@@ -245,7 +245,11 @@ export default (app) => ({
     let path = []
     try { path = ds.path ? JSON.parse(ds.path) : [] } catch (_) { /* invalid paths are rejected at intake */ }
     return {
-      expected_asset_id: ds.maxFiles === "1" ? (ds.assetId || "none") : null,
+      // A single-asset target's current asset, which the delivery replaces only
+      // if it is still shown. The video picker sets it for the target it is open for.
+      expected_asset_id: ds.maxFiles === "1" ? (ds.assetId || "none") : (ds.expectedAssetId || null),
+      // The video picker's opening, handed back with the delivery
+      ref: ds.ref || null,
       kind: ds.kind, component_id: ds.componentId, var_key: ds.varKey,
       field: ds.field || null, file_id: ds.fileId || null, path,
       asset_type: ds.assetType, config_target: ds.configTarget || 'default',

@@ -116,6 +116,23 @@ defmodule BrandoAdmin.Components.Form.Transformer do
     update_item_asset(socket, socket.assigns.video_field, video)
   end
 
+  # A video uploaded in the picker goes to the row it was uploaded for
+  # (`pick_context`), if the row still shows what it showed then; the editor
+  # may have opened the picker for another row meanwhile.
+  def update(%{event: "select_video", id: id, pick_context: dom_id} = assigns, socket) when is_binary(dom_id) do
+    field = socket.assigns.video_field
+    shown = current_asset_id(socket, dom_id, field)
+
+    with true <- Brando.Uploads.AssetIntent.current_selection?(assigns[:expected_asset_id], shown),
+         index when is_integer(index) <- Enum.find_index(socket.assigns.items, &(&1.dom_id == dom_id)),
+         {:ok, video} <- Brando.Videos.get_video(id) do
+      socket = put_item_asset(socket, index, field, video)
+      {:ok, if(socket.assigns.picking_dom_id == dom_id, do: assign(socket, :picking_dom_id, nil), else: socket)}
+    else
+      _ -> {:ok, socket}
+    end
+  end
+
   # VideoPicker reports a grid selection as a send_update rather than an event.
   def update(%{event: "select_video", id: id}, socket) do
     case Brando.Videos.get_video(id) do
@@ -947,11 +964,15 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   def handle_event("pick_asset", %{"dom_id" => dom_id, "kind" => "video"}, socket) do
+    video_field = socket.assigns.video_field
+
     send_update(BrandoAdmin.Components.VideoPicker,
       id: "video-picker",
-      config_target: {"video", socket.assigns.relation_module, socket.assigns.video_field},
+      config_target: {"video", socket.assigns.relation_module, video_field},
       event_target: socket.assigns.myself,
-      multi: false
+      pick_context: dom_id,
+      multi: false,
+      selected_videos: List.wrap(current_asset_id(socket, dom_id, video_field))
     )
 
     {:noreply, assign(socket, :picking_dom_id, dom_id)}

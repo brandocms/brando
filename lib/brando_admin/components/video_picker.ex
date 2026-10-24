@@ -4,6 +4,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
   use Gettext, backend: Brando.Gettext
   use BrandoAdmin.Components.PickerHelpers
 
+  alias Brando.Uploads.AssetIntent
   alias Brando.Videos.ProviderLibrary
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Assets.ProviderVideoUpload
@@ -15,6 +16,9 @@ defmodule BrandoAdmin.Components.VideoPicker do
   # Where the whole library's folders are browsed from: every video folder is
   # stored under this top-level scope (`FolderBrowser.folder_id_for/2`).
   @library_root "videos"
+
+  # Openings an upload started in may still finish in (`remember_opening/1`)
+  @kept_openings 100
 
   def mount(socket) do
     {:ok,
@@ -40,8 +44,12 @@ defmodule BrandoAdmin.Components.VideoPicker do
      socket
      |> assign(:config_target, resolved_target)
      |> assign(:event_target, event_target)
+     # Which of the target's slots it opened for, when it has several (a
+     # transformer's rows, a block's variables); handed back with an upload.
+     |> assign(:pick_context, assigns[:pick_context])
      |> assign(:multi, multi)
      |> assign(:selected_videos, selected_videos)
+     |> remember_opening()
      |> assign(
        :upload_strategy,
        assigns[:upload_strategy] || resolved_config.upload_strategy
@@ -83,12 +91,15 @@ defmodule BrandoAdmin.Components.VideoPicker do
      |> push_selection_state()}
   end
 
-  def update(%{event: "upload_complete", asset: %Brando.Videos.Video{} = video}, socket) do
-    send_update(socket.assigns.event_target, %{event: "select_video", id: video.id})
+  # A server upload started in this picker is stored. It carries the opening
+  # it started in (`ref`) and what the target showed then.
+  def update(%{event: "upload_complete", asset: %Brando.Videos.Video{} = video} = assigns, socket) do
+    handover = opening_handover(socket, assigns[:ref], assigns[:expected_asset_id])
 
     {:ok,
      socket
      |> assign(:upload_progress, nil)
+     |> hand_over(handover, video)
      |> assign_videos()
      |> assign_folder_state(socket.assigns.current_folder)
      |> push_selection_state()}
@@ -192,6 +203,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
     |> assign_new(:scope, fn -> :field end)
     |> assign_new(:library_offered?, fn -> false end)
     |> assign_new(:event_target, fn -> nil end)
+    |> assign_new(:pick_context, fn -> nil end)
+    |> assign_new(:opening, fn -> nil end)
+    |> assign_new(:openings, fn -> %{} end)
+    |> assign_new(:provider_uploads, fn -> %{} end)
     |> assign_new(:selected_videos, fn -> [] end)
     |> assign_new(:current_user, fn -> nil end)
     |> assign_new(:upload_strategy, fn -> Brando.default_video_upload_strategy() end)
@@ -605,7 +620,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
           "filename" => filename,
           "size" => size,
           "mime_type" => mime_type
-        },
+        } = params,
         socket
       ) do
     user = socket.assigns.current_user
@@ -637,7 +652,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
             tus_auth -> Map.put(event_payload, :tus_auth, tus_auth)
           end
 
-        {:noreply, push_event(socket, "video_upload_url_ready", event_payload)}
+        {:noreply,
+         socket
+         |> update(:provider_uploads, &Map.put(&1, request_ref, upload_handover(socket, params)))
+         |> push_event("video_upload_url_ready", event_payload)}
 
       {:error, reason} ->
         # A readable message, not `inspect/1`, which would push the raw term to
@@ -661,26 +679,24 @@ defmodule BrandoAdmin.Components.VideoPicker do
      })}
   end
 
-  def handle_event("video_upload_complete", %{"video_id" => video_id}, socket) do
-    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
-      {:ok, video} ->
-        {:ok, _video} = Brando.Videos.Uploader.complete_client_upload(video)
+  # The file is with the provider. It goes to the target the upload was
+  # started for (`get_video_upload_url`), if that still shows what it showed
+  # then; otherwise, or when the provider refuses to finish it, it stays in
+  # the library only.
+  def handle_event("video_upload_complete", %{"video_id" => video_id} = params, socket) do
+    {handover, uploads} = Map.pop(socket.assigns.provider_uploads, params["request_ref"])
+    socket = socket |> assign(:provider_uploads, uploads) |> assign(:upload_progress, nil)
 
-        # The stored id, not the browser's copy, which may arrive as a string
-        send_update(socket.assigns.event_target, %{
-          event: "select_video",
-          id: video.id
-        })
-
-        {:noreply,
-         socket
-         |> assign(:upload_progress, nil)
-         |> assign_videos()
-         |> assign_folder_state(socket.assigns.current_folder)
-         |> push_selection_state()}
-
-      {:error, _} ->
-        {:noreply, assign(socket, :upload_progress, nil)}
+    with {:ok, video} <- Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}),
+         {:ok, video} <- complete_upload(video) do
+      {:noreply,
+       socket
+       |> hand_over(handover, video)
+       |> assign_videos()
+       |> assign_folder_state(socket.assigns.current_folder)
+       |> push_selection_state()}
+    else
+      _ -> {:noreply, socket}
     end
   end
 
@@ -694,10 +710,14 @@ defmodule BrandoAdmin.Components.VideoPicker do
     {:noreply, assign(socket, :upload_progress, progress)}
   end
 
-  def handle_event("upload_error", %{"error" => error, "filename" => filename}, socket) do
+  def handle_event("upload_error", %{"error" => error, "filename" => filename} = params, socket) do
     require Logger
     Logger.warning("Video upload error for #{filename}: #{error}")
-    {:noreply, assign(socket, :upload_progress, nil)}
+
+    {:noreply,
+     socket
+     |> assign(:upload_progress, nil)
+     |> update(:provider_uploads, &Map.delete(&1, params["request_ref"]))}
   end
 
   def handle_event("delete_video_from_picker", %{"id" => id}, socket) do
@@ -987,6 +1007,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
                     id={"video-uploader-#{@id}"}
                     data-kind="video_picker"
                     data-component-id={@id}
+                    data-ref={@opening}
+                    data-expected-asset-id={shown(%{multi: @multi, selected_videos: @selected_videos})}
                     data-asset-type="video"
                     data-config-target={@config_target}
                     data-click-mode="trigger"
@@ -1007,6 +1029,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
                     phx-hook={video_uploader_hook(@upload_strategy)}
                     id={"video-provider-uploader-#{@id}"}
                     data-target={@myself}
+                    data-ref={@opening}
+                    data-expected-asset-id={shown(%{multi: @multi, selected_videos: @selected_videos})}
                   >
                     <button
                       type="button"
@@ -1579,6 +1603,101 @@ defmodule BrandoAdmin.Components.VideoPicker do
   defp video_uploader_hook(:cloudflare), do: "Brando.CloudflareUploader"
   defp video_uploader_hook(:vimeo), do: "Brando.VimeoUploader"
   defp video_uploader_hook(_strategy), do: nil
+
+  # -- Handing an upload over --
+  #
+  # An upload outlives the opening it started in: the editor may close the
+  # picker and open it for another target while the file transfers. So each
+  # upload keeps its own target, slot and what the target showed, and is
+  # handed only to that target, which takes it only if it still shows that.
+
+  # A server upload carries the opening's ref through the upload manager
+  # (`data-ref` on its trigger); the last few openings are kept for it.
+  defp remember_opening(socket) do
+    n = System.unique_integer([:positive, :monotonic])
+    opening = %{target: socket.assigns.event_target, context: socket.assigns.pick_context}
+    openings = Map.put(socket.assigns.openings, n, opening)
+
+    openings =
+      if map_size(openings) > @kept_openings, do: Map.delete(openings, Enum.min(Map.keys(openings))), else: openings
+
+    socket
+    |> assign(:opening, "vp-#{n}")
+    |> assign(:openings, openings)
+  end
+
+  defp opening_handover(socket, "vp-" <> n, expected) do
+    with {n, ""} <- Integer.parse(n),
+         %{} = opening <- socket.assigns.openings[n] do
+      Map.put(opening, :expected, expected)
+    else
+      _ -> nil
+    end
+  end
+
+  defp opening_handover(_socket, _ref, _expected), do: nil
+
+  # A provider upload names the opening its file was picked in, which may not
+  # be the one asking: the hook sends one file at a time. Without it (a client
+  # from before), the opening asking.
+  defp upload_handover(socket, %{"opening" => opening} = params),
+    do: opening_handover(socket, opening, params["expected_asset_id"])
+
+  defp upload_handover(%{assigns: assigns}, _params),
+    do: %{target: assigns.event_target, context: assigns.pick_context, expected: shown(assigns)}
+
+  # What a single-video target shows: its video, or "none". A gallery adds an
+  # upload whatever it holds.
+  defp shown(%{multi: true}), do: nil
+  defp shown(%{selected_videos: [id]}), do: id
+  defp shown(%{selected_videos: []}), do: "none"
+  defp shown(_assigns), do: nil
+
+  # Unknown (the picker mounted again since) or without a target (the
+  # assistant's): the upload stays in the library.
+  defp hand_over(socket, %{target: target} = handover, video) when not is_nil(target) do
+    # The stored id, not the browser's copy, which may arrive as a string
+    send_update(target, %{
+      event: "select_video",
+      id: video.id,
+      expected_asset_id: handover.expected,
+      pick_context: handover.context
+    })
+
+    mark_selected(socket, handover, video)
+  end
+
+  defp hand_over(socket, _handover, _video), do: socket
+
+  # The target doesn't tell the picker it took the upload, since the picker
+  # may be open for another target by now: when it is open for this one, it
+  # marks the upload itself, as the target will take it.
+  defp mark_selected(%{assigns: assigns} = socket, handover, video) do
+    current? = handover.target == assigns.event_target and handover.context == assigns.pick_context
+
+    cond do
+      not current? -> socket
+      assigns.multi -> assign(socket, :selected_videos, Enum.uniq(assigns.selected_videos ++ [video.id]))
+      AssetIntent.current_selection?(handover.expected, shown_id(assigns)) -> assign(socket, :selected_videos, [video.id])
+      true -> socket
+    end
+  end
+
+  defp shown_id(%{selected_videos: [id]}), do: id
+  defp shown_id(_assigns), do: nil
+
+  # Cloudflare and Vimeo record that the file arrived; a refusal leaves the
+  # video in the library and is reported, not raised.
+  defp complete_upload(video) do
+    case Brando.Videos.Uploader.complete_client_upload(video) do
+      {:ok, video} ->
+        {:ok, video}
+
+      {:error, reason} = error ->
+        send(self(), {:toast, Brando.Uploads.video_upload_error_message(reason)})
+        error
+    end
+  end
 
   # Opening for a field starts on its own videos. A folder from the library
   # means nothing there, so a picker left in the library starts at the root.

@@ -659,8 +659,10 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     send_update(BrandoAdmin.Components.ImagePicker, id: component_id, refresh_images: true)
   end
 
+  # The picker hands the video to the target of the opening it was uploaded
+  # in (`ref`), not to the one it is open for now.
   defp deliver_asset(
-         %{"kind" => "video_picker", "component_id" => component_id},
+         %{"kind" => "video_picker", "component_id" => component_id} = target,
          %Brando.Videos.Video{} = video,
          _socket
        )
@@ -668,7 +670,9 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     send_update(BrandoAdmin.Components.VideoPicker,
       id: component_id,
       event: "upload_complete",
-      asset: video
+      asset: video,
+      ref: target["ref"],
+      expected_asset_id: target["expected_asset_id"]
     )
   end
 

@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
 
   import Ecto.Changeset
 
+  alias Brando.Uploads.AssetIntent
   alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Assets.ProviderVideoUpload
   alias BrandoAdmin.Components.Content
@@ -36,10 +37,16 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   end
 
   # A video uploaded in the picker (to the server or straight to a provider)
-  # is handed over the same way, once it is stored.
-  def update(%{event: "select_video", id: video_id}, socket) do
-    {:noreply, socket} = select_video(socket, video_id)
-    {:ok, socket}
+  # is handed over the same way, once it is stored, unless the field shows
+  # another video than when the upload started. The picker, which may be open
+  # for another field by now, marks it selected itself.
+  def update(%{event: "select_video", id: video_id} = assigns, socket) do
+    if AssetIntent.current_selection?(assigns[:expected_asset_id], socket.assigns.video_id) do
+      {:noreply, socket} = select_video(socket, video_id, sync_picker?: false)
+      {:ok, socket}
+    else
+      {:ok, socket}
+    end
   end
 
   # The provider reported on the video this field shows, to every editor with
@@ -398,14 +405,16 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   def handle_event("video_upload_progress", _params, socket), do: {:noreply, socket}
   def handle_event("upload_error", _params, socket), do: {:noreply, socket}
 
-  defp select_video(%{assigns: %{form_id: form_id}} = socket, selected_video_id) do
+  defp select_video(%{assigns: %{form_id: form_id}} = socket, selected_video_id, opts \\ []) do
     on_change = socket.assigns.on_change
     {:ok, video} = Brando.Videos.get_video(%{matches: %{id: selected_video_id}, preload: [:thumbnail, :file]})
 
-    send_update(BrandoAdmin.Components.VideoPicker,
-      id: "video-picker",
-      selected_videos: [video.id]
-    )
+    if Keyword.get(opts, :sync_picker?, true) do
+      send_update(BrandoAdmin.Components.VideoPicker,
+        id: "video-picker",
+        selected_videos: [video.id]
+      )
+    end
 
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
