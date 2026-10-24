@@ -138,9 +138,9 @@ test('a tab that comes back with offline edits after another took over makes a r
 
   await editHere(page)
 
-  // It edited before: it says that another tab edits now
+  // Its old process is gone: it comes back as a tab beside the one that edits
   await restoreConnection(first)
-  await expect(notice(first)).toContainText('You are editing this entry in another tab')
+  await expect(notice(first)).toContainText('You have this entry open in another tab')
   await expect(mainForm(first)).toHaveAttribute('inert')
 
   // The editing tab offers the copy; nothing was applied or saved
