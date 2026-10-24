@@ -197,11 +197,12 @@ defmodule Brando.SSG.Builds do
       scheduled_at: scheduled_at
     }
 
+    # Inside a caller's transaction the build may still be rolled back
+    in_transaction? = Repo.repo().in_transaction?()
+
     Repo.transaction(fn ->
       with {:ok, build} <- %Build{} |> Build.changeset(attrs) |> Repo.insert(@public_opts),
-           # Before the job, which may run at once; a scheduled build reports when it runs
-           :ok <- if(is_nil(scheduled_at), do: SSGBuild.report_queued(build), else: :ok),
-           {:ok, _job} <- enqueue_or_withdraw(build, scheduled_at) do
+           {:ok, _job} <- enqueue(build, scheduled_at) do
         build
       else
         {:error, reason} -> Repo.rollback(reason)
@@ -210,6 +211,7 @@ defmodule Brando.SSG.Builds do
     |> case do
       {:ok, build} ->
         broadcast(build)
+        unless in_transaction? or scheduled_at, do: SSGBuild.report_queued(build)
         {:ok, build}
 
       {:error, reason} ->
@@ -217,16 +219,10 @@ defmodule Brando.SSG.Builds do
     end
   end
 
-  defp enqueue_or_withdraw(build, scheduled_at) do
-    with {:error, _reason} = error <- enqueue(build, scheduled_at) do
-      if is_nil(scheduled_at), do: SSGBuild.report_failed(build)
-      error
-    end
-  end
-
   defp enqueue(build, nil) do
     build.id
     |> then(&SSGBuild.new(%{"build_id" => &1}, tags: ["ssg-build", "site:#{build.site_id}"]))
+    |> SSGBuild.track(build)
     |> Oban.insert()
   end
 
@@ -238,6 +234,7 @@ defmodule Brando.SSG.Builds do
         tags: ["ssg-build", "site:#{build.site_id}"]
       )
     )
+    |> SSGBuild.track(build)
     |> Oban.insert()
   end
 

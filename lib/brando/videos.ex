@@ -16,6 +16,7 @@ defmodule Brando.Videos do
   alias Brando.Type.VideoConfig
   alias Brando.Users.User
   alias Brando.Videos.Video
+  alias BrandoAdmin.Work
 
   @type id :: binary | integer
   @type changeset :: changeset
@@ -145,11 +146,11 @@ defmodule Brando.Videos do
       %{"video_id" => id, "user_id" => user_id}
       |> Brando.Tenant.Job.attach()
       |> Brando.Worker.VideoMetadata.new()
-      |> then(&if(work_key, do: BrandoAdmin.Work.track(&1, user_id, work_key, step: true), else: &1))
+      |> then(&if(work_key, do: Work.track(&1, user_id, work_key, step: true), else: &1))
       |> Oban.insert()
       |> case do
-        {:ok, %Oban.Job{conflict?: true}} when not is_nil(work_key) -> BrandoAdmin.Work.advance(user_id, work_key)
-        {:error, _reason} when not is_nil(work_key) -> BrandoAdmin.Work.advance(user_id, work_key, :error)
+        {:ok, %Oban.Job{conflict?: true}} when not is_nil(work_key) -> Work.advance(user_id, work_key)
+        {:error, _reason} when not is_nil(work_key) -> Work.advance(user_id, work_key, :error)
         _queued -> :ok
       end
     end)

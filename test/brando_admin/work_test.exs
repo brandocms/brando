@@ -15,6 +15,14 @@ defmodule BrandoAdmin.WorkTest do
     def perform(%Oban.Job{args: %{"result" => "cancel"}}), do: {:cancel, :not_now}
   end
 
+  defmodule RetriedWorker do
+    @moduledoc false
+    use Oban.Worker, queue: :default, max_attempts: 3
+
+    @impl Oban.Worker
+    def perform(_job), do: {:error, :try_again}
+  end
+
   setup do
     # Ids no other test reports for, so nothing leaks between tests
     user_id = System.unique_integer([:positive])
@@ -108,6 +116,13 @@ defmodule BrandoAdmin.WorkTest do
     assert Work.fallback_message(work) == "Done"
   end
 
+  test "ending work that is not running reports nothing", %{user_id: user_id} do
+    Work.finish(user_id, "nothing", "Done")
+    Work.fail(user_id, "nothing", "Failed")
+    Work.advance(user_id, "nothing")
+    refute_receive {:work, "nothing", _, _}, 100
+  end
+
   test "work for the system reports nowhere" do
     assert Work.start(:system, "fetch", "Fetching") == :ok
     assert Work.start(nil, "fetch", "Fetching") == :ok
@@ -180,6 +195,44 @@ defmodule BrandoAdmin.WorkTest do
 
       assert_receive {:work, "steps", :running, %Work{done: 1}}
       assert_receive {:work, "steps", :failed, %Work{done: 2, failed: 1, message: "Some failed"}}
+    end
+
+    test "a job that hands its work on ends it only when it fails", %{user_id: user_id} do
+      Work.start(user_id, "handed", "Looking up")
+
+      %{"result" => "ok"}
+      |> DoneWorker.new()
+      |> Work.track(user_id, "handed", finish: false, failed: "Gave up")
+      |> Oban.insert!()
+
+      refute_receive {:work, "handed", :finished, _}, 100
+      assert %Work{status: :running} = Work.get(user_id, "handed")
+
+      %{"result" => "error"}
+      |> DoneWorker.new()
+      |> Work.track(user_id, "handed", finish: false, failed: "Gave up")
+      |> Oban.insert!()
+
+      assert_receive {:work, "handed", :failed, %Work{message: "Gave up"}}
+    end
+
+    # A job that failed with attempts left: its work goes on, and a job whose
+    # work already ended does not start it again
+    test "a failure with attempts left keeps the work running, and starts none", %{user_id: user_id} do
+      RetriedWorker.new(%{})
+      |> Work.track(user_id, "retried", running: "Running", failed: "Gave up")
+      |> Oban.insert!()
+
+      assert_receive {:work, "retried", :running, %Work{message: "Running"}}
+      refute_receive {:work, "retried", :failed, _}, 100
+      Work.fail(user_id, "retried", "Failed for good")
+      assert_receive {:work, "retried", :failed, _}
+
+      # The next attempt
+      job = RetriedWorker.new(%{}) |> Work.track(user_id, "retried", running: "Running") |> Ecto.Changeset.apply_changes()
+      :telemetry.execute([:oban, :job, :start], %{}, %{job: %{job | attempt: 2}})
+      :telemetry.execute([:oban, :job, :exception], %{}, %{job: %{job | attempt: 2}, state: :failure})
+      refute_receive {:work, "retried", _, _}, 100
     end
 
     test "a job tracked for the system is left as it is" do

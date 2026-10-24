@@ -61,13 +61,17 @@ export default class Toast {
     this.connectionToast = this.add({ kind: connected ? 'success' : 'error', text: message })
   }
 
-  // A report of background work: shows, updates or ends its toast.
+  // A report of background work: shows, updates or ends its toast. A work
+  // keeps its toast while its result shows, so the same key running again
+  // turns that toast back into progress rather than adding a second.
   work(entry) {
     const state = this.workState.get(entry.id) || {}
+    if (entry.status === 'running' && state.entry && state.entry.status !== 'running') {
+      state.dismissed = false
+    }
     state.entry = entry
     this.workState.set(entry.id, state)
     this.renderWork(entry.id)
-    if (entry.status !== 'running') this.workState.delete(entry.id)
   }
 
   // The work running when the user channel (re)joins. Work that ended while
@@ -75,22 +79,27 @@ export default class Toast {
   syncWork(entries) {
     const running = new Set(entries.map(entry => entry.id))
     for (const [id, state] of this.workState) {
-      if (!running.has(id)) {
-        this.remove(state.toast)
-        this.workState.delete(id)
-      }
+      if (state.entry.status === 'running' && !running.has(id)) this.forgetWork(id)
     }
     entries.forEach(entry => this.work(entry))
   }
 
-  // After navigating: a page that shows a work inline takes over from its
-  // toast, and leaving it brings the toast back.
+  // After navigating, or when the page shows or drops a work's status
+  // (the WorkStatus hook): a page that shows a work inline takes over from
+  // its toast, and leaving it brings the toast back.
   refreshWork() {
-    for (const id of this.workState.keys()) this.renderWork(id)
+    for (const id of [...this.workState.keys()]) this.renderWork(id)
+  }
+
+  forgetWork(id) {
+    const state = this.workState.get(id)
+    if (state) this.remove(state.toast)
+    this.workState.delete(id)
   }
 
   renderWork(id) {
     const state = this.workState.get(id)
+    if (!state) return
     const { entry } = state
     const running = entry.status === 'running'
     // The toast carries the id too
@@ -99,29 +108,45 @@ export default class Toast {
       document.querySelector(`[data-work-id="${CSS.escape(id)}"]:not(.toast)`)
 
     if (inline || (running && state.dismissed)) {
-      this.remove(state.toast)
-      state.toast = null
+      if (running) {
+        this.remove(state.toast)
+        state.toast = null
+      } else {
+        this.forgetWork(id)
+      }
       return
     }
 
-    if (!state.toast || !state.toast.isConnected || state.toast.classList.contains('leaving')) {
-      state.toast = this.add({
+    let toast = state.toast
+    if (!toast || !toast.isConnected || toast.classList.contains('leaving')) {
+      toast = this.add({
         kind: 'work',
         build: () => {},
         onClose: () => {
           state.dismissed = true
         }
       })
-      state.toast.dataset.workId = id
+      toast.dataset.workId = id
+      // A result's toast that goes takes its work along
+      toast.onRemoved = () => {
+        if (state.toast === toast && state.entry.status !== 'running') this.workState.delete(id)
+      }
+      state.toast = toast
+    } else if (running && !toast.classList.contains('toast--work')) {
+      toast.classList.remove('toast--success', 'toast--error')
+      toast.classList.add('toast--work')
+      toast.querySelector('.toast-dot')?.classList.replace('toast-dot', 'toast-spinner')
+      this.expire(toast, null)
     }
 
-    fillWork(state.toast, entry)
+    fillWork(toast, entry)
 
     if (!running) {
       const kind = entry.status === 'finished' ? 'success' : 'error'
-      state.toast.classList.replace('toast--work', `toast--${kind}`)
-      state.toast.querySelector('.toast-spinner')?.classList.replace('toast-spinner', 'toast-dot')
-      this.expire(state.toast, TIMEOUTS[kind])
+      toast.classList.remove('toast--work', 'toast--success', 'toast--error')
+      toast.classList.add(`toast--${kind}`)
+      toast.querySelector('.toast-spinner')?.classList.replace('toast-spinner', 'toast-dot')
+      this.expire(toast, TIMEOUTS[kind])
     }
   }
 
@@ -170,21 +195,29 @@ export default class Toast {
     return toast
   }
 
-  // Fades the toast after `timeout` ms; none keeps it until closed.
+  // Fades the toast after `timeout` ms; none keeps it until closed (and
+  // stops a fade already set).
   expire(toast, timeout) {
+    clearTimeout(toast.expiryTimer)
+    toast.expires = Boolean(timeout)
     if (!timeout) return
-    let timer = setTimeout(() => this.remove(toast), timeout)
+    toast.expiryTimer = setTimeout(() => this.remove(toast), timeout)
+
+    if (toast.holdsOnHover) return
+    toast.holdsOnHover = true
     // Hovering holds a toast so it can be read.
-    toast.addEventListener('mouseenter', () => clearTimeout(timer))
+    toast.addEventListener('mouseenter', () => clearTimeout(toast.expiryTimer))
     toast.addEventListener('mouseleave', () => {
-      clearTimeout(timer)
-      timer = setTimeout(() => this.remove(toast), 1500)
+      clearTimeout(toast.expiryTimer)
+      if (toast.expires) toast.expiryTimer = setTimeout(() => this.remove(toast), 1500)
     })
   }
 
   remove(toast) {
     if (!toast || !toast.isConnected || toast.classList.contains('leaving')) return
     toast.classList.add('leaving')
+    clearTimeout(toast.expiryTimer)
+    if (toast.onRemoved) toast.onRemoved()
     animate(toast, { opacity: 0 }, { duration: 0.2 }).finished.then(() => toast.remove())
   }
 

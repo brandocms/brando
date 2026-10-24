@@ -210,6 +210,11 @@ export default (hooks, enableDebug = false) => {
       app.toast.work(entry)
     })
 
+    // Sent after each join: the work running now
+    app.userChannel.on('work:sync', ({ work }) => {
+      app.toast.syncWork(work)
+    })
+
     app.userChannel.on('progress_popup', (data) => {
       app.toast.progressPopup(data.payload)
     })
@@ -266,7 +271,6 @@ export default (hooks, enableDebug = false) => {
     )
 
     app.userChannel.join().receive('ok', (params) => {
-      app.toast.syncWork(params.work || [])
 
       if (app.vsn) {
         // we've connected before. see if versions match!

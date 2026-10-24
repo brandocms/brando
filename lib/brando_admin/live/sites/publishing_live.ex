@@ -373,7 +373,12 @@ defmodule BrandoAdmin.Sites.PublishingLive do
          {:ok, _job} <-
            %{"build_id" => build_id, "action" => action, "creator_id" => user.id}
            |> SSGDeploy.new(tags: ["ssg-deploy", "site:#{site_id}"])
-           |> Work.track(user, SSGBuild.work_key(build_id), [global: true] ++ deploy_messages(action, build.version))
+           # It waits behind any build on the one-at-a-time queue
+           |> Work.track(
+             user,
+             SSGBuild.work_key(build_id),
+             [global: true, timeout: to_timeout(hour: 1)] ++ deploy_messages(action, build.version)
+           )
            |> Oban.insert() do
       {:noreply, socket}
     else

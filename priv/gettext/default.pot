@@ -4513,6 +4513,7 @@ msgstr ""
 msgid "Could not generate a suggestion. Try again."
 msgstr ""
 
+#: lib/brando/workers/video_metadata_sweep.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not look the videos up"
@@ -17370,6 +17371,11 @@ msgstr ""
 #: lib/brando/uploads.ex
 #, elixir-autogen, elixir-format
 msgid "The video provider refused the upload. Check its settings, or try again."
+msgstr ""
+
+#: lib/brando/workers/video_metadata_sweep.ex
+#, elixir-autogen, elixir-format
+msgid "The videos are already being looked up"
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex

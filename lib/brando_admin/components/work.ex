@@ -13,7 +13,8 @@ defmodule BrandoAdmin.Components.Work do
   (an `AIAction.button` with `busy={Work.running?(work)}`) or in a row.
 
   Both carry the work's `data-work-id`: while one is on the page, the admin
-  shows no toast for that work.
+  shows no toast for that work. Show a key once per page: its id is the
+  status's DOM id.
   """
   use BrandoAdmin, :component
 
@@ -60,7 +61,9 @@ defmodule BrandoAdmin.Components.Work do
 
     ~H"""
     <span
+      id={"work-status-" <> @id}
       class={["work-status", @class]}
+      phx-hook="Brando.WorkStatus"
       data-work-id={@id}
       data-status={@work && @work.status}
       role="status"

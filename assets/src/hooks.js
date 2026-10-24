@@ -6,6 +6,7 @@ import AssistantMessagesHook from './hooks/AssistantMessages'
 import ProposalPreviewHook from './hooks/ProposalPreview'
 import TranslationWorkHook from './hooks/TranslationWork'
 import ModulePickerKeysHook from './hooks/ModulePickerKeys'
+import WorkStatusHook from './hooks/WorkStatus'
 import AssetFolderDropHook from './hooks/AssetFolderDrop'
 import BlockFieldHook from './hooks/BlockField'
 import BlockHook from './hooks/Block'
@@ -81,6 +82,7 @@ export default (app) => {
     'Brando.ProposalPreview': ProposalPreviewHook(app),
     'Brando.TranslationWork': TranslationWorkHook(app),
     'Brando.ModulePickerKeys': ModulePickerKeysHook(app),
+    'Brando.WorkStatus': WorkStatusHook(app),
     'Brando.AssetFolderDrop': AssetFolderDropHook(app),
     'Brando.BlockField': BlockFieldHook(app),
     'Brando.Block': BlockHook(app),

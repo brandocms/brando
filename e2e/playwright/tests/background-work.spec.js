@@ -25,7 +25,8 @@ test('work shows as one toast, updated in place until it ends', async ({ page })
   const key = `e2e-import-${Date.now()}`
 
   try {
-    // Running before the page loads: the toast comes with the user channel's join
+    // Running before the page loads: the toast comes with the work sent after
+    // the user channel joins
     await report(page, 'start', { key, message: 'Importing products', total: 2 })
     await page.goto('/admin')
     await syncLV(page)
@@ -52,18 +53,34 @@ test('work shows as one toast, updated in place until it ends', async ({ page })
   }
 })
 
-test('a failure stays as an error toast', async ({ page }) => {
+test('a failure stays as an error toast, which a retry takes over', async ({ page }) => {
   const key = `e2e-fail-${Date.now()}`
-  await report(page, 'start', { key, message: 'Fetching policies' })
-  await page.goto('/admin')
-  await syncLV(page)
 
-  const toast = page.locator(`.toast[data-work-id="${key}"]`)
-  await expect(toast).toContainText('Fetching policies')
+  try {
+    await report(page, 'start', { key, message: 'Fetching policies' })
+    await page.goto('/admin')
+    await syncLV(page)
 
-  await report(page, 'fail', { key, message: 'Could not fetch the policies' })
-  await expect(toast).toHaveClass(/toast--error/)
-  await expect(toast).toContainText('Could not fetch the policies')
+    const toast = page.locator(`.toast[data-work-id="${key}"]`)
+    await expect(toast).toContainText('Fetching policies')
+
+    await report(page, 'fail', { key, message: 'Could not fetch the policies' })
+    await expect(toast).toHaveClass(/toast--error/)
+    await expect(toast).toContainText('Could not fetch the policies')
+
+    // Tried again: the same toast shows the new attempt, not a second one
+    await report(page, 'start', { key, message: 'Fetching policies again' })
+    await expect(toast).toHaveClass(/toast--work/)
+    await expect(toast.locator('.toast-spinner')).toHaveCount(1)
+    await expect(toast).toContainText('Fetching policies again')
+    await expect(toast).toHaveCount(1)
+
+    await report(page, 'finish', { key, message: 'Policies fetched' })
+    await expect(toast).toHaveClass(/toast--success/)
+    await expect(toast).toHaveCount(1)
+  } finally {
+    await report(page, 'finish', { key })
+  }
 })
 
 test('the screen that shows the work takes over from its toast', async ({ page }) => {

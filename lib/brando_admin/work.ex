@@ -41,9 +41,8 @@ defmodule BrandoAdmin.Work do
       )
       |> Oban.insert()
 
-  A job queued to run now starts the work when it is inserted, with
-  `queued:` (or `running:`) as its message; a scheduled one starts when it
-  runs.
+  A job queued to run now, with a `queued:` or `running:` message, starts
+  the work when it is inserted; a scheduled one starts when it runs.
 
   ## Several jobs as one piece of work
 
@@ -183,12 +182,12 @@ defmodule BrandoAdmin.Work do
     report(user, key, :advance, put_scope(%{result: result}, opts))
   end
 
-  @doc "The work is done. Takes `:global`."
+  @doc "The work is done. Takes `:global`. Ends only running work."
   @spec finish(user(), String.t(), String.t() | nil, keyword()) :: :ok
   def finish(user, key, message \\ nil, opts \\ []),
     do: report(user, key, :finish, put_scope(%{message: message}, opts))
 
-  @doc "The work failed, for good. Takes `:global`."
+  @doc "The work failed, for good. Takes `:global`. Ends only running work."
   @spec fail(user(), String.t(), String.t() | nil, keyword()) :: :ok
   def fail(user, key, message \\ nil, opts \\ []),
     do: report(user, key, :fail, put_scope(%{message: message}, opts))
@@ -205,6 +204,9 @@ defmodule BrandoAdmin.Work do
       Oban cancels or gives it up)
     * `:step` — `true` to count as a step of work started with `total:`
       instead (`advance/3`)
+    * `:finish` — `false` for a job that hands its work on, or ends it
+      itself: success reports nothing, and only a failure, cancellation or
+      giving up ends the work
     * `:timeout`, `:toast`, `:global` — as for `start/4`
   """
   @spec track(Ecto.Changeset.t(), user(), String.t(), keyword()) :: Ecto.Changeset.t()
@@ -220,6 +222,7 @@ defmodule BrandoAdmin.Work do
             "key" => key,
             "prefix" => if(opts[:global], do: nil, else: Brando.Tenant.current_prefix()),
             "step" => Keyword.get(opts, :step, false),
+            "finish" => Keyword.get(opts, :finish, true),
             "queued" => opts[:queued],
             "running" => opts[:running],
             "done" => opts[:done],
@@ -321,21 +324,24 @@ defmodule BrandoAdmin.Work do
   def fallback_message(%__MODULE__{status: :failed}), do: gettext("Failed")
   def fallback_message(_work), do: nil
 
-  @doc false
+  @doc "The PubSub topic every node's registry hears reports on."
   def topic, do: @topic
 
-  @doc false
+  @doc "The PubSub topic a user's LiveViews hear their work on (`subscribe/1`)."
   def user_topic(user_id), do: "#{@topic}:#{user_id}"
 
-  @doc false
+  @doc "The key `track/4` puts in an Oban job's meta."
   def meta_key, do: @meta_key
 
-  @doc false
+  @doc "How long work goes without news before it is given up, in ms."
   def default_timeout, do: @default_timeout
 
-  # Every node's registry applies the event, and tells its own LiveViews and
-  # channels, so nothing is sent twice in a cluster.
-  @doc false
+  @doc """
+  Broadcasts a report (`op` and its `attrs`) for every node's registry,
+  which applies it and tells that node's LiveViews and channels, so nothing
+  is sent twice in a cluster. `attrs` may carry the `:prefix`; the functions
+  above build them.
+  """
   def report(user, key, op, attrs) when is_binary(key) do
     case user_id(user) do
       nil ->
@@ -352,7 +358,7 @@ defmodule BrandoAdmin.Work do
 
   defp prefix(opts), do: if(opts[:global], do: nil, else: Brando.Tenant.current_prefix())
 
-  @doc false
+  @doc "The id of a `t:user/0`; nil for `:system` or nil."
   def user_id(%{id: id}) when is_integer(id), do: id
   def user_id(id) when is_integer(id), do: id
   def user_id(_system), do: nil
@@ -363,9 +369,7 @@ defmodule BrandoAdmin.Work do
     Brando.Repo.one(from(u in Brando.Users.User, where: u.id == ^user_id, select: u.language))
   end
 
-  # LiveView hook: `on_mount BrandoAdmin.Work`
-
-  @doc false
+  @doc "The LiveView hook: `on_mount BrandoAdmin.Work` (see \"LiveViews\")."
   def on_mount(:default, _params, _session, socket) do
     user = socket.assigns[:current_user]
 

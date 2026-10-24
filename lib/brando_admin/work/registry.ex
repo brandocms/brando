@@ -60,6 +60,8 @@ defmodule BrandoAdmin.Work.Registry do
 
     case apply_op(op, current, table_key, attrs, at) do
       nil -> :ok
+      # Nothing to show for: only the timeout starts again
+      work when op == :touch -> store(table_key, work)
       work -> store_and_tell(table_key, work)
     end
 
@@ -83,19 +85,11 @@ defmodule BrandoAdmin.Work.Registry do
   @doc false
   # The new state of the work, or nil when the report changes nothing.
   def apply_op(:start, %Work{status: :running} = work, _key, attrs, at) do
-    # A batch that starts while one runs joins its count
-    total =
-      case {work.total, attrs[:total]} do
-        {current, more} when is_integer(current) and is_integer(more) -> current + more
-        {current, nil} -> current
-        {nil, more} -> more
-      end
-
     %{
       work
       | message: attrs.message || work.message,
         percent: attrs[:percent],
-        total: total,
+        total: join_total(work.total, attrs[:total]),
         done_message: attrs[:done_message] || work.done_message,
         failed_message: attrs[:failed_message] || work.failed_message,
         timeout: attrs[:timeout] || work.timeout,
@@ -119,6 +113,10 @@ defmodule BrandoAdmin.Work.Registry do
     }
   end
 
+  # Keeps running work from timing out; starts nothing
+  def apply_op(:touch, %Work{status: :running} = work, _key, _attrs, at), do: %{work | updated_at: at}
+  def apply_op(:touch, _work, _key, _attrs, _at), do: nil
+
   def apply_op(:advance, %Work{status: :running, total: total} = work, _key, %{result: result}, at)
       when is_integer(total) do
     work = %{work | done: work.done + 1, failed: work.failed + if(result == :error, do: 1, else: 0), updated_at: at}
@@ -132,12 +130,20 @@ defmodule BrandoAdmin.Work.Registry do
 
   def apply_op(:advance, _work, _key, _attrs, _at), do: nil
 
-  def apply_op(op, work, key, attrs, at) when op in [:finish, :fail] do
-    work = work || new(key, %{}, at)
+  # Nothing running under the key: nothing to end (a job that ended its work
+  # itself, then Oban giving it up)
+  def apply_op(op, nil, _key, _attrs, _at) when op in [:finish, :fail], do: nil
+
+  def apply_op(op, work, _key, attrs, at) when op in [:finish, :fail] do
     status = if op == :finish, do: :finished, else: :failed
     default = if op == :finish, do: work.done_message, else: work.failed_message
     %{work | status: status, message: attrs.message || default, percent: nil, updated_at: at}
   end
+
+  # A batch that starts while one runs joins its count
+  defp join_total(current, more) when is_integer(current) and is_integer(more), do: current + more
+  defp join_total(current, nil), do: current
+  defp join_total(nil, more), do: more
 
   defp new({user_id, prefix, key}, attrs, at) do
     %Work{
@@ -158,7 +164,7 @@ defmodule BrandoAdmin.Work.Registry do
     }
   end
 
-  defp store_and_tell({user_id, _prefix, key} = table_key, %Work{} = work) do
+  defp store(table_key, %Work{} = work) do
     if work.status == :running do
       version = System.unique_integer([:monotonic])
       :ets.insert(@table, {table_key, work, version})
@@ -166,6 +172,10 @@ defmodule BrandoAdmin.Work.Registry do
     else
       :ets.delete(@table, table_key)
     end
+  end
+
+  defp store_and_tell({user_id, _prefix, key} = table_key, %Work{} = work) do
+    store(table_key, work)
 
     Phoenix.PubSub.local_broadcast(Brando.pubsub(), Work.user_topic(user_id), {:work, key, work.status, work})
     push(user_id, work)

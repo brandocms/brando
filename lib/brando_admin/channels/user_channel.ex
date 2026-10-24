@@ -33,9 +33,9 @@ defmodule BrandoAdmin.UserChannel do
     if to_string(assigned_user_id) == user_id and BrandoAdmin.AdminSocket.session_valid?(socket) and
          Realtime.authorize_account(assigned_user_id) == :ok do
       Realtime.subscribe()
-      # Running background work, so a new tab or a reload shows its toasts
-      work = assigned_user_id |> BrandoAdmin.Work.list() |> Enum.map(&BrandoAdmin.Work.to_payload/1)
-      {:ok, %{vsn: vsn, work: work}, socket}
+      # The channel hears its topic only once join/3 has returned
+      send(self(), :sync_work)
+      {:ok, %{vsn: vsn}, socket}
     else
       # A bare :error crashed the join instead of refusing it
       {:error, %{reason: "forbidden"}}
@@ -49,6 +49,14 @@ defmodule BrandoAdmin.UserChannel do
     else
       {:stop, :normal, socket}
     end
+  end
+
+  # Running background work, so a new tab or a reload shows its toasts. Read
+  # after the channel subscribed to its topic, so no report falls between.
+  def handle_info(:sync_work, socket) do
+    work = socket.assigns.user_id |> BrandoAdmin.Work.list() |> Enum.map(&BrandoAdmin.Work.to_payload/1)
+    push(socket, "work:sync", %{work: work})
+    {:noreply, socket}
   end
 
   def handle_info({:authorization_changed, _}, socket) do

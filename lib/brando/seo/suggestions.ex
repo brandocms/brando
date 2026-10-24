@@ -22,6 +22,7 @@ defmodule Brando.SEO.Suggestions do
   alias Brando.SEO.Generate
   alias Brando.SEO.Suggestion
   alias Brando.Worker.SEOSuggestionGenerator
+  alias BrandoAdmin.Work
 
   @max_batch 200
   @open [:queued, :pending, :failed]
@@ -71,27 +72,24 @@ defmodule Brando.SEO.Suggestions do
       |> Enum.take(max_batch())
 
     if work && rows != [] do
-      BrandoAdmin.Work.start(user, work[:key], work[:message].(length(rows)),
+      Work.start(user, work[:key], work[:message].(length(rows)),
         total: length(rows),
         done: work[:done],
         failed: work[:failed]
       )
     end
 
-    queued =
-      Enum.count(rows, fn row ->
-        case queue(row, language, field, user, now, work && work[:key]) do
-          {:ok, _} ->
-            true
+    work_key = work && work[:key]
+    {:ok, Enum.count(rows, &queued?(queue(&1, language, field, user, now, work_key), user, work_key))}
+  end
 
-          _error ->
-            # Its job never runs to count itself
-            if work, do: BrandoAdmin.Work.advance(user, work[:key], :error)
-            false
-        end
-      end)
+  defp queued?({:ok, _suggestion}, _user, _work_key), do: true
+  defp queued?(_error, _user, nil), do: false
 
-    {:ok, queued}
+  # Its job never runs to count itself
+  defp queued?(_error, user, work_key) do
+    Work.advance(user, work_key, :error)
+    false
   end
 
   # A suggestion is queued together with its job, or not at all: one left
@@ -131,12 +129,12 @@ defmodule Brando.SEO.Suggestions do
       %{"suggestion_id" => suggestion.id}
       |> Brando.Tenant.Job.attach()
       |> SEOSuggestionGenerator.new()
-      |> then(&if(work_key, do: BrandoAdmin.Work.track(&1, user, work_key, step: true), else: &1))
+      |> track_step(user, work_key)
       |> Oban.insert()
       |> case do
         {:ok, %Oban.Job{conflict?: true}} ->
           # A job still waiting for this suggestion writes it, untracked
-          if work_key, do: BrandoAdmin.Work.advance(user, work_key)
+          advance(user, work_key)
           suggestion
 
         {:ok, _job} ->
@@ -151,6 +149,12 @@ defmodule Brando.SEO.Suggestions do
       end
     end)
   end
+
+  defp track_step(changeset, _user, nil), do: changeset
+  defp track_step(changeset, user, work_key), do: Work.track(changeset, user, work_key, step: true)
+
+  defp advance(_user, nil), do: :ok
+  defp advance(user, work_key), do: Work.advance(user, work_key)
 
   @doc """
   Suggestions in `language` that still need attention: queued, pending
