@@ -264,6 +264,13 @@ defmodule Brando.Villain.ProviderVideoRenderingTest do
     assert markdown =~ "Tom's film & co"
     refute markdown =~ "&amp;"
     refute markdown =~ "&#39;"
+
+    # A caption cleared in the editor leaves `<p></p>`: the library title stands
+    [ref] = block.refs
+    cleared = %{ref | data: %{ref.data | data: %{ref.data.data | title: "<p></p>"}}}
+    markdown = Brando.Villain.Markdown.render([%{block: %{block | refs: [cleared]}}], %Brando.Pages.Page{language: "en"})
+    assert markdown =~ "Tom's film & co"
+    refute markdown =~ "&lt;p&gt;"
   end
 
   # A caller's single dimension doesn't reshape the record

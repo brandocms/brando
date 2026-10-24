@@ -1888,6 +1888,8 @@ defmodule Brando.Villain.Parser do
         :aspect_ratio,
         :cover_image
       ])
+      # A caption cleared in the editor is `<p></p>`: no title of its own
+      |> Map.update(:title, nil, &if(Brando.Captions.present?(&1), do: &1))
 
     # Merge into the video struct, nil values = use video default
     merged = Brando.Content.OverrideResolver.merge_overrides(video, override_attrs)
@@ -1895,10 +1897,7 @@ defmodule Brando.Villain.Parser do
     # The figcaption, in `caption` (`video_file_options/1`): the block's title
     # is rich text, the record's own title plain text, escaped here. `title`
     # stays as it was, for what reads it as text (Markdown, templates).
-    caption =
-      if Brando.Captions.present?(override_attrs[:title]),
-        do: override_attrs[:title],
-        else: Brando.Captions.library_html(video.title)
+    caption = override_attrs[:title] || Brando.Captions.library_html(video.title)
 
     %{merged | caption: caption}
   end
