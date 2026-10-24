@@ -283,7 +283,8 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
   # What the picker's server upload trigger puts in the upload's target
   defp server_upload_target(view) do
     [trigger] = view |> render() |> Floki.parse_document!() |> Floki.find("#video-uploader-video-picker")
-    {trigger |> Floki.attribute("data-ref") |> List.first(), trigger |> Floki.attribute("data-expected-asset-id") |> List.first()}
+    attribute = &(trigger |> Floki.attribute(&1) |> List.first())
+    {attribute.("data-ref"), attribute.("data-expected-asset-id")}
   end
 
   # What the upload manager delivers to the picker (`deliver_asset/3`)
