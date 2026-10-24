@@ -56,8 +56,10 @@ defmodule Brando.Villain.Block do
   Stores the block data's rich-text captions (`captions:` in `use
   Brando.Villain.Block`) as `Brando.Captions.normalize/1` does: an editor
   emptied leaves `<p></p>`, which is no caption (`nil`), so the placement
-  takes the asset's own again. A cast of the data normalizes a caption it
-  didn't change too, since the editor sends a stored `<p></p>` back as is.
+  takes the asset's own again. Only a caption the cast changes: one stored
+  as `<p></p>` before stays until it is edited (renderers read it as empty),
+  since cleaning it on another field's save would write a caption the editor
+  didn't touch, over another editor's.
   """
   def normalize_captions(changeset, []), do: changeset
 
@@ -68,7 +70,7 @@ defmodule Brando.Villain.Block do
       %{data: %Ecto.Changeset{} = data} ->
         data =
           Enum.reduce(captions, data, fn field, data ->
-            Ecto.Changeset.put_change(data, field, Brando.Captions.normalize(Ecto.Changeset.get_field(data, field)))
+            Ecto.Changeset.update_change(data, field, &Brando.Captions.normalize/1)
           end)
 
         %{changeset | changes: Map.put(changeset.changes, :data, data)}

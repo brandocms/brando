@@ -22,6 +22,14 @@ defmodule Brando.CaptionsTest do
     assert Captions.normalize(~s(<p style="text-align: center;"></p>)) == nil
   end
 
+  # Plain fields (alt text, credits, a video's title) share the check: what
+  # looks like a tag there is text
+  test "plain text that looks like a tag is present" do
+    assert Captions.present?("<untitled>")
+    assert Captions.present?("a < b")
+    refute Captions.present?("   ")
+  end
+
   test "text/1 keeps blocks apart and inline formatting together" do
     assert Captions.text("<p>Tour</p><p>film</p>") == "Tour film"
     assert Captions.text("<p>Tour fil<em>m</em></p>") == "Tour film"
@@ -62,6 +70,21 @@ defmodule Brando.CaptionsTest do
   end
 
   describe "GalleryObjectOverride.cast_override/2" do
+    test "a plain override that looks like a tag is an override" do
+      override =
+        %GalleryObjectOverride{}
+        |> GalleryObjectOverride.cast_override(%{
+          "object_id" => "1",
+          "object_type" => "video",
+          "title" => "<untitled>",
+          "alt" => "<Untitled>"
+        })
+        |> Ecto.Changeset.apply_changes()
+
+      refute override.use_default_title
+      refute override.use_default_alt
+    end
+
     test "derives each flag from its text when the params do not set it" do
       override =
         %GalleryObjectOverride{}

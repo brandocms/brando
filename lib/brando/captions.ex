@@ -12,9 +12,14 @@ defmodule Brando.Captions do
   @doc """
   Whether `text` holds any text. An emptied rich-text document is markup
   without text (`<p></p>`, `<p style="text-align: center;"><br></p>`,
-  `<p>&nbsp;</p>`), which counts as empty.
+  `<p>&nbsp;</p>`), which counts as empty. Text without the editor's markup
+  is plain, and only blank when it is whitespace: `<untitled>` is a title.
   """
-  def present?(text), do: text(text) != nil
+  def present?(text) when is_binary(text) do
+    if markup?(text), do: text(text) != nil, else: String.trim(text) != ""
+  end
+
+  def present?(_text), do: false
 
   # Elements that end a line of text: their text is kept apart from the next.
   @block_tags ~w(p div br h1 h2 h3 h4 h5 h6 li ul ol blockquote pre hr tr td th dt dd figcaption)

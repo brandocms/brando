@@ -143,8 +143,17 @@ defmodule Brando.Upgrade.Snapshot.Diff do
 
   defp head_tags({"script", attrs, children} = node, acc) do
     if List.keyfind(attrs, "type", 0) == {"type", "application/ld+json"},
-      do: [head_tag(node) <> " " <> collapse(Floki.text(children, js: true)) | acc],
+      do: [head_tag(node) <> " " <> json_ld_text(Floki.text(children, js: true)) | acc],
       else: acc
+  end
+
+  # The data, not how it was escaped: snapshots from before JSON-LD was
+  # encoded HTML-safe (`\/`) compare equal to those after
+  defp json_ld_text(text) do
+    case Jason.decode(text) do
+      {:ok, data} -> Jason.encode!(data)
+      {:error, _} -> collapse(text)
+    end
   end
 
   defp head_tags({"title", _attrs, children} = node, acc),

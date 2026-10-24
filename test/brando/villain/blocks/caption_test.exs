@@ -29,18 +29,17 @@ defmodule Brando.Villain.Blocks.CaptionTest do
       assert caption(unquote(block), "") == nil
     end
 
-    test "#{inspect(block)}: a stored empty caption is cleaned when the data is saved" do
+    # Cleaning it on another field's save would be a caption write the editor
+    # didn't make, which could land over another editor's caption
+    test "#{inspect(block)}: a stored empty caption is left alone when another setting changes" do
       block = unquote(block)
       {setting, value} = Map.fetch!(@settings, block)
       stored = struct(block, data: struct(Module.concat(block, Data), title: "<p></p>"))
 
-      data =
-        stored
-        |> block.changeset(%{"type" => block.__block_type__(), "data" => %{"title" => "<p></p>", setting => value}})
-        |> Ecto.Changeset.apply_changes()
-        |> Map.fetch!(:data)
+      changeset =
+        block.changeset(stored, %{"type" => block.__block_type__(), "data" => %{"title" => "<p></p>", setting => value}})
 
-      assert data.title == nil
+      refute Map.has_key?(changeset.changes.data.changes, :title)
     end
 
     test "#{inspect(block)}: a caption set by a proposal is normalized" do
