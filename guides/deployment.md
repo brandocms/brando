@@ -595,7 +595,10 @@ kept, with a notice saying where it belongs.
 
 Both asset stages install with the pnpm version pinned in the Dockerfile and
 `pnpm install --frozen-lockfile`, so commit `assets/backend/pnpm-lock.yaml` and
-`assets/frontend/pnpm-lock.yaml`. `mix brando.assets.setup` writes them. After
+`assets/frontend/pnpm-lock.yaml`. `mix brando.assets.setup` writes them. Each
+stage copies its `pnpm-workspace.yaml` with them: it holds pnpm's settings,
+the install scripts pnpm may run among them, and without it the install fails
+on the first package with one. After
 updating BrandoJS, from npm or through Yalc, run `pnpm install` in
 `assets/backend` and commit the lockfile it changes; the build stops on a stale
 one rather than resolving different packages. The admin stage installs

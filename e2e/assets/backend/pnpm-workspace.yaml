@@ -1,0 +1,9 @@
+# pnpm's settings for the E2E app's admin, as in Brando's template.
+
+# Dependencies whose install scripts run; any other with one fails the install
+allowBuilds:
+  esbuild: true
+
+# BrandoJS from npm installs the day it is published
+minimumReleaseAgeExclude:
+  - '@brandocms/*'

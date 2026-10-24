@@ -1,0 +1,11 @@
+# pnpm's settings for the site.
+
+# Dependencies whose install scripts run; any other with one fails the install.
+# core-js's only prints a message.
+allowBuilds:
+  core-js: false
+
+# pnpm waits a day before installing a new release; Brando's packages
+# install the day they are published.
+minimumReleaseAgeExclude:
+  - '@brandocms/*'

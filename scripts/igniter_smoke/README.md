@@ -103,8 +103,9 @@ also proves which tarball pnpm used.
 The consumer takes Brando as a path dependency on the unpacked Hex package,
 which resolves its own dependencies from Hex like any package. The generated
 `assets/backend/package.json` keeps the exact npm pin users get; since no
-registry has the candidate, [`packaged.exs`](packaged.exs) adds a
-`pnpm.overrides` entry pointing that package at the npm tarball. pnpm then
+registry has the candidate, [`packaged.exs`](packaged.exs) adds an
+`overrides` entry to `assets/backend/pnpm-workspace.yaml` pointing that
+package at the npm tarball. pnpm then
 installs the tarball's contents and resolves its dependencies from npm as a
 registry install would. A local registry would also exercise registry
 metadata and dist-tags, which publication and the registry-download check

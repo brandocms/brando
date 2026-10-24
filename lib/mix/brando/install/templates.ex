@@ -54,6 +54,7 @@ defmodule Mix.Brando.Install.Templates do
     # Backend tooling
     {:copy, "assets/backend/europa.json5", "assets/backend/europa.json5"},
     {:copy, "assets/backend/package.json", "assets/backend/package.json"},
+    {:copy, "assets/backend/pnpm-workspace.yaml", "assets/backend/pnpm-workspace.yaml"},
     {:copy, "assets/backend/README.md", "assets/backend/README.md"},
     {:copy, "assets/backend/vite.config.js", "assets/backend/vite.config.js"},
 
@@ -72,6 +73,7 @@ defmodule Mix.Brando.Install.Templates do
     {:copy, "assets/frontend/europa.json5", "assets/frontend/europa.json5"},
     {:copy, "assets/frontend/vite.config.js", "assets/frontend/vite.config.js"},
     {:eex, "assets/frontend/package.json", "assets/frontend/package.json"},
+    {:copy, "assets/frontend/pnpm-workspace.yaml", "assets/frontend/pnpm-workspace.yaml"},
 
     # Frontend static
     {:copy, "assets/frontend/public/favicon.ico", "assets/frontend/public/favicon.ico"},
