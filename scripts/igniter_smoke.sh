@@ -58,8 +58,9 @@ trap stop_server EXIT
 
 # GitHub's release downloads now answer with more header bytes than Erlang's
 # httpc takes (header_too_long, 10 KB), so rustler_precompiled can't fetch a
-# NIF (mdex_native's) by itself. Compile the deps that ship one, and fetch each
-# download that fails with curl into rustler_precompiled's cache, then again.
+# NIF (mdex_native's) by itself. Compile the deps that ship one, with their own
+# deps, and fetch each download that fails with curl into rustler_precompiled's
+# cache, then compile again.
 export RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH="$smoke_root/precompiled-nifs"
 mkdir -p "$RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH"
 fetch_precompiled_nifs() {
@@ -69,12 +70,12 @@ fetch_precompiled_nifs() {
   done
   if [[ ${#nif_deps[@]} -eq 0 ]]; then return 0; fi
   for attempt in 1 2; do
-    if mix deps.compile "${nif_deps[@]}" > "$log" 2>&1; then return 0; fi
+    if mix deps.compile --include-children "${nif_deps[@]}" > "$log" 2>&1; then return 0; fi
     for url in $(grep -oE "couldn't fetch NIF from https://[^ ]+\.tar\.gz" "$log" | sed -E "s/^couldn't fetch NIF from //" | sort -u); do
       curl --fail --silent --show-error --location "$url" --output "$RUSTLER_PRECOMPILED_GLOBAL_CACHE_PATH/$(basename "$url")"
     done
   done
-  mix deps.compile "${nif_deps[@]}" > "$log" 2>&1
+  mix deps.compile --include-children "${nif_deps[@]}" > "$log" 2>&1
 }
 
 # The directory the consumer takes Brando from, and whose templates and skills
