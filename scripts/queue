@@ -8,6 +8,7 @@
 #   scripts/queue 3133 3134            # 3134 is stacked on 3133
 #   scripts/queue 3132 --repo brandocms/brando
 #   scripts/queue --dequeue 3132       # take it out, to push to its branch
+#   scripts/queue 3132 --skip-check 'Consumer (*'
 #
 # A PR is queued once every check run on its head commit has finished and
 # passed ("Coverage report" aside). When some failed, it is not queued, and
@@ -15,6 +16,12 @@
 # other jobs of its run still run: a known flake from .github/known-flakes.txt
 # with its rerun command, CI infrastructure (failed setting up), or a real
 # failure. A PR already in the queue is followed from where it is.
+#
+# --skip-check PATTERN (repeatable) leaves out the checks whose name matches
+# the glob: the PR is queued without waiting for them or their passing. Ones
+# that have not passed are named in the line that says it was queued. For
+# checks that are not required, failing for a reason outside the PR (GitHub
+# merges without them).
 #
 # When a PR drops out of the queue, it says why: the files that conflict with
 # main (from git merge-tree, which needs the remote named origin), the failed
@@ -32,7 +39,7 @@
 set -uo pipefail
 
 usage() {
-  echo "usage: scripts/queue <PR number>... [--repo owner/name]" >&2
+  echo "usage: scripts/queue <PR number>... [--repo owner/name] [--skip-check PATTERN]..." >&2
   echo "       scripts/queue --dequeue <PR number> [--repo owner/name]" >&2
   exit 1
 }
@@ -43,9 +50,11 @@ target=main
 prs=()
 dequeue=false
 repo="${QUEUE_REPO:-}"
+skip_checks=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --repo) [ $# -ge 2 ] || usage; repo="$2"; shift 2 ;;
+    --skip-check) [ $# -ge 2 ] && [ -n "$2" ] || usage; skip_checks+=("$2"); shift 2 ;;
     --dequeue) dequeue=true; shift ;;
     -h|--help) awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; exit 0 ;;
     *[!0-9]*|'') usage ;;
@@ -194,15 +203,41 @@ timed_out() {
   [ "$SECONDS" -ge "$deadline" ]
 }
 
+# Splits check runs on --skip-check: prints the runs to wait for, and leaves
+# in $skipped the skipped ones that have not passed, as "name (state)" joined
+# with ", ".
+skip_runs() {
+  local runs="$1" names=() name pattern
+  skipped=""
+  if [ "${#skip_checks[@]}" -eq 0 ]; then
+    echo "$runs"
+    return
+  fi
+  while IFS= read -r name; do
+    for pattern in "${skip_checks[@]}"; do
+      # shellcheck disable=SC2053
+      [[ "$name" == $pattern ]] && { names+=("$name"); break; }
+    done
+  done < <(jq -r '.[].name' <<<"$runs")
+  local skip
+  skip="$(printf '%s\n' "${names[@]}" | jq -Rsc 'split("\n") | map(select(. != ""))')"
+  skipped="$(jq -r --argjson skip "$skip" '[.[] | select(.name as $n | $skip | index($n))
+    | select(.conclusion != "success" and .conclusion != "neutral" and .conclusion != "skipped")
+    | "\(.name) (\(.conclusion // .status))"] | join(", ")' <<<"$runs")"
+  jq -c --argjson skip "$skip" '[.[] | select(.name as $n | $skip | index($n) | not)]' <<<"$runs"
+}
+
 # Waits for the checks on the PR's head to finish. Succeeds when all passed,
-# with the commit in $checked; otherwise says which failed, explains them and
-# fails.
+# with the commit in $checked and the skipped checks that have not passed in
+# $skipped; otherwise says which failed, explains them and fails.
 wait_for_checks() {
   local pr="$1" info sha runs total pending failed seen=""
   while :; do
     if info="$(read_pr "$pr")" && sha="$(field "$info" .headRefOid)" && [ -n "$sha" ] &&
       runs="$(check_runs "$sha")"; then
       total="$(jq length <<<"$runs")"
+      skip_runs "$runs" >"$work/runs-$pr"
+      runs="$(cat "$work/runs-$pr")"
       pending="$(jq '[.[] | select(.status != "completed")] | length' <<<"$runs")"
       if [ "$total" -gt 0 ] && [ "$pending" -eq 0 ]; then
         # Right after a push the next workflows may not have registered their
@@ -311,7 +346,7 @@ follow_queue() {
 enqueue() {
   local pr="$1" info="$2" sha="$3" position files
   if position="$(enqueue_at "$(field "$info" .id)" "$sha" 2>"$work/enqueue-$pr")"; then
-    say "$pr" "checks green on ${sha:0:7}; queued at position $position"
+    say "$pr" "checks green on ${sha:0:7}${skipped:+ but for skipped ${skipped}}; queued at position $position"
     return 0
   fi
   if [ "$(field "$info" .mergeable)" = CONFLICTING ] && files="$(conflicts "$(field "$info" .headRefName)")"; then
@@ -341,7 +376,7 @@ wait_for_result() {
 }
 
 process() {
-  local pr="$1" info base base_pr removals checked
+  local pr="$1" info base base_pr removals checked skipped=""
   info="$(cat "$work/$pr.info")"
   case "$(field "$info" .state)" in
     MERGED) say "$pr" "already merged"; return 0 ;;
