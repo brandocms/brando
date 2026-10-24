@@ -64,6 +64,20 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       complete_upload(view, "##{ref_hook_id(ctx)}", "ref-1", video_id)
       await(fn -> ref_video_id(view) == to_string(video_id) end)
     end
+
+    test "an upload that finishes after another video was picked leaves the pick", ctx do
+      picked = Factory.insert(:video)
+      view = open(ctx)
+      hook = "##{ref_hook_id(ctx)}"
+      video_id = request_upload(view, hook, "ref-late")
+
+      view |> with_target(cid_of(view, hook)) |> render_hook("select_video", %{"id" => picked.id})
+      await(fn -> ref_video_id(view) == to_string(picked.id) end)
+
+      complete_upload(view, hook, "ref-late", video_id)
+      assert ref_video_id(view) == to_string(picked.id)
+      assert Repo.get(Brando.Videos.Video, video_id)
+    end
   end
 
   describe "a video var" do
@@ -86,6 +100,99 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
 
       complete_upload(view, hook, "var-1", video_id)
       await(fn -> var_video_id(view) == to_string(video_id) end)
+    end
+
+    test "an upload that finishes after another video was picked leaves the pick", ctx do
+      picked = Factory.insert(:video)
+      view = open(ctx)
+      hook = "#" <> var_hook(view)
+      video_id = request_upload(view, hook, "var-late")
+
+      view |> with_target(cid_of(view, hook)) |> render_hook("select_video", %{"id" => picked.id})
+      await(fn -> var_video_id(view) == to_string(picked.id) end)
+
+      complete_upload(view, hook, "var-late", video_id)
+      assert var_video_id(view) == to_string(picked.id)
+      assert Repo.get(Brando.Videos.Video, video_id)
+    end
+
+    # The block's settings render only while its config modal is open, and
+    # closing it would take the hook, and the transfer, with it. Such a var
+    # uploads through the video picker, whose hook stays.
+    test "in the block's settings it uploads through the picker", ctx do
+      view = open(ctx)
+      modal = "#block-#{ctx.block_uid}_config"
+
+      view
+      |> element(~s(button.menu-item[phx-click="open_block_config"][phx-value-uid="#{ctx.block_uid}"]))
+      |> render_click()
+
+      assert has_element?(view, ~s(#{modal} [id$="-video-media"][data-upload-enabled="false"]))
+      refute has_element?(view, ~s(#{modal} [id$="-video-uploader"]))
+    end
+  end
+
+  # An entry's own vars (`Input.Vars`) have no block to tell: a var's value
+  # goes to the form with the `b:validate` push.
+  describe "an entry's video var" do
+    setup %{user: user} do
+      page =
+        Factory.insert(:page,
+          creator: user,
+          title: "Reel",
+          uri: "reel",
+          vars: [
+            %Brando.Content.Var{type: :video, key: "hero", label: "Hero", sequence: 0, creator_id: user.id},
+            %Brando.Content.Var{type: :video, key: "outro", label: "Outro", sequence: 1, creator_id: user.id}
+          ]
+        )
+
+      {:ok, entry: page}
+    end
+
+    test "offers Upload, and takes the upload once it is up", ctx do
+      view = open_entry(ctx)
+      hook = "#page_vars_0-video-uploader"
+
+      assert has_element?(view, ~s([data-video-hook-id="page_vars_0-video-uploader"][data-upload-enabled="true"]))
+      assert has_element?(view, ~s(#{hook}[phx-hook="Brando.BunnyUploader"]))
+
+      video_id = request_upload(view, hook, "entry-1")
+      assert Repo.get!(Brando.Videos.Video, video_id).creator_id == ctx.user.id
+
+      complete_upload(view, hook, "entry-1", video_id)
+
+      assert_push_event(view, "b:validate", %{target: "page[vars][0][video_id]", value: ^video_id})
+      assert entry_var_video_id(view, 0) == to_string(video_id)
+    end
+
+    test "changed to another type and back, it offers Upload again", ctx do
+      view = open_entry(ctx)
+
+      change_entry(view, %{"vars" => %{"0" => %{"type" => "string"}}})
+      refute has_element?(view, "#page_vars_0-video-uploader")
+
+      change_entry(view, %{"vars" => %{"0" => %{"type" => "video"}}})
+      assert has_element?(view, ~s(#page_vars_0-video-uploader[phx-hook="Brando.BunnyUploader"]))
+    end
+
+    # Its component is the row's: moved, the row shows the other var, which
+    # the upload isn't for.
+    test "an upload that finishes after its var was moved sets neither", ctx do
+      view = open_entry(ctx)
+      row = cid_of(view, "#page_vars_0-video-uploader")
+      video_id = request_upload(view, "#page_vars_0-video-uploader", "entry-moved")
+
+      change_entry(view, %{"sort_var_ids" => ["1", "0"]})
+      assert has_element?(view, ~s(input[name="page[vars][0][key]"][value="outro"]))
+
+      view
+      |> with_target(row)
+      |> render_hook("video_upload_complete", %{"request_ref" => "entry-moved", "video_id" => video_id})
+
+      refute_push_event(view, "b:validate", %{target: "page[vars][" <> _})
+      assert entry_var_video_id(view, 0) in [nil, ""]
+      assert entry_var_video_id(view, 1) in [nil, ""]
     end
   end
 
@@ -171,6 +278,17 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
     view |> render() |> Floki.parse_document!() |> Floki.attribute(selector, "value") |> List.first()
   end
 
+  defp open_entry(%{conn: conn, entry: page}) do
+    {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+    view
+  end
+
+  defp change_entry(view, params) do
+    view |> element("#page_form_form") |> render_change(%{"page" => params})
+  end
+
+  defp entry_var_video_id(view, index), do: input_value(view, ~s(input[name="page[vars][#{index}][video_id]"]))
+
   defp open(%{conn: conn, page: page}) do
     {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
     await_selector(view, "[data-block-uid]")
@@ -184,17 +302,21 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
     module =
       ProposalFixtures.module!(author, "Film", ~s(<div>{% ref refs.clip %}{{ film }}</div>),
         refs: [ProposalFixtures.ref("clip", %{type: "video", data: %{}})],
-        vars: [%{type: "video", key: "film", label: "Film"}]
+        vars: [
+          %{type: "video", key: "film", label: "Film"},
+          %{type: "video", key: "backdrop", label: "Backdrop", placement: "config"}
+        ]
       )
 
     page = Factory.insert(:page, creator: user, title: "Films", uri: "films")
     ref_uid = Brando.Utils.generate_uid()
+    block_uid = Brando.Utils.generate_uid()
 
     block =
       %Block{}
       |> Block.recursive_block_changeset(
         %{
-          "uid" => Brando.Utils.generate_uid(),
+          "uid" => block_uid,
           "type" => "module",
           "module_id" => module.id,
           "sequence" => 0,
@@ -203,13 +325,16 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
           "refs" => [
             %{"uid" => ref_uid, "name" => "clip", "sequence" => 0, "data" => %{"type" => "video", "data" => %{}}}
           ],
-          "vars" => [%{"type" => "video", "key" => "film", "label" => "Film", "sequence" => 0}]
+          "vars" => [
+            %{"type" => "video", "key" => "film", "label" => "Film", "sequence" => 0},
+            %{"type" => "video", "key" => "backdrop", "label" => "Backdrop", "placement" => "config", "sequence" => 1}
+          ]
         },
         author
       )
       |> Repo.insert!()
 
     Repo.insert!(struct(Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
-    %{page: page, ref_uid: ref_uid, user: user}
+    %{page: page, ref_uid: ref_uid, block_uid: block_uid, user: user}
   end
 end

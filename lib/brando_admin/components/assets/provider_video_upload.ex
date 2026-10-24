@@ -10,13 +10,17 @@ defmodule BrandoAdmin.Components.Assets.ProviderVideoUpload do
   #     component that doesn't know the editor (a ref, a var) asks the video
   #     picker to do it (`initiate_in_picker/3`), which does.
   #   * `video_upload_complete`: `complete/1`, then the component takes the
-  #     video the way it takes a picked one.
+  #     video the way it takes a picked one, if it still shows what it showed
+  #     when the upload started (`remember/4`, `still_shown?/4`). Otherwise
+  #     the video stays in the library only.
   #   * `video_upload_progress`, `upload_error`: nothing; both show
   #     client-side, in the field and the upload drawer.
   use Gettext, backend: Brando.Gettext
 
+  import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [push_event: 3, send_update: 2]
 
+  alias Brando.Uploads.AssetIntent
   alias BrandoAdmin.Components.Assets.MediaField
 
   @doc """
@@ -82,6 +86,34 @@ defmodule BrandoAdmin.Components.Assets.ProviderVideoUpload do
       id: "video-picker",
       provider_upload: %{config_target: config_target, params: params}
     )
+  end
+
+  @doc """
+  Records, for a `get_video_upload_url` request, what the component shows
+  now: its video's id, and for a var its key.
+  """
+  def remember(socket, %{"request_ref" => request_ref}, video_id, key) do
+    shown = Map.put(socket.assigns[:provider_uploads] || %{}, request_ref, {video_id || "none", key})
+    assign(socket, :provider_uploads, shown)
+  end
+
+  def remember(socket, _params, _video_id, _key), do: socket
+
+  @doc """
+  Forgets the request, and returns whether the component still shows what it
+  did when the request came (`remember/4`). A request it has no record of (it
+  mounted again since) counts as shown.
+  """
+  def still_shown?(socket, request_ref, video_id, key) do
+    {shown, uploads} = Map.pop(socket.assigns[:provider_uploads] || %{}, request_ref)
+
+    still_shown? =
+      case shown do
+        nil -> true
+        {expected_id, expected_key} -> expected_key == key and AssetIntent.current_selection?(expected_id, video_id)
+      end
+
+    {still_shown?, assign(socket, :provider_uploads, uploads)}
   end
 
   @doc """

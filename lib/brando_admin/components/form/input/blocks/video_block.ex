@@ -65,9 +65,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   ]
 
   def update(%{event: "select_video", expected_asset_id: expected} = assigns, socket) do
-    current_id = socket.assigns[:video] && socket.assigns.video.id
-
-    if Brando.Uploads.AssetIntent.current_selection?(expected, current_id) do
+    if Brando.Uploads.AssetIntent.current_selection?(expected, current_video_id(socket)) do
       update(Map.delete(assigns, :expected_asset_id), socket)
     else
       {:ok, socket}
@@ -133,6 +131,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
        end
      end)}
   end
+
+  defp current_video_id(socket), do: socket.assigns[:video] && socket.assigns.video.id
 
   # The provider upload hook for the ref's config, looked up again when the
   # config target changes.
@@ -510,14 +510,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   # The picker knows the editor, and creates the video with the ref's config.
   def handle_event("get_video_upload_url", params, socket) do
     ProviderVideoUpload.initiate_in_picker(socket.assigns.provider_config_target, params)
-    {:noreply, socket}
+    {:noreply, ProviderVideoUpload.remember(socket, params, current_video_id(socket), nil)}
   end
 
-  # The file is with the provider; the ref shows the video from now on.
-  def handle_event("video_upload_complete", %{"video_id" => video_id}, socket) do
+  # The file is with the provider; the ref shows the video from now on,
+  # unless another one was chosen meanwhile.
+  def handle_event("video_upload_complete", %{"video_id" => video_id} = params, socket) do
+    {still_shown?, socket} =
+      ProviderVideoUpload.still_shown?(socket, params["request_ref"], current_video_id(socket), nil)
+
     case ProviderVideoUpload.complete(video_id) do
-      {:ok, video} -> {:noreply, select_video(socket, video.id)}
-      :error -> {:noreply, socket}
+      {:ok, video} when still_shown? -> {:noreply, select_video(socket, video.id)}
+      _ -> {:noreply, socket}
     end
   end
 

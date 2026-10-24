@@ -373,15 +373,23 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
   # the provider's destination for the file.
   def handle_event("get_video_upload_url", params, socket) do
     config_target = MediaField.entry_config(socket.assigns.field, :video)
-    {:noreply, ProviderVideoUpload.initiate(socket, socket.assigns[:current_user], config_target, params)}
+
+    socket
+    |> ProviderVideoUpload.remember(params, socket.assigns.video_id, nil)
+    |> ProviderVideoUpload.initiate(socket.assigns[:current_user], config_target, params)
+    |> then(&{:noreply, &1})
   end
 
   # The file is with the provider, which encodes it and reports back
-  # (`video_processed`); the field shows the video from now on.
-  def handle_event("video_upload_complete", %{"video_id" => video_id}, socket) do
+  # (`video_processed`); the field shows the video from now on, unless
+  # another one was chosen meanwhile.
+  def handle_event("video_upload_complete", %{"video_id" => video_id} = params, socket) do
+    {still_shown?, socket} =
+      ProviderVideoUpload.still_shown?(socket, params["request_ref"], socket.assigns.video_id, nil)
+
     case ProviderVideoUpload.complete(video_id) do
-      {:ok, video} -> select_video(socket, video.id)
-      :error -> {:noreply, socket}
+      {:ok, video} when still_shown? -> select_video(socket, video.id)
+      _ -> {:noreply, socket}
     end
   end
 
