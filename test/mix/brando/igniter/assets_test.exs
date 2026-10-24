@@ -61,6 +61,24 @@ defmodule Mix.Brando.Igniter.AssetsTest do
     assert Enum.all?(plan.tasks, fn {task, _args} -> task == "brando.assets.copy" end)
   end
 
+  # pnpm edits it too, writing the exemptions `minimumReleaseAge` asks for
+  test "generating keeps an existing pnpm-workspace.yaml, and names a package.json pnpm field pnpm ignores" do
+    own = "allowBuilds:\n  esbuild: true\nminimumReleaseAgeExclude:\n  - '@brandocms/*'\n  - vite@8.4.0\n"
+
+    package =
+      ~s({"dependencies":{"@brandocms/brandojs":"link:../../../assets"},"pnpm":{"onlyBuiltDependencies":["esbuild"]}})
+
+    plan =
+      IgniterCase.phoenix_project(
+        files: %{"assets/backend/pnpm-workspace.yaml" => own, "assets/backend/package.json" => package}
+      )
+      |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Backend, [])
+
+    assert plan.issues == []
+    Igniter.Test.assert_unchanged(plan, "assets/backend/pnpm-workspace.yaml")
+    assert Enum.any?(plan.notices, &(&1 =~ "onlyBuiltDependencies" and &1 =~ "assets/backend/pnpm-workspace.yaml"))
+  end
+
   defp generate_backend(igniter, version) do
     igniter |> Igniter.assign(:brando_version, version) |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Backend, [])
   end
@@ -177,6 +195,8 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert IgniterCase.source(plan, "assets/backend/pnpm-workspace.yaml") ==
                template("assets/backend/pnpm-workspace.yaml")
 
+      refute Enum.any?(plan.notices, &(&1 =~ "minimumReleaseAgeExclude"))
+
       assert package["dependencies"]["@brandocms/brandojs"] == "file:.yalc/@brandocms/brandojs"
       assert package["dependencies"]["site-widget"] == "^2.0.0"
       assert package["scripts"]["dev"] == "vite --host"
@@ -209,7 +229,7 @@ defmodule Mix.Brando.Igniter.AssetsTest do
         |> Map.put("pnpm", %{
           "overrides" => %{"@codemirror/language" => "6.12.4", "left-pad" => "1.3.0"},
           "onlyBuiltDependencies" => ["esbuild", "sharp"],
-          "ignoredBuiltDependencies" => ["core-js"],
+          "ignoredBuiltDependencies" => ["core-js", "esbuild"],
           "patchedDependencies" => %{"vite" => "patches/vite.patch"}
         })
         |> Jason.encode!(pretty: true)
@@ -221,8 +241,9 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert upgraded_package(plan)["pnpm"] == %{"patchedDependencies" => %{"vite" => "patches/vite.patch"}}
       assert Enum.any?(plan.notices, &(&1 =~ "patchedDependencies" and &1 =~ "pnpm-workspace.yaml"))
 
-      # The template's settings, then the site's: the template's esbuild and
-      # the retired CodeMirror pin are not repeated
+      # The template's settings, then the site's: the template's esbuild
+      # (allowed, whatever the site chose) and the retired CodeMirror pin are
+      # not repeated
       assert IgniterCase.source(plan, "assets/backend/pnpm-workspace.yaml") ==
                String.replace(
                  template("assets/backend/pnpm-workspace.yaml"),
@@ -243,6 +264,29 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       refute Map.has_key?(upgraded_package(plan), "pnpm")
       Igniter.Test.assert_unchanged(plan, "assets/backend/pnpm-workspace.yaml")
       assert Enum.any?(plan.notices, &(&1 =~ "'sharp': true"))
+      # It lacks the exemption that lets the admin install a BrandoJS published today
+      assert Enum.any?(plan.notices, &(&1 =~ "minimumReleaseAgeExclude"))
+    end
+
+    # The 0.54 template's field holds only what the template sets itself, but
+    # a file of the site's own may not allow it yet
+    test "names what the admin needs for a site's own pnpm-workspace.yaml that lacks it" do
+      package =
+        @old_package
+        |> Jason.decode!()
+        |> Map.put("pnpm", %{"onlyBuiltDependencies" => ["esbuild"], "overrides" => %{"@codemirror/language" => "6.12.4"}})
+        |> Jason.encode!()
+
+      plan =
+        upgrade(
+          old_backend(%{
+            "assets/backend/package.json" => package,
+            "assets/backend/pnpm-workspace.yaml" => "onlyBuiltDependencies:\n  - esbuild\n"
+          })
+        )
+
+      refute Map.has_key?(upgraded_package(plan), "pnpm")
+      assert Enum.any?(plan.notices, &(&1 =~ "allowBuilds:\n      'esbuild': true"))
     end
 
     test "an npm BrandoJS pin moves to Brando's spec, a local source stays" do

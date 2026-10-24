@@ -9,3 +9,7 @@ overrides:
 # Dependencies whose install scripts run; any other with one fails the install
 allowBuilds:
   esbuild: true
+
+# Brando's own packages (Jupiter) install the day they are published
+minimumReleaseAgeExclude:
+  - '@brandocms/*'

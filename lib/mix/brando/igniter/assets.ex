@@ -124,6 +124,7 @@ if Code.ensure_loaded?(Igniter) do
       |> Enum.filter(fn {_format, _source, target} -> String.starts_with?(target, "assets/backend/") end)
       |> Enum.reduce(igniter, &upgrade_asset(&1, &2, project))
       |> move_pnpm_settings()
+      |> notice_release_age()
       |> remove_files(@retired_backend_files ++ @legacy_backend_lockfiles)
       |> retire_legacy_europa_files()
       |> notice_legacy_css()
@@ -387,11 +388,12 @@ if Code.ensure_loaded?(Igniter) do
     # overrides, less what earlier templates set and the current one retired
     # or sets itself.
     defp workspace_settings(pnpm) do
-      template_builds = ["esbuild"]
+      # The template's own choices win, as its overrides do
+      decided = ["esbuild" | @retired_backend_packages]
 
       builds =
-        Enum.map(list(pnpm["onlyBuiltDependencies"]) -- (template_builds ++ @retired_backend_packages), &{&1, true}) ++
-          Enum.map(list(pnpm["ignoredBuiltDependencies"]), &{&1, false})
+        Enum.map(list(pnpm["onlyBuiltDependencies"]) -- decided, &{&1, true}) ++
+          Enum.map(list(pnpm["ignoredBuiltDependencies"]) -- decided, &{&1, false})
 
       overrides =
         pnpm["overrides"]
@@ -408,24 +410,38 @@ if Code.ensure_loaded?(Igniter) do
     defp map(value) when is_map(value), do: Enum.filter(value, fn {_k, v} -> is_binary(v) end)
     defp map(_value), do: []
 
-    defp put_workspace_settings(igniter, %{builds: [], overrides: []}), do: igniter
-
     defp put_workspace_settings(igniter, settings) do
       template = Templates.contents(:copy, @backend_workspace)
       {igniter, current} = read_file(igniter, @backend_workspace)
 
-      if current == template do
-        replace_file(igniter, @backend_workspace, workspace_with(template, settings))
-      else
-        Igniter.add_notice(igniter, """
-        pnpm 11 no longer reads package.json's `pnpm` field, and #{@backend_workspace} is your own, so add
-        these settings from #{@backend_package} to it:
+      cond do
+        current == template and settings == %{builds: [], overrides: []} ->
+          igniter
 
-        #{settings |> workspace_lines() |> Enum.map_join("
-",
-        &("    " <> &1))}
-        """)
+        current == template ->
+          replace_file(igniter, @backend_workspace, workspace_with(template, settings))
+
+        true ->
+          notice_own_workspace(igniter, with_template_builds(settings, current))
       end
+    end
+
+    # An application's own file also needs what the template allows
+    defp with_template_builds(settings, current) do
+      if current =~ ~r/^\s+['"]?esbuild['"]?:\s*true\s*$/m,
+        do: settings,
+        else: %{settings | builds: [{"esbuild", true} | settings.builds]}
+    end
+
+    defp notice_own_workspace(igniter, %{builds: [], overrides: []}), do: igniter
+
+    defp notice_own_workspace(igniter, settings) do
+      Igniter.add_notice(igniter, """
+      pnpm 11 no longer reads package.json's `pnpm` field, and #{@backend_workspace} is your own, so add
+      these settings to it (from #{@backend_package}, and what Brando's admin needs):
+
+      #{settings |> workspace_lines() |> Enum.map_join("\n", &("    " <> &1))}
+      """)
     end
 
     # The template's pnpm-workspace.yaml with the application's settings
@@ -462,6 +478,24 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp yaml_string(value), do: "'" <> String.replace(value, "'", "''") <> "'"
+
+    # An application's own pnpm-workspace.yaml without the template's
+    # exemption would wait a day to install a BrandoJS released today
+    defp notice_release_age(igniter) do
+      {igniter, contents} = read_file(igniter, @backend_workspace)
+
+      if contents =~ "minimumReleaseAgeExclude" and contents =~ "@brandocms/" do
+        igniter
+      else
+        Igniter.add_notice(igniter, """
+        pnpm waits a day (minimumReleaseAge) before installing a new release, and #{@backend_workspace}
+        does not exempt Brando's packages, so the admin cannot install a BrandoJS published today. Add:
+
+            minimumReleaseAgeExclude:
+              - '@brandocms/*'
+        """)
+      end
+    end
 
     defp notice_unmoved_pnpm_settings(igniter, rest) when rest == %{}, do: igniter
 
@@ -745,6 +779,11 @@ if Code.ensure_loaded?(Igniter) do
         Path.basename(target) == "package.json" && Igniter.exists?(igniter, target) ->
           merge_package(igniter, target, template_contents(file, project, brando_version(igniter)))
 
+        # pnpm edits it too (the exemptions `minimumReleaseAge` asks for), and
+        # the application may have its own: an existing one is kept
+        Path.basename(target) == "pnpm-workspace.yaml" && Igniter.exists?(igniter, target) ->
+          igniter
+
         target == @backend_package ->
           Files.create(igniter, target, template_contents(file, project, brando_version(igniter)))
 
@@ -788,15 +827,18 @@ if Code.ensure_loaded?(Igniter) do
              ) do
         merged = merge_defaults(current, without_second_brandojs(defaults, current))
 
-        if merged == current do
-          igniter
-        else
-          Igniter.update_file(
-            igniter,
-            path,
-            &Rewrite.Source.update(&1, :content, encode_package(merged, [contents, defaults_json]))
-          )
-        end
+        igniter =
+          if merged == current do
+            igniter
+          else
+            Igniter.update_file(
+              igniter,
+              path,
+              &Rewrite.Source.update(&1, :content, encode_package(merged, [contents, defaults_json]))
+            )
+          end
+
+        notice_pnpm_field(igniter, path, current)
       else
         _ ->
           Igniter.add_issue(
@@ -805,6 +847,17 @@ if Code.ensure_loaded?(Igniter) do
           )
       end
     end
+
+    defp notice_pnpm_field(igniter, path, %{"pnpm" => pnpm}) when map_size(pnpm) > 0 do
+      Igniter.add_notice(igniter, """
+      pnpm 11 no longer reads package.json's `pnpm` field, so pnpm ignores what #{path} sets there
+      (#{pnpm |> Map.keys() |> Enum.sort() |> Enum.join(", ")}). Move it to #{Path.join(Path.dirname(path), "pnpm-workspace.yaml")}
+      (`onlyBuiltDependencies` and `ignoredBuiltDependencies` become `allowBuilds`, true and false;
+      https://pnpm.io/settings names the rest).
+      """)
+    end
+
+    defp notice_pnpm_field(igniter, _path, _package), do: igniter
 
     # A package.json that declares BrandoJS in either section keeps that entry
     # alone, rather than gaining the template's in `dependencies` as well.
