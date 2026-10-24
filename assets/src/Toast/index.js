@@ -5,7 +5,11 @@ import { animate, set } from '../motion'
 // - notifications answer something the user did (`notification/2`): success
 //   and info fade after a while, errors stay until closed;
 // - mutations tell them what someone else just changed (`mutation/2`): quiet,
-//   with the editor's initials, gone after a few seconds.
+//   with the editor's initials, gone after a few seconds;
+// - background work they started (`work/1`, BrandoAdmin.Work): one toast per
+//   work, updated in place, with a spinner, or a bar when it knows how far it
+//   has come, until it turns into its result. A page that shows the work
+//   itself (an element with its `data-work-id`) gets no toast for it.
 //
 // Messages are set as text, never HTML: mutations carry entry titles.
 
@@ -17,6 +21,8 @@ export default class Toast {
     this.app = app
     this.popupTimer = null
     this.popup = null
+    // Work id → { entry, toast, dismissed }
+    this.workState = new Map()
 
     this.stack = document.createElement('div')
     this.stack.className = 'toast-stack'
@@ -55,7 +61,71 @@ export default class Toast {
     this.connectionToast = this.add({ kind: connected ? 'success' : 'error', text: message })
   }
 
-  add({ kind, text, initials, build }) {
+  // A report of background work: shows, updates or ends its toast.
+  work(entry) {
+    const state = this.workState.get(entry.id) || {}
+    state.entry = entry
+    this.workState.set(entry.id, state)
+    this.renderWork(entry.id)
+    if (entry.status !== 'running') this.workState.delete(entry.id)
+  }
+
+  // The work running when the user channel (re)joins. Work that ended while
+  // the socket was down leaves quietly: its result was missed.
+  syncWork(entries) {
+    const running = new Set(entries.map(entry => entry.id))
+    for (const [id, state] of this.workState) {
+      if (!running.has(id)) {
+        this.remove(state.toast)
+        this.workState.delete(id)
+      }
+    }
+    entries.forEach(entry => this.work(entry))
+  }
+
+  // After navigating: a page that shows a work inline takes over from its
+  // toast, and leaving it brings the toast back.
+  refreshWork() {
+    for (const id of this.workState.keys()) this.renderWork(id)
+  }
+
+  renderWork(id) {
+    const state = this.workState.get(id)
+    const { entry } = state
+    const running = entry.status === 'running'
+    // The toast carries the id too
+    const inline =
+      entry.toast !== 'always' &&
+      document.querySelector(`[data-work-id="${CSS.escape(id)}"]:not(.toast)`)
+
+    if (inline || (running && state.dismissed)) {
+      this.remove(state.toast)
+      state.toast = null
+      return
+    }
+
+    if (!state.toast || !state.toast.isConnected || state.toast.classList.contains('leaving')) {
+      state.toast = this.add({
+        kind: 'work',
+        build: () => {},
+        onClose: () => {
+          state.dismissed = true
+        }
+      })
+      state.toast.dataset.workId = id
+    }
+
+    fillWork(state.toast, entry)
+
+    if (!running) {
+      const kind = entry.status === 'finished' ? 'success' : 'error'
+      state.toast.classList.replace('toast--work', `toast--${kind}`)
+      state.toast.querySelector('.toast-spinner')?.classList.replace('toast-spinner', 'toast-dot')
+      this.expire(state.toast, TIMEOUTS[kind])
+    }
+  }
+
+  add({ kind, text, initials, build, onClose }) {
     const toast = document.createElement('div')
     toast.className = `toast toast--${kind}`
 
@@ -63,6 +133,8 @@ export default class Toast {
     if (initials) {
       marker.className = 'toast-initials'
       marker.textContent = initials
+    } else if (kind === 'work') {
+      marker.className = 'toast-spinner'
     } else {
       marker.className = 'toast-dot'
     }
@@ -80,27 +152,34 @@ export default class Toast {
       close.className = 'toast-close'
       close.setAttribute('aria-label', document.body.dataset.toastClose || 'Close')
       close.textContent = '×'
-      close.addEventListener('click', () => this.remove(toast))
+      close.addEventListener('click', () => {
+        if (onClose) onClose()
+        this.remove(toast)
+      })
       toast.append(close)
     }
 
     this.stack.append(toast)
     animate(toast, { opacity: [0, 1], y: [8, 0] }, { duration: 0.18 })
 
-    const timeout = TIMEOUTS[kind]
-    if (timeout) {
-      let timer = setTimeout(() => this.remove(toast), timeout)
-      // Hovering holds a toast so it can be read.
-      toast.addEventListener('mouseenter', () => clearTimeout(timer))
-      toast.addEventListener('mouseleave', () => {
-        timer = setTimeout(() => this.remove(toast), 1500)
-      })
-    }
+    this.expire(toast, TIMEOUTS[kind])
 
     const toasts = this.stack.querySelectorAll('.toast:not(.leaving)')
     if (toasts.length > MAX_VISIBLE) this.remove(toasts[0])
 
     return toast
+  }
+
+  // Fades the toast after `timeout` ms; none keeps it until closed.
+  expire(toast, timeout) {
+    if (!timeout) return
+    let timer = setTimeout(() => this.remove(toast), timeout)
+    // Hovering holds a toast so it can be read.
+    toast.addEventListener('mouseenter', () => clearTimeout(timer))
+    toast.addEventListener('mouseleave', () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => this.remove(toast), 1500)
+    })
   }
 
   remove(toast) {
@@ -151,6 +230,44 @@ export default class Toast {
         this.popup = null
       })
     }
+  }
+}
+
+// The work's message, and its bar and count while it runs. Text only.
+function fillWork(toast, entry) {
+  const $text = toast.querySelector('.toast-text')
+  const running = entry.status === 'running'
+  const words = document.body.dataset
+  const fallback = entry.timed_out
+    ? words.workTimedOut
+    : entry.status === 'finished'
+      ? words.workDone
+      : entry.status === 'failed'
+        ? words.workFailed
+        : ''
+
+  const message = document.createElement('span')
+  message.textContent = entry.message || fallback || ''
+  $text.replaceChildren(message)
+
+  if (running && entry.total) {
+    const count = document.createElement('span')
+    count.className = 'toast-mono toast-count'
+    count.textContent = `${entry.done} / ${entry.total}`
+    $text.append(count)
+  }
+
+  if (running && entry.percent != null) {
+    const bar = document.createElement('span')
+    bar.className = 'toast-progress'
+    bar.setAttribute('role', 'progressbar')
+    bar.setAttribute('aria-valuemin', '0')
+    bar.setAttribute('aria-valuemax', '100')
+    bar.setAttribute('aria-valuenow', String(entry.percent))
+    const fill = document.createElement('span')
+    fill.style.width = `${entry.percent}%`
+    bar.append(fill)
+    $text.append(bar)
   }
 }
 

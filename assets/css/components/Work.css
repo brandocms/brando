@@ -1,0 +1,80 @@
+/**
+**  Work.css
+**
+**  Background work on the screen that started it
+**  (BrandoAdmin.Components.Work): a busy button and its status beside it.
+**  The toast for work elsewhere is in Toast.css.
+**/
+
+.work-action {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.work-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--brando-muted);
+  font-size: var(--brando-text-sm);
+  line-height: 18px;
+
+  /* No work under its key yet */
+  &:not([data-status]) {
+    display: none;
+  }
+
+  &[data-status="failed"] {
+    color: var(--brando-error-ink);
+  }
+}
+
+.work-count {
+  font-family: var(--brando-font-mono);
+  font-size: var(--brando-text-xs);
+}
+
+.work-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brando-status-published);
+
+  [data-status="failed"] > & {
+    background: var(--brando-error-ink);
+  }
+}
+
+.work-spinner {
+  flex: none;
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--brando-line);
+  border-top-color: var(--brando-accent);
+  border-radius: 50%;
+  animation: work-spin 900ms linear infinite;
+
+  .btn & {
+    border-color: currentColor;
+    border-top-color: transparent;
+    opacity: 0.7;
+  }
+}
+
+@keyframes work-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .work-spinner,
+  .toast-spinner::before {
+    animation: none;
+  }
+}

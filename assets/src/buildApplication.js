@@ -124,6 +124,7 @@ export default (hooks, enableDebug = false) => {
 
   window.addEventListener('phx:page-loading-stop', ({ detail }) => {
     topbar.hide()
+    app.toast?.refreshWork()
 
     if (detail.kind === 'redirect') {
       if (app.reconnected) {
@@ -205,6 +206,10 @@ export default (hooks, enableDebug = false) => {
       app.toast.notification(data.level, data.payload)
     })
 
+    app.userChannel.on('work', (entry) => {
+      app.toast.work(entry)
+    })
+
     app.userChannel.on('progress_popup', (data) => {
       app.toast.progressPopup(data.payload)
     })
@@ -261,6 +266,8 @@ export default (hooks, enableDebug = false) => {
     )
 
     app.userChannel.join().receive('ok', (params) => {
+      app.toast.syncWork(params.work || [])
+
       if (app.vsn) {
         // we've connected before. see if versions match!
         if (app.vsn !== params.vsn) {

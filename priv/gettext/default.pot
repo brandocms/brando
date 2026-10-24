@@ -847,6 +847,11 @@ msgstr ""
 msgid "%{used} used in the proposal · %{free} not used"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{version} is deployed"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "%{width} needs %{needed} units — only %{free} free in that row. Narrow another field, or start a new row."
@@ -2073,6 +2078,11 @@ msgstr ""
 
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
+msgid "Alt text is ready for review"
+msgstr ""
+
+#: lib/brando_admin/live/images/alt_text_live.ex
+#, elixir-autogen, elixir-format
 msgid "Alt text saved"
 msgstr ""
 
@@ -2947,6 +2957,11 @@ msgstr ""
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Building blocks"
+msgstr ""
+
+#: lib/brando/workers/ssg_build.ex
+#, elixir-autogen, elixir-format
+msgid "Building static version %{version}"
 msgstr ""
 
 #: lib/brando_admin/live/users/groups_live.ex
@@ -4488,6 +4503,11 @@ msgstr ""
 msgid "Could not create the translation"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not deploy %{version}"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Could not generate a suggestion. Try again."
@@ -4546,6 +4566,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not revert the frontend assets"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not roll back to %{version}"
 msgstr ""
 
 #: lib/brando_admin/live/content/module_form_live.ex
@@ -5495,6 +5520,11 @@ msgstr ""
 msgid "Deploy automatically after a successful build"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy of %{version} is queued"
+msgstr ""
+
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "Deploy this configuration only after reviewing groups, mapping application policies, and testing representative accounts."
@@ -5508,6 +5538,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Deployed"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Deploying %{version}"
 msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex
@@ -5578,6 +5613,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Description written"
+msgstr ""
+
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Descriptions are ready for review"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -5791,7 +5831,9 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props.ex
 #: lib/brando_admin/components/form/subform.ex
 #: lib/brando_admin/components/form/video_drawer.ex
+#: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/live/sites/webhooks_live.ex
+#: lib/brando_admin/work.ex
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr ""
@@ -7046,11 +7088,13 @@ msgstr ""
 msgid "Facebook, LinkedIn"
 msgstr ""
 
+#: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
+#: lib/brando_admin/work.ex
 #, elixir-format, elixir-autogen
 msgid "Failed"
 msgstr ""
@@ -7109,6 +7153,11 @@ msgstr ""
 #: lib/brando_admin/components/content/list.ex
 #, elixir-autogen, elixir-format
 msgid "Fetching entry..."
+msgstr ""
+
+#: lib/brando_admin/live/videos/video_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "Fetching thumbnails and titles"
 msgstr ""
 
 #: lib/brando_admin/components/form/notes_drawer.ex
@@ -9422,6 +9471,7 @@ msgstr ""
 msgid "Looked for the folder “%{name}”"
 msgstr ""
 
+#: lib/brando/workers/video_metadata_sweep.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "Looking up %{count} video"
@@ -10951,6 +11001,11 @@ msgstr ""
 #: lib/brando_admin/components/form/video_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "No video selected"
+msgstr ""
+
+#: lib/brando/workers/video_metadata_sweep.ex
+#, elixir-autogen, elixir-format
+msgid "No videos are missing details"
 msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex
@@ -12862,11 +12917,6 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
-msgid "Queued static build %{version}"
-msgstr ""
-
-#: lib/brando_admin/live/sites/publishing_live.ex
-#, elixir-autogen, elixir-format
 msgid "Queueing…"
 msgstr ""
 
@@ -14224,6 +14274,21 @@ msgstr ""
 msgid "Roll back to %{version}?"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rollback to %{version} is queued"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rolled back to %{version}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Rolling back to %{version}"
+msgstr ""
+
 #: lib/brando_admin/components/assets/file_browser.ex
 #, elixir-autogen, elixir-format
 msgid "Root"
@@ -14640,6 +14705,11 @@ msgstr ""
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Scheduled revision for publishing"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Scheduled static build %{version}"
 msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
@@ -15741,14 +15811,29 @@ msgstr ""
 msgid "Snippet length"
 msgstr ""
 
+#: lib/brando_admin/live/sites/seo_live.ex
+#, elixir-autogen, elixir-format
+msgid "Some descriptions could not be written"
+msgstr ""
+
 #: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "Some entries could not be copied."
 msgstr ""
 
+#: lib/brando_admin/live/images/alt_text_live.ex
+#, elixir-autogen, elixir-format
+msgid "Some images could not be described"
+msgstr ""
+
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Some users"
+msgstr ""
+
+#: lib/brando/workers/video_metadata_sweep.ex
+#, elixir-autogen, elixir-format
+msgid "Some videos could not be looked up"
 msgstr ""
 
 #: lib/brando/users/user_notifier.ex
@@ -15899,9 +15984,34 @@ msgstr ""
 msgid "Static"
 msgstr ""
 
-#: lib/brando_admin/live/sites/publishing_live.ex
+#: lib/brando/workers/ssg_build.ex
 #, elixir-autogen, elixir-format
-msgid "Static %{action} queued"
+msgid "Static build %{version} failed"
+msgstr ""
+
+#: lib/brando/workers/ssg_build.ex
+#, elixir-autogen, elixir-format
+msgid "Static build %{version} is deployed"
+msgstr ""
+
+#: lib/brando/workers/ssg_build.ex
+#, elixir-autogen, elixir-format
+msgid "Static build %{version} is queued"
+msgstr ""
+
+#: lib/brando/workers/ssg_build.ex
+#, elixir-autogen, elixir-format
+msgid "Static build %{version} is ready"
+msgstr ""
+
+#: lib/brando/workers/ssg_build.ex
+#, elixir-autogen, elixir-format
+msgid "Static build %{version} is ready, but deployment failed"
+msgstr ""
+
+#: lib/brando/workers/ssg_build.ex
+#, elixir-autogen, elixir-format
+msgid "Static build %{version} was cancelled"
 msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex
@@ -15956,6 +16066,12 @@ msgstr ""
 #: lib/brando_admin/components/content/list/saved_views.ex
 #, elixir-autogen, elixir-format
 msgid "Stop sharing"
+msgstr ""
+
+#: lib/brando_admin/components/layouts/root.html.heex
+#: lib/brando_admin/work.ex
+#, elixir-autogen, elixir-format
+msgid "Stopped reporting progress"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -17831,6 +17947,11 @@ msgstr ""
 #: lib/brando_admin/components/form/video_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Thumbnail"
+msgstr ""
+
+#: lib/brando/workers/video_metadata_sweep.ex
+#, elixir-autogen, elixir-format
+msgid "Thumbnails and titles fetched"
 msgstr ""
 
 #: lib/brando/forms/messages.ex

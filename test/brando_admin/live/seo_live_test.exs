@@ -288,6 +288,16 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
       assert has_element?(view, ".ai-suggestion textarea", "About the second")
       # Nothing is waiting any more, so there is nothing left to offer.
       refute has_element?(view, ".seo-batch")
+
+      # The batch reported as one piece of work, shown here rather than as a toast
+      BrandoAdmin.Work.Registry.sync()
+
+      assert has_element?(
+               view,
+               ~s(.work-status[data-work-id="seo-descriptions"][data-status="finished"]),
+               "Descriptions are ready for review"
+             )
+
       assert Enum.all?(pages, &(description(&1) == nil))
 
       [first, second] = Brando.SEO.Suggestions.list_open("en")

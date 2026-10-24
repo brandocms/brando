@@ -14,7 +14,8 @@ defmodule BrandoAdmin.UserChannel do
     "toast",
     "progress:show",
     "progress:hide",
-    "progress:update"
+    "progress:update",
+    "work"
   ])
 
   @doc """
@@ -32,7 +33,9 @@ defmodule BrandoAdmin.UserChannel do
     if to_string(assigned_user_id) == user_id and BrandoAdmin.AdminSocket.session_valid?(socket) and
          Realtime.authorize_account(assigned_user_id) == :ok do
       Realtime.subscribe()
-      {:ok, %{vsn: vsn}, socket}
+      # Running background work, so a new tab or a reload shows its toasts
+      work = assigned_user_id |> BrandoAdmin.Work.list() |> Enum.map(&BrandoAdmin.Work.to_payload/1)
+      {:ok, %{vsn: vsn, work: work}, socket}
     else
       # A bare :error crashed the join instead of refusing it
       {:error, %{reason: "forbidden"}}

@@ -17,9 +17,13 @@ defmodule BrandoAdmin.Images.AltTextLive do
   alias Brando.SEO.Suggestions
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.SuggestionReview
+  alias BrandoAdmin.Components.Work
   alias BrandoAdmin.Components.Workspace
 
   @fields [:alt]
+  @work_key "alt-text-suggestions"
+
+  on_mount BrandoAdmin.Work
 
   # The admin layout renders nothing until the socket connects, so the
   # queries wait for that.
@@ -42,6 +46,7 @@ defmodule BrandoAdmin.Images.AltTextLive do
     |> assign(:folder_id, nil)
     |> assign(:accepting_all, false)
     |> assign(:max_batch, Suggestions.max_batch())
+    |> assign(:work_key, @work_key)
     |> assign_state()
   end
 
@@ -82,6 +87,8 @@ defmodule BrandoAdmin.Images.AltTextLive do
           </div>
           <span>{@missing_count}</span>
         </header>
+
+        <Work.status key={@work_key} work={@work[@work_key]} class="alt-text-work" />
 
         <form :if={length(@folders) > 1} class="alt-text-filter" phx-change="folder">
           <label for="alt-text-folder">{gettext("Folder")}</label>
@@ -202,8 +209,18 @@ defmodule BrandoAdmin.Images.AltTextLive do
 
     if available? and candidates != [] do
       rows = Enum.map(candidates, &%{schema: Image, id: &1.id, title: image_title(&1)})
-      {:ok, count} = Suggestions.enqueue(rows, language, user, field: :alt)
-      send(self(), {:toast, ngettext("Describing one image", "Describing %{count} images", count)})
+
+      {:ok, _count} =
+        Suggestions.enqueue(rows, language, user,
+          field: :alt,
+          work: [
+            key: @work_key,
+            message: &ngettext("Describing one image", "Describing %{count} images", &1),
+            done: gettext("Alt text is ready for review"),
+            failed: gettext("Some images could not be described")
+          ]
+        )
+
       {:noreply, assign_state(socket)}
     else
       {:noreply, socket}

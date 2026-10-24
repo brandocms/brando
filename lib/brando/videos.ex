@@ -123,9 +123,13 @@ defmodule Brando.Videos do
   @doc """
   Queues a lookup of each video's thumbnail, title, duration and size at its
   source (see `fetch_metadata/2`). Returns how many were queued.
+
+  With `work: key`, each lookup is a step of the user's `BrandoAdmin.Work`
+  under `key` (started with a `total:`). A video whose lookup already waits
+  counts as done at once: that lookup does it.
   """
-  @spec enqueue_metadata([integer()], user | integer()) :: {:ok, non_neg_integer()}
-  def enqueue_metadata(video_ids, user) do
+  @spec enqueue_metadata([integer()], user | integer(), keyword()) :: {:ok, non_neg_integer()}
+  def enqueue_metadata(video_ids, user, opts \\ []) do
     # Callers of `create_video/2` pass a user or its id, as the Creator trait allows.
     user_id =
       case user do
@@ -133,13 +137,21 @@ defmodule Brando.Videos do
         id when is_integer(id) -> id
       end
 
+    work_key = opts[:work]
+
     # One at a time: `Oban.insert_all/1` skips the worker's uniqueness, and
     # a video whose lookup still waits would be looked up twice.
     Enum.each(video_ids, fn id ->
       %{"video_id" => id, "user_id" => user_id}
       |> Brando.Tenant.Job.attach()
       |> Brando.Worker.VideoMetadata.new()
+      |> then(&if(work_key, do: BrandoAdmin.Work.track(&1, user_id, work_key, step: true), else: &1))
       |> Oban.insert()
+      |> case do
+        {:ok, %Oban.Job{conflict?: true}} when not is_nil(work_key) -> BrandoAdmin.Work.advance(user_id, work_key)
+        {:error, _reason} when not is_nil(work_key) -> BrandoAdmin.Work.advance(user_id, work_key, :error)
+        _queued -> :ok
+      end
     end)
 
     {:ok, length(video_ids)}

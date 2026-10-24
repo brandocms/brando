@@ -3,15 +3,20 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Videos.Video
   use Gettext, backend: Brando.Gettext
 
+  on_mount BrandoAdmin.Work
+
   alias Brando.Videos
   alias Brando.Videos.Video
+  alias Brando.Worker.VideoMetadataSweep
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Assets.SortByUse
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.VideoPlayer
+  alias BrandoAdmin.Components.Work, as: WorkComponent
   alias BrandoAdmin.Components.Workspace
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.LiveView.AssetListHelpers
+  alias BrandoAdmin.Work
 
   @impl true
   def mount(_params, _session, socket) do
@@ -225,16 +230,25 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   # job queues them (`Brando.Worker.VideoMetadataSweep`), so a library of
   # thousands leaves the list responsive, and leaving it does not cut that
   # short.
+  #
+  # The sweep and its lookups report as one piece of work (BrandoAdmin.Work),
+  # started here so the button is busy before the sweep runs.
   def handle_event("fetch_metadata", _, socket) do
+    user = socket.assigns.current_user
     count = socket.assigns.missing_metadata_count
 
-    case Brando.Worker.VideoMetadataSweep.enqueue(socket.assigns.current_user) do
+    Work.start(
+      user,
+      VideoMetadataSweep.work_key(),
+      ngettext("Looking up %{count} video", "Looking up %{count} videos", count)
+    )
+
+    case VideoMetadataSweep.enqueue(user) do
       {:ok, _job} ->
-        send(self(), {:toast, ngettext("Looking up %{count} video", "Looking up %{count} videos", count)})
-        {:noreply, assign(socket, :missing_metadata_count, 0)}
+        {:noreply, socket}
 
       {:error, _reason} ->
-        send(self(), {:toast, gettext("Could not look the videos up")})
+        Work.fail(user, VideoMetadataSweep.work_key(), gettext("Could not look the videos up"))
         {:noreply, socket}
     end
   end
@@ -256,18 +270,20 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     ~H"""
     <div class="admin-workspace workspace-list media-workspace videos-workspace">
       <Workspace.header icon={@page_icon} title={gettext("Videos")}>
-        <button
-          :if={@missing_metadata_count > 0}
-          type="button"
-          class="btn"
+        <WorkComponent.button
+          :if={@missing_metadata_count > 0 || @work[VideoMetadataSweep.work_key()]}
+          key={VideoMetadataSweep.work_key()}
+          work={@work[VideoMetadataSweep.work_key()]}
+          running={gettext("Fetching thumbnails and titles")}
+          disabled={@missing_metadata_count == 0}
           phx-click="fetch_metadata"
           title={gettext("Look up thumbnails, titles and durations at each video's source")}
         >
           {gettext("Fetch thumbnails and titles")}
-          <span class="alt-text-missing">
+          <span :if={@missing_metadata_count > 0} class="alt-text-missing">
             {ngettext("%{count} missing", "%{count} missing", @missing_metadata_count)}
           </span>
-        </button>
+        </WorkComponent.button>
       </Workspace.header>
 
       <Content.modal
@@ -380,6 +396,20 @@ defmodule BrandoAdmin.Videos.VideoListLive do
     </div>
     """
   end
+
+  # The lookups are in: the thumbnails and titles they found, and what is
+  # still missing. Called by `on_mount BrandoAdmin.Work`.
+  def handle_work(%Work{key: key, status: status}, socket) when status != :running do
+    if key == VideoMetadataSweep.work_key() do
+      socket
+      |> assign(:missing_metadata_count, length(Videos.list_video_ids_missing_metadata()))
+      |> refresh()
+    else
+      socket
+    end
+  end
+
+  def handle_work(_work, socket), do: socket
 
   # After a change: the folders, and the counts the header shows (unused,
   # all folders), as handle_params assigns them.

@@ -19,6 +19,7 @@ defmodule Brando.Telemetry do
     )
 
     Brando.Notifications.JobFailures.attach()
+    BrandoAdmin.Work.Oban.attach()
     :ok
   end
 

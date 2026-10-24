@@ -1265,6 +1265,27 @@ defmodule E2EFixtureController do
 
   # An image in the library with its file on disk and no alt text, for
   # "Suggest alt text" with the fake model (`/e2e/field-ai/on`).
+  # Reports BrandoAdmin.Work for the admin, as a job would. The work registry
+  # is not in the SQL sandbox: specs use keys of their own and end their work.
+  def work(conn, %{"action" => action, "key" => key} = params)
+      when action in ~w(start update advance finish fail) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    user = Brando.Users.get_user!(%{matches: %{email: params["email"] || "admin@brandocms.com"}})
+    message = params["message"]
+
+    case action do
+      "start" -> BrandoAdmin.Work.start(user, key, message, total: params["total"], percent: params["percent"])
+      "update" -> BrandoAdmin.Work.update(user, key, message, percent: params["percent"])
+      "advance" -> BrandoAdmin.Work.advance(user, key)
+      "finish" -> BrandoAdmin.Work.finish(user, key, message)
+      "fail" -> BrandoAdmin.Work.fail(user, key, message)
+    end
+
+    BrandoAdmin.Work.Registry.sync()
+    send_resp(conn, 200, "")
+  end
+
   def alt_text_image(conn, _params) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)

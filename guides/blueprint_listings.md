@@ -286,6 +286,42 @@ routes are declared before the application's block, so they take precedence:
 a path Brando already uses stays Brando's, and the compiler warns that the
 application's clause cannot match. Give the screen a path of its own.
 
+### Background work
+
+A screen that starts a job can show it running, and how it ended, with
+`BrandoAdmin.Work`. Mark the job with the user who started it, a key and its
+messages, written in the user's language as it is queued:
+
+```elixir
+%{"shop_id" => shop.id}
+|> MyApp.Workers.FetchPolicies.new()
+|> BrandoAdmin.Work.track(socket.assigns.current_user, "shopify-policies",
+  running: gettext("Fetching policies"),
+  done: gettext("Policies fetched"),
+  failed: gettext("Could not fetch the policies")
+)
+|> Oban.insert()
+```
+
+The screen mounts `on_mount BrandoAdmin.Work`, which keeps `@work` (key to
+the latest state), and shows it with `BrandoAdmin.Components.Work`. Its
+button is busy while the work runs, and the status after it says how it
+ended:
+
+```heex
+<Work.button key="shopify-policies" work={@work["shopify-policies"]} running={gettext("Fetching…")} phx-click="fetch">
+  {gettext("Fetch policies")}
+</Work.button>
+```
+
+A LiveView that defines `handle_work(work, socket)` is called after each
+change, to reload what the job changed ("Last fetched"). On every other
+screen the user gets a toast for the work instead, updated in place until it
+ends, and a screen opened or reloaded while the job runs shows it running. A
+job can also report its own progress with `Work.update/4` (`percent:`), and a
+batch of jobs can count as one piece of work (`total:` and `step: true`). The
+`BrandoAdmin.Work` module documentation has the details.
+
 ## Declaring listings
 
 ```elixir

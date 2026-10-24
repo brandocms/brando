@@ -38,7 +38,16 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     %{site: Registry.get_site(site.id), environment: environment}
   end
 
+  defmodule Builder do
+    @moduledoc false
+    def build(_site, _environment, opts) do
+      File.mkdir_p!(opts[:output_path])
+      {:ok, %{file_count: 0, total_size: 0, url_count: 0, processed_urls: 0, failed_urls: []}}
+    end
+  end
+
   test "queues and renders a static build from the selected environment", context do
+    put_test_env(:ssg_builder, Builder)
     {:ok, view, html} = live(context.conn, "/admin/config/publishing")
 
     assert html =~ "Publishing"
@@ -61,6 +70,27 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     assert build.note == "Campaign release"
     assert build.environment_id == context.environment.id
     assert has_element?(view, "#ssg-build-#{build.id}", "Campaign release")
+
+    # The build ran inline in the LiveView's process, and reported on its
+    # row, which keeps it out of a toast
+    BrandoAdmin.Work.Registry.sync()
+    assert has_element?(view, "#ssg-build-#{build.id} .work-status[data-status=finished]", "Static build v1 is ready")
+  end
+
+  test "a deploy reports on the build's row", context do
+    {:ok, build} = Builds.request_build(context.site, context.environment, [])
+    {:ok, ready} = Builds.update(build, %{status: :ready, built_at: DateTime.utc_now()})
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+    user = :sys.get_state(view.pid).socket.assigns.current_user
+
+    # The job runs inline: without a strategy it fails at once, with retries
+    # left, rather than calling out
+    {:ok, _site} = Registry.update_site(context.site, %{deploy_config: %{strategy: nil, target: nil}})
+    view |> element("#ssg-build-#{ready.id} button[phx-click=deploy]") |> render_click()
+
+    BrandoAdmin.Work.Registry.sync()
+    assert has_element?(view, "#ssg-build-#{ready.id} .work-status[data-status=running]", "Deploying v1")
+    BrandoAdmin.Work.finish(user, Brando.Worker.SSGBuild.work_key(ready.id), nil, global: true)
   end
 
   test "hides publishing from dynamically delivered sites", context do

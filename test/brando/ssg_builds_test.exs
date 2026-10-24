@@ -94,6 +94,27 @@ defmodule Brando.SSGBuildsTest do
     assert File.read!(Path.join(ready.build_path, "index.html")) == "built"
   end
 
+  test "reports the build to its creator as it is queued, built and ready", context do
+    creator = Brando.Factory.insert(:random_user)
+    BrandoAdmin.Work.subscribe(creator)
+    build = request_build(context.site, context.environment, creator_id: creator.id)
+    key = SSGBuild.work_key(build.id)
+
+    assert_receive {:work, ^key, :running, %BrandoAdmin.Work{message: "Static build v1 is queued", prefix: nil}}
+
+    put_test_env(:ssg_builder, SuccessfulBuilder)
+    assert :ok = perform_job(SSGBuild, %{"build_id" => build.id})
+
+    assert_receive {:work, ^key, :running, %BrandoAdmin.Work{message: "Building static version v1"}}
+    assert_receive {:work, ^key, :finished, %BrandoAdmin.Work{message: "Static build v1 is ready"}}
+
+    failed = request_build(context.site, context.environment, creator_id: creator.id)
+    failed_key = SSGBuild.work_key(failed.id)
+    put_test_env(:ssg_builder, FailedBuilder)
+    assert {:error, :url_failures} = perform_job(SSGBuild, %{"build_id" => failed.id})
+    assert_receive {:work, ^failed_key, :failed, %BrandoAdmin.Work{message: "Static build v2 failed"}}
+  end
+
   test "persists failed URLs and a terminal failure log", context do
     build = request_build(context.site, context.environment)
     put_test_env(:ssg_builder, FailedBuilder)

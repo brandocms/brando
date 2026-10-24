@@ -199,7 +199,9 @@ defmodule Brando.SSG.Builds do
 
     Repo.transaction(fn ->
       with {:ok, build} <- %Build{} |> Build.changeset(attrs) |> Repo.insert(@public_opts),
-           {:ok, _job} <- enqueue(build, scheduled_at) do
+           # Before the job, which may run at once; a scheduled build reports when it runs
+           :ok <- if(is_nil(scheduled_at), do: SSGBuild.report_queued(build), else: :ok),
+           {:ok, _job} <- enqueue_or_withdraw(build, scheduled_at) do
         build
       else
         {:error, reason} -> Repo.rollback(reason)
@@ -212,6 +214,13 @@ defmodule Brando.SSG.Builds do
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  defp enqueue_or_withdraw(build, scheduled_at) do
+    with {:error, _reason} = error <- enqueue(build, scheduled_at) do
+      if is_nil(scheduled_at), do: SSGBuild.report_failed(build)
+      error
     end
   end
 

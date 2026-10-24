@@ -48,6 +48,14 @@ defmodule Brando.SEO.Suggestions do
   asked for again.
 
   Returns `{:ok, count}` with the number of jobs queued.
+
+  With `work:`, the batch is one `BrandoAdmin.Work` for `user`, counting
+  the jobs as they end: `key`, `message` (a function of the count, for the
+  work while it runs), and `done` and `failed` for the end.
+
+      Suggestions.enqueue(rows, "en", user,
+        work: [key: "seo-descriptions", message: &ngettext("Writing one", "Writing %{count}", &1), done: "…", failed: "…"]
+      )
   """
   @spec enqueue([Row.t()], String.t(), map() | atom(), keyword()) :: {:ok, non_neg_integer()}
   def enqueue(rows, language, user, opts \\ []) do
@@ -55,20 +63,42 @@ defmodule Brando.SEO.Suggestions do
     language = to_string(language)
     waiting = waiting_keys(language, field)
     now = NaiveDateTime.utc_now(:second)
+    work = opts[:work]
 
     rows =
       rows
       |> Enum.reject(&MapSet.member?(waiting, {inspect(&1.schema), &1.id}))
       |> Enum.take(max_batch())
 
-    {:ok, Enum.count(rows, &match?({:ok, _}, queue(&1, language, field, user, now)))}
+    if work && rows != [] do
+      BrandoAdmin.Work.start(user, work[:key], work[:message].(length(rows)),
+        total: length(rows),
+        done: work[:done],
+        failed: work[:failed]
+      )
+    end
+
+    queued =
+      Enum.count(rows, fn row ->
+        case queue(row, language, field, user, now, work && work[:key]) do
+          {:ok, _} ->
+            true
+
+          _error ->
+            # Its job never runs to count itself
+            if work, do: BrandoAdmin.Work.advance(user, work[:key], :error)
+            false
+        end
+      end)
+
+    {:ok, queued}
   end
 
   # A suggestion is queued together with its job, or not at all: one left
   # queued without a job would never be written, and later runs skip it.
   # One job at a time: `Oban.insert_all/1` skips the worker's uniqueness,
   # and two runs that both found the entry free would write it twice.
-  defp queue(row, language, field, user, now) do
+  defp queue(row, language, field, user, now, work_key) do
     Repo.transaction(fn ->
       suggestion =
         Repo.insert!(
@@ -101,8 +131,14 @@ defmodule Brando.SEO.Suggestions do
       %{"suggestion_id" => suggestion.id}
       |> Brando.Tenant.Job.attach()
       |> SEOSuggestionGenerator.new()
+      |> then(&if(work_key, do: BrandoAdmin.Work.track(&1, user, work_key, step: true), else: &1))
       |> Oban.insert()
       |> case do
+        {:ok, %Oban.Job{conflict?: true}} ->
+          # A job still waiting for this suggestion writes it, untracked
+          if work_key, do: BrandoAdmin.Work.advance(user, work_key)
+          suggestion
+
         {:ok, _job} ->
           suggestion
 
