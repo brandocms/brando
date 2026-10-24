@@ -17,6 +17,9 @@ defmodule Brando.CaptionsTest do
     refute Captions.present?(~s(<p style="text-align: center;"><br></p>))
     refute Captions.present?("<p>&nbsp;</p><p> </p>")
     refute Captions.present?("<p><strong></strong></p>")
+    refute Captions.present?("<h2></h2>")
+    refute Captions.present?("<ul><li></li></ul>")
+    assert Captions.present?("<h2>Tour</h2>")
     assert Captions.present?("<p>&amp;</p>")
     assert Captions.present?("Fish & chips")
     assert Captions.normalize(~s(<p style="text-align: center;"></p>)) == nil

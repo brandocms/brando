@@ -97,9 +97,9 @@ defmodule Brando.Captions do
 
   def plain(_text), do: nil
 
-  # Text formatting a rich-text library title would have held. Anything else
-  # that looks like a tag is text to escape.
-  @markup_tags ~w(p br em strong b i u a span sub sup)
+  # The markup the rich-text caption editor makes, which a rich-text library
+  # title would have held too. Anything else that looks like a tag is text.
+  @markup_tags ~w(p br em strong b i u a span sub sup h1 h2 h3 h4 h5 h6 ul ol li blockquote)
 
   defp markup?(text) do
     case Floki.parse_fragment(text) do
