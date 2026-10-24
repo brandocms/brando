@@ -7570,26 +7570,11 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp take_handed_over(socket, copy, fields) do
-    %{schema: schema, entry: entry, form_blueprint: blueprint, current_user: user} = socket.assigns
+    %{schema: schema, entry: entry, current_user: user} = socket.assigns
     main = copy.payload["main"] || %{}
     handed_transformers = copy.payload["transformers"] || %{}
     own = Drafts.main_params(socket, socket.assigns.form.source)
-
-    uncast = for key <- fields, Map.has_key?(main, key), main[key] != own[key], do: key
-
-    relations =
-      for field <- relation_fields(socket),
-          key = to_string(field),
-          Map.has_key?(main, key),
-          main[key] != own[key],
-          do: key
-
-    transformers =
-      for {name, _, _} <- blueprint.transformers,
-          key = to_string(name),
-          Map.has_key?(handed_transformers, key),
-          handed_transformers[key] != Brando.Drafts.Params.snapshot(Map.get(entry, name) || []),
-          do: key
+    {uncast, relations, transformers} = handed_keys(socket, copy, fields, own)
 
     if uncast == [] and relations == [] and transformers == [] do
       socket
@@ -7625,6 +7610,26 @@ defmodule BrandoAdmin.Components.Form do
     error ->
       Logger.warning("==> Form: could not take the relations another tab handed over: #{inspect(error.__struct__)}")
       socket
+  end
+
+  # What the handed-over copy has otherwise than this form, which doesn't
+  # sync: values typed that didn't cast (`fields`), relations, transformers.
+  defp handed_keys(socket, copy, fields, own) do
+    %{entry: entry, form_blueprint: blueprint} = socket.assigns
+    main = copy.payload["main"] || %{}
+    handed_transformers = copy.payload["transformers"] || %{}
+    differs? = fn key -> Map.has_key?(main, key) and main[key] != own[key] end
+
+    relations = for field <- relation_fields(socket), key = to_string(field), differs?.(key), do: key
+
+    transformers =
+      for {name, _, _} <- blueprint.transformers,
+          key = to_string(name),
+          Map.has_key?(handed_transformers, key),
+          handed_transformers[key] != Brando.Drafts.Params.snapshot(Map.get(entry, name) || []),
+          do: key
+
+    {Enum.filter(fields, differs?), relations, transformers}
   end
 
   defp apply_restored_changeset(socket, changeset, source, working_copy \\ nil) do

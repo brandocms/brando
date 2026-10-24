@@ -119,19 +119,13 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
     # This tab's old process, after a reconnect or a reload
     ghost = metas |> Enum.filter(&(&1.tab == tab)) |> Enum.max_by(&{&1.seq, &1.pid}, fn -> nil end)
     others = Enum.reject(metas, &(&1.tab == tab))
-
-    claim =
-      cond do
-        ghost && ghost.claim > 0 -> ghost.claim
-        Enum.any?(others, &(&1.claim > 0)) -> 0
-        true -> next_claim(others)
-      end
+    edited? = ghost != nil and ghost.claim > 0
 
     meta = %{
       tab: tab,
       pid: self(),
       seq: seq,
-      claim: claim,
+      claim: opening_claim(ghost, others),
       opened_at: (ghost && ghost.opened_at) || System.system_time(:second)
     }
 
@@ -144,8 +138,8 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
       key: key,
       meta: meta,
       schema: schema,
-      mode: if(ghost && ghost.claim > 0, do: :released, else: :waiting),
-      edited?: !!(ghost && ghost.claim > 0),
+      mode: if(edited?, do: :released, else: :waiting),
+      edited?: edited?,
       others?: others != [],
       closed?: false,
       other: nil,
@@ -162,11 +156,17 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
     |> publish(state)
   end
 
+  # The claim a tab opens with: its old process's, none while another of the
+  # user's tabs claims, or one of its own.
+  defp opening_claim(%{claim: claim}, _others) when claim > 0, do: claim
+
+  defp opening_claim(_ghost, others),
+    do: if(Enum.any?(others, &(&1.claim > 0)), do: 0, else: next_claim(others))
+
   # The user's tabs on the topic. A process of this node that has died is
   # no tab, though the tracker lists it until it has handled the exit.
   # Fields a meta from an older Brando lacks (a rolling deploy) default.
-  @doc false
-  def metas(topic, key) do
+  defp metas(topic, key) do
     case Brando.presence().list(topic) do
       %{^key => %{metas: metas}} ->
         for meta <- metas, valid_meta?(meta), not dead?(meta.pid), do: Map.put_new(meta, :seq, 0)
@@ -183,7 +183,7 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
 
   defp dead?(pid), do: node(pid) == node() and not Process.alive?(pid)
 
-  @doc false
+  @doc "A claim over every claim in `metas`: one more than the highest."
   def next_claim(metas), do: Enum.reduce(metas, 0, &max(&1.claim, &2)) + 1
 
   @doc """
@@ -203,48 +203,23 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
   """
   def settle(state, metas) do
     me = state.meta
-    # A newer process of this browser tab is the tab now: this one has no
-    # browser left (`## A browser tab`), and edits nothing.
-    superseded? = Enum.any?(metas, &(&1.tab == me.tab and &1.pid != me.pid and {&1.seq, &1.pid} > {me.seq, me.pid}))
+    superseded? = superseded?(me, metas)
     # This tab as it knows itself: its own presence can lag behind an update,
     # and its old processes are not other tabs.
     metas = [me | Enum.reject(metas, &(&1.tab == me.tab))]
     others = Enum.reject(metas, &(&1.pid == me.pid))
     editor = editor(metas)
-    mine? = editor != nil and editor.pid == me.pid and not superseded?
+    mine? = not superseded? and editor?(editor, me)
 
     {mode, actions} =
       cond do
-        superseded? ->
-          {:released, []}
-
-        mine? and state.mode == :taking ->
-          # The tab it waits for may have closed: it can't hand over then.
-          if state.from && Enum.any?(others, &(&1.pid == state.from)),
-            do: {:taking, []},
-            else: {:editing, [:took_over]}
-
-        mine? ->
-          {:editing, if(state.mode == :editing, do: [], else: [:took_over])}
-
-        state.mode == :editing ->
-          {:released, [{:release, editor.pid}]}
-
-        state.mode == :taking ->
-          {if(state.edited?, do: :released, else: :waiting), []}
-
-        true ->
-          {state.mode, []}
+        superseded? -> {:released, []}
+        mine? -> mode_editing(state, others)
+        true -> mode_not_editing(state, editor)
       end
 
-    other = if editor && not mine?, do: editor, else: Enum.max_by(others, & &1.opened_at, fn -> nil end)
-
-    # A tab that doesn't edit claims nothing: its old claim would have it
-    # edit again by itself once the tab that edits closes.
-    {meta, actions} =
-      if mode in [:waiting, :released] and me.claim > 0,
-        do: {%{me | claim: 0}, actions ++ [:unclaim]},
-        else: {me, actions}
+    other = named_other(editor, mine?, others)
+    {meta, actions} = unclaim(me, mode, actions)
 
     %{
       state
@@ -258,6 +233,42 @@ defmodule BrandoAdmin.LiveView.Form.Tabs do
     }
     |> Map.put(:actions, actions)
   end
+
+  # A newer process of this browser tab is the tab now: this one has no
+  # browser left (`## A browser tab`), and edits nothing.
+  defp superseded?(me, metas),
+    do: Enum.any?(metas, &(&1.tab == me.tab and &1.pid != me.pid and {&1.seq, &1.pid} > {me.seq, me.pid}))
+
+  defp editor?(%{pid: pid}, %{pid: pid}), do: true
+  defp editor?(_editor, _me), do: false
+
+  # The tab the form names: the one that edits, or the latest other one.
+  defp named_other(editor, false, _others) when not is_nil(editor), do: editor
+  defp named_other(_editor, _mine?, others), do: Enum.max_by(others, & &1.opened_at, fn -> nil end)
+
+  # The tab holds the highest claim. Taking over, it waits for the tab it
+  # took from, unless that one has closed: it can't hand over then.
+  defp mode_editing(%{mode: :taking} = state, others) do
+    if state.from && Enum.any?(others, &(&1.pid == state.from)),
+      do: {:taking, []},
+      else: {:editing, [:took_over]}
+  end
+
+  defp mode_editing(%{mode: :editing}, _others), do: {:editing, []}
+  defp mode_editing(_state, _others), do: {:editing, [:took_over]}
+
+  # Another tab holds the highest claim.
+  defp mode_not_editing(%{mode: :editing}, editor), do: {:released, [{:release, editor.pid}]}
+  defp mode_not_editing(%{mode: :taking, edited?: true}, _editor), do: {:released, []}
+  defp mode_not_editing(%{mode: :taking}, _editor), do: {:waiting, []}
+  defp mode_not_editing(state, _editor), do: {state.mode, []}
+
+  # A tab that doesn't edit claims nothing: its old claim would have it
+  # edit again by itself once the tab that edits closes.
+  defp unclaim(%{claim: claim} = me, mode, actions) when mode in [:waiting, :released] and claim > 0,
+    do: {%{me | claim: 0}, actions ++ [:unclaim]}
+
+  defp unclaim(me, _mode, actions), do: {me, actions}
 
   @doc """
   The editor pressed Edit here or Take editing back: this tab claims. It
