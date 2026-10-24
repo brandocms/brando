@@ -20,12 +20,7 @@
   "dependencies": {
     "@brandocms/jupiter": "5.0.0-beta.19"
   },
-  "pnpm": {
-    "ignoredBuiltDependencies": [
-      "core-js"
-    ]
-  },
-  "packageManager": "pnpm@10.32.1",
+  "packageManager": "pnpm@12.15.0",
   "engines": {
     "node": "^22.12.0 || >=24.0.0"
   }

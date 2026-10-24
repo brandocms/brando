@@ -1,0 +1,11 @@
+# pnpm's settings for the admin (`mix brando.gen.backend --upgrade` keeps
+# your own).
+
+# Dependencies whose install scripts run; any other with one fails the install
+allowBuilds:
+  esbuild: true
+
+# pnpm waits a day before installing a new release. BrandoJS installs the
+# day it is published, so the admin can match a Brando released that day.
+minimumReleaseAgeExclude:
+  - '@brandocms/*'

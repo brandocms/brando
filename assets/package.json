@@ -83,18 +83,8 @@
     "svelte": "^5.57.2",
     "vite": "^8.3.3"
   },
-  "pnpm": {
-    "overrides": {
-      "prosemirror-model": "1.25.12",
-      "prosemirror-transform": "1.12.2",
-      "prosemirror-view": "1.42.6"
-    },
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  },
   "engines": {
     "node": ">=24.0.0"
   },
-  "packageManager": "pnpm@10.32.1"
+  "packageManager": "pnpm@12.15.0"
 }

@@ -9,7 +9,7 @@ Conflicting generated files stop the plan, including with `--yes`.
 ## Prerequisites
 
 - Elixir 1.18 or newer, and PostgreSQL.
-- Node.js 24 and pnpm 10, for the admin's and the site's Vite builds.
+- Node.js 24 and pnpm 12, for the admin's and the site's Vite builds.
 - A build environment Image and Vix support, for image processing with
   libvips.
 - Yalc, while Brando is a development version (`-dev`, such as 0.55.0-dev).
@@ -473,7 +473,7 @@ Brando is tested with phx_new 1.8.13, igniter_new 0.5.28, Phoenix 1.8.15,
 LiveView 1.2.12, Elixir 1.20.4, OTP 28.5.0.8 and PostgreSQL 16.1.
 
 A new install pins that toolchain in a `.tool-versions`, which asdf and
-mise both read: Erlang 28.5.0.8, Elixir 1.20.4, Node.js 24 and pnpm 10.32.1 (the
+mise both read: Erlang 28.5.0.8, Elixir 1.20.4, Node.js 24 and pnpm 12.15.0 (the
 Node.js major and pnpm the Dockerfile's asset stages use). With asdf or mise,
 `mix` and `pnpm` in the application then run those versions whatever the
 machine's defaults are; run `mise install` or `asdf install` for the Node.js

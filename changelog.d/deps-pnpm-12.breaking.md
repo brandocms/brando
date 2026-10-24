@@ -1,0 +1,3 @@
+- New applications use pnpm 12, with pnpm's settings in `assets/backend/pnpm-workspace.yaml` and `assets/frontend/pnpm-workspace.yaml`; `mix brando.gen.backend --upgrade` moves an existing admin to pnpm 12 and moves the settings from `package.json`'s `pnpm` field, which pnpm 11 stopped reading.
+  Run `mix brando.gen.backend --upgrade` and `mix brando.assets.setup --backend-only`, then commit `assets/backend/pnpm-workspace.yaml` and the updated `pnpm-lock.yaml` (an installed pnpm 10 runs the pnpm 12 the admin's `packageManager` names).
+  `assets/frontend` keeps the pnpm its `package.json` names until you move it ("Admin assets" in the 0.53 migration guide).

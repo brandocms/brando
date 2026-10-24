@@ -61,6 +61,35 @@ defmodule Mix.Brando.Igniter.AssetsTest do
     assert Enum.all?(plan.tasks, fn {task, _args} -> task == "brando.assets.copy" end)
   end
 
+  # pnpm edits it too, writing the exemptions `minimumReleaseAge` asks for
+  test "generating keeps an existing pnpm-workspace.yaml, and names a package.json pnpm field pnpm ignores" do
+    own = "allowBuilds:\n  esbuild: true\nminimumReleaseAgeExclude:\n  - '@brandocms/*'\n  - vite@8.4.0\n"
+
+    package =
+      ~s({"dependencies":{"@brandocms/brandojs":"link:../../../assets"},"pnpm":{"onlyBuiltDependencies":["esbuild"]}})
+
+    plan =
+      IgniterCase.phoenix_project(
+        files: %{"assets/backend/pnpm-workspace.yaml" => own, "assets/backend/package.json" => package}
+      )
+      |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Backend, [])
+
+    assert plan.issues == []
+    Igniter.Test.assert_unchanged(plan, "assets/backend/pnpm-workspace.yaml")
+    assert Enum.any?(plan.notices, &(&1 =~ "onlyBuiltDependencies" and &1 =~ "assets/backend/pnpm-workspace.yaml"))
+    # It has what the admin needs
+    refute Enum.any?(plan.notices, &(&1 =~ "is your own"))
+
+    # One that lacks it is kept too, and named
+    plan =
+      IgniterCase.phoenix_project(files: %{"assets/backend/pnpm-workspace.yaml" => "packages: []\n"})
+      |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Backend, [])
+
+    assert plan.issues == []
+    Igniter.Test.assert_unchanged(plan, "assets/backend/pnpm-workspace.yaml")
+    assert Enum.any?(plan.notices, &(&1 =~ "is your own" and &1 =~ "'esbuild': true"))
+  end
+
   defp generate_backend(igniter, version) do
     igniter |> Igniter.assign(:brando_version, version) |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Backend, [])
   end
@@ -156,7 +185,7 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       # The file's own key order is kept, and new keys follow the template's.
       keys = Jason.decode!(source, objects: :ordered_objects).values |> Enum.map(&elem(&1, 0))
       assert Enum.take(keys, 6) == ~w(name version type scripts dependencies devDependencies)
-      assert Enum.drop(keys, 6) == ~w(pnpm engines packageManager)
+      assert Enum.drop(keys, 6) == ~w(engines packageManager)
 
       # Nested objects keep their order too.
       ordered = Jason.decode!(source, objects: :ordered_objects)
@@ -171,8 +200,13 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       refute Map.has_key?(package["devDependencies"], "svelte-preprocess")
       assert package["packageManager"] == wanted["packageManager"]
       assert package["engines"] == wanted["engines"]
-      assert package["pnpm"]["onlyBuiltDependencies"] == wanted["pnpm"]["onlyBuiltDependencies"]
-      assert package["pnpm"]["overrides"] == wanted["pnpm"]["overrides"]
+      # pnpm's settings are in pnpm-workspace.yaml, the template's
+      refute Map.has_key?(package, "pnpm")
+
+      assert IgniterCase.source(plan, "assets/backend/pnpm-workspace.yaml") ==
+               template("assets/backend/pnpm-workspace.yaml")
+
+      refute Enum.any?(plan.notices, &(&1 =~ "minimumReleaseAgeExclude"))
 
       assert package["dependencies"]["@brandocms/brandojs"] == "file:.yalc/@brandocms/brandojs"
       assert package["dependencies"]["site-widget"] == "^2.0.0"
@@ -196,6 +230,101 @@ defmodule Mix.Brando.Igniter.AssetsTest do
       assert IgniterCase.source(plan, "assets/backend/europa.json5") == template("assets/backend/europa.json5")
       # Its stylesheet keeps importing BrandoJS's: the Vite plugin resolves package imports.
       Igniter.Test.assert_unchanged(plan, "assets/backend/css/app.css")
+    end
+
+    # pnpm 11 stopped reading package.json's `pnpm` field
+    test "moves the site's own pnpm settings to pnpm-workspace.yaml" do
+      package =
+        @old_package
+        |> Jason.decode!()
+        |> Map.put("pnpm", %{
+          "overrides" => %{"@codemirror/language" => "6.12.4", "left-pad" => "1.3.0"},
+          "onlyBuiltDependencies" => ["esbuild", "sharp"],
+          "ignoredBuiltDependencies" => ["core-js", "esbuild"],
+          "patchedDependencies" => %{"vite" => "patches/vite.patch"}
+        })
+        |> Jason.encode!(pretty: true)
+
+      plan = upgrade(old_backend(%{"assets/backend/package.json" => package}))
+      assert plan.issues == []
+
+      # What the field held that pnpm-workspace.yaml takes over leaves it
+      assert upgraded_package(plan)["pnpm"] == %{"patchedDependencies" => %{"vite" => "patches/vite.patch"}}
+      assert Enum.any?(plan.notices, &(&1 =~ "patchedDependencies" and &1 =~ "pnpm-workspace.yaml"))
+
+      # The template's settings, then the site's: the template's esbuild
+      # (allowed, whatever the site chose) and the retired CodeMirror pin are
+      # not repeated
+      assert IgniterCase.source(plan, "assets/backend/pnpm-workspace.yaml") ==
+               String.replace(
+                 template("assets/backend/pnpm-workspace.yaml"),
+                 "  esbuild: true\n",
+                 "  esbuild: true\n  'sharp': true\n  'core-js': false\n"
+               ) <> "\n# Moved from package.json's `pnpm` field\noverrides:\n  'left-pad': '1.3.0'\n"
+    end
+
+    test "leaves a site's own pnpm-workspace.yaml alone, and names what to move to it" do
+      package =
+        @old_package |> Jason.decode!() |> Map.put("pnpm", %{"onlyBuiltDependencies" => ["sharp"]}) |> Jason.encode!()
+
+      own = "packages: []\nallowBuilds:\n  esbuild: true\n"
+
+      plan =
+        upgrade(old_backend(%{"assets/backend/package.json" => package, "assets/backend/pnpm-workspace.yaml" => own}))
+
+      refute Map.has_key?(upgraded_package(plan), "pnpm")
+      Igniter.Test.assert_unchanged(plan, "assets/backend/pnpm-workspace.yaml")
+      assert Enum.any?(plan.notices, &(&1 =~ "'sharp': true"))
+      # It lacks the exemption that lets the admin install a BrandoJS published today
+      assert Enum.any?(plan.notices, &(&1 =~ "minimumReleaseAgeExclude"))
+    end
+
+    test "names what a site's own pnpm-workspace.yaml lacks, with no pnpm field left to move" do
+      # One package exempted is not Brando's scope, and esbuild has no choice
+      own = "allowBuilds:\n  sharp: true\nminimumReleaseAgeExclude:\n  - '@brandocms/brandojs' # - '@brandocms/*'\n"
+      plan = upgrade(old_backend(%{"assets/backend/pnpm-workspace.yaml" => own}))
+
+      Igniter.Test.assert_unchanged(plan, "assets/backend/pnpm-workspace.yaml")
+      notice = Enum.find(plan.notices, &(&1 =~ "assets/backend/pnpm-workspace.yaml is your own"))
+      assert notice =~ "allowBuilds:\n      'esbuild': true"
+      assert notice =~ "minimumReleaseAgeExclude:\n      - '@brandocms/*'"
+
+      # The scope under another setting is not the exemption
+      own = "allowBuilds:\n  esbuild: true\nignoredOptionalDependencies:\n  - '@brandocms/*'\n"
+      plan = upgrade(old_backend(%{"assets/backend/pnpm-workspace.yaml" => own}))
+      notice = Enum.find(plan.notices, &(&1 =~ "is your own"))
+      assert notice =~ "minimumReleaseAgeExclude"
+      refute notice =~ "esbuild"
+
+      # With both, in block or flow style, nothing to say
+      for own <- [
+            "allowBuilds:\n  'esbuild': true # the admin's\n\nminimumReleaseAgeExclude:\n  - \"@brandocms/*\"\n",
+            "allowBuilds: {esbuild: true, sharp: false}\nminimumReleaseAgeExclude: ['@brandocms/*', vite]\n"
+          ] do
+        plan = upgrade(old_backend(%{"assets/backend/pnpm-workspace.yaml" => own}))
+        refute Enum.any?(plan.notices, &(&1 =~ "is your own")), own
+      end
+    end
+
+    # The 0.54 template's field holds only what the template sets itself, but
+    # a file of the site's own may not allow it yet
+    test "names what the admin needs for a site's own pnpm-workspace.yaml that lacks it" do
+      package =
+        @old_package
+        |> Jason.decode!()
+        |> Map.put("pnpm", %{"onlyBuiltDependencies" => ["esbuild"], "overrides" => %{"@codemirror/language" => "6.12.4"}})
+        |> Jason.encode!()
+
+      plan =
+        upgrade(
+          old_backend(%{
+            "assets/backend/package.json" => package,
+            "assets/backend/pnpm-workspace.yaml" => "onlyBuiltDependencies:\n  - esbuild\n"
+          })
+        )
+
+      refute Map.has_key?(upgraded_package(plan), "pnpm")
+      assert Enum.any?(plan.notices, &(&1 =~ "allowBuilds:\n      'esbuild': true"))
     end
 
     test "an npm BrandoJS pin moves to Brando's spec, a local source stays" do
