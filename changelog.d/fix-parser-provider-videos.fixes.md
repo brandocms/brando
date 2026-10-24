@@ -1,0 +1,2 @@
+- A video block or ref holding a Bunny, Mux, Cloudflare or Vimeo account video renders the video, with the block's settings, instead of nothing.
+- A Bunny video takes its own width and height for its aspect ratio, instead of always 16:9, and a video block's poster applies to provider videos too.

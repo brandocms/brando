@@ -698,6 +698,22 @@ defmodule Brando.Villain.Parser do
     |> Phoenix.LiveViewTest.rendered_to_string()
   end
 
+  # Any other video record (Bunny, Mux, Cloudflare, a Vimeo account, and
+  # whatever provider comes next) renders as `Brando.HTML.video/1` renders it,
+  # handed the record and the block's options. A record the provider hasn't
+  # finished gets its empty comment there.
+  def video(%Brando.Videos.Video{} = video, opts) do
+    assigns = %{
+      video: video,
+      opts: parser_module(opts).video_file_options(video),
+      cover_image: video.cover_image
+    }
+
+    assigns
+    |> Brando.Villain.Parser.video_tag()
+    |> Phoenix.LiveViewTest.rendered_to_string()
+  end
+
   def video(_, _), do: ""
 
   def file(%{file: %Brando.Files.File{} = file} = data, _) do

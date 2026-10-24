@@ -247,9 +247,14 @@ defmodule Brando.HTML.Video do
   # actually configure comes from `setting/4`.
   defp render_video(assigns, video, opts, provider) do
     src = Keyword.fetch!(provider, :src)
-    poster = Keyword.get(provider, :poster, false)
+    # A poster passed in (a video block's) wins over the provider's thumbnail
+    poster =
+      case Keyword.get(opts, :poster) do
+        poster when is_binary(poster) and poster != "" -> poster
+        _ -> Keyword.get(provider, :poster, false)
+      end
 
-    aspect_ratio = setting(opts, video, :aspect_ratio, Keyword.get(provider, :aspect_ratio))
+    aspect_ratio = setting(opts, video, :aspect_ratio, provider_aspect_ratio(opts, video, provider))
     {fallback_width, fallback_height} = fallback_dimensions(aspect_ratio)
     width = setting(opts, video, :width, fallback_width)
     height = setting(opts, video, :height, fallback_height)
@@ -408,6 +413,18 @@ defmodule Brando.HTML.Video do
   end
 
   defp parsed_dimensions(_parts), do: {nil, nil}
+
+  # A provider's ratio (Bunny's 16/9) is a guess for a video whose size is
+  # unknown; a known width and height give the real one, a 4:5 portrait video
+  # included.
+  defp provider_aspect_ratio(opts, video, provider) do
+    width = setting(opts, video, :width, nil)
+    height = setting(opts, video, :height, nil)
+
+    if is_integer(width) and is_integer(height) and width > 0 and height > 0,
+      do: nil,
+      else: Keyword.get(provider, :aspect_ratio)
+  end
 
   # Mux stores its ratio as "16:9"; the record's own `aspect_ratio` is already
   # in the "16/9" CSS form and wins via `setting/4`. This is the fallback for
