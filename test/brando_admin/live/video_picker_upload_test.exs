@@ -92,6 +92,22 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
       assert clip_id(view, @clip_b) == ""
     end
 
+    # The hook sends one file at a time: a file picked for A, queued behind
+    # another upload, asks for its destination once the picker is open for B.
+    test "queued goes to the field it was picked for", ctx do
+      view = open(ctx)
+
+      browse(view, @clip_a)
+      origin = provider_upload_origin(view)
+      assert origin["expected_asset_id"] == "none"
+      browse(view, @clip_b)
+      video_id = start_provider_upload(view, "picker-queued", origin)
+      complete_provider_upload(view, "picker-queued", video_id)
+
+      assert clip_id(view, @clip_a) == to_string(video_id)
+      assert clip_id(view, @clip_b) == ""
+    end
+
     test "stays in the library when its field shows another video by then", ctx do
       picked = Factory.insert(:video)
       view = open(ctx)
@@ -237,6 +253,9 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
       [socket] = RenderVar.update_many([{%{event: "select_video", id: video.id}, socket}])
       assert [%{video_id: video_id}] = socket.assigns.gallery.gallery_objects
       assert video_id == video.id
+      # The pickers, which may be open for another target, are left alone
+      refute_received {:phoenix, :send_update, {{VideoPicker, "video-picker"}, _}}
+      refute_received {:phoenix, :send_update, {{BrandoAdmin.Components.ImagePicker, "image-picker"}, _}}
 
       # Handed over again, from a URL or a provider's library: not added twice
       [socket] = RenderVar.update_many([{%{event: "video_created_from_url", video_data: %{id: video.id}}, socket}])
@@ -259,15 +278,18 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
   defp picker(view), do: with_target(view, cid_of(view, "#video-picker"))
 
   # What the provider's upload hook in the picker pushes before the transfer
-  defp start_provider_upload(view, request_ref) do
+  defp start_provider_upload(view, request_ref, origin \\ %{}) do
     view
     |> picker()
-    |> render_hook("get_video_upload_url", %{
-      "request_ref" => request_ref,
-      "filename" => "clip.mp4",
-      "size" => 1_000,
-      "mime_type" => "video/mp4"
-    })
+    |> render_hook(
+      "get_video_upload_url",
+      Map.merge(origin, %{
+        "request_ref" => request_ref,
+        "filename" => "clip.mp4",
+        "size" => 1_000,
+        "mime_type" => "video/mp4"
+      })
+    )
 
     assert_push_event(view, "video_upload_url_ready", %{request_ref: ^request_ref, video_id: video_id})
     video_id
@@ -282,9 +304,19 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
 
   # What the picker's server upload trigger puts in the upload's target
   defp server_upload_target(view) do
-    [trigger] = view |> render() |> Floki.parse_document!() |> Floki.find("#video-uploader-video-picker")
-    attribute = &(trigger |> Floki.attribute(&1) |> List.first())
+    attribute = picker_attribute(view, "#video-uploader-video-picker")
     {attribute.("data-ref"), attribute.("data-expected-asset-id")}
+  end
+
+  # What the provider's hook in the picker sends with a file picked now
+  defp provider_upload_origin(view) do
+    attribute = picker_attribute(view, "#video-provider-uploader-video-picker")
+    %{"opening" => attribute.("data-ref"), "expected_asset_id" => attribute.("data-expected-asset-id")}
+  end
+
+  defp picker_attribute(view, selector) do
+    [element] = view |> render() |> Floki.parse_document!() |> Floki.find(selector)
+    &(element |> Floki.attribute(&1) |> List.first())
   end
 
   # What the upload manager delivers to the picker (`deliver_asset/3`)

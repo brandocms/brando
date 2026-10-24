@@ -97,9 +97,14 @@ export default function providerVideoUploader({ label, startTransfer }) {
       }
     },
 
+    // In the video picker, the opening a file was picked in, and what its
+    // target showed then, go with the file: a queued one asks for its
+    // destination only when its turn comes, maybe from another opening.
     enqueueFiles(files, refs = []) {
+      const { ref: opening, expectedAssetId: expected } = this.el.dataset
+
       files.forEach((file, index) => {
-        this.queue.push({ file, requestRef: refs[index] || this.requestRef() })
+        this.queue.push({ file, requestRef: refs[index] || this.requestRef(), opening, expected })
       })
       this.pump()
     },
@@ -124,10 +129,10 @@ export default function providerVideoUploader({ label, startTransfer }) {
     pump() {
       if (this.transferring || !this.queue.length) return
 
-      const { file, requestRef } = this.queue.shift()
+      const { file, requestRef, opening, expected } = this.queue.shift()
       this.transferring = true
 
-      this.uploadFile(file, requestRef).finally(() => {
+      this.uploadFile(file, requestRef, { opening, expected_asset_id: expected }).finally(() => {
         this.transferring = false
         this.pump()
       })
@@ -203,12 +208,13 @@ export default function providerVideoUploader({ label, startTransfer }) {
 
     // Resolves when the transfer settles either way — the queue only cares that
     // this file is done occupying the slot, not whether it succeeded.
-    async uploadFile(file, requestRef) {
+    async uploadFile(file, requestRef, origin = {}) {
       window.BrandoUploads?.trackExternal?.(file.name, file.size, requestRef)
 
       try {
         const urlPromise = this.waitForUploadUrl(requestRef)
         this.pushVideoEvent('get_video_upload_url', {
+          ...Object.fromEntries(Object.entries(origin).filter(([, value]) => value)),
           request_ref: requestRef,
           filename: file.name,
           size: file.size,

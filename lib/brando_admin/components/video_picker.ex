@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
   @library_root "videos"
 
   # Openings an upload started in may still finish in (`remember_opening/1`)
-  @kept_openings 20
+  @kept_openings 100
 
   def mount(socket) do
     {:ok,
@@ -620,7 +620,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
           "filename" => filename,
           "size" => size,
           "mime_type" => mime_type
-        },
+        } = params,
         socket
       ) do
     user = socket.assigns.current_user
@@ -654,7 +654,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
         {:noreply,
          socket
-         |> update(:provider_uploads, &Map.put(&1, request_ref, handover(socket.assigns)))
+         |> update(:provider_uploads, &Map.put(&1, request_ref, upload_handover(socket, params)))
          |> push_event("video_upload_url_ready", event_payload)}
 
       {:error, reason} ->
@@ -1029,6 +1029,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
                     phx-hook={video_uploader_hook(@upload_strategy)}
                     id={"video-provider-uploader-#{@id}"}
                     data-target={@myself}
+                    data-ref={@opening}
+                    data-expected-asset-id={shown(%{multi: @multi, selected_videos: @selected_videos})}
                   >
                     <button
                       type="button"
@@ -1635,7 +1637,14 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   defp opening_handover(_socket, _ref, _expected), do: nil
 
-  defp handover(assigns), do: %{target: assigns.event_target, context: assigns.pick_context, expected: shown(assigns)}
+  # A provider upload names the opening its file was picked in, which may not
+  # be the one asking: the hook sends one file at a time. Without it (a client
+  # from before), the opening asking.
+  defp upload_handover(socket, %{"opening" => opening} = params),
+    do: opening_handover(socket, opening, params["expected_asset_id"])
+
+  defp upload_handover(%{assigns: assigns}, _params),
+    do: %{target: assigns.event_target, context: assigns.pick_context, expected: shown(assigns)}
 
   # What a single-video target shows: its video, or "none". A gallery adds an
   # upload whatever it holds.

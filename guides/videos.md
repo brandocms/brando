@@ -488,11 +488,12 @@ If another video is chosen, or the video removed, while the file is still on
 its way, that choice stands, and the uploaded video stays in the library.
 
 An upload in the video picker goes to the field, block, variable or row the
-picker was opened for when the upload started, even if the picker has since
-been closed and opened for another, and on the same terms: if that one shows
-another video by the time the file is stored, the upload stays in the library.
-If the provider refuses to finish the upload, the editor is told and the video
-stays in the library.
+picker was open for when the file was chosen, even if the picker has since been
+opened for another, and on the same terms: if that one shows another video by
+the time the file is stored, the upload stays in the library. If the provider
+refuses to finish the upload, the editor is told and the video stays in the
+library. A provider upload still on its way stops if the picker is opened for
+a field that doesn't upload to a provider.
 
 A video variable takes a provider upload in an entry's form, and in a global
 set's own edit form. A variable on the Globals screen (`/admin/globals`) and a
