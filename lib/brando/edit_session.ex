@@ -213,6 +213,14 @@ defmodule Brando.EditSession do
     :exit, _ -> {:error, :no_session}
   end
 
+  @doc """
+  The caller may change the entry from now on, or no more (`read_only`):
+  another of the editor's tabs took over editing, or this one took it back
+  (`BrandoAdmin.LiveView.Form.Tabs`). A read-only client's ops are rejected.
+  """
+  @spec set_read_only(pid(), boolean()) :: :ok
+  def set_read_only(session, read_only), do: GenServer.cast(session, {:read_only, self(), read_only})
+
   @doc "Stop being a replica of `field` (the block field went away)."
   @spec leave(pid(), term()) :: :ok
   def leave(session, field), do: GenServer.cast(session, {:leave, self(), field})
@@ -426,6 +434,13 @@ defmodule Brando.EditSession do
       end
 
     handle_cast({:leave, pid, field}, session)
+  end
+
+  def handle_cast({:read_only, pid, read_only}, session) do
+    case session.clients do
+      %{^pid => _} -> {:noreply, put_in(session.clients[pid].read_only, read_only)}
+      _ -> {:noreply, session}
+    end
   end
 
   def handle_cast({:save_failed, pid}, session), do: {:noreply, %{session | data: Data.release(session.data, pid)}}

@@ -130,6 +130,26 @@ and **Restore compatible content** loads the rest. **Continue without
 restoring** dismisses the prompt; the copies stay reachable through **Recovery
 copies** until they expire. A successful Save resolves the matching copies.
 
+### One tab per user
+
+An editor edits an entry in one of their browser tabs at a time. A second tab
+on the same entry opens read-only with **You have this entry open in another
+tab**, saying when that tab was opened, and **Edit here** and **Close**. Edit
+here moves editing to it: the first tab stops editing and shows a banner with
+**Take editing back**. The tab that takes over continues the other tab's
+unsaved fields and blocks and writes on in its recovery copy, so that copy is
+not offered. When the editing tab closes, the other tab says so and waits: it
+does not start editing by itself. If the closed tab had unsaved changes, its
+recovery copy is offered once you press Edit here. Close closes the tab where the browser lets
+a script do so, and goes to the listing where it doesn't.
+
+A tab that doesn't edit still follows the entry, and its live preview and
+notes stay available. It saves nothing, and an upload that finishes in it
+stays in the media library without being attached. A tab that reconnects
+with edits made offline after another tab took over does not apply them:
+they become a recovery copy, which the editing tab offers. Other editors'
+tabs are unaffected; several editors work on one entry together as before.
+
 The `DraftPurger` Oban job runs daily at 04:15 UTC and deletes expired copies.
 Unresolved copies expire after `:draft_retention_days` (default 30); saved,
 discarded or resolved copies after `:resolved_draft_retention_days`

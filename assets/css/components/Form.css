@@ -749,6 +749,13 @@
         outline: 2px solid var(--brando-accent);
         outline-offset: 2px;
       }
+
+      /* blocks still loading, or another of the editor's tabs edits */
+      &:disabled {
+        opacity: 0.45;
+        cursor: default;
+        pointer-events: none;
+      }
     }
 
     > button.form-tool-save-button {

@@ -115,6 +115,12 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       toggle_options(view)
     end
 
+    # Picks with the options left open: the other editors don't have them yet.
+    defp hold_picks(view, modules) do
+      toggle_options(view)
+      for module <- modules, do: click_option(view, module)
+    end
+
     # The modules the form holds; none is an empty marker, `""`.
     defp chosen(view) do
       case params(view, "module_set")["module_set_modules"] do
@@ -267,19 +273,20 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       await(fn -> chosen(c.b) == [c.text.id] end)
     end
 
-    # Picks reach another editor's open options as they are made
-    # (`multi_select_changed`), but not another tab of the same editor. Both
-    # tabs changed the list: B keeps its own and is asked which to keep.
-    defp picked_in_two_tabs(c) do
-      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+    # Picks reach the other editors as they are made (`multi_select_changed`),
+    # once the options close. B picked with the options open and went
+    # offline; A changed the list and saved; B is back. Both changed the
+    # list: B keeps its own and is asked which to keep.
+    defp picked_in_two_tabs(c, modules \\ nil) do
+      hold_picks(c.b, modules || [c.text])
+      html = render(c.b)
+      kill_live(c.b)
 
-      Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("field_sync", ModuleSet, c.set.id))
       pick(c.a, c.hero)
-      pick(b, c.text)
       save_and_stay(c.a, "module_set", false)
-      assert_receive {:entry_saved, _}, 5_000
-      assert saved_modules(c.set) == [c.hero.id]
-      # B's process has the message too: the renders queue behind it.
+      await(fn -> saved_modules(c.set) == [c.hero.id] end)
+
+      b = reconnect(c, html)
       settle(b)
       b
     end
@@ -301,16 +308,16 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
     # B's recovery copy holds the pick the form still shows: it is not one
     # to offer B after A's save.
     test "B isn't offered its own recovery copy after A's save", c do
-      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
-      pick(b, c.text)
+      b = c.b
+      hold_picks(b, [c.text])
       capture(b)
       own = form_assigns(b).draft.id
       assert Enum.any?(Brando.Drafts.list(form_assigns(b).draft.identity), &(&1.id == own))
 
-      pick(c.a, c.hero)
+      type(c.a, "module_set", "title", "Set, typed by A")
       save_and_stay(c.a, "module_set", false)
-      await(fn -> saved_modules(c.set) == [c.hero.id] end)
-      await(fn -> conflict?(b, "module_set_modules") end)
+      await(fn -> Repo.get!(ModuleSet, c.set.id).title == "Set, typed by A" end)
+      await(fn -> params(b, "module_set")["title"] == "Set, typed by A" end)
 
       refute Enum.any?(form_assigns(b).draft.candidates, &(&1.id == own))
       refute has_element?(b, ~s([data-testid="draft-notice"]))
@@ -370,21 +377,12 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
       assert saved_modules(c.set) == Enum.sort([c.hero.id, c.text.id])
     end
 
-    # Another tab of the same editor gets no picks as they are made: both
-    # tabs picked Hero, and A saved it.
+    # Both editors picked Hero, and A saved it while B was offline.
     test "an option picked in two tabs is one row after A's save", c do
-      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
-
-      Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("field_sync", ModuleSet, c.set.id))
-      pick(c.a, c.hero)
-      pick(b, c.hero)
-      pick(b, c.text)
-      save_and_stay(c.a, "module_set", false)
-      assert_receive {:entry_saved, _}, 5_000
-      assert saved_modules(c.set) == [c.hero.id]
-      settle(b)
+      b = picked_in_two_tabs(c, [c.hero, c.text])
 
       assert chosen_in_order(b) == [c.hero.id, c.text.id]
+      settle_conflict(b, "module_set_modules", "Keep my version")
 
       save_and_stay(b, "module_set", false)
       settle(b)
@@ -417,7 +415,7 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
     # B's browser sends a keystroke in the form it showed before the save
     # reached it: the rows in it are the ones the save replaced.
     test "B's browser sending the rows it showed before A's save doesn't undo the save", c do
-      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+      b = c.b
       before = render(b)
 
       pick(c.a, c.hero)
@@ -439,7 +437,7 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
     # The other tab's recovery copy is of the form it shows, compared with
     # the entry as saved: it has A's rows, and B's title as B's change.
     test "a recovery copy B captures after A's save has the saved rows", c do
-      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+      b = c.b
       focus(b, "module_set", "title")
       type(b, "module_set", "title", "Set, typed in B")
 
@@ -450,7 +448,7 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
 
       capture(b)
 
-      [copy] = Brando.Drafts.list(Brando.Drafts.identity(ModuleSet, c.set.id, c.me.id))
+      [copy] = Brando.Drafts.list(form_assigns(b).draft.identity)
       assert copy.payload["main"]["title"] == "Set, typed in B"
 
       assert copy.payload["main"]["module_set_modules"] |> Enum.map(& &1["module_id"]) |> Enum.sort() ==
@@ -483,18 +481,18 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
     end
 
     # B reconnects (`recover_form`): its browser sends the form it had, with
-    # the fingerprint of the entry that form was built on. B is another tab
-    # of A's editor, which A's picks don't reach as they are made.
+    # the fingerprint of the entry that form was built on. A's picks didn't
+    # reach B while it was away.
     defp reconnect(c, html) do
       recovered = html |> form_params("#module_set_form_form") |> Map.put("_target", ["image_editor_upload"])
-      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+      {b, _} = live_form(c.other_conn, c.path, "module_set_form")
       b |> form_of("module_set") |> render_hook("recover_form", recovered)
       b
     end
 
     test "B's picks, recovered after A saved others while B was away, are B's to settle", c do
-      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
-      pick(b, c.text)
+      b = c.b
+      hold_picks(b, [c.text])
       html = render(b)
       kill_live(b)
 
@@ -511,8 +509,8 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
     end
 
     test "B's picks, recovered when nobody saved meanwhile, are B's edit", c do
-      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
-      pick(b, c.text)
+      b = c.b
+      hold_picks(b, [c.text])
       html = render(b)
       kill_live(b)
 
@@ -535,8 +533,8 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
     # A's save changed the entry, but not its modules: B's recovered picks
     # are B's edit, as if nobody had saved.
     test "B's picks, recovered after A saved another field while B was away, are B's edit", c do
-      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
-      pick(b, c.text)
+      b = c.b
+      hold_picks(b, [c.text])
       html = render(b)
       kill_live(b)
 
@@ -579,7 +577,7 @@ defmodule BrandoAdmin.EntrySavedElsewhereTest do
     # as a revision restore or a child component sends it), with a module
     # added meanwhile: B's pick after that is B's edit.
     test "B's picks on an entry the form read again are B's edit after a reconnect", c do
-      {b, _} = live_form(c.a_conn, c.path, "module_set_form")
+      b = c.b
       Repo.insert!(%ModuleSetModule{module_set_id: c.set.id, module_id: c.hero.id, sequence: 0})
       entry = Repo.preload(form_assigns(b).entry, [:module_set_modules], force: true)
 

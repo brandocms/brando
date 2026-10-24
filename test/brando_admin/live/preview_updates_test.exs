@@ -181,6 +181,8 @@ defmodule BrandoAdmin.PreviewUpdatesTest do
       identity = Brando.Drafts.identity(Brando.Pages.Page, c.page.id, c.current_user.id)
       await(fn -> Brando.Drafts.list(identity) != [] end)
       [copy] = Brando.Drafts.list(identity)
+      # Loaded again: the first tab is gone, or it would edit (one tab per user)
+      kill_live(view)
       {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
       upload(view, c.second)
 

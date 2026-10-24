@@ -275,32 +275,38 @@ export default (app) => ({
   // form itself (`__offline_edits`), so LiveView's recovery of the form
   // after the reconnect carries the list: the server takes those fields as
   // fresh edits, and the rest of the recovered form as what it was
-  // (`recover_form` in form.ex).
+  // (`recover_form` in form.ex). A block's form typed into is listed in the
+  // same way: a tab that edits no more after the reconnect, because another
+  // of the editor's tabs took over, keeps those edits in a recovery copy
+  // instead of applying them (`LiveView.Form.Tabs`).
   trackOfflineEdits(on) {
     if (this.onOfflineInput) {
-      this.$form.removeEventListener('input', this.onOfflineInput, true)
-      this.$form.removeEventListener('change', this.onOfflineInput, true)
+      this.el.removeEventListener('input', this.onOfflineInput, true)
+      this.el.removeEventListener('change', this.onOfflineInput, true)
       this.onOfflineInput = null
     }
     if (!on) return
 
-    const edits = new Set()
-    this.$form.querySelector(':scope > input[name="__offline_edits"]')?.remove()
+    const edits = new Map()
+    this.el.querySelectorAll('form > input[name="__offline_edits"]').forEach(list => list.remove())
     this.onOfflineInput = event => {
       const name = event.target?.name
-      if (!name || name === '__offline_edits' || event.target.form !== this.$form) return
-      edits.add(name)
-      let list = this.$form.querySelector(':scope > input[name="__offline_edits"]')
+      const form = event.target?.form
+      if (!name || name === '__offline_edits' || !form) return
+      if (form !== this.$form && !(form.matches('form[phx-change="validate_block"]') && this.el.contains(form))) return
+      if (!edits.has(form)) edits.set(form, new Set())
+      edits.get(form).add(name)
+      let list = form.querySelector(':scope > input[name="__offline_edits"]')
       if (!list) {
         list = document.createElement('input')
         list.type = 'hidden'
         list.name = '__offline_edits'
-        this.$form.appendChild(list)
+        form.appendChild(list)
       }
-      list.value = [...edits].join(' ')
+      list.value = [...edits.get(form)].join(' ')
     }
-    this.$form.addEventListener('input', this.onOfflineInput, true)
-    this.$form.addEventListener('change', this.onOfflineInput, true)
+    this.el.addEventListener('input', this.onOfflineInput, true)
+    this.el.addEventListener('change', this.onOfflineInput, true)
   },
 
   // ⇧⌘S saves and closes, ⌘S saves and stays. Ctrl stands in for ⌘ off a

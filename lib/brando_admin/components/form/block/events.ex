@@ -9,7 +9,32 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   alias Ecto.Changeset
 
   def attach_block_events(socket) do
-    attach_hook(socket, :block_events, :handle_event, &handle_block_event/3)
+    attach_hook(socket, :block_events, :handle_event, &guard_block_event/3)
+  end
+
+  # A tab that does not edit (`BrandoAdmin.LiveView.Form.Tabs`) changes no
+  # block: its blocks are inert, and an event that comes anyway is dropped.
+  # A block form LiveView recovers after a reconnect with edits typed into
+  # it offline (the Form hook lists them in `__offline_edits`) goes to the
+  # form, for a recovery copy the editing tab offers.
+  defp guard_block_event(event, params, socket) do
+    cond do
+      BrandoAdmin.LiveView.Form.Tabs.editing?() ->
+        handle_block_event(event, params, socket)
+
+      event == "validate_block" and Map.get(params, "__offline_edits", "") != "" ->
+        send_update(BrandoAdmin.Components.Form,
+          id: socket.assigns.form_id,
+          event: "offline_block_form",
+          uid: socket.assigns.uid,
+          params: Map.take(params, ["entry_block", "child_block"])
+        )
+
+        {:halt, socket}
+
+      true ->
+        {:halt, socket}
+    end
   end
 
   ##

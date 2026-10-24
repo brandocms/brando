@@ -450,20 +450,21 @@ test.describe('Multi-user block sync', () => {
     await secondUserPage.goto('/admin')
     await expect(aLocks).toHaveCount(0, { timeout: 10000 })
 
-    // Locks are per tab: A in two tabs, in two fields, locks both for B.
-    // Closing one tab releases only its field.
+    // Locks are per tab. A's second tab doesn't edit (one tab per user),
+    // so it locks nothing, and closing it leaves the field A's first tab is in.
     await secondUserPage.goto(entryUrl)
     await syncLV(secondUserPage)
     const aSecondTab = await page.context().newPage()
     await aSecondTab.goto(entryUrl)
     await syncLV(aSecondTab)
+    await expect(aSecondTab.getByTestId('tab-notice')).toBeVisible()
 
     await aTitle.click()
-    await aSecondTab.getByLabel('URI').click()
-    await expect(bLocks).toHaveCount(2, { timeout: 5000 })
+    await expect(bLocks).toHaveCount(1, { timeout: 5000 })
 
     await aSecondTab.close()
-    await expect(bLocks).toHaveCount(1, { timeout: 10000 })
+    await syncLV(secondUserPage)
+    await expect(bLocks).toHaveCount(1)
     await expect(bLocks.getByLabel('Title', { exact: true })).toBeAttached()
   })
 

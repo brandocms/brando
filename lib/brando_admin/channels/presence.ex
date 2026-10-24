@@ -265,6 +265,10 @@ defmodule BrandoAdmin.Presence do
       # Implementations moved to external modules
       def fetch("lobby", presences), do: BrandoAdmin.Presence.LobbyFetcher.fetch(presences)
       def fetch("url:" <> _rest = _topic, presences), do: BrandoAdmin.Presence.UrlFetcher.fetch(presences)
+      # A topic without a fetcher keeps its presences as tracked. Without
+      # this, a diff on any other topic raised in the presence shard's task
+      # and took the shard down, with every admin session tracked on it.
+      def fetch(_topic, presences), do: presences
 
       def handle_metas("lobby", %{joins: joins, leaves: leaves}, presences, state) do
         BrandoAdmin.Presence.LobbyFetcher.handle_metas(joins, leaves, presences, unquote(pubsub_server))
@@ -275,6 +279,16 @@ defmodule BrandoAdmin.Presence do
         BrandoAdmin.Presence.UrlFetcher.handle_metas(topic, joins, leaves, presences, unquote(pubsub_server))
         {:ok, state}
       end
+
+      # The tabs a user has an entry's form open in (`BrandoAdmin.LiveView.Form.Tabs`).
+      # Its subscribers re-read the topic on this message: the `presence_diff`
+      # broadcast is swallowed by `BrandoAdmin.Hooks` before a form's hooks see it.
+      def handle_metas("brando:tabs:" <> _rest = topic, _diff, _presences, state) do
+        Phoenix.PubSub.local_broadcast(unquote(pubsub_server), topic, {BrandoAdmin.LiveView.Form.Tabs, :changed})
+        {:ok, state}
+      end
+
+      def handle_metas(_topic, _diff, _presences, state), do: {:ok, state}
 
       # URL tracking functions
       # `meta` adds to the defaults; the frontend editor tracks itself under

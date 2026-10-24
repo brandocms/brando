@@ -39,6 +39,7 @@
 @import "./components/Form/EntryHeader.css";
 @import "./components/Form/Translation.css";
 @import "./components/Form/DraftRecovery.css";
+@import "./components/Form/TabNotice.css";
 @import "./components/Form/SavedElsewhere.css";
 @import "./components/Form/Notes.css";
 @import "./components/Form/BlockEditor.css";

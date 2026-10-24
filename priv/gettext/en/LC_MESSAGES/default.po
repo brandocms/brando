@@ -3759,6 +3759,7 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field/module_picker.ex
 #: lib/brando_admin/components/form/input/multi_select.ex
 #: lib/brando_admin/components/form/input/select.ex
+#: lib/brando_admin/components/form/tab_notice.ex
 #: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/components/shortcut_sheet.ex
 #: lib/brando_admin/components/video_picker.ex
@@ -6263,6 +6264,16 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Edit guidance"
+msgstr ""
+
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Edit here"
+msgstr ""
+
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Edit here to continue. If that tab had unsaved changes, they are offered as a recovery copy."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block/object.ex
@@ -11558,6 +11569,11 @@ msgstr ""
 msgid "One source is created per selected file. Existing sources are skipped. New files added to the folder later must be selected here again."
 msgstr ""
 
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "One tab edits at a time. Edit here, and the other tab stops editing; your unsaved changes come along."
+msgstr ""
+
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "One topic per line — what the organization is known for"
@@ -16176,9 +16192,19 @@ msgstr ""
 msgid "Tabular data"
 msgstr ""
 
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Take editing back"
+msgstr ""
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Takes the units left over"
+msgstr ""
+
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "Taking over editing from the other tab…"
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -16932,6 +16958,11 @@ msgstr ""
 msgid "The original stays here."
 msgstr ""
 
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "The other tab was closed"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "The page could not be rendered: %{message}"
@@ -17162,6 +17193,11 @@ msgstr ""
 msgid "The structured data could not be checked."
 msgstr ""
 
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "The tab you were editing this entry in was closed."
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The target is the live environment: copying replaces what visitors see. Tick “Replace the live content” to go ahead."
@@ -17195,6 +17231,11 @@ msgstr ""
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "The upload failed. Choose the file again."
+msgstr ""
+
+#: lib/brando_admin/live_view/form/hooks.ex
+#, elixir-autogen, elixir-format
+msgid "The upload finished in a tab that is no longer editing. It is in the library, not in the entry."
 msgstr ""
 
 #: lib/brando_admin/live/users/user_form_live.ex
@@ -19574,6 +19615,11 @@ msgstr ""
 msgid "You already have a view with this name on this list"
 msgstr ""
 
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You are editing this entry in another tab. This tab only shows it."
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "You are not allowed to manage environments."
@@ -19739,6 +19785,11 @@ msgstr ""
 #: lib/brando/uploads/store.ex
 #, elixir-autogen, elixir-format
 msgid "You have selected too many files"
+msgstr ""
+
+#: lib/brando_admin/components/form/tab_notice.ex
+#, elixir-autogen, elixir-format
+msgid "You have this entry open in another tab (opened %{time})"
 msgstr ""
 
 #: lib/brando_admin/live/calendar_live.ex

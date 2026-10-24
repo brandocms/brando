@@ -1547,7 +1547,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
              field: field.field,
              component_id: socket.assigns.id,
              selected_ids: selected_ids,
-             user_id: current_user.id
+             user_id: current_user.id,
+             tab: BrandoAdmin.Presence.tab()
            }}
         )
       end

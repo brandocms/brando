@@ -45,13 +45,60 @@ document.addEventListener(
   true
 )
 
+// This browser tab, across reloads and reconnects: an entry's form is
+// edited in one tab per user, and the tab that edits keeps doing so when it
+// reconnects (`BrandoAdmin.LiveView.Form.Tabs`).
+//
+// The id lives in sessionStorage, which a duplicated tab (and a window a
+// script opens) copies. While a page is open its tab says so (`OPEN_KEY`),
+// and says it no more as it goes (`pagehide`, which a reload passes through
+// too): a page that finds the flag set is a copy of a tab still open, and
+// takes an id of its own. Every join counts (`brando_tab_seq`), so that the
+// server knows a tab's newest process from an old one it hasn't dropped yet.
+const TAB_KEY = 'brando:tab'
+const OPEN_KEY = 'brando:tab-open'
+const SEQ_KEY = 'brando:tab-seq'
+
+let tab
+let seq = 0
+try {
+  tab = sessionStorage.getItem(TAB_KEY)
+  if (!tab || sessionStorage.getItem(OPEN_KEY)) {
+    tab = crypto.randomUUID()
+    sessionStorage.setItem(TAB_KEY, tab)
+    sessionStorage.removeItem(SEQ_KEY)
+  }
+  seq = parseInt(sessionStorage.getItem(SEQ_KEY) || '0', 10) || 0
+  sessionStorage.setItem(OPEN_KEY, '1')
+  window.addEventListener('pagehide', () => sessionStorage.removeItem(OPEN_KEY))
+  window.addEventListener('pageshow', ({ persisted }) => {
+    if (persisted) sessionStorage.setItem(OPEN_KEY, '1')
+  })
+} catch {
+  tab = undefined
+}
+
+const nextSeq = () => {
+  seq += 1
+  try {
+    sessionStorage.setItem(SEQ_KEY, String(seq))
+  } catch {}
+  return seq
+}
+
+// Close, on a form another of the editor's tabs edits. A browser closes only
+// a tab a script opened; otherwise the button's navigation goes on.
+window.addEventListener('brando:close-tab', () => window.close())
+
 export default (hooks) => {
   let csrfToken = document
     .querySelector("meta[name='csrf-token']")
     ?.getAttribute('content')
   let liveSocket = new LiveSocket('/live', Socket, {
     hooks: hooks,
-    params: { _csrf_token: csrfToken },
+    // A function, so every join (a reconnect, a live navigation) sends the
+    // tab as it is now.
+    params: () => ({ _csrf_token: csrfToken, brando_tab: tab, brando_tab_seq: nextSeq() }),
     timeout: 70000,
     dom: {
       onBeforeElUpdated(from, to) {

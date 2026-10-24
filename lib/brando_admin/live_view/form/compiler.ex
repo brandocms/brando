@@ -10,6 +10,8 @@ defmodule BrandoAdmin.LiveView.Form.Compiler do
 
   @hooks [
     :setup,
+    # One tab per user edits an entry; must follow `:setup`, which knows it
+    :hooks_tabs,
     :hooks_toast,
     :hooks_progress_popup,
     :hooks_alert,

@@ -1,0 +1,1 @@
+- An editor edits an entry in one of their browser tabs at a time: a second tab opens read-only with **Edit here**, which moves editing and the unsaved work to it, and the first tab can take editing back.

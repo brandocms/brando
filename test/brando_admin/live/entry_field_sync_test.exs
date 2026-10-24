@@ -26,6 +26,14 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     view
   end
 
+  # Both editors open the entry again, as after a reload: the tabs from the
+  # setup close first, or the new ones would not edit (one tab per user).
+  defp reopen(c) do
+    kill_live(c.a)
+    kill_live(c.b)
+    {open(c.conn, c.page), open(c.other_conn, c.page)}
+  end
+
   # The Form component, which takes the focus and blur of its fields.
   defp form(view), do: with_target(view, cid_of(view, "#page_form-el"))
 
@@ -124,8 +132,7 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
       set: [publish_at: ~U[2026-01-01 10:00:00Z], unpublish_at: ~U[2026-03-01 10:00:00Z]]
     )
 
-    a = open(c.conn, c.page)
-    b = open(c.other_conn, c.page)
+    {a, b} = reopen(c)
 
     edit_dates(a, "unpublish_at", %{"publish_at" => "2026-01-01T10:00:00Z", "unpublish_at" => "2026-06-01T10:00:00Z"})
     await(fn -> form_field(b, :unpublish_at) == ~U[2026-06-01 10:00:00Z] end)
@@ -143,8 +150,7 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
       set: [publish_at: ~U[2026-01-01 10:00:00Z], unpublish_at: ~U[2026-03-01 10:00:00Z]]
     )
 
-    a = open(c.conn, c.page)
-    b = open(c.other_conn, c.page)
+    {a, b} = reopen(c)
 
     edit_dates(a, "unpublish_at", %{"publish_at" => "2026-01-01T10:00:00Z", "unpublish_at" => "2026-06-01T10:00:00Z"})
     await(fn -> form_field(b, :unpublish_at) == ~U[2026-06-01 10:00:00Z] end)
@@ -586,6 +592,7 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     test "an image field is locked while its drawer is open, and every way of closing it releases it", c do
       image = Factory.insert(:image, creator: c.me, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
       Repo.update_all(from(p in Page, where: p.id == ^c.page.id), set: [meta_image_id: image.id])
+      kill_live(c.a)
       a = open(c.conn, c.page)
 
       # ×, Done and the backdrop; Escape runs the drawer's `data-modal-close`,
@@ -611,8 +618,7 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
     test "removing the image from its drawer ships the removal", c do
       image = Factory.insert(:image, creator: c.me, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
       Repo.update_all(from(p in Page, where: p.id == ^c.page.id), set: [meta_image_id: image.id])
-      a = open(c.conn, c.page)
-      b = open(c.other_conn, c.page)
+      {a, b} = reopen(c)
 
       a |> element("#page_meta_image-media button[phx-click*=open_image]") |> render_click()
       a |> element("#image-drawer button.menu-item--danger") |> render_click()
@@ -620,21 +626,20 @@ defmodule BrandoAdmin.EntryFieldSyncTest do
       await_shown(b, "meta_image_id", "")
     end
 
-    # One editor with the entry open in two tabs, each in its own field: the
-    # other editor sees both, and closing one tab releases only its field.
-    test "locks are per tab, and closing a tab releases only its field", c do
+    # One editor with the entry open in two tabs: one of them edits (one tab
+    # per user), and the other takes no field. Closing the tab that edits
+    # releases its field, and the editor stays present in the other.
+    test "a tab that doesn't edit takes no field, and closing the other releases only its own", c do
       second_tab = open(c.conn, c.page)
 
       focus(c.a, "title")
       assert_push_event(c.b, "b:set_active_field", %{field: "page[title]", tab: first})
       focus(second_tab, "uri")
-      assert_push_event(c.b, "b:set_active_field", %{field: "page[uri]", tab: second})
-      assert first != second
+      refute_push_event(c.b, "b:set_active_field", %{field: "page[uri]"}, 300)
 
       kill_live(c.a)
       assert_push_event(c.b, "b:set_active_field", %{field: nil, tab: ^first}, 2_000)
-      refute_push_event(c.b, "b:set_active_field", %{field: nil, tab: ^second}, 300)
-      refute_push_event(c.b, "b:clear_user_presence", %{}, 100)
+      refute_push_event(c.b, "b:clear_user_presence", %{}, 300)
     end
 
     # Moving to another field updates the tab's presence: a leave and a join

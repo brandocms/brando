@@ -137,6 +137,8 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     await(fn -> copies(c) != [] end)
     before_restore.()
 
+    # Loaded again: the first tab is gone, or it would edit (one tab per user)
+    kill_live(view)
     view = open(c)
     [copy] = copies(c)
     restore_copy(view, copy)
@@ -391,6 +393,7 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     await(fn -> copies(c) != [] end)
     [ordinary] = copies(c)
 
+    kill_live(view)
     view = open(c)
     drawer = cid_of(view, "#page_form-revisions-drawer-tab-activity")
     view |> with_target(drawer) |> render_hook("select_revision", %{"revision" => revision})
