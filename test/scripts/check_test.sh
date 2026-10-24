@@ -159,7 +159,7 @@ expect "runs the Elixir gates once deps/ has every package" 0 "check: all gates 
 
 # Tooling gates run when the branch or working tree changes a file they
 # exercise.
-all_tooling="ci_wait merge_queue_reuse changelog release_version queue hook_env check"
+all_tooling="ci_wait merge_queue_reuse changelog release_version queue hook_env check e2e_needed"
 scenario lib-only
 change lib/a.ex
 deps alpha beta

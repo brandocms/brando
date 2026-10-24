@@ -342,6 +342,10 @@ jobs:
           bash test/scripts/queue_test.sh
           bash test/scripts/check_test.sh
 
+      - name: Check which pull requests skip the E2E suite
+        if: needs.reuse.outputs.reused != 'true'
+        run: bash test/scripts/e2e_needed_test.sh
+
       - name: Check that the shell tests leave the repository alone under a Git hook
         if: needs.reuse.outputs.reused != 'true'
         run: bash test/scripts/hook_env_test.sh
@@ -525,8 +529,39 @@ jobs:
           overwrite: true
           retention-days: 30
 
+  # Pull requests only. Whether the browser E2E jobs below run: not when the
+  # PR changes only paths they cannot exercise (tooling, unit tests, docs; see
+  # .github/scripts/e2e-needed.sh). They are not required checks, so skipping
+  # them blocks nothing. A failed lookup leaves the output empty, and they run.
+  e2e_changes:
+    name: Decide whether the E2E suite runs
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      needed: ${{ steps.decide.outputs.needed }}
+    steps:
+      # The PR's merge commit and its first parent, the base it merges onto;
+      # their diff is what the PR changes. Trees only, no file contents.
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 2
+          filter: blob:none
+          sparse-checkout: .github/scripts
+
+      # Never fails: anything going wrong runs the suite.
+      - name: Read the changed paths
+        id: decide
+        run: |
+          # Without renames, a moved file lists its old path as well as its new one.
+          if paths="$(git diff --name-only --no-renames HEAD^1 HEAD)" &&
+            needed="$(bash .github/scripts/e2e-needed.sh <<<"$paths")"; then :; else needed=true; fi
+          echo "needed=$needed" >> "$GITHUB_OUTPUT"
+          echo "E2E suite needed: $needed" >> "$GITHUB_STEP_SUMMARY"
+
   e2e_build:
     name: Compile E2E dependencies and application
+    needs: e2e_changes
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Preserve the informational status of the existing E2E jobs.
@@ -534,7 +569,10 @@ jobs:
     # Main builds seed a cache that future PRs can restore. PR-only caches are
     # scoped to that PR and cannot warm the next branch's first run. Not run
     # for merge_group: only the E2E jobs need it, and they are PR-only.
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: >-
+      ${{ !cancelled() && (github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'pull_request' && needs.e2e_changes.outputs.needed != 'false')) }}
     env:
       BRANDO_E2E_INSTANCE: ci
       BRANDO_E2E_POOL_SIZE: 50
@@ -575,10 +613,14 @@ jobs:
   # Main warms the download caches; only browser runs need the built artifact.
   e2e_assets:
     name: Build E2E consumer assets
+    needs: e2e_changes
     runs-on: ubuntu-latest
     timeout-minutes: 15
     continue-on-error: true
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: >-
+      ${{ !cancelled() && (github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || (github.event_name == 'pull_request' && needs.e2e_changes.outputs.needed != 'false')) }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -663,8 +705,11 @@ jobs:
     # Authorization runs independently so it need not wait for the legacy suite.
     # PRs only, avoiding duplicate E2E runs for push + pull_request events,
     # and not in the merge queue: it is informational and would add half an
-    # hour to every queued PR.
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    # hour to every queued PR. Skipped with the build jobs when the PR cannot
+    # affect it (`e2e_changes`).
+    if: >-
+      ${{ !cancelled() && needs.e2e_build.result == 'success' && needs.e2e_assets.result == 'success'
+      && (github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') }}
     # Non-blocking until it has a track record. This job was added on
     # 2026-07-18 and had never once run to completion — it died at the first
     # step, checking out a then-private repo — so its CI pass rate is entirely
