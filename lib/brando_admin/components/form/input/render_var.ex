@@ -137,19 +137,23 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     assign(socket, :gallery, %{gallery | gallery_objects: objects})
   end
 
-  # A gallery var adds the video, once; a video var takes it.
+  # A gallery var adds the video, once; a video var takes it, unless an upload
+  # finished after another video, or another var, was chosen here.
   defp apply_video_created({assigns, socket}) do
     video_id = handed_video_id(assigns)
 
-    case socket.assigns.type do
-      :gallery ->
+    cond do
+      socket.assigns.type == :gallery ->
         objects = gallery_objects(socket.assigns.gallery)
 
         if Enum.any?(objects, &(Map.get(&1, :video_id) == video_id)),
           do: socket,
           else: persist_gallery(socket, objects ++ [%{video_id: video_id, creator_id: socket.assigns.current_user_id}])
 
-      _ ->
+      not handed_to_shown?(assigns, socket) ->
+        socket
+
+      true ->
         {:ok, video} = Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]})
 
         socket
@@ -157,6 +161,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         |> assign(:video_id, video.id)
         |> on_change(%{video: video, video_id: video.id})
     end
+  end
+
+  defp handed_to_shown?(assigns, socket) do
+    assigns[:pick_context] in [nil, socket.assigns.key] and
+      Brando.Uploads.AssetIntent.current_selection?(assigns[:expected_asset_id], socket.assigns[:video_id])
   end
 
   defp handed_video_id(%{event: "select_video", id: id}), do: normalize_id(id)
@@ -1723,6 +1732,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       id: "video-picker",
       config_target: config_target,
       event_target: myself,
+      pick_context: socket.assigns.key,
       multi: false,
       current_user: current_user(socket.assigns.current_user_id),
       selected_videos: if(socket.assigns.video_id, do: [socket.assigns.video_id], else: [])

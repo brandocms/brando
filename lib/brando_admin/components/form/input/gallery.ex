@@ -103,10 +103,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:ok, add_gallery_media(socket, :video, to_string(video_id), notify_picker: false)}
   end
 
-  # A video uploaded in the picker. Added, never toggled: it is new, and the
-  # picker is told, since it has not marked it selected itself.
+  # A video uploaded in the picker. Added, never toggled: it is new. The
+  # picker, which may be open for another field by now, marks it itself.
   def update(%{event: "select_video", id: video_id}, socket) do
-    {:ok, add_gallery_media(socket, :video, to_string(video_id))}
+    {:ok, add_gallery_media(socket, :video, to_string(video_id), notify_picker: false)}
   end
 
   def update(

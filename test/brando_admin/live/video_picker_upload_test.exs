@@ -1,62 +1,181 @@
 defmodule BrandoAdmin.VideoPickerUploadTest do
   @moduledoc """
-  A video uploaded in the picker is handed to the field that opened it with
-  `send_update(field, %{event: "select_video", id: id})`, once it is stored:
-  after a provider upload (`video_upload_complete`, pushed by the provider's
-  upload hook) and after a server upload (`upload_complete`, delivered by the
-  upload manager). The video field had no clause for it, so the message fell
-  through to its general `update/2`, which raised KeyError on `:field` and took
-  the entry form down, the upload unselected.
+  A video uploaded in the picker is handed to the field it was uploaded for
+  with `send_update(field, %{event: "select_video", id: id, ...})`, once it
+  is stored: after a provider upload (`video_upload_complete`, pushed by the
+  provider's upload hook) and after a server upload (`upload_complete`,
+  delivered by the upload manager).
+
+  The editor may close the picker and open it for another field while the
+  file transfers. The upload still goes to the field it was started for, and
+  only if that field shows what it showed then; otherwise it stays in the
+  library. Before, it went to whichever field had opened the picker last.
   """
   use Brando.LiveCase
 
   alias Brando.Repo
   alias Brando.SyncTest
   alias Brando.SyncTest.ArticleItem
+  alias Brando.Videos.Uploaders.Bunny
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.VideoPicker
 
   @form "#article_form_form"
-  @row_clip ~s(input[name="article[items][0][clip_id]"])
+  @clip_a ~s(input[name="article[items][0][clip_id]"])
+  @clip_b ~s(input[name="article[items][1][clip_id]"])
+  @guid "6f2c1a3e-1111-2222-3333-444455556666"
 
   setup %{current_user: user} do
     {:ok, article} =
       SyncTest.create_article(
-        %{title: "Article", slug: "article", language: "en", status: "published", items: [%{label: "Row"}]},
+        %{
+          title: "Article",
+          slug: "article",
+          language: "en",
+          status: "published",
+          items: [%{label: "Row A", sequence: 0}, %{label: "Row B", sequence: 1}]
+        },
         user
       )
 
-    [item] = Repo.preload(article, :items).items
-    {:ok, article: article, item: item}
+    items = article |> Repo.preload(:items) |> Map.fetch!(:items) |> Enum.sort_by(& &1.sequence)
+    {:ok, article: article, items: items}
   end
 
-  test "a video uploaded to a provider from a field's picker is set on the field", ctx do
-    view = open_picker_for_clip(ctx)
-    video = provider_video(ctx.current_user)
+  describe "a provider upload" do
+    setup do
+      put_test_env(:default_video_upload_strategy, :bunny)
 
-    # What the provider's upload hook pushes to the picker once the file is up
-    view
-    |> with_target(cid_of(view, "#video-picker"))
-    |> render_hook("video_upload_complete", %{"video_id" => to_string(video.id)})
+      put_test_env(Bunny,
+        api_key: "key",
+        library_id: "77",
+        cdn_hostname: "vz-1.b-cdn.net",
+        webhook_secret: "whsec",
+        req_options: [plug: {Req.Test, Bunny}]
+      )
 
-    assert Process.alive?(view.pid)
-    assert clip_id(view) == to_string(video.id)
+      Req.Test.set_req_test_to_shared()
+      on_exit(fn -> Req.Test.set_req_test_to_private() end)
 
-    save(view)
-    assert Repo.get!(ArticleItem, ctx.item.id).clip_id == video.id
+      Req.Test.stub(Bunny, fn %{method: "POST", request_path: "/library/77/videos"} = conn ->
+        Req.Test.json(conn, %{"guid" => @guid, "videoLibraryId" => 77, "title" => "Clip"})
+      end)
+
+      :ok
+    end
+
+    test "is set on the field it was started for", ctx do
+      view = open(ctx)
+
+      browse(view, @clip_a)
+      video_id = start_provider_upload(view, "picker-1")
+
+      complete_provider_upload(view, "picker-1", video_id)
+      assert clip_id(view, @clip_a) == to_string(video_id)
+
+      save(view)
+      assert [a, b] = saved_clip_ids(ctx)
+      assert a == video_id
+      assert b == nil
+    end
+
+    test "goes to the field it was started for, not to the one that opened the picker since", ctx do
+      view = open(ctx)
+
+      browse(view, @clip_a)
+      video_id = start_provider_upload(view, "picker-2")
+      browse(view, @clip_b)
+      complete_provider_upload(view, "picker-2", video_id)
+
+      assert Process.alive?(view.pid)
+      assert clip_id(view, @clip_a) == to_string(video_id)
+      assert clip_id(view, @clip_b) == ""
+    end
+
+    test "stays in the library when its field shows another video by then", ctx do
+      picked = Factory.insert(:video)
+      view = open(ctx)
+
+      browse(view, @clip_a)
+      video_id = start_provider_upload(view, "picker-3")
+      view |> with_target(cid_of(view, @clip_a)) |> render_hook("select_video", %{"id" => picked.id})
+      browse(view, @clip_b)
+      complete_provider_upload(view, "picker-3", video_id)
+
+      assert clip_id(view, @clip_a) == to_string(picked.id)
+      assert clip_id(view, @clip_b) == ""
+      assert Repo.get(Brando.Videos.Video, video_id)
+    end
+
+    test "that the provider refuses to finish is reported, and the form keeps running", ctx do
+      view = open(ctx)
+      browse(view, @clip_a)
+
+      # Cloudflare records that the file arrived; without its creator the
+      # row can't be updated, so the completion is refused.
+      video =
+        Factory.insert(:video,
+          type: :cloudflare,
+          status: :uploading,
+          remote_id: "cf-uid",
+          meta: %{"provider" => "cloudflare"},
+          creator_id: nil
+        )
+
+      Brando.endpoint().subscribe("user:#{ctx.current_user.id}")
+      complete_provider_upload(view, "unknown", video.id)
+
+      assert Process.alive?(view.pid)
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
+      assert clip_id(view, @clip_a) == ""
+    end
   end
 
-  test "a video uploaded to the server from a field's picker is set on the field", ctx do
-    view = open_picker_for_clip(ctx)
-    video = Factory.insert(:upload_video, creator: ctx.current_user)
+  describe "a server upload" do
+    setup do
+      put_test_env(:default_video_upload_strategy, :local)
+      :ok
+    end
 
-    # What the upload manager delivers to the picker (`deliver_asset/3`)
-    Phoenix.LiveView.send_update(view.pid, VideoPicker, id: "video-picker", event: "upload_complete", asset: video)
-    # Picker, then field, then form: each hands on with a message of its own
-    for _ <- 1..3, do: render(view)
+    test "goes to the field it was started for, not to the one that opened the picker since", ctx do
+      view = open(ctx)
 
-    assert Process.alive?(view.pid)
-    assert clip_id(view) == to_string(video.id)
+      browse(view, @clip_a)
+      {ref, expected} = server_upload_target(view)
+      assert expected == "none"
+
+      browse(view, @clip_b)
+      deliver_server_upload(view, Factory.insert(:upload_video, creator: ctx.current_user), ref, expected)
+
+      assert Process.alive?(view.pid)
+      video_id = clip_id(view, @clip_a)
+      assert video_id != ""
+      assert clip_id(view, @clip_b) == ""
+    end
+
+    test "stays in the library when its field shows another video by then", ctx do
+      picked = Factory.insert(:video)
+      view = open(ctx)
+
+      browse(view, @clip_a)
+      {ref, expected} = server_upload_target(view)
+      view |> with_target(cid_of(view, @clip_a)) |> render_hook("select_video", %{"id" => picked.id})
+      browse(view, @clip_b)
+      deliver_server_upload(view, Factory.insert(:upload_video, creator: ctx.current_user), ref, expected)
+
+      assert clip_id(view, @clip_a) == to_string(picked.id)
+      assert clip_id(view, @clip_b) == ""
+    end
+
+    test "from an opening the picker no longer knows stays in the library", ctx do
+      view = open(ctx)
+
+      browse(view, @clip_a)
+      deliver_server_upload(view, Factory.insert(:upload_video, creator: ctx.current_user), "vp-0", "none")
+
+      assert Process.alive?(view.pid)
+      assert clip_id(view, @clip_a) == ""
+    end
   end
 
   describe "a block var" do
@@ -69,6 +188,7 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
           id: "var-clip",
           key: "clip",
           gallery: nil,
+          video_id: nil,
           current_user_id: user.id,
           on_change: &send(test_pid, {:var_changed, &1})
         )
@@ -82,10 +202,32 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
 
       # `id` here is the video's: the result is still this component's
       assert [%{assigns: %{id: "var-clip", video_id: video_id}}] =
-               RenderVar.update_many([{%{event: "select_video", id: video.id}, socket}])
+               RenderVar.update_many([
+                 {%{event: "select_video", id: video.id, expected_asset_id: "none", pick_context: "clip"}, socket}
+               ])
 
       assert video_id == video.id
       assert_received {:var_changed, %{event: "update_block_var", data: %{video_id: ^video_id}}}
+    end
+
+    test "a video var that shows another video, or another var, keeps it", %{socket: socket} do
+      video = Factory.insert(:video)
+      picked = Factory.insert(:video)
+      socket = Phoenix.Component.assign(socket, type: :video, video_id: picked.id)
+
+      assert [%{assigns: %{video_id: video_id}}] =
+               RenderVar.update_many([{%{event: "select_video", id: video.id, expected_asset_id: "none"}, socket}])
+
+      assert video_id == picked.id
+
+      socket = Phoenix.Component.assign(socket, video_id: nil)
+
+      assert [%{assigns: %{video_id: nil}}] =
+               RenderVar.update_many([
+                 {%{event: "select_video", id: video.id, expected_asset_id: "none", pick_context: "other"}, socket}
+               ])
+
+      refute_received {:var_changed, _}
     end
 
     test "a gallery var adds the uploaded video, once", %{socket: socket} do
@@ -103,28 +245,65 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
     end
   end
 
-  defp open_picker_for_clip(%{conn: conn, article: article}) do
+  defp open(%{conn: conn, article: article}) do
     {view, _html} = live_form(conn, "/admin/articles/update/#{article.id}", "article_form")
-
-    # The row's video field opening the picker: its "Select video"
-    view |> with_target(cid_of(view, @row_clip)) |> render_click("browse_video", %{})
     view
   end
 
-  defp provider_video(user) do
-    Factory.insert(:video,
-      type: :bunny,
-      status: :processing,
-      remote_id: "6f2c1a3e-1111-2222-3333-444455556666",
-      meta: %{"provider" => "bunny", "bunny" => %{"video_guid" => "6f2c1a3e-1111-2222-3333-444455556666"}},
-      config_target: "video:Brando.SyncTest.ArticleItem:clip",
-      creator: user
-    )
+  # The row's video field opening the picker: its "Select video"
+  defp browse(view, field) do
+    view |> with_target(cid_of(view, field)) |> render_click("browse_video", %{})
+    render(view)
   end
 
-  defp clip_id(view) do
-    view |> render() |> Floki.parse_document!() |> Floki.attribute(@row_clip, "value") |> List.first()
+  defp picker(view), do: with_target(view, cid_of(view, "#video-picker"))
+
+  # What the provider's upload hook in the picker pushes before the transfer
+  defp start_provider_upload(view, request_ref) do
+    view
+    |> picker()
+    |> render_hook("get_video_upload_url", %{
+      "request_ref" => request_ref,
+      "filename" => "clip.mp4",
+      "size" => 1_000,
+      "mime_type" => "video/mp4"
+    })
+
+    assert_push_event(view, "video_upload_url_ready", %{request_ref: ^request_ref, video_id: video_id})
+    video_id
   end
+
+  # ... and once the file is up
+  defp complete_provider_upload(view, request_ref, video_id) do
+    view |> picker() |> render_hook("video_upload_complete", %{"request_ref" => request_ref, "video_id" => video_id})
+    # Picker, then field, then form: each hands on with a message of its own
+    for _ <- 1..3, do: render(view)
+  end
+
+  # What the picker's server upload trigger puts in the upload's target
+  defp server_upload_target(view) do
+    [trigger] = view |> render() |> Floki.parse_document!() |> Floki.find("#video-uploader-video-picker")
+    {trigger |> Floki.attribute("data-ref") |> List.first(), trigger |> Floki.attribute("data-expected-asset-id") |> List.first()}
+  end
+
+  # What the upload manager delivers to the picker (`deliver_asset/3`)
+  defp deliver_server_upload(view, video, ref, expected) do
+    Phoenix.LiveView.send_update(view.pid, VideoPicker,
+      id: "video-picker",
+      event: "upload_complete",
+      asset: video,
+      ref: ref,
+      expected_asset_id: expected
+    )
+
+    for _ <- 1..3, do: render(view)
+  end
+
+  defp clip_id(view, field) do
+    view |> render() |> Floki.parse_document!() |> Floki.attribute(field, "value") |> List.first()
+  end
+
+  defp saved_clip_ids(%{items: items}), do: Enum.map(items, &Repo.get!(ArticleItem, &1.id).clip_id)
 
   defp save(view) do
     view |> form(@form) |> render_submit()

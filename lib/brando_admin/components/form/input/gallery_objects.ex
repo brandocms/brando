@@ -28,9 +28,10 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
     {:ok, add_gallery_media(socket, :video, id)}
   end
 
-  # A video uploaded in the picker. Added, never toggled: it is new.
+  # A video uploaded in the picker. Added, never toggled: it is new. The
+  # picker, which may be open for another field by now, marks it itself.
   def update(%{event: "select_video", id: id}, socket) do
-    {:ok, add_gallery_media(socket, :video, id)}
+    {:ok, add_gallery_media(socket, :video, id, notify_picker: false)}
   end
 
   def update(%{action: :update_image, updated_image: updated_image, force_validation: true}, socket) do
@@ -201,11 +202,12 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryObjects do
     {:noreply, socket}
   end
 
-  defp add_gallery_media(socket, media_type, media_id) do
+  defp add_gallery_media(socket, media_type, media_id, opts \\ []) do
     %{gallery_objects: gallery_objects, current_user: current_user} = socket.assigns
 
     {updated, selected_ids} = Media.add(gallery_objects, media_type, media_id, current_user)
-    Media.notify_picker(media_type, selected_ids)
+
+    if Keyword.get(opts, :notify_picker, true), do: Media.notify_picker(media_type, selected_ids)
 
     commit_gallery_objects(socket, updated, media_type, selected_ids)
   end

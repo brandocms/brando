@@ -1,0 +1,1 @@
+- A video uploaded in the video picker goes to the field it was uploaded for, not to whichever field opened the picker last, and a provider that refuses to finish the upload no longer takes the form down.
