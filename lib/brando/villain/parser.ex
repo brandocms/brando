@@ -706,7 +706,7 @@ defmodule Brando.Villain.Parser do
     assigns = %{
       video: video,
       opts: parser_module(opts).video_file_options(video),
-      cover_image: video.cover_image
+      cover_image: Map.get(video, :cover_image)
     }
 
     assigns
@@ -1392,11 +1392,11 @@ defmodule Brando.Villain.Parser do
     has_play_button = Map.get(data, :play_button, false)
     autoplay_setting = Map.get(data, :autoplay)
 
-    # Determine play button display
-    play_button = get_play_button_setting(has_play_button, autoplay_setting)
-
     # Determine if autoplay should be enabled
     autoplay = autoplay_setting not in [nil, false]
+
+    # Determine play button display
+    play_button = get_play_button_setting(has_play_button, autoplay)
 
     # A block's own aspect ratio reshapes the record's size, as for embeds, so
     # the width/height attributes, orientation and cover agree with its style
@@ -1435,8 +1435,8 @@ defmodule Brando.Villain.Parser do
   end
 
   # Helper function for determining play button setting
-  defp get_play_button_setting(has_play_button, autoplay_setting) do
-    if has_play_button && autoplay_setting == false do
+  defp get_play_button_setting(has_play_button, autoplay) do
+    if has_play_button && !autoplay do
       Brando.config(:video_play_button_text) || true
     else
       false
@@ -1884,7 +1884,12 @@ defmodule Brando.Villain.Parser do
       ])
 
     # Merge into the video struct, nil values = use video default
-    Brando.Content.OverrideResolver.merge_overrides(video, override_attrs)
+    merged = Brando.Content.OverrideResolver.merge_overrides(video, override_attrs)
+
+    # The block's title is rich text; the record's own title is plain text
+    if Brando.Captions.present?(override_attrs[:title]),
+      do: merged,
+      else: %{merged | title: Brando.Captions.library_html(video.title)}
   end
 
   # A ref with no block data at all has nothing to override with. `|| %{}`

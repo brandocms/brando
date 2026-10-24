@@ -115,20 +115,8 @@ defmodule Brando.Villain.ProviderVideoRenderingTest do
     assert Parser.video(bunny(), %{parser_module: SiteParser}) =~ ~s(data-progress)
   end
 
-  test "a video ref with a ready Bunny video renders it, with the ref's settings" do
+  defp render_video_ref(video, block_data) do
     user = Factory.insert(:random_user)
-
-    video =
-      Factory.insert(:video,
-        creator: user,
-        type: :bunny,
-        status: :ready,
-        remote_id: nil,
-        source_url: nil,
-        width: 1080,
-        height: 1350,
-        meta: %{"bunny" => %{"video_guid" => @guid}}
-      )
 
     {:ok, module} =
       Content.create_module(
@@ -154,18 +142,99 @@ defmodule Brando.Villain.ProviderVideoRenderingTest do
             uid: Utils.generate_uid(),
             data: %Brando.Villain.Blocks.VideoBlock{
               type: "video",
-              data: %Brando.Villain.Blocks.VideoBlock.Data{autoplay: true, loop: false}
+              data: struct(Brando.Villain.Blocks.VideoBlock.Data, block_data)
             }
           }
         ]
       }
     }
 
-    parsed = Brando.Villain.parse([block], %Brando.Pages.Page{})
+    Brando.Villain.parse([block], %Brando.Pages.Page{})
+  end
+
+  defp insert_bunny(attrs \\ []) do
+    Factory.insert(
+      :video,
+      Keyword.merge(
+        [
+          creator: Factory.insert(:random_user),
+          type: :bunny,
+          status: :ready,
+          remote_id: nil,
+          source_url: nil,
+          width: 1080,
+          height: 1350,
+          meta: %{"bunny" => %{"video_guid" => @guid}}
+        ],
+        attrs
+      )
+    )
+  end
+
+  test "a video ref with a ready Bunny video renders it, with the ref's settings" do
+    parsed = render_video_ref(insert_bunny(), %{autoplay: true, loop: false})
 
     assert parsed =~ ~s(https://vz-1.b-cdn.net/#{@guid}/playlist.m3u8)
     assert parsed =~ " autoplay"
     refute parsed =~ " loop"
     assert parsed =~ "--aspect-ratio-division: 1080/1350;"
+  end
+
+  # The library title is plain text; the ref's own title is rich text
+  test "a video ref escapes the record's title, and keeps its own title's markup" do
+    parsed = render_video_ref(insert_bunny(title: "<img src=x onerror=alert(1)>"), %{})
+    refute parsed =~ "<img src=x"
+    assert parsed =~ "<figcaption>&lt;img src=x onerror=alert(1)&gt;</figcaption>"
+
+    parsed = render_video_ref(insert_bunny(title: "Q&A <live>"), %{})
+    assert parsed =~ "<figcaption>Q&amp;A &lt;live&gt;</figcaption>"
+
+    upload = Factory.insert(:upload_video, creator: Factory.insert(:random_user), title: "Film & co")
+    assert render_video_ref(upload, %{}) =~ "<figcaption>Film &amp; co</figcaption>"
+
+    parsed = render_video_ref(insert_bunny(title: "Q&A <live>"), %{title: "<p><strong>Tour</strong> film</p>"})
+    assert parsed =~ "<figcaption><p><strong>Tour</strong> film</p></figcaption>"
+  end
+
+  test "a play button shows when autoplay is left unset" do
+    assert Parser.video(bunny(%{play_button: true}), []) =~ "video-play-button"
+    refute Parser.video(bunny(%{play_button: true, autoplay: true}), []) =~ "video-play-button"
+  end
+
+  test "a Vimeo account video without a file link gets the block's playback settings and size" do
+    video = %Video{
+      type: :vimeo_account,
+      status: :ready,
+      width: 1920,
+      height: 1080,
+      meta: %{"vimeo" => %{"video_id" => "123", "hash" => "abc"}}
+    }
+
+    html = Parser.video(%{video | autoplay: true, loop: false, aspect_ratio: "1/1"}, [])
+    assert html =~ ~s(src="https://player.vimeo.com/video/123?h=abc&amp;dnt=1&amp;autoplay=1&amp;muted=1&amp;loop=0")
+    assert html =~ ~s(width="1920")
+    assert html =~ ~s(height="1920")
+
+    html = Parser.video(%{video | controls: true}, [])
+    assert html =~ ~s(src="https://player.vimeo.com/video/123?h=abc&amp;dnt=1&amp;autoplay=0&amp;controls=1")
+  end
+
+  # A caller's single dimension doesn't reshape the record
+  test "Brando.HTML.video keeps a Bunny video's own ratio when one dimension is overridden" do
+    render = fn video, opts ->
+      render_component(&Brando.HTML.Video.video/1, video: video, opts: opts)
+    end
+
+    landscape = bunny(%{width: 1920, height: 1080})
+    assert render.(landscape, width: 400) =~ "--aspect-ratio-division: 1920/1080;"
+    assert render.(landscape, width: 400) =~ ~s(data-orientation="landscape")
+    assert render.(landscape, width: 400) =~ ~s(width="400" height="225")
+    assert render.(landscape, width: 400, height: 400) =~ "--aspect-ratio-division: 400/400;"
+  end
+
+  # Revision snapshots from before the field existed
+  test "an old video struct without cover_image renders" do
+    old = Map.delete(bunny(), :cover_image)
+    assert Parser.video(old, []) =~ ~s(https://vz-1.b-cdn.net/#{@guid}/playlist.m3u8)
   end
 end
