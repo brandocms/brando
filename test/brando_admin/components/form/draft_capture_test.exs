@@ -33,7 +33,7 @@ defmodule BrandoAdmin.Components.Form.DraftCaptureTest do
     {:ok, socket: socket, baseline: baseline, identity: identity}
   end
 
-  defp capture(socket, payload) do
+  defp capture(socket, payload, kind \\ nil) do
     draft = socket.assigns.draft
 
     capture = %{
@@ -43,7 +43,8 @@ defmodule BrandoAdmin.Components.Form.DraftCaptureTest do
       request_id: 1,
       main: payload["main"],
       expected: [{:block, "blocks"}, {:transformer, "items"}],
-      parts: %{{:transformer, "items"} => payload["transformers"]["items"]}
+      parts: %{{:transformer, "items"} => payload["transformers"]["items"]},
+      kind: kind
     }
 
     socket
@@ -93,5 +94,31 @@ defmodule BrandoAdmin.Components.Form.DraftCaptureTest do
     # A capture reply invalidated by an explicit save/reset cannot retry a write.
     assert FormDrafts.part(socket, "stale-capture", :block, "blocks", []) == socket
     assert Drafts.list(ctx.identity) == [copy]
+  end
+
+  # Another of the editor's tabs takes over (`LiveView.Form.Tabs`). A capture
+  # that was under way has the browser's form from before the release: the
+  # release's own capture is asked for again, and only that one is handed over.
+  test "only the release's own capture is handed over", ctx do
+    edited = put_in(ctx.baseline, ["main", "title"], "Typed before the release")
+
+    socket =
+      ctx.socket
+      |> Component.update(:draft, &Map.merge(&1, %{candidates: [], open?: false}))
+      |> Component.assign(:tab_editing?, false)
+      |> Component.assign(:tab_release, %{to: self(), token: make_ref(), fields: ["title"]})
+      |> capture(edited)
+
+    refute_received {BrandoAdmin.LiveView.Form.Tabs, :handover, _, _}
+    assert ["b:draft-release", %{id: "page_form"}] in Phoenix.LiveView.Utils.get_push_events(socket)
+    assert socket.assigns.tab_release
+
+    socket = capture(socket, put_in(edited, ["main", "title"], "Typed since"), :release)
+    id = socket.assigns.draft.id
+    assert_received {BrandoAdmin.LiveView.Form.Tabs, :handover, _, %{draft_id: handed, fields: ["title"]}}
+    assert Drafts.get(ctx.identity, handed).payload["main"]["title"] == "Typed since"
+    # this tab writes no more to the copy it handed over
+    refute id == handed
+    refute socket.assigns.tab_release
   end
 end

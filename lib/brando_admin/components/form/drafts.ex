@@ -343,14 +343,21 @@ defmodule BrandoAdmin.Components.Form.Drafts do
 
   # The copy is the other tab's now (the one that took over adopts it), or
   # the editing tab's to offer: this tab writes no more to it.
+  #
+  # A capture that was under way when the release came has the browser's
+  # form from before it: the release's own capture is asked for again, now
+  # that the browser has the reply to the first.
   defp captured(socket, kind) do
     socket =
-      case socket.assigns[:tab_release] do
-        %{to: to, fields: fields} ->
+      case {socket.assigns[:tab_release], kind} do
+        {%{to: to, fields: fields}, :release} ->
           BrandoAdmin.LiveView.Form.Tabs.hand_over(to, %{draft_id: socket.assigns.draft.id, fields: fields})
           socket |> assign(:tab_release, nil) |> rotate()
 
-        nil ->
+        {%{}, _earlier} ->
+          push_event(socket, "b:draft-release", %{id: socket.assigns.id})
+
+        {nil, _kind} ->
           socket
       end
 

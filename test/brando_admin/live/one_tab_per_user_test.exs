@@ -300,6 +300,34 @@ defmodule BrandoAdmin.OneTabPerUserTest do
     assert picked == [hero.id]
   end
 
+  # The preview recovers with the form, which a tab that doesn't edit
+  # recovers without applying it.
+  test "a tab that doesn't edit gets its live preview back after a reconnect", c do
+    b = open(c.conn, c.path, "tab-b")
+    take_over(b, c.a)
+    await_mode(c.a, :released)
+
+    c.a |> element("button[phx-click=toggle_preview_targets]") |> render_click()
+    c.a |> element("button.preview-choice", "Blocks") |> render_click()
+    html = await_selector(c.a, "iframe[src*='__livepreview']")
+    [key] = Regex.run(~r/__livepreview\?key=([A-Za-z0-9_-]+)/, html, capture: :all_but_first)
+    on_exit(fn -> Brando.LivePreview.cleanup_cache(key) end)
+
+    kill_live(c.a)
+    a = open(c.conn, c.path, "tab-a")
+    refute mode(a) == :editing
+    [target] = a |> render() |> Floki.parse_document!() |> Floki.attribute("#live-preview-recovery", "phx-target")
+
+    a
+    |> with_target(String.to_integer(target))
+    |> render_hook("recover_live_preview_state", %{"live_preview" => %{"cache_key" => key}})
+
+    assert form_assigns(a).live_preview_recovery_pending?
+
+    a |> form() |> render_hook("recover_form", recovery_params(html, "#page_form_form"))
+    refute form_assigns(a).live_preview_recovery_pending?
+  end
+
   test "an upload finishing in a tab that edits no more stays in the library", c do
     b = open(c.conn, c.path, "tab-b")
     claim(b)

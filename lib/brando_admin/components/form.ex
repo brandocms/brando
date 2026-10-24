@@ -5246,9 +5246,11 @@ defmodule BrandoAdmin.Components.Form do
   # what it came back from offline with). The rest would change the entry.
   # LiveView's recovery of the form after a reconnect is not applied: what
   # was typed offline goes in a recovery copy (`Drafts.offline/3`).
+  # The form counts as recovered all the same: a live preview recovered
+  # with it waits for that (`maybe_finish_live_preview_recovery/1`).
   def handle_event("recover_form", params, %{assigns: %{tab_editing?: false}} = socket) do
     socket = if offline_fields(socket, params) != [], do: Drafts.offline(socket, :main, params), else: socket
-    {:noreply, socket}
+    {:noreply, socket |> assign(:form_recovered?, true) |> maybe_finish_live_preview_recovery()}
   end
 
   def handle_event(event, _params, %{assigns: %{tab_editing?: false}} = socket) when event not in @read_only_events,
