@@ -1,6 +1,7 @@
 import tippy from 'tippy.js'
 import { Dom } from '@brandocms/jupiter'
 import { alertError, alertWarning, alertInfo } from '../../alerts'
+import { prefersReducedMotion } from '../../motion'
 
 // Smoothly scrolls the window so `node` sits `offsetY` below where it would
 // (a negative offset leaves room above it). The browser's own smooth scroll,
@@ -11,10 +12,7 @@ import { alertError, alertWarning, alertInfo } from '../../alerts'
 // A native smooth scroll ends when the navigation scrolls to the top.
 function scrollToNode(node, offsetY = 0) {
   const top = node.getBoundingClientRect().top + window.scrollY + offsetY
-  const reduceMotion =
-    document.querySelector('meta[name="prefers_reduced_motion"]') ||
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  window.scrollTo({ top: Math.max(top, 0), behavior: reduceMotion ? 'instant' : 'smooth' })
+  window.scrollTo({ top: Math.max(top, 0), behavior: prefersReducedMotion() ? 'instant' : 'smooth' })
 }
 
 export default app => ({

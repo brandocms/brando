@@ -7,10 +7,6 @@ async function factory(page, schema, attributes) {
   return response.json()
 }
 
-// Drawers, dialogs and the page's entrance run through Web Animations
-// (surfaceMotion.js, FADER.js), which the E2E motion override does not shorten.
-const settled = locator => locator.evaluate(el => Promise.allSettled(el.getAnimations({ subtree: true }).map(a => a.finished)))
-
 // A viewport change reaches ResizeObserver callbacks in the next frame.
 const nextFrames = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
 
@@ -135,7 +131,6 @@ test('entry drawers retain input, use their own scrolling surface and keep their
     await expect(opener).toHaveAttribute('aria-controls', await drawer.getAttribute('id'))
     await expect(opener).toHaveAttribute('aria-expanded', 'true')
     await expect(drawer).toHaveCSS('background-color', 'rgb(255, 255, 255)')
-    await settled(drawer)
     if (trigger === 'Meta') await drawer.getByLabel('Meta title', { exact: true }).fill('Panel metadata')
     if (trigger === 'History') {
       await drawer.getByRole('tab', { name: /Revisions/ }).click()
@@ -187,9 +182,6 @@ test('listing actions align with the header rule and selection covers presence',
   await expect(bar.getByRole('button', { name: 'Clear selection' })).toBeHidden()
   await page.locator('.list-row').first().locator('.listing-creator').click({ modifiers: ['Shift'] })
   await expect(bar).toBeVisible()
-  // The page's entrance fade (FADER.js) gives #admin a stacking context of its
-  // own until it ends, putting the bar under the fixed presences.
-  await page.locator('#admin').evaluate(el => Promise.allSettled(el.getAnimations().map(a => a.finished)))
   const presenceCovered = await page.locator('.presences').evaluate(el => {
     const p = el.getBoundingClientRect(), bar = document.querySelector('.selected-rows'), b = bar.getBoundingClientRect()
     const x = (Math.max(p.left, b.left) + Math.min(p.right, b.right)) / 2, y = (Math.max(p.top, b.top) + Math.min(p.bottom, b.bottom)) / 2

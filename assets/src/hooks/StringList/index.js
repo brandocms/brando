@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from '../../motion'
+
 // A `:string_list` input (Input.input/1). The server renders one text input
 // per value plus an empty one, named `field[]` with positional ids. Insert and
 // remove change the rows here; the form's next change then carries the list in
@@ -37,7 +39,7 @@ export default () => ({
     this.renumber()
     input.focus()
 
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!prefersReducedMotion()) {
       added.animate(
         [
           { opacity: 0, backgroundColor: '#e8f1e5' },

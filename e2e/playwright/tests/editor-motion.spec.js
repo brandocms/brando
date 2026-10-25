@@ -445,6 +445,7 @@ test('offline details sit below the toolbar and wrap on a phone', async ({ page 
 test('navigation fades the destination without animating form validation', async ({ page }) => {
   await page.goto('/admin/pages/create')
   await syncLV(page)
+  await realMotion(page)
   await page.evaluate(() => {
     window.addEventListener('phx:page-loading-stop', ({ detail }) => {
       if (detail.kind !== 'redirect') return

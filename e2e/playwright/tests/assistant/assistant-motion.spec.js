@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, withRealMotion } from '../../utils'
 
 // E2eProject.AssistantModel owns this paced, read-only script. It reports zero
 // tokens and never calls a model provider, including when replayed manually.
@@ -16,6 +16,7 @@ const send = async page => {
 }
 
 test('thinking and new tool steps animate once, with complete accessible text and stable wrapping', async ({ page }, testInfo) => {
+  await withRealMotion(page)
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.addInitScript(() => {
@@ -79,6 +80,7 @@ test('thinking and new tool steps animate once, with complete accessible text an
 
 for (const preference of ['system', 'admin']) {
   test(`assistant respects ${preference} reduced motion and Stop remains immediate`, async ({ page }) => {
+    await withRealMotion(page)
     await page.emulateMedia({ reducedMotion: preference === 'system' ? 'reduce' : 'no-preference' })
     await open(page)
     if (preference === 'admin') await page.evaluate(() => {

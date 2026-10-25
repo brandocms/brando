@@ -29,6 +29,10 @@ missing, forcing a click through an overlay, or increasing retries.
 
 ## Wait for the result the next action needs
 
+E2E pages move nothing: CSS motion is cut to 1ms and `prefersReducedMotion()`
+skips Web Animations, so there is no animation to wait out. A test about motion
+opts in with `withRealMotion(page)` from utils.js before its first navigation.
+
 Fixed sleeps charge their full duration on every execution, loop and retry.
 Prefer retrying locator assertions or `expect.poll` for the required state.
 Register a response/event wait before the action that triggers it. Keep existing
