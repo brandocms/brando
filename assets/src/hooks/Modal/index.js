@@ -166,9 +166,13 @@ export default app => ({
     // keystroke, and Enter on the opener opens the dialog again. Return focus
     // once the event is over, as the closing animation otherwise ensures.
     this.restoreTimer = setTimeout(() => {
-      // Opened again meanwhile. A dialog removed while open (`destroyed/0`)
-      // still reads as open, and still returns focus.
-      if (this.el.isConnected && this.isOpen()) return
+      // Opened again meanwhile: keep the opener for the next close. A dialog
+      // removed while open (`destroyed/0`) still reads as open, and still
+      // returns focus.
+      if (this.el.isConnected && this.isOpen()) {
+        this.opener = this.opener || opener
+        return
+      }
       // Only take focus back if it is still inside the modal; if something else
       // has deliberately moved it since, leave it alone.
       if (!this.el.contains(document.activeElement) && document.activeElement !== document.body) return
