@@ -10,9 +10,10 @@
 //
 //   node scripts/shards.mjs args 2/4 [playwright args...]
 //     Prints the Playwright arguments for shard 2 of 4, one per line: the
-//     options as given, then the shard's spec files. File filters (paths or
+//     shard's spec files, then the options as given. File filters (paths or
 //     regular expressions, as Playwright matches them) narrow the files to
-//     split. Prints nothing when the shard gets no files.
+//     split. Prints nothing when the shard gets no files, and fails when the
+//     filters match none.
 //
 //   node scripts/shards.mjs record <timings.jsonl ...>
 //     Rewrites shard-timings.json from timingReporter.js output: the mean
@@ -105,7 +106,10 @@ function shardArgs(shardArg, args) {
   // A file without a timing (a new spec) counts as an average file.
   const fallback = known.length ? known.reduce((sum, s) => sum + s, 0) / known.length : 1
 
-  const weighted = selectedFiles(filters)
+  const selected = selectedFiles(filters)
+  if (selected.length === 0) throw new Error(`No spec files match ${filters.join(' ')}`)
+
+  const weighted = selected
     .map(file => ({ file, seconds: recorded[file] ?? fallback }))
     .sort((a, b) => b.seconds - a.seconds || a.file.localeCompare(b.file))
 
@@ -122,7 +126,9 @@ function shardArgs(shardArg, args) {
       `(shards ${shards.map(shard => Math.round(shard.seconds)).join(' / ')} s)`
   )
   if (mine.files.length === 0) return
-  for (const arg of [...options, ...mine.files.sort()]) console.log(arg)
+  // Files first: an option with an optional or repeated value (-u, --project)
+  // would take a file that followed it as its value.
+  for (const arg of [...mine.files.sort(), ...options]) console.log(arg)
 }
 
 function record(inputs) {
