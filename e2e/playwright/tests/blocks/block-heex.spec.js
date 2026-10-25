@@ -9,11 +9,7 @@ import {
 
 test.describe('HEEx blocks', () => {
   test('render vars, refs and system assigns in the editor and live preview', async ({ page }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('HEEx Test Page')

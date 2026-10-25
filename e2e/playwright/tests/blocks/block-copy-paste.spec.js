@@ -39,12 +39,7 @@ async function openPage(page, title) {
 test.describe('Block Copy/Paste', () => {
   test('copy root module and paste at root level', async ({ page }) => {
     // Navigate to Pages
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    // Create new page
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     // Fill page basics
@@ -85,11 +80,7 @@ test.describe('Block Copy/Paste', () => {
   })
 
   test('copy module and paste at bottom of page', async ({ page }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Copy Paste Bottom Test')
@@ -116,11 +107,7 @@ test.describe('Block Copy/Paste', () => {
   })
 
   test('copy module with vars and verify pasted block has same var values', async ({ page }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Copy Paste Vars Test')
@@ -167,11 +154,7 @@ test.describe('Block Copy/Paste', () => {
   })
 
   test('copy module and paste inside container', async ({ page }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Copy Paste Container Test')
@@ -210,11 +193,7 @@ test.describe('Block Copy/Paste', () => {
   })
 
   test('copy root module and paste persists after save', async ({ page }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Copy Paste Persist Test')
@@ -250,11 +229,7 @@ test.describe('Block Copy/Paste', () => {
   })
 
   test('smart matching: module_entry only pastes into matching multi-block', async ({ page }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Smart Match Test')

@@ -4,12 +4,7 @@ import { syncLV, dragAndDrop } from '../../utils'
 test.describe('Block Identifier Selection', () => {
   test('add, reorder, remove, re-add identifiers and verify persistence', async ({ page }, testInfo) => {
     // Navigate to Pages
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    // Create new page
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     // Fill page basics
@@ -210,11 +205,7 @@ test.describe('Block Identifier Selection', () => {
   })
 
   test('clicking same identifier twice toggles selection', async ({ page }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Toggle Test Page')

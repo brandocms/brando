@@ -23,12 +23,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
 
       // Navigate to Pages
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      // Create new page
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       // Fill page basics
@@ -80,10 +75,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
     // without them. The channel sees the page is behind and the form renders
     // it again, with a notice in the drawer.
     test('a reloaded preview gets its block edits back, with a notice', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
       await page.getByLabel('Title', { exact: true }).fill('Lost Patches Page')
       await page.getByLabel('URI').fill('lost-patches')
@@ -113,11 +105,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
     })
 
     test('device size buttons work (desktop/tablet/mobile)', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Device Test Page')
@@ -148,11 +136,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
   test.describe('Picture Ref + Variables', () => {
     test('adding image and changing caption updates preview', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Picture Ref Test Page')
@@ -191,11 +175,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
     })
 
     test('toggling show_border var updates preview', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Border Toggle Test Page')
@@ -235,11 +215,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
   test.describe('Gallery Ref + Variables', () => {
     test('adding images to gallery and changing vars updates preview', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Gallery Ref Test Page')
@@ -308,11 +284,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
   test.describe('Header Ref + Variables', () => {
     test('editing header and changing style vars updates preview', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Header Style Test Page')
@@ -359,11 +331,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
   test.describe('Text Ref + Variables', () => {
     test('toggling show_intro and editing text updates preview', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Rich Text Test Page')
@@ -403,11 +371,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
   test.describe('Video Ref + Variables', () => {
     test('toggling autoplay and controls vars updates preview', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Video Player Test Page')
@@ -445,11 +409,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
   test.describe('Persistence', () => {
     test('preview reflects saved content after page reload', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Persistence Test Page')
@@ -490,11 +450,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
     })
 
     test('multiple block changes all reflect in preview', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Multi Block Test Page')
@@ -537,11 +493,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
   test.describe('Block Lifecycle', () => {
     test('deleting a block removes it from preview', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Delete Block Test Page')
@@ -587,11 +539,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
     })
 
     test('deactivating a block hides it from preview', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Deactivate Block Test Page')
@@ -630,11 +578,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
     })
 
     test('duplicating a block shows the copy in preview', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Duplicate Block Test Page')
@@ -681,11 +625,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
   test.describe('Image Var + Live Preview', () => {
     test('uploading image var updates preview iframe', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Image Var Preview Test Page')
@@ -723,11 +663,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
   test.describe('Morph Preservation (skipFromChildren)', () => {
     test('video element survives morphdom update when data-src unchanged', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Morph Video Test Page')
@@ -772,11 +708,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
     })
 
     test('iframe element survives morphdom update when src unchanged', async ({ page }) => {
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
 
       await page.getByLabel('Title', { exact: true }).fill('Morph Iframe Test Page')

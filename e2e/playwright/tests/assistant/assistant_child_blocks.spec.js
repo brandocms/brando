@@ -13,10 +13,7 @@ test('reorders the entries of a multi block and reviews the new order', async ({
   await page.setViewportSize({ width: 1440, height: 1000 })
 
   // A page with a Team Section holding Alice, then Bob.
-  await page.goto('/admin')
-  await page.getByRole('link', { name: 'Pages & Sections' }).click()
-  await syncLV(page)
-  await page.getByRole('link', { name: 'Create page' }).click()
+  await page.goto('/admin/pages/create')
   await syncLV(page)
   await page.getByLabel('Title', { exact: true }).fill('Assistant Team')
   await page.getByLabel('URI').fill('assistant-team')

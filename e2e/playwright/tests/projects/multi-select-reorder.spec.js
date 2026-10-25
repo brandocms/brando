@@ -1,54 +1,34 @@
 import { test, expect } from '../../test-support/setupAuth'
 import { syncLV, dragAndDrop, fillSlugSource, setEntryStatus } from '../../utils'
 
+async function factory(page, schema, attributes) {
+  const response = await page.request.post('/__e2e/db/factory', {
+    data: { schema, attributes, creator_id: 1, fields: ['id'] },
+  })
+  expect(response.ok(), await response.text()).toBeTruthy()
+  return response.json()
+}
+
 test.describe('Multi-select reordering', () => {
   test.beforeEach(async ({ page }) => {
-    // Create a client first
+    // The client and categories are only options to pick; the tests are
+    // about the project form's multi-select
+    await factory(page, 'E2eProject.Projects.Client', {
+      name: 'Test Client',
+      slug: 'test-client',
+      status: 'published',
+      language: 'en',
+    })
+    for (const title of ['Category A', 'Category B', 'Category C']) {
+      await factory(page, 'E2eProject.Projects.Category', {
+        title,
+        slug: title.toLowerCase().replace(' ', '-'),
+        status: 'published',
+        language: 'en',
+      })
+    }
+
     await page.goto('/admin')
-    await page.locator('#nav-sections').getByRole('link', { name: 'Clients' }).click()
-    await page.getByRole('link', { name: 'Create new' }).click()
-    await syncLV(page)
-    await setEntryStatus(page, 'published')
-    const clientNameField = page.getByRole('textbox', { name: 'Name' })
-    await fillSlugSource(clientNameField, 'Test Client')
-    await syncLV(page)
-    await expect(page.locator('input[name="client[slug]"]')).toHaveValue('test-client', { timeout: 10000 })
-    await page.getByTestId('submit').click()
-    await expect(page).toHaveURL(/\/clients(\?|$)/)
-    await syncLV(page)
-
-    // Create three categories
-    await page.locator('#nav-sections').getByRole('link', { name: 'Categories', exact: true }).click()
-    await expect(page).toHaveURL(/\/categories(\?|$)/)
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create new' }).click()
-    await syncLV(page)
-    const catAField = page.getByRole('textbox', { name: 'Title' })
-    await fillSlugSource(catAField, 'Category A')
-    await syncLV(page)
-    await expect(page.locator('input[name="category[slug]"]')).toHaveValue('category-a', { timeout: 10000 })
-    await page.getByTestId('submit').click()
-    await expect(page).toHaveURL(/\/categories(\?|$)/)
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create new' }).click()
-    await syncLV(page)
-    const catBField = page.getByRole('textbox', { name: 'Title' })
-    await fillSlugSource(catBField, 'Category B')
-    await syncLV(page)
-    await expect(page.locator('input[name="category[slug]"]')).toHaveValue('category-b', { timeout: 10000 })
-    await page.getByTestId('submit').click()
-    await expect(page).toHaveURL(/\/categories(\?|$)/)
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create new' }).click()
-    await syncLV(page)
-    const catCField = page.getByRole('textbox', { name: 'Title' })
-    await fillSlugSource(catCField, 'Category C')
-    await syncLV(page)
-    await expect(page.locator('input[name="category[slug]"]')).toHaveValue('category-c', { timeout: 10000 })
-    await page.getByTestId('submit').click()
-    await expect(page).toHaveURL(/\/categories(\?|$)/)
     await syncLV(page)
   })
 

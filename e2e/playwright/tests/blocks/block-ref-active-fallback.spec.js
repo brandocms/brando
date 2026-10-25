@@ -16,10 +16,7 @@ test.describe('Ref active toggles and template fallbacks', () => {
   test.setTimeout(90000)
 
   const addMediaObject = async page => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill('Ref Fallback Test')
     await page.getByLabel('URI').fill('ref-fallback-test')

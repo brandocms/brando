@@ -7,11 +7,7 @@ test.describe('Gallery block image replacement', () => {
   test('can remove an image and add another, then save successfully', async ({ page }) => {
     test.setTimeout(120000)
 
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Gallery Replace Test')

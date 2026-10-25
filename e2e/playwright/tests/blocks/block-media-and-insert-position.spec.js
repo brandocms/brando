@@ -30,11 +30,7 @@ test.describe('Block regressions: media persistence + insert position', () => {
   }
 
   test('uploaded picture survives inserting another block (live preview)', async ({ page }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Media Persistence Test')
@@ -67,11 +63,7 @@ test.describe('Block regressions: media persistence + insert position', () => {
   })
 
   test('gap "+" inserts at the correct position after a prior insert', async ({ page }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Insert Position Test')

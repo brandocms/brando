@@ -13,11 +13,7 @@ test.describe('Image Editor from Blocks', () => {
   test('opens image editor from picture block preview icon', async ({ page }, testInfo) => {
     test.setTimeout(120000)
 
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('PictureBlock Editor Test')
@@ -184,11 +180,7 @@ test.describe('Image Editor from Blocks', () => {
   test('opens image editor from picture block config panel', async ({ page }) => {
     test.setTimeout(120000)
 
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('PictureBlock Config Editor Test')
@@ -243,11 +235,7 @@ test.describe('Image Editor from Blocks', () => {
   test('opens image editor from gallery block thumbnail', async ({ page }) => {
     test.setTimeout(120000)
 
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('GalleryBlock Editor Test')
@@ -304,11 +292,7 @@ test.describe('Image Editor from Blocks', () => {
   test('save as new copy with crop replaces gallery image', async ({ page }) => {
     test.setTimeout(120000)
 
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('GalleryBlock SaveNew Test')
@@ -372,11 +356,7 @@ test.describe('Image Editor from Blocks', () => {
   test('gallery image stays processed after adding another image via picker', async ({ page }) => {
     test.setTimeout(120000)
 
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Gallery Stale Image Test')
@@ -454,11 +434,7 @@ test.describe('Image Editor from Blocks', () => {
   test('gallery image picker deselect syncs correctly', async ({ page }) => {
     test.setTimeout(120000)
 
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Gallery Deselect Test')
@@ -507,11 +483,7 @@ test.describe('Image Editor from Blocks', () => {
   test('does not show edit icon on gallery video objects', async ({ page }) => {
     test.setTimeout(120000)
 
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Gallery Video NoEdit Test')
@@ -545,11 +517,7 @@ test.describe('Image Editor from Blocks', () => {
   test('save changes with zoom applies crop to picture block image', async ({ page }) => {
     test.setTimeout(120000)
 
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('PictureBlock Crop Test')
@@ -611,11 +579,7 @@ test.describe('Image Editor from Blocks', () => {
   test('save changes with zoom applies crop to gallery block image', async ({ page }) => {
     test.setTimeout(120000)
 
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('GalleryBlock Crop Test')
@@ -678,11 +642,7 @@ test.describe('Image Editor from Blocks', () => {
   test('save as new copy with crop from picture block replaces image', async ({ page }) => {
     test.setTimeout(120000)
 
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('PictureBlock SaveNew Crop Test')

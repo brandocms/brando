@@ -56,10 +56,7 @@ test.describe('Block config var persistence', () => {
   test('config vars survive a closed-modal edit, save and reload', async ({
     page,
   }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill(TITLE)
     await page.getByLabel('URI').fill(URI)

@@ -28,13 +28,15 @@ const restore = async page => {
 }
 
 const openProject = async page => {
-  await page.goto('/admin/projects/clients/create')
-  await syncLV(page)
-  await setEntryStatus(page, 'published')
-  await page.getByRole('textbox', { name: 'Name', exact: true }).fill('Recovery client')
-  await page.getByRole('textbox', { name: 'Slug', exact: true }).fill('recovery-client')
-  await page.getByTestId('submit').click()
-  await expect(page).toHaveURL(/\/projects\/clients$/)
+  const client = await page.request.post('/__e2e/db/factory', {
+    data: {
+      schema: 'E2eProject.Projects.Client',
+      attributes: { name: 'Recovery client', slug: 'recovery-client', status: 'published', language: 'en' },
+      creator_id: 1,
+      fields: ['id'],
+    },
+  })
+  expect(client.ok(), await client.text()).toBeTruthy()
   await page.goto('/admin/projects/projects')
   await page.getByRole('link', { name: 'Test Project Gamma' }).click()
   await syncLV(page)

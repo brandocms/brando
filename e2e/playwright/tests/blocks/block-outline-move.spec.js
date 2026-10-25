@@ -39,10 +39,7 @@ test.describe('Block outline: moving a block between containers', () => {
   // other one, `position` relative to the Heading there.
   const moveTest = async (page, title, uri, position, from = 0) => {
     const to = 1 - from
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill(title)
     await page.getByLabel('URI').fill(uri)
