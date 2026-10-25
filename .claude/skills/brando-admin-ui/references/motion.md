@@ -19,11 +19,15 @@ let server validation reveal the tab containing the error.
 
 Form tabs and modal sections keep their fields mounted. Animate their opacity,
 not their transform: a transformed ancestor temporarily changes the containing
-block of fixed dialogs inside it. Test real motion as well as E2E's usual 1ms
-mode, including delayed replies, quick reversals, and reduced motion. See
-`e2e/playwright/tests/editor-motion.spec.js`. For manual E2E previews, start the
-server with `BRANDO_E2E_REAL_MOTION=1`; normal timings then survive refreshes.
-Automated tests keep their fast CSS by default.
+block of fixed dialogs inside it. E2E pages move nothing by default: the E2E
+stylesheet cuts CSS motion to 1ms and `prefersReducedMotion()` skips Web
+Animations. Test real motion as well, including delayed replies, quick
+reversals, and reduced motion: a test opts in with `withRealMotion(page)` from
+`e2e/playwright/utils.js` before navigating (page-load motion included), or by
+removing the body's `data-env` once loaded (see
+`e2e/playwright/tests/editor-motion.spec.js`). For manual E2E previews, start
+the server with `BRANDO_E2E_REAL_MOTION=1`; normal timings then survive
+refreshes.
 
 The login reveals its box and form rows in one overlapping sequence, including
 recovery and passkey actions. Login and logout get a fixed 350ms exit before

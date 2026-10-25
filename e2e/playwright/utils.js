@@ -414,9 +414,27 @@ async function mediaMenu(field, action) {
   await field.locator('.media-field-menu').getByRole('button', { name: action, exact: true }).click()
 }
 
+// E2E pages move nothing: the E2E stylesheet cuts CSS motion and
+// `prefersReducedMotion()` (assets/src/motion.js) skips Web Animations. A test
+// about motion calls this before its first navigation; it marks the body
+// `data-real-motion` as soon as it exists, ahead of the app's scripts, so
+// page-load motion runs too. Reduced-motion tests opt in as well, so that the
+// preference they set is the only thing reducing motion.
+const withRealMotion = page =>
+  page.addInitScript(() => {
+    const mark = () => document.body?.setAttribute('data-real-motion', 'true')
+    if (document.body) return mark()
+    new MutationObserver((_, observer) => {
+      if (!document.body) return
+      mark()
+      observer.disconnect()
+    }).observe(document, { childList: true, subtree: true })
+  })
+
 module.exports = {
   randomString,
   syncLV,
+  withRealMotion,
   awaitBlockDebounce,
   awaitBlockShip,
   goOffline,

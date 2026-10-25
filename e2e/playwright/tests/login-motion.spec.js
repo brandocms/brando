@@ -1,6 +1,6 @@
 import { test, expect } from '../test-support/setupAuth'
 import { baseURL } from '../test-support/e2eUrl'
-import { syncLV } from '../utils'
+import { syncLV, withRealMotion } from '../utils'
 
 const settled = page => page.evaluate(() => Promise.allSettled(document.getAnimations()
   .filter(a => a.effect.getTiming().iterations !== Infinity).map(a => a.finished)))
@@ -22,6 +22,7 @@ const sampleExit = button => button.evaluate(el => new Promise(resolve => {
 test('login reveals every action smoothly, then login and logout finish their exit before navigating', async ({ browser, sandboxUserAgent }, testInfo) => {
   const context = await browser.newContext({ baseURL, userAgent: sandboxUserAgent, viewport: { width: 1440, height: 1000 } })
   const page = await context.newPage()
+  await withRealMotion(page)
   try {
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await page.addInitScript(() => {
@@ -111,6 +112,7 @@ test('login reveals every action smoothly, then login and logout finish their ex
 test('reduced-motion login and logout use immediate native submissions', async ({ browser, sandboxUserAgent }) => {
   const context = await browser.newContext({ baseURL, userAgent: sandboxUserAgent, reducedMotion: 'reduce' })
   const page = await context.newPage()
+  await withRealMotion(page)
   try {
     await page.goto('/admin/login')
     await syncLV(page)
@@ -134,6 +136,7 @@ test('reduced-motion login and logout use immediate native submissions', async (
 })
 
 test('canceling logout during its exit keeps the current LiveView connected', async ({ page }) => {
+  await withRealMotion(page)
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.goto('/admin/pages/update/1')
   await syncLV(page)

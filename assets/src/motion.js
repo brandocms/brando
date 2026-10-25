@@ -15,10 +15,14 @@ export const ease = {
 }
 
 // Honour both the admin preference and the OS setting, including changes made
-// while the editor is open.
+// while the editor is open. E2E runs (`data-env="e2e"` on the body) move
+// nothing either, as the E2E stylesheet does for CSS motion, unless the body
+// has `data-real-motion="true"` (`config :brando, :e2e_real_motion`, or a test
+// opting in).
 export const prefersReducedMotion = () =>
   document.querySelector('meta[name="prefers_reduced_motion"]')?.content === 'true' ||
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+  (document.body?.dataset.env === 'e2e' && document.body.dataset.realMotion !== 'true')
 
 // The consumer's CSS optimiser can turn 350ms into .35s, including inside
 // custom properties. Web Animations and timers always expect milliseconds.

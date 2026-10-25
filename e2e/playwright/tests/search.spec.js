@@ -56,16 +56,18 @@ test('a published entry is found by its block text from the palette and the sear
   expect((await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')).ok()).toBe(true)
   await page.setViewportSize({ width: 1440, height: 900 })
 
-  // Add the block, publish and save
+  // Publish, add the block and save. Publishing first: the new block is
+  // scrolled into view 250 ms after it is added (`b:scroll_to`), which would
+  // move the status menu away mid-click.
   await page.goto(`/admin/projects/projects/update/${project.id}`)
-  await syncLV(page)
-  await page.getByRole('button', { name: 'Legg til blokk', exact: true }).first().click()
-  await page.getByRole('button', { name: /^Søk \d+$/ }).click()
-  await page.getByRole('button', { name: 'Fyrtekst', exact: true }).click()
   await syncLV(page)
   await page.getByTestId('status-trigger').click()
   await page.getByTestId('status-options').locator('label', { hasText: 'Publisert' }).click()
   await expect(page.getByTestId('status-options').locator('input[value="published"]')).toBeChecked()
+  await page.getByRole('button', { name: 'Legg til blokk', exact: true }).first().click()
+  await page.getByRole('button', { name: /^Søk \d+$/ }).click()
+  await page.getByRole('button', { name: 'Fyrtekst', exact: true }).click()
+  await syncLV(page)
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL(/\/admin\/projects\/projects$/)
   await syncLV(page)

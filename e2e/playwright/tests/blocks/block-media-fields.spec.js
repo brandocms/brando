@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV, keepDuplicateUploads, mediaMenu } from '../../utils'
+import { syncLV, keepDuplicateUploads, mediaMenu, withRealMotion } from '../../utils'
 import fs from 'node:fs'
 
 async function createPage(page, title, module) {
@@ -369,6 +369,7 @@ test('file refs keep their settings through replacement and gallery vars accept 
 // opener must not receive that keystroke and open the picker again.
 for (const reducedMotion of ['no-preference', 'reduce']) {
   test(`configured file and video fields browse the current unsaved selection (${reducedMotion} motion)`, async ({ page }, testInfo) => {
+    await withRealMotion(page)
     await page.emulateMedia({ reducedMotion })
     await page.setViewportSize({ width: 1440, height: 1000 })
     await page.goto('/admin/projects/projects/update/3')
