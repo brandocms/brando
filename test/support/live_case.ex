@@ -170,7 +170,7 @@ defmodule Brando.LiveCase do
       receive do
         {:DOWN, ^ref, :process, ^pid, _reason} -> :ok
       after
-        1_000 -> flunk("LiveView #{inspect(pid)} did not exit within 1s")
+        5_000 -> flunk("LiveView #{inspect(pid)} did not exit within 5s")
       end
 
       await_proxy_exit(proxy_pid)
@@ -189,12 +189,13 @@ defmodule Brando.LiveCase do
   # The kill stops the proxy (phoenix_live_view **1.2.12**, `client_proxy.ex`'s
   # `handle_info({:DOWN, …}, state)` clause at `:542`), so the exit is expected
   # and arrives in single-digit ms. Not arriving means the proxy is hung, which
-  # is a failure.
+  # is a failure. The deadline is generous because a loaded CI runner missed
+  # 500 ms (PR #3290); a hung proxy fails all the same.
   defp await_proxy_exit(proxy_pid) do
     receive do
       {:EXIT, ^proxy_pid, _reason} -> :ok
     after
-      500 -> flunk("client proxy #{inspect(proxy_pid)} did not exit within 500ms")
+      5_000 -> flunk("client proxy #{inspect(proxy_pid)} did not exit within 5s")
     end
   end
 
