@@ -47,6 +47,11 @@ test('palette swatches stay inside the select field and on the label line', asyn
 
   const option = page.locator('.select-modal .options-option').filter({ hasText: 'Autumn' })
   await expect(option).toBeVisible()
+  // The dialog slides in through Web Animations (surfaceMotion.js), which the
+  // E2E motion override does not shorten; measure its settled layout.
+  await option.evaluate(el =>
+    Promise.allSettled(el.closest('.modal').getAnimations({ subtree: true }).map(a => a.finished))
+  )
 
   // In the dialog: the swatches sit on the label's line, before the name
   const optionStack = await box(option.locator('.circle-stack'))

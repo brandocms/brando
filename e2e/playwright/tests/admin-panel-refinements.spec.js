@@ -7,6 +7,13 @@ async function factory(page, schema, attributes) {
   return response.json()
 }
 
+// Drawers, dialogs and the page's entrance run through Web Animations
+// (surfaceMotion.js, FADER.js), which the E2E motion override does not shorten.
+const settled = locator => locator.evaluate(el => Promise.allSettled(el.getAnimations({ subtree: true }).map(a => a.finished)))
+
+// A viewport change reaches ResizeObserver callbacks in the next frame.
+const nextFrames = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
+
 async function project(page) {
   const client = await factory(page, 'E2eProject.Projects.Client', { name: 'Panel client', slug: 'panel-client', status: 'published', language: 'en' })
   return factory(page, 'E2eProject.Projects.Project', {
@@ -125,7 +132,7 @@ test('entry drawers retain input and use their own scrolling surface', async ({ 
     await page.getByRole('button', { name: trigger, exact: true }).click()
     const drawer = page.locator(`[id$="-${suffix}"]`)
     await expect(drawer).toHaveCSS('background-color', 'rgb(255, 255, 255)')
-    await page.waitForTimeout(350)
+    await settled(drawer)
     if (trigger === 'Meta') await drawer.getByLabel('Meta title', { exact: true }).fill('Panel metadata')
     if (trigger === 'History') {
       await drawer.getByRole('tab', { name: /Revisions/ }).click()
@@ -133,10 +140,9 @@ test('entry drawers retain input and use their own scrolling surface', async ({ 
       await expect(drawer.locator('.revisions-line').first()).toBeVisible()
     }
     await expect(drawer).toBeInViewport()
-    await page.waitForTimeout(350)
     await page.screenshot({ path: testInfo.outputPath(`${suffix}-desktop.png`) })
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.waitForTimeout(350)
+    await nextFrames(page)
     await page.screenshot({ path: testInfo.outputPath(`${suffix}-mobile.png`) })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await drawer.getByRole('button', { name: 'Close', exact: true }).press('Escape')
@@ -173,7 +179,9 @@ test('listing actions align with the header rule and selection covers presence',
   await expect(bar.getByRole('button', { name: 'Clear selection' })).toBeHidden()
   await page.locator('.list-row').first().locator('.listing-creator').click({ modifiers: ['Shift'] })
   await expect(bar).toBeVisible()
-  await page.waitForTimeout(350)
+  // The page's entrance fade (FADER.js) gives #admin a stacking context of its
+  // own until it ends, putting the bar under the fixed presences.
+  await page.locator('#admin').evaluate(el => Promise.allSettled(el.getAnimations().map(a => a.finished)))
   const presenceCovered = await page.locator('.presences').evaluate(el => {
     const p = el.getBoundingClientRect(), bar = document.querySelector('.selected-rows'), b = bar.getBoundingClientRect()
     const x = (Math.max(p.left, b.left) + Math.min(p.right, b.right)) / 2, y = (Math.max(p.top, b.top) + Math.min(p.bottom, b.bottom)) / 2
@@ -181,14 +189,14 @@ test('listing actions align with the header rule and selection covers presence',
   })
   expect(presenceCovered).toBe(true)
   await page.locator('.sorts .simple-dropdown-button').press('Enter')
-  await expect(page.locator('#sorts-dropdown')).toBeVisible()
-  await page.waitForTimeout(350)
+  // JS.toggle shows the menu at opacity 0 and fades it in a frame later
+  await expect(page.locator('#sorts-dropdown')).toHaveCSS('opacity', '1')
   await page.screenshot({ path: testInfo.outputPath('listing-panels-desktop.png') })
   await page.keyboard.press('Escape')
   await bar.getByRole('button', { name: 'Actions', exact: true }).press('Space')
   await expect(bar.locator('.dropdown-content')).toBeVisible()
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.waitForTimeout(350)
+  await nextFrames(page)
   await page.screenshot({ path: testInfo.outputPath('selection-bar-mobile.png') })
   await page.keyboard.press('Escape')
   await expect(bar.getByRole('button', { name: 'Actions', exact: true })).toBeFocused()
@@ -250,7 +258,7 @@ test('block rich text keeps its toolbar below the form controls', async ({ page 
   await page.locator('.entry-block .tiptap-activate').first().click()
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 })
-    await page.waitForTimeout(350)
+    await nextFrames(page)
     await page.evaluate(() => window.scrollTo(0, 0))
     await menu.evaluate(el => window.scrollBy(0, el.getBoundingClientRect().top + 150))
     await expect.poll(async () => {
@@ -286,7 +294,7 @@ test('revision metadata is readable in Norwegian at desktop and mobile widths', 
   await expect(drawer.locator('.modal-person-avatar > span')).toHaveText('N')
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 })
-    await page.waitForTimeout(350)
+    await nextFrames(page)
     expect(await drawer.locator('.drawer-form').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
     await drawer.screenshot({ path: testInfo.outputPath(`revisions-readable-${width}.png`) })
     if (width === 1440) await drawer.locator('.revisions-table').screenshot({ path: testInfo.outputPath('revisions-table-desktop.png') })
