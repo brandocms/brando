@@ -20,6 +20,25 @@ const setText = async (page, editor, text) => {
   await expect(editor).toHaveText(text)
 }
 
+const placeCaretAtEnd = async editor => {
+  const text = await editor.innerText()
+  await editor.click()
+  await expect(editor).toBeEditable()
+  // Set the model's caret too: ProseMirror's deferred focus can restore the
+  // select-all range between a native ArrowRight and its selectionchange event.
+  await editor.evaluate(element => element.editor.commands.focus('end'))
+  await expect(editor).toBeFocused()
+  await expect.poll(() => editor.evaluate(element => {
+    const selection = window.getSelection()
+    if (!selection?.rangeCount || !selection.isCollapsed || !element.contains(selection.anchorNode)) return null
+    const beforeCaret = document.createRange()
+    beforeCaret.selectNodeContents(element)
+    beforeCaret.setEnd(selection.anchorNode, selection.anchorOffset)
+    return beforeCaret.toString()
+  })).toBe(text)
+  return text
+}
+
 const addModule = async (page, name) => {
   await page.locator('.blocks-wrapper:not(.footnote-storage) > .blocks-content > .block-plus-wrapper button.block-plus').click()
   await page.getByRole('button', { name, exact: true }).click()
@@ -152,14 +171,17 @@ test('Blueprint notes expose the same recovery controls beside their text field'
   const url = `/admin/projects/projects/update/${project.id}`
   await page.goto(url)
   const editor = page.locator('[data-footnote-field="introduction"] .tiptap')
-  await editor.click()
+  const originalText = await placeCaretAtEnd(editor)
   await page.getByRole('button', { name: 'Add footnote', exact: true }).click()
   const drawer = page.locator('.block-slot-drawer.visible')
   await setText(page, drawer.locator('.tiptap'), 'An introduction source')
   await drawer.getByRole('button', { name: 'Done', exact: true }).click()
+  // The field's own text keeps its note marker, numbered, across save and reload.
+  await expect(editor.locator('p')).toHaveText(`${originalText}1`)
   await page.getByRole('button', { name: /^Save and close (⇧⌘S|Ctrl\+Shift\+S)$/ }).click()
   await expect(page).toHaveURL(/\/admin\/projects\/projects$/)
   await page.goto(url)
+  await expect(editor.locator('p')).toHaveText(`${originalText}1`)
   const uid = await page.locator('.tiptap-footnote').getAttribute('data-footnote-uid')
   await setText(page, editor, 'Rewritten introduction')
   await editor.blur()

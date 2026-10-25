@@ -35,7 +35,7 @@ test.describe('Ref active toggles and template fallbacks', () => {
     return multiBlock.locator('.block-children [data-uid]').first()
   }
 
-  test('both a ref and a headless_ref expose a working on/off switch', async ({ page }) => {
+  test('a ref and a headless_ref each switch off and swap in their template fallbacks in live preview', async ({ page }) => {
     const childBlock = await addMediaObject(page)
 
     // `{% ref %}` and `{% headless_ref %}` both have to place an editable ref
@@ -47,18 +47,6 @@ test.describe('Ref active toggles and template fallbacks', () => {
     await expect(mediaRef).not.toHaveClass(/disabled/)
     await expect(textRef).not.toHaveClass(/disabled/)
 
-    await mediaRef.locator('.block-toolbar .switch .slider').first().click()
-    await syncLV(page)
-    await expect(mediaRef).toHaveClass(/disabled/)
-
-    await textRef.locator('.block-toolbar .switch .slider').first().click()
-    await syncLV(page)
-    await expect(textRef).toHaveClass(/disabled/)
-  })
-
-  test('switching refs off swaps in the template fallbacks in live preview', async ({ page }) => {
-    const childBlock = await addMediaObject(page)
-
     await toggleLivePreview(page)
     await waitForPreviewReady(page)
     const frame = getPreviewFrame(page)
@@ -69,14 +57,16 @@ test.describe('Ref active toggles and template fallbacks', () => {
     await expect(frame.locator('.media-fallback')).not.toBeAttached()
 
     // No identifier picked yet, so the media fallback is the generic branch
-    await childBlock.locator('.base-block.ref-block.picture .block-toolbar .switch .slider').first().click()
+    await mediaRef.locator('.block-toolbar .switch .slider').first().click()
     await syncLV(page)
+    await expect(mediaRef).toHaveClass(/disabled/)
     await waitForPreviewUpdate(page)
     await expect(frame.locator('.media-fallback')).toBeAttached({ timeout: 15000 })
 
     // `{% headless_ref %}` reacts to its own switch the same way
-    await childBlock.locator('.base-block.ref-block.text .block-toolbar .switch .slider').first().click()
+    await textRef.locator('.block-toolbar .switch .slider').first().click()
     await syncLV(page)
+    await expect(textRef).toHaveClass(/disabled/)
     await waitForPreviewUpdate(page)
     await expect(frame.locator('.text-fallback')).toBeAttached({ timeout: 15000 })
   })
