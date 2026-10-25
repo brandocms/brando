@@ -28,6 +28,7 @@ defmodule BrandoAdmin.CommandPaletteLive do
        recent: [],
        current_path: nil,
        groups: [],
+       closed?: true,
        skeleton_rows: 1..5,
        site_key: socket.assigns[:current_site] && socket.assigns.current_site.key
      )}
@@ -44,6 +45,7 @@ defmodule BrandoAdmin.CommandPaletteLive do
      socket
      |> assign(
        context: context,
+       closed?: false,
        query: "",
        recent: recent_param(params["recent"]),
        current_path: if(is_binary(params["path"]), do: params["path"])
@@ -51,13 +53,12 @@ defmodule BrandoAdmin.CommandPaletteLive do
      |> assign_groups()}
   end
 
-  def handle_event("search", %{"q" => query}, %{assigns: %{context: nil}} = socket) do
-    handle_event(
-      "search",
-      %{"q" => query},
-      assign(socket, :context, CommandPalette.context(socket.assigns.current_user, socket.assigns[:current_site]))
-    )
-  end
+  # Only an open palette searches. A debounced search can arrive after the
+  # palette closed (without motion it closes at once), and LiveView's form
+  # recovery sends one on reconnect before the hook opens it again; rendering
+  # results for a closed palette only sets up the next opening's diff against
+  # rows nobody sees. An opening searches its current text itself.
+  def handle_event("search", _params, %{assigns: %{closed?: true}} = socket), do: {:noreply, socket}
 
   def handle_event("search", %{"q" => query}, socket) when is_binary(query) do
     {:noreply, socket |> assign(:query, String.slice(query, 0, 200)) |> assign_groups()}
@@ -66,7 +67,7 @@ defmodule BrandoAdmin.CommandPaletteLive do
   def handle_event("search", _params, socket), do: {:noreply, socket}
 
   # Nothing is kept for the next opening, which starts empty.
-  def handle_event("close", _params, socket), do: {:noreply, assign(socket, query: "", groups: [])}
+  def handle_event("close", _params, socket), do: {:noreply, assign(socket, query: "", groups: [], closed?: true)}
 
   defp assign_groups(socket) do
     %{context: context, query: query, recent: recent, current_path: current_path} = socket.assigns
