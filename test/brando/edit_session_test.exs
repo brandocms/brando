@@ -442,10 +442,23 @@ defmodule Brando.EditSessionTest do
       assert_receive {:DOWN, ^monitor, _, _, _}
       wait_until(fn -> EditSession.whereis(ref) == nil end)
 
-      fresh = Task.async(fn -> EditSession.join(ref, @field, {base, base}) end)
-      assert {:ok, %{seeded?: true}} = Task.await(fresh)
+      # The fresh editor stays: with the test config's grace period of 0, a
+      # joiner that left at once would stop the session before A comes back.
+      test_pid = self()
+
+      fresh =
+        spawn_link(fn ->
+          send(test_pid, {:fresh_joined, EditSession.join(ref, @field, {base, base})})
+
+          receive do
+            :leave -> :ok
+          end
+        end)
+
+      assert_receive {:fresh_joined, {:ok, %{seeded?: true}}}
 
       assert {:ok, back} = EditSession.join(ref, @field, {base, held})
+      send(fresh, :leave)
       refute back.seeded?
       assert back.state.diffs["b"]["block"]["anchor"] == "unsaved by A"
       # and the others hear about it
