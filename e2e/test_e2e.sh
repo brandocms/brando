@@ -6,10 +6,13 @@ source .envrc
 TEST_COMMAND="test"
 RESET_DB=false
 CHECK_MIGRATIONS=false
+SHARD=""
 EXTRA_ARGS=()
 
 # Process arguments
-for arg in "$@"; do
+while [ "$#" -gt 0 ]; do
+  arg="$1"
+  shift
   if [ "$arg" = "--ui" ]; then
     TEST_COMMAND="test:ui"
   elif [ "$arg" = "--reset" ]; then
@@ -17,10 +20,32 @@ for arg in "$@"; do
   elif [ "$arg" = "--check-migrations" ]; then
     RESET_DB=true
     CHECK_MIGRATIONS=true
+  elif [ "$arg" = "--shard" ]; then
+    SHARD="${1:?--shard needs <current>/<total>}"
+    shift
+  elif [[ "$arg" == --shard=* ]]; then
+    SHARD="${arg#--shard=}"
   else
     EXTRA_ARGS+=("$arg")
   fi
 done
+
+# A shard runs whole spec files picked by their recorded durations
+# (playwright/scripts/shards.mjs), not Playwright's --shard, which balances
+# test counts. File filters among the arguments narrow the files to split.
+if [ -n "$SHARD" ]; then
+  # An assignment, not a process substitution, so a failing script stops the run.
+  SHARD_LIST="$(cd playwright && node scripts/shards.mjs args "$SHARD" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"})"
+  if [ -z "$SHARD_LIST" ]; then
+    echo "Shard $SHARD has no spec files to run"
+    exit 0
+  fi
+
+  EXTRA_ARGS=()
+  while IFS= read -r arg; do
+    EXTRA_ARGS+=("$arg")
+  done <<< "$SHARD_LIST"
+fi
 
 case "$BRANDO_E2E_DATABASE" in
   *[!a-zA-Z0-9_]*)

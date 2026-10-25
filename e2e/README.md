@@ -37,6 +37,18 @@ caches or other application state. CI runs the legacy suite in four shards
 (`legacy-1` to `legacy-4`), each on its own runner with its own server and
 PostgreSQL service.
 
+`./test_e2e.sh --shard=2/4` runs whole spec files picked by their recorded
+durations in `playwright/shard-timings.json`, so the shards take about the same
+time. File filters among the arguments narrow the files to split, matched as
+Playwright matches them; a `file:line` selection needs a run without `--shard`.
+A spec without a recorded duration counts as an average file. When the shards drift apart,
+record the durations of a CI run:
+
+```sh
+gh run download <run-id> -p 'e2e-artifacts-legacy-*' -D /tmp/e2e-timings
+cd playwright && node scripts/shards.mjs record /tmp/e2e-timings/*/test-results/timings.jsonl
+```
+
 Each attempt writes its duration and result to `playwright/test-results/timings.jsonl`
 (or the selected `--output` directory), including on runs interrupted before
 the final HTML/JSON reports. Ordinary actions have a 15-second deadline;
