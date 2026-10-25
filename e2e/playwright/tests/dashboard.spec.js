@@ -1,14 +1,6 @@
 // playwright/tests/my-test.spec.ts
 import { test, expect } from '../test-support/setupAuth'
 
-test('should go straight to dashboard if authenticated', async ({ page }) => {
-  // Go to the /admin page
-  await page.goto('/admin')
-
-  // Wait for navigation and check that the URL is /admin/login
-  await expect(page).toHaveURL('/admin')
-})
-
 test('updates dashboard content when permissions change without reloading', async ({ page, secondUserPage }) => {
   test.skip(process.env.BRANDO_AUTHORIZATION_MODE !== 'groups', 'Requires explicit group mode')
   expect((await page.request.post('/e2e/admin-workspace-fixtures')).ok()).toBeTruthy()

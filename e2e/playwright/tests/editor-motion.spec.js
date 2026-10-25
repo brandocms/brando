@@ -63,18 +63,39 @@ test('entry tabs leave nested create-entry form panels under their own control',
   await expect(page.getByLabel('Nested entry name')).toHaveValue('Pending entry')
 })
 
-test('a failed save overrides the local tab and focuses the invalid field', async ({ page }) => {
+// Issue #1996: a submitted form announces what failed, and a keyboard user is
+// moved to an error they can reach. Correcting the field clears the
+// announcement: form_validation_a11y_test.exs.
+test('a failed save marks the field invalid, announces why, overrides the local tab and focuses the field', async ({ page }) => {
   await page.goto('/admin/pages/create')
   await syncLV(page)
+  // Required attributes are not validated while an entry is a draft, and a new
+  // page starts as one — so publish it first, or the blank save succeeds.
   await setEntryStatus(page, 'published')
+  const title = page.getByLabel('Tittel', { exact: true })
+  // Nothing has been typed, so nothing is invalid yet — a blank create form
+  // must not read as a form full of errors. It is announced as required.
+  await expect(title).not.toHaveAttribute('aria-invalid', 'true')
+  await expect(title).toHaveAttribute('aria-required', 'true')
+  // The message container exists before it has anything to say: a live region
+  // added together with its content is not reliably announced.
+  const errors = page.locator('#page_title-error')
+  await expect(errors).toHaveAttribute('role', 'alert')
+  // Instructions first, then the message — the order they should be read in.
+  await expect(title).toHaveAttribute('aria-describedby', 'page_title-instructions page_title-error')
   await page.locator('.form-tab-customs').getByRole('button', { name: 'Avansert', exact: true }).click()
   await page.getByTestId('submit').click()
   await syncLV(page)
   await expect(page.locator('[data-form-tab="Content"]')).toHaveAttribute('aria-pressed', 'true')
-  const title = page.getByLabel('Tittel', { exact: true })
   await expect(title).toBeVisible()
   await expect(title).toHaveAttribute('aria-invalid', 'true')
-  await page.locator('dialog.admin-dialog').getByRole('button', { name: 'OK', exact: true }).click()
+  await expect(errors).not.toBeEmpty()
+  // The save error is a modal alert, so focus waits for it to be dismissed.
+  const alert = page.locator('dialog.admin-dialog')
+  await alert.getByRole('button', { name: 'OK', exact: true }).click()
+  await expect(alert).toBeHidden()
+  // The caret lands in the offending control, not on the submit button —
+  // and `aria-describedby` means arriving there reads the message out.
   await expect(title).toBeFocused()
 })
 
@@ -234,21 +255,6 @@ test('a drawer can reverse while it is closing without a late hide', async ({ pa
   await drawer.getByRole('button', { name: 'Lukk', exact: true }).click()
   await expect(drawer).toBeHidden()
   await expect(opener).toBeFocused()
-})
-
-test('toolbar drawer buttons follow opening and closing from inside the drawer', async ({ page }) => {
-  await page.goto('/admin/pages/update/1')
-  await syncLV(page)
-  for (const suffix of ['meta', 'revisions', 'scheduled-publishing']) {
-    const drawer = page.locator(`.drawer[id$="-${suffix}-drawer"]`)
-    const id = await drawer.getAttribute('id')
-    const opener = page.locator(`.form-tab-customs button[aria-controls="${id}"]`)
-    await opener.click()
-    await expect(opener).toHaveAttribute('aria-expanded', 'true')
-    await drawer.getByRole('button', { name: 'Lukk', exact: true }).first().click()
-    await expect(drawer).toBeHidden()
-    await expect(opener).toHaveAttribute('aria-expanded', 'false')
-  }
 })
 
 test('Meta sections ease the drawer width and fade the new pane', async ({ page }) => {

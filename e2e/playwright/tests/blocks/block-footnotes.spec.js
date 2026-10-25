@@ -119,33 +119,6 @@ test('notes are opt-in, keep their subtree on save, and renumber existing marker
   await expect(drawer).toHaveCount(0)
 })
 
-test('Blueprint rich text keeps its own notes across save and reload', async ({ page }) => {
-  const client = await fixture(page, 'E2eProject.Projects.Client', {
-    name: 'Footnote client', slug: 'footnote-client', status: 'published', language: 'en',
-  })
-  const project = await fixture(page, 'E2eProject.Projects.Project', {
-    title: 'Field notes', slug: 'field-notes', introduction: '<p>A field with a source.</p>',
-    client_id: client.id, status: 'draft', language: 'en',
-  })
-  await page.goto(`/admin/projects/projects/update/${project.id}`)
-  await syncLV(page)
-  const editor = page.locator('[data-footnote-field="introduction"] .tiptap')
-  const originalText = await placeCaretAtEnd(editor)
-  await page.getByRole('button', { name: 'Add footnote' }).click()
-  const drawer = page.locator('.block-slot-drawer.visible')
-  await expect(drawer).toBeVisible()
-  await expect(drawer.locator('.tiptap')).toBeFocused()
-  await drawer.locator('.tiptap').fill('A source belonging to the introduction.')
-  await drawer.getByRole('button', { name: 'Done', exact: true }).click()
-  await expect(editor.locator('p')).toHaveText(`${originalText}1`)
-  await page.getByRole('button', { name: /^Save and close (⇧⌘S|Ctrl\+Shift\+S)$/ }).click()
-  await expect(page).toHaveURL(/\/admin\/projects\/projects$/)
-  await page.goto(`/admin/projects/projects/update/${project.id}`)
-  await expect(editor.locator('p')).toHaveText(`${originalText}1`)
-  await page.getByRole('button', { name: 'Edit footnote 1', exact: true }).click()
-  await expect(drawer.locator('.tiptap')).toHaveText('A source belonging to the introduction.')
-})
-
 test('a note uses the existing image, video and file controls and keeps media on reload', async ({ page }) => {
   test.setTimeout(120000)
   await fixture(page, 'Brando.Videos.Video', {

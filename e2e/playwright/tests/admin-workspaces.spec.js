@@ -5,16 +5,16 @@ test.use({ viewport: { width: 1440, height: 1000 } })
 
 const screens = [
   ['dashboard', '/admin', 'Dashboard'],
-  ['pages', '/admin/pages', 'Pages & Sections'],
   ['modules', '/admin/config/content/modules', 'Block modules'],
   ['navigation', '/admin/config/navigation/menus', 'Navigation'],
-  ['menu-editor', '/admin/config/navigation/menus/update/1', 'Main menu'],
   ['files', '/admin/assets/files', 'Files'],
   ['videos', '/admin/assets/videos', 'Videos'],
   ['seo', '/admin/config/seo', 'SEO'],
   ['identity', '/admin/config/identity', 'Identity'],
   ['globals', '/admin/globals', 'Globals'],
 ]
+// The pages listing and the menu editor have these checks in
+// admin-layout-audit.spec.js, which opens them for their layout already.
 
 // Keep these application LiveViews on the previously generated markup. They
 // must inherit the shared design without opting in or regenerating templates.

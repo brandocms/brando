@@ -145,7 +145,12 @@ test('the palette opens from a button on a phone', async ({ page }) => {
   expect(box.x + box.width).toBeLessThanOrEqual(390)
 
   await paletteSearch(page, 'test')
-  await expect(page.locator('#palette-search-all')).toBeVisible()
+  // "See all results" ends the entries group, so this shows that group too
+  await expect(page.locator('#command-palette-group-entries #palette-search-all')).toBeVisible()
+  // ...and the rows still fit the phone
+  const withRows = await palette(page).boundingBox()
+  expect(withRows.x).toBeGreaterThanOrEqual(0)
+  expect(withRows.x + withRows.width).toBeLessThanOrEqual(390)
 
   await page.keyboard.press('Escape')
   await expect(palette(page)).toBeHidden()

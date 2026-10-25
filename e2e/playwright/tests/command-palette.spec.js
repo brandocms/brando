@@ -128,18 +128,6 @@ test('the empty palette shows the places visited last', async ({ page }) => {
   await expect(palette(page)).toBeHidden()
 })
 
-test('fits a phone', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/admin')
-  await syncLV(page)
-  await openWithShortcut(page)
-  await search(page, 'test')
-  await expect(group(page, 'entries')).toBeVisible()
-  const box = await palette(page).boundingBox()
-  expect(box.x).toBeGreaterThanOrEqual(0)
-  expect(box.x + box.width).toBeLessThanOrEqual(390)
-})
-
 test('Search fades its backdrop and closes smoothly, including a quick reversal', async ({ page }) => {
   await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
   await page.goto('/admin')

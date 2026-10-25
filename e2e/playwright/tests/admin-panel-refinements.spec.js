@@ -124,13 +124,16 @@ test('rich text toolbar follows the form toolbar at desktop and mobile widths af
   }
 })
 
-test('entry drawers retain input and use their own scrolling surface', async ({ page }, testInfo) => {
+test('entry drawers retain input, use their own scrolling surface and keep their toolbar button expanded while open', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/admin/pages/update/1')
   await syncLV(page)
   for (const [trigger, suffix] of [['Meta', 'meta-drawer'], ['History', 'revisions-drawer'], ['Scheduled publishing', 'scheduled-publishing-drawer']]) {
-    await page.getByRole('button', { name: trigger, exact: true }).click()
+    const opener = page.getByRole('button', { name: trigger, exact: true })
+    await opener.click()
     const drawer = page.locator(`[id$="-${suffix}"]`)
+    await expect(opener).toHaveAttribute('aria-controls', await drawer.getAttribute('id'))
+    await expect(opener).toHaveAttribute('aria-expanded', 'true')
     await expect(drawer).toHaveCSS('background-color', 'rgb(255, 255, 255)')
     await settled(drawer)
     if (trigger === 'Meta') await drawer.getByLabel('Meta title', { exact: true }).fill('Panel metadata')
@@ -145,8 +148,13 @@ test('entry drawers retain input and use their own scrolling surface', async ({ 
     await nextFrames(page)
     await page.screenshot({ path: testInfo.outputPath(`${suffix}-mobile.png`) })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-    await drawer.getByRole('button', { name: 'Close', exact: true }).press('Escape')
+    // Closing from inside the drawer, not with its toolbar button, still
+    // collapses that button: with the Close button, and with Escape on the last.
+    const close = drawer.getByRole('button', { name: 'Close', exact: true })
+    if (trigger === 'Scheduled publishing') await close.press('Escape')
+    else await close.click()
     await expect(drawer).not.toBeVisible()
+    await expect(opener).toHaveAttribute('aria-expanded', 'false')
     await page.setViewportSize({ width: 1440, height: 900 })
   }
   await page.getByRole('button', { name: 'Meta', exact: true }).click()

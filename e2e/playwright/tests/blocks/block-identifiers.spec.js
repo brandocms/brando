@@ -2,7 +2,7 @@ import { test, expect } from '../../test-support/setupAuth'
 import { syncLV, dragAndDrop } from '../../utils'
 
 test.describe('Block Identifier Selection', () => {
-  test('add, reorder, remove, re-add identifiers and verify persistence', async ({ page }, testInfo) => {
+  test('toggle, add, reorder, remove, re-add identifiers and verify persistence', async ({ page }, testInfo) => {
     // Navigate to Pages
     await page.goto('/admin/pages/create')
     await syncLV(page)
@@ -25,8 +25,24 @@ test.describe('Block Identifier Selection', () => {
     await expect(page.locator('.identifier').first()).toBeVisible()
 
     // === TEST 1: Add identifiers ===
+    const selectedEntries = page.locator(
+      '.module-datasource-selected .selected-entries .identifier'
+    )
+    // Clicking the same identifier twice toggles it: select, deselect, then
+    // select it again for the rest of the test (modal-scoped, as the selected
+    // list shows the same title once Alpha is in it)
+    const modalAlpha = page
+      .locator('[id^="select-entries-"] .identifier')
+      .filter({ hasText: 'Test Project Alpha' })
+    await modalAlpha.click()
+    await syncLV(page)
+    await expect(selectedEntries).toHaveCount(1)
+    await modalAlpha.click()
+    await syncLV(page)
+    await expect(selectedEntries).toHaveCount(0)
+
     // Select Alpha first
-    await page.locator('.identifier').filter({ hasText: 'Test Project Alpha' }).click()
+    await modalAlpha.click()
     await syncLV(page)
 
     // Select Beta second
@@ -42,9 +58,6 @@ test.describe('Block Identifier Selection', () => {
     await syncLV(page)
 
     // Verify 3 identifiers in selected list (use specific selector to avoid matching modal content)
-    const selectedEntries = page.locator(
-      '.module-datasource-selected .selected-entries .identifier'
-    )
     await expect(selectedEntries).toHaveCount(3)
 
     // Verify order: Alpha, Beta, Gamma
@@ -202,49 +215,5 @@ test.describe('Block Identifier Selection', () => {
     await expect(
       page.locator('.module-datasource-selected .selected-entries .identifier').nth(2)
     ).toContainText('Alpha')
-  })
-
-  test('clicking same identifier twice toggles selection', async ({ page }) => {
-    await page.goto('/admin/pages/create')
-    await syncLV(page)
-
-    await page.getByLabel('Title', { exact: true }).fill('Toggle Test Page')
-    await page.getByLabel('URI').fill('toggle-test')
-
-    // Add datasource block
-    await page.getByRole('button', { name: 'Add block' }).click()
-    await page.getByRole('button', { name: 'DATASOURCE' }).click()
-    await page.locator('.module-picker').getByRole('button', { name: 'Featured Projects' }).click()
-    await syncLV(page)
-
-    await page.getByRole('button', { name: 'Select entries' }).click()
-    await syncLV(page)
-
-    // Click Alpha to select (use modal-scoped selector)
-    await page
-      .locator('[id^="select-entries-"] .identifier')
-      .filter({ hasText: 'Test Project Alpha' })
-      .click()
-    await syncLV(page)
-
-    // Verify selected
-    await expect(
-      page.locator('.module-datasource-selected .selected-entries .identifier')
-    ).toHaveCount(1)
-
-    // Click Alpha again to deselect (use modal-scoped selector)
-    await page
-      .locator('[id^="select-entries-"] .identifier')
-      .filter({ hasText: 'Test Project Alpha' })
-      .click()
-    await syncLV(page)
-
-    // Verify deselected
-    await expect(
-      page.locator('.module-datasource-selected .selected-entries .identifier')
-    ).toHaveCount(0)
-
-    // Close modal by clicking the X button
-    await page.locator('[id^="select-entries-"] .modal-close').click()
   })
 })

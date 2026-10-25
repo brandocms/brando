@@ -5,12 +5,12 @@ import { syncLV, awaitBlockDebounce, awaitBlockShip } from '../../utils'
 // one sandbox session) editing the same entry.
 //
 // Guarantees under test:
-// * blur ships: A's edit reaches B on plain blur — no other block needs
-//   focusing (the settle-ship on focusout), and B SEES it (header textareas
-//   are not phx-update="ignore")
 // * B's untouched save includes A's shipped edit instead of clobbering it
-// * late joiners get unsaved state on mount (join sync request/replay)
+// * late joiners get unsaved tiptap and entry-field state on mount
 // * child structural ops (delete) ship immediately, no blur needed
+//
+// Edits reaching the other editor as they are typed, and a late joiner seeing
+// unsaved header edits and an added block, are in `edit-session.spec.js`.
 test.describe('Multi-user block sync', () => {
   test.setTimeout(120000)
 
@@ -97,25 +97,6 @@ test.describe('Multi-user block sync', () => {
     await expect(secondUserPage.locator('.header-block textarea').nth(1)).toHaveValue('Beta')
   }
 
-  test("user B's save preserves user A's shipped block edit", async ({
-    page,
-    secondUserPage,
-  }) => {
-    const entryUrl = await createEntryWithTwoHeaders(page, 'Multiuser Sync Test', 'multiuser-sync-test')
-
-    // A on a fresh mount of the update route
-    await page.goto(entryUrl)
-    await syncLV(page)
-    await expect(page.locator('.header-block textarea').nth(0)).toHaveValue('Alpha')
-
-    await secondUserPage.goto(entryUrl)
-    await syncLV(secondUserPage)
-    await expect(secondUserPage.locator('.header-block textarea').nth(0)).toHaveValue('Alpha')
-
-    await editBlockOneAndBlur(page)
-    await saveAsBAndVerify(secondUserPage)
-  })
-
   test('sync is armed right after create + save-and-continue (no reload)', async ({
     page,
     secondUserPage,
@@ -134,61 +115,6 @@ test.describe('Multi-user block sync', () => {
 
     await editBlockOneAndBlur(page)
     await saveAsBAndVerify(secondUserPage)
-  })
-
-  test("A's plain blur ships the edit and B SEES it — no other block focused", async ({
-    page,
-    secondUserPage,
-  }) => {
-    const entryUrl = await createEntryWithTwoHeaders(page, 'Multiuser Blur Test', 'multiuser-blur-test')
-
-    await page.goto(entryUrl)
-    await syncLV(page)
-    await secondUserPage.goto(entryUrl)
-    await syncLV(secondUserPage)
-    await expect(secondUserPage.locator('.header-block textarea').nth(0)).toHaveValue('Alpha')
-
-    const ta = page.locator('.header-block textarea').nth(0)
-    await ta.click()
-    await ta.fill('Alpha blurred by A')
-    await awaitBlockDebounce(page)
-
-    // blur to something OUTSIDE the blocks — shipping must not depend on
-    // ANOTHER block getting focused
-    await page.getByLabel('Title', { exact: true }).click()
-    await awaitBlockShip(page)
-
-    await expect(secondUserPage.locator('.header-block textarea').nth(0)).toHaveValue(
-      'Alpha blurred by A',
-      { timeout: 5000 }
-    )
-  })
-
-  test('late joiner receives unsaved edits on mount', async ({ page, secondUserPage }) => {
-    const entryUrl = await createEntryWithTwoHeaders(
-      page,
-      'Multiuser Late Join',
-      'multiuser-late-join'
-    )
-
-    await page.goto(entryUrl)
-    await syncLV(page)
-
-    const ta = page.locator('.header-block textarea').nth(0)
-    await ta.click()
-    await ta.fill('Alpha before B joined')
-    await awaitBlockDebounce(page)
-    await page.getByLabel('Title', { exact: true }).click()
-    await awaitBlockShip(page)
-
-    // B joins AFTER the edit — its join sync request must replay A's state
-    await secondUserPage.goto(entryUrl)
-    await syncLV(secondUserPage)
-
-    await expect(secondUserPage.locator('.header-block textarea').nth(0)).toHaveValue(
-      'Alpha before B joined',
-      { timeout: 5000 }
-    )
   })
 
   // A page with one Rich Text Article (TipTap text ref), persisted via

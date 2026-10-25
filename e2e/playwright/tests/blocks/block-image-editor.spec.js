@@ -232,128 +232,7 @@ test.describe('Image Editor from Blocks', () => {
     await expect(editorDrawer).toBeHidden()
   })
 
-  test('opens image editor from gallery block thumbnail', async ({ page }) => {
-    test.setTimeout(120000)
-
-    await page.goto('/admin/pages/create')
-    await syncLV(page)
-
-    await page.getByLabel('Title', { exact: true }).fill('GalleryBlock Editor Test')
-    await page.getByLabel('URI').fill('gallery-editor-test')
-
-    // Add Gallery with Controls block
-    await page.getByRole('button', { name: 'Add block' }).click()
-    await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
-    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
-    await page.getByRole('button', { name: 'Gallery with Controls' }).click()
-    await syncLV(page)
-
-    // Upload 2 images to the gallery block
-    await page
-      .locator('.gallery-block .file-input')
-      .setInputFiles(['./fixtures/image.jpg', './fixtures/image2.jpg'])
-    await syncLV(page)
-
-    // Wait for gallery objects to appear
-    await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(2, {
-      timeout: 15000,
-    })
-
-    // Click edit icon on first image gallery object
-    await page.locator('.gallery-block .gallery-object .edit-image-btn').first().click()
-    await syncLV(page)
-
-    // Verify image editor drawer opened
-    const editorDrawer = page.locator('#image-editor-drawer')
-    await expect(editorDrawer).toBeVisible({ timeout: 5000 })
-
-    // Verify canvas loaded
-    const mainCanvas = page.locator('#image-editor-canvas')
-    await expect(mainCanvas).toBeVisible({ timeout: 10000 })
-    await expectImageEditorReady(page)
-
-    // Verify "Save as new copy" is visible when opened from block
-    await expect(page.locator('#image-editor-save-new')).toBeVisible()
-
-    // Click focal point and save
-    const canvasBox = await mainCanvas.boundingBox()
-    await page.mouse.click(
-      canvasBox.x + canvasBox.width * 0.5,
-      canvasBox.y + canvasBox.height * 0.5
-    )
-
-    await page.locator('#image-editor-save-replace').click()
-
-    // Editor drawer should close after save
-    await page.waitForSelector('#image-editor-drawer', { state: 'hidden', timeout: 10000 })
-    await syncLV(page)
-  })
-
-  test('save as new copy with crop replaces gallery image', async ({ page }) => {
-    test.setTimeout(120000)
-
-    await page.goto('/admin/pages/create')
-    await syncLV(page)
-
-    await page.getByLabel('Title', { exact: true }).fill('GalleryBlock SaveNew Test')
-    await page.getByLabel('URI').fill('gallery-savenew-test')
-
-    // Add Gallery with Controls block
-    await page.getByRole('button', { name: 'Add block' }).click()
-    await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
-    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
-    await page.getByRole('button', { name: 'Gallery with Controls' }).click()
-    await syncLV(page)
-
-    // Upload 1 image to the gallery block
-    await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
-    await syncLV(page)
-
-    // Wait for the gallery object to appear
-    await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(1, {
-      timeout: 15000,
-    })
-
-    // Capture the original image src before editing
-    const imgLocator = page.locator('.gallery-block .gallery-object .gallery-tile-square img').first()
-    await expect(imgLocator).toBeVisible({ timeout: 10000 })
-    const srcBefore = await imgLocator.getAttribute('src')
-
-    // Click edit icon on first image gallery object
-    await page.locator('.gallery-block .gallery-object .edit-image-btn').first().click()
-    await syncLV(page)
-
-    // Verify image editor drawer opened and canvas loaded
-    const mainCanvas = page.locator('#image-editor-canvas')
-    await expect(mainCanvas).toBeVisible({ timeout: 10000 })
-    await expectImageEditorReady(page)
-
-    // Zoom in to apply an actual crop
-    const zoomSlider = page.locator('#image-editor-zoom')
-    await zoomSlider.fill('2')
-    await zoomSlider.dispatchEvent('input')
-    await expect(page.locator('#image-editor-zoom-value')).toHaveText('2.00x')
-
-    // Click "Save as new copy" — uses LiveView upload
-    await page.locator('#image-editor-save-new').click()
-
-    // Editor drawer should close
-    await page.waitForSelector('#image-editor-drawer', { state: 'hidden', timeout: 10000 })
-    await syncLV(page)
-
-    // Gallery should still have 1 object (new copy replaces the original)
-    await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(1, {
-      timeout: 15000,
-    })
-
-    // Wait for the image src to actually change from the original
-    // (polls until the attribute differs, handles async processing + DOM update delays)
-    await expect(imgLocator).not.toHaveAttribute('src', srcBefore, { timeout: 20000 })
-    const srcAfter = await imgLocator.getAttribute('src')
-    expect(srcAfter).not.toEqual(srcBefore)
-  })
-
-  test('gallery image stays processed after adding another image via picker', async ({ page }) => {
+  test('save as new copy replaces gallery image, which stays processed after adding another via picker', async ({ page }) => {
     test.setTimeout(120000)
 
     await page.goto('/admin/pages/create')
@@ -391,7 +270,9 @@ test.describe('Image Editor from Blocks', () => {
     await expect(mainCanvas).toBeVisible({ timeout: 10000 })
     await expectImageEditorReady(page)
 
-    // Save as new copy (replaces the image)
+    // Save as new copy (replaces the image). No crop: this is the only test of
+    // the full-image export; the cropped export from a block is the same code,
+    // covered by 'save as new copy with crop from picture block replaces image'.
     const saveNewBtn = page.locator('#image-editor-save-new')
     await expect(saveNewBtn).toBeVisible()
     await saveNewBtn.click()
@@ -478,40 +359,6 @@ test.describe('Image Editor from Blocks', () => {
     await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(0, {
       timeout: 10000,
     })
-  })
-
-  test('does not show edit icon on gallery video objects', async ({ page }) => {
-    test.setTimeout(120000)
-
-    await page.goto('/admin/pages/create')
-    await syncLV(page)
-
-    await page.getByLabel('Title', { exact: true }).fill('Gallery Video NoEdit Test')
-    await page.getByLabel('URI').fill('gallery-video-noedit-test')
-
-    // Add Gallery with Controls block
-    await page.getByRole('button', { name: 'Add block' }).click()
-    await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
-    await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
-    await page.getByRole('button', { name: 'Gallery with Controls' }).click()
-    await syncLV(page)
-
-    // Upload an image first so we have something to compare
-    await page.locator('.gallery-block .file-input').setInputFiles('./fixtures/image.jpg')
-    await syncLV(page)
-
-    // Wait for the image gallery object
-    await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(1, {
-      timeout: 15000,
-    })
-
-    // Verify image object HAS edit-image-btn
-    await expect(
-      page.locator('.gallery-block .gallery-object .edit-image-btn').first()
-    ).toBeVisible()
-
-    // Video objects without image_id should NOT have edit-image-btn
-    // (verified by the :if condition in the template)
   })
 
   test('save changes with zoom applies crop to picture block image', async ({ page }) => {

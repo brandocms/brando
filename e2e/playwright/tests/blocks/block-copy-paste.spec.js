@@ -79,33 +79,6 @@ test.describe('Block Copy/Paste', () => {
     await expect(blocks).toHaveCount(2)
   })
 
-  test('copy module and paste at bottom of page', async ({ page }) => {
-    await page.goto('/admin/pages/create')
-    await syncLV(page)
-
-    await page.getByLabel('Title', { exact: true }).fill('Copy Paste Bottom Test')
-    await page.getByLabel('URI').fill('copy-paste-bottom')
-
-    // Add a Heading block
-    await page.getByRole('button', { name: 'Add block' }).click()
-    await page.getByRole('button', { name: 'HEADERS' }).click()
-    await page.locator('.module-picker').getByRole('button', { name: 'Heading' }).click()
-    await syncLV(page)
-
-    // Copy the block via dropdown
-    await copyBlock(page.locator('.entry-block').first())
-    await syncLV(page)
-
-    // Click the bottom paste button (last one on the page, inside blocks-content)
-    const bottomPaste = page.locator('.blocks-content > .block-plus-wrapper .block-paste')
-    await expect(bottomPaste).toBeVisible()
-    await bottomPaste.click()
-    await syncLV(page)
-
-    // Verify 2 blocks exist
-    await expect(page.locator('.entry-block')).toHaveCount(2)
-  })
-
   test('copy module with vars and verify pasted block has same var values', async ({ page }) => {
     await page.goto('/admin/pages/create')
     await syncLV(page)
@@ -192,7 +165,7 @@ test.describe('Block Copy/Paste', () => {
     await expect(container.locator('.block-children > [data-uid]')).toHaveCount(2)
   })
 
-  test('copy root module and paste persists after save', async ({ page }) => {
+  test('copy root module, paste at the bottom of the page, and the paste persists after save', async ({ page }) => {
     await page.goto('/admin/pages/create')
     await syncLV(page)
 
@@ -209,7 +182,9 @@ test.describe('Block Copy/Paste', () => {
     await copyBlock(page.locator('.entry-block').first())
     await syncLV(page)
 
+    // The bottom paste button (last one on the page, inside blocks-content)
     const bottomPaste = page.locator('.blocks-content > .block-plus-wrapper .block-paste')
+    await expect(bottomPaste).toBeVisible()
     await bottomPaste.click()
     await syncLV(page)
 

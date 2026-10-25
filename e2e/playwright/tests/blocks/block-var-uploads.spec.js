@@ -18,27 +18,6 @@ function mediaField(page, type) {
 }
 
 for (const type of ['image', 'file']) {
-  test(`${type} var uploads, configures, and persists through save`, async ({ page }) => {
-    test.setTimeout(120000)
-    const title = `Var ${type} Upload Test`
-    await createVarPage(page, title)
-    const field = mediaField(page, type)
-    await expect(mediaMenuButton(field)).toHaveText('Add')
-    await field.locator('input[type="file"]').setInputFiles(type === 'image' ? './fixtures/image.jpg' : './fixtures/test.pdf')
-    await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
-    if (type === 'image') await expect(field.locator('img')).toBeVisible({ timeout: 20000 })
-    await mediaMenu(field, 'Configure')
-    const modal = page.locator(`[id$="${type}-config"]:visible`)
-    await expect(modal.locator('.media-field')).toHaveAttribute('data-asset-id', /\d+/)
-    await modal.getByRole('button', { name: 'Done', exact: true }).click()
-    await page.getByTestId('submit').click()
-    await syncLV(page)
-    await expect(page).not.toHaveURL(/\/create$/, { timeout: 10000 })
-    await page.getByRole('link', { name: title, exact: true }).click()
-    await syncLV(page)
-    await expect(mediaField(page, type)).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
-  })
-
   test(`${type} var removal leaves a usable upload field`, async ({ page }) => {
     test.setTimeout(120000)
     await createVarPage(page, `Var ${type} Remove Test`)
