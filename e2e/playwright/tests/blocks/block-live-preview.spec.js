@@ -692,18 +692,21 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await expect(frame.locator('[data-smart-video]')).toHaveCount(1)
       await expect(frame.locator('iframe.embed-frame')).toBeVisible()
 
+      // Stamp a custom property on the iframe to track DOM identity through
+      // both updates; the video can only be stamped once it has booted
+      await frame.locator('iframe.embed-frame').evaluate(el => {
+        el.__morphTestStamp = 'iframe-alive'
+      })
+
       // Trigger an initial update so initializeLazyVideos runs and adds data-booted
       await page.getByRole('textbox', { name: 'Label' }).fill('First update')
       await syncLV(page)
       await expect(frame.locator('.morph-label')).toContainText('First update')
       await expect(frame.locator('[data-smart-video][data-booted]')).toHaveCount(1)
 
-      // Stamp a custom property on the <video> and the iframe to track DOM identity
+      // Stamp a custom property on the <video> to track DOM identity
       await frame.locator('[data-smart-video] video').evaluate(el => {
         el.__morphTestStamp = 'video-alive'
-      })
-      await frame.locator('iframe.embed-frame').evaluate(el => {
-        el.__morphTestStamp = 'iframe-alive'
       })
 
       // Change the label var again to trigger another morphdom update

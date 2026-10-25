@@ -149,8 +149,10 @@ test('entry drawers retain input, use their own scrolling surface and keep their
     await page.screenshot({ path: testInfo.outputPath(`${suffix}-mobile.png`) })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     // Closing from inside the drawer, not with its toolbar button, still
-    // collapses that button.
-    await drawer.getByRole('button', { name: 'Close', exact: true }).press('Escape')
+    // collapses that button: with the Close button, and with Escape on the last.
+    const close = drawer.getByRole('button', { name: 'Close', exact: true })
+    if (trigger === 'Scheduled publishing') await close.press('Escape')
+    else await close.click()
     await expect(drawer).not.toBeVisible()
     await expect(opener).toHaveAttribute('aria-expanded', 'false')
     await page.setViewportSize({ width: 1440, height: 900 })

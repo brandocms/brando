@@ -78,7 +78,6 @@
     "tests/configuration/identity.spec.js": 5.1,
     "tests/configuration/module-files.spec.js": 7.3,
     "tests/configuration/modules.spec.js": 20.4,
-    "tests/configuration/navigation-link-identifier.spec.js": 3.6,
     "tests/configuration/navigation.spec.js": 3.4,
     "tests/configuration/notifications.spec.js": 7.5,
     "tests/configuration/palette-select.spec.js": 2.3,
