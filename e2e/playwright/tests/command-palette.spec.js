@@ -249,6 +249,24 @@ test('Search accepts typing during loading and a late reply cannot undo closing 
   await expect(page).toHaveURL(`/admin/projects/projects/update/${entry.id}`)
 })
 
+// Without motion, Escape closes the dialog at once but its `close` event comes
+// a task later. Reopened in between, the palette must not be reset by it.
+test('Search closed and reopened at once, without motion, opens and loads', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
+  await page.goto('/admin')
+  await syncLV(page)
+  await openWithShortcut(page)
+  await expect(page.locator('#command-palette-body')).toHaveAttribute('aria-busy', 'false')
+  await page.evaluate(() => {
+    document.querySelector('#command-palette-dialog').dispatchEvent(new Event('cancel', { cancelable: true }))
+    document.querySelector('#command-palette').dispatchEvent(new CustomEvent('brando:command-palette:open'))
+  })
+  await expect(page.locator('#command-palette-body')).toHaveAttribute('aria-busy', 'false')
+  await expect(palette(page)).toHaveAttribute('data-dialog-open', 'true')
+  await expect(input(page)).toBeFocused()
+})
+
 test('Search opened offline recovers its pending query when the connection returns', async ({ page }) => {
   await page.request.post('/e2e/setup_fixtures/norwegian-admin-user')
   await page.goto('/admin')

@@ -22,7 +22,7 @@
  * user and site, and sent to the server when the palette opens.
  */
 import { bindShortcut } from '../../shortcuts'
-import { openDialog, closeDialog, resetDialog } from '../../nativeDialogMotion'
+import { openDialog, closeDialog, resetDialog, onDialogClose } from '../../nativeDialogMotion'
 import { motionDuration, prefersReducedMotion } from '../../motion'
 
 const RECENT_LIMIT = 12
@@ -89,7 +89,7 @@ export default () => ({
       }
     })
 
-    this.dialog.addEventListener('close', () => {
+    onDialogClose(this, () => {
       resetDialog(this)
       clearTimeout(this.searchTimer)
       this.openVersion++
