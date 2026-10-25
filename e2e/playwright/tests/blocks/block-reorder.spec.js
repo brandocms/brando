@@ -88,7 +88,21 @@ test.describe('Block reordering (root blocks)', () => {
     }
   }
 
-  test('drag-reordering root blocks updates editor + preview and persists after save', async ({ page }) => {
+  // Reordering a block must also move preview elements, not rebuild every one
+  // after the change point. Blocks are delimited by HTML comments, which
+  // morphdom cannot match on, so left to itself it pairs `main`'s children up
+  // by position: a video block dragged to a new place would come back as a
+  // fresh, unbooted container — the preview re-initializing a video whose
+  // source never changed (and the same for anything below an inserted or
+  // deleted block).
+  //
+  // Node identity is the property that matters, and it is what a mounted
+  // player rides on, so that is what this asserts: tag the live node with an
+  // expando (which no amount of attribute syncing can reinstate), reorder, and
+  // require the same object to still be carrying the same content.
+  test('drag-reordering root blocks updates editor + preview (moving preview nodes, not rebuilding them) and persists after save', async ({
+    page,
+  }) => {
     await createPage(page, 'Reorder Test', 'reorder-test')
 
     await addStyledHeader(page, 'Alpha', 0)
@@ -103,8 +117,17 @@ test.describe('Block reordering (root blocks)', () => {
     await toggleLivePreview(page)
     await waitForPreviewReady(page)
     const frame = getPreviewFrame(page)
-    const previewHeaders = frame.locator('header[b-tpl="styled-header"] h1')
+    const previewBlocks = frame.locator('header[b-tpl="styled-header"]')
+    const previewHeaders = previewBlocks.locator('h1')
     await expect(previewHeaders.nth(0)).toContainText('Alpha')
+    await expect(previewHeaders.nth(2)).toContainText('Gamma')
+
+    // Expando, not an attribute: morphdom syncs attributes, so an attribute
+    // would be stripped even when the node IS reused, and the test would fail
+    // for the wrong reason.
+    await previewBlocks.nth(2).evaluate(el => {
+      el.__lpIdentityProbe = 'gamma'
+    })
 
     // Drag Gamma (3rd block) to the top → [Gamma, Alpha, Beta]
     await dragBlock(page, rootBlocks(page), 2, 0)
@@ -116,6 +139,14 @@ test.describe('Block reordering (root blocks)', () => {
     await expect(previewHeaders.nth(0)).toContainText('Gamma')
     await expect(previewHeaders.nth(1)).toContainText('Alpha')
     await expect(previewHeaders.nth(2)).toContainText('Beta')
+
+    // Same DOM object, now in first place — moved, not rebuilt.
+    const probe = await previewBlocks.nth(0).evaluate(el => el.__lpIdentityProbe)
+    expect(probe).toBe('gamma')
+
+    // And the nodes it displaced are still the originals too.
+    const rebuilt = await previewBlocks.nth(1).evaluate(el => el.__lpIdentityProbe)
+    expect(rebuilt).toBeUndefined()
 
     // Save, reopen, verify the order actually persisted.
     await page.getByTestId('submit').click()
@@ -289,47 +320,15 @@ test.describe('Block reordering (root blocks)', () => {
       await syncLV(page)
     })
 
-    test('the drop indicator renders as a dashed slot, not a second copy of the block', async ({
-      page,
-    }) => {
-      await createPage(page, 'Drag Indicator Test', 'drag-indicator-test')
-      await addStyledHeader(page, 'Alpha', 0)
-      await addStyledHeader(page, 'Beta', 1)
-
-      await startDrag(page, sortHandle(page, 1))
-
-      // The sortable item is the uid wrapper (`.entry-block` at root) and the
-      // block sits some way inside it, so this matches on the block rather than
-      // on a fixed child step.
-      const indicator = page.locator('.entry-block.is-sorting .base-block > .block').first()
-      await expect(indicator).toBeAttached()
-
-      const style = await indicator.evaluate(el => {
-        const after = getComputedStyle(el, '::after')
-        return {
-          visibility: getComputedStyle(el).visibility,
-          borderStyle: after.borderTopStyle,
-          afterVisibility: after.visibility,
-        }
-      })
-
-      // The block's own content is out of sight but still holds the slot open,
-      // and the dashed outline is what marks the landing place.
-      expect(style.visibility).toBe('hidden')
-      expect(style.borderStyle).toBe('dashed')
-      expect(style.afterVisibility).toBe('visible')
-
-      await page.mouse.up()
-      await syncLV(page)
-    })
-
     // A drag is client-only state: SortableJS adds its classes after the server
     // rendered the element, so they are absent from the markup LiveView diffs
     // against, and a patch landing mid-drag restored the server's `class` and
     // took them with it. The drop indicator reverted to looking like an
     // ordinary block, mid-drag, and never recovered — while the clone kept its
     // own classes, being parked on <body> outside the LiveView tree.
-    test('the drop indicator survives a LiveView patch landing mid-drag', async ({ page }) => {
+    test('the drop indicator renders as a dashed slot, not a second copy of the block, and survives a LiveView patch landing mid-drag', async ({
+      page,
+    }) => {
       await createPage(page, 'Drag Patch Test', 'drag-patch-test')
       await addStyledHeader(page, 'Alpha', 0)
       await addStyledHeader(page, 'Beta', 1)
@@ -339,6 +338,29 @@ test.describe('Block reordering (root blocks)', () => {
 
       const indicator = page.locator('.entry-block.is-sorting')
       await expect(indicator).toHaveCount(1)
+
+      // The sortable item is the uid wrapper (`.entry-block` at root) and the
+      // block sits some way inside it, so this matches on the block rather than
+      // on a fixed child step.
+      const indicatorBlock = page.locator('.entry-block.is-sorting .base-block > .block').first()
+      await expect(indicatorBlock).toBeAttached()
+
+      // The block's own content is out of sight but still holds the slot open,
+      // and the dashed outline is what marks the landing place.
+      const expectDashedSlot = async () => {
+        const style = await indicatorBlock.evaluate(el => {
+          const after = getComputedStyle(el, '::after')
+          return {
+            visibility: getComputedStyle(el).visibility,
+            borderStyle: after.borderTopStyle,
+            afterVisibility: after.visibility,
+          }
+        })
+        expect(style.visibility).toBe('hidden')
+        expect(style.borderStyle).toBe('dashed')
+        expect(style.afterVisibility).toBe('visible')
+      }
+      await expectDashedSlot()
 
       // Force a server round-trip that re-renders the form under the live drag.
       // Set the value and dispatch directly rather than typing: focusing the
@@ -356,58 +378,11 @@ test.describe('Block reordering (root blocks)', () => {
       await expect(indicator).toHaveCount(1)
 
       // And it keeps working as a drop indicator for the rest of the drag.
-      await expect(page.locator('.entry-block.is-sorting .base-block > .block').first()).toBeAttached()
+      await expect(indicatorBlock).toBeAttached()
+      await expectDashedSlot()
 
       await page.mouse.up()
       await syncLV(page)
-    })
-  })
-
-  // Reordering a block must move preview elements, not rebuild every one after
-  // the change point. Blocks are delimited by HTML comments, which morphdom
-  // cannot match on, so left to itself it pairs `main`'s children up by
-  // position: a video block dragged to a new place would come back as a fresh,
-  // unbooted container — the preview re-initializing a video whose source never
-  // changed (and the same for anything below an inserted or deleted block).
-  //
-  // Node identity is the property that matters, and it is what a mounted player
-  // rides on, so that is what this asserts: tag the live node with an expando
-  // (which no amount of attribute syncing can reinstate), reorder, and require
-  // the same object to still be carrying the same content.
-  test.describe('preview block identity', () => {
-    test('reordering moves preview nodes instead of rebuilding them', async ({ page }) => {
-      await createPage(page, 'Preview Identity Test', 'preview-identity-test')
-      await addStyledHeader(page, 'Alpha', 0)
-      await addStyledHeader(page, 'Beta', 1)
-      await addStyledHeader(page, 'Gamma', 2)
-
-      await toggleLivePreview(page)
-      await waitForPreviewReady(page)
-      const frame = getPreviewFrame(page)
-      const headers = frame.locator('header[b-tpl="styled-header"]')
-      await expect(headers.nth(0)).toContainText('Alpha')
-      await expect(headers.nth(2)).toContainText('Gamma')
-
-      // Expando, not an attribute: morphdom syncs attributes, so an attribute
-      // would be stripped even when the node IS reused, and the test would fail
-      // for the wrong reason.
-      await headers.nth(2).evaluate(el => {
-        el.__lpIdentityProbe = 'gamma'
-      })
-
-      // Gamma to the top → [Gamma, Alpha, Beta]
-      await dragBlock(page, rootBlocks(page), 2, 0)
-      await expectHeaderOrder(page, ['Gamma', 'Alpha', 'Beta'])
-      await waitForPreviewUpdate(page)
-      await expect(headers.nth(0)).toContainText('Gamma')
-
-      // Same DOM object, now in first place — moved, not rebuilt.
-      const probe = await headers.nth(0).evaluate(el => el.__lpIdentityProbe)
-      expect(probe).toBe('gamma')
-
-      // And the nodes it displaced are still the originals too.
-      const rebuilt = await headers.nth(1).evaluate(el => el.__lpIdentityProbe)
-      expect(rebuilt).toBeUndefined()
     })
   })
 })

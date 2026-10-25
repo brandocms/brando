@@ -1,5 +1,5 @@
 import { test, expect } from '../../test-support/setupAuth'
-import { syncLV } from '../../utils'
+import { syncLV, mediaMenu, mediaMenuButton } from '../../utils'
 
 // Save → reload persistence guards for block media.
 //
@@ -132,7 +132,12 @@ test.describe('Block media save persistence', () => {
     await expect(page.locator('.header-block')).not.toBeVisible()
   })
 
-  test('editing other vars in the same block keeps uploaded media vars', async ({ page }) => {
+  // Also the upload → configure → save path for each media var type: an empty
+  // var offers "Add", the Configure modal carries the uploaded asset, and
+  // closing it keeps the asset through save.
+  test('image and file vars upload, configure, and persist; editing other vars in the same block keeps them', async ({
+    page,
+  }) => {
     test.setTimeout(180000)
 
     await createPage(page, 'Persist Intra Var Test', 'persist-intra-var-test')
@@ -147,6 +152,8 @@ test.describe('Block media save persistence', () => {
     // Upload the image var through its shared field.
     const imageField = page.locator('.media-field[data-kind="block_var"][id$="-image-media"]')
     const fileField = page.locator('.media-field[data-kind="block_var"][id$="-file-media"]')
+    await expect(mediaMenuButton(imageField)).toHaveText('Add')
+    await expect(mediaMenuButton(fileField)).toHaveText('Add')
     await imageField.locator('input[type="file"]').setInputFiles('./fixtures/image.jpg')
     await expect(imageField.locator('img')).toBeVisible({ timeout: 20000 })
     const imageId = await imageField.getAttribute('data-asset-id')
@@ -167,6 +174,16 @@ test.describe('Block media save persistence', () => {
 
     await expect(imageField).toHaveAttribute('data-asset-id', imageId)
     await expect(fileField).toHaveAttribute('data-asset-id', fileId)
+
+    // Each var's Configure modal carries its uploaded asset; closing it with
+    // Done must leave the asset in place for the save below.
+    for (const [type, field] of [['image', imageField], ['file', fileField]]) {
+      await mediaMenu(field, 'Configure')
+      const modal = page.locator(`[id$="${type}-config"]:visible`)
+      await expect(modal.locator('.media-field')).toHaveAttribute('data-asset-id', /\d+/)
+      await modal.getByRole('button', { name: 'Done', exact: true }).click()
+      await expect(modal).not.toBeVisible()
+    }
 
     await saveAndReopen(page, 'Persist Intra Var Test')
 
