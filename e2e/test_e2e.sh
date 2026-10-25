@@ -32,33 +32,19 @@ done
 
 # A shard runs whole spec files picked by their recorded durations
 # (playwright/scripts/shards.mjs), not Playwright's --shard, which balances
-# test counts. Spec paths among the arguments narrow the files to split; other
-# arguments pass through to Playwright.
+# test counts. File filters among the arguments narrow the files to split.
 if [ -n "$SHARD" ]; then
-  FILTERS=()
-  PASSTHROUGH=()
-  for arg in ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}; do
-    case "$arg" in
-      tests|tests/*|./tests|./tests/*)
-        if [ -e "playwright/$arg" ]; then FILTERS+=("$arg"); else PASSTHROUGH+=("$arg"); fi
-        ;;
-      *) PASSTHROUGH+=("$arg") ;;
-    esac
-  done
-
   # An assignment, not a process substitution, so a failing script stops the run.
-  SHARD_LIST="$(cd playwright && node scripts/shards.mjs files "$SHARD" ${FILTERS[@]+"${FILTERS[@]}"})"
-  SHARD_FILES=()
-  while IFS= read -r file; do
-    if [ -n "$file" ]; then SHARD_FILES+=("$file"); fi
-  done <<< "$SHARD_LIST"
-
-  if [ "${#SHARD_FILES[@]}" -eq 0 ]; then
+  SHARD_LIST="$(cd playwright && node scripts/shards.mjs args "$SHARD" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"})"
+  if [ -z "$SHARD_LIST" ]; then
     echo "Shard $SHARD has no spec files to run"
     exit 0
   fi
 
-  EXTRA_ARGS=(${PASSTHROUGH[@]+"${PASSTHROUGH[@]}"} "${SHARD_FILES[@]}")
+  EXTRA_ARGS=()
+  while IFS= read -r arg; do
+    EXTRA_ARGS+=("$arg")
+  done <<< "$SHARD_LIST"
 fi
 
 case "$BRANDO_E2E_DATABASE" in

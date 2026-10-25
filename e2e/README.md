@@ -39,8 +39,9 @@ PostgreSQL service.
 
 `./test_e2e.sh --shard=2/4` runs whole spec files picked by their recorded
 durations in `playwright/shard-timings.json`, so the shards take about the same
-time; spec paths among the arguments narrow the files to split. A spec without
-a recorded duration counts as an average file. When the shards drift apart,
+time. File filters among the arguments narrow the files to split, matched as
+Playwright matches them; a `file:line` selection needs a run without `--shard`.
+A spec without a recorded duration counts as an average file. When the shards drift apart,
 record the durations of a CI run:
 
 ```sh
