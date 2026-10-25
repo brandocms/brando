@@ -35,6 +35,8 @@ document.addEventListener('keydown', e => {
   keyInHand = e.code || null
   setTimeout(() => { keyInHand = null })
 }, true)
+// Released before that task ended (a busy main thread runs input first)
+document.addEventListener('keyup', e => { if (e.code === keyInHand) keyInHand = null }, true)
 
 // Runs `fn` in the task after the release of a key whose keydown is closing
 // the dialog (or in the next task otherwise), and returns a function that

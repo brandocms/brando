@@ -76,6 +76,18 @@ test.describe('Modal focus management', () => {
     await expect(opener).toBeFocused()
   })
 
+  // macOS sends no keyup for a key pressed with ⌘: a key whose release never
+  // comes must not hold back a later, unrelated close.
+  test('without motion, a key never released does not delay a later close', async ({ page }) => {
+    const { opener, modal } = await openImport(page)
+    await page.keyboard.down('F8')
+    await modal.getByRole('button', { name: 'Close dialog', exact: true }).click()
+    await expect(modal).not.toBeVisible()
+    // Well inside the one-second cap a stale key would wait for
+    await expect(opener).toBeFocused({ timeout: 500 })
+    await page.keyboard.up('F8')
+  })
+
   test('without motion, a dialog reopened and closed before focus returns still returns it', async ({ page }) => {
     const { opener, modal } = await openImport(page)
     await page.keyboard.down('Escape')
