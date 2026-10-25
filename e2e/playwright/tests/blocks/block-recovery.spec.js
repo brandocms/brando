@@ -9,11 +9,7 @@ test.describe('Block Recovery', () => {
   // is the one thing LiveView's own form recovery structurally cannot restore,
   // and therefore the only thing `BlockField`'s sessionStorage mechanism is for.
   const createUnsavedBlock = async (page, { title, uri, text }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill(title)

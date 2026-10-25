@@ -15,10 +15,7 @@ test.describe('Multi-user block sync', () => {
   test.setTimeout(120000)
 
   const createEntryWithTwoHeaders = async (page, title, uri) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill(title)
     await page.getByLabel('URI').fill(uri)
@@ -197,10 +194,7 @@ test.describe('Multi-user block sync', () => {
   // A page with one Rich Text Article (TipTap text ref), persisted via
   // save-and-continue so A stays on the armed update form.
   const createEntryWithTextBlock = async (page, title, uri) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill(title)
     await page.getByLabel('URI').fill(uri)
@@ -473,10 +467,7 @@ test.describe('Multi-user block sync', () => {
     secondUserPage,
   }) => {
     // build a Team Section with one member and persist it
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill('Multiuser Child Delete')
     await page.getByLabel('URI').fill('multiuser-child-delete')

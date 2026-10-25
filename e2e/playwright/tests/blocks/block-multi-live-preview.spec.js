@@ -14,10 +14,7 @@ test.describe('Live Preview with multi modules', () => {
   test.setTimeout(60000)
 
   const createPage = async (page, title, uri) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill(title)
     await page.getByLabel('URI').fill(uri)

@@ -23,10 +23,7 @@ test.describe('Save and continue editing', () => {
   }
 
   test('block edits survive repeated save-and-continue without duplication', async ({ page }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill('Save Continue Test')
     await page.getByLabel('URI').fill('save-continue-test')

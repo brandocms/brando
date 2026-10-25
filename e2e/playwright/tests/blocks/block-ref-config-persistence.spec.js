@@ -36,10 +36,7 @@ test.describe('Block ref config persistence', () => {
   test('ref config fields survive a closed-modal edit, save and reload', async ({
     page,
   }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill(TITLE)
     await page.getByLabel('URI').fill(URI)
@@ -99,10 +96,7 @@ test.describe('Block ref config persistence', () => {
   })
 
   test('a text ref keeps its type through a closed-config edit, save and reload', async ({ page }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill(`${TITLE} text`)
     await page.getByLabel('URI').fill(`${URI}-text`)
@@ -227,10 +221,7 @@ test.describe('Block ref config persistence', () => {
       if (fixture) expect((await page.request.post(`/e2e/setup_fixtures/${fixture}`)).ok()).toBe(true)
       const title = `${TITLE} ${type}`
 
-      await page.goto('/admin')
-      await page.getByRole('link', { name: 'Pages & Sections' }).click()
-      await syncLV(page)
-      await page.getByRole('link', { name: 'Create page' }).click()
+      await page.goto('/admin/pages/create')
       await syncLV(page)
       await page.getByLabel('Title', { exact: true }).fill(title)
       await page.getByLabel('URI').fill(`${URI}-${type}`)

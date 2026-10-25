@@ -24,10 +24,7 @@ test.describe('Block reordering (root blocks)', () => {
   test.use({ viewport: { width: 1280, height: 2600 } })
 
   const createPage = async (page, title, uri) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill(title)
     await page.getByLabel('URI').fill(uri)

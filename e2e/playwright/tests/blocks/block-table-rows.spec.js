@@ -4,12 +4,7 @@ import { syncLV } from '../../utils'
 test.describe('Block Table Rows', () => {
   test('add, edit, reorder, delete table rows and verify persistence', async ({ page }) => {
     // Navigate to Pages
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    // Create new page
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     // Fill page basics
@@ -229,11 +224,7 @@ test.describe('Block Table Rows', () => {
   })
 
   test('adding row after deletion maintains correct sequence', async ({ page }) => {
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Sequence Test Page')

@@ -15,10 +15,7 @@ test.describe('Collapsing a block', () => {
   test('shows at once, before the server replies, and is saved', async ({ page }) => {
     const latency = await serverLatency(page)
 
-    await page.goto('/admin')
-    await page.getByRole('link', { name: 'Pages & Sections' }).click()
-    await syncLV(page)
-    await page.getByRole('link', { name: 'Create page' }).click()
+    await page.goto('/admin/pages/create')
     await syncLV(page)
     await page.getByLabel('Title', { exact: true }).fill('Collapse Test')
     await page.getByLabel('URI').fill('collapse-test')

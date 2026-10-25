@@ -1,62 +1,34 @@
 import { test, expect } from '../../test-support/setupAuth'
-import {
-  syncLV,
-  fillSlugSource,
-  expectCanvasOverlayAligned,
-  setEntryStatus,
-} from '../../utils'
+import { syncLV, expectCanvasOverlayAligned } from '../../utils'
+
+async function factory(page, schema, attributes) {
+  const response = await page.request.post('/__e2e/db/factory', {
+    data: { schema, attributes, creator_id: 1, fields: ['id'] },
+  })
+  expect(response.ok(), await response.text()).toBeTruthy()
+  return response.json()
+}
 
 test('opens image editor, adjusts focal point, and saves', async ({ page }, testInfo) => {
   test.setTimeout(120000)
 
-  // Step 1: Navigate to projects and create a client first
-  await page.goto('/admin')
-  await page.locator('#nav-sections').getByRole('link', { name: 'Clients' }).click()
-  await page.getByRole('link', { name: 'Create new' }).click()
-  await syncLV(page)
-  await setEntryStatus(page, 'published')
-  await fillSlugSource(page.getByRole('textbox', { name: 'Name' }), 'ImgEdClient')
-  await syncLV(page)
-  await expect(page.locator('input[name="client[slug]"]')).toHaveValue('imgedclient', { timeout: 10000 })
-  await page.getByTestId('submit').click()
-  // Saving redirects to the listing; a navigation clicked before it lands
-  // is overtaken by the redirect
-  await expect(page).toHaveURL(/\/projects\/clients$/)
-  await syncLV(page)
-
-  // Step 2: Create a new project
-  await page.locator('#nav-sections').getByRole('link', { name: 'Projects' }).click()
-  await expect(page).toHaveURL(/\/projects\/projects/)
-  await syncLV(page)
-  await page.getByRole('link', { name: 'Create new' }).click()
-  await syncLV(page)
-
-  // Fill required fields
-  await setEntryStatus(page, 'published')
-  const titleField = page.getByRole('textbox', { name: 'Title' })
-  await fillSlugSource(titleField, 'ImgEditorTest')
-  await syncLV(page)
-  await expect(page.locator('input[name="project[slug]"]')).toHaveValue(/imgeditortest/, {
-    timeout: 10000,
+  // Step 1: A published project to put the image on. Its client and the
+  // project are fixtures; the test is about the image field and editor.
+  const client = await factory(page, 'E2eProject.Projects.Client', {
+    name: 'ImgEdClient',
+    slug: 'imgedclient',
+    status: 'published',
+    language: 'en',
   })
-
-  // Fill introduction (required field)
-  const tiptapEditor = page.locator('.tiptap-wrapper [contenteditable="true"]').first()
-  await expect(tiptapEditor).toBeVisible()
-  await tiptapEditor.click()
-  await tiptapEditor.pressSequentially('Test introduction', { delay: 10 })
-  await page.waitForTimeout(100)
-  await tiptapEditor.evaluate((el) => el.blur())
-  await page.waitForTimeout(200)
-  await syncLV(page)
-
-  // Select client (required field) and wait for it to register
-  await page
-    .locator('#project_client_id-field-base')
-    .getByRole('button', { name: 'Select' })
-    .click()
-  await syncLV(page)
-  await page.getByRole('button', { name: 'ImgEdClient' }).click()
+  const project = await factory(page, 'E2eProject.Projects.Project', {
+    title: 'ImgEditorTest',
+    slug: 'imgeditortest',
+    client_id: client.id,
+    introduction: '<p>Test introduction</p>',
+    status: 'published',
+    language: 'en',
+  })
+  await page.goto(`/admin/projects/projects/update/${project.id}`)
   await syncLV(page)
 
   // Upload through the field, then edit shared metadata in the workspace drawer.
@@ -104,10 +76,11 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
 
   // Verify we're back on the listing page
   await expect(page).toHaveURL(/\/admin\/projects\/projects/, { timeout: 30000 })
-  await expect(page.locator('.content-list .list-row').first()).toContainText('ImgEditorTest')
+  const projectRow = page.locator('.content-list .list-row').filter({ hasText: 'ImgEditorTest' })
+  await expect(projectRow).toBeVisible()
 
   // Step 5: Navigate back to edit the project
-  await page.locator('.content-list .list-row').first().locator('.circle-dropdown').click()
+  await projectRow.locator('.circle-dropdown').click()
   await page.getByRole('button', { name: /Edit/ }).click()
   await syncLV(page)
 
@@ -258,7 +231,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   await expect(page).toHaveURL(/\/admin\/projects\/projects/, { timeout: 30000 })
 
   // Step 15: Navigate back to edit the project again
-  await page.locator('.content-list .list-row').first().locator('.circle-dropdown').click()
+  await projectRow.locator('.circle-dropdown').click()
   await page.getByRole('button', { name: /Edit/ }).click()
   await syncLV(page)
 
