@@ -28,7 +28,7 @@ defmodule BrandoAdmin.CommandPaletteLive do
        recent: [],
        current_path: nil,
        groups: [],
-       closed?: false,
+       closed?: true,
        skeleton_rows: 1..5,
        site_key: socket.assigns[:current_site] && socket.assigns.current_site.key
      )}
@@ -53,18 +53,12 @@ defmodule BrandoAdmin.CommandPaletteLive do
      |> assign_groups()}
   end
 
-  # A debounced search can arrive after the palette closed (without motion
-  # it closes at once); rendering its results for a closed palette only sets
-  # up the next opening's diff against rows nobody sees.
+  # Only an open palette searches. A debounced search can arrive after the
+  # palette closed (without motion it closes at once), and LiveView's form
+  # recovery sends one on reconnect before the hook opens it again; rendering
+  # results for a closed palette only sets up the next opening's diff against
+  # rows nobody sees. An opening searches its current text itself.
   def handle_event("search", _params, %{assigns: %{closed?: true}} = socket), do: {:noreply, socket}
-
-  def handle_event("search", %{"q" => query}, %{assigns: %{context: nil}} = socket) do
-    handle_event(
-      "search",
-      %{"q" => query},
-      assign(socket, :context, CommandPalette.context(socket.assigns.current_user, socket.assigns[:current_site]))
-    )
-  end
 
   def handle_event("search", %{"q" => query}, socket) when is_binary(query) do
     {:noreply, socket |> assign(:query, String.slice(query, 0, 200)) |> assign_groups()}
