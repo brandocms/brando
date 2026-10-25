@@ -28,6 +28,7 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
   alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.VideoQuality
   alias Phoenix.LiveView.JS
 
   # prop video_changeset, :any, required: true
@@ -324,6 +325,16 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
               <.flag_choice field={video_form[:loop]} label={gettext("Loop")} />
               <.flag_choice field={video_form[:preload]} label={gettext("Preload")} />
             </div>
+            <VideoQuality.select
+              field={video_form[:quality]}
+              video={@video}
+              inherit={gettext("Default")}
+              instructions={
+                gettext(
+                  "Default plays as the page asks, else Automatic: streamed with controls or a play button, an MP4 for a loop."
+                )
+              }
+            />
           </section>
         <% end %>
       </.form>

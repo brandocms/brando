@@ -1638,6 +1638,65 @@ defmodule E2EFixtureController do
     page
   end
 
+  # A page whose Video Player block (seeded module "video-player") holds a
+  # ready Bunny video with MP4s at 360p and 720p in its ref
+  # (video-ref-quality.spec.js).
+  def video_quality(conn, _params) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    owner = get_admin_user()
+
+    video =
+      Brando.Repo.insert!(%Brando.Videos.Video{
+        title: "Harbour loop",
+        type: :bunny,
+        status: :ready,
+        width: 1080,
+        height: 1350,
+        config_target: "default",
+        creator_id: owner.id,
+        meta: %{
+          "bunny" => %{"video_guid" => "e2e-quality", "has_mp4_fallback" => true, "available_resolutions" => "360p,720p"}
+        }
+      })
+
+    page =
+      Brando.Repo.insert!(%Brando.Pages.Page{
+        title: "Quality ref",
+        uri: "quality-ref-#{System.unique_integer([:positive])}",
+        template: "default.html",
+        language: :en,
+        status: :published,
+        creator_id: owner.id
+      })
+
+    Brando.Content.create_identifier(Brando.Pages.Page, page)
+    module = Brando.Content.Module |> Brando.Repo.get_by!(class: "video-player") |> Brando.Repo.preload(:refs)
+
+    block =
+      Brando.Repo.insert!(%Brando.Content.Block{
+        type: :module,
+        module_id: module.id,
+        source: to_string(Brando.Pages.Page.Blocks),
+        uid: Brando.Utils.generate_uid(),
+        creator_id: owner.id
+      })
+
+    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
+    [template] = module.refs
+
+    Brando.Repo.insert!(%Brando.Content.Ref{
+      name: template.name,
+      uid: Brando.Utils.generate_uid(),
+      block_id: block.id,
+      sequence: 0,
+      video_id: video.id,
+      data: template.data
+    })
+
+    json(conn, %{page_id: page.id, video_id: video.id})
+  end
+
   # A video thumbnail with a real file behind every size the admin asks for.
   defp sweep_thumbnail do
     {_name, image} = create_directory_avatar()

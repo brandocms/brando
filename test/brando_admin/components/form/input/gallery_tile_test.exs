@@ -13,6 +13,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTileTest do
   alias BrandoAdmin.Components.Form.Input.Gallery
   alias BrandoAdmin.Components.Form.Input.Gallery.ImageConfig
   alias BrandoAdmin.Components.Form.Input.Gallery.Tile
+  alias BrandoAdmin.Components.Form.Input.Gallery.VideoConfig
   alias Ecto.Changeset
   alias Phoenix.Component
 
@@ -240,6 +241,50 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTileTest do
       assert config == %{"title" => "<p><em>A</em></p>", "alt" => "Alt"}
 
       ImageConfig.handle_event("save_config", %{"config" => %{"title" => "<p></p>"}}, socket)
+      assert_receive {:phoenix, :send_update, {{Gallery, "project_photos"}, %{config: config}}}
+      assert config == %{}
+    end
+  end
+
+  describe "a video's configuration" do
+    setup do
+      video = %Brando.Videos.Video{
+        id: 1,
+        type: :bunny,
+        status: :ready,
+        meta: %{"bunny" => %{"video_guid" => "g", "has_mp4_fallback" => true, "available_resolutions" => "720p"}}
+      }
+
+      {:ok, socket} =
+        VideoConfig.update(
+          %{
+            id: "project_photos-video-config",
+            config: %{},
+            video: video,
+            gallery_component: Gallery,
+            gallery_component_id: "project_photos",
+            gallery_object_index: 0
+          },
+          %Phoenix.LiveView.Socket{}
+        )
+
+      {:ok, socket: socket}
+    end
+
+    # A toggle rebuilds the form: the quality picked before it stays
+    test "keeps the quality picked before a toggle, and saves it", %{socket: socket} do
+      {:noreply, socket} = VideoConfig.handle_event("change_config", %{"config" => %{"quality" => "mp4_720"}}, socket)
+
+      {:noreply, socket} =
+        VideoConfig.handle_event("toggle_override", %{"field" => "autoplay", "default" => "false"}, socket)
+
+      assert socket.assigns.form[:quality].value == "mp4_720"
+
+      VideoConfig.handle_event("save_config", %{"config" => %{"quality" => "mp4_720", "autoplay" => "true"}}, socket)
+      assert_receive {:phoenix, :send_update, {{Gallery, "project_photos"}, %{config: config}}}
+      assert config == %{"quality" => "mp4_720", "autoplay" => true}
+
+      VideoConfig.handle_event("save_config", %{"config" => %{"quality" => ""}}, socket)
       assert_receive {:phoenix, :send_update, {{Gallery, "project_photos"}, %{config: config}}}
       assert config == %{}
     end

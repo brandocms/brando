@@ -15,6 +15,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.VideoQuality
 
   @caption_opts [extensions: ~w(p bold italic link)]
 
@@ -73,6 +74,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
           <Input.toggle tiny field={@form[:muted]} label={gettext("Muted")} />
           <Input.toggle tiny field={@form[:controls]} label={gettext("Controls")} />
           <Input.toggle tiny field={@form[:preload]} label={gettext("Preload")} />
+          <VideoQuality.select
+            field={@form[:quality]}
+            choices={Map.get(@override_info, :quality_choices, [])}
+            inherit={Map.get(@override_info, :quality_inherit, "")}
+          />
         </div>
       <% end %>
     </div>
@@ -128,6 +134,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
         <Input.toggle tiny field={@form[:muted]} label={gettext("Muted")} />
         <Input.toggle tiny field={@form[:controls]} label={gettext("Controls")} />
         <Input.toggle tiny field={@form[:preload]} label={gettext("Preload")} />
+        <VideoQuality.select
+          field={@form[:quality]}
+          choices={Map.get(@override_info, :quality_choices, [])}
+          inherit={Map.get(@override_info, :quality_inherit, "")}
+        />
       <% end %>
     </div>
     """

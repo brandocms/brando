@@ -925,7 +925,7 @@ defmodule Brando.Villain.Parser do
   # so a present key means "overridden" and everything else falls through to the
   # record.
   @image_overrides ~w(title alt credits)
-  @video_overrides ~w(title caption autoplay loop muted controls preload)
+  @video_overrides ~w(title caption autoplay loop muted controls preload quality)
 
   defp apply_object_config(%Brando.Images.Image{} = image, object),
     do: merge_overrides(image, object_config(object), @image_overrides)
@@ -1886,6 +1886,7 @@ defmodule Brando.Villain.Parser do
         :controls,
         :loop,
         :muted,
+        :quality,
         :cover,
         :aspect_ratio,
         :cover_image
@@ -2188,20 +2189,29 @@ defmodule Brando.Villain.Parser do
   end
 
   defp apply_playback_overrides(video, %Changeset{} = override) do
-    Enum.reduce(~w(autoplay loop muted controls preload)a, video, fn field, acc ->
+    ~w(autoplay loop muted controls preload)a
+    |> Enum.reduce(video, fn field, acc ->
       value = Changeset.get_field(override, field)
       use_default = Changeset.get_field(override, :"use_default_#{field}")
       maybe_apply_override(acc, field, value, use_default)
     end)
+    |> apply_quality_override(Changeset.get_field(override, :quality))
   end
 
   defp apply_playback_overrides(video, override) do
-    Enum.reduce(~w(autoplay loop muted controls preload)a, video, fn field, acc ->
+    ~w(autoplay loop muted controls preload)a
+    |> Enum.reduce(video, fn field, acc ->
       value = Map.get(override, field)
       use_default = Map.get(override, :"use_default_#{field}")
       maybe_apply_override(acc, field, value, use_default)
     end)
+    |> apply_quality_override(Map.get(override, :quality))
   end
+
+  # The quality has no `use_default_quality` flag: nil inherits the video's.
+  # `Map.put/3`: a revision's video from before the field has no such key.
+  defp apply_quality_override(video, nil), do: video
+  defp apply_quality_override(video, quality), do: Map.put(video, :quality, quality)
 
   def maybe_annotate(code, uid, %{annotate_blocks: true}) do
     ["<!-- [+:B<", uid, ">] -->\n  ", code, "\n<!-- [-:B<", uid, ">] -->\n"]

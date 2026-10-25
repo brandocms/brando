@@ -2540,6 +2540,7 @@ msgstr "Auto"
 msgid "Auto — fits its content"
 msgstr "Auto – tilpasser seg innholdet"
 
+#: lib/brando/videos/playback.ex
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Automatic"
@@ -2549,6 +2550,11 @@ msgstr "Automatisk"
 #, elixir-autogen, elixir-format
 msgid "Automatic jobs"
 msgstr "Automatiske jobber"
+
+#: lib/brando_admin/components/form/input/blocks/video_block.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic streams a video with controls or a play button, and plays a loop as an MP4."
+msgstr "Automatisk strømmer en video med kontroller eller avspillingsknapp, og spiller en loop som MP4."
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block/override_form.ex
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
@@ -5175,6 +5181,11 @@ msgstr "Standard overlater valget til siden eller blokken som viser videoen. På
 #, elixir-autogen, elixir-format
 msgid "Default new builds to automatic deployment"
 msgstr "La nye bygg som standard publiseres automatisk"
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Default plays as the page asks, else Automatic: streamed with controls or a play button, an MP4 for a loop."
+msgstr "Standard spiller slik siden ber om, ellers Automatisk: strømmet med kontroller eller avspillingsknapp, MP4 for en loop."
 
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
@@ -9534,6 +9545,11 @@ msgstr "MCP"
 msgid "MCP endpoint"
 msgstr "MCP-endepunkt"
 
+#: lib/brando/videos/playback.ex
+#, elixir-autogen, elixir-format
+msgid "MP4, %{resolution}p"
+msgstr "MP4, %{resolution}p"
+
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Made by"
@@ -12895,6 +12911,11 @@ msgstr "Formål"
 msgid "QR code for your authenticator app"
 msgstr "QR-kode for autentiseringsappen"
 
+#: lib/brando_admin/components/form/input/video_quality.ex
+#, elixir-autogen, elixir-format
+msgid "Quality"
+msgstr "Kvalitet"
+
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Quarter — 3 units"
@@ -16107,6 +16128,11 @@ msgstr "Lagrede resultater som brukes til å vise nettstedet."
 msgid "Strategy"
 msgstr "Strategi"
 
+#: lib/brando/videos/playback.ex
+#, elixir-autogen, elixir-format
+msgid "Streaming (HLS)"
+msgstr "Strømming (HLS)"
+
 #: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
 msgid "Streaming video"
@@ -19234,6 +19260,16 @@ msgstr "Videoer som passer til «%{query}»"
 #, elixir-autogen, elixir-format
 msgid "Videos to choose from"
 msgstr "Videoer å velge mellom"
+
+#: lib/brando_admin/components/form/input/video_quality.ex
+#, elixir-autogen, elixir-format
+msgid "Video’s setting"
+msgstr "Videoens innstilling"
+
+#: lib/brando_admin/components/form/input/video_quality.ex
+#, elixir-autogen, elixir-format
+msgid "Video’s setting (%{quality})"
+msgstr "Videoens innstilling (%{quality})"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/users/groups_live.ex

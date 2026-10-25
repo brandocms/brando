@@ -2,7 +2,10 @@ defmodule Brando.Drafts.Content do
   @moduledoc "Comparison of recovery content without changing the stored restore payload."
 
   @override_fields ~w(title credits alt caption autoplay loop muted controls preload)
-  @override_keys ["object_id", "object_type"] ++ @override_fields ++ Enum.map(@override_fields, &("use_default_" <> &1))
+  # Fields without a `use_default_*` flag: nil is the default
+  @flagless_override_fields ~w(quality)
+  @override_keys ["object_id", "object_type"] ++
+                   @override_fields ++ @flagless_override_fields ++ Enum.map(@override_fields, &("use_default_" <> &1))
 
   def checksum(payload), do: payload |> normalize_payload() |> Brando.Drafts.checksum()
 
@@ -73,7 +76,7 @@ defmodule Brando.Drafts.Content do
     valid_object_id?(id) && Enum.all?(Map.keys(override), &(&1 in @override_keys)) &&
       Enum.all?(@override_fields, fn field ->
         is_nil(override[field]) && Map.get(override, "use_default_" <> field, true) == true
-      end)
+      end) && Enum.all?(@flagless_override_fields, &is_nil(override[&1]))
   end
 
   defp default_override?(_), do: false

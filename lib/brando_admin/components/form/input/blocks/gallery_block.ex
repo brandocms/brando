@@ -902,7 +902,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
         default_loop: Map.get(media_object, :loop) || false,
         default_muted: Map.get(media_object, :muted) || false,
         default_controls: Map.get(media_object, :controls) || false,
-        default_preload: Map.get(media_object, :preload) || false
+        default_preload: Map.get(media_object, :preload) || false,
+        quality_choices: Brando.Videos.Playback.choices(media_object),
+        quality_inherit: BrandoAdmin.Components.Form.Input.VideoQuality.inherit_label(media_object)
       }
     else
       %{}

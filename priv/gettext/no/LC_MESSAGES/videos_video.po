@@ -69,6 +69,11 @@ msgstr "Forhåndslasting"
 
 #: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
+msgid "Quality"
+msgstr "Kvalitet"
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
 msgid "Remote ID"
 msgstr "Ekstern ID"
 

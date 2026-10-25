@@ -2538,6 +2538,7 @@ msgstr ""
 msgid "Auto — fits its content"
 msgstr ""
 
+#: lib/brando/videos/playback.ex
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Automatic"
@@ -2546,6 +2547,11 @@ msgstr ""
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Automatic jobs"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/blocks/video_block.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic streams a video with controls or a play button, and plays a loop as an MP4."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/gallery_block/override_form.ex
@@ -5172,6 +5178,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Default new builds to automatic deployment"
+msgstr ""
+
+#: lib/brando_admin/components/form/video_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Default plays as the page asks, else Automatic: streamed with controls or a play button, an MP4 for a loop."
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -9532,6 +9543,11 @@ msgstr ""
 msgid "MCP endpoint"
 msgstr ""
 
+#: lib/brando/videos/playback.ex
+#, elixir-autogen, elixir-format
+msgid "MP4, %{resolution}p"
+msgstr ""
+
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Made by"
@@ -12893,6 +12909,11 @@ msgstr ""
 msgid "QR code for your authenticator app"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/video_quality.ex
+#, elixir-autogen, elixir-format
+msgid "Quality"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Quarter — 3 units"
@@ -16105,6 +16126,11 @@ msgstr ""
 msgid "Strategy"
 msgstr ""
 
+#: lib/brando/videos/playback.ex
+#, elixir-autogen, elixir-format
+msgid "Streaming (HLS)"
+msgstr ""
+
 #: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
 msgid "Streaming video"
@@ -19229,6 +19255,16 @@ msgstr ""
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Videos to choose from"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/video_quality.ex
+#, elixir-autogen, elixir-format
+msgid "Video’s setting"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/video_quality.ex
+#, elixir-autogen, elixir-format
+msgid "Video’s setting (%{quality})"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex

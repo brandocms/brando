@@ -31,8 +31,10 @@ test('blocking an AI crawler and refusing training is written into robots.txt', 
   await expect(crawlers.locator('.seo-crawler-lines pre')).toBeAttached()
   await saveSeo(page)
 
-  const robots = await (await page.request.get('/robots.txt')).text()
-  expect(robots).toContain('User-agent: GPTBot\nDisallow: /')
+  // The click returns before the save lands: read robots.txt until it does
+  const robotsTxt = async () => (await page.request.get('/robots.txt')).text()
+  await expect.poll(robotsTxt).toContain('User-agent: GPTBot\nDisallow: /')
+  const robots = await robotsTxt()
   expect(robots).toContain('Content-Signal: search=yes, ai-input=yes, ai-train=no')
   expect(robots).toContain('Disallow: /admin/')
 
@@ -42,7 +44,7 @@ test('blocking an AI crawler and refusing training is written into robots.txt', 
   await gptbot.locator('label[data-value="allow"]').click()
   await training.locator('label[data-value=""]').click()
   await saveSeo(page)
-  expect(await (await page.request.get('/robots.txt')).text()).not.toContain('Brando AI crawler policy')
+  await expect.poll(robotsTxt).not.toContain('Brando AI crawler policy')
 })
 
 test('a published entry is served as Markdown, a draft is not', async ({ page }) => {

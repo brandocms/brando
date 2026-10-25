@@ -28,6 +28,9 @@ defmodule Brando.HTML.Video do
     - `opacity` -> background opacity of the `:svg` cover
     - `width`
     - `height`
+    - `quality` -> `:auto`, `:hls`, `:mp4_360`, `:mp4_480`, `:mp4_720` or
+      `:mp4_1080`: whether a Bunny video streams or plays an MP4, see
+      `Brando.Videos.Playback`
 
   ### Precedence
 
@@ -44,7 +47,12 @@ defmodule Brando.HTML.Video do
   Passing `false` counts as passing — `{% video entry.video { autoplay: false } %}`
   turns autoplay off on a record that has it on.
 
-  `muted` is the one exception to all of the above. It resolves like the others,
+  `quality` turns this order around: it is the developer's default for the
+  placement, so the editor's choice on the record (or a block's or gallery
+  object's, merged onto it) wins, and the opt applies only where they left it
+  empty.
+
+  `muted` is the other exception. It resolves like the others,
   but the rendered attribute is `autoplay || muted`, since browsers block
   unmuted autoplay. `muted: false` therefore cannot un-mute an autoplaying
   video — the setting only has an effect with autoplay off.
@@ -108,9 +116,16 @@ defmodule Brando.HTML.Video do
     video_guid = get_in(meta, ["bunny", "video_guid"])
     cdn_hostname = get_bunny_cdn_hostname()
 
+    {_format, src} =
+      Brando.Videos.Playback.source(video,
+        quality: Keyword.get(opts, :quality),
+        controls: setting(opts, video, :controls, false),
+        play_button: setting(opts, video, :play_button, false)
+      )
+
     render_video(assigns, video, opts,
       class: "video-bunny",
-      src: "https://#{cdn_hostname}/#{video_guid}/playlist.m3u8",
+      src: src,
       poster: "https://#{cdn_hostname}/#{video_guid}/thumbnail.jpg",
       aspect_ratio: "16/9"
     )

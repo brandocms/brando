@@ -67,6 +67,9 @@ defmodule Brando.Videos.Video do
     attribute :loop, :boolean
     attribute :controls, :boolean
     attribute :muted, :boolean
+    # HLS or an MP4 at a resolution; nil inherits. `Brando.Videos.Playback.qualities/0`,
+    # written out: that module matches on this struct.
+    attribute :quality, :enum, values: [:auto, :hls, :mp4_360, :mp4_480, :mp4_720, :mp4_1080]
     attribute :source_url, :text
     attribute :remote_id, :text
     attribute :config_target, :text
@@ -148,11 +151,32 @@ defmodule Brando.Videos.Video do
           input :loop, :toggle, label: t("Loop")
           input :controls, :toggle, label: t("Controls")
           input :muted, :toggle, label: t("Muted")
+
+          input :quality, :select,
+            label: t("Quality"),
+            options: &__MODULE__.quality_options/2,
+            resetable: true,
+            show_if: {:type, :bunny}
+
           input :file, :file, label: t("Video file")
           input :thumbnail, :image, label: t("Thumbnail")
         end
       end
     end
+  end
+
+  @doc """
+  The Quality select's options in the video's form: the qualities the video
+  has (`Brando.Videos.Playback.choices/1`), and a stored one it no longer has,
+  which would otherwise be dropped on save.
+  """
+  def quality_options(%{source: %Ecto.Changeset{} = changeset}, _opts) do
+    video = Ecto.Changeset.apply_changes(changeset)
+    choices = Brando.Videos.Playback.choices(video)
+    current = Brando.Videos.Playback.normalize(video.quality)
+    choices = if current && current not in choices, do: choices ++ [current], else: choices
+
+    Enum.map(choices, &%{label: Brando.Videos.Playback.label(&1), value: &1})
   end
 
   # A local capture: the listing DSL keeps the function at compile time, and a

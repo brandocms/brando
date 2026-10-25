@@ -277,9 +277,56 @@ assets do
 end
 ```
 
+#### Playback quality
+
+A Bunny video plays streamed over HLS, or as a progressive MP4 at one
+resolution. An MP4 reaches its first frame sooner, which suits a short
+autoplaying loop; the stream adapts to the viewer's connection, which suits a
+video someone watches through. Bunny makes the MP4s (`play_360p.mp4` up to
+`play_1080p.mp4`, never above the source) when the library's **MP4 Fallback**
+encoding setting is on, for uploads made after it was turned on.
+
+The choice is a video's **Quality**:
+
+| Quality | Plays |
+|---------|-------|
+| `:auto` (Automatic) | The stream when the video shows controls or a play button, otherwise the MP4 at the site default |
+| `:hls` (Streaming) | The stream |
+| `:mp4_360`, `:mp4_480`, `:mp4_720`, `:mp4_1080` | That MP4, else the next resolution down, else the lowest |
+
+A video without MP4s plays the stream whatever its quality. The editor offers
+the qualities the video has.
+
+Editors set it in the video's settings (the video drawer of a video field, or
+the video library), and override it for one placement in a video block or ref
+and in a gallery's settings for the video; an empty value inherits. A template
+gives the default for its placement, which an editor's choice overrides:
+
+```heex
+<.video video={@project.listing_video} opts={[quality: :mp4_720]} />
+```
+
+```liquid
+{% video entry.listing_video { quality: "mp4_720" } %}
+```
+
+The site default is what Automatic plays as an MP4:
+
+```elixir
+# config/config.exs
+config :brando, Brando.Videos, default_mp4_resolution: 720
+```
+
+Brando learns whether a video has MP4s from Bunny when it finishes encoding
+or is added from the Bunny library, and keeps it in `meta.bunny`. A video
+stored before Brando kept it streams until **Fetch details** in the video
+library looks it up. `Brando.Videos.Playback` resolves the source for both
+templates and blocks. Saving a video, or looking it up, renders the entries
+whose blocks show it again, so their stored HTML follows.
+
 #### Playback URLs
 
-Bunny videos are served via HLS streaming:
+Bunny videos stream over HLS, as below, unless their quality picks an MP4:
 
 ```elixir
 # Get playback URL for a video

@@ -19,7 +19,7 @@ defmodule Brando.Videos.Uploaders.ProviderUpdate do
     with {:ok, creator} <- Brando.Users.get_user(video.creator_id),
          {:ok, updated_video} <- Videos.update_video(video, params, creator) do
       Videos.run_completed_callback_on_ready(video, updated_video, creator)
-      broadcast_video_update(updated_video)
+      broadcast(updated_video)
       {:ok, updated_video}
     end
   end
@@ -36,7 +36,11 @@ defmodule Brando.Videos.Uploaders.ProviderUpdate do
 
   def put_dimensions(params, _source), do: params
 
-  defp broadcast_video_update(video) do
+  @doc """
+  Tells the open admin forms following `video` (`"brando:video:<id>"`) and
+  its editors (`Brando.Assets.ProcessingStatus`) that it changed.
+  """
+  def broadcast(video) do
     Brando.Assets.ProcessingStatus.broadcast(:video, video, Brando.Assets.ProcessingStatus.video_state(video))
 
     Phoenix.PubSub.broadcast(

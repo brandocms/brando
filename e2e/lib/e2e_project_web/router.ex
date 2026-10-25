@@ -58,6 +58,7 @@ defmodule E2eProjectWeb.Router do
       post "/image-creator/:image_id", E2EFixtureController, :image_creator
       post "/admin-workspace-fixtures", E2EFixtureController, :admin_workspaces
       post "/media-sweep-fixtures", E2EFixtureController, :media_sweep
+      post "/video-quality-fixtures", E2EFixtureController, :video_quality
       post "/synchronized-translation", E2EFixtureController, :synchronized_translation
       post "/dashboard-access/:mode", E2EFixtureController, :dashboard_access
       post "/authorization/:role", E2EFixtureController, :authorization
