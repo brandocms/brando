@@ -10,6 +10,14 @@ async function sameHeight(locators, expected) {
   }
 }
 
+// The shared workspace checks of admin-workspaces.spec.js, for the screens
+// whose layout these tests already open.
+async function inWorkspace(page, heading) {
+  await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible()
+  await expect(page.locator('.admin-workspace:not(.drawer)').first()).toBeVisible()
+  await expect(page.locator('.phx-error')).toHaveCount(0)
+}
+
 async function noOverflow(page) {
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(0)
 }
@@ -18,6 +26,7 @@ test('listing filters align, disclose children by keyboard and retain creators o
   expect((await page.request.post('/e2e/admin-workspace-fixtures')).ok()).toBeTruthy()
   await page.goto('/admin/pages')
   await syncLV(page)
+  await inWorkspace(page, 'Pages & Sections')
   const filter = page.locator('.list-tools .filter').first()
   const sort = page.locator('.sorts .simple-dropdown-button')
   await sameHeight([filter, sort], 32)
@@ -65,6 +74,7 @@ test('listing filters align, disclose children by keyboard and retain creators o
 test('menu controls align, keyboard status works and save follows the items', async ({ page }, testInfo) => {
   await page.goto('/admin/config/navigation/menus/update/1')
   await syncLV(page)
+  await inWorkspace(page, 'Main menu')
   await page.locator('.form-content > .form-tabs').screenshot({ path: testInfo.outputPath('single-tab-toolbar-desktop.png') })
   const status = page.locator('#menu_status-field-wrapper')
   await sameHeight([page.locator('#menu_title'), page.locator('#menu_key'), status.locator('.multiselect'), page.locator('#menu_language-field-wrapper .multiselect')], 40)

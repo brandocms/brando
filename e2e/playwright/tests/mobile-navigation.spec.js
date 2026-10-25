@@ -47,15 +47,6 @@ test('the menu opens as a drawer on an entry form and closes on Escape, its back
   await expect(dashboard).toBeHidden()
 })
 
-test('a wide screen keeps the sidebar and has no menu button', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 })
-  await page.goto('/admin')
-  await syncLV(page)
-
-  await expect(page.locator('#mobile-nav-toggle')).toBeHidden()
-  await expect(page.locator('#nav').getByRole('link', { name: 'Dashbord' })).toBeVisible()
-})
-
 test('a closed drawer cannot be tabbed into, and focus moves into it and back', async ({ page }) => {
   // Configuration holds the current page, so the hook opens its section and
   // shows its rows inline: closed, the drawer must still keep them out of reach.
@@ -110,10 +101,13 @@ test('Escape closes an open dialog first, and widening the window closes the dra
   await expect(drawer).toBeHidden()
 })
 
-test('the drawer keeps its language row after the sidebar was collapsed on a wide screen', async ({ page }) => {
+test('a wide screen keeps the sidebar without a menu button, and the drawer keeps its language row after the sidebar was collapsed there', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/admin')
   await syncLV(page)
+  await expect(page.locator('#mobile-nav-toggle')).toBeHidden()
+  await expect(page.locator('#nav').getByRole('link', { name: 'Dashbord' })).toBeVisible()
+
   await page.locator('.fullscreen-toggle').click()
   await expect(page.locator('body')).toHaveClass(/sidebar-hidden/)
 

@@ -2,7 +2,7 @@ defmodule BrandoAdmin.FormValidationA11yTest do
   # Issue #1996: a failed save marks the field invalid and fills its alert
   # region; correcting the field clears both. The attributes are rendered by
   # the server. Moving focus to the field after the save alert stays in
-  # e2e/playwright/tests/accessibility/form-a11y.spec.js.
+  # e2e/playwright/tests/editor-motion.spec.js.
   use Brando.LiveCase
 
   defp title_field(view), do: view |> element("#page_title") |> render()

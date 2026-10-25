@@ -65,15 +65,32 @@ test('link picker aligns metadata and keeps the selected content through parent 
   await modal.getByLabel('Content', { exact: true }).check()
   await modal.getByRole('button', { name: /All content/ }).click()
   await expect(modal.getByRole('button', { name: /All content/ })).toHaveAttribute('aria-pressed', 'true')
-  await modal.locator('.identifier-picker-results input').fill('linked project')
+  // The filter is client-side: the Brando.SelectFilter hook toggles
+  // `.filter-hidden` on each `.identifier`, so that class has to actually hide
+  // them. It did not while the rule lived nested under the multiselect
+  // options, which left the filter input inert.
+  const filter = modal.locator('.identifier-picker-results input')
+  const identifiers = modal.locator('.identifier-options .identifier')
+  const noResults = modal.locator('.identifier-options .no-results')
+  await filter.fill('linked project')
   await expect(modal.locator('.identifier-options .identifier:visible')).toHaveCount(1)
+  await expect(identifiers.filter({ visible: true })).toHaveAttribute('data-label', /^Linked Project Alpha/)
   await expect(modal.locator('[id$="-result-count"]')).toHaveText('1')
   await modal.getByLabel('Link text', { exact: true }).fill('Pending link text')
   await syncLV(page)
   await expect(modal.locator('.identifier-options .identifier:visible')).toHaveCount(1)
   await expect(modal.locator('[id$="-result-count"]')).toHaveText('1')
+  // A term matching nothing hides every row and shows the empty state
+  await filter.fill('zzz-no-such-identifier-zzz')
+  await expect(identifiers.filter({ visible: true })).toHaveCount(0)
+  await expect(noResults).toBeVisible()
+  // Clearing restores the full list
   await modal.getByRole('button', { name: 'Clear filter', exact: true }).click()
-  await modal.locator('.identifier-picker-nav button', { hasText: 'Cases' }).click()
+  await expect(identifiers.filter({ visible: true })).toHaveCount(await identifiers.count())
+  await expect(noResults).not.toBeVisible()
+  const cases = modal.locator('.identifier-picker-nav button', { hasText: 'Cases' })
+  await cases.click()
+  await expect(cases).toHaveClass(/\bis-selected\b/)
   const selected = modal.locator('.identifier-options .identifier').filter({ hasText: 'Linked Project Alpha' })
   await selected.click()
   await syncLV(page)

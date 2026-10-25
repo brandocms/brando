@@ -4,12 +4,6 @@ import { syncLV } from '../../utils'
 
 // test.use({ scenario: 'admin-user' })
 
-test('verify navigation to admin page', async ({ page }) => {
-  await page.goto('/admin/pages')
-  await expect(page).toHaveURL('/admin/pages')
-  await expect(page.locator('h1')).toHaveText('Pages & Sections')
-})
-
 test('update identity', async ({ page }) => {
   // Go to the /admin page
   await page.goto('/admin')
