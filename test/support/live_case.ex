@@ -144,8 +144,13 @@ defmodule Brando.LiveCase do
   whole time, even through a pass whose entire job is re-verifying it. Treat
   the pin as a reason to re-read on a bump, never as evidence that anyone read
   correctly the first time.
+
+  Each exit gets `within:` ms (5 s by default) before it counts as a hang:
+  both usually arrive within milliseconds, but a loaded CI runner missed a
+  500 ms deadline (PR #3290). A hung process fails all the same.
   """
-  def kill_live(view) do
+  def kill_live(view, opts \\ []) do
+    within = Keyword.get(opts, :within, 5_000)
     pid = view.pid
     {_ref, _topic, proxy_pid} = view.proxy
     ref = Process.monitor(pid)
@@ -170,10 +175,10 @@ defmodule Brando.LiveCase do
       receive do
         {:DOWN, ^ref, :process, ^pid, _reason} -> :ok
       after
-        5_000 -> flunk("LiveView #{inspect(pid)} did not exit within 5s")
+        within -> flunk("LiveView #{inspect(pid)} did not exit within #{within}ms")
       end
 
-      await_proxy_exit(proxy_pid)
+      await_proxy_exit(proxy_pid, within)
       :ok
     after
       Process.flag(:trap_exit, prior_trap?)
@@ -189,13 +194,12 @@ defmodule Brando.LiveCase do
   # The kill stops the proxy (phoenix_live_view **1.2.12**, `client_proxy.ex`'s
   # `handle_info({:DOWN, …}, state)` clause at `:542`), so the exit is expected
   # and arrives in single-digit ms. Not arriving means the proxy is hung, which
-  # is a failure. The deadline is generous because a loaded CI runner missed
-  # 500 ms (PR #3290); a hung proxy fails all the same.
-  defp await_proxy_exit(proxy_pid) do
+  # is a failure.
+  defp await_proxy_exit(proxy_pid, within) do
     receive do
       {:EXIT, ^proxy_pid, _reason} -> :ok
     after
-      5_000 -> flunk("client proxy #{inspect(proxy_pid)} did not exit within 5s")
+      within -> flunk("client proxy #{inspect(proxy_pid)} did not exit within #{within}ms")
     end
   end
 

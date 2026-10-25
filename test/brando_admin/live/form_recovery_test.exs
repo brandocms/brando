@@ -53,8 +53,8 @@ defmodule BrandoAdmin.FormRecoveryTest do
     test "kill_live/1 flunks when the proxy outlives the view" do
       {view, proxy} = stub_view_with_live_proxy()
 
-      assert_raise ExUnit.AssertionError, ~r/did not exit within 500ms/, fn ->
-        kill_live(view)
+      assert_raise ExUnit.AssertionError, ~r/did not exit within 100ms/, fn ->
+        kill_live(view, within: 100)
       end
 
       # Subject assertion: reaching the proxy wait at all means `kill_live/1`
