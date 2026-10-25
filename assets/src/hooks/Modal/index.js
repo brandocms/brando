@@ -27,26 +27,28 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])'
 ].join(',')
 
-// The key held down now, if any. A dialog that closes without motion closes
-// inside that key's events, and its activation (Enter's keypress, Space's
-// keyup) goes wherever focus is when it arrives.
-let heldKey = null
-document.addEventListener('keydown', e => { heldKey = e.code }, true)
-document.addEventListener('keyup', e => { if (e.code === heldKey) heldKey = null }, true)
-window.addEventListener('blur', () => { heldKey = null })
+// The key whose keydown is being handled, until that task ends. A dialog that
+// closes without motion closes inside it, and the keystroke's activation
+// (Enter's keypress) goes wherever focus is when it arrives.
+let keyInHand = null
+document.addEventListener('keydown', e => {
+  keyInHand = e.code || null
+  setTimeout(() => { keyInHand = null })
+}, true)
 
-// Runs `fn` in the task after the held key's release (or the next task, with
-// no key held), and returns a function that cancels it. Never waits more than
-// a second: a key held down still lets focus return.
+// Runs `fn` in the task after the release of a key whose keydown is closing
+// the dialog (or in the next task otherwise), and returns a function that
+// cancels it. macOS sends no keyup for a key held with ⌘, so the ⌘ keyup ends
+// the wait too, and it never lasts more than a second.
 function afterKeystroke(fn) {
-  const key = heldKey
+  const key = keyInHand
   let timer
   const stop = () => {
     document.removeEventListener('keyup', released, true)
     clearTimeout(timer)
   }
   const released = e => {
-    if (e && e.code !== key) return
+    if (e && e.code !== key && e.key !== 'Meta') return
     stop()
     timer = setTimeout(fn)
   }
@@ -191,13 +193,17 @@ export default app => ({
     cancelAnimationFrame(this.openFrame)
     clearTimeout(this.focusTimer)
     this.cancelRestore?.()
-    const opener = this.opener
+    // A close that has not returned focus yet still owes it to its opener,
+    // also when the dialog reopens and closes again meanwhile.
+    const opener = this.opener || this.pendingOpener
     this.opener = null
+    this.pendingOpener = opener
     // Without motion the dialog closes inside the keystroke that closed it
     // (Enter on a picker row). Focusing the opener there hands it that same
     // keystroke, and Enter on the opener opens the dialog again. Return focus
     // once the keystroke is over, as the closing animation otherwise ensures.
     this.cancelRestore = afterKeystroke(() => {
+      this.pendingOpener = null
       // Opened again meanwhile: keep the opener for the next close. A dialog
       // removed while open (`destroyed/0`) still reads as open, and still
       // returns focus.
