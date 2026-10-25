@@ -279,6 +279,13 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
 
       // Verify video object appears in gallery
       await expect(page.locator('.gallery-block .gallery-object')).toHaveCount(3)
+
+      // The image editor only edits images: the two image objects get its
+      // button, the video object does not.
+      const videoObject = page.locator('.gallery-block .gallery-object').filter({ has: page.locator('.gallery-tile-video') })
+      await expect(videoObject).toHaveCount(1)
+      await expect(videoObject.locator('.edit-image-btn')).toHaveCount(0)
+      await expect(page.locator('.gallery-block .gallery-object .edit-image-btn')).toHaveCount(2)
     })
   })
 
@@ -662,12 +669,12 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
   })
 
   test.describe('Morph Preservation (skipFromChildren)', () => {
-    test('video element survives morphdom update when data-src unchanged', async ({ page }) => {
+    test('video and iframe elements survive morphdom update when their src is unchanged', async ({ page }) => {
       await page.goto('/admin/pages/create')
       await syncLV(page)
 
-      await page.getByLabel('Title', { exact: true }).fill('Morph Video Test Page')
-      await page.getByLabel('URI').fill('morph-video-test')
+      await page.getByLabel('Title', { exact: true }).fill('Morph Preservation Test Page')
+      await page.getByLabel('URI').fill('morph-preservation-test')
 
       // Add Morph Preservation block
       await page.getByRole('button', { name: 'Add block' }).click()
@@ -683,6 +690,7 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       const frame = getPreviewFrame(page)
       // The video container exists but may be CSS-hidden (page styles hide unbooted videos)
       await expect(frame.locator('[data-smart-video]')).toHaveCount(1)
+      await expect(frame.locator('iframe.embed-frame')).toBeVisible()
 
       // Trigger an initial update so initializeLazyVideos runs and adds data-booted
       await page.getByRole('textbox', { name: 'Label' }).fill('First update')
@@ -690,9 +698,12 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await expect(frame.locator('.morph-label')).toContainText('First update')
       await expect(frame.locator('[data-smart-video][data-booted]')).toHaveCount(1)
 
-      // Stamp a custom property on the <video> element to track DOM identity
+      // Stamp a custom property on the <video> and the iframe to track DOM identity
       await frame.locator('[data-smart-video] video').evaluate(el => {
         el.__morphTestStamp = 'video-alive'
+      })
+      await frame.locator('iframe.embed-frame').evaluate(el => {
+        el.__morphTestStamp = 'iframe-alive'
       })
 
       // Change the label var again to trigger another morphdom update
@@ -702,47 +713,13 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       // Verify the label updated (morphdom worked)
       await expect(frame.locator('.morph-label')).toContainText('Second update')
 
-      // Verify the video element was NOT recreated — stamp should survive
-      const stamp = await frame.locator('[data-smart-video] video').evaluate(el => el.__morphTestStamp)
-      expect(stamp).toBe('video-alive')
-    })
-
-    test('iframe element survives morphdom update when src unchanged', async ({ page }) => {
-      await page.goto('/admin/pages/create')
-      await syncLV(page)
-
-      await page.getByLabel('Title', { exact: true }).fill('Morph Iframe Test Page')
-      await page.getByLabel('URI').fill('morph-iframe-test')
-
-      // Add Morph Preservation block
-      await page.getByRole('button', { name: 'Add block' }).click()
-      await page.getByRole('button', { name: '05 LIVE PREVIEW TEST' }).click()
-      await expect(page.locator('.module-picker-namespace.active')).toContainText('05 LIVE PREVIEW TEST')
-      await page.getByRole('button', { name: 'Morph Preservation' }).click()
-      await syncLV(page)
-
-      // Enable live preview
-      await toggleLivePreview(page)
-      await waitForPreviewReady(page)
-
-      const frame = getPreviewFrame(page)
-      await expect(frame.locator('iframe.embed-frame')).toBeVisible()
-
-      // Stamp a custom property on the iframe to track DOM identity
-      await frame.locator('iframe.embed-frame').evaluate(el => {
-        el.__morphTestStamp = 'iframe-alive'
-      })
-
-      // Change the label var to trigger a morphdom update
-      await page.getByRole('textbox', { name: 'Label' }).fill('Changed label')
-      await syncLV(page)
-
-      // Verify the label updated (morphdom worked)
-      await expect(frame.locator('.morph-label')).toContainText('Changed label')
-
-      // Verify the iframe was NOT recreated — stamp should survive
-      const stamp = await frame.locator('iframe.embed-frame').evaluate(el => el.__morphTestStamp)
-      expect(stamp).toBe('iframe-alive')
+      // Verify neither element was recreated — both stamps should survive.
+      // Compared together so a failure reports both elements.
+      const stamps = {
+        video: await frame.locator('[data-smart-video] video').evaluate(el => el.__morphTestStamp),
+        iframe: await frame.locator('iframe.embed-frame').evaluate(el => el.__morphTestStamp),
+      }
+      expect(stamps).toEqual({ video: 'video-alive', iframe: 'iframe-alive' })
     })
   })
 })
