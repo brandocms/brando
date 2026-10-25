@@ -12,7 +12,7 @@
  * The switch at its foot turns single-key shortcuts off and on in this
  * browser; ⌘K and ⌘S are not affected.
  */
-import { openDialog, closeDialog, resetDialog } from '../../nativeDialogMotion'
+import { openDialog, closeDialog, resetDialog, onDialogClose } from '../../nativeDialogMotion'
 import { GROUPS, SHORTCUTS, displayKeys, isMacPlatform } from '../../shortcuts/registry'
 import { available, bindShortcut, characterKeysEnabled, setCharacterKeysEnabled } from '../../shortcuts'
 
@@ -65,7 +65,7 @@ export default () => ({
       closeDialog(this)
     })
 
-    this.dialog.addEventListener('close', () => {
+    onDialogClose(this, () => {
       resetDialog(this)
       const opener = this.opener
       this.opener = null

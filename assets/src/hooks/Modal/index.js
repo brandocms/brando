@@ -27,6 +27,42 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])'
 ].join(',')
 
+// The key whose keydown is being handled, until that task ends. A dialog that
+// closes without motion closes inside it, and the keystroke's activation
+// (Enter's keypress) goes wherever focus is when it arrives.
+let keyInHand = null
+document.addEventListener('keydown', e => {
+  keyInHand = e.code || null
+  setTimeout(() => { keyInHand = null })
+}, true)
+// Released before that task ended (a busy main thread runs input first)
+document.addEventListener('keyup', e => { if (e.code === keyInHand) keyInHand = null }, true)
+
+// Runs `fn` in the task after the release of a key whose keydown is closing
+// the dialog (or in the next task otherwise), and returns a function that
+// cancels it. macOS sends no keyup for a key held with ⌘, so the ⌘ keyup ends
+// the wait too, and it never lasts more than a second.
+function afterKeystroke(fn) {
+  const key = keyInHand
+  let timer
+  const stop = () => {
+    document.removeEventListener('keyup', released, true)
+    clearTimeout(timer)
+  }
+  const released = e => {
+    if (e && e.code !== key && e.key !== 'Meta') return
+    stop()
+    timer = setTimeout(fn)
+  }
+  if (key) {
+    document.addEventListener('keyup', released, true)
+    timer = setTimeout(released, 1000)
+  } else {
+    timer = setTimeout(fn)
+  }
+  return stop
+}
+
 export default app => ({
   mounted() {
     this.opener = null
@@ -158,17 +194,35 @@ export default app => ({
   restoreFocus() {
     cancelAnimationFrame(this.openFrame)
     clearTimeout(this.focusTimer)
-    const opener = this.opener
+    this.cancelRestore?.()
+    // A close that has not returned focus yet still owes it to its opener,
+    // also when the dialog reopens and closes again meanwhile.
+    const opener = this.opener || this.pendingOpener
     this.opener = null
-    // Only take focus back if it is still inside the modal; if something else
-    // has deliberately moved it since, leave it alone.
-    if (!this.el.contains(document.activeElement) && document.activeElement !== document.body) return
-    if (opener && document.contains(opener)) {
-      // A contextual menu closes as it opens a nested panel. Its action is now
-      // hidden, so return to the disclosure that still exposes that action.
-      const target = opener.getClientRects().length ? opener : opener.closest('details')?.querySelector('summary')
-      target?.focus()
-    }
+    this.pendingOpener = opener
+    // Without motion the dialog closes inside the keystroke that closed it
+    // (Enter on a picker row). Focusing the opener there hands it that same
+    // keystroke, and Enter on the opener opens the dialog again. Return focus
+    // once the keystroke is over, as the closing animation otherwise ensures.
+    this.cancelRestore = afterKeystroke(() => {
+      this.pendingOpener = null
+      // Opened again meanwhile: keep the opener for the next close. A dialog
+      // removed while open (`destroyed/0`) still reads as open, and still
+      // returns focus.
+      if (this.el.isConnected && this.isOpen()) {
+        this.opener = this.opener || opener
+        return
+      }
+      // Only take focus back if it is still inside the modal; if something else
+      // has deliberately moved it since, leave it alone.
+      if (!this.el.contains(document.activeElement) && document.activeElement !== document.body) return
+      if (opener && document.contains(opener)) {
+        // A contextual menu closes as it opens a nested panel. Its action is now
+        // hidden, so return to the disclosure that still exposes that action.
+        const target = opener.getClientRects().length ? opener : opener.closest('details')?.querySelector('summary')
+        target?.focus()
+      }
+    })
   },
 
   focusable() {

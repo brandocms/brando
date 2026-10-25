@@ -33,6 +33,23 @@ test('? opens the sheet, and escape gives the focus back', async ({ page }) => {
   await expect(search).toBeFocused()
 })
 
+// Without motion, Escape closes the sheet at once but its `close` event comes
+// a task later. Reopened in between, the sheet must stay open.
+test('the sheet closed and reopened at once, without motion, stays open', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/admin')
+  await syncLV(page)
+  await page.keyboard.press('?')
+  await expect(sheet(page)).toBeVisible()
+  await page.evaluate(() => {
+    document.querySelector('#shortcut-sheet').dispatchEvent(new Event('cancel', { cancelable: true }))
+    document.querySelector('#shortcut-sheet').dispatchEvent(new CustomEvent('brando:shortcuts:open'))
+  })
+  await expect(sheet(page)).toBeVisible()
+  await expect(page.locator('#shortcut-sheet')).toHaveAttribute('data-dialog-open', 'true')
+  await expect(page.locator('#shortcut-sheet-title')).toBeFocused()
+})
+
 test('? typed in a text field is text', async ({ page }) => {
   await page.goto('/admin/projects/projects')
   await syncLV(page)

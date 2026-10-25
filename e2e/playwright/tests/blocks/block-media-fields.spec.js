@@ -365,30 +365,35 @@ test('file refs keep their settings through replacement and gallery vars accept 
   await expect(modal.getByLabel('CSS class(es)', { exact: true })).toHaveValue('report-download')
 })
 
-test('configured file and video fields browse the current unsaved selection', async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 1440, height: 1000 })
-  await page.goto('/admin/projects/projects/update/3')
-  await syncLV(page)
-  for (const [kind, name] of [['file', 'test.pdf'], ['video', 'video.mp4']]) {
-    const field = page.locator(`#project_cover_${kind}-media`)
-    await field.locator('input[type="file"]').setInputFiles(`./fixtures/${name}`)
-    await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
-    const id = await field.getAttribute('data-asset-id')
-    const opener = field.getByRole('button', { name: `Select ${kind}`, exact: true })
-    await opener.click()
-    const picker = page.locator(`#${kind}-picker`)
-    const selected = picker.locator(`.${kind}-picker__${kind}.selected`)
-    await expect(selected).toHaveAttribute('phx-value-id', id)
-    await expect(page.locator('#brando-nav')).toHaveClass(/phx-connected/)
-    await page.screenshot({ path: testInfo.outputPath(`${kind}-browser-desktop.png`) })
-    await page.setViewportSize({ width: 390, height: 844 })
-    expect(await picker.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
-    await page.screenshot({ path: testInfo.outputPath(`${kind}-browser-mobile.png`) })
-    await selected.focus()
-    await page.keyboard.press('Enter')
-    await expect(picker).not.toBeVisible()
-    await expect(field).toHaveAttribute('data-asset-id', id)
-    await expect(opener).toBeFocused()
+// Without motion a picker closes inside the Enter that chose the item; the
+// opener must not receive that keystroke and open the picker again.
+for (const reducedMotion of ['no-preference', 'reduce']) {
+  test(`configured file and video fields browse the current unsaved selection (${reducedMotion} motion)`, async ({ page }, testInfo) => {
+    await page.emulateMedia({ reducedMotion })
     await page.setViewportSize({ width: 1440, height: 1000 })
-  }
-})
+    await page.goto('/admin/projects/projects/update/3')
+    await syncLV(page)
+    for (const [kind, name] of [['file', 'test.pdf'], ['video', 'video.mp4']]) {
+      const field = page.locator(`#project_cover_${kind}-media`)
+      await field.locator('input[type="file"]').setInputFiles(`./fixtures/${name}`)
+      await expect(field).toHaveAttribute('data-asset-id', /\d+/, { timeout: 20000 })
+      const id = await field.getAttribute('data-asset-id')
+      const opener = field.getByRole('button', { name: `Select ${kind}`, exact: true })
+      await opener.click()
+      const picker = page.locator(`#${kind}-picker`)
+      const selected = picker.locator(`.${kind}-picker__${kind}.selected`)
+      await expect(selected).toHaveAttribute('phx-value-id', id)
+      await expect(page.locator('#brando-nav')).toHaveClass(/phx-connected/)
+      await page.screenshot({ path: testInfo.outputPath(`${kind}-browser-desktop.png`) })
+      await page.setViewportSize({ width: 390, height: 844 })
+      expect(await picker.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+      await page.screenshot({ path: testInfo.outputPath(`${kind}-browser-mobile.png`) })
+      await selected.focus()
+      await page.keyboard.press('Enter')
+      await expect(picker).not.toBeVisible()
+      await expect(field).toHaveAttribute('data-asset-id', id)
+      await expect(opener).toBeFocused()
+      await page.setViewportSize({ width: 1440, height: 1000 })
+    }
+  })
+}

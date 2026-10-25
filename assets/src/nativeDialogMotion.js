@@ -25,6 +25,15 @@ export function closeDialog(hook) {
   else hook.closeTimer = setTimeout(() => hook.dialog.close(), duration)
 }
 
+// `dialog.close()` queues its `close` event. Without motion a dialog can be
+// opened again before that event arrives; its close is over by then, and
+// handling it would reset the reopened dialog.
+export function onDialogClose(hook, callback) {
+  hook.dialog.addEventListener('close', () => {
+    if (!hook.dialog.open) callback()
+  })
+}
+
 export function resetDialog(hook) {
   clearTimeout(hook.closeTimer)
   hook.closing = false
