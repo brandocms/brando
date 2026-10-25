@@ -189,8 +189,8 @@ test('listing actions align with the header rule and selection covers presence',
   })
   expect(presenceCovered).toBe(true)
   await page.locator('.sorts .simple-dropdown-button').press('Enter')
-  await expect(page.locator('#sorts-dropdown')).toBeVisible()
-  await settled(page.locator('#sorts-dropdown'))
+  // JS.toggle shows the menu at opacity 0 and fades it in a frame later
+  await expect(page.locator('#sorts-dropdown')).toHaveCSS('opacity', '1')
   await page.screenshot({ path: testInfo.outputPath('listing-panels-desktop.png') })
   await page.keyboard.press('Escape')
   await bar.getByRole('button', { name: 'Actions', exact: true }).press('Space')
