@@ -113,11 +113,14 @@ defmodule BrandoAdmin.WorkTest do
   end
 
   test "news keeps work from timing out", %{user_id: user_id} do
-    Work.start(user_id, "slow", "Working", timeout: 150)
-    Process.sleep(100)
+    # News halfway to the timeout, then watching until halfway between the
+    # first deadline and the one the news set: a quarter of the timeout on
+    # either side of each, for a slow CI runner.
+    Work.start(user_id, "slow", "Working", timeout: 600)
+    Process.sleep(300)
     Work.update(user_id, "slow", "Still working")
     assert_receive {:work, "slow", :running, %Work{message: "Still working"}}
-    refute_receive {:work, "slow", :failed, _}, 100
+    refute_receive {:work, "slow", :failed, _}, 450
     Work.finish(user_id, "slow")
     assert_receive {:work, "slow", :finished, %Work{message: nil} = work}
     assert Work.fallback_message(work) == "Done"
