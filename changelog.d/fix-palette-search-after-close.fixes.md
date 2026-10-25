@@ -1,0 +1,1 @@
+- Search no longer stays loading when it is closed during a search and opened again straight away, as happens with reduced motion.
