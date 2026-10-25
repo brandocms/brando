@@ -192,7 +192,13 @@ test.describe('Block Recovery', () => {
 
     // Navigate away and back — this is a fresh mount, not a reconnect
     await page.evaluate(() => window.liveSocket.connect())
-    await page.goto('/admin/pages/create')
+    await page.goto('/admin')
+    await syncLV(page)
+
+    await page.getByRole('link', { name: 'Pages & Sections' }).click()
+    await syncLV(page)
+
+    await page.getByRole('link', { name: 'Create page' }).click()
     await syncLV(page)
 
     await page.getByLabel('Title', { exact: true }).fill('Fresh Page After Stale')
