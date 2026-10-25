@@ -21,6 +21,7 @@ defmodule Brando.Villain.Tags.Video do
       :muted,
       :preload,
       :poster,
+      :quality,
       :width,
       :height
     ]

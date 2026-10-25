@@ -257,6 +257,26 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
+  Return list of all blocks showing `video_id`: in a ref, a var, or a gallery
+  their ref holds
+  """
+  def list_block_ids_using_video(video_id) do
+    in_refs = from r in Ref, select: r.block_id, where: r.video_id == ^video_id and not is_nil(r.block_id)
+    in_vars = from v in Var, select: v.block_id, where: v.video_id == ^video_id and not is_nil(v.block_id)
+
+    in_galleries =
+      from r in Ref,
+        join: o in Brando.Galleries.GalleryObject,
+        on: o.gallery_id == r.gallery_id,
+        select: r.block_id,
+        where: o.video_id == ^video_id and not is_nil(r.block_id)
+
+    [in_refs, in_vars, in_galleries]
+    |> Enum.flat_map(&Repo.all/1)
+    |> Enum.uniq()
+  end
+
+  @doc """
   Return list of all blocks using `identifier_id` through vars
   """
   def list_block_ids_using_identifier(identifier_id) do
@@ -481,6 +501,18 @@ defmodule Brando.Content.Blocks do
   def render_entries_with_gallery_id(gallery_id) do
     gallery_id
     |> list_block_ids_using_gallery()
+    |> list_root_block_ids_by_source()
+    |> list_entry_ids_for_root_blocks_by_source()
+    |> enqueue_entry_map_for_render()
+  end
+
+  @doc """
+  Render and update all entries with a block showing `video_id`
+  (`list_block_ids_using_video/1`)
+  """
+  def render_entries_with_video_id(video_id) do
+    video_id
+    |> list_block_ids_using_video()
     |> list_root_block_ids_by_source()
     |> list_entry_ids_for_root_blocks_by_source()
     |> enqueue_entry_map_for_render()

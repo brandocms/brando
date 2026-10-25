@@ -286,9 +286,90 @@ defmodule Brando.Villain.ProviderVideoRenderingTest do
     assert render.(landscape, width: 400, height: 400) =~ "--aspect-ratio-division: 400/400;"
   end
 
+  describe "quality" do
+    @mp4s %{"has_mp4_fallback" => true, "available_resolutions" => "360p,480p,720p"}
+
+    defp with_mp4s(video), do: %{video | meta: %{"bunny" => Map.put(@mp4s, "video_guid", @guid)}}
+
+    defp html_video(video, opts), do: render_component(&Brando.HTML.Video.video/1, video: video, opts: opts)
+
+    test "a fixed MP4 renders that file, from a template and from a block" do
+      video = with_mp4s(bunny(%{quality: :mp4_720}))
+
+      assert html_video(video, []) =~ ~s(data-src="https://vz-1.b-cdn.net/#{@guid}/play_720p.mp4")
+      assert Parser.video(video, []) =~ ~s(data-src="https://vz-1.b-cdn.net/#{@guid}/play_720p.mp4")
+    end
+
+    test "automatic renders an autoplaying loop as the default MP4, and a video with controls as the stream" do
+      loop = with_mp4s(bunny(%{autoplay: true}))
+      assert Parser.video(loop, []) =~ "/play_720p.mp4"
+      assert html_video(loop, []) =~ "/play_720p.mp4"
+
+      watched = with_mp4s(bunny(%{autoplay: true, controls: true}))
+      assert Parser.video(watched, []) =~ "/playlist.m3u8"
+      assert html_video(watched, []) =~ "/playlist.m3u8"
+
+      # A block's play button needs autoplay off to show
+      assert Parser.video(with_mp4s(bunny(%{play_button: true})), []) =~ "/playlist.m3u8"
+    end
+
+    test "Brando.HTML.video and the parser render the same source for the same inputs" do
+      for quality <- [nil | Brando.Videos.Playback.qualities()],
+          {autoplay, controls} <- [{true, false}, {true, true}, {false, false}] do
+        video = with_mp4s(bunny(%{quality: quality, autoplay: autoplay, controls: controls}))
+        src = ~r/data-src="([^"]+)"/
+
+        assert Regex.run(src, Parser.video(video, [])) ==
+                 Regex.run(src, html_video(video, Parser.video_file_options(video))),
+               "#{inspect(quality)}, autoplay #{autoplay}, controls #{controls}"
+      end
+    end
+
+    test "an editor's quality on the record beats the template's, which applies where it is empty" do
+      assert html_video(with_mp4s(bunny(%{quality: :hls})), quality: :mp4_360) =~ "/playlist.m3u8"
+      assert html_video(with_mp4s(bunny()), quality: :mp4_360) =~ "/play_360p.mp4"
+    end
+
+    test "a missing resolution falls back to the next one down; no MP4 Fallback renders the stream" do
+      assert html_video(with_mp4s(bunny(%{quality: :mp4_1080})), []) =~ "/play_720p.mp4"
+
+      no_mp4s = bunny(%{quality: :mp4_720, meta: %{"bunny" => %{"video_guid" => @guid, "has_mp4_fallback" => false}}})
+      assert html_video(no_mp4s, []) =~ "/playlist.m3u8"
+    end
+
+    test "a block's quality overrides the video's, and nil inherits it" do
+      video = insert_bunny(quality: :mp4_480, meta: %{"bunny" => Map.put(@mp4s, "video_guid", @guid)})
+
+      assert render_video_ref(video, %{}) =~ "/play_480p.mp4"
+      assert render_video_ref(video, %{quality: :hls}) =~ "/playlist.m3u8"
+      assert render_video_ref(video, %{quality: :mp4_360}) =~ "/play_360p.mp4"
+    end
+
+    test "a gallery object's quality overrides the video's, and nil inherits it" do
+      video = with_mp4s(bunny(%{quality: :mp4_480}))
+
+      [{:video, inherited}] = Parser.gallery_media(%{gallery_objects: [%{video: video, config: %{}}]})
+      assert inherited.quality == :mp4_480
+
+      [{:video, overridden}] = Parser.gallery_media(%{gallery_objects: [%{video: video, config: %{"quality" => "hls"}}]})
+      assert html_video(overridden, []) =~ "/playlist.m3u8"
+    end
+
+    test "the Liquid tag takes the template's quality" do
+      context = Liquex.Context.new(%{"video" => with_mp4s(bunny())})
+      html = Brando.Villain.parse_and_render(~s({% video video { quality: "mp4_360" } %}), context)
+
+      assert html =~ "/play_360p.mp4"
+    end
+  end
+
   # Revision snapshots from before the field existed
   test "an old video struct without cover_image renders" do
     old = Map.delete(bunny(), :cover_image)
+    assert Parser.video(old, []) =~ ~s(https://vz-1.b-cdn.net/#{@guid}/playlist.m3u8)
+
+    # nor quality
+    old = Map.delete(bunny(), :quality)
     assert Parser.video(old, []) =~ ~s(https://vz-1.b-cdn.net/#{@guid}/playlist.m3u8)
   end
 end

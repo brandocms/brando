@@ -31,6 +31,8 @@ defmodule Brando.Villain.Blocks.VideoBlock do
       attribute :controls, :boolean
       attribute :loop, :boolean
       attribute :muted, :boolean
+      # `Brando.Videos.Playback.qualities/0`; nil = use the video's
+      attribute :quality, :enum, values: [:auto, :hls, :mp4_360, :mp4_480, :mp4_720, :mp4_1080]
 
       # Block-specific styling and behavior (not overrides, keep defaults)
       attribute :opacity, :integer, default: 0

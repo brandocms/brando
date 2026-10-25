@@ -68,6 +68,30 @@ defmodule Brando.Drafts.ContentTest do
     end
   end
 
+  # A video's quality has no `use_default_quality` flag: nil is the default
+  test "a gallery override's empty quality is the default, and a set one an edit" do
+    saved = DraftFixtures.payload()
+    initialized = DraftFixtures.initialized(saved)
+
+    path = [
+      "blocks",
+      "blocks",
+      Access.at(0),
+      "block",
+      "refs",
+      Access.at(1),
+      "data",
+      "data",
+      "gallery_object_overrides",
+      Access.at(0)
+    ]
+
+    with_quality = fn quality -> update_in(initialized, path, &Map.put(&1, "quality", quality)) end
+
+    assert Content.checksum(saved) == Content.checksum(with_quality.(nil))
+    refute Content.checksum(saved) == Content.checksum(with_quality.("hls"))
+  end
+
   test "unrelated creator and sequence fields are not stripped" do
     original = %{"main" => %{"settings" => %{"creator_id" => nil, "sequence" => 0}}, "blocks" => %{}}
     refute Content.checksum(original) == Content.checksum(put_in(original, ["main", "settings", "creator_id"], 7))

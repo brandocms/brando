@@ -69,6 +69,11 @@ msgstr ""
 
 #: lib/brando/videos/video.ex
 #, elixir-autogen, elixir-format
+msgid "Quality"
+msgstr ""
+
+#: lib/brando/videos/video.ex
+#, elixir-autogen, elixir-format
 msgid "Remote ID"
 msgstr ""
 

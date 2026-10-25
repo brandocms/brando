@@ -160,6 +160,31 @@ defmodule BrandoAdmin.Components.Form.DrawerRecoveryTest do
     end
   end
 
+  # The video drawer's playback settings come back too, cast to their types.
+  test "replays in-progress playback edits onto the reloaded video", %{user: user} do
+    video = Factory.insert(:video, creator: user, type: :bunny, autoplay: true)
+    article = %Brando.SyncTest.Article{items: [%Brando.SyncTest.ArticleItem{}]}
+
+    changes = %{"title" => "Clip", "autoplay" => false, "controls" => true, "quality" => "mp4_720", "creator_id" => "1"}
+
+    params =
+      drawer_params(video, Jason.encode!(changes))
+      |> put_in(["drawer", "type"], "video")
+      |> put_in(["drawer", "path"], Jason.encode!(["items", 0]))
+      |> put_in(["drawer", "field"], "clip")
+      |> put_in(["drawer", "schema"], to_string(Brando.SyncTest.ArticleItem))
+
+    assert {:noreply, socket} = Form.handle_event("recover_drawer_state", params, socket(article))
+    assert socket.assigns.editing_video?
+
+    assert socket.assigns.video_changeset.changes == %{
+             title: "Clip",
+             autoplay: false,
+             controls: true,
+             quality: :mp4_720
+           }
+  end
+
   # A field in a subform row has the row's index in its path.
   test "a recovered drawer keeps its path", %{image: image} do
     article = %Brando.SyncTest.Article{items: [%Brando.SyncTest.ArticleItem{}]}

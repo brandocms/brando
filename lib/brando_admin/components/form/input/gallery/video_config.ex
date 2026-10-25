@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
+  alias BrandoAdmin.Components.Form.Input.VideoQuality
 
   @caption_opts [extensions: ~w(p bold italic link)]
 
@@ -20,7 +21,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
       "loop" => Map.get(config, "loop"),
       "muted" => Map.get(config, "muted"),
       "controls" => Map.get(config, "controls"),
-      "preload" => Map.get(config, "preload")
+      "preload" => Map.get(config, "preload"),
+      "quality" => Map.get(config, "quality")
     }
 
     form = to_form(form_data, as: "config", id: assigns.id)
@@ -47,6 +49,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
         id={"#{@id}-form"}
         class="gallery-object-config"
         phx-hook="Brando.DetachedForm"
+        phx-change="change_config"
+        phx-target={@myself}
         data-submit-event="save_config"
         data-on-submit={hide_modal("##{@modal_id}")}
       >
@@ -95,6 +99,12 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
             ]}
             target={@myself}
           />
+
+          <VideoQuality.select
+            field={@form[:quality]}
+            video={@video}
+            inherit={VideoQuality.inherit_label(@video)}
+          />
         </div>
 
         <footer class="modal-footer gallery-object-config-footer">
@@ -115,6 +125,17 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
   defp thumbnail(video) do
     if Brando.Utils.loaded_assoc?(video, :thumbnail), do: video.thumbnail
   end
+
+  # A toggle re-renders the form from its source: what was typed or picked
+  # since has to be in it, or the select and texts go back to their old values
+  def handle_event("change_config", %{"config" => params}, socket) do
+    form = socket.assigns.form
+    updated_data = Map.merge(form.source, Map.take(params, ~w(title caption quality)))
+
+    {:noreply, assign(socket, :form, to_form(updated_data, as: "config", id: form.id))}
+  end
+
+  def handle_event("change_config", _params, socket), do: {:noreply, socket}
 
   def handle_event("toggle_override", %{"field" => field_name, "default" => default_str}, socket) do
     default_val = default_str == "true"
@@ -164,6 +185,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
       |> maybe_put_bool_config("muted", config_params["muted"])
       |> maybe_put_bool_config("controls", config_params["controls"])
       |> maybe_put_bool_config("preload", config_params["preload"])
+      |> maybe_put_quality_config(config_params["quality"])
 
     send_update(socket.assigns.gallery_component, %{
       id: socket.assigns.gallery_component_id,
@@ -203,6 +225,13 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
   defp maybe_put_config(config, _key, nil), do: config
   defp maybe_put_config(config, _key, ""), do: config
   defp maybe_put_config(config, key, value), do: Map.put(config, key, value)
+
+  defp maybe_put_quality_config(config, quality) do
+    case Brando.Videos.Playback.normalize(quality) do
+      nil -> config
+      quality -> Map.put(config, "quality", Atom.to_string(quality))
+    end
+  end
 
   defp maybe_put_bool_config(config, _key, nil), do: config
   defp maybe_put_bool_config(config, key, value), do: Map.put(config, key, value == "true")

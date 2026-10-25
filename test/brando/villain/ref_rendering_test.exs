@@ -1264,6 +1264,32 @@ defmodule Brando.Villain.RefRenderingTest do
       assert html =~ "<p><strong>Tour</strong> film</p></figcaption>"
     end
 
+    test "a video's quality override applies to its placement, and nil inherits the video's", %{user: user} do
+      put_test_env(Brando.Videos.Uploaders.Bunny, cdn_hostname: "vz-1.b-cdn.net")
+
+      video =
+        Factory.insert(:video,
+          creator: user,
+          type: :bunny,
+          status: :ready,
+          quality: :mp4_480,
+          meta: %{"bunny" => %{"video_guid" => "g-1", "has_mp4_fallback" => true, "available_resolutions" => "480p,720p"}}
+        )
+
+      gallery = gallery_with([{:video, video}])
+      override = %Brando.Villain.Blocks.GalleryObjectOverride{object_id: to_string(video.id), object_type: :video}
+
+      for {quality, file} <- [{nil, "play_480p.mp4"}, {:hls, "playlist.m3u8"}, {:mp4_720, "play_720p.mp4"}] do
+        html =
+          render_gallery_ref(user, gallery, %Brando.Villain.Blocks.GalleryBlock.Data{
+            type: :gallery,
+            gallery_object_overrides: [%{override | quality: quality}]
+          })
+
+        assert html =~ "vz-1.b-cdn.net/g-1/#{file}", "#{inspect(quality)}"
+      end
+    end
+
     test "apply an override stored without a type by id alone", %{user: user} do
       image = Factory.insert(:image, creator: user, title: "Image default")
       gallery = gallery_with([{:image, image}])

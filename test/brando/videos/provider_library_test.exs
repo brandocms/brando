@@ -172,7 +172,9 @@ defmodule Brando.Videos.ProviderLibraryTest do
         "length" => 20,
         "width" => 1280,
         "height" => 720,
-        "thumbnailFileName" => "thumbnail.jpg"
+        "thumbnailFileName" => "thumbnail.jpg",
+        "availableResolutions" => "360p,720p",
+        "hasMP4Fallback" => true
       }
 
       Req.Test.expect(Bunny, fn conn ->
@@ -188,6 +190,7 @@ defmodule Brando.Videos.ProviderLibraryTest do
 
       assert {:ok, video} = ProviderLibrary.import(:bunny, bunny_video["guid"], user)
       assert {video.type, video.status, video.width} == {:bunny, :ready, 1280}
+      assert Brando.Videos.Playback.choices(video) == [:auto, :hls, :mp4_360, :mp4_720]
     end
   end
 

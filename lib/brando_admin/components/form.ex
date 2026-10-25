@@ -9200,7 +9200,19 @@ defmodule BrandoAdmin.Components.Form do
   # recovers forms it can see. The always-rendered recovery form below carries
   # these values instead.
   @image_drawer_fields [:title, :credits, :alt]
-  @video_drawer_fields [:source_url, :type]
+  @video_drawer_fields [
+    :source_url,
+    :type,
+    :title,
+    :caption,
+    :aspect_ratio,
+    :autoplay,
+    :muted,
+    :controls,
+    :loop,
+    :preload,
+    :quality
+  ]
   @file_drawer_fields [:title]
 
   # The largest id a bigint primary key holds; a larger one fails to encode.
@@ -9352,9 +9364,9 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # Only what the user actually changed, and only the text fields — everything
-  # else in a drawer changeset either is not JSON-encodable or is not something
-  # the drawer can edit. An empty map is the common case and encodes to "{}".
+  # Only what the user actually changed, and only the fields the drawer edits —
+  # everything else in a drawer changeset either is not JSON-encodable or is
+  # not something the drawer can edit. An empty map is the common case and encodes to "{}".
   defp encode_drawer_changes(type, %Changeset{changes: changes}) do
     changes
     |> Map.take(drawer_fields(type))

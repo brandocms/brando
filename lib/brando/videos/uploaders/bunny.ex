@@ -328,6 +328,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
       "status" => bunny_video["status"],
       "length" => bunny_video["length"],
       "available_resolutions" => bunny_video["availableResolutions"],
+      "has_mp4_fallback" => bunny_video["hasMP4Fallback"],
       "thumbnail_url" => bunny_video["thumbnailFileName"],
       "width" => bunny_video["width"],
       "height" => bunny_video["height"]
@@ -355,6 +356,47 @@ defmodule Brando.Videos.Uploaders.Bunny do
       end
 
     ProviderUpdate.update_video(video, params)
+  end
+
+  @doc """
+  Looks up which renditions Bunny has for a ready video, `availableResolutions`
+  and `hasMP4Fallback`, and stores them in `meta.bunny`
+  (`Brando.Videos.Playback`). Videos stored before Brando kept
+  `hasMP4Fallback` stream until this runs; **Fetch details** in the video
+  library runs it for them. A video Bunny no longer has gets no MP4s, so it
+  isn't looked up again. Nothing else on the video changes.
+  """
+  @spec refresh_renditions(Videos.Video.t(), map() | integer()) :: {:ok, Videos.Video.t()} | {:error, term()}
+  def refresh_renditions(%Videos.Video{meta: %{"bunny" => %{"video_guid" => _}}} = video, user) do
+    case fetch_video_details(video) do
+      {:ok, bunny_video} ->
+        put_renditions(
+          video,
+          %{
+            "available_resolutions" => bunny_video["availableResolutions"],
+            "has_mp4_fallback" => bunny_video["hasMP4Fallback"]
+          },
+          user
+        )
+
+      {:error, %{"Message" => "Not Found"}} ->
+        put_renditions(video, %{"has_mp4_fallback" => false}, user)
+
+      error ->
+        error
+    end
+  end
+
+  def refresh_renditions(_video, _user), do: {:error, :missing_video_guid}
+
+  # Open forms showing the video get its new choices
+  defp put_renditions(video, renditions, user) do
+    meta = Map.update!(video.meta, "bunny", &Map.merge(&1, renditions))
+
+    with {:ok, updated} <- Videos.update_video(video, %{meta: meta}, user) do
+      ProviderUpdate.broadcast(updated)
+      {:ok, updated}
+    end
   end
 
   defp update_video_status(video, status), do: ProviderUpdate.update_video(video, %{status: status})

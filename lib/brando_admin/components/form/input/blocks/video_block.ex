@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.VideoQuality
   alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
 
@@ -36,6 +37,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     :aspect_ratio,
     :loop,
     :muted,
+    :quality,
     :video_class,
     :container_class,
     :config_target,
@@ -186,6 +188,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
             {:override, block_data[:controls]},
             {:override, block_data[:loop]},
             {:override, block_data[:muted]},
+            block_data[:quality],
             {:checkbox, block_data[:play_button]},
             {:checkbox, block_data[:progress]},
             block_data[:poster],
@@ -224,10 +227,18 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   — {@video_data[:title]}
                 <% end %>
               <% _ -> %>
-                <%= if @video_data[:remote_id] do %>
-                  {gettext("Video")}: {@video_data[:remote_id]}
-                <% else %>
-                  {gettext("No video selected")}
+                <%!-- Provider videos (Bunny, Mux, Cloudflare) keep their id in
+                      `meta`, not `remote_id`: a selected one has a title. --%>
+                <%= cond do %>
+                  <% @video_data[:remote_id] -> %>
+                    {gettext("Video")}: {@video_data[:remote_id]}
+                  <% @video -> %>
+                    {gettext("Video")}
+                    <%= if @video_data[:title] do %>
+                      — {@video_data[:title]}
+                    <% end %>
+                  <% true -> %>
+                    {gettext("No video selected")}
                 <% end %>
             <% end %>
           </:description>
@@ -280,6 +291,14 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
                   <Input.toggle tiny field={block_data[:play_button]} label={gettext("Play button")} />
                   <Input.toggle tiny field={block_data[:progress]} label={gettext("Progress bar")} />
                 </div>
+                <VideoQuality.select
+                  field={block_data[:quality]}
+                  video={@video}
+                  inherit={VideoQuality.inherit_label(@video)}
+                  instructions={
+                    gettext("Automatic streams a video with controls or a play button, and plays a loop as an MP4.")
+                  }
+                />
               </:section>
               <:section id="display" label={gettext("Display")} icon="sliders-horizontal">
                 <div class="media-section-heading">

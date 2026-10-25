@@ -230,6 +230,8 @@
 .video-block .modal--editor .media-playback-extra .switch .slider:before { width: 16px; height: 16px; left: 2px; bottom: 2px; }
 .video-block .modal--editor .media-playback-extra .switch input[type="checkbox"]:checked + .slider:before { transform: translateX(16px); }
 .video-block .modal--editor .media-playback-extra input:checked + .slider { background: var(--brando-switch-on); }
+/* The quality select follows the rows as its own field. */
+.video-block .modal--editor .media-playback-extra + .video-quality { margin-top: 16px; }
 
 /* Galleries are ordered media rows, with one toolbar and a stable footer. */
 .modal .media-gallery--variable { width: 100%; max-width: none; padding: 0; background: var(--brando-surface); border: 0; border-radius: 0; }
