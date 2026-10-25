@@ -50,7 +50,8 @@ test.describe('Block regressions: media persistence + insert position', () => {
     // Upload an image and confirm it renders in the preview
     await page.locator('.picture-block .file-input').first().setInputFiles('./fixtures/image.jpg')
     await syncLV(page)
-    await page.waitForTimeout(2000) // upload + processing
+    // upload + processing; the block swaps the upload canvas for the image
+    await expect(page.locator('.picture-block img:visible').first()).toBeVisible({ timeout: 20000 })
     await waitForPreviewUpdate(page)
     await expect(frame.locator('figure picture').first()).toBeVisible()
 
