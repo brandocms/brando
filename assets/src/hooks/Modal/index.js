@@ -158,17 +158,27 @@ export default app => ({
   restoreFocus() {
     cancelAnimationFrame(this.openFrame)
     clearTimeout(this.focusTimer)
+    clearTimeout(this.restoreTimer)
     const opener = this.opener
     this.opener = null
-    // Only take focus back if it is still inside the modal; if something else
-    // has deliberately moved it since, leave it alone.
-    if (!this.el.contains(document.activeElement) && document.activeElement !== document.body) return
-    if (opener && document.contains(opener)) {
-      // A contextual menu closes as it opens a nested panel. Its action is now
-      // hidden, so return to the disclosure that still exposes that action.
-      const target = opener.getClientRects().length ? opener : opener.closest('details')?.querySelector('summary')
-      target?.focus()
-    }
+    // Without motion the dialog closes inside the key event that closed it
+    // (Enter on a picker row). Focusing the opener there hands it that same
+    // keystroke, and Enter on the opener opens the dialog again. Return focus
+    // once the event is over, as the closing animation otherwise ensures.
+    this.restoreTimer = setTimeout(() => {
+      // Opened again meanwhile. A dialog removed while open (`destroyed/0`)
+      // still reads as open, and still returns focus.
+      if (this.el.isConnected && this.isOpen()) return
+      // Only take focus back if it is still inside the modal; if something else
+      // has deliberately moved it since, leave it alone.
+      if (!this.el.contains(document.activeElement) && document.activeElement !== document.body) return
+      if (opener && document.contains(opener)) {
+        // A contextual menu closes as it opens a nested panel. Its action is now
+        // hidden, so return to the disclosure that still exposes that action.
+        const target = opener.getClientRects().length ? opener : opener.closest('details')?.querySelector('summary')
+        target?.focus()
+      }
+    })
   },
 
   focusable() {

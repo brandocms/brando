@@ -1,0 +1,1 @@
+- With reduced motion, choosing a video in the picker with Enter closes the picker instead of opening it again.
