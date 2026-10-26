@@ -1,11 +1,10 @@
 defmodule Brando.Worker.ImageUploader do
   @moduledoc """
   Uploads an image's original and sizes, in each of its formats, to its CDN
-  (`Brando.CDN.queue_upload/4`)
-  and marks it as on the CDN (`cdn: true`) once every file is up. A file that
-  fails fails the job, which Oban retries; until then the image keeps being
-  served from the media folder, where its files stay until all are up
-  (`keep_local_copy: false` removes them after).
+  (`Brando.CDN.queue_upload/4`) and marks it as on the CDN (`cdn: true`) once
+  every file is up. A file that fails fails the job, which Oban retries;
+  until then the image keeps being served from the media folder, where its
+  files stay until all are up (`keep_local_copy: false` removes them after).
 
   Before 0.55 each file had a job of its own (with a `src_key`). The first of
   those to run after an upgrade queues one job for the image in their place
