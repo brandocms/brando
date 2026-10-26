@@ -192,6 +192,36 @@ Besides `{% ref %}` and `{% headless_ref %}`:
 - A Liquex container template's `{{ content }}` is replaced literally: write
   it exactly so, with single spaces.
 
+### Writing templates safely
+
+HEEx escapes what it prints; Liquid does not. `{{ … }}` prints a value exactly
+as it is stored. Rich text (text refs, rich-text fields, text and html vars)
+is HTML, meant to be printed between tags as it is. Every other text value
+(string vars, entry titles, globals, addresses) holds whatever an editor, an
+import or an approved content assistant proposal put there, quotes and spaces
+included. So:
+
+- Put output in an attribute only in double quotes, and pass text through
+  `escape`, which encodes `"`, `'`, `&`, `<` and `>`. A quote or a space in
+  the value ends a single-quoted or unquoted attribute, and the rest of the
+  value becomes markup.
+- Never put rich text in an attribute; `strip_html` it, then `escape` it.
+- Do not `url_decode` a value you print: it turns `%3C` and `%22` back into
+  `<` and `"` after every check has passed. For a query string, `url_encode`
+  the value.
+- `escape` does not check an address's scheme. Make a link from a link var
+  with `{% link %}`, which escapes its address and drops a script one.
+
+```liquid
+{%- comment -%} Don't {%- endcomment -%}
+<figure title='{{ caption }}' data-tracking={{ tracking_id }}>
+<a href="/search?q={{ query | url_decode }}">{{ query | url_decode }}</a>
+
+{%- comment -%} Do {%- endcomment -%}
+<figure title="{{ caption | escape }}" data-tracking="{{ tracking_id | escape }}">
+<a href="/search?q={{ query | url_encode }}">{{ query | escape }}</a>
+```
+
 <!-- usage-rules:end -->
 
 ## Named block regions
