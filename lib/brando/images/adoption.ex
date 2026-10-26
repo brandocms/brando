@@ -53,6 +53,7 @@ defmodule Brando.Images.Adoption do
   alias Brando.Images.Operations.Sizing
   alias Brando.Images.Processing
   alias Brando.Images.Size
+  alias Brando.Tenant.Storage
 
   @typedoc """
   What `check/3` found. A difference names what differs:
@@ -222,7 +223,7 @@ defmodule Brando.Images.Adoption do
 
   defp any_file?({path, sizes}) do
     size_paths = if is_map(sizes), do: Enum.filter(Map.values(sizes), &is_binary/1), else: []
-    Enum.any?([path | size_paths], &(&1 |> Images.Utils.media_path() |> File.exists?()))
+    Enum.any?([path | size_paths], &local_exists?/1)
   end
 
   # The folders the originals are in: a sample can miss the few images whose
@@ -239,9 +240,19 @@ defmodule Brando.Images.Adoption do
   defp files_in?(nil), do: false
 
   defp files_in?(folder) do
-    case File.ls(Images.Utils.media_path(folder)) do
-      {:ok, [_ | _]} -> true
+    with {:ok, dir} <- Storage.media_file(folder),
+         {:ok, [_ | _]} <- File.ls(dir) do
+      true
+    else
       _ -> false
+    end
+  end
+
+  # A path that leaves the media root counts as missing
+  defp local_exists?(path) do
+    case Storage.media_file(path) do
+      {:ok, file} -> File.exists?(file)
+      :error -> false
     end
   end
 

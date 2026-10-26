@@ -36,6 +36,10 @@ defmodule Brando.Worker.ImageUploader do
         finalize_image_upload(image_id, user_id, field_full_path)
       end
     else
+      # A stored path that leaves the media root never uploads
+      {:error, :unsafe_media_path} ->
+        {:cancel, :unsafe_media_path}
+
       err ->
         {:error, err}
     end

@@ -21,7 +21,7 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   @doc "`params` without the fields `user` may not change in `schema`'s `blueprint` form."
   @spec drop(map() | nil, module(), struct() | nil, map() | atom()) :: map() | nil
   def drop(params, schema, %Form{} = blueprint, user) when is_map(params),
-    do: Map.drop(params, Enum.map(fields(schema, blueprint, user), &to_string/1))
+    do: Map.drop(params, schema |> params_for(fields(schema, blueprint, user)) |> Enum.map(&to_string/1))
 
   def drop(params, _schema, _blueprint, _user), do: params
 
@@ -39,6 +39,16 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
       unless_superuser = for %{name: name, opts: opts} <- inputs, unless_superuser?(opts), do: name
       Enum.uniq(derived ++ superuser_only ++ unless_superuser)
     end
+  end
+
+  # A media input (`input :cover, :image`) sends its foreign key, `cover_id`
+  defp params_for(schema, fields) do
+    Enum.flat_map(fields, fn field ->
+      case schema.__schema__(:association, field) do
+        %Ecto.Association.BelongsTo{owner_key: key} -> [field, key]
+        _ -> [field]
+      end
+    end)
   end
 
   defp unless_superuser?(opts) when is_list(opts),

@@ -30,7 +30,7 @@ defmodule Brando.Images.MediaPathContainmentTest do
     test "joins a relative path with the media root" do
       root = Storage.current_media_root()
       assert Storage.media_file("images/a.jpg") == {:ok, Path.join(root, "images/a.jpg")}
-      assert Storage.media_file("images/../a.jpg") == {:ok, Path.join(root, "images/../a.jpg")}
+      assert Storage.media_file("images/../a.jpg") == {:ok, Path.join(root, "a.jpg")}
     end
 
     test "refuses a path that leaves the media root", %{escape: escape} do

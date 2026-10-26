@@ -53,7 +53,12 @@ defmodule Brando.Tenant.Storage do
   @spec media_file(String.t()) :: {:ok, String.t()} | :error
   def media_file(relative) when is_binary(relative) do
     root = current_media_root()
-    if within_root?(root, relative), do: {:ok, Path.join(root, relative)}, else: :error
+
+    # Joined with its `..` and `.` already resolved, so the path used is the
+    # path checked, even through a link inside the root.
+    if within_root?(root, relative),
+      do: {:ok, Path.join(root, relative |> Path.expand("/") |> String.trim_leading("/"))},
+      else: :error
   end
 
   def media_file(_relative), do: :error

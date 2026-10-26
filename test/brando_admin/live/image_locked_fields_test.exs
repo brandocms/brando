@@ -74,6 +74,17 @@ defmodule BrandoAdmin.ImageLockedFieldsTest do
                Enum.sort([:sizes, :formats, :status, :config_fingerprint])
     end
 
+    test "a locked media input's foreign key goes with it" do
+      alias Brando.Blueprint.Forms
+
+      input = %Forms.Input{name: :creator, type: :image, opts: []}
+      blueprint = %Forms.Form{tabs: [%Forms.Tab{fields: [%Forms.Fieldset{superuser: true, fields: [input]}]}]}
+      params = %{"creator_id" => "1", "credits" => "Kept"}
+
+      assert LockedFields.drop(params, Image, blueprint, %Brando.Users.User{role: :editor}) == %{"credits" => "Kept"}
+      assert LockedFields.drop(params, Image, blueprint, %Brando.Users.User{role: :superuser}) == params
+    end
+
     test "a superuser fieldset's fields for anyone but a superuser" do
       gallery = Brando.Galleries.Gallery
       blueprint = gallery.__form__(:default)
