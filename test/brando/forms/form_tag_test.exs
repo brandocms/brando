@@ -131,13 +131,20 @@ defmodule Brando.Forms.FormTagTest do
   end
 
   test "finalize leaves inputs that are not the form's token input" do
+    # An image input loads its src; the attributes are only text inside it
+    # A browser starts the next attribute right after a quote or a slash
+    # An input inside another tag's attribute, a comment or a script is not a tag
     html =
       ~s(<input type="hidden" name="_csrf_token" value="$csrftoken-x">) <>
         ~s(<input type="hidden" name="q" value="$csrftoken">) <>
         ~s(<input type="text" name="_csrf_token" value="$csrftoken">) <>
-        # An image input loads its src; the attributes are only text inside it
         ~s(<input type="image" src='https://images.example.net/?a name="_csrf_token" value="$csrftoken"'>) <>
-        ~s(<input type="hidden" alt='x name="_csrf_token" value="$csrftoken"'>)
+        ~s(<input type="hidden" alt='x name="_csrf_token" value="$csrftoken"'>) <>
+        ~s(<input x=""type="image"src='https://images.example.net/?a type="hidden" name="_csrf_token" value="$csrftoken"'>) <>
+        ~s(<input/type="image"/src='https://images.example.net/?a type="hidden" name="_csrf_token" value="$csrftoken"'>) <>
+        ~s(<img src='https://images.example.net/?<input type="hidden" name="_csrf_token" value="$csrftoken">'>) <>
+        ~s(<!-- <input type="hidden" name="_csrf_token" value="$csrftoken"> -->) <>
+        ~s(<script>let s = '<input type="hidden" name="_csrf_token" value="$csrftoken">'</script>)
 
     assert Delivery.finalize(html) == html
   end
@@ -152,6 +159,9 @@ defmodule Brando.Forms.FormTagTest do
     single_quoted = Delivery.finalize(~s(<input type='hidden' name = '_csrf_token' value = '$csrftoken'>))
     refute single_quoted =~ "$csrftoken"
     assert single_quoted =~ ~r{<input type='hidden' name = '_csrf_token' value="[^"$]+">}
+
+    phoenix = Delivery.finalize(~s(<form><INPUT name="_csrf_token" type="hidden" hidden value="$csrftoken"/></form>))
+    assert phoenix =~ ~r{<INPUT name="_csrf_token" type="hidden" hidden value="[^"$]+"/></form>}
   end
 
   test "a HEEx module renders the form with its slots", %{user: user} do

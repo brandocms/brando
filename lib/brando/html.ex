@@ -354,7 +354,8 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Fills in `$csrftoken` in rendered block HTML with the visitor's CSRF token.
+  Fills in the `$csrftoken` of a form's token input in rendered block HTML
+  with the visitor's CSRF token.
 
   Pages, fragments and `render_blocks/1` already do this; call it for block
   HTML output any other way. See `Brando.Forms.Delivery.finalize/1`.

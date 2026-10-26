@@ -29,12 +29,20 @@ defmodule Brando.Forms.Delivery do
   @csrf_placeholder "$csrftoken"
   @dynamic_prefix "/__brando/forms/"
 
-  # An `<input>` tag, quoted values and all, and one attribute in it: a
-  # name, then a double-quoted, single-quoted or bare value. Scanning
-  # attribute by attribute keeps `name=` written inside another attribute's
-  # value from counting.
-  @input_tag ~r/<input\b(?:[^<>"']|"[^"]*"|'[^']*')*>/i
-  @attribute ~r/(\s+)([^\s"'<>\/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/
+  # A run of markup, or an `<input>` tag. Markup is read text run by text run
+  # and tag by tag, so an `<input>` inside a comment, a raw-text element or
+  # another tag's quoted attribute is never taken for a tag; a `<` that starts
+  # none of these is text, as in a browser. `\G` starts each match where the
+  # last one ended, and a run stops after 50 pieces to stay within the regex
+  # engine's limits on a large page.
+  @markup_or_input ~r/\G(?:(?:[^<]++|<!--.*?-->|<(script|style|textarea|title)\b(?:[^>"']|"[^"]*+"|'[^']*+')*+>.*?<\/\1\s*>|<(?!input[\s\/>])[a-zA-Z\/!?](?:[^>"']|"[^"]*+"|'[^']*+')*+>|<(?!input[\s\/>])){1,50}+|(<input(?=[\s\/>])(?:[^>"']|"[^"]*+"|'[^']*+')*+>))/is
+
+  # An `<input>` whose attributes follow one another as a browser reads them:
+  # a name, then a double-quoted, single-quoted or bare value, with spaces or
+  # `/` between them or none after a quote. A tag that reads any other way is
+  # left as it is.
+  @input_tag ~r{\A<input(?=[\s/>])(?>[\s/]*+[^\s"'<>/=]++(?:\s*+=\s*+(?:"[^"]*+"|'[^']*+'|[^\s"'=<>`]++))?)*+[\s/]*+>\z}i
+  @attribute ~r{\G([\s/]*+)([^\s"'<>/=]++)(?:\s*+=\s*+(?:"([^"]*+)"|'([^']*+)'|([^\s"'=<>`]++)))?}
 
   @doc "The placeholder `{% form %}` stores where the CSRF token goes."
   def csrf_placeholder, do: @csrf_placeholder
@@ -75,12 +83,15 @@ defmodule Brando.Forms.Delivery do
   defp do_finalize(html) do
     case static_site() do
       nil ->
-        replace_token_inputs(html, fn input ->
-          Regex.replace(@attribute, input, fn attribute, space, name, _, _, _ ->
-            if String.downcase(name) == "value",
-              do: space <> ~s(value="#{Plug.CSRFProtection.get_csrf_token()}"),
-              else: attribute
-          end)
+        replace_token_inputs(html, fn "<" <> <<tag::binary-size(5)>> <> attributes ->
+          filled =
+            Regex.replace(@attribute, attributes, fn attribute, separator, name, _, _, _ ->
+              if String.downcase(name) == "value",
+                do: separator <> ~s(value="#{Plug.CSRFProtection.get_csrf_token()}"),
+                else: attribute
+            end)
+
+          "<" <> tag <> filled
         end)
 
       {site_key, environment_key} ->
@@ -93,21 +104,27 @@ defmodule Brando.Forms.Delivery do
   end
 
   defp replace_token_inputs(html, fun) do
-    Regex.replace(@input_tag, html, &if(token_input?(&1), do: fun.(&1), else: &1))
+    Regex.replace(@markup_or_input, html, fn
+      markup, _raw_text_tag, "" -> markup
+      input, _raw_text_tag, input -> if token_input?(input), do: fun.(input), else: input
+    end)
   end
 
   # A hidden input named `_csrf_token` whose whole value is the placeholder. As
   # in a browser, the first of a repeated attribute counts.
-  defp token_input?(input) do
-    attributes =
-      @attribute
-      |> Regex.scan(input, capture: :all_but_first)
-      |> Enum.map(fn [_space, name | values] -> {String.downcase(name), Enum.join(values)} end)
-      |> Enum.reverse()
-      |> Map.new()
+  defp token_input?(markup) do
+    with true <- Regex.match?(@input_tag, markup),
+         "<" <> <<_tag::binary-size(5)>> <> attributes <- markup do
+      attributes =
+        @attribute
+        |> Regex.scan(attributes, capture: :all_but_first)
+        |> Enum.map(fn [_separator, name | values] -> {String.downcase(name), Enum.join(values)} end)
+        |> Enum.reverse()
+        |> Map.new()
 
-    String.downcase(attributes["type"] || "") == "hidden" and attributes["name"] == "_csrf_token" and
-      attributes["value"] == @csrf_placeholder
+      String.downcase(attributes["type"] || "") == "hidden" and attributes["name"] == "_csrf_token" and
+        attributes["value"] == @csrf_placeholder
+    end
   end
 
   defp static_action(site_key, environment_key, form_key),

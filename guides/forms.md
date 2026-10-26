@@ -310,7 +310,8 @@ replaces Brando's crontab, and adds the job to its own:
   `_csrf_token` input, and pages, fragments and `Brando.HTML.render_blocks/1`
   fill it in as they are sent. If you output stored block HTML some other way,
   pass it through `Brando.HTML.replace_csrf_token/1`. Only an
-  `<input name="_csrf_token">` whose whole value is `$csrftoken` is filled in:
+  `<input type="hidden" name="_csrf_token">` whose whole value is `$csrftoken`
+  is filled in:
   the placeholder anywhere else stays as text, so content (synced Markdown, an
   image URL) cannot send a visitor's token to another site.
   A cache in front of the site would keep the token of whoever the page was
