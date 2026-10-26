@@ -69,7 +69,7 @@ defmodule Brando.Worker.ImageProcessor do
 
     case result do
       {:processed, image, config, user} ->
-        finish_processing(image, config, user, field_full_path)
+        finish_processing(image, original, config, user, field_full_path)
 
       {:not_updated, error} ->
         Images.discard_restored_original(image, original)
@@ -104,8 +104,16 @@ defmodule Brando.Worker.ImageProcessor do
     end
   end
 
-  defp finish_processing(image, config, user, field_full_path) do
-    CompletedCallback.run(config, image, user)
+  # A callback that raises fails the job before the image is handed over
+  defp finish_processing(image, original, config, user, field_full_path) do
+    try do
+      CompletedCallback.run(config, image, user)
+    rescue
+      error ->
+        Images.discard_restored_original(image, original)
+        reraise error, __STACKTRACE__
+    end
+
     Brando.CDN.maybe_upload_image(image, field_full_path, user, config)
     ProcessingStatus.broadcast(:image, image, :done)
     broadcast_status(image, field_full_path, :updated)

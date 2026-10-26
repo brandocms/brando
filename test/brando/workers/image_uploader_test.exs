@@ -412,6 +412,22 @@ defmodule Brando.Worker.ImageUploaderTest do
       assert FakeS3.keys() == []
     end
 
+    # Processed, but its config's callback fails the job before delivery
+    test "an original fetched for a run whose callback raises is removed again", %{image: image, bytes: bytes} do
+      images = Application.get_env(:brando, Brando.Images)
+      callback = fn _image, _user -> raise "callback failed" end
+      default_config = images |> Keyword.get(:default_config, %{}) |> Map.new() |> Map.put(:completed_callback, callback)
+      Application.put_env(:brando, Brando.Images, Keyword.put(images, :default_config, default_config))
+      expect(Brando.CDN.Client.Mock, :get_object, fn _, _, _ -> {:ok, %{status_code: 200, body: bytes}} end)
+
+      assert_raise RuntimeError, "callback failed", fn ->
+        Brando.Images.Processing.recreate_sizes_for_image(image, :system)
+      end
+
+      refute local?(image.path)
+      assert FakeS3.keys() == []
+    end
+
     # Missing where local copies are kept: the media folder is more likely
     # empty or not mounted than the original gone
     test "an original is not fetched where the CDN keeps local copies", %{image: image} do
