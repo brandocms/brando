@@ -46,6 +46,8 @@ test('text typed while the answer to earlier text is on its way stays in the fie
     title: 'Pending reply', slug: 'pending-reply', client_id: client.id, introduction: '<p>Saved.</p>', status: 'published', language: 'en',
   })
   const path = `/admin/projects/projects/update/${project.id}`
+  // Page time runs as usual until paused below
+  await page.clock.install()
   await page.goto(path)
   await syncLV(page)
   const editor = page.getByRole('textbox', { name: 'Introduction', exact: true })
@@ -56,9 +58,15 @@ test('text typed while the answer to earlier text is on its way stays in the fie
   const first = socket.sent(frame => frame.includes('"validate"') && frame.includes('project%5Bintroduction%5D=%3Cp%3EFirst.%3C%2Fp%3E'))
   await editor.fill('First.')
   await first
+
+  // With page time paused, the debounce of the newer text cannot fire before
+  // the answer to "First." is applied, however slow the machine
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 500))
   await editor.fill('First. Then more.')
   await expect(introduction).toHaveValue('<p>First. Then more.</p>')
   socket.release()
+  await expect(page.locator('.phx-change-loading')).toHaveCount(0)
+  await page.clock.resume()
 
   await syncLV(page)
   await expect(introduction).toHaveValue('<p>First. Then more.</p>')
