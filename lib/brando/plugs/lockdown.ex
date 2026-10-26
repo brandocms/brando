@@ -96,17 +96,16 @@ defmodule Brando.Plug.Lockdown do
   def password?(%Plug.Conn{} = conn, given) do
     bucket = {__MODULE__, conn |> Brando.ClientIP.from_conn() |> Brando.ClientIP.rate_key()}
 
-    cond do
-      password() == nil -> false
-      Brando.RateLimit.count(bucket, @attempt_window) >= @attempts_per_window -> false
-      password?(given) -> true
-      true -> failed(bucket)
+    # Counted before the comparison, so a burst of guesses cannot all pass
+    # one check; the right password takes its count back.
+    with true <- password() != nil,
+         :ok <- Brando.RateLimit.hit(bucket, @attempts_per_window, @attempt_window),
+         true <- password?(given) do
+      Brando.RateLimit.undo(bucket, @attempt_window)
+      true
+    else
+      _ -> false
     end
-  end
-
-  defp failed(bucket) do
-    _ = Brando.RateLimit.hit(bucket, @attempts_per_window, @attempt_window)
-    false
   end
 
   defp allowed?(%{private: %{brando_live_preview: true}} = conn), do: conn

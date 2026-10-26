@@ -22,15 +22,13 @@ defmodule Brando.RateLimit do
   end
 
   @doc """
-  The hits `bucket` has seen in the current window of `window` milliseconds,
-  without counting one.
+  Takes back a hit counted on `bucket` in the current window of `window`
+  milliseconds, for an attempt that turned out to be fine.
   """
-  @spec count(term(), pos_integer()) :: non_neg_integer()
-  def count(bucket, window) do
-    case Cachex.get(:cache, {bucket, div(System.system_time(:millisecond), window)}) do
-      {:ok, count} when is_integer(count) -> count
-      _ -> 0
-    end
+  @spec undo(term(), pos_integer()) :: :ok
+  def undo(bucket, window) do
+    Cachex.decr(:cache, {bucket, div(System.system_time(:millisecond), window)}, 1)
+    :ok
   end
 
   @doc """

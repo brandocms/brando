@@ -33,10 +33,21 @@ defmodule Brando.MarkdownSources.RateLimiter do
     count(request, from, state)
   end
 
+  # A client over its own budget is refused without touching the shared cap,
+  # so no one client can fill it. Once it is full, no new client is added.
   defp count({:client, key}, _from, state) do
     count = Map.get(state.clients, key, 0)
-    allowed = count < @per_client and state.requests < @all_requests
-    {:reply, allowed, %{state | requests: state.requests + 1, clients: Map.put(state.clients, key, count + 1)}}
+
+    cond do
+      count >= @per_client ->
+        {:reply, false, %{state | clients: Map.put(state.clients, key, count + 1)}}
+
+      state.requests >= @all_requests ->
+        {:reply, false, state}
+
+      true ->
+        {:reply, true, %{state | requests: state.requests + 1, clients: Map.put(state.clients, key, count + 1)}}
+    end
   end
 
   defp count(:delivery, _from, state) do

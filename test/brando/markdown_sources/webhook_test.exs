@@ -145,6 +145,14 @@ defmodule Brando.MarkdownSources.WebhookTest do
       end)
     end
 
+    test "one client over its budget does not fill the node's cap" do
+      for _ <- 1..12_100, do: unsigned({192, 0, 2, 1}) |> Webhook.call([])
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert payload() |> signed() |> Webhook.call([]) |> Map.get(:status) == 202
+      end)
+    end
+
     test "each client has a budget of its own" do
       for _ <- 1..120, do: unsigned({192, 0, 2, 1}) |> Webhook.call([])
 
