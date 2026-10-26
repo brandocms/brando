@@ -14,15 +14,26 @@ defmodule Brando.Sites.DeployConfigTest do
   # Names resolve here, not through DNS: two reach this server
   defp resolve(~c"loop.example.com", :inet), do: {:ok, [{127, 0, 1, 1}]}
 
-  defp resolve(~c"self.example.com", :inet) do
-    {:ok, interfaces} = :inet.getifaddrs()
-    {:ok, [interfaces |> Enum.flat_map(fn {_name, opts} -> for {:addr, {_, _, _, _} = a} <- opts, do: a end) |> hd()]}
-  end
+  defp resolve(~c"self.example.com", :inet), do: {:ok, [own_address()]}
 
   defp resolve(_host, _family), do: {:error, :nxdomain}
 
+  # One of this server's addresses that is not loopback (or loopback when
+  # it has none, which the loopback rule refuses anyway)
+  defp own_address do
+    {:ok, interfaces} = :inet.getifaddrs()
+    own = for {_name, opts} <- interfaces, {:addr, {_, _, _, _} = address} <- opts, do: address
+    Enum.find(own, hd(own), &(elem(&1, 0) != 127))
+  end
+
   setup do
     put_test_env(DeployConfig, resolver: &resolve/2)
+  end
+
+  test "this server's own address, however written, is no target" do
+    {a, b, c, d} = own_address()
+    refute rsync("deploy@#{a}.#{b}.#{c}.#{d}:/srv/other-site").valid?
+    refute rsync("deploy@[::ffff:#{a}.#{b}.#{c}.#{d}]:/srv/other-site").valid?
   end
 
   test "a remote destination is a valid rsync target" do
@@ -31,7 +42,8 @@ defmodule Brando.Sites.DeployConfigTest do
           "example.com:/srv/www/",
           "web_1@static-01.example.com:/var/www/site.example.com/public",
           "deploy@10.0.0.5:/srv/www",
-          "deploy@[2001:db8::1]:/srv/www"
+          "deploy@[2001:db8::1]:/srv/www",
+          "deploy@localhost-cdn.example.com:/srv/www"
         ] do
       assert rsync(target).valid?, target
       assert DeployConfig.valid_rsync_target?(target)
@@ -70,6 +82,7 @@ defmodule Brando.Sites.DeployConfigTest do
           "deploy@example.com:/..",
           "deploy@example.com:/srv/www/.",
           "deploy@example.com:/srv//www",
+          "deploy@example.com:/srv/www//",
           "deploy@example.com:/",
           "deploy@localhost.:/srv",
           "deploy@app.localhost.:/srv",
@@ -97,6 +110,7 @@ defmodule Brando.Sites.DeployConfigTest do
     assert rsync("deploy@static.example.com:/srv/sites/acme").valid?
     assert rsync("deploy@Static.Example.com:/srv/sites/acme/").valid?
     assert rsync("web@cdn.example.com:/srv/www").valid?
+    assert rsync("web@cdn.example.com:/srv/www/").valid?
     # The directory that holds the others, and ways of naming it
     refute rsync("deploy@static.example.com:/srv/sites/").valid?
     refute rsync("deploy@static.example.com:/srv/sites").valid?

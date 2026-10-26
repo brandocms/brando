@@ -951,7 +951,8 @@ this server's addresses, paths with `.`, `..` or empty segments,
 `host::module` and `rsync://` targets, and users or hosts beginning with `-`
 are refused, both when the settings are saved and when a build deploys. A
 name can still reach this server in ways a check cannot see (DNS that
-changes after the check, an SSH config alias), so to limit the destinations
+changes after the check, an SSH config alias, a public address behind NAT),
+so to limit the destinations
 anyone who may deploy can choose, list them in config (admins cannot change
 it). A target must be one of them, or lie under one that ends in `/`:
 

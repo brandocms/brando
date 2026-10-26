@@ -112,7 +112,7 @@ defmodule Brando.Sites.DeployConfig do
   # `/srv/www` or `/srv/www/`: not the root, and no `.`, `..` or empty
   # segment, any of which could name a directory above the one it seems to
   defp plain_path?(path) do
-    segments = path |> String.trim_trailing("/") |> String.split("/") |> tl()
+    segments = path |> String.replace_suffix("/", "") |> String.split("/") |> tl()
     segments != [] and not Enum.any?(segments, &(&1 in ["", ".", ".."]))
   end
 
@@ -132,10 +132,9 @@ defmodule Brando.Sites.DeployConfig do
 
     cond do
       host == "" -> true
-      String.starts_with?(first_label, "localhost") -> true
-      first_label in ["ip6-localhost", "ip6-loopback"] -> true
+      first_label in ["localhost", "localhost4", "localhost6", "ip6-localhost", "ip6-loopback"] -> true
       String.ends_with?(host, ".localhost") -> true
-      numeric_host?(host) -> local_address?(:inet.parse_strict_address(String.to_charlist(host)))
+      numeric_host?(host) -> local_literal?(:inet.parse_strict_address(String.to_charlist(host)))
       true -> resolves_locally?(host)
     end
   end
@@ -148,11 +147,28 @@ defmodule Brando.Sites.DeployConfig do
       host |> String.split(".") |> Enum.all?(&Regex.match?(~r/\A(0x[0-9a-f]*|[0-9]+)\z/, &1))
   end
 
+  defp local_literal?({:ok, address}), do: local_addresses?([address])
+  defp local_literal?({:error, _reason}), do: true
+
   defp resolves_locally?(host) do
-    resolver = Application.get_env(:brando, __MODULE__, [])[:resolver] || (&:inet.getaddrs/2)
-    addresses = Enum.flat_map([:inet, :inet6], &resolved(resolver, host, &1))
-    Enum.any?(addresses, &(local_address?({:ok, &1}) or &1 in own_addresses()))
+    resolver = Application.get_env(:brando, __MODULE__, [])[:resolver] || (&:inet.getaddrs(&1, &2, :timer.seconds(3)))
+    [:inet, :inet6] |> Enum.flat_map(&resolved(resolver, host, &1)) |> local_addresses?()
   end
+
+  # Loopback, unspecified, or one of this server's interfaces (an IPv4
+  # address written as IPv6 too). A server behind NAT is not on its public
+  # address: only `rsync_targets` rules that out.
+  defp local_addresses?(addresses) do
+    own = own_addresses()
+
+    Enum.any?(addresses, fn address ->
+      address = unmap(address)
+      local_address?({:ok, address}) or address in own
+    end)
+  end
+
+  defp unmap({0, 0, 0, 0, 0, 0xFFFF, high, low}), do: {div(high, 256), rem(high, 256), div(low, 256), rem(low, 256)}
+  defp unmap(address), do: address
 
   # A name that does not resolve here may still be one ssh knows (a `Host`
   # alias in its config): the operator's to answer for
@@ -165,14 +181,13 @@ defmodule Brando.Sites.DeployConfig do
 
   defp own_addresses do
     case :inet.getifaddrs() do
-      {:ok, interfaces} -> for {_name, opts} <- interfaces, {:addr, address} <- opts, do: address
+      {:ok, interfaces} -> for {_name, opts} <- interfaces, {:addr, address} <- opts, do: unmap(address)
       {:error, _reason} -> []
     end
   end
 
   defp local_address?({:ok, {a, _, _, _}}), do: a in [0, 127]
   defp local_address?({:ok, {0, 0, 0, 0, 0, 0, 0, n}}), do: n in [0, 1]
-  defp local_address?({:ok, {0, 0, 0, 0, 0, 0xFFFF, high, _}}), do: div(high, 256) in [0, 127]
   defp local_address?({:ok, _ipv6}), do: false
   defp local_address?({:error, _}), do: true
 
@@ -195,7 +210,7 @@ defmodule Brando.Sites.DeployConfig do
         String.downcase(host) == String.downcase(listed_host) and
           if String.ends_with?(listed_path, "/"),
             do: String.starts_with?(path, listed_path) and String.trim(path, "/") != String.trim(listed_path, "/"),
-            else: path == listed_path
+            else: String.replace_suffix(path, "/", "") == listed_path
 
       _other ->
         false
