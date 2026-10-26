@@ -100,7 +100,11 @@ defmodule Brando.Sites.RedirectsTest do
       {:ok, seo} = Sites.get_seo(%{matches: %{language: "en"}})
 
       assert {:error, changeset} =
-               Sites.update_seo(seo, %{"redirects" => [%{"from" => "/blog(/moved", "to" => "/x", "code" => "301"}]}, :system)
+               Sites.update_seo(
+                 seo,
+                 %{"redirects" => [%{"from" => "/blog(/moved", "to" => "/x", "code" => "301"}]},
+                 :system
+               )
 
       assert %{redirects: [%{from: [_]}]} = Ecto.Changeset.traverse_errors(changeset, fn {message, _} -> message end)
       assert Redirects.compile("/blog/:slug") |> elem(0) == :ok
@@ -116,11 +120,23 @@ defmodule Brando.Sites.RedirectsTest do
         %Brando.Sites.Redirect{from: "/teststart", to: "/new/teststart", code: 301}
       ]
 
-      {:ok, _} = seo |> Ecto.Changeset.change() |> Ecto.Changeset.put_embed(:redirects, redirects) |> Sites.update_seo(:system)
+      {:ok, _} =
+        seo |> Ecto.Changeset.change() |> Ecto.Changeset.put_embed(:redirects, redirects) |> Sites.update_seo(:system)
+
       Brando.Cache.SEO.set()
 
       assert Redirects.test_redirect(["nothing-here"], "en") == {:error, {:redirects, :no_match}}
       assert Redirects.test_redirect(["teststart"], "en") == {:ok, {:redirect, {"/new/teststart", 301}}}
     end
+  end
+
+  # The 404 log keeps the first 1000 characters of a URL
+  test "a 404 the log cut short becomes a rule for every path it begins" do
+    short = "/old"
+    assert Redirects.not_found_source(short) == "/old$"
+
+    long = "/" <> String.duplicate("a", Brando.Sites.FourOhFour.max_url_length() - 1)
+    assert String.length(long) == Brando.Sites.FourOhFour.max_url_length()
+    assert Redirects.not_found_source(long) == Redirects.exact_source(long) |> String.trim_trailing("$")
   end
 end

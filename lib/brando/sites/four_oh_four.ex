@@ -36,6 +36,9 @@ defmodule Brando.Sites.FourOhFour do
   @max_url_length 1000
   @max_referrer_length 500
 
+  @doc "The longest URL logged; a longer one is logged cut to this length."
+  def max_url_length, do: @max_url_length
+
   @doc "How many URL, referrer and day counts the buffer holds between flushes."
   def buffer_limit, do: @buffer_limit
 

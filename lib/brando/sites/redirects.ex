@@ -2,6 +2,8 @@ defmodule Brando.Sites.Redirects do
   @moduledoc false
   import Ecto.Query, only: [from: 2]
 
+  require Logger
+
   alias Brando.Repo
 
   @doc """
@@ -94,6 +96,19 @@ defmodule Brando.Sites.Redirects do
   def exact_source(path), do: path |> Regex.escape() |> String.replace(":", "\\x3A") |> Kernel.<>("$")
 
   @doc """
+  The redirect source for a logged 404's `url`: `exact_source/1`, except
+  that a URL the log cut short matches every path it begins.
+  """
+  @spec not_found_source(String.t()) :: String.t()
+  def not_found_source(url) do
+    source = exact_source(url)
+
+    if String.length(url) >= Brando.Sites.FourOhFour.max_url_length(),
+      do: String.trim_trailing(source, "$"),
+      else: source
+  end
+
+  @doc """
   The pattern a redirect's `from` matches with: anchored at the start, each
   `:name` segment a named capture. `{:ok, regex}`, or `:error` if it does not
   compile.
@@ -153,6 +168,10 @@ defmodule Brando.Sites.Redirects do
     case Brando.Cache.get(key) do
       nil ->
         compiled = compile(from)
+
+        if compiled == :error,
+          do: Logger.warning("Redirect from #{inspect(from)} is not a valid pattern and matches nothing")
+
         Brando.Cache.put(key, compiled, :timer.hours(24))
         compiled
 
