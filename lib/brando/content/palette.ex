@@ -119,6 +119,14 @@ defmodule Brando.Content.Palette do
   end
 
   @doc """
+  Whether `name` is a key or namespace the palette changeset accepts:
+  letters (in any script), digits, `-` and `_`.
+  """
+  @spec css_name?(term()) :: boolean()
+  def css_name?(name) when is_binary(name), do: Regex.match?(@css_name, name)
+  def css_name?(_), do: false
+
+  @doc """
   `name`, a palette's key or namespace or a colour's key, for CSS: as an
   identifier (`--\#{css_escape(key)}`) or inside a quoted string. A name the
   changeset accepts comes back as it is; any other character, in a name

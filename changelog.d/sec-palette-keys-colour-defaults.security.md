@@ -1,0 +1,1 @@
+- Palette names and colours stored before they were checked, and a container block's anchor, are escaped or left out where the site writes them into the page and the palettes stylesheet, so they cannot add markup to public pages.

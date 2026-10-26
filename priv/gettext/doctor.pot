@@ -246,6 +246,13 @@ msgid_plural "%{count} running"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} stored colour is not a colour"
+msgid_plural "%{count} stored colours are not colours"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} stuck"
@@ -284,6 +291,11 @@ msgstr[1] ""
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "%{database}, not the development database"
+msgstr ""
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "%{field} %{value} is not a CSS name"
 msgstr ""
 
 #: lib/brando/doctor/checks/migrations.ex
@@ -439,6 +451,13 @@ msgstr ""
 msgid "Assistant: not configured"
 msgstr ""
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks of module %{module} (%{uid}): var %{key} in %{count} block"
+msgid_plural "Blocks of module %{module} (%{uid}): var %{key} in %{count} blocks"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "Checking…"
@@ -559,6 +578,11 @@ msgstr ""
 msgid "Migrations"
 msgstr ""
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Module %{module} (%{uid}): default of var %{key}: %{value}"
+msgstr ""
+
 #: lib/brando/doctor/checks/module_entry_paths.ex
 #, elixir-autogen, elixir-format
 msgid "Module entry paths"
@@ -610,6 +634,11 @@ msgstr ""
 msgid "Open images"
 msgstr ""
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Palette [%{namespace}] %{name}: %{item}"
+msgstr ""
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "Resolve blocks"
@@ -633,6 +662,11 @@ msgstr ""
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "Skipped"
+msgstr ""
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Stored colours"
 msgstr ""
 
 #: lib/brando_admin/components/system_check.ex
@@ -794,6 +828,16 @@ msgstr ""
 msgid "checked in development"
 msgstr ""
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "colour %{key}: %{value}"
+msgstr ""
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "colour key %{value} is not a CSS name"
+msgstr ""
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "commit %{commit} from %{url}"
@@ -847,6 +891,11 @@ msgstr ""
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "every image has alt text"
+msgstr ""
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "every stored colour is a colour"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
@@ -1126,6 +1175,11 @@ msgstr ""
 #: lib/brando/doctor/source.ex
 #, elixir-autogen, elixir-format
 msgid "path %{path}"
+msgstr ""
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "pick each one again in the admin, or set it to a colour such as #1a2b3c, before upgrading: until then the site leaves palette colours out, new blocks start module defaults empty and restored revisions bring them back empty; palette keys take letters, digits, - and _"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex

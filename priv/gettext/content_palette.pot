@@ -23,6 +23,11 @@ msgstr ""
 
 #: lib/brando/content/palette.ex
 #, elixir-autogen, elixir-format
+msgid "Letters, digits, - and _"
+msgstr ""
+
+#: lib/brando/content/palette.ex
+#, elixir-autogen, elixir-format
 msgid "Name"
 msgstr ""
 

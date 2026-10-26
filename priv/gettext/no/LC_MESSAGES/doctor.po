@@ -247,6 +247,13 @@ msgid_plural "%{count} running"
 msgstr[0] "%{count} kjører"
 msgstr[1] "%{count} kjører"
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} stored colour is not a colour"
+msgid_plural "%{count} stored colours are not colours"
+msgstr[0] "%{count} lagret farge er ikke en farge"
+msgstr[1] "%{count} lagrede farger er ikke farger"
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} stuck"
@@ -286,6 +293,11 @@ msgstr[1] "%{count} med manglende filer"
 #, elixir-autogen, elixir-format
 msgid "%{database}, not the development database"
 msgstr "%{database}, ikke utviklingsdatabasen"
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "%{field} %{value} is not a CSS name"
+msgstr "%{field} %{value} er ikke et CSS-navn"
 
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
@@ -440,6 +452,13 @@ msgstr "Assistent: KI er slått av"
 msgid "Assistant: not configured"
 msgstr "Assistent: ikke satt opp"
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Blocks of module %{module} (%{uid}): var %{key} in %{count} block"
+msgid_plural "Blocks of module %{module} (%{uid}): var %{key} in %{count} blocks"
+msgstr[0] "Blokker av modul %{module} (%{uid}): variabel %{key} i %{count} blokk"
+msgstr[1] "Blokker av modul %{module} (%{uid}): variabel %{key} i %{count} blokker"
+
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "Checking…"
@@ -560,6 +579,11 @@ msgstr "Mediestier"
 msgid "Migrations"
 msgstr "Migreringer"
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Module %{module} (%{uid}): default of var %{key}: %{value}"
+msgstr "Modul %{module} (%{uid}): standardverdi for variabel %{key}: %{value}"
+
 #: lib/brando/doctor/checks/module_entry_paths.ex
 #, elixir-autogen, elixir-format
 msgid "Module entry paths"
@@ -611,6 +635,11 @@ msgstr "Åpne identitet"
 msgid "Open images"
 msgstr "Åpne bilder"
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Palette [%{namespace}] %{name}: %{item}"
+msgstr "Palett [%{namespace}] %{name}: %{item}"
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "Resolve blocks"
@@ -635,6 +664,11 @@ msgstr "Nettstedskart"
 #, elixir-autogen, elixir-format
 msgid "Skipped"
 msgstr "Hoppet over"
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Stored colours"
+msgstr "Lagrede farger"
 
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
@@ -795,6 +829,16 @@ msgstr "se feilene til de forkastede jobbene"
 msgid "checked in development"
 msgstr "sjekkes i utvikling"
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "colour %{key}: %{value}"
+msgstr "farge %{key}: %{value}"
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "colour key %{value} is not a CSS name"
+msgstr "fargenøkkel %{value} er ikke et CSS-navn"
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "commit %{commit} from %{url}"
@@ -849,6 +893,11 @@ msgstr "alle bilder og filer ligger i mediemappen"
 #, elixir-autogen, elixir-format
 msgid "every image has alt text"
 msgstr "alle bilder har alt-tekst"
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "every stored colour is a colour"
+msgstr "alle lagrede farger er gyldige farger"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
@@ -1128,6 +1177,11 @@ msgstr "åpne hvert bilde merket «Ingen alt. tekst» under Bilder og skriv inn 
 #, elixir-autogen, elixir-format
 msgid "path %{path}"
 msgstr "sti %{path}"
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "pick each one again in the admin, or set it to a colour such as #1a2b3c, before upgrading: until then the site leaves palette colours out, new blocks start module defaults empty and restored revisions bring them back empty; palette keys take letters, digits, - and _"
+msgstr "velg hver farge på nytt i admin, eller sett den til en farge som #1a2b3c, før du oppgraderer: til da utelater nettstedet palettfargene, nye blokker starter med tomme standardverdier fra modulen og gjenopprettede revisjoner henter dem tilbake tomme; palettnøkler tar bokstaver, sifre, - og _"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format

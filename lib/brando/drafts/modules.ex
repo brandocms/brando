@@ -106,7 +106,7 @@ defmodule Brando.Drafts.Modules do
   defp add_defaults(block, module) do
     block
     |> add_missing("refs", "name", module.refs || [])
-    |> add_missing("vars", "key", module.vars || [])
+    |> add_missing("vars", "key", Enum.map(module.vars || [], &Brando.Color.clear_invalid_var/1))
   end
 
   defp add_missing(block, field, key, definitions) do

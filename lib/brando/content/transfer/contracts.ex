@@ -109,8 +109,9 @@ defmodule Brando.Content.Transfer.Contracts do
   defp compatible?(_, _), do: false
 
   def defaults(params, module) do
-    Enum.reduce([{"refs", "name", module.refs}, {"vars", "key", module.vars}], params, fn {field, key, definitions},
-                                                                                          acc ->
+    vars = Enum.map(module.vars || [], &Brando.Color.clear_invalid_var/1)
+
+    Enum.reduce([{"refs", "name", module.refs}, {"vars", "key", vars}], params, fn {field, key, definitions}, acc ->
       existing = acc[field]
 
       additions =

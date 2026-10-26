@@ -3918,6 +3918,11 @@ msgstr "Fargeinnstillinger"
 msgid "Colors (JSON)"
 msgstr "Farger (JSON)"
 
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Colours left empty"
+msgstr "Farger satt tomme"
+
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Command"
@@ -17978,6 +17983,13 @@ msgstr "Denne lenken har utløpt, eller forslaget finnes ikke lenger."
 #, elixir-autogen, elixir-format
 msgid "This revision could not be loaded."
 msgstr "Denne versjonen kunne ikke lastes."
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "This revision has a colour that is not a valid colour. It was left empty: pick the colour again."
+msgid_plural "This revision has %{count} colours that are not valid colours. They were left empty: pick the colours again."
+msgstr[0] "Denne revisjonen har en farge som ikke er en gyldig farge. Den ble satt tom: velg fargen på nytt."
+msgstr[1] "Denne revisjonen har %{count} farger som ikke er gyldige farger. De ble satt tomme: velg fargene på nytt."
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format

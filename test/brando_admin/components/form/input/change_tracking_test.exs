@@ -253,6 +253,9 @@ defmodule BrandoAdmin.Components.Form.Input.ChangeTrackingTest do
     assert Floki.attribute(html, "button.options-option", "data-select-label") ==
              [Phoenix.HTML.html_escape(label) |> Phoenix.HTML.safe_to_string()]
 
+    # The filter matches the label as typed, not its escaped form
+    assert Floki.attribute(html, "button.options-option", "data-label") == [label]
+
     assert Floki.find(html, ".select-label img, .options-option img") == []
   end
 

@@ -31,6 +31,8 @@ defmodule Brando.Revisions do
   alias Brando.Tracing
   alias Brando.Utils
 
+  require Logger
+
   @type changeset :: Ecto.Changeset.t()
   @type revision :: Brando.Revisions.Revision.t()
   @type revision_active :: boolean
@@ -347,7 +349,7 @@ defmodule Brando.Revisions do
 
         revision = get_revision_record!(entry_schema, entry_id, revision_number)
         cancel_pending_activation!(entry_schema, entry_id, revision_number, publish?)
-        target_entry = decode_revision!(revision)
+        target_entry = revision |> decode_revision!() |> clear_invalid_colors(entry_schema, entry_id)
         restore_missing_block_links!(entry_schema, entry_id, target_entry)
 
         current_entry =
@@ -404,6 +406,24 @@ defmodule Brando.Revisions do
 
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  # A colour stored before values were checked would refuse the restore: it
+  # comes back empty instead (`Brando.Color.clear_invalid/1`), and the
+  # revisions drawer says so.
+  defp clear_invalid_colors(entry, entry_schema, entry_id) do
+    case Brando.Color.clear_invalid(entry) do
+      {entry, []} ->
+        entry
+
+      {entry, cleared} ->
+        Logger.warning(
+          "Restoring a revision of #{inspect(entry_schema)} #{entry_id} left colours that are not colours empty: " <>
+            Enum.join(cleared, ", ")
+        )
+
+        entry
     end
   end
 

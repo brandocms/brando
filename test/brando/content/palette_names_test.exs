@@ -182,7 +182,11 @@ defmodule Brando.Content.PaletteNamesTest do
 
     test "a stored key with a space still matches its section" do
       palette =
-        stored_palette(%{key: "Dark section", namespace: "site", colors: [%Palette.Color{name: "Bg", key: "bg", hex_value: "#000"}]})
+        stored_palette(%{
+          key: "Dark section",
+          namespace: "site",
+          colors: [%Palette.Color{name: "Bg", key: "bg", hex_value: "#000"}]
+        })
 
       Brando.Cache.Palettes.set()
       css = Phoenix.HTML.safe_to_string(Brando.Cache.Palettes.get_css())
@@ -193,7 +197,11 @@ defmodule Brando.Content.PaletteNamesTest do
     end
 
     test "a valid palette's CSS is unchanged" do
-      stored_palette(%{key: "green", namespace: "general", colors: [%Palette.Color{name: "Bg", key: "color_bg", hex_value: "#000000"}]})
+      stored_palette(%{
+        key: "green",
+        namespace: "general",
+        colors: [%Palette.Color{name: "Bg", key: "color_bg", hex_value: "#000000"}]
+      })
 
       stored_palette(%{
         key: "brand",

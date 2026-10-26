@@ -1,0 +1,1 @@
+- `mix brando.doctor` lists stored colours that are not colours (module var defaults, colour vars, palette colours and `:color` fields) and palette names that are not CSS names, under Stored colours.

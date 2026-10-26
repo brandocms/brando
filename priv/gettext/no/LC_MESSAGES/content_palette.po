@@ -24,6 +24,11 @@ msgstr "Innhold"
 
 #: lib/brando/content/palette.ex
 #, elixir-autogen, elixir-format
+msgid "Letters, digits, - and _"
+msgstr "Bokstaver, sifre, - og _"
+
+#: lib/brando/content/palette.ex
+#, elixir-autogen, elixir-format
 msgid "Name"
 msgstr "Navn"
 

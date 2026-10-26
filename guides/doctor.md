@@ -120,6 +120,7 @@ and summaries are prose.
 | Image configs | Images made with an older image config: what Utilities → Recreate changed images recreates. Images made before Brando recorded configs are split, as a dry run of `mix brando.images.adopt`, into those whose files already match and those that differ, counted by how they differ (formats, sizes, missing files, dimensions). With no image files in the media folder at all, it says so and asks for the media instead of a recreate |
 | Modules | Blocks behind their module's version, per module |
 | Module entry paths | Liquid module code that reads a multi module's entries as Villain stored them, `{{ link.data.vars.url }}`, which renders nothing since the blocks conversion; `brando_219` rewrites it to `{{ link.vars.url }}`. Datasource modules are left out: their `entries` are records |
+| Stored colours | Colours stored before colour values were checked that are not colours (`Brando.Color`): module var defaults, colour vars in blocks and entries, palette colours and the `:color` fields of Blueprints, subform rows included. Palette keys, namespaces and colour keys that are not CSS names (letters, digits, `-` and `_`) are listed with them |
 | Sitemap | A sitemap module, and a sitemap generated within two days |
 | robots.txt | `/robots.txt` routed to Brando, and no static file in front of it: a `priv/static/robots.txt` counts only when the endpoint's `Plug.Static` serves it, by its `only:` (a literal list, or `static_paths/0` on Phoenix 1.7 and later) or for want of one, and the fix names that setting |
 | JSON-LD | An identity for each language with a name and a logo, and a site URL |
@@ -129,8 +130,8 @@ and summaries are prose.
 | Test database | In development, the Repo's database for `:test` (read from `config/config.exs` and `config/runtime.exs` in the current shell) against the one in use: a `runtime.exs` that reads the Repo `url:` from the environment in every environment makes `mix test` use, and migrate, the development database |
 
 With tenancy enabled, the content checks (image configs, modules, module
-entry paths, sitemap, JSON-LD, alt text, media paths) run in every environment of every
-active site, and their details name the environment.
+entry paths, stored colours, sitemap, JSON-LD, alt text, media paths) run in every
+environment of every active site, and their details name the environment.
 
 ## In the admin
 

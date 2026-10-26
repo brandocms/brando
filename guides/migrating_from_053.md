@@ -707,6 +707,19 @@ index". Publish the fragments first.
    notification routes; no existing group has it. See
    [Notifications](notifications.md).
 
+8. **Fix stored colours that are not colours.** Colour fields accept only
+   colours: hex, a CSS colour keyword, or colour functions such as `rgb()`
+   and `var(--name)`. Palette keys, namespaces and colour keys accept only
+   letters, digits, `-` and `_`. `mix brando.doctor` lists, under Stored
+   colours, what was stored before: module var defaults, colour vars in blocks
+   and entries, palette colours, `:color` fields, and palette names. Until
+   they are fixed, the site leaves those palette colours out, a new block
+   starts such a module default empty, a restored revision brings such a
+   colour back empty, a palette with such a colour key does not save, and an
+   edit that changes a colour must make it one. Pick each colour again in the
+   admin, rename each listed palette name, and update any CSS of your own that
+   names a renamed palette's `b-section` or custom properties.
+
 `mix brando.doctor` reports migrations that have not run, in `public` and in
 each environment, and Oban queues that are missing. Under Module entry paths it
 lists module code that still reads a multi module's entries the 0.53 way
