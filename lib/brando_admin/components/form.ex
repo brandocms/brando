@@ -2237,7 +2237,7 @@ defmodule BrandoAdmin.Components.Form do
 
     params =
       params
-      |> LockedFields.drop(schema, socket.assigns[:form_blueprint], current_user)
+      |> LockedFields.lock(schema, socket.assigns[:form_blueprint], current_user, current)
       |> PendingRows.drop(schema, stale)
       |> owned_params(owned, current)
 

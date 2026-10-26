@@ -218,6 +218,25 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
+    # Inputs locked for everyone (ReadonlyFieldsTest): the save takes no
+    # value the browser sends for them, but keeps one the form set. A slug
+    # is filled in by the browser, so it is never locked.
+    form :locked do
+      default_params %{"subtitle" => "Set by the form", "language" => "en", "status" => "published"}
+
+      tab "Content" do
+        fieldset do
+          input :status, :status
+          input :title, :text
+          input :slug, :slug, source: :title, readonly: true
+          input :subtitle, :text, readonly: true
+          input :year, :number, disabled: true, default: 2024
+          input :featured, :toggle, readonly: true
+          input :cover, :image, readonly: true
+        end
+      end
+    end
+
     # A one-to-one subform with an image field (SubformRelationTest), on the
     # form's automatic preloads.
     form :author do

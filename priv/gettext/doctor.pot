@@ -134,6 +134,13 @@ msgid_plural "%{count} images"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/media_paths.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} image or file stored with a path outside the media folder"
+msgid_plural "%{count} images or files stored with a path outside the media folder"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} image was made before Brando recorded its settings"
@@ -542,6 +549,11 @@ msgstr ""
 msgid "Mailer: not set"
 msgstr ""
 
+#: lib/brando/doctor/checks/media_paths.ex
+#, elixir-autogen, elixir-format
+msgid "Media paths"
+msgstr ""
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "Migrations"
@@ -593,6 +605,7 @@ msgid "Open identity"
 msgstr ""
 
 #: lib/brando/doctor/checks/alt_text.ex
+#: lib/brando/doctor/checks/media_paths.ex
 #, elixir-autogen, elixir-format
 msgid "Open images"
 msgstr ""
@@ -826,6 +839,11 @@ msgstr ""
 msgid "every Blueprint's admin route helpers exist"
 msgstr ""
 
+#: lib/brando/doctor/checks/media_paths.ex
+#, elixir-autogen, elixir-format
+msgid "every image and file is inside the media folder"
+msgstr ""
+
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "every image has alt text"
@@ -849,6 +867,11 @@ msgstr ""
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid "expected %{version}; assets/backend is not a pnpm project yet: run mix brando.gen.backend --upgrade, then mix brando.assets.setup --backend-only"
+msgstr ""
+
+#: lib/brando/doctor/checks/media_paths.ex
+#, elixir-autogen, elixir-format
+msgid "file"
 msgstr ""
 
 #: lib/brando/doctor/checks/json_ld.ex
@@ -903,6 +926,11 @@ msgstr[1] ""
 msgid "identity missing"
 msgstr ""
 
+#: lib/brando/doctor/checks/media_paths.ex
+#, elixir-autogen, elixir-format
+msgid "image"
+msgstr ""
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "it already matches (mix brando.images.adopt records that)"
@@ -942,6 +970,11 @@ msgstr ""
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
 msgid "logo"
+msgstr ""
+
+#: lib/brando/doctor/checks/media_paths.ex
+#, elixir-autogen, elixir-format
+msgid "look for files written to these paths outside the media folder and remove them, then delete each row or have a superuser correct its path"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex

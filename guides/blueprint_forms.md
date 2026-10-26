@@ -307,12 +307,18 @@ Every input type reads these:
   Without it the humanized field name is used; `label: :hidden` hides it.
 * `instructions`: help text under the input, translated.
 * `placeholder`: placeholder text, translated, for inputs that show one.
-* `disabled`: `true` disables the input. `:unless_superuser` disables it for
-  everyone but superusers (top-level inputs only), and a save from anyone
-  else ignores any value sent for the field.
-* `readonly`: `true` makes `:text`, `:number` and `:rich_text` inputs read
-  only. Like `disabled`, it takes `:unless_superuser`, with the same check on
-  save.
+* `disabled`: `true` locks the field for everyone, `:unless_superuser` for
+  everyone but superusers. The translated text inputs and `:rich_text`
+  render disabled.
+* `readonly`: locks the field like `disabled`, with the same values.
+  `:text`, `:number` and `:rich_text` inputs render read only.
+
+  A save ignores any value sent for a locked top-level input. The field
+  keeps the value the form has: its saved value, or one Brando set, such as
+  a new entry's `default_params`. An empty field takes the input's
+  `default:`. Inputs of other types don't render locked, but their value is
+  not saved either. A `:slug` input is never locked: the browser fills it in
+  from its source.
 * `monospace`: a monospace font, for keys and codes.
 * `class`: extra classes on the input's wrapper.
 * `debounce`: milliseconds between keystrokes and validation. Default 300.
