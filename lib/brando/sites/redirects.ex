@@ -108,27 +108,8 @@ defmodule Brando.Sites.Redirects do
       else: source
   end
 
-  @doc """
-  The pattern a redirect's `from` matches with: anchored at the start, each
-  `:name` segment a named capture. `{:ok, regex}`, or `:error` if it does not
-  compile.
-  """
-  @spec compile(String.t()) :: {:ok, Regex.t()} | :error
-  def compile(from) when is_binary(from) do
-    "^#{from}"
-    |> String.split("/")
-    |> Enum.map_join("/", fn
-      ":" <> segment -> "(?<#{segment}>[a-z0-9\-\_]+)"
-      segment -> segment
-    end)
-    |> Regex.compile()
-    |> case do
-      {:ok, regex} -> {:ok, regex}
-      {:error, _reason} -> :error
-    end
-  end
-
-  def compile(_from), do: :error
+  @doc "See `Brando.Sites.Redirect.ValidSource.compile/1`."
+  defdelegate compile(from), to: Brando.Sites.Redirect.ValidSource
 
   @doc """
   Check `test_path` against registered redirects
