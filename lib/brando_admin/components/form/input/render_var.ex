@@ -462,21 +462,29 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     ]
   end
 
-  # A form var chooses a form by key; each key is listed once, in the
-  # language its first version was made in, since rendering resolves the
-  # page's language anyway.
+  # A form var's choices load once per component, also when its type changes
+  # to `:form` in the module editor after it mounted as another type.
+  defp assign_form_options(%{assigns: %{form_options_loaded?: true}} = socket, :form), do: socket
+
   defp assign_form_options(socket, :form) do
-    assign_new(socket, :form_options, fn ->
-      Brando.Repo.all(
-        from f in Brando.Forms.Form,
-          distinct: f.key,
-          order_by: [asc: f.key, asc: f.id],
-          select: %{label: f.title, value: f.id}
-      )
-    end)
+    socket
+    |> assign(:form_options_loaded?, true)
+    |> assign(:form_options, form_options())
   end
 
   defp assign_form_options(socket, _type), do: assign_new(socket, :form_options, fn -> [] end)
+
+  # A form var chooses a form by key; each key is listed once, in the
+  # language its first version was made in, since rendering resolves the
+  # page's language anyway.
+  defp form_options do
+    Brando.Repo.all(
+      from f in Brando.Forms.Form,
+        distinct: f.key,
+        order_by: [asc: f.key, asc: f.id],
+        select: %{label: f.title, value: f.id}
+    )
+  end
 
   defp extract_value(:image, changeset), do: get_field(changeset, :image_id)
   defp extract_value(:file, changeset), do: get_field(changeset, :file_id)
@@ -713,6 +721,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                       id={@id}
                       type={@type}
                       palette_colors={@palette_colors}
+                      form_options={@form_options}
                       var={@var}
                       image={@image}
                       images={@images}
@@ -856,6 +865,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               language={assigns[:language]}
               type={@type}
               palette_colors={@palette_colors}
+              form_options={@form_options}
               var={@var}
               image={@image}
               images={@images}
@@ -895,6 +905,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr(:id, :any)
   attr(:type, :any)
   attr(:palette_colors, :string, default: nil)
+  # A form var's choices: `assign_form_options/2` loads them in `update/2`
+  attr(:form_options, :list, default: [])
   attr(:var, :any)
   attr(:identifier, :any)
   attr(:image, :any)
