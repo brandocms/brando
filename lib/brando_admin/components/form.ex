@@ -5893,10 +5893,14 @@ defmodule BrandoAdmin.Components.Form do
     # Used by both block and non-block paths.
     config_target = Map.get(params, "config_target", "default")
 
+    # The image the copy is made from, and the block or gallery field it goes
+    # back to (`image_editor_copy_target/1`): the drawer closes at once, and an
+    # editor opened elsewhere before the upload finishes replaces `edit_image`.
     {:noreply,
      socket
      |> assign(:image_editor_focal, %{x: x, y: y})
-     |> assign(:image_editor_config_target, config_target)}
+     |> assign(:image_editor_config_target, config_target)
+     |> assign(:image_editor_copy_of, socket.assigns.edit_image)}
   end
 
   def handle_event(
@@ -8097,9 +8101,15 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
+  @doc """
+  What an editor copy is for: `edit_image` as it was when "Save as new copy"
+  was pressed, not as another editor opened since left it.
+  """
+  def image_editor_copy_target(socket), do: socket.assigns[:image_editor_copy_of] || socket.assigns.edit_image
+
   defp image_editor_copy_created(socket, updated_image) do
     current_user = socket.assigns.current_user
-    edit_image = socket.assigns.edit_image
+    edit_image = image_editor_copy_target(socket)
 
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
 

@@ -506,7 +506,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
       assert assigns.old_image_id == ctx.image.id
 
       assert [payload] =
-               for ["b:image_editor:init", payload] <- Phoenix.LiveView.Utils.get_push_events(socket), do: payload
+               for(["b:image_editor:init", payload] <- Phoenix.LiveView.Utils.get_push_events(socket), do: payload)
 
       assert payload.from_block
       assert payload.config_target == ctx.image.config_target
@@ -549,6 +549,22 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
       assert {first, second} == {other.id, copy.id}
       assert Enum.map(socket.assigns.gallery_objects, & &1.image_id) == [other.id, copy.id]
       assert socket.assigns.selected_images == [other.id, copy.id]
+    end
+
+    # The editor closes as the copy starts uploading. Another gallery's or
+    # block's editor opened before it finishes sets the form's `edit_image`.
+    test "the copy goes back to where it was made, though another editor opened since", ctx do
+      made_in = %{path: [], field: nil, image: ctx.image, block_target: {Gallery, "first"}, old_image_id: ctx.image.id}
+      opened_since = %{made_in | block_target: {Gallery, "second"}}
+
+      socket = Component.assign(%Phoenix.LiveView.Socket{}, :edit_image, made_in)
+
+      assert {:noreply, socket} =
+               Form.handle_event("image_editor_save", %{"mode" => "new_copy", "focal_x" => 40, "focal_y" => 60}, socket)
+
+      socket = Component.assign(socket, :edit_image, opened_since)
+
+      assert Form.image_editor_copy_target(socket) == made_in
     end
 
     test "a copy for an object removed meanwhile leaves the gallery alone", ctx do
