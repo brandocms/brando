@@ -5,7 +5,7 @@ defmodule Brando.TenantFailClosedTest do
   # behind, and exported its form submissions.
   use Brando.LiveCase
 
-  import Ecto.Query, only: [from: 2]
+  import Ecto.Query, only: [from: 2, union_all: 2]
 
   alias Brando.Pages.Page
   alias Brando.Tenant
@@ -92,7 +92,14 @@ defmodule Brando.TenantFailClosedTest do
     conn = log_in_user(conn, admin)
 
     assert {:ok, _view, _html} = live(conn, "/admin/sites")
-    assert {:error, {:redirect, %{to: "/admin/access-denied"}}} = live(conn, "/admin/pages")
+    assert {:error, {:redirect, %{to: "/admin/sites"}}} = live(conn, "/admin/pages")
+  end
+
+  test "an account with no site still sets its own password", %{site: site} do
+    editor = Brando.Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+    {:ok, _} = Registry.update_site(site, %{status: :suspended})
+
+    assert {:ok, _view, _html} = live(log_in_user(build_conn(), editor), "/admin/users/password")
   end
 
   describe "Brando.Repo with no tenant prefix" do
@@ -109,7 +116,11 @@ defmodule Brando.TenantFailClosedTest do
       creators = from(page in Page, select: page.creator_id)
       in_subquery = from(user in "users", where: user.id in subquery(creators), select: user.id)
 
-      for query <- [joined, in_subquery] do
+      title = from(page in Page, limit: 1, select: page.title)
+      in_select = from(user in "users", select: %{id: user.id, title: subquery(title)})
+      combined = from(user in "users", select: user.id) |> union_all(^from(page in Page, select: page.id))
+
+      for query <- [joined, in_subquery, in_select, combined] do
         assert_raise Brando.Exception.MissingTenantError, fn -> Brando.Repo.all(query) end
       end
 

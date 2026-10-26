@@ -14,10 +14,10 @@ defmodule Brando.Cache.Palettes do
   """
   @spec get_css :: binary() | nil
   def get_css do
-    case Cache.get(:palettes_css) do
+    case Cache.get_site(:palettes_css) do
       nil ->
         set()
-        Cache.get(:palettes_css)
+        Cache.get_site(:palettes_css)
 
       css ->
         css
@@ -25,10 +25,10 @@ defmodule Brando.Cache.Palettes do
   end
 
   def get do
-    case Cache.get(:palettes) do
+    case Cache.get_site(:palettes) do
       nil ->
         set()
-        Cache.get(:palettes)
+        Cache.get_site(:palettes)
 
       palettes ->
         palettes

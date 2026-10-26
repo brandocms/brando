@@ -14,10 +14,10 @@ defmodule Brando.Cache.Navigation do
   """
   @spec get :: map() | nil
   def get do
-    case Cache.get(:navigation) do
+    case Cache.get_site(:navigation) do
       nil ->
         set()
-        Cache.get(:navigation)
+        Cache.get_site(:navigation)
 
       navigation ->
         navigation

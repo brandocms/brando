@@ -243,19 +243,26 @@ defmodule Brando.Repo do
   end
 
   # Every table the source reads: a query's own, its joins' (an association
-  # join through the schema it starts from) and its subqueries', in `from`,
-  # joins and `where`.
+  # join through the schema it starts from), its subqueries' wherever they
+  # stand, and those of the queries it is combined with.
   defp tenant_tables(%Ecto.Changeset{data: data}), do: tenant_tables(data)
   defp tenant_tables(%Ecto.Query{prefix: prefix}) when is_binary(prefix), do: []
 
-  defp tenant_tables(%Ecto.Query{from: from, joins: joins, wheres: wheres}) do
+  defp tenant_tables(%Ecto.Query{from: from, joins: joins} = query) do
     {tables, _schemas} =
       Enum.reduce([from | joins], {[], []}, fn expr, {tables, schemas} ->
         source = expr_source(expr, schemas)
         {tables ++ expr_tables(expr, source), schemas ++ [source_schema(source)]}
       end)
 
-    tables ++ Enum.flat_map(wheres, fn where -> Enum.flat_map(where.subqueries, &tenant_tables/1) end)
+    expressions =
+      [query.select | Enum.map(joins, & &1.on)] ++
+        query.wheres ++ query.havings ++ query.order_bys ++ query.group_bys ++ query.updates
+
+    subqueries = for %{subqueries: subqueries} <- expressions, subquery <- subqueries, do: subquery
+    combined = for {_kind, combined} <- query.combinations, do: combined
+
+    tables ++ Enum.flat_map(subqueries ++ combined, &tenant_tables/1)
   end
 
   defp tenant_tables(%Ecto.SubQuery{query: query}), do: tenant_tables(query)

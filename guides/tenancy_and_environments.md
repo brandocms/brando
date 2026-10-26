@@ -501,11 +501,12 @@ In `:multi`, a suspended, archived, or unknown frontend host receives `404`
 before content plugs run. A stale or forged admin site selection is checked
 against `public.user_sites`; it can never restore another tenant's schema
 prefix. A signed-in user with no site to enter (none assigned, or only
-suspended or archived ones) is sent to the access-denied page from every admin
-screen and controller, apart from signing out and choosing a site. A global
-superuser with no active site reaches the installation's screens (sites,
-users, groups, frontend assets, the shared library) and is sent to the sites
-screen from the others.
+suspended or archived ones) reaches only their own password, signing out and
+choosing a site, and is sent to the access-denied page from every other admin
+screen and controller. A global superuser with no active site, or with group
+authorization a user granted an installation-wide permission, also reaches the
+installation's screens for it (sites, users, groups, frontend assets, the
+shared library), and is sent to the sites screen from the others.
 
 ## Shared modules, containers, and palettes
 
@@ -973,11 +974,12 @@ and logs remain. Preview tokens expire after seven days and stop working as soon
 as their artifact is pruned. A preview opens only on a host that resolves to
 the build's own site (another site's host answers `404`); with several sites
 the Publishing screen links it on the build environment's domain, or the live
-environment's. Previews are served with a Content-Security-Policy that keeps
-forms from posting and the page from being framed elsewhere. The Publishing
-screen links to each build's preview every time it opens, so a build keeps its
-token itself, where a shared entry preview keeps only its key's hash: anyone
-who can read the database can open a build's preview until it expires.
+environment's, so that domain must reach the application, not only the static
+host. Previews are served with a Content-Security-Policy that keeps forms from
+posting and the page from being framed elsewhere. The Publishing screen links
+to each build's preview every time it opens, so a build keeps its token itself,
+where a shared entry preview keeps only its key's hash: anyone who can read the
+database can open a build's preview until it expires.
 
 <!-- usage-rules:start topic="tenancy" -->
 

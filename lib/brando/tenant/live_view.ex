@@ -10,8 +10,9 @@ defmodule Brando.Tenant.LiveView do
   site whose content they could see. A superuser, or with group authorization
   a user granted the screen's installation-wide permission, still reaches the
   installation's own screens (sites, users, groups, frontend assets, the
-  shared library). From any other screen a superuser is sent to the sites
-  screen, and everyone else to the access-denied page.
+  shared library), and everyone their own password. From any other screen
+  whoever may read the sites screen is sent there, and everyone else to the
+  access-denied page.
   """
 
   import Phoenix.Component, only: [assign: 2]
@@ -48,19 +49,21 @@ defmodule Brando.Tenant.LiveView do
   defp without_site(socket, params) do
     user = socket.assigns[:current_user]
 
+    requirement = BrandoAdmin.Authorization.requirement(socket.view, params, socket.assigns[:live_action])
+
     cond do
-      # A child LiveView (navigation, chrome) mounts inside a screen let in already
-      params == :not_mounted_at_router and installation?(user, {:access, :backend}) -> {:cont, socket}
-      installation_view?(socket, params, user) -> {:cont, socket}
-      superuser?(user) -> {:halt, redirect(socket, to: "/admin/sites")}
+      # A child LiveView (navigation, chrome) mounts only inside a screen let in already
+      params == :not_mounted_at_router -> {:cont, socket}
+      # Their own password, which the first sign-in asks for: an account's, not a site's
+      requirement == {:update, :profile} -> {:cont, socket}
+      installation_view?(requirement, params, user) -> {:cont, socket}
+      installation?(user, {:read, :sites}) -> {:halt, redirect(socket, to: "/admin/sites")}
       true -> {:halt, redirect(socket, to: "/admin/access-denied")}
     end
   end
 
-  defp installation_view?(socket, params, user) do
-    requirement = BrandoAdmin.Authorization.requirement(socket.view, params, socket.assigns[:live_action])
-    BrandoAdmin.Authorization.installation?(requirement, params) and installation?(user, requirement)
-  end
+  defp installation_view?(requirement, params, user),
+    do: BrandoAdmin.Authorization.installation?(requirement, params) and installation?(user, requirement)
 
   # A superuser, or with group authorization one granted the installation-wide
   # permission (sites, frontend assets, accounts)
@@ -71,14 +74,6 @@ defmodule Brando.Tenant.LiveView do
   end
 
   defp installation?(_user, _requirement), do: false
-
-  defp superuser?(%Brando.Users.User{} = user) do
-    if Engine.enabled?(),
-      do: Engine.superuser?(Scope.installation(user)),
-      else: user.role == :superuser
-  end
-
-  defp superuser?(_user), do: false
 
   @doc false
   def resolve_context(params, session, current_user \\ nil) do

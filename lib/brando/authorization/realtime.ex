@@ -93,7 +93,7 @@ defmodule Brando.Authorization.Realtime do
     |> Enum.filter(fn user ->
       if Engine.enabled?(),
         do: Engine.can?(%{scope | user_id: user.id}, :access, :backend),
-        else: legacy_visible?(scope, user)
+        else: legacy_site_access?(scope, user)
     end)
   end
 

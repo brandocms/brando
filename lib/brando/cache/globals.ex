@@ -18,7 +18,7 @@ defmodule Brando.Cache.Globals do
   @spec get(binary()) :: map()
   def get(language) do
     globals_map =
-      case Cache.get(:globals) do
+      case Cache.get_site(:globals) do
         nil -> set()
         cache -> cache
       end

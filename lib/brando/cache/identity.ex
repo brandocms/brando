@@ -20,7 +20,7 @@ defmodule Brando.Cache.Identity do
   @spec get(binary()) :: map()
   def get(language) do
     identity_map =
-      case Cache.get(:identity) do
+      case Cache.get_site(:identity) do
         nil -> set()
         cache -> cache
       end

@@ -21,7 +21,7 @@ defmodule Brando.Cache.SEO do
   @spec get(binary()) :: map()
   def get(language) do
     seo_map =
-      case Cache.get(:seo) do
+      case Cache.get_site(:seo) do
         nil -> set()
         cache -> cache
       end
