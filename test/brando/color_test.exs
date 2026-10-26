@@ -1,3 +1,41 @@
+defmodule Brando.ColorTest.Swatch do
+  @moduledoc false
+  use Ecto.Schema
+  import Ecto.Changeset
+
+  schema "swatches" do
+    field :hex, :string
+    field :section_id, :integer
+  end
+
+  def changeset(swatch, params), do: cast(swatch, params, [:hex])
+end
+
+defmodule Brando.ColorTest.Section do
+  @moduledoc false
+  use Ecto.Schema
+  import Ecto.Changeset
+
+  schema "sections" do
+    field :name, :string
+    has_many :swatches, Brando.ColorTest.Swatch
+  end
+
+  def changeset(section, params), do: section |> cast(params, [:name]) |> cast_assoc(:swatches)
+end
+
+defmodule Brando.ColorTest.Page do
+  @moduledoc false
+  use Ecto.Schema
+  import Ecto.Changeset
+
+  schema "pages" do
+    has_many :sections, Brando.ColorTest.Section
+  end
+
+  def changeset(page, params), do: page |> cast(params, []) |> cast_assoc(:sections)
+end
+
 defmodule Brando.ColorTest do
   # Colour fields store only colours: the value is written into style
   # attributes and stylesheets and shown to other admins (audit F01).
@@ -95,6 +133,18 @@ defmodule Brando.ColorTest do
     # The stored value copied to another row, or kept in an edited row
     assert Enum.any?(colour_errors.([row.("ink", "old;x"), row.("ink2", "old;x")]), &match?(%{hex_value: _}, &1))
     assert Enum.any?(colour_errors.([%{row.("ink", "old;x") | name: "Renamed"}]), &match?(%{hex_value: _}, &1))
+  end
+
+  test "a has_many row kept as stored still has its own subform rows checked" do
+    alias Brando.ColorTest.{Page, Section, Swatch}
+
+    page = %Page{id: 1, sections: [%Section{id: 1, name: "A", swatches: [%Swatch{id: 1, hex: "old;x"}]}]}
+    fields = [{:sections, [{:swatches, [:hex]}]}]
+    swatch = fn hex -> %{"id" => 1, "name" => "A", "swatches" => [%{"id" => 1, "hex" => hex}]} end
+
+    refute Color.validate(Page.changeset(page, %{"sections" => [swatch.("#fff;y")]}), fields).valid?
+    assert Color.validate(Page.changeset(page, %{"sections" => [swatch.("#fff")]}), fields).valid?
+    assert Color.validate(Page.changeset(page, %{"sections" => [swatch.("old;x")]}), fields).valid?
   end
 
   test "re-reading a stored var skips the check" do

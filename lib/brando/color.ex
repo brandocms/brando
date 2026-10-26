@@ -84,15 +84,19 @@ defmodule Brando.Color do
   @doc """
   Validates `fields`: field names, or `{relation, fields}` for the rows of
   a subform, which are cast into the changeset already. A row kept exactly
-  as stored is not checked: rows without a primary key (embeds) are cast as
-  new on every save, so a value stored before this check came back as a
-  change. A row that changes is checked whole.
+  as stored keeps its own colours: rows without a primary key (embeds) are
+  cast as new on every save, so a value stored before this check comes back
+  as a change. A row that changes is checked whole, and the rows of its own
+  subforms are always checked the same way.
   """
   @spec validate(Changeset.t(), [atom() | {atom(), list()}]) :: Changeset.t()
-  def validate(changeset, fields), do: Enum.reduce(fields, changeset, &validate_field(&2, &1))
+  def validate(changeset, fields), do: validate(changeset, fields, changeset.data)
 
-  defp validate_field(changeset, {relation, fields}) do
-    stored = stored_rows(Map.get(changeset.data, relation))
+  # `data` is what the changeset's rows were stored as
+  defp validate(changeset, fields, data), do: Enum.reduce(fields, changeset, &validate_field(&2, &1, data))
+
+  defp validate_field(changeset, {relation, fields}, data) do
+    stored = stored_rows(Map.get(data, relation))
 
     case Map.fetch(changeset.changes, relation) do
       {:ok, children} when is_list(children) ->
@@ -108,17 +112,18 @@ defmodule Brando.Color do
     end
   end
 
-  defp validate_field(changeset, field) do
+  defp validate_field(changeset, field, _data) do
     Changeset.validate_change(changeset, field, fn _, value ->
       if valid?(value), do: [], else: [{field, @message}]
     end)
   end
 
-  defp stored_rows(rows) when is_list(rows), do: Enum.map(rows, &row_fields/1)
+  defp stored_rows(rows) when is_list(rows), do: rows
   defp stored_rows(%Ecto.Association.NotLoaded{}), do: []
-  defp stored_rows(%{} = row), do: [row_fields(row)]
+  defp stored_rows(%{} = row), do: [row]
   defp stored_rows(_), do: []
 
+  # A row's own columns (embeds included), without its associations
   defp row_fields(%module{} = row), do: Map.take(row, module.__schema__(:fields))
   defp row_fields(row), do: row
 
@@ -129,9 +134,12 @@ defmodule Brando.Color do
   end
 
   defp validate_child(%Changeset{} = child, fields, stored) do
-    if row_fields(Changeset.apply_changes(child)) in stored,
-      do: child,
-      else: validate(child, fields)
+    row = row_fields(Changeset.apply_changes(child))
+
+    case Enum.find(stored, &(row_fields(&1) == row)) do
+      nil -> validate(child, fields, child.data)
+      kept -> validate(child, Enum.filter(fields, &is_tuple/1), kept)
+    end
   end
 
   defp validate_child(child, _fields, _stored), do: child
