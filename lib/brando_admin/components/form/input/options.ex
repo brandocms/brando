@@ -60,9 +60,11 @@ defmodule BrandoAdmin.Components.Form.Input.Options do
 
   @doc """
   An option label as plain text, for attributes and filtering: the text of a
-  `{:safe, iodata}` label without its tags.
+  `{:safe, iodata}` label without its tags, its entities decoded.
   """
-  def label_text({:safe, _} = label), do: label |> Phoenix.HTML.safe_to_string() |> HtmlSanitizeEx.strip_tags()
+  def label_text({:safe, _} = label),
+    do: label |> Phoenix.HTML.safe_to_string() |> HtmlSanitizeEx.strip_tags() |> HtmlEntities.decode()
+
   def label_text(nil), do: ""
   def label_text(label), do: to_string(label)
 

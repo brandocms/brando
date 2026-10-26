@@ -42,6 +42,9 @@ defmodule BrandoAdmin.Components.Form.Input.OptionLabelsTest do
 
       assert Options.label_text(@label) == @label
       assert Options.label_text({:safe, ~s(<span class="circle"></span><em>Big</em>)}) == "Big"
+      # the text a filter matches, so entities are decoded
+      assert Options.label_text({:safe, ~s(<span class="text-mono">Black &amp; White &lt;3</span>)}) ==
+               "Black & White <3"
     end
   end
 
