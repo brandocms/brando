@@ -52,6 +52,16 @@ config :brando, Brando.Images, processor_module: Brando.Images.Processor.Vix
 
 Keep libvips/Vix supported by your runtime and build image; test processing on the deployment platform. Size and
 MIME limits apply to incoming uploads, while `formats` controls processed output.
+
+A raster image is also limited in pixels, counted as width × height × pages:
+libvips holds a decoded image at about 9 bytes a pixel, and a small file can
+declare a very large image. Uploads, processing and the content importer read
+the image's header and refuse one over the limit before decoding it. The
+default is 100 megapixels:
+
+```elixir
+config :brando, Brando.Images, max_pixels: 150_000_000
+```
 For SVG, use an explicitly allowed MIME type and inspect its rendering separately
 from raster variants.
 

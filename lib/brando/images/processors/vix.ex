@@ -9,8 +9,11 @@ defmodule Brando.Images.Processor.Vix do
   @behaviour Brando.Images.Processor
 
   alias Brando.Images
+  alias Brando.Images.PixelLimit
 
   require Logger
+
+  @dominant_color_thumbnail 256
 
   @doc """
   Process image conversion without cropping.
@@ -39,6 +42,7 @@ defmodule Brando.Images.Processor.Vix do
     debug_desc = "vix:thumbnail(#{width || 0}x#{height || 0})"
 
     with {:ok, img} <- open_image(image_src_path),
+         :ok <- PixelLimit.check(img),
          {box_width, box_height} = fit_box(img, width, height),
          {:ok, resized} <- Image.thumbnail(img, box_width, crop: :none, height: box_height, resize: :down),
          :ok <- write_image(resized, image_dest_path, format, quality) do
@@ -98,6 +102,7 @@ defmodule Brando.Images.Processor.Vix do
     # large; the crop then takes the exact size. Sizing never asks for more
     # than the original, so only shrinking keeps that pixel from enlarging it.
     with {:ok, img} <- open_image(image_src_path),
+         :ok <- PixelLimit.check(img),
          {:ok, resized} <- Image.thumbnail(img, resize_w + 1, height: resize_h + 1, resize: :down),
          {:ok, cropped} <- crop_image(resized, crop_values) do
       write_image(cropped, image_dest_path, format, quality)
@@ -136,12 +141,15 @@ defmodule Brando.Images.Processor.Vix do
   @doc """
   Extract the dominant color from an image as a hex string.
 
-  Returns a `"#RRGGBB"` string or `nil` on failure.
+  Reads a small thumbnail, which libvips shrinks while loading, so the
+  original is never decoded at full size. Returns a `"#RRGGBB"` string, or
+  `nil` on failure or for an image over `Brando.Images.PixelLimit`.
   """
   def get_dominant_color(image_path) do
     prefixed_image_path = Images.Utils.media_path(image_path)
 
-    with {:ok, img} <- Image.open(prefixed_image_path),
+    with :ok <- PixelLimit.check(prefixed_image_path),
+         {:ok, img} <- Image.thumbnail(prefixed_image_path, @dominant_color_thumbnail),
          {:ok, [{r, g, b} | _]} <- Image.dominant_color(img, method: :imagequant, effort: 3) do
       r = round(r) |> min(255) |> max(0)
       g = round(g) |> min(255) |> max(0)

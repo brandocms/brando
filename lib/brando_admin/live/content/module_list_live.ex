@@ -14,6 +14,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
      socket
      |> assign(:base64_modules, nil)
      |> assign(:imported_modules, nil)
+     |> assign(:import_invalid?, false)
      |> assign(:sketches, %{
        available?: Brando.Content.ModuleSketch.available?(),
        missing: [],
@@ -147,6 +148,9 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
       <form :if={!@imported_modules} id="module-import-form" phx-change="validate_module_import">
         <textarea name="encoded_modules" rows="15" class="module-transfer-code"></textarea>
+        <p :if={@import_invalid?} class="mt-2" role="alert" data-testid="module-import-invalid">
+          {gettext("This is not an export of block modules.")}
+        </p>
       </form>
     </Content.modal>
     """
@@ -189,17 +193,18 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   end
 
   def handle_event("validate_module_import", %{"encoded_modules" => ""}, socket) do
-    {:noreply, socket}
+    {:noreply, assign(socket, :import_invalid?, false)}
   end
 
   # Imported modules bring their code, which runs in the server: only a
   # superuser imports them, and nobody else's paste is decoded.
   def handle_event("validate_module_import", %{"encoded_modules" => encoded_modules}, socket) do
-    if Boundary.superuser?(socket.assigns.current_user) do
-      imported_modules = Brando.Content.deserialize_modules(encoded_modules)
-      {:noreply, assign(socket, :imported_modules, imported_modules)}
+    with true <- Boundary.superuser?(socket.assigns.current_user),
+         {:ok, imported_modules} <- Brando.Content.deserialize_modules(encoded_modules) do
+      {:noreply, assign(socket, imported_modules: imported_modules, import_invalid?: false)}
     else
-      {:noreply, socket}
+      false -> {:noreply, socket}
+      {:error, :invalid} -> {:noreply, assign(socket, imported_modules: nil, import_invalid?: true)}
     end
   end
 
@@ -226,6 +231,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     {:noreply,
      socket
      |> assign(:imported_modules, nil)
+     |> assign(:import_invalid?, false)
      |> assign(:base64_modules, nil)}
   end
 

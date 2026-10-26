@@ -154,6 +154,7 @@ defmodule Brando.Uploads do
   defp format_upload_error({:error, %Ecto.Changeset{}}),
     do: gettext("Could not store uploaded file")
 
+  defp format_upload_error({:error, {:handle_upload_type, message}}) when is_binary(message), do: message
   defp format_upload_error({:error, message}) when is_binary(message), do: message
   defp format_upload_error(error), do: inspect(error)
 

@@ -1676,8 +1676,8 @@ msgstr "Den eksporterte definisjonen er slettet fra målstedet."
 
 #: lib/brando/content/transfer/media.ex
 #, elixir-autogen, elixir-format
-msgid "The image exceeds the 100 megapixel import limit."
-msgstr "Bildet overstiger importgrensen på 100 megapiksler."
+msgid "The image exceeds the %{megapixels} megapixel import limit."
+msgstr "Bildet overstiger importgrensen på %{megapixels} megapiksler."
 
 #: lib/brando/content/transfer/entries.ex
 #, elixir-autogen, elixir-format

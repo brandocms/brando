@@ -16955,6 +16955,11 @@ msgstr ""
 msgid "The image is in a format the AI model cannot read"
 msgstr ""
 
+#: lib/brando/images/pixel_limit.ex
+#, elixir-autogen, elixir-format
+msgid "The image is larger than %{megapixels} megapixels."
+msgstr ""
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "The image this content type shares, as it is shared."
@@ -17769,6 +17774,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "This is not a valid address."
+msgstr ""
+
+#: lib/brando_admin/live/content/module_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "This is not an export of block modules."
 msgstr ""
 
 #: lib/brando/forms/messages.ex

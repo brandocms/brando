@@ -15,6 +15,8 @@ defmodule BrandoWeb.Plugs.CloudflareStreamWebhook do
 
   import Plug.Conn
 
+  alias BrandoWeb.Plugs.WebhookBody
+
   require Logger
 
   @timestamp_tolerance_seconds 300
@@ -31,8 +33,14 @@ defmodule BrandoWeb.Plugs.CloudflareStreamWebhook do
   end
 
   defp handle_webhook(conn) do
-    with {:ok, body, conn} <- read_full_body(conn),
-         :ok <- verify_signature(conn, body, webhook_secret()),
+    case WebhookBody.read(conn) do
+      {:ok, body, conn} -> handle_webhook(conn, body)
+      {:halted, conn} -> conn
+    end
+  end
+
+  defp handle_webhook(conn, body) do
+    with :ok <- verify_signature(conn, body, webhook_secret()),
          {:ok, payload} <- Jason.decode(body),
          :ok <- validate_payload(payload),
          result <- Brando.Videos.Uploaders.Cloudflare.handle_webhook(payload) do
@@ -122,14 +130,6 @@ defmodule BrandoWeb.Plugs.CloudflareStreamWebhook do
     |> put_resp_content_type("application/json")
     |> send_resp(status, Jason.encode!(body))
     |> halt()
-  end
-
-  defp read_full_body(conn, acc \\ []) do
-    case read_body(conn) do
-      {:ok, body, conn} -> {:ok, IO.iodata_to_binary(Enum.reverse([body | acc])), conn}
-      {:more, body, conn} -> read_full_body(conn, [body | acc])
-      {:error, reason} -> {:error, reason}
-    end
   end
 
   defp webhook_secret do

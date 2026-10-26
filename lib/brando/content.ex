@@ -952,14 +952,39 @@ defmodule Brando.Content do
   def render_var(%{type: :form, form: form}), do: form
 
   @doc """
-  Trims encoded module string, base decodes and converts to terms
+  Reads modules exported with `serialize_modules/1`.
+
+  The text comes from whoever pastes it, so it is decoded without creating
+  atoms or functions, and must decode to a list of modules whose children,
+  vars and refs are lists. Returns `{:ok, modules}` or `{:error, :invalid}`.
   """
-  def deserialize_modules(encoded_modules) do
-    encoded_modules
-    |> String.trim()
-    |> Base.decode64!()
-    |> Brando.Utils.binary_to_term()
+  @spec deserialize_modules(String.t()) :: {:ok, [Module.t()]} | {:error, :invalid}
+  def deserialize_modules(encoded_modules) when is_binary(encoded_modules) do
+    with {:ok, binary} <- encoded_modules |> String.trim() |> Base.decode64(),
+         modules when is_list(modules) <- Brando.Utils.binary_to_term(binary),
+         true <- Enum.all?(modules, &importable_module?(&1, 1)) do
+      {:ok, modules}
+    else
+      _ -> {:error, :invalid}
+    end
+  rescue
+    ArgumentError -> {:error, :invalid}
   end
+
+  def deserialize_modules(_encoded_modules), do: {:error, :invalid}
+
+  # Exports carry one level of children
+  defp importable_module?(%Module{vars: vars, refs: refs, children: children}, depth)
+       when is_list(vars) and is_list(refs) do
+    case children do
+      children when is_list(children) and depth > 0 -> Enum.all?(children, &importable_module?(&1, depth - 1))
+      [] -> true
+      %Ecto.Association.NotLoaded{} -> depth == 0
+      _ -> false
+    end
+  end
+
+  defp importable_module?(_module, _depth), do: false
 
   @doc """
   Maps all ids to nil, converts terms to binary and base encodes

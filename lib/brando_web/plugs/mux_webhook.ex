@@ -11,6 +11,8 @@ defmodule BrandoWeb.Plugs.MuxWebhook do
   """
   import Plug.Conn
 
+  alias BrandoWeb.Plugs.WebhookBody
+
   require Logger
 
   @timestamp_tolerance_seconds 300
@@ -32,7 +34,13 @@ defmodule BrandoWeb.Plugs.MuxWebhook do
   Check and verify incoming Mux webhook requests
   """
   def handle_mux_webhook(conn, _options) do
-    {:ok, body, conn} = read_body(conn)
+    case WebhookBody.read(conn) do
+      {:ok, body, conn} -> process_webhook(conn, body)
+      {:halted, conn} -> conn
+    end
+  end
+
+  defp process_webhook(conn, body) do
     signature_header = get_req_header(conn, "mux-signature") |> List.first()
     webhook_secret = get_webhook_secret()
 

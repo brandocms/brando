@@ -34,7 +34,7 @@ added. Uploads and "Add from URL" in either tab still use the field's `cfg`.
 
 ### Add webhook to your endpoint
 
-Webhook plugs must come BEFORE `Plug.Parsers` to read raw body for signature verification.
+Webhook plugs must come BEFORE `Plug.Parsers` to read raw body for signature verification. They read at most 1 MiB of it and answer 413 for a larger body.
 
 #### Mux
 

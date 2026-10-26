@@ -48,6 +48,8 @@ defmodule BrandoWeb.Plugs.BunnyWebhook do
 
   import Plug.Conn
 
+  alias BrandoWeb.Plugs.WebhookBody
+
   require Logger
 
   def init(options), do: options
@@ -62,8 +64,13 @@ defmodule BrandoWeb.Plugs.BunnyWebhook do
   end
 
   def handle_bunny_webhook(conn, _options) do
-    {:ok, body, conn} = read_body(conn)
+    case WebhookBody.read(conn) do
+      {:ok, body, conn} -> process_webhook(conn, body)
+      {:halted, conn} -> conn
+    end
+  end
 
+  defp process_webhook(conn, body) do
     with :ok <- verify_signature(conn, body, get_webhook_secret()),
          {:ok, params} <- Jason.decode(body),
          :ok <- validate_payload(params),

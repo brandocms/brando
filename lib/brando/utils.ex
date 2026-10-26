@@ -904,8 +904,12 @@ defmodule Brando.Utils do
     :erlang.term_to_binary(term, compressed: 9)
   end
 
+  @doc """
+  Decodes a binary from `term_to_binary/1`. Refuses one that would create an
+  atom or carries a function, so it is safe on data a client sent.
+  """
   def binary_to_term(binary) do
-    :erlang.binary_to_term(binary)
+    Plug.Crypto.non_executable_binary_to_term(binary, [:safe])
   end
 
   @doc """

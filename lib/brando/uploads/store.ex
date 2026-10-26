@@ -27,6 +27,7 @@ defmodule Brando.Uploads.Store do
   alias Brando.Assets.CompletedCallback
   alias Brando.Files
   alias Brando.Images
+  alias Brando.Images.PixelLimit
   alias Brando.Tenant.Storage
   alias Brando.Tracing
   alias Brando.Type.FileConfig
@@ -184,26 +185,33 @@ defmodule Brando.Uploads.Store do
   def handle_upload_type(%{meta: meta, upload_entry: _upload_entry, cfg: cfg}, user) do
     media_path = meta.media_path
 
-    case media_path |> Images.Utils.media_path() |> Image.open() do
-      {:ok, img} ->
-        # As shown and processed: turned upright by its EXIF orientation.
-        {width, height} = Images.Utils.upright_dimensions(img)
-        dominant_color = Images.Operations.Info.get_dominant_color(media_path)
+    full_path = Images.Utils.media_path(media_path)
 
-        image_params = %{
-          config_target: meta.config_target,
-          content_hash: content_hash(media_path),
-          path: media_path,
-          width: width,
-          height: height,
-          dominant_color: dominant_color,
-          focal: %{x: 50, y: 50},
-          sizes: %{},
-          status: :unprocessed,
-          folder_id: Brando.Media.Folders.upload_folder_id(meta[:folder_id], cfg)
-        }
+    with {:ok, img} <- Image.open(full_path),
+         :ok <- PixelLimit.check(img) do
+      # As shown and processed: turned upright by its EXIF orientation.
+      {width, height} = Images.Utils.upright_dimensions(img)
+      dominant_color = Images.Operations.Info.get_dominant_color(media_path)
 
-        Images.create_image(image_params, user)
+      image_params = %{
+        config_target: meta.config_target,
+        content_hash: content_hash(media_path),
+        path: media_path,
+        width: width,
+        height: height,
+        dominant_color: dominant_color,
+        focal: %{x: 50, y: 50},
+        sizes: %{},
+        status: :unprocessed,
+        folder_id: Brando.Media.Folders.upload_folder_id(meta[:folder_id], cfg)
+      }
+
+      Images.create_image(image_params, user)
+    else
+      # Refused before anything decodes it; the stored copy goes too.
+      {:error, :too_many_pixels} ->
+        File.rm(full_path)
+        {:error, {:handle_upload_type, PixelLimit.error_message()}}
 
       {:error, _} ->
         {:error, {:handle_upload_type, "Failed to read image dimensions."}}
