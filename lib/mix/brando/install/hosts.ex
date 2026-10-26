@@ -31,9 +31,15 @@ defmodule Mix.Brando.Install.Hosts do
     end
   end
 
-  @doc "The `check_origin` list for the production endpoint, which staging also runs."
+  @doc """
+  The `check_origin` list for the production endpoint, which staging also runs:
+  the domain and its `www.` host, the staging host and the extra origins. No
+  wildcard is added, so a page on another subdomain (a forgotten DNS record, a
+  hosted service) cannot open a socket with a visitor's or an editor's cookies;
+  `--origin '//*.example.com'` trusts them all on purpose.
+  """
   def check_origin(hosts) do
-    Enum.uniq(["//#{hosts.domain}", "//*.#{hosts.domain}", "//#{hosts.staging}" | hosts.origins])
+    Enum.uniq(["//#{hosts.domain}", "//www.#{hosts.domain}", "//#{hosts.staging}" | hosts.origins])
   end
 
   @doc "A placeholder domain built from the application name."

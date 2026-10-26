@@ -227,11 +227,15 @@ not an IP address. Invalid values stop the install with an issue.
 The installer writes:
 
 - With `--domain`, `check_origin` for the endpoint in `config/prod.exs`:
-  `//<domain>`, `//*.<domain>`, `//<staging host>`, each `--origin`, and the
+  `//<domain>`, `//www.<domain>`, `//<staging host>`, each `--origin`, and the
   `PHX_HOST` of any `.envrc.prod` or `.envrc.staging` already there. Staging
   runs the prod release with its own environment file, so its host is listed
   here too. The list replaces Phoenix's default check against the endpoint's
-  URL host, so add any other host the application serves.
+  URL host, so add any other host the application serves. It names hosts, not
+  every subdomain: a page on a subdomain someone else controls (a forgotten
+  DNS record, a hosted service) could otherwise open the admin's socket with
+  an editor's cookies. Trust a family of subdomains on purpose with
+  `--origin '//*.example.com'`.
 - `.envrc.prod` and `.envrc.staging` for Florist, with `PHX_HOST` set to the
   domain and the staging host, `PHX_SERVER`, a `SECRET_KEY_BASE`, a
   `DATABASE_URL` and a `RELEASE_NODE` default. They use the names a Phoenix
