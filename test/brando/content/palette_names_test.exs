@@ -95,6 +95,9 @@ defmodule Brando.Content.PaletteNamesTest do
       assert {:ok, copy} = Content.duplicate_palette(palette.id, user)
       assert copy.key == "darkSection-copy"
       assert Palette.css_name?(copy.key)
+
+      # A second copy gets a section of its own
+      assert {:ok, %{key: "darkSection-copy-2"}} = Content.duplicate_palette(palette.id, user)
     end
 
     test "a stored key or namespace is kept when other fields change", %{user: user} do

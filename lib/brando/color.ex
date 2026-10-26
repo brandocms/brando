@@ -103,21 +103,26 @@ defmodule Brando.Color do
       spec = if spec == :own, do: color_fields(module), else: spec || []
       {record, cleared} = Enum.reduce(spec, {record, []}, &clear_field(&2, &1))
 
-      module
-      |> content_relations()
+      spec_relations = for {name, _fields} <- spec, do: name
+
+      (content_relations(module) ++ spec_relations)
+      |> Enum.uniq()
       |> Enum.filter(&Map.has_key?(record, &1))
-      |> Enum.reduce({record, cleared}, fn name, {record, cleared} ->
-        case clear(Map.get(record, name), relation_spec(spec, name)) do
-          {_children, []} -> {record, cleared}
-          {children, child_cleared} -> {Map.put(record, name, children), cleared ++ child_cleared}
-        end
-      end)
+      |> Enum.reduce({record, cleared}, &clear_relation(&2, &1, spec))
     else
       {record, []}
     end
   end
 
   defp clear(value, _spec), do: {value, []}
+
+  # Put back only when something was cleared
+  defp clear_relation({record, cleared}, name, spec) do
+    case clear(Map.get(record, name), relation_spec(spec, name)) do
+      {_children, []} -> {record, cleared}
+      {children, child_cleared} -> {Map.put(record, name, children), cleared ++ child_cleared}
+    end
+  end
 
   defp clear_field({record, cleared}, field) when is_atom(field) do
     value = Map.get(record, field)
@@ -131,15 +136,17 @@ defmodule Brando.Color do
 
   # The rows a record holds (has_many, has_one, embeds, and a belongs_to it
   # updates in place, like a block field's join row and its block), not the
-  # ones it refers to: a block's module and palette are not its content. A
-  # revision taken before a relation was added has no key for it, and gets
-  # none.
+  # ones it refers to: a block's module and palette are not its content, nor
+  # are entries reached through another relation. A subform on any relation
+  # is walked too (`clear/2`). A revision taken before a relation was added
+  # has no key for it, and gets none.
   defp content_relations(module) do
     owned =
       Enum.filter(module.__schema__(:associations), fn name ->
         case module.__schema__(:association, name) do
           %Ecto.Association.BelongsTo{on_replace: on_replace} -> on_replace == :update
           %Ecto.Association.ManyToMany{} -> false
+          %Ecto.Association.HasThrough{} -> false
           _ -> true
         end
       end)

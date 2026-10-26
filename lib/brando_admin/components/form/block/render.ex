@@ -2735,7 +2735,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             </button>
             <div class="circle-stack">
               <span
-                :for={color <- Enum.reverse(@palette.colors)}
+                :for={color <- Enum.reverse(Brando.Content.Palette.css_colors(@palette.colors))}
                 :key={color.hex_value}
                 class="circle tiny"
                 style={"background-color:#{color.hex_value}"}

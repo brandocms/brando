@@ -1,3 +1,25 @@
+defmodule Brando.ColorStoredValuesTest.Theme do
+  @moduledoc false
+  use Ecto.Schema
+
+  schema "themes" do
+    field :accent, :string
+  end
+end
+
+defmodule Brando.ColorStoredValuesTest.Article do
+  @moduledoc false
+  # A Blueprint with a subform on a belongs_to, as `__color_fields__` gives it
+  use Ecto.Schema
+
+  schema "articles" do
+    field :title, :string
+    belongs_to :theme, Brando.ColorStoredValuesTest.Theme
+  end
+
+  def __color_fields__, do: [{:theme, [:accent]}]
+end
+
 defmodule Brando.ColorStoredValuesTest do
   # Colours stored before `Brando.Color` checked them: a module's colour var
   # default, a revision's colour. Copies and restores leave them empty rather
@@ -155,6 +177,13 @@ defmodule Brando.ColorStoredValuesTest do
                Color.clear_invalid(%Brando.Content.Block{refs: [ref]})
 
       assert Color.clear_invalid(%Brando.Images.Image{dominant_color: "#abc"}) |> elem(1) == []
+    end
+
+    test "clears a subform on a belongs_to" do
+      alias Brando.ColorStoredValuesTest.{Article, Theme}
+
+      assert {%Article{theme: %Theme{accent: nil}}, [_]} =
+               Color.clear_invalid(%Article{theme: %Theme{accent: @stored}})
     end
 
     test "leaves what a record refers to, and relations its snapshot lacks, as they are" do

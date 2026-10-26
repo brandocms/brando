@@ -193,8 +193,13 @@ defmodule Brando.Doctor.Checks.Colors do
     spec = module.__color_fields__()
     {fields, relations} = Enum.split_with(spec, &is_atom/1)
     embeds = for {name, _} <- relations, name in module.__schema__(:embeds), do: name
+    # A belongs_to subform's row is preloaded by its foreign key
+    foreign_keys =
+      for {name, _} <- relations,
+          %Ecto.Association.BelongsTo{owner_key: key} <- [module.__schema__(:association, name)],
+          do: key
 
-    from(q in module, select: struct(q, ^Enum.uniq([:id | fields ++ embeds])), order_by: q.id)
+    from(q in module, select: struct(q, ^Enum.uniq([:id | fields ++ embeds ++ foreign_keys])), order_by: q.id)
     |> Repo.all()
     |> Repo.preload(preloads(module, relations))
     |> Enum.flat_map(fn record ->
@@ -206,8 +211,8 @@ defmodule Brando.Doctor.Checks.Colors do
   # A subform's rows, and the rows of its own subforms
   @doc false
   def preloads(module, spec) do
-    for {relation, fields} <- spec, relation in module.__schema__(:associations) do
-      {relation, preloads(module.__schema__(:association, relation).related, fields)}
+    for {relation, fields} <- spec, %{related: related} <- [module.__schema__(:association, relation)] do
+      {relation, preloads(related, fields)}
     end
   end
 
