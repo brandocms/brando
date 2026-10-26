@@ -19,14 +19,14 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   alias Brando.Trait.Creator
 
   @doc "`params` without the fields `user` may not change in `schema`'s `blueprint` form."
-  @spec drop(map() | nil, module(), %Form{} | nil, map() | atom()) :: map() | nil
+  @spec drop(map() | nil, module(), struct() | nil, map() | atom()) :: map() | nil
   def drop(params, schema, %Form{} = blueprint, user) when is_map(params),
     do: Map.drop(params, Enum.map(fields(schema, blueprint, user), &to_string/1))
 
   def drop(params, _schema, _blueprint, _user), do: params
 
   @doc "The field names `drop/4` takes out."
-  @spec fields(module(), %Form{}, map() | atom()) :: [atom()]
+  @spec fields(module(), struct(), map() | atom()) :: [atom()]
   def fields(schema, %Form{tabs: tabs}, user) do
     fieldsets = for %{fields: fieldsets} <- tabs, %{fields: _} = fieldset <- fieldsets, do: fieldset
     inputs = Enum.flat_map(fieldsets, & &1.fields)

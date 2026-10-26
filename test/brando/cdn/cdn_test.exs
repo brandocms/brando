@@ -57,6 +57,17 @@ defmodule Brando.CDNTest do
     end
   end
 
+  describe "upload_image/4 with a key that leaves the media root" do
+    # The key names the local file sent to the bucket: one that climbs out of
+    # the media root is refused before anything is read or sent.
+    test "is refused" do
+      cfg = %{cdn: %Brando.CDN.Config{enabled: true, bucket: "bucket", s3: @s3_config}}
+
+      assert Brando.CDN.upload_image("media/../../../../etc/hostname", "dest/key.jpg", cfg, 1) ==
+               {:error, :unsafe_media_path}
+    end
+  end
+
   describe "inspecting a config" do
     # MUTATION: remove `@derive {Inspect, except: …}` from
     # `Brando.CDN.S3Config`. Both refutations go red.

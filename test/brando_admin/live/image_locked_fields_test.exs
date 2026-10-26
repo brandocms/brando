@@ -75,10 +75,11 @@ defmodule BrandoAdmin.ImageLockedFieldsTest do
     end
 
     test "a superuser fieldset's fields for anyone but a superuser" do
-      blueprint = Brando.Galleries.Gallery.__form__(:default)
+      gallery = Brando.Galleries.Gallery
+      blueprint = gallery.__form__(:default)
 
-      assert :config_target in LockedFields.fields(Brando.Galleries.Gallery, blueprint, %Brando.Users.User{role: :user})
-      refute :config_target in LockedFields.fields(Brando.Galleries.Gallery, blueprint, %Brando.Users.User{role: :superuser})
+      assert :config_target in LockedFields.fields(gallery, blueprint, %Brando.Users.User{role: :user})
+      refute :config_target in LockedFields.fields(gallery, blueprint, %Brando.Users.User{role: :superuser})
     end
   end
 end
