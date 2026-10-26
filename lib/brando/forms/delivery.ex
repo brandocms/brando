@@ -29,12 +29,12 @@ defmodule Brando.Forms.Delivery do
   @csrf_placeholder "$csrftoken"
   @dynamic_prefix "/__brando/forms/"
 
-  # An `<input>` tag, and the attributes that make it the token input `{% form %}`
-  # stores. Rendered attribute values escape their quotes, so text cannot fake
-  # an attribute.
-  @input_tag ~r/<input\b[^<>]*>/
-  @token_name ~r/\sname\s*=\s*(["'])_csrf_token\1/
-  @placeholder_value ~r/\svalue\s*=\s*(["'])\$csrftoken\1/
+  # An `<input>` tag, quoted values and all, and one attribute in it: a
+  # name, then a double-quoted, single-quoted or bare value. Scanning
+  # attribute by attribute keeps `name=` written inside another attribute's
+  # value from counting.
+  @input_tag ~r/<input\b(?:[^<>"']|"[^"]*"|'[^']*')*>/i
+  @attribute ~r/(\s+)([^\s"'<>\/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/
 
   @doc "The placeholder `{% form %}` stores where the CSRF token goes."
   def csrf_placeholder, do: @csrf_placeholder
@@ -75,9 +75,13 @@ defmodule Brando.Forms.Delivery do
   defp do_finalize(html) do
     case static_site() do
       nil ->
-        token = Plug.CSRFProtection.get_csrf_token()
-        value = ~s( value="#{token}")
-        replace_token_inputs(html, &Regex.replace(@placeholder_value, &1, fn _ -> value end))
+        replace_token_inputs(html, fn input ->
+          Regex.replace(@attribute, input, fn attribute, space, name, _, _, _ ->
+            if String.downcase(name) == "value",
+              do: space <> ~s(value="#{Plug.CSRFProtection.get_csrf_token()}"),
+              else: attribute
+          end)
+        end)
 
       {site_key, environment_key} ->
         static_prefix = static_action(site_key, environment_key, "")
@@ -89,11 +93,21 @@ defmodule Brando.Forms.Delivery do
   end
 
   defp replace_token_inputs(html, fun) do
-    Regex.replace(@input_tag, html, fn input ->
-      if Regex.match?(@token_name, input) and Regex.match?(@placeholder_value, input),
-        do: fun.(input),
-        else: input
-    end)
+    Regex.replace(@input_tag, html, &if(token_input?(&1), do: fun.(&1), else: &1))
+  end
+
+  # A hidden input named `_csrf_token` whose whole value is the placeholder. As
+  # in a browser, the first of a repeated attribute counts.
+  defp token_input?(input) do
+    attributes =
+      @attribute
+      |> Regex.scan(input, capture: :all_but_first)
+      |> Enum.map(fn [_space, name | values] -> {String.downcase(name), Enum.join(values)} end)
+      |> Enum.reverse()
+      |> Map.new()
+
+    String.downcase(attributes["type"] || "") == "hidden" and attributes["name"] == "_csrf_token" and
+      attributes["value"] == @csrf_placeholder
   end
 
   defp static_action(site_key, environment_key, form_key),

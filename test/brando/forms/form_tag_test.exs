@@ -130,10 +130,14 @@ defmodule Brando.Forms.FormTagTest do
     assert Plug.CSRFProtection.valid_state_and_csrf_token?(Plug.CSRFProtection.dump_state(), token)
   end
 
-  test "finalize leaves a text input named for the token, or a token input with more in its value" do
+  test "finalize leaves inputs that are not the form's token input" do
     html =
-      ~s(<input type="text" name="_csrf_token" value="$csrftoken-x">) <>
-        ~s(<input type="hidden" name="q" value="$csrftoken">)
+      ~s(<input type="hidden" name="_csrf_token" value="$csrftoken-x">) <>
+        ~s(<input type="hidden" name="q" value="$csrftoken">) <>
+        ~s(<input type="text" name="_csrf_token" value="$csrftoken">) <>
+        # An image input loads its src; the attributes are only text inside it
+        ~s(<input type="image" src='https://images.example.net/?a name="_csrf_token" value="$csrftoken"'>) <>
+        ~s(<input type="hidden" alt='x name="_csrf_token" value="$csrftoken"'>)
 
     assert Delivery.finalize(html) == html
   end
