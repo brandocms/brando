@@ -136,10 +136,16 @@ defmodule Brando.Plug.LivePreviewTest do
   end
 
   test "the preview's script is served from a path a script-src policy can allow" do
-    conn = build_conn(:get, "/__livepreview/client-0123456789abcdef.js") |> LivePreview.call([])
+    conn = build_conn(:get, LivePreview.client_path()) |> LivePreview.call([])
 
     assert conn.status == 200
     assert get_resp_header(conn, "content-type") == ["text/javascript; charset=utf-8"]
+    assert get_resp_header(conn, "cache-control") == ["public, max-age=31536000, immutable"]
     assert conn.resp_body =~ "brando-live-preview"
+
+    # Another release's hash gets this script, but not cached under that hash
+    conn = build_conn(:get, "/__livepreview/client-0123456789abcdef.js") |> LivePreview.call([])
+    assert conn.resp_body =~ "brando-live-preview"
+    assert get_resp_header(conn, "cache-control") == ["no-cache"]
   end
 end

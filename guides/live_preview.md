@@ -241,7 +241,11 @@ config :brando, :live_preview_content_security_policy,
 The value is appended to the default policy. A `script-src` without
 `'unsafe-inline'` also blocks inline `<script>` elements and `on…` attributes
 in your templates and in editor content; list your own inline scripts by hash
-if the templates need them.
+if the templates need them. `'self'` also allows any script file served from
+the same origin, uploaded media included, so where editors can upload files,
+list your script directories (such as `https://example.com/assets/`) instead
+of `'self'`, along with `https://example.com/__livepreview/` for the
+preview's own script.
 
 The scoped token keeps the admin socket token out of the preview page, not out
 of reach. Without a `script-src` that blocks it, a script an editor puts into

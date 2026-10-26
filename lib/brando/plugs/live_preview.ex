@@ -66,12 +66,17 @@ defmodule Brando.Plug.LivePreview do
   def init(opts), do: opts
 
   # The hash in the path, not a query string, so a CDN that ignores query
-  # strings does not keep an old script; any hash gets the current one
-  def call(%Plug.Conn{path_info: ["__livepreview", "client-" <> _hash]} = conn, _) do
+  # strings does not keep an old script. Any hash gets the current script,
+  # cached for good only under its own hash: a page from another release
+  # (during a deploy) must not pin this one under its hash.
+  def call(%Plug.Conn{path_info: ["__livepreview", "client-" <> file]} = conn, _) do
+    cache_control =
+      if file == @client_vsn <> ".js", do: "public, max-age=31536000, immutable", else: "no-cache"
+
     conn
     |> put_resp_content_type("text/javascript")
     |> put_resp_header("x-content-type-options", "nosniff")
-    |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
+    |> put_resp_header("cache-control", cache_control)
     |> send_resp(200, @client_js)
     |> halt()
   end
@@ -138,6 +143,9 @@ defmodule Brando.Plug.LivePreview do
     end
   end
 
+  @doc false
+  def client_path, do: "/__livepreview/client-#{@client_vsn}.js"
+
   defp preview_key(conn), do: conn.query_string && Plug.Conn.Query.decode(conn.query_string)["key"]
 
   # Signed in, as the preview's socket requires; nil without a session
@@ -179,7 +187,7 @@ defmodule Brando.Plug.LivePreview do
           inject_html = """
           <!-- BRANDO LIVE PREVIEW -->
           <meta name="brando-live-preview" data-key="#{attribute(key)}" data-version="#{generation}" data-token="#{attribute(socket_token)}">
-          <script src="/__livepreview/client-#{@client_vsn}.js"></script>
+          <script src="#{client_path()}"></script>
           <style>
           #{@override_css}
           </style>

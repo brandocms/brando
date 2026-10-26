@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import fs from 'fs'
 import path from 'path'
 
 // The script inside the live preview iframe (`priv/static/js/livepreview.js`)
@@ -7,7 +8,7 @@ import path from 'path'
 // be fired directly. No server or fixtures involved.
 const JS = path.join(__dirname, '../../../../priv/static/js')
 
-const load = async (page, bodyHtml, version = 1) => {
+const load = async (page, bodyHtml, version = 1, { script = true } = {}) => {
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.setContent(
@@ -49,7 +50,7 @@ const load = async (page, bodyHtml, version = 1) => {
   })
   await page.addScriptTag({ path: path.join(JS, 'morphdom-umd.min.js') })
   await page.addScriptTag({ path: path.join(JS, 'block_patch.js') })
-  await page.addScriptTag({ path: path.join(JS, 'livepreview.js') })
+  if (script) await page.addScriptTag({ path: path.join(JS, 'livepreview.js') })
   return errors
 }
 
@@ -168,6 +169,33 @@ test.describe('Live preview iframe script', () => {
 
     await expect.poll(() => page.evaluate(() => window.__lp.socketParams())).toEqual({ token: 'fresh' })
     expect(await page.evaluate(() => window.__lp.fetched)).toBe('/__livepreview/token?key=test')
+    expect(errors).toEqual([])
+  })
+
+  // The plug puts its meta right before the script, so the script reads that
+  // one even when a look-alike comes later in the document.
+  test('the page reads the meta right before its script', async ({ page }) => {
+    const errors = await load(page, '<main><p>old</p></main>', 1, { script: false })
+    const source = fs.readFileSync(path.join(JS, 'livepreview.js'), 'utf8')
+
+    await page.evaluate((source) => {
+      const own = document.createElement('meta')
+      own.setAttribute('name', 'brando-live-preview')
+      own.setAttribute('data-key', 'own')
+      own.setAttribute('data-version', '1')
+      own.setAttribute('data-token', 'own-token')
+      const decoy = own.cloneNode()
+      decoy.setAttribute('data-key', 'decoy')
+      decoy.setAttribute('data-token', 'decoy-token')
+      const script = document.createElement('script')
+      script.textContent = source
+      document.querySelector('meta[name="brando-live-preview"]').remove()
+      document.body.append(own, decoy)
+      document.body.insertBefore(script, decoy)
+    }, source)
+
+    expect(await page.evaluate(() => window.__lp.topic)).toBe('live_preview:own')
+    expect(await page.evaluate(() => window.__lp.socketParams())).toEqual({ token: 'own-token' })
     expect(errors).toEqual([])
   })
 
