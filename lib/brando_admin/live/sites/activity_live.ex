@@ -182,9 +182,18 @@ defmodule BrandoAdmin.Sites.ActivityLive do
       schema: filters["type"],
       action: parse_action(filters["action"]),
       since: since(filters["period"]),
-      schema_in: readable
+      schema_in: readable,
+      readable_entries: readable_entries(readable)
     })
   end
+
+  # A record read policy hides some entries of a type the user may read: their
+  # events go too. Webhooks, notification routes and MCP connections are not
+  # content, and stay with the permission that manages them.
+  @not_content [Brando.Webhooks.Webhook, Brando.Notifications.Route, Brando.MCP.Grant, Brando.MCP.Setting]
+
+  defp readable_entries(nil), do: nil
+  defp readable_entries(readable), do: {Brando.Authorization.Boundary.current_scope(), readable -- @not_content}
 
   # A kind of actor (`Brando.Activity.actor_kind/1`), or one MCP client: `mcp:Claude Code`
   defp parse_actor("mcp:" <> client) when client != "", do: %{actor: :mcp, client: client}

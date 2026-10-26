@@ -50,17 +50,29 @@ defmodule BrandoAdmin.Components.Activity do
 
   defp states_for(schema, ids) do
     soft_delete? = :deleted_at in schema.__schema__(:fields)
+    source = readable(schema)
 
     query =
       if soft_delete?,
-        do: from(e in schema, where: e.id in ^ids, select: {e.id, e.deleted_at}),
-        else: from(e in schema, where: e.id in ^ids, select: {e.id, nil})
+        do: from(e in source, where: e.id in ^ids, select: {e.id, e.deleted_at}),
+        else: from(e in source, where: e.id in ^ids, select: {e.id, nil})
 
     query
     |> Brando.Repo.all()
     |> Enum.map(fn {id, deleted_at} -> {{to_string(schema), id}, if(deleted_at, do: :trashed, else: :live)} end)
   rescue
     _ -> []
+  end
+
+  # Of a type the reader may read, the entries their read policy lets them;
+  # an entry it hides reads as gone. Other types (webhooks, managed rather
+  # than read) are not narrowed.
+  defp readable(schema) do
+    scope = Brando.Authorization.Boundary.current_scope()
+
+    if (Brando.Authorization.Engine.enabled?() and scope) && Brando.Authorization.Engine.can?(scope, :read, schema),
+      do: Brando.Authorization.Engine.scope(scope, :read, schema),
+      else: schema
   end
 
   @doc "The schema module an event names, if it is still a known Blueprint."
