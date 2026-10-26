@@ -952,6 +952,7 @@ defmodule BrandoAdmin.Components.Form do
     |> reset_locked_values()
     |> put_locked_values(changeset)
     |> put_local_form(to_form(changeset, []))
+    |> own_locked_server_assets(Map.keys(changeset.changes))
     |> rebuild_preview_relations()
     |> assign_entry_for_blocks()
     |> clear_blocks_root_changesets()
@@ -2212,8 +2213,9 @@ defmodule BrandoAdmin.Components.Form do
   # A locked field is never owned (`locked_field?/3`): params never supply it
   # either (`LockedFields.lock/6`), so a save keeps the entry's value whatever
   # wrote the form, a recovery copy or another editor's change included. The
-  # exception is a value the server built (`server?`), a translation's: its
-  # gallery objects reach the save no other way.
+  # exception is a value the server built (`server?`), a translation's or a
+  # revision's working copy's: its gallery objects reach the save no other
+  # way.
   defp own_asset(socket, path, key, kind, server? \\ false)
 
   defp own_asset(socket, [], key, kind, server?) do
@@ -2230,6 +2232,12 @@ defmodule BrandoAdmin.Components.Form do
     |> Map.take(changed_fields)
     |> Enum.reduce(socket, fn {key, kind}, socket -> own_asset(socket, [], key, kind, server?) end)
   end
+
+  # A revision's working copy, which the server built: its locked assets are
+  # the form's, as its locked scalars are (`put_locked_values/2`). The others
+  # come back from the browser as before.
+  defp own_locked_server_assets(socket, changed_fields),
+    do: own_changed_assets(socket, Enum.filter(changed_fields, &locked_field?(socket, [], &1)), true)
 
   defp clear_owned_assets(socket), do: assign(socket, :server_owned_assets, %{})
 
@@ -8187,6 +8195,7 @@ defmodule BrandoAdmin.Components.Form do
   def handle_image_editor_upload_progress(:image_editor_upload, entry, socket) do
     cond do
       edit_asset_locked?(socket, socket.assigns[:edit_image]) ->
+        send(self(), {:toast, gettext("This field is locked")})
         {:noreply, cancel_upload(socket, :image_editor_upload, entry.ref)}
 
       entry.done? ->

@@ -223,14 +223,19 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
         |> render_hook("image_editor_save", %{"mode" => "new_copy", "focal_x" => 40, "focal_y" => 60})
 
         images = Repo.aggregate(Brando.Images.Image, :count)
+        Phoenix.PubSub.subscribe(Brando.pubsub(), "user:#{ctx.current_user.id}")
         jpeg = File.read!(Path.expand("../../fixtures/sample.jpg", __DIR__))
 
         view
         |> file_input("#article_form_form", :image_editor_upload, [%{name: "copy.jpg", content: jpeg, type: "image/jpeg"}])
         |> render_upload("copy.jpg")
 
-        # Stored only for a field that takes it
+        # Stored only for a field that takes it; the editor is told
         assert Repo.aggregate(Brando.Images.Image, :count) == if(ctx.locked, do: images, else: images + 1)
+
+        if ctx.locked,
+          do:
+            assert_receive(%Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "This field is locked"}}, 2_000)
       end
 
       # The preview's copy of the field's asset (`Input.Image` on a pick, a
@@ -377,6 +382,69 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
         assert saved(article).cover_id == stored.id
         assert saved_gallery_images(article) == [stored.id]
       end
+    end
+  end
+
+  # Values the server builds into the form are kept for a locked gallery: a
+  # synchronized translation's pending version, a revision's working copy
+  for form <- [:media, :locked_media] do
+    test "a translation's gallery, on form #{form}", %{conn: conn, current_user: user} do
+      [first, second] = [image(user), image(user)]
+
+      {:ok, source} =
+        SyncTest.create_article(%{title: "Kilde", slug: "kilde", language: "no", status: "published"}, user)
+
+      {:ok, target} = Brando.Translations.create_target(Article, source.id, :en, user)
+
+      params = %{
+        "photos" => %{
+          "config_target" => "default",
+          "gallery_objects" => [%{"image_id" => first.id, "sequence" => 0}, %{"image_id" => second.id, "sequence" => 1}]
+        }
+      }
+
+      {:ok, _} =
+        source
+        |> Repo.preload(photos: :gallery_objects)
+        |> Article.changeset(params, user)
+        |> SyncTest.update_article(user)
+
+      {view, _html} = open(conn, target, unquote(form))
+      shown = Enum.map([first, second], &to_string(&1.id))
+      await(fn -> gallery_images(view) == shown end)
+
+      # A keystroke elsewhere casts the form again: the gallery stays the
+      # translation's. (Saving a translation's gallery is not covered: the
+      # save doesn't complete in this setup, locked or not.)
+      view
+      |> form(@form)
+      |> render_change(%{"_target" => ["article", "title"], "article" => %{"title" => "Typed"}})
+
+      assert gallery_images(view) == shown
+    end
+
+    test "a working copy's gallery, on form #{form}", %{conn: conn, article: article, current_user: user} do
+      other = image(user)
+      {view, _html} = open(conn, article, unquote(form))
+      entry = form_assigns(view).entry
+
+      gallery = %{
+        entry.photos
+        | gallery_objects: [%Brando.Galleries.GalleryObject{image_id: other.id, image: other, sequence: 0}]
+      }
+
+      send_form(view, action: :load_working_copy, revision: 1, revision_entry: %{entry | photos: gallery})
+      save(view)
+
+      assert saved_gallery_images(article) == [other.id]
+    end
+  end
+
+  defp await(fun, tries \\ 40) do
+    cond do
+      fun.() -> :ok
+      tries == 0 -> flunk("timed out")
+      true -> Process.sleep(50) && await(fun, tries - 1)
     end
   end
 end
