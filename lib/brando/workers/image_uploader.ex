@@ -49,13 +49,13 @@ defmodule Brando.Worker.ImageUploader do
     with {:ok, image} <- Images.get_image(image_id),
          {:ok, config} <- Images.get_config_for(image.config_target),
          :ok <- CDN.upload_image_files(image, config, user_id || :system, opts),
-         false <- CDN.image_upload_waiting?(image_id, job_id),
+         false <- CDN.newer_image_work?(image_id, job_id),
          {:ok, image} <- Images.update_image(image, %{cdn: true}, user(user_id)) do
       CDN.remove_local_copies(image, config)
       broadcast_status(image, field_full_path, :updated)
     else
-      # Processed again while this ran (a new crop): the job queued then
-      # uploads the new files and marks the image
+      # Processed again while this ran (a new crop): the upload that
+      # processing queues uploads the new files and marks the image
       true ->
         :ok
 

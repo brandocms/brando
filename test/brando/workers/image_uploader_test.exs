@@ -6,6 +6,8 @@ defmodule Brando.Worker.ImageUploaderTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Factory
   alias Brando.Images.Image
   alias Brando.Tenant.Storage
@@ -142,6 +144,55 @@ defmodule Brando.Worker.ImageUploaderTest do
         |> Oban.insert()
 
       assert :ok = Brando.Worker.ImageUploader.perform(Repo.get!(Oban.Job, running.id))
+    end)
+
+    refute Repo.get!(Image, image.id).cdn
+    assert local?(image.path)
+  end
+
+  # A processor that fails to write a format logs it and goes on
+  test "a size missing in another format is skipped", %{dir: dir} do
+    image = image_with_files(dir, ["thumb"])
+    image = image |> Ecto.Changeset.change(formats: [:jpg, :avif]) |> Repo.update!()
+
+    {:ok, _job} = Brando.CDN.queue_upload(image, :system, [])
+
+    assert Repo.get!(Image, image.id).cdn
+    refute Enum.any?(FakeS3.keys(), &String.ends_with?(&1, ".avif"))
+  end
+
+  defp processing_job(image, state) do
+    job =
+      %{image_id: image.id, user_id: nil, field_full_path: [], config_target: image.config_target}
+      |> Brando.Tenant.Job.attach()
+      |> Brando.Worker.ImageProcessor.new()
+      |> Oban.insert!()
+
+    Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: [state: state])
+    job
+  end
+
+  # The processing that queued the upload is still running when it starts
+  test "the processing that queued the upload doesn't hold it back", %{dir: dir} do
+    image = image_with_files(dir, ["thumb"])
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      _queuing = processing_job(image, "executing")
+      {:ok, upload} = Brando.CDN.queue_upload(image, :system, [])
+      assert {:ok, _} = Brando.Worker.ImageUploader.perform(Repo.get!(Oban.Job, upload.id))
+    end)
+
+    assert Repo.get!(Image, image.id).cdn
+  end
+
+  # Processing queued after it (a new crop) queues the next upload
+  test "processing queued after the upload holds it back", %{dir: dir} do
+    image = image_with_files(dir, ["thumb"])
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      {:ok, upload} = Brando.CDN.queue_upload(image, :system, [])
+      _recrop = processing_job(image, "executing")
+      assert :ok = Brando.Worker.ImageUploader.perform(Repo.get!(Oban.Job, upload.id))
     end)
 
     refute Repo.get!(Image, image.id).cdn

@@ -208,10 +208,24 @@ defmodule Brando.CDN do
   # The current site's upload jobs for the image that are waiting to run
   defp delete_waiting_image_uploads(image_id), do: Brando.Repo.delete_all(waiting_image_uploads(image_id))
 
-  @doc "Whether an upload job for image `image_id` of the current site, other than `job_id`, is waiting to run."
-  def image_upload_waiting?(image_id, job_id) do
-    query = waiting_image_uploads(image_id)
-    query = if job_id, do: from(j in query, where: j.id != ^job_id), else: query
+  @doc """
+  Whether work on image `image_id` of the current site was queued after job
+  `job_id` and hasn't finished: another upload, or processing (a new crop),
+  which queues an upload when it is done.
+  """
+  def newer_image_work?(_image_id, nil), do: false
+
+  def newer_image_work?(image_id, job_id) do
+    processor = Oban.Worker.to_string(Worker.ImageProcessor)
+    image_args = Brando.Tenant.Job.attach(%{image_id: image_id})
+
+    query =
+      from j in Oban.Job,
+        where:
+          j.id > ^job_id and j.state in ["available", "scheduled", "executing", "retryable"] and
+            fragment("? @> ?", j.args, ^image_args) and
+            (^"image_upload_#{image_id}" in j.tags or j.worker == ^processor)
+
     Brando.Repo.aggregate(query, :count) > 0
   end
 
@@ -223,19 +237,25 @@ defmodule Brando.CDN do
   end
 
   @doc """
-  The bucket keys of an image's files: its original, then each size in each
-  of its formats (`<picture>` has a source per format).
+  The bucket keys of an image's files: its original, then each size, then
+  each size in its other formats (`<picture>` has a source per format).
   """
   @spec image_keys(Brando.Images.Image.t()) :: [String.t()]
-  def image_keys(image) do
-    formats = image.formats || []
+  def image_keys(image), do: Enum.uniq(required_image_keys(image) ++ format_image_keys(image))
 
-    sizes =
-      for {_key, path} <- Enum.sort(image.sizes || %{}), format <- [nil | formats] do
-        if format in [nil, :original], do: path, else: Brando.Utils.change_extension(path, to_string(format))
-      end
-
+  # The original and the sizes as `sizes` lists them
+  defp required_image_keys(image) do
+    sizes = for {_key, path} <- Enum.sort(image.sizes || %{}), do: path
     [image.path | sizes] |> Enum.uniq() |> Enum.map(&Path.join("media", &1))
+  end
+
+  # The sizes in the other formats. A processor that fails to write one logs
+  # it and goes on, and an SVG's sizes are the original, so one may be missing.
+  defp format_image_keys(image) do
+    for {_key, path} <- Enum.sort(image.sizes || %{}),
+        format <- image.formats || [],
+        format != :original,
+        do: Path.join("media", Brando.Utils.change_extension(path, to_string(format)))
   end
 
   @doc """
@@ -369,9 +389,11 @@ defmodule Brando.CDN do
   """
   @spec upload_image_files(Brando.Images.Image.t(), map, any, keyword) :: :ok | {:error, term}
   def upload_image_files(image, config, user_id, opts \\ []) do
+    required = required_image_keys(image)
+
     image
     |> image_keys()
-    |> Enum.reject(&(opts[:after_per_file] && removed_after_upload?(&1, config)))
+    |> Enum.reject(&(missing?(&1) and skip_missing?(&1 in required, config, opts)))
     |> Enum.reduce_while(:ok, fn key, :ok ->
       case upload_image(key, key, config, user_id, remove_local: false) do
         {:ok, _s3_key} -> {:cont, :ok}
@@ -380,11 +402,19 @@ defmodule Brando.CDN do
     end)
   end
 
-  # A per-file job removed the file once it was up (`keep_local_copy: false`)
-  defp removed_after_upload?(key, config) do
-    keep_local_copy?(config) == false and match?({:ok, _}, local_source(key)) and
-      not File.exists?(elem(local_source(key), 1))
+  defp missing?(key) do
+    case local_source(key) do
+      {:ok, source} -> not File.exists?(source)
+      :error -> false
+    end
   end
+
+  # A size in another format may be missing: a processor that fails to write
+  # one logs it and goes on, and an SVG's sizes are the original. The
+  # original or a size is missing after per-file jobs uploaded and removed
+  # it (`keep_local_copy: false`); otherwise its upload fails.
+  defp skip_missing?(false = _required?, _config, _opts), do: true
+  defp skip_missing?(true, config, opts), do: opts[:after_per_file] == true and keep_local_copy?(config) == false
 
   defp keep_local_copy?(config), do: (config.cdn || config(Brando.Images)).keep_local_copy
 
