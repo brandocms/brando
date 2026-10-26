@@ -168,7 +168,8 @@ defmodule BrandoAdmin.ReauthTest do
       {BrandoAdmin.Sites.PublishingLive, ~w(save_deploy_config deploy rollback request_build schedule_build)},
       {BrandoAdmin.Sites.EnvironmentLive,
        ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy)},
-      {BrandoAdmin.Users.UserListLive, ~w(disable_user enable_user confirm_transfer_delete)},
+      {BrandoAdmin.Users.UserListLive,
+       ~w(disable_user enable_user confirm_transfer_delete delete_selected undelete_entry)},
       {BrandoAdmin.Users.GroupsLive, ~w(save delete add_member remove_member)},
       {BrandoAdmin.Users.UserSecurityLive, ~w(open_setup new_passkey remove_passkey revoke_session revoke_other_sessions)}
     ]
@@ -202,6 +203,63 @@ defmodule BrandoAdmin.ReauthTest do
 
       view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
       refute Repo.get!(Brando.Users.User, target.id).active
+    end
+
+    test "deleting users in bulk waits for the password", %{conn: conn} do
+      editor = Factory.insert(:random_user, role: :editor, config: %UserConfig{})
+      admin = Factory.insert(:random_user, role: :admin, config: %UserConfig{})
+      confirmed_ago(conn, 30)
+      {:ok, view, _html} = live(conn, "/admin/users")
+
+      html = render_click(view, "delete_selected", %{"ids" => Jason.encode!([editor.id, admin.id])})
+      assert html =~ "reauth-modal"
+      assert is_nil(Repo.get!(Brando.Users.User, editor.id).deleted_at)
+      assert is_nil(Repo.get!(Brando.Users.User, admin.id).deleted_at)
+
+      # Answered: the listing's own event runs
+      view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
+      assert Repo.get!(Brando.Users.User, editor.id).deleted_at
+      assert Repo.get!(Brando.Users.User, admin.id).deleted_at
+    end
+
+    test "restoring a user waits for the password", %{conn: conn} do
+      target = Factory.insert(:random_user, role: :editor, config: %UserConfig{})
+      {:ok, _} = Users.delete_user(target.id, :system)
+      confirmed_ago(conn, 30)
+      {:ok, view, _html} = live(conn, "/admin/users")
+
+      html = render_click(view, "undelete_entry", %{"id" => to_string(target.id)})
+      assert html =~ "reauth-modal"
+      assert Repo.get!(Brando.Users.User, target.id).deleted_at
+
+      view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
+      assert is_nil(Repo.get!(Brando.Users.User, target.id).deleted_at)
+    end
+
+    test "deleting one user goes through the transfer dialog", %{conn: conn} do
+      target = Factory.insert(:random_user, role: :editor, config: %UserConfig{})
+      token = Users.generate_user_session_token(target)
+      confirmed_ago(conn, 30)
+      {:ok, view, _html} = live(conn, "/admin/users")
+
+      render_click(view, "delete_entry", %{"id" => to_string(target.id)})
+      assert has_element?(view, ".transfer-content-modal .transfer-source")
+      assert is_nil(Repo.get!(Brando.Users.User, target.id).deleted_at)
+      assert Users.get_user_by_session_token(token)
+
+      # The dialog's delete asks for the password
+      html = render_click(view, "confirm_transfer_delete", %{})
+      assert html =~ "reauth-modal"
+      assert is_nil(Repo.get!(Brando.Users.User, target.id).deleted_at)
+    end
+
+    test "users are not duplicated from the listing", %{conn: conn} do
+      target = Factory.insert(:random_user, role: :editor, config: %UserConfig{})
+      {:ok, view, _html} = live(conn, "/admin/users")
+      count = Repo.aggregate(Brando.Users.User, :count)
+
+      render_click(view, "duplicate_entry", %{"id" => to_string(target.id)})
+      assert Repo.aggregate(Brando.Users.User, :count) == count
     end
 
     test "logging out another session waits for the password", %{conn: conn, current_user: user} do

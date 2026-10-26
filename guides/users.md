@@ -267,7 +267,8 @@ the session last gave one more than ten minutes ago, even inside a valid
 session (`BrandoAdmin.Reauth`): setting up the app, adding or removing a
 passkey, logging out a session, the user form (creating users, changing email
 or role, resetting another user's password or two-factor authentication,
-logging them out), disabling, enabling and deleting users, the sign-in policy,
+logging them out), disabling, enabling, deleting and restoring users (one at a
+time through the transfer dialog, or several selected in the listing), the sign-in policy,
 changing groups and their members, deleting, suspending or archiving a site
 and changing who has access to it, a static site's deploy target and webhook,
 building (which may deploy at once), deploying and rolling back, copying into
@@ -281,6 +282,16 @@ A screen opts in with one line, and so do some events of a LiveView:
 ```elixir
 on_mount {BrandoAdmin.Reauth, :screen}
 on_mount {BrandoAdmin.Reauth, events: ~w(delete_environment queue_set_live)}
+```
+
+A listing names its guarded events with `step_up`, its own (`delete_selected`,
+`undelete_entry`) and the view's alike, since the listing handles its own
+events before the view's hooks see them:
+
+```elixir
+use BrandoAdmin.LiveView.Listing,
+  schema: MyApp.Accounts.Account,
+  step_up: ~w(delete_selected undelete_entry close_account)
 ```
 
 A screen guarded as a whole asks before it opens, holds any event of the

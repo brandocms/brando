@@ -14,6 +14,21 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
   def build(opts) do
     schema = Keyword.fetch!(opts, :schema)
     page_title = Keyword.get(opts, :page_title)
+    step_up = Keyword.get(opts, :step_up, [])
+    overrides = Keyword.get(opts, :overrides, [])
+
+    reauth =
+      if step_up != [] do
+        quote do
+          # Ahead of the listing's hooks, so that it holds the listing's own
+          # events as well as the view's
+          on_mount(
+            {BrandoAdmin.Reauth,
+             events: unquote(step_up),
+             replay: {BrandoAdmin.LiveView.Listing.Hooks, :replay_event, [unquote(schema), unquote(overrides)]}}
+          )
+        end
+      end
 
     quote do
       use BrandoAdmin, :live_view
@@ -21,11 +36,12 @@ defmodule BrandoAdmin.LiveView.Listing.Compiler do
       def __authorization_resource__, do: {:listing, unquote(schema)}
       import Phoenix.Component
 
+      unquote(reauth)
       on_mount({__MODULE__, :hooks})
 
       def on_mount(:hooks, params, assigns, socket) do
         params
-        |> BrandoAdmin.LiveView.Listing.Hooks.hooks(assigns, socket, unquote(schema))
+        |> BrandoAdmin.LiveView.Listing.Hooks.hooks(assigns, socket, unquote(schema), unquote(overrides))
         |> BrandoAdmin.LiveView.Listing.put_page_title(unquote(page_title))
       end
     end
