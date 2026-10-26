@@ -16,21 +16,28 @@ async function renameEditor(page, name) {
   expect(response.ok()).toBeTruthy()
 }
 
+// Presence looks its users up outside the test's SQL sandbox, so a name
+// changed in the test never reaches it. The avatar's data-popover is what the
+// server renders from that name (escaped, as every attribute); the page gets
+// the name there, and the field avatar's tooltip is built from it.
 test("a presence tooltip shows the other editor's name as text", async ({ page, secondUserPage }) => {
-  await renameEditor(page, MARKUP)
-
   await page.goto('/admin/pages/update/1')
   await syncLV(page)
   await secondUserPage.goto('/admin/pages/update/1')
   await syncLV(secondUserPage)
 
+  const theirs = page.locator('.page-presences [data-presence-user-id] .avatar[aria-label="Second Editor"]')
+  await expect(theirs).toHaveCount(1)
+  await theirs.evaluate((avatar, name) => avatar.setAttribute('data-popover', name), MARKUP)
+
   await secondUserPage.getByLabel('Title', { exact: true }).click()
   const avatar = page.locator('.field-wrapper.field-locked .field-presence-user .avatar')
   await expect(avatar).toHaveCount(1)
+  await expect(avatar).toHaveAttribute('data-popover', MARKUP)
 
   await avatar.hover()
   const tooltip = page.locator('.tippy-content')
-  await expect(tooltip).toContainText(MARKUP)
+  await expect(tooltip).toHaveText(MARKUP)
   await expect(tooltip.locator('img')).toHaveCount(0)
   expect(await ran(page)).toBeNull()
 })
@@ -40,12 +47,23 @@ test('the colour picker shows a stored colour value as text', async ({ page }) =
   expect(response.ok()).toBeTruthy()
   const { id } = await response.json()
 
+  // The hook labels the stored value on mount; a moment later the picker
+  // replaces a value it cannot parse with a hex. Record every label.
+  await page.addInitScript(() => {
+    window.colorLabels = []
+    new MutationObserver(mutations => {
+      for (const { target } of mutations) {
+        const label = target.closest?.('.color-hex') || target.parentElement?.closest('.color-hex')
+        if (label) window.colorLabels.push({ text: label.textContent, elements: label.children.length })
+      }
+    }).observe(document, { childList: true, characterData: true, subtree: true })
+  })
+
   await page.goto(`/admin/assets/images/update/${id}`)
   await syncLV(page)
 
-  const hex = page.locator('[phx-hook="Brando.ColorPicker"] .color-hex')
-  await expect(hex).toHaveText(MARKUP)
-  await expect(hex.locator('img')).toHaveCount(0)
+  await expect.poll(() => page.evaluate(() => window.colorLabels.map(l => l.text))).toContain(MARKUP)
+  expect(await page.evaluate(() => window.colorLabels.filter(l => l.elements > 0))).toEqual([])
   expect(await ran(page)).toBeNull()
 })
 

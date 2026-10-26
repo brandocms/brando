@@ -1287,12 +1287,13 @@ defmodule E2EFixtureController do
   end
 
   # Server text that admin pages must show as text (sec/admin-text-sinks).
-  # The spec sends the values; these write them past the changesets that now
-  # refuse them, as older data or another path could have stored them.
+  # The spec sends the values. The colour is written past the changeset that
+  # now refuses it, as older data could hold it.
   def text_sinks(conn, %{"action" => "user-name", "email" => email, "name" => name}) do
     allow_sandbox(conn)
     user = Brando.Users.get_user!(%{matches: %{email: email}})
-    user |> Ecto.Changeset.change(name: name) |> Brando.Repo.update!()
+    # Through the context, so presence and caches see the new name
+    {:ok, _} = Brando.Users.update_user(user, %{name: name}, :system, show_notification: false)
     send_resp(conn, 200, "")
   end
 
