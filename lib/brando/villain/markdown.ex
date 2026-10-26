@@ -381,8 +381,10 @@ defmodule Brando.Villain.Markdown do
   defp template_mode?(%{context: %Context{} = context}), do: template_context?(context)
   defp template_mode?(_opts), do: false
 
-  @doc false
-  # True while a module's `markdown` template renders in `context`.
+  @doc """
+  True while a module's `markdown` template renders in `context`: what it
+  outputs goes into the Markdown as it is, and no Liquid pass reads it after.
+  """
   def template_context?(%Context{} = context), do: Access.get(context, @template_flag) == true
   def template_context?(_context), do: false
 

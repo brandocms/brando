@@ -152,7 +152,6 @@ defmodule Brando.Villain.MarkdownTest do
         rendered_blocks: "<p>Write {{ entry.title }} and &#123;% raw %&#125;.</p>"
       )
 
-      Cachex.clear(:query)
       module = module!("<div>html</div>", markdown: "Before\n\n{% fragment index header en %}\n\nAfter")
       markdown = render([block(module, [])])
 
