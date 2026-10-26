@@ -1,10 +1,9 @@
 defmodule Brando.Blueprint.ErrorTranslatorTest do
   use ExUnit.Case, async: true
 
-  import ExUnit.CaptureLog
-
   alias Brando.Blueprint.ErrorTranslator
   alias Brando.Blueprint.Forms
+  alias Brando.Test.OwnLog
 
   defmodule Schema do
     @moduledoc false
@@ -32,14 +31,12 @@ defmodule Brando.Blueprint.ErrorTranslatorTest do
 
   test "unknown error keys remain readable and are logged" do
     form = form_with_fields([])
-    caller = self()
 
     log =
-      capture_log(fn ->
-        send(caller, {:translated, ErrorTranslator.translate_keys([:missing_field], form, Schema)})
+      OwnLog.capture(fn ->
+        assert ErrorTranslator.translate_keys([:missing_field], form, Schema) == ["Missing field"]
       end)
 
-    assert_receive {:translated, ["Missing field"]}
     assert log =~ "Could not get field :missing_field from form"
 
     # `inspect/2` of the whole `Forms.Form` would be over a hundred lines per
@@ -54,7 +51,7 @@ defmodule Brando.Blueprint.ErrorTranslatorTest do
     form = form_with_fields([])
 
     log =
-      capture_log(fn ->
+      OwnLog.capture(fn ->
         Gettext.with_locale(Brando.Gettext, "no", fn ->
           assert ErrorTranslator.translate_keys([:meta_canonical_url, :meta_title], form, Schema) ==
                    [

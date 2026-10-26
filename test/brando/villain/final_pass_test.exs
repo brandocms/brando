@@ -29,7 +29,7 @@ defmodule Brando.Villain.FinalPassTest do
   end
 
   test "retains parse error handling when Liquid is malformed" do
-    assert ExUnit.CaptureLog.capture_log(fn ->
+    assert Brando.Test.OwnLog.capture(fn ->
              assert Villain.parse_and_render("{% if visible %}unclosed", Context.new(%{})) ==
                       "!!! Error parsing liquex template !!!"
            end) =~ "Error parsing liquex template"
