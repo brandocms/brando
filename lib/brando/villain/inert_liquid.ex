@@ -14,14 +14,7 @@ defmodule Brando.Villain.InertLiquid do
   def encode(nil), do: nil
 
   def encode(html) do
-    html
-    |> IO.iodata_to_binary()
-    |> then(&Regex.split(@raw_text_elements, &1, include_captures: true))
-    |> Enum.with_index()
-    |> Enum.map_join(fn
-      {raw_text, index} when rem(index, 2) == 1 -> raw_text
-      {markup, _} -> String.replace(markup, ["{", "}"], &if(&1 == "{", do: "&#123;", else: "&#125;"))
-    end)
+    outside_raw_text(html, &String.replace(&1, ["{", "}"], fn brace -> if brace == "{", do: "&#123;", else: "&#125;" end))
   end
 
   @doc """
@@ -31,8 +24,20 @@ defmodule Brando.Villain.InertLiquid do
   def decode(nil), do: nil
 
   def decode(html) do
+    outside_raw_text(
+      html,
+      &String.replace(&1, ["&#123;", "&#125;"], fn entity -> if entity == "&#123;", do: "{", else: "}" end)
+    )
+  end
+
+  defp outside_raw_text(html, fun) do
     html
     |> IO.iodata_to_binary()
-    |> String.replace(["&#123;", "&#125;"], &if(&1 == "&#123;", do: "{", else: "}"))
+    |> then(&Regex.split(@raw_text_elements, &1, include_captures: true))
+    |> Enum.with_index()
+    |> Enum.map_join(fn
+      {raw_text, index} when rem(index, 2) == 1 -> raw_text
+      {markup, _} -> fun.(markup)
+    end)
   end
 end
