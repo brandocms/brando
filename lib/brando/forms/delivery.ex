@@ -31,11 +31,12 @@ defmodule Brando.Forms.Delivery do
 
   # A run of markup, or an `<input>` tag. Markup is read text run by text run
   # and tag by tag, so an `<input>` inside a comment, a raw-text element or
-  # another tag's quoted attribute is never taken for a tag; a `<` that starts
-  # none of these is text, as in a browser. `\G` starts each match where the
+  # another tag's quoted attribute is never taken for a tag. As in a browser, a
+  # quote starts a value only after `=`, and a `<` that starts none of these
+  # is text. `\G` starts each match where the
   # last one ended, and a run stops after 50 pieces to stay within the regex
   # engine's limits on a large page.
-  @markup_or_input ~r/\G(?:(?:[^<]++|<!--.*?-->|<(script|style|textarea|title)\b(?:[^>"']|"[^"]*+"|'[^']*+')*+>.*?<\/\1\s*>|<(?!input[\s\/>])[a-zA-Z\/!?](?:[^>"']|"[^"]*+"|'[^']*+')*+>|<(?!input[\s\/>])){1,50}+|(<input(?=[\s\/>])(?:[^>"']|"[^"]*+"|'[^']*+')*+>))/is
+  @markup_or_input ~r/\G(?:(?:[^<]++|<!--.*?-->|<(script|style|textarea|title)\b(?:[^>=]++|=\s*+"[^"]*+"|=\s*+'[^']*+'|=)*+>.*?<\/\1\s*>|<(?!input[\s\/>])[a-zA-Z\/!?](?:[^>=]++|=\s*+"[^"]*+"|=\s*+'[^']*+'|=)*+>|<(?!input[\s\/>])){1,50}+|(<input(?=[\s\/>])(?:[^>=]++|=\s*+"[^"]*+"|=\s*+'[^']*+'|=)*+>))/is
 
   # An `<input>` whose attributes follow one another as a browser reads them:
   # a name, then a double-quoted, single-quoted or bare value, with spaces or
