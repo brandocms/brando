@@ -11,8 +11,11 @@ defmodule Brando.Forms.Delivery do
   the site's own domains instead.
 
   Block HTML is rendered when an entry is saved, so `{% form %}` cannot know the
-  visitor's token. It stores the dynamic action and a `$csrftoken` placeholder;
-  `finalize/1` fills them in as the HTML is sent. A cache in front of the site
+  visitor's token. It stores the dynamic action and a `$csrftoken` placeholder
+  as the value of the form's hidden `_csrf_token` input; `finalize/1` fills them
+  in as the HTML is sent. Only that input is filled in: the placeholder anywhere
+  else (an image URL in synced Markdown, say) stays as it is, so content cannot
+  send the visitor's token to another host. A cache in front of the site
   would keep one visitor's token for everyone, so the form's script fetches a
   fresh one from `token_path/0` before it sends.
 
@@ -25,6 +28,13 @@ defmodule Brando.Forms.Delivery do
 
   @csrf_placeholder "$csrftoken"
   @dynamic_prefix "/__brando/forms/"
+
+  # An `<input>` tag, and the attributes that make it the token input `{% form %}`
+  # stores. Rendered attribute values escape their quotes, so text cannot fake
+  # an attribute.
+  @input_tag ~r/<input\b[^<>]*>/
+  @token_name ~r/\sname="_csrf_token"/
+  @placeholder_value ~r/\svalue="\$csrftoken"/
 
   @doc "The placeholder `{% form %}` stores where the CSRF token goes."
   def csrf_placeholder, do: @csrf_placeholder
@@ -51,6 +61,10 @@ defmodule Brando.Forms.Delivery do
   @doc """
   Fills in what `{% form %}` left for the request: the visitor's CSRF token,
   or, on a static site, the backend action and no token.
+
+  The token goes only into a hidden `<input name="_csrf_token">` whose whole
+  value is `$csrftoken`, in any attribute order. The placeholder anywhere else
+  is left as it is.
   """
   def finalize(html) when is_binary(html) do
     if String.contains?(html, @csrf_placeholder), do: do_finalize(html), else: html
@@ -61,16 +75,25 @@ defmodule Brando.Forms.Delivery do
   defp do_finalize(html) do
     case static_site() do
       nil ->
-        String.replace(html, @csrf_placeholder, Plug.CSRFProtection.get_csrf_token())
+        token = Plug.CSRFProtection.get_csrf_token()
+        value = ~s( value="#{token}")
+        replace_token_inputs(html, &Regex.replace(@placeholder_value, &1, fn _ -> value end))
 
       {site_key, environment_key} ->
-        token_input = "<input type=\"hidden\" name=\"_csrf_token\" value=\"#{@csrf_placeholder}\">"
         static_prefix = static_action(site_key, environment_key, "")
 
         html
-        |> String.replace(token_input, "")
+        |> replace_token_inputs(fn _input -> "" end)
         |> String.replace("action=\"#{@dynamic_prefix}", "action=\"#{static_prefix}")
     end
+  end
+
+  defp replace_token_inputs(html, fun) do
+    Regex.replace(@input_tag, html, fn input ->
+      if Regex.match?(@token_name, input) and Regex.match?(@placeholder_value, input),
+        do: fun.(input),
+        else: input
+    end)
   end
 
   defp static_action(site_key, environment_key, form_key),
