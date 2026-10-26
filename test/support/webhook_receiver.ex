@@ -102,8 +102,12 @@ defmodule Brando.WebhookTestResolver do
   DNS for webhook tests (`config :brando, Brando.Webhooks, resolver: ...`):
   `*.example.com`, `hooks.slack.com` and one Teams host are public, `*.internal.test` private, `pinned.test` is
   loopback, `rebind.test` answers what `rebind/1` set last, anything else is
-  not found.
+  not found. For video lookups (`Brando.Videos.Metadata`), the providers'
+  hosts and `*.b-cdn.net` are public, except `private-*.b-cdn.net`, which is
+  the cloud metadata address.
   """
+
+  @video_hosts ~w(vimeo.com i.vimeocdn.com www.youtube.com i.ytimg.com stream.mux.com image.mux.com)
 
   def resolve(host) do
     host = to_string(host)
@@ -113,6 +117,8 @@ defmodule Brando.WebhookTestResolver do
       host in ["hooks.slack.com", "prod-01.westeurope.logic.azure.com"] -> {:ok, [{93, 184, 216, 34}]}
       String.ends_with?(host, ".internal.test") -> {:ok, [{10, 0, 0, 5}]}
       host == "pinned.test" -> {:ok, [{127, 0, 0, 1}]}
+      String.starts_with?(host, "private-") and String.ends_with?(host, ".b-cdn.net") -> {:ok, [{169, 254, 169, 254}]}
+      host in @video_hosts or String.ends_with?(host, ".b-cdn.net") -> {:ok, [{93, 184, 216, 34}]}
       host == "mixed.test" -> {:ok, [{93, 184, 216, 34}, {192, 168, 1, 1}]}
       host == "rebind.test" -> {:ok, [:persistent_term.get({__MODULE__, :rebind}, {93, 184, 216, 34})]}
       true -> {:error, :nxdomain}

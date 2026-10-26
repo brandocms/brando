@@ -4,6 +4,7 @@ defmodule Brando.Videos.MetadataTest do
 
   alias Brando.Factory
   alias Brando.Videos
+  alias Brando.Videos.Helpers
   alias Brando.Videos.Metadata
   alias Plug.Conn
 
@@ -189,6 +190,141 @@ defmodule Brando.Videos.MetadataTest do
     import Ecto.Query, only: [from: 2]
     inserted_at = DateTime.add(DateTime.utc_now(), -seconds)
     Brando.Repo.update_all(from(j in Oban.Job, where: j.worker == ^inspect(worker)), set: [inserted_at: inserted_at])
+  end
+
+  # Audit F12: a provider is the parsed URL's host, and every request goes
+  # through Brando.Webhooks.URLGuard to the address it checked, without
+  # following redirects.
+  describe "requests stay with the provider" do
+    defp external(url), do: %Videos.Video{type: :external_file, source_url: url}
+
+    test "a provider's host elsewhere in the URL is not the provider" do
+      stub(fn _, _ -> {:text, @master} end)
+
+      for url <- [
+            "http://169.254.169.254/latest/.b-cdn.net/x/playlist.m3u8",
+            "https://evil.example.com/.b-cdn.net/x/playlist.m3u8",
+            "https://vz-1.b-cdn.net.evil.example.com/x/playlist.m3u8",
+            "https://vz-1.b-cdn.net@evil.example.com/x/playlist.m3u8",
+            "http://vz-1.b-cdn.net/x/playlist.m3u8",
+            "https://vz-1.b-cdn.net:6379/x/playlist.m3u8",
+            "https://evil.example.com/player.vimeo.com/external/42/file.mp4"
+          ] do
+        assert Metadata.lookup(external(url)) == {:error, :unsupported}, url
+        assert Helpers.derive_external_thumbnail_url(external(url)) == nil, url
+      end
+
+      assert Helpers.derive_external_thumbnail_url(external("https://evil.example.com/https://stream.mux.com/abc")) == nil
+      refute_received {:request, _, _}
+    end
+
+    test "the providers' own URLs still match" do
+      assert Helpers.derive_external_thumbnail_url(external("https://VZ-1.B-CDN.NET/guid/playlist.m3u8")) ==
+               "https://VZ-1.B-CDN.NET/guid/thumbnail.jpg"
+
+      assert Metadata.lookup(external("https://stream.mux.com/abc123.m3u8")) ==
+               {:ok, %{thumbnail_url: "https://image.mux.com/abc123/thumbnail.jpg"}}
+
+      stub(fn "/api/oembed.json", _ -> {:json, %{"title" => "Clip"}} end)
+
+      assert {:ok, %{title: "Clip"}} =
+               Metadata.lookup(external("https://player.vimeo.com/external/42.hd.mp4?s=abc"))
+    end
+
+    test "connects to the address it checked" do
+      test = self()
+
+      Req.Test.stub(Metadata, fn conn ->
+        send(test, {:host, conn.host})
+        Conn.send_resp(conn, 200, @master)
+      end)
+
+      Metadata.lookup(external("https://vz-1.b-cdn.net/guid/playlist.m3u8"))
+      # The test resolver's address for *.b-cdn.net
+      assert_received {:host, "93.184.216.34"}
+    end
+
+    test "a provider host resolving to a private address is not requested" do
+      stub(fn _, _ -> {:text, @master} end)
+      url = "https://private-zone.b-cdn.net/guid/playlist.m3u8"
+
+      # Only the thumbnail's derived URL comes back, and fetching it is refused.
+      assert {:ok, %{thumbnail_url: thumbnail}} = Metadata.lookup(external(url))
+      assert Metadata.download(thumbnail) == {:error, :private_address}
+      assert Metadata.download("https://10.0.0.5/thumbnail.jpg") == {:error, :private_address}
+      assert Metadata.download("http://169.254.169.254/latest/meta-data") == {:error, :https_required}
+      refute_received {:request, _, _}
+    end
+
+    test "a redirect is not followed" do
+      test = self()
+
+      Req.Test.stub(Metadata, fn conn ->
+        send(test, {:request, conn.request_path, []})
+
+        conn
+        |> Conn.put_resp_header("location", "http://10.0.0.5/internal/playlist.m3u8")
+        |> Conn.send_resp(302, "")
+      end)
+
+      assert {:ok, found} = Metadata.lookup(external("https://vz-1.b-cdn.net/guid/playlist.m3u8"))
+      assert found == %{thumbnail_url: "https://vz-1.b-cdn.net/guid/thumbnail.jpg"}
+      assert Metadata.download("https://vz-1.b-cdn.net/guid/thumbnail.jpg") == {:error, {:http, 302}}
+
+      assert_received {:request, "/guid/playlist.m3u8", _}
+      assert_received {:request, "/guid/thumbnail.jpg", _}
+      refute_received {:request, "/internal/playlist.m3u8", _}
+    end
+
+    test "a rendition on another host is not read" do
+      master = """
+      #EXTM3U
+      #EXT-X-STREAM-INF:BANDWIDTH=4000000,RESOLUTION=1920x1080
+      https://other.b-cdn.net/chosen/video.m3u8
+      """
+
+      stub(fn
+        "/guid/playlist.m3u8", _ -> {:text, master}
+        _, _ -> {:text, @playlist}
+      end)
+
+      assert {:ok, found} = Metadata.lookup(external("https://vz-1.b-cdn.net/guid/playlist.m3u8"))
+      assert found == %{width: 1920, height: 1080, thumbnail_url: "https://vz-1.b-cdn.net/guid/thumbnail.jpg"}
+
+      assert_received {:request, "/guid/playlist.m3u8", _}
+      refute_received {:request, "/chosen/video.m3u8", _}
+    end
+
+    # Over a real socket: the stub is off and a listener waits on loopback.
+    test "no request reaches a loopback listener, and one allowed is not redirected" do
+      put_test_env(Metadata, Keyword.delete(Application.get_env(:brando, Metadata), :req_options))
+
+      receiver =
+        Brando.WebhookReceiver.start(fn
+          %{path: "/thumb.jpg"} -> {302, [{"location", "/second.jpg"}], ""}
+          _request -> {200, [{"content-type", "image/jpeg"}], "jpeg"}
+        end)
+
+      port = receiver.port
+
+      assert Metadata.lookup(external("http://127.0.0.1:#{port}/x/.b-cdn.net/y/playlist.m3u8")) ==
+               {:error, :unsupported}
+
+      assert Metadata.download("http://pinned.test:#{port}/plain.jpg") == {:error, :https_required}
+      refute_receive {:webhook_request, _}, 200
+
+      # The development override lets it reach loopback: it connects to the
+      # address checked, keeps the host name, and does not follow the 302.
+      put_test_env(Brando.Webhooks, allow_localhost: true, resolver: {Brando.WebhookTestResolver, :resolve})
+
+      assert Metadata.download("http://pinned.test:#{port}/plain.jpg") == {:ok, "jpeg", "image/jpeg"}
+      assert_receive {:webhook_request, %{method: "GET", path: "/plain.jpg", headers: %{"host" => host}}}
+      assert host == "pinned.test:#{port}"
+
+      assert Metadata.download("http://pinned.test:#{port}/thumb.jpg") == {:error, {:http, 302}}
+      assert_receive {:webhook_request, %{path: "/thumb.jpg"}}
+      refute_receive {:webhook_request, %{path: "/second.jpg"}}, 200
+    end
   end
 
   describe "a video added by URL" do

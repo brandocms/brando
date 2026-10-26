@@ -110,7 +110,7 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
         strategy: "s3",
         target: "s3://publishing-site/releases",
         cdn_url: "https://static.example.test",
-        webhook_url: "https://hooks.example.test/published",
+        webhook_url: "https://hooks.example.com/published",
         retention_count: "20",
         auto_deploy: "true"
       }
