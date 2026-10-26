@@ -1,0 +1,1 @@
+- Text typed into a rich text field of an entry form is no longer lost when the answer to an earlier change arrives before the text is sent, which left the editor showing text that the save and the recovery copy did not have.

@@ -1,4 +1,5 @@
-// Block inputs while another editor's changes arrive (field presence, #2992).
+// Block inputs while another editor's changes arrive (field presence, #2992),
+// and an entry form's rich text field while its typing is on its way.
 //
 // LiveView leaves the focused input's value alone when it patches; a rich
 // text editor's hidden input is not focused (its editor is), so it is kept
@@ -24,6 +25,14 @@ export const blockInput = el =>
 const editorInUse = (input, active) =>
   input.classList.contains('tiptap-text') && !!input.closest('[phx-hook="Brando.TipTap"]')?.contains(active)
 
+// A rich text field of an entry form (not a block's): an entry field, a
+// subform row, a var, a caption.
+const entryRichText = el =>
+  el?.tagName === 'INPUT' &&
+  !!el.classList?.contains('tiptap-text') &&
+  el.closest('[phx-hook="Brando.TipTap"]')?.dataset?.tiptapType === 'rich_text' &&
+  !el.closest('[data-block-uid]')
+
 export default function pendingInputs({ now = () => Date.now(), activeElement = () => document.activeElement } = {}) {
   const lastInput = new WeakMap()
   const typedValues = new WeakMap()
@@ -31,7 +40,7 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
 
   // This editor typed into `input`.
   const typed = input => {
-    if (!blockInput(input)) return
+    if (!blockInput(input) && !entryRichText(input)) return
     lastInput.set(input, now())
     serverValue.delete(input)
     const values = typedValues.get(input) || []
@@ -42,8 +51,28 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
 
   // LiveView is about to patch `from` with `to` (morphdom's onBeforeElUpdated).
   const patching = (from, to) => {
-    if (!blockInput(from)) return
     const active = activeElement()
+
+    // While its editor is in use, a value the server rendered before the
+    // last keystrokes (one this editor typed since the server last agreed,
+    // or any in the moments after typing) would replace text still waiting
+    // on the input's debounce, which would then send the older value. Other
+    // values are the server's (a handed-over edit), and are taken.
+    if (entryRichText(from)) {
+      if (from.value === to.value) {
+        typedValues.delete(from)
+        return
+      }
+      const own = (typedValues.get(from) || []).includes(to.value)
+      const typedAt = lastInput.get(from)
+      if (editorInUse(from, active) && (own || (typedAt && now() - typedAt < PENDING_INPUT_MS))) {
+        to.value = from.value
+        to.setAttribute('value', from.value)
+      }
+      return
+    }
+
+    if (!blockInput(from)) return
     const focused = from === active
     const richText = !focused && editorInUse(from, active)
     if (!focused && !richText) return

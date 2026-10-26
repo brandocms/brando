@@ -10,14 +10,16 @@ const { default: pendingInputs } = await import(`data:text/javascript;base64,${B
 
 const block = {}
 
-function input(value, { richText = false } = {}) {
-  const editor = { contains: el => el === editor.focus, dispatchEvent() {} }
+// `entry`: an entry form's rich text field, outside any block
+function input(value, { richText = false, entry = false } = {}) {
+  richText ||= entry
+  const editor = { contains: el => el === editor.focus, dispatchEvent() {}, dataset: { tiptapType: entry ? 'rich_text' : 'block' } }
   return {
     tagName: 'INPUT',
     value,
     editor,
     classList: { contains: name => richText && name === 'tiptap-text' },
-    closest: sel => (sel === '[data-block-uid]' ? block : sel === '[phx-hook="Brando.TipTap"]' && richText ? editor : null),
+    closest: sel => (sel === '[data-block-uid]' ? (entry ? null : block) : sel === '[phx-hook="Brando.TipTap"]' && richText ? editor : null),
     setAttribute() {},
     querySelectorAll: () => [],
   }
@@ -164,4 +166,49 @@ test('inputs outside blocks and without the focus are left to LiveView', () => {
   patch(inputs, unfocused, 'Theirs')
   inputs.left(unfocused)
   assert.equal(unfocused.value, 'Mine')
+})
+
+test("an entry's rich text keeps what its editor wrote while a reply to an earlier event arrives", () => {
+  const { clock, inputs } = setup()
+  const el = input('', { entry: true })
+  clock.active = el.editor
+  el.editor.focus = el.editor
+
+  // The answer to a change made before the typing renders the field as the
+  // server had it then, while the text waits on the input's debounce
+  el.value = '<p>Typed</p>'
+  inputs.typed(el)
+  clock.now = 1100
+  assert.equal(patch(inputs, el, '').value, '<p>Typed</p>')
+
+  // The answer to its own earlier text, however late
+  el.value = '<p>Typed more</p>'
+  inputs.typed(el)
+  clock.now = 60000
+  const to = patch(inputs, el, '<p>Typed</p>')
+  assert.equal(to.value, '<p>Typed more</p>')
+  assert.equal(to.attribute, '<p>Typed more</p>')
+})
+
+test("an entry's rich text takes a value the server has from elsewhere", () => {
+  const { clock, inputs } = setup()
+  const el = input('', { entry: true })
+  clock.active = el.editor
+  el.editor.focus = el.editor
+  el.value = '<p>Typed</p>'
+  inputs.typed(el)
+  clock.now = 1100
+  patch(inputs, el, '<p>Typed</p>')
+
+  // An edit handed over from another tab, with the editor still focused
+  clock.now = 60000
+  assert.equal(patch(inputs, el, '').value, '')
+})
+
+test("an entry's rich text takes the server's value once its editor is left", () => {
+  const { clock, inputs } = setup()
+  const el = input('<p>Typed</p>', { entry: true })
+  inputs.typed(el)
+  clock.active = null
+  assert.equal(patch(inputs, el, '<p>Saved</p>').value, '<p>Saved</p>')
 })

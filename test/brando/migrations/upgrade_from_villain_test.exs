@@ -4,10 +4,11 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
   # taken through every later upgrade template in order, as `mix brando.migrate`
   # does on the site.
   #
-  # The chain runs in a database of its own, created for this test and dropped
-  # afterwards. The templates read `information_schema` for `public` and create
-  # and drop tables across it, so a sandboxed copy of the test database, which
-  # already has today's tables, cannot stand in for the old one.
+  # The chain runs in a database of its own, created for this module and
+  # dropped afterwards, its schemas emptied before each test. The templates
+  # read `information_schema` for `public` and create and drop tables across
+  # it, so a sandboxed copy of the test database, which already has today's
+  # tables, cannot stand in for the old one.
   use ExUnit.Case, async: false
 
   import Brando.Test.Support, only: [put_test_env: 2]
@@ -30,18 +31,29 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
   # versions
   @version 20_260_101_000_000
   @copies ~w(brando_133_transfer_ref_media_data brando_175_add_updated_by)
+  # Database-wide DDL waits for checkpoints and other sessions, which on a
+  # loaded machine takes longer than a query's default 15 seconds
+  @ddl [timeout: :timer.minutes(2)]
 
-  setup do
-    config = Repo.config()
-    database = "#{config[:database]}_villain_#{Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)}"
-    storage = Keyword.put(config, :database, database)
+  # One database for the module, created once: `CREATE DATABASE` and
+  # `DROP DATABASE` are what time out on a loaded machine, not the tests.
+  # Each test empties its schemas instead.
+  setup_all do
+    database = "#{Repo.config()[:database]}_villain_#{Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)}"
+    storage = Repo.config() |> Keyword.put(:database, database) |> Keyword.merge(@ddl)
 
     :ok = Ecto.Adapters.Postgres.storage_up(storage)
+    # A connection the pool has not closed yet does not hold the drop up
+    on_exit(fn -> :ok = Ecto.Adapters.Postgres.storage_down(Keyword.put(storage, :force_drop, true)) end)
 
+    %{database: database}
+  end
+
+  setup %{database: database} do
     # The test repo's own connection settings (parsed from its url, which CI
     # gives credentials in), pointed at the new database and out of the sandbox
     repo_config =
-      config
+      Repo.config()
       |> Keyword.drop([:ownership_pool, :pool_size, :pool_overflow])
       |> Keyword.merge(
         name: nil,
@@ -56,19 +68,22 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
 
     Repo.put_dynamic_repo(repo)
 
+    # What the previous test's chain made, dropped: `public` starts empty, as
+    # in a new database
+    for [schema] <- rows("SELECT nspname FROM pg_namespace WHERE nspname !~ '^pg_' AND nspname <> 'information_schema'"),
+        do: Repo.query!(~s(DROP SCHEMA "#{schema}" CASCADE), [], @ddl)
+
+    Repo.query!("CREATE SCHEMA public", [], @ddl)
+
     # Templates that walk the site's Blueprints (`Brando.Blueprint.list_blueprints/0`)
     # would find the test app's, whose tables this database never had. The
     # Villain content here lives in Brando's own tables, which the templates
     # find through `information_schema`.
     otp_app = Application.get_env(:brando, :otp_app)
     Application.put_env(:brando, :otp_app, :eex)
+    on_exit(fn -> Application.put_env(:brando, :otp_app, otp_app) end)
 
-    on_exit(fn ->
-      Application.put_env(:brando, :otp_app, otp_app)
-      :ok = Ecto.Adapters.Postgres.storage_down(storage)
-    end)
-
-    copies = Path.join(System.tmp_dir!(), "#{database}_migrations")
+    copies = Path.join(System.tmp_dir!(), "#{database}_migrations_#{System.unique_integer([:positive])}")
     File.mkdir_p!(copies)
     on_exit(fn -> File.rm_rf!(copies) end)
 

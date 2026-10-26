@@ -243,6 +243,7 @@ defmodule BrandoAdmin.AssistantAppliedLiveTest do
       Map.merge(c, %{draft: draft, norsk: norsk, ops: ops})
     end
 
+    @tag :capture_log
     test "a published entry links to its public URL in its own language, a draft to its preview", c do
       {view, _} = open(c, c.ops)
       host = Brando.Utils.hostname()

@@ -561,6 +561,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
       key
     end
 
+    @tag :capture_log
     test "renders the proposed page and its saved version without saving", %{conn: conn} = c do
       {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
       identity = "Brando.Pages.Page:#{c.identity.id}"
@@ -847,6 +848,8 @@ defmodule BrandoAdmin.AssistantLiveTest do
 
     defp blocks(c), do: length(Catalog.load!(Page, c.identity.id, c.current_user).entry_blocks)
 
+    # Its preview opens on the default view, which fails (see test_helper.exs)
+    @tag :capture_log
     test "the Assistant counts them, lists them and applies one after review", %{conn: conn} = c do
       {:ok, view, _} = live(conn, "/admin/assistant")
       refute has_element?(view, ".assistant-connected-link")
