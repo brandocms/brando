@@ -169,7 +169,7 @@ defmodule BrandoAdmin.AccountAndCodeAuthorityTest do
       module = Factory.insert(:module, code: "<p>plain</p>")
       {:ok, [exported]} = Brando.Content.list_modules(%{filter: %{ids: [module.id]}, preload: [:vars, :refs, :children]})
 
-      [decoded] =
+      {:ok, [decoded]} =
         [exported]
         |> Brando.Content.prepare_modules_for_export(superuser.id)
         |> Brando.Content.serialize_modules()
@@ -204,7 +204,7 @@ defmodule BrandoAdmin.AccountAndCodeAuthorityTest do
       encoded =
         [exported] |> Brando.Content.prepare_modules_for_export(superuser.id) |> Brando.Content.serialize_modules()
 
-      decoded = Brando.Content.deserialize_modules(encoded)
+      {:ok, decoded} = Brando.Content.deserialize_modules(encoded)
 
       assert {:error, :forbidden} = Brando.Content.import_modules(decoded, editor)
       assert {:ok, [{:ok, _}]} = Brando.Content.import_modules(decoded, superuser)

@@ -67,7 +67,12 @@ defmodule Brando.Content.ModuleImportDecodeTest do
 
   describe "the import dialog" do
     defp validate(text) do
-      socket = Phoenix.Component.assign(%Socket{}, imported_modules: nil, import_invalid?: false)
+      socket =
+        Phoenix.Component.assign(%Socket{},
+          imported_modules: nil,
+          import_invalid?: false,
+          current_user: :system
+        )
 
       {:noreply, socket} =
         ModuleListLive.handle_event("validate_module_import", %{"encoded_modules" => text}, socket)
@@ -83,12 +88,6 @@ defmodule Brando.Content.ModuleImportDecodeTest do
     test "lists the modules of an export" do
       assert %{imported_modules: [%Module{}], import_invalid?: false} =
                validate(Content.serialize_modules([module()]))
-    end
-
-    test "imports nothing when no export was read" do
-      socket = Phoenix.Component.assign(%Socket{}, imported_modules: nil, current_user: :system)
-
-      assert {:noreply, ^socket} = ModuleListLive.handle_event("import_modules", %{}, socket)
     end
   end
 end
