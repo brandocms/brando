@@ -67,6 +67,16 @@ defmodule BrandoAdmin.Components.Assets.ProviderVideoUploadTest do
     assert status(video) == :uploading
   end
 
+  test "refuses a token signed in another environment", %{user: user, video: video} do
+    # Signed with another environment's prefix; this test's own has none
+    put_test_env(:tenancy_mode, :multi)
+    token = Brando.Tenant.with_prefix("tenant_site_other", fn -> ProviderVideoUpload.upload_token(video, user, "ref-1") end)
+    put_test_env(:tenancy_mode, :none)
+
+    assert :error = ProviderVideoUpload.complete(user, %{"request_ref" => "ref-1", "upload_token" => token})
+    assert status(video) == :uploading
+  end
+
   test "refuses a token naming someone else's video", %{user: user} do
     other = Factory.insert(:random_user)
 

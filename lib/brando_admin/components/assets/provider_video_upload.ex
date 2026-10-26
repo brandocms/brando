@@ -15,8 +15,8 @@ defmodule BrandoAdmin.Components.Assets.ProviderVideoUpload do
   #     the video stays in the library only.
   #
   # The browser never names the video it completes. `ready_payload/4` signs,
-  # into the destination it pushes, a token naming the video, the user and the
-  # request (`upload_token`); the hook sends it back with `request_ref`, and
+  # into the destination it pushes, a token naming the video, the user, the
+  # request and the environment (`upload_token`); the hook sends it back with `request_ref`, and
   # `complete/2` takes the video only from a token this user was given for
   # that request, for a video they created.
   #   * `video_upload_progress`, `upload_error`: nothing; both show
@@ -141,7 +141,14 @@ defmodule BrandoAdmin.Components.Assets.ProviderVideoUpload do
   Signs the upload of `video`, started by `user` for `request_ref`.
   """
   def upload_token(video, user, request_ref) do
-    Phoenix.Token.sign(Brando.endpoint(), @token_salt, %{video_id: video.id, user_id: user_id(user), ref: request_ref})
+    Phoenix.Token.sign(Brando.endpoint(), @token_salt, %{
+      video_id: video.id,
+      user_id: user_id(user),
+      ref: request_ref,
+      # Video ids are per environment and users are not: a token from one
+      # environment would otherwise name another's video with the same id.
+      prefix: Brando.Tenant.current_prefix()
+    })
   end
 
   @doc """
@@ -173,7 +180,9 @@ defmodule BrandoAdmin.Components.Assets.ProviderVideoUpload do
   defp uploaded_video(nil, _token, _request_ref, _preload), do: :error
 
   defp uploaded_video(user_id, token, request_ref, preload) do
-    with {:ok, %{video_id: video_id, user_id: ^user_id, ref: ^request_ref}} <-
+    prefix = Brando.Tenant.current_prefix()
+
+    with {:ok, %{video_id: video_id, user_id: ^user_id, ref: ^request_ref, prefix: ^prefix}} <-
            Phoenix.Token.verify(Brando.endpoint(), @token_salt, token, max_age: @token_max_age),
          {:ok, %{creator_id: ^user_id} = video} <-
            Brando.Videos.get_video(%{matches: %{id: video_id}, preload: preload}) do
