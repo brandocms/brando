@@ -94,10 +94,52 @@ defmodule Brando.Plug.LivePreviewTest do
 
     assert conn.halted == true
     assert conn.resp_body =~ "</main><!-- BRANDO LIVE PREVIEW -->"
+    assert conn.resp_body =~ ~r{<script src="/__livepreview/client.js\?vsn=[0-9a-f]+"></script>}
 
-    # The preview's socket token is for this session, which it lasts as long as
-    [_, socket_token] = Regex.run(~r/<meta name="user_token" content="([^"]+)">/, conn.resp_body)
+    # The page holds editor markup, so its socket token opens only this
+    # preview's channel, for this session; the admin socket token stays out
+    refute conn.resp_body =~ ~s(name="user_token")
+    [_, socket_token] = Regex.run(~r/data-token="([^"]+)"/, conn.resp_body)
     session_id = Brando.Users.token_id(token)
-    assert {:ok, %{session_id: ^session_id}} = Brando.Users.verify_socket_token(socket_token)
+    assert {:error, :invalid} = Brando.Users.verify_socket_token(socket_token)
+
+    assert {:ok, %{session_id: ^session_id, key: "LIVEPREVIEWKEY"}} =
+             Brando.LivePreview.SocketToken.verify(socket_token)
+
+    refute conn.resp_body =~ Brando.Users.build_socket_token(user, session_id)
+
+    assert get_resp_header(conn, "content-security-policy") == ["frame-ancestors 'self'; base-uri 'self'"]
+  end
+
+  test "the preview key is escaped into the page", %{user: user} do
+    key = ~s(K'"></script><b id="x">)
+    Brando.LivePreview.store_cache(key, "<html><body><main>test</main></body></html>")
+    on_exit(fn -> Cachex.del(:cache, "__live_preview__" <> key) end)
+
+    conn =
+      build_conn(:get, "/__livepreview?key=#{URI.encode_www_form(key)}")
+      |> init_test_session(%{user_token: Brando.Users.generate_user_session_token(user)})
+      |> LivePreview.call([])
+
+    assert conn.status == 200
+    refute conn.resp_body =~ key
+    assert conn.resp_body =~ ~s(data-key="K&#39;&quot;&gt;&lt;/script&gt;&lt;b id=&quot;x&quot;&gt;")
+  end
+
+  test "projects add directives to the preview's Content-Security-Policy" do
+    put_test_env(:live_preview_content_security_policy, "script-src 'self' https://cdn.example.com")
+    conn = build_conn(:get, "/__livepreview?key=missing") |> LivePreview.call([])
+
+    assert get_resp_header(conn, "content-security-policy") == [
+             "frame-ancestors 'self'; base-uri 'self'; script-src 'self' https://cdn.example.com"
+           ]
+  end
+
+  test "the preview's script is served from a path a script-src policy can allow" do
+    conn = build_conn(:get, "/__livepreview/client.js?vsn=x") |> LivePreview.call([])
+
+    assert conn.status == 200
+    assert get_resp_header(conn, "content-type") == ["text/javascript; charset=utf-8"]
+    assert conn.resp_body =~ "brando-live-preview"
   end
 end

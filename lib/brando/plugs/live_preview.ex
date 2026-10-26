@@ -1,6 +1,22 @@
 defmodule Brando.Plug.LivePreview do
   @moduledoc """
-  Router for live-preview
+  Serves live previews at `/__livepreview?key=<key>`: the cached page of an
+  unsaved entry, with the script that keeps it up to date.
+
+  The page holds the site's own markup, editor content included, on the admin
+  origin. Its script connects to the admin socket with a token good only for
+  this preview's channel (`Brando.LivePreview.SocketToken`), never the
+  viewer's admin socket token; it gets a fresh one from
+  `/__livepreview/token?key=<key>` when it has to connect again. The script
+  itself is served from `/__livepreview/client.js`, so a policy without
+  `'unsafe-inline'` allows it.
+
+  Every response carries a Content-Security-Policy with
+  `frame-ancestors 'self'` and `base-uri 'self'`. Add directives with
+
+      config :brando, :live_preview_content_security_policy, "script-src 'self' https://cdn.example.com"
+
+  See the Live preview guide.
   """
 
   @behaviour Plug
@@ -12,10 +28,19 @@ defmodule Brando.Plug.LivePreview do
   @external_resource Application.app_dir(:brando, "priv/static/js/block_patch.js")
   @external_resource Application.app_dir(:brando, "priv/static/js/livepreview.js")
 
-  @phoenix_js File.read!(Application.app_dir(:phoenix, "priv/static/phoenix.js"))
-  @morphdom_js File.read!(Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js"))
-  @block_patch_js File.read!(Application.app_dir(:brando, "priv/static/js/block_patch.js"))
-  @livepreview_js File.read!(Application.app_dir(:brando, "priv/static/js/livepreview.js"))
+  @client_js Enum.map_join(
+               [
+                 Application.app_dir(:phoenix, "priv/static/phoenix.js"),
+                 Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js"),
+                 Application.app_dir(:brando, "priv/static/js/block_patch.js"),
+                 Application.app_dir(:brando, "priv/static/js/livepreview.js")
+               ],
+               "\n;\n",
+               &File.read!/1
+             )
+  @client_vsn :sha256 |> :crypto.hash(@client_js) |> Base.encode16(case: :lower) |> binary_part(0, 16)
+
+  @base_csp "frame-ancestors 'self'; base-uri 'self'"
 
   @override_css """
   html.is-updated-live-preview [data-moonwalk],
@@ -40,9 +65,47 @@ defmodule Brando.Plug.LivePreview do
 
   def init(opts), do: opts
 
+  def call(%Plug.Conn{path_info: ["__livepreview", "client.js"]} = conn, _) do
+    conn
+    |> put_resp_content_type("text/javascript")
+    |> put_resp_header("x-content-type-options", "nosniff")
+    |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
+    |> send_resp(200, @client_js)
+    |> halt()
+  end
+
+  def call(%Plug.Conn{path_info: ["__livepreview", "token"]} = conn, _) do
+    key = preview_key(conn)
+
+    conn =
+      conn
+      |> put_resp_header("cache-control", "private, no-store")
+      |> put_resp_header("x-content-type-options", "nosniff")
+      |> fetch_session()
+      |> BrandoAdmin.UserAuth.fetch_current_user(nil)
+
+    user = conn.assigns[:current_user]
+
+    with true <- is_binary(key) and key != "",
+         %{id: user_id} <- user,
+         :ok <- Brando.Authorization.Preview.authorize(key, user_id),
+         token when is_binary(token) <- preview_socket_token(conn, key) do
+      conn
+      |> put_resp_content_type("application/json")
+      |> send_resp(200, Jason.encode!(%{token: token}))
+      |> halt()
+    else
+      _ -> conn |> put_resp_content_type("application/json") |> send_resp(403, ~s({"error":"forbidden"})) |> halt()
+    end
+  end
+
   def call(%Plug.Conn{path_info: ["__livepreview" | _suffix]} = conn, _) do
-    key = conn.query_string && Plug.Conn.Query.decode(conn.query_string)["key"]
-    conn = put_resp_header(conn, "cache-control", "private, no-store")
+    key = preview_key(conn)
+
+    conn =
+      conn
+      |> put_resp_header("cache-control", "private, no-store")
+      |> put_resp_header("content-security-policy", content_security_policy())
 
     if Brando.Authorization.enabled?() do
       conn = conn |> fetch_session() |> BrandoAdmin.UserAuth.fetch_current_user(nil)
@@ -59,6 +122,31 @@ defmodule Brando.Plug.LivePreview do
   end
 
   def call(conn, _), do: conn
+
+  @doc """
+  The Content-Security-Policy of preview responses: `frame-ancestors 'self'`
+  and `base-uri 'self'`, followed by the directives in the
+  `:live_preview_content_security_policy` config, if any.
+  """
+  @spec content_security_policy() :: String.t()
+  def content_security_policy do
+    case Brando.config(:live_preview_content_security_policy) do
+      extra when is_binary(extra) and extra != "" -> @base_csp <> "; " <> String.trim(extra)
+      _ -> @base_csp
+    end
+  end
+
+  defp preview_key(conn), do: conn.query_string && Plug.Conn.Query.decode(conn.query_string)["key"]
+
+  # Signed in, as the preview's socket requires; nil without a session
+  defp preview_socket_token(conn, key) do
+    with %{id: _} = user <- conn.assigns[:current_user],
+         session_id when is_integer(session_id) <- Brando.Users.token_id(get_session(conn, :user_token)) do
+      Brando.LivePreview.SocketToken.build(user, session_id, key)
+    else
+      _ -> nil
+    end
+  end
 
   defp serve(conn, key) do
     # Before the HTML: see `Brando.LivePreview.page_state/1`
@@ -84,20 +172,12 @@ defmodule Brando.Plug.LivePreview do
           |> BrandoAdmin.UserAuth.fetch_current_user(nil)
 
         try do
-          # Signed in, as the preview's socket requires; nil fails the preview
-          socket_token = BrandoAdmin.UserAuth.socket_token(conn_copy) || raise "no admin session"
+          socket_token = preview_socket_token(conn_copy, key) || raise "no admin session"
 
           inject_html = """
           <!-- BRANDO LIVE PREVIEW -->
-          <meta name="user_token" content="#{socket_token}">
-          <script>
-          var livePreviewKey = '#{key}';
-          var livePreviewVersion = #{generation};
-          #{@phoenix_js}
-          #{@morphdom_js}
-          #{@block_patch_js}
-          #{@livepreview_js}
-          </script>
+          <meta name="brando-live-preview" data-key="#{attribute(key)}" data-version="#{generation}" data-token="#{attribute(socket_token)}">
+          <script src="/__livepreview/client.js?vsn=#{@client_vsn}"></script>
           <style>
           #{@override_css}
           </style>
@@ -122,4 +202,6 @@ defmodule Brando.Plug.LivePreview do
         end
     end
   end
+
+  defp attribute(value), do: value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 end

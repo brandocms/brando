@@ -121,7 +121,7 @@ defmodule Brando.Authorization.RealtimeTest do
   test "an iframe that joins with the generation it was served gets no replay", c do
     conn = preview_conn(c.editor, c.key)
     version = Brando.LivePreview.page_state(c.key).generation
-    assert conn.resp_body =~ "var livePreviewVersion = #{version};"
+    assert conn.resp_body =~ ~s(data-version="#{version}")
 
     socket = admin_socket(c.editor, "preview")
 

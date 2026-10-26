@@ -11,17 +11,16 @@ const load = async (page, bodyHtml, version = 1) => {
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.setContent(
-    `<html><head><meta name="user_token" content="t"></head><body>${bodyHtml}</body></html>`
+    `<html><head><meta name="brando-live-preview" data-key="test" data-version="${version}" data-token="t"></head><body>${bodyHtml}</body></html>`
   )
-  await page.evaluate((version) => {
-    window.livePreviewKey = 'test'
-    window.livePreviewVersion = version
+  await page.evaluate(() => {
     window.__lp = { handlers: {}, patched: [] }
     // A join that succeeds, as the page's setup on join depends on it
     const receipt = { receive: (status, callback) => (status === 'ok' && callback(), receipt) }
     window.Phoenix = {
       Socket: class {
         connect() {}
+        onError() {}
         channel(_topic, params) {
           window.__lp.joinParams = params
           return {
@@ -40,7 +39,7 @@ const load = async (page, bodyHtml, version = 1) => {
         elements: detail.elements.map((el) => el.tagName),
       })
     })
-  }, version)
+  })
   await page.addScriptTag({ path: path.join(JS, 'morphdom-umd.min.js') })
   await page.addScriptTag({ path: path.join(JS, 'block_patch.js') })
   await page.addScriptTag({ path: path.join(JS, 'livepreview.js') })

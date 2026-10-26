@@ -23,14 +23,16 @@ defmodule BrandoAdmin.UserChannel do
   """
   def join("user:" <> user_id, _params, socket) do
     Realtime.allow_sandbox(socket)
-    assigned_user_id = socket.assigns.user_id
+    # nil on a live-preview socket, which joins nothing but its preview
+    assigned_user_id = socket.assigns[:user_id]
 
     vsn =
       Brando.otp_app()
       |> Application.spec(:vsn)
       |> to_string()
 
-    if to_string(assigned_user_id) == user_id and BrandoAdmin.AdminSocket.session_valid?(socket) and
+    if is_integer(assigned_user_id) and to_string(assigned_user_id) == user_id and
+         BrandoAdmin.AdminSocket.session_valid?(socket) and
          Realtime.authorize_account(assigned_user_id) == :ok do
       Realtime.subscribe()
       # The channel hears its topic only once join/3 has returned
