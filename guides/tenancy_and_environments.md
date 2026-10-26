@@ -945,13 +945,16 @@ form supports:
 
 An rsync target is a remote destination, `[user@]host:/absolute/path`. The
 deploy mirrors the build there with `--delete`, as the server's user and with
-its SSH identity, so local paths, `host::module` and `rsync://` targets, and
-users or hosts beginning with `-` are refused, both when the settings are
-saved and when a build deploys. To limit the hosts anyone who may deploy can
-choose, list them in config (admins cannot change it):
+its SSH identity, so local paths, `localhost` and loopback addresses, paths
+with `..`, `host::module` and `rsync://` targets, and users or hosts beginning
+with `-` are refused, both when the settings are saved and when a build
+deploys. To limit the destinations anyone who may deploy can choose, list
+them in config (admins cannot change it); a target must be one of them, or
+lie under one that ends in `/`:
 
 ```elixir
-config :brando, Brando.Sites.DeployConfig, rsync_hosts: ["static.example.com"]
+config :brando, Brando.Sites.DeployConfig,
+  rsync_targets: ["deploy@static.example.com:/srv/sites/"]
 ```
 
 Generated output is persistent at

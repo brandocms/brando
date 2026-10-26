@@ -13,14 +13,18 @@ defmodule Brando.Sites.DeployConfig do
 
   An rsync deploy mirrors the build with `--delete` as the server's user and
   SSH identity, and anyone who may deploy can set the target, so it is held
-  to that remote form: no local paths, no rsync daemon or URL syntax, and no
-  user or host that rsync or ssh could read as an option. An operator can
-  further limit the hosts in config, which no admin can edit:
+  to that remote form: no local paths, no loopback hosts, no `..` in the
+  path, no rsync daemon or URL syntax, and no user or host that rsync or ssh
+  could read as an option. An operator can further limit targets to the
+  destinations they list, in config no admin can edit; a target must be one
+  of them or lie under one ending in `/`:
 
-      config :brando, Brando.Sites.DeployConfig, rsync_hosts: ["static.example.com"]
+      config :brando, Brando.Sites.DeployConfig,
+        rsync_targets: ["deploy@static.example.com:/srv/sites/"]
   """
 
   use Ecto.Schema
+  use Gettext, backend: Brando.Gettext
 
   import Ecto.Changeset
 
@@ -61,7 +65,7 @@ defmodule Brando.Sites.DeployConfig do
       {:s3, target} when is_binary(target) ->
         case URI.parse(target) do
           %URI{scheme: "s3", host: host} when is_binary(host) and host != "" -> changeset
-          _invalid -> add_error(changeset, :target, "must use s3://bucket/optional-prefix")
+          _invalid -> add_error(changeset, :target, gettext("must use s3://bucket/optional-prefix"))
         end
 
       {:rsync, target} when is_binary(target) ->
@@ -82,23 +86,62 @@ defmodule Brando.Sites.DeployConfig do
 
   @doc """
   Whether `target` is an rsync target a deploy may use: the remote
-  `[user@]host:/absolute/path` form, on a host the operator allows (if they
-  limit them). Checked when the config is saved and again before each
-  deploy, since builds snapshot the config.
+  `[user@]host:/absolute/path` form, on a host other than this one, and
+  among the operator's `rsync_targets` if they list them. Checked when the
+  config is saved and again before each deploy, since builds snapshot the
+  config.
   """
   @spec valid_rsync_target?(term()) :: boolean()
   def valid_rsync_target?(target), do: is_binary(target) and is_nil(rsync_target_error(target))
 
   defp rsync_target_error(target) do
     case Regex.named_captures(@rsync_target, target) do
+      %{"host" => host, "path" => path} ->
+        cond do
+          ".." in String.split(path, "/") -> gettext("must be an absolute path without ..")
+          local_host?(host) -> gettext("must be on another server")
+          not listed_target?(target) -> gettext("must be a destination this installation deploys to")
+          true -> nil
+        end
+
       nil ->
-        "must be a remote destination, user@host:/absolute/path"
+        gettext("must be a remote destination, user@host:/absolute/path")
+    end
+  end
 
-      %{"host" => host} ->
-        hosts = Application.get_env(:brando, __MODULE__, [])[:rsync_hosts]
+  # This server under another name. An address in a short or octal form
+  # (`127.1`, `0177.0.0.1`), which ssh's resolver reads as loopback, is no
+  # target either.
+  defp local_host?(host) do
+    host = host |> String.trim_leading("[") |> String.trim_trailing("]") |> String.downcase()
+    address = String.to_charlist(host)
 
-        if is_list(hosts) and String.downcase(host) not in Enum.map(hosts, &String.downcase/1),
-          do: "must be on a host this installation deploys to"
+    cond do
+      host == "localhost" or String.ends_with?(host, ".localhost") -> true
+      match?({:ok, _}, :inet.parse_address(address)) -> local_address?(:inet.parse_strict_address(address))
+      true -> false
+    end
+  end
+
+  defp local_address?({:ok, {a, _, _, _}}), do: a in [0, 127]
+  defp local_address?({:ok, {0, 0, 0, 0, 0, 0, 0, n}}), do: n in [0, 1]
+  defp local_address?({:ok, {0, 0, 0, 0, 0, 0xFFFF, high, _}}), do: div(high, 256) in [0, 127]
+  defp local_address?({:ok, _ipv6}), do: false
+  defp local_address?({:error, _}), do: true
+
+  defp listed_target?(target) do
+    case Application.get_env(:brando, __MODULE__, [])[:rsync_targets] do
+      targets when is_list(targets) ->
+        Enum.any?(targets, fn
+          listed when is_binary(listed) ->
+            target == listed or (String.ends_with?(listed, "/") and String.starts_with?(target, listed))
+
+          _listed ->
+            false
+        end)
+
+      _unlimited ->
+        true
     end
   end
 

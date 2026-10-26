@@ -21,6 +21,8 @@ defmodule Brando.Worker.SSGDeploy do
       :ok
     else
       nil -> {:cancel, :build_not_found}
+      # The build's target stays what it was: retrying cannot help
+      {:error, :invalid_deploy_target} -> {:cancel, :invalid_deploy_target}
       {:error, reason} -> {:error, reason}
     end
   end

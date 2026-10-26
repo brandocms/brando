@@ -20647,11 +20647,36 @@ msgid_plural "moved blocks"
 msgstr[0] "flyttet blokk"
 msgstr[1] "flyttede blokker"
 
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "must be a destination this installation deploys to"
+msgstr "må være et mål denne installasjonen publiserer til"
+
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "must be a remote destination, user@host:/absolute/path"
+msgstr "må være et eksternt mål, bruker@vert:/absolutt/sti"
+
 msgid "must be a repository-relative Markdown file"
 msgstr "må være en Markdown-fil med sti fra repositoriets rot"
 
 msgid "must be a valid branch ref"
 msgstr "må være en gyldig grenreferanse"
+
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "must be an absolute path without .."
+msgstr "må være en absolutt sti uten .."
+
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "must be on another server"
+msgstr "må være på en annen server"
+
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "must use s3://bucket/optional-prefix"
+msgstr "må bruke s3://bøtte/valgfritt-prefiks"
 
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
