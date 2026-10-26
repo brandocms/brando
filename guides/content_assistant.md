@@ -346,8 +346,8 @@ or client wrote, not an editor:
   brace could open a tag there.
 
 A value that fails is a problem on the proposal. A proposal with problems
-cannot be approved, and one with unsafe text shows no page preview and
-cannot be shared.
+cannot be approved, shows no page preview and cannot be shared: leave out
+the changes with problems, or ask for new ones.
 
 ## Limits
 

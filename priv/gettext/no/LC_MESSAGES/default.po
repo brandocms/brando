@@ -1191,6 +1191,11 @@ msgstr "Et telefonnummer"
 msgid "A program on this computer. Any program here can claim a name: allow it only if you started it."
 msgstr "Et program på denne datamaskinen. Ethvert program her kan gi seg ut for å være hva som helst: tillat det bare hvis du startet det selv."
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "A proposal with problems cannot be shared."
+msgstr "Et forslag med problemer kan ikke deles."
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -17113,6 +17118,11 @@ msgstr "Den andre fanen ble lukket"
 msgid "The page could not be rendered: %{message}"
 msgstr "Siden kunne ikke rendres: %{message}"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The page is shown once the proposal has no problems. Leave out the changes with problems, or ask for new ones."
+msgstr "Siden vises når forslaget ikke har problemer. Utelat endringene med problemer, eller be om nye."
+
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
 msgid "The passkey could not be added. Try again."
@@ -17172,16 +17182,6 @@ msgstr "Forhåndsvisningen manglet noen endringer, så den ble oppdatert."
 #, elixir-autogen, elixir-format
 msgid "The previous preview is still open. Check the target configuration and your access, then try again."
 msgstr "Den forrige forhåndsvisningen er fortsatt åpen. Kontroller målkonfigurasjonen og tilgangen din, og prøv igjen."
-
-#: lib/brando_admin/live/ai/assistant_live.ex
-#, elixir-autogen, elixir-format
-msgid "The proposal holds unsafe text, so its page cannot be shared."
-msgstr "Forslaget inneholder utrygg tekst, så siden kan ikke deles."
-
-#: lib/brando_admin/live/ai/assistant_live.ex
-#, elixir-autogen, elixir-format
-msgid "The proposal holds unsafe text, so its page is not shown. Review the changes in the entry card."
-msgstr "Forslaget inneholder utrygg tekst, så siden vises ikke. Se gjennom endringene i kortet for oppføringen."
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format

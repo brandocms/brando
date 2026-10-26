@@ -1189,6 +1189,11 @@ msgstr ""
 msgid "A program on this computer. Any program here can claim a name: allow it only if you started it."
 msgstr ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "A proposal with problems cannot be shared."
+msgstr ""
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -17109,6 +17114,11 @@ msgstr ""
 msgid "The page could not be rendered: %{message}"
 msgstr ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The page is shown once the proposal has no problems. Leave out the changes with problems, or ask for new ones."
+msgstr ""
+
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
 msgid "The passkey could not be added. Try again."
@@ -17167,16 +17177,6 @@ msgstr ""
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "The previous preview is still open. Check the target configuration and your access, then try again."
-msgstr ""
-
-#: lib/brando_admin/live/ai/assistant_live.ex
-#, elixir-autogen, elixir-format
-msgid "The proposal holds unsafe text, so its page cannot be shared."
-msgstr ""
-
-#: lib/brando_admin/live/ai/assistant_live.ex
-#, elixir-autogen, elixir-format
-msgid "The proposal holds unsafe text, so its page is not shown. Review the changes in the entry card."
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex

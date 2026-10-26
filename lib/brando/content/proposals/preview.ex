@@ -30,8 +30,9 @@ defmodule Brando.Content.Proposals.Preview do
 
   Returns `{:ok, %{key: key, html: html}}`, `{:error, :not_created}` for the
   baseline of an entry the proposal creates, `{:error, :no_preview_target}`
-  when the content type has no preview target, `{:error, :unsafe_text}` for
-  the proposed version of a proposal with unsafe text, or `{:error, message}`.
+  when the content type has no preview target, `{:error, :problems}` for the
+  proposed version of a proposal with problems (`Proposals.previewable?/2`),
+  or `{:error, message}`.
   """
   @spec render(Proposals.Proposal.t(), Proposals.Proposal.target(), term(), keyword()) ::
           {:ok, %{key: String.t(), html: String.t()}} | {:error, atom() | String.t()}
@@ -64,8 +65,9 @@ defmodule Brando.Content.Proposals.Preview do
   @spec discard([String.t()]) :: :ok
   def discard(keys), do: Enum.each(keys, &LivePreview.cleanup_cache/1)
 
-  # Text the guard reports as unsafe is not rendered: the preview runs in the
-  # reviewer's browser before anyone approves it.
+  # A proposal with problems is not rendered: the preview runs in the
+  # reviewer's browser before anyone approves it, and text the checks could
+  # not reach may be in it.
   defp renderable(proposal, target, version, actor) do
     schema =
       case target do
@@ -77,7 +79,7 @@ defmodule Brando.Content.Proposals.Preview do
       !schema -> {:error, dgettext("content_proposals", "This entry is not part of the proposal.")}
       version == :before and match?({:new, _}, target) -> {:error, :not_created}
       !LivePreview.has_live_preview_target(schema) -> {:error, :no_preview_target}
-      version == :proposed and Proposals.unsafe_text?(proposal, actor) -> {:error, :unsafe_text}
+      version == :proposed and not Proposals.previewable?(proposal, actor) -> {:error, :problems}
       true -> :ok
     end
   end

@@ -113,17 +113,22 @@ defmodule Brando.Content.Proposals do
   end
 
   @doc """
-  Whether `proposal` holds text the current checks report as unsafe. The
-  operations are checked again: a proposal stored before a check was added
-  or tightened keeps its old problem list.
+  Whether the proposed version of `proposal` may be rendered for review:
+  only when it has no problems. With a problem, an operation's text may not
+  have been checked (a block that is not where it should be), while the page
+  would still be built from it. The operations are checked again for unsafe
+  text: a proposal stored before a check was added or tightened keeps its
+  old problem list.
   """
-  @spec unsafe_text?(Proposal.t(), term()) :: boolean()
-  def unsafe_text?(%Proposal{} = proposal, actor) do
+  @spec previewable?(Proposal.t(), term()) :: boolean()
+  def previewable?(%Proposal{problems: problems} = proposal, actor) when problems in [nil, []] do
     case Error.protect(fn -> operation_problems(proposal, actor) end) do
-      {:ok, problems} -> Enum.any?((proposal.problems || []) ++ problems, &(&1.code == :unsafe_text))
-      {:error, _} -> true
+      {:ok, problems} -> not Enum.any?(problems, &(&1.code == :unsafe_text))
+      {:error, _} -> false
     end
   end
+
+  def previewable?(%Proposal{}, _actor), do: false
 
   defp operation_problems(proposal, actor) do
     {problems, _trees} =
@@ -1099,7 +1104,7 @@ defmodule Brando.Content.Proposals do
   # opening brace at all, written out or as a character reference: one could
   # open a tag once the value is rendered (an attribute's references decoded,
   # Markdown's escapes, identifier attributes removed) or put next to another.
-  @brace ~r/\{|&(#0*123|#x0*7b|lbrace|lcub)/i
+  @brace ~r/\{|&(#0*123(?![0-9])|#x0*7b(?![0-9a-f])|lbrace|lcub)/i
   defp liquid_problem(text, name) do
     if Regex.match?(@brace, text) or String.contains?(HtmlEntities.decode(text), "{"),
       do: dgettext("content_proposals", "%{name} cannot hold a {, which the page could read as Liquid.", name: name)
@@ -2121,17 +2126,30 @@ defmodule Brando.Content.Proposals do
   @spec approve(Ecto.UUID.t(), integer(), term()) :: {:ok, Proposal.t()} | {:error, String.t()}
   def approve(id, version, actor) do
     Error.protect(fn ->
-      case Repo.transaction(fn -> approve!(id, version, actor) end) do
-        {:ok, record} ->
-          rebuild!(record, actor)
-
-        # The checks found problems the stored list lacks: store them, so the
-        # review shows what to resolve.
-        {:error, {:problems, problems}} ->
-          Repo.update_all(from(r in Record, where: r.id == ^id), set: [problems: Enum.map(problems, &encode_problem/1)])
-          Error.fail!(dgettext("content_proposals", "Resolve every blocking problem before applying."))
-      end
+      record = record!(id, actor)
+      reviewable!(record, version, "pending")
+      if record.problems == [], do: record |> rebuild!(actor) |> recheck!(record, actor)
+      {:ok, record} = Repo.transaction(fn -> approve!(id, version, actor) end)
+      rebuild!(record, actor)
     end)
+  end
+
+  # The operations are checked again as a proposal is approved and applied:
+  # one stored before a check was added or tightened would otherwise keep its
+  # old, empty list. Problems found are stored, so the review shows what to
+  # resolve, and an approval is withdrawn.
+  defp recheck!(proposal, record, actor) do
+    case operation_problems(proposal, actor) do
+      [] ->
+        :ok
+
+      problems ->
+        Repo.update_all(from(r in Record, where: r.id == ^record.id),
+          set: [problems: Enum.map(problems, &encode_problem/1), status: "pending", approved_at: nil]
+        )
+
+        Error.fail!(dgettext("content_proposals", "Resolve every blocking problem before applying."))
+    end
   end
 
   defp approve!(id, version, actor) do
@@ -2141,15 +2159,7 @@ defmodule Brando.Content.Proposals do
     if record.problems != [],
       do: Error.fail!(dgettext("content_proposals", "Resolve every blocking problem before applying."))
 
-    proposal = rebuild!(record, actor)
-    current!(proposal, actor)
-
-    # Checked again as the proposal is approved: one stored before a check
-    # was added or tightened would otherwise keep its old, empty list.
-    case operation_problems(proposal, actor) do
-      [] -> :ok
-      problems -> Repo.rollback({:problems, problems})
-    end
+    record |> rebuild!(actor) |> current!(actor)
 
     record
     |> Changeset.change(status: "approved", approved_at: DateTime.utc_now())
@@ -2393,7 +2403,9 @@ defmodule Brando.Content.Proposals do
           {receipt(id, actor), []}
         else
           reviewable!(record, version, "approved")
-          record |> rebuild!(actor) |> apply!(actor, opts)
+          proposal = rebuild!(record, actor)
+          recheck!(proposal, record, actor)
+          apply!(proposal, actor, opts)
         end
       end)
 
@@ -2590,10 +2602,6 @@ defmodule Brando.Content.Proposals do
 
     unless record.status == "approved" and record.version == proposal.version,
       do: Error.fail!(dgettext("content_proposals", "Approve this version of the proposal before applying it."))
-
-    # An approval stored before a check was added or tightened.
-    if operation_problems(proposal, actor) != [],
-      do: Error.fail!(dgettext("content_proposals", "Resolve every blocking problem before applying."))
 
     locked =
       proposal.fingerprints

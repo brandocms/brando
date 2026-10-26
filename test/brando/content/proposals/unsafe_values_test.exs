@@ -27,7 +27,7 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
   defp codes(proposal), do: Enum.map(proposal.problems, & &1.code)
 
   defp refused_preview?(proposal, c),
-    do: {:error, :unsafe_text} == Preview.render(proposal, {Page, c.identity.id}, c.user, preview_target: :blocks)
+    do: {:error, :problems} == Preview.render(proposal, {Page, c.identity.id}, c.user, preview_target: :blocks)
 
   describe "F07: header settings, map addresses and entry fields" do
     setup c do
@@ -73,6 +73,29 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       assert :unsafe_text in codes(proposal)
     end
 
+    test "a proposal with any problem shows no page", c do
+      # The text of an operation on a block another operation failed to
+      # insert is never checked, but the page would be built with it.
+      insert = %InsertBlock{
+        target: {Page, c.identity.id},
+        module: c.heading.id,
+        uid: "new-block",
+        placement: {:after, "nonexistent"}
+      }
+
+      text = %Brando.Content.Proposals.SetBlockText{
+        target: {Page, c.identity.id},
+        block_uid: "new-block",
+        ref: :heading,
+        text: "Rooms"
+      }
+
+      assert {:ok, proposal} = Proposals.propose([insert, text], c.user)
+      assert proposal.problems != []
+      assert refused_preview?(proposal, c)
+      assert {:error, :problems} = Preview.share(proposal, {Page, c.identity.id}, c.user)
+    end
+
     test "SetRefConfig is checked the same way", c do
       op = %InsertBlock{target: {Page, c.identity.id}, module: c.heading.id}
       assert {:ok, proposal} = Proposals.propose([op], c.user)
@@ -114,8 +137,8 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       # Nor previewed or shared.
       assert {:ok, stored} = Proposals.get(proposal.id, c.user)
       assert stored.problems == []
-      assert {:error, :unsafe_text} = Preview.render(stored, {Page, c.identity.id}, c.user, preview_target: :blocks)
-      assert {:error, :unsafe_text} = Preview.share(stored, {Page, c.identity.id}, c.user)
+      assert {:error, :problems} = Preview.render(stored, {Page, c.identity.id}, c.user, preview_target: :blocks)
+      assert {:error, :problems} = Preview.share(stored, {Page, c.identity.id}, c.user)
     end
 
     test "a stored approval made before a check existed cannot be applied", c do
@@ -128,6 +151,8 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       )
 
       assert {:error, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+      # The approval is withdrawn and the problems stored for the review.
+      assert {:ok, %{status: "pending", problems: [%{code: :unsafe_text}]}} = Proposals.get(proposal.id, c.user)
     end
 
     test "ordinary header settings stay valid", c do
@@ -176,6 +201,10 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       nested = %SetFields{target: {Page, c.identity.id}, fields: %{meta_description: %{"en" => [@title_markup]}}}
       assert {:ok, proposal} = Proposals.propose([nested], c.user)
       assert :unsafe_text in codes(proposal)
+
+      # A reference to another character than a brace is fine.
+      cyrillic = %SetFields{target: {Page, c.identity.id}, fields: %{title: "&#1234; &#x7b0;"}}
+      assert {:ok, %{problems: []}} = Proposals.propose([cyrillic], c.user)
 
       ok = %SetFields{
         target: {Page, c.identity.id},
