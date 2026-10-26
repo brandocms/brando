@@ -10,14 +10,16 @@ const { default: pendingInputs } = await import(`data:text/javascript;base64,${B
 
 const block = {}
 
-function input(value, { richText = false } = {}) {
-  const editor = { contains: el => el === editor.focus, dispatchEvent() {} }
+// `entry`: an entry form's rich text field, outside any block
+function input(value, { richText = false, entry = false } = {}) {
+  richText ||= entry
+  const editor = { contains: el => el === editor.focus, dispatchEvent() {}, dataset: { tiptapType: entry ? 'rich_text' : 'block' } }
   return {
     tagName: 'INPUT',
     value,
     editor,
     classList: { contains: name => richText && name === 'tiptap-text' },
-    closest: sel => (sel === '[data-block-uid]' ? block : sel === '[phx-hook="Brando.TipTap"]' && richText ? editor : null),
+    closest: sel => (sel === '[data-block-uid]' ? (entry ? null : block) : sel === '[phx-hook="Brando.TipTap"]' && richText ? editor : null),
     setAttribute() {},
     querySelectorAll: () => [],
   }
@@ -164,4 +166,27 @@ test('inputs outside blocks and without the focus are left to LiveView', () => {
   patch(inputs, unfocused, 'Theirs')
   inputs.left(unfocused)
   assert.equal(unfocused.value, 'Mine')
+})
+
+test("an entry's rich text keeps what its editor wrote while a reply to an earlier event arrives", () => {
+  const { clock, inputs } = setup()
+  const el = input('', { entry: true })
+  // The editor writes the input; the debounce has not sent it yet when the
+  // answer to a change made before the typing renders the field as it was
+  clock.active = el.editor
+  el.editor.focus = el.editor
+  el.value = '<p>Typed</p>'
+  inputs.typed(el)
+  clock.now = 60000
+  const to = patch(inputs, el, '')
+  assert.equal(to.value, '<p>Typed</p>')
+  assert.equal(to.attribute, '<p>Typed</p>')
+})
+
+test("an entry's rich text takes the server's value once its editor is left", () => {
+  const { clock, inputs } = setup()
+  const el = input('<p>Typed</p>', { entry: true })
+  clock.active = null
+  const to = patch(inputs, el, '<p>Saved</p>')
+  assert.equal(to.value, '<p>Saved</p>')
 })

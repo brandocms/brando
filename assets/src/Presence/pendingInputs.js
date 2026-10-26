@@ -1,4 +1,5 @@
-// Block inputs while another editor's changes arrive (field presence, #2992).
+// Block inputs while another editor's changes arrive (field presence, #2992),
+// and an entry form's rich text field while its editor is in use.
 //
 // LiveView leaves the focused input's value alone when it patches; a rich
 // text editor's hidden input is not focused (its editor is), so it is kept
@@ -24,6 +25,17 @@ export const blockInput = el =>
 const editorInUse = (input, active) =>
   input.classList.contains('tiptap-text') && !!input.closest('[phx-hook="Brando.TipTap"]')?.contains(active)
 
+// An entry form's rich text field (not a block's). The server changes it
+// with `b:tiptap:update` (another editor's value, a restored copy), which
+// sets the input itself; a patch only repeats what the server held when it
+// rendered, and that can predate the keystrokes still waiting on the
+// input's debounce.
+const entryRichText = el =>
+  el?.tagName === 'INPUT' &&
+  !!el.classList?.contains('tiptap-text') &&
+  el.closest('[phx-hook="Brando.TipTap"]')?.dataset?.tiptapType === 'rich_text' &&
+  !el.closest('[data-block-uid]')
+
 export default function pendingInputs({ now = () => Date.now(), activeElement = () => document.activeElement } = {}) {
   const lastInput = new WeakMap()
   const typedValues = new WeakMap()
@@ -42,8 +54,20 @@ export default function pendingInputs({ now = () => Date.now(), activeElement = 
 
   // LiveView is about to patch `from` with `to` (morphdom's onBeforeElUpdated).
   const patching = (from, to) => {
-    if (!blockInput(from)) return
     const active = activeElement()
+
+    // While its editor is in use, the editor is what the input holds: a
+    // reply to an event sent before the last keystrokes would empty the
+    // input, and the debounce would then send that
+    if (entryRichText(from)) {
+      if (editorInUse(from, active) && from.value !== to.value) {
+        to.value = from.value
+        to.setAttribute('value', from.value)
+      }
+      return
+    }
+
+    if (!blockInput(from)) return
     const focused = from === active
     const richText = !focused && editorInUse(from, active)
     if (!focused && !richText) return
