@@ -12,13 +12,13 @@ defmodule Brando.Type.Module do
   @doc """
   Cast should return OUR type no matter what the input.
   """
+  # A form sends the name back (a block's source), so only a module that
+  # exists casts: an atom made of any other name would never be freed.
   def cast(binary) when is_binary(binary) do
-    module =
-      binary
-      |> List.wrap()
-      |> Module.concat()
-
-    {:ok, module}
+    case Brando.Utils.existing_module(binary) do
+      nil -> :error
+      module -> {:ok, module}
+    end
   end
 
   def cast(module) when is_atom(module) do

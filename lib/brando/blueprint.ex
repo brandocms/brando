@@ -708,6 +708,17 @@ defmodule Brando.Blueprint do
   def blueprint?(module), do: {:__blueprint__, 0} in module.__info__(:functions)
 
   @doc """
+  The Blueprint module `name` names (`"Elixir.MyApp.Projects.Project"` or
+  `"MyApp.Projects.Project"`), or `nil`. For names from a request or stored
+  content: a name no module has is `nil`, and no atom is created for it.
+  """
+  @spec from_name(term()) :: module() | nil
+  def from_name(name) do
+    module = Brando.Utils.existing_module(name)
+    if module && blueprint?(module), do: module
+  end
+
+  @doc """
   Returns true when the Blueprint stores its entries inside a parent entry's column.
 
   Embedded Blueprints own no table, so anything table-shaped — migrations,

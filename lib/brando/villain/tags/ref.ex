@@ -54,7 +54,7 @@ defmodule Brando.Villain.Tags.Ref do
   defp render_ref(_, %{active: false}, _id, ref_name, _, _), do: "<!-- !a[#{ref_name}] -->"
 
   defp render_ref(parser, %{data: block, description: description}, id, ref_name, true, opts) do
-    rendered_ref = apply(parser, String.to_atom(block.type), [block.data, opts])
+    rendered_ref = apply(parser, String.to_existing_atom(block.type), [block.data, opts])
 
     """
     <section phx-click="edit_ref" b-module-id="#{id}" b-ref="#{ref_name}" b-ref-desc="#{description}">
@@ -72,10 +72,10 @@ defmodule Brando.Villain.Tags.Ref do
          opts
        ) do
     block = Changeset.apply_changes(block_cs)
-    apply(parser, String.to_atom(block.type), [block.data, opts])
+    apply(parser, String.to_existing_atom(block.type), [block.data, opts])
   end
 
   defp render_ref(parser, %{data: block, description: _description}, _id, _ref_name, _, opts) do
-    apply(parser, String.to_atom(block.type), [block.data, opts])
+    apply(parser, String.to_existing_atom(block.type), [block.data, opts])
   end
 end

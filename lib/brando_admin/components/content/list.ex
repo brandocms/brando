@@ -428,8 +428,8 @@ defmodule BrandoAdmin.Components.Content.List do
 
   # From the URL each time: a saved view or the browser's back button can
   # change the sort as well as the sort menu.
-  defp assign_sort(%{assigns: %{listing: %{sorts: sorts}, params: params}} = socket) do
-    assign(socket, :active_sort, active_sort(sorts, params))
+  defp assign_sort(%{assigns: %{listing: %{sorts: sorts}, params: params, schema: schema}} = socket) do
+    assign(socket, :active_sort, active_sort(sorts, params, schema))
   end
 
   @doc """
@@ -438,13 +438,14 @@ defmodule BrandoAdmin.Components.Content.List do
   has (a menu link carries the listing's `query.order`, which may be none of
   them) is the order the rows are in, so it is shown as it is: "Manual order"
   when it orders by `:sequence`, otherwise "Custom order", rather than as the
-  first sort the rows are not in.
+  first sort the rows are not in. An `order` that is not of `schema`'s fields
+  is ignored, as the query ignores it.
   """
-  def active_sort([], _params), do: nil
+  def active_sort([], _params, _schema), do: nil
 
-  def active_sort(sorts, params) do
+  def active_sort(sorts, params, schema) do
     case params["sort"] && Enum.find(sorts, &(to_string(&1.key) == params["sort"])) do
-      nil -> find_active_sort(sorts, parse_order(params["order"]))
+      nil -> find_active_sort(sorts, parse_order(params["order"], schema))
       sort -> sort
     end
   end
@@ -455,15 +456,14 @@ defmodule BrandoAdmin.Components.Content.List do
     Enum.find(sorts, fn sort -> Query.order_string_to_list(sort.order) == order end) || url_order(order)
   end
 
-  defp parse_order(nil), do: nil
-  defp parse_order(order) when is_binary(order), do: Query.order_string_to_list(order)
-  defp parse_order(order) when is_list(order), do: order
+  # A string, or grouped by direction: `order[asc]=title`
+  defp parse_order(nil, _schema), do: nil
 
-  # Grouped by direction: `order[asc]=title`
-  defp parse_order(order) when is_map(order) do
-    order
-    |> Map.new(fn {direction, field} -> {String.to_existing_atom(direction), String.to_existing_atom(field)} end)
-    |> Map.to_list()
+  defp parse_order(order, schema) do
+    case Query.resolve_order(order, schema) do
+      {:ok, order} -> order
+      :error -> nil
+    end
   end
 
   defp url_order(order) do
@@ -498,7 +498,7 @@ defmodule BrandoAdmin.Components.Content.List do
     list_opts =
       listing
       |> build_list_opts(schema, content_language)
-      |> params_to_list_opts(params, listing)
+      |> params_to_list_opts(params, listing, schema)
 
     Tracing.set_attributes(%{"brando.list.limit": list_opts[:limit], "brando.list.offset": list_opts[:offset]})
 
@@ -618,7 +618,7 @@ defmodule BrandoAdmin.Components.Content.List do
     end
   end
 
-  defp params_to_list_opts(list_opts, params, listing) do
+  defp params_to_list_opts(list_opts, params, listing, schema) do
     Enum.reduce(params, list_opts, fn
       {"page", page_number}, new_list_opts ->
         page_number =
@@ -642,17 +642,12 @@ defmodule BrandoAdmin.Components.Content.List do
           sort -> Map.put(new_list_opts, :order, sort.order)
         end
 
-      {"order", order}, new_list_opts when is_binary(order) ->
-        Map.put(new_list_opts, :order, order)
-
+      # Only the schema's own fields: anything else keeps the default sort
       {"order", order}, new_list_opts ->
-        order =
-          Enum.map(order, fn
-            {k, v} when is_binary(k) -> {String.to_existing_atom(k), String.to_existing_atom(v)}
-            {k, v} -> {k, v}
-          end)
-
-        Map.put(new_list_opts, :order, order)
+        case Query.resolve_order(order, schema) do
+          {:ok, order} -> Map.put(new_list_opts, :order, order)
+          :error -> new_list_opts
+        end
 
       {"status", value}, new_list_opts ->
         Map.put(new_list_opts, :status, String.to_existing_atom(value))

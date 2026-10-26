@@ -64,10 +64,7 @@ defmodule BrandoAdmin.Components.Activity do
   end
 
   @doc "The schema module an event names, if it is still a known Blueprint."
-  def schema(name) when is_binary(name) do
-    module = Module.concat([name])
-    if Code.ensure_loaded?(module) and function_exported?(module, :__naming__, 0), do: module
-  end
+  def schema(name) when is_binary(name), do: Brando.Blueprint.from_name(name)
 
   @doc """
   Consecutive events that share a `batch_id` (one content import) become one

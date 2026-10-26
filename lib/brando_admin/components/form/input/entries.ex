@@ -375,18 +375,19 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   end
 
   def handle_event("select_schema", %{"schema" => schema}, %{assigns: %{available_schemas: available_schemas}} = socket) do
-    schema_module = Module.concat([schema])
-    {_, _, list_opts} = get_list_opts(schema_module, available_schemas)
-    field_opts = socket.assigns.opts
+    case Enum.find(available_schemas, &(to_string(elem(&1, 1)) == schema)) do
+      nil ->
+        {:noreply, socket}
 
-    list_opts = maybe_filter_by_language(list_opts, field_opts, socket)
+      {_, schema_module, list_opts} ->
+        list_opts = maybe_filter_by_language(list_opts, socket.assigns.opts, socket)
+        {:ok, identifiers} = Identifier.list_entries_for(schema_module, list_opts)
 
-    {:ok, identifiers} = Identifier.list_entries_for(schema_module, list_opts)
-
-    {:noreply,
-     socket
-     |> assign(:available_identifiers, identifiers)
-     |> assign(:selected_schema, schema_module)}
+        {:noreply,
+         socket
+         |> assign(:available_identifiers, identifiers)
+         |> assign(:selected_schema, schema_module)}
+    end
   end
 
   attr :block_identifier, :any
@@ -682,10 +683,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       {render_slot(@inner_block)}
     </IdentifierRow.content>
     """
-  end
-
-  defp get_list_opts(schema_module, available_schemas) do
-    Enum.find(available_schemas, &(elem(&1, 1) == schema_module))
   end
 
   def insert_identifier(assoc_identifiers, identifier_id, assoc_schema) do

@@ -13,6 +13,8 @@ defmodule Brando.Villain.Tags.Route do
   @impl true
   def parse, do: TagGrammar.parse(:route)
 
+  # The helper and action come from template text, so they must name ones
+  # that exist: an atom made from it would never be freed.
   @impl true
   def render([function: function, action: action, args: args], context) do
     evaled_args = Enum.map(args, fn arg -> Liquex.Argument.eval(arg, context) |> elem(0) end)
@@ -21,13 +23,18 @@ defmodule Brando.Villain.Tags.Route do
       if function == "page_path" and action == "show", do: [evaled_args], else: evaled_args
 
     rendered_route =
-      apply(Brando.helpers(), :"#{function}", [Brando.endpoint(), :"#{action}"] ++ evaled_args)
+      apply(
+        Brando.helpers(),
+        String.to_existing_atom(function),
+        [Brando.endpoint(), String.to_existing_atom(action)] ++ evaled_args
+      )
 
     {[rendered_route], context}
   end
 
   def render([function: function, action: action], context) do
-    rendered_route = apply(Brando.helpers(), :"#{function}", [Brando.endpoint(), :"#{action}"])
+    rendered_route =
+      apply(Brando.helpers(), String.to_existing_atom(function), [Brando.endpoint(), String.to_existing_atom(action)])
 
     {[rendered_route], context}
   end

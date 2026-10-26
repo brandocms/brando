@@ -118,6 +118,9 @@ defmodule Brando.Query do
   @doc "Parses a query order string into its tuple representation."
   def order_string_to_list(order), do: runtime(:order_string_to_list, [order])
 
+  @doc "Resolves a request's order against a schema's fields without creating atoms."
+  def resolve_order(order, schema), do: runtime(:resolve_order, [order, schema])
+
   @doc "Applies a select expression to a query."
   def with_select(query, fields), do: runtime(:with_select, [query, fields])
 

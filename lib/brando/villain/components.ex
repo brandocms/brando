@@ -156,7 +156,7 @@ defmodule Brando.Villain.Components do
 
   defp render_ref_block(parser_module, block_data, assigns) do
     opts = build_parser_opts(assigns)
-    apply(parser_module, String.to_atom(block_data.type), [block_data.data, opts])
+    apply(parser_module, String.to_existing_atom(block_data.type), [block_data.data, opts])
   end
 
   defp build_parser_opts(assigns) do

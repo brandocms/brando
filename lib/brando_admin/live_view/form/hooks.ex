@@ -269,7 +269,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       ["image", image_schema_binary, field_name] ->
         field_atom = String.to_existing_atom(field_name)
         schema = socket.assigns.schema
-        image_schema = Module.concat([image_schema_binary])
+        image_schema = Brando.Utils.existing_module(image_schema_binary)
 
         full_path =
           if image_schema == schema do
@@ -307,7 +307,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       ["image", image_schema_binary, field_name] ->
         field_atom = String.to_existing_atom(field_name)
         schema = socket.assigns.schema
-        image_schema = Module.concat([image_schema_binary])
+        image_schema = Brando.Utils.existing_module(image_schema_binary)
 
         full_path =
           if image_schema != schema do
@@ -937,7 +937,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       ["video", video_schema_binary, field_name] ->
         field_atom = String.to_existing_atom(field_name)
         schema = socket.assigns.schema
-        video_schema = Module.concat([video_schema_binary])
+        video_schema = Brando.Utils.existing_module(video_schema_binary)
 
         full_path =
           if video_schema != schema do
@@ -974,7 +974,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     case String.split(video.config_target || "", ":") do
       ["video", video_schema_binary, _field_name] ->
         schema = socket.assigns.schema
-        video_schema = Module.concat([video_schema_binary])
+        video_schema = Brando.Utils.existing_module(video_schema_binary)
 
         if video_schema != schema do
           # Video belongs to a relation module — route to all Transformer components.

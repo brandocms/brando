@@ -313,8 +313,10 @@ defmodule Brando.Galleries do
   defp parse_config_target(config_target) when is_binary(config_target) do
     case String.split(config_target, ":") do
       ["gallery", schema_binary, field] ->
-        schema = Module.concat([schema_binary])
-        {:ok, schema, field}
+        case Brando.Blueprint.from_name(schema_binary) do
+          nil -> :error
+          schema -> {:ok, schema, field}
+        end
 
       _ ->
         :error

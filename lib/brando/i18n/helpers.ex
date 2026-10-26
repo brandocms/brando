@@ -35,11 +35,15 @@ defmodule Brando.I18n.Helpers do
     default_language = to_string(RuntimeConfig.get(:default_language))
     helpers_module = RuntimeConfig.router_helpers()
 
+    # The locale and the helper can come from stored content (a template's
+    # `route_i18n` tag): look the helper up, never make an atom of them.
+    fun = to_string(fun)
+
     function_name =
       if RuntimeConfig.get(:scope_default_language_routes) == false && default_language == locale do
-        :"#{fun}"
+        fun
       else
-        :"#{locale}_#{fun}"
+        "#{locale}_#{fun}"
       end
 
     arity = length(args)
@@ -50,14 +54,21 @@ defmodule Brando.I18n.Helpers do
     Code.ensure_loaded(helpers_module)
 
     cond do
-      function_exported?(helpers_module, function_name, arity) ->
-        apply(helpers_module, function_name, args)
+      helper = exported_helper(helpers_module, function_name, arity) ->
+        apply(helpers_module, helper, args)
 
-      function_name != :"#{fun}" && function_exported?(helpers_module, :"#{fun}", arity) ->
-        apply(helpers_module, :"#{fun}", args)
+      helper = function_name != fun && exported_helper(helpers_module, fun, arity) ->
+        apply(helpers_module, helper, args)
 
       true ->
         "/<url cannot be localized>"
+    end
+  end
+
+  defp exported_helper(module, name, arity) do
+    case Brando.Utils.existing_atom(name) do
+      {:ok, fun} -> if function_exported?(module, fun, arity), do: fun
+      :error -> nil
     end
   end
 end

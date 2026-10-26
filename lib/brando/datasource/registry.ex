@@ -95,9 +95,26 @@ defmodule Brando.Datasource.Registry do
   @doc false
   @spec resolve(module() | String.t() | [module() | String.t()], atom() | String.t()) :: {module(), atom()}
   def resolve(module_name, key) do
-    module = Module.concat(List.wrap(module_name))
-    Code.ensure_loaded(module)
+    module = resolve_module(module_name)
     atom_key = if is_atom(key), do: key, else: String.to_existing_atom(key)
     {module, atom_key}
+  end
+
+  # The name is stored on the module, which admins edit: never make an atom of it
+  defp resolve_module(module) when is_atom(module) do
+    Code.ensure_loaded(module)
+    module
+  end
+
+  defp resolve_module(module_name) do
+    name =
+      module_name
+      |> List.wrap()
+      |> Enum.map_join(".", fn
+        part when is_atom(part) -> inspect(part)
+        part -> String.replace_prefix(part, "Elixir.", "")
+      end)
+
+    Brando.Utils.existing_module(name) || raise ArgumentError, "unknown datasource module #{inspect(name)}"
   end
 end

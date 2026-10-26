@@ -198,11 +198,79 @@ defmodule Brando.Query.Runtime do
   # A function order has no columns to compare
   def order_string_to_list(order) when is_function(order, 1), do: []
 
+  # Order strings come from code (a listing's sorts, a context call), whose
+  # fields exist as atoms already. A string from a request goes through
+  # `resolve_order/2` instead, so this never creates an atom.
   defp parse_order_segment(val) do
     case String.split(val, ".") do
-      [v1, v2, v3] -> {String.to_atom(v1), String.to_atom(v2), String.to_atom(v3)}
-      [v1, v2] -> {String.to_atom(v1), String.to_atom(v2)}
-      [val] -> String.to_atom(val)
+      [v1, v2, v3] -> {String.to_existing_atom(v1), String.to_existing_atom(v2), String.to_existing_atom(v3)}
+      [v1, v2] -> {String.to_existing_atom(v1), String.to_existing_atom(v2)}
+      [val] -> String.to_existing_atom(val)
+    end
+  end
+
+  @directions ~w(asc desc asc_nulls_first asc_nulls_last desc_nulls_first desc_nulls_last)a
+
+  @doc """
+  An order from a request (`"asc title, desc author.name"`, or the
+  `%{"asc" => "title"}` that `order[asc]=title` decodes to) as the order list
+  `with_order/2` takes, resolved against `schema`'s fields and associations
+  without creating atoms: `{:ok, order}`, or `:error` if any part of it is not
+  a direction and a field (through at most two associations) of `schema`.
+  """
+  def resolve_order(order, schema) when is_binary(order) do
+    order
+    |> String.split(",")
+    |> Enum.map(&(&1 |> String.trim() |> String.split(" ", trim: true)))
+    |> resolve_order_segments(schema)
+  end
+
+  def resolve_order(order, schema) when is_map(order) do
+    order
+    |> Enum.map(fn
+      {direction, path} when is_binary(direction) and is_binary(path) -> [direction, path]
+      _ -> :error
+    end)
+    |> resolve_order_segments(schema)
+  end
+
+  def resolve_order(_order, _schema), do: :error
+
+  defp resolve_order_segments([], _schema), do: :error
+
+  defp resolve_order_segments(segments, schema) do
+    Enum.reduce_while(segments, {:ok, []}, fn segment, {:ok, acc} ->
+      with [direction, path] <- segment,
+           {:ok, direction} <- known_atom(@directions, direction),
+           {:ok, by} <- resolve_order_by(schema, path) do
+        {:cont, {:ok, acc ++ [{direction, by}]}}
+      else
+        _ -> {:halt, :error}
+      end
+    end)
+  end
+
+  defp resolve_order_by(_schema, "random"), do: {:ok, :random}
+  defp resolve_order_by(schema, path), do: resolve_order_path(schema, String.split(path, "."))
+
+  defp resolve_order_path(schema, [field]), do: known_atom(schema.__schema__(:fields), field)
+
+  defp resolve_order_path(schema, [assoc | rest]) when rest != [] and length(rest) <= 2 do
+    with {:ok, assoc} <- known_atom(schema.__schema__(:associations), assoc),
+         %{related: related} <- schema.__schema__(:association, assoc),
+         {:ok, by} <- resolve_order_path(related, rest) do
+      {:ok, if(is_tuple(by), do: Tuple.insert_at(by, 0, assoc), else: {assoc, by})}
+    else
+      _ -> :error
+    end
+  end
+
+  defp resolve_order_path(_schema, _path), do: :error
+
+  defp known_atom(atoms, string) do
+    case Enum.find(atoms, &(Atom.to_string(&1) == string)) do
+      nil -> :error
+      atom -> {:ok, atom}
     end
   end
 
