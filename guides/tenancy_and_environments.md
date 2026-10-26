@@ -442,6 +442,16 @@ position. It resolves domains from `Brando.Tenant.Cache`, assigns
 `current_site`, `current_environment`, and `tenant_prefix`, and stores the
 prefix in process context without a database query.
 
+A LiveView on the site's pages runs in its own process, which the plug never
+reaches. Mount it with `Brando.Tenant.FrontendLiveView`, which does the same
+from the page's host, or its queries read the `public` schema:
+
+```elixir
+live_session :site, on_mount: [Brando.Tenant.FrontendLiveView] do
+  live "/contact", MyAppWeb.ContactLive
+end
+```
+
 <!-- usage-rules:end -->
 
 The Brando admin routes also restore the environment selected in the signed

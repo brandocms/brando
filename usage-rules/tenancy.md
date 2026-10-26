@@ -102,6 +102,16 @@ position. It resolves domains from `Brando.Tenant.Cache`, assigns
 `current_site`, `current_environment`, and `tenant_prefix`, and stores the
 prefix in process context without a database query.
 
+A LiveView on the site's pages runs in its own process, which the plug never
+reaches. Mount it with `Brando.Tenant.FrontendLiveView`, which does the same
+from the page's host, or its queries read the `public` schema:
+
+```elixir
+live_session :site, on_mount: [Brando.Tenant.FrontendLiveView] do
+  live "/contact", MyAppWeb.ContactLive
+end
+```
+
 `Brando.Repo` applies the current prefix to reads, writes, preloads, bulk
 updates, and bulk soft deletion. An explicit prefix always wins:
 
