@@ -1062,6 +1062,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> assign(:blocks_detached?, true)
     |> assign(:working_copy, Map.get(message, :revision))
+    |> reset_locked_values()
     |> put_locked_values(changeset)
     |> put_local_form(to_form(changeset, []))
     |> rebuild_preview_relations()
@@ -1458,7 +1459,11 @@ defmodule BrandoAdmin.Components.Form do
       true ->
         case Translation.restore_changeset(socket) do
           {:ok, changeset, socket} ->
-            {:ok, socket |> put_locked_values(changeset) |> apply_restored_changeset(changeset, :translation)}
+            {:ok,
+             socket
+             |> reset_locked_values()
+             |> put_locked_values(changeset)
+             |> apply_restored_changeset(changeset, :translation)}
 
           :error ->
             send(self(), {:toast, gettext("The changes from the source could not be loaded into the form.")})
@@ -2208,7 +2213,8 @@ defmodule BrandoAdmin.Components.Form do
   # default params, a translation's or a revision's. A cast keeps them; the
   # browser can't supply one. With the inputs' defaults (resolved once),
   # taken while the entry's value is empty. Reset whenever the form is
-  # rebuilt from a stored entry.
+  # rebuilt from a stored entry, and when a translation, a working copy or a
+  # recovery copy replaces the form.
   defp locked_values(socket), do: socket.assigns[:locked_values] || {%{}, %{}}
 
   defp put_locked_values(socket, changeset) do
@@ -2218,9 +2224,18 @@ defmodule BrandoAdmin.Components.Form do
     assign(socket, :locked_values, {Map.merge(values, server), defaults})
   end
 
+  # A new entry's default params stay its values
   defp reset_locked_values(socket) do
     %{schema: schema, current_user: user} = socket.assigns
-    assign(socket, :locked_values, {%{}, LockedFields.defaults(schema, socket.assigns[:form_blueprint], user)})
+    socket = assign(socket, :locked_values, {%{}, LockedFields.defaults(schema, socket.assigns[:form_blueprint], user)})
+
+    case socket.assigns do
+      %{entry: %{id: nil} = entry, default_params: params} when is_map(params) and map_size(params) > 0 ->
+        put_locked_values(socket, schema.changeset(entry, params, user))
+
+      _ ->
+        socket
+    end
   end
 
   defp owned_assets(socket), do: socket.assigns[:server_owned_assets] || %{}
@@ -7721,19 +7736,19 @@ defmodule BrandoAdmin.Components.Form do
   # versions.
   # A recovery copy of a working copy holds what the browser sent: the
   # revision itself gives the locked inputs' values.
-  # A recovery copy that isn't a working copy, restored over one, leaves the
-  # revision's values for the locked inputs
-  defp leave_working_copy_locked_values(%{assigns: %{working_copy: revision}} = socket, :recovery_copy)
-       when not is_nil(revision),
-       do: reset_locked_values(socket)
-
+  # A recovery copy that isn't a working copy replaces what a translation or
+  # a working copy put in the form; it gives the locked inputs no values
+  defp leave_working_copy_locked_values(socket, :recovery_copy), do: reset_locked_values(socket)
   defp leave_working_copy_locked_values(socket, _source), do: socket
 
   defp put_revision_locked_values(socket, nil), do: socket
 
   defp put_revision_locked_values(socket, revision_entry) do
     %{schema: schema, entry: entry, current_user: user} = socket.assigns
-    put_locked_values(socket, schema.changeset(entry, Brando.Revisions.restore_params(revision_entry, entry), user))
+
+    socket
+    |> reset_locked_values()
+    |> put_locked_values(schema.changeset(entry, Brando.Revisions.restore_params(revision_entry, entry), user))
   end
 
   defp working_copy_revision(_socket, nil), do: nil
@@ -8292,12 +8307,7 @@ defmodule BrandoAdmin.Components.Form do
     end)
     |> then(&put_form(&1, &1.assigns.form))
     |> then(fn socket ->
-      if Map.has_key?(socket.assigns, :locked_values),
-        do: socket,
-        else:
-          socket
-          |> reset_locked_values()
-          |> put_locked_values(schema.changeset(default_entry, default_params, current_user))
+      if Map.has_key?(socket.assigns, :locked_values), do: socket, else: reset_locked_values(socket)
     end)
   end
 

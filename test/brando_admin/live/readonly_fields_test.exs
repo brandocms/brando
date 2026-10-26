@@ -130,6 +130,31 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
     assert {saved.title, saved.subtitle} == {"Revised", "From the revision"}
   end
 
+  # Another revision loaded after it replaces the first one's values
+  test "a second working copy replaces the first one's locked values", %{conn: conn, current_user: user} do
+    {:ok, article} =
+      SyncTest.create_article(
+        %{title: "Locked", slug: "locked", subtitle: "Stored", year: 2020, language: "en", status: "published"},
+        user
+      )
+
+    {view, _html} = live_form(conn, "/admin/articles/update/#{article.id}/locked", "article_form")
+
+    for {revision, subtitle} <- [{1, "Older"}, {2, "Stored"}] do
+      Phoenix.LiveView.send_update(view.pid, Form,
+        id: "article_form",
+        action: :load_working_copy,
+        revision: revision,
+        revision_entry: %{article | subtitle: subtitle, title: "Revision #{revision}"}
+      )
+    end
+
+    save(view, %{})
+
+    saved = Repo.get!(Article, article.id)
+    assert {saved.title, saved.subtitle} == {"Revision 2", "Stored"}
+  end
+
   # Another editor (a superuser) saves a field locked for this one: this
   # editor's next save doesn't put back the value it opened with (the form
   # records only the server's values that differ from the entry).
