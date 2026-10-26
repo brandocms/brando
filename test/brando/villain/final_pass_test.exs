@@ -54,4 +54,11 @@ defmodule Brando.Villain.FinalPassTest do
     assert Villain.parse_and_render(InertLiquid.encode("<p>{{ title }}</p>"), Context.new(%{"title" => "T"})) ==
              "<p>&#123;&#123; title &#125;&#125;</p>"
   end
+
+  test "InertLiquid.decode/1 undoes encode/1, and leaves script and style as they are" do
+    html =
+      ~s(<p title="{{ a }}">{% b %}</p><script>let s = "&#123;"</script><style>a::after { content: "&#125;" }</style>)
+
+    assert html |> InertLiquid.encode() |> InertLiquid.decode() == html
+  end
 end
