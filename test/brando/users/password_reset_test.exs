@@ -309,6 +309,18 @@ defmodule Brando.Users.PasswordResetTest do
       end)
     end
 
+    test "without a mailer when the job runs, it is cancelled", %{user: user} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        :ok = Users.request_password_reset(user.email)
+        Application.put_env(:brando, :env, :prod)
+        Application.delete_env(:brando, :mailer)
+
+        [job] = all_enqueued(worker: Brando.Worker.PasswordReset)
+        assert {:cancel, :no_mailer} = perform_job(Brando.Worker.PasswordReset, job.args)
+        assert_no_email_sent()
+      end)
+    end
+
     test "an account deactivated before the job runs gets no link", %{user: user} do
       admin = Factory.insert(:random_user, role: :superuser)
 

@@ -656,18 +656,28 @@ defmodule Brando.Users do
     |> Oban.insert()
   end
 
-  # Only the newest link works: one sent earlier, either way, is deleted.
-  # Sent at once, not queued, so the link never lands in a job's arguments.
+  # Only the newest link works: one sent earlier, either way, is deleted, with
+  # the user's row locked so two jobs at once cannot both keep theirs.
+  # Sent at once, not queued, so the link never lands in a job's arguments,
+  # and an exception from the mailer, which could carry the email, is not
+  # passed on to the job's stored errors.
   defp deliver_reset_link(user, reason) do
     context = if reason == :admin, do: "admin_reset_password", else: "reset_password"
     {encoded, user_token} = UserToken.build_email_token(user, context)
 
     Repo.transaction(fn ->
+      Repo.one!(from u in User, where: u.id == ^user.id, lock: "FOR UPDATE", select: u.id)
       Repo.delete_all(UserToken.user_and_contexts_query(user, UserToken.reset_password_contexts()))
       Repo.insert!(user_token)
     end)
 
-    UserNotifier.deliver_reset_password_instructions(user, reset_password_url(encoded), reason)
+    try do
+      UserNotifier.deliver_reset_password_instructions(user, reset_password_url(encoded), reason)
+    rescue
+      exception ->
+        Logger.error("==> Password reset email for user #{user.id} failed: #{inspect(exception.__struct__)}")
+        {:error, :delivery_failed}
+    end
   end
 
   defp check(true, _reason), do: :ok

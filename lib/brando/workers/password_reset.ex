@@ -10,7 +10,7 @@ defmodule Brando.Worker.PasswordReset do
   token is made and the email sent when the job runs, so the raw token is
   kept in no job row.
   """
-  use Oban.Worker, queue: :default, max_attempts: 3
+  use Oban.Worker, queue: :default, max_attempts: 5
 
   alias Brando.Tenant.Job, as: TenantJob
 
