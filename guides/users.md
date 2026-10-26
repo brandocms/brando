@@ -284,14 +284,14 @@ on_mount {BrandoAdmin.Reauth, :screen}
 on_mount {BrandoAdmin.Reauth, events: ~w(delete_environment queue_set_live)}
 ```
 
-A listing names its guarded events with `step_up`, its own (`delete_selected`,
-`undelete_entry`) and the view's alike, since the listing handles its own
+A listing names its guarded events with `step_up`, its own (`delete_entry`,
+`delete_selected`, `undelete_entry`) and the view's alike, since the listing handles its own
 events before the view's hooks see them:
 
 ```elixir
 use BrandoAdmin.LiveView.Listing,
   schema: MyApp.Accounts.Account,
-  step_up: ~w(delete_selected undelete_entry close_account)
+  step_up: ~w(delete_entry delete_selected undelete_entry close_account)
 ```
 
 A screen guarded as a whole asks before it opens, holds any event of the

@@ -40,9 +40,8 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
   confirmed: the listing's own events here, the view's (`{:cont, socket}`)
   in its `handle_event/3`.
   """
-  def replay_event(event, params, socket, schema, overrides) do
-    listing_event(event, params, socket, schema, overrides)
-  end
+  def replay_event(_event, _params, socket, nil, _overrides), do: {:cont, socket}
+  def replay_event(event, params, socket, schema, overrides), do: listing_event(event, params, socket, schema, overrides)
 
   defp attach_hooks(socket, nil, _overrides) do
     attach_listing_info_hooks(socket, nil)
