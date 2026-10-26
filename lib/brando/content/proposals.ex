@@ -123,7 +123,10 @@ defmodule Brando.Content.Proposals do
   @spec previewable?(Proposal.t()) :: boolean()
   def previewable?(%Proposal{problems: problems} = proposal) when problems in [nil, []] do
     with %Brando.Users.User{} = owner <- Repo.get(Brando.Users.User, proposal.actor_id),
-         {:ok, []} <- Error.protect(fn -> operation_problems(proposal, owner) end) do
+         # In the owner's scope too: queries read the process scope, and a
+         # colleague's could hide what the owner may use.
+         scope = Boundary.actor_scope(owner),
+         {:ok, []} <- Boundary.with_scope(scope, fn -> Error.protect(fn -> operation_problems(proposal, scope) end) end) do
       true
     else
       _ -> false
