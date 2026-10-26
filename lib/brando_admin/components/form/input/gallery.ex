@@ -98,6 +98,26 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:ok, watch_processing(socket)}
   end
 
+  # "Save as new copy" in the image editor (`Form.image_editor_copy_created/2`):
+  # the copy takes the edited object's place, which keeps its position, caption
+  # and alt text. When no object holds the image any more (removed while the
+  # copy uploaded), the gallery stays as it is and the copy stays in the library.
+  def update(%{event: "image_editor_new_copy", new_image: new_image, old_image_id: old_image_id}, socket) do
+    gallery_objects = socket.assigns.gallery_objects
+
+    if old_image_id && Enum.any?(gallery_objects, &(&1.image_id == old_image_id)) do
+      updated =
+        Enum.map(gallery_objects, fn
+          %{image_id: ^old_image_id} = object -> Map.merge(object, %{image_id: new_image.id, image: new_image})
+          object -> object
+        end)
+
+      {:ok, commit_gallery(socket, updated, :image, Media.selected_ids(updated, :image_id))}
+    else
+      {:ok, socket}
+    end
+  end
+
   def update(%{event: "video_created_from_url", video_data: %{id: video_id}}, socket) do
     # Skip notify_picker since the VideoPicker already knows about this video
     {:ok, add_gallery_media(socket, :video, to_string(video_id), notify_picker: false)}
@@ -872,13 +892,21 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     crop_groups = build_crop_groups_for(image)
 
+    # `from_block`: the editor's copy goes through the form's own editor
+    # upload, which hands it back here (`image_editor_new_copy`), as from a
+    # block. The other route fills the image drawer's file input, and this
+    # field has no image drawer.
     {:noreply,
      push_event(socket, "b:image_editor:init", %{
        image_src: Utils.img_url(image, :original, prefix: Utils.media_url()),
        image_width: image.width,
        image_height: image.height,
        image_id: image.id,
-       crop_groups: crop_groups
+       focal_x: (image.focal && image.focal.x) || 50,
+       focal_y: (image.focal && image.focal.y) || 50,
+       crop_groups: crop_groups,
+       from_block: true,
+       config_target: image.config_target
      })}
   end
 

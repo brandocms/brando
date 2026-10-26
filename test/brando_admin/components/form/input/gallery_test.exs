@@ -488,4 +488,79 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
       assert [%{action: :update, data: %{id: 42}}, %{action: :insert}] = objects
     end
   end
+
+  # The field opens the image editor itself; no image drawer is open. Its
+  # copy came back through the drawer's file input, which isn't there, so
+  # "Save as new copy" made nothing.
+  describe "save as new copy" do
+    test "the editor's copy goes through the form's editor upload", ctx do
+      form = to_form(Changeset.change(%ProjectUpdate1{}))
+      socket = gallery_socket(form, [], %{current_user: ctx.user, form_id: "project_form", id: "gallery"})
+
+      assert {:noreply, socket} =
+               Gallery.handle_event("open_image_editor", %{"image_id" => to_string(ctx.image.id)}, socket)
+
+      assert_receive {:phoenix, :send_update, {{Form, "project_form"}, assigns}}
+      assert assigns.action == :set_edit_image_from_block
+      assert assigns.block_target == {Gallery, "gallery"}
+      assert assigns.old_image_id == ctx.image.id
+
+      assert [payload] =
+               for ["b:image_editor:init", payload] <- Phoenix.LiveView.Utils.get_push_events(socket), do: payload
+
+      assert payload.from_block
+      assert payload.config_target == ctx.image.config_target
+    end
+
+    test "the copy takes the edited object's place, keeping its caption", ctx do
+      other = Factory.insert(:image, creator: ctx.user)
+      copy = Factory.insert(:image, creator: ctx.user)
+
+      objects = [
+        %GalleryObject{image_id: other.id, image: other, sequence: 0},
+        %GalleryObject{image_id: ctx.image.id, image: ctx.image, sequence: 1, config: %{"title" => "Lobby"}}
+      ]
+
+      gallery = %Brando.Galleries.Gallery{
+        config_target: "gallery:Brando.MigrationTest.ProjectUpdate1:photos",
+        gallery_objects: objects
+      }
+
+      form = to_form(Changeset.change(%ProjectUpdate1{photos: gallery}))
+
+      socket =
+        gallery_socket(form, [], %{
+          current_user: ctx.user,
+          form_id: "project_form",
+          gallery_objects: objects,
+          selected_images: [other.id, ctx.image.id]
+        })
+
+      assert {:ok, socket} =
+               Gallery.update(%{event: "image_editor_new_copy", new_image: copy, old_image_id: ctx.image.id}, socket)
+
+      assert_receive {:phoenix, :send_update, {{Form, "project_form"}, assigns}}
+      assert assigns.action == :put_gallery
+      assert assigns.key == :photos
+
+      assert [%{image_id: first}, %{image_id: second, config: %{"title" => "Lobby"}}] =
+               assigns.gallery.gallery_objects
+
+      assert {first, second} == {other.id, copy.id}
+      assert Enum.map(socket.assigns.gallery_objects, & &1.image_id) == [other.id, copy.id]
+      assert socket.assigns.selected_images == [other.id, copy.id]
+    end
+
+    test "a copy for an object removed meanwhile leaves the gallery alone", ctx do
+      copy = Factory.insert(:image, creator: ctx.user)
+      form = to_form(Changeset.change(%ProjectUpdate1{}))
+      socket = gallery_socket(form, [], %{current_user: ctx.user, form_id: "project_form"})
+
+      assert {:ok, socket} =
+               Gallery.update(%{event: "image_editor_new_copy", new_image: copy, old_image_id: ctx.image.id}, socket)
+
+      refute_receive {:phoenix, :send_update, _}
+      assert socket.assigns.gallery_objects == []
+    end
+  end
 end
