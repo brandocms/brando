@@ -234,8 +234,20 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   #
   # The sweep and its lookups report as one piece of work (BrandoAdmin.Work),
   # started here so the button is busy before the sweep runs.
+  #
+  # The lookups store what they find as the system, so asking for them needs
+  # the right to update videos, in both authorization modes.
   def handle_event("fetch_metadata", _, socket) do
     user = socket.assigns.current_user
+
+    # `run/4` reads the role afresh: the list may have opened before a demotion
+    case Brando.Authorization.Boundary.run(user, :update, Video, fn _ -> {:ok, :allowed} end) do
+      {:ok, :allowed} -> start_lookups(socket, user)
+      _ -> {:noreply, put_flash(socket, :error, gettext("You do not have permission for this action."))}
+    end
+  end
+
+  defp start_lookups(socket, user) do
     count = socket.assigns.missing_metadata_count
 
     Work.start(

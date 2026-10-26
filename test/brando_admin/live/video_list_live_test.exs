@@ -150,4 +150,18 @@ defmodule BrandoAdmin.VideoListLiveTest do
       assert Brando.Repo.all(where(Oban.Job, worker: "Brando.Worker.VideoMetadataSweep")) == []
     end)
   end
+
+  test "fetching missing details is refused to a legacy user demoted since the list opened" do
+    editor = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+    _video = Factory.insert(:video, title: nil)
+    conn = log_in_user(Phoenix.ConnTest.build_conn(), editor)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      {:ok, view, _html} = live(conn, "/admin/assets/videos")
+      Brando.Repo.update_all(Ecto.Query.from(u in Brando.Users.User, where: u.id == ^editor.id), set: [role: :user])
+
+      render_click(view, "fetch_metadata", %{})
+      assert Brando.Repo.all(where(Oban.Job, worker: "Brando.Worker.VideoMetadataSweep")) == []
+    end)
+  end
 end
