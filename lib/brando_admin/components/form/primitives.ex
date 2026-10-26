@@ -59,7 +59,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
   attr :locked, :any,
     default: false,
     doc: """
-    a locked field (`BrandoAdmin.Utils.locked?/1`) is marked as such by its
+    a locked field (BrandoAdmin.Utils.locked?/1) is marked as such by its
     label. `true` makes its controls inert; `:readonly` leaves them to the
     input, which renders them `readonly`, so their text can still be read,
     selected and copied.
@@ -99,8 +99,9 @@ defmodule BrandoAdmin.Components.Form.Primitives do
       data-locked={@locked && "true"}
     >
       <div class={["label-wrapper", @hidden && "hidden"]}>
+        <%!-- An inert control takes no click from its label either --%>
         <label
-          for={"#{@f_id}"}
+          for={@locked != true && "#{@f_id}"}
           class={["control-label", @failed && "failed"]}
           data-field-presence={!@skip_presence && @f_name}
         >
@@ -256,7 +257,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
   @doc """
   `opts` with `readonly: :unless_superuser` and `disabled: :unless_superuser`
   resolved for `user`: they lock the input for anyone but a superuser, who
-  can still correct the field. `BrandoAdmin.Utils.locked?/1` then tells
+  can still correct the field. BrandoAdmin.Utils.locked?/1 then tells
   whether the input renders locked. A top-level input comes with
   `:locked` set (`LockedFields.locked_input?/2`), which it keeps.
 

@@ -33,7 +33,8 @@ switch (`locked={:readonly}`); rich text drops its toolbar. Any other control
 sits in an inert field base at 60% opacity (`locked`), as a translation's
 source-locked fields do. Keep a locked control's inputs posting their
 values: never `disabled`, which drops them from a subform row's params.
-`FieldBase.css` styles it; `locked-inputs.spec.js` covers every type.
+Keep the focus ring on a read-only control. `FieldBase.css` styles it;
+`locked-inputs.spec.js` and `locked_inputs_test.exs` cover it.
 
 Constrain avatar photos and their image wrappers to their container. Source
 `width`/`height` attributes and a non-shrinking image wrapper can otherwise expand

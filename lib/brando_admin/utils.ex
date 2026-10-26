@@ -128,13 +128,14 @@ defmodule BrandoAdmin.Utils do
   @doc """
   Whether an input's `opts` lock it: its controls take no edit. A top-level
   input's `:locked` says (`Form.LockedFields.locked_input?/2`); otherwise
-  `readonly: true` or `disabled: true`, `:unless_superuser` resolved by
-  `Form.Primitives.lock_opts/2`.
+  `readonly:` or `disabled:`, `true` or `:unless_superuser` resolved for the
+  user by `Form.Primitives.lock_opts/2` (unresolved, it locks).
   """
   def locked?(opts) when is_list(opts) do
     case Keyword.fetch(opts, :locked) do
       {:ok, locked} -> locked == true
-      :error -> Keyword.get(opts, :readonly) == true or Keyword.get(opts, :disabled) == true
+      # Not resolved for a user: locked for everyone, as for no user
+      :error -> Enum.any?([:readonly, :disabled], &(Keyword.get(opts, &1) in [true, :unless_superuser]))
     end
   end
 

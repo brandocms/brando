@@ -100,12 +100,18 @@ test('every locked input type renders locked and takes no edit', async ({ page }
   await clickThrough(page, status.locator('.status-label.draft'))
   await expect(status.locator('input[value="published"]')).toBeChecked()
 
+  // Neither the control nor the field's label, which is outside the inert
+  // part, flips a toggle or a checkbox
   const featured = lockedField(page, 'Featured')
   await clickThrough(page, featured.locator('.slider'))
+  await featured.locator(':scope > .label-wrapper .control-label').click()
+  await syncLV(page)
   await expect(featured.locator('input[type="checkbox"]')).toBeChecked()
 
   const confirmed = lockedField(page, 'Confirmed')
   await clickThrough(page, confirmed.locator('.check-wrapper'))
+  await confirmed.locator(':scope > .label-wrapper .control-label').click()
+  await syncLV(page)
   await expect(confirmed.locator('input[type="checkbox"]')).toBeChecked()
 
   const size = lockedField(page, 'Size')

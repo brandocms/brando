@@ -270,12 +270,6 @@
     color: var(--brando-muted);
     box-shadow: none;
     cursor: default;
-
-    &:focus,
-    &:focus-within {
-      border-color: var(--brando-line-strong);
-      box-shadow: none;
-    }
   }
 }
 
@@ -296,7 +290,6 @@
   }
 }
 
-.tiny-toggle-wrapper[data-locked],
-.link-input[data-locked] {
+.tiny-toggle-wrapper[data-locked] {
   opacity: 0.6;
 }

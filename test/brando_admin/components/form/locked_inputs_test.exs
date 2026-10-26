@@ -110,6 +110,8 @@ defmodule BrandoAdmin.Components.Form.LockedInputsTest do
 
       assert locked?(html)
       assert inert?(html)
+      # Its label would pass a click on to the inert checkbox
+      assert html |> Floki.parse_fragment!() |> Floki.find("label.control-label") |> Floki.attribute("for") == []
       assert html =~ ~r/type="checkbox"[^>]*name="entry\[featured\]"[^>]*checked/
       refute html =~ ~r/type="checkbox"[^>]*\bdisabled\b/
 
@@ -118,6 +120,34 @@ defmodule BrandoAdmin.Components.Form.LockedInputsTest do
       assert locked?(html)
       assert inert?(html)
       assert html =~ ~s(value="2026-11-14")
+    end
+  end
+
+  describe "a link" do
+    # `Input.Link` draws its field through the var's own chrome
+    test "a locked link's field is marked and inert" do
+      var =
+        %Brando.Content.Var{type: :link, key: "link", link_type: :url, value: "https://example.com"}
+        |> Ecto.Changeset.change()
+        |> to_form(as: :link)
+
+      render = fn locked ->
+        render_component(&BrandoAdmin.Components.Form.Input.RenderVar.render_value_inputs/1, %{
+          type: :link,
+          var: var,
+          label: "Link",
+          instructions: nil,
+          identifier: nil,
+          identifier_id: nil,
+          target: nil,
+          on_change: fn _ -> :ok end,
+          locked: locked
+        })
+      end
+
+      assert locked?(render.(true))
+      assert inert?(render.(true))
+      refute locked?(render.(false))
     end
   end
 
@@ -135,6 +165,25 @@ defmodule BrandoAdmin.Components.Form.LockedInputsTest do
 
     test "is locked without a user" do
       assert locked?(render_nested(:title, :text, [readonly: :unless_superuser], nil))
+    end
+
+    # The Meta drawer renders its inputs itself, from the Blueprint's options
+    test "is locked where a caller passes it unresolved" do
+      html =
+        render_component(&BrandoAdmin.Components.Form.Input.text/1,
+          field: form()[:title],
+          opts: [readonly: :unless_superuser]
+        )
+
+      assert locked?(html)
+
+      html =
+        render_component(&BrandoAdmin.Components.Form.Input.text/1,
+          field: form()[:title],
+          opts: Primitives.lock_opts([readonly: :unless_superuser], @superuser)
+        )
+
+      refute locked?(html)
     end
   end
 

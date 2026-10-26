@@ -373,6 +373,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign_new(:inner_block, fn -> nil end)
     |> assign_new(:identifiers, fn -> nil end)
     |> assign_new(:compact, fn -> true end)
+    # A locked `:link` input (`Input.Link`): its link is shown, not edited
+    |> assign_new(:locked, fn -> false end)
     |> assign(:value_id, value)
     |> assign(:image_id, if(type == :image, do: value))
     |> assign(:file_id, if(type == :file, do: value))
@@ -870,6 +872,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
             <.render_value_inputs
               language={assigns[:language]}
+              locked={@locked}
               type={@type}
               palette_colors={@palette_colors}
               form_options={@form_options}
@@ -944,6 +947,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr(:provider_hook, :string, default: nil)
   # The entry's language: the link picker offers entries in it
   attr(:language, :string, default: nil)
+  # A locked `:link` input: the link is shown, not edited
+  attr(:locked, :boolean, default: false)
 
   def render_value_inputs(%{type: nil} = assigns) do
     ~H"""
@@ -1288,7 +1293,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   def render_value_inputs(%{type: :link} = assigns) do
     ~H"""
     <div class="brando-input">
-      <Primitives.field_base field={@var[:identifier_id]} label={@label} instructions={@instructions} skip_presence>
+      <Primitives.field_base
+        field={@var[:identifier_id]}
+        label={@label}
+        instructions={@instructions}
+        locked={@locked}
+        skip_presence
+      >
         <div class="input-link">
           <Input.hidden field={@var[:identifier_id]} value={@identifier_id || ""} />
           <.link_preview
