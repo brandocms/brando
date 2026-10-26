@@ -23,6 +23,16 @@
 #     Anything else, an API error included, prints why and writes
 #     reused=false. It exits 0 either way.
 #
+# What the record vouches for: the artifact's name is all that is read, and
+# it names the tree and base the run's merge commit had, so a run can only
+# vouch for its own PR head merged onto that base. A pull request controls
+# its run (it may change ci.yml, and its code runs in the jobs), so it can
+# record whatever it likes for that tree, but the tree holds the same ci.yml
+# and the same code, which the queue run would run in full anyway: reuse
+# grants a pull request nothing its own workflow file does not. A run on
+# another head, another tree or another base is never matched, and the
+# artifact must belong to the run itself and not have expired.
+#
 # Needs gh (GH_TOKEN with actions: read), jq and GITHUB_REPOSITORY.
 set -uo pipefail
 
@@ -93,7 +103,9 @@ lookup() {
       incomplete) decide false "running every job: cannot read every job of run $id" ;;
       passed)
         count="$(gh api "repos/$repo/actions/runs/$id/artifacts?name=$name" |
-          jq --arg name "$name" '[.artifacts[] | select(.name == $name)] | length')" ||
+          jq --arg name "$name" --argjson id "$id" '
+            [.artifacts[] | select(.name == $name and (.expired | not) and .workflow_run.id == $id)]
+            | length')" ||
           decide false "running every job: cannot read the artifacts of run $id"
         if [ "$count" -gt 0 ]; then
           decide true "reusing pull_request run $id, which passed on the same tree ($tree, base $base): https://github.com/$repo/actions/runs/$id"
