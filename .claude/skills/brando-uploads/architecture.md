@@ -133,6 +133,11 @@ the key and resolved target, server-side.
 Mux, Bunny, Cloudflare and Vimeo hooks own their transfer and delivery and report
 to the drawer through `window.BrandoUploads.trackExternal/externalProgress/externalComplete/externalError`.
 `:external` items are display-only and cannot be cancelled from the drawer.
+The `video_upload_url_ready` payload carries an `upload_token` signed for the
+video, the user and the `request_ref` (`ProviderVideoUpload.ready_payload/4`);
+`video_upload_complete` sends it back instead of a video id, and
+`ProviderVideoUpload.complete/3` refuses any completion without a token this
+user was given for that request, for a video they created.
 Cloudflare provisions one-time direct-user tus uploads, tracks `:uploading` →
 `:processing`, verifies raw-body webhook HMACs and persists playback, thumbnail,
 dimensions and duration.

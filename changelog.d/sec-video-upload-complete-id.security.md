@@ -1,0 +1,1 @@
+- A finished Mux, Bunny, Cloudflare or Vimeo upload is completed only for the upload the server started for that editor: the browser no longer names the video, so it can't move another video out of uploading or onto a field.
