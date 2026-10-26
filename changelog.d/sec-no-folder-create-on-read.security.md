@@ -1,0 +1,1 @@
+- Opening a folder in the media libraries or an image picker no longer stores it for someone who may only read the media: a folder not stored yet shows empty, and only someone who may add or organize that media gets it stored, for uploads into it.
