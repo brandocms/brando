@@ -23,15 +23,16 @@
 #     Anything else, an API error included, prints why and writes
 #     reused=false. It exits 0 either way.
 #
-# What the record vouches for: the artifact's name is all that is read, and
-# it names the tree and base the run's merge commit had, so a run can only
-# vouch for its own PR head merged onto that base. A pull request controls
-# its run (it may change ci.yml, and its code runs in the jobs), so it can
-# record whatever it likes for that tree, but the tree holds the same ci.yml
-# and the same code, which the queue run would run in full anyway: reuse
-# grants a pull request nothing its own workflow file does not. A run on
-# another head, another tree or another base is never matched, and the
-# artifact must belong to the run itself and not have expired.
+# What the record vouches for: only its name is read, and the honest `record`
+# job names the tree and base of the merge commit the run tested. The record
+# is no more trustworthy than the pull request itself: the PR may change
+# ci.yml, and code it adds runs in the jobs, where it could upload a record
+# for another base of the same head (say, once main has moved). That grants
+# nothing the PR does not already have, since the queue run runs the same
+# ci.yml and the same PR code, which can pass its own checks there just as
+# well; review of the PR is what guards both. The record must belong to the
+# run (an artifact of another run is not matched), must not have expired,
+# and must name the queue commit's own tree and first parent.
 #
 # Needs gh (GH_TOKEN with actions: read), jq and GITHUB_REPOSITORY.
 set -uo pipefail
