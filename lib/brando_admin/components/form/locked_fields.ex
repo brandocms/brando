@@ -115,10 +115,20 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
     superuser? = superuser?(user)
 
     for input <- inputs(blueprint),
-        (input.superuser_fieldset and not superuser?) or
-          locked?(Map.get(input, :opts), superuser?, Map.get(input, :type) in @client_filled),
+        (input.superuser_fieldset and not superuser?) or locked_for?(input, superuser?),
         do: input
   end
+
+  @doc """
+  Whether `user` may not change top-level `input` by its own `readonly:` and
+  `disabled:` options: what the form renders locked. A superuser fieldset
+  is not rendered for anyone else, so it is not asked here.
+  """
+  @spec locked_input?(map(), map() | atom()) :: boolean()
+  def locked_input?(input, user), do: locked_for?(input, superuser?(user))
+
+  defp locked_for?(input, superuser?),
+    do: locked?(Map.get(input, :opts), superuser?, Map.get(input, :type) in @client_filled)
 
   defp locked?(opts, superuser?, client_filled?) when is_list(opts) do
     Enum.any?([:readonly, :disabled], fn key ->

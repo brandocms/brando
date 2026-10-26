@@ -244,6 +244,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
         label={@label}
         instructions={@instructions}
         class={@class}
+        locked={@locked}
         relation
       >
         <div>

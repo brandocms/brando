@@ -45,7 +45,14 @@ defmodule BrandoAdmin.Components.Form.Input do
       )
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked}
+    >
       <div class={["check-wrapper", @compact && "small"]}>
         <.input type={:checkbox} field={@field} />
         <%!-- Draws the box. Presence shows on the field's own label, whose
@@ -69,7 +76,14 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = prepare_input_component(assigns)
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked}
+    >
       <div
         id={"#{@field.id}-code"}
         class="code-editor"
@@ -97,7 +111,14 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = assign_new(assigns, :palette_colors, fn -> palette_colors(assigns.palette_id) end)
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked}
+    >
       <div
         id={"#{@field.id}-color-picker"}
         phx-hook="Brando.ColorPicker"
@@ -152,7 +173,14 @@ defmodule BrandoAdmin.Components.Form.Input do
       )
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked}
+    >
       <div
         id={"#{@field.id}-datepicker"}
         class="datetime-wrapper"
@@ -184,7 +212,14 @@ defmodule BrandoAdmin.Components.Form.Input do
       )
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked}
+    >
       <div
         id={"#{@field.id}-datetimepicker"}
         class="datetime-wrapper"
@@ -218,12 +253,19 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = prepare_input_component(assigns)
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked && :readonly}
+    >
       <.input
         type={:email}
         field={@field}
         placeholder={@placeholder}
-        disabled={@disabled}
+        readonly={@locked}
         phx-debounce={@debounce}
         phx-target={@target}
         data-watch-focus
@@ -237,13 +279,19 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = prepare_input_component(assigns)
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked && :readonly}
+    >
       <.input
         type={:number}
         field={@field}
         placeholder={@placeholder}
-        disabled={@disabled}
-        readonly={@readonly}
+        readonly={@locked}
         phx-debounce={@debounce}
         class={["text", @monospace && "monospace"]}
       />
@@ -269,13 +317,20 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:confirmation_value, confirmation_value)
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked && :readonly}
+    >
       <.input
         type={:password}
         field={@field}
         value={@value}
         placeholder={@placeholder}
-        disabled={@disabled}
+        readonly={@locked}
         phx-debounce={@debounce}
         class={["text", @monospace && "monospace"]}
       />
@@ -287,13 +342,14 @@ defmodule BrandoAdmin.Components.Form.Input do
         instructions={@instructions}
         class={@class}
         compact={@compact}
+        locked={@locked && :readonly}
       >
         <.input
           type={:password}
           field={@confirmation_field}
           value={@confirmation_value}
           placeholder={@placeholder}
-          disabled={@disabled}
+          readonly={@locked}
           phx-debounce={@debounce}
           class={["text", @monospace && "monospace"]}
         />
@@ -306,12 +362,19 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = prepare_input_component(assigns)
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked && :readonly}
+    >
       <.input
         type={:phone}
         field={@field}
         placeholder={@placeholder}
-        disabled={@disabled}
+        readonly={@locked}
         phx-debounce={@debounce}
         class={["text", @monospace && "monospace"]}
       />
@@ -342,7 +405,14 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:input_options, input_options)
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked}
+    >
       <div :if={@input_options != []} class="radios-wrapper">
         <div :for={opt <- @input_options} class="form-check">
           <.radio_opt id={@id} opt={opt} field={@field} />
@@ -420,12 +490,19 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:show_default?, present_rich_text?(assigns.default_value))
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked && :readonly}
+    >
       <:header :if={@field_actions != []}>
         <FieldActions.menu field={@field} actions={@field_actions} target={@target} panel={@ai_panel} />
       </:header>
       <div
-        class={["tiptap-wrapper", "input-with-action", @reset && @is_overridden && "has-action"]}
+        class={["tiptap-wrapper", "input-with-action", @reset && @is_overridden && !@locked && "has-action"]}
         id={"#{@field.id}-rich-text-wrapper"}
       >
         <div
@@ -447,7 +524,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           data-tiptap-describedby={"#{@field.id}-error #{@field.id}-tiptap-help"}
           data-tiptap-invalid={to_string(field_invalid?(@field))}
           data-tiptap-required={to_string(field_required?(@field))}
-          data-tiptap-readonly={to_string(@disabled == true || @opts[:readonly] == true)}
+          data-tiptap-readonly={to_string(@locked)}
           data-tiptap-ai={to_string(@write_with_ai?)}
           data-tiptap-field={@field.field}
           data-tiptap-label-mode={@opts[:label_mode] || "compact"}
@@ -474,7 +551,7 @@ defmodule BrandoAdmin.Components.Form.Input do
               and only syncs *out* to the hidden input, so writing the input
               directly would leave the visible text untouched. --%>
         <button
-          :if={@reset && @is_overridden}
+          :if={@reset && @is_overridden && !@locked}
           type="button"
           class="override-reset-button"
           phx-click={Phoenix.LiveView.JS.dispatch("brando:tiptap:clear", to: "##{@field.id}-rich-text")}
@@ -545,12 +622,20 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> maybe_assign_url(assigns.opts[:show_url])
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked && :readonly}
+    >
       <.input
         type={:text}
         field={@field}
         class="text monospace"
         phx-hook="Brando.Slug"
+        readonly={@locked}
         phx-debounce={300}
         data-slug-for={@data_slug_for}
         data-slug-type={@data_slug_type}
@@ -908,7 +993,14 @@ defmodule BrandoAdmin.Components.Form.Input do
       status_compact(assigns)
     else
       ~H"""
-      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <Primitives.field_base
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}
+        locked={@locked}
+      >
         <div class="radios-wrapper status">
           <div :for={status <- @statuses} :key={status.value} class="form-check">
             <label class="form-check-label">
@@ -960,6 +1052,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       instructions={@instructions}
       class={@class}
       compact={@compact}
+      locked={@locked}
       fit_content
     >
       <div
@@ -1051,7 +1144,14 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = prepare_input_component(assigns)
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked}
+    >
       <.input type={:string_list} field={@field} />
     </Primitives.field_base>
     """
@@ -1086,20 +1186,29 @@ defmodule BrandoAdmin.Components.Form.Input do
       <button
         type="button"
         class="disclosed-text-summary"
+        disabled={@locked}
         phx-click={
           JS.add_class("is-open", to: "##{@wrapper}")
           |> JS.focus(to: "##{@field.id}")
         }
       >
-        {@label}: <code>{@field.value}</code> <.icon name="square-pen" />
+        {@label}: <code>{@field.value}</code> <.icon name={if @locked, do: "lock", else: "square-pen"} />
       </button>
       <div class="disclosed-text-field">
-        <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+        <Primitives.field_base
+          field={@field}
+          label={@label}
+          instructions={@instructions}
+          class={@class}
+          compact={@compact}
+          locked={@locked && :readonly}
+        >
           <.input
             type={:text}
             field={@field}
             placeholder={@placeholder}
             class={["text", @monospace && "monospace"]}
+            readonly={@locked}
             phx-debounce={@debounce}
           />
         </Primitives.field_base>
@@ -1133,7 +1242,14 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> prepare_ai_support()
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked && :readonly}
+    >
       <:header :if={@field_actions != []}>
         <FieldActions.menu field={@field} actions={@field_actions} target={@target} panel={@ai_panel} />
       </:header>
@@ -1142,8 +1258,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           type={:text}
           field={@field}
           placeholder={@placeholder}
-          disabled={@disabled}
-          readonly={@readonly}
+          readonly={@locked}
           class={["text", @monospace && "monospace"]}
           phx-debounce={@debounce}
           data-watch-focus
@@ -1182,18 +1297,26 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:display_placeholder, assigns.default_value || "")
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked && :readonly}
+    >
       <div class="input-with-action has-action">
         <.input
           type={:text}
           field={@field}
           placeholder={@display_placeholder}
           class={["text", @is_overridden && "is-overridden"]}
+          readonly={@locked}
           phx-debounce={@debounce}
           data-watch-focus
         />
         <button
-          :if={@is_overridden}
+          :if={@is_overridden && !@locked}
           type="button"
           class="override-reset-button"
           phx-click={
@@ -1317,7 +1440,14 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:monospace, assigns.opts[:monospace])
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked && :readonly}
+    >
       <:header :if={@field_actions != []}>
         <FieldActions.menu field={@field} actions={@field_actions} target={@target} panel={@ai_panel} />
       </:header>
@@ -1328,7 +1458,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           class={["text", @monospace && "monospace"]}
           placeholder={@placeholder}
           rows={@rows}
-          disabled={@disabled}
+          readonly={@locked}
           phx-debounce={@debounce}
           phx-target={@target}
           data-watch-focus
@@ -1471,7 +1601,14 @@ defmodule BrandoAdmin.Components.Form.Input do
       |> assign(:written?, Enum.any?(languages, fn {language, _} -> !blank_i18n?(value[language]) end))
 
     ~H"""
-    <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+    <Primitives.field_base
+      field={@field}
+      label={@label}
+      instructions={@instructions}
+      class={@class}
+      compact={@compact}
+      locked={@locked && :readonly}
+    >
       <div class={["i18n-field", "i18n-#{@kind}"]} id={@i18n_id}>
         <%!-- Removing a configured language hides its tab, not its stored text. --%>
         <input
@@ -1479,7 +1616,6 @@ defmodule BrandoAdmin.Components.Form.Input do
           type="hidden"
           name={"#{@field.name}[#{language}]"}
           value={text}
-          disabled={@disabled}
         />
         <div class="i18n-head">
           <div class="i18n-tabs" role="tablist" aria-label={@label}>
@@ -1501,7 +1637,7 @@ defmodule BrandoAdmin.Components.Form.Input do
           <%!-- An image's alt text, described by AI: a suggestion under the
                 field until it is accepted --%>
           <AIAction.button
-            :if={@suggest_alt?}
+            :if={@suggest_alt? && !@locked}
             size={:compact}
             class="i18n-suggest"
             phx-click={@suggest_event}
@@ -1527,7 +1663,7 @@ defmodule BrandoAdmin.Components.Form.Input do
             class="text"
             lang={language}
             aria-label={"#{@label_text} (#{name})"}
-            disabled={@disabled}
+            readonly={@locked}
             phx-debounce={@debounce}
             phx-target={@target}
             data-watch-focus
@@ -1540,7 +1676,7 @@ defmodule BrandoAdmin.Components.Form.Input do
             rows={@rows}
             lang={language}
             aria-label={"#{@label_text} (#{name})"}
-            disabled={@disabled}
+            readonly={@locked}
             phx-debounce={@debounce}
             phx-target={@target}
             data-watch-focus
@@ -1580,7 +1716,7 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <%= if @tiny do %>
-      <div class="tiny-toggle-wrapper">
+      <div class="tiny-toggle-wrapper" data-locked={@locked && "true"} inert={@locked}>
         <Primitives.label field={@field} class="switch small" skip_presence>
           <%= if @inner_block do %>
             {render_slot(@inner_block)}
@@ -1598,6 +1734,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         instructions={@instructions}
         class={@class}
         compact={@compact}
+        locked={@locked}
         left_justify_meta
       >
         <Primitives.label field={@field} class={["switch", @compact && "small"]} skip_presence>

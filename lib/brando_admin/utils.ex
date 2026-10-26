@@ -89,6 +89,8 @@ defmodule BrandoAdmin.Utils do
       class: assign_opts[:class],
       monospace: assign_opts[:monospace] || false,
       disabled: assign_opts[:disabled] || false,
+      readonly: assign_opts[:readonly] || nil,
+      locked: locked?(assign_opts),
       debounce: assign_opts[:debounce] || 300,
       compact: assign_opts[:compact],
       placeholder: g(schema, assign_opts[:placeholder]) || socket.assigns.placeholder,
@@ -114,6 +116,7 @@ defmodule BrandoAdmin.Utils do
       monospace: assigns.opts[:monospace] || false,
       disabled: assigns.opts[:disabled] || false,
       readonly: assigns.opts[:readonly] || nil,
+      locked: locked?(assigns.opts),
       debounce: assigns.opts[:debounce] || 300,
       compact: assigns.opts[:compact],
       placeholder: g(schema, assigns.opts[:placeholder]) || assigns.placeholder,
@@ -121,6 +124,20 @@ defmodule BrandoAdmin.Utils do
       label: g(schema, assigns.opts[:label]) || assigns.label
     )
   end
+
+  @doc """
+  Whether an input's `opts` lock it: its controls take no edit. Set by
+  `BrandoAdmin.Components.Form.Primitives.lock_opts/2`; without it,
+  `readonly: true` or `disabled: true`.
+  """
+  def locked?(opts) when is_list(opts) do
+    case Keyword.fetch(opts, :locked) do
+      {:ok, locked} -> locked == true
+      :error -> Keyword.get(opts, :readonly) == true or Keyword.get(opts, :disabled) == true
+    end
+  end
+
+  def locked?(_opts), do: false
 
   def make_uid(_field, nil) do
     nil

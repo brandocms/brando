@@ -30,7 +30,9 @@ defmodule BrandoAdmin.Components.Form.Input.Link do
 
   def render(assigns) do
     ~H"""
-    <div>
+    <%!-- A locked link's own field chrome is drawn by the var, so its
+          controls are made inert here --%>
+    <div class="link-input" data-locked={@locked && "true"} inert={@locked}>
       <.inputs_for :let={var} field={@field}>
         <.live_component
           module={RenderVar}

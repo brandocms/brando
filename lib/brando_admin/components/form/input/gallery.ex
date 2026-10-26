@@ -180,7 +180,14 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     ~H"""
     <div>
-      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <Primitives.field_base
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}
+        locked={@locked}
+      >
         <div class="gallery-input">
           <div
             id={"#{@field.id}-gallery-upload-trigger"}
