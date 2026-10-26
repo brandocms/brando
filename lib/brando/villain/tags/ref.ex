@@ -54,7 +54,7 @@ defmodule Brando.Villain.Tags.Ref do
   defp render_ref(_, %{active: false}, _id, ref_name, _, _), do: "<!-- !a[#{ref_name}] -->"
 
   defp render_ref(parser, %{data: block, description: description}, id, ref_name, true, opts) do
-    rendered_ref = apply(parser, String.to_existing_atom(block.type), [block.data, opts])
+    rendered_ref = apply(parser, parser_function(parser, block.type), [block.data, opts])
 
     """
     <section phx-click="edit_ref" b-module-id="#{id}" b-ref="#{ref_name}" b-ref-desc="#{description}">
@@ -72,10 +72,18 @@ defmodule Brando.Villain.Tags.Ref do
          opts
        ) do
     block = Changeset.apply_changes(block_cs)
-    apply(parser, String.to_existing_atom(block.type), [block.data, opts])
+    apply(parser, parser_function(parser, block.type), [block.data, opts])
   end
 
   defp render_ref(parser, %{data: block, description: _description}, _id, _ref_name, _, opts) do
-    apply(parser, String.to_existing_atom(block.type), [block.data, opts])
+    apply(parser, parser_function(parser, block.type), [block.data, opts])
+  end
+
+  @doc false
+  # The block's type names the parser function. It is stored data, so it
+  # must name one that exists; the parser is loaded first so its names are.
+  def parser_function(parser, type) do
+    Code.ensure_loaded(parser)
+    String.to_existing_atom(type)
   end
 end
