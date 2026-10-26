@@ -6,6 +6,7 @@ defmodule Brando.Cache.Palettes do
 
   alias Brando.Cache
   alias Brando.Content
+  alias Brando.Content.Palette
 
   @type changeset :: Ecto.Changeset.t()
 
@@ -87,22 +88,27 @@ defmodule Brando.Cache.Palettes do
     |> Phoenix.HTML.raw()
   end
 
+  # Names are escaped and colours stored before values were checked left
+  # out (`Palette.css_escape/1`, `Palette.css_colors/1`): the CSS is written
+  # into the page's `<style>` as it is.
   defp namespace_css(%{global: true} = palette) do
+    prefix = Palette.css_escape("palette-#{palette.namespace}-#{palette.key}-")
+
     palette_vars =
-      Enum.map(palette.colors, fn color ->
-        "--palette-#{palette.namespace}-#{palette.key}-#{color.key}: #{color.hex_value};"
+      Enum.map(Palette.css_colors(palette.colors), fn color ->
+        "--#{prefix}#{Palette.css_escape(color.key)}: #{color.hex_value};"
       end)
 
     ":root {#{palette_vars}}"
   end
 
   defp namespace_css(%{namespace: namespace, key: key} = palette) do
-    opening_tag = [~s([b-section="#{namespace}-#{key}"] {)]
+    opening_tag = [~s([b-section="#{Palette.css_escape("#{namespace}-#{key}")}"] {)]
     closing_tag = ["}"]
 
     colors =
-      Enum.map(palette.colors, fn color ->
-        "--#{color.key}: #{color.hex_value};"
+      Enum.map(Palette.css_colors(palette.colors), fn color ->
+        "--#{Palette.css_escape(color.key)}: #{color.hex_value};"
       end)
 
     opening_tag ++ colors ++ closing_tag

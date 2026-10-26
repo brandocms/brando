@@ -252,6 +252,7 @@ defmodule Brando.Villain.Parser do
 
   alias Brando.Content
   alias Brando.Content.BlockSlots
+  alias Brando.Content.Palette
   alias Brando.RuntimeConfig
   alias Brando.Utils
   alias Brando.Villain.Blocks.GalleryObjectOverride
@@ -1278,7 +1279,9 @@ defmodule Brando.Villain.Parser do
     case Content.find_palette(palettes, palette_id, Map.get(block, :palette_origin, :local)) do
       {:ok, palette} ->
         colors =
-          palette.colors |> Enum.map(&"--#{&1.key}: #{&1.hex_value}") |> Enum.intersperse(";")
+          palette.colors
+          |> Palette.css_colors()
+          |> Enum.map_join(";", &"--#{Palette.css_escape(&1.key)}: #{&1.hex_value}")
 
         palette_vars = " style=\"#{escape_attr(colors)}\""
 
