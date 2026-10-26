@@ -80,31 +80,60 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
     end
   end
 
-  defp source_value(value) when is_binary(value), do: value
+  # The value as its input holds it: a date as `2026-10-26`. A language map,
+  # an embed or a list has no single input.
   defp source_value(nil), do: ""
-  defp source_value(value) when is_map(value), do: ""
+  defp source_value(value) when is_struct(value), do: if(String.Chars.impl_for(value), do: to_string(value), else: "")
+  defp source_value(value) when is_map(value) or is_list(value), do: ""
   defp source_value(value), do: to_string(value)
 
   defp slug_prefix(prefix, changeset) when is_function(prefix, 1), do: prefix.(changeset) || ""
   defp slug_prefix(prefix, _changeset) when is_binary(prefix), do: prefix
   defp slug_prefix(_prefix, _changeset), do: ""
 
-  # The Slug hook's `camelCase`: accents replaced, other characters but
-  # letters, digits, spaces and hyphens removed, then the words after the
-  # first joined with a capital
-  @camel_letters %{"Æ" => "AE", "æ" => "ae", "Ø" => "O", "ø" => "o", "Ð" => "D", "Þ" => "P", "þ" => "p"}
-
+  # The Slug hook's `camelCase`: its accented Latin-1 letters replaced,
+  # characters other than ASCII letters, digits, Latin-1 letters, spaces and
+  # hyphens removed, then the words after the first joined with a capital
   defp camel_case(string) do
     string
-    |> String.replace(Map.keys(@camel_letters), &Map.fetch!(@camel_letters, &1))
-    |> String.normalize(:nfd)
-    |> String.replace(~r/\p{Mn}/u, "")
-    |> String.replace(~r/[^0-9a-zA-Z \-]/, "")
+    |> String.replace(~r/[\x{C0}-\x{FF}]/u, &replace_accent/1)
+    |> String.replace(~r/[^0-9a-zA-Z\x{C0}-\x{FF} \-]/u, "")
     |> String.replace("-", " ")
-    |> String.replace(~r/\s[a-z]/, &String.upcase/1)
-    |> String.replace(~r/\s+/, "")
+    |> String.replace(~r/\s[a-z]/u, &String.upcase/1)
+    |> String.replace(~r/\s+/u, "")
     |> String.replace(~r/^[A-Z]/, &String.downcase/1)
   end
+
+  # `replaceAccents` in the Slug hook, by code point; the rest (ß, ð, ×, ÷)
+  # stay
+  @accents for {chars, letter} <- [
+                 {0xC0..0xC5, "A"},
+                 {[0xC6], "AE"},
+                 {[0xC7], "C"},
+                 {0xC8..0xCB, "E"},
+                 {0xCC..0xCF, "I"},
+                 {[0xD0], "D"},
+                 {[0xD1], "N"},
+                 {[0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD8], "O"},
+                 {0xD9..0xDC, "U"},
+                 {[0xDD], "Y"},
+                 {[0xDE], "P"},
+                 {0xE0..0xE5, "a"},
+                 {[0xE6], "ae"},
+                 {[0xE7], "c"},
+                 {0xE8..0xEB, "e"},
+                 {0xEC..0xEF, "i"},
+                 {[0xF1], "n"},
+                 {[0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF8], "o"},
+                 {0xF9..0xFC, "u"},
+                 {[0xFE], "p"},
+                 {[0xFD, 0xFF], "y"}
+               ],
+               char <- chars,
+               into: %{},
+               do: {<<char::utf8>>, letter}
+
+  defp replace_accent(letter), do: Map.get(@accents, letter, letter)
 
   defp blank?(value), do: value in [nil, ""]
 

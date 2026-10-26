@@ -338,6 +338,22 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
 
       assert %{"slug" => "primaryColorBla"} =
                derive.([source: :title, camel_case: true] ++ locked, %Article{}, %{"title" => "Primary color blå"})
+
+      # The hook keeps the Latin-1 letters it doesn't replace
+      assert %{"slug" => "straßeaeRo"} =
+               derive.([source: :title, camel_case: true] ++ locked, %Article{}, %{"title" => "Straße/æ-rø!"})
+    end
+
+    # A date source is slugged as its input holds it
+    test "generates a slug from a date", %{editor: editor} do
+      fields = [%Forms.Input{name: :slug, type: :slug, opts: [source: [:title, :published_on], readonly: true]}]
+      blueprint = %Forms.Form{tabs: [%Forms.Tab{fields: [%Forms.Fieldset{fields: fields}]}]}
+      params = %{"title" => "Notes", "published_on" => "2026-10-26"}
+
+      changeset =
+        Ecto.Changeset.cast({%{}, %{title: :string, slug: :string, published_on: :date}}, params, [:title, :published_on])
+
+      assert %{"slug" => "notes-2026-10-26"} = LockedFields.derive_slugs(params, changeset, Article, blueprint, editor)
     end
 
     test "leaves a slug that has a value, one without a source, and one not locked", %{derive: derive} do
@@ -359,7 +375,11 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
       changeset = Ecto.Changeset.cast(%Article{}, params, [:title])
 
       assert LockedFields.derive_slugs(params, changeset, Article, blueprint, %{editor | role: :superuser}) == params
-      assert LockedFields.derive_slugs(params, changeset, Article, blueprint, editor) == %{"title" => "New", "slug" => "new"}
+
+      assert LockedFields.derive_slugs(params, changeset, Article, blueprint, editor) == %{
+               "title" => "New",
+               "slug" => "new"
+             }
     end
   end
 end
