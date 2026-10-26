@@ -1,0 +1,1 @@
+- `plug_crypto` 2.2.1, which keeps the secret key base out of stack traces (EEF-CVE-2026-105963).
