@@ -56,6 +56,23 @@ defmodule Brando.RichTextSanitizeTest do
     refute RichText.safe_svg?(~s(<svg><foreignObject><p>x</p></foreignObject></svg>))
     refute RichText.safe_svg?(~s(<svg><style>p{}</style></svg>))
     refute RichText.safe_svg?(~s(<svg></svg><p>after</p>))
+    assert RichText.safe_svg?(~s(<?xml version="1.0"?>\n<!-- Exported --><svg viewBox="0 0 1 1"></svg>\n))
+    refute RichText.safe_svg?(~s(<!-- x --><svg><!-- inside --></svg>))
+  end
+
+  test "elements SVG and HTML share a name are seen in HTML" do
+    for html <- [
+          ~s(<iframe srcdoc="x"></iframe>),
+          ~s(<video src="x" onerror="x"></video>),
+          ~s(<canvas onclick="x"></canvas>),
+          ~s(<a href="javascript:x">a</a>),
+          ~s(<span onclick="x">a</span>),
+          ~s(<font onclick="x">a</font>),
+          ~s(<audio onplay="x"></audio>)
+        ] do
+      refute RichText.safe_html?(html), html
+      assert RichText.sanitize_html(html) == :error, html
+    end
   end
 
   test "Markdown is checked as the HTML it renders" do

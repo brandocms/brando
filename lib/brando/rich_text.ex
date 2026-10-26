@@ -144,12 +144,18 @@ defmodule Brando.RichText do
     known? = known_tags?(code, tags)
     code = code |> canonical(tags, false) |> String.trim()
 
+    # Comments and blank text around the root are allowed, as in an
+    # exported icon; inside it, a comment is refused.
+    around? = &(match?({:comment, _}, &1) or match?({:text, ""}, trim(&1)))
+
     with true <- known?,
          {:ok, tokens} <- tokens(code),
-         [{:start, "svg", _} | _] <- tokens,
+         [{:start, "svg", _} | _] = tokens <- Enum.drop_while(tokens, around?),
          {:ok, rest} <- close(tokens, 0),
-         true <- Enum.all?(rest, &match?({:text, text} when text == "", trim(&1))) do
-      Enum.all?(tokens, &safe_token?(&1, @unsafe_svg_tags ++ (@hidden_tags -- ["title"])))
+         true <- Enum.all?(rest, around?) do
+      tokens
+      |> Enum.take(length(tokens) - length(rest))
+      |> Enum.all?(&safe_token?(&1, @unsafe_svg_tags ++ (@hidden_tags -- ["title"])))
     else
       _ -> false
     end

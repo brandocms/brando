@@ -54,6 +54,9 @@ defmodule Brando.Content.Proposals.RichTextGuardTest do
     assert codes(c, %{notes: "[Read more](javascript:document.title='MARKER')"}) == [:unsafe_text]
     assert codes(c, %{notes: ~s(Hi\n\n<img src="x" onerror="document.title='MARKER'">)}) == [:unsafe_text]
     assert codes(c, %{notes: "Some *notes* and [a link](https://example.com)"}) == []
+
+    # An entry link in it skips nothing.
+    assert :unsafe_text in codes(c, %{notes: ~s{[x](entry:Brando.Pages.Page:1)\n\n<img src="x" onerror="x">}})
   end
 
   test "ordinary rich text and svg stay valid", c do

@@ -954,7 +954,11 @@ defmodule Brando.Content.Proposals do
     do: problem(:unsupported_value, dgettext("content_proposals", "%{key} cannot be set to this value.", key: key))
 
   # Markdown is checked as the HTML it renders, raw HTML and links included.
-  defp checked_text("markdown", text), do: Brando.Markdown.to_html!(text, breaks: true)
+  # An `entry:` link in it never resolves, so it does not count as an
+  # unresolved one, which would skip the check of the rest.
+  defp checked_text("markdown", text),
+    do: text |> Brando.Markdown.to_html!(breaks: true) |> String.replace(~r/href=(["'])\s*entry:/i, "href=\\1#")
+
   defp checked_text(_type, text), do: text
 
   # Text, markdown and HTML refs must pass the same safety check as the
