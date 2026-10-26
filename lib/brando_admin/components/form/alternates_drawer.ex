@@ -131,15 +131,16 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
     {:noreply, socket}
   end
 
-  def handle_event("select_entry", %{"schema" => schema, "parent_id" => parent_id, "id" => id}, socket) do
-    alternate_schema = Module.concat(schema, Alternate)
+  # The links are the edited entry's: its schema, never one the event names
+  def handle_event("select_entry", %{"parent_id" => parent_id, "id" => id}, socket) do
+    alternate_schema = Module.concat(socket.assigns.entry.__struct__, Alternate)
     _ = alternate_schema.add(id, parent_id)
 
     {:noreply, add_identifier(socket, id)}
   end
 
-  def handle_event("remove_entry", %{"schema" => schema, "parent_id" => parent_id, "id" => id}, socket) do
-    alternate_schema = Module.concat(schema, Alternate)
+  def handle_event("remove_entry", %{"parent_id" => parent_id, "id" => id}, socket) do
+    alternate_schema = Module.concat(socket.assigns.entry.__struct__, Alternate)
     _ = alternate_schema.delete(id, parent_id)
 
     {:noreply, delete_identifier(socket, id)}

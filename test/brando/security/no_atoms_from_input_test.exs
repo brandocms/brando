@@ -71,6 +71,12 @@ defmodule Brando.Security.NoAtomsFromInputTest do
     refute atom?("Elixir.Brando.#{name}")
   end
 
+  test "a module's stored datasource name names an existing module" do
+    name = fresh()
+    assert_raise ArgumentError, fn -> Brando.Datasource.Registry.module!("Brando.#{name}") end
+    refute atom?("Elixir.Brando.#{name}")
+  end
+
   describe "a template's route tags" do
     test "name helpers and actions that exist, and make no atom of the others" do
       for {tpl, name} <- [{"{% route NAME index %}", fresh()}, {"{% route project_path NAME %}", fresh()}] do

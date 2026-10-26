@@ -1463,7 +1463,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   # Meta labels are msgids in the datasource schema's gettext domain, like
   # its field labels.
   defp translate_meta_labels(meta, module) when is_list(meta) do
-    schema = Module.concat([module])
+    schema = Brando.Datasource.Registry.module!(module)
     gettext = schema.__modules__().gettext
     naming = schema.__naming__()
     domain = String.downcase("#{naming.domain}_#{naming.schema}")
@@ -1491,7 +1491,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   def maybe_assign_datasource_preview(socket), do: assign_new(socket, :datasource_preview, fn -> nil end)
 
   defp datasource_preview(socket) do
-    module = Module.concat([socket.assigns.module_datasource_module])
+    module = Brando.Datasource.Registry.module!(socket.assigns.module_datasource_module)
     language = socket.assigns[:entry] && Map.get(socket.assigns.entry, :language)
 
     case Brando.Datasource.list_results(
@@ -1616,7 +1616,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp datasource_module_label(module) do
     if module.datasource and module.datasource_module do
-      module = Module.concat(List.wrap(module.datasource_module))
+      module = Brando.Datasource.Registry.module!(module.datasource_module)
       domain = module.__naming__().domain
       schema = module.__naming__().schema
 
@@ -1902,7 +1902,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   def assign_available_identifiers(socket) do
-    module = Module.concat([socket.assigns.module_datasource_module])
+    module = Brando.Datasource.Registry.module!(socket.assigns.module_datasource_module)
     query = socket.assigns.module_datasource_query
     entry = socket.assigns.entry
 

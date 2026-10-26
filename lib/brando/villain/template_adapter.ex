@@ -84,6 +84,14 @@ defmodule Brando.Villain.TemplateAdapter do
 
   defp table_row(row), do: row
 
+  # Keys come from stored table templates: one no code uses as an atom stays
+  # a string rather than becoming a new atom.
   defp to_atom(key) when is_atom(key), do: key
-  defp to_atom(key), do: String.to_atom(key)
+
+  defp to_atom(key) do
+    case Brando.Utils.existing_atom(key) do
+      {:ok, atom} -> atom
+      :error -> key
+    end
+  end
 end

@@ -95,18 +95,23 @@ defmodule Brando.Datasource.Registry do
   @doc false
   @spec resolve(module() | String.t() | [module() | String.t()], atom() | String.t()) :: {module(), atom()}
   def resolve(module_name, key) do
-    module = resolve_module(module_name)
+    module = module!(module_name)
     atom_key = if is_atom(key), do: key, else: String.to_existing_atom(key)
     {module, atom_key}
   end
 
-  # The name is stored on the module, which admins edit: never make an atom of it
-  defp resolve_module(module) when is_atom(module) do
+  @doc """
+  The datasource module a module's stored `datasource_module` names. The name
+  is stored on the module, which admins edit, so no atom is made of it: a name
+  no module has raises `ArgumentError`.
+  """
+  @spec module!(module() | String.t() | [module() | String.t()]) :: module()
+  def module!(module) when is_atom(module) do
     Code.ensure_loaded(module)
     module
   end
 
-  defp resolve_module(module_name) do
+  def module!(module_name) do
     name =
       module_name
       |> List.wrap()
