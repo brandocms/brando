@@ -70,4 +70,15 @@ defmodule Brando.ClientIPTest do
     assert :error = ClientIP.parse_range("10.0.0.0/33")
     assert :error = ClientIP.parse_range("nonsense")
   end
+
+  describe "rate_key/1" do
+    test "keeps an IPv4 address and takes an IPv6 one's /64" do
+      assert Brando.ClientIP.rate_key({203, 0, 113, 5}) == {203, 0, 113, 5}
+      assert Brando.ClientIP.rate_key({0x2001, 0xDB8, 0, 1, 5, 6, 7, 8}) == {0x2001, 0xDB8, 0, 1, 0, 0, 0, 0}
+      assert Brando.ClientIP.rate_key("2001:db8:0:1::9") == {0x2001, 0xDB8, 0, 1, 0, 0, 0, 0}
+      assert Brando.ClientIP.rate_key("::ffff:203.0.113.5") == {203, 0, 113, 5}
+      assert Brando.ClientIP.rate_key("not an address") == nil
+      assert Brando.ClientIP.rate_key(nil) == nil
+    end
+  end
 end

@@ -136,7 +136,7 @@ defmodule Brando.Forms do
   def submit(key, params, meta) do
     with %Form{} = form <- get_published_form(key, params["_language"]) || {:error, :not_found},
          :ok <- check_honeypot(params, form),
-         :ok <- tag(RateLimit.check_visitor(Submission.current_scope(), form.key, ip_hash(meta[:ip])), form),
+         :ok <- tag(RateLimit.check_visitor(Submission.current_scope(), form.key, visitor(meta)), form),
          :ok <- tag(verify_turnstile(params, meta), form),
          {:ok, data} <- tag(Validation.validate(form, params["fields"] || %{}), form),
          :ok <- tag(RateLimit.count_form(Submission.current_scope(), form.key), form),
@@ -146,6 +146,14 @@ defmodule Brando.Forms do
     else
       {:ignored, form} -> {:ok, :ignored, form}
       other -> other
+    end
+  end
+
+  # Visitors are counted by address, an IPv6 one by its /64
+  defp visitor(meta) do
+    case Brando.ClientIP.rate_key(meta[:ip]) do
+      nil -> ip_hash(meta[:ip])
+      key -> key |> :inet.ntoa() |> ip_hash()
     end
   end
 

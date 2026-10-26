@@ -315,8 +315,8 @@ replaces Brando's crontab, and adds the job to its own:
 - **Honeypot.** A hidden field people never see; a submission that fills it in
   is answered as a success and not stored.
 - **Rate limit.** Ten posts per visitor and 200 stored submissions per form
-  in ten minutes. Visitors are counted by a hash of their IP address, also
-  behind a trusted reverse proxy (`config :brando, :trusted_proxies`, see
+  in ten minutes. Visitors are counted by a hash of their IP address (an IPv6
+  one by its /64), also behind a trusted reverse proxy (`config :brando, :trusted_proxies`, see
   `Brando.ClientIP`). A post counts against its visitor before Turnstile is
   asked; only a submission that passed Turnstile and validation counts
   against the form, so refused posts cannot block it for everyone:

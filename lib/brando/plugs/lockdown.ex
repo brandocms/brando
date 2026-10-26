@@ -35,7 +35,7 @@ defmodule Brando.Plug.Lockdown do
 
   `https://website/?key=<pass>`
 
-  Password attempts are limited to #{@attempts_per_window} per client address in
+  Wrong password attempts are limited to #{@attempts_per_window} per client address in
   #{div(@attempt_window, 60_000)} minutes (`password?/2`, which the lockdown
   page's controller calls), so the password cannot be guessed by trying
   many. The address is the client's, also behind a trusted reverse proxy
@@ -72,9 +72,10 @@ defmodule Brando.Plug.Lockdown do
   end
 
   @doc """
-  Whether `given` is the configured `lockdown_password`. Use `password?/2`
-  for what a visitor sent, so their attempts are counted.
+  Whether `given` is the configured `lockdown_password`, with no limit on
+  attempts. Use `password?/2` for what a visitor sent.
   """
+  @deprecated "Use password?/2, which limits a visitor's attempts"
   @spec password?(term()) :: boolean()
   def password?(given) do
     case password() do
@@ -85,20 +86,27 @@ defmodule Brando.Plug.Lockdown do
 
   @doc """
   Whether `given`, sent by the visitor at `conn`, is the configured
-  `lockdown_password`. Counts the attempt against the visitor's address;
-  past #{@attempts_per_window} in #{div(@attempt_window, 60_000)} minutes, even the right
-  password is refused until the window ends.
+  `lockdown_password`. A wrong one counts against the visitor's address (an
+  IPv6 one by its /64); after #{@attempts_per_window} in #{div(@attempt_window, 60_000)} minutes, even
+  the right password is refused there until the window ends. The right
+  password costs nothing, so people sharing an address and a key link are
+  not locked out.
   """
   @spec password?(Plug.Conn.t(), term()) :: boolean()
   def password?(%Plug.Conn{} = conn, given) do
-    password() != nil and attempt_allowed?(conn) and password?(given)
+    bucket = {__MODULE__, conn |> Brando.ClientIP.from_conn() |> Brando.ClientIP.rate_key()}
+
+    cond do
+      password() == nil -> false
+      Brando.RateLimit.count(bucket, @attempt_window) >= @attempts_per_window -> false
+      password?(given) -> true
+      true -> failed(bucket)
+    end
   end
 
-  defp attempt_allowed?(conn) do
-    case Brando.ClientIP.from_conn(conn) do
-      nil -> true
-      ip -> Brando.RateLimit.hit({__MODULE__, ip}, @attempts_per_window, @attempt_window) == :ok
-    end
+  defp failed(bucket) do
+    _ = Brando.RateLimit.hit(bucket, @attempts_per_window, @attempt_window)
+    false
   end
 
   defp allowed?(%{private: %{brando_live_preview: true}} = conn), do: conn

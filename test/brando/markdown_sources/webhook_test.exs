@@ -5,8 +5,8 @@ defmodule Brando.MarkdownSources.WebhookTest do
   @secret String.duplicate("s", 40)
 
   setup do
-    Brando.MarkdownSources.RateLimiter.reset()
-    on_exit(&Brando.MarkdownSources.RateLimiter.reset/0)
+    Brando.MarkdownSources.RateLimiter.reset(freeze: true)
+    on_exit(fn -> Brando.MarkdownSources.RateLimiter.reset() end)
     old = Application.get_env(:brando, :markdown_sources)
 
     Application.put_env(:brando, :markdown_sources,
@@ -143,6 +143,23 @@ defmodule Brando.MarkdownSources.WebhookTest do
       Oban.Testing.with_testing_mode(:manual, fn ->
         assert payload() |> signed() |> Webhook.call([]) |> Map.get(:status) == 202
       end)
+    end
+
+    test "each client has a budget of its own" do
+      for _ <- 1..120, do: unsigned({192, 0, 2, 1}) |> Webhook.call([])
+
+      for i <- 2..200 do
+        assert unsigned({192, 0, 2, i}) |> Webhook.call([]) |> Map.get(:status) == 401
+      end
+    end
+
+    test "an IPv6 client is counted by its /64" do
+      for i <- 1..120 do
+        assert unsigned({0x2001, 0xDB8, 0, 1, 0, 0, 0, i}) |> Webhook.call([]) |> Map.get(:status) == 401
+      end
+
+      assert unsigned({0x2001, 0xDB8, 0, 1, 0xFFFF, 0, 0, 1}) |> Webhook.call([]) |> Map.get(:status) == 429
+      assert unsigned({0x2001, 0xDB8, 0, 2, 0, 0, 0, 1}) |> Webhook.call([]) |> Map.get(:status) == 401
     end
 
     test "clients behind a trusted proxy are counted by their own address" do

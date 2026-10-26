@@ -125,11 +125,22 @@ defmodule Brando.Plug.LockdownTest do
       Lockdown.password?(%{Plug.Test.conn(:post, "/coming-soon") | remote_ip: ip}, password)
     end
 
-    test "after ten tries from one address, even the right password is refused there" do
+    test "after ten wrong tries from one address, even the right password is refused there" do
       for _ <- 1..10, do: refute(attempt({203, 0, 113, 5}, "guess"))
 
       refute attempt({203, 0, 113, 5}, "my_pass")
       assert attempt({198, 51, 100, 7}, "my_pass")
+    end
+
+    test "the right password costs nothing, so people sharing an address get in" do
+      for _ <- 1..20, do: assert(attempt({203, 0, 113, 5}, "my_pass"))
+    end
+
+    test "an IPv6 client is counted by its /64" do
+      for i <- 1..10, do: refute(attempt({0x2001, 0xDB8, 0, 1, 0, 0, 0, i}, "guess"))
+
+      refute attempt({0x2001, 0xDB8, 0, 1, 0, 0, 0, 99}, "my_pass")
+      assert attempt({0x2001, 0xDB8, 0, 2, 0, 0, 0, 1}, "my_pass")
     end
 
     test "?key= counts as a try" do

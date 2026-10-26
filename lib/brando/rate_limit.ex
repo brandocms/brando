@@ -22,6 +22,18 @@ defmodule Brando.RateLimit do
   end
 
   @doc """
+  The hits `bucket` has seen in the current window of `window` milliseconds,
+  without counting one.
+  """
+  @spec count(term(), pos_integer()) :: non_neg_integer()
+  def count(bucket, window) do
+    case Cachex.get(:cache, {bucket, div(System.system_time(:millisecond), window)}) do
+      {:ok, count} when is_integer(count) -> count
+      _ -> 0
+    end
+  end
+
+  @doc """
   Adds one to the counter `key` and returns the new count. A new counter
   expires after twice `ttl` milliseconds.
   """
