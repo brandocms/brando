@@ -330,7 +330,12 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
       })
     )
 
-    assert_push_event(view, "video_upload_url_ready", %{request_ref: ^request_ref, video_id: video_id, upload_token: token})
+    assert_push_event(view, "video_upload_url_ready", %{
+      request_ref: ^request_ref,
+      video_id: video_id,
+      upload_token: token
+    })
+
     {video_id, token}
   end
 

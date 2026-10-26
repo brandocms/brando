@@ -73,6 +73,7 @@ defmodule BrandoAdmin.VideoFieldProviderUploadTest do
       upload_token: token,
       tus_auth: tus_auth
     })
+
     assert tus_auth.video_id == @guid
 
     video = Repo.get!(Brando.Videos.Video, video_id)
@@ -105,7 +106,11 @@ defmodule BrandoAdmin.VideoFieldProviderUploadTest do
       "mime_type" => "video/mp4"
     })
 
-    assert_push_event(view, "video_upload_url_ready", %{request_ref: "field-late", video_id: video_id, upload_token: token})
+    assert_push_event(view, "video_upload_url_ready", %{
+      request_ref: "field-late",
+      video_id: video_id,
+      upload_token: token
+    })
 
     view |> with_target(cid_of(view, @hook)) |> render_hook("select_video", %{"id" => picked.id})
     assert clip_id(view) == to_string(picked.id)

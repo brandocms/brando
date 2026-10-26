@@ -1136,7 +1136,11 @@ defmodule BrandoAdmin.Components.Form.Transformer do
         socket = place_video_upload(socket, request_ref, video)
 
         {:noreply,
-         push_event(socket, "video_upload_url_ready", ProviderVideoUpload.ready_payload(result, user, filename, request_ref))}
+         push_event(
+           socket,
+           "video_upload_url_ready",
+           ProviderVideoUpload.ready_payload(result, user, filename, request_ref)
+         )}
 
       {:error, reason} ->
         message = upload_error_message(reason)
