@@ -83,7 +83,7 @@ defmodule Brando.RichText do
                 iframe img input ins kbd label legend li link main map mark marquee menu meta meter nav
                 nobr object ol optgroup option output p picture pre progress q rp rt ruby s samp script
                 search section select slot small source span strike strong style sub summary sup table
-                tbody td textarea tfoot th thead time tr track tt u ul var video wbr math base)
+                tbody td textarea tfoot th thead time tr track tt u ul var video wbr math svg base)
   @svg_tags ~w(svg g path circle ellipse line polyline polygon rect text tspan textPath defs use symbol desc
                metadata linearGradient radialGradient stop clipPath mask pattern image marker filter switch
                view feBlend feColorMatrix feComponentTransfer feComposite feConvolveMatrix
@@ -124,7 +124,8 @@ defmodule Brando.RichText do
   `sanitize_html/1` would leave out.
   """
   def safe_html?(html) when is_binary(html) do
-    html |> canonical(@html_tags ++ @hidden_tags, false) |> safe_tokens?(@unsafe_tags ++ @hidden_tags)
+    tags = @html_tags ++ @hidden_tags
+    known_tags?(html, tags) and html |> canonical(tags, false) |> safe_tokens?(@unsafe_tags ++ @hidden_tags)
   end
 
   def safe_html?(nil), do: true
@@ -139,9 +140,12 @@ defmodule Brando.RichText do
   they can rewrite an attribute such as `href` after the check.
   """
   def safe_svg?(code) when is_binary(code) do
-    code = code |> canonical(@html_tags ++ @svg_tags ++ @hidden_tags, false) |> String.trim()
+    tags = @html_tags ++ @svg_tags ++ @hidden_tags
+    known? = known_tags?(code, tags)
+    code = code |> canonical(tags, false) |> String.trim()
 
-    with {:ok, tokens} <- tokens(code),
+    with true <- known?,
+         {:ok, tokens} <- tokens(code),
          [{:start, "svg", _} | _] <- tokens,
          {:ok, rest} <- close(tokens, 0),
          true <- Enum.all?(rest, &match?({:text, text} when text == "", trim(&1))) do
@@ -164,6 +168,17 @@ defmodule Brando.RichText do
   defp close([{:end, _} | rest], depth), do: close(rest, depth - 1)
   defp close([_ | rest], depth), do: close(rest, depth)
   defp close([], _depth), do: :error
+
+  # The checks above see the text as it is stored only after `sanitize_html/1`.
+  # Text checked and kept as it is must hold no tag the canonical form leaves
+  # out: its attributes would go unseen (a custom element, or `body`, whose
+  # attributes a page merges into its own body). Any name a browser could
+  # read as a tag counts, in text and attributes too.
+  @tag_name ~r{<([a-zA-Z][^\t\n\f\r />]*)}
+  defp known_tags?(html, tags) do
+    known = MapSet.new(tags, &String.downcase/1)
+    @tag_name |> Regex.scan(html, capture: :all_but_first) |> Enum.all?(fn [name] -> String.downcase(name) in known end)
+  end
 
   defp canonical(html, tags, strip?) do
     hidden = if strip?, do: @hidden_tags, else: []

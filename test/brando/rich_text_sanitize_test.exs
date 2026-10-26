@@ -115,6 +115,23 @@ defmodule Brando.RichTextSanitizeTest do
     assert RichText.sanitize_html("<p>a<x-custom>b</x-custom></p>") == {:ok, "<p>ab</p>"}
   end
 
+  test "markup on an element the check would not see is refused" do
+    for html <- [
+          ~s(<svg onload="document.title='MARKER'"></svg>),
+          ~s(<x-custom onclick="document.title='MARKER'">Click</x-custom>),
+          ~s(<p>Hi</p><body onload="document.title='MARKER'">),
+          ~s(<p>Hi</p><html onclick="x">),
+          ~s(<image src=x onerror="x">)
+        ] do
+      refute RichText.safe_html?(html), html
+    end
+
+    refute RichText.safe_svg?(~s(<svg><x-custom onclick="x"></x-custom></svg>))
+    # Sanitized, such an element and what it holds on itself is gone.
+    assert RichText.sanitize_html(~s(<p>a<x-custom onclick="x">b</x-custom></p>)) == {:ok, "<p>ab</p>"}
+    assert RichText.sanitize_html(~s(<svg onload="x"></svg>)) == :error
+  end
+
   test "comments and hidden elements are left out of sanitized text" do
     assert RichText.sanitize_html("<p>Hi</p><!-- note --><p>there</p>") == {:ok, "<p>Hi</p><p>there</p>"}
     assert RichText.sanitize_html("<p>Hi</p><xmp>raw</xmp>") == {:ok, "<p>Hi</p>"}
