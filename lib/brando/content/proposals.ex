@@ -115,20 +115,22 @@ defmodule Brando.Content.Proposals do
   @doc """
   Whether the proposed version of `proposal` may be rendered for review:
   only when it has no problems. With a problem, an operation's text may not
-  have been checked (a block that is not where it should be), while the page
-  would still be built from it. The operations are checked again for unsafe
-  text: a proposal stored before a check was added or tightened keeps its
-  old problem list.
+  have been checked (a block that is not where it should be, a ref its
+  module no longer has), while the page would still be built from it. The
+  operations are checked again, as the user who prepared the proposal: one
+  stored before a check was added or tightened keeps its old problem list.
   """
-  @spec previewable?(Proposal.t(), term()) :: boolean()
-  def previewable?(%Proposal{problems: problems} = proposal, actor) when problems in [nil, []] do
-    case Error.protect(fn -> operation_problems(proposal, actor) end) do
-      {:ok, problems} -> not Enum.any?(problems, &(&1.code == :unsafe_text))
-      {:error, _} -> false
+  @spec previewable?(Proposal.t()) :: boolean()
+  def previewable?(%Proposal{problems: problems} = proposal) when problems in [nil, []] do
+    with %Brando.Users.User{} = owner <- Repo.get(Brando.Users.User, proposal.actor_id),
+         {:ok, []} <- Error.protect(fn -> operation_problems(proposal, owner) end) do
+      true
+    else
+      _ -> false
     end
   end
 
-  def previewable?(%Proposal{}, _actor), do: false
+  def previewable?(%Proposal{}), do: false
 
   defp operation_problems(proposal, actor) do
     {problems, _trees} =
@@ -2144,7 +2146,12 @@ defmodule Brando.Content.Proposals do
         :ok
 
       problems ->
-        Repo.update_all(from(r in Record, where: r.id == ^record.id),
+        # Only the version and status checked: a proposal cancelled or
+        # replaced meanwhile stays so.
+        Repo.update_all(
+          from(r in Record,
+            where: r.id == ^record.id and r.version == ^record.version and r.status == ^record.status
+          ),
           set: [problems: Enum.map(problems, &encode_problem/1), status: "pending", approved_at: nil]
         )
 

@@ -96,6 +96,23 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       assert {:error, :problems} = Preview.share(proposal, {Page, c.identity.id}, c.user)
     end
 
+    test "a re-check that finds any problem shows no page", c do
+      op = %InsertBlock{target: {Page, c.identity.id}, module: c.heading.id}
+      assert {:ok, proposal} = Proposals.propose([op], c.user)
+      assert {:ok, %{key: key}} = Preview.render(proposal, {Page, c.identity.id}, c.user, preview_target: :blocks)
+      Preview.discard([key])
+
+      # The heading's module no longer has the ref it sets text in.
+      ref = %Brando.Content.Proposals.SetBlockText{
+        target: {Page, c.identity.id},
+        block_uid: hd(proposal.operations).uid,
+        ref: :gone,
+        text: "Rooms"
+      }
+
+      assert refused_preview?(%{proposal | operations: proposal.operations ++ [ref]}, c)
+    end
+
     test "SetRefConfig is checked the same way", c do
       op = %InsertBlock{target: {Page, c.identity.id}, module: c.heading.id}
       assert {:ok, proposal} = Proposals.propose([op], c.user)

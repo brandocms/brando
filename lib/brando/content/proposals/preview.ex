@@ -31,7 +31,7 @@ defmodule Brando.Content.Proposals.Preview do
   Returns `{:ok, %{key: key, html: html}}`, `{:error, :not_created}` for the
   baseline of an entry the proposal creates, `{:error, :no_preview_target}`
   when the content type has no preview target, `{:error, :problems}` for the
-  proposed version of a proposal with problems (`Proposals.previewable?/2`),
+  proposed version of a proposal with problems (`Proposals.previewable?/1`),
   or `{:error, message}`.
   """
   @spec render(Proposals.Proposal.t(), Proposals.Proposal.target(), term(), keyword()) ::
@@ -39,7 +39,7 @@ defmodule Brando.Content.Proposals.Preview do
   def render(proposal, target, actor, opts \\ []) do
     version = Keyword.get(opts, :version, :proposed)
 
-    with :ok <- renderable(proposal, target, version, actor),
+    with :ok <- renderable(proposal, target, version),
          {:ok, changeset} <- changeset(proposal, target, actor, version, opts[:shared]),
          {:ok, key} <- initialize(changeset, actor, opts[:preview_target]) do
       {:ok, html} = LivePreview.get_cache(key)
@@ -68,7 +68,7 @@ defmodule Brando.Content.Proposals.Preview do
   # A proposal with problems is not rendered: the preview runs in the
   # reviewer's browser before anyone approves it, and text the checks could
   # not reach may be in it.
-  defp renderable(proposal, target, version, actor) do
+  defp renderable(proposal, target, version) do
     schema =
       case target do
         {:new, _} -> Map.get(proposal.targets, target)
@@ -79,7 +79,7 @@ defmodule Brando.Content.Proposals.Preview do
       !schema -> {:error, dgettext("content_proposals", "This entry is not part of the proposal.")}
       version == :before and match?({:new, _}, target) -> {:error, :not_created}
       !LivePreview.has_live_preview_target(schema) -> {:error, :no_preview_target}
-      version == :proposed and not Proposals.previewable?(proposal, actor) -> {:error, :problems}
+      version == :proposed and not Proposals.previewable?(proposal) -> {:error, :problems}
       true -> :ok
     end
   end
@@ -110,7 +110,7 @@ defmodule Brando.Content.Proposals.Preview do
   @spec share(Proposals.Proposal.t(), Proposals.Proposal.target(), term(), keyword()) ::
           {:ok, String.t(), integer()} | {:error, atom() | String.t()}
   def share(proposal, target, actor, opts \\ []) do
-    with :ok <- renderable(proposal, target, :proposed, actor),
+    with :ok <- renderable(proposal, target, :proposed),
          {:ok, changeset} <- changeset(proposal, target, actor, :proposed, opts[:shared]) do
       scope = Boundary.actor_scope(actor)
       user = Brando.Repo.get!(Brando.Users.User, scope.user_id)
