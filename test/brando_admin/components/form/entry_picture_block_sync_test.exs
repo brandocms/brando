@@ -147,6 +147,34 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
     assert {saved.path, saved.sizes, saved.config_target} == {image.path, image.sizes, image.config_target}
   end
 
+  # A block opens the image editor, not the drawer, so a drawer save with
+  # the block's image in `edit_image` has nothing to save: it closes, and
+  # neither changes the image nor makes one.
+  test "a drawer save with a block's image closes without saving", ctx do
+    %{page: page, user: user} = ctx
+    image = Factory.insert(:image, creator: user, status: :processed, title: %{"en" => "Lobby"})
+
+    edit_image = %{
+      path: [],
+      field: nil,
+      relation_field: nil,
+      image: image,
+      block_target: @block_ref,
+      old_image_id: image.id
+    }
+
+    count = Repo.aggregate(Brando.Images.Image, :count)
+
+    params = %{"image" => %{"title" => %{"en" => "Lobby, edited"}}}
+    socket = page |> form_socket(user, edit_image) |> Component.assign(:editing_image?, true)
+    {:noreply, form} = Form.handle_event("save_image", params, socket)
+
+    refute form.assigns.editing_image?
+    assert Repo.aggregate(Brando.Images.Image, :count) == count
+    assert Repo.get!(Brando.Images.Image, image.id).title == %{"en" => "Lobby"}
+    refute_received {:phoenix, :send_update, _}
+  end
+
   # The drawer's save is reported as the image's id (`b:validate`), which a
   # trigger declared on the image field does not cover.
   test "saving the image's drawer fires the preview trigger declared on the field", ctx do
