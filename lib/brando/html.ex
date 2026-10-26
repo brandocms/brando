@@ -69,7 +69,8 @@ defmodule Brando.HTML do
   def menu_item(assigns) do
     item = assigns.item
 
-    url = get_menu_item_url(item) || ""
+    href = get_menu_item_url(item)
+    url = href || ""
     text = get_menu_item_text(item)
     target_blank? = get_menu_item_target_blank(item)
     key = item.key
@@ -93,7 +94,8 @@ defmodule Brando.HTML do
 
     assigns =
       assigns
-      |> assign(:url, url)
+      # No address, no href: an empty one would link to the page itself
+      |> assign(:url, href && url)
       |> assign(:text, text)
       |> assign(:key, key)
       |> assign(:active, active?)
@@ -176,11 +178,12 @@ defmodule Brando.HTML do
     """
   end
 
-  # An address with a script or unknown scheme is no link
+  # An address with a script or unknown scheme is no link. An entry's can
+  # be one an editor typed too (an external link field).
   def get_menu_item_url(%{link: %{link_type: :url, value: url}}), do: Brando.Villain.Parser.safe_url(url)
 
   def get_menu_item_url(%{link: %{link_type: :identifier, identifier: %{} = identifier}}),
-    do: Brando.Content.Identifier.link_url(identifier)
+    do: identifier |> Brando.Content.Identifier.link_url() |> Brando.Villain.Parser.safe_url()
 
   def get_menu_item_url(_), do: nil
 

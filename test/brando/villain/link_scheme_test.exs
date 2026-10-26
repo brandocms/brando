@@ -61,11 +61,29 @@ defmodule Brando.Villain.LinkSchemeTest do
     end
 
     assert picture.("https://example.com") =~ ~s(href="https://example.com")
+    # Allowed, though `<.link>` would raise on them
+    assert picture.("sms:+4712345678") =~ ~s(href="sms:+4712345678")
+    assert picture.("HTTPS://example.com") =~ ~s(href="HTTPS://example.com")
   end
 
   test "a menu item or a service links only to a safe address" do
     for url <- @scripts do
       assert Brando.HTML.get_menu_item_url(%{link: %{link_type: :url, value: url}}) == nil
+
+      # An entry's address can be an external link an editor typed
+      identifier = %Brando.Content.Identifier{url: url, schema: Brando.Pages.Page}
+      assert Brando.HTML.get_menu_item_url(%{link: %{link_type: :identifier, identifier: identifier}}) == nil
+
+      html =
+        render_component(&Brando.HTML.menu_item/1,
+          item: %{key: "k", link: %Var{type: :link, link_type: :url, value: url, link_text: "Item"}},
+          conn: Phoenix.ConnTest.build_conn(:get, "/")
+        )
+
+      refute html =~ "href", "#{inspect(url)}: #{html}"
+
+      resolved = Brando.Sites.Services.resolve(%Brando.Sites.Service{name: "Service", url: url})
+      assert resolved.resolved_url == nil
 
       html =
         render_component(&Brando.HTML.Services.list/1,

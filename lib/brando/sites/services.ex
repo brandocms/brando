@@ -28,7 +28,7 @@ defmodule Brando.Sites.Services do
 
     %{
       service
-      | resolved_url: absolute(presence(service.url) || identifier_url(identifier)),
+      | resolved_url: absolute(safe_url(service.url) || identifier_url(identifier)),
         resolved_description: presence(service.description) || entry_description(entry)
     }
   end
@@ -60,7 +60,7 @@ defmodule Brando.Sites.Services do
         service_type: presence(service.service_type),
         provider: "#{hostname}/#identity",
         area_served: list_or_nil(service.area_served) || inherited,
-        url: presence(service.resolved_url) || absolute(presence(service.url))
+        url: presence(service.resolved_url) || absolute(safe_url(service.url))
       })
     end)
   end
@@ -110,6 +110,9 @@ defmodule Brando.Sites.Services do
   defp absolute("http://" <> _ = url), do: url
   defp absolute("https://" <> _ = url), do: url
   defp absolute(path), do: Utils.hostname(path)
+
+  # An address with a script or unknown scheme is no link
+  defp safe_url(url), do: url |> presence() |> Brando.Villain.Parser.safe_url()
 
   defp presence(nil), do: nil
   defp presence(""), do: nil

@@ -66,7 +66,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
             </div>
           </:config>
           <div class="map-block">
-            <%= if block_data[:embed_url].value do %>
+            <%= if Brando.Villain.Parser.safe_url(block_data[:embed_url].value) do %>
               <%= case block_data[:source].value do %>
                 <% :gmaps -> %>
                   <div class="map-content">
@@ -105,7 +105,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
     """
   end
 
+  # The address is what the editor pasted: only one with an allowed scheme
+  # is kept, as the public renderer would refuse the rest anyway
   def handle_event("url", %{"source" => source, "embedUrl" => embed_url}, socket) do
+    embed_url = Brando.Villain.Parser.safe_url(embed_url)
+
     ref_data =
       Block.current_block_data_map(socket.assigns.block, nil, %{
         embed_url: embed_url,

@@ -1539,9 +1539,11 @@ defmodule Brando.Villain.Parser do
     <%= if Map.get(@src, :path) do %>
       <div class="picture-wrapper" data-orientation={@orientation}>
         <%= if @link != "" do %>
-          <.link href={@link} rel={@rel} target={@target}>
+          <%!-- A plain anchor: `safe_url/1` checked the address, and `<.link>`
+               raises on schemes and spellings it allows (sms:, HTTPS:) --%>
+          <a href={@link} rel={@rel} target={@target}>
             <.picture src={@src} opts={@opts} />
-          </.link>
+          </a>
         <% else %>
           <.picture src={@src} opts={@opts} />
         <% end %>
