@@ -124,13 +124,14 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
       assert Repo.get(Brando.Videos.Video, video_id)
     end
 
-    test "that the provider refuses to finish is reported, and the form keeps running", ctx do
+    # Cloudflare records that the file arrived. The video's provider state is
+    # the system's to write, so an upload its creator started still moves on
+    # when they were demoted since; an upload nobody waits for leaves the
+    # fields alone, and the form keeps running.
+    test "from a creator demoted since is finished all the same, and the form keeps running", ctx do
       view = open(ctx)
       browse(view, @clip_a)
 
-      # Cloudflare records that the file arrived, as the video's creator; a
-      # creator who may no longer update videos can't, so the completion is
-      # refused.
       video =
         Factory.insert(:video,
           type: :cloudflare,
@@ -143,11 +144,10 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
       token = ProviderVideoUpload.upload_token(video, ctx.current_user, "gone")
       ctx.current_user |> Ecto.Changeset.change(role: :user) |> Repo.update!()
 
-      Brando.endpoint().subscribe("user:#{ctx.current_user.id}")
       complete_provider_upload(view, "gone", token)
 
       assert Process.alive?(view.pid)
-      assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
+      assert Repo.get!(Brando.Videos.Video, video.id).status == :processing
       assert clip_id(view, @clip_a) == ""
     end
 
