@@ -1,0 +1,2 @@
+- An rsync deploy target must be a remote `[user@]host:/absolute/path`: local paths, `rsync://` and `host::module` targets, and users or hosts starting with `-` are refused when saved and when a build deploys, and rsync gets `--` before its operands. An operator can limit the hosts with `config :brando, Brando.Sites.DeployConfig, rsync_hosts: [...]`.
+  If a site deploys with rsync to a directory on the same server, point it at a remote destination (an SSH host, `deploy@host:/srv/www`) under Admin → Config → Publishing.

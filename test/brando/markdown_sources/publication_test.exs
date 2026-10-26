@@ -110,10 +110,19 @@ defmodule Brando.MarkdownSources.PublicationTest do
   end
 
   test "the queued SSG worker builds and automatically deploys; retries do not create duplicate builds", c do
+    # rsync deploys to a remote host only; the runner stands in for it
     destination = Path.join(c.root, "deployed")
     File.mkdir_p!(destination)
-    {:ok, _} = Registry.update_site(c.site, %{deploy_config: %{strategy: :rsync, target: destination}})
+
+    {:ok, _} =
+      Registry.update_site(c.site, %{deploy_config: %{strategy: :rsync, target: "deploy@example.test:/srv/docs"}})
+
     put_test_env(:ssg_builder, Builder)
+
+    put_test_env(:ssg_deploy_runner, fn "rsync", ["-az", "--delete", "--", source, "deploy@example.test:/srv/docs"], _ ->
+      File.cp_r!(source, destination)
+      {"", 0}
+    end)
 
     Oban.Testing.with_testing_mode(:manual, fn ->
       assert :ok = Publication.publish(c.args)

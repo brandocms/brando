@@ -189,7 +189,7 @@ defmodule Brando.SSGBuildsTest do
 
     assert {:ok, deployed_first} = Deploy.deploy(first, runner: runner)
     assert deployed_first.status == :deployed
-    assert_receive {:command, "rsync", ["-az", "--delete", _, "deploy@example.test:/srv/www"]}
+    assert_receive {:command, "rsync", ["-az", "--delete", "--", _, "deploy@example.test:/srv/www"]}
 
     assert {:ok, deployed_second} = Deploy.deploy(second, runner: runner)
     assert deployed_second.status == :deployed
@@ -275,6 +275,19 @@ defmodule Brando.SSGBuildsTest do
 
       assert_receive {:webhook_request, %{method: "POST", path: "/hook"}}
       refute build.build_log =~ "webhook"
+    end
+  end
+
+  # A build carries the config it was made with, which may predate the
+  # check on save
+  test "an rsync deploy refuses a snapshotted local or option-like target", context do
+    for target <- ["/tmp/local-dest", "--log-file=/tmp/marker.log", "u@-oProxyCommand=true:/srv/www"] do
+      build = ready_build(context.site, context.environment)
+      {:ok, build} = Builds.update(build, %{deploy_config: %{"strategy" => "rsync", "target" => target}})
+      runner = fn command, args, _opts -> send(self(), {:command, command, args}) && {"", 0} end
+
+      assert {:error, :invalid_deploy_target} = Deploy.deploy(build, runner: runner)
+      refute_received {:command, "rsync", _}
     end
   end
 
