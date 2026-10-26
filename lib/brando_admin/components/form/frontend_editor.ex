@@ -158,7 +158,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
         <span id={"#{@id}-draft-capture"} data-draft-capture phx-target={@myself} hidden></span>
         <span id={"#{@id}-save-source"} data-save-source phx-target={@myself} hidden></span>
         <div class="form-content">
-          <.live_component module={FilePicker} id="file-picker" />
+          <.live_component module={FilePicker} id="file-picker" current_user={@current_user} />
           <.live_component module={ImagePicker} id="image-picker" current_user={@current_user} upload_in_form? />
           <.live_component module={VideoPicker} id="video-picker" current_user={@current_user} />
           <.live_component module={TipTapLinkDialog} id="tiptap-link-dialog" />

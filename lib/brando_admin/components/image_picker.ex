@@ -2,8 +2,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
   @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
-  use BrandoAdmin.Components.PickerHelpers
+  use BrandoAdmin.Components.PickerHelpers, schema: Brando.Images.Image
 
+  alias Brando.Images.Image
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form
@@ -112,7 +113,20 @@ defmodule BrandoAdmin.Components.ImagePicker do
     {:ok,
      socket
      |> assign_defaults()
-     |> assign(assigns)}
+     |> assign(assigns)
+     |> assign_grants()}
+  end
+
+  # What the user may do to the library from here: delete an image, and
+  # organize it (move images, create folders). The handlers check again.
+  defp assign_grants(socket) do
+    can_delete? =
+      is_map(socket.assigns.current_user) and
+        Brando.Authorization.Boundary.authorize(socket.assigns.current_user, :delete, Image) == :ok
+
+    socket
+    |> assign(:can_delete?, can_delete?)
+    |> assign_can_organize()
   end
 
   # Resolves the config target only — it does not assign the library, hence
@@ -319,21 +333,19 @@ defmodule BrandoAdmin.Components.ImagePicker do
   end
 
   def handle_event("delete_image_from_picker", %{"id" => id}, socket) do
-    case parse_item_id(id) do
-      {:ok, image_id} ->
-        _ = Brando.Images.delete_images([image_id])
+    with {:ok, image_id} <- parse_item_id(id),
+         {:ok, _image} <- Brando.Images.delete_image(image_id, socket.assigns.current_user) do
+      send(self(), {:toast, gettext("Image deleted")})
 
-        send(self(), {:toast, gettext("Image deleted")})
-
-        {:noreply,
-         socket
-         |> assign(:selected_images, Enum.reject(socket.assigns.selected_images, &same_item_id?(&1, image_id)))
-         |> assign_config_target()
-         |> assign_folder_state(socket.assigns.current_folder)
-         |> push_selection_state()}
-
-      _ ->
-        {:noreply, socket}
+      {:noreply,
+       socket
+       |> assign(:selected_images, Enum.reject(socket.assigns.selected_images, &same_item_id?(&1, image_id)))
+       |> assign_config_target()
+       |> assign_folder_state(socket.assigns.current_folder)
+       |> push_selection_state()}
+    else
+      {:error, :forbidden} -> {:noreply, not_permitted(socket)}
+      _ -> {:noreply, socket}
     end
   end
 
@@ -373,10 +385,10 @@ defmodule BrandoAdmin.Components.ImagePicker do
       not folder_under_root?(absolute_folder, socket.assigns.upload_root) ->
         {:noreply, socket}
 
-      true ->
-        folder_id = FolderBrowser.folder_id_for(folder, socket.assigns.upload_root)
-        move_images_to_folder(ids, folder_id)
+      move_images(socket, ids, folder) != :ok ->
+        {:noreply, not_permitted(socket)}
 
+      true ->
         send(self(), {:toast, gettext("Moved %{count} images", count: length(ids))})
 
         {:noreply,
@@ -507,7 +519,8 @@ defmodule BrandoAdmin.Components.ImagePicker do
           show_new_folder_form={@show_new_folder_form}
           new_folder={@new_folder}
           main_id={"image-picker-main-#{@id}"}
-          enable_folder_drop={@picker_mode == :select}
+          enable_folder_drop={@picker_mode == :select and @can_organize?}
+          allow_new_folder={@can_organize?}
           folder_drop_event="picker_move_to_folder"
           go_root_event="picker_go_root"
           go_parent_event="picker_go_parent"
@@ -676,6 +689,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
                   picker_mode={@picker_mode}
                   from_library={@scope == :library}
                   pick_values={@pick_values}
+                  can_delete?={@can_delete?}
                   myself={@myself}
                 />
               </div>
@@ -840,7 +854,7 @@ defmodule BrandoAdmin.Components.ImagePicker do
                 {gettext("Edit image")}
               </button>
             </li>
-            <li>
+            <li :if={@can_delete?}>
               <button
                 type="button"
                 class="menu-item menu-item--danger"
@@ -865,6 +879,8 @@ defmodule BrandoAdmin.Components.ImagePicker do
     socket
     |> assign_new(:multi, fn -> false end)
     |> assign_new(:current_user, fn -> nil end)
+    |> assign_new(:can_delete?, fn -> false end)
+    |> assign_new(:can_organize?, fn -> false end)
     |> assign_new(:scope, fn -> :field end)
     |> assign_new(:library_offered?, fn -> false end)
     |> assign_new(:open_generation, fn -> 0 end)
@@ -1156,11 +1172,13 @@ defmodule BrandoAdmin.Components.ImagePicker do
 
   defp image_menu_id(image_id), do: "image-picker-image-menu-#{image_id}"
 
-  defp move_images_to_folder(ids, folder_id) when is_list(ids) do
-    import Ecto.Query
-    timestamp = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+  # The folder is created only once the user may move the images there
+  defp move_images(socket, ids, folder) do
+    folder_id = fn -> FolderBrowser.folder_id_for(folder, socket.assigns.upload_root) end
 
-    from(i in Brando.Images.Image, where: i.id in ^ids)
-    |> Brando.Repo.update_all(set: [folder_id: folder_id, updated_at: timestamp])
+    case Brando.Media.Folders.move(Image, ids, folder_id, socket.assigns.current_user) do
+      {:ok, _moved} -> :ok
+      error -> error
+    end
   end
 end

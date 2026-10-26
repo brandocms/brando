@@ -131,6 +131,27 @@ defmodule BrandoAdmin.VideoPickerURLTest do
     refute_received {:video_created, _}
   end
 
+  describe "with group authorization" do
+    setup do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      Req.Test.stub(Brando.OEmbed, &Req.Test.json(&1, %{"title" => "Never gonna"}))
+      :ok
+    end
+
+    test "a video is added from a URL only with the create grant", %{conn: conn} do
+      editor = ~w(brando.admin.access brando.pages.update brando.videos.read)
+
+      view = paste_url(conn, Brando.Test.Users.insert_user(permissions: editor))
+      render_async(view)
+      assert Brando.Repo.aggregate(Video, :count) == 0
+
+      view = paste_url(conn, Brando.Test.Users.insert_user(permissions: ["brando.videos.create" | editor]))
+      render_async(view)
+      assert Brando.Repo.aggregate(Video, :count) == 1
+    end
+  end
+
   defp paste_url(conn, user) do
     {:ok, view, _html} = live_isolated(conn, Host, session: %{"test_pid" => self(), "user" => user})
     open_picker(view, "#video-field")

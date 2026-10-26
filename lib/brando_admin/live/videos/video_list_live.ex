@@ -68,7 +68,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
   end
 
   def handle_event("assets_go_folder", %{"folder" => folder}, socket) do
-    folder_id = FolderBrowser.folder_id_for(folder, socket.assigns.upload_root)
+    folder_id = AssetListHelpers.folder_id_to_open(socket, folder)
     {:noreply, AssetListHelpers.patch_folder_filter(socket, folder_id)}
   end
 
@@ -78,7 +78,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   def handle_event("assets_go_recent", %{"folder" => folder}, socket) do
     relative = FolderBrowser.relative_folder(folder, socket.assigns.upload_root)
-    folder_id = FolderBrowser.folder_id_for(relative, socket.assigns.upload_root)
+    folder_id = AssetListHelpers.folder_id_to_open(socket, relative)
     {:noreply, AssetListHelpers.patch_folder_filter(socket, folder_id)}
   end
 
@@ -108,9 +108,10 @@ defmodule BrandoAdmin.Videos.VideoListLive do
       not AssetListHelpers.folder_under_root?(absolute_folder, socket.assigns.upload_root) ->
         {:noreply, socket}
 
+      AssetListHelpers.move_entries_to_folder(socket, Video, ids, folder) != :ok ->
+        {:noreply, socket}
+
       true ->
-        folder_id = FolderBrowser.folder_id_for(folder, socket.assigns.upload_root)
-        AssetListHelpers.move_entries_to_folder(Video, ids, folder_id)
         AssetListHelpers.update_list_entries(socket.assigns.schema)
 
         send(self(), {:toast, gettext("Moved %{count} videos", count: length(ids))})
@@ -149,25 +150,27 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   @impl true
   def handle_event("assets_paste_selected", _, socket) do
-    folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
     ids = socket.assigns.clipboard_ids
 
-    AssetListHelpers.move_entries_to_folder(Video, ids, folder_id)
-    AssetListHelpers.update_list_entries(socket.assigns.schema)
+    if AssetListHelpers.move_entries_to_folder(socket, Video, ids, socket.assigns.current_folder) == :ok do
+      AssetListHelpers.update_list_entries(socket.assigns.schema)
 
-    send(
-      self(),
-      {:toast,
-       gettext("Moved %{count} videos to %{folder}",
-         count: length(ids),
-         folder: folder_label_for_display(socket.assigns.current_folder_abs, socket.assigns.upload_root)
-       )}
-    )
+      send(
+        self(),
+        {:toast,
+         gettext("Moved %{count} videos to %{folder}",
+           count: length(ids),
+           folder: folder_label_for_display(socket.assigns.current_folder_abs, socket.assigns.upload_root)
+         )}
+      )
 
-    {:noreply,
-     socket
-     |> assign(:clipboard_ids, [])
-     |> refresh()}
+      {:noreply,
+       socket
+       |> assign(:clipboard_ids, [])
+       |> refresh()}
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
@@ -314,7 +317,8 @@ defmodule BrandoAdmin.Videos.VideoListLive do
         go_folder_event="assets_go_folder"
         go_parent_event="assets_go_parent"
         go_recent_event="assets_go_recent"
-        enable_folder_drop={true}
+        enable_folder_drop={BrandoAdmin.Authorization.allowed?(:update, @schema)}
+        allow_new_folder={BrandoAdmin.Authorization.allowed?(:update, @schema)}
         folder_drop_event="assets_move_selected_to_folder"
         show_new_folder_event="assets_show_new_folder_form"
         cancel_new_folder_event="assets_cancel_new_folder_form"
@@ -354,7 +358,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
                 busy={@deleting_unused?}
               />
               <button
-                :if={@clipboard_ids != []}
+                :if={@clipboard_ids != [] and BrandoAdmin.Authorization.allowed?(:update, @schema)}
                 type="button"
                 class="folder-action"
                 phx-click="assets_paste_selected"
@@ -388,9 +392,11 @@ defmodule BrandoAdmin.Videos.VideoListLive do
           hidden_filters={[:folder_id]}
           empty_title={gettext("No videos in this view")}
           empty_description={gettext("Choose a folder or adjust your search.")}
-          extra_selection_actions={[
-            %{event: "assets_cut_selected", label: gettext("Cut selected")}
-          ]}
+          extra_selection_actions={
+            if BrandoAdmin.Authorization.allowed?(:update, @schema),
+              do: [%{event: "assets_cut_selected", label: gettext("Cut selected")}],
+              else: []
+          }
         />
       </.live_component>
     </div>

@@ -408,7 +408,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
   def handle_event("set_access", %{"access" => %{"kind" => kind, "ids" => ids}}, socket) do
     with {:ok, kind} <- parse_kind(kind),
          site when not is_nil(site) <- socket.assigns.selected_site,
-         :ok <- SharedLibrary.set_enabled(site, kind, Enum.reject(ids, &(&1 == ""))) do
+         :ok <- SharedLibrary.set_enabled(site, kind, Enum.reject(ids, &(&1 == "")), socket.assigns.current_user) do
       {:noreply, socket |> notify(gettext("Shared library access updated.")) |> refresh()}
     else
       error -> {:noreply, notify_error(socket, error_message(error))}
@@ -508,7 +508,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
   end
 
   defp update_access(socket, site, kind, ids) do
-    case SharedLibrary.set_enabled(site, kind, ids) do
+    case SharedLibrary.set_enabled(site, kind, ids, socket.assigns.current_user) do
       :ok -> {:noreply, socket |> notify(gettext("Shared library access updated.")) |> refresh()}
       error -> {:noreply, notify_error(socket, error_message(error))}
     end

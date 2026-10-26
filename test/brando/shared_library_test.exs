@@ -288,6 +288,34 @@ defmodule Brando.Content.SharedLibraryTest do
     assert :ok = SharedLibrary.reset(:module, shared.id, site, @prefix, user)
   end
 
+  test "with group authorization, turning entries on and off for a site takes update on the library",
+       %{site: site, user: user} do
+    alias Brando.Authorization.{Boundary, Groups, Migration, Scope}
+
+    shared = create_public_module("Shared toggle", user)
+    put_test_env(:authorization_mode, :groups)
+    Boundary.put_scope(nil)
+    {:ok, _} = Migration.run()
+
+    member = fn keys ->
+      member = Brando.Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+      scope = Scope.installation(user)
+      {:ok, group} = Groups.create(scope, %{name: "Group #{System.unique_integer([:positive])}"}, keys)
+      {:ok, :ok} = Groups.add_member(scope, group.id, member.id)
+      member
+    end
+
+    reader = member.(~w(brando.admin.access brando.shared_library.read))
+    manager = member.(~w(brando.admin.access brando.shared_library.read brando.shared_library.update))
+
+    assert {:error, :forbidden} = SharedLibrary.enable(site, :module, shared.id, reader)
+    refute SharedLibrary.enabled?(site, :module, shared.id)
+
+    assert :ok = SharedLibrary.enable(site, :module, shared.id, manager)
+    assert {:error, :forbidden} = SharedLibrary.disable(site, :module, shared.id, reader)
+    assert SharedLibrary.enabled?(site, :module, shared.id)
+  end
+
   defp create_public_module(name, user) do
     Tenant.put_prefix(nil)
 

@@ -2,10 +2,11 @@ defmodule BrandoAdmin.Components.VideoPicker do
   @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
-  use BrandoAdmin.Components.PickerHelpers
+  use BrandoAdmin.Components.PickerHelpers, schema: Brando.Videos.Video
 
   alias Brando.Uploads.AssetIntent
   alias Brando.Videos.ProviderLibrary
+  alias Brando.Videos.Video
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Assets.ProviderVideoUpload
   alias BrandoAdmin.Components.Content
@@ -122,7 +123,20 @@ defmodule BrandoAdmin.Components.VideoPicker do
      |> assign_defaults()
      |> assign(assigns)
      |> assign_video_upload_available()
-     |> assign_library_providers()}
+     |> assign_library_providers()
+     |> assign_grants()}
+  end
+
+  # What the user may do to the library from here: delete a video, and rename
+  # or organize (move videos, create folders). The handlers check again.
+  defp assign_grants(socket) do
+    can_delete? =
+      is_map(socket.assigns.current_user) and
+        Brando.Authorization.Boundary.authorize(socket.assigns.current_user, :delete, Video) == :ok
+
+    socket
+    |> assign(:can_delete?, can_delete?)
+    |> assign_can_organize()
   end
 
   # Whether to offer the direct "Upload file" button — computed once per update
@@ -209,6 +223,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
     |> assign_new(:provider_uploads, fn -> %{} end)
     |> assign_new(:selected_videos, fn -> [] end)
     |> assign_new(:current_user, fn -> nil end)
+    |> assign_new(:can_delete?, fn -> false end)
+    |> assign_new(:can_organize?, fn -> false end)
     |> assign_new(:upload_strategy, fn -> Brando.default_video_upload_strategy() end)
     |> assign_new(:allow_uploads?, fn -> true end)
     |> assign_new(:allow_external_urls?, fn -> true end)
@@ -405,10 +421,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
       not folder_under_root?(absolute_folder, socket.assigns.upload_root) ->
         {:noreply, socket}
 
-      true ->
-        folder_id = FolderBrowser.folder_id_for(folder, socket.assigns.upload_root)
-        move_videos_to_folder(ids, folder_id)
+      move_videos(socket, ids, folder) != :ok ->
+        {:noreply, not_permitted(socket)}
 
+      true ->
         send(self(), {:toast, gettext("Moved %{count} videos", count: length(ids))})
 
         {:noreply,
@@ -527,12 +543,13 @@ defmodule BrandoAdmin.Components.VideoPicker do
   end
 
   def handle_event("rename_video", %{"title" => title, "video_id" => video_id}, socket) do
-    video_id = if is_binary(video_id), do: String.to_integer(video_id), else: video_id
-
-    Brando.Videos.Video
-    |> Brando.Repo.get!(video_id)
-    |> Ecto.Changeset.change(%{title: title})
-    |> Brando.Repo.update()
+    socket =
+      with {:ok, video_id} <- parse_item_id(video_id),
+           {:error, :forbidden} <- Brando.Videos.update_video(video_id, %{title: title}, socket.assigns.current_user) do
+        not_permitted(socket)
+      else
+        _ -> socket
+      end
 
     {:noreply,
      socket
@@ -723,9 +740,11 @@ defmodule BrandoAdmin.Components.VideoPicker do
   def handle_event("delete_video_from_picker", %{"id" => id}, socket) do
     case parse_item_id(id) do
       {:ok, video_id} ->
-        _ = Brando.Videos.delete_video(video_id, socket.assigns.current_user)
-
-        send(self(), {:toast, gettext("Video deleted")})
+        case Brando.Videos.delete_video(video_id, socket.assigns.current_user) do
+          {:ok, _} -> send(self(), {:toast, gettext("Video deleted")})
+          {:error, :forbidden} -> not_permitted(socket)
+          _ -> :ok
+        end
 
         {:noreply,
          socket
@@ -775,7 +794,13 @@ defmodule BrandoAdmin.Components.VideoPicker do
   end
 
   defp create_url_video(socket, video_params) do
-    case Brando.Videos.create_video(video_params, Map.get(socket.assigns, :current_user)) do
+    user = Map.get(socket.assigns, :current_user)
+
+    result =
+      with :ok <- Brando.Authorization.Media.authorize(user, :video),
+           do: Brando.Videos.create_video(video_params, user)
+
+    case result do
       {:ok, video} ->
         send_update(socket.assigns.event_target, %{
           event: "video_created_from_url",
@@ -791,6 +816,9 @@ defmodule BrandoAdmin.Components.VideoPicker do
          |> assign_videos()
          |> assign_folder_state(socket.assigns.current_folder)
          |> push_selection_state()}
+
+      {:error, message} when is_binary(message) ->
+        {:noreply, socket |> not_permitted() |> assign(:creating_video, false)}
 
       {:error, changeset} ->
         error_msg =
@@ -932,7 +960,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
           show_new_folder_form={@show_new_folder_form}
           new_folder={@new_folder}
           main_id={"video-picker-main-#{@id}"}
-          enable_folder_drop={true}
+          enable_folder_drop={@can_organize?}
+          allow_new_folder={@can_organize?}
           folder_drop_event="picker_move_to_folder"
           go_root_event="picker_go_root"
           go_parent_event="picker_go_parent"
@@ -1265,6 +1294,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
                 event_target={@event_target}
                 myself={@myself}
                 editing_video_id={@editing_video_id}
+                can_delete?={@can_delete?}
+                can_rename?={@can_organize?}
               />
             </div>
           </div>
@@ -1393,7 +1424,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
             <.icon name="circle-ellipsis" />
           </button>
           <ul id={"video-picker-menu-#{@video.id}"} class="video-picker-action-dropdown hidden">
-            <li>
+            <li :if={@can_rename?}>
               <button
                 type="button"
                 class="menu-item"
@@ -1424,7 +1455,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                 {gettext("Preview")}
               </button>
             </li>
-            <li>
+            <li :if={@can_delete?}>
               <button
                 type="button"
                 class="menu-item menu-item--danger"
@@ -1497,12 +1528,14 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   # -- Private helpers --
 
-  defp move_videos_to_folder(ids, folder_id) when is_list(ids) do
-    import Ecto.Query
-    timestamp = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+  # The folder is created only once the user may move the videos there
+  defp move_videos(socket, ids, folder) do
+    folder_id = fn -> FolderBrowser.folder_id_for(folder, socket.assigns.upload_root) end
 
-    from(v in Brando.Videos.Video, where: v.id in ^ids)
-    |> Brando.Repo.update_all(set: [folder_id: folder_id, updated_at: timestamp])
+    case Brando.Media.Folders.move(Video, ids, folder_id, socket.assigns.current_user) do
+      {:ok, _moved} -> :ok
+      error -> error
+    end
   end
 
   def show_grid(js \\ %JS{}, id) do

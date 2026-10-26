@@ -378,6 +378,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     |> assign(:file_id, if(type == :file, do: value))
     |> assign(:video_id, if(type == :video, do: value))
     |> assign(:gallery_id, if(type == :gallery, do: value))
+    |> assign_new(:own_gallery_ids, fn -> MapSet.new(List.wrap(if(type == :gallery, do: value))) end)
     |> assign_form_options(type)
     |> assign(:identifier_id, get_field(changeset, :identifier_id))
     |> assign(:instructions, get_field(changeset, :instructions))
@@ -1951,11 +1952,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     }
 
     result =
-      (gallery || %Brando.Galleries.Gallery{})
-      |> Brando.Galleries.Gallery.changeset(params, current_user_id)
-      |> then(fn changeset ->
-        if gallery, do: Repo.update(changeset), else: Repo.insert(changeset)
-      end)
+      if own_gallery?(socket, gallery),
+        do: Brando.Galleries.save_gallery(gallery, params, gallery_actor(socket)),
+        else: {:error, :forbidden}
 
     case result do
       {:ok, saved_gallery} ->
@@ -1966,17 +1965,47 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             force: true
           )
 
-        Brando.Content.Blocks.render_entries_with_gallery_id(saved_gallery.id)
         if Keyword.get(opts, :notify_pickers?, true), do: notify_gallery_pickers(saved_gallery)
 
         socket
+        |> assign(:own_gallery_ids, MapSet.put(Map.get(socket.assigns, :own_gallery_ids, MapSet.new()), saved_gallery.id))
         |> assign(:gallery, saved_gallery)
         |> assign(:gallery_id, saved_gallery.id)
         |> on_change(%{gallery: saved_gallery, gallery_id: saved_gallery.id})
 
+      {:error, :forbidden} ->
+        send(self(), {:toast, gettext("You do not have permission for this action.")})
+        socket
+
       {:error, changeset} ->
         put_flash(socket, :error, gettext("Could not update gallery: %{error}", error: inspect(changeset.errors)))
     end
+  end
+
+  # `gallery_id` round-trips through the form, so a crafted payload could
+  # name a gallery another entry shows. Written from here are the gallery the
+  # var had when this component mounted or that it saved since (a moved
+  # block keeps its component, an inserted module's var mounts with its
+  # gallery), the one the var stores in the database, and one nothing uses
+  # yet (a copied block's). The gallery grant applies to each.
+  defp own_gallery?(_socket, nil), do: true
+
+  defp own_gallery?(socket, %{id: gallery_id}) do
+    gallery_id in Map.get(socket.assigns, :own_gallery_ids, []) or stored_gallery_id(socket) == gallery_id or
+      not Brando.Galleries.gallery_in_use?(gallery_id)
+  end
+
+  defp stored_gallery_id(socket) do
+    case socket.assigns.var[:id].value do
+      id when id in [nil, ""] -> nil
+      id -> Repo.one(from(v in Brando.Content.Var, where: v.id == ^id, select: v.gallery_id))
+    end
+  end
+
+  # The view's user. `current_user_id` is the var's creator when the parent
+  # passes none, so it is only the fallback.
+  defp gallery_actor(socket) do
+    BrandoAdmin.Authorization.current_actor() || current_user(socket.assigns.current_user_id)
   end
 
   defp notify_gallery_pickers(gallery) do

@@ -4751,7 +4751,7 @@ defmodule BrandoAdmin.Components.Form do
             entry_id={@entry_id}
           />
 
-          <.live_component module={FilePicker} id="file-picker" />
+          <.live_component module={FilePicker} id="file-picker" current_user={@current_user} />
           <.live_component module={ImagePicker} id="image-picker" current_user={@current_user} upload_in_form? />
           <.live_component module={VideoPicker} id="video-picker" current_user={@current_user} />
           <.live_component module={TipTapLinkDialog} id="tiptap-link-dialog" />
@@ -4846,6 +4846,7 @@ defmodule BrandoAdmin.Components.Form do
               module={AlternatesDrawer}
               id={"#{@id}-alternates-drawer"}
               entry={@entry}
+              current_user={@current_user}
               on_close={toggle_drawer("##{@id}-alternates-drawer")}
               on_remove_link={JS.push("remove_link", target: @myself)}
             />
@@ -5789,15 +5790,22 @@ defmodule BrandoAdmin.Components.Form do
         %{"image_id" => image_id},
         %{assigns: %{singular: singular, current_user: current_user}} = socket
       ) do
-    {:ok, image} = Images.duplicate_image(image_id, current_user)
+    case Images.duplicate_image(image_id, current_user) do
+      {:ok, image} ->
+        send_update(__MODULE__,
+          id: "#{singular}_form",
+          action: :update_edit_image,
+          image: image
+        )
 
-    send_update(__MODULE__,
-      id: "#{singular}_form",
-      action: :update_edit_image,
-      image: image
-    )
+        send(self(), {:toast, gettext("Image duplicated")})
 
-    send(self(), {:toast, gettext("Image duplicated")})
+      {:error, :forbidden} ->
+        send(self(), {:toast, gettext("You do not have permission for this action.")})
+
+      _error ->
+        :ok
+    end
 
     {:noreply, socket}
   end

@@ -488,7 +488,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         </section>
       </div>
 
-      <.live_component module={ImagePicker} id="image-picker" />
+      <.live_component module={ImagePicker} id="image-picker" current_user={@current_user} />
       <.live_component module={VideoPicker} id="video-picker" current_user={@current_user} />
     </div>
     """

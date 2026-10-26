@@ -694,18 +694,18 @@ defmodule BrandoAdmin.Components.Content.List.Row do
             identifier={identifier}
             select={
               JS.push("update_entry",
-                value: %{entry_id: identifier.entry_id, schema: identifier.schema},
+                value: %{entry_id: identifier.entry_id, parent_id: @entry.id},
                 target: @target
               )
             }
           >
-            <:delete>
+            <:delete :if={BrandoAdmin.Authorization.allowed?(:update, @entry)}>
               <button
                 type="button"
                 aria-label={gettext("Remove")}
                 phx-click={
                   JS.push("remove_entry",
-                    value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id},
+                    value: %{id: identifier.entry_id, parent_id: @entry.id},
                     target: @target
                   )
                 }
@@ -1012,28 +1012,50 @@ defmodule BrandoAdmin.Components.Content.List.Row do
      |> assign(:child_fields, child_fields)}
   end
 
-  def handle_event("update_entry", %{"entry_id" => entry_id, "schema" => schema}, socket) do
-    case Brando.Blueprint.from_name(schema) do
+  # An entry's alternates are of its own schema. The entry is this row's, or
+  # one of its child rows', which send their events here: never a schema the
+  # client names.
+  def handle_event("update_entry", %{"entry_id" => entry_id} = params, socket) do
+    case shown_entry(socket, params["parent_id"]) do
       nil -> {:noreply, socket}
-      schema -> {:noreply, push_navigate(socket, to: schema.__admin_route__(:update, [entry_id]))}
+      entry -> {:noreply, push_navigate(socket, to: entry.__struct__.__admin_route__(:update, [entry_id]))}
     end
   end
 
-  def handle_event("remove_entry", %{"schema" => schema, "parent_id" => parent_id, "id" => id}, socket) do
-    case Brando.Blueprint.from_name(schema) do
+  def handle_event("remove_entry", %{"id" => id} = params, socket) do
+    actor = socket.assigns[:current_user] || BrandoAdmin.Authorization.current_actor()
+
+    with %{__struct__: schema} = entry <- shown_entry(socket, params["parent_id"]),
+         true <- schema.has_alternates?(),
+         {:error, :forbidden} <- Module.concat(schema, Alternate).delete(id, entry.id, actor) do
+      send(self(), {:toast, gettext("You do not have permission for this action.")})
+    else
       nil ->
-        {:noreply, socket}
+        :ok
 
-      schema ->
-        if schema.has_alternates?(), do: Module.concat(schema, Alternate).delete(id, parent_id)
+      false ->
+        :ok
 
+      _ ->
         send_update(BrandoAdmin.Components.Content.List,
           id: "content_listing_#{socket.assigns.schema}_default",
           action: :update_entries
         )
-
-        {:noreply, socket}
     end
+
+    {:noreply, socket}
+  end
+
+  # The row's entry, or a loaded child entry, with the id `id`
+  defp shown_entry(%{assigns: %{entry: entry}}, id) do
+    children =
+      entry
+      |> Map.values()
+      |> Enum.filter(&is_list/1)
+      |> List.flatten()
+      |> Enum.filter(&(is_struct(&1) and Map.has_key?(&1, :id)))
+
+    Enum.find([entry | children], &(to_string(&1.id) == to_string(id)))
   end
 
   defp matching_child_fields(entry, fields) do

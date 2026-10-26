@@ -659,7 +659,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       phx-click={@select}
     >
       <.identifier_content has_cover?={@has_cover?} identifier={@identifier}>
-        <:delete>
+        <:delete :if={@delete != []}>
           {render_slot(@delete)}
         </:delete>
         {render_slot(@inner_block)}
