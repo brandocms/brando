@@ -222,20 +222,33 @@ defmodule BrandoAdmin.ActivityLiveTest do
     hidden = Factory.insert(:page, title: "Hidden Marker", creator: owner)
     own = Factory.insert(:page, title: "Own Marker", creator: viewer)
 
-    for page <- [hidden, own] do
-      entry = Brando.Repo.get!(Brando.AuthorizationTestResources.Page, page.id)
-      {:ok, _} = Brando.Activity.record(:updated, entry, owner, fields: ["title"])
-    end
+    [hidden, own] = Enum.map([hidden, own], &Brando.Repo.get!(Brando.AuthorizationTestResources.Page, &1.id))
+    for entry <- [hidden, own], do: {:ok, _} = Brando.Activity.record(:updated, entry, owner, fields: ["title"])
+    # Events that name the hidden entry in their details
+    Brando.Activity.reordered(Brando.AuthorizationTestResources.Page, 2, hidden, owner)
+    Brando.Activity.duplicated(own, hidden, owner)
 
     conn = log_in_user(conn, viewer)
 
     {:ok, view, _} = live(conn, "/admin/config/activity?period=all")
     assert has_element?(view, ".activity-row", "Own Marker")
-    refute has_element?(view, ".activity-row", "Hidden Marker")
-    assert has_element?(view, ".activity-count", "1 event")
+    assert has_element?(view, ".activity-row", "Copied from another entry")
+    refute render(view) =~ "Hidden Marker"
+    assert has_element?(view, ".activity-count", "2 events")
 
     {:ok, view, _} = live(conn, "/admin/config/activity?period=all&q=Hidden")
     refute has_element?(view, ".activity-row", "Hidden Marker")
+  end
+
+  test "with group authorization, an entry deleted for good keeps its history", %{conn: conn, current_user: user} do
+    put_test_env(:authorization_mode, :groups)
+    {:ok, _} = Brando.Authorization.Migration.run()
+    page = create_page(user, "Gone For Good")
+    {:ok, _} = Brando.Activity.deleted(page, user, false)
+    Brando.Repo.delete!(page)
+
+    {:ok, view, _} = live(conn, "/admin/config/activity?period=all")
+    assert has_element?(view, ".activity-row", "Gone For Good")
   end
 
   test "editors can't open it without group authorization", %{conn: conn} do

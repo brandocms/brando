@@ -470,11 +470,12 @@ defmodule Brando.Activity do
   `actor_kind/1`), `:client` (an MCP client's name) and `:proposal_id`.
   Options: `:limit` (default 50), `:offset`.
 
-  `readable_entries: {scope, schemas}` keeps, of `schemas`' events, those of
-  entries `scope` may read (`Brando.Authorization.Engine.scope/3`, a record
-  policy included), and those that name no entry. Events of other schemas are
-  left to `:schema_in`. An entry deleted for good cannot be checked, so its
-  events drop out.
+  `readable_entries: {scope, schemas}` keeps, of the events of those
+  `schemas` that have a record read policy, only those of entries `scope` may
+  read, as `Brando.Authorization.Boundary.query/2` narrows them. Their events
+  that name no entry (a reorder, naming the entry now first) or an entry
+  deleted for good cannot be checked, and drop out. Events of other schemas
+  are left to `:schema_in`.
   """
   def list(filters \\ %{}, opts \\ []) do
     limit = Keyword.get(opts, :limit, 50)
@@ -514,15 +515,12 @@ defmodule Brando.Activity do
   defp readable_entries(nil, schemas), do: dynamic([e], e.schema not in ^Enum.map(schemas, &to_string/1))
 
   defp readable_entries(scope, schemas) do
-    names = Enum.map(schemas, &to_string/1)
+    policed = Enum.filter(schemas, &Brando.Authorization.Engine.record_policy?/1)
+    names = Enum.map(policed, &to_string/1)
 
-    Enum.reduce(schemas, dynamic([e], e.schema not in ^names), fn schema, allowed ->
+    Enum.reduce(policed, dynamic([e], e.schema not in ^names), fn schema, allowed ->
       ids = from(entry in Brando.Authorization.Engine.scope(scope, :read, schema), select: entry.id)
-
-      dynamic(
-        [e],
-        ^allowed or (e.schema == ^to_string(schema) and (is_nil(e.entry_id) or e.entry_id in subquery(ids)))
-      )
+      dynamic([e], ^allowed or (e.schema == ^to_string(schema) and e.entry_id in subquery(ids)))
     end)
   end
 

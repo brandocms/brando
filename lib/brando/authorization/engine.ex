@@ -336,6 +336,10 @@ defmodule Brando.Authorization.Engine do
     end
   end
 
+  @doc "Whether `schema` has a record policy, which may hide some of its entries from a reader of the type."
+  def record_policy?(schema) when is_atom(schema), do: not is_nil(policy(schema))
+  def record_policy?(_schema), do: false
+
   defp policy(schema) when is_atom(schema) do
     if function_exported?(schema, :__authorization__, 0) do
       module = Keyword.get(schema.__authorization__(), :policy)

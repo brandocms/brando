@@ -150,19 +150,20 @@ defmodule Brando.Tenant do
   """
   @spec capture_context((-> result)) :: (-> result) when result: var
   def capture_context(fun) when is_function(fun, 0) do
-    prefix = captured_prefix()
-    trace = Brando.Tracing.capture()
-    authorization = Boundary.capture()
-    fn -> Boundary.with_captured(authorization, fn -> run_captured(prefix, trace, fun) end) end
+    context = capture()
+    fn -> run_in(context, fun) end
   end
 
   @spec capture_context((arg -> result)) :: (arg -> result) when arg: var, result: var
   def capture_context(fun) when is_function(fun, 1) do
-    prefix = captured_prefix()
-    trace = Brando.Tracing.capture()
-    authorization = Boundary.capture()
-    fn arg -> Boundary.with_captured(authorization, fn -> run_captured(prefix, trace, fn -> fun.(arg) end) end) end
+    context = capture()
+    fn arg -> run_in(context, fn -> fun.(arg) end) end
   end
+
+  defp capture, do: {captured_prefix(), Brando.Tracing.capture(), Boundary.capture()}
+
+  defp run_in({prefix, trace, authorization}, fun),
+    do: Boundary.with_captured(authorization, fn -> run_captured(prefix, trace, fun) end)
 
   defp captured_prefix, do: if(public?(), do: :public, else: current_prefix())
 

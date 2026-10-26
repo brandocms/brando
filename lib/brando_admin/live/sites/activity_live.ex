@@ -162,15 +162,19 @@ defmodule BrandoAdmin.Sites.ActivityLive do
     end
   end
 
+  # One authorization snapshot for the whole load: the read scopes of every
+  # type the log narrows by entry (list, count, states) share it.
   defp load(socket) do
-    filters = query_filters(socket.assigns.filters, socket.assigns.readable)
-    events = Activity.list(filters, limit: socket.assigns.limit)
+    Brando.Authorization.with_snapshots(fn ->
+      filters = query_filters(socket.assigns.filters, socket.assigns.readable)
+      events = Activity.list(filters, limit: socket.assigns.limit)
 
-    socket
-    |> assign(:count, Activity.count(filters))
-    |> assign(:events, events)
-    |> assign(:states, Events.states(events))
-    |> assign(:days, events |> Events.items() |> Events.by_day())
+      socket
+      |> assign(:count, Activity.count(filters))
+      |> assign(:events, events)
+      |> assign(:states, Events.states(events))
+      |> assign(:days, events |> Events.items() |> Events.by_day())
+    end)
   end
 
   defp query_filters(filters, readable) do

@@ -50,29 +50,46 @@ defmodule BrandoAdmin.Components.Activity do
 
   defp states_for(schema, ids) do
     soft_delete? = :deleted_at in schema.__schema__(:fields)
-    source = readable(schema)
 
     query =
       if soft_delete?,
-        do: from(e in source, where: e.id in ^ids, select: {e.id, e.deleted_at}),
-        else: from(e in source, where: e.id in ^ids, select: {e.id, nil})
+        do: from(e in schema, where: e.id in ^ids, select: {e.id, e.deleted_at}),
+        else: from(e in schema, where: e.id in ^ids, select: {e.id, nil})
+
+    hidden = hidden(schema, ids)
 
     query
     |> Brando.Repo.all()
-    |> Enum.map(fn {id, deleted_at} -> {{to_string(schema), id}, if(deleted_at, do: :trashed, else: :live)} end)
+    |> Enum.map(fn {id, deleted_at} ->
+      state =
+        cond do
+          id in hidden -> :hidden
+          deleted_at -> :trashed
+          true -> :live
+        end
+
+      {{to_string(schema), id}, state}
+    end)
   rescue
     _ -> []
   end
 
-  # Of a type the reader may read, the entries their read policy lets them;
-  # an entry it hides reads as gone. Other types (webhooks, managed rather
-  # than read) are not narrowed.
-  defp readable(schema) do
-    scope = Brando.Authorization.Boundary.current_scope()
+  # Of `ids`, those the reader's record read policy hides: the entry a copy
+  # was made from, say, whose title the copy's event names.
+  defp hidden(schema, ids) do
+    alias Brando.Authorization.{Boundary, Engine}
 
-    if (Brando.Authorization.Engine.enabled?() and scope) && Brando.Authorization.Engine.can?(scope, :read, schema),
-      do: Brando.Authorization.Engine.scope(scope, :read, schema),
-      else: schema
+    if Engine.enabled?() and Engine.record_policy?(schema) do
+      readable =
+        case Boundary.current_scope() do
+          nil -> []
+          scope -> Brando.Repo.all(from(e in Engine.scope(scope, :read, schema), where: e.id in ^ids, select: e.id))
+        end
+
+      ids -- readable
+    else
+      []
+    end
   end
 
   @doc "The schema module an event names, if it is still a known Blueprint."
@@ -634,8 +651,11 @@ defmodule BrandoAdmin.Components.Activity do
       gettext("The schedule was cancelled")
     ]
 
-  defp lines(%{action: :duplicated, details: %{"copied_from" => %{"title" => title}}}, _fields, _states),
-    do: [gettext("Copied from %{title}", title: title)]
+  defp lines(%{action: :duplicated, details: %{"copied_from" => %{"title" => title} = copied}} = event, _fields, states) do
+    if states[{event.schema, copied["id"]}] == :hidden,
+      do: [gettext("Copied from another entry")],
+      else: [gettext("Copied from %{title}", title: title)]
+  end
 
   defp lines(%{action: :imported, details: details}, fields, _states),
     do: [import_line(details), fields && gettext("Replaced %{fields}", fields: fields)]
