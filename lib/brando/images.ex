@@ -233,11 +233,12 @@ defmodule Brando.Images do
 
   def restore_original(_image), do: :ok
 
-  # Written beside it and moved into place, so processing never reads a
+  # Written beside it, under a name of its own (two recreations of the image
+  # may run at once), and moved into place, so processing never reads a
   # partly written original. Without a CDN (`:enoent`) there is nowhere to
   # read it from, and processing fails on the missing file as it would have.
   defp download_original(image, file) do
-    partial = file <> ".download"
+    partial = "#{file}.download-#{Base.url_encode64(:crypto.strong_rand_bytes(9))}"
 
     with {:cdn, {:ok, bytes}} <- {:cdn, read_original_from_cdn(image)},
          :ok <- File.mkdir_p(Path.dirname(file)),

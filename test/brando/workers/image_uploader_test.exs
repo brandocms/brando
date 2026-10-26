@@ -334,14 +334,25 @@ defmodule Brando.Worker.ImageUploaderTest do
       Application.put_env(:brando, Brando.Images, Keyword.put(images, :processor_module, Brando.Images.Processor.Vix))
 
       bytes = File.read!(Path.expand("../../fixtures/sample.jpg", __DIR__))
-      image = Factory.insert(:image, path: Path.join(dir, "harbour.jpg"), config_target: "default", sizes: %{}, status: :processed, cdn: true)
+
+      image =
+        Factory.insert(:image,
+          path: Path.join(dir, "harbour.jpg"),
+          config_target: "default",
+          sizes: %{},
+          status: :processed,
+          cdn: true
+        )
 
       {:ok, image: image, bytes: bytes}
     end
 
     test "processes it again from the CDN's copy, and delivers every size", %{image: image, bytes: bytes} do
       object_key = "media/" <> image.path
-      expect(Brando.CDN.Client.Mock, :get_object, fn "bucket", ^object_key, _ -> {:ok, %{status_code: 200, body: bytes}} end)
+
+      expect(Brando.CDN.Client.Mock, :get_object, fn "bucket", ^object_key, _ ->
+        {:ok, %{status_code: 200, body: bytes}}
+      end)
 
       {:ok, _job} = Brando.Images.Processing.recreate_sizes_for_image(image, :system)
 
@@ -361,8 +372,23 @@ defmodule Brando.Worker.ImageUploaderTest do
 
       assert Repo.get!(Image, image.id).sizes == %{}
       refute local?(image.path)
-      refute local?(image.path <> ".download")
+      assert Path.wildcard(Path.join(Storage.current_media_root(), image.path <> "*")) == []
       assert FakeS3.keys() == []
+    end
+
+    # Recreated twice at once: neither writes into the other's download
+    test "a download leaves another one under way alone", %{image: image, bytes: bytes} do
+      expect(Brando.CDN.Client.Mock, :get_object, fn _, _, _ -> {:ok, %{status_code: 200, body: bytes}} end)
+
+      others =
+        for name <- [".download", ".download-other"], do: Path.join(Storage.current_media_root(), image.path <> name)
+
+      File.mkdir_p!(Path.dirname(hd(others)))
+      Enum.each(others, &File.write!(&1, "PARTIAL"))
+
+      assert :ok = Brando.Images.restore_original(image)
+      assert File.read!(Path.join(Storage.current_media_root(), image.path)) == bytes
+      assert Enum.map(others, &File.read!/1) == ["PARTIAL", "PARTIAL"]
     end
   end
 end
