@@ -94,4 +94,33 @@ defmodule Brando.Sites.RedirectsTest do
     assert unchanged.redirects == seo.redirects
     assert {:ok, nil} = Redirects.delete_permalink_redirect("/new", "no", :system)
   end
+
+  describe "a redirect's pattern" do
+    test "must compile to be saved" do
+      {:ok, seo} = Sites.get_seo(%{matches: %{language: "en"}})
+
+      assert {:error, changeset} =
+               Sites.update_seo(seo, %{"redirects" => [%{"from" => "/blog(/moved", "to" => "/x", "code" => "301"}]}, :system)
+
+      assert %{redirects: [%{from: [_]}]} = Ecto.Changeset.traverse_errors(changeset, fn {message, _} -> message end)
+      assert Redirects.compile("/blog/:slug") |> elem(0) == :ok
+      assert Redirects.compile("/blog(/moved") == :error
+    end
+
+    # Rules saved before `from` was checked
+    test "that does not compile matches nothing, and the others still match" do
+      {:ok, seo} = Sites.get_seo(%{matches: %{language: "en"}})
+
+      redirects = [
+        %Brando.Sites.Redirect{from: "/blog(/moved-page", to: "/en/moved-page", code: 301},
+        %Brando.Sites.Redirect{from: "/teststart", to: "/new/teststart", code: 301}
+      ]
+
+      {:ok, _} = seo |> Ecto.Changeset.change() |> Ecto.Changeset.put_embed(:redirects, redirects) |> Sites.update_seo(:system)
+      Brando.Cache.SEO.set()
+
+      assert Redirects.test_redirect(["nothing-here"], "en") == {:error, {:redirects, :no_match}}
+      assert Redirects.test_redirect(["teststart"], "en") == {:ok, {:redirect, {"/new/teststart", 301}}}
+    end
+  end
 end
