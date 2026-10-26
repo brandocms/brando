@@ -33,4 +33,22 @@ defmodule Brando.Villain.FinalPassTest do
                       "!!! Error parsing liquex template !!!"
            end) =~ "Error parsing liquex template"
   end
+
+  test "inert_liquid/1 leaves Liquid as text, and script and style as they are" do
+    html =
+      ~s(<p title="{{ title }}">{{ title }} {% if true %}x{% endif %}</p>) <>
+        ~s(<script type="application/ld+json">{"a": {"b": 1}}</script><style>p { color: red }</style>)
+
+    inert = Villain.inert_liquid(html)
+
+    assert inert ==
+             ~s(<p title="&#123;&#123; title &#125;&#125;">&#123;&#123; title &#125;&#125; ) <>
+               ~s(&#123;% if true %&#125;x&#123;% endif %&#125;</p>) <>
+               ~s(<script type="application/ld+json">{"a": {"b": 1}}</script><style>p { color: red }</style>)
+
+    assert Floki.text(Floki.parse_fragment!(inert)) == Floki.text(Floki.parse_fragment!(html))
+
+    assert Villain.parse_and_render(Villain.inert_liquid("<p>{{ title }}</p>"), Context.new(%{"title" => "T"})) ==
+             "<p>&#123;&#123; title &#125;&#125;</p>"
+  end
 end

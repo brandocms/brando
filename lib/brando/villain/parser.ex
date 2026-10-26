@@ -1368,8 +1368,16 @@ defmodule Brando.Villain.Parser do
     case fragment.status do
       # In frontend edit mode the fragment's blocks carry their own markers,
       # so a click inside the fragment edits it, not the page embedding it.
-      :published -> fragment |> Brando.FrontendEdit.rendered_html(:blocks) |> maybe_annotate(block.uid, opts)
-      _ -> "<!-- fragment##{id} not embedded. status != :published -->"
+      # Its HTML has had its Liquid pass, so the page's must not evaluate the
+      # text again (synced Markdown in it included).
+      :published ->
+        fragment
+        |> Brando.FrontendEdit.rendered_html(:blocks)
+        |> Brando.Villain.inert_liquid()
+        |> maybe_annotate(block.uid, opts)
+
+      _ ->
+        "<!-- fragment##{id} not embedded. status != :published -->"
     end
   end
 

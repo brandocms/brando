@@ -301,6 +301,29 @@ defmodule Brando.Villain do
     Context.assign(context, key, value)
   end
 
+  @raw_text_elements ~r/<(script|style)\b.*?<\/\1\s*>/is
+
+  @doc """
+  Makes HTML inert to a later `parse_and_render/2`: braces become entities,
+  which browsers show as the same text, so Liquid finds no delimiter.
+
+  For HTML that must not be evaluated in this render: content from outside
+  the CMS, and output a render has already evaluated. Script and style
+  content is raw text, where entities stay literal, so it is left as it is.
+  """
+  def inert_liquid(nil), do: nil
+
+  def inert_liquid(html) do
+    html
+    |> ensure_string()
+    |> then(&Regex.split(@raw_text_elements, &1, include_captures: true))
+    |> Enum.with_index()
+    |> Enum.map_join(fn
+      {raw_text, index} when rem(index, 2) == 1 -> raw_text
+      {markup, _} -> String.replace(markup, ["{", "}"], &if(&1 == "{", do: "&#123;", else: "&#125;"))
+    end)
+  end
+
   @decorate span("brando.villain.liquid")
   def parse_and_render(html, context) do
     html_string =

@@ -61,6 +61,12 @@ defmodule Brando.CaptionsTest do
     assert Captions.library_html("") == nil
   end
 
+  test "library text keeps Liquid as text for the entry's Liquid pass" do
+    # A video's title comes from its provider, outside the CMS
+    assert Captions.library_html("{{ entry.title }}") == "&#123;&#123; entry.title &#125;&#125;"
+    assert Captions.library_html("<p>{% if x %}</p>") == "<p>&#123;% if x %&#125;</p>"
+  end
+
   test "safe_preview/2 prefers the placement caption, sanitized" do
     assert Captions.safe_preview("<p><em>A</em><script>x</script></p>", "Library") == {:safe, "<p><em>A</em>x</p>"}
     assert Captions.safe_preview("<p></p>", "A & B") == {:safe, "A &amp; B"}

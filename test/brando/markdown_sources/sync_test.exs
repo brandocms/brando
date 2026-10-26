@@ -358,6 +358,62 @@ defmodule Brando.MarkdownSources.SyncTest do
       end
     end
 
+    test "a page embedding a fragment does not evaluate the fragment's Markdown", c do
+      # The footnote marker in the text makes the fragment's footnote pass
+      # parse and reserialise its HTML, which decodes the brace entities.
+      sync_markdown(c, "b", "MARK1 {{ entry.title | upcase }} data-footnote-uid MARK2")
+      user = Brando.Factory.insert(:random_user, role: :superuser)
+      module = Brando.Factory.insert(:module, type: :liquid, code: "{% ref refs.body %}")
+      fragment = Brando.Factory.insert(:fragment, creator: user, title: "fragment-title")
+      fragment_join = Brando.Pages.Fragment.__schema__(:association, :entry_blocks).queryable
+      source = MarkdownSources.get_source(c.source.id)
+
+      block =
+        Repo.insert!(%Brando.Content.Block{
+          uid: Brando.Utils.generate_uid(),
+          type: :module,
+          module_id: module.id,
+          source: fragment_join,
+          creator_id: user.id,
+          vars: [],
+          refs: [
+            %Brando.Content.Ref{
+              name: "body",
+              uid: Brando.Utils.generate_uid(),
+              data: %MarkdownSourceBlock{
+                data: %MarkdownSourceBlock.Data{
+                  source_id: source.id,
+                  policy: :follow,
+                  version_id: source.latest_version_id
+                }
+              }
+            }
+          ]
+        })
+
+      Repo.insert!(struct(fragment_join, %{entry_id: fragment.id, block_id: block.id, sequence: 0}))
+      assert {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, fragment.id)
+      Cachex.clear(:query)
+
+      page = Brando.Factory.insert(:page, creator: user, title: "page-title")
+      join = Brando.Pages.Page.__schema__(:association, :entry_blocks).queryable
+
+      embed =
+        Repo.insert!(%Brando.Content.Block{
+          uid: Brando.Utils.generate_uid(),
+          type: :fragment,
+          fragment_id: fragment.id,
+          source: join,
+          creator_id: user.id
+        })
+
+      Repo.insert!(struct(join, %{entry_id: page.id, block_id: embed.id, sequence: 0}))
+      assert {:ok, rendered} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
+      text = Floki.text(Floki.parse_fragment!(rendered.rendered_blocks))
+      assert text =~ "MARK1 {{ entry.title | upcase }} data-footnote-uid MARK2"
+      refute text =~ "PAGE-TITLE"
+    end
+
     test "the entry's Markdown alternate keeps the braces", c do
       sync_markdown(c, "b", "Write {{ entry.title }} and `%{a: 1}`.")
       page = c.pages |> hd() |> Repo.preload(entry_blocks: [block: [:refs, :vars]])
