@@ -90,7 +90,10 @@ defmodule BrandoAdmin.LobbyChannelSiteAccessTest do
 
   defp join_lobby(user, token) do
     session_id = Brando.Users.token_id(Brando.Users.generate_user_session_token(user))
-    socket = socket(BrandoAdmin.AdminSocket, "lobby-#{System.unique_integer()}", %{user_id: user.id, session_id: session_id})
+
+    socket =
+      socket(BrandoAdmin.AdminSocket, "lobby-#{System.unique_integer()}", %{user_id: user.id, session_id: session_id})
+
     subscribe_and_join(socket, BrandoAdmin.LobbyChannel, "lobby", %{url: "/admin", scope_token: token})
   end
 

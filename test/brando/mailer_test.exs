@@ -218,6 +218,7 @@ defmodule Brando.MailerTest do
     on_exit(fn -> Brando.Cache.del(:identity) end)
 
     assert {:ok, _} = UserNotifier.deliver_reset_password_instructions(user, "https://example.com/reset/abc")
+
     assert_email_sent(fn email ->
       assert email.text_body =~ "https://example.com/reset/abc"
       refute email.text_body =~ "Public copy"

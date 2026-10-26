@@ -14,7 +14,9 @@ defmodule Brando.HTML.Forms.LiveFormTenantTest.SiteFormLive do
   def render(assigns) do
     ~H"""
     <.live_component module={Brando.HTML.Forms.LiveForm} id="contact" form={@form} meta={@meta}>
-      <:success><p>Got it.</p></:success>
+      <:success>
+        <p>Got it.</p>
+      </:success>
     </.live_component>
     """
   end
@@ -31,7 +33,9 @@ defmodule Brando.HTML.Forms.LiveFormTenantTest.UnhookedFormLive do
   def render(assigns) do
     ~H"""
     <.live_component module={Brando.HTML.Forms.LiveForm} id="contact" form={@form} meta={@meta}>
-      <:success><p>Got it.</p></:success>
+      <:success>
+        <p>Got it.</p>
+      </:success>
     </.live_component>
     """
   end
