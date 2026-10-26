@@ -953,13 +953,17 @@ defmodule Brando.Content.Proposals do
   defp unsupported(_var, key, _value),
     do: problem(:unsupported_value, dgettext("content_proposals", "%{key} cannot be set to this value.", key: key))
 
+  # Markdown is checked as the HTML it renders, raw HTML and links included.
+  defp checked_text("markdown", text), do: Brando.Markdown.to_html!(text, breaks: true)
+  defp checked_text(_type, text), do: text
+
   # Text, markdown and HTML refs must pass the same safety check as the
   # editor's rich text; header refs hold plain text, svg refs one safe
   # `<svg>`, and map refs an https embed address.
   defp text(name, text, module) do
     case Enum.find(module.refs || [], &(&1.name == name)) do
       %{data: %{type: type}} when is_binary(text) ->
-        case text_problem(type, text, name) do
+        case text_problem(type, checked_text(type, text), name) do
           :unknown -> [unknown_text(name)]
           nil -> []
           message -> [problem(:unsafe_text, message)]
