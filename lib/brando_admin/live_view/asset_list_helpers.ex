@@ -25,8 +25,7 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
       |> Enum.drop(-1)
       |> Enum.join("/")
 
-    folder_id = FolderBrowser.folder_id_for(parent, socket.assigns.upload_root)
-    patch_folder_filter(socket, folder_id)
+    patch_folder_filter(socket, folder_id_to_open(socket, parent))
   end
 
   @doc """
@@ -230,7 +229,8 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
 
   @doc "Opens the preview of sorting the current folder's `asset_type` assets."
   def open_sweep(socket, asset_type) do
-    folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
+    # A preview moves nothing, and a folder not stored yet has nothing to sort
+    folder_id = FolderBrowser.find_folder_id(socket.assigns.current_folder, socket.assigns.upload_root)
 
     case Sweep.plan(asset_type, folder_id) do
       {:ok, plan} -> Component.assign(socket, :sweep, %{plan: plan, samples: Sweep.samples(plan)})

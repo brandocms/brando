@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
   import Ecto.Query
 
+  alias Brando.Authorization.Boundary
   alias Brando.Images
   alias Brando.Images.Image
   alias BrandoAdmin.Components.Assets.FileBrowser
@@ -73,7 +74,13 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
   defp open_default_upload_folder(socket) do
     with {:ok, %{upload_path: path}} <- Brando.Images.get_config_for(%{config_target: "default"}),
-         folder_id when is_integer(folder_id) <- FolderBrowser.folder_id_for(path, socket.assigns.upload_root) do
+         folder_id when is_integer(folder_id) <-
+           FolderBrowser.folder_id_for(
+             path,
+             socket.assigns.upload_root,
+             socket.assigns.current_user,
+             socket.assigns.schema
+           ) do
       AssetListHelpers.patch_folder_filter(socket, folder_id)
     else
       _ -> socket
@@ -423,7 +430,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
     {:ok, images} =
       Images.list_images(%{select: [:id, :path, :folder_id, :config_target], order: "desc id"})
 
-    images = ensure_image_folder_ids(images, socket.assigns.upload_root)
+    images = ensure_image_folder_ids(images, socket)
 
     folders =
       FolderBrowser.folders_from_entries(images, socket.assigns.upload_root)
@@ -473,7 +480,12 @@ defmodule BrandoAdmin.Images.ImageListLive do
     |> assign(:effective_upload_folder, effective_upload_folder)
     |> assign(
       :effective_upload_folder_id,
-      FolderBrowser.folder_id_for(effective_upload_folder, socket.assigns.upload_root)
+      FolderBrowser.folder_id_for(
+        effective_upload_folder,
+        socket.assigns.upload_root,
+        socket.assigns.current_user,
+        socket.assigns.schema
+      )
     )
   end
 
@@ -572,8 +584,15 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
   # Keeps folder browsing correct for legacy assets by assigning folder_id
   # from existing image paths the first time we encounter unassigned entries.
-  defp ensure_image_folder_ids(images, upload_root) do
-    updates = pending_image_folder_updates(images, upload_root)
+  # That creates folders and moves images, so only for someone who may
+  # organize the library; anyone else sees them by their paths.
+  defp ensure_image_folder_ids(images, socket) do
+    upload_root = socket.assigns.upload_root
+
+    updates =
+      if Boundary.authorize(socket.assigns.current_user, :update, socket.assigns.schema) == :ok,
+        do: pending_image_folder_updates(images, upload_root),
+        else: []
 
     if updates == [] do
       images

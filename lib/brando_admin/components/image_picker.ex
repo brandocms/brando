@@ -303,7 +303,9 @@ defmodule BrandoAdmin.Components.ImagePicker do
   def handle_event("confirm_block_upload_folder", _, socket) do
     upload_name = socket.assigns.pending_upload_name
     absolute_folder = FolderBrowser.absolute_folder(socket.assigns.current_folder, socket.assigns.upload_root)
-    folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
+
+    folder_id =
+      FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root, picker_actor(socket), Image)
 
     {:noreply,
      socket
@@ -1046,11 +1048,13 @@ defmodule BrandoAdmin.Components.ImagePicker do
       {"data-asset-type", "image"},
       {"data-config-target", config_target},
       {"data-folder", FolderBrowser.absolute_folder(folder, root)},
-      {"data-folder-id", FolderBrowser.folder_id_for(folder, root)}
+      {"data-folder-id", FolderBrowser.folder_id_for(folder, root, picker_actor(socket), Image)}
     ]
   end
 
   defp upload_target(_socket, _root, _folder), do: nil
+
+  defp picker_actor(socket), do: BrandoAdmin.Authorization.current_actor() || socket.assigns.current_user
 
   # Each opening is a new generation, so a copy picked in an earlier one is
   # not handed to the field this one is for. The folder browsed and the

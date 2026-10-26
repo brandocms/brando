@@ -365,7 +365,7 @@ defmodule BrandoAdmin.Files.FileListLive do
                 data-deliver-topic={@deliver_topic}
                 data-config-target={@current_folder_config_target || "default"}
                 data-folder={@current_folder_abs}
-                data-folder-id={FolderBrowser.folder_id_for(@current_folder, @upload_root)}
+                data-folder-id={@current_folder_id}
                 data-click-mode="trigger"
                 class="library-upload-trigger"
               >
@@ -493,6 +493,15 @@ defmodule BrandoAdmin.Files.FileListLive do
       )
     )
     |> assign(:current_folder_config_target, current_folder_config_target)
+    |> assign(
+      :current_folder_id,
+      FolderBrowser.folder_id_for(
+        current_folder,
+        socket.assigns.upload_root,
+        socket.assigns.current_user,
+        socket.assigns.schema
+      )
+    )
   end
 
   defp folder_label_for_display(folder, upload_root) do
