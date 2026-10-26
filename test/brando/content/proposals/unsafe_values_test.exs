@@ -11,6 +11,7 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
   alias Brando.Pages.Page
 
   import Brando.ProposalFixtures, only: [module!: 4, ref: 2]
+  import Ecto.Query, only: [from: 2]
 
   # Inert payloads: each would only set document.title.
   @breakout ~s(t"><img src=x alt=MARKER onerror=document.title=this.alt><b class="x)
@@ -74,6 +75,25 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       set = %SetRefConfig{target: {Page, c.identity.id}, block_uid: uid, ref: :heading, config: %{class: @breakout}}
       assert {:ok, proposal} = Proposals.propose([set], c.user)
       assert codes(proposal) == [:unsafe_text]
+    end
+
+    test "a link is cleared with an empty value", c do
+      op = %InsertBlock{target: {Page, c.identity.id}, module: c.heading.id, configs: %{heading: %{link: ""}}}
+      assert {:ok, %{problems: []}} = Proposals.propose([op], c.user)
+    end
+
+    test "a proposal stored before a check existed is checked again on approval", c do
+      op = %InsertBlock{target: {Page, c.identity.id}, module: c.heading.id, configs: %{heading: %{class: @breakout}}}
+      assert {:ok, proposal} = Proposals.propose([op], c.user)
+      assert codes(proposal) == [:unsafe_text]
+
+      # As a version without the check stored it.
+      Brando.Repo.update_all(
+        from(r in Brando.Content.Proposals.Record, where: r.id == ^proposal.id),
+        set: [problems: []]
+      )
+
+      assert {:error, _} = Proposals.approve(proposal.id, proposal.version, c.user)
     end
 
     test "ordinary header settings stay valid", c do

@@ -107,8 +107,14 @@ defmodule Brando.Content.Proposals do
       module_versions: module_versions(operations)
     }
 
+    problems = operation_problems(proposal, actor)
+    problems = if problems == [], do: check_changesets(proposal, entries, user), else: problems
+    %{proposal | problems: problems, effects: effects(proposal)}
+  end
+
+  defp operation_problems(proposal, actor) do
     {problems, _trees} =
-      operations
+      proposal.operations
       |> Enum.with_index()
       |> Enum.flat_map_reduce(%{}, fn {op, index}, trees ->
         {problems, trees} = check(op, proposal, actor, trees)
@@ -117,8 +123,7 @@ defmodule Brando.Content.Proposals do
         {Enum.map(problems, &Map.put(&1, :operation, index)), trees}
       end)
 
-    problems = if problems == [], do: check_changesets(proposal, entries, user), else: problems
-    %{proposal | problems: problems, effects: effects(proposal)}
+    problems
   end
 
   # The entries an operation touches: its target, and a copy's destination.
@@ -516,6 +521,8 @@ defmodule Brando.Content.Proposals do
   # Settings are rendered into attributes (a heading's class, id and link)
   # and captions. A caption's title and credits take safe rich text, a link
   # an address, a class or id no quotes, and any other text no markup.
+  defp setting_problems(_key, ""), do: []
+
   defp setting_problems(key, value) when is_binary(value) do
     cond do
       key in ~w(title credits) -> unsafe(rich_text_problem(value, key))
@@ -2085,7 +2092,13 @@ defmodule Brando.Content.Proposals do
     if record.problems != [],
       do: Error.fail!(dgettext("content_proposals", "Resolve every blocking problem before applying."))
 
-    record |> rebuild!(actor) |> current!(actor)
+    proposal = rebuild!(record, actor)
+    current!(proposal, actor)
+
+    # Checked again as the proposal is approved: one stored before a check
+    # was added or tightened would otherwise keep its old, empty list.
+    if operation_problems(proposal, actor) != [],
+      do: Error.fail!(dgettext("content_proposals", "Resolve every blocking problem before applying."))
 
     record
     |> Changeset.change(status: "approved", approved_at: DateTime.utc_now())
