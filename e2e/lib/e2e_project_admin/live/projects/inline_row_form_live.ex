@@ -1,5 +1,9 @@
-defmodule E2eProjectAdmin.Projects.LockedInlineRowFormLive do
-  @moduledoc "The inline row's `:locked` form (locked-inputs.spec.js)."
+defmodule E2eProjectAdmin.Projects.InlineRowFormLive do
+  @moduledoc """
+  An inline row on its own, which only its `:locked` form opens
+  (locked-inputs.spec.js). Routed as an update form, as `mix brando.doctor`
+  expects of a Blueprint with a form.
+  """
   use BrandoAdmin.LiveView.Form, schema: E2eProject.Projects.InlineRow
 
   def render(assigns) do

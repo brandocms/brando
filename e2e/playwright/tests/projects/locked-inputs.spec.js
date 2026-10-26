@@ -73,7 +73,7 @@ test('every locked input type renders locked and takes no edit', async ({ page }
     description: { en: 'The first night.', no: 'Første kveld.' },
   })
 
-  await page.goto(`/admin/projects/inline_rows/locked/${row.id}`)
+  await page.goto(`/admin/projects/inline_rows/update/${row.id}`)
   await syncLV(page)
 
   // Text inputs, `readonly: true` and `disabled: true` alike

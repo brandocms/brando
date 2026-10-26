@@ -71,7 +71,7 @@ defmodule E2eProject.Projects.InlineRow do
 
   # Every input of the row on its own, declared locked, alternating
   # `readonly: true` and `disabled: true` (locked-inputs.spec.js). Opened at
-  # /admin/projects/inline_rows/locked/:entry_id.
+  # /admin/projects/inline_rows/update/:entry_id.
   forms do
     form :locked do
       tab "Locked" do

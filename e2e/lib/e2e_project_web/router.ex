@@ -101,7 +101,7 @@ defmodule E2eProjectWeb.Router do
       live "/projects/create", ProjectFormLive, :create
       live "/projects/update/:entry_id", ProjectFormLive, :update
       live "/projects/locked/:entry_id", LockedProjectFormLive, :update
-      live "/inline_rows/locked/:entry_id", LockedInlineRowFormLive, :update
+      live "/inline_rows/update/:entry_id", InlineRowFormLive, :update
     end
 
     scope "/sync_test", E2eProjectAdmin.SyncTest do
