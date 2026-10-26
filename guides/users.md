@@ -123,6 +123,9 @@ account — disconnects them, and the user's other sessions keep theirs. The
 admin socket's token, in the page's `user_token` meta tag, names the session
 by its row id (`Brando.Users.build_socket_token/2`); it lasts a day, and only
 while the session does, so a disconnected socket cannot reconnect with it.
+A live preview page connects with a token of its own, which joins only that
+preview's channel and lasts 15 minutes (see [Live preview](live_preview.md));
+ending the session disconnects it too.
 
 ## Reset a forgotten password
 

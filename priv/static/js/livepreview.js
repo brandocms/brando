@@ -13,23 +13,60 @@ document.documentElement.classList.add('is-live-preview')
 // before this file).
 const BlockPatch = window.BrandoBlockPatch
 
+// What `Brando.Plug.LivePreview` served this page with: the preview key, the
+// generation of the cached document, and a socket token good only for this
+// preview's channel (`Brando.LivePreview.SocketToken`).
+// `livePreviewKey` and `livePreviewVersion` stay globals, as they were when the
+// plug set them in an inline script.
+// The plug puts the meta right before this script; read that one, not a
+// look-alike in the page's content.
+const livePreviewMeta = (() => {
+  const own = document.currentScript && document.currentScript.previousElementSibling
+  if (own && own.matches('meta[name="brando-live-preview"]')) return own
+  const metas = document.querySelectorAll('meta[name="brando-live-preview"]')
+  return metas[metas.length - 1]
+})()
+var livePreviewKey = livePreviewMeta.getAttribute('data-key')
+var livePreviewVersion = Number(livePreviewMeta.getAttribute('data-version'))
+let token = livePreviewMeta.getAttribute('data-token')
+
 // Cache DOM references. `<main>` is looked up on every update instead: a full
 // rerender may replace it, and a template need not have one.
-const token = document.querySelector('meta[name="user_token"]').getAttribute('content')
 const body = document.querySelector('body')
 const parser = new DOMParser()
 
-// Phoenix Socket connection
+// Phoenix Socket connection. The token is read on every connect.
 const previewSocket = new Phoenix.Socket('/admin/socket', {
-  params: { token: token },
+  params: () => ({ token }),
+})
+
+// The token lasts 15 minutes and the socket checks it only as it connects.
+// When a connect fails, fetch a fresh one for the next attempt: the socket may
+// have been away for longer than that.
+let refreshingToken = false
+previewSocket.onError(() => {
+  if (refreshingToken) return
+  refreshingToken = true
+  fetch('/__livepreview/token?key=' + encodeURIComponent(livePreviewKey), {
+    credentials: 'same-origin',
+    cache: 'no-store',
+  })
+    .then(response => (response.ok ? response.json() : null))
+    .then(data => {
+      if (data && data.token) token = data.token
+    })
+    .catch(() => {})
+    .finally(() => {
+      refreshingToken = false
+    })
 })
 previewSocket.connect()
 
 // The generation of the cached document this page shows: the one it was
-// served (`livePreviewVersion`, set by `Brando.Plug.LivePreview`), then the `v`
-// of each render it applies. Sent on every join, so the channel replays the cache only
-// when this page missed a render.
-let shownVersion = typeof livePreviewVersion === 'undefined' ? null : livePreviewVersion
+// served (`livePreviewVersion`), then the `v` of each render it applies. Sent
+// on every join, so the channel replays the cache only when this page missed a
+// render.
+let shownVersion = livePreviewVersion
 // Block patches applied on top of that generation (each patch's `p`). The cache
 // holds none of them, so the channel has the form render the page again when
 // this is behind.

@@ -106,6 +106,14 @@ defmodule Brando.Authorization.Preview do
 
   def cleanup(key), do: Cachex.del(:cache, cache_key(key))
 
+  @doc "The scope `key` was registered under (`register/2`), or nil."
+  def scope(key) do
+    case metadata(key) do
+      {:ok, %{scope: %Scope{} = scope}} -> scope
+      _ -> nil
+    end
+  end
+
   defp metadata(key) when is_binary(key), do: Cachex.get(:cache, cache_key(key))
   defp metadata(_), do: {:error, :forbidden}
   defp cache_key(key), do: "__live_preview_authority__#{key}"

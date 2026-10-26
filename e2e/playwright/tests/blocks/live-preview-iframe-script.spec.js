@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import fs from 'fs'
 import path from 'path'
 
 // The script inside the live preview iframe (`priv/static/js/livepreview.js`)
@@ -7,22 +8,28 @@ import path from 'path'
 // be fired directly. No server or fixtures involved.
 const JS = path.join(__dirname, '../../../../priv/static/js')
 
-const load = async (page, bodyHtml, version = 1) => {
+const load = async (page, bodyHtml, version = 1, { script = true } = {}) => {
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.setContent(
-    `<html><head><meta name="user_token" content="t"></head><body>${bodyHtml}</body></html>`
+    // The plug puts the meta at the end of the body, after the page's content
+    `<html><head></head><body>${bodyHtml}<meta name="brando-live-preview" data-key="test" data-version="${version}" data-token="t"></body></html>`
   )
-  await page.evaluate((version) => {
-    window.livePreviewKey = 'test'
-    window.livePreviewVersion = version
+  await page.evaluate(() => {
     window.__lp = { handlers: {}, patched: [] }
     // A join that succeeds, as the page's setup on join depends on it
     const receipt = { receive: (status, callback) => (status === 'ok' && callback(), receipt) }
     window.Phoenix = {
       Socket: class {
+        constructor(_path, opts) {
+          window.__lp.socketParams = opts.params
+        }
         connect() {}
-        channel(_topic, params) {
+        onError(fn) {
+          window.__lp.socketError = fn
+        }
+        channel(topic, params) {
+          window.__lp.topic = topic
           window.__lp.joinParams = params
           return {
             on: (event, fn) => (window.__lp.handlers[event] = fn),
@@ -40,10 +47,10 @@ const load = async (page, bodyHtml, version = 1) => {
         elements: detail.elements.map((el) => el.tagName),
       })
     })
-  }, version)
+  })
   await page.addScriptTag({ path: path.join(JS, 'morphdom-umd.min.js') })
   await page.addScriptTag({ path: path.join(JS, 'block_patch.js') })
-  await page.addScriptTag({ path: path.join(JS, 'livepreview.js') })
+  if (script) await page.addScriptTag({ path: path.join(JS, 'livepreview.js') })
   return errors
 }
 
@@ -146,6 +153,65 @@ test.describe('Live preview iframe script', () => {
     expect(await page.evaluate(() => window.BrandoBlockPatch.replaceField('Missing:1:blocks', '<p></p>'))).toBeNull()
     expect(errors).toEqual([])
   })
+  // The socket token lasts 15 minutes and is checked only as the socket
+  // connects, so a refused connect fetches a fresh one for the next attempt.
+  test('a failed connect fetches a fresh token for the next attempt', async ({ page }) => {
+    const errors = await load(page, '<main><p>old</p></main>')
+    expect(await page.evaluate(() => window.__lp.socketParams())).toEqual({ token: 't' })
+
+    await page.evaluate(() => {
+      window.fetch = async (url) => {
+        window.__lp.fetched = url
+        return { ok: true, json: async () => ({ token: 'fresh' }) }
+      }
+      window.__lp.socketError()
+    })
+
+    await expect.poll(() => page.evaluate(() => window.__lp.socketParams())).toEqual({ token: 'fresh' })
+    expect(await page.evaluate(() => window.__lp.fetched)).toBe('/__livepreview/token?key=test')
+    expect(errors).toEqual([])
+  })
+
+  // The plug puts its meta right before the script, so the script reads that
+  // one even when a look-alike comes later in the document.
+  test('the page reads the meta right before its script', async ({ page }) => {
+    const errors = await load(page, '<main><p>old</p></main>', 1, { script: false })
+    const source = fs.readFileSync(path.join(JS, 'livepreview.js'), 'utf8')
+
+    await page.evaluate((source) => {
+      const own = document.createElement('meta')
+      own.setAttribute('name', 'brando-live-preview')
+      own.setAttribute('data-key', 'own')
+      own.setAttribute('data-version', '1')
+      own.setAttribute('data-token', 'own-token')
+      const decoy = own.cloneNode()
+      decoy.setAttribute('data-key', 'decoy')
+      decoy.setAttribute('data-token', 'decoy-token')
+      const script = document.createElement('script')
+      script.textContent = source
+      document.querySelector('meta[name="brando-live-preview"]').remove()
+      document.body.append(own, decoy)
+      document.body.insertBefore(script, decoy)
+    }, source)
+
+    expect(await page.evaluate(() => window.__lp.topic)).toBe('live_preview:own')
+    expect(await page.evaluate(() => window.__lp.socketParams())).toEqual({ token: 'own-token' })
+    expect(errors).toEqual([])
+  })
+
+  // Content in the page can hold a look-alike meta; the page keeps to the one
+  // the plug put after it.
+  test('the page takes its key and token from its own meta, not one in the content', async ({ page }) => {
+    const errors = await load(
+      page,
+      '<main><meta name="brando-live-preview" data-key="other" data-version="9" data-token="planted"></main>'
+    )
+
+    expect(await page.evaluate(() => window.__lp.topic)).toBe('live_preview:test')
+    expect(await page.evaluate(() => window.__lp.socketParams())).toEqual({ token: 't' })
+    expect(errors).toEqual([])
+  })
+
   // The channel replays the cache on join only when this version is not what
   // the page shows, so the page sends the one it was served, then the `v` of
   // each render it applies. With it go the block patches applied on top (each

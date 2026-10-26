@@ -14,25 +14,42 @@ defmodule BrandoAdmin.LivePreviewChannel do
   def join("live_preview:" <> preview_id, params, socket) do
     Realtime.allow_sandbox(socket)
 
-    with true <- BrandoAdmin.AdminSocket.session_valid?(socket),
-         :ok <- Preview.authorize(preview_id, socket.assigns.user_id) do
+    with {:ok, viewer_id} <- viewer(socket, preview_id),
+         :ok <- Preview.authorize(preview_id, viewer_id) do
       Realtime.subscribe()
       send(self(), :sync_preview)
 
       socket =
         socket
         |> assign(:preview_id, preview_id)
+        |> assign(:viewer_id, viewer_id)
         |> assign(:shown_version, params["version"])
         |> assign(:shown_patches, params["patches"] || 0)
 
-      {:ok, socket.assigns.user_id, socket}
+      {:ok, viewer_id, socket}
     else
       _ -> {:error, %{reason: "forbidden"}}
     end
   end
 
+  # A preview document's socket (`Brando.LivePreview.SocketToken`) joins only
+  # the preview its token names, in the site and environment it names, while
+  # its session lasts. An admin socket joins any preview its user may see.
+  defp viewer(%{assigns: %{preview: %{key: key, user_id: user_id, tenant: tenant}}} = socket, key) do
+    if Brando.Users.session_valid?(socket.assigns.session_id, user_id) and
+         tenant == Brando.LivePreview.SocketToken.tenant(key),
+       do: {:ok, user_id},
+       else: :error
+  end
+
+  defp viewer(%{assigns: %{preview: _}}, _key), do: :error
+
+  defp viewer(socket, _key) do
+    if BrandoAdmin.AdminSocket.session_valid?(socket), do: {:ok, socket.assigns.user_id}, else: :error
+  end
+
   def handle_out(event, payload, socket) do
-    if Preview.authorize(socket.assigns.preview_id, socket.assigns.user_id) == :ok do
+    if Preview.authorize(socket.assigns.preview_id, socket.assigns.viewer_id) == :ok do
       push(socket, event, payload)
       {:noreply, socket}
     else
@@ -68,7 +85,7 @@ defmodule BrandoAdmin.LivePreviewChannel do
   end
 
   def handle_info({:authorization_changed, _}, socket) do
-    if Preview.authorize(socket.assigns.preview_id, socket.assigns.user_id) == :ok,
+    if Preview.authorize(socket.assigns.preview_id, socket.assigns.viewer_id) == :ok,
       do: {:noreply, socket},
       else: {:stop, :normal, socket}
   end

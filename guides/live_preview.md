@@ -214,3 +214,44 @@ The repository's consumer example is `e2e/lib/e2e_project_web/live_preview.ex`;
 `e2e/playwright/tests/blocks/block-preview-targets.spec.js` exercises these
 editor transitions. If rendering fails, check the application logs and ensure
 that required preloads and template/layout assigns match the controller path.
+
+## What the preview page can reach
+
+The preview is served from the admin's own origin at `/__livepreview`, so it
+renders with the site's own scripts, and editor content in it (HTML blocks,
+module markup) runs there too. Its script connects to the admin socket with a
+token for that preview alone (`Brando.LivePreview.SocketToken`): it names the
+viewer, their session, the preview, and the site and environment it belongs
+to, and it lasts 15 minutes. It joins that preview's channel and no other; the
+page fetches a fresh one from `/__livepreview/token` when its socket
+reconnects. The viewer's admin socket token is not in the page.
+
+Preview responses carry a Content-Security-Policy of
+`frame-ancestors 'self'; base-uri 'self'`: only admin pages on the same origin
+can frame a preview, and a `<base>` tag in content cannot redirect the page's
+relative URLs. The preview's own script loads from
+`/__livepreview/client-<hash>.js`, so `'self'` allows it. To add directives, such as a
+`script-src` listing the hosts your templates load scripts from:
+
+```elixir
+config :brando, :live_preview_content_security_policy,
+  "script-src 'self' https://cdn.example.com; object-src 'none'"
+```
+
+The value is appended to the default policy. A `script-src` without
+`'unsafe-inline'` also blocks inline `<script>` elements and `on…` attributes
+in your templates and in editor content; list your own inline scripts by hash
+if the templates need them. `'self'` also allows any script file served from
+the same origin, uploaded media included, so where editors can upload files,
+list your script directories (such as `https://example.com/assets/`) instead
+of `'self'`, along with `https://example.com/__livepreview/` for the
+preview's own script.
+
+The scoped token keeps the admin socket token out of the preview page, not out
+of reach. Without a `script-src` that blocks it, a script an editor puts into
+the content runs on the admin origin whenever someone previews it, with the
+viewing user's cookies: it can read the admin page that frames the preview
+(and the window that opened a standalone preview), admin token included, and
+load any admin page as that user. Restrict who can add raw HTML (HTML blocks,
+module code), and set a `script-src` if editors you do not trust author
+content.
