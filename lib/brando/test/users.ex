@@ -73,6 +73,15 @@ defmodule Brando.Test.Users do
     unknown = Enum.reject(permissions, &MapSet.member?(known, &1))
     if unknown != [], do: raise(ArgumentError, "unknown permission keys: #{inspect(unknown)}")
 
+    superuser_only = Enum.filter(permissions, &MapSet.member?(Catalog.superuser_only_keys(), &1))
+
+    if superuser_only != [],
+      do:
+        raise(
+          ArgumentError,
+          "no group can hold #{inspect(superuser_only)}: only superusers have them"
+        )
+
     repo = Brando.Repo.repo()
     scope = Scope.current(user)
     n = System.unique_integer([:positive])

@@ -144,7 +144,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
           enabled?={enabled?(@enabled, kind, entry.id)}
           diff={Map.get(@diffs, {kind, entry.id})}
           global_manager?={@global_manager?}
-          can_customize?={@can_customize?}
+          can_customize?={@can_customize? && (kind == :palette || @code_authority?)}
           selected_site={@selected_site}
           selected_environment={@selected_environment}
         />
@@ -488,13 +488,13 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
             SharedLibrary.customize(kind, params["id"], site, prefix, socket.assigns.current_user)
 
           :reset ->
-            SharedLibrary.reset(kind, params["id"], site, prefix)
+            SharedLibrary.reset(kind, params["id"], site, prefix, socket.assigns.current_user)
 
           :accept_update ->
             SharedLibrary.accept_update(kind, params["id"], site, prefix, socket.assigns.current_user)
 
           :dismiss_update ->
-            SharedLibrary.dismiss_update(kind, params["id"], site, prefix)
+            SharedLibrary.dismiss_update(kind, params["id"], site, prefix, socket.assigns.current_user)
         end
 
       case result do
@@ -558,6 +558,8 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
       sites: sites,
       kinds: @kinds,
       can_customize?: selected_site && Access.can_manage?(socket.assigns.current_user, selected_site),
+      # A module or container override is code: a superuser's to make or replace.
+      code_authority?: Brando.Authorization.Boundary.superuser?(socket.assigns.current_user),
       selected_site: selected_site,
       selected_site_id: selected_site && selected_site.id,
       selected_environment: selected_environment,

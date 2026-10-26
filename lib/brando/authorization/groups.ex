@@ -173,7 +173,8 @@ defmodule Brando.Authorization.Groups do
 
   @doc "A pure save preview: which grants will be added and removed."
   def changes(group, permissions) do
-    current = Enum.map(group.grants, & &1.permission_key)
+    superuser_only = Catalog.superuser_only_keys()
+    current = group.grants |> Enum.map(& &1.permission_key) |> Enum.reject(&MapSet.member?(superuser_only, &1))
     %{added: permissions -- current, removed: current -- permissions, members: length(group.memberships)}
   end
 

@@ -275,6 +275,19 @@ defmodule Brando.Content.SharedLibraryTest do
            end)
   end
 
+  # An override is module code in the site: in legacy mode, a superuser's.
+  test "only a superuser customizes, resets or accepts updates of shared code", %{site: site, user: user} do
+    shared = create_public_module("Shared code", user)
+    assert :ok = SharedLibrary.enable(site, :module, shared.id)
+    admin = Brando.Factory.insert(:random_user, role: :admin)
+
+    assert {:error, :forbidden} = SharedLibrary.customize(:module, shared.id, site, @prefix, admin)
+    assert {:ok, _override} = SharedLibrary.customize(:module, shared.id, site, @prefix, user)
+    assert {:error, :forbidden} = SharedLibrary.accept_update(:module, shared.id, site, @prefix, admin)
+    assert {:error, :forbidden} = SharedLibrary.reset(:module, shared.id, site, @prefix, admin)
+    assert :ok = SharedLibrary.reset(:module, shared.id, site, @prefix, user)
+  end
+
   defp create_public_module(name, user) do
     Tenant.put_prefix(nil)
 

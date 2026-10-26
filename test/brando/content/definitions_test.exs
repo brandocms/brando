@@ -350,19 +350,22 @@ defmodule Brando.Content.DefinitionsTest do
     assert hero() == before
   end
 
-  test "module import cannot bypass Markdown publication permissions", c do
+  # Creating modules takes a superuser, who may publish Markdown sources too:
+  # a module-create grant left from before stops the import at the module.
+  test "module import needs a superuser, whatever grant a group holds", c do
     %{bundle: bundle, mappings: mappings} = markdown_fixture(c)
     put_test_env(:authorization_mode, :groups)
-    alias Brando.Authorization.{Catalog, Groups, Migration, Scope}
+    alias Brando.Authorization.{Catalog, Grant, Groups, Migration, Scope}
     owner = Factory.insert(:random_user, role: :superuser)
     assert {:ok, _} = Migration.run()
     editor = Factory.insert(:random_user, role: :user)
     scope = Scope.standalone(owner)
-    grants = [Catalog.get(:create, Module).key, "brando.admin.access", "brando.markdown_sources.read"]
+    grants = ["brando.admin.access", "brando.markdown_sources.read"]
     assert {:ok, group} = Groups.create(scope, %{name: "Module authors"}, grants)
+    Repo.insert!(%Grant{group_id: group.id, permission_key: Catalog.get(:create, Module).key})
     assert {:ok, :ok} = Groups.add_member(scope, group.id, editor.id)
     assert {:error, message} = Definitions.plan(bundle, editor, references: mappings)
-    assert message =~ "You cannot publish Markdown source updates"
+    assert message =~ "forbidden"
     assert Repo.aggregate(Module, :count) == 0
   end
 

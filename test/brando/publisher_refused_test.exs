@@ -322,9 +322,10 @@ defmodule Brando.PublisherRefusedTest do
   end
 
   describe "without group authorization" do
-    setup do
+    # A User-role account writes nothing in legacy mode: the editor is an Editor.
+    setup c do
       put_test_env(:authorization_mode, :legacy)
-      :ok
+      %{editor: Repo.update!(Ecto.Changeset.change(c.editor, role: :editor))}
     end
 
     test "a deactivated or deleted user's schedule still runs, as before", c do

@@ -128,6 +128,53 @@ defmodule BrandoAdmin.AccountAndCodeAuthorityTest do
       assert %{active: true, deleted_at: nil} = Repo.get!(User, owner.id)
     end
 
+    test "a changeset built outside the schema cannot raise a role either" do
+      admin = TestUsers.insert_user(role: :admin)
+      editor = TestUsers.insert_user(role: :editor)
+
+      assert {:error, :forbidden} = Users.update_user(Ecto.Changeset.change(editor, role: :superuser), admin)
+      assert Repo.get!(User, editor.id).role == :editor
+
+      # The role is read afresh: a superuser demoted while their view is open
+      # writes as what they are now.
+      demoted = TestUsers.insert_user(role: :superuser)
+      Repo.update!(Ecto.Changeset.change(demoted, role: :admin))
+      assert {:error, _} = Users.update_user(editor.id, %{role: :superuser}, demoted)
+      assert {:error, :forbidden} = Brando.Content.create_module(%{name: "X", namespace: "x", code: @heex}, demoted)
+    end
+
+    test "an actor given as an id writes what its stored role allows" do
+      user = TestUsers.insert_user(role: :user)
+      editor = TestUsers.insert_user(role: :editor)
+      page = Factory.insert(:page)
+
+      assert {:error, :forbidden} = Brando.Pages.update_page(page.id, %{title: "By id"}, %{id: user.id})
+
+      assert {:error, :forbidden} =
+               Brando.Content.create_module(%{name: "X", namespace: "x", code: @heex}, %{id: editor.id})
+
+      assert {:error, :forbidden} = Brando.Content.create_module(%{name: "X", namespace: "x", code: @heex}, nil)
+
+      assert {:ok, %{title: "By an editor"}} =
+               Brando.Pages.update_page(page.id, %{title: "By an editor"}, %{id: editor.id})
+    end
+
+    test "a module imported one at a time needs a superuser too" do
+      editor = TestUsers.insert_user(role: :editor)
+      superuser = TestUsers.insert_user(role: :superuser)
+      module = Factory.insert(:module, code: "<p>plain</p>")
+      {:ok, [exported]} = Brando.Content.list_modules(%{filter: %{ids: [module.id]}, preload: [:vars, :refs, :children]})
+
+      [decoded] =
+        [exported]
+        |> Brando.Content.prepare_modules_for_export(superuser.id)
+        |> Brando.Content.serialize_modules()
+        |> Brando.Content.deserialize_modules()
+
+      assert {:error, :forbidden} = Brando.Content.import_module_with_children(decoded, editor)
+      assert {:ok, _} = Brando.Content.import_module_with_children(decoded, superuser)
+    end
+
     test "an admin cannot disable a superuser; a superuser can" do
       owner = TestUsers.insert_user(role: :superuser)
       admin = TestUsers.insert_user(role: :admin)

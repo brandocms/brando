@@ -266,6 +266,10 @@ defmodule BrandoAdmin.Authorization do
   def allowed?(action, subject) do
     if Engine.enabled?(),
       do: Engine.can?(Boundary.presentation() || Boundary.current_scope(), action, subject),
-      else: Boundary.authorize(Process.get(@legacy_actor_key), action, subject) == :ok
+      else: legacy_allowed?(Process.get(@legacy_actor_key), action, subject)
   end
+
+  # Outside a mounted admin view there is nobody to ask: as before, allowed.
+  defp legacy_allowed?(nil, _action, _subject), do: true
+  defp legacy_allowed?(actor, action, subject), do: Boundary.authorize(actor, action, subject) == :ok
 end

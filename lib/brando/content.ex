@@ -1054,16 +1054,20 @@ defmodule Brando.Content do
   """
   def import_modules(modules, user) do
     Brando.Authorization.Boundary.run(user, :create, Module, fn user ->
-      Brando.Repo.transaction(fn -> Enum.map(modules, &import_module_with_children(&1, user)) end)
+      Brando.Repo.transaction(fn -> Enum.map(modules, &do_import_module_with_children(&1, user)) end)
     end)
   end
 
   @doc """
   Imports a module with its children, maintaining parent-child relationships.
   Resolves table templates by name to avoid duplicates.
-  Should be called within a transaction.
+  Should be called within a transaction. Only a superuser (or `:system`) may.
   """
   def import_module_with_children(module, user \\ :system) do
+    Brando.Authorization.Boundary.run(user, :create, Module, &do_import_module_with_children(module, &1))
+  end
+
+  defp do_import_module_with_children(module, user) do
     module
     |> resolve_table_template_for_import(user)
     |> resolve_children_table_templates_for_import(user)

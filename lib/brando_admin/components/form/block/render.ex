@@ -1392,6 +1392,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               {gettext("Reset all variables")}
             </button>
             <a
+              :if={BrandoAdmin.Authorization.allowed?(:update, Brando.Content.Module)}
               href={"/admin/config/content/modules/update/#{@block_form[:module_id].value}"}
               class="btn"
               target="_blank"

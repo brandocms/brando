@@ -35,6 +35,7 @@ defmodule Brando.Authorization.Boundary do
   alias Brando.Authorization.{Catalog, Engine, Groups, Scope}
   alias Brando.Repo
   alias Brando.Trait.ProtectPassword
+  alias Brando.Trait.ProtectRole
   alias Brando.Users.User
 
   @scope_key {__MODULE__, :scope}
@@ -141,14 +142,14 @@ defmodule Brando.Authorization.Boundary do
   @doc """
   Whether `actor` is a superuser: in the installation's superuser group with groups
   authorization, of the `:superuser` role without. Only superusers write module and
-  container code, and act on another user's credentials.
+  container code, and act on another user's credentials. Reads the role afresh.
   """
   def superuser?(:system), do: true
 
   def superuser?(actor) do
     if Engine.enabled?(),
       do: Engine.superuser?(Scope.installation(%{id: user_id(actor)})),
-      else: legacy_role(actor) == :superuser
+      else: actor |> fresh_role() |> legacy_role() == :superuser
   end
 
   def restore(actor, %{__struct__: schema} = entry) do
@@ -175,6 +176,7 @@ defmodule Brando.Authorization.Boundary do
     else
       with :ok <- legacy_authorize(actor, action, changeset.data),
            :ok <- legacy_profile(actor, changeset),
+           :ok <- legacy_role_change(actor, changeset),
            :ok <- protect_credentials(actor, changeset) do
         legacy_protect_superuser(actor, changeset)
       end
@@ -307,7 +309,9 @@ defmodule Brando.Authorization.Boundary do
   defp protect_credentials(_actor, _changeset), do: :ok
 
   # The roles' meaning in legacy mode: code is a superuser's, a `:user`
-  # account edits nothing, and a superuser is deleted by superusers only.
+  # account edits nothing, and a superuser is deleted by superusers only. An
+  # actor given by id has its stored role. One with no role (nil, as for a
+  # scheduled publication whose user is gone) writes all but code, as before.
   # Group mode's `Engine` checks the same on its own terms.
   defp legacy_authorize(:system, _action, _subject), do: :ok
 
@@ -344,6 +348,15 @@ defmodule Brando.Authorization.Boundary do
 
   defp legacy_profile(_actor, _changeset), do: :ok
 
+  # `Brando.Trait.ProtectRole` checks a changeset built by the schema; this
+  # checks one built any other way, against the role read afresh.
+  defp legacy_role_change(actor, %{data: %User{} = user, changes: %{role: new_role}, valid?: true})
+       when not is_nil(new_role) do
+    if ProtectRole.allowed?(%{role: legacy_role(actor)}, user, new_role), do: :ok, else: {:error, :forbidden}
+  end
+
+  defp legacy_role_change(_actor, _changeset), do: :ok
+
   defp legacy_protect_superuser(actor, %{data: %User{id: id} = user, changes: changes}) when not is_nil(id) do
     if (Map.get(changes, :active) == false or not is_nil(Map.get(changes, :deleted_at))) and superuser_account?(user) and
          not ProtectPassword.allowed?(actor, user),
@@ -358,6 +371,7 @@ defmodule Brando.Authorization.Boundary do
 
   defp legacy_role(%Scope{user_id: id}) when is_integer(id), do: stored_role(id)
   defp legacy_role(%{role: role}), do: role
+  defp legacy_role(%{id: id}) when is_integer(id), do: stored_role(id)
   defp legacy_role(_), do: nil
 
   # An admin view holds the user it mounted with; the role may have changed since.

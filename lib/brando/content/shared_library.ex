@@ -218,8 +218,8 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   @doc "Deletes a tenant override; origin-qualified blocks immediately use shared again."
-  def reset(kind, id, %Site{} = site, prefix) when kind in @kinds do
-    with :ok <- authorize_local(kind, site, prefix, :system), do: do_reset(kind, id, prefix)
+  def reset(kind, id, %Site{} = site, prefix, user \\ :system) when kind in @kinds do
+    with :ok <- authorize_local(kind, site, prefix, user), do: do_reset(kind, id, prefix)
   end
 
   defp do_reset(kind, id, prefix) do
@@ -246,8 +246,8 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   @doc "Acknowledges the current shared version without replacing local changes."
-  def dismiss_update(kind, id, %Site{} = site, prefix) when kind in @kinds do
-    with :ok <- authorize_local(kind, site, prefix, :system), do: do_dismiss_update(kind, id, prefix)
+  def dismiss_update(kind, id, %Site{} = site, prefix, user \\ :system) when kind in @kinds do
+    with :ok <- authorize_local(kind, site, prefix, user), do: do_dismiss_update(kind, id, prefix)
   end
 
   defp do_dismiss_update(kind, id, prefix) do
@@ -394,8 +394,10 @@ defmodule Brando.Content.SharedLibrary do
     scope = Boundary.current_scope()
 
     cond do
+      # A module or container override is code: in legacy mode, a superuser's
+      # (`Brando.Authorization.Boundary`).
       not Brando.Authorization.enabled?() ->
-        :ok
+        Boundary.authorize(actor, :update, definition(kind).schema)
 
       is_nil(scope) and actor == :system ->
         :ok
