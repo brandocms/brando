@@ -174,6 +174,9 @@ defmodule Brando.Authorization.Boundary do
         protect_account(changeset)
       end
     else
+      # A changeset built elsewhere may carry the target as it was: its stored role counts.
+      changeset = with_stored_role(changeset)
+
       with :ok <- legacy_authorize(actor, action, changeset.data),
            :ok <- legacy_profile(actor, changeset),
            :ok <- legacy_role_change(actor, changeset),
@@ -365,6 +368,12 @@ defmodule Brando.Authorization.Boundary do
   end
 
   defp legacy_protect_superuser(_actor, _changeset), do: :ok
+
+  # Only checked, never saved: the caller writes its own changeset.
+  defp with_stored_role(%{data: %User{id: id} = user} = changeset) when is_integer(id),
+    do: %{changeset | data: %{user | role: stored_role(id) || user.role}}
+
+  defp with_stored_role(changeset), do: changeset
 
   defp superuser_account?(%User{role: :superuser}), do: true
   defp superuser_account?(_), do: false

@@ -135,6 +135,13 @@ defmodule BrandoAdmin.AccountAndCodeAuthorityTest do
       assert {:error, :forbidden} = Users.update_user(Ecto.Changeset.change(editor, role: :superuser), admin)
       assert Repo.get!(User, editor.id).role == :editor
 
+      # The target as the admin loaded it was an editor; it is a superuser now.
+      loaded = TestUsers.insert_user(role: :editor)
+      Repo.update!(Ecto.Changeset.change(loaded, role: :superuser))
+      assert {:error, :forbidden} = Users.update_user(Ecto.Changeset.change(loaded, role: :admin), admin)
+      assert {:error, :forbidden} = Users.update_user(Ecto.Changeset.change(loaded, active: false), admin)
+      assert %{role: :superuser, active: true} = Repo.get!(User, loaded.id)
+
       # The role is read afresh: a superuser demoted while their view is open
       # writes as what they are now.
       demoted = TestUsers.insert_user(role: :superuser)
