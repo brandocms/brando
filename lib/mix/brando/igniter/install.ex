@@ -343,16 +343,16 @@ if Code.ensure_loaded?(Igniter) do
     defp request_log(igniter, endpoint) do
       ProjectModule.find_and_update_module!(igniter, endpoint, fn zipper ->
         with {:ok, call} <- Source.find_call(zipper, :plug, [2], Plug.Telemetry),
-             {:ok, call} <-
-               CodeFunction.update_nth_argument(call, 1, fn options ->
-                 CodeKeyword.set_keyword_key(options, :log, quote(do: {Brando.Plug.RequestLog, :level, []}))
-               end) do
+             {:ok, call} <- CodeFunction.update_nth_argument(call, 1, &put_request_log/1) do
           {:ok, call}
         else
           _ -> {:ok, zipper}
         end
       end)
     end
+
+    defp put_request_log(options),
+      do: CodeKeyword.set_keyword_key(options, :log, quote(do: {Brando.Plug.RequestLog, :level, []}))
 
     defp router(igniter, project) do
       igniter
