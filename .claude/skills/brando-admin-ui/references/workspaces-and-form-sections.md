@@ -24,6 +24,17 @@ A read-only `component &Module.preview/1` can render from the current `form`
 assigns without maintaining a separate copy of pending values. Keep form IDs,
 input names, component IDs, upload targets, and save ownership stable.
 
+A locked input (`readonly:` or `disabled:`, `BrandoAdmin.Utils.locked?/1`)
+looks locked whatever its type, through `Primitives.field_base/1`'s `locked`:
+a 12px lock after the label, muted, with "Locked" for screen readers. Text
+controls render `readonly` on the shaded surface in muted text, so the value
+can still be read, selected and copied, and a translated input's tabs still
+switch (`locked={:readonly}`); rich text drops its toolbar. Any other control
+sits in an inert field base at 60% opacity (`locked`), as a translation's
+source-locked fields do. Keep a locked control's inputs posting their
+values: never `disabled`, which drops them from a subform row's params.
+`FieldBase.css` styles it; `locked-inputs.spec.js` covers every type.
+
 Constrain avatar photos and their image wrappers to their container. Source
 `width`/`height` attributes and a non-shrinking image wrapper can otherwise expand
 a small presence avatar over the page. Clip the photo wrapper, leaving status

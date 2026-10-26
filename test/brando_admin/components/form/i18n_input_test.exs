@@ -60,13 +60,18 @@ defmodule BrandoAdmin.Components.Form.I18nInputTest do
     end
   end
 
+  # A locked input is read only, not disabled: it submits its whole map,
+  # unlisted translations included, so a subform row keeps it as stored.
   for kind <- [:i18n_text, :i18n_textarea] do
-    test "disabled #{kind} does not submit a partial translation map" do
+    test "disabled #{kind} submits its whole translation map, read only" do
       var = %Var{label: %{"en" => "English", "de" => "Deutsch"}}
       html = render_input(unquote(kind), var, :admin, disabled: true)
 
-      assert submitted_params(html) == %{}
-      assert get_field(cast(var, submitted_params(html), [:label]), :label) == var.label
+      assert html =~ ~r/name="var\[label\]\[en\]"[^>]*\breadonly\b/
+      # The empty tab comes back blank, as from an untouched editable input
+      label = get_field(cast(var, submitted_params(html), [:label]), :label)
+      assert {:ok, dumped} = I18nString.dump(label)
+      assert Map.reject(dumped, fn {_language, text} -> is_nil(text) end) == var.label
     end
   end
 

@@ -254,23 +254,33 @@ defmodule BrandoAdmin.Components.Form.Primitives do
   end
 
   @doc """
-  `opts` with `:locked` set: whether the input renders locked, so its
-  controls take no edit (`BrandoAdmin.Utils.locked?/1`). A top-level input comes with it
-  (`LockedFields.locked_input?/2`). Otherwise `readonly:` or `disabled:`
-  locks it: `true` for everyone, `:unless_superuser` for anyone but a
-  superuser, who can still correct the field.
-  """
-  def lock_opts(opts, user) do
-    opts =
-      Enum.map(opts || [], fn
-        {key, :unless_superuser} when key in [:readonly, :disabled] -> {key, not match?(%{role: :superuser}, user)}
-        opt -> opt
-      end)
+  `opts` with `readonly: :unless_superuser` and `disabled: :unless_superuser`
+  resolved for `user`: they lock the input for anyone but a superuser, who
+  can still correct the field. `BrandoAdmin.Utils.locked?/1` then tells
+  whether the input renders locked. A top-level input comes with
+  `:locked` set (`LockedFields.locked_input?/2`), which it keeps.
 
-    Keyword.put_new_lazy(opts, :locked, fn ->
-      Keyword.get(opts, :readonly) == true or Keyword.get(opts, :disabled) == true
-    end)
+  Options without `:unless_superuser` come back as they are, so the assign
+  stays unchanged between renders.
+  """
+  def lock_opts(nil, _user), do: []
+
+  def lock_opts(opts, user) do
+    if Enum.any?(opts, &unless_superuser?/1) do
+      opts =
+        Enum.map(opts, fn
+          {key, :unless_superuser} when key in [:readonly, :disabled] -> {key, not match?(%{role: :superuser}, user)}
+          opt -> opt
+        end)
+
+      Keyword.put_new(opts, :locked, Keyword.get(opts, :readonly) == true or Keyword.get(opts, :disabled) == true)
+    else
+      opts
+    end
   end
+
+  defp unless_superuser?({key, :unless_superuser}) when key in [:readonly, :disabled], do: true
+  defp unless_superuser?(_opt), do: false
 
   @doc """
   A type with a module under `Input` is a live component; any other type falls

@@ -126,9 +126,10 @@ defmodule BrandoAdmin.Utils do
   end
 
   @doc """
-  Whether an input's `opts` lock it: its controls take no edit. Set by
-  `BrandoAdmin.Components.Form.Primitives.lock_opts/2`; without it,
-  `readonly: true` or `disabled: true`.
+  Whether an input's `opts` lock it: its controls take no edit. A top-level
+  input's `:locked` says (`Form.LockedFields.locked_input?/2`); otherwise
+  `readonly: true` or `disabled: true`, `:unless_superuser` resolved by
+  `Form.Primitives.lock_opts/2`.
   """
   def locked?(opts) when is_list(opts) do
     case Keyword.fetch(opts, :locked) do

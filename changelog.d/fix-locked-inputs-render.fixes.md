@@ -1,0 +1,1 @@
+- Every input type now shows when it is locked by `readonly:` or `disabled:`: a lock by its label, text read only and other controls inert, where most inputs used to look editable while a save ignored them.

@@ -308,18 +308,25 @@ Every input type reads these:
 * `instructions`: help text under the input, translated.
 * `placeholder`: placeholder text, translated, for inputs that show one.
 * `disabled`: `true` locks the field for everyone, `:unless_superuser` for
-  everyone but superusers. The translated text inputs and `:rich_text`
-  render disabled.
+  everyone but superusers.
 * `readonly`: locks the field like `disabled`, with the same values.
-  `:text`, `:number` and `:rich_text` inputs render read only.
+
+  Every input type renders a locked field the same way: a lock after its
+  label, and controls that take no edit. Text inputs (`:text`, `:textarea`,
+  `:number`, `:email`, `:phone`, `:password`, `:slug`, the translated
+  inputs and `:rich_text`) are read only, so their text can still be
+  selected and a translated input's languages read; every other control is
+  inert and faded. A custom input component reads the lock as `@locked`
+  (set by `prepare_input_component/1`) and passes it to
+  `Primitives.field_base/1` as `locked`.
 
   A save ignores any value sent for a locked top-level input. The field
   keeps its saved value, or one Brando set: a new entry's `default_params`,
   a translation or a revision's working copy. A restored recovery copy
-  doesn't change it. An empty field takes the input's `default:`. Inputs of
-  other types don't render locked, but their value is not saved either.
-  The exception is an `:image`, `:file`, `:video` or `:gallery` input, which
-  still takes what its picker, an upload or a recovery copy delivers.
+  doesn't change it. An empty field takes the input's `default:`. The
+  exception is an `:image`, `:file`, `:video` or `:gallery` input: its
+  controls are inert, but the form still takes an asset its picker or an
+  upload delivers for it, and a recovery copy's.
 
   A `:slug` input declared `true` is not locked: the browser fills it in
   from its source. One declared `:unless_superuser` is locked for anyone
@@ -379,11 +386,10 @@ type.
 
 ### Text and numbers
 
-* `:text`: a single line. Reads `readonly` and
-  [`ai_actions`](#ai-actions-on-a-field).
+* `:text`: a single line. Reads [`ai_actions`](#ai-actions-on-a-field).
 * `:textarea`: several lines. `rows:` sets the height (default 3). Reads
   `ai_actions`.
-* `:number`: a number field. Reads `readonly`.
+* `:number`: a number field.
 * `:email`: an email field.
 * `:phone`: a text field for phone numbers.
 * `:password`: never shows the stored value. `confirmation: true` adds a
