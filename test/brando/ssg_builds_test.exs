@@ -284,7 +284,11 @@ defmodule Brando.SSGBuildsTest do
     for target <- ["/tmp/local-dest", "--log-file=/tmp/marker.log", "u@-oProxyCommand=true:/srv/www"] do
       build = ready_build(context.site, context.environment)
       {:ok, build} = Builds.update(build, %{deploy_config: %{"strategy" => "rsync", "target" => target}})
-      runner = fn command, args, _opts -> send(self(), {:command, command, args}) && {"", 0} end
+
+      runner = fn command, args, _opts ->
+        send(self(), {:command, command, args})
+        {"", 0}
+      end
 
       assert {:error, :invalid_deploy_target} = Deploy.deploy(build, runner: runner)
       refute_received {:command, "rsync", _}
