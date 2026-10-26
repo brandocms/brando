@@ -89,13 +89,12 @@ defmodule Brando.Deprecated.RenamedModulesTest do
   test "a shared preview through the old controller name", %{current_user: user} do
     key = Ecto.UUID.generate()
 
-    preview =
-      Repo.insert!(%Preview{
-        creator_id: user.id,
-        preview_key: Preview.hash_key(key),
-        html: Brando.Utils.term_to_binary("<main>Shared draft</main>"),
-        expires_at: DateTime.utc_now() |> DateTime.add(60, :second) |> DateTime.truncate(:second)
-      })
+    Repo.insert!(%Preview{
+      creator_id: user.id,
+      preview_key: Preview.hash_key(key),
+      html: Brando.Utils.term_to_binary("<main>Shared draft</main>"),
+      expires_at: DateTime.utc_now() |> DateTime.add(60, :second) |> DateTime.truncate(:second)
+    })
 
     log =
       ExUnit.CaptureLog.capture_log(fn ->
