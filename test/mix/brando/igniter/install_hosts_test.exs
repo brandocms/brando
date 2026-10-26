@@ -114,6 +114,20 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     assert host(igniter, ".envrc.staging") == "staging.example.com"
   end
 
+  test "check_origin names hosts, not every subdomain, and says to add the others" do
+    igniter = install(project(), ["--domain", "example.com"])
+
+    refute Enum.any?(check_origin(igniter), &String.contains?(&1, "*"))
+    assert Enum.any?(igniter.notices, &(&1 =~ "--origin '//*.example.com'"))
+  end
+
+  test "a www. domain trusts the name without www., not www.www." do
+    igniter = install(project(), ["--domain", "www.example.com"])
+
+    assert check_origin(igniter) == ["//www.example.com", "//example.com", "//staging.www.example.com"]
+    assert Enum.any?(igniter.notices, &(&1 =~ "<site>.example.com"))
+  end
+
   test "without --domain, --yes writes no check_origin, uses placeholder hosts and asks nothing" do
     igniter = install(project(), ["--yes"])
 

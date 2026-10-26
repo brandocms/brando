@@ -1097,7 +1097,10 @@ Before enabling `:single` or `:multi`:
 7. Run tenant migrations for every environment.
 8. Exercise copy and recovery on representative production-sized data.
 9. Verify each domain resolves to the intended environment and unknown hosts
-   return `404`.
+   return `404`, and that each domain serving LiveView pages or the admin is in
+   the endpoint's `check_origin` (`mix brando.install --domain` lists the
+   production domain, its `www.` host and the staging host, no other
+   subdomain).
 10. Verify an editor cannot switch to or query an unassigned site.
 11. Verify uploaded assets and media return different bytes for two site hosts.
 12. Back up the database, `media/`, `sites/`, and `site_assets/` together.

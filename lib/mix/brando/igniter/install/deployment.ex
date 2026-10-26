@@ -152,12 +152,16 @@ if Code.ensure_loaded?(Igniter) do
         )
 
       origins = Hosts.check_origin(hosts) ++ Enum.map(served, &"//#{&1}")
+      apex = String.replace_prefix(hosts.domain, "www.", "")
 
       igniter
       |> Config.configure_new("prod.exs", project.otp_app, [project.endpoint, :check_origin], Enum.uniq(origins))
       |> Igniter.add_notice("""
       check_origin for #{inspect(project.endpoint)} in config/prod.exs replaces Phoenix's check
-      against the endpoint's URL host. Add any other host the application serves to it.
+      against the endpoint's URL host, and lists these hosts only, not their subdomains. Add
+      every other host that serves LiveView pages or the admin (a site of a multi-site
+      installation on <site>.#{apex}, an admin moved to another host through PHX_HOST),
+      or trust every subdomain with --origin '//*.#{apex}' if they are all yours.
       """)
     end
 
