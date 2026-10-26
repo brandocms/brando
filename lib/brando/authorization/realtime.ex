@@ -29,26 +29,51 @@ defmodule Brando.Authorization.Realtime do
   end
 
   def authorize_account(id) when is_integer(id) do
-    case Repo.get(User, id) do
-      %{active: true, deleted_at: nil} = user ->
+    case active_user(id) do
+      %User{} = user ->
         if not Engine.enabled?() or Engine.backend_access?(user), do: :ok, else: {:error, :forbidden}
 
-      _ ->
+      nil ->
         {:error, :forbidden}
     end
   end
 
   def authorize_account(_), do: {:error, :forbidden}
 
+  @doc """
+  Whether the scope's user may still act in its workspace. A site scope in
+  legacy mode needs the site to be enterable by the user now
+  (`Brando.Tenant.Access.can_access?/2`), not only when it was signed.
+  """
   def authorize_scope(%Scope{} = scope) do
     if Engine.enabled?(),
       do: Engine.authorize(scope, :access, :backend),
-      else: authorize_account(scope.user_id)
+      else: legacy_authorize_scope(scope)
   end
 
   def authorize_scope(_), do: {:error, :forbidden}
 
+  defp legacy_authorize_scope(%Scope{user_id: id} = scope) when is_integer(id) do
+    case active_user(id) do
+      %User{} = user -> if legacy_visible?(scope, user), do: :ok, else: {:error, :forbidden}
+      nil -> {:error, :forbidden}
+    end
+  end
+
+  defp legacy_authorize_scope(_scope), do: {:error, :forbidden}
+
+  defp active_user(id) do
+    case Repo.get(User, id) do
+      %User{active: true, deleted_at: nil} = user -> user
+      _ -> nil
+    end
+  end
+
   def subscribe, do: Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:authorization")
+
+  @doc "Tells open administration channels and views to check their access again."
+  def broadcast_changed,
+    do: Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:authorization", {:authorization_changed, :all})
 
   def notification_allowed?(scope, %{authorization: %{prefix: prefix, schema: schema, entry_id: id}}) do
     authorize_scope(scope) == :ok and scope.prefix == prefix and

@@ -47,10 +47,10 @@ defmodule Brando.Tenant.Registry do
 
   @spec update_site(Site.t(), map()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
   def update_site(%Site{} = site, attrs) do
-    site
-    |> Site.changeset(attrs)
-    |> Repo.update(@public_opts)
-    |> refresh_cache_on_success()
+    changeset = Site.changeset(site, attrs)
+    result = changeset |> Repo.update(@public_opts) |> refresh_cache_on_success()
+    if Map.has_key?(changeset.changes, :status), do: access_changed(result)
+    result
   end
 
   @spec delete_site(Site.t()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
@@ -58,6 +58,7 @@ defmodule Brando.Tenant.Registry do
     site
     |> Repo.delete(@public_opts)
     |> refresh_cache_on_success()
+    |> tap(&access_changed/1)
   end
 
   @spec list_environments(Site.t() | pos_integer()) :: [Environment.t()]
@@ -133,4 +134,8 @@ defmodule Brando.Tenant.Registry do
   end
 
   defp refresh_cache_on_success({:error, _changeset} = result), do: result
+
+  # Who may enter a site follows its status: open channels check again.
+  defp access_changed({:ok, _site}), do: Brando.Authorization.Realtime.broadcast_changed()
+  defp access_changed(_error), do: :ok
 end
