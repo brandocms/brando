@@ -234,7 +234,8 @@ defmodule Brando.Assets.PreviewPinningTest do
 
     assert {:ok, url, _days} = LivePreview.share(Page, changeset, user)
     preview = Repo.one!(from(preview in Preview, order_by: [desc: preview.id], limit: 1))
-    assert url =~ preview.preview_key
+    # Only the key's hash is stored
+    assert preview.preview_key == url |> String.split("/") |> List.last() |> Preview.hash_key()
     assert [set] = SiteAssets.list_sets()
     assert preview.asset_set_id == set.id
     assert Capture.captured?(set)

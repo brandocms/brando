@@ -612,10 +612,11 @@ defmodule Brando.LivePreview do
       |> Utils.term_to_binary()
 
     expires_at = DateTime.add(DateTime.utc_now(), expiry_days, :day)
+    key = Utils.random_string(12)
 
     preview = %{
       html: html,
-      preview_key: Utils.random_string(12),
+      preview_key: Brando.Sites.Preview.hash_key(key),
       expires_at: expires_at,
       creator_id: user.id,
       asset_set_id: asset_set.id
@@ -629,7 +630,7 @@ defmodule Brando.LivePreview do
       |> Worker.PreviewPurger.new(scheduled_at: expires_at, tags: [:preview_purger])
       |> Oban.insert()
 
-      {:ok, Brando.Sites.Preview.__absolute_url__(preview), expiry_days}
+      {:ok, Brando.Sites.Preview.__absolute_url__(%{preview | preview_key: key}), expiry_days}
     end
   end
 

@@ -311,7 +311,8 @@ from another form or environment cannot be reused to overwrite its content.
 **Share preview** creates a separate, expiring link and requires the resource's
 Export permission as well as edit/create access. Shared links are accessible
 without signing in until they expire. Expiry is checked when reading
-the link, even if background cleanup is delayed.
+the link, even if background cleanup is delayed. The link is shown once, when
+it is created: Brando keeps only a hash of its key.
 
 The activity panel shows colleagues with backend access in the selected workspace.
 Live URLs are limited to its environment. Global last-seen timestamps are omitted

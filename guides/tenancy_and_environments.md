@@ -934,7 +934,10 @@ Generated output is persistent at
 `sites/{site_key}/ssg/builds/{version}`. Old ready, archived, and failed artifact
 directories are pruned after the retention window, while their database history
 and logs remain. Preview tokens expire after seven days and stop working as soon
-as their artifact is pruned.
+as their artifact is pruned. The Publishing screen links to each build's
+preview every time it opens, so a build keeps its token itself, where a shared
+entry preview keeps only its key's hash: anyone who can read the database can
+open a build's preview until it expires.
 
 <!-- usage-rules:start topic="tenancy" -->
 

@@ -174,7 +174,8 @@ defmodule Brando.LivePreview.TargetsTest do
     user = Brando.Factory.insert(:random_user, avatar: nil)
     assert {:ok, url, _days} = LivePreview.share(Page, changeset, user, %{}, :listing)
     preview = Repo.one!(Brando.Sites.Preview)
-    assert url =~ preview.preview_key
+    # Only the key's hash is stored
+    assert preview.preview_key == url |> String.split("/") |> List.last() |> Brando.Sites.Preview.hash_key()
     html = Brando.Utils.binary_to_term(preview.html)
     assert html =~ ~s(data-preview="listing")
     assert html =~ "Unsaved title"
