@@ -14,6 +14,11 @@ defmodule Brando.SSG.Deploy do
   alias Brando.SSG.Build
   alias Brando.SSG.Builds
   alias Brando.Tenant.Lock
+  alias Brando.Webhooks.Client
+  alias Brando.Webhooks.URLGuard
+  alias Brando.Webhooks.Webhook
+
+  require Logger
 
   @public_opts [prefix: "public"]
 
@@ -266,8 +271,15 @@ defmodule Brando.SSG.Deploy do
           {:ok, _response} ->
             result
 
+          # The log says what the URL is (the settings said so when saved),
+          # not what answered: the status or error would map internal hosts.
+          {:error, {:url, reason}} ->
+            Builds.append_log(build, "Deployment webhook not sent: its URL #{Webhook.url_error(reason)}")
+            result
+
           {:error, reason} ->
-            Builds.append_log(build, "Deployment webhook failed: #{inspect(reason)}")
+            Logger.warning("SSG deployment webhook for build #{build.id} failed: #{inspect(reason)}")
+            Builds.append_log(build, "Deployment webhook failed")
             result
         end
 
@@ -278,11 +290,21 @@ defmodule Brando.SSG.Deploy do
 
   defp notify_webhook(error, _opts), do: error
 
+  # Checked again before every delivery and posted to the address checked,
+  # without following redirects (Brando.Webhooks.Client).
   defp default_webhook(url, payload) do
-    case Req.post(url, json: payload, retry: false) do
-      {:ok, %{status: status}} when status in 200..299 -> :ok
-      {:ok, %{status: status}} -> {:error, {:http_status, status}}
-      {:error, reason} -> {:error, reason}
+    case URLGuard.resolve(url) do
+      {:ok, target} ->
+        headers = [{"content-type", "application/json"}, {"user-agent", "Brando-SSG"}]
+
+        case Client.post(target, headers, Jason.encode!(payload)) do
+          %{status: status} when status in 200..299 -> :ok
+          %{status: nil, error: error} -> {:error, error}
+          %{status: status} -> {:error, {:http_status, status}}
+        end
+
+      {:error, reason} ->
+        {:error, {:url, reason}}
     end
   end
 

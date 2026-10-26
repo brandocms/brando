@@ -241,6 +241,7 @@ defmodule Brando.Videos.Helpers do
 
   Currently supports:
     - Bunny CDN Stream: `https://vz-*.b-cdn.net/{guid}/playlist.m3u8`
+    - Mux Stream: `https://stream.mux.com/{playback_id}.m3u8`
   """
   def derive_external_thumbnail_url(%Video{type: :external_file, source_url: url})
       when is_binary(url) do
@@ -251,18 +252,53 @@ defmodule Brando.Videos.Helpers do
 
   defp derive_external_thumbnail(url) do
     cond do
-      # Bunny CDN Stream: https://vz-*.b-cdn.net/{guid}/playlist.m3u8
-      String.contains?(url, ".b-cdn.net/") and String.ends_with?(url, "/playlist.m3u8") ->
+      bunny_stream_url?(url) ->
         String.replace_trailing(url, "/playlist.m3u8", "/thumbnail.jpg")
 
-      # Mux Stream: https://stream.mux.com/{playback_id}.m3u8
-      String.starts_with?(url, "https://stream.mux.com/") ->
-        case Regex.run(~r{https://stream\.mux\.com/([^/.]+)}, url) do
+      mux_stream_url?(url) ->
+        case Regex.run(~r{^/([^/.]+)}, URI.parse(url).path) do
           [_, playback_id] -> "https://image.mux.com/#{playback_id}/thumbnail.jpg"
           _ -> nil
         end
 
       true ->
+        nil
+    end
+  end
+
+  @doc """
+  Whether `url` is a Bunny Stream playlist: `https` on the default port, a
+  host under `b-cdn.net`, and a path ending in `/playlist.m3u8`, with no query
+  or fragment. The host is read from the parsed URL, so `.b-cdn.net/`
+  elsewhere in it does not count.
+  """
+  @spec bunny_stream_url?(term()) :: boolean()
+  def bunny_stream_url?(url) when is_binary(url) do
+    case provider_uri(url) do
+      %URI{host: host, path: path, query: nil, fragment: nil} ->
+        String.ends_with?(host, ".b-cdn.net") and String.ends_with?(path, "/playlist.m3u8")
+
+      _ ->
+        false
+    end
+  end
+
+  def bunny_stream_url?(_url), do: false
+
+  @doc "Whether `url` is a Mux stream: `https://stream.mux.com/…`."
+  @spec mux_stream_url?(term()) :: boolean()
+  def mux_stream_url?(url) when is_binary(url), do: match?(%URI{host: "stream.mux.com"}, provider_uri(url))
+  def mux_stream_url?(_url), do: false
+
+  # An https URL on the default port with a path and no credentials, its host
+  # lowercased
+  defp provider_uri(url) do
+    case URI.new(url) do
+      {:ok, %URI{scheme: "https", host: host, port: 443, userinfo: nil, path: "/" <> _} = uri}
+      when is_binary(host) ->
+        %{uri | host: String.downcase(host)}
+
+      _ ->
         nil
     end
   end

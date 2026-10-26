@@ -4,15 +4,17 @@ defmodule Brando.WebhookReceiver do
   a random loopback port. Every request it gets is sent to the test process
   as `{:webhook_request, %{method, path, headers, body}}`, and `respond`
   decides the answer: `{status, body}`, `{status, headers, body}`, or
-  `{:sleep, ms}` to answer nothing for that long.
+  `{:sleep, ms}` to answer nothing for that long. `start(respond, {0, 0, 0, 0, 0, 0, 0, 1})`
+  listens on IPv6 loopback.
 
       receiver = Brando.WebhookReceiver.start(fn _request -> {200, "ok"} end)
       url = Brando.WebhookReceiver.url(receiver, "/hook")
   """
 
-  def start(respond \\ fn _request -> {200, "ok"} end) do
+  def start(respond \\ fn _request -> {200, "ok"} end, ip \\ {127, 0, 0, 1}) do
     test = self()
-    {:ok, socket} = :gen_tcp.listen(0, [:binary, packet: :raw, active: false, reuseaddr: true, ip: {127, 0, 0, 1}])
+    family = if tuple_size(ip) == 8, do: [:inet6], else: []
+    {:ok, socket} = :gen_tcp.listen(0, family ++ [:binary, packet: :raw, active: false, reuseaddr: true, ip: ip])
     {:ok, port} = :inet.port(socket)
     pid = spawn(fn -> accept(socket, test, respond) end)
     :gen_tcp.controlling_process(socket, pid)
@@ -102,8 +104,12 @@ defmodule Brando.WebhookTestResolver do
   DNS for webhook tests (`config :brando, Brando.Webhooks, resolver: ...`):
   `*.example.com`, `hooks.slack.com` and one Teams host are public, `*.internal.test` private, `pinned.test` is
   loopback, `rebind.test` answers what `rebind/1` set last, anything else is
-  not found.
+  not found. For video lookups (`Brando.Videos.Metadata`), the providers'
+  hosts and `*.b-cdn.net` are public, except `private-*.b-cdn.net`, which is
+  the cloud metadata address.
   """
+
+  @video_hosts ~w(vimeo.com i.vimeocdn.com www.youtube.com i.ytimg.com stream.mux.com image.mux.com)
 
   def resolve(host) do
     host = to_string(host)
@@ -113,6 +119,8 @@ defmodule Brando.WebhookTestResolver do
       host in ["hooks.slack.com", "prod-01.westeurope.logic.azure.com"] -> {:ok, [{93, 184, 216, 34}]}
       String.ends_with?(host, ".internal.test") -> {:ok, [{10, 0, 0, 5}]}
       host == "pinned.test" -> {:ok, [{127, 0, 0, 1}]}
+      String.starts_with?(host, "private-") and String.ends_with?(host, ".b-cdn.net") -> {:ok, [{169, 254, 169, 254}]}
+      host in @video_hosts or String.ends_with?(host, ".b-cdn.net") -> {:ok, [{93, 184, 216, 34}]}
       host == "mixed.test" -> {:ok, [{93, 184, 216, 34}, {192, 168, 1, 1}]}
       host == "rebind.test" -> {:ok, [:persistent_term.get({__MODULE__, :rebind}, {93, 184, 216, 34})]}
       true -> {:error, :nxdomain}

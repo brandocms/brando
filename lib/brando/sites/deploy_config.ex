@@ -15,6 +15,9 @@ defmodule Brando.Sites.DeployConfig do
 
   import Ecto.Changeset
 
+  alias Brando.Webhooks.URLGuard
+  alias Brando.Webhooks.Webhook
+
   @primary_key false
 
   @type t :: %__MODULE__{}
@@ -37,7 +40,7 @@ defmodule Brando.Sites.DeployConfig do
     |> validate_strategy_target()
     |> validate_number(:retention_count, greater_than_or_equal_to: 1, less_than_or_equal_to: 100)
     |> validate_http_url(:cdn_url)
-    |> validate_http_url(:webhook_url)
+    |> validate_webhook_url()
   end
 
   defp require_target_for_strategy(changeset) do
@@ -55,6 +58,22 @@ defmodule Brando.Sites.DeployConfig do
       _other ->
         changeset
     end
+  end
+
+  # Called after a deploy, so it may only reach a public address over https,
+  # like a webhook (Brando.Webhooks.URLGuard). Checked when it changes, and
+  # again before every delivery.
+  defp validate_webhook_url(changeset) do
+    validate_change(changeset, :webhook_url, fn
+      :webhook_url, value when value in [nil, ""] ->
+        []
+
+      :webhook_url, value ->
+        case URLGuard.resolve(value) do
+          {:ok, _target} -> []
+          {:error, reason} -> [webhook_url: {Webhook.url_error(reason), reason: reason}]
+        end
+    end)
   end
 
   defp validate_http_url(changeset, field) do

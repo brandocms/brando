@@ -200,6 +200,84 @@ defmodule Brando.SSGBuildsTest do
     assert Builds.get_build(second.id).status == :archived
   end
 
+  # Audit F26: the completion webhook may only reach a public address, is
+  # posted to the address checked without following redirects, and the build
+  # log does not say what answered.
+  describe "the completion webhook" do
+    defp deploy_with_webhook(context, url) do
+      build = ready_build(context.site, context.environment)
+      {:ok, build} = Builds.update(build, %{deploy_config: Map.put(build.deploy_config, "webhook_url", url)})
+      assert {:ok, deployed} = Deploy.deploy(build, runner: fn _command, _args, _opts -> {"deployed", 0} end)
+      Builds.get_build(deployed.id)
+    end
+
+    test "must be https to a public address when saved", context do
+      for {url, error} <- [
+            {"http://127.0.0.1:6379/", "must start with https://"},
+            {"https://169.254.169.254/latest/meta-data", "points to a private or local network address"},
+            {"https://hooks.internal.test/x", "points to a private or local network address"},
+            {"https://user:pass@hooks.example.com/x", "must not contain a user name or password"}
+          ] do
+        assert {:error, changeset} =
+                 Registry.update_site(context.site, %{
+                   deploy_config: %{strategy: :rsync, target: "deploy@example.test:/srv/www", webhook_url: url}
+                 })
+
+        assert {^error, _} = changeset.changes.deploy_config.errors[:webhook_url], url
+      end
+
+      assert {:ok, site} =
+               Registry.update_site(context.site, %{
+                 deploy_config: %{
+                   strategy: :rsync,
+                   target: "deploy@example.test:/srv/www",
+                   webhook_url: "https://hooks.example.com/published"
+                 }
+               })
+
+      assert site.deploy_config.webhook_url == "https://hooks.example.com/published"
+    end
+
+    test "is not posted to a private address saved before the check", context do
+      receiver = Brando.WebhookReceiver.start()
+      build = deploy_with_webhook(context, Brando.WebhookReceiver.url(receiver, "/hook"))
+
+      refute_receive {:webhook_request, _}, 200
+      assert build.status == :deployed
+      assert build.build_log =~ "Deployment webhook not sent: its URL must start with https://"
+    end
+
+    test "is posted to the address checked, and a redirect is not followed", context do
+      put_test_env(Brando.Webhooks, allow_localhost: true, resolver: {Brando.WebhookTestResolver, :resolve})
+
+      receiver =
+        Brando.WebhookReceiver.start(fn
+          %{path: "/hook"} -> {302, [{"location", "/elsewhere"}], ""}
+          _request -> {200, "ok"}
+        end)
+
+      build = deploy_with_webhook(context, "http://pinned.test:#{receiver.port}/hook")
+
+      assert_receive {:webhook_request, %{method: "POST", path: "/hook", headers: headers, body: body}}
+      assert headers["host"] == "pinned.test:#{receiver.port}"
+      assert %{"event" => "deploy", "status" => "deployed"} = Jason.decode!(body)
+      refute_receive {:webhook_request, %{path: "/elsewhere"}}, 200
+
+      assert build.build_log =~ "Deployment webhook failed"
+      refute build.build_log =~ "302"
+    end
+
+    test "answered with a success leaves the log alone", context do
+      put_test_env(Brando.Webhooks, allow_localhost: true, resolver: {Brando.WebhookTestResolver, :resolve})
+      receiver = Brando.WebhookReceiver.start()
+
+      build = deploy_with_webhook(context, "http://pinned.test:#{receiver.port}/hook")
+
+      assert_receive {:webhook_request, %{method: "POST", path: "/hook"}}
+      refute build.build_log =~ "webhook"
+    end
+  end
+
   test "S3 deployment removes stale target keys before uploading the artifact", context do
     build = ready_build(context.site, context.environment)
 

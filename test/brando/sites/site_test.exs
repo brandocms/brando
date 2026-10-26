@@ -70,7 +70,7 @@ defmodule Brando.Sites.SiteTest do
              | deploy_config: %{
                  strategy: :s3,
                  target: "s3://acme-site/static",
-                 webhook_url: "https://hooks.example.test/published",
+                 webhook_url: "https://hooks.example.com/published",
                  retention_count: 25
                }
            }).valid?

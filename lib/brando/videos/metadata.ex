@@ -13,6 +13,12 @@ defmodule Brando.Videos.Metadata do
   Bunny pull zones usually serve only the site's own domain, so every request
   carries the site's URL as its referer.
 
+  A provider is recognised by the host of the parsed URL, over `https`. Every
+  request goes through `Brando.Webhooks.URLGuard`: it is refused when the host
+  resolves to a private or local address, connects to the address that was
+  checked (so the name cannot resolve elsewhere in between), and does not
+  follow redirects.
+
   Requests use `config :brando, Brando.Videos.Metadata, req_options: [...]`,
   which is how tests stub them.
   """
@@ -20,6 +26,8 @@ defmodule Brando.Videos.Metadata do
   alias Brando.Videos.Helpers
   alias Brando.Videos.Video
   alias Brando.Videos.VimeoURL
+  alias Brando.Webhooks.Client
+  alias Brando.Webhooks.URLGuard
 
   @type found :: %{
           optional(:thumbnail_url) => String.t(),
@@ -29,9 +37,13 @@ defmodule Brando.Videos.Metadata do
           optional(:height) => pos_integer()
         }
 
+  @timeout 15_000
+  # A thumbnail or a playlist; anything longer is refused
+  @body_limit 20_000_000
+
   @vimeo_oembed "https://vimeo.com/api/oembed.json?url="
   @youtube_oembed "https://www.youtube.com/oembed?format=json&url="
-  @vimeo_file ~r{player\.vimeo\.com/(?:progressive_redirect/(?:playback|download)|external)/(\d+)}
+  @vimeo_file ~r{^/(?:progressive_redirect/(?:playback|download)|external)/(\d+)}
 
   @doc """
   Looks up `video` at its source. Returns only what the source knows, so any
@@ -50,10 +62,10 @@ defmodule Brando.Videos.Metadata do
 
   def lookup(%Video{type: :external_file, source_url: url} = video) when is_binary(url) do
     cond do
-      match = Regex.run(@vimeo_file, url, capture: :all_but_first) ->
-        vimeo(%{id: hd(match), hash: nil})
+      id = vimeo_file_id(url) ->
+        vimeo(%{id: id, hash: nil})
 
-      String.contains?(url, ".b-cdn.net/") and String.ends_with?(url, "/playlist.m3u8") ->
+      Helpers.bunny_stream_url?(url) ->
         bunny(url, Helpers.derive_external_thumbnail_url(video))
 
       thumbnail = Helpers.derive_external_thumbnail_url(video) ->
@@ -72,7 +84,7 @@ defmodule Brando.Videos.Metadata do
   """
   @spec gives_title?(Video.t()) :: boolean()
   def gives_title?(%Video{type: type}) when type in [:vimeo, :youtube], do: true
-  def gives_title?(%Video{type: :external_file, source_url: url}) when is_binary(url), do: Regex.match?(@vimeo_file, url)
+  def gives_title?(%Video{type: :external_file, source_url: url}) when is_binary(url), do: vimeo_file_id(url) != nil
   def gives_title?(%Video{}), do: false
 
   @doc """
@@ -89,6 +101,17 @@ defmodule Brando.Videos.Metadata do
 
       {:error, _} = error ->
         error
+    end
+  end
+
+  # Vimeo's file links: `https://player.vimeo.com/progressive_redirect/…/{id}/…`
+  defp vimeo_file_id(url) do
+    with {:ok, %URI{scheme: "https", host: host, path: path}} when is_binary(host) and is_binary(path) <- URI.new(url),
+         "player.vimeo.com" <- String.downcase(host),
+         [id] <- Regex.run(@vimeo_file, path, capture: :all_but_first) do
+      id
+    else
+      _ -> nil
     end
   end
 
@@ -121,13 +144,18 @@ defmodule Brando.Videos.Metadata do
   end
 
   # The master playlist names a playlist per rendition; the largest gives the
-  # size, and its segments add up to the duration.
+  # size, and its segments add up to the duration. The playlist chooses the
+  # rendition's URL, so only one on the stream's own host is read.
   defp bunny(url, thumbnail_url) do
     with {:ok, %{status: 200, body: master}} when is_binary(master) <- get(url),
          {:ok, {width, height, variant}} <- largest_rendition(master) do
+      variant_url = url |> URI.merge(variant) |> to_string()
+
       duration =
-        case get(URI.merge(url, variant) |> to_string()) do
-          {:ok, %{status: 200, body: playlist}} when is_binary(playlist) -> playlist_duration(playlist)
+        with true <- same_origin?(url, variant_url),
+             {:ok, %{status: 200, body: playlist}} when is_binary(playlist) <- get(variant_url) do
+          playlist_duration(playlist)
+        else
           _ -> nil
         end
 
@@ -162,16 +190,31 @@ defmodule Brando.Videos.Metadata do
     |> positive()
   end
 
+  defp same_origin?(url, other) do
+    a = URI.parse(url)
+    b = URI.parse(other)
+    {a.scheme, a.host, a.port} == {b.scheme, b.host, b.port}
+  end
+
+  # Req's pipeline (headers, decompression, JSON) with the request sent by
+  # Brando.Webhooks.Client: to the address URLGuard checked, with the host
+  # name kept for TLS (SNI and certificate) and the Host header. A redirect
+  # is an answer like any other, not followed.
   defp get(url) do
-    [
-      url: url,
-      retry: false,
-      receive_timeout: 15_000,
-      headers: [{"referer", Brando.Utils.hostname() <> "/"}]
-    ]
-    |> Keyword.merge(Keyword.get(Application.get_env(:brando, __MODULE__, []), :req_options, []))
-    |> Req.new()
-    |> Req.get()
+    with {:ok, target} <- URLGuard.resolve(url) do
+      [
+        url: url,
+        adapter: Client,
+        redirect: false,
+        retry: false,
+        headers: [{"referer", Brando.Utils.hostname() <> "/"}]
+      ]
+      |> Keyword.merge(Keyword.get(Application.get_env(:brando, __MODULE__, []), :req_options, []))
+      |> Req.new()
+      |> Req.Request.put_private(:url_guard_target, target)
+      |> Req.Request.put_private(:client_options, timeout: @timeout, body_limit: @body_limit)
+      |> Req.get()
+    end
   end
 
   defp content_type(response) do
