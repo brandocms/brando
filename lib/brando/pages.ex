@@ -626,7 +626,7 @@ defmodule Brando.Pages do
       # fragment has had its own, so its text must not be evaluated again.
       {:ok, fragment} ->
         {:safe, html} = fragment_html(fragment)
-        {:safe, Brando.Villain.inert_liquid(html)}
+        {:safe, Brando.Villain.InertLiquid.encode(html)}
 
       {:error, {:fragment, :not_found}} ->
         if Brando.env() == :dev do

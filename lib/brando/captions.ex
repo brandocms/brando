@@ -72,8 +72,8 @@ defmodule Brando.Captions do
   def library_html(text) do
     cond do
       not is_binary(text) or String.trim(text) == "" -> nil
-      markup?(text) -> if present?(text), do: text |> HtmlSanitizeEx.basic_html() |> Brando.Villain.inert_liquid()
-      true -> text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string() |> Brando.Villain.inert_liquid()
+      markup?(text) -> if present?(text), do: text |> HtmlSanitizeEx.basic_html() |> Brando.Villain.InertLiquid.encode()
+      true -> text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string() |> Brando.Villain.InertLiquid.encode()
     end
   end
 

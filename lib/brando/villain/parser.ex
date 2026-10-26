@@ -1373,7 +1373,7 @@ defmodule Brando.Villain.Parser do
       :published ->
         fragment
         |> Brando.FrontendEdit.rendered_html(:blocks)
-        |> Brando.Villain.inert_liquid()
+        |> Brando.Villain.InertLiquid.encode()
         |> maybe_annotate(block.uid, opts)
 
       _ ->

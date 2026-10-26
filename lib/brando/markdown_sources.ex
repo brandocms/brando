@@ -170,7 +170,7 @@ defmodule Brando.MarkdownSources do
   # read time covers versions stored before.
   def render(data) do
     case resolved_version(data) do
-      %Version{html: html} when is_binary(html) -> Brando.Villain.inert_liquid(html)
+      %Version{html: html} when is_binary(html) -> Brando.Villain.InertLiquid.encode(html)
       _ -> ""
     end
   end

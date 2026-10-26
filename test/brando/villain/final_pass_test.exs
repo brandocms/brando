@@ -2,6 +2,7 @@ defmodule Brando.Villain.FinalPassTest do
   use ExUnit.Case, async: true
 
   alias Brando.Villain
+  alias Brando.Villain.InertLiquid
   alias Liquex.Context
 
   test "preserves plain HTML and whitespace while stripping editor identifiers" do
@@ -34,12 +35,12 @@ defmodule Brando.Villain.FinalPassTest do
            end) =~ "Error parsing liquex template"
   end
 
-  test "inert_liquid/1 leaves Liquid as text, and script and style as they are" do
+  test "InertLiquid.encode/1 leaves Liquid as text, and script and style as they are" do
     html =
       ~s(<p title="{{ title }}">{{ title }} {% if true %}x{% endif %}</p>) <>
         ~s(<script type="application/ld+json">{"a": {"b": 1}}</script><style>p { color: red }</style>)
 
-    inert = Villain.inert_liquid(html)
+    inert = InertLiquid.encode(html)
 
     assert inert ==
              ~s(<p title="&#123;&#123; title &#125;&#125;">&#123;&#123; title &#125;&#125; ) <>
@@ -48,9 +49,9 @@ defmodule Brando.Villain.FinalPassTest do
 
     assert Floki.text(Floki.parse_fragment!(inert)) == Floki.text(Floki.parse_fragment!(html))
     # A custom element named like one is not raw text
-    assert Villain.inert_liquid("<script-x>{</script-x></script>}") == "<script-x>&#123;</script-x></script>&#125;"
+    assert InertLiquid.encode("<script-x>{</script-x></script>}") == "<script-x>&#123;</script-x></script>&#125;"
 
-    assert Villain.parse_and_render(Villain.inert_liquid("<p>{{ title }}</p>"), Context.new(%{"title" => "T"})) ==
+    assert Villain.parse_and_render(InertLiquid.encode("<p>{{ title }}</p>"), Context.new(%{"title" => "T"})) ==
              "<p>&#123;&#123; title &#125;&#125;</p>"
   end
 end
