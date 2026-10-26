@@ -208,7 +208,10 @@ included. So:
   they are.
 - Between tags, `escape` a value meant as text as well: a `<` in a string var
   or a title otherwise writes markup.
-- Never put rich text in an attribute; `strip_html` it, then `escape` it.
+- Never put rich text in an attribute as it is. `strip_html` keeps its
+  character references (`&amp;`), so follow it with `escape_once`, which
+  encodes what is left without encoding them twice:
+  `content="{{ intro | strip_html | escape_once }}"`.
 - Do not `url_decode` a value you print: it turns `%3C` and `%22` back into
   `<` and `"` after every check has passed. For a query string, `url_encode`
   the value.
