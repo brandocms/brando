@@ -441,10 +441,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp select_option(option) when is_map_key(option, "value") or is_map_key(option, "label"),
     do: select_option(%{value: option["value"], label: option["label"]})
 
-  # The label is text an admin typed in the module editor. The select renders
-  # option labels as markup, in the page and through `data-select-label`
-  # (uiCommands.js), so it gets the label escaped, as a string: a `{:safe, _}`
-  # label would reach the attribute unescaped and be decoded back to markup.
+  # The label is text an admin typed in the module editor. It stays a plain
+  # string: Select escapes it, in the page and in `data-select-label`.
   defp select_option(option) do
     value = Map.get(option, :value)
     label = Map.get(option, :label)
