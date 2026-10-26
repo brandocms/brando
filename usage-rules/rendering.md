@@ -209,7 +209,8 @@ A fragment embedded in a block, through a fragment block, the
 `{% fragment %}` tag or `<.fragment>`, is rendered into the entry's stored
 HTML. Saving the fragment re-renders the entries holding a fragment block;
 an entry embedding it through the tag or component shows the change on its
-own next save.
+own next save. The fragment goes in as it was rendered: the entry's Liquid
+pass does not evaluate its text a second time.
 
 ## Navigation
 
