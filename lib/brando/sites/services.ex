@@ -86,7 +86,7 @@ defmodule Brando.Sites.Services do
   defp loaded(%Identifier{} = identifier), do: identifier
   defp loaded(_), do: nil
 
-  defp identifier_url(%Identifier{url: url}), do: presence(url)
+  defp identifier_url(%Identifier{url: url}), do: safe_url(url)
   defp identifier_url(_), do: nil
 
   defp entry_for(%Identifier{schema: schema, entry_id: id}) when is_atom(schema) and not is_nil(id) do

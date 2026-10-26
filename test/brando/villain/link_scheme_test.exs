@@ -85,6 +85,10 @@ defmodule Brando.Villain.LinkSchemeTest do
       resolved = Brando.Sites.Services.resolve(%Brando.Sites.Service{name: "Service", url: url})
       assert resolved.resolved_url == nil
 
+      # Or the entry it links to
+      linked = %Brando.Sites.Service{name: "Service", identifier: %Brando.Content.Identifier{url: url, schema: nil}}
+      assert Brando.Sites.Services.resolve(linked).resolved_url == nil
+
       html =
         render_component(&Brando.HTML.Services.list/1,
           services: [%Brando.Sites.Service{name: "Service", url: url}]
