@@ -24,7 +24,10 @@ defmodule Brando.ColorTest do
           "hsl(120deg 50% 50%)",
           "hsla(120, 50%, 50%, .5)",
           "transparent",
-          "white"
+          "white",
+          "var(--brand)",
+          "oklch(70% 0.1 200 / .5)",
+          "color-mix(in srgb, var(--brand) 40%, white)"
         ] do
       assert Color.valid?(value), inspect(value)
     end
@@ -36,8 +39,12 @@ defmodule Brando.ColorTest do
           "red;background:url(x)",
           "rgb(1,2,3);",
           "url(https://example.com)",
-          "var(--x)",
+          "rgb(1, url(x), 3)",
+          "rgb(1, 2, 3",
+          "rgb(1, 2, 3))(",
+          " #fff",
           "expression(alert(1))",
+          "var(--x);color:red",
           ~s(#fff"><b>),
           123
         ] do
@@ -77,6 +84,29 @@ defmodule Brando.ColorTest do
     assert errors_on(Var.changeset(%Var{}, params, :system))[:value]
     refute errors_on(Var.changeset(%Var{}, %{params | value: "#000"}, :system))[:value]
     refute errors_on(Var.changeset(%Var{}, %{params | type: :string}, :system))[:value]
+  end
+
+  test "a palette keeps colours it already stored; a new one must be a colour" do
+    palette = %Palette{name: "Site", key: "site", colors: [%Palette.Color{name: "Ink", key: "ink", hex_value: "old"}]}
+    row = fn hex -> %{name: "Ink", key: "ink", hex_value: hex} end
+
+    assert errors_on(Palette.changeset(palette, %{colors: [row.("old")]}, :system))[:colors] in [nil, [%{}]]
+
+    errors = errors_on(Palette.changeset(palette, %{colors: [row.("old;x")]}, :system))[:colors]
+    assert Enum.any?(errors, &match?(%{hex_value: [_]}, &1))
+  end
+
+  test "re-reading a stored var skips the check" do
+    params = %{type: :color, key: "bg", label: %{"en" => "Background"}, value: "old;x"}
+
+    assert Var.changeset(%Var{}, params, %{id: 0}, nil, validate_colors: false).valid?
+    refute Var.changeset(%Var{}, params, %{id: 0}).valid?
+  end
+
+  test "a definition snapshot reads a stored colour var that predates the check" do
+    var = %Var{type: :color, key: "bg", label: %{"en" => "Background"}, value: "old;x", options: []}
+
+    assert %{"value" => "old;x"} = Brando.Content.Definition.Model.stored_var_record(var)
   end
 
   test "a var turned into a colour var must already hold a colour" do

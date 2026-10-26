@@ -429,7 +429,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   # A select var's options for the editor, their labels in its language. An
   # option is a struct, a changeset while being edited, or params.
-  defp select_options(options) do
+  @doc false
+  def select_options(options) do
     Enum.map(options || [], fn
       %Ecto.Changeset{} = changeset -> select_option(Ecto.Changeset.apply_changes(changeset))
       option -> select_option(option)
@@ -440,10 +441,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp select_option(option) when is_map_key(option, "value") or is_map_key(option, "label"),
     do: select_option(%{value: option["value"], label: option["label"]})
 
+  # The label is text an admin typed in the module editor: escaped here, as
+  # the select renders option labels as markup.
   defp select_option(option) do
     value = Map.get(option, :value)
     label = Map.get(option, :label)
-    %{label: I18nString.localized(label) || to_string(value), value: value}
+    %{label: Phoenix.HTML.html_escape(I18nString.localized(label) || to_string(value)), value: value}
   end
 
   defp width_options do

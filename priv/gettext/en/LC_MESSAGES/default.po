@@ -9199,6 +9199,11 @@ msgstr ""
 msgid "Live"
 msgstr ""
 
+#: lib/brando/live_preview.ex
+#, elixir-autogen, elixir-format
+msgid "Live Preview could not render this entry. The server log has the details."
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Live page"

@@ -66,6 +66,7 @@ defmodule Brando.LivePreview do
     opts_to_document: []
 
   use Brando.Tracing.Decorator
+  use Gettext, backend: Brando.Gettext
 
   require Logger
   alias Brando.Assets.SiteAssets
@@ -313,8 +314,6 @@ defmodule Brando.LivePreview do
     end)
   end
 
-  @initialize_failed "Live Preview could not render this entry. The server log has the details."
-
   @decorate span("brando.preview.initialize", schema: :schema)
   def initialize(schema, changeset, updated_entry_assocs \\ %{}, target \\ nil) do
     cache_key = build_cache_key(:erlang.system_time())
@@ -347,15 +346,17 @@ defmodule Brando.LivePreview do
           {:error,
            "LivePreview is missing preload for #{inspect(field)}. Add `schema_preloads [#{inspect(field)}]` to your `preview_target`."}
         else
-          {:error, @initialize_failed}
+          {:error, initialize_failed()}
         end
 
       err ->
         cleanup_cache(cache_key)
         log_initialize_error(err, __STACKTRACE__)
-        {:error, @initialize_failed}
+        {:error, initialize_failed()}
     end
   end
+
+  defp initialize_failed, do: gettext("Live Preview could not render this entry. The server log has the details.")
 
   defp log_initialize_error(err, stacktrace) do
     Logger.error("""
