@@ -138,13 +138,22 @@ defmodule Brando.ColorTest do
   test "a has_many row kept as stored still has its own subform rows checked" do
     alias Brando.ColorTest.{Page, Section, Swatch}
 
-    page = %Page{id: 1, sections: [%Section{id: 1, name: "A", swatches: [%Swatch{id: 1, hex: "old;x"}]}]}
+    swatches = [%Swatch{id: 1, hex: "old;x"}, %Swatch{id: 2, hex: "#000"}]
+    page = %Page{id: 1, sections: [%Section{id: 1, name: "A", swatches: swatches}]}
     fields = [{:sections, [{:swatches, [:hex]}]}]
-    swatch = fn hex -> %{"id" => 1, "name" => "A", "swatches" => [%{"id" => 1, "hex" => hex}]} end
 
-    refute Color.validate(Page.changeset(page, %{"sections" => [swatch.("#fff;y")]}), fields).valid?
-    assert Color.validate(Page.changeset(page, %{"sections" => [swatch.("#fff")]}), fields).valid?
-    assert Color.validate(Page.changeset(page, %{"sections" => [swatch.("old;x")]}), fields).valid?
+    params = fn first, second ->
+      %{
+        "sections" => [
+          %{"id" => 1, "name" => "A", "swatches" => [%{"id" => 1, "hex" => first}, %{"id" => 2, "hex" => second}]}
+        ]
+      }
+    end
+
+    refute Color.validate(Page.changeset(page, params.("#fff;y", "#000")), fields).valid?
+    assert Color.validate(Page.changeset(page, params.("#fff", "#000")), fields).valid?
+    # The stored swatch is kept while its neighbour changes
+    assert Color.validate(Page.changeset(page, params.("old;x", "#111")), fields).valid?
   end
 
   test "re-reading a stored var skips the check" do
