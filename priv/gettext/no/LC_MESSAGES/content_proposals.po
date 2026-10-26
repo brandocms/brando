@@ -61,6 +61,11 @@ msgstr "%{key} er true eller false."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{name} cannot hold a {, which the page could read as Liquid."
+msgstr "%{name} kan ikke inneholde {, som siden kan lese som Liquid."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} contains unsafe rich text."
 msgstr "%{name} inneholder utrygg rik tekst."
 
@@ -71,8 +76,18 @@ msgstr "%{name} godtar ikke denne medietypen."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "%{name} takes an https embed address."
-msgstr "%{name} tar en https-adresse for innebygging."
+msgid "%{name} takes a web, mail or phone address."
+msgstr "%{name} tar en nett-, e-post- eller telefonadresse."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} takes an https Google Maps embed address."
+msgstr "%{name} tar en https-adresse for innebygging fra Google Maps."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} takes no quotes or markup."
+msgstr "%{name} tar ikke anførselstegn eller markering."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format

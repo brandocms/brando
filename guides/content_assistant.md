@@ -329,6 +329,26 @@ is applied.
 It does not delete entries. A link to an entry created in the same proposal is
 reported as a problem, because the new entry is a draft.
 
+What a proposal writes is checked before it can be approved, as text a model
+or client wrote, not an editor:
+
+- text, markdown and html slots, text and html variables, and an entry's
+  fields take rich text without scripts, event handlers or script addresses;
+- header slots and single-line text variables take plain text, without
+  markup;
+- a link variable or a slot's link takes a web, mail or phone address, or a
+  path;
+- a map slot takes an https Google Maps embed address;
+- a slot's class or id takes no quotes or markup, and its other settings no
+  markup;
+- no value holds an opening brace (`{`), written out or as a character
+  reference: the page renders a module's output as Liquid once more, and a
+  brace could open a tag there.
+
+A value that fails is a problem on the proposal. A proposal with problems
+cannot be approved, shows no page preview and cannot be shared: leave out
+the changes with problems, or ask for new ones.
+
 ## Limits
 
 These are the defaults:

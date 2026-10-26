@@ -1191,6 +1191,11 @@ msgstr "Et telefonnummer"
 msgid "A program on this computer. Any program here can claim a name: allow it only if you started it."
 msgstr "Et program på denne datamaskinen. Ethvert program her kan gi seg ut for å være hva som helst: tillat det bare hvis du startet det selv."
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "A proposal with problems cannot be shared. Leave out the changes with problems first."
+msgstr "Et forslag med problemer kan ikke deles. Utelat endringene med problemer først."
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -17122,6 +17127,11 @@ msgstr "Den andre fanen ble lukket"
 #, elixir-autogen, elixir-format
 msgid "The page could not be rendered: %{message}"
 msgstr "Siden kunne ikke rendres: %{message}"
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The page is shown once the proposal has no problems. Leave out the changes with problems, or ask for new ones."
+msgstr "Siden vises når forslaget ikke har problemer. Utelat endringene med problemer, eller be om nye."
 
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format

@@ -1191,6 +1191,11 @@ msgstr ""
 msgid "A program on this computer. Any program here can claim a name: allow it only if you started it."
 msgstr ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "A proposal with problems cannot be shared. Leave out the changes with problems first."
+msgstr ""
+
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
@@ -17119,6 +17124,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "The page could not be rendered: %{message}"
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The page is shown once the proposal has no problems. Leave out the changes with problems, or ask for new ones."
 msgstr ""
 
 #: lib/brando_admin/components/two_factor.ex

@@ -1300,6 +1300,19 @@ defmodule BrandoAdmin.AI.AssistantLive do
     """
   end
 
+  defp frame(%{preview: %{frame: :problems}} = assigns) do
+    ~H"""
+    <div class="assistant-frame-state">
+      <.icon name="shield-alert" />
+      <p>
+        {gettext(
+          "The page is shown once the proposal has no problems. Leave out the changes with problems, or ask for new ones."
+        )}
+      </p>
+    </div>
+    """
+  end
+
   defp frame(%{preview: %{frame: {:error, message}}} = assigns) do
     assigns = assign(assigns, :message, message)
 
@@ -1736,6 +1749,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
       {:error, :forbidden} ->
         {:noreply, put_toast(socket, :error, gettext("You do not have permission to share pages."))}
 
+      {:error, :problems} ->
+        {:noreply,
+         put_toast(
+           socket,
+           :error,
+           gettext("A proposal with problems cannot be shared. Leave out the changes with problems first.")
+         )}
+
       {:error, reason} ->
         {:noreply, put_toast(socket, :error, to_string(reason))}
     end
@@ -1932,7 +1953,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
                  shared: !!socket.assigns.shared
                ) do
             {:ok, %{key: key}} -> {:ok, key}
-            {:error, reason} when reason in [:not_created, :no_preview_target] -> reason
+            {:error, reason} when reason in [:not_created, :no_preview_target, :problems] -> reason
             {:error, message} -> {:error, to_string(message)}
           end
 

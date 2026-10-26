@@ -302,28 +302,29 @@ defmodule Brando.Villain.Parser do
 
   def header(%{text: text, level: level, anchor: anchor}, opts) do
     h = parser_module(opts).header(%{text: text, level: level}, opts)
-    ~s(<a name="#{anchor}"></a>#{h})
+    ~s(<a name="#{escape_attr(anchor)}"></a>#{h})
   end
 
   def header(%{text: text, level: level} = data, _) do
     classes =
-      if Map.get(data, :class, nil) do
-        ~s( class="#{Map.get(data, :class)}")
+      if class = Map.get(data, :class, nil) do
+        ~s( class="#{escape_attr(class)}")
       else
         ""
       end
 
     id =
-      if Map.get(data, :id, nil) do
-        ~s( id="#{Map.get(data, :id)}")
+      if id = Map.get(data, :id, nil) do
+        ~s( id="#{escape_attr(id)}")
       else
         ""
       end
 
     header_size = "h#{level}"
 
-    if link = Map.get(data, :link) do
-      ~s(<a href="#{link}"><#{header_size}#{classes}#{id}>#{nl2br(text)}</#{header_size}></a>)
+    # A link with a script or unknown scheme is left out, not the heading.
+    if link = safe_url(Map.get(data, :link)) do
+      ~s(<a href="#{escape_attr(link)}"><#{header_size}#{classes}#{id}>#{nl2br(text)}</#{header_size}></a>)
     else
       ["<", header_size, classes, id, ">", nl2br(text), "</", header_size, ">"]
     end
@@ -493,7 +494,7 @@ defmodule Brando.Villain.Parser do
     case Map.get(params, :type) do
       nil -> text
       "paragraph" -> text
-      type -> "<div class=\"#{type}\">#{text}</div>"
+      type -> "<div class=\"#{escape_attr(type)}\">#{text}</div>"
     end
   end
 
@@ -506,20 +507,27 @@ defmodule Brando.Villain.Parser do
 
   def markdown_source(data, _), do: Brando.MarkdownSources.render(data)
 
-  def map(%{embed_url: embed_url, source: :gmaps}, _) do
-    ~s(<div class="map-wrapper">
-         <iframe width="420"
-                 height="315"
-                 src="#{embed_url}"
-                 frameborder="0"
-                 allowfullscreen>
-         </iframe>
-       </div>)
+  def map(%{embed_url: embed_url, source: :gmaps}, _) when is_binary(embed_url) do
+    case safe_url(embed_url) do
+      nil -> ""
+      url -> map_embed(url)
+    end
   end
 
   # unconfigured map block (no embed committed yet) renders nothing —
   # without this clause the editor's validate-time render crashes the form LV
   def map(_, _), do: ""
+
+  defp map_embed(embed_url) do
+    ~s(<div class="map-wrapper">
+         <iframe width="420"
+                 height="315"
+                 src="#{escape_attr(embed_url)}"
+                 frameborder="0"
+                 allowfullscreen>
+         </iframe>
+       </div>)
+  end
 
   # Extract dimension data with defaults
   defp extract_video_dimensions(data, default_width, default_height) do
@@ -604,10 +612,10 @@ defmodule Brando.Villain.Parser do
   defp render_iframe_video(width, height, orientation, aspect_ratio, src, extra_attrs \\ false) do
     # For YouTube
     youtube_template =
-      ~s(<div class="video-wrapper video-embed" data-orientation="#{orientation}" style="--aspect-ratio: #{aspect_ratio}">
-         <iframe width="#{width}"
-                 height="#{height}"
-                 src="#{src}"
+      ~s(<div class="video-wrapper video-embed" data-orientation="#{escape_attr(orientation)}" style="--aspect-ratio: #{escape_attr(aspect_ratio)}">
+         <iframe width="#{escape_attr(width)}"
+                 height="#{escape_attr(height)}"
+                 src="#{encode_player_url(src)}"
                  frameborder="0"
                  allowfullscreen>
          </iframe>
@@ -615,10 +623,10 @@ defmodule Brando.Villain.Parser do
 
     # For Vimeo
     vimeo_template =
-      ~s(<div class="video-wrapper video-embed" data-orientation="#{orientation}" style="--aspect-ratio: #{aspect_ratio}">
-         <iframe src="#{src}"
-                 width="#{width}"
-                 height="#{height}"
+      ~s(<div class="video-wrapper video-embed" data-orientation="#{escape_attr(orientation)}" style="--aspect-ratio: #{escape_attr(aspect_ratio)}">
+         <iframe src="#{encode_player_url(src)}"
+                 width="#{escape_attr(width)}"
+                 height="#{escape_attr(height)}"
                  frameborder="0"
                  webkitallowfullscreen
                  mozallowfullscreen
@@ -975,7 +983,7 @@ defmodule Brando.Villain.Parser do
     items = gallery_items(media, data, opts, :plain)
 
     """
-    <div data-slideshow="#{class}">
+    <div data-slideshow="#{escape_attr(class)}">
       #{items}
     </div>
     """
@@ -986,7 +994,7 @@ defmodule Brando.Villain.Parser do
     items = gallery_items(media, data, opts, :plain)
 
     """
-    <div data-gallery="#{class}">
+    <div data-gallery="#{escape_attr(class)}">
       <div class="inner">
         <section data-gallery-items>
           #{items}
@@ -1118,7 +1126,7 @@ defmodule Brando.Villain.Parser do
     rows_html =
       rows
       |> Enum.map(fn row ->
-        class = (row[:class] && ~s( class="#{row.class}")) || ""
+        class = (row[:class] && ~s( class="#{escape_attr(row.class)}")) || ""
         value = row.value
 
         """
@@ -1129,8 +1137,8 @@ defmodule Brando.Villain.Parser do
       end)
       |> Enum.intersperse("\n")
 
-    ul_id = (data.id && ~s( id="#{data.id}")) || ""
-    ul_class = (data.class && ~s( class="#{data.class}")) || ""
+    ul_id = (data.id && ~s( id="#{escape_attr(data.id)}")) || ""
+    ul_class = (data.class && ~s( class="#{escape_attr(data.class)}")) || ""
 
     """
     <ul#{ul_id}#{ul_class}>
@@ -1264,17 +1272,17 @@ defmodule Brando.Villain.Parser do
       end
 
     target_id =
-      (target_id && " id=\"#{target_id}\" data-scrollspy-trigger=\"##{target_id}\"") || ""
+      (target_id && " id=\"#{escape_attr(target_id)}\" data-scrollspy-trigger=\"##{escape_attr(target_id)}\"") || ""
 
     case Content.find_palette(palettes, palette_id, Map.get(block, :palette_origin, :local)) do
       {:ok, palette} ->
         colors =
           palette.colors |> Enum.map(&"--#{&1.key}: #{&1.hex_value}") |> Enum.intersperse(";")
 
-        palette_vars = " style=\"#{colors}\""
+        palette_vars = " style=\"#{escape_attr(colors)}\""
 
         """
-        <section b-section="#{palette.namespace}-#{palette.key}"#{target_id}#{palette_vars}>
+        <section b-section="#{escape_attr("#{palette.namespace}-#{palette.key}")}"#{target_id}#{palette_vars}>
           #{children_html}
         </section>
         """
@@ -1380,6 +1388,46 @@ defmodule Brando.Villain.Parser do
         "<!-- fragment##{id} not embedded. status != :published -->"
     end
   end
+
+  @doc """
+  `value` escaped for a double-quoted attribute. Character references in it
+  (a pasted embed code's `&amp;`) are decoded first: stored values were
+  once interpolated as they were, and the browser decoded them, so it still
+  reads the same value.
+  """
+  @spec escape_attr(term()) :: String.t()
+  def escape_attr(value),
+    do: value |> to_string() |> HtmlEntities.decode() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
+  @doc """
+  `url` trimmed, when it has no scheme or one `Brando.RichText.allowed_uri?/1`
+  allows, else `nil`. The scheme is read after the character references
+  `HtmlEntities` knows are decoded, leading spaces and control characters
+  trimmed, and tabs and newlines dropped. Put the result in an attribute
+  with `escape_attr/1`, never as it is: a reference a browser decodes and
+  `HtmlEntities` does not could still spell a scheme.
+  """
+  @spec safe_url(term()) :: String.t() | nil
+  def safe_url(url) when is_binary(url) do
+    url = String.trim(url)
+
+    read =
+      url
+      |> HtmlEntities.decode()
+      |> String.replace(~r/[\t\n\r]/, "")
+      |> String.replace(~r/^[\x00-\x20]+/, "")
+
+    case Regex.run(~r/^([a-z][a-z0-9+.-]*):/i, read, capture: :all_but_first) do
+      nil -> if url != "", do: url
+      [scheme] -> if Brando.RichText.allowed_uri?(scheme <> ":"), do: url
+    end
+  end
+
+  def safe_url(_), do: nil
+
+  # A player address starts with Brando's own https host, so only what could
+  # end the attribute is encoded; its query keeps its plain `&`.
+  defp encode_player_url(url), do: String.replace(to_string(url), ["\"", "'", "<", ">", " "], &("%" <> Base.encode16(&1)))
 
   def render_caption(%{title: nil, credits: nil}), do: ""
   def render_caption(%{title: "", credits: nil}), do: ""

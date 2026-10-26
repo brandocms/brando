@@ -54,6 +54,14 @@ defmodule Brando.Content.Proposals.EntryLinks do
     end
   end
 
+  @doc """
+  `value` with the address of each unresolved entry link replaced by `#`, so
+  a safety check that refuses the `entry:` scheme still reads the rest.
+  """
+  @spec blank_unresolved(String.t()) :: String.t()
+  def blank_unresolved(value) when is_binary(value),
+    do: Regex.replace(~r/href=(["'])\s*entry:[\w.]+:\d+\1/i, value, "href=\\1#\\1")
+
   @doc "Whether `value` still holds an entry link that could not be resolved."
   @spec unresolved?(term()) :: boolean()
   def unresolved?(value) when is_binary(value), do: Regex.match?(~r/href=(["'])\s*entry:/i, value)
