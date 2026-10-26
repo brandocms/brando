@@ -1,0 +1,2 @@
+- With group authorization, the activity log no longer shows the titles and history of entries a record read policy hides from the reader.
+- Work the admin runs in a background task, such as loading a large entry's form or drawing module sketches, now keeps the user's authorization scope, so record read policies apply to it as well.

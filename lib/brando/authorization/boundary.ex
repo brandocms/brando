@@ -213,6 +213,20 @@ defmodule Brando.Authorization.Boundary do
     end
   end
 
+  @doc """
+  The process's authorization context: its scope and query action. A task
+  does not inherit the process dictionary, and a query there with no scope is
+  not narrowed at all: run the task's work in `with_captured/2`.
+  `Brando.Tenant.capture_context/1` does both.
+  """
+  def capture, do: {current_scope(), Process.get(@query_action_key)}
+
+  @doc "Runs `fun` in an authorization context taken with `capture/0`."
+  def with_captured({scope, nil}, fun), do: with_scope(scope, fun)
+
+  def with_captured({scope, {action, schema}}, fun),
+    do: with_scope(scope, fn -> with_query_action(action, schema, fun) end)
+
   @doc "Applies each source resource's read policy before identifier pagination."
   def identifiers(query) do
     if Engine.enabled?() and current_scope() do

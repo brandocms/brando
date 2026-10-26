@@ -452,7 +452,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
 
     socket
     |> assign(:sketch, %{socket.assigns.sketch | status: :loading})
-    |> start_async(:sketch, fn -> Brando.Content.ModuleSketch.generate(module) end)
+    |> start_async(:sketch, Brando.Tenant.capture_context(fn -> Brando.Content.ModuleSketch.generate(module) end))
     |> then(&{:noreply, &1})
   end
 
