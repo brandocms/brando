@@ -220,12 +220,13 @@ defmodule BrandoAdmin.Components.Form.Input.ChangeTrackingTest do
     assert socket.assigns.select_label == "Refreshed"
   end
 
-  test "Select optimistic labels preserve developer markup and escape entry titles" do
+  test "Select optimistic labels keep markup passed as {:safe, iodata} and escape other labels" do
     field = to_form(Changeset.change(%Brando.Pages.Page{title: "one"}), as: "entry")[:title]
     title = ~s|<img src=x onerror="alert(1)"> & title|
 
     for {option, expected} <- [
-          {%{label: "<em>Emphasis</em>", value: "one"}, "<em>Emphasis</em>"},
+          {%{label: {:safe, "<em>Emphasis</em>"}, value: "one"}, "<em>Emphasis</em>"},
+          {%{label: title, value: "one"}, Phoenix.HTML.html_escape(title) |> Phoenix.HTML.safe_to_string()},
           {%{entry: nil, status: :draft, label: title, value: "one"},
            Phoenix.HTML.html_escape(title) |> Phoenix.HTML.safe_to_string()}
         ] do

@@ -390,6 +390,11 @@ sender first, before the first compile.
   `websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]`.
   In a generated `LockdownController`, call `Lockdown.password?(conn, password)`
   so password attempts are limited.
+- **Markup in option labels.** A select, multi-select or radio shows its
+  option labels as text, so a label written as HTML (a swatch, an icon) shows
+  its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with
+  any stored value in it escaped (`Phoenix.HTML.html_escape/1`); never wrap a
+  stored value itself.
 
 Then validate and commit the source migration:
 

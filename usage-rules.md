@@ -650,6 +650,12 @@ def category_options(_form, _opts), do: MyApp.Articles.list_categories!(%{order:
 Options are maps or entries; `{label, value}` tuples are not supported in
 forms.
 
+Labels are text: markup in a label shows as written, since labels often come
+from data other admins control (entry titles, user names). A label built in
+code that needs markup, such as a colour swatch, is passed as
+`Phoenix.HTML.raw(html)` with any stored value in it escaped
+(`Phoenix.HTML.html_escape/1`). Never wrap a stored value itself.
+
 #### Rules
 
 * Write subform options inside the `inputs_for` block; `inputs_for :links,

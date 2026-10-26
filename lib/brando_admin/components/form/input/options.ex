@@ -47,6 +47,25 @@ defmodule BrandoAdmin.Components.Form.Input.Options do
 
   def translate_labels(options, _field), do: options
 
+  @doc """
+  An option label as HTML. Labels are text: entry titles, user names and
+  module params come from data other admins control, so a binary label is
+  escaped. Option lists written in code that need markup (swatches, icons)
+  pass the label as `{:safe, iodata}` (`Phoenix.HTML.raw/1`), which is the
+  only way markup reaches the page; stored data never arrives as a tuple.
+  """
+  def label_html({:safe, _} = label), do: Phoenix.HTML.safe_to_string(label)
+  def label_html(nil), do: ""
+  def label_html(label), do: label |> to_string() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
+  @doc """
+  An option label as plain text, for attributes and filtering: the text of a
+  `{:safe, iodata}` label without its tags.
+  """
+  def label_text({:safe, _} = label), do: label |> Phoenix.HTML.safe_to_string() |> HtmlSanitizeEx.strip_tags()
+  def label_text(nil), do: ""
+  def label_text(label), do: to_string(label)
+
   @doc false
   def assign_options(socket, load, force? \\ false) do
     %{field: field, opts: opts} = socket.assigns

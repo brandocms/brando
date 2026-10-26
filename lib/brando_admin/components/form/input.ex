@@ -357,7 +357,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       (assigns.id && assigns.id <> "-#{Brando.Utils.slugify(to_string(assigns.opt.value))}") ||
         assigns.field.id <> "-#{Brando.Utils.slugify(to_string(assigns.opt.value))}"
 
-    label = g(assigns.field.form.source.data.__struct__, to_string(assigns.opt.label))
+    label = radio_label(assigns.field.form.source.data.__struct__, assigns.opt.label)
 
     assigns =
       assigns
@@ -375,6 +375,12 @@ defmodule BrandoAdmin.Components.Form.Input do
     </label>
     """
   end
+
+  # A radio's label is text: translated in the schema's domain, as a select's
+  # Blueprint options are, and escaped, since options from a function are
+  # data. A `{:safe, iodata}` label from code is markup and kept as it is.
+  defp radio_label(_schema, {:safe, _} = label), do: label
+  defp radio_label(schema, label), do: schema |> g(to_string(label)) |> Phoenix.HTML.safe_to_string()
 
   @doc """
   A TipTap editor bound to `field`.

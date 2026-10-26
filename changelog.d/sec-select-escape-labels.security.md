@@ -1,0 +1,1 @@
+- Selects, multi-selects and radios in the admin show option labels as text, so markup in an entry title, page title, palette name or other label another admin can edit no longer runs in the picker.
