@@ -38,7 +38,7 @@ defmodule Brando.Content.Proposals.Preview do
   def render(proposal, target, actor, opts \\ []) do
     version = Keyword.get(opts, :version, :proposed)
 
-    with :ok <- renderable(proposal, target, version),
+    with :ok <- renderable(proposal, target, version, actor),
          {:ok, changeset} <- changeset(proposal, target, actor, version, opts[:shared]),
          {:ok, key} <- initialize(changeset, actor, opts[:preview_target]) do
       {:ok, html} = LivePreview.get_cache(key)
@@ -64,7 +64,9 @@ defmodule Brando.Content.Proposals.Preview do
   @spec discard([String.t()]) :: :ok
   def discard(keys), do: Enum.each(keys, &LivePreview.cleanup_cache/1)
 
-  defp renderable(proposal, target, version) do
+  # Text the guard reports as unsafe is not rendered: the preview runs in the
+  # reviewer's browser before anyone approves it.
+  defp renderable(proposal, target, version, actor) do
     schema =
       case target do
         {:new, _} -> Map.get(proposal.targets, target)
@@ -75,14 +77,10 @@ defmodule Brando.Content.Proposals.Preview do
       !schema -> {:error, dgettext("content_proposals", "This entry is not part of the proposal.")}
       version == :before and match?({:new, _}, target) -> {:error, :not_created}
       !LivePreview.has_live_preview_target(schema) -> {:error, :no_preview_target}
-      version == :proposed and unsafe_text?(proposal) -> {:error, :unsafe_text}
+      version == :proposed and Proposals.unsafe_text?(proposal, actor) -> {:error, :unsafe_text}
       true -> :ok
     end
   end
-
-  # Text the guard reports as unsafe is not rendered: the preview runs in the
-  # reviewer's browser before anyone approves it.
-  defp unsafe_text?(proposal), do: Enum.any?(proposal.problems || [], &(&1.code == :unsafe_text))
 
   defp changeset(proposal, target, actor, :proposed, shared) do
     with {:ok, changesets} <- Proposals.materialize(proposal, actor, shared: !!shared),
@@ -110,7 +108,7 @@ defmodule Brando.Content.Proposals.Preview do
   @spec share(Proposals.Proposal.t(), Proposals.Proposal.target(), term(), keyword()) ::
           {:ok, String.t(), integer()} | {:error, atom() | String.t()}
   def share(proposal, target, actor, opts \\ []) do
-    with :ok <- renderable(proposal, target, :proposed),
+    with :ok <- renderable(proposal, target, :proposed, actor),
          {:ok, changeset} <- changeset(proposal, target, actor, :proposed, opts[:shared]) do
       scope = Boundary.actor_scope(actor)
       user = Brando.Repo.get!(Brando.Users.User, scope.user_id)

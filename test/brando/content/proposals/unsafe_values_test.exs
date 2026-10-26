@@ -2,8 +2,8 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
   # Values a proposal writes into ref settings, map addresses, block vars and
   # entry fields reach templates and the Villain parser as they are. The guard
   # reports markup in them as :unsafe_text, which blocks approval and the
-  # preview, and the parser escapes what it puts into attributes, so a value
-  # the guard missed still builds no element or script address.
+  # preview. The parser's own escaping is tested in
+  # test/brando/villain/parser/escaping_test.exs.
   use Brando.ConnCase, async: false
 
   alias Brando.Content.Proposals
@@ -26,22 +26,8 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
 
   defp codes(proposal), do: Enum.map(proposal.problems, & &1.code)
 
-  # The page as rendered if the guard had missed the value.
-  defp unguarded_preview!(proposal, c) do
-    assert {:error, :unsafe_text} = Preview.render(proposal, {Page, c.identity.id}, c.user, preview_target: :blocks)
-
-    {:ok, %{key: key, html: html}} =
-      Preview.render(%{proposal | problems: []}, {Page, c.identity.id}, c.user, preview_target: :blocks)
-
-    Preview.discard([key])
-    html
-  end
-
-  # What a browser builds from `html`.
-  defp live_handlers(html), do: html |> LazyHTML.from_document() |> LazyHTML.query("[onerror]") |> Enum.count()
-
-  defp script_links(html),
-    do: html |> LazyHTML.from_document() |> LazyHTML.query(~s(a[href^="javascript" i])) |> Enum.count()
+  defp refused_preview?(proposal, c),
+    do: {:error, :unsafe_text} == Preview.render(proposal, {Page, c.identity.id}, c.user, preview_target: :blocks)
 
   describe "F07: header settings, map addresses and entry fields" do
     setup c do
@@ -63,10 +49,7 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
         assert :unsafe_text in codes(proposal), inspect(config)
         assert {:error, _} = Proposals.approve(proposal.id, proposal.version, c.user)
 
-        html = unguarded_preview!(proposal, c)
-        assert live_handlers(html) == 0
-        assert script_links(html) == 0
-        assert html =~ "Rooms"
+        assert refused_preview?(proposal, c)
       end
     end
 
@@ -99,6 +82,24 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       )
 
       assert {:error, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+
+      # Nor previewed or shared.
+      assert {:ok, stored} = Proposals.get(proposal.id, c.user)
+      assert stored.problems == []
+      assert {:error, :unsafe_text} = Preview.render(stored, {Page, c.identity.id}, c.user, preview_target: :blocks)
+      assert {:error, :unsafe_text} = Preview.share(stored, {Page, c.identity.id}, c.user)
+    end
+
+    test "a stored approval made before a check existed cannot be applied", c do
+      op = %InsertBlock{target: {Page, c.identity.id}, module: c.heading.id, configs: %{heading: %{class: @breakout}}}
+      assert {:ok, proposal} = Proposals.propose([op], c.user)
+
+      Brando.Repo.update_all(
+        from(r in Brando.Content.Proposals.Record, where: r.id == ^proposal.id),
+        set: [problems: [], status: "approved", approved_at: DateTime.utc_now()]
+      )
+
+      assert {:error, _} = Proposals.apply(proposal.id, proposal.version, c.user)
     end
 
     test "ordinary header settings stay valid", c do
@@ -118,8 +119,7 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
         assert {:ok, proposal} = Proposals.propose([op], c.user)
         assert codes(proposal) == [:unsafe_text], text
 
-        html = unguarded_preview!(proposal, c)
-        assert live_handlers(html) == 0
+        assert refused_preview?(proposal, c)
       end
 
       ok = %InsertBlock{
@@ -206,7 +206,7 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
     test "the link tag escapes the address and leaves out script addresses", c do
       op = %InsertBlock{target: {Page, c.identity.id}, module: c.note.id, values: %{cta: @script_link}}
       assert {:ok, proposal} = Proposals.propose([op], c.user)
-      assert script_links(unguarded_preview!(proposal, c)) == 0
+      assert refused_preview?(proposal, c)
 
       render = fn url ->
         var = %Brando.Content.Var{type: :link, key: "cta", link_type: :url, value: url, link_text: "Go"}
@@ -246,6 +246,12 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       end
 
       op = %SetFields{target: {Page, c.identity.id}, fields: %{title: liquid}}
+      assert {:ok, proposal} = Proposals.propose([op], c.user)
+      assert codes(proposal) == [:unsafe_text]
+
+      # Spelled with character references, which an attribute is rendered with decoded.
+      encoded = "&#123;&#123; x | url_decode &#125;&#125;"
+      op = %InsertBlock{target: {Page, c.identity.id}, module: c.note.id, values: %{heading: encoded}}
       assert {:ok, proposal} = Proposals.propose([op], c.user)
       assert codes(proposal) == [:unsafe_text]
     end

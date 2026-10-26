@@ -112,6 +112,19 @@ defmodule Brando.Content.Proposals do
     %{proposal | problems: problems, effects: effects(proposal)}
   end
 
+  @doc """
+  Whether `proposal` holds text the current checks report as unsafe. The
+  operations are checked again: a proposal stored before a check was added
+  or tightened keeps its old problem list.
+  """
+  @spec unsafe_text?(Proposal.t(), term()) :: boolean()
+  def unsafe_text?(%Proposal{} = proposal, actor) do
+    case Error.protect(fn -> operation_problems(proposal, actor) end) do
+      {:ok, problems} -> Enum.any?((proposal.problems || []) ++ problems, &(&1.code == :unsafe_text))
+      {:error, _} -> true
+    end
+  end
+
   defp operation_problems(proposal, actor) do
     {problems, _trees} =
       proposal.operations
@@ -1067,8 +1080,10 @@ defmodule Brando.Content.Proposals do
   # A module's output is rendered as Liquid once more when it holds a tag, so
   # a proposed value cannot carry one: a filter could write markup no check
   # here saw.
+  # Attribute values are rendered with their character references decoded
+  # (`Brando.Villain.Parser.escape_attr/1`), which could spell a tag too.
   defp liquid_problem(text, name) do
-    if String.contains?(text, ["{{", "{%"]),
+    if Enum.any?([text, HtmlEntities.decode(text)], &String.contains?(&1, ["{{", "{%"])),
       do: dgettext("content_proposals", "%{name} cannot hold Liquid tags.", name: name)
   end
 
@@ -2547,6 +2562,10 @@ defmodule Brando.Content.Proposals do
 
     unless record.status == "approved" and record.version == proposal.version,
       do: Error.fail!(dgettext("content_proposals", "Approve this version of the proposal before applying it."))
+
+    # An approval stored before a check was added or tightened.
+    if operation_problems(proposal, actor) != [],
+      do: Error.fail!(dgettext("content_proposals", "Resolve every blocking problem before applying."))
 
     locked =
       proposal.fingerprints
