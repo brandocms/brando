@@ -136,9 +136,10 @@ defmodule Brando.Forms do
   def submit(key, params, meta) do
     with %Form{} = form <- get_published_form(key, params["_language"]) || {:error, :not_found},
          :ok <- check_honeypot(params, form),
-         :ok <- tag(RateLimit.hit(Submission.current_scope(), form.key, ip_hash(meta[:ip])), form),
+         :ok <- tag(RateLimit.check_visitor(Submission.current_scope(), form.key, ip_hash(meta[:ip])), form),
          :ok <- tag(verify_turnstile(params, meta), form),
          {:ok, data} <- tag(Validation.validate(form, params["fields"] || %{}), form),
+         :ok <- tag(RateLimit.count_form(Submission.current_scope(), form.key), form),
          {:ok, submission} <- insert_submission(form, data, meta) do
       Notification.confirm(submission, form)
       {:ok, Notification.enqueue(submission), form}

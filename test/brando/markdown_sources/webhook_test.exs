@@ -5,6 +5,8 @@ defmodule Brando.MarkdownSources.WebhookTest do
   @secret String.duplicate("s", 40)
 
   setup do
+    Brando.MarkdownSources.RateLimiter.reset()
+    on_exit(&Brando.MarkdownSources.RateLimiter.reset/0)
     old = Application.get_env(:brando, :markdown_sources)
 
     Application.put_env(:brando, :markdown_sources,
@@ -110,5 +112,47 @@ defmodule Brando.MarkdownSources.WebhookTest do
     Oban.Testing.with_testing_mode(:manual, fn ->
       assert signed(body) |> Webhook.call([]) |> Map.get(:status) == 202
     end)
+  end
+
+  # Audit F23: unsigned requests used up the node-wide budget before the
+  # signature was checked, and a limited delivery got 401
+  describe "rate limits" do
+    defp unsigned(ip) do
+      %{Plug.Test.conn(:post, "https://cms.example.test/api/markdown-sources/webhooks/docs", "{}") | remote_ip: ip}
+      |> put_req_header("content-type", "application/json")
+    end
+
+    test "unsigned requests from many addresses leave the budget for signed deliveries" do
+      for i <- 1..1_300 do
+        ip = {10, 1, div(i, 250), rem(i, 250)}
+        assert unsigned(ip) |> Webhook.call([]) |> Map.get(:status) == 401
+      end
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert payload() |> signed() |> Webhook.call([]) |> Map.get(:status) == 202
+      end)
+    end
+
+    test "one address over its budget gets 429, and others are not held back" do
+      for _ <- 1..120, do: assert(unsigned({192, 0, 2, 1}) |> Webhook.call([]) |> Map.get(:status) == 401)
+
+      conn = unsigned({192, 0, 2, 1}) |> Webhook.call([])
+      assert conn.status == 429
+      assert Jason.decode!(conn.resp_body) == %{"status" => "rate_limited"}
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert payload() |> signed() |> Webhook.call([]) |> Map.get(:status) == 202
+      end)
+    end
+
+    test "clients behind a trusted proxy are counted by their own address" do
+      proxied = fn client ->
+        unsigned({127, 0, 0, 1}) |> put_req_header("x-forwarded-for", client) |> Webhook.call([])
+      end
+
+      for _ <- 1..120, do: assert(proxied.("203.0.113.9").status == 401)
+      assert proxied.("203.0.113.9").status == 429
+      assert proxied.("198.51.100.7").status == 401
+    end
   end
 end

@@ -1,4 +1,7 @@
 defmodule Brando.Plug.Lockdown do
+  @attempts_per_window 10
+  @attempt_window :timer.minutes(15)
+
   @moduledoc """
   Basic plug for locking down websites under development
 
@@ -31,6 +34,12 @@ defmodule Brando.Plug.Lockdown do
   You can also add the password as a query string to set a cookie that allows browsing.
 
   `https://website/?key=<pass>`
+
+  Password attempts are limited to #{@attempts_per_window} per client address in
+  #{div(@attempt_window, 60_000)} minutes (`password?/2`, which the lockdown
+  page's controller calls), so the password cannot be guessed by trying
+  many. The address is the client's, also behind a trusted reverse proxy
+  (`Brando.ClientIP`).
   """
   @behaviour Plug
 
@@ -62,12 +71,33 @@ defmodule Brando.Plug.Lockdown do
     end
   end
 
-  @doc "Whether `given` is the configured `lockdown_password`."
+  @doc """
+  Whether `given` is the configured `lockdown_password`. Use `password?/2`
+  for what a visitor sent, so their attempts are counted.
+  """
   @spec password?(term()) :: boolean()
   def password?(given) do
     case password() do
       nil -> false
       password -> is_binary(given) and Plug.Crypto.secure_compare(given, password)
+    end
+  end
+
+  @doc """
+  Whether `given`, sent by the visitor at `conn`, is the configured
+  `lockdown_password`. Counts the attempt against the visitor's address;
+  past #{@attempts_per_window} in #{div(@attempt_window, 60_000)} minutes, even the right
+  password is refused until the window ends.
+  """
+  @spec password?(Plug.Conn.t(), term()) :: boolean()
+  def password?(%Plug.Conn{} = conn, given) do
+    password() != nil and attempt_allowed?(conn) and password?(given)
+  end
+
+  defp attempt_allowed?(conn) do
+    case Brando.ClientIP.from_conn(conn) do
+      nil -> true
+      ip -> Brando.RateLimit.hit({__MODULE__, ip}, @attempts_per_window, @attempt_window) == :ok
     end
   end
 
@@ -87,7 +117,7 @@ defmodule Brando.Plug.Lockdown do
       session["lockdown_authorized"] == true ->
         conn
 
-      password?(key(conn)) ->
+      key(conn) != nil and password?(conn, key(conn)) ->
         Plug.Conn.put_session(conn, :lockdown_authorized, true)
 
       true ->

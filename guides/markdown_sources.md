@@ -172,10 +172,12 @@ membership and current account activation are rechecked server-side.
 The plug authenticates a strict HMAC-SHA256 signature over the complete raw body
 using constant-time comparison, before JSON parsing. Ambiguous/missing headers,
 wrong repositories, unsupported events, oversized and incomplete bodies fail
-closed. It accepts at most 1 MiB and limits requests per node to 120 per client
-address and 1,200 globally per minute; apply distributed rate limits at the edge
-when running multiple nodes. Do not trust forwarded client IP headers without a
-trusted proxy configuration.
+closed. It accepts at most 1 MiB and, per node and minute, 120 requests per
+client address and 1,200 deliveries whose signature verified, so unsigned
+requests cannot hold back GitHub's. A request over either limit gets 429, which
+shows in GitHub's delivery log. Apply distributed rate limits at the edge when
+running multiple nodes. The client address is taken from `X-Forwarded-For` only
+when the request comes from a trusted proxy (`Brando.ClientIP`).
 
 Receipt uniqueness covers both connection-scoped delivery IDs and verified body
 fingerprints. Renaming a delivery header cannot replay the same body. Receipts retain the accepted Oban job IDs for processing-status lookup. Receipt

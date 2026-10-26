@@ -57,7 +57,7 @@ defmodule Brando.Forms.SubmissionController do
 
   defp handle(conn, key, params) do
     meta = %{
-      ip: conn.remote_ip |> :inet.ntoa() |> to_string(),
+      ip: client_ip(conn),
       user_agent: conn |> get_req_header("user-agent") |> List.first(),
       url: referer(conn)
     }
@@ -138,6 +138,14 @@ defmodule Brando.Forms.SubmissionController do
   end
 
   defp resolve(_conn, url), do: url
+
+  # The visitor's address, also behind a trusted reverse proxy
+  defp client_ip(conn) do
+    case Brando.ClientIP.from_conn(conn) do
+      nil -> nil
+      address -> address |> :inet.ntoa() |> to_string()
+    end
+  end
 
   defp referer(conn), do: conn |> get_req_header("referer") |> List.first()
 

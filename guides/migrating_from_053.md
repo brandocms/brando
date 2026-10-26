@@ -378,6 +378,12 @@ sender first, before the first compile.
 - **`<input name="id">`.** LiveView 1.2 warns at compile time, since it
   overrides the form's `id` property in the browser. Rename the field (to
   `_id`, say) and map it back where the form is handled.
+- **Visitor addresses behind the proxy.** Add `:x_headers` to the
+  `connect_info` of the endpoint's `/live` socket, so `LiveForm` counts
+  visitors by their own address and not the proxy's:
+  `websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]`.
+  In a generated `LockdownController`, call `Lockdown.password?(conn, password)`
+  so password attempts are limited.
 
 Then validate and commit the source migration:
 

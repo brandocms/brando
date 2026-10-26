@@ -112,6 +112,39 @@ defmodule Brando.Plug.LockdownTest do
     assert request("/", %{lockdown_authorized: true}).status == nil
   end
 
+  # Audit report, section 6: the password had no attempt throttling
+  describe "password attempts" do
+    setup do
+      put_test_env(:lockdown, true)
+      put_test_env(:lockdown_password, "my_pass")
+      Brando.RateLimit.reset(&match?({Lockdown, _}, &1))
+      on_exit(fn -> Brando.RateLimit.reset(&match?({Lockdown, _}, &1)) end)
+    end
+
+    defp attempt(ip, password) do
+      Lockdown.password?(%{Plug.Test.conn(:post, "/coming-soon") | remote_ip: ip}, password)
+    end
+
+    test "after ten tries from one address, even the right password is refused there" do
+      for _ <- 1..10, do: refute(attempt({203, 0, 113, 5}, "guess"))
+
+      refute attempt({203, 0, 113, 5}, "my_pass")
+      assert attempt({198, 51, 100, 7}, "my_pass")
+    end
+
+    test "?key= counts as a try" do
+      for _ <- 1..10, do: assert(request("/?key=guess", %{}).status == 302)
+
+      assert request("/?key=my_pass", %{}).status == 302
+    end
+
+    test "a page without ?key= is not a try" do
+      for _ <- 1..20, do: request("/", %{})
+
+      assert request("/?key=my_pass", %{}).status == nil
+    end
+  end
+
   test "with groups authorization, backend access lets a user in, not the legacy role" do
     put_test_env(:lockdown, true)
     put_test_env(:authorization_mode, :groups)

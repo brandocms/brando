@@ -118,4 +118,33 @@ defmodule Brando.HTML.Forms.LiveFormTest do
 
     assert has_element?(view, "#contact-form-failed.is-shown", "Too many submissions")
   end
+
+  # Audit F22: the rate limit and ip_hash use the visitor's address, also
+  # behind a trusted proxy
+  describe "connect_meta/1" do
+    defp socket_with(info), do: %Phoenix.LiveView.Socket{private: %{connect_info: info}}
+
+    test "reads the client's address from X-Forwarded-For when the peer is a trusted proxy" do
+      info = %{
+        peer_data: %{address: {127, 0, 0, 1}, port: 4000, ssl_cert: nil},
+        x_headers: [{"x-forwarded-for", "203.0.113.99"}],
+        user_agent: "Test"
+      }
+
+      assert %{ip: "203.0.113.99", user_agent: "Test"} = Brando.HTML.Forms.LiveForm.connect_meta(socket_with(info))
+    end
+
+    test "ignores X-Forwarded-For from a peer that is not a trusted proxy" do
+      info = %{
+        peer_data: %{address: {198, 51, 100, 4}, port: 4000, ssl_cert: nil},
+        x_headers: [{"x-forwarded-for", "203.0.113.99"}]
+      }
+
+      assert %{ip: "198.51.100.4"} = Brando.HTML.Forms.LiveForm.connect_meta(socket_with(info))
+    end
+
+    test "has no address without peer data" do
+      assert %{ip: nil} = Brando.HTML.Forms.LiveForm.connect_meta(socket_with(%{}))
+    end
+  end
 end
