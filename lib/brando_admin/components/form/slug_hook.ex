@@ -9,6 +9,11 @@ defmodule BrandoAdmin.Components.Form.SlugHook do
   the hook's own `camelCase`.
   """
 
+  # Ported from npm slugify 1.6.9, the exact version `assets/package.json`
+  # pins: another version's character map can differ. Upgrading it means
+  # porting its `charMap` here again and regenerating SlugHookTest's table
+  # in Node.
+
   # Whitespace as JavaScript's `\s`
   @js_space "\\t\\n\\x{0B}\\f\\r \\x{A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}"
 

@@ -39,6 +39,12 @@ defmodule BrandoAdmin.Components.Form.SlugHookTest do
     {"#1 hit", "1-hit"}
   ]
 
+  # The port is of one version's character map: another needs porting again
+  test "the hook's slugify is pinned to the ported version" do
+    package = "assets/package.json" |> File.read!() |> Jason.decode!()
+    assert package["dependencies"]["slugify"] == "1.6.9"
+  end
+
   test "slugify/1 gives the hook's slug" do
     assert Enum.map(@hook_slugs, fn {title, _} -> {title, SlugHook.slugify(title)} end) == @hook_slugs
   end

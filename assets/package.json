@@ -69,7 +69,7 @@
     "morphdom": "^2.7.8",
     "phoenix": "1.8.16",
     "phoenix_live_view": "1.2.13",
-    "slugify": "^1.6.9",
+    "slugify": "1.6.9",
     "sortablejs": "^1.15.7",
     "tippy.js": "^6.3.7",
     "tus-js-client": "^4.3.1",
