@@ -638,7 +638,13 @@ defmodule BrandoAdmin.Components.Form do
          |> assign(:edit_video, edit_video)
          |> assign(:video_changeset, video_changeset)}
 
-      _ ->
+      # Cloudflare and Vimeo record that the file arrived; a refusal leaves
+      # the video in the library and is reported, as the picker does.
+      {:error, reason} ->
+        send(self(), {:toast, Brando.Uploads.video_upload_error_message(reason)})
+        {:ok, socket}
+
+      :error ->
         {:ok, socket}
     end
   end
