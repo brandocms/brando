@@ -71,7 +71,17 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
-msgid "%{name} takes an https embed address."
+msgid "%{name} takes a web, mail or phone address."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} takes an https Google Maps embed address."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} takes no quotes or markup."
 msgstr ""
 
 #: lib/brando/content/proposals.ex

@@ -302,6 +302,7 @@ defmodule Brando.Content.Proposals do
 
       true ->
         protected_fields(op.fields, op.schema) ++
+          text_fields(op.fields, op.schema) ++
           asset_fields(op.fields, op.schema, actor) ++
           list_fields(op.fields, op.schema, actor) ++ draft_dependencies(op.fields, proposal)
     end
@@ -315,6 +316,7 @@ defmodule Brando.Content.Proposals do
     {status, fields} = Map.split(op.fields, ["status"])
 
     protected_fields(fields, schema) ++
+      text_fields(fields, schema) ++
       status_problems(status, schema, proposal.targets[op.target], actor) ++
       asset_fields(op.fields, schema, actor) ++
       list_fields(op.fields, schema, actor) ++ draft_dependencies(op.fields, proposal)
@@ -502,10 +504,28 @@ defmodule Brando.Content.Proposals do
 
   defp config(name, config, module) do
     case Enum.find(module.refs || [], &(&1.name == name)) do
-      nil -> ref_exists(name, module)
-      definition -> Enum.map(RefConfig.problems(name, definition, config), &problem(:unsupported_value, &1))
+      nil ->
+        ref_exists(name, module)
+
+      definition ->
+        Enum.map(RefConfig.problems(name, definition, config), &problem(:unsupported_value, &1)) ++
+          Enum.flat_map(config, fn {key, value} -> setting_problems(to_string(key), value) end)
     end
   end
+
+  # Settings are rendered into attributes (a heading's class, id and link)
+  # and captions. A caption's title and credits take safe rich text, a link
+  # an address, a class or id no quotes, and any other text no markup.
+  defp setting_problems(key, value) when is_binary(value) do
+    cond do
+      key in ~w(title credits) -> unsafe(rich_text_problem(value, key))
+      key in ~w(link poster) -> unsafe(address_problem(value, key))
+      key == "id" or String.ends_with?(key, "class") -> unsafe(token_problem(value, key))
+      true -> unsafe(plain_text_problem(value, key))
+    end
+  end
+
+  defp setting_problems(_key, _value), do: []
 
   # An image, video or file field takes media of its own kind, from the
   # library. The value is saved as the asset's id.
@@ -764,6 +784,30 @@ defmodule Brando.Content.Proposals do
     end
   end
 
+  # Templates output entry fields as they are: a rich-text field takes safe
+  # rich text, any other text field plain text.
+  defp text_fields(fields, schema) do
+    rich = rich_text_fields(schema)
+
+    for {key, value} <- fields, is_binary(value), string_field?(schema, key), reduce: [] do
+      problems ->
+        message = if key in rich, do: rich_text_problem(value, key), else: plain_text_problem(value, key)
+        problems ++ unsafe(message)
+    end
+  end
+
+  defp rich_text_fields(schema) do
+    if function_exported?(schema, :__rich_text_fields__, 0),
+      do: Enum.map(schema.__rich_text_fields__(), &to_string/1),
+      else: []
+  end
+
+  defp string_field?(schema, key) do
+    schema.__schema__(:type, String.to_existing_atom(key)) == :string
+  rescue
+    ArgumentError -> false
+  end
+
   # An existing entry's status: a real one for its type, and publishing —
   # into or out of published — needs the publish permission.
   defp status_problems(status, _schema, _entry, _actor) when status == %{}, do: []
@@ -924,6 +968,17 @@ defmodule Brando.Content.Proposals do
          problem(:wrong_media_type, dgettext("content_proposals", "%{name} does not accept this media type.", name: key))
        ]
 
+  # Templates output text values as they are: a string takes plain text, a
+  # text or HTML value safe rich text, and a link an address.
+  defp value_problems(%{type: :string}, key, value, _actor) when is_binary(value),
+    do: unsafe(plain_text_problem(value, key))
+
+  defp value_problems(%{type: type}, key, value, _actor) when type in [:text, :html] and is_binary(value),
+    do: unsafe(rich_text_problem(value, key))
+
+  defp value_problems(%{type: :link}, key, value, _actor) when is_binary(value) and value != "",
+    do: unsafe(address_problem(value, key))
+
   defp value_problems(var, key, value, _actor),
     do: if(settable?(var, value), do: [], else: [unsupported(var, key, value)])
 
@@ -973,15 +1028,8 @@ defmodule Brando.Content.Proposals do
   defp unknown_text(name),
     do: problem(:unknown_ref, dgettext("content_proposals", "The module has no text slot %{name}.", name: name))
 
-  # A link to an entry that was not resolved is reported as such.
-  defp text_problem(type, text, name) when type in ["text", "markdown", "html"] do
-    unless EntryLinks.unresolved?(text) or Brando.RichText.safe_html?(text),
-      do: dgettext("content_proposals", "%{name} contains unsafe rich text.", name: name)
-  end
-
-  defp text_problem("header", text, name) do
-    if String.contains?(text, ["<", ">"]), do: dgettext("content_proposals", "%{name} takes plain text.", name: name)
-  end
+  defp text_problem(type, text, name) when type in ["text", "markdown", "html"], do: rich_text_problem(text, name)
+  defp text_problem("header", text, name), do: plain_text_problem(text, name)
 
   defp text_problem("svg", text, name) do
     unless Brando.RichText.safe_svg?(text),
@@ -989,11 +1037,56 @@ defmodule Brando.Content.Proposals do
   end
 
   defp text_problem("map", text, name) do
-    unless String.starts_with?(text, "https://"),
-      do: dgettext("content_proposals", "%{name} takes an https embed address.", name: name)
+    unless embed_address?(text),
+      do: dgettext("content_proposals", "%{name} takes an https Google Maps embed address.", name: name)
   end
 
   defp text_problem(_type, _text, _name), do: :unknown
+
+  # A link to an entry that was not resolved is reported as such
+  # (`link_problems/1`); the rest of the text is still checked.
+  defp rich_text_problem(text, name) do
+    unless text |> EntryLinks.blank_unresolved() |> Brando.RichText.safe_html?(),
+      do: dgettext("content_proposals", "%{name} contains unsafe rich text.", name: name)
+  end
+
+  defp plain_text_problem(text, name) do
+    if String.contains?(text, ["<", ">"]), do: dgettext("content_proposals", "%{name} takes plain text.", name: name)
+  end
+
+  defp token_problem(text, name) do
+    if String.contains?(text, ["<", ">", "\"", "'", "`", "="]),
+      do: dgettext("content_proposals", "%{name} takes no quotes or markup.", name: name)
+  end
+
+  # A web, mail or phone address, or a path. Quotes, angle brackets and
+  # character references are refused too: a template may put the address in
+  # an attribute as it is.
+  defp address_problem(text, name) do
+    scheme = Regex.run(~r/^([a-z][a-z0-9+.-]*):/i, text, capture: :all_but_first)
+
+    unless Brando.RichText.allowed_uri?(text) and
+             (scheme == nil or String.downcase(hd(scheme)) in ~w(http https mailto tel)) and
+             not unsafe_in_attribute?(text),
+           do: dgettext("content_proposals", "%{name} takes a web, mail or phone address.", name: name)
+  end
+
+  # A map is embedded from Google Maps, over https.
+  defp embed_address?(text) do
+    case URI.new(text) do
+      {:ok, %URI{scheme: "https", host: host}} when is_binary(host) ->
+        (host == "google.com" or String.ends_with?(host, ".google.com")) and Brando.RichText.allowed_uri?(text) and
+          not unsafe_in_attribute?(text)
+
+      _ ->
+        false
+    end
+  end
+
+  defp unsafe_in_attribute?(text), do: Regex.match?(~r/["'<>`]|&(#|[a-z][a-z0-9]*;)/i, text)
+
+  defp unsafe(nil), do: []
+  defp unsafe(message), do: [problem(:unsafe_text, message)]
 
   defp media(name, {kind, _} = asset, module, actor) when kind in [:image, :video, :file, :gallery] do
     case Enum.find(module.refs || [], &(&1.name == name)) do

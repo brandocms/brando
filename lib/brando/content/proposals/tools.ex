@@ -907,7 +907,7 @@ defmodule Brando.Content.Proposals.Tools do
   defp text_slot("markdown"), do: "text: markdown"
   defp text_slot("html"), do: "text: safe HTML"
   defp text_slot("svg"), do: "text: one <svg> element, no scripts"
-  defp text_slot("map"), do: "text: an https map embed address"
+  defp text_slot("map"), do: "text: an https Google Maps embed address"
   defp text_slot(_), do: nil
 
   defp settable(type) when type in [:string, :text, :html], do: "a string"

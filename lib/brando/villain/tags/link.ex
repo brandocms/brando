@@ -14,7 +14,7 @@ defmodule Brando.Villain.Tags.Link do
     {evaled_link, _context} = Liquex.Argument.eval(link, context)
 
     link_text = Brando.Villain.Filters.link_text(evaled_link, context)
-    link_url = Brando.Villain.Filters.link_url(evaled_link, context)
+    link_url = evaled_link |> Brando.Villain.Filters.link_url(context) |> href()
     new_window? = evaled_link.link_target_blank
 
     link_html =
@@ -22,4 +22,13 @@ defmodule Brando.Villain.Tags.Link do
 
     {link_html, context}
   end
+
+  # An address with a script or unknown scheme renders as an empty href.
+  defp href(url) when is_binary(url) do
+    if Brando.RichText.allowed_uri?(url),
+      do: url |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string(),
+      else: ""
+  end
+
+  defp href(_), do: ""
 end
