@@ -32,18 +32,18 @@ defmodule Brando.Forms.Delivery do
   # A run of markup, or an `<input>` tag. Markup is read text run by text run
   # and tag by tag, so an `<input>` inside a comment, a raw-text element or
   # another tag's quoted attribute is never taken for a tag. As in a browser, a
-  # quote starts a value only after `=`, and a `<` that starts none of these
-  # is text. `\G` starts each match where the
+  # quote starts a value only after `=`, a `<` that starts none of these is
+  # text, and whitespace is HTML's (no vertical tab). `\G` starts each match where the
   # last one ended, and a run stops after 50 pieces to stay within the regex
   # engine's limits on a large page.
-  @markup_or_input ~r/\G(?:(?:[^<]++|<!--.*?-->|<(script|style|textarea|title)\b(?:[^>=]++|=\s*+"[^"]*+"|=\s*+'[^']*+'|=)*+>.*?<\/\1\s*>|<(?!input[\s\/>])[a-zA-Z\/!?](?:[^>=]++|=\s*+"[^"]*+"|=\s*+'[^']*+'|=)*+>|<(?!input[\s\/>])){1,50}+|(<input(?=[\s\/>])(?:[^>=]++|=\s*+"[^"]*+"|=\s*+'[^']*+'|=)*+>))/is
+  @markup_or_input ~r/\G(?:(?:[^<]++|<!--.*?-->|<(script|style|textarea|title)(?=[\t\n\f\r \/>])(?:[^>=]++|=[\t\n\f\r ]*+"[^"]*+"|=[\t\n\f\r ]*+'[^']*+'|=)*+>.*?<\/\1[\t\n\f\r ]*>|<(?!input[\t\n\f\r \/>])[a-zA-Z\/!?](?:[^>=]++|=[\t\n\f\r ]*+"[^"]*+"|=[\t\n\f\r ]*+'[^']*+'|=)*+>|<(?!input[\t\n\f\r \/>])){1,50}+|(<input(?=[\t\n\f\r \/>])(?:[^>=]++|=[\t\n\f\r ]*+"[^"]*+"|=[\t\n\f\r ]*+'[^']*+'|=)*+>))/is
 
   # An `<input>` whose attributes follow one another as a browser reads them:
   # a name, then a double-quoted, single-quoted or bare value, with spaces or
   # `/` between them or none after a quote. A tag that reads any other way is
   # left as it is.
-  @input_tag ~r{\A<input(?=[\s/>])(?>[\s/]*+[^\s"'<>/=]++(?:\s*+=\s*+(?:"[^"]*+"|'[^']*+'|[^\s"'=<>`]++))?)*+[\s/]*+>\z}i
-  @attribute ~r{\G([\s/]*+)([^\s"'<>/=]++)(?:\s*+=\s*+(?:"([^"]*+)"|'([^']*+)'|([^\s"'=<>`]++)))?}
+  @input_tag ~r{\A<input(?=[\t\n\f\r />])(?>[\t\n\f\r /]*+[^\t\n\f\r "'<>/=]++(?:[\t\n\f\r ]*+=[\t\n\f\r ]*+(?:"[^"]*+"|'[^']*+'|[^\t\n\f\r "'=<>`]++))?)*+[\t\n\f\r /]*+>\z}i
+  @attribute ~r{\G([\t\n\f\r /]*+)([^\t\n\f\r "'<>/=]++)(?:[\t\n\f\r ]*+=[\t\n\f\r ]*+(?:"([^"]*+)"|'([^']*+)'|([^\t\n\f\r "'=<>`]++)))?}
 
   @doc "The placeholder `{% form %}` stores where the CSRF token goes."
   def csrf_placeholder, do: @csrf_placeholder

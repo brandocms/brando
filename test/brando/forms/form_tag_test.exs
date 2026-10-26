@@ -131,24 +131,29 @@ defmodule Brando.Forms.FormTagTest do
   end
 
   test "finalize leaves inputs that are not the form's token input" do
-    # An image input loads its src; the attributes are only text inside it
-    # A browser starts the next attribute right after a quote or a slash
-    # An input inside another tag's attribute, a comment or a script is not a tag
-    # A quote in an attribute name starts no value
-    html =
-      ~s(<input type="hidden" name="_csrf_token" value="$csrftoken-x">) <>
-        ~s(<input type="hidden" name="q" value="$csrftoken">) <>
-        ~s(<input type="text" name="_csrf_token" value="$csrftoken">) <>
-        ~s(<input type="image" src='https://images.example.net/?a name="_csrf_token" value="$csrftoken"'>) <>
-        ~s(<input type="hidden" alt='x name="_csrf_token" value="$csrftoken"'>) <>
-        ~s(<input x=""type="image"src='https://images.example.net/?a type="hidden" name="_csrf_token" value="$csrftoken"'>) <>
-        ~s(<input/type="image"/src='https://images.example.net/?a type="hidden" name="_csrf_token" value="$csrftoken"'>) <>
-        ~s(<img src='https://images.example.net/?<input type="hidden" name="_csrf_token" value="$csrftoken">'>) <>
-        ~s(<img x"=1 src='https://images.example.net/?"><input type="hidden" name="_csrf_token" value="$csrftoken">'>) <>
-        ~s(<!-- <input type="hidden" name="_csrf_token" value="$csrftoken"> -->) <>
-        ~s(<script>let s = '<input type="hidden" name="_csrf_token" value="$csrftoken">'</script>)
+    cases = [
+      ~s(<input type="hidden" name="_csrf_token" value="$csrftoken-x">),
+      ~s(<input type="hidden" name="q" value="$csrftoken">),
+      ~s(<input type="text" name="_csrf_token" value="$csrftoken">),
+      # An image input loads its src; the attributes are only text inside it
+      ~s(<input type="image" src='https://images.example.net/?a name="_csrf_token" value="$csrftoken"'>),
+      ~s(<input type="hidden" alt='x name="_csrf_token" value="$csrftoken"'>),
+      # A browser starts the next attribute right after a quote or a slash
+      ~s(<input x=""type="image"src='https://images.example.net/?a type="hidden" name="_csrf_token" value="$csrftoken"'>),
+      ~s(<input/type="image"/src='https://images.example.net/?a type="hidden" name="_csrf_token" value="$csrftoken"'>),
+      # A vertical tab is not whitespace in HTML
+      "<input x=y\vtype=hidden type=image name=_csrf_token src=https://images.example.net/?\vvalue=$csrftoken>",
+      # An input inside another tag's attribute, a comment or a script is not a tag
+      ~s(<img src='https://images.example.net/?<input type="hidden" name="_csrf_token" value="$csrftoken">'>),
+      ~s(<!-- <input type="hidden" name="_csrf_token" value="$csrftoken"> -->),
+      ~s(<script>let s = '<input type="hidden" name="_csrf_token" value="$csrftoken">'</script>),
+      # A quote in an attribute name starts no value
+      ~s(<img x"=1 src='https://images.example.net/?"><input type="hidden" name="_csrf_token" value="$csrftoken">'>),
+      # A custom element named like a raw-text one is not raw text
+      ~s(<title-card><img src='https://images.example.net/?</title><input type="hidden" name="_csrf_token" value="$csrftoken">'></title-card>)
+    ]
 
-    assert Delivery.finalize(html) == html
+    for html <- cases, do: assert(Delivery.finalize(html) == html)
   end
 
   test "finalize fills in a site component's token input whatever its attribute order" do
