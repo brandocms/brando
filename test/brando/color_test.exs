@@ -86,14 +86,15 @@ defmodule Brando.ColorTest do
     refute errors_on(Var.changeset(%Var{}, %{params | type: :string}, :system))[:value]
   end
 
-  test "a palette keeps colours it already stored; a new one must be a colour" do
-    palette = %Palette{name: "Site", key: "site", colors: [%Palette.Color{name: "Ink", key: "ink", hex_value: "old"}]}
-    row = fn hex -> %{name: "Ink", key: "ink", hex_value: hex} end
+  test "a palette row kept as stored keeps its colour; a changed or new row must hold a colour" do
+    palette = %Palette{name: "Site", key: "site", colors: [%Palette.Color{name: "Ink", key: "ink", hex_value: "old;x"}]}
+    row = fn key, hex -> %{name: "Ink", key: key, hex_value: hex} end
+    colour_errors = fn rows -> errors_on(Palette.changeset(palette, %{colors: rows}, :system))[:colors] || [] end
 
-    assert errors_on(Palette.changeset(palette, %{colors: [row.("old")]}, :system))[:colors] in [nil, [%{}]]
-
-    errors = errors_on(Palette.changeset(palette, %{colors: [row.("old;x")]}, :system))[:colors]
-    assert Enum.any?(errors, &match?(%{hex_value: [_]}, &1))
+    refute Enum.any?(colour_errors.([row.("ink", "old;x")]), &match?(%{hex_value: _}, &1))
+    # The stored value copied to another row, or kept in an edited row
+    assert Enum.any?(colour_errors.([row.("ink", "old;x"), row.("ink2", "old;x")]), &match?(%{hex_value: _}, &1))
+    assert Enum.any?(colour_errors.([%{row.("ink", "old;x") | name: "Renamed"}]), &match?(%{hex_value: _}, &1))
   end
 
   test "re-reading a stored var skips the check" do

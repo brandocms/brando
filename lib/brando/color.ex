@@ -83,16 +83,16 @@ defmodule Brando.Color do
 
   @doc """
   Validates `fields`: field names, or `{relation, fields}` for the rows of
-  a subform, which are cast into the changeset already. A row may keep a
-  value one of the stored rows holds: rows without a primary key (embeds)
-  are all cast as new, so their stored values come back as changes.
+  a subform, which are cast into the changeset already. A row kept exactly
+  as stored is not checked: rows without a primary key (embeds) are cast as
+  new on every save, so a value stored before this check came back as a
+  change. A row that changes is checked whole.
   """
-  @spec validate(Changeset.t(), [atom() | {atom(), list()}], map()) :: Changeset.t()
-  def validate(changeset, fields, stored \\ %{}),
-    do: Enum.reduce(fields, changeset, &validate_field(&2, &1, stored))
+  @spec validate(Changeset.t(), [atom() | {atom(), list()}]) :: Changeset.t()
+  def validate(changeset, fields), do: Enum.reduce(fields, changeset, &validate_field(&2, &1))
 
-  defp validate_field(changeset, {relation, fields}, _stored) do
-    stored = stored_values(Map.get(changeset.data, relation), fields)
+  defp validate_field(changeset, {relation, fields}) do
+    stored = stored_rows(Map.get(changeset.data, relation))
 
     case Map.fetch(changeset.changes, relation) do
       {:ok, children} when is_list(children) ->
@@ -108,25 +108,19 @@ defmodule Brando.Color do
     end
   end
 
-  defp validate_field(changeset, field, stored) do
-    known = Map.get(stored, field, MapSet.new())
-
+  defp validate_field(changeset, field) do
     Changeset.validate_change(changeset, field, fn _, value ->
-      if valid?(value) or MapSet.member?(known, value), do: [], else: [{field, @message}]
+      if valid?(value), do: [], else: [{field, @message}]
     end)
   end
 
-  defp stored_values(rows, fields) do
-    rows =
-      case rows do
-        rows when is_list(rows) -> rows
-        %Ecto.Association.NotLoaded{} -> []
-        %{} = row -> [row]
-        _ -> []
-      end
+  defp stored_rows(rows) when is_list(rows), do: Enum.map(rows, &row_fields/1)
+  defp stored_rows(%Ecto.Association.NotLoaded{}), do: []
+  defp stored_rows(%{} = row), do: [row_fields(row)]
+  defp stored_rows(_), do: []
 
-    for field <- fields, is_atom(field), into: %{}, do: {field, MapSet.new(rows, &Map.get(&1, field))}
-  end
+  defp row_fields(%module{} = row), do: Map.take(row, module.__schema__(:fields))
+  defp row_fields(row), do: row
 
   defp validate_current(changeset, field) do
     if valid?(Changeset.get_field(changeset, field)),
@@ -134,7 +128,12 @@ defmodule Brando.Color do
       else: Changeset.add_error(changeset, field, @message)
   end
 
-  defp validate_child(%Changeset{} = child, fields, stored), do: validate(child, fields, stored)
+  defp validate_child(%Changeset{} = child, fields, stored) do
+    if row_fields(Changeset.apply_changes(child)) in stored,
+      do: child,
+      else: validate(child, fields)
+  end
+
   defp validate_child(child, _fields, _stored), do: child
 
   defp child_valid?(%Changeset{valid?: valid?}), do: valid?

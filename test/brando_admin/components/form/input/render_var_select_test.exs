@@ -9,10 +9,12 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVarSelectTest do
   test "option labels are escaped" do
     label = ~s(<img src="data:," onerror="document.title=1">Small)
 
-    assert [%{label: {:safe, escaped}, value: "s"}] =
+    # A string: a `{:safe, _}` label would go into `data-select-label`
+    # unescaped, and the browser would decode it back to markup.
+    assert [%{label: escaped, value: "s"}] =
              RenderVar.select_options([%Var.Option{label: %{"en" => label, "no" => label}, value: "s"}])
 
-    escaped = IO.iodata_to_binary(escaped)
+    assert is_binary(escaped)
     assert escaped =~ "&lt;img"
     refute escaped =~ "<img"
   end

@@ -526,7 +526,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   # Developer-authored `%{label: ...}` options may deliberately contain markup
   # and pass through untouched; entry titles and custom values are user input
   # and must be escaped before they reach `raw`. A var's choices arrive
-  # escaped, as `{:safe, _}` labels (RenderVar).
+  # escaped (RenderVar).
   defp get_label(input_options, selected_option, selected_origin, allow_custom) do
     case Enum.find(input_options, fn
            option -> option_selected?(option, selected_option, selected_origin)
