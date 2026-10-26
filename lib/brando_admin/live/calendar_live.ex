@@ -177,8 +177,8 @@ defmodule BrandoAdmin.CalendarLive do
          %Date{} = date <- parse_date(date) do
       {:reply,
        %{
-         title: escape(gettext("Move “%{title}”?", title: item.title)),
-         message: escape(move_summary(item, date)),
+         title: gettext("Move “%{title}”?", title: item.title),
+         message: move_summary(item, date),
          confirm: gettext("Move")
        }, socket}
     else
@@ -207,16 +207,16 @@ defmodule BrandoAdmin.CalendarLive do
          |> load()
          |> push_event("b:alert", %{
            type: "warning",
-           title: escape(gettext("Not moved")),
-           message: escape(move_error(error))
+           title: gettext("Not moved"),
+           message: move_error(error)
          })}
 
       error ->
         {:noreply,
          push_event(socket, "b:alert", %{
            type: "error",
-           title: escape(gettext("Not moved")),
-           message: escape(move_error(error))
+           title: gettext("Not moved"),
+           message: move_error(error)
          })}
     end
   end
@@ -238,8 +238,6 @@ defmodule BrandoAdmin.CalendarLive do
 
   defp move_error({:error, :forbidden}), do: gettext("You may not reschedule this entry.")
   defp move_error(_error), do: gettext("The entry could not be moved. Reload the calendar and try again.")
-
-  defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
   ## Copy
 

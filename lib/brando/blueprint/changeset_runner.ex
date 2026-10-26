@@ -78,6 +78,7 @@ defmodule Brando.Blueprint.ChangesetRunner do
     )
     |> maybe_sequence(changeset_params.module, changeset_params.sequence)
     |> Brando.RichText.validate_blueprint(changeset_params.module)
+    |> Brando.Color.validate_blueprint(changeset_params.module)
   end
 
   @doc """

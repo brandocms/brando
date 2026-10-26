@@ -68,6 +68,7 @@ defmodule E2eProjectWeb.Router do
       post "/mcp/:action", E2EFixtureController, :mcp
       post "/field-ai/:action", E2EFixtureController, :field_ai
       post "/alt-text-image", E2EFixtureController, :alt_text_image
+      post "/text-sinks/:action", E2EFixtureController, :text_sinks
       post "/work/:action", E2EFixtureController, :work
       # Bunny's tus endpoint (E2EFakeBunny); Plug.Head serves HEAD as a GET.
       post "/bunny/tus", E2EFakeBunnyTusController, :create

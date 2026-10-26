@@ -37,16 +37,9 @@ export default function installConfirm() {
       e.preventDefault()
       e.stopImmediatePropagation()
 
-      // The attributes are plain text; the dialog takes HTML.
-      const escape = value => {
-        const text = document.createElement('span')
-        text.textContent = value || ''
-        return text.innerHTML
-      }
-
       alertConfirm(
-        escape(el.getAttribute('data-confirm-title')),
-        escape(message),
+        el.getAttribute('data-confirm-title'),
+        message,
         ok => {
           if (!ok) return
           // A patch may have replaced the element while the dialog was open.

@@ -313,6 +313,8 @@ defmodule Brando.LivePreview do
     end)
   end
 
+  @initialize_failed "Live Preview could not render this entry. The server log has the details."
+
   @decorate span("brando.preview.initialize", schema: :schema)
   def initialize(schema, changeset, updated_entry_assocs \\ %{}, target \\ nil) do
     cache_key = build_cache_key(:erlang.system_time())
@@ -333,31 +335,36 @@ defmodule Brando.LivePreview do
           {:error, "You no longer have permission to preview this entry."}
       end
     rescue
+      # The alert gets a fixed message, the log the exception: its text can
+      # carry entry content another editor wrote.
       err in [KeyError] ->
         cleanup_cache(cache_key)
-
-        Logger.error("""
-
-        Stacktrace:
-
-        #{Exception.format(:error, err, __STACKTRACE__)}
-
-        """)
+        log_initialize_error(err, __STACKTRACE__)
 
         if match?(%Ecto.Association.NotLoaded{}, Map.get(err, :term)) do
           field = err.term |> Map.from_struct() |> Map.get(:__field__)
 
           {:error,
-           "LivePreview is missing preload for #{inspect(field)}<br><br>Add `schema_preloads [#{inspect(field)}]` to your `preview_target`"}
+           "LivePreview is missing preload for #{inspect(field)}. Add `schema_preloads [#{inspect(field)}]` to your `preview_target`."}
         else
-          {:error, "#{inspect(err, pretty: true)}"}
+          {:error, @initialize_failed}
         end
 
       err ->
         cleanup_cache(cache_key)
-        error_message = Map.get(err, :message, inspect(err))
-        {:error, "Initialization failed.\r\n\r\n#{error_message}"}
+        log_initialize_error(err, __STACKTRACE__)
+        {:error, @initialize_failed}
     end
+  end
+
+  defp log_initialize_error(err, stacktrace) do
+    Logger.error("""
+
+    Live Preview initialization failed:
+
+    #{Exception.format(:error, err, stacktrace)}
+
+    """)
   end
 
   def update_cache(cache_key, schema, changeset, updated_entry_assocs \\ %{}),

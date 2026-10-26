@@ -1286,6 +1286,50 @@ defmodule E2EFixtureController do
     send_resp(conn, 200, "")
   end
 
+  # Server text that admin pages must show as text (sec/admin-text-sinks).
+  # The spec sends the values; these write them past the changesets that now
+  # refuse them, as older data or another path could have stored them.
+  def text_sinks(conn, %{"action" => "user-name", "email" => email, "name" => name}) do
+    allow_sandbox(conn)
+    user = Brando.Users.get_user!(%{matches: %{email: email}})
+    user |> Ecto.Changeset.change(name: name) |> Brando.Repo.update!()
+    send_resp(conn, 200, "")
+  end
+
+  def text_sinks(conn, %{"action" => "color-image", "color" => color}) do
+    allow_sandbox(conn)
+    {_name, image} = create_directory_avatar()
+
+    image =
+      image
+      |> Ecto.Changeset.change(config_target: "default", dominant_color: color)
+      |> Brando.Repo.update!()
+
+    json(conn, %{id: image.id})
+  end
+
+  # What image processing and saves report through the user channel
+  def text_sinks(conn, %{"action" => "progress"} = params) do
+    allow_sandbox(conn)
+    user = get_admin_user()
+
+    BrandoAdmin.Progress.show(user.id)
+
+    BrandoAdmin.Progress.update(user.id, params["status"], %{
+      key: params["key"],
+      percent: 10,
+      filename: params["filename"]
+    })
+
+    BrandoAdmin.ProgressPopup.send_to(user, params["popup"])
+    send_resp(conn, 200, "")
+  end
+
+  defp allow_sandbox(conn) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+  end
+
   def alt_text_image(conn, _params) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)

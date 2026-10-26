@@ -320,7 +320,7 @@ defmodule Brando.CDN do
 
     progress_string =
       gettext(
-        "Uploading image to CDN &rarr; %{s3_bucket}",
+        "Uploading image to CDN → %{s3_bucket}",
         src_key: src_key,
         s3_bucket: s3_bucket
       )
@@ -366,7 +366,7 @@ defmodule Brando.CDN do
       {:ok, %{status_code: 200}} ->
         progress_string =
           gettext(
-            "Uploading image to CDN &rarr; %{s3_bucket}",
+            "Uploading image to CDN → %{s3_bucket}",
             src_key: src_key,
             s3_bucket: s3_bucket
           )

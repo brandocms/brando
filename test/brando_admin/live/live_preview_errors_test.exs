@@ -23,7 +23,7 @@ defmodule BrandoAdmin.LivePreviewErrorsTest do
         "Cannot open Live Preview with errors in form. Please correct marked fields and try again<br><br>Fields marked invalid:"
       )
 
-    assert_push_event(view, "b:alert", %{message: message}, 3_000)
+    assert_push_event(view, "b:alert", %{html: message}, 3_000)
     assert message =~ preview_notice
     refute render(view) =~ "__livepreview"
   end

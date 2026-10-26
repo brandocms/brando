@@ -9,6 +9,10 @@ import { alertConfirm } from '../../alerts'
  * event, with the element's `phx-value-id`) and uses the title, message and
  * labels it replies with — for text that depends on the entry, like what a
  * delete takes with it.
+ *
+ * All of it is text. A reply may carry `html` instead of `message`: markup the
+ * server built and escaped (BrandoAdmin.LiveView.Listing.DeleteDescription
+ * links the places a media file is used).
  */
 export default app => ({
   mounted() {
@@ -27,10 +31,10 @@ export default app => ({
       this.el.closest('.dropdown-content')?.classList.add('hidden')
       const destructive = this.el.hasAttribute('phx-confirm-click-destructive')
 
-      const confirm = ({ title, message, confirm, cancel }) =>
+      const confirm = ({ title, message, html, confirm, cancel }) =>
         alertConfirm(
           title,
-          message,
+          typeof html === 'string' ? { html } : message,
           confirmed => {
             if (confirmed !== false) {
               app.liveSocket.execJS(this.el, event)
@@ -50,7 +54,7 @@ export default app => ({
 
       if (describe) {
         this.pushEvent(describe, { id: this.el.getAttribute('phx-value-id') }, reply =>
-          confirm(reply && reply.message ? reply : fromElement)
+          confirm(reply && (reply.message || reply.html) ? reply : fromElement)
         )
       } else {
         confirm(fromElement)

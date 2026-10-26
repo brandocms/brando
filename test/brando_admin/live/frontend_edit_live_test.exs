@@ -130,6 +130,29 @@ defmodule BrandoAdmin.FrontendEditLiveTest do
     assert uid == intro.uid
   end
 
+  # The alert shows the name as text (`message`); only `html` is markup, and
+  # this alert has none (audit F16).
+  test "the refused save names the other user in the alert's text", %{conn: conn, intro: intro, page: page} do
+    {view, _html} = editor(conn, intro.uid)
+    name = ~s(<img src="data:," onerror="document.title=1">Ada)
+    other = Brando.Factory.insert(:random_user, name: name)
+
+    {:ok, saved} = Brando.Pages.update_page(Repo.get!(Page, page.id), %{title: "Saved by Ada"}, other)
+
+    Phoenix.PubSub.broadcast(
+      Brando.pubsub(),
+      Brando.Tenant.Topic.scoped("brando:mutations:#{inspect(Page)}"),
+      {:mutation, Page, saved, :update}
+    )
+
+    await_selector(view, "[data-testid=frontend-edit-stale]")
+
+    view |> form("##{@form}_form") |> render_submit()
+    assert_push_event(view, "b:alert", %{type: "error", message: message} = alert)
+    assert message =~ name
+    refute Map.has_key?(alert, :html)
+  end
+
   test "is present at the entry's admin form, as editing from the website", %{
     conn: conn,
     intro: intro,

@@ -42,6 +42,7 @@ defmodule BrandoAdmin.Components.Form do
   alias Brando.LivePreview
   alias Brando.Tracing
   alias Brando.Villain
+  alias BrandoAdmin.Alert
   alias BrandoAdmin.Components.Button
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.FilePicker
@@ -4046,14 +4047,14 @@ defmodule BrandoAdmin.Components.Form do
           message =
             gettext(
               ~s(A shareable time limited URL has been created. The URL will expire %{expiration_days} days from now.<br><br><a href="%{preview_url}" target="_blank">OPEN LINK</a>),
-              %{expiration_days: expiration_days, preview_url: preview_url}
+              %{expiration_days: expiration_days, preview_url: Alert.escape(preview_url)}
             )
 
           socket
           |> clear_blocks_root_changesets()
           |> push_event("b:alert", %{
             title: gettext("Get shareable link"),
-            message: message,
+            html: message,
             type: "info"
           })
 
@@ -7924,10 +7925,10 @@ defmodule BrandoAdmin.Components.Form do
 
     all_error_items =
       for key <- translated_error_keys do
-        "<li class=\"text-mono\">#{key}</li>"
+        "<li class=\"text-mono\">#{Alert.escape(key)}</li>"
       end ++
         for {path, messages} <- nested_error_paths do
-          "<li class=\"text-mono\">#{path}: #{Enum.join(messages, ", ")}</li>"
+          "<li class=\"text-mono\">#{Alert.escape(path)}: #{Alert.escape(Enum.join(messages, ", "))}</li>"
         end
 
     error_msg = """
@@ -7949,7 +7950,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> assign(:active_tab, tab_with_first_error)
     |> push_event("b:select_form_tab", %{id: "#{socket.assigns.id}-el", name: tab_with_first_error})
-    |> push_event("b:alert", %{title: error_title, message: error_msg, type: "error"})
+    |> push_event("b:alert", %{title: error_title, html: error_msg, type: "error"})
     |> push_event("b:scroll_to_first_error", %{})
   end
 
@@ -8177,13 +8178,13 @@ defmodule BrandoAdmin.Components.Form do
       gettext(
         "Server rejected %{kind} type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
         %{
-          kind: upload_kind_label(kind),
-          rejected_type: rejected_type,
-          allowed_types: inspect(allowed_types)
+          kind: Alert.escape(upload_kind_label(kind)),
+          rejected_type: Alert.escape(rejected_type),
+          allowed_types: Alert.escape(inspect(allowed_types))
         }
       )
 
-    {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", message: error_msg})}
+    {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", html: error_msg})}
   end
 
   defp upload_error_noreply(socket, _kind, %Changeset{} = changeset) do

@@ -4911,7 +4911,7 @@ msgstr ""
 
 #: lib/brando/images/operations/sizing.ex
 #, elixir-autogen, elixir-format
-msgid "Creating image size: <strong>%{size_key}</strong>/%{format}"
+msgid "Creating image size: %{size_key}/%{format}"
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
@@ -18861,7 +18861,7 @@ msgstr ""
 
 #: lib/brando/cdn.ex
 #, elixir-autogen, elixir-format
-msgid "Uploading image to CDN &rarr; %{s3_bucket}"
+msgid "Uploading image to CDN → %{s3_bucket}"
 msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex

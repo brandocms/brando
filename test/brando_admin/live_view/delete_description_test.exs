@@ -20,7 +20,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescriptionTest do
   test "names the entry and what's deleted with it" do
     entry = article("Parthenon", ["One", "Two"])
 
-    assert %{title: title, message: message, confirm: "Delete", cancel: "Cancel"} =
+    assert %{title: title, html: message, confirm: "Delete", cancel: "Cancel"} =
              DeleteDescription.describe(Article, entry)
 
     assert title == "Delete article?"
@@ -30,7 +30,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescriptionTest do
 
   test "leaves out owned relations that are empty, and escapes the name" do
     entry = article("<b>Bold</b>", [])
-    %{message: message} = DeleteDescription.describe(Article, entry)
+    %{html: message} = DeleteDescription.describe(Article, entry)
 
     assert message =~ "<strong>&lt;b&gt;Bold&lt;/b&gt;</strong> will be deleted."
     refute message =~ "together"
@@ -38,14 +38,14 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescriptionTest do
 
   test "an entry without a name is \"this entry\", not the schema's noun spliced in" do
     entry = article("", [])
-    %{message: message} = DeleteDescription.describe(Article, entry)
+    %{html: message} = DeleteDescription.describe(Article, entry)
 
     assert message =~ "This entry will be deleted."
   end
 
   test "a soft-deleted entry is moved to Deleted, where it can be restored" do
     page = Brando.Factory.insert(:page, title: "About")
-    %{message: message} = DeleteDescription.describe(Brando.Pages.Page, page)
+    %{html: message} = DeleteDescription.describe(Brando.Pages.Page, page)
 
     assert message =~ "<strong>About</strong> is moved to the list's Deleted filter"
     assert message =~ "It can be restored from there."
@@ -59,14 +59,14 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescriptionTest do
 
       for n <- 1..7, do: Brando.Factory.insert(:video, title: "Video #{n}", thumbnail_id: image.id)
 
-      %{message: message} = DeleteDescription.describe(Brando.Images.Image, image)
+      %{html: message} = DeleteDescription.describe(Brando.Images.Image, image)
 
       assert message =~ "It is used in 7 places:"
       assert message =~ ~r{<a href="[^"]+" target="_blank">Video 1</a>}
       assert message =~ "2 more"
       refute message =~ "Video 7"
 
-      refute DeleteDescription.describe(Brando.Images.Image, unused).message =~ "It is used"
+      refute DeleteDescription.describe(Brando.Images.Image, unused).html =~ "It is used"
     end
   end
 end
