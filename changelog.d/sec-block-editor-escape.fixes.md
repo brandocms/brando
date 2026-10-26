@@ -1,0 +1,1 @@
+- A block with a form variable opens in the block editor instead of crashing the entry form.

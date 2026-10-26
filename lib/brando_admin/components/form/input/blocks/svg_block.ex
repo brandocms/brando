@@ -65,7 +65,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
           <div class="svg-block" phx-hook="Brando.SVGDrop" id={"block-#{@uid}-svg-drop"} data-target={@myself}>
             <%= if block_data[:code].value do %>
               <div class="svg-block-preview" id={"block-#{@uid}-svg-preview"}>
-                {block_data[:code].value |> raw}
+                <img src={svg_preview_src(block_data[:code].value)} alt="" />
               </div>
             <% else %>
               <div class="empty">
@@ -91,4 +91,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
     </div>
     """
   end
+
+  # The code is an editor's markup. As an image the browser draws it without
+  # running its scripts or handlers in the admin page.
+  defp svg_preview_src(code), do: "data:image/svg+xml;base64," <> :base64.encode(code)
 end
