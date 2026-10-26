@@ -323,10 +323,11 @@ Every input type reads these:
   A save ignores any value sent for a locked top-level input. The field
   keeps its saved value, or one Brando set: a new entry's `default_params`,
   a translation or a revision's working copy. A restored recovery copy
-  doesn't change it. An empty field takes the input's `default:`. The
-  exception is an `:image`, `:file`, `:video` or `:gallery` input: its
-  controls are inert, but the form still takes an asset its picker or an
-  upload delivers for it, and a recovery copy's.
+  doesn't change it. An empty field takes the input's `default:`. A locked
+  `:image`, `:file`, `:video` or `:gallery` input keeps its asset too: a
+  picker's selection, an upload, removing it or resetting its drawer, a new
+  copy from the image editor, a gallery edit and a recovery copy leave it as
+  it is.
 
   A locked `:slug` input that is empty, as on a new entry, is generated
   from its `source` on the server, as an unlocked one is while

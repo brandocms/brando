@@ -395,15 +395,7 @@ defmodule BrandoAdmin.Components.Form do
         %{action: :update_edit_file, file: file},
         %{assigns: %{edit_file: edit_file}} = socket
       ) do
-    updated_edit_file = Map.merge(edit_file, %{file: file, id: file.id})
-    file_changeset = change(file)
-
-    {:ok,
-     socket
-     |> assign(:edit_file, updated_edit_file)
-     |> assign(:file_changeset, file_changeset)
-     |> commit_selected_asset(updated_edit_file, file)
-     |> assign_drawer_recovery_state()}
+    {:ok, select_drawer_asset(socket, :file, edit_file, file)}
   end
 
   def update(%{action: :update_edit_file, edit_file: %{file: nil} = edit_file}, socket) do
@@ -433,15 +425,7 @@ defmodule BrandoAdmin.Components.Form do
         %{action: :update_edit_image, image: image},
         %{assigns: %{edit_image: edit_image}} = socket
       ) do
-    updated_edit_image = Map.merge(edit_image, %{image: image, id: image.id})
-    image_changeset = change(image)
-
-    {:ok,
-     socket
-     |> assign(:edit_image, updated_edit_image)
-     |> assign(:image_changeset, image_changeset)
-     |> commit_selected_asset(updated_edit_image, image)
-     |> assign_drawer_recovery_state()}
+    {:ok, select_drawer_asset(socket, :image, edit_image, image)}
   end
 
   def update(
@@ -504,15 +488,7 @@ defmodule BrandoAdmin.Components.Form do
         %{action: :update_edit_video, video: video},
         %{assigns: %{edit_video: edit_video}} = socket
       ) do
-    updated_edit_video = Map.merge(edit_video, %{video: video, id: video.id})
-    video_changeset = change(video)
-
-    {:ok,
-     socket
-     |> assign(:edit_video, updated_edit_video)
-     |> assign(:video_changeset, video_changeset)
-     |> commit_selected_asset(updated_edit_video, video)
-     |> assign_drawer_recovery_state()}
+    {:ok, select_drawer_asset(socket, :video, edit_video, video)}
   end
 
   def update(
@@ -628,15 +604,21 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :video_upload_complete, upload: params}, socket) do
     case ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params, [:thumbnail]) do
       {:ok, video} ->
-        edit_video = Map.put(socket.assigns.edit_video, :video, video)
-        video_changeset = change(video)
-        relation_key = String.to_existing_atom("#{socket.assigns.edit_video.field}_id")
+        # Completed all the same: a locked field doesn't take the video,
+        # which stays in the library
+        if edit_asset_locked?(socket, socket.assigns.edit_video) do
+          {:ok, socket}
+        else
+          edit_video = Map.put(socket.assigns.edit_video, :video, video)
+          video_changeset = change(video)
+          relation_key = String.to_existing_atom("#{socket.assigns.edit_video.field}_id")
 
-        {:ok,
-         socket
-         |> update_changeset(relation_key, video.id)
-         |> assign(:edit_video, edit_video)
-         |> assign(:video_changeset, video_changeset)}
+          {:ok,
+           socket
+           |> update_changeset(relation_key, video.id)
+           |> assign(:edit_video, edit_video)
+           |> assign(:video_changeset, video_changeset)}
+        end
 
       # Cloudflare and Vimeo record that the file arrived; a refusal leaves
       # the video in the library and is reported, as the picker does.
@@ -784,21 +766,9 @@ defmodule BrandoAdmin.Components.Form do
   # processing. The `reset_*_field` handlers clear the flag when they close
   # their drawer.
   def update(%{event: "clear_entry_field_asset", field: field, path: path}, socket) do
-    relation_key = String.to_existing_atom("#{field}_id")
-
-    changeset =
-      socket.assigns.form.source
-      |> put_key_at(path, relation_key, nil)
-      |> put_asset_in_data(path, field, nil)
-
-    {:ok,
-     socket
-     |> put_local_form(to_form(changeset, []))
-     |> update_entry_with_relation(path ++ [field], nil)
-     |> relation_changed(path, field, nil)
-     |> own_asset(path, relation_key, :id)
-     |> ship_all_field_changes()
-     |> push_event("b:validate", %{})}
+    if locked_field?(socket, path, field),
+      do: {:ok, socket},
+      else: clear_entry_field_asset(socket, field, path)
   end
 
   def update(
@@ -896,90 +866,18 @@ defmodule BrandoAdmin.Components.Form do
     {:ok, deliver_entry_field_asset(socket, :video, field, path, video)}
   end
 
-  # Gallery entry fields: append the delivered image to the gallery assoc.
-  def update(
-        %{event: "entry_field_upload_complete", asset_type: :gallery, field: key, asset: image} = params,
-        socket
-      ) do
+  # Gallery entry fields: append the delivered image or video to the gallery
+  # assoc. A locked gallery takes neither, and its input and the picker are
+  # not told of one.
+  def update(%{event: "entry_field_upload_complete", asset_type: type, field: key} = params, socket)
+      when type in [:gallery, :gallery_video] do
     path = Map.get(params, :path, [])
-    component_id = Map.get(params, :component_id) || "#{socket.assigns.singular}_#{key}"
-    config_target = Map.get(params, :config_target)
-    gallery = gallery_at(socket.assigns.form.source, path, key)
 
-    new_gallery_image = %{
-      image_id: image.id,
-      creator_id: socket.assigns.current_user.id,
-      gallery_id: gallery && gallery.id,
-      image: image
-    }
-
-    current_gallery_objects = (gallery && gallery.gallery_objects) || []
-
-    unloaded_image_ids =
-      current_gallery_objects
-      |> Enum.filter(&(&1.image != nil && &1.image.__struct__ == Ecto.Association.NotLoaded))
-      |> Enum.map(& &1.image_id)
-
-    loaded_image_ids =
-      current_gallery_objects
-      |> Enum.filter(&(&1.image != nil && &1.image.__struct__ != Ecto.Association.NotLoaded))
-      |> Enum.map(& &1.image_id)
-
-    selected_images = loaded_image_ids ++ unloaded_image_ids ++ [image.id]
-
-    send_update(ImagePicker, id: "image-picker", selected_images: selected_images)
-
-    send_update(BrandoAdmin.Components.Form.Input.Gallery,
-      id: component_id,
-      new_image: %{image_id: image.id, image: image},
-      selected_images: selected_images
-    )
-
-    # Already-processed deliveries (inline-Oban race) get no later [:image,
-    # :updated] broadcast — an unconditional add would leave a stale
-    # never-cleared processing_images entry.
-    socket =
-      if image.status != :processed do
-        update(socket, :processing_images, &[image.id | &1])
-      else
-        socket
-      end
-
-    {:ok, append_gallery_object(socket, path, key, new_gallery_image, config_target)}
-  end
-
-  # Gallery entry fields: append the delivered video to the gallery assoc.
-  def update(
-        %{event: "entry_field_upload_complete", asset_type: :gallery_video, field: key, asset: video} = params,
-        socket
-      ) do
-    path = Map.get(params, :path, [])
-    component_id = Map.get(params, :component_id) || "#{socket.assigns.singular}_#{key}"
-    config_target = Map.get(params, :config_target)
-    gallery = gallery_at(socket.assigns.form.source, path, key)
-
-    new_gallery_video = %{
-      video_id: video.id,
-      creator_id: socket.assigns.current_user.id,
-      gallery_id: gallery && gallery.id,
-      video: video
-    }
-
-    selected_videos =
-      ((gallery && gallery.gallery_objects) || [])
-      |> Enum.filter(& &1.video_id)
-      |> Enum.map(& &1.video_id)
-      |> Kernel.++([video.id])
-
-    send_update(VideoPicker, id: "video-picker", selected_videos: selected_videos)
-
-    send_update(BrandoAdmin.Components.Form.Input.Gallery,
-      id: component_id,
-      new_video: %{video_id: video.id, video: video},
-      selected_videos: selected_videos
-    )
-
-    {:ok, append_gallery_object(socket, path, key, new_gallery_video, config_target)}
+    cond do
+      locked_field?(socket, path, key) -> {:ok, socket}
+      type == :gallery -> {:ok, deliver_gallery_image(socket, path, key, params)}
+      true -> {:ok, deliver_gallery_video(socket, path, key, params)}
+    end
   end
 
   # Unified handler for updating entry relations.
@@ -993,40 +891,9 @@ defmodule BrandoAdmin.Components.Form do
         %{event: "update_entry_relation", path: path, updated_relation: updated_relation} = params,
         socket
       ) do
-    update_entry? = Map.get(params, :update_entry, false)
-    force_validation? = Map.get(params, :force_validation, false)
-    live_preview_active? = socket.assigns.live_preview_active?
-
-    force_live_preview_update =
-      live_preview_active? && Map.get(params, :force_live_preview_update, false)
-
-    # 1. Always update updated_entry_assocs (for live preview)
-    socket = update_entry_assocs(socket, path, updated_relation)
-    socket = if params[:draft_dirty], do: Drafts.dirty(socket), else: socket
-
-    # 2. Optionally update entry
-    socket =
-      if update_entry? or force_validation? do
-        update_entry_with_relation(socket, path, updated_relation)
-      else
-        socket
-      end
-
-    # 4. Optionally trigger validation + svelte remounts
-    socket =
-      if force_validation? do
-        socket |> push_event("b:validate", %{}) |> force_svelte_remounts()
-      else
-        socket
-      end
-
-    # 5. Always handle live preview. A forced update queued after a full
-    # rerender merges into it.
-    socket
-    |> maybe_invalidate_live_preview_assign(path)
-    |> maybe_rerender_live_preview_for(path_to_strings(path))
-    |> then(&if(force_live_preview_update, do: fetch_root_blocks(&1, :live_preview_update, 0), else: &1))
-    |> then(&{:ok, &1})
+    if locked_field?(socket, Enum.drop(path, -1), List.last(path)),
+      do: {:ok, socket},
+      else: update_entry_relation(socket, path, updated_relation, params)
   end
 
   # Deprecation wrapper — delegates to the unified event handler
@@ -1923,6 +1790,116 @@ defmodule BrandoAdmin.Components.Form do
   #
   # Block-level picks are excluded: they carry a `block_target` and commit
   # through `Block.commit_ref_data/2` instead, and `field` is nil for them.
+  defp deliver_gallery_image(socket, path, key, %{asset: image} = params) do
+    component_id = Map.get(params, :component_id) || "#{socket.assigns.singular}_#{key}"
+    config_target = Map.get(params, :config_target)
+    gallery = gallery_at(socket.assigns.form.source, path, key)
+
+    new_gallery_image = %{
+      image_id: image.id,
+      creator_id: socket.assigns.current_user.id,
+      gallery_id: gallery && gallery.id,
+      image: image
+    }
+
+    current_gallery_objects = (gallery && gallery.gallery_objects) || []
+
+    unloaded_image_ids =
+      current_gallery_objects
+      |> Enum.filter(&(&1.image != nil && &1.image.__struct__ == Ecto.Association.NotLoaded))
+      |> Enum.map(& &1.image_id)
+
+    loaded_image_ids =
+      current_gallery_objects
+      |> Enum.filter(&(&1.image != nil && &1.image.__struct__ != Ecto.Association.NotLoaded))
+      |> Enum.map(& &1.image_id)
+
+    selected_images = loaded_image_ids ++ unloaded_image_ids ++ [image.id]
+
+    send_update(ImagePicker, id: "image-picker", selected_images: selected_images)
+
+    send_update(BrandoAdmin.Components.Form.Input.Gallery,
+      id: component_id,
+      new_image: %{image_id: image.id, image: image},
+      selected_images: selected_images
+    )
+
+    # Already-processed deliveries (inline-Oban race) get no later [:image,
+    # :updated] broadcast — an unconditional add would leave a stale
+    # never-cleared processing_images entry.
+    socket =
+      if image.status != :processed do
+        update(socket, :processing_images, &[image.id | &1])
+      else
+        socket
+      end
+
+    append_gallery_object(socket, path, key, new_gallery_image, config_target)
+  end
+
+  defp deliver_gallery_video(socket, path, key, %{asset: video} = params) do
+    component_id = Map.get(params, :component_id) || "#{socket.assigns.singular}_#{key}"
+    config_target = Map.get(params, :config_target)
+    gallery = gallery_at(socket.assigns.form.source, path, key)
+
+    new_gallery_video = %{
+      video_id: video.id,
+      creator_id: socket.assigns.current_user.id,
+      gallery_id: gallery && gallery.id,
+      video: video
+    }
+
+    selected_videos =
+      ((gallery && gallery.gallery_objects) || [])
+      |> Enum.filter(& &1.video_id)
+      |> Enum.map(& &1.video_id)
+      |> Kernel.++([video.id])
+
+    send_update(VideoPicker, id: "video-picker", selected_videos: selected_videos)
+
+    send_update(BrandoAdmin.Components.Form.Input.Gallery,
+      id: component_id,
+      new_video: %{video_id: video.id, video: video},
+      selected_videos: selected_videos
+    )
+
+    append_gallery_object(socket, path, key, new_gallery_video, config_target)
+  end
+
+  defp clear_entry_field_asset(socket, field, path) do
+    relation_key = String.to_existing_atom("#{field}_id")
+
+    changeset =
+      socket.assigns.form.source
+      |> put_key_at(path, relation_key, nil)
+      |> put_asset_in_data(path, field, nil)
+
+    {:ok,
+     socket
+     |> put_local_form(to_form(changeset, []))
+     |> update_entry_with_relation(path ++ [field], nil)
+     |> relation_changed(path, field, nil)
+     |> own_asset(path, relation_key, :id)
+     |> ship_all_field_changes()
+     |> push_event("b:validate", %{})}
+  end
+
+  # A picker's selection (or a duplicate) in the image, file or video drawer.
+  # A locked field's drawer keeps its asset.
+  defp select_drawer_asset(socket, asset_type, edit_asset, asset) do
+    if edit_asset_locked?(socket, edit_asset) do
+      socket
+    else
+      updated_edit_asset = Map.merge(edit_asset, %{asset_type => asset, :id => asset.id})
+
+      socket
+      |> assign(:"edit_#{asset_type}", updated_edit_asset)
+      |> assign(:"#{asset_type}_changeset", change(asset))
+      |> commit_selected_asset(updated_edit_asset, asset)
+      |> assign_drawer_recovery_state()
+    end
+  end
+
   defp commit_selected_asset(socket, %{field: field} = edit_asset, asset) when not is_nil(field) do
     if Map.get(edit_asset, :block_target) do
       socket
@@ -1939,6 +1916,12 @@ defmodule BrandoAdmin.Components.Form do
   # genuinely different — they append to an assoc — and stay on their own
   # clauses.
   defp deliver_entry_field_asset(socket, asset_type, field, path, asset) do
+    if locked_field?(socket, path, field),
+      do: socket,
+      else: deliver_unlocked_entry_field_asset(socket, asset_type, field, path, asset)
+  end
+
+  defp deliver_unlocked_entry_field_asset(socket, asset_type, field, path, asset) do
     edit_key = :"edit_#{asset_type}"
     changeset_key = :"#{asset_type}_changeset"
 
@@ -1967,6 +1950,12 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp commit_entry_field_asset(socket, field, path, relation_key, asset) do
+    if locked_field?(socket, path, field),
+      do: socket,
+      else: commit_unlocked_entry_field_asset(socket, field, path, relation_key, asset)
+  end
+
+  defp commit_unlocked_entry_field_asset(socket, field, path, relation_key, asset) do
     full_path = path ++ [relation_key]
 
     updated_changeset =
@@ -2132,6 +2121,12 @@ defmodule BrandoAdmin.Components.Form do
   # changeset. `path == []` is the entry's own field; anything deeper is a
   # gallery on a nested (subform) record, which only `update_at/3` can reach.
   defp put_gallery_at(socket, path, key, new_gallery) do
+    if locked_field?(socket, path, key),
+      do: socket,
+      else: put_unlocked_gallery_at(socket, path, key, new_gallery)
+  end
+
+  defp put_unlocked_gallery_at(socket, path, key, new_gallery) do
     updated_changeset = put_gallery_into(socket.assigns.form.source, path, key, new_gallery)
 
     socket
@@ -2200,8 +2195,14 @@ defmodule BrandoAdmin.Components.Form do
   # so a carried-over value could land on the wrong row.
   #
   #     %{meta_image_id: :id, photos: :gallery}
+  #
+  # A locked field is never owned (`locked_field?/3`): params never supply it
+  # either (`LockedFields.lock/6`), so a save keeps the entry's value whatever
+  # wrote the form, a recovery copy or another editor's change included.
   defp own_asset(socket, [], key, kind) do
-    assign(socket, :server_owned_assets, Map.put(owned_assets(socket), key, kind))
+    if locked_field?(socket, [], key),
+      do: socket,
+      else: assign(socket, :server_owned_assets, Map.put(owned_assets(socket), key, kind))
   end
 
   defp own_asset(socket, _nested_path, _key, _kind), do: socket
@@ -2214,6 +2215,33 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp clear_owned_assets(socket), do: assign(socket, :server_owned_assets, %{})
+
+  # -- Locked media inputs --
+  #
+  # A top-level input the user may not change (`LockedFields`) takes no asset:
+  # every writer of an asset field (a picker's selection, an upload delivery,
+  # a removal, a drawer's reset or new copy, a gallery edit, the preview's
+  # relation) leaves a locked one as it is, and `own_asset/4` never owns one,
+  # so a save keeps the entry's value whatever a writer missed. `key` is the
+  # field (`:cover`), its foreign key (`:cover_id`) or a gallery's name.
+  # Nested (subform) fields are not locked.
+  defp locked_field?(socket, [], key) when is_atom(key) or is_binary(key) do
+    %{assigns: assigns} = socket
+    key = to_string(key)
+
+    assigns[:schema]
+    |> LockedFields.keys(assigns[:form_blueprint], assigns[:current_user])
+    |> Enum.any?(&(Atom.to_string(&1) == key))
+  end
+
+  defp locked_field?(_socket, _path, _key), do: false
+
+  # The field a drawer edits, unless a block's ref opened it
+  defp edit_asset_locked?(socket, %{field: field} = edit_asset) when not is_nil(field) do
+    is_nil(Map.get(edit_asset, :block_target)) and locked_field?(socket, Map.get(edit_asset, :path) || [], field)
+  end
+
+  defp edit_asset_locked?(_socket, _edit_asset), do: false
 
   # The values the server put in the form for its locked inputs where they
   # differ from the entry (`LockedFields.server_values/5`): a new entry's
@@ -2413,6 +2441,43 @@ defmodule BrandoAdmin.Components.Form do
   # The live preview merges these over the entry one level deep, so they hold
   # the entry's own fields only. A relation in a subform row rides in the
   # changeset instead, as `put_asset_in_data/4` leaves it.
+  defp update_entry_relation(socket, path, updated_relation, params) do
+    update_entry? = Map.get(params, :update_entry, false)
+    force_validation? = Map.get(params, :force_validation, false)
+    live_preview_active? = socket.assigns.live_preview_active?
+
+    force_live_preview_update =
+      live_preview_active? && Map.get(params, :force_live_preview_update, false)
+
+    # 1. Always update updated_entry_assocs (for live preview)
+    socket = update_entry_assocs(socket, path, updated_relation)
+    socket = if params[:draft_dirty], do: Drafts.dirty(socket), else: socket
+
+    # 2. Optionally update entry
+    socket =
+      if update_entry? or force_validation? do
+        update_entry_with_relation(socket, path, updated_relation)
+      else
+        socket
+      end
+
+    # 4. Optionally trigger validation + svelte remounts
+    socket =
+      if force_validation? do
+        socket |> push_event("b:validate", %{}) |> force_svelte_remounts()
+      else
+        socket
+      end
+
+    # 5. Always handle live preview. A forced update queued after a full
+    # rerender merges into it.
+    socket
+    |> maybe_invalidate_live_preview_assign(path)
+    |> maybe_rerender_live_preview_for(path_to_strings(path))
+    |> then(&if(force_live_preview_update, do: fetch_root_blocks(&1, :live_preview_update, 0), else: &1))
+    |> then(&{:ok, &1})
+  end
+
   defp update_entry_assocs(socket, [field], updated_relation) do
     assign(socket, :updated_entry_assocs, Map.put(socket.assigns.updated_entry_assocs, field, updated_relation))
   end
@@ -5929,29 +5994,11 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:image_editor_copy_of, socket.assigns.edit_image)}
   end
 
-  def handle_event(
-        "reset_video_field",
-        _,
-        %{assigns: %{form: form, edit_video: edit_video, entry: entry, singular: singular}} = socket
-      ) do
-    relation_key = relation_field_key(edit_video.relation_field, edit_video.field)
-
-    changeset =
-      form.source
-      |> put_key_at(edit_video.path, relation_key, nil)
-      |> put_asset_in_data(edit_video.path, edit_video.field, nil)
-
-    {:noreply,
-     socket
-     |> assign(:entry, Map.put(entry, edit_video.field, nil))
-     |> relation_changed(edit_video.path, edit_video.field, nil)
-     |> assign(:video_changeset, nil)
-     |> assign(:editing_video?, false)
-     |> assign(:edit_video, %{edit_video | video: nil})
-     |> put_local_form(to_form(changeset, []))
-     |> own_asset(edit_video.path, relation_key, :id)
-     |> assign_drawer_recovery_state()
-     |> push_event("b:validate", %{target: "#{singular}[#{relation_key}]", value: ""})}
+  # A locked field keeps its video; the drawer closes.
+  def handle_event("reset_video_field", _, %{assigns: %{edit_video: edit_video}} = socket) do
+    if edit_asset_locked?(socket, edit_video),
+      do: {:noreply, socket |> assign(:editing_video?, false) |> assign_drawer_recovery_state()},
+      else: reset_video_field(socket)
   end
 
   def handle_event("browse_video_thumbnail", _, socket) do
@@ -6039,72 +6086,18 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, assign(socket, :live_preview_target, target)}
   end
 
-  def handle_event(
-        "reset_file_field",
-        _,
-        %{assigns: %{form: form, edit_file: edit_file, entry: entry, singular: singular}} = socket
-      ) do
-    changeset = form.source
-    relation_key = relation_field_key(edit_file.relation_field, edit_file.field)
-
-    updated_changeset =
-      changeset
-      |> put_key_at(edit_file.path, relation_key, nil)
-      |> put_asset_in_data(edit_file.path, edit_file.field, nil)
-
-    updated_edit_file = Map.put(edit_file, :file, nil)
-
-    {:noreply,
-     socket
-     |> assign(:entry, Map.put(entry, edit_file.field, nil))
-     |> relation_changed(edit_file.path, edit_file.field, nil)
-     |> assign(:file_changeset, nil)
-     # `reset_file_field/2` closes the drawer (`toggle_drawer`), so the flag has
-     # to come down with it — leaving it set stranded the main save behind
-     # "close the file drawer before saving" with no drawer to close.
-     |> assign(:editing_file?, false)
-     |> assign(:edit_file, updated_edit_file)
-     |> put_local_form(to_form(updated_changeset, []))
-     |> own_asset(edit_file.path, relation_key, :id)
-     |> assign_drawer_recovery_state()
-     |> push_event("b:validate", %{
-       target: "#{singular}[#{relation_key}]",
-       value: ""
-     })}
+  # A locked field keeps its file; the drawer closes.
+  def handle_event("reset_file_field", _, %{assigns: %{edit_file: edit_file}} = socket) do
+    if edit_asset_locked?(socket, edit_file),
+      do: {:noreply, socket |> assign(:editing_file?, false) |> assign_drawer_recovery_state()},
+      else: reset_file_field(socket)
   end
 
-  def handle_event(
-        "reset_image_field",
-        _,
-        %{assigns: %{form: form, edit_image: edit_image, entry: entry, singular: singular}} =
-          socket
-      ) do
-    changeset = form.source
-    relation_key = relation_field_key(edit_image.relation_field, edit_image.field)
-
-    updated_changeset =
-      changeset
-      |> put_key_at(edit_image.path, relation_key, nil)
-      |> put_asset_in_data(edit_image.path, edit_image.field, nil)
-
-    updated_edit_image = Map.put(edit_image, :image, nil)
-
-    {:noreply,
-     socket
-     |> assign(:entry, Map.put(entry, edit_image.field, nil))
-     |> relation_changed(edit_image.path, edit_image.field, nil)
-     |> assign(:image_changeset, nil)
-     # Same as reset_file_field above — this closes the image drawer, so the
-     # guard flag must come down or the entry can never be saved again.
-     |> assign(:editing_image?, false)
-     |> assign(:edit_image, updated_edit_image)
-     |> put_local_form(to_form(updated_changeset, []))
-     |> own_asset(edit_image.path, relation_key, :id)
-     |> assign_drawer_recovery_state()
-     |> push_event("b:validate", %{
-       target: "#{singular}[#{relation_key}]",
-       value: ""
-     })}
+  # A locked field keeps its image; the drawer closes.
+  def handle_event("reset_image_field", _, %{assigns: %{edit_image: edit_image}} = socket) do
+    if edit_asset_locked?(socket, edit_image),
+      do: {:noreply, socket |> assign(:editing_image?, false) |> assign_drawer_recovery_state()},
+      else: reset_image_field(socket)
   end
 
   def handle_event("validate_file", %{"file" => file_params}, socket) do
@@ -7172,6 +7165,89 @@ defmodule BrandoAdmin.Components.Form do
     img
   end
 
+  defp reset_video_field(%{assigns: %{form: form, edit_video: edit_video, entry: entry, singular: singular}} = socket) do
+    relation_key = relation_field_key(edit_video.relation_field, edit_video.field)
+
+    changeset =
+      form.source
+      |> put_key_at(edit_video.path, relation_key, nil)
+      |> put_asset_in_data(edit_video.path, edit_video.field, nil)
+
+    {:noreply,
+     socket
+     |> assign(:entry, Map.put(entry, edit_video.field, nil))
+     |> relation_changed(edit_video.path, edit_video.field, nil)
+     |> assign(:video_changeset, nil)
+     |> assign(:editing_video?, false)
+     |> assign(:edit_video, %{edit_video | video: nil})
+     |> put_local_form(to_form(changeset, []))
+     |> own_asset(edit_video.path, relation_key, :id)
+     |> assign_drawer_recovery_state()
+     |> push_event("b:validate", %{target: "#{singular}[#{relation_key}]", value: ""})}
+  end
+
+  defp reset_file_field(%{assigns: %{form: form, edit_file: edit_file, entry: entry, singular: singular}} = socket) do
+    changeset = form.source
+    relation_key = relation_field_key(edit_file.relation_field, edit_file.field)
+
+    updated_changeset =
+      changeset
+      |> put_key_at(edit_file.path, relation_key, nil)
+      |> put_asset_in_data(edit_file.path, edit_file.field, nil)
+
+    updated_edit_file = Map.put(edit_file, :file, nil)
+
+    {:noreply,
+     socket
+     |> assign(:entry, Map.put(entry, edit_file.field, nil))
+     |> relation_changed(edit_file.path, edit_file.field, nil)
+     |> assign(:file_changeset, nil)
+     # `reset_file_field/2` closes the drawer (`toggle_drawer`), so the flag has
+     # to come down with it — leaving it set stranded the main save behind
+     # "close the file drawer before saving" with no drawer to close.
+     |> assign(:editing_file?, false)
+     |> assign(:edit_file, updated_edit_file)
+     |> put_local_form(to_form(updated_changeset, []))
+     |> own_asset(edit_file.path, relation_key, :id)
+     |> assign_drawer_recovery_state()
+     |> push_event("b:validate", %{
+       target: "#{singular}[#{relation_key}]",
+       value: ""
+     })}
+  end
+
+  defp reset_image_field(
+         %{assigns: %{form: form, edit_image: edit_image, entry: entry, singular: singular}} =
+           socket
+       ) do
+    changeset = form.source
+    relation_key = relation_field_key(edit_image.relation_field, edit_image.field)
+
+    updated_changeset =
+      changeset
+      |> put_key_at(edit_image.path, relation_key, nil)
+      |> put_asset_in_data(edit_image.path, edit_image.field, nil)
+
+    updated_edit_image = Map.put(edit_image, :image, nil)
+
+    {:noreply,
+     socket
+     |> assign(:entry, Map.put(entry, edit_image.field, nil))
+     |> relation_changed(edit_image.path, edit_image.field, nil)
+     |> assign(:image_changeset, nil)
+     # Same as reset_file_field above — this closes the image drawer, so the
+     # guard flag must come down or the entry can never be saved again.
+     |> assign(:editing_image?, false)
+     |> assign(:edit_image, updated_edit_image)
+     |> put_local_form(to_form(updated_changeset, []))
+     |> own_asset(edit_image.path, relation_key, :id)
+     |> assign_drawer_recovery_state()
+     |> push_event("b:validate", %{
+       target: "#{singular}[#{relation_key}]",
+       value: ""
+     })}
+  end
+
   # The image's own form: the entry is the image; show it as saved.
   defp show_saved_editor_image(socket, %{own: own} = edit_image, updated_image) when own not in [nil, false] do
     socket
@@ -8170,7 +8246,14 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, push_navigate(socket, to: Images.Image.__admin_route__(:update, [new_image.id]))}
   end
 
+  # A locked field keeps its image; the copy stays in the library
   defp own_or_field_copy(socket, edit_image, updated_image) do
+    if edit_asset_locked?(socket, edit_image),
+      do: {:noreply, socket},
+      else: field_copy(socket, edit_image, updated_image)
+  end
+
+  defp field_copy(socket, edit_image, updated_image) do
     # Non-block path
     relation_key = String.to_existing_atom("#{edit_image.field}_id")
     image_changeset = change(updated_image)

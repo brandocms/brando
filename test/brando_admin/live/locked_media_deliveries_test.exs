@@ -165,7 +165,12 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
         {view, _html} = open(conn, article, ctx.form)
 
         # What the gallery input sends when its last object is removed
-        send_form(view, action: :put_gallery, path: [], key: :photos, gallery: %{config_target: "default", gallery_objects: []})
+        send_form(view,
+          action: :put_gallery,
+          path: [],
+          key: :photos,
+          gallery: %{config_target: "default", gallery_objects: []}
+        )
 
         expected = if ctx.locked, do: [stored.id], else: []
         save(view)
