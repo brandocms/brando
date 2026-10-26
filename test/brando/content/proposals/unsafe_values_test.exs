@@ -1,9 +1,9 @@
 defmodule Brando.Content.Proposals.UnsafeValuesTest do
   # Values a proposal writes into ref settings, map addresses, block vars and
   # entry fields reach templates and the Villain parser as they are. The guard
-  # reports markup in them as :unsafe_text, which blocks approval, and the
-  # parser escapes what it puts into attributes, so even the preview of a
-  # flagged proposal builds no element or script address from them.
+  # reports markup in them as :unsafe_text, which blocks approval and the
+  # preview, and the parser escapes what it puts into attributes, so a value
+  # the guard missed still builds no element or script address.
   use Brando.ConnCase, async: false
 
   alias Brando.Content.Proposals
@@ -26,8 +26,13 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
 
   defp codes(proposal), do: Enum.map(proposal.problems, & &1.code)
 
-  defp preview!(proposal, c) do
-    {:ok, %{key: key, html: html}} = Preview.render(proposal, {Page, c.identity.id}, c.user, preview_target: :blocks)
+  # The page as rendered if the guard had missed the value.
+  defp unguarded_preview!(proposal, c) do
+    assert {:error, :unsafe_text} = Preview.render(proposal, {Page, c.identity.id}, c.user, preview_target: :blocks)
+
+    {:ok, %{key: key, html: html}} =
+      Preview.render(%{proposal | problems: []}, {Page, c.identity.id}, c.user, preview_target: :blocks)
+
     Preview.discard([key])
     html
   end
@@ -58,7 +63,7 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
         assert :unsafe_text in codes(proposal), inspect(config)
         assert {:error, _} = Proposals.approve(proposal.id, proposal.version, c.user)
 
-        html = preview!(proposal, c)
+        html = unguarded_preview!(proposal, c)
         assert live_handlers(html) == 0
         assert script_links(html) == 0
         assert html =~ "Rooms"
@@ -113,7 +118,7 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
         assert {:ok, proposal} = Proposals.propose([op], c.user)
         assert codes(proposal) == [:unsafe_text], text
 
-        html = preview!(proposal, c)
+        html = unguarded_preview!(proposal, c)
         assert live_handlers(html) == 0
       end
 
@@ -124,15 +129,31 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       }
 
       assert {:ok, %{problems: []}} = Proposals.propose([ok], c.user)
+
+      no = %InsertBlock{
+        target: {Page, c.identity.id},
+        module: c.where.id,
+        texts: %{where: "https://maps.google.no/maps?q=Oslo&output=embed"}
+      }
+
+      assert {:ok, %{problems: []}} = Proposals.propose([no], c.user)
     end
 
-    test "an entry's plain text fields take no markup", c do
+    test "an entry's text fields take no unsafe markup", c do
       op = %SetFields{target: {Page, c.identity.id}, fields: %{title: @title_markup}}
       assert {:ok, proposal} = Proposals.propose([op], c.user)
       assert codes(proposal) == [:unsafe_text]
       assert {:error, _} = Proposals.approve(proposal.id, proposal.version, c.user)
 
-      ok = %SetFields{target: {Page, c.identity.id}, fields: %{title: ~s(Rooms & "suites" — it's open)}}
+      nested = %SetFields{target: {Page, c.identity.id}, fields: %{meta_description: %{"en" => [@title_markup]}}}
+      assert {:ok, proposal} = Proposals.propose([nested], c.user)
+      assert :unsafe_text in codes(proposal)
+
+      ok = %SetFields{
+        target: {Page, c.identity.id},
+        fields: %{title: ~s(Rooms & "suites" > 100 kr — it's <b>open</b>), meta_description: "> A quote"}
+      }
+
       assert {:ok, %{problems: []}} = Proposals.propose([ok], c.user)
     end
   end
@@ -185,8 +206,17 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
     test "the link tag escapes the address and leaves out script addresses", c do
       op = %InsertBlock{target: {Page, c.identity.id}, module: c.note.id, values: %{cta: @script_link}}
       assert {:ok, proposal} = Proposals.propose([op], c.user)
-      html = preview!(proposal, c)
-      assert script_links(html) == 0
+      assert script_links(unguarded_preview!(proposal, c)) == 0
+
+      render = fn url ->
+        var = %Brando.Content.Var{type: :link, key: "cta", link_type: :url, value: url, link_text: "Go"}
+        Brando.Villain.parse_and_render("{% link cta %}", Liquex.Context.new(%{"cta" => var}))
+      end
+
+      assert render.(@script_link) =~ ~s(href="")
+      assert render.(~s(/a" onclick="x)) =~ ~s(href="/a&quot; onclick=&quot;x")
+      assert render.("tel:+47 22 33 44 55") =~ ~s(href="tel:+47 22 33 44 55")
+      assert render.("https://example.com/?a=1&amp;b=2") =~ ~s(href="https://example.com/?a=1&amp;b=2")
     end
 
     test "ordinary values stay valid", c do
@@ -200,10 +230,24 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       op = %InsertBlock{target: {Page, c.identity.id}, module: c.note.id, values: values}
       assert {:ok, %{problems: []}} = Proposals.propose([op], c.user)
 
-      for cta <- ["/about", "https://example.com/a?b=1&c=2", "tel:+4712345678", "#top"] do
+      for cta <- ["/about", "https://example.com/a?b=1&c=2", "tel:+47 22 33 44 55", "#top", "/o'brien"] do
         op = %InsertBlock{target: {Page, c.identity.id}, module: c.note.id, values: %{cta: cta}}
         assert {:ok, %{problems: []}} = Proposals.propose([op], c.user), cta
       end
+    end
+
+    test "a value cannot carry Liquid, which the page would render", c do
+      liquid = ~s({{ "%3Cimg src=x onerror=x%3E" | url_decode }})
+
+      for values <- [%{heading: liquid}, %{note: "<p>#{liquid}</p>"}, %{cta: "/a?{% raw %}"}] do
+        op = %InsertBlock{target: {Page, c.identity.id}, module: c.note.id, values: values}
+        assert {:ok, proposal} = Proposals.propose([op], c.user)
+        assert codes(proposal) == [:unsafe_text], inspect(values)
+      end
+
+      op = %SetFields{target: {Page, c.identity.id}, fields: %{title: liquid}}
+      assert {:ok, proposal} = Proposals.propose([op], c.user)
+      assert codes(proposal) == [:unsafe_text]
     end
 
     test "an unresolved entry link no longer hides the rest of a rich text", c do
@@ -212,6 +256,11 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       assert {:ok, proposal} = Proposals.propose([op], c.user)
       assert :unsafe_text in codes(proposal)
       assert :unknown_target in codes(proposal)
+
+      hidden = ~s(<p><a href="entry:<img src=x onerror=x>">x</a></p>)
+      op = %InsertBlock{target: {Page, c.identity.id}, module: c.text_module.id, texts: %{body: hidden}}
+      assert {:ok, proposal} = Proposals.propose([op], c.user)
+      assert :unsafe_text in codes(proposal)
 
       clean = %InsertBlock{
         target: {Page, c.identity.id},

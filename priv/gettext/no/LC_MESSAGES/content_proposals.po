@@ -61,6 +61,11 @@ msgstr "%{key} er true eller false."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{name} cannot hold Liquid tags."
+msgstr "%{name} kan ikke inneholde Liquid-tagger."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} contains unsafe rich text."
 msgstr "%{name} inneholder utrygg rik tekst."
 

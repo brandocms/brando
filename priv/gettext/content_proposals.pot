@@ -60,6 +60,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{name} cannot hold Liquid tags."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} contains unsafe rich text."
 msgstr ""
 

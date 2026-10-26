@@ -60,7 +60,7 @@ defmodule Brando.Content.Proposals.EntryLinks do
   """
   @spec blank_unresolved(String.t()) :: String.t()
   def blank_unresolved(value) when is_binary(value),
-    do: Regex.replace(~r/href=(["'])\s*entry:[^"']*\1/i, value, "href=\\1#\\1")
+    do: Regex.replace(~r/href=(["'])\s*entry:[\w.]+:\d+\1/i, value, "href=\\1#\\1")
 
   @doc "Whether `value` still holds an entry link that could not be resolved."
   @spec unresolved?(term()) :: boolean()

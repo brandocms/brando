@@ -1381,16 +1381,37 @@ defmodule Brando.Villain.Parser do
     end
   end
 
-  # Values interpolated into an attribute are escaped for it, and an address
-  # must have a scheme `Brando.RichText.allowed_uri?/1` allows.
-  defp escape_attr(value), do: value |> to_string() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+  # Values interpolated into an attribute are escaped for it. Stored values
+  # may hold character references (a pasted embed code's `&amp;`), which the
+  # browser decoded when they were interpolated as they were: they are
+  # decoded first, so the browser still reads the same value.
+  @doc false
+  def escape_attr(value),
+    do: value |> to_string() |> HtmlEntities.decode() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
-  defp safe_url(url) when is_binary(url) do
+  @doc """
+  `url` trimmed, when it has no scheme or one `Brando.RichText.allowed_uri?/1`
+  allows, else `nil`. The scheme is read as a browser reads it: after
+  character references are decoded, leading spaces and control characters
+  trimmed, and tabs and newlines dropped.
+  """
+  @spec safe_url(term()) :: String.t() | nil
+  def safe_url(url) when is_binary(url) do
     url = String.trim(url)
-    if Brando.RichText.allowed_uri?(url), do: url
+
+    read =
+      url
+      |> HtmlEntities.decode()
+      |> String.replace(~r/[\t\n\r]/, "")
+      |> String.replace(~r/^[\x00-\x20]+/, "")
+
+    case Regex.run(~r/^([a-z][a-z0-9+.-]*):/i, read, capture: :all_but_first) do
+      nil -> if url != "", do: url
+      [scheme] -> if Brando.RichText.allowed_uri?(scheme <> ":"), do: url
+    end
   end
 
-  defp safe_url(_), do: nil
+  def safe_url(_), do: nil
 
   # A player address starts with Brando's own https host, so only what could
   # end the attribute is encoded; its query keeps its plain `&`.

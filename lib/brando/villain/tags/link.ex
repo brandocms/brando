@@ -24,11 +24,10 @@ defmodule Brando.Villain.Tags.Link do
   end
 
   # An address with a script or unknown scheme renders as an empty href.
-  defp href(url) when is_binary(url) do
-    if Brando.RichText.allowed_uri?(url),
-      do: url |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string(),
-      else: ""
+  defp href(url) do
+    case Brando.Villain.Parser.safe_url(url) do
+      nil -> ""
+      url -> Brando.Villain.Parser.escape_attr(url)
+    end
   end
-
-  defp href(_), do: ""
 end

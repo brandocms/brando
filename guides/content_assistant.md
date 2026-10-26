@@ -332,19 +332,21 @@ reported as a problem, because the new entry is a draft.
 What a proposal writes is checked before it can be approved, as text a model
 or client wrote, not an editor:
 
-- text, markdown and html slots, text and html variables, and an entry's rich
-  text fields take rich text without scripts, event handlers or script
-  addresses;
-- header slots, single-line text variables and an entry's other text fields
-  take plain text, without markup;
+- text, markdown and html slots, text and html variables, and an entry's
+  fields take rich text without scripts, event handlers or script addresses;
+- header slots and single-line text variables take plain text, without
+  markup;
 - a link variable or a slot's link takes a web, mail or phone address, or a
   path;
 - a map slot takes an https Google Maps embed address;
 - a slot's class or id takes no quotes or markup, and its other settings no
-  markup.
+  markup;
+- no value holds Liquid tags (`{{ }}`, `{% %}`), since the page renders a
+  module's output as Liquid once more.
 
-A value that fails is a problem on the proposal, and a proposal with problems
-cannot be approved.
+A value that fails is a problem on the proposal. A proposal with problems
+cannot be approved, and one with unsafe text shows no page preview and
+cannot be shared.
 
 ## Limits
 

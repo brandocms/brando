@@ -40,8 +40,30 @@ defmodule Brando.Villain.Parser.EscapingTest do
     assert count(out, "iframe[onload]") == 0
 
     assert Parser.map(%{embed_url: "javascript:document.title=1", source: :gmaps}, %{}) == ""
-    assert Parser.map(%{embed_url: "javascript&#58;document.title=1", source: :gmaps}, %{}) =~ "javascript&amp;#58;"
+    assert Parser.map(%{embed_url: "javascript&#58;document.title=1", source: :gmaps}, %{}) == ""
     assert Parser.map(%{embed_url: nil, source: :gmaps}, %{}) == ""
+
+    # A pasted embed code's src keeps its character references.
+    legacy = Parser.map(%{embed_url: "https://maps.google.no/maps?q=Oslo&amp;output=embed", source: :gmaps}, %{})
+    assert legacy =~ ~s(src="https://maps.google.no/maps?q=Oslo&amp;output=embed")
+  end
+
+  test "an address is read as a browser reads it" do
+    assert Parser.safe_url("tel:+47 22 33 44 55") == "tel:+47 22 33 44 55"
+    assert Parser.safe_url(" /about ") == "/about"
+    assert Parser.safe_url("mailto:a@b.no?subject=Hei der") == "mailto:a@b.no?subject=Hei der"
+
+    for url <- [
+          "java\tscript:x",
+          " javascript:x",
+          "\x01javascript:x",
+          "javascript&#58;x",
+          "JaVaScRiPt:x",
+          "data:text/html,x",
+          ""
+        ] do
+      assert Parser.safe_url(url) == nil, inspect(url)
+    end
   end
 
   test "a video embed's id cannot end its address" do

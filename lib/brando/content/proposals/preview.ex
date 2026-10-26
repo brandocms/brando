@@ -30,7 +30,8 @@ defmodule Brando.Content.Proposals.Preview do
 
   Returns `{:ok, %{key: key, html: html}}`, `{:error, :not_created}` for the
   baseline of an entry the proposal creates, `{:error, :no_preview_target}`
-  when the content type has no preview target, or `{:error, message}`.
+  when the content type has no preview target, `{:error, :unsafe_text}` for
+  the proposed version of a proposal with unsafe text, or `{:error, message}`.
   """
   @spec render(Proposals.Proposal.t(), Proposals.Proposal.target(), term(), keyword()) ::
           {:ok, %{key: String.t(), html: String.t()}} | {:error, atom() | String.t()}
@@ -74,9 +75,14 @@ defmodule Brando.Content.Proposals.Preview do
       !schema -> {:error, dgettext("content_proposals", "This entry is not part of the proposal.")}
       version == :before and match?({:new, _}, target) -> {:error, :not_created}
       !LivePreview.has_live_preview_target(schema) -> {:error, :no_preview_target}
+      version == :proposed and unsafe_text?(proposal) -> {:error, :unsafe_text}
       true -> :ok
     end
   end
+
+  # Text the guard reports as unsafe is not rendered: the preview runs in the
+  # reviewer's browser before anyone approves it.
+  defp unsafe_text?(proposal), do: Enum.any?(proposal.problems || [], &(&1.code == :unsafe_text))
 
   defp changeset(proposal, target, actor, :proposed, shared) do
     with {:ok, changesets} <- Proposals.materialize(proposal, actor, shared: !!shared),
@@ -98,7 +104,8 @@ defmodule Brando.Content.Proposals.Preview do
   A public link to the proposed page, for any browser: a static snapshot
   rendered by the site's own template, as the editor's "Get shareable link"
   makes. Anyone with the link can view it until it expires; it takes the
-  export permission. Returns `{:ok, url, expiry_days}`.
+  export permission. Returns `{:ok, url, expiry_days}`, or `{:error, reason}`
+  as `render/4` does.
   """
   @spec share(Proposals.Proposal.t(), Proposals.Proposal.target(), term(), keyword()) ::
           {:ok, String.t(), integer()} | {:error, atom() | String.t()}

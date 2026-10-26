@@ -17171,6 +17171,16 @@ msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
+msgid "The proposal holds unsafe text, so its page cannot be shared."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The proposal holds unsafe text, so its page is not shown. Review the changes in the entry card."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
 msgid "The proposal is undone"
 msgstr ""
 
