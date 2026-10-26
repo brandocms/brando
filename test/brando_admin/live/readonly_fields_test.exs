@@ -322,6 +322,9 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
       assert derive.([source: :title] ++ locked, %Article{}, %{"title" => "Hello Wörld/Foo"}) ==
                %{"title" => "Hello Wörld/Foo", "slug" => "hello-world-foo"}
 
+      # Other punctuation goes without separating, as in the hook
+      assert %{"slug" => "abc-strasse"} = derive.([source: :title] ++ locked, %Article{}, %{"title" => "a_b.c Straße"})
+
       assert %{"slug" => "first-2024"} =
                derive.([source: [:title, :year]] ++ locked, %Article{}, %{"title" => "First", "year" => "2024"})
 
@@ -354,6 +357,14 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
         Ecto.Changeset.cast({%{}, %{title: :string, slug: :string, published_on: :date}}, params, [:title, :published_on])
 
       assert %{"slug" => "notes-2026-10-26"} = LockedFields.derive_slugs(params, changeset, Article, blueprint, editor)
+
+      # A date-time as the DateTimePicker writes it, in UTC with milliseconds
+      types = %{title: :string, slug: :string, published_on: :utc_datetime}
+      params = %{"title" => "Notes", "published_on" => "2026-10-26T14:30:00+02:00"}
+      changeset = Ecto.Changeset.cast({%{}, types}, params, [:title, :published_on])
+
+      assert %{"slug" => "notes-2026-10-26t123000000z"} =
+               LockedFields.derive_slugs(params, changeset, Article, blueprint, editor)
     end
 
     test "leaves a slug that has a value, one without a source, and one not locked", %{derive: derive} do

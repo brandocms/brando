@@ -72,7 +72,7 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   # slugified, and the prefix in front of a slug that isn't empty
   defp generate_slug(changeset, opts) do
     joined = opts[:source] |> List.wrap() |> Enum.map_join("-", &source_value(Changeset.get_field(changeset, &1)))
-    slug = if opts[:camel_case], do: camel_case(joined), else: Brando.Utils.slugify(joined) || ""
+    slug = if opts[:camel_case], do: camel_case(joined), else: slugify(joined)
 
     case slug do
       "" -> ""
@@ -80,12 +80,29 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
     end
   end
 
-  # The value as its input holds it: a date as `2026-10-26`. A language map,
-  # an embed or a list has no single input.
+  # The hook's `slugify(…, {strict: true})` with `/` as a separator: other
+  # punctuation goes without separating (`a_b.c` is `abc`), where
+  # `Brando.Utils.slugify/1` separates at it
+  defp slugify(string) do
+    string
+    |> String.replace("/", " ")
+    |> String.replace(~r/[!"#$%&'()*+,.:;<=>?@\[\\\]^_`{|}~]/, "")
+    |> Brando.Utils.slugify()
+    |> Kernel.||("")
+  end
+
+  # The value as its input holds it: a date as `2026-10-26`, a date-time as
+  # the DateTimePicker writes it (`toISOString`, `2026-10-26T12:30:00.000Z`).
+  # A language map, an embed or a list has no single input.
   defp source_value(nil), do: ""
+  defp source_value(%DateTime{} = value), do: value |> DateTime.shift_zone!("Etc/UTC") |> iso_milliseconds()
+  defp source_value(%NaiveDateTime{} = value), do: value |> DateTime.from_naive!("Etc/UTC") |> iso_milliseconds()
   defp source_value(value) when is_struct(value), do: if(String.Chars.impl_for(value), do: to_string(value), else: "")
   defp source_value(value) when is_map(value) or is_list(value), do: ""
   defp source_value(value), do: to_string(value)
+
+  defp iso_milliseconds(%DateTime{microsecond: {microsecond, _}} = value),
+    do: DateTime.to_iso8601(%{value | microsecond: {div(microsecond, 1000) * 1000, 3}})
 
   defp slug_prefix(prefix, changeset) when is_function(prefix, 1), do: prefix.(changeset) || ""
   defp slug_prefix(prefix, _changeset) when is_binary(prefix), do: prefix
