@@ -9707,7 +9707,8 @@ defmodule BrandoAdmin.Components.Form do
     # placement is load-bearing. Form *recovery* pushes this same event with a
     # `_target` naming the first non-hidden input in the form — which here is
     # the `image_editor_upload` file input a few lines into the markup, not an
-    # entry field (`view.ts:2450`, `channel.ex:848-853`). Assigning inside the
+    # entry field (LiveView's `pushFormRecovery` in `view.ts`, and
+    # `decode_merge_target/1` in `channel.ex`). Assigning inside the
     # `[^singular | rest]` branch meant every recovered value was recomputed and
     # then dropped, so a reconnect silently restored nothing.
     socket = socket |> put_form(to_form(changeset, [])) |> broadcast_dirty_fields() |> Drafts.dirty()
