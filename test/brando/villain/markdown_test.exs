@@ -157,6 +157,16 @@ defmodule Brando.Villain.MarkdownTest do
 
       assert markdown =~ "Write {{ entry.title }} and {% raw %}."
       refute markdown =~ "&#12"
+
+      # An HTML render keeps them encoded for its Liquid pass, whatever the
+      # template assigns
+      html =
+        Brando.Villain.parse_and_render(
+          "{% assign brando_markdown_template = true %}{% fragment index header en %}",
+          Liquex.Context.new(%{"brando_markdown_template" => true})
+        )
+
+      assert html =~ "Write &#123;&#123; entry.title &#125;&#125;"
     end
   end
 

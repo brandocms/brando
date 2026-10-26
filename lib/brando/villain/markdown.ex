@@ -50,8 +50,9 @@ defmodule Brando.Villain.Markdown do
     ]
   ]
 
-  # Set in a module's Liquid context while its `markdown` template renders:
-  # refs then give Markdown rather than markup for the HTML conversion.
+  # Set in a module's Liquid context, as private data, while its `markdown`
+  # template renders: refs then give Markdown rather than markup for the HTML
+  # conversion, and `{% fragment %}` gives plain braces.
   @template_flag :brando_markdown_template
 
   @doc """
@@ -73,7 +74,7 @@ defmodule Brando.Villain.Markdown do
         entry
         |> Villain.get_base_context()
         |> Villain.add_to_context("url", entry && Brando.Blueprint.URL.resolve(entry))
-        |> Context.assign(@template_flag, false)
+        |> put_template_flag(false)
 
       opts_map =
         opts
@@ -385,13 +386,18 @@ defmodule Brando.Villain.Markdown do
   True while a module's `markdown` template renders in `context`: what it
   outputs goes into the Markdown as it is, and no Liquid pass reads it after.
   """
-  def template_context?(%Context{} = context), do: Access.get(context, @template_flag) == true
+  def template_context?(%Context{private: private}), do: Map.get(private, @template_flag) == true
   def template_context?(_context), do: false
 
   defp put_flag(%{context: %Context{} = context} = opts, value),
-    do: %{opts | context: Context.assign(context, @template_flag, value)}
+    do: %{opts | context: put_template_flag(context, value)}
 
   defp put_flag(opts, _value), do: opts
+
+  # In the context's private data, where neither a template's `assign` nor a
+  # module variable can set it.
+  defp put_template_flag(%Context{private: private} = context, value),
+    do: %{context | private: Map.put(private, @template_flag, value)}
 
   defp escape(text), do: text |> to_string() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
