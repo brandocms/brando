@@ -8,7 +8,7 @@ defmodule Brando.Content.Proposals.Looks do
   disk or fetched from the CDN, and cached for an hour, since a run's context is rebuilt for
   every model call. A video is seen through its thumbnail image.
   """
-  alias Brando.Images.Utils
+  alias Brando.Tenant.Storage
 
   @edge 256
   @ttl :timer.hours(1)
@@ -61,8 +61,10 @@ defmodule Brando.Content.Proposals.Looks do
         nil
 
       path ->
-        case File.read(Utils.media_path(path)) do
-          {:ok, bytes} -> bytes
+        with {:ok, file} <- Storage.media_file(path),
+             {:ok, bytes} <- File.read(file) do
+          bytes
+        else
           _ -> nil
         end
     end) || remote(image)

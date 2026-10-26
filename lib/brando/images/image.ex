@@ -36,10 +36,10 @@ defmodule Brando.Images.Image do
 
     attribute :formats, {:array, Ecto.Enum}, values: [:original, :jpg, :png, :gif, :webp, :avif, :svg]
 
-    attribute :path, :text, required: true
+    attribute :path, :text, required: true, constraints: [media_path: true]
     attribute :width, :integer
     attribute :height, :integer
-    attribute :sizes, :map
+    attribute :sizes, :map, constraints: [media_path: true]
     attribute :cdn, :boolean, default: false
     attribute :dominant_color, :text
     attribute :config_target, :text

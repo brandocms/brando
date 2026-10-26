@@ -69,13 +69,23 @@ defmodule Brando.Trait.Creator do
   def stamp_if_edited(%{data: %{id: nil}} = changeset, _schema, _user), do: changeset
 
   def stamp_if_edited(changeset, schema, user) do
-    case List.keyfind(schema.__traits__(), __MODULE__, 0) do
-      {_trait, opts} ->
-        derived = opts |> Map.new() |> Map.get(:derived, [])
-        if edited?(changeset, derived), do: stamp_editor(changeset, user_id(user)), else: changeset
+    if schema.has_trait(__MODULE__) do
+      derived = derived(schema)
+      if edited?(changeset, derived), do: stamp_editor(changeset, user_id(user)), else: changeset
+    else
+      changeset
+    end
+  end
 
-      nil ->
-        changeset
+  @doc """
+  The fields `schema` declares `derived`: written by a processing pipeline,
+  not by an editor. `[]` for a schema without this trait.
+  """
+  @spec derived(module()) :: [atom()]
+  def derived(schema) do
+    case List.keyfind(schema.__traits__(), __MODULE__, 0) do
+      {_trait, opts} -> opts |> Map.new() |> Map.get(:derived, [])
+      nil -> []
     end
   end
 

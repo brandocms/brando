@@ -15,6 +15,8 @@ defmodule Brando.Blueprint.Constraints do
       - `format` - see `Ecto.Changeset.validate_format/4`
       - `acceptance` - see `Ecto.Changeset.validate_acceptance/3`
       - `confirmation` - see `Ecto.Changeset.validate_confirmation/3`
+      - `media_path` - `true`: a path, or a map of paths, stored on a media record;
+        each must stay inside the media root (`Brando.Tenant.Storage.media_file/1`)
       - `one_of` - list of fields, at least one of which must have a value
       - `exactly_one_of` - list of fields, exactly one of which must have a value
       - `check` - database check constraint name(s) to translate into field errors
@@ -168,6 +170,12 @@ defmodule Brando.Blueprint.Constraints do
 
   defp run_validation({:confirmation, true}, validated_changeset, %{name: name}),
     do: validate_confirmation(validated_changeset, name)
+
+  defp run_validation({:media_path, true}, validated_changeset, %{name: name}) do
+    validate_change(validated_changeset, name, fn ^name, value ->
+      if media_paths?(value), do: [], else: [{name, {"is invalid", validation: :media_path}}]
+    end)
+  end
 
   defp run_validation({:one_of, fields}, changeset, %{name: name} = field_or_asset) do
     if Enum.any?(fields, &value_present?(changeset, &1)) do
@@ -363,4 +371,8 @@ defmodule Brando.Blueprint.Constraints do
     |> Enum.reject(&is_nil/1)
     |> Enum.uniq()
   end
+
+  # An image's `path`, or its `sizes` map of size name to path
+  defp media_paths?(paths) when is_map(paths), do: Enum.all?(Map.values(paths), &media_paths?/1)
+  defp media_paths?(path), do: Brando.Tenant.Storage.safe_media_path?(path)
 end

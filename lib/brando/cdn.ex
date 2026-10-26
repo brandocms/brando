@@ -263,6 +263,9 @@ defmodule Brando.CDN do
         Logger.error("==> Error uploading file. 403 from AMAZON")
         Logger.error(inspect(err, pretty: true))
         {:error, "S3 Upload failed"}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -347,13 +350,24 @@ defmodule Brando.CDN do
         Logger.error("==> Error uploading file. 403 from AMAZON")
         Logger.error(inspect(err, pretty: true))
         {:error, "S3 Upload failed"}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   # Not decorated directly: its implicit `rescue` would become a second span.
   @decorate span("brando.cdn.upload", bucket: :s3_bucket, object_key: :s3_dest_key)
-  defp s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts \\ []),
-    do: do_s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts)
+  defp s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts \\ []) do
+    if media_key?(src_key),
+      do: do_s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts),
+      else: {:error, :unsafe_media_path}
+  end
+
+  # The local file sent to the bucket is named by a stored media path, as
+  # `media/<path>`: never one that leaves the media directory.
+  defp media_key?("media/" <> path), do: Brando.Tenant.Storage.safe_media_path?(path)
+  defp media_key?(_src_key), do: false
 
   defp do_s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts) do
     upload_opts = Keyword.merge([acl: :public_read], opts)

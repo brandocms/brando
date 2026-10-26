@@ -24,7 +24,7 @@ defmodule Brando.Blueprint.Verifier do
     :one_of_message
   ]
 
-  @attribute_constraint_keys [:acceptance, :confirmation, :format, :length, :max_length, :min_length] ++
+  @attribute_constraint_keys [:acceptance, :confirmation, :format, :length, :max_length, :media_path, :min_length] ++
                                @shared_constraint_keys
   @non_string_collision_types [
     :array,
@@ -639,7 +639,7 @@ defmodule Brando.Blueprint.Verifier do
        do: is_integer(value) and value >= 0
 
   defp valid_constraint?(:attribute, _, {:format, %Regex{}}), do: true
-  defp valid_constraint?(:attribute, _, {key, true}) when key in [:acceptance, :confirmation], do: true
+  defp valid_constraint?(:attribute, _, {key, true}) when key in [:acceptance, :confirmation, :media_path], do: true
 
   defp valid_constraint?(:relation, %{opts: %{module: :blocks}}, {:require_blocks, classes}),
     do: is_list(classes) and Enum.all?(classes, &is_binary/1)

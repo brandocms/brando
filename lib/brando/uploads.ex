@@ -360,16 +360,22 @@ defmodule Brando.Uploads do
   # (which reads local files) and delivery (which uploads the original and its
   # sizes to the same keys) run unchanged. `keep_local_copy: false` removes the
   # local files again once delivered.
-  defp write_direct_original("media/" <> media_path, body) do
-    path = Path.join(Brando.Tenant.Storage.current_media_root(), media_path)
-
-    with :ok <- File.mkdir_p(Path.dirname(path)),
+  defp write_direct_original("media/" <> media_path = key, body) do
+    with {:ok, path} <- direct_original_path(media_path, key),
+         :ok <- File.mkdir_p(Path.dirname(path)),
          :ok <- File.write(path, body) do
       {:ok, media_path}
     end
   end
 
   defp write_direct_original(key, _body), do: {:error, "Unexpected object key #{inspect(key)}"}
+
+  defp direct_original_path(media_path, key) do
+    case Brando.Tenant.Storage.media_file(media_path) do
+      {:ok, path} -> {:ok, path}
+      :error -> {:error, "Unexpected object key #{inspect(key)}"}
+    end
+  end
 
   defp create_direct_image(cfg, media_path, resolved_target, params, user) do
     upload = %{

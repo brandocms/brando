@@ -46,8 +46,8 @@ defmodule Brando.Images.Crop do
 
     result =
       with :ok <- Boundary.change(user, :create, changeset),
-           {:ok, _} <- Ecto.Changeset.apply_action(changeset, :insert) do
-        write(new_path, binary_data)
+           {:ok, _} <- Ecto.Changeset.apply_action(changeset, :insert),
+           :ok <- write(new_path, binary_data) do
         Images.create_image(new_image_params, user)
       end
 
@@ -99,8 +99,8 @@ defmodule Brando.Images.Crop do
 
     result =
       with :ok <- Boundary.change(user, :update, changeset),
-           {:ok, _} <- Ecto.Changeset.apply_action(changeset, :update) do
-        write(image.path, binary_data)
+           {:ok, _} <- Ecto.Changeset.apply_action(changeset, :update),
+           :ok <- write(image.path, binary_data) do
         Images.update_image(changeset, user)
       end
 
@@ -114,12 +114,17 @@ defmodule Brando.Images.Crop do
     end
   end
 
+  # The path comes from the image record, so it is checked against the media
+  # root before anything is written.
   defp write(path, binary_data) do
-    media_path = Storage.current_media_root()
-    dest_file = Path.join(media_path, path)
+    case Storage.media_file(path) do
+      {:ok, dest_file} ->
+        File.mkdir_p!(Path.dirname(dest_file))
+        File.write!(dest_file, binary_data)
 
-    File.mkdir_p!(Path.dirname(dest_file))
-    File.write!(dest_file, binary_data)
+      :error ->
+        {:error, :unsafe_media_path}
+    end
   end
 
   defp measure(binary_data, fallback_dimensions) do

@@ -69,7 +69,9 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
-  Deletes `file` after joining it with `media_path`.
+  Deletes `file` after joining it with `media_path`. A path that would leave
+  the media root (see `Storage.media_file/1`) deletes nothing and returns
+  `{:error, :unsafe_media_path}`.
 
   Resolves through `Storage.current_media_root/0`, which is shared by every
   environment of a site. This removes the bytes without consulting any other
@@ -87,8 +89,10 @@ defmodule Brando.Images.Utils do
     if String.ends_with?(file, ".svg") do
       nil
     else
-      file = Path.join(Storage.current_media_root(), file)
-      File.rm(file)
+      case Storage.media_file(file) do
+        {:ok, path} -> File.rm(path)
+        :error -> {:error, :unsafe_media_path}
+      end
     end
   end
 
@@ -201,13 +205,20 @@ defmodule Brando.Images.Utils do
   end
 
   @doc """
-  Return joined path of `file` and the :media_path config option
-  as set in your app's config.exs.
+  Return joined path of `file` and the current media root. Raises
+  `ArgumentError` for a path that would leave the root (see
+  `Storage.media_file/1`): every path given here comes from a media record.
   """
 
   @spec media_path() :: binary
   @spec media_path(nil | binary) :: binary
   def media_path, do: Storage.current_media_root()
   def media_path(nil), do: Storage.current_media_root()
-  def media_path(file), do: Path.join(Storage.current_media_root(), file)
+
+  def media_path(file) do
+    case Storage.media_file(file) do
+      {:ok, path} -> path
+      :error -> raise ArgumentError, "media path #{inspect(file)} leaves the media root"
+    end
+  end
 end

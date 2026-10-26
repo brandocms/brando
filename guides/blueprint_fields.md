@@ -288,6 +288,9 @@ Collision handling skips the entry itself, soft-deleted entries (with
   checkbox.
 * `confirmation: true`: `validate_confirmation/2`, which compares the field
   with `<field>_confirmation`.
+* `media_path: true`: a path stored on a media record, or a map of them
+  (an image's `sizes`), must stay inside the media root: no absolute path,
+  no `..` that climbs out of it.
 
 ```elixir
 attribute :title, :string, required: true, constraints: [max_length: 120]
