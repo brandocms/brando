@@ -597,7 +597,7 @@ defmodule Brando.NotesTest do
         Repo.query!(~s{CREATE TABLE "#{prefix}".#{table} (LIKE public.#{table} INCLUDING ALL)})
       end
 
-      {public_note, _} = thread!(page, author, %{"body" => "Public"})
+      {public_note, _} = Brando.Tenant.with_public(fn -> thread!(page, author, %{"body" => "Public"}) end)
 
       Brando.Tenant.with_prefix(prefix, fn ->
         Repo.query!(~s{INSERT INTO "#{prefix}".pages SELECT * FROM public.pages WHERE id = $1}, [page.id])
@@ -607,7 +607,7 @@ defmodule Brando.NotesTest do
         assert tenant_note.id
       end)
 
-      assert [%{id: id, body: "Public"}] = Notes.list_threads(Page, page.id)
+      assert [%{id: id, body: "Public"}] = Brando.Tenant.with_public(fn -> Notes.list_threads(Page, page.id) end)
       assert id == public_note.id
     end
   end

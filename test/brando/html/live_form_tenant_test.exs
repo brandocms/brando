@@ -96,7 +96,11 @@ defmodule Brando.HTML.Forms.LiveFormTenantTest do
     assert [_] = Tenant.with_prefix(prefix, fn -> Forms.list_submissions("contact") end)
   end
 
+  # In :multi mode Brando.Repo refuses the unprefixed queries outright
   test "a LiveView without the hook does not send the form", %{conn: conn, host: host, tenant_form: form} do
+    put_test_env(:tenancy_mode, :single)
+    put_test_env(:site_key, String.trim_trailing(host, ".test"))
+    Cache.clear()
     {:ok, view, _html} = live_isolated(%{conn | host: host}, UnhookedFormLive, session: %{"form" => form})
 
     view |> form("#contact-form", %{"fields" => %{"name" => "Ada"}}) |> render_submit()

@@ -67,9 +67,12 @@ defmodule Brando.Authorization.SiteContextTest do
       end)
     end
 
-    Boundary.with_scope(c.beta_scope, fn ->
-      assert {:ok, []} = Pages.list_pages(%{})
-      assert {:error, {:page, :not_found}} = Pages.get_page(c.page.id)
+    # As an admin request in the other site sets both
+    Tenant.with_prefix(c.beta_scope.prefix, fn ->
+      Boundary.with_scope(c.beta_scope, fn ->
+        assert {:ok, []} = Pages.list_pages(%{})
+        assert {:error, {:page, :not_found}} = Pages.get_page(c.page.id)
+      end)
     end)
   end
 

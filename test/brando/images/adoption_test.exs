@@ -295,14 +295,14 @@ defmodule Brando.Images.AdoptionTest do
     end
 
     test "adopts the images of the current environment only, from its media folder" do
-      public = Brando.Tenant.with_prefix(nil, fn -> unrecorded("public", write: []) end)
+      public = Brando.Tenant.with_public(fn -> unrecorded("public", write: []) end)
       tenant = Brando.Tenant.with_prefix(@prefix, fn -> unrecorded("tenant") end)
 
       assert Brando.Tenant.with_prefix(@prefix, fn -> Processing.adopt_unrecorded() end) ==
                %{adopted: 1, differ: 0, skipped: 0}
 
       assert Brando.Tenant.with_prefix(@prefix, fn -> Brando.Repo.get!(Image, tenant.id).config_fingerprint end)
-      assert Brando.Repo.get!(Image, public.id).config_fingerprint == nil
+      assert Brando.Repo.get!(Image, public.id, prefix: "public").config_fingerprint == nil
     end
   end
 

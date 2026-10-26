@@ -127,6 +127,14 @@ Shared schemas should set `@schema_prefix "public"`. The wrapper recognizes
 that metadata and keeps shared models in `public` even when an admin is working
 inside a tenant environment.
 
+In `:multi` mode a query on a site's table with no prefix at all raises
+`Brando.Exception.MissingTenantError`: `public`'s copy of a site table is no
+site's content. Run background work for a site inside
+`Brando.Tenant.with_prefix/2`. Where the `public` copy is meant, as for the
+shared library, pass `prefix: "public"` or run the work in
+`Brando.Tenant.with_public/1`. Tables listed in `Brando.Tenant.SharedTables`, and schemas with
+their own `@schema_prefix`, are not refused.
+
 Declare public paths in your application's web SSG module:
 
 ```elixir

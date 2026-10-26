@@ -95,7 +95,6 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
 
   test "hides publishing from dynamically delivered sites", context do
     {:ok, _dynamic_site} = Registry.update_site(context.site, %{delivery_mode: :dynamic})
-    Cache.clear()
 
     assert {:error, {:redirect, %{to: "/admin"}}} =
              live(context.conn, "/admin/config/publishing")

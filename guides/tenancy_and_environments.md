@@ -487,12 +487,25 @@ Shared schemas should set `@schema_prefix "public"`. The wrapper recognizes
 that metadata and keeps shared models in `public` even when an admin is working
 inside a tenant environment.
 
+In `:multi` mode a query on a site's table with no prefix at all raises
+`Brando.Exception.MissingTenantError`: `public`'s copy of a site table is no
+site's content. Run background work for a site inside
+`Brando.Tenant.with_prefix/2`. Where the `public` copy is meant, as for the
+shared library, pass `prefix: "public"` or run the work in
+`Brando.Tenant.with_public/1`. Tables listed in `Brando.Tenant.SharedTables`, and schemas with
+their own `@schema_prefix`, are not refused.
+
 <!-- usage-rules:end -->
 
 In `:multi`, a suspended, archived, or unknown frontend host receives `404`
 before content plugs run. A stale or forged admin site selection is checked
 against `public.user_sites`; it can never restore another tenant's schema
-prefix.
+prefix. A signed-in user with no site to enter (none assigned, or only
+suspended or archived ones) is sent to the access-denied page from every admin
+screen and controller, apart from signing out and choosing a site. A global
+superuser with no active site reaches the installation's screens (sites,
+users, groups, frontend assets, the shared library) and is sent to the sites
+screen from the others.
 
 ## Shared modules, containers, and palettes
 
@@ -957,10 +970,13 @@ Generated output is persistent at
 `sites/{site_key}/ssg/builds/{version}`. Old ready, archived, and failed artifact
 directories are pruned after the retention window, while their database history
 and logs remain. Preview tokens expire after seven days and stop working as soon
-as their artifact is pruned. The Publishing screen links to each build's
-preview every time it opens, so a build keeps its token itself, where a shared
-entry preview keeps only its key's hash: anyone who can read the database can
-open a build's preview until it expires.
+as their artifact is pruned. A preview opens only on a host that resolves to
+the build's own site (another site's host answers `404`), and is served with a
+sandboxing Content-Security-Policy: its scripts run, without access to the
+host's cookies or storage. The Publishing screen links to each build's preview
+every time it opens, so a build keeps its token itself, where a shared entry
+preview keeps only its key's hash: anyone who can read the database can open a
+build's preview until it expires.
 
 <!-- usage-rules:start topic="tenancy" -->
 

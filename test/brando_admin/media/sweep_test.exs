@@ -230,26 +230,29 @@ defmodule BrandoAdmin.Media.SweepTest do
     end
 
     test "a sort and its undo stay in the current site's schema", c do
-      a = video(c.videos)
-      show(page("About us"), [a])
+      # The sort runs on the public copy on purpose; the tenant has its own
+      Brando.Tenant.with_public(fn ->
+        a = video(c.videos)
+        show(page("About us"), [a])
 
-      # The same folders in the tenant: not the public sort's to touch.
-      tenant_folder =
+        # The same folders in the tenant: not the public sort's to touch.
+        tenant_folder =
+          Brando.Tenant.with_prefix(@prefix, fn ->
+            FolderBrowser.folder_id_for("videos/default/sweep/pages/about-us")
+            FolderBrowser.folder_id_for("videos/default/sweep")
+          end)
+
+        {:ok, plan} = Sweep.plan(:video, c.videos)
+        {:ok, result} = Sweep.apply(plan)
+        assert {:ok, 1} = Sweep.undo(result)
+
         Brando.Tenant.with_prefix(@prefix, fn ->
-          FolderBrowser.folder_id_for("videos/default/sweep/pages/about-us")
-          FolderBrowser.folder_id_for("videos/default/sweep")
+          assert Repo.get_by(Folder, scope: "videos", path: "default/sweep/pages/about-us")
+          assert {:ok, %{total: 0, groups: []}} = Sweep.plan(:video, tenant_folder)
         end)
 
-      {:ok, plan} = Sweep.plan(:video, c.videos)
-      {:ok, result} = Sweep.apply(plan)
-      assert {:ok, 1} = Sweep.undo(result)
-
-      Brando.Tenant.with_prefix(@prefix, fn ->
-        assert Repo.get_by(Folder, scope: "videos", path: "default/sweep/pages/about-us")
-        assert {:ok, %{total: 0, groups: []}} = Sweep.plan(:video, tenant_folder)
+        refute Repo.get_by(Folder, scope: "videos", path: "default/sweep/pages/about-us")
       end)
-
-      refute Repo.get_by(Folder, scope: "videos", path: "default/sweep/pages/about-us")
     end
   end
 end

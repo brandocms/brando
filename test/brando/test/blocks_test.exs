@@ -96,7 +96,7 @@ defmodule Brando.Test.BlocksTest do
           language: :en,
           template: "default.html",
           creator_id: user.id
-        })
+        }, prefix: "public")
 
       Brando.Tenant.with_prefix(@prefix, fn ->
         module =

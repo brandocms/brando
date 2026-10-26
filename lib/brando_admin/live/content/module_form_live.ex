@@ -763,7 +763,7 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
   defp maybe_require_version_note(changeset, false), do: changeset
 
   defp maybe_use_public_library_context(%{assigns: %{shared_library?: true}} = socket) do
-    Brando.Tenant.put_prefix(nil)
+    Brando.Tenant.put_public()
     assign(socket, :tenant_prefix, nil)
   end
 

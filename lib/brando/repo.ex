@@ -222,8 +222,52 @@ defmodule Brando.Repo do
         Keyword.put(opts, :prefix, prefix)
 
       true ->
+        refuse_unscoped!(source)
         opts
     end
+  end
+
+  # With several sites, `public`'s copy of a site table is no site's content
+  # (a tenant migration leaves it behind): reading it with no prefix would
+  # show it to whoever has no site. A source that carries its own prefix, or
+  # a shared table, is not refused, nor is work on `public` on purpose
+  # (`Brando.Tenant.with_public/1`).
+  defp refuse_unscoped!(source) do
+    if Brando.Tenant.mode() == :multi and not Brando.Tenant.public?() do
+      case tenant_table(source) do
+        nil -> :ok
+        table -> raise Brando.Exception.MissingTenantError, table: table
+      end
+    end
+  end
+
+  defp tenant_table(%Ecto.Changeset{data: data}), do: tenant_table(data)
+  defp tenant_table(%Ecto.Query{prefix: prefix}) when is_binary(prefix), do: nil
+  defp tenant_table(%Ecto.Query{from: %{prefix: prefix}}) when is_binary(prefix), do: nil
+  defp tenant_table(%Ecto.Query{from: %{source: source}}), do: tenant_table(source)
+  defp tenant_table(%Ecto.SubQuery{query: query}), do: tenant_table(query)
+  defp tenant_table(%{__meta__: %{prefix: prefix}}) when is_binary(prefix), do: nil
+  defp tenant_table(%{__meta__: %{source: table}, __struct__: schema}), do: tenant_table({table, schema})
+  defp tenant_table({table, nil}) when is_binary(table), do: tenant_table(table)
+
+  defp tenant_table({table, schema}) when is_binary(table) and is_atom(schema),
+    do: if(schema_prefix(schema), do: nil, else: tenant_table(table))
+
+  defp tenant_table([first | _rest]), do: tenant_table(first)
+
+  defp tenant_table(table) when is_binary(table),
+    do: if(Brando.Tenant.SharedTables.member?(table), do: nil, else: table)
+
+  defp tenant_table(schema) when is_atom(schema) do
+    if Code.ensure_loaded?(schema) and function_exported?(schema, :__schema__, 1),
+      do: tenant_table({schema.__schema__(:source), schema})
+  end
+
+  defp tenant_table(_source), do: nil
+
+  defp schema_prefix(schema) do
+    Code.ensure_loaded?(schema) and function_exported?(schema, :__schema__, 1) and
+      is_binary(schema.__schema__(:prefix))
   end
 
   defp public_source?(%Ecto.Changeset{data: data}), do: public_source?(data)
