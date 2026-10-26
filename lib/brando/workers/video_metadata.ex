@@ -20,6 +20,8 @@ defmodule Brando.Worker.VideoMetadata do
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Videos.Video
 
+  @refused [:private_address, :https_required, :scheme_not_allowed, :credentials_in_url, :invalid_url]
+
   @impl Oban.Worker
   def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
 
@@ -29,7 +31,10 @@ defmodule Brando.Worker.VideoMetadata do
       case Brando.Videos.fetch_metadata(video, user) do
         {:ok, _} -> :ok
         {:error, :unsupported} -> {:cancel, :unsupported}
-        {:error, {:http, status}} when status in 400..499 -> {:cancel, {:http, status}}
+        # A redirect is not followed, and the address is refused (URLGuard):
+        # trying again won't change either
+        {:error, {:http, status}} when status in 300..499 -> {:cancel, {:http, status}}
+        {:error, reason} when reason in @refused -> {:cancel, reason}
         {:error, reason} -> {:error, reason}
       end
     else

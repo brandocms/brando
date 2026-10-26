@@ -927,8 +927,8 @@ form supports:
 - an optional public CDN URL;
 - an optional completion webhook, posted after each deploy or rollback. Like
   a [webhook](webhooks.md), it must be `https` to a host with only public
-  addresses; Brando checks it when saved and again before each post, and does
-  not follow redirects. The build log says when the post failed, not the
+  addresses; Brando checks it when it is set or changed, and again before each
+  post, and does not follow redirects. The build log says when the post failed, not the
   answer;
 - automatic deployment after successful builds; and
 - artifact retention from 1 through 100 builds (10 by default).

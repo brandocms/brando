@@ -26,6 +26,7 @@ defmodule Brando.Videos.Metadata do
   alias Brando.Videos.Helpers
   alias Brando.Videos.Video
   alias Brando.Videos.VimeoURL
+  alias Brando.Webhooks.Client
   alias Brando.Webhooks.URLGuard
 
   @type found :: %{
@@ -35,6 +36,10 @@ defmodule Brando.Videos.Metadata do
           optional(:width) => pos_integer(),
           optional(:height) => pos_integer()
         }
+
+  @timeout 15_000
+  # A thumbnail or a playlist; anything longer is refused
+  @body_limit 20_000_000
 
   @vimeo_oembed "https://vimeo.com/api/oembed.json?url="
   @youtube_oembed "https://www.youtube.com/oembed?format=json&url="
@@ -191,44 +196,25 @@ defmodule Brando.Videos.Metadata do
     {a.scheme, a.host, a.port} == {b.scheme, b.host, b.port}
   end
 
-  # Connects to the address URLGuard checked, with the host name kept for TLS
-  # (SNI and certificate) and the Host header. A redirect is an answer like
-  # any other, not followed.
+  # Req's pipeline (headers, decompression, JSON) with the request sent by
+  # Brando.Webhooks.Client: to the address URLGuard checked, with the host
+  # name kept for TLS (SNI and certificate) and the Host header. A redirect
+  # is an answer like any other, not followed.
   defp get(url) do
     with {:ok, target} <- URLGuard.resolve(url) do
       [
-        url: pinned_url(target),
-        # A pool per host name, closed when idle
-        finch: [
-          conn_opts: [hostname: target.host, transport_opts: transport_opts(target)],
-          pool_max_idle_time: 60_000
-        ],
+        url: url,
+        adapter: Client,
         redirect: false,
         retry: false,
-        receive_timeout: 15_000,
-        # Req would name an IPv6 address here
-        headers: [{"host", host_header(target)}, {"referer", Brando.Utils.hostname() <> "/"}]
+        headers: [{"referer", Brando.Utils.hostname() <> "/"}]
       ]
       |> Keyword.merge(Keyword.get(Application.get_env(:brando, __MODULE__, []), :req_options, []))
       |> Req.new()
+      |> Req.Request.put_private(:url_guard_target, target)
+      |> Req.Request.put_private(:client_options, timeout: @timeout, body_limit: @body_limit)
       |> Req.get()
     end
-  end
-
-  defp transport_opts(target) do
-    sni = if target.scheme == :https, do: [server_name_indication: String.to_charlist(target.host)], else: []
-    if tuple_size(target.address) == 8, do: [{:inet6, true} | sni], else: sni
-  end
-
-  defp pinned_url(target), do: "#{target.scheme}://#{literal(:inet.ntoa(target.address))}:#{target.port}#{target.path}"
-
-  defp host_header(%{scheme: scheme, host: host, port: port}) do
-    if {scheme, port} in [{:https, 443}, {:http, 80}], do: literal(host), else: "#{literal(host)}:#{port}"
-  end
-
-  defp literal(host) do
-    host = to_string(host)
-    if String.contains?(host, ":"), do: "[#{host}]", else: host
   end
 
   defp content_type(response) do

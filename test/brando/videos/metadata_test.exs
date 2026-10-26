@@ -233,24 +233,6 @@ defmodule Brando.Videos.MetadataTest do
                Metadata.lookup(external("https://player.vimeo.com/external/42.hd.mp4?s=abc"))
     end
 
-    test "connects to the address it checked, naming the host" do
-      test = self()
-
-      Req.Test.stub(Metadata, fn conn ->
-        send(test, {:host, conn.host, Conn.get_req_header(conn, "host")})
-        Conn.send_resp(conn, 200, @master)
-      end)
-
-      Metadata.lookup(external("https://vz-1.b-cdn.net/guid/playlist.m3u8"))
-      # The test resolver's address for *.b-cdn.net
-      assert_received {:host, "93.184.216.34", ["vz-1.b-cdn.net"]}
-
-      # An IPv6 address is named by the host too, not the address
-      put_test_env(Brando.Webhooks, resolver: fn _host -> {:ok, [{0x2A00, 0x1450, 0, 0, 0, 0, 0, 0x200E}]} end)
-      Metadata.lookup(external("https://vz-1.b-cdn.net/guid/playlist.m3u8"))
-      assert_received {:host, "2a00:1450::200e", ["vz-1.b-cdn.net"]}
-    end
-
     test "a provider host resolving to a private address is not requested" do
       stub(fn _, _ -> {:text, @master} end)
       url = "https://private-zone.b-cdn.net/guid/playlist.m3u8"
@@ -281,6 +263,20 @@ defmodule Brando.Videos.MetadataTest do
       assert_received {:request, "/guid/playlist.m3u8", _}
       assert_received {:request, "/guid/thumbnail.jpg", _}
       refute_received {:request, "/internal/playlist.m3u8", _}
+    end
+
+    test "a redirect or a refused address is not looked up again" do
+      user = Factory.insert(:random_user)
+      video = Factory.insert(:video, creator: user, type: :vimeo, remote_id: "8", source_url: "https://vimeo.com/8")
+      stub(fn _, _ -> 302 end)
+
+      assert {:cancel, {:http, 302}} =
+               perform_job(Brando.Worker.VideoMetadata, %{"video_id" => video.id, "user_id" => user.id})
+
+      put_test_env(Brando.Webhooks, resolver: fn _host -> {:ok, [{10, 0, 0, 5}]} end)
+
+      assert {:cancel, :private_address} =
+               perform_job(Brando.Worker.VideoMetadata, %{"video_id" => video.id, "user_id" => user.id})
     end
 
     test "a rendition on another host is not read" do
@@ -331,6 +327,18 @@ defmodule Brando.Videos.MetadataTest do
       assert Metadata.download("http://pinned.test:#{port}/thumb.jpg") == {:error, {:http, 302}}
       assert_receive {:webhook_request, %{path: "/thumb.jpg"}}
       refute_receive {:webhook_request, %{path: "/second.jpg"}}, 200
+    end
+
+    test "an IPv6 address is connected to by address, and the host keeps its name" do
+      put_test_env(Metadata, Keyword.delete(Application.get_env(:brando, Metadata), :req_options))
+      put_test_env(Brando.Webhooks, allow_localhost: true, resolver: fn _host -> {:ok, [{0, 0, 0, 0, 0, 0, 0, 1}]} end)
+
+      receiver =
+        Brando.WebhookReceiver.start(fn _ -> {200, [{"content-type", "image/png"}], "png"} end, {0, 0, 0, 0, 0, 0, 0, 1})
+
+      assert Metadata.download("http://pinned6.test:#{receiver.port}/a.png") == {:ok, "png", "image/png"}
+      assert_receive {:webhook_request, %{path: "/a.png", headers: %{"host" => host}}}
+      assert host == "pinned6.test:#{receiver.port}"
     end
   end
 

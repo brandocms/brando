@@ -4,15 +4,17 @@ defmodule Brando.WebhookReceiver do
   a random loopback port. Every request it gets is sent to the test process
   as `{:webhook_request, %{method, path, headers, body}}`, and `respond`
   decides the answer: `{status, body}`, `{status, headers, body}`, or
-  `{:sleep, ms}` to answer nothing for that long.
+  `{:sleep, ms}` to answer nothing for that long. `start(respond, {0, 0, 0, 0, 0, 0, 0, 1})`
+  listens on IPv6 loopback.
 
       receiver = Brando.WebhookReceiver.start(fn _request -> {200, "ok"} end)
       url = Brando.WebhookReceiver.url(receiver, "/hook")
   """
 
-  def start(respond \\ fn _request -> {200, "ok"} end) do
+  def start(respond \\ fn _request -> {200, "ok"} end, ip \\ {127, 0, 0, 1}) do
     test = self()
-    {:ok, socket} = :gen_tcp.listen(0, [:binary, packet: :raw, active: false, reuseaddr: true, ip: {127, 0, 0, 1}])
+    family = if tuple_size(ip) == 8, do: [:inet6], else: []
+    {:ok, socket} = :gen_tcp.listen(0, family ++ [:binary, packet: :raw, active: false, reuseaddr: true, ip: ip])
     {:ok, port} = :inet.port(socket)
     pid = spawn(fn -> accept(socket, test, respond) end)
     :gen_tcp.controlling_process(socket, pid)
