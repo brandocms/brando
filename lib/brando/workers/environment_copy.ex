@@ -1,5 +1,8 @@
 defmodule Brando.Worker.EnvironmentCopy do
-  @moduledoc "Runs a scheduled, archived copy between two named environments."
+  @moduledoc """
+  Runs a scheduled, archived copy between two named environments, if
+  whoever scheduled it still may (`Brando.Environments.scheduler_authorized?/2`).
+  """
 
   use Oban.Worker, queue: :environment_operations, max_attempts: 3
 
@@ -15,6 +18,7 @@ defmodule Brando.Worker.EnvironmentCopy do
       }) do
     with source when not is_nil(source) <- Registry.get_environment(source_id),
          target when not is_nil(target) <- Registry.get_environment(target_id),
+         true <- Brando.Environments.scheduler_authorized?(args["creator_id"], target.site_id) || :forbidden,
          {:ok, _result} <-
            Brando.Environments.copy_environment(source, target,
              creator_id: args["creator_id"],
@@ -23,6 +27,7 @@ defmodule Brando.Worker.EnvironmentCopy do
       :ok
     else
       nil -> {:cancel, :environment_not_found}
+      :forbidden -> {:cancel, :scheduler_not_authorized}
       {:error, reason} -> {:error, reason}
     end
   end

@@ -434,6 +434,68 @@ defmodule Brando.EnvironmentsTest do
     assert Registry.get_environment(target.id).live
   end
 
+  describe "a scheduled operation, when it runs" do
+    setup %{site: site} do
+      {:ok, source} = Environments.create_environment(site, %{name: "Source", key: "source", live: true})
+      {:ok, target} = Environments.create_environment(site, %{name: "Target", key: "target", live: false})
+      scheduler = Brando.Factory.insert(:random_user, role: :editor)
+      {:ok, _} = Brando.Tenant.Access.grant(scheduler, site, :admin)
+      %{source: source, target: target, scheduler: scheduler}
+    end
+
+    defp set_live(target, scheduler),
+      do: EnvironmentSetLive.perform(%Oban.Job{args: %{"environment_id" => target.id, "creator_id" => scheduler.id}})
+
+    defp copy(source, target, scheduler),
+      do:
+        EnvironmentCopy.perform(%Oban.Job{
+          args: %{
+            "source_environment_id" => source.id,
+            "target_environment_id" => target.id,
+            "creator_id" => scheduler.id
+          }
+        })
+
+    test "runs while whoever scheduled it may still manage the site", ctx do
+      assert :ok = copy(ctx.source, ctx.target, ctx.scheduler)
+      assert :ok = set_live(ctx.target, ctx.scheduler)
+      assert Registry.get_environment(ctx.target.id).live
+    end
+
+    test "is cancelled once they may not", %{site: site} = ctx do
+      {:ok, _} = Brando.Tenant.Access.grant(ctx.scheduler, site, :editor)
+
+      assert {:cancel, :scheduler_not_authorized} = copy(ctx.source, ctx.target, ctx.scheduler)
+      assert {:cancel, :scheduler_not_authorized} = set_live(ctx.target, ctx.scheduler)
+      refute Registry.get_environment(ctx.target.id).live
+      refute_received {:schema_cloned, _, _}
+    end
+
+    test "is cancelled when their account is disabled or deleted", ctx do
+      Brando.Repo.update_all(from_user(ctx.scheduler), set: [active: false])
+      assert {:cancel, :scheduler_not_authorized} = set_live(ctx.target, ctx.scheduler)
+
+      Brando.Repo.update_all(from_user(ctx.scheduler), set: [active: true, deleted_at: DateTime.utc_now()])
+      assert {:cancel, :scheduler_not_authorized} = set_live(ctx.target, ctx.scheduler)
+      refute Registry.get_environment(ctx.target.id).live
+    end
+
+    test "with one site, takes an admin or superuser", %{site: site} do
+      put_test_env(:tenancy_mode, :single)
+      admin = Brando.Factory.insert(:random_user, role: :admin)
+      demoted = Brando.Factory.insert(:random_user, role: :editor)
+
+      assert Environments.scheduler_authorized?(admin.id, site.id)
+      refute Environments.scheduler_authorized?(demoted.id, site.id)
+      assert Environments.scheduler_authorized?(nil, site.id)
+    end
+  end
+
+  defp from_user(user) do
+    import Ecto.Query, only: [from: 2]
+    from(u in Brando.Users.User, where: u.id == ^user.id)
+  end
+
   defp operation_logs(site) do
     import Ecto.Query, only: [from: 2]
 

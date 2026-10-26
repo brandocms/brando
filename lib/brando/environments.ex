@@ -22,6 +22,7 @@ defmodule Brando.Environments do
   alias Brando.Tenant
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
+  alias Brando.Users.User
   alias Brando.Worker.EnvironmentCopy
   alias Brando.Worker.EnvironmentSetLive
 
@@ -404,6 +405,37 @@ defmodule Brando.Environments do
     |> compact_job_args()
     |> EnvironmentSetLive.new(scheduled_at: scheduled_at, tags: ["environment-operation"])
     |> Oban.insert()
+  end
+
+  @doc """
+  Whether whoever scheduled an operation on `site_id`'s environments may
+  still carry it out when it runs: an active account allowed to promote the
+  site's environments (in legacy mode, an admin or superuser of the site).
+  An operation scheduled by no one (`creator_id` nil) runs as the system.
+  """
+  @spec scheduler_authorized?(integer() | nil, integer()) :: boolean()
+  def scheduler_authorized?(nil, _site_id), do: true
+
+  def scheduler_authorized?(creator_id, site_id) do
+    with %User{active: true, deleted_at: nil} = user <- Repo.get(User, creator_id, prefix: "public"),
+         %Site{} = site <- Registry.get_site(site_id) do
+      may_promote?(user, site)
+    else
+      _ -> false
+    end
+  end
+
+  defp may_promote?(user, site) do
+    cond do
+      Brando.Authorization.enabled?() ->
+        Brando.Authorization.Operations.authorize(user, :promote, :environments, site.id) == :ok
+
+      Tenant.mode() == :multi ->
+        Brando.Tenant.Access.can_manage?(user, site)
+
+      true ->
+        user.role in [:admin, :superuser]
+    end
   end
 
   @doc "Lists pending copy/live-switch jobs for a site."
