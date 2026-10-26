@@ -144,6 +144,10 @@ defmodule Brando.Forms.FormTagTest do
 
     refute finalized =~ "$csrftoken"
     assert finalized =~ ~r{<input value="[^"$]+" name="_csrf_token" type="hidden" />}
+
+    single_quoted = Delivery.finalize(~s(<input type='hidden' name = '_csrf_token' value = '$csrftoken'>))
+    refute single_quoted =~ "$csrftoken"
+    assert single_quoted =~ ~r{<input type='hidden' name = '_csrf_token' value="[^"$]+">}
   end
 
   test "a HEEx module renders the form with its slots", %{user: user} do

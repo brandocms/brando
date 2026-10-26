@@ -33,8 +33,8 @@ defmodule Brando.Forms.Delivery do
   # stores. Rendered attribute values escape their quotes, so text cannot fake
   # an attribute.
   @input_tag ~r/<input\b[^<>]*>/
-  @token_name ~r/\sname="_csrf_token"/
-  @placeholder_value ~r/\svalue="\$csrftoken"/
+  @token_name ~r/\sname\s*=\s*(["'])_csrf_token\1/
+  @placeholder_value ~r/\svalue\s*=\s*(["'])\$csrftoken\1/
 
   @doc "The placeholder `{% form %}` stores where the CSRF token goes."
   def csrf_placeholder, do: @csrf_placeholder
