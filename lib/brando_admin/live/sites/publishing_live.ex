@@ -41,6 +41,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
          socket
          |> assign(:socket_connected, true)
          |> assign(:site, site)
+         |> assign(:admin_uri, socket.host_uri)
          |> assign(:can_manage?, can_manage?(socket.assigns.current_user, site))
          |> assign(:default_scheduled_at, default_scheduled_at())
          |> refresh()}
@@ -267,7 +268,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                   <a
                     :if={previewable?(build)}
                     class="btn btn--sm"
-                    href={preview_url(build)}
+                    href={preview_url(build, @site, @admin_uri)}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -522,7 +523,26 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp previewable?(build),
     do: build.status in [:ready, :deployed, :archived] and is_nil(build.pruned_at)
 
-  defp preview_url(build), do: "/__ssg_preview__/#{build.preview_token}/"
+  # A preview opens only on a host of the build's own site
+  # (`Brando.SSG.PreviewController`), which with several sites need not be
+  # the admin's: link to the build environment's domain, or the live one's.
+  defp preview_url(build, site, admin_uri) do
+    path = "/__ssg_preview__/#{build.preview_token}/"
+
+    with :multi <- Brando.Tenant.mode(),
+         %URI{} <- admin_uri,
+         domain when is_binary(domain) <- preview_domain(build, site) do
+      URI.to_string(%URI{admin_uri | host: domain, path: path, query: nil, fragment: nil})
+    else
+      _ -> path
+    end
+  end
+
+  defp preview_domain(build, site),
+    do: environment_domain(build.environment) || environment_domain(Brando.Tenant.Cache.get_live_env(site.key))
+
+  defp environment_domain(%{domain: domain}) when is_binary(domain) and domain != "", do: domain
+  defp environment_domain(_environment), do: nil
 
   defp public_url(build), do: build.deploy_config["cdn_url"]
 

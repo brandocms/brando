@@ -128,6 +128,15 @@ defmodule Brando.Tenant do
     :ok
   end
 
+  @doc """
+  Whether the process is outside every site in multi-site mode: no tenant
+  prefix, and not working on `public` on purpose (`with_public/1`). Account
+  emails and the installation's own screens run so; a site's identity, SEO,
+  globals and menus are then empty.
+  """
+  @spec outside_site?() :: boolean()
+  def outside_site?, do: mode() == :multi and is_nil(current_prefix()) and not public?()
+
   @doc "Whether the process works on `public`'s copy of site tables on purpose (`with_public/1`)."
   @spec public?() :: boolean()
   def public?, do: Process.get(@process_public_key, false) and is_nil(Process.get(@process_prefix_key))

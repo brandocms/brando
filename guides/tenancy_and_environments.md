@@ -971,12 +971,13 @@ Generated output is persistent at
 directories are pruned after the retention window, while their database history
 and logs remain. Preview tokens expire after seven days and stop working as soon
 as their artifact is pruned. A preview opens only on a host that resolves to
-the build's own site (another site's host answers `404`), and is served with a
-sandboxing Content-Security-Policy: its scripts run, without access to the
-host's cookies or storage. The Publishing screen links to each build's preview
-every time it opens, so a build keeps its token itself, where a shared entry
-preview keeps only its key's hash: anyone who can read the database can open a
-build's preview until it expires.
+the build's own site (another site's host answers `404`); with several sites
+the Publishing screen links it on the build environment's domain, or the live
+environment's. Previews are served with a Content-Security-Policy that keeps
+forms from posting and the page from being framed elsewhere. The Publishing
+screen links to each build's preview every time it opens, so a build keeps its
+token itself, where a shared entry preview keeps only its key's hash: anyone
+who can read the database can open a build's preview until it expires.
 
 <!-- usage-rules:start topic="tenancy" -->
 

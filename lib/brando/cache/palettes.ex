@@ -41,6 +41,10 @@ defmodule Brando.Cache.Palettes do
   @spec set :: {:error, boolean} | {:ok, boolean}
   @decorate span("brando.cache.set_palettes")
   def set do
+    if Brando.Tenant.outside_site?(), do: {:ok, false}, else: do_set()
+  end
+
+  defp do_set do
     {:ok, palettes} = get_palettes()
     palettes_css = get_palettes_css(palettes)
 

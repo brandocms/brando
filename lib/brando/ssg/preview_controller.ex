@@ -3,9 +3,9 @@ defmodule Brando.SSG.PreviewController do
   Serves a short-lived preview from a versioned SSG artifact.
 
   With tenancy enabled a preview is served only on a host that resolves to the
-  build's own site: another site's host, or none, answers 404. The artifact
-  carries the site's raw markup, so the response is sandboxed away from the
-  host's origin.
+  build's own site: another site's host, or none, answers 404, so the
+  artifact's markup runs only in its own site's origin. The response carries
+  a restrictive Content-Security-Policy.
   """
 
   use BrandoAdmin, :controller
@@ -13,10 +13,12 @@ defmodule Brando.SSG.PreviewController do
   alias Brando.SSG.Builds
   alias Brando.Tenant
 
-  # Scripts run, but in an opaque origin: no access to the host's cookies,
-  # storage or same-origin requests. Forms post nowhere.
-  @content_security_policy "sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox; " <>
-                             "base-uri 'none'; form-action 'none'; frame-ancestors 'self'"
+  # The build's scripts run, with the site's own origin: an opaque one would
+  # need CORS for its module scripts and fonts, which the site's assets do not
+  # send, and leave the page blank. Forms post nowhere, and plugins, top-level
+  # navigation and dialogs are off.
+  @content_security_policy "sandbox allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox; " <>
+                             "base-uri 'none'; form-action 'none'; frame-ancestors 'self'; object-src 'none'"
 
   @doc false
   def show(conn, %{"token" => token} = params) do

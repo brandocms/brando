@@ -349,7 +349,7 @@ defmodule Brando.SSGBuildsTest do
 
   # Audit F15: the artifact carries the site's raw markup, so it must not run
   # in another site's origin.
-  test "serves a preview only on its own site's host, sandboxed", context do
+  test "serves a preview only on its own site's host, with a restrictive policy", context do
     {:ok, other_site} =
       Registry.create_site(%{
         name: "Static Beta",
@@ -374,7 +374,7 @@ defmodule Brando.SSGBuildsTest do
     assert response(own, 200) == build.version
     assert [policy] = get_resp_header(own, "content-security-policy")
     assert policy =~ "sandbox allow-scripts"
-    refute policy =~ "allow-same-origin"
+    assert policy =~ "form-action 'none'"
     assert get_resp_header(own, "x-content-type-options") == ["nosniff"]
 
     assert response(preview(build, "#{other_site.key}.test"), 404)

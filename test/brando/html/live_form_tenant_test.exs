@@ -37,6 +37,20 @@ defmodule Brando.HTML.Forms.LiveFormTenantTest.UnhookedFormLive do
   end
 end
 
+defmodule Brando.HTML.Forms.LiveFormTenantTest.PrefixLive do
+  @moduledoc false
+  use Phoenix.LiveView
+
+  on_mount Brando.Tenant.FrontendLiveView
+
+  def mount(_params, %{"test" => test}, socket) do
+    send(test, {:mounted, connected?(socket), socket.assigns.tenant_prefix})
+    {:ok, socket}
+  end
+
+  def render(assigns), do: ~H"<p>Prefix</p>"
+end
+
 defmodule Brando.HTML.Forms.LiveFormTenantTest do
   # Audit F29: a LiveForm's connected process had no tenant prefix, so its
   # submissions were stored under "public", outside the site's listing and
@@ -48,7 +62,7 @@ defmodule Brando.HTML.Forms.LiveFormTenantTest do
   alias Brando.Factory
   alias Brando.Forms
   alias Brando.Forms.Submission
-  alias Brando.HTML.Forms.LiveFormTenantTest.{SiteFormLive, UnhookedFormLive}
+  alias Brando.HTML.Forms.LiveFormTenantTest.{PrefixLive, SiteFormLive, UnhookedFormLive}
   alias Brando.Tenant
   alias Brando.Tenant.{Cache, Registry}
 
@@ -82,7 +96,19 @@ defmodule Brando.HTML.Forms.LiveFormTenantTest do
     {:ok, tenant_form} = Tenant.with_prefix(prefix, fn -> create_form(user, "TenantLabel") end)
     Tenant.put_prefix(nil)
 
-    %{host: "#{key}.test", prefix: prefix, tenant_form: tenant_form}
+    %{host: "#{key}.test", prefix: prefix, tenant_form: tenant_form, site: site}
+  end
+
+  # A static build renders an environment through the plug's signed context,
+  # whatever the host
+  test "the first render keeps the environment the request resolved", %{conn: conn, host: host, site: site} do
+    {:ok, staging} = Registry.create_environment(site, %{name: "Staging", key: "staging", live: false})
+    staging_prefix = Tenant.prefix(site, staging)
+    Tenant.put_prefix(staging_prefix)
+
+    {:ok, _view, _html} = live_isolated(%{conn | host: host}, PrefixLive, session: %{"test" => self()})
+
+    assert_received {:mounted, false, ^staging_prefix}
   end
 
   test "a submission is stored in the page's site", %{conn: conn, host: host, prefix: prefix} do

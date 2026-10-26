@@ -32,6 +32,10 @@ defmodule Brando.Cache.Globals do
   @spec set :: map()
   @decorate span("brando.cache.set_globals")
   def set do
+    if Brando.Tenant.outside_site?(), do: %{}, else: do_set()
+  end
+
+  defp do_set do
     {:ok, global_sets} = Sites.list_global_sets()
     global_map = process_globals(global_sets)
     Cache.put(:globals, global_map, :infinite)

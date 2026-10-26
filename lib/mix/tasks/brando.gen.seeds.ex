@@ -45,7 +45,12 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
     ---------------------------
     """)
 
-    {:ok, report} = Brando.Setup.Seeds.run(user, seo: Keyword.take(opts, [:base_url, :description]))
+    # With several sites the task seeds `public`, as it always has: new sites
+    # get their own content from `Brando.Tenant.Seeder`
+    {:ok, report} =
+      Brando.Tenant.with_public(fn ->
+        Brando.Setup.Seeds.run(user, seo: Keyword.take(opts, [:base_url, :description]))
+      end)
 
     for label <- Enum.reverse(report.created), do: Mix.shell().info([:green, "    + #{label}"])
     for label <- Enum.reverse(report.skipped), do: Mix.shell().info([:yellow, "    = #{label} (exists)"])

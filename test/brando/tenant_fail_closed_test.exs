@@ -80,6 +80,21 @@ defmodule Brando.TenantFailClosedTest do
     assert {:error, {:redirect, %{to: "/admin/sites"}}} = live(conn, "/admin/pages")
   end
 
+  test "with group authorization, an installation grant reaches its screen with no site", %{conn: conn} do
+    put_test_env(:authorization_mode, :groups)
+    owner = Brando.Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+    admin = Brando.Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+    {:ok, _} = Brando.Authorization.Migration.run()
+    installation = Brando.Authorization.Scope.installation(owner)
+    keys = ["brando.admin.access", "brando.sites.read"]
+    {:ok, group} = Brando.Authorization.Groups.create(installation, %{name: "Site managers"}, keys)
+    {:ok, :ok} = Brando.Authorization.Groups.add_member(installation, group.id, admin.id)
+    conn = log_in_user(conn, admin)
+
+    assert {:ok, _view, _html} = live(conn, "/admin/sites")
+    assert {:error, {:redirect, %{to: "/admin/access-denied"}}} = live(conn, "/admin/pages")
+  end
+
   describe "Brando.Repo with no tenant prefix" do
     test "refuses a site table" do
       for query <- [Page, from(page in Page, select: page.id), "pages"] do
@@ -87,6 +102,26 @@ defmodule Brando.TenantFailClosedTest do
       end
 
       assert_raise Brando.Exception.MissingTenantError, fn -> Brando.Repo.insert(%Page{title: "Nowhere"}) end
+    end
+
+    test "refuses a site table joined to a shared one" do
+      joined = from(user in "users", join: page in "pages", on: page.creator_id == user.id, select: page.title)
+      creators = from(page in Page, select: page.creator_id)
+      in_subquery = from(user in "users", where: user.id in subquery(creators), select: user.id)
+
+      for query <- [joined, in_subquery] do
+        assert_raise Brando.Exception.MissingTenantError, fn -> Brando.Repo.all(query) end
+      end
+
+      # A shared schema reads `public` by design, its joins included (avatars)
+      assert is_list(Brando.Repo.all(from(user in Brando.Users.User, join: avatar in assoc(user, :avatar))))
+    end
+
+    # A Brando data migration that reads content with Brando.Repo
+    test "does not refuse a migration Ecto runs" do
+      Process.put(:ecto_migration, %{runner: self(), prefix: nil})
+      on_exit(fn -> Process.delete(:ecto_migration) end)
+      assert is_list(Brando.Repo.all(Page))
     end
 
     test "reads shared tables, and the public copy when asked for" do

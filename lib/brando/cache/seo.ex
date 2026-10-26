@@ -35,6 +35,10 @@ defmodule Brando.Cache.SEO do
   @spec set :: map()
   @decorate span("brando.cache.set_seo")
   def set do
+    if Brando.Tenant.outside_site?(), do: %{}, else: do_set()
+  end
+
+  defp do_set do
     {:ok, seos} = Sites.list_seos(%{preload: [:fallback_meta_image]})
     seo_map = process_seos(seos)
     Cache.put(:seo, seo_map, :infinite)

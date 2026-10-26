@@ -41,9 +41,9 @@ defmodule Brando.Authorization.Realtime do
   def authorize_account(_), do: {:error, :forbidden}
 
   @doc """
-  Whether the scope's user may still act in its workspace. A site scope in
-  legacy mode needs the site to be enterable by the user now
-  (`Brando.Tenant.Access.can_access?/2`), not only when it was signed.
+  Whether the scope's user may still act in its workspace. With several
+  sites, a site scope in legacy mode needs the site to be enterable by the
+  user now (`Brando.Tenant.Access.can_access?/2`), not only when it was signed.
   """
   def authorize_scope(%Scope{} = scope) do
     if Engine.enabled?(),
@@ -55,12 +55,15 @@ defmodule Brando.Authorization.Realtime do
 
   defp legacy_authorize_scope(%Scope{user_id: id} = scope) when is_integer(id) do
     case active_user(id) do
-      %User{} = user -> if legacy_visible?(scope, user), do: :ok, else: {:error, :forbidden}
+      %User{} = user -> if legacy_site_access?(scope, user), do: :ok, else: {:error, :forbidden}
       nil -> {:error, :forbidden}
     end
   end
 
   defp legacy_authorize_scope(_scope), do: {:error, :forbidden}
+
+  # In :single mode every account enters the one site (Brando.Tenant.AdminContext)
+  defp legacy_site_access?(scope, user), do: Brando.Tenant.mode() != :multi or legacy_visible?(scope, user)
 
   defp active_user(id) do
     case Repo.get(User, id) do

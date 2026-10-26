@@ -16,25 +16,43 @@ defmodule Brando.Tenant.FrontendLiveView do
       end
 
   The host is read from the socket's `:uri` connect info when the endpoint
-  declares it, and otherwise from the URL the LiveView mounted at.
+  declares it, and otherwise from the URL the LiveView mounted at. The first,
+  disconnected render keeps the site the plug resolved for the request, as for
+  a static build's pages.
   """
 
   import Phoenix.Component, only: [assign: 2]
   import Phoenix.LiveView, only: [attach_hook: 4]
 
   alias Brando.Tenant
+  alias Brando.Tenant.Cache
   alias Brando.Tenant.Frontend
 
   def on_mount(:default, _params, _session, socket) do
     if Tenant.enabled?() do
-      mount_tenant(socket, host(socket))
+      mount_tenant(socket, resolve(socket))
     else
       {:cont, assign(socket, %{current_site: nil, current_environment: nil, tenant_prefix: nil})}
     end
   end
 
-  defp mount_tenant(socket, host) do
-    case host && Frontend.resolve(host) do
+  # The dead render runs in the request's process, after `Brando.Plug.Tenant`,
+  # which also honours a static build's signed context and live preview: keep
+  # what it resolved.
+  defp resolve(socket) do
+    with false <- Phoenix.LiveView.connected?(socket),
+         "tenant_" <> rest <- Tenant.current_prefix(),
+         [site_key, environment_key] <- String.split(rest, "_", parts: 2),
+         %{} = site <- Cache.get_site(site_key),
+         %{} = environment <- Cache.get_env(site_key, environment_key) do
+      {site, environment}
+    else
+      _ -> with host when is_binary(host) <- host(socket), do: Frontend.resolve(host)
+    end
+  end
+
+  defp mount_tenant(socket, resolved) do
+    case resolved do
       {site, environment} ->
         prefix = Tenant.prefix(site, environment)
         Tenant.put_prefix(prefix)

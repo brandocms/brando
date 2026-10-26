@@ -207,4 +207,15 @@ defmodule Brando.MailerTest do
       assert email.html_body =~ ~s(href="https://example.com/reset/abc")
     end)
   end
+
+  # Sent from the login page, outside any site: no site's identity to read
+  test "account email outside any site is sent with several sites" do
+    user = Factory.insert(:random_user)
+    put_test_env(:tenancy_mode, :multi)
+    Brando.Tenant.put_prefix(nil)
+    Brando.Cache.del(:identity)
+
+    assert {:ok, _} = UserNotifier.deliver_reset_password_instructions(user, "https://example.com/reset/abc")
+    assert_email_sent(fn email -> assert email.text_body =~ "https://example.com/reset/abc" end)
+  end
 end

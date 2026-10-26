@@ -49,8 +49,9 @@ defmodule Brando.Cache.Navigation do
   @spec set :: {:error, boolean} | {:ok, boolean}
   @decorate span("brando.cache.set_navigation")
   def set do
-    menu_map = get_menu_map()
-    Cache.put(:navigation, menu_map, :infinite)
+    if Brando.Tenant.outside_site?(),
+      do: {:ok, false},
+      else: Cache.put(:navigation, get_menu_map(), :infinite)
   end
 
   @doc """

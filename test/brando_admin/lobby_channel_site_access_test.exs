@@ -70,6 +70,16 @@ defmodule BrandoAdmin.LobbyChannelSiteAccessTest do
     assert {:error, %{reason: "forbidden"}} = join_lobby(c.editor, Realtime.token(c.alpha_scope))
   end
 
+  # A single site lets every account in, assigned or not (Brando.Tenant.AdminContext)
+  test "with one site, an editor with no assignment still joins", c do
+    put_test_env(:tenancy_mode, :single)
+    put_test_env(:site_key, c.alpha.key)
+    editor = Factory.insert(:random_user, role: :editor, avatar: nil)
+    scope = Scope.site(editor, c.alpha, hd(c.alpha.environments))
+
+    assert {:ok, _scope} = Realtime.verify_scope(Realtime.token(scope), editor.id)
+  end
+
   defp join!(user, token) do
     Phoenix.PubSub.subscribe(Brando.pubsub(), "presence")
     {:ok, _, joined} = join_lobby(user, token)
