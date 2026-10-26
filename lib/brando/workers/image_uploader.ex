@@ -8,8 +8,8 @@ defmodule Brando.Worker.ImageUploader do
 
   While the image is being processed (a new crop, say), its files change:
   the job waits, snoozing, and processing queues an upload when it is done,
-  which replaces this one (after ten minutes it gives up waiting, and leaves
-  the image to that upload). An upload queued after this one leaves the work
+  which replaces this one (after ten minutes the job fails and Oban retries
+  it, and it never removes files the processing needs). An upload queued after this one leaves the work
   to it.
 
   Before 0.55 each file had a job of its own (with a `src_key`). The first of
@@ -89,8 +89,8 @@ defmodule Brando.Worker.ImageUploader do
       {:snooze, _seconds} = snooze ->
         snooze
 
-      {:cancel, :processing} = cancel ->
-        cancel
+      {:error, :processing} = error ->
+        error
 
       {:error, {:image, :not_found}} ->
         {:cancel, :image_not_found}
@@ -107,13 +107,14 @@ defmodule Brando.Worker.ImageUploader do
   # The image is being processed (a new crop): its files are changing, and
   # processing queues an upload when it is done, which replaces this one.
   # Wait for it, for a while (a job that snoozes never runs out of
-  # attempts); then leave the image to that upload rather than remove files
-  # the processing still needs.
+  # attempts); then fail, so Oban retries a few times more (if the
+  # processing was cancelled meanwhile, this uploads), rather than remove
+  # files the processing still needs.
   defp processing(image_id, %Oban.Job{meta: meta}) do
     cond do
       not Images.Processing.processing_queued?(%{id: image_id}) -> nil
       (meta["snoozed"] || 0) < @max_snoozes -> {:snooze, @snooze}
-      true -> {:cancel, :processing}
+      true -> {:error, :processing}
     end
   end
 

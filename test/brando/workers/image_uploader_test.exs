@@ -20,23 +20,21 @@ defmodule Brando.Worker.ImageUploaderTest do
     @impl true
     def request(method, url, _body, _headers, _opts) do
       %URI{path: path, query: query} = URI.parse(url)
-      completes? = method == :post and String.contains?(query || "", "uploadId")
-      Agent.update(__MODULE__, &[{if(completes?, do: :complete, else: method), path} | &1])
-
-      cond do
-        path =~ "failing" or (path =~ "flaky" and :persistent_term.get({__MODULE__, :flaky}, false)) ->
-          {:ok, %{status_code: 403, headers: [], body: "<Error><Code>AccessDenied</Code></Error>"}}
-
-        method == :post and String.starts_with?(query || "", "uploads") ->
-          {:ok, %{status_code: 200, headers: [], body: initiated()}}
-
-        method == :put ->
-          {:ok, %{status_code: 200, headers: [{"ETag", "\"etag\""}], body: ""}}
-
-        true ->
-          {:ok, %{status_code: 200, headers: [], body: completed()}}
-      end
+      call = call(method, query || "")
+      Agent.update(__MODULE__, &[{call, path} | &1])
+      if call == :complete, do: :persistent_term.get({__MODULE__, :on_complete}, fn -> :ok end).()
+      if refused?(path), do: {:ok, %{status_code: 403, headers: [], body: "<Error/>"}}, else: respond(call)
     end
+
+    defp call(:post, "uploads" <> _), do: :initiate
+    defp call(:post, query), do: if(String.contains?(query, "uploadId"), do: :complete, else: :post)
+    defp call(method, _query), do: method
+
+    defp refused?(path), do: path =~ "failing" or (path =~ "flaky" and :persistent_term.get({__MODULE__, :flaky}, false))
+
+    defp respond(:initiate), do: {:ok, %{status_code: 200, headers: [], body: initiated()}}
+    defp respond(:put), do: {:ok, %{status_code: 200, headers: [{"ETag", "\"etag\""}], body: ""}}
+    defp respond(_call), do: {:ok, %{status_code: 200, headers: [], body: completed()}}
 
     defp initiated,
       do:
@@ -72,6 +70,7 @@ defmodule Brando.Worker.ImageUploaderTest do
 
     on_exit(fn ->
       :persistent_term.erase({FakeS3, :flaky})
+      :persistent_term.erase({FakeS3, :on_complete})
       Application.put_env(:brando, Brando.Images, images)
       for {key, _} <- Application.get_all_env(:ex_aws), do: Application.delete_env(:ex_aws, key)
       for {key, value} <- ex_aws, do: Application.put_env(:ex_aws, key, value)
@@ -190,8 +189,9 @@ defmodule Brando.Worker.ImageUploaderTest do
     assert Repo.get!(Image, image.id).cdn
   end
 
-  # A job that snoozes never runs out of attempts. It leaves the image to the
-  # upload the processing queues, rather than remove files it still needs.
+  # A job that snoozes never runs out of attempts. It fails instead, so Oban
+  # retries it a few times (if the processing is cancelled meanwhile, it
+  # uploads), and doesn't remove files the processing still needs.
   test "an upload stops waiting for processing after a while", %{dir: dir} do
     image = image_with_files(dir, ["thumb"])
 
@@ -199,7 +199,7 @@ defmodule Brando.Worker.ImageUploaderTest do
       _slow = processing_job(image, "available")
       {:ok, upload} = Brando.CDN.queue_upload(image, :system, [])
       job = %{Repo.get!(Oban.Job, upload.id) | meta: %{"snoozed" => 120}}
-      assert {:cancel, :processing} = Brando.Worker.ImageUploader.perform(job)
+      assert {:error, :processing} = Brando.Worker.ImageUploader.perform(job)
     end)
 
     refute Repo.get!(Image, image.id).cdn
@@ -219,6 +219,29 @@ defmodule Brando.Worker.ImageUploaderTest do
       uploads = for job <- Repo.all(Oban.Job), "image_upload_#{image.id}" in job.tags, do: job.id
       assert uploads == [new.id]
     end)
+  end
+
+  # Processing done while it ran queued an upload of the files as they are now
+  test "an upload leaves the image to one queued while it ran", %{dir: dir} do
+    image = image_with_files(dir, ["thumb"])
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      {:ok, upload} = Brando.CDN.queue_upload(image, :system, [])
+
+      :persistent_term.put({FakeS3, :on_complete}, fn ->
+        :persistent_term.erase({FakeS3, :on_complete})
+
+        %{image_id: image.id, config_target: image.config_target, user_id: nil, field_full_path: [], files: 2}
+        |> Brando.Tenant.Job.attach()
+        |> Brando.Worker.ImageUploader.new(tags: ["image_upload_#{image.id}"])
+        |> Oban.insert!()
+      end)
+
+      assert :ok = Brando.Worker.ImageUploader.perform(Repo.get!(Oban.Job, upload.id))
+    end)
+
+    refute Repo.get!(Image, image.id).cdn
+    assert local?(image.path)
   end
 
   test "an image with a size that fails to upload stays off the CDN, with its files", %{dir: dir} do

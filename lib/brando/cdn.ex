@@ -210,8 +210,8 @@ defmodule Brando.CDN do
 
   @doc """
   Whether an upload of image `image_id` of the current site was queued
-  after job `job_id` and hasn't finished: it uploads the image's files as
-  they are now.
+  after job `job_id` and hasn't failed or been cancelled: it uploads (or
+  uploaded) the image's files as they are now.
   """
   def newer_image_upload?(_image_id, nil), do: false
 
@@ -219,7 +219,7 @@ defmodule Brando.CDN do
     query =
       from j in Oban.Job,
         where:
-          j.id > ^job_id and j.state in ["available", "scheduled", "executing", "retryable"] and
+          j.id > ^job_id and j.state not in ["cancelled", "discarded"] and
             ^"image_upload_#{image_id}" in j.tags and
             fragment("? @> ?", j.args, ^Brando.Tenant.Job.context_fragment())
 
