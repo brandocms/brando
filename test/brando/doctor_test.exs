@@ -79,7 +79,7 @@ defmodule Brando.DoctorTest do
   end
 
   describe "Report" do
-    @versions %{brando: "0.55.0-dev", elixir: "1.20.3", otp: "28", phoenix: "1.8.15", live_view: "1.2.12"}
+    @versions %{brando: "0.55.0-dev", elixir: "1.20.3", otp: "28", phoenix: "1.8.16", live_view: "1.2.13"}
 
     test "prints a line per check, the fix under a failing one, and a summary" do
       text =
@@ -89,7 +89,7 @@ defmodule Brando.DoctorTest do
         |> IO.ANSI.format(false)
         |> IO.iodata_to_binary()
 
-      assert text =~ "Brando 0.55.0-dev · Phoenix 1.8.15 · LiveView 1.2.12"
+      assert text =~ "Brando 0.55.0-dev · Phoenix 1.8.16 · LiveView 1.2.13"
       assert text =~ ~r/^✓ Healthy\s+all good$/m
       assert text =~ ~r/^! Warns\s+2 things\n\s{29}do the thing$/m
       assert text =~ ~r/^✗ Fails\s+broken\n\s{29}mend it$/m
@@ -114,7 +114,7 @@ defmodule Brando.DoctorTest do
       source = %{type: :git, url: "https://x/brando.git", commit: "12c2289e98fa", branch: "main", tag: nil, ref: nil}
 
       assert Report.header(Map.put(@versions, :brando_source, source)) ==
-               "Brando 0.55.0-dev (git 12c2289, branch main) · Phoenix 1.8.15 · LiveView 1.2.12"
+               "Brando 0.55.0-dev (git 12c2289, branch main) · Phoenix 1.8.16 · LiveView 1.2.13"
 
       assert %{"versions" => %{"brando_source" => %{"type" => "git", "commit" => "12c2289e98fa", "branch" => "main"}}} =
                Report.json([], Map.put(@versions, :brando_source, source))
@@ -130,7 +130,7 @@ defmodule Brando.DoctorTest do
 
       assert %{
                "status" => "warning",
-               "versions" => %{"brando" => "0.55.0-dev", "live_view" => "1.2.12"},
+               "versions" => %{"brando" => "0.55.0-dev", "live_view" => "1.2.13"},
                "counts" => %{"ok" => 1, "warning" => 1, "error" => 0, "skipped" => 0},
                "checks" => [
                  %{"id" => "healthy", "label" => "Healthy", "status" => "ok", "summary" => "all good", "fix" => nil},
