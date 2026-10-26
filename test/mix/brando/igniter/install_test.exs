@@ -157,6 +157,61 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert IgniterCase.source(rerun, "config/brando.exs") =~ "tenancy_mode: :single"
   end
 
+  test "tokens and keys are kept out of the request logs" do
+    igniter = project() |> install()
+    config = IgniterCase.source(igniter, "config/config.exs")
+    assert config =~ ~s(config :phoenix, filter_parameters: ["password", "code", "proof", "secret", "token", "key"])
+
+    endpoint = IgniterCase.source(igniter, "lib/studio_web/endpoint.ex")
+    # The fixture endpoint has no Plug.Telemetry, so nothing logs requests there
+    refute endpoint =~ "RequestLog"
+
+    endpoint_source = """
+    defmodule StudioWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :studio
+      @session_options [store: :cookie, key: "_studio_key", signing_salt: "preserve-this-salt"]
+      socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
+      plug Plug.Static, at: "/", from: :studio, only: ~w(assets)
+      plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+      plug Plug.Session, @session_options
+      plug StudioWeb.Router
+    end
+    """
+
+    igniter =
+      project(%{
+        "lib/studio_web/endpoint.ex" => endpoint_source,
+        "config/config.exs" => """
+        import Config
+        config :studio, StudioWeb.Endpoint, secret_key_base: "existing-secret", live_view: [signing_salt: "existing-lv-salt"]
+        config :phoenix, :filter_parameters, ["password", "card_number"]
+        import_config "dev.exs"
+        """
+      })
+      |> install()
+
+    assert igniter.issues == []
+
+    assert IgniterCase.source(igniter, "lib/studio_web/endpoint.ex") =~
+             ~r/plug\(?Plug.Telemetry,\s+event_prefix: \[:phoenix, :endpoint\],\s+log: \{Brando.Plug.RequestLog, :level, \[\]\}/
+
+    # The application's own names stay, and Brando's are added
+    names = IgniterCase.source(igniter, "config/config.exs") |> String.replace(~r/\s+/, "")
+    assert names =~ ~s(:filter_parameters,["password","card_number","code","proof","secret","token","key"])
+
+    # A log level of the application's own is kept
+    igniter =
+      project(%{
+        "lib/studio_web/endpoint.ex" =>
+          String.replace(endpoint_source, "[:phoenix, :endpoint]", "[:phoenix, :endpoint], log: :debug")
+      })
+      |> install()
+
+    endpoint = IgniterCase.source(igniter, "lib/studio_web/endpoint.ex")
+    assert endpoint =~ "log: :debug"
+    refute endpoint =~ "RequestLog"
+  end
+
   test "conflicting scaffold files block even automatic acceptance and keep the original" do
     original = "defmodule Studio.Presence do\n def custom, do: :preserved\nend\n"
     igniter = project(%{"lib/studio/presence.ex" => original}) |> install(["--yes"])

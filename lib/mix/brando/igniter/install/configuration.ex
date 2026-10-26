@@ -157,10 +157,30 @@ if Code.ensure_loaded?(Igniter) do
         Module.concat(project.app_module, Villain.Parser)
       )
       |> configure_tenancy(tenancy.mode, tenancy.site_key)
+      |> filter_parameters()
       # Brando depends on Swoosh, which will not start without an API client;
       # Req is already one of Brando's dependencies.
       |> Mix.Brando.Igniter.SourceUpgrade.configure_swoosh_client()
       |> Mix.Brando.Igniter.SourceUpgrade.configure_brando_mailer(Module.concat(project.app_module, Mailer))
+    end
+
+    # Kept out of the request logs: passwords, the admin login's two-factor
+    # code and proof, and tokens and keys (a reset or preview link's, an API
+    # key). Phoenix filters any parameter whose name contains one of them.
+    @filter_parameters ["password", "code", "proof", "secret", "token", "key"]
+
+    defp filter_parameters(igniter) do
+      Config.configure(igniter, "config.exs", :phoenix, [:filter_parameters], @filter_parameters,
+        updater: fn zipper ->
+          Enum.reduce_while(@filter_parameters, {:ok, zipper}, fn name, {:ok, zipper} ->
+            case Igniter.Code.List.append_new_to_list(zipper, name) do
+              {:ok, zipper} -> {:cont, {:ok, zipper}}
+              # Not a literal list (`{:keep, …}`, a variable): the application's own
+              :error -> {:halt, {:ok, zipper}}
+            end
+          end)
+        end
+      )
     end
 
     # The endpoint watchers in config/dev.exs that start the admin's and the

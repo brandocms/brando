@@ -84,7 +84,7 @@ defmodule E2eProjectWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
-  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint], log: {Brando.Plug.RequestLog, :level, []}
 
   plug BrandoWeb.Plugs.GitHubMarkdownWebhook,
     allow_insecure: Application.compile_env(:e2e_project, :sql_sandbox, false)

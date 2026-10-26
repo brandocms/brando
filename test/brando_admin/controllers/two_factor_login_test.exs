@@ -56,6 +56,20 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
       assert get_session(conn, :user_token)
       assert [_] = session_tokens(user)
     end
+
+    test "the remember-me cookie is sent over https only, when the site is served over https" do
+      conn =
+        post(anonymous(), "https://www.example.com/admin/login", %{
+          "user" => %{"email" => user().email, "password" => "admin", "remember_me" => "true"}
+        })
+
+      assert %{secure: true} = conn.resp_cookies[@remember_me]
+
+      # A dev server over plain http keeps it working
+      conn = log_in(anonymous(), user(), %{"remember_me" => "true"})
+      assert %{value: _} = cookie = conn.resp_cookies[@remember_me]
+      refute cookie[:secure]
+    end
   end
 
   describe "with two-factor authentication" do
