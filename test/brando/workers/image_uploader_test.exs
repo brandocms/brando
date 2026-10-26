@@ -190,18 +190,35 @@ defmodule Brando.Worker.ImageUploaderTest do
     assert Repo.get!(Image, image.id).cdn
   end
 
-  # A job that snoozes never runs out of attempts
+  # A job that snoozes never runs out of attempts. It leaves the image to the
+  # upload the processing queues, rather than remove files it still needs.
   test "an upload stops waiting for processing after a while", %{dir: dir} do
     image = image_with_files(dir, ["thumb"])
 
     Oban.Testing.with_testing_mode(:manual, fn ->
-      _stuck = processing_job(image, "executing")
+      _slow = processing_job(image, "available")
       {:ok, upload} = Brando.CDN.queue_upload(image, :system, [])
       job = %{Repo.get!(Oban.Job, upload.id) | meta: %{"snoozed" => 120}}
-      assert {:ok, _} = Brando.Worker.ImageUploader.perform(job)
+      assert {:cancel, :processing} = Brando.Worker.ImageUploader.perform(job)
     end)
 
-    assert Repo.get!(Image, image.id).cdn
+    refute Repo.get!(Image, image.id).cdn
+    assert local?(image.path)
+  end
+
+  # Processing queues an upload when it is done, which replaces one waiting
+  # for it
+  test "a new upload replaces one snoozing", %{dir: dir} do
+    image = image_with_files(dir, ["thumb"])
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      {:ok, snoozing} = Brando.CDN.queue_upload(image, :system, [])
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^snoozing.id), set: [state: "scheduled"])
+      {:ok, new} = Brando.CDN.queue_upload(image, :system, [])
+
+      uploads = for job <- Repo.all(Oban.Job), "image_upload_#{image.id}" in job.tags, do: job.id
+      assert uploads == [new.id]
+    end)
   end
 
   test "an image with a size that fails to upload stays off the CDN, with its files", %{dir: dir} do
