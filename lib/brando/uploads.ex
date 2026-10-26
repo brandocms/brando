@@ -38,6 +38,7 @@ defmodule Brando.Uploads do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Images.PixelLimit
   alias Brando.Uploads.PendingIntent
   alias Brando.Uploads.Store
   alias Brando.Utils
@@ -345,6 +346,7 @@ defmodule Brando.Uploads do
          {:ok, object} <- Brando.CDN.head_object(key, field_cfg),
          :ok <- validate_direct_object(object, params[:filesize], params[:mime_type]),
          {:ok, body} <- Brando.CDN.get_object(key, field_cfg),
+         :ok <- check_direct_pixels(body, [key, params[:mime_type]]),
          {:ok, media_path} <- write_direct_original(key, body),
          {:ok, image} <- create_direct_image(cfg, media_path, resolved_target, params, user),
          {:ok, _job} <- Brando.Images.Processing.queue_processing(image, user, [], silent: true) do
@@ -354,6 +356,17 @@ defmodule Brando.Uploads do
       {:error, :not_found} -> {:error, "Uploaded object not found in bucket (#{key})"}
       {:error, {:handle_upload_type, message}} -> {:error, message}
       {:error, reason} -> {:error, reason}
+    end
+  end
+
+  # Before the original is written over one an `overwrite` config shares a
+  # name with. Bytes libvips cannot read are left to the later steps.
+  defp check_direct_pixels(body, names) do
+    with {:ok, image} <- Image.from_binary(body, PixelLimit.open_options(names)),
+         {:error, :too_many_pixels} <- PixelLimit.check(image) do
+      {:error, PixelLimit.error_message()}
+    else
+      _ -> :ok
     end
   end
 

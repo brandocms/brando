@@ -175,6 +175,36 @@ defmodule Brando.Images.PixelLimitTest do
     end
   end
 
+  test "an animated GIF sent as another type is counted by its name", %{tmp_dir: tmp_dir} do
+    {:ok, white} = Image.new(20, 10, color: :white)
+    {:ok, black} = Image.new(20, 10, color: :black)
+    {:ok, strip} = Image.join([white, black, white], across: 1)
+    {:ok, strip} = Vix.Vips.Image.mutate(strip, &Vix.Vips.MutableImage.set(&1, "page-height", :gint, 10))
+    # A temporary upload has no extension
+    upload_path = Path.join(tmp_dir, "upload")
+    File.write!(upload_path, Image.write!(strip, :memory, suffix: ".gif"))
+
+    dir = Path.join(Brando.Tenant.Storage.current_media_root(), "images/pixel-limit")
+    File.mkdir_p!(dir)
+    on_exit(fn -> File.rm_rf(dir) end)
+    File.cp!(@sample, Path.join(dir, "cover.gif"))
+
+    cfg =
+      struct(Brando.Type.ImageConfig, %{
+        upload_path: "images/pixel-limit",
+        allowed_mimetypes: ["image/png"],
+        force_filename: "cover.gif",
+        overwrite: true
+      })
+
+    put_max_pixels(599)
+    meta = %{path: upload_path, config_target: "default"}
+    entry = %{client_name: "cover.gif", client_type: "image/png", client_size: File.stat!(upload_path).size}
+
+    capture_log(fn -> assert {:error, _} = Brando.Uploads.store_upload(meta, entry, cfg, :system) end)
+    assert File.read!(Path.join(dir, "cover.gif")) == File.read!(@sample)
+  end
+
   describe "processing a stored image" do
     setup do
       dir = Path.join(Brando.Tenant.Storage.current_media_root(), "images/pixel-limit")

@@ -210,8 +210,8 @@ defmodule Brando.Uploads.Store do
 
       Images.create_image(image_params, user)
     else
-      # Refused before anything decodes it. A server upload was checked before
-      # it was copied; this is a direct upload's original, at a key of its own.
+      # Refused before anything decodes it. Server and direct uploads are
+      # checked before they are written; this is a last check.
       {:error, :too_many_pixels} ->
         unless Map.get(cfg, :overwrite), do: File.rm(full_path)
         {:error, {:handle_upload_type, PixelLimit.error_message()}}
@@ -337,7 +337,7 @@ defmodule Brando.Uploads.Store do
   # temporary upload, before it can replace a stored original (`overwrite`).
   defp check_pixels(%__MODULE__{cfg: %ImageConfig{}, upload_entry: %{client_type: type}} = upload)
        when type != "image/svg+xml" do
-    case PixelLimit.check(upload.meta.path, PixelLimit.open_options(type)) do
+    case PixelLimit.check(upload.meta.path, PixelLimit.open_options([type, upload.meta[:filename]])) do
       {:error, :too_many_pixels} -> {:error, {:handle_upload_type, PixelLimit.error_message()}}
       _ -> {:ok, upload}
     end

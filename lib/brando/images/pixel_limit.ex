@@ -47,12 +47,19 @@ defmodule Brando.Images.PixelLimit do
   How processing opens an image, from its file name or MIME type: every
   frame of a GIF, the first page of anything else.
   """
-  @spec open_options(String.t()) :: keyword
+  @spec open_options(String.t() | [String.t() | nil] | nil) :: keyword
   def open_options("image/gif"), do: [pages: :all]
 
   def open_options(name) when is_binary(name) do
     if name |> Path.extname() |> String.downcase() == ".gif", do: [pages: :all], else: []
   end
+
+  # A GIF by any of the names, a MIME type that says otherwise included
+  def open_options(names) when is_list(names) do
+    if Enum.any?(names, &(open_options(&1) != [])), do: [pages: :all], else: []
+  end
+
+  def open_options(_name), do: []
 
   @doc """
   `check/1` for a stored image's original, before it is processed. Only an

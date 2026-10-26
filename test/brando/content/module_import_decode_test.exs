@@ -54,8 +54,10 @@ defmodule Brando.Content.ModuleImportDecodeTest do
     end
 
     test "refuses a compressed term that would expand past the limit, before expanding it" do
-      # A compressed term (tag 80) claiming 64 MB once inflated
-      binary = <<131, 80, 64 * 1_048_576::32>> <> :zlib.compress(<<107, 0, 1, 0>>)
+      # A module export that is 33 MB once inflated and a few KB compressed
+      large = [module(%{code: :binary.copy("a", 33 * 1_048_576)})]
+      binary = :erlang.term_to_binary(large, compressed: 9)
+      assert byte_size(binary) < 100_000
 
       assert Content.deserialize_modules(Base.encode64(binary)) == {:error, :invalid}
     end

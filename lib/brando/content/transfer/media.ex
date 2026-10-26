@@ -110,7 +110,7 @@ defmodule Brando.Content.Transfer.Media do
   end
 
   defp validate_image!(body, name) do
-    case Image.from_binary(body) do
+    case Image.from_binary(body, PixelLimit.open_options(name)) do
       {:ok, image} ->
         unless PixelLimit.check(image) == :ok,
           do:
