@@ -219,8 +219,8 @@ defmodule Brando.SyncTest.Article do
     end
 
     # Inputs locked for everyone (ReadonlyFieldsTest): the save takes no
-    # value the browser sends for them, but keeps one the form set. A slug
-    # is filled in by the browser, so it is never locked.
+    # value the browser sends for them, but keeps one the form set. The
+    # server fills in a new entry's locked slug from its source.
     form :locked do
       default_params %{"subtitle" => "Set by the form", "language" => "en", "status" => "published"}
 
@@ -233,6 +233,20 @@ defmodule Brando.SyncTest.Article do
           input :year, :number, disabled: true, default: 2024
           input :featured, :toggle, readonly: true
           input :cover, :image
+        end
+      end
+    end
+
+    # A slug only superusers may change (ReadonlyFieldsTest): the server
+    # fills it in from the title for anyone else, as the Slug hook would.
+    form :locked_slug do
+      default_params %{"language" => "en", "status" => "published"}
+
+      tab "Content" do
+        fieldset do
+          input :status, :status
+          input :title, :text
+          input :slug, :slug, source: :title, readonly: :unless_superuser
         end
       end
     end

@@ -328,10 +328,9 @@ Every input type reads these:
   controls are inert, but the form still takes an asset its picker or an
   upload delivers for it, and a recovery copy's.
 
-  A `:slug` input declared `true` is not locked: the browser fills it in
-  from its source. One declared `:unless_superuser` is locked for anyone
-  else, who then can't fill in a new entry's slug, so only use it where the
-  slug is set otherwise.
+  A locked `:slug` input that is empty, as on a new entry, is generated
+  from its `source` on the server, as an unlocked one is while
+  editors type. A saved entry's locked slug stays as it is.
 * `monospace`: a monospace font, for keys and codes.
 * `class`: extra classes on the input's wrapper.
 * `debounce`: milliseconds between keystrokes and validation. Default 300.
@@ -411,7 +410,9 @@ input :slug, :slug, source: :title, show_url: true
 ```
 
 `:slug` fills itself from another field while editors type, until they edit
-the slug themselves on a new entry:
+the slug themselves on a new entry. A slug [locked](#common-options) for the
+editor (`readonly` or `disabled`) is generated the same way on the server,
+from the values the form saves, while it is empty:
 
 * `source`: the field, or list of fields, to build the slug from. The
   fields are checked when the Blueprint compiles.

@@ -2,7 +2,8 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
   # An input declared `readonly: true` or `disabled: true` is locked for
   # everyone, superusers included: the save takes no value the browser sends
   # for it, and keeps the one the form has (the test article's `:locked`
-  # form). A slug is filled in by the browser and stays editable.
+  # form). A locked slug of a new entry is filled in from its source on the
+  # server, as the browser's Slug hook would.
   use Brando.LiveCase
 
   import Ecto.Query, only: [from: 2]
@@ -41,7 +42,7 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
     })
 
     saved = Repo.get!(Article, article.id)
-    assert {saved.title, saved.slug} == {"Edited", "edited"}
+    assert {saved.title, saved.slug} == {"Edited", "locked"}
     assert {saved.subtitle, saved.year, saved.featured} == {"Stored", 2020, false}
   end
 
@@ -61,10 +62,57 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
       asset: image
     )
 
-    save(view, %{"title" => "New", "slug" => "new", "subtitle" => "Crafted", "year" => "1999", "featured" => "true"})
+    save(view, %{
+      "title" => "New Entry",
+      "slug" => "crafted",
+      "subtitle" => "Crafted",
+      "year" => "1999",
+      "featured" => "true"
+    })
 
-    saved = Repo.get_by!(Article, title: "New")
+    saved = Repo.get_by!(Article, title: "New Entry")
     assert {saved.subtitle, saved.year, saved.featured, saved.cover_id} == {"Set by the form", 2024, false, image.id}
+    assert saved.slug == "new-entry"
+  end
+
+  describe "a slug locked for anyone but superusers" do
+    setup %{current_user: user} do
+      editor = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      {:ok, editor: editor, superuser: user}
+    end
+
+    # The Slug hook's value is dropped like any locked field's, so the server
+    # fills it in, or the entry could not be created
+    test "an editor creates an entry with the slug derived from its source", %{editor: editor} do
+      conn = log_in_user(Phoenix.ConnTest.build_conn(), editor)
+      {view, _html} = live_form(conn, "/admin/articles/create/locked-slug", "article_form")
+
+      html = view |> form(@form) |> render_change(%{"article" => %{"title" => "Første sak", "slug" => "crafted"}})
+      assert html =~ ~s(value="forste-sak")
+
+      save(view, %{"title" => "Første sak", "slug" => "crafted"})
+
+      assert Repo.get_by!(Article, title: "Første sak").slug == "forste-sak"
+    end
+
+    test "a superuser still types it", %{conn: conn} do
+      {view, _html} = live_form(conn, "/admin/articles/create/locked-slug", "article_form")
+      save(view, %{"title" => "Typed", "slug" => "by-hand"})
+
+      assert Repo.get_by!(Article, title: "Typed").slug == "by-hand"
+    end
+
+    # A saved entry's slug is its URL: a lock keeps it as the title changes
+    test "a saved entry's slug stays when the title changes", %{editor: editor, superuser: user} do
+      {:ok, article} =
+        SyncTest.create_article(%{title: "Stored", slug: "stored", language: "en", status: "published"}, user)
+
+      conn = log_in_user(Phoenix.ConnTest.build_conn(), editor)
+      {view, _html} = live_form(conn, "/admin/articles/update/#{article.id}/locked-slug", "article_form")
+      save(view, %{"title" => "Renamed", "slug" => "renamed"})
+
+      assert {Repo.get!(Article, article.id).title, Repo.get!(Article, article.id).slug} == {"Renamed", "stored"}
+    end
   end
 
   # A recovery copy holds what the browser sent: restoring it doesn't save a
@@ -212,13 +260,16 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
       none = {%{}, %{}}
 
       assert LockedFields.lock(params, Article, blueprint, %Brando.Users.User{role: :superuser}, none, entry) ==
-               %{"title" => "T", "slug" => "s"}
+               %{"title" => "T"}
 
       # A slug in a superuser fieldset is locked for anyone else
       params = Map.put(params, "language", "x")
 
+      assert LockedFields.lock(params, Article, blueprint, %Brando.Users.User{role: :superuser}, none, entry) ==
+               %{"title" => "T", "language" => "x"}
+
       assert LockedFields.lock(params, Article, blueprint, %Brando.Users.User{role: :editor}, none, entry) ==
-               %{"title" => "T", "slug" => "s"}
+               %{"title" => "T"}
     end
 
     test "puts back the server's value, and a default while the entry's is empty", %{blueprint: blueprint} do
@@ -245,6 +296,70 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
 
       assert LockedFields.lock(%{"subtitle" => "x"}, Article, blueprint, user, {values, %{}}, stored) ==
                %{"subtitle" => nil}
+    end
+  end
+
+  describe "LockedFields.derive_slugs/5" do
+    setup do
+      editor = %Brando.Users.User{role: :editor}
+
+      blueprint = fn opts ->
+        fields = [%Forms.Input{name: :title, type: :text}, %Forms.Input{name: :slug, type: :slug, opts: opts}]
+        %Forms.Form{tabs: [%Forms.Tab{fields: [%Forms.Fieldset{fields: fields}]}]}
+      end
+
+      derive = fn opts, entry, params ->
+        changeset = Ecto.Changeset.cast(entry, params, [:title, :slug, :subtitle, :year])
+        LockedFields.derive_slugs(params, changeset, Article, blueprint.(opts), editor)
+      end
+
+      {:ok, derive: derive, editor: editor}
+    end
+
+    test "generates an empty locked slug from its sources, as the Slug hook", %{derive: derive} do
+      locked = [readonly: :unless_superuser]
+
+      assert derive.([source: :title] ++ locked, %Article{}, %{"title" => "Hello Wörld/Foo"}) ==
+               %{"title" => "Hello Wörld/Foo", "slug" => "hello-world-foo"}
+
+      assert %{"slug" => "first-2024"} =
+               derive.([source: [:title, :year]] ++ locked, %Article{}, %{"title" => "First", "year" => "2024"})
+
+      assert %{"slug" => "parent/child-page"} =
+               derive.([source: :title, prefix: "parent/"] ++ locked, %Article{}, %{"title" => "Child page"})
+
+      prefix = fn changeset -> Ecto.Changeset.get_field(changeset, :subtitle) <> "/" end
+
+      assert %{"slug" => "from-subtitle/child"} =
+               derive.([source: :title, prefix: prefix] ++ locked, %Article{}, %{
+                 "title" => "Child",
+                 "subtitle" => "from-subtitle"
+               })
+
+      assert %{"slug" => "primaryColorBla"} =
+               derive.([source: :title, camel_case: true] ++ locked, %Article{}, %{"title" => "Primary color blå"})
+    end
+
+    test "leaves a slug that has a value, one without a source, and one not locked", %{derive: derive} do
+      assert derive.([source: :title, readonly: true], %Article{slug: "saved"}, %{"title" => "New"}) ==
+               %{"title" => "New"}
+
+      # No prefix without a slug
+      assert derive.([source: :title, readonly: true, prefix: "parent/"], %Article{}, %{"title" => "?!"}) ==
+               %{"title" => "?!"}
+
+      assert derive.([readonly: true], %Article{}, %{"title" => "New"}) == %{"title" => "New"}
+      assert derive.([source: :title], %Article{}, %{"title" => "New"}) == %{"title" => "New"}
+    end
+
+    test "leaves a slug locked only for others to a superuser", %{editor: editor} do
+      fields = [%Forms.Input{name: :slug, type: :slug, opts: [source: :title, readonly: :unless_superuser]}]
+      blueprint = %Forms.Form{tabs: [%Forms.Tab{fields: [%Forms.Fieldset{fields: fields}]}]}
+      params = %{"title" => "New"}
+      changeset = Ecto.Changeset.cast(%Article{}, params, [:title])
+
+      assert LockedFields.derive_slugs(params, changeset, Article, blueprint, %{editor | role: :superuser}) == params
+      assert LockedFields.derive_slugs(params, changeset, Article, blueprint, editor) == %{"title" => "New", "slug" => "new"}
     end
   end
 end

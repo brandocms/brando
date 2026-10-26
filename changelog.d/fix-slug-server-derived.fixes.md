@@ -1,0 +1,1 @@
+- A `:slug` input locked for the editor (`readonly`, `disabled`, or in a superuser fieldset) is generated on the server from its `source` while it is empty, so editors can create entries with it; a saved entry's locked slug stays as it is.
