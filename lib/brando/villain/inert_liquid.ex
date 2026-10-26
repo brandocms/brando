@@ -23,4 +23,16 @@ defmodule Brando.Villain.InertLiquid do
       {markup, _} -> String.replace(markup, ["{", "}"], &if(&1 == "{", do: "&#123;", else: "&#125;"))
     end)
   end
+
+  @doc """
+  Plain braces again, for output no Liquid pass reads after it, such as a
+  Markdown template's (`Brando.Villain.Markdown`).
+  """
+  def decode(nil), do: nil
+
+  def decode(html) do
+    html
+    |> IO.iodata_to_binary()
+    |> String.replace(["&#123;", "&#125;"], &if(&1 == "&#123;", do: "{", else: "}"))
+  end
 end

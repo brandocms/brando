@@ -143,6 +143,22 @@ defmodule Brando.Villain.MarkdownTest do
 
       assert markdown == "## Facts\n\nA *restored* bathhouse.\n\n- Rooms: 221"
     end
+
+    test "an embedded fragment shows its braces as they are", %{user: user} do
+      # Stored as rendered: its own Liquid pass is done, and synced Markdown in
+      # it carries encoded braces
+      Factory.insert(:fragment,
+        creator: user,
+        rendered_blocks: "<p>Write {{ entry.title }} and &#123;% raw %&#125;.</p>"
+      )
+
+      Cachex.clear(:query)
+      module = module!("<div>html</div>", markdown: "Before\n\n{% fragment index header en %}\n\nAfter")
+      markdown = render([block(module, [])])
+
+      assert markdown =~ "Write {{ entry.title }} and {% raw %}."
+      refute markdown =~ "&#12"
+    end
   end
 
   describe "structure" do

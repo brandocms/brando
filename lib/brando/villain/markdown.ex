@@ -378,8 +378,13 @@ defmodule Brando.Villain.Markdown do
   defp passthrough(""), do: ""
   defp passthrough(markdown), do: "<brando-markdown>#{escape(markdown)}</brando-markdown>"
 
-  defp template_mode?(%{context: %Context{} = context}), do: Access.get(context, @template_flag) == true
+  defp template_mode?(%{context: %Context{} = context}), do: template_context?(context)
   defp template_mode?(_opts), do: false
+
+  @doc false
+  # True while a module's `markdown` template renders in `context`.
+  def template_context?(%Context{} = context), do: Access.get(context, @template_flag) == true
+  def template_context?(_context), do: false
 
   defp put_flag(%{context: %Context{} = context} = opts, value),
     do: %{opts | context: Context.assign(context, @template_flag, value)}
