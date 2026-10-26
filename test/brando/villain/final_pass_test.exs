@@ -47,6 +47,8 @@ defmodule Brando.Villain.FinalPassTest do
                ~s(<script type="application/ld+json">{"a": {"b": 1}}</script><style>p { color: red }</style>)
 
     assert Floki.text(Floki.parse_fragment!(inert)) == Floki.text(Floki.parse_fragment!(html))
+    # A custom element named like one is not raw text
+    assert Villain.inert_liquid("<script-x>{</script-x></script>}") == "<script-x>&#123;</script-x></script>&#125;"
 
     assert Villain.parse_and_render(Villain.inert_liquid("<p>{{ title }}</p>"), Context.new(%{"title" => "T"})) ==
              "<p>&#123;&#123; title &#125;&#125;</p>"

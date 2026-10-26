@@ -393,25 +393,42 @@ defmodule Brando.MarkdownSources.SyncTest do
 
       Repo.insert!(struct(fragment_join, %{entry_id: fragment.id, block_id: block.id, sequence: 0}))
       assert {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, fragment.id)
-      Cachex.clear(:query)
 
-      page = Brando.Factory.insert(:page, creator: user, title: "page-title")
+      # A fragment block, the Liquid tag and the HEEx component in module code
+      embeds = [
+        {:fragment, nil},
+        {:module, Brando.Factory.insert(:module, type: :liquid, code: "{% fragment index header en %}")},
+        {:module,
+         Brando.Factory.insert(:module,
+           type: :heex,
+           code: ~s(<.fragment parent_key="index" key="header" language="en" />)
+         )}
+      ]
+
+      Cachex.clear(:query)
       join = Brando.Pages.Page.__schema__(:association, :entry_blocks).queryable
 
-      embed =
-        Repo.insert!(%Brando.Content.Block{
-          uid: Brando.Utils.generate_uid(),
-          type: :fragment,
-          fragment_id: fragment.id,
-          source: join,
-          creator_id: user.id
-        })
+      for {type, embed_module} <- embeds do
+        page = Brando.Factory.insert(:page, creator: user, title: "page-title")
 
-      Repo.insert!(struct(join, %{entry_id: page.id, block_id: embed.id, sequence: 0}))
-      assert {:ok, rendered} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
-      text = Floki.text(Floki.parse_fragment!(rendered.rendered_blocks))
-      assert text =~ "MARK1 {{ entry.title | upcase }} data-footnote-uid MARK2"
-      refute text =~ "PAGE-TITLE"
+        embed =
+          Repo.insert!(%Brando.Content.Block{
+            uid: Brando.Utils.generate_uid(),
+            type: type,
+            fragment_id: if(type == :fragment, do: fragment.id),
+            module_id: embed_module && embed_module.id,
+            source: join,
+            creator_id: user.id,
+            vars: [],
+            refs: []
+          })
+
+        Repo.insert!(struct(join, %{entry_id: page.id, block_id: embed.id, sequence: 0}))
+        assert {:ok, rendered} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
+        text = Floki.text(Floki.parse_fragment!(rendered.rendered_blocks))
+        assert text =~ "MARK1 {{ entry.title | upcase }} data-footnote-uid MARK2"
+        refute text =~ "PAGE-TITLE"
+      end
     end
 
     test "the entry's Markdown alternate keeps the braces", c do

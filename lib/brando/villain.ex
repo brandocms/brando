@@ -301,7 +301,7 @@ defmodule Brando.Villain do
     Context.assign(context, key, value)
   end
 
-  @raw_text_elements ~r/<(script|style)\b.*?<\/\1\s*>/is
+  @raw_text_elements ~r/<(script|style)(?=[\s>\/]).*?<\/\1\s*>/is
 
   @doc """
   Makes HTML inert to a later `parse_and_render/2`: braces become entities,

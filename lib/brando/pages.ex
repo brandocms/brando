@@ -622,8 +622,11 @@ defmodule Brando.Pages do
   """
   def render_embedded_fragment(parent, key, language \\ nil) when is_binary(parent) and is_binary(key) do
     case lookup_fragment(parent, key, language) do
+      # Block code embeds the fragment before the entry's Liquid pass. The
+      # fragment has had its own, so its text must not be evaluated again.
       {:ok, fragment} ->
-        fragment_html(fragment)
+        {:safe, html} = fragment_html(fragment)
+        {:safe, Brando.Villain.inert_liquid(html)}
 
       {:error, {:fragment, :not_found}} ->
         if Brando.env() == :dev do
