@@ -111,8 +111,10 @@ Admin group. Suspended sites and disabled/deleted accounts are denied, including
 for Superusers.
 
 User starts without backend access. Editor receives content/media capabilities,
-including publishing, plus read access to reusable definitions. Admin adds site
-settings and group administration. Superuser is a protected installation group;
+including publishing and scheduling entries, plus read access to reusable
+definitions. Builds and deployments of a static site (`brando.publishing`) are
+a Settings permission, which Editor does not get. Admin adds site settings,
+builds and deployments, and group administration. Superuser is a protected installation group;
 its members have all supported capabilities across active sites. It cannot be
 renamed into an ordinary group, deleted, or stripped of its permissions. At least
 one active member must remain. Naming a custom group “Superuser” grants nothing.
