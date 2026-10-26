@@ -779,8 +779,10 @@ scheduled_at = DateTime.add(DateTime.utc_now(), 3_600, :second)
 When the job runs, the creator must still be allowed to carry it out: an active
 account that may promote the site's environments (in legacy mode, an admin or
 superuser of the site). A job whose creator has since lost that, or whose
-account is disabled or deleted, is cancelled and changes nothing. A job
-scheduled without a creator runs as the system.
+account is disabled or deleted, is cancelled and changes nothing: it leaves the
+list of scheduled operations, ends in Oban as cancelled with the reason
+`:scheduler_not_authorized`, and a warning is logged. A job scheduled without a
+creator runs as the system.
 
 The dedicated `environment_operations` queue runs one expensive schema
 operation at a time. Per-site advisory locks remain the final concurrency

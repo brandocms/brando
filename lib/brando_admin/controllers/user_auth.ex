@@ -111,18 +111,19 @@ defmodule BrandoAdmin.UserAuth do
   # The cookie carries the session token: over https it is never sent in
   # the clear. Plain http (a dev server) keeps it working without.
   defp maybe_write_remember_me_cookie(conn, token, %{"remember_me" => "true"}) do
-    put_resp_cookie(conn, @remember_me_cookie, token, [secure: https?(conn)] ++ @remember_me_options)
+    put_resp_cookie(conn, @remember_me_cookie, token, [secure: secure_cookie?(conn)] ++ @remember_me_options)
   end
 
   defp maybe_write_remember_me_cookie(conn, _token, _params) do
     conn
   end
 
+  @doc false
   # Behind a proxy that ends TLS the request arrives over http, but the
   # endpoint's url says what visitors use.
-  defp https?(%Plug.Conn{scheme: :https}), do: true
+  def secure_cookie?(%Plug.Conn{scheme: :https}), do: true
 
-  defp https?(conn) do
+  def secure_cookie?(conn) do
     case conn.private[:phoenix_endpoint] do
       nil -> false
       endpoint -> endpoint.struct_url().scheme == "https"

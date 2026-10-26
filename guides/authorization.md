@@ -205,8 +205,8 @@ publication its user may no longer carry out, or whose account is gone, is
 cancelled and its date cleared rather than run as `:system`, while an expiry
 is still carried out on time, as `:system`, with Activity saying why (see the
 scheduled publishing guide). Scheduled environment copies and live switches
-do too: one whose creator may no longer promote the site's environments is
-cancelled.
+authorize again too: one whose creator may no longer promote the site's
+environments is cancelled, with a warning in the log.
 
 <!-- usage-rules:end -->
 

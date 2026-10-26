@@ -70,6 +70,16 @@ defmodule BrandoAdmin.TwoFactorLoginTest do
       assert %{value: _} = cookie = conn.resp_cookies[@remember_me]
       refute cookie[:secure]
     end
+
+    defmodule HttpsEndpoint do
+      def struct_url, do: %URI{scheme: "https", host: "www.example.com", port: 443}
+    end
+
+    test "behind a proxy that ends TLS, the endpoint's https url makes the cookie secure" do
+      conn = Phoenix.ConnTest.build_conn() |> Plug.Conn.put_private(:phoenix_endpoint, HttpsEndpoint)
+      assert conn.scheme == :http
+      assert BrandoAdmin.UserAuth.secure_cookie?(conn)
+    end
   end
 
   describe "with two-factor authentication" do

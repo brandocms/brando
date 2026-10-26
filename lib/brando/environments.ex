@@ -417,12 +417,22 @@ defmodule Brando.Environments do
   def scheduler_authorized?(nil, _site_id), do: true
 
   def scheduler_authorized?(creator_id, site_id) do
-    with %User{active: true, deleted_at: nil} = user <- Repo.get(User, creator_id, prefix: "public"),
-         %Site{} = site <- Registry.get_site(site_id) do
-      may_promote?(user, site)
-    else
-      _ -> false
-    end
+    authorized? =
+      with %User{active: true, deleted_at: nil} = user <- Repo.get(User, creator_id, prefix: "public"),
+           %Site{} = site <- Registry.get_site(site_id) do
+        may_promote?(user, site)
+      else
+        _ -> false
+      end
+
+    # The job ends cancelled, which takes it off the Environments screen
+    if not authorized?,
+      do:
+        Logger.warning(
+          "[Brando.Environments] A scheduled operation on site ##{site_id} was cancelled: user ##{creator_id}, who scheduled it, may no longer promote its environments"
+        )
+
+    authorized?
   end
 
   defp may_promote?(user, site) do

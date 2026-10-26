@@ -32,7 +32,7 @@ defmodule Brando.Migrations.HashPreviewKeysTest do
     old = insert.("Zx81kQ0pLm-_")
     new = insert.(Preview.hash_key("fresh-key"))
 
-    # Run twice: an archive restore runs it again over hashed keys
+    # Run twice: hashed keys are left as they are
     for _run <- 1..2 do
       Ecto.Migrator.up(Repo, System.unique_integer([:positive]), migration, log: false, migration_lock: false)
 
