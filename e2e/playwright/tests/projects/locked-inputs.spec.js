@@ -120,11 +120,12 @@ test('every locked input type renders locked and takes no edit', async ({ page }
   await clickThrough(page, lockedField(page, 'Date').locator('input:not([type="hidden"])').first())
   await expect(page.locator('.flatpickr-calendar.open')).toHaveCount(0)
 
-  // A string list adds no row, a media field opens no file chooser
+  // A string list's empty row takes no focus, so nothing can be typed into
+  // it; a media field opens no file chooser
   const aliases = lockedField(page, 'Aliases')
   await clickThrough(page, aliases.locator('.string-list-add input'))
-  await page.keyboard.type('Gala')
-  await expect(aliases.locator('input.string-list-input').last()).toHaveValue('')
+  await expect(aliases.locator(':focus')).toHaveCount(0)
+  await expect(aliases.locator('input.string-list-input')).toHaveCount(2)
 
   let chooserOpened = false
   page.on('filechooser', () => (chooserOpened = true))
@@ -151,11 +152,12 @@ test('locked rich text, selects, multi-select, gallery and entries take no edit'
   await expectLocked(introduction)
   await expect(introduction.locator('[data-tiptap-readonly="true"]')).toHaveCount(1)
   await expect(introduction.locator('.tiptap-menu')).toBeHidden()
+  // A click doesn't open the editor (keys typed now would reach the page's
+  // shortcuts, not a field)
   await introduction.locator('.tiptap-wrapper').click()
-  await page.keyboard.type('changed')
-  await expect(introduction.locator('.tiptap-wrapper')).toContainText('The introduction.')
-  await expect(introduction.locator('.tiptap-wrapper')).not.toContainText('changed')
+  await syncLV(page)
   await expect(introduction.locator('[contenteditable="true"]')).toHaveCount(0)
+  await expect(introduction.locator('.tiptap-wrapper')).toContainText('The introduction.')
 
   for (const name of ['Full case', 'Categories', 'Client', 'Project gallery', 'Related entries']) {
     await expectInert(lockedField(page, name))
