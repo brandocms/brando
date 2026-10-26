@@ -105,19 +105,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
     """
   end
 
-  # The address is what the editor pasted: only one with an allowed scheme
-  # is kept, as the public renderer would refuse the rest anyway
+  # The address is what the editor pasted: one with a script or unknown
+  # scheme is refused, and the map already there stays
   def handle_event("url", %{"source" => source, "embedUrl" => embed_url}, socket) do
-    embed_url = Brando.Villain.Parser.safe_url(embed_url)
+    case Brando.Villain.Parser.safe_url(embed_url) do
+      nil ->
+        send(self(), {:toast, gettext("This map address can't be embedded.")})
+        {:noreply, socket}
 
-    ref_data =
-      Block.current_block_data_map(socket.assigns.block, nil, %{
-        embed_url: embed_url,
-        source: String.to_existing_atom(source)
-      })
+      embed_url ->
+        ref_data =
+          Block.current_block_data_map(socket.assigns.block, nil, %{
+            embed_url: embed_url,
+            source: String.to_existing_atom(source)
+          })
 
-    socket
-    |> Block.commit_ref_data(ref_data: ref_data)
-    |> then(&{:noreply, &1})
+        socket
+        |> Block.commit_ref_data(ref_data: ref_data)
+        |> then(&{:noreply, &1})
+    end
   end
 end

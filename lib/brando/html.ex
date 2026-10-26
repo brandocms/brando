@@ -69,8 +69,9 @@ defmodule Brando.HTML do
   def menu_item(assigns) do
     item = assigns.item
 
-    href = get_menu_item_url(item)
-    url = href || ""
+    url = get_menu_item_url(item) || ""
+    # A refused address renders no href; an item without one keeps href=""
+    refused? = url == "" and present_menu_item_url?(item)
     text = get_menu_item_text(item)
     target_blank? = get_menu_item_target_blank(item)
     key = item.key
@@ -94,8 +95,7 @@ defmodule Brando.HTML do
 
     assigns =
       assigns
-      # No address, no href: an empty one would link to the page itself
-      |> assign(:url, href && url)
+      |> assign(:url, if(refused?, do: nil, else: url))
       |> assign(:text, text)
       |> assign(:key, key)
       |> assign(:active, active?)
@@ -186,6 +186,13 @@ defmodule Brando.HTML do
     do: identifier |> Brando.Content.Identifier.link_url() |> Brando.Villain.Parser.safe_url()
 
   def get_menu_item_url(_), do: nil
+
+  defp present_menu_item_url?(%{link: %{link_type: :url, value: url}}), do: is_binary(url) and String.trim(url) != ""
+
+  defp present_menu_item_url?(%{link: %{link_type: :identifier, identifier: %{} = identifier}}),
+    do: Brando.Content.Identifier.link_url(identifier) != nil
+
+  defp present_menu_item_url?(_), do: false
 
   def get_menu_item_text(%{link: %{link_type: :url, link_text: text}}), do: text
 

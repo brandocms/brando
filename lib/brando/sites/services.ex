@@ -107,9 +107,10 @@ defmodule Brando.Sites.Services do
   end
 
   defp absolute(nil), do: nil
-  defp absolute("http://" <> _ = url), do: url
-  defp absolute("https://" <> _ = url), do: url
-  defp absolute(path), do: Utils.hostname(path)
+  # An address with a scheme (any case) stays as it is; a path gets the host
+  defp absolute(url) do
+    if Regex.match?(~r/^[a-z][a-z0-9+.-]*:/i, url), do: url, else: Utils.hostname(url)
+  end
 
   # An address with a script or unknown scheme is no link
   defp safe_url(url), do: url |> presence() |> Brando.Villain.Parser.safe_url()

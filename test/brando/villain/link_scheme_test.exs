@@ -98,6 +98,18 @@ defmodule Brando.Villain.LinkSchemeTest do
     end
 
     assert Brando.HTML.get_menu_item_url(%{link: %{link_type: :url, value: "/about"}}) == "/about"
+
+    # An item without an address keeps its empty href (a dropdown's parent)
+    html =
+      render_component(&Brando.HTML.menu_item/1,
+        item: %{key: "k", link: %Var{type: :link, link_type: :url, value: "", link_text: "Parent"}},
+        conn: Phoenix.ConnTest.build_conn(:get, "/")
+      )
+
+    assert html =~ ~s(href="")
+
+    assert Brando.Sites.Services.resolve(%Brando.Sites.Service{name: "S", url: "mailto:post@example.com"}).resolved_url ==
+             "mailto:post@example.com"
   end
 
   test "the Markdown export gives a script link no address" do

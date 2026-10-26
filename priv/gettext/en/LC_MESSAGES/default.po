@@ -17801,6 +17801,11 @@ msgstr ""
 msgid "This language already has a version."
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/map_block.ex
+#, elixir-autogen, elixir-format
+msgid "This map address can't be embedded."
+msgstr ""
+
 #: lib/brando_web/controllers/error_html/500.html.heex
 #, elixir-autogen, elixir-format
 msgid "This might occur during a server update or reboot"
