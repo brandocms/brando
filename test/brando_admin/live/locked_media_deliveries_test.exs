@@ -61,6 +61,19 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
 
   defp messages, do: self() |> Process.info(:messages) |> elem(1)
 
+  defp form_assigns(view) do
+    {:ok, components} = Phoenix.LiveView.Debug.live_components(view.pid)
+    Enum.find(components, &(&1.module == Form and &1.id == "article_form")).assigns
+  end
+
+  defp saved_gallery_videos(article) do
+    Repo.all(
+      from o in Brando.Galleries.GalleryObject,
+        where: o.gallery_id == ^saved(article).photos_id and not is_nil(o.video_id),
+        select: o.video_id
+    )
+  end
+
   defp saved_gallery_images(article) do
     case saved(article).photos_id do
       nil ->
@@ -179,6 +192,118 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
         assert saved_gallery_images(article) == expected
       end
 
+      test "a gallery video delivery", %{conn: conn, article: article} = ctx do
+        video = Factory.insert(:video, remote_id: "gallery")
+        {view, _html} = open(conn, article, ctx.form)
+
+        send_form(view,
+          event: "entry_field_upload_complete",
+          asset_type: :gallery_video,
+          field: :photos,
+          path: [],
+          asset: video
+        )
+
+        save(view)
+        assert saved_gallery_videos(article) == if(ctx.locked, do: [], else: [video.id])
+      end
+
+      # The image editor's "save as new copy" for the field's image
+      test "the image editor's new copy", %{conn: conn, article: article, stored: stored} = ctx do
+        {view, _html} = open(conn, article, ctx.form)
+        form_cid = cid_of(view, "#article_form-el")
+
+        send_form(view,
+          action: :update_edit_image,
+          edit_image: %{id: stored.id, path: [], field: :cover, relation_field: nil, image: stored}
+        )
+
+        view
+        |> with_target(form_cid)
+        |> render_hook("image_editor_save", %{"mode" => "new_copy", "focal_x" => 40, "focal_y" => 60})
+
+        images = Repo.aggregate(Brando.Images.Image, :count)
+        jpeg = File.read!(Path.expand("../../fixtures/sample.jpg", __DIR__))
+
+        view
+        |> file_input("#article_form_form", :image_editor_upload, [%{name: "copy.jpg", content: jpeg, type: "image/jpeg"}])
+        |> render_upload("copy.jpg")
+
+        # Stored only for a field that takes it
+        assert Repo.aggregate(Brando.Images.Image, :count) == if(ctx.locked, do: images, else: images + 1)
+      end
+
+      # The preview's copy of the field's asset (`Input.Image` on a pick, a
+      # processed image's refresh)
+      test "the field's relation in the preview", %{conn: conn, article: article, stored: stored} = ctx do
+        other = image(ctx.current_user)
+        {view, _html} = open(conn, article, ctx.form)
+
+        send_form(view, event: "update_entry_relation", path: [:cover], updated_relation: other, update_entry: true)
+        assert form_assigns(view).entry.cover.id == if(ctx.locked, do: stored.id, else: other.id)
+
+        # The image a locked field holds, refreshed, is taken
+        if ctx.locked do
+          refreshed = %{stored | alt: %{"en" => "Refreshed"}}
+          send_form(view, event: "update_entry_relation", path: [:cover], updated_relation: refreshed, update_entry: true)
+          assert form_assigns(view).entry.cover.alt == %{"en" => "Refreshed"}
+        end
+      end
+
+      # A drawer's provider upload (Mux, Bunny, Cloudflare, Vimeo)
+      test "a provider upload in the video drawer", %{conn: conn, article: article, clip: clip} = ctx do
+        {view, _html} = open(conn, article, ctx.form)
+
+        send_form(view,
+          action: :update_edit_video,
+          edit_video: %{id: clip.id, path: [], field: :clip, relation_field: nil, video: clip}
+        )
+
+        if ctx.locked do
+          videos = Repo.aggregate(Brando.Videos.Video, :count)
+
+          send_form(view,
+            action: :get_video_upload_url,
+            upload_request: %{
+              "request_ref" => "ref-1",
+              "filename" => "clip.mp4",
+              "size" => 1_000,
+              "mime_type" => "video/mp4"
+            }
+          )
+
+          assert_push_event(view, "video_upload_url_error", %{request_ref: "ref-1"})
+          assert Repo.aggregate(Brando.Videos.Video, :count) == videos
+        end
+
+        # One started before, say: the provider is told the file is up either way
+        uploading =
+          Factory.insert(:video, type: :cloudflare, status: :uploading, remote_id: "cf-uid", creator: ctx.current_user)
+
+        send_form(view, action: :video_upload_complete, video_id: uploading.id)
+        assert Repo.get!(Brando.Videos.Video, uploading.id).status == :processing
+
+        assert Ecto.Changeset.get_field(form_assigns(view).form.source, :clip_id) ==
+                 if(ctx.locked, do: clip.id, else: uploading.id)
+      end
+
+      test "a subform's media input", %{conn: conn, article: article, current_user: user} = ctx do
+        author = Repo.insert!(%Brando.SyncTest.ArticleAuthor{article_id: article.id, name: "Author"})
+        portrait = image(user)
+        {view, _html} = open(conn, article, ctx.form)
+
+        send_form(view,
+          event: "entry_field_upload_complete",
+          asset_type: :image,
+          field: :portrait,
+          path: [:author],
+          asset: portrait
+        )
+
+        save(view)
+        assert Repo.get!(Brando.SyncTest.ArticleAuthor, author.id).portrait_id == portrait.id
+      end
+
       test "a recovery copy", %{conn: conn, article: article, stored: stored, current_user: user} = ctx do
         other = image(user)
         {view, _html} = open(conn, article, ctx.form)
@@ -221,6 +346,36 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
 
         expected = if ctx.locked, do: stored.id, else: other.id
         assert {saved(article).title, saved(article).cover_id} == {"Restored", expected}
+      end
+    end
+  end
+
+  # `:unless_superuser`: a superuser's delivery is taken, anyone else's not
+  for role <- [:superuser, :editor] do
+    test "a field locked unless superuser, for a #{role}", %{article: article, stored: stored} do
+      user = Factory.insert(:random_user, role: unquote(role), config: %Brando.Users.UserConfig{})
+      conn = log_in_user(Phoenix.ConnTest.build_conn(), user)
+      uploaded = image(user)
+      {view, _html} = open(conn, article, :superuser_media)
+
+      send_form(view, event: "entry_field_upload_complete", asset_type: :image, field: :cover, path: [], asset: uploaded)
+
+      send_form(view,
+        event: "entry_field_upload_complete",
+        asset_type: :gallery,
+        field: :photos,
+        path: [],
+        asset: uploaded
+      )
+
+      save(view)
+
+      if unquote(role) == :superuser do
+        assert saved(article).cover_id == uploaded.id
+        assert saved_gallery_images(article) == [stored.id, uploaded.id]
+      else
+        assert saved(article).cover_id == stored.id
+        assert saved_gallery_images(article) == [stored.id]
       end
     end
   end

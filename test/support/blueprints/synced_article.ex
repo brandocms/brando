@@ -263,9 +263,10 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
-    # Media inputs, open (`:media`) and locked for everyone
-    # (`:locked_media`, LockedMediaDeliveriesTest): a locked one takes no
-    # asset, however it is delivered.
+    # Media inputs, open (`:media`), locked for everyone (`:locked_media`)
+    # and for anyone but a superuser (`:superuser_media`,
+    # LockedMediaDeliveriesTest): a locked one takes no asset, however it is
+    # delivered.
     form :media do
       tab "Content" do
         fieldset do
@@ -275,6 +276,13 @@ defmodule Brando.SyncTest.Article do
           input :pdf, :file
           input :clip, :video
           input :photos, :gallery
+
+          inputs_for :author do
+            cardinality :one
+
+            input :name, :text
+            input :portrait, :image
+          end
         end
       end
     end
@@ -288,6 +296,26 @@ defmodule Brando.SyncTest.Article do
           input :pdf, :file, disabled: true
           input :clip, :video, readonly: true
           input :photos, :gallery, disabled: true
+
+          # A subform's media input is not locked
+          inputs_for :author do
+            cardinality :one
+
+            input :name, :text
+            input :portrait, :image
+          end
+        end
+      end
+    end
+
+    # Locked for anyone but a superuser
+    form :superuser_media do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+          input :cover, :image, readonly: :unless_superuser
+          input :photos, :gallery, disabled: :unless_superuser
         end
       end
     end

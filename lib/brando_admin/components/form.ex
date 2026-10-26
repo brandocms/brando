@@ -569,7 +569,20 @@ defmodule BrandoAdmin.Components.Form do
       ) do
     edit_video = socket.assigns.edit_video
 
-    case video_config_target(edit_video, socket.assigns.schema) do
+    # A locked field's drawer starts no upload, so the provider gets no file
+    # the field won't take
+    config_target =
+      if edit_asset_locked?(socket, edit_video), do: :locked, else: video_config_target(edit_video, socket.assigns.schema)
+
+    case config_target do
+      :locked ->
+        {:ok,
+         push_event(socket, "video_upload_url_error", %{
+           error: gettext("This field is locked"),
+           filename: filename,
+           request_ref: request_ref
+         })}
+
       nil ->
         Logger.error("Failed to build video config target for #{inspect(edit_video[:field])}")
 
@@ -891,7 +904,7 @@ defmodule BrandoAdmin.Components.Form do
         %{event: "update_entry_relation", path: path, updated_relation: updated_relation} = params,
         socket
       ) do
-    if match?([_field], path) and locked_field?(socket, [], hd(path)),
+    if refused_relation?(socket, path, updated_relation),
       do: {:ok, socket},
       else: update_entry_relation(socket, path, updated_relation, params)
   end
@@ -2198,20 +2211,24 @@ defmodule BrandoAdmin.Components.Form do
   #
   # A locked field is never owned (`locked_field?/3`): params never supply it
   # either (`LockedFields.lock/6`), so a save keeps the entry's value whatever
-  # wrote the form, a recovery copy or another editor's change included.
-  defp own_asset(socket, [], key, kind) do
-    if locked_field?(socket, [], key),
+  # wrote the form, a recovery copy or another editor's change included. The
+  # exception is a value the server built (`server?`), a translation's: its
+  # gallery objects reach the save no other way.
+  defp own_asset(socket, path, key, kind, server? \\ false)
+
+  defp own_asset(socket, [], key, kind, server?) do
+    if not server? and locked_field?(socket, [], key),
       do: socket,
       else: assign(socket, :server_owned_assets, Map.put(owned_assets(socket), key, kind))
   end
 
-  defp own_asset(socket, _nested_path, _key, _kind), do: socket
+  defp own_asset(socket, _nested_path, _key, _kind, _server?), do: socket
 
-  defp own_changed_assets(socket, changed_fields) do
+  defp own_changed_assets(socket, changed_fields, server? \\ false) do
     socket.assigns.schema
     |> asset_field_kinds()
     |> Map.take(changed_fields)
-    |> Enum.reduce(socket, fn {key, kind}, socket -> own_asset(socket, [], key, kind) end)
+    |> Enum.reduce(socket, fn {key, kind}, socket -> own_asset(socket, [], key, kind, server?) end)
   end
 
   defp clear_owned_assets(socket), do: assign(socket, :server_owned_assets, %{})
@@ -2220,9 +2237,10 @@ defmodule BrandoAdmin.Components.Form do
   #
   # A top-level input the user may not change (`LockedFields`) takes no asset:
   # every writer of an asset field (a picker's selection, an upload delivery,
-  # a removal, a drawer's reset or new copy, a gallery edit, the preview's
-  # relation) leaves a locked one as it is, and `own_asset/4` never owns one,
-  # so a save keeps the entry's value whatever a writer missed. No locked
+  # a removal, a drawer's reset, new copy or provider upload, a gallery edit,
+  # the preview's relation) leaves a locked one as it is, and `own_asset/4`
+  # never owns one, so a save keeps the entry's value whatever a writer
+  # missed. No locked
   # field ships to the other editors (`pending_changes/1`). `key` is the
   # field (`:cover`), its foreign key (`:cover_id`) or a gallery's name.
   # Nested (subform) fields are not locked.
@@ -2239,6 +2257,19 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp edit_asset_locked?(_socket, _edit_asset), do: false
+
+  # The preview's copy of a locked media field takes the asset the field holds
+  # (refreshed once processed, say), not another one. Other relations are
+  # not refused here.
+  defp refused_relation?(socket, [field], relation) when is_atom(field) do
+    source = socket.assigns.form.source
+    fk = "#{field}_id"
+
+    locked_field?(socket, [], field) and Enum.any?(Map.keys(source.data), &(is_atom(&1) and Atom.to_string(&1) == fk)) and
+      not holds_relation?(source, field, relation)
+  end
+
+  defp refused_relation?(_socket, _path, _relation), do: false
 
   # The fields and foreign keys of the user's locked inputs
   defp locked_keys(%{assigns: assigns}),
@@ -7791,7 +7822,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> put_local_form(form)
     |> rebuild_preview_relations()
-    |> own_changed_assets(Map.keys(changeset.changes))
+    |> own_changed_assets(Map.keys(changeset.changes), source == :translation)
     |> assign_entry_for_blocks()
     |> force_svelte_remounts(:all)
     |> Drafts.dirty()
@@ -8152,11 +8183,17 @@ defmodule BrandoAdmin.Components.Form do
   Applies stored focal point and config_target to the new image, then queues
   processing and forwards the result to the block component (if from a block).
   """
+  # A new copy for a locked field is dropped before it is stored
   def handle_image_editor_upload_progress(:image_editor_upload, entry, socket) do
-    if entry.done? do
-      consume_image_editor_upload(entry, socket)
-    else
-      {:noreply, socket}
+    cond do
+      edit_asset_locked?(socket, socket.assigns[:edit_image]) ->
+        {:noreply, cancel_upload(socket, :image_editor_upload, entry.ref)}
+
+      entry.done? ->
+        consume_image_editor_upload(entry, socket)
+
+      true ->
+        {:noreply, socket}
     end
   end
 
@@ -8252,14 +8289,7 @@ defmodule BrandoAdmin.Components.Form do
     {:noreply, push_navigate(socket, to: Images.Image.__admin_route__(:update, [new_image.id]))}
   end
 
-  # A locked field keeps its image; the copy stays in the library
   defp own_or_field_copy(socket, edit_image, updated_image) do
-    if edit_asset_locked?(socket, edit_image),
-      do: {:noreply, socket},
-      else: field_copy(socket, edit_image, updated_image)
-  end
-
-  defp field_copy(socket, edit_image, updated_image) do
     # Non-block path
     relation_key = String.to_existing_atom("#{edit_image.field}_id")
     image_changeset = change(updated_image)

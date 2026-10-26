@@ -17819,6 +17819,11 @@ msgstr "Denne oppføringen viser ingen video, eller videoene mangler tittel, min
 msgid "This export is not available."
 msgstr "Denne eksporten er ikke tilgjengelig."
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "This field is locked"
+msgstr "Dette feltet er låst"
+
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "This field’s footnote module set has no suitable modules. Add a Text module to it first."
