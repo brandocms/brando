@@ -2,6 +2,8 @@ defmodule Brando.Sites.Redirects do
   @moduledoc false
   import Ecto.Query, only: [from: 2]
 
+  require Logger
+
   alias Brando.Repo
 
   @doc """
@@ -83,9 +85,31 @@ defmodule Brando.Sites.Redirects do
     end
   end
 
-  # A segment beginning with ':' is a placeholder in the redirect matcher.
-  # Escape the colon as well so a literal path can never become a pattern.
-  defp exact_source(path), do: path |> Regex.escape() |> String.replace(":", "\\x3A") |> Kernel.<>("$")
+  @doc """
+  The redirect source that matches `path` and nothing else: escaped, so a
+  path can never become a pattern, and anchored at its end. A segment
+  beginning with `:` is a placeholder in the matcher, so the colon is escaped
+  too. For a source taken from a visitor's URL (a 404) as well as a
+  permalink.
+  """
+  @spec exact_source(String.t()) :: String.t()
+  def exact_source(path), do: path |> Regex.escape() |> String.replace(":", "\\x3A") |> Kernel.<>("$")
+
+  @doc """
+  The redirect source for a logged 404's `url`: `exact_source/1`, except
+  that a URL the log cut short matches every path it begins.
+  """
+  @spec not_found_source(String.t()) :: String.t()
+  def not_found_source(url) do
+    source = exact_source(url)
+
+    if String.length(url) >= Brando.Sites.FourOhFour.max_url_length(),
+      do: String.trim_trailing(source, "$"),
+      else: source
+  end
+
+  @doc "See `Brando.Sites.Redirect.ValidSource.compile/1`."
+  defdelegate compile(from), to: Brando.Sites.Redirect.ValidSource
 
   @doc """
   Check `test_path` against registered redirects
@@ -109,16 +133,35 @@ defmodule Brando.Sites.Redirects do
     end)
   end
 
+  # A rule that does not compile (saved before `from` was checked) matches
+  # nothing, rather than failing every 404 in its language
   defp match_redirect(test_url, from, to) do
-    from_regex =
-      "^#{from}"
-      |> String.split("/")
-      |> Enum.map_join("/", fn
-        ":" <> segment -> "(?<#{segment}>[a-z0-9\-\_]+)"
-        segment -> segment
-      end)
-      |> Regex.compile!()
+    case cached_pattern(from) do
+      {:ok, from_regex} -> match_redirect_pattern(test_url, from_regex, to)
+      :error -> {:error, {:redirects, :no_match}}
+    end
+  end
 
+  # Every 404 checks every rule, so a rule's pattern is compiled once
+  defp cached_pattern(from) do
+    key = {:redirect_pattern, from}
+
+    case Brando.Cache.get(key) do
+      nil ->
+        compiled = compile(from)
+
+        if compiled == :error,
+          do: Logger.warning("Redirect from #{inspect(from)} is not a valid pattern and matches nothing")
+
+        Brando.Cache.put(key, compiled, :timer.hours(24))
+        compiled
+
+      compiled ->
+        compiled
+    end
+  end
+
+  defp match_redirect_pattern(test_url, from_regex, to) do
     case Regex.named_captures(from_regex, test_url) do
       nil ->
         {:error, {:redirects, :no_match}}

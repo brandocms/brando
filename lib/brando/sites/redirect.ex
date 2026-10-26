@@ -15,6 +15,8 @@ defmodule Brando.Sites.Redirect do
   identifier false
   persist_identifier false
 
+  trait Brando.Sites.Redirect.ValidSource
+
   attributes do
     attribute :to, :string, required: true
     attribute :from, :string, required: true

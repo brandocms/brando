@@ -20525,6 +20525,11 @@ msgstr "er ugyldig"
 msgid "is moved to the list's Deleted filter"
 msgstr "flyttes til Slettet i listen"
 
+#: lib/brando/sites/redirect/valid_source.ex
+#, elixir-autogen, elixir-format
+msgid "is not a valid pattern"
+msgstr "er ikke et gyldig mønster"
+
 msgid "is not enabled for this environment"
 msgstr "er ikke aktivert for dette miljøet"
 

@@ -1136,7 +1136,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
       id: "seo_form",
       event: "append_embed",
       field: :redirects,
-      attrs: %{from: url, to: to || "", code: 301},
+      attrs: %{from: Brando.Sites.Redirects.not_found_source(url), to: to || "", code: 301},
       focus: :to
     )
 
@@ -1606,10 +1606,13 @@ defmodule BrandoAdmin.Sites.SEOLive do
   end
 
   # Appends to the embedded redirects through a changeset so the existing
-  # rows keep their identity instead of being re-cast from params.
+  # rows keep their identity instead of being re-cast from params. The URL
+  # is a visitor's, so it is stored as the exact path, never as a pattern.
   defp create_redirect(from, to, language, user) do
+    source = Brando.Sites.Redirects.not_found_source(from)
+
     with {:ok, seo} <- Sites.get_seo(%{matches: %{language: language}}) do
-      redirects = (seo.redirects || []) ++ [%Brando.Sites.Redirect{from: from, to: to, code: 301}]
+      redirects = (seo.redirects || []) ++ [%Brando.Sites.Redirect{from: source, to: to, code: 301}]
 
       seo
       |> Ecto.Changeset.change()

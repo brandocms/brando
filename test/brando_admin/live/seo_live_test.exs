@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Sites.SEOLiveTest do
   use Brando.LiveCase
 
+  alias Brando.Sites.Redirects
+
   alias Brando.Factory
   alias Brando.Pages
 
@@ -78,11 +80,37 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
 
     assert Enum.any?(
              redirects,
-             &(&1.from == "/blog/moved-page" and &1.to == Brando.Pages.Page.__absolute_url__(page) and &1.code == 301)
+             &(&1.from == "/blog/moved\\-page$" and &1.to == Brando.Pages.Page.__absolute_url__(page) and &1.code == 301)
            )
 
     refute render(view) =~ ~s(phx-value-from="/blog/moved-page")
     refute Enum.any?(Brando.Sites.FourOhFour.list(), &(&1.url == "/blog/moved-page"))
+  end
+
+  # The URL is a visitor's: stored as a pattern, `/blog(/moved-page` failed
+  # every later 404 in its language, and nested repeats made each one slow
+  test "a visitor's 404 becomes a redirect for that exact path, never a pattern", %{conn: conn} do
+    user = Factory.insert(:random_user)
+    Brando.Cache.SEO.set()
+
+    {:ok, page} =
+      Pages.create_page(
+        %{title: "Moved page", uri: "moved-page", language: "en", template: "default.html", status: :published},
+        user
+      )
+
+    Brando.Sites.FourOhFour.add_404(%Plug.Conn{path_info: ["blog(", "moved-page"]})
+
+    {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
+    render_async(view, 5_000)
+    view |> element(~s(.seo-redirects button[phx-value-from="/blog(/moved-page"])) |> render_click()
+
+    assert Enum.any?(Brando.Cache.SEO.get("en").redirects, &(&1.from == "/blog\\(/moved\\-page$"))
+
+    to = Brando.Pages.Page.__absolute_url__(page)
+    assert Redirects.test_redirect(["blog(", "moved-page"], "en") == {:ok, {:redirect, {to, 301}}}
+    assert Redirects.test_redirect(["nothing-here"], "en") == {:error, {:redirects, :no_match}}
+    assert Redirects.test_redirect(["blog", "moved-page"], "en") == {:error, {:redirects, :no_match}}
   end
 
   test "a 404 can be added to the form's redirects, and bot probes are folded away", %{conn: conn} do
@@ -100,7 +128,8 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
     html = render(view)
 
     # A new, unsaved row in the form, not a write behind its back.
-    assert html =~ ~r/name="[^"]*\[redirects\]\[\d+\]\[from\]"[^>]*value="\/projects\/old-case"/
+    # The exact path, escaped as a confirmed permalink's is
+    assert html =~ ~r/name="[^"]*\[redirects\]\[\d+\]\[from\]"[^>]*value="\/projects\/old\\-case\$"/
     assert has_element?(view, ".seo-not-found-added")
     refute Enum.any?(Brando.Cache.SEO.get("en").redirects || [], &(&1.from == "/projects/old-case"))
   end

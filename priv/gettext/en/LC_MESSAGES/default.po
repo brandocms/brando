@@ -20523,6 +20523,11 @@ msgstr ""
 msgid "is moved to the list's Deleted filter"
 msgstr ""
 
+#: lib/brando/sites/redirect/valid_source.ex
+#, elixir-autogen, elixir-format
+msgid "is not a valid pattern"
+msgstr ""
+
 msgid "is not enabled for this environment"
 msgstr ""
 
