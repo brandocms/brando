@@ -740,7 +740,8 @@ defmodule Brando.HTML.Images do
 
   def get_srcset(image_field, srcset, opts, placeholder) when is_binary(srcset) do
     [module_string, field_string] = String.split(srcset, ":")
-    module = Module.concat([module_string])
+    # A template's `srcset` filter names it: no atom from template text
+    module = Brando.Utils.existing_module(module_string) || raise(ArgumentError, "unknown srcset module #{module_string}")
 
     case String.split(field_string, ".") do
       [field, key] ->

@@ -651,7 +651,7 @@ defmodule Brando.Content.Proposals do
     vars = Enum.map(module.vars || [], &Changeset.change/1)
 
     case Brando.Datasource.list_results(
-           Module.concat([ds_module]),
+           Brando.Datasource.Registry.module!(ds_module),
            query,
            vars,
            language && to_string(language),

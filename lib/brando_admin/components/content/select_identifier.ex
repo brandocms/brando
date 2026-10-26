@@ -49,7 +49,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     %{wanted_schemas: wanted, language: language, statuses: statuses, layout: layout, require_url: require_url} =
       socket.assigns
 
-    key = {Enum.map(wanted, &Module.concat(List.wrap(&1))), language, statuses, layout, require_url}
+    key = {Enum.map(wanted, &wanted_module/1), language, statuses, layout, require_url}
 
     if socket.assigns[:identifier_filters] == key do
       socket
@@ -116,10 +116,20 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   # `wanted_schemas` arrives as module atoms, strings or path lists — normalise to
   # module atoms so the rest of the component only deals with one shape.
   defp schema_options(wanted_schemas) do
-    Enum.map(wanted_schemas, fn schema ->
-      module = Module.concat(List.wrap(schema))
+    for schema <- wanted_schemas, module = wanted_module(schema) do
       {Brando.Blueprint.get_plural(module), module}
-    end)
+    end
+  end
+
+  # A var's schemas can come from its unsaved form: a name that is no
+  # Blueprint is left out, and no atom is made of it.
+  defp wanted_module(schema) when is_atom(schema), do: schema
+
+  defp wanted_module(schema) do
+    schema
+    |> List.wrap()
+    |> Enum.map_join(".", &(&1 |> to_string() |> String.replace_prefix("Elixir.", "")))
+    |> Brando.Blueprint.from_name()
   end
 
   # Preserve the user's chosen tab only while it belongs to the current filter.
@@ -424,21 +434,25 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
   end
 
   def handle_event("select_schema", %{"schema" => schema}, socket) do
-    schema_module = Module.concat([schema])
+    case Enum.find(socket.assigns.available_schemas, &(to_string(elem(&1, 1)) == schema)) do
+      nil ->
+        {:noreply, socket}
 
-    {:ok, identifiers} =
-      list_identifiers_for_schema(
-        schema_module,
-        socket.assigns.language,
-        socket.assigns.statuses,
-        socket.assigns.require_url
-      )
+      {_label, schema_module} ->
+        {:ok, identifiers} =
+          list_identifiers_for_schema(
+            schema_module,
+            socket.assigns.language,
+            socket.assigns.statuses,
+            socket.assigns.require_url
+          )
 
-    {:noreply,
-     socket
-     |> assign(:identifiers, identifiers)
-     |> assign(:selected_schema, schema_module)
-     |> assign(:selected_schema_raw, schema)}
+        {:noreply,
+         socket
+         |> assign(:identifiers, identifiers)
+         |> assign(:selected_schema, schema_module)
+         |> assign(:selected_schema_raw, schema)}
+    end
   end
 
   def handle_event("select_identifier", %{"id" => id}, socket) do

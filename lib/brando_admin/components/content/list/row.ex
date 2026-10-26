@@ -1013,21 +1013,27 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   end
 
   def handle_event("update_entry", %{"entry_id" => entry_id, "schema" => schema}, socket) do
-    schema = Module.concat([schema])
-    url = schema.__admin_route__(:update, [entry_id])
-    {:noreply, push_navigate(socket, to: url)}
+    case Brando.Blueprint.from_name(schema) do
+      nil -> {:noreply, socket}
+      schema -> {:noreply, push_navigate(socket, to: schema.__admin_route__(:update, [entry_id]))}
+    end
   end
 
   def handle_event("remove_entry", %{"schema" => schema, "parent_id" => parent_id, "id" => id}, socket) do
-    alternate_schema = Module.concat(schema, Alternate)
-    _ = alternate_schema.delete(id, parent_id)
+    case Brando.Blueprint.from_name(schema) do
+      nil ->
+        {:noreply, socket}
 
-    send_update(BrandoAdmin.Components.Content.List,
-      id: "content_listing_#{socket.assigns.schema}_default",
-      action: :update_entries
-    )
+      schema ->
+        if schema.has_alternates?(), do: Module.concat(schema, Alternate).delete(id, parent_id)
 
-    {:noreply, socket}
+        send_update(BrandoAdmin.Components.Content.List,
+          id: "content_listing_#{socket.assigns.schema}_default",
+          action: :update_entries
+        )
+
+        {:noreply, socket}
+    end
   end
 
   defp matching_child_fields(entry, fields) do

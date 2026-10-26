@@ -8,6 +8,7 @@ defmodule Brando.Villain.Tags.RouteI18n do
 
   alias Brando.I18n
   alias Brando.Villain.LiquexParser.TagGrammar
+  alias Brando.Villain.Tags.Route
 
   # {% route_i18n entry.language page_path list %}
   # {% route_i18n entry.language page_path detail { entry.uri } %}
@@ -15,6 +16,8 @@ defmodule Brando.Villain.Tags.RouteI18n do
   @impl true
   def parse, do: TagGrammar.parse(:route_i18n)
 
+  # The helper and action come from template text, so they must name ones
+  # that exist: an atom made from it would never be freed.
   @impl true
   def render([locale: locale, function: function, action: action, args: args], context) do
     {evaled_locale, _context} = Liquex.Argument.eval(locale, context)
@@ -23,12 +26,16 @@ defmodule Brando.Villain.Tags.RouteI18n do
     rendered_route =
       if function == "page_path" do
         # never localize the page path. it should live as a root route that passes on its prefix as language
-        apply(Brando.helpers(), :"#{function}", [Brando.endpoint(), :"#{action}"] ++ evaled_args)
+        apply(
+          Brando.helpers(),
+          Route.existing_name(function),
+          [Brando.endpoint(), Route.existing_name(action)] ++ evaled_args
+        )
       else
         I18n.Helpers.localized_path(
           evaled_locale,
-          :"#{function}",
-          [Brando.endpoint(), :"#{action}"] ++ evaled_args
+          function,
+          [Brando.endpoint(), Route.existing_name(action)] ++ evaled_args
         )
       end
 
@@ -41,12 +48,12 @@ defmodule Brando.Villain.Tags.RouteI18n do
     rendered_route =
       if function == "page_path" do
         # never localize the page path. it should live as a root route that passes on its prefix as language
-        apply(Brando.helpers(), :"#{function}", [Brando.endpoint(), :"#{action}"])
+        apply(Brando.helpers(), Route.existing_name(function), [Brando.endpoint(), Route.existing_name(action)])
       else
         I18n.Helpers.localized_path(
           evaled_locale,
-          :"#{function}",
-          [Brando.endpoint(), :"#{action}"]
+          function,
+          [Brando.endpoint(), Route.existing_name(action)]
         )
       end
 

@@ -327,6 +327,37 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  The atom `string` names, if there is one: `{:ok, atom}` or `:error`. For
+  strings from a request or stored content: atoms are never freed, so these
+  must not create them.
+  """
+  @spec existing_atom(String.t() | atom()) :: {:ok, atom()} | :error
+  def existing_atom(atom) when is_atom(atom), do: {:ok, atom}
+
+  def existing_atom(string) when is_binary(string) do
+    {:ok, String.to_existing_atom(string)}
+  rescue
+    ArgumentError -> :error
+  end
+
+  @doc """
+  The module `name` names (`"MyApp.Projects.Project"`, with or without
+  `"Elixir."`), if it exists, or `nil`. Unlike `Module.concat/1` it creates no
+  atom, so it is the one for names from a request or stored content.
+  """
+  @spec existing_module(term()) :: module() | nil
+  def existing_module(name) when is_binary(name) do
+    name = if String.starts_with?(name, "Elixir."), do: name, else: "Elixir." <> name
+
+    case existing_atom(name) do
+      {:ok, module} -> if Code.ensure_loaded?(module), do: module
+      :error -> nil
+    end
+  end
+
+  def existing_module(_name), do: nil
+
+  @doc """
   Converts string map `collection` to a map with safe atom keys
   """
   def to_atom_map(string_map) do
