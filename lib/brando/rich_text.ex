@@ -124,8 +124,10 @@ defmodule Brando.RichText do
   `sanitize_html/1` would leave out.
   """
   def safe_html?(html) when is_binary(html) do
-    tags = @html_tags ++ @hidden_tags
-    known_tags?(html, tags) and html |> canonical(tags, false) |> safe_tokens?(@unsafe_tags ++ @hidden_tags)
+    case checked_tokens(html, @html_tags ++ @hidden_tags) do
+      {:ok, tokens} -> Enum.all?(tokens, &safe_token?(&1, @unsafe_tags ++ @hidden_tags))
+      :error -> false
+    end
   end
 
   def safe_html?(nil), do: true
@@ -140,16 +142,11 @@ defmodule Brando.RichText do
   they can rewrite an attribute such as `href` after the check.
   """
   def safe_svg?(code) when is_binary(code) do
-    tags = @html_tags ++ @svg_tags ++ @hidden_tags
-    known? = known_tags?(code, tags)
-    code = code |> canonical(tags, false) |> String.trim()
-
     # Comments and blank text around the root are allowed, as in an
     # exported icon; inside it, a comment is refused.
     around? = &(match?({:comment, _}, &1) or match?({:text, ""}, trim(&1)))
 
-    with true <- known?,
-         {:ok, tokens} <- tokens(code),
+    with {:ok, tokens} <- checked_tokens(code, @html_tags ++ @svg_tags ++ @hidden_tags),
          [{:start, "svg", _} | _] = tokens <- Enum.drop_while(tokens, around?),
          {:ok, rest} <- close(tokens, 0),
          true <- Enum.all?(rest, around?) do
@@ -176,14 +173,25 @@ defmodule Brando.RichText do
   defp close([], _depth), do: :error
 
   # The checks above see the text as it is stored only after `sanitize_html/1`.
-  # Text checked and kept as it is must hold no tag the canonical form leaves
-  # out: its attributes would go unseen (a custom element, or `body`, whose
-  # attributes a page merges into its own body). Any name a browser could
-  # read as a tag counts, in text and attributes too.
+  # Text checked and kept as it is must lose no tag in the canonical form:
+  # the attributes of one left out would go unseen (a custom element; `body`,
+  # whose attributes a page merges into its own body; table rows outside a
+  # table; HTML inside an svg's `desc`). So it may hold no tag name the list
+  # lacks, and the canonical form must have at least as many start tags as
+  # it has names a browser could read as one, in text and attributes too.
+  # Tag names are lowercased in ASCII only, as browsers do.
   @tag_name ~r{<([a-zA-Z][^\t\n\f\r />]*)}
-  defp known_tags?(html, tags) do
-    known = MapSet.new(tags, &String.downcase/1)
-    @tag_name |> Regex.scan(html, capture: :all_but_first) |> Enum.all?(fn [name] -> String.downcase(name) in known end)
+  defp checked_tokens(html, tags) do
+    known = MapSet.new(tags, &String.downcase(&1, :ascii))
+    names = Regex.scan(@tag_name, html, capture: :all_but_first)
+
+    with true <- Enum.all?(names, fn [name] -> String.downcase(name, :ascii) in known end),
+         {:ok, tokens} <- html |> canonical(tags, false) |> String.trim() |> tokens(),
+         true <- Enum.count(tokens, &match?({:start, _, _}, &1)) >= length(names) do
+      {:ok, tokens}
+    else
+      _ -> :error
+    end
   end
 
   defp canonical(html, tags, strip?) do
@@ -216,7 +224,7 @@ defmodule Brando.RichText do
   end
 
   defp safe_token?({:start, tag, attrs}, refused),
-    do: String.downcase(tag) not in refused and Enum.all?(attrs, &safe_attribute?/1)
+    do: String.downcase(tag, :ascii) not in refused and Enum.all?(attrs, &safe_attribute?/1)
 
   defp safe_token?({:comment, _}, _refused), do: false
   defp safe_token?(_token, _refused), do: true
@@ -244,7 +252,7 @@ defmodule Brando.RichText do
   end
 
   defp attributes(attrs) do
-    for [_, name, value] <- Regex.scan(@attribute, attrs), do: {String.downcase(name), unescape(value)}
+    for [_, name, value] <- Regex.scan(@attribute, attrs), do: {String.downcase(name, :ascii), unescape(value)}
   end
 
   defp unescape(value),

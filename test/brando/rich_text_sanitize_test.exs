@@ -144,6 +144,25 @@ defmodule Brando.RichTextSanitizeTest do
     end
 
     refute RichText.safe_svg?(~s(<svg><x-custom onclick="x"></x-custom></svg>))
+
+    # HTML a parser drops or moves out of sight: inside an svg's desc or
+    # title, table parts outside a table, a name lowercased beyond ASCII.
+    for code <- [
+          ~s(<svg><desc><img src="x" onerror="x"></desc></svg>),
+          ~s(<svg><title><video onerror="x"></video></title></svg>),
+          ~s(<svg><section onclick="x"></section></svg>),
+          ~s(<svg><mas\u212A onclick="x"></mas\u212A></svg>)
+        ] do
+      refute RichText.safe_svg?(code), code
+    end
+
+    for html <- [
+          ~s(<p>a</p><tr onclick="x"><td>b</td></tr>),
+          ~s(<p>a<mar\u212A onmouseover="x">b</mar\u212A></p>)
+        ] do
+      refute RichText.safe_html?(html), html
+    end
+
     # Sanitized, such an element and what it holds on itself is gone.
     assert RichText.sanitize_html(~s(<p>a<x-custom onclick="x">b</x-custom></p>)) == {:ok, "<p>ab</p>"}
     assert RichText.sanitize_html(~s(<svg onload="x"></svg>)) == :error
