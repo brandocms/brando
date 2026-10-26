@@ -84,16 +84,7 @@ defmodule Brando.Forms.Delivery do
   defp do_finalize(html) do
     case static_site() do
       nil ->
-        replace_token_inputs(html, fn "<" <> <<tag::binary-size(5)>> <> attributes ->
-          filled =
-            Regex.replace(@attribute, attributes, fn attribute, separator, name, _, _, _ ->
-              if String.downcase(name) == "value",
-                do: separator <> ~s(value="#{Plug.CSRFProtection.get_csrf_token()}"),
-                else: attribute
-            end)
-
-          "<" <> tag <> filled
-        end)
+        replace_token_inputs(html, &fill_token/1)
 
       {site_key, environment_key} ->
         static_prefix = static_action(site_key, environment_key, "")
@@ -102,6 +93,16 @@ defmodule Brando.Forms.Delivery do
         |> replace_token_inputs(fn _input -> "" end)
         |> String.replace("action=\"#{@dynamic_prefix}", "action=\"#{static_prefix}")
     end
+  end
+
+  defp fill_token("<" <> <<tag::binary-size(5)>> <> attributes) do
+    "<" <> tag <> Regex.replace(@attribute, attributes, &fill_value/6)
+  end
+
+  defp fill_value(attribute, separator, name, _, _, _) do
+    if String.downcase(name) == "value",
+      do: separator <> ~s(value="#{Plug.CSRFProtection.get_csrf_token()}"),
+      else: attribute
   end
 
   defp replace_token_inputs(html, fun) do
