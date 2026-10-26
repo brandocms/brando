@@ -1,0 +1,3 @@
+- Tokens and keys are kept out of the request logs: `mix brando.install` adds `"token"` and `"key"` to `:filter_parameters`, and `Brando.Plug.RequestLog` logs paths that carry a token (password reset, shared and static site previews, content transfer downloads, shared assistant conversations) with the token filtered out.
+  In an existing application, add `"token"` and `"key"` to `config :phoenix, :filter_parameters`, and `log: {Brando.Plug.RequestLog, :level, []}` to the endpoint's `plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]`.
+  Run `mix brando.gen.migrations` and `mix brando.migrate` for brando_222: until it has run, shared preview links made before the upgrade do not open.

@@ -359,8 +359,22 @@ socket "/live", Phoenix.LiveView.Socket,
   websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]
 ```
 
-Two-factor codes and confirmation fields are kept out of the request logs
-with `config :phoenix, :filter_parameters, ["password", "code", "proof", "secret"]`.
+Two-factor codes, confirmation fields, tokens and keys are kept out of the
+request logs with
+`config :phoenix, :filter_parameters, ["password", "code", "proof", "secret", "token", "key"]`.
+A reset link's token is part of its path, which Phoenix logs as is;
+`Brando.Plug.RequestLog` logs those paths with the token filtered out (and
+those of shared previews, static site previews, content transfer downloads and
+shared assistant conversations). `mix brando.install` writes both:
+
+```elixir
+plug Plug.Telemetry,
+  event_prefix: [:phoenix, :endpoint],
+  log: {Brando.Plug.RequestLog, :level, []}
+```
+
+Over https the remember-me cookie, which carries the session, is only sent
+over https (`secure`); a dev server over plain http keeps it working.
 
 ## Security log
 
