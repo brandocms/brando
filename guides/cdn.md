@@ -90,7 +90,8 @@ not itself an object-key prefix. See [Sites and environments](tenancy_and_enviro
 ## Server-side and direct uploads
 
 Images are uploaded to the application, processed with Image/Vix, and then queued
-for delivery of the original and each generated rendition, in one job per image.
+for delivery of the original and each generated rendition in each of its formats,
+in one job per image.
 The `image_processing` and `default` queues must run. An image is marked as
 delivered once its original and every rendition are in the bucket. Until then,
 including after a failed delivery, it is served from the media folder, which

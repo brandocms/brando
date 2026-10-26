@@ -80,18 +80,20 @@ defmodule Brando.Worker.ImageUploaderTest do
     {:ok, dir: dir}
   end
 
-  defp image_with_files(dir, sizes) do
+  defp image_with_files(dir, sizes, formats \\ [:jpg]) do
     root = Storage.current_media_root()
     paths = [Path.join(dir, "original.jpg") | Enum.map(sizes, &Path.join([dir, &1, "original.jpg"]))]
 
-    for path <- paths do
-      File.mkdir_p!(Path.dirname(Path.join(root, path)))
-      File.write!(Path.join(root, path), "JPEG")
+    for path <- paths, format <- formats do
+      file = Path.join(root, Brando.Utils.change_extension(path, to_string(format)))
+      File.mkdir_p!(Path.dirname(file))
+      File.write!(file, "IMAGE")
     end
 
     Factory.insert(:image,
       path: hd(paths),
       sizes: Map.new(Enum.zip(sizes, tl(paths))),
+      formats: formats,
       status: :processed,
       cdn: false
     )
@@ -107,6 +109,43 @@ defmodule Brando.Worker.ImageUploaderTest do
     assert Repo.get!(Image, image.id).cdn
     assert Enum.sort(FakeS3.keys()) == Enum.sort(Enum.map(Brando.CDN.image_keys(image), &"/bucket/#{&1}"))
     refute Enum.any?([image.path | Map.values(image.sizes)], &local?/1)
+  end
+
+  # `<picture>` has a source per format
+  test "each size goes up in each of the image's formats", %{dir: dir} do
+    image = image_with_files(dir, ["thumb"], [:jpg, :webp])
+
+    {:ok, _job} = Brando.CDN.queue_upload(image, :system, [])
+
+    assert Repo.get!(Image, image.id).cdn
+
+    assert Enum.sort(FakeS3.completed_keys()) ==
+             Enum.sort([
+               "/bucket/media/#{dir}/original.jpg",
+               "/bucket/media/#{dir}/thumb/original.jpg",
+               "/bucket/media/#{dir}/thumb/original.webp"
+             ])
+  end
+
+  # Processed again while it ran (a new crop): the job queued then uploads
+  # the new files, so this one neither marks the image nor removes them.
+  test "an upload with another one waiting leaves the image to it", %{dir: dir} do
+    image = image_with_files(dir, ["thumb"])
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      {:ok, running} = Brando.CDN.queue_upload(image, :system, [])
+
+      {:ok, _waiting} =
+        %{image_id: image.id, config_target: image.config_target, user_id: nil, field_full_path: [], files: 2}
+        |> Brando.Tenant.Job.attach()
+        |> Brando.Worker.ImageUploader.new(tags: ["image_upload_#{image.id}"])
+        |> Oban.insert()
+
+      assert :ok = Brando.Worker.ImageUploader.perform(Repo.get!(Oban.Job, running.id))
+    end)
+
+    refute Repo.get!(Image, image.id).cdn
+    assert local?(image.path)
   end
 
   test "an image with a size that fails to upload stays off the CDN, with its files", %{dir: dir} do
@@ -136,26 +175,30 @@ defmodule Brando.Worker.ImageUploaderTest do
     Oban.Testing.with_testing_mode(:manual, fn ->
       {:ok, job} = Brando.CDN.queue_upload(image, :system, [])
 
-      assert {:error, _} = Oban.Testing.perform_job(Brando.Worker.ImageUploader, job.args, repo: Brando.Repo.repo())
+      assert {:error, _} = Brando.Worker.ImageUploader.perform(Repo.get!(Oban.Job, job.id))
       refute Repo.get!(Image, image.id).cdn
       assert local?(image.path)
 
       :persistent_term.put({FakeS3, :flaky}, false)
-      assert {:ok, _} = Oban.Testing.perform_job(Brando.Worker.ImageUploader, job.args, repo: Brando.Repo.repo())
+      assert {:ok, _} = Brando.Worker.ImageUploader.perform(Repo.get!(Oban.Job, job.id))
     end)
 
     assert Repo.get!(Image, image.id).cdn
     refute local?(image.path)
   end
 
-  # Before, each file had a job: the first to run uploads the image and
-  # deletes the rest, which would each upload it again.
-  test "per-file jobs queued before upload the image once", %{dir: dir} do
+  # Before, each file had a job. The first to run after an upgrade queues one
+  # for the image, which doesn't upload again what an earlier per-file job
+  # uploaded and removed (`keep_local_copy: false`).
+  test "per-file jobs queued before an upgrade upload the rest of the image once", %{dir: dir} do
     image = image_with_files(dir, ["thumb", "large"])
+    [original | sizes] = Brando.CDN.image_keys(image)
+    # The original's job ran before the upgrade
+    File.rm!(Path.join(Storage.current_media_root(), image.path))
 
     Oban.Testing.with_testing_mode(:manual, fn ->
       [first | _] =
-        for key <- Brando.CDN.image_keys(image) do
+        for key <- sizes do
           %{
             src_key: key,
             dest_key: key,
@@ -169,14 +212,17 @@ defmodule Brando.Worker.ImageUploaderTest do
           |> Oban.insert!()
         end
 
-      assert {:ok, _} = Oban.Testing.perform_job(Brando.Worker.ImageUploader, first.args, repo: Brando.Repo.repo())
-      # (`perform_job/3` leaves the job it runs `available`; a running one is
-      # `executing`, which stays)
-      uploads = for job <- Repo.all(Oban.Job), "image_upload_#{image.id}" in job.tags, do: job.id
-      assert uploads -- [first.id] == []
+      assert :ok = Brando.Worker.ImageUploader.perform(Repo.get!(Oban.Job, first.id))
+
+      # (`perform/1` leaves the job's row `available`, which the new job's
+      # queueing deletes; a running one is `executing`, which stays)
+      [whole] = for job <- Repo.all(Oban.Job), "image_upload_#{image.id}" in job.tags, job.id != first.id, do: job
+      assert whole.args["files"] == 3
+      assert {:ok, _} = Brando.Worker.ImageUploader.perform(whole)
     end)
 
     assert Repo.get!(Image, image.id).cdn
-    assert length(FakeS3.completed_keys()) == length(Brando.CDN.image_keys(image))
+    assert FakeS3.completed_keys() == Enum.map(sizes, &"/bucket/#{&1}")
+    refute "/bucket/#{original}" in FakeS3.keys()
   end
 end
