@@ -1,4 +1,10 @@
 .svg-block {
+  .svg-block-preview img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
   &.dragging {
     .empty {
       background-color: var(--brando-surface-selected);

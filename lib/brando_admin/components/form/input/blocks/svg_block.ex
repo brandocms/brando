@@ -65,7 +65,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
           <div class="svg-block" phx-hook="Brando.SVGDrop" id={"block-#{@uid}-svg-drop"} data-target={@myself}>
             <%= if block_data[:code].value do %>
               <div class="svg-block-preview" id={"block-#{@uid}-svg-preview"}>
-                {block_data[:code].value |> raw}
+                <img src={svg_preview_src(block_data[:code].value)} alt="" />
               </div>
             <% else %>
               <div class="empty">
@@ -90,5 +90,27 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
       </.inputs_for>
     </div>
     """
+  end
+
+  # The code is an editor's markup. As an image the browser draws it without
+  # running its scripts or handlers in the admin page. An image is a
+  # standalone XML document, which needs the namespaces the HTML parser
+  # supplies for inline code, so a root without them gets them.
+  defp svg_preview_src(code), do: "data:image/svg+xml;base64," <> :base64.encode(with_namespaces(code))
+
+  defp with_namespaces(code) do
+    # The root's start tag: `>` inside a quoted value does not end it, and a
+    # prefixed root (`<svg:svg>`) declares its own namespaces.
+    case Regex.run(~r/<svg(?=[\s\/>])(?:"[^"]*"|'[^']*'|[^"'>])*>/i, code, return: :index) do
+      [{start, length}] ->
+        root = binary_part(code, start, length)
+        svg = if root =~ ~r/\sxmlns\s*=/, do: "", else: ~s( xmlns="http://www.w3.org/2000/svg")
+        xlink = if root =~ ~r/\sxmlns:xlink\s*=/, do: "", else: ~s( xmlns:xlink="http://www.w3.org/1999/xlink")
+        at = start + 4
+        binary_part(code, 0, at) <> svg <> xlink <> binary_part(code, at, byte_size(code) - at)
+
+      nil ->
+        code
+    end
   end
 end

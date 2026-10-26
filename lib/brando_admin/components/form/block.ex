@@ -3037,13 +3037,15 @@ defmodule BrandoAdmin.Components.Form.Block do
     end
   end
 
+  # The value is the entry's data (a title an editor typed, say), shown as
+  # text: it is never markup for the block editor.
   defp liquid_render_entry_variable(var_path_string, entry) do
     var_path =
       var_path_string
       |> String.split(".")
       |> Enum.map(&String.to_existing_atom/1)
 
-    entry |> Brando.Utils.try_path(var_path) |> raw()
+    Brando.Utils.try_path(entry, var_path)
   rescue
     ArgumentError ->
       "{{ entry.#{var_path_string} }}"

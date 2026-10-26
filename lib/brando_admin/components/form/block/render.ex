@@ -2075,9 +2075,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             </div>
           </:config>
           <div id={"block-#{@uid}-comment"}>
-            <%= if @text do %>
-              {@text |> raw()}
-            <% end %>
+            {@text}
           </div>
         </.block>
       </.inputs_for>

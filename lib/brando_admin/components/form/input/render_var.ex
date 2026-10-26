@@ -447,9 +447,15 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # label would reach the attribute unescaped and be decoded back to markup.
   defp select_option(option) do
     value = Map.get(option, :value)
-    label = I18nString.localized(Map.get(option, :label)) || to_string(value)
-    %{label: label |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string(), value: value}
+    label = Map.get(option, :label)
+    %{label: escape_label(I18nString.localized(label) || to_string(value)), value: value}
   end
+
+  # Select renders a `%{label: ...}` option's label as markup. These labels
+  # are data an editor can set (a block var's options are cast from the
+  # block's params, a form's title from the forms screen), so they go in as
+  # escaped text.
+  defp escape_label(label), do: label |> HTML.html_escape() |> HTML.safe_to_string()
 
   defp width_options do
     [
@@ -462,21 +468,30 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     ]
   end
 
-  # A form var chooses a form by key; each key is listed once, in the
-  # language its first version was made in, since rendering resolves the
-  # page's language anyway.
+  # A form var's choices load once per component, also when its type changes
+  # to `:form` in the module editor after it mounted as another type.
+  defp assign_form_options(%{assigns: %{form_options_loaded?: true}} = socket, :form), do: socket
+
   defp assign_form_options(socket, :form) do
-    assign_new(socket, :form_options, fn ->
-      Brando.Repo.all(
-        from f in Brando.Forms.Form,
-          distinct: f.key,
-          order_by: [asc: f.key, asc: f.id],
-          select: %{label: f.title, value: f.id}
-      )
-    end)
+    socket
+    |> assign(:form_options_loaded?, true)
+    |> assign(:form_options, form_options())
   end
 
   defp assign_form_options(socket, _type), do: assign_new(socket, :form_options, fn -> [] end)
+
+  # A form var chooses a form by key; each key is listed once, in the
+  # language its first version was made in, since rendering resolves the
+  # page's language anyway.
+  defp form_options do
+    Brando.Repo.all(
+      from f in Brando.Forms.Form,
+        distinct: f.key,
+        order_by: [asc: f.key, asc: f.id],
+        select: %{label: f.title, value: f.id}
+    )
+    |> Enum.map(&%{&1 | label: escape_label(&1.label)})
+  end
 
   defp extract_value(:image, changeset), do: get_field(changeset, :image_id)
   defp extract_value(:file, changeset), do: get_field(changeset, :file_id)
@@ -713,6 +728,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                       id={@id}
                       type={@type}
                       palette_colors={@palette_colors}
+                      form_options={@form_options}
                       var={@var}
                       image={@image}
                       images={@images}
@@ -856,6 +872,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
               language={assigns[:language]}
               type={@type}
               palette_colors={@palette_colors}
+              form_options={@form_options}
               var={@var}
               image={@image}
               images={@images}
@@ -895,6 +912,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   attr(:id, :any)
   attr(:type, :any)
   attr(:palette_colors, :string, default: nil)
+  # A form var's choices: `assign_form_options/2` loads them in `update/2`
+  attr(:form_options, :list, default: [])
   attr(:var, :any)
   attr(:identifier, :any)
   attr(:image, :any)
