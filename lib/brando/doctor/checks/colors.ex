@@ -22,13 +22,7 @@ defmodule Brando.Doctor.Checks.Colors do
   alias Brando.Doctor.Context
   alias Brando.Repo
 
-  @owners [
-    page_id: "Page",
-    global_set_id: "Global set",
-    menu_item_id: "Menu item",
-    table_template_id: "Table template",
-    table_row_id: "Table row"
-  ]
+  @owners [:page_id, :global_set_id, :menu_item_id, :table_template_id, :table_row_id]
 
   @impl true
   def id, do: "colors"
@@ -120,10 +114,22 @@ defmodule Brando.Doctor.Checks.Colors do
       )
 
   defp var_item(var, _module) do
-    {field, owner} = Enum.find(@owners, {nil, "Var"}, fn {field, _} -> Map.get(var, field) end)
+    field = Enum.find(@owners, &Map.get(var, &1))
 
-    "#{owner} #{field && Map.get(var, field)}: var #{var.key}: #{value(var.value)}"
+    dgettext("doctor", "%{owner} %{id}: var %{key}: %{value}",
+      owner: owner(field),
+      id: if(field, do: Map.get(var, field), else: var.id),
+      key: var.key,
+      value: value(var.value)
+    )
   end
+
+  defp owner(:page_id), do: dgettext("doctor", "Page")
+  defp owner(:global_set_id), do: dgettext("doctor", "Global set")
+  defp owner(:menu_item_id), do: dgettext("doctor", "Menu item")
+  defp owner(:table_template_id), do: dgettext("doctor", "Table template")
+  defp owner(:table_row_id), do: dgettext("doctor", "Table row")
+  defp owner(nil), do: dgettext("doctor", "Var")
 
   defp palettes do
     for palette <- Repo.all(from(p in Palette, order_by: [p.namespace, p.key])),
@@ -137,10 +143,17 @@ defmodule Brando.Doctor.Checks.Colors do
   end
 
   defp palette_items(palette) do
-    names =
-      for {field, name} <- [key: palette.key, namespace: palette.namespace],
-          not Palette.css_name?(name),
-          do: dgettext("doctor", "%{field} %{value} is not a CSS name", field: field, value: value(name))
+    key =
+      if Palette.css_name?(palette.key),
+        do: [],
+        else: [dgettext("doctor", "key %{value} is not a CSS name", value: value(palette.key))]
+
+    namespace =
+      if Palette.css_name?(palette.namespace),
+        do: [],
+        else: [dgettext("doctor", "namespace %{value} is not a CSS name", value: value(palette.namespace))]
+
+    names = key ++ namespace
 
     colors =
       for color <- palette.colors || [], item <- color_items(color), do: item
@@ -179,16 +192,23 @@ defmodule Brando.Doctor.Checks.Colors do
   defp blueprint_items(module) do
     spec = module.__color_fields__()
     {fields, relations} = Enum.split_with(spec, &is_atom/1)
-    relation_names = Enum.map(relations, &elem(&1, 0))
-    {embeds, assocs} = Enum.split_with(relation_names, &(&1 in module.__schema__(:embeds)))
+    embeds = for {name, _} <- relations, name in module.__schema__(:embeds), do: name
 
     from(q in module, select: struct(q, ^Enum.uniq([:id | fields ++ embeds])), order_by: q.id)
     |> Repo.all()
-    |> Repo.preload(assocs)
+    |> Repo.preload(preloads(module, relations))
     |> Enum.flat_map(fn record ->
       {_, cleared} = Color.clear_invalid(record)
       Enum.map(cleared, &"#{inspect(module)} #{record.id}: #{&1}")
     end)
+  end
+
+  # A subform's rows, and the rows of its own subforms
+  @doc false
+  def preloads(module, spec) do
+    for {relation, fields} <- spec, relation in module.__schema__(:associations) do
+      {relation, preloads(module.__schema__(:association, relation).related, fields)}
+    end
   end
 
   defp module_name(nil), do: "-"

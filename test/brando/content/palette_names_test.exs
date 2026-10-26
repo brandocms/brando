@@ -89,6 +89,14 @@ defmodule Brando.Content.PaletteNamesTest do
       assert [%{errors: [key: _]}] = changeset.changes.colors
     end
 
+    test "a duplicate's key is a CSS name too", %{user: user} do
+      {:ok, palette} = Content.create_palette(params(%{}), user)
+
+      assert {:ok, copy} = Content.duplicate_palette(palette.id, user)
+      assert copy.key == "darkSection-copy"
+      assert Palette.css_name?(copy.key)
+    end
+
     test "a stored key or namespace is kept when other fields change", %{user: user} do
       palette = stored_palette(%{key: "Dark section", namespace: "old namespace"})
 
@@ -230,6 +238,8 @@ defmodule Brando.Content.PaletteNamesTest do
 
     refute labels =~ "data-marked=\""
     refute labels =~ "</style>"
+    # The colour stored before values were checked is left out
+    refute labels =~ "red}"
     assert labels =~ "Dark &lt;img data-marked=&quot;name&quot;&gt;"
   end
 

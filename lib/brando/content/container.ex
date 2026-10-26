@@ -100,7 +100,7 @@ defmodule Brando.Content.Container do
 
     Enum.map(available_palettes, fn palette ->
       colors =
-        Enum.map(Enum.reverse(palette.colors), fn color ->
+        Enum.map(Enum.reverse(Brando.Content.Palette.css_colors(palette.colors)), fn color ->
           ~s(<span class="circle tiny" style="background-color:#{escape(color.hex_value)}"></span>)
         end)
 

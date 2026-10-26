@@ -821,6 +821,11 @@ defmodule Brando.Doctor.ChecksTest do
 
       assert result.fix =~ "#1a2b3c"
     end
+
+    test "loads a subform's rows and the rows of its own subforms" do
+      spec = [{:entry_blocks, [{:block, [{:vars, [:value]}]}]}]
+      assert Checks.Colors.preloads(Brando.Pages.Page, spec) == [entry_blocks: [block: [vars: []]]]
+    end
   end
 
   describe "Modules" do

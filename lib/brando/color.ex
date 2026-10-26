@@ -103,10 +103,14 @@ defmodule Brando.Color do
       spec = if spec == :own, do: color_fields(module), else: spec || []
       {record, cleared} = Enum.reduce(spec, {record, []}, &clear_field(&2, &1))
 
-      (module.__schema__(:associations) ++ module.__schema__(:embeds))
+      module
+      |> content_relations()
+      |> Enum.filter(&Map.has_key?(record, &1))
       |> Enum.reduce({record, cleared}, fn name, {record, cleared} ->
-        {children, child_cleared} = clear(Map.get(record, name), relation_spec(spec, name))
-        {Map.put(record, name, children), cleared ++ child_cleared}
+        case clear(Map.get(record, name), relation_spec(spec, name)) do
+          {_children, []} -> {record, cleared}
+          {children, child_cleared} -> {Map.put(record, name, children), cleared ++ child_cleared}
+        end
       end)
     else
       {record, []}
@@ -124,6 +128,24 @@ defmodule Brando.Color do
   end
 
   defp clear_field(acc, {_relation, _fields}), do: acc
+
+  # The rows a record holds (has_many, has_one, embeds, and a belongs_to it
+  # updates in place, like a block field's join row and its block), not the
+  # ones it refers to: a block's module and palette are not its content. A
+  # revision taken before a relation was added has no key for it, and gets
+  # none.
+  defp content_relations(module) do
+    owned =
+      Enum.filter(module.__schema__(:associations), fn name ->
+        case module.__schema__(:association, name) do
+          %Ecto.Association.BelongsTo{on_replace: on_replace} -> on_replace == :update
+          %Ecto.Association.ManyToMany{} -> false
+          _ -> true
+        end
+      end)
+
+    owned ++ module.__schema__(:embeds)
+  end
 
   defp color_fields(module) do
     if function_exported?(module, :__color_fields__, 0), do: module.__color_fields__(), else: []

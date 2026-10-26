@@ -471,7 +471,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   # What the filter matches (SelectFilter): an option may carry its label as
   # typed beside it (RenderVar's var choices).
-  defp filter_label(%{text: text}) when is_binary(text), do: text
+  defp filter_label(%{text: text} = opt) when is_binary(text) and not is_struct(opt), do: text
   defp filter_label(opt), do: extract_label(opt)
 
   defp extract_value(%{value: value}), do: value

@@ -294,11 +294,6 @@ msgstr[1] "%{count} med manglende filer"
 msgid "%{database}, not the development database"
 msgstr "%{database}, ikke utviklingsdatabasen"
 
-#: lib/brando/doctor/checks/colors.ex
-#, elixir-autogen, elixir-format
-msgid "%{field} %{value} is not a CSS name"
-msgstr "%{field} %{value} er ikke et CSS-navn"
-
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{file} differs from %{template}"
@@ -340,6 +335,11 @@ msgstr "%{name} %{version} (støttet: %{requirement})"
 #, elixir-autogen, elixir-format
 msgid "%{name} %{version}, needs %{requirement}"
 msgstr "%{name} %{version}, krever %{requirement}"
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "%{owner} %{id}: var %{key}: %{value}"
+msgstr "%{owner} %{id}: variabel %{key}: %{value}"
 
 #: lib/brando/europa_css.ex
 #, elixir-autogen, elixir-format
@@ -499,6 +499,11 @@ msgstr "EuropaCSS %{version}"
 msgid "GET /robots.txt goes to %{plug}"
 msgstr "GET /robots.txt går til %{plug}"
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Global set"
+msgstr "Globalt sett"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "Go to image sizes"
@@ -574,6 +579,11 @@ msgstr "E-post: ikke satt opp"
 msgid "Media paths"
 msgstr "Mediestier"
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Menu item"
+msgstr "Menypunkt"
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "Migrations"
@@ -637,6 +647,11 @@ msgstr "Åpne bilder"
 
 #: lib/brando/doctor/checks/colors.ex
 #, elixir-autogen, elixir-format
+msgid "Page"
+msgstr "Side"
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
 msgid "Palette [%{namespace}] %{name}: %{item}"
 msgstr "Palett [%{namespace}] %{name}: %{item}"
 
@@ -675,6 +690,16 @@ msgstr "Lagrede farger"
 msgid "System check"
 msgstr "Systemkontroll"
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Table row"
+msgstr "Tabellrad"
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Table template"
+msgstr "Tabellmal"
+
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "Test database"
@@ -704,6 +729,11 @@ msgstr "Verktøy → Lag endrede bilder på nytt"
 #, elixir-autogen, elixir-format
 msgid "Utilities → Recreate changed images recreates the images that differ; mix brando.images.adopt --dry-run --verbose lists why each one differs"
 msgstr "Verktøy → Lag endrede bilder på nytt lager bildene som avviker på nytt; mix brando.images.adopt --dry-run --verbose viser hvorfor hvert av dem avviker"
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "Var"
+msgstr "Variabel"
 
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
@@ -1002,6 +1032,11 @@ msgid_plural "all likely match (mix brando.images.adopt checks and records that)
 msgstr[0] "det samsvarer trolig (mix brando.images.adopt sjekker og lagrer det)"
 msgstr[1] "alle samsvarer trolig (mix brando.images.adopt sjekker og lagrer det)"
 
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "key %{value} is not a CSS name"
+msgstr "nøkkel %{value} er ikke et CSS-navn"
+
 #: lib/brando/doctor/checks/sitemap.ex
 #, elixir-autogen, elixir-format
 msgid "last generated %{age} ago"
@@ -1041,6 +1076,11 @@ msgstr "mix test ville brukt utviklingsdatabasen %{database}"
 #, elixir-autogen, elixir-format
 msgid "name"
 msgstr "navn"
+
+#: lib/brando/doctor/checks/colors.ex
+#, elixir-autogen, elixir-format
+msgid "namespace %{value} is not a CSS name"
+msgstr "navnerom %{value} er ikke et CSS-navn"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format

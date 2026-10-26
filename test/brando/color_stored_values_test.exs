@@ -155,6 +155,20 @@ defmodule Brando.ColorStoredValuesTest do
                Color.clear_invalid(%Brando.Content.Block{refs: [ref]})
 
       assert Color.clear_invalid(%Brando.Images.Image{dominant_color: "#abc"}) |> elem(1) == []
+    end
+
+    test "leaves what a record refers to, and relations its snapshot lacks, as they are" do
+      palette = %Brando.Content.Palette{colors: [%Brando.Content.Palette.Color{key: "ink", hex_value: @stored}]}
+      module = %Brando.Content.Module{vars: [color_var("bg", @stored)]}
+      block = %Brando.Content.Block{palette: palette, module: module, vars: [color_var("fg", "#000")]}
+
+      assert Color.clear_invalid(block) == {block, []}
+
+      # A revision taken before a relation was added has no key for it
+      old_snapshot = Map.delete(%Page{title: "Old", vars: [color_var("bg", @stored)]}, :entry_blocks)
+      {restored, [_]} = Color.clear_invalid(old_snapshot)
+      refute Map.has_key?(restored, :entry_blocks)
+      assert [%{value: nil}] = restored.vars
       assert {%{dominant_color: nil}, [_]} = Color.clear_invalid(%Brando.Images.Image{dominant_color: @stored})
     end
   end

@@ -462,7 +462,10 @@ defmodule Brando.Content do
   end
 
   mutation :delete, Palette
-  mutation :duplicate, {Palette, change_fields: [:name, :key]}
+  mutation :duplicate, {Palette, change_fields: [:name, key: &__MODULE__.duplicate_palette_key/2]}
+
+  # A key names CSS (`Palette.css_name?/1`): " (copy)" would not be one
+  def duplicate_palette_key(_palette, key), do: key && "#{key}-copy"
 
   @doc """
   Find palette with `id` in `palettes`
