@@ -314,11 +314,13 @@ Every input type reads these:
   `:text`, `:number` and `:rich_text` inputs render read only.
 
   A save ignores any value sent for a locked top-level input. The field
-  keeps the value the form has: its saved value, or one Brando set, such as
-  a new entry's `default_params`. An empty field takes the input's
-  `default:`. Inputs of other types don't render locked, but their value is
-  not saved either. A `:slug` input is never locked: the browser fills it in
-  from its source.
+  keeps its saved value, or one Brando set: a new entry's `default_params`,
+  or a translation. A restored recovery copy doesn't change it. An empty
+  field takes the input's `default:`. Inputs of other types don't render
+  locked, but their value is not saved either, except that an `:image`,
+  `:file`, `:video` or `:gallery` input still takes what its picker or an
+  upload delivers. A `:slug` input declared `true` is not locked: the
+  browser fills it in from its source.
 * `monospace`: a monospace font, for keys and codes.
 * `class`: extra classes on the input's wrapper.
 * `debounce`: milliseconds between keystrokes and validation. Default 300.

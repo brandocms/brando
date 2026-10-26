@@ -232,7 +232,7 @@ defmodule Brando.SyncTest.Article do
           input :subtitle, :text, readonly: true
           input :year, :number, disabled: true, default: 2024
           input :featured, :toggle, readonly: true
-          input :cover, :image, readonly: true
+          input :cover, :image
         end
       end
     end
