@@ -94,7 +94,7 @@ defmodule Brando.Plug.LivePreviewTest do
 
     assert conn.halted == true
     assert conn.resp_body =~ "</main><!-- BRANDO LIVE PREVIEW -->"
-    assert conn.resp_body =~ ~r{<script src="/__livepreview/client.js\?vsn=[0-9a-f]+"></script>}
+    assert conn.resp_body =~ ~r"<script src=\"/__livepreview/client-[0-9a-f]{16}\.js\"></script>"
 
     # The page holds editor markup, so its socket token opens only this
     # preview's channel, for this session; the admin socket token stays out
@@ -136,7 +136,7 @@ defmodule Brando.Plug.LivePreviewTest do
   end
 
   test "the preview's script is served from a path a script-src policy can allow" do
-    conn = build_conn(:get, "/__livepreview/client.js?vsn=x") |> LivePreview.call([])
+    conn = build_conn(:get, "/__livepreview/client-0123456789abcdef.js") |> LivePreview.call([])
 
     assert conn.status == 200
     assert get_resp_header(conn, "content-type") == ["text/javascript; charset=utf-8"]

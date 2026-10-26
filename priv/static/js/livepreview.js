@@ -18,7 +18,14 @@ const BlockPatch = window.BrandoBlockPatch
 // preview's channel (`Brando.LivePreview.SocketToken`).
 // `livePreviewKey` and `livePreviewVersion` stay globals, as they were when the
 // plug set them in an inline script.
-const livePreviewMeta = document.querySelector('meta[name="brando-live-preview"]')
+// The plug puts the meta right before this script; read that one, not a
+// look-alike in the page's content.
+const livePreviewMeta = (() => {
+  const own = document.currentScript && document.currentScript.previousElementSibling
+  if (own && own.matches('meta[name="brando-live-preview"]')) return own
+  const metas = document.querySelectorAll('meta[name="brando-live-preview"]')
+  return metas[metas.length - 1]
+})()
 var livePreviewKey = livePreviewMeta.getAttribute('data-key')
 var livePreviewVersion = Number(livePreviewMeta.getAttribute('data-version'))
 let token = livePreviewMeta.getAttribute('data-token')

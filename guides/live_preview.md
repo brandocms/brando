@@ -230,7 +230,7 @@ Preview responses carry a Content-Security-Policy of
 `frame-ancestors 'self'; base-uri 'self'`: only admin pages on the same origin
 can frame a preview, and a `<base>` tag in content cannot redirect the page's
 relative URLs. The preview's own script loads from
-`/__livepreview/client.js`, so `'self'` allows it. To add directives, such as a
+`/__livepreview/client-<hash>.js`, so `'self'` allows it. To add directives, such as a
 `script-src` listing the hosts your templates load scripts from:
 
 ```elixir
@@ -243,7 +243,11 @@ The value is appended to the default policy. A `script-src` without
 in your templates and in editor content; list your own inline scripts by hash
 if the templates need them.
 
-Without a `script-src`, a script an editor puts into the content runs on the
-admin origin with the viewing user's cookies whenever someone previews it:
-it can load admin pages as that user. Restrict who can add raw HTML, and set
-a `script-src` if editors you do not trust author content.
+The scoped token keeps the admin socket token out of the preview page, not out
+of reach. Without a `script-src` that blocks it, a script an editor puts into
+the content runs on the admin origin whenever someone previews it, with the
+viewing user's cookies: it can read the admin page that frames the preview
+(and the window that opened a standalone preview), admin token included, and
+load any admin page as that user. Restrict who can add raw HTML (HTML blocks,
+module code), and set a `script-src` if editors you do not trust author
+content.

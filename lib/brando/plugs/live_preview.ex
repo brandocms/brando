@@ -8,7 +8,7 @@ defmodule Brando.Plug.LivePreview do
   this preview's channel (`Brando.LivePreview.SocketToken`), never the
   viewer's admin socket token; it gets a fresh one from
   `/__livepreview/token?key=<key>` when it has to connect again. The script
-  itself is served from `/__livepreview/client.js`, so a policy without
+  itself is served from `/__livepreview/client-<hash>.js`, so a policy without
   `'unsafe-inline'` allows it.
 
   Every response carries a Content-Security-Policy with
@@ -65,7 +65,9 @@ defmodule Brando.Plug.LivePreview do
 
   def init(opts), do: opts
 
-  def call(%Plug.Conn{path_info: ["__livepreview", "client.js"]} = conn, _) do
+  # The hash in the path, not a query string, so a CDN that ignores query
+  # strings does not keep an old script; any hash gets the current one
+  def call(%Plug.Conn{path_info: ["__livepreview", "client-" <> _hash]} = conn, _) do
     conn
     |> put_resp_content_type("text/javascript")
     |> put_resp_header("x-content-type-options", "nosniff")
@@ -177,7 +179,7 @@ defmodule Brando.Plug.LivePreview do
           inject_html = """
           <!-- BRANDO LIVE PREVIEW -->
           <meta name="brando-live-preview" data-key="#{attribute(key)}" data-version="#{generation}" data-token="#{attribute(socket_token)}">
-          <script src="/__livepreview/client.js?vsn=#{@client_vsn}"></script>
+          <script src="/__livepreview/client-#{@client_vsn}.js"></script>
           <style>
           #{@override_css}
           </style>
