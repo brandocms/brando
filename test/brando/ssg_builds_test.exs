@@ -1,3 +1,18 @@
+defmodule Brando.SSGBuildsTest.TenantRouter do
+  @moduledoc false
+  use Phoenix.Router
+  import Brando.Router
+
+  pipeline :site do
+    plug Brando.Plug.Tenant
+  end
+
+  scope "/" do
+    pipe_through :site
+    page_routes(catch_all: false)
+  end
+end
+
 defmodule Brando.SSGBuildsTest do
   use Brando.ConnCase
 
@@ -5,6 +20,7 @@ defmodule Brando.SSGBuildsTest do
   alias Brando.SSG.Deploy
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
+  alias Brando.SSGBuildsTest.TenantRouter
   alias Brando.Worker.SSGBuild
 
   defmodule SuccessfulBuilder do
@@ -67,6 +83,7 @@ defmodule Brando.SSGBuildsTest do
       Registry.create_environment(site, %{
         name: "Production",
         key: "production",
+        domain: "#{site.key}.test",
         live: true
       })
 
@@ -320,14 +337,61 @@ defmodule Brando.SSGBuildsTest do
   test "serves ready previews and rejects pruned artifacts", context do
     build = ready_build(context.site, context.environment)
 
-    conn = get(Phoenix.ConnTest.build_conn(), "/__ssg_preview__/#{build.preview_token}/")
+    conn = preview(build, "#{context.site.key}.test")
     assert response(conn, 200) == build.version
     assert get_resp_header(conn, "cache-control") == ["private, no-store"]
 
     {:ok, _pruned} = Builds.update(build, %{pruned_at: DateTime.utc_now()})
 
-    missing = get(Phoenix.ConnTest.build_conn(), "/__ssg_preview__/#{build.preview_token}/")
+    missing = preview(build, "#{context.site.key}.test")
     assert response(missing, 404) == "Static preview not found"
+  end
+
+  # Audit F15: the artifact carries the site's raw markup, so it must not run
+  # in another site's origin.
+  test "serves a preview only on its own site's host, sandboxed", context do
+    {:ok, other_site} =
+      Registry.create_site(%{
+        name: "Static Beta",
+        key: "static-beta-#{System.unique_integer([:positive])}",
+        languages: ["en"],
+        default_language: "en",
+        status: :active,
+        delivery_mode: :static
+      })
+
+    {:ok, _environment} =
+      Registry.create_environment(other_site, %{
+        name: "Production",
+        key: "production",
+        domain: "#{other_site.key}.test",
+        live: true
+      })
+
+    build = ready_build(context.site, context.environment)
+
+    own = preview(build, "#{context.site.key}.test")
+    assert response(own, 200) == build.version
+    assert [policy] = get_resp_header(own, "content-security-policy")
+    assert policy =~ "sandbox allow-scripts"
+    refute policy =~ "allow-same-origin"
+    assert get_resp_header(own, "x-content-type-options") == ["nosniff"]
+
+    assert response(preview(build, "#{other_site.key}.test"), 404)
+    assert response(preview(build, "unknown.test"), 404)
+  end
+
+  test "refuses a preview when tenancy is on but the request resolved no site", context do
+    build = ready_build(context.site, context.environment)
+
+    conn = get(Phoenix.ConnTest.build_conn(), "/__ssg_preview__/#{build.preview_token}/")
+    assert response(conn, 404) == "Static preview not found"
+  end
+
+  defp preview(build, host) do
+    Phoenix.ConnTest.build_conn(:get, "/__ssg_preview__/#{build.preview_token}/")
+    |> Map.put(:host, host)
+    |> TenantRouter.call(TenantRouter.init([]))
   end
 
   test "retains environment history after the source environment is deleted", context do

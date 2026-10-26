@@ -84,9 +84,12 @@ defmodule Brando.SSG.Builds do
     |> preload()
   end
 
-  @doc "Returns a previewable build by its unguessable token."
-  @spec get_preview(String.t()) :: Build.t() | nil
-  def get_preview(token) when is_binary(token) do
+  @doc """
+  Returns a previewable build by its unguessable token, built for `site`.
+  Pass `:any` only where tenancy is disabled.
+  """
+  @spec get_preview(String.t(), Site.t() | :any) :: Build.t() | nil
+  def get_preview(token, site) when is_binary(token) do
     now = DateTime.utc_now()
 
     from(build in Build,
@@ -95,8 +98,12 @@ defmodule Brando.SSG.Builds do
           build.status in [:ready, :deployed, :archived],
       preload: [:site, :environment]
     )
+    |> where_site(site)
     |> Repo.one(@public_opts)
   end
+
+  defp where_site(query, :any), do: query
+  defp where_site(query, %Site{id: site_id}), do: from(build in query, where: build.site_id == ^site_id)
 
   @doc "Records coarse URL progress for the publishing UI."
   @spec update(Build.t(), map()) :: {:ok, Build.t()} | {:error, Ecto.Changeset.t()}
