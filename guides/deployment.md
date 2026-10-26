@@ -640,9 +640,11 @@ Dockerfile does this when it gets a `sentry_auth_token` build secret:
 The step injects debug IDs into the built scripts and uploads the maps with
 `sentry-cli`, so Sentry pairs them with an event without a matching release
 name. Your frontend still has to report errors with `@sentry/browser`. Without
-the secret the step does nothing. The step runs with the token, so it fetches
-an exact `sentry-cli` version (`ARG SENTRY_CLI_VERSION`); raise it after
-reading the release notes, or pass `--build-arg SENTRY_CLI_VERSION=…`.
+the secret the step does nothing. `sentry-cli` is installed in an earlier step
+that has no secret mounted, at an exact version (`ARG SENTRY_CLI_VERSION`), so
+nothing fetched from npm runs while the token is in the environment. Raise the
+version after reading the release notes, or pass
+`--build-arg SENTRY_CLI_VERSION=…`.
 
 Projects generated before 0.55 move their frontend maps to
 `priv/static/assets/__srcmaps/`, which `Plug.Static` serves. The digest

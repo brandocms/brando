@@ -94,6 +94,12 @@ WORKDIR /opt/app/assets/frontend
 # Keep in step with `packageManager` in assets/frontend/package.json
 RUN npm install --global pnpm@12.15.0
 
+# sentry-cli for the source map upload below, installed here, where no secret
+# is mounted: its install scripts and dependencies never see the Sentry token.
+# The version is exact; npm still resolves the CLI's own dependency ranges.
+ARG SENTRY_CLI_VERSION=3.8.2
+RUN npm install --global @sentry/cli@${SENTRY_CLI_VERSION}
+
 # The site's CSS builds with the native EuropaCSS compiler too, installed
 # from the lockfile's optional dependencies as in assets_backend.
 
@@ -117,14 +123,13 @@ RUN pnpm build
 # never ship. To upload them to Sentry first, commit an
 # assets/frontend/.sentryclirc with your org and project, then build with
 #   --secret id=sentry_auth_token,env=SENTRY_AUTH_TOKEN
-# Without the secret this step does nothing. The CLI version is exact: the step
-# runs with the token, so a new release is never fetched unreviewed.
-ARG SENTRY_CLI_VERSION=3.8.2
+# Without the secret this step does nothing. It runs the sentry-cli installed
+# above and fetches nothing while the token is in its environment.
 RUN --mount=type=secret,id=sentry_auth_token \
   if [ -s /run/secrets/sentry_auth_token ]; then \
     export SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token)" && \
-    npx --yes @sentry/cli@${SENTRY_CLI_VERSION} sourcemaps inject ../../priv/static/assets && \
-    npx --yes @sentry/cli@${SENTRY_CLI_VERSION} sourcemaps upload ../../priv/static/assets; \
+    sentry-cli sourcemaps inject ../../priv/static/assets && \
+    sentry-cli sourcemaps upload ../../priv/static/assets; \
   fi
 
 
