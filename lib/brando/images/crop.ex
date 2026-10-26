@@ -28,8 +28,12 @@ defmodule Brando.Images.Crop do
   end
 
   defp do_save_as_new_copy(original_image, binary_data, focal, user) do
+    with {:ok, dimensions} <- measure(binary_data, {nil, nil}),
+         do: save_as_new_copy(original_image, binary_data, dimensions, focal, user)
+  end
+
+  defp save_as_new_copy(original_image, binary_data, {width, height}, focal, user) do
     new_path = Brando.Utils.unique_filename(original_image.path)
-    {width, height} = measure(binary_data, {nil, nil})
 
     new_image_params = %{
       path: new_path,
@@ -81,8 +85,11 @@ defmodule Brando.Images.Crop do
   end
 
   defp do_save_replace(image, binary_data, focal, user) do
-    {width, height} = measure(binary_data, {image.width, image.height})
+    with {:ok, dimensions} <- measure(binary_data, {image.width, image.height}),
+         do: save_replace(image, binary_data, dimensions, focal, user)
+  end
 
+  defp save_replace(image, binary_data, {width, height}, focal, user) do
     update_params = %{
       width: width,
       height: height,
@@ -127,15 +134,16 @@ defmodule Brando.Images.Crop do
     end
   end
 
+  # An image over the pixel limit is refused before it is written.
   defp measure(binary_data, fallback_dimensions) do
     # Use Image.from_binary instead of Image.open(path) to bypass the libvips
     # file cache, which returns stale dimensions when overwriting an existing file.
     case Image.from_binary(binary_data) do
       {:ok, img} ->
-        {Image.width(img), Image.height(img)}
+        with :ok <- Images.PixelLimit.check(img), do: {:ok, {Image.width(img), Image.height(img)}}
 
       {:error, _reason} ->
-        fallback_dimensions
+        {:ok, fallback_dimensions}
     end
   end
 end

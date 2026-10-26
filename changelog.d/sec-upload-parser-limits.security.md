@@ -1,4 +1,4 @@
-- Image uploads, direct-to-S3 uploads, image processing and the content importer refuse a raster image over 100 megapixels (width × height × pages) on its header, before decoding it; set `config :brando, Brando.Images, max_pixels: …` to change the limit. The dominant colour is read from a small thumbnail.
+- Image uploads, direct-to-S3 uploads, image editor crops, image processing and the content importer refuse a raster image over 100 megapixels (width × height, × frames for a GIF) on its header, before decoding it; set `config :brando, Brando.Images, max_pixels: …` to change the limit. Processing an existing image over the limit stops before its sizes are removed, and the dominant colour is read from a small thumbnail.
 
 - An uploaded SVG's size is read without fetching the external DTD its DOCTYPE names, so it can no longer make the server read a local file.
 

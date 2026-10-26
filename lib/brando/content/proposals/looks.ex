@@ -108,6 +108,7 @@ defmodule Brando.Content.Proposals.Looks do
 
   defp shrink(bytes) do
     with {:ok, image} <- Image.from_binary(bytes),
+         :ok <- Brando.Images.PixelLimit.check(image),
          {:ok, small} <- Image.thumbnail(image, @edge),
          {:ok, jpeg} <- Image.write(small, :memory, suffix: ".jpg", quality: 70) do
       jpeg

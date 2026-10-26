@@ -22,6 +22,9 @@ defmodule BrandoAdmin.API.Content.Upload.ImageController do
       {:error, :forbidden} ->
         conn |> put_status(:forbidden) |> json(%{status: 403, error: "You do not have permission to edit this image."})
 
+      {:error, :too_many_pixels} ->
+        conn |> put_status(:unprocessable_entity) |> json(%{status: 422, error: Brando.Images.PixelLimit.error_message()})
+
       {:error, reason} ->
         json(conn, %{status: 500, error: "Error replacing image: #{inspect(reason)}"})
     end

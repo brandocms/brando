@@ -40,8 +40,24 @@ defmodule Brando.Content.ModuleImportDecodeTest do
         assert Content.deserialize_modules(encode(term)) == {:error, :invalid}, inspect(term)
       end
 
+      for term <- [
+            [module() | :x],
+            [module(%{vars: [module()]})],
+            [module(%{refs: [:ref]})],
+            [module(%{vars: [nil | nil]})]
+          ] do
+        assert Content.deserialize_modules(encode(term)) == {:error, :invalid}, inspect(term)
+      end
+
       grandchild = module(%{children: [module()]})
       assert Content.deserialize_modules(encode([module(%{children: [grandchild]})])) == {:error, :invalid}
+    end
+
+    test "refuses a compressed term that would expand past the limit, before expanding it" do
+      # A compressed term (tag 80) claiming 64 MB once inflated
+      binary = <<131, 80, 64 * 1_048_576::32>> <> :zlib.compress(<<107, 0, 1, 0>>)
+
+      assert Content.deserialize_modules(Base.encode64(binary)) == {:error, :invalid}
     end
 
     test "refuses text that is not base64" do

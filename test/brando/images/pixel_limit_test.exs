@@ -6,6 +6,7 @@ defmodule Brando.Images.PixelLimitTest do
   would take about 90 GB.
   """
   use ExUnit.Case, async: false
+  use Brando.ConnCase
 
   import Brando.Test.Support, only: [put_test_env: 2]
   import ExUnit.CaptureLog
@@ -48,7 +49,7 @@ defmodule Brando.Images.PixelLimitTest do
       assert PixelLimit.error_message() =~ "megapixels"
     end
 
-    test "counts every page of an animated image, however it was opened", %{tmp_dir: tmp_dir} do
+    test "counts every frame of a GIF, which processing decodes whole", %{tmp_dir: tmp_dir} do
       # Distinct frames: the GIF writer folds identical ones together
       {:ok, white} = Image.new(20, 10, color: :white)
       {:ok, black} = Image.new(20, 10, color: :black)
@@ -60,12 +61,15 @@ defmodule Brando.Images.PixelLimitTest do
       {:ok, first_page} = Image.open(path)
       {:ok, all_pages} = Image.open(path, pages: :all)
 
-      assert Image.pages(first_page) == 3
-      assert PixelLimit.pixels(first_page) == 600
+      assert PixelLimit.pixels(first_page) == 200
       assert PixelLimit.pixels(all_pages) == 600
+      assert PixelLimit.open_options(path) == [pages: :all]
+      assert PixelLimit.open_options("image/gif") == [pages: :all]
+      assert PixelLimit.open_options("photo.webp") == []
 
       put_max_pixels(599)
-      assert {:error, :too_many_pixels} = PixelLimit.check(first_page)
+      assert {:error, :too_many_pixels} = PixelLimit.check(path, PixelLimit.open_options(path))
+      assert :ok = PixelLimit.check(path)
     end
   end
 
@@ -85,9 +89,9 @@ defmodule Brando.Images.PixelLimitTest do
         resize_values: %{width: 100}
       }
 
-      log = capture_log(fn -> VixProcessor.process_image(params) end)
+      log = capture_log(fn -> assert {:error, :too_many_pixels} = VixProcessor.process_image(params) end)
 
-      assert log =~ "too_many_pixels"
+      assert log =~ "over the pixel limit"
       refute File.exists?(dest)
 
       cropped = %{
@@ -97,8 +101,8 @@ defmodule Brando.Images.PixelLimitTest do
           resize_values: %{width: 50, height: 50}
       }
 
-      log = capture_log(fn -> VixProcessor.process_image(cropped) end)
-      assert log =~ "too_many_pixels"
+      log = capture_log(fn -> assert {:error, :too_many_pixels} = VixProcessor.process_image(cropped) end)
+      assert log =~ "over the pixel limit"
       refute File.exists?(dest)
     end
 
@@ -141,6 +145,88 @@ defmodule Brando.Images.PixelLimitTest do
 
       stored = Path.join([Brando.Tenant.Storage.current_media_root(), "images/pixel-limit", "huge.png"])
       refute File.exists?(stored)
+    end
+
+    test "an upload over the limit leaves the original it would overwrite alone", %{tmp_dir: tmp_dir} do
+      upload_path = Path.join(tmp_dir, "upload.png")
+      File.cp!(@huge, upload_path)
+
+      dir = Path.join(Brando.Tenant.Storage.current_media_root(), "images/pixel-limit")
+      File.mkdir_p!(dir)
+      File.cp!(@sample, Path.join(dir, "cover.jpg"))
+
+      cfg =
+        struct(Brando.Type.ImageConfig, %{
+          upload_path: "images/pixel-limit",
+          allowed_mimetypes: ["image/png"],
+          force_filename: "cover.jpg",
+          overwrite: true
+        })
+
+      meta = %{path: upload_path, config_target: "default"}
+      entry = %{client_name: "huge.png", client_type: "image/png", client_size: File.stat!(@huge).size}
+
+      capture_log(fn ->
+        assert {:error, message} = Brando.Uploads.store_upload(meta, entry, cfg, :system)
+        assert message == PixelLimit.error_message()
+      end)
+
+      assert File.read!(Path.join(dir, "cover.jpg")) == File.read!(@sample)
+    end
+  end
+
+  describe "processing a stored image" do
+    setup do
+      dir = Path.join(Brando.Tenant.Storage.current_media_root(), "images/pixel-limit")
+      File.mkdir_p!(Path.join(dir, "small"))
+      File.cp!(@huge, Path.join(dir, "huge.png"))
+      File.write!(Path.join(dir, "small/huge.png"), "a size made earlier")
+      on_exit(fn -> File.rm_rf(dir) end)
+
+      image =
+        Brando.Factory.insert(:image, %{
+          path: "images/pixel-limit/huge.png",
+          formats: [:png],
+          sizes: %{"small" => "images/pixel-limit/small/huge.png"},
+          status: :processed
+        })
+
+      {:ok, image: image, size: Path.join(dir, "small/huge.png")}
+    end
+
+    test "is refused before the sizes it has are removed", %{image: image, size: size} do
+      args = %{
+        "image_id" => image.id,
+        "config_target" => "default",
+        "user_id" => nil,
+        "field_full_path" => []
+      }
+
+      assert {:cancel, :too_many_pixels} = perform_job(Brando.Worker.ImageProcessor, args)
+      assert File.exists?(size)
+      assert Brando.Repo.get!(Brando.Images.Image, image.id).sizes == image.sizes
+    end
+
+    test "is not written over an original by the image editor's crop", %{image: image} do
+      sample = Path.join(Brando.Tenant.Storage.current_media_root(), "images/pixel-limit/sample.jpg")
+      File.cp!(@sample, sample)
+      image = Brando.Repo.update!(Ecto.Changeset.change(image, path: "images/pixel-limit/sample.jpg"))
+
+      assert {:error, :too_many_pixels} =
+               Brando.Images.Crop.save_replace(image, File.read!(@huge), %{x: 50, y: 50}, :system)
+
+      assert File.read!(sample) == File.read!(@sample)
+
+      assert {:error, :too_many_pixels} =
+               Brando.Images.Crop.save_as_new_copy(image, File.read!(@huge), %{x: 50, y: 50}, :system)
+    end
+
+    test "is skipped by a bulk recreate, which keeps its sizes", %{image: image, size: size} do
+      Brando.Repo.update_all(Brando.Images.Image, set: [config_target: "default"])
+
+      assert {:ok, ids} = Brando.Images.Processing.recreate_sizes_for_image_field("default", :system)
+      refute image.id in ids
+      assert File.exists?(size)
     end
   end
 end

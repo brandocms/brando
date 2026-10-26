@@ -304,7 +304,9 @@ defmodule Brando.Images.Processing do
     %{cfg: cfg} = Brando.Blueprint.Assets.__asset_opts__(schema, field_name)
 
     operations =
-      Enum.flat_map(images, fn image ->
+      images
+      |> Enum.filter(&(Images.PixelLimit.check_image(&1) == :ok))
+      |> Enum.flat_map(fn image ->
         Images.Utils.delete_sized_images(image)
 
         {:ok, operations} =
@@ -340,7 +342,9 @@ defmodule Brando.Images.Processing do
     {:ok, cfg} = Brando.Images.get_config_for(%{config_target: "default"})
 
     operations =
-      Enum.flat_map(images, fn image ->
+      images
+      |> Enum.filter(&(Images.PixelLimit.check_image(&1) == :ok))
+      |> Enum.flat_map(fn image ->
         Images.Utils.delete_sized_images(image)
 
         {:ok, operations} =

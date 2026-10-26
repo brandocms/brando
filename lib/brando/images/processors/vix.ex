@@ -55,6 +55,11 @@ defmodule Brando.Images.Processor.Vix do
          cmd_params: debug_desc
        }}
     else
+      # Nothing was written: say so, rather than report a size that isn't there
+      {:error, :too_many_pixels} = error ->
+        Logger.error("==> process_image/ERROR: #{image_src_path} is over the pixel limit")
+        error
+
       {:error, reason} ->
         Logger.error("""
         ==> process_image/ERROR (no crop)
@@ -116,6 +121,11 @@ defmodule Brando.Images.Processor.Vix do
          cmd_params: debug_desc
        }}
     else
+      # Nothing was written: say so, rather than report a size that isn't there
+      {:error, :too_many_pixels} = error ->
+        Logger.error("==> process_image/ERROR: #{image_src_path} is over the pixel limit")
+        error
+
       {:error, reason} ->
         Logger.error("""
         ==> process_image/ERROR (crop)

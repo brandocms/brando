@@ -35,6 +35,8 @@ defmodule Brando.Worker.ImageProcessor do
 
     with {:ok, image} <- Images.get_image(image_id),
          {:ok, _} <- broadcast_status(image, field_full_path, :processing),
+         # Before the sizes go: an image over the limit keeps the ones it has
+         :ok <- Images.PixelLimit.check_image(image),
          {:ok, _} <- Images.Utils.delete_sized_images(image),
          {:ok, user} <- Users.get_job_user(user_id),
          {:ok, config} <- Images.get_config_for(config_target),
@@ -42,6 +44,10 @@ defmodule Brando.Worker.ImageProcessor do
          {:ok, process_map} <- Images.Operations.perform(operations, user, silent: silent?) do
       finish_processing(image, Map.fetch!(process_map, image_id), config, user, field_full_path)
     else
+      {:error, :too_many_pixels} ->
+        broadcast_processing_error(image_id, field_full_path)
+        {:cancel, :too_many_pixels}
+
       err ->
         handle_processing_error(job, image_id, field_full_path, err)
     end
