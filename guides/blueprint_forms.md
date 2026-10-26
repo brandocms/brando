@@ -278,7 +278,8 @@ Fieldset options are written inside the block:
 * `label`: a section heading, translated.
 * `superuser`: `true` renders the fieldset only for users with the
   `:superuser` role, for technical settings editors have no use for. Other
-  users do not get it at all, so its inputs are not submitted.
+  users do not get it at all, and a save from them ignores any value sent
+  for its fields.
 * `component`: a one-arity function component rendered above the inputs,
   such as an SEO preview. It receives `form`, `fieldset`, `relations`,
   `current_user`, `form_cid`, `form_id` and `id`, and renders read-only
@@ -307,9 +308,11 @@ Every input type reads these:
 * `instructions`: help text under the input, translated.
 * `placeholder`: placeholder text, translated, for inputs that show one.
 * `disabled`: `true` disables the input. `:unless_superuser` disables it for
-  everyone but superusers (top-level inputs only).
+  everyone but superusers (top-level inputs only), and a save from anyone
+  else ignores any value sent for the field.
 * `readonly`: `true` makes `:text`, `:number` and `:rich_text` inputs read
-  only. Like `disabled`, it takes `:unless_superuser`.
+  only. Like `disabled`, it takes `:unless_superuser`, with the same check on
+  save.
 * `monospace`: a monospace font, for keys and codes.
 * `class`: extra classes on the input's wrapper.
 * `debounce`: milliseconds between keystrokes and validation. Default 300.

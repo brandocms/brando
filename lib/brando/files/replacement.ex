@@ -112,10 +112,10 @@ defmodule Brando.Files.Replacement do
   defp extension(name), do: name |> Path.extname() |> String.downcase()
 
   defp destination(file, cfg) do
-    root = Path.expand(Storage.current_media_root())
-    path = Path.expand(Path.join(cfg.upload_path, file.filename), root)
-
-    if String.starts_with?(path, root <> "/"), do: {:ok, path}, else: {:error, "Invalid file storage path"}
+    case Storage.media_file(Path.join(cfg.upload_path, file.filename)) do
+      {:ok, path} -> {:ok, path}
+      :error -> {:error, "Invalid file storage path"}
+    end
   end
 
   defp store_contents(%{cdn: true} = file, cfg, source, destination) do

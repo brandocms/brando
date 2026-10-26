@@ -365,18 +365,23 @@ defmodule Brando.Images.AltText do
         {:error, :unsupported_format}
 
       {:ok, media_type} ->
-        local = Path.join(Brando.Tenant.Storage.current_media_root(), path)
-
-        cond do
-          File.regular?(local) ->
-            {:ok, File.read!(local), media_type}
-
-          Map.get(image, :cdn) ->
-            image |> Brando.Images.URL.url(rendition_key(image)) |> fetch_remote(media_type)
-
-          true ->
-            {:error, :image_file_missing}
+        case Brando.Tenant.Storage.media_file(path) do
+          {:ok, local} -> read(image, local, media_type)
+          :error -> {:error, :image_file_missing}
         end
+    end
+  end
+
+  defp read(image, local, media_type) do
+    cond do
+      File.regular?(local) ->
+        {:ok, File.read!(local), media_type}
+
+      Map.get(image, :cdn) ->
+        image |> Brando.Images.URL.url(rendition_key(image)) |> fetch_remote(media_type)
+
+      true ->
+        {:error, :image_file_missing}
     end
   end
 

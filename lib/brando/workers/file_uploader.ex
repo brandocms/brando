@@ -38,6 +38,10 @@ defmodule Brando.Worker.FileUploader do
           err
       end
     else
+      # A stored path that leaves the media root never uploads
+      {:error, :unsafe_media_path} ->
+        {:cancel, :unsafe_media_path}
+
       err ->
         {:error, err}
     end

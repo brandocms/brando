@@ -263,6 +263,9 @@ defmodule Brando.CDN do
         Logger.error("==> Error uploading file. 403 from AMAZON")
         Logger.error(inspect(err, pretty: true))
         {:error, "S3 Upload failed"}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
@@ -336,9 +339,8 @@ defmodule Brando.CDN do
     case s3_upload(s3_bucket, src_key, dest_key, s3_config, user_id, progress_key) do
       {:ok, s3_key} ->
         if cdn_config.keep_local_copy == false do
-          # local_path_and_filename = Path.join([local_path, filename])
-          # original_path = Brando.Images.Utils.media_path(local_path_and_filename)
-          File.rm!(src_key)
+          {:ok, source} = local_source(src_key)
+          File.rm!(source)
         end
 
         {:ok, s3_key}
@@ -347,18 +349,31 @@ defmodule Brando.CDN do
         Logger.error("==> Error uploading file. 403 from AMAZON")
         Logger.error(inspect(err, pretty: true))
         {:error, "S3 Upload failed"}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
   # Not decorated directly: its implicit `rescue` would become a second span.
   @decorate span("brando.cdn.upload", bucket: :s3_bucket, object_key: :s3_dest_key)
-  defp s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts \\ []),
-    do: do_s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts)
+  defp s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts \\ []) do
+    case local_source(src_key) do
+      {:ok, source} -> do_s3_upload(s3_bucket, {src_key, source}, s3_dest_key, s3_config, user_id, progress_key, opts)
+      :error -> {:error, :unsafe_media_path}
+    end
+  end
 
-  defp do_s3_upload(s3_bucket, src_key, s3_dest_key, s3_config, user_id, progress_key, opts) do
+  # The key names the local file by its stored media path, as `media/<path>`:
+  # the file is that path under the current media root, never one that
+  # leaves it.
+  defp local_source("media/" <> path), do: Brando.Tenant.Storage.media_file(path)
+  defp local_source(_src_key), do: :error
+
+  defp do_s3_upload(s3_bucket, {src_key, source}, s3_dest_key, s3_config, user_id, progress_key, opts) do
     upload_opts = Keyword.merge([acl: :public_read], opts)
 
-    src_key
+    source
     |> Upload.stream_file()
     |> S3.upload(s3_bucket, s3_dest_key, upload_opts)
     |> ExAws.request(s3_config)

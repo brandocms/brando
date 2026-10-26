@@ -117,6 +117,36 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
     assert form.assigns.updated_entry_assocs.meta_image.title == %{"en" => "Example Hotel lobby"}
   end
 
+  # The drawer edits the image's texts (and focal point); the rest of the image
+  # (its path, which the crop editor writes to, and its sizes) is not the
+  # drawer's to change, whatever the params say.
+  test "saving the image's drawer takes only what the drawer edits", ctx do
+    %{page: page, user: user} = ctx
+    image = Factory.insert(:image, creator: user, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+    edit_image = %{path: [], field: :meta_image, relation_field: :meta_image_id, image: image}
+
+    socket =
+      page
+      |> form_socket(user, edit_image)
+      |> Component.assign(sync_assigns())
+      |> Component.assign(:updated_entry_assocs, %{meta_image: image})
+
+    params = %{
+      "image" => %{
+        "title" => %{"en" => "Lobby"},
+        "path" => "images/elsewhere.jpg",
+        "sizes" => %{"thumb" => "images/elsewhere.jpg"},
+        "config_target" => "image:Elsewhere:cover"
+      }
+    }
+
+    {:noreply, _form} = Form.handle_event("save_image", params, socket)
+
+    saved = Repo.get!(Brando.Images.Image, image.id)
+    assert saved.title["en"] == "Lobby"
+    assert {saved.path, saved.sizes, saved.config_target} == {image.path, image.sizes, image.config_target}
+  end
+
   # The drawer's save is reported as the image's id (`b:validate`), which a
   # trigger declared on the image field does not cover.
   test "saving the image's drawer fires the preview trigger declared on the field", ctx do

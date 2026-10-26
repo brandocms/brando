@@ -61,6 +61,7 @@ defmodule BrandoAdmin.Components.Form do
   alias BrandoAdmin.Components.Form.Input.MultiSelect
   alias BrandoAdmin.Components.Form.Input.Select
   alias BrandoAdmin.Components.Form.Input.SubformHelpers
+  alias BrandoAdmin.Components.Form.LockedFields
   alias BrandoAdmin.Components.Form.MetaDrawer
   alias BrandoAdmin.Components.Form.NotesDrawer
   alias BrandoAdmin.Components.Form.PendingRows
@@ -2222,6 +2223,7 @@ defmodule BrandoAdmin.Components.Form do
   # recover_form and both save paths, which go through `cast_entry_params/4`).
   # Also returns the fields whose value was kept over the browser's old form,
   # sent before another editor's change reached it (`drop_echoes/4`).
+  # Fields the user may not change (`LockedFields`) are taken out first.
   # `target` is the entry field the event names. The relations in `stale`
   # stay as the form has them: the browser sent the rows it showed before
   # another editor's save replaced them (`stale_relations/2`), so their
@@ -2233,8 +2235,14 @@ defmodule BrandoAdmin.Components.Form do
     owned = owned_assets(socket)
     current = socket.assigns.form.source
 
+    params =
+      params
+      |> LockedFields.drop(schema, socket.assigns[:form_blueprint], current_user)
+      |> PendingRows.drop(schema, stale)
+      |> owned_params(owned, current)
+
     entry
-    |> schema.changeset(params |> PendingRows.drop(schema, stale) |> owned_params(owned, current), current_user)
+    |> schema.changeset(params, current_user)
     |> reapply_owned_assets(owned, current)
     |> drop_echoes(current, replaced_values(socket), target)
     |> keep_fields(current, stale)
@@ -6129,7 +6137,7 @@ defmodule BrandoAdmin.Components.Form do
 
     validated_changeset =
       file
-      |> Brando.Files.File.changeset(file_params, current_user)
+      |> Brando.Files.File.changeset(drawer_params(file_params, "file"), current_user)
       |> Map.put(:action, :update)
       |> Brando.Trait.run_trait_before_save_callbacks(
         Brando.Files.File,
@@ -6249,7 +6257,10 @@ defmodule BrandoAdmin.Components.Form do
           }
         } = socket
       ) do
-    new_image_params = Map.put(image_params, "config_target", original_image.config_target)
+    new_image_params =
+      image_params
+      |> drawer_params("image")
+      |> Map.put("config_target", original_image.config_target)
 
     validated_changeset =
       %Images.Image{}
@@ -6313,7 +6324,7 @@ defmodule BrandoAdmin.Components.Form do
 
     validated_changeset =
       image
-      |> Images.Image.changeset(image_params, current_user)
+      |> Images.Image.changeset(drawer_params(image_params, "image"), current_user)
       |> Map.put(:action, :update)
       |> Brando.Trait.run_trait_before_save_callbacks(
         Images.Image,
@@ -9214,6 +9225,15 @@ defmodule BrandoAdmin.Components.Form do
     :quality
   ]
   @file_drawer_fields [:title]
+
+  # What a drawer's save takes: the fields it lets you type into, and an
+  # image's focal point. The rest of the record (an image's path and sizes, a
+  # file's name) is the upload's and processing's, and the crop editor writes
+  # to the file at an image's path.
+  defp drawer_params(params, "image"),
+    do: Map.take(params, ["focal" | Enum.map(@image_drawer_fields, &to_string/1)])
+
+  defp drawer_params(params, "file"), do: Map.take(params, Enum.map(@file_drawer_fields, &to_string/1))
 
   # The largest id a bigint primary key holds; a larger one fails to encode.
   @max_id 9_223_372_036_854_775_807

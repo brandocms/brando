@@ -43,6 +43,44 @@ defmodule Brando.Tenant.Storage do
     end
   end
 
+  @doc """
+  `relative`, a path stored on a media record (an image's `path` or sizes, a
+  file's upload path and name), joined with the current media root. `:error`
+  for a path that would leave the root: absolute, starting with `~/`, climbing
+  out with `..`, or holding a NUL byte. The check is lexical, so links inside
+  the media root resolve as before.
+  """
+  @spec media_file(String.t()) :: {:ok, String.t()} | :error
+  def media_file(relative) when is_binary(relative) do
+    root = current_media_root()
+
+    # Joined with its `..` and `.` already resolved, so the path used is the
+    # path checked, even through a link inside the root.
+    if within_root?(root, relative),
+      do: {:ok, Path.join(root, relative |> Path.expand("/") |> String.trim_leading("/"))},
+      else: :error
+  end
+
+  def media_file(_relative), do: :error
+
+  @doc "Whether `relative` names a place inside a media root: see `media_file/1`."
+  @spec safe_media_path?(term()) :: boolean()
+  def safe_media_path?(relative) when is_binary(relative), do: within_root?("/media", relative)
+  def safe_media_path?(_relative), do: false
+
+  defp within_root?(root, relative) do
+    # `Path.expand/2` reads a leading `~` as the home directory, where
+    # `Path.join/2` keeps it as a directory name: refuse it rather than
+    # check one path and use another.
+    Path.type(relative) == :relative and relative != "~" and not String.starts_with?(relative, "~/") and
+      not String.contains?(relative, <<0>>) and inside?(Path.expand(root), relative)
+  end
+
+  defp inside?(root, relative) do
+    path = Path.expand(relative, root)
+    path == root or String.starts_with?(path, root <> "/")
+  end
+
   @spec sites_root() :: String.t()
   def sites_root do
     Brando.config(:sites_path) || Path.join(media_parent(), "sites")

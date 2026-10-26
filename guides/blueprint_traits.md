@@ -80,7 +80,8 @@ validated more loosely; see [Drafts](blueprints.md#drafts). See
 * `required:`: whether every entry needs a creator. Default `true`. An
   insert made as `:system` must then set `creator_id` itself.
 * `derived:`: fields a pipeline writes on the user's behalf, such as image
-  sizes. A save changing only those is not an edit.
+  sizes. A save changing only those is not an edit, and the admin form takes
+  no value for one it has no input for.
 
 Listings show a creator and last-editor column.
 

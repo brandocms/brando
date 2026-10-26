@@ -218,10 +218,9 @@ defmodule Brando.Images do
   end
 
   defp read_original(image) do
-    case File.read(Images.Utils.media_path(image.path)) do
-      {:ok, bytes} -> {:ok, bytes}
-      {:error, :enoent} -> read_original_from_cdn(image)
-      {:error, reason} -> {:error, reason}
+    with {:ok, path} <- media_file(image.path),
+         {:error, :enoent} <- File.read(path) do
+      read_original_from_cdn(image)
     end
   end
 
@@ -381,20 +380,11 @@ defmodule Brando.Images do
 
   def duplicate_image(image_id, user) do
     original_image = get_image!(image_id)
-
-    src_file =
-      :media_path
-      |> Brando.config()
-      |> Path.join(original_image.path)
-
     new_file = Brando.Utils.unique_filename(original_image.path)
 
-    dest_file =
-      :media_path
-      |> Brando.config()
-      |> Path.join(new_file)
-
-    with :ok <- File.cp(src_file, dest_file) do
+    with {:ok, src_file} <- media_file(original_image.path),
+         {:ok, dest_file} <- media_file(new_file),
+         :ok <- File.cp(src_file, dest_file) do
       new_image_params =
         original_image
         |> Brando.Utils.map_from_struct()
@@ -408,6 +398,14 @@ defmodule Brando.Images do
         |> Map.put(:config_fingerprint, nil)
 
       create_image(new_image_params, user)
+    end
+  end
+
+  # A stored path, joined with the current media root unless it would leave it
+  defp media_file(path) do
+    case Brando.Tenant.Storage.media_file(path) do
+      {:ok, file} -> {:ok, file}
+      :error -> {:error, :unsafe_media_path}
     end
   end
 
