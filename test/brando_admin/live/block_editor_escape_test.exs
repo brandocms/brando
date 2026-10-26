@@ -15,7 +15,8 @@ defmodule BrandoAdmin.Live.BlockEditorEscapeTest do
 
   @title ~s(Rooms<img src="x" data-f04="title">)
   @comment ~s(Note<img src="x" data-f04="comment">)
-  @svg ~s(<svg xmlns="http://www.w3.org/2000/svg"><image href="x" data-f04="svg"/></svg>)
+  # Pasted without a namespace, as inline code can be
+  @svg ~s(<svg viewBox="0 0 8 8"><image href="x" data-f04="svg"/></svg>)
   @option ~s(Large<img src="x" data-f04="option">)
   @form_title ~s(Contact<img src="x" data-f04="form">)
 
@@ -121,7 +122,9 @@ defmodule BrandoAdmin.Live.BlockEditorEscapeTest do
     assert text_of(doc, ".select-label") =~ @form_title
 
     [src] = doc |> LazyHTML.query(".svg-block-preview img") |> LazyHTML.attribute("src")
-    assert src == "data:image/svg+xml;base64," <> :base64.encode(@svg)
+    assert "data:image/svg+xml;base64," <> svg = src
+    assert :base64.decode(svg) =~ ~s(<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink=)
+    assert :base64.decode(svg) =~ ~s(<image href="x" data-f04="svg"/></svg>)
   end
 
   defp ref_params(name, data) do
