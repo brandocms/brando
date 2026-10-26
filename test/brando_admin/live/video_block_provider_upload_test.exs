@@ -181,7 +181,7 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
     test "an upload that finishes after its var was moved sets neither", ctx do
       view = open_entry(ctx)
       row = cid_of(view, "#page_vars_0-video-uploader")
-      {video_id, token} = request_upload(view, "#page_vars_0-video-uploader", "entry-moved")
+      {_video_id, token} = request_upload(view, "#page_vars_0-video-uploader", "entry-moved")
 
       change_entry(view, %{"sort_var_ids" => ["1", "0"]})
       assert has_element?(view, ~s(input[name="page[vars][0][key]"][value="outro"]))
