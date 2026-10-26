@@ -209,22 +209,19 @@ defmodule Brando.CDN do
   defp delete_waiting_image_uploads(image_id), do: Brando.Repo.delete_all(waiting_image_uploads(image_id))
 
   @doc """
-  Whether work on image `image_id` of the current site was queued after job
-  `job_id` and hasn't finished: another upload, or processing (a new crop),
-  which queues an upload when it is done.
+  Whether an upload of image `image_id` of the current site was queued
+  after job `job_id` and hasn't finished: it uploads the image's files as
+  they are now.
   """
-  def newer_image_work?(_image_id, nil), do: false
+  def newer_image_upload?(_image_id, nil), do: false
 
-  def newer_image_work?(image_id, job_id) do
-    processor = Oban.Worker.to_string(Worker.ImageProcessor)
-    image_args = Brando.Tenant.Job.attach(%{image_id: image_id})
-
+  def newer_image_upload?(image_id, job_id) do
     query =
       from j in Oban.Job,
         where:
           j.id > ^job_id and j.state in ["available", "scheduled", "executing", "retryable"] and
-            fragment("? @> ?", j.args, ^image_args) and
-            (^"image_upload_#{image_id}" in j.tags or j.worker == ^processor)
+            ^"image_upload_#{image_id}" in j.tags and
+            fragment("? @> ?", j.args, ^Brando.Tenant.Job.context_fragment())
 
     Brando.Repo.aggregate(query, :count) > 0
   end

@@ -6,12 +6,22 @@ defmodule Brando.Worker.ImageUploader do
   until then the image keeps being served from the media folder, where its
   files stay until all are up (`keep_local_copy: false` removes them after).
 
+  While the image is being processed (a new crop, say), its files change:
+  the job waits, snoozing, and processing queues an upload when it is done,
+  which replaces this one. An upload queued after this one leaves the work
+  to it.
+
   Before 0.55 each file had a job of its own (with a `src_key`). The first of
   those to run after an upgrade queues one job for the image in their place
   (`after_per_file`), which doesn't upload again a file one of them already
   uploaded and removed (`keep_local_copy: false`).
   """
   use Oban.Worker, queue: :default, max_attempts: 5
+
+  # The processing that queued the upload is done moments after it does
+  @snooze 5
+  # Ten minutes of waiting for the image's processing
+  @max_snoozes 120
 
   alias Brando.CDN
   alias Brando.Images
@@ -32,32 +42,43 @@ defmodule Brando.Worker.ImageUploader do
     end
   end
 
-  defp perform_tenant(%Oban.Job{
-         id: job_id,
-         args: %{"image_id" => image_id, "user_id" => user_id, "field_full_path" => field_full_path} = args
-       }) do
-    BrandoAdmin.Progress.show(user_id || :system)
+  defp perform_tenant(
+         %Oban.Job{
+           args: %{"image_id" => image_id, "user_id" => user_id, "field_full_path" => field_full_path} = args
+         } = job
+       ) do
+    if processing?(image_id, job) do
+      {:snooze, @snooze}
+    else
+      BrandoAdmin.Progress.show(user_id || :system)
 
-    try do
-      upload(job_id, image_id, user_id, field_path(field_full_path), after_per_file: args["after_per_file"] == true)
-    after
-      BrandoAdmin.Progress.hide(user_id || :system)
+      try do
+        upload(job, image_id, user_id, field_path(field_full_path), after_per_file: args["after_per_file"] == true)
+      after
+        BrandoAdmin.Progress.hide(user_id || :system)
+      end
     end
   end
 
-  defp upload(job_id, image_id, user_id, field_full_path, opts) do
+  defp upload(%Oban.Job{id: job_id} = job, image_id, user_id, field_full_path, opts) do
     with {:ok, image} <- Images.get_image(image_id),
          {:ok, config} <- Images.get_config_for(image.config_target),
          :ok <- CDN.upload_image_files(image, config, user_id || :system, opts),
-         false <- CDN.newer_image_work?(image_id, job_id),
+         {:newer_upload, false} <- {:newer_upload, CDN.newer_image_upload?(image_id, job_id)},
+         {:processing, false} <- {:processing, processing?(image_id, job)},
          {:ok, image} <- Images.update_image(image, %{cdn: true}, user(user_id)) do
       CDN.remove_local_copies(image, config)
       broadcast_status(image, field_full_path, :updated)
     else
-      # Processed again while this ran (a new crop): the upload that
-      # processing queues uploads the new files and marks the image
-      true ->
+      # Another upload of the image, queued after this one, uploads its files
+      # as they are now and marks it
+      {:newer_upload, true} ->
         :ok
+
+      # Processed again while this ran: wait for it, and for the upload it
+      # queues, which replaces this one
+      {:processing, true} ->
+        {:snooze, @snooze}
 
       {:error, {:image, :not_found}} ->
         {:cancel, :image_not_found}
@@ -69,6 +90,13 @@ defmodule Brando.Worker.ImageUploader do
       err ->
         {:error, err}
     end
+  end
+
+  # The image is being processed (a new crop): its files are changing, and
+  # processing queues an upload when it is done, which replaces this one.
+  # Bounded: a job that snoozes never runs out of attempts.
+  defp processing?(image_id, %Oban.Job{meta: meta}) do
+    (meta["snoozed"] || 0) < @max_snoozes and Images.Processing.processing_queued?(%{id: image_id})
   end
 
   defp user(nil), do: :system

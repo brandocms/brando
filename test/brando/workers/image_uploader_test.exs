@@ -172,31 +172,36 @@ defmodule Brando.Worker.ImageUploaderTest do
     job
   end
 
-  # The processing that queued the upload is still running when it starts
-  test "the processing that queued the upload doesn't hold it back", %{dir: dir} do
+  # Its files are changing, and processing queues an upload when it is done
+  test "an upload waits for the image's processing to finish", %{dir: dir} do
     image = image_with_files(dir, ["thumb"])
 
     Oban.Testing.with_testing_mode(:manual, fn ->
-      _queuing = processing_job(image, "executing")
+      processing = processing_job(image, "executing")
       {:ok, upload} = Brando.CDN.queue_upload(image, :system, [])
+
+      assert {:snooze, _} = Brando.Worker.ImageUploader.perform(Repo.get!(Oban.Job, upload.id))
+      assert FakeS3.keys() == []
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^processing.id), set: [state: "completed"])
       assert {:ok, _} = Brando.Worker.ImageUploader.perform(Repo.get!(Oban.Job, upload.id))
     end)
 
     assert Repo.get!(Image, image.id).cdn
   end
 
-  # Processing queued after it (a new crop) queues the next upload
-  test "processing queued after the upload holds it back", %{dir: dir} do
+  # A job that snoozes never runs out of attempts
+  test "an upload stops waiting for processing after a while", %{dir: dir} do
     image = image_with_files(dir, ["thumb"])
 
     Oban.Testing.with_testing_mode(:manual, fn ->
+      _stuck = processing_job(image, "executing")
       {:ok, upload} = Brando.CDN.queue_upload(image, :system, [])
-      _recrop = processing_job(image, "executing")
-      assert :ok = Brando.Worker.ImageUploader.perform(Repo.get!(Oban.Job, upload.id))
+      job = %{Repo.get!(Oban.Job, upload.id) | meta: %{"snoozed" => 120}}
+      assert {:ok, _} = Brando.Worker.ImageUploader.perform(job)
     end)
 
-    refute Repo.get!(Image, image.id).cdn
-    assert local?(image.path)
+    assert Repo.get!(Image, image.id).cdn
   end
 
   test "an image with a size that fails to upload stays off the CDN, with its files", %{dir: dir} do
