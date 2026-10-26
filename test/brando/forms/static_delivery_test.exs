@@ -54,6 +54,17 @@ defmodule Brando.Forms.StaticDeliveryTest do
     assert Delivery.finalize(@stored) == ~s(<form id="form-contact" action="#{action}" method="post"></form>)
   end
 
+  test "a static site drops only the form's token input" do
+    Tenant.put_prefix("tenant_acme_production")
+    action = Brando.endpoint().url() <> "/__brando/forms/static/acme/production/contact"
+    image = ~s(<img src="https://images.example.net/pixel.gif?t=$csrftoken">)
+
+    reordered =
+      ~s(<form action="/__brando/forms/contact"><input name="_csrf_token" value="$csrftoken" type="hidden" /></form>)
+
+    assert Delivery.finalize(image <> reordered) == image <> ~s(<form action="#{action}"></form>)
+  end
+
   test "a dynamic site keeps its own route and gets the token" do
     Tenant.put_prefix("tenant_other_production")
 

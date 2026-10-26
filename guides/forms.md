@@ -135,6 +135,10 @@ function component that the tag renders instead; it gets the same assigns:
 config :brando, Brando.Forms, component: {MyAppWeb.Forms, :site_form}
 ```
 
+Render its `@csrf_token` as the value of a hidden input named `_csrf_token`,
+as `site_form/1` does: that input is the only place the token is filled in
+(see [Protection](#protection)).
+
 ### In a template
 
 `Brando.HTML.Forms.site_form/1` renders a form with its fields loaded:
@@ -302,9 +306,14 @@ replaces Brando's crontab, and adds the job to its own:
 
 - **CSRF.** A form carries the visitor's CSRF token, checked by your pipeline's
   `protect_from_forgery`. Block HTML is stored when an entry is saved, so a form
-  in a block stores a `$csrftoken` placeholder that pages, fragments and
-  `Brando.HTML.render_blocks/1` fill in as they are sent. If you output stored
-  block HTML some other way, pass it through `Brando.HTML.replace_csrf_token/1`.
+  in a block stores a `$csrftoken` placeholder as the value of its hidden
+  `_csrf_token` input, and pages, fragments and `Brando.HTML.render_blocks/1`
+  fill it in as they are sent. If you output stored block HTML some other way,
+  pass it through `Brando.HTML.replace_csrf_token/1`. Only an
+  `<input type="hidden" name="_csrf_token">` whose whole value is `$csrftoken`
+  is filled in:
+  the placeholder anywhere else stays as text, so content (synced Markdown, an
+  image URL) cannot send a visitor's token to another site.
   A cache in front of the site would keep the token of whoever the page was
   cached for, so before it sends, the form's script fetches the visitor's own
   from `/__brando/forms/csrf-token` (also added by `page_routes/1`). A visitor

@@ -354,7 +354,8 @@ defmodule Brando.HTML do
   end
 
   @doc """
-  Fills in `$csrftoken` in rendered block HTML with the visitor's CSRF token.
+  Fills in the `$csrftoken` of a form's token input in rendered block HTML
+  with the visitor's CSRF token.
 
   Pages, fragments and `render_blocks/1` already do this; call it for block
   HTML output any other way. See `Brando.Forms.Delivery.finalize/1`.
@@ -1124,7 +1125,8 @@ defmodule Brando.HTML do
   Parses a villain field.
 
   You can also parse a "content hole", if the data field you are processing contains
-  a `$__CONTENT__` delimiter.
+  a `$__CONTENT__` delimiter. The slot goes into the first one; any later one is
+  left as text.
 
   For instance, the template:
 
@@ -1157,8 +1159,10 @@ defmodule Brando.HTML do
       )
       |> Brando.Forms.Delivery.finalize()
 
+    # The first hole takes the slot; any later one stays as text, so a second
+    # one in synced or pasted content cannot break the page.
     [pre, post] =
-      case String.split(parsed_data, "$__CONTENT__") do
+      case String.split(parsed_data, "$__CONTENT__", parts: 2) do
         [pre, post] -> [pre, post]
         [pre] -> [pre, nil]
       end

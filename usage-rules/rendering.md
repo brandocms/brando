@@ -339,6 +339,10 @@ function component that the tag renders instead; it gets the same assigns:
 config :brando, Brando.Forms, component: {MyAppWeb.Forms, :site_form}
 ```
 
+Render its `@csrf_token` as the value of a hidden input named `_csrf_token`,
+as `site_form/1` does: that input is the only place the token is filled in
+(see [Protection](deps/brando/guides/forms.md#protection)).
+
 ### In a template
 
 `Brando.HTML.Forms.site_form/1` renders a form with its fields loaded:
