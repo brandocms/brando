@@ -26,8 +26,8 @@ defmodule Brando.Doctor.ChecksTest do
   end
 
   describe "Versions" do
-    @requirements %{elixir: "~> 1.18", otp: 27, phoenix: "1.8.15", live_view: "1.2.12"}
-    @versions %{brando: "0.55.0", elixir: "1.20.3", otp: "28", phoenix: "1.8.15", live_view: "1.2.12"}
+    @requirements %{elixir: "~> 1.18", otp: 27, phoenix: "1.8.16", live_view: "1.2.13"}
+    @versions %{brando: "0.55.0", elixir: "1.20.3", otp: "28", phoenix: "1.8.16", live_view: "1.2.13"}
 
     @git %{
       type: :git,
@@ -69,7 +69,7 @@ defmodule Brando.Doctor.ChecksTest do
       result = Checks.Versions.evaluate(%{@versions | otp: "26", phoenix: "1.8.10"}, @requirements)
       assert result.status == :error
       assert result.summary =~ "OTP 26, needs >= 27"
-      assert result.summary =~ "Phoenix 1.8.10, needs 1.8.15"
+      assert result.summary =~ "Phoenix 1.8.10, needs 1.8.16"
     end
 
     test "the requirements come from Brando's mix.exs" do

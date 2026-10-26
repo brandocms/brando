@@ -32,7 +32,7 @@ if Code.ensure_loaded?(Igniter) do
     @live_view_package_regex ~r/("phoenix_live_view"\s*:\s*")[^"]+("\s*[,}])/
     @phx_digest_regex ~r/\bmix[\t ]+phx\.digest(?=[\t ]|$)/m
     @vite_sourcemap_regex ~r/(?<![\w$])(sourcemap\s*:\s*)true\b/
-    @phoenix_live_view_fallback_version "1.2.12"
+    @phoenix_live_view_fallback_version "1.2.13"
 
     @listing_core_components ~w(<.field <.i18n <.update_link <.url)
 

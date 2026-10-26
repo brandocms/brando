@@ -156,7 +156,7 @@ defmodule BrandoAdmin.FormRecoveryTest do
     end
 
     # `recovery_target/2` mirrors `pushFormRecovery` in LiveView's own JS
-    # (`view.ts:2490-2519`). Nothing in Elixir-land makes that mirror break when
+    # (`view.ts:2607-2636`). Nothing in Elixir-land makes that mirror break when
     # the JS changes, so pin the version it was read against: a bump surfaces
     # here as a prompt to re-read the source, instead of as a test that still
     # passes while modelling a client that no longer exists.
@@ -167,7 +167,7 @@ defmodule BrandoAdmin.FormRecoveryTest do
     # `pushFormRecovery` — the failure message says so, and the stub's own
     # comment points back here.
     test "the recovery target mirrors a known LiveView version" do
-      assert to_string(Application.spec(:phoenix_live_view, :vsn)) == "1.2.12",
+      assert to_string(Application.spec(:phoenix_live_view, :vsn)) == "1.2.13",
              """
              phoenix_live_view moved. Two things to re-read before bumping this:
 

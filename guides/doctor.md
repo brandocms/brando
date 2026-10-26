@@ -10,7 +10,7 @@ do about each one.
 
 ```
 $ mix brando.doctor
-Brando 0.55.0-dev (git 12c2289, branch main) · Phoenix 1.8.15 · LiveView 1.2.12
+Brando 0.55.0-dev (git 12c2289, branch main) · Phoenix 1.8.16 · LiveView 1.2.13
 
 ✓ Versions                   Brando 0.55.0-dev (git 12c2289, branch main) · Elixir 1.20.3 · OTP 28
 ✓ Node.js                    v22.15.0
@@ -91,7 +91,7 @@ not looked up, and the admin never makes the call.
   "versions": {
     "brando": "0.55.0",
     "brando_source": {"type": "git", "url": "https://github.com/brandocms/brando.git", "commit": "12c2289e98fa058a8168720b802c13b42a2c21b4", "branch": "main", "tag": null, "ref": null},
-    "elixir": "1.20.3", "otp": "28", "phoenix": "1.8.15", "live_view": "1.2.12"
+    "elixir": "1.20.3", "otp": "28", "phoenix": "1.8.16", "live_view": "1.2.13"
   },
   "counts": {"ok": 9, "warning": 3, "error": 0, "skipped": 0},
   "checks": [

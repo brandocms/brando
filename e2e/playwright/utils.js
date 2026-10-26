@@ -75,14 +75,12 @@ const awaitBlockShip = async page => {
 // the loss, fires `disconnected()` on every hook, and starts retrying into a
 // network that is not there.
 //
-// The close code is load-bearing and used to be implicit. Phoenix arms the
-// reconnect timer only when `closeCode !== 1000` (`socket.js:552`), and a bare
-// `conn.close()` requests exactly 1000 — a clean, deliberate shutdown, which is
-// the opposite of what this helper is for. It worked anyway only because step 1
-// had already aborted the transport into a 1006 by the time `close()` ran, so
-// the behaviour depended on the ordering of two lines rather than on anything
-// stated. 4000 is in the private application range and is unambiguously not
-// 1000, so reconnect is armed whether or not step 1 got there first.
+// The close code is explicit. Up to Phoenix 1.8.15 the reconnect timer was
+// armed only when `closeCode !== 1000`, and a bare `conn.close()` requests
+// exactly 1000, a clean, deliberate shutdown. Since 1.8.16 any close the socket
+// did not start itself reconnects, whatever its code; 4000 (the private
+// application range) still says what this helper means, and does not depend on
+// step 1 having aborted the transport first.
 const goOffline = async page => {
   await page.context().setOffline(true)
   await page.evaluate(() =>

@@ -114,7 +114,7 @@ defmodule Brando.LiveCase do
   still shutting down.
 
   The proxy is awaited unconditionally, for **any** view. As of
-  **phoenix_live_view 1.2.12**, `client_proxy.ex`'s `put_view/3` (`:846`)
+  **phoenix_live_view 1.2.13**, `client_proxy.ex`'s `put_view/3` (`:846`)
   monitors every view it registers and keys them all in one `state.pids` map;
   children reach that same function through
   `recursive_detect_added_or_removed_children/4`; and the
@@ -191,7 +191,7 @@ defmodule Brando.LiveCase do
   # test should be able to see it. A blanket drain here would let a test carry
   # on past a crash it never observed.
   #
-  # The kill stops the proxy (phoenix_live_view **1.2.12**, `client_proxy.ex`'s
+  # The kill stops the proxy (phoenix_live_view **1.2.13**, `client_proxy.ex`'s
   # `handle_info({:DOWN, …}, state)` clause at `:542`), so the exit is expected
   # and arrives in single-digit ms. Not arriving means the proxy is hung, which
   # is a failure.
@@ -393,11 +393,11 @@ defmodule Brando.LiveCase do
 
   The `_target` is not incidental. `pushFormRecovery` has no originating element
   to name, so it substitutes **the first non-hidden named input in the form**
-  (`view.ts:2519`), pushes the form under the form's `phx-change` event, and the
-  server turns that name into a key path (`channel.ex:848-853`). A handler that
-  branches on `_target` therefore sees something quite different on recovery
-  than it ever sees while the user types, which is easy to get wrong and
-  impossible to notice without mounting the form.
+  (`view.ts:2636`), pushes the form under the form's `phx-change` event, and the
+  server turns that name into a key path (`channel.ex`'s `decode_merge_target/1`,
+  `:921`). A handler that branches on `_target` therefore sees something quite
+  different on recovery than it ever sees while the user types, which is easy
+  to get wrong and impossible to notice without mounting the form.
   """
   def recovery_params(html, form_selector) do
     html
@@ -408,8 +408,8 @@ defmodule Brando.LiveCase do
   @doc """
   The `_target` key path LiveView's form recovery would send for this form.
 
-  Mirrors `pushFormRecovery` (`deps/phoenix_live_view/assets/js/phoenix_live_view/view.ts:2490-2519`)
-  as of **phoenix_live_view 1.2.12**: form-associated, named, no `phx-change` of
+  Mirrors `pushFormRecovery` (`deps/phoenix_live_view/assets/js/phoenix_live_view/view.ts:2607-2636`)
+  as of **phoenix_live_view 1.2.13**: form-associated, named, no `phx-change` of
   its own, first non-hidden one wins.
 
   A mirror of somebody else's source drifts silently on a dependency bump, so
