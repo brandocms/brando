@@ -592,12 +592,7 @@ defmodule Brando.Users do
   @spec request_password_reset(String.t()) :: :ok | {:error, :no_mailer | :no_sender}
   def request_password_reset(email) when is_binary(email) do
     with :ok <- Brando.Mailer.ensure_configured() do
-      {:ok, _job} =
-        %{"email" => email |> String.trim() |> String.slice(0, 160)}
-        |> Brando.Tenant.Job.attach_current()
-        |> Brando.Worker.PasswordReset.new()
-        |> Oban.insert()
-
+      {:ok, _job} = queue_password_reset(%{"email" => email |> String.trim() |> String.slice(0, 160)})
       :ok
     end
   end
@@ -631,12 +626,38 @@ defmodule Brando.Users do
          :ok <- check(Brando.Trait.ProtectPassword.allowed?(current_user, user), :forbidden),
          :ok <- check(user.active, :inactive),
          :ok <- Brando.Mailer.ensure_configured(),
-         {:ok, _job} <- deliver_reset_link(user, :admin) do
+         {:ok, _job} <- queue_password_reset(%{"user_id" => user.id, "reason" => "admin"}) do
       {:ok, user}
     end
   end
 
+  @doc """
+  Emails the active, undeleted user `user_id` the link an administrator sent
+  with `send_password_reset/2`. Run by `Brando.Worker.PasswordReset`; returns
+  `:ok`, also when the account is gone or inactive by then, or
+  `{:error, reason}` when the email could not be sent.
+  """
+  @spec deliver_admin_password_reset(integer()) :: :ok | {:error, term()}
+  def deliver_admin_password_reset(user_id) when is_integer(user_id) do
+    query = from u in User, where: u.id == ^user_id and u.active == true and is_nil(u.deleted_at)
+
+    case Repo.one(query) do
+      nil -> :ok
+      user -> user |> deliver_reset_link(:admin) |> ok()
+    end
+  end
+
+  # The job carries who the link is for, never the link: the token is made
+  # and sent when the job runs, so the raw token is stored nowhere.
+  defp queue_password_reset(args) do
+    args
+    |> Brando.Tenant.Job.attach_current()
+    |> Brando.Worker.PasswordReset.new()
+    |> Oban.insert()
+  end
+
   # Only the newest link works: one sent earlier, either way, is deleted.
+  # Sent at once, not queued, so the link never lands in a job's arguments.
   defp deliver_reset_link(user, reason) do
     context = if reason == :admin, do: "admin_reset_password", else: "reset_password"
     {encoded, user_token} = UserToken.build_email_token(user, context)

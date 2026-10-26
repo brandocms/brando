@@ -265,6 +265,64 @@ defmodule Brando.Users.PasswordResetTest do
     end
   end
 
+  # Audit F25: the raw link was kept in a queued Mail job's arguments
+  describe "the link is kept in no job" do
+    defp run_password_reset_jobs do
+      for job <- all_enqueued(worker: Brando.Worker.PasswordReset) do
+        assert :ok = perform_job(Brando.Worker.PasswordReset, job.args)
+      end
+    end
+
+    test "a requested link: the job has the address, the token is made when it runs", %{user: user} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert :ok = Users.request_password_reset(user.email)
+
+        assert [%{args: args}] = all_enqueued(worker: Brando.Worker.PasswordReset)
+        assert Map.delete(args, "tenant_prefix") == %{"email" => user.email}
+        assert tokens(user, "reset_password") == []
+
+        run_password_reset_jobs()
+        token = sent_token()
+
+        assert all_enqueued(worker: Brando.Worker.Mail) == []
+        refute inspect(Repo.all(Oban.Job)) =~ token
+        assert Users.get_user_by_reset_password_token(token).id == user.id
+      end)
+    end
+
+    test "an administrator's link: the job has the user's id, the token is made when it runs", %{user: user} do
+      admin = Factory.insert(:random_user, role: :superuser)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _} = Users.send_password_reset(user.id, admin)
+
+        assert [%{args: args}] = all_enqueued(worker: Brando.Worker.PasswordReset)
+        assert Map.delete(args, "tenant_prefix") == %{"user_id" => user.id, "reason" => "admin"}
+        assert_no_email_sent()
+
+        run_password_reset_jobs()
+        token = sent_token()
+
+        assert all_enqueued(worker: Brando.Worker.Mail) == []
+        refute inspect(Repo.all(Oban.Job)) =~ token
+        assert [%UserToken{context: "admin_reset_password"}] = tokens(user, "admin_reset_password")
+      end)
+    end
+
+    test "an account deactivated before the job runs gets no link", %{user: user} do
+      admin = Factory.insert(:random_user, role: :superuser)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _} = Users.send_password_reset(user.id, admin)
+        Repo.update_all(from(u in Brando.Users.User, where: u.id == ^user.id), set: [active: false])
+
+        run_password_reset_jobs()
+        assert_no_email_sent()
+        assert tokens(user, "admin_reset_password") == []
+      end)
+    end
+  end
+
   describe "set_user_password/3" do
     setup do
       {:ok, admin: Factory.insert(:random_user, role: :superuser)}

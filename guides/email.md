@@ -87,6 +87,16 @@ never holds up the request. A job cannot carry attachments or provider
 options; send such an email with `Brando.Mailer.deliver/1`, which sends it
 straight away and returns the mailer's result.
 
+The job keeps the email's addresses and bodies in its arguments, in the
+`oban_jobs` table, until Oban's Pruner removes the finished job: after five
+minutes with Brando's Oban configuration. An application that sets
+`config :brando, Oban` itself keeps a pruner in it (`pruner: [max_age: 300]`).
+Never queue an email that carries a secret, such as a sign-in or reset link:
+anyone who reads the database, a backup or a replica could use it. Queue a
+job that carries who the email is for, and have it make the secret and send
+the email with `deliver/1` when it runs, as Brando's password reset does
+(`Brando.Worker.PasswordReset`).
+
 ## Testing
 
 Use Swoosh's test adapter and its assertions:

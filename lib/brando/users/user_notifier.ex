@@ -11,14 +11,18 @@ defmodule Brando.Users.UserNotifier do
   alias Brando.Users.UserToken
 
   @doc """
-  Queues the email with the link `url`, where `user` chooses a new password.
+  Sends the email with the link `url`, where `user` chooses a new password.
   `reason` is `:requested` when the user asked for the link, and `:admin` when
   an administrator sent it.
+
+  Sent at once, never queued: a queued email keeps its body, and so the link,
+  in the job's arguments. `Brando.Worker.PasswordReset` calls it in the
+  background.
   """
   @spec deliver_reset_password_instructions(map(), String.t(), :requested | :admin) ::
-          {:ok, Oban.Job.t()} | {:error, term()}
+          {:ok, term()} | {:error, term()}
   def deliver_reset_password_instructions(user, url, reason \\ :requested) do
-    user |> reset_password_instructions(url, reason) |> Mailer.deliver_later()
+    user |> reset_password_instructions(url, reason) |> Mailer.deliver()
   end
 
   @doc """
