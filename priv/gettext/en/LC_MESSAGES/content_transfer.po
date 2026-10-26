@@ -1684,7 +1684,7 @@ msgstr ""
 
 #: lib/brando/content/transfer/media.ex
 #, elixir-autogen, elixir-format
-msgid "The image exceeds the 100 megapixel import limit."
+msgid "The image exceeds the %{megapixels} megapixel import limit."
 msgstr ""
 
 #: lib/brando/content/transfer/entries.ex

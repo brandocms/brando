@@ -320,7 +320,7 @@ defmodule Brando.ContentTest do
       assert Content.list_modules!() == []
 
       # Import
-      decoded = Content.deserialize_modules(encoded)
+      {:ok, decoded} = Content.deserialize_modules(encoded)
 
       for mod <- decoded do
         Content.import_module_with_children(mod)
@@ -474,7 +474,7 @@ defmodule Brando.ContentTest do
 
       # Serialize and deserialize
       encoded = Content.serialize_modules(prepared)
-      decoded = Content.deserialize_modules(encoded)
+      {:ok, decoded} = Content.deserialize_modules(encoded)
 
       # Delete originals
       parent_with_children =
@@ -573,7 +573,7 @@ defmodule Brando.ContentTest do
       assert {:error, _} = Content.get_table_template(%{matches: %{name: "ImportNewTemplate"}})
 
       # Import
-      decoded = Content.deserialize_modules(encoded)
+      {:ok, decoded} = Content.deserialize_modules(encoded)
 
       for mod <- decoded do
         {:ok, _} = Content.import_module_with_children(mod, user)

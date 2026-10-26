@@ -222,6 +222,7 @@ defmodule Brando.Content.ModuleWriteWithAITest do
     |> Content.prepare_modules_for_export(user.id)
     |> Content.serialize_modules()
     |> Content.deserialize_modules()
+    |> then(fn {:ok, modules} -> modules end)
   end
 
   test "the module definition files carry it", %{user: user} do

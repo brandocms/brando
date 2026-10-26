@@ -150,6 +150,25 @@ defmodule Brando.Uploads.DirectImageTest do
       assert Uploads.get_pending_intent(upload.ref)
     end
 
+    # Audit F27: the header is read before anything decodes the original
+    test "an image whose header declares more than the pixel limit is refused" do
+      put_image_config(%{cdn: @cdn, allowed_mimetypes: ["image/png"]})
+      body = File.read!(Path.expand("../../fixtures/declared_10_gigapixels.png", __DIR__))
+
+      {:ok, upload} =
+        Direct.presign(:image, "default", meta(%{name: "huge.png", type: "image/png", size: byte_size(body)}))
+
+      expect(Client.Mock, :head_object, fn _, _, _ -> {:ok, head_response(byte_size(body), "image/png")} end)
+      expect(Client.Mock, :get_object, fn _, _, _ -> {:ok, %{status_code: 200, body: body}} end)
+
+      assert {:error, message} = Direct.complete(upload.ref)
+      assert message == Brando.Images.PixelLimit.error_message()
+      assert BrandoIntegration.Repo.all(Image) == []
+
+      "media/" <> media_path = upload.key
+      refute File.exists?(Path.join(Brando.Tenant.Storage.current_media_root(), media_path))
+    end
+
     test "an unknown ref completes nothing" do
       assert {:error, :not_found} = Direct.complete(Ecto.UUID.generate())
       assert {:error, :not_found} = Direct.complete("not-a-uuid")

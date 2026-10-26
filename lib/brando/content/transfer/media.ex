@@ -2,6 +2,7 @@ defmodule Brando.Content.Transfer.Media do
   use Gettext, backend: Brando.Gettext
   @moduledoc "Media staging for archive imports. Only verified originals reach destination-owned paths."
   alias Brando.Content.Transfer.{Archive, Catalog, Dependencies, Error}
+  alias Brando.Images.PixelLimit
   alias Brando.Repo
 
   def read_original!(kind, record) do
@@ -109,10 +110,15 @@ defmodule Brando.Content.Transfer.Media do
   end
 
   defp validate_image!(body, name) do
-    case Image.from_binary(body) do
+    case Image.from_binary(body, PixelLimit.open_options(name)) do
       {:ok, image} ->
-        if Image.width(image) * Image.height(image) > 100_000_000,
-          do: Error.fail!(dgettext("content_transfer", "The image exceeds the 100 megapixel import limit."))
+        unless PixelLimit.check(image) == :ok,
+          do:
+            Error.fail!(
+              dgettext("content_transfer", "The image exceeds the %{megapixels} megapixel import limit.",
+                megapixels: div(PixelLimit.max_pixels(), 1_000_000)
+              )
+            )
 
       _ ->
         Error.fail!(dgettext("content_transfer", "%{value1} is not a valid image original.", value1: name))

@@ -38,6 +38,7 @@ defmodule Brando.Content do
   alias Brando.Content.ModuleSet
   alias Brando.Content.ModuleSetModule
   alias Brando.Content.Palette
+  alias Brando.Content.Ref
   alias Brando.Content.TableTemplate
   alias Brando.Content.Template
   alias Brando.Content.Var
@@ -951,15 +952,52 @@ defmodule Brando.Content do
   def render_var(%{type: :gallery, gallery: gallery}), do: gallery
   def render_var(%{type: :form, form: form}), do: form
 
+  @max_module_import_bytes 32 * 1_048_576
+
   @doc """
-  Trims encoded module string, base decodes and converts to terms
+  Reads modules exported with `serialize_modules/1`.
+
+  The text comes from whoever pastes it, so it is decoded without creating
+  atoms or functions, only up to #{div(@max_module_import_bytes, 1_048_576)} MB
+  once decompressed, and must decode to a list of modules whose children,
+  vars and refs are lists. Returns `{:ok, modules}` or `{:error, :invalid}`.
   """
-  def deserialize_modules(encoded_modules) do
-    encoded_modules
-    |> String.trim()
-    |> Base.decode64!()
-    |> Brando.Utils.binary_to_term()
+  @spec deserialize_modules(String.t()) :: {:ok, [Module.t()]} | {:error, :invalid}
+  def deserialize_modules(encoded_modules) when is_binary(encoded_modules) do
+    with {:ok, binary} <- encoded_modules |> String.trim() |> Base.decode64(),
+         true <- import_size(binary) <= @max_module_import_bytes,
+         modules <- Brando.Utils.binary_to_term(binary),
+         true <- all?(modules, &importable_module?(&1, 1)) do
+      {:ok, modules}
+    else
+      _ -> {:error, :invalid}
+    end
+  rescue
+    ArgumentError -> {:error, :invalid}
   end
+
+  def deserialize_modules(_encoded_modules), do: {:error, :invalid}
+
+  # A compressed term (tag 80) states its decompressed size up front
+  defp import_size(<<131, 80, size::32, _::binary>>), do: size
+  defp import_size(binary), do: byte_size(binary)
+
+  # Exports carry one level of children
+  defp importable_module?(%Module{vars: vars, refs: refs, children: children}, depth) do
+    all?(vars, &match?(%Var{}, &1)) and all?(refs, &match?(%Ref{}, &1)) and
+      case children do
+        %Ecto.Association.NotLoaded{} -> depth == 0
+        children when depth > 0 -> all?(children, &importable_module?(&1, depth - 1))
+        children -> children == []
+      end
+  end
+
+  defp importable_module?(_module, _depth), do: false
+
+  # Enum.all?/2 for a proper list; false for anything else
+  defp all?([], _fun), do: true
+  defp all?([head | tail], fun), do: fun.(head) and all?(tail, fun)
+  defp all?(_other, _fun), do: false
 
   @doc """
   Maps all ids to nil, converts terms to binary and base encodes

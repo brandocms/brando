@@ -170,14 +170,25 @@ defmodule Brando.Images.Utils do
   @spec image_type(filename :: binary) :: atom | {:error, binary}
   defdelegate image_type(filename), to: Brando.Images.Metadata, as: :type
 
+  @doc """
+  The width and height an SVG file declares, from its `width` and `height`
+  attributes or its `viewBox`.
+
+  The SVG is parsed without its external DTD: a DOCTYPE naming one (an
+  exported SVG's `svg11.dtd`, or a path on this server) is not fetched, and
+  entity declarations are refused.
+  """
   def svg_size(file) do
     doc = File.read!(file)
 
     doc
+    |> SweetXml.parse(dtd: [only: []], fetch_fun: &skip_external_dtd/2)
     |> xpath(~x"//svg", width: ~x"./@width", height: ~x"./@height", viewbox: ~x"./@viewBox")
     |> Map.new(fn {k, v} -> {k, to_string(v)} end)
     |> parse_svg_size()
   end
+
+  defp skip_external_dtd(_uri, state), do: {:ok, :not_fetched, state}
 
   defp parse_svg_size(%{width: "", height: "", viewbox: ""}) do
     %{width: 300, height: 150}

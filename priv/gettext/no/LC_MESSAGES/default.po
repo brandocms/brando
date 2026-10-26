@@ -16969,6 +16969,11 @@ msgstr "Klarte ikke lese bildefilen"
 msgid "The image is in a format the AI model cannot read"
 msgstr "Bildet er i et format KI-modellen ikke kan lese"
 
+#: lib/brando/images/pixel_limit.ex
+#, elixir-autogen, elixir-format
+msgid "The image is larger than %{megapixels} megapixels."
+msgstr "Bildet er større enn %{megapixels} megapiksler."
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "The image this content type shares, as it is shared."
@@ -17789,6 +17794,11 @@ msgstr "Dette kjører allerede."
 #, elixir-autogen, elixir-format
 msgid "This is not a valid address."
 msgstr "Dette er ikke en gyldig adresse."
+
+#: lib/brando_admin/live/content/module_list_live.ex
+#, elixir-autogen, elixir-format
+msgid "This is not an export of block modules."
+msgstr "Dette er ikke en eksport av blokkmoduler."
 
 #: lib/brando/forms/messages.ex
 #: lib/brando_admin/live/sites/notifications_live.ex

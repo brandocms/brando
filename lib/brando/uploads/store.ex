@@ -27,6 +27,7 @@ defmodule Brando.Uploads.Store do
   alias Brando.Assets.CompletedCallback
   alias Brando.Files
   alias Brando.Images
+  alias Brando.Images.PixelLimit
   alias Brando.Tenant.Storage
   alias Brando.Tracing
   alias Brando.Type.FileConfig
@@ -60,6 +61,7 @@ defmodule Brando.Uploads.Store do
          {:ok, upload} <- get_valid_filename(upload),
          {:ok, upload} <- ensure_correct_ext(upload),
          {:ok, upload} <- check_mimetype(upload),
+         {:ok, upload} <- check_pixels(upload),
          {:ok, upload} <- create_upload_path(upload),
          {:ok, upload} <- copy_uploaded_file(upload) do
       handle_upload_type(upload, user)
@@ -74,7 +76,8 @@ defmodule Brando.Uploads.Store do
   def process_upload(%{id: image_id} = image, cfg, user) do
     Tracing.set_attributes(%{"brando.asset_type": :image})
 
-    with {:ok, ops} <- Images.Operations.create(image, cfg, user),
+    with :ok <- PixelLimit.check_image(image),
+         {:ok, ops} <- Images.Operations.create(image, cfg, user),
          {:ok, %{^image_id => result}} <- Images.Operations.perform(ops, user) do
       image
       |> Images.update_image(
@@ -184,26 +187,34 @@ defmodule Brando.Uploads.Store do
   def handle_upload_type(%{meta: meta, upload_entry: _upload_entry, cfg: cfg}, user) do
     media_path = meta.media_path
 
-    case media_path |> Images.Utils.media_path() |> Image.open() do
-      {:ok, img} ->
-        # As shown and processed: turned upright by its EXIF orientation.
-        {width, height} = Images.Utils.upright_dimensions(img)
-        dominant_color = Images.Operations.Info.get_dominant_color(media_path)
+    full_path = Images.Utils.media_path(media_path)
 
-        image_params = %{
-          config_target: meta.config_target,
-          content_hash: content_hash(media_path),
-          path: media_path,
-          width: width,
-          height: height,
-          dominant_color: dominant_color,
-          focal: %{x: 50, y: 50},
-          sizes: %{},
-          status: :unprocessed,
-          folder_id: Brando.Media.Folders.upload_folder_id(meta[:folder_id], cfg)
-        }
+    with {:ok, img} <- Image.open(full_path),
+         :ok <- PixelLimit.check(full_path, PixelLimit.open_options(media_path)) do
+      # As shown and processed: turned upright by its EXIF orientation.
+      {width, height} = Images.Utils.upright_dimensions(img)
+      dominant_color = Images.Operations.Info.get_dominant_color(media_path)
 
-        Images.create_image(image_params, user)
+      image_params = %{
+        config_target: meta.config_target,
+        content_hash: content_hash(media_path),
+        path: media_path,
+        width: width,
+        height: height,
+        dominant_color: dominant_color,
+        focal: %{x: 50, y: 50},
+        sizes: %{},
+        status: :unprocessed,
+        folder_id: Brando.Media.Folders.upload_folder_id(meta[:folder_id], cfg)
+      }
+
+      Images.create_image(image_params, user)
+    else
+      # Refused before anything decodes it. Server and direct uploads are
+      # checked before they are written; this is a last check.
+      {:error, :too_many_pixels} ->
+        unless Map.get(cfg, :overwrite), do: File.rm(full_path)
+        {:error, {:handle_upload_type, PixelLimit.error_message()}}
 
       {:error, _} ->
         {:error, {:handle_upload_type, "Failed to read image dimensions."}}
@@ -321,6 +332,18 @@ defmodule Brando.Uploads.Store do
       end
     end
   end
+
+  # A raster image over the pixel limit is refused while it is still the
+  # temporary upload, before it can replace a stored original (`overwrite`).
+  defp check_pixels(%__MODULE__{cfg: %ImageConfig{}, upload_entry: %{client_type: type}} = upload)
+       when type != "image/svg+xml" do
+    case PixelLimit.check(upload.meta.path, PixelLimit.open_options([type, upload.meta[:filename]])) do
+      {:error, :too_many_pixels} -> {:error, {:handle_upload_type, PixelLimit.error_message()}}
+      _ -> {:ok, upload}
+    end
+  end
+
+  defp check_pixels(upload), do: {:ok, upload}
 
   defp create_upload_path(%__MODULE__{cfg: cfg} = upload) do
     upload_path = Path.join(Storage.current_media_root(), Map.get(cfg, :upload_path))
