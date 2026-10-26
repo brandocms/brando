@@ -126,7 +126,7 @@ defmodule Brando.Content.Proposals do
          # In the owner's scope too: queries read the process scope, and a
          # colleague's could hide what the owner may use.
          scope = Boundary.actor_scope(owner),
-         {:ok, []} <- Boundary.with_scope(scope, fn -> Error.protect(fn -> operation_problems(proposal, scope) end) end) do
+         {:ok, []} <- Boundary.with_scope(scope, fn -> recheck(proposal, scope) end) do
       true
     else
       _ -> false
@@ -134,6 +134,8 @@ defmodule Brando.Content.Proposals do
   end
 
   def previewable?(%Proposal{}), do: false
+
+  defp recheck(proposal, actor), do: Error.protect(fn -> operation_problems(proposal, actor) end)
 
   defp operation_problems(proposal, actor) do
     {problems, _trees} =

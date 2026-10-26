@@ -1381,11 +1381,13 @@ defmodule Brando.Villain.Parser do
     end
   end
 
-  # Values interpolated into an attribute are escaped for it. Stored values
-  # may hold character references (a pasted embed code's `&amp;`), which the
-  # browser decoded when they were interpolated as they were: they are
-  # decoded first, so the browser still reads the same value.
-  @doc false
+  @doc """
+  `value` escaped for a double-quoted attribute. Character references in it
+  (a pasted embed code's `&amp;`) are decoded first: stored values were
+  once interpolated as they were, and the browser decoded them, so it still
+  reads the same value.
+  """
+  @spec escape_attr(term()) :: String.t()
   def escape_attr(value),
     do: value |> to_string() |> HtmlEntities.decode() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
