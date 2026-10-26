@@ -177,11 +177,11 @@ defmodule Brando.RichText do
   # the attributes of one left out would go unseen (a custom element; `body`,
   # whose attributes a page merges into its own body; table rows outside a
   # table; HTML inside an svg's `desc`). So it may hold no tag name the list
-  # lacks, and the canonical form must have, for each name, at least as many
-  # start tags as the text has places a browser could read as one, in text
-  # and attributes too. Counted by name, so elements a parser adds (a
-  # `tbody`, the `br` of `</br>`) do not make up for one it dropped. Tag
-  # names are lowercased in ASCII only, as browsers do.
+  # lacks, and the names a browser could read as tags in it (in text and
+  # attributes too) must appear, in order, among the canonical start tags.
+  # In order, so an element a parser adds (a `tbody`, the `br` of `</br>`)
+  # does not stand in for one it dropped, even of the same name. Tag names
+  # are lowercased in ASCII only, as browsers do.
   @tag_name ~r{<([a-zA-Z][^\t\n\f\r />]*)}
   defp checked_tokens(html, tags) do
     known = MapSet.new(tags, &String.downcase(&1, :ascii))
@@ -189,7 +189,7 @@ defmodule Brando.RichText do
 
     with true <- Enum.all?(names, &(&1 in known or &1 == "img")),
          {:ok, tokens} <- html |> canonical(tags, false) |> String.trim() |> tokens(),
-         true <- kept_all?(Enum.frequencies(names), tokens) do
+         true <- kept_all?(names, tokens) do
       {:ok, tokens}
     else
       _ -> :error
@@ -204,17 +204,16 @@ defmodule Brando.RichText do
     end
   end
 
+  # The text's tag names, in order, among the canonical start tags.
   defp kept_all?(wanted, tokens) do
-    kept =
-      tokens
-      |> Enum.flat_map(fn
-        {:start, tag, _} -> [tag_key(tag)]
-        _ -> []
-      end)
-      |> Enum.frequencies()
-
-    Enum.all?(wanted, fn {name, count} -> Map.get(kept, name, 0) >= count end)
+    kept = for {:start, tag, _} <- tokens, do: tag_key(tag)
+    subsequence?(wanted, kept)
   end
+
+  defp subsequence?([], _kept), do: true
+  defp subsequence?(_wanted, []), do: false
+  defp subsequence?([name | wanted], [name | kept]), do: subsequence?(wanted, kept)
+  defp subsequence?(wanted, [_ | kept]), do: subsequence?(wanted, kept)
 
   defp canonical(html, tags, strip?) do
     hidden = if strip?, do: @hidden_tags, else: []
