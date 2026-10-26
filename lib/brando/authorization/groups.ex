@@ -301,7 +301,7 @@ defmodule Brando.Authorization.Groups do
   defp available_in_scope?(catalog, key, scope) do
     case Map.get(catalog, key) do
       nil -> false
-      permission -> scope.kind in permission.scopes
+      permission -> scope.kind in permission.scopes and not permission.superuser_only
     end
   end
 
@@ -377,8 +377,14 @@ defmodule Brando.Authorization.Groups do
 
   defp protect_last_superuser!(_, _), do: :ok
 
+  # A superuser-only grant from before the permission became one grants
+  # nothing: it is left out here, so saving the group drops it and no
+  # delegation check counts it.
   defp permission_keys(group) do
+    superuser_only = Catalog.superuser_only_keys()
+
     Repo.all(from(p in Grant, where: p.group_id == ^group.id, select: p.permission_key))
+    |> Enum.reject(&MapSet.member?(superuser_only, &1))
   end
 
   defp replace_grants(group, keys) do

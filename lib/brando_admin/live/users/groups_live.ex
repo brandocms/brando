@@ -10,7 +10,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   def mount(_params, _session, socket) do
     if Administration.can?(socket.assigns.authorization_scope, :read, :groups) do
       scope = socket.assigns.authorization_scope
-      catalog = Enum.filter(Catalog.all(), &(scope.kind in &1.scopes))
+      catalog = Enum.filter(Catalog.all(), &(scope.kind in &1.scopes and not &1.superuser_only))
 
       {:ok,
        socket
@@ -865,7 +865,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
     socket
     |> assign(:selected, group)
     |> assign(:draft, %{"name" => group.name, "description" => group.description})
-    |> assign(:permissions, MapSet.new(group.grants, & &1.permission_key))
+    |> assign(:permissions, grant_keys(group))
     |> assign(:preview, nil)
     |> assign(:members, members)
     |> assign(:history, history)
@@ -944,7 +944,14 @@ defmodule BrandoAdmin.Users.GroupsLive do
     (is_nil(group.id) && (normalize(draft["name"]) != "" || MapSet.size(permissions) > 0)) ||
       normalize(draft["name"]) != normalize(group.name) ||
       normalize(draft["description"]) != normalize(group.description) ||
-      permissions != MapSet.new(group.grants, & &1.permission_key)
+      permissions != grant_keys(group)
+  end
+
+  # Without the superuser-only grants a group may hold from before those
+  # permissions became superuser-only: they grant nothing, and saving drops them.
+  defp grant_keys(group) do
+    superuser_only = Catalog.superuser_only_keys()
+    group.grants |> Enum.map(& &1.permission_key) |> Enum.reject(&MapSet.member?(superuser_only, &1)) |> MapSet.new()
   end
 
   defp normalize(value), do: String.trim(value || "")

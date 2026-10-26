@@ -185,10 +185,11 @@ defmodule Brando.Authorization.Configuration do
   defp unsupported_export, do: invalid("Expected a version 1 Brando authorization export with at most 500 groups.")
 
   defp validate_entries(scope, entries) do
-    catalog = Catalog.all() |> Enum.filter(&(scope.kind in &1.scopes)) |> MapSet.new(& &1.key)
+    catalog = Catalog.all() |> Enum.filter(&(scope.kind in &1.scopes and not &1.superuser_only)) |> MapSet.new(& &1.key)
+    superuser_only = Catalog.superuser_only_keys()
 
     Enum.reduce_while(entries, {:ok, []}, fn entry, {:ok, validated} ->
-      case validate_entry(entry, catalog) do
+      case validate_entry(drop_superuser_only(entry, superuser_only), catalog) do
         {:ok, entry} -> add_unique_entry(entry, validated)
         error -> {:halt, error}
       end
@@ -198,6 +199,13 @@ defmodule Brando.Authorization.Configuration do
       error -> error
     end
   end
+
+  # An export from before module and container writes became superuser-only
+  # may list them; no group can hold them, so they are left out.
+  defp drop_superuser_only(%{"permissions" => permissions} = entry, superuser_only) when is_list(permissions),
+    do: Map.put(entry, "permissions", Enum.reject(permissions, &MapSet.member?(superuser_only, &1)))
+
+  defp drop_superuser_only(entry, _), do: entry
 
   defp add_unique_entry(entry, validated) do
     if Enum.any?(validated, &(&1["key"] == entry["key"])),
@@ -274,7 +282,15 @@ defmodule Brando.Authorization.Configuration do
         do: from(g in query, where: g.site_id == ^scope.site_id),
         else: from(g in query, where: is_nil(g.site_id))
 
-    Repo.all(query)
+    # Superuser-only grants left from before grant nothing; they are neither
+    # exported nor counted as a change.
+    superuser_only = Catalog.superuser_only_keys()
+
+    query
+    |> Repo.all()
+    |> Enum.map(fn group ->
+      %{group | grants: Enum.reject(group.grants, &MapSet.member?(superuser_only, &1.permission_key))}
+    end)
   end
 
   defp serialize(group),

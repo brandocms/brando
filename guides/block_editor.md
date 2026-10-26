@@ -140,8 +140,9 @@ different template types, which supports gradual migration.
 > #### HEEx templates are trusted code {: .warning}
 >
 > HEEx module templates compile and execute as server-side Elixir; they are not
-> sandboxed like Liquex. Only trusted administrators should be allowed to edit
-> module or container templates.
+> sandboxed like Liquex. Only superusers create, change, import or delete
+> modules and containers, in both authorization modes; no group can be
+> granted it ([Authorization](authorization.md#scopes-and-defaults)).
 
 **Containers** (`Brando.Content.Container`) wrap root blocks in a palette-
 aware `<section>` wrapper (using `{{ content }}` in Liquex or `<.content />` in

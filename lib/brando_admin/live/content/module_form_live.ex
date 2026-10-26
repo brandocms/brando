@@ -23,17 +23,10 @@ defmodule BrandoAdmin.Content.ModuleFormLive do
     shared_library? = socket.assigns.live_action == :shared_update
 
     cond do
+      # Module code runs in the server: a shared module, in every site it
+      # reaches. Only superusers edit it.
       shared_library? and
-          (Brando.Tenant.mode() != :multi or
-             not if(Brando.Authorization.enabled?(),
-               do:
-                 Brando.Authorization.can?(
-                   Brando.Authorization.Scope.installation(socket.assigns.current_user),
-                   :update,
-                   :shared_library
-                 ),
-               else: socket.assigns.current_user.role == :superuser
-             )) ->
+          (Brando.Tenant.mode() != :multi or not Brando.Authorization.Boundary.superuser?(socket.assigns.current_user)) ->
         {:ok, redirect(socket, to: "/admin")}
 
       connected?(socket) ->

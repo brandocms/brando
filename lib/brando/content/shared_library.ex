@@ -123,7 +123,7 @@ defmodule Brando.Content.SharedLibrary do
 
   @doc "Creates a versioned entry directly in the public shared library."
   def create_shared(kind, attrs, user \\ :system) when kind in @kinds and is_map(attrs) do
-    with :ok <- authorize_shared(user), do: do_create_shared(kind, attrs, user)
+    with :ok <- authorize_shared(user, kind), do: do_create_shared(kind, attrs, user)
   end
 
   defp do_create_shared(kind, attrs, user) do
@@ -265,7 +265,7 @@ defmodule Brando.Content.SharedLibrary do
   def update_shared(kind, id, attrs_or_changeset, user \\ :system)
 
   def update_shared(kind, id, attrs_or_changeset, user) when kind in @kinds do
-    with :ok <- authorize_shared(user), do: do_update_shared(kind, id, attrs_or_changeset, user)
+    with :ok <- authorize_shared(user, kind), do: do_update_shared(kind, id, attrs_or_changeset, user)
   end
 
   defp do_update_shared(kind, id, %Changeset{} = changeset, _user) do
@@ -356,8 +356,8 @@ defmodule Brando.Content.SharedLibrary do
   end
 
   @doc "Prevents deleting a shared entry while any site can still use it."
-  def delete_shared(kind, id) when kind in @kinds do
-    with :ok <- authorize_shared(:system), do: do_delete_shared(kind, id)
+  def delete_shared(kind, id, user \\ :system) when kind in @kinds do
+    with :ok <- authorize_shared(user, kind), do: do_delete_shared(kind, id)
   end
 
   defp do_delete_shared(kind, id) do
@@ -375,11 +375,20 @@ defmodule Brando.Content.SharedLibrary do
     end
   end
 
-  defp authorize_shared(actor) do
+  defp authorize_shared(actor, kind \\ :palette) do
     actor = Boundary.current_scope() || actor
     scope = if actor == :system, do: :system, else: Boundary.actor_scope(actor)
-    Boundary.authorize(scope, :update, :shared_library)
+
+    with :ok <- Boundary.authorize(scope, :update, :shared_library),
+         do: authorize_code(actor, kind)
   end
+
+  # A shared module or container is code every site it reaches compiles:
+  # writing one takes a superuser, whatever the shared-library grant.
+  defp authorize_code(actor, kind) when kind in [:module, :container],
+    do: if(Boundary.superuser?(actor), do: :ok, else: {:error, :forbidden})
+
+  defp authorize_code(_actor, _kind), do: :ok
 
   defp authorize_local(kind, site, prefix, actor) do
     scope = Boundary.current_scope()

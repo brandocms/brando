@@ -41,7 +41,16 @@ Do not pre-hash a value before submitting it to this changeset or log the params
 Handle `{:error, changeset}` for invalid input and `{:error, :forbidden}` for a
 denied operation.
 
-In legacy mode, the role participates in the application's legacy rules.
+In legacy mode, the role participates in the application's legacy rules,
+and Brando enforces what the roles mean on its own:
+
+- A **User** changes nothing but their own profile.
+- An **Admin** gives roles up to Admin, to accounts below Admin.
+- Only a **Superuser** writes block modules and containers, whose templates
+  run as code in the server, and deactivates or deletes another Superuser.
+
+In both modes, only a superuser changes another user's email or password:
+the email is where a password reset link goes. Everyone changes their own.
 In group mode, role assignment is not a substitute for membership. Add the
 account to the intended group/site through the Permissions screen. Do not assume
 a global Editor role grants every site.
@@ -402,7 +411,8 @@ operation. `Brando.Users.delete_session_token(token)` revokes one known token;
 it is not an all-device API. A password reset deletes them all. Test both an
 already open tab and a fresh request.
 
-Group mode protects the last active Superuser from removal/deactivation. If an
+Only a superuser deactivates or deletes a superuser. Group mode also
+protects the last active Superuser from removal/deactivation. If an
 operation is denied, retain the account and establish another authorized active
 administrator first; do not work around the guard with a raw database update.
 

@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Module, page_title: &__MODULE__.page_title/0
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Authorization.Boundary
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Workspace
@@ -48,6 +49,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
               </span>
             </button>
             <button
+              :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
               type="button"
               class="menu-item"
               phx-click={close_transfer_menu() |> show_modal("#module-import-modal")}
@@ -200,17 +202,21 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     {:noreply, socket}
   end
 
+  # Imported modules bring their code, which runs in the server: only a
+  # superuser imports them, and nobody else's paste is decoded.
   def handle_event("validate_module_import", %{"encoded_modules" => encoded_modules}, socket) do
-    imported_modules = Brando.Content.deserialize_modules(encoded_modules)
-
-    {:noreply, assign(socket, :imported_modules, imported_modules)}
+    if Boundary.superuser?(socket.assigns.current_user) do
+      imported_modules = Brando.Content.deserialize_modules(encoded_modules)
+      {:noreply, assign(socket, :imported_modules, imported_modules)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("import_modules", _, socket) do
     current_user = socket.assigns.current_user
 
-    # Import modules in a transaction to ensure atomicity
-    case import_modules_in_transaction(socket.assigns.imported_modules, current_user) do
+    case Brando.Content.import_modules(socket.assigns.imported_modules || [], current_user) do
       {:ok, _} ->
         send(self(), {:toast, gettext("Modules imported")})
         BrandoAdmin.LiveView.Listing.update_list_entries(socket.assigns.schema)
@@ -246,16 +252,14 @@ defmodule BrandoAdmin.Content.ModuleListLive do
           "  </div>\n</article>"
     }
 
-    {:ok, new_module} = Brando.Content.create_module(params, user)
+    case Brando.Content.create_module(params, user) do
+      {:ok, new_module} ->
+        {:noreply, push_navigate(socket, to: Brando.routes().admin_module_form_path(socket, :update, new_module.id))}
 
-    new_module_route =
-      Brando.routes().admin_module_form_path(
-        socket,
-        :update,
-        new_module.id
-      )
-
-    {:noreply, push_navigate(socket, to: new_module_route)}
+      {:error, _} ->
+        send(self(), {:toast, gettext("You do not have permission for this action.")})
+        {:noreply, socket}
+    end
   end
 
   def handle_event("export_modules", %{"ids" => ids_string}, socket) do
@@ -304,14 +308,6 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       {id, ""} when id > 0 -> [id]
       _ -> []
     end
-  end
-
-  defp import_modules_in_transaction(modules, current_user) do
-    Brando.Repo.transaction(fn ->
-      for mod <- modules do
-        Brando.Content.import_module_with_children(mod, current_user)
-      end
-    end)
   end
 
   @doc """

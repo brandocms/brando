@@ -457,7 +457,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLive do
 
   def handle_event("delete", params, socket) do
     with {:ok, kind} <- parse_kind(params["kind"]),
-         {:ok, _entry} <- SharedLibrary.delete_shared(kind, params["id"]) do
+         {:ok, _entry} <- SharedLibrary.delete_shared(kind, params["id"], socket.assigns.current_user) do
       {:noreply, socket |> notify(gettext("Shared entry deleted.")) |> refresh()}
     else
       error -> {:noreply, notify_error(socket, error_message(error))}

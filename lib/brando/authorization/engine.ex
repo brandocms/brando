@@ -129,6 +129,8 @@ defmodule Brando.Authorization.Engine do
   defp access_denial_reason(snapshot, permission, action, subject) do
     cond do
       not has_backend_access?(snapshot) -> :backend_access_required
+      # No group grants it; a grant left from before it was superuser-only is inert.
+      permission.superuser_only and not snapshot.superuser? -> :superuser_only
       not granted?(snapshot, permission.key) -> :missing_grant
       not protected_subject?(snapshot, action, subject) -> :protected_account
       not policy_allows?(snapshot.scope, action, subject) -> :policy_denied

@@ -11738,6 +11738,11 @@ msgstr "Bare nettstedsadministratorer og superbrukere kan publisere statiske byg
 
 #: lib/brando/traits/protect_password.ex
 #, elixir-autogen, elixir-format
+msgid "Only superusers can change the email of other users."
+msgstr "Kun superbrukere kan endre e-postadressen til andre brukere."
+
+#: lib/brando/traits/protect_password.ex
+#, elixir-autogen, elixir-format
 msgid "Only superusers can change the password of other users."
 msgstr "Kun superbrukere kan endre passord for andre brukere."
 
@@ -19851,6 +19856,7 @@ msgid "You changed it too. The form shows your version, and saving replaces the 
 msgstr "Du endret det også. Skjemaet viser din versjon, og når du lagrer, erstatter den den lagrede."
 
 #: lib/brando_admin/components/module_files.ex
+#: lib/brando_admin/live/content/module_list_live.ex
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "You do not have permission for this action."
