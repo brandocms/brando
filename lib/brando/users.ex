@@ -660,7 +660,7 @@ defmodule Brando.Users do
   # the user's row locked so two jobs at once cannot both keep theirs.
   # Sent at once, not queued, so the link never lands in a job's arguments,
   # and an exception from the mailer, which could carry the email, is not
-  # passed on to the job's stored errors.
+  # passed on whole to the job's stored errors.
   defp deliver_reset_link(user, reason) do
     context = if reason == :admin, do: "admin_reset_password", else: "reset_password"
     {encoded, user_token} = UserToken.build_email_token(user, context)
@@ -674,9 +674,8 @@ defmodule Brando.Users do
     try do
       UserNotifier.deliver_reset_password_instructions(user, reset_password_url(encoded), reason)
     rescue
-      exception ->
-        Logger.error("==> Password reset email for user #{user.id} failed: #{inspect(exception.__struct__)}")
-        {:error, :delivery_failed}
+      # Its module only: the exception's message or terms could hold the link
+      exception -> {:error, {:delivery_failed, exception.__struct__}}
     end
   end
 
