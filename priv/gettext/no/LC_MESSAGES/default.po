@@ -1193,8 +1193,8 @@ msgstr "Et program på denne datamaskinen. Ethvert program her kan gi seg ut for
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
-msgid "A proposal with problems cannot be shared."
-msgstr "Et forslag med problemer kan ikke deles."
+msgid "A proposal with problems cannot be shared. Leave out the changes with problems first."
+msgstr "Et forslag med problemer kan ikke deles. Utelat endringene med problemer først."
 
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/var_layout.ex

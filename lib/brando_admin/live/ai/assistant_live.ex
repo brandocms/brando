@@ -1750,7 +1750,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
         {:noreply, put_toast(socket, :error, gettext("You do not have permission to share pages."))}
 
       {:error, :problems} ->
-        {:noreply, put_toast(socket, :error, gettext("A proposal with problems cannot be shared."))}
+        {:noreply,
+         put_toast(
+           socket,
+           :error,
+           gettext("A proposal with problems cannot be shared. Leave out the changes with problems first.")
+         )}
 
       {:error, reason} ->
         {:noreply, put_toast(socket, :error, to_string(reason))}

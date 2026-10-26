@@ -2130,7 +2130,13 @@ defmodule Brando.Content.Proposals do
     Error.protect(fn ->
       record = record!(id, actor)
       reviewable!(record, version, "pending")
-      if record.problems == [], do: record |> rebuild!(actor) |> recheck!(record, actor)
+      # An entry changed since is reported as such, before the re-check.
+      if record.problems == [] do
+        proposal = rebuild!(record, actor)
+        current!(proposal, actor)
+        recheck!(proposal, record, actor)
+      end
+
       {:ok, record} = Repo.transaction(fn -> approve!(id, version, actor) end)
       rebuild!(record, actor)
     end)
@@ -2411,6 +2417,7 @@ defmodule Brando.Content.Proposals do
         else
           reviewable!(record, version, "approved")
           proposal = rebuild!(record, actor)
+          current!(proposal, actor)
           recheck!(proposal, record, actor)
           apply!(proposal, actor, opts)
         end
