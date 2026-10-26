@@ -147,6 +147,20 @@ defmodule Brando.Videos.MetadataTest do
     assert video.thumbnail.path =~ "images/videos/thumbnails/"
   end
 
+  # Filling in is the system's work: it is stored when the user the lookup
+  # was queued for has been demoted since
+  test "fills in the video for a user demoted since the lookup was queued" do
+    user = Factory.insert(:random_user, role: :editor)
+    video = Factory.insert(:video, type: :vimeo, remote_id: "43", source_url: "https://vimeo.com/43", title: nil)
+
+    stub(fn "/api/oembed.json", _ -> {:json, %{"title" => "Example Harbour", "duration" => 65}} end)
+
+    Brando.Repo.update_all(Ecto.Query.from(u in Brando.Users.User, where: u.id == ^user.id), set: [role: :user])
+
+    assert :ok = perform_job(Brando.Worker.VideoMetadata, %{"video_id" => video.id, "user_id" => user.id})
+    assert Brando.Repo.get!(Brando.Videos.Video, video.id).title == "Example Harbour"
+  end
+
   # Asked for again while the first lookup still waits (the queue is busy,
   # or it is retrying), the video is looked up once.
   test "a lookup still waiting is not queued twice" do

@@ -75,7 +75,9 @@ defmodule Brando.Worker.ImageUploader do
          :ok <- CDN.upload_image_files(image, config, user_id || :system, opts),
          {:newer_upload, false} <- {:newer_upload, CDN.newer_image_upload?(image_id, job_id)},
          nil <- processing(image_id, job),
-         {:ok, image} <- Images.update_image(image, %{cdn: true}, user(user_id)) do
+         # Marking the upload done is the system's work: the uploader's role
+         # may have changed since, and only their progress display is theirs
+         {:ok, image} <- Images.update_image(image, %{cdn: true}, :system) do
       CDN.remove_local_copies(image, config)
       broadcast_status(image, field_full_path, :updated)
     else

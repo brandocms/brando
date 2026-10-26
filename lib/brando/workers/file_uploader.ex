@@ -5,7 +5,6 @@ defmodule Brando.Worker.FileUploader do
   alias Brando.CDN
   alias Brando.Files
   alias Brando.Tenant.Job, as: TenantJob
-  alias Brando.Users
 
   @impl Oban.Worker
   def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
@@ -25,12 +24,12 @@ defmodule Brando.Worker.FileUploader do
       end)
 
     with {:ok, file} <- Files.get_file(file_id),
-         {:ok, user} <- Users.get_job_user(user_id),
          {:ok, config} <- Files.get_config_for(config_target),
          {:ok, _s3_key} <- CDN.upload_file(file, config, user_id || :system) do
       file_params = %{cdn: true}
 
-      case Files.update_file(file, file_params, user) do
+      # The system's work, whatever the uploader's role is by now
+      case Files.update_file(file, file_params, :system) do
         {:ok, file} ->
           broadcast_status(file, field_full_path, :updated)
 

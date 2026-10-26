@@ -98,7 +98,9 @@ defmodule Brando.Worker.ImageProcessor do
         upright_dimensions(image)
       )
 
-    case Images.update_image(image, image_params, user) do
+    # The sizes are the system's work, written whatever the uploader's role is
+    # by now; the uploader is still the one the callback and progress are for
+    case Images.update_image(image, image_params, :system) do
       {:ok, image} -> {:processed, image, config, user}
       error -> {:not_updated, error}
     end

@@ -1,0 +1,1 @@
+- Image sizes, the CDN copy of images and files, video provider status reports and video metadata lookups are stored again after the user who uploaded the asset is demoted to User; that background work no longer runs with the uploader's role.

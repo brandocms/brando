@@ -230,7 +230,9 @@ defmodule Brando.Videos do
         |> Enum.reject(fn {_, value} -> value in [nil, false] end)
         |> Map.new()
 
-      if params == %{}, do: {:ok, video}, else: update_video(video.id, params, user)
+      # Filling in what the source knows is the system's work, whatever the
+      # role of the user the lookup was queued for is by now
+      if params == %{}, do: {:ok, video}, else: update_video(video.id, params, :system)
     end
   end
 
