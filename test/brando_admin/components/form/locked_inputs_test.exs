@@ -149,6 +149,36 @@ defmodule BrandoAdmin.Components.Form.LockedInputsTest do
       assert inert?(render.(true))
       refute locked?(render.(false))
     end
+
+    # The whole way: `Input.Link` hands its lock to the var it renders
+    test "a locked `:link` input renders its var locked" do
+      link = %Brando.Content.Var{type: :link, key: "link", label: "Link", link_type: :url, value: "https://example.com"}
+
+      item_form = %Brando.Navigation.Item{link: link} |> Ecto.Changeset.change() |> to_form(as: :item)
+
+      html =
+        render_component(BrandoAdmin.Components.Form.Input.Link,
+          id: "item-link",
+          field: item_form[:link],
+          label: "Link",
+          opts: [locked: true],
+          form_id: nil
+        )
+
+      assert locked?(html)
+      assert inert?(html)
+
+      html =
+        render_component(BrandoAdmin.Components.Form.Input.Link,
+          id: "item-link",
+          field: item_form[:link],
+          label: "Link",
+          opts: [],
+          form_id: nil
+        )
+
+      refute locked?(html)
+    end
   end
 
   describe "`:unless_superuser`" do
