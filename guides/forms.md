@@ -196,11 +196,13 @@ end
 ```
 
 `connect_meta/1` reads the visitor's IP address and user agent for the rate
-limit and the stored submission, so the socket must give them:
+limit and the stored submission, so the socket must give them. `:x_headers`
+carries the visitor's address behind a reverse proxy (see `Brando.ClientIP`);
+without it, every visitor counts as the proxy:
 
 ```elixir
 socket "/live", Phoenix.LiveView.Socket,
-  websocket: [connect_info: [:peer_data, :user_agent, session: @session_options]]
+  websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]
 ```
 
 With Turnstile, load its script in the layout. A Turnstile token is good for
@@ -321,8 +323,12 @@ replaces Brando's crontab, and adds the job to its own:
 - **Origin.** A post whose `Origin` (or `Referer`) is another site is refused.
 - **Honeypot.** A hidden field people never see; a submission that fills it in
   is answered as a success and not stored.
-- **Rate limit.** Ten submissions per visitor and 200 per form in ten minutes,
-  counted by a hash of the visitor's IP address:
+- **Rate limit.** Ten posts per visitor and 200 stored submissions per form
+  in ten minutes. Visitors are counted by a hash of their IP address (an IPv6
+  one by its /64), also behind a trusted reverse proxy (`config :brando, :trusted_proxies`, see
+  `Brando.ClientIP`). A post counts against its visitor before Turnstile is
+  asked; only a submission that passed Turnstile and validation counts
+  against the form, so refused posts cannot block it for everyone:
 
   ```elixir
   config :brando, Brando.Forms,

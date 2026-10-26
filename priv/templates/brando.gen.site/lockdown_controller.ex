@@ -19,7 +19,7 @@ defmodule <%= web_module %>.CMS.LockdownController do
   def index(conn, _params), do: render_form(conn, false)
 
   def unlock(conn, %{"password" => password}) when is_binary(password) do
-    if Lockdown.password?(password) do
+    if Lockdown.password?(conn, password) do
       conn
       |> configure_session(renew: true)
       |> put_session(:lockdown_authorized, true)

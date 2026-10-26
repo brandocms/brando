@@ -22,6 +22,24 @@ defmodule Brando.RateLimit do
   end
 
   @doc """
+  Takes back a hit counted on `bucket` in the current window of `window`
+  milliseconds, for an attempt that turned out to be fine.
+  """
+  @spec undo(term(), pos_integer()) :: :ok
+  def undo(bucket, window) do
+    key = {bucket, div(System.system_time(:millisecond), window)}
+
+    # A window that began since the hit has nothing to take back: leave it,
+    # rather than start it below zero with no expiry
+    case Cachex.get(:cache, key) do
+      {:ok, count} when is_integer(count) and count > 0 -> Cachex.decr(:cache, key, 1)
+      _ -> :ok
+    end
+
+    :ok
+  end
+
+  @doc """
   Adds one to the counter `key` and returns the new count. A new counter
   expires after twice `ttl` milliseconds.
   """

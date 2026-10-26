@@ -29,11 +29,15 @@ defmodule Brando.HTML.Forms.LiveForm do
   notification. The rate limit counts visitors by IP address, which a
   component cannot read from the socket: pass `meta` from `connect_meta/1`,
   called in the LiveView's `mount/3`, and add `:url` for the page if you want
-  it stored. The socket must give the `:peer_data` and `:user_agent` connect
-  info:
+  it stored. The socket must give the `:peer_data`, `:x_headers` and
+  `:user_agent` connect info; `:x_headers` gives the visitor's address behind
+  a reverse proxy (`Brando.ClientIP`):
 
       socket "/live", Phoenix.LiveView.Socket,
-        websocket: [connect_info: [:peer_data, :user_agent, session: @session_options]]
+        websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]
+
+  Without `:x_headers`, every visitor behind the proxy counts as the proxy's
+  address, and a few submissions block the form for all of them.
 
   With Turnstile configured, load its script in your layout. The widget is
   left alone by LiveView's patches, but a token is good for one submission:
@@ -54,13 +58,18 @@ defmodule Brando.HTML.Forms.LiveForm do
   @doc """
   What a submission records about the visitor — their IP address and user
   agent — from the socket's connect info. Call it in the LiveView's `mount/3`.
+  The address is the client's, also behind a trusted proxy (`Brando.ClientIP`).
   """
   @spec connect_meta(Phoenix.LiveView.Socket.t()) :: map()
   def connect_meta(socket) do
-    peer = connect_info(socket, :peer_data)
+    info = %{peer_data: connect_info(socket, :peer_data), x_headers: connect_info(socket, :x_headers)}
 
     %{
-      ip: peer && peer[:address] && peer.address |> :inet.ntoa() |> to_string(),
+      ip:
+        case Brando.ClientIP.from_connect_info(info) do
+          nil -> nil
+          address -> address |> :inet.ntoa() |> to_string()
+        end,
       user_agent: connect_info(socket, :user_agent)
     }
   end

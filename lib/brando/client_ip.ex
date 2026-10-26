@@ -92,6 +92,18 @@ defmodule Brando.ClientIP do
   defp normalize({0, 0, 0, 0, 0, 0xFFFF, high, low}), do: {high >>> 8, high &&& 255, low >>> 8, low &&& 255}
   defp normalize(address), do: address
 
+  @doc """
+  The key to count `address` under in a per-client limit: an IPv4 address as
+  it is, an IPv6 address by its /64, the block one subscriber gets, so one
+  client cannot get a fresh budget from every address in it. Takes an
+  address or its text; nil and text that is no address give nil.
+  """
+  @spec rate_key(address() | String.t() | nil) :: address() | nil
+  def rate_key(address) when is_binary(address), do: address |> parse() |> rate_key()
+  def rate_key({a, b, c, d, _, _, _, _}), do: {a, b, c, d, 0, 0, 0, 0}
+  def rate_key({_, _, _, _} = address), do: address
+  def rate_key(_address), do: nil
+
   @doc "Whether `address` is one of the trusted proxies."
   @spec trusted?(address()) :: boolean()
   def trusted?(address), do: Enum.any?(trusted_ranges(), &in_range?(address, &1))

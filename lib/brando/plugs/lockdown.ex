@@ -1,4 +1,7 @@
 defmodule Brando.Plug.Lockdown do
+  @attempts_per_window 10
+  @attempt_window :timer.minutes(15)
+
   @moduledoc """
   Basic plug for locking down websites under development
 
@@ -31,6 +34,12 @@ defmodule Brando.Plug.Lockdown do
   You can also add the password as a query string to set a cookie that allows browsing.
 
   `https://website/?key=<pass>`
+
+  Wrong password attempts are limited to #{@attempts_per_window} per client address in
+  #{div(@attempt_window, 60_000)} minutes (`password?/2`, which the lockdown
+  page's controller calls), so the password cannot be guessed by trying
+  many. The address is the client's, also behind a trusted reverse proxy
+  (`Brando.ClientIP`).
   """
   @behaviour Plug
 
@@ -62,12 +71,40 @@ defmodule Brando.Plug.Lockdown do
     end
   end
 
-  @doc "Whether `given` is the configured `lockdown_password`."
+  @doc """
+  Whether `given` is the configured `lockdown_password`, with no limit on
+  attempts. Use `password?/2` for what a visitor sent.
+  """
+  @deprecated "Use password?/2, which limits a visitor's attempts"
   @spec password?(term()) :: boolean()
   def password?(given) do
     case password() do
       nil -> false
       password -> is_binary(given) and Plug.Crypto.secure_compare(given, password)
+    end
+  end
+
+  @doc """
+  Whether `given`, sent by the visitor at `conn`, is the configured
+  `lockdown_password`. A wrong one counts against the visitor's address (an
+  IPv6 one by its /64); after #{@attempts_per_window} in #{div(@attempt_window, 60_000)} minutes, even
+  the right password is refused there until the window ends. The right
+  password costs nothing, so people sharing an address and a key link are
+  not locked out.
+  """
+  @spec password?(Plug.Conn.t(), term()) :: boolean()
+  def password?(%Plug.Conn{} = conn, given) do
+    bucket = {__MODULE__, conn |> Brando.ClientIP.from_conn() |> Brando.ClientIP.rate_key()}
+
+    # Counted before the comparison, so a burst of guesses cannot all pass
+    # one check; the right password takes its count back.
+    with true <- password() != nil,
+         :ok <- Brando.RateLimit.hit(bucket, @attempts_per_window, @attempt_window),
+         true <- password?(given) do
+      Brando.RateLimit.undo(bucket, @attempt_window)
+      true
+    else
+      _ -> false
     end
   end
 
@@ -87,7 +124,7 @@ defmodule Brando.Plug.Lockdown do
       session["lockdown_authorized"] == true ->
         conn
 
-      password?(key(conn)) ->
+      key(conn) != nil and password?(conn, key(conn)) ->
         Plug.Conn.put_session(conn, :lockdown_authorized, true)
 
       true ->

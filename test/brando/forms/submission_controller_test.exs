@@ -120,6 +120,25 @@ defmodule Brando.Forms.SubmissionControllerTest do
     assert get_resp_header(conn, "cache-control") == ["no-store, private"]
   end
 
+  # Audit F22: behind a same-server proxy every post came from 127.0.0.1
+  test "visitors are told apart behind a trusted proxy", %{conn: conn} do
+    Application.put_env(:brando, Brando.Forms, rate_limit: [per_visitor: 1])
+    on_exit(fn -> Application.delete_env(:brando, Brando.Forms) end)
+
+    proxied = fn ip ->
+      %{build_conn() | remote_ip: {127, 0, 0, 1}}
+      |> post_form(%{"email" => "ada@example.com"}, [{"x-forwarded-for", ip} | @json])
+    end
+
+    assert json_response(proxied.("203.0.113.99"), 200)["ok"]
+    assert json_response(proxied.("203.0.113.99"), 429)
+    assert json_response(proxied.("198.51.100.4"), 200)["ok"]
+
+    hashes = "contact" |> Forms.list_submissions() |> Enum.map(& &1.ip_hash) |> Enum.sort()
+    assert hashes == Enum.sort([Forms.ip_hash("203.0.113.99"), Forms.ip_hash("198.51.100.4")])
+    _ = conn
+  end
+
   test "an unknown form is not found", %{conn: conn} do
     conn =
       conn

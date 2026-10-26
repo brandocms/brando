@@ -26,13 +26,14 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
   defp handle(conn, key, opts) do
     with true <- conn.scheme == :https or Keyword.get(opts, :allow_insecure, false),
          true <- conn.method == "POST",
-         true <- RateLimiter.allow?(conn.remote_ip),
+         {:client, true} <- {:client, RateLimiter.allow_client?(Brando.ClientIP.from_conn(conn))},
          {:ok, connection} <- Connection.get(key),
          [content_type] <- get_req_header(conn, "content-type"),
          true <- String.downcase(hd(String.split(content_type, ";"))) == "application/json",
          {:ok, body, conn} <- body(conn, [], 0, System.monotonic_time(:millisecond) + 10_000) do
       authenticate_and_accept(conn, connection, body)
     else
+      {:client, false} -> respond(conn, 429, "rate_limited")
       {:error, :too_large, conn} -> respond(conn, 413, "request_too_large")
       {:error, :incomplete_body, conn} -> respond(conn, 400, "incomplete_body")
       _ -> respond(conn, 401, "delivery_rejected")
@@ -41,6 +42,7 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
 
   defp authenticate_and_accept(conn, connection, body) do
     with :ok <- verify(get_req_header(conn, "x-hub-signature-256"), body, connection.secret),
+         {:delivery, true} <- {:delivery, RateLimiter.allow_delivery?()},
          {:ok, payload} when is_map(payload) <- Jason.decode(body),
          :ok <- repository(payload, connection),
          {:ok, event} <- event(get_req_header(conn, "x-github-event"), payload),
@@ -48,6 +50,7 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
          {:ok, _} <- accept(connection, event, payload, body, delivery_id) do
       respond(conn, 202, "accepted")
     else
+      {:delivery, false} -> respond(conn, 429, "rate_limited")
       {:error, :persistence_failed} -> respond(conn, 503, "temporarily_unavailable")
       _ -> respond(conn, 401, "delivery_rejected")
     end

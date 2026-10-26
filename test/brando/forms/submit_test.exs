@@ -141,6 +141,46 @@ defmodule Brando.Forms.SubmitTest do
       assert {:ok, _, _} = Forms.submit("contact", params, %{meta() | ip: "198.51.100.1"})
     end
 
+    # Audit F21: one client's refused posts must not block the form for others
+    test "posts that are refused do not use up the form's budget" do
+      Application.put_env(:brando, Brando.Forms, rate_limit: [per_visitor: 100, per_form: 2])
+      invalid = %{"fields" => valid(%{"email" => "x"}), "_language" => "en"}
+
+      for i <- 1..20 do
+        attacker = %{meta() | ip: "198.51.100.#{i}"}
+        assert {:error, {:invalid, _}, _} = Forms.submit("contact", invalid, attacker)
+      end
+
+      params = %{"fields" => valid(), "_language" => "en"}
+      assert {:ok, %Submission{}, _} = Forms.submit("contact", params, meta())
+      assert {:ok, %Submission{}, _} = Forms.submit("contact", params, %{meta() | ip: "192.0.2.1"})
+      # Two stored: the form's budget is used up for everyone
+      assert {:error, :rate_limited, _} = Forms.submit("contact", params, %{meta() | ip: "192.0.2.2"})
+    end
+
+    test "an IPv6 visitor is counted by its /64" do
+      Application.put_env(:brando, Brando.Forms, rate_limit: [per_visitor: 1])
+      params = %{"fields" => valid(), "_language" => "en"}
+
+      assert {:ok, _, _} = Forms.submit("contact", params, %{meta() | ip: "2001:db8:0:1::1"})
+      assert {:error, :rate_limited, _} = Forms.submit("contact", params, %{meta() | ip: "2001:db8:0:1::2"})
+      assert {:ok, _, _} = Forms.submit("contact", params, %{meta() | ip: "2001:db8:0:2::1"})
+    end
+
+    test "a visitor over its limit stops before it counts against the form" do
+      Application.put_env(:brando, Brando.Forms, rate_limit: [per_visitor: 1, per_form: 2])
+      params = %{"fields" => valid(), "_language" => "en"}
+      attacker = %{meta() | ip: "198.51.100.1"}
+
+      assert {:ok, _, _} = Forms.submit("contact", params, attacker)
+
+      for _ <- 1..20 do
+        assert {:error, :rate_limited, _} = Forms.submit("contact", params, attacker)
+      end
+
+      assert {:ok, _, _} = Forms.submit("contact", params, meta())
+    end
+
     test "with Turnstile configured, the token must be confirmed" do
       Application.put_env(:brando, Brando.Forms,
         turnstile: [site_key: "site", secret_key: "secret", req_options: [plug: {Req.Test, Brando.Forms.Turnstile}]]
@@ -156,6 +196,26 @@ defmodule Brando.Forms.SubmitTest do
       params = %{"fields" => valid(), "_language" => "en"}
       assert {:error, :rejected, _} = Forms.submit("contact", params, meta())
       assert {:error, :rejected, _} = Forms.submit("contact", Map.put(params, "cf-turnstile-response", "bad"), meta())
+      assert {:ok, _, _} = Forms.submit("contact", Map.put(params, "cf-turnstile-response", "good"), meta())
+    end
+
+    test "posts Turnstile rejects do not count against the form" do
+      Application.put_env(:brando, Brando.Forms,
+        rate_limit: [per_visitor: 100, per_form: 1],
+        turnstile: [site_key: "site", secret_key: "secret", req_options: [plug: {Req.Test, Brando.Forms.Turnstile}]]
+      )
+
+      Req.Test.stub(Brando.Forms.Turnstile, fn conn ->
+        {:ok, body, conn} = Plug.Conn.read_body(conn)
+        Req.Test.json(conn, %{"success" => URI.decode_query(body)["response"] == "good"})
+      end)
+
+      params = %{"fields" => valid(), "_language" => "en"}
+
+      for _ <- 1..5 do
+        assert {:error, :rejected, _} = Forms.submit("contact", params, %{meta() | ip: "198.51.100.1"})
+      end
+
       assert {:ok, _, _} = Forms.submit("contact", Map.put(params, "cf-turnstile-response", "good"), meta())
     end
   end

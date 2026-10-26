@@ -27,7 +27,11 @@ defmodule Brando.Health do
   end
 
   @doc """
-  Checks if the connection originates from localhost.
+  Checks if the client is on this server.
+
+  The client is the one `Brando.ClientIP` finds: behind a reverse proxy on
+  the same server, every request comes from localhost, so the address the
+  proxy forwards decides.
 
   Handles:
   - IPv4 localhost: 127.0.0.1
@@ -36,7 +40,7 @@ defmodule Brando.Health do
   """
   @spec localhost?(Plug.Conn.t()) :: boolean()
   def localhost?(conn) do
-    case conn.remote_ip do
+    case Brando.ClientIP.from_conn(conn) do
       # Native IPv4 localhost
       {127, 0, 0, 1} -> true
       # Native IPv6 localhost

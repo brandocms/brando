@@ -6,7 +6,8 @@ defmodule Brando.Plug.Health do
   reaches the router, bypassing all pipeline plugs (sessions, CSRF, etc.).
 
   Returns JSON with database connectivity, latency, and system metrics.
-  Only requests from localhost are allowed.
+  Only requests from localhost are allowed: from the server itself, not
+  through a reverse proxy on it (see `Brando.ClientIP`).
 
   ## Usage
 
