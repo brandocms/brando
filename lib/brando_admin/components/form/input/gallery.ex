@@ -112,7 +112,8 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
           object -> object
         end)
 
-      {:ok, commit_gallery(socket, updated, :image, Media.selected_ids(updated, :image_id))}
+      selected_ids = Media.selected_ids(updated, :image_id)
+      {:ok, commit_gallery(socket, updated, :image, selected_ids, keep_text_editor: true)}
     else
       {:ok, socket}
     end
@@ -906,7 +907,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
        focal_y: (image.focal && image.focal.y) || 50,
        crop_groups: crop_groups,
        from_block: true,
-       config_target: image.config_target
+       # The gallery's: an image picked from the library keeps the target it
+       # was uploaded for, another field's, which the copy is not for
+       config_target: socket.assigns.config_target
      })}
   end
 
@@ -1069,7 +1072,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
   # The gallery may not exist yet — the first pick creates it, which is why the
   # config target is derived from the owning schema rather than read off it.
-  defp commit_gallery(socket, gallery_objects, media_type, selected_ids) do
+  # An add or a removal moves objects, so an open caption popover, which
+  # names its object by index, closes; `keep_text_editor: true` keeps it for
+  # a change that moves none.
+  defp commit_gallery(socket, gallery_objects, media_type, selected_ids, opts \\ []) do
     %{field: field} = socket.assigns
     gallery = Ecto.Changeset.get_field(field.form.source, field.field)
 
@@ -1080,9 +1086,11 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       gallery_objects: Media.slim(gallery_objects)
     })
 
+    text_editor = if Keyword.get(opts, :keep_text_editor, false), do: socket.assigns[:text_editor]
+
     assign(socket, [
       {:gallery_objects, gallery_objects},
-      {:text_editor, nil},
+      {:text_editor, text_editor},
       {Media.selection_key(media_type), selected_ids}
     ])
   end

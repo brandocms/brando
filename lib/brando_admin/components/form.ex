@@ -5894,7 +5894,7 @@ defmodule BrandoAdmin.Components.Form do
     config_target = Map.get(params, "config_target", "default")
 
     # The image the copy is made from, and the block or gallery field it goes
-    # back to (`image_editor_copy_target/1`): the drawer closes at once, and an
+    # back to (`image_editor_copy_created/2`): the drawer closes at once, and an
     # editor opened elsewhere before the upload finishes replaces `edit_image`.
     {:noreply,
      socket
@@ -8074,7 +8074,12 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp refocus_image_editor_copy(socket, new_image) do
+  @doc """
+  Give an image editor copy, which the editor upload has put in the library,
+  the editor's focal point, queue its processing and hand it to the block or
+  gallery field it was made in.
+  """
+  def refocus_image_editor_copy(socket, new_image) do
     current_user = socket.assigns.current_user
     focal = Map.get(socket.assigns, :image_editor_focal, %{x: 50, y: 50})
 
@@ -8101,15 +8106,11 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  @doc """
-  What an editor copy is for: `edit_image` as it was when "Save as new copy"
-  was pressed, not as another editor opened since left it.
-  """
-  def image_editor_copy_target(socket), do: socket.assigns[:image_editor_copy_of] || socket.assigns.edit_image
-
   defp image_editor_copy_created(socket, updated_image) do
     current_user = socket.assigns.current_user
-    edit_image = image_editor_copy_target(socket)
+    # `edit_image` as it was when "Save as new copy" was pressed, not as an
+    # editor opened since left it
+    edit_image = socket.assigns[:image_editor_copy_of] || socket.assigns.edit_image
 
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
 
