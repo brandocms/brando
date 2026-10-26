@@ -891,7 +891,7 @@ defmodule BrandoAdmin.Components.Form do
         %{event: "update_entry_relation", path: path, updated_relation: updated_relation} = params,
         socket
       ) do
-    if locked_field?(socket, Enum.drop(path, -1), List.last(path)),
+    if match?([_field], path) and locked_field?(socket, [], hd(path)),
       do: {:ok, socket},
       else: update_entry_relation(socket, path, updated_relation, params)
   end
@@ -2222,16 +2222,13 @@ defmodule BrandoAdmin.Components.Form do
   # every writer of an asset field (a picker's selection, an upload delivery,
   # a removal, a drawer's reset or new copy, a gallery edit, the preview's
   # relation) leaves a locked one as it is, and `own_asset/4` never owns one,
-  # so a save keeps the entry's value whatever a writer missed. `key` is the
+  # so a save keeps the entry's value whatever a writer missed. No locked
+  # field ships to the other editors (`pending_changes/1`). `key` is the
   # field (`:cover`), its foreign key (`:cover_id`) or a gallery's name.
   # Nested (subform) fields are not locked.
   defp locked_field?(socket, [], key) when is_atom(key) or is_binary(key) do
-    %{assigns: assigns} = socket
     key = to_string(key)
-
-    assigns[:schema]
-    |> LockedFields.keys(assigns[:form_blueprint], assigns[:current_user])
-    |> Enum.any?(&(Atom.to_string(&1) == key))
+    socket |> locked_keys() |> Enum.any?(&(Atom.to_string(&1) == key))
   end
 
   defp locked_field?(_socket, _path, _key), do: false
@@ -2242,6 +2239,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp edit_asset_locked?(_socket, _edit_asset), do: false
+
+  # The fields and foreign keys of the user's locked inputs
+  defp locked_keys(%{assigns: assigns}),
+    do: LockedFields.keys(assigns[:schema], assigns[:form_blueprint], assigns[:current_user])
 
   # The values the server put in the form for its locked inputs where they
   # differ from the entry (`LockedFields.server_values/5`): a new entry's
@@ -2996,12 +2997,17 @@ defmodule BrandoAdmin.Components.Form do
   # The fields this editor changed whose value the other editors don't
   # hold. A field typed back to what they hold has nothing to ship, and
   # neither has one cleared or typed into that didn't cast (`uncast?/2`).
+  # Nor has a field this editor may not change (`LockedFields`), whatever put
+  # it in the form (a recovery copy, another tab's): an editor it is not
+  # locked for would take it and could save it.
   defp pending_changes(socket) do
     changeset = socket.assigns.form.source
     synced = synced_values(socket)
     {_fields, belongs_to} = sync_fields(socket)
+    locked = locked_keys(socket)
 
     for field <- socket |> unshipped_fields() |> Enum.sort(),
+        field not in locked,
         not uncast?(changeset, field),
         %{value: value} = change <- List.wrap(field_change(changeset, field, belongs_to)),
         value != Map.get(synced, field, Map.get(changeset.data, field)),

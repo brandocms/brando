@@ -59,6 +59,8 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
 
   defp saved(article), do: Repo.get!(Article, article.id)
 
+  defp messages, do: self() |> Process.info(:messages) |> elem(1)
+
   defp saved_gallery_images(article) do
     case saved(article).photos_id do
       nil ->
@@ -202,7 +204,16 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
               limit: 1
           )
 
+        Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.Tenant.Topic.entry("field_sync", Article, article.id))
         view |> with_target(form_cid) |> render_hook("draft_restore", %{"id" => copy.id})
+
+        # Leaving a field ships what the editor changed to the other editors,
+        # who could save it: a locked field is not among it
+        view |> with_target(form_cid) |> render_hook("blur", %{"field" => "article[title]"})
+        shipped = for {:fields_shipped, %{changes: changes}} <- messages(), change <- changes, do: change.field
+        assert :title in shipped
+        assert :cover_id in shipped == not ctx.locked
+
         view |> form(@form) |> render_submit(%{})
         assert_push_event(view, "b:submit", %{}, 2_000)
         view |> form(@form) |> render_submit(%{})

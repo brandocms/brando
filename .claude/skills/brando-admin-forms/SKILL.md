@@ -40,7 +40,9 @@ area in [the section map](form-map.md) and grep for the names it lists.
   `test/brando_admin/live/stale_validate_asset_race_test.exs`. A field the user
   may not change (`LockedFields`) is never owned, and every writer checks
   `locked_field?/3` (`edit_asset_locked?/2` for a drawer) before writing it;
-  a new writer does the same (`locked_media_deliveries_test.exs`).
+  a new writer does the same. Nor does a locked field ship to the other
+  editors (`pending_changes`), who could save it
+  (`locked_media_deliveries_test.exs`).
 - Entry fields sync between editors as the fields each editor changed
   ("Entry field sync" in Form): `validate` marks the field `_target` names
   and other inputs whose value it changed; a change Form makes itself must
