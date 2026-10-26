@@ -69,6 +69,49 @@ defmodule E2eProject.Projects.InlineRow do
     relation :client, :belongs_to, module: E2eProject.Projects.Client
   end
 
+  # Every input of the row on its own, declared locked, alternating
+  # `readonly: true` and `disabled: true` (locked-inputs.spec.js). Opened at
+  # /admin/projects/inline_rows/locked/:entry_id.
+  forms do
+    form :locked do
+      tab "Locked" do
+        fieldset do
+          size :half
+          input :status, :status, readonly: true
+          input :title, :text, label: "Title", readonly: true
+          input :key, :code, label: "Key", disabled: true
+          input :notes, :textarea, label: "Notes", readonly: true
+          input :email, :email, label: "Email", disabled: true
+          input :phone, :phone, label: "Phone", readonly: true
+          input :amount, :number, label: "Amount", disabled: true
+          input :starts_on, :date, label: "Date", readonly: true
+          input :starts_at, :datetime, label: "Date and time", disabled: true
+          input :color, :color, label: "Colour", readonly: true
+          input :kind, :select, label: "Kind", options: &E2eProject.Projects.Client.kind_options/2, disabled: true
+          input :size, :radios, label: "Size", options: &E2eProject.Projects.Client.size_options/2, readonly: true
+        end
+
+        fieldset do
+          size :half
+          input :featured, :toggle, label: "Featured", disabled: true
+          input :confirmed, :checkbox, label: "Confirmed", readonly: true
+          input :aliases, :string_list, label: "Aliases", disabled: true
+
+          input :tags, :multi_select,
+            label: "Tags",
+            options: [%{label: "Red", value: "red"}, %{label: "Green", value: "green"}],
+            readonly: true
+
+          input :label, :i18n_text, label: "Label", disabled: true
+          input :description, :i18n_textarea, label: "Description", readonly: true
+          input :cover, :image, label: "Image", disabled: true
+          input :attachment, :file, label: "File", readonly: true
+          input :clip, :video, label: "Video", disabled: true
+        end
+      end
+    end
+  end
+
   translations do
     context :naming do
       translate :singular, t("inline row")

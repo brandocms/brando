@@ -23,6 +23,21 @@ defmodule E2eProject.Projects do
 
   # ++code
   #
+  # InlineRow, opened on its own only by its `:locked` form
+  # (locked-inputs.spec.js)
+
+  mutation :create, E2eProject.Projects.InlineRow
+  mutation :update, E2eProject.Projects.InlineRow
+
+  query :single, E2eProject.Projects.InlineRow, do: fn query -> from t in query end
+
+  matches E2eProject.Projects.InlineRow do
+    fn
+      {:id, id}, query -> from t in query, where: t.id == ^id
+    end
+  end
+
+  #
   # Client
   
   mutation :create, Client
