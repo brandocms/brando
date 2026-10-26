@@ -72,16 +72,18 @@ defmodule Brando.Color do
 
   @doc """
   `value`, a stored record or a list of them (a decoded revision, say), with
-  every colour that is not a valid colour left empty: the `:color` fields of
-  Blueprints (subform rows included) and colour vars, at any depth (an
-  entry's blocks, their children and table rows). Returns the cleaned value
-  and a description of each colour cleared.
+  every colour that is not a valid colour left empty: the record's own
+  `:color` fields (subform rows included) and colour vars at any depth (an
+  entry's blocks, their children and table rows). Other records it holds,
+  such as a ref's image, keep their colour fields: they are not the record's
+  content. Returns the cleaned value and a description of each colour
+  cleared.
 
   Restoring a revision uses it, so a colour stored before values were checked
   comes back empty rather than refusing the restore.
   """
   @spec clear_invalid(value) :: {value, [String.t()]} when value: term()
-  def clear_invalid(value), do: clear(value, nil)
+  def clear_invalid(value), do: clear(value, :own)
 
   defp clear(list, spec) when is_list(list) do
     {items, cleared} = list |> Enum.map(&clear(&1, spec)) |> Enum.unzip()
@@ -98,7 +100,7 @@ defmodule Brando.Color do
 
   defp clear(%module{} = record, spec) do
     if function_exported?(module, :__schema__, 1) do
-      spec = spec || color_fields(module)
+      spec = if spec == :own, do: color_fields(module), else: spec || []
       {record, cleared} = Enum.reduce(spec, {record, []}, &clear_field(&2, &1))
 
       (module.__schema__(:associations) ++ module.__schema__(:embeds))
@@ -127,7 +129,7 @@ defmodule Brando.Color do
     if function_exported?(module, :__color_fields__, 0), do: module.__color_fields__(), else: []
   end
 
-  # A subform's rows take its colour fields; any other relation, its own
+  # A subform's rows take its colour fields; any other relation none
   defp relation_spec(spec, name) do
     Enum.find_value(spec, fn
       {^name, fields} -> fields

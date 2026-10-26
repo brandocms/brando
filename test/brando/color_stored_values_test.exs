@@ -148,6 +148,12 @@ defmodule Brando.ColorStoredValuesTest do
       [%{block: %{vars: [bg, fg], children: [%{vars: [deep]}]}}] = cleared_page.entry_blocks
       assert {bg.value, fg.value, deep.value} == {nil, "#000", nil}
 
+      # A ref's image is not the entry's content: its colour is left as it is
+      ref = %Brando.Content.Ref{image: %Brando.Images.Image{dominant_color: @stored}}
+
+      assert {%{refs: [%{image: %{dominant_color: @stored}}]}, []} =
+               Color.clear_invalid(%Brando.Content.Block{refs: [ref]})
+
       assert Color.clear_invalid(%Brando.Images.Image{dominant_color: "#abc"}) |> elem(1) == []
       assert {%{dominant_color: nil}, [_]} = Color.clear_invalid(%Brando.Images.Image{dominant_color: @stored})
     end
