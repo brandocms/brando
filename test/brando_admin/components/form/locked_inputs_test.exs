@@ -218,17 +218,20 @@ defmodule BrandoAdmin.Components.Form.LockedInputsTest do
   end
 
   describe "a slug" do
-    # The browser's Slug hook fills a slug in, so `readonly: true` doesn't
-    # lock it on save (`LockedFields`), and it renders editable.
-    test "declared `readonly: true` renders editable" do
-      html = render_top_level(:slug, :slug, [source: :title, readonly: true], @superuser)
+    # A top-level slug renders locked exactly when a save ignores it
+    test "renders locked as `LockedFields` locks it" do
+      for opts <- [[readonly: true], [disabled: true], [readonly: :unless_superuser]], user <- [@superuser, @editor] do
+        opts = [source: :title] ++ opts
+        html = render_top_level(:slug, :slug, opts, user)
+        locked = BrandoAdmin.Components.Form.LockedFields.locked_input?(%{type: :slug, opts: opts}, user)
 
-      refute locked?(html)
-      refute html =~ ~r/name="entry\[slug\]"[^>]*\breadonly\b/
+        assert locked?(html) == locked
+        assert html =~ ~r/name="entry\[slug\]"[^>]*\breadonly\b/ == locked
+      end
     end
 
     # Locked, it is read only, which the Slug hook reads as "don't follow
-    # the source".
+    # the source"
     test "declared `:unless_superuser` is read only for anyone else" do
       html = render_top_level(:slug, :slug, [source: :title, readonly: :unless_superuser], @editor)
 

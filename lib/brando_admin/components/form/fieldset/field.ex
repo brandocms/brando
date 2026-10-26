@@ -96,7 +96,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   end
 
   # A top-level input renders locked exactly when a save ignores it
-  # (`LockedFields`), which leaves a `:slug` declared `readonly: true` open.
+  # (`LockedFields`)
   defp user_opts(input, user), do: Keyword.put(input.opts || [], :locked, LockedFields.locked_input?(input, user))
 
   defp hidden?(%BlueprintInput{opts: opts}, form), do: Visibility.hidden?(opts, form)
