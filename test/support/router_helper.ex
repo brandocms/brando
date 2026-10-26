@@ -328,6 +328,30 @@ defmodule BrandoAdmin.SavedElsewhereTest.ShelfFormLive do
   end
 end
 
+# Form `:media` or `:locked_media` (LockedMediaDeliveriesTest)
+defmodule BrandoAdmin.SyncTest.ArticleMediaFormLive do
+  @moduledoc false
+  use BrandoAdmin.LiveView.Form, schema: Brando.SyncTest.Article
+
+  alias BrandoAdmin.Components.Form
+
+  def render(assigns) do
+    ~H"""
+    <.live_component
+      module={Form}
+      id="article_form"
+      name={@live_action}
+      entry_id={@entry_id}
+      current_user={@current_user}
+      presences={@presences}
+      schema={@schema}
+    >
+      <:header>Article</:header>
+    </.live_component>
+    """
+  end
+end
+
 defmodule BrandoAdmin.SyncTest.ArticleAuthorFormLive do
   @moduledoc false
   use BrandoAdmin.LiveView.Form, schema: Brando.SyncTest.Article
@@ -394,6 +418,8 @@ defmodule BrandoIntegrationWeb.Router do
     live "/articles/update/:entry_id/locked", BrandoAdmin.SyncTest.ArticleLockedFormLive, :update
     live "/articles/create/locked-slug", BrandoAdmin.SyncTest.ArticleLockedSlugFormLive, :create
     live "/articles/update/:entry_id/locked-slug", BrandoAdmin.SyncTest.ArticleLockedSlugFormLive, :update
+    live "/articles/update/:entry_id/media", BrandoAdmin.SyncTest.ArticleMediaFormLive, :media
+    live "/articles/update/:entry_id/locked_media", BrandoAdmin.SyncTest.ArticleMediaFormLive, :locked_media
     live "/articles/update/:entry_id/notes", BrandoAdmin.SyncTest.ArticleNotesFormLive, :update
     live "/articles/update/:entry_id/author", BrandoAdmin.SyncTest.ArticleAuthorFormLive, :update
     live "/articles/update/:entry_id/elsewhere", BrandoAdmin.SyncTest.ArticleElsewhereFormLive, :update
