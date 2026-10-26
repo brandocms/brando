@@ -172,8 +172,9 @@ defmodule BrandoAdmin.Components.Assets.ProviderVideoUpload do
   def complete(_user, _params, _preload), do: :error
 
   @doc """
-  The user a provider upload event acts for: the view's actor, else the
-  component's `current_user`.
+  Whom `complete/3` checks the token against. A component is not always
+  given the editor; the view's authorization actor always is, with
+  `current_user` for a component rendered outside an admin view.
   """
   def actor(socket), do: BrandoAdmin.Authorization.current_actor() || socket.assigns[:current_user]
 
