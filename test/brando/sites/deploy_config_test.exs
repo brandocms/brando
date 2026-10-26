@@ -11,6 +11,20 @@ defmodule Brando.Sites.DeployConfigTest do
 
   defp rsync(target), do: DeployConfig.changeset(%DeployConfig{}, %{strategy: :rsync, target: target})
 
+  # Names resolve here, not through DNS: two reach this server
+  defp resolve(~c"loop.example.com", :inet), do: {:ok, [{127, 0, 1, 1}]}
+
+  defp resolve(~c"self.example.com", :inet) do
+    {:ok, interfaces} = :inet.getifaddrs()
+    {:ok, [interfaces |> Enum.flat_map(fn {_name, opts} -> for {:addr, {_, _, _, _} = a} <- opts, do: a end) |> hd()]}
+  end
+
+  defp resolve(_host, _family), do: {:error, :nxdomain}
+
+  setup do
+    put_test_env(DeployConfig, resolver: &resolve/2)
+  end
+
   test "a remote destination is a valid rsync target" do
     for target <- [
           "deploy@example.com:/srv/www",
@@ -53,7 +67,21 @@ defmodule Brando.Sites.DeployConfigTest do
           "deploy@[::1]:/srv",
           "deploy@[::ffff:127.0.0.1]:/srv",
           "deploy@example.com:/srv/www/../site-b",
-          "deploy@example.com:/.."
+          "deploy@example.com:/..",
+          "deploy@example.com:/srv/www/.",
+          "deploy@example.com:/srv//www",
+          "deploy@example.com:/",
+          "deploy@localhost.:/srv",
+          "deploy@app.localhost.:/srv",
+          "deploy@localhost4:/srv",
+          "deploy@localhost.localdomain:/srv",
+          "deploy@ip6-localhost:/srv",
+          "deploy@0x0:/srv",
+          "deploy@0x7f000001:/srv",
+          "deploy@127.0.0.1.:/srv",
+          # Names that resolve to this server
+          "deploy@loop.example.com:/srv",
+          "deploy@self.example.com:/srv"
         ] do
       refute rsync(target).valid?, inspect(target)
       refute DeployConfig.valid_rsync_target?(target)
@@ -62,14 +90,27 @@ defmodule Brando.Sites.DeployConfigTest do
 
   test "an operator's list limits where rsync deploys go" do
     put_test_env(DeployConfig,
+      resolver: &resolve/2,
       rsync_targets: ["deploy@static.example.com:/srv/sites/", "web@cdn.example.com:/srv/www", :ignored]
     )
 
     assert rsync("deploy@static.example.com:/srv/sites/acme").valid?
+    assert rsync("deploy@Static.Example.com:/srv/sites/acme/").valid?
     assert rsync("web@cdn.example.com:/srv/www").valid?
+    # The directory that holds the others, and ways of naming it
+    refute rsync("deploy@static.example.com:/srv/sites/").valid?
+    refute rsync("deploy@static.example.com:/srv/sites").valid?
+    refute rsync("deploy@static.example.com:/srv/sites/.").valid?
+    refute rsync("deploy@static.example.com:/srv/sites//").valid?
     refute rsync("root@static.example.com:/srv/sites/acme").valid?
     refute rsync("deploy@static.example.com:/home/deploy").valid?
     refute rsync("web@cdn.example.com:/srv/www-other").valid?
+    refute rsync("web@cdn.example.com:/srv/www/sub").valid?
     refute rsync("deploy@other.example.com:/srv/sites/acme").valid?
+  end
+
+  test "a list that is not a list allows nothing" do
+    put_test_env(DeployConfig, resolver: &resolve/2, rsync_targets: "deploy@static.example.com:/srv/sites/")
+    refute rsync("deploy@static.example.com:/srv/sites/acme").valid?
   end
 end

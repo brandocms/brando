@@ -96,11 +96,11 @@ defmodule Brando.Sites.DeployConfig do
 
   defp rsync_target_error(target) do
     case Regex.named_captures(@rsync_target, target) do
-      %{"host" => host, "path" => path} ->
+      %{"host" => host, "path" => path} = parts ->
         cond do
-          ".." in String.split(path, "/") -> gettext("must be an absolute path without ..")
+          not plain_path?(path) -> gettext("must be an absolute path without . or ..")
           local_host?(host) -> gettext("must be on another server")
-          not listed_target?(target) -> gettext("must be a destination this installation deploys to")
+          not listed_target?(parts) -> gettext("must be a destination this installation deploys to")
           true -> nil
         end
 
@@ -109,17 +109,64 @@ defmodule Brando.Sites.DeployConfig do
     end
   end
 
-  # This server under another name. An address in a short or octal form
-  # (`127.1`, `0177.0.0.1`), which ssh's resolver reads as loopback, is no
-  # target either.
+  # `/srv/www` or `/srv/www/`: not the root, and no `.`, `..` or empty
+  # segment, any of which could name a directory above the one it seems to
+  defp plain_path?(path) do
+    segments = path |> String.trim_trailing("/") |> String.split("/") |> tl()
+    segments != [] and not Enum.any?(segments, &(&1 in ["", ".", ".."]))
+  end
+
+  # This server under another name. Names are only the start: the server's
+  # own hostname or a wildcard DNS name reaches it too, so the host is also
+  # resolved and refused if any address it has is this server's. Only an
+  # operator's `rsync_targets` rules out every such name.
   defp local_host?(host) do
-    host = host |> String.trim_leading("[") |> String.trim_trailing("]") |> String.downcase()
-    address = String.to_charlist(host)
+    host =
+      host
+      |> String.trim_leading("[")
+      |> String.trim_trailing("]")
+      |> String.trim_trailing(".")
+      |> String.downcase()
+
+    first_label = host |> String.split(".") |> hd()
 
     cond do
-      host == "localhost" or String.ends_with?(host, ".localhost") -> true
-      match?({:ok, _}, :inet.parse_address(address)) -> local_address?(:inet.parse_strict_address(address))
-      true -> false
+      host == "" -> true
+      String.starts_with?(first_label, "localhost") -> true
+      first_label in ["ip6-localhost", "ip6-loopback"] -> true
+      String.ends_with?(host, ".localhost") -> true
+      numeric_host?(host) -> local_address?(:inet.parse_strict_address(String.to_charlist(host)))
+      true -> resolves_locally?(host)
+    end
+  end
+
+  # An address however written (`127.1`, `0177.0.0.1`, `0x0`, an IPv6
+  # literal): ssh's resolver reads all of them, so only the plain dotted or
+  # IPv6 form, of another server, is a target
+  defp numeric_host?(host) do
+    String.contains?(host, ":") or
+      host |> String.split(".") |> Enum.all?(&Regex.match?(~r/\A(0x[0-9a-f]*|[0-9]+)\z/, &1))
+  end
+
+  defp resolves_locally?(host) do
+    resolver = Application.get_env(:brando, __MODULE__, [])[:resolver] || (&:inet.getaddrs/2)
+    addresses = Enum.flat_map([:inet, :inet6], &resolved(resolver, host, &1))
+    Enum.any?(addresses, &(local_address?({:ok, &1}) or &1 in own_addresses()))
+  end
+
+  # A name that does not resolve here may still be one ssh knows (a `Host`
+  # alias in its config): the operator's to answer for
+  defp resolved(resolver, host, family) do
+    case resolver.(String.to_charlist(host), family) do
+      {:ok, addresses} -> addresses
+      {:error, _reason} -> []
+    end
+  end
+
+  defp own_addresses do
+    case :inet.getifaddrs() do
+      {:ok, interfaces} -> for {_name, opts} <- interfaces, {:addr, address} <- opts, do: address
+      {:error, _reason} -> []
     end
   end
 
@@ -129,21 +176,33 @@ defmodule Brando.Sites.DeployConfig do
   defp local_address?({:ok, _ipv6}), do: false
   defp local_address?({:error, _}), do: true
 
-  defp listed_target?(target) do
+  # Unset: any target. Set to anything but a list of destinations: none, so
+  # a typo in the config never opens it up.
+  defp listed_target?(parts) do
     case Application.get_env(:brando, __MODULE__, [])[:rsync_targets] do
-      targets when is_list(targets) ->
-        Enum.any?(targets, fn
-          listed when is_binary(listed) ->
-            target == listed or (String.ends_with?(listed, "/") and String.starts_with?(target, listed))
-
-          _listed ->
-            false
-        end)
-
-      _unlimited ->
-        true
+      nil -> true
+      targets when is_list(targets) -> Enum.any?(targets, &within?(parts, &1))
+      _misconfigured -> false
     end
   end
+
+  # The listed destination itself, or for an entry ending in `/` a directory
+  # under it (not the directory itself, which holds the others). Hosts
+  # compare without case.
+  defp within?(%{"user" => user, "host" => host, "path" => path}, listed) when is_binary(listed) do
+    case Regex.named_captures(@rsync_target, listed) do
+      %{"user" => ^user, "host" => listed_host, "path" => listed_path} ->
+        String.downcase(host) == String.downcase(listed_host) and
+          if String.ends_with?(listed_path, "/"),
+            do: String.starts_with?(path, listed_path) and String.trim(path, "/") != String.trim(listed_path, "/"),
+            else: path == listed_path
+
+      _other ->
+        false
+    end
+  end
+
+  defp within?(_parts, _listed), do: false
 
   # Called after a deploy, so it may only reach a public address over https,
   # like a webhook (Brando.Webhooks.URLGuard). Checked when it changes, and

@@ -20665,8 +20665,8 @@ msgstr "må være en gyldig grenreferanse"
 
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format
-msgid "must be an absolute path without .."
-msgstr "må være en absolutt sti uten .."
+msgid "must be an absolute path without . or .."
+msgstr "må være en absolutt sti uten . eller .."
 
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format

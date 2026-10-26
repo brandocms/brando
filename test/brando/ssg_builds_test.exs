@@ -291,6 +291,14 @@ defmodule Brando.SSGBuildsTest do
     end
   end
 
+  test "a deploy job with a refused target is cancelled, not retried", context do
+    build = ready_build(context.site, context.environment)
+    {:ok, build} = Builds.update(build, %{deploy_config: %{"strategy" => "rsync", "target" => "/tmp/local-dest"}})
+
+    assert {:cancel, :invalid_deploy_target} =
+             perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
+  end
+
   test "S3 deployment removes stale target keys before uploading the artifact", context do
     build = ready_build(context.site, context.environment)
 

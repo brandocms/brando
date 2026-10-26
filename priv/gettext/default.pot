@@ -20661,7 +20661,7 @@ msgstr ""
 
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format
-msgid "must be an absolute path without .."
+msgid "must be an absolute path without . or .."
 msgstr ""
 
 #: lib/brando/sites/deploy_config.ex
