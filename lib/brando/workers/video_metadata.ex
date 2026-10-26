@@ -35,6 +35,7 @@ defmodule Brando.Worker.VideoMetadata do
         # trying again won't change either
         {:error, {:http, status}} when status in 300..499 -> {:cancel, {:http, status}}
         {:error, reason} when reason in @refused -> {:cancel, reason}
+        {:error, %Req.TransportError{reason: :body_too_large}} -> {:cancel, :body_too_large}
         {:error, reason} -> {:error, reason}
       end
     else

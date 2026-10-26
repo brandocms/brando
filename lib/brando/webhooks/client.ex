@@ -144,8 +144,10 @@ defmodule Brando.Webhooks.Client do
   defp received({:error, conn, %Mint.TransportError{reason: :timeout}, _}, _ref, state, _deadline),
     do: {conn, finish(state, :timeout)}
 
+  # After the status, a webhook's answer is what arrived; a body that must be
+  # whole was cut off.
   defp received({:error, conn, _error, _}, _ref, state, _deadline),
-    do: {conn, finish(state, if(state.status, do: nil, else: :connection_failed))}
+    do: {conn, finish(state, if(state.status && not state.whole_body, do: nil, else: :connection_failed))}
 
   defp consume([], _ref, state), do: {:more, state}
   defp consume([{:status, ref, status} | rest], ref, state), do: consume(rest, ref, %{state | status: status})
