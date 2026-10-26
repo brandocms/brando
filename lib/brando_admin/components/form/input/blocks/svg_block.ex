@@ -99,7 +99,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
   defp svg_preview_src(code), do: "data:image/svg+xml;base64," <> :base64.encode(with_namespaces(code))
 
   defp with_namespaces(code) do
-    case Regex.run(~r/<svg\b[^>]*>/i, code, return: :index) do
+    # The root's start tag: `>` inside a quoted value does not end it, and a
+    # prefixed root (`<svg:svg>`) declares its own namespaces.
+    case Regex.run(~r/<svg(?=[\s\/>])(?:"[^"]*"|'[^']*'|[^"'>])*>/i, code, return: :index) do
       [{start, length}] ->
         root = binary_part(code, start, length)
         svg = if root =~ ~r/\sxmlns\s*=/, do: "", else: ~s( xmlns="http://www.w3.org/2000/svg")
