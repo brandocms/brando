@@ -27,15 +27,16 @@ export default app => ({
       window.dispatchEvent(new CustomEvent('b:navigation:refresh_active'))
     }, 1)
 
-    this.handleEvent('b:alert', ({ title, message, type }) => {
+    // `message` is text; `html` is markup the server built and escaped
+    // (BrandoAdmin.Alert), for alerts that carry a link or a list.
+    this.handleEvent('b:alert', ({ title, message, html, type }) => {
+      const body = typeof html === 'string' ? { html } : message
       if (type === 'error') {
-        alertError(title, message)
+        alertError(title, body)
       } else if (type === 'warning') {
-        alertWarning(title, message)
-      } else if (type === 'info') {
-        alertInfo(title, message)
+        alertWarning(title, body)
       } else {
-        alertInfo(title, message)
+        alertInfo(title, body)
       }
     })
 
@@ -127,8 +128,9 @@ export default app => ({
     // tippy
     const $tippyEls = Dom.all(this.el, '[data-popover]')
     $tippyEls.forEach(el => {
+      // Text: tooltips carry names and values other admins control
       const content = el.dataset.popover
-      this.tippys.push(tippy(el, { allowHTML: true, content }))
+      this.tippys.push(tippy(el, { content }))
     })
   },
 

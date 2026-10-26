@@ -1,0 +1,2 @@
+- Alerts, confirmation dialogs, tooltips, the colour picker, select vars' choices and the upload progress panel show names, filenames, labels and colour values as text, so markup another admin stored there no longer runs in your session.
+- A Live Preview that fails to render shows a fixed message; the exception goes to the server log.

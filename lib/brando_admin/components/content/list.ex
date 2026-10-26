@@ -15,6 +15,7 @@ defmodule BrandoAdmin.Components.Content.List do
   alias Brando.Trait.SoftDelete
   alias Brando.Trait.Status
   alias Brando.Trait.Translatable
+  alias BrandoAdmin.Alert
   alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Content.List.Row
   alias BrandoAdmin.Components.Content.List.SavedViews
@@ -323,10 +324,10 @@ defmodule BrandoAdmin.Components.Content.List do
     # predictable file below /media bypasses access checks on later downloads.
     download_path = "data:text/csv;charset=utf-8;base64," <> Base.encode64(IO.iodata_to_binary(csv_content))
 
-    message = """
-    #{gettext("Download exports: ")}
-    <a href="#{download_path}" download="#{target_filename}">
-      #{gettext("Download")}
+    html = """
+    #{Alert.escape(gettext("Download exports: "))}
+    <a href="#{Alert.escape(download_path)}" download="#{Alert.escape(target_filename)}">
+      #{Alert.escape(gettext("Download"))}
     </a>
     """
 
@@ -334,7 +335,7 @@ defmodule BrandoAdmin.Components.Content.List do
      push_event(socket, "b:alert", %{
        title: gettext("Download ready"),
        type: "info",
-       message: message
+       html: html
      })}
   end
 

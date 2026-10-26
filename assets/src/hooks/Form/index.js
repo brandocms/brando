@@ -181,10 +181,8 @@ export default (app) => ({
           const clonedAvatar = userAvatar.cloneNode(true)
           presence.appendChild(clonedAvatar)
           fieldPresence.appendChild(presence)
-          tippy(clonedAvatar, {
-            allowHTML: true,
-            content: clonedAvatar.dataset.popover,
-          })
+          // Text: the label is the other user's display name
+          tippy(clonedAvatar, { content: clonedAvatar.dataset.popover })
         }
 
         // Lock the field wrapper — sticky: the form re-renders on every

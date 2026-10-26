@@ -147,7 +147,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     alert_params = %{
       title: gettext("Block variables"),
-      message: message,
+      html: message,
       type: "info"
     }
 
@@ -168,7 +168,7 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
 
     alert_params = %{
       title: gettext("Tabular data"),
-      message: message,
+      html: message,
       type: "info"
     }
 

@@ -90,6 +90,7 @@ defmodule Brando.Blueprint.Dsl do
       generated_schema(),
       generated_forms(),
       generated_rich_text_fields(),
+      generated_color_fields(),
       generated_changeset(),
       generated_trait_implementations()
     ]
@@ -444,6 +445,33 @@ defmodule Brando.Blueprint.Dsl do
         do: Enum.flat_map(sub_fields, &extract_rich_text_names/1)
 
       defp extract_rich_text_names(_), do: []
+    end
+  end
+
+  # `:color` inputs in any form, with `{relation, fields}` for subform rows
+  # (Brando.Color validates them).
+  defp generated_color_fields do
+    quote location: :keep, unquote: false do
+      def __color_fields__ do
+        for %{tabs: tabs} <- __forms__(),
+            tab <- tabs,
+            fieldset <- tab.fields,
+            field <- Map.get(fieldset, :fields, []),
+            spec <- extract_color_fields(field),
+            uniq: true,
+            do: spec
+      end
+
+      defp extract_color_fields(%Brando.Blueprint.Forms.Input{type: :color, name: name}), do: [name]
+
+      defp extract_color_fields(%Brando.Blueprint.Forms.Subform{name: name, sub_fields: sub_fields}) do
+        case Enum.flat_map(sub_fields, &extract_color_fields/1) do
+          [] -> []
+          fields -> [{name, fields}]
+        end
+      end
+
+      defp extract_color_fields(_), do: []
     end
   end
 

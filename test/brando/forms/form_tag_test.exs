@@ -189,7 +189,7 @@ defmodule Brando.Forms.FormTagTest do
 
     # Deleting the Norwegian form takes it from Norwegian pages holding the form
     description = BrandoAdmin.LiveView.Listing.DeleteDescription.describe(Form, Brando.Repo.get!(Form, norwegian.id))
-    assert description.message =~ "Get in touch"
+    assert description.html =~ "Get in touch"
   end
 
   test "saving a form re-renders the pages that hold it", %{user: user, english: english} do

@@ -430,7 +430,7 @@ defmodule Brando.Images.Operations.Sizing do
       ) do
     progress_string =
       gettext(
-        "Creating image size: <strong>%{size_key}</strong>/%{format}",
+        "Creating image size: %{size_key}/%{format}",
         size_key: size_key,
         format: format
       )

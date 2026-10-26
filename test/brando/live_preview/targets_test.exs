@@ -179,4 +179,16 @@ defmodule Brando.LivePreview.TargetsTest do
     assert html =~ ~s(data-preview="listing")
     assert html =~ "Unsaved title"
   end
+
+  # The message goes to an admin's alert; an exception's text can carry
+  # entry content another editor wrote (audit F17).
+  test "a failing render returns a fixed message and logs the exception", %{changeset: changeset} do
+    log =
+      capture_log(fn ->
+        assert {:error, message} = LivePreview.initialize(Page, changeset, %{}, :broken)
+        assert message == "Live Preview could not render this entry. The server log has the details."
+      end)
+
+    assert log =~ "Broken preview template"
+  end
 end

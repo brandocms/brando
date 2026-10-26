@@ -63,7 +63,7 @@ export default app => ({
     this.$targetEl = Dom.find(this.el, '.flatpickr')
     this.flatpickrInstance = Flatpickr(this.$targetEl, opts)
 
-    this.$timezoneEl.innerHTML = this.timezone
+    this.$timezoneEl.textContent = this.timezone
 
     this.clearDate = () => this.flatpickrInstance.clear()
     this.$btnClear.addEventListener('click', this.clearDate)

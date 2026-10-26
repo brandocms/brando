@@ -227,43 +227,43 @@ export default (hooks, enableDebug = false) => {
       animate($progressWrapper, { y: '-100%' }, { ease: ease.circIn, duration: 0.35 })
     })
 
+    // Text only: the filename is whatever the uploader named the file
+    const progressIcon =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.364 5.636L16.95 7.05A7 7 0 1 0 19 12h2a9 9 0 1 1-2.636-6.364z"/></svg>'
+
+    const progressItem = (key) =>
+      Array.from($progress.querySelectorAll('.progress-item')).find(
+        (item) => item.dataset.progressKey === String(key)
+      )
+
     app.userChannel.on(
       'progress:update',
       ({ status, content: { key, filename, percent } }) => {
-        const keyEl = Dom.find(`[data-progress-key="${key}"]`)
+        let keyEl = progressItem(key)
+        const known = !!keyEl
 
-        if (keyEl) {
-          const filenameEl = Dom.find(keyEl, '.filename')
-          const descriptionEl = Dom.find(keyEl, '.description')
-          const percentEl = Dom.find(keyEl, '.percent')
+        if (!known) {
+          keyEl = document.createElement('div')
+          keyEl.className = 'progress-item'
+          keyEl.dataset.progressKey = key
+          keyEl.innerHTML = progressIcon
 
-          filenameEl.innerHTML = filename
-          descriptionEl.innerHTML = status
-          percentEl.innerHTML = `${percent}%`
-
-          if (parseInt(percent) === 100) {
-            keyEl.remove()
-            set($progressWrapper, { height: `${getHeights()}px` })
+          for (const name of ['filename', 'description', 'percent']) {
+            const el = document.createElement('div')
+            el.className = name
+            keyEl.appendChild(el)
           }
-        } else {
-          const updateProgress = document.createRange()
-            .createContextualFragment(`
-            <div class="progress-item" data-progress-key="${key}">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16"><path fill="none" d="M0 0h24v24H0z"/><path d="M18.364 5.636L16.95 7.05A7 7 0 1 0 19 12h2a9 9 0 1 1-2.636-6.364z"/></svg>
-              <div class="filename">
-                ${filename}
-              </div>
-              <div class="description">
-                ${status}
-              </div>
-              <div class="percent">
-                ${percent}%
-              </div>
-            </div>
-            `)
-          $progress.append(updateProgress)
-          const keyEl = Dom.find(`[data-progress-key="${key}"]`)
+        }
+
+        keyEl.querySelector('.filename').textContent = filename ?? ''
+        keyEl.querySelector('.description').textContent = status ?? ''
+        keyEl.querySelector('.percent').textContent = `${percent}%`
+
+        if (!known) {
+          $progress.append(keyEl)
           set(keyEl, { opacity: 1 })
+        } else if (parseInt(percent) === 100) {
+          keyEl.remove()
         }
 
         set($progressWrapper, { height: `${getHeights()}px` })

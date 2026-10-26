@@ -85,7 +85,7 @@ export default app => ({
         }
 
         this.circle.style.background = processedColor
-        this.colorHex.innerHTML = processedColor
+        this.colorHex.textContent = processedColor
         inputTarget.value = processedColor
 
         // has the color actually changed?
@@ -147,6 +147,6 @@ export default app => ({
 
   setColor(color) {
     this.circle.style.background = color
-    this.colorHex.innerHTML = color || '(no color)'
+    this.colorHex.textContent = color || '(no color)'
   }
 })

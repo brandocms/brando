@@ -238,6 +238,23 @@ defmodule BrandoAdmin.Components.Form.Input.ChangeTrackingTest do
     end
   end
 
+  # A select var's choices are typed by admins: their optimistic label, which
+  # uiCommands.js sets as markup, must decode to escaped text.
+  test "Select optimistic labels escape select var choices" do
+    field = to_form(Changeset.change(%Brando.Pages.Page{title: "s"}), as: "entry")[:title]
+    label = ~s|<img src=x onerror="alert(1)"> & small|
+    options = RenderVar.select_options([%Brando.Content.Var.Option{label: %{"en" => label, "no" => label}, value: "s"}])
+
+    html =
+      Phoenix.LiveViewTest.render_component(Select, id: "select", field: field, opts: [options: options], open: true)
+      |> Floki.parse_document!()
+
+    assert Floki.attribute(html, "button.options-option", "data-select-label") ==
+             [Phoenix.HTML.html_escape(label) |> Phoenix.HTML.safe_to_string()]
+
+    assert Floki.find(html, ".select-label img, .options-option img") == []
+  end
+
   defp picture_assigns(image) do
     block = %Brando.Villain.Blocks.PictureBlock{data: %Brando.Villain.Blocks.PictureBlock.Data{}}
     ref = %Brando.Content.Ref{uid: "picture-ref", image_id: image && image.id, image: image}

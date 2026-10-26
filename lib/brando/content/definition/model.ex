@@ -217,9 +217,11 @@ defmodule Brando.Content.Definition.Model do
     |> ref_record()
   end
 
+  # A stored value predating a validation is read as it is: one old colour
+  # must not stop every snapshot, export and import.
   def stored_var_record(record) do
     struct(Var)
-    |> Var.changeset(Map.delete(var_record(record), "assets"), %{id: 0})
+    |> Var.changeset(Map.delete(var_record(record), "assets"), %{id: 0}, nil, validate_colors: false)
     |> apply_valid!(record.key)
     |> var_record()
   end

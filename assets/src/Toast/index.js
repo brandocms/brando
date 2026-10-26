@@ -237,12 +237,16 @@ export default class Toast {
     this.updatePopup(message)
   }
 
+  // `message` is text
   updatePopup(message) {
     if (!this.popup) {
       this.msgNo = 1
       this.popup = document.createElement('div')
       this.popup.className = 'progress-popup'
-      this.popup.innerHTML = `<div class="message">[${this.msgNo}] &rarr; ${message}</div>`
+      const $message = document.createElement('div')
+      $message.className = 'message'
+      $message.textContent = `[${this.msgNo}] → ${message}`
+      this.popup.appendChild($message)
       set(this.popup, { opacity: 0 })
       document.body.appendChild(this.popup)
       this.popup.setAttribute('popover', '')
@@ -252,8 +256,7 @@ export default class Toast {
       animate(this.popup, { opacity: 1 }, { duration: 0.15 })
     } else {
       this.msgNo++
-      this.popup.querySelector('.message').innerHTML =
-        `[${this.msgNo}] &rarr; ${message}`
+      this.popup.querySelector('.message').textContent = `[${this.msgNo}] → ${message}`
       // A message during the fade-out brings the popup back. Starting a new
       // opacity animation stops the fade, and a stopped fade never finishes,
       // so the popup is not removed under the new message.

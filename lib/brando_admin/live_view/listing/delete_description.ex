@@ -20,8 +20,9 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   alias Brando.Trait.SoftDelete
 
   @doc """
-  `%{title, message, confirm, cancel}` for deleting `entry`. The message is
-  HTML (the dialog renders HTML), with the entry's name escaped.
+  `%{title, html, confirm, cancel}` for deleting `entry`. `html` is the
+  message as markup (it links the places media is used), with the entry's
+  name and every place escaped; the rest is text.
   """
   def describe(schema, entry) do
     singular = schema |> Blueprint.get_singular() |> String.downcase()
@@ -30,7 +31,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
 
     %{
       title: gettext("Delete %{singular}?", singular: singular),
-      message: message(schema, name, owned) <> usage(schema, entry),
+      html: message(schema, name, owned) <> usage(schema, entry),
       confirm: gettext("Delete"),
       cancel: gettext("Cancel")
     }
