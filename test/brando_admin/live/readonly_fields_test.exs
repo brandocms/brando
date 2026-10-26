@@ -106,6 +106,30 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
     assert {saved.title, saved.subtitle} == {"Restored", "Stored"}
   end
 
+  # A revision's working copy is the server's: its locked values are saved
+  # with the rest of it.
+  test "a revision's working copy keeps its value for a locked field", %{conn: conn, current_user: user} do
+    {:ok, article} =
+      SyncTest.create_article(
+        %{title: "Locked", slug: "locked", subtitle: "Stored", year: 2020, language: "en", status: "published"},
+        user
+      )
+
+    {view, _html} = live_form(conn, "/admin/articles/update/#{article.id}/locked", "article_form")
+
+    Phoenix.LiveView.send_update(view.pid, Form,
+      id: "article_form",
+      action: :load_working_copy,
+      revision: 1,
+      revision_entry: %{article | subtitle: "From the revision", title: "Revised"}
+    )
+
+    save(view, %{"subtitle" => "Crafted"})
+
+    saved = Repo.get!(Article, article.id)
+    assert {saved.title, saved.subtitle} == {"Revised", "From the revision"}
+  end
+
   describe "LockedFields.lock/6" do
     setup do
       input = &%Forms.Input{name: &1, type: &2, opts: &3}
@@ -151,18 +175,36 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
                %{"title" => "T", "slug" => "s"}
     end
 
-    test "puts back the server's value, or an empty field's default", %{blueprint: blueprint} do
+    test "puts back the server's value, an empty field's default once", %{blueprint: blueprint} do
       user = %Brando.Users.User{role: :superuser}
       changeset = Ecto.Changeset.change(%Article{}, subtitle: "Set", cover_id: 7, title: "Not locked")
-      values = LockedFields.server_values(changeset, Article, blueprint, user, %Article{})
-      assert values == %{subtitle: "Set", cover_id: 7}
+      values = LockedFields.server_values(changeset, Article, blueprint, user)
+      assert values == %{subtitle: "Set", cover_id: 7, year: 2024}
 
       assert LockedFields.lock(%{"subtitle" => "x"}, Article, blueprint, user, values, %Article{}) ==
                %{"subtitle" => "Set", "year" => 2024, "cover_id" => 7}
 
       # Once the entry has them, there is nothing to put back
-      saved = %Article{subtitle: "Set", cover_id: 7, year: 2020}
+      saved = %Article{subtitle: "Set", cover_id: 7, year: 2024}
       assert LockedFields.lock(%{"subtitle" => "x"}, Article, blueprint, user, values, saved) == %{}
+    end
+
+    test "keeps a server value that is false or nil", %{blueprint: blueprint} do
+      user = %Brando.Users.User{role: :superuser}
+
+      values =
+        LockedFields.server_values(
+          Ecto.Changeset.change(%Article{subtitle: "Stored"}, subtitle: nil),
+          Article,
+          blueprint,
+          user
+        )
+
+      assert LockedFields.lock(%{"subtitle" => "x"}, Article, blueprint, user, values, %Article{
+               subtitle: "Stored",
+               year: 2024
+             }) ==
+               %{"subtitle" => nil}
     end
   end
 end

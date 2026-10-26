@@ -16,11 +16,12 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   An image's `path` is one: the crop editor writes to it, so a path set from
   the form would write outside the media root.
 
-  A locked input keeps its saved value, or one the server put in the form
-  (`server_values/5`): a new entry's default params, a translation. A value
-  that reached the form from the browser (a recovery copy, a picker) is not
-  one. An empty field takes the input's `default:`, as the browser does for
-  a date, date-time or color input.
+  A locked input keeps the value the server put in the form
+  (`server_values/4`): the stored entry's, with its input's `default:` when
+  empty (the browser shows the default for a date, date-time or color
+  input), a new entry's default params, a translation or a revision's
+  working copy. A value that reached the form from the browser (a recovery
+  copy, a picker) is not one.
 
   A `:slug` input declared `readonly: true` or `disabled: true` is not
   locked: the browser's Slug hook writes it from its source field, and
@@ -37,9 +38,8 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
 
   @doc """
   `params` without the fields `user` may not change in `schema`'s `blueprint`
-  form. A locked input whose value in `values` (`server_values/5`) differs
-  from `entry`'s takes that value, cast again; one empty in `entry` takes
-  the input's `default:`.
+  form. A locked input whose value in `values` (`server_values/4`) differs
+  from `entry`'s takes that value, cast again.
   """
   @spec lock(map() | nil, module(), struct() | nil, map() | atom(), map(), struct()) :: map() | nil
   def lock(params, schema, %Form{} = blueprint, user, values, entry) when is_map(params) do
@@ -50,21 +50,27 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   def lock(params, _schema, _blueprint, _user, _values, _entry), do: params
 
   @doc """
-  The values `changeset`, built by the server, gives `user`'s locked inputs
-  that differ from `entry`'s, by field: what `lock/6` keeps.
+  The value of each of `user`'s locked inputs in `changeset`, which the
+  server built, by field; an empty one takes its input's `default:`. What
+  `lock/6` keeps.
   """
-  @spec server_values(Changeset.t(), module(), struct() | nil, map() | atom(), struct()) :: map()
-  def server_values(%Changeset{} = changeset, schema, %Form{} = blueprint, user, entry) do
-    for input <- locked_inputs(blueprint, user),
-        key = key(schema, input.name),
-        key != nil,
-        value = Changeset.get_field(changeset, key),
-        value != Map.get(entry, key),
-        into: %{},
-        do: {key, value}
+  @spec server_values(Changeset.t(), module(), struct() | nil, map() | atom()) :: map()
+  def server_values(%Changeset{} = changeset, schema, %Form{} = blueprint, user) do
+    for input <- locked_inputs(blueprint, user), key = key(schema, input.name), key != nil, into: %{} do
+      {key, changeset |> Changeset.get_field(key) |> or_default(Map.get(input, :opts))}
+    end
   end
 
-  def server_values(_changeset, _schema, _blueprint, _user, _entry), do: %{}
+  def server_values(_changeset, _schema, _blueprint, _user), do: %{}
+
+  defp or_default(nil, opts) when is_list(opts) do
+    case Keyword.get(opts, :default) do
+      default when is_function(default, 0) -> default.()
+      default -> default
+    end
+  end
+
+  defp or_default(value, _opts), do: value
 
   @doc "The params keys `drop/4` takes out: the field names, and a media input's foreign key."
   @spec keys(module(), struct() | nil, map() | atom()) :: [atom()]
@@ -115,19 +121,16 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
 
   defp locked?(_opts, _superuser?, _client_filled?), do: false
 
-  # The server's value for a locked input, cast again; an empty field's
-  # `default:`. A relation or an embed is only dropped: its value is not one
-  # to cast. A media input keeps its foreign key.
-  defp keep(params, schema, %{name: name} = input, values, entry) do
-    case key(schema, name) do
-      nil ->
-        params
-
-      key ->
-        case Map.fetch(values, key) do
-          {:ok, value} -> if value == Map.get(entry, key), do: params, else: Map.put(params, to_string(key), value)
-          :error -> put_default(params, key, Map.get(input, :opts), entry)
-        end
+  # The server's value for a locked input, cast again, when the entry's
+  # differs. A relation or an embed is only dropped: its value is not one to
+  # cast. A media input keeps its foreign key.
+  defp keep(params, schema, %{name: name}, values, entry) do
+    with key when key != nil <- key(schema, name),
+         {:ok, value} <- Map.fetch(values, key),
+         true <- value != Map.get(entry, key) do
+      Map.put(params, to_string(key), value)
+    else
+      _ -> params
     end
   end
 
@@ -138,20 +141,6 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
       _many -> nil
     end
   end
-
-  defp put_default(params, key, opts, entry) when is_list(opts) do
-    with true <- Keyword.has_key?(opts, :default),
-         nil <- Map.get(entry, key) do
-      Map.put(params, to_string(key), default(Keyword.get(opts, :default)))
-    else
-      _ -> params
-    end
-  end
-
-  defp put_default(params, _key, _opts, _entry), do: params
-
-  defp default(default) when is_function(default, 0), do: default.()
-  defp default(default), do: default
 
   # A media input (`input :cover, :image`) sends its foreign key, `cover_id`
   defp params_for(schema, fields) do

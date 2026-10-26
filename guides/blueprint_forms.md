@@ -315,12 +315,16 @@ Every input type reads these:
 
   A save ignores any value sent for a locked top-level input. The field
   keeps its saved value, or one Brando set: a new entry's `default_params`,
-  or a translation. A restored recovery copy doesn't change it. An empty
-  field takes the input's `default:`. Inputs of other types don't render
-  locked, but their value is not saved either, except that an `:image`,
-  `:file`, `:video` or `:gallery` input still takes what its picker or an
-  upload delivers. A `:slug` input declared `true` is not locked: the
-  browser fills it in from its source.
+  a translation or a revision's working copy. A restored recovery copy
+  doesn't change it. An empty field takes the input's `default:`. Inputs of
+  other types don't render locked, but their value is not saved either.
+  The exception is an `:image`, `:file`, `:video` or `:gallery` input, which
+  still takes what its picker, an upload or a recovery copy delivers.
+
+  A `:slug` input declared `true` is not locked: the browser fills it in
+  from its source. One declared `:unless_superuser` is locked for anyone
+  else, who then can't fill in a new entry's slug, so only use it where the
+  slug is set otherwise.
 * `monospace`: a monospace font, for keys and codes.
 * `class`: extra classes on the input's wrapper.
 * `debounce`: milliseconds between keystrokes and validation. Default 300.
