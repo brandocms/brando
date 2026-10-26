@@ -204,6 +204,9 @@ defmodule BrandoIntegrationWeb.LivePreview do
   @moduledoc false
   use Brando.LivePreview
 
+  # Pages have no `key`: the default view fails on purpose, as a site's view
+  # can, and the tests of how a failed render is shown use it. They capture
+  # the KeyError it logs.
   preview_target Brando.Pages.Page do
     template fn e -> {BrandoIntegrationWeb.PageHTML, "#{e.key}.html"} end
     layout {BrandoIntegrationWeb.Layouts, "app"}
