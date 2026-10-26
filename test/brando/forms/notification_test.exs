@@ -178,6 +178,30 @@ defmodule Brando.Forms.NotificationTest do
       assert_email_sent(to: [{"Post", "post@example.com"}])
     end
 
+    test "goes to one address a few times an hour", %{user: user} do
+      {:ok, _} =
+        create_form(user, %{
+          "recipients" => [%{"name" => "Post", "email" => "post@example.com"}],
+          "confirmation" => "true"
+        })
+
+      for _ <- 1..3 do
+        submit()
+        assert_email_sent(to: [{"", "ada@example.com"}])
+        assert_email_sent(to: [{"Post", "post@example.com"}])
+      end
+
+      # The fourth submission is kept and notified, without a confirmation
+      submit(%{"email" => " ADA@example.com "})
+      assert_email_sent(to: [{"Post", "post@example.com"}])
+      assert_no_email_sent()
+      assert Brando.Repo.aggregate(Submission, :count) == 4
+
+      # Another address is not held back
+      submit(%{"email" => "grace@example.com"})
+      assert_email_sent(to: [{"", "grace@example.com"}])
+    end
+
     test "is not sent when the form does not ask for one", %{user: user} do
       {:ok, _} = create_form(user, %{"recipients" => []})
       submit()

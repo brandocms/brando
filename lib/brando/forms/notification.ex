@@ -24,7 +24,10 @@ defmodule Brando.Forms.Notification do
   in, with the form's confirmation message — or its success message — and a
   copy of what they sent, without hidden fields. Replies go to the form's
   first recipient. It is sent with `Brando.Mailer.deliver_later/1`, and is
-  left out when no mailer is configured.
+  left out when no mailer is configured, or when the address has had its
+  share of confirmations lately (`Brando.Forms.RateLimit.confirmation/2`):
+  the address is whatever the visitor typed, so that it cannot be used to
+  send someone else email after email.
   """
   use Phoenix.Component
   use Gettext, backend: Brando.Gettext
@@ -187,12 +190,14 @@ defmodule Brando.Forms.Notification do
 
   @doc """
   Queues the confirmation of `submission` to the visitor, when `form` asks for
-  one, the visitor filled in an email address and a mailer is configured.
+  one, the visitor filled in an email address, a mailer is configured and the
+  address is within its limit.
   """
   @spec confirm(Submission.t(), Form.t()) :: :ok
   def confirm(%Submission{} = submission, %Form{confirmation: true} = form) do
     with address when is_binary(address) <- visitor_email(submission, form),
-         true <- Mailer.configured?() and not is_nil(Mailer.sender()[:from]) do
+         true <- Mailer.configured?() and not is_nil(Mailer.sender()[:from]),
+         :ok <- Brando.Forms.RateLimit.confirmation(submission.scope, address) do
       {:ok, _job} = submission |> confirmation(form, address) |> Mailer.deliver_later()
     else
       _ -> Logger.info("[Brando.Forms] No confirmation sent for the form #{inspect(form.key)}")
