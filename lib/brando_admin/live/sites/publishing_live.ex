@@ -530,9 +530,9 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     path = "/__ssg_preview__/#{build.preview_token}/"
 
     with :multi <- Brando.Tenant.mode(),
-         %URI{} <- admin_uri,
+         %URI{} = uri <- admin_uri,
          domain when is_binary(domain) <- preview_domain(build, site) do
-      URI.to_string(%URI{admin_uri | host: domain, path: path, query: nil, fragment: nil})
+      URI.to_string(%{uri | host: domain, path: path, query: nil, fragment: nil})
     else
       _ -> path
     end
