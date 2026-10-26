@@ -177,21 +177,43 @@ defmodule Brando.RichText do
   # the attributes of one left out would go unseen (a custom element; `body`,
   # whose attributes a page merges into its own body; table rows outside a
   # table; HTML inside an svg's `desc`). So it may hold no tag name the list
-  # lacks, and the canonical form must have at least as many start tags as
-  # it has names a browser could read as one, in text and attributes too.
-  # Tag names are lowercased in ASCII only, as browsers do.
+  # lacks, and the canonical form must have, for each name, at least as many
+  # start tags as the text has places a browser could read as one, in text
+  # and attributes too. Counted by name, so elements a parser adds (a
+  # `tbody`, the `br` of `</br>`) do not make up for one it dropped. Tag
+  # names are lowercased in ASCII only, as browsers do.
   @tag_name ~r{<([a-zA-Z][^\t\n\f\r />]*)}
   defp checked_tokens(html, tags) do
     known = MapSet.new(tags, &String.downcase(&1, :ascii))
-    names = Regex.scan(@tag_name, html, capture: :all_but_first)
+    names = for [name] <- Regex.scan(@tag_name, html, capture: :all_but_first), do: tag_key(name)
 
-    with true <- Enum.all?(names, fn [name] -> String.downcase(name, :ascii) in known end),
+    with true <- Enum.all?(names, &(&1 in known or &1 == "img")),
          {:ok, tokens} <- html |> canonical(tags, false) |> String.trim() |> tokens(),
-         true <- Enum.count(tokens, &match?({:start, _, _}, &1)) >= length(names) do
+         true <- kept_all?(Enum.frequencies(names), tokens) do
       {:ok, tokens}
     else
       _ -> :error
     end
+  end
+
+  # Parsers read `<image>` as `<img>`.
+  defp tag_key(name) do
+    case String.downcase(name, :ascii) do
+      "image" -> "img"
+      name -> name
+    end
+  end
+
+  defp kept_all?(wanted, tokens) do
+    kept =
+      tokens
+      |> Enum.flat_map(fn
+        {:start, tag, _} -> [tag_key(tag)]
+        _ -> []
+      end)
+      |> Enum.frequencies()
+
+    Enum.all?(wanted, fn {name, count} -> Map.get(kept, name, 0) >= count end)
   end
 
   defp canonical(html, tags, strip?) do

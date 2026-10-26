@@ -158,6 +158,7 @@ defmodule Brando.RichTextSanitizeTest do
 
     for html <- [
           ~s(<p>a</p><tr onclick="x"><td>b</td></tr>),
+          ~s(<p>a</p><tr onclick="x"></tr></br></p>),
           ~s(<p>a<mar\u212A onmouseover="x">b</mar\u212A></p>)
         ] do
       refute RichText.safe_html?(html), html
