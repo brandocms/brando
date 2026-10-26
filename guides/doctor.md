@@ -124,11 +124,12 @@ and summaries are prose.
 | robots.txt | `/robots.txt` routed to Brando, and no static file in front of it: a `priv/static/robots.txt` counts only when the endpoint's `Plug.Static` serves it, by its `only:` (a literal list, or `static_paths/0` on Phoenix 1.7 and later) or for want of one, and the fix names that setting |
 | JSON-LD | An identity for each language with a name and a logo, and a site URL |
 | Alt text | Images without alt text, per content language |
+| Media paths | Image and file rows, deleted ones included, whose stored path leaves the media folder: an image's path or one of its sizes, or a file's name, that is absolute, starts with `~/` or climbs out with `..`. Brando refuses such a path when it is saved and in every file operation, but a row stored before that check keeps it, and the crop editor may have written an upload to the place it names. The details list each row and its path: remove what was written there, then delete the row or have a superuser correct its path |
 | Deprecations | Calls to Brando functions marked `@deprecated` in the project's `lib/`, following aliases, imports and pipes |
 | Test database | In development, the Repo's database for `:test` (read from `config/config.exs` and `config/runtime.exs` in the current shell) against the one in use: a `runtime.exs` that reads the Repo `url:` from the environment in every environment makes `mix test` use, and migrate, the development database |
 
 With tenancy enabled, the content checks (image configs, modules, module
-entry paths, sitemap, JSON-LD, alt text) run in every environment of every
+entry paths, sitemap, JSON-LD, alt text, media paths) run in every environment of every
 active site, and their details name the environment.
 
 ## In the admin

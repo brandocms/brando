@@ -1041,6 +1041,36 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "MediaPaths" do
+    test "lists the images and files whose stored path leaves the media folder" do
+      safe = Factory.insert(:image, path: "images/doctor/fine.jpg", sizes: %{"thumb" => "images/doctor/thumb/fine.jpg"})
+      climbing = Factory.insert(:image, path: "images/../../../srv/app/priv/static/x.jpg")
+      sized = Factory.insert(:image, path: "images/doctor/sized.jpg", sizes: %{"thumb" => "/etc/cron.d/x"})
+      deleted = Factory.insert(:image, path: "~/x.jpg", deleted_at: @now)
+      file = Brando.Repo.insert!(%Brando.Files.File{filename: "../../x.pdf", filesize: 1, config_target: "default"})
+      Brando.Repo.insert!(%Brando.Files.File{filename: "rates..2026.pdf", filesize: 1, config_target: "default"})
+
+      result = Checks.MediaPaths.run(context())
+
+      assert result.status == :error
+      assert result.summary == "4 images or files stored with a path outside the media folder"
+
+      assert result.items == [
+               "image #{climbing.id}: images/../../../srv/app/priv/static/x.jpg",
+               "image #{sized.id}: /etc/cron.d/x",
+               "image #{deleted.id}: ~/x.jpg",
+               "file #{file.id}: ../../x.pdf"
+             ]
+
+      refute Enum.any?(result.items, &(&1 =~ "image #{safe.id}:"))
+    end
+
+    test "passes when every path is inside the media folder" do
+      Factory.insert(:image, path: "images/doctor/a/../fine.jpg")
+      assert %Result{status: :ok} = Checks.MediaPaths.run(context())
+    end
+  end
+
   describe "Deprecations" do
     @deprecated_calls %{
       {Brando.HTML, :picture_tag, 2} => "Use <.picture>",

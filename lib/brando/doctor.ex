@@ -42,6 +42,7 @@ defmodule Brando.Doctor do
     Checks.Robots,
     Checks.JSONLD,
     Checks.AltText,
+    Checks.MediaPaths,
     Checks.Deprecations,
     Checks.TestDatabase
   ]
