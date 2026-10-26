@@ -65,10 +65,12 @@ defmodule Brando.I18n.Helpers do
     end
   end
 
+  # Not `Brando.Utils.existing_atom/1`: templates import this module at
+  # compile time, and Brando.Utils would tie it to most of Brando.
   defp exported_helper(module, name, arity) do
-    case Brando.Utils.existing_atom(name) do
-      {:ok, fun} -> if function_exported?(module, fun, arity), do: fun
-      :error -> nil
-    end
+    fun = String.to_existing_atom(name)
+    if function_exported?(module, fun, arity), do: fun
+  rescue
+    ArgumentError -> nil
   end
 end
