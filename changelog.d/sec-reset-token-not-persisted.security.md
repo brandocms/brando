@@ -1,0 +1,1 @@
+- Password reset links, requested or sent by an administrator, are made and emailed when their background job runs, so the raw link is no longer kept in an `oban_jobs` row.
