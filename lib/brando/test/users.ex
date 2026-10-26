@@ -58,8 +58,9 @@ defmodule Brando.Test.Users do
 
   @doc """
   Grant `permissions` to `user` through a new group in the current scope.
-  Raises outside groups mode, and for keys the permission catalogue does not
-  have, listing them.
+  Raises outside groups mode, for keys the permission catalogue does not
+  have, and for the superuser-only ones no group can hold (module and
+  container writes), listing them.
   """
   @spec grant_permissions(User.t(), [String.t()]) :: struct()
   def grant_permissions(%User{} = user, permissions) do
@@ -72,6 +73,15 @@ defmodule Brando.Test.Users do
     known = MapSet.new(Catalog.all(), & &1.key)
     unknown = Enum.reject(permissions, &MapSet.member?(known, &1))
     if unknown != [], do: raise(ArgumentError, "unknown permission keys: #{inspect(unknown)}")
+
+    superuser_only = Enum.filter(permissions, &MapSet.member?(Catalog.superuser_only_keys(), &1))
+
+    if superuser_only != [],
+      do:
+        raise(
+          ArgumentError,
+          "no group can hold #{inspect(superuser_only)}: only superusers have them"
+        )
 
     repo = Brando.Repo.repo()
     scope = Scope.current(user)

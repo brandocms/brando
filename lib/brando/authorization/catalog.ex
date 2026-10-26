@@ -8,6 +8,11 @@ defmodule Brando.Authorization.Catalog do
   """
 
   @content_scopes [:standalone, :site]
+  # Module and container code compiles into the server and runs on render.
+  # Writing it is installation authority: only superusers have it, and no
+  # group can be granted it.
+  @code_schemas [Brando.Content.Module, Brando.Content.Container]
+  @read_actions [:read, :export]
   @internal_schemas [
     Brando.Revisions.Revision,
     Brando.Content.Var,
@@ -161,6 +166,17 @@ defmodule Brando.Authorization.Catalog do
   def schema(schema) when is_atom(schema), do: if(schema in schemas() and for_schema(schema) != [], do: schema)
   def schema(_), do: nil
 
+  @doc """
+  Whether `action` on `subject` (a schema or one of its entries) writes
+  server-evaluated code: creating, changing, copying or deleting a module or
+  container. Only superusers may, in both authorization modes.
+  """
+  def superuser_only?(action, %{__struct__: schema}), do: superuser_only?(action, schema)
+  def superuser_only?(action, subject), do: subject in @code_schemas and action not in @read_actions
+
+  @doc "The keys of the permissions only superusers hold (`superuser_only?/2`)."
+  def superuser_only_keys, do: all() |> Enum.filter(& &1.superuser_only) |> MapSet.new(& &1.key)
+
   @doc "Default grants for a fresh preset. Existing groups are not modified."
   def preset_permissions(:user, _kind), do: []
   def preset_permissions(:superuser, _kind), do: []
@@ -173,6 +189,7 @@ defmodule Brando.Authorization.Catalog do
 
   # Connecting tools over MCP is granted to people one group at a time.
   defp in_preset?(_preset, %{subject: :mcp, action: :connect}), do: false
+  defp in_preset?(_preset, %{superuser_only: true}), do: false
   defp in_preset?(:admin, permission), do: permission.delegable
 
   defp in_preset?(:editor, permission) do
@@ -198,6 +215,8 @@ defmodule Brando.Authorization.Catalog do
   end
 
   defp permission(subject, resource, label, section, action, scopes) do
+    superuser_only = superuser_only?(action, subject)
+
     %{
       key: "#{resource}.#{action}",
       resource: resource,
@@ -206,7 +225,8 @@ defmodule Brando.Authorization.Catalog do
       section: section,
       action: action,
       scopes: scopes,
-      delegable: section != "Installation" and subject != Brando.Users.User
+      delegable: section != "Installation" and subject != Brando.Users.User and not superuser_only,
+      superuser_only: superuser_only
     }
   end
 

@@ -191,7 +191,13 @@ Do not expose explanations for arbitrary users or scopes from a public endpoint;
 `Groups.effective/2` provides the authorized administration wrapper.
 
 Generated context mutations accept an authenticated user or `Scope` and enforce
-permissions when group mode is enabled. Outside a scoped administration request,
+permissions when group mode is enabled. In legacy mode they enforce what the
+roles mean in Brando itself, reading the user's role afresh: only a
+Superuser writes modules and containers, a User-role account changes nothing
+but its own profile, and only a Superuser deactivates or deletes another
+Superuser. The application's legacy rules are not consulted. In both modes,
+only a Superuser changes another account's email or password (the email is
+where a password reset link goes). Outside a scoped administration request,
 ordinary frontend queries are not filtered by permissions. Custom administration
 reads should use `Authorization.scope/3` or `Boundary.with_scope/2`. Query caches
 are bypassed for scoped admin reads to prevent public cached results from escaping

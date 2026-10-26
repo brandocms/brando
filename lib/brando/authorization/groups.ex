@@ -173,7 +173,8 @@ defmodule Brando.Authorization.Groups do
 
   @doc "A pure save preview: which grants will be added and removed."
   def changes(group, permissions) do
-    current = Enum.map(group.grants, & &1.permission_key)
+    superuser_only = Catalog.superuser_only_keys()
+    current = group.grants |> Enum.map(& &1.permission_key) |> Enum.reject(&MapSet.member?(superuser_only, &1))
     %{added: permissions -- current, removed: current -- permissions, members: length(group.memberships)}
   end
 
@@ -301,7 +302,7 @@ defmodule Brando.Authorization.Groups do
   defp available_in_scope?(catalog, key, scope) do
     case Map.get(catalog, key) do
       nil -> false
-      permission -> scope.kind in permission.scopes
+      permission -> scope.kind in permission.scopes and not permission.superuser_only
     end
   end
 
@@ -377,8 +378,18 @@ defmodule Brando.Authorization.Groups do
 
   defp protect_last_superuser!(_, _), do: :ok
 
+  # A superuser-only grant from before the permission became one grants
+  # nothing: it is left out here, so saving the group drops it and no
+  # delegation check counts it.
   defp permission_keys(group) do
-    Repo.all(from(p in Grant, where: p.group_id == ^group.id, select: p.permission_key))
+    superuser_only = MapSet.to_list(Catalog.superuser_only_keys())
+
+    Repo.all(
+      from(p in Grant,
+        where: p.group_id == ^group.id and p.permission_key not in ^superuser_only,
+        select: p.permission_key
+      )
+    )
   end
 
   defp replace_grants(group, keys) do

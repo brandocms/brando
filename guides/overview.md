@@ -46,8 +46,8 @@ The mistakes that cost the most time, each explained in its guide:
 * Blocks are rendered when an entry is saved. A changed parser does not change
   existing entries until `mix brando.entries.resave`
   ([Villain parser](villain_parser.md#when-it-runs)).
-* HEEx module templates run as server-side Elixir; only trusted administrators
-  may edit them ([Block editor](block_editor.md#modules-refs-and-vars)).
+* HEEx module templates run as server-side Elixir; only superusers may edit
+  modules and containers ([Block editor](block_editor.md#modules-refs-and-vars)).
 * Keep `page_routes()` after the application's own routes; its catch-all
   would take their requests ([Pages and fragments](pages.md)).
 * Preload media before rendering it. A size missing from `image.sizes` is a

@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   use BrandoAdmin.LiveView.Listing, schema: Brando.Content.Module, page_title: &__MODULE__.page_title/0
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Authorization.Boundary
   alias BrandoAdmin.Components.AIAction
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Workspace
@@ -48,6 +49,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
               </span>
             </button>
             <button
+              :if={BrandoAdmin.Authorization.allowed?(:create, @schema)}
               type="button"
               class="menu-item"
               phx-click={close_transfer_menu() |> show_modal("#module-import-modal")}
@@ -152,26 +154,16 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
   # Draw a sketch for every module without one. They are drawn one at a time
   # and each is saved as it arrives, so the list fills in as it goes and an
-  # interruption keeps what was drawn.
-  def handle_event("open_sketches", _, %{assigns: %{sketches: %{running?: true}}} = socket), do: {:noreply, socket}
+  # interruption keeps what was drawn. Sketches are saved on the modules, so
+  # they are for superusers, who may change modules, as the button is.
+  def handle_event(event, _, %{assigns: %{sketches: %{running?: true}}} = socket)
+      when event in ["open_sketches", "start_sketches"],
+      do: {:noreply, socket}
 
-  def handle_event("open_sketches", _, socket) do
-    {:ok, modules} = Brando.Content.list_modules(%{preload: [:refs, :vars]})
-    missing = Enum.filter(modules, &(&1.svg in [nil, ""]))
-
-    {:noreply, update(socket, :sketches, &%{&1 | missing: missing, drawn: %{}, failed: [], current: nil})}
-  end
-
-  def handle_event("start_sketches", _, %{assigns: %{sketches: %{running?: true}}} = socket), do: {:noreply, socket}
-
-  def handle_event("start_sketches", _, socket) do
-    lv = self()
-    modules = socket.assigns.sketches.missing
-
-    socket
-    |> update(:sketches, &%{&1 | running?: true, drawn: %{}, failed: []})
-    |> start_async(:sketches, fn -> Enum.each(modules, &draw_sketch(lv, &1)) end)
-    |> then(&{:noreply, &1})
+  def handle_event(event, _, socket) when event in ["open_sketches", "start_sketches"] do
+    if Boundary.superuser?(socket.assigns.current_user),
+      do: run_sketches(event, socket),
+      else: {:noreply, socket}
   end
 
   def handle_event("focus", _, socket), do: {:noreply, socket}
@@ -200,17 +192,21 @@ defmodule BrandoAdmin.Content.ModuleListLive do
     {:noreply, socket}
   end
 
+  # Imported modules bring their code, which runs in the server: only a
+  # superuser imports them, and nobody else's paste is decoded.
   def handle_event("validate_module_import", %{"encoded_modules" => encoded_modules}, socket) do
-    imported_modules = Brando.Content.deserialize_modules(encoded_modules)
-
-    {:noreply, assign(socket, :imported_modules, imported_modules)}
+    if Boundary.superuser?(socket.assigns.current_user) do
+      imported_modules = Brando.Content.deserialize_modules(encoded_modules)
+      {:noreply, assign(socket, :imported_modules, imported_modules)}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("import_modules", _, socket) do
     current_user = socket.assigns.current_user
 
-    # Import modules in a transaction to ensure atomicity
-    case import_modules_in_transaction(socket.assigns.imported_modules, current_user) do
+    case Brando.Content.import_modules(socket.assigns.imported_modules || [], current_user) do
       {:ok, _} ->
         send(self(), {:toast, gettext("Modules imported")})
         BrandoAdmin.LiveView.Listing.update_list_entries(socket.assigns.schema)
@@ -246,16 +242,14 @@ defmodule BrandoAdmin.Content.ModuleListLive do
           "  </div>\n</article>"
     }
 
-    {:ok, new_module} = Brando.Content.create_module(params, user)
+    case Brando.Content.create_module(params, user) do
+      {:ok, new_module} ->
+        {:noreply, push_navigate(socket, to: Brando.routes().admin_module_form_path(socket, :update, new_module.id))}
 
-    new_module_route =
-      Brando.routes().admin_module_form_path(
-        socket,
-        :update,
-        new_module.id
-      )
-
-    {:noreply, push_navigate(socket, to: new_module_route)}
+      {:error, _} ->
+        send(self(), {:toast, gettext("You do not have permission for this action.")})
+        {:noreply, socket}
+    end
   end
 
   def handle_event("export_modules", %{"ids" => ids_string}, socket) do
@@ -278,6 +272,23 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       |> Brando.Content.serialize_modules()
 
     {:noreply, assign(socket, :base64_modules, base64_modules)}
+  end
+
+  defp run_sketches("open_sketches", socket) do
+    {:ok, modules} = Brando.Content.list_modules(%{preload: [:refs, :vars]})
+    missing = Enum.filter(modules, &(&1.svg in [nil, ""]))
+
+    {:noreply, update(socket, :sketches, &%{&1 | missing: missing, drawn: %{}, failed: [], current: nil})}
+  end
+
+  defp run_sketches("start_sketches", socket) do
+    lv = self()
+    modules = socket.assigns.sketches.missing
+
+    socket
+    |> update(:sketches, &%{&1 | running?: true, drawn: %{}, failed: []})
+    |> start_async(:sketches, fn -> Enum.each(modules, &draw_sketch(lv, &1)) end)
+    |> then(&{:noreply, &1})
   end
 
   defp module_files_scope(assigns) do
@@ -304,14 +315,6 @@ defmodule BrandoAdmin.Content.ModuleListLive do
       {id, ""} when id > 0 -> [id]
       _ -> []
     end
-  end
-
-  defp import_modules_in_transaction(modules, current_user) do
-    Brando.Repo.transaction(fn ->
-      for mod <- modules do
-        Brando.Content.import_module_with_children(mod, current_user)
-      end
-    end)
   end
 
   @doc """

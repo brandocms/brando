@@ -8,6 +8,8 @@ defmodule BrandoAdmin.Authorization do
   import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1, redirect: 2, put_flash: 3]
   alias Brando.Authorization.{Administration, Boundary, Engine, Scope}
 
+  @legacy_actor_key {__MODULE__, :legacy_actor}
+
   # View names are registry data, not dependencies of the authorization engine.
   # Module aliases here would close compile-connected cycles through LiveView macros.
   @views %{
@@ -75,8 +77,21 @@ defmodule BrandoAdmin.Authorization do
         denied -> denied
       end
     else
-      {:cont, socket}
+      legacy_check(socket, params)
     end
+  end
+
+  # Legacy mode checks the roles' fixed meaning only (`Boundary`): a form for
+  # module or container code opens for superusers. `allowed?/2` asks the same
+  # for the user this view mounted with.
+  defp legacy_check(socket, params) do
+    user = socket.assigns.current_user
+    Process.put(@legacy_actor_key, user)
+    {action, subject} = requirement(socket.view, params, socket.assigns[:live_action])
+
+    if Brando.Authorization.Catalog.superuser_only?(action, subject) and not Boundary.superuser?(user),
+      do: {:halt, redirect(socket, to: "/admin/access-denied")},
+      else: {:cont, socket}
   end
 
   defp attach_authorization_hooks(socket, params) do
@@ -244,8 +259,17 @@ defmodule BrandoAdmin.Authorization do
   defp event_action(_, event) when event in ["disable_user", "enable_user"], do: :update
   defp event_action(_, _), do: nil
 
-  @doc "Presentation checks against the current administration scope."
+  @doc """
+  Presentation checks against the current administration scope; in legacy
+  mode, against the user the view mounted with.
+  """
   def allowed?(action, subject) do
-    not Engine.enabled?() or Engine.can?(Boundary.presentation() || Boundary.current_scope(), action, subject)
+    if Engine.enabled?(),
+      do: Engine.can?(Boundary.presentation() || Boundary.current_scope(), action, subject),
+      else: legacy_allowed?(Process.get(@legacy_actor_key), action, subject)
   end
+
+  # Outside a mounted admin view there is nobody to ask: as before, allowed.
+  defp legacy_allowed?(nil, _action, _subject), do: true
+  defp legacy_allowed?(actor, action, subject), do: Boundary.authorize(actor, action, subject) == :ok
 end

@@ -97,7 +97,8 @@ attributes, loops, arbitrary `use` statements and expressions such as
 `System.get_env/1` are rejected by the reader. It does not evaluate the files.
 HEEx templates remain trusted server-side code, just like templates edited in
 the admin: planning compiles them, and rendering executes their expressions.
-Only import definitions and templates from trusted authors.
+Planning or applying modules takes a superuser (or `:system`). Only import
+definitions and templates from trusted authors.
 
 `ref :name, :type` declares a normal content ref. Available types include
 `:header`, `:text`, `:picture`, `:media`, `:video`, `:gallery`, `:file`, `:blocks`,

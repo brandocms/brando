@@ -117,6 +117,14 @@ its members have all supported capabilities across active sites. It cannot be
 renamed into an ordinary group, deleted, or stripped of its permissions. At least
 one active member must remain. Naming a custom group “Superuser” grants nothing.
 
+Module and container templates are code: a HEEx template compiles and runs
+in the server, which every site shares. Creating, changing, duplicating,
+importing or deleting a module or container therefore takes a Superuser, in
+both authorization modes, and no group can be granted it. The presets, the
+group editor and configuration imports leave these permissions out. A group
+that held one before 0.55 gains nothing from it, and saving the group drops it.
+Reading and exporting modules and containers are ordinary permissions.
+
 Membership in several groups combines their grants. There are no group hierarchies,
 implicit priority, or explicit-deny rules in v1. Missing and unknown permissions
 are denied. Removing one membership leaves access granted by other groups intact.
@@ -175,7 +183,13 @@ Do not expose explanations for arbitrary users or scopes from a public endpoint;
 `Groups.effective/2` provides the authorized administration wrapper.
 
 Generated context mutations accept an authenticated user or `Scope` and enforce
-permissions when group mode is enabled. Outside a scoped administration request,
+permissions when group mode is enabled. In legacy mode they enforce what the
+roles mean in Brando itself, reading the user's role afresh: only a
+Superuser writes modules and containers, a User-role account changes nothing
+but its own profile, and only a Superuser deactivates or deletes another
+Superuser. The application's legacy rules are not consulted. In both modes,
+only a Superuser changes another account's email or password (the email is
+where a password reset link goes). Outside a scoped administration request,
 ordinary frontend queries are not filtered by permissions. Custom administration
 reads should use `Authorization.scope/3` or `Boundary.with_scope/2`. Query caches
 are bypassed for scoped admin reads to prevent public cached results from escaping

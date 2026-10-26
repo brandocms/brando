@@ -112,7 +112,8 @@ defmodule BrandoAdmin.Content.SharedLibraryLiveTest do
     assert html =~ "Changelog note"
   end
 
-  test "site administrators can customize enabled entries but cannot mutate the global library", %{
+  # A module override is module code in the site: a superuser's.
+  test "site administrators cannot customize modules nor mutate the global library", %{
     site: site,
     shared_module: shared_module
   } do
@@ -130,14 +131,11 @@ defmodule BrandoAdmin.Content.SharedLibraryLiveTest do
     assert html =~ "Site library"
     refute has_element?(view, "#create-shared-module")
 
-    view
-    |> element("#shared-module-#{shared_module.id} button[phx-click=customize]")
-    |> render_click()
+    refute has_element?(view, "#shared-module-#{shared_module.id} button[phx-click=customize]")
+    render_click(view, "customize", %{"kind" => "module", "id" => shared_module.id})
 
-    assert %{source_module_id: source_id} =
+    assert %{source_module_id: nil, library_origin: :shared} =
              SharedLibrary.get(:module, shared_module.id, :shared, site, @prefix)
-
-    assert source_id == shared_module.id
 
     render_click(view, "delete", %{"kind" => "module", "id" => shared_module.id})
     assert SharedLibrary.get_shared(:module, shared_module.id)

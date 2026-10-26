@@ -528,17 +528,20 @@ defmodule Brando.Content.StaleBlocksTest do
       assert %{entries: []} = StaleBlocks.plan(report!(c), %{{:var, "link"} => :drop})
     end
 
-    test "needs the right to update the module and every entry it changes", c do
+    # Changing a module takes a superuser, who may change every entry too: a
+    # group cannot be granted it, and a grant left from before grants nothing.
+    test "needs the right to update the module", c do
       {_page, block} = page_with_block(c, [link_var()], [])
       put_test_env(:authorization_mode, :groups)
-      alias Brando.Authorization.{Catalog, Groups, Migration, Scope}
+      alias Brando.Authorization.{Catalog, Grant, Groups, Migration, Scope}
       owner = Factory.insert(:random_user, role: :superuser)
       assert {:ok, _} = Migration.run()
       scope = Scope.standalone(owner)
 
       module_only = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
-      grants = [Catalog.get(:update, Module).key, Catalog.get(:read, Module).key, "brando.admin.access"]
+      grants = [Catalog.get(:read, Module).key, "brando.admin.access"]
       assert {:ok, group} = Groups.create(scope, %{name: "Module editors"}, grants)
+      Repo.insert!(%Grant{group_id: group.id, permission_key: Catalog.get(:update, Module).key})
       assert {:ok, :ok} = Groups.add_member(scope, group.id, module_only.id)
 
       nobody = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
@@ -547,14 +550,14 @@ defmodule Brando.Content.StaleBlocksTest do
       assert message =~ "permission to change this module"
 
       assert {:error, message} = StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, module_only)
-      assert message =~ "permission to change Example Hotel"
+      assert message =~ "permission to change this module"
 
       assert var(block, "link")
       assert {:ok, _} = StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, owner)
       assert var(block, "link") == nil
     end
 
-    test "needs the right to update an entry in the trash too", c do
+    test "with an entry in the trash, needs a superuser too", c do
       {page, block} = page_with_block(c, [link_var()], [], "I papirkurven")
       page |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
       put_test_env(:authorization_mode, :groups)
@@ -564,13 +567,17 @@ defmodule Brando.Content.StaleBlocksTest do
       scope = Scope.standalone(owner)
 
       module_only = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
-      grants = [Catalog.get(:update, Module).key, Catalog.get(:read, Module).key, "brando.admin.access"]
+      grants = [Catalog.get(:read, Module).key, "brando.admin.access"]
       assert {:ok, group} = Groups.create(scope, %{name: "Module editors"}, grants)
+      Repo.insert!(%Brando.Authorization.Grant{group_id: group.id, permission_key: Catalog.get(:update, Module).key})
       assert {:ok, :ok} = Groups.add_member(scope, group.id, module_only.id)
 
       assert {:error, message} = StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, module_only)
-      assert message =~ "permission to change I papirkurven"
+      assert message =~ "permission to change this module"
       assert var(block, "link")
+
+      assert {:ok, _} = StaleBlocks.apply(c.module, %{{:var, "link"} => :drop}, owner)
+      assert var(block, "link") == nil
     end
   end
 

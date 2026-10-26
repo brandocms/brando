@@ -11736,6 +11736,11 @@ msgstr ""
 
 #: lib/brando/traits/protect_password.ex
 #, elixir-autogen, elixir-format
+msgid "Only superusers can change the email of other users."
+msgstr ""
+
+#: lib/brando/traits/protect_password.ex
+#, elixir-autogen, elixir-format
 msgid "Only superusers can change the password of other users."
 msgstr ""
 
@@ -19847,6 +19852,7 @@ msgid "You changed it too. The form shows your version, and saving replaces the 
 msgstr ""
 
 #: lib/brando_admin/components/module_files.ex
+#: lib/brando_admin/live/content/module_list_live.ex
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "You do not have permission for this action."

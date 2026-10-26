@@ -10,7 +10,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   def mount(_params, _session, socket) do
     if Administration.can?(socket.assigns.authorization_scope, :read, :groups) do
       scope = socket.assigns.authorization_scope
-      catalog = Enum.filter(Catalog.all(), &(scope.kind in &1.scopes))
+      catalog = Enum.filter(Catalog.all(), &(scope.kind in &1.scopes and not &1.superuser_only))
 
       {:ok,
        socket
@@ -858,6 +858,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
   end
 
   defp select(socket, group) do
+    group = without_superuser_only(group)
     scope = socket.assigns.authorization_scope
     members = if group.id, do: result_list(Groups.members(scope, group.id)), else: []
     history = if group.id, do: result_list(Groups.history(scope, group.id)), else: []
@@ -946,6 +947,15 @@ defmodule BrandoAdmin.Users.GroupsLive do
       normalize(draft["description"]) != normalize(group.description) ||
       permissions != MapSet.new(group.grants, & &1.permission_key)
   end
+
+  # Without the superuser-only grants a group may hold from before those
+  # permissions became superuser-only: they grant nothing, and saving drops them.
+  defp without_superuser_only(%{grants: grants} = group) when is_list(grants) do
+    superuser_only = Catalog.superuser_only_keys()
+    %{group | grants: Enum.reject(grants, &MapSet.member?(superuser_only, &1.permission_key))}
+  end
+
+  defp without_superuser_only(group), do: group
 
   defp normalize(value), do: String.trim(value || "")
   defp empty_label(""), do: gettext("No description")
