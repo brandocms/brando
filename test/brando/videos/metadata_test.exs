@@ -208,6 +208,8 @@ defmodule Brando.Videos.MetadataTest do
             "https://vz-1.b-cdn.net@evil.example.com/x/playlist.m3u8",
             "http://vz-1.b-cdn.net/x/playlist.m3u8",
             "https://vz-1.b-cdn.net:6379/x/playlist.m3u8",
+            "https://vz-1.b-cdn.net/x/playlist.m3u8?token=abc",
+            "https://vz-1.b-cdn.net/x?a=/playlist.m3u8",
             "https://evil.example.com/player.vimeo.com/external/42/file.mp4"
           ] do
         assert Metadata.lookup(external(url)) == {:error, :unsupported}, url
@@ -231,17 +233,22 @@ defmodule Brando.Videos.MetadataTest do
                Metadata.lookup(external("https://player.vimeo.com/external/42.hd.mp4?s=abc"))
     end
 
-    test "connects to the address it checked" do
+    test "connects to the address it checked, naming the host" do
       test = self()
 
       Req.Test.stub(Metadata, fn conn ->
-        send(test, {:host, conn.host})
+        send(test, {:host, conn.host, Conn.get_req_header(conn, "host")})
         Conn.send_resp(conn, 200, @master)
       end)
 
       Metadata.lookup(external("https://vz-1.b-cdn.net/guid/playlist.m3u8"))
       # The test resolver's address for *.b-cdn.net
-      assert_received {:host, "93.184.216.34"}
+      assert_received {:host, "93.184.216.34", ["vz-1.b-cdn.net"]}
+
+      # An IPv6 address is named by the host too, not the address
+      put_test_env(Brando.Webhooks, resolver: fn _host -> {:ok, [{0x2A00, 0x1450, 0, 0, 0, 0, 0, 0x200E}]} end)
+      Metadata.lookup(external("https://vz-1.b-cdn.net/guid/playlist.m3u8"))
+      assert_received {:host, "2a00:1450::200e", ["vz-1.b-cdn.net"]}
     end
 
     test "a provider host resolving to a private address is not requested" do

@@ -268,14 +268,18 @@ defmodule Brando.Videos.Helpers do
 
   @doc """
   Whether `url` is a Bunny Stream playlist: `https` on the default port, a
-  host under `b-cdn.net`, and a path ending in `/playlist.m3u8`. The host is
-  read from the parsed URL, so `.b-cdn.net/` elsewhere in it does not count.
+  host under `b-cdn.net`, and a path ending in `/playlist.m3u8`, with no query
+  or fragment. The host is read from the parsed URL, so `.b-cdn.net/`
+  elsewhere in it does not count.
   """
   @spec bunny_stream_url?(term()) :: boolean()
   def bunny_stream_url?(url) when is_binary(url) do
     case provider_uri(url) do
-      %URI{host: host, path: path} -> String.ends_with?(host, ".b-cdn.net") and String.ends_with?(path, "/playlist.m3u8")
-      nil -> false
+      %URI{host: host, path: path, query: nil, fragment: nil} ->
+        String.ends_with?(host, ".b-cdn.net") and String.ends_with?(path, "/playlist.m3u8")
+
+      _ ->
+        false
     end
   end
 

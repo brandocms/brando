@@ -206,7 +206,8 @@ defmodule Brando.Videos.Metadata do
         redirect: false,
         retry: false,
         receive_timeout: 15_000,
-        headers: [{"referer", Brando.Utils.hostname() <> "/"}]
+        # Req would name an IPv6 address here
+        headers: [{"host", host_header(target)}, {"referer", Brando.Utils.hostname() <> "/"}]
       ]
       |> Keyword.merge(Keyword.get(Application.get_env(:brando, __MODULE__, []), :req_options, []))
       |> Req.new()
@@ -219,10 +220,15 @@ defmodule Brando.Videos.Metadata do
     if tuple_size(target.address) == 8, do: [{:inet6, true} | sni], else: sni
   end
 
-  defp pinned_url(target) do
-    host = target.address |> :inet.ntoa() |> to_string()
-    host = if String.contains?(host, ":"), do: "[#{host}]", else: host
-    "#{target.scheme}://#{host}:#{target.port}#{target.path}"
+  defp pinned_url(target), do: "#{target.scheme}://#{literal(:inet.ntoa(target.address))}:#{target.port}#{target.path}"
+
+  defp host_header(%{scheme: scheme, host: host, port: port}) do
+    if {scheme, port} in [{:https, 443}, {:http, 80}], do: literal(host), else: "#{literal(host)}:#{port}"
+  end
+
+  defp literal(host) do
+    host = to_string(host)
+    if String.contains?(host, ":"), do: "[#{host}]", else: host
   end
 
   defp content_type(response) do
