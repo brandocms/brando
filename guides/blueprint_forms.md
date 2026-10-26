@@ -307,12 +307,24 @@ Every input type reads these:
   Without it the humanized field name is used; `label: :hidden` hides it.
 * `instructions`: help text under the input, translated.
 * `placeholder`: placeholder text, translated, for inputs that show one.
-* `disabled`: `true` disables the input. `:unless_superuser` disables it for
-  everyone but superusers (top-level inputs only), and a save from anyone
-  else ignores any value sent for the field.
-* `readonly`: `true` makes `:text`, `:number` and `:rich_text` inputs read
-  only. Like `disabled`, it takes `:unless_superuser`, with the same check on
-  save.
+* `disabled`: `true` locks the field for everyone, `:unless_superuser` for
+  everyone but superusers. The translated text inputs and `:rich_text`
+  render disabled.
+* `readonly`: locks the field like `disabled`, with the same values.
+  `:text`, `:number` and `:rich_text` inputs render read only.
+
+  A save ignores any value sent for a locked top-level input. The field
+  keeps its saved value, or one Brando set: a new entry's `default_params`,
+  a translation or a revision's working copy. A restored recovery copy
+  doesn't change it. An empty field takes the input's `default:`. Inputs of
+  other types don't render locked, but their value is not saved either.
+  The exception is an `:image`, `:file`, `:video` or `:gallery` input, which
+  still takes what its picker, an upload or a recovery copy delivers.
+
+  A `:slug` input declared `true` is not locked: the browser fills it in
+  from its source. One declared `:unless_superuser` is locked for anyone
+  else, who then can't fill in a new entry's slug, so only use it where the
+  slug is set otherwise.
 * `monospace`: a monospace font, for keys and codes.
 * `class`: extra classes on the input's wrapper.
 * `debounce`: milliseconds between keystrokes and validation. Default 300.

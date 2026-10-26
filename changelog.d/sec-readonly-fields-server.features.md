@@ -1,0 +1,1 @@
+- `mix brando.doctor` lists image and file rows whose stored path leaves the media folder, so rows saved before paths were checked can be found and cleaned up.

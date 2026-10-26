@@ -1063,6 +1063,8 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> assign(:blocks_detached?, true)
     |> assign(:working_copy, Map.get(message, :revision))
+    |> reset_locked_values()
+    |> put_locked_values(changeset)
     |> put_local_form(to_form(changeset, []))
     |> rebuild_preview_relations()
     |> assign_entry_for_blocks()
@@ -1102,6 +1104,7 @@ defmodule BrandoAdmin.Components.Form do
      |> put_form(to_form(new_changeset, []))
      |> rebuild_preview_relations()
      |> clear_owned_assets()
+     |> reset_locked_values()
      |> remount_block_fields()
      |> force_svelte_remounts(:all)}
   end
@@ -1396,6 +1399,7 @@ defmodule BrandoAdmin.Components.Form do
      |> put_form(to_form(updated_changeset))
      |> rebuild_preview_relations()
      |> clear_owned_assets()
+     |> reset_locked_values()
      |> force_svelte_remounts(:all)}
   end
 
@@ -1456,7 +1460,11 @@ defmodule BrandoAdmin.Components.Form do
       true ->
         case Translation.restore_changeset(socket) do
           {:ok, changeset, socket} ->
-            {:ok, apply_restored_changeset(socket, changeset, :translation)}
+            {:ok,
+             socket
+             |> reset_locked_values()
+             |> put_locked_values(changeset)
+             |> apply_restored_changeset(changeset, :translation)}
 
           :error ->
             send(self(), {:toast, gettext("The changes from the source could not be loaded into the form.")})
@@ -2201,6 +2209,36 @@ defmodule BrandoAdmin.Components.Form do
 
   defp clear_owned_assets(socket), do: assign(socket, :server_owned_assets, %{})
 
+  # The values the server put in the form for its locked inputs where they
+  # differ from the entry (`LockedFields.server_values/5`): a new entry's
+  # default params, a translation's or a revision's. A cast keeps them; the
+  # browser can't supply one. With the inputs' defaults (resolved once),
+  # taken while the entry's value is empty. Reset whenever the form is
+  # rebuilt from a stored entry, and when a translation, a working copy or a
+  # recovery copy replaces the form.
+  defp locked_values(socket), do: socket.assigns[:locked_values] || {%{}, %{}}
+
+  defp put_locked_values(socket, changeset) do
+    %{schema: schema, current_user: user, entry: entry} = socket.assigns
+    {values, defaults} = locked_values(socket)
+    server = LockedFields.server_values(changeset, schema, socket.assigns[:form_blueprint], user, entry || struct(schema))
+    assign(socket, :locked_values, {Map.merge(values, server), defaults})
+  end
+
+  # A new entry's default params stay its values
+  defp reset_locked_values(socket) do
+    %{schema: schema, current_user: user} = socket.assigns
+    socket = assign(socket, :locked_values, {%{}, LockedFields.defaults(schema, socket.assigns[:form_blueprint], user)})
+
+    case socket.assigns do
+      %{entry: %{id: nil} = entry, default_params: params} when is_map(params) and map_size(params) > 0 ->
+        put_locked_values(socket, schema.changeset(entry, params, user))
+
+      _ ->
+        socket
+    end
+  end
+
   defp owned_assets(socket), do: socket.assigns[:server_owned_assets] || %{}
 
   defp asset_field_kinds(schema) do
@@ -2233,12 +2271,13 @@ defmodule BrandoAdmin.Components.Form do
   @decorate span("brando.form.cast", schema: [:socket, :assigns, :schema], entry_id: [:entry, :id])
   defp cast_entry_edit(socket, entry, params, target, stale) do
     %{schema: schema, current_user: current_user} = socket.assigns
+    blueprint = socket.assigns[:form_blueprint]
     owned = owned_assets(socket)
     current = socket.assigns.form.source
 
     params =
       params
-      |> LockedFields.drop(schema, socket.assigns[:form_blueprint], current_user)
+      |> LockedFields.lock(schema, blueprint, current_user, locked_values(socket), entry)
       |> PendingRows.drop(schema, stale)
       |> owned_params(owned, current)
 
@@ -7669,8 +7708,12 @@ defmodule BrandoAdmin.Components.Form do
 
     socket =
       if working_copy,
-        do: socket |> assign(:blocks_detached?, true) |> assign(:working_copy, working_copy["revision"]),
-        else: assign(socket, :working_copy, nil)
+        do:
+          socket
+          |> assign(:blocks_detached?, true)
+          |> assign(:working_copy, working_copy["revision"])
+          |> put_revision_locked_values(revision_entry),
+        else: socket |> leave_working_copy_locked_values(source) |> assign(:working_copy, nil)
 
     for {name, _, _} <- socket.assigns.form_blueprint.transformers do
       send_update(BrandoAdmin.Components.Form.Transformer,
@@ -7692,6 +7735,23 @@ defmodule BrandoAdmin.Components.Form do
   # The revision a recovered working copy is of, if it is still there: its
   # blocks then go where the copy has them without the revision's module
   # versions.
+  # A recovery copy of a working copy holds what the browser sent: the
+  # revision itself gives the locked inputs' values.
+  # A recovery copy that isn't a working copy replaces what a translation or
+  # a working copy put in the form; it gives the locked inputs no values
+  defp leave_working_copy_locked_values(socket, :recovery_copy), do: reset_locked_values(socket)
+  defp leave_working_copy_locked_values(socket, _source), do: socket
+
+  defp put_revision_locked_values(socket, nil), do: socket
+
+  defp put_revision_locked_values(socket, revision_entry) do
+    %{schema: schema, entry: entry, current_user: user} = socket.assigns
+
+    socket
+    |> reset_locked_values()
+    |> put_locked_values(schema.changeset(entry, Brando.Revisions.restore_params(revision_entry, entry), user))
+  end
+
   defp working_copy_revision(_socket, nil), do: nil
 
   defp working_copy_revision(%{assigns: %{schema: schema, entry: entry}}, %{"revision" => number}) do
@@ -8247,6 +8307,9 @@ defmodule BrandoAdmin.Components.Form do
       |> to_form()
     end)
     |> then(&put_form(&1, &1.assigns.form))
+    |> then(fn socket ->
+      if Map.has_key?(socket.assigns, :locked_values), do: socket, else: reset_locked_values(socket)
+    end)
   end
 
   # No `Map.put(:action, :validate)` on any of these three: they all build from
@@ -8271,6 +8334,7 @@ defmodule BrandoAdmin.Components.Form do
       |> to_form()
     end)
     |> then(&put_form(&1, &1.assigns.form))
+    |> then(&if(Map.has_key?(&1.assigns, :locked_values), do: &1, else: reset_locked_values(&1)))
   end
 
   def assign_refreshed_form(%{assigns: %{entry: entry, schema: schema, current_user: current_user}} = socket) do
@@ -8278,6 +8342,7 @@ defmodule BrandoAdmin.Components.Form do
     |> put_form(to_form(schema.changeset(entry, %{}, current_user), []))
     |> rebuild_preview_relations()
     |> clear_owned_assets()
+    |> reset_locked_values()
     |> clear_dirty_fields()
   end
 
