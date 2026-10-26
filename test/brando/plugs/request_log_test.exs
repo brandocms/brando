@@ -23,6 +23,20 @@ defmodule Brando.Plug.RequestLogTest do
     end
   end
 
+  # The router decodes segments before it matches them, so these open the
+  # same pages (found by the Codex audit)
+  test "a percent-encoded path is filtered as the router reads it" do
+    for path <- ["/admin/%72eset-password/s3cr3t", "/%5f_p__/s3cr3t", "/admin/assistant/%73hared/s3cr3t"] do
+      log = capture_log(fn -> assert RequestLog.level(conn(path), :error) == false end)
+      assert log =~ "[FILTERED]"
+      refute log =~ "s3cr3t"
+    end
+  end
+
+  test "a malformed encoding is matched as it is" do
+    assert capture_log(fn -> assert RequestLog.level(conn("/admin/%zz/x"), :error) == :error end) == ""
+  end
+
   test "the end of such a request logs nothing" do
     conn = conn("/__p__/s3cr3t") |> Plug.Conn.send_resp(200, "")
     assert capture_log(fn -> assert RequestLog.level(conn, :error) == false end) == ""

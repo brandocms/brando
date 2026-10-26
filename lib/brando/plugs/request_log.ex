@@ -48,7 +48,16 @@ defmodule Brando.Plug.RequestLog do
   @doc "`path_info` with its secret token filtered out, or `nil` when it has none."
   @spec filter([String.t()]) :: [String.t()] | nil
   def filter(path_info) do
+    path_info = Enum.map(path_info, &decode/1)
     Enum.find_value(@at_root, &replace_after(path_info, &1)) || filter_below(path_info)
+  end
+
+  # As the router reads a segment before matching it: `%72eset-password`
+  # opens the reset page too
+  defp decode(segment) do
+    URI.decode(segment)
+  rescue
+    ArgumentError -> segment
   end
 
   defp filter_below([]), do: nil
