@@ -117,12 +117,14 @@ RUN pnpm build
 # never ship. To upload them to Sentry first, commit an
 # assets/frontend/.sentryclirc with your org and project, then build with
 #   --secret id=sentry_auth_token,env=SENTRY_AUTH_TOKEN
-# Without the secret this step does nothing.
+# Without the secret this step does nothing. The CLI version is exact: the step
+# runs with the token, so a new release is never fetched unreviewed.
+ARG SENTRY_CLI_VERSION=3.8.2
 RUN --mount=type=secret,id=sentry_auth_token \
   if [ -s /run/secrets/sentry_auth_token ]; then \
     export SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token)" && \
-    npx --yes @sentry/cli@3 sourcemaps inject ../../priv/static/assets && \
-    npx --yes @sentry/cli@3 sourcemaps upload ../../priv/static/assets; \
+    npx --yes @sentry/cli@${SENTRY_CLI_VERSION} sourcemaps inject ../../priv/static/assets && \
+    npx --yes @sentry/cli@${SENTRY_CLI_VERSION} sourcemaps upload ../../priv/static/assets; \
   fi
 
 
