@@ -176,7 +176,8 @@ defmodule Brando.HTML do
     """
   end
 
-  def get_menu_item_url(%{link: %{link_type: :url, value: url}}), do: url
+  # An address with a script or unknown scheme is no link
+  def get_menu_item_url(%{link: %{link_type: :url, value: url}}), do: Brando.Villain.Parser.safe_url(url)
 
   def get_menu_item_url(%{link: %{link_type: :identifier, identifier: %{} = identifier}}),
     do: Brando.Content.Identifier.link_url(identifier)

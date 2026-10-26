@@ -798,7 +798,8 @@ defmodule Brando.Villain.Parser do
       placeholder: Map.get(data, :placeholder, nil),
       moonwalk: Map.get(data, :moonwalk, false),
       lazyload: Map.get(data, :lazyload, false),
-      link: Map.get(data, :link) || "",
+      # A script or unknown scheme leaves the picture unlinked
+      link: safe_url(Map.get(data, :link)) || "",
       img_class: Map.get(data, :img_class, ""),
       picture_class: Map.get(data, :picture_class, ""),
       srcset: Map.get(data, :srcset, nil)

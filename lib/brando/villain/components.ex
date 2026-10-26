@@ -277,7 +277,8 @@ defmodule Brando.Villain.Components do
     var_href = Brando.Villain.Filters.link_url(assigns.var, nil)
     var_text = Brando.Villain.Filters.link_text(assigns.var, nil)
 
-    href = assigns.href || var_href || get_in(assigns, [:entry, assigns.field])
+    # An address with a script or unknown scheme leaves the link inert
+    href = Brando.Villain.Parser.safe_url(assigns.href || var_href || get_in(assigns, [:entry, assigns.field]))
     target = if assigns.var && Map.get(assigns.var, :link_target_blank), do: "_blank"
     class = assigns.class || (assigns.var && "link")
 

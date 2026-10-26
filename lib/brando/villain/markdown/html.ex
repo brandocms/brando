@@ -275,8 +275,7 @@ defmodule Brando.Villain.Markdown.HTML do
     cond do
       String.starts_with?(url, "//") -> "https:" <> url
       String.starts_with?(url, "/") -> Brando.Utils.hostname(url)
-      String.starts_with?(url, ["javascript:", "data:"]) -> nil
-      true -> url
+      true -> Brando.Villain.Parser.safe_url(url)
     end
   end
 

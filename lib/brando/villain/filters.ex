@@ -1193,8 +1193,9 @@ defmodule Brando.Villain.Filters do
     Brando.Utils.slugify(str)
   end
 
+  # An address with a script or unknown scheme is no link: `nil`
   def link_url(%Var{type: :link} = var, _ctx) do
-    get_link_url(var) || nil
+    var |> get_link_url() |> Brando.Villain.Parser.safe_url()
   end
 
   def link_url(nil, _ctx) do

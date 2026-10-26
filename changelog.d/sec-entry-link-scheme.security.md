@@ -1,0 +1,1 @@
+- Addresses editors type render as links only with a scheme rich text allows: a `javascript:` (or other script or unknown scheme) address in a link var, `entry_link`, the `link_url` filter, a picture's link, a navigation menu item or an identity service renders without an `href`, and the Markdown export leaves it out.
