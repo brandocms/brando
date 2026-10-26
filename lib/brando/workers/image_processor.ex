@@ -45,6 +45,15 @@ defmodule Brando.Worker.ImageProcessor do
   @impl Oban.Worker
   def timeout(_job), do: :timer.seconds(400)
 
+  # Progress and the completed callback are the uploader's; an uploader
+  # deleted since gets them as the system, and the sizes are made all the same
+  defp job_user(user_id) do
+    case Users.get_job_user(user_id) do
+      {:ok, user} -> user
+      _ -> :system
+    end
+  end
+
   # An original restored from the CDN for this run is removed again unless
   # the image is handed over for delivery, which removes it with the sizes
   # (`keep_local_copy: false`). A retry restores it again.
@@ -55,7 +64,7 @@ defmodule Brando.Worker.ImageProcessor do
              # Before the sizes go: an image over the limit keeps the ones it has
              :ok <- Images.PixelLimit.check_image(image),
              {:ok, _} <- Images.Utils.delete_sized_images(image),
-             {:ok, user} <- Users.get_job_user(user_id),
+             user = job_user(user_id),
              {:ok, config} <- Images.get_config_for(config_target),
              {:ok, operations} <- Images.Operations.create(image, config, user),
              {:ok, process_map} <- Images.Operations.perform(operations, user, silent: silent?) do

@@ -56,6 +56,11 @@ defmodule Brando.Worker.DemotedUploaderTest do
     Brando.Repo.update_all(from(u in User, where: u.id == ^user.id), set: [role: :user])
   end
 
+  # Gone for good, as the trash purge leaves a user deleted long enough ago
+  defp delete(user) do
+    Brando.Repo.delete_all(from(u in User, where: u.id == ^user.id))
+  end
+
   defp put_media(name) do
     path = Path.join(["images", "demoted", name])
     file = Images.Utils.media_path(path)
@@ -92,6 +97,40 @@ defmodule Brando.Worker.DemotedUploaderTest do
     image = Brando.Repo.get!(Image, image.id)
     assert image.status == :processed
     assert image.sizes != %{}
+  end
+
+  # The user who queued the sizes (an admin recreating them, say) is gone;
+  # the image is someone else's
+  test "an image's sizes are made after the user who queued them is gone", %{uploader: uploader} do
+    path = put_media("deleted-#{System.unique_integer([:positive])}.png")
+    image = Factory.insert(:image, path: path, sizes: %{}, status: :unprocessed, creator_id: nil)
+    delete(uploader)
+
+    assert {:ok, _} =
+             perform_job(ImageProcessor, %{
+               "image_id" => image.id,
+               "config_target" => "default",
+               "user_id" => uploader.id,
+               "field_full_path" => []
+             })
+
+    assert Brando.Repo.get!(Image, image.id).status == :processed
+  end
+
+  # An upload processed at once: the sizes are stored as the system, and the
+  # completed callback is still the uploader's
+  test "an upload processed at once for a demoted uploader still calls back with them", %{uploader: uploader} do
+    path = put_media("now-#{System.unique_integer([:positive])}.png")
+    image = Factory.insert(:image, path: path, sizes: %{}, status: :unprocessed, creator_id: uploader.id)
+    test = self()
+    {:ok, cfg} = Images.get_config_for("default")
+    cfg = Map.put(cfg, :completed_callback, fn image, user -> send(test, {:completed, image.id, user}) end)
+    demote(uploader)
+
+    assert {:ok, %Image{status: :processed}} = Brando.Uploads.Store.process_upload(image, cfg, uploader)
+    uploader_id = uploader.id
+    image_id = image.id
+    assert_received {:completed, ^image_id, %User{id: ^uploader_id}}
   end
 
   test "an image's CDN copy is marked done after its uploader is demoted", %{uploader: uploader} do

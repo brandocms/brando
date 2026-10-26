@@ -282,9 +282,10 @@ defmodule Brando.Videos do
         entry = %{client_name: "video-#{video.id}#{extension(content_type)}", client_type: content_type}
 
         # Stored as the system, like the rest of the lookup; the user it was
-        # queued for is still the thumbnail's creator
+        # queued for is still the thumbnail's creator, and its progress and
+        # completed callback are theirs
         with {:ok, image} <- Brando.Uploads.Store.handle_upload(meta, entry, cfg, :system),
-             {:ok, image} <- Brando.Uploads.Store.process_upload(image, cfg, :system),
+             {:ok, image} <- Brando.Uploads.Store.process_upload(image, cfg, user),
              {:ok, image} <- put_creator(image, user) do
           image.id
         else

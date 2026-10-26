@@ -79,6 +79,8 @@ defmodule Brando.Uploads.Store do
     with :ok <- PixelLimit.check_image(image),
          {:ok, ops} <- Images.Operations.create(image, cfg, user),
          {:ok, %{^image_id => result}} <- Images.Operations.perform(ops, user) do
+      # The sizes are the system's work on an image already stored, as in
+      # `Brando.Worker.ImageProcessor`; progress and the callback are `user`'s
       image
       |> Images.update_image(
         %{
@@ -87,7 +89,7 @@ defmodule Brando.Uploads.Store do
           status: :processed,
           config_fingerprint: ImageConfig.fingerprint(cfg)
         },
-        user
+        :system
       )
       |> run_completed_callback(cfg, user)
     end

@@ -210,6 +210,16 @@ defmodule Brando.Videos.Uploaders.VimeoTest do
       assert Brando.Repo.get!(Brando.Videos.Video, gone.id).status == :errored
     end
 
+    # Created by no admin user (`Brando.Uploads.Direct` creates as the system)
+    test "stores the report for a video with no creator" do
+      video = insert_vimeo_video("705", :processing)
+      Brando.Repo.update_all(Ecto.Query.from(v in Brando.Videos.Video, where: v.id == ^video.id), set: [creator_id: nil])
+
+      Req.Test.expect(Vimeo, &Req.Test.json(&1, available_payload("705")))
+      assert :ok = perform_job(VimeoStatus, %{"video_id" => video.id})
+      assert Brando.Repo.get!(Brando.Videos.Video, video.id).status == :ready
+    end
+
     test "backs off as the upload ages" do
       assert Enum.map([0, 900, 7_200, 30_000], &VimeoStatus.interval/1) == [15, 60, 300, 900]
     end
