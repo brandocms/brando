@@ -1,10 +1,12 @@
 defmodule Brando.MarkdownSources.RateLimiter do
   @moduledoc false
   # Per-minute budgets for the GitHub Markdown webhook, on this node. Every
-  # request counts against its client (120) and a loose cap for all requests
-  # (12,000), which bounds the work unsigned ones cause; only a delivery
-  # whose signature verified counts against the deliveries' budget (1,200),
-  # so unsigned or forged requests cannot use it up and hold back GitHub's.
+  # request counts against its client (120) and, while its client is within
+  # that, a loose cap for all requests (12,000), which bounds the work
+  # unsigned ones cause. Only a delivery whose signature verified counts
+  # against the deliveries' budget (1,200), so unsigned requests cannot use
+  # that up. Filling the loose cap takes about a hundred clients at their
+  # limit; past that, deliveries wait for the next minute too.
   use GenServer
 
   @per_client 120

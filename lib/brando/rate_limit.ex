@@ -27,7 +27,15 @@ defmodule Brando.RateLimit do
   """
   @spec undo(term(), pos_integer()) :: :ok
   def undo(bucket, window) do
-    Cachex.decr(:cache, {bucket, div(System.system_time(:millisecond), window)}, 1)
+    key = {bucket, div(System.system_time(:millisecond), window)}
+
+    # A window that began since the hit has nothing to take back: leave it,
+    # rather than start it below zero with no expiry
+    case Cachex.get(:cache, key) do
+      {:ok, count} when is_integer(count) and count > 0 -> Cachex.decr(:cache, key, 1)
+      _ -> :ok
+    end
+
     :ok
   end
 
