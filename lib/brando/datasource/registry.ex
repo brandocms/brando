@@ -101,9 +101,10 @@ defmodule Brando.Datasource.Registry do
   end
 
   @doc """
-  The datasource module a module's stored `datasource_module` names. The name
-  is stored on the module, which admins edit, so no atom is made of it: a name
-  no module has raises `ArgumentError`.
+  Resolves a stored `datasource_module` name. Admins edit that name, and an
+  atom made from it would never be freed, so this looks it up among existing
+  modules instead of `Module.concat/1`; a name no module has raises
+  `ArgumentError`.
   """
   @spec module!(module() | String.t() | [module() | String.t()]) :: module()
   def module!(module) when is_atom(module) do

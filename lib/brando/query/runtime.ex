@@ -255,7 +255,11 @@ defmodule Brando.Query.Runtime do
 
   defp resolve_order_path(schema, [field]), do: known_atom(schema.__schema__(:fields), field)
 
-  defp resolve_order_path(schema, [assoc | rest]) when rest != [] and length(rest) <= 2 do
+  defp resolve_order_path(schema, [assoc, field]), do: resolve_order_through(schema, assoc, [field])
+  defp resolve_order_path(schema, [assoc, assoc2, field]), do: resolve_order_through(schema, assoc, [assoc2, field])
+  defp resolve_order_path(_schema, _path), do: :error
+
+  defp resolve_order_through(schema, assoc, rest) do
     with {:ok, assoc} <- known_atom(schema.__schema__(:associations), assoc),
          %{related: related} <- schema.__schema__(:association, assoc),
          {:ok, by} <- resolve_order_path(related, rest) do
@@ -264,8 +268,6 @@ defmodule Brando.Query.Runtime do
       _ -> :error
     end
   end
-
-  defp resolve_order_path(_schema, _path), do: :error
 
   defp known_atom(atoms, string) do
     case Enum.find(atoms, &(Atom.to_string(&1) == string)) do
