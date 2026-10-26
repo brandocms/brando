@@ -13,7 +13,15 @@ defmodule Brando.Villain.Tags.Link do
   def render([link: link], context) do
     {evaled_link, _context} = Liquex.Argument.eval(link, context)
 
-    link_text = Brando.Villain.Filters.link_text(evaled_link, context)
+    # The text is plain, as `<.entry_link>` prints it: an editor's label or
+    # the linked entry's title
+    link_text =
+      evaled_link
+      |> Brando.Villain.Filters.link_text(context)
+      |> to_string()
+      |> Phoenix.HTML.html_escape()
+      |> Phoenix.HTML.safe_to_string()
+
     link_url = evaled_link |> Brando.Villain.Filters.link_url(context) |> href()
     new_window? = evaled_link.link_target_blank
 

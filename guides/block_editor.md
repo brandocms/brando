@@ -201,16 +201,20 @@ is HTML, meant to be printed between tags as it is. Every other text value
 import or an approved content assistant proposal put there, quotes and spaces
 included. So:
 
-- Put output in an attribute only in double quotes, and pass text through
-  `escape`, which encodes `"`, `'`, `&`, `<` and `>`. A quote or a space in
-  the value ends a single-quoted or unquoted attribute, and the rest of the
-  value becomes markup.
+- In an attribute, write double quotes around the output and pass text
+  through `escape`, which encodes `"`, `'`, `&`, `<` and `>`. Unescaped, a `"`
+  in the value ends the attribute and the rest becomes markup; a `'` or a
+  space ends a single-quoted or unquoted one, and `escape` leaves spaces as
+  they are.
+- Between tags, `escape` a value meant as text as well: a `<` in a string var
+  or a title otherwise writes markup.
 - Never put rich text in an attribute; `strip_html` it, then `escape` it.
 - Do not `url_decode` a value you print: it turns `%3C` and `%22` back into
   `<` and `"` after every check has passed. For a query string, `url_encode`
   the value.
 - `escape` does not check an address's scheme. Make a link from a link var
-  with `{% link %}`, which escapes its address and drops a script one.
+  with `{% link %}`, which escapes its address and its text and drops a
+  script address.
 
 ```liquid
 {%- comment -%} Don't {%- endcomment -%}

@@ -1348,7 +1348,7 @@ fallback_group =
   },
   class: "config-vars",
   code: """
-  <div b-tpl="config-vars" data-tracking="{{ tracking_id }}">
+  <div b-tpl="config-vars" data-tracking="{{ tracking_id | escape }}">
     <span class="body-text">{{ body_text }}</span>
     <span class="config-note">{{ config_note }}</span>
   </div>
