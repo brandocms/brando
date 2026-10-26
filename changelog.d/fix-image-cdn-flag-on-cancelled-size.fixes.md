@@ -1,0 +1,1 @@
+- An image is marked as on the CDN once its original and every size are uploaded, in one job per image: before, an image whose upload of one size failed or was cancelled was never marked, and with `keep_local_copy: false` its other files had already been removed from the media folder. A failed upload now keeps the image's local files and is retried as a whole.

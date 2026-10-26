@@ -181,50 +181,45 @@ defmodule Brando.CDN do
     |> Oban.insert()
   end
 
+  # One job uploads all of an image's files, so it is on the CDN (`cdn: true`)
+  # only when every one is: a size that failed would otherwise be served from
+  # a bucket without it. A new upload of the image replaces one that has not
+  # started, and the per-file jobs queued before.
   def queue_upload(%Brando.Images.Image{} = image, user, field_full_path) do
-    src_key = Path.join(["media", image.path])
-    dest_key = src_key
+    delete_waiting_image_uploads(image.id)
 
-    args = %{
-      src_key: src_key,
-      dest_key: dest_key,
+    %{
       image_id: image.id,
       config_target: image.config_target,
       user_id: Brando.Users.job_user_id(user),
-      field_full_path: field_full_path
+      field_full_path: field_full_path,
+      files: length(image_keys(image))
     }
-
-    create_image_upload_job(args)
-
-    # upload individual sizes from sizes map
-    for {_, path} <- image.sizes do
-      sized_key = Path.join(["media", path])
-      dest_key = sized_key
-
-      args = %{
-        src_key: sized_key,
-        dest_key: dest_key,
-        image_id: image.id,
-        config_target: image.config_target,
-        user_id: Brando.Users.job_user_id(user),
-        field_full_path: field_full_path
-      }
-
-      create_image_upload_job(args)
-    end
+    |> Brando.Tenant.Job.attach()
+    |> Worker.ImageUploader.new(tags: ["image_upload_#{image.id}"])
+    |> Oban.insert()
   end
 
-  defp create_image_upload_job(args) do
-    args = Brando.Tenant.Job.attach(args)
-
-    Brando.Repo.delete_all(
+  @doc """
+  Deletes the current site's upload jobs for image `image_id` that are
+  waiting to run, or only those queued one per file (`legacy: true`).
+  """
+  def delete_waiting_image_uploads(image_id, opts \\ []) do
+    query =
       from j in Oban.Job,
-        where: fragment("? @> ?", j.args, ^args)
-    )
+        where:
+          ^"image_upload_#{image_id}" in j.tags and j.state in ["available", "scheduled", "retryable"] and
+            fragment("? @> ?", j.args, ^Brando.Tenant.Job.context_fragment())
 
-    args
-    |> Worker.ImageUploader.new(replace_args: true, tags: ["image_upload_#{args.image_id}"])
-    |> Oban.insert()
+    query = if opts[:legacy], do: from(j in query, where: fragment("?->>'src_key' IS NOT NULL", j.args)), else: query
+    Brando.Repo.delete_all(query)
+  end
+
+  @doc "The bucket keys of an image's files: its original, then each size."
+  @spec image_keys(Brando.Images.Image.t()) :: [String.t()]
+  def image_keys(image) do
+    sizes = for {_key, path} <- Enum.sort(image.sizes || %{}), do: path
+    [image.path | sizes] |> Enum.uniq() |> Enum.map(&Path.join("media", &1))
   end
 
   @doc """
@@ -296,10 +291,9 @@ defmodule Brando.CDN do
     end
   end
 
-  def upload_image(src_key, dest_key, config, user_id) do
+  def upload_image(src_key, dest_key, config, user_id, opts \\ []) do
     s3_bucket = get_bucket_for_image_config(config)
     s3_config = get_s3_config(config, as: :keyword_list)
-    cdn_config = config.cdn || config(Brando.Images)
 
     if !s3_bucket do
       # Credentials are dropped rather than inspected. `get_s3_config/2` with
@@ -338,11 +332,7 @@ defmodule Brando.CDN do
 
     case s3_upload(s3_bucket, src_key, dest_key, s3_config, user_id, progress_key) do
       {:ok, s3_key} ->
-        if cdn_config.keep_local_copy == false do
-          {:ok, source} = local_source(src_key)
-          File.rm!(source)
-        end
-
+        if Keyword.get(opts, :remove_local, true), do: remove_local_copies([src_key], config)
         {:ok, s3_key}
 
       {:error, {:http_error, 403, err}} ->
@@ -353,6 +343,39 @@ defmodule Brando.CDN do
       {:error, reason} ->
         {:error, reason}
     end
+  end
+
+  @doc """
+  Uploads `image`'s files (`image_keys/1`) to the bucket of `config`, one
+  after another, and stops at the first that fails. The local files stay:
+  remove them with `remove_local_copies/2` once the image is marked as on the
+  CDN.
+  """
+  @spec upload_image_files(Brando.Images.Image.t(), map, any) :: :ok | {:error, term}
+  def upload_image_files(image, config, user_id) do
+    image
+    |> image_keys()
+    |> Enum.reduce_while(:ok, fn key, :ok ->
+      case upload_image(key, key, config, user_id, remove_local: false) do
+        {:ok, _s3_key} -> {:cont, :ok}
+        error -> {:halt, error}
+      end
+    end)
+  end
+
+  @doc """
+  Removes the local files behind bucket keys `keys` (or an image's,
+  `image_keys/1`), when `config`'s CDN keeps no local copy
+  (`keep_local_copy: false`).
+  """
+  def remove_local_copies(%Brando.Images.Image{} = image, config), do: remove_local_copies(image_keys(image), config)
+
+  def remove_local_copies(keys, config) when is_list(keys) do
+    if (config.cdn || config(Brando.Images)).keep_local_copy == false do
+      for key <- keys, {:ok, source} <- [local_source(key)], do: File.rm(source)
+    end
+
+    :ok
   end
 
   # Not decorated directly: its implicit `rescue` would become a second span.
