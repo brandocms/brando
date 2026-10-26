@@ -165,9 +165,12 @@ defmodule Brando.MarkdownSources do
     end
   end
 
+  # The entry's final Liquid pass runs over every block's output. Synced
+  # Markdown comes from outside the CMS, so it goes out inert; encoding at
+  # read time covers versions stored before.
   def render(data) do
     case resolved_version(data) do
-      %Version{html: html} -> html
+      %Version{html: html} when is_binary(html) -> Brando.Villain.InertLiquid.encode(html)
       _ -> ""
     end
   end

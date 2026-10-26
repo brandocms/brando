@@ -195,7 +195,9 @@ arbitrary external URLs are not supported.
 External Markdown has a separate renderer from trusted CMS Markdown. It supports
 paragraphs, headings, lists, blockquotes, code, tables, strikethrough, links, and
 images. Raw HTML/templates, scripts, SVG, event attributes, and unsafe URL
-schemes are excluded in both preview and public output. Heading IDs are stable
+schemes are excluded in both preview and public output. Liquid syntax in the
+document (`{{ ... }}`, `{% ... %}`) appears as written: the entry's Liquid pass
+does not evaluate it. Heading IDs are stable
 slugs with numeric suffixes for duplicates. Relative document links target
 GitHub, and relative images target GitHub's raw host, at the imported immutable
 commit. Relative paths cannot escape that repository/commit root. Absolute

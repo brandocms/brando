@@ -64,12 +64,16 @@ defmodule Brando.Captions do
     end
   end
 
-  @doc "Markup for a plain library text: escaped, or sanitized when it already holds markup."
+  @doc """
+  Markup for a plain library text: escaped, or sanitized when it already holds
+  markup. Its braces are entities, so the entry's Liquid pass leaves a title
+  imported from a video provider as text.
+  """
   def library_html(text) do
     cond do
       not is_binary(text) or String.trim(text) == "" -> nil
-      markup?(text) -> if present?(text), do: HtmlSanitizeEx.basic_html(text)
-      true -> text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+      markup?(text) -> if present?(text), do: text |> HtmlSanitizeEx.basic_html() |> Brando.Villain.InertLiquid.encode()
+      true -> text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string() |> Brando.Villain.InertLiquid.encode()
     end
   end
 

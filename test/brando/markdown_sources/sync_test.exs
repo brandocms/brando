@@ -275,4 +275,217 @@ defmodule Brando.MarkdownSources.SyncTest do
       if active, do: assert(page.rendered_blocks =~ "Second"), else: refute(page.rendered_blocks =~ "Second")
     end
   end
+
+  describe "Liquid in synced Markdown" do
+    # A repository contributor without a CMS account writes the document, so
+    # the entry's final Liquid pass must leave its text alone.
+    setup c do
+      assert :ok = Brando.Worker.MarkdownSourceSync.sync(c.source.id, c.connection)
+      first = MarkdownSources.get_source(c.source.id).latest_version_id
+      user = Brando.Factory.insert(:random_user, role: :superuser)
+      Cachex.clear(:query)
+      pages = for format <- [:liquid, :heex], do: follow_page(c.source, first, format, user)
+      {:ok, pages: pages}
+    end
+
+    test "tags and outputs stay literal text on Follow pages", c do
+      markdown =
+        "MARKA {{ entry.title | upcase }} MARKB {% for a in (1..3) %}x{% endfor %} MARKC " <>
+          "{% capture m %}%3Cspan class%3Dmarker%3Einjected%3C%2Fspan%3E{% endcapture %}{{ m | url_decode }} MARKD"
+
+      sync_markdown(c, "b", markdown)
+
+      for page <- c.pages do
+        html = Repo.get!(Brando.Pages.Page, page.id).rendered_blocks
+        refute html =~ "MARKER-TITLE"
+        refute html =~ "xxx"
+        refute html =~ "<span"
+        assert Floki.text(Floki.parse_fragment!(html)) == Floki.text(Floki.parse_fragment!(markdown_html(c)))
+        assert Floki.text(Floki.parse_fragment!(html)) =~ "MARKA {{ entry.title | upcase }} MARKB {% for a in (1..3) %}"
+      end
+    end
+
+    test "a document Liquid cannot parse does not blank the page", c do
+      sync_markdown(c, "b", ~s(MARK1 {{ "%3Cspan%3E" | url_decode }} MARK2))
+
+      for page <- c.pages do
+        html = Repo.get!(Brando.Pages.Page, page.id).rendered_blocks
+        refute html =~ "Error parsing liquex template"
+        assert Floki.text(Floki.parse_fragment!(html)) =~ ~s(MARK1 {{ "%3Cspan%3E" | url_decode }} MARK2)
+      end
+    end
+
+    test "versions stored before the encoding render inert too", c do
+      version =
+        Repo.insert!(%Version{
+          source_id: c.source.id,
+          commit: String.duplicate("c", 40),
+          markdown: "stored",
+          html: "<p>{{ entry.title }} {% inspect entry %}</p>",
+          content_hash: "stored",
+          repository: "acme/docs",
+          path: c.source.path
+        })
+
+      assert MarkdownSources.render(%{source_id: c.source.id, policy: :pinned, version_id: version.id}) ==
+               "<p>&#123;&#123; entry.title &#125;&#125; &#123;% inspect entry %&#125;</p>"
+    end
+
+    test "ordinary Markdown, braces in code included, shows the same text", c do
+      markdown = """
+      # Config
+
+      Set `opts = %{a: 1}` and write **bold** text.
+
+      ```elixir
+      %{key: "value"} |> Map.get(:key)
+      def x, do: {:ok, %{}}
+      ```
+
+      | A | B |
+      |---|---|
+      | {1} | {{2}} |
+      """
+
+      sync_markdown(c, "b", markdown)
+
+      for page <- c.pages do
+        html = Repo.get!(Brando.Pages.Page, page.id).rendered_blocks
+        assert Floki.text(Floki.parse_fragment!(html)) == Floki.text(Floki.parse_fragment!(markdown_html(c)))
+        assert Floki.text(Floki.parse_fragment!(html)) =~ "def x, do: {:ok, %{}}"
+        assert html =~ ~s(<code class="language-elixir">)
+        assert html =~ "<strong>bold</strong>"
+      end
+    end
+
+    test "a page embedding a fragment does not evaluate the fragment's Markdown", c do
+      # The footnote marker in the text makes the fragment's footnote pass
+      # parse and reserialise its HTML, which decodes the brace entities.
+      sync_markdown(c, "b", "MARK1 {{ entry.title | upcase }} data-footnote-uid MARK2")
+      user = Brando.Factory.insert(:random_user, role: :superuser)
+      module = Brando.Factory.insert(:module, type: :liquid, code: "{% ref refs.body %}")
+      fragment = Brando.Factory.insert(:fragment, creator: user, title: "fragment-title")
+      fragment_join = Brando.Pages.Fragment.__schema__(:association, :entry_blocks).queryable
+      source = MarkdownSources.get_source(c.source.id)
+
+      block =
+        Repo.insert!(%Brando.Content.Block{
+          uid: Brando.Utils.generate_uid(),
+          type: :module,
+          module_id: module.id,
+          source: fragment_join,
+          creator_id: user.id,
+          vars: [],
+          refs: [
+            %Brando.Content.Ref{
+              name: "body",
+              uid: Brando.Utils.generate_uid(),
+              data: %MarkdownSourceBlock{
+                data: %MarkdownSourceBlock.Data{
+                  source_id: source.id,
+                  policy: :follow,
+                  version_id: source.latest_version_id
+                }
+              }
+            }
+          ]
+        })
+
+      Repo.insert!(struct(fragment_join, %{entry_id: fragment.id, block_id: block.id, sequence: 0}))
+      assert {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, fragment.id)
+
+      # A fragment block, the Liquid tag and the HEEx component in module code
+      embeds = [
+        {:fragment, nil},
+        {:module, Brando.Factory.insert(:module, type: :liquid, code: "{% fragment index header en %}")},
+        {:module,
+         Brando.Factory.insert(:module,
+           type: :heex,
+           code: ~s(<.fragment parent_key="index" key="header" language="en" />)
+         )}
+      ]
+
+      Cachex.clear(:query)
+      join = Brando.Pages.Page.__schema__(:association, :entry_blocks).queryable
+
+      for {type, embed_module} <- embeds do
+        page = Brando.Factory.insert(:page, creator: user, title: "page-title")
+
+        embed =
+          Repo.insert!(%Brando.Content.Block{
+            uid: Brando.Utils.generate_uid(),
+            type: type,
+            fragment_id: if(type == :fragment, do: fragment.id),
+            module_id: embed_module && embed_module.id,
+            source: join,
+            creator_id: user.id,
+            vars: [],
+            refs: []
+          })
+
+        Repo.insert!(struct(join, %{entry_id: page.id, block_id: embed.id, sequence: 0}))
+        assert {:ok, rendered} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
+        text = Floki.text(Floki.parse_fragment!(rendered.rendered_blocks))
+        assert text =~ "MARK1 {{ entry.title | upcase }} data-footnote-uid MARK2"
+        refute text =~ "PAGE-TITLE"
+      end
+    end
+
+    test "the entry's Markdown alternate keeps the braces", c do
+      sync_markdown(c, "b", "Write {{ entry.title }} and `%{a: 1}`.")
+      page = c.pages |> hd() |> Repo.preload(entry_blocks: [block: [:refs, :vars]])
+      markdown = Brando.Villain.Markdown.render(page.entry_blocks, page)
+      assert markdown =~ "Write {{ entry.title }} and `%{a: 1}`."
+    end
+  end
+
+  defp sync_markdown(c, commit, markdown) do
+    Process.put(
+      :markdown_fetch_result,
+      {:ok, %{commit: String.duplicate(commit, 40), markdown: markdown, repository: "acme/docs", path: c.source.path}}
+    )
+
+    assert :ok = Brando.Worker.MarkdownSourceSync.sync(c.source.id, c.connection)
+  end
+
+  # The stored version HTML, as the sanitiser wrote it
+  defp markdown_html(c) do
+    source = MarkdownSources.get_source(c.source.id)
+    MarkdownSources.get_version(source.id, source.latest_version_id).html
+  end
+
+  defp follow_page(source, version_id, format, user) do
+    module =
+      Brando.Factory.insert(:module,
+        type: format,
+        code: if(format == :heex, do: "<.ref block={@block} ref={:body} />", else: "{% ref refs.body %}")
+      )
+
+    page = Brando.Factory.insert(:page, creator: user, title: "marker-title")
+    join = Brando.Pages.Page.__schema__(:association, :entry_blocks).queryable
+
+    block =
+      Repo.insert!(%Brando.Content.Block{
+        uid: Brando.Utils.generate_uid(),
+        type: :module,
+        module_id: module.id,
+        source: join,
+        creator_id: user.id,
+        vars: [],
+        refs: [
+          %Brando.Content.Ref{
+            name: "body",
+            uid: Brando.Utils.generate_uid(),
+            data: %MarkdownSourceBlock{
+              data: %MarkdownSourceBlock.Data{source_id: source.id, policy: :follow, version_id: version_id}
+            }
+          }
+        ]
+      })
+
+    Repo.insert!(struct(join, %{entry_id: page.id, block_id: block.id, sequence: 0}))
+    assert {:ok, rendered} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
+    assert rendered.rendered_blocks =~ "First"
+    page
+  end
 end
