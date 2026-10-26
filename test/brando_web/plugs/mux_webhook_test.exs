@@ -1,8 +1,6 @@
 defmodule BrandoWeb.Plugs.MuxWebhookTest do
   use ExUnit.Case, async: true
 
-  import ExUnit.CaptureLog
-
   alias BrandoWeb.Plugs.MuxWebhook
 
   @secret "mux-webhook-secret"
@@ -16,7 +14,7 @@ defmodule BrandoWeb.Plugs.MuxWebhookTest do
   test "rejects a missing header and an unconfigured secret" do
     assert {:error, :invalid_signature} = MuxWebhook.verify_signature(nil, @body, @secret, @now)
 
-    assert capture_log(fn ->
+    assert Brando.Test.OwnLog.capture(fn ->
              assert {:error, :invalid_signature} =
                       MuxWebhook.verify_signature(signed(@body, @now), @body, nil, @now)
            end) =~ "Mux webhook secret not configured"

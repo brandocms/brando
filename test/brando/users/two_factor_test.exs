@@ -275,7 +275,7 @@ defmodule Brando.Users.TwoFactorTest do
       Repo.update_all(from(s in Security, where: s.user_id == ^user.id), set: [totp_secret: "XCP.garbage"])
 
       log =
-        ExUnit.CaptureLog.capture_log(fn ->
+        Brando.Test.OwnLog.capture(fn ->
           assert {:error, :unreadable} = TwoFactor.verify(user, TwoFactor.current_code(secret))
           assert {:error, :unreadable} = TwoFactor.confirm(user, TwoFactor.current_code(secret))
         end)
