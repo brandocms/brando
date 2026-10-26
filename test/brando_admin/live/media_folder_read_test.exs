@@ -56,6 +56,24 @@ defmodule BrandoAdmin.MediaFolderReadTest do
       assert folder_of(c.legacy) == nil
     end
 
+    # Not stored, the folder is opened by its path
+    test "a reader opens a legacy folder, and goes back up", %{conn: conn} do
+      {conn, _user} = log_in_as(conn, permissions: ~w(brando.images.read))
+      folders = folder_count()
+      {view, _html} = open_library(conn, "filter:folder_id=root")
+
+      render_click(view, "assets_go_folder", %{"folder" => "legacy"})
+      assert_patch(view, "/admin/assets/images?filter%3Apath=images%2Flegacy")
+      render_click(view, "assets_go_folder", %{"folder" => "legacy/pics"})
+      assert_patch(view, "/admin/assets/images?filter%3Apath=images%2Flegacy%2Fpics")
+      assert render(view) =~ "a.jpg"
+
+      render_click(view, "assets_go_parent", %{})
+      assert_patch(view, "/admin/assets/images?filter%3Apath=images%2Flegacy")
+
+      assert folder_count() == folders
+    end
+
     test "a folder not stored yet shows empty to a reader", %{conn: conn} do
       {conn, _user} = log_in_as(conn, permissions: ~w(brando.images.read))
       folders = folder_count()

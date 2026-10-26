@@ -101,8 +101,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
   end
 
   def handle_event("assets_go_folder", %{"folder" => folder}, socket) do
-    folder_id = AssetListHelpers.folder_id_to_open(socket, folder)
-    {:noreply, AssetListHelpers.patch_folder_filter(socket, folder_id)}
+    {:noreply, AssetListHelpers.open_folder(socket, folder)}
   end
 
   def handle_event("assets_go_parent", _, socket) do
@@ -111,8 +110,7 @@ defmodule BrandoAdmin.Images.ImageListLive do
 
   def handle_event("assets_go_recent", %{"folder" => folder}, socket) do
     relative = FolderBrowser.relative_folder(folder, socket.assigns.upload_root)
-    folder_id = AssetListHelpers.folder_id_to_open(socket, relative)
-    {:noreply, AssetListHelpers.patch_folder_filter(socket, folder_id)}
+    {:noreply, AssetListHelpers.open_folder(socket, relative)}
   end
 
   def handle_event("assets_show_new_folder_form", _, socket) do
