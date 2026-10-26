@@ -53,6 +53,26 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       end
     end
 
+    test "text is checked whatever else is wrong with the operation", c do
+      [saved | _] =
+        Enum.map(Brando.Content.Transfer.Catalog.load!(Page, c.identity.id, c.user).entry_blocks, & &1.block.uid)
+
+      op = %InsertBlock{
+        target: {Page, c.identity.id},
+        module: c.heading.id,
+        uid: saved,
+        configs: %{heading: %{class: @breakout}}
+      }
+
+      assert {:ok, proposal} = Proposals.propose([op], c.user)
+      assert :unsafe_text in codes(proposal)
+      assert refused_preview?(proposal, c)
+
+      create = %Brando.Content.Proposals.CreateEntry{schema: Page, ref: "x", fields: %{title: @title_markup}}
+      assert {:ok, proposal} = Proposals.propose([create, create], c.user)
+      assert :unsafe_text in codes(proposal)
+    end
+
     test "SetRefConfig is checked the same way", c do
       op = %InsertBlock{target: {Page, c.identity.id}, module: c.heading.id}
       assert {:ok, proposal} = Proposals.propose([op], c.user)
@@ -82,6 +102,14 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
       )
 
       assert {:error, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+
+      # The problems the check found are stored for the review.
+      assert {:ok, %{problems: [%{code: :unsafe_text}]}} = Proposals.get(proposal.id, c.user)
+
+      Brando.Repo.update_all(
+        from(r in Brando.Content.Proposals.Record, where: r.id == ^proposal.id),
+        set: [problems: []]
+      )
 
       # Nor previewed or shared.
       assert {:ok, stored} = Proposals.get(proposal.id, c.user)
@@ -239,7 +267,16 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
     test "a value cannot carry Liquid, which the page would render", c do
       liquid = ~s({{ "%3Cimg src=x onerror=x%3E" | url_decode }})
 
-      for values <- [%{heading: liquid}, %{note: "<p>#{liquid}</p>"}, %{cta: "/a?{% raw %}"}] do
+      for values <- [
+            %{heading: liquid},
+            %{note: "<p>#{liquid}</p>"},
+            %{cta: "/a?{% raw %}"},
+            # A tag opened once identifier attributes are removed, or next to another value.
+            %{heading: ~s({ data-identifier-id="1"{ x }})},
+            %{heading: "ends with {"},
+            %{summary: "&lbrace;&lbrace; x &rbrace;&rbrace;"},
+            %{summary: "&#x7B;&#x7b; x }}"}
+          ] do
         op = %InsertBlock{target: {Page, c.identity.id}, module: c.note.id, values: values}
         assert {:ok, proposal} = Proposals.propose([op], c.user)
         assert codes(proposal) == [:unsafe_text], inspect(values)

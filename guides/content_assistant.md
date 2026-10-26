@@ -341,8 +341,9 @@ or client wrote, not an editor:
 - a map slot takes an https Google Maps embed address;
 - a slot's class or id takes no quotes or markup, and its other settings no
   markup;
-- no value holds Liquid tags (`{{ }}`, `{% %}`), since the page renders a
-  module's output as Liquid once more.
+- no value holds an opening brace (`{`), written out or as a character
+  reference: the page renders a module's output as Liquid once more, and a
+  brace could open a tag there.
 
 A value that fails is a problem on the proposal. A proposal with problems
 cannot be approved, and one with unsafe text shows no page preview and

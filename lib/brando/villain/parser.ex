@@ -1391,9 +1391,11 @@ defmodule Brando.Villain.Parser do
 
   @doc """
   `url` trimmed, when it has no scheme or one `Brando.RichText.allowed_uri?/1`
-  allows, else `nil`. The scheme is read as a browser reads it: after
-  character references are decoded, leading spaces and control characters
-  trimmed, and tabs and newlines dropped.
+  allows, else `nil`. The scheme is read after the character references
+  `HtmlEntities` knows are decoded, leading spaces and control characters
+  trimmed, and tabs and newlines dropped. Put the result in an attribute
+  with `escape_attr/1`, never as it is: a reference a browser decodes and
+  `HtmlEntities` does not could still spell a scheme.
   """
   @spec safe_url(term()) :: String.t() | nil
   def safe_url(url) when is_binary(url) do

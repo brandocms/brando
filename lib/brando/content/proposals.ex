@@ -308,22 +308,25 @@ defmodule Brando.Content.Proposals do
   defp check(%CreateEntry{} = op, proposal, actor) do
     duplicate? = Enum.count(proposal.operations, &match?(%CreateEntry{ref: ref} when ref == op.ref, &1)) > 1
 
-    cond do
-      duplicate? ->
-        [problem(:duplicate_ref, dgettext("content_proposals", "Two new entries use the same reference."))]
+    problems =
+      cond do
+        duplicate? ->
+          [problem(:duplicate_ref, dgettext("content_proposals", "Two new entries use the same reference."))]
 
-      op.schema not in Brando.Authorization.Catalog.schemas() ->
-        [problem(:unknown_schema, dgettext("content_proposals", "This content type is not registered on this site."))]
+        op.schema not in Brando.Authorization.Catalog.schemas() ->
+          [problem(:unknown_schema, dgettext("content_proposals", "This content type is not registered on this site."))]
 
-      Boundary.authorize(actor, :create, op.schema) != :ok ->
-        [problem(:forbidden, dgettext("content_proposals", "You do not have permission to create this entry."))]
+        Boundary.authorize(actor, :create, op.schema) != :ok ->
+          [problem(:forbidden, dgettext("content_proposals", "You do not have permission to create this entry."))]
 
-      true ->
-        protected_fields(op.fields, op.schema) ++
-          text_fields(op.fields) ++
-          asset_fields(op.fields, op.schema, actor) ++
-          list_fields(op.fields, op.schema, actor) ++ draft_dependencies(op.fields, proposal)
-    end
+        true ->
+          protected_fields(op.fields, op.schema) ++
+            asset_fields(op.fields, op.schema, actor) ++
+            list_fields(op.fields, op.schema, actor) ++ draft_dependencies(op.fields, proposal)
+      end
+
+    # Text is checked whatever else is wrong: a preview renders it anyway.
+    problems ++ text_fields(op.fields)
   end
 
   defp check(%SetFields{target: {:new, _}}, _, _),
@@ -369,7 +372,8 @@ defmodule Brando.Content.Proposals do
 
       {problems, BlockTree.put(tree, node, op.parent, op.placement)}
     else
-      {:error, problem} -> {[problem], tree}
+      # Text is checked whatever else is wrong: a preview builds the block anyway.
+      {:error, problem} -> {[problem | inserted_unsafe_text(op, actor)], tree}
     end
   end
 
@@ -486,6 +490,19 @@ defmodule Brando.Content.Proposals do
       end
 
     {problems, tree}
+  end
+
+  defp inserted_unsafe_text(op, actor) do
+    case fetch_module(op.module) do
+      %{} = module ->
+        (values(op.values, module.vars, actor) ++
+           Enum.flat_map(op.texts, fn {name, text} -> text(name, text, module) end) ++
+           Enum.flat_map(op.configs, fn {name, config} -> config(name, config, module) end))
+        |> Enum.filter(&(&1.code == :unsafe_text))
+
+      _ ->
+        []
+    end
   end
 
   defp unknown_block,
@@ -1077,14 +1094,15 @@ defmodule Brando.Content.Proposals do
       )
   end
 
-  # A module's output is rendered as Liquid once more when it holds a tag, so
-  # a proposed value cannot carry one: a filter could write markup no check
-  # here saw.
-  # Attribute values are rendered with their character references decoded
-  # (`Brando.Villain.Parser.escape_attr/1`), which could spell a tag too.
+  # A module's output is rendered as Liquid once more when it holds a tag, and
+  # a tag could write markup no check here saw. A proposed value holds no
+  # opening brace at all, written out or as a character reference: one could
+  # open a tag once the value is rendered (an attribute's references decoded,
+  # Markdown's escapes, identifier attributes removed) or put next to another.
+  @brace ~r/\{|&(#0*123|#x0*7b|lbrace|lcub)/i
   defp liquid_problem(text, name) do
-    if Enum.any?([text, HtmlEntities.decode(text)], &String.contains?(&1, ["{{", "{%"])),
-      do: dgettext("content_proposals", "%{name} cannot hold Liquid tags.", name: name)
+    if Regex.match?(@brace, text) or String.contains?(HtmlEntities.decode(text), "{"),
+      do: dgettext("content_proposals", "%{name} cannot hold a {, which the page could read as Liquid.", name: name)
   end
 
   # A web, mail or phone address, or a path. Quotes, angle brackets and
@@ -2103,8 +2121,16 @@ defmodule Brando.Content.Proposals do
   @spec approve(Ecto.UUID.t(), integer(), term()) :: {:ok, Proposal.t()} | {:error, String.t()}
   def approve(id, version, actor) do
     Error.protect(fn ->
-      {:ok, record} = Repo.transaction(fn -> approve!(id, version, actor) end)
-      rebuild!(record, actor)
+      case Repo.transaction(fn -> approve!(id, version, actor) end) do
+        {:ok, record} ->
+          rebuild!(record, actor)
+
+        # The checks found problems the stored list lacks: store them, so the
+        # review shows what to resolve.
+        {:error, {:problems, problems}} ->
+          Repo.update_all(from(r in Record, where: r.id == ^id), set: [problems: Enum.map(problems, &encode_problem/1)])
+          Error.fail!(dgettext("content_proposals", "Resolve every blocking problem before applying."))
+      end
     end)
   end
 
@@ -2120,8 +2146,10 @@ defmodule Brando.Content.Proposals do
 
     # Checked again as the proposal is approved: one stored before a check
     # was added or tightened would otherwise keep its old, empty list.
-    if operation_problems(proposal, actor) != [],
-      do: Error.fail!(dgettext("content_proposals", "Resolve every blocking problem before applying."))
+    case operation_problems(proposal, actor) do
+      [] -> :ok
+      problems -> Repo.rollback({:problems, problems})
+    end
 
     record
     |> Changeset.change(status: "approved", approved_at: DateTime.utc_now())
