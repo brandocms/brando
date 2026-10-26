@@ -325,6 +325,12 @@ defmodule BrandoAdmin.ReadonlyFieldsTest do
       # Other punctuation goes without separating, as in the hook
       assert %{"slug" => "abc-strasse"} = derive.([source: :title] ++ locked, %Article{}, %{"title" => "a_b.c Straße"})
 
+      # Symbols as the hook's character map has them (more in SlugHookTest)
+      assert %{"slug" => "mat-and-drikke"} = derive.([source: :title] ++ locked, %Article{}, %{"title" => "Mat & drikke"})
+
+      # A title of characters the map lacks gives no slug, as in the hook
+      assert derive.([source: :title] ++ locked, %Article{}, %{"title" => "中文标题"}) == %{"title" => "中文标题"}
+
       assert %{"slug" => "first-2024"} =
                derive.([source: [:title, :year]] ++ locked, %Article{}, %{"title" => "First", "year" => "2024"})
 

@@ -30,6 +30,7 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
 
   alias Brando.Blueprint.Forms.Form
   alias Brando.Trait.Creator
+  alias BrandoAdmin.Components.Form.SlugHook
   alias Ecto.Changeset
 
   @doc """
@@ -72,23 +73,12 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   # slugified, and the prefix in front of a slug that isn't empty
   defp generate_slug(changeset, opts) do
     joined = opts[:source] |> List.wrap() |> Enum.map_join("-", &source_value(Changeset.get_field(changeset, &1)))
-    slug = if opts[:camel_case], do: camel_case(joined), else: slugify(joined)
+    slug = if opts[:camel_case], do: SlugHook.camel_case(joined), else: SlugHook.slugify(joined)
 
     case slug do
       "" -> ""
       slug -> slug_prefix(opts[:prefix], changeset) <> slug
     end
-  end
-
-  # The hook's `slugify(…, {strict: true})` with `/` as a separator: other
-  # punctuation goes without separating (`a_b.c` is `abc`), where
-  # `Brando.Utils.slugify/1` separates at it
-  defp slugify(string) do
-    string
-    |> String.replace("/", " ")
-    |> String.replace(~r/[!"#$%&'()*+,.:;<=>?@\[\\\]^_`{|}~]/, "")
-    |> Brando.Utils.slugify()
-    |> Kernel.||("")
   end
 
   # The value as its input holds it: a date as `2026-10-26`, a date-time as
@@ -107,50 +97,6 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   defp slug_prefix(prefix, changeset) when is_function(prefix, 1), do: prefix.(changeset) || ""
   defp slug_prefix(prefix, _changeset) when is_binary(prefix), do: prefix
   defp slug_prefix(_prefix, _changeset), do: ""
-
-  # The Slug hook's `camelCase`: its accented Latin-1 letters replaced,
-  # characters other than ASCII letters, digits, Latin-1 letters, spaces and
-  # hyphens removed, then the words after the first joined with a capital
-  defp camel_case(string) do
-    string
-    |> String.replace(~r/[\x{C0}-\x{FF}]/u, &replace_accent/1)
-    |> String.replace(~r/[^0-9a-zA-Z\x{C0}-\x{FF} \-]/u, "")
-    |> String.replace("-", " ")
-    |> String.replace(~r/\s[a-z]/u, &String.upcase/1)
-    |> String.replace(~r/\s+/u, "")
-    |> String.replace(~r/^[A-Z]/, &String.downcase/1)
-  end
-
-  # `replaceAccents` in the Slug hook, by code point; the rest (ß, ð, ×, ÷)
-  # stay
-  @accents for {chars, letter} <- [
-                 {0xC0..0xC5, "A"},
-                 {[0xC6], "AE"},
-                 {[0xC7], "C"},
-                 {0xC8..0xCB, "E"},
-                 {0xCC..0xCF, "I"},
-                 {[0xD0], "D"},
-                 {[0xD1], "N"},
-                 {[0xD2, 0xD3, 0xD4, 0xD5, 0xD6, 0xD8], "O"},
-                 {0xD9..0xDC, "U"},
-                 {[0xDD], "Y"},
-                 {[0xDE], "P"},
-                 {0xE0..0xE5, "a"},
-                 {[0xE6], "ae"},
-                 {[0xE7], "c"},
-                 {0xE8..0xEB, "e"},
-                 {0xEC..0xEF, "i"},
-                 {[0xF1], "n"},
-                 {[0xF2, 0xF3, 0xF4, 0xF5, 0xF6, 0xF8], "o"},
-                 {0xF9..0xFC, "u"},
-                 {[0xFE], "p"},
-                 {[0xFD, 0xFF], "y"}
-               ],
-               char <- chars,
-               into: %{},
-               do: {<<char::utf8>>, letter}
-
-  defp replace_accent(letter), do: Map.get(@accents, letter, letter)
 
   defp blank?(value), do: value in [nil, ""]
 
