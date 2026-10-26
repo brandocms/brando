@@ -13,6 +13,7 @@ defmodule Brando.ColorTest do
   test "valid?/1 takes what the picker stores and hand-written CSS colours" do
     for value <- [
           nil,
+          "",
           "#fff",
           "#ffff",
           "#1a2b3c",
@@ -30,7 +31,6 @@ defmodule Brando.ColorTest do
 
     for value <- [
           @markup,
-          "",
           "#12",
           "#1234567",
           "red;background:url(x)",
@@ -77,6 +77,13 @@ defmodule Brando.ColorTest do
     assert errors_on(Var.changeset(%Var{}, params, :system))[:value]
     refute errors_on(Var.changeset(%Var{}, %{params | value: "#000"}, :system))[:value]
     refute errors_on(Var.changeset(%Var{}, %{params | type: :string}, :system))[:value]
+  end
+
+  test "a var turned into a colour var must already hold a colour" do
+    var = %Var{type: :string, key: "bg", label: %{"en" => "Background"}, value: "red;background:url(x)"}
+
+    assert errors_on(Var.changeset(var, %{type: :color}, :system))[:value]
+    refute errors_on(Var.changeset(%{var | value: "#000"}, %{type: :color}, :system))[:value]
   end
 
   defp errors_on(changeset) do

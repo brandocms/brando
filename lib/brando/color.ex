@@ -23,10 +23,11 @@ defmodule Brando.Color do
   @message "is not a valid colour"
 
   @doc """
-  Whether `value` is a colour a colour field may store. `nil` is (no colour).
+  Whether `value` is a colour a colour field may store. `nil` and `""` are
+  (no colour).
   """
   @spec valid?(term()) :: boolean()
-  def valid?(nil), do: true
+  def valid?(value) when value in [nil, ""], do: true
 
   def valid?(value) when is_binary(value) do
     Enum.any?([@hex, @comma_function, @space_function, @keyword], &Regex.match?(&1, value))
@@ -39,9 +40,12 @@ defmodule Brando.Color do
   """
   @spec validate_blueprint(Changeset.t(), module()) :: Changeset.t()
   def validate_blueprint(changeset, Brando.Content.Var) do
-    if Changeset.get_field(changeset, :type) == :color,
-      do: validate(changeset, [:value]),
-      else: changeset
+    cond do
+      Changeset.get_field(changeset, :type) != :color -> changeset
+      # A var becoming a colour var brings its value along unchanged
+      Map.has_key?(changeset.changes, :type) -> validate_current(changeset, :value)
+      true -> validate(changeset, [:value])
+    end
   end
 
   def validate_blueprint(changeset, module) do
@@ -76,6 +80,12 @@ defmodule Brando.Color do
     Changeset.validate_change(changeset, field, fn _, value ->
       if valid?(value), do: [], else: [{field, @message}]
     end)
+  end
+
+  defp validate_current(changeset, field) do
+    if valid?(Changeset.get_field(changeset, field)),
+      do: changeset,
+      else: Changeset.add_error(changeset, field, @message)
   end
 
   defp validate_child(%Changeset{} = child, fields), do: validate(child, fields)
