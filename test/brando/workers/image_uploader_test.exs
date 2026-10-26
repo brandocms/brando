@@ -321,4 +321,48 @@ defmodule Brando.Worker.ImageUploaderTest do
     assert FakeS3.completed_keys() == Enum.map(sizes, &"/bucket/#{&1}")
     refute "/bucket/#{original}" in FakeS3.keys()
   end
+
+  describe "recreating the sizes of an image whose original is only on the CDN" do
+    import Mox
+
+    setup :verify_on_exit!
+
+    # Uploaded with `keep_local_copy: false`: the media folder kept nothing.
+    # Processed for real, so each size has its file to deliver.
+    setup %{dir: dir} do
+      images = Application.get_env(:brando, Brando.Images)
+      Application.put_env(:brando, Brando.Images, Keyword.put(images, :processor_module, Brando.Images.Processor.Vix))
+
+      bytes = File.read!(Path.expand("../../fixtures/sample.jpg", __DIR__))
+      image = Factory.insert(:image, path: Path.join(dir, "harbour.jpg"), config_target: "default", sizes: %{}, status: :processed, cdn: true)
+
+      {:ok, image: image, bytes: bytes}
+    end
+
+    test "processes it again from the CDN's copy, and delivers every size", %{image: image, bytes: bytes} do
+      object_key = "media/" <> image.path
+      expect(Brando.CDN.Client.Mock, :get_object, fn "bucket", ^object_key, _ -> {:ok, %{status_code: 200, body: bytes}} end)
+
+      {:ok, _job} = Brando.Images.Processing.recreate_sizes_for_image(image, :system)
+
+      image = Repo.get!(Image, image.id)
+      assert image.status == :processed
+      assert map_size(image.sizes) > 0
+      assert image.cdn
+      assert Enum.sort(FakeS3.completed_keys()) == Enum.sort(Enum.map(Brando.CDN.image_keys(image), &"/bucket/#{&1}"))
+      # Removed again once delivered
+      refute Enum.any?([image.path | Map.values(image.sizes)], &local?/1)
+    end
+
+    test "an original the CDN can't give fails the processing, and leaves nothing", %{image: image} do
+      expect(Brando.CDN.Client.Mock, :get_object, fn _, _, _ -> {:error, {:http_error, 404, %{}}} end)
+
+      {:ok, _job} = Brando.Images.Processing.recreate_sizes_for_image(image, :system)
+
+      assert Repo.get!(Image, image.id).sizes == %{}
+      refute local?(image.path)
+      refute local?(image.path <> ".download")
+      assert FakeS3.keys() == []
+    end
+  end
 end

@@ -217,6 +217,46 @@ defmodule Brando.Images do
     end
   end
 
+  @doc """
+  Puts `image`'s original back in the media folder from the CDN it was
+  uploaded to, when the folder doesn't have it. With `keep_local_copy: false`
+  the original was removed once uploaded, and processing reads it from the
+  folder, so recreating the image's sizes needs it there. Delivering the
+  sizes to the CDN removes it again.
+  """
+  @spec restore_original(Image.t()) :: :ok | {:error, term}
+  def restore_original(%Image{path: path} = image) when is_binary(path) do
+    with {:ok, file} <- media_file(path) do
+      if File.exists?(file), do: :ok, else: download_original(image, file)
+    end
+  end
+
+  def restore_original(_image), do: :ok
+
+  # Written beside it and moved into place, so processing never reads a
+  # partly written original. Without a CDN (`:enoent`) there is nowhere to
+  # read it from, and processing fails on the missing file as it would have.
+  defp download_original(image, file) do
+    partial = file <> ".download"
+
+    with {:cdn, {:ok, bytes}} <- {:cdn, read_original_from_cdn(image)},
+         :ok <- File.mkdir_p(Path.dirname(file)),
+         :ok <- File.write(partial, bytes),
+         :ok <- File.rename(partial, file) do
+      :ok
+    else
+      {:cdn, {:error, :enoent}} ->
+        :ok
+
+      {:cdn, error} ->
+        error
+
+      error ->
+        File.rm(partial)
+        error
+    end
+  end
+
   defp read_original(image) do
     with {:ok, path} <- media_file(image.path),
          {:error, :enoent} <- File.read(path) do

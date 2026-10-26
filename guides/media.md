@@ -160,7 +160,8 @@ Quality and other
 encoder settings are not in a file's header and are not compared, nor is a
 crop's focal point: if a config changed
 only those, use **Recreate image sizes**. Images on the CDN without a local
-copy (`keep_local_copy: false`) can't be checked and are left as they are.
+copy (`keep_local_copy: false`) can't be checked: adopting leaves them as they
+are, and recreating them fetches their originals back from the CDN.
 
 Run it where the media is. When none of the images has a file under the
 media folder (an empty or unmounted folder, or media never synced to this

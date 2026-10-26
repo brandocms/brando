@@ -34,6 +34,7 @@ defmodule Brando.Worker.ImageProcessor do
       end)
 
     with {:ok, image} <- Images.get_image(image_id),
+         :ok <- Images.restore_original(image),
          {:ok, _} <- broadcast_status(image, field_full_path, :processing),
          # Before the sizes go: an image over the limit keeps the ones it has
          :ok <- Images.PixelLimit.check_image(image),

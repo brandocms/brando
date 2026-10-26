@@ -1,0 +1,1 @@
+- Recreating an image's sizes works with `keep_local_copy: false`: an original the media folder no longer has is fetched back from the CDN, processed, and removed again once its sizes are delivered.

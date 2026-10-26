@@ -97,7 +97,9 @@ delivered once its original and every rendition are in the bucket. Until then,
 including after a failed delivery, it is served from the media folder, which
 keeps its files until they are all delivered. Oban retries a failed delivery,
 and recreating the image's sizes queues it again. Keeping local copies is the
-default and lets you reprocess later. Changing `keep_local_copy` requires a
+default. With `keep_local_copy: false`, recreating an image's sizes fetches its
+original back from the bucket into the media folder, processes it, and removes
+the files again once they are delivered. Changing `keep_local_copy` requires a
 deliberate retention plan; it does not create a local copy of a direct upload.
 
 Files, images and S3 videos can opt into browser-to-bucket upload with
