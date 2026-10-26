@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.VideoListLiveTest do
   use Brando.LiveCase
 
+  import Ecto.Query, only: [where: 2]
+
   alias Brando.Factory
   alias Brando.Videos
 
@@ -123,5 +125,29 @@ defmodule BrandoAdmin.VideoListLiveTest do
     view |> element(".boolean-filter input") |> render_click()
     refute assert_patch(view) =~ "unused"
     refute has_element?(view, ".active-filters")
+  end
+
+  # The lookups store what they find as the system, so asking for them needs
+  # the right to update videos, as storing did when they ran as the user.
+  test "fetching missing details needs the right to update videos" do
+    alias Brando.Authorization.{Boundary, Groups, Migration, Scope}
+
+    put_test_env(:authorization_mode, :groups)
+    Boundary.put_scope(nil)
+    owner = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+    {:ok, _} = Migration.run()
+    _video = Factory.insert(:video, title: nil)
+
+    reader = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+    scope = Scope.standalone(owner)
+    {:ok, group} = Groups.create(scope, %{name: "Readers"}, ~w(brando.admin.access brando.videos.read))
+    {:ok, :ok} = Groups.add_member(scope, group.id, reader.id)
+    conn = log_in_user(Phoenix.ConnTest.build_conn(), reader)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      {:ok, view, _html} = live(conn, "/admin/assets/videos")
+      render_click(view, "fetch_metadata", %{})
+      assert Brando.Repo.all(where(Oban.Job, worker: "Brando.Worker.VideoMetadataSweep")) == []
+    end)
   end
 end

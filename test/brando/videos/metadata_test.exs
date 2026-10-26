@@ -151,14 +151,27 @@ defmodule Brando.Videos.MetadataTest do
   # was queued for has been demoted since
   test "fills in the video for a user demoted since the lookup was queued" do
     user = Factory.insert(:random_user, role: :editor)
+    jpeg = File.read!(Path.join([__DIR__, "..", "..", "fixtures", "sample.jpg"]))
     video = Factory.insert(:video, type: :vimeo, remote_id: "43", source_url: "https://vimeo.com/43", title: nil)
 
-    stub(fn "/api/oembed.json", _ -> {:json, %{"title" => "Example Harbour", "duration" => 65}} end)
+    stub(fn
+      "/api/oembed.json", _ ->
+        {:json,
+         %{"title" => "Example Harbour", "duration" => 65, "thumbnail_url" => "https://i.vimeocdn.com/video/9-e_295x166"}}
+
+      "/video/9-e_1280", _ ->
+        {:jpeg, jpeg}
+    end)
 
     Brando.Repo.update_all(Ecto.Query.from(u in Brando.Users.User, where: u.id == ^user.id), set: [role: :user])
 
     assert :ok = perform_job(Brando.Worker.VideoMetadata, %{"video_id" => video.id, "user_id" => user.id})
-    assert Brando.Repo.get!(Brando.Videos.Video, video.id).title == "Example Harbour"
+    video = Brando.Videos.Video |> Brando.Repo.get!(video.id) |> Brando.Repo.preload(:thumbnail)
+
+    assert video.title == "Example Harbour"
+    assert video.thumbnail.status == :processed
+    # The user it was looked up for is still the thumbnail's creator
+    assert video.thumbnail.creator_id == user.id
   end
 
   # Asked for again while the first lookup still waits (the queue is busy,

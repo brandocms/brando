@@ -255,6 +255,9 @@ defmodule BrandoAdmin.Authorization do
             ],
        do: :update
 
+  # The video library's lookups store what they find as the system.
+  defp event_action(_, "fetch_metadata"), do: :update
+
   defp event_action(_, event)
        when event in [
               "duplicate_entry",
