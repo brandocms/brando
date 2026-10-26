@@ -9,10 +9,10 @@ defmodule Brando.Test.OwnLog do
   `{removed_failing_handler,'Elixir.ExUnit.CaptureServer'}`). An async test
   asserting on its log then fails for another test's event.
 
-  `capture/1` adds a handler of its own for the calling process's events,
-  which formats them in place and sends them to that process, so nothing
-  another test logs can take it away. It runs inside `capture_log/1`, which
-  keeps the output off the console.
+  `capture/1` adds a handler of its own for the events of the calling
+  process and the tasks it starts, which formats them in place and sends them
+  to that process, so nothing another test logs can take it away. It runs
+  inside `capture_log/1`, which keeps the output off the console.
   """
 
   @spec capture((-> any())) :: String.t()
@@ -30,8 +30,8 @@ defmodule Brando.Test.OwnLog do
     ref |> collect([]) |> IO.chardata_to_string()
   end
 
-  # The handler runs in the logging process, so every event is in the
-  # mailbox once `fun` has returned
+  # The handler runs in the logging process, so every event logged before
+  # `fun` returned (a task's: before it was awaited) is in the mailbox
   defp collect(ref, acc) do
     receive do
       {^ref, chardata} -> collect(ref, [acc, chardata])
@@ -40,11 +40,16 @@ defmodule Brando.Test.OwnLog do
     end
   end
 
+  # Runs in the logging process: the caller's own events, and those of the
+  # tasks it started (whose `$callers` name it), so a `refute` still holds
+  # when the logging moves into one
   @doc false
-  def log(%{meta: %{pid: pid}} = event, %{config: %{pid: pid, ref: ref}}) do
-    {formatter, config} = Logger.default_formatter(colors: [enabled: false])
-    send(pid, {ref, formatter.format(event, config)})
-  end
+  def log(%{meta: %{pid: pid}} = event, %{config: %{pid: caller, ref: ref}}) do
+    if pid == caller or caller in Process.get(:"$callers", []) do
+      {formatter, config} = Logger.default_formatter(colors: [enabled: false])
+      send(caller, {ref, formatter.format(event, config)})
+    end
 
-  def log(_event, _config), do: :ok
+    :ok
+  end
 end

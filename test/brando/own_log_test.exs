@@ -24,14 +24,17 @@ defmodule Brando.Test.OwnLogTest do
     assert log =~ "[error] logged after the handler went"
   end
 
-  test "leaves out what other processes log" do
+  test "keeps what the process and its tasks log, and leaves out other processes" do
     log =
       OwnLog.capture(fn ->
         Logger.error("from the test")
-        Task.await(Task.async(fn -> Logger.error("from another process") end))
+        Task.await(Task.async(fn -> Logger.error("from its task") end))
+        {pid, ref} = spawn_monitor(fn -> Logger.error("from another process") end)
+        assert_receive {:DOWN, ^ref, :process, ^pid, :normal}
       end)
 
     assert log =~ "from the test"
+    assert log =~ "from its task"
     refute log =~ "from another process"
   end
 end
