@@ -187,9 +187,11 @@ export default function providerVideoUploader({ label, startTransfer }) {
       this.el.dispatchEvent(new CustomEvent('brando:video-upload', { detail: { ref: requestRef, ...detail } }))
     },
 
-    reportSuccess(requestRef, videoId) {
+    // The server signed `uploadToken` for this request when it created the
+    // video; it, not a video id, says which upload finished.
+    reportSuccess(requestRef, uploadToken) {
       this.activeUploads.delete(requestRef)
-      this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, video_id: videoId })
+      this.pushVideoEvent('video_upload_complete', { request_ref: requestRef, upload_token: uploadToken })
       window.BrandoUploads?.externalComplete?.(requestRef)
       this.announce(requestRef, { status: 'done' })
     },
@@ -238,7 +240,7 @@ export default function providerVideoUploader({ label, startTransfer }) {
             response,
             onProgress: (bytesUploaded, bytesTotal) =>
               this.reportProgress(requestRef, videoId, bytesUploaded, bytesTotal),
-            onSuccess: settle(() => this.reportSuccess(requestRef, videoId)),
+            onSuccess: settle(() => this.reportSuccess(requestRef, response.upload_token)),
             onError: settle((error) => this.reportError(requestRef, file, error)),
           })
 

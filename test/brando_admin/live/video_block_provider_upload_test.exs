@@ -52,7 +52,7 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
 
     test "an upload is created by the editor, with the ref's config, and set on the ref once it is up", ctx do
       view = open(ctx)
-      video_id = request_upload(view, "##{ref_hook_id(ctx)}", "ref-1")
+      {video_id, token} = request_upload(view, "##{ref_hook_id(ctx)}", "ref-1")
 
       video = Repo.get!(Brando.Videos.Video, video_id)
       assert video.type == :bunny
@@ -61,7 +61,7 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
 
       refute ref_video_id(view) == to_string(video_id)
 
-      complete_upload(view, "##{ref_hook_id(ctx)}", "ref-1", video_id)
+      complete_upload(view, "##{ref_hook_id(ctx)}", "ref-1", token)
       await(fn -> ref_video_id(view) == to_string(video_id) end)
     end
 
@@ -69,12 +69,12 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       picked = Factory.insert(:video)
       view = open(ctx)
       hook = "##{ref_hook_id(ctx)}"
-      video_id = request_upload(view, hook, "ref-late")
+      {video_id, token} = request_upload(view, hook, "ref-late")
 
       view |> with_target(cid_of(view, hook)) |> render_hook("select_video", %{"id" => picked.id})
       await(fn -> ref_video_id(view) == to_string(picked.id) end)
 
-      complete_upload(view, hook, "ref-late", video_id)
+      complete_upload(view, hook, "ref-late", token)
       assert ref_video_id(view) == to_string(picked.id)
       assert Repo.get(Brando.Videos.Video, video_id)
     end
@@ -92,13 +92,13 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
     test "an upload is created by the editor, with the var's config, and set on the var once it is up", ctx do
       view = open(ctx)
       hook = "#" <> var_hook(view)
-      video_id = request_upload(view, hook, "var-1")
+      {video_id, token} = request_upload(view, hook, "var-1")
 
       video = Repo.get!(Brando.Videos.Video, video_id)
       assert video.config_target == "default"
       assert video.creator_id == ctx.user.id
 
-      complete_upload(view, hook, "var-1", video_id)
+      complete_upload(view, hook, "var-1", token)
       await(fn -> var_video_id(view) == to_string(video_id) end)
     end
 
@@ -106,12 +106,12 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       picked = Factory.insert(:video)
       view = open(ctx)
       hook = "#" <> var_hook(view)
-      video_id = request_upload(view, hook, "var-late")
+      {video_id, token} = request_upload(view, hook, "var-late")
 
       view |> with_target(cid_of(view, hook)) |> render_hook("select_video", %{"id" => picked.id})
       await(fn -> var_video_id(view) == to_string(picked.id) end)
 
-      complete_upload(view, hook, "var-late", video_id)
+      complete_upload(view, hook, "var-late", token)
       assert var_video_id(view) == to_string(picked.id)
       assert Repo.get(Brando.Videos.Video, video_id)
     end
@@ -157,10 +157,10 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       assert has_element?(view, ~s([data-video-hook-id="page_vars_0-video-uploader"][data-upload-enabled="true"]))
       assert has_element?(view, ~s(#{hook}[phx-hook="Brando.BunnyUploader"]))
 
-      video_id = request_upload(view, hook, "entry-1")
+      {video_id, token} = request_upload(view, hook, "entry-1")
       assert Repo.get!(Brando.Videos.Video, video_id).creator_id == ctx.user.id
 
-      complete_upload(view, hook, "entry-1", video_id)
+      complete_upload(view, hook, "entry-1", token)
 
       assert_push_event(view, "b:validate", %{target: "page[vars][0][video_id]", value: ^video_id})
       assert entry_var_video_id(view, 0) == to_string(video_id)
@@ -181,14 +181,14 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
     test "an upload that finishes after its var was moved sets neither", ctx do
       view = open_entry(ctx)
       row = cid_of(view, "#page_vars_0-video-uploader")
-      video_id = request_upload(view, "#page_vars_0-video-uploader", "entry-moved")
+      {video_id, token} = request_upload(view, "#page_vars_0-video-uploader", "entry-moved")
 
       change_entry(view, %{"sort_var_ids" => ["1", "0"]})
       assert has_element?(view, ~s(input[name="page[vars][0][key]"][value="outro"]))
 
       view
       |> with_target(row)
-      |> render_hook("video_upload_complete", %{"request_ref" => "entry-moved", "video_id" => video_id})
+      |> render_hook("video_upload_complete", %{"request_ref" => "entry-moved", "upload_token" => token})
 
       refute_push_event(view, "b:validate", %{target: "page[vars][" <> _})
       assert entry_var_video_id(view, 0) in [nil, ""]
@@ -248,16 +248,21 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       "mime_type" => "video/mp4"
     })
 
-    assert_push_event(view, "video_upload_url_ready", %{request_ref: ^request_ref, video_id: video_id, tus_auth: tus_auth})
+    assert_push_event(view, "video_upload_url_ready", %{
+      request_ref: ^request_ref,
+      video_id: video_id,
+      upload_token: token,
+      tus_auth: tus_auth
+    })
 
     assert tus_auth.video_id == @guid
-    video_id
+    {video_id, token}
   end
 
-  defp complete_upload(view, hook, request_ref, video_id) do
+  defp complete_upload(view, hook, request_ref, token) do
     view
     |> with_target(cid_of(view, hook))
-    |> render_hook("video_upload_complete", %{"request_ref" => request_ref, "video_id" => video_id})
+    |> render_hook("video_upload_complete", %{"request_ref" => request_ref, "upload_token" => token})
   end
 
   defp ref_hook_id(ctx), do: "block-#{ctx.ref_uid}-video-uploader"

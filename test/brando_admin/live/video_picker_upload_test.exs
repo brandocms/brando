@@ -17,6 +17,7 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
   alias Brando.SyncTest
   alias Brando.SyncTest.ArticleItem
   alias Brando.Videos.Uploaders.Bunny
+  alias BrandoAdmin.Components.Assets.ProviderVideoUpload
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.VideoPicker
 
@@ -68,9 +69,9 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
       view = open(ctx)
 
       browse(view, @clip_a)
-      video_id = start_provider_upload(view, "picker-1")
+      {video_id, token} = start_provider_upload(view, "picker-1")
 
-      complete_provider_upload(view, "picker-1", video_id)
+      complete_provider_upload(view, "picker-1", token)
       assert clip_id(view, @clip_a) == to_string(video_id)
 
       save(view)
@@ -83,9 +84,9 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
       view = open(ctx)
 
       browse(view, @clip_a)
-      video_id = start_provider_upload(view, "picker-2")
+      {video_id, token} = start_provider_upload(view, "picker-2")
       browse(view, @clip_b)
-      complete_provider_upload(view, "picker-2", video_id)
+      complete_provider_upload(view, "picker-2", token)
 
       assert Process.alive?(view.pid)
       assert clip_id(view, @clip_a) == to_string(video_id)
@@ -101,8 +102,8 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
       origin = provider_upload_origin(view)
       assert origin["expected_asset_id"] == "none"
       browse(view, @clip_b)
-      video_id = start_provider_upload(view, "picker-queued", origin)
-      complete_provider_upload(view, "picker-queued", video_id)
+      {video_id, token} = start_provider_upload(view, "picker-queued", origin)
+      complete_provider_upload(view, "picker-queued", token)
 
       assert clip_id(view, @clip_a) == to_string(video_id)
       assert clip_id(view, @clip_b) == ""
@@ -113,10 +114,10 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
       view = open(ctx)
 
       browse(view, @clip_a)
-      video_id = start_provider_upload(view, "picker-3")
+      {video_id, token} = start_provider_upload(view, "picker-3")
       view |> with_target(cid_of(view, @clip_a)) |> render_hook("select_video", %{"id" => picked.id})
       browse(view, @clip_b)
-      complete_provider_upload(view, "picker-3", video_id)
+      complete_provider_upload(view, "picker-3", token)
 
       assert clip_id(view, @clip_a) == to_string(picked.id)
       assert clip_id(view, @clip_b) == ""
@@ -127,23 +128,61 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
       view = open(ctx)
       browse(view, @clip_a)
 
-      # Cloudflare records that the file arrived; without its creator the
-      # row can't be updated, so the completion is refused.
+      # Cloudflare records that the file arrived, as the video's creator; a
+      # creator who may no longer update videos can't, so the completion is
+      # refused.
       video =
         Factory.insert(:video,
           type: :cloudflare,
           status: :uploading,
           remote_id: "cf-uid",
           meta: %{"provider" => "cloudflare"},
-          creator_id: nil
+          creator: ctx.current_user
         )
 
+      token = ProviderVideoUpload.upload_token(video, ctx.current_user, "gone")
+      ctx.current_user |> Ecto.Changeset.change(role: :user) |> Repo.update!()
+
       Brando.endpoint().subscribe("user:#{ctx.current_user.id}")
-      complete_provider_upload(view, "unknown", video.id)
+      complete_provider_upload(view, "gone", token)
 
       assert Process.alive?(view.pid)
       assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
       assert clip_id(view, @clip_a) == ""
+    end
+
+    # The browser says which upload finished with the token it was given for
+    # it, not with a video id: an id of its own choosing used to move any
+    # video out of uploading and onto the field.
+    test "completes only an upload this user started, for that request", ctx do
+      view = open(ctx)
+      browse(view, @clip_a)
+      {video_id, token} = start_provider_upload(view, "picker-own")
+
+      other_user = Factory.insert(:random_user)
+
+      others =
+        Factory.insert(:video,
+          type: :cloudflare,
+          status: :uploading,
+          remote_id: "cf-other",
+          meta: %{"provider" => "cloudflare"},
+          creator: other_user
+        )
+
+      # A video id alone, someone else's upload, a token for another request
+      # or another user, and a forged token are all refused.
+      view |> picker() |> render_hook("video_upload_complete", %{"request_ref" => "x", "video_id" => others.id})
+      complete_provider_upload(view, "x", ProviderVideoUpload.upload_token(others, other_user, "x"))
+      complete_provider_upload(view, "x", ProviderVideoUpload.upload_token(others, ctx.current_user, "x"))
+      complete_provider_upload(view, "picker-other-ref", token)
+      complete_provider_upload(view, "picker-own", token <> "x")
+
+      assert Repo.get!(Brando.Videos.Video, others.id).status == :uploading
+      assert clip_id(view, @clip_a) == ""
+
+      complete_provider_upload(view, "picker-own", token)
+      assert clip_id(view, @clip_a) == to_string(video_id)
     end
   end
 
@@ -291,13 +330,13 @@ defmodule BrandoAdmin.VideoPickerUploadTest do
       })
     )
 
-    assert_push_event(view, "video_upload_url_ready", %{request_ref: ^request_ref, video_id: video_id})
-    video_id
+    assert_push_event(view, "video_upload_url_ready", %{request_ref: ^request_ref, video_id: video_id, upload_token: token})
+    {video_id, token}
   end
 
-  # ... and once the file is up
-  defp complete_provider_upload(view, request_ref, video_id) do
-    view |> picker() |> render_hook("video_upload_complete", %{"request_ref" => request_ref, "video_id" => video_id})
+  # ... and once the file is up, with the token the server signed for it
+  defp complete_provider_upload(view, request_ref, token) do
+    view |> picker() |> render_hook("video_upload_complete", %{"request_ref" => request_ref, "upload_token" => token})
     # Picker, then field, then form: each hands on with a message of its own
     for _ <- 1..3, do: render(view)
   end

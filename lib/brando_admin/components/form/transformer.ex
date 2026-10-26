@@ -15,6 +15,7 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   """
   use BrandoAdmin, :live_component
 
+  alias BrandoAdmin.Components.Assets.ProviderVideoUpload
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.Subform
@@ -1130,20 +1131,12 @@ defmodule BrandoAdmin.Components.Form.Transformer do
            config_target: config_target,
            file_meta: %{name: filename, size: size, type: mime_type}
          ) do
-      {:ok, %{upload_url: url, video: video} = result} ->
+      {:ok, %{video: video} = result} ->
         Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
         socket = place_video_upload(socket, request_ref, video)
 
-        event_payload =
-          %{
-            upload_url: url,
-            video_id: video.id,
-            filename: filename,
-            request_ref: request_ref
-          }
-          |> maybe_add_tus_auth(result)
-
-        {:noreply, push_event(socket, "video_upload_url_ready", event_payload)}
+        {:noreply,
+         push_event(socket, "video_upload_url_ready", ProviderVideoUpload.ready_payload(result, user, filename, request_ref))}
 
       {:error, reason} ->
         message = upload_error_message(reason)
@@ -1168,13 +1161,11 @@ defmodule BrandoAdmin.Components.Form.Transformer do
      })}
   end
 
-  def handle_event("video_upload_complete", %{"video_id" => video_id} = params, socket) do
+  def handle_event("video_upload_complete", params, socket) do
     # Video uploaded to provider. The item was already created in
     # get_video_upload_url. Status updates arrive via PubSub when the webhook
     # fires, so the placeholder can retire here.
-    with {:ok, video} <- Brando.Videos.get_video(video_id) do
-      Brando.Videos.Uploader.complete_client_upload(video)
-    end
+    ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params)
 
     {:noreply, clear_pending_upload(socket, Map.get(params, "request_ref"))}
   end
@@ -1764,7 +1755,4 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   defp video_thumbnail_url(_), do: nil
-
-  defp maybe_add_tus_auth(payload, %{tus_auth: tus_auth}), do: Map.put(payload, :tus_auth, tus_auth)
-  defp maybe_add_tus_auth(payload, _), do: payload
 end

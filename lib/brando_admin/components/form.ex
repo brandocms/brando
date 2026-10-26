@@ -43,6 +43,7 @@ defmodule BrandoAdmin.Components.Form do
   alias Brando.Tracing
   alias Brando.Villain
   alias BrandoAdmin.Alert
+  alias BrandoAdmin.Components.Assets.ProviderVideoUpload
   alias BrandoAdmin.Components.Button
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.FilePicker
@@ -622,12 +623,11 @@ defmodule BrandoAdmin.Components.Form do
      })}
   end
 
-  def update(%{action: :video_upload_complete, video_id: video_id}, socket) do
-    # Video uploaded, webhook will update status
-    # Reload video to get latest data
-    case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}) do
+  # Video uploaded, webhook will update status. Only the upload this user
+  # started here (`ProviderVideoUpload.complete/3`).
+  def update(%{action: :video_upload_complete, upload: params}, socket) do
+    case ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params, [:thumbnail]) do
       {:ok, video} ->
-        {:ok, video} = Brando.Videos.Uploader.complete_client_upload(video)
         edit_video = Map.put(socket.assigns.edit_video, :video, video)
         video_changeset = change(video)
         relation_key = String.to_existing_atom("#{socket.assigns.edit_video.field}_id")
@@ -638,7 +638,7 @@ defmodule BrandoAdmin.Components.Form do
          |> assign(:edit_video, edit_video)
          |> assign(:video_changeset, video_changeset)}
 
-      {:error, _} ->
+      _ ->
         {:ok, socket}
     end
   end
@@ -9187,34 +9187,21 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  defp provider_video_upload_ready(socket, edit_video, %{upload_url: url, video: video} = result, filename, request_ref) do
+  defp provider_video_upload_ready(socket, edit_video, %{video: video} = result, filename, request_ref) do
     # Subscribe to video updates
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:video:#{video.id}", link: true)
 
     # Update edit_video with the created video
     edit_video = Map.put(edit_video, :video, video)
     video_changeset = change(video)
-
-    # Build event payload - include tus_auth for Bunny uploads
-    event_payload = %{
-      upload_url: url,
-      video_id: video.id,
-      filename: filename,
-      request_ref: request_ref
-    }
-
-    event_payload =
-      case Map.get(result, :tus_auth) do
-        nil -> event_payload
-        tus_auth -> Map.put(event_payload, :tus_auth, tus_auth)
-      end
+    payload = ProviderVideoUpload.ready_payload(result, socket.assigns.current_user, filename, request_ref)
 
     # Push event to JavaScript hook with upload URL
     {:ok,
      socket
      |> assign(:edit_video, edit_video)
      |> assign(:video_changeset, video_changeset)
-     |> push_event("video_upload_url_ready", event_payload)}
+     |> push_event("video_upload_url_ready", payload)}
   end
 
   defp relation_field_key(%{field: relation_key}, _field) when not is_nil(relation_key),
