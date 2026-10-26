@@ -397,7 +397,7 @@ defmodule Brando.Content.SharedLibrary do
       # A module or container override is code: in legacy mode, a superuser's
       # (`Brando.Authorization.Boundary`).
       not Brando.Authorization.enabled?() ->
-        Boundary.authorize(actor, :update, definition(kind).schema)
+        authorize_code(actor, kind)
 
       is_nil(scope) and actor == :system ->
         :ok

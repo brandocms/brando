@@ -557,7 +557,7 @@ defmodule Brando.Content.StaleBlocksTest do
       assert var(block, "link") == nil
     end
 
-    test "needs the right to update an entry in the trash too", c do
+    test "with an entry in the trash, needs a superuser too", c do
       {page, block} = page_with_block(c, [link_var()], [], "I papirkurven")
       page |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
       put_test_env(:authorization_mode, :groups)

@@ -27,12 +27,22 @@ defmodule BrandoAdmin.AccountAndCodeAuthorityTest do
     view
   end
 
-  defp save_module_code(conn, module) do
-    {:ok, view, _} = live(conn, "/admin/config/content/modules/update/#{module.id}")
-    params = form_params(render(view), "#module_form")
-    render_hook(view, "save", %{"module" => Map.merge(params["module"] || %{}, %{"type" => "heex", "code" => @heex})})
-    if render(view) =~ "confirm_destructive_save", do: render_hook(view, "confirm_destructive_save", %{})
-    view
+  # Opens the module form and saves HEEx code into it, as the browser would,
+  # when the form opens at all.
+  defp try_save_module_code(conn, module) do
+    case live(conn, "/admin/config/content/modules/update/#{module.id}") do
+      {:error, {:redirect, %{to: "/admin/access-denied"}}} ->
+        :access_denied
+
+      {:ok, view, _} ->
+        params = form_params(render(view), "#module_form")
+        render_hook(view, "save", %{"module" => Map.merge(params["module"] || %{}, %{"type" => "heex", "code" => @heex})})
+
+        if Process.alive?(view.pid) and render(view) =~ "confirm_destructive_save",
+          do: render_hook(view, "confirm_destructive_save", %{})
+
+        :saved
+    end
   end
 
   describe "legacy mode" do
@@ -41,20 +51,7 @@ defmodule BrandoAdmin.AccountAndCodeAuthorityTest do
       module = Factory.insert(:module, code: "<p>plain</p>")
       conn = log_in_user(build_conn(), editor)
 
-      case live(conn, "/admin/config/content/modules/update/#{module.id}") do
-        {:error, {:redirect, _}} ->
-          :ok
-
-        {:ok, view, _} ->
-          params = form_params(render(view), "#module_form")
-
-          render_hook(view, "save", %{
-            "module" => Map.merge(params["module"] || %{}, %{"type" => "heex", "code" => @heex})
-          })
-
-          if Process.alive?(view.pid) and render(view) =~ "confirm_destructive_save",
-            do: render_hook(view, "confirm_destructive_save", %{})
-      end
+      assert :access_denied = try_save_module_code(conn, module)
 
       assert Repo.get!(Brando.Content.Module, module.id).code == "<p>plain</p>"
 
@@ -66,7 +63,7 @@ defmodule BrandoAdmin.AccountAndCodeAuthorityTest do
 
     test "a superuser saves HEEx module code", %{conn: conn} do
       module = Factory.insert(:module, code: "<p>plain</p>")
-      save_module_code(conn, module)
+      assert :saved = try_save_module_code(conn, module)
 
       saved = Repo.get!(Brando.Content.Module, module.id)
       assert saved.code == @heex
@@ -312,20 +309,7 @@ defmodule BrandoAdmin.AccountAndCodeAuthorityTest do
       production = ctx.production
       conn = log_in_user(build_conn(), site_admin)
 
-      case live(conn, "/admin/config/content/modules/update/#{module.id}") do
-        {:error, {:redirect, %{to: "/admin/access-denied"}}} ->
-          :ok
-
-        {:ok, view, _} ->
-          params = form_params(render(view), "#module_form")
-
-          render_hook(view, "save", %{
-            "module" => Map.merge(params["module"] || %{}, %{"type" => "heex", "code" => @heex})
-          })
-
-          if Process.alive?(view.pid) and render(view) =~ "confirm_destructive_save",
-            do: render_hook(view, "confirm_destructive_save", %{})
-      end
+      assert :access_denied = try_save_module_code(conn, module)
 
       [saved] = Repo.all(from(m in Brando.Content.Module, where: m.id == ^module.id), prefix: prefix)
       assert saved.code == "<p>plain</p>"

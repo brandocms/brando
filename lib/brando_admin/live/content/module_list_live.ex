@@ -155,13 +155,13 @@ defmodule BrandoAdmin.Content.ModuleListLive do
   # Draw a sketch for every module without one. They are drawn one at a time
   # and each is saved as it arrives, so the list fills in as it goes and an
   # interruption keeps what was drawn. Sketches are saved on the modules, so
-  # they are for those who may change modules, as the button is.
+  # they are for superusers, who may change modules, as the button is.
   def handle_event(event, _, %{assigns: %{sketches: %{running?: true}}} = socket)
       when event in ["open_sketches", "start_sketches"],
       do: {:noreply, socket}
 
   def handle_event(event, _, socket) when event in ["open_sketches", "start_sketches"] do
-    if Boundary.authorize(socket.assigns.current_user, :update, Brando.Content.Module) == :ok,
+    if Boundary.superuser?(socket.assigns.current_user),
       do: run_sketches(event, socket),
       else: {:noreply, socket}
   end

@@ -519,7 +519,9 @@ Choosing **Customize** copies the shared entry into the selected environment
 and records its source ID and source version. Blocks keep their shared identity,
 so they immediately resolve to that environment's customization without a
 content rewrite. Other environments and sites are unaffected. **Reset to
-shared** removes only the customization.
+shared** removes only the customization. Customizing, resetting and accepting
+updates of modules and containers takes a superuser, as any change to their
+code does; a site manager does these for palettes.
 
 Publishing a shared edit increments its version and records a changelog note.
 Sites without a customization use the new version immediately, and Brando

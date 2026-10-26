@@ -325,16 +325,21 @@ defmodule Brando.Authorization.Boundary do
       Catalog.superuser_only?(action, subject) and role != :superuser ->
         {:error, :forbidden}
 
-      role == :user and not (action in [:read, :export] or own_profile?(actor, action, subject)) ->
+      role == :user and not user_may?(actor, action, subject) ->
         {:error, :forbidden}
 
-      action == :delete and superuser_account?(subject) and not ProtectPassword.allowed?(actor, subject) ->
+      superuser_deletion?(action, subject) and not ProtectPassword.allowed?(actor, subject) ->
         {:error, :forbidden}
 
       true ->
         :ok
     end
   end
+
+  defp user_may?(actor, action, subject), do: action in [:read, :export] or own_profile?(actor, action, subject)
+
+  defp superuser_deletion?(:delete, subject), do: superuser_account?(subject)
+  defp superuser_deletion?(_action, _subject), do: false
 
   # The schema itself stands for "some user": `change/3` checks the record.
   defp own_profile?(_actor, :update, User), do: true

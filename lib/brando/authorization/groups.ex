@@ -382,10 +382,14 @@ defmodule Brando.Authorization.Groups do
   # nothing: it is left out here, so saving the group drops it and no
   # delegation check counts it.
   defp permission_keys(group) do
-    superuser_only = Catalog.superuser_only_keys()
+    superuser_only = MapSet.to_list(Catalog.superuser_only_keys())
 
-    Repo.all(from(p in Grant, where: p.group_id == ^group.id, select: p.permission_key))
-    |> Enum.reject(&MapSet.member?(superuser_only, &1))
+    Repo.all(
+      from(p in Grant,
+        where: p.group_id == ^group.id and p.permission_key not in ^superuser_only,
+        select: p.permission_key
+      )
+    )
   end
 
   defp replace_grants(group, keys) do

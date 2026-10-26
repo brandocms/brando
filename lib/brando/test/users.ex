@@ -58,8 +58,9 @@ defmodule Brando.Test.Users do
 
   @doc """
   Grant `permissions` to `user` through a new group in the current scope.
-  Raises outside groups mode, and for keys the permission catalogue does not
-  have, listing them.
+  Raises outside groups mode, for keys the permission catalogue does not
+  have, and for the superuser-only ones no group can hold (module and
+  container writes), listing them.
   """
   @spec grant_permissions(User.t(), [String.t()]) :: struct()
   def grant_permissions(%User{} = user, permissions) do
