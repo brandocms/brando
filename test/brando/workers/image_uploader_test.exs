@@ -51,6 +51,12 @@ defmodule Brando.Worker.ImageUploaderTest do
       do: __MODULE__ |> Agent.get(&Enum.reverse/1) |> Enum.filter(&match?({:complete, _}, &1)) |> Enum.map(&elem(&1, 1))
   end
 
+  # Fails every size it is asked for
+  defmodule FailingProcessor do
+    def get_dominant_color(_path), do: nil
+    def process_image(_conversion_parameters), do: {:error, :failed}
+  end
+
   setup do
     start_supervised!(%{id: FakeS3, start: {Agent, :start_link, [fn -> [] end, [name: FakeS3]]}})
 
@@ -328,7 +334,8 @@ defmodule Brando.Worker.ImageUploaderTest do
     setup :verify_on_exit!
 
     # Uploaded with `keep_local_copy: false`: the media folder kept nothing.
-    # Processed for real, so each size has its file to deliver.
+    # Processed for real, so each size has its file to deliver. Off the CDN,
+    # as an image is whose delivery failed before one job per image.
     setup %{dir: dir} do
       images = Application.get_env(:brando, Brando.Images)
       Application.put_env(:brando, Brando.Images, Keyword.put(images, :processor_module, Brando.Images.Processor.Vix))
@@ -341,7 +348,7 @@ defmodule Brando.Worker.ImageUploaderTest do
           config_target: "default",
           sizes: %{},
           status: :processed,
-          cdn: true
+          cdn: false
         )
 
       {:ok, image: image, bytes: bytes}
@@ -386,9 +393,33 @@ defmodule Brando.Worker.ImageUploaderTest do
       File.mkdir_p!(Path.dirname(hd(others)))
       Enum.each(others, &File.write!(&1, "PARTIAL"))
 
-      assert :ok = Brando.Images.restore_original(image)
+      assert {:ok, :restored} = Brando.Images.restore_original(image)
       assert File.read!(Path.join(Storage.current_media_root(), image.path)) == bytes
       assert Enum.map(others, &File.read!/1) == ["PARTIAL", "PARTIAL"]
+    end
+
+    # Processing fails, and never hands the image over for delivery
+    test "an original fetched for a run that fails is removed again", %{image: image, bytes: bytes} do
+      images = Application.get_env(:brando, Brando.Images)
+      Application.put_env(:brando, Brando.Images, Keyword.put(images, :processor_module, FailingProcessor))
+      expect(Brando.CDN.Client.Mock, :get_object, fn _, _, _ -> {:ok, %{status_code: 200, body: bytes}} end)
+
+      assert_raise Brando.Exception.ImageProcessingError, fn ->
+        Brando.Images.Processing.recreate_sizes_for_image(image, :system)
+      end
+
+      refute local?(image.path)
+      assert FakeS3.keys() == []
+    end
+
+    # Missing where local copies are kept: the media folder is more likely
+    # empty or not mounted than the original gone
+    test "an original is not fetched where the CDN keeps local copies", %{image: image} do
+      images = Application.get_env(:brando, Brando.Images)
+      Application.put_env(:brando, Brando.Images, Keyword.update!(images, :cdn, &%{&1 | keep_local_copy: true}))
+
+      assert {:ok, :unchanged} = Brando.Images.restore_original(image)
+      refute local?(image.path)
     end
   end
 end

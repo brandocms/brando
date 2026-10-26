@@ -99,8 +99,13 @@ keeps its files until they are all delivered. Oban retries a failed delivery,
 and recreating the image's sizes queues it again. Keeping local copies is the
 default. With `keep_local_copy: false`, recreating an image's sizes fetches its
 original back from the bucket into the media folder, processes it, and removes
-the files again once they are delivered. Changing `keep_local_copy` requires a
-deliberate retention plan; it does not create a local copy of a direct upload.
+the files again once they are delivered, or once the processing fails. Where
+local copies are kept, a missing original is not fetched, and its processing
+fails. Recreate sizes only where the CDN config is the site's own: a machine
+with a copy of production's config and `keep_local_copy: false` fetches
+production's originals and uploads new sizes over production's. Changing
+`keep_local_copy` requires a deliberate retention plan; it does not create a
+local copy of a direct upload.
 
 Files, images and S3 videos can opt into browser-to-bucket upload with
 `%Brando.CDN.Config{enabled: true, direct: true, ...}`. The manager obtains a

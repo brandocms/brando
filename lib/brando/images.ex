@@ -219,36 +219,60 @@ defmodule Brando.Images do
 
   @doc """
   Puts `image`'s original back in the media folder from the CDN it was
-  uploaded to, when the folder doesn't have it. With `keep_local_copy: false`
-  the original was removed once uploaded, and processing reads it from the
-  folder, so recreating the image's sizes needs it there. Delivering the
-  sizes to the CDN removes it again.
+  uploaded to, when the folder doesn't have it and the CDN keeps no local
+  copy (`keep_local_copy: false`): the original was removed once uploaded,
+  and processing reads it from the folder, so recreating the image's sizes
+  needs it there. Delivering the sizes to the CDN removes it again; a run
+  that doesn't get that far removes it with `discard_restored_original/2`.
+
+  `{:ok, :restored}` when it was fetched, `{:ok, :unchanged}` otherwise. An
+  original missing where local copies are kept is not fetched: the folder
+  is more likely empty or not mounted (a copy of production's config on
+  another machine), and processing fails on the missing file, as before.
   """
-  @spec restore_original(Image.t()) :: :ok | {:error, term}
+  @spec restore_original(Image.t()) :: {:ok, :restored | :unchanged} | {:error, term}
   def restore_original(%Image{path: path} = image) when is_binary(path) do
     with {:ok, file} <- media_file(path) do
-      if File.exists?(file), do: :ok, else: download_original(image, file)
+      case not File.exists?(file) && delivery_cdn(image) do
+        {cfg, cdn} -> download_original(image, file, Map.put(cfg, :cdn, cdn))
+        _ -> {:ok, :unchanged}
+      end
     end
   end
 
-  def restore_original(_image), do: :ok
+  def restore_original(_image), do: {:ok, :unchanged}
+
+  @doc "Removes the original `restore_original/1` fetched, when it did (`:restored`)."
+  @spec discard_restored_original(Image.t(), :restored | :unchanged) :: :ok
+  def discard_restored_original(%Image{path: path}, :restored) do
+    with {:ok, file} <- media_file(path), do: File.rm(file)
+    :ok
+  end
+
+  def discard_restored_original(_image, _restored), do: :ok
+
+  # The CDN the original was delivered to, when it keeps no local copy
+  defp delivery_cdn(image) do
+    {:ok, cfg} = get_config_for(image)
+
+    case effective_cdn(cfg) do
+      %{enabled: true, keep_local_copy: false} = cdn -> {cfg, cdn}
+      _ -> nil
+    end
+  end
 
   # Written beside it, under a name of its own (two recreations of the image
   # may run at once), and moved into place, so processing never reads a
-  # partly written original. Without a CDN (`:enoent`) there is nowhere to
-  # read it from, and processing fails on the missing file as it would have.
-  defp download_original(image, file) do
+  # partly written original
+  defp download_original(image, file, field_cfg) do
     partial = "#{file}.download-#{Base.url_encode64(:crypto.strong_rand_bytes(9))}"
 
-    with {:cdn, {:ok, bytes}} <- {:cdn, read_original_from_cdn(image)},
+    with {:cdn, {:ok, bytes}} <- {:cdn, Brando.CDN.get_object(Path.join("media", image.path), field_cfg)},
          :ok <- File.mkdir_p(Path.dirname(file)),
          :ok <- File.write(partial, bytes),
          :ok <- File.rename(partial, file) do
-      :ok
+      {:ok, :restored}
     else
-      {:cdn, {:error, :enoent}} ->
-        :ok
-
       {:cdn, error} ->
         error
 
