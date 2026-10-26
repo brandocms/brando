@@ -1,0 +1,1 @@
+- Liquid written in a synced Markdown source document appears as text on the page instead of being evaluated, so someone who can push to the documentation repository can no longer inject HTML, read template values or break the page with a template error.

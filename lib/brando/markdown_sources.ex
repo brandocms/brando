@@ -165,12 +165,18 @@ defmodule Brando.MarkdownSources do
     end
   end
 
+  # The entry's final Liquid pass (`Brando.Villain.parse_and_render/2`) runs
+  # over every block's output. Synced Markdown comes from outside the CMS, so
+  # its braces go out as entities: browsers show the same text, and Liquid
+  # never sees a delimiter in it. Encoding at read time covers stored versions.
   def render(data) do
     case resolved_version(data) do
-      %Version{html: html} -> html
+      %Version{html: html} when is_binary(html) -> inert_html(html)
       _ -> ""
     end
   end
+
+  defp inert_html(html), do: String.replace(html, ["{", "}"], &if(&1 == "{", do: "&#123;", else: "&#125;"))
 
   def resolved_version(%{source_id: source_id, policy: policy, version_id: version_id}) do
     with %Source{} = source <- get_source(source_id) do
