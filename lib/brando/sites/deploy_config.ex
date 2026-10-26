@@ -189,7 +189,6 @@ defmodule Brando.Sites.DeployConfig do
   defp local_address?({:ok, {a, _, _, _}}), do: a in [0, 127]
   defp local_address?({:ok, {0, 0, 0, 0, 0, 0, 0, n}}), do: n in [0, 1]
   defp local_address?({:ok, _ipv6}), do: false
-  defp local_address?({:error, _}), do: true
 
   # Unset: any target. Set to anything but a list of destinations: none, so
   # a typo in the config never opens it up.
