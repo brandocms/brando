@@ -90,10 +90,15 @@ not itself an object-key prefix. See [Sites and environments](tenancy_and_enviro
 ## Server-side and direct uploads
 
 Images are uploaded to the application, processed with Image/Vix, and then queued
-for delivery of the original and each generated rendition. The `image_processing`
-and `default` queues must run. Keeping local copies is the default and lets you
-reprocess later. Changing `keep_local_copy` requires a deliberate retention plan;
-it does not create a local copy of a direct upload.
+for delivery of the original and each generated rendition in each of its formats,
+in one job per image.
+The `image_processing` and `default` queues must run. An image is marked as
+delivered once its original and every rendition are in the bucket. Until then,
+including after a failed delivery, it is served from the media folder, which
+keeps its files until they are all delivered. Oban retries a failed delivery,
+and recreating the image's sizes queues it again. Keeping local copies is the
+default and lets you reprocess later. Changing `keep_local_copy` requires a
+deliberate retention plan; it does not create a local copy of a direct upload.
 
 Files, images and S3 videos can opt into browser-to-bucket upload with
 `%Brando.CDN.Config{enabled: true, direct: true, ...}`. The manager obtains a
