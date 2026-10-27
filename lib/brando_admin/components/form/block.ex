@@ -879,41 +879,40 @@ defmodule BrandoAdmin.Components.Form.Block do
   # settings). The block does, whenever the videos those vars hold change,
   # so the live preview reloads when one is ready (`video_processed`).
   defp watch_carried_var_videos(socket) do
-    ids = carried_var_video_ids(socket)
+    vars = carried_video_vars(socket)
+    ids = MapSet.new(vars, & &1.video_id)
 
     if ids == socket.assigns[:carried_video_ids] or not ProcessingWatch.enabled?() do
       socket
     else
       socket
       |> assign(:carried_video_ids, ids)
-      |> ProcessingWatch.watch(__MODULE__, :video, current_videos(ids))
+      |> ProcessingWatch.watch(__MODULE__, :video, current_videos(vars))
     end
   end
 
-  defp carried_var_video_ids(%{assigns: %{has_vars?: true, form: form, belongs_to: belongs_to}}) do
+  defp carried_video_vars(%{assigns: %{has_vars?: true, form: form, belongs_to: belongs_to}}) do
     form.source
     |> get_block_changeset(belongs_to)
     |> Changeset.get_assoc(:vars, :struct)
-    |> Enum.flat_map(fn
-      %{type: :video, placement: placement, video_id: id} when placement in [:config, :hidden] and is_integer(id) ->
-        [id]
-
-      _var ->
-        []
-    end)
-    |> MapSet.new()
+    |> Enum.filter(&(&1.type == :video and &1.placement in [:config, :hidden] and is_integer(&1.video_id)))
   end
 
-  defp carried_var_video_ids(_socket), do: MapSet.new()
+  defp carried_video_vars(_socket), do: []
 
-  # Read now: a var's struct is the one the block was opened with, and a
-  # pick changes only its id.
-  defp current_videos(ids) do
+  # The struct a var was opened with, while it is still its video (a video
+  # that finished since is caught up by the watch). A pick changes only the
+  # var's id, so a picked video is read.
+  defp current_videos(vars) do
+    {loaded, picked} = Enum.split_with(vars, &match?(%{video: %Brando.Videos.Video{id: id}, video_id: id}, &1))
+    Enum.map(loaded, & &1.video) ++ read_videos(Enum.map(picked, & &1.video_id))
+  end
+
+  defp read_videos([]), do: []
+
+  defp read_videos(ids) do
     import Ecto.Query, only: [from: 2]
-
-    if Enum.empty?(ids),
-      do: [],
-      else: Brando.Repo.all(from(v in Brando.Videos.Video, where: v.id in ^MapSet.to_list(ids)))
+    Brando.Repo.all(from(v in Brando.Videos.Video, where: v.id in ^ids))
   end
 
   defp block_has_table_rows?(block_cs) do
