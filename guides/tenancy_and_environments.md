@@ -776,6 +776,14 @@ scheduled_at = DateTime.add(DateTime.utc_now(), 3_600, :second)
   )
 ```
 
+When the job runs, the creator must still be allowed to carry it out: an active
+account that may promote the site's environments (in legacy mode, an admin or
+superuser of the site). A job whose creator has since lost that, or whose
+account is disabled or deleted, is cancelled and changes nothing: it leaves the
+list of scheduled operations, ends in Oban as cancelled with the reason
+`:scheduler_not_authorized`, and a warning is logged. A job scheduled without a
+creator runs as the system.
+
 The dedicated `environment_operations` queue runs one expensive schema
 operation at a time. Per-site advisory locks remain the final concurrency
 guard.
@@ -939,7 +947,10 @@ Generated output is persistent at
 `sites/{site_key}/ssg/builds/{version}`. Old ready, archived, and failed artifact
 directories are pruned after the retention window, while their database history
 and logs remain. Preview tokens expire after seven days and stop working as soon
-as their artifact is pruned.
+as their artifact is pruned. The Publishing screen links to each build's
+preview every time it opens, so a build keeps its token itself, where a shared
+entry preview keeps only its key's hash: anyone who can read the database can
+open a build's preview until it expires.
 
 <!-- usage-rules:start topic="tenancy" -->
 

@@ -111,8 +111,10 @@ Admin group. Suspended sites and disabled/deleted accounts are denied, including
 for Superusers.
 
 User starts without backend access. Editor receives content/media capabilities,
-including publishing, plus read access to reusable definitions. Admin adds site
-settings and group administration. Superuser is a protected installation group;
+including publishing and scheduling entries, plus read access to reusable
+definitions. Builds and deployments of a static site (`brando.publishing`) are
+a Settings permission, which Editor does not get. Admin adds site settings,
+builds and deployments, and group administration. Superuser is a protected installation group;
 its members have all supported capabilities across active sites. It cannot be
 renamed into an ordinary group, deleted, or stripped of its permissions. At least
 one active member must remain. Naming a custom group “Superuser” grants nothing.
@@ -202,7 +204,9 @@ and authorize again when the operation executes. Scheduled publishing does: a
 publication its user may no longer carry out, or whose account is gone, is
 cancelled and its date cleared rather than run as `:system`, while an expiry
 is still carried out on time, as `:system`, with Activity saying why (see the
-scheduled publishing guide).
+scheduled publishing guide). Scheduled environment copies and live switches
+authorize again too: one whose creator may no longer promote the site's
+environments is cancelled, with a warning in the log.
 
 <!-- usage-rules:end -->
 
@@ -311,7 +315,8 @@ from another form or environment cannot be reused to overwrite its content.
 **Share preview** creates a separate, expiring link and requires the resource's
 Export permission as well as edit/create access. Shared links are accessible
 without signing in until they expire. Expiry is checked when reading
-the link, even if background cleanup is delayed.
+the link, even if background cleanup is delayed. The link is shown once, when
+it is created: Brando keeps only a hash of its key.
 
 The activity panel shows colleagues with backend access in the selected workspace.
 Live URLs are limited to its environment. Global last-seen timestamps are omitted

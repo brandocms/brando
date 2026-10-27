@@ -6,6 +6,19 @@ defmodule Brando.Authorization.CatalogTest do
     assert [_ | _] = Catalog.all()
   end
 
+  # As guides/authorization.md describes the presets
+  test "Editor publishes and schedules entries; builds and deployments are Admin's" do
+    page = Catalog.get(:publish, Brando.Pages.Page).resource
+    editor = Catalog.preset_permissions(:editor, :site)
+    admin = Catalog.preset_permissions(:admin, :site)
+
+    assert "#{page}.publish" in editor
+    assert "#{page}.schedule" in editor
+    refute Enum.any?(editor, &String.starts_with?(&1, "brando.publishing."))
+    assert "brando.publishing.deploy" in admin
+    assert "brando.publishing.build" in admin
+  end
+
   test "duplicate capability keys report the resources instead of dropping one" do
     permissions = [
       %{key: "example.pages.read", subject: FirstResource},

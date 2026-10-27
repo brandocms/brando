@@ -87,17 +87,18 @@ defmodule Brando.Deprecated.RenamedModulesTest do
   end
 
   test "a shared preview through the old controller name", %{current_user: user} do
-    preview =
-      Repo.insert!(%Preview{
-        creator_id: user.id,
-        preview_key: Ecto.UUID.generate(),
-        html: Brando.Utils.term_to_binary("<main>Shared draft</main>"),
-        expires_at: DateTime.utc_now() |> DateTime.add(60, :second) |> DateTime.truncate(:second)
-      })
+    key = Ecto.UUID.generate()
+
+    Repo.insert!(%Preview{
+      creator_id: user.id,
+      preview_key: Preview.hash_key(key),
+      html: Brando.Utils.term_to_binary("<main>Shared draft</main>"),
+      expires_at: DateTime.utc_now() |> DateTime.add(60, :second) |> DateTime.truncate(:second)
+    })
 
     log =
       ExUnit.CaptureLog.capture_log(fn ->
-        conn = dispatch(:get, "/__p__/#{preview.preview_key}")
+        conn = dispatch(:get, "/__p__/#{key}")
         assert conn.status == 200
         assert conn.resp_body =~ "Shared draft"
         assert conn.private.phoenix_controller == BrandoWeb.PreviewController

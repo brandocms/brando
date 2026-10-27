@@ -375,6 +375,12 @@ sender first, before the first compile.
   `<.head>` (the 0.54.0 section of `CHANGELOG.md`).
 - **Direct Hackney calls.** Declare `{:hackney, "~> 4.0"}`: hackney 1.x does not
   resolve next to Brando.
+- **Tokens in the request logs.** Add `"token"` and `"key"` to
+  `config :phoenix, :filter_parameters`, and
+  `log: {Brando.Plug.RequestLog, :level, []}` to the endpoint's
+  `plug Plug.Telemetry`, as a new install has them
+  ([Users](users.md)): otherwise password reset, preview and download tokens
+  are written to the log.
 - **`<input name="id">`.** LiveView 1.2 warns at compile time, since it
   overrides the form's `id` property in the browser. Rename the field (to
   `_id`, say) and map it back where the form is handled.

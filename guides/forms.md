@@ -289,8 +289,17 @@ submission says so; it is stored either way.
 the form needs an Email field. It carries the confirmation message, or the
 success message when there is none, and a copy of what they sent, without
 hidden fields. Replies go to the form's first recipient that is not a blind
-copy. Anyone can type someone else's address into a form, so use Turnstile on
-forms that send confirmations.
+copy. Anyone can type someone else's address into a form, so one address gets
+at most three confirmations an hour, from all of the site's forms together (in
+each environment that takes submissions); a
+submission past that is stored and notified as usual, without the
+confirmation. Use Turnstile on forms that send confirmations as well. The limit
+is configurable:
+
+```elixir
+config :brando, Brando.Forms,
+  confirmation_limit: [window: :timer.hours(1), per_address: 3]
+```
 
 ### Keeping submissions
 
