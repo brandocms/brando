@@ -98,6 +98,27 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
     {:ok, watch_processing(socket)}
   end
 
+  # "Save as new copy" in the image editor (`Form.image_editor_copy_created/2`):
+  # the copy takes the edited object's place, which keeps its position, caption
+  # and alt text. When no object holds the image any more (removed while the
+  # copy uploaded), the gallery stays as it is and the copy stays in the library.
+  def update(%{event: "image_editor_new_copy", new_image: new_image, old_image_id: old_image_id}, socket) do
+    gallery_objects = socket.assigns.gallery_objects
+
+    if old_image_id && Enum.any?(gallery_objects, &(&1.image_id == old_image_id)) do
+      updated =
+        Enum.map(gallery_objects, fn
+          %{image_id: ^old_image_id} = object -> Map.merge(object, %{image_id: new_image.id, image: new_image})
+          object -> object
+        end)
+
+      selected_ids = Media.selected_ids(updated, :image_id)
+      {:ok, commit_gallery(socket, updated, :image, selected_ids, keep_text_editor: true)}
+    else
+      {:ok, socket}
+    end
+  end
+
   def update(%{event: "video_created_from_url", video_data: %{id: video_id}}, socket) do
     # Skip notify_picker since the VideoPicker already knows about this video
     {:ok, add_gallery_media(socket, :video, to_string(video_id), notify_picker: false)}
@@ -879,13 +900,23 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
     crop_groups = build_crop_groups_for(image)
 
+    # `from_block`: the editor's copy goes through the form's own editor
+    # upload, which hands it back here (`image_editor_new_copy`), as from a
+    # block. The other route fills the image drawer's file input, and this
+    # field has no image drawer.
     {:noreply,
      push_event(socket, "b:image_editor:init", %{
        image_src: Utils.img_url(image, :original, prefix: Utils.media_url()),
        image_width: image.width,
        image_height: image.height,
        image_id: image.id,
-       crop_groups: crop_groups
+       focal_x: (image.focal && image.focal.x) || 50,
+       focal_y: (image.focal && image.focal.y) || 50,
+       crop_groups: crop_groups,
+       from_block: true,
+       # The gallery's: an image picked from the library keeps the target it
+       # was uploaded for, another field's, which the copy is not for
+       config_target: socket.assigns.config_target
      })}
   end
 
@@ -1048,7 +1079,10 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
 
   # The gallery may not exist yet — the first pick creates it, which is why the
   # config target is derived from the owning schema rather than read off it.
-  defp commit_gallery(socket, gallery_objects, media_type, selected_ids) do
+  # An add or a removal moves objects, so an open caption popover, which
+  # names its object by index, closes; `keep_text_editor: true` keeps it for
+  # a change that moves none.
+  defp commit_gallery(socket, gallery_objects, media_type, selected_ids, opts \\ []) do
     %{field: field} = socket.assigns
     gallery = Ecto.Changeset.get_field(field.form.source, field.field)
 
@@ -1059,9 +1093,11 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
       gallery_objects: Media.slim(gallery_objects)
     })
 
+    text_editor = if Keyword.get(opts, :keep_text_editor, false), do: socket.assigns[:text_editor]
+
     assign(socket, [
       {:gallery_objects, gallery_objects},
-      {:text_editor, nil},
+      {:text_editor, text_editor},
       {Media.selection_key(media_type), selected_ids}
     ])
   end

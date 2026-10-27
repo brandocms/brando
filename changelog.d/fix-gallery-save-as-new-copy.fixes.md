@@ -1,0 +1,1 @@
+- "Save as new copy" in the image editor of a gallery field puts the copy in the edited image's place, keeping its caption and alt text; it used to make nothing.

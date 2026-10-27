@@ -488,4 +488,125 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryTest do
       assert [%{action: :update, data: %{id: 42}}, %{action: :insert}] = objects
     end
   end
+
+  # The field opens the image editor itself; no image drawer is open. Its
+  # copy came back through the drawer's file input, which isn't there, so
+  # "Save as new copy" made nothing.
+  describe "save as new copy" do
+    # An image picked from the library keeps the target it was uploaded for,
+    # here another field's. Its copy is made for the gallery, so it takes the
+    # gallery's sizes, and its processing doesn't reach the other field.
+    test "the editor's copy goes through the form's editor upload, for the gallery", ctx do
+      gallery_target = "gallery:Brando.MigrationTest.ProjectUpdate1:photos"
+      picked = Factory.insert(:image, creator: ctx.user, config_target: "image:Brando.MigrationTest.ProjectUpdate1:cover")
+      form = to_form(Changeset.change(%ProjectUpdate1{}))
+
+      socket =
+        gallery_socket(form, [], %{
+          current_user: ctx.user,
+          form_id: "project_form",
+          id: "gallery",
+          config_target: gallery_target
+        })
+
+      assert {:noreply, socket} =
+               Gallery.handle_event("open_image_editor", %{"image_id" => to_string(picked.id)}, socket)
+
+      assert_receive {:phoenix, :send_update, {{Form, "project_form"}, assigns}}
+      assert assigns.action == :set_edit_image_from_block
+      assert assigns.block_target == {Gallery, "gallery"}
+      assert assigns.old_image_id == picked.id
+
+      assert [payload] =
+               for(["b:image_editor:init", payload] <- Phoenix.LiveView.Utils.get_push_events(socket), do: payload)
+
+      assert payload.from_block
+      assert payload.config_target == gallery_target
+    end
+
+    # The caption popover may be open on another object while the copy
+    # uploads; the copy moves no object, so it stays open.
+    test "the copy takes the edited object's place, keeping its caption", ctx do
+      other = Factory.insert(:image, creator: ctx.user)
+      copy = Factory.insert(:image, creator: ctx.user)
+
+      objects = [
+        %GalleryObject{image_id: other.id, image: other, sequence: 0},
+        %GalleryObject{image_id: ctx.image.id, image: ctx.image, sequence: 1, config: %{"title" => "Lobby"}}
+      ]
+
+      gallery = %Brando.Galleries.Gallery{
+        config_target: "gallery:Brando.MigrationTest.ProjectUpdate1:photos",
+        gallery_objects: objects
+      }
+
+      form = to_form(Changeset.change(%ProjectUpdate1{photos: gallery}))
+
+      socket =
+        gallery_socket(form, [], %{
+          current_user: ctx.user,
+          form_id: "project_form",
+          gallery_objects: objects,
+          selected_images: [other.id, ctx.image.id],
+          text_editor: %{index: 0, kind: :caption}
+        })
+
+      assert {:ok, socket} =
+               Gallery.update(%{event: "image_editor_new_copy", new_image: copy, old_image_id: ctx.image.id}, socket)
+
+      assert socket.assigns.text_editor == %{index: 0, kind: :caption}
+
+      assert_receive {:phoenix, :send_update, {{Form, "project_form"}, assigns}}
+      assert assigns.action == :put_gallery
+      assert assigns.key == :photos
+
+      assert [%{image_id: first}, %{image_id: second, config: %{"title" => "Lobby"}}] =
+               assigns.gallery.gallery_objects
+
+      assert {first, second} == {other.id, copy.id}
+      assert Enum.map(socket.assigns.gallery_objects, & &1.image_id) == [other.id, copy.id]
+      assert socket.assigns.selected_images == [other.id, copy.id]
+    end
+
+    # The editor closes as the copy starts uploading. Another gallery's or
+    # block's editor opened before it finishes sets the form's `edit_image`.
+    test "the copy goes back to where it was made, though another editor opened since", ctx do
+      copy = Factory.insert(:image, creator: ctx.user)
+      made_in = %{path: [], field: nil, image: ctx.image, block_target: {Gallery, "first"}, old_image_id: ctx.image.id}
+      opened_since = %{made_in | block_target: {Gallery, "second"}}
+
+      socket =
+        %Phoenix.LiveView.Socket{}
+        |> Component.assign(:current_user, ctx.user)
+        |> Component.assign(:edit_image, made_in)
+
+      assert {:noreply, socket} =
+               Form.handle_event("image_editor_save", %{"mode" => "new_copy", "focal_x" => 40, "focal_y" => 60}, socket)
+
+      socket = Component.assign(socket, :edit_image, opened_since)
+
+      # The upload has finished and made the copy. Its processing is queued,
+      # not run: the factory image has no file.
+      assert {:noreply, _socket} =
+               Oban.Testing.with_testing_mode(:manual, fn -> Form.refocus_image_editor_copy(socket, copy) end)
+
+      assert_receive {:phoenix, :send_update, {{Gallery, "first"}, %{event: "image_editor_new_copy"} = assigns}}
+      assert assigns.new_image.id == copy.id
+      assert assigns.new_image.focal.x == 40
+      assert assigns.old_image_id == ctx.image.id
+      refute_received {:phoenix, :send_update, {{Gallery, "second"}, _}}
+    end
+
+    test "a copy for an object removed meanwhile leaves the gallery alone", ctx do
+      copy = Factory.insert(:image, creator: ctx.user)
+      form = to_form(Changeset.change(%ProjectUpdate1{}))
+      socket = gallery_socket(form, [], %{current_user: ctx.user, form_id: "project_form"})
+
+      assert {:ok, socket} =
+               Gallery.update(%{event: "image_editor_new_copy", new_image: copy, old_image_id: ctx.image.id}, socket)
+
+      refute_receive {:phoenix, :send_update, _}
+      assert socket.assigns.gallery_objects == []
+    end
+  end
 end
