@@ -1168,7 +1168,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp value_label(%{label: label}), do: Options.label_text(label)
   defp value_label(nil), do: gettext("Missing option")
   defp value_label(%Changeset{data: entry}), do: value_label(entry)
-  defp value_label(entry), do: entry.__struct__.__identifier__(entry, skip_cover: true).title
+
+  defp value_label(entry),
+    do: Brando.Content.Identifier.title_text(entry.__struct__.__identifier__(entry, skip_cover: true))
 
   # The labels under the field, in the order chosen.
   defp get_label(%{opt: %{entry: _, status: _}} = assigns) do

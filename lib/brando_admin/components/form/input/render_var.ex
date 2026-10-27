@@ -1323,7 +1323,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     parts =
       case get_field(changeset, :link_type) || :url do
         :url -> [get_field(changeset, :link_text), get_field(changeset, :value)]
-        :identifier -> [get_field(changeset, :link_text), identifier && identifier.title]
+        :identifier -> [get_field(changeset, :link_text), Brando.Content.Identifier.title_text(identifier)]
       end
 
     case Enum.reject(parts, &(&1 in [nil, ""])) do
