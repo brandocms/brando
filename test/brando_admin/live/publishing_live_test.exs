@@ -144,6 +144,21 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     assert updated.deploy_config.retention_count == 20
   end
 
+  test "an rsync target must be a remote destination", context do
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+    for target <- ["/tmp/local-dest", "--log-file=/tmp/marker.log", "u@-oProxyCommand=true:/srv/www"] do
+      render_submit(form(view, "#static-deploy-config"), %{"deploy" => %{"strategy" => "rsync", "target" => target}})
+      assert Registry.get_site(context.site.id).deploy_config.target == "deploy@example.test:/srv/www"
+    end
+
+    render_submit(form(view, "#static-deploy-config"), %{
+      "deploy" => %{"strategy" => "rsync", "target" => "web@static.example.test:/srv/site"}
+    })
+
+    assert Registry.get_site(context.site.id).deploy_config.target == "web@static.example.test:/srv/site"
+  end
+
   test "renders nested deployment validation errors without crashing", context do
     {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
 

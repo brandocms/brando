@@ -10,6 +10,7 @@ defmodule Brando.SSG.Deploy do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Repo
+  alias Brando.Sites.DeployConfig
   alias Brando.Sites.Site
   alias Brando.SSG.Build
   alias Brando.SSG.Builds
@@ -107,12 +108,19 @@ defmodule Brando.SSG.Deploy do
     do: {:error, :deploy_target_not_configured}
 
   defp deploy_rsync(build, target, opts) do
-    runner = Keyword.get(opts, :runner, &System.cmd/3)
-    args = ["-az", "--delete", String.trim_trailing(build.build_path, "/") <> "/", target]
+    runner = Keyword.get(opts, :runner) || Application.get_env(:brando, :ssg_deploy_runner, &System.cmd/3)
+    # `--` ends the options: neither operand can be read as one
+    args = ["-az", "--delete", "--", String.trim_trailing(build.build_path, "/") <> "/", target]
 
-    case runner.("rsync", args, stderr_to_stdout: true) do
-      {_output, 0} -> :ok
-      {output, exit_status} -> {:error, {:rsync_failed, exit_status, output}}
+    # The build carries the config it was made with, which may predate the
+    # check on save
+    if DeployConfig.valid_rsync_target?(target) do
+      case runner.("rsync", args, stderr_to_stdout: true) do
+        {_output, 0} -> :ok
+        {output, exit_status} -> {:error, {:rsync_failed, exit_status, output}}
+      end
+    else
+      {:error, :invalid_deploy_target}
     end
   rescue
     exception -> {:error, {:rsync_failed, Exception.message(exception)}}

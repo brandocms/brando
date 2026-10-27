@@ -967,6 +967,24 @@ form supports:
 - automatic deployment after successful builds; and
 - artifact retention from 1 through 100 builds (10 by default).
 
+An rsync target is a remote destination, `[user@]host:/absolute/path`. The
+deploy mirrors the build there with `--delete`, as the server's user and with
+its SSH identity, so it must be another server: local paths, `localhost` and
+loopback names and addresses (however written), hosts that resolve to one of
+this server's addresses, paths with `.`, `..` or empty segments,
+`host::module` and `rsync://` targets, and users or hosts beginning with `-`
+are refused, both when the settings are saved and when a build deploys. A
+name can still reach this server in ways a check cannot see (DNS that
+changes after the check, an SSH config alias, a public address behind NAT),
+so to limit the destinations
+anyone who may deploy can choose, list them in config (admins cannot change
+it). A target must be one of them, or lie under one that ends in `/`:
+
+```elixir
+config :brando, Brando.Sites.DeployConfig,
+  rsync_targets: ["deploy@static.example.com:/srv/sites/"]
+```
+
 Generated output is persistent at
 `sites/{site_key}/ssg/builds/{version}`. Old ready, archived, and failed artifact
 directories are pruned after the retention window, while their database history

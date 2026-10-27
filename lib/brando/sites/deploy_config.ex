@@ -6,12 +6,25 @@ defmodule Brando.Sites.DeployConfig do
   dynamically delivered sites. Static builds snapshot this configuration so a
   later site edit cannot silently change how an already-built artifact deploys.
 
-  `:rsync` targets are ordinary rsync destinations such as
-  `deploy@example.com:/srv/www`; `:s3` targets use `s3://bucket/optional-prefix`.
-  Florist application releases are configured separately.
+  `:rsync` targets are remote rsync destinations, `[user@]host:/absolute/path`
+  such as `deploy@example.com:/srv/www`; `:s3` targets use
+  `s3://bucket/optional-prefix`. Florist application releases are configured
+  separately.
+
+  An rsync deploy mirrors the build with `--delete` as the server's user and
+  SSH identity, and anyone who may deploy can set the target, so it is held
+  to that remote form: no local paths, no loopback hosts, no `..` in the
+  path, no rsync daemon or URL syntax, and no user or host that rsync or ssh
+  could read as an option. An operator can further limit targets to the
+  destinations they list, in config no admin can edit; a target must be one
+  of them or lie under one ending in `/`:
+
+      config :brando, Brando.Sites.DeployConfig,
+        rsync_targets: ["deploy@static.example.com:/srv/sites/"]
   """
 
   use Ecto.Schema
+  use Gettext, backend: Brando.Gettext
 
   import Ecto.Changeset
 
@@ -52,13 +65,158 @@ defmodule Brando.Sites.DeployConfig do
       {:s3, target} when is_binary(target) ->
         case URI.parse(target) do
           %URI{scheme: "s3", host: host} when is_binary(host) and host != "" -> changeset
-          _invalid -> add_error(changeset, :target, "must use s3://bucket/optional-prefix")
+          _invalid -> add_error(changeset, :target, gettext("must use s3://bucket/optional-prefix"))
+        end
+
+      {:rsync, target} when is_binary(target) ->
+        case rsync_target_error(target) do
+          nil -> changeset
+          message -> add_error(changeset, :target, message)
         end
 
       _other ->
         changeset
     end
   end
+
+  # A user and host that cannot start with `-`, and an absolute path of plain
+  # characters: rsync hands the path to a remote shell, and the user and host
+  # to ssh. A path may not start `//`, which makes `rsync://` a daemon URL.
+  @rsync_target ~r/\A(?:(?<user>[A-Za-z0-9_][A-Za-z0-9._-]{0,63})@)?(?<host>[A-Za-z0-9](?:[A-Za-z0-9.-]{0,252})|\[[0-9A-Fa-f:.]+\]):(?<path>\/(?!\/)[A-Za-z0-9._~+@\/-]*)\z/
+
+  @doc """
+  Whether `target` is an rsync target a deploy may use: the remote
+  `[user@]host:/absolute/path` form, on a host other than this one, and
+  among the operator's `rsync_targets` if they list them. Checked when the
+  config is saved and again before each deploy, since builds snapshot the
+  config.
+  """
+  @spec valid_rsync_target?(term()) :: boolean()
+  def valid_rsync_target?(target), do: is_binary(target) and is_nil(rsync_target_error(target))
+
+  defp rsync_target_error(target) do
+    case Regex.named_captures(@rsync_target, target) do
+      %{"host" => host, "path" => path} = parts ->
+        cond do
+          not plain_path?(path) -> gettext("must be an absolute path without . or ..")
+          local_host?(host) -> gettext("must be on another server")
+          not listed_target?(parts) -> gettext("must be a destination this installation deploys to")
+          true -> nil
+        end
+
+      nil ->
+        gettext("must be a remote destination, user@host:/absolute/path")
+    end
+  end
+
+  # `/srv/www` or `/srv/www/`: not the root, and no `.`, `..` or empty
+  # segment, any of which could name a directory above the one it seems to
+  defp plain_path?(path) do
+    segments = path |> String.replace_suffix("/", "") |> String.split("/") |> tl()
+    segments != [] and not Enum.any?(segments, &(&1 in ["", ".", ".."]))
+  end
+
+  # This server under another name. Names are only the start: the server's
+  # own hostname or a wildcard DNS name reaches it too, so the host is also
+  # resolved and refused if any address it has is this server's. Only an
+  # operator's `rsync_targets` rules out every such name.
+  defp local_host?(host) do
+    host =
+      host
+      |> String.trim_leading("[")
+      |> String.trim_trailing("]")
+      |> String.trim_trailing(".")
+      |> String.downcase()
+
+    first_label = host |> String.split(".") |> hd()
+
+    cond do
+      host == "" -> true
+      first_label in ["localhost", "localhost4", "localhost6", "ip6-localhost", "ip6-loopback"] -> true
+      String.ends_with?(host, ".localhost") -> true
+      numeric_host?(host) -> local_literal?(:inet.parse_strict_address(String.to_charlist(host)))
+      true -> resolves_locally?(host)
+    end
+  end
+
+  # An address however written (`127.1`, `0177.0.0.1`, `0x0`, an IPv6
+  # literal): ssh's resolver reads all of them, so only the plain dotted or
+  # IPv6 form, of another server, is a target
+  defp numeric_host?(host) do
+    String.contains?(host, ":") or
+      host |> String.split(".") |> Enum.all?(&Regex.match?(~r/\A(0x[0-9a-f]*|[0-9]+)\z/, &1))
+  end
+
+  defp local_literal?({:ok, address}), do: local_addresses?([address])
+  defp local_literal?({:error, _reason}), do: true
+
+  defp resolves_locally?(host) do
+    resolver = Application.get_env(:brando, __MODULE__, [])[:resolver] || (&:inet.getaddrs(&1, &2, :timer.seconds(3)))
+    [:inet, :inet6] |> Enum.flat_map(&resolved(resolver, host, &1)) |> local_addresses?()
+  end
+
+  # Loopback, unspecified, or one of this server's interfaces (an IPv4
+  # address written as IPv6 too). A server behind NAT is not on its public
+  # address: only `rsync_targets` rules that out.
+  defp local_addresses?(addresses) do
+    own = own_addresses()
+
+    Enum.any?(addresses, fn address ->
+      address = unmap(address)
+      local_address?({:ok, address}) or address in own
+    end)
+  end
+
+  defp unmap({0, 0, 0, 0, 0, 0xFFFF, high, low}), do: {div(high, 256), rem(high, 256), div(low, 256), rem(low, 256)}
+  defp unmap(address), do: address
+
+  # A name that does not resolve here may still be one ssh knows (a `Host`
+  # alias in its config): the operator's to answer for
+  defp resolved(resolver, host, family) do
+    case resolver.(String.to_charlist(host), family) do
+      {:ok, addresses} -> addresses
+      {:error, _reason} -> []
+    end
+  end
+
+  defp own_addresses do
+    case :inet.getifaddrs() do
+      {:ok, interfaces} -> for {_name, opts} <- interfaces, {:addr, address} <- opts, do: unmap(address)
+      {:error, _reason} -> []
+    end
+  end
+
+  defp local_address?({:ok, {a, _, _, _}}), do: a in [0, 127]
+  defp local_address?({:ok, {0, 0, 0, 0, 0, 0, 0, n}}), do: n in [0, 1]
+  defp local_address?({:ok, _ipv6}), do: false
+
+  # Unset: any target. Set to anything but a list of destinations: none, so
+  # a typo in the config never opens it up.
+  defp listed_target?(parts) do
+    case Application.get_env(:brando, __MODULE__, [])[:rsync_targets] do
+      nil -> true
+      targets when is_list(targets) -> Enum.any?(targets, &within?(parts, &1))
+      _misconfigured -> false
+    end
+  end
+
+  # The listed destination itself, or for an entry ending in `/` a directory
+  # under it (not the directory itself, which holds the others). Hosts
+  # compare without case.
+  defp within?(%{"user" => user, "host" => host, "path" => path}, listed) when is_binary(listed) do
+    case Regex.named_captures(@rsync_target, listed) do
+      %{"user" => ^user, "host" => listed_host, "path" => listed_path} ->
+        String.downcase(host) == String.downcase(listed_host) and
+          if String.ends_with?(listed_path, "/"),
+            do: String.starts_with?(path, listed_path) and String.trim(path, "/") != String.trim(listed_path, "/"),
+            else: String.replace_suffix(path, "/", "") == listed_path
+
+      _other ->
+        false
+    end
+  end
+
+  defp within?(_parts, _listed), do: false
 
   # Called after a deploy, so it may only reach a public address over https,
   # like a webhook (Brando.Webhooks.URLGuard). Checked when it changes, and
