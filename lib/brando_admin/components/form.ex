@@ -2239,6 +2239,15 @@ defmodule BrandoAdmin.Components.Form do
   defp own_locked_server_assets(socket, changed_fields),
     do: own_changed_assets(socket, Enum.filter(changed_fields, &locked_field?(socket, [], &1)), true)
 
+  # The form takes values from elsewhere (a recovery copy, another tab's
+  # handover): a locked asset the server put in it before (a working copy's,
+  # a translation's) is not the form's any more. Owned, it would carry the
+  # restored value into the save.
+  defp disown_locked_assets(socket) do
+    locked = locked_keys(socket)
+    assign(socket, :server_owned_assets, Map.drop(owned_assets(socket), locked))
+  end
+
   defp clear_owned_assets(socket), do: assign(socket, :server_owned_assets, %{})
 
   # -- Locked media inputs --
@@ -7758,6 +7767,7 @@ defmodule BrandoAdmin.Components.Form do
 
       socket
       |> put_local_form(form)
+      |> disown_locked_assets()
       |> assign(:uncast_fields, MapSet.union(uncast_fields(socket), MapSet.new(uncast)))
       |> rebuild_preview_relations()
       |> assign_entry_for_blocks()
@@ -7830,6 +7840,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> put_local_form(form)
     |> rebuild_preview_relations()
+    |> disown_locked_assets()
     |> own_changed_assets(Map.keys(changeset.changes), source == :translation)
     |> assign_entry_for_blocks()
     |> force_svelte_remounts(:all)

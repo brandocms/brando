@@ -233,9 +233,11 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
         # Stored only for a field that takes it; the editor is told
         assert Repo.aggregate(Brando.Images.Image, :count) == if(ctx.locked, do: images, else: images + 1)
 
-        if ctx.locked,
-          do:
-            assert_receive(%Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "This field is locked"}}, 2_000)
+        if ctx.locked do
+          assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "This field is locked"}}, 2_000
+        else
+          refute_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "This field is locked"}}, 300
+        end
       end
 
       # The preview's copy of the field's asset (`Input.Image` on a pick, a
@@ -437,6 +439,47 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
       save(view)
 
       assert saved_gallery_images(article) == [other.id]
+    end
+
+    # The working copy's assets are the server's while it is loaded. A
+    # recovery copy restored after it is the browser's: a locked field
+    # doesn't take it.
+    test "a recovery copy after a working copy, on form #{form}", %{conn: conn, article: article} = ctx do
+      [revised, forged] = [image(ctx.current_user), image(ctx.current_user)]
+      {view, _html} = open(conn, article, unquote(form))
+      form_cid = cid_of(view, "#article_form-el")
+      entry = form_assigns(view).entry
+
+      # An older copy, or a forged one
+      main =
+        view
+        |> render()
+        |> form_params(@form)
+        |> put_in(["article", "cover_id"], to_string(forged.id))
+        |> Plug.Conn.Query.encode()
+
+      view
+      |> with_target(form_cid)
+      |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
+
+      copy =
+        Repo.one!(
+          from d in Brando.Drafts.EntryDraft,
+            where: d.entry_id == ^article.id and is_nil(d.resolved_at),
+            order_by: [desc: d.id],
+            limit: 1
+        )
+
+      send_form(view,
+        action: :load_working_copy,
+        revision: 1,
+        revision_entry: %{entry | cover_id: revised.id, cover: revised}
+      )
+
+      view |> with_target(form_cid) |> render_hook("draft_restore", %{"id" => copy.id})
+      save(view)
+
+      assert saved(article).cover_id == if(unquote(form) == :locked_media, do: ctx.stored.id, else: forged.id)
     end
   end
 
