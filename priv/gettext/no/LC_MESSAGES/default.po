@@ -4404,6 +4404,12 @@ msgstr "Samtale"
 msgid "Copied"
 msgstr "Kopiert"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment operation"
+msgid "Copied"
+msgstr "Kopiert"
+
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
 msgid "Copied from %{scope}"
@@ -4881,6 +4887,12 @@ msgstr "Opprett, kopier, forfrem, planlegg og gjenopprett isolerte innholdsmilj�
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
+msgid "Created"
+msgstr "Opprettet"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment operation"
 msgid "Created"
 msgstr "Opprettet"
 
@@ -5430,6 +5442,12 @@ msgstr "Slett «%{name}» …"
 #: lib/brando_admin/components/content/select_identifier.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
+msgid "Deleted"
+msgstr "Slettet"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment operation"
 msgid "Deleted"
 msgstr "Slettet"
 
@@ -12954,6 +12972,12 @@ msgstr "Legg kopiering i kø nå"
 msgid "Queued"
 msgstr "I kø"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment job"
+msgid "Queued"
+msgstr "I kø"
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Queueing…"
@@ -13992,6 +14016,12 @@ msgstr "Gjenopprette dette arkivet som et nytt miljø som ikke er live?"
 msgid "Restored"
 msgstr "Gjenopprettet"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment operation"
+msgid "Restored"
+msgstr "Gjenopprettet"
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Restored a revision"
@@ -14072,6 +14102,12 @@ msgstr "Prøv oppfrisking igjen"
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-format, elixir-autogen
+msgid "Retrying"
+msgstr "Prøver på nytt"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment job"
 msgid "Retrying"
 msgstr "Prøver på nytt"
 
@@ -14390,6 +14426,12 @@ msgstr "Kjørt av %{name}"
 msgid "Run migration report"
 msgstr "Kjør migreringsrapport"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment job"
+msgid "Running"
+msgstr "Kjører"
+
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Running in the background"
@@ -14587,6 +14629,18 @@ msgstr "Lagret %{time} av %{author}"
 msgid "Saved as %{status}"
 msgstr "Lagret som %{status}"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment archive"
+msgid "Saved before a copy"
+msgstr "Lagret før kopiering"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment archive"
+msgid "Saved before a live switch"
+msgstr "Lagret før live-bytte"
+
 #: lib/brando_admin/components/form/saved_elsewhere.ex
 #, elixir-autogen, elixir-format
 msgid "Saved elsewhere"
@@ -14703,6 +14757,12 @@ msgstr "Planlegg versjon"
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
+msgid "Scheduled"
+msgstr "Planlagt"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment job"
 msgid "Scheduled"
 msgstr "Planlagt"
 
@@ -15377,6 +15437,12 @@ msgstr "Sett det opp, lag nye gjenopprettingskoder og se nylige innlogginger på
 #, elixir-autogen, elixir-format
 msgid "Set live"
 msgstr "Sett live"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment operation"
+msgid "Set live"
+msgstr "Satt live"
 
 #: lib/brando_admin/live/user_reset_password_live.ex
 #, elixir-autogen, elixir-format

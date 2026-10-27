@@ -209,6 +209,20 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
              [[0]]
   end
 
+  # The log names each operation, not its atom (`set_live`, `copy`), and an
+  # archive the operation it was saved before
+  test "the operation log and the archives name their operations", %{conn: conn, site: site, production: production} do
+    {:ok, preview} = Environments.create_environment(site, %{name: "Preview", key: "preview-log"})
+    assert {:ok, _} = Environments.copy_environment(production, preview)
+
+    {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+    assert has_element?(view, ".environment-log__operation", "Created")
+    assert has_element?(view, ".environment-log__operation", "Copied")
+    refute has_element?(view, ".environment-log__operation", ~r/^\s*(copy|create)\s*$/)
+    assert has_element?(view, ".environment-archive__meta span", "Saved before a copy")
+  end
+
   test "editors cannot invoke environment lifecycle events", %{site: site} do
     editor =
       Brando.Factory.insert(:random_user,

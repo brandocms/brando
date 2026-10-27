@@ -293,7 +293,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <tr :for={job <- @jobs} id={"environment-job-#{job.id}"}>
                   <td>{job_description(job, @environments)}</td>
                   <td>{format_scheduled_at(job.scheduled_at)}</td>
-                  <td><span class="environment-state">{job.state}</span></td>
+                  <td><span class="environment-state">{job_state_label(job.state)}</span></td>
                   <td class="environment-actions">
                     <button
                       type="button"
@@ -340,7 +340,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               <tbody>
                 <tr :for={log <- @operation_logs} id={"environment-log-#{log.id}"}>
                   <td>
-                    <span class="environment-log__operation">{log.operation}</span>
+                    <span class="environment-log__operation">{operation_label(log.operation)}</span>
                   </td>
                   <td>
                     <code :if={log.target_environment}>{log.target_environment.key}</code>
@@ -419,7 +419,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <span :if={archive.note} class="environment-archive__note">{archive.note}</span>
               </div>
               <div class="environment-archive__meta">
-                <span>{archive.operation || gettext("Recovered archive")}</span>
+                <span>{archive_label(archive.operation)}</span>
                 <button
                   type="button"
                   class="btn btn--sm"
@@ -756,6 +756,27 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   end
 
   defp format_log_time(datetime), do: BrandoAdmin.Dates.short(datetime)
+
+  # `Brando.Environments.OperationLog.operations/0`, as the log names them
+  defp operation_label(:copy), do: pgettext("environment operation", "Copied")
+  defp operation_label(:set_live), do: pgettext("environment operation", "Set live")
+  defp operation_label(:rollback), do: pgettext("environment operation", "Restored")
+  defp operation_label(:create), do: pgettext("environment operation", "Created")
+  defp operation_label(:delete), do: pgettext("environment operation", "Deleted")
+  defp operation_label(operation), do: to_string(operation)
+
+  # An archive is the environment as it was before the operation replaced it
+  defp archive_label(:copy), do: pgettext("environment archive", "Saved before a copy")
+  defp archive_label(:set_live), do: pgettext("environment archive", "Saved before a live switch")
+  defp archive_label(nil), do: gettext("Recovered archive")
+  defp archive_label(operation), do: operation_label(operation)
+
+  # The Oban states `Brando.Environments.list_scheduled_operations/1` lists
+  defp job_state_label("scheduled"), do: pgettext("environment job", "Scheduled")
+  defp job_state_label("available"), do: pgettext("environment job", "Queued")
+  defp job_state_label("executing"), do: pgettext("environment job", "Running")
+  defp job_state_label("retryable"), do: pgettext("environment job", "Retrying")
+  defp job_state_label(state), do: state
 
   defp format_scheduled_at(scheduled_at), do: BrandoAdmin.Dates.long(scheduled_at)
 
