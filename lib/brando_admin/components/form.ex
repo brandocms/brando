@@ -6285,59 +6285,12 @@ defmodule BrandoAdmin.Components.Form do
     end
   end
 
-  # When opened from a block, edit_image has no path/field/relation_field.
-  # Create a new image record and notify the block component to update its reference.
-  def handle_event(
-        "save_image",
-        %{"image" => image_params},
-        %{
-          assigns: %{
-            edit_image: %{field: nil, image: original_image, block_target: block_target},
-            current_user: current_user
-          }
-        } = socket
-      ) do
-    new_image_params =
-      image_params
-      |> drawer_params("image")
-      |> Map.put("config_target", original_image.config_target)
-
-    validated_changeset =
-      %Images.Image{}
-      |> Images.Image.changeset(new_image_params, current_user)
-      |> Map.put(:action, :insert)
-      |> Brando.Trait.run_trait_before_save_callbacks(
-        Images.Image,
-        current_user
-      )
-
-    {:ok, new_image} = Images.create_image(validated_changeset, current_user)
-
-    Brando.Blueprint.AfterSave.run(
-      Images.Image,
-      new_image,
-      validated_changeset,
-      current_user
-    )
-
-    if new_image.status !== :processed do
-      Images.Processing.queue_processing(new_image, current_user, [], silent: true)
-    end
-
-    if block_target do
-      {module, id} = block_target
-      old_image_id = Map.get(socket.assigns.edit_image, :old_image_id)
-
-      send_update(module,
-        id: id,
-        event: "image_editor_new_copy",
-        new_image: new_image,
-        old_image_id: old_image_id
-      )
-    end
-
-    send(self(), {:toast, gettext("New image created.")})
-
+  # A block opens the image editor, not this drawer, and sets `edit_image`
+  # with no field (`:set_edit_image_from_block`); the editor's copy goes
+  # through `image_editor_upload`. A drawer save in that state has nothing to
+  # save: its form is the last image drawer's, so it closes. The next clause
+  # would write the image to a field that isn't there.
+  def handle_event("save_image", _params, %{assigns: %{edit_image: %{field: nil, block_target: _}}} = socket) do
     {:noreply,
      socket
      |> assign(:editing_image?, false)
