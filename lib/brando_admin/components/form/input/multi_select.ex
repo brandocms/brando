@@ -1152,7 +1152,6 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp extract_value(%{id: value}), do: value
   defp extract_value(value), do: value
 
-  # The labels under the field, in the order chosen.
   # The selected options' labels as text, for the field's value read out
   # while it is locked (`Primitives.field_base/1`'s `:value`), as `labels/1`
   # shows them
@@ -1166,11 +1165,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     end
   end
 
-  defp value_label(%{label: label}), do: label
+  defp value_label(%{label: label}), do: Options.label_text(label)
   defp value_label(nil), do: gettext("Missing option")
   defp value_label(%Changeset{data: entry}), do: value_label(entry)
   defp value_label(entry), do: entry.__struct__.__identifier__(entry, skip_cover: true).title
 
+  # The labels under the field, in the order chosen.
   defp get_label(%{opt: %{entry: _, status: _}} = assigns) do
     ~H"""
     <span class="status-label"><.status_circle status={@opt.status} /> {@opt.label}</span>

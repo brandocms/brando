@@ -180,12 +180,12 @@ defmodule BrandoAdmin.Components.Form.Input do
     end
   end
 
-  # The label of the option `field` holds; a radio's is translated by the
-  # schema, as `radio_opt/1` shows it
+  # The label of the option `field` holds, as text; a radio's is translated
+  # by the schema, as `radio_opt/1` shows it
   defp option_text(field, options) do
     case Enum.find(options, &(to_string(&1.value) == to_string(field.value))) do
       nil -> value_text(nil)
-      %{label: label} -> g(field.form.source.data.__struct__, to_string(label))
+      %{label: label} -> field.form.source.data.__struct__ |> radio_label(label) |> Options.label_text()
     end
   end
 
