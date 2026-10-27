@@ -89,6 +89,47 @@ defmodule BrandoAdmin.IdentifierTitleTest do
     end
   end
 
+  defmodule SelectHost do
+    use Phoenix.LiveView, layout: false
+
+    alias Brando.Blueprint.Identifier.HEExTest.HEExIdentifierSchema, as: HEExEntry
+
+    def mount(_, _, socket) do
+      entry = %HEExEntry{id: 1, title: "Rock & Roll <b>live</b>", language: "en", status: :published}
+      form = %Brando.Pages.Page{} |> Ecto.Changeset.change(parent_id: 1) |> Phoenix.Component.to_form(as: "page")
+      {:ok, socket |> Phoenix.Component.assign(:form, form) |> Phoenix.Component.assign(:entry, entry)}
+    end
+
+    def handle_info(_message, socket), do: {:noreply, socket}
+
+    def render(assigns) do
+      ~H"""
+      <.live_component
+        module={BrandoAdmin.Components.Form.Input.Select}
+        id="parent"
+        field={@form[:parent_id]}
+        label="Parent"
+        opts={[options: [@entry]]}
+      />
+      """
+    end
+  end
+
+  # The label of the selected option is rendered with raw/1 and set with
+  # innerHTML when an option is picked: it carries the title escaped once
+  test "an entry select labels its options once escaped" do
+    {:ok, view, html} = live_isolated(build_conn(), SelectHost)
+    assert html =~ ~r/data-select-preview="true">\s*#{Regex.escape(@once)} \[en\]\s*</
+    assert_once(html)
+
+    html = view |> element("button.button-edit") |> render_click()
+    assert html =~ ~s(data-label="#{@once} [en]")
+    # HTML in an attribute: escaped once more, read back once by innerHTML
+    assert html =~ ~s(data-select-label="#{stored(@once)} [en]")
+    assert html =~ "</svg> #{@once} [en]</span>"
+    refute html =~ "<b>"
+  end
+
   describe "an entry's own title" do
     test "the entry header and the frontend editor name it as text" do
       assert EntryHeader.title(HEExEntry, heex_entry()) == @title <> " [en]"
