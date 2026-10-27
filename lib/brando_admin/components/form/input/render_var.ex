@@ -446,10 +446,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   # The label is text an admin typed in the module editor. It stays a plain
   # string: Select escapes it, in the page and in `data-select-label`.
+  # `text` is the label as typed, for the filter to match.
   defp select_option(option) do
     value = Map.get(option, :value)
-    label = Map.get(option, :label)
-    %{label: I18nString.localized(label) || to_string(value), value: value}
+    label = I18nString.localized(Map.get(option, :label)) || to_string(value)
+    %{label: label, text: label, value: value}
   end
 
   defp width_options do

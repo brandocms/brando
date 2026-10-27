@@ -104,7 +104,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
               :for={opt <- @input_options}
               type="button"
               class="menu-item options-option"
-              data-label={extract_label(opt)}
+              data-label={filter_label(opt)}
               data-select-label={option_label_html(opt)}
               value={extract_value(opt)}
               phx-value-origin={extract_origin(opt)}
@@ -177,7 +177,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                       "options-option",
                       option_selected?(opt, @selected_option, @selected_origin) && "option-selected"
                     ]}
-                    data-label={extract_label(opt)}
+                    data-label={filter_label(opt)}
                     data-select-label={option_label_html(opt)}
                     value={extract_value(opt)}
                     phx-value-origin={extract_origin(opt)}
@@ -468,6 +468,11 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   defp extract_label(_) do
     "No label found"
   end
+
+  # What the filter matches (SelectFilter): an option may carry its label as
+  # typed beside it (RenderVar's var choices).
+  defp filter_label(%{text: text} = opt) when is_binary(text) and not is_struct(opt), do: text
+  defp filter_label(opt), do: extract_label(opt)
 
   defp extract_value(%{value: value}), do: value
   defp extract_value(%{id: value}), do: value

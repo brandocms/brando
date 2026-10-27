@@ -3918,6 +3918,11 @@ msgstr ""
 msgid "Colors (JSON)"
 msgstr ""
 
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "Colours left empty"
+msgstr ""
+
 #: lib/brando_admin/components/shortcut_sheet.ex
 #, elixir-autogen, elixir-format
 msgid "Command"
@@ -17981,6 +17986,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This revision could not be loaded."
 msgstr ""
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "This revision has a colour that is not a valid colour. It was left empty: pick the colour again."
+msgid_plural "This revision has %{count} colours that are not valid colours. They were left empty: pick the colours again."
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format

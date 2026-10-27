@@ -23,7 +23,8 @@ defmodule Brando.Content.Palette.Color do
 
   attributes do
     attribute :name, :string, required: true
-    attribute :key, :string, required: true
+    # A CSS custom property name (`--bg`), as the palette's key
+    attribute :key, :string, required: true, constraints: [format: ~r/\A[\p{L}\p{N}_-]+\z/u]
     attribute :hex_value, :string, required: true
     attribute :instructions, :text
   end

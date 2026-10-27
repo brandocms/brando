@@ -56,6 +56,117 @@ defmodule Brando.Color do
   end
 
   @doc """
+  A stored var about to be copied into a new row (a module's default into a
+  new block, a table template's into a new row), with a colour value stored
+  before values were checked left empty. The copy is a new row, which the
+  check would refuse, and the default is not the editor's to fix: the new
+  block starts without the colour instead. `mix brando.doctor` lists these
+  defaults.
+  """
+  @spec clear_invalid_var(var) :: var when var: map()
+  def clear_invalid_var(%{type: :color, value: value} = var) do
+    if valid?(value), do: var, else: %{var | value: nil}
+  end
+
+  def clear_invalid_var(var), do: var
+
+  @doc """
+  `value`, a stored record or a list of them (a decoded revision, say), with
+  every colour that is not a valid colour left empty: the record's own
+  `:color` fields (subform rows included) and colour vars at any depth (an
+  entry's blocks, their children and table rows). Other records it holds,
+  such as a ref's image, keep their colour fields: they are not the record's
+  content. Returns the cleaned value and a description of each colour
+  cleared.
+
+  Restoring a revision uses it, so a colour stored before values were checked
+  comes back empty rather than refusing the restore.
+  """
+  @spec clear_invalid(value) :: {value, [String.t()]} when value: term()
+  def clear_invalid(value), do: clear(value, :own)
+
+  defp clear(list, spec) when is_list(list) do
+    {items, cleared} = list |> Enum.map(&clear(&1, spec)) |> Enum.unzip()
+    {items, List.flatten(cleared)}
+  end
+
+  # Matched by name, without a compile-time dependency on the Blueprint
+  defp clear(%{__struct__: Brando.Content.Var} = var, _spec) do
+    case clear_invalid_var(var) do
+      ^var -> {var, []}
+      cleared -> {cleared, ["var #{var.key}: #{inspect(var.value)}"]}
+    end
+  end
+
+  defp clear(%module{} = record, spec) do
+    if function_exported?(module, :__schema__, 1) do
+      spec = if spec == :own, do: color_fields(module), else: spec || []
+      {record, cleared} = Enum.reduce(spec, {record, []}, &clear_field(&2, &1))
+
+      spec_relations = for {name, _fields} <- spec, do: name
+
+      (content_relations(module) ++ spec_relations)
+      |> Enum.uniq()
+      |> Enum.filter(&Map.has_key?(record, &1))
+      |> Enum.reduce({record, cleared}, &clear_relation(&2, &1, spec))
+    else
+      {record, []}
+    end
+  end
+
+  defp clear(value, _spec), do: {value, []}
+
+  # Put back only when something was cleared
+  defp clear_relation({record, cleared}, name, spec) do
+    case clear(Map.get(record, name), relation_spec(spec, name)) do
+      {_children, []} -> {record, cleared}
+      {children, child_cleared} -> {Map.put(record, name, children), cleared ++ child_cleared}
+    end
+  end
+
+  defp clear_field({record, cleared}, field) when is_atom(field) do
+    value = Map.get(record, field)
+
+    if valid?(value),
+      do: {record, cleared},
+      else: {Map.put(record, field, nil), cleared ++ ["#{field}: #{inspect(value)}"]}
+  end
+
+  defp clear_field(acc, {_relation, _fields}), do: acc
+
+  # The rows a record holds (has_many, has_one, embeds, and a belongs_to it
+  # updates in place, like a block field's join row and its block), not the
+  # ones it refers to: a block's module and palette are not its content, nor
+  # are entries reached through another relation. A subform on any relation
+  # is walked too (`clear/2`). A revision taken before a relation was added
+  # has no key for it, and gets none.
+  defp content_relations(module) do
+    owned =
+      Enum.filter(module.__schema__(:associations), fn name ->
+        case module.__schema__(:association, name) do
+          %Ecto.Association.BelongsTo{on_replace: on_replace} -> on_replace == :update
+          %Ecto.Association.ManyToMany{} -> false
+          %Ecto.Association.HasThrough{} -> false
+          _ -> true
+        end
+      end)
+
+    owned ++ module.__schema__(:embeds)
+  end
+
+  defp color_fields(module) do
+    if function_exported?(module, :__color_fields__, 0), do: module.__color_fields__(), else: []
+  end
+
+  # A subform's rows take its colour fields; any other relation none
+  defp relation_spec(spec, name) do
+    Enum.find_value(spec, fn
+      {^name, fields} -> fields
+      _ -> nil
+    end)
+  end
+
+  @doc """
   Validates the colour fields of `module`'s changeset. `validate_colors:
   false` in `opts` skips it, for re-reading records already stored.
   """

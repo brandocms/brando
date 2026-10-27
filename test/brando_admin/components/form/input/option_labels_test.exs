@@ -154,7 +154,10 @@ defmodule BrandoAdmin.Components.Form.Input.OptionLabelsTest do
         namespace: ~s(ns<img src="x" data-marker="namespace">),
         status: :published,
         creator: user,
-        colors: [Brando.Factory.build(:color, hex_value: ~s(#f00"><img src="x" data-marker="color">))]
+        colors: [
+          Brando.Factory.build(:color, hex_value: "#00ff00"),
+          Brando.Factory.build(:color, hex_value: ~s(#f00"><img src="x" data-marker="color">))
+        ]
       )
 
       [%{label: {:safe, _} = label}] =
@@ -164,6 +167,7 @@ defmodule BrandoAdmin.Components.Form.Input.OptionLabelsTest do
 
       assert markers(doc) == []
       assert text_of(doc, ".text-mono") =~ @label
+      # A stored non-colour gets no swatch (`Palette.css_colors/1`)
       assert doc |> LazyHTML.query(".circle") |> Enum.count() == 1
     end
   end

@@ -1226,10 +1226,13 @@ defmodule Brando.Content.Blocks do
   def remove_pk_from_vars(nil), do: nil
   def remove_pk_from_vars([]), do: []
 
+  # The copy is a new row: a colour value stored before values were checked
+  # is left empty rather than refused (`Brando.Color.clear_invalid_var/1`).
   def remove_pk_from_vars(vars) when is_list(vars) do
     Enum.map(vars, fn var ->
       var
       |> Map.merge(%{id: nil, module_id: nil, block_id: nil})
+      |> Brando.Color.clear_invalid_var()
       |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
     end)
   end

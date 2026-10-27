@@ -466,6 +466,11 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
            revision_number
          ) do
       {:ok, {_revision, {_revision_id, decoded_entry}}} ->
+        # A colour stored before values were checked would refuse the save:
+        # it comes back empty, as when the revision is activated.
+        {decoded_entry, cleared} = Brando.Color.clear_invalid(decoded_entry)
+        socket = warn_cleared_colors(socket, cleared)
+
         # The revision becomes unsaved changes to the entry as it is now,
         # this editor's alone: its blocks leave the entry's edit session
         # until it is saved.
@@ -487,6 +492,9 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   end
 
   def handle_event("activate_revision", %{"value" => revision_number}, socket) do
+    # `set_entry_to_revision/5` restores these colours empty
+    cleared = cleared_colors(socket, revision_number)
+
     case Brando.Revisions.set_entry_to_revision(
            entry_schema(socket),
            socket.assigns.entry_id,
@@ -504,6 +512,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
         {:noreply,
          socket
+         |> warn_cleared_colors(cleared)
          |> assign(:preview_revision, nil)
          |> load_revisions()
          |> load_activity()}
@@ -710,6 +719,28 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
 
   defp schedule_error(:revision_not_found), do: gettext("This revision no longer exists.")
   defp schedule_error(_reason), do: gettext("Scheduled publishing could not be updated.")
+
+  defp cleared_colors(socket, revision_number) do
+    case Brando.Revisions.get_revision(socket.assigns.entry_type, socket.assigns.entry_id, revision_number) do
+      {:ok, {_revision, {_revision_id, decoded_entry}}} -> decoded_entry |> Brando.Color.clear_invalid() |> elem(1)
+      _ -> []
+    end
+  end
+
+  defp warn_cleared_colors(socket, []), do: socket
+
+  defp warn_cleared_colors(socket, cleared) do
+    push_event(socket, "b:alert", %{
+      title: gettext("Colours left empty"),
+      message:
+        ngettext(
+          "This revision has a colour that is not a valid colour. It was left empty: pick the colour again.",
+          "This revision has %{count} colours that are not valid colours. They were left empty: pick the colours again.",
+          length(cleared)
+        ),
+      type: "warning"
+    })
+  end
 
   defp alert_error(socket, message) do
     push_event(socket, "b:alert", %{

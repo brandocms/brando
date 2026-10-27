@@ -462,7 +462,20 @@ defmodule Brando.Content do
   end
 
   mutation :delete, Palette
-  mutation :duplicate, {Palette, change_fields: [:name, :key]}
+  mutation :duplicate, {Palette, change_fields: [:name, key: &__MODULE__.duplicate_palette_key/2]}
+
+  # A key names CSS (`Palette.css_name?/1`): " (copy)" would not be one. A
+  # key taken in the namespace gets a number, so two copies' sections differ.
+  def duplicate_palette_key(_palette, nil), do: nil
+  def duplicate_palette_key(palette, key), do: free_palette_key(palette.namespace, "#{key}-copy", 1)
+
+  defp free_palette_key(namespace, base, n) do
+    candidate = if n == 1, do: base, else: "#{base}-#{n}"
+    query = from(p in Palette, where: p.key == ^candidate)
+    query = if namespace, do: where(query, [p], p.namespace == ^namespace), else: where(query, [p], is_nil(p.namespace))
+
+    if Brando.Repo.aggregate(query, :count) > 0, do: free_palette_key(namespace, base, n + 1), else: candidate
+  end
 
   @doc """
   Find palette with `id` in `palettes`

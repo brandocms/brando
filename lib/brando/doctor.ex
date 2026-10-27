@@ -38,6 +38,7 @@ defmodule Brando.Doctor do
     Checks.ImageConfigs,
     Checks.Modules,
     Checks.ModuleEntryPaths,
+    Checks.Colors,
     Checks.Sitemap,
     Checks.Robots,
     Checks.JSONLD,

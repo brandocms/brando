@@ -1,0 +1,1 @@
+- A new block whose module has a colour var default that is not a colour starts the var empty instead of refusing to save, and a revision holding such a colour restores with it empty and a warning instead of being refused.

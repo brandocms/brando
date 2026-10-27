@@ -28,11 +28,15 @@ defmodule Brando.Content.Palette do
   trait :status
   trait :timestamped
 
+  # Key and namespace name the palette's section attribute and its CSS
+  # custom properties (`[b-section="site-dark"]`, `--palette-site-dark-bg`).
+  @css_name ~r/\A[\p{L}\p{N}_-]+\z/u
+
   attributes do
     attribute :name, :string, required: true
-    attribute :key, :string, required: true
+    attribute :key, :string, required: true, constraints: [format: @css_name]
     attribute :global, :boolean
-    attribute :namespace, :string, default: "site"
+    attribute :namespace, :string, default: "site", constraints: [format: @css_name]
     attribute :instructions, :text
     attribute :version, :integer, default: 1
     attribute :version_note, :text
@@ -57,7 +61,7 @@ defmodule Brando.Content.Palette do
           input :global, :toggle
           input :name, :text
           input :key, :slug, source: :name, camel_case: true
-          input :namespace, :text, monospace: true
+          input :namespace, :text, monospace: true, instructions: t("Letters, digits, - and _")
           input :instructions, :textarea
         end
 
@@ -69,7 +73,7 @@ defmodule Brando.Content.Palette do
 
             input :hex_value, :color, monospace: true
             input :name, :text
-            input :key, :text, monospace: true
+            input :key, :text, monospace: true, instructions: t("Letters, digits, - and _")
             input :instructions, :text
           end
         end
@@ -113,6 +117,43 @@ defmodule Brando.Content.Palette do
     </.update_link>
     """
   end
+
+  @doc """
+  Whether `name` is a key or namespace the palette changeset accepts:
+  letters (in any script), digits, `-` and `_`.
+  """
+  @spec css_name?(term()) :: boolean()
+  def css_name?(name) when is_binary(name), do: Regex.match?(@css_name, name)
+  def css_name?(_), do: false
+
+  @doc """
+  `name`, a palette's key or namespace or a colour's key, for CSS: as an
+  identifier (`--\#{css_escape(key)}`) or inside a quoted string. A name the
+  changeset accepts comes back as it is; any other character, in a name
+  stored before names were checked, is hex-escaped, so it cannot leave its
+  selector, declaration or `<style>` element. CSS reads the escape back as
+  the character, so the escaped name still matches the attribute.
+  """
+  @spec css_escape(String.t() | nil) :: String.t()
+  def css_escape(nil), do: ""
+
+  def css_escape(name) when is_binary(name) do
+    for <<char::utf8 <- name>>, into: "", do: css_escape_char(char)
+  end
+
+  # Six hex digits need no terminating space, which a minifier could drop
+  defp css_escape_char(char)
+       when char in ?a..?z or char in ?A..?Z or char in ?0..?9 or char in [?-, ?_] or char >= 0x80,
+       do: <<char::utf8>>
+
+  defp css_escape_char(char), do: "\\" <> String.pad_leading(Integer.to_string(char, 16), 6, "0")
+
+  @doc """
+  The palette colours whose value can be written into CSS: a colour stored
+  before values were checked (`Brando.Color`) is left out.
+  """
+  @spec css_colors([Brando.Content.Palette.Color.t()] | nil) :: [Brando.Content.Palette.Color.t()]
+  def css_colors(colors), do: Enum.filter(colors || [], &Brando.Color.valid?(&1.hex_value))
 
   translations do
     context :naming do

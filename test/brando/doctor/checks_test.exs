@@ -766,6 +766,68 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "Stored colours" do
+    test "lists colours and palette names stored before they were checked" do
+      assert %Result{status: :ok} = Checks.Colors.run(context())
+
+      user = Factory.insert(:random_user)
+      bad = "red;background:url(x)"
+      color_var = fn key, value -> %Brando.Content.Var{type: :color, key: key, label: %{"en" => key}, value: value} end
+
+      module =
+        Factory.insert(:module,
+          name: %{"en" => "Hero"},
+          uid: "hero-colours",
+          vars: [color_var.("bg", bad), color_var.("fg", "#000")]
+        )
+
+      for _ <- 1..2 do
+        %Brando.Content.Block{}
+        |> Ecto.Changeset.change(%{
+          uid: Brando.Utils.generate_uid(),
+          type: :module,
+          module_id: module.id,
+          creator_id: user.id
+        })
+        |> Ecto.Changeset.put_assoc(:vars, [color_var.("bg", bad), color_var.("fg", "#fff")])
+        |> Brando.Repo.insert!()
+      end
+
+      Factory.insert(:palette,
+        name: "Dark",
+        key: "Dark section",
+        namespace: "site",
+        colors: [
+          %Brando.Content.Palette.Color{name: "Ink", key: "ink", hex_value: bad},
+          %Brando.Content.Palette.Color{name: "Paper", key: "paper colour", hex_value: "#fff"}
+        ]
+      )
+
+      image = Factory.insert(:image, creator: user, dominant_color: bad)
+      Factory.insert(:image, creator: user, dominant_color: "#abcdef")
+
+      result = Checks.Colors.run(context())
+      assert result.status == :warning
+      assert result.summary == "6 stored colours are not colours"
+
+      assert result.items == [
+               ~s|Blocks of module Hero (hero-colours): var bg in 2 blocks|,
+               ~s|Module Hero (hero-colours): default of var bg: "red;background:url(x)"|,
+               ~s|Palette [site] Dark: key "Dark section" is not a CSS name|,
+               ~s|Palette [site] Dark: colour ink: "red;background:url(x)"|,
+               ~s|Palette [site] Dark: colour key "paper colour" is not a CSS name|,
+               ~s|Brando.Images.Image #{image.id}: dominant_color: "red;background:url(x)"|
+             ]
+
+      assert result.fix =~ "#1a2b3c"
+    end
+
+    test "loads a subform's rows and the rows of its own subforms" do
+      spec = [{:entry_blocks, [{:block, [{:vars, [:value]}]}]}]
+      assert Checks.Colors.preloads(Brando.Pages.Page, spec) == [entry_blocks: [block: [vars: []]]]
+    end
+  end
+
   describe "Modules" do
     test "blocks behind their module's version are a warning" do
       assert %Result{status: :ok} = Checks.Modules.run(context())
