@@ -428,7 +428,8 @@ defmodule Brando.Translations do
 
     * `:translate` and `:review` — when the saved text differs from the
       pending text, or the path was acknowledged, unless the save left the
-      block, ref or row it is in as it was (a form without that field)
+      structure, media or shared values of the block, ref, var or row it is
+      in as they were (a form without that field)
     * `:shared_update` and `:relinked` — when the saved value is the pending one
     * `:awaiting_translation` — never; it resolves when the link can be made
 
@@ -681,26 +682,40 @@ defmodule Brando.Translations do
     |> Map.put(:work_items, items)
   end
 
-  # The blocks, refs and rows whose structure or shared values the save left
-  # as they were, not the reviewed version's: a form without their field
+  # The blocks, refs, vars and rows whose structure or shared values the save
+  # left as they were, not the reviewed version's: a form without their field
   # can't hold it (`check_target_save/4`). Their saved text is no
   # translation of the pending text, so the text work within them stays
-  # open. A field's own row (its block order) is left out: a block added
+  # open. A shared value left covers what holds it: a ref's or var's media
+  # its text, a row's shared field the row, a block's identifiers their
+  # metas. A field's own row (its block order) is left out: a block added
   # elsewhere does not touch the others' text.
   defp unapplied(saved, payload, schema, module_uids) do
     [saved, payload] =
       Enum.map([saved, payload], fn entry ->
-        for {path, _class, value} <- Sync.owned_rows(entry, schema, nil, module_uids),
+        for {path, class, value} <- Sync.owned_rows(entry, schema, nil, module_uids),
             String.contains?(path, "/"),
             reduce: %{},
-            do: (rows -> Map.update(rows, path, [value], &[value | &1]))
+            do: (rows -> Map.update(rows, {path, class}, [value], &[value | &1]))
       end)
 
-    for path <- Enum.uniq(Map.keys(saved) ++ Map.keys(payload)),
-        Enum.sort(Map.get(saved, path, [])) != Enum.sort(Map.get(payload, path, [])),
+    for {path, class} = key <- Enum.uniq(Map.keys(saved) ++ Map.keys(payload)),
+        Enum.sort(Map.get(saved, key, [])) != Enum.sort(Map.get(payload, key, [])),
+        part <- [path | holder(path, class)],
         into: MapSet.new(),
-        do: path
+        do: part
   end
+
+  # What a shared value belongs to: its ref, var or row, or for a block's
+  # identifiers the metas kept for them.
+  defp holder(path, :shared) do
+    case path |> String.split("/") |> Enum.split(-1) do
+      {parent, ["identifiers"]} -> [Enum.join(parent ++ ["identifier_metas"], "/")]
+      {parent, _leaf} -> [Enum.join(parent, "/")]
+    end
+  end
+
+  defp holder(_path, _class), do: []
 
   # Whether `path` is one of `parts` or lies within one
   defp within?(path, parts) do

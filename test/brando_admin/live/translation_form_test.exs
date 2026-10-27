@@ -4,11 +4,13 @@ defmodule BrandoAdmin.TranslationFormTest do
   # what the editor reviewed.
   use Brando.LiveCase
 
+  alias Brando.Content.Block
   alias Brando.Repo
   alias Brando.SyncTest
   alias Brando.SyncTest.Article
   alias Brando.TranslationFixtures
   alias Brando.Translations
+  alias Brando.Translations.PendingVersion
 
   setup %{current_user: user} do
     {:ok, module} =
@@ -54,6 +56,37 @@ defmodule BrandoAdmin.TranslationFormTest do
     |> Map.fetch!(:entry_blocks)
     |> Enum.zip(texts)
     |> Enum.each(fn {join, text} -> set_text(join.block, text) end)
+  end
+
+  defp add_block(c, article, params, sequence) do
+    params =
+      Map.merge(
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "type" => "module",
+          "module_id" => c.module.id,
+          "creator_id" => c.current_user.id,
+          "source" => to_string(Article.Blocks)
+        },
+        params
+      )
+
+    block =
+      %Block{} |> Block.recursive_block_changeset(params, c.current_user) |> Repo.insert!()
+
+    struct(Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: sequence}) |> Repo.insert!()
+  end
+
+  defp picture_refs(id) do
+    for join <- load(id).entry_blocks, ref <- join.block.refs, ref.name == "photo", do: ref
+  end
+
+  defp set_alt(id, image_id, alt) do
+    [ref] = picture_refs(id)
+
+    ref
+    |> Ecto.Changeset.change(image_id: image_id, data: %{ref.data | data: %{ref.data.data | alt: alt}})
+    |> Repo.update!()
   end
 
   # The source adds a block and changes the year.
@@ -118,7 +151,7 @@ defmodule BrandoAdmin.TranslationFormTest do
     assert Translations.get_pending_version(Article, c.target.id) == nil
     # The version the editor reviewed is the one applied: no recompute queued by
     # the save replaced it first.
-    assert Repo.get!(Brando.Translations.PendingVersion, version.id).status == :applied
+    assert Repo.get!(PendingVersion, version.id).status == :applied
     # Still a published translation; its status was not touched.
     assert saved.status == :draft or saved.status == :published
   end
@@ -292,20 +325,74 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert Enum.any?(items, &(&1.path == item.path and is_nil(&1.resolved_at)))
     end
 
+    # The blocks the form can't show stay as they were, which the save may
+    # do; the forged year is neither the saved nor the pending one, and is
+    # the only thing refused.
     test "a forged value it has no input for is still refused", %{conn: conn} = c do
       version = change_source(c)
       {view, _html} = live_form(conn, "/admin/articles/update/#{c.target.id}/no-blocks", "article_form")
       await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
 
+      Logger.put_module_level(BrandoAdmin.Components.Form, :warning)
+      on_exit(fn -> Logger.delete_module_level(BrandoAdmin.Components.Form) end)
       params = %{"article" => %{"title" => "Title", "year" => "1999"}}
-      view |> form("#article_form_form") |> render_submit(params)
-      assert_push_event(view, "b:submit", %{}, 2_000)
-      view |> form("#article_form_form") |> render_submit(params)
-      render(view)
+
+      log =
+        ExUnit.CaptureLog.capture_log([level: :warning], fn ->
+          view |> form("#article_form_form") |> render_submit(params)
+          assert_push_event(view, "b:submit", %{}, 2_000)
+          view |> form("#article_form_form") |> render_submit(params)
+          render(view)
+        end)
+
+      assert log =~ ~s(source-controlled content: ["year"])
 
       saved = load(c.target.id)
       assert saved.title == "Tittel"
       assert saved.year == 2020
+    end
+
+    # The source swaps the picture's image and rewrites its alt text. The form
+    # can't show the picture, so the image stays pending, and marking the alt
+    # text reviewed doesn't resolve its review: the save left the picture as
+    # it was.
+    test "text work in a ref whose media the save left stays open", %{conn: conn, current_user: user} = c do
+      [image, other] =
+        for _ <- 1..2,
+            do: Factory.insert(:image, creator: user, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+
+      ref = %{
+        "uid" => Brando.Utils.generate_uid(),
+        "name" => "photo",
+        "image_id" => image.id,
+        "data" => %{"type" => "picture", "data" => %{"alt" => "Hund"}}
+      }
+
+      {:ok, source} =
+        SyncTest.create_article(%{title: "Bilde", slug: "bilde", language: "no", status: "published"}, user)
+
+      add_block(c, source, %{"refs" => [ref]}, 0)
+      {:ok, target} = Translations.create_target(Article, source.id, :en, user)
+      set_alt(target.id, image.id, "Dog")
+
+      set_alt(source.id, other.id, "Katt")
+      Translations.source_saved(load(source.id))
+      version = Translations.get_pending_version(Article, target.id)
+      [item] = Enum.filter(version.work_items, &String.ends_with?(&1.path, "/refs/photo/alt"))
+
+      {view, _html} = live_form(conn, "/admin/articles/update/#{target.id}/no-blocks", "article_form")
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      view
+      |> element("#article_form_form")
+      |> render_change(%{"translation_review" => %{"acknowledged" => [item.path]}})
+
+      save_without_blocks(view, %{"article" => %{"title" => "Title"}})
+
+      assert [%{image_id: image_id}] = picture_refs(target.id)
+      assert image_id == image.id
+      assert %{work_items: items} = Translations.get_pending_version(Article, target.id)
+      assert Enum.any?(items, &(&1.path == item.path and is_nil(&1.resolved_at)))
     end
 
     test "a translation takes the source's new cover", %{conn: conn, current_user: user} = c do
