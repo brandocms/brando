@@ -145,3 +145,38 @@ test('a missing URL that matches an entry is suggested as a redirect, stacked on
 
   await row.screenshot({ path: testInfo.outputPath('seo-missing-redirect-mobile.png') })
 })
+
+// Scanners send the URL they probe as its own referrer. Such a URL folds into
+// the bot probes, and a self-referrer is never shown as where a miss came from.
+test('a missing URL requested with itself as the referrer is folded away as a bot probe', async ({ page }) => {
+  const run = `${Date.now()}-${test.info().workerIndex}`
+  const scanned = `/dashboard/scan-${run}`
+  const linked = `/old-news-${run}`
+
+  for (const referer of [`http://localhost${scanned}`, `https://64.227.71.155${scanned}/`]) {
+    const response = await page.request.get(scanned, { headers: { referer } })
+    expect(response.status()).toBe(404)
+  }
+
+  for (const referer of [`https://news.example.com/story-${run}`, `http://localhost${linked}`]) {
+    expect((await page.request.get(linked, { headers: { referer } })).status()).toBe(404)
+  }
+
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto('/admin/config/seo')
+  await syncLV(page)
+
+  const section = page.locator('.seo-not-found')
+  const miss = section.locator('.workspace-table tbody tr').filter({ hasText: linked })
+  await expect(miss).toHaveCount(1, { timeout: 15000 })
+  await expect(miss.locator('.seo-not-found-referrer')).toContainText(`https://news.example.com/story-${run}`)
+  await expect(miss.locator('button[phx-click="redirect_404"]')).toBeVisible()
+
+  const probes = section.locator('details.seo-not-found-probes')
+  const probe = probes.locator('tbody tr').filter({ hasText: scanned })
+  await expect(probe).toBeHidden()
+  await probes.locator('summary').click()
+  await expect(probe).toBeVisible()
+  await expect(probe.locator('.seo-not-found-referrer')).toHaveCount(0)
+  await expect(section.locator('> .workspace-table-scroll tbody tr').filter({ hasText: scanned })).toHaveCount(0)
+})

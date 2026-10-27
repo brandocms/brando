@@ -14766,7 +14766,7 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
-msgid "Scanners looking for WordPress, PHP scripts and exposed config files. Nothing to redirect."
+msgid "Scanner requests: known attack paths, and URLs mostly requested with themselves as the referrer. Nothing to redirect."
 msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex

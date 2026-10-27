@@ -214,7 +214,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   # Real misses first, where a redirect may help; scanner probes folded away
   # under them, closed by default.
   defp not_found_lists(assigns) do
-    {probes, misses} = Enum.split_with(assigns.items, &Brando.Sites.FourOhFour.probe?(&1.url))
+    {probes, misses} = Enum.split_with(assigns.items, & &1.probe)
     assigns = assign(assigns, probes: probes, misses: misses)
 
     ~H"""
@@ -234,7 +234,9 @@ defmodule BrandoAdmin.Sites.SEOLive do
       <summary>
         {ngettext("%{count} bot probe", "%{count} bot probes", length(@probes), count: length(@probes))}
         <span>
-          {gettext("Scanners looking for WordPress, PHP scripts and exposed config files. Nothing to redirect.")}
+          {gettext(
+            "Scanner requests: known attack paths, and URLs mostly requested with themselves as the referrer. Nothing to redirect."
+          )}
         </span>
       </summary>
       <.not_found_table items={@probes} label={gettext("Bot probes")} />

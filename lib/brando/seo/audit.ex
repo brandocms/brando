@@ -392,6 +392,6 @@ defmodule Brando.SEO.Audit do
 
   # A scanner's probe (/wp-login.php, /.env) never had a page to redirect to.
   defp redirectable_404s do
-    Enum.reject(Brando.Sites.FourOhFour.list(), &Brando.Sites.FourOhFour.probe?(&1.url))
+    Enum.reject(Brando.Sites.FourOhFour.list(), & &1.probe)
   end
 end

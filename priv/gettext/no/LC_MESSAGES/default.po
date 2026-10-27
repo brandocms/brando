@@ -14766,8 +14766,8 @@ msgstr "Skann QR-koden"
 
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
-msgid "Scanners looking for WordPress, PHP scripts and exposed config files. Nothing to redirect."
-msgstr "Skannere som leter etter WordPress, PHP-skript og eksponerte konfigurasjonsfiler. Ingenting å videresende."
+msgid "Scanner requests: known attack paths, and URLs mostly requested with themselves as the referrer. Nothing to redirect."
+msgstr "Forespørsler fra skannere: kjente angrepsstier, og URL-er som oftest ble forespurt med seg selv som henvisende side. Ingenting å videresende."
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #: lib/brando_admin/live/sites/publishing_live.ex

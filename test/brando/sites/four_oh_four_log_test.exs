@@ -65,7 +65,37 @@ defmodule Brando.Sites.FourOhFourLogTest do
     assert moved.referrer == "https://old.example.com/links"
     assert is_binary(moved.last_hit_at)
 
-    assert rare == Map.merge(rare, %{url: "/rare", hits: 1, referrer: nil})
+    assert rare == Map.merge(rare, %{url: "/rare", hits: 1, referrer: nil, probe: false})
+  end
+
+  # Scanners send the URL they probe as its referrer, from any host
+  test "a self-referrer is never the named referrer, and folds a URL it mostly sent as a probe" do
+    for _ <- 1..3, do: miss("/wrangler.toml", "http://bielkeyang.com/wrangler.toml")
+    for _ <- 1..3, do: miss("/blog", "http://bielkeyang.com/blog/")
+    miss("/blog", "https://64.227.71.155/blog")
+    miss("/blog")
+    miss("/team", "http://ghost-rider/team")
+    miss("/team", "https://www.bielkeyang.com/team?ref=x")
+    miss("/team")
+    for _ <- 1..2, do: miss("/projects/old", "https://news.example.com/story")
+    miss("/projects/old", "https://bielkeyang.com/projects/old")
+    miss("/projects/old", "https://bielkeyang.com/projects/old/")
+    miss("/assets/app-4f9a1c.js", "https://bielkeyang.com/assets/app-4f9a1c.js")
+    miss("/assets/app-4f9a1c.js")
+    miss("/about", "https://bielkeyang.com/about")
+    miss("/about", "https://bielkeyang.com/")
+
+    by_url = Map.new(FourOhFour.list(), &{&1.url, &1})
+
+    # A probe by path, and by its referrers
+    assert %{probe: true, referrer: nil} = by_url["/wrangler.toml"]
+    # 4 of 5 hits self-referred, only by path
+    assert %{probe: true, referrer: nil} = by_url["/blog"]
+    assert %{probe: true, referrer: nil} = by_url["/team"]
+    # Half or fewer are not "mostly": the real referrer is named instead
+    assert %{probe: false, referrer: "https://news.example.com/story"} = by_url["/projects/old"]
+    assert %{probe: false, referrer: nil} = by_url["/assets/app-4f9a1c.js"]
+    assert %{probe: false, referrer: "https://bielkeyang.com/"} = by_url["/about"]
   end
 
   test "remove/1 forgets a URL in the database and in the buffer" do

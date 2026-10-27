@@ -118,10 +118,17 @@ defmodule Brando.Sites.FourOhFour do
 
   @doc """
   The missing URLs recorded in the current tenant, most requested first, with
-  their total hits, when they were last requested (formatted) and the
-  referrer that sent most of them. Flushes the buffer first.
+  their total hits, when they were last requested (formatted), the referrer
+  that sent most of them and whether they are a scanner's probe. Flushes the
+  buffer first.
+
+  A self-referrer (see `self_referrer?/2`) is never the named referrer. A URL
+  is a probe when its path is one (`probe?/1`), or when more than half its
+  hits name the URL itself as their referrer, as scanners do.
   """
-  @spec list() :: [%{url: String.t(), hits: integer(), last_hit_at: String.t(), referrer: String.t() | nil}]
+  @spec list() :: [
+          %{url: String.t(), hits: integer(), last_hit_at: String.t(), referrer: String.t() | nil, probe: boolean()}
+        ]
   def list do
     flush()
 
@@ -134,29 +141,56 @@ defmodule Brando.Sites.FourOhFour do
           limit: @list_limit
       )
 
-    referrers = top_referrers(Enum.map(totals, & &1.url))
+    referrers = referrer_hits(Enum.map(totals, & &1.url))
 
     Enum.map(totals, fn total ->
+      {self_referred, others} =
+        referrers |> Map.get(total.url, []) |> Enum.split_with(&self_referrer?(total.url, elem(&1, 0)))
+
+      self_hits = self_referred |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+
       %{
         url: total.url,
         hits: total.hits,
         last_hit_at: Brando.Utils.Datetime.format_datetime(total.last_hit_at, "%d/%m/%y, %H:%M"),
-        referrer: Map.get(referrers, total.url)
+        referrer: others |> Enum.max_by(&elem(&1, 1), fn -> {nil, 0} end) |> elem(0),
+        probe: probe?(total.url) or self_hits * 2 > total.hits
       }
     end)
   end
 
-  defp top_referrers([]), do: %{}
+  defp referrer_hits([]), do: %{}
 
-  defp top_referrers(urls) do
+  defp referrer_hits(urls) do
     from(h in NotFoundHit,
       where: h.url in ^urls and h.referrer != "",
       group_by: [h.url, h.referrer],
       select: {h.url, h.referrer, sum(h.hits)}
     )
     |> Brando.Repo.all()
-    |> Enum.group_by(&elem(&1, 0))
-    |> Map.new(fn {url, rows} -> {url, rows |> Enum.max_by(&elem(&1, 2)) |> elem(1)} end)
+    |> Enum.group_by(&elem(&1, 0), &{elem(&1, 1), elem(&1, 2)})
+  end
+
+  @doc """
+  Whether `referrer` is the missing `url` itself, whatever its scheme, host,
+  query or trailing slash. Scanners send the URL they probe as its referrer; a
+  visitor never arrives at a missing page from that page.
+  """
+  @spec self_referrer?(String.t(), String.t()) :: boolean()
+  def self_referrer?(url, referrer) when is_binary(url) and is_binary(referrer) do
+    case URI.parse(referrer) do
+      %URI{host: host, path: path} when is_binary(host) -> same_path?(decode(path || ""), url)
+      _ -> false
+    end
+  end
+
+  defp same_path?(a, b), do: String.trim_trailing(a, "/") == String.trim_trailing(b, "/")
+
+  # A logged URL is already decoded, so a lone % in it is not an escape.
+  defp decode(path) do
+    URI.decode(path)
+  rescue
+    ArgumentError -> path
   end
 
   @doc "Forgets a recorded URL, e.g. once a redirect covers it."
@@ -192,8 +226,11 @@ defmodule Brando.Sites.FourOhFour do
   defp config, do: Application.get_env(:brando, __MODULE__, [])
 
   # Requests no real visitor or broken link makes: scanners looking for
-  # WordPress, PHP shells, exposed config and credentials. They're kept, but
-  # the SEO view folds them away so the 404s worth a redirect stand out.
+  # WordPress, PHP shells, exposed config, credentials, source maps and dev
+  # servers. They're kept, but the SEO view folds them away so the 404s worth
+  # a redirect stand out. Generic words scanners also try (/login, /team,
+  # /dashboard) are real pages on many sites, so they're left to the
+  # self-referrer rule in `list/0`.
   @probe_patterns [
     # PHP scripts and their editor/backup copies: x.php, x.php~, x.php.bak
     ~r/\.php\d?(?:[.~]|$)/i,
@@ -202,16 +239,25 @@ defmodule Brando.Sites.FourOhFour do
     ~r{(?:^|/)\.(?!well-known/)[^/]},
     ~r{(?:^|/)wp-|wordpress}i,
     ~r{phpunit|eval-stdin|/vendor/|^/cgi-bin/|^/containers/json$}i,
-    ~r{(?:^|/)(?:config|secrets|credentials)\.(?:json|ya?ml|php|ini)$}i
+    ~r{(?:^|/)(?:config|secrets|credentials)\.(?:json|ya?ml|php|ini)$}i,
+    # Source maps (x.js.map, x.astro.mjs.map), keys, dumps and env files
+    ~r/\.(?:map|pem|key|env|sql(?:\.(?:gz|zip))?)$/i,
+    # Dev servers, debug consoles and file reads, /proc/self/ also after ../
+    ~r{(?:^|/)(?:@fs/|proc/self/|__vite|_profiler(?:/|$)|actuator(?:/|$)|phpmyadmin|server-status$)}i,
+    ~r{laravel\.log|storage/logs/|(?:^|/)id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?$}i,
+    # Deploy, container and cloud config
+    ~r{(?:^|/)(?:docker-compose(?:\.[\w-]+)?\.ya?ml|dockerfile|composer\.(?:json|lock)|appsettings(?:\.\w+)?\.json|application(?:-[\w-]+)?\.(?:ya?ml|properties)|service-account\.json|vercel\.json|netlify\.toml|wrangler\.toml|railway\.json|values\.ya?ml|rclone\.conf|aws-exports\.js|env\.js)$}i,
+    ~r{(?:^|/)(?:supabase/config\.toml|config/aws\.ya?ml)$}i
   ]
 
   @doc """
   Whether a 404'd path looks like a vulnerability scanner's probe rather than
-  a moved page or a broken link.
+  a moved page or a broken link. `list/0` also counts a URL mostly requested
+  with itself as the referrer as a probe.
   """
   @spec probe?(String.t()) :: boolean()
   def probe?(url) when is_binary(url) do
-    path = url |> URI.parse() |> Map.get(:path) |> Kernel.||("") |> URI.decode()
+    path = url |> URI.parse() |> Map.get(:path) |> Kernel.||("") |> decode()
     Enum.any?(@probe_patterns, &Regex.match?(&1, path))
   end
 end
