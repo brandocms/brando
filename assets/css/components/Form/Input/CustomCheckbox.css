@@ -5,9 +5,13 @@
     opacity: 0.5;
   }
 
+  /* At least the circle's height: the circle is centred on the label, and
+     a label without text (a `:checkbox` without `text:`) would otherwise
+     centre it on a line of no height, over the field's label above */
   label {
     padding: 0 0 0 var(--padding-size);
     user-select: none;
+    min-height: var(--checkbox-size);
 
     display: flex;
     align-items: center;
@@ -64,6 +68,11 @@
     --checkbox-size: 18px;
     --checkmark-width: 14px;
     --padding-size: 30px;
+  }
+
+  /* Without text, only the circle takes the click, not the field's width */
+  label.no-text {
+    width: fit-content;
   }
 
   input:focus + label::before {
