@@ -18,6 +18,7 @@ defmodule Brando.Tenant do
   @key_format ~r/^[a-z0-9]+(?:-[a-z0-9]+)*$/
   @prefix_format ~r/^tenant_[a-z0-9]+(?:-[a-z0-9]+)*_[a-z0-9]+(?:-[a-z0-9]+)*$/
   @process_prefix_key {__MODULE__, :current_prefix}
+  @process_public_key {__MODULE__, :public}
 
   @spec mode() :: mode()
   def mode do
@@ -96,22 +97,69 @@ defmodule Brando.Tenant do
   end
 
   @doc """
+  Runs `fun` with no tenant prefix, reading and writing `public`'s copy of
+  site tables on purpose, as the shared library does. In multi-site mode
+  `Brando.Repo` refuses a query on a site table with no prefix anywhere else
+  (`Brando.Exception.MissingTenantError`).
+  """
+  @spec with_public((-> result)) :: result when result: var
+  def with_public(fun) when is_function(fun, 0) do
+    previous = {Process.get(@process_prefix_key), Process.get(@process_public_key)}
+    put_public()
+
+    try do
+      fun.()
+    after
+      {prefix, public} = previous
+      put_prefix(prefix)
+      if public, do: Process.put(@process_public_key, true), else: Process.delete(@process_public_key)
+    end
+  end
+
+  @doc """
+  Clears the tenant prefix for the rest of the process and marks its queries
+  on site tables as meant for `public` (see `with_public/1`). For a LiveView
+  that works on the shared library.
+  """
+  @spec put_public() :: :ok
+  def put_public do
+    put_prefix(nil)
+    Process.put(@process_public_key, true)
+    :ok
+  end
+
+  @doc """
+  Whether the process is outside every site in multi-site mode: no tenant
+  prefix, and not working on `public` on purpose (`with_public/1`). Account
+  emails and the installation's own screens run so; a site's identity, SEO,
+  globals and menus are then empty.
+  """
+  @spec outside_site?() :: boolean()
+  def outside_site?, do: mode() == :multi and is_nil(current_prefix()) and not public?()
+
+  @doc "Whether the process works on `public`'s copy of site tables on purpose (`with_public/1`)."
+  @spec public?() :: boolean()
+  def public?, do: Process.get(@process_public_key, false) and is_nil(Process.get(@process_prefix_key))
+
+  @doc """
   Captures the current tenant context for work that will run in another process.
   The trace context comes along, so spans there join the caller's trace.
   """
   @spec capture_context((-> result)) :: (-> result) when result: var
   def capture_context(fun) when is_function(fun, 0) do
-    prefix = current_prefix()
+    prefix = captured_prefix()
     trace = Brando.Tracing.capture()
     fn -> run_captured(prefix, trace, fun) end
   end
 
   @spec capture_context((arg -> result)) :: (arg -> result) when arg: var, result: var
   def capture_context(fun) when is_function(fun, 1) do
-    prefix = current_prefix()
+    prefix = captured_prefix()
     trace = Brando.Tracing.capture()
     fn arg -> run_captured(prefix, trace, fn -> fun.(arg) end) end
   end
+
+  defp captured_prefix, do: if(public?(), do: :public, else: current_prefix())
 
   @spec validate_config!() :: :ok
   def validate_config! do
@@ -138,6 +186,7 @@ defmodule Brando.Tenant do
   end
 
   defp run_captured(nil, trace, fun), do: Brando.Tracing.with_context(trace, fun)
+  defp run_captured(:public, trace, fun), do: Brando.Tracing.with_context(trace, fn -> with_public(fun) end)
   defp run_captured(prefix, trace, fun), do: Brando.Tracing.with_context(trace, fn -> with_prefix(prefix, fun) end)
 
   defp raise_invalid_mode(mode) do

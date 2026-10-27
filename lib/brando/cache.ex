@@ -14,6 +14,14 @@ defmodule Brando.Cache do
     end
   end
 
+  @doc """
+  A site's cached data (identity, SEO, globals, menus, palettes): `nil`
+  outside every site in multi-site mode (`Brando.Tenant.outside_site?/0`),
+  whatever `public`'s copy put under the unprefixed key.
+  """
+  @spec get_site(any) :: any
+  def get_site(key), do: if(Brando.Tenant.outside_site?(), do: nil, else: get(key))
+
   @spec get(any, atom) :: any
   def get(key, sub_key) do
     case get_from_cache(key) do

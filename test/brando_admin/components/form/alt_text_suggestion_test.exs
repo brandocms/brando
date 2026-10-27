@@ -54,8 +54,15 @@ defmodule BrandoAdmin.Components.Form.AltTextSuggestionTest do
              fn -> describe.() end |> Task.async() |> Task.await()
   end
 
-  test "a task without the context looks in the wrong environment", %{image: image} do
-    assert {:error, {:image, :not_found}} =
-             fn -> Brando.Images.AltText.describe(image.id) end |> Task.async() |> Task.await()
+  test "a task without the context is refused a site's table", %{image: image} do
+    describe = fn ->
+      try do
+        Brando.Images.AltText.describe(image.id)
+      rescue
+        error in Brando.Exception.MissingTenantError -> {:refused, error.table}
+      end
+    end
+
+    assert {:refused, "images"} = describe |> Task.async() |> Task.await()
   end
 end

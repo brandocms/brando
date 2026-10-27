@@ -107,15 +107,20 @@ defmodule BrandoAdmin.Authorization do
     |> attach_hook(:authorization_info, :handle_info, &info_hook/2)
   end
 
-  defp scope(socket, {_, resource}, params) do
+  defp scope(socket, requirement, params) do
     user = socket.assigns.current_user
+    if installation?(requirement, params), do: Scope.installation(user), else: Scope.current(user)
+  end
 
-    installation? =
-      resource in [:sites, :frontend_assets, :shared_library] or
-        (resource == Brando.Users.User and Brando.Tenant.enabled?()) or
-        (resource == :groups and is_map(params) and params["scope"] == "installation")
-
-    if installation?, do: Scope.installation(user), else: Scope.current(user)
+  @doc """
+  Whether a view's requirement (`requirement/3`) is the installation's rather
+  than a site's: sites, frontend assets, the shared library, accounts with
+  tenancy on, and installation groups.
+  """
+  def installation?({_action, resource}, params) do
+    resource in [:sites, :frontend_assets, :shared_library] or
+      (resource == Brando.Users.User and Brando.Tenant.enabled?()) or
+      (resource == :groups and is_map(params) and params["scope"] == "installation")
   end
 
   defp params_hook(params, _url, socket) do

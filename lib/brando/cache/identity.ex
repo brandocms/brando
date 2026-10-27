@@ -20,7 +20,7 @@ defmodule Brando.Cache.Identity do
   @spec get(binary()) :: map()
   def get(language) do
     identity_map =
-      case Cache.get(:identity) do
+      case Cache.get_site(:identity) do
         nil -> set()
         cache -> cache
       end
@@ -34,6 +34,10 @@ defmodule Brando.Cache.Identity do
   @spec set :: map()
   @decorate span("brando.cache.set_identity")
   def set do
+    if Brando.Tenant.outside_site?(), do: %{}, else: do_set()
+  end
+
+  defp do_set do
     {:ok, identities} = Sites.list_identities(%{preload: @preloads})
     identity_map = process_identities(identities)
     Cache.put(:identity, identity_map, :infinite)

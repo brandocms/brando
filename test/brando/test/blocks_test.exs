@@ -90,13 +90,16 @@ defmodule Brando.Test.BlocksTest do
       # A public page with the tenant page's id: a join row written to public
       # would land on it without a foreign key error.
       public_page =
-        Brando.Repo.insert!(%Page{
-          title: "Public page",
-          uri: "public-page",
-          language: :en,
-          template: "default.html",
-          creator_id: user.id
-        })
+        Brando.Repo.insert!(
+          %Page{
+            title: "Public page",
+            uri: "public-page",
+            language: :en,
+            template: "default.html",
+            creator_id: user.id
+          },
+          prefix: "public"
+        )
 
       Brando.Tenant.with_prefix(@prefix, fn ->
         module =

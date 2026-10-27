@@ -1,0 +1,4 @@
+- A static-build preview opens only on its own site's hosts, so one site's build can no longer run in another site's origin; the Publishing screen links it on the site's domain.
+- With legacy authorization and several sites, a user removed from a site, or whose site is suspended, stops receiving that site's save notifications at once.
+- LiveForm submissions on a multi-site installation are stored with the page's site, where its submissions listing, export and retention purge find them; mount site LiveViews with `Brando.Tenant.FrontendLiveView`.
+- On a multi-site installation an admin with no site to enter is sent to the access-denied page (a superuser to the sites screen), instead of reading the content and form submissions a tenant migration leaves in the `public` schema, and `Brando.Repo` refuses a query on a site table that has no tenant prefix.

@@ -215,6 +215,7 @@ defmodule Brando.Repo do
       Keyword.has_key?(opts, :prefix) ->
         opts
 
+      # Shared schemas read `public` by design, joins included (a user's avatar)
       public_source?(source) ->
         Keyword.put(opts, :prefix, "public")
 
@@ -222,9 +223,84 @@ defmodule Brando.Repo do
         Keyword.put(opts, :prefix, prefix)
 
       true ->
+        refuse_unscoped!(source)
         opts
     end
   end
+
+  # With several sites, `public`'s copy of a site table is no site's content
+  # (a tenant migration leaves it behind): reading it with no prefix would
+  # show it to whoever has no site. A source that carries its own prefix, or
+  # a shared table, is not refused, nor is work on `public` on purpose
+  # (`Brando.Tenant.with_public/1`) or a migration Ecto is running.
+  defp refuse_unscoped!(source) do
+    if Brando.Tenant.outside_site?() and is_nil(Process.get(:ecto_migration)) do
+      case tenant_tables(source) do
+        [] -> :ok
+        [table | _] -> raise Brando.Exception.MissingTenantError, table: table
+      end
+    end
+  end
+
+  # Every table the source reads: a query's own, its joins' (an association
+  # join through the schema it starts from), its subqueries' wherever they
+  # stand, and those of the queries it is combined with.
+  defp tenant_tables(%Ecto.Changeset{data: data}), do: tenant_tables(data)
+  defp tenant_tables(%Ecto.Query{prefix: prefix}) when is_binary(prefix), do: []
+
+  defp tenant_tables(%Ecto.Query{from: from, joins: joins} = query) do
+    {tables, _schemas} =
+      Enum.reduce([from | joins], {[], []}, fn expr, {tables, schemas} ->
+        source = expr_source(expr, schemas)
+        {tables ++ expr_tables(expr, source), schemas ++ [source_schema(source)]}
+      end)
+
+    expressions =
+      [query.select | Enum.map(joins, & &1.on)] ++
+        query.wheres ++ query.havings ++ query.order_bys ++ query.group_bys ++ query.updates
+
+    subqueries = for %{subqueries: subqueries} <- expressions, subquery <- subqueries, do: subquery
+    combined = for {_kind, combined} <- query.combinations, do: combined
+
+    tables ++ Enum.flat_map(subqueries ++ combined, &tenant_tables/1)
+  end
+
+  defp tenant_tables(%Ecto.SubQuery{query: query}), do: tenant_tables(query)
+  defp tenant_tables(%{__meta__: %{prefix: prefix}}) when is_binary(prefix), do: []
+  defp tenant_tables(%{__meta__: %{source: table}, __struct__: schema}), do: tenant_tables({table, schema})
+  defp tenant_tables({table, nil}) when is_binary(table), do: tenant_tables(table)
+
+  defp tenant_tables({table, schema}) when is_binary(table) and is_atom(schema),
+    do: if(schema_prefix?(schema), do: [], else: tenant_tables(table))
+
+  defp tenant_tables([first | _rest]), do: tenant_tables(first)
+
+  defp tenant_tables(table) when is_binary(table),
+    do: if(Brando.Tenant.SharedTables.member?(table), do: [], else: [table])
+
+  defp tenant_tables(schema) when is_atom(schema) do
+    if schema?(schema), do: tenant_tables({schema.__schema__(:source), schema}), else: []
+  end
+
+  defp tenant_tables(_source), do: []
+
+  defp expr_source(%{source: nil, assoc: {parent, field}}, schemas) do
+    with schema when not is_nil(schema) <- Enum.at(schemas, parent),
+         %{related: related} <- schema.__schema__(:association, field) do
+      {related.__schema__(:source), related}
+    end
+  end
+
+  defp expr_source(%{source: source}, _schemas), do: source
+
+  defp expr_tables(%{prefix: prefix}, _source) when is_binary(prefix), do: []
+  defp expr_tables(_expr, source), do: tenant_tables(source)
+
+  defp source_schema({_table, schema}) when is_atom(schema) and not is_nil(schema), do: schema
+  defp source_schema(_source), do: nil
+
+  defp schema?(schema), do: Code.ensure_loaded?(schema) and function_exported?(schema, :__schema__, 1)
+  defp schema_prefix?(schema), do: schema?(schema) and is_binary(schema.__schema__(:prefix))
 
   defp public_source?(%Ecto.Changeset{data: data}), do: public_source?(data)
   defp public_source?(%Ecto.Query{from: %{source: source}}), do: public_source?(source)

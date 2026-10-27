@@ -205,6 +205,13 @@ socket "/live", Phoenix.LiveView.Socket,
   websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]
 ```
 
+With tenancy enabled, mount the LiveView with `Brando.Tenant.FrontendLiveView`
+(see [Tenancy and environments](tenancy_and_environments.md#router-and-request-context)).
+It resolves the page's site from its host, so the form is read from that site
+and `connect_meta/1` carries its tenant prefix; the submission is stored with
+the site's other submissions. A LiveForm whose LiveView has no site does not
+send, and shows the form's failure message.
+
 With Turnstile, load its script in the layout. A Turnstile token is good for
 one submission, so a visitor whose check fails is asked to reload the page.
 

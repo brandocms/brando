@@ -93,9 +93,29 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     BrandoAdmin.Work.finish(user, Brando.Worker.SSGBuild.work_key(ready.id), nil, global: true)
   end
 
+  # A preview opens only on its own site's hosts, which need not be the admin's
+  test "links a build's preview on its environment's domain", context do
+    {:ok, _environment} = Registry.update_environment(context.environment, %{domain: "static-acme.test"})
+
+    build =
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, build} = Builds.request_build(context.site, context.environment, creator_id: context.current_user.id)
+        build
+      end)
+
+    File.mkdir_p!(build.build_path)
+    {:ok, _ready} = Builds.update(build, %{status: :ready, built_at: DateTime.utc_now()})
+
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+    assert has_element?(
+             view,
+             ~s(#ssg-build-#{build.id} a[href="http://static-acme.test/__ssg_preview__/#{build.preview_token}/"])
+           )
+  end
+
   test "hides publishing from dynamically delivered sites", context do
     {:ok, _dynamic_site} = Registry.update_site(context.site, %{delivery_mode: :dynamic})
-    Cache.clear()
 
     assert {:error, {:redirect, %{to: "/admin"}}} =
              live(context.conn, "/admin/config/publishing")

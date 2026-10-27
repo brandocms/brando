@@ -371,7 +371,7 @@ defmodule Brando.SearchTest do
 
     test "documents are written to and found in the current site and environment only", %{user: user} do
       public = Factory.insert(:page, title: "Example Hotel public", creator: user)
-      :ok = Search.index_entry(Page, public.id)
+      :ok = Brando.Tenant.with_public(fn -> Search.index_entry(Page, public.id) end)
 
       Brando.Tenant.with_prefix(@prefix, fn ->
         page =
@@ -395,8 +395,10 @@ defmodule Brando.SearchTest do
         assert %DateTime{} = Search.rebuilt_at()
       end)
 
-      assert search("example hotel") == ["Example Hotel public"]
-      assert Search.rebuilt_at() == nil
+      Brando.Tenant.with_public(fn ->
+        assert search("example hotel") == ["Example Hotel public"]
+        assert Search.rebuilt_at() == nil
+      end)
 
       assert Repo.query!(~s|SELECT title FROM "#{@prefix}".search_documents|).rows == [["Example Hotel tenant"]]
     end

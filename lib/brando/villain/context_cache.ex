@@ -19,7 +19,7 @@ defmodule Brando.Villain.ContextCache do
   @spec identity(binary()) :: map()
   def identity(language) do
     RenderScope.fetch({__MODULE__, :identity, language}, fn ->
-      identity_map = Cache.get(:identity) || @identity_cache.set()
+      identity_map = Cache.get_site(:identity) || @identity_cache.set()
       Map.get(identity_map, language, %{})
     end)
   end
@@ -30,7 +30,7 @@ defmodule Brando.Villain.ContextCache do
   @spec globals(binary()) :: map()
   def globals(language) do
     RenderScope.fetch({__MODULE__, :globals, language}, fn ->
-      globals_map = Cache.get(:globals) || @globals_cache.set()
+      globals_map = Cache.get_site(:globals) || @globals_cache.set()
       Map.get(globals_map || %{}, language, %{})
     end)
   end
@@ -39,5 +39,5 @@ defmodule Brando.Villain.ContextCache do
   Gets the cached navigation tree.
   """
   @spec navigation() :: map() | nil
-  def navigation, do: RenderScope.fetch({__MODULE__, :navigation}, fn -> Cache.get(:navigation) end)
+  def navigation, do: RenderScope.fetch({__MODULE__, :navigation}, fn -> Cache.get_site(:navigation) end)
 end

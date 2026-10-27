@@ -102,6 +102,16 @@ position. It resolves domains from `Brando.Tenant.Cache`, assigns
 `current_site`, `current_environment`, and `tenant_prefix`, and stores the
 prefix in process context without a database query.
 
+A LiveView on the site's pages runs in its own process, which the plug never
+reaches. Mount it with `Brando.Tenant.FrontendLiveView`, which does the same
+from the page's host, or its queries read the `public` schema:
+
+```elixir
+live_session :site, on_mount: [Brando.Tenant.FrontendLiveView] do
+  live "/contact", MyAppWeb.ContactLive
+end
+```
+
 `Brando.Repo` applies the current prefix to reads, writes, preloads, bulk
 updates, and bulk soft deletion. An explicit prefix always wins:
 
@@ -116,6 +126,14 @@ Brando.Repo.all(Brando.Sites.Site, prefix: "public")
 Shared schemas should set `@schema_prefix "public"`. The wrapper recognizes
 that metadata and keeps shared models in `public` even when an admin is working
 inside a tenant environment.
+
+In `:multi` mode a query on a site's table with no prefix at all raises
+`Brando.Exception.MissingTenantError`: `public`'s copy of a site table is no
+site's content. Run background work for a site inside
+`Brando.Tenant.with_prefix/2`. Where the `public` copy is meant, as for the
+shared library, pass `prefix: "public"` or run the work in
+`Brando.Tenant.with_public/1`. Tables listed in `Brando.Tenant.SharedTables`, and schemas with
+their own `@schema_prefix`, are not refused.
 
 Declare public paths in your application's web SSG module:
 

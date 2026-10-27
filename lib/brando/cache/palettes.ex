@@ -14,10 +14,10 @@ defmodule Brando.Cache.Palettes do
   """
   @spec get_css :: binary() | nil
   def get_css do
-    case Cache.get(:palettes_css) do
+    case Cache.get_site(:palettes_css) do
       nil ->
         set()
-        Cache.get(:palettes_css)
+        Cache.get_site(:palettes_css)
 
       css ->
         css
@@ -25,10 +25,10 @@ defmodule Brando.Cache.Palettes do
   end
 
   def get do
-    case Cache.get(:palettes) do
+    case Cache.get_site(:palettes) do
       nil ->
         set()
-        Cache.get(:palettes)
+        Cache.get_site(:palettes)
 
       palettes ->
         palettes
@@ -41,6 +41,10 @@ defmodule Brando.Cache.Palettes do
   @spec set :: {:error, boolean} | {:ok, boolean}
   @decorate span("brando.cache.set_palettes")
   def set do
+    if Brando.Tenant.outside_site?(), do: {:ok, false}, else: do_set()
+  end
+
+  defp do_set do
     {:ok, palettes} = get_palettes()
     palettes_css = get_palettes_css(palettes)
 

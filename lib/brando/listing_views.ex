@@ -42,6 +42,8 @@ defmodule Brando.ListingViews do
     end
   rescue
     error in Postgrex.Error -> missing_table(error, __STACKTRACE__, [])
+    # An installation screen with no site (multi-site mode): no site's views
+    Brando.Exception.MissingTenantError -> []
   end
 
   @doc "A view `user` sees on `listing` of `schema`, by id."
@@ -74,6 +76,8 @@ defmodule Brando.ListingViews do
     end
   rescue
     error in Postgrex.Error -> missing_table(error, __STACKTRACE__, {:error, :unavailable})
+    # An installation screen with no site (multi-site mode): no site's views
+    Brando.Exception.MissingTenantError -> {:error, :unavailable}
   end
 
   @doc "Changes a view's name, parameters or sharing, when `user` may (`can_manage?/2`)."
@@ -127,6 +131,8 @@ defmodule Brando.ListingViews do
     end
   rescue
     error in Postgrex.Error -> missing_table(error, __STACKTRACE__, nil)
+    # An installation screen with no site (multi-site mode): no site's views
+    Brando.Exception.MissingTenantError -> nil
   end
 
   @doc "Makes `view` the one `user` opens its listing with, in place of any other."

@@ -150,7 +150,7 @@ defmodule BrandoAdmin.Content.SharedLibraryLiveTest do
 
     conn = log_in_user(Phoenix.ConnTest.build_conn(), editor)
 
-    assert {:error, {:redirect, %{to: "/admin"}}} =
+    assert {:error, {:redirect, %{to: "/admin/access-denied"}}} =
              live(conn, "/admin/config/content/shared_library")
   end
 end

@@ -102,6 +102,7 @@ defmodule Brando.Tenant.Access do
     |> then(fn changeset ->
       if changeset.data.id, do: Repo.update(changeset, @public_opts), else: Repo.insert(changeset, @public_opts)
     end)
+    |> tap(&broadcast_on_success/1)
   end
 
   @spec revoke(User.t(), Site.t()) :: :ok | {:error, Ecto.Changeset.t()}
@@ -112,8 +113,12 @@ defmodule Brando.Tenant.Access do
 
       assignment ->
         case Repo.delete(assignment, @public_opts) do
-          {:ok, _deleted} -> :ok
-          {:error, changeset} -> {:error, changeset}
+          {:ok, _deleted} = result ->
+            broadcast_on_success(result)
+            :ok
+
+          {:error, changeset} ->
+            {:error, changeset}
         end
     end
   end
@@ -127,6 +132,10 @@ defmodule Brando.Tenant.Access do
     )
     |> Repo.all(@public_opts)
   end
+
+  # Open lobby channels re-check their site scope; legacy mode has no other signal.
+  defp broadcast_on_success({:ok, _record}), do: Brando.Authorization.Realtime.broadcast_changed()
+  defp broadcast_on_success(_error), do: :ok
 
   defp get_assignment(%User{id: user_id}, %Site{id: site_id}) do
     from(user_site in UserSite,

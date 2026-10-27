@@ -39,6 +39,11 @@ defmodule Brando.HTML.Forms.LiveForm do
   Without `:x_headers`, every visitor behind the proxy counts as the proxy's
   address, and a few submissions block the form for all of them.
 
+  With tenancy enabled, mount the LiveView with `Brando.Tenant.FrontendLiveView`
+  so the form is read, and its submissions stored, in the page's site:
+  `connect_meta/1` carries the site's tenant prefix, and a form whose meta has
+  none is not sent.
+
   With Turnstile configured, load its script in your layout. The widget is
   left alone by LiveView's patches, but a token is good for one submission:
   when a check fails, the visitor is asked to reload the page.
@@ -52,13 +57,16 @@ defmodule Brando.HTML.Forms.LiveForm do
   alias Brando.Forms
   alias Brando.Forms.Field
   alias Brando.Forms.Validation
+  alias Brando.Tenant
 
   @passed [:classes, :only, :except, :nonce, :intro, :submit, :success, :failure, :section, :field]
 
   @doc """
   What a submission records about the visitor — their IP address and user
-  agent — from the socket's connect info. Call it in the LiveView's `mount/3`.
-  The address is the client's, also behind a trusted proxy (`Brando.ClientIP`).
+  agent — from the socket's connect info, and the tenant prefix
+  `Brando.Tenant.FrontendLiveView` resolved for the page. Call it in the
+  LiveView's `mount/3`. The address is the client's, also behind a trusted
+  proxy (`Brando.ClientIP`).
   """
   @spec connect_meta(Phoenix.LiveView.Socket.t()) :: map()
   def connect_meta(socket) do
@@ -70,7 +78,8 @@ defmodule Brando.HTML.Forms.LiveForm do
           nil -> nil
           address -> address |> :inet.ntoa() |> to_string()
         end,
-      user_agent: connect_info(socket, :user_agent)
+      user_agent: connect_info(socket, :user_agent),
+      tenant_prefix: socket.assigns[:tenant_prefix]
     }
   end
 
@@ -143,7 +152,7 @@ defmodule Brando.HTML.Forms.LiveForm do
     posted = params["fields"] || %{}
     socket = assign(socket, values: values(socket.assigns.form, posted), failure_message: nil)
 
-    case Forms.submit(socket.assigns.form.key, params, socket.assigns.meta) do
+    case submit(socket.assigns.form.key, params, socket.assigns.meta) do
       {:ok, _submission, %{redirect_url: url}} when is_binary(url) and url != "" ->
         {:noreply, redirect_to(socket, url)}
 
@@ -160,6 +169,17 @@ defmodule Brando.HTML.Forms.LiveForm do
       _ ->
         message = Forms.message(:failure_message, socket.assigns.form.language)
         {:noreply, assign(socket, :failure_message, message)}
+    end
+  end
+
+  # The connected process has no tenant prefix of its own: the page's comes in
+  # `meta`. With tenancy on and none resolved, sending would store the
+  # submission outside every site.
+  defp submit(key, params, meta) do
+    cond do
+      not Tenant.enabled?() -> Forms.submit(key, params, meta)
+      is_binary(meta[:tenant_prefix]) -> Tenant.with_prefix(meta.tenant_prefix, fn -> Forms.submit(key, params, meta) end)
+      true -> {:error, :no_site}
     end
   end
 
