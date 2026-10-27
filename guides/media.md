@@ -160,13 +160,15 @@ Quality and other
 encoder settings are not in a file's header and are not compared, nor is a
 crop's focal point: if a config changed
 only those, use **Recreate image sizes**. Images on the CDN without a local
-copy (`keep_local_copy: false`) can't be checked and are left as they are.
+copy (`keep_local_copy: false`) can't be checked: adopting leaves them as they
+are, and recreating them fetches their originals back from the CDN.
 
 Run it where the media is. When none of the images has a file under the
 media folder (an empty or unmounted folder, or media never synced to this
 machine), the task stops with `No image files found under <media path>`
 instead of reporting every image as different: recreating them would need
-the originals too. A single missing file is named with `--verbose`, as
+the originals too. Only images kept in the media folder count here: those
+on a CDN without a local copy are fetched from it when recreated. A single missing file is named with `--verbose`, as
 `large: file missing: images/site/default/large/x.jpg`.
 
 The task covers every environment of every active site. **Recreate changed images** adopts the same way before recreating, so
