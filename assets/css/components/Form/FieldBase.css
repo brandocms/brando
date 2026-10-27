@@ -290,6 +290,12 @@
   }
 }
 
+/* The value of a field whose controls take no edit, read out with its label
+   (`field_base/1`'s `:value`). An editable field has it in its controls. */
+.field-wrapper:not([data-locked]):not([data-source-locked]) > .label-wrapper .field-value {
+  display: none;
+}
+
 .tiny-toggle-wrapper[data-locked] {
   opacity: 0.6;
 }

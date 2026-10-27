@@ -1293,6 +1293,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         locked={@locked}
         skip_presence
       >
+        <:value>{link_text(@var, @identifier)}</:value>
         <div class="input-link">
           <Input.hidden field={@var[:identifier_id]} value={@identifier_id || ""} />
           <.link_preview
@@ -1312,6 +1313,23 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       </Primitives.field_base>
     </div>
     """
+  end
+
+  # The link as text, for a locked link: its text and URL, or the entry it
+  # points to
+  defp link_text(var, identifier) do
+    changeset = var.source
+
+    parts =
+      case get_field(changeset, :link_type) || :url do
+        :url -> [get_field(changeset, :link_text), get_field(changeset, :value)]
+        :identifier -> [get_field(changeset, :link_text), Brando.Content.Identifier.title_text(identifier)]
+      end
+
+    case Enum.reject(parts, &(&1 in [nil, ""])) do
+      [] -> Input.value_text(nil)
+      parts -> Enum.join(parts, ", ")
+    end
   end
 
   def link_preview(assigns) do

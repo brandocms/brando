@@ -260,6 +260,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         locked={@locked}
         relation
       >
+        <:value>{MediaField.asset_name(@image, :image) || Input.value_text(nil)}</:value>
         <div>
           <div class={["input-image", @small && "small", @square && "square", @compact && "compact"]}>
             <MediaField.field

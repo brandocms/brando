@@ -68,6 +68,15 @@ defmodule BrandoAdmin.Components.Form.Primitives do
   slot :meta
   slot :header
 
+  slot :value,
+    doc: """
+    the field's value as text, for a control that is not text itself (a
+    toggle, a select, a media field). Read out with the label while the
+    field is locked, by its own options or as a translation's source-locked
+    field (`Brando.TranslationWork`): its controls are inert then, which
+    hides what they show from a screen reader.
+    """
+
   def field_base(assigns) do
     relation = Map.get(assigns, :relation, false)
     failed = has_error(assigns.field, relation)
@@ -109,6 +118,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
           <span :if={@locked} class="field-lock">
             <.icon name="lock" /><span class="visually-hidden">{gettext("Locked")}</span>
           </span>
+          <span :if={@value != []} class="field-value visually-hidden">, {render_slot(@value)}</span>
           <div
             :if={!@skip_presence}
             class="field-presence"

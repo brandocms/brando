@@ -30,8 +30,12 @@ a 12px lock after the label, muted, with "Locked" for screen readers. Text
 controls render `readonly` on the shaded surface in muted text, so the value
 can still be read, selected and copied, and a translated input's tabs still
 switch (`locked={:readonly}`); rich text drops its toolbar. Any other control
-sits in an inert field base at 60% opacity (`locked`), as a translation's
-source-locked fields do. Keep a locked control's inputs posting their
+sits in an inert field base at 60% opacity (`locked`), which hides what it
+shows from a screen reader: it passes its value as text in `field_base/1`'s
+`:value` slot, read with the label and hidden while the field takes edits.
+A synchronized translation's source-locked fields (`Brando.TranslationWork`)
+lock the same way: text read only, any other control inert, the label and its
+value readable. Keep a locked control's inputs posting their
 values: never `disabled`, which drops them from a subform row's params.
 Keep the focus ring on a read-only control. `FieldBase.css` styles it;
 `locked-inputs.spec.js` and `locked_inputs_test.exs` cover it.

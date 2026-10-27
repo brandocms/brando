@@ -58,6 +58,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
         compact={@compact}
         locked={@locked}
       >
+        <:value>{selected_text(@selected_options, @input_options, @relation_key, @relation_type)}</:value>
         <.invalid_options_warning
           :if={@invalid_options != []}
           invalid_options={@invalid_options}
@@ -1150,6 +1151,26 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp extract_value(%{value: value}), do: value
   defp extract_value(%{id: value}), do: value
   defp extract_value(value), do: value
+
+  # The selected options' labels as text, for the field's value read out
+  # while it is locked (`Primitives.field_base/1`'s `:value`), as `labels/1`
+  # shows them
+  defp selected_text(selected_options, input_options, relation_key, relation_type) do
+    selected_options
+    |> Enum.reject(&match?(%Changeset{changes: %{marked_as_deleted: true}}, &1))
+    |> Enum.map(&value_label(get_opt(&1, input_options, relation_key, relation_type)))
+    |> case do
+      [] -> gettext("None selected")
+      labels -> Enum.join(labels, ", ")
+    end
+  end
+
+  defp value_label(%{label: label}), do: Options.label_text(label)
+  defp value_label(nil), do: gettext("Missing option")
+  defp value_label(%Changeset{data: entry}), do: value_label(entry)
+
+  defp value_label(entry),
+    do: Brando.Content.Identifier.title_text(entry.__struct__.__identifier__(entry, skip_cover: true))
 
   # The labels under the field, in the order chosen.
   defp get_label(%{opt: %{entry: _, status: _}} = assigns) do

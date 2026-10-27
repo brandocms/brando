@@ -46,9 +46,15 @@ async function expectReadonlyText(page, field, value) {
   await expect(field.locator(':scope > .field-base')).not.toHaveAttribute('inert')
 }
 
-async function expectInert(field) {
+// An inert control hides what it shows from a screen reader: the label
+// reads out the value, in a visually hidden part that an editable field hides
+async function expectInert(field, value) {
   await expectLocked(field)
   await expect(field.locator(':scope > .field-base')).toHaveAttribute('inert', '')
+  const text = field.locator(':scope > .label-wrapper .control-label > .field-value')
+  await expect(text).not.toBeEmpty()
+  if (value) await expect(text).toContainText(value)
+  expect(await text.evaluate(el => getComputedStyle(el).display)).not.toBe('none')
 }
 
 test('every locked input type renders locked and takes no edit', async ({ page }) => {
@@ -92,8 +98,14 @@ test('every locked input type renders locked and takes no edit', async ({ page }
   await expect(label.locator('input[lang="no"]')).toHaveValue('Åpning')
 
   // Every other control is inert: a click reaches nothing
-  for (const name of ['Status', 'Key', 'Date', 'Date and time', 'Colour', 'Kind', 'Size', 'Featured', 'Confirmed', 'Aliases', 'Tags', 'Image', 'File', 'Video']) {
-    await expectInert(lockedField(page, name))
+  // and its label reads out the value: the fixture's own, where it isn't
+  // the admin's copy
+  for (const [name, value] of [
+    ['Status'], ['Key', '{{ entry.title }}'], ['Date', '2026-11-14'], ['Date and time', '2026-11-14'],
+    ['Colour', '#254e3f'], ['Kind'], ['Size'], ['Featured'], ['Confirmed'], ['Aliases', 'Premiere'], ['Tags'],
+    ['Image'], ['File'], ['Video'],
+  ]) {
+    await expectInert(lockedField(page, name), value)
   }
 
   const status = lockedField(page, 'Status')

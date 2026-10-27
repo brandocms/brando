@@ -209,6 +209,9 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
         compact={@compact}
         locked={@locked}
       >
+        <:value>
+          {ngettext("%{count} item", "%{count} items", length(@gallery_objects), count: length(@gallery_objects))}
+        </:value>
         <div class="gallery-input">
           <div
             id={"#{@field.id}-gallery-upload-trigger"}

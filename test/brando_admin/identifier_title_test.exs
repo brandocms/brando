@@ -95,6 +95,30 @@ defmodule BrandoAdmin.IdentifierTitleTest do
       html = rendered_to_string(~H"<RenderVar.link_identifier identifier={@identifier} link_text={@label} />")
       assert html =~ "Write &amp;lt;br&amp;gt;"
     end
+
+    # A locked link var reads its value out: the entry's title, escaped once
+    test "a locked link to an entry reads out its title once escaped" do
+      var =
+        %Brando.Content.Var{type: :link, key: "link", link_type: :identifier, identifier_id: 1}
+        |> Ecto.Changeset.change()
+        |> Phoenix.Component.to_form(as: :link)
+
+      html =
+        render_component(&RenderVar.render_value_inputs/1, %{
+          type: :link,
+          var: var,
+          label: "Link",
+          instructions: nil,
+          identifier: identifier(),
+          identifier_id: 1,
+          target: nil,
+          on_change: fn _ -> :ok end,
+          locked: true
+        })
+
+      assert html =~ ~r/class="field-value[^"]*">, #{Regex.escape(@once)}</
+      assert_once(html)
+    end
   end
 
   defmodule SelectHost do

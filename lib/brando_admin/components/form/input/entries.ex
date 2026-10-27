@@ -156,6 +156,13 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         compact={@compact}
         locked={@locked}
       >
+        <:value>
+          <%= if @has_entries do %>
+            {Enum.map_join(@selected_identifiers, ", ", & &1.title)}
+          <% else %>
+            {gettext("No selected entries")}
+          <% end %>
+        </:value>
         <div class="entries-input identifier-field">
           <div
             id={"#{@field.id}-selected-identifiers"}

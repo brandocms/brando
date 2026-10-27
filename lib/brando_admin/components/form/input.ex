@@ -53,6 +53,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       locked={@locked}
     >
+      <:value>{checked_text(@field, :checkbox)}</:value>
       <div class={["check-wrapper", @compact && "small"]}>
         <.input type={:checkbox} field={@field} />
         <%!-- Draws the box. Presence shows on the field's own label, whose
@@ -85,6 +86,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       locked={@locked}
     >
+      <:value>{value_text(@field.value)}</:value>
       <div
         id={"#{@field.id}-code"}
         class="code-editor"
@@ -120,6 +122,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       locked={@locked}
     >
+      <:value>{value_text(@field.value)}</:value>
       <div
         id={"#{@field.id}-color-picker"}
         phx-hook="Brando.ColorPicker"
@@ -157,6 +160,35 @@ defmodule BrandoAdmin.Components.Form.Input do
     end
   end
 
+  @doc """
+  A field's value as text, for `Primitives.field_base/1`'s `:value`: read
+  out with the label while the field's controls are inert. "Not set" for an
+  empty value, a list joined with commas.
+  """
+  def value_text(value) when value in [nil, "", []], do: gettext("Not set")
+  def value_text(values) when is_list(values), do: Enum.map_join(values, ", ", &to_string/1)
+  def value_text(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M %Z")
+  def value_text(%NaiveDateTime{} = datetime), do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M")
+  def value_text(value), do: to_string(value)
+
+  defp checked_text(field, kind) do
+    case {Phoenix.HTML.Form.normalize_value("checkbox", field.value), kind} do
+      {true, :checkbox} -> pgettext("checkbox state", "Checked")
+      {false, :checkbox} -> pgettext("checkbox state", "Not checked")
+      {true, :toggle} -> gettext("On")
+      {false, :toggle} -> gettext("Off")
+    end
+  end
+
+  # The label of the option `field` holds, as text; a radio's is translated
+  # by the schema, as `radio_opt/1` shows it
+  defp option_text(field, options) do
+    case Enum.find(options, &(to_string(&1.value) == to_string(field.value))) do
+      nil -> value_text(nil)
+      %{label: label} -> field.form.source.data.__struct__ |> radio_label(label) |> Options.label_text()
+    end
+  end
+
   defp get_default(opts) do
     case Keyword.get(opts, :default) do
       default_fn when is_function(default_fn, 0) -> default_fn.()
@@ -182,6 +214,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       locked={@locked}
     >
+      <:value>{value_text(@value)}</:value>
       <div
         id={"#{@field.id}-datepicker"}
         class="datetime-wrapper"
@@ -221,6 +254,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       locked={@locked}
     >
+      <:value>{value_text(@value)}</:value>
       <div
         id={"#{@field.id}-datetimepicker"}
         class="datetime-wrapper"
@@ -414,6 +448,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       locked={@locked}
     >
+      <:value>{option_text(@field, @input_options)}</:value>
       <div :if={@input_options != []} class="radios-wrapper">
         <div :for={opt <- @input_options} class="form-check">
           <.radio_opt id={@id} opt={opt} field={@field} />
@@ -1008,6 +1043,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         compact={@compact}
         locked={@locked}
       >
+        <:value>{option_text(@field, @statuses)}</:value>
         <div class="radios-wrapper status">
           <div :for={status <- @statuses} :key={status.value} class="form-check">
             <label class="form-check-label">
@@ -1062,6 +1098,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       locked={@locked}
       fit_content
     >
+      <:value>{@current_label || value_text(nil)}</:value>
       <div
         class="radios-wrapper status compact"
         phx-click={
@@ -1159,6 +1196,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       locked={@locked}
     >
+      <:value>{@field.value |> Brando.Type.StringList.cast() |> elem(1) |> value_text()}</:value>
       <.input type={:string_list} field={@field} />
     </Primitives.field_base>
     """
@@ -1723,6 +1761,10 @@ defmodule BrandoAdmin.Components.Form.Input do
 
     ~H"""
     <%= if @tiny do %>
+      <%!-- The inert switch hides its label and state from a screen reader --%>
+      <span :if={@locked} class="visually-hidden">
+        {@label}, {gettext("Locked")}, {checked_text(@field, :toggle)}
+      </span>
       <div class="tiny-toggle-wrapper" data-locked={@locked && "true"} inert={@locked}>
         <Primitives.label field={@field} class="switch small" skip_presence>
           <%= if @inner_block do %>
@@ -1744,6 +1786,7 @@ defmodule BrandoAdmin.Components.Form.Input do
         locked={@locked}
         left_justify_meta
       >
+        <:value>{checked_text(@field, :toggle)}</:value>
         <Primitives.label field={@field} class={["switch", @compact && "small"]} skip_presence>
           <%= if @inner_block do %>
             {render_slot(@inner_block)}

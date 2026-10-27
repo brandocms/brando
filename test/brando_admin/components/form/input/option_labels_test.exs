@@ -55,6 +55,8 @@ defmodule BrandoAdmin.Components.Form.Input.OptionLabelsTest do
       assert markers(doc) == []
       assert text_of(doc, ".options-option") =~ @label
       assert text_of(doc, ".select-label") =~ @label
+      # read out with the label while the field is locked
+      assert text_of(doc, ".field-value") =~ @label
       assert attr_of(doc, ".options-option", "data-label") == [@label]
       # set as innerHTML by `b:select-option`, so it holds the escaped label
       assert attr_of(doc, ".options-option", "data-select-label") == [Options.label_html(@label)]
@@ -102,6 +104,7 @@ defmodule BrandoAdmin.Components.Form.Input.OptionLabelsTest do
 
       assert markers(doc) == ["safe", "safe"]
       assert doc |> LazyHTML.query(".options-option em") |> LazyHTML.text() == "Big"
+      assert text_of(doc, ".field-value") == ", Big"
       assert attr_of(doc, ".options-option", "data-label") == ["Big"]
       assert attr_of(doc, ".options-option", "data-select-label") == [Phoenix.HTML.safe_to_string(label)]
     end
@@ -125,6 +128,20 @@ defmodule BrandoAdmin.Components.Form.Input.OptionLabelsTest do
       assert markers(doc) == []
       assert text_of(doc, ".multiselect-option") =~ @label
       assert @label in attr_of(doc, "[data-label]", "data-label")
+      assert text_of(doc, ".field-value") =~ @label
+    end
+
+    test "a selected {:safe, iodata} label is read out as its text" do
+      var = %Brando.Content.Var{type: :link, key: "link", link_identifier_schemas: ["one"]}
+      field = to_form(Changeset.change(var), as: "var")[:link_identifier_schemas]
+      label = {:safe, ~s(<em data-marker="safe">Big</em>)}
+
+      doc =
+        MultiSelect
+        |> LiveViewTest.render_component(id: "multi", field: field, opts: [options: [%{label: label, value: "one"}]])
+        |> LazyHTML.from_fragment()
+
+      assert text_of(doc, ".field-value") == ", Big"
     end
   end
 
@@ -141,6 +158,15 @@ defmodule BrandoAdmin.Components.Form.Input.OptionLabelsTest do
 
       assert markers(doc) == ["safe"]
       assert text_of(doc, ".label-text") =~ @label
+      assert text_of(doc, ".field-value") =~ @label
+
+      safe_doc =
+        (&Input.radios/1)
+        |> LiveViewTest.render_component(field: title_field("two"), opts: [options: options], label: "Size", id: nil)
+        |> LazyHTML.from_fragment()
+
+      assert markers(safe_doc) == ["safe"]
+      assert text_of(safe_doc, ".field-value") == ", Big"
     end
   end
 
