@@ -23,7 +23,8 @@ defmodule Brando.Images.ConfigResolverTest do
         end
       end)
 
-    assert [_once] = Regex.scan(~r/Images point at/, log)
+    # Other tests log the same warning for their own targets; count only this one's
+    assert [_once] = Regex.scan(~r/Images point at .*\(#{Regex.escape(target)}\)/, log)
 
     assert log =~
              "Images point at a field Brando.Pages.Page no longer has (#{target}); they use the default image config."
