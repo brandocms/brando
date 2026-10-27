@@ -252,7 +252,7 @@ defmodule Brando.SEO.StructuredData do
 
   defp title(schema, entry) do
     if schema.__has_identifier__(),
-      do: entry |> schema.__identifier__(skip_cover: true) |> Map.get(:title),
+      do: entry |> schema.__identifier__(skip_cover: true) |> Brando.Content.Identifier.title_text(),
       else: Map.get(entry, :title)
   rescue
     _ -> Map.get(entry, :title)

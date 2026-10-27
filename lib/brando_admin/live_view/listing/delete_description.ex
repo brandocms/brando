@@ -111,7 +111,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   defp entry_name(schema, entry) do
     if function_exported?(schema, :__has_identifier__, 0) and schema.__has_identifier__() do
       case schema.__identifier__(entry) do
-        %{title: title} when is_binary(title) and title != "" -> title
+        %{title: title} when is_binary(title) and title != "" -> Brando.Content.Identifier.title_text(schema, title)
         _ -> nil
       end
     end

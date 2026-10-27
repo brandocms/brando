@@ -61,6 +61,37 @@ defmodule Brando.Content.Identifier do
   def link_url(_), do: nil
 
   @doc """
+  The identifier's title as plain text, for HEEx, an attribute or
+  `textContent` to escape once.
+
+  A HEEx identifier (`identifier ~H"{@entry.title}"`) stores the title
+  escaped, `Rock &amp; Roll`, and HEEx escapes the stored text again, so its
+  title is decoded first and every character is encoded once. A Liquid
+  identifier stores the title as written; it is returned as it is. Markup in
+  a title comes back as markup: the result must never reach `raw/1` or
+  `innerHTML` unescaped.
+
+  Takes an identifier, or the entry's schema and the title it stored.
+  """
+  @spec title_text(t() | map() | nil) :: String.t() | nil
+  def title_text(%{schema: schema, title: title}), do: title_text(schema, title)
+  def title_text(%{title: title}) when is_binary(title), do: title
+  def title_text(_), do: nil
+
+  @spec title_text(module() | nil, String.t() | nil) :: String.t() | nil
+  def title_text(schema, title) when is_binary(title),
+    do: if(heex_identifier?(schema), do: HtmlEntities.decode(title), else: title)
+
+  def title_text(_schema, _title), do: nil
+
+  defp heex_identifier?(schema) when is_atom(schema) and not is_nil(schema) do
+    Code.ensure_loaded?(schema) and function_exported?(schema, :__identifier_type__, 0) and
+      schema.__identifier_type__() == :heex
+  end
+
+  defp heex_identifier?(_), do: false
+
+  @doc """
   Builds a changeset for persisting an identifier snapshot.
   """
   @spec changeset(t(), map()) :: Ecto.Changeset.t()

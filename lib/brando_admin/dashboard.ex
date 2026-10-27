@@ -50,7 +50,7 @@ defmodule BrandoAdmin.Dashboard do
            true <- allowed?(user, :read, entry),
            true <- kind != :drafts or allowed?(user, :update, entry) do
         %{
-          title: identifier.title,
+          title: Identifier.title_text(identifier),
           type: Blueprint.get_singular(identifier.schema) |> Brando.Utils.humanize(),
           icon: Blueprint.get_icon(identifier.schema),
           cover: cover(kind, identifier, entry),
@@ -144,7 +144,7 @@ defmodule BrandoAdmin.Dashboard do
            %Identifier{} = identifier <- Brando.Content.Identifier.Queries.identifier_for(entry) do
         [
           %{
-            title: identifier.title,
+            title: Identifier.title_text(identifier),
             type: Blueprint.get_singular(schema) |> Brando.Utils.humanize(),
             icon: Blueprint.get_icon(schema),
             path: schema.__admin_route__(:update, [entry.id]),

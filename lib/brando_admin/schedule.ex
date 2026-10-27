@@ -241,7 +241,7 @@ defmodule BrandoAdmin.Schedule do
           schema: schema,
           entry_id: entry.id,
           revision: revision,
-          title: present(identifier.title) || gettext("Untitled"),
+          title: present(Brando.Content.Identifier.title_text(identifier)) || gettext("Untitled"),
           type: schema |> Blueprint.get_singular() |> Brando.Utils.humanize(),
           icon: Blueprint.get_icon(schema),
           language: present(Map.get(entry, :language)),

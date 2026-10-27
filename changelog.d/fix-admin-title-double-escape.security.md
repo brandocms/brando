@@ -1,0 +1,1 @@
+- The identity form's service page picker prints an entry's title as text: markup in a title from a Liquid identifier was rendered as HTML.

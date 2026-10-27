@@ -235,7 +235,7 @@ defmodule Brando.SEO.Audit do
   defp title(schema, entry) do
     if Code.ensure_loaded?(schema) and function_exported?(schema, :__has_identifier__, 0) and
          schema.__has_identifier__() do
-      entry |> schema.__identifier__(skip_cover: true) |> Map.get(:title)
+      entry |> schema.__identifier__(skip_cover: true) |> Brando.Content.Identifier.title_text()
     else
       Map.get(entry, :title) || Map.get(entry, :name) || "##{entry.id}"
     end
