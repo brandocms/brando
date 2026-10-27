@@ -399,6 +399,29 @@ defmodule Brando.TranslationsTest do
       assert {source_id, id} == {c.source.id, version.id}
       assert %{member: %{role: :source}, pending: nil} = Translations.editor_state(Article, c.source.id)
     end
+
+    # The trash frees a page's URI; a pending version never puts back the
+    # live one, nor its trash form on a restored page
+    test "a pending version keeps the URI the trash gave or took back", c do
+      alias Brando.Pages.Page
+
+      put_test_env(Page, translatable: [mode: :synchronized, source_controlled_fields: [:css_classes]])
+      source = Factory.insert(:page, title: "Om oss", uri: "om-oss", language: :no, creator: c.user)
+      {:ok, target} = Translations.create_target(Page, source.id, :en, c.user)
+      {:ok, _} = Brando.Pages.update_page(source.id, %{css_classes: "wide"}, c.user)
+      live = Translations.get_pending_version(Page, target.id)
+      {:ok, trashed} = Brando.Pages.delete_page(target.id, c.user)
+
+      assert %{uri: uri, css_classes: "wide"} = Translations.pending_content(live, trashed)
+      assert {uri, uri =~ "$$$"} == {trashed.uri, true}
+
+      # As the trashed translation's own save recomputes it
+      taken_in_trash = %{Translations.pending_content(live, trashed) | deleted_at: trashed.deleted_at}
+      in_trash = %{live | payload: :erlang.term_to_binary(taken_in_trash)}
+      {:ok, restored} = Repo.restore(trashed)
+      assert %{uri: "om-oss", css_classes: "wide"} = Translations.pending_content(in_trash, restored)
+      assert Translations.pending_content(live, restored).uri == "om-oss"
+    end
   end
 
   describe "listing status" do

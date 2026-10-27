@@ -501,7 +501,7 @@ defmodule Brando.Translations do
       reference =
         case reviewed_version(member, %{version_id: version_id}) do
           nil -> saved
-          version -> decode_payload(version)
+          version -> pending_content(version, saved)
         end
 
       changeset = restore_sync_identities(changeset, schema, reference)
@@ -659,7 +659,7 @@ defmodule Brando.Translations do
   # so the recomputation carries what is still open.
   defp resolve_reviewed(schema, member, current, reviewed, review) do
     {:ok, saved} = load_entry(schema, member.entry_id, with_deleted: true)
-    payload = decode_payload(reviewed)
+    payload = pending_content(reviewed, saved)
     module_uids = module_uids([saved, payload], schema)
     saved_rows = rows_by_path(saved, schema, module_uids)
     reviewed_rows = rows_by_path(payload, schema, module_uids)
@@ -1079,6 +1079,29 @@ defmodule Brando.Translations do
 
   @doc "Decodes a pending version's payload into the entry struct."
   def decode_payload(%PendingVersion{payload: payload}), do: :erlang.binary_to_term(payload, [:safe])
+
+  @doc """
+  A pending version's content for `entry`, the translation it was computed
+  for, as its form loads it. The fields the trash obfuscates (a page's `uri`)
+  stay as `entry` has them when either is in the trash: a version taken
+  before the trash holds the names it freed, which another entry may have
+  taken since, and one taken in the trash holds their trash form.
+  """
+  def pending_content(%PendingVersion{} = version, entry) do
+    payload = decode_payload(version)
+
+    case obfuscated_fields(entry) do
+      [] -> payload
+      _fields when is_nil(entry.deleted_at) and is_nil(payload.deleted_at) -> payload
+      fields -> struct(payload, Map.take(entry, fields))
+    end
+  end
+
+  defp obfuscated_fields(%schema{}) do
+    if schema.has_trait(Brando.Trait.SoftDelete),
+      do: Keyword.get(schema.__trait__(Brando.Trait.SoftDelete), :obfuscated_fields, []),
+      else: []
+  end
 
   @doc """
   Refuses to delete the source of a group that still has synchronized targets.

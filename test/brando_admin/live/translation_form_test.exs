@@ -426,11 +426,61 @@ defmodule BrandoAdmin.TranslationFormTest do
     view |> form("#page_form_form", %{"page" => %{"title" => "About us"}}) |> render_submit()
     assert_push_event(view, "b:submit", %{}, 2_000)
     view |> form("#page_form_form", %{"page" => %{"title" => "About us"}}) |> render_submit()
-    render(view)
+    assert_redirect(view, 3_000)
 
     {:ok, saved} = Brando.Pages.get_page(%{matches: %{id: target.id}, with_deleted: true})
     assert {saved.title, saved.deleted_at != nil} == {"About us", true}
     assert Repo.get!(PendingVersion, version.id).status == :applied
+  end
+
+  # The trash gives a translation's URI a trash form, freeing it for another
+  # page. A pending version taken before the trash holds the live URI, one
+  # taken in the trash holds the trash form: the save takes the version's
+  # content and leaves the URI as the entry has it.
+  describe "a translation in the trash" do
+    setup %{current_user: user} do
+      put_test_env(Page, translatable: [mode: :synchronized, source_controlled_fields: [:css_classes]])
+      source = Factory.insert(:page, title: "Om oss", uri: "om-oss", language: :no, creator: user)
+      {:ok, target} = Translations.create_target(Page, source.id, :en, user)
+      {:ok, _} = Brando.Pages.update_page(source.id, %{title: "Om oss, endret", css_classes: "wide"}, user)
+      version = Translations.get_pending_version(Page, target.id)
+      {:ok, _} = Brando.Pages.delete_page(target.id, user)
+
+      %{target: Repo.get!(Page, target.id), version: version}
+    end
+
+    defp save_page(conn, id) do
+      {view, _html} = live_form(conn, "/admin/pages/update/#{id}")
+      await_selector(view, "input[name='translation_review[version_id]']")
+      view |> form("#page_form_form") |> render_submit()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#page_form_form") |> render_submit()
+      assert_redirect(view, 3_000)
+
+      {:ok, saved} = Brando.Pages.get_page(%{matches: %{id: id}, with_deleted: true})
+      saved
+    end
+
+    test "keeps its trash URI and takes the source's content", %{conn: conn, target: target, version: version} do
+      assert target.uri =~ "$$$"
+
+      saved = save_page(conn, target.id)
+
+      assert {saved.uri, saved.css_classes, saved.deleted_at != nil} == {target.uri, "wide", true}
+      assert Repo.get!(PendingVersion, version.id).status == :applied
+    end
+
+    test "restored, gets its URI back and keeps the source's content", c do
+      _ = save_page(c.conn, c.target.id)
+      {:ok, restored} = Brando.Authorization.Boundary.restore(c.current_user, Repo.get!(Page, c.target.id))
+      assert {restored.uri, restored.css_classes, restored.deleted_at} == {"om-oss", "wide", nil}
+
+      # The title's review is still open, in a version taken in the trash
+      assert Translations.get_pending_version(Page, c.target.id)
+
+      saved = save_page(c.conn, c.target.id)
+      assert {saved.uri, saved.css_classes, saved.deleted_at} == {"om-oss", "wide", nil}
+    end
   end
 
   describe "synchronization controls" do
