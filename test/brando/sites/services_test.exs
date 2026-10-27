@@ -15,8 +15,6 @@ defmodule Brando.Sites.ServicesTest do
 
   import ExUnit.CaptureLog
 
-  require Logger
-
   # `update_identity` refreshes the identity cache, which outlives the test's
   # database sandbox. Put the cached identity back, so later tests (a JSON-LD
   # graph's site nodes) don't read these services.
