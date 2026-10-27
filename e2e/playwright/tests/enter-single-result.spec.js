@@ -64,10 +64,22 @@ test('Enter in a listing filter opens the only matching entry', async ({ page })
   await expect(page).toHaveURL(/\/admin\/projects\/projects\?filter:title=enter(\+|%20)pair$/)
   await expect(page.locator('.content-list .list-row')).toHaveCount(2)
 
+  // The row says it is opening (`openingRow.js`) as the navigation starts;
+  // LiveView's class commands apply on the next frame
+  await page.evaluate(() => {
+    window.addEventListener('phx:page-loading-start', ({ detail }) => {
+      if (detail.kind !== 'redirect') return
+      requestAnimationFrame(() => {
+        window.__openingRow = document.querySelector('.list-row.is-opening .entry-link')?.textContent.trim()
+      })
+    })
+  })
+
   // Enter right after typing, before the filter's debounce has sent it
   await filter.fill('zephyr')
   await filter.press('Enter')
   await expect(page).toHaveURL(`/admin/projects/projects/update/${target.id}`)
+  await expect.poll(() => page.evaluate(() => window.__openingRow)).toBe('Enter Target Zephyr')
   await syncLV(page)
   await expect(page.getByTestId('submit')).toBeVisible()
 })

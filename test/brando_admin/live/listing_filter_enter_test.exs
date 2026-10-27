@@ -74,4 +74,18 @@ defmodule BrandoAdmin.ListingFilterEnterTest do
     assert_patch(view, @path <> "?filter:title=gamma")
     refute_push_event(view, "brando:open_entry", %{})
   end
+
+  # The library's own listing params hold the folder as a tuple (`AssetListHelpers.list_params/2`)
+  test "Enter in the image library opens the only matching image", %{conn: conn} do
+    image = Factory.insert(:image, status: :processed, path: "images/enter-zephyr.jpg", folder_id: nil)
+    {:ok, view, _html} = live(conn, "/admin/assets/images")
+
+    view
+    |> form("#listing-filter-form-Elixir\\.Brando\\.Images\\.Image-path", %{q: "enter-zephyr"})
+    |> render_submit()
+
+    url = "/admin/assets/images/update/#{image.id}"
+    assert_push_event(view, "brando:open_entry", %{url: ^url, patch: patch})
+    assert patch =~ "filter:path=enter-zephyr"
+  end
 end

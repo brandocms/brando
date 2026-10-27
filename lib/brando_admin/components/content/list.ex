@@ -121,7 +121,6 @@ defmodule BrandoAdmin.Components.Content.List do
     {:noreply, push_query_params(socket, %{"filter:#{filter_key}" => query})}
   end
 
-  # Toggle boolean filter
   # Enter in a text filter applies what was typed, ahead of the input's
   # debounce. When that leaves one entry, and the editor may open it, the
   # listing (the `Brando.Listing` hook) opens it from its row's link: this
@@ -142,11 +141,12 @@ defmodule BrandoAdmin.Components.Content.List do
          |> push_event("brando:open_entry", %{
            listing: "listing-#{socket.assigns.listing.name}",
            url: entry.__struct__.__admin_route__(:update, [entry.id]),
-           patch: listing_url(socket.assigns.uri.path, filtered_params)
+           patch: filter_url(socket, filter_key, query)
          })}
     end
   end
 
+  # Toggle boolean filter
   def handle_event("toggle_boolean_filter", %{"filter" => filter_key}, socket) do
     filter = Enum.find(socket.assigns.listing.filters, &(&1.key == filter_key))
     current_value = get_in(socket.assigns, [:list_opts, :filter, String.to_existing_atom(filter_key)])
@@ -525,6 +525,19 @@ defmodule BrandoAdmin.Components.Content.List do
     |> assign(:status_counts, Map.get(entries, :status_counts))
     |> assign(:entries, entries)
     |> assign(:content_language, content_language)
+  end
+
+  # The listing's URL with the text filter `filter_key` set to `query`, from
+  # its first page. Built from the URL, as `params` may hold values a listing
+  # view derived from it, such as the media libraries' folders.
+  defp filter_url(%{assigns: %{uri: uri}}, filter_key, query) do
+    params =
+      (uri.query || "")
+      |> URI.decode_query()
+      |> Map.delete("page")
+      |> Map.put("filter:#{filter_key}", query)
+
+    listing_url(uri.path, params)
   end
 
   # The listing's query with the text filter `filter_key` set to `query`, from its first page

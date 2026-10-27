@@ -65,6 +65,13 @@ export default app => ({
         a => a.getAttribute('href') === url
       )
       if (link) {
+        // LiveView marks only a trusted click's link as loading, and that
+        // mark is what `openingRow.js` finds the row by when the navigation
+        // starts (its listener runs before this one)
+        link.classList.add('phx-click-loading')
+        window.addEventListener('phx:page-loading-start', () => link.classList.remove('phx-click-loading'), {
+          once: true,
+        })
         link.click()
       } else {
         this.js().patch(patch)
