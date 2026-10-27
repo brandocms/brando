@@ -194,13 +194,23 @@ defmodule Brando.HTML do
 
   defp present_menu_item_url?(_), do: false
 
-  def get_menu_item_text(%{link: %{link_type: :url, link_text: text}}), do: text
+  @doc """
+  The text of a menu item: its link's label, or else the linked entry's title.
 
-  def get_menu_item_text(%{link: %{link_type: :identifier, link_text: text}}) when not is_nil(text), do: text
+  Plain text, for HEEx to escape: a HEEx identifier stores the entry's title
+  escaped, so it is decoded here, as `{% link %}` does.
+  """
+  def get_menu_item_text(item) do
+    case stored_menu_item_text(item) do
+      text when is_binary(text) -> HtmlEntities.decode(text)
+      text -> text
+    end
+  end
 
-  def get_menu_item_text(%{link: %{link_type: :identifier, link_text: nil, identifier: %{title: text}}}), do: text
-
-  def get_menu_item_text(_), do: nil
+  defp stored_menu_item_text(%{link: %{link_type: :url, link_text: text}}), do: text
+  defp stored_menu_item_text(%{link: %{link_type: :identifier, link_text: text}}) when not is_nil(text), do: text
+  defp stored_menu_item_text(%{link: %{link_type: :identifier, link_text: nil, identifier: %{title: text}}}), do: text
+  defp stored_menu_item_text(_), do: nil
 
   def get_menu_item_target_blank(%{link: %{link_target_blank: true}}), do: true
   def get_menu_item_target_blank(_), do: false

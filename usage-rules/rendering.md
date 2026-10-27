@@ -287,7 +287,10 @@ Use the components in a HEEx layout:
 ```
 
 `menu` filters items to `:published` by default; the outer condition separately
-checks the **menu** status. `menu_item` resolves the link and marks matching paths
+checks the **menu** status. `menu_item` hands its slot the item's text (the
+link's label, or else the linked entry's title) as plain text, for `{text}` to
+escape, as do `menu_button`, `menu_item_text` and `get_menu_item_text/1`; never
+print it with `raw/1`. `menu_item` resolves the link and marks matching paths
 with `data-link-active`. Use `splat={false}` if a link should match only its exact
 path rather than descendant URLs. A link to a front page, `/` or a language's
 `/no` or `/no/`, matches only that front page, also when the locale plug's
