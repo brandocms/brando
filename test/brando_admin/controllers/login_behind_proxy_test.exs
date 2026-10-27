@@ -10,6 +10,9 @@ defmodule BrandoAdmin.LoginBehindProxyTest do
 
   setup do
     put_test_env(:trusted_proxies, ["10.77.0.0/16"])
+    # Windows are fixed and start on the clock: a 15-minute boundary during the
+    # test would reset the count. One window of a century has none to cross.
+    put_test_env(Throttle, window: :timer.hours(24 * 365 * 100))
     Throttle.reset()
     on_exit(&Throttle.reset/0)
 
