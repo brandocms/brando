@@ -40,6 +40,7 @@ hex-registry-timeout log:Failed to fetch record for [A-Za-z0-9_]+ from registry 
 # has no problems; no preview opens; 160 local runs alone and 31 of the whole
 # module on one scheduler showed it never (one run, under load, timed out
 # waiting for the reply instead). CI cuts the page short, so the assertion
-# now prints the view's proposal, error and run.
+# now prints the view's proposal, error and run ("The view holds:", which
+# only that assertion prints, so a later step's failure is not taken for it).
 # TEMPORARY (27 Oct 2026): remove once a failure's message names the cause.
-assistant-text-block-proposal a message produces a reviewed proposal that one click applies \(BrandoAdmin\.AssistantLiveTest\).*Ready for your review
+assistant-text-block-proposal a message produces a reviewed proposal that one click applies \(BrandoAdmin\.AssistantLiveTest\).*The view holds:

@@ -41,8 +41,12 @@ defmodule BrandoAdmin.AssistantLiveTest do
     assigns = :sys.get_state(view.pid).socket.assigns
     proposal = assigns.proposal && Map.take(assigns.proposal, [:id, :version, :status, :problems])
 
+    # Read after the failed render: whether a render now shows the proposal
+    # tells a late event from a wrong render
     "The view holds: " <>
       inspect(
+        rendered?: render(view) =~ "Ready for your review",
+        review: length(assigns.review),
         proposal: proposal,
         error: assigns.error,
         conversation_proposal: assigns.conversation && assigns.conversation.proposal_id,

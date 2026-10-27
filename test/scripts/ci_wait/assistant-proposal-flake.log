@@ -1,0 +1,13 @@
+2026-10-27T09:00:00.0000000Z Running ExUnit with seed: 1234, max_cases: 8
+2026-10-27T09:00:01.0000000Z .........................................................
+2026-10-27T09:00:02.0000000Z   1) test a message produces a reviewed proposal that one click applies (BrandoAdmin.AssistantLiveTest)
+2026-10-27T09:00:03.0000000Z ##[error]     nofile:1
+2026-10-27T09:00:04.0000000Z      The view holds: [rendered?: false, review: 0, proposal: nil, error: nil, conversation_proposal: 12, run: :completed, receipt?: false, preview?: false]
+2026-10-27T09:00:05.0000000Z      stacktrace:
+2026-10-27T09:00:06.0000000Z        test/brando_admin/live/assistant_live_test.exs:212: (test)
+2026-10-27T09:00:07.0000000Z 
+2026-10-27T09:00:08.0000000Z Finished in 664.6 seconds (50.1s async, 614.5s sync)
+2026-10-27T09:00:09.0000000Z 
+2026-10-27T09:00:10.0000000Z Result: 5073/5074 passed (165/165 doctests, 4908/4909 tests)
+2026-10-27T09:00:11.0000000Z Failed: 1 test
+2026-10-27T09:00:12.0000000Z ##[error]Process completed with exit code 2.
