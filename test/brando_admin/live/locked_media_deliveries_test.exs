@@ -240,6 +240,51 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
         end
       end
 
+      # The picker's "edit image", and a drawer recovered after a reconnect,
+      # each followed by the drawer's save: the form and the preview keep
+      # what a locked field holds
+      test "the picker's image editor and a recovered drawer", %{conn: conn, article: article, stored: stored} = ctx do
+        [picked, recovered] = [image(ctx.current_user), image(ctx.current_user)]
+        {view, _html} = open(conn, article, ctx.form)
+        form_cid = cid_of(view, "#article_form-el")
+
+        shown = fn ->
+          {Ecto.Changeset.get_field(form_assigns(view).form.source, :cover_id), form_assigns(view).entry.cover.id}
+        end
+
+        send_form(view,
+          action: :update_edit_image,
+          edit_image: %{id: stored.id, path: [], field: :cover, relation_field: nil, image: stored}
+        )
+
+        send_form(view, action: :open_image_editor_from_picker, image: picked)
+        view |> with_target(form_cid) |> render_hook("save_image", %{"image" => %{}})
+        assert shown.() == if(ctx.locked, do: {stored.id, stored.id}, else: {picked.id, picked.id})
+
+        drawer = fn image ->
+          %{
+            "type" => "image",
+            "resource_id" => to_string(image.id),
+            "field" => "cover",
+            "path" => Jason.encode!([]),
+            "schema" => to_string(Article),
+            "form_id" => "article_form",
+            "changes" => "{}"
+          }
+        end
+
+        view |> with_target(form_cid) |> render_hook("recover_drawer_state", %{"drawer" => drawer.(recovered)})
+        view |> with_target(form_cid) |> render_hook("save_image", %{"image" => %{}})
+        assert shown.() == if(ctx.locked, do: {stored.id, stored.id}, else: {recovered.id, recovered.id})
+
+        # The drawer of the image the field holds is recovered, locked or not
+        view
+        |> with_target(form_cid)
+        |> render_hook("recover_drawer_state", %{"drawer" => drawer.(form_assigns(view).entry.cover)})
+
+        assert form_assigns(view).editing_image?
+      end
+
       # The preview's copy of the field's asset (`Input.Image` on a pick, a
       # processed image's refresh)
       test "the field's relation in the preview", %{conn: conn, article: article, stored: stored} = ctx do
@@ -358,36 +403,62 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
     end
   end
 
-  # The lock is the field's "Save as new copy" was pressed in, though an
-  # image editor opened since (a block's here) replaced `edit_image`
-  test "the image editor's new copy keeps the field it was made in",
-       %{conn: conn, article: article, stored: stored, current_user: user} do
-    other = image(user)
-    {view, _html} = open(conn, article, :locked_media)
-    form_cid = cid_of(view, "#article_form-el")
+  # The image editor's copy goes to the field it was made for
+  # (`image_editor_copy_of`), and that field's lock decides, whichever
+  # drawer is open by the time the upload arrives: here the subform's
+  # portrait, which is not locked, and the locked cover.
+  describe "the image editor's new copy, with another drawer opened since" do
+    setup %{article: article} do
+      author = Repo.insert!(%Brando.SyncTest.ArticleAuthor{article_id: article.id, name: "Author"})
+      {:ok, author: author}
+    end
 
-    send_form(view,
-      action: :update_edit_image,
-      edit_image: %{id: stored.id, path: [], field: :cover, relation_field: nil, image: stored}
-    )
+    defp copy_after_switch(view, from, to) do
+      send_form(view, action: :update_edit_image, edit_image: from)
 
-    view
-    |> with_target(form_cid)
-    |> render_hook("image_editor_save", %{"mode" => "new_copy", "focal_x" => 40, "focal_y" => 60})
+      view
+      |> with_target(cid_of(view, "#article_form-el"))
+      |> render_hook("image_editor_save", %{"mode" => "new_copy", "focal_x" => 40, "focal_y" => 60})
 
-    send_form(view,
-      action: :update_edit_image,
-      edit_image: %{id: other.id, path: [], field: :cover, relation_field: nil, block_target: "block", image: other}
-    )
+      send_form(view, action: :update_edit_image, edit_image: to)
+      jpeg = File.read!(Path.expand("../../fixtures/sample.jpg", __DIR__))
 
-    images = Repo.aggregate(Brando.Images.Image, :count)
-    jpeg = File.read!(Path.expand("../../fixtures/sample.jpg", __DIR__))
+      view
+      |> file_input(@form, :image_editor_upload, [%{name: "copy.jpg", content: jpeg, type: "image/jpeg"}])
+      |> render_upload("copy.jpg")
+    end
 
-    view
-    |> file_input("#article_form_form", :image_editor_upload, [%{name: "copy.jpg", content: jpeg, type: "image/jpeg"}])
-    |> render_upload("copy.jpg")
+    defp cover_drawer(image), do: %{id: image.id, path: [], field: :cover, relation_field: nil, image: image}
 
-    assert Repo.aggregate(Brando.Images.Image, :count) == images
+    defp portrait_drawer(image), do: %{id: image.id, path: [:author], field: :portrait, relation_field: nil, image: image}
+
+    test "is refused for the locked field", %{conn: conn, article: article, stored: stored, current_user: user} do
+      {view, _html} = open(conn, article, :locked_media)
+      portrait = image(user)
+      images = Repo.aggregate(Brando.Images.Image, :count)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "user:#{user.id}")
+
+      copy_after_switch(view, cover_drawer(stored), portrait_drawer(portrait))
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "This field is locked"}}, 2_000
+      assert Repo.aggregate(Brando.Images.Image, :count) == images
+      assert Ecto.Changeset.get_field(form_assigns(view).form.source, :cover_id) == stored.id
+    end
+
+    test "is taken for the open field", %{conn: conn, article: article, stored: stored, current_user: user} do
+      {view, _html} = open(conn, article, :locked_media)
+      portrait = image(user)
+      images = Repo.aggregate(Brando.Images.Image, :count)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "user:#{user.id}")
+
+      copy_after_switch(view, portrait_drawer(portrait), cover_drawer(stored))
+
+      refute_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "This field is locked"}}, 300
+      assert Repo.aggregate(Brando.Images.Image, :count) == images + 1
+      author = Ecto.Changeset.get_field(form_assigns(view).form.source, :author)
+      assert author.portrait_id not in [nil, portrait.id]
+      assert Ecto.Changeset.get_field(form_assigns(view).form.source, :cover_id) == stored.id
+    end
   end
 
   # `:unless_superuser`: a superuser's delivery is taken, anyone else's not

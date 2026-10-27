@@ -457,16 +457,9 @@ defmodule BrandoAdmin.Components.Form do
         %{action: :open_image_editor_from_picker, image: image},
         %{assigns: %{edit_image: edit_image}} = socket
       ) do
-    updated_edit_image = Map.merge(edit_image, %{image: image, id: image.id})
-    image_changeset = change(image)
-
-    {:ok,
-     socket
-     |> assign(:edit_image, updated_edit_image)
-     |> assign(:editing_image?, true)
-     |> assign(:image_changeset, image_changeset)
-     |> assign_drawer_recovery_state()
-     |> push_event("b:image_editor:init", image_editor_payload(image))}
+    if edit_asset_locked?(socket, edit_image),
+      do: {:ok, socket},
+      else: {:ok, open_image_editor_from_picker(socket, edit_image, image)}
   end
 
   # Set edit_image for the save handler when image editor is opened from a block.
@@ -1896,6 +1889,17 @@ defmodule BrandoAdmin.Components.Form do
      |> own_asset(path, relation_key, :id)
      |> ship_all_field_changes()
      |> push_event("b:validate", %{})}
+  end
+
+  # The picker's "edit image": the drawer, and its save, take the image.
+  # A locked field's drawer keeps its asset.
+  defp open_image_editor_from_picker(socket, edit_image, image) do
+    socket
+    |> assign(:edit_image, Map.merge(edit_image, %{image: image, id: image.id}))
+    |> assign(:editing_image?, true)
+    |> assign(:image_changeset, change(image))
+    |> assign_drawer_recovery_state()
+    |> push_event("b:image_editor:init", image_editor_payload(image))
   end
 
   # A picker's selection (or a duplicate) in the image, file or video drawer.
@@ -9454,6 +9458,13 @@ defmodule BrandoAdmin.Components.Form do
   # blueprint schema, one of its asset fields of the drawer's type, and the
   # path to that schema's struct in this form. Anything else is not restored:
   # the restored drawer commits a pick as `<field>_id` at that path.
+  # A locked field's drawer is recovered on the asset the field holds only:
+  # its save would put another one in the form and the preview
+  defp recovered_asset_locked?(socket, path, field, resource_id) do
+    locked_field?(socket, path, field) and
+      get_field(socket.assigns.form.source, relation_field_key(nil, field)) != resource_id
+  end
+
   defp with_drawer_target(socket, params, restore) do
     with id when is_binary(id) <- params["resource_id"],
          {resource_id, ""} when resource_id in 1..@max_id//1 <- Integer.parse(id),
@@ -9462,7 +9473,8 @@ defmodule BrandoAdmin.Components.Form do
          true <- Atom.to_string(type) == params["type"],
          {:ok, schema} <- Brando.Assets.ConfigTarget.schema_module(schema),
          {:ok, path} <- decode_recovery_path(params["path"]),
-         %^schema{} <- form_struct_at(socket.assigns[:form], path) do
+         %^schema{} <- form_struct_at(socket.assigns[:form], path),
+         false <- recovered_asset_locked?(socket, path, field, resource_id) do
       target = %{
         id: resource_id,
         path: path,
