@@ -17523,6 +17523,11 @@ msgstr ""
 msgid "The value is stored with each submission; the label is what visitors see."
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "The video is in the library. The form could not add it to the field it was uploaded for."
+msgstr ""
+
 #: lib/brando/uploads.ex
 #, elixir-autogen, elixir-format
 msgid "The video provider could not be reached. Please try again."

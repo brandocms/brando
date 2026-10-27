@@ -606,25 +606,15 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # Video uploaded, webhook will update status. Only the upload this user
-  # started here (`ProviderVideoUpload.complete/3`).
+  # started here (`ProviderVideoUpload.complete/3`), and it goes to the
+  # field whose drawer it started in (`remember_video_upload/3`), not to the
+  # drawer open now.
   def update(%{action: :video_upload_complete, upload: params}, socket) do
+    {target, socket} = pop_video_upload(socket, params["request_ref"])
+
     case ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params, [:thumbnail]) do
       {:ok, video} ->
-        # Completed all the same: a locked field doesn't take the video,
-        # which stays in the library
-        if edit_asset_locked?(socket, socket.assigns.edit_video) do
-          {:ok, socket}
-        else
-          edit_video = Map.put(socket.assigns.edit_video, :video, video)
-          video_changeset = change(video)
-          relation_key = String.to_existing_atom("#{socket.assigns.edit_video.field}_id")
-
-          {:ok,
-           socket
-           |> update_changeset(relation_key, video.id)
-           |> assign(:edit_video, edit_video)
-           |> assign(:video_changeset, video_changeset)}
-        end
+        {:ok, deliver_uploaded_video(socket, target, video)}
 
       # Cloudflare and Vimeo record that the file arrived; a refusal leaves
       # the video in the library and is reported, as the picker does.
@@ -7813,7 +7803,7 @@ defmodule BrandoAdmin.Components.Form do
   defp apply_restored_changeset(socket, changeset, source, working_copy \\ nil) do
     revision_entry = working_copy_revision(socket, working_copy)
     revised = revised_changeset(socket, revision_entry)
-    {changeset, revised_assets} = put_revision_locked_assets(socket, changeset, revised)
+    {changeset, revised_assets} = put_revision_locked_assets(socket, changeset, revised, source)
     form = to_form(changeset)
 
     for field <- socket.assigns.form_blueprint.blocks do
@@ -7880,11 +7870,16 @@ defmodule BrandoAdmin.Components.Form do
   # A recovered working copy's locked assets are the revision's, as its
   # locked scalars are (`put_revision_locked_values/2`): the copy holds what
   # the browser sent. Returns the changeset with them, and their fields,
-  # which the form owns.
-  defp put_revision_locked_assets(_socket, changeset, nil), do: {changeset, []}
+  # which the form owns. Those of another recovery copy are the entry's, as
+  # the save keeps them, so the form and the preview show them too. A
+  # translation's are the server's (`own_changed_assets/3`).
+  defp put_revision_locked_assets(socket, changeset, nil, :recovery_copy),
+    do: {Enum.reduce(locked_asset_kinds(socket), changeset, fn {key, _}, cs -> delete_change(cs, key) end), []}
 
-  defp put_revision_locked_assets(%{assigns: %{schema: schema}} = socket, changeset, revised) do
-    locked = for {key, kind} <- asset_field_kinds(schema), locked_field?(socket, [], key), do: {key, kind}
+  defp put_revision_locked_assets(_socket, changeset, nil, _source), do: {changeset, []}
+
+  defp put_revision_locked_assets(socket, changeset, revised, _source) do
+    locked = locked_asset_kinds(socket)
 
     changeset =
       Enum.reduce(locked, changeset, fn
@@ -7895,7 +7890,13 @@ defmodule BrandoAdmin.Components.Form do
     {changeset, Keyword.keys(locked)}
   end
 
-  defp put_revision_locked_values(socket, nil), do: socket
+  defp locked_asset_kinds(%{assigns: %{schema: schema}} = socket),
+    do: for({key, kind} <- asset_field_kinds(schema), locked_field?(socket, [], key), do: {key, kind})
+
+  # A working copy whose revision is gone since still puts its blocks back,
+  # but nothing gives its locked inputs other values than the entry's: they
+  # have them as in another recovery copy (`put_revision_locked_assets/4`).
+  defp put_revision_locked_values(socket, nil), do: reset_locked_values(socket)
 
   defp put_revision_locked_values(socket, revised), do: socket |> reset_locked_values() |> put_locked_values(revised)
 
@@ -9401,10 +9402,142 @@ defmodule BrandoAdmin.Components.Form do
     # Push event to JavaScript hook with upload URL
     {:ok,
      socket
+     |> remember_video_upload(request_ref, edit_video)
      |> assign(:edit_video, edit_video)
      |> assign(:video_changeset, video_changeset)
      |> push_event("video_upload_url_ready", payload)}
   end
+
+  # The field a drawer's provider upload goes to once it completes, as the
+  # drawer had it when the upload started: the editor may open another
+  # field's drawer meanwhile (`image_editor_copy_of` does the same for the
+  # image editor). With the video the field showed and the subform rows its
+  # path runs through, which tell at delivery whether it is still the field.
+  defp remember_video_upload(socket, request_ref, edit_video) do
+    path = Map.get(edit_video, :path) || []
+    changeset = socket.assigns.form.source
+
+    rows = path_row_keys(changeset, path)
+    relation_key = relation_field_key(edit_video.relation_field, edit_video.field)
+
+    target = %{
+      edit_video: Map.put(edit_video, :path, path),
+      shown: shown_video(changeset, path, rows, relation_key) || "none",
+      rows: rows
+    }
+
+    assign(socket, :video_uploads, Map.put(socket.assigns[:video_uploads] || %{}, request_ref, target))
+  end
+
+  defp pop_video_upload(socket, request_ref) do
+    {target, uploads} = Map.pop(socket.assigns[:video_uploads] || %{}, request_ref)
+    {target, assign(socket, :video_uploads, uploads)}
+  end
+
+  # A completed upload the form has no record of (it mounted again since)
+  # or whose row is gone (removed, or moved under a removed one) stays in
+  # the library, and the editor is told. So does one for a locked field,
+  # and one whose field shows another video by then, picked since.
+  defp deliver_uploaded_video(socket, nil, _video), do: video_left_in_library(socket)
+
+  defp deliver_uploaded_video(socket, %{edit_video: %{path: path, field: field} = edit_video} = target, video) do
+    changeset = socket.assigns.form.source
+    relation_key = relation_field_key(edit_video.relation_field, field)
+    rows = path_row_keys(changeset, path)
+    shown = shown_video(changeset, path, rows, relation_key)
+
+    cond do
+      edit_asset_locked?(socket, edit_video) ->
+        socket
+
+      not same_rows?(target.rows, rows) ->
+        video_left_in_library(socket)
+
+      not (Brando.Uploads.AssetIntent.current_selection?(target.shown, shown) or to_string(shown) == to_string(video.id)) ->
+        socket
+
+      true ->
+        socket
+        |> commit_entry_field_asset(field, path, relation_key, video)
+        |> show_uploaded_video(edit_video, video)
+    end
+  end
+
+  # The drawer shows the video if it is open on the field the upload was for
+  defp show_uploaded_video(%{assigns: %{edit_video: open}} = socket, edit_video, video) do
+    if Map.take(open, [:path, :field, :schema]) == Map.take(edit_video, [:path, :field, :schema]) do
+      socket
+      |> assign(:edit_video, Map.merge(open, %{id: video.id, video: video}))
+      |> assign(:video_changeset, change(video))
+      |> assign_drawer_recovery_state()
+    else
+      socket
+    end
+  end
+
+  defp video_left_in_library(socket) do
+    send(
+      self(),
+      {:toast, gettext("The video is in the library. The form could not add it to the field it was uploaded for.")}
+    )
+
+    socket
+  end
+
+  # The video id a field shows, unless its row is gone
+  defp shown_video(changeset, path, rows, relation_key),
+    do: if(:gone in rows, do: nil, else: get_shown(changeset, path ++ [relation_key]))
+
+  # The subform rows a form path runs through, a one-to-one's included, as
+  # `{key, rows in its list}` (`SubformHelpers.row_key/1`, rows counted as
+  # the form shows them); `:gone` for a row the form doesn't show, or one
+  # marked for deletion.
+  defp path_row_keys(data, [key, index | rest]) when is_atom(key) and is_integer(index) do
+    with rows when is_list(rows) <- path_child(data, key),
+         row when not is_nil(row) <- form_row_at(rows, index),
+         false <- marked_for_deletion?(row) do
+      [{SubformHelpers.row_key(row), length(shown_rows(rows))} | path_row_keys(row, rest)]
+    else
+      _ -> [:gone]
+    end
+  end
+
+  defp path_row_keys(data, [key | rest]) when is_atom(key) do
+    case path_child(data, key) do
+      %Changeset{action: :replace} ->
+        [:gone]
+
+      %{} = row when not is_struct(row, Ecto.Association.NotLoaded) ->
+        [{SubformHelpers.row_key(row), 1} | path_row_keys(row, rest)]
+
+      _ ->
+        [:gone]
+    end
+  end
+
+  defp path_row_keys(_data, _path), do: []
+
+  defp marked_for_deletion?(%Changeset{action: action}), do: action in [:delete, :ignore]
+  defp marked_for_deletion?(_row), do: false
+
+  # Whether a path runs through the rows it did (`path_row_keys/2`). A saved
+  # row keeps its key. A new row's (`_key`) is gone once the form is rebuilt
+  # from its changeset (`apply_changes/1`), so a new row is the one at its
+  # index while its list has as many rows.
+  defp same_rows?([recorded | recorded_rest], [current | current_rest]),
+    do: same_row?({recorded, current}) and same_rows?(recorded_rest, current_rest)
+
+  defp same_rows?([], []), do: true
+  defp same_rows?(_recorded, _current), do: false
+
+  defp same_row?({{"id-" <> _ = key, _}, {key, _}}), do: true
+  defp same_row?({{"id-" <> _, _}, _current}), do: false
+  defp same_row?({{key, count}, {current, count}}), do: current in [key, nil]
+  defp same_row?(_rows), do: false
+
+  defp path_child(%Changeset{changes: changes, data: data}, key), do: Map.get(changes, key, Map.get(data, key))
+  defp path_child(%{} = data, key), do: Map.get(data, key)
+  defp path_child(_data, _key), do: nil
 
   defp relation_field_key(%{field: relation_key}, _field) when not is_nil(relation_key),
     do: relation_key

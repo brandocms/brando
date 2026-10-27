@@ -6,7 +6,8 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
   drawer's `update/2` and `handle_event/3` clauses stay in `Form` because they
   write the *parent's* state: `handle_event("save_video_authorized", …)` assigns
   `:form` and `:entry` and calls `ship_all_field_changes/1`, and
-  `update(%{action: :video_upload_complete}, …)` calls `update_changeset/3`.
+  `update(%{action: :video_upload_complete}, …)` commits the video to the
+  field the upload started in.
   Drawer recovery is likewise parent-owned — `assign_drawer_recovery_state/1`
   computes image, video and file state in a single `cond`, feeding the
   `phx-auto-recover` form that hangs off `Form`'s own element.

@@ -328,7 +328,9 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
           assert Repo.aggregate(Brando.Videos.Video, :count) == videos
         end
 
-        # One started before, say: the provider is told the file is up either way
+        # One this form has no record of (started before it mounted again,
+        # say): the provider is told the file is up, and the video stays in
+        # the library ("a drawer's provider upload" below)
         uploading =
           Factory.insert(:video, type: :cloudflare, status: :uploading, remote_id: "cf-uid", creator: ctx.current_user)
 
@@ -336,8 +338,7 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
         send_form(view, action: :video_upload_complete, upload: %{"upload_token" => token, "request_ref" => "ref-2"})
         assert Repo.get!(Brando.Videos.Video, uploading.id).status == :processing
 
-        assert Ecto.Changeset.get_field(form_assigns(view).form.source, :clip_id) ==
-                 if(ctx.locked, do: clip.id, else: uploading.id)
+        assert Ecto.Changeset.get_field(form_assigns(view).form.source, :clip_id) == clip.id
       end
 
       test "a subform's media input", %{conn: conn, article: article, current_user: user} = ctx do
@@ -407,6 +408,185 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
   # (`image_editor_copy_of`), and that field's lock decides, whichever
   # drawer is open by the time the upload arrives: here the subform's
   # portrait, which is not locked, and the locked cover.
+  # A provider upload (Mux, Bunny, Cloudflare, Vimeo) goes to the field whose
+  # drawer it was started in, and that field's lock decides, whichever drawer
+  # is open when it completes: here a row's video, never locked, and the
+  # entry's clip, locked on `:locked_media`.
+  describe "a drawer's provider upload, with another drawer opened since" do
+    setup %{article: article} do
+      put_test_env(:default_video_upload_strategy, :bunny)
+
+      put_test_env(Brando.Videos.Uploaders.Bunny,
+        api_key: "key",
+        library_id: "77",
+        cdn_hostname: "vz-1.b-cdn.net",
+        webhook_secret: "whsec",
+        req_options: [plug: {Req.Test, Brando.Videos.Uploaders.Bunny}]
+      )
+
+      Req.Test.set_req_test_to_shared()
+      on_exit(fn -> Req.Test.set_req_test_to_private() end)
+
+      Req.Test.stub(Brando.Videos.Uploaders.Bunny, fn %{method: "POST", request_path: "/library/77/videos"} = conn ->
+        Req.Test.json(conn, %{"guid" => Ecto.UUID.generate(), "videoLibraryId" => 77, "title" => "Clip"})
+      end)
+
+      rows =
+        for n <- 0..1,
+            do: Repo.insert!(%Brando.SyncTest.ArticleItem{article_id: article.id, label: "Row #{n}", sequence: n})
+
+      {:ok, rows: rows}
+    end
+
+    defp row_drawer(index),
+      do: %{
+        id: nil,
+        path: [:items, index],
+        field: :clip,
+        relation_field: nil,
+        schema: Brando.SyncTest.ArticleItem,
+        video: nil
+      }
+
+    defp clip_drawer(clip), do: %{id: clip.id, path: [], field: :clip, relation_field: nil, video: clip}
+
+    # What the drawer's provider upload hook pushes before the transfer
+    defp start_drawer_upload(view, edit_video, request_ref) do
+      send_form(view, action: :update_edit_video, edit_video: edit_video)
+
+      send_form(view,
+        action: :get_video_upload_url,
+        upload_request: %{
+          "request_ref" => request_ref,
+          "filename" => "clip.mp4",
+          "size" => 1_000,
+          "mime_type" => "video/mp4"
+        }
+      )
+
+      assert_push_event(view, "video_upload_url_ready", %{request_ref: ^request_ref, video_id: id, upload_token: token})
+      {id, token}
+    end
+
+    # ... and once the file is up
+    defp complete_drawer_upload(view, request_ref, token),
+      do:
+        send_form(view, action: :video_upload_complete, upload: %{"upload_token" => token, "request_ref" => request_ref})
+
+    defp form_row_clips(view),
+      do:
+        view
+        |> form_assigns()
+        |> Map.fetch!(:form)
+        |> Map.fetch!(:source)
+        |> Ecto.Changeset.get_field(:items)
+        |> Enum.map(& &1.clip_id)
+
+    defp saved_row_clips(rows), do: Enum.map(rows, &Repo.get!(Brando.SyncTest.ArticleItem, &1.id).clip_id)
+
+    for form <- [:media, :locked_media] do
+      test "goes to the field it was started in, on form #{form}", %{conn: conn, article: article, clip: clip, rows: rows} do
+        {view, _html} = open(conn, article, unquote(form))
+
+        {video_id, token} = start_drawer_upload(view, row_drawer(0), "drawer-1")
+        send_form(view, action: :update_edit_video, edit_video: clip_drawer(clip))
+        complete_drawer_upload(view, "drawer-1", token)
+
+        assert form_row_clips(view) == [video_id, nil]
+        assert Ecto.Changeset.get_field(form_assigns(view).form.source, :clip_id) == clip.id
+        # The open drawer still shows its own field's video
+        assert form_assigns(view).edit_video.video.id == clip.id
+
+        save(view)
+        assert saved_row_clips(rows) == [video_id, nil]
+        assert saved(article).clip_id == clip.id
+      end
+    end
+
+    test "fills the open drawer when that is the field it was started in", %{conn: conn, article: article} do
+      {view, _html} = open(conn, article, :media)
+
+      {video_id, token} = start_drawer_upload(view, row_drawer(1), "drawer-2")
+      complete_drawer_upload(view, "drawer-2", token)
+
+      assert form_row_clips(view) == [nil, video_id]
+      assert %{path: [:items, 1], video: %{id: ^video_id}} = form_assigns(view).edit_video
+    end
+
+    # Rows move up under a removed one: the upload doesn't go to the row now
+    # at its index
+    test "whose row was removed since stays in the library", %{conn: conn, article: article, current_user: user} = ctx do
+      {view, _html} = open(conn, article, :media)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), "user:#{user.id}")
+
+      {video_id, token} = start_drawer_upload(view, row_drawer(0), "drawer-3")
+      send_form(view, action: :update_entries, field: :items, op: {:delete, "id-#{hd(ctx.rows).id}"})
+      complete_drawer_upload(view, "drawer-3", token)
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast"}, 2_000
+      assert Repo.get(Brando.Videos.Video, video_id)
+      assert form_row_clips(view) == [nil]
+    end
+
+    # A new row's key (`_key`) is gone once the form is rebuilt from its
+    # changeset, as a delivery to another field does: the row is still the
+    # one at its index while no row was added or removed
+    test "goes to a new row after the form was rebuilt", %{conn: conn, article: article, stored: stored} do
+      {view, _html} = open(conn, article, :media)
+      source = form_assigns(view).form.source
+      new_row = BrandoAdmin.Components.Form.Input.SubformHelpers.new_row(source, :items, %{label: "New"})
+      send_form(view, action: :update_entries, field: :items, op: {:append, [new_row]})
+
+      {video_id, token} = start_drawer_upload(view, row_drawer(2), "drawer-5")
+      send_form(view, event: "entry_field_upload_complete", asset_type: :image, field: :cover, path: [], asset: stored)
+      complete_drawer_upload(view, "drawer-5", token)
+
+      assert form_row_clips(view) == [nil, nil, video_id]
+    end
+
+    # ... but not once a row was removed: another new row may be at its
+    # index by then
+    test "whose new row was removed after the form was rebuilt stays in the library", %{
+      conn: conn,
+      article: article,
+      stored: stored
+    } do
+      {view, _html} = open(conn, article, :media)
+      source = form_assigns(view).form.source
+
+      rows =
+        for label <- ["New A", "New B"],
+            do: BrandoAdmin.Components.Form.Input.SubformHelpers.new_row(source, :items, %{label: label})
+
+      send_form(view, action: :update_entries, field: :items, op: {:append, rows})
+      [_, _, key_a, _] = BrandoAdmin.Components.Form.Input.SubformHelpers.row_keys(form_assigns(view).form.source, :items)
+
+      {_video_id, token} = start_drawer_upload(view, row_drawer(2), "drawer-6")
+      send_form(view, action: :update_entries, field: :items, op: {:delete, key_a})
+      send_form(view, event: "entry_field_upload_complete", asset_type: :image, field: :cover, path: [], asset: stored)
+      complete_drawer_upload(view, "drawer-6", token)
+
+      assert form_row_clips(view) == [nil, nil, nil]
+    end
+
+    # The form was opened again since (a reconnect, say): it doesn't know
+    # where the upload goes
+    test "that the form has no record of stays in the library", %{conn: conn, article: article, clip: clip} = ctx do
+      {view, _html} = open(conn, article, :media)
+      send_form(view, action: :update_edit_video, edit_video: clip_drawer(clip))
+
+      uploading =
+        Factory.insert(:video, type: :cloudflare, status: :uploading, remote_id: "cf-uid", creator: ctx.current_user)
+
+      token = BrandoAdmin.Components.Assets.ProviderVideoUpload.upload_token(uploading, ctx.current_user, "drawer-4")
+      complete_drawer_upload(view, "drawer-4", token)
+
+      assert Repo.get!(Brando.Videos.Video, uploading.id).status == :processing
+      assert Ecto.Changeset.get_field(form_assigns(view).form.source, :clip_id) == clip.id
+      assert form_row_clips(view) == [nil, nil]
+    end
+  end
+
   describe "the image editor's new copy, with another drawer opened since" do
     setup %{article: article} do
       author = Repo.insert!(%Brando.SyncTest.ArticleAuthor{article_id: article.id, name: "Author"})
@@ -613,6 +793,51 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
 
       assert saved(article).cover_id == if(unquote(form) == :locked_media, do: revised.id, else: forged.id)
       assert saved_gallery_images(article) == [other.id]
+    end
+  end
+
+  # A working copy's recovery copy whose revision was deleted since: a
+  # locked field shows and saves the entry's asset, not the copy's, as in an
+  # ordinary recovery copy (its blocks still go where the copy has them,
+  # WorkingCopyPlacementTest)
+  for form <- [:media, :locked_media] do
+    test "a working copy's recovery copy, its revision deleted since, on form #{form}",
+         %{conn: conn, article: article} = ctx do
+      [revised, forged, other] = [image(ctx.current_user), image(ctx.current_user), image(ctx.current_user)]
+      {view, _html} = open(conn, article, unquote(form))
+      form_cid = cid_of(view, "#article_form-el")
+      revision_entry = revised_entry(form_assigns(view).entry, revised, other, ctx.current_user)
+
+      send_form(view, action: :load_working_copy, revision: revision_entry.revision, revision_entry: revision_entry.entry)
+
+      main =
+        view
+        |> render()
+        |> form_params(@form)
+        |> put_in(["article", "cover_id"], to_string(forged.id))
+        |> Plug.Conn.Query.encode()
+
+      view
+      |> with_target(form_cid)
+      |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
+
+      assert {1, _} =
+               Repo.delete_all(
+                 from r in Brando.Revisions.Revision,
+                   where:
+                     r.entry_type == ^to_string(Article) and r.entry_id == ^article.id and
+                       r.revision == ^revision_entry.revision
+               )
+
+      view |> with_target(form_cid) |> render_hook("draft_restore", %{"id" => latest_copy(article).id})
+
+      expected = if unquote(form) == :locked_media, do: ctx.stored.id, else: forged.id
+      assigns = form_assigns(view)
+      assert Ecto.Changeset.get_field(assigns.form.source, :cover_id) == expected
+      assert Map.get(assigns.updated_entry_assocs[:cover] || %{id: expected}, :id) == expected
+
+      save(view)
+      assert saved(article).cover_id == expected
     end
   end
 
