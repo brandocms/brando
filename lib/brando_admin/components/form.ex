@@ -7800,12 +7800,8 @@ defmodule BrandoAdmin.Components.Form do
     {Enum.filter(fields, differs?), relations, transformers}
   end
 
-  # A working copy whose revision is gone since is restored as an ordinary
-  # recovery copy: nothing gives its locked inputs other values than the
-  # entry's.
   defp apply_restored_changeset(socket, changeset, source, working_copy \\ nil) do
     revision_entry = working_copy_revision(socket, working_copy)
-    working_copy = if revision_entry, do: working_copy
     revised = revised_changeset(socket, revision_entry)
     {changeset, revised_assets} = put_revision_locked_assets(socket, changeset, revised, source)
     form = to_form(changeset)
@@ -7897,7 +7893,10 @@ defmodule BrandoAdmin.Components.Form do
   defp locked_asset_kinds(%{assigns: %{schema: schema}} = socket),
     do: for({key, kind} <- asset_field_kinds(schema), locked_field?(socket, [], key), do: {key, kind})
 
-  defp put_revision_locked_values(socket, nil), do: socket
+  # A working copy whose revision is gone since still puts its blocks back,
+  # but nothing gives its locked inputs other values than the entry's: they
+  # have them as in another recovery copy (`put_revision_locked_assets/4`).
+  defp put_revision_locked_values(socket, nil), do: reset_locked_values(socket)
 
   defp put_revision_locked_values(socket, revised), do: socket |> reset_locked_values() |> put_locked_values(revised)
 
@@ -9418,10 +9417,13 @@ defmodule BrandoAdmin.Components.Form do
     path = Map.get(edit_video, :path) || []
     changeset = socket.assigns.form.source
 
+    rows = path_row_keys(changeset, path)
+    relation_key = relation_field_key(edit_video.relation_field, edit_video.field)
+
     target = %{
       edit_video: Map.put(edit_video, :path, path),
-      shown: get_shown(changeset, path ++ [relation_field_key(edit_video.relation_field, edit_video.field)]) || "none",
-      rows: path_row_keys(changeset, path)
+      shown: shown_video(changeset, path, rows, relation_key) || "none",
+      rows: rows
     }
 
     assign(socket, :video_uploads, Map.put(socket.assigns[:video_uploads] || %{}, request_ref, target))
@@ -9441,13 +9443,14 @@ defmodule BrandoAdmin.Components.Form do
   defp deliver_uploaded_video(socket, %{edit_video: %{path: path, field: field} = edit_video} = target, video) do
     changeset = socket.assigns.form.source
     relation_key = relation_field_key(edit_video.relation_field, field)
-    shown = get_shown(changeset, path ++ [relation_key])
+    rows = path_row_keys(changeset, path)
+    shown = shown_video(changeset, path, rows, relation_key)
 
     cond do
       edit_asset_locked?(socket, edit_video) ->
         socket
 
-      path_row_keys(changeset, path) != target.rows ->
+      not same_rows?(target.rows, rows) ->
         video_left_in_library(socket)
 
       not (Brando.Uploads.AssetIntent.current_selection?(target.shown, shown) or to_string(shown) == to_string(video.id)) ->
@@ -9481,24 +9484,55 @@ defmodule BrandoAdmin.Components.Form do
     socket
   end
 
-  # The keys of the subform rows a form path runs through
-  # (`SubformHelpers.row_key/1`), counted as the form shows them; `:gone`
-  # for a row it doesn't show.
+  # The video id a field shows, unless its row is gone
+  defp shown_video(changeset, path, rows, relation_key),
+    do: if(:gone in rows, do: nil, else: get_shown(changeset, path ++ [relation_key]))
+
+  # The subform rows a form path runs through, a one-to-one's included, as
+  # `{key, rows in its list}` (`SubformHelpers.row_key/1`, rows counted as
+  # the form shows them); `:gone` for a row the form doesn't show, or one
+  # marked for deletion.
   defp path_row_keys(data, [key, index | rest]) when is_atom(key) and is_integer(index) do
+    with rows when is_list(rows) <- path_child(data, key),
+         row when not is_nil(row) <- form_row_at(rows, index),
+         false <- marked_for_deletion?(row) do
+      [{SubformHelpers.row_key(row), length(shown_rows(rows))} | path_row_keys(row, rest)]
+    else
+      _ -> [:gone]
+    end
+  end
+
+  defp path_row_keys(data, [key | rest]) when is_atom(key) do
     case path_child(data, key) do
-      rows when is_list(rows) ->
-        case form_row_at(rows, index) do
-          nil -> [:gone]
-          row -> [SubformHelpers.row_key(row) | path_row_keys(row, rest)]
-        end
+      %Changeset{action: :replace} ->
+        [:gone]
+
+      %{} = row when not is_struct(row, Ecto.Association.NotLoaded) ->
+        [{SubformHelpers.row_key(row), 1} | path_row_keys(row, rest)]
 
       _ ->
         [:gone]
     end
   end
 
-  defp path_row_keys(data, [key | rest]) when is_atom(key), do: path_row_keys(path_child(data, key), rest)
   defp path_row_keys(_data, _path), do: []
+
+  defp marked_for_deletion?(%Changeset{action: action}), do: action in [:delete, :ignore]
+  defp marked_for_deletion?(_row), do: false
+
+  # Whether a path runs through the rows it did (`path_row_keys/2`). A saved
+  # row keeps its key. A new row's (`_key`) is gone once the form is rebuilt
+  # from its changeset (`apply_changes/1`), so a new row is the one at its
+  # index while its list has as many rows.
+  defp same_rows?(recorded, current) when length(recorded) == length(current),
+    do: recorded |> Enum.zip(current) |> Enum.all?(&same_row?/1)
+
+  defp same_rows?(_recorded, _current), do: false
+
+  defp same_row?({{"id-" <> _ = key, _}, {key, _}}), do: true
+  defp same_row?({{"id-" <> _, _}, _current}), do: false
+  defp same_row?({{key, count}, {current, count}}), do: current in [key, nil]
+  defp same_row?(_rows), do: false
 
   defp path_child(%Changeset{changes: changes, data: data}, key), do: Map.get(changes, key, Map.get(data, key))
   defp path_child(%{} = data, key), do: Map.get(data, key)

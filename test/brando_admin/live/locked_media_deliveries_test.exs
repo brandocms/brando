@@ -528,6 +528,47 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
       assert form_row_clips(view) == [nil]
     end
 
+    # A new row's key (`_key`) is gone once the form is rebuilt from its
+    # changeset, as a delivery to another field does: the row is still the
+    # one at its index while no row was added or removed
+    test "goes to a new row after the form was rebuilt", %{conn: conn, article: article, stored: stored} do
+      {view, _html} = open(conn, article, :media)
+      source = form_assigns(view).form.source
+      new_row = BrandoAdmin.Components.Form.Input.SubformHelpers.new_row(source, :items, %{label: "New"})
+      send_form(view, action: :update_entries, field: :items, op: {:append, [new_row]})
+
+      {video_id, token} = start_drawer_upload(view, row_drawer(2), "drawer-5")
+      send_form(view, event: "entry_field_upload_complete", asset_type: :image, field: :cover, path: [], asset: stored)
+      complete_drawer_upload(view, "drawer-5", token)
+
+      assert form_row_clips(view) == [nil, nil, video_id]
+    end
+
+    # ... but not once a row was removed: another new row may be at its
+    # index by then
+    test "whose new row was removed after the form was rebuilt stays in the library", %{
+      conn: conn,
+      article: article,
+      stored: stored
+    } do
+      {view, _html} = open(conn, article, :media)
+      source = form_assigns(view).form.source
+
+      rows =
+        for label <- ["New A", "New B"],
+            do: BrandoAdmin.Components.Form.Input.SubformHelpers.new_row(source, :items, %{label: label})
+
+      send_form(view, action: :update_entries, field: :items, op: {:append, rows})
+      [_, _, key_a, _] = BrandoAdmin.Components.Form.Input.SubformHelpers.row_keys(form_assigns(view).form.source, :items)
+
+      {_video_id, token} = start_drawer_upload(view, row_drawer(2), "drawer-6")
+      send_form(view, action: :update_entries, field: :items, op: {:delete, key_a})
+      send_form(view, event: "entry_field_upload_complete", asset_type: :image, field: :cover, path: [], asset: stored)
+      complete_drawer_upload(view, "drawer-6", token)
+
+      assert form_row_clips(view) == [nil, nil, nil]
+    end
+
     # The form was opened again since (a reconnect, say): it doesn't know
     # where the upload goes
     test "that the form has no record of stays in the library", %{conn: conn, article: article, clip: clip} = ctx do
@@ -755,9 +796,10 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
     end
   end
 
-  # A working copy's recovery copy whose revision was deleted since is an
-  # ordinary recovery copy: a locked field shows and saves the entry's asset,
-  # not the copy's
+  # A working copy's recovery copy whose revision was deleted since: a
+  # locked field shows and saves the entry's asset, not the copy's, as in an
+  # ordinary recovery copy (its blocks still go where the copy has them,
+  # WorkingCopyPlacementTest)
   for form <- [:media, :locked_media] do
     test "a working copy's recovery copy, its revision deleted since, on form #{form}",
          %{conn: conn, article: article} = ctx do
@@ -791,7 +833,6 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
 
       expected = if unquote(form) == :locked_media, do: ctx.stored.id, else: forged.id
       assigns = form_assigns(view)
-      assert assigns.working_copy == nil
       assert Ecto.Changeset.get_field(assigns.form.source, :cover_id) == expected
       assert Map.get(assigns.updated_entry_assocs[:cover] || %{id: expected}, :id) == expected
 
