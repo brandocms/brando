@@ -283,6 +283,17 @@ defmodule Brando.SyncTest.Article do
             input :name, :text
             input :portrait, :image
           end
+
+          # A row's video, which is never locked: a provider upload started
+          # in its drawer goes to it, not to the drawer open by the end
+          inputs_for :items do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :label, :text
+            input :clip, :video
+          end
         end
       end
     end
@@ -303,6 +314,15 @@ defmodule Brando.SyncTest.Article do
 
             input :name, :text
             input :portrait, :image
+          end
+
+          inputs_for :items do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :label, :text
+            input :clip, :video
           end
         end
       end

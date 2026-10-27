@@ -17499,6 +17499,11 @@ msgstr "Brukeren er deaktivert, så ingen lenke for nytt passord ble sendt."
 msgid "The value is stored with each submission; the label is what visitors see."
 msgstr "Verdien lagres med hver innsending; etiketten er det besøkende ser."
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "The video is in the library. The form could not add it to the field it was uploaded for."
+msgstr "Videoen ligger i biblioteket. Skjemaet kunne ikke legge den i feltet den ble lastet opp til."
+
 #: lib/brando/uploads.ex
 #, elixir-autogen, elixir-format
 msgid "The video provider could not be reached. Please try again."

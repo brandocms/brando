@@ -606,25 +606,15 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # Video uploaded, webhook will update status. Only the upload this user
-  # started here (`ProviderVideoUpload.complete/3`).
+  # started here (`ProviderVideoUpload.complete/3`), and it goes to the
+  # field whose drawer it started in (`remember_video_upload/3`), not to the
+  # drawer open now.
   def update(%{action: :video_upload_complete, upload: params}, socket) do
+    {target, socket} = pop_video_upload(socket, params["request_ref"])
+
     case ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params, [:thumbnail]) do
       {:ok, video} ->
-        # Completed all the same: a locked field doesn't take the video,
-        # which stays in the library
-        if edit_asset_locked?(socket, socket.assigns.edit_video) do
-          {:ok, socket}
-        else
-          edit_video = Map.put(socket.assigns.edit_video, :video, video)
-          video_changeset = change(video)
-          relation_key = String.to_existing_atom("#{socket.assigns.edit_video.field}_id")
-
-          {:ok,
-           socket
-           |> update_changeset(relation_key, video.id)
-           |> assign(:edit_video, edit_video)
-           |> assign(:video_changeset, video_changeset)}
-        end
+        {:ok, deliver_uploaded_video(socket, target, video)}
 
       # Cloudflare and Vimeo record that the file arrived; a refusal leaves
       # the video in the library and is reported, as the picker does.
@@ -9413,10 +9403,106 @@ defmodule BrandoAdmin.Components.Form do
     # Push event to JavaScript hook with upload URL
     {:ok,
      socket
+     |> remember_video_upload(request_ref, edit_video)
      |> assign(:edit_video, edit_video)
      |> assign(:video_changeset, video_changeset)
      |> push_event("video_upload_url_ready", payload)}
   end
+
+  # The field a drawer's provider upload goes to once it completes, as the
+  # drawer had it when the upload started: the editor may open another
+  # field's drawer meanwhile (`image_editor_copy_of` does the same for the
+  # image editor). With the video the field showed and the subform rows its
+  # path runs through, which tell at delivery whether it is still the field.
+  defp remember_video_upload(socket, request_ref, edit_video) do
+    path = Map.get(edit_video, :path) || []
+    changeset = socket.assigns.form.source
+
+    target = %{
+      edit_video: Map.put(edit_video, :path, path),
+      shown: get_shown(changeset, path ++ [relation_field_key(edit_video.relation_field, edit_video.field)]) || "none",
+      rows: path_row_keys(changeset, path)
+    }
+
+    assign(socket, :video_uploads, Map.put(socket.assigns[:video_uploads] || %{}, request_ref, target))
+  end
+
+  defp pop_video_upload(socket, request_ref) do
+    {target, uploads} = Map.pop(socket.assigns[:video_uploads] || %{}, request_ref)
+    {target, assign(socket, :video_uploads, uploads)}
+  end
+
+  # A completed upload the form has no record of (it mounted again since)
+  # or whose row is gone (removed, or moved under a removed one) stays in
+  # the library, and the editor is told. So does one for a locked field,
+  # and one whose field shows another video by then, picked since.
+  defp deliver_uploaded_video(socket, nil, _video), do: video_left_in_library(socket)
+
+  defp deliver_uploaded_video(socket, %{edit_video: %{path: path, field: field} = edit_video} = target, video) do
+    changeset = socket.assigns.form.source
+    relation_key = relation_field_key(edit_video.relation_field, field)
+    shown = get_shown(changeset, path ++ [relation_key])
+
+    cond do
+      edit_asset_locked?(socket, edit_video) ->
+        socket
+
+      path_row_keys(changeset, path) != target.rows ->
+        video_left_in_library(socket)
+
+      not (Brando.Uploads.AssetIntent.current_selection?(target.shown, shown) or to_string(shown) == to_string(video.id)) ->
+        socket
+
+      true ->
+        socket
+        |> commit_entry_field_asset(field, path, relation_key, video)
+        |> show_uploaded_video(edit_video, video)
+    end
+  end
+
+  # The drawer shows the video if it is open on the field the upload was for
+  defp show_uploaded_video(%{assigns: %{edit_video: open}} = socket, edit_video, video) do
+    if Map.take(open, [:path, :field, :schema]) == Map.take(edit_video, [:path, :field, :schema]) do
+      socket
+      |> assign(:edit_video, Map.merge(open, %{id: video.id, video: video}))
+      |> assign(:video_changeset, change(video))
+      |> assign_drawer_recovery_state()
+    else
+      socket
+    end
+  end
+
+  defp video_left_in_library(socket) do
+    send(
+      self(),
+      {:toast, gettext("The video is in the library. The form could not add it to the field it was uploaded for.")}
+    )
+
+    socket
+  end
+
+  # The keys of the subform rows a form path runs through
+  # (`SubformHelpers.row_key/1`), counted as the form shows them; `:gone`
+  # for a row it doesn't show.
+  defp path_row_keys(data, [key, index | rest]) when is_atom(key) and is_integer(index) do
+    case path_child(data, key) do
+      rows when is_list(rows) ->
+        case form_row_at(rows, index) do
+          nil -> [:gone]
+          row -> [SubformHelpers.row_key(row) | path_row_keys(row, rest)]
+        end
+
+      _ ->
+        [:gone]
+    end
+  end
+
+  defp path_row_keys(data, [key | rest]) when is_atom(key), do: path_row_keys(path_child(data, key), rest)
+  defp path_row_keys(_data, _path), do: []
+
+  defp path_child(%Changeset{changes: changes, data: data}, key), do: Map.get(changes, key, Map.get(data, key))
+  defp path_child(%{} = data, key), do: Map.get(data, key)
+  defp path_child(_data, _key), do: nil
 
   defp relation_field_key(%{field: relation_key}, _field) when not is_nil(relation_key),
     do: relation_key
