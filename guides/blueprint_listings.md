@@ -609,7 +609,9 @@ call passes, or `nil`.
 
 Text filters are the listing's search field. The tools bar shows one at a
 time with a button that cycles through them; the key **f** focuses the
-field. Typing filters the listing after a short pause. There is no separate
+field. Typing filters the listing after a short pause; Enter filters at
+once, and when exactly one entry matches and the editor may edit it, opens
+it through the link on its row. There is no separate
 search box: declare a text filter for each field editors search by, or one
 key such as `"search"` whose clause searches several columns.
 

@@ -41,6 +41,8 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
      |> assign_new(:layout, fn -> :default end)
      |> assign_new(:statuses, fn -> nil end)
      |> assign_new(:require_url, fn -> false end)
+     # Enter on a filter left with one entry picks it and closes the modal around it
+     |> assign_new(:enter_select, fn -> false end)
      |> sync_selection(assigns)
      |> refresh_filters()}
   end
@@ -207,6 +209,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
               identifiers={@identifiers}
               selected_identifier_id={@selected_identifier_id}
               myself={@myself}
+              enter_select={@enter_select}
               workspace
             />
           </div>
@@ -263,6 +266,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
                 identifiers={@identifiers}
                 selected_identifier_id={@selected_identifier_id}
                 myself={@myself}
+                enter_select={@enter_select}
               />
             </div>
           </div>
@@ -284,6 +288,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
               identifiers={@identifiers}
               selected_identifier_id={@selected_identifier_id}
               myself={@myself}
+              enter_select={@enter_select}
             />
           <% end %>
         <% end %>
@@ -335,6 +340,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
       id={"#{@id}-select-modal-filter"}
       phx-hook="Brando.SelectFilter"
       data-target=".identifier"
+      data-enter-select={@enter_select}
       data-filter-target={"##{@id}-identifier-options"}
       data-count-target={@workspace && "##{@id}-result-count"}
     >

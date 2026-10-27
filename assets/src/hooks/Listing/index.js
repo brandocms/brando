@@ -54,6 +54,17 @@ export default app => ({
       if (!filterInput) return false
       filterInput.focus()
     })
+
+    // Enter in a filter that leaves one entry (`submit_filter`): open it as a
+    // click on its row would, so the row says it is opening. A listing whose
+    // rows do not link to the entry's editor stays where it is.
+    this.handleEvent('brando:open_entry', ({ listing, url }) => {
+      if (listing !== this.el.id) return
+      const link = Array.from(this.el.querySelectorAll('a[data-phx-link="redirect"]')).find(
+        a => a.getAttribute('href') === url
+      )
+      link?.click()
+    })
   },
 
   destroyed() {

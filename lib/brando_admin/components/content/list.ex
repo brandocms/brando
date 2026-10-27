@@ -122,7 +122,30 @@ defmodule BrandoAdmin.Components.Content.List do
   end
 
   # Toggle boolean filter
-  def handle_event("toggle_boolean_filter", %{"filter" => filter_key}, socket) do
+  # Enter in a text filter applies what was typed, ahead of the input's
+  # debounce. When that leaves one entry, and the editor may open it, the
+  # listing (the `Brando.Listing` hook) opens it from its row's link: this
+  # render shows the row, as a patch of the URL would only after the event.
+  def handle_event("submit_filter", %{"filter" => filter_key, "q" => query} = params, socket) do
+    filtered_params = filter_params(socket, filter_key, query)
+
+    case only_match(socket, filtered_params, query) do
+      nil ->
+        handle_event("update_filter", params, socket)
+
+      entry ->
+        {:noreply,
+         socket
+         |> assign(:params, filtered_params)
+         |> assign_entries(nil)
+         |> push_event("brando:open_entry", %{
+           listing: "listing-#{socket.assigns.listing.name}",
+           url: entry.__struct__.__admin_route__(:update, [entry.id])
+         })}
+    end
+  end
+
+  def handle_event("toggle_boolean_filter",%{"filter" => filter_key}, socket) do
     filter = Enum.find(socket.assigns.listing.filters, &(&1.key == filter_key))
     current_value = get_in(socket.assigns, [:list_opts, :filter, String.to_existing_atom(filter_key)])
     # What off sends is the filter's to decide (see `Listings.off_value/1`).
@@ -481,17 +504,52 @@ defmodule BrandoAdmin.Components.Content.List do
 
   @decorate span("brando.list.assign_entries", schema: :schema)
   defp assign_entries(
-         %{
-           assigns: %{
-             schema: schema,
-             context: context,
-             plural: plural,
-             listing: listing,
-             params: params,
-             current_user: current_user
-           }
-         } = socket,
+         %{assigns: %{schema: schema, listing: listing, params: params, current_user: current_user}} = socket,
          _
+       ) do
+    {list_opts, entries} = list_entries(socket, params)
+    content_language = current_user.config.content_language
+
+    entries =
+      entries
+      |> decorate(listing.decorate, current_user)
+      |> decorate(&put_translation_status(&1, schema, current_user))
+      |> decorate(&put_trashed_by(&1, schema))
+
+    Tracing.set_attributes(%{"brando.entry_count": entry_count(entries)})
+
+    socket
+    |> assign(:list_opts, list_opts)
+    |> assign(:status_counts, Map.get(entries, :status_counts))
+    |> assign(:entries, entries)
+    |> assign(:content_language, content_language)
+  end
+
+  # The listing's query with the text filter `filter_key` set to `query`, from its first page
+  defp filter_params(socket, filter_key, query) do
+    socket.assigns.params
+    |> Map.delete("page")
+    |> Map.put("filter:#{filter_key}", query)
+  end
+
+  # The one entry the listing shows under `params`, if it has an editor the
+  # user may open
+  defp only_match(socket, params, query) do
+    with false <- String.trim(query) == "",
+         {_, %{entries: [entry], pagination_meta: %{total_entries: 1}}} <- list_entries(socket, params),
+         true <- Brando.Blueprint.admin_editor?(entry.__struct__),
+         :ok <- Brando.Authorization.Boundary.authorize(socket.assigns.current_user, :update, entry) do
+      entry
+    else
+      _ -> nil
+    end
+  end
+
+  # The listing's entries under the URL query `params`, as the context lists them
+  defp list_entries(
+         %{assigns: %{schema: schema, context: context, plural: plural, listing: listing, current_user: current_user}} =
+           socket,
+         params
        ) do
     content_language = current_user.config.content_language
 
@@ -513,20 +571,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> then(&if socket.assigns.status?, do: Map.put(&1, :status_counts, true), else: &1)
 
     {:ok, entries} = apply(context, :"list_#{plural}", [context_opts])
-
-    entries =
-      entries
-      |> decorate(listing.decorate, current_user)
-      |> decorate(&put_translation_status(&1, schema, socket.assigns.current_user))
-      |> decorate(&put_trashed_by(&1, schema))
-
-    Tracing.set_attributes(%{"brando.entry_count": entry_count(entries)})
-
-    socket
-    |> assign(:list_opts, list_opts)
-    |> assign(:status_counts, Map.get(entries, :status_counts))
-    |> assign(:entries, entries)
-    |> assign(:content_language, content_language)
+    {list_opts, entries}
   end
 
   defp entry_count(%{entries: page}) when is_list(page), do: length(page)
@@ -948,6 +993,7 @@ defmodule BrandoAdmin.Components.Content.List do
   attr :active_filter, :map, required: true
   attr :schema, :atom, required: true
   attr :update_filter, :any, required: true
+  attr :submit_filter, :any, required: true
   attr :next_filter_key, :any, required: true
   attr :filters_count, :integer, required: true
 
@@ -971,7 +1017,7 @@ defmodule BrandoAdmin.Components.Content.List do
         as={:filter_form}
         phx-auto-recover="ignore"
         phx-change={@update_filter}
-        onkeydown="return event.key != 'Enter';"
+        phx-submit={@submit_filter}
       >
         <input
           id={"listing-filter-#{@filter.key}"}
@@ -1185,6 +1231,7 @@ defmodule BrandoAdmin.Components.Content.List do
       |> assign_new(:listing, fn -> assigns.listing end)
       |> assign_new(:update_sort, fn -> assigns.update_sort end)
       |> assign_new(:update_filter, fn -> assigns.update_filter end)
+      |> assign_new(:submit_filter, fn -> assigns.submit_filter end)
       |> assign_new(:delete_filter, fn -> assigns.delete_filter end)
       |> assign_new(:update_status, fn -> assigns.update_status end)
       |> assign_new(:next_filter_key, fn -> assigns.next_filter_key end)
@@ -1221,6 +1268,7 @@ defmodule BrandoAdmin.Components.Content.List do
             active_filter={@active_filter}
             schema={@schema}
             update_filter={@update_filter}
+            submit_filter={@submit_filter}
             next_filter_key={@next_filter_key}
             filters_count={Enum.count(@filters)}
           />
