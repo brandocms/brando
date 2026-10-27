@@ -198,8 +198,8 @@ defmodule Brando.Images.ImageMaintenanceTest do
       end)
     end
 
-    # Each image's progress goes to the admin who started the run
-    test "recreating sizes for a demoted admin queues the images for them", %{user: user} do
+    # Each image's completed callback and CDN copy are still the admin's
+    test "recreating sizes for a demoted admin still queues each image for them", %{user: user} do
       image = Factory.insert(:image, path: "image/demoted-sizes.jpg")
       user_id = user.id
 
@@ -212,6 +212,34 @@ defmodule Brando.Images.ImageMaintenanceTest do
                  Enum.filter(all_enqueued(worker: Worker.ImageProcessor), &(&1.args["image_id"] == image.id))
       end)
     end
+  end
+
+  # The runs write as the system, so starting one needs the right to update
+  # images, read afresh
+  test "a user who may not update images cannot start a run", %{user: user} do
+    Repo.update_all(from(u in Brando.Users.User, where: u.id == ^user.id), set: [role: :user])
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:error, :forbidden} = Processing.recreate_sizes_for_images(user)
+      assert {:error, :forbidden} = Processing.recreate_sizes_for_changed_images(user)
+      assert {:error, :forbidden} = Processing.set_dominant_color_for_images(user)
+      assert [] = all_enqueued(worker: Worker.ImageMaintenance)
+    end)
+  end
+
+  test "the system can start a run, as from a release shell" do
+    image = Factory.insert(:image, path: "image/system.jpg", dominant_color: nil)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, _job} = Processing.recreate_sizes_for_images(:system)
+      assert {:ok, _job} = Processing.set_dominant_color_for_images(:system)
+      assert %{failure: 0} = Oban.drain_queue(queue: :default, with_recursion: true)
+
+      assert [%{args: %{"user_id" => nil}}] =
+               Enum.filter(all_enqueued(worker: Worker.ImageProcessor), &(&1.args["image_id"] == image.id))
+    end)
+
+    assert Repo.get!(Image, image.id).dominant_color == "#123456"
   end
 
   test "a task cannot be started twice while it is unfinished", %{user: user} do

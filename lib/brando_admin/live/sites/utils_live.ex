@@ -410,6 +410,11 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     {:noreply, assign_image_tasks(socket)}
   end
 
+  defp image_task_started({:error, :forbidden}, socket, _message) do
+    send(self(), {:toast, gettext("You do not have permission for this action.")})
+    {:noreply, socket}
+  end
+
   defp image_task_started({:error, _reason}, socket, _message) do
     send(self(), {:toast, gettext("The operation could not be completed. Check the application logs and try again.")})
     {:noreply, socket}

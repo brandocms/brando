@@ -113,4 +113,17 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
       assert [_] = all_enqueued(worker: ImageMaintenance, args: %{task: "recreate_sizes"})
     end)
   end
+
+  # The tools write as the system: a legacy User account, which edits
+  # nothing, cannot start them by sending the event
+  test "a legacy user demoted since the page opened cannot start an image tool", %{conn: conn, current_user: user} do
+    {:ok, view, _} = live(conn, "/admin/config/utils")
+    Brando.endpoint().subscribe("user:#{user.id}")
+    Brando.Users.User |> Brando.Repo.get!(user.id) |> Ecto.Changeset.change(role: :user) |> Brando.Repo.update!()
+
+    for event <- ~w(recreate_image_sizes recreate_changed_image_sizes recalculate_dominant_colors) do
+      render_click(view, event, %{})
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "You do not have permission" <> _}}
+    end
+  end
 end
