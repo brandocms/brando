@@ -97,14 +97,14 @@ defmodule Brando.HTMLTest do
     # title escaped; the menu components escape it again when they print it
     defp stored_title(title), do: title |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
-    defp title_item(title, link_text \\ nil),
+    defp title_item(title, link_text \\ nil, schema \\ Brando.Blueprint.Identifier.HEExTest.HEExIdentifierSchema),
       do: %{
         key: "rock",
         link: %{
           link_type: :identifier,
           link_text: link_text,
           link_target_blank: false,
-          identifier: %{url: "/rock", title: title}
+          identifier: %Brando.Content.Identifier{schema: schema, url: "/rock", title: title}
         }
       }
 
@@ -152,6 +152,13 @@ defmodule Brando.HTMLTest do
     test "prints an editor's label as written" do
       html = "Rock" |> title_item("Write &lt;br&gt; & more") |> render_menu()
       assert html =~ ~s(href="/rock">Write &amp;lt;br&amp;gt; &amp; more</a>)
+    end
+
+    # A Liquid identifier stores the title as written
+    test "prints a Liquid identifier's title as written" do
+      html = "Using &lt;br&gt;" |> title_item(nil, Brando.Pages.Page) |> render_menu()
+      assert html =~ ~s(href="/rock">Using &amp;lt;br&amp;gt;</a>)
+      assert html =~ "<i>Using &amp;lt;br&amp;gt;</i>"
     end
 
     test "an item without text has none" do
