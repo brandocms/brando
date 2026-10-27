@@ -249,6 +249,23 @@ defmodule BrandoAdmin.Images.FolderBrowser do
   end
 
   @doc """
+  The id of the stored folder `folder` for a screen showing it to `actor`.
+  Drawing a folder is reading: it is created if need be only for someone
+  who may add or organize `schema` assets (`:create` or `:update`). For
+  anyone else a folder not stored yet is nil, and shows empty.
+  """
+  def folder_id_for(folder, upload_root, actor, schema) do
+    if may_add_folders?(actor, schema),
+      do: folder_id_for(folder, upload_root),
+      else: find_folder_id(folder, upload_root)
+  end
+
+  defp may_add_folders?(nil, _schema), do: false
+
+  defp may_add_folders?(actor, schema),
+    do: Enum.any?([:create, :update], &(Brando.Authorization.Boundary.authorize(actor, &1, schema) == :ok))
+
+  @doc """
   The id of the stored folder `folder` (relative to `upload_root`, or
   absolute), or nil. Unlike `folder_id_for/2` it never creates one.
   """

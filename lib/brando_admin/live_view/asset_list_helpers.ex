@@ -25,8 +25,7 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
       |> Enum.drop(-1)
       |> Enum.join("/")
 
-    folder_id = FolderBrowser.folder_id_for(parent, socket.assigns.upload_root)
-    patch_folder_filter(socket, folder_id)
+    open_folder(socket, parent)
   end
 
   @doc """
@@ -74,16 +73,34 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
       else: FolderBrowser.find_folder_id(folder, socket.assigns.upload_root)
   end
 
+  @doc """
+  Opens `folder` (relative to the upload root, "" for the root) by its stored
+  id (`folder_id_to_open/2`). A folder not stored, known only by its assets'
+  paths, is opened by its path, so a user who may not store it still can.
+  """
+  def open_folder(socket, folder) do
+    case folder_id_to_open(socket, folder) do
+      nil when folder not in [nil, ""] ->
+        patch_filter(socket, "filter:path", FolderBrowser.absolute_folder(folder, socket.assigns.upload_root))
+
+      folder_id ->
+        patch_folder_filter(socket, folder_id)
+    end
+  end
+
   @doc "Patches the URL to filter by the given folder."
   def patch_folder_filter(socket, folder) do
+    patch_filter(socket, "filter:folder_id", if(is_nil(folder), do: "root", else: to_string(folder)))
+  end
+
+  defp patch_filter(socket, key, value) do
     uri = socket.assigns.uri
     current_params = URI.decode_query(uri.query || "")
-    folder_filter = if is_nil(folder), do: "root", else: to_string(folder)
 
     new_params =
       current_params
-      |> Map.drop(["filter:path", "page"])
-      |> Map.put("filter:folder_id", folder_filter)
+      |> Map.drop(["filter:path", "filter:folder_id", "page"])
+      |> Map.put(key, value)
       |> Enum.reject(fn {_k, v} -> v in [nil, ""] end)
       |> URI.encode_query()
 
@@ -230,7 +247,8 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
 
   @doc "Opens the preview of sorting the current folder's `asset_type` assets."
   def open_sweep(socket, asset_type) do
-    folder_id = FolderBrowser.folder_id_for(socket.assigns.current_folder, socket.assigns.upload_root)
+    # A preview moves nothing, and a folder not stored yet has nothing to sort
+    folder_id = FolderBrowser.find_folder_id(socket.assigns.current_folder, socket.assigns.upload_root)
 
     case Sweep.plan(asset_type, folder_id) do
       {:ok, plan} -> Component.assign(socket, :sweep, %{plan: plan, samples: Sweep.samples(plan)})

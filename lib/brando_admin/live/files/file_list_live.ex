@@ -97,8 +97,7 @@ defmodule BrandoAdmin.Files.FileListLive do
   end
 
   def handle_event("assets_go_folder", %{"folder" => folder}, socket) do
-    folder_id = AssetListHelpers.folder_id_to_open(socket, folder)
-    {:noreply, AssetListHelpers.patch_folder_filter(socket, folder_id)}
+    {:noreply, AssetListHelpers.open_folder(socket, folder)}
   end
 
   def handle_event("assets_go_parent", _, socket) do
@@ -107,8 +106,7 @@ defmodule BrandoAdmin.Files.FileListLive do
 
   def handle_event("assets_go_recent", %{"folder" => folder}, socket) do
     relative = FolderBrowser.relative_folder(folder, socket.assigns.upload_root)
-    folder_id = AssetListHelpers.folder_id_to_open(socket, relative)
-    {:noreply, AssetListHelpers.patch_folder_filter(socket, folder_id)}
+    {:noreply, AssetListHelpers.open_folder(socket, relative)}
   end
 
   def handle_event("assets_show_new_folder_form", _, socket) do
@@ -365,7 +363,7 @@ defmodule BrandoAdmin.Files.FileListLive do
                 data-deliver-topic={@deliver_topic}
                 data-config-target={@current_folder_config_target || "default"}
                 data-folder={@current_folder_abs}
-                data-folder-id={FolderBrowser.folder_id_for(@current_folder, @upload_root)}
+                data-folder-id={@current_folder_id}
                 data-click-mode="trigger"
                 class="library-upload-trigger"
               >
@@ -493,6 +491,15 @@ defmodule BrandoAdmin.Files.FileListLive do
       )
     )
     |> assign(:current_folder_config_target, current_folder_config_target)
+    |> assign(
+      :current_folder_id,
+      FolderBrowser.folder_id_for(
+        current_folder,
+        socket.assigns.upload_root,
+        socket.assigns.current_user,
+        socket.assigns.schema
+      )
+    )
   end
 
   defp folder_label_for_display(folder, upload_root) do
