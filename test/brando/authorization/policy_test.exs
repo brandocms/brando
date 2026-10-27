@@ -43,6 +43,24 @@ defmodule Brando.Authorization.PolicyTest do
     end)
   end
 
+  # Audit F32: a heavy entry's form loads in a start_async task wrapped by
+  # capture_context, which ran the read with no scope and so no policy.
+  test "work captured for another process keeps the caller's scope and query action", c do
+    read = fn -> Repo.all(Boundary.query(Page, Page)) end
+    in_task = fn fun -> fun |> Brando.Tenant.capture_context() |> Task.async() |> Task.await() end
+
+    Boundary.with_scope(c.scope, fn ->
+      ids = read |> in_task.() |> Enum.map(& &1.id) |> Enum.sort()
+      assert ids == Enum.sort([c.own.id, c.hidden_export.id])
+
+      assert [%{id: id}] = Boundary.with_query_action(:export, Page, fn -> in_task.(read) end)
+      assert id == c.own.id
+
+      get = Brando.Tenant.capture_context(fn page_id -> Repo.get(Boundary.query(Page, Page), page_id) end)
+      assert nil == Task.async(fn -> get.(c.foreign.id) end) |> Task.await()
+    end)
+  end
+
   test "live previews recheck record policies after ownership changes", c do
     alias Brando.Authorization.Preview
     key = "POLICY-PREVIEW-#{Ecto.UUID.generate()}"

@@ -466,9 +466,16 @@ defmodule Brando.Activity do
   @doc """
   Events, newest first. Filters: `:user_id`, `:schema` (module or string),
   `:action`, `:since` (`DateTime`), `:q` (title search), `:schema_in` (the
-  schemas the reader may see), `:actor` (a kind, see `actor_kind/1`),
-  `:client` (an MCP client's name) and `:proposal_id`. Options: `:limit`
-  (default 50), `:offset`.
+  schemas the reader may see), `:readable_entries`, `:actor` (a kind, see
+  `actor_kind/1`), `:client` (an MCP client's name) and `:proposal_id`.
+  Options: `:limit` (default 50), `:offset`.
+
+  `readable_entries: {scope, schemas}` keeps, of the events of those
+  `schemas` that have a record read policy, only those of entries `scope` may
+  read, as `Brando.Authorization.Boundary.query/2` narrows them. Their events
+  that name no entry (a reorder, naming the entry now first) or an entry
+  deleted for good cannot be checked, and drop out. Events of other schemas
+  are left to `:schema_in`.
   """
   def list(filters \\ %{}, opts \\ []) do
     limit = Keyword.get(opts, :limit, 50)
@@ -492,6 +499,7 @@ defmodule Brando.Activity do
       {:user_id, id}, query -> where(query, [e], e.user_id == ^id)
       {:schema, schema}, query -> where(query, [e], e.schema == ^to_string(schema))
       {:schema_in, schemas}, query -> where(query, [e], e.schema in ^Enum.map(schemas, &to_string/1))
+      {:readable_entries, {scope, schemas}}, query -> where(query, ^readable_entries(scope, schemas))
       {:action, action}, query -> where(query, [e], e.action == ^action)
       {:since, since}, query -> where(query, [e], e.inserted_at >= ^since)
       {:entry_id, id}, query -> where(query, [e], e.entry_id == ^id)
@@ -500,6 +508,19 @@ defmodule Brando.Activity do
       {:proposal_id, id}, query -> where(query, [e], e.proposal_id == ^id)
       {:q, q}, query -> where(query, [e], ilike(e.title, ^"%#{Brando.Query.sanitize_ilike_pattern(q)}%"))
       _, query -> query
+    end)
+  end
+
+  # No scope to check against: none of `schemas`' events
+  defp readable_entries(nil, schemas), do: dynamic([e], e.schema not in ^Enum.map(schemas, &to_string/1))
+
+  defp readable_entries(scope, schemas) do
+    policed = Enum.filter(schemas, &Brando.Authorization.Engine.record_policy?/1)
+    names = Enum.map(policed, &to_string/1)
+
+    Enum.reduce(policed, dynamic([e], e.schema not in ^names), fn schema, allowed ->
+      ids = from(entry in Brando.Authorization.Engine.scope(scope, :read, schema), select: entry.id)
+      dynamic([e], ^allowed or (e.schema == ^to_string(schema) and e.entry_id in subquery(ids)))
     end)
   end
 

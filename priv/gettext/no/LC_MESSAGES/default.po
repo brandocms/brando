@@ -4420,6 +4420,11 @@ msgstr "Kopiert fra %{scope}"
 msgid "Copied from %{title}"
 msgstr "Kopiert fra %{title}"
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Copied from another entry"
+msgstr "Kopiert fra en annen oppføring"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format

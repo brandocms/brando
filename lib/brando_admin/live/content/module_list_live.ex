@@ -293,7 +293,7 @@ defmodule BrandoAdmin.Content.ModuleListLive do
 
     socket
     |> update(:sketches, &%{&1 | running?: true, drawn: %{}, failed: []})
-    |> start_async(:sketches, fn -> Enum.each(modules, &draw_sketch(lv, &1)) end)
+    |> start_async(:sketches, Brando.Tenant.capture_context(fn -> Enum.each(modules, &draw_sketch(lv, &1)) end))
     |> then(&{:noreply, &1})
   end
 

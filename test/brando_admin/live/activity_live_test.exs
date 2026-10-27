@@ -207,6 +207,50 @@ defmodule BrandoAdmin.ActivityLiveTest do
     )
   end
 
+  # Audit F28: the log narrowed by type only, so it showed the titles and
+  # history of entries a record read policy hides.
+  test "with group authorization, a record read policy hides an entry's events", %{conn: conn} do
+    put_test_env(:authorization_mode, :groups)
+    owner = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+    viewer = Factory.insert(:random_user, role: :user, config: %Brando.Users.UserConfig{})
+    {:ok, _} = Brando.Authorization.Migration.run()
+    scope = Brando.Authorization.Scope.standalone(owner)
+    keys = ["brando.admin.access", "brando.activity.read", "authorization.policy_pages.read"]
+    {:ok, group} = Brando.Authorization.Groups.create(scope, %{name: "Policy readers"}, keys)
+    {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, viewer.id)
+
+    hidden = Factory.insert(:page, title: "Hidden Marker", creator: owner)
+    own = Factory.insert(:page, title: "Own Marker", creator: viewer)
+
+    [hidden, own] = Enum.map([hidden, own], &Brando.Repo.get!(Brando.AuthorizationTestResources.Page, &1.id))
+    for entry <- [hidden, own], do: {:ok, _} = Brando.Activity.record(:updated, entry, owner, fields: ["title"])
+    # Events that name the hidden entry in their details
+    Brando.Activity.reordered(Brando.AuthorizationTestResources.Page, 2, hidden, owner)
+    Brando.Activity.duplicated(own, hidden, owner)
+
+    conn = log_in_user(conn, viewer)
+
+    {:ok, view, _} = live(conn, "/admin/config/activity?period=all")
+    assert has_element?(view, ".activity-row", "Own Marker")
+    assert has_element?(view, ".activity-row", "Copied from another entry")
+    refute render(view) =~ "Hidden Marker"
+    assert has_element?(view, ".activity-count", "2 events")
+
+    {:ok, view, _} = live(conn, "/admin/config/activity?period=all&q=Hidden")
+    refute has_element?(view, ".activity-row", "Hidden Marker")
+  end
+
+  test "with group authorization, an entry deleted for good keeps its history", %{conn: conn, current_user: user} do
+    put_test_env(:authorization_mode, :groups)
+    {:ok, _} = Brando.Authorization.Migration.run()
+    page = create_page(user, "Gone For Good")
+    {:ok, _} = Brando.Activity.deleted(page, user, false)
+    Brando.Repo.delete!(page)
+
+    {:ok, view, _} = live(conn, "/admin/config/activity?period=all")
+    assert has_element?(view, ".activity-row", "Gone For Good")
+  end
+
   test "editors can't open it without group authorization", %{conn: conn} do
     editor = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
     conn = log_in_user(conn, editor)

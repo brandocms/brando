@@ -8,6 +8,7 @@ defmodule Brando.Tenant do
   LiveView boundaries when tenancy is enabled.
   """
 
+  alias Brando.Authorization.Boundary
   alias Brando.Environments.Environment
   alias Brando.Exception.ConfigError
   alias Brando.Sites.Site
@@ -143,21 +144,26 @@ defmodule Brando.Tenant do
 
   @doc """
   Captures the current tenant context for work that will run in another process.
-  The trace context comes along, so spans there join the caller's trace.
+  The authorization scope comes along (`Brando.Authorization.Boundary.capture/0`),
+  so queries there are narrowed as the caller's are, and so does the trace
+  context, so spans there join the caller's trace.
   """
   @spec capture_context((-> result)) :: (-> result) when result: var
   def capture_context(fun) when is_function(fun, 0) do
-    prefix = captured_prefix()
-    trace = Brando.Tracing.capture()
-    fn -> run_captured(prefix, trace, fun) end
+    context = capture()
+    fn -> run_in(context, fun) end
   end
 
   @spec capture_context((arg -> result)) :: (arg -> result) when arg: var, result: var
   def capture_context(fun) when is_function(fun, 1) do
-    prefix = captured_prefix()
-    trace = Brando.Tracing.capture()
-    fn arg -> run_captured(prefix, trace, fn -> fun.(arg) end) end
+    context = capture()
+    fn arg -> run_in(context, fn -> fun.(arg) end) end
   end
+
+  defp capture, do: {captured_prefix(), Brando.Tracing.capture(), Boundary.capture()}
+
+  defp run_in({prefix, trace, authorization}, fun),
+    do: Boundary.with_captured(authorization, fn -> run_captured(prefix, trace, fun) end)
 
   defp captured_prefix, do: if(public?(), do: :public, else: current_prefix())
 
