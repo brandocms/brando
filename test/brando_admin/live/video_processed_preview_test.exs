@@ -34,7 +34,9 @@ defmodule BrandoAdmin.VideoProcessedPreviewTest do
 
     ref_video = processing_video(user, "Ref clip")
     var_video = processing_video(user, "Var clip")
-    {:ok, Map.merge(page_with(user, ref_video, var_video), %{ref_video: ref_video, var_video: var_video})}
+    config_video = processing_video(user, "Config clip")
+    videos = %{ref_video: ref_video, var_video: var_video, config_video: config_video}
+    {:ok, Map.merge(page_with(user, videos), videos)}
   end
 
   test "the preview shows a ref's and a var's video once the provider reports them ready", c do
@@ -85,6 +87,21 @@ defmodule BrandoAdmin.VideoProcessedPreviewTest do
     assert_receive %Phoenix.Socket.Broadcast{event: "update", payload: %{html: html}}, 3_000
     assert html =~ player(c.ref_video)
     assert html =~ player(c.var_video)
+  end
+
+  # A saved var in the block's settings is carried as hidden inputs while
+  # they are closed: no var component shows it, so the block follows it.
+  test "the preview shows a settings var's video once the provider reports it ready", c do
+    view = open(c)
+    refute has_element?(view, ~s([id$="-video-media"][data-asset-id="#{c.config_video.id}"]))
+    key = open_preview(view)
+    on_exit(fn -> LivePreview.cleanup_cache(key) end)
+    flush_preview_updates()
+    before = session(c.page)
+
+    report(c.config_video, %{status: :ready, width: 1280, height: 720})
+    assert_preview_shows(key, player(c.config_video))
+    assert session(c.page) == before
   end
 
   test "a report that the video is still processing does not reload the preview", c do
@@ -153,11 +170,17 @@ defmodule BrandoAdmin.VideoProcessedPreviewTest do
     end
   end
 
-  defp page_with(user, ref_video, var_video) do
+  defp page_with(user, videos) do
     module =
-      ProposalFixtures.module!(user, "Film", ~s(<div>{% ref refs.clip %}{% video film { autoplay: true } %}</div>),
+      ProposalFixtures.module!(
+        user,
+        "Film",
+        ~s(<div>{% ref refs.clip %}{% video film { autoplay: true } %}{% video backdrop { autoplay: true } %}</div>),
         refs: [ProposalFixtures.ref("clip", %{type: "video", data: %{}})],
-        vars: [%{type: "video", key: "film", label: "Film"}]
+        vars: [
+          %{type: "video", key: "film", label: "Film"},
+          %{type: "video", key: "backdrop", label: "Backdrop", placement: "config"}
+        ]
       )
 
     page = Factory.insert(:page, creator: user, title: "Films", uri: "films")
@@ -178,12 +201,20 @@ defmodule BrandoAdmin.VideoProcessedPreviewTest do
               "uid" => ref_uid,
               "name" => "clip",
               "sequence" => 0,
-              "video_id" => ref_video.id,
+              "video_id" => videos.ref_video.id,
               "data" => %{"type" => "video", "data" => %{}}
             }
           ],
           "vars" => [
-            %{"type" => "video", "key" => "film", "label" => "Film", "sequence" => 0, "video_id" => var_video.id}
+            %{"type" => "video", "key" => "film", "label" => "Film", "sequence" => 0, "video_id" => videos.var_video.id},
+            %{
+              "type" => "video",
+              "key" => "backdrop",
+              "label" => "Backdrop",
+              "placement" => "config",
+              "sequence" => 1,
+              "video_id" => videos.config_video.id
+            }
           ]
         },
         user

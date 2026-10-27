@@ -55,6 +55,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.BlockField.Ops
   alias BrandoAdmin.Components.Form.RichTextAI
+  alias BrandoAdmin.LiveView.Form.ProcessingWatch
   alias Ecto.Changeset
 
   def mount(socket) do
@@ -741,6 +742,18 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
+  # The provider reported the video of a var this block carries as hidden
+  # inputs (`watch_carried_var_videos/1`). Not an edit: the form is left
+  # alone, only the live preview reloads.
+  def update(%{event: "video_processed", video: video}, socket) do
+    case Enum.find(carried_var_videos(socket), &(&1.id == video.id)) do
+      nil -> :ok
+      shown -> reload_live_preview_when_ready(socket.assigns.form_id, shown, video)
+    end
+
+    {:ok, socket}
+  end
+
   def update(%{event: "update_entry_field", path: path, change: change}, socket) do
     liquid_splits = socket.assigns.liquid_splits
     entry = put_in(socket.assigns.entry, path, change)
@@ -840,6 +853,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_selected_identifiers()
     |> maybe_parse_module()
     |> assign_hidden_block_fields()
+    |> watch_carried_var_videos()
     |> assign(:block_initialized, true)
     |> assign_unused_collections()
     |> then(&{:ok, &1})
@@ -858,6 +872,31 @@ defmodule BrandoAdmin.Components.Form.Block do
   rescue
     _ -> false
   end
+
+  # A saved video var in the block's settings, while they are closed, and a
+  # hidden one are carried as hidden inputs: no `RenderVar` follows its video
+  # while the provider has it. The block does, from its first mount, so the
+  # live preview reloads when the video is ready (`video_processed`).
+  defp watch_carried_var_videos(%{assigns: %{block_initialized: true}} = socket), do: socket
+
+  defp watch_carried_var_videos(socket),
+    do: ProcessingWatch.watch(socket, __MODULE__, :video, carried_var_videos(socket))
+
+  defp carried_var_videos(%{assigns: %{has_vars?: true, form: form, belongs_to: belongs_to}}) do
+    form.source
+    |> get_block_changeset(belongs_to)
+    |> Changeset.get_assoc(:vars, :struct)
+    |> Enum.flat_map(fn
+      %{type: :video, placement: placement, video_id: id, video: %Brando.Videos.Video{id: id} = video}
+      when placement in [:config, :hidden] ->
+        [video]
+
+      _var ->
+        []
+    end)
+  end
+
+  defp carried_var_videos(_socket), do: []
 
   defp block_has_table_rows?(block_cs) do
     case Changeset.get_assoc(block_cs, :table_rows) do
