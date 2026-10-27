@@ -29,33 +29,45 @@ defmodule Brando.Content.Var.FollowLinkDefault do
   alias Ecto.Changeset
 
   def changeset_mutator(_module, _config, changeset, _user, _opts) do
-    Changeset.prepare_changes(changeset, &follow/1)
+    changeset
+    |> store_url_as_empty()
+    |> Changeset.prepare_changes(&follow/1)
+  end
+
+  # URL is the default, and stored as empty: a field Brando added since a
+  # definition was exported must stay empty, or every module file would differ
+  # from its lockfile's baseline (`Brando.Content.Definition.Value`).
+  defp store_url_as_empty(changeset) do
+    if Changeset.get_field(changeset, :link_default_type) == :url,
+      do: Changeset.put_change(changeset, :link_default_type, nil),
+      else: changeset
   end
 
   @doc """
-  Sets `link_type` to the var's `link_default_type` when this changeset changes
-  the default and the link is empty.
+  Sets `link_type` to the var's default tab when this changeset changes the
+  default and the link is empty.
   """
   @spec follow(Changeset.t()) :: Changeset.t()
   def follow(%Changeset{} = changeset) do
-    with true <- Changeset.changed?(changeset, :link_default_type),
-         var = Changeset.apply_changes(changeset),
-         true <- empty_link?(var) do
-      Changeset.put_change(changeset, :link_type, var.link_default_type || :url)
-    else
-      _ -> changeset
-    end
+    var = Changeset.apply_changes(changeset)
+    default = default_type(var)
+
+    if default != default_type(changeset.data) and empty_link?(var),
+      do: Changeset.put_change(changeset, :link_type, default),
+      else: changeset
   end
 
   @doc """
   The copy of an empty link var starts on its default tab.
   """
   @spec put(struct()) :: struct()
-  def put(%{type: :link, link_default_type: default} = var) do
-    if empty_link?(var), do: %{var | link_type: default || :url}, else: var
+  def put(%{type: :link, link_default_type: _} = var) do
+    if empty_link?(var), do: %{var | link_type: default_type(var)}, else: var
   end
 
   def put(var), do: var
+
+  defp default_type(var), do: Map.get(var, :link_default_type) || :url
 
   @doc "True for a link var with neither a URL nor an entry."
   @spec empty_link?(map()) :: boolean()

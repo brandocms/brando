@@ -44,6 +44,7 @@ defmodule Brando.Translations.Sync do
   alias Brando.Blueprint.Attributes
   alias Brando.Blueprint.Relations
   alias Brando.Content.Var
+  alias Brando.Content.Var.FollowLinkDefault
   alias Brando.Query.Mutations
   alias Brando.Villain.Blocks.GalleryBlock
   alias Brando.Villain.Blocks.PictureBlock
@@ -664,15 +665,22 @@ defmodule Brando.Translations.Sync do
   # over from the source's value; the translation's old one belonged to the
   # other kind.
   defp restart_changed_link(merged, %{type: :link, link_type: kind} = source_var, %{link_type: old})
-       when kind != old,
-       do: Map.merge(merged, Map.take(source_var, [:value, :link_text]))
+       when kind != old do
+    if FollowLinkDefault.empty_link?(source_var),
+      do: merged,
+      else: Map.merge(merged, Map.take(source_var, [:value, :link_text]))
+  end
 
   defp restart_changed_link(merged, _source_var, _target_var), do: merged
 
   defp controlled_fields(var, controlled), do: if(var.key in controlled, do: @var_values, else: [])
 
-  defp var_shared_fields(var),
-    do: [:sequence, :identifier_id, :identifier | @media_fks ++ @media_assocs ++ link_kind(var)]
+  # An empty link's kind is only the tab its dialog opens on, which a module
+  # save can move (`FollowLinkDefault`): the translation keeps its own link.
+  defp var_shared_fields(var) do
+    kind = if FollowLinkDefault.empty_link?(var), do: [], else: link_kind(var)
+    [:sequence, :identifier_id, :identifier | @media_fks ++ @media_assocs ++ kind]
+  end
 
   defp merge_rows(source_rows, target_rows) do
     source_ids = row_identities(source_rows)

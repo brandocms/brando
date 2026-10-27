@@ -98,7 +98,9 @@ defmodule Brando.Content.LinkDefaultTypeTest do
 
   describe "a var saved with a new default" do
     setup %{user: user} do
-      {:ok, page} = Pages.create_page(Factory.params_for(:page, vars: [%{type: :link, key: "cta", label: %{"en" => "Cta"}}]), user)
+      {:ok, page} =
+        Pages.create_page(Factory.params_for(:page, vars: [%{type: :link, key: "cta", label: %{"en" => "Cta"}}]), user)
+
       {:ok, page: Repo.preload(page, :vars)}
     end
 

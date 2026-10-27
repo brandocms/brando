@@ -768,10 +768,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                         <Input.toggle field={@var[:color_opacity]} label={gettext("Allow setting opacity")} />
                         <Input.number field={@var[:palette_id]} label={gettext("ID of palette to choose colors from")} />
                       <% :link -> %>
+                        <%!-- Empty is URL (`FollowLinkDefault` stores URL as empty) --%>
                         <Input.radios
-                          field={@var[:link_default_type]}
+                          field={%{@var[:link_default_type] | value: @var[:link_default_type].value || :url}}
                           label={gettext("Default tab")}
-                          instructions={gettext("Where the link dialog opens while no link is set. Editors can still switch.")}
+                          instructions={
+                            gettext("Where the link dialog opens while no link is set. Editors can still switch.")
+                          }
                           opts={[
                             options: [
                               %{label: gettext("URL"), value: :url},

@@ -3,6 +3,7 @@ defmodule Brando.Content.Definition.Model do
 
   alias Brando.Content.Definition.{Error, Reader, Value}
   alias Brando.Content.{Module, Ref, Var}
+  alias Brando.Content.Var.FollowLinkDefault
   alias Brando.Villain.Blocks
   alias Ecto.Changeset
 
@@ -160,13 +161,28 @@ defmodule Brando.Content.Definition.Model do
     validate_fields!(Var, params, uid <> ".vars." <> key)
 
     params
+    |> legacy_link_default()
     # Creator is persistence metadata, supplied by the import actor. A sentinel
     # satisfies that required field while normalizing without any database I/O.
     |> then(&Var.changeset(struct(Var), &1, %{id: 0}))
+    # What saving it does (`FollowLinkDefault`), so the import is what the file says
+    |> FollowLinkDefault.follow()
     |> apply_valid!(uid <> ".vars." <> key)
     |> var_record()
     |> Map.put("assets", assets)
   end
+
+  # Before `link_default_type`, an empty link of type `:identifier` was how a
+  # var opened on Content; brando_224 gives stored ones that default, and a
+  # file written that way reads the same.
+  defp legacy_link_default(%{"type" => "link", "link_type" => kind} = params)
+       when kind in [:identifier, "identifier"] and not is_map_key(params, "link_default_type") do
+    if Map.get(params, "value") in [nil, ""] and Map.get(params, "identifier_id") == nil,
+      do: Map.put(params, "link_default_type", "identifier"),
+      else: params
+  end
+
+  defp legacy_link_default(params), do: params
 
   defp options!(options) when is_list(options) do
     Enum.map(options, fn

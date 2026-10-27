@@ -9,7 +9,7 @@ defmodule BrandoIntegration.Repo.Migrations.AddLinkDefaultTypeToVars do
 
   def change do
     alter table(:content_vars) do
-      add :link_default_type, :string, default: "url"
+      add :link_default_type, :string
     end
   end
 end
