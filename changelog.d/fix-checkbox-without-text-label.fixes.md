@@ -1,0 +1,1 @@
+- A `:checkbox` input without `text:` draws its circle below the field's label instead of over it.
