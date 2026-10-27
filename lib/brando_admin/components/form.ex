@@ -9524,9 +9524,10 @@ defmodule BrandoAdmin.Components.Form do
   # row keeps its key. A new row's (`_key`) is gone once the form is rebuilt
   # from its changeset (`apply_changes/1`), so a new row is the one at its
   # index while its list has as many rows.
-  defp same_rows?(recorded, current) when length(recorded) == length(current),
-    do: recorded |> Enum.zip(current) |> Enum.all?(&same_row?/1)
+  defp same_rows?([recorded | recorded_rest], [current | current_rest]),
+    do: same_row?({recorded, current}) and same_rows?(recorded_rest, current_rest)
 
+  defp same_rows?([], []), do: true
   defp same_rows?(_recorded, _current), do: false
 
   defp same_row?({{"id-" <> _ = key, _}, {key, _}}), do: true
