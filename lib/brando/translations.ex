@@ -427,7 +427,8 @@ defmodule Brando.Translations do
   work raised by a newer source save stays open:
 
     * `:translate` and `:review` — when the saved text differs from the
-      pending text, or the path was acknowledged
+      pending text, or the path was acknowledged, unless the save left the
+      block, ref or row it is in as it was (a form without that field)
     * `:shared_update` and `:relinked` — when the saved value is the pending one
     * `:awaiting_translation` — never; it resolves when the link can be made
 
@@ -475,10 +476,10 @@ defmodule Brando.Translations do
   translation follow its source. Whatever path changed them — a disabled
   control, a forged event, a replayed parameter — the save is compared with
   the version the editor worked from: the pending version `version_id`, or
-  the saved translation when none was loaded. A path may also keep its saved
-  value: a form without a block field, or without an input for a shared
-  value, can't hold the pending version's, and what the save leaves stays
-  pending. Any other difference refuses the save with the paths that
+  the saved translation when none was loaded. A field may also keep its
+  saved content whole: a form without a block field, or without an input for
+  a shared value, can't hold the pending version's, and what the save leaves
+  stays pending. Any other difference refuses the save with the paths that
   differ: `{:error, {:source_controlled, paths}}`.
 
   New blocks and table rows keep the sync identity the pending version gave
@@ -501,28 +502,36 @@ defmodule Brando.Translations do
       changeset = restore_sync_identities(changeset, schema, reference)
       submitted = Changeset.apply_changes(changeset)
       module_uids = module_uids([reference, saved, submitted], schema)
-      [expected, kept, actual] = Enum.map([reference, saved, submitted], &owned_by_path(&1, schema, module_uids))
+      [expected, kept, actual] = Enum.map([reference, saved, submitted], &owned_by_field(&1, schema, module_uids))
 
       differing =
-        for path <- Enum.uniq(Map.keys(expected) ++ Map.keys(actual)),
-            actual[path] not in [expected[path], kept[path]],
-            do: path
+        for field <- Enum.uniq(Map.keys(expected) ++ Map.keys(actual)),
+            [rows, wanted] = [Map.get(actual, field, []), Map.get(expected, field, [])],
+            rows not in [wanted, Map.get(kept, field, [])],
+            row <- (wanted -- rows) ++ (rows -- wanted),
+            do: row
 
       case differing do
         [] -> {:ok, changeset}
-        paths -> {:error, {:source_controlled, paths}}
+        rows -> {:error, {:source_controlled, paths(rows)}}
       end
     else
       _ -> {:ok, changeset}
     end
   end
 
-  defp owned_by_path(entry, schema, module_uids) do
+  # Owned rows by the entry field their path starts with: a field is kept or
+  # taken whole, never a mix of the saved and the pending version's rows.
+  defp owned_by_field(entry, schema, module_uids) do
     entry
     |> Sync.owned_rows(schema, nil, module_uids)
-    |> Enum.group_by(&elem(&1, 0))
-    |> Map.new(fn {path, rows} -> {path, Enum.sort(rows)} end)
+    |> Enum.group_by(fn {path, _class, _value} -> path_field(path) end)
+    |> Map.new(fn {field, rows} -> {field, Enum.sort(rows)} end)
   end
+
+  defp path_field(path), do: path |> String.split("/", parts: 2) |> hd()
+
+  defp paths(rows), do: rows |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
 
   # A block the pending version added is new to the form, which gives it a
   # fresh `sync_uid`; put back the one the source assigned, found by `uid`.
@@ -651,12 +660,13 @@ defmodule Brando.Translations do
     reviewed_rows = rows_by_path(payload, schema, module_uids)
     reviewed_work = MapSet.new(reviewed.work_items, &{&1.path, &1.source_digest})
     acknowledged = MapSet.new(List.wrap(review[:acknowledged]))
+    left = unapplied(saved, payload, schema, module_uids)
     timestamp = now()
 
     items =
       Enum.map(current.work_items, fn item ->
         if is_nil(item.resolved_at) and MapSet.member?(reviewed_work, {item.path, item.source_digest}) and
-             done?(item, saved_rows, reviewed_rows, acknowledged) do
+             not within?(item.path, left) and done?(item, saved_rows, reviewed_rows, acknowledged) do
           item
           |> Changeset.change(resolved_at: timestamp, resolved_generation: reviewed.source_generation)
           |> Repo.update!()
@@ -669,6 +679,35 @@ defmodule Brando.Translations do
     |> Changeset.change(status: :applied, applied_at: timestamp)
     |> Repo.update!()
     |> Map.put(:work_items, items)
+  end
+
+  # The blocks, refs and rows whose structure or shared values the save left
+  # as they were, not the reviewed version's: a form without their field
+  # can't hold it (`check_target_save/4`). Their saved text is no
+  # translation of the pending text, so the text work within them stays
+  # open. A field's own row (its block order) is left out: a block added
+  # elsewhere does not touch the others' text.
+  defp unapplied(saved, payload, schema, module_uids) do
+    [saved, payload] =
+      Enum.map([saved, payload], fn entry ->
+        for {path, _class, value} <- Sync.owned_rows(entry, schema, nil, module_uids),
+            String.contains?(path, "/"),
+            reduce: %{},
+            do: (rows -> Map.update(rows, path, [value], &[value | &1]))
+      end)
+
+    for path <- Enum.uniq(Map.keys(saved) ++ Map.keys(payload)),
+        Enum.sort(Map.get(saved, path, [])) != Enum.sort(Map.get(payload, path, [])),
+        into: MapSet.new(),
+        do: path
+  end
+
+  # Whether `path` is one of `parts` or lies within one
+  defp within?(path, parts) do
+    path
+    |> String.split("/")
+    |> Enum.scan(&"#{&2}/#{&1}")
+    |> Enum.any?(&MapSet.member?(parts, &1))
   end
 
   defp done?(%WorkItem{kind: kind, path: path}, saved, reviewed, acknowledged) when kind in [:translate, :review] do

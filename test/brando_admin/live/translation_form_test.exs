@@ -267,6 +267,31 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert Enum.any?(items, &(&1.kind == :translate))
     end
 
+    # The source rewrites its block and hides it. The form can't show the
+    # block, so marking its text reviewed doesn't resolve the review: the
+    # save left the block as it was.
+    test "work in a block the save left stays open", %{conn: conn} = c do
+      [join] = load(c.source.id).entry_blocks
+      set_text(join.block, "Første avsnitt, endret")
+      join.block |> Ecto.Changeset.change(active: false) |> Repo.update!()
+      Translations.source_saved(load(c.source.id))
+      version = Translations.get_pending_version(Article, c.target.id)
+      [item] = Enum.filter(version.work_items, &(&1.kind == :review))
+
+      {view, _html} = live_form(conn, "/admin/articles/update/#{c.target.id}/no-blocks", "article_form")
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      view
+      |> element("#article_form_form")
+      |> render_change(%{"translation_review" => %{"acknowledged" => [item.path]}})
+
+      save_without_blocks(view, %{"article" => %{"title" => "Title"}})
+
+      assert [%{active: true}] = Enum.map(load(c.target.id).entry_blocks, & &1.block)
+      assert %{work_items: items} = Translations.get_pending_version(Article, c.target.id)
+      assert Enum.any?(items, &(&1.path == item.path and is_nil(&1.resolved_at)))
+    end
+
     test "a forged value it has no input for is still refused", %{conn: conn} = c do
       version = change_source(c)
       {view, _html} = live_form(conn, "/admin/articles/update/#{c.target.id}/no-blocks", "article_form")
