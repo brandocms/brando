@@ -643,7 +643,13 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp precompute_option(%{__struct__: module} = entry) do
     if function_exported?(module, :__identifier__, 2) do
       identifier = module.__identifier__(entry, skip_cover: true)
-      %{value: to_string(entry.id), label: Brando.Content.Identifier.title_text(identifier), status: identifier.status, entry: entry}
+
+      %{
+        value: to_string(entry.id),
+        label: Brando.Content.Identifier.title_text(identifier),
+        status: identifier.status,
+        entry: entry
+      }
     else
       entry
     end
@@ -1157,7 +1163,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     assigns = assign(assigns, :identifier, entry.__struct__.__identifier__(entry, skip_cover: true))
 
     ~H"""
-    <span class="status-label"><.status_circle status={@identifier.status} /> {Brando.Content.Identifier.title_text(@identifier)}</span>
+    <span class="status-label"><.status_circle status={@identifier.status} /> {Brando.Content.Identifier.title_text(
+      @identifier
+    )}</span>
     """
   end
 

@@ -410,7 +410,7 @@ defmodule Brando.Content.Proposals.Review do
         before:
           saved &&
             Enum.map(saved.block_identifiers || [], fn bi ->
-              (bi.identifier && bi.identifier.title) || "##{bi.identifier_id}"
+              Content.Identifier.title_text(bi.identifier) || "##{bi.identifier_id}"
             end),
         entries: Enum.map(op.identifiers, &Map.get(titles, &1, "##{&1}"))
       }
@@ -446,7 +446,7 @@ defmodule Brando.Content.Proposals.Review do
 
   defp identifier_titles(ids) do
     case Content.list_identifiers(ids) do
-      {:ok, identifiers} -> Map.new(identifiers, &{&1.id, &1.title})
+      {:ok, identifiers} -> Map.new(identifiers, &{&1.id, Content.Identifier.title_text(&1)})
       _ -> %{}
     end
   end
@@ -750,8 +750,11 @@ defmodule Brando.Content.Proposals.Review do
   # text variable (a team member block holds only a name and a role).
   defp describe(block) do
     Enum.find_value(block.vars || [], fn
-      %{type: :link, identifier: %{title: title}} when is_binary(title) and title != "" -> title
-      _ -> nil
+      %{type: :link, identifier: %{title: title} = identifier} when is_binary(title) and title != "" ->
+        Content.Identifier.title_text(identifier)
+
+      _ ->
+        nil
     end) ||
       block.refs |> Enum.find_value(&text_of/1) |> excerpt() ||
       Enum.find_value(block.vars || [], fn
@@ -791,7 +794,10 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp saved_value(%{type: :boolean} = var), do: var.value_boolean
-  defp saved_value(%{type: :link, identifier: %{title: title}}) when is_binary(title), do: title
+
+  defp saved_value(%{type: :link, identifier: %{title: title} = identifier}) when is_binary(title),
+    do: Content.Identifier.title_text(identifier)
+
   defp saved_value(%{type: type}) when type in [:image, :video], do: nil
   defp saved_value(var), do: option(var, var.value)
 
@@ -817,7 +823,7 @@ defmodule Brando.Content.Proposals.Review do
 
   defp option(_var, {:entry, schema, id}) do
     case Content.get_identifier(schema, %{id: id}) do
-      {:ok, %{title: title}} when is_binary(title) -> title
+      {:ok, %{title: title} = identifier} when is_binary(title) -> Content.Identifier.title_text(identifier)
       _ -> "##{id}"
     end
   end

@@ -155,7 +155,7 @@ defmodule Brando.FrontendEdit.Manifest do
   def title(schema, entry) do
     if function_exported?(schema, :__identifier__, 2) do
       case schema.__identifier__(entry, []) do
-        %{title: title} when is_binary(title) and title != "" -> Brando.Content.Identifier.title_text(title)
+        %{title: title} when is_binary(title) and title != "" -> Brando.Content.Identifier.title_text(schema, title)
         _ -> fallback_title(entry)
       end
     else

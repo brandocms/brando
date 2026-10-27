@@ -541,7 +541,9 @@ defmodule Brando.Webhooks do
     else
       from(i in Brando.Content.Identifier, where: i.entry_id in ^ids, select: {i.schema, i.entry_id, i.title})
       |> Repo.all()
-      |> Map.new(fn {schema, id, title} -> {{to_string(schema), id}, Brando.Content.Identifier.title_text(title)} end)
+      |> Map.new(fn {schema, id, title} ->
+        {{to_string(schema), id}, Brando.Content.Identifier.title_text(schema, title)}
+      end)
     end
   rescue
     _ -> %{}

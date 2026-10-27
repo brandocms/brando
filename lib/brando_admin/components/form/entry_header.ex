@@ -116,7 +116,7 @@ defmodule BrandoAdmin.Components.Form.EntryHeader do
   defp identifier_title(schema, entry) do
     if function_exported?(schema, :__has_identifier__, 0) and schema.__has_identifier__() do
       case schema.__identifier__(entry, skip_cover: true) do
-        %{title: title} when is_binary(title) and title != "" -> Brando.Content.Identifier.title_text(title)
+        %{title: title} when is_binary(title) and title != "" -> Brando.Content.Identifier.title_text(schema, title)
         _ -> nil
       end
     end

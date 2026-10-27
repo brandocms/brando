@@ -138,9 +138,14 @@ defmodule Brando.Content.Usage do
 
   defp usage_label(source, type, id) do
     case source do
-      %{title: title} when is_binary(title) and title != "" -> Brando.Content.Identifier.title_text(title)
-      title when is_binary(title) and title != "" -> URI.decode(title)
-      _ -> "#{type} ##{id}"
+      %{title: title} = identifier when is_binary(title) and title != "" ->
+        Brando.Content.Identifier.title_text(identifier)
+
+      title when is_binary(title) and title != "" ->
+        URI.decode(title)
+
+      _ ->
+        "#{type} ##{id}"
     end
   end
 

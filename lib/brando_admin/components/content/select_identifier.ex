@@ -406,7 +406,11 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         @select && "selectable",
         @identifier.id == @selected_identifier_id && "selected"
       ]}
-      data-label={if @workspace, do: "#{Identifier.title_text(@identifier)} #{Identifier.link_url(@identifier)}", else: Identifier.title_text(@identifier)}
+      data-label={
+        if @workspace,
+          do: "#{Identifier.title_text(@identifier)} #{Identifier.link_url(@identifier)}",
+          else: Identifier.title_text(@identifier)
+      }
       aria-pressed={@select && to_string(@identifier.id == @selected_identifier_id)}
       phx-click={@select}
       phx-value-param={@identifier.id}

@@ -1,7 +1,8 @@
 defmodule BrandoAdmin.IdentifierTitleTest do
   # A HEEx identifier (`identifier ~H"{@entry.title}"`) stores the entry's
   # title escaped. The admin screens printing it decode it first, so it is
-  # escaped exactly once and markup in a title stays text.
+  # escaped exactly once and markup in a title stays text. A Liquid
+  # identifier stores the title as written, and it is printed as written.
   use Brando.ConnCase, async: false
 
   import Phoenix.Component, only: [sigil_H: 2]
@@ -18,8 +19,6 @@ defmodule BrandoAdmin.IdentifierTitleTest do
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias Phoenix.Socket.Broadcast
 
-  doctest Brando.Content.Identifier
-
   @title "Rock & Roll <b>live</b>"
   # The title escaped once, as the page must carry it
   @once "Rock &amp; Roll &lt;b&gt;live&lt;/b&gt;"
@@ -30,7 +29,7 @@ defmodule BrandoAdmin.IdentifierTitleTest do
     struct(
       %Identifier{
         id: 1,
-        schema: Brando.Pages.Page,
+        schema: HEExEntry,
         entry_id: 1,
         title: stored(@title),
         status: :published,
@@ -51,6 +50,15 @@ defmodule BrandoAdmin.IdentifierTitleTest do
 
   test "the stored title is escaped by the HEEx identifier" do
     assert HEExEntry.__identifier__(heex_entry(), skip_cover: true).title == @once <> " [en]"
+  end
+
+  test "title_text/1 decodes a HEEx identifier's title only" do
+    assert Identifier.title_text(identifier()) == @title
+    assert Identifier.title_text(HEExEntry, stored(@title)) == @title
+    assert Identifier.title_text(%Identifier{schema: Brando.Pages.Page, title: "Using &lt;br&gt;"}) == "Using &lt;br&gt;"
+    assert Identifier.title_text(Brando.Pages.Page, "Using &lt;br&gt;") == "Using &lt;br&gt;"
+    assert Identifier.title_text(nil) == nil
+    assert Identifier.title_text(HEExEntry, nil) == nil
   end
 
   describe "identifier components" do
@@ -134,6 +142,9 @@ defmodule BrandoAdmin.IdentifierTitleTest do
     test "the entry header and the frontend editor name it as text" do
       assert EntryHeader.title(HEExEntry, heex_entry()) == @title <> " [en]"
       assert Brando.FrontendEdit.Manifest.title(HEExEntry, heex_entry()) == @title <> " [en]"
+
+      page = %Brando.Pages.Page{id: 1, title: "Using &lt;br&gt;", language: :en, uri: "using"}
+      assert EntryHeader.title(Brando.Pages.Page, page) == "Using &lt;br&gt;"
     end
 
     test "the delete dialog names it once escaped" do
@@ -150,35 +161,47 @@ defmodule BrandoAdmin.IdentifierTitleTest do
       owner = Factory.insert(:random_user, role: :superuser)
       user = Factory.insert(:random_user, role: :user)
       {:ok, _} = Migration.run()
-      page = Factory.insert(:page, title: @title, status: :published, language: :en)
+      scope = Scope.standalone(owner)
 
+      {:ok, group} =
+        Groups.create(scope, %{name: "Editors"}, ~w(brando.admin.access brando.pages.read brando.pages.update))
+
+      {:ok, :ok} = Groups.add_member(scope, group.id, user.id)
+
+      %{user: user}
+    end
+
+    defp save_identifier(schema, entry_id, title) do
       Repo.insert!(%Identifier{
-        schema: Brando.Pages.Page,
-        entry_id: page.id,
-        title: stored(@title),
+        schema: schema,
+        entry_id: entry_id,
+        title: title,
         status: :published,
         language: :en,
         updated_at: DateTime.utc_now(:second)
       })
-
-      scope = Scope.standalone(owner)
-      {:ok, group} = Groups.create(scope, %{name: "Editors"}, ~w(brando.admin.access brando.pages.read brando.pages.update))
-      {:ok, :ok} = Groups.add_member(scope, group.id, user.id)
-
-      %{user: user, page: page}
     end
 
-    test "the dashboard and the command palette show the title as text", c do
-      assert [%{title: @title}] = BrandoAdmin.Dashboard.load(c.user).recent
-      assert [%{label: @title}] = BrandoAdmin.CommandPalette.entries(c.user, "rock")
+    # A page's identifier is Liquid: the title is stored as written
+    test "the dashboard and the command palette show a Liquid title as written", c do
+      title = "Write &lt;br&gt; & more"
+      page = Factory.insert(:page, title: title, status: :published, language: :en)
+      save_identifier(Brando.Pages.Page, page.id, title)
+
+      assert [%{title: ^title}] = BrandoAdmin.Dashboard.load(c.user).recent
+      assert [%{label: ^title}] = BrandoAdmin.CommandPalette.entries(c.user, "write")
     end
 
-    test "usage lists and webhook deliveries name the entry as text", c do
-      entry = {Brando.Pages.Page, c.page.id}
-      assert %{^entry => %{label: @title}} = Brando.Content.Usage.labels([entry])
+    test "usage lists and webhook deliveries name the entry as text" do
+      save_identifier(HEExEntry, 4242, stored(@title))
+      save_identifier(Brando.Pages.Page, 4243, "Using &lt;br&gt;")
 
-      assert Brando.Webhooks.entry_titles([%{entry_id: c.page.id}]) == %{
-               {to_string(Brando.Pages.Page), c.page.id} => @title
+      assert %{{HEExEntry, 4242} => %{label: @title}, {Brando.Pages.Page, 4243} => %{label: "Using &lt;br&gt;"}} =
+               Brando.Content.Usage.labels([{HEExEntry, 4242}, {Brando.Pages.Page, 4243}])
+
+      assert Brando.Webhooks.entry_titles([%{entry_id: 4242}, %{entry_id: 4243}]) == %{
+               {to_string(HEExEntry), 4242} => @title,
+               {to_string(Brando.Pages.Page), 4243} => "Using &lt;br&gt;"
              }
     end
   end

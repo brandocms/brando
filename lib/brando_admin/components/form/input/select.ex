@@ -507,7 +507,9 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       |> assign_new(:target, fn -> nil end)
 
     ~H"""
-    <span class="status-label"><.status_circle status={@identifier.status} /> {Brando.Content.Identifier.title_text(@identifier)}</span>
+    <span class="status-label"><.status_circle status={@identifier.status} /> {Brando.Content.Identifier.title_text(
+      @identifier
+    )}</span>
     <%= if @deletable do %>
       <button
         class="btn btn--sm btn--icon btn--quiet"
