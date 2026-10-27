@@ -39,7 +39,8 @@ defmodule BrandoAdmin.ListingFilterEnterTest do
     # The render that carries the event shows the row it opens from
     assert html |> Floki.parse_document!() |> Floki.find(".content-list .list-row") |> length() == 1
     url = "/admin/articles/update/#{articles["Gamma"].id}"
-    assert_push_event(view, "brando:open_entry", %{listing: "listing-filters", url: ^url})
+    patch = @path <> "?filter:title=gamma"
+    assert_push_event(view, "brando:open_entry", %{listing: "listing-filters", url: ^url, patch: ^patch})
   end
 
   test "Enter on a filter that leaves several entries applies it and opens nothing", %{conn: conn} do

@@ -126,6 +126,7 @@ defmodule BrandoAdmin.Components.Content.List do
   # debounce. When that leaves one entry, and the editor may open it, the
   # listing (the `Brando.Listing` hook) opens it from its row's link: this
   # render shows the row, as a patch of the URL would only after the event.
+  # A row without that link stays, and the hook patches the URL to `patch`.
   def handle_event("submit_filter", %{"filter" => filter_key, "q" => query} = params, socket) do
     filtered_params = filter_params(socket, filter_key, query)
 
@@ -140,12 +141,13 @@ defmodule BrandoAdmin.Components.Content.List do
          |> assign_entries(nil)
          |> push_event("brando:open_entry", %{
            listing: "listing-#{socket.assigns.listing.name}",
-           url: entry.__struct__.__admin_route__(:update, [entry.id])
+           url: entry.__struct__.__admin_route__(:update, [entry.id]),
+           patch: listing_url(socket.assigns.uri.path, filtered_params)
          })}
     end
   end
 
-  def handle_event("toggle_boolean_filter",%{"filter" => filter_key}, socket) do
+  def handle_event("toggle_boolean_filter", %{"filter" => filter_key}, socket) do
     filter = Enum.find(socket.assigns.listing.filters, &(&1.key == filter_key))
     current_value = get_in(socket.assigns, [:list_opts, :filter, String.to_existing_atom(filter_key)])
     # What off sends is the filter's to decide (see `Listings.off_value/1`).
