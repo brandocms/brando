@@ -1,0 +1,1 @@
+- A locked media input keeps a revision's working copy's asset when a recovery copy of it is restored or the editor's other tab takes over, and it no longer shows an image picked through the picker's "edit image" or a recovered drawer that the save would not keep.
