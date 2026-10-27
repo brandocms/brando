@@ -24,7 +24,9 @@ read-only, Save and recovery copies wait. Fixed per mount:
 which `"validate"`, `"commit_tiptap"` and `"recover_form"` all run;
 `cast_entry_params` wraps it for the save paths). Server-owned asset fields:
 the `-- Server-owned asset fields --` comment, `own_asset`,
-`own_changed_assets`, `owned_params`, `reapply_owned_assets`. Writing the form:
+`own_changed_assets`, `owned_params`, `reapply_owned_assets`; locked media
+inputs: the `-- Locked media inputs --` comment, `locked_field?`,
+`edit_asset_locked?`. Writing the form:
 `put_form` (every write; also sets `hidden_block_fields` and calls
 `assign_header_status`), `assign_form`, `assign_refreshed_form`,
 `maybe_assign_block_map` (on load) and `assign_block_map` (after a save and on

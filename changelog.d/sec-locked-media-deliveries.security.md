@@ -1,0 +1,1 @@
+- An `:image`, `:file`, `:video` or `:gallery` input declared `readonly:` or `disabled:` now keeps its asset when an editor it is locked for picks, uploads or removes one, edits the gallery or restores a recovery copy; before, only a crafted form param was ignored.

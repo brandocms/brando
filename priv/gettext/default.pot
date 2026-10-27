@@ -17826,6 +17826,11 @@ msgstr ""
 msgid "This export is not available."
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "This field is locked"
+msgstr ""
+
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "This field’s footnote module set has no suitable modules. Add a Text module to it first."

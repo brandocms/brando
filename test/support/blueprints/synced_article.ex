@@ -36,6 +36,18 @@ defmodule Brando.SyncTest.Article do
 
   assets do
     asset :cover, :image, cfg: @image_cfg
+
+    # Locked media inputs (form `:locked_media`, LockedMediaDeliveriesTest)
+    asset :pdf, :file,
+      cfg: %{
+        allowed_mimetypes: ["application/pdf"],
+        upload_path: Path.join("files", "synced"),
+        random_filename: true,
+        size_limit: 10_240_000
+      }
+
+    asset :clip, :video, cfg: :default
+    asset :photos, :gallery, cfg: @image_cfg
   end
 
   relations do
@@ -247,6 +259,63 @@ defmodule Brando.SyncTest.Article do
           input :status, :status
           input :title, :text
           input :slug, :slug, source: :title, readonly: :unless_superuser
+        end
+      end
+    end
+
+    # Media inputs, open (`:media`), locked for everyone (`:locked_media`)
+    # and for anyone but a superuser (`:superuser_media`,
+    # LockedMediaDeliveriesTest): a locked one takes no asset, however it is
+    # delivered.
+    form :media do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+          input :cover, :image
+          input :pdf, :file
+          input :clip, :video
+          input :photos, :gallery
+
+          inputs_for :author do
+            cardinality :one
+
+            input :name, :text
+            input :portrait, :image
+          end
+        end
+      end
+    end
+
+    form :locked_media do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+          input :cover, :image, readonly: true
+          input :pdf, :file, disabled: true
+          input :clip, :video, readonly: true
+          input :photos, :gallery, disabled: true
+
+          # A subform's media input is not locked
+          inputs_for :author do
+            cardinality :one
+
+            input :name, :text
+            input :portrait, :image
+          end
+        end
+      end
+    end
+
+    # Locked for anyone but a superuser
+    form :superuser_media do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+          input :cover, :image, readonly: :unless_superuser
+          input :photos, :gallery, disabled: :unless_superuser
         end
       end
     end
