@@ -483,6 +483,37 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
     end
   end
 
+  # Another editor's change to a field this one may not change (a superuser's,
+  # for `:unless_superuser`) doesn't enter this form: its save keeps what the
+  # form has, here a working copy's cover
+  for form <- [:media, :locked_media] do
+    test "another editor's change, on form #{form}", %{conn: conn, article: article} = ctx do
+      [revised, picked] = [image(ctx.current_user), image(ctx.current_user)]
+      {a, _html} = open(conn, article, unquote(form))
+      entry = form_assigns(a).entry
+
+      send_form(a,
+        action: :load_working_copy,
+        revision: 1,
+        revision_entry: %{entry | cover_id: revised.id, cover: revised}
+      )
+
+      other = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      {b, _html} = open(log_in_user(Phoenix.ConnTest.build_conn(), other), article, :media)
+      send_form(b, event: "entry_field_upload_complete", asset_type: :image, field: :cover, path: [], asset: picked)
+
+      if unquote(form) == :media do
+        await(fn -> Ecto.Changeset.get_field(form_assigns(a).form.source, :cover_id) == picked.id end)
+      else
+        Process.sleep(300)
+        assert Ecto.Changeset.get_field(form_assigns(a).form.source, :cover_id) == revised.id
+      end
+
+      save(a)
+      assert saved(article).cover_id == if(unquote(form) == :media, do: picked.id, else: revised.id)
+    end
+  end
+
   defp await(fun, tries \\ 40) do
     cond do
       fun.() -> :ok

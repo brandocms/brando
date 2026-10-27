@@ -3422,7 +3422,12 @@ defmodule BrandoAdmin.Components.Form do
 
   # Another editor's changes. The field this editor is in is held until it
   # leaves it (`apply_held_remote/1`); the rest apply now.
+  # A change to a field this editor may not change (`LockedFields`), from an
+  # editor it isn't locked for, doesn't enter the form: its save keeps what
+  # the form has (the entry's value, or a working copy's or translation's).
   defp receive_field_changes(socket, changes) do
+    locked = locked_keys(socket)
+    changes = Enum.reject(changes, &(&1.field in locked))
     {changes, socket} = take_newer(changes, socket)
     {held, changes} = Enum.split_with(changes, &focused_field?(socket, &1.field))
 
