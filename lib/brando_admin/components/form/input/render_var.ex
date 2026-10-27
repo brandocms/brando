@@ -774,8 +774,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                           instructions={gettext("Where the link dialog opens while no link is set. Editors can still switch.")}
                           opts={[
                             options: [
-                              %{label: gettext("URL"), value: :url, icon: "globe"},
-                              %{label: gettext("Content"), value: :identifier, icon: "file-text"}
+                              %{label: gettext("URL"), value: :url},
+                              %{label: gettext("Content"), value: :identifier}
                             ]
                           ]}
                         />
