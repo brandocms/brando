@@ -118,11 +118,20 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
     Brando.Sites.FourOhFour.add_404(%Plug.Conn{path_info: ["projects", "old-case"]})
     Brando.Sites.FourOhFour.add_404(%Plug.Conn{path_info: ["wp-login.php"]})
 
+    # A scanner names the URL it probes as the referrer; a real page's path
+    for referrer <- ["http://example.com/team", "https://64.227.71.155/team/"] do
+      %Plug.Conn{path_info: ["team"]}
+      |> Plug.Conn.put_req_header("referer", referrer)
+      |> Brando.Sites.FourOhFour.add_404()
+    end
+
     {:ok, view, _html} = live(conn, "/admin/config/seo")
     render_async(view, 5_000)
 
     assert has_element?(view, ~s(.seo-not-found-probes td), "/wp-login.php")
     refute has_element?(view, ~s(button[phx-click="redirect_404"][phx-value-url="/wp-login.php"]))
+    assert has_element?(view, ~s(.seo-not-found-probes td), "/team")
+    refute has_element?(view, ".seo-not-found-referrer")
 
     view |> element(~s(button[phx-click="redirect_404"][phx-value-url="/projects/old-case"])) |> render_click()
     html = render(view)

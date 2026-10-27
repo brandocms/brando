@@ -1,0 +1,1 @@
+- The SEO 404 list folds more scanner traffic into "Bot probes": source maps, dev-server and debug paths, keys, SQL dumps and deploy config files, and any URL most of whose hits name the URL itself as their referrer. A referrer that is the missing URL itself is no longer shown as where its hits came from.
