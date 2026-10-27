@@ -68,6 +68,8 @@ defmodule BrandoAdmin.Components.VideoPicker do
      |> assign(:video_config, resolved_config)
      |> assign(:new_folder, "")
      |> assign(:show_new_folder_form, false)
+     # A search typed for the previous field doesn't carry over to this one.
+     |> assign(:search, "")
      |> assign_new(:current_user, fn -> assigns[:current_user] end)
      |> assign_new(:upload_progress, fn -> nil end)
      |> leave_library()
@@ -254,6 +256,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
     |> assign_new(:last_organize_selected_id, fn -> nil end)
     |> assign_new(:video_count, fn -> 0 end)
     |> assign_new(:visible_item_ids, fn -> [] end)
+    |> assign_new(:search, fn -> "" end)
   end
 
   # -- PickerHelpers callbacks --
@@ -314,6 +317,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
     visible_video_structs =
       socket.assigns.videos
       |> Enum.filter(&(&1.id in visible_ids))
+      |> filter_by_search(socket.assigns.search)
       |> Enum.sort_by(& &1.id, :desc)
 
     child_folders = FolderBrowser.child_folders(folders, current_folder)
@@ -347,6 +351,23 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
   defp folder_entry_path(%{type: :upload, remote_id: rid}) when is_binary(rid), do: rid
   defp folder_entry_path(_), do: nil
+
+  # Matches the title, the source URL, the provider's id and an uploaded
+  # file's name, ignoring case. In memory, as in the image picker: the
+  # picker has every video of its scope loaded for the folders anyway.
+  defp filter_by_search(videos, search) when search in [nil, ""], do: videos
+
+  defp filter_by_search(videos, search) do
+    needle = String.downcase(search)
+
+    Enum.filter(videos, fn video ->
+      [video.title, video.source_url, video.remote_id, file_name(video)]
+      |> Enum.any?(&(is_binary(&1) and String.contains?(String.downcase(&1), needle)))
+    end)
+  end
+
+  defp file_name(%{file: %{filename: filename}}) when is_binary(filename), do: Path.basename(filename)
+  defp file_name(_video), do: nil
 
   # -- Video-specific event handlers --
 
@@ -384,6 +405,14 @@ defmodule BrandoAdmin.Components.VideoPicker do
   end
 
   def handle_event("picker_go_parent", params, socket), do: handle_event("go_parent_folder", params, socket)
+
+  def handle_event("search_videos", %{"search" => search}, socket) do
+    {:noreply,
+     socket
+     |> assign(:search, String.trim(search))
+     |> assign_folder_state(socket.assigns.current_folder)
+     |> push_selection_state()}
+  end
 
   def handle_event("organize_select_video", %{"id" => id} = params, socket) do
     case parse_item_id(id) do
@@ -998,6 +1027,25 @@ defmodule BrandoAdmin.Components.VideoPicker do
                 <p :if={@library_offered?} class="image-picker-main-hint">{scope_hint(@scope)}</p>
               </div>
               <div class="image-picker-main-actions">
+                <%!-- The videos listed below. A provider's own library has its
+                      search in its panel. --%>
+                <form
+                  id={"video-picker-search-#{@id}"}
+                  phx-change="search_videos"
+                  phx-target={@myself}
+                  phx-submit="search_videos"
+                >
+                  <input
+                    type="search"
+                    name="search"
+                    value={@search}
+                    class="image-picker-search"
+                    placeholder={gettext("Search by title, URL or file name")}
+                    aria-label={gettext("Search videos in this folder")}
+                    phx-debounce="250"
+                    autocomplete="off"
+                  />
+                </form>
                 <span>
                   {ngettext("%{count} video", "%{count} videos", @video_count, count: @video_count)}
                 </span>
@@ -1145,7 +1193,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   class="text"
                   value={@library.query}
                   aria-label={gettext("Search %{provider}", provider: @library.label)}
-                  placeholder={gettext("Search by title")}
+                  placeholder={gettext("Search %{provider} by title", provider: @library.label)}
                 />
                 <button type="submit" class="btn">{gettext("Search")}</button>
               </form>
@@ -1232,7 +1280,21 @@ defmodule BrandoAdmin.Components.VideoPicker do
             id={"video-picker-drawer-#{@id}"}
             class="video-picker list"
           >
-            <%= if @video_count == 0 do %>
+            <div :if={@video_count == 0 and @search != ""} class="image-picker-empty">
+              <.icon name="search" />
+              <h4>{gettext("No videos match “%{query}”.", query: @search)}</h4>
+              <p>{gettext("The search covers the videos in this folder.")}</p>
+              <button
+                type="button"
+                class="folder-action"
+                phx-click="search_videos"
+                phx-value-search=""
+                phx-target={@myself}
+              >
+                {gettext("Clear search")}
+              </button>
+            </div>
+            <%= if @video_count == 0 and @search == "" do %>
               <div class="image-picker-empty">
                 <.icon name="film" />
                 <h4>{gettext("No videos in this folder")}</h4>

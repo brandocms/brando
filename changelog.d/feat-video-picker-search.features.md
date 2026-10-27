@@ -1,0 +1,1 @@
+- The video picker has a search box that lists only the videos in its folder matching a title, source URL, provider id or file name, and Resources → Videos' "Title or source" filter also finds an uploaded video by its file name.

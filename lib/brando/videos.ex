@@ -54,15 +54,18 @@ defmodule Brando.Videos do
         target_string = "#{type}:#{inspect(schema)}:#{field}"
         from t in query, where: t.config_target == ^target_string
 
+      # The listing's "Title or source" filter, which also finds an uploaded
+      # video by its file's name
       {:path, path}, query ->
         pattern = "%#{path}%"
         encoded_pattern = "%#{URI.encode(path)}%"
+        file_ids = from(f in Brando.Files.File, where: ilike(f.filename, ^pattern), select: f.id)
 
         from q in query,
           where:
             ilike(q.title, ^pattern) or ilike(q.source_url, ^pattern) or ilike(q.remote_id, ^pattern) or
               ilike(q.title, ^encoded_pattern) or ilike(q.source_url, ^encoded_pattern) or
-              ilike(q.remote_id, ^encoded_pattern)
+              ilike(q.remote_id, ^encoded_pattern) or q.file_id in subquery(file_ids)
 
       # The root: entries without a folder, and those in a folder that is the root itself.
       {:unused, value}, query when value in [true, "true"] ->
