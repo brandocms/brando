@@ -237,7 +237,8 @@ defmodule Brando.Content.PaletteNamesTest do
       colors: [%Palette.Color{name: "Text", key: "fg", hex_value: @breakout_hex}]
     })
 
-    labels = Enum.map_join(Brando.Content.Container.get_palettes(nil, nil), & &1.label)
+    # Markup (`{:safe, _}`), for Select to render as the swatches
+    labels = Enum.map_join(Brando.Content.Container.get_palettes(nil, nil), &Phoenix.HTML.safe_to_string(&1.label))
 
     refute labels =~ "data-marked=\""
     refute labels =~ "</style>"
