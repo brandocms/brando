@@ -37,4 +37,29 @@ defmodule Brando.Test.OwnLogTest do
     assert log =~ "from its task"
     refute log =~ "from another process"
   end
+
+  # As the async tests of a partition do. With a handler added and removed per
+  # capture, about one in ten came back without its event, and on OTP 27 some
+  # raised from `Logger.flush/0`.
+  test "captures in many processes at once each keep their own events" do
+    handlers = :logger.get_handler_ids()
+
+    results =
+      1..16
+      |> Task.async_stream(
+        fn i ->
+          for j <- 1..50 do
+            line = "capture #{i}.#{j}"
+            log = OwnLog.capture(fn -> Logger.error(line) end)
+            log =~ line and not (log =~ "capture #{i + 1}.")
+          end
+        end,
+        max_concurrency: 16,
+        timeout: :infinity
+      )
+      |> Enum.flat_map(fn {:ok, kept} -> kept end)
+
+    assert Enum.all?(results)
+    assert Enum.sort(:logger.get_handler_ids()) == Enum.sort(handlers)
+  end
 end

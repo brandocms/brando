@@ -213,9 +213,11 @@ defmodule Brando.MailerTest do
     user = Factory.insert(:random_user)
     put_test_env(:tenancy_mode, :multi)
     Brando.Tenant.put_prefix(nil)
-    # What a public seed or reload leaves under the unprefixed key is no site's
+    # What a public seed or reload leaves under the unprefixed key is no site's.
+    # Put back as it was: an emptied key is refilled by the next reader, which
+    # fails in a test without a database connection of its own.
+    preserve_cache([:identity])
     Brando.Cache.put(:identity, %{"en" => %{name: "Public copy"}}, :infinite)
-    on_exit(fn -> Brando.Cache.del(:identity) end)
 
     assert {:ok, _} = UserNotifier.deliver_reset_password_instructions(user, "https://example.com/reset/abc")
 
