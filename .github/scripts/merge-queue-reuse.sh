@@ -23,6 +23,17 @@
 #     Anything else, an API error included, prints why and writes
 #     reused=false. It exits 0 either way.
 #
+# What the record vouches for: only its name is read, and the honest `record`
+# job names the tree and base of the merge commit the run tested. The record
+# is no more trustworthy than the pull request itself: the PR may change
+# ci.yml, and code it adds runs in the jobs, where it could upload a record
+# for another base of the same head (say, once main has moved). That grants
+# nothing the PR does not already have, since the queue run runs the same
+# ci.yml and the same PR code, which can pass its own checks there just as
+# well; review of the PR is what guards both. The record must belong to the
+# run (an artifact of another run is not matched), must not have expired,
+# and must name the queue commit's own tree and first parent.
+#
 # Needs gh (GH_TOKEN with actions: read), jq and GITHUB_REPOSITORY.
 set -uo pipefail
 
@@ -93,7 +104,9 @@ lookup() {
       incomplete) decide false "running every job: cannot read every job of run $id" ;;
       passed)
         count="$(gh api "repos/$repo/actions/runs/$id/artifacts?name=$name" |
-          jq --arg name "$name" '[.artifacts[] | select(.name == $name)] | length')" ||
+          jq --arg name "$name" --argjson id "$id" '
+            [.artifacts[] | select(.name == $name and (.expired | not) and .workflow_run.id == $id)]
+            | length')" ||
           decide false "running every job: cannot read the artifacts of run $id"
         if [ "$count" -gt 0 ]; then
           decide true "reusing pull_request run $id, which passed on the same tree ($tree, base $base): https://github.com/$repo/actions/runs/$id"

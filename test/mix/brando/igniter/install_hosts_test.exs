@@ -70,7 +70,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
 
     assert check_origin(igniter) == [
              "//example.com",
-             "//*.example.com",
+             "//www.example.com",
              "//preview.example.net",
              "//*.agency.example",
              "https://admin.example.org:8443"
@@ -110,8 +110,22 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
   test "the staging host defaults to staging.<domain>" do
     igniter = install(project(), ["--domain", "example.com"])
 
-    assert check_origin(igniter) == ["//example.com", "//*.example.com", "//staging.example.com"]
+    assert check_origin(igniter) == ["//example.com", "//www.example.com", "//staging.example.com"]
     assert host(igniter, ".envrc.staging") == "staging.example.com"
+  end
+
+  test "check_origin names hosts, not every subdomain, and says to add the others" do
+    igniter = install(project(), ["--domain", "example.com"])
+
+    refute Enum.any?(check_origin(igniter), &String.contains?(&1, "*"))
+    assert Enum.any?(igniter.notices, &(&1 =~ "--origin '//*.example.com'"))
+  end
+
+  test "a www. domain trusts the name without www., not www.www." do
+    igniter = install(project(), ["--domain", "www.example.com"])
+
+    assert check_origin(igniter) == ["//www.example.com", "//example.com", "//staging.www.example.com"]
+    assert Enum.any?(igniter.notices, &(&1 =~ "<site>.example.com"))
   end
 
   test "without --domain, --yes writes no check_origin, uses placeholder hosts and asks nothing" do
@@ -187,7 +201,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
       })
       |> install(["--yes", "--domain", "example.com"])
 
-    assert check_origin(igniter) == ["//example.com", "//*.example.com", "//staging.example.com", "//realsite.no"]
+    assert check_origin(igniter) == ["//example.com", "//www.example.com", "//staging.example.com", "//realsite.no"]
   end
 
   test "a check_origin in a config file imported with a literal path is kept" do
@@ -288,7 +302,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
 
     assert check_origin(igniter) == [
              "//example.org",
-             "//*.example.org",
+             "//www.example.org",
              "//staging.example.org",
              "//*.agency.example",
              "https://cms.example.net"
@@ -344,7 +358,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
 
     assert_received {:mix_shell, :prompt, ["+ Production domain [studio.com]"]}
     refute_received {:mix_shell, :prompt, _}
-    assert check_origin(igniter) == ["//example.org", "//*.example.org", "//qa.example.org", "//cms.example.net"]
+    assert check_origin(igniter) == ["//example.org", "//www.example.org", "//qa.example.org", "//cms.example.net"]
   end
 
   test "an application's own check_origin, environment files and ignore rules are kept" do

@@ -62,7 +62,7 @@ runs() {
 artifacts() {
   local id="$1"
   shift
-  jq -n '{artifacts: [$ARGS.positional[] | {name: ., expired: false}]}' --args "$@" \
+  jq -n --argjson id "$id" '{artifacts: [$ARGS.positional[] | {name: ., expired: false, workflow_run: {id: $id}}]}' --args "$@" \
     > "$case_dir/artifacts-$id.json"
 }
 # jobs ID "NAME=CONCLUSION"… — an empty conclusion is a job still running.
@@ -157,6 +157,14 @@ expect false "running every job: the newest finished pull_request run 10 *" "run
 fresh
 artifacts 10 "merge-queue-$tree-$main-extra" "x-merge-queue-$tree-$main"
 expect false "running every job: the newest finished pull_request run 10 *" "matches the artifact name exactly"
+
+fresh
+jq '.artifacts[0].expired = true' "$case_dir/artifacts-10.json" > "$case_dir/a.tmp" && mv "$case_dir/a.tmp" "$case_dir/artifacts-10.json"
+expect false "running every job: the newest finished pull_request run 10 *" "runs everything when the record has expired"
+
+fresh
+jq '.artifacts[0].workflow_run.id = 11' "$case_dir/artifacts-10.json" > "$case_dir/a.tmp" && mv "$case_dir/a.tmp" "$case_dir/artifacts-10.json"
+expect false "running every job: the newest finished pull_request run 10 *" "runs everything when the record belongs to another run"
 
 fresh
 commit "$queued" "$tree" "$main"

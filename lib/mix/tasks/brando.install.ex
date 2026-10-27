@@ -42,8 +42,9 @@ if Code.ensure_loaded?(Igniter) do
     the staging host (default `staging.<domain>`), and `--origin` (repeatable)
     adds a trusted origin such as `//*.agency.example` or `https://host:8443`.
     With `--domain`, they fill the prod endpoint's `check_origin` in
-    `config/prod.exs` (the domain, its subdomains, the staging host and each
-    origin). They also set `PHX_HOST` in the new `.envrc.prod` and
+    `config/prod.exs` (the domain and its `www.` host, the staging host and
+    each origin; no other subdomain, so add every other host that serves
+    LiveView, or trust them all with `--origin '//*.example.com'`). They also set `PHX_HOST` in the new `.envrc.prod` and
     `.envrc.staging`, which are added to `.gitignore` and get their secrets
     after the changes are accepted, and `rel/env.sh.eex` makes the release
     source them on the server. Without `--domain` no `check_origin` is written
