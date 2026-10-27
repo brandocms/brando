@@ -254,7 +254,17 @@ defmodule Brando.Videos.Uploader do
   webhooks at all; its row moves the same way and its status poll is nudged.
   Other providers already expose intermediate webhook states and are left
   unchanged.
+
+  This is the browser's word, so a video with no creator (one no editor
+  started) is not moved on this way: `{:error, :no_creator}`. The admin
+  already takes it only for the upload token the creator was given
+  (`ProviderVideoUpload`, in the admin). The provider's own
+  report, which needs no creator, moves it.
   """
+  def complete_client_upload(%Brando.Videos.Video{type: type, creator_id: nil})
+      when type in [:cloudflare, :vimeo_account],
+      do: {:error, :no_creator}
+
   def complete_client_upload(%Brando.Videos.Video{type: :cloudflare} = video) do
     Brando.Videos.Uploaders.Cloudflare.complete_upload(video, %{})
   end

@@ -83,8 +83,7 @@ defmodule Brando.Worker.VimeoStatus do
   defp give_up(video, why) do
     Logger.warning("Vimeo video #{video.id} marked errored: #{why}")
 
-    with {:ok, creator} <- Brando.Users.get_user(video.creator_id),
-         {:ok, updated} <- Brando.Videos.update_video(video, %{status: :errored}, creator) do
+    with {:ok, updated} <- Brando.Videos.update_video(video, %{status: :errored}, :system) do
       Brando.Assets.ProcessingStatus.broadcast(:video, updated, :done)
       Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:video:#{updated.id}", {updated, [:video, :updated]})
     end

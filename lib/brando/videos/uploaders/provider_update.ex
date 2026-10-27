@@ -10,17 +10,30 @@ defmodule Brando.Videos.Uploaders.ProviderUpdate do
   alias Brando.Videos
 
   @doc """
-  Updates `video` with `params` as its creator, runs the completed callback when
+  Updates `video` with `params` as the system (the provider's report is not the
+  creator's action, and their role may have changed since the upload, or they
+  may be gone), runs the creator's completed callback when
   the video has just become ready, and broadcasts the result to subscribers of
   `"brando:video:<id>"` and to the editors following it
   (`Brando.Assets.ProcessingStatus`). Returns `{:ok, video}` or the error from the update.
   """
   def update_video(video, params) do
-    with {:ok, creator} <- Brando.Users.get_user(video.creator_id),
-         {:ok, updated_video} <- Videos.update_video(video, params, creator) do
+    creator = creator(video)
+
+    with {:ok, updated_video} <- Videos.update_video(video, params, :system) do
       Videos.run_completed_callback_on_ready(video, updated_video, creator)
       broadcast(updated_video)
       {:ok, updated_video}
+    end
+  end
+
+  # A creator deleted since gets the callback as the system
+  defp creator(%{creator_id: nil}), do: :system
+
+  defp creator(%{creator_id: creator_id}) do
+    case Brando.Users.get_user(creator_id) do
+      {:ok, creator} -> creator
+      _ -> :system
     end
   end
 

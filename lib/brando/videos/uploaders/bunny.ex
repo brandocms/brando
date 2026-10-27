@@ -367,7 +367,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
   isn't looked up again. Nothing else on the video changes.
   """
   @spec refresh_renditions(Videos.Video.t(), map() | integer()) :: {:ok, Videos.Video.t()} | {:error, term()}
-  def refresh_renditions(%Videos.Video{meta: %{"bunny" => %{"video_guid" => _}}} = video, user) do
+  def refresh_renditions(%Videos.Video{meta: %{"bunny" => %{"video_guid" => _}}} = video, _user) do
     case fetch_video_details(video) do
       {:ok, bunny_video} ->
         put_renditions(
@@ -375,12 +375,11 @@ defmodule Brando.Videos.Uploaders.Bunny do
           %{
             "available_resolutions" => bunny_video["availableResolutions"],
             "has_mp4_fallback" => bunny_video["hasMP4Fallback"]
-          },
-          user
+          }
         )
 
       {:error, %{"Message" => "Not Found"}} ->
-        put_renditions(video, %{"has_mp4_fallback" => false}, user)
+        put_renditions(video, %{"has_mp4_fallback" => false})
 
       error ->
         error
@@ -389,11 +388,12 @@ defmodule Brando.Videos.Uploaders.Bunny do
 
   def refresh_renditions(_video, _user), do: {:error, :missing_video_guid}
 
-  # Open forms showing the video get its new choices
-  defp put_renditions(video, renditions, user) do
+  # Open forms showing the video get its new choices. Written as the system:
+  # the renditions are Bunny's report, not the user's action.
+  defp put_renditions(video, renditions) do
     meta = Map.update!(video.meta, "bunny", &Map.merge(&1, renditions))
 
-    with {:ok, updated} <- Videos.update_video(video, %{meta: meta}, user) do
+    with {:ok, updated} <- Videos.update_video(video, %{meta: meta}, :system) do
       ProviderUpdate.broadcast(updated)
       {:ok, updated}
     end

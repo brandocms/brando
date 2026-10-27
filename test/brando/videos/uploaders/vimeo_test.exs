@@ -188,6 +188,38 @@ defmodule Brando.Videos.Uploaders.VimeoTest do
       assert Brando.Repo.get!(Brando.Videos.Video, video.id).status == :errored
     end
 
+    # The report is Vimeo's, not the uploader's action: it is stored when the
+    # uploader has been demoted since
+    test "stores the report after the uploader is demoted" do
+      ready = insert_vimeo_video("703", :processing)
+      gone = insert_vimeo_video("704", :processing)
+
+      for video <- [ready, gone] do
+        Brando.Repo.update_all(
+          Ecto.Query.from(u in Brando.Users.User, where: u.id == ^video.creator_id),
+          set: [role: :user]
+        )
+      end
+
+      Req.Test.expect(Vimeo, &Req.Test.json(&1, available_payload("703")))
+      assert :ok = perform_job(VimeoStatus, %{"video_id" => ready.id})
+      assert Brando.Repo.get!(Brando.Videos.Video, ready.id).status == :ready
+
+      Req.Test.expect(Vimeo, &send_resp(&1, 404, ""))
+      assert {:cancel, :gave_up} = perform_job(VimeoStatus, %{"video_id" => gone.id})
+      assert Brando.Repo.get!(Brando.Videos.Video, gone.id).status == :errored
+    end
+
+    # Created by no admin user (`Brando.Uploads.Direct` creates as the system)
+    test "stores the report for a video with no creator" do
+      video = insert_vimeo_video("705", :processing)
+      Brando.Repo.update_all(Ecto.Query.from(v in Brando.Videos.Video, where: v.id == ^video.id), set: [creator_id: nil])
+
+      Req.Test.expect(Vimeo, &Req.Test.json(&1, available_payload("705")))
+      assert :ok = perform_job(VimeoStatus, %{"video_id" => video.id})
+      assert Brando.Repo.get!(Brando.Videos.Video, video.id).status == :ready
+    end
+
     test "backs off as the upload ages" do
       assert Enum.map([0, 900, 7_200, 30_000], &VimeoStatus.interval/1) == [15, 60, 300, 900]
     end
@@ -213,6 +245,15 @@ defmodule Brando.Videos.Uploaders.VimeoTest do
     Oban.Testing.with_testing_mode(:manual, fn ->
       assert {:ok, %{status: :processing}} = Brando.Videos.Uploader.complete_client_upload(video)
     end)
+  end
+
+  # The provider's report moves a video no editor started; the browser's
+  # completion does not.
+  test "a browser transfer for a video with no creator is refused" do
+    video = "801" |> insert_vimeo_video(:uploading) |> Ecto.Changeset.change(creator_id: nil) |> Brando.Repo.update!()
+
+    assert {:error, :no_creator} = Brando.Videos.Uploader.complete_client_upload(video)
+    assert Brando.Repo.get!(Brando.Videos.Video, video.id).status == :uploading
   end
 
   test "deletes the remote video, treating 404 as already gone" do

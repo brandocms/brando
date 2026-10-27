@@ -230,7 +230,9 @@ defmodule Brando.Videos do
         |> Enum.reject(fn {_, value} -> value in [nil, false] end)
         |> Map.new()
 
-      if params == %{}, do: {:ok, video}, else: update_video(video.id, params, user)
+      # Filling in what the source knows is the system's work, whatever the
+      # role of the user the lookup was queued for is by now
+      if params == %{}, do: {:ok, video}, else: update_video(video.id, params, :system)
     end
   end
 
@@ -279,8 +281,12 @@ defmodule Brando.Videos do
         meta = %{path: tmp, config_target: config_target}
         entry = %{client_name: "video-#{video.id}#{extension(content_type)}", client_type: content_type}
 
-        with {:ok, image} <- Brando.Uploads.Store.handle_upload(meta, entry, cfg, user),
-             {:ok, image} <- Brando.Uploads.Store.process_upload(image, cfg, user) do
+        # Stored as the system, like the rest of the lookup; the user it was
+        # queued for is still the thumbnail's creator, and its progress and
+        # completed callback are theirs
+        with {:ok, image} <- Brando.Uploads.Store.handle_upload(meta, entry, cfg, :system),
+             {:ok, image} <- Brando.Uploads.Store.process_upload(image, cfg, user),
+             {:ok, image} <- put_creator(image, user) do
           image.id
         else
           _ -> nil
@@ -292,6 +298,9 @@ defmodule Brando.Videos do
       _ -> nil
     end
   end
+
+  defp put_creator(image, %{id: user_id}), do: image |> Ecto.Changeset.change(creator_id: user_id) |> Brando.Repo.update()
+  defp put_creator(image, _system), do: {:ok, image}
 
   defp extension("image/png"), do: ".png"
   defp extension("image/webp"), do: ".webp"
