@@ -37,6 +37,10 @@ defmodule Brando.Test.OwnLog do
 
   @spec capture((-> any())) :: String.t()
   def capture(fun) do
+    if :ets.whereis(@table) == :undefined do
+      raise "#{inspect(__MODULE__)}.install/0 has not run: call it from test_helper.exs"
+    end
+
     entry = {self(), make_ref()}
     true = :ets.insert(@table, entry)
 
