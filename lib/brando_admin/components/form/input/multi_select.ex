@@ -89,7 +89,9 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
           >
             <span>{preset.label}</span>
             <small>{Enum.map_join(preset.values, ", ", fn value ->
-              Enum.find_value(@input_options, value, fn option -> if option.value == value, do: option.label end)
+              Enum.find_value(@input_options, value, fn option ->
+                if option.value == value, do: Options.label_text(option.label)
+              end)
             end)}</small>
           </button>
         </details>
@@ -101,7 +103,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 {render_slot(@inner_block)}
               <% else %>
                 <%= if @selected_options != [] do %>
-                  {@count_label |> raw}
+                  {@count_label}
                 <% else %>
                   {if @presets != [] && !@array_touched && is_nil(@field.value),
                     do: gettext("Default tools"),
@@ -213,8 +215,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
                 <div class="multiselect-chosen">
                   <h2 id={"#{@field.id}-chosen-heading"} class="multiselect-heading">
                     {gettext("Currently selected")}
-                    <span :if={@selected_options != []} class="badge badge--count" data-testid="multiselect-count">{@count_label
-                    |> raw}</span>
+                    <span :if={@selected_options != []} class="badge badge--count" data-testid="multiselect-count">{@count_label}</span>
                   </h2>
                   <.chosen_rows
                     id_prefix={"#{@field.id}-chosen"}
@@ -904,7 +905,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       aria-labelledby={"#{@row.id}-label"}
       aria-describedby={described_by(@row)}
       class={["identifier", "selectable", "multiselect-option", @selected? && "selected"]}
-      data-label={@row.label}
+      data-label={Options.label_text(@row.label)}
       value={@row.value}
       phx-click={@click}
     >
@@ -951,7 +952,12 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     ~H"""
     <p :if={@rows == []} class="multiselect-empty">{gettext("None selected")}</p>
     <div :if={@rows != []} class="identifier-list multiselect-list" role="list">
-      <div :for={row <- @rows} class="identifier multiselect-chosen-row" role="listitem" data-label={row.label}>
+      <div
+        :for={row <- @rows}
+        class="identifier multiselect-chosen-row"
+        role="listitem"
+        data-label={Options.label_text(row.label)}
+      >
         <.option_copy row={row} />
         <span class="identifier-remove remove">
           <button

@@ -68,7 +68,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
                 {render_slot(@inner_block)}
               <% else %>
                 <%= if @selected_option do %>
-                  {@select_label |> raw}
+                  {@select_label}
                 <% else %>
                   {gettext("No selection")}
                 <% end %>
@@ -453,7 +453,8 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     |> assign(:module, module)
   end
 
-  defp extract_label(%Brando.Content.Var.Option{label: label}), do: label
+  # The option's text, for `data-label` (what the filter matches)
+  defp extract_label(%Brando.Content.Var.Option{label: label}), do: Options.label_text(label)
 
   defp extract_label(%{__struct__: _} = entry) do
     identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
@@ -461,7 +462,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   end
 
   defp extract_label(%{label: label}) do
-    label
+    Options.label_text(label)
   end
 
   defp extract_label(_) do
@@ -490,10 +491,10 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
     ~H"""
     <div :if={@instructions} class="option-label-wrap">
-      <span>{@opt.label |> raw}</span>
+      <span>{@opt.label}</span>
       <small class="help-text">{@instructions}</small>
     </div>
-    <span :if={!@instructions}>{@opt.label |> raw}</span>
+    <span :if={!@instructions}>{@opt.label}</span>
     """
   end
 
@@ -531,36 +532,31 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
     """
   end
 
-  # Returns the HTML string rendered (via `raw`) as the field's select label.
-  # Developer-authored `%{label: ...}` options may deliberately contain markup
-  # and pass through untouched; entry titles and custom values are user input
-  # and must be escaped before they reach `raw`. A var's choices arrive
-  # escaped (RenderVar).
+  # The field's select label. Labels are escaped text; only a label passed
+  # as `{:safe, iodata}` by code is markup (see `Options.label_html/1`).
   defp get_label(input_options, selected_option, selected_origin, allow_custom) do
     case Enum.find(input_options, fn
            option -> option_selected?(option, selected_option, selected_origin)
          end) do
       nil ->
         if allow_custom && selected_option && selected_option != "" do
-          escape_label(selected_option)
+          selected_option
         else
           gettext("No selection")
         end
 
+      %{label: label} ->
+        label
+
       opt ->
-        option_label_html(opt)
+        extract_label(opt)
     end
   end
 
-  # The optimistic label uses exactly the same escaping as the server label.
-  # Only developer-authored option labels may contain intentional HTML.
-  defp option_label_html(%{entry: _} = opt), do: opt |> extract_label() |> escape_label()
-  defp option_label_html(%{label: _} = opt), do: extract_label(opt)
-  defp option_label_html(opt), do: opt |> extract_label() |> escape_label()
-
-  defp escape_label(value) do
-    value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-  end
+  # The optimistic label (`data-select-label`, set as innerHTML by
+  # `b:select-option`) is the same HTML as the server label.
+  defp option_label_html(%{label: label}), do: Options.label_html(label)
+  defp option_label_html(opt), do: opt |> extract_label() |> Options.label_html()
 
   defp assign_custom_input_value(
          %{assigns: %{selected_option: selected, input_options: options, allow_custom: true}} =

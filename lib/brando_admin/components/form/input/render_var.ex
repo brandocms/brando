@@ -444,21 +444,13 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp select_option(option) when is_map_key(option, "value") or is_map_key(option, "label"),
     do: select_option(%{value: option["value"], label: option["label"]})
 
-  # The label is text an admin typed in the module editor. The select renders
-  # option labels as markup, in the page and through `data-select-label`
-  # (uiCommands.js), so it gets the label escaped, as a string: a `{:safe, _}`
-  # label would reach the attribute unescaped and be decoded back to markup.
+  # The label is text an admin typed in the module editor. It stays a plain
+  # string: Select escapes it, in the page and in `data-select-label`.
   defp select_option(option) do
     value = Map.get(option, :value)
     label = Map.get(option, :label)
-    %{label: escape_label(I18nString.localized(label) || to_string(value)), value: value}
+    %{label: I18nString.localized(label) || to_string(value), value: value}
   end
-
-  # Select renders a `%{label: ...}` option's label as markup. These labels
-  # are data an editor can set (a block var's options are cast from the
-  # block's params, a form's title from the forms screen), so they go in as
-  # escaped text.
-  defp escape_label(label), do: label |> HTML.html_escape() |> HTML.safe_to_string()
 
   defp width_options do
     [
@@ -493,7 +485,6 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         order_by: [asc: f.key, asc: f.id],
         select: %{label: f.title, value: f.id}
     )
-    |> Enum.map(&%{&1 | label: escape_label(&1.label)})
   end
 
   defp extract_value(:image, changeset), do: get_field(changeset, :image_id)

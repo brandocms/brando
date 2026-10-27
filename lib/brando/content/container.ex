@@ -92,6 +92,8 @@ defmodule Brando.Content.Container do
     end
   end
 
+  # Each palette's label shows its swatches, so it is markup (`{:safe, ...}`)
+  # built here, with the palette's own values escaped.
   def get_palettes(_, _) do
     available_palettes =
       Brando.Content.list_palettes!(%{status: :published})
@@ -99,22 +101,18 @@ defmodule Brando.Content.Container do
     Enum.map(available_palettes, fn palette ->
       colors =
         Enum.map(Enum.reverse(palette.colors), fn color ->
-          """
-          <span
-            class="circle tiny"
-            style="background-color:#{color.hex_value}"></span>
-          """
+          ~s(<span class="circle tiny" style="background-color:#{escape(color.hex_value)}"></span>)
         end)
 
-      label = """
-      <div class="circle-stack mr-1">
-        #{colors}
-      </div><span class="text-mono">[#{palette.namespace}] #{palette.name}</span>
-      """
+      label =
+        ~s(<div class="circle-stack mr-1">#{colors}</div>) <>
+          ~s(<span class="text-mono">[#{escape(palette.namespace)}] #{escape(palette.name)}</span>)
 
-      %{label: label, value: palette.id}
+      %{label: {:safe, label}, value: palette.id}
     end)
   end
+
+  defp escape(value), do: value |> to_string() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
   def get_palette(id) do
     Brando.Content.get_palette!(id)
