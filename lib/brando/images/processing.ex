@@ -2,6 +2,7 @@ defmodule Brando.Images.Processing do
   @moduledoc false
   import Ecto.Query
 
+  alias Brando.Authorization.Boundary
   alias Brando.Images
   alias Brando.Images.Image
   alias Brando.Images.Operations
@@ -16,7 +17,7 @@ defmodule Brando.Images.Processing do
   @type id :: binary | integer
   @type image :: Image.t()
   @type upload :: Store.t()
-  @type user :: User.t()
+  @type user :: User.t() | :system
 
   @doc """
   Queue an image for processing
@@ -85,10 +86,12 @@ defmodule Brando.Images.Processing do
   Recreate all transforms for all images.
 
   Queues a background job that walks the images in batches and queues each
-  one for processing, so it is safe to call from the admin or a release shell.
-  Returns `{:error, :already_running}` while an earlier run is unfinished.
+  one for processing, so it is safe to call from the admin or a release shell
+  (as `:system`). The run writes as the system, so `user` needs the right to
+  update images: `{:error, :forbidden}` otherwise. Returns
+  `{:error, :already_running}` while an earlier run is unfinished.
   """
-  @spec recreate_sizes_for_images(user) :: {:ok, Oban.Job.t()} | {:error, :already_running | term}
+  @spec recreate_sizes_for_images(user) :: {:ok, Oban.Job.t()} | {:error, :already_running | :forbidden | term}
   def recreate_sizes_for_images(user), do: start_image_maintenance("recreate_sizes", user)
 
   @doc """
@@ -104,7 +107,7 @@ defmodule Brando.Images.Processing do
   Runs in the background like `recreate_sizes_for_images/1`, and neither starts
   while the other is unfinished.
   """
-  @spec recreate_sizes_for_changed_images(user) :: {:ok, Oban.Job.t()} | {:error, :already_running | term}
+  @spec recreate_sizes_for_changed_images(user) :: {:ok, Oban.Job.t()} | {:error, :already_running | :forbidden | term}
   def recreate_sizes_for_changed_images(user), do: start_image_maintenance("recreate_changed_sizes", user)
 
   @doc """
@@ -246,7 +249,7 @@ defmodule Brando.Images.Processing do
 
   Runs in the background like `recreate_sizes_for_images/1`.
   """
-  @spec set_dominant_color_for_images(user) :: {:ok, Oban.Job.t()} | {:error, :already_running | term}
+  @spec set_dominant_color_for_images(user) :: {:ok, Oban.Job.t()} | {:error, :already_running | :forbidden | term}
   def set_dominant_color_for_images(user), do: start_image_maintenance("dominant_colors", user)
 
   @doc """
@@ -273,16 +276,20 @@ defmodule Brando.Images.Processing do
   # Both recreate tasks queue the same per-image jobs, so one waits for the other.
   @recreate_tasks ~w(recreate_sizes recreate_changed_sizes)
 
+  # The run writes as the system, so starting it needs the right to update
+  # images, read afresh, in both authorization modes.
   defp start_image_maintenance(task, user) do
     blocking = if task in @recreate_tasks, do: @recreate_tasks, else: [task]
 
-    if Enum.any?(blocking, &image_maintenance_running?/1) do
-      {:error, :already_running}
-    else
-      %{task: task, user_id: user.id}
-      |> TenantJob.attach()
-      |> Worker.ImageMaintenance.new()
-      |> Oban.insert()
+    with {:ok, :allowed} <- Boundary.run(user, :update, Image, fn _ -> {:ok, :allowed} end) do
+      if Enum.any?(blocking, &image_maintenance_running?/1) do
+        {:error, :already_running}
+      else
+        %{task: task, user_id: Brando.Users.job_user_id(user)}
+        |> TenantJob.attach()
+        |> Worker.ImageMaintenance.new()
+        |> Oban.insert()
+      end
     end
   end
 
