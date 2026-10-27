@@ -17,7 +17,7 @@ defmodule Brando.Images.Processing do
   @type id :: binary | integer
   @type image :: Image.t()
   @type upload :: Store.t()
-  @type user :: User.t()
+  @type user :: User.t() | :system
 
   @doc """
   Queue an image for processing

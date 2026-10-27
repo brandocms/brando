@@ -227,6 +227,33 @@ defmodule Brando.Images.ImageMaintenanceTest do
     end)
   end
 
+  test "in groups mode, managing Utilities is not enough to start a run" do
+    alias Brando.Authorization.{Catalog, Groups, Scope}
+
+    put_test_env(:authorization_mode, :groups)
+    Brando.Authorization.Boundary.put_scope(nil)
+    owner = Factory.insert(:random_user, role: :superuser)
+    {:ok, _} = Brando.Authorization.Migration.run()
+    member = Factory.insert(:random_user, role: :user)
+    scope = Scope.standalone(owner)
+
+    {:ok, utilities} =
+      Groups.create(scope, %{name: "Utilities"}, [
+        Catalog.get(:access, :backend).key,
+        Catalog.get(:update, :utilities).key
+      ])
+
+    {:ok, :ok} = Groups.add_member(scope, utilities.id, member.id)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:error, :forbidden} = Processing.set_dominant_color_for_images(member)
+
+      {:ok, media} = Groups.create(scope, %{name: "Media"}, [Catalog.get(:update, Image).key])
+      {:ok, :ok} = Groups.add_member(scope, media.id, member.id)
+      assert {:ok, _job} = Processing.set_dominant_color_for_images(member)
+    end)
+  end
+
   test "the system can start a run, as from a release shell" do
     image = Factory.insert(:image, path: "image/system.jpg", dominant_color: nil)
 
