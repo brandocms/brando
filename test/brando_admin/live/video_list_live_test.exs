@@ -164,4 +164,15 @@ defmodule BrandoAdmin.VideoListLiveTest do
       assert Brando.Repo.all(where(Oban.Job, worker: "Brando.Worker.VideoMetadataSweep")) == []
     end)
   end
+
+  test "Title or source also finds an uploaded video by its file's name", %{conn: conn} do
+    file = Brando.Repo.insert!(%Brando.Files.File{filename: "harbour-raw.mp4", filesize: 1, config_target: "default"})
+    uploaded = Factory.insert(:upload_video, title: "Opening titles", file_id: file.id)
+    other = Factory.insert(:video, title: "Interview")
+
+    {:ok, view, _html} = live(conn, "/admin/assets/videos?filter%3Apath=raw.mp4")
+
+    assert has_element?(view, "#list-row-#{uploaded.id}")
+    refute has_element?(view, "#list-row-#{other.id}")
+  end
 end

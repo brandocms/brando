@@ -184,6 +184,11 @@ own folders. A video picked from there is used as it is, not copied: it is a
 record of the provider's video, and its config was only used when it was
 added. Uploads and "Add from URL" in either tab still use the field's `cfg`.
 
+The picker's search box narrows the videos in the folder on screen by title,
+source URL, provider id or the uploaded file's name. A provider's own library
+has a separate search in its panel (below). In Resources → Videos, the "Title
+or source" filter matches the same fields.
+
 ### Add webhook to your endpoint
 
 Webhook plugs must come BEFORE `Plug.Parsers` to read raw body for signature verification. They read at most 1 MiB of it and answer 413 for a larger body.

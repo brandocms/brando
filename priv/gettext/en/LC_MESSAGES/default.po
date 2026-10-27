@@ -3721,6 +3721,7 @@ msgid "Clear filter"
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field/module_picker.ex
+#: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Clear search"
 msgstr ""
@@ -14903,6 +14904,11 @@ msgstr ""
 msgid "Search %{provider}"
 msgstr ""
 
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Search %{provider} by title"
+msgstr ""
+
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
 msgid "Search all content"
@@ -14919,11 +14925,6 @@ msgstr ""
 msgid "Search by name or title"
 msgstr "Search by name or title"
 
-#: lib/brando_admin/components/video_picker.ex
-#, elixir-autogen, elixir-format
-msgid "Search by title"
-msgstr ""
-
 #: lib/brando_admin/components/content/select_identifier.ex
 #, elixir-autogen, elixir-format
 msgid "Search by title or URL"
@@ -14932,6 +14933,11 @@ msgstr ""
 #: lib/brando_admin/components/content/select_identifier.ex
 #, elixir-autogen, elixir-format
 msgid "Search by title or URL…"
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Search by title, URL or file name"
 msgstr ""
 
 #: lib/brando/seo/checks.ex
@@ -15009,6 +15015,11 @@ msgstr ""
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
 msgid "Search titles and content"
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Search videos in this folder"
 msgstr ""
 
 #: lib/brando_admin/live/command_palette_live.ex
@@ -17378,6 +17389,11 @@ msgstr ""
 #: lib/brando_admin/live/calendar_live.ex
 #, elixir-autogen, elixir-format
 msgid "The scheduled revision moves from %{from} to %{to}."
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "The search covers the videos in this folder."
 msgstr ""
 
 #: lib/brando_admin/live/search_live.ex
