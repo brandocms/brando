@@ -97,6 +97,93 @@ defmodule Brando.Content.DefinitionsTest do
     assert {:ok, %{items: [%{action: :conflict}]}} = Definitions.plan(v1, c.user)
   end
 
+  test "a var setting Brando added since export doesn't make the definition a conflict", c do
+    result = apply_bundle!(c.bundle, c.user)
+
+    [current] = snapshot()["modules"]
+    before_upgrade = update_in(current, ["vars", Access.at(0)], &Map.delete(&1, "link_default_type"))
+
+    edited = edit(result.bundle, &Map.put(&1, "class", "edited"))
+    stale = put_in(edited, ["baseline", "modules", "hero-test"], Value.baseline_digest(before_upgrade))
+    assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(stale, c.user)
+  end
+
+  # The link var's settings, in hero.exs after the theme var
+  defp with_link_var(c, settings) do
+    source = File.read!(Path.join(c.path, "hero.exs"))
+
+    link_var = """
+        end
+
+        var :cta, :link do
+          label "Call to action"
+          settings #{settings}
+        end
+      end
+    """
+
+    File.write!(
+      Path.join(c.path, "hero.exs"),
+      String.replace(source, "    end\n  end\n\n  template", link_var <> "\n  template")
+    )
+
+    assert {:ok, bundle} = Definitions.read(c.path)
+    bundle
+  end
+
+  for {name, settings} <- [
+        {"its default tab", "link_default_type: :identifier"},
+        {"an empty link of that type, as before the setting", "link_type: :identifier"}
+      ] do
+    test "a link var opening on Content by #{name} imports as the file says", c do
+      result = c |> with_link_var(unquote(settings)) |> apply_bundle!(c.user)
+
+      cta = Enum.find(hero().vars, &(&1.key == "cta"))
+      assert %{link_default_type: :identifier, link_type: :identifier} = cta
+      assert {:ok, plan} = Definitions.plan(result.bundle, c.user)
+      assert [%{action: :noop}] = plan.items
+    end
+  end
+
+  # brando_224 gives a stored empty Content link the default it implied
+  test "a Content default brando_224 backfilled doesn't make the definition a conflict", c do
+    result = c |> with_link_var("link_type: :identifier") |> apply_bundle!(c.user)
+
+    [current] = snapshot()["modules"]
+    cta = Enum.find_index(current["vars"], &(&1["key"] == "cta"))
+    assert get_in(current, ["vars", Access.at(cta), "link_default_type"]) == "identifier"
+    before_upgrade = update_in(current, ["vars", Access.at(cta)], &Map.delete(&1, "link_default_type"))
+
+    edited = edit(result.bundle, &Map.put(&1, "class", "edited"))
+    stale = put_in(edited, ["baseline", "modules", "hero-test"], Value.baseline_digest(before_upgrade))
+    assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(stale, c.user)
+  end
+
+  # Every copy of an empty link opens on the default tab, so the module var's
+  # own link type there is no part of the definition
+  test "an empty link left on the other tab exports and reimports unchanged", c do
+    c |> with_link_var("link_default_type: :identifier") |> apply_bundle!(c.user)
+    cta = Enum.find(hero().vars, &(&1.key == "cta"))
+    cta |> Changeset.change(link_type: :url) |> Repo.update!()
+
+    assert {:ok, exported} = Definitions.export(Path.join(c.path, "out"), c.user)
+    assert {:ok, bundle} = Definitions.read(exported.directory)
+    assert {:ok, plan} = Definitions.plan(bundle, c.user)
+    assert [%{action: :noop}] = plan.items
+  end
+
+  test "a file stating an empty link's type and another default imports as it says", c do
+    result = c |> with_link_var("link_default_type: :identifier, link_type: :url") |> apply_bundle!(c.user)
+
+    assert {:ok, plan} = Definitions.plan(result.bundle, c.user)
+    assert [%{action: :noop}] = plan.items
+  end
+
+  test "a link var opening on URL stores its default empty", c do
+    c |> with_link_var("link_default_type: :url") |> apply_bundle!(c.user)
+    assert %{link_default_type: nil, link_type: :url} = Enum.find(hero().vars, &(&1.key == "cta"))
+  end
+
   test "baseline digests leave empty values out, and still see real changes" do
     definition = %{"class" => "hero", "refs" => [%{"data" => %{"text" => "Hi", "level" => 1}}]}
     grown = put_in(definition, ["refs", Access.at(0), "data", "placeholder"], nil)

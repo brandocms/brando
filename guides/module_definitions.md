@@ -343,6 +343,9 @@ end
 
 This also covers color picker/opacity flags, media config targets, gallery
 allowed types and link identifier schema restrictions. Export emits all of them.
+`link_default_type: :identifier` opens an empty link's dialog on Content
+instead of URL (`:url`, the default); a link the editor has set keeps its own
+type, and the editor can still switch tabs.
 
 ## Children and table templates
 

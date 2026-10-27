@@ -246,8 +246,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
     groups =
       module_set
       |> Brando.Content.BlockSlots.modules()
-      |> Brando.Utils.split_by(:namespace)
-      |> Enum.map(&__MODULE__.sort_namespace/1)
+      |> group_by_namespace()
 
     assign(socket, :modules_by_namespace, groups)
   end
@@ -261,8 +260,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
 
     modules_by_namespace =
       modules
-      |> Brando.Utils.split_by(:namespace)
-      |> Enum.map(&__MODULE__.sort_namespace/1)
+      |> group_by_namespace()
 
     assign(socket, :modules_by_namespace, modules_by_namespace)
   end
@@ -291,8 +289,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
       {:ok, set} ->
         set.module_set_modules
         |> Enum.map(& &1.module)
-        |> Brando.Utils.split_by(:namespace)
-        |> Enum.map(&__MODULE__.sort_namespace/1)
+        |> group_by_namespace()
 
       {:error, _} ->
         []
@@ -302,8 +299,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   defp root_modules_by_namespace(filter) do
     filter
     |> list_picker_modules()
-    |> Brando.Utils.split_by(:namespace)
-    |> Enum.map(&__MODULE__.sort_namespace/1)
+    |> group_by_namespace()
   end
 
   def assign_modules(socket) do
@@ -311,8 +307,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
 
     modules_by_namespace =
       modules
-      |> Brando.Utils.split_by(:namespace)
-      |> Enum.map(&__MODULE__.sort_namespace/1)
+      |> group_by_namespace()
 
     assign(socket, :modules_by_namespace, modules_by_namespace)
   end
@@ -518,6 +513,37 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
       "" -> map["en"] || ""
       translated -> translated
     end
+  end
+
+  @doc """
+  Groups `modules` by their namespace as the editor reads it, in the current
+  locale: `[{translated_namespace, namespace, modules}]`, each group's modules
+  in sequence order.
+
+  Two namespaces stored differently can read the same: `"general"` and
+  `%{"en" => "general"}`, or one English name with two Norwegian ones. They
+  are one group, the name is the group's key in the picker.
+  """
+  def group_by_namespace(modules) do
+    groups =
+      modules
+      |> Brando.Utils.split_by(:namespace)
+      |> Enum.map(&sort_namespace/1)
+
+    by_name = Enum.group_by(groups, &elem(&1, 0))
+
+    groups
+    |> Enum.map(&elem(&1, 0))
+    |> Enum.uniq()
+    |> Enum.map(fn name ->
+      case by_name[name] do
+        [group] ->
+          group
+
+        [{_, namespace, _} | _] = same ->
+          {name, namespace, same |> Enum.flat_map(&elem(&1, 2)) |> Enum.sort(&(&1.sequence <= &2.sequence))}
+      end
+    end)
   end
 
   def sort_namespace({namespace, modules}) do

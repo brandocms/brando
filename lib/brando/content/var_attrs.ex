@@ -32,6 +32,7 @@ defmodule Brando.Content.VarAttrs do
     :link_identifier_schemas,
     :link_target_blank,
     :link_allow_custom_text,
+    :link_default_type,
     :width,
     :sequence,
     :creator_id,

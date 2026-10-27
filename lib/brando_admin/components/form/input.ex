@@ -420,6 +420,7 @@ defmodule BrandoAdmin.Components.Form.Input do
   attr :id, :any, default: nil
   attr :opts, :any, default: []
   attr :label, :string
+  attr :instructions, :string
   attr :uid, :string
   attr :id_prefix, :string
   attr :field, FormField

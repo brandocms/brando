@@ -784,6 +784,20 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                         <Input.toggle field={@var[:color_opacity]} label={gettext("Allow setting opacity")} />
                         <Input.number field={@var[:palette_id]} label={gettext("ID of palette to choose colors from")} />
                       <% :link -> %>
+                        <%!-- Empty is URL (`FollowLinkDefault` stores URL as empty) --%>
+                        <Input.radios
+                          field={%{@var[:link_default_type] | value: @var[:link_default_type].value || :url}}
+                          label={gettext("Default tab")}
+                          instructions={
+                            gettext("Where the link dialog opens while no link is set. Editors can still switch.")
+                          }
+                          opts={[
+                            options: [
+                              %{label: gettext("URL"), value: :url},
+                              %{label: gettext("Content"), value: :identifier}
+                            ]
+                          ]}
+                        />
                         <.live_component
                           module={Input.MultiSelect}
                           id={"#{@var.id}-select-link-schemas"}
@@ -1362,7 +1376,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       |> assign(:link_text, link_text)
       |> assign(:value, split_url_with_wbr(value))
       |> assign(:external?, external?)
-      |> assign(:empty?, link_type == :url && value in [nil, ""])
+      |> assign(:empty?, empty_link?(link_type, value, get_field(changeset, :identifier_id)))
 
     ~H"""
     <button type="button" class={["link-preview", @empty? && "link-preview--empty"]} phx-click={@click}>
@@ -1370,7 +1384,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         <.icon :if={@empty?} name="plus" />
         <.icon :if={@link_type == :url && !@external? && !@empty?} name="link" />
         <.icon :if={@link_type == :url && @external?} name="globe" />
-        <.icon :if={@link_type == :identifier} name="link" />
+        <.icon :if={@link_type == :identifier && !@empty?} name="link" />
       </div>
       <div class="info">
         <%= if @link_type == :url do %>
@@ -1388,12 +1402,23 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
             </dl>
           <% end %>
         <% else %>
-          <.link_identifier identifier={@identifier} link_text={@link_text} />
+          <%!-- A var opening on Content (its default tab) has no entry yet --%>
+          <%= if @empty? do %>
+            <div :if={@link_text} class="link-text">{@link_text}</div>
+            <dl>
+              <dt>{gettext("Add link")}</dt>
+            </dl>
+          <% else %>
+            <.link_identifier identifier={@identifier} link_text={@link_text} />
+          <% end %>
         <% end %>
       </div>
     </button>
     """
   end
+
+  defp empty_link?(:identifier, _value, identifier_id), do: is_nil(identifier_id)
+  defp empty_link?(_url, value, _identifier_id), do: value in [nil, ""]
 
   defp split_url_with_wbr(nil) do
     ""

@@ -1,5 +1,6 @@
 defmodule Brando.Drafts.Modules do
   @moduledoc "Captures and checks the module contracts a recovery copy depends on."
+  alias Brando.Content.Var.FollowLinkDefault
   alias Brando.Drafts.Params
 
   @contract_fields ~w(type multi datasource datasource_module datasource_type datasource_query table_template_id)a
@@ -106,7 +107,11 @@ defmodule Brando.Drafts.Modules do
   defp add_defaults(block, module) do
     block
     |> add_missing("refs", "name", module.refs || [])
-    |> add_missing("vars", "key", Enum.map(module.vars || [], &Brando.Color.clear_invalid_var/1))
+    |> add_missing(
+      "vars",
+      "key",
+      Enum.map(module.vars || [], &(&1 |> Brando.Color.clear_invalid_var() |> FollowLinkDefault.put()))
+    )
   end
 
   defp add_missing(block, field, key, definitions) do

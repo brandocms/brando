@@ -555,5 +555,26 @@ defmodule Brando.Translations.ComputePendingTest do
       assert var.identifier_id == nil
       assert {:shared_update, "entry_blocks/a/vars/cta/media"} in kinds(result)
     end
+
+    # A module save moves an empty link onto its default tab (`FollowLinkDefault`):
+    # that is where its dialog opens, not a link the translation should follow.
+    test "an empty source link opening on another tab leaves the translation's link alone" do
+      empty = %Var{key: "cta", type: :link, link_type: :url, label: "cta"}
+      source = article(:no, blocks: [block("a", vars: [empty])])
+      target = article(:en, id: 2, blocks: [block("a", id: 10, vars: [url_link("/en/about")])])
+      base = baseline(source)
+
+      moved =
+        put_in(source.entry_blocks, [
+          %{hd(source.entry_blocks) | block: %{hd(source.entry_blocks).block | vars: [%{empty | link_type: :identifier}]}}
+        ])
+
+      result = compute(moved, target, base)
+      [var] = hd(result.payload.entry_blocks).block.vars
+
+      assert var.link_type == :url
+      assert var.value == "/en/about"
+      assert result.work_items == []
+    end
   end
 end

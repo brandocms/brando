@@ -25,4 +25,17 @@ defmodule BrandoAdmin.Components.Form.ModulePickerGroupsTest do
     assert [{"Media", [%{name: "Image text"}]}, {"Text", [%{name: "Text"}]}] =
              ModulePicker.visible_groups(assigns)
   end
+
+  test "namespaces stored differently that read the same are one group" do
+    modules = [
+      %{name: "Slider", namespace: %{"en" => "general"}, sequence: 1},
+      %{name: "Text", namespace: "general", sequence: 0},
+      %{name: "Image", namespace: %{"en" => "media"}, sequence: 0}
+    ]
+
+    groups = ModulePicker.group_by_namespace(modules)
+
+    assert Enum.map(groups, &elem(&1, 0)) |> Enum.sort() == ["general", "media"]
+    assert {_, _, [%{name: "Text"}, %{name: "Slider"}]} = List.keyfind(groups, "general", 0)
+  end
 end

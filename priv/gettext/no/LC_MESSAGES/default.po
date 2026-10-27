@@ -5222,6 +5222,11 @@ msgstr "La nye bygg som standard publiseres automatisk"
 msgid "Default plays as the page asks, else Automatic: streamed with controls or a play button, an MP4 for a loop."
 msgstr "Standard spiller slik siden ber om, ellers Automatisk: strømmet med kontroller eller avspillingsknapp, MP4 for en loop."
 
+#: lib/brando_admin/components/form/input/render_var.ex
+#, elixir-autogen, elixir-format
+msgid "Default tab"
+msgstr "Standardfane"
+
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Default text and preview"
@@ -19709,6 +19714,11 @@ msgstr "Når noen kobler til en app, vises den her sammen med hvem som koblet de
 #, elixir-autogen, elixir-format
 msgid "When you have selected more than 1 connection, you can ensure that the child alternates are linked together as well."
 msgstr "Når du har valgt mer enn 1 kobling så kan klikke knappen under for å forsikre at disse underelementene også er koblet sammen."
+
+#: lib/brando_admin/components/form/input/render_var.ex
+#, elixir-autogen, elixir-format
+msgid "Where the link dialog opens while no link is set. Editors can still switch."
+msgstr "Hvor lenkevinduet åpner når ingen lenke er satt. Redaktører kan fortsatt bytte."
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
