@@ -3,7 +3,7 @@ defmodule Brando.SEO.StructuredDataTest do
   use Brando.ConnCase
   use BrandoIntegration.TestCase
 
-  import Brando.Test.Support, only: [put_test_env: 2]
+  import Brando.Test.Support, only: [preserve_cache: 1, put_test_env: 2]
 
   alias Brando.Factory
   alias Brando.Pages
@@ -20,8 +20,7 @@ defmodule Brando.SEO.StructuredDataTest do
   end
 
   setup do
-    on_exit(fn -> Brando.Cache.del({:seo_structured_data, "en", [Brando.Pages.Page]}) end)
-    :ok
+    preserve_cache({:seo_structured_data, "en", [Brando.Pages.Page]})
   end
 
   test "checks blueprints with a JSON-LD mapping and a page of their own" do

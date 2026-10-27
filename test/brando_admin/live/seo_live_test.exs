@@ -6,6 +6,12 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
   alias Brando.Factory
   alias Brando.Pages
 
+  # Tests reload the SEO cache and audit structured data from their own rows,
+  # which roll back.
+  setup do
+    preserve_cache([:seo, {:seo_structured_data, "en", Brando.SEO.StructuredData.schemas()}])
+  end
+
   test "the settings tab renders the form and the content tab audits on demand", %{conn: conn} do
     user = Factory.insert(:random_user)
 
@@ -35,8 +41,6 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
     Brando.Test.Support.put_test_env(Brando.JSONLDTest,
       products: [%Brando.JSONLDTest.Product{id: 42, title: "Teapot", slug: "teapot", sku: "T-1"}]
     )
-
-    on_exit(fn -> Brando.Cache.del({:seo_structured_data, "en", Brando.SEO.StructuredData.schemas()}) end)
 
     {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
     render_async(view, 5_000)

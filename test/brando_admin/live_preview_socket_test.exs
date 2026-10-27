@@ -35,10 +35,7 @@ defmodule BrandoAdmin.LivePreviewSocketTest do
     on_exit(fn ->
       Boundary.put_scope(nil)
 
-      for key <- keys do
-        Preview.cleanup(key)
-        Cachex.del(:cache, "__live_preview__#{key}")
-      end
+      Enum.each(keys, &Brando.LivePreview.cleanup_cache/1)
     end)
 
     session = Users.generate_user_session_token(editor)

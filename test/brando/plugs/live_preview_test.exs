@@ -114,7 +114,7 @@ defmodule Brando.Plug.LivePreviewTest do
   test "the preview key is escaped into the page", %{user: user} do
     key = ~s(K'"></script><b id="x">)
     Brando.LivePreview.store_cache(key, "<html><body><main>test</main></body></html>")
-    on_exit(fn -> Cachex.del(:cache, "__live_preview__" <> key) end)
+    on_exit(fn -> Brando.LivePreview.cleanup_cache(key) end)
 
     conn =
       build_conn(:get, "/__livepreview?key=#{URI.encode_www_form(key)}")
