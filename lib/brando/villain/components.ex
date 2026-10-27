@@ -20,6 +20,7 @@ defmodule Brando.Villain.Components do
 
   use Phoenix.Component
   import Phoenix.HTML, only: [raw: 1]
+  alias Brando.Content.Identifier
   alias Brando.Villain.RenderSourceQuery
   alias Ecto.Changeset
 
@@ -275,11 +276,12 @@ defmodule Brando.Villain.Components do
   """
   def entry_link(assigns) do
     var_href = Brando.Villain.Filters.link_url(assigns.var, nil)
-    # A HEEx identifier stores the entry's title escaped; HEEx escapes it again
+    # An editor's label as written, or else the entry's title as text: a HEEx
+    # identifier stores it escaped, and HEEx escapes it again
     var_text =
-      case Brando.Villain.Filters.link_text(assigns.var, nil) do
-        text when is_binary(text) -> HtmlEntities.decode(text)
-        text -> text
+      case assigns.var do
+        %{link_type: :identifier, link_text: nil, identifier: identifier} -> Identifier.title_text(identifier)
+        var -> Brando.Villain.Filters.link_text(var, nil)
       end
 
     # An address with a script or unknown scheme leaves the link inert

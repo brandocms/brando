@@ -4,6 +4,7 @@ defmodule Brando.Villain.Tags.Link do
   """
   @behaviour Liquex.Tag
 
+  alias Brando.Content.Identifier
   alias Brando.Villain.LiquexParser.TagGrammar
 
   @impl true
@@ -13,14 +14,10 @@ defmodule Brando.Villain.Tags.Link do
   def render([link: link], context) do
     {evaled_link, _context} = Liquex.Argument.eval(link, context)
 
-    # The text is plain: an editor's label, or the linked entry's title, which
-    # a HEEx identifier stores escaped. Decoded first, so that every character
-    # is encoded once.
     link_text =
       evaled_link
-      |> Brando.Villain.Filters.link_text(context)
+      |> text(context)
       |> to_string()
-      |> HtmlEntities.decode()
       |> Phoenix.HTML.html_escape()
       |> Phoenix.HTML.safe_to_string()
 
@@ -32,6 +29,13 @@ defmodule Brando.Villain.Tags.Link do
 
     {link_html, context}
   end
+
+  # The text is plain, to escape once: an editor's label as written, or else
+  # the linked entry's title, which a HEEx identifier stores escaped
+  defp text(%{link_type: :identifier, link_text: nil, identifier: identifier}, _context),
+    do: Identifier.title_text(identifier)
+
+  defp text(link, context), do: Brando.Villain.Filters.link_text(link, context)
 
   # An address with a script or unknown scheme renders as an empty href.
   defp href(url) do
