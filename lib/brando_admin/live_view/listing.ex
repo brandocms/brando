@@ -15,6 +15,18 @@ defmodule BrandoAdmin.LiveView.Listing do
   (`page_title: &__MODULE__.page_title/0`). Without it the tab is the schema's
   plural.
 
+  Events that should ask for the password, a code or a passkey when the
+  session has not confirmed lately (see `BrandoAdmin.Reauth`) are named in
+  `step_up`: the listing's own events, such as `delete_entry`,
+  `delete_selected` and `undelete_entry`, and the view's alike. A listing
+  event the view handles itself in `handle_event/3` is named in `overrides`,
+  and the listing passes it on:
+
+      use BrandoAdmin.LiveView.Listing,
+        schema: MyApp.Accounts.Account,
+        step_up: ~w(delete_selected undelete_entry close_account),
+        overrides: ~w(delete_entry)
+
   Compiler and hook modules are internal implementation details.
   """
 

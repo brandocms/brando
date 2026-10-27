@@ -28,6 +28,16 @@ defmodule BrandoAdmin.Reauth do
 
       on_mount {BrandoAdmin.Reauth, events: ~w(delete_environment queue_set_live)}
 
+  A held event runs through the LiveView's `handle_event/3` once answered. An
+  event handled by a hook instead names how to run it, as `{module, function,
+  extra_args}` called with the event, its params and the socket first, and
+  returning `{:cont, socket}` for events it leaves to the LiveView:
+
+      on_mount {BrandoAdmin.Reauth, events: ~w(delete_entry), replay: {MyHooks, :run, []}}
+
+  A listing declares its guarded events with the `step_up` option of
+  `BrandoAdmin.LiveView.Listing`, which guards the listing's own events too.
+
   Events of a LiveComponent do not reach the LiveView's hooks. A screen
   guarded as a whole covers them by leaving when the confirmation runs out;
   otherwise guard an event of the LiveView that opens the component.
@@ -127,19 +137,19 @@ defmodule BrandoAdmin.Reauth do
     socket =
       socket
       |> Phoenix.Component.assign(:reauth, Keyword.get(opts, :prompt))
-      |> setup(session_id, Keyword.get(opts, :events, []))
+      |> setup(session_id, Keyword.get(opts, :events, []), Keyword.get(opts, :replay))
 
     {:cont, socket}
   end
 
   # The session is kept by its token row's id, so the token itself stays out
   # of the LiveView's state.
-  defp setup(socket, session_id, events) do
+  defp setup(socket, session_id, events, replay \\ nil) do
     socket
     |> Phoenix.Component.assign_new(:reauth, fn -> nil end)
     |> Phoenix.Component.assign(:reauth_meta, SecurityLog.socket_meta(socket))
     |> attach_hook(:brando_reauth, :handle_event, fn event, params, socket ->
-      handle_event(event, params, socket, events, session_id)
+      handle_event(event, params, socket, events, {session_id, replay})
     end)
   end
 
@@ -180,11 +190,11 @@ defmodule BrandoAdmin.Reauth do
 
   ## The prompt's events
 
-  defp handle_event("brando:reauth:" <> action, params, socket, _events, session_id) do
-    if socket.assigns[:reauth], do: prompt_event(action, params, socket, session_id), else: {:halt, socket}
+  defp handle_event("brando:reauth:" <> action, params, socket, _events, session) do
+    if socket.assigns[:reauth], do: prompt_event(action, params, socket, session), else: {:halt, socket}
   end
 
-  defp handle_event(event, params, socket, events, session_id) do
+  defp handle_event(event, params, socket, events, {session_id, _replay}) do
     cond do
       events != :all and event not in events -> {:cont, socket}
       fresh?(session_id) -> {:cont, socket}
@@ -202,23 +212,23 @@ defmodule BrandoAdmin.Reauth do
     )
   end
 
-  defp prompt_event("submit", %{"reauth" => %{"proof" => proof}}, socket, session_id) do
+  defp prompt_event("submit", %{"reauth" => %{"proof" => proof}}, socket, session) do
     %{current_user: user, reauth_meta: meta} = socket.assigns
 
     case TwoFactor.confirm(user, proof, meta) do
-      :ok -> confirmed(socket, session_id)
+      :ok -> confirmed(socket, session)
       {:error, reason} -> {:halt, error(socket, reason)}
     end
   end
 
-  defp prompt_event("cancel", _params, socket, _session_id) do
+  defp prompt_event("cancel", _params, socket, _session) do
     case socket.assigns.reauth do
       %{return_to: _} -> {:halt, push_navigate(socket, to: "/admin")}
       _ -> {:halt, Phoenix.Component.assign(socket, :reauth, nil)}
     end
   end
 
-  defp prompt_event("passkey_options", _params, socket, _session_id) do
+  defp prompt_event("passkey_options", _params, socket, _session) do
     {challenge, options} = Passkeys.authentication_challenge(socket.assigns.current_user)
     socket = Phoenix.Component.update(socket, :reauth, &%{&1 | challenge: Brando.Redacted.wrap(challenge)})
     {:halt, %{publicKey: options}, socket}
@@ -228,7 +238,7 @@ defmodule BrandoAdmin.Reauth do
          "passkey",
          params,
          %{assigns: %{reauth: %{challenge: %Brando.Redacted{} = challenge}}} = socket,
-         session_id
+         session
        ) do
     challenge = Brando.Redacted.value(challenge)
     %{current_user: user, reauth_meta: meta} = socket.assigns
@@ -240,7 +250,7 @@ defmodule BrandoAdmin.Reauth do
         {:halt, error(socket, :locked)}
 
       match?({:ok, _, _}, Passkeys.authenticate(user, params, challenge)) ->
-        confirmed(socket, session_id)
+        confirmed(socket, session)
 
       true ->
         case Throttle.failed(user, :confirm, meta || %{}) do
@@ -250,13 +260,13 @@ defmodule BrandoAdmin.Reauth do
     end
   end
 
-  defp prompt_event("passkey_error", _params, socket, _session_id), do: {:halt, error(socket, :passkey)}
-  defp prompt_event(_action, _params, socket, _session_id), do: {:halt, socket}
+  defp prompt_event("passkey_error", _params, socket, _session), do: {:halt, error(socket, :passkey)}
+  defp prompt_event(_action, _params, socket, _session), do: {:halt, socket}
 
   defp error(socket, reason), do: Phoenix.Component.update(socket, :reauth, &%{&1 | error: reason})
 
   # Confirmed: carry on with what was asked, or go back to the screen
-  defp confirmed(socket, session_id) do
+  defp confirmed(socket, {session_id, replay}) do
     Users.confirm_session(session_id)
     pending = socket.assigns.reauth
     socket = Phoenix.Component.assign(socket, :reauth, nil)
@@ -266,10 +276,22 @@ defmodule BrandoAdmin.Reauth do
         {:halt, push_navigate(socket, to: return_to)}
 
       %{event: event, params: params} ->
-        case socket.view.handle_event(event, params, socket) do
-          {:noreply, socket} -> {:halt, socket}
-          {:reply, _reply, socket} -> {:halt, socket}
-        end
+        run(replay, event, params, socket)
+    end
+  end
+
+  defp run({module, function, args}, event, params, socket) do
+    case apply(module, function, [event, params, socket | args]) do
+      {:cont, socket} -> run(nil, event, params, socket)
+      {:halt, socket} -> {:halt, socket}
+      {:halt, _reply, socket} -> {:halt, socket}
+    end
+  end
+
+  defp run(nil, event, params, socket) do
+    case socket.view.handle_event(event, params, socket) do
+      {:noreply, socket} -> {:halt, socket}
+      {:reply, _reply, socket} -> {:halt, socket}
     end
   end
 

@@ -11,7 +11,7 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
   require Logger
 
-  def hooks(_params, _, socket, schema) do
+  def hooks(_params, _session, socket, schema, overrides \\ []) do
     if Phoenix.LiveView.connected?(socket) do
       subscribe(schema)
     end
@@ -30,19 +30,34 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       |> assign_create_url(schema)
       |> assign_title()
       |> assign_page_icon()
-      |> attach_hooks(schema)
+      |> attach_hooks(schema, overrides)
 
     {:cont, socket}
   end
 
-  defp attach_hooks(socket, nil) do
+  @doc """
+  Runs a listing event held by `BrandoAdmin.Reauth` once the session has
+  confirmed: the listing's own events here, the view's (`{:cont, socket}`)
+  in its `handle_event/3`.
+  """
+  def replay_event(_event, _params, socket, nil, _overrides), do: {:cont, socket}
+  def replay_event(event, params, socket, schema, overrides), do: listing_event(event, params, socket, schema, overrides)
+
+  defp attach_hooks(socket, nil, _overrides) do
     attach_listing_info_hooks(socket, nil)
   end
 
-  defp attach_hooks(socket, schema) do
+  defp attach_hooks(socket, schema, overrides) do
     socket
-    |> attach_hook(:b_listing_events, :handle_event, &handle_listing_event(&1, &2, &3, schema))
+    |> attach_hook(:b_listing_events, :handle_event, &listing_event(&1, &2, &3, schema, overrides))
     |> attach_listing_info_hooks(schema)
+  end
+
+  # Events the view handles itself (the `overrides` option) pass on to it
+  defp listing_event(event, params, socket, schema, overrides) do
+    if event in overrides,
+      do: {:cont, socket},
+      else: handle_listing_event(event, params, socket, schema)
   end
 
   defp handle_listing_event(

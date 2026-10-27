@@ -1,11 +1,14 @@
 defmodule BrandoAdmin.Users.UserListLive do
   @moduledoc false
-  use BrandoAdmin.LiveView.Listing, schema: Brando.Users.User
-  use Gettext, backend: Brando.Gettext
+  # Disabling, enabling, deleting and restoring users ask for the password, a
+  # code or a passkey when the session has not confirmed lately. A user is
+  # deleted through the transfer dialog, and never duplicated.
+  use BrandoAdmin.LiveView.Listing,
+    schema: Brando.Users.User,
+    step_up: ~w(disable_user enable_user confirm_transfer_delete delete_selected undelete_entry),
+    overrides: ~w(delete_entry duplicate_entry)
 
-  # Disabling, enabling and deleting users ask for the password, a code or a
-  # passkey when the session has not confirmed lately.
-  on_mount({BrandoAdmin.Reauth, events: ~w(disable_user enable_user confirm_transfer_delete)})
+  use Gettext, backend: Brando.Gettext
 
   alias Brando.Users
   alias BrandoAdmin.Components.Content
@@ -206,6 +209,9 @@ defmodule BrandoAdmin.Users.UserListLive do
      |> assign(:content_summary, content_summary)
      |> assign(:user_select_open, false)}
   end
+
+  def handle_event("delete_entry", params, socket), do: handle_event("delete_user", params, socket)
+  def handle_event("duplicate_entry", _params, socket), do: {:noreply, socket}
 
   def handle_event("toggle_user_select", _, socket) do
     {:noreply, assign(socket, :user_select_open, !socket.assigns.user_select_open)}
