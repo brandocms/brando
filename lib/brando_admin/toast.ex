@@ -42,6 +42,12 @@ defmodule BrandoAdmin.Toast do
 
   # Shallow, so updated_at stays a DateTime that encodes as ISO 8601: the
   # lobby channel pushes the payload through the socket's JSON serializer.
-  defp identifier_fields(%_{} = identifier), do: identifier |> Map.from_struct() |> Map.delete(:__meta__)
+  # The title as text: the toast sets it as text, and a HEEx identifier stores it escaped.
+  defp identifier_fields(%_{} = identifier),
+    do: identifier |> Map.from_struct() |> Map.delete(:__meta__) |> identifier_fields()
+
+  defp identifier_fields(%{title: _} = identifier),
+    do: Map.put(identifier, :title, Brando.Content.Identifier.title_text(identifier))
+
   defp identifier_fields(identifier), do: identifier
 end

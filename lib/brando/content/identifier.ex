@@ -61,6 +61,28 @@ defmodule Brando.Content.Identifier do
   def link_url(_), do: nil
 
   @doc """
+  The identifier's title as plain text, for HEEx, an attribute or
+  `textContent` to escape once.
+
+  A HEEx identifier (`identifier ~H"{@entry.title}"`) stores the title
+  escaped, `Rock &amp; Roll`, and HEEx escapes the stored text again. Decoded
+  first, every character is encoded once. Markup in a title comes back as
+  markup, so the result must never reach `raw/1` or `innerHTML` unescaped.
+
+  ## Examples
+
+      iex> Brando.Content.Identifier.title_text(%{title: "Rock &amp; Roll &lt;3"})
+      "Rock & Roll <3"
+
+      iex> Brando.Content.Identifier.title_text(nil)
+      nil
+  """
+  @spec title_text(t() | map() | String.t() | nil) :: String.t() | nil
+  def title_text(%{title: title}), do: title_text(title)
+  def title_text(title) when is_binary(title), do: HtmlEntities.decode(title)
+  def title_text(_), do: nil
+
+  @doc """
   Builds a changeset for persisting an identifier snapshot.
   """
   @spec changeset(t(), map()) :: Ecto.Changeset.t()

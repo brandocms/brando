@@ -1571,7 +1571,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
          %{} = entry <- Brando.Repo.get(schema, entry_id),
          entry = Brando.Repo.preload(entry, schema.__identifier_preloads__()),
          %{title: title} when is_binary(title) and title != "" <- schema.__identifier__(entry) do
-      title
+      Brando.Content.Identifier.title_text(title)
     else
       _ -> nil
     end

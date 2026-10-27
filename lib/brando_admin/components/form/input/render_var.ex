@@ -1392,7 +1392,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       >
         <.status_circle status={@identifier.status} />
       </span>
-      {@link_text || (@identifier && @identifier.title)}
+      {@link_text || Brando.Content.Identifier.title_text(@identifier)}
       <span
         :if={@identifier && @translated_type}
         class="link-kind"
@@ -1480,7 +1480,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
       <:footer>
         <span :if={@link_type == :identifier && @identifier} class="modal-footer-selection">
           <.icon name="link" />
-          <span>{@identifier.title}</span>
+          <span>{Brando.Content.Identifier.title_text(@identifier)}</span>
           <small :if={@identifier.language}>{String.upcase(to_string(@identifier.language))}</small>
         </span>
         <button type="button" class="btn btn--primary" phx-click={hide_modal("#var-#{@field.id}-link-config")}>{gettext(

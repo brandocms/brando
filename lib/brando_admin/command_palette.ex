@@ -289,7 +289,7 @@ defmodule BrandoAdmin.CommandPalette do
     %{
       id: "palette-entry-#{identifier.id}",
       kind: :entry,
-      label: identifier.title,
+      label: Identifier.title_text(identifier),
       url: identifier.schema.__admin_route__(:update, [entry.id]),
       icon: Blueprint.get_icon(identifier.schema),
       cover: identifier.cover,

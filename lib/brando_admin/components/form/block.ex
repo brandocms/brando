@@ -1515,7 +1515,7 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   defp preview_title(module, entry) do
     if function_exported?(module, :__identifier__, 2) do
-      module.__identifier__(entry).title
+      Brando.Content.Identifier.title_text(module.__identifier__(entry))
     else
       Map.get(entry, :title) || Map.get(entry, :name) || "##{Map.get(entry, :id)}"
     end

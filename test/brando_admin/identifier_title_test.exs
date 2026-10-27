@@ -1,0 +1,154 @@
+defmodule BrandoAdmin.IdentifierTitleTest do
+  # A HEEx identifier (`identifier ~H"{@entry.title}"`) stores the entry's
+  # title escaped. The admin screens printing it decode it first, so it is
+  # escaped exactly once and markup in a title stays text.
+  use Brando.ConnCase, async: false
+
+  import Phoenix.Component, only: [sigil_H: 2]
+  import Phoenix.LiveViewTest
+
+  alias Brando.Authorization.{Groups, Migration, Scope}
+  alias Brando.Blueprint.Identifier.HEExTest.HEExIdentifierSchema, as: HEExEntry
+  alias Brando.Content.Identifier
+  alias Brando.Factory
+  alias BrandoAdmin.Components.Content.Identifier, as: IdentifierRow
+  alias BrandoAdmin.Components.Content.SelectIdentifier
+  alias BrandoAdmin.Components.Form.EntryHeader
+  alias BrandoAdmin.Components.Form.Input.Entries
+  alias BrandoAdmin.Components.Form.Input.RenderVar
+  alias Phoenix.Socket.Broadcast
+
+  doctest Brando.Content.Identifier
+
+  @title "Rock & Roll <b>live</b>"
+  # The title escaped once, as the page must carry it
+  @once "Rock &amp; Roll &lt;b&gt;live&lt;/b&gt;"
+
+  defp stored(title), do: title |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
+  defp identifier(attrs \\ %{}) do
+    struct(
+      %Identifier{
+        id: 1,
+        schema: Brando.Pages.Page,
+        entry_id: 1,
+        title: stored(@title),
+        status: :published,
+        language: :en,
+        url: "/rock"
+      },
+      attrs
+    )
+  end
+
+  defp heex_entry, do: %HEExEntry{id: 1, title: @title, language: "en", status: :published}
+
+  defp assert_once(html) do
+    assert html =~ @once
+    refute html =~ "&amp;amp;"
+    refute html =~ "<b>"
+  end
+
+  test "the stored title is escaped by the HEEx identifier" do
+    assert HEExEntry.__identifier__(heex_entry(), skip_cover: true).title == @once <> " [en]"
+  end
+
+  describe "identifier components" do
+    test "a picker row or a selected entry prints the title once escaped" do
+      assigns = %{identifier: identifier()}
+
+      assert_once(rendered_to_string(~H"<IdentifierRow.content identifier={@identifier} />"))
+    end
+
+    test "the destination picker labels its rows with the title as text" do
+      assigns = %{identifier: identifier()}
+
+      html = rendered_to_string(~H"<SelectIdentifier.identifier identifier={@identifier} />")
+      assert html =~ ~s(data-label="#{@once}")
+      assert_once(html)
+
+      html = rendered_to_string(~H"<SelectIdentifier.identifier identifier={@identifier} workspace />")
+      assert html =~ ~s(data-label="#{@once} /rock")
+    end
+
+    test "a related entry row labels itself with the title as text" do
+      assigns = %{identifiers: [identifier()]}
+
+      html = rendered_to_string(~H"<Entries.identifier identifier_id={1} available_identifiers={@identifiers} />")
+      assert html =~ ~s(data-label="#{@once}")
+      assert_once(html)
+    end
+
+    # The link preview in a link var, as the menu form shows a menu item
+    test "a link to an entry shows its title once escaped, and a label as written" do
+      assigns = %{identifier: identifier(), label: "Write &lt;br&gt;"}
+      assert_once(rendered_to_string(~H"<RenderVar.link_identifier identifier={@identifier} />"))
+
+      html = rendered_to_string(~H"<RenderVar.link_identifier identifier={@identifier} link_text={@label} />")
+      assert html =~ "Write &amp;lt;br&amp;gt;"
+    end
+  end
+
+  describe "an entry's own title" do
+    test "the entry header and the frontend editor name it as text" do
+      assert EntryHeader.title(HEExEntry, heex_entry()) == @title <> " [en]"
+      assert Brando.FrontendEdit.Manifest.title(HEExEntry, heex_entry()) == @title <> " [en]"
+    end
+
+    test "the delete dialog names it once escaped" do
+      %{html: html} = BrandoAdmin.LiveView.Listing.DeleteDescription.describe(HEExEntry, heex_entry())
+      assert html =~ "<strong>#{@once} [en]</strong>"
+      refute html =~ "&amp;amp;"
+    end
+  end
+
+  describe "screens reading saved identifiers" do
+    setup do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      owner = Factory.insert(:random_user, role: :superuser)
+      user = Factory.insert(:random_user, role: :user)
+      {:ok, _} = Migration.run()
+      page = Factory.insert(:page, title: @title, status: :published, language: :en)
+
+      Repo.insert!(%Identifier{
+        schema: Brando.Pages.Page,
+        entry_id: page.id,
+        title: stored(@title),
+        status: :published,
+        language: :en,
+        updated_at: DateTime.utc_now(:second)
+      })
+
+      scope = Scope.standalone(owner)
+      {:ok, group} = Groups.create(scope, %{name: "Editors"}, ~w(brando.admin.access brando.pages.read brando.pages.update))
+      {:ok, :ok} = Groups.add_member(scope, group.id, user.id)
+
+      %{user: user, page: page}
+    end
+
+    test "the dashboard and the command palette show the title as text", c do
+      assert [%{title: @title}] = BrandoAdmin.Dashboard.load(c.user).recent
+      assert [%{label: @title}] = BrandoAdmin.CommandPalette.entries(c.user, "rock")
+    end
+
+    test "usage lists and webhook deliveries name the entry as text", c do
+      entry = {Brando.Pages.Page, c.page.id}
+      assert %{^entry => %{label: @title}} = Brando.Content.Usage.labels([entry])
+
+      assert Brando.Webhooks.entry_titles([%{entry_id: c.page.id}]) == %{
+               {to_string(Brando.Pages.Page), c.page.id} => @title
+             }
+    end
+  end
+
+  # The toast sets the title as text
+  test "a mutation toast carries the title as text" do
+    Brando.endpoint().subscribe("lobby")
+    on_exit(fn -> Brando.endpoint().unsubscribe("lobby") end)
+
+    Brando.Notifications.push_mutation("updated", identifier(), :system)
+
+    assert_receive %Broadcast{topic: "lobby", event: "toast", payload: %{payload: %{identifier: %{title: @title}}}}
+  end
+end

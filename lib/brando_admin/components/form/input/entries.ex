@@ -422,7 +422,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     <article
       :if={@identifier}
       data-id={@identifier.id}
-      data-label={@identifier.title}
+      data-label={Brando.Content.Identifier.title_text(@identifier)}
       class={[
         @draggable && "draggable",
         "identifier"
@@ -475,7 +475,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       type="button"
       aria-pressed={to_string(@selected)}
       data-id={@identifier.id}
-      data-label={@identifier.title}
+      data-label={Brando.Content.Identifier.title_text(@identifier)}
       class={[
         "identifier",
         "selectable",
@@ -518,7 +518,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <article
       data-id={@identifier.id}
-      data-label={@identifier.title}
+      data-label={Brando.Content.Identifier.title_text(@identifier)}
       class={[
         "identifier",
         @select && "selectable",
@@ -572,7 +572,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     ~H"""
     <article
       data-id={@identifier.id}
-      data-label={@identifier.title}
+      data-label={Brando.Content.Identifier.title_text(@identifier)}
       class={[
         "draggable",
         "identifier"
@@ -615,7 +615,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       type="button"
       aria-pressed={to_string(@selected)}
       data-id={@identifier.id}
-      data-label={@identifier.title}
+      data-label={Brando.Content.Identifier.title_text(@identifier)}
       class={[
         "identifier",
         "selectable",

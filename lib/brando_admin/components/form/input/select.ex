@@ -371,7 +371,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
       %{
         value: to_string(entry.id),
-        label: identifier.title,
+        label: Brando.Content.Identifier.title_text(identifier),
         status: identifier.status,
         entry: entry,
         origin: Map.get(entry, :library_origin)
@@ -450,7 +450,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
 
   defp extract_label(%{__struct__: _} = entry) do
     identifier = entry.__struct__.__identifier__(entry, skip_cover: true)
-    identifier.title
+    Brando.Content.Identifier.title_text(identifier)
   end
 
   defp extract_label(%{label: label}) do
@@ -507,7 +507,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
       |> assign_new(:target, fn -> nil end)
 
     ~H"""
-    <span class="status-label"><.status_circle status={@identifier.status} /> {@identifier.title}</span>
+    <span class="status-label"><.status_circle status={@identifier.status} /> {Brando.Content.Identifier.title_text(@identifier)}</span>
     <%= if @deletable do %>
       <button
         class="btn btn--sm btn--icon btn--quiet"

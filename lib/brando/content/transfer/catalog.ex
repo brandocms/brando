@@ -183,7 +183,7 @@ defmodule Brando.Content.Transfer.Catalog do
 
   defp describe_title(entry, identifier) do
     title =
-      (identifier && identifier.title) || Map.get(entry, :title) || Map.get(entry, :name) ||
+      Identifier.title_text(identifier) || Map.get(entry, :title) || Map.get(entry, :name) ||
         "#{Brando.Blueprint.get_singular(entry.__struct__)} ##{entry.id}"
 
     if is_map(title),

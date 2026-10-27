@@ -643,7 +643,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
   defp precompute_option(%{__struct__: module} = entry) do
     if function_exported?(module, :__identifier__, 2) do
       identifier = module.__identifier__(entry, skip_cover: true)
-      %{value: to_string(entry.id), label: identifier.title, status: identifier.status, entry: entry}
+      %{value: to_string(entry.id), label: Brando.Content.Identifier.title_text(identifier), status: identifier.status, entry: entry}
     else
       entry
     end
@@ -741,7 +741,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   defp extract_identifier_title(struct) do
     identifier = struct.__struct__.__identifier__(struct, skip_cover: true)
-    identifier.title
+    Brando.Content.Identifier.title_text(identifier)
   rescue
     _ -> nil
   end
@@ -1027,7 +1027,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     %{
       id: "#{id_prefix}-#{id}",
       value: to_string(id),
-      label: identifier.title,
+      label: Brando.Content.Identifier.title_text(identifier),
       status: identifier.status,
       details: language_details(Map.get(entry, :language))
     }
@@ -1157,7 +1157,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     assigns = assign(assigns, :identifier, entry.__struct__.__identifier__(entry, skip_cover: true))
 
     ~H"""
-    <span class="status-label"><.status_circle status={@identifier.status} /> {@identifier.title}</span>
+    <span class="status-label"><.status_circle status={@identifier.status} /> {Brando.Content.Identifier.title_text(@identifier)}</span>
     """
   end
 

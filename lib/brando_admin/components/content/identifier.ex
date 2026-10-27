@@ -41,7 +41,7 @@ defmodule BrandoAdmin.Components.Content.Identifier do
         <span class="identifier-status" data-status={@status} title={status_label(@status)}>
           <i aria-hidden="true"></i><span class="visually-hidden">{status_label(@status)}</span>
         </span>
-        {@identifier.title}
+        {Brando.Content.Identifier.title_text(@identifier)}
       </span>
       <.destination :if={@show_url} identifier={@identifier} class="identifier-url" />
       <span class="identifier-details">
