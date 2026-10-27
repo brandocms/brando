@@ -4404,6 +4404,12 @@ msgstr ""
 msgid "Copied"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment operation"
+msgid "Copied"
+msgstr ""
+
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
 msgid "Copied from %{scope}"
@@ -4881,6 +4887,12 @@ msgstr ""
 #: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
+msgid "Created"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment operation"
 msgid "Created"
 msgstr ""
 
@@ -5430,6 +5442,12 @@ msgstr ""
 #: lib/brando_admin/components/content/select_identifier.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
+msgid "Deleted"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment operation"
 msgid "Deleted"
 msgstr ""
 
@@ -12959,6 +12977,12 @@ msgstr ""
 msgid "Queued"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment job"
+msgid "Queued"
+msgstr ""
+
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Queueing…"
@@ -13997,6 +14021,12 @@ msgstr ""
 msgid "Restored"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment operation"
+msgid "Restored"
+msgstr ""
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Restored a revision"
@@ -14077,6 +14107,12 @@ msgstr ""
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-format, elixir-autogen
+msgid "Retrying"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment job"
 msgid "Retrying"
 msgstr ""
 
@@ -14395,6 +14431,12 @@ msgstr ""
 msgid "Run migration report"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment job"
+msgid "Running"
+msgstr ""
+
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Running in the background"
@@ -14592,6 +14634,18 @@ msgstr ""
 msgid "Saved as %{status}"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment archive"
+msgid "Saved before a copy"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment archive"
+msgid "Saved before a live switch"
+msgstr ""
+
 #: lib/brando_admin/components/form/saved_elsewhere.ex
 #, elixir-autogen, elixir-format
 msgid "Saved elsewhere"
@@ -14708,6 +14762,12 @@ msgstr ""
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
+msgid "Scheduled"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment job"
 msgid "Scheduled"
 msgstr ""
 
@@ -15380,6 +15440,12 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
+msgid "Set live"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "environment operation"
 msgid "Set live"
 msgstr ""
 

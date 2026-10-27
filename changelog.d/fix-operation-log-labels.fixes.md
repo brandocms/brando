@@ -1,0 +1,1 @@
+- The Environments screen names its operations in the admin's language: the operation log reads "Copied" or "Set live" instead of `copy` or `set_live`, recovery archives say which operation they were saved before, and pending operations show their state as "Scheduled", "Queued", "Running" or "Retrying".
