@@ -8207,10 +8207,12 @@ defmodule BrandoAdmin.Components.Form do
   Applies stored focal point and config_target to the new image, then queues
   processing and forwards the result to the block component (if from a block).
   """
-  # A new copy for a locked field is dropped before it is stored
+  # A new copy for a locked field is dropped before it is stored. The field is
+  # the one "Save as new copy" was pressed in (`image_editor_copy_of`), not one
+  # an editor opened since left in `edit_image`.
   def handle_image_editor_upload_progress(:image_editor_upload, entry, socket) do
     cond do
-      edit_asset_locked?(socket, socket.assigns[:edit_image]) ->
+      edit_asset_locked?(socket, socket.assigns[:image_editor_copy_of] || socket.assigns[:edit_image]) ->
         send(self(), {:toast, gettext("This field is locked")})
         {:noreply, cancel_upload(socket, :image_editor_upload, entry.ref)}
 

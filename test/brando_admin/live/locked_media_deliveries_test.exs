@@ -287,7 +287,8 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
         uploading =
           Factory.insert(:video, type: :cloudflare, status: :uploading, remote_id: "cf-uid", creator: ctx.current_user)
 
-        send_form(view, action: :video_upload_complete, video_id: uploading.id)
+        token = BrandoAdmin.Components.Assets.ProviderVideoUpload.upload_token(uploading, ctx.current_user, "ref-2")
+        send_form(view, action: :video_upload_complete, upload: %{"upload_token" => token, "request_ref" => "ref-2"})
         assert Repo.get!(Brando.Videos.Video, uploading.id).status == :processing
 
         assert Ecto.Changeset.get_field(form_assigns(view).form.source, :clip_id) ==
@@ -355,6 +356,38 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
         assert {saved(article).title, saved(article).cover_id} == {"Restored", expected}
       end
     end
+  end
+
+  # The lock is the field's "Save as new copy" was pressed in, though an
+  # image editor opened since (a block's here) replaced `edit_image`
+  test "the image editor's new copy keeps the field it was made in",
+       %{conn: conn, article: article, stored: stored, current_user: user} do
+    other = image(user)
+    {view, _html} = open(conn, article, :locked_media)
+    form_cid = cid_of(view, "#article_form-el")
+
+    send_form(view,
+      action: :update_edit_image,
+      edit_image: %{id: stored.id, path: [], field: :cover, relation_field: nil, image: stored}
+    )
+
+    view
+    |> with_target(form_cid)
+    |> render_hook("image_editor_save", %{"mode" => "new_copy", "focal_x" => 40, "focal_y" => 60})
+
+    send_form(view,
+      action: :update_edit_image,
+      edit_image: %{id: other.id, path: [], field: :cover, relation_field: nil, block_target: "block", image: other}
+    )
+
+    images = Repo.aggregate(Brando.Images.Image, :count)
+    jpeg = File.read!(Path.expand("../../fixtures/sample.jpg", __DIR__))
+
+    view
+    |> file_input("#article_form_form", :image_editor_upload, [%{name: "copy.jpg", content: jpeg, type: "image/jpeg"}])
+    |> render_upload("copy.jpg")
+
+    assert Repo.aggregate(Brando.Images.Image, :count) == images
   end
 
   # `:unless_superuser`: a superuser's delivery is taken, anyone else's not
