@@ -1,0 +1,1 @@
+- `<.entry_link>` and `{% link %}` show a linked entry's title stored by a HEEx identifier (`identifier ~H"{@entry.title}"`) as written: `Rock & Roll` no longer shows as `Rock &amp; Roll`.

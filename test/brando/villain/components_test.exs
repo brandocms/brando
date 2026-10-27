@@ -133,6 +133,27 @@ defmodule Brando.Villain.ComponentsTest do
       assert result =~ ~s(class="link")
       assert result =~ "Brando"
     end
+
+    test "prints an entry link's title once escaped, as a HEEx identifier stores it" do
+      stored = "Rock & Roll's" |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
+      var = %Brando.Content.Var{
+        type: :link,
+        link_type: :identifier,
+        link_text: nil,
+        identifier: %{url: "/rock", title: stored}
+      }
+
+      assigns = %{href: nil, entry: nil, field: :url, var: var, class: nil, inner_block: [], __changed__: %{}}
+      result = rendered_to_string(Components.entry_link(assigns))
+
+      assert result =~ "Rock &amp; Roll&#39;s"
+      refute result =~ "&amp;amp;"
+
+      raw = %{var | identifier: %{url: "/rock", title: "Rooms <b>& suites</b>"}}
+      result = rendered_to_string(Components.entry_link(%{assigns | var: raw}))
+      assert result =~ "Rooms &lt;b&gt;&amp; suites&lt;/b&gt;"
+    end
   end
 
   describe "route/1" do

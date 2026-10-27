@@ -82,6 +82,33 @@ defmodule Brando.Villain.LiquexTest do
              "Footer|"
   end
 
+  test "link tag prints its text escaped once" do
+    render = fn var -> Brando.Villain.parse_and_render("{% link cta %}", Liquex.Context.new(%{"cta" => var})) end
+    label = ~s(<img src=x onerror="document.title='MARKER'"> & more)
+
+    url_var = %Brando.Content.Var{type: :link, key: "cta", link_type: :url, value: "/about", link_text: label}
+    html = render.(url_var)
+    refute html =~ "<img"
+    assert html =~ "&lt;img src=x onerror=&quot;document.title=&#39;MARKER&#39;&quot;&gt; &amp; more</a>"
+
+    # Without a text of its own, an entry link shows the entry's title
+    identifier_var = %Brando.Content.Var{
+      type: :link,
+      key: "cta",
+      link_type: :identifier,
+      link_text: nil,
+      identifier: %{url: "/rooms", title: "Rooms <b>& suites</b>"}
+    }
+
+    assert render.(identifier_var) =~ ">Rooms &lt;b&gt;&amp; suites&lt;/b&gt;</a>"
+
+    # A HEEx identifier (`identifier ~H"{@entry.title}"`) stores the title
+    # escaped; it is encoded once, not twice
+    stored = "Rock & Roll's" |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+    heex_var = %{identifier_var | identifier: %{url: "/rock", title: stored}}
+    assert render.(heex_var) =~ ">Rock &amp; Roll&#39;s</a>"
+  end
+
   test "route tag" do
     tpl =
       """

@@ -275,7 +275,12 @@ defmodule Brando.Villain.Components do
   """
   def entry_link(assigns) do
     var_href = Brando.Villain.Filters.link_url(assigns.var, nil)
-    var_text = Brando.Villain.Filters.link_text(assigns.var, nil)
+    # A HEEx identifier stores the entry's title escaped; HEEx escapes it again
+    var_text =
+      case Brando.Villain.Filters.link_text(assigns.var, nil) do
+        text when is_binary(text) -> HtmlEntities.decode(text)
+        text -> text
+      end
 
     # An address with a script or unknown scheme leaves the link inert
     href = Brando.Villain.Parser.safe_url(assigns.href || var_href || get_in(assigns, [:entry, assigns.field]))

@@ -1,0 +1,1 @@
+- The `{% link %}` tag prints a link's text as text: markup in a link label or in the linked entry's title shows as written instead of rendering.

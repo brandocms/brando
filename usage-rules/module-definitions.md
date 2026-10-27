@@ -88,7 +88,9 @@ With `hero.heex` beside it:
 Exactly one template is required. Use `template_file :liquid, "hero.liquid"`
 for Liquid, or an inline literal such as
 `template :liquid, "<h1>{{ title }}</h1>"`. Relative template paths must stay
-inside the definition directory; symlinks are rejected.
+inside the definition directory; symlinks are rejected. Liquid prints values
+without escaping them: see
+[Writing templates safely](deps/brando/guides/block_editor.md#writing-templates-safely).
 
 The file reader accepts one `defmodule` per `.exs` file, literal values, DSL
 declarations and `use Brando.Content.Definition`. Maps, keyword lists, lists,
