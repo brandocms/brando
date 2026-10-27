@@ -30,3 +30,16 @@ beam-jit-crash log:\[asmjit\] Assertion failed at asmjit/core/jitallocator\.cpp.
 # package <name> in lockfile" before any code is compiled. Seen on #3219
 # (17 Oct 2026, polymorphic_embed); a rerun passes.
 hex-registry-timeout log:Failed to fetch record for [A-Za-z0-9_]+ from registry \(using cache instead\) :timeout .*\*\* \(Mix\) Unknown package [A-Za-z0-9_]+ in lockfile
+
+# AssistantLiveTest's text block proposal: the page shows the model's final
+# reply but not the proposal's "Ready for your review" (CI 19, 26 and 27 Oct
+# 2026, both OTP legs). Checked without finding the cause: the run broadcasts
+# `{:proposal, id}` from the same process before the reply, after the
+# conversation's proposal_id is committed; the view subscribes before the run
+# starts and reloads the conversation on the event; the cassette's tool result
+# has no problems; no preview opens; 160 local runs alone and 31 of the whole
+# module on one scheduler showed it never (one run, under load, timed out
+# waiting for the reply instead). CI cuts the page short, so the assertion
+# now prints the view's proposal, error and run.
+# TEMPORARY (27 Oct 2026): remove once a failure's message names the cause.
+assistant-text-block-proposal a message produces a reviewed proposal that one click applies \(BrandoAdmin\.AssistantLiveTest\).*Ready for your review

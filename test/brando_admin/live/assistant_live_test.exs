@@ -37,6 +37,21 @@ defmodule BrandoAdmin.AssistantLiveTest do
     end
   end
 
+  defp review_state(view) do
+    assigns = :sys.get_state(view.pid).socket.assigns
+    proposal = assigns.proposal && Map.take(assigns.proposal, [:id, :version, :status, :problems])
+
+    "The view holds: " <>
+      inspect(
+        proposal: proposal,
+        error: assigns.error,
+        conversation_proposal: assigns.conversation && assigns.conversation.proposal_id,
+        run: assigns.run && assigns.run.status,
+        receipt?: not is_nil(assigns.receipt),
+        preview?: not is_nil(assigns.preview)
+      )
+  end
+
   test "an empty workspace explains the next step", %{conn: conn} do
     {:ok, _view, html} = live(conn, "/admin/assistant")
     assert html =~ "No proposal yet"
@@ -184,7 +199,9 @@ defmodule BrandoAdmin.AssistantLiveTest do
 
     # The proposal arrives before the model's final reply.
     html = eventually(view, &(&1 =~ "Prepared a text block for Identity."))
-    assert html =~ "Ready for your review"
+    # This has failed in CI without a reproduction: the reply shown, the
+    # proposal not. CI cuts the page short, so say what the view holds.
+    assert html =~ "Ready for your review", review_state(view)
     # A step's search words, content type and version are marked out; the
     # quotes stay with the words, so the font's kerning holds.
     assert has_element?(view, ".assistant-steps li", "Searched for “Ident” in Pages")
