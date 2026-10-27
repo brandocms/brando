@@ -38,7 +38,7 @@ defmodule Brando.ServiceDescriptionTest.IntroPage do
 
   meta_schema do
     field ["description", "og:description"], &fallback(&1, [:meta_description, {:strip_tags, :intro}])
-    # Needs preloads the service read does not load; must not run
+    # Not the description; `only:` must keep it from running
     field "og:image", fn _ -> raise "og:image evaluated" end
   end
 end

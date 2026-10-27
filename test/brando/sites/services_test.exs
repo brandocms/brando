@@ -130,16 +130,18 @@ defmodule Brando.Sites.ServicesTest do
       assert resolve_linked(filled).resolved_description == "Egen metabeskrivelse"
     end
 
-    test "falls back to the block text without a meta_schema description" do
+    test "without a meta_schema description, is the meta description field, else the block text" do
       entry = %PlainPage{
         id: 3,
         title: "Strategi",
-        # Not printed by this blueprint's meta_schema, so not the page's description
-        meta_description: "Upublisert",
+        meta_description: nil,
         rendered_blocks: "<!-- [+:C<23r4Ns9WUlz7Z8SpDsn3Jr>] --><h2>Strategi</h2><p>Vi legger planen.</p>"
       }
 
       assert resolve_linked(entry).resolved_description == "Strategi Vi legger planen."
+
+      filled = %{entry | id: 6, meta_description: "Egen metabeskrivelse"}
+      assert resolve_linked(filled).resolved_description == "Egen metabeskrivelse"
     end
 
     test "gives way to the service's own description" do

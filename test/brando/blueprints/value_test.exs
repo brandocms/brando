@@ -97,6 +97,21 @@ defmodule Brando.Blueprint.ValueTest do
       assert Value.rendered_text(entry) == "Tekst"
     end
 
+    test "a comment marker inside a script, or a script inside a comment, hides nothing else" do
+      entry = %{
+        rendered_blocks:
+          ~s|<script>const marker = "<!--";</script><p>Tjenester</p><!-- [+:C<a>] -->| <>
+            ~s|<!-- <script> --><p>og mer</p><script>go()</script>|
+      }
+
+      assert Value.rendered_text(entry) == "Tjenester og mer"
+    end
+
+    test "keeps the text of custom elements whose names start like script or style" do
+      entry = %{rendered_blocks: "<style-guide><p>Farger</p></style-guide><style>p {}</style><script-x>Tekst</script-x>"}
+      assert Value.rendered_text(entry) == "Farger Tekst"
+    end
+
     test "truncates to the requested length" do
       entry = %{rendered_blocks: "<p>#{String.duplicate("a", 200)}</p>"}
 

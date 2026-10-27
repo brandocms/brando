@@ -96,10 +96,11 @@ defmodule Brando.Blueprint.Value do
   # Comments go first, whole: rendered blocks carry module refs such as
   # `<!-- [+:C<23r4N…>] -->`, whose inner `>` would end the tag match early and
   # leave `] -->` in the text. Script and style bodies are not text either.
+  # One pass, so whichever opens first wins, as in HTML: a `<!--` inside a
+  # script is script, a `<script>` inside a comment is comment.
   defp flatten_html(html) when is_binary(html) do
     html
-    |> String.replace(~r/<!--.*?-->/s, " ")
-    |> String.replace(~r/<(script|style)\b[^>]*>.*?<\/\1\s*>/is, " ")
+    |> String.replace(~r/<!--.*?-->|<(script|style)(?=[\s>\/])[^>]*>.*?<\/\1\s*>/is, " ")
     |> String.replace(~r/<[^>]*>/, " ")
     |> HtmlEntities.decode()
     |> String.replace(~r/\s+/u, " ")

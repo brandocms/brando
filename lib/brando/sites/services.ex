@@ -23,8 +23,8 @@ defmodule Brando.Sites.Services do
   Fills `resolved_url` and `resolved_description` from the service's own
   fields, falling back to the linked entry's URL and to the description its
   page publishes: the blueprint's `meta_schema` `"description"` (which may
-  itself fall back to another field, such as an intro), else the rendered
-  block text.
+  itself fall back to another field, such as an intro), else the entry's
+  `meta_description`, else the rendered block text.
   """
   @spec resolve(Service.t()) :: Service.t()
   def resolve(%Service{} = service) do
@@ -116,20 +116,22 @@ defmodule Brando.Sites.Services do
   defp entry_description(nil), do: nil
 
   defp entry_description(entry) do
-    meta_description(entry) || Value.rendered_text(entry, length: 300)
+    meta_description(entry) || text(Map.get(entry, :meta_description)) ||
+      Value.rendered_text(entry, length: 300)
   end
 
-  # What the page itself prints in `<meta name="description">`. `only:` keeps
-  # the image and other value functions from running on an entry loaded
-  # without their preloads; one that raises is no reason to lose the identity
-  # cache, so it counts as no description.
+  # What the page itself prints in `<meta name="description">`, as the SEO
+  # audit reads it. `only:` runs just the description function, not the image
+  # or URL ones, which may need more than this read (`__meta__`, a creator);
+  # one that raises is no reason to lose the identity cache, so it counts as
+  # no description.
   defp meta_description(%schema{} = entry) do
     schema
     |> Meta.extract_meta(entry, only: ["description"])
     |> List.keyfind("description", 0)
     |> case do
-      {_, description} when is_binary(description) -> description |> String.trim() |> presence()
-      _ -> nil
+      {_, description} -> text(description)
+      nil -> nil
     end
   rescue
     error ->
@@ -142,6 +144,9 @@ defmodule Brando.Sites.Services do
   end
 
   defp meta_description(_entry), do: nil
+
+  defp text(value) when is_binary(value), do: value |> String.trim() |> presence()
+  defp text(_value), do: nil
 
   defp absolute(nil), do: nil
   # An address with a scheme (any case) stays as it is; a path gets the host
