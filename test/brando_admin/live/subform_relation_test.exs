@@ -119,6 +119,29 @@ defmodule BrandoAdmin.SubformRelationTest do
     |> Floki.attribute("value")
   end
 
+  # A form input shows its param before its saved value, so picking the
+  # saved image back drops the param the earlier pick left.
+  test "a row's saved image picked back after another", ctx do
+    first = insert_image(ctx, "first", "First")
+    ctx.item |> Ecto.Changeset.change(cover_id: first.id) |> Repo.update!()
+    second = insert_image(ctx, "second", "Second")
+
+    view = open(ctx)
+    pick(view, second)
+    params = view |> render() |> form_params(@form) |> Map.put("_target", ["article", "items", "0", "cover_id"])
+    view |> element(@form) |> render_change(params)
+    assert row_cover_id(render(view)) == to_string(second.id)
+
+    pick(view, first)
+    assert row_cover_id(render(view)) == to_string(first.id)
+    form = form_assigns(view).form
+    [row] = Phoenix.HTML.FormData.to_form(form.source, form, :items, [])
+    assert Phoenix.HTML.Form.input_value(row, :cover_id) == first.id
+
+    save(view)
+    assert Repo.get!(ArticleItem, ctx.item.id).cover_id == first.id
+  end
+
   test "a row's picked image replacing another stays shown through an edit", ctx do
     first = insert_image(ctx, "first", "First")
     ctx.item |> Ecto.Changeset.change(cover_id: first.id) |> Repo.update!()

@@ -9808,7 +9808,10 @@ defmodule BrandoAdmin.Components.Form do
   # relation back with `put_assoc`, which raises for a row being replaced
   # still in its changes (a row the editor removed), so a row there is
   # changed in place. A path to a row the form no longer shows changes nothing.
-  defp put_key_at(changeset, [], key, value), do: Changeset.put_change(changeset, key, value)
+  # The form shows a param before a saved value, so the key loses the param
+  # the browser sent for it: a value set back to the saved one would show it.
+  defp put_key_at(changeset, [], key, value),
+    do: %{Changeset.put_change(changeset, key, value) | params: drop_param(changeset.params, key)}
 
   defp put_key_at(%Changeset{changes: changes} = changeset, [field, index | rest] = path, key, value)
        when is_atom(field) and is_integer(index) and is_list(:erlang.map_get(field, changes)) do
@@ -9824,7 +9827,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp put_key_at(changeset, path, key, value) do
     case nested_path(changeset, path) do
-      {:ok, _path} -> EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
+      {:ok, path} -> EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
       :error -> changeset
     end
   end
