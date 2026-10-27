@@ -1,0 +1,1 @@
+- An image, file or video delivered to a subform row (picked, uploaded, saved in its drawer, or copied in the image editor) no longer goes to the row below it when a row above is marked for deletion.

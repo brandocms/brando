@@ -12,6 +12,7 @@ defmodule BrandoAdmin.SubformRelationTest do
   alias BrandoAdmin.Components.Form.Input.Video
 
   @form "#article_form_form"
+  @sample Path.expand("../../fixtures/sample.jpg", __DIR__)
   @row_cover ~s(input[name="article[items][0][cover_id]"])
   @row_media "#article_items_0_cover-media"
   @row_clip ~s(input[name="article[items][0][clip_id]"])
@@ -116,6 +117,29 @@ defmodule BrandoAdmin.SubformRelationTest do
     |> Floki.parse_document!()
     |> Floki.find(~s(input[name^="article[items]"][name$="[label]"]))
     |> Floki.attribute("value")
+  end
+
+  # A form input shows its param before its saved value, so picking the
+  # saved image back drops the param the earlier pick left.
+  test "a row's saved image picked back after another", ctx do
+    first = insert_image(ctx, "first", "First")
+    ctx.item |> Ecto.Changeset.change(cover_id: first.id) |> Repo.update!()
+    second = insert_image(ctx, "second", "Second")
+
+    view = open(ctx)
+    pick(view, second)
+    params = view |> render() |> form_params(@form) |> Map.put("_target", ["article", "items", "0", "cover_id"])
+    view |> element(@form) |> render_change(params)
+    assert row_cover_id(render(view)) == to_string(second.id)
+
+    pick(view, first)
+    assert row_cover_id(render(view)) == to_string(first.id)
+    form = form_assigns(view).form
+    [row] = Phoenix.HTML.FormData.to_form(form.source, form, :items, [])
+    assert Phoenix.HTML.Form.input_value(row, :cover_id) == first.id
+
+    save(view)
+    assert Repo.get!(ArticleItem, ctx.item.id).cover_id == first.id
   end
 
   test "a row's picked image replacing another stays shown through an edit", ctx do
@@ -280,6 +304,178 @@ defmodule BrandoAdmin.SubformRelationTest do
 
     assert %{cover: %{path: "image/processed.jpg"}} =
              Enum.find(form_assigns(view).entry.items, &(&1.id == second_id))
+  end
+
+  # A row marked for deletion is still a row of the form until the
+  # browser's next change (`PendingRows` then takes it out), so a delivery's
+  # path counts it. The deliveries write through `put_key_at/4`: the picker,
+  # the upload manager, a provider upload and the image editor's copy
+  # (`commit_entry_field_asset`), and the drawers' saves.
+  describe "a delivery to a row after a row marked for deletion" do
+    setup ctx do
+      {:ok, article} =
+        SyncTest.create_article(
+          %{
+            title: "Example Hotel",
+            slug: "example-hotel",
+            language: "en",
+            status: "published",
+            items: [%{label: "A"}, %{label: "B"}, %{label: "C"}]
+          },
+          ctx.current_user
+        )
+
+      [a, b, c] = article |> Repo.preload(:items) |> Map.get(:items) |> Enum.sort_by(& &1.label)
+      %{article: article, a: a, b: b, c: c}
+    end
+
+    test "a picked image goes on its row", ctx do
+      view = open(ctx)
+      mark_row(view, 0, "true")
+      assert [%{action: :delete}, _, _] = form_rows(view)
+
+      view
+      |> with_target(cid_of(view, ~s(input[name="article[items][2][cover_id]"])))
+      |> render_click("select_image", %{"id" => to_string(ctx.image.id)})
+
+      assert_delivered(view, ctx, ["", "", to_string(ctx.image.id)])
+      save(view)
+      assert saved_covers(ctx) == [{ctx.b.id, nil}, {ctx.c.id, ctx.image.id}]
+    end
+
+    test "an uploaded image goes on its row", ctx do
+      view = open(ctx)
+      mark_row(view, 0, "true")
+
+      deliver_upload(view, [:items, 2], ctx.image)
+      assert_delivered(view, ctx, ["", "", to_string(ctx.image.id)])
+      save(view)
+      assert saved_covers(ctx) == [{ctx.b.id, nil}, {ctx.c.id, ctx.image.id}]
+    end
+
+    # The picker's "edit image" on the third row's field, then the drawer's
+    # save
+    test "an image saved in the row's drawer goes on its row", ctx do
+      view = open(ctx)
+      mark_row(view, 0, "true")
+
+      send_form(view,
+        action: :update_edit_image,
+        edit_image: %{id: nil, path: [:items, 2], field: :cover, relation_field: nil, image: nil}
+      )
+
+      send_form(view, action: :open_image_editor_from_picker, image: ctx.image)
+      view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("save_image", %{"image" => %{}})
+
+      assert_delivered(view, ctx, ["", "", to_string(ctx.image.id)])
+      save(view)
+      assert saved_covers(ctx) == [{ctx.b.id, nil}, {ctx.c.id, ctx.image.id}]
+    end
+
+    # The image editor's "save as new copy" in the third row's drawer
+    test "the image editor's new copy goes on its row", ctx do
+      ctx.c |> Ecto.Changeset.change(cover_id: ctx.image.id) |> Repo.update!()
+      view = open(ctx)
+      mark_row(view, 0, "true")
+
+      send_form(view,
+        action: :update_edit_image,
+        edit_image: %{id: ctx.image.id, path: [:items, 2], field: :cover, relation_field: nil, image: ctx.image}
+      )
+
+      view
+      |> with_target(cid_of(view, "#article_form-el"))
+      |> render_hook("image_editor_save", %{"mode" => "new_copy", "focal_x" => 40, "focal_y" => 60})
+
+      view
+      |> file_input(@form, :image_editor_upload, [%{name: "copy.jpg", content: File.read!(@sample), type: "image/jpeg"}])
+      |> render_upload("copy.jpg")
+
+      copy = Brando.Images.Image |> Ecto.Query.last(:id) |> Repo.one!()
+      assert copy.id != ctx.image.id
+
+      assert [%{action: :delete}, b, c] = form_rows(view)
+      assert {Ecto.Changeset.get_field(b, :cover_id), Ecto.Changeset.get_field(c, :cover_id)} == {nil, copy.id}
+    end
+
+    # The browser's next change after the mark, here taking it back: the row
+    # being removed from the browser's list, `PendingRows` leaves it out
+    # (the form has no input for the mark). A delivery then goes to the third
+    # row wherever the form shows it.
+    test "a row marked and then unmarked", ctx do
+      view = open(ctx)
+      mark_row(view, 0, "true")
+      mark_row(view, 0, "false")
+
+      index = view |> render() |> row_labels() |> Enum.find_index(&(&1 == "C"))
+      deliver_upload(view, [:items, index], ctx.image)
+
+      covers = view |> render() |> row_labels() |> Enum.zip(cover_ids(render(view)))
+      assert {"B", ""} in covers
+      assert {"C", to_string(ctx.image.id)} in covers
+
+      save(view)
+      covers = saved_covers(ctx)
+      assert {ctx.b.id, nil} in covers
+      assert {ctx.c.id, ctx.image.id} in covers
+    end
+
+    # The form right after the delivery, and after the browser's `validate`
+    # that follows it (`b:validate`), which takes the marked row out of the
+    # form.
+    defp assert_delivered(view, ctx, covers) do
+      image_id = ctx.image.id
+      assert_push_event(view, "b:validate", %{target: "article[items][2][cover_id]", value: ^image_id})
+      assert [%{action: :delete}, _, _] = form_rows(view)
+
+      html = render(view)
+      assert cover_ids(html) == covers
+
+      params = html |> form_params(@form) |> Map.put("_target", ["article", "items", "2", "cover_id"])
+      view |> element(@form) |> render_change(params)
+      assert cover_ids(render(view)) == tl(covers)
+    end
+
+    defp mark_row(view, index, marked) do
+      index = to_string(index)
+
+      params =
+        view
+        |> render()
+        |> form_params(@form)
+        |> put_in(["article", "items", index, "marked_as_deleted"], marked)
+        |> Map.put("_target", ["article", "items", index, "marked_as_deleted"])
+
+      view |> element(@form) |> render_change(params)
+    end
+
+    # What the upload manager sends the form when an upload to a row's image
+    # field is stored
+    defp deliver_upload(view, path, image) do
+      send_form(view, event: "entry_field_upload_complete", asset_type: :image, field: :cover, path: path, asset: image)
+    end
+
+    defp send_form(view, message) do
+      Phoenix.LiveView.send_update(view.pid, Form, [id: "article_form"] ++ message)
+      _ = :sys.get_state(view.pid)
+    end
+
+    defp form_rows(view), do: form_assigns(view).form.source.changes.items
+
+    defp cover_ids(html) do
+      html
+      |> Floki.parse_document!()
+      |> Floki.find(~s(#{@form} input[name^="article[items]"][name$="[cover_id]"]))
+      |> Floki.attribute("value")
+    end
+
+    defp saved_covers(%{article: article}) do
+      ArticleItem
+      |> Repo.all()
+      |> Enum.filter(&(&1.article_id == article.id))
+      |> Enum.sort_by(& &1.label)
+      |> Enum.map(&{&1.id, &1.cover_id})
+    end
   end
 
   test "a processed image whose row path is stale leaves the rows alone", ctx do

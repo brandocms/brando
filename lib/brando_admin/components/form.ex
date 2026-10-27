@@ -1966,11 +1966,11 @@ defmodule BrandoAdmin.Components.Form do
   defp commit_unlocked_entry_field_asset(socket, field, path, relation_key, asset) do
     full_path = path ++ [relation_key]
 
+    # The path counts rows as the form shows them, a row marked for deletion
+    # included (`put_key_at/4`).
     updated_changeset =
       socket.assigns.form.source
-      |> apply_changes()
-      |> change()
-      |> EctoNestedChangeset.update_at(full_path, fn _ -> asset.id end)
+      |> put_key_at(path, relation_key, asset.id)
       |> put_asset_in_data(path, field, asset)
 
     socket
@@ -1979,8 +1979,6 @@ defmodule BrandoAdmin.Components.Form do
     |> update_entry_with_relation(path ++ [field], asset)
     |> own_asset(path, relation_key, :id)
     |> Drafts.dirty()
-    # Ship while the FK is still a change — the drawer-save path re-bakes the
-    # changeset (apply_changes/change), after which there is nothing to ship.
     |> ship_all_field_changes()
     |> push_event("b:validate", %{
       target: socket.assigns.singular <> Enum.map_join(full_path, &"[#{&1}]"),
@@ -6272,13 +6270,10 @@ defmodule BrandoAdmin.Components.Form do
 
     edit_file = Map.put(edit_file, :file, updated_file)
     relation_key = relation_field_key(relation_field, field)
-    full_path = path ++ [relation_key]
 
     updated_changeset =
       form.source
-      |> apply_changes()
-      |> change()
-      |> EctoNestedChangeset.update_at(full_path, fn _ -> file.id end)
+      |> put_key_at(path, relation_key, file.id)
       |> put_asset_in_data(path, field, updated_file)
 
     updated_entry = Map.put(entry_or_default, field, updated_file)
@@ -6292,8 +6287,6 @@ defmodule BrandoAdmin.Components.Form do
 
     {:noreply,
      socket
-     # ship BEFORE the re-bake below — apply_changes/change() bakes pending
-     # changes into data, leaving nothing for ship_all_field_changes to see
      |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
      |> refresh_asset_in_preview(path, field, updated_file)
@@ -6421,9 +6414,7 @@ defmodule BrandoAdmin.Components.Form do
 
     updated_changeset =
       form.source
-      |> apply_changes()
-      |> change()
-      |> EctoNestedChangeset.update_at(relation_full_path, fn _ -> image.id end)
+      |> put_key_at(path, relation_key, image.id)
       |> put_asset_in_data(path, field, updated_image)
 
     entrys_current_image = Brando.Utils.try_path(entry_or_default, field_full_path)
@@ -6454,8 +6445,6 @@ defmodule BrandoAdmin.Components.Form do
 
     {:noreply,
      socket
-     # ship BEFORE the re-bake below — apply_changes/change() bakes pending
-     # changes into data, leaving nothing for ship_all_field_changes to see
      |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
      |> refresh_asset_in_preview(path, field, Map.get(updated_entry, field))
@@ -6605,9 +6594,7 @@ defmodule BrandoAdmin.Components.Form do
 
     updated_changeset =
       form.source
-      |> apply_changes()
-      |> change()
-      |> EctoNestedChangeset.update_at(relation_full_path, fn _ -> video.id end)
+      |> put_key_at(path, relation_key, video.id)
       |> put_asset_in_data(path, field, updated_video)
 
     access_field_full_path = Brando.Utils.build_access_path(field_full_path)
@@ -6618,8 +6605,6 @@ defmodule BrandoAdmin.Components.Form do
 
     {:noreply,
      socket
-     # ship BEFORE the re-bake below — apply_changes/change() bakes pending
-     # changes into data, leaving nothing for ship_all_field_changes to see
      |> ship_all_field_changes()
      |> assign(:entry, updated_entry)
      |> refresh_asset_in_preview(path, field, updated_video)
@@ -9021,16 +9006,8 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   def update_changeset(socket, path, key, value) when is_list(path) do
-    # The re-bake below moves pending changes into `data`, where they no
-    # longer read as changes: ship them first.
     socket = ship_all_field_changes(socket)
-
-    changeset =
-      socket.assigns.form.source
-      |> apply_changes()
-      |> change()
-
-    new_changeset = EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
+    new_changeset = put_key_at(socket.assigns.form.source, path, key, value)
 
     socket |> put_written_form(to_form(new_changeset, []))
   end
@@ -9831,7 +9808,10 @@ defmodule BrandoAdmin.Components.Form do
   # relation back with `put_assoc`, which raises for a row being replaced
   # still in its changes (a row the editor removed), so a row there is
   # changed in place. A path to a row the form no longer shows changes nothing.
-  defp put_key_at(changeset, [], key, value), do: Changeset.put_change(changeset, key, value)
+  # The form shows a param before a saved value, so the key loses the param
+  # the browser sent for it: a value set back to the saved one would show it.
+  defp put_key_at(changeset, [], key, value),
+    do: %{Changeset.put_change(changeset, key, value) | params: drop_param(changeset.params, key)}
 
   defp put_key_at(%Changeset{changes: changes} = changeset, [field, index | rest] = path, key, value)
        when is_atom(field) and is_integer(index) and is_list(:erlang.map_get(field, changes)) do
@@ -9847,7 +9827,7 @@ defmodule BrandoAdmin.Components.Form do
 
   defp put_key_at(changeset, path, key, value) do
     case nested_path(changeset, path) do
-      {:ok, _path} -> EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
+      {:ok, path} -> EctoNestedChangeset.update_at(changeset, path ++ [key], fn _ -> value end)
       :error -> changeset
     end
   end
