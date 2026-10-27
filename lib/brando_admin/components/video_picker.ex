@@ -103,8 +103,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
      socket
      |> assign(:upload_progress, nil)
      |> hand_over(handover, video)
-     |> assign_videos()
-     |> assign_folder_state(socket.assigns.current_folder)
+     |> list_added()
      |> push_selection_state()}
   end
 
@@ -361,13 +360,26 @@ defmodule BrandoAdmin.Components.VideoPicker do
     needle = String.downcase(search)
 
     Enum.filter(videos, fn video ->
-      [video.title, video.source_url, video.remote_id, file_name(video)]
+      [video.title, video.source_url, searched_remote_id(video), file_name(video)]
       |> Enum.any?(&(is_binary(&1) and String.contains?(String.downcase(&1), needle)))
     end)
   end
 
+  # An upload's remote id is its stored path, whose folders every upload in
+  # the folder shares: only its file name is searched.
+  defp searched_remote_id(%{type: :upload, remote_id: rid}) when is_binary(rid), do: Path.basename(rid)
+  defp searched_remote_id(video), do: video.remote_id
+
   defp file_name(%{file: %{filename: filename}}) when is_binary(filename), do: Path.basename(filename)
   defp file_name(_video), do: nil
+
+  # A video just added is listed, whatever the search: it may be selected.
+  defp list_added(socket) do
+    socket
+    |> assign(:search, "")
+    |> assign_videos()
+    |> assign_folder_state(socket.assigns.current_folder)
+  end
 
   # -- Video-specific event handlers --
 
@@ -544,8 +556,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
          socket
          |> assign(:library, %{library | items: items, error: nil})
          |> update(:selected_videos, &Enum.uniq([video.id | &1]))
-         |> assign_videos()
-         |> assign_folder_state(socket.assigns.current_folder)
+         |> list_added()
          |> push_selection_state()}
 
       {:error, reason} ->
@@ -729,8 +740,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
         {:noreply,
          socket
          |> hand_over(handover, video)
-         |> assign_videos()
-         |> assign_folder_state(socket.assigns.current_folder)
+         |> list_added()
          |> push_selection_state()}
 
       # Cloudflare and Vimeo record that the file arrived; a refusal leaves
@@ -840,8 +850,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
          |> assign(:creating_video, false)
          |> assign(:show_url_input, false)
          |> update(:selected_videos, &Enum.uniq([video.id | &1]))
-         |> assign_videos()
-         |> assign_folder_state(socket.assigns.current_folder)
+         |> list_added()
          |> push_selection_state()}
 
       {:error, message} when is_binary(message) ->

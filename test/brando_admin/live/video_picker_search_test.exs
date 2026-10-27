@@ -97,6 +97,33 @@ defmodule BrandoAdmin.VideoPickerSearchTest do
     assert view |> element("#video-picker-search-video-picker input") |> render() =~ ~s(value="")
   end
 
+  # An uploaded video's remote id is its stored path: the folder in it
+  # would match every upload, so only its file name counts.
+  test "an uploaded video's folder path doesn't match", %{conn: conn, user: user} do
+    Factory.insert(:upload_video,
+      title: "Stored upload",
+      remote_id: "videos/posts/stored-upload.mp4",
+      config_target: @field_target_string
+    )
+
+    view = open_picker(conn, user)
+    assert "Stored upload" in listed(view)
+
+    assert search(view, "videos/posts") == []
+    assert search(view, "stored-upload") == ["Stored upload"]
+  end
+
+  test "a video added during a search is listed, and the search cleared", %{conn: conn, user: user} do
+    view = open_picker(conn, user)
+    assert search(view, "dawn") == ["Harbour at dawn"]
+
+    video = Factory.insert(:video, title: "Just added", config_target: @field_target_string)
+    Phoenix.LiveView.send_update(view.pid, VideoPicker, id: "video-picker", event: "upload_complete", asset: video)
+
+    assert "Just added" in listed(view)
+    assert view |> element("#video-picker-search-video-picker input") |> render() =~ ~s(value="")
+  end
+
   defp open_picker(conn, user) do
     {:ok, view, _html} = live_isolated(conn, Host, session: %{"user" => user})
     reopen(view)
