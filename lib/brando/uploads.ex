@@ -797,6 +797,10 @@ defmodule Brando.Uploads do
     do: gettext("The video provider could not be reached. Please try again.")
 
   def video_upload_error_message({:error, reason}), do: video_upload_error_message(reason)
+
+  def video_upload_error_message(:no_creator),
+    do: gettext("This upload was not started by an editor, so it cannot be finished here.")
+
   def video_upload_error_message(reason) when is_binary(reason), do: reason
   def video_upload_error_message(reason) when is_atom(reason), do: to_string(reason)
 

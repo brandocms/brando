@@ -247,6 +247,15 @@ defmodule Brando.Videos.Uploaders.VimeoTest do
     end)
   end
 
+  # The provider's report moves a video no editor started; the browser's
+  # completion does not.
+  test "a browser transfer for a video with no creator is refused" do
+    video = "801" |> insert_vimeo_video(:uploading) |> Ecto.Changeset.change(creator_id: nil) |> Brando.Repo.update!()
+
+    assert {:error, :no_creator} = Brando.Videos.Uploader.complete_client_upload(video)
+    assert Brando.Repo.get!(Brando.Videos.Video, video.id).status == :uploading
+  end
+
   test "deletes the remote video, treating 404 as already gone" do
     test_pid = self()
 

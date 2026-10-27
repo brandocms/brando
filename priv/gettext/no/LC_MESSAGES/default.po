@@ -18100,6 +18100,11 @@ msgstr "Oversettelsen er nå kilden."
 msgid "This translation no longer follows a source. Its structure and shared values are edited here."
 msgstr "Denne oversettelsen følger ikke lenger en kilde. Strukturen og de felles verdiene redigeres her."
 
+#: lib/brando/uploads.ex
+#, elixir-autogen, elixir-format
+msgid "This upload was not started by an editor, so it cannot be finished here."
+msgstr "Denne opplastingen ble ikke startet av en redaktør, så den kan ikke fullføres her."
+
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "This uploaded build is serving frontend requests now."

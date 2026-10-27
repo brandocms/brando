@@ -18098,6 +18098,11 @@ msgstr ""
 msgid "This translation no longer follows a source. Its structure and shared values are edited here."
 msgstr ""
 
+#: lib/brando/uploads.ex
+#, elixir-autogen, elixir-format
+msgid "This upload was not started by an editor, so it cannot be finished here."
+msgstr ""
+
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "This uploaded build is serving frontend requests now."

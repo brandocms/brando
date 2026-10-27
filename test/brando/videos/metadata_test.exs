@@ -164,14 +164,17 @@ defmodule Brando.Videos.MetadataTest do
     end)
 
     Brando.Repo.update_all(Ecto.Query.from(u in Brando.Users.User, where: u.id == ^user.id), set: [role: :user])
+    Brando.endpoint().subscribe("user:#{user.id}")
 
     assert :ok = perform_job(Brando.Worker.VideoMetadata, %{"video_id" => video.id, "user_id" => user.id})
     video = Brando.Videos.Video |> Brando.Repo.get!(video.id) |> Brando.Repo.preload(:thumbnail)
 
     assert video.title == "Example Harbour"
     assert video.thumbnail.status == :processed
-    # The user it was looked up for is still the thumbnail's creator
+    # The user it was looked up for is still the thumbnail's creator, and its
+    # processing (progress, the completed callback) is theirs
     assert video.thumbnail.creator_id == user.id
+    assert_received %Phoenix.Socket.Broadcast{event: "progress:show"}
   end
 
   # Asked for again while the first lookup still waits (the queue is busy,
