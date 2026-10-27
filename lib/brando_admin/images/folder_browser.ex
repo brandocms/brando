@@ -248,6 +248,17 @@ defmodule BrandoAdmin.Images.FolderBrowser do
     end
   end
 
+  @doc """
+  The id of the stored folder `folder` (relative to `upload_root`, or
+  absolute), or nil. Unlike `folder_id_for/2` it never creates one.
+  """
+  def find_folder_id(folder, upload_root \\ nil) do
+    with {scope, relative} <- storage_location(folder, upload_root),
+         %Folder{id: id} <- get_folder(scope, relative),
+         do: id,
+         else: (_ -> nil)
+  end
+
   # Folders are stored under the top-level scope ("images", "videos") with
   # the rest as their path, whoever creates them. `folder` is relative to
   # `upload_root` or already absolute. Pickers are rooted at a field's upload

@@ -1,0 +1,5 @@
+- With group authorization, the image and video pickers in an entry form delete, rename and move library media, and create folders, only for people with the delete or update grant on that media; the controls are hidden from everyone else.
+- With group authorization, moving images, videos and files between folders, pasting them into one and creating folders in the media libraries take the update grant; people who may only read a library no longer see those controls.
+- With group authorization, editing a gallery variable takes the update grant on galleries (create for a new gallery), and the editor writes only the gallery the variable stores, not one named in a crafted form submission.
+- With group authorization, adding and removing translation links (alternates) from the listing or the entry form takes the update grant on both entries; `Alternate.add/3` and `delete/3` take the acting user.
+- With group authorization, adding a video from a URL in the picker, duplicating an image and saving an edited image as a new copy take the create grant on that media.

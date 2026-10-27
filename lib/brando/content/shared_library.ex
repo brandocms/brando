@@ -72,9 +72,12 @@ defmodule Brando.Content.SharedLibrary do
     end
   end
 
-  @doc "Atomically replaces one site's allowlist for a library kind."
-  def set_enabled(%Site{} = site, kind, ids) when kind in @kinds and is_list(ids) do
-    with :ok <- authorize_shared(:system), do: do_set_enabled(site, kind, ids)
+  @doc """
+  Atomically replaces one site's allowlist for a library kind, on behalf of
+  `user`, who needs `update` on the shared library.
+  """
+  def set_enabled(%Site{} = site, kind, ids, user \\ :system) when kind in @kinds and is_list(ids) do
+    with :ok <- authorize_shared(user), do: do_set_enabled(site, kind, ids)
   end
 
   defp do_set_enabled(site, kind, ids) do
@@ -88,15 +91,15 @@ defmodule Brando.Content.SharedLibrary do
     end
   end
 
-  def enable(%Site{} = site, kind, id) when kind in @kinds do
+  def enable(%Site{} = site, kind, id, user \\ :system) when kind in @kinds do
     ids = [normalize_id!(id) | MapSet.to_list(enabled_ids(site, kind))]
-    set_enabled(site, kind, ids)
+    set_enabled(site, kind, ids, user)
   end
 
-  def disable(%Site{} = site, kind, id) when kind in @kinds do
+  def disable(%Site{} = site, kind, id, user \\ :system) when kind in @kinds do
     id = normalize_id!(id)
     ids = site |> enabled_ids(kind) |> MapSet.delete(id) |> MapSet.to_list()
-    set_enabled(site, kind, ids)
+    set_enabled(site, kind, ids, user)
   end
 
   def enabled?(%Site{} = site, kind, id) when kind in @kinds do

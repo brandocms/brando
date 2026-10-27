@@ -13,6 +13,7 @@ defmodule Brando.Media.Folders do
   """
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Authorization.Boundary
   alias Brando.Content.Transfer.{Catalog, Error}
   alias Brando.Media.Folder
   alias Brando.Repo
@@ -22,6 +23,8 @@ defmodule Brando.Media.Folders do
 
   # Hidden folders live under their own scope, outside every library root
   @hidden_scope "hidden"
+
+  @asset_schemas [Brando.Images.Image, Brando.Videos.Video, Brando.Files.File]
 
   @doc """
   The id of the hidden folder `name`, created on first use.
@@ -47,6 +50,43 @@ defmodule Brando.Media.Folders do
           _ -> Repo.get_by!(Folder, scope: @hidden_scope, path: name).id
         end
     end
+  end
+
+  @doc """
+  Moves the `schema` assets `ids` (images, videos or files) to a library
+  folder on behalf of `actor`, who needs `:update` on `schema`. With groups
+  authorization only the assets the actor may update move.
+
+  `folder` is the folder's id (`nil` for the library root), or a function
+  returning it, called once the actor may move `schema` assets, so a refused
+  move creates no folder. Returns `{:ok, moved}` or `{:error, :forbidden}`.
+  """
+  @spec move(module(), [integer()], integer() | nil | (-> integer() | nil), term()) ::
+          {:ok, non_neg_integer()} | {:error, :forbidden}
+  def move(schema, ids, folder, actor) when schema in @asset_schemas and is_list(ids) do
+    # Resolved outside the move's transaction: creating a folder another
+    # editor creates at the same time falls back to theirs, which a failed
+    # insert inside a transaction could not.
+    with :ok <- Boundary.authorize(actor, :update, schema) do
+      folder_id = if is_function(folder, 0), do: folder.(), else: folder
+      move_to(schema, ids, folder_id, actor)
+    end
+  end
+
+  defp move_to(schema, ids, folder_id, actor) do
+    Boundary.run(actor, :update, schema, fn _user ->
+      timestamp = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
+
+      allowed =
+        Boundary.with_query_action(:update, schema, fn ->
+          from(a in schema, where: a.id in ^ids, select: a.id) |> Boundary.query(schema) |> Repo.all()
+        end)
+
+      {moved, _} =
+        Repo.update_all(from(a in schema, where: a.id in ^allowed), set: [folder_id: folder_id, updated_at: timestamp])
+
+      {:ok, moved}
+    end)
   end
 
   @doc "Ids of every hidden (non-library) folder."

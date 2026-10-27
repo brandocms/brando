@@ -4,11 +4,12 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   (ImageListLive, FileListLive, VideoListLive).
   """
 
-  import Ecto.Query, only: [from: 2]
-
   require Phoenix.LiveView
 
+  use Gettext, backend: Brando.Gettext
+
   alias Brando.Authorization.Boundary
+  alias Brando.Media.Folders
   alias BrandoAdmin.Components.Assets.SortByUse
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.Media.Sweep
@@ -28,11 +29,14 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
     patch_folder_filter(socket, folder_id)
   end
 
-  @doc "Creates a new folder and navigates to it."
+  @doc """
+  Creates a new folder and navigates to it. Organizing the library takes
+  `:update` on the view's asset schema.
+  """
   def create_folder(socket, folder_name) do
     cleaned = FolderBrowser.normalize_folder(folder_name)
 
-    if cleaned do
+    if cleaned && Boundary.authorize(socket.assigns.current_user, :update, socket.assigns.schema) == :ok do
       absolute =
         if socket.assigns.current_folder in ["", nil] do
           cleaned
@@ -57,6 +61,17 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
     else
       socket
     end
+  end
+
+  @doc """
+  The id of the folder to open from a client-named `folder`. It is created
+  if need be only for someone who may organize the library: opening a
+  folder is reading.
+  """
+  def folder_id_to_open(socket, folder) do
+    if Boundary.authorize(socket.assigns.current_user, :update, socket.assigns.schema) == :ok,
+      do: FolderBrowser.folder_id_for(folder, socket.assigns.upload_root),
+      else: FolderBrowser.find_folder_id(folder, socket.assigns.upload_root)
   end
 
   @doc "Patches the URL to filter by the given folder."
@@ -131,12 +146,23 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
       String.starts_with?(normalized_folder || "", (normalized_root || "") <> "/")
   end
 
-  @doc "Moves entries to a target folder by updating their folder_id."
-  def move_entries_to_folder(schema_module, ids, folder_id) when is_list(ids) do
-    timestamp = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+  @doc """
+  Moves the `schema_module` entries `ids` to `folder` (relative to the upload
+  root, created if need be) as the view's user, who needs `:update` on
+  `schema_module` (`Brando.Media.Folders.move/4`). Returns `:ok`, or says the
+  user may not and returns `{:error, :forbidden}`.
+  """
+  def move_entries_to_folder(socket, schema_module, ids, folder) when is_list(ids) do
+    folder_id = fn -> FolderBrowser.folder_id_for(folder, socket.assigns.upload_root) end
 
-    from(entry in schema_module, where: entry.id in ^ids)
-    |> Brando.Repo.update_all(set: [folder_id: folder_id, updated_at: timestamp])
+    case Folders.move(schema_module, ids, folder_id, socket.assigns.current_user) do
+      {:ok, _moved} ->
+        :ok
+
+      {:error, reason} ->
+        send(self(), {:toast, gettext("You do not have permission for this action.")})
+        {:error, reason}
+    end
   end
 
   @doc "Broadcasts a listing update for the given schema."
@@ -339,9 +365,11 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
     Component.assign(socket, :deleting_unused?, false)
   end
 
-  defp delete_assets(:image, ids, _user) do
-    Brando.Images.delete_images(ids)
-    length(ids)
+  defp delete_assets(:image, ids, user) do
+    case Brando.Images.delete_images(ids, user) do
+      {:error, _} -> 0
+      {count, _} -> count
+    end
   end
 
   defp delete_assets(:video, ids, user), do: Enum.count(ids, &match?({:ok, _}, Brando.Videos.delete_video(&1, user)))

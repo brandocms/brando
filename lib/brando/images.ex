@@ -24,6 +24,7 @@ defmodule Brando.Images do
 
   import Ecto.Query
 
+  alias Brando.Authorization.Boundary
   alias Brando.Images
   alias Brando.Images.Image
   alias Brando.Repo
@@ -301,12 +302,19 @@ defmodule Brando.Images do
   end
 
   @doc """
-  Delete `ids` from database
-  Also deletes all dependent image sizes.
+  Soft-deletes the images `ids` on behalf of `actor`, who needs `:delete` on
+  images. With groups authorization only the images the actor may delete go;
+  `{:error, :forbidden}` without the grant.
   """
-  def delete_images(ids) when is_list(ids) do
-    q = from m in Image, where: m.id in ^ids
-    Repo.soft_delete_all(q)
+  def delete_images(ids, actor \\ :system) when is_list(ids) do
+    Boundary.run(actor, :delete, Image, fn _user ->
+      allowed =
+        Boundary.with_query_action(:delete, Image, fn ->
+          from(m in Image, where: m.id in ^ids, select: m.id) |> Boundary.query(Image) |> Repo.all()
+        end)
+
+      Repo.soft_delete_all(from(m in Image, where: m.id in ^allowed))
+    end)
   end
 
   @doc "Returns the image orientation for dimensions or an image-like map."
@@ -378,7 +386,17 @@ defmodule Brando.Images do
     {:ok, %{formats: _formats, sizes: _sizes}} = get_config_for(image)
   end
 
+  @doc """
+  Copies the image `image_id`, file and all, on behalf of `user`, who needs
+  to read it and `:create` images.
+  """
   def duplicate_image(image_id, user) do
+    with :ok <- Boundary.authorize(user, :create, Image),
+         :ok <- Boundary.authorize_record(user, :read, Image, image_id),
+         do: do_duplicate_image(image_id, user)
+  end
+
+  defp do_duplicate_image(image_id, user) do
     original_image = get_image!(image_id)
     new_file = Brando.Utils.unique_filename(original_image.path)
 

@@ -19890,9 +19890,17 @@ msgstr "Du kan ikke redigere dette"
 msgid "You changed it too. The form shows your version, and saving replaces the saved one with it."
 msgstr "Du endret det også. Skjemaet viser din versjon, og når du lagrer, erstatter den den lagrede."
 
+#: lib/brando_admin/components/content/list/row.ex
+#: lib/brando_admin/components/file_picker.ex
+#: lib/brando_admin/components/form.ex
+#: lib/brando_admin/components/form/alternates_drawer.ex
+#: lib/brando_admin/components/form/input/render_var.ex
+#: lib/brando_admin/components/image_picker.ex
 #: lib/brando_admin/components/module_files.ex
+#: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/content/module_list_live.ex
 #: lib/brando_admin/live/users/user_list_live.ex
+#: lib/brando_admin/live_view/asset_list_helpers.ex
 #, elixir-autogen, elixir-format
 msgid "You do not have permission for this action."
 msgstr "Du har ikke tilgang til denne handlingen."

@@ -64,7 +64,40 @@ defmodule Brando.Trait.Translatable.Compiler do
             Ecto.Changeset.cast(struct, params, [:entry_id, :linked_entry_id])
           end
 
-          def add(id, parent_id) do
+          @doc """
+          Links the entries `id` and `parent_id` as alternates of each
+          other, on behalf of `actor`, who needs `:update` on both.
+          """
+          def add(id, parent_id, actor \\ :system) do
+            authorized(actor, id, parent_id, fn -> do_add(id, parent_id) end)
+          end
+
+          @doc """
+          Unlinks the entries `id` and `parent_id`, on behalf of `actor`,
+          who needs `:update` on both.
+          """
+          def delete(id, parent_id, actor \\ :system) do
+            authorized(actor, id, parent_id, fn -> do_delete(id, parent_id) end)
+          end
+
+          defp authorized(actor, id, parent_id, fun) do
+            Brando.Authorization.Boundary.run(
+              actor,
+              :update,
+              unquote(parent_module),
+              &run_authorized(&1, id, parent_id, fun)
+            )
+          end
+
+          defp run_authorized(user, id, parent_id, fun) do
+            alias Brando.Authorization.Boundary
+
+            with :ok <- Boundary.authorize_record(user, :update, unquote(parent_module), id),
+                 :ok <- Boundary.authorize_record(user, :update, unquote(parent_module), parent_id),
+                 do: fun.()
+          end
+
+          defp do_add(id, parent_id) do
             changesets = [
               changeset(%__MODULE__{}, %{"entry_id" => id, "linked_entry_id" => parent_id}),
               changeset(%__MODULE__{}, %{"entry_id" => parent_id, "linked_entry_id" => id})
@@ -80,7 +113,7 @@ defmodule Brando.Trait.Translatable.Compiler do
             :ok
           end
 
-          def delete(id, parent_id) do
+          defp do_delete(id, parent_id) do
             res =
               Brando.Repo.delete_all(
                 from q in __MODULE__,

@@ -637,7 +637,7 @@ different site domains.
 > routinely hold different rows pointing at the same `path`.
 >
 > Brando therefore soft-deletes asset rows and never removes media bytes:
-> `Brando.Images.delete_images/1` marks `deleted_at`, and
+> `Brando.Images.delete_images/2` marks `deleted_at`, and
 > `Brando.Images.Utils.delete_original_and_sized_images/1` has no callers. The
 > upload reapers only clear abandoned direct-upload objects that never became
 > assets.

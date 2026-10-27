@@ -238,8 +238,17 @@ defmodule BrandoAdmin.Authorization do
        when event in ["delete_entry", "delete_selected", "delete_user", "confirm_transfer_delete", "delete_unused"],
        do: :delete
 
-  # The media libraries' "Sort by use" moves assets between folders.
-  defp event_action(_, event) when event in ["sweep_apply", "sweep_undo"], do: :update
+  # The media libraries' "Sort by use", drag, paste and new folder organize
+  # the library: they move assets between folders and create folders.
+  defp event_action(_, event)
+       when event in [
+              "sweep_apply",
+              "sweep_undo",
+              "assets_move_selected_to_folder",
+              "assets_paste_selected",
+              "assets_create_folder"
+            ],
+       do: :update
 
   defp event_action(_, event)
        when event in [
@@ -258,6 +267,14 @@ defmodule BrandoAdmin.Authorization do
   defp event_action(_, "import_modules"), do: :create
   defp event_action(_, event) when event in ["disable_user", "enable_user"], do: :update
   defp event_action(_, _), do: nil
+
+  @doc """
+  The user this admin view's process acts for: the authorization scope with
+  groups, the user the view mounted with in legacy mode, else nil. For
+  LiveComponents, which may not be given the user, and whose events this
+  module's event check does not see.
+  """
+  def current_actor, do: Boundary.current_scope() || Process.get(@legacy_actor_key)
 
   @doc """
   Presentation checks against the current administration scope; in legacy

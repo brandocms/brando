@@ -112,7 +112,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
         </div>
 
         <button
-          :if={!@show_new_folder_form}
+          :if={@allow_new_folder and !@show_new_folder_form}
           type="button"
           class="new-folder-trigger"
           phx-click={@show_new_folder_event}
@@ -123,7 +123,7 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
         </button>
 
         <form
-          :if={@show_new_folder_form}
+          :if={@allow_new_folder and @show_new_folder_form}
           phx-submit={@create_folder_event}
           phx-target={@target}
           class="new-folder-form"
@@ -205,6 +205,8 @@ defmodule BrandoAdmin.Components.Assets.FileBrowser do
     |> assign_new(:show_recent_folders, fn -> true end)
     |> assign_new(:child_folders, fn -> [] end)
     |> assign_new(:show_new_folder_form, fn -> false end)
+    # Off for someone who may not organize the library
+    |> assign_new(:allow_new_folder, fn -> true end)
     |> assign_new(:new_folder, fn -> "" end)
     |> assign_new(:go_root_event, fn -> "go_root" end)
     # Up and Root stay enabled at the root: the picker leads them above it

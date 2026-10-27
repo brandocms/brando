@@ -7,7 +7,11 @@ defmodule BrandoAdmin.Components.PickerHelpers do
 
   ## Usage
 
-      use BrandoAdmin.Components.PickerHelpers
+      use BrandoAdmin.Components.PickerHelpers, schema: Brando.Images.Image
+
+  `schema` is the picker's asset type. Creating a folder and moving assets
+  organize the library and take `:update` on it, checked for the picker's
+  `current_user`; `can_organize?` says whether the controls show.
 
   ## Required callbacks
 
@@ -22,7 +26,9 @@ defmodule BrandoAdmin.Components.PickerHelpers do
 
   alias BrandoAdmin.Images.FolderBrowser
 
-  defmacro __using__(_opts) do
+  defmacro __using__(opts) do
+    schema = Keyword.fetch!(opts, :schema)
+
     quote do
       import BrandoAdmin.Components.PickerFolders, only: [folder_under_root?: 2]
 
@@ -44,7 +50,7 @@ defmodule BrandoAdmin.Components.PickerHelpers do
       end
 
       def handle_event("go_folder", %{"folder" => folder}, socket) do
-        {:noreply, set_current_folder(socket, folder)}
+        {:noreply, open_folder(socket, folder)}
       end
 
       def handle_event("go_parent_folder", _, %{assigns: %{current_folder: ""}} = socket) do
@@ -63,30 +69,17 @@ defmodule BrandoAdmin.Components.PickerHelpers do
 
       def handle_event("go_recent_folder", %{"folder" => folder}, socket) do
         relative = FolderBrowser.relative_folder(folder, socket.assigns.upload_root)
-        {:noreply, set_current_folder(socket, relative)}
+        {:noreply, open_folder(socket, relative)}
       end
 
       def handle_event("create_folder", %{"folder" => %{"name" => folder_name}}, socket) do
         cleaned = FolderBrowser.normalize_folder(folder_name)
 
         socket =
-          if cleaned do
-            current = socket.assigns.current_folder
-            relative = if current in ["", nil], do: cleaned, else: Path.join(current, cleaned)
-            custom_folders = Enum.uniq([relative | socket.assigns.custom_folders])
-
-            case FolderBrowser.create_folder(relative, socket.assigns.upload_root) do
-              {:ok, _folder} ->
-                socket
-                |> assign(:custom_folders, custom_folders)
-                |> set_current_folder(relative)
-                |> assign(:show_new_folder_form, false)
-
-              {:error, _reason} ->
-                socket
-            end
-          else
-            socket
+          cond do
+            is_nil(cleaned) -> socket
+            not may_organize?(socket) -> not_permitted(socket)
+            true -> create_picker_folder(socket, cleaned)
           end
 
         {:noreply, assign(socket, :new_folder, "")}
@@ -101,6 +94,47 @@ defmodule BrandoAdmin.Components.PickerHelpers do
          socket
          |> assign(:new_folder, "")
          |> assign(:show_new_folder_form, false)}
+      end
+
+      # A folder the picker does not list is opened, and so created for an
+      # upload to it, only by someone who may organize the library
+      defp open_folder(socket, folder) do
+        known? = (FolderBrowser.normalize_folder(folder) || "") in socket.assigns.folders
+
+        if known? or may_organize?(socket),
+          do: set_current_folder(socket, folder),
+          else: socket
+      end
+
+      defp create_picker_folder(socket, name) do
+        current = socket.assigns.current_folder
+        relative = if current in ["", nil], do: name, else: Path.join(current, name)
+        custom_folders = Enum.uniq([relative | socket.assigns.custom_folders])
+
+        case FolderBrowser.create_folder(relative, socket.assigns.upload_root) do
+          {:ok, _folder} ->
+            socket
+            |> assign(:custom_folders, custom_folders)
+            |> set_current_folder(relative)
+            |> assign(:show_new_folder_form, false)
+
+          {:error, _reason} ->
+            socket
+        end
+      end
+
+      # -- Authorization --
+
+      defp may_organize?(%{assigns: %{current_user: %{} = user}}),
+        do: Brando.Authorization.Boundary.authorize(user, :update, unquote(schema)) == :ok
+
+      defp may_organize?(_socket), do: false
+
+      defp assign_can_organize(socket), do: assign(socket, :can_organize?, may_organize?(socket))
+
+      defp not_permitted(socket) do
+        send(self(), {:toast, gettext("You do not have permission for this action.")})
+        socket
       end
 
       # -- Folder state helpers --

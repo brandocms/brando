@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.FilePicker do
   @moduledoc false
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
-  use BrandoAdmin.Components.PickerHelpers
+  use BrandoAdmin.Components.PickerHelpers, schema: Brando.Files.File
 
   alias Brando.Utils
   alias BrandoAdmin.Components.Assets.FileBrowser
@@ -52,12 +52,15 @@ defmodule BrandoAdmin.Components.FilePicker do
     {:ok,
      socket
      |> assign_defaults()
-     |> assign(assigns)}
+     |> assign(assigns)
+     |> assign_can_organize()}
   end
 
   defp assign_defaults(socket) do
     socket
     |> assign_new(:multi, fn -> false end)
+    |> assign_new(:current_user, fn -> nil end)
+    |> assign_new(:can_organize?, fn -> false end)
     |> assign_new(:files, fn -> [] end)
     |> assign_new(:config_target, fn -> nil end)
     |> assign_new(:event_target, fn -> nil end)
@@ -208,6 +211,7 @@ defmodule BrandoAdmin.Components.FilePicker do
           child_folders={@child_folders}
           show_new_folder_form={@show_new_folder_form}
           new_folder={@new_folder}
+          allow_new_folder={@can_organize?}
           main_id={"file-picker-main-#{@id}"}
         >
           <:main_header>

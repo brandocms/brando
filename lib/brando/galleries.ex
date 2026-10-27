@@ -8,6 +8,7 @@ defmodule Brando.Galleries do
 
   import Ecto.Query
 
+  alias Brando.Authorization.Boundary
   alias Brando.Galleries.Gallery
   alias Brando.Users.User
 
@@ -64,14 +65,55 @@ defmodule Brando.Galleries do
   mutation :delete, Gallery
 
   @doc """
-  Create new gallery
+  Creates a gallery on behalf of `user`, who needs `:create` on galleries.
   """
-  @spec create_gallery(params, user) :: {:ok, Gallery.t()} | {:error, changeset}
+  @spec create_gallery(params, user) :: {:ok, Gallery.t()} | {:error, changeset | :forbidden}
   def create_gallery(params, user) do
+    Boundary.run(user, :create, Gallery, &insert_gallery(params, &1))
+  end
+
+  defp insert_gallery(params, user) do
     %Gallery{}
     |> Gallery.changeset(params, user)
     |> Brando.Repo.insert()
   end
+
+  @doc """
+  Saves a gallery's objects as a gallery var's editor changes them, on behalf
+  of `user`: updates `gallery` (`:update` on galleries), or creates one when
+  it is `nil` (`:create`). Entries showing the gallery are rendered again.
+  """
+  @spec save_gallery(Gallery.t() | nil, params, user) :: {:ok, Gallery.t()} | {:error, changeset | :forbidden}
+  def save_gallery(nil, params, user) do
+    with {:ok, gallery} <- create_gallery(params, user) do
+      Brando.Content.Blocks.render_entries_with_gallery_id(gallery.id)
+      {:ok, gallery}
+    end
+  end
+
+  def save_gallery(%Gallery{} = gallery, params, user) do
+    Boundary.run(user, :update, Gallery, fn user ->
+      changeset = Gallery.changeset(gallery, params, user)
+
+      with :ok <- Boundary.change(user, :update, changeset),
+           {:ok, gallery} <- Brando.Repo.update(changeset) do
+        Brando.Content.Blocks.render_entries_with_gallery_id(gallery.id)
+        {:ok, gallery}
+      end
+    end)
+  end
+
+  @doc """
+  Whether anything stored uses the gallery: a block var or ref, or an
+  entry's gallery field.
+  """
+  def gallery_in_use?(gallery_id) do
+    used_by?(Brando.Content.Var, gallery_id) or used_by?(Brando.Content.Ref, gallery_id) or
+      list_gallery_asset_usage(gallery_id) != %{}
+  end
+
+  defp used_by?(schema, gallery_id),
+    do: Brando.Repo.one(from(s in schema, where: s.gallery_id == ^gallery_id, select: 1, limit: 1)) == 1
 
   @gallery_preloads [gallery_objects: [:image, video: [:thumbnail]]]
 
@@ -110,7 +152,9 @@ defmodule Brando.Galleries do
         |> Map.put(:sequence, index)
       end)
 
-    case create_gallery(%{config_target: gallery.config_target, gallery_objects: objects}, user) do
+    # Part of copying the content that holds the gallery, which is authorized
+    # as a whole: no gallery grant of its own.
+    case insert_gallery(%{config_target: gallery.config_target, gallery_objects: objects}, user) do
       {:ok, new_gallery} -> get_gallery(%{matches: %{id: new_gallery.id}, preload: @gallery_preloads})
       {:error, _} = error -> error
     end

@@ -60,7 +60,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
                   phx-click={
                     JS.push("remove_entry",
                       target: @myself,
-                      value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id}
+                      value: %{id: identifier.entry_id}
                     )
                   }
                 >
@@ -102,7 +102,7 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
               select={
                 JS.push("select_entry",
                   target: @myself,
-                  value: %{schema: @entry.__struct__, parent_id: @entry.id, id: identifier.entry_id}
+                  value: %{id: identifier.entry_id}
                 )
               }
             />
@@ -131,34 +131,51 @@ defmodule BrandoAdmin.Components.Form.AlternatesDrawer do
     {:noreply, socket}
   end
 
-  # The links are the edited entry's: its schema, never one the event names
-  def handle_event("select_entry", %{"parent_id" => parent_id, "id" => id}, socket) do
-    alternate_schema = Module.concat(socket.assigns.entry.__struct__, Alternate)
-    _ = alternate_schema.add(id, parent_id)
+  # Links are made to the entries this drawer offered, of the entry's own
+  # schema, and take `:update` on both entries.
+  def handle_event("select_entry", %{"id" => id}, socket) do
+    entry = socket.assigns.entry
+    offered = socket.assigns[:entries_identifiers] || []
 
-    {:noreply, add_identifier(socket, id)}
+    with %{} = identifier <- Enum.find(offered, &(to_string(&1.entry_id) == to_string(id))),
+         :ok <- alternate(entry).add(identifier.entry_id, entry.id, actor(socket)) do
+      {:noreply, add_identifier(socket, identifier)}
+    else
+      error -> {:noreply, refused(socket, error)}
+    end
   end
 
-  def handle_event("remove_entry", %{"parent_id" => parent_id, "id" => id}, socket) do
-    alternate_schema = Module.concat(socket.assigns.entry.__struct__, Alternate)
-    _ = alternate_schema.delete(id, parent_id)
+  def handle_event("remove_entry", %{"id" => id}, socket) do
+    entry = socket.assigns.entry
 
-    {:noreply, delete_identifier(socket, id)}
+    case alternate(entry).delete(id, entry.id, actor(socket)) do
+      {:error, _} = error -> {:noreply, refused(socket, error)}
+      _ -> {:noreply, delete_identifier(socket, id)}
+    end
   end
 
   def handle_event("store_alternates", _, socket) do
     # new identifiers here must be linked to eachother.
     identifiers = socket.assigns.new_identifiers
-    schema = socket.assigns.entry.__struct__
-    alternate_schema = Module.concat(schema, Alternate)
-    link_entries(identifiers, &alternate_schema.add/2)
+    alternate = alternate(socket.assigns.entry)
+    actor = actor(socket)
+    link_entries(identifiers, &alternate.add(&1, &2, actor))
 
     {:noreply, assign(socket, :new_identifiers, [])}
   end
 
-  def add_identifier(socket, identifier_id) do
-    identifier = Enum.find(socket.assigns.entries_identifiers, &(&1.entry_id == identifier_id))
+  defp alternate(entry), do: Module.concat(entry.__struct__, Alternate)
 
+  defp actor(socket), do: socket.assigns[:current_user] || BrandoAdmin.Authorization.current_actor()
+
+  defp refused(socket, {:error, :forbidden}) do
+    send(self(), {:toast, gettext("You do not have permission for this action.")})
+    socket
+  end
+
+  defp refused(socket, _), do: socket
+
+  def add_identifier(socket, identifier) do
     socket
     |> assign(:identifiers, socket.assigns.identifiers ++ [identifier])
     |> update(:new_identifiers, fn new_identifiers -> new_identifiers ++ [identifier.entry_id] end)
