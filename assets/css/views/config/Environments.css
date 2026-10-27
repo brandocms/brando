@@ -432,6 +432,15 @@
     }
   }
 
+  .environment-log__reason {
+    @font main;
+    display: block;
+    margin-top: 4px;
+    color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+    font-size: var(--brando-text-sm);
+    white-space: normal;
+  }
+
   /* Kept as a table cell: display:flex on a <td> drops it out of table layout,
      which detached its bottom border from the rest of the row. */
   td.environment-actions {
@@ -513,6 +522,13 @@
     @font mono;
     font-size: var(--brando-text-sm);
     font-weight: 500;
+  }
+
+  .environment-log__heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
   }
 
   .environment-archive__meta {

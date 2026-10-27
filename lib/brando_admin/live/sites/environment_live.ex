@@ -340,7 +340,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               <tbody>
                 <tr :for={log <- @operation_logs} id={"environment-log-#{log.id}"}>
                   <td>
-                    <span class="environment-log__operation">{operation_label(log.operation)}</span>
+                    <%!-- Scheduled, then cancelled when it was due instead of run --%>
+                    <span class="environment-log__heading">
+                      <span class="environment-log__operation">{operation_label(log.operation)}</span>
+                      <span :if={log.cancelled_reason} class="badge badge--error">{gettext("Cancelled")}</span>
+                    </span>
+                    <span :if={log.cancelled_reason} class="environment-log__reason">{cancel_reason(log)}</span>
                   </td>
                   <td>
                     <code :if={log.target_environment}>{log.target_environment.key}</code>
@@ -795,6 +800,15 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         job.worker
     end
   end
+
+  defp cancel_reason(%{cancelled_reason: :scheduler_not_authorized, creator: %{name: name}}),
+    do:
+      gettext("Not run: %{name}, who scheduled it, may no longer copy or switch this site's environments.",
+        name: name
+      )
+
+  defp cancel_reason(%{cancelled_reason: :scheduler_not_authorized}),
+    do: gettext("Not run: the account that scheduled it may no longer copy or switch this site's environments.")
 
   defp environment_name(environments, id) do
     case Enum.find(environments, &(to_string(&1.id) == to_string(id))) do

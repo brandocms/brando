@@ -3123,6 +3123,7 @@ msgstr "Avbryte planlagt publisering for denne versjonen?"
 msgid "Cancel this pending environment operation?"
 msgstr "Avbryte denne ventende miljøoperasjonen?"
 
+#: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-format, elixir-autogen
 msgid "Cancelled"
@@ -11247,6 +11248,16 @@ msgstr "Ikke publisert som planlagt: brukeren som planla den, har ikke lenger lo
 #, elixir-autogen, elixir-format
 msgid "Not required"
 msgstr "Ikke påkrevd"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not run: %{name}, who scheduled it, may no longer copy or switch this site's environments."
+msgstr "Ikke kjørt: %{name}, som planla den, kan ikke lenger kopiere eller sette live miljøene til dette nettstedet."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not run: the account that scheduled it may no longer copy or switch this site's environments."
+msgstr "Ikke kjørt: kontoen som planla den, kan ikke lenger kopiere eller sette live miljøene til dette nettstedet."
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format

@@ -805,8 +805,11 @@ account that may promote the site's environments (in legacy mode, an admin or
 superuser of the site). A job whose creator has since lost that, or whose
 account is disabled or deleted, is cancelled and changes nothing: it leaves the
 list of scheduled operations, ends in Oban as cancelled with the reason
-`:scheduler_not_authorized`, and a warning is logged. A job scheduled without a
-creator runs as the system.
+`:scheduler_not_authorized`, and a warning is logged. The site's operation log
+records it with its operation, environment, note and creator, its
+`cancelled_reason` set, and the Environments screen shows it there as
+Cancelled, with who scheduled it and why. A job scheduled without a creator
+runs as the system.
 
 The dedicated `environment_operations` queue runs one expensive schema
 operation at a time. Per-site advisory locks remain the final concurrency

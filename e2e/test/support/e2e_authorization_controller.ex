@@ -92,6 +92,30 @@ defmodule E2EAuthorizationController do
     json(conn, %{ok: true})
   end
 
+  # After "setup": a live switch of Alpha's staging, cancelled when it was
+  # due because the editor who scheduled it no longer may (the Environments
+  # screen's operation log)
+  defp perform(conn, %{"action" => "cancelled-operation"}) do
+    editor = Repo.get_by!(Brando.Users.User, email: "editor@brandocms.com")
+    alpha = Registry.get_site_by_key("auth-alpha")
+    staging = Registry.get_environment_by_key(alpha, "staging")
+
+    log =
+      Repo.insert!(
+        %Brando.Environments.OperationLog{
+          site_id: alpha.id,
+          target_environment_id: staging.id,
+          creator_id: editor.id,
+          operation: :set_live,
+          note: "Friday release",
+          cancelled_reason: :scheduler_not_authorized
+        },
+        prefix: "public"
+      )
+
+    json(conn, %{log_id: log.id})
+  end
+
   defp site(name, key) do
     {:ok, site} =
       Registry.create_site(%{

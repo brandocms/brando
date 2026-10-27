@@ -3123,6 +3123,7 @@ msgstr ""
 msgid "Cancel this pending environment operation?"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-format, elixir-autogen
 msgid "Cancelled"
@@ -11246,6 +11247,16 @@ msgstr ""
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not required"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not run: %{name}, who scheduled it, may no longer copy or switch this site's environments."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not run: the account that scheduled it may no longer copy or switch this site's environments."
 msgstr ""
 
 #: lib/brando_admin/components/form.ex

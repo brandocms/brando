@@ -171,6 +171,38 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     refute has_element?(view, "#environment-job-#{job.id}")
   end
 
+  # Scheduled by someone who may no longer promote the site's environments:
+  # the open screen's operation log shows it cancelled, and why
+  test "shows a scheduled operation cancelled when it was due", %{conn: conn, site: site} do
+    {:ok, preview} = Environments.create_environment(site, %{name: "Preview", key: "preview-cancelled"})
+    scheduler = Brando.Factory.insert(:random_user, role: :user, name: "Sam Scheduler")
+
+    {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+    job =
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, job} =
+          %{site_id: site.id, environment_id: preview.id, creator_id: scheduler.id}
+          |> Brando.Worker.EnvironmentSetLive.new()
+          |> Oban.insert()
+
+        assert %{cancelled: 1} = Oban.drain_queue(queue: :environment_operations)
+        job
+      end)
+
+    refute has_element?(view, "#environment-job-#{job.id}")
+
+    [log] =
+      Brando.Repo.all(from(l in OperationLog, where: l.site_id == ^site.id and not is_nil(l.cancelled_reason)),
+        prefix: "public"
+      )
+
+    row = "#environment-log-#{log.id}"
+    assert has_element?(view, "#{row} .badge--error")
+    assert has_element?(view, "#{row} .environment-log__reason", "Sam Scheduler")
+    assert has_element?(view, "#{row} code", "preview-cancelled")
+  end
+
   defmodule RaisingSchemaCloner do
     @behaviour Brando.Environments.SchemaCloner
 
