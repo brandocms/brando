@@ -180,7 +180,7 @@ fi
 
 # The assistant entry matches its assertion's diagnostic, not a later step
 # that fails with the same page on screen
-check assistant-proposal-flake.log 'known flake: assistant-text-block-proposal — rerun with: gh run rerun 20 --failed'
+check assistant-proposal-flake.log "known flake: assistant-text-block-proposal — rerun with: gh run rerun $((id + 1)) --failed"
 check assistant-proposal-real.log 'real failure: test a message produces a reviewed proposal that one click applies (BrandoAdmin.AssistantLiveTest)'
 
 if [ "$failures" -gt 0 ]; then

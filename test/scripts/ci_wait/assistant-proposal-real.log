@@ -1,14 +1,15 @@
 2026-10-27T09:00:00.0000000Z Running ExUnit with seed: 1234, max_cases: 8
 2026-10-27T09:00:01.0000000Z .........................................................
 2026-10-27T09:00:02.0000000Z   1) test a message produces a reviewed proposal that one click applies (BrandoAdmin.AssistantLiveTest)
-2026-10-27T09:00:03.0000000Z ##[error]     test/brando_admin/live/assistant_live_test.exs:229
-2026-10-27T09:00:04.0000000Z      The view never rendered what the test waited for. Last render:
-2026-10-27T09:00:05.0000000Z      <section class="assistant-review"><h2>Ready for your review</h2><button>Apply</button></section>
+2026-10-27T09:00:03.0000000Z ##[error]     test/brando_admin/live/assistant_live_test.exs:197
+2026-10-27T09:00:04.0000000Z      Timed out waiting for the view. Last render:
+2026-10-27T09:00:05.0000000Z      <section class="assistant-review"><h2>Ready for your review</h2><button class="assistant-apply">Apply</button></section>
 2026-10-27T09:00:06.0000000Z      stacktrace:
-2026-10-27T09:00:07.0000000Z        test/brando_admin/live/assistant_live_test.exs:229: (test)
-2026-10-27T09:00:08.0000000Z 
-2026-10-27T09:00:09.0000000Z Finished in 664.6 seconds (50.1s async, 614.5s sync)
-2026-10-27T09:00:10.0000000Z 
-2026-10-27T09:00:11.0000000Z Result: 5073/5074 passed (165/165 doctests, 4908/4909 tests)
-2026-10-27T09:00:12.0000000Z Failed: 1 test
-2026-10-27T09:00:13.0000000Z ##[error]Process completed with exit code 2.
+2026-10-27T09:00:07.0000000Z        test/brando_admin/live/assistant_live_test.exs:34: BrandoAdmin.AssistantLiveTest.eventually/3
+2026-10-27T09:00:08.0000000Z        test/brando_admin/live/assistant_live_test.exs:222: (test)
+2026-10-27T09:00:09.0000000Z 
+2026-10-27T09:00:10.0000000Z Finished in 664.6 seconds (50.1s async, 614.5s sync)
+2026-10-27T09:00:11.0000000Z 
+2026-10-27T09:00:12.0000000Z Result: 5073/5074 passed (165/165 doctests, 4908/4909 tests)
+2026-10-27T09:00:13.0000000Z Failed: 1 test
+2026-10-27T09:00:14.0000000Z ##[error]Process completed with exit code 2.

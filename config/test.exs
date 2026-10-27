@@ -103,8 +103,9 @@ config :brando, BrandoIntegration.Repo,
   # queue target (100 ms by default). A live view reloading its permissions
   # while the test held the connection in a transaction then crashed, and took
   # the test down with it, on loaded CI runners. A wait here is not overload.
-  # The cost: a real deadlock on the sandbox connection fails after 10-15 s,
-  # as a call timeout, instead of at once.
+  # The cost: a real deadlock on the sandbox connection fails after 10-15 s
+  # (dropped from the queue, or a caller's own call timeout first) instead
+  # of after about 100 ms.
   queue_target: 5_000,
   queue_interval: 5_000,
   # We don't run a server during test. If one is required,
