@@ -335,6 +335,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/brando/content/stale_blocks.ex
+#: lib/brando_admin/components/form/input/gallery.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
 #: lib/brando_admin/live/calendar_live.ex
@@ -3369,6 +3370,7 @@ msgstr ""
 msgid "Checkbox"
 msgstr ""
 
+#: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Checked"
@@ -9350,6 +9352,7 @@ msgstr ""
 msgid "Locale"
 msgstr ""
 
+#: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/components/form/primitives.ex
 #, elixir-autogen, elixir-format
 msgid "Locked"
@@ -11178,6 +11181,7 @@ msgstr ""
 msgid "Not available in this installation"
 msgstr ""
 
+#: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not checked"
@@ -11279,6 +11283,7 @@ msgstr ""
 #: lib/brando_admin/components/content/list/row.ex
 #: lib/brando_admin/components/content/select_identifier.ex
 #: lib/brando_admin/components/form/entry_header.ex
+#: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/live/command_palette_live.ex
 #: lib/brando_admin/live/search_live.ex
 #, elixir-autogen, elixir-format
@@ -11581,6 +11586,7 @@ msgid "Occupation"
 msgstr ""
 
 #: lib/brando/users/user.ex
+#: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #: lib/brando_admin/live/sites/mcp_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -11610,6 +11616,7 @@ msgid "Offline"
 msgstr ""
 
 #: lib/brando/users/user.ex
+#: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/components/form/video_drawer.ex
 #: lib/brando_admin/live/sites/integrations_live.ex
 #: lib/brando_admin/live/sites/mcp_live.ex

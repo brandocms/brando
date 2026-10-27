@@ -102,7 +102,15 @@
 .translation-structure { color: var(--translation-ink); }
 
 /* Locked by Brando.TranslationWork in a synchronized translation. */
-.field-wrapper[data-source-locked] { opacity: .6; }
+.field-wrapper[data-source-locked] {
+  opacity: .6;
+
+  /* Rich text is read only (TranslationWork): nothing to format or reset */
+  .tiptap-wrapper .tiptap-menu,
+  .tiptap-wrapper .override-reset-button {
+    display: none;
+  }
+}
 
 [data-source-structure] {
   .subform-delete,

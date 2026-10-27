@@ -29,8 +29,8 @@ test('a translation opens with its pending version, is reviewed and saved', asyn
 
   // The pending year is in the form, and what follows the source is locked.
   await expect(page.locator('input[name="article[year]"]')).toHaveValue('2024')
-  // A text input is read only; another control is inert, and its label
-  // reads out its value. Neither label passes a click on.
+  // A text input is read only and keeps its label; another control is
+  // inert, and its label reads out its value and passes no click on.
   const year = page.locator('#article_year-field-wrapper')
   await expect(year).toHaveAttribute('data-source-locked', 'true', { timeout: 5000 })
   await expect(year.locator('input[name="article[year]"]')).toHaveAttribute('readonly', '')
@@ -38,9 +38,8 @@ test('a translation opens with its pending version, is reviewed and saved', asyn
   const featured = page.locator('#article_featured-field-wrapper')
   await expect(featured).toHaveAttribute('data-source-locked', 'true')
   await expect(featured.locator(':scope > .field-base')).toHaveAttribute('inert', '')
-  for (const field of [year, featured]) {
-    await expect(field.locator(':scope > .label-wrapper > label')).not.toHaveAttribute('for')
-  }
+  await expect(year.locator(':scope > .label-wrapper > label')).toHaveAttribute('for', 'article_year')
+  await expect(featured.locator(':scope > .label-wrapper > label')).not.toHaveAttribute('for')
   const featuredValue = featured.locator(':scope > .label-wrapper .field-value')
   await expect(featuredValue).not.toBeEmpty()
   expect(await featuredValue.evaluate(el => getComputedStyle(el).display)).not.toBe('none')

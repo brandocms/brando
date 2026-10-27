@@ -9,9 +9,9 @@
  * hidden. The server refuses those changes on save regardless.
  *
  * A locked field keeps its label and value readable, as a field locked by its
- * own `readonly:` does: text inputs become read-only, any other control goes
- * inert, and the label reads out the value the field renders as text
- * (`.field-value`, shown by `[data-source-locked]`).
+ * own `readonly:` does: text inputs and rich text become read-only, any other
+ * control goes inert, and the label reads out the value the field renders as
+ * text (`.field-value`, shown by `[data-source-locked]`).
  *
  * A block can also carry a note (`data-notes`, text by block uid), shown in
  * the block as `data-translation-note`, e.g. which linked entries it waits for.
@@ -79,15 +79,16 @@ export default () => ({
     const set = (el, name, value = '') => el.getAttribute(name) !== value && this.js().setAttribute(el, name, value)
     set(wrapper, 'data-source-locked', 'true')
 
-    // A label's click would reach its control
-    const label = wrapper.querySelector(':scope > .label-wrapper > label')
-    if (label?.hasAttribute('for')) this.js().removeAttribute(label, 'for')
-
     const header = wrapper.querySelector(':scope > .label-wrapper > .field-wrapper-header')
     if (header) set(header, 'inert')
 
     const base = wrapper.querySelector(':scope > .field-base')
     if (!base) return set(wrapper, 'inert')
+
+    // Rich text stops taking edits itself (the TipTap hook watches the
+    // attribute); Translation.css hides its toolbar and reset button
+    const richText = base.querySelector('[data-tiptap-readonly]')
+    if (richText) return set(richText, 'data-tiptap-readonly', 'true')
 
     const controls = [...base.querySelectorAll('input:not([type="hidden"]), textarea, select, button, [contenteditable]')]
     const texts = controls.filter(el => el.matches('input.text, textarea.text'))
@@ -97,6 +98,9 @@ export default () => ({
       texts.forEach(el => set(el, 'readonly'))
     } else {
       set(base, 'inert')
+      // Its click would reach the inert control
+      const label = wrapper.querySelector(':scope > .label-wrapper > label')
+      if (label?.hasAttribute('for')) this.js().removeAttribute(label, 'for')
     }
   },
 

@@ -168,10 +168,9 @@ defmodule BrandoAdmin.Components.Form.LockedInputsTest do
       assert value_text(html) == ", Not set"
     end
 
-    test "renders unlocked as well, for a translation's source lock, except a code editor's" do
+    test "renders unlocked as well, for a translation's source lock" do
       assert value_text(render_top_level(:featured, :toggle, [], @editor)) == ", On"
-      # Its text changes with every keystroke
-      assert value_text(render_top_level(:key, :code, [], @editor)) == nil
+      assert value_text(render_top_level(:key, :code, [], @editor)) == ", <p>{{ entry.title }}</p>"
     end
 
     test "a text input, read only, needs none" do

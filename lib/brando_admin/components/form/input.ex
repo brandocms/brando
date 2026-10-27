@@ -86,8 +86,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       locked={@locked}
     >
-      <%!-- Only while locked: the text changes with every keystroke --%>
-      <:value :if={@locked}>{value_text(@field.value)}</:value>
+      <:value>{value_text(@field.value)}</:value>
       <div
         id={"#{@field.id}-code"}
         class="code-editor"
