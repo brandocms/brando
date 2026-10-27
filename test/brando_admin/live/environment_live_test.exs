@@ -149,6 +149,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     assert [listed_job] = Environments.list_scheduled_operations(site)
     assert listed_job.id == job.id
     assert has_element?(view, "#environment-job-#{job.id}", "Copy Production → Spring Redesign")
+    assert has_element?(view, "#environment-job-#{job.id} .environment-state", "Scheduled")
 
     view
     |> element("#environment-job-#{job.id} button", "Cancel")
