@@ -75,7 +75,7 @@ defmodule BrandoAdmin.Components.Form.Translation do
   defp build(schema, entry, state, previous, user) do
     %{member: member, source: source, pending: pending} = state
     entry_id = entry.id
-    payload = pending && Translations.decode_payload(pending)
+    payload = pending && Translations.pending_content(pending, entry)
 
     %{
       schema: schema,

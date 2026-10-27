@@ -1,0 +1,1 @@
+- Saving a synchronized translation that is in the trash keeps its trash URI: the pending version no longer writes back the URL it had before the trash, which another page may hold now.
