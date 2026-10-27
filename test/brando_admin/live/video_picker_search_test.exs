@@ -18,6 +18,8 @@ defmodule BrandoAdmin.VideoPickerSearchTest do
 
     def render(assigns), do: ~H"<div id={@id}></div>"
 
+    # A video handed to the field
+    def update(%{event: "select_video"}, socket), do: {:ok, socket}
     def update(assigns, socket), do: {:ok, assign(socket, assigns)}
   end
 
@@ -113,15 +115,29 @@ defmodule BrandoAdmin.VideoPickerSearchTest do
     assert search(view, "stored-upload") == ["Stored upload"]
   end
 
-  test "a video added during a search is listed, and the search cleared", %{conn: conn, user: user} do
+  test "a video added here during a search is listed, and the search cleared", %{conn: conn, user: user} do
+    # Uploads to the server, through the picker's upload trigger
+    put_test_env(:default_video_upload_strategy, :local)
     view = open_picker(conn, user)
     assert search(view, "dawn") == ["Harbour at dawn"]
 
     video = Factory.insert(:video, title: "Just added", config_target: @field_target_string)
-    Phoenix.LiveView.send_update(view.pid, VideoPicker, id: "video-picker", event: "upload_complete", asset: video)
+    deliver_upload(view, video, ref: picker_attribute(view, "data-ref"), expected_asset_id: "none")
 
     assert "Just added" in listed(view)
     assert view |> element("#video-picker-search-video-picker input") |> render() =~ ~s(value="")
+  end
+
+  # An upload started in an earlier opening goes to that opening's field;
+  # the search on screen is for this one.
+  test "an upload for another opening keeps the search", %{conn: conn, user: user} do
+    view = open_picker(conn, user)
+    assert search(view, "dawn") == ["Harbour at dawn"]
+
+    video = Factory.insert(:video, title: "Just added", config_target: @field_target_string)
+    deliver_upload(view, video, ref: "vp-0", expected_asset_id: "none")
+
+    assert listed(view) == ["Harbour at dawn"]
   end
 
   defp open_picker(conn, user) do
@@ -138,6 +154,24 @@ defmodule BrandoAdmin.VideoPickerSearchTest do
       multi: false,
       selected_videos: []
     )
+  end
+
+  # What the upload manager delivers to the picker once a server upload is stored
+  defp deliver_upload(view, video, opts) do
+    Phoenix.LiveView.send_update(
+      view.pid,
+      VideoPicker,
+      [id: "video-picker", event: "upload_complete", asset: video] ++ opts
+    )
+  end
+
+  defp picker_attribute(view, attribute) do
+    view
+    |> render()
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query("#video-uploader-video-picker")
+    |> LazyHTML.attribute(attribute)
+    |> List.first()
   end
 
   defp search(view, text) do

@@ -103,7 +103,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
      socket
      |> assign(:upload_progress, nil)
      |> hand_over(handover, video)
-     |> list_added()
+     |> list_added(video)
      |> push_selection_state()}
   end
 
@@ -373,10 +373,13 @@ defmodule BrandoAdmin.Components.VideoPicker do
   defp file_name(%{file: %{filename: filename}}) when is_binary(filename), do: Path.basename(filename)
   defp file_name(_video), do: nil
 
-  # A video just added is listed, whatever the search: it may be selected.
-  defp list_added(socket) do
+  # A video just added and selected here is listed, whatever the search. One
+  # handed to another opening's target leaves the search on screen alone.
+  defp list_added(socket, video) do
+    selected? = Enum.any?(socket.assigns.selected_videos, &same_item_id?(&1, video.id))
+
     socket
-    |> assign(:search, "")
+    |> assign(:search, if(selected?, do: "", else: socket.assigns.search))
     |> assign_videos()
     |> assign_folder_state(socket.assigns.current_folder)
   end
@@ -556,7 +559,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
          socket
          |> assign(:library, %{library | items: items, error: nil})
          |> update(:selected_videos, &Enum.uniq([video.id | &1]))
-         |> list_added()
+         |> list_added(video)
          |> push_selection_state()}
 
       {:error, reason} ->
@@ -740,7 +743,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
         {:noreply,
          socket
          |> hand_over(handover, video)
-         |> list_added()
+         |> list_added(video)
          |> push_selection_state()}
 
       # Cloudflare and Vimeo record that the file arrived; a refusal leaves
@@ -850,7 +853,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
          |> assign(:creating_video, false)
          |> assign(:show_url_input, false)
          |> update(:selected_videos, &Enum.uniq([video.id | &1]))
-         |> list_added()
+         |> list_added(video)
          |> push_selection_state()}
 
       {:error, message} when is_binary(message) ->
