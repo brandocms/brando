@@ -13,7 +13,8 @@ defmodule Brando.Worker.EnvironmentSetLive do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"environment_id" => environment_id} = args} = job) do
     with environment when not is_nil(environment) <- Registry.get_environment(environment_id),
-         true <- Brando.Environments.scheduler_authorized?(args["creator_id"], environment.site_id) || {:forbidden, environment},
+         true <-
+           Brando.Environments.scheduler_authorized?(args["creator_id"], environment.site_id) || {:forbidden, environment},
          {:ok, _live_environment} <-
            Brando.Environments.set_live(environment,
              creator_id: args["creator_id"],

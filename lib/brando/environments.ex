@@ -448,8 +448,10 @@ defmodule Brando.Environments do
     end
   end
 
-  # Set on a job cancelled when it ran (`cancel_unauthorized/3`)
+  # Set on a job cancelled when it ran (`cancel_unauthorized/3`), with the
+  # attempt it was cancelled in
   @cancel_reason_key "cancelled_because"
+  @cancel_attempt_key "cancelled_attempt"
 
   @doc "Lists pending copy/live-switch jobs for a site."
   @spec list_scheduled_operations(Site.t()) :: [Oban.Job.t()]
@@ -460,12 +462,13 @@ defmodule Brando.Environments do
 
     # One cancelled as it ran is no longer pending, though Oban may not have
     # marked it yet (`cancel_unauthorized/3`). Run again (rescued, retried by
-    # hand), it is.
+    # hand), in a later attempt, it is.
     from(job in Oban.Job,
       where:
         job.worker in ^workers and job.state in ^states and
           fragment("?->>'site_id' = ?", job.args, ^site_id) and
-          not (job.state == "executing" and not is_nil(fragment("?->>?", job.meta, @cancel_reason_key))),
+          not (job.state == "executing" and
+                 fragment("coalesce((?->>?)::int = ?, false)", job.meta, @cancel_attempt_key, job.attempt)),
       order_by: [asc: job.scheduled_at, asc: job.id]
     )
     |> Repo.all(@public_opts)
@@ -503,7 +506,11 @@ defmodule Brando.Environments do
     # after; until then it would still show as pending. A job run outside a
     # queue (`perform_job/2`) has no row.
     if job.id do
-      meta = Map.put(job.meta || %{}, @cancel_reason_key, "scheduler_not_authorized")
+      meta =
+        (job.meta || %{})
+        |> Map.put(@cancel_reason_key, "scheduler_not_authorized")
+        |> Map.put(@cancel_attempt_key, job.attempt)
+
       Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), [set: [meta: meta]], @public_opts)
     end
 

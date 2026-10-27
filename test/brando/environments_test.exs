@@ -538,16 +538,21 @@ defmodule Brando.EnvironmentsTest do
     test "a job being cancelled is no longer listed as pending", %{site: site} = ctx do
       Oban.Testing.with_testing_mode(:manual, fn ->
         {:ok, job} = Environments.schedule_set_live(ctx.target, DateTime.add(DateTime.utc_now(), 3600, :second))
-        Brando.Repo.update_all(from_job(job), [set: [state: "executing"]], prefix: "public")
+        Brando.Repo.update_all(from_job(job), [set: [state: "executing", attempt: 1]], prefix: "public")
         assert [_] = Environments.list_scheduled_operations(site)
 
-        assert {:cancel, :scheduler_not_authorized} = Environments.cancel_unauthorized(job, :set_live, ctx.target)
+        assert {:cancel, :scheduler_not_authorized} =
+                 Environments.cancel_unauthorized(%{job | attempt: 1}, :set_live, ctx.target)
+
         assert Environments.list_scheduled_operations(site) == []
 
-        # Rescued or retried by hand, it is pending again
+        # Rescued or retried by hand, it is pending again, and running again
         Brando.Repo.update_all(from_job(job), [set: [state: "available"]], prefix: "public")
         assert [%{id: job_id}] = Environments.list_scheduled_operations(site)
         assert job_id == job.id
+
+        Brando.Repo.update_all(from_job(job), [set: [state: "executing", attempt: 2]], prefix: "public")
+        assert [%{id: ^job_id}] = Environments.list_scheduled_operations(site)
       end)
     end
 
