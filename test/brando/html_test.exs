@@ -148,6 +148,12 @@ defmodule Brando.HTMLTest do
       refute html =~ "&amp;lt;"
     end
 
+    # Only the title is stored escaped; an editor's label is shown as written
+    test "prints an editor's label as written" do
+      html = "Rock" |> title_item("Write &lt;br&gt; & more") |> render_menu()
+      assert html =~ ~s(href="/rock">Write &amp;lt;br&amp;gt; &amp; more</a>)
+    end
+
     test "an item without text has none" do
       assert get_menu_item_text(%{link: nil}) == nil
       assert get_menu_item_text(%{link: %{link_type: :url, value: "/", link_text: nil}}) == nil
