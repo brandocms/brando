@@ -560,6 +560,12 @@ The upload flow:
 3. The video record is created and associated with the block
 4. Provider webhooks update the video status when processing completes
 
+Until the provider reports the video ready, a video field, block ref or video
+variable shows "Processing video…" in place of its thumbnail, in every editor
+with the entry open. The webhook's report replaces it with the thumbnail and
+the video's details, without a reload. A video the provider failed to process
+shows "Video processing failed".
+
 ### Playback settings
 
 `autoplay`, `preload`, `loop`, `muted`, `controls` and `aspect_ratio` are columns

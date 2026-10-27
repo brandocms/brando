@@ -78,6 +78,66 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       assert ref_video_id(view) == to_string(picked.id)
       assert Repo.get(Brando.Videos.Video, video_id)
     end
+
+    # The ref took the video while Bunny still had it: it showed a bare film
+    # icon until the entry was reloaded, as nothing told it the video was ready.
+    test "an upload shows as processing until the provider reports it ready", ctx do
+      view = open(ctx)
+      card = "#block-#{ctx.ref_uid}-video-upload"
+      {video_id, token} = request_upload(view, "##{ref_hook_id(ctx)}", "ref-ready")
+
+      complete_upload(view, "##{ref_hook_id(ctx)}", "ref-ready", token)
+      await(fn -> ref_video_id(view) == to_string(video_id) end)
+      assert has_element?(view, ~s(#{card}[data-processing-video="true"] .media-field-processing))
+
+      report(video_id, %{status: :processing})
+      await(fn -> has_element?(view, ~s(#{card}[data-processing-video="true"])) end)
+
+      report(video_id, %{status: :ready, width: 1280, height: 720})
+      await(fn -> has_element?(view, ~s(#{card}[data-processing-video="false"])) end)
+      assert view |> element("#{card} .media-field-meta") |> render() =~ "16:9"
+      refute has_element?(view, "#{card} .media-field-processing")
+      assert ref_video_id(view) == to_string(video_id)
+    end
+
+    test "a video still with the provider when the entry opens shows ready once reported", ctx do
+      video =
+        Factory.insert(:video,
+          type: :bunny,
+          remote_id: nil,
+          source_url: nil,
+          status: :processing,
+          creator_id: ctx.user.id
+        )
+
+      set_ref_video(ctx, video)
+      view = open(ctx)
+      card = "#block-#{ctx.ref_uid}-video-upload"
+
+      assert has_element?(view, ~s(#{card}[data-processing-video="true"]))
+
+      report(video.id, %{status: :ready, width: 1280, height: 720})
+      await(fn -> has_element?(view, ~s(#{card}[data-processing-video="false"])) end)
+    end
+
+    test "a video the provider gave up on shows as failed", ctx do
+      video =
+        Factory.insert(:video,
+          type: :bunny,
+          remote_id: nil,
+          source_url: nil,
+          status: :processing,
+          creator_id: ctx.user.id
+        )
+
+      set_ref_video(ctx, video)
+      view = open(ctx)
+      card = "#block-#{ctx.ref_uid}-video-upload"
+
+      report(video.id, %{status: :errored})
+      await(fn -> has_element?(view, "#{card} .media-field-processing.is-failed") end)
+      assert has_element?(view, ~s(#{card}[data-processing-video="false"]))
+    end
   end
 
   describe "a video var" do
@@ -114,6 +174,22 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
       complete_upload(view, hook, "var-late", token)
       assert var_video_id(view) == to_string(picked.id)
       assert Repo.get(Brando.Videos.Video, video_id)
+    end
+
+    test "an upload shows as processing until the provider reports it ready", ctx do
+      view = open(ctx)
+      hook_id = var_hook(view)
+      card = "#" <> String.replace_suffix(hook_id, "-video-uploader", "-video-media")
+      {video_id, token} = request_upload(view, "#" <> hook_id, "var-ready")
+
+      complete_upload(view, "#" <> hook_id, "var-ready", token)
+      await(fn -> var_video_id(view) == to_string(video_id) end)
+      assert has_element?(view, ~s(#{card}[data-processing-video="true"] .media-field-processing))
+
+      report(video_id, %{status: :ready, width: 1280, height: 720})
+      await(fn -> has_element?(view, ~s(#{card}[data-processing-video="false"])) end)
+      assert view |> element("#{card} .media-field-meta") |> render() =~ "16:9"
+      assert var_video_id(view) == to_string(video_id)
     end
 
     # The block's settings render only while its config modal is open, and
@@ -266,6 +342,16 @@ defmodule BrandoAdmin.VideoBlockProviderUploadTest do
   end
 
   defp ref_hook_id(ctx), do: "block-#{ctx.ref_uid}-video-uploader"
+
+  # The provider's webhook, as `Bunny.handle_webhook/1` applies it
+  defp report(video_id, params) do
+    {:ok, _video} = Brando.Videos.Uploaders.ProviderUpdate.update_video(Repo.get!(Brando.Videos.Video, video_id), params)
+  end
+
+  defp set_ref_video(ctx, video) do
+    ref = Repo.get_by!(Brando.Content.Ref, uid: ctx.ref_uid)
+    ref |> Ecto.Changeset.change(video_id: video.id) |> Repo.update!()
+  end
 
   # The var's hook: the uploader that isn't the ref's
   defp var_hook(view) do

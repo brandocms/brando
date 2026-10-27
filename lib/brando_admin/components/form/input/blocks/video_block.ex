@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.VideoQuality
   alias BrandoAdmin.Components.Form.Primitives
+  alias BrandoAdmin.LiveView.Form.ProcessingWatch
   alias Ecto.Changeset
 
   # prop block, :any
@@ -86,7 +87,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     |> assign(:type, Map.get(assigns.video_data, :type, :file))
     |> assign(:cover_image, nil)
     |> assign(:cover_image_id, nil)
+    |> assign(:cover_from_video?, true)
     |> assign(:video, struct(Brando.Videos.Video, assigns.video_data))
+    |> watch_processing()
     |> then(&{:ok, &1})
   end
 
@@ -97,6 +100,23 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   # The video picker's handover of a video uploaded in it
   def update(%{event: "select_video", id: video_id}, socket) do
     {:ok, select_video(socket, video_id)}
+  end
+
+  # The provider reported on the video this ref shows, to every editor with the
+  # entry open (`ProcessingWatch`): it moved on from uploading, or is ready.
+  # Not an edit: the ref keeps its video id, so no ref data is committed; only
+  # what the ref shows is refreshed. A cover the editor picked stays.
+  def update(%{event: "video_processed", video: video}, socket) do
+    if current_video_id(socket) == video.id do
+      socket
+      |> assign(:video, video)
+      |> assign_video_data(video)
+      |> then(&if(&1.assigns[:cover_from_video?], do: assign_video_cover(&1, video), else: &1))
+      |> watch_processing()
+      |> then(&{:ok, &1})
+    else
+      {:ok, socket}
+    end
   end
 
   def update(assigns, socket) do
@@ -131,7 +151,10 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
        else
          Brando.default_video_upload_strategy()
        end
-     end)}
+     end)
+     # A video still with its provider, uploaded here or by another editor,
+     # is followed until it is ready (`video_processed`).
+     |> watch_processing()}
   end
 
   defp current_video_id(socket), do: socket.assigns[:video] && socket.assigns.video.id
@@ -157,17 +180,38 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
       socket
     else
       video = socket.assigns.video
-      video_data = if video, do: Map.from_struct(video), else: %{}
-      cover = Map.get(video_data, :thumbnail)
 
       socket
-      |> assign(:video_data, video_data)
-      |> assign(:type, Map.get(video_data, :type, :file))
-      |> assign(:cover_image, cover)
-      |> assign(:cover_image_id, cover_image_id(cover))
+      |> assign_video_data(video)
+      |> assign_video_cover(video)
       |> assign(:video_display_source, source)
     end
   end
+
+  defp assign_video_data(socket, video) do
+    video_data = if video, do: Map.from_struct(video), else: %{}
+
+    socket
+    |> assign(:video_data, video_data)
+    |> assign(:type, Map.get(video_data, :type, :file))
+  end
+
+  # The video's own thumbnail as the cover. `cover_from_video?` tells a
+  # processed refresh whether the cover shown is still the video's, or one the
+  # editor picked or removed.
+  defp assign_video_cover(socket, video) do
+    cover = video && loaded_thumbnail(Map.get(video, :thumbnail))
+
+    socket
+    |> assign(:cover_image, cover)
+    |> assign(:cover_image_id, cover_image_id(cover))
+    |> assign(:cover_from_video?, true)
+  end
+
+  defp loaded_thumbnail(%Ecto.Association.NotLoaded{}), do: nil
+  defp loaded_thumbnail(thumbnail), do: thumbnail
+
+  defp watch_processing(socket), do: ProcessingWatch.watch(socket, __MODULE__, :video, [socket.assigns[:video]])
 
   def render(assigns) do
     ~H"""
@@ -460,6 +504,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     |> Block.commit_ref_data(ref_data: ref_data)
     |> assign(:cover_image, nil)
     |> assign(:cover_image_id, nil)
+    |> assign(:cover_from_video?, false)
     |> then(&{:noreply, &1})
   end
 
@@ -475,6 +520,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     |> assign(:type, :file)
     |> assign(:cover_image, nil)
     |> assign(:cover_image_id, nil)
+    |> watch_processing()
     |> then(&{:noreply, &1})
   end
 
@@ -494,6 +540,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
     |> Block.commit_ref_data(ref_data: ref_data)
     |> assign(:cover_image, picture_data)
     |> assign(:cover_image_id, image.id)
+    |> assign(:cover_from_video?, false)
     |> then(&{:noreply, &1})
   end
 
@@ -552,8 +599,6 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   defp select_video(socket, video_id) do
     case Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail, :file]}) do
       {:ok, video} ->
-        video_data = Map.from_struct(video)
-
         socket
         |> Block.commit_ref_data(
           # preserve override fields; the video itself goes to the association
@@ -563,10 +608,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
           force_render: true
         )
         |> assign(:video, video)
-        |> assign(:video_data, video_data)
-        |> assign(:type, Map.get(video_data, :type, :file))
-        |> assign(:cover_image, Map.get(video_data, :thumbnail))
-        |> assign(:cover_image_id, cover_image_id(Map.get(video_data, :thumbnail)))
+        |> assign_video_data(video)
+        |> assign_video_cover(video)
+        |> watch_processing()
 
       {:error, _reason} ->
         socket

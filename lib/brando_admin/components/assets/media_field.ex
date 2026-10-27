@@ -64,6 +64,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       |> assign(:details, asset_details(asset, assigns.type))
       |> assign(:alt, if(assigns.presentation != :line, do: alt_status(asset, assigns.type, assigns.alt_override)))
       |> assign(:processing_image?, processing_image?(asset, assigns.type))
+      |> assign(:video_status, video_status(asset, assigns.type))
       |> assign(:preview_ratio, image_ratio(asset, assigns.type))
       |> assign(
         :drop_label,
@@ -96,6 +97,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
       data-drop-label={@drop_label}
       data-asset-id={@asset && @asset.id}
       data-processing-image={to_string(@processing_image?)}
+      data-processing-video={to_string(@video_status == :processing)}
       data-upload-processing={gettext("Processing…")}
     >
       <input :if={@upload_enabled?} type="file" class="file-input" accept={@accept} aria-label={gettext("Upload media")} />
@@ -137,6 +139,15 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           <span :if={@processing_image?} class="media-field-processing" role="status" aria-live="polite">
             <span class="media-field-spinner" aria-hidden="true"></span>
             {gettext("Processing image…")}
+          </span>
+          <%!-- A provider video shows nothing to play until the provider
+                reports it ready, which can take minutes after the upload. --%>
+          <span :if={@video_status == :processing} class="media-field-processing" role="status" aria-live="polite">
+            <span class="media-field-spinner" aria-hidden="true"></span>
+            {gettext("Processing video…")}
+          </span>
+          <span :if={@video_status == :failed} class="media-field-processing is-failed" role="status" aria-live="polite">
+            {gettext("Video processing failed")}
           </span>
           <span :if={!@asset && @upload_enabled?} class="media-field-meta">
             {gettext("Up to %{size}", size: @limit)}
@@ -291,6 +302,13 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   defp field_config_target(config_target), do: config_target
 
   defp processing_image?(asset, type), do: type == :image && asset != nil && asset.status != :processed
+
+  # A video with its provider: `:processing` while it uploads or is encoded
+  # (`Brando.Assets.ProcessingStatus.processing?/2`), `:failed` once the
+  # provider gave up on it.
+  defp video_status(%{status: status}, :video) when status in [:uploading, :processing], do: :processing
+  defp video_status(%{status: :errored}, :video), do: :failed
+  defp video_status(_asset, _type), do: nil
 
   # Where the next upload goes, under a menu's actions
   attr :folder, :string, required: true
