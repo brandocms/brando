@@ -768,7 +768,7 @@ defmodule Brando.Notes do
         do: schema.__identifier__(entry, skip_cover: true)
 
     case identifier do
-      %{title: title} when is_binary(title) and title != "" -> title
+      %{title: title} when is_binary(title) and title != "" -> Brando.Content.Identifier.title_text(schema, title)
       _ -> Map.get(entry, :title) || Map.get(entry, :name) || "##{entry.id}"
     end
   rescue

@@ -356,7 +356,12 @@ defmodule BrandoAdmin.Components.Form.Translation do
       from(i in Brando.Content.Identifier, where: i.id in ^ids)
       |> Brando.Repo.all()
       |> Map.new(fn i ->
-        {i.id, %{title: i.title, language: i.language && to_string(i.language), url: admin_url(i.schema, i.entry_id)}}
+        {i.id,
+         %{
+           title: Brando.Content.Identifier.title_text(i),
+           language: i.language && to_string(i.language),
+           url: admin_url(i.schema, i.entry_id)
+         }}
       end)
     end
   end

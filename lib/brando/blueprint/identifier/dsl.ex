@@ -95,7 +95,6 @@ defmodule Brando.Blueprint.Identifier.DSL do
       @identifier_tpl unquote(tpl)
       @identifier_type :liquid
       def __has_identifier__, do: true
-      @doc false
       def __identifier_type__, do: :liquid
       def __identifier_fields__, do: unquote(identifier_fields(tpl))
 
@@ -125,7 +124,6 @@ defmodule Brando.Blueprint.Identifier.DSL do
 
       def __has_identifier__, do: true
       # A HEEx identifier's title is stored escaped (`Brando.Content.Identifier.title_text/1`)
-      @doc false
       def __identifier_type__, do: :heex
       def __identifier_fields__, do: unquote(identifier_fields(tpl_string))
 

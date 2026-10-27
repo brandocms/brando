@@ -69,7 +69,7 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
             <tbody>
               <tr :for={job <- @jobs}>
                 <td class="publishing-entry">
-                  <strong>{job.meta["identifier"]["title"]}</strong>
+                  <strong>{scheduled_title(job.meta["identifier"])}</strong>
                   <small>
                     {gettext("Entry #%{id}", id: job.args["id"])}<span :if={Publisher.unpublish_job?(job)}> · {gettext(
                       "Expiry"
@@ -109,6 +109,16 @@ defmodule BrandoAdmin.Sites.ScheduledPublishingLive do
     </div>
     """
   end
+
+  # The identifier the job was scheduled with, saved as JSON
+  defp scheduled_title(%{"schema" => schema, "title" => title}) when is_binary(schema) do
+    Brando.Content.Identifier.title_text(String.to_existing_atom(schema), title)
+  rescue
+    ArgumentError -> title
+  end
+
+  defp scheduled_title(%{"title" => title}), do: title
+  defp scheduled_title(_), do: nil
 
   defp job_state_label("scheduled"), do: gettext("Scheduled")
   defp job_state_label("available"), do: gettext("Queued")

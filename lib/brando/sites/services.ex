@@ -77,7 +77,15 @@ defmodule Brando.Sites.Services do
 
     identifiers
     |> Enum.reject(&(&1.url in [nil, ""]))
-    |> Enum.map(&%{label: "#{Brando.Blueprint.get_singular(&1.schema)}: #{&1.title}", value: &1.id})
+    |> Enum.map(&%{label: identifier_label(&1), value: &1.id})
+  end
+
+  # A select prints an option's label as HTML (developer-authored labels may
+  # carry markup); this one is an editor's title, so it is escaped once.
+  defp identifier_label(identifier) do
+    "#{Brando.Blueprint.get_singular(identifier.schema)}: #{Identifier.title_text(identifier)}"
+    |> Phoenix.HTML.html_escape()
+    |> Phoenix.HTML.safe_to_string()
   end
 
   defp identity_area_served(%{type_config: %{area_served: area}}), do: area

@@ -101,11 +101,12 @@ defmodule BrandoAdmin.IdentifierTitleTest do
     use Phoenix.LiveView, layout: false
 
     alias Brando.Blueprint.Identifier.HEExTest.HEExIdentifierSchema, as: HEExEntry
+    alias Phoenix.Component
 
     def mount(_, _, socket) do
       entry = %HEExEntry{id: 1, title: "Rock & Roll <b>live</b>", language: "en", status: :published}
-      form = %Brando.Pages.Page{} |> Ecto.Changeset.change(parent_id: 1) |> Phoenix.Component.to_form(as: "page")
-      {:ok, socket |> Phoenix.Component.assign(:form, form) |> Phoenix.Component.assign(:entry, entry)}
+      form = %Brando.Pages.Page{} |> Ecto.Changeset.change(parent_id: 1) |> Component.to_form(as: "page")
+      {:ok, socket |> Component.assign(:form, form) |> Component.assign(:entry, entry)}
     end
 
     def handle_info(_message, socket), do: {:noreply, socket}
@@ -145,6 +146,10 @@ defmodule BrandoAdmin.IdentifierTitleTest do
 
       page = %Brando.Pages.Page{id: 1, title: "Using &lt;br&gt;", language: :en, uri: "using"}
       assert EntryHeader.title(Brando.Pages.Page, page) == "Using &lt;br&gt;"
+
+      # A note's mention email and notifications
+      assert Brando.Notes.entry_title(HEExEntry, heex_entry()) == @title <> " [en]"
+      assert Brando.Notes.entry_title(Brando.Pages.Page, page) == "Using &lt;br&gt;"
     end
 
     test "the delete dialog names it once escaped" do
@@ -203,6 +208,19 @@ defmodule BrandoAdmin.IdentifierTitleTest do
                {to_string(HEExEntry), 4242} => @title,
                {to_string(Brando.Pages.Page), 4243} => "Using &lt;br&gt;"
              }
+    end
+
+    # The select prints these labels as HTML: each title is escaped once, a
+    # Liquid one too, so markup in it is text
+    test "the service page picker escapes each title once" do
+      save_identifier(HEExEntry, 4242, stored(@title)) |> Ecto.Changeset.change(url: "/rock") |> Repo.update!()
+      liquid = ~s(<img src=x onerror="document.title='MARKER'">)
+      save_identifier(Brando.Pages.Page, 4243, liquid) |> Ecto.Changeset.change(url: "/img") |> Repo.update!()
+
+      labels = Brando.Sites.Services.identifier_options(nil, []) |> Enum.map(& &1.label) |> Enum.sort()
+      assert [heex, page] = labels
+      assert String.ends_with?(heex, ": #{@once}")
+      assert page == "Page: &lt;img src=x onerror=&quot;document.title=&#39;MARKER&#39;&quot;&gt;"
     end
   end
 
