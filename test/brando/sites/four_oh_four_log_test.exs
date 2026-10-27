@@ -133,6 +133,21 @@ defmodule Brando.Sites.FourOhFourLogTest do
     assert [%{url: "/before-deploy", hits: 1}] = rows()
   end
 
+  # The logged URL keeps its escapes, as the request had them
+  test "an escaped URL is its own referrer, however long its path" do
+    for _ <- 1..2, do: miss("/bl%C3%A5b%C3%A6r", "https://site.no/bl%C3%A5b%C3%A6r")
+    long = "/" <> String.duplicate("a", 600)
+    for _ <- 1..2, do: miss(long, "https://example.com#{long}?q=1")
+    miss("/x", "https://" <> String.duplicate("h", 2000) <> ".com/x")
+
+    by_url = Map.new(FourOhFour.list(), &{&1.url, &1})
+
+    assert %{probe: true, referrer: nil} = by_url["/bl%C3%A5b%C3%A6r"]
+    assert %{probe: true, referrer: nil} = by_url[long]
+    assert %{probe: true, referrer: nil} = by_url["/x"]
+    assert Enum.all?(rows(), &(String.length(&1.referrer) <= 500 + String.length(&1.url)))
+  end
+
   test "a referrer that is not a web page is not stored" do
     miss("/x", "android-app://com.example")
     FourOhFour.flush()

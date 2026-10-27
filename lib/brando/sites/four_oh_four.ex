@@ -45,20 +45,27 @@ defmodule Brando.Sites.FourOhFour do
   @doc "Counts a 404 for `conn`'s path, with its referrer."
   @spec add_404(Plug.Conn.t()) :: Plug.Conn.t()
   def add_404(conn) do
-    url = conn.path_info |> then(&Path.join(["/" | &1])) |> String.slice(0, @max_url_length)
-    key = Brando.Tenant.cache_key({url, referrer(conn), Date.utc_today()})
+    path = Path.join(["/" | conn.path_info])
+    url = String.slice(path, 0, @max_url_length)
+    key = Brando.Tenant.cache_key({url, referrer(conn, path, url), Date.utc_today()})
     Cachex.incr(@cache, key, 1)
     conn
   end
 
   # Scheme, host and path of an http(s) referrer, without its query string,
-  # which would split one link's hits across rows and can carry tokens.
-  defp referrer(conn) do
+  # which would split one link's hits across rows and can carry tokens. A
+  # self-referrer is stored with the logged URL as its path, so `list/0`
+  # recognises it however long the path.
+  defp referrer(conn, path, url) do
     with [value | _] <- Plug.Conn.get_req_header(conn, "referer"),
          %URI{scheme: scheme, host: host} = uri when scheme in ["http", "https"] and is_binary(host) <- URI.parse(value) do
-      %URI{uri | query: nil, fragment: nil, userinfo: nil}
-      |> URI.to_string()
-      |> String.slice(0, @max_referrer_length)
+      uri = %URI{uri | query: nil, fragment: nil, userinfo: nil}
+
+      if self_referrer?(path, URI.to_string(uri)) do
+        String.slice(URI.to_string(%URI{uri | path: nil}), 0, @max_referrer_length) <> url
+      else
+        uri |> URI.to_string() |> String.slice(0, @max_referrer_length)
+      end
     else
       _ -> ""
     end
@@ -179,14 +186,14 @@ defmodule Brando.Sites.FourOhFour do
   @spec self_referrer?(String.t(), String.t()) :: boolean()
   def self_referrer?(url, referrer) when is_binary(url) and is_binary(referrer) do
     case URI.parse(referrer) do
-      %URI{host: host, path: path} when is_binary(host) -> same_path?(decode(path || ""), url)
+      %URI{host: host, path: path} when is_binary(host) -> same_path?(decode(path || ""), decode(url))
       _ -> false
     end
   end
 
   defp same_path?(a, b), do: String.trim_trailing(a, "/") == String.trim_trailing(b, "/")
 
-  # A logged URL is already decoded, so a lone % in it is not an escape.
+  # A path cut mid-escape, or with a lone %, is compared as it is.
   defp decode(path) do
     URI.decode(path)
   rescue
@@ -243,7 +250,7 @@ defmodule Brando.Sites.FourOhFour do
     # Source maps (x.js.map, x.astro.mjs.map), keys, dumps and env files
     ~r/\.(?:map|pem|key|env|sql(?:\.(?:gz|zip))?)$/i,
     # Dev servers, debug consoles and file reads, /proc/self/ also after ../
-    ~r{(?:^|/)(?:@fs/|proc/self/|__vite|_profiler(?:/|$)|actuator(?:/|$)|phpmyadmin|server-status$)}i,
+    ~r{(?:^|/)(?:@fs/|proc/self/|__vite|_profiler(?:/|$)|phpmyadmin(?:/|$)|server-status$)|^/actuator(?:/|$)}i,
     ~r{laravel\.log|storage/logs/|(?:^|/)id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?$}i,
     # Deploy, container and cloud config
     ~r{(?:^|/)(?:docker-compose(?:\.[\w-]+)?\.ya?ml|dockerfile|composer\.(?:json|lock)|appsettings(?:\.\w+)?\.json|application(?:-[\w-]+)?\.(?:ya?ml|properties)|service-account\.json|vercel\.json|netlify\.toml|wrangler\.toml|railway\.json|values\.ya?ml|rclone\.conf|aws-exports\.js|env\.js)$}i,

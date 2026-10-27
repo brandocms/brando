@@ -120,7 +120,9 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
 
     # A scanner names the URL it probes as the referrer; a real page's path
     for referrer <- ["http://example.com/team", "https://64.227.71.155/team/"] do
-      %Plug.Conn{path_info: ["team"]} |> Plug.Conn.put_req_header("referer", referrer) |> Brando.Sites.FourOhFour.add_404()
+      %Plug.Conn{path_info: ["team"]}
+      |> Plug.Conn.put_req_header("referer", referrer)
+      |> Brando.Sites.FourOhFour.add_404()
     end
 
     {:ok, view, _html} = live(conn, "/admin/config/seo")

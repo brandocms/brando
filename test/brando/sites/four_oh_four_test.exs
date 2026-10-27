@@ -37,6 +37,7 @@ defmodule Brando.Sites.FourOhFourTest do
     for url <- ~w(
           /team /billing /dashboard/settings /login /settings/api-keys /docs /contact /blog /about
           /assets/app-4f9a1c.js /sitemap /maps /keynote /application /100%
+          /products/actuator /actuator-guide /blog/phpmyadmin-tips
         ) do
       refute FourOhFour.probe?(url), "expected #{url} not to be a probe"
     end
@@ -50,6 +51,8 @@ defmodule Brando.Sites.FourOhFourTest do
           {"/apple-touch-icon.png", "https://64.227.71.155/apple-touch-icon.png"},
           {"/team", "http://ghost-rider/team?x=1"},
           {"/a b", "https://example.com/a%20b"},
+          {"/a%20b", "https://example.com/a%20b"},
+          {"/bl%C3%A5b%C3%A6r", "https://example.com/bl%C3%A5b%C3%A6r/"},
           {"/100%", "https://example.com/100%25"},
           # Not a valid escape; compared as it is rather than raising
           {"/100%", "https://example.com/100%"},
