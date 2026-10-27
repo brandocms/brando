@@ -38,7 +38,9 @@ area in [the section map](form-map.md) and grep for the names it lists.
   of those fields must go through Form and mark ownership. Do not read them back
   from `validate` params. Coverage lives in
   `test/brando_admin/live/stale_validate_asset_race_test.exs`. A field the user
-  may not change (`LockedFields`) is never owned, and every writer checks
+  may not change (`LockedFields`) is owned only with a value the server built
+  (a translation's, a revision's working copy's, recovered or handed over
+  too), and every writer checks
   `locked_field?/3` (`edit_asset_locked?/2` for a drawer) before writing it;
   a new writer does the same. Nor does a locked field ship to the other
   editors (`pending_changes`), who could save it
