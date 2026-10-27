@@ -427,7 +427,9 @@ defmodule Brando.Translations do
   work raised by a newer source save stays open:
 
     * `:translate` and `:review` — when the saved text differs from the
-      pending text, or the path was acknowledged
+      pending text, or the path was acknowledged, unless the save left the
+      structure, media or shared values of the block, ref, var or row it is
+      in as they were (a form without that field)
     * `:shared_update` and `:relinked` — when the saved value is the pending one
     * `:awaiting_translation` — never; it resolves when the link can be made
 
@@ -460,8 +462,11 @@ defmodule Brando.Translations do
       end
 
     case load_group_source(group) do
-      {:ok, source} -> sync_member(schema, source, member, group.source_generation, false, previous)
-      :error -> :ok
+      {:ok, source} ->
+        sync_member(schema, source, member, group.source_generation, false, previous: previous, with_deleted: true)
+
+      :error ->
+        :ok
     end
 
     %{open: open_count(member.id), stale: reviewed != nil and reviewed.source_generation < group.source_generation}
@@ -475,8 +480,11 @@ defmodule Brando.Translations do
   translation follow its source. Whatever path changed them — a disabled
   control, a forged event, a replayed parameter — the save is compared with
   the version the editor worked from: the pending version `version_id`, or
-  the saved translation when none was loaded. Any difference refuses the
-  save with the paths that differ: `{:error, {:source_controlled, paths}}`.
+  the saved translation when none was loaded. A field may also keep its
+  saved content whole: a form without a block field, or without an input for
+  a shared value, can't hold the pending version's, and what the save leaves
+  stays pending. Any other difference refuses the save with the paths that
+  differ: `{:error, {:source_controlled, paths}}`.
 
   New blocks and table rows keep the sync identity the pending version gave
   them, which the form does not carry.
@@ -487,30 +495,46 @@ defmodule Brando.Translations do
   def check_target_save(schema, entry_id, %Changeset{} = changeset, version_id \\ nil) do
     with true <- synchronized?(schema),
          %Member{role: :target, synchronized: true} = member <- get_member(schema, entry_id) do
+      # A translation in the trash opens and saves in the form like any other
+      {:ok, saved} = load_entry(schema, entry_id, with_deleted: true)
+
       reference =
         case reviewed_version(member, %{version_id: version_id}) do
-          nil ->
-            {:ok, saved} = load_entry(schema, entry_id)
-            saved
-
-          version ->
-            decode_payload(version)
+          nil -> saved
+          version -> decode_payload(version)
         end
 
       changeset = restore_sync_identities(changeset, schema, reference)
       submitted = Changeset.apply_changes(changeset)
-      module_uids = module_uids([reference, submitted], schema)
-      expected = Sync.owned_rows(reference, schema, nil, module_uids)
-      actual = Sync.owned_rows(submitted, schema, nil, module_uids)
+      module_uids = module_uids([reference, saved, submitted], schema)
+      [expected, kept, actual] = Enum.map([reference, saved, submitted], &owned_by_field(&1, schema, module_uids))
 
-      case (expected -- actual) ++ (actual -- expected) do
+      differing =
+        for field <- Enum.uniq(Map.keys(expected) ++ Map.keys(actual)),
+            [rows, wanted] = [Map.get(actual, field, []), Map.get(expected, field, [])],
+            rows not in [wanted, Map.get(kept, field, [])],
+            row <- (wanted -- rows) ++ (rows -- wanted),
+            do: row
+
+      case differing do
         [] -> {:ok, changeset}
-        differing -> {:error, {:source_controlled, paths(differing)}}
+        rows -> {:error, {:source_controlled, paths(rows)}}
       end
     else
       _ -> {:ok, changeset}
     end
   end
+
+  # Owned rows by the entry field their path starts with: a field is kept or
+  # taken whole, never a mix of the saved and the pending version's rows.
+  defp owned_by_field(entry, schema, module_uids) do
+    entry
+    |> Sync.owned_rows(schema, nil, module_uids)
+    |> Enum.group_by(fn {path, _class, _value} -> path_field(path) end)
+    |> Map.new(fn {field, rows} -> {field, Enum.sort(rows)} end)
+  end
+
+  defp path_field(path), do: path |> String.split("/", parts: 2) |> hd()
 
   defp paths(rows), do: rows |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
 
@@ -634,19 +658,20 @@ defmodule Brando.Translations do
   # and the save completed, then marks the current version applied. Returns it,
   # so the recomputation carries what is still open.
   defp resolve_reviewed(schema, member, current, reviewed, review) do
-    {:ok, saved} = load_entry(schema, member.entry_id)
+    {:ok, saved} = load_entry(schema, member.entry_id, with_deleted: true)
     payload = decode_payload(reviewed)
     module_uids = module_uids([saved, payload], schema)
     saved_rows = rows_by_path(saved, schema, module_uids)
     reviewed_rows = rows_by_path(payload, schema, module_uids)
     reviewed_work = MapSet.new(reviewed.work_items, &{&1.path, &1.source_digest})
     acknowledged = MapSet.new(List.wrap(review[:acknowledged]))
+    left = unapplied(saved, payload, schema, module_uids)
     timestamp = now()
 
     items =
       Enum.map(current.work_items, fn item ->
         if is_nil(item.resolved_at) and MapSet.member?(reviewed_work, {item.path, item.source_digest}) and
-             done?(item, saved_rows, reviewed_rows, acknowledged) do
+             not within?(item.path, left) and done?(item, saved_rows, reviewed_rows, acknowledged) do
           item
           |> Changeset.change(resolved_at: timestamp, resolved_generation: reviewed.source_generation)
           |> Repo.update!()
@@ -659,6 +684,49 @@ defmodule Brando.Translations do
     |> Changeset.change(status: :applied, applied_at: timestamp)
     |> Repo.update!()
     |> Map.put(:work_items, items)
+  end
+
+  # The blocks, refs, vars and rows whose structure or shared values the save
+  # left as they were, not the reviewed version's: a form without their field
+  # can't hold it (`check_target_save/4`). Their saved text is no
+  # translation of the pending text, so the text work within them stays
+  # open. A shared value left covers what holds it: a ref's or var's media
+  # its text, a row's shared field the row, a block's identifiers their
+  # metas. A field's own row (its block order) is left out: a block added
+  # elsewhere does not touch the others' text.
+  defp unapplied(saved, payload, schema, module_uids) do
+    [saved, payload] =
+      Enum.map([saved, payload], fn entry ->
+        for {path, class, value} <- Sync.owned_rows(entry, schema, nil, module_uids),
+            String.contains?(path, "/"),
+            reduce: %{},
+            do: (rows -> Map.update(rows, {path, class}, [value], &[value | &1]))
+      end)
+
+    for {path, class} = key <- Enum.uniq(Map.keys(saved) ++ Map.keys(payload)),
+        Enum.sort(Map.get(saved, key, [])) != Enum.sort(Map.get(payload, key, [])),
+        part <- [path | holder(path, class)],
+        into: MapSet.new(),
+        do: part
+  end
+
+  # What a shared value belongs to: its ref, var or row, or for a block's
+  # identifiers the metas kept for them.
+  defp holder(path, :shared) do
+    case path |> String.split("/") |> Enum.split(-1) do
+      {parent, ["identifiers"]} -> [Enum.join(parent ++ ["identifier_metas"], "/")]
+      {parent, _leaf} -> [Enum.join(parent, "/")]
+    end
+  end
+
+  defp holder(_path, _class), do: []
+
+  # Whether `path` is one of `parts` or lies within one
+  defp within?(path, parts) do
+    path
+    |> String.split("/")
+    |> Enum.scan(&"#{&2}/#{&1}")
+    |> Enum.any?(&MapSet.member?(parts, &1))
   end
 
   defp done?(%WorkItem{kind: kind, path: path}, saved, reviewed, acknowledged) when kind in [:translate, :review] do
@@ -726,8 +794,13 @@ defmodule Brando.Translations do
     end
   end
 
-  defp sync_member(schema, source, member, generation, minor?, previous \\ :current) do
-    case load_entry(schema, member.entry_id) do
+  # `previous`: the version the new one supersedes (the current one by
+  # default). `with_deleted`: also a translation in the trash, which only its
+  # own save recomputes.
+  defp sync_member(schema, source, member, generation, minor?, opts \\ []) do
+    previous = Keyword.get(opts, :previous, :current)
+
+    case load_entry(schema, member.entry_id, Keyword.take(opts, [:with_deleted])) do
       {:ok, target} ->
         result =
           Sync.compute_pending(source, target, member.baseline,
@@ -1389,10 +1462,12 @@ defmodule Brando.Translations do
     end
   end
 
-  defp load_entry(schema, id) do
+  defp load_entry(schema, id, opts \\ []) do
     singular = schema.__naming__().singular
     context = schema.__modules__().context
-    apply(context, :"get_#{singular}", [%{matches: %{id: id}, preload: Brando.Blueprint.preloads_for(schema)}])
+    args = %{matches: %{id: id}, preload: Brando.Blueprint.preloads_for(schema)}
+    args = if opts[:with_deleted], do: Map.put(args, :with_deleted, true), else: args
+    apply(context, :"get_#{singular}", [args])
   end
 
   defp schema_version(schema) do
