@@ -1,6 +1,8 @@
 defmodule Brando.Villain.ComponentsTest do
   use ExUnit.Case, async: false
   import Phoenix.LiveViewTest, only: [rendered_to_string: 1]
+  alias Brando.Blueprint.Identifier.HEExTest.HEExIdentifierSchema
+  alias Brando.Content.Identifier
   alias Brando.Villain.Components
   alias Brando.Villain.HeexRenderer
 
@@ -141,7 +143,7 @@ defmodule Brando.Villain.ComponentsTest do
         type: :link,
         link_type: :identifier,
         link_text: nil,
-        identifier: %{url: "/rock", title: stored}
+        identifier: %Identifier{schema: HEExIdentifierSchema, url: "/rock", title: stored}
       }
 
       assigns = %{href: nil, entry: nil, field: :url, var: var, class: nil, inner_block: [], __changed__: %{}}
@@ -150,9 +152,22 @@ defmodule Brando.Villain.ComponentsTest do
       assert result =~ "Rock &amp; Roll&#39;s"
       refute result =~ "&amp;amp;"
 
-      raw = %{var | identifier: %{url: "/rock", title: "Rooms <b>& suites</b>"}}
+      raw = %{var | identifier: %Identifier{schema: Brando.Pages.Page, url: "/rock", title: "Rooms <b>& suites</b>"}}
       result = rendered_to_string(Components.entry_link(%{assigns | var: raw}))
       assert result =~ "Rooms &lt;b&gt;&amp; suites&lt;/b&gt;"
+    end
+
+    # A Liquid identifier stores the title as written, and an editor's label
+    # is as written: neither is decoded
+    test "prints a Liquid identifier's title and a label as written" do
+      liquid = %Identifier{schema: Brando.Pages.Page, url: "/br", title: "Using &lt;br&gt;"}
+      var = %Brando.Content.Var{type: :link, link_type: :identifier, link_text: nil, identifier: liquid}
+      assigns = %{href: nil, entry: nil, field: :url, var: var, class: nil, inner_block: [], __changed__: %{}}
+
+      assert rendered_to_string(Components.entry_link(assigns)) =~ "Using &amp;lt;br&amp;gt;"
+
+      labelled = %{var | link_text: "Write &lt;br&gt;"}
+      assert rendered_to_string(Components.entry_link(%{assigns | var: labelled})) =~ "Write &amp;lt;br&amp;gt;"
     end
   end
 

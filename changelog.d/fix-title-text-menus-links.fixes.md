@@ -1,0 +1,1 @@
+- Navigation menus, `{% link %}` and `<.entry_link>` show a link's label and a Liquid identifier's entry title as written: an `&lt;br&gt;` typed in either no longer shows as `<br>`.

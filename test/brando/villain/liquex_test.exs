@@ -97,7 +97,7 @@ defmodule Brando.Villain.LiquexTest do
       key: "cta",
       link_type: :identifier,
       link_text: nil,
-      identifier: %{url: "/rooms", title: "Rooms <b>& suites</b>"}
+      identifier: %Brando.Content.Identifier{schema: Brando.Pages.Page, url: "/rooms", title: "Rooms <b>& suites</b>"}
     }
 
     assert render.(identifier_var) =~ ">Rooms &lt;b&gt;&amp; suites&lt;/b&gt;</a>"
@@ -105,8 +105,23 @@ defmodule Brando.Villain.LiquexTest do
     # A HEEx identifier (`identifier ~H"{@entry.title}"`) stores the title
     # escaped; it is encoded once, not twice
     stored = "Rock & Roll's" |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
-    heex_var = %{identifier_var | identifier: %{url: "/rock", title: stored}}
+
+    heex_var = %{
+      identifier_var
+      | identifier: %Brando.Content.Identifier{
+          schema: Brando.Blueprint.Identifier.HEExTest.HEExIdentifierSchema,
+          url: "/rock",
+          title: stored
+        }
+    }
+
     assert render.(heex_var) =~ ">Rock &amp; Roll&#39;s</a>"
+
+    # A Liquid identifier stores the title as written, and an editor's label
+    # is as written: neither is decoded
+    liquid_var = %{identifier_var | identifier: %{identifier_var.identifier | title: "Using &lt;br&gt;"}}
+    assert render.(liquid_var) =~ ">Using &amp;lt;br&amp;gt;</a>"
+    assert render.(%{url_var | link_text: "Write &lt;br&gt;"}) =~ ">Write &amp;lt;br&amp;gt;</a>"
   end
 
   test "route tag" do
