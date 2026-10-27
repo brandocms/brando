@@ -78,6 +78,25 @@ defmodule Brando.Blueprint.ValueTest do
       assert Value.rendered_text(entry) == "Design & strategi <3"
     end
 
+    test "drops comments whole, even ones holding angle brackets" do
+      entry = %{
+        rendered_blocks:
+          "<!-- [+:C<23r4Ns9WUlz7Z8SpDsn3Jr>] --><h2>Identitet</h2><!-- !a[h2] -->" <>
+            "<p>Strategi <!-- a\n multi-line <b>comment</b> --> og UX</p>"
+      }
+
+      assert Value.rendered_text(entry) == "Identitet Strategi og UX"
+    end
+
+    test "drops script and style contents" do
+      entry = %{
+        rendered_blocks:
+          ~s|<style>.a > .b { color: red }</style><p>Tekst</p><script type="module">if (a < b) go()</script>|
+      }
+
+      assert Value.rendered_text(entry) == "Tekst"
+    end
+
     test "truncates to the requested length" do
       entry = %{rendered_blocks: "<p>#{String.duplicate("a", 200)}</p>"}
 

@@ -33,7 +33,7 @@ msgstr ""
 
 #: lib/brando/sites/identity.ex
 #, elixir-autogen, elixir-format
-msgid "Leave empty to use the linked page's meta description"
+msgid "Leave empty to use the description the linked page publishes, or its text"
 msgstr ""
 
 #: lib/brando/sites/identity.ex

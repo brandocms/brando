@@ -101,8 +101,13 @@ The **Services** tab on the identity takes a repeatable list of what the
 organization provides: name, description, alternate names (the other
 language's wording, industry synonyms), service type, URL and area served.
 Each service can link to an entry; it then takes that page's URL and — when it
-has no description of its own — the page's meta description or block text, so
-the markup describes content that is actually published.
+has no description of its own — the description the page publishes: whatever
+the blueprint's `meta_schema` puts in `"description"`, its fallbacks included
+(a `fallback(&1, [:meta_description, {:strip_tags, :intro}])` gives the intro
+when the meta description is empty). A blueprint whose `meta_schema` has no
+description, or whose description function raises, gives the page's block
+text instead. Either way the markup describes content that is actually
+published.
 
 Every service is emitted into the JSON-LD graph as a `Service` node joined to
 `#identity`, inheriting the organization's `areaServed` unless it names its
