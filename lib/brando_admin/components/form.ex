@@ -7810,10 +7810,14 @@ defmodule BrandoAdmin.Components.Form do
     {Enum.filter(fields, differs?), relations, transformers}
   end
 
+  # A working copy whose revision is gone since is restored as an ordinary
+  # recovery copy: nothing gives its locked inputs other values than the
+  # entry's.
   defp apply_restored_changeset(socket, changeset, source, working_copy \\ nil) do
     revision_entry = working_copy_revision(socket, working_copy)
+    working_copy = if revision_entry, do: working_copy
     revised = revised_changeset(socket, revision_entry)
-    {changeset, revised_assets} = put_revision_locked_assets(socket, changeset, revised)
+    {changeset, revised_assets} = put_revision_locked_assets(socket, changeset, revised, source)
     form = to_form(changeset)
 
     for field <- socket.assigns.form_blueprint.blocks do
@@ -7880,11 +7884,16 @@ defmodule BrandoAdmin.Components.Form do
   # A recovered working copy's locked assets are the revision's, as its
   # locked scalars are (`put_revision_locked_values/2`): the copy holds what
   # the browser sent. Returns the changeset with them, and their fields,
-  # which the form owns.
-  defp put_revision_locked_assets(_socket, changeset, nil), do: {changeset, []}
+  # which the form owns. Those of another recovery copy are the entry's, as
+  # the save keeps them, so the form and the preview show them too. A
+  # translation's are the server's (`own_changed_assets/3`).
+  defp put_revision_locked_assets(socket, changeset, nil, :recovery_copy),
+    do: {Enum.reduce(locked_asset_kinds(socket), changeset, fn {key, _}, cs -> delete_change(cs, key) end), []}
 
-  defp put_revision_locked_assets(%{assigns: %{schema: schema}} = socket, changeset, revised) do
-    locked = for {key, kind} <- asset_field_kinds(schema), locked_field?(socket, [], key), do: {key, kind}
+  defp put_revision_locked_assets(_socket, changeset, nil, _source), do: {changeset, []}
+
+  defp put_revision_locked_assets(socket, changeset, revised, _source) do
+    locked = locked_asset_kinds(socket)
 
     changeset =
       Enum.reduce(locked, changeset, fn
@@ -7894,6 +7903,9 @@ defmodule BrandoAdmin.Components.Form do
 
     {changeset, Keyword.keys(locked)}
   end
+
+  defp locked_asset_kinds(%{assigns: %{schema: schema}} = socket),
+    do: for({key, kind} <- asset_field_kinds(schema), locked_field?(socket, [], key), do: {key, kind})
 
   defp put_revision_locked_values(socket, nil), do: socket
 

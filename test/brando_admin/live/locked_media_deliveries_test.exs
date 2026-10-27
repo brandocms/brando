@@ -616,6 +616,51 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
     end
   end
 
+  # A working copy's recovery copy whose revision was deleted since is an
+  # ordinary recovery copy: a locked field shows and saves the entry's asset,
+  # not the copy's
+  for form <- [:media, :locked_media] do
+    test "a working copy's recovery copy, its revision deleted since, on form #{form}",
+         %{conn: conn, article: article} = ctx do
+      [revised, forged, other] = [image(ctx.current_user), image(ctx.current_user), image(ctx.current_user)]
+      {view, _html} = open(conn, article, unquote(form))
+      form_cid = cid_of(view, "#article_form-el")
+      revision_entry = revised_entry(form_assigns(view).entry, revised, other, ctx.current_user)
+
+      send_form(view, action: :load_working_copy, revision: revision_entry.revision, revision_entry: revision_entry.entry)
+
+      main =
+        view
+        |> render()
+        |> form_params(@form)
+        |> put_in(["article", "cover_id"], to_string(forged.id))
+        |> Plug.Conn.Query.encode()
+
+      view
+      |> with_target(form_cid)
+      |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
+
+      assert {1, _} =
+               Repo.delete_all(
+                 from r in Brando.Revisions.Revision,
+                   where:
+                     r.entry_type == ^to_string(Article) and r.entry_id == ^article.id and
+                       r.revision == ^revision_entry.revision
+               )
+
+      view |> with_target(form_cid) |> render_hook("draft_restore", %{"id" => latest_copy(article).id})
+
+      expected = if unquote(form) == :locked_media, do: ctx.stored.id, else: forged.id
+      assigns = form_assigns(view)
+      assert assigns.working_copy == nil
+      assert Ecto.Changeset.get_field(assigns.form.source, :cover_id) == expected
+      assert Map.get(assigns.updated_entry_assocs[:cover] || %{id: expected}, :id) == expected
+
+      save(view)
+      assert saved(article).cover_id == expected
+    end
+  end
+
   # A working copy goes over to the editor's other tab as a working copy, its
   # locked assets with it
   for form <- [:media, :locked_media] do
