@@ -77,6 +77,20 @@ defmodule E2EFakeBunnyTusController do
       })
   end
 
+  # Bunny's webhook for a video, on the spec's cue: `status` is Bunny's code
+  # (3 finished, 5 failed). The real one comes through
+  # `BrandoWeb.Plugs.BunnyWebhook`, which the E2E app doesn't mount.
+  def webhook(conn, %{"video_guid" => video_guid, "status" => status}) do
+    [beam | _] = get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    library_id = Application.get_env(:brando, Bunny)[:library_id]
+
+    case Bunny.handle_webhook(%{"VideoLibraryId" => library_id, "VideoGuid" => video_guid, "Status" => status}) do
+      {:ok, video} -> json(conn, %{status: video.status})
+      other -> conn |> put_status(422) |> json(%{error: inspect(other)})
+    end
+  end
+
   # The signature Bunny checks: SHA256(library_id <> api_key <> expire <> video_id).
   defp authorize(conn) do
     config = Application.get_env(:brando, Bunny)

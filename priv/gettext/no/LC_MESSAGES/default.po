@@ -12761,6 +12761,11 @@ msgstr "Behandler bilde…"
 msgid "Processing migration…"
 msgstr "Behandler migrering…"
 
+#: lib/brando_admin/components/assets/media_field.ex
+#, elixir-autogen, elixir-format
+msgid "Processing video…"
+msgstr "Behandler video…"
+
 #: lib/brando_admin/components/form/primitives.ex
 #, elixir-autogen, elixir-format
 msgid "Processing. Please wait..."
@@ -19381,6 +19386,11 @@ msgstr "Videoavspilling"
 #, elixir-autogen, elixir-format
 msgid "Video preview"
 msgstr "Forhåndsvisning av video"
+
+#: lib/brando_admin/components/assets/media_field.ex
+#, elixir-autogen, elixir-format
+msgid "Video processing failed"
+msgstr "Behandlingen av videoen feilet"
 
 #: lib/brando/uploads.ex
 #, elixir-autogen, elixir-format

@@ -41,9 +41,9 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     original_assigns_sockets = assigns_sockets
 
     {processed_events, assigns_sockets} =
-      Enum.split_with(assigns_sockets, fn {assigns, _} -> assigns[:event] == "image_processed" end)
+      Enum.split_with(assigns_sockets, fn {assigns, _} -> assigns[:event] in ["image_processed", "video_processed"] end)
 
-    processed_results = Enum.map(processed_events, &apply_image_processed/1)
+    processed_results = Enum.map(processed_events, &apply_processed/1)
 
     {upload_events, rest} =
       Enum.split_with(assigns_sockets, fn {assigns, _socket} ->
@@ -102,6 +102,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   # An image var, or a gallery var's images, set by another editor may still
   # be processing here; follow them until they are done (`image_processed`).
+  # So is a video var's video while it is with its provider, uploaded here or
+  # by another editor (`video_processed`).
   defp watch_processing(socket) do
     images =
       case socket.assigns[:type] do
@@ -110,10 +112,24 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         _ -> []
       end
 
-    ProcessingWatch.watch(socket, __MODULE__, :image, images)
+    videos = if socket.assigns[:type] == :video, do: [socket.assigns[:video]], else: []
+
+    socket
+    |> ProcessingWatch.watch(__MODULE__, :image, images)
+    |> ProcessingWatch.watch(__MODULE__, :video, videos)
   end
 
-  defp apply_image_processed({%{image: image}, socket}) do
+  # Not an edit: the var keeps its video id, so nothing goes to the block.
+  # Only the card is refreshed.
+  defp apply_processed({%{event: "video_processed", video: video}, socket}) do
+    if socket.assigns[:type] == :video && match?(%{id: id} when id == video.id, socket.assigns[:video]) do
+      assign(socket, :video, video)
+    else
+      socket
+    end
+  end
+
+  defp apply_processed({%{image: image}, socket}) do
     cond do
       socket.assigns[:image_id] == image.id ->
         assign(socket, :image, image)

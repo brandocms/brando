@@ -1705,10 +1705,38 @@ defmodule E2EFixtureController do
         }
       })
 
+    page = video_ref_page(owner, video, "Quality ref")
+    json(conn, %{page_id: page.id, video_id: video.id})
+  end
+
+  # A page whose Video Player block's ref holds a Bunny video still encoding,
+  # as another editor's upload is until Bunny's webhook reports it
+  # (`/e2e/bunny/webhook`).
+  def video_processing(conn, _params) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    owner = get_admin_user()
+    guid = Ecto.UUID.generate()
+
+    video =
+      Brando.Repo.insert!(%Brando.Videos.Video{
+        title: "Harbour loop",
+        type: :bunny,
+        status: :processing,
+        config_target: "default",
+        creator_id: owner.id,
+        meta: %{"bunny" => %{"video_guid" => guid}}
+      })
+
+    page = video_ref_page(owner, video, "Processing ref")
+    json(conn, %{page_id: page.id, video_id: video.id, video_guid: guid})
+  end
+
+  defp video_ref_page(owner, video, title) do
     page =
       Brando.Repo.insert!(%Brando.Pages.Page{
-        title: "Quality ref",
-        uri: "quality-ref-#{System.unique_integer([:positive])}",
+        title: title,
+        uri: "video-ref-#{System.unique_integer([:positive])}",
         template: "default.html",
         language: :en,
         status: :published,
@@ -1739,7 +1767,7 @@ defmodule E2EFixtureController do
       data: template.data
     })
 
-    json(conn, %{page_id: page.id, video_id: video.id})
+    page
   end
 
   # A video thumbnail with a real file behind every size the admin asks for.

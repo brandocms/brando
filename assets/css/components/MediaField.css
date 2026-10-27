@@ -27,6 +27,7 @@
   .media-field-alt em, .media-field-alt.is-missing { color: var(--brando-attention-ink); font-style: normal; }
   .media-field-alt em::before { content: "· "; color: var(--media-muted); }
   .media-field-processing { display: inline-flex; align-items: center; gap: 6px; color: var(--media-muted); font: var(--brando-text-sm)/18px var(--brando-font-sans); }
+  .media-field-processing.is-failed { color: var(--brando-error-ink); }
   .media-field-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
   .media-field-destination { display: flex; align-items: center; gap: 6px; margin-top: 12px; color: var(--media-muted); font: var(--brando-text-sm)/18px var(--brando-font-sans); overflow-wrap: anywhere; }
   .media-field-destination > [data-icon] { width: 14px; height: 14px; flex: 0 0 14px; }
@@ -40,7 +41,7 @@
 }
 /* The image's own status remains visible through processing and page reloads.
    Only its duplicate manager projection is hidden; failures stay readable. */
-.media-field[data-processing-image="true"] > .media-field-progress[data-state="processing"] { display: none; }
+.media-field:is([data-processing-image="true"], [data-processing-video="true"]) > .media-field-progress[data-state="processing"] { display: none; }
 .media-field:has(> .media-field-progress[data-state="error"]) .media-field-processing { display: none; }
 .media-field-spinner {
   display: inline-block; flex: 0 0 12px; width: 12px; height: 12px;

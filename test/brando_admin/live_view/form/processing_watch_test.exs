@@ -66,6 +66,51 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
     end
   end
 
+  # A block's video ref: the report refreshes what the card shows. Whether it
+  # gets there from the provider is in `VideoBlockProviderUploadTest`.
+  describe "a video ref told its video is processed" do
+    setup %{user: user} do
+      video = Factory.insert(:upload_video, status: :processing, creator_id: user.id, thumbnail: nil)
+      thumbnail = Factory.insert(:image)
+      ready = %{video | status: :ready, thumbnail: thumbnail, title: "Clip"}
+      {:ok, video: video, ready: ready, thumbnail: thumbnail}
+    end
+
+    test "takes the report only for the video it shows", %{video: video, ready: ready} do
+      socket = video_ref_socket(video, cover_from_video?: true)
+      other = %{ready | id: video.id + 1}
+
+      assert {:ok, %{assigns: %{video: ^video}}} =
+               Input.Blocks.VideoBlock.update(%{event: "video_processed", video: other}, socket)
+
+      assert {:ok, %{assigns: assigns}} =
+               Input.Blocks.VideoBlock.update(%{event: "video_processed", video: ready}, socket)
+
+      assert assigns.video == ready
+      assert assigns.video_data.status == :ready
+      assert assigns.video_data.title == "Clip"
+    end
+
+    test "shows the video's new thumbnail as the cover, unless the editor picked one", ctx do
+      %{video: video, ready: ready, thumbnail: thumbnail} = ctx
+
+      socket = video_ref_socket(video, cover_from_video?: true)
+      {:ok, %{assigns: assigns}} = Input.Blocks.VideoBlock.update(%{event: "video_processed", video: ready}, socket)
+      assert assigns.cover_image == thumbnail
+      assert assigns.cover_image_id == thumbnail.id
+
+      picked = %{path: "images/picked.jpg"}
+      socket = video_ref_socket(video, cover_from_video?: false, cover_image: picked, cover_image_id: 7)
+      {:ok, %{assigns: assigns}} = Input.Blocks.VideoBlock.update(%{event: "video_processed", video: ready}, socket)
+      assert assigns.cover_image == picked
+      assert assigns.cover_image_id == 7
+
+      removed = video_ref_socket(video, cover_from_video?: false)
+      {:ok, %{assigns: assigns}} = Input.Blocks.VideoBlock.update(%{event: "video_processed", video: ready}, removed)
+      assert assigns.cover_image == nil
+    end
+  end
+
   describe "a video field showing a video that is not ready" do
     setup %{user: user} do
       video = Factory.insert(:upload_video, status: :processing, creator_id: user.id)
@@ -282,6 +327,23 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
   defp meta_image_field(image) do
     page = %Brando.Pages.Page{meta_image_id: image.id, meta_image: image}
     Component.to_form(Changeset.change(page), as: "page")[:meta_image]
+  end
+
+  defp video_ref_socket(video, assigns) do
+    assigns =
+      Map.merge(
+        %{
+          __changed__: %{},
+          id: "ref_video",
+          video: video,
+          cover_image: nil,
+          cover_image_id: nil,
+          cover_from_video?: true
+        },
+        Map.new(assigns)
+      )
+
+    %Socket{assigns: assigns}
   end
 
   defp socket, do: %Socket{assigns: %{__changed__: %{}, processing_watch: %{}, processing_catch_up: %{}}}

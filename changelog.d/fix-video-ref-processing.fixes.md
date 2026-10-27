@@ -1,0 +1,1 @@
+- A video uploaded to a provider (Bunny, Mux, Cloudflare, Vimeo) through a block's video ref or video var now shows "Processing video…" until the provider reports it ready, then its thumbnail and details, without a reload; a video the provider failed shows "Video processing failed" in fields, refs and vars.

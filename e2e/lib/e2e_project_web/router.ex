@@ -59,6 +59,7 @@ defmodule E2eProjectWeb.Router do
       post "/admin-workspace-fixtures", E2EFixtureController, :admin_workspaces
       post "/media-sweep-fixtures", E2EFixtureController, :media_sweep
       post "/video-quality-fixtures", E2EFixtureController, :video_quality
+      post "/video-processing-fixtures", E2EFixtureController, :video_processing
       post "/synchronized-translation", E2EFixtureController, :synchronized_translation
       post "/dashboard-access/:mode", E2EFixtureController, :dashboard_access
       post "/authorization/:role", E2EFixtureController, :authorization
@@ -74,6 +75,7 @@ defmodule E2eProjectWeb.Router do
       post "/bunny/tus", E2EFakeBunnyTusController, :create
       get "/bunny/tus/:id", E2EFakeBunnyTusController, :show
       patch "/bunny/tus/:id", E2EFakeBunnyTusController, :update
+      post "/bunny/webhook", E2EFakeBunnyTusController, :webhook
     end
   end
 
