@@ -61,7 +61,8 @@ defmodule BrandoAdmin.Components.Form.Input do
           field={@field}
           class={[
             "control-label",
-            @compact && "small"
+            @compact && "small",
+            @text in [nil, ""] && "no-text"
           ]}
           skip_presence
         >

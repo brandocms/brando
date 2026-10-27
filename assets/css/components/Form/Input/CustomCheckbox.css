@@ -70,6 +70,11 @@
     --padding-size: 30px;
   }
 
+  /* Without text, only the circle takes the click, not the field's width */
+  label.no-text {
+    width: fit-content;
+  }
+
   input:focus + label::before {
     box-shadow: 0px 0px 5px 0px var(--brando-accent);
   }

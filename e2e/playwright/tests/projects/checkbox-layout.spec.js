@@ -16,11 +16,14 @@ test('a checkbox without text draws its circle below the field label', async ({ 
 
   const field = page.locator('#inline_row_confirmed-field-wrapper')
   const label = await field.locator(':scope > .label-wrapper').boundingBox()
-  const circle = await field.locator('.check-wrapper label').evaluate(el => {
-    const style = getComputedStyle(el, '::before')
-    const box = el.getBoundingClientRect()
-    return { top: box.top + parseFloat(style.top || 0), height: parseFloat(style.height) }
-  })
+  // The circle is absolutely positioned in the check wrapper
+  const circle = await field.locator('.check-wrapper label').evaluate(el => ({
+    top: el.parentElement.getBoundingClientRect().top + parseFloat(getComputedStyle(el, '::before').top),
+  }))
 
   expect(circle.top).toBeGreaterThanOrEqual(label.y + label.height)
+
+  // Only the circle takes a click, not the empty width beside it
+  const checkbox = await field.locator('.check-wrapper label').boundingBox()
+  expect(checkbox.width).toBeLessThan(60)
 })
