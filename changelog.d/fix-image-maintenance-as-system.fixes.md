@@ -1,0 +1,1 @@
+- **Recreate image sizes**, **Recreate changed image sizes** and **Recalculate dominant colors** in Utilities finish after the admin who started them is demoted or deleted; the batches write as the system, and each image's progress still goes to that admin.

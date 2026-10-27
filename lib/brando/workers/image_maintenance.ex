@@ -10,6 +10,11 @@ defmodule Brando.Worker.ImageMaintenance do
   # were recorded whose files already match (`Brando.Images.Adoption`), and
   # queues only the rest. It carries the counts from batch to batch in its
   # arguments and broadcasts them on `Processing.topic/0`.
+  #
+  # What a batch writes is the system's work, whatever the role of the admin
+  # who started the run is by now, as with an image's sizes
+  # (`Brando.Worker.ImageProcessor`). The admin is still the one each image's
+  # progress is for; an admin deleted since leaves it to the system.
   use Oban.Worker, queue: :default, max_attempts: 3
 
   import Ecto.Query
@@ -35,25 +40,31 @@ defmodule Brando.Worker.ImageMaintenance do
   def timeout(_job), do: :timer.minutes(10)
 
   defp run_batch(task, %{"user_id" => user_id} = args) do
-    with {:ok, user} <- Users.get_user(user_id) do
-      batch_size = Map.get(args, "batch_size", @batch_size)
-      images = next_batch(task, Map.get(args, "after_id", 0), batch_size)
+    user = job_user(user_id)
+    batch_size = Map.get(args, "batch_size", @batch_size)
+    images = next_batch(task, Map.get(args, "after_id", 0), batch_size)
 
-      counts =
-        images
-        |> only_changed(task)
-        |> run_tasks(task, user)
+    counts =
+      images
+      |> only_changed(task)
+      |> run_tasks(task, user)
 
-      args = Map.merge(args, counts, fn _key, total, count -> total + count end)
+    args = Map.merge(args, counts, fn _key, total, count -> total + count end)
 
-      case continue(images, batch_size, args) do
-        :done ->
-          finish(task, args)
+    case continue(images, batch_size, args) do
+      :done ->
+        finish(task, args)
 
-        result ->
-          progress(task, :running, args)
-          result
-      end
+      result ->
+        progress(task, :running, args)
+        result
+    end
+  end
+
+  defp job_user(user_id) do
+    case Users.get_job_user(user_id) do
+      {:ok, user} -> user
+      _ -> :system
     end
   end
 
@@ -102,12 +113,13 @@ defmodule Brando.Worker.ImageMaintenance do
     %{}
   end
 
-  # The per-image work is already a job of its own, so this only enqueues it.
+  # The per-image work is already a job of its own, so this only enqueues it,
+  # for `user`'s progress.
   defp run_task(task, image, user) when task in ["recreate_sizes", "recreate_changed_sizes"],
     do: Processing.queue_processing(image, user, [], silent: true)
 
-  defp run_task("dominant_colors", image, user) do
-    case Processing.set_dominant_color(image, user) do
+  defp run_task("dominant_colors", image, _user) do
+    case Processing.set_dominant_color(image, :system) do
       {:ok, _image} -> :ok
       {:error, reason} -> Logger.warning("==> Dominant color not set for image #{image.id}: #{inspect(reason)}")
     end

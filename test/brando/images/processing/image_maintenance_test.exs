@@ -150,6 +150,70 @@ defmodule Brando.Images.ImageMaintenanceTest do
     assert Repo.get!(Image, unreadable.id).dominant_color == "#abcdef"
   end
 
+  # The admin who started a batch may be demoted, or gone, before it reaches
+  # the last image. The batches are the system's work, as an image's sizes
+  # are (`Brando.Worker.ImageProcessor`); the progress stays the admin's.
+  describe "after the admin who started it is demoted or gone" do
+    setup %{user: user} do
+      Repo.update_all(from(u in Brando.Users.User, where: u.id == ^user.id), set: [role: :admin])
+      :ok
+    end
+
+    defp demote(user), do: Repo.update_all(from(u in Brando.Users.User, where: u.id == ^user.id), set: [role: :user])
+    defp delete(user), do: Repo.delete_all(from(u in Brando.Users.User, where: u.id == ^user.id))
+
+    test "recalculating colors still stores them for a demoted admin", %{user: user} do
+      image = Factory.insert(:image, path: "image/demoted.jpg", dominant_color: nil)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _job} = Processing.set_dominant_color_for_images(user)
+        demote(user)
+        assert %{failure: 0} = Oban.drain_queue(queue: :default, with_recursion: true)
+      end)
+
+      assert Repo.get!(Image, image.id).dominant_color == "#123456"
+    end
+
+    test "recalculating colors still stores them when the admin is gone", %{user: user} do
+      image = Factory.insert(:image, path: "image/gone.jpg", dominant_color: nil)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _job} = Processing.set_dominant_color_for_images(user)
+        delete(user)
+        assert %{failure: 0} = Oban.drain_queue(queue: :default, with_recursion: true)
+      end)
+
+      assert Repo.get!(Image, image.id).dominant_color == "#123456"
+    end
+
+    test "recreating sizes still queues every image when the admin is gone", %{user: user} do
+      image = Factory.insert(:image, path: "image/gone-sizes.jpg")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _job} = Processing.recreate_sizes_for_images(user)
+        delete(user)
+        assert %{failure: 0} = Oban.drain_queue(queue: :default, with_recursion: true)
+
+        assert image.id in Enum.map(all_enqueued(worker: Worker.ImageProcessor), & &1.args["image_id"])
+      end)
+    end
+
+    # Each image's progress goes to the admin who started the run
+    test "recreating sizes for a demoted admin queues the images for them", %{user: user} do
+      image = Factory.insert(:image, path: "image/demoted-sizes.jpg")
+      user_id = user.id
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _job} = Processing.recreate_sizes_for_images(user)
+        demote(user)
+        assert %{failure: 0} = Oban.drain_queue(queue: :default, with_recursion: true)
+
+        assert [%{args: %{"user_id" => ^user_id}}] =
+                 Enum.filter(all_enqueued(worker: Worker.ImageProcessor), &(&1.args["image_id"] == image.id))
+      end)
+    end
+  end
+
   test "a task cannot be started twice while it is unfinished", %{user: user} do
     Oban.Testing.with_testing_mode(:manual, fn ->
       refute Processing.image_maintenance_running?("recreate_sizes")

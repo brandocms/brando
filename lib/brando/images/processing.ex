@@ -279,7 +279,7 @@ defmodule Brando.Images.Processing do
     if Enum.any?(blocking, &image_maintenance_running?/1) do
       {:error, :already_running}
     else
-      %{task: task, user_id: user.id}
+      %{task: task, user_id: Brando.Users.job_user_id(user)}
       |> TenantJob.attach()
       |> Worker.ImageMaintenance.new()
       |> Oban.insert()
