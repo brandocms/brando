@@ -5,6 +5,7 @@ defmodule BrandoAdmin.TranslationFormTest do
   use Brando.LiveCase
 
   alias Brando.Content.Block
+  alias Brando.Pages.Page
   alias Brando.Repo
   alias Brando.SyncTest
   alias Brando.SyncTest.Article
@@ -408,6 +409,28 @@ defmodule BrandoAdmin.TranslationFormTest do
       assert saved.title == "Title"
       assert saved.cover_id == cover.id
     end
+  end
+
+  # The form opens an entry in the trash, so a translation there saves, its
+  # pending version with it.
+  test "a translation in the trash saves", %{conn: conn, current_user: user} do
+    put_test_env(Page, translatable: [mode: :synchronized])
+    source = Factory.insert(:page, title: "Om oss", uri: "om-oss", language: :no, creator: user)
+    {:ok, target} = Translations.create_target(Page, source.id, :en, user)
+    {:ok, _} = Brando.Pages.update_page(source.id, %{title: "Om oss, endret"}, user)
+    version = Translations.get_pending_version(Page, target.id)
+    {:ok, _} = Brando.Pages.delete_page(target.id, user)
+
+    {view, _html} = live_form(conn, "/admin/pages/update/#{target.id}")
+    await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+    view |> form("#page_form_form", %{"page" => %{"title" => "About us"}}) |> render_submit()
+    assert_push_event(view, "b:submit", %{}, 2_000)
+    view |> form("#page_form_form", %{"page" => %{"title" => "About us"}}) |> render_submit()
+    render(view)
+
+    {:ok, saved} = Brando.Pages.get_page(%{matches: %{id: target.id}, with_deleted: true})
+    assert {saved.title, saved.deleted_at != nil} == {"About us", true}
+    assert Repo.get!(PendingVersion, version.id).status == :applied
   end
 
   describe "synchronization controls" do

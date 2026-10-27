@@ -462,8 +462,11 @@ defmodule Brando.Translations do
       end
 
     case load_group_source(group) do
-      {:ok, source} -> sync_member(schema, source, member, group.source_generation, false, previous)
-      :error -> :ok
+      {:ok, source} ->
+        sync_member(schema, source, member, group.source_generation, false, previous: previous, with_deleted: true)
+
+      :error ->
+        :ok
     end
 
     %{open: open_count(member.id), stale: reviewed != nil and reviewed.source_generation < group.source_generation}
@@ -492,7 +495,8 @@ defmodule Brando.Translations do
   def check_target_save(schema, entry_id, %Changeset{} = changeset, version_id \\ nil) do
     with true <- synchronized?(schema),
          %Member{role: :target, synchronized: true} = member <- get_member(schema, entry_id) do
-      {:ok, saved} = load_entry(schema, entry_id)
+      # A translation in the trash opens and saves in the form like any other
+      {:ok, saved} = load_entry(schema, entry_id, with_deleted: true)
 
       reference =
         case reviewed_version(member, %{version_id: version_id}) do
@@ -654,7 +658,7 @@ defmodule Brando.Translations do
   # and the save completed, then marks the current version applied. Returns it,
   # so the recomputation carries what is still open.
   defp resolve_reviewed(schema, member, current, reviewed, review) do
-    {:ok, saved} = load_entry(schema, member.entry_id)
+    {:ok, saved} = load_entry(schema, member.entry_id, with_deleted: true)
     payload = decode_payload(reviewed)
     module_uids = module_uids([saved, payload], schema)
     saved_rows = rows_by_path(saved, schema, module_uids)
@@ -790,8 +794,13 @@ defmodule Brando.Translations do
     end
   end
 
-  defp sync_member(schema, source, member, generation, minor?, previous \\ :current) do
-    case load_entry(schema, member.entry_id) do
+  # `previous`: the version the new one supersedes (the current one by
+  # default). `with_deleted`: also a translation in the trash, which only its
+  # own save recomputes.
+  defp sync_member(schema, source, member, generation, minor?, opts \\ []) do
+    previous = Keyword.get(opts, :previous, :current)
+
+    case load_entry(schema, member.entry_id, Keyword.take(opts, [:with_deleted])) do
       {:ok, target} ->
         result =
           Sync.compute_pending(source, target, member.baseline,
@@ -1453,10 +1462,12 @@ defmodule Brando.Translations do
     end
   end
 
-  defp load_entry(schema, id) do
+  defp load_entry(schema, id, opts \\ []) do
     singular = schema.__naming__().singular
     context = schema.__modules__().context
-    apply(context, :"get_#{singular}", [%{matches: %{id: id}, preload: Brando.Blueprint.preloads_for(schema)}])
+    args = %{matches: %{id: id}, preload: Brando.Blueprint.preloads_for(schema)}
+    args = if opts[:with_deleted], do: Map.put(args, :with_deleted, true), else: args
+    apply(context, :"get_#{singular}", [args])
   end
 
   defp schema_version(schema) do
