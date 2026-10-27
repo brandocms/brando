@@ -2242,9 +2242,10 @@ defmodule BrandoAdmin.Components.Form do
   # The form takes values from elsewhere (a recovery copy, another tab's
   # handover): a locked asset the server put in it before (a working copy's,
   # a translation's) is not the form's any more. Owned, it would carry the
-  # restored value into the save.
-  defp disown_locked_assets(socket) do
-    locked = locked_keys(socket)
+  # restored value into the save. A handover takes some fields only
+  # (`taken`, as params keys), and the form keeps the others' assets.
+  defp disown_locked_assets(socket, taken \\ nil) do
+    locked = for key <- locked_keys(socket), taken == nil or to_string(key) in taken, do: key
     assign(socket, :server_owned_assets, Map.drop(owned_assets(socket), locked))
   end
 
@@ -7746,8 +7747,9 @@ defmodule BrandoAdmin.Components.Form do
     handed_transformers = copy.payload["transformers"] || %{}
     own = Drafts.main_params(socket, socket.assigns.form.source)
     {uncast, relations, transformers} = handed_keys(socket, copy, fields, own)
+    taken = uncast ++ relations ++ transformers
 
-    if uncast == [] and relations == [] and transformers == [] do
+    if taken == [] do
       socket
     else
       params =
@@ -7772,7 +7774,7 @@ defmodule BrandoAdmin.Components.Form do
 
       socket
       |> put_local_form(form)
-      |> disown_locked_assets()
+      |> disown_locked_assets(taken)
       |> assign(:uncast_fields, MapSet.union(uncast_fields(socket), MapSet.new(uncast)))
       |> rebuild_preview_relations()
       |> assign_entry_for_blocks()
@@ -7805,8 +7807,10 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp apply_restored_changeset(socket, changeset, source, working_copy \\ nil) do
-    form = to_form(changeset)
     revision_entry = working_copy_revision(socket, working_copy)
+    revised = revised_changeset(socket, revision_entry)
+    {changeset, revised_assets} = put_revision_locked_assets(socket, changeset, revised)
+    form = to_form(changeset)
 
     for field <- socket.assigns.form_blueprint.blocks do
       message = [
@@ -7831,7 +7835,7 @@ defmodule BrandoAdmin.Components.Form do
           socket
           |> assign(:blocks_detached?, true)
           |> assign(:working_copy, working_copy["revision"])
-          |> put_revision_locked_values(revision_entry),
+          |> put_revision_locked_values(revised),
         else: socket |> leave_working_copy_locked_values(source) |> assign(:working_copy, nil)
 
     for {name, _, _} <- socket.assigns.form_blueprint.transformers do
@@ -7847,6 +7851,7 @@ defmodule BrandoAdmin.Components.Form do
     |> rebuild_preview_relations()
     |> disown_locked_assets()
     |> own_changed_assets(Map.keys(changeset.changes), source == :translation)
+    |> own_locked_server_assets(revised_assets)
     |> assign_entry_for_blocks()
     |> force_svelte_remounts(:all)
     |> Drafts.dirty()
@@ -7862,15 +7867,33 @@ defmodule BrandoAdmin.Components.Form do
   defp leave_working_copy_locked_values(socket, :recovery_copy), do: reset_locked_values(socket)
   defp leave_working_copy_locked_values(socket, _source), do: socket
 
+  # The revision a recovered working copy is of, cast onto the entry
+  defp revised_changeset(_socket, nil), do: nil
+
+  defp revised_changeset(%{assigns: %{schema: schema, entry: entry, current_user: user}}, revision_entry),
+    do: schema.changeset(entry, Brando.Revisions.restore_params(revision_entry, entry), user)
+
+  # A recovered working copy's locked assets are the revision's, as its
+  # locked scalars are (`put_revision_locked_values/2`): the copy holds what
+  # the browser sent. Returns the changeset with them, and their fields,
+  # which the form owns.
+  defp put_revision_locked_assets(_socket, changeset, nil), do: {changeset, []}
+
+  defp put_revision_locked_assets(%{assigns: %{schema: schema}} = socket, changeset, revised) do
+    locked = for {key, kind} <- asset_field_kinds(schema), locked_field?(socket, [], key), do: {key, kind}
+
+    changeset =
+      Enum.reduce(locked, changeset, fn
+        {key, :id}, changeset -> put_change(changeset, key, get_field(revised, key))
+        {key, :gallery}, changeset -> put_gallery_into(changeset, [], key, owned_gallery(get_field(revised, key)))
+      end)
+
+    {changeset, Keyword.keys(locked)}
+  end
+
   defp put_revision_locked_values(socket, nil), do: socket
 
-  defp put_revision_locked_values(socket, revision_entry) do
-    %{schema: schema, entry: entry, current_user: user} = socket.assigns
-
-    socket
-    |> reset_locked_values()
-    |> put_locked_values(schema.changeset(entry, Brando.Revisions.restore_params(revision_entry, entry), user))
-  end
+  defp put_revision_locked_values(socket, revised), do: socket |> reset_locked_values() |> put_locked_values(revised)
 
   defp working_copy_revision(_socket, nil), do: nil
 

@@ -514,6 +514,118 @@ defmodule BrandoAdmin.LockedMediaDeliveriesTest do
 
       assert saved(article).cover_id == if(unquote(form) == :locked_media, do: ctx.stored.id, else: forged.id)
     end
+
+    # A recovery copy taken while the working copy was loaded is a working
+    # copy again: a locked field has the revision's assets, whatever the copy
+    # holds for them
+    test "a working copy's recovery copy, on form #{form}", %{conn: conn, article: article} = ctx do
+      [revised, forged, other] = [image(ctx.current_user), image(ctx.current_user), image(ctx.current_user)]
+      {view, _html} = open(conn, article, unquote(form))
+      form_cid = cid_of(view, "#article_form-el")
+      revision_entry = revised_entry(form_assigns(view).entry, revised, other, ctx.current_user)
+
+      send_form(view, action: :load_working_copy, revision: revision_entry.revision, revision_entry: revision_entry.entry)
+
+      main =
+        view
+        |> render()
+        |> form_params(@form)
+        |> put_in(["article", "cover_id"], to_string(forged.id))
+        |> Plug.Conn.Query.encode()
+
+      view
+      |> with_target(form_cid)
+      |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
+
+      view |> with_target(form_cid) |> render_hook("draft_restore", %{"id" => latest_copy(article).id})
+      save(view)
+
+      assert saved(article).cover_id == if(unquote(form) == :locked_media, do: revised.id, else: forged.id)
+      assert saved_gallery_images(article) == [other.id]
+    end
+  end
+
+  # A working copy goes over to the editor's other tab as a working copy, its
+  # locked assets with it
+  for form <- [:media, :locked_media] do
+    test "a working copy handed over to another tab, on form #{form}", %{conn: conn, article: article} = ctx do
+      [revised, other] = [image(ctx.current_user), image(ctx.current_user)]
+      a = open_tab(conn, article, unquote(form), "tab-a")
+      revision_entry = revised_entry(form_assigns(a).entry, revised, other, ctx.current_user)
+      send_form(a, action: :load_working_copy, revision: revision_entry.revision, revision_entry: revision_entry.entry)
+
+      b = open_tab(conn, article, unquote(form), "tab-b")
+      b |> element(~s([data-testid="tab-notice"] button[phx-click="brando_tab_claim"])) |> render_click()
+      assert_push_event(a, "b:draft-release", %{})
+      capture(a)
+      await(fn -> form_assigns(b).working_copy == revision_entry.revision end)
+
+      save(b)
+      assert {saved(article).cover_id, saved_gallery_images(article)} == {revised.id, [other.id]}
+    end
+
+    # The copy of a tab that had no working copy: the form takes what doesn't
+    # sync from it (a value typed that didn't cast here), and keeps its own
+    # working copy's locked assets
+    test "a handover to a tab with a working copy, on form #{form}", %{conn: conn, article: article} = ctx do
+      [revised, other] = [image(ctx.current_user), image(ctx.current_user)]
+      {view, _html} = open(conn, article, unquote(form))
+      revision_entry = revised_entry(form_assigns(view).entry, revised, other, ctx.current_user)
+
+      main = view |> render() |> form_params(@form) |> put_in(["article", "title"], "") |> Plug.Conn.Query.encode()
+      capture(view, main)
+      copy = latest_copy(article)
+
+      send_form(view, action: :load_working_copy, revision: revision_entry.revision, revision_entry: revision_entry.entry)
+
+      send_form(view,
+        event: "tab_access",
+        access: form_assigns(view).tab_access,
+        handover: %{draft_id: copy.id, fields: ["title"]}
+      )
+
+      assert Keyword.has_key?(form_assigns(view).form.source.errors, :title)
+
+      save(view)
+      assert {saved(article).cover_id, saved_gallery_images(article)} == {revised.id, [other.id]}
+    end
+  end
+
+  defp open_tab(conn, article, form, tab) do
+    params = %{"brando_tab" => tab, "brando_tab_seq" => System.unique_integer([:monotonic, :positive])}
+    {view, _html} = conn |> Phoenix.LiveViewTest.put_connect_params(params) |> open(article, form)
+    view
+  end
+
+  defp capture(view, main \\ nil) do
+    main = main || view |> render() |> form_params(@form) |> Plug.Conn.Query.encode()
+
+    view
+    |> with_target(cid_of(view, "#article_form-el"))
+    |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
+  end
+
+  # A stored revision of `entry` with `cover` and a gallery of `image`
+  defp revised_entry(entry, cover, image, user) do
+    gallery = %{
+      entry.photos
+      | gallery_objects: [%Brando.Galleries.GalleryObject{image_id: image.id, image: image, sequence: 0}]
+    }
+
+    {:ok, revision} =
+      Brando.Revisions.create_revision(%{entry | cover_id: cover.id, cover: cover, photos: gallery}, user, false)
+
+    {:ok, {_revision, {number, revision_entry}}} = Brando.Revisions.get_revision(Article, entry.id, revision.revision)
+    %{revision: number, entry: revision_entry}
+  end
+
+  defp latest_copy(article) do
+    Repo.one!(
+      from d in Brando.Drafts.EntryDraft,
+        where: d.entry_id == ^article.id and is_nil(d.resolved_at),
+        order_by: [desc: d.id],
+        limit: 1
+    )
   end
 
   # Another editor's change to a field this one may not change (a superuser's,
