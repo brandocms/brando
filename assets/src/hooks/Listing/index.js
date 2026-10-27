@@ -54,6 +54,29 @@ export default app => ({
       if (!filterInput) return false
       filterInput.focus()
     })
+
+    // Enter in a filter that leaves one entry (`submit_filter`): open it as a
+    // click on its row would, so the row says it is opening. A listing whose
+    // rows do not link to the entry's editor stays, filtered: its URL takes
+    // the filter, as typing it would have.
+    this.handleEvent('brando:open_entry', ({ listing, url, patch }) => {
+      if (listing !== this.el.id) return
+      const link = Array.from(this.el.querySelectorAll('a[data-phx-link="redirect"]')).find(
+        a => a.getAttribute('href') === url
+      )
+      if (link) {
+        // LiveView marks only a trusted click's link as loading, and that
+        // mark is what `openingRow.js` finds the row by when the navigation
+        // starts (its listener runs before this one)
+        link.classList.add('phx-click-loading')
+        window.addEventListener('phx:page-loading-start', () => link.classList.remove('phx-click-loading'), {
+          once: true,
+        })
+        link.click()
+      } else {
+        this.js().patch(patch)
+      }
+    })
   },
 
   destroyed() {

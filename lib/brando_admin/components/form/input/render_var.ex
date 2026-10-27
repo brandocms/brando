@@ -1506,6 +1506,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
           language={assigns[:language]}
           layout={:workspace}
           require_url
+          enter_select
           on_change={@on_change}
           target={@target}
         >

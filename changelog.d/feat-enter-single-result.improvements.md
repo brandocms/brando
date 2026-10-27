@@ -1,0 +1,1 @@
+- Enter in a listing's text filter opens the entry when the filter leaves exactly one, and Enter in a link field's content picker selects the only match and closes the picker.

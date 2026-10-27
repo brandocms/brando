@@ -22,6 +22,10 @@ export default (app) => ({
       if (e.key === 'Escape' && this.$input.value !== '') {
         e.stopPropagation()
         this.clear()
+      } else if (e.key === 'Enter' && this.el.hasAttribute('data-enter-select')) {
+        // the input sits inside the entry or block form: Enter must not submit it
+        e.preventDefault()
+        this.selectOnlyMatch()
       }
     })
 
@@ -49,6 +53,27 @@ export default (app) => ({
   clear() {
     this.$input.value = ''
     this.filter('')
+  },
+
+  // `data-enter-select`: Enter on a filter that leaves one option picks it,
+  // and closes the modal the filter sits in (its `data-modal-close`).
+  selectOnlyMatch() {
+    const $container = this.getContainer()
+    if (!$container || this.$input.value.trim() === '') {
+      return
+    }
+
+    const $visible = Dom.all($container, this._target).filter((option) => !option.classList.contains('filter-hidden'))
+    if ($visible.length !== 1) {
+      return
+    }
+
+    $visible[0].click()
+
+    const $modal = this.el.closest('.modal[data-modal-close]')
+    if ($modal) {
+      app.liveSocket.execJS($modal, $modal.dataset.modalClose)
+    }
   },
 
   // sticky class toggle: adds `klass` when `on`, removes it otherwise
