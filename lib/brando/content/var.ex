@@ -18,6 +18,7 @@ defmodule Brando.Content.Var do
   trait :revisioned
   trait :sequenced
   trait :timestamped
+  trait Brando.Content.Var.FollowLinkDefault
 
   identifier false
   persist_identifier false
@@ -70,6 +71,8 @@ defmodule Brando.Content.Var do
     attribute :link_identifier_schemas, {:array, :string}, default: []
     attribute :link_target_blank, :boolean, default: false
     attribute :link_allow_custom_text, :boolean, default: true
+    # The tab the link dialog opens on while the link is empty (`FollowLinkDefault`)
+    attribute :link_default_type, :enum, values: [:url, :identifier], default: :url
 
     # layout — see `Brando.Content.Var.Layout`. Rows in the block editor are
     # derived by packing `width` into 12 units in `sequence` order, breaking

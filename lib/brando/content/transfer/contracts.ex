@@ -2,6 +2,7 @@ defmodule Brando.Content.Transfer.Contracts do
   use Gettext, backend: Brando.Gettext
   @moduledoc false
   alias Brando.Content.Transfer.Error
+  alias Brando.Content.Var.FollowLinkDefault
   alias Brando.Drafts.Params
   alias Brando.Repo
 
@@ -109,7 +110,7 @@ defmodule Brando.Content.Transfer.Contracts do
   defp compatible?(_, _), do: false
 
   def defaults(params, module) do
-    vars = Enum.map(module.vars || [], &Brando.Color.clear_invalid_var/1)
+    vars = Enum.map(module.vars || [], &(&1 |> Brando.Color.clear_invalid_var() |> FollowLinkDefault.put()))
 
     Enum.reduce([{"refs", "name", module.refs}, {"vars", "key", vars}], params, fn {field, key, definitions}, acc ->
       existing = acc[field]

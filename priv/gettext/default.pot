@@ -5220,6 +5220,11 @@ msgstr ""
 msgid "Default plays as the page asks, else Automatic: streamed with controls or a play button, an MP4 for a loop."
 msgstr ""
 
+#: lib/brando_admin/components/form/input/render_var.ex
+#, elixir-autogen, elixir-format
+msgid "Default tab"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "Default text and preview"
@@ -19694,6 +19699,11 @@ msgstr ""
 #: lib/brando_admin/components/form/alternates_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "When you have selected more than 1 connection, you can ensure that the child alternates are linked together as well."
+msgstr ""
+
+#: lib/brando_admin/components/form/input/render_var.ex
+#, elixir-autogen, elixir-format
+msgid "Where the link dialog opens while no link is set. Editors can still switch."
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex

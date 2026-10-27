@@ -15,6 +15,7 @@ defmodule Brando.Content.Blocks do
   alias Brando.Content.BlockPreloads
   alias Brando.Content.Ref
   alias Brando.Content.Var
+  alias Brando.Content.Var.FollowLinkDefault
   alias Brando.Repo
   alias Brando.RichText
   alias Brando.Tracing
@@ -1170,7 +1171,10 @@ defmodule Brando.Content.Blocks do
         var_src = Map.get(vars_by_key, var_key, %{})
         attrs_to_take = Map.keys(var_src) -- @protected_and_ignored_var_attrs
         new_attrs = Map.take(var_src, attrs_to_take)
-        Changeset.change(var, new_attrs)
+
+        var
+        |> Changeset.change(new_attrs)
+        |> FollowLinkDefault.follow()
     end)
   end
 
@@ -1227,12 +1231,14 @@ defmodule Brando.Content.Blocks do
   def remove_pk_from_vars([]), do: []
 
   # The copy is a new row: a colour value stored before values were checked
-  # is left empty rather than refused (`Brando.Color.clear_invalid_var/1`).
+  # is left empty rather than refused (`Brando.Color.clear_invalid_var/1`),
+  # and an empty link starts on its default tab (`FollowLinkDefault.put/1`).
   def remove_pk_from_vars(vars) when is_list(vars) do
     Enum.map(vars, fn var ->
       var
       |> Map.merge(%{id: nil, module_id: nil, block_id: nil})
       |> Brando.Color.clear_invalid_var()
+      |> FollowLinkDefault.put()
       |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
     end)
   end

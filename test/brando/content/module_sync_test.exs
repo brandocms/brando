@@ -294,4 +294,54 @@ defmodule Brando.Content.ModuleSyncTest do
       assert Changeset.get_field(var, :label) == "New label"
     end
   end
+
+  describe "a link var's default tab" do
+    defp link_var(attrs) do
+      struct(%Var{key: "cta", type: :link, label: "Call to action", link_type: :url, link_default_type: :url}, attrs)
+    end
+
+    defp synced_var(block, module) do
+      block
+      |> Blocks.sync_module(module)
+      |> Changeset.get_assoc(:vars)
+      |> List.first()
+    end
+
+    test "syncs from the module, and an empty var opens on it" do
+      module = module(vars: [link_var(link_default_type: :identifier)])
+      var = synced_var(block(vars: [link_var(id: 1)]), module)
+
+      assert Changeset.get_field(var, :link_default_type) == :identifier
+      assert Changeset.get_field(var, :link_type) == :identifier
+    end
+
+    test "keeps the kind of a link the editor has set" do
+      module = module(vars: [link_var(link_default_type: :identifier)])
+
+      url_var = synced_var(block(vars: [link_var(id: 1, value: "https://example.com")]), module)
+      assert Changeset.get_field(url_var, :link_default_type) == :identifier
+      assert Changeset.get_field(url_var, :link_type) == :url
+
+      entry_var =
+        synced_var(block(vars: [link_var(id: 1, link_type: :identifier, identifier_id: 5)]), module(vars: [link_var([])]))
+
+      assert Changeset.get_field(entry_var, :link_default_type) == :url
+      assert Changeset.get_field(entry_var, :link_type) == :identifier
+    end
+
+    test "leaves an empty var's tab alone when the default did not change" do
+      module = module(vars: [link_var(link_default_type: :identifier)])
+      var = synced_var(block(vars: [link_var(id: 1, link_default_type: :identifier, link_type: :url)]), module)
+
+      refute Map.has_key?(var.changes, :link_type)
+    end
+
+    test "is where a var the module added opens" do
+      module = module(vars: [link_var(id: 9, link_default_type: :identifier)])
+
+      var = synced_var(block(vars: []), module)
+
+      assert Changeset.get_field(var, :link_type) == :identifier
+    end
+  end
 end
