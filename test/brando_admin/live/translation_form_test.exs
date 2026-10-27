@@ -230,6 +230,74 @@ defmodule BrandoAdmin.TranslationFormTest do
     end
   end
 
+  # A form without block fields saves in one submit, without collecting
+  # blocks first (`has_blocks?: false`).
+  describe "a form without block fields" do
+    defp save_without_blocks(view, params) do
+      view |> form("#article_form_form", params) |> render_submit()
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#article_form_form", params) |> render_submit()
+      assert_redirect(view, 3_000)
+    end
+
+    test "a translation saves", %{conn: conn} = c do
+      {view, _html} = live_form(conn, "/admin/articles/update/#{c.target.id}/no-blocks", "article_form")
+      await_selector(view, ".translation-panel.is-target")
+
+      save_without_blocks(view, %{"article" => %{"title" => "Title"}})
+
+      assert load(c.target.id).title == "Title"
+    end
+
+    # The form has no input for the year or the blocks, so the pending
+    # version's stay pending: the save keeps the saved ones.
+    test "a translation with a pending version saves what the form holds", %{conn: conn} = c do
+      version = change_source(c)
+      {view, _html} = live_form(conn, "/admin/articles/update/#{c.target.id}/no-blocks", "article_form")
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      save_without_blocks(view, %{"article" => %{"title" => "Title"}})
+
+      saved = load(c.target.id)
+      assert saved.title == "Title"
+      assert saved.year == 2020
+      assert texts(saved) == ["First paragraph"]
+
+      assert %{work_items: items} = Translations.get_pending_version(Article, c.target.id)
+      assert Enum.any?(items, &(&1.kind == :translate))
+    end
+
+    test "a forged value it has no input for is still refused", %{conn: conn} = c do
+      version = change_source(c)
+      {view, _html} = live_form(conn, "/admin/articles/update/#{c.target.id}/no-blocks", "article_form")
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      params = %{"article" => %{"title" => "Title", "year" => "1999"}}
+      view |> form("#article_form_form") |> render_submit(params)
+      assert_push_event(view, "b:submit", %{}, 2_000)
+      view |> form("#article_form_form") |> render_submit(params)
+      render(view)
+
+      saved = load(c.target.id)
+      assert saved.title == "Tittel"
+      assert saved.year == 2020
+    end
+
+    test "a translation takes the source's new cover", %{conn: conn, current_user: user} = c do
+      cover = Factory.insert(:image, creator: user, focal: %Brando.Images.Focal{x: 50, y: 50}, status: :processed)
+      {:ok, _} = SyncTest.update_article(c.source.id, %{cover_id: cover.id}, user)
+      version = Translations.get_pending_version(Article, c.target.id)
+      {view, _html} = live_form(conn, "/admin/articles/update/#{c.target.id}/elsewhere", "article_form")
+      await_selector(view, "input[name='translation_review[version_id]'][value='#{version.id}']")
+
+      save_without_blocks(view, %{"article" => %{"title" => "Title"}})
+
+      saved = load(c.target.id)
+      assert saved.title == "Title"
+      assert saved.cover_id == cover.id
+    end
+  end
+
   describe "synchronization controls" do
     defp minor_save(view) do
       view |> element("button", "Save minor text corrections") |> render_click()

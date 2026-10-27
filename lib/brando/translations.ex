@@ -475,8 +475,11 @@ defmodule Brando.Translations do
   translation follow its source. Whatever path changed them — a disabled
   control, a forged event, a replayed parameter — the save is compared with
   the version the editor worked from: the pending version `version_id`, or
-  the saved translation when none was loaded. Any difference refuses the
-  save with the paths that differ: `{:error, {:source_controlled, paths}}`.
+  the saved translation when none was loaded. A path may also keep its saved
+  value: a form without a block field, or without an input for a shared
+  value, can't hold the pending version's, and what the save leaves stays
+  pending. Any other difference refuses the save with the paths that
+  differ: `{:error, {:source_controlled, paths}}`.
 
   New blocks and table rows keep the sync identity the pending version gave
   them, which the form does not carry.
@@ -487,32 +490,39 @@ defmodule Brando.Translations do
   def check_target_save(schema, entry_id, %Changeset{} = changeset, version_id \\ nil) do
     with true <- synchronized?(schema),
          %Member{role: :target, synchronized: true} = member <- get_member(schema, entry_id) do
+      {:ok, saved} = load_entry(schema, entry_id)
+
       reference =
         case reviewed_version(member, %{version_id: version_id}) do
-          nil ->
-            {:ok, saved} = load_entry(schema, entry_id)
-            saved
-
-          version ->
-            decode_payload(version)
+          nil -> saved
+          version -> decode_payload(version)
         end
 
       changeset = restore_sync_identities(changeset, schema, reference)
       submitted = Changeset.apply_changes(changeset)
-      module_uids = module_uids([reference, submitted], schema)
-      expected = Sync.owned_rows(reference, schema, nil, module_uids)
-      actual = Sync.owned_rows(submitted, schema, nil, module_uids)
+      module_uids = module_uids([reference, saved, submitted], schema)
+      [expected, kept, actual] = Enum.map([reference, saved, submitted], &owned_by_path(&1, schema, module_uids))
 
-      case (expected -- actual) ++ (actual -- expected) do
+      differing =
+        for path <- Enum.uniq(Map.keys(expected) ++ Map.keys(actual)),
+            actual[path] not in [expected[path], kept[path]],
+            do: path
+
+      case differing do
         [] -> {:ok, changeset}
-        differing -> {:error, {:source_controlled, paths(differing)}}
+        paths -> {:error, {:source_controlled, paths}}
       end
     else
       _ -> {:ok, changeset}
     end
   end
 
-  defp paths(rows), do: rows |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
+  defp owned_by_path(entry, schema, module_uids) do
+    entry
+    |> Sync.owned_rows(schema, nil, module_uids)
+    |> Enum.group_by(&elem(&1, 0))
+    |> Map.new(fn {path, rows} -> {path, Enum.sort(rows)} end)
+  end
 
   # A block the pending version added is new to the form, which gives it a
   # fresh `sync_uid`; put back the one the source assigned, found by `uid`.
