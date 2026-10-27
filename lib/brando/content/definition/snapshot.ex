@@ -81,16 +81,37 @@ defmodule Brando.Content.Definition.Snapshot do
 
   def baselines(bundle) do
     ~w(modules table_templates)
-    |> Map.new(fn kind -> {kind, Map.new(bundle[kind], &{&1["uid"], Value.baseline_digest(&1)})} end)
+    |> Map.new(fn kind -> {kind, Map.new(bundle[kind], &{&1["uid"], version_2_digest(&1)})} end)
     |> Map.put("version", @baseline_version)
   end
 
   @doc "`definition`'s digest as `bundle`'s baseline records them."
   def baseline_digest(bundle, definition) do
     if get_in(bundle, ["baseline", "version"]) == @baseline_version,
-      do: Value.baseline_digest(definition),
+      do: version_2_digest(definition),
       else: Value.digest(definition)
   end
+
+  defp version_2_digest(definition), do: definition |> drop_implied_link_defaults() |> Value.baseline_digest()
+
+  # Before `link_default_type`, an empty link of type identifier was how a var
+  # opened on Content, and brando_224 gave those the default they implied. A
+  # baseline from before the upgrade has no default there: it is the same
+  # definition.
+  defp drop_implied_link_defaults(%{"vars" => vars} = definition) when is_list(vars),
+    do: %{definition | "vars" => Enum.map(vars, &drop_implied_link_default/1)}
+
+  defp drop_implied_link_defaults(definition), do: definition
+
+  defp drop_implied_link_default(
+         %{"type" => "link", "link_type" => "identifier", "link_default_type" => "identifier"} = var
+       ) do
+    if Map.get(var, "value") in [nil, ""] and get_in(var, ["assets", "identifier"]) in [nil, ""],
+      do: Map.delete(var, "link_default_type"),
+      else: var
+  end
+
+  defp drop_implied_link_default(var), do: var
 
   def ensure_scope! do
     if Brando.Tenant.mode() != :none and is_nil(Brando.Tenant.current_prefix()),

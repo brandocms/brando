@@ -145,6 +145,20 @@ defmodule Brando.Content.DefinitionsTest do
     end
   end
 
+  # brando_224 gives a stored empty Content link the default it implied
+  test "a Content default brando_224 backfilled doesn't make the definition a conflict", c do
+    result = c |> with_link_var("link_type: :identifier") |> apply_bundle!(c.user)
+
+    [current] = snapshot()["modules"]
+    cta = Enum.find_index(current["vars"], &(&1["key"] == "cta"))
+    assert get_in(current, ["vars", Access.at(cta), "link_default_type"]) == "identifier"
+    before_upgrade = update_in(current, ["vars", Access.at(cta)], &Map.delete(&1, "link_default_type"))
+
+    edited = edit(result.bundle, &Map.put(&1, "class", "edited"))
+    stale = put_in(edited, ["baseline", "modules", "hero-test"], Value.baseline_digest(before_upgrade))
+    assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(stale, c.user)
+  end
+
   test "a link var opening on URL stores its default empty", c do
     c |> with_link_var("link_default_type: :url") |> apply_bundle!(c.user)
     assert %{link_default_type: nil, link_type: :url} = Enum.find(hero().vars, &(&1.key == "cta"))
