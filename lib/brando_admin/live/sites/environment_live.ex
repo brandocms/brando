@@ -275,11 +275,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         <section class="environment-panel">
           <span class="environment-eyebrow">{gettext("Queue")}</span>
           <h2>{gettext("Pending operations")}</h2>
-          <div :if={@jobs == []} class="environment-empty">
+          <div :if={@jobs == [] and @cancelled_jobs == []} class="environment-empty">
             <span class="environment-empty__icon"><.icon name="clock" /></span>
             <p>{gettext("No copy or live-switch operations are pending.")}</p>
           </div>
-          <div :if={@jobs != []} class="environment-table-wrap">
+          <div :if={@jobs != [] or @cancelled_jobs != []} class="environment-table-wrap">
             <table>
               <thead>
                 <tr>
@@ -306,6 +306,21 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       {gettext("Cancel")}
                     </button>
                   </td>
+                </tr>
+                <%!-- Cancelled when due, for a week: whoever scheduled it may
+                      no longer copy or switch the site's environments. --%>
+                <tr
+                  :for={%{job: job} = cancelled <- @cancelled_jobs}
+                  id={"environment-job-#{job.id}"}
+                  class="environment-job--cancelled"
+                >
+                  <td>
+                    {job_description(job, @environments)}
+                    <span class="environment-job__reason">{cancel_reason(cancelled)}</span>
+                  </td>
+                  <td>{format_scheduled_at(job.scheduled_at)}</td>
+                  <td><span class="environment-state cancelled">{gettext("Cancelled")}</span></td>
+                  <td class="environment-actions"></td>
                 </tr>
               </tbody>
             </table>
@@ -708,6 +723,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     |> assign(:environments, for_site(site, &Registry.list_environments/1))
     |> assign(:archives, for_site(site, &Environments.list_archives/1))
     |> assign(:jobs, for_site(site, &Environments.list_scheduled_operations/1))
+    |> assign(:cancelled_jobs, for_site(site, &Environments.list_cancelled_operations/1))
     |> assign(:operation_logs, for_site(site, &Environments.list_operation_logs/1))
   end
 
@@ -795,6 +811,15 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         job.worker
     end
   end
+
+  defp cancel_reason(%{reason: :scheduler_not_authorized, scheduled_by: %{name: name}}),
+    do:
+      gettext("Not run: %{name}, who scheduled it, may no longer copy or switch this site's environments.",
+        name: name
+      )
+
+  defp cancel_reason(%{reason: :scheduler_not_authorized}),
+    do: gettext("Not run: the account that scheduled it may no longer copy or switch this site's environments.")
 
   defp environment_name(environments, id) do
     case Enum.find(environments, &(to_string(&1.id) == to_string(id))) do

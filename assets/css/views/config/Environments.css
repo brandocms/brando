@@ -432,6 +432,20 @@
     }
   }
 
+  .environment-state.cancelled {
+    background: var(--brando-error);
+    color: var(--brando-error-ink);
+  }
+
+  .environment-job__reason {
+    @font main;
+    display: block;
+    margin-top: 4px;
+    color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+    font-size: var(--brando-text-sm);
+    white-space: normal;
+  }
+
   /* Kept as a table cell: display:flex on a <td> drops it out of table layout,
      which detached its bottom border from the rest of the row. */
   td.environment-actions {
