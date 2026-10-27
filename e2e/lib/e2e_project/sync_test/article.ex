@@ -13,7 +13,7 @@ defmodule E2eProject.SyncTest.Article do
   trait Brando.Trait.Creator
   trait Brando.Trait.Status
   trait Brando.Trait.Timestamped
-  trait Brando.Trait.Translatable, mode: :synchronized, source_controlled_fields: [:year, items: [:link]]
+  trait Brando.Trait.Translatable, mode: :synchronized, source_controlled_fields: [:year, :featured, items: [:link]]
   trait Brando.Trait.Blocks
 
   identifier "{{ entry.title }}"

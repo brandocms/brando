@@ -1,0 +1,1 @@
+- A screen reader reads out the value of a locked toggle, select, date, media or other non-text field with its label, where the inert control hid it; a synchronized translation's source-locked fields keep their label readable too, and their text inputs become read only instead of inert.

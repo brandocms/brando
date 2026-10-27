@@ -28,6 +28,10 @@ defmodule BrandoAdmin.Components.Form.LockedInputsTest do
       field :featured, :boolean
       field :starts_on, :date
       field :label, :map
+      field :size, :string
+      field :status, :string
+      field :key, :string
+      field :aliases, {:array, :string}
     end
   end
 
@@ -39,7 +43,11 @@ defmodule BrandoAdmin.Components.Form.LockedInputsTest do
       amount: 120,
       featured: true,
       starts_on: ~D[2026-11-14],
-      label: %{"en" => "Opening", "no" => "Åpning"}
+      label: %{"en" => "Opening", "no" => "Åpning"},
+      size: "m",
+      status: "published",
+      key: "<p>{{ entry.title }}</p>",
+      aliases: ["Premiere", "Opening"]
     }
     |> Ecto.Changeset.change()
     |> to_form(as: :entry)
@@ -123,6 +131,67 @@ defmodule BrandoAdmin.Components.Form.LockedInputsTest do
     end
   end
 
+  # An inert control hides what it shows from a screen reader, so the label
+  # reads out the value as text. Visible only to a screen reader, and only
+  # while the field is locked (FieldBase.css); a translation's source lock
+  # shows it as well (`Brando.TranslationWork`), so it renders unlocked too.
+  describe "the value of an inert control" do
+    defp value_text(html) do
+      case html |> Floki.parse_fragment!() |> Floki.find("label.control-label > .field-value") do
+        [] -> nil
+        found -> found |> Floki.text() |> String.replace(~r/\s+/, " ") |> String.trim()
+      end
+    end
+
+    test "is read out with the label" do
+      size_options = [options: [%{label: "Small", value: "s"}, %{label: "Medium", value: "m"}]]
+
+      for {name, type, opts, expected} <- [
+            {:featured, :toggle, [], "On"},
+            {:featured, :checkbox, [], "Checked"},
+            {:starts_on, :date, [], "2026-11-14"},
+            {:size, :radios, size_options, "Medium"},
+            {:status, :status, [], "Published"},
+            {:aliases, :string_list, [], "Premiere, Opening"},
+            {:key, :code, [], "<p>{{ entry.title }}</p>"}
+          ] do
+        html = render_top_level(name, type, [readonly: true] ++ opts, @superuser)
+
+        assert inert?(html), "#{type} is inert"
+        assert value_text(html) == ", " <> expected, "#{type}: #{inspect(value_text(html))}"
+      end
+    end
+
+    test "an unset value says so" do
+      html = render_top_level(:size, :radios, [readonly: true, options: [%{label: "Small", value: "s"}]], @superuser)
+
+      assert value_text(html) == ", Not set"
+    end
+
+    test "renders unlocked as well, for a translation's source lock, except a code editor's" do
+      assert value_text(render_top_level(:featured, :toggle, [], @editor)) == ", On"
+      # Its text changes with every keystroke
+      assert value_text(render_top_level(:key, :code, [], @editor)) == nil
+    end
+
+    test "a text input, read only, needs none" do
+      assert value_text(render_top_level(:title, :text, [readonly: true], @superuser)) == nil
+    end
+
+    test "a tiny toggle reads out its label, lock and state" do
+      html =
+        render_component(&BrandoAdmin.Components.Form.Input.toggle/1,
+          field: form()[:featured],
+          label: "Featured",
+          opts: [readonly: true],
+          tiny: true
+        )
+
+      [hidden] = html |> Floki.parse_fragment!() |> Floki.find(".visually-hidden")
+      assert hidden |> Floki.text() |> String.replace(~r/\s+/, " ") |> String.trim() == "Featured, Locked, On"
+    end
+  end
+
   describe "a link" do
     # `Input.Link` draws its field through the var's own chrome
     test "a locked link's field is marked and inert" do
@@ -147,6 +216,7 @@ defmodule BrandoAdmin.Components.Form.LockedInputsTest do
 
       assert locked?(render.(true))
       assert inert?(render.(true))
+      assert render.(true) =~ ~r/class="field-value[^"]*">, https:\/\/example.com</
       refute locked?(render.(false))
     end
 

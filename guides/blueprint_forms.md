@@ -316,9 +316,11 @@ Every input type reads these:
   `:number`, `:email`, `:phone`, `:password`, `:slug`, the translated
   inputs and `:rich_text`) are read only, so their text can still be
   selected and a translated input's languages read; every other control is
-  inert and faded. A custom input component reads the lock as `@locked`
-  (set by `prepare_input_component/1`) and passes it to
-  `Primitives.field_base/1` as `locked`.
+  inert and faded, and a screen reader reads its value out with the label.
+  A custom input component reads the lock as `@locked` (set by
+  `prepare_input_component/1`) and passes it to `Primitives.field_base/1`
+  as `locked`; a control that isn't text passes its value as text in the
+  `:value` slot.
 
   A save ignores any value sent for a locked top-level input. The field
   keeps its saved value, or one Brando set: a new entry's `default_params`,

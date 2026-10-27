@@ -124,6 +124,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
         locked={@locked}
         relation
       >
+        <:value>{MediaField.asset_name(@file, :file) || Input.value_text(nil)}</:value>
         <div>
           <div class="input-file">
             <MediaField.field

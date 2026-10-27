@@ -29,7 +29,21 @@ test('a translation opens with its pending version, is reviewed and saved', asyn
 
   // The pending year is in the form, and what follows the source is locked.
   await expect(page.locator('input[name="article[year]"]')).toHaveValue('2024')
-  await expect(page.locator('#article_year-field-wrapper')).toHaveAttribute('inert', '', { timeout: 5000 })
+  // A text input is read only; another control is inert, and its label
+  // reads out its value. Neither label passes a click on.
+  const year = page.locator('#article_year-field-wrapper')
+  await expect(year).toHaveAttribute('data-source-locked', 'true', { timeout: 5000 })
+  await expect(year.locator('input[name="article[year]"]')).toHaveAttribute('readonly', '')
+  await expect(year.locator(':scope > .field-base')).not.toHaveAttribute('inert')
+  const featured = page.locator('#article_featured-field-wrapper')
+  await expect(featured).toHaveAttribute('data-source-locked', 'true')
+  await expect(featured.locator(':scope > .field-base')).toHaveAttribute('inert', '')
+  for (const field of [year, featured]) {
+    await expect(field.locator(':scope > .label-wrapper > label')).not.toHaveAttribute('for')
+  }
+  const featuredValue = featured.locator(':scope > .label-wrapper .field-value')
+  await expect(featuredValue).not.toBeEmpty()
+  expect(await featuredValue.evaluate(el => getComputedStyle(el).display)).not.toBe('none')
   await expect(page.locator('.blocks-wrapper.is-source-locked .blocks-source-note')).toBeVisible()
   await expect(page.locator('.blocks-wrapper.is-source-locked .block-plus:visible')).toHaveCount(0)
   // Blocks are added, moved and removed only in the source: no drag handles,

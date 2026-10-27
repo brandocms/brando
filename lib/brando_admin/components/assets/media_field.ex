@@ -396,10 +396,11 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   def video_url(%{type: :external_file, source_url: url}) when is_binary(url) and url != "", do: url
   def video_url(_), do: nil
 
-  defp asset_name(nil, _), do: nil
-  defp asset_name(asset, :image), do: Path.basename(asset.path || "")
-  defp asset_name(asset, :file), do: asset.filename
-  defp asset_name(asset, :video), do: asset.title || gettext("Untitled video")
+  @doc "The name a media field shows for `asset`: an image's file name, a file's, a video's title"
+  def asset_name(nil, _), do: nil
+  def asset_name(asset, :image), do: Path.basename(asset.path || "")
+  def asset_name(asset, :file), do: asset.filename
+  def asset_name(asset, :video), do: asset.title || gettext("Untitled video")
 
   @doc """
   Returns the human-readable upload size limit for a field config, such as

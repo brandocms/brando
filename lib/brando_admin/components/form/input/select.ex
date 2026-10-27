@@ -53,6 +53,7 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
         compact={@compact}
         locked={@locked}
       >
+        <:value>{if @selected_option, do: raw(@select_label), else: gettext("No selection")}</:value>
         <Input.input type={:hidden} field={@field} value={@selected_option} publish={@publish} />
         <Input.input
           :if={@origin_field}

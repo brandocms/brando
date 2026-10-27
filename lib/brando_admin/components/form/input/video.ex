@@ -247,6 +247,7 @@ defmodule BrandoAdmin.Components.Form.Input.Video do
         locked={@locked}
         relation
       >
+        <:value>{MediaField.asset_name(@video, :video) || Input.value_text(nil)}</:value>
         <div>
           <div class="input-video">
             <MediaField.field
