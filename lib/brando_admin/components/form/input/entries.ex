@@ -148,7 +148,14 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   def render(assigns) do
     ~H"""
     <div>
-      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <Primitives.field_base
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}
+        locked={@locked}
+      >
         <div class="entries-input identifier-field">
           <div
             id={"#{@field.id}-selected-identifiers"}

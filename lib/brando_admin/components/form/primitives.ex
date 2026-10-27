@@ -55,6 +55,16 @@ defmodule BrandoAdmin.Components.Form.Primitives do
   attr :uid, :string
   attr :id_prefix, :string
   attr :skip_presence, :boolean, default: false
+
+  attr :locked, :any,
+    default: false,
+    doc: """
+    a locked field (BrandoAdmin.Utils.locked?/1) is marked as such by its
+    label. `true` makes its controls inert; `:readonly` leaves them to the
+    input, which renders them `readonly`, so their text can still be read,
+    selected and copied.
+    """
+
   slot :meta
   slot :header
 
@@ -86,14 +96,19 @@ defmodule BrandoAdmin.Components.Form.Primitives do
       class={["field-wrapper", @class, @fit_content && "fit-content"]}
       id={"#{@f_id}-field-wrapper"}
       phx-hook="Brando.FieldBase"
+      data-locked={@locked && "true"}
     >
       <div class={["label-wrapper", @hidden && "hidden"]}>
+        <%!-- An inert control takes no click from its label either --%>
         <label
-          for={"#{@f_id}"}
+          for={@locked != true && "#{@f_id}"}
           class={["control-label", @failed && "failed"]}
           data-field-presence={!@skip_presence && @f_name}
         >
           <span>{@label}</span>
+          <span :if={@locked} class="field-lock">
+            <.icon name="lock" /><span class="visually-hidden">{gettext("Locked")}</span>
+          </span>
           <div
             :if={!@skip_presence}
             class="field-presence"
@@ -115,7 +130,7 @@ defmodule BrandoAdmin.Components.Form.Primitives do
         </div>
       </div>
       <.field_meta :if={@meta_top} f_id={@f_id} instructions={@raw_instructions} left={@left_justify_meta} meta={@meta} />
-      <div class="field-base" id={"#{@f_id}-field-base"}>
+      <div class="field-base" id={"#{@f_id}-field-base"} inert={@locked == true}>
         {render_slot(@inner_block)}
       </div>
       <.field_meta :if={!@meta_top} f_id={@f_id} instructions={@raw_instructions} left={@left_justify_meta} meta={@meta} />
@@ -178,6 +193,8 @@ defmodule BrandoAdmin.Components.Form.Primitives do
   def input(assigns) do
     assigns =
       assigns
+      |> assign_new(:current_user, fn -> nil end)
+      |> then(&assign(&1, :opts, lock_opts(&1.opts, &1.current_user)))
       |> assign_new(:path, fn -> [] end)
       |> assign_new(:component_id, fn -> assigns.field.id end)
       |> assign_new(:parent_form, fn -> nil end)
@@ -236,6 +253,35 @@ defmodule BrandoAdmin.Components.Form.Primitives do
     <% end %>
     """
   end
+
+  @doc """
+  `opts` with `readonly: :unless_superuser` and `disabled: :unless_superuser`
+  resolved for `user`: they lock the input for anyone but a superuser, who
+  can still correct the field. BrandoAdmin.Utils.locked?/1 then tells
+  whether the input renders locked. A top-level input comes with
+  `:locked` set (`LockedFields.locked_input?/2`), which it keeps.
+
+  Options without `:unless_superuser` come back as they are, so the assign
+  stays unchanged between renders.
+  """
+  def lock_opts(nil, _user), do: []
+
+  def lock_opts(opts, user) do
+    if Enum.any?(opts, &unless_superuser?/1) do
+      opts =
+        Enum.map(opts, fn
+          {key, :unless_superuser} when key in [:readonly, :disabled] -> {key, not match?(%{role: :superuser}, user)}
+          opt -> opt
+        end)
+
+      Keyword.put_new(opts, :locked, Keyword.get(opts, :readonly) == true or Keyword.get(opts, :disabled) == true)
+    else
+      opts
+    end
+  end
+
+  defp unless_superuser?({key, :unless_superuser}) when key in [:readonly, :disabled], do: true
+  defp unless_superuser?(_opt), do: false
 
   @doc """
   A type with a module under `Input` is a live component; any other type falls

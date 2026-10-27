@@ -237,3 +237,59 @@
     }
   }
 }
+
+/* A locked field (`readonly:` or `disabled:`): a lock after the label, and
+   controls that show they take no edit. Text stays readable and can be
+   selected; other controls are inert and faded, as a translation's
+   source-locked fields are. */
+.label-wrapper label .field-lock {
+  display: inline-flex;
+  vertical-align: -1px;
+  margin-left: 6px;
+  padding-left: 0;
+  color: var(--brando-muted);
+
+  [data-icon] {
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.label-wrapper label.failed .field-lock {
+  padding-left: 0;
+}
+
+.field-wrapper[data-locked] {
+  > .field-base[inert] {
+    opacity: 0.6;
+  }
+
+  input.text[readonly],
+  textarea.text[readonly] {
+    background-color: var(--brando-surface-shaded);
+    color: var(--brando-muted);
+    box-shadow: none;
+    cursor: default;
+  }
+}
+
+/* Read-only rich text: the text on the locked surface, without the toolbar */
+.field-wrapper[data-locked] .tiptap-wrapper {
+  background: var(--brando-surface-shaded);
+
+  .tiptap-menu {
+    display: none;
+  }
+
+  .tiptap-editor-shell,
+  .tiptap-preview {
+    --tiptap-paper: transparent;
+    --tiptap-ink: var(--brando-muted);
+    background: transparent;
+    color: var(--brando-muted);
+  }
+}
+
+.tiny-toggle-wrapper[data-locked] {
+  opacity: 0.6;
+}

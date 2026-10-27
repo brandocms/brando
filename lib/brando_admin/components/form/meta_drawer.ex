@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
   alias BrandoAdmin.Components.Form.FieldActions
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.MetaPreviews
+  alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.StructuredData
   alias Phoenix.LiveView.JS
 
@@ -28,9 +29,10 @@ defmodule BrandoAdmin.Components.Form.MetaDrawer do
     assigns =
       assigns
       |> assign_new(:form_id, fn -> nil end)
-      |> assign(:meta_title_opts, meta_title_opts)
+      # A `readonly: :unless_superuser` meta field is locked for anyone else
+      |> assign(:meta_title_opts, Primitives.lock_opts(meta_title_opts, assigns[:current_user]))
       |> assign(:meta_title_actions, meta_title_actions)
-      |> assign(:meta_description_opts, meta_description_opts)
+      |> assign(:meta_description_opts, Primitives.lock_opts(meta_description_opts, assigns[:current_user]))
       |> assign(:meta_description_actions, meta_description_actions)
       |> assign(:schema, schema)
       |> assign(:structured_data?, structured_data?(schema))

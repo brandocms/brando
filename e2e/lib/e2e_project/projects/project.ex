@@ -131,6 +131,43 @@ defmodule E2eProject.Projects.Project do
   end
 
   forms do
+    # The inputs the inline row fixture can't hold, declared locked
+    # (locked-inputs.spec.js). Opened at /admin/projects/projects/locked/:entry_id.
+    form :locked do
+      tab gettext("Content") do
+        fieldset do
+          size :half
+          input :title, :text, label: t("Title"), readonly: true
+          input :introduction, :rich_text, label: t("Introduction"), extensions: ["p", "bold"], readonly: true
+          input :full_case, :toggle, label: t("Full case"), disabled: true
+
+          input :project_categories, :multi_select,
+            options: &__MODULE__.get_categories/2,
+            relation_key: :category_id,
+            relation: :category,
+            resetable: true,
+            label: t("Categories"),
+            disabled: true
+
+          input :client_id, :select,
+            options: &__MODULE__.get_clients/2,
+            resetable: true,
+            label: t("Client"),
+            readonly: true
+        end
+
+        fieldset do
+          size :half
+          input :project_gallery, :gallery, label: t("Project gallery"), readonly: true
+
+          input :related_entries, :entries,
+            sources: [{__MODULE__, %{preload: [], order: "asc title", status: :published}}],
+            label: t("Related entries"),
+            disabled: true
+        end
+      end
+    end
+
     form do
       default_params %{"status" => "draft"}
       blocks :blocks, label: "Blocks"

@@ -121,6 +121,7 @@ defmodule BrandoAdmin.Components.Form.Input.File do
         instructions={@instructions}
         class={@class}
         compact={@compact}
+        locked={@locked}
         relation
       >
         <div>

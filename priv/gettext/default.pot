@@ -9320,6 +9320,11 @@ msgstr ""
 msgid "Locale"
 msgstr ""
 
+#: lib/brando_admin/components/form/primitives.ex
+#, elixir-autogen, elixir-format
+msgid "Locked"
+msgstr ""
+
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
 msgid "Locked after too many failed attempts"

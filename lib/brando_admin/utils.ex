@@ -89,6 +89,8 @@ defmodule BrandoAdmin.Utils do
       class: assign_opts[:class],
       monospace: assign_opts[:monospace] || false,
       disabled: assign_opts[:disabled] || false,
+      readonly: assign_opts[:readonly] || nil,
+      locked: locked?(assign_opts),
       debounce: assign_opts[:debounce] || 300,
       compact: assign_opts[:compact],
       placeholder: g(schema, assign_opts[:placeholder]) || socket.assigns.placeholder,
@@ -114,6 +116,7 @@ defmodule BrandoAdmin.Utils do
       monospace: assigns.opts[:monospace] || false,
       disabled: assigns.opts[:disabled] || false,
       readonly: assigns.opts[:readonly] || nil,
+      locked: locked?(assigns.opts),
       debounce: assigns.opts[:debounce] || 300,
       compact: assigns.opts[:compact],
       placeholder: g(schema, assigns.opts[:placeholder]) || assigns.placeholder,
@@ -121,6 +124,22 @@ defmodule BrandoAdmin.Utils do
       label: g(schema, assigns.opts[:label]) || assigns.label
     )
   end
+
+  @doc """
+  Whether an input's `opts` lock it: its controls take no edit. A top-level
+  input's `:locked` says (`Form.LockedFields.locked_input?/2`); otherwise
+  `readonly:` or `disabled:`, `true` or `:unless_superuser` resolved for the
+  user by `Form.Primitives.lock_opts/2` (unresolved, it locks).
+  """
+  def locked?(opts) when is_list(opts) do
+    case Keyword.fetch(opts, :locked) do
+      {:ok, locked} -> locked == true
+      # Not resolved for a user: locked for everyone, as for no user
+      :error -> Enum.any?([:readonly, :disabled], &(Keyword.get(opts, &1) in [true, :unless_superuser]))
+    end
+  end
+
+  def locked?(_opts), do: false
 
   def make_uid(_field, nil) do
     nil

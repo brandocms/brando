@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
   # use Phoenix.HTML
 
   alias Brando.Blueprint.Forms.Input, as: BlueprintInput
+  alias BrandoAdmin.Components.Form.LockedFields
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.Components.Form.Subform
   alias BrandoAdmin.Components.Form.Transformer
@@ -82,7 +83,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
           label={@label}
           instructions={@instructions}
           placeholder={@placeholder}
-          opts={user_opts(@input.opts || [], @current_user)}
+          opts={user_opts(@input, @current_user)}
           type={@input.type}
           current_user={@current_user}
           form_id={@form_id}
@@ -94,14 +95,9 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
     """
   end
 
-  # `readonly: :unless_superuser` and `disabled: :unless_superuser` lock a
-  # field for everyone but superusers, who can still correct it.
-  defp user_opts(opts, user) do
-    Enum.map(opts, fn
-      {key, :unless_superuser} when key in [:readonly, :disabled] -> {key, !match?(%{role: :superuser}, user)}
-      opt -> opt
-    end)
-  end
+  # A top-level input renders locked exactly when a save ignores it
+  # (`LockedFields`)
+  defp user_opts(input, user), do: Keyword.put(input.opts || [], :locked, LockedFields.locked_input?(input, user))
 
   defp hidden?(%BlueprintInput{opts: opts}, form), do: Visibility.hidden?(opts, form)
   defp hidden?(_, _), do: false

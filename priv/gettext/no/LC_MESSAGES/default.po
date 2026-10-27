@@ -9322,6 +9322,11 @@ msgstr "Laster inn videoer…"
 msgid "Locale"
 msgstr "Språk"
 
+#: lib/brando_admin/components/form/primitives.ex
+#, elixir-autogen, elixir-format
+msgid "Locked"
+msgstr "Låst"
+
 #: lib/brando_admin/components/two_factor.ex
 #, elixir-autogen, elixir-format
 msgid "Locked after too many failed attempts"

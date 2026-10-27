@@ -24,8 +24,9 @@ export default app => ({
       // Follow the source only for a slug that starts out empty (a new entry)
       // and until someone types in it. An existing entry's slug is its URL,
       // and fixing a typo in the title mustn't move it. A slug typed by hand
-      // is kept as typed, prefix or not.
-      this.following = this.el.value === ''
+      // is kept as typed, prefix or not. A locked (read-only) slug is the
+      // server's to set, so it doesn't follow either.
+      this.following = this.el.value === '' && !this.el.readOnly
       this.prefix = this.el.dataset.slugPrefix || ''
       this.el.addEventListener('input', () => {
         if (!this.generating) this.following = this.el.value === ''

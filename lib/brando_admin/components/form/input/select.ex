@@ -45,7 +45,14 @@ defmodule BrandoAdmin.Components.Form.Input.Select do
   def render(assigns) do
     ~H"""
     <div>
-      <Primitives.field_base field={@field} label={@label} instructions={@instructions} class={@class} compact={@compact}>
+      <Primitives.field_base
+        field={@field}
+        label={@label}
+        instructions={@instructions}
+        class={@class}
+        compact={@compact}
+        locked={@locked}
+      >
         <Input.input type={:hidden} field={@field} value={@selected_option} publish={@publish} />
         <Input.input
           :if={@origin_field}

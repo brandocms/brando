@@ -39,6 +39,7 @@ defmodule BrandoAdmin.Components.Form.Input.Link do
           render={:all}
           form_id={@form_id}
           label_override={@label}
+          locked={@locked}
         />
       </.inputs_for>
     </div>

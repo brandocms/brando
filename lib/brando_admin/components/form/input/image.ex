@@ -257,6 +257,7 @@ defmodule BrandoAdmin.Components.Form.Input.Image do
         instructions={@instructions}
         class={@class}
         compact={@compact}
+        locked={@locked}
         relation
       >
         <div>
