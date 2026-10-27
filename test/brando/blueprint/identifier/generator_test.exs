@@ -1,5 +1,7 @@
 defmodule Brando.Blueprint.Identifier.GeneratorTest do
-  use ExUnit.Case
+  # A sandbox of its own: `generate/4` renders with the site's identity, which
+  # is read from the database when another test has left the cache empty
+  use Brando.ConnCase
 
   alias Brando.Blueprint.Identifier.Generator
   alias Brando.MigrationTest.ProjectUpdate1
