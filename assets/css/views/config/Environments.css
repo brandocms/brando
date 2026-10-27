@@ -524,8 +524,11 @@
     font-weight: 500;
   }
 
-  .environment-log__operation + .badge {
-    margin-left: 8px;
+  .environment-log__heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
   }
 
   .environment-archive__meta {

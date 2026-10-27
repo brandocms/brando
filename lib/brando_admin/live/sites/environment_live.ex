@@ -340,9 +340,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
               <tbody>
                 <tr :for={log <- @operation_logs} id={"environment-log-#{log.id}"}>
                   <td>
-                    <span class="environment-log__operation">{operation_label(log.operation)}</span>
                     <%!-- Scheduled, then cancelled when it was due instead of run --%>
-                    <span :if={log.cancelled_reason} class="badge badge--error">{gettext("Cancelled")}</span>
+                    <span class="environment-log__heading">
+                      <span class="environment-log__operation">{operation_label(log.operation)}</span>
+                      <span :if={log.cancelled_reason} class="badge badge--error">{gettext("Cancelled")}</span>
+                    </span>
                     <span :if={log.cancelled_reason} class="environment-log__reason">{cancel_reason(log)}</span>
                   </td>
                   <td>
