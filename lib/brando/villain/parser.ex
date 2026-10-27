@@ -1688,7 +1688,11 @@ defmodule Brando.Villain.Parser do
     {key, video}
   end
 
-  defp process_var(%Brando.Content.Var{type: :video, key: key, video: video}), do: {key, video}
+  # A video still with its provider when the editor loaded it may be ready
+  # by now (`with_provider?/1`).
+  defp process_var(%Brando.Content.Var{type: :video, key: key, video: video, video_id: id}) do
+    if with_provider?(video) and video.id == id, do: {key, fetch_video_assoc(id)}, else: {key, video}
+  end
 
   defp process_var(%Brando.Content.Var{type: :gallery, key: key, gallery: %Ecto.Association.NotLoaded{}} = var) do
     %{gallery: gallery} =
@@ -1794,7 +1798,7 @@ defmodule Brando.Villain.Parser do
   defp merge_ref_associations(%{data: %{type: "video"}} = ref) do
     # video_id may arrive as an integer or as a string (freshly picked, before cast).
     video_id = normalize_ref_id(Map.get(ref, :video_id))
-    video = resolve_ref_assoc(Map.get(ref, :video), video_id)
+    video = ref |> Map.get(:video) |> resolve_ref_assoc(video_id) |> unless_with_provider()
 
     merged_data =
       cond do
@@ -1978,6 +1982,16 @@ defmodule Brando.Villain.Parser do
       video -> Brando.Repo.preload(video, [:thumbnail, :file])
     end
   end
+
+  # A video the provider was still uploading or encoding when it was loaded.
+  # The editor's blocks keep the struct they were opened or picked with, and
+  # the provider's report refreshes only the card (`ProcessingWatch`), so a
+  # render (the live preview's above all) reads it again by id: by now it may
+  # be ready to play.
+  defp with_provider?(%Brando.Videos.Video{status: status}), do: status in [:uploading, :processing]
+  defp with_provider?(_video), do: false
+
+  defp unless_with_provider(video), do: if(with_provider?(video), do: nil, else: video)
 
   # A ref's `*_id` is the source of truth for which asset the ref points at. The
   # preloaded association is only a cache of that id, and the two can disagree.

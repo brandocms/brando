@@ -2474,6 +2474,23 @@ defmodule BrandoAdmin.Components.Form.Block do
     maybe_update_live_preview_block(socket)
   end
 
+  @doc """
+  The provider reported a video a ref or var shows as ready
+  (`BrandoAdmin.LiveView.Form.ProcessingWatch`): reload the live preview, as
+  for a newly picked video, so the frontend boots its player. Not an edit,
+  so the block's state is left alone: a render reads a video still with its
+  provider again by id (`Brando.Villain.Parser`). `form_id` is nil outside an
+  entry form, which has no preview.
+  """
+  def reload_live_preview_when_ready(form_id, shown, processed)
+
+  def reload_live_preview_when_ready(form_id, %{status: was}, %{status: :ready})
+      when not is_nil(form_id) and was != :ready do
+    send_update(BrandoAdmin.Components.Form, id: form_id, event: "reload_live_preview")
+  end
+
+  def reload_live_preview_when_ready(_form_id, _shown, _processed), do: :ok
+
   # Keys in an update_ref_data payload that introduce, swap or remove a media
   # association whose frontend player must be JS-mounted (video/gallery/image/file).
   defp media_ref_change?(params) do

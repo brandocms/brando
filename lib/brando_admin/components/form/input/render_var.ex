@@ -13,6 +13,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   alias BrandoAdmin.Components.Assets.MediaField
   alias BrandoAdmin.Components.Assets.ProviderVideoUpload
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Primitives
   alias BrandoAdmin.LiveView.Form.ProcessingWatch
@@ -120,9 +121,10 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   end
 
   # Not an edit: the var keeps its video id, so nothing goes to the block.
-  # Only the card is refreshed.
+  # Only the card is refreshed, and the live preview once the video is ready.
   defp apply_processed({%{event: "video_processed", video: video}, socket}) do
     if socket.assigns[:type] == :video && match?(%{id: id} when id == video.id, socket.assigns[:video]) do
+      Block.reload_live_preview_when_ready(socket.assigns[:form_id], socket.assigns.video, video)
       assign(socket, :video, video)
     else
       socket

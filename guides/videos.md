@@ -568,8 +568,9 @@ The upload flow:
 Until the provider reports the video ready, a video field, block ref or video
 variable shows "Processing video…" in place of its thumbnail, in every editor
 with the entry open. The webhook's report replaces it with the thumbnail and
-the video's details, without a reload. A video the provider failed to process
-shows "Video processing failed".
+the video's details, without a reload, and an open live preview reloads to
+show the player. The report is not an edit: the entry is not marked changed.
+A video the provider failed to process shows "Video processing failed".
 
 ### Playback settings
 
