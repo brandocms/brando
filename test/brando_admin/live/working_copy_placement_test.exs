@@ -467,4 +467,29 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
     await(fn -> render(view) =~ ~r/draft-save-state" data-state="clean"/ end)
     assert copies(c) == []
   end
+
+  # The revision's fields go into the form as params: a publishing date
+  # turned into a plain map there crashed the datetime input.
+  test "a published page with a publishing date loads as a working copy", c do
+    publish_at = ~U[2026-03-04 05:06:00Z]
+
+    Repo.update_all(from(p in Page, where: p.id == ^c.page.id),
+      set: [status: :published, publish_at: publish_at, title: "As in the revision"]
+    )
+
+    roots!(c, [container(c, "boxA", [module_block(c, "keepA", "Stays in A")])])
+    revision = revision!(c)
+    Repo.update_all(from(p in Page, where: p.id == ^c.page.id), set: [title: "Edited since"])
+
+    view = open(c)
+    load_working_copy(view, revision)
+
+    params = view |> render() |> form_params("#page_form_form")
+    assert params["page"]["title"] == "As in the revision"
+    assert params["page"]["publish_at"] =~ "2026-03-04"
+
+    save(view)
+    await(fn -> Repo.get!(Page, c.page.id).title == "As in the revision" end)
+    assert Repo.get!(Page, c.page.id).publish_at == publish_at
+  end
 end

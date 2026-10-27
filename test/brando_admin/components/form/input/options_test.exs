@@ -74,4 +74,17 @@ defmodule BrandoAdmin.Components.Form.Input.OptionsTest do
     assert Options.translate_labels(options, field(Brando.Navigation.Menu)) == options
     assert Options.translate_labels(options, %{form: %{source: %{}}}) == options
   end
+
+  # A select var's labels are text an admin typed in the module editor. As
+  # msgids, a placeholder-like label logged missing bindings on each render.
+  test "a var's option labels are not looked up in gettext" do
+    options = [%{value: "x", label: "Hi %{name}"}]
+
+    log =
+      ExUnit.CaptureLog.capture_log(fn ->
+        assert Options.translate_labels(options, field(Brando.Content.Var)) == options
+      end)
+
+    refute log =~ "missing Gettext bindings"
+  end
 end

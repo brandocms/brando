@@ -36,8 +36,11 @@ defmodule BrandoAdmin.Components.Form.Input.Options do
   Translate the labels of options declared in the Blueprint, like
   `%{value: :published, label: t("Published")}`, in the schema's gettext
   domain, as radios do. Options from a function are data (entry titles and
-  the like) and are left alone.
+  the like) and are left alone, and so are a var's: its labels are text an
+  admin typed, not msgids.
   """
+  def translate_labels(options, %{form: %{source: %{data: %Brando.Content.Var{}}}}), do: options
+
   def translate_labels(options, %{form: %{source: %{data: %{__struct__: schema}}}}) when is_list(options) do
     Enum.map(options, fn
       %{label: label} = opt when is_binary(label) -> %{opt | label: schema |> g(label) |> Phoenix.HTML.safe_to_string()}
