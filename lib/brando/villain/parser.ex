@@ -1688,11 +1688,17 @@ defmodule Brando.Villain.Parser do
     {key, video}
   end
 
-  # A video still with its provider when the editor loaded it may be ready
-  # by now (`with_provider?/1`).
-  defp process_var(%Brando.Content.Var{type: :video, key: key, video: video, video_id: id}) do
-    if with_provider?(video) and video.id == id, do: {key, fetch_video_assoc(id)}, else: {key, video}
+  # `video_id` says which video the var shows. The struct is a cache of it:
+  # the one the editor loaded, which a pick in the editor does not replace
+  # (as for refs, `resolve_ref_assoc/2`) and the provider may have finished
+  # since (`with_provider?/1`). Then the video is read again by id.
+  defp process_var(%Brando.Content.Var{type: :video, key: key, video: video, video_id: id}) when is_integer(id) do
+    if match?(%{id: ^id}, video) and not with_provider?(video),
+      do: {key, video},
+      else: {key, fetch_video_assoc(id)}
   end
+
+  defp process_var(%Brando.Content.Var{type: :video, key: key, video: video}), do: {key, video}
 
   defp process_var(%Brando.Content.Var{type: :gallery, key: key, gallery: %Ecto.Association.NotLoaded{}} = var) do
     %{gallery: gallery} =

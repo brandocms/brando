@@ -563,6 +563,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:form, form)
     |> assign_selected_identifiers()
     |> assign_hidden_block_fields()
+    |> watch_carried_var_videos()
     |> assign(:form_is_new, false)
     |> assign(:form_has_changes, false)
     |> assign(:active, Changeset.get_field(block_cs, :active))
@@ -743,13 +744,12 @@ defmodule BrandoAdmin.Components.Form.Block do
   end
 
   # The provider reported the video of a var this block carries as hidden
-  # inputs (`watch_carried_var_videos/1`). Not an edit: the form is left
-  # alone, only the live preview reloads.
+  # inputs (`watch_carried_var_videos/1`), followed only while the provider
+  # had it. Not an edit: the form is left alone, only the live preview
+  # reloads.
   def update(%{event: "video_processed", video: video}, socket) do
-    case Enum.find(carried_var_videos(socket), &(&1.id == video.id)) do
-      nil -> :ok
-      shown -> reload_live_preview_when_ready(socket.assigns.form_id, shown, video)
-    end
+    if MapSet.member?(socket.assigns[:carried_video_ids] || MapSet.new(), video.id),
+      do: reload_live_preview_when_ready(socket.assigns.form_id, %{status: :processing}, video)
 
     {:ok, socket}
   end
@@ -853,7 +853,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_selected_identifiers()
     |> maybe_parse_module()
     |> assign_hidden_block_fields()
-    |> watch_carried_var_videos()
+    |> then(&if(&1.assigns[:block_initialized], do: &1, else: watch_carried_var_videos(&1)))
     |> assign(:block_initialized, true)
     |> assign_unused_collections()
     |> then(&{:ok, &1})
@@ -875,28 +875,46 @@ defmodule BrandoAdmin.Components.Form.Block do
 
   # A saved video var in the block's settings, while they are closed, and a
   # hidden one are carried as hidden inputs: no `RenderVar` follows its video
-  # while the provider has it. The block does, from its first mount, so the
-  # live preview reloads when the video is ready (`video_processed`).
-  defp watch_carried_var_videos(%{assigns: %{block_initialized: true}} = socket), do: socket
+  # while the provider has it (and one that did is gone with the closed
+  # settings). The block does, whenever the videos those vars hold change,
+  # so the live preview reloads when one is ready (`video_processed`).
+  defp watch_carried_var_videos(socket) do
+    ids = carried_var_video_ids(socket)
 
-  defp watch_carried_var_videos(socket),
-    do: ProcessingWatch.watch(socket, __MODULE__, :video, carried_var_videos(socket))
+    if ids == socket.assigns[:carried_video_ids] or not ProcessingWatch.enabled?() do
+      socket
+    else
+      socket
+      |> assign(:carried_video_ids, ids)
+      |> ProcessingWatch.watch(__MODULE__, :video, current_videos(ids))
+    end
+  end
 
-  defp carried_var_videos(%{assigns: %{has_vars?: true, form: form, belongs_to: belongs_to}}) do
+  defp carried_var_video_ids(%{assigns: %{has_vars?: true, form: form, belongs_to: belongs_to}}) do
     form.source
     |> get_block_changeset(belongs_to)
     |> Changeset.get_assoc(:vars, :struct)
     |> Enum.flat_map(fn
-      %{type: :video, placement: placement, video_id: id, video: %Brando.Videos.Video{id: id} = video}
-      when placement in [:config, :hidden] ->
-        [video]
+      %{type: :video, placement: placement, video_id: id} when placement in [:config, :hidden] and is_integer(id) ->
+        [id]
 
       _var ->
         []
     end)
+    |> MapSet.new()
   end
 
-  defp carried_var_videos(_socket), do: []
+  defp carried_var_video_ids(_socket), do: MapSet.new()
+
+  # Read now: a var's struct is the one the block was opened with, and a
+  # pick changes only its id.
+  defp current_videos(ids) do
+    import Ecto.Query, only: [from: 2]
+
+    if Enum.empty?(ids),
+      do: [],
+      else: Brando.Repo.all(from(v in Brando.Videos.Video, where: v.id in ^MapSet.to_list(ids)))
+  end
 
   defp block_has_table_rows?(block_cs) do
     case Changeset.get_assoc(block_cs, :table_rows) do
@@ -2445,6 +2463,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> assign(:form, form)
     |> assign_hidden_block_fields()
+    |> watch_carried_var_videos()
     |> emit_block_op(op)
     |> assign_unused_collections()
   end

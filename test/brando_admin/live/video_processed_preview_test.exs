@@ -104,6 +104,32 @@ defmodule BrandoAdmin.VideoProcessedPreviewTest do
     assert session(c.page) == before
   end
 
+  # Picked while the settings were open, then carried as hidden inputs once
+  # they closed: the var's own component, which followed it, is gone.
+  test "the preview shows a video picked into a settings var once the provider reports it ready", c do
+    picked = processing_video(c.current_user, "Picked clip")
+    view = open(c)
+    key = open_preview(view)
+    on_exit(fn -> LivePreview.cleanup_cache(key) end)
+    modal = "#block-#{c.block_uid}_config"
+
+    view
+    |> element(~s(button.menu-item[phx-click="open_block_config"][phx-value-uid="#{c.block_uid}"]))
+    |> render_click()
+
+    view
+    |> with_target(~s([id^="block-#{c.block_uid}-render-var-config-"]))
+    |> render_hook("select_video", %{"id" => picked.id})
+
+    await(fn -> has_element?(view, ~s(#{modal} [data-asset-id="#{picked.id}"])) end)
+    view |> with_target(cid_of(view, modal)) |> render_hook("close_block_config", %{})
+    refute has_element?(view, ~s(#{modal} [id$="-video-media"]))
+    flush_preview_updates()
+
+    report(picked, %{status: :ready, width: 1280, height: 720})
+    assert_preview_shows(key, player(picked))
+  end
+
   test "a report that the video is still processing does not reload the preview", c do
     view = open(c)
     key = open_preview(view)
@@ -185,12 +211,13 @@ defmodule BrandoAdmin.VideoProcessedPreviewTest do
 
     page = Factory.insert(:page, creator: user, title: "Films", uri: "films")
     ref_uid = Brando.Utils.generate_uid()
+    block_uid = Brando.Utils.generate_uid()
 
     block =
       %Block{}
       |> Block.recursive_block_changeset(
         %{
-          "uid" => Brando.Utils.generate_uid(),
+          "uid" => block_uid,
           "type" => "module",
           "module_id" => module.id,
           "sequence" => 0,
@@ -222,6 +249,6 @@ defmodule BrandoAdmin.VideoProcessedPreviewTest do
       |> Repo.insert!()
 
     Repo.insert!(struct(Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
-    %{page: page, ref_uid: ref_uid}
+    %{page: page, ref_uid: ref_uid, block_uid: block_uid}
   end
 end
