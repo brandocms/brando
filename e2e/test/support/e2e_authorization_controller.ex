@@ -94,29 +94,26 @@ defmodule E2EAuthorizationController do
 
   # After "setup": a live switch of Alpha's staging, cancelled when it was
   # due because the editor who scheduled it no longer may (the Environments
-  # screen's queue)
+  # screen's operation log)
   defp perform(conn, %{"action" => "cancelled-operation"}) do
     editor = Repo.get_by!(Brando.Users.User, email: "editor@brandocms.com")
     alpha = Registry.get_site_by_key("auth-alpha")
     staging = Registry.get_environment_by_key(alpha, "staging")
-    now = DateTime.utc_now()
 
-    job =
+    log =
       Repo.insert!(
-        %Oban.Job{
-          worker: Oban.Worker.to_string(Brando.Worker.EnvironmentSetLive),
-          queue: "environment_operations",
-          state: "cancelled",
-          args: %{"site_id" => alpha.id, "environment_id" => staging.id, "creator_id" => editor.id},
-          meta: %{"cancelled_because" => "scheduler_not_authorized"},
-          scheduled_at: now,
-          attempted_at: now,
-          cancelled_at: now
+        %Brando.Environments.OperationLog{
+          site_id: alpha.id,
+          target_environment_id: staging.id,
+          creator_id: editor.id,
+          operation: :set_live,
+          note: "Friday release",
+          cancelled_reason: :scheduler_not_authorized
         },
         prefix: "public"
       )
 
-    json(conn, %{job_id: job.id})
+    json(conn, %{log_id: log.id})
   end
 
   defp site(name, key) do

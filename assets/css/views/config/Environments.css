@@ -432,12 +432,7 @@
     }
   }
 
-  .environment-state.cancelled {
-    background: var(--brando-error);
-    color: var(--brando-error-ink);
-  }
-
-  .environment-job__reason {
+  .environment-log__reason {
     @font main;
     display: block;
     margin-top: 4px;
@@ -527,6 +522,10 @@
     @font mono;
     font-size: var(--brando-text-sm);
     font-weight: 500;
+  }
+
+  .environment-log__operation + .badge {
+    margin-left: 8px;
   }
 
   .environment-archive__meta {

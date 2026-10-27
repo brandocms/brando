@@ -480,33 +480,41 @@ defmodule Brando.EnvironmentsTest do
       refute Registry.get_environment(ctx.target.id).live
     end
 
-    # The screen hears of it at once, and lists it as cancelled, not pending
-    test "once cancelled, is listed as such with who scheduled it", %{site: site} = ctx do
+    # Oban prunes a cancelled job within minutes; the operation log keeps it
+    test "once cancelled, is in the operation log with who scheduled it", %{site: site} = ctx do
       Phoenix.PubSub.subscribe(Brando.pubsub(), Environments.topic(site.id))
       site_id = site.id
       scheduler_id = ctx.scheduler.id
+      target_id = ctx.target.id
 
       Oban.Testing.with_testing_mode(:manual, fn ->
-        {:ok, job} =
-          %{site_id: site.id, environment_id: ctx.target.id, creator_id: ctx.scheduler.id}
+        {:ok, _job} =
+          %{site_id: site.id, environment_id: ctx.target.id, creator_id: ctx.scheduler.id, note: "Friday release"}
           |> EnvironmentSetLive.new()
           |> Oban.insert()
 
         {:ok, _} = Brando.Tenant.Access.grant(ctx.scheduler, site, :editor)
         assert %{cancelled: 1} = Oban.drain_queue(queue: :environment_operations)
-
-        job_id = job.id
-        assert [%{job: %{id: ^job_id, state: "cancelled"}, scheduled_by: %{id: ^scheduler_id}}] =
-                 Environments.list_cancelled_operations(site)
-
-        assert Environments.list_scheduled_operations(site) == []
-        assert_received {:environments_updated, ^site_id}
       end)
 
+      assert [
+               %OperationLog{
+                 operation: :set_live,
+                 cancelled_reason: :scheduler_not_authorized,
+                 creator_id: ^scheduler_id,
+                 target_environment_id: ^target_id,
+                 note: "Friday release"
+               }
+             ] = Enum.filter(operation_logs(site), & &1.cancelled_reason)
+
+      assert Environments.list_scheduled_operations(site) == []
+      assert_received {:environments_updated, ^site_id}
       refute Registry.get_environment(ctx.target.id).live
     end
 
-    test "a cancelled operation of a deleted account is listed without them", %{site: site} = ctx do
+    test "a cancelled copy of a deleted account is logged without them", %{site: site} = ctx do
+      source_id = ctx.source.id
+
       Oban.Testing.with_testing_mode(:manual, fn ->
         {:ok, _job} =
           %{
@@ -522,17 +530,34 @@ defmodule Brando.EnvironmentsTest do
         assert %{cancelled: 1} = Oban.drain_queue(queue: :environment_operations)
       end)
 
-      assert [%{reason: :scheduler_not_authorized, scheduled_by: nil}] = Environments.list_cancelled_operations(site)
+      assert [%OperationLog{operation: :copy, source_environment_id: ^source_id, creator_id: nil}] =
+               Enum.filter(operation_logs(site), & &1.cancelled_reason)
     end
 
-    # Cancelled by hand, or for another reason, it is not the scheduler's
-    test "an operation cancelled by hand is not listed", %{site: site} = ctx do
+    # Until Oban marks it cancelled, a job the worker has cancelled is not pending
+    test "a job being cancelled is no longer listed as pending", %{site: site} = ctx do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, job} = Environments.schedule_set_live(ctx.target, DateTime.add(DateTime.utc_now(), 3600, :second))
+        Brando.Repo.update_all(from_job(job), [set: [state: "executing"]], prefix: "public")
+        assert [_] = Environments.list_scheduled_operations(site)
+
+        assert {:cancel, :scheduler_not_authorized} = Environments.cancel_unauthorized(job, :set_live, ctx.target)
+        assert Environments.list_scheduled_operations(site) == []
+
+        # Rescued or retried by hand, it is pending again
+        Brando.Repo.update_all(from_job(job), [set: [state: "available"]], prefix: "public")
+        assert [%{id: job_id}] = Environments.list_scheduled_operations(site)
+        assert job_id == job.id
+      end)
+    end
+
+    test "an operation cancelled by hand is not logged as cancelled", %{site: site} = ctx do
       Oban.Testing.with_testing_mode(:manual, fn ->
         {:ok, job} = Environments.schedule_set_live(ctx.target, DateTime.add(DateTime.utc_now(), 3600, :second))
         :ok = Environments.cancel_scheduled_operation(site, job.id)
       end)
 
-      assert Environments.list_cancelled_operations(site) == []
+      assert Enum.filter(operation_logs(site), & &1.cancelled_reason) == []
     end
 
     test "with one site, takes an admin or superuser", %{site: site} do
@@ -544,6 +569,11 @@ defmodule Brando.EnvironmentsTest do
       refute Environments.scheduler_authorized?(demoted.id, site.id)
       assert Environments.scheduler_authorized?(nil, site.id)
     end
+  end
+
+  defp from_job(job) do
+    import Ecto.Query, only: [from: 2]
+    from(j in Oban.Job, where: j.id == ^job.id)
   end
 
   defp from_user(user) do

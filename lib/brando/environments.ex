@@ -425,7 +425,7 @@ defmodule Brando.Environments do
         _ -> false
       end
 
-    # The job ends cancelled; the Environments screen shows it as such
+    # The job ends cancelled, which the operation log records
     if not authorized?,
       do:
         Logger.warning(
@@ -448,10 +448,8 @@ defmodule Brando.Environments do
     end
   end
 
-  # Set on a job cancelled when it ran (`cancel_unauthorized/2`), which the
-  # Environments screen lists for a week
+  # Set on a job cancelled when it ran (`cancel_unauthorized/3`)
   @cancel_reason_key "cancelled_because"
-  @cancelled_days 7
 
   @doc "Lists pending copy/live-switch jobs for a site."
   @spec list_scheduled_operations(Site.t()) :: [Oban.Job.t()]
@@ -460,64 +458,63 @@ defmodule Brando.Environments do
     states = ["available", "scheduled", "retryable", "executing"]
     site_id = to_string(site.id)
 
-    # One cancelled when it ran is no longer pending, though Oban may not have
-    # marked it yet (`cancel_unauthorized/2`)
+    # One cancelled as it ran is no longer pending, though Oban may not have
+    # marked it yet (`cancel_unauthorized/3`). Run again (rescued, retried by
+    # hand), it is.
     from(job in Oban.Job,
       where:
         job.worker in ^workers and job.state in ^states and
           fragment("?->>'site_id' = ?", job.args, ^site_id) and
-          is_nil(fragment("?->>?", job.meta, @cancel_reason_key)),
+          not (job.state == "executing" and not is_nil(fragment("?->>?", job.meta, @cancel_reason_key))),
       order_by: [asc: job.scheduled_at, asc: job.id]
     )
     |> Repo.all(@public_opts)
   end
 
   @doc """
-  Lists a site's copy/live-switch jobs cancelled when they were due in the
-  last #{@cancelled_days} days because whoever scheduled them no longer may
-  carry them out (`cancel_unauthorized/2`), newest first, each with that user
-  (nil when the account is gone).
-  """
-  @spec list_cancelled_operations(Site.t()) :: [%{job: Oban.Job.t(), reason: atom(), scheduled_by: User.t() | nil}]
-  def list_cancelled_operations(%Site{} = site) do
-    workers = [Oban.Worker.to_string(EnvironmentCopy), Oban.Worker.to_string(EnvironmentSetLive)]
-    since = DateTime.add(DateTime.utc_now(), -@cancelled_days, :day)
-    site_id = to_string(site.id)
-
-    jobs =
-      from(job in Oban.Job,
-        where:
-          job.worker in ^workers and job.state in ["cancelled", "executing"] and
-            fragment("?->>'site_id' = ?", job.args, ^site_id) and
-            fragment("?->>? = 'scheduler_not_authorized'", job.meta, @cancel_reason_key) and
-            job.attempted_at > ^since,
-        order_by: [desc: job.attempted_at, desc: job.id]
-      )
-      |> Repo.all(@public_opts)
-
-    creator_ids = jobs |> Enum.map(& &1.args["creator_id"]) |> Enum.reject(&is_nil/1) |> Enum.uniq()
-    users = from(u in User, where: u.id in ^creator_ids) |> Repo.all(@public_opts) |> Map.new(&{&1.id, &1})
-
-    Enum.map(jobs, &%{job: &1, reason: :scheduler_not_authorized, scheduled_by: users[&1.args["creator_id"]]})
-  end
-
-  @doc """
   Ends a scheduled copy or live switch whose scheduler may no longer carry it
-  out (`scheduler_authorized?/2`): records why on the job, for
-  `list_cancelled_operations/1`, tells the Environments screen, and returns
-  the worker's `{:cancel, :scheduler_not_authorized}`.
+  out (`scheduler_authorized?/2`). Records it in the site's operation log as
+  cancelled, with the scheduler (while their account exists) and the note,
+  marks the job so the screen no longer lists it as pending, tells the
+  Environments screen, and returns the worker's
+  `{:cancel, :scheduler_not_authorized}`.
+
+  `operation` is `:copy`, with `{source, target}`, or `:set_live`, with the
+  environment.
   """
-  @spec cancel_unauthorized(Oban.Job.t(), pos_integer()) :: {:cancel, :scheduler_not_authorized}
-  def cancel_unauthorized(%Oban.Job{} = job, site_id) do
-    # A job run outside a queue (`perform_job/2`) has no row
+  @spec cancel_unauthorized(Oban.Job.t(), :copy | :set_live, {Environment.t(), Environment.t()} | Environment.t()) ::
+          {:cancel, :scheduler_not_authorized}
+  def cancel_unauthorized(%Oban.Job{} = job, operation, environments) do
+    {source, target} =
+      case environments do
+        {%Environment{} = source, %Environment{} = target} -> {source, target}
+        %Environment{} = target -> {nil, target}
+      end
+
+    log_operation!(target.site_id, operation, %{
+      source_environment_id: source && source.id,
+      target_environment_id: target.id,
+      creator_id: existing_user_id(job.args["creator_id"]),
+      note: job.args["note"],
+      cancelled_reason: :scheduler_not_authorized
+    })
+
+    # Oban marks the job cancelled after this returns, and may prune it soon
+    # after; until then it would still show as pending. A job run outside a
+    # queue (`perform_job/2`) has no row.
     if job.id do
       meta = Map.put(job.meta || %{}, @cancel_reason_key, "scheduler_not_authorized")
       Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), [set: [meta: meta]], @public_opts)
     end
 
-    announce(site_id)
+    announce(target.site_id)
     {:cancel, :scheduler_not_authorized}
   end
+
+  # A deleted account's id would break the log's reference to it
+  defp existing_user_id(nil), do: nil
+
+  defp existing_user_id(user_id), do: Repo.one(from(u in User, where: u.id == ^user_id, select: u.id), @public_opts)
 
   @doc "Cancels a pending environment operation after checking site ownership."
   @spec cancel_scheduled_operation(Site.t(), pos_integer()) :: :ok | {:error, term()}

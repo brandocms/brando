@@ -1,1 +1,0 @@
-- A scheduled environment copy or live switch cancelled when it was due, because whoever scheduled it may no longer carry it out, shows on the Environments screen for a week as cancelled, with who scheduled it and why.

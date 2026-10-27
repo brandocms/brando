@@ -275,11 +275,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         <section class="environment-panel">
           <span class="environment-eyebrow">{gettext("Queue")}</span>
           <h2>{gettext("Pending operations")}</h2>
-          <div :if={@jobs == [] and @cancelled_jobs == []} class="environment-empty">
+          <div :if={@jobs == []} class="environment-empty">
             <span class="environment-empty__icon"><.icon name="clock" /></span>
             <p>{gettext("No copy or live-switch operations are pending.")}</p>
           </div>
-          <div :if={@jobs != [] or @cancelled_jobs != []} class="environment-table-wrap">
+          <div :if={@jobs != []} class="environment-table-wrap">
             <table>
               <thead>
                 <tr>
@@ -306,21 +306,6 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       {gettext("Cancel")}
                     </button>
                   </td>
-                </tr>
-                <%!-- Cancelled when due, for a week: whoever scheduled it may
-                      no longer copy or switch the site's environments. --%>
-                <tr
-                  :for={%{job: job} = cancelled <- @cancelled_jobs}
-                  id={"environment-job-#{job.id}"}
-                  class="environment-job--cancelled"
-                >
-                  <td>
-                    {job_description(job, @environments)}
-                    <span class="environment-job__reason">{cancel_reason(cancelled)}</span>
-                  </td>
-                  <td>{format_scheduled_at(job.scheduled_at)}</td>
-                  <td><span class="environment-state cancelled">{gettext("Cancelled")}</span></td>
-                  <td class="environment-actions"></td>
                 </tr>
               </tbody>
             </table>
@@ -356,6 +341,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <tr :for={log <- @operation_logs} id={"environment-log-#{log.id}"}>
                   <td>
                     <span class="environment-log__operation">{operation_label(log.operation)}</span>
+                    <%!-- Scheduled, then cancelled when it was due instead of run --%>
+                    <span :if={log.cancelled_reason} class="badge badge--error">{gettext("Cancelled")}</span>
+                    <span :if={log.cancelled_reason} class="environment-log__reason">{cancel_reason(log)}</span>
                   </td>
                   <td>
                     <code :if={log.target_environment}>{log.target_environment.key}</code>
@@ -723,7 +711,6 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     |> assign(:environments, for_site(site, &Registry.list_environments/1))
     |> assign(:archives, for_site(site, &Environments.list_archives/1))
     |> assign(:jobs, for_site(site, &Environments.list_scheduled_operations/1))
-    |> assign(:cancelled_jobs, for_site(site, &Environments.list_cancelled_operations/1))
     |> assign(:operation_logs, for_site(site, &Environments.list_operation_logs/1))
   end
 
@@ -812,13 +799,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     end
   end
 
-  defp cancel_reason(%{reason: :scheduler_not_authorized, scheduled_by: %{name: name}}),
+  defp cancel_reason(%{cancelled_reason: :scheduler_not_authorized, creator: %{name: name}}),
     do:
       gettext("Not run: %{name}, who scheduled it, may no longer copy or switch this site's environments.",
         name: name
       )
 
-  defp cancel_reason(%{reason: :scheduler_not_authorized}),
+  defp cancel_reason(%{cancelled_reason: :scheduler_not_authorized}),
     do: gettext("Not run: the account that scheduled it may no longer copy or switch this site's environments.")
 
   defp environment_name(environments, id) do

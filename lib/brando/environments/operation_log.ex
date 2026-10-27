@@ -4,6 +4,10 @@ defmodule Brando.Environments.OperationLog do
 
   Source and target references are nilified when an environment is deleted so
   historical operations remain inspectable.
+
+  A scheduled copy or live switch cancelled when it was due, instead of run,
+  is recorded too, with its `cancelled_reason`
+  (`Brando.Environments.cancel_unauthorized/3`).
   """
 
   use Ecto.Schema
@@ -30,6 +34,7 @@ defmodule Brando.Environments.OperationLog do
     field :operation, Ecto.Enum, values: @operations
     field :archive_schema, :string
     field :note, :string
+    field :cancelled_reason, Ecto.Enum, values: [:scheduler_not_authorized]
 
     timestamps()
   end
@@ -40,7 +45,8 @@ defmodule Brando.Environments.OperationLog do
     :target_environment_id,
     :creator_id,
     :archive_schema,
-    :note
+    :note,
+    :cancelled_reason
   ]
 
   def changeset(log \\ %__MODULE__{}, attrs) do
