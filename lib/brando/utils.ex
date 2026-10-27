@@ -387,15 +387,16 @@ defmodule Brando.Utils do
     struct(schema, params)
   end
 
+  # Values, not records: params keep them as they are, so a form input
+  # given them can render them, which it cannot as plain maps.
+  @value_structs [Date, Time, NaiveDateTime, DateTime, Decimal]
+
   @doc """
-  Recursive Schema to map function.
+  Recursive Schema to map function. Dates, times and decimals are kept as
+  they are.
   """
   @spec map_from_struct(map) :: map
-  def map_from_struct(%_{__meta__: %{__struct__: _}} = schema) when is_map(schema) do
-    schema
-    |> Map.from_struct()
-    |> map_from_struct()
-  end
+  def map_from_struct(%struct{} = value) when struct in @value_structs, do: value
 
   def map_from_struct(schema) when is_struct(schema) do
     schema
@@ -408,17 +409,9 @@ defmodule Brando.Utils do
     |> Enum.reduce(%{}, fn {key, value}, acc ->
       processed_value =
         case value do
-          %_{__meta__: %{__struct__: _}} ->
-            map_from_struct(value)
-
-          s when is_struct(s) ->
-            map_from_struct(s)
-
-          list when is_list(list) ->
-            Enum.map(list, &map_from_struct/1)
-
-          _ ->
-            value
+          s when is_struct(s) -> map_from_struct(s)
+          list when is_list(list) -> Enum.map(list, &map_from_struct/1)
+          _ -> value
         end
 
       Map.put_new(acc, key, processed_value)
