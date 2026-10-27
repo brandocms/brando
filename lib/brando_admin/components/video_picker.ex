@@ -655,24 +655,11 @@ defmodule BrandoAdmin.Components.VideoPicker do
            config_target: config_target,
            file_meta: %{name: filename, size: size, type: mime_type}
          ) do
-      {:ok, %{upload_url: upload_url, video: video} = result} ->
-        event_payload = %{
-          upload_url: upload_url,
-          video_id: video.id,
-          filename: filename,
-          request_ref: request_ref
-        }
-
-        event_payload =
-          case Map.get(result, :tus_auth) do
-            nil -> event_payload
-            tus_auth -> Map.put(event_payload, :tus_auth, tus_auth)
-          end
-
+      {:ok, result} ->
         {:noreply,
          socket
          |> update(:provider_uploads, &Map.put(&1, request_ref, upload_handover(socket, params)))
-         |> push_event("video_upload_url_ready", event_payload)}
+         |> push_event("video_upload_url_ready", ProviderVideoUpload.ready_payload(result, user, filename, request_ref))}
 
       {:error, reason} ->
         # A readable message, not `inspect/1`, which would push the raw term to
@@ -700,20 +687,31 @@ defmodule BrandoAdmin.Components.VideoPicker do
   # started for (`get_video_upload_url`), if that still shows what it showed
   # then; otherwise, or when the provider refuses to finish it, it stays in
   # the library only.
-  def handle_event("video_upload_complete", %{"video_id" => video_id} = params, socket) do
-    {handover, uploads} = Map.pop(socket.assigns.provider_uploads, params["request_ref"])
-    socket = socket |> assign(:provider_uploads, uploads) |> assign(:upload_progress, nil)
+  #
+  # A completion that isn't for an upload this user started
+  # (`ProviderVideoUpload.complete/3`) is ignored.
+  def handle_event("video_upload_complete", params, socket) do
+    socket = assign(socket, :upload_progress, nil)
 
-    with {:ok, video} <- Brando.Videos.get_video(%{matches: %{id: video_id}, preload: [:thumbnail]}),
-         {:ok, video} <- complete_upload(video) do
-      {:noreply,
-       socket
-       |> hand_over(handover, video)
-       |> assign_videos()
-       |> assign_folder_state(socket.assigns.current_folder)
-       |> push_selection_state()}
-    else
-      _ -> {:noreply, socket}
+    case ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params, [:thumbnail]) do
+      {:ok, video} ->
+        {handover, socket} = pop_handover(socket, params["request_ref"])
+
+        {:noreply,
+         socket
+         |> hand_over(handover, video)
+         |> assign_videos()
+         |> assign_folder_state(socket.assigns.current_folder)
+         |> push_selection_state()}
+
+      # Cloudflare and Vimeo record that the file arrived; a refusal leaves
+      # the video in the library and is reported, not raised.
+      {:error, reason} ->
+        send(self(), {:toast, Brando.Uploads.video_upload_error_message(reason)})
+        {:noreply, socket |> pop_handover(params["request_ref"]) |> elem(1)}
+
+      :error ->
+        {:noreply, socket}
     end
   end
 
@@ -1716,21 +1714,13 @@ defmodule BrandoAdmin.Components.VideoPicker do
     end
   end
 
+  defp pop_handover(socket, request_ref) do
+    {handover, uploads} = Map.pop(socket.assigns.provider_uploads, request_ref)
+    {handover, assign(socket, :provider_uploads, uploads)}
+  end
+
   defp shown_id(%{selected_videos: [id]}), do: id
   defp shown_id(_assigns), do: nil
-
-  # Cloudflare and Vimeo record that the file arrived; a refusal leaves the
-  # video in the library and is reported, not raised.
-  defp complete_upload(video) do
-    case Brando.Videos.Uploader.complete_client_upload(video) do
-      {:ok, video} ->
-        {:ok, video}
-
-      {:error, reason} = error ->
-        send(self(), {:toast, Brando.Uploads.video_upload_error_message(reason)})
-        error
-    end
-  end
 
   # Opening for a field starts on its own videos. A folder from the library
   # means nothing there, so a picker left in the library starts at the root.

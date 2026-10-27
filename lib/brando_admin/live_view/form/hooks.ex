@@ -1037,7 +1037,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   # Generic event for upload completion - works with any strategy
-  defp handle_hooks_video_event("video_upload_complete", %{"video_id" => video_id}, socket) do
+  defp handle_hooks_video_event("video_upload_complete", params, socket) when is_map(params) do
     schema = socket.assigns.schema
     singular = schema.__naming__().singular
     form_id = "#{singular}_form"
@@ -1045,7 +1045,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     send_update(BrandoAdmin.Components.Form,
       id: form_id,
       action: :video_upload_complete,
-      video_id: video_id
+      upload: params
     )
 
     {:halt, socket}

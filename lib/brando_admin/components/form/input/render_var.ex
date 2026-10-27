@@ -1836,11 +1836,11 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
   # The file is with the provider; the var shows the video from now on,
   # unless another one, or another var, was chosen meanwhile.
-  def handle_event("video_upload_complete", %{"video_id" => video_id} = params, socket) do
+  def handle_event("video_upload_complete", params, socket) do
     {still_shown?, socket} =
       ProviderVideoUpload.still_shown?(socket, params["request_ref"], socket.assigns.video_id, socket.assigns.key)
 
-    with {:ok, video} <- ProviderVideoUpload.complete(video_id),
+    with {:ok, video} <- ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params),
          true <- still_shown?,
          {:ok, video} <- Brando.Videos.get_video(%{matches: %{id: video.id}, preload: [:thumbnail, :file]}) do
       socket

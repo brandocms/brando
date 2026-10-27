@@ -534,11 +534,11 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
 
   # The file is with the provider; the ref shows the video from now on,
   # unless another one was chosen meanwhile.
-  def handle_event("video_upload_complete", %{"video_id" => video_id} = params, socket) do
+  def handle_event("video_upload_complete", params, socket) do
     {still_shown?, socket} =
       ProviderVideoUpload.still_shown?(socket, params["request_ref"], current_video_id(socket), nil)
 
-    case ProviderVideoUpload.complete(video_id) do
+    case ProviderVideoUpload.complete(ProviderVideoUpload.actor(socket), params) do
       {:ok, video} when still_shown? -> {:noreply, select_video(socket, video.id)}
       _ -> {:noreply, socket}
     end
