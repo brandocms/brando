@@ -268,7 +268,7 @@ importers:
         specifier: 1.2.13
         version: 1.2.13
       slugify:
-        specifier: ^1.6.9
+        specifier: 1.6.9
         version: 1.6.9
       sortablejs:
         specifier: ^1.15.7

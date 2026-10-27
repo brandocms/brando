@@ -1,0 +1,1 @@
+- The admin's `slugify` (npm) is pinned to 1.6.9, the version whose slugs the server generates for locked slugs.

@@ -2283,9 +2283,21 @@ defmodule BrandoAdmin.Components.Form do
 
     entry
     |> schema.changeset(params, current_user)
+    |> derive_locked_slugs(entry, params, socket)
     |> reapply_owned_assets(owned, current)
     |> drop_echoes(current, replaced_values(socket), target)
     |> keep_fields(current, stale)
+  end
+
+  # A locked slug left empty is generated from its source, which the cast
+  # has, and cast with the rest (`LockedFields.derive_slugs/5`)
+  defp derive_locked_slugs(changeset, entry, params, socket) do
+    %{schema: schema, current_user: current_user} = socket.assigns
+
+    case LockedFields.derive_slugs(params, changeset, schema, socket.assigns[:form_blueprint], current_user) do
+      ^params -> changeset
+      params -> schema.changeset(entry, params, current_user)
+    end
   end
 
   # Ids are substituted rather than dropped so the schema's own validations

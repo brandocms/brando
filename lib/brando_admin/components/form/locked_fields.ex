@@ -23,18 +23,15 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   takes the input's `default:` (`defaults/3`), as the browser shows a date,
   date-time or color input's.
 
-  A `:slug` input declared `readonly: true` or `disabled: true` is not
-  locked: the browser's Slug hook writes it from its source field, and
-  nothing on the server does.
+  A locked `:slug` input whose value is empty is filled in from its source
+  on the server (`derive_slugs/5`), as the browser's Slug hook fills in an
+  unlocked one, so a new entry still gets its slug.
   """
 
   alias Brando.Blueprint.Forms.Form
   alias Brando.Trait.Creator
+  alias BrandoAdmin.Components.Form.SlugHook
   alias Ecto.Changeset
-
-  # Input types whose value the browser fills in, so a lock for everyone
-  # would lose it
-  @client_filled [:slug]
 
   @doc """
   `params` without the fields `user` may not change in `schema`'s `blueprint`
@@ -49,6 +46,59 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   end
 
   def lock(params, _schema, _blueprint, _user, _values, _entry), do: params
+
+  @doc """
+  `params` (after `lock/6`) with a slug for each of `user`'s locked `:slug`
+  inputs that `changeset`, cast from them, leaves empty: generated from its
+  `source:` fields in `changeset` as the browser's Slug hook generates one,
+  with its `prefix:` and `camel_case:`. The Slug hook fills in an empty slug
+  only, so a saved entry's slug stays its URL. Cast again when it differs.
+  """
+  @spec derive_slugs(map() | nil, Changeset.t(), module(), struct() | nil, map() | atom()) :: map() | nil
+  def derive_slugs(params, %Changeset{} = changeset, schema, %Form{} = blueprint, user) when is_map(params) do
+    for %{type: :slug, name: name, opts: opts} <- locked_inputs(blueprint, user),
+        is_list(opts) and opts[:source] != nil,
+        key = key(schema, name),
+        key != nil,
+        blank?(Changeset.get_field(changeset, key)),
+        slug = generate_slug(changeset, opts),
+        slug != "",
+        reduce: params,
+        do: (params -> Map.put(params, to_string(key), slug))
+  end
+
+  def derive_slugs(params, _changeset, _schema, _blueprint, _user), do: params
+
+  # As `assets/src/hooks/Slug`: the sources' values joined with `-`, then
+  # slugified, and the prefix in front of a slug that isn't empty
+  defp generate_slug(changeset, opts) do
+    joined = opts[:source] |> List.wrap() |> Enum.map_join("-", &source_value(Changeset.get_field(changeset, &1)))
+    slug = if opts[:camel_case], do: SlugHook.camel_case(joined), else: SlugHook.slugify(joined)
+
+    case slug do
+      "" -> ""
+      slug -> slug_prefix(opts[:prefix], changeset) <> slug
+    end
+  end
+
+  # The value as its input holds it: a date as `2026-10-26`, a date-time as
+  # the DateTimePicker writes it (`toISOString`, `2026-10-26T12:30:00.000Z`).
+  # A language map, an embed or a list has no single input.
+  defp source_value(nil), do: ""
+  defp source_value(%DateTime{} = value), do: value |> DateTime.shift_zone!("Etc/UTC") |> iso_milliseconds()
+  defp source_value(%NaiveDateTime{} = value), do: value |> DateTime.from_naive!("Etc/UTC") |> iso_milliseconds()
+  defp source_value(value) when is_struct(value), do: if(String.Chars.impl_for(value), do: to_string(value), else: "")
+  defp source_value(value) when is_map(value) or is_list(value), do: ""
+  defp source_value(value), do: to_string(value)
+
+  defp iso_milliseconds(%DateTime{microsecond: {microsecond, _}} = value),
+    do: DateTime.to_iso8601(%{value | microsecond: {div(microsecond, 1000) * 1000, 3}})
+
+  defp slug_prefix(prefix, changeset) when is_function(prefix, 1), do: prefix.(changeset) || ""
+  defp slug_prefix(prefix, _changeset) when is_binary(prefix), do: prefix
+  defp slug_prefix(_prefix, _changeset), do: ""
+
+  defp blank?(value), do: value in [nil, ""]
 
   @doc """
   The values `changeset`, which the server built, gives `user`'s locked
@@ -128,19 +178,19 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   def locked_input?(input, user), do: locked_for?(input, superuser?(user))
 
   defp locked_for?(input, superuser?),
-    do: locked?(Map.get(input, :opts), superuser?, Map.get(input, :type) in @client_filled)
+    do: locked?(Map.get(input, :opts), superuser?)
 
-  defp locked?(opts, superuser?, client_filled?) when is_list(opts) do
+  defp locked?(opts, superuser?) when is_list(opts) do
     Enum.any?([:readonly, :disabled], fn key ->
       case Keyword.get(opts, key) do
-        true -> not client_filled?
+        true -> true
         :unless_superuser -> not superuser?
         _ -> false
       end
     end)
   end
 
-  defp locked?(_opts, _superuser?, _client_filled?), do: false
+  defp locked?(_opts, _superuser?), do: false
 
   # The server's value for a locked input, cast again, when the entry's
   # differs; its default while the entry's is empty. A relation or an embed
