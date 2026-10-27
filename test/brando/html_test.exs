@@ -92,6 +92,74 @@ defmodule Brando.HTMLTest do
     assert html =~ ~s(<meta name="title" content="Fallback meta title">)
   end
 
+  describe "menu item text" do
+    # A HEEx identifier (`identifier ~H"{@entry.title}"`) stores the entry's
+    # title escaped; the menu components escape it again when they print it
+    defp stored_title(title), do: title |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
+    defp title_item(title, link_text \\ nil),
+      do: %{
+        key: "rock",
+        link: %{
+          link_type: :identifier,
+          link_text: link_text,
+          link_target_blank: false,
+          identifier: %{url: "/rock", title: title}
+        }
+      }
+
+    defp render_menu(item) do
+      assigns = %{conn: build_conn(:get, "/"), item: item}
+
+      ~H"""
+      <.menu_item :let={text} conn={@conn} item={@item}>{text}</.menu_item>
+      <.menu_button :let={text} item={@item}>{text}</.menu_button>
+      <span><.menu_item_text item={@item} /></span>
+      <i>{get_menu_item_text(@item)}</i>
+      """
+      |> rendered_to_string()
+      |> String.replace(~r/\s*\n\s*/, "")
+    end
+
+    test "prints a title stored escaped once escaped" do
+      html = "Rock & Roll's" |> stored_title() |> title_item() |> render_menu()
+
+      assert html =~ ~s(href="/rock">Rock &amp; Roll&#39;s</a>)
+      assert html =~ ~s(>Rock &amp; Roll&#39;s</button>)
+      assert html =~ "<span>Rock &amp; Roll&#39;s</span>"
+      assert html =~ "<i>Rock &amp; Roll&#39;s</i>"
+      refute html =~ "&amp;amp;"
+      refute html =~ "&amp;#39;"
+    end
+
+    test "prints markup in a title or label as text" do
+      html = "Rooms <b>& suites</b>" |> title_item() |> render_menu()
+      refute html =~ "<b>"
+      assert html =~ ~s(href="/rock">Rooms &lt;b&gt;&amp; suites&lt;/b&gt;</a>)
+
+      label = ~s(<img src=x onerror="document.title='MARKER'"> & more)
+      html = "Rock" |> title_item(label) |> render_menu()
+      refute html =~ "<img"
+      assert html =~ "&lt;img src=x onerror=&quot;document.title=&#39;MARKER&#39;&quot;&gt; &amp; more</a>"
+
+      url_item = %{key: "more", link: %{link_type: :url, value: "/more", link_text: label, link_target_blank: false}}
+      html = render_menu(url_item)
+      refute html =~ "<img"
+      refute html =~ "&amp;lt;"
+    end
+
+    # Only the title is stored escaped; an editor's label is shown as written
+    test "prints an editor's label as written" do
+      html = "Rock" |> title_item("Write &lt;br&gt; & more") |> render_menu()
+      assert html =~ ~s(href="/rock">Write &amp;lt;br&amp;gt; &amp; more</a>)
+    end
+
+    test "an item without text has none" do
+      assert get_menu_item_text(%{link: nil}) == nil
+      assert get_menu_item_text(%{link: %{link_type: :url, value: "/", link_text: nil}}) == nil
+    end
+  end
+
   describe "menu_item/1 data-link-active" do
     # `locale` runs the conn through the site's locale plug with those options
     defp menu_conn(request_path, locale \\ nil) do

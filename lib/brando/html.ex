@@ -194,9 +194,20 @@ defmodule Brando.HTML do
 
   defp present_menu_item_url?(_), do: false
 
+  @doc """
+  The text of a menu item: its link's label, or else the linked entry's title.
+
+  Plain text, for HEEx to escape. A HEEx identifier stores the entry's title
+  escaped, so the title is decoded first, as `{% link %}` does; the label is
+  the editor's, as written.
+  """
   def get_menu_item_text(%{link: %{link_type: :url, link_text: text}}), do: text
 
   def get_menu_item_text(%{link: %{link_type: :identifier, link_text: text}}) when not is_nil(text), do: text
+
+  def get_menu_item_text(%{link: %{link_type: :identifier, link_text: nil, identifier: %{title: text}}})
+      when is_binary(text),
+      do: HtmlEntities.decode(text)
 
   def get_menu_item_text(%{link: %{link_type: :identifier, link_text: nil, identifier: %{title: text}}}), do: text
 
