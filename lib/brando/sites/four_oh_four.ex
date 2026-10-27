@@ -62,13 +62,26 @@ defmodule Brando.Sites.FourOhFour do
       uri = %URI{uri | query: nil, fragment: nil, userinfo: nil}
 
       if self_referrer?(path, URI.to_string(uri)) do
-        String.slice(URI.to_string(%URI{uri | path: nil}), 0, @max_referrer_length) <> url
+        cut_bytes(URI.to_string(%URI{uri | path: nil}), @max_referrer_length) <> url
       else
         uri |> URI.to_string() |> String.slice(0, @max_referrer_length)
       end
     else
       _ -> ""
     end
+  end
+
+  # At most `max` bytes, the unique index's limit being in bytes, without a
+  # split character at the end.
+  defp cut_bytes(string, max) when byte_size(string) <= max, do: string
+  defp cut_bytes(string, max), do: string |> binary_part(0, max) |> drop_split_character(3)
+
+  defp drop_split_character(string, 0), do: string
+
+  defp drop_split_character(string, bytes) do
+    if String.valid?(string),
+      do: string,
+      else: string |> binary_part(0, byte_size(string) - 1) |> drop_split_character(bytes - 1)
   end
 
   @doc """
@@ -250,7 +263,7 @@ defmodule Brando.Sites.FourOhFour do
     # Source maps (x.js.map, x.astro.mjs.map), keys, dumps and env files
     ~r/\.(?:map|pem|key|env|sql(?:\.(?:gz|zip))?)$/i,
     # Dev servers, debug consoles and file reads, /proc/self/ also after ../
-    ~r{(?:^|/)(?:@fs/|proc/self/|__vite|_profiler(?:/|$)|phpmyadmin(?:/|$)|server-status$)|^/actuator(?:/|$)}i,
+    ~r{(?:^|/)(?:@fs/|proc/self/|__vite|_profiler(?:/|$)|phpmyadmin[\d.-]*(?:/|$)|server-status$)|^/actuator(?:/|$)}i,
     ~r{laravel\.log|storage/logs/|(?:^|/)id_(?:rsa|dsa|ecdsa|ed25519)(?:\.pub)?$}i,
     # Deploy, container and cloud config
     ~r{(?:^|/)(?:docker-compose(?:\.[\w-]+)?\.ya?ml|dockerfile|composer\.(?:json|lock)|appsettings(?:\.\w+)?\.json|application(?:-[\w-]+)?\.(?:ya?ml|properties)|service-account\.json|vercel\.json|netlify\.toml|wrangler\.toml|railway\.json|values\.ya?ml|rclone\.conf|aws-exports\.js|env\.js)$}i,

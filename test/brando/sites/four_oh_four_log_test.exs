@@ -139,13 +139,17 @@ defmodule Brando.Sites.FourOhFourLogTest do
     long = "/" <> String.duplicate("a", 600)
     for _ <- 1..2, do: miss(long, "https://example.com#{long}?q=1")
     miss("/x", "https://" <> String.duplicate("h", 2000) <> ".com/x")
+    # A 3-byte character host must not push the row past the index's byte limit
+    path = "/" <> String.duplicate("b", 999)
+    miss(path, "https://" <> String.duplicate("語", 600) <> path)
 
     by_url = Map.new(FourOhFour.list(), &{&1.url, &1})
 
     assert %{probe: true, referrer: nil} = by_url["/bl%C3%A5b%C3%A6r"]
     assert %{probe: true, referrer: nil} = by_url[long]
     assert %{probe: true, referrer: nil} = by_url["/x"]
-    assert Enum.all?(rows(), &(String.length(&1.referrer) <= 500 + String.length(&1.url)))
+    assert %{probe: true, referrer: nil} = by_url[path]
+    assert Enum.all?(rows(), &(byte_size(&1.referrer) <= 500 + byte_size(&1.url)))
   end
 
   test "a referrer that is not a web page is not stored" do

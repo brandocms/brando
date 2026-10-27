@@ -25,7 +25,7 @@ defmodule Brando.Sites.FourOhFourTest do
           /application.yml /application-prod.properties /config/application.yaml /service-account.json
           /vercel.json /netlify.toml /wrangler.toml /railway.json /values.yaml /rclone.conf
           /supabase/config.toml /aws-exports.js /src/aws-exports.js /aws/production.env /config/aws.yml
-          /database.sql /backup.sql /dump.sql.gz /assets/env.js /actuator/health /phpmyadmin/ /server-status
+          /database.sql /backup.sql /dump.sql.gz /assets/env.js /actuator/health /phpmyadmin/ /phpMyAdmin-5.2.1/ /phpmyadmin4/ /server-status
         ) do
       assert FourOhFour.probe?(url), "expected #{url} to be a probe"
     end
