@@ -178,6 +178,11 @@ if [ "$(cat "$stub/calls" 2>/dev/null)" != "rerun 40" ]; then
   echo "FAIL     reruns: $(cat "$stub/calls" 2>/dev/null)"
 fi
 
+# The assistant entry matches its assertion's diagnostic, not a later step
+# that fails with the same page on screen
+check assistant-proposal-flake.log "known flake: assistant-text-block-proposal — rerun with: gh run rerun $((id + 1)) --failed"
+check assistant-proposal-real.log 'real failure: test a message produces a reviewed proposal that one click applies (BrandoAdmin.AssistantLiveTest)'
+
 if [ "$failures" -gt 0 ]; then
   echo "$failures case(s) failed"
   exit 1

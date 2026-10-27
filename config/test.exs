@@ -98,6 +98,16 @@ config :brando, BrandoIntegration.Repo,
   url: test_database_url,
   pool: Ecto.Adapters.SQL.Sandbox,
   ownership_pool: DBConnection.Poolboy,
+  # In a shared sandbox every process takes turns on the owner's one
+  # connection, and DBConnection drops a checkout that waited past twice the
+  # queue target (100 ms by default). A live view reloading its permissions
+  # while the test held the connection in a transaction then crashed, and took
+  # the test down with it, on loaded CI runners. A wait here is not overload.
+  # The cost: a real deadlock on the sandbox connection fails after 10-15 s
+  # (dropped from the queue, or a caller's own call timeout first) instead
+  # of after about 100 ms.
+  queue_target: 5_000,
+  queue_interval: 5_000,
   # We don't run a server during test. If one is required,
   # you can enable the server option below.
   pool_overflow: 0
