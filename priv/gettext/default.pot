@@ -3368,9 +3368,14 @@ msgstr ""
 msgid "Checkbox"
 msgstr ""
 
-#: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
+msgid "Checked"
+msgstr ""
+
+#: lib/brando_admin/components/form/input.ex
+#, elixir-autogen, elixir-format
+msgctxt "checkbox state"
 msgid "Checked"
 msgstr ""
 
@@ -11179,9 +11184,14 @@ msgstr ""
 msgid "Not available in this installation"
 msgstr ""
 
-#: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
+msgid "Not checked"
+msgstr ""
+
+#: lib/brando_admin/components/form/input.ex
+#, elixir-autogen, elixir-format
+msgctxt "checkbox state"
 msgid "Not checked"
 msgstr ""
 

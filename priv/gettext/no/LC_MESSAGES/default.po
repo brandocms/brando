@@ -3370,11 +3370,16 @@ msgstr "Sjekk e-posten din"
 msgid "Checkbox"
 msgstr "Avkrysningsboks"
 
-#: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Checked"
 msgstr "Sjekket"
+
+#: lib/brando_admin/components/form/input.ex
+#, elixir-autogen, elixir-format
+msgctxt "checkbox state"
+msgid "Checked"
+msgstr "Avkrysset"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -11181,11 +11186,16 @@ msgstr "Ikke tillatt"
 msgid "Not available in this installation"
 msgstr "Ikke tilgjengelig i denne installasjonen"
 
-#: lib/brando_admin/components/form/input.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not checked"
 msgstr "Ikke sjekket"
+
+#: lib/brando_admin/components/form/input.ex
+#, elixir-autogen, elixir-format
+msgctxt "checkbox state"
+msgid "Not checked"
+msgstr "Ikke avkrysset"
 
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format

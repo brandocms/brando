@@ -160,9 +160,11 @@ defmodule BrandoAdmin.Components.Form.Input do
     end
   end
 
-  # A field's value as text, read out while its controls are inert
-  # (`Primitives.field_base/1`'s `:value`)
-  @doc false
+  @doc """
+  A field's value as text, for `Primitives.field_base/1`'s `:value`: read
+  out with the label while the field's controls are inert. "Not set" for an
+  empty value, a list joined with commas.
+  """
   def value_text(value) when value in [nil, "", []], do: gettext("Not set")
   def value_text(values) when is_list(values), do: Enum.map_join(values, ", ", &to_string/1)
   def value_text(%DateTime{} = datetime), do: Calendar.strftime(datetime, "%Y-%m-%d %H:%M %Z")
@@ -171,8 +173,8 @@ defmodule BrandoAdmin.Components.Form.Input do
 
   defp checked_text(field, kind) do
     case {Phoenix.HTML.Form.normalize_value("checkbox", field.value), kind} do
-      {true, :checkbox} -> gettext("Checked")
-      {false, :checkbox} -> gettext("Not checked")
+      {true, :checkbox} -> pgettext("checkbox state", "Checked")
+      {false, :checkbox} -> pgettext("checkbox state", "Not checked")
       {true, :toggle} -> gettext("On")
       {false, :toggle} -> gettext("Off")
     end
@@ -212,7 +214,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       locked={@locked}
     >
-      <:value>{value_text(@field.value)}</:value>
+      <:value>{value_text(@value)}</:value>
       <div
         id={"#{@field.id}-datepicker"}
         class="datetime-wrapper"
@@ -252,7 +254,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       locked={@locked}
     >
-      <:value>{value_text(@field.value)}</:value>
+      <:value>{value_text(@value)}</:value>
       <div
         id={"#{@field.id}-datetimepicker"}
         class="datetime-wrapper"
@@ -1194,7 +1196,7 @@ defmodule BrandoAdmin.Components.Form.Input do
       compact={@compact}
       locked={@locked}
     >
-      <:value>{value_text(@field.value)}</:value>
+      <:value>{@field.value |> Brando.Type.StringList.cast() |> elem(1) |> value_text()}</:value>
       <.input type={:string_list} field={@field} />
     </Primitives.field_base>
     """
