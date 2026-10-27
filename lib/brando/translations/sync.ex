@@ -430,7 +430,9 @@ defmodule Brando.Translations.Sync do
         # A typed URL is often language-specific (a /no/ path, a localized
         # site), so it is text: kept per language, reviewed when the source's
         # changes, and started from the source's when the link is new
-        var.type == :link and var.link_type == :url ->
+        # An empty link reads as a URL whatever its kind: that is only the tab
+        # its dialog opens on, which a module save can move (`FollowLinkDefault`)
+        var.type == :link and (var.link_type == :url or FollowLinkDefault.empty_link?(var)) ->
           [{prefix <> "/link_text", :text, var.link_text}, {prefix <> "/url", :text, var.value}]
 
         var.type == :link ->

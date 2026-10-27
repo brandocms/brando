@@ -165,10 +165,8 @@ defmodule Brando.Content.Definition.Model do
     # Creator is persistence metadata, supplied by the import actor. A sentinel
     # satisfies that required field while normalizing without any database I/O.
     |> then(&Var.changeset(struct(Var), &1, %{id: 0}))
-    # What saving it does (`FollowLinkDefault`), so the import is what the file says
-    |> FollowLinkDefault.follow()
     |> apply_valid!(uid <> ".vars." <> key)
-    |> var_record()
+    |> var_record(assets["identifier"])
     |> Map.put("assets", assets)
   end
 
@@ -177,12 +175,16 @@ defmodule Brando.Content.Definition.Model do
   # file written that way reads the same.
   defp legacy_link_default(%{"type" => "link", "link_type" => kind} = params, identifier)
        when kind in [:identifier, "identifier"] and not is_map_key(params, "link_default_type") do
-    if Map.get(params, "value") in [nil, ""] and identifier in [nil, ""],
+    if blank?(Map.get(params, "value")) and identifier in [nil, ""],
       do: Map.put(params, "link_default_type", "identifier"),
       else: params
   end
 
   defp legacy_link_default(params, _identifier), do: params
+
+  # As brando_224's backfill reads an empty value
+  defp blank?(value) when is_binary(value), do: String.trim(value) == ""
+  defp blank?(value), do: is_nil(value)
 
   defp options!(options) when is_list(options) do
     Enum.map(options, fn
@@ -221,8 +223,23 @@ defmodule Brando.Content.Definition.Model do
   def ref_record(record),
     do: record |> Map.take(@ref_fields) |> Value.plain() |> Map.put("assets", Map.new(@ref_assets, &{&1, nil}))
 
-  def var_record(record),
-    do: record |> Map.take(var_fields()) |> Value.plain() |> Map.put("assets", Map.new(@var_assets, &{&1, nil}))
+  def var_record(record, identifier \\ nil) do
+    linked = identifier || Map.get(record, :identifier_id)
+
+    record
+    |> open_on_default_tab(linked)
+    |> Map.take(var_fields())
+    |> Value.plain()
+    |> Map.put("assets", Map.new(@var_assets, &{&1, nil}))
+  end
+
+  # Every copy of an empty link starts on its default tab
+  # (`FollowLinkDefault.put/1`), so a definition's own link type there is no
+  # part of it: the record has the default, whatever the file or the stored
+  # var holds.
+  defp open_on_default_tab(%{type: :link} = var, nil), do: FollowLinkDefault.put(var)
+
+  defp open_on_default_tab(var, _linked), do: var
 
   # Compare persisted definitions using the same schema normalization as the
   # literal reader. Legacy empty strings must not become edits on reimport.
@@ -239,7 +256,7 @@ defmodule Brando.Content.Definition.Model do
     struct(Var)
     |> Var.changeset(Map.delete(var_record(record), "assets"), %{id: 0}, nil, validate_colors: false)
     |> apply_valid!(record.key)
-    |> var_record()
+    |> var_record(Map.get(record, :identifier_id))
   end
 
   defp ordered(records, fun) when is_list(records) do

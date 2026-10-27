@@ -574,6 +574,7 @@ defmodule Brando.Translations.ComputePendingTest do
 
       assert var.link_type == :url
       assert var.value == "/en/about"
+      assert result.work_items == []
     end
   end
 end

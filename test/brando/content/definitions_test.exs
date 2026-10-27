@@ -159,6 +159,26 @@ defmodule Brando.Content.DefinitionsTest do
     assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(stale, c.user)
   end
 
+  # Every copy of an empty link opens on the default tab, so the module var's
+  # own link type there is no part of the definition
+  test "an empty link left on the other tab exports and reimports unchanged", c do
+    c |> with_link_var("link_default_type: :identifier") |> apply_bundle!(c.user)
+    cta = Enum.find(hero().vars, &(&1.key == "cta"))
+    cta |> Changeset.change(link_type: :url) |> Repo.update!()
+
+    assert {:ok, exported} = Definitions.export(Path.join(c.path, "out"), c.user)
+    assert {:ok, bundle} = Definitions.read(exported.directory)
+    assert {:ok, plan} = Definitions.plan(bundle, c.user)
+    assert [%{action: :noop}] = plan.items
+  end
+
+  test "a file stating an empty link's type and another default imports as it says", c do
+    result = c |> with_link_var("link_default_type: :identifier, link_type: :url") |> apply_bundle!(c.user)
+
+    assert {:ok, plan} = Definitions.plan(result.bundle, c.user)
+    assert [%{action: :noop}] = plan.items
+  end
+
   test "a link var opening on URL stores its default empty", c do
     c |> with_link_var("link_default_type: :url") |> apply_bundle!(c.user)
     assert %{link_default_type: nil, link_type: :url} = Enum.find(hero().vars, &(&1.key == "cta"))
