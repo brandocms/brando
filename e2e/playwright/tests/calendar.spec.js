@@ -94,7 +94,10 @@ test('dragging an item to another day asks first, then moves it, keeping the tim
 
 test('the keyboard moves between days, and Move to… moves an item without dragging', async ({ page }, testInfo) => {
   const { project, day } = await scheduledProject(page, 'Winter menu', 'winter-menu')
-  const target = addDays(day, 2)
+  // The month grid ends with the week the month ends in, so a day past
+  // the month may have no cell: near the month's end, step back instead
+  const inMonth = days => addDays(day, days).slice(0, 7) === day.slice(0, 7)
+  const target = inMonth(2) ? addDays(day, 2) : addDays(day, -2)
 
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.goto(`/admin/calendar?date=${day}`)
@@ -104,11 +107,12 @@ test('the keyboard moves between days, and Move to… moves an item without drag
   const cell = dayCell(page, day)
   await expect(cell).toHaveAttribute('tabindex', '0')
   await cell.focus()
-  await page.keyboard.press('ArrowRight')
-  await expect(dayCell(page, addDays(day, 1))).toBeFocused()
-  await page.keyboard.press('ArrowLeft')
-  // A week on, or back near the month's end: the month shows only its own days
-  const week = addDays(day, 7).slice(0, 7) === day.slice(0, 7) ? 7 : -7
+  const next = inMonth(1) ? 1 : -1
+  await page.keyboard.press(next > 0 ? 'ArrowRight' : 'ArrowLeft')
+  await expect(dayCell(page, addDays(day, next))).toBeFocused()
+  await page.keyboard.press(next > 0 ? 'ArrowLeft' : 'ArrowRight')
+  await expect(cell).toBeFocused()
+  const week = inMonth(7) ? 7 : -7
   await page.keyboard.press(week > 0 ? 'ArrowDown' : 'ArrowUp')
   await expect(dayCell(page, addDays(day, week))).toBeFocused()
   await page.keyboard.press(week > 0 ? 'ArrowUp' : 'ArrowDown')

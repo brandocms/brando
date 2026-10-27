@@ -36,9 +36,12 @@ defmodule Brando.Users.SessionsTest do
     hour_ago = NaiveDateTime.add(NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second), -3600)
     Repo.update_all(from(t in UserToken, where: t.token == ^token), set: [last_used_at: hour_ago])
 
+    # Compared with the clock just before the touch, not "now": a stalled
+    # runner can take seconds between the touch and the assertion.
+    before = NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second)
     Users.touch_session(token)
     [%{last_used_at: touched}] = Users.list_sessions(user)
-    assert NaiveDateTime.diff(NaiveDateTime.utc_now(), touched) < 5
+    assert NaiveDateTime.compare(touched, before) != :lt
 
     minute_ago = NaiveDateTime.add(NaiveDateTime.truncate(NaiveDateTime.utc_now(), :second), -60)
     Repo.update_all(from(t in UserToken, where: t.token == ^token), set: [last_used_at: minute_ago])
