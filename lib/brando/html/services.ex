@@ -63,8 +63,9 @@ defmodule Brando.HTML.Services do
   defp entries(%{services: services}) when is_list(services), do: services
   defp entries(%{language: language}), do: for_language(language)
 
-  defp url(%{resolved_url: url}) when is_binary(url) and url != "", do: url
-  defp url(%{url: url}) when is_binary(url) and url != "", do: url
+  # An address with a script or unknown scheme is no link
+  defp url(%{resolved_url: url}) when is_binary(url) and url != "", do: Brando.Villain.Parser.safe_url(url)
+  defp url(%{url: url}) when is_binary(url) and url != "", do: Brando.Villain.Parser.safe_url(url)
   defp url(_), do: nil
 
   defp description(%{resolved_description: text}) when is_binary(text) and text != "", do: text

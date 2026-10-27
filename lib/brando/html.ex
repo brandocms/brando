@@ -70,6 +70,8 @@ defmodule Brando.HTML do
     item = assigns.item
 
     url = get_menu_item_url(item) || ""
+    # A refused address renders no href; an item without one keeps href=""
+    refused? = url == "" and present_menu_item_url?(item)
     text = get_menu_item_text(item)
     target_blank? = get_menu_item_target_blank(item)
     key = item.key
@@ -93,7 +95,7 @@ defmodule Brando.HTML do
 
     assigns =
       assigns
-      |> assign(:url, url)
+      |> assign(:url, if(refused?, do: nil, else: url))
       |> assign(:text, text)
       |> assign(:key, key)
       |> assign(:active, active?)
@@ -176,12 +178,21 @@ defmodule Brando.HTML do
     """
   end
 
-  def get_menu_item_url(%{link: %{link_type: :url, value: url}}), do: url
+  # An address with a script or unknown scheme is no link. An entry's can
+  # be one an editor typed too (an external link field).
+  def get_menu_item_url(%{link: %{link_type: :url, value: url}}), do: Brando.Villain.Parser.safe_url(url)
 
   def get_menu_item_url(%{link: %{link_type: :identifier, identifier: %{} = identifier}}),
-    do: Brando.Content.Identifier.link_url(identifier)
+    do: identifier |> Brando.Content.Identifier.link_url() |> Brando.Villain.Parser.safe_url()
 
   def get_menu_item_url(_), do: nil
+
+  defp present_menu_item_url?(%{link: %{link_type: :url, value: url}}), do: is_binary(url) and String.trim(url) != ""
+
+  defp present_menu_item_url?(%{link: %{link_type: :identifier, identifier: %{} = identifier}}),
+    do: Brando.Content.Identifier.link_url(identifier) != nil
+
+  defp present_menu_item_url?(_), do: false
 
   def get_menu_item_text(%{link: %{link_type: :url, link_text: text}}), do: text
 

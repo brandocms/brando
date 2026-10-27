@@ -17813,6 +17813,11 @@ msgstr "Dette er for langt."
 msgid "This language already has a version."
 msgstr "Dette språket har allerede en versjon."
 
+#: lib/brando_admin/components/form/input/blocks/map_block.ex
+#, elixir-autogen, elixir-format
+msgid "This map address can't be embedded."
+msgstr "Denne kartadressen kan ikke bygges inn."
+
 #: lib/brando_web/controllers/error_html/500.html.heex
 #, elixir-autogen, elixir-format
 msgid "This might occur during a server update or reboot"

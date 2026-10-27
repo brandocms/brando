@@ -28,7 +28,7 @@ defmodule Brando.Sites.Services do
 
     %{
       service
-      | resolved_url: absolute(presence(service.url) || identifier_url(identifier)),
+      | resolved_url: absolute(safe_url(service.url) || identifier_url(identifier)),
         resolved_description: presence(service.description) || entry_description(entry)
     }
   end
@@ -60,7 +60,7 @@ defmodule Brando.Sites.Services do
         service_type: presence(service.service_type),
         provider: "#{hostname}/#identity",
         area_served: list_or_nil(service.area_served) || inherited,
-        url: presence(service.resolved_url) || absolute(presence(service.url))
+        url: presence(service.resolved_url) || absolute(safe_url(service.url))
       })
     end)
   end
@@ -86,7 +86,7 @@ defmodule Brando.Sites.Services do
   defp loaded(%Identifier{} = identifier), do: identifier
   defp loaded(_), do: nil
 
-  defp identifier_url(%Identifier{url: url}), do: presence(url)
+  defp identifier_url(%Identifier{url: url}), do: safe_url(url)
   defp identifier_url(_), do: nil
 
   defp entry_for(%Identifier{schema: schema, entry_id: id}) when is_atom(schema) and not is_nil(id) do
@@ -107,9 +107,13 @@ defmodule Brando.Sites.Services do
   end
 
   defp absolute(nil), do: nil
-  defp absolute("http://" <> _ = url), do: url
-  defp absolute("https://" <> _ = url), do: url
-  defp absolute(path), do: Utils.hostname(path)
+  # An address with a scheme (any case) stays as it is; a path gets the host
+  defp absolute(url) do
+    if Regex.match?(~r/^[a-z][a-z0-9+.-]*:/i, url), do: url, else: Utils.hostname(url)
+  end
+
+  # An address with a script or unknown scheme is no link
+  defp safe_url(url), do: url |> presence() |> Brando.Villain.Parser.safe_url()
 
   defp presence(nil), do: nil
   defp presence(""), do: nil

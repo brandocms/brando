@@ -66,7 +66,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
             </div>
           </:config>
           <div class="map-block">
-            <%= if block_data[:embed_url].value do %>
+            <%= if Brando.Villain.Parser.safe_url(block_data[:embed_url].value) do %>
               <%= case block_data[:source].value do %>
                 <% :gmaps -> %>
                   <div class="map-content">
@@ -105,15 +105,24 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MapBlock do
     """
   end
 
+  # The address is what the editor pasted: one with a script or unknown
+  # scheme is refused, and the map already there stays
   def handle_event("url", %{"source" => source, "embedUrl" => embed_url}, socket) do
-    ref_data =
-      Block.current_block_data_map(socket.assigns.block, nil, %{
-        embed_url: embed_url,
-        source: String.to_existing_atom(source)
-      })
+    case Brando.Villain.Parser.safe_url(embed_url) do
+      nil ->
+        send(self(), {:toast, gettext("This map address can't be embedded.")})
+        {:noreply, socket}
 
-    socket
-    |> Block.commit_ref_data(ref_data: ref_data)
-    |> then(&{:noreply, &1})
+      embed_url ->
+        ref_data =
+          Block.current_block_data_map(socket.assigns.block, nil, %{
+            embed_url: embed_url,
+            source: String.to_existing_atom(source)
+          })
+
+        socket
+        |> Block.commit_ref_data(ref_data: ref_data)
+        |> then(&{:noreply, &1})
+    end
   end
 end
