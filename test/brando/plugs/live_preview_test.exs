@@ -189,6 +189,20 @@ defmodule Brando.Plug.LivePreviewTest do
     assert capture_log(fn -> assert %{status: 404} = request.() end) == ""
   end
 
+  # A mounted socket answers only its WebSocket path: other paths under it
+  # reach the plug on a correctly configured endpoint too
+  test "other paths under the preview socket do not claim the line is missing" do
+    :persistent_term.erase({LivePreview, :socket_missing})
+    on_exit(fn -> :persistent_term.erase({LivePreview, :socket_missing}) end)
+
+    for path <- ["/__livepreview/socket", "/__livepreview/socket/longpoll"] do
+      log = capture_log(fn -> build_conn(:get, path) |> LivePreview.call([]) end)
+      refute log =~ "Live preview updates are unavailable", path
+    end
+
+    refute :persistent_term.get({LivePreview, :socket_missing}, false)
+  end
+
   # The cookie-based token route went with the sandbox: the page has no
   # cookies to send it (the channel hands over fresh tokens instead)
   test "there is no token route; it is a preview page like any other path" do

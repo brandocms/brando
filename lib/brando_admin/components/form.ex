@@ -9207,9 +9207,7 @@ defmodule BrandoAdmin.Components.Form do
               class="live-preview-notice"
               role="status"
               data-message={gettext("The preview was missing some changes, so it was refreshed.")}
-              data-unavailable-message={
-                gettext("Live updates are unavailable, so the preview does not follow your changes. The server log says why.")
-              }
+              data-unavailable-message={gettext("Live updates are unavailable, so the preview does not follow your changes.")}
             >
             </p>
             <iframe

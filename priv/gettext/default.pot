@@ -9321,7 +9321,7 @@ msgstr ""
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
-msgid "Live updates are unavailable, so the preview does not follow your changes. The server log says why."
+msgid "Live updates are unavailable, so the preview does not follow your changes."
 msgstr ""
 
 #: lib/brando_admin/components/form/var_layout.ex

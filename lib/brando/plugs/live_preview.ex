@@ -100,7 +100,7 @@ defmodule Brando.Plug.LivePreview do
   # the preview socket that gets here means the endpoint does not mount it.
   # The preview's script tells the admin page that live updates are
   # unavailable; the log says why, once.
-  def call(%Plug.Conn{path_info: ["__livepreview", "socket" | _]} = conn, _) do
+  def call(%Plug.Conn{path_info: ["__livepreview", "socket", "websocket"]} = conn, _) do
     endpoint = conn.private[:phoenix_endpoint] || Brando.endpoint()
 
     if :persistent_term.get({__MODULE__, :socket_missing}, false) == false do
