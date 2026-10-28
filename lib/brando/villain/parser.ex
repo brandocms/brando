@@ -499,7 +499,10 @@ defmodule Brando.Villain.Parser do
     end
   end
 
-  def html(%{text: html}, _), do: html
+  # The template with its parameters' values in place, each checked against
+  # its type and escaped for it (`Brando.Villain.Blocks.HtmlBlock.render/1`).
+  # A parser that overrides `html/2` gets the same data and should call it.
+  def html(data, _), do: Brando.Villain.Blocks.HtmlBlock.render(data)
   def svg(%{code: html}, _), do: html
 
   def markdown(%{text: markdown}, _) do

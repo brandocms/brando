@@ -181,6 +181,7 @@ defmodule Brando.Content.Block do
       drop_param: :drop_var_ids
     )
     |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
+    |> Brando.Content.RefGuard.guard(user)
     |> finalize_new_block(block)
   end
 
@@ -233,6 +234,7 @@ defmodule Brando.Content.Block do
       drop_param: :drop_var_ids
     )
     |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
+    |> Brando.Content.RefGuard.guard(user)
     |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user, opts))
     |> Brando.Content.BlockSlots.validate(opts)
     |> finalize_new_block(block)
