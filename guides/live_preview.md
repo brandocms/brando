@@ -331,4 +331,3 @@ What is left:
   plug, must send the same headers (`Brando.Plug.Media.media_headers/1`).
   Without them, an uploaded SVG opened on its own runs on the site's origin,
   and a preview's standalone window can navigate itself to one.
-- To limit which scripts run in previews further, set a `script-src` (above).
