@@ -6,6 +6,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
   use Gettext, backend: Brando.Gettext
 
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.Blocks.HtmlParams
   alias BrandoAdmin.Components.Form.ModuleProps
   alias BrandoAdmin.Components.Form.Primitives
   alias Phoenix.LiveView.JS
@@ -123,7 +124,10 @@ defmodule BrandoAdmin.Components.Form.ModuleProps.RefBlockForm do
         id={"#{@form_id}-ref-#{@key}-#{@ref_name}-html-code"}
         field={block_data[:text]}
         label={gettext("HTML")}
+        instructions={gettext("New blocks start with this HTML. Only superusers see and change it.")}
       />
+      <HtmlParams.params_editor block_data={block_data} />
+      <HtmlParams.values_form block_data={block_data} />
     </Primitives.inputs_for_block>
     """
   end

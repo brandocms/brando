@@ -1157,6 +1157,11 @@ msgstr[1] "%{count} varslingsruter ble satt på pause"
 msgid "A number"
 msgstr "Et tall"
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "A number, such as 42 or 4.5"
+msgstr "Et tall, for eksempel 42 eller 4.5"
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "A palette or custom color"
@@ -1298,6 +1303,16 @@ msgstr "Én linje, for eksempel et navn"
 #, elixir-autogen, elixir-format
 msgid "A single yes or no"
 msgstr "Ett ja eller nei"
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "A superuser maintains this HTML."
+msgstr "En superbruker vedlikeholder denne HTML-en."
+
+#: lib/brando_admin/components/form/input/blocks/svg_block.ex
+#, elixir-autogen, elixir-format
+msgid "A superuser maintains this SVG."
+msgstr "En superbruker vedlikeholder denne SVG-en."
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -1727,6 +1742,11 @@ msgstr "Legg til én, og referer så til nøkkelen dens i malen."
 #, elixir-autogen, elixir-format
 msgid "Add option"
 msgstr "Legg til alternativ"
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Add parameter"
+msgstr "Legg til parameter"
 
 #: lib/brando_admin/components/form/input/multi_select.ex
 #, elixir-autogen, elixir-format
@@ -2172,6 +2192,11 @@ msgstr "Et anslag ut fra modellens publiserte priser og størrelsen på hvert bi
 #, elixir-autogen, elixir-format
 msgid "An https address on the public internet. Redirects are not followed."
 msgstr "En https-adresse på det åpne internettet. Videresendinger følges ikke."
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "An https:// address, or a path on this site"
+msgstr "En https://-adresse, eller en sti på dette nettstedet"
 
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
@@ -6566,6 +6591,11 @@ msgstr "Editoroppsett"
 msgid "Editors connect a repository document and choose its update policy in each entry."
 msgstr "Redaktører kobler til et repositorydokument og velger oppdateringsregel i hver oppføring."
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Editors fill these in. Refer to one in the HTML as {{ key }}."
+msgstr "Redaktører fyller inn disse. Vis til en i HTML-en som {{ key }}."
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Editors' channel"
@@ -6683,6 +6713,11 @@ msgstr "Skriv inn en dato."
 msgid "Enter a group name (up to 100 characters) and a description up to 500 characters."
 msgstr "Skriv inn et gruppenavn på opptil 100 tegn og en beskrivelse på opptil 500 tegn."
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a number"
+msgstr "Skriv inn et tall"
+
 #: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a number."
@@ -6702,6 +6737,11 @@ msgstr "Oppgi en gyldig lenkeadresse før du legger til lenken."
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
 msgstr "Skriv inn en gyldig e-postadresse."
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Enter an https:// address or a path"
+msgstr "Skriv inn en https://-adresse eller en sti"
 
 #: lib/brando_admin/components/form/input/select.ex
 #, elixir-autogen, elixir-format
@@ -7983,6 +8023,7 @@ msgstr "H5"
 msgid "H6"
 msgstr "H6"
 
+#: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/components/form/module_props.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
@@ -8165,6 +8206,7 @@ msgstr "Jeg har lagt ved media. Bruk dem."
 msgid "I have saved my codes"
 msgstr "Jeg har lagret kodene"
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "ID"
@@ -8647,6 +8689,11 @@ msgstr "Feil e-post eller passord"
 msgid "Invalid job identifier."
 msgstr "Ugyldig jobb-ID."
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid value"
+msgstr "Ugyldig verdi"
+
 #: lib/brando_admin/components/assets/provider_video_upload.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid video upload request"
@@ -8834,6 +8881,7 @@ msgid_plural "Kept for %{count} days"
 msgstr[0] "Lagres i %{count} dag"
 msgstr[1] "Lagres i %{count} dager"
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/live/content/shared_library_live.ex
@@ -8861,6 +8909,7 @@ msgstr "Hurtigtaster"
 msgid "Knows about"
 msgstr "Kunnskapsområder"
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -9076,6 +9125,11 @@ msgstr "La folk koble Claude, ChatGPT og andre MCP-klienter til dette nettstedet
 #, elixir-autogen, elixir-format
 msgid "Let the assistant choose"
 msgstr "La assistenten velge"
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Letters, digits, _ and - only"
+msgstr "Bare bokstaver, sifre, _ og -"
 
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
@@ -10387,6 +10441,11 @@ msgstr "Ny %{singular}"
 msgid "New %{type}"
 msgstr "Ny %{type}"
 
+#: lib/brando_admin/components/form/module_props/ref_block_form.ex
+#, elixir-autogen, elixir-format
+msgid "New blocks start with this HTML. Only superusers see and change it."
+msgstr "Nye blokker starter med denne HTML-en. Bare superbrukere ser og endrer den."
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "New conversation"
@@ -11583,6 +11642,7 @@ msgstr "Varsler vises her når de sendes, eller når du sender en test."
 msgid "Now"
 msgstr "Nå"
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Number"
@@ -11822,6 +11882,11 @@ msgstr "Kun superbrukere kan endre e-postadressen til andre brukere."
 #, elixir-autogen, elixir-format
 msgid "Only superusers can change the password of other users."
 msgstr "Kun superbrukere kan endre passord for andre brukere."
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Only superusers see and change the HTML and its parameters."
+msgstr "Bare superbrukere ser og endrer HTML-en og parameterne."
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -12212,6 +12277,11 @@ msgstr "Avsnitt"
 #, elixir-autogen, elixir-format
 msgid "Paragraph and style"
 msgstr "Avsnitt og stil"
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Parameters"
+msgstr "Parametere"
 
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
@@ -13577,6 +13647,11 @@ msgstr "Fjern lenke"
 #, elixir-autogen, elixir-format
 msgid "Remove option %{value}"
 msgstr "Fjern valget %{value}"
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Remove parameter"
+msgstr "Fjern parameter"
 
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
@@ -16577,6 +16652,7 @@ msgid "Test notification from %{site}"
 msgstr "Testvarsel fra %{site}"
 
 #: lib/brando_admin/components/form/block/render.ex
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props.ex
@@ -18591,6 +18667,7 @@ msgstr "Tofaktorautentisering ble slått av"
 msgid "Two-factor authentication was turned on"
 msgstr "Tofaktorautentisering ble slått på"
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props.ex
@@ -18615,6 +18692,7 @@ msgstr "Type og plassering"
 
 #: lib/brando/seo/checks.ex
 #: lib/brando_admin/components/content/select_identifier.ex
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -19145,6 +19223,11 @@ msgstr "Bruk eksisterende"
 #, elixir-autogen, elixir-format
 msgid "Use for model training"
 msgstr "Bruk til modelltrening"
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Use letters, digits, _ and - only"
+msgstr "Bruk bare bokstaver, sifre, _ og -"
 
 #: lib/brando_admin/live/content/module_form_live.ex
 #, elixir-autogen, elixir-format

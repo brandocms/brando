@@ -1,0 +1,14 @@
+{
+  "attribute_breakout": "\" onmouseover=\"window.__pwned=1\" x=\"",
+  "element_breakout": "</div><script>window.__pwned=1</script>",
+  "script_string_breakout": "\";window.__pwned=1;//",
+  "script_close": "</script><script>window.__pwned=1</script>",
+  "javascript_url": "javascript:window.__pwned=1",
+  "entity_javascript_url": "java&#x09;script:window.__pwned=1",
+  "data_url": "data:text/html,<script>window.__pwned=1</script>",
+  "http_url": "http://example.com/",
+  "https_url_with_quote": "https://example.com/?a=1&b=\"x",
+  "relative_url": "/checkin?id=42",
+  "liquid": "{{ entry.title }}{% fragment a b c %}",
+  "number_with_code": "42;window.__pwned=1"
+}

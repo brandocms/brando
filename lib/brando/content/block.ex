@@ -170,6 +170,14 @@ defmodule Brando.Content.Block do
     attrs = drop_vanished_rows(attrs, block, @row_relations)
 
     block
+    |> cast_block(attrs, user)
+    |> finalize_new_block(block)
+  end
+
+  # The block's own fields and rows, its refs held to what `user` may
+  # change (`Brando.Content.RefGuard`)
+  defp cast_block(block, attrs, user) do
+    block
     |> cast(attrs, @block_attrs)
     |> validate_required(:uid)
     |> unique_constraint(:uid)
@@ -181,7 +189,7 @@ defmodule Brando.Content.Block do
       drop_param: :drop_var_ids
     )
     |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
-    |> finalize_new_block(block)
+    |> Brando.Content.RefGuard.guard(user)
   end
 
   # New (nil-id) blocks: strip :replace refs/vars changesets (they cause
@@ -222,17 +230,7 @@ defmodule Brando.Content.Block do
     attrs = drop_vanished_rows(attrs, block, @row_relations)
 
     block
-    |> cast(attrs, @block_attrs)
-    |> validate_required(:uid)
-    |> unique_constraint(:uid)
-    |> cast_table_rows(user)
-    |> cast_block_identifiers(user)
-    |> cast_assoc(:vars,
-      with: &var_changeset(&1, &2, &3, user),
-      sort_param: :sort_var_ids,
-      drop_param: :drop_var_ids
-    )
-    |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
+    |> cast_block(attrs, user)
     |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user, opts))
     |> Brando.Content.BlockSlots.validate(opts)
     |> finalize_new_block(block)

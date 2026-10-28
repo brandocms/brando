@@ -138,6 +138,9 @@ between new entries block import with instructions to map a reference to an exis
 Blueprints first: missing or unknown authored fields are rejected. Database IDs,
 block instance UIDs, creator identity, timestamps, deletion flags and passwords
 are not portable authored values. The current actor owns the destination changes.
+Imported blocks are saved as that actor's own edits: unless the actor is a
+superuser, an HTML or SVG ref takes the destination module's markup, keeping
+an HTML ref's parameter values ([HTML refs](block_editor.md#html-refs)).
 
 Shared-library definitions and overrides must be made local before transfer.
 Unsupported reference types and missing application dependencies are actionable

@@ -315,7 +315,10 @@ is applied.
 - Move, copy and delete blocks, children included, and turn a block or one of
   its slots on or off.
 - On new and existing blocks, at any depth:
-  - set text in text, header, markdown, html, svg and map slots;
+  - set text in text, header, markdown and map slots, and fill in the
+    parameters of an HTML slot through its settings (`values`), each checked
+    against its type. The markup of HTML and SVG slots is a superuser's and
+    no proposal changes it;
   - put images, videos and files in media slots, and set a gallery's whole,
     ordered content;
   - set variables: text, boolean, select, colour, date, image, video, and

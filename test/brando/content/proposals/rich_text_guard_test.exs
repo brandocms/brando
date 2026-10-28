@@ -18,7 +18,7 @@ defmodule Brando.Content.Proposals.RichTextGuardTest do
     module =
       module!(c.user, "Mixed", "{% ref refs.body %}{% ref refs.notes %}{% ref refs.icon %}",
         refs: [
-          ref("body", %{type: "html", data: %{text: "<p>Body</p>"}}),
+          ref("body", %{type: "text", data: %{text: "<p>Body</p>"}}),
           ref("notes", %{type: "markdown", data: %{text: "Notes"}}),
           ref("icon", %{type: "svg", data: %{code: "<svg></svg>"}})
         ]
@@ -46,8 +46,10 @@ defmodule Brando.Content.Proposals.RichTextGuardTest do
     end
   end
 
-  test "an svg that hides a handler in a comment is unsafe", c do
-    assert codes(c, %{icon: ~s(<svg viewBox="0 0 10 10"><!-->#{@handler}--></svg>)}) == [:unsafe_text]
+  # SVG code is markup only a superuser changes, safe or not
+  test "an svg takes no text from a proposal", c do
+    assert codes(c, %{icon: ~s(<svg viewBox="0 0 10 10"><!-->#{@handler}--></svg>)}) == [:unsupported_value]
+    assert codes(c, %{icon: ~s(<svg viewBox="0 0 10 10"><title>Dot</title></svg>)}) == [:unsupported_value]
   end
 
   test "Markdown is checked as the HTML it renders", c do
@@ -59,11 +61,10 @@ defmodule Brando.Content.Proposals.RichTextGuardTest do
     assert :unsafe_text in codes(c, %{notes: ~s{[x](entry:Brando.Pages.Page:1)\n\n<img src="x" onerror="x">}})
   end
 
-  test "ordinary rich text and svg stay valid", c do
+  test "ordinary rich text stays valid", c do
     body =
       ~s(<p class="lede">A <a href="https://example.com/?a=1&amp;b=2" target="_blank">link</a> &amp; <strong>text</strong></p>)
 
-    svg = ~s(<svg viewBox="0 0 10 10"><title>Dot</title><circle cx="5" cy="5" r="4"/></svg>)
-    assert codes(c, %{body: body, icon: svg}) == []
+    assert codes(c, %{body: body}) == []
   end
 end

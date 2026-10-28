@@ -231,6 +231,60 @@ included. So:
 
 <!-- usage-rules:end -->
 
+## HTML refs
+
+An HTML ref holds markup a superuser writes: an embed, a widget's mount
+point. Editors fill in its **parameters**, the way a parameterized SQL query
+takes values, and never see or change the markup.
+
+A superuser writes the template and declares each parameter with a key, a
+label and a type. The template names a parameter as `{{ key }}`:
+
+```html
+<div class="checkin" data-checkin="{{ checkin_id }}"></div>
+<script src="https://widgets.example.com/checkin.js" data-id="{{ checkin_id }}"></script>
+```
+
+Editors see one input per parameter, labelled with its label. On render,
+each value is checked against its type and escaped for it; a value that is
+not valid renders as nothing, and the editor refuses to save it.
+
+| Type | Takes | Safe in |
+| --- | --- | --- |
+| `id` | Letters, digits, `_` and `-` | Anywhere, a script included |
+| `number` | An integer or a decimal number, such as `42` or `-4.5` | Anywhere |
+| `url` | An `https:` address or a relative one, escaped for an attribute | A quoted attribute |
+| `text` | Any text, HTML-escaped | Element content and quoted attributes |
+
+`{`, `}` and `%` in a value are escaped too, and a placeholder inside the
+template's own Liquid (`{% {{ key }} %}`) takes no value, so a value never
+forms Liquid. Only
+`{{ key }}` of a declared parameter is replaced, with optional spaces and no
+filters; any other `{{ … }}` in the template is left for the page's Liquid
+pass, as before. A template without parameters renders as it is.
+
+The template belongs to the block. The module's HTML ref is the template
+new blocks start with, and saving a module leaves the template, parameters
+and values of existing blocks as they are. A superuser changes one block's
+template in the block editor.
+
+Only a superuser (`Brando.Authorization.Boundary.superuser?/1`) changes an
+HTML ref's template and parameters, or an SVG ref's code, also in a media
+slot. The server holds every save to that (`Brando.Content.RefGuard`):
+markup another user sends is put back, and their other changes are kept. It
+also keeps each ref's type to what its module defines, for everyone. A copy
+of a saved block keeps its markup, as long as a saved block of the same
+module holds that markup. The same holds when a non-superuser restores a
+revision, or saves while a superuser has unsaved markup changes in the
+same entry: the saved markup stays, and a superuser makes the change. AI
+translation translates the values of `text`
+parameters, and a content assistant proposal fills in values through a
+slot's settings.
+
+A project parser that overrides `html/2` gets the template, parameters and
+values in its data; call `Brando.Villain.Blocks.HtmlBlock.render/1` to fill
+them in.
+
 ## Named block regions
 
 A **Blocks** ref (`:blocks` in [module definitions](module_definitions.md))

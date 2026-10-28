@@ -1056,11 +1056,20 @@ defmodule Brando.Content.Proposals do
 
   defp checked_text(_type, text), do: text
 
-  # Text, markdown and HTML refs must pass the same safety check as the
-  # editor's rich text; header refs hold plain text, svg refs one safe
-  # `<svg>`, and map refs an https embed address.
+  # Text and markdown refs must pass the same safety check as the editor's
+  # rich text; header refs hold plain text, and map refs an https embed
+  # address. HTML and SVG refs hold markup only a superuser changes: an HTML
+  # ref's parameters take values through `set_ref_config`.
   defp text(name, text, module) do
     case Enum.find(module.refs || [], &(&1.name == name)) do
+      %{data: %{type: type}} when type in ["html", "svg"] ->
+        [
+          problem(
+            :unsupported_value,
+            dgettext("content_proposals", "%{name} holds markup only a superuser changes.", name: name)
+          )
+        ]
+
       %{data: %{type: type}} when is_binary(text) ->
         case text_problem(type, checked_text(type, text), name) do
           :unknown -> [unknown_text(name)]
@@ -1076,15 +1085,8 @@ defmodule Brando.Content.Proposals do
   defp unknown_text(name),
     do: problem(:unknown_ref, dgettext("content_proposals", "The module has no text slot %{name}.", name: name))
 
-  defp text_problem(type, text, name) when type in ["text", "markdown", "html"], do: rich_text_problem(text, name)
+  defp text_problem(type, text, name) when type in ["text", "markdown"], do: rich_text_problem(text, name)
   defp text_problem("header", text, name), do: plain_text_problem(text, name)
-
-  defp text_problem("svg", text, name) do
-    liquid_problem(text, name) ||
-      unless(Brando.RichText.safe_svg?(text),
-        do: dgettext("content_proposals", "%{name} takes one safe <svg> element.", name: name)
-      )
-  end
 
   defp text_problem("map", text, name) do
     unless embed_address?(text) and liquid_problem(text, name) == nil,
@@ -1865,17 +1867,16 @@ defmodule Brando.Content.Proposals do
   end
 
   # The field a ref's content lives in, by ref type.
+  # Never an HTML or SVG ref's markup (`text/3` refuses it before this).
   defp put_text(ref, text) do
-    %{type: type, data: inner} = block = Changeset.get_field(ref, :data)
+    case Changeset.get_field(ref, :data) do
+      %{type: type} when type in ["html", "svg"] ->
+        ref
 
-    key =
-      case type do
-        "svg" -> :code
-        "map" -> :embed_url
-        _ -> :text
-      end
-
-    Changeset.put_change(ref, :data, %{block | data: Map.put(inner, key, text)})
+      %{type: type, data: inner} = block ->
+        key = if type == "map", do: :embed_url, else: :text
+        Changeset.put_change(ref, :data, %{block | data: Map.put(inner, key, text)})
+    end
   end
 
   defp template(%{data: %{type: "media", data: data}}, "picture"),

@@ -15,6 +15,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   alias BrandoAdmin.Components.Form.Block
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Blocks
+  alias BrandoAdmin.Components.Form.Input.Blocks.HtmlParams
   alias BrandoAdmin.Components.Form.Input.Entries
   alias BrandoAdmin.Components.Form.Input.RenderVar
   alias BrandoAdmin.Components.Form.Primitives
@@ -76,6 +77,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         module_class={@module_class}
         module_color={@module_color}
         module_write_with_ai={@module_write_with_ai}
+        superuser={@current_user_superuser}
         module_name={@module_name}
         module_type={@module_type}
         heex_compiled_module={@heex_compiled_module}
@@ -137,6 +139,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               form_id={@form_id}
               entry={@entry}
               current_user_id={@current_user_id}
+              current_user_superuser={@current_user_superuser}
               belongs_to={:multi}
               paste_multi_module_id={@paste_multi_module_id}
               level={@level + 1}
@@ -181,6 +184,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         module_name={@module_name}
         module_color={@module_color}
         module_write_with_ai={@module_write_with_ai}
+        superuser={@current_user_superuser}
         module_datasource_module_label={@module_datasource_module_label}
         module_datasource_type={@module_datasource_type}
         module_datasource_query={@module_datasource_query}
@@ -241,6 +245,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         module_name={@module_name}
         module_color={@module_color}
         module_write_with_ai={@module_write_with_ai}
+        superuser={@current_user_superuser}
         paste_multi_module_id={@paste_multi_module_id}
         hidden_block_fields={@hidden_block_fields}
         paste_context={multi_paste_context(@paste_multi_module_id, @parent_module_id)}
@@ -313,6 +318,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               form={child_block_form}
               form_id={@form_id}
               current_user_id={@current_user_id}
+              current_user_superuser={@current_user_superuser}
               belongs_to={:container}
               paste_multi_module_id={@paste_multi_module_id}
               level={@level + 1}
@@ -477,6 +483,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         form_id={@form_id}
         entry={@entry}
         current_user_id={@current_user_id}
+        current_user_superuser={@current_user_superuser}
         belongs_to={:slot}
         slot_open={@open_slot_uid == child_uid}
         slot_title={@slot_title}
@@ -849,6 +856,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :focus_role, :atom, default: nil
   # Write with AI in the module's text blocks (`Brando.Content.Module`)
   attr :module_write_with_ai, :boolean, default: false
+  # Whether HTML and SVG refs show their markup for editing
+  attr :superuser, :boolean, default: false
   slot :inner_block
 
   def module(assigns) do
@@ -963,6 +972,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               entry={@entry}
               entry_language={@entry_language}
               write_with_ai={@module_write_with_ai}
+              superuser={@superuser}
             />
           <% else %>
             <Input.hidden field={@form[:sequence]} />
@@ -1017,6 +1027,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
               entry={@entry}
               entry_language={@entry_language}
               write_with_ai={@module_write_with_ai}
+              superuser={@superuser}
             />
           <% end %>
         </form>
@@ -1127,6 +1138,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       |> assign(:liquid_splits, liquid_splits)
       |> assign_new(:entry_language, fn -> nil end)
       |> assign_new(:write_with_ai, fn -> false end)
+      |> assign_new(:superuser, fn -> false end)
 
     ~H"""
     <div class="block-content">
@@ -1176,6 +1188,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                   ref_name={ref}
                   footnotes_enabled={ref in @footnote_refs}
                   write_with_ai={@write_with_ai}
+                  superuser={@superuser}
                   config_open={@config_open}
                   target={@target}
                   target_ref={@target_ref}
@@ -1586,6 +1599,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
   attr :footnotes_enabled, :boolean
   # Write with AI in the ref's text: the module turns it on
   attr :write_with_ai, :boolean, default: false
+  # Whether HTML and SVG refs show their markup for editing
+  attr :superuser, :boolean, default: false
 
   def ref(assigns) do
     refs = Changeset.get_assoc(assigns.refs_field.form.source, :refs, :struct)
@@ -1616,6 +1631,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
                 ref_form={ref_form}
                 footnotes_enabled={@footnotes_enabled}
                 write_with_ai={@write_with_ai}
+                superuser={@superuser}
                 block={block}
                 target={@target}
                 target_ref={@target_ref}
@@ -1721,6 +1737,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       |> assign_new(:config_open, fn -> nil end)
       |> assign_new(:form_id, fn -> nil end)
       |> assign_new(:target_ref, fn -> nil end)
+      |> assign_new(:superuser, fn -> false end)
       |> assign_new(:block_id, fn ->
         if assigns[:is_ref?] && assigns[:ref_form] do
           assigns.ref_form[:uid].value
@@ -1801,6 +1818,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         target={@target}
         target_ref={@target_ref}
         form_id={@form_id}
+        superuser={@superuser}
       />
     <% end %>
     """
@@ -1941,7 +1959,7 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
         <.toolbar
           uid={@uid}
           collapsed={@collapsed}
-          config={@config}
+          config={@config != []}
           type={@block_type}
           block={@block}
           ref_form={@ref_form}
@@ -1994,7 +2012,25 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
             <% end %>
           </:description>
           <div class="html-block">
-            <Input.code field={block_data[:text]} label={gettext("Text")} />
+            <%!-- Only a superuser sees and changes the template and its
+                  parameters (`Brando.Content.RefGuard` holds a save to
+                  that); everyone fills in the parameters' values. --%>
+            <%= if @superuser do %>
+              <div class="html-block-template">
+                <Input.code
+                  field={block_data[:text]}
+                  label={gettext("HTML")}
+                  instructions={gettext("Only superusers see and change the HTML and its parameters.")}
+                />
+                <HtmlParams.params_editor block_data={block_data} />
+              </div>
+            <% else %>
+              <HtmlParams.carried_template block_data={block_data} />
+              <p :if={!HtmlParams.params?(block_data)} class="html-block-note">
+                {gettext("A superuser maintains this HTML.")}
+              </p>
+            <% end %>
+            <HtmlParams.values_form block_data={block_data} />
           </div>
         </.block>
       </.inputs_for>
@@ -3390,7 +3426,8 @@ defmodule BrandoAdmin.Components.Form.Block.Render do
       target: assigns[:target],
       target_ref: assigns[:target_ref],
       form_id: assigns[:form_id],
-      write_with_ai: assigns[:write_with_ai] == true
+      write_with_ai: assigns[:write_with_ai] == true,
+      superuser: assigns[:superuser] == true
     }
 
     system_assigns =

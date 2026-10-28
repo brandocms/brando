@@ -1157,6 +1157,11 @@ msgstr[1] ""
 msgid "A number"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "A number, such as 42 or 4.5"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "A palette or custom color"
@@ -1297,6 +1302,16 @@ msgstr ""
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "A single yes or no"
+msgstr ""
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "A superuser maintains this HTML."
+msgstr ""
+
+#: lib/brando_admin/components/form/input/blocks/svg_block.ex
+#, elixir-autogen, elixir-format
+msgid "A superuser maintains this SVG."
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -1726,6 +1741,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "Add option"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Add parameter"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/multi_select.ex
@@ -2171,6 +2191,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "An https address on the public internet. Redirects are not followed."
+msgstr ""
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "An https:// address, or a path on this site"
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props.ex
@@ -6566,6 +6591,11 @@ msgstr ""
 msgid "Editors connect a repository document and choose its update policy in each entry."
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Editors fill these in. Refer to one in the HTML as {{ key }}."
+msgstr ""
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Editors' channel"
@@ -6683,6 +6713,11 @@ msgstr ""
 msgid "Enter a group name (up to 100 characters) and a description up to 500 characters."
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a number"
+msgstr ""
+
 #: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a number."
@@ -6701,6 +6736,11 @@ msgstr ""
 #: lib/brando/forms/messages.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a valid email address."
+msgstr ""
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Enter an https:// address or a path"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/select.ex
@@ -7983,6 +8023,7 @@ msgstr ""
 msgid "H6"
 msgstr ""
 
+#: lib/brando_admin/components/form/block/render.ex
 #: lib/brando_admin/components/form/module_props.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
@@ -8165,6 +8206,7 @@ msgstr ""
 msgid "I have saved my codes"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "ID"
@@ -8647,6 +8689,11 @@ msgstr ""
 msgid "Invalid job identifier."
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Invalid value"
+msgstr ""
+
 #: lib/brando_admin/components/assets/provider_video_upload.ex
 #, elixir-autogen, elixir-format
 msgid "Invalid video upload request"
@@ -8834,6 +8881,7 @@ msgid_plural "Kept for %{count} days"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/live/content/shared_library_live.ex
@@ -8861,6 +8909,7 @@ msgstr ""
 msgid "Knows about"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -9075,6 +9124,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Let the assistant choose"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Letters, digits, _ and - only"
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -10387,6 +10441,11 @@ msgstr ""
 msgid "New %{type}"
 msgstr ""
 
+#: lib/brando_admin/components/form/module_props/ref_block_form.ex
+#, elixir-autogen, elixir-format
+msgid "New blocks start with this HTML. Only superusers see and change it."
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "New conversation"
@@ -11583,6 +11642,7 @@ msgstr ""
 msgid "Now"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Number"
@@ -11821,6 +11881,11 @@ msgstr ""
 #: lib/brando/traits/protect_password.ex
 #, elixir-autogen, elixir-format
 msgid "Only superusers can change the password of other users."
+msgstr ""
+
+#: lib/brando_admin/components/form/block/render.ex
+#, elixir-autogen, elixir-format
+msgid "Only superusers see and change the HTML and its parameters."
 msgstr ""
 
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -12211,6 +12276,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Paragraph and style"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Parameters"
 msgstr ""
 
 #: lib/brando_admin/components/form/module_props.ex
@@ -13576,6 +13646,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "Remove option %{value}"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Remove parameter"
 msgstr ""
 
 #: lib/brando_admin/live/users/user_security_live.ex
@@ -16577,6 +16652,7 @@ msgid "Test notification from %{site}"
 msgstr ""
 
 #: lib/brando_admin/components/form/block/render.ex
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props.ex
@@ -18589,6 +18665,7 @@ msgstr ""
 msgid "Two-factor authentication was turned on"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/form_fields.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props.ex
@@ -18613,6 +18690,7 @@ msgstr ""
 
 #: lib/brando/seo/checks.ex
 #: lib/brando_admin/components/content/select_identifier.ex
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
 #: lib/brando_admin/components/form/input/blocks/tiptap_link_dialog.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -19142,6 +19220,11 @@ msgstr ""
 #: lib/brando_admin/components/crawler_policy.ex
 #, elixir-autogen, elixir-format
 msgid "Use for model training"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/blocks/html_params.ex
+#, elixir-autogen, elixir-format
+msgid "Use letters, digits, _ and - only"
 msgstr ""
 
 #: lib/brando_admin/live/content/module_form_live.ex

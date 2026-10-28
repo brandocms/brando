@@ -81,6 +81,8 @@ defmodule BrandoAdmin.Components.Form.Block do
     # A synchronized translation's structure follows its source: set by the
     # block field, and read where a block reorders its own children.
     |> assign(:source_locked, false)
+    # Set by the block field: whether HTML and SVG refs show their markup
+    |> assign(:current_user_superuser, false)
     |> assign_new(:paste_multi_module_id, fn -> nil end)
     |> Events.attach_block_events()
     |> then(&{:ok, &1})

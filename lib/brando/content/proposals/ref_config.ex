@@ -9,6 +9,7 @@ defmodule Brando.Content.Proposals.RefConfig do
   Values are cast by the ref type's own embedded schema, so a proposal can
   only set what the editor's ref form could.
   """
+  alias Brando.Villain.Blocks.HtmlBlock
   alias Ecto.Changeset
 
   @content ~w(text code embed_url sizes path width height dominant_color cdn config_target image_config_target
@@ -18,7 +19,8 @@ defmodule Brando.Content.Proposals.RefConfig do
   # A text or header ref's placeholder is the module's hint for an empty field,
   # set in its definition; it isn't a setting of the block. (On pictures and
   # galleries `placeholder` is a display setting, so it stays there.)
-  @definition_only %{"text" => [:placeholder], "header" => [:placeholder]}
+  # An SVG ref's class belongs to its markup, which only a superuser changes.
+  @definition_only %{"text" => [:placeholder], "header" => [:placeholder], "svg" => [:class]}
 
   # A media slot can hold any of these, each with its own settings.
   @media_types ~w(picture video gallery file)
@@ -57,6 +59,24 @@ defmodule Brando.Content.Proposals.RefConfig do
   """
   @spec describe(map()) :: map() | [map()]
   def describe(%{data: %{type: "media"}}), do: Map.new(@media_types, &{&1, describe_type(&1)})
+
+  # An HTML ref's only setting is its parameters' values, by key.
+  def describe(%{data: %{type: "html", data: data}}) do
+    case HtmlBlock.params_by_key(data || %{}) do
+      params when params == %{} ->
+        []
+
+      params ->
+        [
+          %{
+            key: :values,
+            type: "object of parameter values",
+            params: for({key, type} <- params, do: %{key: key, type: to_string(type), takes: takes(type)})
+          }
+        ]
+    end
+  end
+
   def describe(%{data: %{type: type}}), do: describe_type(type)
 
   defp describe_type(type) do
@@ -76,6 +96,11 @@ defmodule Brando.Content.Proposals.RefConfig do
     end
   end
 
+  defp takes(:id), do: "letters, digits, _ and - only"
+  defp takes(:number), do: "a number"
+  defp takes(:url), do: "an https or relative address"
+  defp takes(_text), do: "plain text"
+
   defp inspect_type(type) when is_atom(type), do: to_string(type)
   defp inspect_type(type), do: inspect(type)
 
@@ -85,6 +110,25 @@ defmodule Brando.Content.Proposals.RefConfig do
   the one it holds.
   """
   @spec problems(String.t(), map(), map()) :: [String.t()]
+  def problems(name, %{data: %{type: "html", data: data}}, config) do
+    params = HtmlBlock.params_by_key(data || %{})
+    unknown = Map.keys(config) -- ["values"]
+
+    cond do
+      params == %{} ->
+        ["This ref has no settings."]
+
+      unknown != [] ->
+        ["Unknown setting #{Enum.join(unknown, ", ")}. Settable: values."]
+
+      not is_map(config["values"]) ->
+        ["#{name} takes values as an object of parameter values."]
+
+      true ->
+        for {key, value} <- config["values"], problem = value_problem(params, to_string(key), value), do: problem
+    end
+  end
+
   def problems(name, %{data: %{type: type}}, config) do
     types = if type == "media", do: @media_types, else: [type]
     results = Enum.map(types, &check(&1, config))
@@ -119,13 +163,46 @@ defmodule Brando.Content.Proposals.RefConfig do
     end
   end
 
+  defp value_problem(params, key, value) do
+    case params do
+      %{^key => type} ->
+        unless (is_binary(value) or is_number(value)) and HtmlBlock.valid_value?(type, value),
+          do: "#{key} takes #{takes(type)}."
+
+      _ ->
+        "There is no parameter #{key}. Parameters: #{params |> Map.keys() |> Enum.join(", ")}."
+    end
+  end
+
   @doc "Apply `config` to a ref changeset, cast by the type the ref holds."
   @spec put(Changeset.t(), map()) :: Changeset.t()
   def put(ref, config) when config == %{}, do: ref
 
+  # The values of the ref's own parameters that are valid for their type;
+  # the template and the parameters stay as they are.
+  def put(ref, %{"values" => values}) when is_map(values) do
+    case Changeset.get_field(ref, :data) do
+      %{type: "html", data: inner} = block ->
+        params = HtmlBlock.params_by_key(inner)
+
+        values =
+          for {key, value} <- HtmlBlock.normalize_values(values),
+              type = params[key],
+              type != nil and HtmlBlock.valid_value?(type, value),
+              into: inner.values || %{},
+              do: {key, value}
+
+        Changeset.put_change(ref, :data, %{block | data: %{inner | values: values}})
+
+      _ ->
+        ref
+    end
+  end
+
   def put(ref, config) do
     %{type: type, data: inner} = block = Changeset.get_field(ref, :data)
-    keys = keys(type)
+    # An HTML ref's values go through the clause above, checked, or not at all
+    keys = if type == "html", do: [], else: keys(type)
     config = Map.take(config, Enum.map(keys, &to_string/1))
     inner = inner |> Changeset.cast(config, keys) |> normalize_caption(type) |> Changeset.apply_changes()
     Changeset.put_change(ref, :data, %{block | data: inner})

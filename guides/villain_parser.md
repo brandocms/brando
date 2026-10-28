@@ -61,7 +61,7 @@ at the bottom.
 |---|---|
 | `header/2` | |
 | `text/2` | |
-| `html/2` | |
+| `html/2` | an [HTML ref](block_editor.md#html-refs): `data` holds the template (`text`), `params` and `values`. The default fills the values in with `Brando.Villain.Blocks.HtmlBlock.render/1`; an override should too |
 | `svg/2` | |
 | `markdown/2` | deprecated |
 | `markdown_source/2` | a [Markdown source](markdown_sources.md) placement; `data` holds `source_id`, `policy` and `version_id`. The default returns the stored HTML of the resolved version (the source's latest for `:follow`, otherwise the selected version), or `""` |

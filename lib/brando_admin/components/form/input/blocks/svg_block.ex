@@ -28,16 +28,20 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
     {:ok,
      socket
      |> assign(assigns)
+     |> assign_new(:superuser, fn -> false end)
      |> assign(:uid, assigns.ref_form[:uid].value)}
   end
 
-  def handle_event("drop_svg", %{"code" => code}, socket) do
+  # SVG code is markup only a superuser changes (`Brando.Content.RefGuard`)
+  def handle_event("drop_svg", %{"code" => code}, %{assigns: %{superuser: true}} = socket) do
     new_data = Block.current_block_data_map(socket.assigns.block, nil, %{code: code})
 
     socket
     |> Block.commit_ref_data(ref_data: new_data, force_render: true)
     |> then(&{:noreply, &1})
   end
+
+  def handle_event("drop_svg", _params, socket), do: {:noreply, socket}
 
   def render(assigns) do
     ~H"""
@@ -58,11 +62,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
               {@ref_description}
             <% end %>
           </:description>
-          <:config>
+          <:config :if={@superuser}>
             <Input.code id={"block-#{@uid}-svg-code"} field={block_data[:code]} label={gettext("Code")} />
             <Input.text field={block_data[:class]} label={gettext("Class")} />
           </:config>
-          <div class="svg-block" phx-hook="Brando.SVGDrop" id={"block-#{@uid}-svg-drop"} data-target={@myself}>
+          <div
+            class="svg-block"
+            phx-hook={@superuser && "Brando.SVGDrop"}
+            id={"block-#{@uid}-svg-drop"}
+            data-target={@myself}
+          >
             <%= if block_data[:code].value do %>
               <div class="svg-block-preview" id={"block-#{@uid}-svg-preview"}>
                 <img src={svg_preview_src(block_data[:code].value)} alt="" />
@@ -74,6 +83,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
                 </figure>
                 <div class="instructions">
                   <button
+                    :if={@superuser}
                     type="button"
                     class="btn btn--sm"
                     phx-click="open_block_config"
@@ -82,6 +92,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
                   >
                     {gettext("Configure SVG block")}
                   </button>
+                  <p :if={!@superuser}>{gettext("A superuser maintains this SVG.")}</p>
                 </div>
               </div>
             <% end %>

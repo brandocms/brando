@@ -1403,6 +1403,18 @@ application's root:
    the conversion (see [Legacy snapshots](#legacy-snapshots)). The legacy
    Villain column is then the only copy of that image data, so run both
    before anyone drops it.
+7. **A parser that overrides `html/2`.** An HTML ref's template can take
+   parameters ([HTML refs](block_editor.md#html-refs)), and the default
+   `html/2` fills their values in. An override that returns `data.text` as it
+   is renders a template without parameters as before, and leaves a
+   parameterized one's `{{ key }}` unfilled.
+
+   ```shell
+   grep -rn 'def html(' lib
+   ```
+
+   Return `Brando.Villain.Blocks.HtmlBlock.render(data)` where the override
+   returned the text.
 
 ## What the source tasks change
 

@@ -157,7 +157,21 @@ defmodule Brando.Content.StaleBlocksTest do
     end
 
     test "a ref whose type the module changed is a leftover, and so is a block that only needs a re-sync", c do
-      {_page, retyped} = page_with_block(c, [], [text_ref("body", "Was text")])
+      # Saved while `body` was a text ref. A block save keeps a ref to its
+      # module's type (`Brando.Content.RefGuard`), so the old row is written
+      # directly, as an earlier module version left it.
+      {_page, retyped} = page_with_block(c, [], [])
+      body = Enum.find(refs(retyped), &(&1.name == "body"))
+
+      body
+      |> Ecto.Changeset.change(
+        data: %Brando.Villain.Blocks.TextBlock{
+          type: "text",
+          data: %Brando.Villain.Blocks.TextBlock.Data{text: "Was text"}
+        }
+      )
+      |> Repo.update!()
+
       {_page, current} = page_with_block(c, [], [], "Clean")
 
       report = report!(c)

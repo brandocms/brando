@@ -47,6 +47,7 @@ defmodule Brando.Translations.Sync do
   alias Brando.Content.Var.FollowLinkDefault
   alias Brando.Query.Mutations
   alias Brando.Villain.Blocks.GalleryBlock
+  alias Brando.Villain.Blocks.HtmlBlock
   alias Brando.Villain.Blocks.PictureBlock
   alias Brando.Villain.Blocks.VideoBlock
 
@@ -379,6 +380,17 @@ defmodule Brando.Translations.Sync do
     cond do
       wrapper in Translation.text_ref_wrapper_types() ->
         [{prefix <> "/text", :text, Map.get(data, :text)}]
+
+      # An HTML ref's template is a superuser's markup, not text to
+      # translate; its `text` parameters' values are.
+      wrapper == HtmlBlock ->
+        values = data.values || %{}
+
+        text_values =
+          for {key, :text} <- HtmlBlock.params_by_key(data),
+              do: {"#{prefix}/values/#{key}", :text, Map.get(values, key)}
+
+        [{prefix <> "/data", :local, data} | text_values]
 
       wrapper == PictureBlock ->
         for field <- [:title, :credits, :alt], do: {"#{prefix}/#{field}", :text, Map.get(data, field)}
