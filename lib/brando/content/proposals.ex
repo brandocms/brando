@@ -69,7 +69,7 @@ defmodule Brando.Content.Proposals do
   alias Ecto.Changeset
 
   @protected_fields ~w(id status publish_at unpublish_at deleted_at marked_as_deleted creator_id inserted_at updated_at)
-  @text_vars [:string, :text, :html]
+  @text_vars [:string, :text, :rich_text]
   @media_kinds %{image: "picture", video: "video", gallery: "gallery", file: "file"}
 
   ## Prepare
@@ -1013,7 +1013,7 @@ defmodule Brando.Content.Proposals do
   defp value_problems(%{type: :string}, key, value, _actor) when is_binary(value),
     do: unsafe(plain_text_problem(value, key))
 
-  defp value_problems(%{type: type}, key, value, _actor) when type in [:text, :html] and is_binary(value),
+  defp value_problems(%{type: type}, key, value, _actor) when type in [:text, :rich_text] and is_binary(value),
     do: unsafe(rich_text_problem(value, key))
 
   defp value_problems(%{type: :link}, key, value, _actor) when is_binary(value) and value != "",
@@ -1048,7 +1048,8 @@ defmodule Brando.Content.Proposals do
   defp unsupported(_var, key, _value),
     do: problem(:unsupported_value, dgettext("content_proposals", "%{key} cannot be set to this value.", key: key))
 
-  # Markdown is checked as the HTML it renders, raw HTML and links included.
+  # Markdown is checked as the HTML it renders (`Brando.Markdown` leaves out
+  # its raw HTML and unsafe addresses).
   # An `entry:` link in it never resolves, so it does not count as an
   # unresolved one, which would skip the check of the rest.
   defp checked_text("markdown", text),

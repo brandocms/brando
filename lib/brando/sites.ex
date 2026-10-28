@@ -271,12 +271,14 @@ defmodule Brando.Sites do
   end
 
   @doc """
-  Render a global's value. Booleans come from `value_boolean`, everything else
+  Render a global's value. Booleans come from `value_boolean`, rich text from
+  its sanitized `value` (`Brando.RichText.render_html/1`), everything else
   from `value`.
   """
   def render_global(language, cat_key, key) do
     case global(language, cat_key, key) do
       %{type: :boolean, value_boolean: value} -> value || false
+      %{type: type, value: value} when type in [:rich_text, :html] -> Brando.RichText.render_html(value)
       %{value: value} -> value
       _ -> nil
     end

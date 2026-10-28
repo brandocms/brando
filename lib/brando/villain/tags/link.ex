@@ -21,7 +21,7 @@ defmodule Brando.Villain.Tags.Link do
       |> Phoenix.HTML.html_escape()
       |> Phoenix.HTML.safe_to_string()
 
-    link_url = evaled_link |> Brando.Villain.Filters.link_url(context) |> href()
+    link_url = evaled_link |> Brando.Villain.Filters.link_url() |> href()
     new_window? = evaled_link.link_target_blank
 
     link_html =
@@ -35,7 +35,7 @@ defmodule Brando.Villain.Tags.Link do
   defp text(%{link_type: :identifier, link_text: nil, identifier: identifier}, _context),
     do: Identifier.title_text(identifier)
 
-  defp text(link, context), do: Brando.Villain.Filters.link_text(link, context)
+  defp text(link, _context), do: Brando.Villain.Filters.link_text(link)
 
   # An address with a script or unknown scheme renders as an empty href.
   defp href(url) do

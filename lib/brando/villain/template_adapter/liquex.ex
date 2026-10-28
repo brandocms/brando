@@ -96,7 +96,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
     do: Context.assign(context, :brando_module_id, module_id)
 
   defp add_block_to_context(context, module, block) do
-    simple_block = TemplateAdapter.simple_block(module, block)
+    simple_block = TemplateAdapter.simple_block(module, block, escape: true)
 
     Context.assign(context, :block, simple_block)
   end

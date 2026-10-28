@@ -19,31 +19,14 @@ defmodule Brando.Content.Var do
   trait :sequenced
   trait :timestamped
   trait Brando.Content.Var.FollowLinkDefault
+  trait Brando.Content.Var.SanitizeRichText
 
   identifier false
   persist_identifier false
 
   attributes do
-    attribute :type, :enum,
-      required: true,
-      values: [
-        :boolean,
-        :string,
-        :text,
-        :html,
-        :image,
-        :video,
-        :gallery,
-        :datetime,
-        :color,
-        :select,
-        :file,
-        :link,
-        :form,
-        # todo
-        :date
-        # :table?
-      ]
+    # `Brando.Content.Var.Type`: `:rich_text` also reads its old name, `html`
+    attribute :type, Brando.Content.Var.Type, required: true
 
     attribute :label, :i18n_string, required: true
     attribute :placeholder, :string
@@ -148,8 +131,8 @@ defmodule Brando.Content.Var do
       value || ""
     end
 
-    def to_string(%{type: :html, value: value}) do
-      value || ""
+    def to_string(%{type: type, value: value}) when type in [:rich_text, :html] do
+      Brando.RichText.render_html(value)
     end
 
     def to_string(%{type: _} = var) do

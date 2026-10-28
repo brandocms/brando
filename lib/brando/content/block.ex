@@ -317,6 +317,7 @@ defmodule Brando.Content.Block do
     |> cast_embed(:options)
     |> change(sequence: position)
     |> validate_media_fks()
+    |> Brando.Content.Var.SanitizeRichText.sanitize()
   end
 
   def var_changeset(var, attrs, user) do
@@ -325,6 +326,7 @@ defmodule Brando.Content.Block do
     |> put_var_creator(user)
     |> cast_embed(:options)
     |> validate_media_fks()
+    |> Brando.Content.Var.SanitizeRichText.sanitize()
   end
 
   # `Brando.Trait.Creator` sets this on the blueprint-generated changeset, but

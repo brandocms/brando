@@ -19,7 +19,7 @@ defmodule Brando.Search.Text do
 
   @max_bytes 200_000
   @text_inputs [:text, :textarea, :rich_text]
-  @text_vars [:string, :text, :html]
+  @text_vars [:string, :text, :rich_text]
 
   @doc "The most text a document holds, in bytes."
   @spec max_bytes() :: pos_integer()

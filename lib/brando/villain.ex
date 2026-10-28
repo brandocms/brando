@@ -287,10 +287,12 @@ defmodule Brando.Villain do
     Context.assign(context, key, %{})
   end
 
+  # A global prints as its value, as a var does in a Liquid module: `string`
+  # and `text` escaped, rich text sanitized.
   def add_to_context(context, "globals" = key, global_sets) do
     parsed_globals =
       Map.new(global_sets, fn {g_key, g_category} ->
-        cat_globs = Map.new(g_category, fn {key, %{value: value}} -> {key, value} end)
+        cat_globs = Map.new(g_category, fn {key, global} -> {key, global_value(global)} end)
         {g_key, cat_globs}
       end)
 
@@ -300,6 +302,12 @@ defmodule Brando.Villain do
   def add_to_context(context, key, value) do
     Context.assign(context, key, value)
   end
+
+  defp global_value(%{type: type, value: value}) when type in [:string, :text],
+    do: Brando.Villain.Parser.escape_var_value(value)
+
+  defp global_value(%{type: type, value: value}) when type in [:rich_text, :html], do: Brando.RichText.render_html(value)
+  defp global_value(%{value: value}), do: value
 
   @decorate span("brando.villain.liquid")
   def parse_and_render(html, context) do

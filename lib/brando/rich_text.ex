@@ -119,6 +119,46 @@ defmodule Brando.RichText do
   def sanitize_html(_), do: :error
 
   @doc """
+  Rich text as it may be rendered: sanitized (`sanitize_html/1`), or, when
+  it holds unsafe markup that saving it now would refuse, its text alone
+  without any markup. `nil` gives `""`.
+
+  For rich text stored before it was sanitized on save, such as `rich_text`
+  vars saved when they were called `html`.
+  """
+  @spec render_html(term()) :: String.t()
+  def render_html(html) when is_binary(html) do
+    case sanitize_html(html) do
+      {:ok, clean} -> clean
+      :error -> text_only(html)
+    end
+  end
+
+  def render_html(nil), do: ""
+  def render_html(other), do: other |> to_string() |> render_html()
+
+  # The text, as browsers parse it, without any element or what the hidden,
+  # script and style elements hold.
+  defp text_only(html) do
+    MDEx.safe_html(html,
+      sanitize: [
+        tags: [],
+        clean_content_tags: @hidden_tags ++ ~w(script style),
+        generic_attribute_prefixes: [],
+        generic_attributes: [],
+        tag_attributes: %{},
+        tag_attribute_values: %{},
+        url_schemes: [],
+        link_rel: nil,
+        allowed_classes: %{},
+        strip_comments: true,
+        id_prefix: nil
+      ],
+      escape: [content: false, curly_braces_in_code: false]
+    )
+  end
+
+  @doc """
   Whether `html`, as it is, is safe rich text: no unsafe element,
   attribute or address, and no comment, CDATA or element that
   `sanitize_html/1` would leave out.

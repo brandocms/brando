@@ -254,7 +254,10 @@ defmodule Brando.Content.Definition.Model do
   # must not stop every snapshot, export and import.
   def stored_var_record(record) do
     struct(Var)
-    |> Var.changeset(Map.delete(var_record(record), "assets"), %{id: 0}, nil, validate_colors: false)
+    |> Var.changeset(Map.delete(var_record(record), "assets"), %{id: 0}, nil,
+      validate_colors: false,
+      sanitize_rich_text: false
+    )
     |> apply_valid!(record.key)
     |> var_record(Map.get(record, :identifier_id))
   end

@@ -168,7 +168,7 @@ defmodule Brando.SearchTest do
         sequence: 0,
         vars: [
           %{type: :string, key: "kicker", label: "Kicker", value: "Kicker line", sequence: 0},
-          %{type: :html, key: "body", label: "Body", value: "<p>Rich <strong>var</strong> text</p>", sequence: 1},
+          %{type: :rich_text, key: "body", label: "Body", value: "<p>Rich <strong>var</strong> text</p>", sequence: 1},
           %{type: :boolean, key: "flag", label: "Flag", value: "true", sequence: 2},
           # Addresses kept in text vars by modules older than link vars
           %{type: :text, key: "link", label: "Link", value: "#content", sequence: 3},

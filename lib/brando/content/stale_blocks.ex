@@ -605,7 +605,7 @@ defmodule Brando.Content.StaleBlocks do
   defp var_conversion(same, same), do: :same
   defp var_conversion(:string, :text), do: :same
   defp var_conversion(:text, :string), do: :single_line
-  defp var_conversion(from, :html) when from in [:string, :text], do: :to_html
+  defp var_conversion(from, :rich_text) when from in [:string, :text], do: :to_html
   defp var_conversion(_from, _to), do: :error
 
   defp convert(%{kind: :ref}, _source), do: {:ok, nil}
@@ -727,7 +727,7 @@ defmodule Brando.Content.StaleBlocks do
 
   @doc "A short, readable preview of a var's value."
   def var_preview(%Var{type: :boolean, value_boolean: value}), do: if(value, do: gettext("Yes"), else: gettext("No"))
-  def var_preview(%Var{type: :html, value: value}), do: plain(value)
+  def var_preview(%Var{type: :rich_text, value: value}), do: plain(value)
 
   def var_preview(%Var{type: :link} = var) do
     target =

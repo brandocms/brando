@@ -54,8 +54,13 @@ defmodule Brando.Villain.TemplateAdapter do
   Each table row also carries its vars by key, so `{{ row.city }}` (or `row.city`
   in HEEx) reads the row's `city` var. Row fields win over a var of the same
   name, so positional access through `row.vars[0].value` keeps working.
+
+  With `escape: true` (Liquid) a row's `string` and `text` vars are
+  HTML-escaped, by key and in `row.vars` alike (`Brando.Villain.Parser.process_vars/2`).
   """
-  def simple_block(module, block) do
+  def simple_block(module, block, opts \\ []) do
+    escape? = Keyword.get(opts, :escape, false)
+
     block
     |> Map.take([
       :uid,
@@ -68,21 +73,29 @@ defmodule Brando.Villain.TemplateAdapter do
       :anchor,
       :description
     ])
-    |> Map.replace_lazy(:table_rows, &table_rows/1)
+    |> Map.replace_lazy(:table_rows, &table_rows(&1, escape?))
     |> Map.put(:class, module.class)
   end
 
-  defp table_rows(rows) when is_list(rows), do: Enum.map(rows, &table_row/1)
-  defp table_rows(rows), do: rows
+  defp table_rows(rows, escape?) when is_list(rows), do: Enum.map(rows, &table_row(&1, escape?))
+  defp table_rows(rows, _escape?), do: rows
 
-  defp table_row(%{vars: vars} = row) do
+  defp table_row(%{vars: vars} = row, escape?) do
+    row = if is_struct(row), do: Map.from_struct(row), else: row
+    row = if escape? and is_list(vars), do: %{row | vars: Enum.map(vars, &escape_var/1)}, else: row
+
     vars
-    |> Brando.Villain.Parser.process_vars()
+    |> Brando.Villain.Parser.process_vars(escape: escape?)
     |> Map.new(fn {key, value} -> {to_atom(key), value} end)
-    |> Map.merge(if is_struct(row), do: Map.from_struct(row), else: row)
+    |> Map.merge(row)
   end
 
-  defp table_row(row), do: row
+  defp table_row(row, _escape?), do: row
+
+  defp escape_var(%{type: type, value: value} = var) when type in [:string, :text],
+    do: %{var | value: Brando.Villain.Parser.escape_var_value(value)}
+
+  defp escape_var(var), do: var
 
   defp to_atom(key) when is_atom(key), do: key
   defp to_atom(key), do: String.to_atom(key)

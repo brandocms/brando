@@ -41,7 +41,7 @@ defmodule BrandoAdmin.Components.Form.ModuleProps do
   @var_types [
     %{value: "string", label: gettext_noop("String"), description: gettext_noop("A short line of text")},
     %{value: "text", label: gettext_noop("Text"), description: gettext_noop("Longer plain text")},
-    %{value: "html", label: gettext_noop("Rich text"), description: gettext_noop("Formatted rich text")},
+    %{value: "rich_text", label: gettext_noop("Rich text"), description: gettext_noop("Formatted rich text")},
     %{value: "boolean", label: gettext_noop("Boolean"), description: gettext_noop("An on/off choice")},
     %{value: "select", label: gettext_noop("Select"), description: gettext_noop("A choice from predefined options")},
     %{value: "link", label: gettext_noop("Link"), description: gettext_noop("A URL or content link")},

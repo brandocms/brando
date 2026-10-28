@@ -247,19 +247,25 @@ defmodule Brando.Villain.Filters do
   def downcase(value, _), do: String.downcase(to_string(value))
 
   @doc """
-  Escapes a string by replacing characters with escape sequences (so that the string can
-  be used in a URL, for example). It doesn’t change strings that don’t have anything to
-  escape.
+  HTML-escapes a string: `"`, `'`, `&`, `<` and `>` become character
+  references. It doesn’t change strings that don’t have anything to escape.
+
+  Character references already in the string are not escaped again, as with
+  `escape_once`: `string` and `text` vars reach Liquid escaped, and a template
+  that escapes one again prints it as typed.
 
   ## Examples
 
       iex> Brando.Villain.Filters.escape("Have you read 'James & the Giant Peach'?", %{})
       "Have you read &#39;James &amp; the Giant Peach&#39;?"
 
+      iex> Brando.Villain.Filters.escape("Have you read &#39;James &amp; the Giant Peach&#39;?", %{})
+      "Have you read &#39;James &amp; the Giant Peach&#39;?"
+
       iex> Brando.Villain.Filters.escape("Tetsuro Takara", %{})
       "Tetsuro Takara"
   """
-  def escape(value, _), do: HtmlEntities.encode(to_string(value))
+  def escape(value, ctx), do: escape_once(value, ctx)
 
   @doc """
   Escapes a string by replacing characters with escape sequences (so that the string can
@@ -759,7 +765,9 @@ defmodule Brando.Villain.Filters do
   def url_decode(value, _), do: URI.decode_www_form(to_string(value))
 
   @doc """
-  Decodes a string that has been encoded as a URL or by url_encode/2.
+  Encodes a string for a URL. Character references are encoded as the
+  characters they stand for: a `string` or `text` var reaches Liquid escaped,
+  and its query keeps the `&` the editor typed.
 
   ## Examples
 
@@ -768,8 +776,11 @@ defmodule Brando.Villain.Filters do
 
       iex> Brando.Villain.Filters.url_encode("Tetsuro Takara", %{})
       "Tetsuro+Takara"
+
+      iex> Brando.Villain.Filters.url_encode("Tom &amp; Jerry", %{})
+      "Tom+%26+Jerry"
   """
-  def url_encode(value, _), do: URI.encode_www_form(to_string(value))
+  def url_encode(value, _), do: value |> to_string() |> HtmlEntities.decode() |> URI.encode_www_form()
 
   @doc """
   Base encode 64 string without padding
@@ -1159,8 +1170,12 @@ defmodule Brando.Villain.Filters do
   """
   def markdown(%{value: str}, opts), do: markdown(str, opts)
 
+  # A `string` or `text` var reaches Liquid escaped: its character references
+  # are read back as the characters the editor typed, so its `>` quotes and
+  # code spans stay Markdown. The HTML is safe (`Brando.Markdown`).
   def markdown(str, _) when is_binary(str) do
     str
+    |> HtmlEntities.decode()
     |> Brando.HTML.render_markdown()
     |> Phoenix.HTML.safe_to_string()
   end
@@ -1189,21 +1204,26 @@ defmodule Brando.Villain.Filters do
     ""
   end
 
+  # Of the text as typed: a `string` var reaches Liquid escaped
   def slugify(str, _) when is_binary(str) do
-    Brando.Utils.slugify(str)
+    str |> HtmlEntities.decode() |> Brando.Utils.slugify()
   end
 
-  # An address with a script or unknown scheme is no link: `nil`
-  def link_url(%Var{type: :link} = var, _ctx) do
-    var |> get_link_url() |> Brando.Villain.Parser.safe_url()
-  end
+  # An address with a script or unknown scheme is no link: `nil`. As filters
+  # the address and the text are HTML-escaped, as a string var's value is;
+  # `link_url/1` and `link_text/1` give them as they are, for markup that
+  # escapes them itself (`{% link %}`, `entry_link/1`).
+  def link_url(%Var{type: :link} = var, _ctx), do: var |> link_url() |> Brando.Villain.Parser.escape_var_value()
+  def link_url(nil, _ctx), do: nil
 
-  def link_url(nil, _ctx) do
-    nil
-  end
+  def link_url(%Var{type: :link} = var), do: var |> get_link_url() |> Brando.Villain.Parser.safe_url()
+  def link_url(nil), do: nil
+
+  def link_text(%Var{type: :link} = var), do: get_link_text(var)
+  def link_text(nil), do: nil
 
   def link_text(%Var{type: :link} = var, _ctx) do
-    get_link_text(var) || nil
+    var |> link_text() |> Brando.Villain.Parser.escape_var_value()
   end
 
   def link_text(nil, _ctx) do

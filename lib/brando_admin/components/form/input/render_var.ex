@@ -543,8 +543,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   defp control_value(:select, value) when is_binary(value), do: value
   defp control_value(:select, _value), do: ""
 
-  defp control_value(:html, value) when is_binary(value), do: value
-  defp control_value(:html, _value), do: "<p></p>"
+  defp control_value(:rich_text, value) when is_binary(value), do: value
+  defp control_value(:rich_text, _value), do: "<p></p>"
 
   defp control_value(:image, value) when is_binary(value), do: nil
   defp control_value(:image, value) when is_boolean(value), do: nil
@@ -685,7 +685,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
                             %{label: gettext("File"), value: "file"},
                             %{label: gettext("Form"), value: "form"},
                             %{label: gettext("Gallery"), value: "gallery"},
-                            %{label: gettext("Html"), value: "html"},
+                            %{label: gettext("Rich text"), value: "rich_text"},
                             %{label: gettext("Image"), value: "image"},
                             %{label: gettext("Link"), value: "link"},
                             %{label: gettext("String"), value: "string"},
@@ -989,7 +989,7 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     """
   end
 
-  def render_value_inputs(%{type: :html} = assigns) do
+  def render_value_inputs(%{type: :rich_text} = assigns) do
     ~H"""
     <div class="brando-input">
       <Input.rich_text field={@var[:value]} label={@label} placeholder={@placeholder} opts={[]} instructions={@instructions} />

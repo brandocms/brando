@@ -111,7 +111,7 @@ defmodule Brando.Villain.DuplicationTest do
         children: [note_body]
       })
 
-    owner = build_block(%{refs: [ref], children: [note], vars: [build_var(%{type: :html, value: text})]})
+    owner = build_block(%{refs: [ref], children: [note], vars: [build_var(%{type: :rich_text, value: text})]})
 
     copied = owner |> Changeset.change() |> ContentBlocks.duplicate_block(user_id: user.id) |> Changeset.apply_changes()
     [copied_note] = copied.children

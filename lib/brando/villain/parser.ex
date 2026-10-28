@@ -297,6 +297,14 @@ defmodule Brando.Villain.Parser do
   def adapter_for(:heex), do: TemplateAdapter.Heex
   def adapter_for(nil), do: TemplateAdapter.Liquex
 
+  @doc """
+  Whether `adapter` gets its `string` and `text` vars HTML-escaped
+  (`process_vars/2`'s `escape:`): Liquid prints values as they are, HEEx
+  escapes them itself.
+  """
+  def escapes_vars?(TemplateAdapter.Liquex), do: true
+  def escapes_vars?(_adapter), do: false
+
   # An empty header (a module whose header ref is left blank) renders nothing,
   # not an empty <h2></h2>.
   def header(%{text: text}, _) when text in [nil, ""], do: ""
@@ -325,13 +333,22 @@ defmodule Brando.Villain.Parser do
 
     # A link with a script or unknown scheme is left out, not the heading.
     if link = safe_url(Map.get(data, :link)) do
-      ~s(<a href="#{escape_attr(link)}"><#{header_size}#{classes}#{id}>#{nl2br(text)}</#{header_size}></a>)
+      ~s(<a href="#{escape_attr(link)}"><#{header_size}#{classes}#{id}>#{header_text(text)}</#{header_size}></a>)
     else
-      ["<", header_size, classes, id, ">", nl2br(text), "</", header_size, ">"]
+      ["<", header_size, classes, id, ">", header_text(text), "</", header_size, ">"]
     end
   end
 
-  def header(%{text: text}, _), do: ["<h1>", nl2br(text), "</h1>"]
+  def header(%{text: text}, _), do: ["<h1>", header_text(text), "</h1>"]
+
+  # A heading is plain text: escaped, its line breaks kept as `<br>`.
+  defp header_text(text) do
+    text
+    |> to_string()
+    |> Phoenix.HTML.html_escape()
+    |> Phoenix.HTML.safe_to_string()
+    |> String.replace(~r/\r?\n/, "<br>")
+  end
 
   def module(%{active: false} = block, opts) do
     # we might want to annotate disabled modules
@@ -353,9 +370,9 @@ defmodule Brando.Villain.Parser do
 
     case Content.find_module(modules, id, Map.get(block, :module_origin, :local)) do
       {:ok, module} ->
-        processed_vars = process_vars(block.vars)
-        processed_refs = process_refs(block.refs, block, opts)
         adapter = adapter_for(module.type)
+        processed_vars = process_vars(block.vars, escape: escapes_vars?(adapter))
+        processed_refs = process_refs(block.refs, block, opts)
         opts = Map.put(opts, :parser_module, parser_module(opts))
 
         adapter.render_module(module, block, processed_vars, processed_refs, opts)
@@ -399,7 +416,8 @@ defmodule Brando.Villain.Parser do
         |> maybe_annotate_children(block.uid, opts)
       end
 
-    base_vars = process_vars(block.vars)
+    escape? = escapes_vars?(adapter)
+    base_vars = process_vars(block.vars, escape: escape?)
     base_refs = process_refs(block.refs)
 
     children =
@@ -412,7 +430,7 @@ defmodule Brando.Villain.Parser do
     children =
       Enum.map(children, fn entry ->
         entry
-        |> put_in([Access.key(:vars)], process_vars(entry.vars))
+        |> put_in([Access.key(:vars)], process_vars(entry.vars, escape: escape?))
         |> put_in([Access.key(:refs)], process_refs(entry.refs))
       end)
 
@@ -442,7 +460,7 @@ defmodule Brando.Villain.Parser do
         child_module
         |> child_adapter.render_child_module(
           child_block,
-          process_vars(child_block.vars),
+          process_vars(child_block.vars, escape: escapes_vars?(child_adapter)),
           process_refs(child_block.refs),
           forloop,
           parent_module_id,
@@ -777,8 +795,16 @@ defmodule Brando.Villain.Parser do
     # Determine link attributes
     {rel, target} = get_link_attributes(fields.link)
 
-    # Get caption and determine alt text
-    caption = parser_module(opts).render_caption(Map.merge(data, %{title: fields.title, credits: fields.credits}))
+    # Get caption and determine alt text. The title and credits go in as
+    # markup, as a gallery's do: the placement's rich-text caption as it is,
+    # the image's own texts and the credits escaped.
+    caption =
+      parser_module(opts).render_caption(
+        Map.merge(data, %{
+          title: Brando.Captions.caption_html(fields.title),
+          credits: Brando.Captions.library_html(fields.credits)
+        })
+      )
     alt = get_alt_text(fields.alt, caption)
 
     # Build assigns for the template
@@ -1102,11 +1128,14 @@ defmodule Brando.Villain.Parser do
   # A video's figcaption is its caption for this placement, else its title.
   defp video_caption(video, overrides) do
     if Map.has_key?(overrides, "caption") and Brando.Captions.present?(video.caption),
-      do: video.caption,
+      do: rich_caption(video.caption),
       else: Brando.Captions.library_html(video.title)
   end
 
-  defp rich_caption(text), do: if(Brando.Captions.present?(text), do: text)
+  # A placement caption is stored normalized (`Brando.Captions.normalize/1`)
+  # when the editor writes it; one that reached the ref another way is
+  # normalized here.
+  defp rich_caption(text), do: Brando.Captions.normalize(text)
 
   defp gallery_image_tag(assigns, :panner), do: Brando.Villain.Parser.panner_item(assigns)
   defp gallery_image_tag(assigns, :plain), do: Brando.Villain.Parser.picture_tag(assigns)
@@ -1222,7 +1251,7 @@ defmodule Brando.Villain.Parser do
     <blockquote>
       #{text_html}
       <p class="cite">
-        — <cite>#{cite}</cite>
+        — <cite>#{Phoenix.HTML.html_escape(cite) |> Phoenix.HTML.safe_to_string()}</cite>
       </p>
     </blockquote>
     """
@@ -1622,13 +1651,38 @@ defmodule Brando.Villain.Parser do
   Turns a block's vars into the `%{key => value}` map templates render from.
 
   Media, file and link vars resolve to their records, preloading any association
-  that is not loaded yet; booleans resolve to `value_boolean` and everything else
-  to `value`. Used by template adapters and the admin's HEEx preview as well as
+  that is not loaded yet; booleans resolve to `value_boolean`, rich text to its
+  sanitized `value` (`Brando.RichText.render_html/1`) and everything else to
+  `value`. Used by template adapters and the admin's HEEx preview as well as
   the parser itself. `nil` or an unloaded association gives `%{}`.
+
+  Options:
+
+    * `escape: true` HTML-escapes `string` and `text` values, for a template
+      that prints values as they are (Liquid). HEEx escapes what it prints.
   """
-  def process_vars(nil), do: %{}
-  def process_vars(%Ecto.Association.NotLoaded{}), do: %{}
-  def process_vars(vars), do: Map.new(vars, &process_var(&1))
+  def process_vars(vars, opts \\ [])
+  def process_vars(nil, _opts), do: %{}
+  def process_vars(%Ecto.Association.NotLoaded{}, _opts), do: %{}
+
+  def process_vars(vars, opts) do
+    escape? = Keyword.get(opts, :escape, false)
+    Map.new(vars, &(&1 |> process_var() |> maybe_escape_var(&1, escape?)))
+  end
+
+  @doc """
+  The text of a `string` or `text` var as Liquid gets it: HTML-escaped, so a
+  `<` or a quote an editor typed is printed as text.
+  """
+  def escape_var_value(value) when is_binary(value),
+    do: value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
+  def escape_var_value(value), do: value
+
+  defp maybe_escape_var({key, value}, %{type: type}, true) when type in [:string, :text],
+    do: {key, escape_var_value(value)}
+
+  defp maybe_escape_var(processed, _var, _escape?), do: processed
 
   defp process_var(
          %Brando.Content.Var{
@@ -1721,6 +1775,10 @@ defmodule Brando.Villain.Parser do
 
   defp process_var(%{key: key, label: _, type: :link} = link),
     do: {key, link}
+
+  # `:html` is its name before 0.55, in structs decoded from older revisions
+  defp process_var(%{key: key, type: type, value: value}) when type in [:rich_text, :html],
+    do: {key, Brando.RichText.render_html(value)}
 
   defp process_var(%{key: key, label: _, type: _, value: value}), do: {key, value}
 
@@ -1975,7 +2033,7 @@ defmodule Brando.Villain.Parser do
     # The figcaption, in `caption` (`video_file_options/1`): the block's title
     # is rich text, the record's own title plain text, escaped here. `title`
     # stays as it was, for what reads it as text (Markdown, templates).
-    caption = override_attrs[:title] || Brando.Captions.library_html(video.title)
+    caption = rich_caption(override_attrs[:title]) || Brando.Captions.library_html(video.title)
 
     %{merged | caption: caption}
   end

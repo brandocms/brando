@@ -914,7 +914,7 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp html_values?(_ref), do: false
 
-  defp settable(type) when type in [:string, :text, :html], do: "a string"
+  defp settable(type) when type in [:string, :text, :rich_text], do: "a string"
   defp settable(:boolean), do: "true or false"
   defp settable(:select), do: "one of the options"
   defp settable(:color), do: "a colour such as #1a2b3c"
