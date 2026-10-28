@@ -15,14 +15,11 @@ defmodule Brando.Villain.RenderSourceQueryTest do
     owner = self()
     handler = {__MODULE__, make_ref()}
     event = Brando.repo().config()[:telemetry_prefix] ++ [:query]
+    preserve_query_cache(Brando.Content.Module)
     Brando.Cache.Query.evict_schema(Brando.Content.Module)
 
     :telemetry.attach(handler, event, fn _, _, _, _ -> send(owner, :query) end, nil)
-
-    on_exit(fn ->
-      :telemetry.detach(handler)
-      Brando.Cache.Query.evict_schema(Brando.Content.Module)
-    end)
+    on_exit(fn -> :telemetry.detach(handler) end)
 
     assert RenderSourceQuery.get_module(first.id, opts).id == first.id
     assert_received :query
@@ -50,7 +47,7 @@ defmodule Brando.Villain.RenderSourceQueryTest do
   test "individual module cache follows both entry and schema eviction" do
     module = Factory.insert(:module, vars: [Factory.build(:var_text, sequence: 2), Factory.build(:var_text, sequence: 1)])
     opts = %{cache: {:ttl, :infinite}, preload: [vars: {Brando.Content.Var, [asc: :sequence]}]}
-    on_exit(fn -> Brando.Cache.Query.evict_schema(Brando.Content.Module) end)
+    preserve_query_cache(Brando.Content.Module)
 
     assert %{vars: [%{sequence: 1}, %{sequence: 2}]} = RenderSourceQuery.get_module(module.id, opts)
     updated = module |> Ecto.Changeset.change(code: "Updated") |> Repo.update!()

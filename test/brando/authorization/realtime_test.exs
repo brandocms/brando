@@ -23,8 +23,7 @@ defmodule Brando.Authorization.RealtimeTest do
 
     on_exit(fn ->
       Boundary.put_scope(nil)
-      Preview.cleanup(key)
-      Cachex.del(:cache, "__live_preview__#{key}")
+      Brando.LivePreview.cleanup_cache(key)
     end)
 
     %{owner: owner, editor: editor, outsider: outsider, page: page, scope: scope, key: key, changeset: changeset}

@@ -14,8 +14,8 @@ defmodule BrandoAdmin.NavigationLiveTest do
   alias Brando.Navigation.Menu
 
   setup %{current_user: user} do
-    # The site reads menus from a cache; drop it so the next test reloads it.
-    on_exit(fn -> Brando.Cache.del(:navigation) end)
+    # The site reads menus from a cache, which this reloads from rows that roll back.
+    preserve_cache(:navigation)
 
     menu =
       Repo.insert!(%Menu{

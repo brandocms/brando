@@ -63,6 +63,39 @@ defmodule Brando.Test.Support do
   defp restore_cache(key, cached), do: Cache.put(key, cached, :infinite)
 
   @doc """
+  Puts the query cache entries of `schemas` (lists and single entries, under
+  every tenant prefix) back as they were when the test exits, with what was
+  left of their TTL, and removes the ones the test added.
+
+  The query cache is `preserve_cache/1`'s counterpart for `Brando.Query`
+  results: a test that evicts a schema's entries, or caches rows that roll
+  back, calls it in `setup` or before its first query:
+  `preserve_query_cache(Brando.Content.Module)`. The `TestCacheRestore` Credo
+  check accepts it as the restore.
+  """
+  def preserve_query_cache(schemas) do
+    sources = schemas |> List.wrap() |> Enum.map(& &1.__schema__(:source))
+    cached = query_entries(sources)
+
+    ExUnit.Callbacks.on_exit(fn ->
+      for entry <- query_entries(sources), do: Cachex.del(:query, elem(entry, 1))
+      Cachex.import(:query, cached)
+    end)
+
+    :ok
+  end
+
+  defp query_entries(sources) do
+    {:ok, entries} = Cachex.export(:query)
+    Enum.filter(entries, &(query_source(elem(&1, 1)) in sources))
+  end
+
+  defp query_source({:tenant, _prefix, key}), do: query_source(key)
+  defp query_source({type, source, _hash}) when type in [:list, :single], do: source
+  defp query_source({:single, source, _hash, _id}), do: source
+  defp query_source(_key), do: nil
+
+  @doc """
   Recursively strips __spark_metadata__ from structs for comparison in tests.
 
   This is necessary because Spark DSL populates __spark_metadata__ with
