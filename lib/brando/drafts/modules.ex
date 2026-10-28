@@ -98,6 +98,9 @@ defmodule Brando.Drafts.Modules do
   end
 
   defp compatible_type?(type, type), do: true
+  # A rich_text var was called html before 0.55
+  defp compatible_type?("html", "rich_text"), do: true
+  defp compatible_type?("rich_text", "html"), do: true
   defp compatible_type?(type, "media"), do: type in ["picture", "video", "gallery", "svg", "file"]
   defp compatible_type?("media", type), do: type in ["picture", "video", "gallery", "svg", "file"]
   defp compatible_type?(_, _), do: false

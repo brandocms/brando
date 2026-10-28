@@ -1385,8 +1385,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
 
   defp remap_ref_markers(ref, _mapping), do: ref
 
-  defp remap_var_markers(%{"type" => type, "value" => value} = var, mapping) when type in ["html", :html],
-    do: %{var | "value" => Brando.Content.BlockSlots.remap_markers(value, mapping)}
+  defp remap_var_markers(%{"type" => type, "value" => value} = var, mapping)
+       when type in ["rich_text", :rich_text, "html", :html],
+       do: %{var | "value" => Brando.Content.BlockSlots.remap_markers(value, mapping)}
 
   defp remap_var_markers(var, _mapping), do: var
 

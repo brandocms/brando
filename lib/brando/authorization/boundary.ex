@@ -13,7 +13,9 @@ defmodule Brando.Authorization.Boundary do
   with no transaction, and checks only what the roles always meant:
 
     * module and container code (`Brando.Authorization.Catalog.superuser_only?/2`)
-      is written by superusers, in both modes;
+      is written by superusers, in both modes, and so are the fields
+      `Brando.Authorization.Catalog.superuser_only_fields/1` names, such as a
+      fragment's `wrapper`;
     * a `:user` account writes nothing but its own profile;
     * only a superuser deactivates or deletes another superuser.
 
@@ -170,7 +172,8 @@ defmodule Brando.Authorization.Boundary do
   def change(actor, action, changeset) do
     if Engine.enabled?() do
       with :ok <- Engine.authorize_change(actor_scope(actor), action, changeset),
-           :ok <- protect_credentials(actor, changeset) do
+           :ok <- protect_credentials(actor, changeset),
+           :ok <- protect_superuser_fields(actor, changeset) do
         protect_account(changeset)
       end
     else
@@ -180,7 +183,8 @@ defmodule Brando.Authorization.Boundary do
       with :ok <- legacy_authorize(actor, action, changeset.data),
            :ok <- legacy_profile(actor, changeset),
            :ok <- legacy_role_change(actor, changeset),
-           :ok <- protect_credentials(actor, changeset) do
+           :ok <- protect_credentials(actor, changeset),
+           :ok <- protect_superuser_fields(actor, changeset) do
         legacy_protect_superuser(actor, changeset)
       end
     end
@@ -324,6 +328,16 @@ defmodule Brando.Authorization.Boundary do
   end
 
   defp protect_credentials(_actor, _changeset), do: :ok
+
+  # A superuser's field set in the change (a copy carries it as data, not as
+  # a change). Read with `superuser?/1`, the rule module code follows.
+  defp protect_superuser_fields(actor, %Ecto.Changeset{data: data, changes: changes}) do
+    if Enum.any?(Catalog.superuser_only_fields(data), &Map.has_key?(changes, &1)) and not superuser?(actor),
+      do: {:error, :forbidden},
+      else: :ok
+  end
+
+  defp protect_superuser_fields(_actor, _changeset), do: :ok
 
   # The roles' meaning in legacy mode: code is a superuser's, a `:user`
   # account edits nothing, and a superuser is deleted by superusers only. An

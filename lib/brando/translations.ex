@@ -1077,8 +1077,12 @@ defmodule Brando.Translations do
     end
   end
 
-  @doc "Decodes a pending version's payload into the entry struct."
-  def decode_payload(%PendingVersion{payload: payload}), do: :erlang.binary_to_term(payload, [:safe])
+  @doc """
+  Decodes a pending version's payload into the entry struct. A var stored as
+  `html` (before brando_225) comes back as `rich_text`, as the entry has it.
+  """
+  def decode_payload(%PendingVersion{payload: payload}),
+    do: payload |> :erlang.binary_to_term([:safe]) |> Brando.Content.Var.Type.rename_in()
 
   @doc """
   A pending version's content for `entry`, the translation it was computed

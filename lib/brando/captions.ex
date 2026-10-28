@@ -71,10 +71,29 @@ defmodule Brando.Captions do
   """
   def library_html(text) do
     cond do
-      not is_binary(text) or String.trim(text) == "" -> nil
-      markup?(text) -> if present?(text), do: text |> HtmlSanitizeEx.basic_html() |> Brando.Villain.InertLiquid.encode()
-      true -> text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string() |> Brando.Villain.InertLiquid.encode()
+      not is_binary(text) or String.trim(text) == "" ->
+        nil
+
+      markup?(text) ->
+        if present?(text), do: text |> HtmlSanitizeEx.basic_html() |> Brando.Villain.InertLiquid.encode()
+
+      # Escaped once: a legacy caption's `&amp;` is the `&` it stands for
+      true ->
+        text
+        |> HtmlEntities.decode()
+        |> Phoenix.HTML.html_escape()
+        |> Phoenix.HTML.safe_to_string()
+        |> Brando.Villain.InertLiquid.encode()
     end
+  end
+
+  @doc """
+  Markup for a picture's title, which is either the placement's rich-text
+  caption or the image's plain title: rich text as `normalize/1` stores it,
+  plain text escaped (`library_html/1`). `nil` when there is no text.
+  """
+  def caption_html(text) do
+    if is_binary(text) and markup?(text), do: normalize(text), else: library_html(text)
   end
 
   @doc "A rich-text caption reduced to basic markup, for previews in the admin."

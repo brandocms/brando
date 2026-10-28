@@ -100,12 +100,6 @@ main > .page-section > .inner > h1:not(:last-child) {
 
   h1 {
     max-width: 15ch;
-
-    /* The seeded heading carries a second line the design steps back, so the
-       eye lands on the statement and not the invitation. */
-    .soft {
-      @color fg bone.dim;
-    }
   }
 
   .lead {

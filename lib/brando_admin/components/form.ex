@@ -914,7 +914,7 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :load_working_copy, revision_entry: revision_entry} = message, socket) do
     %{schema: schema, entry: entry, current_user: current_user, form_blueprint: blueprint} = socket.assigns
     block_assocs = Enum.map(blueprint.blocks, &:"entry_#{&1.name}")
-    params = revision_entry |> Brando.Revisions.restore_params(entry) |> Map.drop(block_assocs)
+    params = revision_entry |> Brando.Revisions.restore_params(entry, current_user) |> Map.drop(block_assocs)
 
     changeset =
       entry
@@ -7870,7 +7870,7 @@ defmodule BrandoAdmin.Components.Form do
   defp revised_changeset(_socket, nil), do: nil
 
   defp revised_changeset(%{assigns: %{schema: schema, entry: entry, current_user: user}}, revision_entry),
-    do: schema.changeset(entry, Brando.Revisions.restore_params(revision_entry, entry), user)
+    do: schema.changeset(entry, Brando.Revisions.restore_params(revision_entry, entry, user), user)
 
   # A recovered working copy's locked assets are the revision's, as its
   # locked scalars are (`put_revision_locked_values/2`): the copy holds what

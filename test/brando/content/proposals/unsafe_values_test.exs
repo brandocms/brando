@@ -238,7 +238,7 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
         module!(c.user, "Note", ~s(<h2>{{ heading }}</h2><div>{{ note }}</div><p>{{ summary }}</p>{% link cta %}),
           vars: [
             %{type: "string", key: "heading", label: "Heading", value: "Heading"},
-            %{type: "html", key: "note", label: "Note", value: "<p>Note</p>"},
+            %{type: "rich_text", key: "note", label: "Note", value: "<p>Note</p>"},
             %{type: "text", key: "summary", label: "Summary", value: "Summary"},
             %{type: "link", key: "cta", label: "Read more", value: "https://example.com"}
           ]

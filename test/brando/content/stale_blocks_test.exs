@@ -226,7 +226,7 @@ defmodule Brando.Content.StaleBlocksTest do
       assert [%Var{value: "https://by.no/kultur"}] = Enum.filter(vars(block), &(&1.key == "cta"))
     end
 
-    test "converts a string var into a text or HTML one, and refuses what would lose content", c do
+    test "converts a string var into a text or rich text one, and refuses what would lose content", c do
       {_page, block} =
         page_with_block(c, [%{"type" => "string", "key" => "subtitle", "label" => "S", "value" => "A & B"}], [])
 
@@ -235,14 +235,14 @@ defmodule Brando.Content.StaleBlocksTest do
       assert version(block) == 3
     end
 
-    test "a string or text var moved onto an HTML one is escaped into a paragraph", c do
-      Repo.insert!(%Var{module_id: c.module.id, key: "lead", type: :html, label: %{"en" => "Lead"}})
+    test "a string or text var moved onto a rich text one is escaped into a paragraph", c do
+      Repo.insert!(%Var{module_id: c.module.id, key: "lead", type: :rich_text, label: %{"en" => "Lead"}})
 
       {_page, block} =
         page_with_block(c, [%{"type" => "text", "key" => "intro", "label" => "I", "value" => "A < B\nC"}], [])
 
       assert {:ok, _} = StaleBlocks.apply(c.module, %{{:var, "intro"} => {:map, "lead"}}, c.user)
-      assert %Var{type: :html, value: "<p>A &lt; B<br>C</p>"} = var(block, "lead")
+      assert %Var{type: :rich_text, value: "<p>A &lt; B<br>C</p>"} = var(block, "lead")
       assert version(block) == 3
     end
 

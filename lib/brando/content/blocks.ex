@@ -315,7 +315,7 @@ defmodule Brando.Content.Blocks do
   def list_block_ids_with_identifier_in_html_vars(identifier_id) do
     from(v in Var,
       left_join: row in assoc(v, :table_row),
-      where: v.type == :html and ilike(v.value, "%data-identifier-id%"),
+      where: v.type == :rich_text and ilike(v.value, "%data-identifier-id%"),
       where: not is_nil(v.block_id) or not is_nil(row.block_id),
       select: {coalesce(v.block_id, row.block_id), v.value}
     )
@@ -597,7 +597,7 @@ defmodule Brando.Content.Blocks do
   cells) that reference the given identifier.
   """
   def update_identifier_links_in_html_vars(identifier_id, new_url) do
-    query = from v in Var, where: v.type == :html and ilike(v.value, "%data-identifier-id%"), select: {v.id, v.value}
+    query = from v in Var, where: v.type == :rich_text and ilike(v.value, "%data-identifier-id%"), select: {v.id, v.value}
 
     for {id, html} <- Repo.all(query), RichText.contains_identifier?(html, identifier_id) do
       Repo.transaction(fn -> update_locked_var_identifier_link(id, identifier_id, new_url) end)
@@ -1484,7 +1484,7 @@ defmodule Brando.Content.Blocks do
   end
 
   defp remap_var_footnote_markers(var, mapping) do
-    if Changeset.get_field(var, :type) == :html do
+    if Changeset.get_field(var, :type) in [:rich_text, :html] do
       value = Brando.Content.BlockSlots.remap_markers(Changeset.get_field(var, :value), mapping)
       Changeset.put_change(var, :value, value)
     else

@@ -155,6 +155,12 @@ development for instance, the link is not followed. On another server where
 `media` links to a mounted volume, a release keeps them in the volume's parent
 directory; configure both paths to keep them elsewhere.
 
+Media reaches visitors through `Brando.Plug.Media`, which sends
+`X-Content-Type-Options: nosniff` and a `sandbox` Content Security Policy so
+an uploaded SVG or HTML file cannot run as a page of the site. A web server
+set up to serve `/media` itself must send them too: see
+[How media is served](media.md#how-media-is-served).
+
 <!-- usage-rules:end -->
 
 ### Ignored files

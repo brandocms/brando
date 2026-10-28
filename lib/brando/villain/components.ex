@@ -277,13 +277,13 @@ defmodule Brando.Villain.Components do
   standard `link` class when no inner content is given.
   """
   def entry_link(assigns) do
-    var_href = Brando.Villain.Filters.link_url(assigns.var, nil)
+    var_href = Brando.Villain.Filters.link_url(assigns.var)
     # An editor's label as written, or else the entry's title as text: a HEEx
     # identifier stores it escaped, and HEEx escapes it again
     var_text =
       case assigns.var do
         %{link_type: :identifier, link_text: nil, identifier: identifier} -> Identifier.title_text(identifier)
-        var -> Brando.Villain.Filters.link_text(var, nil)
+        var -> Brando.Villain.Filters.link_text(var)
       end
 
     # An address with a script or unknown scheme leaves the link inert

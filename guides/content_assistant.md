@@ -335,8 +335,11 @@ reported as a problem, because the new entry is a draft.
 What a proposal writes is checked before it can be approved, as text a model
 or client wrote, not an editor:
 
-- text, markdown and html slots, text and html variables, and an entry's
+- text and markdown slots, text and rich_text variables, and an entry's
   fields take rich text without scripts, event handlers or script addresses;
+  an HTML or SVG slot's markup is a superuser's and is never written;
+- an HTML slot's parameter values each take a value of their type, escaped
+  when the slot renders;
 - header slots and single-line text variables take plain text, without
   markup;
 - a link variable or a slot's link takes a web, mail or phone address, or a
@@ -344,9 +347,9 @@ or client wrote, not an editor:
 - a map slot takes an https Google Maps embed address;
 - a slot's class or id takes no quotes or markup, and its other settings no
   markup;
-- no value holds an opening brace (`{`), written out or as a character
+- no other value holds an opening brace (`{`), written out or as a character
   reference: the page renders a module's output as Liquid once more, and a
-  brace could open a tag there.
+  brace could open a tag there. An HTML slot's values have theirs escaped.
 
 A value that fails is a problem on the proposal. A proposal with problems
 cannot be approved, shows no page preview and cannot be shared: leave out

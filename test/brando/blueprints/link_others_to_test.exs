@@ -150,8 +150,8 @@ defmodule Brando.Blueprint.LinkOthersToTest do
       block = Brando.Repo.insert!(%Brando.Content.Block{type: :module, uid: Brando.Utils.generate_uid()})
       row = Brando.Repo.insert!(%Brando.Content.TableRow{block_id: block.id})
 
-      in_block = Brando.Repo.insert!(%Var{type: :html, key: "body", block_id: block.id, value: html})
-      in_cell = Brando.Repo.insert!(%Var{type: :html, key: "cell", table_row_id: row.id, value: html})
+      in_block = Brando.Repo.insert!(%Var{type: :rich_text, key: "body", block_id: block.id, value: html})
+      in_cell = Brando.Repo.insert!(%Var{type: :rich_text, key: "cell", table_row_id: row.id, value: html})
 
       assert Brando.Content.Blocks.list_block_ids_with_identifier_in_html_vars(identifier.id) == [block.id]
 

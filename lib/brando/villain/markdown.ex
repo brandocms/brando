@@ -148,9 +148,11 @@ defmodule Brando.Villain.Markdown do
     content = if block.multi == true, do: children_html(block.children, opts)
     refs = Parser.process_refs(block.refs, block, opts)
 
-    module.type
-    |> Parser.adapter_for()
-    |> render_html(module, block, Parser.process_vars(block.vars), refs, content, opts)
+    adapter = Parser.adapter_for(module.type)
+    vars = Parser.process_vars(block.vars, escape: Parser.escapes_vars?(adapter))
+
+    adapter
+    |> render_html(module, block, vars, refs, content, opts)
     |> IO.iodata_to_binary()
   end
 

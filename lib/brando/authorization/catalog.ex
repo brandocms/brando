@@ -166,6 +166,16 @@ defmodule Brando.Authorization.Catalog do
   def schema(schema) when is_atom(schema), do: if(schema in schemas() and for_schema(schema) != [], do: schema)
   def schema(_), do: nil
 
+  @superuser_fields %{Brando.Pages.Fragment => [:wrapper]}
+
+  @doc """
+  The fields of `schema` only superusers may set, in both modes: markup or
+  code printed as it is, such as a fragment's `wrapper`. Anyone else may
+  write the rest of the entry, and copy one that holds them.
+  """
+  def superuser_only_fields(%{__struct__: schema}), do: superuser_only_fields(schema)
+  def superuser_only_fields(schema), do: Map.get(@superuser_fields, schema, [])
+
   @doc """
   Whether `action` on `subject` (a schema or one of its entries) writes
   server-evaluated code: creating, changing, copying or deleting a module or

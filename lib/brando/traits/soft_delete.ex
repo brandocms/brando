@@ -24,7 +24,7 @@ defmodule Brando.Trait.SoftDelete do
   - A revision restore never moves an entry into or out of the trash, and
     keeps the obfuscated fields as the entry has them when the entry or the
     revision is in the trash. A new restore path builds its params with
-    `Brando.Revisions.restore_params/2`, which holds that rule.
+    `Brando.Revisions.restore_params/3`, which holds that rule.
   """
   use Brando.Trait
 

@@ -78,7 +78,7 @@ defmodule Brando.NotesTest do
       source: "Elixir.Brando.Pages.Page.Blocks",
       creator_id: user.id,
       sequence: 0,
-      vars: [%{type: :html, key: "body", label: "Body", value: html, sequence: 0}],
+      vars: [%{type: :rich_text, key: "body", label: "Body", value: html, sequence: 0}],
       refs: [],
       children: []
     })
@@ -666,7 +666,7 @@ defmodule Brando.NotesTest do
             }
           ],
           vars: [
-            %{key: "intro", label: "Intro", type: :html, value: ~s(<span data-brando-note="4">Intro</span> text)}
+            %{key: "intro", label: "Intro", type: :rich_text, value: ~s(<span data-brando-note="4">Intro</span> text)}
           ]
         }
       }

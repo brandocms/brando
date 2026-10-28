@@ -16,6 +16,7 @@ defmodule Brando.Villain do
   alias Brando.RuntimeConfig
   alias Brando.Tracing
   alias Brando.Villain.ContextCache
+  alias Brando.Villain.Parser
   alias Brando.Villain.RenderScope
   alias Brando.Villain.RenderSourceQuery
   alias Liquex.Context
@@ -215,7 +216,7 @@ defmodule Brando.Villain do
   end
 
   defp parse_node(_parser, %{type: :slot} = block, opts_map),
-    do: Brando.Villain.Parser.render_block_slot(block, opts_map)
+    do: Parser.render_block_slot(block, opts_map)
 
   defp parse_node(parser, block, opts_map) do
     type_atom = if block.type == :module_entry, do: :module, else: block.type
@@ -278,28 +279,70 @@ defmodule Brando.Villain do
     )
   end
 
+  # An identity link's name and address are what an editor typed: escaped,
+  # as a string var is, and an address with a script or unknown scheme empty.
+  # HEEx escapes what it prints, so it reads them unescaped (`raw_context/2`),
+  # with the address checked all the same.
   def add_to_context(context, "links" = key, %{links: links}) do
-    links = Map.new(links, &{String.downcase(&1.name), &1})
-    Context.assign(context, key, links)
+    raw =
+      Map.new(links, fn link ->
+        {String.downcase(link.name), %{link | url: Parser.safe_url(link.url) || ""}}
+      end)
+
+    escaped =
+      Map.new(raw, fn {name, link} ->
+        {name, %{link | name: Parser.escape_var_value(link.name), url: Parser.escape_var_value(link.url)}}
+      end)
+
+    context |> Context.assign(key, escaped) |> put_raw(key, raw)
   end
 
   def add_to_context(context, "links" = key, _) do
     Context.assign(context, key, %{})
   end
 
+  # A global prints as its value, as a var does in a Liquid module: `string`
+  # and `text` escaped, rich text sanitized. HEEx, which escapes what it
+  # prints, reads them unescaped (`raw_context/2`).
   def add_to_context(context, "globals" = key, global_sets) do
-    parsed_globals =
-      Map.new(global_sets, fn {g_key, g_category} ->
-        cat_globs = Map.new(g_category, fn {key, %{value: value}} -> {key, value} end)
-        {g_key, cat_globs}
-      end)
-
-    Context.assign(context, key, parsed_globals)
+    context
+    |> Context.assign(key, globals(global_sets, true))
+    |> put_raw(key, globals(global_sets, false))
   end
 
   def add_to_context(context, key, value) do
     Context.assign(context, key, value)
   end
+
+  @doc """
+  The value of `key` in `context` for a template that escapes what it
+  prints (HEEx): `globals` and `links` unescaped, as Liquid does not get
+  them, anything else as it is in the context.
+  """
+  def raw_context(%Context{private: private} = context, key) do
+    case Map.fetch(private, {:brando_raw, key}) do
+      {:ok, value} -> value
+      :error -> Context.get(context, key)
+    end
+  end
+
+  # In the context's private data, where no template can read or set it
+  defp put_raw(%Context{private: private} = context, key, value),
+    do: %{context | private: Map.put(private, {:brando_raw, key}, value)}
+
+  defp globals(global_sets, escape?) do
+    Map.new(global_sets, fn {set_key, set} -> {set_key, Map.new(set, &global_value(&1, escape?))} end)
+  end
+
+  defp global_value({key, global}, escape?), do: {key, global_value(global, escape?)}
+
+  defp global_value(%{type: type, value: value}, true) when type in [:string, :text],
+    do: Parser.escape_var_value(value)
+
+  defp global_value(%{type: type, value: value}, _escape?) when type in [:rich_text, :html],
+    do: Brando.RichText.render_html(value)
+
+  defp global_value(%{value: value}, _escape?), do: value
 
   @decorate span("brando.villain.liquid")
   def parse_and_render(html, context) do

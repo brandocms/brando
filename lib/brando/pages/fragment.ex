@@ -123,7 +123,11 @@ defmodule Brando.Pages.Fragment do
       end
 
       tab t("Advanced") do
+        # Markup around the fragment, printed as it is: a superuser's, as
+        # module code is (`Brando.Authorization.Catalog.superuser_only_fields/1`)
         fieldset do
+          superuser true
+
           input :wrapper, :code,
             label: t("Wrapper"),
             instructions: t("You can access the fragment's rendered content as <code>{{ content }}</code>")

@@ -770,7 +770,7 @@ table_template =
   ],
   vars: [
     %Brando.Content.Var{
-      type: :html,
+      type: :rich_text,
       label: "Intro text",
       key: "intro",
       placement: :content,

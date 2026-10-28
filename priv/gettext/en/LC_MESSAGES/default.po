@@ -8190,11 +8190,6 @@ msgstr ""
 msgid "How this module appears to editors"
 msgstr ""
 
-#: lib/brando_admin/components/form/input/render_var.ex
-#, elixir-autogen, elixir-format
-msgid "Html"
-msgstr ""
-
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "I have attached the media. Use it."
@@ -14447,6 +14442,7 @@ msgstr ""
 msgid "Rich Results Test"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/render_var.ex
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "Rich text"

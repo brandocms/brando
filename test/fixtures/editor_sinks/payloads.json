@@ -1,0 +1,8 @@
+{
+  "_comment": "Inert markup an editor could save. Each would only set document.title to MARKER in a browser.",
+  "handler": "<img src=x alt=MARKER onerror=document.title=this.alt>",
+  "script": "<script>document.title='MARKER'</script>",
+  "script_link": "<a href=\"javascript:document.title='MARKER'\">Read</a>",
+  "markdown_html": "Before\n\n<div><img src=x alt=MARKER onerror=document.title=this.alt></div>\n\nInline <b onclick=\"document.title='MARKER'\">bold</b> text",
+  "markdown_links": "[one](javascript:document.title='MARKER') [two](JaVaScRiPt:document.title='MARKER') [three](java&#x09;script:document.title='MARKER') [four](vbscript:document.title) [five](data:text/html,MARKER) ![six](javascript:document.title='MARKER') [safe](https://example.com/?a=1&b=2)"
+}

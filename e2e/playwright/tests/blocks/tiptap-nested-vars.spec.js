@@ -11,7 +11,7 @@ async function moduleWithHtmlVars(page) {
   const table = await fixture(page, 'Brando.Content.TableTemplate', {
     name: 'Linked locations',
     vars: [
-      { type: 'html', key: 'city', label: 'City', placement: 'content', width: 'full', sequence: 0, value: '<p>Oslo</p>' },
+      { type: 'rich_text', key: 'city', label: 'City', placement: 'content', width: 'full', sequence: 0, value: '<p>Oslo</p>' },
       { type: 'string', key: 'caption', label: 'Caption', placement: 'content', width: 'full', sequence: 1 },
     ],
   })
@@ -20,7 +20,7 @@ async function moduleWithHtmlVars(page) {
     help_text: { en: 'Rich text in variables and table rows' }, class: 'linked-locations', type: 'liquid',
     code: '<section>{{ introduction }}{% for row in block.table_rows %}<p>{{ row.city }} {{ row.caption }}</p>{% endfor %}</section>',
     table_template_id: table.id, refs: [], multi: false, datasource: false,
-    vars: [{ type: 'html', key: 'introduction', label: 'Introduction', placement: 'content', width: 'full', value: '<p>Our locations</p>' }],
+    vars: [{ type: 'rich_text', key: 'introduction', label: 'Introduction', placement: 'content', width: 'full', value: '<p>Our locations</p>' }],
   })
 }
 

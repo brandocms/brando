@@ -159,6 +159,40 @@ defmodule Brando.Content.DefinitionsTest do
     assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(stale, c.user)
   end
 
+  # brando_225 renames html vars to rich_text
+  test "an html var reads as rich_text, and the rename doesn't make the definition a conflict", c do
+    source = File.read!(Path.join(c.path, "hero.exs"))
+
+    html_var = """
+        end
+
+        var :intro, :html do
+          label "Intro"
+        end
+      end
+    """
+
+    File.write!(
+      Path.join(c.path, "hero.exs"),
+      String.replace(source, "    end\n  end\n\n  template", html_var <> "\n  template")
+    )
+
+    assert {:ok, bundle} = Definitions.read(c.path)
+    result = apply_bundle!(bundle, c.user)
+
+    assert %{type: :rich_text} = Enum.find(hero().vars, &(&1.key == "intro"))
+    assert {:ok, %{items: [%{action: :noop}]}} = Definitions.plan(result.bundle, c.user)
+
+    [current] = snapshot()["modules"]
+    intro = Enum.find_index(current["vars"], &(&1["key"] == "intro"))
+    assert get_in(current, ["vars", Access.at(intro), "type"]) == "rich_text"
+    before_upgrade = put_in(current, ["vars", Access.at(intro), "type"], "html")
+
+    edited = edit(result.bundle, &Map.put(&1, "class", "edited"))
+    stale = put_in(edited, ["baseline", "modules", "hero-test"], Value.baseline_digest(before_upgrade))
+    assert {:ok, %{items: [%{action: :update}]}} = Definitions.plan(stale, c.user)
+  end
+
   # Every copy of an empty link opens on the default tab, so the module var's
   # own link type there is no part of the definition
   test "an empty link left on the other tab exports and reimports unchanged", c do

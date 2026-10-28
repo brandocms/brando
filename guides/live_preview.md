@@ -253,7 +253,9 @@ the content runs on the admin origin whenever someone previews it, with the
 viewing user's cookies: it can read the admin page that frames the preview
 (and the window that opened a standalone preview), admin token included, and
 load any admin page as that user. Only superusers write markup that runs as
-it is: module code, and the template and parameters of an HTML ref and the
-code of an SVG ref ([HTML refs](block_editor.md#html-refs)). Other editors
-fill in an HTML ref's parameters, whose values are checked and escaped. Set a
-`script-src` if editors you do not trust author content.
+it is: module code, the template and parameters of an HTML ref, the code of
+an SVG ref ([HTML refs](block_editor.md#html-refs)) and a fragment's wrapper.
+What other editors write is escaped or sanitized before it reaches the page:
+text and rich-text refs, headings, Markdown, captions, vars and an HTML ref's
+parameter values (see [Writing templates safely](block_editor.md#writing-templates-safely)).
+Set a `script-src` if editors you do not trust author content.

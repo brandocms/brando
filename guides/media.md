@@ -513,6 +513,35 @@ remove first:
 length(report.deleted)
 ```
 
+## How media is served
+
+`Brando.Plug.Media` (`plug Brando.Plug.Media, at: "/media"` in the endpoint)
+serves uploads from the site's own origin, so a file an editor uploads must
+not run as a page of the site. Every media response carries:
+
+- `X-Content-Type-Options: nosniff`: the type is the one the file's extension
+  gives, never one the browser guesses from its content;
+- `Content-Security-Policy: sandbox`: an SVG or HTML file opened on its own
+  becomes a document with an opaque origin and no scripts, which cannot read
+  the site's cookies or reach the admin. PDFs do not get it, since browsers
+  show no PDF in a sandboxed document; their PDF viewers keep a PDF's scripts
+  away from the site.
+
+Images in `<img>`, video and downloads are not affected. A web server or CDN
+that serves `/media` itself, without going through the plug, should send the
+same headers; `Brando.Plug.Media.media_headers/1` gives them for a path. For
+nginx:
+
+```nginx
+location /media/ {
+  add_header X-Content-Type-Options nosniff always;
+  add_header Content-Security-Policy sandbox always;
+  location ~* \.pdf$ {
+    add_header X-Content-Type-Options nosniff always;
+  }
+}
+```
+
 ## Upload lifecycle and delivery checks
 
 The sticky UploadManager owns intake, transfer, validation, progress, and delivery

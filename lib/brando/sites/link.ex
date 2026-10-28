@@ -19,10 +19,13 @@ defmodule Brando.Sites.Link do
     attribute :url, :string, required: true
   end
 
+  # The address, escaped, or nothing for a script or unknown scheme: it is
+  # what an editor typed in the identity's links
   defimpl Phoenix.HTML.Safe do
     def to_iodata(link) do
       link.url
-      |> Phoenix.HTML.raw()
+      |> Brando.Villain.Parser.safe_url()
+      |> Kernel.||("")
       |> Phoenix.HTML.Safe.to_iodata()
     end
   end

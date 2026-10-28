@@ -22,7 +22,7 @@ defmodule Brando.AI.Translation do
   alias Brando.Villain.Blocks.VideoBlock
 
   @batch_char_limit 12_000
-  @translatable_var_types [:string, :text, :html]
+  @translatable_var_types [:string, :text, :rich_text]
 
   # PolymorphicEmbed resolves to the wrapper struct (e.g. TextBlock),
   # which contains the actual Data struct at .data (e.g. TextBlock.Data).
@@ -655,18 +655,20 @@ defmodule Brando.AI.Translation do
     end
   end
 
-  defp apply_single_translation({:field, field_name, translated_text}, entry, _schema) do
+  # Model output is stored as an editor's would be: rich text sanitized, and
+  # refused (the copy keeps the source text) when it holds unsafe markup.
+  # Refs go through their data's changeset (`update_ref_inner_data/3`), which
+  # sanitizes a text ref's text; markup refs are kept out by the wrapper
+  # list each write names, not by that changeset.
+  defp apply_single_translation({:field, field_name, translated_text}, entry, schema) do
     entry
     |> Ecto.Changeset.change(%{field_name => translated_text})
-    |> Repo.update()
+    |> Brando.RichText.validate_blueprint(schema)
+    |> update_translated()
   end
 
-  defp apply_single_translation({:var, var_id, translated_text}, _entry, _schema) do
-    case Repo.get(Var, var_id) do
-      nil -> :ok
-      var -> var |> Ecto.Changeset.change(%{value: translated_text}) |> Repo.update()
-    end
-  end
+  defp apply_single_translation({:var, var_id, translated_text}, _entry, _schema),
+    do: update_translated_var(var_id, translated_text)
 
   # Only into a ref that still holds plain text: never an HTML or SVG ref's
   # markup, whatever the item says.
@@ -709,12 +711,8 @@ defmodule Brando.AI.Translation do
     end)
   end
 
-  defp apply_single_translation({:table_var, var_id, translated_text}, _entry, _schema) do
-    case Repo.get(Var, var_id) do
-      nil -> :ok
-      var -> var |> Ecto.Changeset.change(%{value: translated_text}) |> Repo.update()
-    end
-  end
+  defp apply_single_translation({:table_var, var_id, translated_text}, _entry, _schema),
+    do: update_translated_var(var_id, translated_text)
 
   defp apply_single_translation({:identifier_meta, block_id, identifier_key, field, translated_text}, _entry, _schema) do
     case Repo.get(Brando.Content.Block, block_id) do
@@ -759,7 +757,35 @@ defmodule Brando.AI.Translation do
     ref
     |> Ecto.Changeset.cast(%{"data" => data_params}, [])
     |> PolymorphicEmbed.cast_polymorphic_embed(:data)
-    |> Repo.update()
+    |> update_translated()
+  end
+
+  defp update_translated_var(var_id, translated_text) do
+    case Repo.get(Var, var_id) do
+      nil ->
+        :ok
+
+      var ->
+        var
+        |> Ecto.Changeset.change(%{value: translated_text})
+        |> Brando.Content.Var.SanitizeRichText.sanitize()
+        |> update_translated()
+    end
+  end
+
+  defp update_translated(changeset) do
+    case Repo.update(changeset) do
+      {:ok, _} = ok ->
+        ok
+
+      {:error, changeset} = error ->
+        Logger.warning(
+          "[Brando.AI.Translation] Kept the source text of #{inspect(changeset.data.__struct__)} " <>
+            "#{inspect(Map.get(changeset.data, :id))}: #{inspect(changeset.errors)}"
+        )
+
+        error
+    end
   end
 
   defp poly_embed_to_params(struct) do

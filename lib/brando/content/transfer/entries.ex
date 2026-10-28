@@ -823,7 +823,7 @@ defmodule Brando.Content.Transfer.Entries do
         Transfer.lock_records!(%{fields: [%{entry: entry}], bindings: %{}})
         entry = EntryCodec.load!(expected["schema"], expected["id"], actor)
 
-        unless EntryCodec.fingerprint(entry) == expected["fingerprint"],
+        unless EntryCodec.fingerprint?(entry, expected["fingerprint"]),
           do:
             Error.fail!(
               dgettext(

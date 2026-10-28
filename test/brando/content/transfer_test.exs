@@ -173,6 +173,35 @@ defmodule Brando.Content.TransferTest do
     refute Repo.get!(Page, c.source.id).deleted_at
   end
 
+  # brando_225 renamed html vars to rich_text after the import was recorded
+  test "a whole entry imported before the html var rename can still be recovered", c do
+    Brando.Content.Var.changeset(
+      %Brando.Content.Var{},
+      %{type: :rich_text, key: "intro", label: "Intro", value: "<p>Intro</p>", page_id: c.source.id},
+      c.user
+    )
+    |> Repo.insert!()
+
+    archive = entry_archive(c)
+    [entry] = archive.bundle["entries"]
+    targets = %{entry["key"] => %{"attributes" => %{"uri" => "renamed-vars"}}}
+    assert {:ok, plan} = Transfer.preview(archive, targets, c.user)
+    assert {:ok, receipt} = Transfer.apply(plan, c.user)
+
+    %{"schema" => schema, "id" => id} = receipt.after[entry["key"]]
+    saved = Brando.Content.Transfer.EntryCodec.load!(schema, id, c.user)
+    before_rename = %{saved | vars: Enum.map(saved.vars, &%{&1 | type: :html})}
+    old_fingerprint = Brando.Content.Transfer.EntryCodec.fingerprint(before_rename)
+    refute old_fingerprint == Brando.Content.Transfer.EntryCodec.fingerprint(saved)
+
+    receipt
+    |> Changeset.change(after: put_in(receipt.after, [entry["key"], "fingerprint"], old_fingerprint))
+    |> Repo.update!()
+
+    assert {:ok, _} = Transfer.restore(receipt.id, c.user)
+    assert is_nil(Repo.get(Page, id))
+  end
+
   test "whole entry updates preserve publication, review conflicts and recover metadata", c do
     archive = entry_archive(c)
     [entry] = archive.bundle["entries"]

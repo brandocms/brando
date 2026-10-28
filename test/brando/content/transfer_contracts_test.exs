@@ -49,4 +49,29 @@ defmodule Brando.Content.TransferContractsTest do
       Contracts.check!(block(), Contracts.capture(module!(nil)), module!(true))
     end
   end
+
+  # A bundle exported before brando_225 names a rich_text var html
+  test "a bundle with html vars matches a module with rich_text ones" do
+    module = module!(false)
+    Repo.insert!(%Brando.Content.Var{module_id: module.id, key: "intro", type: :rich_text, label: %{"en" => "Intro"}})
+    module = Repo.preload(module, :vars, force: true)
+
+    old = put_in(Contracts.capture(module), ["vars", "intro"], "html")
+    assert old["vars"]["intro"] == "html"
+
+    block = %{block() | "vars" => [%{"key" => "intro", "type" => "html", "value" => "<p>Intro</p>"}]}
+    assert Contracts.check!(block, old, module) == :ok
+
+    definition =
+      update_in(Contracts.normalized(module), ["vars"], fn vars -> Enum.map(vars, &%{&1 | "type" => "html"}) end)
+
+    assert Contracts.differences(%{"kind" => "module", "definition" => definition}, module) == []
+    assert Contracts.same_definition?(module, definition)
+
+    # A receipt's digest from before the rename names the var html
+    blocks = [%{"block" => %{"vars" => [%{"key" => "intro", "type" => "rich_text"}], "children" => []}}]
+
+    assert Contracts.with_html_vars(blocks) ==
+             [%{"block" => %{"vars" => [%{"key" => "intro", "type" => "html"}], "children" => []}}]
+  end
 end
