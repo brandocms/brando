@@ -285,6 +285,22 @@ refs do
 end
 ```
 
+An HTML ref's template, parameters and default values are protected
+fields, so they go in `default`
+([HTML refs](block_editor.md#html-refs)):
+
+```elixir
+refs do
+  ref :embed, :html do
+    default %{
+      "text" => ~s(<div data-checkin="{{ checkin_id }}"></div>),
+      "params" => [%{"key" => "checkin_id", "label" => "Check-in ID", "type" => "id"}],
+      "values" => %{}
+    }
+  end
+end
+```
+
 `available_blocks` takes `"picture"`, `"video"`, `"gallery"`, `"svg"` and
 `"file"`, each with its own `template_*`. A file in a media slot is an
 ordinary file ref: `{% ref refs.visual %}` renders the download link. To show

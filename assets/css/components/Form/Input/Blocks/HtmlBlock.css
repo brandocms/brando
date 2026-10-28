@@ -1,0 +1,48 @@
+/* An HTML ref: a superuser's template and parameter declarations, and the
+   values form everyone fills in (`HtmlParams`). */
+.html-block {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+
+  .html-block-template {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* The add button sits above the parameters' instructions */
+  .html-params .add-entry-button {
+    margin-bottom: 8px;
+  }
+
+  .html-values {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    &:empty {
+      display: none;
+    }
+
+    .field-wrapper {
+      margin-bottom: 0;
+    }
+  }
+
+  .html-values input.text {
+    background-color: var(--brando-surface);
+    border: 1px solid var(--brando-input-border);
+    border-radius: var(--brando-input-radius);
+
+    &:focus {
+      border-color: var(--brando-accent);
+      box-shadow: var(--brando-input-focus-shadow);
+    }
+  }
+
+  .html-block-note {
+    color: var(--brando-muted);
+    font-size: var(--brando-text-sm);
+  }
+}

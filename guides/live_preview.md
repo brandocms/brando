@@ -218,8 +218,8 @@ that required preloads and template/layout assigns match the controller path.
 ## What the preview page can reach
 
 The preview is served from the admin's own origin at `/__livepreview`, so it
-renders with the site's own scripts, and editor content in it (HTML blocks,
-module markup) runs there too. Its script connects to the admin socket with a
+renders with the site's own scripts, and content markup in it (HTML and SVG
+refs, module code) runs there too. Its script connects to the admin socket with a
 token for that preview alone (`Brando.LivePreview.SocketToken`): it names the
 viewer, their session, the preview, and the site and environment it belongs
 to, and it lasts 15 minutes. It joins that preview's channel and no other; the
@@ -252,6 +252,8 @@ of reach. Without a `script-src` that blocks it, a script an editor puts into
 the content runs on the admin origin whenever someone previews it, with the
 viewing user's cookies: it can read the admin page that frames the preview
 (and the window that opened a standalone preview), admin token included, and
-load any admin page as that user. Restrict who can add raw HTML (HTML blocks,
-module code), and set a `script-src` if editors you do not trust author
-content.
+load any admin page as that user. Only superusers write markup that runs as
+it is: module code, and the template and parameters of an HTML ref and the
+code of an SVG ref ([HTML refs](block_editor.md#html-refs)). Other editors
+fill in an HTML ref's parameters, whose values are checked and escaped. Set a
+`script-src` if editors you do not trust author content.

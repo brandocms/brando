@@ -806,6 +806,9 @@ defmodule BrandoAdmin.Components.Form.BlockField do
     |> assign_new(:focus, fn -> nil end)
     |> assign_new(:session_detached?, fn -> false end)
     |> assign_new(:tab_editing?, &BrandoAdmin.LiveView.Form.Tabs.editing?/0)
+    # Whether the editor shows HTML and SVG markup for editing. The server
+    # holds a save to the same rule (`Brando.Content.RefGuard`).
+    |> assign_new(:current_user_superuser, fn -> Brando.Authorization.Boundary.superuser?(assigns.current_user) end)
     |> initialize_blocks(assigns)
     |> reseed_revived(revived?)
     |> maybe_join_session(mounted?)
@@ -3132,6 +3135,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 form={entry_block_form}
                 form_id={@form_id}
                 current_user_id={@current_user.id}
+                current_user_superuser={@current_user_superuser}
                 belongs_to={:root}
                 slot_open={@open_slot_uid == block[:uid].value}
                 slot_title={@slot_title}
@@ -3482,6 +3486,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
                 form={entry_block_form}
                 form_id={@form_id}
                 current_user_id={@current_user.id}
+                current_user_superuser={@current_user_superuser}
                 belongs_to={:root}
                 slot_open={@open_slot_uid == block[:uid].value}
                 slot_title={@slot_title}

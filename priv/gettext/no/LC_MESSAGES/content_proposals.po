@@ -76,6 +76,11 @@ msgstr "%{name} godtar ikke denne medietypen."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{name} holds markup only a superuser changes."
+msgstr "%{name} inneholder kode som bare en superbruker endrer."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} takes a web, mail or phone address."
 msgstr "%{name} tar en nett-, e-post- eller telefonadresse."
 
@@ -88,11 +93,6 @@ msgstr "%{name} tar en https-adresse for innebygging fra Google Maps."
 #, elixir-autogen, elixir-format
 msgid "%{name} takes no quotes or markup."
 msgstr "%{name} tar ikke anførselstegn eller markering."
-
-#: lib/brando/content/proposals.ex
-#, elixir-autogen, elixir-format
-msgid "%{name} takes one safe <svg> element."
-msgstr "%{name} tar ett trygt <svg>-element."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
