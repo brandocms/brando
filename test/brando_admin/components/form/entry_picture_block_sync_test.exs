@@ -376,6 +376,130 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
 
       assert saved(form, [:vars, 0]).video.title == "Example Hotel tour"
     end
+
+    # The entry is what the next `validate` casts onto, so the saved asset
+    # goes on the row the form shows, found by its id, and not on the entry's
+    # row at the form's index (or, for a file, on the entry's own field).
+    for {kind, params} <- [
+          image: %{"title" => %{"en" => "Example Hotel lobby"}},
+          file: %{"title" => "Example Hotel rates"},
+          video: %{"title" => "Example Hotel tour"}
+        ] do
+      test "#{kind}: saved in a row after a removed row, it goes on that row of the entry", ctx do
+        kind = unquote(kind)
+        asset = Map.fetch!(ctx, :"saved_#{kind}")
+        removed = %Brando.Content.Var{id: 2, key: "old", type: :text, label: "Old"}
+        [shown] = in_row(ctx.page, kind, asset).vars
+        page = %{ctx.page | vars: [removed, shown]}
+        changeset = page |> Changeset.change() |> Changeset.put_assoc(:vars, [shown])
+
+        socket =
+          page
+          |> drawer_socket(ctx.user, kind, [:vars, 0], kind, asset)
+          |> Component.assign(:form, to_form(changeset))
+
+        {:noreply, form} = Form.handle_event("save_#{kind}", %{"#{kind}" => unquote(Macro.escape(params))}, socket)
+
+        assert [entry_removed, entry_shown] = form.assigns.entry.vars
+        assert entry_removed == removed
+        assert Map.fetch!(entry_shown, kind).title == unquote(Macro.escape(params))["title"]
+        refute Map.has_key?(Map.from_struct(form.assigns.entry), :file)
+        assert validate_target(form) == "page[vars][0][#{kind}_id]"
+      end
+
+      test "#{kind}: saved in a row after a new row, it goes on that row of the entry", ctx do
+        kind = unquote(kind)
+        asset = Map.fetch!(ctx, :"saved_#{kind}")
+        [shown] = in_row(ctx.page, kind, asset).vars
+        page = %{ctx.page | vars: [shown]}
+        added = %Brando.Content.Var{key: "new", type: :text, label: "New"}
+        changeset = page |> Changeset.change() |> Changeset.put_assoc(:vars, [added, shown])
+
+        socket =
+          page
+          |> drawer_socket(ctx.user, kind, [:vars, 1], kind, asset)
+          |> Component.assign(:form, to_form(changeset))
+
+        {:noreply, form} = Form.handle_event("save_#{kind}", %{"#{kind}" => unquote(Macro.escape(params))}, socket)
+
+        assert [entry_shown] = form.assigns.entry.vars
+        assert Map.fetch!(entry_shown, kind).title == unquote(Macro.escape(params))["title"]
+      end
+    end
+
+    # A row's drawer reset clears that row of the entry, and the `validate` it
+    # asks for names the row's input: the entry's own field of the same name
+    # (`article[cover_id]`) keeps its asset.
+    for {kind, field} <- [image: :cover, video: :clip, file: :file] do
+      test "#{kind}: reset in a row after a removed row, it clears that row only", ctx do
+        kind = unquote(kind)
+        field = unquote(field)
+        asset = Map.fetch!(ctx, :"saved_#{kind}")
+        {entry, rows_key, singular} = entry_with_rows(ctx, kind, field, asset)
+        [removed, shown] = Map.fetch!(entry, rows_key)
+        changeset = entry |> Changeset.change() |> Changeset.put_assoc(rows_key, [shown])
+
+        socket =
+          ctx.page
+          |> drawer_socket(ctx.user, kind, [rows_key, 0], field, asset)
+          |> Component.assign(schema: entry.__struct__, entry: entry, singular: singular)
+          |> Component.assign(:form, to_form(changeset))
+
+        {:noreply, form} = Form.handle_event("reset_#{kind}_field", %{}, socket)
+
+        assert [^removed, entry_shown] = Map.fetch!(form.assigns.entry, rows_key)
+        assert Map.fetch!(entry_shown, field) == nil
+        assert Map.get(form.assigns.entry, field) == Map.get(entry, field)
+        assert validate_target(form) == "#{singular}[#{rows_key}][0][#{field}_id]"
+      end
+    end
+
+    # An article whose own field has the name of the rows' field, or a page
+    # (its variables hold files; the page has no file of its own)
+    defp entry_with_rows(ctx, :file, :file, file) do
+      [shown] = in_row(ctx.page, :file, file).vars
+      removed = %Brando.Content.Var{id: 2, key: "old", type: :text, label: "Old"}
+      {%{ctx.page | vars: [removed, shown]}, :vars, "page"}
+    end
+
+    defp entry_with_rows(ctx, kind, field, asset) do
+      own = if kind == :image, do: ctx.first, else: Factory.insert(:video, creator: ctx.user)
+      shown = Map.merge(%Brando.SyncTest.ArticleItem{id: 1, label: "Row"}, %{field => asset, :"#{field}_id" => asset.id})
+      removed = %Brando.SyncTest.ArticleItem{id: 2, label: "Old"}
+
+      article =
+        Map.merge(%Brando.SyncTest.Article{id: 1, items: [removed, shown]}, %{field => own, :"#{field}_id" => own.id})
+
+      {article, :items, "article"}
+    end
+
+    defp validate_target(form) do
+      Enum.find_value(Phoenix.LiveView.Utils.get_push_events(form), fn
+        ["b:validate", %{target: target}] -> target
+        _ -> nil
+      end)
+    end
+
+    # The image editor's save over the image, from a row's drawer
+    test "an image refocused in a row after a removed row goes on that row of the entry", ctx do
+      original = Path.join(Brando.Tenant.Storage.current_media_root(), ctx.saved_image.path)
+      File.mkdir_p!(Path.dirname(original))
+      on_exit(fn -> File.rm_rf!(Path.dirname(original)) end)
+      File.cp!(Path.expand("../../../fixtures/sample.jpg", __DIR__), original)
+
+      {socket, removed, _shown} =
+        with_removed_row(
+          ctx.page,
+          ctx.saved_image,
+          &drawer_socket(&1, ctx.user, :image, [:vars, 0], :image, ctx.saved_image)
+        )
+
+      params = %{"mode" => "replace", "focal_x" => 40, "focal_y" => 60}
+      {:noreply, form} = Form.handle_event("image_editor_save", params, socket)
+
+      assert [^removed, entry_shown] = form.assigns.entry.vars
+      assert entry_shown.image.focal == %Brando.Images.Focal{x: 40, y: 60}
+    end
   end
 
   # The next `validate` casts onto the entry, so a remote image has to be on

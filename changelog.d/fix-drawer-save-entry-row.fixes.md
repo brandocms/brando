@@ -1,0 +1,3 @@
+- Saving an image, video or file in a list row's drawer, or refocusing a row's image in the image editor, shows it on that row in the live preview when a row above was removed or added, and a row's file no longer shows on the entry's own field.
+
+- Resetting an image, video or file in a list row's drawer clears only that row, and no longer clears the entry's own field of the same name.
