@@ -434,6 +434,20 @@ defmodule Brando.Content.Transfer.EntryCodec do
 
   def fingerprint(entry), do: entry |> snapshot() |> Value.digest()
 
+  @doc """
+  Whether `entry` still has the `fingerprint` recorded when it was imported:
+  a fingerprint from before brando_225 digested its `rich_text` vars as
+  `html`.
+  """
+  def fingerprint?(entry, fingerprint) do
+    snapshot = snapshot(entry)
+
+    fingerprint in [
+      Value.digest(snapshot),
+      Value.digest(Brando.Content.Transfer.Contracts.with_html_vars(snapshot))
+    ]
+  end
+
   def records(%Brando.Content.Block{} = block) do
     [
       block

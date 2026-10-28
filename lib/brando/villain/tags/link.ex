@@ -20,8 +20,9 @@ defmodule Brando.Villain.Tags.Link do
       |> to_string()
       |> Phoenix.HTML.html_escape()
       |> Phoenix.HTML.safe_to_string()
-      # Liquid typed into the label is text to the entry's final pass
-      |> Brando.Villain.InertLiquid.encode()
+      # Liquid typed into the label is text to the entry's final pass; a
+      # Markdown template has no such pass, and keeps plain braces
+      |> inert(context)
 
     link_url = evaled_link |> Brando.Villain.Filters.link_url() |> href()
     new_window? = evaled_link.link_target_blank
@@ -38,6 +39,12 @@ defmodule Brando.Villain.Tags.Link do
     do: Identifier.title_text(identifier)
 
   defp text(link, _context), do: Brando.Villain.Filters.link_text(link)
+
+  defp inert(text, context) do
+    if Brando.Villain.Markdown.template_context?(context),
+      do: text,
+      else: Brando.Villain.InertLiquid.encode(text)
+  end
 
   # An address with a script or unknown scheme renders as an empty href.
   defp href(url) do
