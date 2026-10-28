@@ -241,14 +241,27 @@ content cannot redirect the page's relative URLs. Shared preview links
 (`/__p__/…`) get the same `sandbox` directive, ahead of the policy the site's
 router pipeline sets.
 
-The page's script connects to the admin socket at `/__livepreview/socket`,
-with a token for that preview alone (`Brando.LivePreview.SocketToken`): it
-names the viewer, their session, the preview, and the site and environment
-it belongs to, and it lasts 15 minutes. It joins that preview's channel and
-no other, and the channel hands the page a fresh token before the last one
-expires. The socket takes origin `null` there because it reads no cookie;
-the admin socket at `/admin/socket` keeps Phoenix's origin check. The
-viewer's admin socket token is not in the page.
+The page's script connects to a socket of its own, which the endpoint
+mounts next to the admin socket:
+
+```elixir
+socket "/__livepreview/socket", BrandoAdmin.LivePreviewSocket,
+  websocket: [check_origin: false],
+  longpoll: false
+```
+
+It connects with a token for that preview alone
+(`Brando.LivePreview.SocketToken`): it names the viewer, their session, the
+preview, and the site and environment it belongs to, and it lasts 15
+minutes. It joins that preview's channel and no other, and the channel hands
+the page a fresh token before the last one expires. The socket takes origin
+`null` because it reads no cookie; the admin socket at `/admin/socket` keeps
+Phoenix's origin check and refuses preview tokens. The viewer's admin socket
+token is not in the page.
+
+Without the line, the preview shows the page as it was when it opened, and
+the preview panel says live updates are unavailable; the server log names
+the line to add.
 
 ### The site's scripts in the preview
 

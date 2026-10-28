@@ -175,6 +175,20 @@ defmodule Brando.Plug.LivePreviewTest do
     assert get_resp_header(conn, "cache-control") == ["no-cache"]
   end
 
+  # The endpoint answers the sockets it mounts before any plug runs: the
+  # preview socket's path reaching the plug means the endpoint lacks the line
+  test "without the preview socket in the endpoint, the log names the line to add, once" do
+    :persistent_term.erase({LivePreview, :socket_missing})
+    on_exit(fn -> :persistent_term.erase({LivePreview, :socket_missing}) end)
+    request = fn -> build_conn(:get, "/__livepreview/socket/websocket?vsn=2.0.0") |> LivePreview.call([]) end
+
+    log = capture_log(fn -> assert %{status: 404, halted: true} = request.() end)
+    assert log =~ "Live preview updates are unavailable"
+    assert log =~ BrandoAdmin.LivePreviewSocket.endpoint_line()
+
+    assert capture_log(fn -> assert %{status: 404} = request.() end) == ""
+  end
+
   # The cookie-based token route went with the sandbox: the page has no
   # cookies to send it (the channel hands over fresh tokens instead)
   test "there is no token route; it is a preview page like any other path" do

@@ -4,11 +4,11 @@ defmodule BrandoAdmin.LivePreviewSocketTest do
   served (`Brando.LivePreview.SocketToken`) must open only that preview's
   channel: not the lobby, not the user channel, not another preview, and not
   after it expires or its session ends. The document is sandboxed, so it
-  connects from origin `null`, to the admin socket at `/__livepreview/socket`,
-  which takes nothing but that token there.
+  connects from origin `null`, to `BrandoAdmin.LivePreviewSocket` at
+  `/__livepreview/socket`, which takes nothing but that token.
   """
   use Brando.ConnCase
-  import Phoenix.ChannelTest, only: [subscribe_and_join: 2, subscribe_and_join: 3]
+  import Phoenix.ChannelTest, only: [subscribe_and_join: 2]
   require Phoenix.ChannelTest
   alias Brando.Authorization.{Boundary, Migration, Preview, Scope}
   alias Brando.Factory
@@ -58,10 +58,7 @@ defmodule BrandoAdmin.LivePreviewSocketTest do
 
   defp connect_admin(token), do: Phoenix.ChannelTest.connect(BrandoAdmin.AdminSocket, %{"token" => token})
 
-  # As `Brando.Plug.LivePreview` connects it (`AdminSocket.preview_transport/0`)
-  defp connect_preview(token) do
-    Phoenix.ChannelTest.connect(BrandoAdmin.AdminSocket, %{"token" => token}, connect_info: %{brando_live_preview: true})
-  end
+  defp connect_preview(token), do: Phoenix.ChannelTest.connect(BrandoAdmin.LivePreviewSocket, %{"token" => token})
 
   # A WebSocket upgrade through the test endpoint, as a sandboxed page sends it
   defp upgrade(path, token), do: upgrade_at(path <> "/websocket", token)
@@ -85,8 +82,9 @@ defmodule BrandoAdmin.LivePreviewSocketTest do
     assert {:ok, socket} = connect_preview(token)
     refute Map.has_key?(socket.assigns, :user_id)
 
-    assert {:error, %{reason: "forbidden"}} = subscribe_and_join(socket, "lobby", %{"url" => "/admin"})
-    assert {:error, %{reason: "forbidden"}} = subscribe_and_join(socket, "user:#{c.editor.id}")
+    # No other channel is routed on the preview socket, and no other preview joins
+    refute BrandoAdmin.LivePreviewSocket.__channel__("lobby")
+    refute BrandoAdmin.LivePreviewSocket.__channel__("user:#{c.editor.id}")
     assert {:error, %{reason: "forbidden"}} = subscribe_and_join(socket, "live_preview:#{c.other_key}")
 
     assert {:ok, user_id, _} = subscribe_and_join(socket, "live_preview:#{c.key}")
@@ -108,7 +106,7 @@ defmodule BrandoAdmin.LivePreviewSocketTest do
     conn = upgrade("/__livepreview/socket", served_token(c))
     assert conn.halted
 
-    assert [{:websocket, {BrandoAdmin.AdminSocket, {_, %{assigns: %{preview: _}}}, _opts}}] =
+    assert [{:websocket, {BrandoAdmin.LivePreviewSocket, {_, %{assigns: %{preview: _}}}, _opts}}] =
              Plug.Test.sent_upgrades(conn)
 
     admin_token = Users.build_socket_token(c.editor, Users.token_id(c.session))
@@ -116,7 +114,7 @@ defmodule BrandoAdmin.LivePreviewSocketTest do
     assert conn.status == 403
     assert Plug.Test.sent_upgrades(conn) == []
 
-    # However the path is spelled: Plug drops the empty segments the request path keeps
+    # However the path is spelled (Phoenix routes sockets on the path's segments)
     for path <- ["/__livepreview/socket/websocket/", "/__livepreview//socket/websocket"] do
       conn = upgrade_at(path, admin_token)
       assert conn.status == 403, path

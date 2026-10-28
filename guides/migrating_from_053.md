@@ -315,9 +315,19 @@ sender first, before the first compile.
 17. **Endpoint plugs.** When the task could not find the endpoint, add
     `plug Brando.Plug.Markdown` and `plug Brando.Plug.IndexNow` to it, before
     the router ([Markdown alternates](markdown_alternates.md),
-    [IndexNow](identity_and_seo.md#indexnow)). When it could not find the
-    endpoint or its `plug Plug.Static`, add `plug Brando.Plug.SiteAssets` right
-    before the plug that serves the site's static files.
+    [IndexNow](identity_and_seo.md#indexnow)). Live previews also need two
+    endpoint changes; when the task could not make them, it says which:
+    - `plug Brando.Plug.SiteAssets` right before the plug that serves the
+      site's static files (`plug Plug.Static`);
+    - the live preview socket, next to `socket "/admin/socket"`:
+
+      ```elixir
+      socket "/__livepreview/socket", BrandoAdmin.LivePreviewSocket,
+        websocket: [check_origin: false],
+        longpoll: false
+      ```
+
+    See [Live preview](live_preview.md#what-the-preview-page-can-reach).
 18. **Module aliases in braces** the new name cannot share. Write the new name
     (the table is in `UPGRADE.md`); the old names warn until 0.57.
 19. **An edited `scripts/sync_gettext.sh`.** Compare it with Brando's and merge
@@ -1634,6 +1644,10 @@ has the fixes.
   shared previews pin, and sends the site's static files with the
   cross-origin header sandboxed live previews need to load the site's module
   scripts and fonts ([Live preview](live_preview.md#what-the-preview-page-can-reach));
+- mounts the live preview socket (`BrandoAdmin.LivePreviewSocket`) in the
+  endpoint, after `socket "/admin/socket"`, unless something is mounted at
+  `/__livepreview/socket` already. Live previews are sandboxed and connect
+  from origin `null`, which the admin socket refuses;
 - gives Villain parsers (`use Brando.Villain.Parser`) back what the parser's
   `__using__` does not bring in, where they use it: `use Phoenix.Component`
   for `~H`, `import Brando.HTML` for components such as `<.picture>`,

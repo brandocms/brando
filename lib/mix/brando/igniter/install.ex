@@ -298,6 +298,14 @@ if Code.ensure_loaded?(Igniter) do
         """,
         before_router
       )
+      |> Source.ensure_call(
+        endpoint,
+        :socket,
+        [2, 3],
+        "/__livepreview/socket",
+        BrandoAdmin.LivePreviewSocket.endpoint_line(),
+        before_router
+      )
       |> Source.ensure_call(endpoint, :plug, [1, 2], Brando.Plug.SiteAssets, "plug Brando.Plug.SiteAssets",
         before: {:plug, [1, 2], Plug.Static}
       )

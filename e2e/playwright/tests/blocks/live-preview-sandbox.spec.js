@@ -101,6 +101,45 @@ test.describe('Live preview sandbox', () => {
     expect(errors.filter(error => !error.includes("/admin' from origin 'null'"))).toEqual([])
   })
 
+  // Without the endpoint's preview socket line the server refuses the socket
+  // (and its log names the line): the drawer says so instead of showing a
+  // preview that silently stops following the form. Here the page's socket
+  // fails as a refused upgrade does (an error and a close, never open) until
+  // the test lets it through.
+  test('a preview whose socket is refused says live updates are unavailable', async ({ page }) => {
+    await page.addInitScript(() => {
+      const NativeWebSocket = window.WebSocket
+      window.WebSocket = function (url, protocols) {
+        if (!String(url).includes('/__livepreview/socket/') || window.__allowPreviewSocket) {
+          return new NativeWebSocket(url, protocols)
+        }
+        const refused = new EventTarget()
+        Object.assign(refused, { readyState: 0, url: String(url), send() {}, close() {} })
+        setTimeout(() => {
+          refused.readyState = 3
+          for (const type of ['error', 'close']) {
+            const event = type === 'close' ? new CloseEvent('close', { code: 1006 }) : new Event('error')
+            refused.dispatchEvent(event)
+            refused['on' + type]?.(event)
+          }
+        })
+        return refused
+      }
+      Object.assign(window.WebSocket, { CONNECTING: 0, OPEN: 1, CLOSING: 2, CLOSED: 3 })
+    })
+
+    await openPreview(page, 'Sandbox Unavailable')
+    const notice = page.locator('.live-preview-notice')
+    await expect(notice).toHaveText(await notice.getAttribute('data-unavailable-message'))
+    await expect(getPreviewFrame(page).locator('#lp-connection-status')).toBeVisible()
+
+    // Once it connects, the notice goes
+    const frame = await (await page.locator('#live-preview-frame').elementHandle()).contentFrame()
+    await frame.evaluate(() => (window.__allowPreviewSocket = true))
+    await expect(notice).toBeEmpty({ timeout: 15000 })
+    await expect(getPreviewFrame(page).locator('#lp-connection-status')).toHaveCount(0)
+  })
+
   test('the standalone preview has no opener and keeps updating', async ({ page }) => {
     const errors = watchErrors(page)
     await openPreview(page, 'Sandbox Window')

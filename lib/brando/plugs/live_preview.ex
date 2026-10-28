@@ -11,10 +11,12 @@ defmodule Brando.Plug.LivePreview do
 
       config :brando, :live_preview_content_security_policy, "script-src 'self' https://cdn.example.com"
 
-  The page's script connects to the admin socket (`BrandoAdmin.AdminSocket`),
-  served here at `/__livepreview/socket`, with a token good only for this preview's
-  channel (`Brando.LivePreview.SocketToken`), never the viewer's admin socket
-  token; the channel hands it a fresh one before it expires. The script is
+  The page's script connects to `BrandoAdmin.LivePreviewSocket`, which the
+  endpoint mounts at `/__livepreview/socket`, with a token good only for this
+  preview's channel (`Brando.LivePreview.SocketToken`), never the viewer's
+  admin socket token; the channel hands it a fresh one before it expires.
+  Without that socket, the page reports live updates unavailable, and the
+  log names the endpoint line to add. The script is
   served from `/__livepreview/client-<hash>.js`, and the storage stand-ins the
   site's own scripts need in an opaque origin (`put_storage_script/1`) from
   `/__livepreview/storage-<hash>.js`, so a policy without `'unsafe-inline'`
@@ -26,6 +28,8 @@ defmodule Brando.Plug.LivePreview do
   @behaviour Plug
 
   import Plug.Conn
+
+  require Logger
 
   @external_resource Application.app_dir(:phoenix, "priv/static/phoenix.js")
   @external_resource Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js")
@@ -92,13 +96,27 @@ defmodule Brando.Plug.LivePreview do
   def call(%Plug.Conn{path_info: ["__livepreview", "storage-" <> file]} = conn, _),
     do: send_script(conn, @storage_js, file == @storage_vsn <> ".js")
 
-  # The preview's socket: the admin socket, taking only preview tokens and
-  # any origin here. See `BrandoAdmin.AdminSocket.preview_transport/0`.
-  def call(%Plug.Conn{path_info: ["__livepreview", "socket", "websocket"]} = conn, _) do
+  # The endpoint answers its sockets before any plug runs, so a request for
+  # the preview socket that gets here means the endpoint does not mount it.
+  # The preview's script tells the admin page that live updates are
+  # unavailable; the log says why, once.
+  def call(%Plug.Conn{path_info: ["__livepreview", "socket" | _]} = conn, _) do
     endpoint = conn.private[:phoenix_endpoint] || Brando.endpoint()
 
+    if :persistent_term.get({__MODULE__, :socket_missing}, false) == false do
+      :persistent_term.put({__MODULE__, :socket_missing}, true)
+
+      Logger.error("""
+      Live preview updates are unavailable: #{inspect(endpoint)} does not mount the preview socket. \
+      Add this line to it, next to `socket "/admin/socket"`, or run `mix brando.migrate55`:
+
+          #{BrandoAdmin.LivePreviewSocket.endpoint_line()}
+      """)
+    end
+
     conn
-    |> Phoenix.Transports.WebSocket.call({endpoint, BrandoAdmin.AdminSocket, BrandoAdmin.AdminSocket.preview_transport()})
+    |> put_resp_content_type("text/plain")
+    |> send_resp(404, "The endpoint does not mount the live preview socket.")
     |> halt()
   end
 
@@ -261,7 +279,6 @@ defmodule Brando.Plug.LivePreview do
           |> halt()
         rescue
           err ->
-            require Logger
             Logger.error("Livepreview call failed: #{Exception.format(:error, err, __STACKTRACE__)}")
 
             conn

@@ -27,8 +27,12 @@ const load = async (page, bodyHtml, version = 1, { script = true, maxAge = 900 }
         }
         connect() {}
         onError(fn) {
-          window.__lp.socketError = fn
+          const handlers = (window.__lp.errorHandlers ||= [])
+          handlers.push(fn)
+          window.__lp.socketError = () => handlers.forEach((handler) => handler())
         }
+        onOpen() {}
+        onClose() {}
         channel(topic, params) {
           window.__lp.topic = topic
           window.__lp.joinParams = params

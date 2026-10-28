@@ -44,6 +44,10 @@ defmodule E2eProjectWeb.Endpoint do
     websocket: [connect_info: [:user_agent]],
     longpoll: true
 
+  socket "/__livepreview/socket", BrandoAdmin.LivePreviewSocket,
+    websocket: [check_origin: false, connect_info: [:user_agent]],
+    longpoll: false
+
   socket "/live",
          Phoenix.LiveView.Socket,
          websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]

@@ -40,6 +40,11 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert IgniterCase.source(igniter, "config/config.exs") =~ "existing-lv-salt"
     assert IgniterCase.source(igniter, "config/brando.exs") =~ "tenancy_mode: :none"
     assert IgniterCase.source(igniter, "lib/studio_web/endpoint.ex") =~ "preserve-this-salt"
+
+    # Live previews are sandboxed and connect from origin null, to a socket of their own
+    assert IgniterCase.source(igniter, "lib/studio_web/endpoint.ex") =~
+             ~r{socket\(?\s*"/__livepreview/socket",\s*BrandoAdmin.LivePreviewSocket,\s*websocket: \[check_origin: false\],\s*longpoll: false}
+
     assert IgniterCase.source(igniter, "lib/studio_web.ex") =~ "helpers: true"
 
     router = IgniterCase.source(igniter, "lib/studio_web/router.ex")

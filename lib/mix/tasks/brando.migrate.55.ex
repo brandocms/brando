@@ -37,7 +37,8 @@ if Code.ensure_loaded?(Igniter) do
     Swoosh's API client, points Brando at the application's mailer (creating
     `MyApp.Mailer`, its development and test adapters and a placeholder
     sender when the application has none), adds
-    `Brando.Plug.Markdown`, `Brando.Plug.IndexNow` and `Brando.Plug.SiteAssets` to the endpoint, removes the
+    `Brando.Plug.Markdown`, `Brando.Plug.IndexNow` and `Brando.Plug.SiteAssets` to the endpoint, mounts
+    the live preview socket in it, removes the
     retired Sharp image processor from config, pins the declared `phoenix_live_view` JavaScript
     dependency, builds Vite source maps `hidden`, converts a legacy Fabric deployment to a reviewable Florist
     configuration, refreshes the gettext recovery helper, copies the
@@ -117,6 +118,7 @@ if Code.ensure_loaded?(Igniter) do
       |> SourceUpgrade.create_florist_config()
       |> SourceUpgrade.add_content_plugs()
       |> SourceUpgrade.add_site_assets_plug()
+      |> SourceUpgrade.add_live_preview_socket()
       |> SourceUpgrade.refresh_gettext_script()
       |> SourceUpgrade.carry_blueprint_translations()
       |> BlueprintGettext.carry_default_translations()
@@ -180,7 +182,8 @@ if Code.ensure_loaded?(Igniter) do
       file), before the router, and `plug Brando.Plug.SiteAssets` (pinned
       asset sets, and the cross-origin header sandboxed live previews need to
       load the site's scripts and fonts) before `plug Plug.Static`, unless it
-      has them.
+      has them. It mounts the live preview socket
+      (`BrandoAdmin.LivePreviewSocket`) after `socket "/admin/socket"`.
 
       When both legacy `deployment.cfg` and `fabfile.py` exist and no Florist
       configuration exists, the task also creates a reviewable

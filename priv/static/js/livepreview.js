@@ -39,9 +39,9 @@ const body = document.querySelector('body')
 const parser = new DOMParser()
 
 // The page is sandboxed (`Brando.Plug.LivePreview`): its origin is opaque and
-// it has none of the viewer's cookies. Its socket is the admin socket served
-// at `/__livepreview/socket`, which takes origin `null` and a preview token
-// alone (`BrandoAdmin.AdminSocket.preview_transport/0`); the token is read on
+// it has none of the viewer's cookies. Its socket is the preview socket the
+// endpoint mounts at `/__livepreview/socket` (`BrandoAdmin.LivePreviewSocket`),
+// which takes origin `null` and a preview token alone; the token is read on
 // every connect.
 const previewSocket = new Phoenix.Socket('/__livepreview/socket', {
   params: () => ({ token }),
@@ -53,13 +53,28 @@ const previewSocket = new Phoenix.Socket('/__livepreview/socket', {
 // keeps them.
 const framed = window.parent !== window
 
-function reloadPage() {
-  if (framed) {
-    window.parent.postMessage({ source: 'brando-live-preview', type: 'reload' }, location.origin)
-  } else {
-    window.location.reload()
-  }
+function tellParent(type) {
+  if (framed) window.parent.postMessage({ source: 'brando-live-preview', type }, location.origin)
 }
+
+function reloadPage() {
+  if (framed) tellParent('reload')
+  else window.location.reload()
+}
+
+// A socket that has never connected: the endpoint may not mount it (the
+// server log says so), or the server is away. The admin page says live
+// updates are unavailable until it connects.
+let connected = false
+previewSocket.onOpen(() => {
+  if (!connected) tellParent('connected')
+  connected = true
+})
+const reportUnavailable = () => {
+  if (!connected) tellParent('unavailable')
+}
+previewSocket.onError(reportUnavailable)
+previewSocket.onClose(reportUnavailable)
 
 // The token lasts `tokenMaxAge` seconds and the socket checks it only as it
 // connects; the channel hands over a fresh one well before it expires

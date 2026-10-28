@@ -9319,6 +9319,11 @@ msgstr ""
 msgid "Live switch scheduled."
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Live updates are unavailable, so the preview does not follow your changes. The server log says why."
+msgstr ""
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Live, from the layout beside it."

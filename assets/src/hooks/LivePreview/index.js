@@ -40,15 +40,17 @@ export default app => ({
       }
       if (event.target.closest('.live-preview-blank') && this.active) this.toggle()
     }
-    // The preview asks to load again (`reloadPage` in livepreview.js). It is
-    // sandboxed: loaded from here, the request carries the viewer's cookies,
-    // which a reload from inside would not. Its origin is opaque, so only
-    // this frame's page is listened to, by the message's source.
+    // The preview's messages (`tellParent` in livepreview.js). Its origin is
+    // opaque, so only this frame's page is listened to, by the message's
+    // source.
+    // - reload: it is sandboxed, and loaded from here the request carries the
+    //   viewer's cookies, which a reload from inside would not.
+    // - unavailable / connected: its socket has not connected yet, or now has.
     this.message = event => {
-      if (event.source !== this.$iframe.contentWindow) return
-      if (event.data?.source === 'brando-live-preview' && event.data.type === 'reload') {
-        this.$iframe.src = this.$iframe.getAttribute('src')
-      }
+      if (event.source !== this.$iframe.contentWindow || event.data?.source !== 'brando-live-preview') return
+      if (event.data.type === 'reload') this.$iframe.src = this.$iframe.getAttribute('src')
+      else if (event.data.type === 'unavailable') this.showUnavailable()
+      else if (event.data.type === 'connected' && this.unavailable) this.hideNotice()
     }
     window.addEventListener('message', this.message)
     this.el.addEventListener('click', this.click)
@@ -90,12 +92,26 @@ export default app => ({
   // its text from the server-rendered `data-message`.
   showNotice() {
     clearTimeout(this.noticeTimer)
+    this.unavailable = false
     this.$notice.textContent = this.$notice.dataset.message
     this.$notice.classList.add('is-visible')
-    this.noticeTimer = setTimeout(() => {
-      this.$notice.classList.remove('is-visible')
-      this.$notice.textContent = ''
-    }, 6000)
+    this.noticeTimer = setTimeout(() => this.hideNotice(), 6000)
+  },
+
+  // Stays until the preview's socket connects
+  showUnavailable() {
+    if (this.unavailable) return
+    clearTimeout(this.noticeTimer)
+    this.unavailable = true
+    this.$notice.textContent = this.$notice.dataset.unavailableMessage
+    this.$notice.classList.add('is-visible')
+  },
+
+  hideNotice() {
+    clearTimeout(this.noticeTimer)
+    this.unavailable = false
+    this.$notice.classList.remove('is-visible')
+    this.$notice.textContent = ''
   },
 
   lpSetMaxWidth() {
