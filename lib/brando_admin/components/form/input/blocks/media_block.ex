@@ -227,7 +227,16 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlock do
     """
   end
 
-  def handle_event("select_block", %{"block" => selected_block_type}, socket) do
+  # Only a type the module lists for the slot: the save holds the ref to it
+  # (`Brando.Content.RefGuard`), and the editor, its preview and the edit
+  # session should not show another one before that.
+  def handle_event("select_block", %{"block" => type}, socket) when is_binary(type) do
+    if type in socket.assigns.available_blocks,
+      do: select_block(type, socket),
+      else: {:noreply, socket}
+  end
+
+  defp select_block(selected_block_type, socket) do
     block_templates = socket.assigns.block_templates
 
     {module, id} = socket.assigns.target_ref

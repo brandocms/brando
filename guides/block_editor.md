@@ -256,7 +256,7 @@ not valid renders as nothing, and the editor refuses to save it.
 | `url` | An `https:` address or a relative one, escaped for an attribute | A quoted attribute |
 | `text` | Any text, HTML-escaped | Element content and quoted attributes |
 
-`{` and `}` in a value are escaped too, so a value never forms Liquid. Only
+`{`, `}` and `%` in a value are escaped too, so a value never forms Liquid. Only
 `{{ key }}` of a declared parameter is replaced, with optional spaces and no
 filters; any other `{{ … }}` in the template is left for the page's Liquid
 pass, as before. A template without parameters renders as it is.

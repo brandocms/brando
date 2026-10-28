@@ -79,6 +79,16 @@ defmodule Brando.Villain.Blocks.HtmlBlockTest do
       assert rendered =~ "&lt;/div&gt;&lt;script&gt;"
     end
 
+    test "never forms Liquid with the template's own braces" do
+      for type <- [:text, :url] do
+        rendered = render("<pre>{{{ v }}}</pre>", type, "% inspect entry %")
+        refute rendered =~ "{%"
+
+        context = Liquex.Context.new(%{"entry" => %{"title" => "SECRET"}})
+        refute Brando.Villain.parse_and_render(rendered, context) =~ "SECRET"
+      end
+    end
+
     test "never forms Liquid for the page's Liquid pass" do
       rendered = render("<p>{{ v }}</p>", :text, payload("liquid"))
       refute rendered =~ "{{"

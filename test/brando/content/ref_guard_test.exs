@@ -115,6 +115,16 @@ defmodule Brando.Content.RefGuardTest do
       assert %TextBlock{} = saved_ref(changeset, "body").data
     end
 
+    test "a saved ref keeps its name, so it cannot take another ref's place", c do
+      block = insert_block!(c)
+      embed = ref(block, "embed")
+
+      params = %{"refs" => %{"0" => %{"id" => to_string(embed.id), "name" => "body"}}}
+      changeset = Block.block_changeset(block, params, c.editor.id)
+
+      refute Enum.any?(Changeset.apply_changes(changeset).refs, &match?(%{name: "body", data: %HtmlBlock{}}, &1))
+    end
+
     test "a media slot takes a type its module lists", c do
       block = insert_block!(c)
 

@@ -136,8 +136,8 @@ defmodule Brando.Villain.Blocks.HtmlBlock do
     * `:text` — any text, escaped for element content and quoted
       attributes.
 
-  `{` and `}` are escaped too, so a value never forms Liquid for the page's
-  Liquid pass.
+  `{`, `}` and `%` are escaped too, so a value never forms Liquid for the
+  page's Liquid pass, alone or with the template's braces around it.
   """
   @spec escape(atom() | String.t(), term()) :: String.t()
   def escape(type, value) do
@@ -186,13 +186,20 @@ defmodule Brando.Villain.Blocks.HtmlBlock do
 
   defp encode(type, value) do
     case to_type(type) do
-      :url -> value |> Parser.escape_attr() |> escape_braces()
-      :text -> value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string() |> escape_braces()
+      :url -> value |> Parser.escape_attr() |> escape_liquid()
+      :text -> value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string() |> escape_liquid()
       _ -> value
     end
   end
 
-  defp escape_braces(value), do: value |> String.replace("{", "&#123;") |> String.replace("}", "&#125;")
+  # Liquid's delimiters, so a value forms none, alone or with the template's
+  # own braces around it (`{{{ key }}}` and a value starting with `%`).
+  defp escape_liquid(value) do
+    value
+    |> String.replace("{", "&#123;")
+    |> String.replace("}", "&#125;")
+    |> String.replace("%", "&#37;")
+  end
 
   defp to_type(type) when type in @types, do: type
 

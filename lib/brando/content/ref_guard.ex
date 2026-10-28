@@ -5,7 +5,8 @@ defmodule Brando.Content.RefGuard do
   `recursive_block_changeset/4`), so every write that casts blocks gets it:
   the block editor, recovery, drafts, content transfer and revisions.
 
-  For everyone, a ref keeps the type its module gives it:
+  For everyone, a ref keeps the type its module gives it, and a saved ref
+  keeps its name:
 
     * a saved ref's type only changes to one its module's definition of the
       ref allows: the same type, or, for a media slot, a type in its
@@ -64,6 +65,9 @@ defmodule Brando.Content.RefGuard do
     do: {ref, state}
 
   defp guard_ref(%Changeset{} = ref, state) do
+    # A saved ref keeps its name: a new one would put it, and its type, in
+    # another ref's place in the template.
+    ref = if ref.data.id, do: Changeset.delete_change(ref, :name), else: ref
     old = ref.data.data
     new = ref |> Changeset.get_field(:data) |> applied()
 
