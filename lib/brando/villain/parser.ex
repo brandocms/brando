@@ -341,12 +341,14 @@ defmodule Brando.Villain.Parser do
 
   def header(%{text: text}, _), do: ["<h1>", header_text(text), "</h1>"]
 
-  # A heading is plain text: escaped, its line breaks kept as `<br>`.
+  # A heading is plain text: escaped, its line breaks kept as `<br>`, and
+  # inert to the entry's final Liquid pass, as a string var is. A character
+  # reference typed into it (`&shy;`, `&nbsp;`) is the character it names.
   defp header_text(text) do
     text
     |> to_string()
-    |> Phoenix.HTML.html_escape()
-    |> Phoenix.HTML.safe_to_string()
+    |> HtmlEntities.decode()
+    |> escape_var_value()
     |> String.replace(~r/\r?\n/, "<br>")
   end
 
@@ -805,6 +807,7 @@ defmodule Brando.Villain.Parser do
           credits: Brando.Captions.library_html(fields.credits)
         })
       )
+
     alt = get_alt_text(fields.alt, caption)
 
     # Build assigns for the template
@@ -1672,10 +1675,13 @@ defmodule Brando.Villain.Parser do
 
   @doc """
   The text of a `string` or `text` var as Liquid gets it: HTML-escaped, so a
-  `<` or a quote an editor typed is printed as text.
+  `<` or a quote an editor typed is printed as text, and its braces
+  character references (`Brando.Villain.InertLiquid`), so Liquid an editor
+  typed is printed as text too rather than run by the entry's final Liquid
+  pass.
   """
   def escape_var_value(value) when is_binary(value),
-    do: value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+    do: value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string() |> Brando.Villain.InertLiquid.encode()
 
   def escape_var_value(value), do: value
 

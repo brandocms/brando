@@ -55,8 +55,9 @@ defmodule Brando.Villain.TemplateAdapter do
   in HEEx) reads the row's `city` var. Row fields win over a var of the same
   name, so positional access through `row.vars[0].value` keeps working.
 
-  With `escape: true` (Liquid) a row's `string` and `text` vars are
-  HTML-escaped, by key and in `row.vars` alike (`Brando.Villain.Parser.process_vars/2`).
+  A row's `rich_text` vars are sanitized and, with `escape: true` (Liquid),
+  its `string` and `text` vars HTML-escaped, by key and in `row.vars` alike
+  (`Brando.Villain.Parser.process_vars/2`).
   """
   def simple_block(module, block, opts \\ []) do
     escape? = Keyword.get(opts, :escape, false)
@@ -82,7 +83,7 @@ defmodule Brando.Villain.TemplateAdapter do
 
   defp table_row(%{vars: vars} = row, escape?) do
     row = if is_struct(row), do: Map.from_struct(row), else: row
-    row = if escape? and is_list(vars), do: %{row | vars: Enum.map(vars, &escape_var/1)}, else: row
+    row = if is_list(vars), do: %{row | vars: Enum.map(vars, &row_var(&1, escape?))}, else: row
 
     vars
     |> Brando.Villain.Parser.process_vars(escape: escape?)
@@ -92,10 +93,15 @@ defmodule Brando.Villain.TemplateAdapter do
 
   defp table_row(row, _escape?), do: row
 
-  defp escape_var(%{type: type, value: value} = var) when type in [:string, :text],
+  # `row.vars` holds the vars themselves: their values as `process_vars/2`
+  # gives them by key
+  defp row_var(%{type: type, value: value} = var, true) when type in [:string, :text],
     do: %{var | value: Brando.Villain.Parser.escape_var_value(value)}
 
-  defp escape_var(var), do: var
+  defp row_var(%{type: type, value: value} = var, _escape?) when type in [:rich_text, :html],
+    do: %{var | value: Brando.RichText.render_html(value)}
+
+  defp row_var(var, _escape?), do: var
 
   defp to_atom(key) when is_atom(key), do: key
   defp to_atom(key), do: String.to_atom(key)

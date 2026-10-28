@@ -82,7 +82,7 @@ defmodule Brando.Plug.Media do
 
   # Set before `Plug.Static` sends the file, and kept on its 304 and 404
   defp put_media_headers(conn, path),
-    do: Enum.reduce(media_headers(List.last(path)), conn, fn {k, v}, conn -> put_resp_header(conn, k, v) end)
+    do: Enum.reduce(media_headers(Path.join(path)), conn, fn {k, v}, conn -> put_resp_header(conn, k, v) end)
 
   defp subset([h | expected], [h | actual]), do: subset(expected, actual)
   defp subset([], actual), do: actual

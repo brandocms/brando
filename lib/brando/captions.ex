@@ -71,8 +71,12 @@ defmodule Brando.Captions do
   """
   def library_html(text) do
     cond do
-      not is_binary(text) or String.trim(text) == "" -> nil
-      markup?(text) -> if present?(text), do: text |> HtmlSanitizeEx.basic_html() |> Brando.Villain.InertLiquid.encode()
+      not is_binary(text) or String.trim(text) == "" ->
+        nil
+
+      markup?(text) ->
+        if present?(text), do: text |> HtmlSanitizeEx.basic_html() |> Brando.Villain.InertLiquid.encode()
+
       # Escaped once: a legacy caption's `&amp;` is the `&` it stands for
       true ->
         text

@@ -41,6 +41,24 @@ defmodule Brando.Content.Var.Type do
   def normalize(type) when is_binary(type), do: Map.get(@by_name, type)
   def normalize(_), do: nil
 
+  @doc """
+  `term` with each var in it typed `:html`, as a struct decoded from before
+  0.55 holds it (a pending translation's entry), typed `:rich_text`.
+  """
+  def rename_in(%{__struct__: Brando.Content.Var, type: :html} = var), do: %{var | type: :rich_text}
+
+  def rename_in(%{__struct__: module} = struct)
+      when module in [DateTime, NaiveDateTime, Date, Time, Decimal, Ecto.Association.NotLoaded, Ecto.Schema.Metadata],
+      do: struct
+
+  def rename_in(%{__struct__: _} = struct),
+    do:
+      struct |> Map.from_struct() |> Enum.reduce(struct, fn {key, value}, acc -> Map.put(acc, key, rename_in(value)) end)
+
+  def rename_in(map) when is_map(map), do: Map.new(map, fn {key, value} -> {key, rename_in(value)} end)
+  def rename_in(list) when is_list(list), do: Enum.map(list, &rename_in/1)
+  def rename_in(other), do: other
+
   @impl true
   def type, do: :string
 

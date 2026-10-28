@@ -37,11 +37,15 @@ defmodule Brando.EditorSinksTest do
 
   defp var(type, key, value), do: %Var{type: type, key: key, label: %{"en" => key}, value: value}
 
-  defp render_module(user, code, vars, type \\ :liquid) do
+  defp render_module(user, code, vars, type \\ :liquid, refs \\ []) do
     {:ok, module} = Content.create_module(Factory.params_for(:module, %{type: type, code: code}), user)
 
-    block = %{block: %Block{type: :module, module_id: module.id, uid: Brando.Utils.generate_uid(), vars: vars, refs: []}}
-    Brando.Villain.parse([block], %Brando.Pages.Page{})
+    block = %{
+      block: %Block{type: :module, module_id: module.id, uid: Brando.Utils.generate_uid(), vars: vars, refs: refs}
+    }
+
+    # An entry whose title holds markup, which Liquid prints as it is stored
+    Brando.Villain.parse([block], %Brando.Pages.Page{title: @handler})
   end
 
   describe "the rich_text var type" do
@@ -60,6 +64,18 @@ defmodule Brando.EditorSinksTest do
       # revision holds it
       var = Brando.Repo.insert!(var(:html, "body", "<p>Body</p>"))
       assert Brando.Repo.get!(Var, var.id).type == :rich_text
+
+      # A pending translation stored before the rename decodes with the new name
+      stored = %Brando.Pages.Page{
+        title: "Old",
+        vars: [var(:html, "intro", "<p>Intro</p>")],
+        inserted_at: ~N[2026-01-01 00:00:00]
+      }
+
+      payload = :erlang.term_to_binary(stored)
+      decoded = Brando.Translations.decode_payload(%Brando.Translations.PendingVersion{payload: payload})
+      assert [%Var{type: :rich_text, value: "<p>Intro</p>"}] = decoded.vars
+      assert decoded.inserted_at == ~N[2026-01-01 00:00:00]
 
       assert %{rows: [["rich_text"]]} =
                Ecto.Adapters.SQL.query!(BrandoIntegration.Repo, "SELECT type FROM content_vars WHERE id = $1", [var.id])
@@ -154,16 +170,58 @@ defmodule Brando.EditorSinksTest do
       assert active(html) == 0
     end
 
-    test "a table row's vars are escaped by key and in its vars" do
-      row = %{vars: [var(:string, "city", @handler)]}
+    test "a table row's vars are escaped or sanitized by key and in its vars" do
+      row = %{vars: [var(:string, "city", @handler), var(:rich_text, "note", "<p>Note</p>" <> @handler)]}
       block = %{uid: "b", type: :module, table_rows: [row]}
 
       %{table_rows: [liquid]} = Brando.Villain.TemplateAdapter.simple_block(%{class: nil}, block, escape: true)
       assert active(liquid.city) == 0
-      assert active(hd(liquid.vars).value) == 0
+      assert active(liquid.note) == 0
+      assert Enum.all?(liquid.vars, &(active(&1.value) == 0))
 
       %{table_rows: [heex]} = Brando.Villain.TemplateAdapter.simple_block(%{class: nil}, block)
       assert heex.city == @handler
+      assert [%{value: @handler}, %{value: note}] = heex.vars
+      assert active(note) == 0
+    end
+
+    test "Liquid typed into a string var or a heading is printed, not run", %{user: user} do
+      header = %Brando.Content.Ref{
+        name: "heading",
+        uid: Brando.Utils.generate_uid(),
+        data: %Brando.Villain.Blocks.HeaderBlock{
+          data: %Brando.Villain.Blocks.HeaderBlock.Data{text: "{{ entry.title }}", level: 2}
+        }
+      }
+
+      html =
+        render_module(
+          user,
+          "<p>{{ headline }}</p><p>{{ headline | escape }}</p>{% ref refs.heading %}",
+          [var(:string, "headline", "{{ entry.title }}")],
+          :liquid,
+          [header]
+        )
+
+      assert active(html) == 0
+      assert html =~ "<p>&#123;&#123; entry.title &#125;&#125;</p><p>&#123;&#123; entry.title &#125;&#125;</p>"
+      assert html =~ "<h2>&#123;&#123; entry.title &#125;&#125;</h2>"
+    end
+
+    test "HEEx reads globals unescaped, and escapes them once", %{user: user} do
+      {:ok, _} =
+        Brando.Sites.create_global_set(
+          %{
+            "label" => "System",
+            "key" => "system",
+            "language" => "en",
+            "vars" => [%{"type" => "string", "label" => "Name", "key" => "name", "value" => "Tom & Jerry"}]
+          },
+          user
+        )
+
+      html = render_module(user, "<p>{@globals[\"system\"][\"name\"]}</p>", [], :heex)
+      assert html =~ "<p>Tom &amp; Jerry</p>"
     end
 
     test "globals are escaped as vars are", %{user: user} do
@@ -199,14 +257,20 @@ defmodule Brando.EditorSinksTest do
       ]
 
       context = Brando.Villain.add_to_context(Brando.Villain.create_context(%{}), "links", %{links: links})
-      html = Brando.Villain.parse_and_render(~s(<a href="{{ links.shop.url }}">S</a><a href="{{ links.bad.url }}">B</a>), context)
+
+      html =
+        Brando.Villain.parse_and_render(
+          ~s(<a href="{{ links.shop.url }}">S</a><a href="{{ links.bad.url }}">B</a>),
+          context
+        )
 
       assert html =~ ~s(href="https://shop.example/?a=1&amp;b=&quot;2&quot;")
       assert html =~ ~s(<a href="">B</a>)
 
       heex = fn link -> Phoenix.HTML.Safe.to_iodata(link) |> IO.iodata_to_binary() end
-      assert heex.(hd(links)) == "https://shop.example/?a=1&amp;b=&quot;2&quot;"
-      assert heex.(List.last(links)) == ""
+      [shop, bad] = links
+      assert heex.(shop) == "https://shop.example/?a=1&amp;b=&quot;2&quot;"
+      assert heex.(bad) == ""
     end
 
     test "link filters print their text and address escaped" do
@@ -216,6 +280,21 @@ defmodule Brando.EditorSinksTest do
       html = Brando.Villain.parse_and_render(~s(<a href="{{ cta | link_url }}">{{ cta | link_text }}</a>), context)
       assert html =~ ~s(href="/a?b=1&amp;c=&quot;2&quot;")
       assert active(html) == 0
+
+      # An entry's title, which a HEEx identifier stores escaped, is escaped once
+      entry_link = %Var{
+        type: :link,
+        link_type: :identifier,
+        link_text: nil,
+        identifier: %Brando.Content.Identifier{
+          schema: Brando.JSONLDTest.Person,
+          url: "/rooms",
+          title: "Rooms &amp; suites"
+        }
+      }
+
+      context = Brando.Villain.create_context(%{"cta" => entry_link})
+      assert Brando.Villain.parse_and_render("{{ cta | link_text }}", context) == "Rooms &amp; suites"
     end
   end
 
@@ -224,6 +303,11 @@ defmodule Brando.EditorSinksTest do
       html = Parser.header(%{text: "First line\n" <> @handler, level: 2}, %{}) |> IO.iodata_to_binary()
 
       assert html =~ "<h2>First line<br>&lt;img"
+
+      # A character reference typed into a heading is the character it names
+      assert Parser.header(%{text: "Fjell&shy;vandring &amp; mer", level: 2}, %{}) |> IO.iodata_to_binary() ==
+               "<h2>Fjell­vandring &amp; mer</h2>"
+
       assert active(html) == 0
 
       linked = Parser.header(%{text: @script, level: 3, link: "/about"}, %{}) |> IO.iodata_to_binary()
@@ -276,7 +360,13 @@ defmodule Brando.EditorSinksTest do
       assert Brando.Repo.get!(Var, var.id).value == "<p>Kilde<br></p>"
 
       entry = Brando.Repo.insert!(%Brando.LinkTest.Case{title: "Case", slug: "case", summary: "<p>Source</p>"})
-      Brando.AI.Translation.apply_translations([{:field, :summary, "<p>Kilde</p>" <> @script}], entry, Brando.LinkTest.Case)
+
+      Brando.AI.Translation.apply_translations(
+        [{:field, :summary, "<p>Kilde</p>" <> @script}],
+        entry,
+        Brando.LinkTest.Case
+      )
+
       assert Brando.Repo.get!(Brando.LinkTest.Case, entry.id).summary == "<p>Source</p>"
     end
   end

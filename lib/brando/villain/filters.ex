@@ -277,7 +277,10 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.escape_once("1 &lt; 2 &amp; 3", %{})
       "1 &lt; 2 &amp; 3"
   """
-  def escape_once(value, _), do: value |> to_string() |> HtmlEntities.decode() |> HtmlEntities.encode()
+  # Braces are encoded too, so the entry's final Liquid pass prints them as
+  # text (`Brando.Villain.InertLiquid`): an escaped value is text.
+  def escape_once(value, _),
+    do: value |> to_string() |> HtmlEntities.decode() |> HtmlEntities.encode() |> Brando.Villain.InertLiquid.encode()
 
   @doc """
   Returns the first item of an array.
@@ -1178,6 +1181,7 @@ defmodule Brando.Villain.Filters do
     |> HtmlEntities.decode()
     |> Brando.HTML.render_markdown()
     |> Phoenix.HTML.safe_to_string()
+    |> Brando.Villain.InertLiquid.encode()
   end
 
   @doc """
@@ -1283,8 +1287,9 @@ defmodule Brando.Villain.Filters do
        when not is_nil(text),
        do: text
 
-  defp get_link_text(%{link_type: :identifier, link_text: nil, identifier: %{title: text}}),
-    do: text
+  # The entry's title as text: a HEEx identifier stores it escaped
+  defp get_link_text(%{link_type: :identifier, link_text: nil, identifier: %{title: _} = identifier}),
+    do: Identifier.title_text(identifier)
 
   defp get_link_text(_), do: nil
 end

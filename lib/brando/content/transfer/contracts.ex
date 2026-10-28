@@ -31,7 +31,21 @@ defmodule Brando.Content.Transfer.Contracts do
   defp unset_multi(data), do: Map.update(data, "multi", false, &(&1 || false))
 
   def table(table), do: table |> Params.snapshot() |> Map.fetch!("vars") |> types()
-  defp types(vars), do: Map.new(vars, &{&1["key"], &1["type"]})
+  defp types(vars), do: Map.new(vars, &{&1["key"], var_type(&1["type"])})
+
+  # A `rich_text` var was called `html` before brando_225: a bundle exported
+  # before the upgrade names it so.
+  defp var_type("html"), do: "rich_text"
+  defp var_type(type), do: type
+
+  defp var_types(nil), do: nil
+  defp var_types(types) when is_map(types), do: Map.new(types, fn {key, type} -> {key, var_type(type)} end)
+  defp var_types(types), do: types
+
+  defp rename_html_vars(%{"vars" => vars} = definition) when is_list(vars),
+    do: %{definition | "vars" => Enum.map(vars, &Map.update(&1, "type", nil, fn type -> var_type(type) end))}
+
+  defp rename_html_vars(definition), do: definition
 
   def normalized(module) do
     module |> Params.snapshot() |> Map.take(@settings ++ ~w(code class refs vars)) |> unset_multi() |> normalize()
@@ -50,6 +64,7 @@ defmodule Brando.Content.Transfer.Contracts do
   defp normalize(value), do: value
 
   def differences(%{"kind" => "module", "definition" => source}, %Brando.Content.Module{} = module) do
+    source = rename_html_vars(source)
     destination = normalized(module)
     for key <- ~w(code class refs vars), source[key] != destination[key], do: key
   end
@@ -73,10 +88,10 @@ defmodule Brando.Content.Transfer.Contracts do
 
     compare!(old["refs"], latest["refs"], "reference")
     compare!(Map.new(block["refs"], &{&1["name"], &1["data"]["type"]}), latest["refs"], "reference")
-    compare!(old["vars"], latest["vars"], "variable")
+    compare!(var_types(old["vars"]), latest["vars"], "variable")
     compare!(types(block["vars"]), latest["vars"], "variable")
 
-    if old["table"] != latest["table"],
+    if var_types(old["table"]) != latest["table"],
       do:
         Error.fail!(
           dgettext(

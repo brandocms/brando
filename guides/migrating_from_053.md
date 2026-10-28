@@ -342,7 +342,9 @@ sender first, before the first compile.
 **Not found by any task.** Their correct rewrite depends on the application:
 
 - **Markup editors wrote where text belongs.** Liquid modules print `string`
-  and `text` vars and globals HTML-escaped; header refs show their text as
+  and `text` vars, globals and identity links HTML-escaped, braces included,
+  so Liquid in them is printed rather than run (a comparison, `truncate` or
+  `replace` on them sees the escaped text); header refs show their text as
   typed, with line breaks still as `<br>`; Markdown refs render no raw HTML
   and no script links; a picture's own title and credits are escaped. Look
   for markup in those in the module code and the content (the seeded Hero's

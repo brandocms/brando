@@ -112,7 +112,7 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
   def context_assigns(context) do
     Enum.reduce(@context_assign_defaults, @context_assign_defaults, fn {assigns_key, default}, assigns ->
       context_key = Atom.to_string(assigns_key)
-      Map.put(assigns, assigns_key, Liquex.Context.get(context, context_key) || default)
+      Map.put(assigns, assigns_key, Brando.Villain.raw_context(context, context_key) || default)
     end)
   end
 

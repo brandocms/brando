@@ -89,10 +89,22 @@ defmodule Brando.Content.Definition.Snapshot do
   def baseline_digest(bundle, definition) do
     if get_in(bundle, ["baseline", "version"]) == @baseline_version,
       do: version_2_digest(definition),
-      else: Value.digest(definition)
+      else: definition |> with_html_vars() |> Value.digest()
   end
 
-  defp version_2_digest(definition), do: definition |> drop_implied_link_defaults() |> Value.baseline_digest()
+  defp version_2_digest(definition),
+    do: definition |> drop_implied_link_defaults() |> with_html_vars() |> Value.baseline_digest()
+
+  # A `rich_text` var was an `html` var before brando_225, and a baseline from
+  # before the upgrade was digested with that name: digests use it, so the
+  # rename is no change to the definition.
+  defp with_html_vars(%{"vars" => vars} = definition) when is_list(vars),
+    do: %{definition | "vars" => Enum.map(vars, &html_var/1)}
+
+  defp with_html_vars(definition), do: definition
+
+  defp html_var(%{"type" => "rich_text"} = var), do: %{var | "type" => "html"}
+  defp html_var(var), do: var
 
   # Before `link_default_type`, an empty link of type identifier was how a var
   # opened on Content, and brando_224 gave those the default they implied. A
