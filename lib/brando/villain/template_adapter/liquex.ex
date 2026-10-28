@@ -96,7 +96,9 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
     do: Context.assign(context, :brando_module_id, module_id)
 
   defp add_block_to_context(context, module, block) do
-    simple_block = TemplateAdapter.simple_block(module, block, escape: true)
+    # A module's Markdown template prints no HTML: its rows' text as typed
+    escape? = not Brando.Villain.Markdown.template_context?(context)
+    simple_block = TemplateAdapter.simple_block(module, block, escape: escape?)
 
     Context.assign(context, :block, simple_block)
   end

@@ -657,7 +657,9 @@ defmodule Brando.AI.Translation do
 
   # Model output is stored as an editor's would be: rich text sanitized, and
   # refused (the copy keeps the source text) when it holds unsafe markup.
-  # Refs go through their block's changeset (`update_ref_inner_data/3`).
+  # Refs go through their data's changeset (`update_ref_inner_data/3`), which
+  # sanitizes a text ref's text; markup refs are kept out by the wrapper
+  # list each write names, not by that changeset.
   defp apply_single_translation({:field, field_name, translated_text}, entry, schema) do
     entry
     |> Ecto.Changeset.change(%{field_name => translated_text})

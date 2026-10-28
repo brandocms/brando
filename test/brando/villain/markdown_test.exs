@@ -144,6 +144,26 @@ defmodule Brando.Villain.MarkdownTest do
       assert markdown == "## Facts\n\nA *restored* bathhouse.\n\n- Rooms: 221"
     end
 
+    # Markdown is no HTML: a table row's text is as typed there, as a var's is
+    test "a table row's values are as typed" do
+      module =
+        module!("<div>html</div>",
+          markdown: "{% for row in block.table_rows %}`{{ row.city }}` {{ row.note }}{% endfor %}"
+        )
+
+      row = %{
+        vars: [
+          %Brando.Content.Var{key: "city", label: %{}, type: :string, value: "Tom & {Jerry}"},
+          %Brando.Content.Var{key: "note", label: %{}, type: :rich_text, value: "<p>Note</p><script>x</script>"}
+        ]
+      }
+
+      markdown = render([Map.put(block(module, []), :table_rows, [row])])
+
+      assert markdown =~ "`Tom & {Jerry}`"
+      refute markdown =~ "script"
+    end
+
     test "an HTML ref's template takes its parameters' values" do
       data = %{
         text: "<p>{{ caption }}</p>",
