@@ -9321,6 +9321,11 @@ msgstr "Live-bytte lagt i kø."
 msgid "Live switch scheduled."
 msgstr "Live-bytte planlagt."
 
+#: lib/brando_admin/components/form.ex
+#, elixir-autogen, elixir-format
+msgid "Live updates are unavailable, so the preview does not follow your changes."
+msgstr "Direkteoppdatering er ikke tilgjengelig, så forhåndsvisningen følger ikke endringene dine."
+
 #: lib/brando_admin/components/form/var_layout.ex
 #, elixir-autogen, elixir-format
 msgid "Live, from the layout beside it."

@@ -2500,15 +2500,84 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    @doc """
+    Adds `plug Brando.Plug.SiteAssets` to the endpoint, right before its
+    `plug Plug.Static`, as in the install template. It serves the asset sets
+    shared previews pin, and sends the site's static files with
+    `Access-Control-Allow-Origin: *`, without which a sandboxed live preview
+    cannot load the site's module scripts and fonts. A plug the endpoint
+    already has is left where it is.
+    """
+    def add_site_assets_plug(igniter, endpoint \\ nil) do
+      endpoint = endpoint || default_endpoint(igniter)
+
+      missing =
+        "add `plug Brando.Plug.SiteAssets` to #{inspect(endpoint)}, right before `plug Plug.Static`. " <>
+          "Without it, live previews cannot load the site's module scripts and fonts."
+
+      add_endpoint_plug(igniter, endpoint, Brando.Plug.SiteAssets, missing, &plug_before_static/3)
+    end
+
+    @doc """
+    Mounts the live preview socket (`BrandoAdmin.LivePreviewSocket`) in the
+    endpoint, right after its `socket "/admin/socket"`, or after its
+    `use Phoenix.Endpoint` without one. Live previews are sandboxed, so their
+    socket connects from origin `null`; without the line they show no live
+    updates. An endpoint that already mounts something at
+    `/__livepreview/socket` is left alone.
+    """
+    def add_live_preview_socket(igniter, endpoint \\ nil) do
+      endpoint = endpoint || default_endpoint(igniter)
+      line = BrandoAdmin.LivePreviewSocket.endpoint_line()
+      missing = "add this line to #{inspect(endpoint)}, next to `socket \"/admin/socket\"`: #{line}"
+
+      with {:ok, {igniter, _source, defmodule}} <- ProjectModule.find_module(igniter, endpoint),
+           {:ok, body} <- Common.move_to_do_block(defmodule),
+           :error <- move_to_socket(body, "/__livepreview/socket") do
+        case ProjectModule.find_and_update_module(igniter, endpoint, &mount_preview_socket(&1, line, missing)) do
+          {:ok, igniter} -> igniter
+          {:error, igniter} -> Igniter.add_warning(igniter, "Could not find the endpoint; " <> missing)
+        end
+      else
+        {:ok, _socket} -> igniter
+        {:error, igniter} -> Igniter.add_warning(igniter, "Could not find the endpoint; " <> missing)
+        :error -> Igniter.add_warning(igniter, "Could not read the endpoint; " <> missing)
+      end
+    end
+
+    defp mount_preview_socket(zipper, line, missing) do
+      case move_to_socket(zipper, "/admin/socket") do
+        {:ok, anchor} ->
+          {:ok, Common.add_code(anchor, line, placement: :after)}
+
+        :error ->
+          use_endpoint =
+            CodeFunction.move_to_function_call_in_current_scope(zipper, :use, [1, 2], fn call ->
+              CodeFunction.argument_equals?(call, 0, Phoenix.Endpoint)
+            end)
+
+          case use_endpoint do
+            {:ok, anchor} -> {:ok, Common.add_code(anchor, line, placement: :after)}
+            :error -> {:warning, "Could not find `socket \"/admin/socket\"` or `use Phoenix.Endpoint`; " <> missing}
+          end
+      end
+    end
+
+    defp move_to_socket(zipper, path) do
+      CodeFunction.move_to_function_call_in_current_scope(zipper, :socket, [2, 3], fn call ->
+        CodeFunction.argument_equals?(call, 0, path)
+      end)
+    end
+
     defp default_endpoint(igniter), do: Module.concat(Igniter.Libs.Phoenix.web_module(igniter), Endpoint)
 
-    defp add_endpoint_plug(igniter, endpoint, plug, missing) do
+    defp add_endpoint_plug(igniter, endpoint, plug, missing, place \\ &plug_before_router/3) do
       # Updating a module reformats its file, so an endpoint that already has
       # the plug is only read.
       with {:ok, {igniter, _source, defmodule}} <- ProjectModule.find_module(igniter, endpoint),
            {:ok, body} <- Common.move_to_do_block(defmodule),
            :error <- move_to_plug(body, &Common.nodes_equal?(&1, plug)) do
-        case ProjectModule.find_and_update_module(igniter, endpoint, &plug_before_router(&1, plug, missing)) do
+        case ProjectModule.find_and_update_module(igniter, endpoint, &place.(&1, plug, missing)) do
           {:ok, igniter} -> igniter
           {:error, igniter} -> Igniter.add_warning(igniter, "Could not find the endpoint; " <> missing)
         end
@@ -2525,6 +2594,13 @@ if Code.ensure_loaded?(Igniter) do
         {:warning, "Could not find the router plug; " <> missing}
       else
         {:ok, anchor} -> {:ok, Common.add_code(anchor, "plug #{inspect(plug)}", placement: :before)}
+      end
+    end
+
+    defp plug_before_static(zipper, plug, missing) do
+      case move_to_plug(zipper, &Common.nodes_equal?(&1, Plug.Static)) do
+        {:ok, anchor} -> {:ok, Common.add_code(anchor, "plug #{inspect(plug)}", placement: :before)}
+        :error -> {:warning, "Could not find `plug Plug.Static`; " <> missing}
       end
     end
 

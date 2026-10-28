@@ -9207,6 +9207,7 @@ defmodule BrandoAdmin.Components.Form do
               class="live-preview-notice"
               role="status"
               data-message={gettext("The preview was missing some changes, so it was refreshed.")}
+              data-unavailable-message={gettext("Live updates are unavailable, so the preview does not follow your changes.")}
             >
             </p>
             <iframe
@@ -9214,6 +9215,7 @@ defmodule BrandoAdmin.Components.Form do
               title={gettext("Live preview")}
               data-live-preview-device={@live_preview_target}
               src={"/__livepreview?key=#{@live_preview_cache_key}"}
+              sandbox={Brando.Plug.LivePreview.sandbox_flags()}
             ></iframe>
           </div>
         </div>

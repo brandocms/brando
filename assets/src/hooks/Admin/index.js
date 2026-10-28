@@ -56,10 +56,9 @@ export default app => ({
       }
     }
 
+    // A standalone preview has no reference back to this page
     this.handleEvent('b:open_window', ({ url }) => {
-      console.log('==> Open window standalone')
-      // open url in new tab/window
-      window.open(url, '_blank')
+      window.open(url, '_blank', 'noopener')
     })
 
     this.handleEvent('b:scroll_to_first_error', () => {

@@ -70,6 +70,10 @@ defmodule BrandoIntegrationWeb.Endpoint do
     websocket: true,
     longpoll: false
 
+  socket "/__livepreview/socket", BrandoAdmin.LivePreviewSocket,
+    websocket: [check_origin: false],
+    longpoll: false
+
   plug Plug.Session,
     store: :cookie,
     key: "_test",

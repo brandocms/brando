@@ -112,8 +112,9 @@ session's sockets, clears session data, and removes the remember-me cookie. It
 does not mean “revoke every other browser belonging to this account”;
 changing the password does (see below).
 
-A session's sockets are its LiveViews and its admin socket
-(`BrandoAdmin.AdminSocket`: presence, notifications and live preview). They
+A session's sockets are its LiveViews, its admin socket
+(`BrandoAdmin.AdminSocket`: presence and notifications) and its live preview
+pages' sockets (`BrandoAdmin.LivePreviewSocket`). They
 share one id per session, `Brando.Users.live_socket_id/1`, made from a
 hash of the session token, and `Brando.Users.disconnect_session/1` closes
 them, once the transaction that ended the session has committed. Whatever ends a session —

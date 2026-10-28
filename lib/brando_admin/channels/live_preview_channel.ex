@@ -5,6 +5,7 @@ defmodule BrandoAdmin.LivePreviewChannel do
   use Phoenix.Channel
   alias Brando.Authorization.{Preview, Realtime}
   alias Brando.LivePreview
+  alias Brando.LivePreview.SocketToken
 
   intercept(["update", "rerender", "reload", "update_block"])
 
@@ -18,6 +19,7 @@ defmodule BrandoAdmin.LivePreviewChannel do
          :ok <- Preview.authorize(preview_id, viewer_id) do
       Realtime.subscribe()
       send(self(), :sync_preview)
+      schedule_token(socket)
 
       socket =
         socket
@@ -37,7 +39,7 @@ defmodule BrandoAdmin.LivePreviewChannel do
   # its session lasts. An admin socket joins any preview its user may see.
   defp viewer(%{assigns: %{preview: %{key: key, user_id: user_id, tenant: tenant}}} = socket, key) do
     if Brando.Users.session_valid?(socket.assigns.session_id, user_id) and
-         tenant == Brando.LivePreview.SocketToken.tenant(key),
+         tenant == SocketToken.tenant(key),
        do: {:ok, user_id},
        else: :error
   end
@@ -47,6 +49,15 @@ defmodule BrandoAdmin.LivePreviewChannel do
   defp viewer(socket, _key) do
     if BrandoAdmin.AdminSocket.session_valid?(socket), do: {:ok, socket.assigns.user_id}, else: :error
   end
+
+  # A preview document's token lasts `SocketToken.max_age/0` and is checked
+  # only as its socket connects. The document is sandboxed, with none of the
+  # viewer's cookies, so it cannot ask for a fresh one over HTTP: the channel
+  # hands it one well before the last expires, for its next reconnect.
+  defp schedule_token(%{assigns: %{preview: _}}),
+    do: Process.send_after(self(), :refresh_token, div(SocketToken.max_age(), 3) * 1000)
+
+  defp schedule_token(_socket), do: :ok
 
   def handle_out(event, payload, socket) do
     if Preview.authorize(socket.assigns.preview_id, socket.assigns.viewer_id) == :ok do
@@ -81,6 +92,19 @@ defmodule BrandoAdmin.LivePreviewChannel do
 
       _ ->
         {:noreply, socket}
+    end
+  end
+
+  def handle_info(:refresh_token, socket) do
+    %{preview_id: key, session_id: session_id, viewer_id: user_id} = socket.assigns
+
+    with {:ok, ^user_id} <- viewer(socket, key),
+         :ok <- Preview.authorize(key, user_id) do
+      push(socket, "token", %{token: SocketToken.build(%{id: user_id}, session_id, key)})
+      schedule_token(socket)
+      {:noreply, socket}
+    else
+      _ -> {:stop, :normal, socket}
     end
   end
 

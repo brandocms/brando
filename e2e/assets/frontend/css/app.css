@@ -37,6 +37,10 @@ body {
   min-height: 100%;
 }
 
+body {
+  font-family: "E2E Sans", system-ui, sans-serif;
+}
+
 svg:not(:root) {
   overflow: hidden;
 }

@@ -392,6 +392,7 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     has_plugs = """
     defmodule LegacyAppWeb.Endpoint do
       use Phoenix.Endpoint, otp_app: :legacy_app
+      socket "/__livepreview/socket", BrandoAdmin.LivePreviewSocket, websocket: [check_origin: false], longpoll: false
       plug Brando.Plug.Markdown
       plug Brando.Plug.IndexNow
       plug Brando.Plug.Health
@@ -449,6 +450,104 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
 
     without_endpoint = migrate(@blueprint_054, Map.delete(files, endpoint_path))
     assert_has_warning(without_endpoint, &(&1 =~ "add `plug Brando.Plug.Markdown` and"))
+  end
+
+  # Sandboxed live previews load the site's module scripts and fonts
+  # cross-origin; SiteAssets sends them with the header that allows it.
+  test "adds the SiteAssets plug to the endpoint, right before Plug.Static" do
+    endpoint_path = "lib/legacy_app_web/endpoint.ex"
+
+    endpoint = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      plug Plug.Static, at: "/", from: :legacy_app
+      plug Plug.Session, @session_options
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    files = %{endpoint_path => endpoint, @deployment_config_path => nil, @fabfile_path => nil}
+    igniter = migrate(@blueprint_054, files)
+
+    assert source(igniter, endpoint_path) =~
+             ~r/plug\(?Brando.Plug.SiteAssets\)?\n\s*plug\(?Plug.Static, at: "\/", from: :legacy_app\)?/
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, endpoint_path)
+
+    no_static = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      plug Plug.Session, @session_options
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    igniter = migrate(@blueprint_054, %{files | endpoint_path => no_static})
+    refute source(igniter, endpoint_path) =~ "Brando.Plug.SiteAssets"
+    assert_has_warning(igniter, &(&1 =~ "add `plug Brando.Plug.SiteAssets`"))
+  end
+
+  # Sandboxed live previews connect from origin `null`, which the admin
+  # socket refuses: they have a socket of their own
+  test "mounts the live preview socket after the admin socket" do
+    endpoint_path = "lib/legacy_app_web/endpoint.ex"
+
+    endpoint = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      socket "/admin/socket", BrandoAdmin.AdminSocket, websocket: true, longpoll: true
+
+      plug Plug.Session, @session_options
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    files = %{endpoint_path => endpoint, @deployment_config_path => nil, @fabfile_path => nil}
+    igniter = migrate(@blueprint_054, files)
+
+    assert source(igniter, endpoint_path) =~
+             ~r{socket\(?"/admin/socket", BrandoAdmin.AdminSocket, websocket: true, longpoll: true\)?\n\s*socket\(?\s*"/__livepreview/socket",\s*BrandoAdmin.LivePreviewSocket,\s*websocket: \[check_origin: false\],\s*longpoll: false\s*\)?}
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, endpoint_path)
+
+    # Already mounted, with options of its own: left as it is
+    mounted = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      socket "/__livepreview/socket", BrandoAdmin.LivePreviewSocket,
+        websocket: [check_origin: false, connect_info: [:user_agent]],
+        longpoll: false
+
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    contents = migrate(@blueprint_054, %{files | endpoint_path => mounted}) |> source(endpoint_path)
+    assert length(String.split(contents, "/__livepreview/socket")) == 2
+    assert contents =~ "connect_info: [:user_agent]"
+
+    # No admin socket: after `use Phoenix.Endpoint`, where sockets go
+    no_admin_socket = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      plug Plug.Session, @session_options
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    assert migrate(@blueprint_054, %{files | endpoint_path => no_admin_socket}) |> source(endpoint_path) =~
+             ~r{otp_app: :legacy_app\n\n\s*socket\(?\s*"/__livepreview/socket",\s*BrandoAdmin.LivePreviewSocket,.*?\n\s*plug\(?Plug.Session}s
+
+    # The endpoint cannot be found: the warning carries the exact line
+    without_endpoint = migrate(@blueprint_054, Map.delete(files, endpoint_path))
+    assert_has_warning(without_endpoint, &(&1 =~ BrandoAdmin.LivePreviewSocket.endpoint_line()))
   end
 
   test "points Brando at the application's mailer" do

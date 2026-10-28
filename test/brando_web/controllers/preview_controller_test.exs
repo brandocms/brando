@@ -18,6 +18,11 @@ defmodule BrandoWeb.PreviewControllerTest do
     response = BrandoWeb.PreviewController.show(build_conn(), %{"preview_key" => key})
     assert response.status == 200
     assert response.resp_body =~ "Shared draft"
+
+    # Editor content on the site's origin: sandboxed as a live preview is,
+    # with the storage stand-ins the site's scripts need there
+    assert get_resp_header(response, "content-security-policy") == [Brando.Plug.LivePreview.sandbox_policy()]
+    assert response.resp_body =~ ~s(<script src="#{Brando.Plug.LivePreview.storage_path()}"></script><main>)
     assert {:snooze, seconds} = Brando.Worker.PreviewPurger.perform(%Oban.Job{args: %{"id" => preview.id}})
     assert seconds > 0
     assert Repo.get(Preview, preview.id)
@@ -48,5 +53,28 @@ defmodule BrandoWeb.PreviewControllerTest do
 
     assert {:error, _} =
              BrandoWeb.PreviewController.show(build_conn(), %{"preview_key" => preview.preview_key})
+  end
+
+  # The pipeline's policy (`put_secure_browser_headers`, the site's
+  # `script-src`) still applies, with the sandbox on top
+  test "the sandbox joins the policy the pipeline set" do
+    user = Brando.Factory.insert(:random_user, avatar: nil)
+    key = Brando.Utils.random_string(12)
+
+    Repo.insert!(%Preview{
+      creator_id: user.id,
+      preview_key: Preview.hash_key(key),
+      html: Brando.Utils.term_to_binary("<main>Shared draft</main>"),
+      expires_at: DateTime.utc_now() |> DateTime.add(60, :second) |> DateTime.truncate(:second)
+    })
+
+    conn =
+      build_conn()
+      |> put_resp_header("content-security-policy", "base-uri 'self'; frame-ancestors 'self'; script-src 'self'")
+      |> BrandoWeb.PreviewController.show(%{"preview_key" => key})
+
+    assert get_resp_header(conn, "content-security-policy") == [
+             Brando.Plug.LivePreview.sandbox_policy() <> "; base-uri 'self'; frame-ancestors 'self'; script-src 'self'"
+           ]
   end
 end

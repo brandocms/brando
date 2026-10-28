@@ -70,6 +70,23 @@ an iframe successfully does not establish that recovered unsaved inputs have
 reached the server. Keep the recovery form outside the conditional preview pane
 and avoid replacing the ignored iframe wrapper during ordinary patches.
 
+## The preview is sandboxed
+
+Preview responses and `/__p__` snapshots carry a CSP `sandbox` without
+`allow-same-origin` (`Brando.Plug.LivePreview.sandbox_policy/0`), and the admin
+iframes the same flags as an attribute: the page's origin is `null`. Talk to
+it with `postMessage` (`source: 'brando-admin'` in, `'brando-live-preview'`
+out), matching messages from it by `event.source`, since its origin is
+`null`; `contentDocument` is unreadable. It has no cookies: it loads again
+only when the parent resets the iframe `src` (its `reload` request), gets
+socket tokens from the channel's `token` push, and connects to
+`BrandoAdmin.LivePreviewSocket`, which the project's endpoint mounts at
+`/__livepreview/socket` with no origin check (preview tokens only). Until it
+first connects the page posts `unavailable`, and the drawer says live
+updates are unavailable. Site scripts get in-memory storage
+(`livepreview_storage.js`) and CORS on static files (`Brando.Plug.SiteAssets`).
+`e2e/playwright/tests/blocks/live-preview-sandbox.spec.js` covers all of it.
+
 ## What the iframe shows
 
 The iframe joins with the generation of the cache it shows

@@ -98,7 +98,11 @@ test.describe('Live Preview with Blocks, Vars and Refs', () => {
       await expect(page.locator('.live-preview-notice')).toBeEmpty()
       expect((await page.locator('.live-preview-notice').boundingBox()).height).toBe(0)
 
-      await page.locator('#live-preview-frame').evaluate(iframe => iframe.contentWindow.location.reload())
+      // The preview is sandboxed: it loads again from the admin page, which
+      // sends the viewer's cookies (a reload from inside would not)
+      await page.locator('#live-preview-frame').evaluate(iframe => {
+        iframe.src = iframe.getAttribute('src')
+      })
 
       await expect(page.locator('.live-preview-notice')).toHaveText('The preview was missing some changes, so it was refreshed.')
       await expect(heading).toContainText('Patched Header')

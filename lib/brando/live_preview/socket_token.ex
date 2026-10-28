@@ -1,15 +1,16 @@
 defmodule Brando.LivePreview.SocketToken do
   @moduledoc """
-  The token a live-preview document connects to the admin socket with.
+  The token a live-preview document connects to its socket with.
 
   The preview document holds the site's own markup, editor content included,
-  and runs on the admin origin. It gets this token instead of the viewer's
+  sandboxed in an opaque origin. It gets this token instead of the viewer's
   admin socket token (`Brando.Users.build_socket_token/2`): signed with its own
   salt, it names the viewer, their session and one preview key, with the
   site and environment the preview was registered in, and lasts 15 minutes.
-  `BrandoAdmin.AdminSocket` connects it as a preview socket, which joins only
-  `live_preview:<key>` for that key; every other channel refuses it. The preview fetches a fresh one from
-  `/__livepreview/token` when its socket has to connect again.
+  `BrandoAdmin.LivePreviewSocket`, which the endpoint mounts at
+  `/__livepreview/socket`, connects it, and joins only `live_preview:<key>`
+  for that key; `BrandoAdmin.AdminSocket` refuses it. `BrandoAdmin.LivePreviewChannel` hands the
+  preview a fresh one before it expires, for its next connect.
   """
   alias Brando.Repo
   alias Brando.Users
