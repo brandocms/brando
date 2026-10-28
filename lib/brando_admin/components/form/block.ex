@@ -55,6 +55,7 @@ defmodule BrandoAdmin.Components.Form.Block do
   alias BrandoAdmin.Components.Form.BlockField
   alias BrandoAdmin.Components.Form.BlockField.Ops
   alias BrandoAdmin.Components.Form.RichTextAI
+  alias BrandoAdmin.LiveView.Form.ProcessingWatch
   alias Ecto.Changeset
 
   def mount(socket) do
@@ -562,6 +563,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign(:form, form)
     |> assign_selected_identifiers()
     |> assign_hidden_block_fields()
+    |> watch_carried_var_videos()
     |> assign(:form_is_new, false)
     |> assign(:form_has_changes, false)
     |> assign(:active, Changeset.get_field(block_cs, :active))
@@ -741,6 +743,17 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> then(&{:ok, &1})
   end
 
+  # The provider reported the video of a var this block carries as hidden
+  # inputs (`watch_carried_var_videos/1`), followed only while the provider
+  # had it. Not an edit: the form is left alone, only the live preview
+  # reloads.
+  def update(%{event: "video_processed", video: video}, socket) do
+    if MapSet.member?(socket.assigns[:carried_video_ids] || MapSet.new(), video.id),
+      do: reload_live_preview_when_ready(socket.assigns.form_id, %{status: :processing}, video)
+
+    {:ok, socket}
+  end
+
   def update(%{event: "update_entry_field", path: path, change: change}, socket) do
     liquid_splits = socket.assigns.liquid_splits
     entry = put_in(socket.assigns.entry, path, change)
@@ -840,6 +853,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     |> assign_selected_identifiers()
     |> maybe_parse_module()
     |> assign_hidden_block_fields()
+    |> then(&if(&1.assigns[:block_initialized], do: &1, else: watch_carried_var_videos(&1)))
     |> assign(:block_initialized, true)
     |> assign_unused_collections()
     |> then(&{:ok, &1})
@@ -857,6 +871,48 @@ defmodule BrandoAdmin.Components.Form.Block do
     Changeset.get_assoc(block_cs, :vars) != []
   rescue
     _ -> false
+  end
+
+  # A saved video var in the block's settings, while they are closed, and a
+  # hidden one are carried as hidden inputs: no `RenderVar` follows its video
+  # while the provider has it (and one that did is gone with the closed
+  # settings). The block does, whenever the videos those vars hold change,
+  # so the live preview reloads when one is ready (`video_processed`).
+  defp watch_carried_var_videos(socket) do
+    vars = carried_video_vars(socket)
+    ids = MapSet.new(vars, & &1.video_id)
+
+    if ids == socket.assigns[:carried_video_ids] or not ProcessingWatch.enabled?() do
+      socket
+    else
+      socket
+      |> assign(:carried_video_ids, ids)
+      |> ProcessingWatch.watch(__MODULE__, :video, current_videos(vars))
+    end
+  end
+
+  defp carried_video_vars(%{assigns: %{has_vars?: true, form: form, belongs_to: belongs_to}}) do
+    form.source
+    |> get_block_changeset(belongs_to)
+    |> Changeset.get_assoc(:vars, :struct)
+    |> Enum.filter(&(&1.type == :video and &1.placement in [:config, :hidden] and is_integer(&1.video_id)))
+  end
+
+  defp carried_video_vars(_socket), do: []
+
+  # The struct a var was opened with, while it is still its video (a video
+  # that finished since is caught up by the watch). A pick changes only the
+  # var's id, so a picked video is read.
+  defp current_videos(vars) do
+    {loaded, picked} = Enum.split_with(vars, &match?(%{video: %Brando.Videos.Video{id: id}, video_id: id}, &1))
+    Enum.map(loaded, & &1.video) ++ read_videos(Enum.map(picked, & &1.video_id))
+  end
+
+  defp read_videos([]), do: []
+
+  defp read_videos(ids) do
+    import Ecto.Query, only: [from: 2]
+    Brando.Repo.all(from(v in Brando.Videos.Video, where: v.id in ^ids))
   end
 
   defp block_has_table_rows?(block_cs) do
@@ -2406,6 +2462,7 @@ defmodule BrandoAdmin.Components.Form.Block do
     socket
     |> assign(:form, form)
     |> assign_hidden_block_fields()
+    |> watch_carried_var_videos()
     |> emit_block_op(op)
     |> assign_unused_collections()
   end
@@ -2473,6 +2530,23 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp maybe_reload_or_update_live_preview(socket, _media_ref?) do
     maybe_update_live_preview_block(socket)
   end
+
+  @doc """
+  The provider reported a video a ref or var shows as ready
+  (`BrandoAdmin.LiveView.Form.ProcessingWatch`): reload the live preview, as
+  for a newly picked video, so the frontend boots its player. Not an edit,
+  so the block's state is left alone: a render reads a video still with its
+  provider again by id (`Brando.Villain.Parser`). `form_id` is nil outside an
+  entry form, which has no preview.
+  """
+  def reload_live_preview_when_ready(form_id, shown, processed)
+
+  def reload_live_preview_when_ready(form_id, %{status: was}, %{status: :ready})
+      when not is_nil(form_id) and was != :ready do
+    send_update(BrandoAdmin.Components.Form, id: form_id, event: "reload_live_preview")
+  end
+
+  def reload_live_preview_when_ready(_form_id, _shown, _processed), do: :ok
 
   # Keys in an update_ref_data payload that introduce, swap or remove a media
   # association whose frontend player must be JS-mounted (video/gallery/image/file).

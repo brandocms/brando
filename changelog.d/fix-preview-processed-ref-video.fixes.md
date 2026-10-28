@@ -1,0 +1,1 @@
+- The live preview shows a block ref's or video variable's video once the provider (Bunny, Mux, Cloudflare, Vimeo) reports it ready, without a reload of the editor; before, it kept rendering the video as unready until the next change to it or a reload.

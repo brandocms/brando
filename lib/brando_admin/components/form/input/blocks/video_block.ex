@@ -105,9 +105,12 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.VideoBlock do
   # The provider reported on the video this ref shows, to every editor with the
   # entry open (`ProcessingWatch`): it moved on from uploading, or is ready.
   # Not an edit: the ref keeps its video id, so no ref data is committed; only
-  # what the ref shows is refreshed. A cover the editor picked stays.
+  # what the ref shows is refreshed, and the live preview once the video is
+  # ready. A cover the editor picked stays.
   def update(%{event: "video_processed", video: video}, socket) do
     if current_video_id(socket) == video.id do
+      Block.reload_live_preview_when_ready(socket.assigns[:form_id], socket.assigns.video, video)
+
       socket
       |> assign(:video, video)
       |> assign_video_data(video)

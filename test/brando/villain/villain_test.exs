@@ -120,6 +120,66 @@ defmodule Brando.VillainTest do
     #          "The url is /projects/all. Param: all"
   end
 
+  # An editor's blocks keep the videos they were opened with: a copy from
+  # while the provider still had the video, and a var's video from before a
+  # pick, which changes only its id. A render reads the video by id then.
+  test "a module block renders its ref's and var's videos as stored, not as the block holds them", %{user: user} do
+    Brando.Test.Support.put_test_env(Brando.Videos.Uploaders.Bunny, cdn_hostname: "vz-1.b-cdn.net")
+
+    bunny = fn title, status ->
+      Factory.insert(:video,
+        title: title,
+        type: :bunny,
+        remote_id: nil,
+        source_url: nil,
+        status: status,
+        creator_id: user.id,
+        meta: %{"bunny" => %{"video_guid" => Ecto.UUID.generate()}}
+      )
+    end
+
+    ref_video = bunny.("Ref", :ready)
+    picked = bunny.("Picked", :ready)
+    before_pick = bunny.("Before the pick", :ready)
+    thumbnail = &"https://vz-1.b-cdn.net/#{&1.meta["bunny"]["video_guid"]}/thumbnail.jpg"
+
+    module =
+      Brando.ProposalFixtures.module!(
+        user,
+        "Film",
+        ~s(<div>{% ref refs.clip %}|{% video film { autoplay: true } %}</div>),
+        refs: [Brando.ProposalFixtures.ref("clip", %{type: "video", data: %{}})],
+        vars: [%{type: "video", key: "film", label: "Film"}]
+      )
+
+    block = %{
+      block: %{
+        type: :module,
+        source: "Elixir.Brando.Pages.Page.Blocks",
+        module_id: module.id,
+        uid: Brando.Utils.generate_uid(),
+        refs: [
+          %{
+            name: "clip",
+            description: nil,
+            uid: Brando.Utils.generate_uid(),
+            video_id: ref_video.id,
+            video: %{ref_video | status: :processing},
+            data: %{type: "video", data: %Brando.Villain.Blocks.VideoBlock.Data{}}
+          }
+        ],
+        vars: [
+          %Brando.Content.Var{key: "film", label: "Film", type: :video, video_id: picked.id, video: before_pick}
+        ]
+      }
+    }
+
+    parsed = Brando.Villain.parse([block], %Brando.Pages.Page{})
+    assert parsed =~ thumbnail.(ref_video)
+    assert parsed =~ thumbnail.(picked)
+    refute parsed =~ thumbnail.(before_pick)
+  end
+
   test "parse with module block", %{user: user, image: image} do
     module_params =
       Factory.params_for(:module, %{
