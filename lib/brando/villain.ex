@@ -280,19 +280,18 @@ defmodule Brando.Villain do
   end
 
   # An identity link's name and address are what an editor typed: escaped,
-  # as a string var is, and an address with a script or unknown scheme empty
-  # HEEx escapes what it prints, so it reads them as they are (`raw_context/2`).
+  # as a string var is, and an address with a script or unknown scheme empty.
+  # HEEx escapes what it prints, so it reads them unescaped (`raw_context/2`),
+  # with the address checked all the same.
   def add_to_context(context, "links" = key, %{links: links}) do
-    raw = Map.new(links, &{String.downcase(&1.name), &1})
+    raw =
+      Map.new(links, fn link ->
+        {String.downcase(link.name), %{link | url: Parser.safe_url(link.url) || ""}}
+      end)
 
     escaped =
       Map.new(raw, fn {name, link} ->
-        {name,
-         %{
-           link
-           | name: Parser.escape_var_value(link.name),
-             url: link.url |> Parser.safe_url() |> Kernel.||("") |> Parser.escape_var_value()
-         }}
+        {name, %{link | name: Parser.escape_var_value(link.name), url: Parser.escape_var_value(link.url)}}
       end)
 
     context |> Context.assign(key, escaped) |> put_raw(key, raw)

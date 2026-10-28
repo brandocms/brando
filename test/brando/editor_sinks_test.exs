@@ -267,6 +267,11 @@ defmodule Brando.EditorSinksTest do
       assert html =~ ~s(href="https://shop.example/?a=1&amp;b=&quot;2&quot;")
       assert html =~ ~s(<a href="">B</a>)
 
+      # HEEx reads them unescaped, the address still checked
+      raw = Brando.Villain.raw_context(context, "links")
+      assert raw["shop"].url == ~s(https://shop.example/?a=1&b="2")
+      assert raw["bad"].url == ""
+
       heex = fn link -> Phoenix.HTML.Safe.to_iodata(link) |> IO.iodata_to_binary() end
       [shop, bad] = links
       assert heex.(shop) == "https://shop.example/?a=1&amp;b=&quot;2&quot;"
