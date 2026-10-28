@@ -341,6 +341,47 @@ sender first, before the first compile.
 
 **Not found by any task.** Their correct rewrite depends on the application:
 
+- **Markup editors wrote where text belongs.** Liquid modules print `string`
+  and `text` vars and globals HTML-escaped; header refs show their text as
+  typed, with line breaks still as `<br>`; Markdown refs render no raw HTML
+  and no script links; a picture's own title and credits are escaped. Look
+  for markup in those in the module code and the content (the seeded Hero's
+  heading holds a `<span class="soft">`, for one), and move markup out of a
+  heading or a Markdown ref into a text ref. `{{ title | escape }}` keeps
+  printing the text once. See
+  [Writing templates safely](block_editor.md#writing-templates-safely).
+
+  A `string` or `text` var that is meant to hold HTML becomes a `rich_text`
+  var, its values kept (they render sanitized). In `iex -S mix`, for each
+  such var, with the module's id and the var's key:
+
+  ```elixir
+  import Ecto.Query
+
+  {module_id, key} = {12, "intro"}
+  blocks = from(b in Brando.Content.Block, where: b.module_id == ^module_id, select: b.id)
+
+  Brando.Repo.update_all(
+    from(v in Brando.Content.Var,
+      where: v.key == ^key and v.type in ^[:string, :text],
+      where: v.module_id == ^module_id or v.block_id in subquery(blocks)
+    ),
+    set: [type: :rich_text]
+  )
+  ```
+
+  Then resave the entries that use the module (`mix brando.entries.resave`).
+- **`html` vars are `rich_text` vars.** `brando_225` renames them in the
+  database. In code, match `:rich_text` where you matched `type: :html` on a
+  var; module definition files that say `:html` still read, and their next
+  export writes `:rich_text`. A rich-text var's value is sanitized when it is
+  saved and when it renders: one saved before with unsafe markup renders as
+  its text alone, and the editor is asked for safe markup when they save it.
+- **Media served by the web server.** If nginx, Caddy or a CDN serves
+  `/media` without `Brando.Plug.Media`, add the plug's
+  `X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox`
+  headers to it ([How media is served](media.md#how-media-is-served)).
+
 - **Legacy video values.** Moving `Brando.Type.Video` embedded values to
   `Brando.Videos.Video` records takes an application-specific schema and data
   migration; renaming the module corrupts storage.

@@ -59,11 +59,11 @@ at the bottom.
 
 | Callback | Notes |
 |---|---|
-| `header/2` | |
+| `header/2` | the text is plain: the default escapes it and turns its line breaks into `<br>` |
 | `text/2` | |
 | `html/2` | an [HTML ref](block_editor.md#html-refs): `data` holds the template (`text`), `params` and `values`. The default fills the values in with `Brando.Villain.Blocks.HtmlBlock.render/1`; an override should too |
 | `svg/2` | |
-| `markdown/2` | deprecated |
+| `markdown/2` | deprecated. The default renders no raw HTML (MDEx leaves `<!-- raw HTML omitted -->`) and drops script and other unsafe addresses |
 | `markdown_source/2` | a [Markdown source](markdown_sources.md) placement; `data` holds `source_id`, `policy` and `version_id`. The default returns the stored HTML of the resolved version (the source's latest for `:follow`, otherwise the selected version), or `""` |
 | `picture/2` | see *What the media callbacks receive* |
 | `video/2` | " |
@@ -87,7 +87,7 @@ at the bottom.
 
 | Callback | Notes |
 |---|---|
-| `render_caption/1` | builds the caption string from `title` and `credits`; used by `picture/2` and `gallery/2` |
+| `render_caption/1` | builds the caption string from `title` and `credits`; used by `picture/2` and `gallery/2`, which pass them as markup: a placement's rich-text caption sanitized, the image's own title and the credits escaped |
 | `video_file_options/1` | the options list passed to `<.video>` for file-backed videos |
 
 **Deprecated**, kept for old content — they have no block module, so nothing in

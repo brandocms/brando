@@ -114,11 +114,14 @@ the editor.
 
 #### Vars: values, controls and layout
 
-The DSL supports the schema's var types: `:boolean`, `:string`, `:text`, `:html`,
-`:image`, `:video`, `:gallery`, `:datetime`, `:color`, `:select`, `:file`, `:link`
-and `:date`. Values retain the same representation as in the admin; for example,
-date/datetime values use strings. `default` writes `value_boolean` for booleans,
-an asset token for media vars, and `value` for the remaining types.
+The DSL supports the schema's var types: `:boolean`, `:string`, `:text`,
+`:rich_text`, `:image`, `:video`, `:gallery`, `:datetime`, `:color`, `:select`,
+`:file`, `:link` and `:date`. A file that says `:html` reads as `:rich_text`, and
+is written as `:rich_text` on its next export. Values retain the same
+representation as in the admin; for example, date/datetime values use strings,
+and a `:rich_text` default is sanitized rich text. `default` writes
+`value_boolean` for booleans, an asset token for media vars, and `value` for the
+remaining types.
 
 Use `label`, `placeholder`, `instructions` and `options` for controls. Options
 accept `{label, value}` pairs or maps with `label` and `value`. Layout declarations

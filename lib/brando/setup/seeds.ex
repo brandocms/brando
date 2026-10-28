@@ -187,7 +187,7 @@ defmodule Brando.Setup.Seeds do
       namespace: "general",
       help_text:
         "Page opening: a mono eyebrow, the headline, a lead paragraph and a four-part fact row. " <>
-          "The headline may carry a second line wrapped in <span class=\"soft\"> to step it back.",
+          "A line break in the headline starts its second line.",
       class: "hero",
       code: """
       <section b-tpl="hero">
@@ -690,7 +690,7 @@ defmodule Brando.Setup.Seeds do
       header_ref(
         "title",
         1,
-        "Your site is up.\n<span class=\"soft\">Now make it yours.</span>",
+        "Your site is up.\nNow make it yours.",
         1
       ),
       text_ref(

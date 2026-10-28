@@ -27,11 +27,13 @@ defmodule Brando.MarkdownTest do
     assert Markdown.to_html!("| A | B |\n|---|---|\n| 1 | 2 |") =~ "<table>"
   end
 
-  test "preserves smart punctuation and trusted raw HTML" do
+  test "preserves smart punctuation, and raw HTML only when not safe" do
     assert Markdown.to_html!(~s("quotes" -- dash --- em ...)) ==
              "<p>“quotes” – dash — em …</p>"
 
-    assert Markdown.to_html!(~s(<div class="notice">Content</div>)) ==
+    assert Markdown.to_html!(~s(<div class="notice">Content</div>)) == "<!-- raw HTML omitted -->"
+
+    assert Markdown.to_html!(~s(<div class="notice">Content</div>), safe: false) ==
              ~s(<div class="notice">Content</div>)
   end
 

@@ -766,9 +766,10 @@ HEEx (`:heex`) templates. In Liquex:
 
 - **refs** — named slots holding a block primitive (header, text, picture,
   file, video, gallery, map, …). Templates reference them as `{% ref refs.name %}`.
-- **vars** — typed variables (`text`, `string`, `color`, `select`, `boolean`,
-  `image`, `file`, `video`, `gallery`, `link`, …) referenced bare by key:
-  `style="color: {{ text_color }}"`.
+- **vars** — typed variables (`string`, `text`, `rich_text`, `color`,
+  `select`, `boolean`, `image`, `file`, `video`, `gallery`, `link`, …)
+  referenced bare by key: `style="color: {{ text_color }}"`. `rich_text` is
+  sanitized rich text; `string` and `text` are plain.
 - **multi modules** — a module whose template contains `{{ content }}`
   renders nested child blocks there (each an instance of a child module).
 
@@ -828,39 +829,37 @@ Besides `{% ref %}` and `{% headless_ref %}`:
 
 #### Writing templates safely
 
-HEEx escapes what it prints; Liquid does not. `{{ … }}` prints a value exactly
-as it is stored. Rich text (text refs, rich-text fields, text and html vars)
-is HTML, meant to be printed between tags as it is. Every other text value
-(string vars, entry titles, globals, addresses) holds whatever an editor, an
-import or an approved content assistant proposal put there, quotes and spaces
-included. So:
+HEEx escapes what it prints; Liquid prints values as Brando hands them over:
 
-- In an attribute, write double quotes around the output and pass text
-  through `escape`, which encodes `"`, `'`, `&`, `<` and `>`. Unescaped, a `"`
-  in the value ends the attribute and the rest becomes markup; a `'` or a
-  space ends a single-quoted or unquoted one, and `escape` leaves spaces as
-  they are.
-- Between tags, `escape` a value meant as text as well: a `<` in a string var
-  or a title otherwise writes markup.
-- Never put rich text in an attribute as it is. `strip_html` keeps its
-  character references (`&amp;`), so follow it with `escape_once`, which
-  encodes what is left without encoding them twice:
+- `string` and `text` vars and globals arrive HTML-escaped (by key, in
+  `entries`, in table rows), as do `links` and the `link_url`/`link_text`
+  filters: `{{ title }}` prints the text as typed, also in a double-quoted
+  attribute. Markup meant as markup belongs in a `rich_text` var.
+- `rich_text` vars and globals arrive sanitized, to print between tags.
+- `escape` never encodes a character reference twice; `url_encode`,
+  `slugify` and `markdown` read an escaped var as the text it stands for.
+
+Entry fields (`entry.title`), `identity`, ref data read through `refs` and
+filter output print as stored. So:
+
+- In an attribute, write double quotes around the output and pass such text
+  through `escape`, which encodes `"`, `'`, `&`, `<` and `>`; between tags,
+  `escape` it as well.
+- Never put rich text in an attribute as it is:
   `content="{{ intro | strip_html | escape_once }}"`.
-- Do not `url_decode` a value you print: it turns `%3C` and `%22` back into
-  `<` and `"` after every check has passed. For a query string, `url_encode`
-  the value.
+- Do not `url_decode` a value you print: it turns `%3C` back into `<` after
+  every check. For a query string, `url_encode` the value.
 - `escape` does not check an address's scheme. Make a link from a link var
-  with `{% link %}`, which escapes its address and its text and drops a
-  script address.
+  with `{% link %}`, which drops a script address.
 
 ```liquid
 {%- comment -%} Don't {%- endcomment -%}
-<figure title='{{ caption }}' data-tracking={{ tracking_id }}>
+<figure title='{{ entry.title }}'>
 <a href="/search?q={{ query | url_decode }}">{{ query | url_decode }}</a>
 
 {%- comment -%} Do {%- endcomment -%}
-<figure title="{{ caption | escape }}" data-tracking="{{ tracking_id | escape }}">
-<a href="/search?q={{ query | url_encode }}">{{ query | escape }}</a>
+<figure title="{{ entry.title | escape }}">
+<a href="/search?q={{ query | url_encode }}">{{ query }}</a>
 ```
 
 ## More rules by topic

@@ -332,11 +332,14 @@ the editor.
 
 ### Vars: values, controls and layout
 
-The DSL supports the schema's var types: `:boolean`, `:string`, `:text`, `:html`,
-`:image`, `:video`, `:gallery`, `:datetime`, `:color`, `:select`, `:file`, `:link`
-and `:date`. Values retain the same representation as in the admin; for example,
-date/datetime values use strings. `default` writes `value_boolean` for booleans,
-an asset token for media vars, and `value` for the remaining types.
+The DSL supports the schema's var types: `:boolean`, `:string`, `:text`,
+`:rich_text`, `:image`, `:video`, `:gallery`, `:datetime`, `:color`, `:select`,
+`:file`, `:link` and `:date`. A file that says `:html` reads as `:rich_text`, and
+is written as `:rich_text` on its next export. Values retain the same
+representation as in the admin; for example, date/datetime values use strings,
+and a `:rich_text` default is sanitized rich text. `default` writes
+`value_boolean` for booleans, an asset token for media vars, and `value` for the
+remaining types.
 
 Use `label`, `placeholder`, `instructions` and `options` for controls. Options
 accept `{label, value}` pairs or maps with `label` and `value`. Layout declarations
@@ -527,7 +530,7 @@ the module → **Resolve blocks**, or the system check's link), or with the
 `resolve` command. Each leftover is dropped or mapped onto a ref or var the
 module defines now, in every block at once, with exceptions per block in the
 admin. A var keeps its value when it moves to the same type, from string to
-text, from single-line text to string, or from string or text to HTML; a select
+text, from single-line text to string, or from string or text to rich text; a select
 value must be one of the target's options. A ref moves to a ref of a compatible
 type. Anything else is refused, with the reason.
 

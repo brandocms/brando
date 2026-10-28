@@ -335,7 +335,7 @@ reported as a problem, because the new entry is a draft.
 What a proposal writes is checked before it can be approved, as text a model
 or client wrote, not an editor:
 
-- text, markdown and html slots, text and html variables, and an entry's
+- text, markdown and html slots, text and rich_text variables, and an entry's
   fields take rich text without scripts, event handlers or script addresses;
 - header slots and single-line text variables take plain text, without
   markup;

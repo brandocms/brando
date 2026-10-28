@@ -192,6 +192,23 @@ defmodule Brando.EditorSinksTest do
       assert active(html) == 0
     end
 
+    test "identity links print their name and address escaped, and no script address" do
+      links = [
+        %Brando.Sites.Link{name: "Shop", url: ~s(https://shop.example/?a=1&b="2")},
+        %Brando.Sites.Link{name: "Bad", url: "javascript:document.title='MARKER'"}
+      ]
+
+      context = Brando.Villain.add_to_context(Brando.Villain.create_context(%{}), "links", %{links: links})
+      html = Brando.Villain.parse_and_render(~s(<a href="{{ links.shop.url }}">S</a><a href="{{ links.bad.url }}">B</a>), context)
+
+      assert html =~ ~s(href="https://shop.example/?a=1&amp;b=&quot;2&quot;")
+      assert html =~ ~s(<a href="">B</a>)
+
+      heex = fn link -> Phoenix.HTML.Safe.to_iodata(link) |> IO.iodata_to_binary() end
+      assert heex.(hd(links)) == "https://shop.example/?a=1&amp;b=&quot;2&quot;"
+      assert heex.(List.last(links)) == ""
+    end
+
     test "link filters print their text and address escaped" do
       link = %Var{type: :link, link_type: :url, value: ~s(/a?b=1&c="2"), link_text: @handler}
       context = Brando.Villain.create_context(%{"cta" => link})

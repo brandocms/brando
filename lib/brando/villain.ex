@@ -278,8 +278,19 @@ defmodule Brando.Villain do
     )
   end
 
+  # An identity link's name and address are what an editor typed: escaped,
+  # as a string var is, and an address with a script or unknown scheme empty
   def add_to_context(context, "links" = key, %{links: links}) do
-    links = Map.new(links, &{String.downcase(&1.name), &1})
+    links =
+      Map.new(links, fn link ->
+        {String.downcase(link.name),
+         %{
+           link
+           | name: Brando.Villain.Parser.escape_var_value(link.name),
+             url: link.url |> Brando.Villain.Parser.safe_url() |> Kernel.||("") |> Brando.Villain.Parser.escape_var_value()
+         }}
+      end)
+
     Context.assign(context, key, links)
   end
 
