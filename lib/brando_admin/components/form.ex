@@ -2567,10 +2567,20 @@ defmodule BrandoAdmin.Components.Form do
       {parents, [field]} when is_atom(field) ->
         entry = socket.assigns.entry || struct(socket.assigns.schema)
         source = socket.assigns.form.source
-        assign(socket, :entry, put_entry_relation(entry, parents, field, updated_relation, source, false))
+        assign(socket, :entry, put_entry_relation(entry, parents, field, fn _ -> updated_relation end, source, false))
 
       _ ->
         socket
+    end
+  end
+
+  # The entry with `update` applied to the relation at `path`, a path as the
+  # form names it (`source` is the form's changeset). `update` gets the
+  # entry's current relation there.
+  defp entry_with_relation(entry, source, path, update) do
+    case Enum.split(path, -1) do
+      {parents, [field]} when is_atom(field) -> put_entry_relation(entry, parents, field, update, source, false)
+      _ -> entry
     end
   end
 
@@ -2579,11 +2589,12 @@ defmodule BrandoAdmin.Components.Form do
   # in the entry by its id. A path can be older than the rows (a processing
   # job carries it), so a row takes the relation only while its form row
   # holds it.
-  defp put_entry_relation(%{} = data, [], field, value, source, row?) do
+  defp put_entry_relation(%{} = data, [], field, update, source, row?) do
+    value = update.(Map.get(data, field))
     if row? and not holds_relation?(source, field, value), do: data, else: Map.put(data, field, value)
   end
 
-  defp put_entry_relation(%{} = data, [key, index | rest], field, value, %Changeset{} = source, _row?)
+  defp put_entry_relation(%{} = data, [key, index | rest], field, update, %Changeset{} = source, _row?)
        when is_atom(key) and is_integer(index) do
     with rows when is_list(rows) <- Map.get(data, key),
          form_rows when is_list(form_rows) <- Map.get(source.changes, key, Map.get(source.data, key)),
@@ -2591,23 +2602,23 @@ defmodule BrandoAdmin.Components.Form do
          row = Changeset.change(row),
          id when not is_nil(id) <- Changeset.get_field(row, :id),
          at when is_integer(at) <- Enum.find_index(rows, &(Map.get(&1, :id) == id)) do
-      Map.put(data, key, List.update_at(rows, at, &put_entry_relation(&1, rest, field, value, row, true)))
+      Map.put(data, key, List.update_at(rows, at, &put_entry_relation(&1, rest, field, update, row, true)))
     else
       _ -> data
     end
   end
 
-  defp put_entry_relation(%{} = data, [key | rest], field, value, %Changeset{} = source, _row?) when is_atom(key) do
+  defp put_entry_relation(%{} = data, [key | rest], field, update, %Changeset{} = source, _row?) when is_atom(key) do
     with %{} = nested <- Map.get(data, key),
          false <- is_struct(nested, Ecto.Association.NotLoaded),
          %{} = row <- SubformHelpers.current_entries(source, key) do
-      Map.put(data, key, put_entry_relation(nested, rest, field, value, Changeset.change(row), true))
+      Map.put(data, key, put_entry_relation(nested, rest, field, update, Changeset.change(row), true))
     else
       _ -> data
     end
   end
 
-  defp put_entry_relation(data, _path, _field, _value, _source, _row?), do: data
+  defp put_entry_relation(data, _path, _field, _update, _source, _row?), do: data
 
   defp holds_relation?(%Changeset{} = row, field, value) do
     fk = "#{field}_id"
@@ -6276,7 +6287,7 @@ defmodule BrandoAdmin.Components.Form do
       |> put_key_at(path, relation_key, file.id)
       |> put_asset_in_data(path, field, updated_file)
 
-    updated_entry = Map.put(entry_or_default, field, updated_file)
+    updated_entry = entry_with_relation(entry_or_default, updated_changeset, path ++ [field], fn _ -> updated_file end)
 
     # this is only for fresh uploads.
     if !updated_file.cdn && Brando.CDN.enabled?(Brando.Files) do
@@ -6417,21 +6428,16 @@ defmodule BrandoAdmin.Components.Form do
       |> put_key_at(path, relation_key, image.id)
       |> put_asset_in_data(path, field, updated_image)
 
-    entrys_current_image = Brando.Utils.try_path(entry_or_default, field_full_path)
-    access_field_full_path = Brando.Utils.build_access_path(field_full_path)
-
     updated_entry =
-      if loaded_image?(entrys_current_image) && entrys_current_image.id == image.id &&
-           updated_image.status == :processed do
-        # the image has already been marked as processed, do not
-        # update the image but merge in title, credits and alt text
-        merged_image =
-          Map.merge(entrys_current_image, Map.take(updated_image, [:title, :credits, :alt]))
-
-        put_in(entry_or_default, access_field_full_path, merged_image)
-      else
-        put_in(entry_or_default, access_field_full_path, updated_image)
-      end
+      entry_with_relation(entry_or_default, updated_changeset, field_full_path, fn current ->
+        if loaded_image?(current) && current.id == image.id && updated_image.status == :processed do
+          # the image has already been marked as processed, do not
+          # update the image but merge in title, credits and alt text
+          Map.merge(current, Map.take(updated_image, [:title, :credits, :alt]))
+        else
+          updated_image
+        end
+      end)
 
     # Subscribe parent live view to changes to this image
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
@@ -6597,8 +6603,7 @@ defmodule BrandoAdmin.Components.Form do
       |> put_key_at(path, relation_key, video.id)
       |> put_asset_in_data(path, field, updated_video)
 
-    access_field_full_path = Brando.Utils.build_access_path(field_full_path)
-    updated_entry = put_in(entry_or_default, access_field_full_path, updated_video)
+    updated_entry = entry_with_relation(entry_or_default, updated_changeset, field_full_path, fn _ -> updated_video end)
 
     target_field_name =
       Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
@@ -7299,18 +7304,12 @@ defmodule BrandoAdmin.Components.Form do
   # Non-block path: update entry with the image so the Image input
   # detects the change when the form re-validates (same pattern as new_copy).
   defp show_saved_editor_image(socket, edit_image, updated_image) do
-    schema = socket.assigns.schema
     field_atom = String.to_existing_atom("#{edit_image.field}")
-    entry = socket.assigns.entry || struct(schema)
-    field_path = edit_image.path ++ [field_atom]
-    access_path = Brando.Utils.build_access_path(field_path)
-    updated_entry = put_in(entry, access_path, updated_image)
-
     image_changeset = change(updated_image)
     updated_edit_image = Map.merge(edit_image, %{image: updated_image})
 
     socket
-    |> assign(:entry, updated_entry)
+    |> update_entry_with_relation(edit_image.path ++ [field_atom], updated_image)
     |> assign(:edit_image, updated_edit_image)
     |> assign(:image_changeset, image_changeset)
     |> push_event("b:validate", %{})
