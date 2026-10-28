@@ -33,3 +33,15 @@
   font-weight: 400;
   font-style: italic;
 } */
+
+/* Schibsted Grotesk (SIL Open Font License), from Brando's admin fonts, for
+   the body. Live previews are sandboxed, so this font and its preload in
+   the layout load cross-origin there
+   (e2e/playwright/tests/blocks/live-preview-sandbox.spec.js). */
+@font-face {
+  font-family: "E2E Sans";
+  font-display: swap;
+  src: url('/fonts/e2e-sans.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}

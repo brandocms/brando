@@ -9214,6 +9214,7 @@ defmodule BrandoAdmin.Components.Form do
               title={gettext("Live preview")}
               data-live-preview-device={@live_preview_target}
               src={"/__livepreview?key=#{@live_preview_cache_key}"}
+              sandbox={Brando.Plug.LivePreview.sandbox_flags()}
             ></iframe>
           </div>
         </div>

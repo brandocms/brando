@@ -19,7 +19,16 @@ defmodule BrandoWeb.PreviewController do
 
     with {:ok, preview} <- Sites.get_preview(preview_opts),
          :gt <- DateTime.compare(preview.expires_at, DateTime.utc_now()) do
-      html(conn, Utils.binary_to_term(preview.html))
+      # Sandboxed as a live preview is (`Brando.Plug.LivePreview`): the
+      # snapshot holds editor content and is served on the site's origin.
+      # The policy the pipeline set (`put_secure_browser_headers`, the
+      # site's own directives) still applies.
+      policy =
+        Enum.join([Brando.Plug.LivePreview.sandbox_policy() | get_resp_header(conn, "content-security-policy")], "; ")
+
+      conn
+      |> put_resp_header("content-security-policy", policy)
+      |> html(Brando.Plug.LivePreview.put_storage_script(Utils.binary_to_term(preview.html)))
     else
       {:error, _} = error -> error
       _ -> {:error, {:preview, :not_found}}

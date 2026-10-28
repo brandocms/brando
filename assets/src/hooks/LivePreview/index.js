@@ -40,6 +40,17 @@ export default app => ({
       }
       if (event.target.closest('.live-preview-blank') && this.active) this.toggle()
     }
+    // The preview asks to load again (`reloadPage` in livepreview.js). It is
+    // sandboxed: loaded from here, the request carries the viewer's cookies,
+    // which a reload from inside would not. Its origin is opaque, so only
+    // this frame's page is listened to, by the message's source.
+    this.message = event => {
+      if (event.source !== this.$iframe.contentWindow) return
+      if (event.data?.source === 'brando-live-preview' && event.data.type === 'reload') {
+        this.$iframe.src = this.$iframe.getAttribute('src')
+      }
+    }
+    window.addEventListener('message', this.message)
     this.el.addEventListener('click', this.click)
     this.$divider.addEventListener('pointerdown', this.pointerDown)
     this.$divider.addEventListener('pointermove', this.pointerMove)
@@ -153,6 +164,7 @@ export default app => ({
     this.stopResize()
     this.entrance?.cancel()
     this.widthAnimation?.cancel()
+    window.removeEventListener('message', this.message)
     this.el.removeEventListener('click', this.click)
     this.$divider.removeEventListener('pointerdown', this.pointerDown)
     this.$divider.removeEventListener('pointermove', this.pointerMove)

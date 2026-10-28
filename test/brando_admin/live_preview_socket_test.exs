@@ -1,9 +1,11 @@
 defmodule BrandoAdmin.LivePreviewSocketTest do
   @moduledoc """
-  The live-preview document runs editor markup on the admin origin, so the
-  socket token it is served (`Brando.LivePreview.SocketToken`) must open only
-  that preview's channel: not the lobby, not the user channel, not another
-  preview, and not after it expires or its session ends.
+  The live-preview document runs editor markup, so the socket token it is
+  served (`Brando.LivePreview.SocketToken`) must open only that preview's
+  channel: not the lobby, not the user channel, not another preview, and not
+  after it expires or its session ends. The document is sandboxed, so it
+  connects from origin `null`, to the admin socket at `/__livepreview/socket`,
+  which takes nothing but that token there.
   """
   use Brando.ConnCase
   import Phoenix.ChannelTest, only: [subscribe_and_join: 2, subscribe_and_join: 3]
@@ -56,11 +58,31 @@ defmodule BrandoAdmin.LivePreviewSocketTest do
 
   defp connect_admin(token), do: Phoenix.ChannelTest.connect(BrandoAdmin.AdminSocket, %{"token" => token})
 
+  # As `Brando.Plug.LivePreview` connects it (`AdminSocket.preview_transport/0`)
+  defp connect_preview(token) do
+    Phoenix.ChannelTest.connect(BrandoAdmin.AdminSocket, %{"token" => token}, connect_info: %{brando_live_preview: true})
+  end
+
+  # A WebSocket upgrade through the test endpoint, as a sandboxed page sends it
+  defp upgrade(path, token), do: upgrade_at(path <> "/websocket", token)
+
+  defp upgrade_at(path, token) do
+    build_conn(:get, "#{path}?" <> URI.encode_query(%{"token" => token, "vsn" => "2.0.0"}))
+    |> then(&%{&1 | req_headers: [{"host", "localhost"} | &1.req_headers]})
+    |> put_req_header("origin", "null")
+    |> put_req_header("connection", "Upgrade")
+    |> put_req_header("upgrade", "websocket")
+    |> put_req_header("sec-websocket-version", "13")
+    |> put_req_header("sec-websocket-key", Base.encode64(:crypto.strong_rand_bytes(16)))
+    |> BrandoIntegrationWeb.Endpoint.call([])
+  end
+
   test "the preview's token opens its own preview channel and no admin channel", c do
     token = served_token(c)
     assert {:error, :invalid} = Users.verify_socket_token(token)
+    assert :error = connect_admin(token)
 
-    assert {:ok, socket} = connect_admin(token)
+    assert {:ok, socket} = connect_preview(token)
     refute Map.has_key?(socket.assigns, :user_id)
 
     assert {:error, %{reason: "forbidden"}} = subscribe_and_join(socket, "lobby", %{"url" => "/admin"})
@@ -71,28 +93,74 @@ defmodule BrandoAdmin.LivePreviewSocketTest do
     assert user_id == c.editor.id
   end
 
-  test "the admin socket token still opens the admin channels", c do
+  test "the admin socket token still opens the admin channels, and not the preview socket", c do
     token = Users.build_socket_token(c.editor, Users.token_id(c.session))
     assert {:ok, socket} = connect_admin(token)
     assert {:ok, _, _} = subscribe_and_join(socket, "user:#{c.editor.id}")
     assert {:ok, _, _} = subscribe_and_join(socket, "live_preview:#{c.key}")
+
+    assert :error = connect_preview(token)
+  end
+
+  # Origin `null` is every sandboxed document on the web; the preview socket
+  # takes it because it takes no cookie, only the preview's token
+  test "the preview socket takes origin null with a preview token; the admin socket keeps its origin check", c do
+    conn = upgrade("/__livepreview/socket", served_token(c))
+    assert conn.halted
+
+    assert [{:websocket, {BrandoAdmin.AdminSocket, {_, %{assigns: %{preview: _}}}, _opts}}] =
+             Plug.Test.sent_upgrades(conn)
+
+    admin_token = Users.build_socket_token(c.editor, Users.token_id(c.session))
+    conn = upgrade("/__livepreview/socket", admin_token)
+    assert conn.status == 403
+    assert Plug.Test.sent_upgrades(conn) == []
+
+    # However the path is spelled: Plug drops the empty segments the request path keeps
+    for path <- ["/__livepreview/socket/websocket/", "/__livepreview//socket/websocket"] do
+      conn = upgrade_at(path, admin_token)
+      assert conn.status == 403, path
+      assert Plug.Test.sent_upgrades(conn) == [], path
+    end
+
+    conn = upgrade("/admin/socket", admin_token)
+    assert conn.status == 403
+    assert Plug.Test.sent_upgrades(conn) == []
+  end
+
+  # The page has no cookies to fetch a fresh token with; the channel hands
+  # one over before the last expires, while the session and preview last
+  test "the preview channel hands over a fresh token, while the preview lasts", c do
+    {:ok, socket} = connect_preview(served_token(c))
+    {:ok, _, socket} = subscribe_and_join(socket, "live_preview:#{c.key}")
+
+    send(socket.channel_pid, :refresh_token)
+    Phoenix.ChannelTest.assert_push("token", %{token: fresh})
+    assert {:ok, %{key: key, user_id: user_id}} = SocketToken.verify(fresh)
+    assert {key, user_id} == {c.key, c.editor.id}
+
+    ref = Process.monitor(socket.channel_pid)
+    Users.delete_session_token(c.session)
+    send(socket.channel_pid, :refresh_token)
+    assert_receive {:DOWN, ^ref, :process, _, _}
+    Phoenix.ChannelTest.refute_push("token", _)
   end
 
   test "the preview's token expires", c do
     session_id = Users.token_id(c.session)
     stale = System.system_time(:second) - SocketToken.max_age() - 1
-    assert :error = connect_admin(SocketToken.build(c.editor, session_id, c.key, signed_at: stale))
+    assert :error = connect_preview(SocketToken.build(c.editor, session_id, c.key, signed_at: stale))
 
     fresh = System.system_time(:second) - SocketToken.max_age() + 60
-    assert {:ok, _} = connect_admin(SocketToken.build(c.editor, session_id, c.key, signed_at: fresh))
+    assert {:ok, _} = connect_preview(SocketToken.build(c.editor, session_id, c.key, signed_at: fresh))
   end
 
   test "the preview's token ends with its session", c do
     token = served_token(c)
-    assert {:ok, socket} = connect_admin(token)
+    assert {:ok, socket} = connect_preview(token)
 
     Users.delete_session_token(c.session)
-    assert :error = connect_admin(token)
+    assert :error = connect_preview(token)
     assert {:error, %{reason: "forbidden"}} = subscribe_and_join(socket, "live_preview:#{c.key}")
   end
 
@@ -107,31 +175,7 @@ defmodule BrandoAdmin.LivePreviewSocketTest do
         "tenant" => [1, 1]
       })
 
-    assert {:ok, socket} = connect_admin(forged)
+    assert {:ok, socket} = connect_preview(forged)
     assert {:error, %{reason: "forbidden"}} = subscribe_and_join(socket, "live_preview:#{c.key}")
-  end
-
-  test "the token endpoint hands a fresh preview token only to the preview's viewer", c do
-    conn =
-      build_conn(:get, "/__livepreview/token?key=#{c.key}")
-      |> init_test_session(%{user_token: c.session})
-      |> Brando.Plug.LivePreview.call([])
-
-    assert conn.status == 200
-    assert get_resp_header(conn, "cache-control") == ["private, no-store"]
-    assert {:ok, %{key: key}} = SocketToken.verify(Jason.decode!(conn.resp_body)["token"])
-    assert key == c.key
-
-    other = Factory.insert(:random_user, role: :editor, avatar: nil)
-
-    for session <- [%{user_token: Users.generate_user_session_token(other)}, %{}] do
-      conn =
-        build_conn(:get, "/__livepreview/token?key=#{c.key}")
-        |> init_test_session(session)
-        |> Brando.Plug.LivePreview.call([])
-
-      assert conn.status == 403
-      refute conn.resp_body =~ "token\":"
-    end
   end
 end

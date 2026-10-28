@@ -3,18 +3,22 @@ defmodule Brando.Plug.LivePreview do
   Serves live previews at `/__livepreview?key=<key>`: the cached page of an
   unsaved entry, with the script that keeps it up to date.
 
-  The page holds the site's own markup, editor content included, on the admin
-  origin. Its script connects to the admin socket with a token good only for
-  this preview's channel (`Brando.LivePreview.SocketToken`), never the
-  viewer's admin socket token; it gets a fresh one from
-  `/__livepreview/token?key=<key>` when it has to connect again. The script
-  itself is served from `/__livepreview/client-<hash>.js`, so a policy without
-  `'unsafe-inline'` allows it.
-
-  Every response carries a Content-Security-Policy with
-  `frame-ancestors 'self'` and `base-uri 'self'`. Add directives with
+  The page holds the site's own markup, editor content included. Every
+  response carries a Content-Security-Policy that sandboxes it
+  (`sandbox_policy/0`): its scripts run in an opaque origin, apart from the
+  admin pages that frame or open it and from the viewer's cookies.
+  `frame-ancestors 'self'` and `base-uri 'self'` follow. Add directives with
 
       config :brando, :live_preview_content_security_policy, "script-src 'self' https://cdn.example.com"
+
+  The page's script connects to the admin socket (`BrandoAdmin.AdminSocket`),
+  served here at `/__livepreview/socket`, with a token good only for this preview's
+  channel (`Brando.LivePreview.SocketToken`), never the viewer's admin socket
+  token; the channel hands it a fresh one before it expires. The script is
+  served from `/__livepreview/client-<hash>.js`, and the storage stand-ins the
+  site's own scripts need in an opaque origin (`put_storage_script/1`) from
+  `/__livepreview/storage-<hash>.js`, so a policy without `'unsafe-inline'`
+  allows both.
 
   See the Live preview guide.
   """
@@ -27,20 +31,33 @@ defmodule Brando.Plug.LivePreview do
   @external_resource Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js")
   @external_resource Application.app_dir(:brando, "priv/static/js/block_patch.js")
   @external_resource Application.app_dir(:brando, "priv/static/js/livepreview.js")
+  @external_resource Application.app_dir(:brando, "priv/static/js/livepreview_highlight.js")
+  @external_resource Application.app_dir(:brando, "priv/static/js/livepreview_storage.js")
 
   @client_js Enum.map_join(
                [
                  Application.app_dir(:phoenix, "priv/static/phoenix.js"),
                  Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js"),
                  Application.app_dir(:brando, "priv/static/js/block_patch.js"),
-                 Application.app_dir(:brando, "priv/static/js/livepreview.js")
+                 Application.app_dir(:brando, "priv/static/js/livepreview.js"),
+                 Application.app_dir(:brando, "priv/static/js/livepreview_highlight.js")
                ],
                "\n;\n",
                &File.read!/1
              )
   @client_vsn :sha256 |> :crypto.hash(@client_js) |> Base.encode16(case: :lower) |> binary_part(0, 16)
 
-  @base_csp "frame-ancestors 'self'; base-uri 'self'"
+  @storage_js File.read!(Application.app_dir(:brando, "priv/static/js/livepreview_storage.js"))
+  @storage_vsn :sha256 |> :crypto.hash(@storage_js) |> Base.encode16(case: :lower) |> binary_part(0, 16)
+
+  # No `allow-same-origin`, so the page's origin is opaque, and no top
+  # navigation, so content cannot take the admin page away. A popup the page
+  # opens (a link with `target="_blank"`) leaves the sandbox, as that link
+  # opened from any other site would: it holds whatever page it links to, with
+  # no access to this one.
+  @sandbox_flags "allow-scripts allow-forms allow-modals allow-downloads allow-popups allow-popups-to-escape-sandbox"
+  @sandbox "sandbox " <> @sandbox_flags
+  @base_csp @sandbox <> "; frame-ancestors 'self'; base-uri 'self'"
 
   @override_css """
   html.is-updated-live-preview [data-moonwalk],
@@ -69,41 +86,20 @@ defmodule Brando.Plug.LivePreview do
   # strings does not keep an old script. Any hash gets the current script,
   # cached for good only under its own hash: a page from another release
   # (during a deploy) must not pin this one under its hash.
-  def call(%Plug.Conn{path_info: ["__livepreview", "client-" <> file]} = conn, _) do
-    cache_control =
-      if file == @client_vsn <> ".js", do: "public, max-age=31536000, immutable", else: "no-cache"
+  def call(%Plug.Conn{path_info: ["__livepreview", "client-" <> file]} = conn, _),
+    do: send_script(conn, @client_js, file == @client_vsn <> ".js")
+
+  def call(%Plug.Conn{path_info: ["__livepreview", "storage-" <> file]} = conn, _),
+    do: send_script(conn, @storage_js, file == @storage_vsn <> ".js")
+
+  # The preview's socket: the admin socket, taking only preview tokens and
+  # any origin here. See `BrandoAdmin.AdminSocket.preview_transport/0`.
+  def call(%Plug.Conn{path_info: ["__livepreview", "socket", "websocket"]} = conn, _) do
+    endpoint = conn.private[:phoenix_endpoint] || Brando.endpoint()
 
     conn
-    |> put_resp_content_type("text/javascript")
-    |> put_resp_header("x-content-type-options", "nosniff")
-    |> put_resp_header("cache-control", cache_control)
-    |> send_resp(200, @client_js)
+    |> Phoenix.Transports.WebSocket.call({endpoint, BrandoAdmin.AdminSocket, BrandoAdmin.AdminSocket.preview_transport()})
     |> halt()
-  end
-
-  def call(%Plug.Conn{path_info: ["__livepreview", "token"]} = conn, _) do
-    key = preview_key(conn)
-
-    conn =
-      conn
-      |> put_resp_header("cache-control", "private, no-store")
-      |> put_resp_header("x-content-type-options", "nosniff")
-      |> fetch_session()
-      |> BrandoAdmin.UserAuth.fetch_current_user(nil)
-
-    user = conn.assigns[:current_user]
-
-    with true <- is_binary(key) and key != "",
-         %{id: user_id} <- user,
-         :ok <- Brando.Authorization.Preview.authorize(key, user_id),
-         token when is_binary(token) <- preview_socket_token(conn, key) do
-      conn
-      |> put_resp_content_type("application/json")
-      |> send_resp(200, Jason.encode!(%{token: token}))
-      |> halt()
-    else
-      _ -> conn |> put_resp_content_type("application/json") |> send_resp(403, ~s({"error":"forbidden"})) |> halt()
-    end
   end
 
   def call(%Plug.Conn{path_info: ["__livepreview" | _suffix]} = conn, _) do
@@ -131,9 +127,9 @@ defmodule Brando.Plug.LivePreview do
   def call(conn, _), do: conn
 
   @doc """
-  The Content-Security-Policy of preview responses: `frame-ancestors 'self'`
-  and `base-uri 'self'`, followed by the directives in the
-  `:live_preview_content_security_policy` config, if any.
+  The Content-Security-Policy of preview responses: `sandbox_policy/0`,
+  `frame-ancestors 'self'` and `base-uri 'self'`, followed by the directives
+  in the `:live_preview_content_security_policy` config, if any.
   """
   @spec content_security_policy() :: String.t()
   def content_security_policy do
@@ -143,8 +139,71 @@ defmodule Brando.Plug.LivePreview do
     end
   end
 
+  @doc """
+  The CSP `sandbox` directive of preview pages and shared preview snapshots.
+  Scripts, forms, dialogs, downloads and popups work, in an opaque origin: the
+  page can neither reach the admin pages that frame or open it nor send a
+  request with the viewer's `SameSite=Lax` cookies.
+  """
+  @spec sandbox_policy() :: String.t()
+  def sandbox_policy, do: @sandbox
+
+  @doc """
+  The same flags for an admin page's preview `<iframe sandbox>`. The response
+  header sandboxes the preview; the attribute keeps sandboxed whatever else
+  the frame navigates to, such as another page of the site.
+  """
+  @spec sandbox_flags() :: String.t()
+  def sandbox_flags, do: @sandbox_flags
+
+  @doc """
+  Puts the script that stands in for `localStorage`, `sessionStorage` and
+  `document.cookie` first in `html`'s `<head>`, before the site's own scripts.
+  In a sandboxed page these throw, and a site script that reads them would
+  stop there; the stand-ins keep what is written in memory for the page's life.
+  """
+  @spec put_storage_script(iodata()) :: String.t()
+  def put_storage_script(html) when is_list(html), do: html |> IO.iodata_to_binary() |> put_storage_script()
+
+  def put_storage_script(html) when is_binary(html) do
+    tag = ~s(<script src="#{storage_path()}"></script>)
+
+    # After `<head>`; without one, where the parser opens it
+    match =
+      Enum.find_value([~r/<head(?:\s[^>]*)?>/i, ~r/<html(?:\s[^>]*)?>/i, ~r/<!doctype[^>]*>/i], fn pattern ->
+        Regex.run(pattern, html, return: :index)
+      end)
+
+    case match do
+      [{at, length}] ->
+        split = at + length
+        binary_part(html, 0, split) <> tag <> binary_part(html, split, byte_size(html) - split)
+
+      nil ->
+        tag <> html
+    end
+  end
+
   @doc false
   def client_path, do: "/__livepreview/client-#{@client_vsn}.js"
+
+  @doc """
+  The path of the storage stand-ins `put_storage_script/1` puts in a page,
+  under `/__livepreview/` with the script's hash.
+  """
+  @spec storage_path() :: String.t()
+  def storage_path, do: "/__livepreview/storage-#{@storage_vsn}.js"
+
+  defp send_script(conn, script, current?) do
+    cache_control = if current?, do: "public, max-age=31536000, immutable", else: "no-cache"
+
+    conn
+    |> put_resp_content_type("text/javascript")
+    |> put_resp_header("x-content-type-options", "nosniff")
+    |> put_resp_header("cache-control", cache_control)
+    |> send_resp(200, script)
+    |> halt()
+  end
 
   defp preview_key(conn), do: conn.query_string && Plug.Conn.Query.decode(conn.query_string)["key"]
 
@@ -186,7 +245,7 @@ defmodule Brando.Plug.LivePreview do
 
           inject_html = """
           <!-- BRANDO LIVE PREVIEW -->
-          <meta name="brando-live-preview" data-key="#{attribute(key)}" data-version="#{generation}" data-token="#{attribute(socket_token)}">
+          <meta name="brando-live-preview" data-key="#{attribute(key)}" data-version="#{generation}" data-token="#{attribute(socket_token)}" data-token-max-age="#{Brando.LivePreview.SocketToken.max_age()}">
           <script src="#{client_path()}"></script>
           <style>
           #{@override_css}
@@ -194,7 +253,7 @@ defmodule Brando.Plug.LivePreview do
           """
 
           [page | rest] = String.split(initial_html, "</body>")
-          html = page <> inject_html <> Enum.join(["</body>" | rest])
+          html = put_storage_script(page <> inject_html <> Enum.join(["</body>" | rest]))
 
           conn
           |> put_resp_content_type("text/html")

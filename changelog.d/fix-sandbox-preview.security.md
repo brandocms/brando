@@ -1,0 +1,1 @@
+- Live previews and shared preview links are sandboxed (CSP `sandbox`, in an opaque origin), so a script in a draft no longer reads the admin page that frames or opened the preview, nor sends requests with the viewer's session; published content still runs unsandboxed on the site's pages, as the Live preview guide describes.

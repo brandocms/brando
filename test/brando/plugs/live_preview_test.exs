@@ -108,7 +108,17 @@ defmodule Brando.Plug.LivePreviewTest do
 
     refute conn.resp_body =~ Brando.Users.build_socket_token(user, session_id)
 
-    assert get_resp_header(conn, "content-security-policy") == ["frame-ancestors 'self'; base-uri 'self'"]
+    # Sandboxed: the page's origin is opaque, apart from the admin pages
+    # that frame or open it and from the viewer's cookies
+    assert [csp] = get_resp_header(conn, "content-security-policy")
+    assert csp == LivePreview.sandbox_policy() <> "; frame-ancestors 'self'; base-uri 'self'"
+    assert csp =~ ~r/^sandbox allow-scripts /
+    refute csp =~ "allow-same-origin"
+    refute csp =~ "allow-top-navigation"
+
+    # The storage stand-ins run before any of the site's scripts
+    assert conn.resp_body =~ ~r"^<html><head><script src=\"/__livepreview/storage-[0-9a-f]{16}\.js\"></script></head>"
+    assert conn.resp_body =~ ~s(data-token-max-age="#{Brando.LivePreview.SocketToken.max_age()}")
   end
 
   test "the preview key is escaped into the page", %{user: user} do
@@ -131,8 +141,47 @@ defmodule Brando.Plug.LivePreviewTest do
     conn = build_conn(:get, "/__livepreview?key=missing") |> LivePreview.call([])
 
     assert get_resp_header(conn, "content-security-policy") == [
-             "frame-ancestors 'self'; base-uri 'self'; script-src 'self' https://cdn.example.com"
+             LivePreview.sandbox_policy() <>
+               "; frame-ancestors 'self'; base-uri 'self'; script-src 'self' https://cdn.example.com"
            ]
+  end
+
+  test "the storage stand-ins go first in the head, wherever the parser opens it" do
+    tag = ~s(<script src="#{LivePreview.storage_path()}"></script>)
+
+    assert LivePreview.put_storage_script(
+             ~s(<!DOCTYPE html><html lang="no"><HEAD data-x="1"><script src="/a.js"></script>)
+           ) ==
+             ~s(<!DOCTYPE html><html lang="no"><HEAD data-x="1">#{tag}<script src="/a.js"></script>)
+
+    # `<header>` is not the head
+    assert LivePreview.put_storage_script("<!doctype html><html><body><header>x</header>") ==
+             "<!doctype html><html>#{tag}<body><header>x</header>"
+
+    assert LivePreview.put_storage_script("<!doctype html><p>x</p>") == "<!doctype html>#{tag}<p>x</p>"
+    assert LivePreview.put_storage_script(["<p>", "x</p>"]) == tag <> "<p>x</p>"
+  end
+
+  test "the storage stand-ins are served from a path a script-src policy can allow" do
+    conn = build_conn(:get, LivePreview.storage_path()) |> LivePreview.call([])
+
+    assert conn.status == 200
+    assert get_resp_header(conn, "content-type") == ["text/javascript; charset=utf-8"]
+    assert get_resp_header(conn, "cache-control") == ["public, max-age=31536000, immutable"]
+    assert conn.resp_body =~ "localStorage"
+
+    conn = build_conn(:get, "/__livepreview/storage-0123456789abcdef.js") |> LivePreview.call([])
+    assert conn.resp_body =~ "localStorage"
+    assert get_resp_header(conn, "cache-control") == ["no-cache"]
+  end
+
+  # The cookie-based token route went with the sandbox: the page has no
+  # cookies to send it (the channel hands over fresh tokens instead)
+  test "there is no token route; it is a preview page like any other path" do
+    conn = build_conn(:get, "/__livepreview/token?key=missing") |> LivePreview.call([])
+    assert conn.halted
+    refute conn.resp_body =~ "token"
+    assert [_] = get_resp_header(conn, "content-security-policy")
   end
 
   test "the preview's script is served from a path a script-src policy can allow" do

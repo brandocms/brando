@@ -451,6 +451,44 @@ defmodule Mix.Tasks.Brando.Migrate55Test do
     assert_has_warning(without_endpoint, &(&1 =~ "add `plug Brando.Plug.Markdown` and"))
   end
 
+  # Sandboxed live previews load the site's module scripts and fonts
+  # cross-origin; SiteAssets sends them with the header that allows it.
+  test "adds the SiteAssets plug to the endpoint, right before Plug.Static" do
+    endpoint_path = "lib/legacy_app_web/endpoint.ex"
+
+    endpoint = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      plug Plug.Static, at: "/", from: :legacy_app
+      plug Plug.Session, @session_options
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    files = %{endpoint_path => endpoint, @deployment_config_path => nil, @fabfile_path => nil}
+    igniter = migrate(@blueprint_054, files)
+
+    assert source(igniter, endpoint_path) =~
+             ~r/plug\(?Brando.Plug.SiteAssets\)?\n\s*plug\(?Plug.Static, at: "\/", from: :legacy_app\)?/
+
+    rerun = igniter |> apply_igniter!() |> include_test_files() |> Migrate55.igniter()
+    assert_unchanged(rerun, endpoint_path)
+
+    no_static = """
+    defmodule LegacyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :legacy_app
+
+      plug Plug.Session, @session_options
+      plug LegacyAppWeb.Router
+    end
+    """
+
+    igniter = migrate(@blueprint_054, %{files | endpoint_path => no_static})
+    refute source(igniter, endpoint_path) =~ "Brando.Plug.SiteAssets"
+    assert_has_warning(igniter, &(&1 =~ "add `plug Brando.Plug.SiteAssets`"))
+  end
+
   test "points Brando at the application's mailer" do
     mailer = "defmodule LegacyApp.Mailer do\n  use Swoosh.Mailer, otp_app: :legacy_app\nend\n"
     igniter = migrate(@blueprint_054, %{"lib/legacy_app/mailer.ex" => mailer})

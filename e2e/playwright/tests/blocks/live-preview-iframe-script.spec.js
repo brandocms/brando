@@ -8,12 +8,12 @@ import path from 'path'
 // be fired directly. No server or fixtures involved.
 const JS = path.join(__dirname, '../../../../priv/static/js')
 
-const load = async (page, bodyHtml, version = 1, { script = true } = {}) => {
+const load = async (page, bodyHtml, version = 1, { script = true, maxAge = 900 } = {}) => {
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.setContent(
     // The plug puts the meta at the end of the body, after the page's content
-    `<html><head></head><body>${bodyHtml}<meta name="brando-live-preview" data-key="test" data-version="${version}" data-token="t"></body></html>`
+    `<html><head></head><body>${bodyHtml}<meta name="brando-live-preview" data-key="test" data-version="${version}" data-token="t" data-token-max-age="${maxAge}"></body></html>`
   )
   await page.evaluate(() => {
     window.__lp = { handlers: {}, patched: [] }
@@ -21,7 +21,8 @@ const load = async (page, bodyHtml, version = 1, { script = true } = {}) => {
     const receipt = { receive: (status, callback) => (status === 'ok' && callback(), receipt) }
     window.Phoenix = {
       Socket: class {
-        constructor(_path, opts) {
+        constructor(path, opts) {
+          window.__lp.socketPath = path
           window.__lp.socketParams = opts.params
         }
         connect() {}
@@ -153,22 +154,66 @@ test.describe('Live preview iframe script', () => {
     expect(await page.evaluate(() => window.BrandoBlockPatch.replaceField('Missing:1:blocks', '<p></p>'))).toBeNull()
     expect(errors).toEqual([])
   })
-  // The socket token lasts 15 minutes and is checked only as the socket
-  // connects, so a refused connect fetches a fresh one for the next attempt.
-  test('a failed connect fetches a fresh token for the next attempt', async ({ page }) => {
+  // The page is sandboxed, with none of the viewer's cookies to fetch a token
+  // with: the channel hands over fresh ones, and the socket connects with the
+  // latest.
+  test('the socket connects with the token the channel handed over last', async ({ page }) => {
     const errors = await load(page, '<main><p>old</p></main>')
+    expect(await page.evaluate(() => window.__lp.socketPath)).toBe('/__livepreview/socket')
     expect(await page.evaluate(() => window.__lp.socketParams())).toEqual({ token: 't' })
 
+    await push(page, 'token', { token: 'fresh' })
+    expect(await page.evaluate(() => window.__lp.socketParams())).toEqual({ token: 'fresh' })
+
+    // A refused connect with a token still fresh just tries again
     await page.evaluate(() => {
-      window.fetch = async (url) => {
-        window.__lp.fetched = url
-        return { ok: true, json: async () => ({ token: 'fresh' }) }
+      window.fetch = async () => {
+        window.__lp.probed = true
       }
       window.__lp.socketError()
     })
+    expect(await page.evaluate(() => window.__lp.probed)).toBeUndefined()
+    expect(errors).toEqual([])
+  })
 
-    await expect.poll(() => page.evaluate(() => window.__lp.socketParams())).toEqual({ token: 'fresh' })
-    expect(await page.evaluate(() => window.__lp.fetched)).toBe('/__livepreview/token?key=test')
+  // Away for longer than its token lasts, the socket has nothing to connect
+  // with: the page loads again, for a fresh one, once the server answers. A
+  // framed page asks the admin page framing it (a reload from inside would
+  // send no cookies); a standalone window reloads itself.
+  // (The framed page's request is in live-preview-sandbox.spec.js.)
+  test('a connect refused after the token expired loads the page again', async ({ page }) => {
+    // Within 30 seconds of its expiry, a token counts as expired
+    const errors = await load(page, '<main><p>old</p></main>', 1, { maxAge: 30 })
+
+    await page.evaluate(() => {
+      window.fetch = async () => ({ type: 'opaque' })
+    })
+    const reloaded = page.waitForEvent('framenavigated')
+    await page.evaluate(() => window.__lp.socketError())
+    await reloaded
+    expect(errors).toEqual([])
+  })
+
+  // The server does not answer: the page stays, and tries again on the next
+  // refused connect
+  test('an expired token does not reload the page while the server is away', async ({ page }) => {
+    const errors = await load(page, '<main><p>old</p></main>', 1, { maxAge: 30 })
+    let navigated = false
+    page.on('framenavigated', () => (navigated = true))
+
+    await page.evaluate(() => {
+      window.__lp.probes = 0
+      window.fetch = async () => {
+        window.__lp.probes++
+        throw new TypeError('Failed to fetch')
+      }
+      window.__lp.socketError()
+    })
+    await expect.poll(() => page.evaluate(() => window.__lp.probes)).toBe(1)
+    await page.evaluate(() => window.__lp.socketError())
+    await expect.poll(() => page.evaluate(() => window.__lp.probes)).toBe(2)
+    await expect(page.locator('main p')).toHaveText('old')
+    expect(navigated).toBe(false)
     expect(errors).toEqual([])
   })
 

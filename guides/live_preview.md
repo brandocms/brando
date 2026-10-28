@@ -217,21 +217,62 @@ that required preloads and template/layout assigns match the controller path.
 
 ## What the preview page can reach
 
-The preview is served from the admin's own origin at `/__livepreview`, so it
-renders with the site's own scripts, and content markup in it (HTML and SVG
-refs, module code) runs there too. Its script connects to the admin socket with a
-token for that preview alone (`Brando.LivePreview.SocketToken`): it names the
-viewer, their session, the preview, and the site and environment it belongs
-to, and it lasts 15 minutes. It joins that preview's channel and no other; the
-page fetches a fresh one from `/__livepreview/token` when its socket
-reconnects. The viewer's admin socket token is not in the page.
+The preview is served from the admin's own host at `/__livepreview` and renders
+with the site's own scripts. Content markup in it (HTML and SVG refs, module
+code) runs there too, so every preview response is sandboxed with the
+Content-Security-Policy directive
+`sandbox allow-scripts allow-forms allow-modals allow-downloads allow-popups allow-popups-to-escape-sandbox`,
+and the admin's preview frames carry the same flags in their `sandbox`
+attribute. The page's origin is opaque (`null`), not the admin's:
 
-Preview responses carry a Content-Security-Policy of
-`frame-ancestors 'self'; base-uri 'self'`: only admin pages on the same origin
-can frame a preview, and a `<base>` tag in content cannot redirect the page's
-relative URLs. The preview's own script loads from
-`/__livepreview/client-<hash>.js`, so `'self'` allows it. To add directives, such as a
-`script-src` listing the hosts your templates load scripts from:
+- It cannot read the admin page that frames it. A standalone preview opens
+  with no `window.opener`.
+- Its requests carry none of the viewer's `SameSite=Lax` or `Strict` cookies,
+  and it cannot read a response from the admin. Set `same_site: "Lax"` on the
+  endpoint's session options, as `phx.new` does: some browsers (Firefox)
+  treat a cookie without it as `None` and send it, though the page still
+  cannot read what comes back.
+- It cannot navigate the admin page. Links that open a new window open
+  outside the sandbox, as they would from any other site.
+
+The rest of the policy is `frame-ancestors 'self'; base-uri 'self'`: only
+admin pages on the same origin can frame a preview, and a `<base>` tag in
+content cannot redirect the page's relative URLs. Shared preview links
+(`/__p__/…`) get the same `sandbox` directive, ahead of the policy the site's
+router pipeline sets.
+
+The page's script connects to the admin socket at `/__livepreview/socket`,
+with a token for that preview alone (`Brando.LivePreview.SocketToken`): it
+names the viewer, their session, the preview, and the site and environment
+it belongs to, and it lasts 15 minutes. It joins that preview's channel and
+no other, and the channel hands the page a fresh token before the last one
+expires. The socket takes origin `null` there because it reads no cookie;
+the admin socket at `/admin/socket` keeps Phoenix's origin check. The
+viewer's admin socket token is not in the page.
+
+### The site's scripts in the preview
+
+Most frontend code runs unchanged. What an opaque origin changes:
+
+- `localStorage`, `sessionStorage` and `document.cookie` work, but hold their
+  values in memory for the life of the page. Brando puts stand-ins for them
+  in the page (`/__livepreview/storage-<hash>.js`, first in `<head>`); without
+  them, reading them throws.
+- IndexedDB, the Cache API and service workers are not available.
+- Module scripts, fonts and anything else loaded with CORS (`crossorigin`,
+  `fetch`) count as cross-origin requests. `Brando.Plug.SiteAssets` sends the
+  site's static files with `Access-Control-Allow-Origin: *`, so it must sit
+  right before the endpoint's `Plug.Static`, as `mix brando.install` and
+  `mix brando.migrate55` put it. A script that fetches from the site's own
+  routes (an API, a JSON feed) gets no response in the preview unless that
+  route sends the header too. With the Vite dev server in development, allow
+  any origin in its `server.cors` setting.
+
+### Restricting scripts further
+
+The preview's own scripts load from `/__livepreview/`, so `'self'` allows
+them. To add directives, such as a `script-src` listing the hosts your
+templates load scripts from:
 
 ```elixir
 config :brando, :live_preview_content_security_policy,
@@ -245,17 +286,36 @@ if the templates need them. `'self'` also allows any script file served from
 the same origin, uploaded media included, so where editors can upload files,
 list your script directories (such as `https://example.com/assets/`) instead
 of `'self'`, along with `https://example.com/__livepreview/` for the
-preview's own script.
+preview's own scripts.
 
-The scoped token keeps the admin socket token out of the preview page, not out
-of reach. Without a `script-src` that blocks it, a script an editor puts into
-the content runs on the admin origin whenever someone previews it, with the
-viewing user's cookies: it can read the admin page that frames the preview
-(and the window that opened a standalone preview), admin token included, and
-load any admin page as that user. Only superusers write markup that runs as
-it is: module code, the template and parameters of an HTML ref, the code of
-an SVG ref ([HTML refs](block_editor.md#html-refs)) and a fragment's wrapper.
-What other editors write is escaped or sanitized before it reaches the page:
-text and rich-text refs, headings, Markdown, captions, vars and an HTML ref's
-parameter values (see [Writing templates safely](block_editor.md#writing-templates-safely)).
-Set a `script-src` if editors you do not trust author content.
+### What protects the admin, and what is left
+
+Three things keep markup an editor writes from acting as someone who views
+it:
+
+- The sandbox above, for previews (drafts and unsaved edits) and shared
+  preview links.
+- Who writes markup that runs. Only superusers write markup that runs as
+  written: module code, the template and parameters of an HTML ref, the code
+  of an SVG ref ([HTML refs](block_editor.md#html-refs)) and a fragment's
+  wrapper. What other editors write is escaped or sanitized before it reaches
+  the page: text and rich-text refs, headings, Markdown, captions, vars and an
+  HTML ref's parameter values (see
+  [Writing templates safely](block_editor.md#writing-templates-safely)).
+- Uploads. `Brando.Plug.Media` serves `/media` with
+  `Content-Security-Policy: sandbox` and `nosniff`, so an uploaded SVG or HTML
+  file opened on its own, from a preview or anywhere else, runs no script
+  ([How media is served](media.md#how-media-is-served)).
+
+What is left:
+
+- Published content runs on the site's own pages, outside any sandbox, for
+  everyone who visits them. On a site served from the admin's host that
+  includes signed-in admins, frontend edit mode included: a script a
+  superuser published there has the visiting admin's cookies and can load
+  admin pages as them.
+- A web server or CDN that serves `/media` itself, rather than through the
+  plug, must send the same headers (`Brando.Plug.Media.media_headers/1`).
+  Without them, an uploaded SVG opened on its own runs on the site's origin,
+  and a preview's standalone window can navigate itself to one.
+- To limit which scripts run in previews further, set a `script-src` (above).

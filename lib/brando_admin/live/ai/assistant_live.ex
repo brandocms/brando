@@ -1272,6 +1272,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <iframe
         id={"assistant-preview-frame-#{@key}"}
         src={"/__livepreview?key=#{@key}"}
+        sandbox={Brando.Plug.LivePreview.sandbox_flags()}
         title={gettext("Page preview of %{title}", title: @entry && @entry.title)}
         phx-hook="Brando.ProposalPreview"
         data-highlight={Jason.encode!(@highlight)}

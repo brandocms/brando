@@ -1,6 +1,10 @@
 defmodule BrandoAdmin.AdminSocket do
   @moduledoc """
   Socket specs for System and Stats channels.
+
+  The application's endpoint serves it at `/admin/socket`, with Phoenix's
+  origin check, for admin pages. `Brando.Plug.LivePreview` also serves it at
+  `/__livepreview/socket`, as a preview socket: see `preview_transport/0`.
   """
   use Phoenix.Socket
 
@@ -20,7 +24,11 @@ defmodule BrandoAdmin.AdminSocket do
         else: socket
 
     Brando.Authorization.Realtime.allow_sandbox(socket)
-    connect(params, socket)
+
+    case connect_info do
+      %{brando_live_preview: true} -> connect_preview(params, socket)
+      _admin -> connect(params, socket)
+    end
   end
 
   # The token names the user's session (`Brando.Users.build_socket_token/2`):
@@ -29,22 +37,13 @@ defmodule BrandoAdmin.AdminSocket do
   # change, a two-factor reset, deactivating the account — disconnects it
   # with the session's LiveViews (`Brando.Users.disconnect_session/1`), and
   # its reconnects are turned away. The user's other sessions keep theirs.
-  #
-  # A live-preview document connects with a token for one preview instead
-  # (`Brando.LivePreview.SocketToken`), as its page holds editor markup. That
-  # socket assigns `:preview`, not `:user_id`, so `session_valid?/1` is false
-  # for it and only `BrandoAdmin.LivePreviewChannel` joins it, for its key.
   @impl true
   def connect(%{"token" => token}, socket) do
-    case Brando.Users.verify_socket_token(token) do
-      {:ok, session} ->
-        if Brando.Authorization.Realtime.authorize_account(session.user_id) == :ok,
-          do:
-            {:ok, assign(socket, user_id: session.user_id, session_id: session.session_id, socket_id: session.socket_id)},
-          else: :error
-
-      {:error, _} ->
-        connect_preview(token, socket)
+    with {:ok, session} <- Brando.Users.verify_socket_token(token),
+         :ok <- Brando.Authorization.Realtime.authorize_account(session.user_id) do
+      {:ok, assign(socket, user_id: session.user_id, session_id: session.session_id, socket_id: session.socket_id)}
+    else
+      _ -> :error
     end
   end
 
@@ -53,7 +52,12 @@ defmodule BrandoAdmin.AdminSocket do
     :error
   end
 
-  defp connect_preview(token, socket) do
+  # A live-preview document connects with a token for one preview
+  # (`Brando.LivePreview.SocketToken`), as its page holds editor markup, and
+  # with nothing else. That socket assigns `:preview`, not `:user_id`, so
+  # `session_valid?/1` is false for it and only `BrandoAdmin.LivePreviewChannel`
+  # joins it, for its key.
+  defp connect_preview(%{"token" => token}, socket) do
     with {:ok, preview} <- Brando.LivePreview.SocketToken.verify(token),
          :ok <- Brando.Authorization.Realtime.authorize_account(preview.user_id) do
       {:ok,
@@ -67,6 +71,8 @@ defmodule BrandoAdmin.AdminSocket do
     end
   end
 
+  defp connect_preview(_params, _socket), do: :error
+
   # The session's `Brando.Users.live_socket_id/1`
   @impl true
   def id(socket), do: socket.assigns.socket_id
@@ -79,4 +85,24 @@ defmodule BrandoAdmin.AdminSocket do
   """
   @spec session_valid?(Phoenix.Socket.t()) :: boolean()
   def session_valid?(socket), do: Brando.Users.session_valid?(socket.assigns[:session_id], socket.assigns[:user_id])
+
+  @doc false
+  # The WebSocket transport options of the preview socket at
+  # `/__livepreview/socket` (`Brando.Plug.LivePreview`).
+  #
+  # A preview page is sandboxed: its origin is opaque, so its WebSocket
+  # request carries `Origin: null` and none of the viewer's `SameSite=Lax`
+  # cookies. Phoenix's origin check turns `null` away; the admin socket at
+  # `/admin/socket` keeps that check. Here it is off, which is safe because
+  # this socket reads no cookie: on this path it connects only with a preview
+  # token (`connect/3` sees `brando_live_preview: true` in its connect info,
+  # which only this transport sets), and only that preview's
+  # channel joins it. It runs under the admin socket's own supervision tree,
+  # which the endpoint starts, so the endpoint declares nothing for it.
+  def preview_transport do
+    Phoenix.Socket.Transport.load_config(
+      [check_origin: false, connect_info: [:user_agent, brando_live_preview: true]],
+      Phoenix.Transports.WebSocket
+    )
+  end
 end

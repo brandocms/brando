@@ -29,35 +29,51 @@ const livePreviewMeta = (() => {
 var livePreviewKey = livePreviewMeta.getAttribute('data-key')
 var livePreviewVersion = Number(livePreviewMeta.getAttribute('data-version'))
 let token = livePreviewMeta.getAttribute('data-token')
+const tokenMaxAge = Number(livePreviewMeta.getAttribute('data-token-max-age')) || 15 * 60
+let tokenReceivedAt = Date.now()
+const clientScriptUrl = document.currentScript && document.currentScript.src
 
 // Cache DOM references. `<main>` is looked up on every update instead: a full
 // rerender may replace it, and a template need not have one.
 const body = document.querySelector('body')
 const parser = new DOMParser()
 
-// Phoenix Socket connection. The token is read on every connect.
-const previewSocket = new Phoenix.Socket('/admin/socket', {
+// The page is sandboxed (`Brando.Plug.LivePreview`): its origin is opaque and
+// it has none of the viewer's cookies. Its socket is the admin socket served
+// at `/__livepreview/socket`, which takes origin `null` and a preview token
+// alone (`BrandoAdmin.AdminSocket.preview_transport/0`); the token is read on
+// every connect.
+const previewSocket = new Phoenix.Socket('/__livepreview/socket', {
   params: () => ({ token }),
 })
 
-// The token lasts 15 minutes and the socket checks it only as it connects.
-// When a connect fails, fetch a fresh one for the next attempt: the socket may
-// have been away for longer than that.
-let refreshingToken = false
+// The page loads again from the admin page that frames it, which sends the
+// viewer's cookies with the request; a page reloading itself would be turned
+// away without them. A standalone window reloads itself: a top-level reload
+// keeps them.
+const framed = window.parent !== window
+
+function reloadPage() {
+  if (framed) {
+    window.parent.postMessage({ source: 'brando-live-preview', type: 'reload' }, location.origin)
+  } else {
+    window.location.reload()
+  }
+}
+
+// The token lasts `tokenMaxAge` seconds and the socket checks it only as it
+// connects; the channel hands over a fresh one well before it expires
+// (`token`). A socket away for longer than that has only an expired token to
+// connect with, so the page loads again for a fresh one, once the server
+// answers.
+let recovering = false
 previewSocket.onError(() => {
-  if (refreshingToken) return
-  refreshingToken = true
-  fetch('/__livepreview/token?key=' + encodeURIComponent(livePreviewKey), {
-    credentials: 'same-origin',
-    cache: 'no-store',
-  })
-    .then(response => (response.ok ? response.json() : null))
-    .then(data => {
-      if (data && data.token) token = data.token
-    })
-    .catch(() => {})
-    .finally(() => {
-      refreshingToken = false
+  if (recovering || Date.now() - tokenReceivedAt < (tokenMaxAge - 30) * 1000) return
+  recovering = true
+  fetch(clientScriptUrl || location.href, { mode: 'no-cors', cache: 'no-store' })
+    .then(reloadPage)
+    .catch(() => {
+      recovering = false
     })
 })
 previewSocket.connect()
@@ -216,10 +232,18 @@ function preparePage() {
  * player must be mounted by the host frontend's JS boot. morphdom can swap the DOM
  * but never runs that boot, so we reload the iframe: it re-fetches the (already
  * refreshed) cached HTML for the same key and the frontend mounts the player —
- * exactly like opening the preview.
+ * exactly like opening the preview. See `reloadPage` for how.
  */
-channel.on('reload', function () {
-  window.location.reload()
+channel.on('reload', reloadPage)
+
+/**
+ * A fresh socket token for the next connect.
+ */
+channel.on('token', function (payload) {
+  if (payload && payload.token) {
+    token = payload.token
+    tokenReceivedAt = Date.now()
+  }
 })
 
 /**

@@ -118,6 +118,65 @@ defmodule Brando.Assets.SiteAssetsTest do
     assert Manifest.read(:app).entries.files == ["/assets/beta-set.js"]
   end
 
+  # A sandboxed live preview's origin is opaque, so its module scripts and
+  # fonts load cross-origin: the site's static files carry
+  # `Access-Control-Allow-Origin: *`, with no credentials allowed, whichever
+  # plug before the router sends them.
+  describe "the cross-origin header" do
+    test "is on the files of an active set" do
+      set_path = SiteAssetsFixtures.create_set(nil, "20260816_cors", "standalone", "standalone.css")
+      {:ok, registered} = SiteAssets.register_set(set_path, %{uploaded_at: "2026-08-16T12:30:00Z", revision: "c"})
+      {:ok, _} = SiteAssets.activate_set(registered.id)
+
+      served = Brando.Plug.SiteAssets.call(conn("assets/20260816_cors.js"), [])
+      assert served.status == 200
+      assert get_resp_header(served, "access-control-allow-origin") == ["*"]
+      assert get_resp_header(served, "access-control-allow-credentials") == []
+    end
+
+    test "is on what the release's Plug.Static sends after it" do
+      static = Plug.Static.init(at: "/", from: {:brando, "priv/static"}, only: ~w(js))
+
+      sent =
+        conn("js/livepreview_storage.js")
+        |> Brando.Plug.SiteAssets.call([])
+        |> Plug.Static.call(static)
+
+      assert sent.status == 200
+      assert get_resp_header(sent, "access-control-allow-origin") == ["*"]
+
+      # Revalidated: the browser keeps the header it cached only if it is sent again
+      etag = sent |> get_resp_header("etag") |> List.first()
+
+      revalidated =
+        conn("js/livepreview_storage.js")
+        |> put_req_header("if-none-match", etag)
+        |> Brando.Plug.SiteAssets.call([])
+        |> Plug.Static.call(static)
+
+      assert revalidated.status == 304
+      assert get_resp_header(revalidated, "access-control-allow-origin") == ["*"]
+    end
+
+    test "is not on admin paths, previews, routed pages or misses" do
+      for path <- ["admin/pages", "__livepreview/client-0.js", "__livepreview"] do
+        sent = path |> conn() |> Brando.Plug.SiteAssets.call([]) |> send_resp(200, "")
+        assert get_resp_header(sent, "access-control-allow-origin") == [], path
+      end
+
+      routed =
+        conn("about")
+        |> Brando.Plug.SiteAssets.call([])
+        |> put_private(:phoenix_router, BrandoIntegrationWeb.Router)
+        |> send_resp(200, "page")
+
+      assert get_resp_header(routed, "access-control-allow-origin") == []
+
+      missing = "assets/missing.js" |> conn() |> Brando.Plug.SiteAssets.call([]) |> send_resp(404, "")
+      assert get_resp_header(missing, "access-control-allow-origin") == []
+    end
+  end
+
   defp conn(relative_path, host \\ "standalone.test") do
     :get
     |> Plug.Test.conn("https://#{host}/#{relative_path}")
