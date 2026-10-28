@@ -55,8 +55,9 @@ defmodule Brando.Villain.TemplateAdapter do
   in HEEx) reads the row's `city` var. Row fields win over a var of the same
   name, so positional access through `row.vars[0].value` keeps working.
 
-  A row's `rich_text` vars are sanitized and, with `escape: true` (Liquid),
-  its `string` and `text` vars HTML-escaped, by key and in `row.vars` alike
+  A row's `rich_text` vars are sanitized and, with `escape: true` (a Liquid
+  template that renders HTML, not a module's Markdown template), its
+  `string` and `text` vars HTML-escaped, by key and in `row.vars` alike
   (`Brando.Villain.Parser.process_vars/2`).
   """
   def simple_block(module, block, opts \\ []) do
