@@ -347,10 +347,12 @@ sender first, before the first compile.
   `replace` on them sees the escaped text); header refs show their text as
   typed, with line breaks still as `<br>`; Markdown refs render no raw HTML
   and no script links; a picture's own title and credits are escaped. Look
-  for markup in those in the module code and the content (the seeded Hero's
-  heading holds a `<span class="soft">`, for one), and move markup out of a
-  heading or a Markdown ref into a text ref. `{{ title | escape }}` keeps
-  printing the text once. See
+  for markup in those in the content and move it out: HTML in a Markdown ref
+  into a text ref, and formatting in a heading into the module template, as
+  a plain-text convention the template turns into markup (`***word***`, say),
+  since a heading is plain text. The seeded Hero's heading holds a
+  `<span class="soft">`: edit it. `{{ title | escape }}` keeps printing the
+  text once. See
   [Writing templates safely](block_editor.md#writing-templates-safely).
 
   A `string` or `text` var that is meant to hold HTML becomes a `rich_text`

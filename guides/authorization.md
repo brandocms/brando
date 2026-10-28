@@ -127,6 +127,12 @@ group editor and configuration imports leave these permissions out. A group
 that held one before 0.55 gains nothing from it, and saving the group drops it.
 Reading and exporting modules and containers are ordinary permissions.
 
+A fragment's wrapper is markup printed around it as it is, so the same rule
+holds for that one field: only a Superuser sets or changes it, in both modes,
+whatever the save (the form, a content import, a proposal). Anyone who may edit
+the fragment edits the rest of it, and copying a fragment copies its wrapper.
+The form shows the wrapper only to users with the `:superuser` role.
+
 Membership in several groups combines their grants. There are no group hierarchies,
 implicit priority, or explicit-deny rules in v1. Missing and unknown permissions
 are denied. Removing one membership leaves access granted by other groups intact.

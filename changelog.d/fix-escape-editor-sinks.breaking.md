@@ -2,8 +2,8 @@
   Run `mix brando.gen.migrations` and migrate (`brando_225`). Match `:rich_text` where code matched `type: :html` on a var; `:html` is still read on the way in (definition files, exports, transfers).
 - Liquid modules print `string` and `text` vars, globals and identity links HTML-escaped and with their braces encoded, so markup or Liquid in them shows as text.
   Make a var that is meant to hold HTML a `rich_text` var (the migration guide has the steps); `{{ var | escape }}` keeps printing it once. A comparison, `truncate` or `replace` on such a var sees the escaped text.
-- A header ref's text is printed as text, braces included, with its line breaks still as `<br>`; markup in a heading shows as written, a character reference such as `&shy;` as its character.
-  Move markup out of headings into text refs; the seeded Hero's heading holds a `<span class="soft">` to remove.
+- A heading (header ref) is plain text: HTML in it shows as text, braces included, while line breaks still become `<br>` and a character reference such as `&shy;` its character.
+  Formatting in a heading belongs in the module template: a plain-text convention the template turns into markup (`***word***`, say), not HTML in the heading. On an existing site, edit the seeded Hero's heading, which holds a `<span class="soft">`.
 - A picture's caption reaches `render_caption/1` as markup: the image's own title and the credits escaped, a placement's caption sanitized.
   A parser module that overrides `render_caption/1` and escapes `title` or `credits` itself should stop.
 - Markdown refs and the `markdown` filter render no raw HTML and no script addresses (`Brando.Markdown` is safe by default; `safe: false` for Markdown no editor wrote).

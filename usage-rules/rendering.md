@@ -191,8 +191,10 @@ This empty state omits an absent footer. The `render_fragment` convenience
 helpers instead render a visible **Missing page fragment** diagnostic for an
 unknown key. Rendering a fragment struct directly also applies its optional
 wrapper, which accepts `{{ content }}`, `{{ parent_key }}`, `{{ key }}`, and
-`{{ language }}` substitutions. `render_fragment/1` outputs the stored content
-without that wrapper.
+`{{ language }}` substitutions. The wrapper is printed as it is, so only a
+superuser sets it (see [Authorization](deps/brando/guides/authorization.md)); editors edit the
+rest of the fragment. `render_fragment/1` outputs the stored content without
+that wrapper.
 
 Only a published fragment renders. An unpublished one stays in the map with no
 content, so `{fragment}`, `<Brando.HTML.fragment fragment={fragment} />`,

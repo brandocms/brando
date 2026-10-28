@@ -569,7 +569,8 @@ Two conventions the seeds rely on, worth knowing when you write your own:
 
 - A header ref holds plain text: markup in it shows as text. Newlines in a
   header ref become `<br>`, which is how the hero headline gets its second
-  line.
+  line. Formatting in a heading belongs in the module template, as a
+  plain-text convention it turns into markup, not as HTML in the heading.
 - Ref content is parsed for Liquid on its way into the module markup. Copy that
   shows a `{% ref %}` tag, like the Quick start step that explains them, has
   to escape its braces as `&#123;` / `&#125;`, or the renderer consumes it as a

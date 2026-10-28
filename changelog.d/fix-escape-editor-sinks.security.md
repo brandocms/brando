@@ -1,3 +1,4 @@
 - A picture's own title and credits are escaped in its caption, and a placement's caption (picture, gallery, video) is sanitized when it renders, so markup in them cannot run on the site.
 - Rich text an AI translation of a copied entry writes into vars and rich-text fields is sanitized as an editor's would be; text with unsafe markup keeps the source text.
 - The `link_url` and `link_text` filters print a link var's address and text HTML-escaped.
+- Only a superuser sets or changes a fragment's wrapper, in both authorization modes and on every save path; editors still edit the rest of the fragment and may copy one that has a wrapper.
