@@ -1047,12 +1047,15 @@ defmodule Brando.Content.ProposalsTest do
           creator_id: c.user.id
         })
 
+      # The SVG is the module's: a proposal does not write SVG code
+      svg = ~s(<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>)
+
       module =
         module!(c.user, "Everything", "<div>{% ref refs.gallery %}{% ref refs.doc %}{% ref refs.icon %}</div>",
           refs: [
             Brando.ProposalFixtures.ref("gallery", %{type: "gallery", data: %{}}),
             Brando.ProposalFixtures.ref("doc", %{type: "file", data: %{}}),
-            Brando.ProposalFixtures.ref("icon", %{type: "svg", data: %{}}),
+            Brando.ProposalFixtures.ref("icon", %{type: "svg", data: %{code: svg}}),
             Brando.ProposalFixtures.ref("notes", %{type: "markdown", data: %{}}),
             Brando.ProposalFixtures.ref("where", %{type: "map", data: %{}})
           ]
@@ -1060,14 +1063,13 @@ defmodule Brando.Content.ProposalsTest do
 
       target = {Page, c.work.id}
       uid = Brando.Utils.generate_uid()
-      svg = ~s(<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="4"/></svg>)
 
       insert = %InsertBlock{
         target: target,
         module: module.id,
         uid: uid,
         media: %{gallery: {:gallery, [{:image, c.image.id}, {:video, c.video.id}]}, doc: {:file, file.id}},
-        texts: %{icon: svg, notes: "Some *notes*", where: "https://www.google.com/maps/embed?pb=1"},
+        texts: %{notes: "Some *notes*", where: "https://www.google.com/maps/embed?pb=1"},
         configs: %{gallery: %{display: "list"}, doc: %{label: "Download"}}
       }
 
@@ -1104,7 +1106,7 @@ defmodule Brando.Content.ProposalsTest do
       assert {:ok, proposal} = Proposals.propose([bad], c.user)
 
       assert proposal.problems |> Enum.map(& &1.code) |> Enum.sort() ==
-               Enum.sort([:wrong_media_type, :missing_asset, :unsafe_text, :unsafe_text])
+               Enum.sort([:wrong_media_type, :missing_asset, :unsupported_value, :unsafe_text])
     end
 
     test "entry fields take media", c do

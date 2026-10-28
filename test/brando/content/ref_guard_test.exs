@@ -270,6 +270,52 @@ defmodule Brando.Content.RefGuardTest do
     end
   end
 
+  describe "content transfer" do
+    # Transferred blocks are cast by `Transfer.field_changeset/3` with the
+    # importing user, like an editor's save
+    defp transfer(c, user) do
+      page = Factory.insert(:page, creator: c.superuser) |> Repo.preload(entry_blocks: :block)
+
+      block = %{
+        "uid" => Brando.Utils.generate_uid(),
+        "type" => "module",
+        "module_id" => c.module.id,
+        "refs" => %{
+          "0" => %{
+            "uid" => Brando.Utils.generate_uid(),
+            "name" => "embed",
+            "data" => %{"type" => "html", "data" => %{"text" => "<i>imported</i>", "values" => %{"checkin_id" => "x1"}}}
+          },
+          "1" => %{
+            "uid" => Brando.Utils.generate_uid(),
+            "name" => "body",
+            "data" => %{"type" => "svg", "data" => %{"code" => "<svg/>"}}
+          }
+        }
+      }
+
+      changeset =
+        Brando.Content.Transfer.field_changeset(page, %{"entry_blocks" => [%{"sequence" => 0, "block" => block}]}, user)
+
+      [entry_block] = Changeset.apply_changes(changeset).entry_blocks
+      Map.new(entry_block.block.refs, &{&1.name, &1.data})
+    end
+
+    test "an editor's import takes the module's markup and types", c do
+      refs = transfer(c, c.editor)
+
+      assert %HtmlBlock{data: %{text: @template, values: %{"checkin_id" => "x1"}}} = refs["embed"]
+      assert %TextBlock{data: %{text: "<p>Body</p>"}} = refs["body"]
+    end
+
+    test "a superuser's import keeps its markup, but not a changed type", c do
+      refs = transfer(c, c.superuser)
+
+      assert %HtmlBlock{data: %{text: "<i>imported</i>"}} = refs["embed"]
+      assert %TextBlock{} = refs["body"]
+    end
+  end
+
   describe "an SVG ref" do
     test "an editor's code is put back", c do
       block = insert_block!(c)

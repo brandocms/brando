@@ -25,8 +25,10 @@ defmodule Brando.AI.Translation do
   @translatable_var_types [:string, :text, :html]
 
   # PolymorphicEmbed resolves to the wrapper struct (e.g. TextBlock),
-  # which contains the actual Data struct at .data (e.g. TextBlock.Data)
-  @text_ref_wrapper_types [TextBlock, HtmlBlock, HeaderBlock, MarkdownBlock]
+  # which contains the actual Data struct at .data (e.g. TextBlock.Data).
+  # An HTML ref's text is markup a superuser writes: only the values of its
+  # `text` parameters are translated (`{:ref_html_value, ...}`).
+  @text_ref_wrapper_types [TextBlock, HeaderBlock, MarkdownBlock]
 
   @doc "Var types whose `value` is text to translate."
   def translatable_var_types, do: @translatable_var_types
@@ -127,6 +129,7 @@ defmodule Brando.AI.Translation do
   - `{:var, var_id, text}`
   - `{:ref, ref_id, text}`
   - `{:ref_picture, ref_id, field, text}`
+  - `{:ref_html_value, ref_id, param_key, text}` — a `text` parameter of an HTML ref
   - `{:ref_video, ref_id, :title, text}`
   - `{:ref_gallery, ref_id, override_idx, field, text}`
   - `{:table_var, var_id, text}`
@@ -246,6 +249,9 @@ defmodule Brando.AI.Translation do
         %wrapper{data: inner_data} when wrapper in @text_ref_wrapper_types ->
           collect_ref_text(ref.id, Map.get(inner_data, :text))
 
+        %HtmlBlock{data: inner_data} ->
+          collect_html_values(ref.id, inner_data)
+
         %PictureBlock{data: inner_data} ->
           collect_picture_overrides(ref, inner_data, langs)
 
@@ -267,6 +273,15 @@ defmodule Brando.AI.Translation do
     else
       []
     end
+  end
+
+  defp collect_html_values(ref_id, data) do
+    values = data.values || %{}
+
+    for {key, :text} <- HtmlBlock.params_by_key(data),
+        text = Map.get(values, key),
+        is_binary(text) and text != "",
+        do: {:ref_html_value, ref_id, key, text}
   end
 
   defp collect_picture_overrides(ref, data, langs) do
@@ -653,20 +668,32 @@ defmodule Brando.AI.Translation do
     end
   end
 
+  # Only into a ref that still holds plain text: never an HTML or SVG ref's
+  # markup, whatever the item says.
   defp apply_single_translation({:ref, ref_id, translated_text}, _entry, _schema) do
-    update_ref_inner_data(ref_id, fn inner -> Map.put(inner, :text, translated_text) end)
+    update_ref_inner_data(ref_id, @text_ref_wrapper_types, fn inner -> Map.put(inner, :text, translated_text) end)
+  end
+
+  # A `text` parameter's value only: the template and the other parameters
+  # stay as they are.
+  defp apply_single_translation({:ref_html_value, ref_id, key, translated_text}, _entry, _schema) do
+    update_ref_inner_data(ref_id, [HtmlBlock], fn inner ->
+      if HtmlBlock.params_by_key(inner)[key] == :text,
+        do: %{inner | values: Map.put(inner.values || %{}, key, translated_text)},
+        else: inner
+    end)
   end
 
   defp apply_single_translation({:ref_picture, ref_id, field, translated_text}, _entry, _schema) do
-    update_ref_inner_data(ref_id, fn inner -> Map.put(inner, field, translated_text) end)
+    update_ref_inner_data(ref_id, [PictureBlock], fn inner -> Map.put(inner, field, translated_text) end)
   end
 
   defp apply_single_translation({:ref_video, ref_id, :title, translated_text}, _entry, _schema) do
-    update_ref_inner_data(ref_id, fn inner -> Map.put(inner, :title, translated_text) end)
+    update_ref_inner_data(ref_id, [VideoBlock], fn inner -> Map.put(inner, :title, translated_text) end)
   end
 
   defp apply_single_translation({:ref_gallery, ref_id, override_idx, field, translated_text}, _entry, _schema) do
-    update_ref_inner_data(ref_id, fn inner ->
+    update_ref_inner_data(ref_id, [GalleryBlock], fn inner ->
       overrides = inner.gallery_object_overrides || []
 
       updated_overrides =
@@ -705,28 +732,34 @@ defmodule Brando.AI.Translation do
 
   # Updates the inner `.data` of a ref's wrapper struct.
   # ref.data is a wrapper (e.g. %TextBlock{data: %TextBlock.Data{...}})
-  # update_fn receives the inner Data struct, returns the updated inner Data struct
-  defp update_ref_inner_data(ref_id, update_fn) do
+  # update_fn receives the inner Data struct, returns the updated inner Data struct.
+  # `wrappers` are the ref types the update may write to: a ref changed to
+  # another type since it was collected is left alone.
+  defp update_ref_inner_data(ref_id, wrappers, update_fn) do
     case Repo.get(Ref, ref_id) do
-      nil ->
+      %Ref{data: %wrapper{}} = ref ->
+        if wrapper in wrappers, do: write_ref_inner_data(ref, update_fn), else: :ok
+
+      _ ->
         :ok
-
-      ref ->
-        ref = Repo.preload(ref, Ref.preloads())
-        wrapper = ref.data
-        inner_data = wrapper.data
-        updated_inner = update_fn.(inner_data)
-        updated_wrapper = %{wrapper | data: updated_inner}
-
-        # PolymorphicEmbed fields are excluded from Blueprint's castable_fields,
-        # so we must build the changeset manually with cast + cast_polymorphic_embed
-        data_params = poly_embed_to_params(updated_wrapper)
-
-        ref
-        |> Ecto.Changeset.cast(%{"data" => data_params}, [])
-        |> PolymorphicEmbed.cast_polymorphic_embed(:data)
-        |> Repo.update()
     end
+  end
+
+  defp write_ref_inner_data(ref, update_fn) do
+    ref = Repo.preload(ref, Ref.preloads())
+    wrapper = ref.data
+    inner_data = wrapper.data
+    updated_inner = update_fn.(inner_data)
+    updated_wrapper = %{wrapper | data: updated_inner}
+
+    # PolymorphicEmbed fields are excluded from Blueprint's castable_fields,
+    # so we must build the changeset manually with cast + cast_polymorphic_embed
+    data_params = poly_embed_to_params(updated_wrapper)
+
+    ref
+    |> Ecto.Changeset.cast(%{"data" => data_params}, [])
+    |> PolymorphicEmbed.cast_polymorphic_embed(:data)
+    |> Repo.update()
   end
 
   defp poly_embed_to_params(struct) do

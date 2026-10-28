@@ -863,6 +863,7 @@ defmodule Brando.Content.Proposals.Tools do
             settable:
               cond do
                 text = text_slot(ref.data.type) -> text
+                html_values?(ref) -> "its parameters' values (settings), with set_ref_config"
                 Proposals.accepts(ref) != [] -> Enum.map_join(Proposals.accepts(ref), " or ", &to_string/1)
                 true -> "no"
               end
@@ -905,10 +906,13 @@ defmodule Brando.Content.Proposals.Tools do
   defp text_slot("text"), do: "text: simple HTML"
   defp text_slot("header"), do: "text: plain"
   defp text_slot("markdown"), do: "text: markdown"
-  defp text_slot("html"), do: "text: safe HTML"
-  defp text_slot("svg"), do: "text: one <svg> element, no scripts"
   defp text_slot("map"), do: "text: an https Google Maps embed address"
   defp text_slot(_), do: nil
+
+  defp html_values?(%{data: %{type: "html", data: data}}),
+    do: Brando.Villain.Blocks.HtmlBlock.params_by_key(data || %{}) != %{}
+
+  defp html_values?(_ref), do: false
 
   defp settable(type) when type in [:string, :text, :html], do: "a string"
   defp settable(:boolean), do: "true or false"
