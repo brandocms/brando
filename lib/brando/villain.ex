@@ -305,14 +305,9 @@ defmodule Brando.Villain do
   # and `text` escaped, rich text sanitized. HEEx, which escapes what it
   # prints, reads them unescaped (`raw_context/2`).
   def add_to_context(context, "globals" = key, global_sets) do
-    globals = fn escape? ->
-      Map.new(global_sets, fn {g_key, g_category} ->
-        cat_globs = Map.new(g_category, fn {key, global} -> {key, global_value(global, escape?)} end)
-        {g_key, cat_globs}
-      end)
-    end
-
-    context |> Context.assign(key, globals.(true)) |> put_raw(key, globals.(false))
+    context
+    |> Context.assign(key, globals(global_sets, true))
+    |> put_raw(key, globals(global_sets, false))
   end
 
   def add_to_context(context, key, value) do
@@ -334,6 +329,12 @@ defmodule Brando.Villain do
   # In the context's private data, where no template can read or set it
   defp put_raw(%Context{private: private} = context, key, value),
     do: %{context | private: Map.put(private, {:brando_raw, key}, value)}
+
+  defp globals(global_sets, escape?) do
+    Map.new(global_sets, fn {set_key, set} -> {set_key, Map.new(set, &global_value(&1, escape?))} end)
+  end
+
+  defp global_value({key, global}, escape?), do: {key, global_value(global, escape?)}
 
   defp global_value(%{type: type, value: value}, true) when type in [:string, :text],
     do: Parser.escape_var_value(value)
