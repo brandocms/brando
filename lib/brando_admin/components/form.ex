@@ -6307,7 +6307,7 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:edit_file, edit_file)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
-       target: "#{singular}[#{relation_key}]",
+       target: field_name(singular, path ++ [relation_key]),
        value: file.id
      })}
   end
@@ -7209,7 +7209,13 @@ defmodule BrandoAdmin.Components.Form do
     img
   end
 
-  defp reset_video_field(%{assigns: %{form: form, edit_video: edit_video, entry: entry, singular: singular}} = socket) do
+  # A form field's input name at a path as the form names it:
+  # `article[items][1][cover_id]`.
+  defp field_name(singular, path), do: singular <> Enum.map_join(path, &"[#{&1}]")
+
+  defp reset_video_field(
+         %{assigns: %{form: form, edit_video: edit_video, entry: entry, schema: schema, singular: singular}} = socket
+       ) do
     relation_key = relation_field_key(edit_video.relation_field, edit_video.field)
 
     changeset =
@@ -7219,7 +7225,10 @@ defmodule BrandoAdmin.Components.Form do
 
     {:noreply,
      socket
-     |> assign(:entry, Map.put(entry, edit_video.field, nil))
+     |> assign(
+       :entry,
+       entry_with_relation(entry || struct(schema), changeset, edit_video.path ++ [edit_video.field], fn _ -> nil end)
+     )
      |> relation_changed(edit_video.path, edit_video.field, nil)
      |> assign(:video_changeset, nil)
      |> assign(:editing_video?, false)
@@ -7227,10 +7236,12 @@ defmodule BrandoAdmin.Components.Form do
      |> put_local_form(to_form(changeset, []))
      |> own_asset(edit_video.path, relation_key, :id)
      |> assign_drawer_recovery_state()
-     |> push_event("b:validate", %{target: "#{singular}[#{relation_key}]", value: ""})}
+     |> push_event("b:validate", %{target: field_name(singular, edit_video.path ++ [relation_key]), value: ""})}
   end
 
-  defp reset_file_field(%{assigns: %{form: form, edit_file: edit_file, entry: entry, singular: singular}} = socket) do
+  defp reset_file_field(
+         %{assigns: %{form: form, edit_file: edit_file, entry: entry, schema: schema, singular: singular}} = socket
+       ) do
     changeset = form.source
     relation_key = relation_field_key(edit_file.relation_field, edit_file.field)
 
@@ -7243,7 +7254,12 @@ defmodule BrandoAdmin.Components.Form do
 
     {:noreply,
      socket
-     |> assign(:entry, Map.put(entry, edit_file.field, nil))
+     |> assign(
+       :entry,
+       entry_with_relation(entry || struct(schema), updated_changeset, edit_file.path ++ [edit_file.field], fn _ ->
+         nil
+       end)
+     )
      |> relation_changed(edit_file.path, edit_file.field, nil)
      |> assign(:file_changeset, nil)
      # `reset_file_field/2` closes the drawer (`toggle_drawer`), so the flag has
@@ -7255,13 +7271,13 @@ defmodule BrandoAdmin.Components.Form do
      |> own_asset(edit_file.path, relation_key, :id)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
-       target: "#{singular}[#{relation_key}]",
+       target: field_name(singular, edit_file.path ++ [relation_key]),
        value: ""
      })}
   end
 
   defp reset_image_field(
-         %{assigns: %{form: form, edit_image: edit_image, entry: entry, singular: singular}} =
+         %{assigns: %{form: form, edit_image: edit_image, entry: entry, schema: schema, singular: singular}} =
            socket
        ) do
     changeset = form.source
@@ -7276,7 +7292,12 @@ defmodule BrandoAdmin.Components.Form do
 
     {:noreply,
      socket
-     |> assign(:entry, Map.put(entry, edit_image.field, nil))
+     |> assign(
+       :entry,
+       entry_with_relation(entry || struct(schema), updated_changeset, edit_image.path ++ [edit_image.field], fn _ ->
+         nil
+       end)
+     )
      |> relation_changed(edit_image.path, edit_image.field, nil)
      |> assign(:image_changeset, nil)
      # Same as reset_file_field above — this closes the image drawer, so the
@@ -7287,7 +7308,7 @@ defmodule BrandoAdmin.Components.Form do
      |> own_asset(edit_image.path, relation_key, :id)
      |> assign_drawer_recovery_state()
      |> push_event("b:validate", %{
-       target: "#{singular}[#{relation_key}]",
+       target: field_name(singular, edit_image.path ++ [relation_key]),
        value: ""
      })}
   end
