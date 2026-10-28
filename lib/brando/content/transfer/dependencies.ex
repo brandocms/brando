@@ -423,7 +423,7 @@ defmodule Brando.Content.Transfer.Dependencies do
   defp definition_match?(record, kind, dependency, actor) do
     Boundary.authorize(actor, :read, record) == :ok &&
       (record.uid == dependency["uid"] ||
-         (kind == "module" && Contracts.normalized(record) == dependency["definition"]))
+         (kind == "module" && Contracts.same_definition?(record, dependency["definition"])))
   end
 
   def options(kind, actor, query \\ "")

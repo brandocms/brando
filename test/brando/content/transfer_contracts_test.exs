@@ -66,5 +66,12 @@ defmodule Brando.Content.TransferContractsTest do
       update_in(Contracts.normalized(module), ["vars"], fn vars -> Enum.map(vars, &%{&1 | "type" => "html"}) end)
 
     assert Contracts.differences(%{"kind" => "module", "definition" => definition}, module) == []
+    assert Contracts.same_definition?(module, definition)
+
+    # A receipt's digest from before the rename names the var html
+    blocks = [%{"block" => %{"vars" => [%{"key" => "intro", "type" => "rich_text"}], "children" => []}}]
+
+    assert Contracts.with_html_vars(blocks) ==
+             [%{"block" => %{"vars" => [%{"key" => "intro", "type" => "html"}], "children" => []}}]
   end
 end

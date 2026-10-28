@@ -20,6 +20,8 @@ defmodule Brando.Villain.Tags.Link do
       |> to_string()
       |> Phoenix.HTML.html_escape()
       |> Phoenix.HTML.safe_to_string()
+      # Liquid typed into the label is text to the entry's final pass
+      |> Brando.Villain.InertLiquid.encode()
 
     link_url = evaled_link |> Brando.Villain.Filters.link_url() |> href()
     new_window? = evaled_link.link_target_blank

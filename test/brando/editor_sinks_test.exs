@@ -123,6 +123,14 @@ defmodule Brando.EditorSinksTest do
       end
 
       assert Parser.process_vars([var(:rich_text, "body", "<p>A <em>b</em></p>")]) == %{"body" => "<p>A <em>b</em></p>"}
+
+      # An empty one stays empty, so `{% if body %}` is still false
+      assert Parser.process_vars([var(:rich_text, "body", nil)]) == %{"body" => nil}
+
+      %{table_rows: [%{body: nil, vars: [%{value: nil}]}]} =
+        Brando.Villain.TemplateAdapter.simple_block(%{class: nil}, %{
+          table_rows: [%{vars: [var(:rich_text, "body", nil)]}]
+        })
     end
   end
 
@@ -285,6 +293,11 @@ defmodule Brando.EditorSinksTest do
       html = Brando.Villain.parse_and_render(~s(<a href="{{ cta | link_url }}">{{ cta | link_text }}</a>), context)
       assert html =~ ~s(href="/a?b=1&amp;c=&quot;2&quot;")
       assert active(html) == 0
+
+      # Liquid typed into a link's label is text to the entry's final pass
+      labelled = %{link | link_text: "{{ entry.title }}"}
+      tag = Brando.Villain.parse_and_render("{% link cta %}", Brando.Villain.create_context(%{"cta" => labelled}))
+      assert tag =~ ">&#123;&#123; entry.title &#125;&#125;</a>"
 
       # An entry's title, which a HEEx identifier stores escaped, is escaped once
       entry_link = %Var{

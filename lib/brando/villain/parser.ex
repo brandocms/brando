@@ -1432,11 +1432,18 @@ defmodule Brando.Villain.Parser do
   `value` escaped for a double-quoted attribute. Character references in it
   (a pasted embed code's `&amp;`) are decoded first: stored values were
   once interpolated as they were, and the browser decoded them, so it still
-  reads the same value.
+  reads the same value. Its braces are character references too, so the
+  entry's final Liquid pass leaves Liquid an editor typed in it as text.
   """
   @spec escape_attr(term()) :: String.t()
-  def escape_attr(value),
-    do: value |> to_string() |> HtmlEntities.decode() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+  def escape_attr(value) do
+    value
+    |> to_string()
+    |> HtmlEntities.decode()
+    |> Phoenix.HTML.html_escape()
+    |> Phoenix.HTML.safe_to_string()
+    |> Brando.Villain.InertLiquid.encode()
+  end
 
   @doc """
   `url` trimmed, when it has no scheme or one `Brando.RichText.allowed_uri?/1`

@@ -132,7 +132,7 @@ defmodule Brando.Content.Var do
     end
 
     def to_string(%{type: type, value: value}) when type in [:rich_text, :html] do
-      Brando.RichText.render_html(value)
+      Brando.RichText.render_html(value) || ""
     end
 
     def to_string(%{type: _} = var) do

@@ -47,6 +47,30 @@ defmodule Brando.Content.Transfer.Contracts do
 
   defp rename_html_vars(definition), do: definition
 
+  @doc "Whether `module` is the definition a bundle names, which may be from before brando_225."
+  def same_definition?(module, definition) when is_map(definition),
+    do: normalized(module) == rename_html_vars(definition)
+
+  def same_definition?(_module, _definition), do: false
+
+  @doc """
+  `snapshot` (`Brando.Drafts.Params.snapshot/1` of blocks) with its
+  `rich_text` vars named `html`, as a snapshot taken before brando_225 has
+  them: for comparing with a digest recorded then.
+  """
+  def with_html_vars(%{"vars" => vars} = map) when is_list(vars) do
+    map
+    |> Map.new(fn {key, value} -> {key, with_html_vars(value)} end)
+    |> Map.put("vars", Enum.map(vars, &html_var/1))
+  end
+
+  def with_html_vars(map) when is_map(map), do: Map.new(map, fn {key, value} -> {key, with_html_vars(value)} end)
+  def with_html_vars(list) when is_list(list), do: Enum.map(list, &with_html_vars/1)
+  def with_html_vars(other), do: other
+
+  defp html_var(%{"type" => "rich_text"} = var), do: var |> with_html_vars() |> Map.put("type", "html")
+  defp html_var(var), do: with_html_vars(var)
+
   def normalized(module) do
     module |> Params.snapshot() |> Map.take(@settings ++ ~w(code class refs vars)) |> unset_multi() |> normalize()
   end

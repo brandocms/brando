@@ -121,12 +121,13 @@ defmodule Brando.RichText do
   @doc """
   Rich text as it may be rendered: sanitized (`sanitize_html/1`), or, when
   it holds unsafe markup that saving it now would refuse, its text alone
-  without any markup. `nil` gives `""`.
+  without any markup. `nil` stays `nil`, so an empty value is still falsy in
+  a template (`{% if intro %}`).
 
   For rich text stored before it was sanitized on save, such as `rich_text`
   vars saved when they were called `html`.
   """
-  @spec render_html(term()) :: String.t()
+  @spec render_html(term()) :: String.t() | nil
   def render_html(html) when is_binary(html) do
     case sanitize_html(html) do
       {:ok, clean} -> clean
@@ -134,7 +135,7 @@ defmodule Brando.RichText do
     end
   end
 
-  def render_html(nil), do: ""
+  def render_html(nil), do: nil
   def render_html(other), do: other |> to_string() |> render_html()
 
   # The text, as browsers parse it, without any element or what the hidden,
