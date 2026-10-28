@@ -49,8 +49,9 @@ defmodule Brando.Blueprint.Value do
   built in a controller that only preloads images.
 
   The HTML is flattened with whitespace at every tag boundary (so
-  `<h2>Title</h2><p>Body</p>` does not collapse into `TitleBody`), entities are
-  decoded, runs of whitespace are squeezed, and the result is truncated.
+  `<h2>Title</h2><p>Body</p>` does not collapse into `TitleBody`), comments
+  and `<script>`/`<style>` contents are dropped, entities are decoded, runs of
+  whitespace are squeezed, and the result is truncated.
 
   Returns `nil` when the field is empty or holds no text, so it composes with
   `fallback/1`:
@@ -92,8 +93,14 @@ defmodule Brando.Blueprint.Value do
 
   defp flatten_html(nil), do: nil
 
+  # Comments go first, whole: rendered blocks carry module refs such as
+  # `<!-- [+:C<23r4N…>] -->`, whose inner `>` would end the tag match early and
+  # leave `] -->` in the text. Script and style bodies are not text either.
+  # One pass, so whichever opens first wins, as in HTML: a `<!--` inside a
+  # script is script, a `<script>` inside a comment is comment.
   defp flatten_html(html) when is_binary(html) do
     html
+    |> String.replace(~r/<!--.*?-->|<(script|style)(?=[\s>\/])[^>]*>.*?<\/\1\s*>/is, " ")
     |> String.replace(~r/<[^>]*>/, " ")
     |> HtmlEntities.decode()
     |> String.replace(~r/\s+/u, " ")

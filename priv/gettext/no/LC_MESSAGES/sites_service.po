@@ -34,8 +34,8 @@ msgstr "La stå tomt for å arve organisasjonens markeder"
 
 #: lib/brando/sites/identity.ex
 #, elixir-autogen, elixir-format
-msgid "Leave empty to use the linked page's meta description"
-msgstr "La stå tomt for å bruke metabeskrivelsen til den koblede siden"
+msgid "Leave empty to use the description the linked page publishes, or its text"
+msgstr "La stå tomt for å bruke beskrivelsen den koblede siden publiserer, eller teksten på siden"
 
 #: lib/brando/sites/identity.ex
 #, elixir-autogen, elixir-format

@@ -235,7 +235,8 @@ defmodule Brando.Sites.Identity do
 
             input :description, :textarea,
               label: t("Description", Brando.Sites.Service),
-              instructions: t("Leave empty to use the linked page's meta description", Brando.Sites.Service)
+              instructions:
+                t("Leave empty to use the description the linked page publishes, or its text", Brando.Sites.Service)
 
             input :identifier_id, :select,
               options: &__MODULE__.service_page_options/2,

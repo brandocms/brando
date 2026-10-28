@@ -6,8 +6,9 @@ defmodule Brando.Sites.Service do
   so a site can say what its business does without a developer writing a
   controller. Optionally points at an entry through its identifier; the
   service then takes that page's URL and, when it has no description of its
-  own, the page's meta description or block text — keeping the markup
-  grounded in content that is actually published.
+  own, the description the page publishes (its blueprint's `meta_schema`
+  `"description"`, fallbacks included) or else its block text — keeping the
+  markup grounded in content that is actually published.
   """
   use Brando.Blueprint,
     application: "Brando",

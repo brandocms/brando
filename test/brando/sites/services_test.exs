@@ -6,8 +6,14 @@ defmodule Brando.Sites.ServicesTest do
   alias Brando.Content.Identifier
   alias Brando.Factory
   alias Brando.Pages
+  alias Brando.ServiceDescriptionTest
+  alias Brando.ServiceDescriptionTest.IntroPage
+  alias Brando.ServiceDescriptionTest.PlainPage
+  alias Brando.ServiceDescriptionTest.RaisingPage
   alias Brando.Sites
   alias Brando.Sites.Services
+
+  import ExUnit.CaptureLog
 
   # `update_identity` refreshes the identity cache, which outlives the test's
   # database sandbox. Put the cached identity back, so later tests (a JSON-LD
@@ -95,6 +101,66 @@ defmodule Brando.Sites.ServicesTest do
     resolved = Services.resolve(service)
     assert resolved.resolved_description == "Own"
     assert resolved.resolved_url == "https://own.test/x"
+  end
+
+  describe "a linked entry's description" do
+    defp resolve_linked(entry, own_description \\ nil) do
+      ServiceDescriptionTest.put_entry(entry)
+
+      Services.resolve(%Sites.Service{
+        name: "Identitet",
+        description: own_description,
+        identifier: %Identifier{schema: entry.__struct__, entry_id: entry.id, url: "/identitet"}
+      })
+    end
+
+    test "is the one its blueprint's meta_schema publishes, fallback included" do
+      entry = %IntroPage{
+        id: 1,
+        meta_description: nil,
+        intro: "<p>Vi bygger <strong>identiteter</strong>.</p>",
+        rendered_blocks: "<p>Blokktekst</p>"
+      }
+
+      assert resolve_linked(entry).resolved_description == "Vi bygger identiteter."
+
+      filled = %{entry | id: 2, meta_description: "Egen metabeskrivelse"}
+      assert resolve_linked(filled).resolved_description == "Egen metabeskrivelse"
+    end
+
+    test "without a meta_schema description, is the meta description field, else the block text" do
+      entry = %PlainPage{
+        id: 3,
+        title: "Strategi",
+        meta_description: nil,
+        rendered_blocks: "<!-- [+:C<23r4Ns9WUlz7Z8SpDsn3Jr>] --><h2>Strategi</h2><p>Vi legger planen.</p>"
+      }
+
+      assert resolve_linked(entry).resolved_description == "Strategi Vi legger planen."
+
+      filled = %{entry | id: 6, meta_description: "Egen metabeskrivelse"}
+      assert resolve_linked(filled).resolved_description == "Egen metabeskrivelse"
+    end
+
+    test "gives way to the service's own description" do
+      entry = %IntroPage{id: 4, meta_description: "Fra siden", intro: nil, rendered_blocks: nil}
+      assert resolve_linked(entry, "Egen").resolved_description == "Egen"
+    end
+
+    test "falls back to the block text when the meta_schema description raises" do
+      entry = %RaisingPage{id: 5, rendered_blocks: "<p>Blokktekst</p>"}
+      Logger.put_module_level(Services, :warning)
+      on_exit(fn -> Logger.delete_module_level(Services) end)
+
+      log =
+        capture_log(fn ->
+          resolved = resolve_linked(entry)
+          assert resolved.resolved_description == "Blokktekst"
+          assert String.ends_with?(resolved.resolved_url, "/identitet")
+        end)
+
+      assert log =~ "bad description"
+    end
   end
 
   test "the page picker lists identifiers that have a URL" do
