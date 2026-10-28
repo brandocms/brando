@@ -91,9 +91,7 @@ defmodule Brando.Content.RefGuard do
 
     cond do
       definition && type_allowed?(definition, type(new)) ->
-        # A media slot that became an SVG takes its own SVG template
-        source = if type(old) == "media" and type(new) == "svg", do: old, else: definition
-        guard_markup(ref, old, new, source, state)
+        guard_markup(ref, old, new, markup_source(old, new, definition), state)
 
       old ->
         {put_data(ref, old), state}
@@ -101,12 +99,23 @@ defmodule Brando.Content.RefGuard do
       definition ->
         {put_data(ref, definition.data), state}
 
-      type(new) not in @markup_types ->
-        {ref, state}
-
       true ->
-        {state, superuser?} = superuser?(state)
-        if superuser?, do: {ref, state}, else: {%{ref | action: :ignore}, state}
+        guard_undefined(ref, new, state)
+    end
+  end
+
+  # A media slot that became an SVG takes its own SVG template
+  defp markup_source(old, new, definition) do
+    if type(old) == "media" and type(new) == "svg", do: old, else: definition
+  end
+
+  # A new ref the module does not define
+  defp guard_undefined(ref, new, state) do
+    if type(new) in @markup_types do
+      {state, superuser?} = superuser?(state)
+      if superuser?, do: {ref, state}, else: {%{ref | action: :ignore}, state}
+    else
+      {ref, state}
     end
   end
 
@@ -130,22 +139,20 @@ defmodule Brando.Content.RefGuard do
   defp guard_markup(ref, old, new, source, state) do
     type = type(new)
 
-    if type in @markup_types do
-      allowed = markup(type, baseline(type, source))
+    allowed = if type in @markup_types, do: markup(type, baseline(type, source))
 
-      if comparable(type, markup(type, new.data)) == comparable(type, allowed) do
-        {ref, state}
-      else
-        {state, superuser?} = superuser?(state)
+    if is_nil(allowed) or comparable(type, markup(type, new.data)) == comparable(type, allowed),
+      do: {ref, state},
+      else: guard_changed_markup(ref, old, new, allowed, state)
+  end
 
-        cond do
-          superuser? -> {ref, state}
-          is_nil(old) and stored?(state, ref, type, new.data) -> {ref, state}
-          true -> {restore(ref, new, allowed), state}
-        end
-      end
-    else
-      {ref, state}
+  defp guard_changed_markup(ref, old, new, allowed, state) do
+    {state, superuser?} = superuser?(state)
+
+    cond do
+      superuser? -> {ref, state}
+      is_nil(old) and stored?(state, ref, type(new), new.data) -> {ref, state}
+      true -> {restore(ref, new, allowed), state}
     end
   end
 

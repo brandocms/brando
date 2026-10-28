@@ -3,8 +3,8 @@ defmodule BrandoAdmin.Components.Form.Input.MediaBlockTest do
   # those, whatever type the event names.
   use ExUnit.Case, async: true
 
-  alias BrandoAdmin.Components.Form.Input.Blocks.MediaBlock
   alias Brando.Villain.Blocks
+  alias BrandoAdmin.Components.Form.Input.Blocks.MediaBlock
 
   defp socket(available) do
     %Phoenix.LiveView.Socket{

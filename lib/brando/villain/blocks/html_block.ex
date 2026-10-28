@@ -114,13 +114,15 @@ defmodule Brando.Villain.Blocks.HtmlBlock do
 
       params ->
         values = Map.get(data, :values) || %{}
+        Regex.replace(@placeholder, text, &fill(&1, &2, params, values))
+    end
+  end
 
-        Regex.replace(@placeholder, text, fn placeholder, key ->
-          case params do
-            %{^key => type} -> escape(type, value(values, key))
-            _ -> placeholder
-          end
-        end)
+  # A declared parameter's value, or the placeholder as it was
+  defp fill(placeholder, key, params, values) do
+    case params do
+      %{^key => type} -> escape(type, value(values, key))
+      _ -> placeholder
     end
   end
 
@@ -175,12 +177,17 @@ defmodule Brando.Villain.Blocks.HtmlBlock do
         :error
 
       safe ->
-        read = safe |> HtmlEntities.decode() |> String.replace(~r/[\x00-\x20]/, "")
+        if scheme(safe) in [nil, "https"], do: {:ok, safe}, else: :error
+    end
+  end
 
-        case Regex.run(~r/^([a-z][a-z0-9+.-]*):/i, read, capture: :all_but_first) do
-          nil -> {:ok, safe}
-          [scheme] -> if String.downcase(scheme) == "https", do: {:ok, safe}, else: :error
-        end
+  # Read as `Brando.Villain.Parser.safe_url/1` reads it
+  defp scheme(url) do
+    read = url |> HtmlEntities.decode() |> String.replace(~r/[\x00-\x20]/, "")
+
+    case Regex.run(~r/^([a-z][a-z0-9+.-]*):/i, read, capture: :all_but_first) do
+      nil -> nil
+      [scheme] -> String.downcase(scheme)
     end
   end
 

@@ -10,6 +10,7 @@ defmodule Brando.Content.RefGuardTest do
   alias Brando.Factory
   alias Brando.ProposalFixtures
   alias Brando.Repo
+  alias Brando.Utils
   alias Brando.Villain.Blocks.HtmlBlock
   alias Brando.Villain.Blocks.MediaBlock
   alias Brando.Villain.Blocks.SvgBlock
@@ -49,7 +50,7 @@ defmodule Brando.Content.RefGuardTest do
     %Block{}
     |> Block.recursive_block_changeset(
       %{
-        "uid" => Brando.Utils.generate_uid(),
+        "uid" => Utils.generate_uid(),
         "type" => "module",
         "module_id" => c.module.id,
         "refs" => module_ref_params(c.module)
@@ -66,7 +67,7 @@ defmodule Brando.Content.RefGuardTest do
     |> Map.new(fn {ref, index} ->
       {to_string(index),
        %{
-         "uid" => Brando.Utils.generate_uid(),
+         "uid" => Utils.generate_uid(),
          "name" => ref.name,
          "data" => data_params(ref.data)
        }}
@@ -225,12 +226,12 @@ defmodule Brando.Content.RefGuardTest do
 
     test "a new block's HTML ref takes the module's markup for an editor", c do
       params = %{
-        "uid" => Brando.Utils.generate_uid(),
+        "uid" => Utils.generate_uid(),
         "type" => "module",
         "module_id" => c.module.id,
         "refs" => %{
           "0" => %{
-            "uid" => Brando.Utils.generate_uid(),
+            "uid" => Utils.generate_uid(),
             "name" => "embed",
             "data" => %{"type" => "html", "data" => %{"text" => "<i>x</i>", "values" => %{"checkin_id" => "a1"}}}
           }
@@ -256,12 +257,12 @@ defmodule Brando.Content.RefGuardTest do
       |> Repo.update!()
 
       params = %{
-        "uid" => Brando.Utils.generate_uid(),
+        "uid" => Utils.generate_uid(),
         "type" => "module",
         "module_id" => c.module.id,
         "refs" => %{
           "0" => %{
-            "uid" => Brando.Utils.generate_uid(),
+            "uid" => Utils.generate_uid(),
             "name" => "embed",
             "data" => %{
               "type" => "html",
@@ -287,17 +288,17 @@ defmodule Brando.Content.RefGuardTest do
       page = Factory.insert(:page, creator: c.superuser) |> Repo.preload(entry_blocks: :block)
 
       block = %{
-        "uid" => Brando.Utils.generate_uid(),
+        "uid" => Utils.generate_uid(),
         "type" => "module",
         "module_id" => c.module.id,
         "refs" => %{
           "0" => %{
-            "uid" => Brando.Utils.generate_uid(),
+            "uid" => Utils.generate_uid(),
             "name" => "embed",
             "data" => %{"type" => "html", "data" => %{"text" => "<i>imported</i>", "values" => %{"checkin_id" => "x1"}}}
           },
           "1" => %{
-            "uid" => Brando.Utils.generate_uid(),
+            "uid" => Utils.generate_uid(),
             "name" => "body",
             "data" => %{"type" => "svg", "data" => %{"code" => "<svg/>"}}
           }
