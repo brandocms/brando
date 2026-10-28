@@ -275,12 +275,21 @@ defmodule Brando.Query.Mutations do
         |> drop_fields()
         |> update_meta()
 
-      with :ok <- Boundary.change(user, :create, Ecto.Changeset.change(cloned_entry)),
+      with :ok <- Boundary.change(user, :create, copy_changeset(entry, cloned_entry)),
            {:ok, copy} <- insert_copy(cloned_entry, module, user) do
         Activity.duplicated(copy, entry, user)
         {:ok, copy}
       end
     end
+  end
+
+  # What a copy changes, as `Boundary.change/3` sees it: nothing it copies,
+  # but a superuser's field (a fragment's `wrapper`) its options set to
+  # something other than the original's.
+  defp copy_changeset(entry, cloned_entry) do
+    fields = Brando.Authorization.Catalog.superuser_only_fields(cloned_entry)
+    original = Enum.reduce(fields, cloned_entry, &Map.put(&2, &1, Map.get(entry, &1)))
+    Ecto.Changeset.change(original, Map.take(cloned_entry, fields))
   end
 
   # The copy is inserted through a changeset that knows the schema's unique

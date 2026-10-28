@@ -58,6 +58,35 @@ defmodule BrandoAdmin.FragmentWrapperAuthorityTest do
       assert copy.wrapper == @wrapper
     end
 
+    test "an editor's copy cannot set a wrapper of its own", %{current_user: superuser} do
+      editor = TestUsers.insert_user(role: :editor)
+      fragment = fragment!()
+
+      assert {:error, :forbidden} = Pages.duplicate_fragment(fragment.id, editor, merge_fields: %{wrapper: @wrapper})
+
+      assert {:ok, %{wrapper: @wrapper}} =
+               Pages.duplicate_fragment(fragment.id, superuser, merge_fields: %{wrapper: @wrapper})
+    end
+
+    # A superuser changed the wrapper after the revision an editor restores
+    test "an editor restoring a revision restores the rest and keeps the wrapper", %{current_user: superuser} do
+      editor = TestUsers.insert_user(role: :editor)
+      fragment = fragment!()
+      {:ok, _} = Brando.Revisions.create_revision(fragment, editor)
+      [%{revision: old}] = Repo.all(Brando.Revisions.Revision)
+
+      {:ok, changed} = Pages.update_fragment(fragment.id, %{wrapper: @wrapper, title: "Changed"}, superuser)
+      {:ok, _} = Brando.Revisions.create_revision(changed, superuser)
+
+      assert {:ok, _} = Brando.Revisions.set_entry_to_revision(Fragment, fragment.id, old, editor)
+      restored = Repo.get!(Fragment, fragment.id)
+      assert {restored.title, restored.wrapper} == {"Footer", @wrapper}
+
+      revision_entry = %{changed | wrapper: nil, title: "From revision"}
+      assert Brando.Revisions.restore_params(revision_entry, restored, editor) |> Map.has_key?(:wrapper) == false
+      assert %{wrapper: nil} = Brando.Revisions.restore_params(revision_entry, restored, superuser)
+    end
+
     test "a superuser sets the wrapper from the form", %{conn: conn} do
       fragment = fragment!()
       assert save_from_form(conn, fragment, %{"wrapper" => @wrapper}) =~ "fragment[wrapper]"

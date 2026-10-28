@@ -361,7 +361,7 @@ defmodule Brando.Revisions do
         # job is cancelled). Read under the lock, so trashing can't slip in.
         if publish? and Map.get(current_entry, :deleted_at), do: Repo.rollback(:in_trash)
 
-        restore_params = prepare_restore_params(target_entry, current_entry, publish?)
+        restore_params = prepare_restore_params(target_entry, current_entry, publish?, user)
 
         changeset =
           current_entry
@@ -455,10 +455,14 @@ defmodule Brando.Revisions do
   The params that restore `revision_entry`, a decoded revision, onto
   `current_entry`, the entry as it is now: its fields and associations,
   without render output, and without moving the entry into or out of the
-  trash (see `set_entry_to_revision/5`, which uses the same rule).
+  trash (see `set_entry_to_revision/5`, which uses the same rule). For a
+  `user` who is not a superuser, the fields only a superuser sets
+  (`Brando.Authorization.Catalog.superuser_only_fields/1`, a fragment's
+  `wrapper`) stay as the entry has them now.
   """
-  @spec restore_params(struct(), struct()) :: map()
-  def restore_params(revision_entry, current_entry), do: prepare_restore_params(revision_entry, current_entry, false)
+  @spec restore_params(struct(), struct(), term()) :: map()
+  def restore_params(revision_entry, current_entry, user),
+    do: prepare_restore_params(revision_entry, current_entry, false, user)
 
   # The entry's expiry is a plan for the entry, not content of the revision:
   # restoring one keeps the expiry the entry has now. So is the trash:
@@ -466,7 +470,10 @@ defmodule Brando.Revisions do
   # fields the trash obfuscates (a page's `uri`) are kept as the entry has
   # them when either is in the trash: a revision taken there holds their
   # trash form, and an entry there must not take back the names it freed.
-  defp prepare_restore_params(target_entry, current_entry, publish?) do
+  #
+  # A superuser's fields (a fragment's `wrapper`) restore only for a
+  # superuser: anyone else restores the rest, which they may write.
+  defp prepare_restore_params(target_entry, current_entry, publish?, user) do
     params =
       target_entry
       |> Utils.map_from_struct()
@@ -475,6 +482,7 @@ defmodule Brando.Revisions do
       |> Map.drop([:unpublish_at, :deleted_at])
       |> drop_obfuscated_if_trashed(target_entry)
       |> drop_obfuscated_if_trashed(current_entry)
+      |> drop_superuser_fields(current_entry, user)
 
     if publish? do
       params
@@ -484,6 +492,16 @@ defmodule Brando.Revisions do
       params
     end
   end
+
+  defp drop_superuser_fields(params, entry, user) do
+    case Brando.Authorization.Catalog.superuser_only_fields(entry) do
+      [] -> params
+      fields -> if superuser?(user), do: params, else: Map.drop(params, fields)
+    end
+  end
+
+  defp superuser?(nil), do: false
+  defp superuser?(user), do: Brando.Authorization.Boundary.superuser?(user)
 
   defp drop_obfuscated_if_trashed(params, %{deleted_at: %{}} = entry), do: Map.drop(params, obfuscated_fields(entry))
   defp drop_obfuscated_if_trashed(params, _entry), do: params
