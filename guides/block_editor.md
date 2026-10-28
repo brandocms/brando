@@ -272,7 +272,10 @@ slot. The server holds every save to that (`Brando.Content.RefGuard`):
 markup another user sends is put back, and their other changes are kept. It
 also keeps each ref's type to what its module defines, for everyone. A copy
 of a saved block keeps its markup, as long as a saved block of the same
-module holds that markup. AI translation translates the values of `text`
+module holds that markup. The same holds when a non-superuser restores a
+revision, or saves while a superuser has unsaved markup changes in the
+same entry: the saved markup stays, and a superuser makes the change. AI
+translation translates the values of `text`
 parameters, and a content assistant proposal fills in values through a
 slot's settings.
 

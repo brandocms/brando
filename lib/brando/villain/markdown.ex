@@ -240,7 +240,8 @@ defmodule Brando.Villain.Markdown do
   def text(%{text: text}, opts) when is_binary(text), do: out(text, opts)
   def text(_data, _opts), do: ""
 
-  def html(%{text: html}, opts) when is_binary(html), do: out(html, opts)
+  # The template with its parameters' values in place, as on the page
+  def html(%{text: html} = data, opts) when is_binary(html), do: out(Brando.Villain.Blocks.HtmlBlock.render(data), opts)
   def html(_data, _opts), do: ""
 
   def header(%{text: text} = data, opts) when is_binary(text) and text != "" do

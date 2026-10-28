@@ -144,6 +144,20 @@ defmodule Brando.Villain.MarkdownTest do
       assert markdown == "## Facts\n\nA *restored* bathhouse.\n\n- Rooms: 221"
     end
 
+    test "an HTML ref's template takes its parameters' values" do
+      data = %{
+        text: "<p>{{ caption }}</p>",
+        params: [%{key: "caption", label: "Caption", type: :text}],
+        values: %{"caption" => "Hello"}
+      }
+
+      html_module = module!("<div>{% ref refs.embed %}</div>")
+      markdown_module = module!("<div>{% ref refs.embed %}</div>", markdown: "{% ref refs.embed %}")
+
+      assert render([block(html_module, [ref("embed", "html", data)])]) == "Hello"
+      assert render([block(markdown_module, [ref("embed", "html", data)])]) == "Hello"
+    end
+
     test "an embedded fragment shows its braces as they are", %{user: user} do
       # Stored as rendered: its own Liquid pass is done, and synced Markdown in
       # it carries encoded braces

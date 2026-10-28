@@ -33,15 +33,15 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.SvgBlock do
   end
 
   # SVG code is markup only a superuser changes (`Brando.Content.RefGuard`)
-  def handle_event("drop_svg", _params, %{assigns: %{superuser: false}} = socket), do: {:noreply, socket}
-
-  def handle_event("drop_svg", %{"code" => code}, socket) do
+  def handle_event("drop_svg", %{"code" => code}, %{assigns: %{superuser: true}} = socket) do
     new_data = Block.current_block_data_map(socket.assigns.block, nil, %{code: code})
 
     socket
     |> Block.commit_ref_data(ref_data: new_data, force_render: true)
     |> then(&{:noreply, &1})
   end
+
+  def handle_event("drop_svg", _params, socket), do: {:noreply, socket}
 
   def render(assigns) do
     ~H"""
