@@ -114,15 +114,43 @@ defmodule Brando.Villain.Blocks.HtmlBlock do
 
       params ->
         values = Map.get(data, :values) || %{}
-        Regex.replace(@placeholder, text, &fill(&1, &2, params, values))
+
+        {filled, rest} =
+          @placeholder
+          |> Regex.scan(text, return: :index)
+          |> Enum.reduce({[], 0}, fn [{start, length}, {key_start, key_length}], {acc, from} ->
+            key = binary_part(text, key_start, key_length)
+            value = fill(text, start, length, key, params, values)
+            {[acc, binary_part(text, from, start - from), value], start + length}
+          end)
+
+        IO.iodata_to_binary([filled, binary_part(text, rest, byte_size(text) - rest)])
     end
   end
 
-  # A declared parameter's value, or the placeholder as it was
-  defp fill(placeholder, key, params, values) do
+  # A declared parameter's value, or the placeholder as it was. Inside the
+  # template's own Liquid (`{% {{ key }} %}`, `{{{{ key }}}}`) a value would
+  # write Liquid for the page's Liquid pass, so it takes none.
+  defp fill(text, start, length, key, params, values) do
     case params do
-      %{^key => type} -> escape(type, value(values, key))
-      _ -> placeholder
+      %{^key => type} ->
+        if inside_liquid?(binary_part(text, 0, start)), do: "", else: escape(type, value(values, key))
+
+      _ ->
+        binary_part(text, start, length)
+    end
+  end
+
+  # Whether `prefix` leaves a Liquid tag or output open
+  defp inside_liquid?(prefix) do
+    last = fn delimiters -> delimiters |> Enum.map(&last_index(prefix, &1)) |> Enum.max() end
+    last.(["{{", "{%"]) > last.(["}}", "%}"])
+  end
+
+  defp last_index(string, pattern) do
+    case :binary.matches(string, pattern) do
+      [] -> -1
+      matches -> matches |> List.last() |> elem(0)
     end
   end
 

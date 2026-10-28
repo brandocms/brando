@@ -5,8 +5,7 @@ defmodule Brando.Content.RefGuard do
   `recursive_block_changeset/4`), so every write that casts blocks gets it:
   the block editor, recovery, drafts, content transfer and revisions.
 
-  For everyone, a ref keeps the type its module gives it, and a saved ref
-  keeps its name:
+  For everyone, a ref keeps the type its module gives it:
 
     * a saved ref's type only changes to one its module's definition of the
       ref allows: the same type, or, for a media slot, a type in its
@@ -14,6 +13,8 @@ defmodule Brando.Content.RefGuard do
     * a new ref takes the module definition's data when its type is not one
       the definition allows. A new ref the module does not define keeps its
       type only when that type holds no markup, or when a superuser saves it.
+    * a saved ref keeps its name when the module defines a ref of the new
+      name with a type it does not allow.
 
   For anyone but a superuser (`Brando.Authorization.Boundary.superuser?/1`),
   the markup of an HTML ref (`text` and `params`), an SVG ref (`code` and
@@ -65,11 +66,9 @@ defmodule Brando.Content.RefGuard do
     do: {ref, state}
 
   defp guard_ref(%Changeset{} = ref, state) do
-    # A saved ref keeps its name: a new one would put it, and its type, in
-    # another ref's place in the template.
-    ref = if ref.data.id, do: Changeset.delete_change(ref, :name), else: ref
     old = ref.data.data
     new = ref |> Changeset.get_field(:data) |> applied()
+    {ref, state} = guard_name(ref, new, state)
 
     cond do
       is_nil(new) ->
@@ -84,6 +83,20 @@ defmodule Brando.Content.RefGuard do
   end
 
   defp guard_ref(ref, state), do: {ref, state}
+
+  # A saved ref takes a new name only when the module defines no ref of that
+  # name of another type: otherwise it would take that ref's place in the
+  # template. A name the module does not define (a revision restored after a
+  # rename gives one back) renders nowhere.
+  defp guard_name(%Changeset{data: %{id: id}, changes: %{name: name}} = ref, new, state) when not is_nil(id) do
+    {definition, state} = definition(state, name)
+
+    if definition && not type_allowed?(definition, type(new)),
+      do: {Changeset.delete_change(ref, :name), state},
+      else: {ref, state}
+  end
+
+  defp guard_name(ref, _new, state), do: {ref, state}
 
   # A changed type, or a new ref
   defp guard_type(ref, old, new, state) do

@@ -79,6 +79,12 @@ defmodule Brando.Villain.Blocks.HtmlBlockTest do
       assert rendered =~ "&lt;/div&gt;&lt;script&gt;"
     end
 
+    test "a placeholder inside the template's own Liquid takes no value" do
+      assert render("{{{{ v }}}}", :id, "entry") == "{{}}"
+      assert render("{% {{ v }} %}", :id, "comment") == "{%  %}"
+      assert render("{{ entry.title }} <i>{{ v }}</i>", :id, "a1") == "{{ entry.title }} <i>a1</i>"
+    end
+
     test "never forms Liquid with the template's own braces" do
       for type <- [:text, :url] do
         rendered = render("<pre>{{{ v }}}</pre>", type, "% inspect entry %")

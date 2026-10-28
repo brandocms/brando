@@ -126,6 +126,18 @@ defmodule Brando.Content.RefGuardTest do
       refute Enum.any?(Changeset.apply_changes(changeset).refs, &match?(%{name: "body", data: %HtmlBlock{}}, &1))
     end
 
+    # A revision restored after a stale-block rename gives a ref back its old
+    # name, which the module no longer defines
+    test "a saved ref takes a name the module does not define", c do
+      block = insert_block!(c)
+      body = ref(block, "body")
+
+      params = %{"refs" => %{"0" => %{"id" => to_string(body.id), "name" => "old_body"}}}
+      changeset = Block.block_changeset(block, params, c.editor.id)
+
+      assert Enum.any?(Changeset.apply_changes(changeset).refs, &match?(%{name: "old_body", data: %TextBlock{}}, &1))
+    end
+
     test "a media slot takes a type its module lists", c do
       block = insert_block!(c)
 
