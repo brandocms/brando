@@ -109,6 +109,11 @@ description, or its description function raises, the service takes the
 entry's meta description field, and without one the page's block text. Either
 way the markup describes content that is actually published.
 
+That description function runs while the identity cache is built, so it must
+not read the identity (`Brando.Cache.Identity`, or identity values in Liquid):
+the cache is still empty then, and the read would start building it again, in
+a loop.
+
 Every service is emitted into the JSON-LD graph as a `Service` node joined to
 `#identity`, inheriting the organization's `areaServed` unless it names its
 own.
