@@ -301,9 +301,9 @@ defmodule Brando.Villain do
     Context.assign(context, key, %{})
   end
 
-  # A global prints as its value, as a var does in a Liquid module: `string`
-  # and `text` escaped, rich text sanitized. HEEx, which escapes what it
-  # prints, reads them unescaped (`raw_context/2`).
+  # A global prints as its value, as a var does in a Liquid module: rich text
+  # sanitized, any other text escaped. HEEx, which escapes what it prints,
+  # reads them unescaped (`raw_context/2`).
   def add_to_context(context, "globals" = key, global_sets) do
     context
     |> Context.assign(key, globals(global_sets, true))
@@ -336,11 +336,10 @@ defmodule Brando.Villain do
 
   defp global_value({key, global}, escape?), do: {key, global_value(global, escape?)}
 
-  defp global_value(%{type: type, value: value}, true) when type in [:string, :text],
-    do: Parser.escape_var_value(value)
-
   defp global_value(%{type: type, value: value}, _escape?) when type in [:rich_text, :html],
     do: Brando.RichText.render_html(value)
+
+  defp global_value(%{value: value}, true) when is_binary(value), do: Parser.escape_var_value(value)
 
   defp global_value(%{value: value}, _escape?), do: value
 

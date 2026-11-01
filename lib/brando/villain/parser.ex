@@ -125,7 +125,7 @@ defmodule Brando.Villain.Parser do
       def header(data, opts), do: Brando.Villain.Parser.header(data, opts)
       defoverridable header: 2
 
-      def input(%{value: value}, _), do: value
+      def input(%{value: value}, _), do: Brando.Villain.Parser.escape_var_value(value)
       defoverridable input: 2
 
       def module(data, opts), do: Brando.Villain.Parser.module(data, opts)
@@ -298,7 +298,7 @@ defmodule Brando.Villain.Parser do
   def adapter_for(nil), do: TemplateAdapter.Liquex
 
   @doc """
-  Whether `adapter` gets its `string` and `text` vars HTML-escaped
+  Whether `adapter` gets its vars' text HTML-escaped
   (`process_vars/2`'s `escape:`): Liquid prints values as they are, HEEx
   escapes them itself.
   """
@@ -1668,7 +1668,7 @@ defmodule Brando.Villain.Parser do
 
   Options:
 
-    * `escape: true` HTML-escapes `string` and `text` values, for a template
+    * `escape: true` HTML-escapes every text value but `rich_text`, for a template
       that prints values as they are (Liquid). HEEx escapes what it prints.
   """
   def process_vars(vars, opts \\ [])
@@ -1681,7 +1681,7 @@ defmodule Brando.Villain.Parser do
   end
 
   @doc """
-  The text of a `string` or `text` var as Liquid gets it: HTML-escaped, so a
+  The text of a var as Liquid gets it, whatever its type but `rich_text`: HTML-escaped, so a
   `<` or a quote an editor typed is printed as text, and its braces
   character references (`Brando.Villain.InertLiquid`), so Liquid an editor
   typed is printed as text too rather than run by the entry's final Liquid
@@ -1692,7 +1692,9 @@ defmodule Brando.Villain.Parser do
 
   def escape_var_value(value), do: value
 
-  defp maybe_escape_var({key, value}, %{type: type}, true) when type in [:string, :text],
+  # By exclusion: only sanitized rich text prints as markup, so a type added
+  # later, or a value stored before it was checked, is text.
+  defp maybe_escape_var({key, value}, %{type: type}, true) when is_binary(value) and type not in [:rich_text, :html],
     do: {key, escape_var_value(value)}
 
   defp maybe_escape_var(processed, _var, _escape?), do: processed

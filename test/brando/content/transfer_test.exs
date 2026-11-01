@@ -953,6 +953,7 @@ defmodule Brando.Content.TransferTest do
       )
 
     c.module |> Changeset.change(table_template_id: template.id) |> Repo.update!()
+    Brando.Cache.Query.evict({:ok, c.module})
 
     rows =
       Enum.with_index(["First", "Second", "Third"], fn value, n ->
@@ -1007,6 +1008,7 @@ defmodule Brando.Content.TransferTest do
 
     var = %{key: "contact", label: %{"en" => "Contact"}, type: :form, creator_id: c.user.id}
     c.module |> Repo.preload(:vars) |> Changeset.change() |> Changeset.put_assoc(:vars, [var]) |> Repo.update!()
+    Brando.Cache.Query.evict({:ok, c.module})
 
     c.block
     |> Repo.preload(:vars)

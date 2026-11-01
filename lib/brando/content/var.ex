@@ -20,6 +20,7 @@ defmodule Brando.Content.Var do
   trait :timestamped
   trait Brando.Content.Var.FollowLinkDefault
   trait Brando.Content.Var.SanitizeRichText
+  trait Brando.Content.Var.ValidateValue
 
   identifier false
   persist_identifier false

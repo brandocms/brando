@@ -44,6 +44,17 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
     op
   end
 
+  # `block` with its first var's options changed. A block save holds a var's
+  # options to its definition (`Brando.Content.VarGuard`); the reducer merges
+  # the list for a write that does change them.
+  defp with_options(block, options) do
+    [var | vars] = block.vars
+    options = Enum.map(options, &Brando.Content.Var.Option.changeset(%Brando.Content.Var.Option{}, &1, :system))
+    changed = var |> Changeset.change() |> Changeset.put_embed(:options, options)
+
+    block |> Changeset.change() |> Changeset.put_assoc(:vars, [changed | Enum.map(vars, &Changeset.change/1)])
+  end
+
   defp root_keystroke(entry_block, user, path, value) do
     before = Changeset.change(entry_block)
     params = before |> Params.snapshot() |> put_at(path, value)
@@ -205,8 +216,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
     [var | _] = alpha.vars
 
     option_op = fn options ->
-      params = before |> Params.snapshot() |> put_at(["vars", "0", "options"], options)
-      {:ok, op} = Ops.field_op(before, Block.block_changeset(alpha, params, c.user.id), alpha.uid)
+      {:ok, op} = Ops.field_op(before, with_options(alpha, options), alpha.uid)
       op
     end
 
@@ -317,8 +327,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
     options = get_in(snapshot, ["vars", Access.at(0), "options"])
 
     add = fn option ->
-      params = put_at(snapshot, ["vars", "0", "options"], options ++ [option])
-      {:ok, op} = Ops.field_op(before, Block.block_changeset(alpha, params, c.user.id), alpha.uid)
+      {:ok, op} = Ops.field_op(before, with_options(alpha, options ++ [option]), alpha.uid)
       op
     end
 
@@ -328,10 +337,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
       |> apply!(add.(%{"label" => "By A", "value" => "25"}))
       |> apply!(add.(%{"label" => "By B", "value" => "75"}))
 
-    save(c.work, rows, state, c.user)
-    [_intro, multi] = rows(c.work)
-    alpha = hd(multi.block.children)
-    assert alpha.vars |> hd() |> Map.get(:options) |> Enum.map(& &1.value) |> Enum.sort() == ~w(100 25 50 75)
+    {:ok, params} = Ops.materialize_child(state, alpha.uid)
+    [var | _] = params["vars"]
+    assert var["options"] |> Enum.map(& &1["value"]) |> Enum.sort() == ~w(100 25 50 75)
   end
 
   test "gallery objects are named by their image or video, before and after a save" do
@@ -407,8 +415,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
     alpha = hd(multi.block.children)
     before = Changeset.change(alpha)
     twice = [%{"label" => "One", "value" => "1"}, %{"label" => "Also one", "value" => "1"}]
-    params = before |> Params.snapshot() |> put_at(["vars", "0", "options"], twice)
-    changed = Block.block_changeset(alpha, params, c.user.id)
+    changed = with_options(alpha, twice)
 
     assert {:ok, {:set_field, _, [{:at, "vars", _, _}, "options"], [_, _], nil}} =
              Ops.field_op(before, changed, alpha.uid)

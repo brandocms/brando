@@ -1527,6 +1527,8 @@ defmodule Brando.Content.Blocks do
   def duplicate_var(var, current_user_id) do
     var
     |> Map.merge(%{id: nil, block_id: nil})
+    |> Brando.Color.clear_invalid_var()
+    |> Brando.Content.Var.ValidateValue.clear_invalid()
     |> clone_ref_gallery(current_user_id)
     |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
     |> Var.changeset(%{

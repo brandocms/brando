@@ -410,6 +410,17 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
   end
 
   # Containers A (holding `child`) and B, empty.
+  # A module defining the child's vars, and its table rows' under a template
+  defp module_with_vars!(user, vars, row_vars \\ []) do
+    template =
+      if row_vars != [] do
+        {:ok, template} = Brando.Content.create_table_template(%{name: "Rows", vars: row_vars}, user)
+        template.id
+      end
+
+    Brando.ProposalFixtures.module!(user, "Moved", "<div></div>", vars: vars, table_template_id: template)
+  end
+
   defp insert_containers(page, user, child) do
     for {uid, children, seq} <- [{"containerA", [child], 0}, {"containerB", [], 1}] do
       %Brando.Pages.Page.Blocks{}
@@ -435,9 +446,12 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     user = Factory.insert(:random_user)
     page = Factory.insert(:page, creator: user)
 
+    module = module_with_vars!(user, [%{type: "string", key: "heading", label: "Heading"}])
+
     child = %{
       uid: "childR",
       type: :module,
+      module_id: module.id,
       active: true,
       source: "Elixir.Brando.Pages.Page.Blocks",
       creator_id: user.id,
@@ -600,9 +614,15 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     page = Factory.insert(:page, creator: user)
     gallery = Brando.Repo.insert!(%Brando.Galleries.Gallery{})
 
+    module =
+      module_with_vars!(user, [%{type: "gallery", key: "pics", label: "Pics"}], [
+        %{type: "gallery", key: "cell", label: "Cell", creator_id: user.id}
+      ])
+
     child = %{
       uid: "childV",
       type: :module,
+      module_id: module.id,
       active: true,
       source: "Elixir.Brando.Pages.Page.Blocks",
       creator_id: user.id,
@@ -689,9 +709,16 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     page = Factory.insert(:page, creator: user)
     [saved, picked] = for _ <- 1..2, do: Brando.Repo.insert!(%Brando.Galleries.Gallery{})
 
+    module =
+      module_with_vars!(user, [
+        %{type: "gallery", key: "picked", label: "Picked"},
+        %{type: "gallery", key: "cleared", label: "Cleared"}
+      ])
+
     child = %{
       uid: "childP",
       type: :module,
+      module_id: module.id,
       active: true,
       source: "Elixir.Brando.Pages.Page.Blocks",
       creator_id: user.id,

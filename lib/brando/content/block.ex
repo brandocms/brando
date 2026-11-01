@@ -14,6 +14,7 @@ defmodule Brando.Content.Block do
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Content.VarAttrs
+  alias Brando.Content.VarGuard
 
   @type t :: %__MODULE__{}
 
@@ -43,7 +44,10 @@ defmodule Brando.Content.Block do
     :identifier_metas
   ]
 
-  @var_attrs VarAttrs.all()
+  # A var's owner is whichever schema's `cast_assoc(:vars, …)` builds it: a
+  # `module_id` from params would make a block's var part of that module's
+  # definition.
+  @var_attrs VarAttrs.all() -- VarAttrs.owner()
 
   # ++ Traits
   trait :creator
@@ -174,20 +178,28 @@ defmodule Brando.Content.Block do
     |> finalize_new_block(block)
   end
 
-  # The block's own fields and rows, its refs held to what `user` may
-  # change (`Brando.Content.RefGuard`)
+  # The block's own fields and rows, its module, refs and vars held to what
+  # `user` may change (`Brando.Content.RefGuard`, `Brando.Content.VarGuard`)
   defp cast_block(block, attrs, user) do
-    block
-    |> cast(attrs, @block_attrs)
-    |> validate_required(:uid)
-    |> unique_constraint(:uid)
-    |> cast_table_rows(user)
+    changeset =
+      block
+      |> cast(attrs, @block_attrs)
+      |> Brando.Content.RefGuard.hold_module(user)
+      |> validate_required(:uid)
+      |> unique_constraint(:uid)
+
+    definitions = VarGuard.definitions(changeset)
+
+    changeset
+    |> cast_table_rows(user, definitions)
     |> cast_block_identifiers(user)
     |> cast_assoc(:vars,
-      with: &var_changeset(&1, &2, &3, user),
+      with: &block_var_changeset(&1, &2, &3, user, definitions.vars),
       sort_param: :sort_var_ids,
       drop_param: :drop_var_ids
     )
+    |> VarGuard.drop_refused(:vars)
+    |> VarGuard.follow_module()
     |> cast_assoc(:refs, with: &ref_changeset(&1, &2, user))
     |> Brando.Content.RefGuard.guard(user)
   end
@@ -250,25 +262,26 @@ defmodule Brando.Content.Block do
     end
   end
 
-  defp cast_table_rows(changeset, user) do
+  defp cast_table_rows(changeset, user, definitions) do
     cast_assoc(changeset, :table_rows,
-      with: &table_row_changeset(&1, &2, &3, user),
+      with: &table_row_changeset(&1, &2, &3, user, definitions.rows),
       drop_param: :drop_table_row_ids,
       sort_param: :sort_table_row_ids
     )
   end
 
-  def table_row_changeset(table_row, attrs, position, user) do
+  def table_row_changeset(table_row, attrs, position, user, definitions \\ %{}) do
     attrs = drop_vanished_rows(attrs, table_row, [:vars])
 
     table_row
     |> cast(attrs, [:block_id])
     |> put_table_row_sync_uid()
     |> cast_assoc(:vars,
-      with: &var_changeset(&1, &2, &3, user),
+      with: &block_var_changeset(&1, &2, &3, user, definitions),
       sort_param: :sort_var_ids,
       drop_param: :drop_var_ids
     )
+    |> VarGuard.drop_refused(:vars)
     |> change(sequence: position)
   end
 
@@ -311,22 +324,41 @@ defmodule Brando.Content.Block do
   def carried_var_attrs, do: VarAttrs.carried()
 
   def var_changeset(var, attrs, position, user) when is_integer(position) do
-    var
-    |> cast(attrs, @var_attrs)
-    |> put_var_creator(user)
-    |> cast_embed(:options)
-    |> change(sequence: position)
-    |> validate_media_fks()
-    |> Brando.Content.Var.SanitizeRichText.sanitize()
+    var |> cast_var(attrs, user, nil) |> change(sequence: position)
   end
 
-  def var_changeset(var, attrs, user) do
-    var
-    |> cast(attrs, @var_attrs)
-    |> put_var_creator(user)
-    |> cast_embed(:options)
-    |> validate_media_fks()
-    |> Brando.Content.Var.SanitizeRichText.sanitize()
+  def var_changeset(var, attrs, user), do: cast_var(var, attrs, user, nil)
+
+  # A var of a block or table row, held to `definitions`, its definitions by key
+  defp block_var_changeset(var, attrs, position, user, definitions) do
+    case cast_var(var, attrs, user, definitions) do
+      %{action: :ignore} = refused -> refused
+      changeset -> change(changeset, sequence: position)
+    end
+  end
+
+  # What a var's type and options may be comes first (`VarGuard.hold/3`), so
+  # the value is checked for the type it ends up with.
+  defp cast_var(var, attrs, user, definitions) do
+    case VarGuard.hold(var, attrs, definitions) do
+      :refused ->
+        %{change(var) | action: :ignore}
+
+      {var, held} ->
+        var
+        |> cast(attrs, @var_attrs -- held)
+        |> VarGuard.forget_params(held)
+        |> put_var_creator(user)
+        |> cast_var_options(held)
+        |> validate_media_fks()
+        |> Brando.Content.Var.ValidateValue.validate()
+        |> Brando.Color.validate_blueprint(Brando.Content.Var)
+        |> Brando.Content.Var.SanitizeRichText.sanitize()
+    end
+  end
+
+  defp cast_var_options(changeset, held) do
+    if :options in held, do: changeset, else: cast_embed(changeset, :options)
   end
 
   # `Brando.Trait.Creator` sets this on the blueprint-generated changeset, but

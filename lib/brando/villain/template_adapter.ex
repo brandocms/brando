@@ -96,11 +96,12 @@ defmodule Brando.Villain.TemplateAdapter do
 
   # `row.vars` holds the vars themselves: their values as `process_vars/2`
   # gives them by key
-  defp row_var(%{type: type, value: value} = var, true) when type in [:string, :text],
-    do: %{var | value: Brando.Villain.Parser.escape_var_value(value)}
-
   defp row_var(%{type: type, value: value} = var, _escape?) when type in [:rich_text, :html],
     do: %{var | value: Brando.RichText.render_html(value)}
+
+  # A link is read through `link_url` and `link_text`, which escape
+  defp row_var(%{type: type, value: value} = var, true) when is_binary(value) and type != :link,
+    do: %{var | value: Brando.Villain.Parser.escape_var_value(value)}
 
   defp row_var(var, _escape?), do: var
 

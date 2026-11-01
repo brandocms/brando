@@ -267,7 +267,9 @@ defmodule Brando.Content.DefinitionsTest do
       %Var{}
       |> Var.changeset(
         %{"key" => var.key, "type" => "select", "label" => "Theme", "value" => "dark", "block_id" => block.id},
-        c.user
+        c.user,
+        nil,
+        validate_var_values: false
       )
       |> Repo.insert!()
 
