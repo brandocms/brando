@@ -411,7 +411,9 @@ defmodule Brando.Villain.InertEditorTextTest do
     end
 
     test "other spellings of a credential are hidden" do
-      keys = ~w(passwordhash hashedpassword accesstoken authtoken clientsecret secretkey secrets api_keys api-key x-api-key)
+      keys =
+        ~w(passwordhash hashedpassword accesstoken authtoken clientsecret secretkey secrets api_keys api-key x-api-key)
+
       view = TemplateView.wrap(Map.new(keys, &{&1, "v"}))
       context = Villain.create_context(%{"x" => view})
 

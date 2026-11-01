@@ -146,9 +146,9 @@ defmodule Brando.Villain.TemplateView do
   def unwrap(value), do: value
 
   @doc """
-  The mode of the views in `value`, where `unwrap/1` looks, `:escape` if any of
-  them escapes, or nil if there are none. A filter's result reads as what it read, and the names of a block's
-  refs are not its text.
+  What a filter's result is read as: `:escape` if any view in `value` escapes,
+  else the mode they have, nil with no view. A block's ref names are not its text,
+  so `:names` reads as `:escape`.
   """
   @spec view_mode(term()) :: mode() | nil
   def view_mode(%__MODULE__{mode: :names}), do: :escape
@@ -322,20 +322,22 @@ defmodule Brando.Villain.TemplateView do
   defp without_credentials(value), do: value
 
   defimpl String.Chars do
+    alias Brando.Villain.TemplateView
+
     # As Liquid prints a map, and nothing for a struct that has no text
     def to_string(%{value: value, mode: mode}) do
       cond do
         is_struct(value) and String.Chars.impl_for(value) ->
-          value |> Kernel.to_string() |> Brando.Villain.TemplateView.wrap(mode)
+          value |> Kernel.to_string() |> TemplateView.wrap(mode)
 
         is_struct(value) ->
           ""
 
         true ->
           value
-          |> Brando.Villain.TemplateView.printable()
+          |> TemplateView.printable()
           |> Liquex.Render.to_output_string()
-          |> Brando.Villain.TemplateView.wrap(mode)
+          |> TemplateView.wrap(mode)
       end
     end
   end
