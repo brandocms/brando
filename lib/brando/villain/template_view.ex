@@ -261,7 +261,14 @@ defmodule Brando.Villain.TemplateView do
   defp hidden?(_value, _key, mode) when mode in [:processed, :names], do: false
   defp hidden?(_value, key, _mode), do: credential?(key)
 
-  defp credential?(key) when is_binary(key), do: key |> String.downcase(:ascii) |> credential_word?()
+  # `accessToken` from JSON is two words; most keys have no capital to look at
+  defp credential?(key) when is_binary(key) do
+    case String.downcase(key, :ascii) do
+      ^key -> credential_word?(key)
+      lower -> credential_word?(lower) or key |> Macro.underscore() |> credential_word?()
+    end
+  end
+
   defp credential?(key) when is_atom(key), do: credential?(Atom.to_string(key))
   defp credential?(_key), do: false
 

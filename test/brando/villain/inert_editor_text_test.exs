@@ -220,6 +220,17 @@ defmodule Brando.Villain.InertEditorTextTest do
       assert html =~ user.name <> "|"
     end
 
+    test "a camelCase key from JSON is hidden too, and a word that only holds one is not" do
+      view = TemplateView.wrap(%{"accessToken" => "t", "clientSecret" => "s", "apiKey" => "k", "secretary" => "n"})
+      context = Villain.create_context(%{"x" => view})
+      eval = fn key -> Liquex.Argument.eval({:field, [key: "x", key: key]}, context) |> elem(0) end
+
+      assert eval.("accessToken") == nil
+      assert eval.("clientSecret") == nil
+      assert eval.("apiKey") == nil
+      assert eval.("secretary") == "n"
+    end
+
     test "no struct shows a field named like a credential" do
       view = TemplateView.wrap(%{api_key: "k", name: "n", access_token: "t", nested: %{client_secret: "s"}})
       context = Villain.create_context(%{"x" => view})
