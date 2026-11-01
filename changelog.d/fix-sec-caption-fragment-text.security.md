@@ -1,0 +1,2 @@
+- `caption: true` on a picture or video prints the record's title or caption as text, or as sanitized markup when it is rich text, so markup in them cannot run on the site; a caption the template passes still prints as written.
+- A fragment's parent key and key print HTML-escaped in its wrapper and in the missing-fragment diagnostic, which `render_fragment/2,3` and `fetch_fragment/2` now show only in development; elsewhere a missing fragment renders nothing and logs a warning.

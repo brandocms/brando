@@ -56,8 +56,18 @@ defmodule Brando.Pages.Fragment do
 
   attributes do
     attribute :title, :string
-    attribute :parent_key, :string, required: true
-    attribute :key, :string, required: true
+
+    # Identifiers: letters, digits, `_`, `-`, `.` and `/`. A parent key can be a
+    # page's URI. The check runs when a key changes, so a stored key that doesn't
+    # fit still saves; what prints a key escapes it.
+    attribute :parent_key, :string,
+      required: true,
+      constraints: [format: ~r/\A[\p{L}\p{M}\p{N}_][\p{L}\p{M}\p{N}_.\/-]*\z/u]
+
+    attribute :key, :string,
+      required: true,
+      constraints: [format: ~r/\A[\p{L}\p{M}\p{N}_][\p{L}\p{M}\p{N}_.\/-]*\z/u]
+
     attribute :wrapper, :string
   end
 
@@ -98,12 +108,14 @@ defmodule Brando.Pages.Fragment do
           input :parent_key, :text,
             monospace: true,
             label: t("Parent key"),
-            placeholder: t("parent_key")
+            placeholder: t("parent_key"),
+            instructions: t("Letters, digits and _ - . /")
 
           input :key, :text,
             monospace: true,
             label: t("Key"),
-            placeholder: t("key")
+            placeholder: t("key"),
+            instructions: t("Letters, digits and _ - . /")
         end
 
         fieldset do
@@ -171,12 +183,21 @@ defmodule Brando.Pages.Fragment do
     def to_iodata(%{wrapper: wrapper} = fragment) do
       wrapper
       |> String.replace("{{ content }}", Brando.FrontendEdit.rendered_html(fragment, :blocks) || "")
-      |> String.replace("{{ parent_key }}", fragment.parent_key)
-      |> String.replace("{{ key }}", fragment.key)
+      |> String.replace("{{ parent_key }}", text(fragment.parent_key))
+      |> String.replace("{{ key }}", text(fragment.key))
       |> String.replace("{{ language }}", to_string(fragment.language))
       |> Brando.Forms.Delivery.finalize()
       |> Phoenix.HTML.raw()
       |> Phoenix.HTML.Safe.to_iodata()
+    end
+
+    # An editor's value in a superuser's markup. Its braces are entities, so it
+    # can't bring a placeholder of its own.
+    defp text(value) do
+      value
+      |> Phoenix.HTML.html_escape()
+      |> Phoenix.HTML.safe_to_string()
+      |> Brando.Villain.InertLiquid.encode()
     end
   end
 end

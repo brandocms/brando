@@ -38,6 +38,11 @@ msgid "Language"
 msgstr "Språk"
 
 #: lib/brando/pages/fragment.ex
+#, elixir-autogen, elixir-format
+msgid "Letters, digits and _ - . /"
+msgstr "Bokstaver, tall og _ - . /"
+
+#: lib/brando/pages/fragment.ex
 #, elixir-format
 msgid "New %{type}"
 msgstr "Nytt %{type}"

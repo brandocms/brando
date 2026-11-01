@@ -183,9 +183,9 @@ defmodule Brando.PagesTest do
     refute pf2.deleted_at == nil
   end
 
+  @tag :capture_log
   test "fetch_fragment non existing" do
-    assert Pages.fetch_fragment("non_existing") |> Phoenix.HTML.safe_to_string() ==
-             "<div class=\"page-fragment-missing\">\n             <strong>Missing page fragment</strong> <br />\n             key..: non_existing<br />\n             lang.: en\n           </div>"
+    assert Pages.fetch_fragment("non_existing") |> Phoenix.HTML.safe_to_string() == ""
   end
 
   test "fetch_fragment" do
@@ -239,13 +239,13 @@ defmodule Brando.PagesTest do
 
     frags = Pages.get_fragments("parent", "no")
 
-    assert Pages.render_fragment(frags, "non_existing") |> Phoenix.HTML.safe_to_string() =~
-             "Missing page fragment"
+    assert Pages.render_fragment(frags, "non_existing") |> Phoenix.HTML.safe_to_string() == ""
 
     assert Pages.render_fragment(frags, "frag1") |> Phoenix.HTML.safe_to_string() ==
              "fragment content!"
   end
 
+  @tag :capture_log
   test "render_fragment parent_key + key" do
     _pf1 =
       Factory.insert(:fragment,
@@ -271,8 +271,7 @@ defmodule Brando.PagesTest do
         rendered_blocks: "fragment content! 3"
       )
 
-    assert Pages.render_fragment("parent", "non_existing") |> Phoenix.HTML.safe_to_string() =~
-             "Missing page fragment"
+    assert Pages.render_fragment("parent", "non_existing") |> Phoenix.HTML.safe_to_string() == ""
 
     assert Pages.render_fragment("parent", "frag1") |> Phoenix.HTML.safe_to_string() ==
              "fragment content!"

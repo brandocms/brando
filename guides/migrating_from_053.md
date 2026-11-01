@@ -776,6 +776,18 @@ index". Publish the fragments first.
    edit that changes a colour must make it one. Pick each colour again in the
    admin, rename each listed palette name, and update any CSS of your own that
    names a renamed palette's `b-section` or custom properties.
+9. **Rename fragment keys that are not identifiers.** A fragment's parent key
+   and key hold letters, digits, `_`, `-`, `.` and `/`. A stored key that doesn't
+   fit keeps rendering, saving and copying, printed escaped, but a change to it
+   must fit. To list them:
+
+   ```sql
+   SELECT id, parent_key, key FROM pages_fragments
+   WHERE parent_key !~ '^[[:alnum:]_][[:alnum:]_./-]*$'
+      OR key !~ '^[[:alnum:]_][[:alnum:]_./-]*$';
+   ```
+
+   Rename each in the admin, along with the templates that look it up.
 
 `mix brando.doctor` reports migrations that have not run, in `public` and in
 each environment, and Oban queues that are missing. Under Module entry paths it

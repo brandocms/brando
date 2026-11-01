@@ -563,8 +563,8 @@ defmodule Brando.Pages do
       fetch_fragment("my/fragment", "en")
 
   If no language is passed, default language set in `brando.exs` will be used.
-  If the fragment isn't found, it will render an error box. An unpublished
-  fragment renders nothing.
+  If the fragment isn't found, it renders an error box in development; elsewhere
+  it renders nothing and is logged. An unpublished fragment renders nothing.
   """
   def fetch_fragment(key, language \\ nil) when is_binary(key) do
     language = language || Brando.config(:default_language)
@@ -577,11 +577,7 @@ defmodule Brando.Pages do
 
     case fragment do
       nil ->
-        Phoenix.HTML.raw(~s(<div class="page-fragment-missing">
-             <strong>Missing page fragment</strong> <br />
-             key..: #{key}<br />
-             lang.: #{language}
-           </div>))
+        missing_fragment_html(key: key, lang: language)
 
       fragment ->
         fragment_html(fragment)
@@ -591,17 +587,15 @@ defmodule Brando.Pages do
   @doc """
   Render a fragment, or the fragment under `key` in a map from `get_fragments/1`,
   or the one with `parent` key and `key`. An unpublished fragment renders nothing.
+  A missing one renders an error box in development; elsewhere it renders nothing
+  and is logged.
   """
   def render_fragment(%Fragment{} = fragment), do: fragment_html(fragment)
 
   def render_fragment(fragments, key) when is_map(fragments) do
     case Map.get(fragments, key) do
       nil ->
-        Phoenix.HTML.raw(~s(<div class="page-fragment-missing text-mono">
-             <strong>Missing page fragment</strong> <br />
-             key...: #{key}<br />
-             frags.: #{inspect(Map.keys(fragments))}
-           </div>))
+        missing_fragment_html(key: key, frags: Map.keys(fragments))
 
       fragment ->
         fragment_html(fragment)
@@ -611,14 +605,13 @@ defmodule Brando.Pages do
   def render_fragment(parent, key, language \\ nil) when is_binary(parent) and is_binary(key) do
     case lookup_fragment(parent, key, language) do
       {:ok, fragment} -> fragment_html(fragment)
-      {:error, {:fragment, :not_found}} -> missing_fragment_html(parent, key, language)
+      {:error, {:fragment, :not_found}} -> missing_fragment_html(parent: parent, key: key, lang: language)
     end
   end
 
   @doc """
   `render_fragment/3` for HTML stored with an entry, as the `{% fragment %}`
-  tag renders it: outside development a missing fragment renders nothing, and
-  is logged, since visitors see the stored HTML.
+  tag renders it.
   """
   def render_embedded_fragment(parent, key, language \\ nil) when is_binary(parent) and is_binary(key) do
     case lookup_fragment(parent, key, language) do
@@ -629,12 +622,7 @@ defmodule Brando.Pages do
         {:safe, Brando.Villain.InertLiquid.encode(html)}
 
       {:error, {:fragment, :not_found}} ->
-        if Brando.env() == :dev do
-          missing_fragment_html(parent, key, language)
-        else
-          Logger.warning("Missing page fragment #{inspect(parent)} #{inspect(key)} #{inspect(language)}")
-          Phoenix.HTML.raw("")
-        end
+        missing_fragment_html(parent: parent, key: key, lang: language)
     end
   end
 
@@ -644,13 +632,26 @@ defmodule Brando.Pages do
     get_fragment(%{matches: matches})
   end
 
-  defp missing_fragment_html(parent, key, language) do
-    Phoenix.HTML.raw(~s(<div class="page-fragment-missing">
+  # A diagnostic for whoever writes the template, which visitors never see. The
+  # keys are what an editor typed, or what the template passes along.
+  defp missing_fragment_html(details) do
+    if Brando.env() == :dev do
+      rows = Enum.map_join(details, "<br />\n", &missing_fragment_row/1)
+
+      Phoenix.HTML.raw(~s(<div class="page-fragment-missing text-mono">
              <strong>Missing page fragment</strong> <br />
-             parent: #{parent}<br />
-             key...: #{key}<br />
-             lang..: #{language}
+#{rows}
            </div>))
+    else
+      Logger.warning("Missing page fragment #{inspect(details)}")
+      Phoenix.HTML.raw("")
+    end
+  end
+
+  defp missing_fragment_row({label, value}) do
+    value = if is_list(value), do: inspect(value), else: value
+
+    "             #{String.pad_trailing(to_string(label), 6, ".")}: #{value |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()}"
   end
 
   # rendered_blocks is pre-rendered CMS content from our own rendering pipeline
