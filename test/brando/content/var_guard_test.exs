@@ -651,6 +651,158 @@ defmodule Brando.Content.VarGuardTest do
     end
   end
 
+  describe "a superuser's change of a saved block's module" do
+    @new_options [%{label: "Large", value: "large"}, %{label: "Huge", value: "huge"}]
+
+    setup c do
+      {:ok, template} =
+        Brando.Content.create_table_template(
+          %{
+            name: "New rows",
+            vars: [
+              %{key: "cell", label: "Cell", type: :select, options: @new_options, creator_id: c.superuser.id},
+              %{key: "size", label: "Size", type: :select, options: @new_options, creator_id: c.superuser.id}
+            ]
+          },
+          c.superuser
+        )
+
+      target =
+        ProposalFixtures.module!(c.superuser, "Same keys", "<p>{{ size }}</p>",
+          table_template_id: template.id,
+          vars: [
+            %{type: "select", key: "size", label: "Size", options: @new_options},
+            %{type: "rich_text", key: "body", label: "Body"},
+            %{type: "color", key: "tint", label: "Tint"}
+          ]
+        )
+
+      %{new_module: target}
+    end
+
+    defp to_new_module(block, c, params \\ %{}),
+      do: Block.block_changeset(block, Map.put(params, "module_id", to_string(c.new_module.id)), :system)
+
+    defp saved_block(changeset), do: changeset |> Repo.update!() |> Repo.preload([:vars, table_rows: :vars], force: true)
+
+    defp values(options), do: Enum.map(options, & &1.value)
+
+    test "a var of the same type takes the definition's options, its old value emptied", c do
+      saved = c |> insert_block!() |> to_new_module(c) |> saved_block()
+
+      assert %{value: nil, options: options} = var(saved, "size")
+      assert values(options) == ["large", "huge"]
+    end
+
+    test "a value still among the options stays", c do
+      block = insert_block!(c)
+      var(block, "size") |> Changeset.change(value: "large") |> Repo.update!()
+      block = Repo.preload(block, :vars, force: true)
+
+      assert %{value: "large"} = block |> to_new_module(c) |> saved_block() |> var("size")
+    end
+
+    test "a later save takes the new options' value and refuses the old one", c do
+      saved = c |> insert_block!() |> to_new_module(c) |> saved_block()
+
+      assert edit(saved, "size", %{"value" => "huge"}, c.editor).valid?
+      refute edit(saved, "size", %{"value" => "small"}, c.editor).valid?
+    end
+
+    test "a value sent with the change is checked for the new options", c do
+      block = insert_block!(c)
+      fields = %{"id" => to_string(var(block, "size").id), "value" => "huge"}
+      changeset = to_new_module(block, c, %{"vars" => %{"0" => fields}})
+
+      assert changeset.valid?
+      assert %{value: "huge"} = changeset |> saved_block() |> var("size")
+    end
+
+    test "an invalid value sent with the change leaves it empty, and the block with no refs saves", c do
+      block = insert_block!(c)
+      assert block.refs == []
+      fields = %{"id" => to_string(var(block, "size").id), "value" => @handler}
+      changeset = to_new_module(block, c, %{"vars" => %{"0" => fields}})
+
+      assert changeset.valid?
+      assert %{value: nil} = changeset |> saved_block() |> var("size")
+    end
+
+    test "a value refused for what it holds stays refused", c do
+      block = insert_block!(c)
+      fields = %{"id" => to_string(var(block, "body").id), "value" => @handler}
+      refute to_new_module(block, c, %{"vars" => %{"0" => fields}}).valid?
+    end
+
+    test "table rows the params leave out follow the new table template", c do
+      block = insert_block!(c)
+      saved = block |> to_new_module(c) |> saved_block()
+
+      assert [%{vars: [cell]}] = saved.table_rows
+      assert %{key: "cell", type: :select, value: nil, options: options} = cell
+      assert values(options) == ["large", "huge"]
+    end
+
+    test "every saved row stays and follows, whichever the params name", c do
+      block = insert_block!(c)
+      [%{vars: [first_cell]} = first] = block.table_rows
+
+      second =
+        %Brando.Content.TableRow{block_id: block.id, sequence: 1, sync_uid: Utils.generate_uid()}
+        |> Repo.insert!()
+
+      %Var{}
+      |> Var.changeset(
+        %{key: "cell", label: "Cell", type: :string, value: "Two", creator_id: c.superuser.id},
+        c.superuser
+      )
+      |> Changeset.put_change(:table_row_id, second.id)
+      |> Repo.insert!()
+
+      block = Repo.preload(block, [table_rows: :vars], force: true)
+
+      params = %{
+        "table_rows" => %{
+          "0" => %{
+            "id" => to_string(first.id),
+            "vars" => %{"0" => %{"id" => to_string(first_cell.id), "value" => "huge"}}
+          },
+          "1" => %{"id" => to_string(second.id)}
+        }
+      }
+
+      saved = block |> to_new_module(c, params) |> saved_block()
+
+      assert [
+               %{vars: [%{key: "cell", type: :select, value: nil}]},
+               %{vars: [%{key: "cell", type: :select, value: nil}]}
+             ] =
+               Enum.sort_by(saved.table_rows, & &1.id)
+    end
+
+    test "a row's var the new template does not define stays dormant", c do
+      {:ok, template} =
+        Brando.Content.create_table_template(
+          %{name: "Other rows", vars: [%{key: "other", label: "Other", type: :color, creator_id: c.superuser.id}]},
+          c.superuser
+        )
+
+      target = ProposalFixtures.module!(c.superuser, "Other", "<p></p>", table_template_id: template.id)
+      block = insert_block!(c)
+      saved = block |> Block.block_changeset(%{"module_id" => to_string(target.id)}, :system) |> saved_block()
+
+      assert [%{vars: [%{key: "cell", type: :string, value: "One"}]}] = saved.table_rows
+    end
+
+    test "works on a block whose rows and vars are not loaded", c do
+      block = insert_block!(c)
+      saved = Block |> Repo.get!(block.id) |> to_new_module(c) |> saved_block()
+
+      assert %{type: :select, value: nil} = var(saved, "size")
+      assert [%{vars: [%{type: :select, value: nil}]}] = saved.table_rows
+    end
+  end
+
   describe "ordinary editing" do
     test "a new block from the module saves its vars and table row", c do
       block = insert_block!(c)

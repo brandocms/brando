@@ -105,16 +105,20 @@ defmodule Brando.Content.VarGuard do
   copy.
   """
   @spec clear_copied_value(Changeset.t(), map() | nil) :: Changeset.t()
-  def clear_copied_value(%Changeset{data: %{id: nil}} = var, %{copy?: true}), do: clear_invalid_value(var)
+  def clear_copied_value(%Changeset{data: %{id: nil}} = var, %{copy?: true}) do
+    if value_fits?(var), do: var, else: Changeset.force_change(var, :value, nil)
+  end
+
   def clear_copied_value(var, _definitions), do: var
 
-  defp clear_invalid_value(%Changeset{} = var) do
-    value = Changeset.get_field(var, :value)
-    stored = %{type: Changeset.get_field(var, :type), value: value, options: Changeset.get_embed(var, :options, :struct)}
+  defp value_fits?(%Changeset{} = var) do
+    stored = %{
+      type: Changeset.get_field(var, :type),
+      value: Changeset.get_field(var, :value),
+      options: Changeset.get_embed(var, :options, :struct)
+    }
 
-    if stored |> Brando.Color.clear_invalid_var() |> ValidateValue.clear_invalid() |> Map.fetch!(:value) == value,
-      do: var,
-      else: Changeset.force_change(var, :value, nil)
+    stored |> Brando.Color.clear_invalid_var() |> ValidateValue.clear_invalid() == stored
   end
 
   @doc """
@@ -141,46 +145,90 @@ defmodule Brando.Content.VarGuard do
 
   @doc """
   The block changeset `changeset` with its saved vars following a module change
-  (`Brando.Content.RefGuard.module_changed?/1`): a var the new module defines as
-  another type takes that type and its options, and starts empty, since its
-  value was not checked for that type. A var it does not define stays dormant.
+  (`Brando.Content.RefGuard.module_changed?/1`), the block's and its table
+  rows', mentioned in the params or not: a var the new module or its table
+  template defines takes that type and those options. Its value starts empty
+  when the type changed, since it was not checked for that type, or when it is
+  not valid for them. A var it does not define stays dormant.
   """
   @spec follow_module(Changeset.t()) :: Changeset.t()
   def follow_module(%Changeset{} = changeset) do
-    if Brando.Content.RefGuard.module_changed?(changeset), do: retype_saved_vars(changeset), else: changeset
+    if Brando.Content.RefGuard.module_changed?(changeset), do: follow_saved_vars(changeset), else: changeset
   end
 
-  defp retype_saved_vars(%Changeset{data: block} = changeset) do
-    %{vars: saved} = Brando.Repo.preload(block, :vars)
-    definitions = by_key((module(changeset) || %{vars: []}).vars)
-    cast = Map.get(changeset.changes, :vars, [])
+  defp follow_saved_vars(%Changeset{data: block} = changeset) do
+    %{vars: vars, table_rows: rows} = Brando.Repo.preload(block, [:vars, table_rows: :vars])
+    module = module(changeset)
+    definitions = by_key((module || %{vars: []}).vars)
+    cell_definitions = by_key((module && Proposals.table_vars(module)) || [])
+    cells = Map.new(rows, &{&1.id, &1.vars})
+
+    changeset
+    |> put_followed(:vars, vars, &retype(&1, definitions))
+    |> put_followed(:table_rows, rows, &follow_row(&1, cell_definitions, cells))
+    |> Brando.Content.RefGuard.revalidate()
+  end
+
+  defp follow_row(%Changeset{action: action} = row, _definitions, _cells) when action in [:replace, :delete], do: row
+
+  defp follow_row(%Changeset{} = row, definitions, cells) do
+    if saved?(row),
+      do:
+        row
+        |> put_followed(:vars, Map.get(cells, row.data.id, []), &retype(&1, definitions))
+        |> Brando.Content.RefGuard.revalidate(),
+      else: row
+  end
+
+  # The cast rows and every saved row the cast leaves out: a row missing from
+  # `changes` is one the save does not have.
+  defp put_followed(%Changeset{changes: changes} = changeset, relation, saved, follow) do
+    cast = Map.get(changes, relation, [])
     cast_ids = MapSet.new(cast, & &1.data.id)
 
     unmentioned =
-      saved |> Enum.reject(&MapSet.member?(cast_ids, &1.id)) |> Enum.map(&%{Changeset.change(&1) | action: :update})
+      saved
+      |> Enum.filter(&saved?/1)
+      |> Enum.reject(&MapSet.member?(cast_ids, &1.id))
+      |> Enum.map(&%{Changeset.change(&1) | action: :update})
 
-    vars = Enum.map(cast ++ unmentioned, &retype(&1, definitions))
-
-    %{changeset | changes: Map.put(changeset.changes, :vars, vars)}
+    case cast ++ unmentioned do
+      [] -> changeset
+      rows -> %{changeset | changes: Map.put(changes, relation, Enum.map(rows, follow))}
+    end
   end
 
   defp retype(%Changeset{action: action} = var, _definitions) when action in [:replace, :delete], do: var
 
   defp retype(%Changeset{} = var, definitions) do
     definition = Map.get(definitions, Changeset.get_field(var, :key))
-    type = Changeset.get_field(var, :type)
-
-    if (saved?(var) and definition) && definition.type != type do
-      var
-      |> Changeset.put_change(:type, definition.type)
-      |> Changeset.put_embed(:options, definition.options || [])
-      |> Changeset.force_change(:value, nil)
-      |> Map.update!(:errors, &Keyword.delete(&1, :value))
-      |> then(&%{&1 | valid?: &1.errors == []})
-    else
-      var
-    end
+    if saved?(var) and definition, do: hold_to(var, definition), else: var
   end
+
+  # An error on the value is the old definition's when it comes from the check:
+  # the value is judged anew here. One from what it holds (rich text) stands,
+  # unless the value goes.
+  defp hold_to(var, definition) do
+    retyped? = definition.type != Changeset.get_field(var, :type)
+    var = var |> Changeset.put_change(:type, definition.type) |> put_options(definition.options || [])
+
+    var =
+      if not retyped? and value_fits?(var) do
+        ValidateValue.forget_error(var)
+      else
+        var |> Changeset.force_change(:value, nil) |> Map.update!(:errors, &Keyword.delete(&1, :value))
+      end
+
+    Brando.Content.RefGuard.revalidate(var)
+  end
+
+  defp put_options(var, options) do
+    if option_values(Changeset.get_embed(var, :options, :struct)) == option_values(options),
+      do: var,
+      else: Changeset.put_embed(var, :options, options)
+  end
+
+  defp option_values(options), do: Enum.map(options, &{&1.label, &1.value})
 
   @doc """
   The params of a save on the Globals screen, which fills in values: the set
