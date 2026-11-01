@@ -59,15 +59,15 @@ defmodule Brando.Pages.Fragment do
 
     # Identifiers: letters, digits, `_`, `-`, `.` and `/`, as a parent key can be
     # a page's URI, and a space and parentheses, as a copy's key is "footer (copy)".
-    # Any of them can come first but the space. The check runs when a key changes,
+    # A space can't come first or last. The check runs when a key changes,
     # so a stored key that doesn't fit still saves; what prints a key escapes it.
     attribute :parent_key, :string,
       required: true,
-      constraints: [format: ~r/\A[\p{L}\p{M}\p{N}_.\/()-][\p{L}\p{M}\p{N}_.\/ ()-]*\z/u]
+      constraints: [format: ~r/\A[\p{L}\p{M}\p{N}_.\/()-][\p{L}\p{M}\p{N}_.\/ ()-]*(?<! )\z/u]
 
     attribute :key, :string,
       required: true,
-      constraints: [format: ~r/\A[\p{L}\p{M}\p{N}_.\/()-][\p{L}\p{M}\p{N}_.\/ ()-]*\z/u]
+      constraints: [format: ~r/\A[\p{L}\p{M}\p{N}_.\/()-][\p{L}\p{M}\p{N}_.\/ ()-]*(?<! )\z/u]
 
     attribute :wrapper, :string
   end

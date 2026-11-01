@@ -14,7 +14,7 @@ defmodule Brando.Pages.FragmentKeyTest do
 
   @marker ~s(<i data-marker="key"></i>)
   @closing ~s("><i data-marker="key"></i>)
-  @crafted [@marker, @closing, "a\n", "a\tb", "a&b", "a=b", "a'b", ~s(a"b), "{{ a }}", "{% a %}", " a", "", " "]
+  @crafted [@marker, @closing, "a\n", "a\tb", "a&b", "a=b", "a'b", ~s(a"b), "{{ a }}", "{% a %}", " a", "a ", "", " "]
 
   defp fragment!(attrs \\ []), do: Factory.insert(:fragment, Keyword.merge([title: "Footer", wrapper: nil], attrs))
 

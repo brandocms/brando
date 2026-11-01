@@ -198,9 +198,10 @@ rest of the fragment, and the keys it prints are HTML-escaped.
 `render_fragment/1` outputs the stored content without that wrapper.
 
 A parent key or key holds letters, digits, `_`, `-`, `.`, `/`, spaces and
-parentheses, and can't start with a space, so `about/team`, `/about`,
+parentheses, and can't start or end with a space, so `about/team`, `/about`,
 `site-footer` and a copy's `footer (copy)` all work. A save that changes one to
-anything else is refused.
+anything else is refused. The `{% fragment %}` tag still takes only bare words
+(see [the block editor guide](deps/brando/guides/block_editor.md)), so it can't name the others.
 
 Only a published fragment renders. An unpublished one stays in the map with no
 content, so `{fragment}`, `<Brando.HTML.fragment fragment={fragment} />`,
