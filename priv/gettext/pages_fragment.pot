@@ -38,7 +38,7 @@ msgstr ""
 
 #: lib/brando/pages/fragment.ex
 #, elixir-autogen, elixir-format
-msgid "Letters, digits and _ - . /"
+msgid "Letters, digits, spaces and _ - . / ( )"
 msgstr ""
 
 #: lib/brando/pages/fragment.ex

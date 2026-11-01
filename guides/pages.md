@@ -188,8 +188,9 @@ superuser sets it (see [Authorization](authorization.md)); editors edit the
 rest of the fragment, and the keys it prints are HTML-escaped.
 `render_fragment/1` outputs the stored content without that wrapper.
 
-A parent key or key holds letters, digits, `_`, `-`, `.` and `/`, so `about/team`
-and `site-footer` both work. A save that changes one to anything else is refused.
+A parent key or key starts with a letter, digit or `_`, then holds those, `-`,
+`.`, `/`, spaces and parentheses, so `about/team`, `site-footer` and a copy's
+`footer (copy)` all work. A save that changes one to anything else is refused.
 
 Only a published fragment renders. An unpublished one stays in the map with no
 content, so `{fragment}`, `<Brando.HTML.fragment fragment={fragment} />`,

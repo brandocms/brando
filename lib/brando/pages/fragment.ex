@@ -57,16 +57,17 @@ defmodule Brando.Pages.Fragment do
   attributes do
     attribute :title, :string
 
-    # Identifiers: letters, digits, `_`, `-`, `.` and `/`. A parent key can be a
-    # page's URI. The check runs when a key changes, so a stored key that doesn't
-    # fit still saves; what prints a key escapes it.
+    # Identifiers: letters, digits, `_`, `-`, `.` and `/`, as a parent key can be
+    # a page's URI, and a space and parentheses, as a copy's key is "footer (copy)".
+    # The check runs when a key changes, so a stored key that doesn't fit still
+    # saves; what prints a key escapes it.
     attribute :parent_key, :string,
       required: true,
-      constraints: [format: ~r/\A[\p{L}\p{M}\p{N}_][\p{L}\p{M}\p{N}_.\/-]*\z/u]
+      constraints: [format: ~r/\A[\p{L}\p{M}\p{N}_][\p{L}\p{M}\p{N}_.\/ ()-]*\z/u]
 
     attribute :key, :string,
       required: true,
-      constraints: [format: ~r/\A[\p{L}\p{M}\p{N}_][\p{L}\p{M}\p{N}_.\/-]*\z/u]
+      constraints: [format: ~r/\A[\p{L}\p{M}\p{N}_][\p{L}\p{M}\p{N}_.\/ ()-]*\z/u]
 
     attribute :wrapper, :string
   end
@@ -109,13 +110,13 @@ defmodule Brando.Pages.Fragment do
             monospace: true,
             label: t("Parent key"),
             placeholder: t("parent_key"),
-            instructions: t("Letters, digits and _ - . /")
+            instructions: t("Letters, digits, spaces and _ - . / ( )")
 
           input :key, :text,
             monospace: true,
             label: t("Key"),
             placeholder: t("key"),
-            instructions: t("Letters, digits and _ - . /")
+            instructions: t("Letters, digits, spaces and _ - . / ( )")
         end
 
         fieldset do

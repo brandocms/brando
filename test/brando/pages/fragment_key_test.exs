@@ -14,7 +14,7 @@ defmodule Brando.Pages.FragmentKeyTest do
 
   @marker ~s(<i data-marker="key"></i>)
   @closing ~s("><i data-marker="key"></i>)
-  @crafted [@marker, @closing, "a b", "a\n", "a&b", "a=b", "a'b", "{{ a }}", "{% a %}", "", " "]
+  @crafted [@marker, @closing, "a\n", "a\tb", "a&b", "a=b", "a'b", ~s(a"b), "{{ a }}", "{% a %}", "(a", "-a", "", " "]
 
   defp fragment!(attrs \\ []), do: Factory.insert(:fragment, Keyword.merge([title: "Footer", wrapper: nil], attrs))
 
@@ -43,9 +43,21 @@ defmodule Brando.Pages.FragmentKeyTest do
 
   describe "the key format" do
     test "keeps the keys projects use" do
-      for key <-
-            ~w(partials footer contact_card site-footer my/fragment about/team 2024/report footer.en om-oss/kontakt
-               smørbrød _private) do
+      for key <- [
+            "partials",
+            "footer",
+            "contact_card",
+            "site-footer",
+            "my/fragment",
+            "about/team",
+            "2024/report",
+            "footer.en",
+            "om-oss/kontakt",
+            "smørbrød",
+            "_private",
+            "footer (copy)",
+            "footer (kopi) (kopi)"
+          ] do
         assert errors(%{key: key}) == [], "key #{inspect(key)} was refused"
         assert errors(%{parent_key: key}) == [], "parent key #{inspect(key)} was refused"
       end
@@ -59,11 +71,11 @@ defmodule Brando.Pages.FragmentKeyTest do
     end
 
     test "leaves a stored key alone until it changes" do
-      fragment = fragment!(key: "Stored key", parent_key: "Stored parent")
+      fragment = fragment!(key: "Stored&key", parent_key: "Stored&parent")
 
       changeset = Fragment.changeset(fragment, %{title: "Renamed"}, %{id: 1})
       assert changeset.valid?
-      assert Repo.get!(Fragment, fragment.id).key == "Stored key"
+      assert Repo.get!(Fragment, fragment.id).key == "Stored&key"
     end
   end
 
@@ -100,16 +112,25 @@ defmodule Brando.Pages.FragmentKeyTest do
       assert Repo.get!(Fragment, fragment.id).key == fragment.key
     end
 
-    test "a copy keeps a stored key that doesn't fit", %{editor: editor} do
-      fragment = fragment!(key: "Stored key")
+    test "a copy's key fits, and saves when edited further", %{editor: editor} do
+      fragment = fragment!(key: "footer")
 
-      assert {:ok, %{key: "Stored key"}} = Pages.duplicate_fragment(fragment.id, editor)
+      assert {:ok, %{key: "footer" <> _ = key} = copy} = Pages.duplicate_fragment(fragment.id, editor)
+      assert key != "footer"
+      assert errors(%{key: key}) == []
+      assert {:ok, %{key: "footer (copy) 2"}} = Pages.update_fragment(copy.id, %{key: "footer (copy) 2"}, editor)
+    end
+
+    test "a copy of a stored key that doesn't fit still goes through", %{editor: editor} do
+      fragment = fragment!(key: "Stored&key")
+
+      assert {:ok, %{key: "Stored&key" <> _}} = Pages.duplicate_fragment(fragment.id, editor)
     end
 
     test "an editor still saves a stored key that doesn't fit, unchanged", %{editor: editor} do
-      fragment = fragment!(key: "Stored key")
+      fragment = fragment!(key: "Stored&key")
 
-      assert {:ok, %{title: "Renamed", key: "Stored key"}} =
+      assert {:ok, %{title: "Renamed", key: "Stored&key"}} =
                Pages.update_fragment(fragment.id, %{title: "Renamed"}, editor)
     end
   end

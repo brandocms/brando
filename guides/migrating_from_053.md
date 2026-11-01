@@ -777,14 +777,15 @@ index". Publish the fragments first.
    admin, rename each listed palette name, and update any CSS of your own that
    names a renamed palette's `b-section` or custom properties.
 9. **Rename fragment keys that are not identifiers.** A fragment's parent key
-   and key hold letters, digits, `_`, `-`, `.` and `/`. A stored key that doesn't
+   and key start with a letter, digit or `_`, then hold those, `-`, `.`, `/`,
+   spaces and parentheses. A stored key that doesn't
    fit keeps rendering, saving and copying, printed escaped, but a change to it
    must fit. To list them:
 
    ```sql
    SELECT id, parent_key, key FROM pages_fragments
-   WHERE parent_key !~ '^[[:alnum:]_][[:alnum:]_./-]*$'
-      OR key !~ '^[[:alnum:]_][[:alnum:]_./-]*$';
+   WHERE parent_key !~ '^[[:alnum:]_][[:alnum:]_./ ()-]*$'
+      OR key !~ '^[[:alnum:]_][[:alnum:]_./ ()-]*$';
    ```
 
    Rename each in the admin, along with the templates that look it up.
