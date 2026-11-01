@@ -833,7 +833,7 @@ Only module, container, SVG and HTML ref templates run as Liquid. What editors
 write is data: Liquid in a ref, a var, a global or a caption prints as text.
 
 HEEx escapes what it prints; Liquid in a value it prints is text. Liquid prints
-values as Brando hands them over:
+values as Brando gives them:
 
 - `string` and `text` vars and globals arrive HTML-escaped (by key, in
   `entries`, in table rows), as do `links` and the `link_url`/`link_text`
@@ -843,7 +843,7 @@ values as Brando hands them over:
 - `entry` and its preloads, `identity`, `configs`, `navigation`, `request`,
   `url`, ref data read through `refs` and a datasource's `entries` read the same
   way: `{{ entry.title }}` prints as text. A field declared `:rich_text` in the
-  entry's form, and a text ref's `text`, arrive sanitized, to print as markup.
+  entry's form, and a text ref's `text`, arrive sanitized.
 - `{{ entry.embed | raw }}` is a template's opt-in, for a plain field whose
   markup you trust. Liquid in the value stays text.
 - `escape` never encodes twice; `url_encode`, `slugify` and `markdown` read
