@@ -38,6 +38,11 @@ defmodule Brando.Content.Var.ValidateValue do
     end)
   end
 
+  @doc "`changeset` without this check's error, for a definition read as it is."
+  @spec forget_error(Changeset.t()) :: Changeset.t()
+  def forget_error(%Changeset{errors: errors} = changeset),
+    do: %{changeset | errors: Enum.reject(errors, &match?({:value, {@message, _}}, &1))}
+
   @doc "`var` with its value empty when it is not valid for its type: for a copy of a stored var."
   def clear_invalid(%{type: type, value: value, options: options} = var) do
     if valid?(type, value, options), do: var, else: %{var | value: nil}

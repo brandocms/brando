@@ -88,8 +88,7 @@ defmodule Brando.Content.RefGuard do
     state = %{block: changeset, user: user, module: :unloaded, superuser: :unknown, moved?: moved?}
     {refs, _state} = Enum.map_reduce(refs, state, &guard_ref/2)
 
-    changeset = %{changeset | changes: Map.put(changeset.changes, :refs, refs)}
-    %{changeset | valid?: changeset.errors == [] and nested_valid?(changeset)}
+    revalidate(%{changeset | changes: Map.put(changeset.changes, :refs, refs)})
   end
 
   defp guard_refs(changeset, _user, _moved?), do: changeset
@@ -271,9 +270,12 @@ defmodule Brando.Content.RefGuard do
   defp put_data(ref, data) do
     errors = Keyword.delete(ref.errors, :data)
     ref = %{ref | errors: errors}
-    ref = Changeset.force_change(ref, :data, data)
-    %{ref | valid?: ref.errors == [] and nested_valid?(ref)}
+    ref |> Changeset.force_change(:data, data) |> revalidate()
   end
+
+  @doc "`changeset` with `valid?` read from its errors and nested changesets, after one of them was changed by hand."
+  @spec revalidate(Changeset.t()) :: Changeset.t()
+  def revalidate(%Changeset{} = changeset), do: %{changeset | valid?: changeset.errors == [] and nested_valid?(changeset)}
 
   defp nested_valid?(%Changeset{changes: changes}) do
     Enum.all?(changes, fn
