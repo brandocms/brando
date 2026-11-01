@@ -976,6 +976,82 @@ defmodule Brando.Content.TransferTest do
     refute Enum.any?(copied.table_rows, fn row -> Enum.any?(original.table_rows, &(&1.id == row.id)) end)
   end
 
+  test "a value the destination's definition would refuse comes over empty", c do
+    options = [%Brando.Content.Var.Option{label: %{"en" => "Small"}, value: "small"}]
+    both = [%Brando.Content.Var.Option{label: %{"en" => "Large"}, value: "large"} | options]
+
+    var = fn fields ->
+      Repo.insert!(struct(Brando.Content.Var, Map.merge(%{label: %{"en" => "Label"}, creator_id: c.user.id}, fields)))
+    end
+
+    var.(%{module_id: c.module.id, key: "title", type: :string})
+    narrowed = var.(%{module_id: c.module.id, key: "size", type: :select, options: both})
+    var.(%{module_id: c.module.id, key: "stale", type: :select, options: both})
+    var.(%{module_id: c.module.id, key: "kept", type: :select, options: both})
+    var.(%{module_id: c.module.id, key: "tint", type: :color})
+
+    {:ok, template} =
+      Brando.Content.create_table_template(
+        %{
+          name: "Transfer table",
+          vars: [
+            %{
+              key: "cell",
+              label: "Cell",
+              type: :select,
+              options: Enum.map(both, &Map.from_struct/1),
+              creator_id: c.user.id
+            }
+          ]
+        },
+        c.user
+      )
+
+    c.module |> Changeset.change(table_template_id: template.id) |> Repo.update!()
+
+    var.(%{block_id: c.block.id, key: "title", type: :string, value: "Kept"})
+    var.(%{block_id: c.block.id, key: "size", type: :select, value: "large", options: both})
+    var.(%{block_id: c.block.id, key: "stale", type: :select, value: "gone", options: both})
+    var.(%{block_id: c.block.id, key: "kept", type: :select, value: "large", options: both})
+    var.(%{block_id: c.block.id, key: "tint", type: :color, value: "not a colour"})
+
+    c.block
+    |> Repo.preload(:table_rows)
+    |> Changeset.change()
+    |> Changeset.put_assoc(:table_rows, [
+      %{
+        sequence: 0,
+        vars: [
+          %{key: "cell", label: %{"en" => "Cell"}, type: :select, value: "gone", options: both, creator_id: c.user.id}
+        ]
+      }
+    ])
+    |> Repo.update!()
+
+    Brando.Cache.Query.evict({:ok, c.module})
+    archive = export(c)
+
+    # Valid at the source, not among the destination's options
+    narrowed |> Changeset.change() |> Changeset.put_embed(:options, options) |> Repo.update!()
+    Brando.Cache.Query.evict({:ok, c.module})
+
+    plan = preview(c, archive)
+    assert plan.problems == []
+    assert {:ok, _} = Transfer.apply(plan, c.user)
+
+    [copied] = blocks(c.target, c.user)
+
+    assert Map.new(copied.vars, &{&1.key, &1.value}) == %{
+             "title" => "Kept",
+             "size" => nil,
+             "stale" => nil,
+             "kept" => "large",
+             "tint" => nil
+           }
+
+    assert [%{vars: [%{key: "cell", value: nil}]}] = copied.table_rows
+  end
+
   test "definition-only assets do not create unused content dependencies", c do
     module = Repo.preload(c.module, :refs)
     ref = %{name: "optional_picture", image_id: c.user.avatar.id, data: %{type: "picture", data: %{}}}

@@ -158,7 +158,9 @@ defmodule Brando.Content.Block do
   end
 
   def maybe_cast_recursive(changeset, {:transfer, retained_slots}, user) do
-    cast_assoc(changeset, :block, with: &recursive_block_changeset(&1, &2, user, retained_slot_uids: retained_slots))
+    cast_assoc(changeset, :block,
+      with: &recursive_block_changeset(&1, &2, user, retained_slot_uids: retained_slots, copy: true)
+    )
   end
 
   def maybe_cast_recursive(changeset, :restore, user) do
@@ -364,8 +366,9 @@ defmodule Brando.Content.Block do
   # they are; one that no longer fits must not stop the restore.
   defp validate_var_value(changeset, %{restore?: true}), do: changeset
 
-  defp validate_var_value(changeset, _definitions) do
+  defp validate_var_value(changeset, definitions) do
     changeset
+    |> VarGuard.clear_copied_value(definitions)
     |> Brando.Content.Var.ValidateValue.validate()
     |> Brando.Color.validate_blueprint(Brando.Content.Var)
   end

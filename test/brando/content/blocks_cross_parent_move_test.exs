@@ -503,6 +503,80 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
     assert [%{uid: "grandR", description: "the grandchild", type: :module}] = moved.children
   end
 
+  # What a moved child holds comes back as a new row: a value its definition
+  # would now refuse is nobody's change, and must not stop the save.
+  test "a moved child leaves a value it could not carry empty, and saves" do
+    user = Factory.insert(:random_user)
+    page = Factory.insert(:page, creator: user)
+    options = [%{label: %{"en" => "Small"}, value: "small"}, %{label: %{"en" => "Large"}, value: "large"}]
+
+    module =
+      module_with_vars!(
+        user,
+        [
+          %{type: "string", key: "heading", label: "Heading"},
+          %{type: "select", key: "kept", label: "Kept", options: options},
+          %{type: "select", key: "stale", label: "Stale", options: options},
+          %{type: "select", key: "own", label: "Own", options: options},
+          %{type: "color", key: "tint", label: "Tint"},
+          %{type: "date", key: "day", label: "Day"}
+        ],
+        [%{type: "select", key: "cell", label: "Cell", options: options, creator_id: user.id}]
+      )
+
+    var = fn key, type, value, opts ->
+      %{key: key, label: %{"en" => key}, type: type, value: value, options: opts, creator_id: user.id}
+    end
+
+    child = %{
+      uid: "childS",
+      type: :module,
+      module_id: module.id,
+      active: true,
+      source: "Elixir.Brando.Pages.Page.Blocks",
+      creator_id: user.id,
+      sequence: 0,
+      vars: [
+        var.("heading", :string, "Var value", []),
+        var.("kept", :select, "large", options),
+        var.("stale", :select, "gone", options),
+        var.("own", :select, "old", [%{label: %{"en" => "Old"}, value: "old"}]),
+        var.("tint", :color, "not a colour", []),
+        var.("day", :date, "not a date", [])
+      ],
+      table_rows: [%{sequence: 0, vars: [var.("cell", :select, "gone", options)]}],
+      children: []
+    }
+
+    insert_containers(page, user, child)
+
+    entry_blocks = preloaded_entry_blocks(page.id)
+    [%{block: %{children: [row]}} | _] = entry_blocks
+    row = Brando.Repo.preload(row, [:vars, table_rows: :vars], force: true)
+    ops = Ops.from_entry_blocks(entry_blocks)
+
+    {:ok, params} = Ops.materialize_child(ops, "childS")
+    block_cs = Brando.Content.Block.recursive_block_changeset(row, params, user.id)
+    moved_cs = BrandoAdmin.Components.Form.BlockField.moved_child_changeset(block_cs, user.id)
+    {:ok, ops} = Ops.apply_op(ops, {:insert_child, "containerB", "childS", 0, Ops.block_diff_params(moved_cs)})
+
+    assert {:ok, _} = save_from_ops(page, entry_blocks, ops, user)
+
+    assert [_, %{block: %{children: [moved]}}] = preloaded_entry_blocks(page.id)
+    values = Map.new(moved.vars, &{&1.key, &1.value})
+
+    assert values == %{
+             "heading" => "Var value",
+             "kept" => "large",
+             "stale" => nil,
+             "own" => nil,
+             "tint" => nil,
+             "day" => nil
+           }
+
+    assert [%{vars: [%{key: "cell", value: nil}]}] = Brando.Repo.preload(moved, table_rows: :vars).table_rows
+  end
+
   # A moved child's ref keeps its saved gallery by id; that must not drop the
   # gallery changes the move carried.
   test "a moved child keeps the unsaved changes to its ref's gallery" do

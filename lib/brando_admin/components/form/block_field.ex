@@ -2009,14 +2009,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   holding everything the child holds (`Ops.moved_params/1`). Its diff is
   then all of it, not only what changed: under the new parent it is a new
   row, and a diff of changes would save it without its module, type, refs
-  and vars.
+  and vars. A value its definition would refuse goes empty, as in any copy
+  (`Brando.Content.VarGuard.clear_copied_value/2`).
   """
   def moved_child_changeset(%Changeset{} = changeset, user_id) do
     params = changeset |> Ops.snapshot_params() |> Ops.moved_params(changed_galleries(changeset))
     base = %Brando.Content.Block{vars: [], refs: [], table_rows: [], children: [], block_identifiers: []}
 
     base
-    |> Brando.Content.Block.recursive_block_changeset(params, user_id)
+    |> Brando.Content.Block.recursive_block_changeset(params, user_id, copy: true)
     # its diff is its applied state: it carries them to the save
     |> BlockIdentity.keep(BlockIdentity.index([changeset.data]))
   end

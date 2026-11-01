@@ -16,7 +16,7 @@ defmodule Brando.Content.VarGuard do
 
   These are put back rather than refused, as `Brando.Content.RefGuard` does for
   refs, since only a crafted request or a stale view sends them. An invalid
-  value is refused.
+  value is refused, except in a copy, which leaves it empty.
 
   Restoring a revision is the one write that keeps a var without a definition
   (`hold/3`). A module save (`Brando.Content.Blocks.sync_module/2`) and resolving a stale
@@ -27,6 +27,7 @@ defmodule Brando.Content.VarGuard do
   On the Globals screen, `global_values/2` lets through values only.
   """
   alias Brando.Content.Proposals
+  alias Brando.Content.Var.ValidateValue
   alias Ecto.Changeset
 
   # What the Globals screen fills in. The rest of a global is its definition.
@@ -41,19 +42,24 @@ defmodule Brando.Content.VarGuard do
   @spec definitions(Changeset.t(), keyword()) :: %{vars: map(), rows: map()}
   def definitions(%Changeset{params: params, data: block} = changeset, opts \\ []) do
     restore? = Keyword.get(opts, :restore, false)
+    copy? = Keyword.get(opts, :copy, false)
     new_vars? = new_var?(params["vars"], loaded(block, :vars))
     saved_cells = block |> loaded(:table_rows) |> Enum.flat_map(&loaded(&1, :vars))
     new_cells? = params["table_rows"] |> rows() |> Enum.any?(&new_var?(param(&1, "vars"), saved_cells))
     module = if new_vars? or new_cells?, do: module(changeset)
 
     %{
-      vars: %{by_key: by_key((new_vars? && module && module.vars) || []), restore?: restore?},
-      rows: %{by_key: by_key((new_cells? && module && Proposals.table_vars(module)) || []), restore?: restore?}
+      vars: %{by_key: by_key((new_vars? && module && module.vars) || []), restore?: restore?, copy?: copy?},
+      rows: %{
+        by_key: by_key((new_cells? && module && Proposals.table_vars(module)) || []),
+        restore?: restore?,
+        copy?: copy?
+      }
     }
   end
 
   @doc "What a table row is held to when no block gave it definitions: no new var is taken."
-  def no_definitions, do: %{by_key: %{}, restore?: false}
+  def no_definitions, do: %{by_key: %{}, restore?: false, copy?: false}
 
   @doc """
   `var` as it may be cast from `attrs`, and the fields to leave out of the cast.
@@ -91,6 +97,25 @@ defmodule Brando.Content.VarGuard do
 
   defp seed(%{} = var, definition),
     do: %{var | type: definition.type, options: definition.options || [], value: definition.value}
+
+  @doc """
+  A new var of a copy (`copy: true`: a child moved to another parent, a content
+  transfer) with a value it cannot carry left empty: the value is checked for
+  the options it takes here, and nobody changed it, so it does not refuse the
+  copy.
+  """
+  @spec clear_copied_value(Changeset.t(), map() | nil) :: Changeset.t()
+  def clear_copied_value(%Changeset{data: %{id: nil}} = var, %{copy?: true}), do: clear_invalid_value(var)
+  def clear_copied_value(var, _definitions), do: var
+
+  defp clear_invalid_value(%Changeset{} = var) do
+    value = Changeset.get_field(var, :value)
+    stored = %{type: Changeset.get_field(var, :type), value: value, options: Changeset.get_embed(var, :options, :struct)}
+
+    if stored |> Brando.Color.clear_invalid_var() |> ValidateValue.clear_invalid() |> Map.fetch!(:value) == value,
+      do: var,
+      else: Changeset.force_change(var, :value, nil)
+  end
 
   @doc """
   `changeset` without the params of its `held` fields: a form reads a field's
