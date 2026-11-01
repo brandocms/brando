@@ -10,6 +10,7 @@ defmodule Brando.Villain.InertEditorTextTest do
   alias Brando.Content
   alias Brando.Content.Block
   alias Brando.Content.Ref
+  alias Brando.Content.TableRow
   alias Brando.Content.Var
   alias Brando.Factory
   alias Brando.Pages.Page
@@ -20,11 +21,20 @@ defmodule Brando.Villain.InertEditorTextTest do
   alias Brando.Villain.Blocks.TextBlock
   alias Brando.Villain.TemplateView
 
+  defmodule ProjectFilters do
+    @moduledoc false
+    use Brando.Villain.Filters
+
+    def load_page(_key, _context), do: Process.get(:project_filter_page)
+    def load_pages(_key, _context), do: [Process.get(:project_filter_page)]
+  end
+
   # An image with a handler, percent-encoded so a sanitizer sees only text. Its
   # handler sets a marker and nothing else.
   @encoded "%3Cimg%20src%3Dx%20onerror%3D%22document.title%3D1%22%3E"
   @payload "{{ '#{@encoded}' | url_decode }}"
   @hash "$2b$12$dummy.stored.value.for.a.test"
+  @markup_title ~s(<img src=x onerror="document.title=1">)
 
   setup do
     user = Factory.insert(:random_user)
@@ -44,7 +54,10 @@ defmodule Brando.Villain.InertEditorTextTest do
   end
 
   defp block(module, attrs) do
-    struct(%Block{type: :module, active: true, module_id: module.id, uid: Utils.generate_uid(), vars: [], refs: []}, attrs)
+    struct(
+      %Block{type: :module, active: true, module_id: module.id, uid: Utils.generate_uid(), vars: [], refs: []},
+      attrs
+    )
   end
 
   defp ref(name, data), do: %Ref{name: name, uid: Utils.generate_uid(), active: true, data: data}
@@ -119,6 +132,15 @@ defmodule Brando.Villain.InertEditorTextTest do
 
       assert active_elements(html) == []
       assert html =~ "<p>&#123;&#123;"
+
+      row = %TableRow{vars: [var]}
+      code = "{% for row in block.table_rows %}{{ row.body }}|{{ row.vars[0].value }}{% endfor %}"
+      html = render(block(module!(user, code), table_rows: [row]))
+
+      assert active_elements(html) == []
+      assert [_, _] = html |> Floki.parse_fragment!() |> Floki.find("p")
+      refute html =~ "{{"
+      refute html =~ "&lt;p"
     end
 
     test "a picture's caption runs no Liquid, with and without its own alt", %{user: user} do
@@ -179,8 +201,11 @@ defmodule Brando.Villain.InertEditorTextTest do
 
     test "a link or media var's creator is no way to a hash", %{user: user} do
       image = Factory.insert(:image, creator: user)
-      vars = [%Var{key: "cta", label: "C", type: :link, link_type: :url, value: "/a", creator: user},
-              %Var{key: "pic", label: "P", type: :image, image_id: image.id, image: %{image | creator: user}}]
+
+      vars = [
+        %Var{key: "cta", label: "C", type: :link, link_type: :url, value: "/a", creator: user},
+        %Var{key: "pic", label: "P", type: :image, image_id: image.id, image: %{image | creator: user}}
+      ]
 
       for code <- ["{{ cta.creator.password }}", "{{ pic.creator.password }}", "{% inspect cta %}", "{% inspect pic %}"] do
         html = render(block(module!(user, code), vars: vars))
@@ -199,7 +224,9 @@ defmodule Brando.Villain.InertEditorTextTest do
       view = TemplateView.wrap(%{api_key: "k", name: "n", access_token: "t", nested: %{client_secret: "s"}})
       context = Villain.create_context(%{"x" => view})
 
-      eval = fn keys -> keys |> Enum.map(&{:key, &1}) |> then(&Liquex.Argument.eval({:field, [{:key, "x"} | &1]}, context)) |> elem(0) end
+      eval = fn keys ->
+        keys |> Enum.map(&{:key, &1}) |> then(&Liquex.Argument.eval({:field, [{:key, "x"} | &1]}, context)) |> elem(0)
+      end
 
       assert eval.(["name"]) == "n"
       assert eval.(["api_key"]) == nil
@@ -273,7 +300,9 @@ defmodule Brando.Villain.InertEditorTextTest do
       field = hd(Page.__rich_text_fields__() ++ [:not_declared])
 
       if field != :not_declared do
-        entry = Map.put(%Page{language: :en}, field, ~s(<p>Text <strong>bold</strong> <script>x</script>{{ 1 | plus: 1 }}</p>))
+        entry =
+          Map.put(%Page{language: :en}, field, ~s(<p>Text <strong>bold</strong> <script>x</script>{{ 1 | plus: 1 }}</p>))
+
         html = render(block(module!(user, "{{ entry.#{field} }}"), []), entry)
 
         assert html =~ "<strong>bold</strong>"
@@ -316,7 +345,13 @@ defmodule Brando.Villain.InertEditorTextTest do
     end
 
     test "a block's description and anchor print as text", %{user: user} do
-      html = render(block(module!(user, "{{ block.description }}{{ block.anchor }}"), description: @markup, anchor: "{{ 1 | plus: 1 }}"))
+      html =
+        render(
+          block(module!(user, "{{ block.description }}{{ block.anchor }}"),
+            description: @markup,
+            anchor: "{{ 1 | plus: 1 }}"
+          )
+        )
 
       assert active_elements(html) == []
       refute html =~ "{{"
@@ -429,7 +464,14 @@ defmodule Brando.Villain.InertEditorTextTest do
         fragment |> Ecto.Changeset.change(rendered_blocks: "<p>{{ 1 | plus: 41 }}</p>") |> Brando.Repo.update()
 
       html =
-        render(%Block{type: :fragment, active: true, fragment_id: fragment.id, uid: Utils.generate_uid(), vars: [], refs: []})
+        render(%Block{
+          type: :fragment,
+          active: true,
+          fragment_id: fragment.id,
+          uid: Utils.generate_uid(),
+          vars: [],
+          refs: []
+        })
 
       refute html =~ "42"
       assert Floki.text(Floki.parse_fragment!(html)) == "{{ 1 | plus: 41 }}"
@@ -484,9 +526,9 @@ defmodule Brando.Villain.InertEditorTextTest do
 
     test "a map field loops as pairs", %{user: user} do
       entry = Map.put(%Page{language: :en}, :meta, %{"a" => "<b>"})
-      code = "{% for pair in entry.meta %}x{% endfor %}"
+      code = "{% for p in entry.meta %}{{ p[0] }}={{ p[1] }}{% endfor %}"
 
-      assert render(block(module!(user, code), []), entry) == "x"
+      assert render(block(module!(user, code), []), entry) == "a=&lt;b&gt;"
     end
 
     test "an entry's URL and identifier templates read the plain value" do
@@ -618,7 +660,353 @@ defmodule Brando.Villain.InertEditorTextTest do
     end
   end
 
-  test "a filter returning {:safe, html} prints it" do
-    assert TemplateView.filter_result({:safe, ["<b>", "x"]}, :x, true, Villain.create_context(%{})) == "<b>x"
+  describe "what a filter gives back" do
+    test "a filter's text starts no Liquid, whatever it was given", %{user: user} do
+      delimited = "{{ 1 | plus: 41 }}"
+      child = %Page{id: 1, title: delimited, uri: "a", language: :en}
+      entry = %Page{id: 2, title: delimited, language: :en, children: [child]}
+
+      for code <- [
+            "{{ entry.title | strip_html }}",
+            "{{ '%7B%7B 1 | plus: 41 %7D%7D' | url_decode }}",
+            "{{ entry.children | json_ld }}"
+          ] do
+        html = render(block(module!(user, code), []), entry)
+
+        refute html =~ "42", "#{code} ran Liquid"
+        assert html =~ "plus: 41", "#{code} printed nothing"
+      end
+    end
+
+    test "{:safe, html} starts no Liquid either" do
+      context = Villain.create_context(%{})
+
+      assert TemplateView.filter_result({:safe, ["<b>", "x"]}, :x, :escape, context) == "<b>x"
+      assert TemplateView.filter_result({:safe, ["<b>", "{{ x }}"]}, :x, nil, context) == "<b>&#123;{ x }}"
+    end
+
+    test "a Markdown template keeps its braces through a filter", %{user: user} do
+      module = module!(user, "<p>html</p>", %{markdown_code: "{{ '%7B%7B x %7D%7D' | url_decode }}"})
+      md = Villain.Markdown.render([%{block: block(module, [])}], %Page{title: "T", language: :en})
+
+      assert md =~ "{{ x }}"
+    end
+
+    test "size, srcset, large and xlarge print picture markup", %{user: user} do
+      image = Factory.insert(:image, creator: user)
+      entry = Map.put(%Page{title: "T", language: :en}, :cover, image)
+
+      for code <- [
+            ~s({{ entry.cover | size: "large" }}),
+            ~s({{ entry.cover | srcset: "Brando.Users.User:avatar" }}),
+            "{{ entry.cover | large }}",
+            "{{ entry.cover | xlarge }}"
+          ] do
+        html = render(block(module!(user, code), []), entry)
+
+        assert [_ | _] = html |> Floki.parse_fragment!() |> Floki.find("picture"), "#{code} printed #{html}"
+        refute html =~ "&lt;picture"
+      end
+    end
+
+    test "raw on a record or a list keeps its protection", %{user: user} do
+      child = %Page{title: @markup_title, language: :en, creator: user}
+      entry = %Page{title: "T", language: :en, creator: user, children: [child]}
+
+      for code <- [
+            "{% assign e = entry | raw %}{{ e.creator.password }}",
+            "{% assign u = entry.creator | raw %}{{ u.password }}",
+            "{% assign l = entry.children | raw %}{% for c in l %}{{ c.creator.password }}{% endfor %}",
+            "{% assign e = entry | raw %}{% inspect e %}"
+          ] do
+        html = render(block(module!(user, code), []), entry)
+
+        refute html =~ @hash, "#{code} printed the hash"
+      end
+
+      html =
+        render(
+          block(module!(user, "{% assign l = entry.children | raw %}{% for c in l %}{{ c.title }}{% endfor %}"), []),
+          entry
+        )
+
+      assert active_elements(html) == []
+    end
+
+    test "a filter on rows keeps how rows read", %{user: user} do
+      row = %TableRow{
+        vars: [
+          %Var{key: "body", label: "B", type: :rich_text, value: "<p>Rich <strong>text</strong></p>"},
+          %Var{key: "title", label: "T", type: :string, value: "R&D"}
+        ]
+      }
+
+      code = "{% assign rows = block.table_rows | reverse %}{% for r in rows %}{{ r.body }}|{{ r.title }}{% endfor %}"
+
+      assert render(block(module!(user, code), table_rows: [row])) == "<p>Rich <strong>text</strong></p>|R&amp;D"
+    end
+
+    test "a filter given a string that returns a record gives a view" do
+      user = Factory.insert(:random_user)
+      {:ok, _} = user |> Ecto.Changeset.change(password: @hash) |> Brando.Repo.update()
+      user = Brando.Repo.get!(Brando.Users.User, user.id)
+      Process.put(:project_filter_page, %Page{title: @markup_title, language: :en, creator: user})
+
+      context = %{Villain.get_base_context(%Page{language: :en}) | filter_module: ProjectFilters}
+
+      for code <- [
+            ~s({% assign p = "about" | load_page %}{{ p.creator.password }}{{ p.title }}),
+            ~s({% assign l = "about" | load_pages %}{% for p in l %}{{ p.creator.password }}{{ p.title }}{% endfor %})
+          ] do
+        {:ok, parsed} = Liquex.parse(code, Brando.Villain.LiquexParser)
+        {result, _} = Liquex.Render.render!([], parsed, context)
+        html = Enum.join(result)
+
+        refute html =~ @hash
+        assert active_elements(html) == []
+        assert html =~ "&lt;img"
+      end
+    end
+
+    test "a date a filter returns stays a date" do
+      context = Villain.create_context(%{})
+
+      assert TemplateView.filter_result(~D[2026-01-02], :x, nil, context) == ~D[2026-01-02]
+    end
+  end
+
+  describe "table rows" do
+    test "what a row's records hold prints as text", %{user: user} do
+      image = Factory.insert(:image, creator: user, title: "#{@markup_title} {{ 1 | plus: 41 }}")
+
+      row = %TableRow{
+        vars: [
+          %Var{
+            key: "cta",
+            label: "C",
+            type: :link,
+            link_type: :url,
+            value: "/a",
+            link_text: "#{@markup_title} {{ 1 | plus: 41 }}"
+          },
+          %Var{key: "pic", label: "P", type: :image, image_id: image.id, image: image}
+        ]
+      }
+
+      code = "{% for row in block.table_rows %}{{ row.cta.link_text }}|{{ row.pic.title }}{% endfor %}"
+      html = render(block(module!(user, code), table_rows: [row]))
+
+      assert active_elements(html) == []
+      refute html =~ "42"
+      assert html =~ "&lt;img"
+    end
+
+    test "a row's rich_text var reads as markup by key and by position", %{user: user} do
+      row = %TableRow{vars: [%Var{key: "body", label: "B", type: :rich_text, value: "<p>Rich</p>"}]}
+      code = "{% for row in block.table_rows %}{{ row.body }}|{{ row.vars[0].value }}{% endfor %}"
+
+      assert render(block(module!(user, code), table_rows: [row])) == "<p>Rich</p>|<p>Rich</p>"
+    end
+
+    test "a row's record still hides a password", %{user: user} do
+      row = %TableRow{vars: [%Var{key: "cta", label: "C", type: :link, link_type: :url, value: "/a", creator: user}]}
+
+      code =
+        "{% for row in block.table_rows %}{{ row.cta.creator.password }}{{ row.vars[0].creator.password }}{% endfor %}"
+
+      refute render(block(module!(user, code), table_rows: [row])) =~ @hash
+    end
+
+    test "a Markdown template reads a row's text as typed", %{user: user} do
+      row = %TableRow{vars: [%Var{key: "title", label: "T", type: :string, value: "R&D"}]}
+      code = "{% for row in block.table_rows %}{{ row.title }}|{{ row.vars[0].value }}{% endfor %}"
+      module = module!(user, "<p>html</p>", %{markdown_code: code})
+      md = Villain.Markdown.render([%{block: block(module, table_rows: [row])}], %Page{title: "T", language: :en})
+
+      assert md =~ "R&D|R&D"
+    end
+  end
+
+  describe "a map field's pairs" do
+    test "leave out credentials", %{user: user} do
+      entry = Map.put(%Page{language: :en}, :configs, %{"api_key" => "hiddenmarker", "a" => "shown"})
+
+      for code <- [
+            "{% for pair in entry.configs %}{% inspect pair %}{% endfor %}",
+            "{% for p in entry.configs %}{{ p[0] }}{{ p[1] }}{% endfor %}",
+            "{% for p in entry.configs %}{{ p }}{% endfor %}"
+          ] do
+        html = render(block(module!(user, code), []), entry)
+
+        refute html =~ "hiddenmarker", "#{code} printed it"
+        assert html =~ "shown"
+      end
+    end
+
+    test "escape the key and read the value as a view", %{user: user} do
+      child = %Page{title: @markup_title, language: :en, creator: user}
+      entry = Map.put(%Page{language: :en}, :configs, %{"<k>" => "v", "c" => child})
+
+      html =
+        render(
+          block(
+            module!(
+              user,
+              "{% for p in entry.configs %}{{ p[0] }}={{ p[1].title }}{{ p[1].creator.password }}{% endfor %}"
+            ),
+            []
+          ),
+          entry
+        )
+
+      assert html =~ "&lt;k&gt;="
+      assert active_elements(html) == []
+      refute html =~ @hash
+    end
+
+    test "print as a pair", %{user: user} do
+      entry = Map.put(%Page{language: :en}, :configs, %{"a" => "<b>"})
+
+      assert render(block(module!(user, "{% for p in entry.configs %}{{ p }}{% endfor %}"), []), entry) == "a&lt;b&gt;"
+    end
+  end
+
+  describe "a form tag" do
+    test "prints a label's Liquid as text and keeps the CSRF placeholder", %{user: user} do
+      {:ok, _} =
+        Brando.Forms.create_form(
+          %{
+            "title" => "Contact",
+            "key" => "inert-contact",
+            "language" => "en",
+            "status" => "published",
+            "fields" => [%{"key" => "email", "type" => "email", "label" => "{{ 1 | plus: 41 }}"}]
+          },
+          user
+        )
+
+      html = render(block(module!(user, "{% form 'inert-contact' %}"), []))
+
+      assert html =~ "<form"
+      refute html =~ "42"
+      assert html =~ "plus: 41"
+      assert html =~ ~s(value="$csrftoken")
+    end
+  end
+
+  describe "names an author chose" do
+    test "a ref, a field, a var and a row var named near a credential print", %{user: user} do
+      assert render(
+               block(module!(user, "{% ref refs.secret_heading %}"),
+                 refs: [%{text_ref("<p>Shown</p>") | name: "secret_heading"}]
+               )
+             ) =~ "Shown"
+
+      entry = Map.put(%Page{language: :en}, :secretary, "Anna")
+      assert render(block(module!(user, "{{ entry.secretary }}"), []), entry) == "Anna"
+
+      var = %Var{key: "token_label", label: "L", type: :string, value: "Shown"}
+      parent = module!(user, "{{ content }}{% for e in entries %}{{ e.vars.token_label }}{% endfor %}")
+      child = block(module!(user, "x"), type: :module_entry, vars: [var])
+      assert render(block(parent, multi: true, children: [child])) =~ "Shown"
+
+      row = %TableRow{vars: [%Var{key: "password_hint", label: "L", type: :string, value: "Shown"}]}
+
+      for code <- [
+            "{% for row in block.table_rows %}{{ row.password_hint }}{% endfor %}",
+            "{% assign rows = block.table_rows | reverse %}{% for row in rows %}{{ row.password_hint }}{% endfor %}"
+          ] do
+        assert render(block(module!(user, code), table_rows: [row])) == "Shown"
+      end
+
+      entry_ref = %{text_ref("<p>Shown</p>") | name: "token_box"}
+      parent = module!(user, "{{ content }}{% for e in entries %}{{ e.refs.token_box.name }}{% endfor %}")
+      child = block(module!(user, "x"), type: :module_entry, refs: [entry_ref])
+      assert render(block(parent, multi: true, children: [child])) =~ "token_box"
+    end
+
+    test "a credential word is a whole word of the key" do
+      context = Villain.create_context(%{})
+
+      read = fn value, key ->
+        case TemplateView.fetch(TemplateView.wrap(value), key, context) do
+          {:ok, text} -> text
+          :error -> nil
+        end
+      end
+
+      for key <- ~w(password passwd secret token credential credentials api_key apikey totp recovery_code recovery_codes
+                    lockdown_password token_hash totp_secret secret_ciphertext credential_id reset_password_on_first_login
+                    client-secret access_token API_KEY Password) do
+        assert read.(%{key => "x"}, key) == nil, "#{key} was shown"
+        assert read.(Map.put(%Page{}, String.to_atom(key), "x"), key) == nil, "#{key} was shown on a struct"
+      end
+
+      for key <- ~w(secretary tokens input_tokens tokenizer passwordless totpal credentialed recovery_codex) do
+        assert read.(%{key => "x"}, key) == "x", "#{key} was hidden"
+      end
+    end
+  end
+
+  describe "truncate" do
+    test "cuts no character reference in two", %{user: user} do
+      entry = %Page{title: "AB & CD and more text", language: :en}
+
+      for length <- 4..12 do
+        html = render(block(module!(user, "{{ entry.title | truncate: #{length} }}"), []), entry)
+
+        refute html =~ ~r/&[#\w]*\.\.\.$/, "cut at #{length}: #{html}"
+      end
+    end
+
+    test "strip_html reads an escaped field's tags as tags, and stays text", %{user: user} do
+      entry = %Page{title: ~s(<b>Bold</b> R&D &amp;lt;img src=x onerror=1&amp;gt;), language: :en}
+      html = render(block(module!(user, "{{ entry.title | strip_html }}"), []), entry)
+
+      refute html =~ "<b>"
+      refute html =~ "&lt;b"
+      assert html =~ "Bold"
+      assert active_elements(html) == []
+
+      entry = %Page{title: "a < b &lt;img src=x onerror=1", language: :en}
+      html = render(block(module!(user, "{{ entry.title | strip_html }}"), []), entry)
+      assert active_elements(html) == []
+      refute html =~ "<img"
+    end
+  end
+
+  describe "HEEx comprehensions and split delimiters" do
+    test "the module's own Liquid in a comprehension runs, a value's does not", %{user: user} do
+      var = %Var{key: "title", label: "T", type: :string, value: "{{ 1 | plus: 41 }}"}
+
+      code = ~S"""
+      <p :for={x <- [1, 2]} phx-no-curly-interpolation>{{ entry.title }}</p><i :for={x <- [@title]}>{x}</i>
+      """
+
+      html = render(block(module!(user, code, %{type: :heex}), vars: [var]), %Page{title: "Mine", language: :en})
+
+      assert html =~ "<p>Mine</p>"
+      refute html =~ "{{ entry"
+      refute html =~ "42"
+      assert html =~ "plus: 41"
+    end
+
+    test "a value cannot complete a delimiter a static part started", %{user: user} do
+      for {value, code} <- [
+            {"{ 1 | plus: 41 }}", ~S|<style>.a {<%= @css %>}</style>|},
+            {"% if true %}41{% endif %}", ~S|<style>.a {<%= @css %>}</style>|},
+            {"{ 1 | plus: 41 }}", ~S|<style>.a {<%= @empty %><%= @css %>}</style>|}
+          ] do
+        vars = [
+          %Var{key: "css", label: "C", type: :string, value: value},
+          %Var{key: "empty", label: "E", type: :string, value: ""}
+        ]
+
+        html = render(block(module!(user, code, %{type: :heex}), vars: vars))
+
+        refute html =~ "42", "#{code} ran #{value}"
+        assert html =~ ~r/\.a \{(&#123; 1|&#37; if)/, "#{code} printed #{html}"
+      end
+    end
   end
 end

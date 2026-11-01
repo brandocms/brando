@@ -24,6 +24,7 @@ defmodule Brando.Villain.Tags.Form do
 
   alias Brando.Forms
   alias Brando.Forms.Delivery
+  alias Brando.Villain.InertLiquid
   alias Brando.Villain.LiquexParser.TagGrammar
   alias Brando.Villain.TemplateView
 
@@ -49,7 +50,8 @@ defmodule Brando.Villain.Tags.Form do
           end)
           |> assigns(form, Liquex.Context.get(context, "brando_render_for_admin") == true)
 
-        {[render_component(assigns)], context}
+        # Editors' text in it (a label, a help text) is text to the final pass
+        {[assigns |> render_component() |> InertLiquid.encode()], context}
     end
   end
 

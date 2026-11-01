@@ -9,6 +9,7 @@ defmodule Brando.Villain.HeexRenderer do
   """
 
   alias Brando.Villain.InertLiquid
+  alias Phoenix.LiveView.Comprehension
   alias Phoenix.LiveView.Rendered
 
   @ets_table :brando_heex_cache
@@ -120,15 +121,34 @@ defmodule Brando.Villain.HeexRenderer do
     |> IO.iodata_to_binary()
   end
 
-  defp inert_iodata(%Rendered{static: static, dynamic: dynamic}), do: inert_iodata(static, dynamic.(false))
+  defp inert_iodata(%Rendered{static: static, dynamic: dynamic}), do: inert_parts(static, dynamic.(false), false)
+
+  # Its static parts are the template's own, as a rendered template's are
+  defp inert_iodata(%Comprehension{static: static, entries: entries}) when is_list(static) and is_list(entries),
+    do: for({_key, _vars, render} <- entries, do: inert_parts(static, render.(%{}, false), false))
+
   defp inert_iodata(dynamic), do: dynamic |> printed() |> InertLiquid.encode_delimiters()
 
-  defp inert_iodata([static], []), do: [static]
+  # `open?`: what is printed so far ends in a `{` of the template, which a value
+  # could complete to a Liquid delimiter.
+  defp inert_parts([static], [], _open?), do: [static]
 
-  defp inert_iodata([static | statics], [dynamic | dynamics]),
-    do: [static, inert_iodata(dynamic) | inert_iodata(statics, dynamics)]
+  defp inert_parts([static | statics], [dynamic | dynamics], open?) do
+    open? = if static == "", do: open?, else: String.ends_with?(static, "{")
+    printed = inert_iodata(dynamic)
 
-  # A comprehension's static parts go with its values
+    if open? do
+      text = printed |> IO.iodata_to_binary() |> close_delimiter()
+      [static, text | inert_parts(statics, dynamics, text == "")]
+    else
+      [static, printed | inert_parts(statics, dynamics, false)]
+    end
+  end
+
+  defp close_delimiter("{" <> rest), do: "&#123;" <> rest
+  defp close_delimiter("%" <> rest), do: "&#37;" <> rest
+  defp close_delimiter(text), do: text
+
   defp printed(%_{} = struct), do: Phoenix.HTML.Safe.to_iodata(struct)
   defp printed(nil), do: []
   defp printed(iodata), do: iodata

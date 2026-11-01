@@ -28,8 +28,9 @@ defmodule Brando.Villain.InertLiquid do
   def encode_all(html), do: html |> IO.iodata_to_binary() |> encode_braces()
 
   @doc """
-  A template's dynamic output (`Brando.Villain.HeexRenderer`): the Liquid
-  delimiters in it character references, so what a value holds starts no Liquid,
+  A template's dynamic output (`Brando.Villain.HeexRenderer`) and a filter's
+  (`Brando.Villain.TemplateView.filter_result/4`): the Liquid delimiters in it
+  character references, so what a value holds starts no Liquid,
   and any other brace as it is, so printed JSON stays JSON. A brace at the end
   could start one with what comes next.
   """

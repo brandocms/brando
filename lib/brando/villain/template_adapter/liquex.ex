@@ -86,7 +86,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
   end
 
   defp add_refs_to_context(context, refs),
-    do: Context.assign(context, :refs, TemplateView.wrap_for(refs, context))
+    do: Context.assign(context, :refs, TemplateView.wrap(refs, :names))
 
   defp add_admin_to_context(context, opts) do
     if Map.get(opts, :brando_render_for_admin) do
@@ -108,7 +108,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
     simple_block = TemplateAdapter.simple_block(module, block, escape: escape?)
 
     # Processed already; through a view for what its rows' records hold
-    Context.assign(context, :block, TemplateView.wrap(simple_block, :raw))
+    Context.assign(context, :block, TemplateView.wrap(simple_block, :processed))
   end
 
   defp add_datasource_entries_to_context(

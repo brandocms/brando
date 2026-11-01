@@ -16,7 +16,9 @@ defmodule Brando.Villain.TemplateView do
   touches costs nothing.
 
   Credentials do not get through it: a `Brando.Users.User` shows only
-  `@user_fields`, and no struct or map shows a field named like a credential.
+  `@user_fields`, and no struct or map shows a field with a credential word in
+  its name. Names an author chose are no credentials: a block's ref names and
+  the keys of processed maps are read as they are.
 
   Tags and filters get the value itself, with the same fields left out: a tag
   with `eval/2`, a filter from `Brando.Villain.Filters.apply/4`, which puts the
@@ -27,6 +29,7 @@ defmodule Brando.Villain.TemplateView do
   @behaviour Liquex.Drop
 
   alias Brando.Captions
+  alias Brando.Content.Var
   alias Brando.Images.Image
   alias Brando.Users.User
   alias Brando.Videos.Video
@@ -40,7 +43,7 @@ defmodule Brando.Villain.TemplateView do
 
   defstruct [:value, mode: :escape]
 
-  @type mode :: :escape | :processed | :raw
+  @type mode :: :escape | :processed | :raw | :names
   @type t :: %__MODULE__{value: map(), mode: mode()}
 
   # In the context's private data, where no template can read or set it
@@ -49,7 +52,7 @@ defmodule Brando.Villain.TemplateView do
   @user_fields ~w(id name email language role avatar active job_title same_as inserted_at updated_at deleted_at)a
   @user_keys @user_fields ++ Enum.map(@user_fields, &Atom.to_string/1)
 
-  @credential_words ~w(password secret token credential api_key apikey totp recovery_code)
+  @credential_words ~w(password passwd secret token credential credentials api_key apikey totp recovery_code recovery_codes)
 
   @values [Date, Time, DateTime, NaiveDateTime, Decimal, Range]
 
@@ -57,23 +60,28 @@ defmodule Brando.Villain.TemplateView do
   # `Brando.Captions.caption_html/1` tells them apart.
   @captioned [Image, Video, PictureBlock.Data, VideoBlock.Data]
 
-  @filters_giving_markup [:markdown, :json_ld, :inspect, :raw]
+  @filters_giving_markup [:markdown, :json_ld, :inspect, :raw, :srcset, :size, :large, :xlarge]
 
   @doc """
   `value` as a template reads it. Mode `:escape` escapes the strings in it as
-  they are read. Mode `:processed` is for a map the parser has already escaped
-  (a block's processed vars); `:raw` for text no HTML is made of (a Markdown
-  template) and for what a tag reads, with credentials left out all the same.
+  they are read. Mode `:processed` is for what the parser has already escaped
+  (a block's processed vars, its table rows): strings as they are, lists and
+  plain maps the same, keys as an author named them, and a struct read in
+  `:escape`. Mode `:names` is for the map of a block's refs: its keys as an
+  author named them, what they hold in `:escape`. Mode `:raw` is for text no
+  HTML is made of (a Markdown template) and for what a tag reads, with
+  credentials left out all the same.
   """
   @spec wrap(term(), mode()) :: term()
   def wrap(value, mode \\ :escape)
   def wrap(%__MODULE__{} = view, _mode), do: view
-  def wrap(value, :escape) when is_binary(value), do: escape(value)
+  def wrap(value, mode) when is_binary(value) and mode in [:escape, :names], do: escape(value)
   def wrap(value, _mode) when is_binary(value), do: value
   def wrap(value, mode) when is_list(value), do: Enum.map(value, &wrap(&1, mode))
   def wrap(%Ecto.Association.NotLoaded{}, _mode), do: nil
   def wrap(%struct{} = value, _mode) when struct in @values, do: value
   def wrap(value, _mode) when is_map(value) and map_size(value) == 0, do: value
+  def wrap(%_{} = value, :processed), do: %__MODULE__{value: value, mode: :escape}
   def wrap(value, mode) when is_map(value), do: %__MODULE__{value: value, mode: mode}
   def wrap(value, _mode), do: value
 
@@ -87,13 +95,21 @@ defmodule Brando.Villain.TemplateView do
   @spec wrap_children([map()], Context.t()) :: [t()]
   def wrap_children(children, %Context{} = context) do
     Enum.map(children, fn %{vars: vars} = child ->
-      wrap_for(%{child | vars: %__MODULE__{value: vars, mode: :processed}}, context)
+      %{child | vars: %__MODULE__{value: vars, mode: :processed}}
+      |> Map.replace_lazy(:refs, &wrap(&1, :names))
+      |> wrap_for(context)
     end)
   end
 
   @impl Liquex.Drop
+  def fetch(%__MODULE__{value: value, mode: :names}, key, %Context{} = context) do
+    with {:ok, field} <- Liquex.Indifferent.fetch(value, key) do
+      {:ok, wrap_for(field, context)}
+    end
+  end
+
   def fetch(%__MODULE__{value: value, mode: mode}, key, %Context{} = context) do
-    with false <- hidden?(value, key),
+    with false <- hidden?(value, key, mode),
          {:ok, field} <- Liquex.Indifferent.fetch(value, key) do
       {:ok, read(value, key, field, read_mode(mode, context))}
     else
@@ -116,32 +132,73 @@ defmodule Brando.Villain.TemplateView do
   end
 
   @doc """
-  The value in a view, with credentials left out: a list's items, and a pair's
-  value, too.
+  The value in a view, with credentials left out: a list's items, and a keyword
+  argument's value, too. A map of names an author chose stays whole.
   """
   @spec unwrap(term()) :: term()
+  def unwrap(%__MODULE__{value: value, mode: mode}) when mode in [:processed, :names] and not is_struct(value), do: value
   def unwrap(%__MODULE__{value: value}), do: without_credentials(value)
   def unwrap(value) when is_list(value), do: Enum.map(value, &unwrap/1)
   def unwrap({key, value}), do: {key, unwrap(value)}
   def unwrap(value), do: value
 
-  @doc "Whether `value` is a view, or holds one where `unwrap/1` looks."
-  @spec view?(term()) :: boolean()
-  def view?(%__MODULE__{}), do: true
-  def view?(value) when is_list(value), do: Enum.any?(value, &view?/1)
-  def view?({_key, value}), do: view?(value)
-  def view?(_value), do: false
+  @doc """
+  The mode of the first view in `value`, where `unwrap/1` looks, or nil if there
+  is none. A filter's result reads as what it read, and the names of a block's
+  refs are not its text.
+  """
+  @spec view_mode(term()) :: mode() | nil
+  def view_mode(%__MODULE__{mode: :names}), do: :escape
+  def view_mode(%__MODULE__{mode: mode}), do: mode
+  def view_mode(value) when is_list(value), do: Enum.find_value(value, &view_mode/1)
+  def view_mode({_key, value}), do: view_mode(value)
+  def view_mode(_value), do: nil
 
   @doc """
-  A filter's result. A filter that read a view put its result in one again,
-  unless it returns `{:safe, html}` or is one of Brando's that makes markup;
-  a string that came from a view is text until a template says otherwise.
+  A filter's result, given `mode`, the mode of the view it read (`view_mode/1`).
+  It goes back in a view of that mode, and a record it returned goes in one
+  whatever it read. Text stays as a filter that makes markup or returns
+  `{:safe, html}` gave it, and text from any filter starts no Liquid in the
+  final pass, except in a Markdown template, which has none.
   """
-  @spec filter_result(term(), atom(), boolean(), Context.t()) :: term()
-  def filter_result({:safe, html}, _filter, _read_view?, _context), do: IO.iodata_to_binary(html)
-  def filter_result(result, _filter, false, _context), do: result
-  def filter_result(result, filter, true, _context) when filter in @filters_giving_markup, do: result
-  def filter_result(result, _filter, true, %Context{} = context), do: wrap_for(result, context)
+  @spec filter_result(term(), atom(), mode() | nil, Context.t()) :: term()
+  def filter_result({:safe, html}, _filter, _mode, context), do: html |> IO.iodata_to_binary() |> inert(context)
+
+  def filter_result(result, filter, _mode, context) when is_binary(result) and filter in @filters_giving_markup,
+    do: inert(result, context)
+
+  def filter_result(result, _filter, nil, context), do: result |> wrap_records(context) |> inert(context)
+  def filter_result(result, _filter, mode, context), do: result |> wrap(read_mode(mode, context)) |> inert(context)
+
+  defp wrap_records(%_{} = record, context), do: wrap_for(record, context)
+  defp wrap_records(value, context) when is_list(value), do: Enum.map(value, &wrap_records(&1, context))
+  defp wrap_records(value, _context), do: value
+
+  defp inert(value, context) when is_list(value), do: Enum.map(value, &inert(&1, context))
+
+  defp inert(text, context) when is_binary(text) do
+    if Markdown.template_context?(context), do: text, else: InertLiquid.encode_delimiters(text)
+  end
+
+  defp inert(value, _context), do: value
+
+  @doc """
+  A plain map's pairs as a loop reads them, `[key, value]` as Liquex gives a
+  map's: no hidden field, the key escaped, the value as this view reads it.
+  """
+  @spec pairs(t()) :: [list()]
+  def pairs(%__MODULE__{value: value, mode: mode}) do
+    {key_mode, field_mode} =
+      case mode do
+        :raw -> {:raw, :raw}
+        :names -> {:escape, :escape}
+        mode -> {:escape, mode}
+      end
+
+    for {key, field} <- value, not hidden?(value, key, mode) do
+      [wrap(key, key_mode), wrap(field, field_mode)]
+    end
+  end
 
   @doc """
   `value` with every user reduced to `@user_fields` and every credential field
@@ -158,13 +215,13 @@ defmodule Brando.Villain.TemplateView do
 
   defp printable_fields(map), do: :maps.map(fn _key, value -> printable(value) end, map)
 
-  defp read_mode(mode, %Context{private: private} = context) do
-    if Map.get(private, @raw_flag) == true or Markdown.template_context?(context), do: :raw, else: mode
+  # Only `:escape` changes text it reads: a tag and a Markdown template read it raw
+  defp read_mode(:escape, %Context{private: private} = context) do
+    if Map.get(private, @raw_flag) == true or Markdown.template_context?(context), do: :raw, else: :escape
   end
 
-  # One level of already processed values; what they hold is read as any other.
-  defp read(_value, _key, field, :processed) when is_binary(field), do: field
-  defp read(_value, _key, field, :processed), do: wrap(field, :escape)
+  defp read_mode(mode, _context), do: mode
+
   defp read(value, key, field, :escape) when is_binary(field), do: read_text(value, key, field)
   defp read(_value, _key, field, mode), do: wrap(field, mode)
 
@@ -181,8 +238,11 @@ defmodule Brando.Villain.TemplateView do
 
   defp rich_text?(%TextBlock.Data{}, key), do: to_string(key) == "text"
 
+  defp rich_text?(%Var{type: type}, key) when type in [:rich_text, :html], do: to_string(key) == "value"
+
   defp rich_text?(%struct{}, key) do
-    function_exported?(struct, :__rich_text_fields__, 0) and to_string(key) in Enum.map(struct.__rich_text_fields__(), &to_string/1)
+    function_exported?(struct, :__rich_text_fields__, 0) and
+      to_string(key) in Enum.map(struct.__rich_text_fields__(), &to_string/1)
   end
 
   # Decoded first, as a heading is: a character reference typed into a title
@@ -196,22 +256,31 @@ defmodule Brando.Villain.TemplateView do
   defp plain?(<<_, rest::binary>>), do: plain?(rest)
   defp plain?(<<>>), do: true
 
-  defp hidden?(%User{}, key), do: key not in @user_keys
-  defp hidden?(_value, key), do: credential?(key)
+  defp hidden?(%User{}, key, _mode), do: key not in @user_keys
+  defp hidden?(%_{}, key, _mode), do: credential?(key)
+  defp hidden?(_value, _key, mode) when mode in [:processed, :names], do: false
+  defp hidden?(_value, key, _mode), do: credential?(key)
 
   defp credential?(key) when is_binary(key), do: key |> String.downcase(:ascii) |> credential_word?()
   defp credential?(key) when is_atom(key), do: credential?(Atom.to_string(key))
   defp credential?(_key), do: false
 
-  # Read on every key: a walk over the name, not a pattern compiled per call
+  # Read on every key: a walk over the name, not a pattern compiled per call. A
+  # credential is a whole word of it, so `secretary` and `tokens` are no credentials.
   for word <- @credential_words do
-    defp credential_word?(<<unquote(word), _::binary>>), do: true
+    defp credential_word?(unquote(word)), do: true
+    defp credential_word?(<<unquote(word), "_", _::binary>>), do: true
+    defp credential_word?(<<unquote(word), "-", _::binary>>), do: true
   end
 
-  defp credential_word?(<<_, rest::binary>>), do: credential_word?(rest)
-  defp credential_word?(<<>>), do: false
+  defp credential_word?(name), do: next_word(name)
 
-  defp without_credentials(%User{} = user), do: User |> struct(Map.take(user, @user_fields)) |> Map.put(:__meta__, user.__meta__)
+  defp next_word(<<char, rest::binary>>) when char in [?_, ?-], do: credential_word?(rest)
+  defp next_word(<<_, rest::binary>>), do: next_word(rest)
+  defp next_word(<<>>), do: false
+
+  defp without_credentials(%User{} = user),
+    do: User |> struct(Map.take(user, @user_fields)) |> Map.put(:__meta__, user.__meta__)
 
   defp without_credentials(%struct{} = value) when struct in @values, do: value
 
@@ -270,11 +339,7 @@ defmodule Brando.Villain.TemplateView do
     def where(view, field, value), do: view |> items() |> Collection.where(field, value)
     def to_enumerable(view), do: items(view)
 
-    # A plain map's pairs, with their values as views
     defp items(%{value: %_{} = value}), do: raise(Protocol.UndefinedError, protocol: Liquex.Collection, value: value)
-
-    defp items(%{value: value, mode: mode}) do
-      Enum.map(value, fn {key, field} -> {key, Brando.Villain.TemplateView.wrap(field, mode)} end)
-    end
+    defp items(view), do: Brando.Villain.TemplateView.pairs(view)
   end
 end

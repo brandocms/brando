@@ -26,9 +26,10 @@ defmodule Brando.Villain.Filters do
   @spec filter_name(filter_t) :: String.t()
   def filter_name({:filter, [filter_name | _]}), do: filter_name
 
-  # A filter is given the value in a view, and its result goes back in one: text
-  # read from entry data stays text through a filter. A project's filter that
-  # makes markup returns `{:safe, html}` (`Brando.Villain.TemplateView`).
+  # A filter is given the value in a view, and its result goes back in one of the
+  # same mode: text read from entry data stays text through a filter. A project's
+  # filter that makes markup returns `{:safe, html}`. Text from any filter starts
+  # no Liquid in the final pass (`Brando.Villain.TemplateView.filter_result/4`).
   def apply(mod \\ __MODULE__, value, {:filter, [function, {:arguments, arguments}]}, context) do
     func = String.to_existing_atom(function)
 
@@ -44,12 +45,12 @@ defmodule Brando.Villain.Filters do
         __MODULE__
       end
 
-    read_view? = TemplateView.view?([value | function_args])
+    view_mode = TemplateView.view_mode([value | function_args])
     args = [TemplateView.unwrap(value) | TemplateView.unwrap(function_args)] ++ [context]
 
     mod
     |> Kernel.apply(func, args)
-    |> TemplateView.filter_result(func, read_view?, context)
+    |> TemplateView.filter_result(func, view_mode, context)
   rescue
     # credo:disable-for-next-line
     ArgumentError -> raise Liquex.Error, "Invalid filter #{function}"
@@ -641,7 +642,7 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.strip_html("Have <em>you</em> read <strong>Ulysses</strong>?", %{})
       "Have you read Ulysses?"
   """
-  def strip_html(value, _), do: HtmlSanitizeEx.strip_tags(to_string(value))
+  def strip_html(value, _), do: value |> to_string() |> HtmlEntities.decode() |> HtmlSanitizeEx.strip_tags()
 
   @doc """
   Removes any newline characters (line breaks) from a string.
@@ -705,7 +706,10 @@ defmodule Brando.Villain.Filters do
         ellipsis
 
       true ->
-        String.slice(value, 0, length - String.length(ellipsis)) <> ellipsis
+        value
+        |> String.slice(0, length - String.length(ellipsis))
+        |> String.replace(~r/&[#\w]*$/u, "")
+        |> Kernel.<>(ellipsis)
     end
   end
 
