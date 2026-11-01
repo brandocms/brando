@@ -642,7 +642,16 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.strip_html("Have <em>you</em> read <strong>Ulysses</strong>?", %{})
       "Have you read Ulysses?"
   """
-  def strip_html(value, _), do: value |> to_string() |> HtmlEntities.decode() |> HtmlSanitizeEx.strip_tags()
+  def strip_html(value, _) do
+    value = to_string(value)
+
+    # Text read from entry data has no tag left but its escaped ones, which are
+    # what it stands for. Markup's entities are its text. The result can go in an
+    # attribute: a quote the text held stays encoded.
+    if(String.contains?(value, "<"), do: value, else: HtmlEntities.decode(value))
+    |> HtmlSanitizeEx.strip_tags()
+    |> String.replace(["\"", "'"], fn quote -> if quote == "\"", do: "&quot;", else: "&#39;" end)
+  end
 
   @doc """
   Removes any newline characters (line breaks) from a string.
@@ -708,7 +717,7 @@ defmodule Brando.Villain.Filters do
       true ->
         value
         |> String.slice(0, length - String.length(ellipsis))
-        |> String.replace(~r/&[#\w]*$/u, "")
+        |> String.replace(~r/&(?:#\d*|a|am|amp|l|lt|g|gt|q|qu|quo|quot)?$/, "")
         |> Kernel.<>(ellipsis)
     end
   end
@@ -906,12 +915,12 @@ defmodule Brando.Villain.Filters do
   ## Examples
 
       iex> Brando.Villain.Filters.raw("&lt;em&gt;Hi&lt;/em&gt; &#123;&#123; x &#125;&#125;", %{})
-      "<em>Hi</em> &#123;&#123; x &#125;&#125;"
+      "<em>Hi</em> &#123;{ x }}"
   """
   def raw(value, context) when is_binary(value) do
     if Brando.Villain.Markdown.template_context?(context),
       do: value,
-      else: value |> HtmlEntities.decode() |> Brando.Villain.InertLiquid.encode_all()
+      else: value |> HtmlEntities.decode() |> Brando.Villain.InertLiquid.encode_delimiters()
   end
 
   def raw(value, _), do: value

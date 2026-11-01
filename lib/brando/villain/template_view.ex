@@ -52,7 +52,10 @@ defmodule Brando.Villain.TemplateView do
   @user_fields ~w(id name email language role avatar active job_title same_as inserted_at updated_at deleted_at)a
   @user_keys @user_fields ++ Enum.map(@user_fields, &Atom.to_string/1)
 
-  @credential_words ~w(password passwd secret token credential credentials api_key apikey totp recovery_code recovery_codes)
+  @credential_words ~w(
+    password passwords passwd passwordhash hashedpassword secret secrets secretkey clientsecret token accesstoken
+    authtoken credential credentials api_key api_keys api-key apikey totp recovery_code recovery_codes recovery-code
+  )
 
   @values [Date, Time, DateTime, NaiveDateTime, Decimal, Range]
 
@@ -143,14 +146,19 @@ defmodule Brando.Villain.TemplateView do
   def unwrap(value), do: value
 
   @doc """
-  The mode of the first view in `value`, where `unwrap/1` looks, or nil if there
-  is none. A filter's result reads as what it read, and the names of a block's
+  The mode of the views in `value`, where `unwrap/1` looks, `:escape` if any of
+  them escapes, or nil if there are none. A filter's result reads as what it read, and the names of a block's
   refs are not its text.
   """
   @spec view_mode(term()) :: mode() | nil
   def view_mode(%__MODULE__{mode: :names}), do: :escape
   def view_mode(%__MODULE__{mode: mode}), do: mode
-  def view_mode(value) when is_list(value), do: Enum.find_value(value, &view_mode/1)
+
+  def view_mode(value) when is_list(value) do
+    modes = value |> Enum.map(&view_mode/1) |> Enum.reject(&is_nil/1)
+    if :escape in modes, do: :escape, else: List.first(modes)
+  end
+
   def view_mode({_key, value}), do: view_mode(value)
   def view_mode(_value), do: nil
 

@@ -294,7 +294,7 @@ defmodule Brando.Villain.InertEditorTextTest do
       entry = %Page{title: "<em>Hi</em> {{ 1 | plus: 1 }}", language: :en}
 
       for html <- in_module_and_final_pass(user, "{{ entry.title | raw }}", entry) do
-        assert html =~ "<em>Hi</em> &#123;&#123; 1 | plus: 1 &#125;&#125;"
+        assert html =~ "<em>Hi</em> &#123;{ 1 | plus: 1 }}"
       end
     end
 
@@ -366,6 +366,58 @@ defmodule Brando.Villain.InertEditorTextTest do
 
       assert active_elements(html) == []
       refute html =~ "{{"
+    end
+  end
+
+  describe "second review" do
+    test "strip_html keeps a value inside its attribute", %{user: user} do
+      entry = %Page{title: ~s(" onmouseover="document.title=1), language: :en}
+      html = render(block(module!(user, ~s(<a title="{{ entry.title | strip_html }}">x</a>)), []), entry)
+
+      assert html |> Floki.parse_fragment!() |> Floki.find("a[onmouseover]") == []
+    end
+
+    test "strip_html keeps text a rich-text field wrote as entities", %{user: user} do
+      refs = [text_ref("<p>Use the &lt;title&gt; element</p>")]
+      html = render(block(module!(user, "{{ refs.text.data.data.text | strip_html }}"), refs: refs))
+
+      assert html =~ "title"
+      assert html =~ "element"
+    end
+
+    test "raw leaves script, style and JSON working", %{user: user} do
+      for value <- ["<style>.x{color:red}</style>", ~s(<script type="application/ld+json">{"a":{"b":1}}</script>)] do
+        html = render(block(module!(user, "{{ entry.title | raw }}"), []), %Page{title: value, language: :en})
+
+        assert html == value
+      end
+    end
+
+    test "the strictest view decides what a filter's result prints as", %{user: user} do
+      row = %Brando.Content.TableRow{vars: []}
+      child = %Page{title: ~s(<img src=x onerror="document.title=1">), language: :en}
+      entry = %Page{language: :en, children: [child]}
+      code = ~s({{ block.table_rows | concat: entry.children | map: "title" | join: "" }})
+      html = render(block(module!(user, code), table_rows: [row]), entry)
+
+      assert active_elements(html) == []
+    end
+
+    test "truncate drops only a partial character reference", %{user: user} do
+      code = ~s({{ "AT&T Mobile" | truncate: 7 }}|{{ entry.title | truncate: 7 }})
+      html = render(block(module!(user, code), []), %Page{title: "AB & CD EF", language: :en})
+
+      assert html == "AT&T...|AB ..."
+    end
+
+    test "other spellings of a credential are hidden" do
+      keys = ~w(passwordhash hashedpassword accesstoken authtoken clientsecret secretkey secrets api_keys api-key x-api-key)
+      view = TemplateView.wrap(Map.new(keys, &{&1, "v"}))
+      context = Villain.create_context(%{"x" => view})
+
+      for key <- keys do
+        assert Liquex.Argument.eval({:field, [key: "x", key: key]}, context) |> elem(0) == nil, key
+      end
     end
   end
 
