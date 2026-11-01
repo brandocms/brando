@@ -187,14 +187,21 @@ conn = Plug.Conn.assign(conn, :partials, partials)
 </footer>
 ```
 
-This empty state omits an absent footer. The `render_fragment` convenience
-helpers instead render a visible **Missing page fragment** diagnostic for an
-unknown key. Rendering a fragment struct directly also applies its optional
-wrapper, which accepts `{{ content }}`, `{{ parent_key }}`, `{{ key }}`, and
-`{{ language }}` substitutions. The wrapper is printed as it is, so only a
+This empty state omits an absent footer. For an unknown key, the
+`render_fragment` convenience helpers and `fetch_fragment/2` render a visible
+**Missing page fragment** diagnostic in development; elsewhere they render
+nothing and log a warning. Rendering a fragment struct directly also applies its
+optional wrapper, which accepts `{{ content }}`, `{{ parent_key }}`, `{{ key }}`,
+and `{{ language }}` substitutions. The wrapper is printed as it is, so only a
 superuser sets it (see [Authorization](deps/brando/guides/authorization.md)); editors edit the
-rest of the fragment. `render_fragment/1` outputs the stored content without
-that wrapper.
+rest of the fragment, and the keys it prints are HTML-escaped.
+`render_fragment/1` outputs the stored content without that wrapper.
+
+A parent key or key holds letters, digits, `_`, `-`, `.`, `/`, spaces and
+parentheses, and can't start or end with a space, so `about/team`, `/about`,
+`site-footer` and a copy's `footer (copy)` all work. A save that changes one to
+anything else is refused. The `{% fragment %}` tag still takes only bare words
+(see [the block editor guide](deps/brando/guides/block_editor.md)), so it can't name the others.
 
 Only a published fragment renders. An unpublished one stays in the map with no
 content, so `{fragment}`, `<Brando.HTML.fragment fragment={fragment} />`,
