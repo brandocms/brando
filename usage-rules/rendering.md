@@ -197,9 +197,10 @@ superuser sets it (see [Authorization](deps/brando/guides/authorization.md)); ed
 rest of the fragment, and the keys it prints are HTML-escaped.
 `render_fragment/1` outputs the stored content without that wrapper.
 
-A parent key or key starts with a letter, digit or `_`, then holds those, `-`,
-`.`, `/`, spaces and parentheses, so `about/team`, `site-footer` and a copy's
-`footer (copy)` all work. A save that changes one to anything else is refused.
+A parent key or key holds letters, digits, `_`, `-`, `.`, `/`, spaces and
+parentheses, and can't start with a space, so `about/team`, `/about`,
+`site-footer` and a copy's `footer (copy)` all work. A save that changes one to
+anything else is refused.
 
 Only a published fragment renders. An unpublished one stays in the map with no
 content, so `{fragment}`, `<Brando.HTML.fragment fragment={fragment} />`,

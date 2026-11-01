@@ -14,7 +14,7 @@ defmodule Brando.Pages.FragmentKeyTest do
 
   @marker ~s(<i data-marker="key"></i>)
   @closing ~s("><i data-marker="key"></i>)
-  @crafted [@marker, @closing, "a\n", "a\tb", "a&b", "a=b", "a'b", ~s(a"b), "{{ a }}", "{% a %}", "(a", "-a", "", " "]
+  @crafted [@marker, @closing, "a\n", "a\tb", "a&b", "a=b", "a'b", ~s(a"b), "{{ a }}", "{% a %}", " a", "", " "]
 
   defp fragment!(attrs \\ []), do: Factory.insert(:fragment, Keyword.merge([title: "Footer", wrapper: nil], attrs))
 
@@ -50,6 +50,8 @@ defmodule Brando.Pages.FragmentKeyTest do
             "site-footer",
             "my/fragment",
             "about/team",
+            "/about",
+            "-footer",
             "2024/report",
             "footer.en",
             "om-oss/kontakt",
@@ -135,6 +137,53 @@ defmodule Brando.Pages.FragmentKeyTest do
     end
   end
 
+  describe "restoring a revision" do
+    # A revision taken while the key was `key`, and a later rename to `renamed`
+    defp old_revision!(key, renamed, user) do
+      fragment = fragment!(key: key)
+      {:ok, _} = Brando.Revisions.create_revision(fragment, user)
+      [%{revision: old}] = Repo.all(Brando.Revisions.Revision)
+
+      {:ok, changed} = Pages.update_fragment(fragment.id, %{key: renamed}, user)
+      {:ok, _} = Brando.Revisions.create_revision(changed, user)
+
+      {fragment, old}
+    end
+
+    test "is refused when it would bring back a key that doesn't fit", %{current_user: user} do
+      {fragment, old} = old_revision!("Stored&key", "footer", user)
+
+      assert {:error, %Ecto.Changeset{} = changeset} =
+               Brando.Revisions.set_entry_to_revision(Fragment, fragment.id, old, user)
+
+      assert Keyword.has_key?(changeset.errors, :key)
+      assert Repo.get!(Fragment, fragment.id).key == "footer"
+    end
+
+    test "goes through when the fragment still has that key", %{current_user: user} do
+      fragment = fragment!(key: "Stored&key")
+      {:ok, _} = Brando.Revisions.create_revision(fragment, user)
+      [%{revision: old}] = Repo.all(Brando.Revisions.Revision)
+
+      {:ok, changed} = Pages.update_fragment(fragment.id, %{title: "Changed"}, user)
+      {:ok, _} = Brando.Revisions.create_revision(changed, user)
+
+      assert {:ok, %{title: "Footer", key: "Stored&key"}} =
+               Brando.Revisions.set_entry_to_revision(Fragment, fragment.id, old, user)
+    end
+
+    # Renaming the fragment is what the revision conflicts with, so a further
+    # rename doesn't free it
+    test "stays refused after the fragment is renamed again", %{current_user: user} do
+      {fragment, old} = old_revision!("Stored&key", "footer", user)
+
+      {:ok, _} = Pages.update_fragment(fragment.id, %{key: "site-footer"}, user)
+
+      assert {:error, %Ecto.Changeset{}} = Brando.Revisions.set_entry_to_revision(Fragment, fragment.id, old, user)
+      assert Repo.get!(Fragment, fragment.id).key == "site-footer"
+    end
+  end
+
   describe "groups mode" do
     setup %{current_user: owner} do
       put_test_env(:authorization_mode, :groups)
@@ -192,7 +241,10 @@ defmodule Brando.Pages.FragmentKeyTest do
         wrapper: "{{ parent_key }}"
       }
 
-      refute fragment |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary() =~ "<i"
+      html = fragment |> Phoenix.HTML.Safe.to_iodata() |> IO.iodata_to_binary()
+
+      assert html == "&#123;&#123; key &#125;&#125;"
+      refute html =~ "data-marker"
     end
   end
 
