@@ -76,7 +76,7 @@ defmodule Brando.Scripts.Prepare055DepsTest do
         {:phoenix, "~> 1.8.16"},
         {:ecto, "~> 3.14"},
         {:ecto_sql, "~> 3.14"},
-        {:phoenix_html, "~> 4.0"},
+        {:phoenix_html, "~> 4.4"},
         {:phoenix_live_reload, "~> 1.2", only: :dev},
         {:telemetry, "~> 1.0", override: true},
         # {:exsync, "~> 0.2", only: :dev},

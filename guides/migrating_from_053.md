@@ -889,7 +889,7 @@ By hand, change every one of these the application declares before fetching
 # mix.exs
 {:phoenix, "~> 1.8.16"},
 {:phoenix_live_view, "~> 1.2.0"},
-{:phoenix_html, "~> 4.0"},
+{:phoenix_html, "~> 4.4"},
 {:ecto, "~> 3.14"},
 {:ecto_sql, "~> 3.14"},
 {:postgrex, "~> 0.20"},
