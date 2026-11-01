@@ -99,6 +99,13 @@ defmodule Brando.Content.VarGuardTest do
     Block.block_changeset(block, %{"vars" => %{"0" => params}}, user.id)
   end
 
+  # A saved block's vars back at their definitions, unsaved, as the editor's
+  # "Reset vars" leaves them.
+  defp reset_vars(block) do
+    vars = Enum.map(block.vars, &Map.take(&1, [:key, :label, :type, :value, :options]))
+    block |> Changeset.change() |> Changeset.put_assoc(:vars, vars) |> Changeset.apply_changes()
+  end
+
   defp var_change(changeset, key) do
     changeset |> Changeset.get_assoc(:vars) |> Enum.find(&(Changeset.get_field(&1, :key) == key))
   end
@@ -195,6 +202,34 @@ defmodule Brando.Content.VarGuardTest do
     test "a value under a key of another type is checked for that type", c do
       assert [var] = new_var(%{}, c, %{"key" => "body", "label" => "Body", "type" => "string", "value" => @handler})
       refute var.valid?
+    end
+
+    # After "Reset var", "Reset vars" or "Add missing vars", a child block's
+    # next change casts over the unsaved var in its applied state.
+    test "is taken on a saved block that already holds an unsaved var", c do
+      block = c |> insert_block!() |> reset_vars()
+      assert %{id: nil} = var(block, "title")
+      fields = %{"id" => "", "key" => "title", "label" => "Title", "value" => "Typed"}
+      changeset = Block.block_changeset(block, %{"vars" => %{"0" => fields}}, c.editor.id)
+
+      assert changeset.valid?
+      assert %{changes: %{value: "Typed"}} = var_change(changeset, "title")
+    end
+
+    test "is taken in a saved row that already holds an unsaved cell", c do
+      block = insert_block!(c)
+      [row] = block.table_rows
+      cell = %Var{key: "cell", label: %{"en" => "Cell"}, type: :string}
+      block = %{block | table_rows: [%{row | vars: [cell]}]}
+      fields = %{"id" => "", "key" => "cell", "label" => "Cell", "value" => "Typed"}
+      rows = %{"0" => %{"id" => to_string(row.id), "vars" => %{"0" => fields}}}
+      changeset = Block.block_changeset(block, %{"table_rows" => rows}, c.editor.id)
+
+      assert changeset.valid?
+      [row_change] = Changeset.get_assoc(changeset, :table_rows)
+
+      assert [%{changes: %{value: "Typed"}}] =
+               row_change |> Changeset.get_assoc(:vars) |> Enum.reject(&(&1.action == :replace))
     end
 
     test "gets its options from the definition, not the request", c do

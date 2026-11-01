@@ -195,9 +195,10 @@ defmodule Brando.Content.VarGuard do
   defp saved?(_var), do: false
 
   # An id the owner does not have (a restored revision's row, since deleted)
-  # is a new row as well.
+  # is a new row as well. An unsaved var the owner already holds (a child block
+  # casts over its applied state) has no id to compare with.
   defp new_var?(vars, saved) do
-    ids = MapSet.new(saved, &to_string(&1.id))
+    ids = for %{id: id} when not is_nil(id) <- saved, into: MapSet.new(), do: to_string(id)
     vars |> rows() |> Enum.any?(&(not MapSet.member?(ids, to_string(param(&1, "id")))))
   end
 
