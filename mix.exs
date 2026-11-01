@@ -291,7 +291,7 @@ defmodule Brando.Mixfile do
 
       # liveview
       {:phoenix_live_view, "1.2.13"},
-      {:phoenix_html, "~> 4.0"},
+      {:phoenix_html, "~> 4.4"},
 
       # hashing/passwords
       {:bcrypt_elixir, "~> 3.0"},
@@ -339,7 +339,7 @@ defmodule Brando.Mixfile do
       {:html_sanitize_ex, "~> 1.5.0"},
 
       # Misc
-      {:req_llm, "~> 1.6"},
+      {:req_llm, "~> 1.29"},
       {:req, "~> 0.5 or ~> 1.0"},
       {:gettext, "~> 1.0.0"},
       {:mdex, "~> 0.14.0"},
