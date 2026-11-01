@@ -14,7 +14,7 @@ defmodule Brando.Villain.RefRenderingTest do
   end
 
   describe "ref parsing and rendering" do
-    test "evaluates Liquid emitted by refs in both page and single-block rendering", %{user: user} do
+    test "prints Liquid typed in a ref as text in both page and single-block rendering", %{user: user} do
       {:ok, module} =
         Content.create_module(
           Factory.params_for(:module, %{
@@ -48,8 +48,9 @@ defmodule Brando.Villain.RefRenderingTest do
       entry = %Brando.Pages.Page{title: "Rendered title"}
 
       for rendered <- [Brando.Villain.parse([%{block: block}], entry), Brando.Villain.render_block(block, entry)] do
-        assert rendered =~ "<a href=\"/case\">Rendered title</a>"
-        assert rendered =~ "<strong>Visible</strong>"
+        assert rendered =~ "<a href=\"/case\">&#123;&#123; entry.title &#125;&#125;</a>"
+        assert rendered =~ "&#123;% if entry.title %&#125;<strong>Visible</strong>"
+        refute rendered =~ "Rendered title"
         refute rendered =~ "data-identifier-id"
         refute rendered =~ "{{"
         refute rendered =~ "{%"

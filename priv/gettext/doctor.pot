@@ -232,6 +232,13 @@ msgid_plural "%{count} queues"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/editor_liquid.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} ref or var holds Liquid, which prints as text"
+msgid_plural "%{count} refs and vars hold Liquid, which prints as text"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} run"
@@ -333,6 +340,16 @@ msgstr ""
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} %{version}, needs %{requirement}"
+msgstr ""
+
+#: lib/brando/doctor/checks/editor_liquid.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} on block #%{id}"
+msgstr ""
+
+#: lib/brando/doctor/checks/editor_liquid.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} on module #%{id}"
 msgstr ""
 
 #: lib/brando/doctor/checks/colors.ex
@@ -531,6 +548,11 @@ msgstr ""
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
 msgid "JSON-LD"
+msgstr ""
+
+#: lib/brando/doctor/checks/editor_liquid.ex
+#, elixir-autogen, elixir-format
+msgid "Liquid in editor text"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -1071,6 +1093,11 @@ msgstr ""
 msgid "mix test would use the development database %{database}"
 msgstr ""
 
+#: lib/brando/doctor/checks/editor_liquid.ex
+#, elixir-autogen, elixir-format
+msgid "move what should run into the module's code, or edit the text if it should not show: Liquid in refs and vars is not run"
+msgstr ""
+
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
 msgid "name"
@@ -1145,6 +1172,11 @@ msgstr ""
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "no queues, so background jobs never run"
+msgstr ""
+
+#: lib/brando/doctor/checks/editor_liquid.ex
+#, elixir-autogen, elixir-format
+msgid "no ref or var holds Liquid"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_routes.ex

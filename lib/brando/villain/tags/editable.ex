@@ -12,6 +12,7 @@ defmodule Brando.Villain.Tags.Editable do
 
   alias Brando.FrontendEdit.Fields
   alias Brando.Villain.LiquexParser.TagGrammar
+  alias Brando.Villain.TemplateView
 
   @stack :brando_editable
 
@@ -50,7 +51,7 @@ defmodule Brando.Villain.Tags.Editable do
   def resolve({:field, [_, _ | _] = accesses}, context) do
     case Enum.split(accesses, -1) do
       {parent, [{:key, name}]} ->
-        {entry, context} = Liquex.Argument.eval({:field, parent}, context)
+        entry = TemplateView.eval({:field, parent}, context)
         {entry, Fields.field(entry, name), context}
 
       _ ->

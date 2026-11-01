@@ -76,8 +76,18 @@ defmodule Brando.Villain.TemplateAdapter do
       :description
     ])
     |> Map.replace_lazy(:table_rows, &table_rows(&1, escape?))
+    |> escape_texts(escape?)
     |> Map.put(:class, module.class)
   end
+
+  # What an editor typed about the block prints as text, as a var does
+  defp escape_texts(block, true) do
+    Enum.reduce([:anchor, :description], block, fn key, acc ->
+      Map.replace_lazy(acc, key, &Brando.Villain.Parser.escape_var_value/1)
+    end)
+  end
+
+  defp escape_texts(block, false), do: block
 
   defp table_rows(rows, escape?) when is_list(rows), do: Enum.map(rows, &table_row(&1, escape?))
   defp table_rows(rows, _escape?), do: rows
@@ -98,6 +108,9 @@ defmodule Brando.Villain.TemplateAdapter do
   # gives them by key
   defp row_var(%{type: type, value: value} = var, true) when type in [:string, :text],
     do: %{var | value: Brando.Villain.Parser.escape_var_value(value)}
+
+  defp row_var(%{type: type, value: value} = var, true) when type in [:rich_text, :html],
+    do: %{var | value: value |> Brando.RichText.render_html() |> Brando.Villain.InertLiquid.encode_all()}
 
   defp row_var(%{type: type, value: value} = var, _escape?) when type in [:rich_text, :html],
     do: %{var | value: Brando.RichText.render_html(value)}

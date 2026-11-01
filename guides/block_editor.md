@@ -195,23 +195,46 @@ Besides `{% ref %}` and `{% headless_ref %}`:
 
 ### Writing templates safely
 
-HEEx escapes what it prints; Liquid prints values as Brando hands them over:
+Only module, container, SVG and HTML ref templates run as Liquid, and superusers
+write those. What editors write is data: Liquid in a text or Markdown ref, a
+var, a global or a caption prints as text, braces included. To show a value in
+copy, put it in the module's code.
+
+HEEx escapes what it prints, and Liquid in a value it prints is text, inside
+`<script>` and `<style>` too, where the brace shows as `&#123;`. Liquid in a
+HEEx template's own code runs. Liquid prints values as Brando hands them over:
 
 - `string` and `text` vars and globals arrive HTML-escaped (by key, in
   `entries`, in table rows), as do `links` and the `link_url`/`link_text`
-  filters: `{{ title }}` prints the text as typed, braces included (Liquid
-  in it is not run), also in a double-quoted attribute; a comparison or
-  `truncate` sees the escaped text. Markup belongs in a `rich_text` var.
+  filters: `{{ title }}` prints the text as typed, also in a double-quoted
+  attribute; a comparison or `truncate` sees the escaped text. Markup belongs
+  in a `rich_text` var.
 - `rich_text` vars and globals arrive sanitized, to print between tags.
+- `entry` and its preloads, `identity`, `configs`, `navigation`, `request`,
+  `url`, ref data read through `refs` and a datasource's `entries` read the same
+  way: `{{ entry.title }}` prints as text, and a character reference in it
+  (`&shy;`) as the character it names. A field declared `:rich_text` in the
+  entry's form, and a text ref's `text`, arrive sanitized, to print as markup.
+- The `raw` filter is a template's opt-in, for a plain field whose markup you
+  trust: `{{ entry.embed | raw }}`. It reads the text as what it stands for, so
+  a rich-text field does not need it. Liquid in the value stays text.
 - `escape` never encodes a character reference twice; `url_encode`,
-  `slugify` and `markdown` read an escaped var as the text it stands for.
+  `slugify` and `markdown` read escaped text as the text it stands for.
+- `{% picture %}`, `{% video %}`, `{% route %}` and other tags read the record or
+  the value itself, and filters on a record (`media_url`, `absolute_url`, `date`,
+  `i18n`) get the record.
+- A user shows only `id`, `name`, `email`, `language`, `role`, `avatar`, `active`,
+  `job_title`, `same_as` and its timestamps, and no field named like a credential
+  reaches a template, through `{% inspect %}` either.
 
-Entry fields (`entry.title`), `identity`, ref data read through `refs` and
-filter output print as stored. So:
+A filter of your own gets the record, and text it returns from one is escaped
+like any other. To return markup, return `{:safe, html}`. A tag of your own reads
+its argument with `Brando.Villain.TemplateView.eval/2`, which gives the record,
+and escapes what it prints.
 
-- In an attribute, write double quotes around the output and pass such text
-  through `escape`, which encodes `"`, `'`, `&`, `<` and `>`; between tags,
-  `escape` it as well.
+So:
+
+- In an attribute, write double quotes around the output.
 - Never put rich text in an attribute as it is:
   `content="{{ intro | strip_html | escape_once }}"`.
 - Do not `url_decode` a value you print: it turns `%3C` back into `<` after
@@ -225,7 +248,7 @@ filter output print as stored. So:
 <a href="/search?q={{ query | url_decode }}">{{ query | url_decode }}</a>
 
 {%- comment -%} Do {%- endcomment -%}
-<figure title="{{ entry.title | escape }}">
+<figure title="{{ entry.title }}">
 <a href="/search?q={{ query | url_encode }}">{{ query }}</a>
 ```
 

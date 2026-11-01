@@ -159,8 +159,21 @@ defmodule Brando.Villain.Components do
 
   defp render_ref_block(parser_module, block_data, assigns) do
     opts = build_parser_opts(assigns)
-    apply(parser_module, Brando.Villain.Tags.Ref.parser_function(parser_module, block_data.type), [block_data.data, opts])
+
+    parser_module
+    |> apply(Brando.Villain.Tags.Ref.parser_function(parser_module, block_data.type), [block_data.data, opts])
+    |> template_ref_liquid(block_data.type, opts)
   end
+
+  # An SVG or HTML ref is a superuser's template, so its Liquid runs. It runs here:
+  # what a HEEx template prints is text to the entry's final pass.
+  defp template_ref_liquid(html, type, %{context: context}) when type in ~w(svg html) do
+    html = IO.iodata_to_binary(html)
+
+    if String.contains?(html, ["{{", "{%"]), do: Brando.Villain.parse_and_render(html, context), else: html
+  end
+
+  defp template_ref_liquid(html, _type, _opts), do: html
 
   defp build_parser_opts(assigns) do
     {:ok, modules} = RenderSourceQuery.list_modules(cache_opts())

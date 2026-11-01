@@ -49,34 +49,16 @@ defmodule Brando.VillainTest do
     ]
   }
 
-  defp pf_cs(text) do
-    module_params = Factory.params_for(:module, %{code: "{% ref refs.text %}"})
-    {:ok, module} = Brando.Content.create_module(module_params, :system)
+  # A fragment whose module's own template holds the Liquid
+  defp pf_module_cs(code) do
+    {:ok, module} = Brando.Content.create_module(Factory.params_for(:module, %{code: code}), :system)
 
     params =
       Factory.params_for(:fragment, %{
         parent_key: "blabla",
         key: "blabla",
         entry_blocks: [
-          %{
-            block: %{
-              type: :module,
-              source: "Elixir.Brando.Pages.Fragment.Blocks",
-              module_id: module.id,
-              refs: [
-                %{
-                  name: "text",
-                  uid: "pf_cs_ref_#{System.unique_integer([:positive])}",
-                  data: %Brando.Villain.Blocks.TextBlock{
-                    data: %Brando.Villain.Blocks.TextBlock.Data{
-                      text: text,
-                      type: :paragraph
-                    }
-                  }
-                }
-              ]
-            }
-          }
+          %{block: %{type: :module, source: "Elixir.Brando.Pages.Fragment.Blocks", module_id: module.id, refs: []}}
         ]
       })
 
@@ -1262,7 +1244,7 @@ defmodule Brando.VillainTest do
         user
       )
 
-    pf_params = pf_cs("**Some** {{ navigation.main.en.title }} here.")
+    pf_params = pf_module_cs(~s(<div class="paragraph">**Some** {{ navigation.main.en.title }} here.</div>))
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
     {:ok, pf1} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, pf1.id)
 
@@ -1294,8 +1276,8 @@ defmodule Brando.VillainTest do
       ]
     }
 
-    fragment_cs_1 = pf_cs("So the global says: '{{ globals.system.text }}'.")
-    fragment_cs_2 = pf_cs("So the global says: '{{ globals.system.text }}'.")
+    fragment_cs_1 = pf_module_cs(~s(<div class="paragraph">So the global says: '{{ globals.system.text }}'.</div>))
+    fragment_cs_2 = pf_module_cs(~s(<div class="paragraph">So the global says: '{{ globals.system.text }}'.</div>))
 
     {:ok, gc1} = Brando.Sites.create_global_set(global_set_params, user)
     {:ok, _} = Brando.Sites.create_global_set(global_set_params_no, user)
@@ -1337,7 +1319,7 @@ defmodule Brando.VillainTest do
   test "ensure villains update on identity changes", %{user: user} do
     Brando.Cache.Identity.set()
 
-    pf_params = pf_cs("So identity.name says: '{{ identity.name }}'.")
+    pf_params = pf_module_cs(~s(<div class="paragraph">So identity.name says: '{{ identity.name }}'.</div>))
 
     {:ok, pf1} = Brando.Pages.create_fragment(pf_params, user)
     {:ok, pf1} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, pf1.id)
@@ -1360,7 +1342,7 @@ defmodule Brando.VillainTest do
   test "ensure villains update on link changes", %{user: user} do
     Brando.Cache.Identity.set()
 
-    pf_cs = pf_cs("So links.instagram.url says: '{{ links.instagram.url }}'.")
+    pf_cs = pf_module_cs(~s(<div class="paragraph">So links.instagram.url says: '{{ links.instagram.url }}'.</div>))
 
     {:ok, pf1} = Brando.Pages.create_fragment(pf_cs, user)
     {:ok, pf1} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, pf1.id)

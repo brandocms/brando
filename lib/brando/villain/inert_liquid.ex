@@ -14,7 +14,31 @@ defmodule Brando.Villain.InertLiquid do
   def encode(nil), do: nil
 
   def encode(html) do
-    outside_raw_text(html, &String.replace(&1, ["{", "}"], fn brace -> if brace == "{", do: "&#123;", else: "&#125;" end))
+    html = IO.iodata_to_binary(html)
+
+    if :binary.match(html, "{") == :nomatch, do: html, else: outside_raw_text(html, &encode_braces/1)
+  end
+
+  @doc """
+  Every brace a character reference, script and style included: for a value
+  on its own, which no template wrote and which could hold a whole script
+  element. In script or style the references stay literal.
+  """
+  def encode_all(nil), do: nil
+  def encode_all(html), do: html |> IO.iodata_to_binary() |> encode_braces()
+
+  @doc """
+  A template's dynamic output (`Brando.Villain.HeexRenderer`): the Liquid
+  delimiters in it character references, so what a value holds starts no Liquid,
+  and any other brace as it is, so printed JSON stays JSON. A brace at the end
+  could start one with what comes next.
+  """
+  def encode_delimiters(html) do
+    html = IO.iodata_to_binary(html)
+
+    if :binary.match(html, "{") == :nomatch,
+      do: html,
+      else: String.replace(html, ~r/\{(?=[{%]|\z)/, "&#123;")
   end
 
   @doc """
@@ -29,6 +53,9 @@ defmodule Brando.Villain.InertLiquid do
       &String.replace(&1, ["&#123;", "&#125;"], fn entity -> if entity == "&#123;", do: "{", else: "}" end)
     )
   end
+
+  defp encode_braces(html),
+    do: String.replace(html, ["{", "}"], fn brace -> if brace == "{", do: "&#123;", else: "&#125;" end)
 
   defp outside_raw_text(html, fun) do
     html

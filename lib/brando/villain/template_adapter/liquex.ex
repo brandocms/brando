@@ -10,6 +10,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
 
   alias Brando.Villain
   alias Brando.Villain.TemplateAdapter
+  alias Brando.Villain.TemplateView
   alias Liquex.Context
 
   @impl true
@@ -42,7 +43,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
       |> add_parser_to_context(opts)
       |> add_module_id_to_context(block.module_id)
       |> add_block_to_context(module, block)
-      |> Context.assign("entries", children)
+      |> Context.assign("entries", TemplateView.wrap_children(children, base_context))
       |> Context.assign("content", content)
 
     module.code
@@ -75,11 +76,17 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
 
   # -- Context helpers --
 
-  defp add_vars_to_context(context, vars),
-    do: Enum.reduce(vars, context, fn {k, v}, acc -> Context.assign(acc, k, v) end)
+  # A var's text is processed already (`Brando.Villain.Parser.process_vars/2`);
+  # what a media or link var holds is read as any other record.
+  defp add_vars_to_context(context, vars) do
+    Enum.reduce(vars, context, fn
+      {k, v}, acc when is_binary(v) -> Context.assign(acc, k, v)
+      {k, v}, acc -> Context.assign(acc, k, TemplateView.wrap_for(v, context))
+    end)
+  end
 
   defp add_refs_to_context(context, refs),
-    do: Context.assign(context, :refs, refs)
+    do: Context.assign(context, :refs, TemplateView.wrap_for(refs, context))
 
   defp add_admin_to_context(context, opts) do
     if Map.get(opts, :brando_render_for_admin) do
@@ -100,7 +107,8 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
     escape? = not Brando.Villain.Markdown.template_context?(context)
     simple_block = TemplateAdapter.simple_block(module, block, escape: escape?)
 
-    Context.assign(context, :block, simple_block)
+    # Processed already; through a view for what its rows' records hold
+    Context.assign(context, :block, TemplateView.wrap(simple_block, :raw))
   end
 
   defp add_datasource_entries_to_context(
@@ -114,7 +122,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
          %{vars: vars}
        ) do
     language = Context.get(context, "language")
-    request = Context.get(context, "request")
+    request = Villain.raw_context(context, "request")
 
     mapped_vars =
       vars
@@ -123,7 +131,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
 
     {:ok, entries} = Brando.Datasource.list_results(module, query, mapped_vars, language, :list)
 
-    Context.assign(context, :entries, entries || [])
+    Context.assign(context, :entries, TemplateView.wrap_for(entries || [], context))
   end
 
   defp add_datasource_entries_to_context(
@@ -141,8 +149,8 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
     entries_with_meta = Brando.Villain.Parser.add_meta_to_entries(entries, block)
 
     context
-    |> Context.assign(:entries, entries || [])
-    |> Context.assign(:entries_with_meta, entries_with_meta || [])
+    |> Context.assign(:entries, TemplateView.wrap_for(entries || [], context))
+    |> Context.assign(:entries_with_meta, TemplateView.wrap_for(entries_with_meta || [], context))
   end
 
   # The one entry chosen for a `:single` block, as `entries`.
@@ -153,7 +161,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
        ) do
     ids = block.block_identifiers |> Enum.sort_by(&(&1.sequence || 0)) |> Enum.map(& &1.identifier_id)
     {:ok, entries} = Brando.Datasource.get_single_entries(module, query, ids)
-    Context.assign(context, :entries, entries)
+    Context.assign(context, :entries, TemplateView.wrap_for(entries, context))
   end
 
   defp add_datasource_entries_to_context(context, _, _),

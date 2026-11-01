@@ -367,6 +367,26 @@ sender first, before the first compile.
   text once. See
   [Writing templates safely](block_editor.md#writing-templates-safely).
 
+  **Liquid in what editors write prints as text.** A text or Markdown ref, a
+  var, a global or a caption no longer runs Liquid, including a text ref on a
+  module definition (`{{ forloop.index }}`) and in HEEx modules. Run
+  `mix brando.doctor`, which lists refs and vars holding it under Liquid in
+  editor text, and move what should run into the module's code. Liquid in a
+  module's own code keeps running.
+
+  **Entry data prints as text in Liquid.** `{{ entry.title }}`, `identity`,
+  `navigation`, ref data read through `refs` and a datasource's `entries` arrive
+  escaped, like a `string` var. A rich-text field prints as before. Where a
+  template prints a plain field that holds markup on purpose, add
+  `{{ entry.embed | raw }}`. A filter of your own that returns markup for a record
+  returns `{:safe, html}`, and a tag of your own reads its argument with
+  `Brando.Villain.TemplateView.eval/2`. Passwords and other credentials no longer
+  reach templates, through `{% inspect %}` either.
+
+  Stored pages keep what they rendered until they are rendered again:
+  `mix brando.entries.resave`, which replaces any markup Liquid in editor text
+  made.
+
   A `string` or `text` var that is meant to hold HTML becomes a `rich_text`
   var, its values kept (they render sanitized). In `iex -S mix`, for each
   such var, with the module's id and the var's key:

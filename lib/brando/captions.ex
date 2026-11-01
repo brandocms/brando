@@ -90,11 +90,18 @@ defmodule Brando.Captions do
   @doc """
   Markup for a picture's title, which is either the placement's rich-text
   caption or the image's plain title: rich text as `normalize/1` stores it,
-  plain text escaped (`library_html/1`). `nil` when there is no text.
+  plain text escaped (`library_html/1`). `nil` when there is no text. Its
+  braces are entities either way: Liquid in a caption is text.
   """
   def caption_html(text) do
-    if is_binary(text) and markup?(text), do: normalize(text), else: library_html(text)
+    if is_binary(text) and markup?(text), do: rich_html(text), else: library_html(text)
   end
+
+  @doc """
+  Markup for a placement's rich-text caption: as `normalize/1` stores it, with
+  its braces as entities, so the entry's Liquid pass leaves it as text.
+  """
+  def rich_html(text), do: text |> normalize() |> Brando.Villain.InertLiquid.encode_all()
 
   @doc "A rich-text caption reduced to basic markup, for previews in the admin."
   def preview_html(text) do

@@ -8,6 +8,9 @@ defmodule Brando.Villain.HeexRenderer do
   content module cannot point at whichever version happened to compile last.
   """
 
+  alias Brando.Villain.InertLiquid
+  alias Phoenix.LiveView.Rendered
+
   @ets_table :brando_heex_cache
 
   @doc """
@@ -103,7 +106,9 @@ defmodule Brando.Villain.HeexRenderer do
   @doc """
   Compile (or fetch from cache) and render a HEEx template to an HTML string.
 
-  Assigns are passed to the compiled `render/1` function component.
+  Assigns are passed to the compiled `render/1` function component. What the
+  template prints is inert to Liquid (`Brando.Villain.InertLiquid`): only
+  Liquid written in the template itself runs, whatever a value holds.
   """
   @spec render_to_string(integer() | binary(), String.t(), map()) :: String.t()
   def render_to_string(id, code_string, assigns) do
@@ -111,9 +116,22 @@ defmodule Brando.Villain.HeexRenderer do
     assigns = Map.put(assigns, :__changed__, %{})
 
     module_name.render(assigns)
-    |> Phoenix.HTML.Safe.to_iodata()
+    |> inert_iodata()
     |> IO.iodata_to_binary()
   end
+
+  defp inert_iodata(%Rendered{static: static, dynamic: dynamic}), do: inert_iodata(static, dynamic.(false))
+  defp inert_iodata(dynamic), do: dynamic |> printed() |> InertLiquid.encode_delimiters()
+
+  defp inert_iodata([static], []), do: [static]
+
+  defp inert_iodata([static | statics], [dynamic | dynamics]),
+    do: [static, inert_iodata(dynamic) | inert_iodata(statics, dynamics)]
+
+  # A comprehension's static parts go with its values
+  defp printed(%_{} = struct), do: Phoenix.HTML.Safe.to_iodata(struct)
+  defp printed(nil), do: []
+  defp printed(iodata), do: iodata
 
   @doc """
   Invalidate all cached modules for a given id (any code hash).

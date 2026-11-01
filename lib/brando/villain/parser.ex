@@ -511,7 +511,11 @@ defmodule Brando.Villain.Parser do
 
   def text(%{text: text}, _) when text in [nil, ""], do: ""
 
+  # What an editor wrote is text to the entry's final Liquid pass, as it is
+  # everywhere an editor's value reaches the page.
   def text(%{text: text} = params, _) do
+    text = Brando.Villain.InertLiquid.encode_all(text)
+
     case Map.get(params, :type) do
       nil -> text
       "paragraph" -> text
@@ -526,7 +530,9 @@ defmodule Brando.Villain.Parser do
   def svg(%{code: html}, _), do: html
 
   def markdown(%{text: markdown}, _) do
-    Brando.Markdown.to_html!(markdown, breaks: true)
+    markdown
+    |> Brando.Markdown.to_html!(breaks: true)
+    |> Brando.Villain.InertLiquid.encode_all()
   end
 
   def markdown_source(data, _), do: Brando.MarkdownSources.render(data)
@@ -1138,7 +1144,7 @@ defmodule Brando.Villain.Parser do
   # A placement caption is stored normalized (`Brando.Captions.normalize/1`)
   # when the editor writes it; one that reached the ref another way is
   # normalized here.
-  defp rich_caption(text), do: Brando.Captions.normalize(text)
+  defp rich_caption(text), do: Brando.Captions.rich_html(text)
 
   defp gallery_image_tag(assigns, :panner), do: Brando.Villain.Parser.panner_item(assigns)
   defp gallery_image_tag(assigns, :plain), do: Brando.Villain.Parser.picture_tag(assigns)
@@ -1694,6 +1700,11 @@ defmodule Brando.Villain.Parser do
 
   defp maybe_escape_var({key, value}, %{type: type}, true) when type in [:string, :text],
     do: {key, escape_var_value(value)}
+
+  # Sanitized, and text to the entry's final Liquid pass. HEEx has no use for
+  # this: what it prints is made inert after it (`Brando.Villain.HeexRenderer`).
+  defp maybe_escape_var({key, value}, %{type: type}, true) when type in [:rich_text, :html],
+    do: {key, Brando.Villain.InertLiquid.encode_all(value)}
 
   defp maybe_escape_var(processed, _var, _escape?), do: processed
 

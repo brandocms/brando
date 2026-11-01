@@ -12,18 +12,20 @@ defmodule Brando.Villain.Tags.Picture do
 
   import Phoenix.Component
 
+  alias Brando.Villain.InertLiquid
   alias Brando.Villain.LiquexParser.TagGrammar
+  alias Brando.Villain.TemplateView
 
   @impl true
   def parse, do: TagGrammar.parse(:picture)
 
   @impl true
   def render([source: source, args: args], context) do
-    {evaled_source, _context} = Liquex.Argument.eval(source, context)
+    evaled_source = TemplateView.eval(source, context)
 
     evaled_args =
       Enum.map(args, fn arg ->
-        {{key, val}, _context} = Liquex.Argument.eval(arg, context)
+        {key, val} = TemplateView.eval(arg, context)
         {String.to_existing_atom(key), val}
       end)
 
@@ -36,7 +38,8 @@ defmodule Brando.Villain.Tags.Picture do
     <Brando.HTML.Images.picture src={@src} opts={@opts} />
     """
 
-    html = Phoenix.LiveViewTest.rendered_to_string(comp)
+    # Texts an editor wrote about the media: text to the entry's final Liquid pass
+    html = comp |> Phoenix.LiveViewTest.rendered_to_string() |> InertLiquid.encode()
 
     {[html], context}
   end

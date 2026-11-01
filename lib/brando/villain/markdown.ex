@@ -73,7 +73,7 @@ defmodule Brando.Villain.Markdown do
       context =
         entry
         |> Villain.get_base_context()
-        |> Villain.add_to_context("url", entry && Brando.Blueprint.URL.resolve(entry))
+        |> Context.assign("url", entry && Brando.Blueprint.URL.resolve(entry))
         |> put_template_flag(false)
 
       opts_map =
