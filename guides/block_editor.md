@@ -197,11 +197,14 @@ Besides `{% ref %}` and `{% headless_ref %}`:
 
 HEEx escapes what it prints; Liquid prints values as Brando hands them over:
 
-- `string` and `text` vars and globals arrive HTML-escaped (by key, in
+- Every var and global holding text arrives HTML-escaped, whatever its type
+  (`string`, `text`, `select`, `color`, `date`, `datetime`; by key, in
   `entries`, in table rows), as do `links` and the `link_url`/`link_text`
   filters: `{{ title }}` prints the text as typed, braces included (Liquid
   in it is not run), also in a double-quoted attribute; a comparison or
-  `truncate` sees the escaped text. Markup belongs in a `rich_text` var.
+  `truncate` sees the escaped text, so a `select` option compared in a
+  template holds no `&`, `<`, `>` or quotes. A colour prints as it is. Markup
+  belongs in a `rich_text` var.
 - `rich_text` vars and globals arrive sanitized, to print between tags.
 - `escape` never encodes a character reference twice; `url_encode`,
   `slugify` and `markdown` read an escaped var as the text it stands for.
@@ -272,7 +275,9 @@ Only a superuser (`Brando.Authorization.Boundary.superuser?/1`) changes an
 HTML ref's template and parameters, or an SVG ref's code, also in a media
 slot. The server holds every save to that (`Brando.Content.RefGuard`):
 markup another user sends is put back, and their other changes are kept. It
-also keeps each ref's type to what its module defines, for everyone. A copy
+also keeps each ref's type to what its module defines, for everyone, and only
+a superuser moves a saved block to another module, which holds the block's
+refs and vars to the new definition. A copy
 of a saved block keeps its markup, as long as a saved block of the same
 module holds that markup. The same holds when a non-superuser restores a
 revision, or saves while a superuser has unsaved markup changes in the
@@ -284,6 +289,24 @@ slot's settings.
 A project parser that overrides `html/2` gets the template, parameters and
 values in its data; call `Brando.Villain.Blocks.HtmlBlock.render/1` to fill
 them in.
+
+## What a var's definition holds
+
+A var's type, key and options belong to its definition: the module, the
+table template for a table row's var, or the global set. A block save holds
+them there (`Brando.Content.VarGuard`), for everyone: a saved var keeps its
+own, a new var takes its definition's, and a new var whose key has no
+definition is left out, so a copy of a block leaves behind a var its module no
+longer defines. Saving a module and resolving stale blocks change them on the
+server.
+
+A value is checked for its type: a colour, a date, a datetime, or one of a
+`select` var's options. A value stored before these checks stays until it
+changes, and a copy of a block leaves it empty.
+
+The Globals screen fills in values only. Setting up global sets
+(`/admin/config/global_sets`) takes a superuser in legacy mode, and the update
+permission on global sets in groups mode.
 
 ## Named block regions
 
