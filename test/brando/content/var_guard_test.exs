@@ -491,6 +491,9 @@ defmodule Brando.Content.VarGuardTest do
                "&amp;lt;b&amp;gt; &#123;&#123; x &#125;&#125;"
 
       assert render_link(c, link, "{{ link | link_url }}") == "/a?b=&amp;#106;"
+
+      assert render_link(c, link, "{% link link %}") ==
+               ~s(<a href="/a?b=j" class="link" >&amp;lt;b&amp;gt; &#123;&#123; x &#125;&#125;</a>)
     end
 
     test "HEEx reads a link as typed" do

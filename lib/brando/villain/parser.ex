@@ -1680,6 +1680,9 @@ defmodule Brando.Villain.Parser do
     Map.new(vars, &(&1 |> process_var() |> maybe_escape_var(&1, escape?)))
   end
 
+  # On a link var whose text `escape_link_var/1` escaped
+  @escaped_link :brando_escaped_link
+
   @doc """
   The text of a var as Liquid gets it, whatever its type but `rich_text`: HTML-escaped, so a
   `<` or a quote an editor typed is printed as text, and its braces
@@ -1695,25 +1698,24 @@ defmodule Brando.Villain.Parser do
   @doc """
   A link var as Liquid gets it: `{{ link.value }}` and `{{ link.link_text }}`
   print like any var's text. The `link_url` and `link_text` filters and
-  `{% link %}` read the text as typed (`typed_link_var/2`).
+  `{% link %}` read the text as typed (`typed_link_var/1`), which the key put
+  here tells apart from a link var that reached the template as stored.
   """
   def escape_link_var(%{type: :link} = link) do
     escaped = link |> Map.take([:value, :link_text]) |> Map.new(fn {key, text} -> {key, escape_var_value(text)} end)
-    Map.merge(link, escaped)
+    link |> Map.merge(escaped) |> Map.put(@escaped_link, true)
   end
 
   @doc """
-  The link var a Liquid template holds, with its address and text as typed, for
-  what checks the address and escapes once. A module's Markdown template holds
-  it as typed already.
+  A link var with its address and text as typed, for what checks the address
+  and escapes once.
   """
-  def typed_link_var(%Brando.Content.Var{type: :link} = link, context) do
-    if Brando.Villain.Markdown.template_context?(context),
-      do: link,
-      else: %{link | value: typed_text(link.value), link_text: typed_text(link.link_text)}
+  def typed_link_var(%{@escaped_link => true} = link) do
+    typed = link |> Map.take([:value, :link_text]) |> Map.new(fn {key, text} -> {key, typed_text(text)} end)
+    link |> Map.merge(typed) |> Map.delete(@escaped_link)
   end
 
-  def typed_link_var(link, _context), do: link
+  def typed_link_var(link), do: link
 
   defp typed_text(text) when is_binary(text), do: HtmlEntities.decode(text)
   defp typed_text(text), do: text
