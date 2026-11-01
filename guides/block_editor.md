@@ -297,7 +297,7 @@ table template for a table row's var, or the global set. A block save holds
 them there (`Brando.Content.VarGuard`), for everyone: a saved var keeps its
 own, a new var takes its definition's, and a new var whose key has no
 definition is left out, so a copy of a block leaves behind a var its module no
-longer defines. Saving a module and resolving stale blocks change them on the
+longer defines; restoring a revision brings it back. Saving a module and resolving stale blocks change them on the
 server.
 
 A value is checked for its type: a colour, a date, a datetime, or one of a

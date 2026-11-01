@@ -183,7 +183,12 @@ defmodule BrandoAdmin.VarGuardLiveTest do
         [entry_block] = Repo.all(Brando.Pages.Page.Blocks) |> Enum.filter(&(&1.entry_id == c.page.id))
         block = Repo.preload(Repo.get!(Brando.Content.Block, entry_block.block_id), [:vars, :refs])
         html = Brando.Villain.parse([%{block: block}], Repo.get!(Brando.Pages.Page, c.page.id))
-        refute html |> IO.iodata_to_binary() |> LazyHTML.from_fragment() |> LazyHTML.query("[onerror],script") |> Enum.any?()
+
+        refute html
+               |> IO.iodata_to_binary()
+               |> LazyHTML.from_fragment()
+               |> LazyHTML.query("[onerror],script")
+               |> Enum.any?()
       end
     end
   end

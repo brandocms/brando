@@ -161,6 +161,10 @@ defmodule Brando.Content.Block do
     cast_assoc(changeset, :block, with: &recursive_block_changeset(&1, &2, user, retained_slot_uids: retained_slots))
   end
 
+  def maybe_cast_recursive(changeset, :restore, user) do
+    cast_assoc(changeset, :block, with: &recursive_block_changeset(&1, &2, user, restore: true))
+  end
+
   def maybe_cast_recursive(changeset, false, user) do
     cast_assoc(changeset, :block, with: &block_changeset(&1, &2, user))
   end
@@ -174,13 +178,13 @@ defmodule Brando.Content.Block do
     attrs = drop_vanished_rows(attrs, block, @row_relations)
 
     block
-    |> cast_block(attrs, user)
+    |> cast_block(attrs, user, [])
     |> finalize_new_block(block)
   end
 
   # The block's own fields and rows, its module, refs and vars held to what
   # `user` may change (`Brando.Content.RefGuard`, `Brando.Content.VarGuard`)
-  defp cast_block(block, attrs, user) do
+  defp cast_block(block, attrs, user, opts) do
     changeset =
       block
       |> cast(attrs, @block_attrs)
@@ -188,7 +192,7 @@ defmodule Brando.Content.Block do
       |> validate_required(:uid)
       |> unique_constraint(:uid)
 
-    definitions = VarGuard.definitions(changeset)
+    definitions = VarGuard.definitions(changeset, opts)
 
     changeset
     |> cast_table_rows(user, definitions)
@@ -242,7 +246,7 @@ defmodule Brando.Content.Block do
     attrs = drop_vanished_rows(attrs, block, @row_relations)
 
     block
-    |> cast_block(attrs, user)
+    |> cast_block(attrs, user, opts)
     |> cast_assoc(:children, with: &recursive_block_changeset(&1, &2, user, opts))
     |> Brando.Content.BlockSlots.validate(opts)
     |> finalize_new_block(block)
@@ -270,7 +274,7 @@ defmodule Brando.Content.Block do
     )
   end
 
-  def table_row_changeset(table_row, attrs, position, user, definitions \\ %{}) do
+  def table_row_changeset(table_row, attrs, position, user, definitions \\ VarGuard.no_definitions()) do
     attrs = drop_vanished_rows(attrs, table_row, [:vars])
 
     table_row
@@ -329,7 +333,7 @@ defmodule Brando.Content.Block do
 
   def var_changeset(var, attrs, user), do: cast_var(var, attrs, user, nil)
 
-  # A var of a block or table row, held to `definitions`, its definitions by key
+  # A var of a block or table row, held to `definitions` (`VarGuard.hold/3`)
   defp block_var_changeset(var, attrs, position, user, definitions) do
     case cast_var(var, attrs, user, definitions) do
       %{action: :ignore} = refused -> refused
@@ -351,10 +355,19 @@ defmodule Brando.Content.Block do
         |> put_var_creator(user)
         |> cast_var_options(held)
         |> validate_media_fks()
-        |> Brando.Content.Var.ValidateValue.validate()
-        |> Brando.Color.validate_blueprint(Brando.Content.Var)
+        |> validate_var_value(definitions)
         |> Brando.Content.Var.SanitizeRichText.sanitize()
     end
+  end
+
+  # A restored revision's values were stored once, and print as text whatever
+  # they are; one that no longer fits must not stop the restore.
+  defp validate_var_value(changeset, %{restore?: true}), do: changeset
+
+  defp validate_var_value(changeset, _definitions) do
+    changeset
+    |> Brando.Content.Var.ValidateValue.validate()
+    |> Brando.Color.validate_blueprint(Brando.Content.Var)
   end
 
   defp cast_var_options(changeset, held) do

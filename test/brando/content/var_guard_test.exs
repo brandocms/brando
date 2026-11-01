@@ -43,7 +43,10 @@ defmodule Brando.Content.VarGuardTest do
       )
 
     module =
-      ProposalFixtures.module!(superuser, "Vars", "<p>{{ title }}|{{ body }}|{{ size }}|{{ tint }}|{{ day }}|{{ at }}</p>",
+      ProposalFixtures.module!(
+        superuser,
+        "Vars",
+        "<p>{{ title }}|{{ body }}|{{ size }}|{{ tint }}|{{ day }}|{{ at }}</p>",
         table_template_id: template.id,
         vars: [
           %{type: "string", key: "title", label: "Title"},
@@ -61,7 +64,12 @@ defmodule Brando.Content.VarGuardTest do
 
   defp new_block_params(c, extra) do
     Map.merge(
-      %{"uid" => Utils.generate_uid(), "type" => "module", "module_id" => c.module.id, "source" => "Elixir.Brando.Pages.Page.Blocks"},
+      %{
+        "uid" => Utils.generate_uid(),
+        "type" => "module",
+        "module_id" => c.module.id,
+        "source" => "Elixir.Brando.Pages.Page.Blocks"
+      },
       extra
     )
   end
@@ -306,13 +314,21 @@ defmodule Brando.Content.VarGuardTest do
           Brando.Content.create_module(
             Factory.params_for(:module, %{
               type: :liquid,
-              code: "<p>{{ v }}</p>{% for row in table_rows %}{{ row.v }}{% for c in row.vars %}{{ c.value }}{% endfor %}{% endfor %}"
+              code:
+                "<p>{{ v }}</p>{% for row in table_rows %}{{ row.v }}{% for c in row.vars %}{{ c.value }}{% endfor %}{% endfor %}"
             }),
             c.superuser
           )
 
         block = %{
-          block: %Block{type: :module, module_id: module.id, uid: Utils.generate_uid(), vars: [var], table_rows: [row], refs: []}
+          block: %Block{
+            type: :module,
+            module_id: module.id,
+            uid: Utils.generate_uid(),
+            vars: [var],
+            table_rows: [row],
+            refs: []
+          }
         }
 
         html = Brando.Villain.parse([block], %Brando.Pages.Page{})
@@ -322,7 +338,8 @@ defmodule Brando.Content.VarGuardTest do
     end
 
     test "a color prints as it is", c do
-      {:ok, module} = Brando.Content.create_module(Factory.params_for(:module, %{type: :liquid, code: "{{ v }}"}), c.superuser)
+      {:ok, module} =
+        Brando.Content.create_module(Factory.params_for(:module, %{type: :liquid, code: "{{ v }}"}), c.superuser)
 
       for value <- ["#ff00aa", "rgb(0 0 0 / 50%)", "oklch(50% 0.1 200)"] do
         var = %Var{type: :color, key: "v", label: %{"en" => "v"}, value: value}
@@ -332,7 +349,9 @@ defmodule Brando.Content.VarGuardTest do
     end
 
     test "rich text still prints as markup", c do
-      {:ok, module} = Brando.Content.create_module(Factory.params_for(:module, %{type: :liquid, code: "{{ v }}"}), c.superuser)
+      {:ok, module} =
+        Brando.Content.create_module(Factory.params_for(:module, %{type: :liquid, code: "{{ v }}"}), c.superuser)
+
       var = %Var{type: :rich_text, key: "v", label: %{"en" => "v"}, value: "<p>Hi</p>"}
       block = %{block: %Block{type: :module, module_id: module.id, uid: Utils.generate_uid(), vars: [var], refs: []}}
       assert [block] |> Brando.Villain.parse(%Brando.Pages.Page{}) |> IO.iodata_to_binary() =~ "<p>Hi</p>"
@@ -380,7 +399,11 @@ defmodule Brando.Content.VarGuardTest do
 
       params = %{
         "refs" => %{
-          "0" => %{"uid" => Utils.generate_uid(), "name" => name, "data" => %{"type" => "input", "data" => %{"value" => @handler}}}
+          "0" => %{
+            "uid" => Utils.generate_uid(),
+            "name" => name,
+            "data" => %{"type" => "input", "data" => %{"value" => @handler}}
+          }
         }
       }
 
@@ -471,7 +494,9 @@ defmodule Brando.Content.VarGuardTest do
       assert var(block, "size").value == "small"
       assert Enum.map(var(block, "size").options, & &1.value) == ["small", "large"]
       assert [%{vars: [%{key: "cell", value: "One", type: :string}]}] = block.table_rows
-      assert Enum.sort(Enum.map(block.vars, & &1.type)) == Enum.sort([:string, :rich_text, :select, :color, :date, :datetime])
+
+      assert Enum.sort(Enum.map(block.vars, & &1.type)) ==
+               Enum.sort([:string, :rich_text, :select, :color, :date, :datetime])
     end
 
     test "a duplicate saves, with a stored value it could not carry left empty", c do

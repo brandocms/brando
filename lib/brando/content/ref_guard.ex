@@ -99,7 +99,9 @@ defmodule Brando.Content.RefGuard do
     %{refs: saved} = Brando.Repo.preload(block, :refs)
     cast = Map.get(changeset.changes, :refs, [])
     cast_ids = MapSet.new(cast, & &1.data.id)
-    unmentioned = saved |> Enum.reject(&MapSet.member?(cast_ids, &1.id)) |> Enum.map(&%{Changeset.change(&1) | action: :update})
+
+    unmentioned =
+      saved |> Enum.reject(&MapSet.member?(cast_ids, &1.id)) |> Enum.map(&%{Changeset.change(&1) | action: :update})
 
     %{changeset | changes: Map.put(changeset.changes, :refs, cast ++ unmentioned)}
   end

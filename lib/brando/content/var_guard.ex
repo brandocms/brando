@@ -18,7 +18,8 @@ defmodule Brando.Content.VarGuard do
   refs, since only a crafted request or a stale view sends them. An invalid
   value is refused.
 
-  A module save (`Brando.Content.Blocks.sync_module/2`) and resolving a stale
+  Restoring a revision is the one write that keeps a var without a definition
+  (`hold/3`). A module save (`Brando.Content.Blocks.sync_module/2`) and resolving a stale
   block (`Brando.Content.StaleBlocks`) retype vars on the server, without
   casting. So does a superuser moving a saved block to another module
   (`follow_module/1`).
@@ -37,23 +38,22 @@ defmodule Brando.Content.VarGuard do
   key: `vars` for the block's, `rows` for its table rows'. Read only when the
   params hold a new var.
   """
-  @spec definitions(Changeset.t()) :: %{vars: map(), rows: map()}
-  def definitions(%Changeset{params: params, data: block} = changeset) do
+  @spec definitions(Changeset.t(), keyword()) :: %{vars: map(), rows: map()}
+  def definitions(%Changeset{params: params, data: block} = changeset, opts \\ []) do
+    restore? = Keyword.get(opts, :restore, false)
     new_vars? = new_var?(params["vars"], loaded(block, :vars))
     saved_cells = block |> loaded(:table_rows) |> Enum.flat_map(&loaded(&1, :vars))
     new_cells? = params["table_rows"] |> rows() |> Enum.any?(&new_var?(param(&1, "vars"), saved_cells))
+    module = if new_vars? or new_cells?, do: module(changeset)
 
-    if new_vars? or new_cells? do
-      module = module(changeset)
-
-      %{
-        vars: by_key((new_vars? && module && module.vars) || []),
-        rows: by_key((new_cells? && module && Proposals.table_vars(module)) || [])
-      }
-    else
-      %{vars: %{}, rows: %{}}
-    end
+    %{
+      vars: %{by_key: by_key((new_vars? && module && module.vars) || []), restore?: restore?},
+      rows: %{by_key: by_key((new_cells? && module && Proposals.table_vars(module)) || []), restore?: restore?}
+    }
   end
+
+  @doc "What a table row is held to when no block gave it definitions: no new var is taken."
+  def no_definitions, do: %{by_key: %{}, restore?: false}
 
   @doc """
   `var` as it may be cast from `attrs`, and the fields to leave out of the cast.
@@ -61,8 +61,11 @@ defmodule Brando.Content.VarGuard do
   A saved var keeps its type, key and options. A new var starts from the
   definition of its key in `definitions` (type, options and default value, so
   a default is not taken for a value an editor sent), or is `:refused` without
-  one. With `definitions` `nil`, for a caller that has none to give, a new var
-  is cast as it comes.
+  one. Restoring a revision (`restore?`) brings a var the module no longer
+  defines back as it was: History is how a leftover dropped by
+  `Brando.Content.StaleBlocks` returns, it renders nowhere, and revisions only
+  hold what a guarded save or the server wrote. With `definitions` `nil`, for a
+  caller that has none to give, a new var is cast as it comes.
   """
   @spec hold(term(), map(), map() | nil) :: {term(), [atom()]} | :refused
   def hold(var, attrs, definitions) do
@@ -73,8 +76,11 @@ defmodule Brando.Content.VarGuard do
       is_nil(definitions) ->
         {var, []}
 
-      definition = Map.get(definitions, to_string_or_nil(param(attrs, "key"))) ->
+      definition = Map.get(definitions.by_key, to_string_or_nil(param(attrs, "key"))) ->
         {seed(var, definition), [:type, :options]}
+
+      definitions.restore? ->
+        {var, []}
 
       true ->
         :refused
@@ -124,7 +130,10 @@ defmodule Brando.Content.VarGuard do
     definitions = by_key((module(changeset) || %{vars: []}).vars)
     cast = Map.get(changeset.changes, :vars, [])
     cast_ids = MapSet.new(cast, & &1.data.id)
-    unmentioned = saved |> Enum.reject(&MapSet.member?(cast_ids, &1.id)) |> Enum.map(&%{Changeset.change(&1) | action: :update})
+
+    unmentioned =
+      saved |> Enum.reject(&MapSet.member?(cast_ids, &1.id)) |> Enum.map(&%{Changeset.change(&1) | action: :update})
+
     vars = Enum.map(cast ++ unmentioned, &retype(&1, definitions))
 
     %{changeset | changes: Map.put(changeset.changes, :vars, vars)}
@@ -136,7 +145,7 @@ defmodule Brando.Content.VarGuard do
     definition = Map.get(definitions, Changeset.get_field(var, :key))
     type = Changeset.get_field(var, :type)
 
-    if saved?(var) and definition && definition.type != type do
+    if (saved?(var) and definition) && definition.type != type do
       var
       |> Changeset.put_change(:type, definition.type)
       |> Changeset.put_embed(:options, definition.options || [])

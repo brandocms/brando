@@ -831,11 +831,14 @@ Besides `{% ref %}` and `{% headless_ref %}`:
 
 HEEx escapes what it prints; Liquid prints values as Brando hands them over:
 
-- `string` and `text` vars and globals arrive HTML-escaped (by key, in
+- Every var and global holding text arrives HTML-escaped, whatever its type
+  (`string`, `text`, `select`, `color`, `date`, `datetime`; by key, in
   `entries`, in table rows), as do `links` and the `link_url`/`link_text`
   filters: `{{ title }}` prints the text as typed, braces included (Liquid
   in it is not run), also in a double-quoted attribute; a comparison or
-  `truncate` sees the escaped text. Markup belongs in a `rich_text` var.
+  `truncate` sees the escaped text, so a `select` option compared in a
+  template holds no `&`, `<`, `>` or quotes. A colour prints as it is. Markup
+  belongs in a `rich_text` var.
 - `rich_text` vars and globals arrive sanitized, to print between tags.
 - `escape` never encodes a character reference twice; `url_encode`,
   `slugify` and `markdown` read an escaped var as the text it stands for.
