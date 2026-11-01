@@ -57,7 +57,8 @@ defmodule Brando.Villain.TemplateAdapter do
 
   A row's `rich_text` vars are sanitized and, with `escape: true` (a Liquid
   template that renders HTML, not a module's Markdown template), its
-  `string` and `text` vars HTML-escaped, by key and in `row.vars` alike
+  other text, a link's address and text included, HTML-escaped, by key and
+  in `row.vars` alike
   (`Brando.Villain.Parser.process_vars/2`).
   """
   def simple_block(module, block, opts \\ []) do
@@ -99,8 +100,9 @@ defmodule Brando.Villain.TemplateAdapter do
   defp row_var(%{type: type, value: value} = var, _escape?) when type in [:rich_text, :html],
     do: %{var | value: Brando.RichText.render_html(value)}
 
-  # A link is read through `link_url` and `link_text`, which escape
-  defp row_var(%{type: type, value: value} = var, true) when is_binary(value) and type != :link,
+  defp row_var(%{type: :link} = var, true), do: Brando.Villain.Parser.escape_link_var(var)
+
+  defp row_var(%{value: value} = var, true) when is_binary(value),
     do: %{var | value: Brando.Villain.Parser.escape_var_value(value)}
 
   defp row_var(var, _escape?), do: var

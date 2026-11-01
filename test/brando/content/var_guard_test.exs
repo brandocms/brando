@@ -15,6 +15,8 @@ defmodule Brando.Content.VarGuardTest do
   alias Brando.Utils
   alias Ecto.Changeset
 
+  require Phoenix.LiveViewTest
+
   @payloads "test/fixtures/editor_sinks/payloads.json" |> File.read!() |> Jason.decode!()
   @handler @payloads["handler"]
   @crafted_types ~w(color select datetime date rich_text html boolean bogus)
@@ -350,7 +352,7 @@ defmodule Brando.Content.VarGuardTest do
             Factory.params_for(:module, %{
               type: :liquid,
               code:
-                "<p>{{ v }}</p>{% for row in table_rows %}{{ row.v }}{% for c in row.vars %}{{ c.value }}{% endfor %}{% endfor %}"
+                "<p>{{ v }}</p>{% for row in block.table_rows %}{{ row.v }}{% for c in row.vars %}{{ c.value }}{% endfor %}{% endfor %}"
             }),
             c.superuser
           )
@@ -406,6 +408,132 @@ defmodule Brando.Content.VarGuardTest do
       end
 
       assert Brando.Villain.raw_context(context, "globals")["set"]["select"] == @handler
+    end
+
+    defp link(value, text \\ "Text"),
+      do: %Var{type: :link, key: "link", label: %{"en" => "Link"}, link_type: :url, value: value, link_text: text}
+
+    # `template` printed by a module with one block var and one table row
+    defp render_link(c, link, template) do
+      {:ok, module} =
+        Brando.Content.create_module(Factory.params_for(:module, %{type: :liquid, code: template}), c.superuser)
+
+      block = %Block{
+        type: :module,
+        module_id: module.id,
+        uid: Utils.generate_uid(),
+        vars: [link],
+        table_rows: [%Brando.Content.TableRow{vars: [link]}],
+        refs: []
+      }
+
+      [%{block: block}] |> Brando.Villain.parse(%Brando.Pages.Page{}) |> IO.iodata_to_binary()
+    end
+
+    test "a link's value and text print inert when a template reads them directly", c do
+      link = link(@handler, @handler)
+
+      for template <- [
+            "{{ link.value }}",
+            "{{ link.link_text }}",
+            "{% for row in block.table_rows %}{{ row.link.value }}{% endfor %}",
+            "{% for row in block.table_rows %}{{ row.link.link_text }}{% endfor %}",
+            "{% for row in block.table_rows %}{% for cell in row.vars %}{{ cell.value }}{% endfor %}{% endfor %}",
+            "{% for row in block.table_rows %}{% for cell in row.vars %}{{ cell.link_text }}{% endfor %}{% endfor %}"
+          ] do
+        html = render_link(c, link, template)
+        assert active(html) == 0, template
+        assert html =~ "&lt;", template
+      end
+    end
+
+    for {name, read} <- [
+          {"on the block", "link"},
+          {"by key in a row", "row.link"},
+          {"in row.vars", "cell"}
+        ] do
+      test "a link #{name} prints the same through its filters and tag", c do
+        wrap = fn template ->
+          "{% for row in block.table_rows %}{% for cell in row.vars %}#{template}{% endfor %}{% endfor %}"
+        end
+
+        read = unquote(read)
+        link = link("https://shop.example/?a=1&b=2", "Rooms < suites & more")
+        url = "https://shop.example/?a=1&amp;b=2"
+        text = "Rooms &lt; suites &amp; more"
+
+        assert render_link(c, link, wrap.("{{ #{read} | link_url }}")) == url
+        assert render_link(c, link, wrap.("{{ #{read} | link_text }}")) == text
+
+        assert render_link(c, link, wrap.("{% link #{read} %}")) ==
+                 ~s(<a href="#{url}" class="link" >#{text}</a>)
+      end
+
+      test "a link #{name} still drops a script address", c do
+        wrap = fn template ->
+          "{% for row in block.table_rows %}{% for cell in row.vars %}#{template}{% endfor %}{% endfor %}"
+        end
+
+        read = unquote(read)
+
+        for address <- ["javascript:document.title='x'", "&#106;avascript:document.title='x'"] do
+          link = link(address)
+          assert render_link(c, link, wrap.("[{{ #{read} | link_url }}]")) == "[]"
+          assert render_link(c, link, wrap.("{% link #{read} %}")) =~ ~s(<a href="" class="link" >Text</a>)
+        end
+      end
+    end
+
+    test "a link's text as typed survives its filters and tag, a reference included", c do
+      link = link("/a?b=&#106;", "&lt;b&gt; {{ x }}")
+
+      assert render_link(c, link, "{{ link | link_text }}") ==
+               "&amp;lt;b&amp;gt; &#123;&#123; x &#125;&#125;"
+
+      assert render_link(c, link, "{{ link | link_url }}") == "/a?b=&amp;#106;"
+    end
+
+    test "HEEx reads a link as typed" do
+      link = link("/a?b=1&c=2", @handler)
+      assert %{"link" => %{value: "/a?b=1&c=2", link_text: @handler}} = Brando.Villain.Parser.process_vars([link])
+
+      module = %{class: nil}
+      row = %Brando.Content.TableRow{vars: [link]}
+      block = %Block{uid: "x", table_rows: [row]}
+      [row] = Brando.Villain.TemplateAdapter.simple_block(module, block).table_rows
+      assert %{value: "/a?b=1&c=2", link_text: @handler} = hd(row.vars)
+
+      html =
+        Phoenix.LiveViewTest.render_component(&Brando.Villain.Components.entry_link/1, %{
+          var: %{link | link_text: "Rooms"},
+          href: nil,
+          entry: nil,
+          field: :url,
+          class: nil,
+          inner_block: []
+        })
+
+      assert html =~ ~s(href="/a?b=1&amp;c=2")
+    end
+
+    test "a Markdown template reads a link's filters as it did", c do
+      link = link("/a?b=&amp;", "A &amp; B")
+      block = %Block{type: :module, uid: Utils.generate_uid(), vars: [link], refs: []}
+
+      {:ok, module} =
+        Brando.Content.create_module(
+          Factory.params_for(:module, %{
+            type: :liquid,
+            code: "<p>html</p>",
+            markdown_code: "{{ link | link_url }}|{{ link | link_text }}|{% link link %}"
+          }),
+          c.superuser
+        )
+
+      markdown = Brando.Villain.Markdown.render([%{block: %{block | module_id: module.id}}], %Brando.Pages.Page{})
+      markdown = IO.iodata_to_binary(markdown)
+      assert markdown =~ "/a?b=&amp;amp;|A &amp;amp; B|"
+      assert markdown =~ ~s(<a href="/a?b=&amp;" class="link" >A &amp;amp; B</a>)
     end
 
     test "an input ref prints its value as text" do

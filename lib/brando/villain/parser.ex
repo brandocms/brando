@@ -1692,10 +1692,38 @@ defmodule Brando.Villain.Parser do
 
   def escape_var_value(value), do: value
 
+  @doc """
+  A link var as Liquid gets it: `{{ link.value }}` and `{{ link.link_text }}`
+  print like any var's text. The `link_url` and `link_text` filters and
+  `{% link %}` read the text as typed (`typed_link_var/2`).
+  """
+  def escape_link_var(%{type: :link} = link) do
+    escaped = link |> Map.take([:value, :link_text]) |> Map.new(fn {key, text} -> {key, escape_var_value(text)} end)
+    Map.merge(link, escaped)
+  end
+
+  @doc """
+  The link var a Liquid template holds, with its address and text as typed, for
+  what checks the address and escapes once. A module's Markdown template holds
+  it as typed already.
+  """
+  def typed_link_var(%Brando.Content.Var{type: :link} = link, context) do
+    if Brando.Villain.Markdown.template_context?(context),
+      do: link,
+      else: %{link | value: typed_text(link.value), link_text: typed_text(link.link_text)}
+  end
+
+  def typed_link_var(link, _context), do: link
+
+  defp typed_text(text) when is_binary(text), do: HtmlEntities.decode(text)
+  defp typed_text(text), do: text
+
   # By exclusion: only sanitized rich text prints as markup, so a type added
   # later, or a value stored before it was checked, is text.
   defp maybe_escape_var({key, value}, %{type: type}, true) when is_binary(value) and type not in [:rich_text, :html],
     do: {key, escape_var_value(value)}
+
+  defp maybe_escape_var({key, %{type: :link} = link}, _var, true), do: {key, escape_link_var(link)}
 
   defp maybe_escape_var(processed, _var, _escape?), do: processed
 
