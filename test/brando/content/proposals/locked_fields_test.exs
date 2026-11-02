@@ -39,7 +39,12 @@ defmodule Brando.Content.Proposals.LockedFieldsTest do
   end
 
   defp note do
-    Repo.insert!(%Note{title: "Saved", slug: "saved-#{System.unique_integer([:positive])}", subtitle: "Stored", status: :draft})
+    Repo.insert!(%Note{
+      title: "Saved",
+      slug: "saved-#{System.unique_integer([:positive])}",
+      subtitle: "Stored",
+      status: :draft
+    })
   end
 
   defp codes(proposal), do: Enum.map(proposal.problems, & &1.code)
@@ -69,7 +74,9 @@ defmodule Brando.Content.Proposals.LockedFieldsTest do
       test "a status a form locks is refused too" do
         user = editor(unquote(mode))
 
-        assert {:ok, proposal} = Proposals.prepare([%SetFields{target: {Note, note().id}, fields: %{status: "disabled"}}], user)
+        assert {:ok, proposal} =
+                 Proposals.prepare([%SetFields{target: {Note, note().id}, fields: %{status: "disabled"}}], user)
+
         assert :protected_field in codes(proposal)
       end
 
@@ -85,7 +92,9 @@ defmodule Brando.Content.Proposals.LockedFieldsTest do
         user = editor(unquote(mode))
         note = note()
 
-        assert {:ok, proposal} = Proposals.propose([%SetFields{target: {Note, note.id}, fields: %{title: "Proposed"}}], user)
+        assert {:ok, proposal} =
+                 Proposals.propose([%SetFields{target: {Note, note.id}, fields: %{title: "Proposed"}}], user)
+
         assert proposal.problems == []
         assert {:ok, _} = approve_and_apply(proposal, user)
 
@@ -96,7 +105,9 @@ defmodule Brando.Content.Proposals.LockedFieldsTest do
       test "a superuser's proposal still writes one", %{superuser: user} do
         note = note()
 
-        assert {:ok, proposal} = Proposals.propose([%SetFields{target: {Note, note.id}, fields: %{subtitle: "Proposed"}}], user)
+        assert {:ok, proposal} =
+                 Proposals.propose([%SetFields{target: {Note, note.id}, fields: %{subtitle: "Proposed"}}], user)
+
         assert proposal.problems == []
         assert {:ok, _} = approve_and_apply(proposal, user)
         assert Repo.get!(Note, note.id).subtitle == "Proposed"
@@ -116,7 +127,9 @@ defmodule Brando.Content.Proposals.LockedFieldsTest do
     %{superuser: user} = put_mode(:legacy)
     note = note()
 
-    assert {:ok, proposal} = Proposals.propose([%SetFields{target: {Note, note.id}, fields: %{subtitle: "Proposed"}}], user)
+    assert {:ok, proposal} =
+             Proposals.propose([%SetFields{target: {Note, note.id}, fields: %{subtitle: "Proposed"}}], user)
+
     assert {:ok, _} = Proposals.approve(proposal.id, proposal.version, user)
 
     demoted = user |> Ecto.Changeset.change(role: :editor) |> Repo.update!()

@@ -145,7 +145,9 @@ defmodule Brando.Content.TransferLockedFieldsTest do
       assert :path in held and :width in held and :cdn in held
 
       locked = Brando.SyncTest.Article.__form__(:locked)
-      assert LockedFields.held_keys(Brando.SyncTest.Article, locked) == LockedFields.keys(Brando.SyncTest.Article, locked, nil)
+
+      assert LockedFields.held_keys(Brando.SyncTest.Article, locked) ==
+               LockedFields.keys(Brando.SyncTest.Article, locked, nil)
     end
   end
 
