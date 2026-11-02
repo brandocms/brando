@@ -92,7 +92,10 @@ defmodule Brando.Videos.ProviderHoldings do
     if repo.in_transaction?() do
       with :ok <- acquire("pg_try_advisory_xact_lock", key, deadline), do: fun.()
     else
-      repo.checkout(fn -> with_session_lock(repo, key, deadline, fun) end)
+      # No checkout deadline: the pool would close the connection when one
+      # ran out, and the session's lock with it, while `fun` still runs. The
+      # wait has its own limit, and the provider clients their own timeouts.
+      repo.checkout(fn -> with_session_lock(repo, key, deadline, fun) end, timeout: :infinity)
     end
   end
 

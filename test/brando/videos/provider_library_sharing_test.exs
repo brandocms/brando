@@ -13,6 +13,7 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
   alias Brando.Tenant
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
+  alias Brando.Videos.ProviderHoldings
   alias Brando.Videos.ProviderLibrary
   alias Brando.Videos.Uploader
   alias Brando.Videos.Uploaders.Bunny
@@ -21,6 +22,11 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
   alias Brando.Videos.Uploaders.Vimeo
   alias Brando.Videos.Video
   alias Ecto.Adapters.SQL
+
+  # A repo of its own, to give the pool a short checkout deadline.
+  defmodule ShortCheckoutRepo do
+    use Ecto.Repo, otp_app: :brando, adapter: Ecto.Adapters.Postgres
+  end
 
   setup do
     put_test_env(Mux, [])
@@ -374,6 +380,28 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
 
       assert_received {:vimeo, "DELETE", "/videos/1"}
     end
+
+    # A pool drops a checkout that outlasts its deadline (15 s by default, the
+    # repo's `:timeout`) and closes its connection, which ends the session's
+    # lock. Here the deadline is 200 ms.
+    test "the lock is held for as long as the call takes, past the pool's checkout deadline", %{lock_conn: conn} do
+      use_short_checkout_repo()
+
+      assert ProviderHoldings.with_video_lock("vimeo.video_id", "slow", fn ->
+               Process.sleep(500)
+               lock_free?(conn, "vimeo.video_id", "slow")
+             end) == false
+
+      assert lock_free?(conn, "vimeo.video_id", "slow")
+    end
+
+    test "a wait past the pool's checkout deadline is still :busy", %{lock_conn: conn} do
+      use_short_checkout_repo()
+      put_test_env(Brando.Videos.ProviderHoldings, lock_timeout: 500)
+      hold_lock(conn, "vimeo.video_id", "slow")
+
+      assert {:error, :busy} = ProviderHoldings.with_video_lock("vimeo.video_id", "slow", fn -> :ran end)
+    end
   end
 
   describe "an environment being created or copied" do
@@ -607,6 +635,12 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       %{rows: [[false]]} ->
         false
     end
+  end
+
+  defp use_short_checkout_repo do
+    config = Keyword.drop(Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name])
+    start_supervised!({ShortCheckoutRepo, Keyword.merge(config, pool_size: 2, timeout: 200)})
+    put_test_env(:repo_module, ShortCheckoutRepo)
   end
 
   defp lock_key(path, remote_id), do: "brando:provider_video:#{path}:#{remote_id}"
