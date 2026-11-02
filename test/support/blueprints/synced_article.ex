@@ -264,6 +264,29 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
+    # Related entries, open (`:entries`) and locked for everyone
+    # (`:locked_entries`, EntriesInputMaskingTest): a selected entry the
+    # editor may not read keeps its place without its title.
+    form :entries do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+          input :related_entries, :entries, sources: [{Brando.Pages.Page, %{}}, {__MODULE__, %{}}]
+        end
+      end
+    end
+
+    form :locked_entries do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+          input :related_entries, :entries, sources: [{Brando.Pages.Page, %{}}, {__MODULE__, %{}}], readonly: true
+        end
+      end
+    end
+
     # Media inputs, open (`:media`), locked for everyone (`:locked_media`)
     # and for anyone but a superuser (`:superuser_media`,
     # LockedMediaDeliveriesTest): a locked one takes no asset, however it is

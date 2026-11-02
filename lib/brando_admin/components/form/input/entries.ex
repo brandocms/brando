@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Authorization.Boundary
   alias Brando.Blueprint.Identifier
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Content.Identifier, as: IdentifierRow
@@ -66,13 +67,29 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
      |> refresh_filters(wanted_schemas)}
   end
 
+  # The selected entries the editor may read, in the order of the rows. The
+  # changeset preloads each row's identifier with no read policy applied, so
+  # a preloaded one is named only if `Boundary.readable_entries/1` allows it;
+  # one fetched by id comes through `Boundary.identifiers/1`, as the picker's
+  # do. A row the editor may not read stays out of the list and shows masked.
+  # Rows already decided are not checked again (`masked_identifier_ids`).
   defp assign_selected_identifiers(socket, field) do
     associations = Changeset.get_assoc(field.form.source, field.field) |> Enum.reject(&(&1.action == :replace))
-    cached = List.wrap(socket.assigns[:selected_identifiers]) ++ List.wrap(socket.assigns[:available_identifiers])
-    loaded = Enum.map(associations, &Changeset.get_field(&1, :identifier))
-    by_id = (cached ++ loaded) |> Enum.filter(&match?(%{id: id} when not is_nil(id), &1)) |> Map.new(&{&1.id, &1})
     ids = Enum.map(associations, &Changeset.get_field(&1, :identifier_id)) |> Enum.reject(&is_nil/1)
-    missing = Enum.reject(ids, &Map.has_key?(by_id, &1))
+    masked = socket.assigns[:masked_identifier_ids] || MapSet.new()
+    cached = List.wrap(socket.assigns[:selected_identifiers]) ++ List.wrap(socket.assigns[:available_identifiers])
+    by_id = Map.new(cached, &{&1.id, &1})
+    unknown = Enum.reject(ids, &(Map.has_key?(by_id, &1) or MapSet.member?(masked, &1)))
+
+    preloaded =
+      for association <- associations,
+          %{id: id, schema: _, entry_id: _} = identifier <- [Changeset.get_field(association, :identifier)],
+          id in unknown,
+          do: identifier
+
+    readable = Boundary.readable_entries(Enum.map(preloaded, &{&1.schema, &1.entry_id}))
+    by_id = Map.merge(by_id, Map.new(Enum.filter(preloaded, &({&1.schema, &1.entry_id} in readable)), &{&1.id, &1}))
+    missing = unknown -- Enum.map(preloaded, & &1.id)
 
     by_id =
       if missing == [] do
@@ -82,7 +99,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
         Map.merge(by_id, Map.new(identifiers, &{&1.id, &1}))
       end
 
-    assign(socket, :selected_identifiers, Enum.map(ids, &Map.get(by_id, &1)) |> Enum.reject(&is_nil/1))
+    selected = Enum.map(ids, &Map.get(by_id, &1))
+
+    socket
+    |> assign(:selected_identifiers, Enum.reject(selected, &is_nil/1))
+    |> assign(:masked_identifier_ids, MapSet.union(masked, MapSet.new(Enum.reject(unknown, &Map.has_key?(by_id, &1)))))
+    |> assign(:selected_text, Enum.map_join(selected, ", ", &((&1 && &1.title) || IdentifierRow.masked_label())))
   end
 
   defp refresh_filters(socket, wanted_schemas) do
@@ -158,7 +180,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       >
         <:value>
           <%= if @has_entries do %>
-            {Enum.map_join(@selected_identifiers, ", ", & &1.title)}
+            {@selected_text}
           <% else %>
             {gettext("No selected entries")}
           <% end %>
@@ -565,44 +587,48 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   slot :inner_block
   slot :delete
 
-  # shown as selected
+  # shown as selected: named from `available_identifiers`, the selected
+  # entries the editor may read, never from the row's preloaded identifier.
+  # Any other row is masked, and keeps its inputs, so a save keeps the link
+  # and the editor may still move or remove it.
   def assoc_identifier(%{assoc_identifier: assoc_identifier} = assigns) do
-    changeset = assoc_identifier.source
-    identifier_changeset = Changeset.get_assoc(changeset, :identifier)
-
-    identifier =
-      if identifier_changeset == nil do
-        identifier_id = Changeset.get_field(changeset, :identifier_id)
-        Enum.find(assigns.available_identifiers, &(&1.id == identifier_id))
-      else
-        identifier_changeset.data
-      end
+    identifier_id = Changeset.get_field(assoc_identifier.source, :identifier_id)
+    identifier = Enum.find(assigns.available_identifiers, &(&1.id == identifier_id))
 
     assigns =
       assigns
       |> assign(:identifier, identifier)
-      |> assign(:has_cover?, Map.has_key?(identifier, :cover))
+      |> assign(:has_cover?, identifier && Map.has_key?(identifier, :cover))
 
     ~H"""
     <article
-      data-id={@identifier.id}
-      data-label={Brando.Content.Identifier.title_text(@identifier)}
+      data-id={@identifier && @identifier.id}
+      data-label={if @identifier, do: Brando.Content.Identifier.title_text(@identifier), else: IdentifierRow.masked_label()}
       class={[
         "draggable",
-        "identifier"
+        "identifier",
+        !@identifier && "masked"
       ]}
-      phx-click={@select}
-      phx-value-param={@identifier.id}
+      phx-click={@identifier && @select}
+      phx-value-param={@identifier && @identifier.id}
     >
       <Input.hidden field={@assoc_identifier[:parent_id]} />
       <Input.hidden field={@assoc_identifier[:identifier_id]} />
 
-      <.identifier_content draggable has_cover?={@has_cover?} identifier={@identifier}>
-        <:delete>
-          {render_slot(@delete)}
-        </:delete>
-        {render_slot(@inner_block)}
-      </.identifier_content>
+      <%= if @identifier do %>
+        <.identifier_content draggable has_cover?={@has_cover?} identifier={@identifier}>
+          <:delete>
+            {render_slot(@delete)}
+          </:delete>
+          {render_slot(@inner_block)}
+        </.identifier_content>
+      <% else %>
+        <IdentifierRow.masked draggable>
+          <:delete>
+            {render_slot(@delete)}
+          </:delete>
+        </IdentifierRow.masked>
+      <% end %>
     </article>
     """
   end

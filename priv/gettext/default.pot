@@ -2188,6 +2188,11 @@ msgstr ""
 msgid "An entry is unpublished at its scheduled time."
 msgstr ""
 
+#: lib/brando_admin/components/content/identifier.ex
+#, elixir-autogen, elixir-format
+msgid "An entry you can't view"
+msgstr ""
+
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format

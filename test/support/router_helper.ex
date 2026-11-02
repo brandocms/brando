@@ -421,6 +421,8 @@ defmodule BrandoIntegrationWeb.Router do
     live "/articles/update/:entry_id/media", BrandoAdmin.SyncTest.ArticleMediaFormLive, :media
     live "/articles/update/:entry_id/locked_media", BrandoAdmin.SyncTest.ArticleMediaFormLive, :locked_media
     live "/articles/update/:entry_id/superuser_media", BrandoAdmin.SyncTest.ArticleMediaFormLive, :superuser_media
+    live "/articles/update/:entry_id/entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :entries
+    live "/articles/update/:entry_id/locked_entries", BrandoAdmin.SyncTest.ArticleMediaFormLive, :locked_entries
     live "/articles/update/:entry_id/notes", BrandoAdmin.SyncTest.ArticleNotesFormLive, :update
     live "/articles/update/:entry_id/author", BrandoAdmin.SyncTest.ArticleAuthorFormLive, :update
     live "/articles/update/:entry_id/elsewhere", BrandoAdmin.SyncTest.ArticleElsewhereFormLive, :update
