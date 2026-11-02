@@ -241,6 +241,7 @@ defmodule Brando.Users.AccountLifecycleTest do
       assert_receive %Broadcast{event: "toast", payload: %{payload: "You do not have permission" <> _}}, 2_000
       refute_received %Broadcast{event: "toast", payload: %{payload: "Error deleting user" <> _}}
       refute Repo.get!(User, target.id).deleted_at
+      refute has_element?(view, ".transfer-content-modal")
     end
 
     test "a demoted admin's open listing may not deactivate an admin", %{current_user: superuser} do

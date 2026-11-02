@@ -214,15 +214,10 @@ defmodule BrandoAdmin.Users.UserListLive do
       {:ok, _} ->
         send(self(), {:toast, gettext("User deleted and content transferred.")})
         BrandoAdmin.LiveView.Listing.update_list_entries(Users.User)
-
-        {:noreply,
-         socket
-         |> assign(:deleting_user, nil)
-         |> assign(:transfer_to_user_id, nil)
-         |> assign(:user_select_open, false)}
+        {:noreply, close_transfer_delete(socket)}
 
       {:error, :forbidden} ->
-        {:noreply, refused(socket)}
+        {:noreply, socket |> refused() |> close_transfer_delete()}
 
       {:error, reason} ->
         send(self(), {:toast, gettext("Error deleting user: %{reason}", reason: inspect(reason))})
@@ -230,13 +225,7 @@ defmodule BrandoAdmin.Users.UserListLive do
     end
   end
 
-  def handle_event("cancel_delete", _, socket) do
-    {:noreply,
-     socket
-     |> assign(:deleting_user, nil)
-     |> assign(:transfer_to_user_id, nil)
-     |> assign(:user_select_open, false)}
-  end
+  def handle_event("cancel_delete", _, socket), do: {:noreply, close_transfer_delete(socket)}
 
   # On behalf of the signed-in user, who must be allowed to update users
   # (`BrandoAdmin.Authorization` maps both events to :update).
@@ -267,6 +256,13 @@ defmodule BrandoAdmin.Users.UserListLive do
     |> assign(:transfer_to_user_id, nil)
     |> assign(:available_users, available_users)
     |> assign(:content_summary, content_summary)
+    |> assign(:user_select_open, false)
+  end
+
+  defp close_transfer_delete(socket) do
+    socket
+    |> assign(:deleting_user, nil)
+    |> assign(:transfer_to_user_id, nil)
     |> assign(:user_select_open, false)
   end
 
