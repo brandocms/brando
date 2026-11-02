@@ -96,7 +96,9 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
           ngettext(
             "It is used in one place: %{places}.",
             "It is used in %{count} places: %{places}.",
-            length(usages) + hidden, places: to_sentence(links))
+            length(usages) + hidden,
+            places: to_sentence(links)
+          )
     end
   end
 
