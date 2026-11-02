@@ -122,6 +122,17 @@ defmodule Brando.Files.ReplacementTest do
 
       assert {:ok, :server} = Replacement.initiate(file.id, meta)
     end
+
+    # An upload stores `.jpeg` as `.jpg`, whatever the config
+    test "takes .jpeg for a stored .jpg", ctx do
+      for opts <- [[slugify_filename: true], [slugify_filename: false], [random_filename: true]] do
+        put_file_config(opts)
+        file = insert_file(ctx.user, "photo.jpg")
+        meta = %{name: "photo.JPEG", size: 20, type: "image/jpeg"}
+
+        assert {:ok, :server} = Replacement.initiate(file.id, meta), inspect(opts)
+      end
+    end
   end
 
   defp put_file_config(opts) do

@@ -126,14 +126,19 @@ defmodule Brando.Files.Replacement do
   defp extension(name), do: name |> Path.extname() |> String.downcase()
 
   # The stored name was made from the client's by the config, as in
-  # `Brando.Uploads.Store`: slugged, unless a random name kept the extension.
-  # A replacement's extension is compared after the same change.
+  # `Brando.Uploads.Store`: slugged, unless a random name kept the extension,
+  # and `.jpeg` written `.jpg`. A replacement's extension is compared after the
+  # same change.
   defp stored_extension(name, cfg) do
+    name = Path.basename(name)
+
     if Map.get(cfg, :slugify_filename, false) and not Map.get(cfg, :random_filename, false) do
-      name |> Path.basename() |> Utils.slugify_filename() |> extension()
+      Utils.slugify_filename(name)
     else
-      extension(name)
+      name
     end
+    |> Utils.ensure_correct_extension()
+    |> extension()
   end
 
   defp destination(file, cfg) do
