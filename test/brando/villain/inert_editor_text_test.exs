@@ -1496,6 +1496,23 @@ defmodule Brando.Villain.InertEditorTextTest do
       end
     end
 
+    @tag :capture_log
+    test "a brace stays open through an output or tag that prints nothing", %{user: user} do
+      for code <- [
+            ~S({{ "{" }}{{ missing }}{{ entry.title | raw }}),
+            ~S({{ "{" }}{% capture unused %}{{ "x" }}{% endcapture %}{{ entry.title | raw }}),
+            ~S({{ "{" }}{% if false %}x{% endif %}{{ entry.title | raw }}),
+            ~S({{ "{" }}{% assign a = "x" %}{{ entry.title }}),
+            ~S({{ "{" }}{% if true %}{% endif %}{{ entry.title }})
+          ],
+          value <- ["{ 1 | plus: 41 }}", "% if true %}42{% endif %}"] do
+        html = render(block(module!(user, code), []), %Page{title: value, language: :en})
+
+        refute html =~ "Error parsing", "#{code} with #{value}: #{html}"
+        assert html =~ ~r/plus: 41|if true/, "#{code} ran #{value}: #{html}"
+      end
+    end
+
     test "a literal brace keeps JSON printed through raw working", %{user: user} do
       var = %Var{key: "json", label: "J", type: :string, value: ~s({"b":1})}
       key = %Var{key: "key", label: "K", type: :string, value: "k"}
@@ -1506,7 +1523,11 @@ defmodule Brando.Villain.InertEditorTextTest do
             {~S(<script>{{ "{" }}{{ "x" }}{{ json | raw }}</script>), ~S(<script>{x{"b":1}</script>)},
             {~S(<script>{{ json | raw }}{{ json | raw }}</script>), ~S(<script>{"b":1}{"b":1}</script>)},
             {~S(<script>{{ "{" }}"a": 1}{% if true %}{{ json | raw }}{% endif %}</script>),
-             ~S(<script>{"a": 1}{"b":1}</script>)}
+             ~S(<script>{"a": 1}{"b":1}</script>)},
+            {~S(<script>{{ "{" }}{% if true %}"a": {% endif %}{{ json | raw }}}</script>),
+             ~S(<script>{"a": {"b":1}}</script>)},
+            {~S[<script>{{ "{" }}{% for i in (1..1) %}"a": {% endfor %}{{ json | raw }}}</script>],
+             ~S(<script>{"a": {"b":1}}</script>)}
           ] do
         assert render(block(module!(user, code), vars: [var, key])) == expected, code
       end

@@ -1,20 +1,22 @@
 defmodule Brando.Villain.Tags.Output do
   @moduledoc """
-  Liquid's `{{ x }}` and `{% echo x %}`, rendered by Liquex's own tags, with
-  the start of what they print closed (`Brando.Villain.InertLiquid.close_delimiter/1`)
-  where the output printed right before it ended in a `{`.
+  Renders each tag of a template, `{{ x }}` and `{% echo x %}` included, with
+  its own renderer, and closes the start of what it prints
+  (`Brando.Villain.InertLiquid.close_delimiter/1`) where the template printed a
+  `{` right before it.
 
   A template writes a brace right before a value with `{{ "{" }}{{ x }}`. A
   value starting with `%` or `{` would make a Liquid delimiter with it, which
-  the final pass runs or fails to parse. Only a value right after such an
-  output is closed, with no text of the template between them, so a template
+  the final pass runs or fails to parse. Only what is printed right after such
+  a brace is closed, with no text of the template between them, so a template
   printing JSON after a brace and some text (`{{ "{" }}"a": {{ json | raw }}}`)
   keeps it.
 
-  The parser marks each output with whether template text comes right before
-  and after it (`mark_joins/5`). The output before it, in a loop's last pass
-  or before a tag, is known only when rendering: it is kept in the context's
-  private data.
+  The parser wraps each tag in this one, marked with whether template text
+  comes right before and after it (`mark_joins/5`). Whether what was printed
+  last ends in a `{` is kept in the context's private data: a tag that prints
+  something sets it from its output, one that prints nothing (an empty value,
+  `assign`, `capture`) leaves it as it was.
   """
 
   alias Brando.Villain.InertLiquid
@@ -22,11 +24,10 @@ defmodule Brando.Villain.Tags.Output do
   alias Liquex.Context
 
   @open :brando_output_open_brace
-  @outputs [Liquex.Tag.ObjectTag, Liquex.Tag.EchoTag]
 
   @doc """
   A `post_traverse` for a document's nodes, in the reverse order NimbleParsec
-  gives them: each output's tag in this module, with its neighbours.
+  gives them: each tag in this one, with its neighbours.
   """
   def mark_joins(rest, nodes, context, _line, _offset) do
     {rest, nodes |> Enum.reverse() |> mark([]) |> Enum.reverse(), context}
@@ -34,7 +35,7 @@ defmodule Brando.Villain.Tags.Output do
 
   defp mark([], _previous), do: []
 
-  defp mark([{{:tag, tag}, contents} | rest], previous) when tag in @outputs do
+  defp mark([{{:tag, tag}, contents} | rest], previous) do
     node =
       {{:tag, __MODULE__},
        [
@@ -50,19 +51,40 @@ defmodule Brando.Villain.Tags.Output do
   defp mark([node | rest], _previous), do: [node | mark(rest, [node])]
 
   def render([tag: tag, contents: contents, after_text: after_text?, before_text: before_text?], context) do
-    {output, context} = tag.render(contents, context)
-    output = IO.iodata_to_binary(output)
+    open? = not after_text? and open?(context)
 
+    case tag.render(contents, context) do
+      {output, %Context{} = rendered} -> printed(IO.iodata_to_binary(output), rendered, open?, before_text?)
+      # `break` and `continue`, which the loop around them handles
+      other -> other
+    end
+  end
+
+  @doc """
+  A parsed document with each tag as Liquex's own grammar gives it, without
+  this one around it: for comparing a document's nodes.
+  """
+  def unwrap({{:tag, __MODULE__}, [tag: tag, contents: contents, after_text: _, before_text: _]}),
+    do: {{:tag, tag}, unwrap(contents)}
+
+  def unwrap(list) when is_list(list), do: Enum.map(list, &unwrap/1)
+  def unwrap({key, value}), do: {unwrap(key), unwrap(value)}
+  def unwrap(other), do: other
+
+  @doc "`context` for a document rendered on its own, with nothing printed before it."
+  def reset(%Context{} = context), do: put_open(context, false)
+
+  # Nothing reached the page: what was printed before still ends it
+  defp printed("", context, open?, _before_text?), do: {"", put_open(context, open?)}
+
+  defp printed(output, context, open?, before_text?) do
     output =
-      if not after_text? and open?(context) and not Markdown.template_context?(context),
+      if open? and not Markdown.template_context?(context),
         do: InertLiquid.close_delimiter(output),
         else: output
 
     {output, put_open(context, not before_text? and String.ends_with?(output, "{"))}
   end
-
-  @doc "`context` for a document rendered on its own, with no output before it."
-  def reset(%Context{} = context), do: put_open(context, false)
 
   defp open?(%Context{private: private}), do: Map.get(private, @open, false)
 

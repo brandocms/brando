@@ -763,21 +763,21 @@ defmodule Brando.Villain.Filters do
       text
       |> String.replace(["&#123;", "&#125;"], &if(&1 == "&#123;", do: @open_brace_mark, else: @close_brace_mark))
       |> fun.()
-      |> then(fn
-        result when is_binary(result) ->
-          String.replace(
-            result,
-            [@open_brace_mark, @close_brace_mark],
-            &if(&1 == @open_brace_mark, do: "&#123;", else: "&#125;")
-          )
-
-        result ->
-          result
-      end)
+      |> brace_references()
     else
       fun.(text)
     end
   end
+
+  defp brace_references(text) when is_binary(text),
+    do:
+      String.replace(
+        text,
+        [@open_brace_mark, @close_brace_mark],
+        &if(&1 == @open_brace_mark, do: "&#123;", else: "&#125;")
+      )
+
+  defp brace_references(result), do: result
 
   @doc """
   Shortens a string down to the number of characters passed as an argument. If
