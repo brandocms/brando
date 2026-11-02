@@ -126,8 +126,15 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     <code>{environment.key}</code>
                   </td>
                   <td>
-                    <form phx-submit="update_domain" class="environment-inline-form">
+                    <%!-- Keyed on the domain shown: when a live switch moves it, the form is
+                    replaced and a half-typed edit goes with the domain it was typed against --%>
+                    <form
+                      id={"environment-domain-#{environment.id}-#{:erlang.phash2(environment.domain)}"}
+                      phx-submit="update_domain"
+                      class="environment-inline-form"
+                    >
                       <input type="hidden" name="environment_id" value={environment.id} />
+                      <input type="hidden" name="shown_domain" value={environment.domain || ""} />
                       <input
                         type="text"
                         name="domain"
@@ -548,10 +555,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     domain = if domain == "", do: nil, else: domain
 
     with :ok <- authorize(socket),
-         {:ok, shown} <- environment_for_site(socket, id),
-         {:ok, environment} <- current_domain(shown),
-         {:ok, _updated} <-
-           Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user) do
+         {:ok, listed} <- environment_for_site(socket, id),
+         {:ok, _updated} <- update_shown_domain(socket, listed, params["shown_domain"], domain) do
       {:noreply,
        socket
        |> notify(gettext("Domain updated."))
@@ -764,15 +769,37 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     end
   end
 
-  # A live switch moves hosts without a superuser, so the domain this screen
-  # shows may be gone from the row; a change made against it would overwrite
-  # or clear a host the screen never showed. The row as it is now is what the
-  # change applies to, and only while it still holds the domain shown.
-  defp current_domain(%Environment{id: id, site_id: site_id, domain: shown}) do
-    case Registry.get_environment(id) do
-      %Environment{site_id: ^site_id, domain: ^shown} = environment -> {:ok, environment}
-      %Environment{site_id: ^site_id} -> {:error, :domain_moved}
-      _ -> {:error, :environment_not_found}
+  # A live switch moves hosts without a superuser, so the domain the form
+  # showed may be gone from the row; a change made against it would overwrite
+  # or clear a host the screen never showed. The form submits the domain it was
+  # rendered with, since the switch's broadcast may already have refreshed this
+  # screen's assigns, and only the form posts this event, so a submission
+  # without it is refused too. The row is read and written under the site lock
+  # a live switch holds from before its transaction until after it commits, so
+  # no swap lands between the check and the write.
+  defp update_shown_domain(_socket, _environment, shown, _domain) when not is_binary(shown),
+    do: {:error, :domain_moved}
+
+  defp update_shown_domain(socket, %Environment{id: id, site_id: site_id}, shown, domain) do
+    shown = if shown == "", do: nil, else: shown
+
+    case Registry.get_site(site_id) do
+      nil ->
+        {:error, :environment_not_found}
+
+      site ->
+        Environments.with_site_lock(site, fn ->
+          case Registry.get_environment(id) do
+            %Environment{site_id: ^site_id, domain: ^shown} = environment ->
+              Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user)
+
+            %Environment{site_id: ^site_id} ->
+              {:error, :domain_moved}
+
+            _ ->
+              {:error, :environment_not_found}
+          end
+        end)
     end
   end
 

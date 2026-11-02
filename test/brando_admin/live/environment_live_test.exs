@@ -121,8 +121,17 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       log_in_user(build_conn(), admin)
     end
 
+    # Submits along with the domain the screen shows for the environment, as its form does
     defp submit_domain(view, environment, domain),
-      do: render_submit(view, "update_domain", %{"environment_id" => environment.id, "domain" => domain})
+      do: submit_domain(view, environment, domain, shown_domain(view, environment))
+
+    defp submit_domain(view, environment, domain, shown),
+      do:
+        render_submit(view, "update_domain", %{
+          "environment_id" => environment.id,
+          "domain" => domain,
+          "shown_domain" => shown
+        })
 
     defp submit_new(view, key, domain),
       do:
@@ -330,6 +339,71 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       submit_domain(view, production, "")
       assert Registry.get_environment(production.id).domain == nil
     end
+
+    # The swap's broadcast can refresh the screen between the form's render
+    # and its submission: what counts is the domain the form was rendered with
+    test "a domain submitted from a form rendered before a live switch leaves the moved hosts alone", %{
+      conn: conn,
+      site: site,
+      production: production,
+      staging: staging
+    } do
+      {:ok, _production} = Registry.update_environment(production, %{domain: "www.acme.test"}, actor: :system)
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+      rendered_with = shown_domain(view, production)
+      assert rendered_with == "www.acme.test"
+
+      assert {:ok, %{live: true}} = Environments.set_live(Registry.get_environment(staging.id), creator: :system)
+      send(view.pid, {:environments_updated, site.id})
+      # The screen already shows the swapped hosts
+      assert shown_domain(view, production) == "staging.acme.test"
+
+      # Clearing the www.acme.test the form showed for production
+      submit_domain(view, production, "", rendered_with)
+
+      assert Registry.get_environment(production.id).domain == "staging.acme.test"
+      assert Registry.get_environment(staging.id).domain == "www.acme.test"
+    end
+
+    test "a domain submitted without the one shown is refused", %{conn: conn, staging: staging} do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      render_submit(view, "update_domain", %{"environment_id" => staging.id, "domain" => ""})
+
+      assert Registry.get_environment(staging.id).domain == "staging.acme.test"
+    end
+
+    # The form is replaced when its environment's domain moves, so a
+    # half-typed edit goes with the domain it was typed against
+    test "the domain form is keyed on the domain it shows", %{conn: conn, production: production} do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+      before = domain_form_id(view, production)
+
+      render_click(view, "refresh", %{})
+      assert domain_form_id(view, production) == before
+
+      submit_domain(view, production, "www.acme.test")
+      assert Registry.get_environment(production.id).domain == "www.acme.test"
+      refute domain_form_id(view, production) == before
+    end
+  end
+
+  defp shown_domain(view, environment) do
+    view
+    |> element(~s(#environment-#{environment.id} input[name="shown_domain"]))
+    |> render()
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.attribute("value")
+    |> List.first()
+  end
+
+  defp domain_form_id(view, environment) do
+    view
+    |> element("#environment-#{environment.id} form[phx-submit=update_domain]")
+    |> render()
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.attribute("id")
+    |> List.first()
   end
 
   test "copying into the live environment has to be ticked", %{conn: conn, site: site, production: production} do
@@ -562,7 +636,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
         groups_mode(unquote(mode))
         {:ok, view, _html} = live(conn, "/admin/config/environments")
 
-        html = render_submit(view, "update_domain", %{"environment_id" => staging.id, "domain" => "moved.acme.test"})
+        html =
+          render_submit(view, "update_domain", %{
+            "environment_id" => staging.id,
+            "domain" => "moved.acme.test",
+            "shown_domain" => ""
+          })
+
         assert html =~ "reauth-modal"
         assert Registry.get_environment(staging.id).domain == staging.domain
 
