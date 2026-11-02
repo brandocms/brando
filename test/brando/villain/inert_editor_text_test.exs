@@ -1282,6 +1282,45 @@ defmodule Brando.Villain.InertEditorTextTest do
       assert html =~ "plus: 41", "ran: #{html}"
     end
 
+    test "stripping what the final pass strips completes no delimiter", %{user: user} do
+      for {type, marker} <- [
+            {:heex, ~S| data-identifier-id="1"|},
+            {:heex, ~S|<span data-brando-note="1"></span>|},
+            {:liquid, ~S| data-identifier-id="1"|}
+          ],
+          tail <- ["{ 1 | plus: 41 }}", "% if true %}41{% endif %}"] do
+        value = "{" <> marker <> tail
+
+        {attrs, code} =
+          case type do
+            :heex ->
+              {%{type: :heex},
+               ~S|<%= Phoenix.HTML.raw(@body) %><style phx-no-curly-interpolation>{{ entry.title }}</style>|}
+
+            :liquid ->
+              {%{}, "{{ body | raw }}"}
+          end
+
+        var = %Var{key: "body", label: "B", type: :string, value: value}
+        html = render(block(module!(user, code, attrs), vars: [var]))
+
+        assert html =~ ~r/plus: 41|if true/, "#{marker}#{tail} ran: #{html}"
+      end
+    end
+
+    test "a rich-text var printed by HEEx completes no delimiter through the strip", %{user: user} do
+      var = %Var{key: "body", label: "B", type: :rich_text, value: ~S|<p>{ data-identifier-id="1"{ 1 \| plus: 41 }}</p>|}
+      html = render(block(module!(user, ~S|<%= Phoenix.HTML.raw(@body) %>|, %{type: :heex}), vars: [var]))
+
+      refute html =~ ~r/>\s*42/, "ran: #{html}"
+    end
+
+    test "a real identifier attribute is still stripped", %{user: user} do
+      html = render(block(module!(user, ~S(<a href="/" data-identifier-id="1">x</a>{{ entry.title }})), []))
+
+      refute html =~ "data-identifier-id"
+    end
+
     test "a container's brace before its content completes no delimiter", %{user: user} do
       var = %Var{key: "css", label: "C", type: :string, value: "{ 1 | plus: 41 }}"}
 

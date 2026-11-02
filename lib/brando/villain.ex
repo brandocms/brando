@@ -502,7 +502,9 @@ defmodule Brando.Villain do
   Strip editor-only `data-identifier-id` attributes from rendered output.
   """
   def strip_identifier_data_attributes(html) when is_binary(html) do
-    String.replace(html, ~r/ data-identifier-id="\d+"/, "")
+    # Never right after a brace, where it is no attribute: taking it away would
+    # make a Liquid delimiter of what a value holds.
+    String.replace(html, ~r/(?<!\{) data-identifier-id="\d+"/, "")
   end
 
   def strip_identifier_data_attributes(html), do: html

@@ -410,9 +410,14 @@ defmodule Brando.Villain.Parser do
         children
         |> Enum.with_index()
         |> Enum.map(fn
-          {%{active: false}, _} -> ""
-          {%{marked_as_deleted: true}, _} -> ""
-          {child_block, index} -> render_multi_child(child_block, index, count, id, opts)
+          {%{active: false}, _} ->
+            ""
+
+          {%{marked_as_deleted: true}, _} ->
+            ""
+
+          {child_block, index} ->
+            child_block |> render_multi_child(index, count, id, opts) |> Brando.Villain.InertLiquid.close_end()
         end)
         |> Enum.intersperse("\n")
         |> maybe_annotate_children(block.uid, opts)

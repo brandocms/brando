@@ -507,10 +507,14 @@ defmodule Brando.Notes do
   when there are none: rendered HTML only pays for a substring check.
   """
   def strip_marks(html) when is_binary(html) do
-    if String.contains?(html, @mark_attribute), do: do_strip_marks(html), else: html
+    if String.contains?(html, @mark_attribute), do: html |> close_brace_before_tag() |> do_strip_marks(), else: html
   end
 
   def strip_marks(html), do: html
+
+  # Taking a mark away must not join a brace to what follows the mark, which a
+  # later Liquid pass would read as a delimiter.
+  defp close_brace_before_tag(html), do: String.replace(html, ~r/\{(?=<\/?span\b)/i, "&#123;")
 
   @span ~r{<span\b[^>]*>|</span\s*>}i
 
