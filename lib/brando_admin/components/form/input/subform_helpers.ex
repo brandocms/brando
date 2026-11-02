@@ -60,6 +60,29 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
     end
   end
 
+  @doc """
+  Applies `op` to the relation's current entries (`apply_op/2`). A one-to-one
+  relation with no row yet is shown as a new row, which is not in the
+  changeset: a `:replace` from that row (a new row has no key) makes it the
+  relation's row.
+  """
+  def apply_relation_op(%Changeset{} = changeset, field_name, op) do
+    case {current_entries(changeset, field_name), op} do
+      {[], {:replace, nil, entry}} -> if one?(changeset, field_name), do: entry, else: :stale
+      {entries, op} -> apply_op(entries, op)
+    end
+  end
+
+  defp one?(%Changeset{data: %module{}} = changeset, field_name) do
+    relation =
+      case relation_kind(changeset, field_name) do
+        :assoc -> module.__schema__(:association, field_name)
+        :embed -> module.__schema__(:embed, field_name)
+      end
+
+    relation.cardinality == :one
+  end
+
   defp relation_kind(%Changeset{data: %module{}}, field_name) do
     if module.__schema__(:association, field_name), do: :assoc, else: :embed
   end

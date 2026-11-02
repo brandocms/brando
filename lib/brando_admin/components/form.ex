@@ -1120,7 +1120,7 @@ defmodule BrandoAdmin.Components.Form do
     # (`multi_select_changed`) changes the list for them, not for this editor.
     put = if message[:remote] == true, do: &put_received_form/2, else: &put_local_form/2
 
-    case changeset |> SubformHelpers.current_entries(field) |> SubformHelpers.apply_op(op) do
+    case SubformHelpers.apply_relation_op(changeset, field, op) do
       :stale ->
         {:ok, socket}
 

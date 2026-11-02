@@ -274,6 +274,32 @@ defmodule BrandoAdmin.EntriesInputSubformRowsTest do
       assert saved(c.author, c.author_join, [c.linked.id, c.picked.id]) == [c.linked.id, c.picked.id]
     end
 
+    # The subform shows a new row for the empty relation; a pick is the first
+    # thing to change it
+    test "a pick in an empty one makes its row", %{conn: conn} = c do
+      Repo.delete!(c.author)
+      view = open(conn, c.article, "author_entries")
+      view |> element("#article_author_0_related_entries-field-wrapper button", "Select entries") |> render_click()
+
+      view
+      |> element("#article_author_0_related_entries-entries-options [data-id='#{c.picked.id}']")
+      |> render_click()
+
+      assert author_links(view) == [to_string(c.picked.id)]
+
+      stay(view)
+      save(view)
+      author = await_author(c.article)
+      assert saved(author, c.author_join, [c.picked.id]) == [c.picked.id]
+    end
+
+    defp await_author(article, tries \\ 100) do
+      case Repo.get_by(Brando.SyncTest.ArticleAuthor, article_id: article.id) do
+        nil when tries > 0 -> Process.sleep(20) && await_author(article, tries - 1)
+        author -> author
+      end
+    end
+
     test "\"Clear all\" empties the row", %{conn: conn} = c do
       view = open(conn, c.article, "author_entries")
       view |> element("#article_author_0_related_entries-field-wrapper button", "Clear all") |> render_click()
