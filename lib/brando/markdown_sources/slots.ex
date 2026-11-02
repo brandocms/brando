@@ -33,8 +33,8 @@ defmodule Brando.MarkdownSources.Slots do
     catch
       :exit, {:timeout, _} ->
         # A slot given after the timeout goes back; a late reply is dropped.
-        # A cancel the server is too busy to answer in time is still queued,
-        # and this process's DOWN follows it, so the request is refused as
+        # A cancel the server is too busy to answer in time is still queued
+        # and gives the slot back when handled, so the request is refused as
         # busy rather than exiting.
         try do
           GenServer.call(name, {:cancel, tag})

@@ -54,6 +54,8 @@ defmodule Brando.MarkdownSources.SlotsTest do
     firsts = for _ <- 1..5, do: hold(name, :first)
     wait_until(fn -> map_size(:sys.get_state(pid).waiting) == 5 end)
 
+    # A collection copying the backlog would count too: done before measuring
+    :erlang.garbage_collect(pid)
     {:reductions, before} = Process.info(pid, :reductions)
     send(holder, :release)
 
