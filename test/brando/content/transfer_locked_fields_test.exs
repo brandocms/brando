@@ -193,13 +193,28 @@ defmodule Brando.Content.TransferLockedFieldsTest do
       refute File.exists?(Path.join(root, path))
     end
 
-    test "a replace doesn't write a file that isn't an image's", %{user: user, root: root, dir: dir} do
-      other = Path.join(dir, "brochure.pdf")
-      File.write!(Path.join(root, other), "untouched")
-      image = Factory.insert(:image, path: other, width: 100, height: 50, status: :processed)
+    test "a replace writes a stored original the upload form no longer takes", %{user: user, root: root, dir: dir} do
+      for name <- ~w(old.avif old.tif old.TIFF old.bmp) do
+        path = Path.join(dir, name)
+        File.write!(Path.join(root, path), "before")
+        image = Factory.insert(:image, path: path, width: 100, height: 50, status: :processed)
 
-      assert {:error, :unsafe_media_path} = Crop.save_replace(image, jpeg(), %{x: 50, y: 50}, user)
-      assert File.read!(Path.join(root, other)) == "untouched"
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          assert {:ok, _} = Crop.save_replace(image, jpeg(), %{x: 50, y: 50}, user)
+          refute File.read!(Path.join(root, path)) == "before"
+        end)
+      end
+    end
+
+    test "a replace doesn't write a file that isn't an image's", %{user: user, root: root, dir: dir} do
+      for name <- ~w(brochure.pdf page.html page.htm script.js noextension) do
+        other = Path.join(dir, name)
+        File.write!(Path.join(root, other), "untouched")
+        image = Factory.insert(:image, path: other, width: 100, height: 50, status: :processed)
+
+        assert {:error, :unsafe_media_path} = Crop.save_replace(image, jpeg(), %{x: 50, y: 50}, user)
+        assert File.read!(Path.join(root, other)) == "untouched"
+      end
     end
 
     test "a replace doesn't create a file", %{user: user, root: root, dir: dir} do

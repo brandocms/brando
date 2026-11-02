@@ -147,7 +147,9 @@ defmodule Brando.Images.Crop do
     end
   end
 
-  defp image_path?(path), do: (path |> Path.extname() |> String.downcase()) in Brando.Uploads.image_exts()
+  # Any stored original the image pipeline reads, which is more than an upload
+  # may be now (`Brando.Uploads.image_exts/0`)
+  defp image_path?(path), do: is_atom(Images.Metadata.type(path))
 
   # An image over the pixel limit is refused before it is written.
   defp measure(binary_data, fallback_dimensions) do
