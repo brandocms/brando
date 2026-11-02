@@ -308,7 +308,9 @@ is applied.
 
 - Create entries, as drafts.
 - Change fields of existing entries, including their status where the editor
-  may set it. Publication times and block fields are not set this way.
+  may set it. Publication times and block fields are not set this way, nor,
+  for anyone but a superuser, is a field the forms lock (`readonly` or
+  `disabled`) and none offers unlocked.
 - Insert blocks from the modules a block field allows: as a root block, or
   into a multi module, a container or a slot; at the end, or before or after
   another block.
