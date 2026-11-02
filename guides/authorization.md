@@ -211,6 +211,18 @@ does this for asset usage, and ends its list with `%{hidden: count}`.
 A superuser is told of entries a scope is merely not the place for, such as a
 user in a site scope; a record read policy still applies.
 
+Authority is read when it is used, so a change reaches a view that is already open.
+With groups every event, patch and message checks the view's requirement again. In
+legacy mode every event, patch and `authorization_changed` broadcast reads the
+account and its site: a lowered role disconnects the session's sockets, so its
+views remount at the stored role and forms recover what was typed, and a site no
+longer enterable sends the view to the access-denied page. Compiling a HEEx
+template while planning a module import takes a Superuser read at that moment, in
+both modes. In a custom view, decide with `Boundary.authorize/3`, or the helpers
+built on it such as `Brando.Users.superuser?/1`, rather than an assign set at mount.
+`BrandoAdmin.Authorization.allowed?/2` is for presentation: in legacy mode it answers
+for the role the view holds, with no read.
+
 `:system` is an explicit trusted maintenance actor. Never derive it from a browser
 parameter or use it as a fallback for a missing account. Do not store a resolved
 permission snapshot in an Oban job. Retain the initiating account and tenant,
