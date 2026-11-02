@@ -190,6 +190,38 @@ defmodule BrandoAdmin.AssistantUnloadableProposalTest do
       refute has_element?(view, ".assistant-feedback.is-error")
     end
 
+    # The address is taken meanwhile, so applying fails and rolls back.
+    defp applies_and_fails(path, editor) do
+      {:ok, _} =
+        Brando.Pages.create_page(
+          %{title: "Taken", uri: "rooms-taken", language: "en", template: "default.html", status: :draft},
+          editor
+        )
+
+      {:ok, view, _} = live(log_in_user(build_conn(), editor), path)
+      view |> element("button.assistant-apply") |> render_click()
+      view
+    end
+
+    test "a URL naming the proposal in upper case keeps a failed apply's error on screen" do
+      editor = TestUsers.insert_user(role: :editor)
+      record = prepared(editor, uri: "rooms-taken")
+      view = applies_and_fails("/admin/assistant/connected/#{String.upcase(record.id)}", editor)
+      assert has_element?(view, "#proposal-#{record.id} .assistant-feedback.is-error")
+    end
+
+    test "a failed apply's error goes once the proposal is discarded" do
+      editor = TestUsers.insert_user(role: :editor)
+      record = prepared(editor, uri: "rooms-taken")
+      view = applies_and_fails("/admin/assistant/connected/#{record.id}", editor)
+      assert has_element?(view, "#proposal-#{record.id} .assistant-feedback.is-error")
+
+      view |> element(".assistant-apply-bar button[phx-click=cancel_proposal]") |> render_click()
+      assert status(record) == "cancelled"
+      assert has_element?(view, "#proposal-#{record.id}")
+      refute has_element?(view, ".assistant-feedback.is-error")
+    end
+
     test "a discarded one shows no Discard", %{conn: conn, current_user: user} do
       record = crafted(user)
       :ok = Proposals.cancel(record.id, user)

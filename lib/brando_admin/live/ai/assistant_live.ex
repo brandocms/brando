@@ -154,7 +154,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         review_link: nil,
         share_choice: nil,
         share_url: nil,
-        proposal_id: params["proposal_id"]
+        proposal_id: uuid(params["proposal_id"])
       )
       |> assign_connected()
       |> assign_proposal()
@@ -1795,7 +1795,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
   # another proposal since, nothing is discarded.
   def handle_event("cancel_proposal", params, socket) do
     id = params["id"]
-    if id && id == shown_proposal_id(socket.assigns), do: Proposals.cancel(id, socket.assigns.current_user)
+
+    # A discarded proposal's earlier apply or undo error is no longer current.
+    socket =
+      if id && id == shown_proposal_id(socket.assigns) && Proposals.cancel(id, socket.assigns.current_user) == :ok,
+        do: assign(socket, :error, nil),
+        else: socket
 
     {:noreply, socket |> assign_proposal() |> assign_connected()}
   end
@@ -2173,6 +2178,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp shown_proposal_id(%{proposal: %{id: id}}), do: id
   defp shown_proposal_id(%{unloadable_id: id}), do: id
+
+  # The URL's proposal id as the database returns it (lowercase), so it
+  # compares with the loaded proposal's; one that is not a UUID is kept, and
+  # its lookup refused.
+  defp uuid(id) when is_binary(id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, uuid} -> uuid
+      :error -> id
+    end
+  end
+
+  defp uuid(id), do: id
 
   # The proposal on screen: the one chosen under "From connected tools", or
   # the conversation's.
