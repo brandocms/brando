@@ -304,6 +304,9 @@ defmodule Brando.Videos.Uploader do
 
   ## Returns
   - `:ok` if deletion succeeds or is skipped
+  - `{:error, :held_in_this_environment}` while a live record of the current
+    environment plays the same remote video: added again from the provider's
+    library, or the deleted record itself, restored.
   - `{:error, :held_by_another_site}` with several sites, while another site
     has a record of the same remote video, deleted or not, and
     `{:error, :held_by_another_environment}` with named environments, while
@@ -338,15 +341,17 @@ defmodule Brando.Videos.Uploader do
   def delete_remote(%Brando.Videos.Video{meta: %{"imported" => true}}, purge), do: then_purge(:ok, purge)
 
   def delete_remote(%Brando.Videos.Video{} = video, purge) do
-    with mode when mode in [:single, :multi] <- Brando.Tenant.mode(),
-         {module, remote_id} when is_binary(remote_id) <- library_remote_id(video) do
-      # An add of the same video waits, and this waits for one in progress,
-      # so the check below still holds when the provider is asked.
-      Brando.Videos.ProviderHoldings.with_video_lock(module.library_meta_path(), remote_id, fn ->
-        video |> delete_unless_held(module, remote_id, mode) |> then_purge(purge)
-      end)
-    else
-      _no_environments_or_no_remote_id -> video |> dispatch_delete_remote() |> then_purge(purge)
+    case library_remote_id(video) do
+      {module, remote_id} when is_binary(remote_id) ->
+        # An add or a restore of the same video waits, and this waits for one
+        # in progress, so the check below still holds when the provider is
+        # asked.
+        Brando.Videos.ProviderHoldings.with_video_lock(module.library_meta_path(), remote_id, fn ->
+          video |> delete_unless_held(module, remote_id, Brando.Tenant.mode()) |> then_purge(purge)
+        end)
+
+      _no_remote_id ->
+        video |> dispatch_delete_remote() |> then_purge(purge)
     end
   end
 
@@ -358,7 +363,7 @@ defmodule Brando.Videos.Uploader do
   end
 
   defp delete_unless_held(video, module, remote_id, mode) do
-    case held_elsewhere(video, module, remote_id, mode) do
+    case held(video, module, remote_id, mode) do
       false ->
         dispatch_delete_remote(video)
 
@@ -373,6 +378,24 @@ defmodule Brando.Videos.Uploader do
       reason ->
         Logger.info("Video #{video.id} left at its provider: #{reason}")
         {:error, reason}
+    end
+  end
+
+  # A live record of this environment plays the video: added again from the
+  # provider's library while this one waited for its purge, or this one, read
+  # deleted and restored since. Its own delete will ask the provider again.
+  defp held(video, module, remote_id, mode) do
+    except_id = if is_nil(video.deleted_at), do: video.id
+
+    cond do
+      Brando.Videos.ProviderHoldings.recorded_here?(module.library_meta_path(), remote_id, except_id) ->
+        :held_in_this_environment
+
+      mode in [:single, :multi] ->
+        held_elsewhere(video, module, remote_id, mode)
+
+      true ->
+        false
     end
   end
 

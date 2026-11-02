@@ -812,6 +812,29 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       refute_received {:mux, "DELETE", _path, _prefix}
     end
 
+    # #3436: the video added again in the environment that deleted it.
+    for tenancy_mode <- [:single, :multi] do
+      @tenancy_mode tenancy_mode
+
+      test "a live record in the purging environment holds it, #{tenancy_mode} tenancy", context do
+        put_test_env(:tenancy_mode, @tenancy_mode)
+        Tenant.with_prefix(context.production_prefix, fn -> Repo.delete_all(Video) end)
+
+        log =
+          capture_log([level: :info], fn ->
+            Tenant.with_prefix(context.staging_prefix, fn ->
+              expire(context.staging)
+              "asset-1" |> mux_uploaded_here() |> Ecto.Changeset.change(meta: imported_meta()) |> Repo.update!()
+              Brando.SoftDelete.Query.clean_up_soft_deletions()
+              assert Repo.aggregate(Video, :count) == 1
+            end)
+          end)
+
+        refute_received {:mux, "DELETE", _path, _prefix}
+        assert log =~ "Video #{context.staging.id} left at its provider: held_in_this_environment"
+      end
+    end
+
     test "without named environments, deletes as before" do
       put_test_env(:tenancy_mode, :none)
       video = mux_uploaded_here("asset-1")
@@ -988,6 +1011,10 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       status: :ready,
       meta: %{"provider" => "mux", "mux" => %{"asset_id" => asset_id, "playback_id" => "pb-#{asset_id}"}}
     })
+  end
+
+  defp imported_meta do
+    %{"provider" => "mux", "imported" => true, "mux" => %{"asset_id" => "asset-1", "playback_id" => "pb-asset-1"}}
   end
 
   defp expire(video) do

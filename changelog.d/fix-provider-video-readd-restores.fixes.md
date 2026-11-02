@@ -1,0 +1,1 @@
+- Adding a provider video again from the library after deleting it restores the deleted record, and a purge no longer deletes at the provider a video that another record of the same environment still plays.
