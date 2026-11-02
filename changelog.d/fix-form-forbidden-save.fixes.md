@@ -1,1 +1,2 @@
 - Saving an entry the account may not change shows the permission message and keeps the form open, instead of crashing the form.
+- Saving an image, file or video drawer, resetting a video's thumbnail or moving an image's focal point without a grant on the asset shows the permission message and keeps the entry's edits, instead of crashing the form; the drawer closes as for any refused drawer save.

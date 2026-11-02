@@ -3081,6 +3081,14 @@ defmodule BrandoAdmin.Components.Form do
 
   defp close_refused_drawer(socket, flag), do: socket |> assign(flag, false) |> assign_drawer_recovery_state()
 
+  # A drawer save the event check let through, which the asset's context
+  # refuses: a grant to change the entry, none to change the asset. The drawer
+  # closes as for a refused event, and the entry keeps what was typed in it.
+  defp refused_drawer_save(socket, flag) do
+    send(self(), {:toast, gettext("You do not have permission for this action.")})
+    {:noreply, close_refused_drawer(socket, flag)}
+  end
+
   # Someone who may not change the entry follows the others and sends nothing,
   # as in a block field: whoever saves a value that reached their form stores
   # it as their own.
@@ -6022,55 +6030,62 @@ defmodule BrandoAdmin.Components.Form do
     edit_image = socket.assigns.edit_image
     block_target = Map.get(edit_image, :block_target)
 
-    updated_image =
-      if params["crop_applied"] do
-        cropped_editor_image(params, edit_image)
-      else
-        refocused_editor_image(params, edit_image, current_user)
-      end
+    saved =
+      if params["crop_applied"],
+        do: cropped_editor_image(params, edit_image),
+        else: refocused_editor_image(params, edit_image, current_user)
 
-    # Subscribe to PubSub BEFORE queuing processing so inline Oban
-    # broadcasts aren't missed. Always subscribe — both block and non-block
-    # paths need processing notifications to update their UI.
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
+    case saved do
+      {:ok, updated_image} ->
+        # Subscribe to PubSub BEFORE queuing processing so inline Oban
+        # broadcasts aren't missed. Always subscribe — both block and non-block
+        # paths need processing notifications to update their UI.
+        Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{updated_image.id}")
 
-    if block_target do
-      send(self(), {:register_pending_block_image, updated_image.id, block_target})
-    end
+        if block_target do
+          send(self(), {:register_pending_block_image, updated_image.id, block_target})
+        end
 
-    # For non-crop case, queue processing after subscribing.
-    unless params["crop_applied"] do
-      # Silent: the editor and drawer show the image processing themselves; the
-      # old top-of-page progress bar would be a second, older indicator.
-      Images.Processing.queue_processing(updated_image, current_user, [], silent: true)
-    end
+        # For non-crop case, queue processing after subscribing.
+        unless params["crop_applied"] do
+          # Silent: the editor and drawer show the image processing themselves; the
+          # old top-of-page progress bar would be a second, older indicator.
+          Images.Processing.queue_processing(updated_image, current_user, [], silent: true)
+        end
 
-    # For crop_applied, processing was already queued by the controller.
-    # With Oban inline testing, the broadcast was sent before we subscribed.
-    # Re-fetch to get the latest state (may already be processed).
-    updated_image =
-      if params["crop_applied"] do
-        {:ok, fresh} = Images.get_image(updated_image.id)
-        fresh
-      else
-        updated_image
-      end
+        # For crop_applied, processing was already queued by the controller.
+        # With Oban inline testing, the broadcast was sent before we subscribed.
+        # Re-fetch to get the latest state (may already be processed).
+        updated_image =
+          if params["crop_applied"] do
+            {:ok, fresh} = Images.get_image(updated_image.id)
+            fresh
+          else
+            updated_image
+          end
 
-    send(self(), {:toast, gettext("Changes saved. Image is reprocessing.")})
+        send(self(), {:toast, gettext("Changes saved. Image is reprocessing.")})
 
-    if block_target do
-      # Block path: update image drawer; PubSub hooks handle the block component.
-      singular = socket.assigns.singular
+        if block_target do
+          # Block path: update image drawer; PubSub hooks handle the block component.
+          singular = socket.assigns.singular
 
-      send_update(__MODULE__,
-        id: "#{singular}_form",
-        action: :update_edit_image,
-        image: updated_image
-      )
+          send_update(__MODULE__,
+            id: "#{singular}_form",
+            action: :update_edit_image,
+            image: updated_image
+          )
 
-      {:noreply, socket}
-    else
-      {:noreply, show_saved_editor_image(socket, edit_image, updated_image)}
+          {:noreply, socket}
+        else
+          {:noreply, show_saved_editor_image(socket, edit_image, updated_image)}
+        end
+
+      # No grant to change the image: the editor has closed, and what it was
+      # opened from stays as it was.
+      {:error, :forbidden} ->
+        send(self(), {:toast, gettext("You do not have permission for this action.")})
+        {:noreply, socket}
     end
   end
 
@@ -6168,6 +6183,11 @@ defmodule BrandoAdmin.Components.Form do
           {:ok, updated_video} ->
             updated_video = %{updated_video | thumbnail: nil}
             {:noreply, assign(socket, :edit_video, %{edit_video | video: updated_video})}
+
+          # No grant to change the video: its drawer stays open as it was.
+          {:error, :forbidden} ->
+            send(self(), {:toast, gettext("You do not have permission for this action.")})
+            {:noreply, socket}
 
           {:error, %Changeset{} = failed_changeset} ->
             require Logger
@@ -6306,46 +6326,51 @@ defmodule BrandoAdmin.Components.Form do
         current_user
       )
 
-    {:ok, updated_file} = Brando.Files.update_file(validated_changeset, current_user)
+    case Brando.Files.update_file(validated_changeset, current_user) do
+      {:ok, updated_file} ->
+        Brando.Blueprint.AfterSave.run(
+          Brando.Files.File,
+          updated_file,
+          validated_changeset,
+          current_user
+        )
 
-    Brando.Blueprint.AfterSave.run(
-      Brando.Files.File,
-      updated_file,
-      validated_changeset,
-      current_user
-    )
+        edit_file = Map.put(edit_file, :file, updated_file)
+        relation_key = relation_field_key(relation_field, field)
 
-    edit_file = Map.put(edit_file, :file, updated_file)
-    relation_key = relation_field_key(relation_field, field)
+        updated_changeset =
+          form.source
+          |> put_key_at(path, relation_key, file.id)
+          |> put_asset_in_data(path, field, updated_file)
 
-    updated_changeset =
-      form.source
-      |> put_key_at(path, relation_key, file.id)
-      |> put_asset_in_data(path, field, updated_file)
+        updated_entry =
+          entry_with_relation(entry_or_default, updated_changeset, path ++ [field], fn _ -> updated_file end)
 
-    updated_entry = entry_with_relation(entry_or_default, updated_changeset, path ++ [field], fn _ -> updated_file end)
+        # this is only for fresh uploads.
+        if !updated_file.cdn && Brando.CDN.enabled?(Brando.Files) do
+          # TODO __ FIGURE OUT FULL_PATH
+          full_field_path = []
+          Brando.CDN.queue_upload(updated_file, current_user, full_field_path)
+        end
 
-    # this is only for fresh uploads.
-    if !updated_file.cdn && Brando.CDN.enabled?(Brando.Files) do
-      # TODO __ FIGURE OUT FULL_PATH
-      full_field_path = []
-      Brando.CDN.queue_upload(updated_file, current_user, full_field_path)
+        {:noreply,
+         socket
+         |> ship_all_field_changes()
+         |> assign(:entry, updated_entry)
+         |> refresh_asset_in_preview(path, field, updated_file)
+         |> put_form(to_form(updated_changeset, []))
+         |> assign(:file_changeset, validated_changeset)
+         |> assign(:editing_file?, false)
+         |> assign(:edit_file, edit_file)
+         |> assign_drawer_recovery_state()
+         |> push_event("b:validate", %{
+           target: field_name(singular, path ++ [relation_key]),
+           value: file.id
+         })}
+
+      {:error, :forbidden} ->
+        refused_drawer_save(socket, :editing_file?)
     end
-
-    {:noreply,
-     socket
-     |> ship_all_field_changes()
-     |> assign(:entry, updated_entry)
-     |> refresh_asset_in_preview(path, field, updated_file)
-     |> put_form(to_form(updated_changeset, []))
-     |> assign(:file_changeset, validated_changeset)
-     |> assign(:editing_file?, false)
-     |> assign(:edit_file, edit_file)
-     |> assign_drawer_recovery_state()
-     |> push_event("b:validate", %{
-       target: field_name(singular, path ++ [relation_key]),
-       value: file.id
-     })}
   end
 
   # without file in params
@@ -6441,64 +6466,60 @@ defmodule BrandoAdmin.Components.Form do
         current_user
       )
 
-    {:ok, _} = Images.update_image(validated_changeset, current_user)
+    case Images.update_image(validated_changeset, current_user) do
+      {:ok, _} ->
+        # Reload from DB — the Oban processing job may have updated
+        # status/sizes since the drawer was opened.
+        {:ok, updated_image} = Images.get_image(image.id)
 
-    # Reload from DB — the Oban processing job may have updated
-    # status/sizes since the drawer was opened.
-    {:ok, updated_image} = Images.get_image(image.id)
+        Brando.Blueprint.AfterSave.run(
+          Images.Image,
+          updated_image,
+          validated_changeset,
+          current_user
+        )
 
-    Brando.Blueprint.AfterSave.run(
-      Images.Image,
-      updated_image,
-      validated_changeset,
-      current_user
-    )
+        edit_image = Map.put(edit_image, :image, updated_image)
+        relation_key = relation_field_key(relation_field, field)
+        relation_full_path = path ++ [relation_key]
+        field_full_path = path ++ [field]
 
-    edit_image = Map.put(edit_image, :image, updated_image)
-    relation_key = relation_field_key(relation_field, field)
-    relation_full_path = path ++ [relation_key]
-    field_full_path = path ++ [field]
+        updated_changeset =
+          form.source
+          |> put_key_at(path, relation_key, image.id)
+          |> put_asset_in_data(path, field, updated_image)
 
-    updated_changeset =
-      form.source
-      |> put_key_at(path, relation_key, image.id)
-      |> put_asset_in_data(path, field, updated_image)
+        updated_entry =
+          entry_with_relation(entry_or_default, updated_changeset, field_full_path, &drawer_image(&1, updated_image))
 
-    updated_entry =
-      entry_with_relation(entry_or_default, updated_changeset, field_full_path, fn current ->
-        if loaded_image?(current) && current.id == image.id && updated_image.status == :processed do
-          # the image has already been marked as processed, do not
-          # update the image but merge in title, credits and alt text
-          Map.merge(current, Map.take(updated_image, [:title, :credits, :alt]))
-        else
-          updated_image
+        # Subscribe parent live view to changes to this image
+        Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+
+        if requeue_processing?(validated_changeset, updated_image) do
+          Images.Processing.queue_processing(updated_image, current_user, field_full_path, silent: true)
         end
-      end)
 
-    # Subscribe parent live view to changes to this image
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+        target_field_name =
+          Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
 
-    if requeue_processing?(validated_changeset, updated_image) do
-      Images.Processing.queue_processing(updated_image, current_user, field_full_path, silent: true)
+        {:noreply,
+         socket
+         |> ship_all_field_changes()
+         |> assign(:entry, updated_entry)
+         |> refresh_asset_in_preview(path, field, Map.get(updated_entry, field))
+         |> put_form(to_form(updated_changeset, []))
+         |> assign(:image_changeset, validated_changeset)
+         |> assign(:edit_image, edit_image)
+         |> assign(:editing_image?, false)
+         |> assign_drawer_recovery_state()
+         |> push_event("b:validate", %{
+           target: target_field_name,
+           value: image.id
+         })}
+
+      {:error, :forbidden} ->
+        refused_drawer_save(socket, :editing_image?)
     end
-
-    target_field_name =
-      Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
-
-    {:noreply,
-     socket
-     |> ship_all_field_changes()
-     |> assign(:entry, updated_entry)
-     |> refresh_asset_in_preview(path, field, Map.get(updated_entry, field))
-     |> put_form(to_form(updated_changeset, []))
-     |> assign(:image_changeset, validated_changeset)
-     |> assign(:edit_image, edit_image)
-     |> assign(:editing_image?, false)
-     |> assign_drawer_recovery_state()
-     |> push_event("b:validate", %{
-       target: target_field_name,
-       value: image.id
-     })}
   end
 
   # without image in params
@@ -6620,44 +6641,49 @@ defmodule BrandoAdmin.Components.Form do
         current_user
       )
 
-    {:ok, updated_video} = Brando.Videos.update_video(validated_changeset, current_user)
+    case Brando.Videos.update_video(validated_changeset, current_user) do
+      {:ok, updated_video} ->
+        Brando.Blueprint.AfterSave.run(
+          Brando.Videos.Video,
+          updated_video,
+          validated_changeset,
+          current_user
+        )
 
-    Brando.Blueprint.AfterSave.run(
-      Brando.Videos.Video,
-      updated_video,
-      validated_changeset,
-      current_user
-    )
+        edit_video = Map.put(edit_video, :video, updated_video)
+        relation_key = relation_field_key(relation_field, field)
+        relation_full_path = path ++ [relation_key]
+        field_full_path = path ++ [field]
 
-    edit_video = Map.put(edit_video, :video, updated_video)
-    relation_key = relation_field_key(relation_field, field)
-    relation_full_path = path ++ [relation_key]
-    field_full_path = path ++ [field]
+        updated_changeset =
+          form.source
+          |> put_key_at(path, relation_key, video.id)
+          |> put_asset_in_data(path, field, updated_video)
 
-    updated_changeset =
-      form.source
-      |> put_key_at(path, relation_key, video.id)
-      |> put_asset_in_data(path, field, updated_video)
+        updated_entry =
+          entry_with_relation(entry_or_default, updated_changeset, field_full_path, fn _ -> updated_video end)
 
-    updated_entry = entry_with_relation(entry_or_default, updated_changeset, field_full_path, fn _ -> updated_video end)
+        target_field_name =
+          Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
 
-    target_field_name =
-      Enum.join([singular | Enum.map(relation_full_path, &"[#{to_string(&1)}]")])
+        {:noreply,
+         socket
+         |> ship_all_field_changes()
+         |> assign(:entry, updated_entry)
+         |> refresh_asset_in_preview(path, field, updated_video)
+         |> put_form(to_form(updated_changeset, []))
+         |> assign(:video_changeset, validated_changeset)
+         |> assign(:edit_video, edit_video)
+         |> assign(:editing_video?, false)
+         |> assign_drawer_recovery_state()
+         |> push_event("b:validate", %{
+           target: target_field_name,
+           value: video.id
+         })}
 
-    {:noreply,
-     socket
-     |> ship_all_field_changes()
-     |> assign(:entry, updated_entry)
-     |> refresh_asset_in_preview(path, field, updated_video)
-     |> put_form(to_form(updated_changeset, []))
-     |> assign(:video_changeset, validated_changeset)
-     |> assign(:edit_video, edit_video)
-     |> assign(:editing_video?, false)
-     |> assign_drawer_recovery_state()
-     |> push_event("b:validate", %{
-       target: target_field_name,
-       value: video.id
-     })}
+      {:error, :forbidden} ->
+        refused_drawer_save(socket, :editing_video?)
+    end
   end
 
   # without video in params
@@ -7242,8 +7268,7 @@ defmodule BrandoAdmin.Components.Form do
   # The controller's Crop.save_replace already queued processing.
   defp cropped_editor_image(params, edit_image) do
     image_id = params["image_id"] || edit_image.image.id
-    {:ok, img} = Images.get_image(image_id)
-    img
+    Images.get_image(image_id)
   end
 
   # No crop — just update focal point and reprocess from the original file.
@@ -7269,8 +7294,7 @@ defmodule BrandoAdmin.Components.Form do
       )
       |> Map.put(:action, :update)
 
-    {:ok, img} = Images.update_image(changeset, current_user)
-    img
+    Images.update_image(changeset, current_user)
   end
 
   # A form field's input name at a path as the form names it:
@@ -8213,6 +8237,19 @@ defmodule BrandoAdmin.Components.Form do
   defp loaded_image?(nil), do: false
   defp loaded_image?(%Ecto.Association.NotLoaded{}), do: false
   defp loaded_image?(%Images.Image{}), do: true
+
+  # The image a drawer save puts on the entry in place of `current`
+  defp drawer_image(current, %{id: id, status: :processed} = updated_image) do
+    if loaded_image?(current) && current.id == id do
+      # the image has already been marked as processed, do not
+      # update the image but merge in title, credits and alt text
+      Map.merge(current, Map.take(updated_image, [:title, :credits, :alt]))
+    else
+      updated_image
+    end
+  end
+
+  defp drawer_image(_current, updated_image), do: updated_image
 
   # `env` says what the errors stopped: a save, or opening the live preview.
   defp push_errors(socket, changeset, form, schema, env \\ :save) do

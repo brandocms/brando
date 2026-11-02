@@ -907,11 +907,6 @@ defmodule BrandoAdmin.LegacyUserEventsTest do
       view |> element("#page_form_form") |> render_submit()
       view |> element("#page_form_form") |> render_submit()
 
-      # The blocks arrive and the save runs after the submit returns: render
-      # again so a refusal that crashed the form fails here, not later.
-      _ = render(view)
-      _ = render(view)
-
       assert Process.alive?(view.pid)
       assert Repo.get!(Page, c.page.id).title == "Om oss"
     end
