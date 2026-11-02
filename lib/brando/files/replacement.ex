@@ -125,7 +125,8 @@ defmodule Brando.Files.Replacement do
   defp extension(name), do: name |> Path.extname() |> String.downcase()
 
   defp destination(file, cfg) do
-    case Storage.media_file(Path.join(cfg.upload_path, file.filename)) do
+    # A leading slash is tolerated in an upload path, as when the file was stored
+    case Storage.media_file(cfg.upload_path |> String.trim_leading("/") |> Path.join(file.filename)) do
       {:ok, path} -> {:ok, path}
       :error -> {:error, "Invalid file storage path"}
     end

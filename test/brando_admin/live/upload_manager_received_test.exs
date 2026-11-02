@@ -185,16 +185,39 @@ defmodule BrandoAdmin.UploadManagerReceivedTest do
 
   # The image editor's "save as new copy" is the one upload the form owns
   describe "image editor copy" do
-    test "over the config's limit: refused, and the editor is told", %{conn: conn, page: page, dir: dir} do
+    # The size is the editor's own export, which can pass the limit its source met
+    test "over the config's limit still saves", %{conn: conn, page: page, dir: dir} do
       {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
-      images = Repo.aggregate(Brando.Images.Image, :count)
       body = File.read!(@fixture) <> :binary.copy(<<0>>, 1_100_000)
+      image = Factory.insert(:image)
+
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form,
+        id: "page_form",
+        action: :update_edit_image,
+        edit_image: %{id: image.id, path: [], field: :meta_image, relation_field: nil, image: image}
+      )
+
+      view
+      |> with_target(cid_of(view, "#page_form-el"))
+      |> render_hook("image_editor_save", %{"mode" => "new_copy", "focal_x" => 40, "focal_y" => 60})
 
       view
       |> file_input("#page_form_form", :image_editor_upload, [%{name: "copy.jpg", content: body, type: "image/jpeg"}])
       |> render_upload("copy.jpg")
 
-      assert_push_event(view, "b:alert", %{type: "error", message: "File is too large" <> _}, 2_000)
+      assert stored(dir) == ["copy.jpg"]
+    end
+
+    test "a name outside the image list: refused, and the editor is told", %{conn: conn, page: page, dir: dir} do
+      {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+      images = Repo.aggregate(Brando.Images.Image, :count)
+      body = File.read!(@fixture)
+
+      view
+      |> file_input("#page_form_form", :image_editor_upload, [%{name: "copy.html", content: body, type: "image/jpeg"}])
+      |> render_upload("copy.html")
+
+      assert_push_event(view, "b:alert", %{type: "error", message: "Unsupported image type" <> _}, 2_000)
       assert Repo.aggregate(Brando.Images.Image, :count) == images
       assert stored(dir) == []
     end

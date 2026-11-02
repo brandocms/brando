@@ -22,6 +22,8 @@ defmodule BrandoAdmin.Components.Form do
 
 
   """
+  @image_editor_max_file_size 50_000_000
+
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator
 
@@ -5419,7 +5421,7 @@ defmodule BrandoAdmin.Components.Form do
       socket
       |> allow_upload(:image_editor_upload,
         accept: ~w(.jpg .jpeg .png .webp),
-        max_file_size: 50_000_000,
+        max_file_size: @image_editor_max_file_size,
         max_entries: 1,
         auto_upload: true,
         progress: &__MODULE__.handle_image_editor_upload_progress/3
@@ -8404,7 +8406,12 @@ defmodule BrandoAdmin.Components.Form do
 
   defp normalize_upload_config_target(_), do: nil
 
+  # The copy's size is the editor's own JPEG export, not what the editor chose
+  # to upload: an image within the field's limit can export over it. So the
+  # transport's bound stands in for the limit, and the rest is checked as usual.
   defp safe_handle_upload(meta, upload_entry, cfg, current_user) do
+    cfg = Map.put(cfg, :size_limit, @image_editor_max_file_size)
+
     case Brando.Uploads.store_upload(meta, upload_entry, cfg, current_user) do
       {:ok, asset} -> {:ok, asset}
       {:error, message} -> {:ok, {:upload_error, message}}

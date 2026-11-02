@@ -282,8 +282,9 @@ subscribe to their own `deliver_topic` the same way.
   gallery editors use `resource_gallery`.
 - **Image editor "save as new copy"** is the one form-owned upload
   (`allow_upload(:image_editor_upload)` in `Form.allow_uploads/1`). It stores through
-  `Brando.Uploads.store_upload/4` like the manager; a refusal reaches the editor as a
-  `b:alert`.
+  `Brando.Uploads.store_upload/4` like the manager, with the transport's 50 MB in place of
+  the field's `size_limit`, because the file is the editor's own JPEG export and can pass
+  the limit its source met. A refusal reaches the editor as a `b:alert`.
 
 ### File replacement
 

@@ -6,6 +6,6 @@
 
 - An SVG uploaded directly to the bucket is stored instead of failing at the end of the upload.
 
-- The image editor's "save as new copy" now applies the field's size limit and allowed types, and a refused type shows the editor an error instead of crashing the form.
+- The image editor's "save as new copy" now applies the image extension list and the field's allowed types, and a refused type shows the editor an error instead of crashing the form.
 
 - Replacing a video's file checks its contents, so bytes that are not a video can no longer take its place.
