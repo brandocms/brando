@@ -294,6 +294,36 @@ defmodule Brando.Uploads.ReceivedUploadTest do
                Uploads.store_upload(meta(path), entry("a.jpg", "image/jpeg"), image_cfg(), user)
     end
 
+    # Slugging used to leave ".jpg", a dotfile with no extension and so no type
+    test "a jpeg named only punctuation is stored with its extension and processed",
+         %{dir: dir, user: user} = ctx do
+      path = temp(dir, File.read!(@jpg))
+
+      assert {:ok, image} =
+               Uploads.store_upload(meta(path), entry("!!!.jpg", "image/jpeg"), image_cfg(), user)
+
+      assert image.path == Path.join(@upload_path, "file.jpg")
+      assert stored(ctx) == ["file.jpg"]
+      assert Utils.image_type(image.path) == :jpg
+
+      args = %{"image_id" => image.id, "config_target" => "default", "user_id" => nil, "field_full_path" => []}
+      assert {:ok, _} = perform_job(Brando.Worker.ImageProcessor, args)
+
+      processed = Brando.Repo.get!(Brando.Images.Image, image.id)
+      assert processed.status == :processed
+      assert processed.sizes["thumb"] == Path.join([@upload_path, "thumb", "file.jpg"])
+    end
+
+    test "a name longer than a filesystem takes is stored cut short", %{dir: dir, user: user} = ctx do
+      name = String.duplicate("a", 300) <> ".txt"
+
+      assert {:ok, file} =
+               Uploads.store_upload(meta(temp(dir, "x")), entry(name, "text/plain"), file_cfg(%{}), user)
+
+      assert file.filename == String.duplicate("a", 200) <> ".txt"
+      assert stored(ctx) == [file.filename]
+    end
+
     test "an SVG, with its declared size", %{dir: dir, user: user} do
       assert {:ok, image} =
                Uploads.store_upload(meta(temp(dir, @svg)), entry("a.svg", "image/svg+xml"), image_cfg(), user)

@@ -21,6 +21,10 @@ defmodule Brando.Images.Operations do
   Creates an %Operation{} for each size key in `cfg`s `:sizes` and for each
   format in `cfg`s `:formats`
 
+  An image whose path has no image extension cannot keep its original format:
+  with `:original` among the formats, this returns
+  `{:error, {:unsupported_image_type, extension}}`.
+
   ## Example
 
       {:ok, operations} = create(image, image_config, user)
@@ -30,8 +34,23 @@ defmodule Brando.Images.Operations do
           image :: image,
           cfg :: image_config,
           user :: user
-        ) :: {:ok, [operation]}
-  def create(%{path: path, id: id} = image_struct, cfg, user) do
+        ) :: {:ok, [operation]} | {:error, {:unsupported_image_type, String.t()}}
+  def create(%{path: path} = image_struct, cfg, user) do
+    original_type = Images.Utils.image_type(path)
+
+    with :ok <- check_original_type(original_type, Map.get(cfg, :formats)) do
+      {:ok, build_operations(image_struct, original_type, cfg, user)}
+    end
+  end
+
+  # Keeping the original format needs a type, which comes from the path's extension
+  defp check_original_type({:error, extension}, formats) when is_list(formats) do
+    if :original in formats, do: {:error, {:unsupported_image_type, extension}}, else: :ok
+  end
+
+  defp check_original_type(_original_type, _formats), do: :ok
+
+  defp build_operations(%{path: path, id: id} = image_struct, original_type, cfg, user) do
     user_id = (is_map(user) && user.id) || user
     {_, filename} = Utils.split_path(path)
 
@@ -40,7 +59,6 @@ defmodule Brando.Images.Operations do
 
     total_operations = Enum.count(Map.keys(sizes)) * Enum.count(formats)
     processed_formats = Images.get_processed_formats(path, formats)
-    original_type = Images.Utils.image_type(path)
 
     operations =
       Enum.map(formats, fn format ->
@@ -72,7 +90,7 @@ defmodule Brando.Images.Operations do
         format_operations
       end)
 
-    {:ok, List.flatten(operations)}
+    List.flatten(operations)
   end
 
   @doc """

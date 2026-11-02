@@ -23,6 +23,10 @@ defmodule Brando.Utils do
   @hour_time 60 * @min_time
   @day_time 24 * @hour_time
 
+  @fallback_basename "file"
+  @max_slugged_basename 200
+  @max_slugged_extension 16
+
   @doc """
   Converts `string` to an ascii slug. Removes all unicode, spaces,
   extraneous dashes and punctuation and downcases the slug
@@ -32,22 +36,48 @@ defmodule Brando.Utils do
 
   @doc """
   Converts `filename` to an ascii slug, as per slugify/1.
-  This function retains the extension of the filename, only converting
-  the basename.
+  This function retains the extension of the filename, as `Path.extname/1`
+  finds it, slugging it to lowercase letters and digits.
+
+  A basename with nothing left to slug (only punctuation, or characters with
+  no ascii form) becomes `#{@fallback_basename}`, so the extension survives. The
+  basename is cut to #{@max_slugged_basename} characters and the extension to
+  #{@max_slugged_extension}, which keeps the name within a filesystem's limit
+  with room for the suffixes uploads add. An extension with nothing left to
+  slug is dropped. An empty name stays empty.
 
   ## Example
 
         iex(1)> slugify_filename("test with spaces.jpeg")
         "test-with-spaces.jpeg"
 
+        iex(2)> slugify_filename("!!!.jpg")
+        "#{@fallback_basename}.jpg"
+
   """
   @spec slugify_filename(binary) :: binary
+  def slugify_filename(""), do: ""
+
   def slugify_filename(filename) do
     {basename, ext} = split_filename(filename)
-    slugged_filename = slugify(basename)
-    ext = String.downcase(ext)
-    "#{slugged_filename}#{ext}"
+    "#{slugify_basename(basename)}#{slugify_extension(ext)}"
   end
+
+  defp slugify_basename(basename) do
+    case slugify(basename) do
+      nil -> @fallback_basename
+      slug -> slug |> String.slice(0, @max_slugged_basename) |> String.trim_trailing("-")
+    end
+  end
+
+  defp slugify_extension("." <> ext) do
+    case Slug.slugify(ext, separator: "") do
+      nil -> ""
+      slug -> "." <> String.slice(slug, 0, @max_slugged_extension)
+    end
+  end
+
+  defp slugify_extension(_ext), do: ""
 
   @doc """
   Capitalize and replace dashes and underscores with spaces

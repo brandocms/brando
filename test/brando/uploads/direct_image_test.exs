@@ -163,12 +163,32 @@ defmodule Brando.Uploads.DirectImageTest do
       assert BrandoIntegration.Repo.all(Image) == []
     end
 
-    # Slugging a name of only punctuation leaves ".png", which has no extension
-    test "a key that lost its extension is not stored" do
-      put_image_config(%{cdn: @cdn, allowed_mimetypes: ["image/jpeg", "image/png"]})
+    # Slugging such a name used to leave ".jpg", a key with no extension
+    test "a name of only punctuation keeps its extension and is stored" do
+      put_image_config(%{cdn: @cdn})
       body = File.read!(@fixture)
       {:ok, upload} = Direct.presign(:image, "default", meta(%{name: "!!!.jpg", size: byte_size(body)}))
-      assert Path.extname(upload.key) == ""
+      assert upload.key =~ ~r"^media/images/visitors/file-\w+\.jpg$"
+
+      expect(Client.Mock, :head_object, fn _, _, _ -> {:ok, head_response(byte_size(body), "image/jpeg")} end)
+      expect(Client.Mock, :get_object, fn _, _, _ -> {:ok, %{status_code: 200, body: body}} end)
+
+      {:ok, image} = Oban.Testing.with_testing_mode(:manual, fn -> Direct.complete(upload.ref) end)
+      assert "media/" <> image.path == upload.key
+      assert Brando.Images.Utils.image_type(image.path) == :jpg
+      assert_enqueued(worker: Brando.Worker.ImageProcessor, args: %{image_id: image.id})
+    end
+
+    # Defence in depth: intake took the client's name, the key is what is stored
+    test "a pending key without an image extension is not stored" do
+      put_image_config(%{cdn: @cdn})
+      body = File.read!(@fixture)
+      {:ok, upload} = Direct.presign(:image, "default", meta(%{size: byte_size(body)}))
+
+      upload.ref
+      |> Uploads.get_pending_intent()
+      |> Ecto.Changeset.change(key: "media/images/visitors/.jpg")
+      |> BrandoIntegration.Repo.update!()
 
       expect(Client.Mock, :head_object, fn _, _, _ -> {:ok, head_response(byte_size(body), "image/jpeg")} end)
       expect(Client.Mock, :get_object, fn _, _, _ -> {:ok, %{status_code: 200, body: body}} end)
