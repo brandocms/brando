@@ -198,6 +198,51 @@ defmodule Brando.Users.AccountLifecycleTest do
       end
     end
 
+    test "the listing opens no delete dialog for an account above the actor's role", %{current_user: superuser} do
+      editor = TestUsers.insert_user(role: :editor)
+      admin = TestUsers.insert_user(role: :admin)
+      {:ok, view, _} = live(log_in_user(build_conn(), editor), "/admin/users")
+      Brando.endpoint().subscribe("user:#{editor.id}")
+
+      for event <- ["delete_user", "delete_entry"] do
+        render_hook(view, event, %{"id" => to_string(admin.id)})
+
+        refute has_element?(view, ".transfer-content-modal")
+        assert_receive %Broadcast{event: "toast", payload: %{payload: "You do not have permission" <> _}}, 2_000
+      end
+
+      # A confirm sent without an open dialog deletes nothing.
+      render_hook(view, "select_transfer_user", %{"id" => to_string(superuser.id)})
+      render_hook(view, "confirm_transfer_delete", %{})
+      refute Repo.get!(User, admin.id).deleted_at
+    end
+
+    test "the listing opens the delete dialog for an account at the actor's role" do
+      editor = TestUsers.insert_user(role: :editor)
+      other = TestUsers.insert_user(role: :editor)
+      {:ok, view, _} = live(log_in_user(build_conn(), editor), "/admin/users")
+
+      render_hook(view, "delete_user", %{"id" => to_string(other.id)})
+      assert has_element?(view, ".transfer-content-modal")
+    end
+
+    test "a refused transfer delete says the actor may not", %{current_user: superuser} do
+      admin = TestUsers.insert_user(role: :admin)
+      target = TestUsers.insert_user(role: :editor)
+      {:ok, view, _} = live(log_in_user(build_conn(), admin), "/admin/users")
+      Brando.endpoint().subscribe("user:#{admin.id}")
+
+      render_hook(view, "delete_user", %{"id" => to_string(target.id)})
+      render_hook(view, "select_transfer_user", %{"id" => to_string(superuser.id)})
+      # Raised above the actor while the dialog is open.
+      Repo.update_all(from(u in User, where: u.id == ^target.id), set: [role: :superuser])
+      render_hook(view, "confirm_transfer_delete", %{})
+
+      assert_receive %Broadcast{event: "toast", payload: %{payload: "You do not have permission" <> _}}, 2_000
+      refute_received %Broadcast{event: "toast", payload: %{payload: "Error deleting user" <> _}}
+      refute Repo.get!(User, target.id).deleted_at
+    end
+
     test "a demoted admin's open listing may not deactivate an admin", %{current_user: superuser} do
       actor = TestUsers.insert_user(role: :admin)
       target = target(:admin, :deactivate, superuser)

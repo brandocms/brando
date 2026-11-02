@@ -180,34 +180,14 @@ defmodule BrandoAdmin.Users.UserListLive do
      |> assign(:user_select_open, false)}
   end
 
+  # The dialog opens only on an account the signed-in user may delete.
   def handle_event("delete_user", %{"id" => id}, socket) do
     user = Users.get_user!(id) |> Brando.Repo.preload(:avatar)
 
-    table_labels =
-      Brando.Blueprint.list_blueprints(:include_brando)
-      |> Enum.filter(&function_exported?(&1, :__schema__, 1))
-      |> Map.new(&{&1.__schema__(:source), Brando.Blueprint.get_plural(&1)})
-
-    content_summary =
-      user.id
-      |> Users.get_user_content_summary()
-      |> Enum.map(&Map.put(&1, :label, Map.get(table_labels, &1.table, Phoenix.Naming.humanize(&1.table))))
-
-    {:ok, all_users} =
-      Users.list_users(%{
-        filter: %{active: true},
-        preload: [{:avatar, :join}]
-      })
-
-    available_users = Enum.reject(all_users, &(&1.id == user.id))
-
-    {:noreply,
-     socket
-     |> assign(:deleting_user, user)
-     |> assign(:transfer_to_user_id, nil)
-     |> assign(:available_users, available_users)
-     |> assign(:content_summary, content_summary)
-     |> assign(:user_select_open, false)}
+    case Brando.Authorization.Boundary.authorize(socket.assigns.current_user, :delete, user) do
+      :ok -> {:noreply, open_transfer_delete(socket, user)}
+      {:error, _} -> {:noreply, refused(socket)}
+    end
   end
 
   def handle_event("delete_entry", params, socket), do: handle_event("delete_user", params, socket)
@@ -224,6 +204,8 @@ defmodule BrandoAdmin.Users.UserListLive do
      |> assign(:user_select_open, false)}
   end
 
+  def handle_event("confirm_transfer_delete", _, %{assigns: %{deleting_user: nil}} = socket), do: {:noreply, socket}
+
   def handle_event("confirm_transfer_delete", _, socket) do
     %{deleting_user: user, transfer_to_user_id: to_id, current_user: current_user} =
       socket.assigns
@@ -238,6 +220,9 @@ defmodule BrandoAdmin.Users.UserListLive do
          |> assign(:deleting_user, nil)
          |> assign(:transfer_to_user_id, nil)
          |> assign(:user_select_open, false)}
+
+      {:error, :forbidden} ->
+        {:noreply, refused(socket)}
 
       {:error, reason} ->
         send(self(), {:toast, gettext("Error deleting user: %{reason}", reason: inspect(reason))})
@@ -258,10 +243,42 @@ defmodule BrandoAdmin.Users.UserListLive do
   def handle_event("disable_user", %{"id" => id}, socket), do: set_active(socket, id, false, gettext("User disabled."))
   def handle_event("enable_user", %{"id" => id}, socket), do: set_active(socket, id, true, gettext("User enabled."))
 
+  defp open_transfer_delete(socket, user) do
+    table_labels =
+      Brando.Blueprint.list_blueprints(:include_brando)
+      |> Enum.filter(&function_exported?(&1, :__schema__, 1))
+      |> Map.new(&{&1.__schema__(:source), Brando.Blueprint.get_plural(&1)})
+
+    content_summary =
+      user.id
+      |> Users.get_user_content_summary()
+      |> Enum.map(&Map.put(&1, :label, Map.get(table_labels, &1.table, Phoenix.Naming.humanize(&1.table))))
+
+    {:ok, all_users} =
+      Users.list_users(%{
+        filter: %{active: true},
+        preload: [{:avatar, :join}]
+      })
+
+    available_users = Enum.reject(all_users, &(&1.id == user.id))
+
+    socket
+    |> assign(:deleting_user, user)
+    |> assign(:transfer_to_user_id, nil)
+    |> assign(:available_users, available_users)
+    |> assign(:content_summary, content_summary)
+    |> assign(:user_select_open, false)
+  end
+
+  defp refused(socket) do
+    send(self(), {:toast, gettext("You do not have permission for this action.")})
+    socket
+  end
+
   defp set_active(socket, id, active, message) do
     case Users.set_active(id, active, socket.assigns.current_user) do
       {:ok, _user} -> send(self(), {:toast, message})
-      {:error, _reason} -> send(self(), {:toast, gettext("You do not have permission for this action.")})
+      {:error, _reason} -> refused(socket)
     end
 
     {:noreply, socket}
