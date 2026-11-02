@@ -1003,9 +1003,10 @@ that names it exactly, such as `s3://{site_key}-static`; `s3://bucket/` allows
 every prefix in the bucket but not the bucket itself. Brando checks a target
 when the settings are saved and again each time a build deploys, since a build
 keeps the configuration it was made with. A refused deploy or rollback says so
-in the build's log. Fix the list and the build deploys; change a site's target
-and it takes a new build. An older build whose target no longer fits cannot be
-rolled back until its target is listed again.
+in the build's log. If the target is of the right form, fix the list and the
+build deploys; change a site's target and it takes a new build. An older build
+whose target no longer fits cannot be rolled back until its target is listed
+again, and one with a target of the wrong form cannot be deployed at all.
 
 **An entry without `{site_key}` grants every site.** That holds for an exact
 destination such as `s3://acme-www` as much as for a parent such as

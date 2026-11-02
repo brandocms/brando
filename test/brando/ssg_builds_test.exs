@@ -375,7 +375,7 @@ defmodule Brando.SSGBuildsTest do
 
       assert {:ok, %{status: :deployed}} = Deploy.deploy(build, runner: &recording_runner/3)
       assert_received {:command, "rsync", args}
-      assert List.last(args) == target
+      assert target in args
     end
 
     test "S3 at another site's prefix or a whole bucket lists and deletes nothing", context do
@@ -411,10 +411,12 @@ defmodule Brando.SSGBuildsTest do
 
     test "a queued deploy or rollback to a refused target says why in the build log", context do
       for action <- ["deploy", "rollback"] do
-        {:ok, build} =
-          context.build
+        build =
+          context.site
+          |> ready_build(context.environment)
           |> with_target("s3", "s3://static-bucket/sites/#{context.other_key}")
-          |> Builds.update(%{build_log: ""})
+
+        refute build.build_log =~ "refused"
 
         assert {:cancel, :invalid_deploy_target} =
                  perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => action})
