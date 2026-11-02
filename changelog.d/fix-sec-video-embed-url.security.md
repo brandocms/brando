@@ -1,0 +1,1 @@
+- A stored video address can no longer run as script in another admin's session: video previews embed only a player URL Brando builds on YouTube's or Vimeo's host, and a video's address must be http(s) or have no scheme.

@@ -17784,6 +17784,11 @@ msgstr "Denne %{singular}"
 msgid "This MCP endpoint does not exist or is turned off."
 msgstr "Dette MCP-endepunktet finnes ikke eller er slått av."
 
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "This address can't be used for a video."
+msgstr "Denne adressen kan ikke brukes til en video."
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -20949,6 +20954,11 @@ msgstr "må være en gyldig grenreferanse"
 #, elixir-autogen, elixir-format
 msgid "must be an absolute path without . or .."
 msgstr "må være en absolutt sti uten . eller .."
+
+#: lib/brando/videos/video/valid_source_url.ex
+#, elixir-autogen, elixir-format
+msgid "must be an http or https address"
+msgstr "må være en http- eller https-adresse"
 
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format

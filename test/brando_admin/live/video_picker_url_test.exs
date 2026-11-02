@@ -6,6 +6,8 @@ defmodule BrandoAdmin.VideoPickerURLTest do
   """
   use Brando.LiveCase
 
+  import ExUnit.CaptureLog, only: [capture_log: 1]
+
   alias Brando.Videos.Video
   alias BrandoAdmin.Components.VideoPicker
 
@@ -31,6 +33,11 @@ defmodule BrandoAdmin.VideoPickerURLTest do
 
     def mount(_params, %{"test_pid" => test_pid, "user" => user}, socket) do
       {:ok, assign(socket, test_pid: test_pid, current_user: user)}
+    end
+
+    def handle_info({:toast, message}, socket) do
+      send(socket.assigns.test_pid, {:toast, message})
+      {:noreply, socket}
     end
 
     def render(assigns) do
@@ -60,6 +67,17 @@ defmodule BrandoAdmin.VideoPickerURLTest do
 
     assert %{id: id, title: "Never gonna", caption: "A classic", type: :youtube} = Brando.Repo.one!(Video)
     assert_received {:video_created, ^id}
+  end
+
+  test "an address with a script scheme is refused, and the editor told", %{conn: conn, current_user: user} do
+    Req.Test.stub(Brando.OEmbed, &Req.Test.json(&1, %{"title" => "Never gonna"}))
+
+    view = paste_url(conn, user, %{"url" => "javascript:document.title='f05'"})
+    capture_log(fn -> render_async(view) end)
+
+    assert Brando.Repo.aggregate(Video, :count) == 0
+    assert_received {:toast, _message}
+    refute has_element?(view, ".video-picker-analyzing:not(.hidden)")
   end
 
   test "a provider that cannot be reached is asked once, and the video is still created",
@@ -152,10 +170,10 @@ defmodule BrandoAdmin.VideoPickerURLTest do
     end
   end
 
-  defp paste_url(conn, user) do
+  defp paste_url(conn, user, params \\ %{}) do
     {:ok, view, _html} = live_isolated(conn, Host, session: %{"test_pid" => self(), "user" => user})
     open_picker(view, "#video-field")
-    view |> with_target(cid_of(view, "#video-picker")) |> render_hook("url", @params)
+    view |> with_target(cid_of(view, "#video-picker")) |> render_hook("url", Map.merge(@params, params))
     view
   end
 

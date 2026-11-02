@@ -639,7 +639,9 @@ Gallery fields (`asset :my_gallery, :gallery`) hold both images and videos. Vide
 can be added to a gallery in three ways:
 
 1. **Select existing videos** — the "Select videos" button opens the video picker.
-2. **Add from URL** — the video picker accepts YouTube, Vimeo and direct video URLs.
+2. **Add from URL** — the video picker accepts YouTube, Vimeo and direct video URLs,
+   http(s) or without a scheme. The picker's preview embeds a provider video from
+   its id, on the provider's own host.
 3. **Upload video files**:
    - With `:local` or a configured `:s3` strategy, the gallery's "Upload media"
      button takes video files as well as images, uploads them through the

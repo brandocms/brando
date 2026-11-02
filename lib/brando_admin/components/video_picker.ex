@@ -602,26 +602,25 @@ defmodule BrandoAdmin.Components.VideoPicker do
      |> push_selection_state()}
   end
 
-  def handle_event(
-        "play_video",
-        %{"video-id" => video_id, "type" => type} = params,
-        socket
-      ) do
+  # What plays comes from the row, never from the event.
+  def handle_event("play_video", %{"video-id" => video_id}, socket) do
     video_data = Enum.find(socket.assigns.videos, &(&1.id == String.to_integer(video_id)))
-    source_url = Map.get(params, "source-url", "")
 
     {preview_type, playback_url} =
       case Brando.Videos.Helpers.get_playback_url(video_data) do
         {:ok, url} when video_data.type not in [:youtube, :vimeo] -> {:external_file, url}
         # No file link (an account without `video_files`): Vimeo's own player.
         _ when video_data.type == :vimeo_account -> {:vimeo, video_data.source_url}
-        _ -> {video_data.type, source_url}
+        _ -> {video_data.type, video_data.source_url}
       end
+
+    embed_url = get_embed_url(preview_type, video_data)
 
     video = %{
       id: video_id,
       source_url: playback_url,
-      type: preview_type || String.to_existing_atom(type),
+      embed_url: embed_url,
+      type: playing_type(preview_type, embed_url),
       unique_id: System.unique_integer([:positive]),
       width: video_data.width,
       height: video_data.height
@@ -865,6 +864,10 @@ defmodule BrandoAdmin.Components.VideoPicker do
 
         require Logger
         Logger.warning("Video changeset error: #{error_msg}")
+
+        if Keyword.has_key?(changeset.errors, :source_url),
+          do: send(self(), {:toast, gettext("This address can't be used for a video.")})
+
         {:noreply, assign(socket, :creating_video, false)}
     end
   end
@@ -1384,7 +1387,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
               <% :youtube -> %>
                 <iframe
                   id={"youtube-player-#{@playing_video.unique_id}"}
-                  src={get_embed_url(@playing_video)}
+                  src={@playing_video.embed_url}
                   frameborder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowfullscreen
@@ -1393,7 +1396,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
               <% :vimeo -> %>
                 <iframe
                   id={"vimeo-player-#{@playing_video.unique_id}"}
-                  src={get_embed_url(@playing_video)}
+                  src={@playing_video.embed_url}
                   frameborder="0"
                   allow="autoplay; fullscreen; picture-in-picture"
                   allowfullscreen
@@ -1520,8 +1523,6 @@ defmodule BrandoAdmin.Components.VideoPicker do
                   |> hide_dropdown("#video-picker-menu-#{@video.id}")
                 }
                 phx-value-video-id={@video.id}
-                phx-value-source-url={@video.source_url}
-                phx-value-type={@video.type}
               >
                 <.icon name="play" />
                 {gettext("Preview")}
@@ -1570,8 +1571,6 @@ defmodule BrandoAdmin.Components.VideoPicker do
       class="video-preview"
       phx-click={JS.push("play_video", target: @myself) |> show_modal("#video-player-modal")}
       phx-value-video-id={@video.id}
-      phx-value-source-url={@video.source_url}
-      phx-value-type={@video.type}
     >
       <.icon name="film" />
       <%= cond do %>
@@ -1626,27 +1625,17 @@ defmodule BrandoAdmin.Components.VideoPicker do
     |> JS.remove_class("is-active", to: "##{id}-view-grid")
   end
 
-  defp get_embed_url(%{type: :youtube, source_url: source_url}) do
-    cond do
-      String.contains?(source_url, "watch?v=") ->
-        String.replace(source_url, "watch?v=", "embed/") <> "?autoplay=1"
+  defp get_embed_url(:youtube, video), do: Brando.Videos.YouTubeURL.embed_url(video, autoplay: 1)
 
-      String.contains?(source_url, "youtu.be/") ->
-        video_id = source_url |> String.split("/") |> List.last()
-        "https://www.youtube.com/embed/#{video_id}?autoplay=1"
+  defp get_embed_url(:vimeo, %{type: :vimeo_account} = video),
+    do: Brando.Videos.Uploaders.Vimeo.embed_url(video, autoplay: 1)
 
-      true ->
-        source_url
-    end
-  end
+  defp get_embed_url(:vimeo, video), do: Brando.Videos.VimeoURL.embed_url(video, autoplay: 1)
+  defp get_embed_url(_preview_type, _video), do: nil
 
-  defp get_embed_url(%{type: :vimeo} = video) do
-    Brando.Videos.VimeoURL.embed_url(video, autoplay: 1)
-  end
-
-  defp get_embed_url(%{source_url: source_url}) do
-    source_url
-  end
+  # A provider video with nothing to embed says so instead of an empty player
+  defp playing_type(type, nil) when type in [:youtube, :vimeo], do: nil
+  defp playing_type(type, _embed_url), do: type
 
   defp get_aspect_ratio(%{width: width, height: height})
        when is_integer(width) and is_integer(height) and width > 0 and height > 0 do
