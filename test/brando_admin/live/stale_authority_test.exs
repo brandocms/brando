@@ -678,7 +678,7 @@ defmodule BrandoAdmin.StaleAuthorityTest do
 
       Repo.delete_all(from(m in Brando.Authorization.Membership, where: m.group_id == ^grant.id), prefix: "public")
 
-      assert render_click(view, "compare", %{"id" => event.id})
+      assert render_click(view, "compare", %{"id" => to_string(event.id)})
       refute :sys.get_state(view.pid).socket.assigns.comparison
 
       render_click(view, "load_more")
