@@ -199,4 +199,75 @@ test.describe('Live preview sandbox', () => {
     await standalone.close()
     expect(errors).toEqual([])
   })
+
+  // Runs `setup(arg)` in the preview page once it has a `<body>`, before the
+  // client script the plug puts at its end, as the site's own scripts and
+  // content would be there.
+  const beforeClient = (page, setup, arg) =>
+    page.addInitScript(
+      `if (location.pathname.startsWith('/__livepreview')) new MutationObserver((_, observer) => {
+        if (!document.body) return
+        observer.disconnect()
+        ;(${setup})(${JSON.stringify(arg)})
+      }).observe(document, { childList: true, subtree: true })`
+    )
+
+  // The site's classic scripts share one global scope with the client. Names
+  // they declare must not keep the client from loading, and the client must
+  // leave the site's globals as they were.
+  test('a site script declaring the names the client uses keeps its globals and its preview updated', async ({
+    page
+  }) => {
+    const errors = watchErrors(page)
+    await beforeClient(page, () => {
+      const script = document.createElement('script')
+      script.textContent =
+        "let token = 'site token'; const body = 'site body'; var Phoenix = 'site Phoenix'; var morphdom = 'site morphdom'"
+      document.body.append(script)
+    })
+    await openPreview(page, 'Sandbox Globals')
+
+    const preview = getPreviewFrame(page)
+    await page.locator('.header-block textarea').fill('Globals Header')
+    await syncLV(page)
+    await expect(preview.locator('header[b-tpl="styled-header"] h1')).toContainText('Globals Header')
+
+    const frame = await (await page.locator('#live-preview-frame').elementHandle()).contentFrame()
+    expect(await frame.evaluate(() => [token, body, window.Phoenix, window.morphdom])).toEqual([
+      'site token',
+      'site body',
+      'site Phoenix',
+      'site morphdom'
+    ])
+    expect(errors).toEqual([])
+  })
+
+  // Content can name an element after a member of `document` (rich text keeps
+  // `name`), and `document` then returns the element for that name; the name
+  // also hides `window.addEventListener`. The client starts and patches anyway.
+  for (const name of ['querySelector', 'createElement', 'createRange', 'addEventListener']) {
+    test(`an element named ${name} in the content keeps the preview updating`, async ({ page }) => {
+      const clientErrors = []
+      page.on('pageerror', error => {
+        if (/__livepreview\/client-/.test(error.stack || '')) clientErrors.push(error.message)
+      })
+      await beforeClient(
+        page,
+        name => {
+          const image = document.createElement('img')
+          image.name = name
+          document.body.prepend(image)
+        },
+        name
+      )
+      await openPreview(page, `Sandbox Named ${name}`)
+
+      const preview = getPreviewFrame(page)
+      await page.locator('.header-block textarea').fill(`Named ${name}`)
+      await syncLV(page)
+      await expect(preview.locator('header[b-tpl="styled-header"] h1')).toContainText(`Named ${name}`)
+      await expect(page.locator('.live-preview-notice')).toBeEmpty()
+      expect(clientErrors).toEqual([])
+    })
+  }
 })

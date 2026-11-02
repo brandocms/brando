@@ -198,6 +198,27 @@ test.describe('Live preview iframe script', () => {
     expect(errors).toEqual([])
   })
 
+  // An element named `currentScript` in the content is what `document` returns
+  // for that name. The page asks the server with its own script's address
+  // (none here, an inline script: the page's), never the element's.
+  test('a connect refused after the token expired asks the server, not an element named currentScript', async ({
+    page
+  }) => {
+    const errors = await load(page, '<main><img name="currentScript" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></main>', 1, {
+      maxAge: 30
+    })
+
+    await page.evaluate(() => {
+      window.fetch = async url => {
+        window.__lp.probed = String(url)
+        throw new TypeError('Failed to fetch')
+      }
+      window.__lp.socketError()
+    })
+    await expect.poll(() => page.evaluate(() => window.__lp.probed)).toBe('about:blank')
+    expect(errors).toEqual([])
+  })
+
   // The server does not answer: the page stays, and tries again on the next
   // refused connect
   test('an expired token does not reload the page while the server is away', async ({ page }) => {
