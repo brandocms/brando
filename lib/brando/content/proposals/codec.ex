@@ -7,7 +7,8 @@ defmodule Brando.Content.Proposals.Codec do
   One shape serves both directions: the operations an agent submits through
   the `prepare_proposal` tool, and the frozen operations stored with a
   proposal. Content types are Blueprint module names (`"Brando.Pages.Page"`)
-  and are resolved against the registered schemas, never turned into atoms.
+  and are resolved against the content type catalogue (`schema/1`), never
+  turned into atoms.
 
       %{"op" => "create_entry", "content_type" => "…", "ref" => "case", "fields" => %{}}
       %{"op" => "set_fields", "target" => target, "fields" => %{}}
@@ -364,12 +365,17 @@ defmodule Brando.Content.Proposals.Codec do
   @spec content_type(module()) :: String.t()
   def content_type(schema), do: inspect(schema)
 
-  @doc "Resolve a content type name to a registered schema."
+  @doc """
+  Resolve a content type name to a schema a proposal may name: one in the
+  content type catalogue (`Brando.Content.Transfer.Catalog.editable_schemas/0`,
+  what `list_content_types` lists). Brando's internal schemas, such as users,
+  global sets, menus or vars, resolve to `:error` like an unknown name.
+  """
   @spec schema(term()) :: {:ok, module()} | :error
   def schema(name) when is_binary(name) do
     case Enum.find(Brando.Authorization.Catalog.schemas(), &(inspect(&1) == name || to_string(&1) == name)) do
       nil -> :error
-      schema -> {:ok, schema}
+      schema -> if Brando.Content.Transfer.Catalog.editable?(schema), do: {:ok, schema}, else: :error
     end
   end
 
@@ -394,8 +400,17 @@ defmodule Brando.Content.Proposals.Codec do
 
   defp schema!(name) do
     case schema(name) do
-      {:ok, schema} -> schema
-      :error -> invalid!(dgettext("content_proposals", "Unknown content type %{name}.", name: inspect(name)))
+      {:ok, schema} ->
+        schema
+
+      :error ->
+        invalid!(
+          dgettext(
+            "content_proposals",
+            "Unknown content type %{name}. A proposal can only name the content types list_content_types lists.",
+            name: inspect(name)
+          )
+        )
     end
   end
 

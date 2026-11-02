@@ -93,6 +93,7 @@ defmodule Brando.Content.Proposals do
     Transfer.ensure_scope!(actor)
     user = user!(actor)
     operations = Enum.map(operations, &(&1 |> freeze() |> EntryLinks.resolve(actor)))
+    catalogued!(operations)
     creates = for %CreateEntry{} = op <- operations, into: %{}, do: {{:new, op.ref}, op.schema}
 
     entries =
@@ -115,6 +116,23 @@ defmodule Brando.Content.Proposals do
     problems = operation_problems(proposal, actor)
     problems = if problems == [], do: check_changesets(proposal, entries, user), else: problems
     %{proposal | problems: problems, effects: effects(proposal)}
+  end
+
+  # A proposal creates entries only of the content types in the catalogue,
+  # as it changes only theirs (`load!/3`): Brando's internal schemas, such as
+  # users, global sets, menus or vars, are refused before anything is stored.
+  defp catalogued!(operations) do
+    for %CreateEntry{schema: schema} <- operations, Codec.schema(schema) != {:ok, schema} do
+      Error.fail!(
+        dgettext(
+          "content_proposals",
+          "Unknown content type %{name}. A proposal can only name the content types list_content_types lists.",
+          name: inspect(Codec.content_type(schema))
+        )
+      )
+    end
+
+    :ok
   end
 
   @doc """
@@ -330,7 +348,7 @@ defmodule Brando.Content.Proposals do
         duplicate? ->
           [problem(:duplicate_ref, dgettext("content_proposals", "Two new entries use the same reference."))]
 
-        op.schema not in Brando.Authorization.Catalog.schemas() ->
+        Codec.schema(op.schema) != {:ok, op.schema} ->
           [problem(:unknown_schema, dgettext("content_proposals", "This content type is not registered on this site."))]
 
         Boundary.authorize(actor, :create, op.schema) != :ok ->
@@ -2549,7 +2567,14 @@ defmodule Brando.Content.Proposals do
   end
 
   defp rebuild!(record, actor, action \\ :update) do
-    {:ok, operations} = Codec.decode_all(record.operations)
+    # A stored operation naming a content type the catalogue no longer
+    # lists (or never did) is refused, not reviewed or applied.
+    operations =
+      case Codec.decode_all(record.operations) do
+        {:ok, operations} -> operations
+        {:error, message} -> Error.fail!(message)
+      end
+
     creates = for %CreateEntry{} = op <- operations, into: %{}, do: {{:new, op.ref}, op.schema}
 
     entries =

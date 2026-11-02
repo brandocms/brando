@@ -499,10 +499,11 @@ msgstr "To nye oppføringer bruker samme referanse."
 msgid "Undo failed: %{reason}"
 msgstr "Angring mislyktes: %{reason}"
 
+#: lib/brando/content/proposals.ex
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
-msgid "Unknown content type %{name}."
-msgstr "Ukjent innholdstype %{name}."
+msgid "Unknown content type %{name}. A proposal can only name the content types list_content_types lists."
+msgstr "Ukjent innholdstype %{name}. Et forslag kan bare gjelde innholdstypene som list_content_types viser."
 
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
