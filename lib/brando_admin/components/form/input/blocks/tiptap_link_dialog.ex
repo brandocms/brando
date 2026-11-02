@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Authorization.Boundary
   alias Brando.Content.Identifier
   alias Brando.RichText
   alias BrandoAdmin.Components.Content
@@ -50,7 +51,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
 
   def update(%{event: :open} = params, socket) do
     href = params[:current_href] || ""
-    identifier = open_identifier(params[:current_identifier_id])
+    {identifier, hidden?} = open_identifier(params[:current_identifier_id])
     rel = String.split(params[:current_rel] || "")
 
     {:ok,
@@ -63,8 +64,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
        selected_identifier: identifier,
        selected_identifier_id: identifier && identifier.id,
        unavailable_destination: !!params[:current_identifier_id] && is_nil(identifier),
-       kept_destination:
-         if(is_nil(identifier) && params[:current_identifier_id], do: {params[:current_identifier_id], href}),
+       kept_destination: if(hidden?, do: {params[:current_identifier_id], href}),
        has_existing_link?: href != "",
        original_class: params[:current_class],
        original_target: params[:current_target],
@@ -98,10 +98,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
 
   def update(assigns, socket), do: {:ok, assign(socket, assigns)}
 
+  # The identifier to show, and whether the account's read filter hid it: one
+  # that is gone, or readable with no URL, does not stay on the link.
+  defp open_identifier(nil), do: {nil, false}
+
   defp open_identifier(identifier_id) do
-    case identifier_id && Brando.Content.get_identifier(identifier_id) do
-      {:ok, entry} -> if RichText.allowed_uri?(Identifier.link_url(entry)), do: entry
-      _ -> nil
+    case Brando.Content.get_identifier(identifier_id) do
+      {:ok, entry} ->
+        {if(RichText.allowed_uri?(Identifier.link_url(entry)), do: entry), false}
+
+      _ ->
+        {nil, match?({:ok, _}, Boundary.with_scope(nil, fn -> Brando.Content.get_identifier(identifier_id) end))}
     end
   end
 

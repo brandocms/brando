@@ -212,6 +212,25 @@ defmodule BrandoAdmin.ReadScopesTest do
       assert_received {:tiptap_set_link, _, %{identifier_id: nil}}
     end
 
+    for mode <- [:groups, :legacy] do
+      @mode mode
+      test "in #{mode} mode the rich text dialog drops a destination that has no URL, or is gone", c do
+        put_test_env(:authorization_mode, @mode)
+        Repo.update!(Ecto.Changeset.change(c.identifier, url: nil, external_url: nil))
+        if @mode == :groups, do: as(insert_user(permissions: ["brando.admin.access" | @page_read]))
+
+        for id <- [c.identifier.id, -1] do
+          {:ok, socket} = TipTapLinkDialog.mount(%Phoenix.LiveView.Socket{})
+          open = %{event: :open, current_identifier_id: id, current_href: "/saved-address"}
+          {:ok, socket} = TipTapLinkDialog.update(open, socket)
+          assert socket.assigns.unavailable_destination
+
+          {:noreply, _} = TipTapLinkDialog.handle_event("confirm_link", %{"link" => %{"url" => "/saved-address"}}, socket)
+          assert_received {:tiptap_set_link, _, %{identifier_id: nil}}
+        end
+      end
+    end
+
     test "legacy mode lists everything", c do
       put_test_env(:authorization_mode, :legacy)
       Brando.Repo.update!(Ecto.Changeset.change(c.identifier, url: "/secret"))
