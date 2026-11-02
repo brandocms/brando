@@ -746,7 +746,10 @@ site's behalf. If the other site's record is one it added from the library,
 it is never deleted remotely, and the video stays in the provider account
 until someone removes it there. If the record is that site's own upload, for
 example in a schema restored from an archive, deleting it deletes the video
-at the provider as usual.
+at the provider as usual, once no other site holds it. Another site's record
+holds the video even when it is deleted, so with `delete_remote_on:
+:on_delete`, where a purge never asks the provider, a video both sites have
+deleted stays in the provider account until someone removes it there.
 
 A delete is refused too when the video tables cannot be read, or when an add
 or another delete of the same video holds it up for more than 30 seconds.
@@ -797,6 +800,12 @@ Whether another environment's deleted record holds the video depends on
 
 Another site's record holds the video whether it is deleted or not, as
 described under the provider library above.
+
+A record an environment added from the provider's library holds the video
+as any other record does, but deleting it never deletes the video at the
+provider. If staging adds production's upload from the library, and both
+records are later deleted, the video stays in the provider account until
+someone removes it there.
 
 Rollback archives do not hold videos. A video whose last current record is
 deleted is deleted at the provider even when an archive still has a record

@@ -652,6 +652,28 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       refute_received {:mux, "DELETE", _path, _prefix}
     end
 
+    test "with delete_remote_on: :on_delete, an environment with a live record besides a deleted one still holds it",
+         context do
+      put_test_env(:tenancy_mode, :single)
+
+      put_test_env(Mux,
+        access_token_id: "id",
+        access_token_secret: "secret",
+        delete_remote_on: :on_delete,
+        req_options: [plug: {Req.Test, Mux}]
+      )
+
+      Tenant.with_prefix(context.staging_prefix, fn ->
+        "asset-1" |> mux_uploaded_here() |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+      end)
+
+      Tenant.with_prefix(context.production_prefix, fn ->
+        assert {:error, :held_by_another_environment} = Uploader.delete_remote(context.production)
+      end)
+
+      refute_received {:mux, "DELETE", _path, _prefix}
+    end
+
     test "with delete_remote_on: :on_delete, another site's soft-deleted record still holds it", context do
       put_test_env(:tenancy_mode, :multi)
 
