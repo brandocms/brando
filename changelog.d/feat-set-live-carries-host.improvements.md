@@ -1,0 +1,1 @@
+- On a dynamically delivered site, setting an environment live takes the site's host with it: the new and the previous live environment swap domains, so a per-site admin's live switch reaches visitors on the next request without a superuser moving the host.

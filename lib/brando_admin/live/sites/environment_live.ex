@@ -16,8 +16,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
        ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy update_domain create_environment rollback cancel_operation)}
   )
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Environments
   alias Brando.Environments.Environment
+  alias Brando.Repo
   alias Brando.Tenant
   alias Brando.Tenant.Access
   alias Brando.Tenant.Registry
@@ -126,8 +129,15 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     <code>{environment.key}</code>
                   </td>
                   <td>
-                    <form phx-submit="update_domain" class="environment-inline-form">
+                    <%!-- Keyed on the domain shown: when a live switch moves it, the form is
+                    replaced and a half-typed edit goes with the domain it was typed against --%>
+                    <form
+                      id={"environment-domain-#{environment.id}-#{:erlang.phash2(environment.domain)}"}
+                      phx-submit="update_domain"
+                      class="environment-inline-form"
+                    >
                       <input type="hidden" name="environment_id" value={environment.id} />
+                      <input type="hidden" name="shown_domain" value={environment.domain || ""} />
                       <input
                         type="text"
                         name="domain"
@@ -548,15 +558,21 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     domain = if domain == "", do: nil, else: domain
 
     with :ok <- authorize(socket),
-         {:ok, environment} <- environment_for_site(socket, id),
-         {:ok, _updated} <-
-           Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user) do
+         {:ok, listed} <- environment_for_site(socket, id),
+         {:ok, _updated} <- update_shown_domain(socket, listed, params["shown_domain"], domain) do
       {:noreply,
        socket
        |> notify(gettext("Domain updated."))
        |> refresh_data()}
     else
-      {:error, reason} -> {:noreply, notify_error(socket, operation_error(reason))}
+      {:error, :domain_moved} ->
+        {:noreply,
+         socket
+         |> notify_error(gettext("That did not work. Reload the page and try again."))
+         |> refresh_data()}
+
+      {:error, reason} ->
+        {:noreply, notify_error(socket, operation_error(reason))}
     end
   end
 
@@ -752,6 +768,40 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
            Enum.find(socket.assigns.environments, &(&1.id == environment_id)) do
       {:ok, environment}
     else
+      _ -> {:error, :environment_not_found}
+    end
+  end
+
+  # A live switch moves hosts without a superuser, so the domain the form
+  # showed may be gone from the row; a change made against it would overwrite
+  # or clear a host the screen never showed. The form submits the domain it was
+  # rendered with, since the switch's broadcast may already have refreshed this
+  # screen's assigns, and only the form posts this event, so a submission
+  # without it is refused too. The row is locked from the check to the write,
+  # as a live switch locks it to swap domains (`Brando.Environments`), so no
+  # swap lands in between. A row lock, not the site lock: a switch holds that
+  # while it archives the live schema, which can take minutes.
+  defp update_shown_domain(_socket, _environment, shown, _domain) when not is_binary(shown),
+    do: {:error, :domain_moved}
+
+  defp update_shown_domain(socket, %Environment{id: id, site_id: site_id}, shown, domain) do
+    shown = if shown == "", do: nil, else: shown
+
+    Repo.transaction(fn ->
+      with {:ok, environment} <- locked_shown(id, site_id, shown),
+           {:ok, updated} <-
+             Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user) do
+        updated
+      else
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
+  end
+
+  defp locked_shown(id, site_id, shown) do
+    case Repo.one(from(e in Environment, where: e.id == ^id, lock: "FOR UPDATE"), prefix: "public") do
+      %Environment{site_id: ^site_id, domain: ^shown} = environment -> {:ok, environment}
+      %Environment{site_id: ^site_id} -> {:error, :domain_moved}
       _ -> {:error, :environment_not_found}
     end
   end
