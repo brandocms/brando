@@ -190,19 +190,18 @@ defmodule Brando.Authorization.Boundary do
   # longer than a transaction may keep its connection. Not while a live
   # record of the same provider video is in the environment
   # (`{:error, {:recorded_here, live}}`), and not once it is purged.
-  def restore(actor, %Video{} = video) do
-    ProviderLibrary.with_restore_lock(video, fn ->
-      run(actor, :restore, Video, fn user ->
-        with :ok <- authorize(user, :restore, video),
-             do: ProviderLibrary.guard_restore(user, video, &restore_entry(user, &1))
-      end)
-    end)
-  end
+  def restore(actor, %Video{} = video),
+    do: ProviderLibrary.with_restore_lock(video, fn -> run(actor, :restore, Video, &restore_video(&1, video)) end)
 
   def restore(actor, %{__struct__: schema} = entry) do
     run(actor, :restore, schema, fn user ->
       with :ok <- authorize(user, :restore, entry), do: restore_entry(user, entry)
     end)
+  end
+
+  defp restore_video(user, video) do
+    with :ok <- authorize(user, :restore, video),
+         do: ProviderLibrary.guard_restore(user, video, &restore_entry(user, &1))
   end
 
   defp restore_entry(user, %{__struct__: schema} = entry) do

@@ -98,18 +98,7 @@ defmodule Brando.SoftDelete.Query do
     # call to a provider that hangs waits out its client's timeout, and the
     # purger has one deadline for every schema and environment. Its other
     # rows stay for the next run, and the other providers' rows go on.
-    {purged, kept} =
-      Enum.reduce(on_purge, {0, %{}}, fn video, {purged, kept} ->
-        if Map.has_key?(kept, video.type) do
-          {purged, Map.update!(kept, video.type, &(&1 + 1))}
-        else
-          case purge_video(query, video) do
-            {:error, {:retry, _reason}} -> {purged, Map.put(kept, video.type, 0)}
-            {:error, reason} when reason in [:holdings_unavailable, :busy, :not_purged] -> {purged, kept}
-            _purged -> {purged + 1, kept}
-          end
-        end
-      end)
+    {purged, kept} = Enum.reduce(on_purge, {0, %{}}, &purge_unless_unanswered(query, &1, &2))
 
     for {type, count} <- kept, count > 0 do
       Logger.warning(
@@ -142,6 +131,20 @@ defmodule Brando.SoftDelete.Query do
       Enum.each(purged, &Brando.Activity.deleted(&1, :system, false, %{"purged" => true}))
       result
     end)
+  end
+
+  # `kept` counts, by provider, the videos left without asking it once it
+  # could not answer.
+  defp purge_unless_unanswered(query, video, {purged, kept}) do
+    if Map.has_key?(kept, video.type) do
+      {purged, Map.update!(kept, video.type, &(&1 + 1))}
+    else
+      case purge_video(query, video) do
+        {:error, {:retry, _reason}} -> {purged, Map.put(kept, video.type, 0)}
+        {:error, reason} when reason in [:holdings_unavailable, :busy, :not_purged] -> {purged, kept}
+        _purged -> {purged + 1, kept}
+      end
+    end
   end
 
   defp purge_video(query, video) do
