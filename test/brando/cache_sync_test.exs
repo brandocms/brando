@@ -313,6 +313,26 @@ defmodule Brando.CacheSyncTest do
       assert %{set: %{id: ^second_id}} = SiteAssets.cached()
     end
 
+    test "a boot warm that read the active set before another node changed it does not keep it" do
+      {:ok, first} = register_set("20260816_one")
+      {:ok, second} = register_set("20260816_two")
+      {:ok, _active} = SiteAssets.activate_set(first.id)
+
+      # This node boots and reads the active set...
+      warm = start_held("site_asset_sets", &SiteAssets.warm/0)
+
+      # ...when another node switches it, and this node hears of it
+      Brando.Repo.update_all(Brando.Assets.SiteAssetSet, [set: [active: false]], prefix: "public")
+      second |> Brando.Assets.SiteAssetSet.changeset(%{active: true}) |> Repo.update!()
+      remote_refresh({SiteAssets, {:active, :standalone}})
+
+      resume(warm)
+      assert :ok = Task.await(warm)
+
+      second_id = second.id
+      assert %{set: %{id: ^second_id}} = SiteAssets.cached()
+    end
+
     test "an activation inside a transaction drops this node's copy once it commits" do
       {:ok, first} = register_set("20260816_one")
       {:ok, second} = register_set("20260816_two")

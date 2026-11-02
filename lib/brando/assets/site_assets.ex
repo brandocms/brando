@@ -269,13 +269,16 @@ defmodule Brando.Assets.SiteAssets do
   @spec warm() :: :ok
   def warm do
     invalidate_cache()
+    # Filled like any read: CacheSync is already listening when this runs at
+    # boot, and an activation it hears meanwhile must not be overwritten
+    fence = change_fence()
 
     from(asset_set in SiteAssetSet, where: asset_set.active)
     |> Repo.all(@public_opts)
     |> Enum.each(fn asset_set ->
       case build_cache(asset_set) do
-        {:ok, cached} -> put_cache(scope_key(asset_set), cached)
-        {:error, _reason} -> put_cache(scope_key(asset_set), :none)
+        {:ok, cached} -> fill(cache_key(scope_key(asset_set)), cached, fence)
+        {:error, _reason} -> fill(cache_key(scope_key(asset_set)), :none, fence)
       end
     end)
 
@@ -576,15 +579,10 @@ defmodule Brando.Assets.SiteAssets do
   defp pinned_cache_key(scope_key), do: {:brando, :site_assets, :pinned, scope_key}
   defp set_cache_key(set_id), do: {:brando, :site_assets, :set, set_id}
 
-  defp put_cache(scope_key, value) do
-    move_change_fence()
-    store(cache_key(scope_key), value)
-  end
-
   # Dropped rather than replaced after a write, as two writes here may finish
-  # in either order: the next read loads the one committed last
-  # Inside a transaction, once it commits: a fill here before then would read
-  # the set it replaces and keep it
+  # in either order: the next read loads the one committed last. Inside a
+  # transaction, once it commits: a fill here before then would read the set
+  # it replaces and keep it.
   defp active_changed(scope_key) do
     Repo.after_commit({__MODULE__, :active, scope_key}, fn -> drop_active(scope_key) end)
     CacheSync.broadcast(__MODULE__, {:active, scope_key})
