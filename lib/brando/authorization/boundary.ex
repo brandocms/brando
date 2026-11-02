@@ -17,7 +17,8 @@ defmodule Brando.Authorization.Boundary do
       `Brando.Authorization.Catalog.superuser_only_fields/1` names, such as a
       fragment's `wrapper`;
     * a `:user` account writes nothing but its own profile;
-    * only a superuser deactivates, deletes or brings back another superuser.
+    * an account deactivates, deletes or brings back only accounts at or below
+      its own role (`:user` < `:editor` < `:admin` < `:superuser`).
 
   Changing another user's email or password takes a superuser in both modes
   (`Brando.Trait.ProtectPassword.allowed?/2`): the email is where a password
@@ -214,7 +215,7 @@ defmodule Brando.Authorization.Boundary do
            :ok <- legacy_role_change(actor, changeset),
            :ok <- protect_credentials(actor, changeset),
            :ok <- protect_superuser_fields(actor, changeset) do
-        legacy_protect_superuser(actor, changeset)
+        legacy_protect_rank(actor, changeset)
       end
     end
   end
@@ -424,10 +425,11 @@ defmodule Brando.Authorization.Boundary do
   defp protect_superuser_fields(_actor, _changeset), do: :ok
 
   # The roles' meaning in legacy mode: code is a superuser's, a `:user`
-  # account edits nothing, and a superuser is deleted by superusers only. An
+  # account edits nothing, and an account is removed by its role or above. An
   # actor given by id has its stored role. One with no role (nil, as for a
-  # scheduled publication whose user is gone) writes all but code, as before.
-  # Group mode's `Engine` checks the same on its own terms.
+  # scheduled publication whose user is gone) writes all but code, as before,
+  # and removes no account. Group mode's `Engine` decides by grants, and keeps
+  # the Superuser group's members to superusers.
   defp legacy_authorize(:system, _action, _subject), do: :ok
 
   defp legacy_authorize(actor, action, subject) do
@@ -440,7 +442,7 @@ defmodule Brando.Authorization.Boundary do
       role == :user and not user_may?(actor, action, subject) ->
         {:error, :forbidden}
 
-      superuser_deletion?(action, subject) and not ProtectPassword.allowed?(actor, subject) ->
+      action in [:delete, :restore] and not legacy_may_remove?(actor, subject) ->
         {:error, :forbidden}
 
       true ->
@@ -449,9 +451,6 @@ defmodule Brando.Authorization.Boundary do
   end
 
   defp user_may?(actor, action, subject), do: action in [:read, :export] or own_profile?(actor, action, subject)
-
-  defp superuser_deletion?(action, subject) when action in [:delete, :restore], do: superuser_account?(subject)
-  defp superuser_deletion?(_action, _subject), do: false
 
   # The schema itself stands for "some user": `change/3` checks the record.
   defp own_profile?(_actor, :update, User), do: true
@@ -477,23 +476,34 @@ defmodule Brando.Authorization.Boundary do
 
   defp legacy_role_change(_actor, _changeset), do: :ok
 
-  defp legacy_protect_superuser(actor, %{data: %User{id: id} = user, changes: changes}) when not is_nil(id) do
-    if (Map.has_key?(changes, :active) or Map.has_key?(changes, :deleted_at)) and superuser_account?(user) and
-         not ProtectPassword.allowed?(actor, user),
-       do: {:error, :forbidden},
-       else: :ok
+  # Deactivating, deleting and their reversal: `legacy_may_remove?/2` on the
+  # account's stored role, which `change/3` puts in the changeset's data.
+  defp legacy_protect_rank(actor, %{data: %User{id: id} = user, changes: changes}) when not is_nil(id) do
+    if (Map.has_key?(changes, :active) or Map.has_key?(changes, :deleted_at)) and not legacy_may_remove?(actor, user),
+      do: {:error, :forbidden},
+      else: :ok
   end
 
-  defp legacy_protect_superuser(_actor, _changeset), do: :ok
+  defp legacy_protect_rank(_actor, _changeset), do: :ok
+
+  # Whether `actor` may deactivate, delete or bring back `user`: an account at
+  # or below its own role, itself included. One with no role removes nobody.
+  defp legacy_may_remove?(actor, %User{} = user) do
+    case rank(legacy_role(actor)) do
+      nil -> false
+      actor_rank -> actor_rank >= rank(user.role || :user)
+    end
+  end
+
+  defp legacy_may_remove?(_actor, _subject), do: true
+
+  defp rank(role), do: Enum.find_index(Ecto.Enum.values(User, :role), &(&1 == role))
 
   # Only checked, never saved: the caller writes its own changeset.
   defp with_stored_role(%{data: %User{id: id} = user} = changeset) when is_integer(id),
     do: %{changeset | data: %{user | role: stored_role(id) || user.role}}
 
   defp with_stored_role(changeset), do: changeset
-
-  defp superuser_account?(%User{role: :superuser}), do: true
-  defp superuser_account?(_), do: false
 
   defp legacy_role(%Scope{user_id: id}) when is_integer(id), do: stored_role(id)
   defp legacy_role(%{role: role}), do: role

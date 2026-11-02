@@ -1,0 +1,1 @@
+- In legacy authorization mode an account deactivates, deletes, restores or re-enables only accounts at or below its own role, so an editor can no longer remove or bring back an admin.

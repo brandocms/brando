@@ -47,7 +47,10 @@ and Brando enforces what the roles mean on its own:
 - A **User** changes nothing but their own profile.
 - An **Admin** gives roles up to Admin, to accounts below Admin.
 - Only a **Superuser** writes block modules and containers, whose templates
-  run as code in the server, and deactivates or deletes another Superuser.
+  run as code in the server.
+- An **Editor**, **Admin** or **Superuser** deactivates, re-enables, deletes
+  and restores accounts at or below their own role, themselves included: an
+  Editor another Editor, but not an Admin.
 
 In both modes, only a superuser changes another user's email or password:
 the email is where a password reset link goes. Everyone changes their own.
@@ -444,12 +447,14 @@ operation. `Brando.Users.delete_session_token(token)` revokes one known token;
 it is not an all-device API. A password reset deletes them all. Test both an
 already open tab and a fresh request.
 
-Only a superuser deactivates, re-enables, deletes or restores a superuser. In
-group mode a removed account counts as a superuser while it is in the
-installation's Superuser group, as it would be one again the moment it came
-back; any other account takes the `restore` or `update` grant. Group mode also
-protects the last active Superuser from removal/deactivation. If an
-operation is denied, retain the account and establish another authorized active
+In legacy mode an account deactivates, re-enables, deletes or restores only
+accounts at or below its own role, so only a superuser does it to a
+superuser. In group mode only a superuser does it to a superuser, and a
+removed account counts as one while it is in the installation's Superuser
+group, as it would be one again the moment it came back; any other account
+takes the `delete`, `restore` or `update` grant. Group mode also protects
+the last active Superuser from removal/deactivation. If an operation is
+denied, retain the account and establish another authorized active
 administrator first; do not work around the guard with a raw database update.
 
 ## Delete and transfer content

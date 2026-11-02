@@ -84,13 +84,132 @@ defmodule Brando.Users.AccountLifecycleTest do
       refute_received %Broadcast{event: "toast", payload: %{payload: "User undeleted"}}
     end
 
-    test "an account below a superuser comes back as before", %{current_user: superuser} do
+    test "an account at the actor's role comes back as before", %{current_user: superuser} do
       editor = TestUsers.insert_user(role: :editor)
-      admin = removed(TestUsers.insert_user(role: :admin), :deleted, superuser)
+      deleted = removed(TestUsers.insert_user(role: :editor), :deleted, superuser)
       other = removed(TestUsers.insert_user(role: :editor), :deactivated, superuser)
 
-      assert {:ok, %{deleted_at: nil}} = Boundary.restore(editor, admin)
+      assert {:ok, %{deleted_at: nil}} = Boundary.restore(editor, deleted)
       assert {:ok, %{active: true}} = Users.set_active(other.id, true, editor)
+    end
+  end
+
+  # An account in the state `action` acts on.
+  defp target(role, action, superuser) do
+    user = TestUsers.insert_user(role: role)
+
+    case action do
+      :restore -> removed(user, :deleted, superuser)
+      :enable -> removed(user, :deactivated, superuser)
+      _ -> user
+    end
+  end
+
+  defp attempt(:listing, action, actor, target, recipient) do
+    {:ok, view, _} = live(log_in_user(build_conn(), actor), "/admin/users")
+    id = to_string(target.id)
+
+    case action do
+      :delete ->
+        render_hook(view, "delete_user", %{"id" => id})
+        render_hook(view, "select_transfer_user", %{"id" => to_string(recipient.id)})
+        render_hook(view, "confirm_transfer_delete", %{})
+
+      :deactivate ->
+        render_hook(view, "disable_user", %{"id" => id})
+
+      :restore ->
+        render_hook(view, "undelete_entry", %{"id" => id})
+
+      :enable ->
+        render_hook(view, "enable_user", %{"id" => id})
+    end
+  end
+
+  defp attempt(:context, action, actor, target, _recipient) do
+    case action do
+      :delete -> Users.delete_user(target.id, actor)
+      :deactivate -> Users.set_active(target.id, false, actor)
+      :restore -> Boundary.restore(actor, target)
+      :enable -> Users.set_active(target.id, true, actor)
+    end
+  end
+
+  defp done?(action, target) do
+    user = Repo.get!(User, target.id)
+
+    case action do
+      :delete -> not is_nil(user.deleted_at)
+      :deactivate -> not user.active
+      :restore -> is_nil(user.deleted_at)
+      :enable -> user.active
+    end
+  end
+
+  describe "removing and bringing back an account by role, legacy mode" do
+    # An account removes, and brings back, accounts at or below its own role.
+    # A :user account writes nothing but its own profile.
+    cases = [
+      {:editor, :admin, false},
+      {:editor, :superuser, false},
+      {:editor, :editor, true},
+      {:editor, :user, true},
+      {:admin, :editor, true},
+      {:admin, :admin, true},
+      {:admin, :superuser, false},
+      {:superuser, :admin, true},
+      {:superuser, :superuser, true},
+      {:user, :user, false},
+      {:user, :editor, false}
+    ]
+
+    for {actor_role, target_role, allowed?} <- cases,
+        action <- [:delete, :deactivate, :restore, :enable],
+        via <- [:listing, :context] do
+      @tag actor_role: actor_role, target_role: target_role, action: action, via: via, allowed?: allowed?
+      test "#{actor_role} #{if allowed?, do: "may", else: "may not"} #{action} #{target_role} through the #{via}",
+           %{current_user: superuser} = c do
+        actor = TestUsers.insert_user(role: c.actor_role)
+        target = target(c.target_role, c.action, superuser)
+        attempt(c.via, c.action, actor, target, superuser)
+
+        assert done?(c.action, target) == c.allowed?
+      end
+    end
+
+    for action <- [:delete, :deactivate], via <- [:listing, :context] do
+      @tag action: action, via: via
+      test "a :user account may not #{action} itself through the #{via}", %{current_user: superuser} = c do
+        user = TestUsers.insert_user(role: :user)
+        attempt(c.via, c.action, user, user, superuser)
+        refute done?(c.action, user)
+      end
+    end
+
+    for action <- [:delete, :deactivate, :restore, :enable] do
+      @tag action: action
+      test "a demoted admin may not #{action} an admin at its stored role", %{current_user: superuser} = c do
+        actor = TestUsers.insert_user(role: :admin)
+        target = target(:admin, c.action, superuser)
+        Repo.update_all(from(u in User, where: u.id == ^actor.id), set: [role: :editor])
+
+        attempt(:context, c.action, actor, target, superuser)
+        refute done?(c.action, target)
+      end
+    end
+
+    test "a demoted admin's open listing may not deactivate an admin", %{current_user: superuser} do
+      actor = TestUsers.insert_user(role: :admin)
+      target = target(:admin, :deactivate, superuser)
+      {:ok, view, _} = live(log_in_user(build_conn(), actor), "/admin/users")
+      Repo.update_all(from(u in User, where: u.id == ^actor.id), set: [role: :editor])
+
+      # The view ends at the lowered role; the test process is linked to it.
+      Process.flag(:trap_exit, true)
+      ref = Process.monitor(view.pid)
+      catch_exit(render_hook(view, "disable_user", %{"id" => to_string(target.id)}))
+      assert_receive {:DOWN, ^ref, :process, _, {:shutdown, :authority_changed}}, 1000
+      assert Repo.get!(User, target.id).active
     end
   end
 
@@ -145,6 +264,17 @@ defmodule Brando.Users.AccountLifecycleTest do
     test "an account outside the Superuser group comes back with the grant", c do
       other = removed(TestUsers.insert_user(role: :editor), :deleted, c.current_user)
       assert {:ok, %{deleted_at: nil}} = Boundary.restore(c.manager, other)
+    end
+
+    # Grants decide here, not the legacy role: an Editor by role holding them
+    # removes and brings back an Admin by role.
+    for action <- [:delete, :deactivate, :restore, :enable], via <- [:listing, :context] do
+      @tag action: action, via: via
+      test "a holder of the grants may #{action} an admin by role through the #{via}", c do
+        target = target(:admin, c.action, c.current_user)
+        attempt(c.via, c.action, c.manager, target, c.current_user)
+        assert done?(c.action, target)
+      end
     end
   end
 
