@@ -76,11 +76,17 @@ may publish.
   operations, the fingerprints of the entries it read and the versions of the
   modules it builds blocks from. Asking for an adjustment creates a new
   version, and the previous one can no longer be applied.
+- **The card shows what Apply writes.** A change's whole value is on its card.
+  Long text shows what differs in it, with some context, and markup that does
+  more than format text (a link's address, an image, a style) is written out.
 - **Applying is atomic.** The Apply button approves exactly the version on
   screen and applies it in one transaction. If an entry or module changed
   after the proposal was prepared, nothing is written; ask the assistant to
   prepare it again. New entries are created as drafts. Changes to a published
   entry go live, and the review says so before you apply.
+- **Nothing in a reply loads by itself.** An image in the assistant's reply is
+  written as a link, since a browser would fetch it unasked and its address
+  could carry the conversation out.
 - **Attachments keep their names.** Media uploaded or picked in the
   conversation is named `image1`, `image2`, `video1` … in the order it was
   chosen, not the order uploads finish. Refer to these names in messages.

@@ -10,6 +10,21 @@ defmodule Brando.MarkdownTest do
     assert Markdown.to_html!("# Hello") == "<h1>Hello</h1>"
   end
 
+  test "embeds images, or writes them as links when asked" do
+    assert Markdown.to_html!("![alt](https://example.com/x.png)") =~ "<img"
+
+    assert Markdown.to_html!(~s|![alt](https://example.com/x.png "Title")|, images: :links) ==
+             ~s(<p><a href="https://example.com/x.png" title="Title">alt</a></p>)
+
+    assert Markdown.to_html!("![](https://example.com/x.png)", images: :links) ==
+             ~s(<p><a href="https://example.com/x.png">https://example.com/x.png</a></p>)
+
+    refute Markdown.to_html!("[![alt](https://example.com/x.png)](https://example.com)", images: :links) =~ "<img"
+    # An unsafe address stays left out of the link it becomes
+    refute Markdown.to_html!("![alt](javascript:alert)", images: :links) =~ "javascript:"
+    refute Markdown.to_html!(~s(<img src="https://example.com/x.png">), images: :links) =~ "<img"
+  end
+
   test "renders soft line breaks only when requested" do
     assert Markdown.to_html!("line one\nline two") == "<p>line one\nline two</p>"
 
