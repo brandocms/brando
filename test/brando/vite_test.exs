@@ -212,13 +212,36 @@ defmodule Brando.ViteTest do
   end
 
   # Another process can see the port while Port.open/2 is still starting it,
-  # with an OS pid of 0
+  # with an OS pid of 0. The pid is known as soon as the VM's erl_child_setup has
+  # forked the process, which inherits erl_child_setup's ignored SIGTERM until it
+  # restores the default, on its way to exec the wrapper. The kernel discards a
+  # SIGTERM sent before that, and the process runs the wrapper as if none came,
+  # so the test signals the wrapper from when SIGTERM is no longer ignored.
   defp wrapper_os_pid(watcher) do
     port = Enum.find(Port.list(), &(Port.info(&1, :connected) == {:connected, watcher}))
 
     case port && Port.info(port, :os_pid) do
-      {:os_pid, os_pid} when os_pid > 0 -> os_pid
-      _ -> Process.sleep(1) && wrapper_os_pid(watcher)
+      {:os_pid, os_pid} when os_pid > 0 ->
+        if ignores_sigterm?(os_pid), do: wrapper_os_pid(watcher), else: os_pid
+
+      _ ->
+        Process.sleep(1) && wrapper_os_pid(watcher)
+    end
+  end
+
+  # Linux shows the ignored signals in /proc (SIGTERM is bit 14 of the hex mask),
+  # read without starting a process, so the test signals the wrapper early in its
+  # start. Elsewhere, as on macOS, whose ps does not show them, the test waits
+  # until the process has execed, which is after it restored the default. ps
+  # prints nothing for a process that is gone.
+  defp ignores_sigterm?(os_pid) do
+    with {:ok, status} <- File.read("/proc/#{os_pid}/status"),
+         [mask] <- Regex.run(~r/^SigIgn:\s*([0-9a-f]+)$/m, status, capture: :all_but_first) do
+      Bitwise.band(String.to_integer(mask, 16), Bitwise.bsl(1, 14)) != 0
+    else
+      _ ->
+        {command, _status} = System.cmd("ps", ["-o", "comm=", "-p", Integer.to_string(os_pid)])
+        Path.basename(String.trim(command)) == "erl_child_setup"
     end
   end
 
