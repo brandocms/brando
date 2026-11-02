@@ -107,7 +107,7 @@ defmodule Brando.Images.Crop do
     result =
       with :ok <- Boundary.change(user, :update, changeset),
            {:ok, _} <- Ecto.Changeset.apply_action(changeset, :update),
-           :ok <- write(image.path, binary_data) do
+           :ok <- overwrite(image.path, binary_data) do
         Images.update_image(changeset, user)
       end
 
@@ -121,18 +121,29 @@ defmodule Brando.Images.Crop do
     end
   end
 
-  # The path comes from the image record, so it is checked against the media
-  # root before anything is written.
-  defp write(path, binary_data) do
-    case Storage.media_file(path) do
-      {:ok, dest_file} ->
-        File.mkdir_p!(Path.dirname(dest_file))
-        File.write!(dest_file, binary_data)
-
-      :error ->
-        {:error, :unsafe_media_path}
+  # The path comes from the image record, so it is checked before anything is
+  # written: it stays in the media root and names an image. A replace writes
+  # over a file that is there and creates none.
+  defp overwrite(path, binary_data) do
+    with {:ok, dest_file} <- Storage.media_file(path),
+         true <- File.regular?(dest_file) do
+      write(path, binary_data)
+    else
+      _ -> {:error, :unsafe_media_path}
     end
   end
+
+  defp write(path, binary_data) do
+    with {:ok, dest_file} <- Storage.media_file(path),
+         true <- image_path?(path) do
+      File.mkdir_p!(Path.dirname(dest_file))
+      File.write!(dest_file, binary_data)
+    else
+      _ -> {:error, :unsafe_media_path}
+    end
+  end
+
+  defp image_path?(path), do: (path |> Path.extname() |> String.downcase()) in Brando.Uploads.image_exts()
 
   # An image over the pixel limit is refused before it is written.
   defp measure(binary_data, fallback_dimensions) do

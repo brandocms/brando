@@ -914,7 +914,7 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :load_working_copy, revision_entry: revision_entry} = message, socket) do
     %{schema: schema, entry: entry, current_user: current_user, form_blueprint: blueprint} = socket.assigns
     block_assocs = Enum.map(blueprint.blocks, &:"entry_#{&1.name}")
-    params = revision_entry |> Brando.Revisions.restore_params(entry, current_user) |> Map.drop(block_assocs)
+    params = revision_entry |> Brando.Revisions.restore_params(entry, current_user, blueprint) |> Map.drop(block_assocs)
 
     changeset =
       entry
@@ -4971,6 +4971,7 @@ defmodule BrandoAdmin.Components.Form do
               current_user={@current_user}
               entry_id={@entry_id}
               form={@form}
+              form_blueprint={@form_blueprint}
               form_cid={@myself}
               form_id={@id}
               status={@status_revisions}
@@ -7808,7 +7809,7 @@ defmodule BrandoAdmin.Components.Form do
   defp apply_restored_changeset(socket, changeset, source, working_copy \\ nil) do
     revision_entry = working_copy_revision(socket, working_copy)
     revised = revised_changeset(socket, revision_entry)
-    {changeset, revised_assets} = put_revision_locked_assets(socket, changeset, revised, source)
+    {changeset, revised_assets} = put_revision_locked_fields(socket, changeset, revised, source)
     form = to_form(changeset)
 
     for field <- socket.assigns.form_blueprint.blocks do
@@ -7869,22 +7870,30 @@ defmodule BrandoAdmin.Components.Form do
   # The revision a recovered working copy is of, cast onto the entry
   defp revised_changeset(_socket, nil), do: nil
 
-  defp revised_changeset(%{assigns: %{schema: schema, entry: entry, current_user: user}}, revision_entry),
-    do: schema.changeset(entry, Brando.Revisions.restore_params(revision_entry, entry, user), user)
+  defp revised_changeset(%{assigns: %{schema: schema, entry: entry, current_user: user} = assigns}, revision_entry),
+    do:
+      schema.changeset(entry, Brando.Revisions.restore_params(revision_entry, entry, user, assigns.form_blueprint), user)
 
-  # A recovered working copy's locked assets are the revision's, as its
-  # locked scalars are (`put_revision_locked_values/2`): the copy holds what
-  # the browser sent. Returns the changeset with them, and their fields,
+  # A recovered working copy's locked fields are the revision's, as its
+  # locked values are (`put_revision_locked_values/2`): the copy holds what
+  # the browser sent. Returns the changeset with them, and the asset fields,
   # which the form owns. Those of another recovery copy are the entry's, as
-  # the save keeps them, so the form and the preview show them too. A
-  # translation's are the server's (`own_changed_assets/3`).
-  defp put_revision_locked_assets(socket, changeset, nil, :recovery_copy),
-    do: {Enum.reduce(locked_asset_kinds(socket), changeset, fn {key, _}, cs -> delete_change(cs, key) end), []}
+  # the save keeps them, so the form, the preview and a stored revision have
+  # them too. A translation's are the server's (`own_changed_assets/3`).
+  defp put_revision_locked_fields(socket, changeset, nil, :recovery_copy),
+    do: {hold_recovered_fields(socket, changeset), []}
 
-  defp put_revision_locked_assets(_socket, changeset, nil, _source), do: {changeset, []}
+  defp put_revision_locked_fields(_socket, changeset, nil, _source), do: {changeset, []}
 
-  defp put_revision_locked_assets(socket, changeset, revised, _source) do
+  defp put_revision_locked_fields(socket, changeset, revised, _source) do
     locked = locked_asset_kinds(socket)
+    assets = Keyword.keys(locked)
+    fields = socket.assigns.schema.__schema__(:fields)
+
+    changeset =
+      Enum.reduce(locked_keys(socket) -- assets, changeset, fn key, changeset ->
+        if key in fields, do: put_change(changeset, key, get_field(revised, key)), else: delete_change(changeset, key)
+      end)
 
     changeset =
       Enum.reduce(locked, changeset, fn
@@ -7892,7 +7901,20 @@ defmodule BrandoAdmin.Components.Form do
         {key, :gallery}, changeset -> put_gallery_into(changeset, [], key, owned_gallery(get_field(revised, key)))
       end)
 
-    {changeset, Keyword.keys(locked)}
+    {changeset, assets}
+  end
+
+  # A recovery copy's locked fields are none of its own: they have a new
+  # entry's default params and an empty field's default, as a cast gives them
+  defp hold_recovered_fields(socket, changeset) do
+    {values, defaults} = socket |> reset_locked_values() |> locked_values()
+    empty = Map.filter(defaults, fn {key, _} -> is_nil(Map.get(changeset.data, key)) end)
+    server = Map.merge(empty, values)
+
+    socket
+    |> locked_keys()
+    |> Enum.reduce(changeset, &delete_change(&2, &1))
+    |> then(&Enum.reduce(server, &1, fn {key, value}, changeset -> put_change(changeset, key, value) end))
   end
 
   defp locked_asset_kinds(%{assigns: %{schema: schema}} = socket),

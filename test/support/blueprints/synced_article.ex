@@ -23,6 +23,7 @@ defmodule Brando.SyncTest.Article do
   trait :timestamped
   trait :translatable, mode: :synchronized, source_controlled_fields: [:year]
   trait :blocks
+  trait :revisioned
 
   identifier "{{ entry.title }}"
 

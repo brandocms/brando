@@ -17,11 +17,14 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   the form would write outside the media root.
 
   A locked input keeps its saved value, or one the server put in the form
-  (`server_values/5`): a new entry's default params, a translation or a
-  revision's working copy. A value that reached the form from the browser
-  (a recovery copy, a picker) is not one. While the saved value is empty it
-  takes the input's `default:` (`defaults/3`), as the browser shows a date,
-  date-time or color input's.
+  (`server_values/5`): a new entry's default params, a translation or, for
+  a superuser, a revision's working copy. A value that reached the form from
+  the browser (a recovery copy, a picker) is not one. While the saved value is
+  empty it takes the input's `default:` (`defaults/3`), as the browser shows a
+  date, date-time or color input's.
+
+  A writer past the form (a transfer bundle, a stored revision) holds the same
+  fields for anyone but a superuser (`held_keys/2`, `hold/3`).
 
   A locked `:slug` input whose value is empty is filled in from its source
   on the server (`derive_slugs/5`), as the browser's Slug hook fills in an
@@ -32,6 +35,9 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   alias Brando.Trait.Creator
   alias BrandoAdmin.Components.Form.SlugHook
   alias Ecto.Changeset
+
+  # Anyone but a superuser, for a writer that has asked who the actor is
+  @not_superuser :not_superuser
 
   @doc """
   `params` without the fields `user` may not change in `schema`'s `blueprint`
@@ -137,6 +143,62 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   @spec keys(module(), struct() | nil, map() | atom()) :: [atom()]
   def keys(schema, %Form{} = blueprint, user), do: params_for(schema, fields(schema, blueprint, user))
   def keys(_schema, _blueprint, _user), do: []
+
+  @doc """
+  The params keys a writer past the form holds for anyone but a superuser.
+  With `form`, those of the form it acts for. Without one, those some form of
+  `schema` locks and none offers unlocked: a field another form lets the user
+  write is theirs to write.
+  """
+  @spec held_keys(module(), struct() | nil) :: [atom()]
+  def held_keys(schema, %Form{} = form), do: keys(schema, form, @not_superuser)
+
+  def held_keys(schema, nil) do
+    forms = forms(schema)
+    locked = Enum.flat_map(forms, &fields(schema, &1, @not_superuser))
+
+    offered =
+      for form <- forms,
+          held = fields(schema, form, @not_superuser),
+          %{name: name} <- inputs(form),
+          name not in held,
+          do: name
+
+    params_for(schema, locked |> Enum.uniq() |> Enum.reject(&(&1 in offered)))
+  end
+
+  @doc """
+  String-keyed `params` for `entry` without the fields `held_keys/2` holds,
+  each taking its input's `default:` while `entry`'s value is empty.
+  """
+  @spec hold(map(), module(), struct()) :: map()
+  def hold(params, schema, entry) do
+    held = held_keys(schema, nil)
+
+    defaults =
+      for form <- forms(schema),
+          {key, value} <- defaults(schema, form, @not_superuser),
+          key in held,
+          is_nil(Map.get(entry, key)),
+          into: %{},
+          do: {to_string(key), value}
+
+    params |> Map.drop(Enum.map(held, &to_string/1)) |> Map.merge(defaults)
+  end
+
+  @doc """
+  `params` (after `hold/3`) with a slug for each locked `:slug` input of
+  `schema`'s forms that `changeset`, cast from them, leaves empty
+  (`derive_slugs/5`). Cast again when it differs.
+  """
+  @spec derive_held_slugs(map(), Changeset.t(), module()) :: map()
+  def derive_held_slugs(params, %Changeset{} = changeset, schema) do
+    Enum.reduce(forms(schema), params, &derive_slugs(&2, changeset, schema, &1, @not_superuser))
+  end
+
+  defp forms(schema) do
+    if Code.ensure_loaded?(schema) and function_exported?(schema, :__forms__, 0), do: schema.__forms__(), else: []
+  end
 
   @doc "`params` without the fields `user` may not change in `schema`'s `blueprint` form."
   @spec drop(map() | nil, module(), struct() | nil, map() | atom()) :: map() | nil

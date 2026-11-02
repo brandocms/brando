@@ -30,6 +30,7 @@ defmodule Brando.Revisions do
   alias Brando.Revisions.Revision
   alias Brando.Tracing
   alias Brando.Utils
+  alias BrandoAdmin.Components.Form.LockedFields
 
   require Logger
 
@@ -327,7 +328,8 @@ defmodule Brando.Revisions do
   `publish?: true` when a scheduled job executes to force published status and
   the current publication timestamp; it returns `{:error, :in_trash}`, changing
   nothing, for an entry in the trash. A restore never moves the entry into or
-  out of the trash.
+  out of the trash. For anyone but a superuser, the fields a form locks keep
+  their value (`restore_params/4`); pass `form:` for the form restoring it.
   """
   @decorate span("brando.revisions.restore", schema: :entry_schema, entry_id: :entry_id, revision: :revision_number)
   def set_entry_to_revision(entry_schema, entry_id, revision_number, user, opts \\ []) do
@@ -361,7 +363,7 @@ defmodule Brando.Revisions do
         # job is cancelled). Read under the lock, so trashing can't slip in.
         if publish? and Map.get(current_entry, :deleted_at), do: Repo.rollback(:in_trash)
 
-        restore_params = prepare_restore_params(target_entry, current_entry, publish?, user)
+        restore_params = prepare_restore_params(target_entry, current_entry, publish?, user, opts[:form])
 
         changeset =
           current_entry
@@ -458,11 +460,12 @@ defmodule Brando.Revisions do
   trash (see `set_entry_to_revision/5`, which uses the same rule). For a
   `user` who is not a superuser, the fields only a superuser sets
   (`Brando.Authorization.Catalog.superuser_only_fields/1`, a fragment's
-  `wrapper`) stay as the entry has them now.
+  `wrapper`) and those a form locks (`form`, or any of the schema's that none
+  offers unlocked: `LockedFields.held_keys/2`) stay as the entry has them now.
   """
-  @spec restore_params(struct(), struct(), term()) :: map()
-  def restore_params(revision_entry, current_entry, user),
-    do: prepare_restore_params(revision_entry, current_entry, false, user)
+  @spec restore_params(struct(), struct(), term(), struct() | nil) :: map()
+  def restore_params(revision_entry, current_entry, user, form \\ nil),
+    do: prepare_restore_params(revision_entry, current_entry, false, user, form)
 
   # The entry's expiry is a plan for the entry, not content of the revision:
   # restoring one keeps the expiry the entry has now. So is the trash:
@@ -471,9 +474,10 @@ defmodule Brando.Revisions do
   # them when either is in the trash: a revision taken there holds their
   # trash form, and an entry there must not take back the names it freed.
   #
-  # A superuser's fields (a fragment's `wrapper`) restore only for a
-  # superuser: anyone else restores the rest, which they may write.
-  defp prepare_restore_params(target_entry, current_entry, publish?, user) do
+  # A superuser's fields (a fragment's `wrapper`) and those a form locks
+  # (`LockedFields.held_keys/2`, of `form` when one is restoring) restore only
+  # for a superuser: anyone else restores the rest, which they may write.
+  defp prepare_restore_params(target_entry, current_entry, publish?, user, form) do
     params =
       target_entry
       |> Utils.map_from_struct()
@@ -483,6 +487,7 @@ defmodule Brando.Revisions do
       |> drop_obfuscated_if_trashed(target_entry)
       |> drop_obfuscated_if_trashed(current_entry)
       |> drop_superuser_fields(current_entry, user)
+      |> drop_locked_fields(current_entry, user, form)
 
     if publish? do
       params
@@ -498,6 +503,10 @@ defmodule Brando.Revisions do
       [] -> params
       fields -> if superuser?(user), do: params, else: Map.drop(params, fields)
     end
+  end
+
+  defp drop_locked_fields(params, %schema{}, user, form) do
+    if superuser?(user), do: params, else: Map.drop(params, LockedFields.held_keys(schema, form))
   end
 
   defp superuser?(nil), do: false

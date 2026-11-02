@@ -22,6 +22,7 @@ defmodule Brando.Content.Transfer.Entries do
 
   alias Brando.Drafts.Params
   alias Brando.Repo
+  alias BrandoAdmin.Components.Form.LockedFields
   alias Ecto.Changeset
 
   def take!(selectors, actor, opts) do
@@ -371,7 +372,7 @@ defmodule Brando.Content.Transfer.Entries do
   end
 
   defp changeset!(item, params, actor) do
-    cs = Transfer.field_changeset(item.entry, params, actor) |> Brando.Publisher.maybe_override_status()
+    cs = held_changeset(item, params, actor) |> Brando.Publisher.maybe_override_status()
 
     unless cs.valid?,
       do:
@@ -387,6 +388,34 @@ defmodule Brando.Content.Transfer.Entries do
       do: Error.fail!(dgettext("content_transfer", "You do not have permission to save or publish this entry."))
 
     cs
+  end
+
+  # A bundle sets no field the forms lock for anyone but a superuser, on an
+  # existing entry or a new one: those keep their value, or the input's default
+  # or derived slug as a form's new entry has them. An image's `path` has neither,
+  # so a new image can't be created this way (dependencies upload its file).
+  defp held_changeset(%{entry: %schema{} = entry}, params, actor) do
+    if Boundary.superuser?(actor) do
+      Transfer.field_changeset(entry, params, actor)
+    else
+      params = LockedFields.hold(params, schema, entry)
+      cs = Transfer.field_changeset(entry, params, actor)
+
+      case LockedFields.derive_held_slugs(params, cs, schema) do
+        ^params -> cs
+        params -> Transfer.field_changeset(entry, params, actor)
+      end
+    end
+  end
+
+  # What `held_changeset/3` holds, on the relations claimed after the cast
+  defp held_references(node, schema, actor) do
+    if Boundary.superuser?(actor) do
+      node
+    else
+      held = schema |> LockedFields.held_keys(nil) |> Enum.map(&to_string/1)
+      Map.update(node, "references", %{}, &Map.drop(&1, held))
+    end
   end
 
   @doc """
@@ -739,7 +768,8 @@ defmodule Brando.Content.Transfer.Entries do
     params = EntryCodec.decode(item.data, item.entry.__struct__, bindings, actor)
     {params, available} = Ownership.galleries(params, actor, available)
     cs = changeset!(item, params, actor) |> Transfer.stamp_versions(bindings)
-    {cs, available} = claim_galleries(cs, item.data, bindings, actor, available)
+    node = held_references(item.data, item.entry.__struct__, actor)
+    {cs, available} = claim_galleries(cs, node, bindings, actor, available)
     cs = if item.mode == "create", do: Changeset.put_change(cs, :id, reserved_ids[item.source["key"]]), else: cs
     entry = if item.mode == "create", do: Repo.insert!(cs), else: Repo.update!(cs)
     if item.mode != "create", do: Brando.EditSession.sync_saved(entry)
