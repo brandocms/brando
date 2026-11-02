@@ -517,8 +517,8 @@ msgstr "Publiseringsmål: %{pairs} når samme mål"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
-msgid "Deploy targets: %{settings} allow no destination"
-msgstr "Publiseringsmål: %{settings} tillater ingen mål"
+msgid "Deploy targets: %{settings} have entries no target can pass"
+msgstr "Publiseringsmål: %{settings} har oppføringer som ingen mål passer"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -982,6 +982,11 @@ msgstr "slett priv/static/robots.txt: Plug.Static i %{file} har ingen only:, så
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "deploy target entries that allow nothing"
+msgstr "oppføringer for publiseringsmål som ikke tillater noe"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "deploy targets shared between sites"
 msgstr "publiseringsmål som deles mellom nettsteder"
 
@@ -989,11 +994,6 @@ msgstr "publiseringsmål som deles mellom nettsteder"
 #, elixir-autogen, elixir-format
 msgid "deploy targets shared by every site"
 msgstr "publiseringsmål som deles av alle nettsteder"
-
-#: lib/brando/doctor/checks/configuration.ex
-#, elixir-autogen, elixir-format
-msgid "deploy targets that allow nothing"
-msgstr "publiseringsmål som ikke tillater noe"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format

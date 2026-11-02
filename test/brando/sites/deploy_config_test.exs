@@ -310,7 +310,9 @@ defmodule Brando.Sites.DeployConfigTest do
       resolver: &resolve/2,
       rsync_targets: %{
         "alpha" => ["deploy@static.example.com:/srv/sites/"],
-        "beta" => ["deploy@Static.example.com:/srv/sites/beta", "deploy@static.example.com:/srv/sites-b"]
+        "beta" => ["deploy@Static.example.com.:/srv/sites/beta", "deploy@static.example.com:/srv/sites-b"],
+        "gamma" => ["deploy@[2001:db8::1]:/srv/www"],
+        "delta" => ["deploy@[2001:db8:0::1]:/srv/www/"]
       },
       s3_targets: %{
         "alpha" => ["s3://bucket", "s3://other/a", "s3://other/{site_key}-x"],
@@ -321,7 +323,8 @@ defmodule Brando.Sites.DeployConfigTest do
 
     assert DeployConfig.overlapping_destinations() == [
              {:rsync_targets, {"alpha", "deploy@static.example.com:/srv/sites/"},
-              {"beta", "deploy@Static.example.com:/srv/sites/beta"}},
+              {"beta", "deploy@Static.example.com.:/srv/sites/beta"}},
+             {:rsync_targets, {"delta", "deploy@[2001:db8:0::1]:/srv/www/"}, {"gamma", "deploy@[2001:db8::1]:/srv/www"}},
              {:s3_targets, {"alpha", "s3://bucket"}, {"beta", "s3://bucket/beta"}},
              {:s3_targets, {"alpha", "s3://other/{site_key}-x"}, {"beta", "s3://other/alpha-x/y"}}
            ]
@@ -336,7 +339,7 @@ defmodule Brando.Sites.DeployConfigTest do
 
     assert DeployConfig.unreadable_settings() == [:rsync_targets, :s3_targets]
 
-    for value <- ["s3://acme-www", %{acme: ["s3://acme-www"]}, %{"acme" => [:atom]}] do
+    for value <- ["s3://acme-www", %{acme: ["s3://acme-www"]}, %{"acme" => [:atom]}, MapSet.new(["s3://acme-www"])] do
       put_test_env(DeployConfig, resolver: &resolve/2, s3_targets: value)
       assert DeployConfig.unreadable_settings() == [:s3_targets], inspect(value)
     end

@@ -1075,7 +1075,8 @@ build deploys, as the list is.
 
 The System check's Configuration line warns when, with `tenancy_mode: :multi`,
 a list entry has no `{site_key}` or two sites' map entries reach the same
-destination, and when a setting has a form no target can pass (see
+destination, and when a setting has an entry, key or value of a form no
+target can pass (see
 [System check](doctor.md)).
 
 **Entries that extend each other collide on hyphenated keys.** With

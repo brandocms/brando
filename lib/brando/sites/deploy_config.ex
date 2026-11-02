@@ -330,7 +330,7 @@ defmodule Brando.Sites.DeployConfig do
   def overlapping_destinations do
     for setting <- @settings,
         targets = setting_value(setting),
-        is_map(targets),
+        is_map(targets) and not is_struct(targets),
         entries = map_entries(targets),
         {key, entry} <- entries,
         {other_key, other_entry} <- entries,
@@ -340,9 +340,10 @@ defmodule Brando.Sites.DeployConfig do
   end
 
   @doc """
-  The settings no target can pass, so every save and deploy of that strategy
-  is refused: anything but a list of strings, or a map from string site keys
-  to lists of strings (`%{acme: [...]}` with an atom key, for one).
+  The settings with a part no target can pass: anything but a list of
+  strings, or a map from string site keys to lists of strings. A value of
+  another form refuses every target of its strategy; a map key that is not a
+  string (`%{acme: [...]}`) or a value that is not a list refuses that site's.
   """
   @spec unreadable_settings() :: [atom()]
   def unreadable_settings do
@@ -350,6 +351,7 @@ defmodule Brando.Sites.DeployConfig do
       case setting_value(setting) do
         nil -> false
         targets when is_list(targets) -> not Enum.all?(targets, &is_binary/1)
+        targets when is_struct(targets) -> true
         targets when is_map(targets) -> not Enum.all?(targets, &readable_site_entries?/1)
         _other -> true
       end
@@ -360,6 +362,8 @@ defmodule Brando.Sites.DeployConfig do
 
   defp readable_site_entries?({key, entries}),
     do: is_binary(key) and is_list(entries) and Enum.all?(entries, &is_binary/1)
+
+  defp readable_site_entries?(_other), do: false
 
   defp map_entries(targets) do
     for {key, entries} when is_binary(key) and is_list(entries) <- Enum.sort(targets),
@@ -372,7 +376,7 @@ defmodule Brando.Sites.DeployConfig do
   defp same_place?(:rsync_targets, entry, other) do
     with %{"host" => host, "path" => path} <- Regex.named_captures(@rsync_target, entry),
          %{"host" => other_host, "path" => other_path} <- Regex.named_captures(@rsync_target, other) do
-      String.downcase(host) == String.downcase(other_host) and
+      same_host?(host, other_host) and
         nested?(String.trim_trailing(path, "/"), String.trim_trailing(other_path, "/"))
     else
       _unparsed -> false
@@ -386,6 +390,19 @@ defmodule Brando.Sites.DeployConfig do
 
       _other ->
         false
+    end
+  end
+
+  # ssh reaches `example.com.` and `example.com`, or an IPv6 address however
+  # written, as one host
+  defp same_host?(host, other), do: host_key(host) == host_key(other)
+
+  defp host_key(host) do
+    host = host |> String.trim_leading("[") |> String.trim_trailing("]") |> String.trim_trailing(".") |> String.downcase()
+
+    case :inet.parse_strict_address(String.to_charlist(host)) do
+      {:ok, address} -> unmap(address)
+      {:error, _reason} -> host
     end
   end
 

@@ -392,9 +392,17 @@ defmodule Brando.Doctor.ChecksTest do
       for mode <- [:single, :multi] do
         put_test_env(:tenancy_mode, mode)
 
-        assert [{:warning, "Deploy targets: s3_targets allow no destination", "deploy targets that allow nothing", _fix}] =
-                 Checks.Configuration.deploy_targets()
+        assert [
+                 {:warning, "Deploy targets: s3_targets have entries no target can pass",
+                  "deploy target entries that allow nothing", _fix}
+               ] = Checks.Configuration.deploy_targets()
       end
+
+      # A struct is no map of sites, and the rest of the check still runs
+      put_test_env(Brando.Sites.DeployConfig, s3_targets: MapSet.new(["s3://acme-www"]))
+      assert [{:warning, _item, "deploy target entries that allow nothing", _fix}] = Checks.Configuration.deploy_targets()
+      assert %Result{items: items} = Checks.Configuration.run(context())
+      assert Enum.any?(items, &(&1 =~ "Mailer"))
     end
 
     test "with one site, a deploy target without {site_key} is fine" do

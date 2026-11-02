@@ -517,7 +517,7 @@ msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
-msgid "Deploy targets: %{settings} allow no destination"
+msgid "Deploy targets: %{settings} have entries no target can pass"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -982,17 +982,17 @@ msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "deploy target entries that allow nothing"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "deploy targets shared between sites"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "deploy targets shared by every site"
-msgstr ""
-
-#: lib/brando/doctor/checks/configuration.ex
-#, elixir-autogen, elixir-format
-msgid "deploy targets that allow nothing"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex

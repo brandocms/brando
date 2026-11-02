@@ -2,8 +2,9 @@ defmodule Brando.Doctor.Checks.Configuration do
   @moduledoc """
   Required configuration: the endpoint's URL, the mailer and its sender, the
   media CDN settings when a CDN is enabled, the Assistant's model and key
-  when the Assistant is configured, and the deploy target settings: with
-  several sites, destinations that more than one site may use.
+  when the Assistant is configured, and the deploy target settings: entries
+  of the wrong form and, with several sites, destinations that more than one
+  site may use.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
@@ -257,8 +258,8 @@ defmodule Brando.Doctor.Checks.Configuration do
   The operator's deploy target settings as findings (see `evaluate/1`). With
   several sites, a list entry without `{site_key}` grants every site, and map
   entries of two sites that reach the same destination let either replace
-  the other's files. A setting no target can pass refuses every deploy of
-  its strategy.
+  the other's files. A setting with an entry, key or value of the wrong form
+  refuses the targets it would have allowed.
   """
   def deploy_targets do
     multi? = Brando.Tenant.mode() == :multi
@@ -317,8 +318,9 @@ defmodule Brando.Doctor.Checks.Configuration do
 
   defp unreadable_deploy_targets(settings) do
     {:warning,
-     dgettext("doctor", "Deploy targets: %{settings} allow no destination", settings: Enum.join(settings, ", ")),
-     dgettext("doctor", "deploy targets that allow nothing"),
+     dgettext("doctor", "Deploy targets: %{settings} have entries no target can pass",
+       settings: Enum.join(settings, ", ")
+     ), dgettext("doctor", "deploy target entries that allow nothing"),
      dgettext(
        "doctor",
        "write each deploy target setting as a list of destinations, or as a map from each site key, a string, to a list of destinations"
