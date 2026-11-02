@@ -143,6 +143,9 @@ defmodule Brando.SyncTest.Article do
 
           input :year, :number
           input :featured, :toggle
+          # Opened alone in the frontend editor (EntriesInputMaskingTest),
+          # which edits a field of the default form
+          input :related_entries, :entries, sources: [{Brando.AuthorizationTestResources.Page, %{}}]
         end
 
         fieldset do
@@ -299,6 +302,29 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
+    # The same input in a subform's rows: a read decision there follows a
+    # change of permissions as the top-level one does. The rows' entries
+    # come with their identifiers, which the input names them from.
+    form :item_entries do
+      query &Brando.SyncTest.Article.item_entries_query/1
+
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+
+          inputs_for :items do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :label, :text
+            input :related_entries, :entries, sources: [{Brando.AuthorizationTestResources.Page, %{}}]
+          end
+        end
+      end
+    end
+
     # Media inputs, open (`:media`), locked for everyone (`:locked_media`)
     # and for anyone but a superuser (`:superuser_media`,
     # LockedMediaDeliveriesTest): a locked one takes no asset, however it is
@@ -406,6 +432,20 @@ defmodule Brando.SyncTest.Article do
   def write_after_save(_entry, _user), do: :ok
 
   def module_options(_, _), do: Brando.Content.list_modules!(%{filter: %{parent_id: nil}, order: "asc name"})
+
+  # Form `:item_entries`: the default preloads, the rows' entries with their
+  # identifiers
+  def item_entries_query(id) do
+    require Ecto.Query
+
+    preloads =
+      Enum.map(Brando.Blueprint.preloads_for(__MODULE__), fn
+        {:items, %Ecto.Query{} = query} -> {:items, Ecto.Query.preload(query, related_entries: :identifier)}
+        preload -> preload
+      end)
+
+    %{matches: %{id: id}, preload: preloads}
+  end
 end
 
 defmodule Brando.SyncTest.ArticleItem do
@@ -457,6 +497,9 @@ defmodule Brando.SyncTest.ArticleItem do
       foreign_key: :item_id,
       on_replace: :delete,
       cast: true
+
+    # Entries input in a row (form `:item_entries`, EntriesInputMaskingTest)
+    relation :related_entries, :entries
   end
 end
 

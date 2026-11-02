@@ -294,6 +294,32 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
 
     defp own(page, user), do: Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [creator_id: user.id])
 
+    # A row of the article's items linking the page
+    defp link_in_row(c) do
+      item = Repo.insert!(%Brando.SyncTest.ArticleItem{article_id: c.article.id, label: "Row", sequence: 0})
+      join = Brando.SyncTest.ArticleItem.__schema__(:association, :related_entries).related
+      Repo.insert!(struct(join, parent_id: item.id, identifier_id: c.identifier.id, sequence: 0))
+    end
+
+    defp row_html(view) do
+      view
+      |> render()
+      |> Floki.parse_document!()
+      |> Floki.find("#article_items_0_related_entries-field-wrapper .identifier-list")
+      |> Floki.text()
+    end
+
+    defp enable_frontend_edit do
+      previous = Application.get_env(:brando, Brando.FrontendEdit)
+      Application.put_env(:brando, Brando.FrontendEdit, enabled: true)
+
+      on_exit(fn ->
+        if previous,
+          do: Application.put_env(:brando, Brando.FrontendEdit, previous),
+          else: Application.delete_env(:brando, Brando.FrontendEdit)
+      end)
+    end
+
     test "an entry handed to the editor is named after a save in place", %{conn: conn} = c do
       view = open(conn, c.article, "policy_entries")
       refute render(view) =~ @owned
@@ -393,6 +419,60 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
       permissions_changed(view)
 
       refute view |> element(options) |> render() =~ @owned
+    end
+
+    # The entries input of a subform row (form `:item_entries`) and the
+    # frontend editor's field decide again as the form's own fields do
+    test "an entry in a subform row taken from the editor is masked once permissions change", %{conn: conn} = c do
+      link_in_row(c)
+      own(c.page, c.editor)
+      view = open(conn, c.article, "item_entries")
+      assert row_html(view) =~ @owned
+
+      own(c.page, c.other)
+      permissions_changed(view)
+
+      refute render(view) =~ @owned
+      assert row_html(view) =~ @masked
+    end
+
+    test "an entry in a subform row handed to the editor is named after the form reads its entry again",
+         %{conn: conn} = c do
+      link_in_row(c)
+      view = open(conn, c.article, "item_entries")
+      refute render(view) =~ @owned
+
+      own(c.page, c.editor)
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "article_form", action: :refresh_entry)
+
+      assert row_html(view) =~ @owned
+    end
+
+    test "an edit reads none of a subform row's entries again", %{conn: conn} = c do
+      link_in_row(c)
+      own(c.page, c.editor)
+      view = open(conn, c.article, "item_entries")
+      assert row_html(view) =~ @owned
+
+      assert read_queries(view, fn ->
+               change(view, put_in(params(view), ["article", "items", "0", "label"], "Typed"))
+               render(view)
+             end) == 0
+    end
+
+    test "the frontend editor's field masks an entry taken from the editor once permissions change",
+         %{conn: conn} = c do
+      enable_frontend_edit()
+      own(c.page, c.editor)
+      key = Brando.FrontendEdit.Fields.key(Article, c.article.id, :related_entries)
+      {view, _html} = live_form(conn, "/admin/frontend-edit?field=#{key}", "article_form")
+      assert field_html(view) =~ @owned
+
+      own(c.page, c.other)
+      permissions_changed(view)
+
+      refute render(view) =~ @owned
+      assert field_html(view) =~ @masked
     end
 
     # Picked from the list shown before the change, with no edit between

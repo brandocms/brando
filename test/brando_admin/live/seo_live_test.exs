@@ -194,6 +194,22 @@ defmodule BrandoAdmin.Sites.SEOLiveTest do
     refute html =~ "seo_form"
   end
 
+  # A change of permissions has the view's entry form draw its fields again
+  # (`BrandoAdmin.Authorization`), which this tab does not mount
+  test "a change of permissions leaves the content tab open", %{conn: conn} do
+    Brando.Test.Support.put_test_env(:authorization_mode, :groups)
+    Brando.Test.Support.put_test_env(:tenancy_mode, :none)
+    keys = for action <- [:read, :create, :update], do: Brando.Authorization.Catalog.get(action, Brando.Sites.SEO).key
+    {conn, _user} = Brando.Test.Users.log_in_as(conn, permissions: keys)
+    {:ok, view, _html} = live(conn, "/admin/config/seo?tab=content")
+    render_async(view, 5_000)
+
+    send(view.pid, {:authorization_changed, :all})
+
+    assert render(view) =~ "seo-audit"
+    assert Process.alive?(view.pid)
+  end
+
   describe "traffic" do
     test "figures, sorting and a page's searches, when the sources are configured", %{conn: conn} do
       user = Factory.insert(:random_user)

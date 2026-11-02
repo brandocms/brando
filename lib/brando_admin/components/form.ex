@@ -5400,10 +5400,10 @@ defmodule BrandoAdmin.Components.Form do
 
   defp presence_title(user, _count), do: presence_label(user)
 
-  # A change of `read_generation` calls `tab_fields/1` again, which draws
-  # every fieldset (`relations` and the fields' derived assigns change on
-  # each call), so inputs that keep read decisions (`Input.Entries`) update
-  # and decide anew. EntriesInputMaskingTest covers it.
+  # A change of `read_generation` draws every fieldset again, down to a
+  # subform's rows (`Fieldset`, `Subform`), so inputs that keep read
+  # decisions (`Input.Entries`) update and decide anew. The frontend editor's
+  # field gets it the same way. EntriesInputMaskingTest covers it.
   def form_tabs(assigns) do
     ~H"""
     <div
@@ -5487,6 +5487,7 @@ defmodule BrandoAdmin.Components.Form do
           current_user={@current_user}
           form_cid={@form_cid}
           form_id={@form_id}
+          read_generation={@read_generation}
         />
       <% end %>
     <% end %>
