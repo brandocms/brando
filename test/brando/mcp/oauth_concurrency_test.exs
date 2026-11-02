@@ -8,6 +8,7 @@ defmodule Brando.MCP.OAuthConcurrencyTest do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.MCP
+  alias Brando.MCP.AuthorizationCode
   alias Brando.MCP.Grant
   alias Brando.MCP.OAuth
   alias Brando.MCP.Setting
@@ -110,6 +111,75 @@ defmodule Brando.MCP.OAuthConcurrencyTest do
     end)
   end
 
+  test "revoking a user's connections waits for a code being exchanged, and ends what it made", %{
+    tenant: tenant,
+    grant: %{user_id: user_id}
+  } do
+    parent = self()
+
+    code =
+      Sandbox.unboxed_run(Repo, fn ->
+        Repo.insert!(%AuthorizationCode{
+          code_hash: OAuth.hash("in-flight-#{System.unique_integer([:positive])}"),
+          user_id: user_id,
+          resource: MCP.resource(tenant),
+          client_id: client_id(),
+          client_name: "Test Client",
+          redirect_uri: redirect_uri(),
+          code_challenge: "challenge",
+          scope: MCP.scope(),
+          expires_at: DateTime.add(DateTime.utc_now(), 60, :second)
+        })
+      end)
+
+    # As `OAuth`'s exchange does: holds the code's row until its grant is in
+    exchange =
+      Task.async(fn ->
+        Sandbox.unboxed_run(Repo, fn ->
+          Repo.transaction(fn ->
+            locked = Repo.one!(from c in AuthorizationCode, where: c.id == ^code.id, lock: "FOR UPDATE")
+            send(parent, :locked)
+
+            receive do
+              :finish -> :ok
+            after
+              10_000 -> :ok
+            end
+
+            made =
+              Repo.insert!(%Grant{
+                user_id: user_id,
+                resource: locked.resource,
+                client_id: locked.client_id,
+                client_name: locked.client_name,
+                redirect_uri: locked.redirect_uri,
+                scope: locked.scope
+              })
+
+            locked |> Ecto.Changeset.change(used_at: DateTime.utc_now(), grant_id: made.id) |> Repo.update!()
+            made
+          end)
+        end)
+      end)
+
+    assert_receive :locked, 5_000
+
+    revocation =
+      Task.async(fn ->
+        Sandbox.unboxed_run(Repo, fn -> MCP.revoke_user_grants(%{id: user_id}, "password_changed") end)
+      end)
+
+    await_lock_wait("mcp_authorization_codes")
+    send(exchange.pid, :finish)
+
+    assert {:ok, made} = Task.await(exchange, 10_000)
+    assert :ok = Task.await(revocation, 10_000)
+
+    Sandbox.unboxed_run(Repo, fn ->
+      assert %Grant{revoked_reason: "password_changed"} = Repo.get!(Grant, made.id)
+    end)
+  end
+
   # Telemetry handler, run in the process that made the query: in the first
   # refresh's process only, it stops once after the token's rotation and
   # once after the commit, until the test lets it go on.
@@ -135,14 +205,17 @@ defmodule Brando.MCP.OAuthConcurrencyTest do
   defp pause_point(%{query: "commit"}), do: :committed
   defp pause_point(_metadata), do: nil
 
-  # Until another connection waits on a row lock on mcp_tokens
-  defp await_lock_wait(tries \\ 100) do
+  # Until another connection waits on a row lock on `table`
+  defp await_lock_wait(table \\ "mcp_tokens", tries \\ 100) do
     waiting =
       Sandbox.unboxed_run(Repo, fn ->
-        Repo.query!("""
-        SELECT count(*) FROM pg_stat_activity
-        WHERE datname = current_database() AND wait_event_type = 'Lock' AND query LIKE '%mcp_tokens%'
-        """).rows
+        Repo.query!(
+          """
+          SELECT count(*) FROM pg_stat_activity
+          WHERE datname = current_database() AND wait_event_type = 'Lock' AND query LIKE '%' || $1 || '%'
+          """,
+          [table]
+        ).rows
       end)
 
     cond do
@@ -150,11 +223,11 @@ defmodule Brando.MCP.OAuthConcurrencyTest do
         :ok
 
       tries == 0 ->
-        flunk("the second refresh never waited on the row lock")
+        flunk("nothing ever waited on the row lock")
 
       true ->
         Process.sleep(20)
-        await_lock_wait(tries - 1)
+        await_lock_wait(table, tries - 1)
     end
   end
 end

@@ -512,14 +512,16 @@ defmodule Brando.MCP do
     # Before the brando_213 migration there is nothing to revoke, and a
     # failed query would abort the caller's transaction.
     if installed?() do
+      # What the person approved a moment ago ends too: it would otherwise
+      # still make a connection, if the account comes back within its minute.
+      # First: this waits on the row lock of a code being exchanged, so the
+      # grant that exchange makes is among the ones revoked below.
+      from(c in AuthorizationCode, where: c.user_id == ^user_id and is_nil(c.used_at))
+      |> Repo.update_all(set: [used_at: DateTime.utc_now()])
+
       from(g in Grant, where: g.user_id == ^user_id and is_nil(g.revoked_at))
       |> Repo.all()
       |> Enum.each(&revoke_grant(&1, :system, reason))
-
-      # What the person approved a moment ago ends too: it would otherwise
-      # still make a connection, if the account comes back within its minute.
-      from(c in AuthorizationCode, where: c.user_id == ^user_id and is_nil(c.used_at))
-      |> Repo.update_all(set: [used_at: DateTime.utc_now()])
     end
 
     :ok
