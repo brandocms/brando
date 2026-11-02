@@ -207,12 +207,16 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
         })
 
       {:ok, _} =
-        Tenant.Registry.create_environment(site, %{
-          name: "Production",
-          key: "production",
-          live: true,
-          domain: "www.acme.test"
-        })
+        Tenant.Registry.create_environment(
+          site,
+          %{
+            name: "Production",
+            key: "production",
+            live: true,
+            domain: "www.acme.test"
+          },
+          actor: :system
+        )
 
       # The site's schema is not migrated here: the page's palettes CSS
       # querying it shows the page renders in the site's context.

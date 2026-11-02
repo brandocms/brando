@@ -66,7 +66,7 @@ defmodule Brando.Content.VarAttrs do
   # identifier var, those *are* the value.
   @owner [:creator_id, :module_id, :page_id, :block_id, :global_set_id, :table_template_id]
 
-  @doc "Every var field `Brando.Content.Block` casts."
+  @doc "Every var field, the owners included: `Brando.Content.Block` casts all but `owner/0`."
   @spec all() :: [atom()]
   def all, do: @all
 

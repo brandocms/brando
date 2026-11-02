@@ -80,7 +80,6 @@ defmodule Brando.Content.StaleBlocksTest do
           "module_id" => c.module.id,
           "creator_id" => c.user.id,
           "source" => to_string(join_schema(page)),
-          "vars" => Enum.with_index(vars ++ defined_vars, &Map.put(&1, "sequence", &2)),
           "refs" => Enum.with_index(refs ++ defined_refs, &Map.put(&1, "sequence", &2))
         },
         c.user
@@ -88,6 +87,15 @@ defmodule Brando.Content.StaleBlocksTest do
       |> Repo.insert!()
       |> Ecto.Changeset.change(module_version: 1)
       |> Repo.update!()
+
+    # Stored rows, as a module that dropped a var leaves them: a block save
+    # takes no var its module does not define (`Brando.Content.VarGuard`).
+    (vars ++ defined_vars)
+    |> Enum.with_index()
+    |> Enum.each(fn {var, sequence} ->
+      params = Map.merge(var, %{"sequence" => sequence, "block_id" => block.id})
+      %Var{} |> Var.changeset(params, c.user, nil, validate_var_values: false) |> Repo.insert!()
+    end)
 
     struct(join_schema(page), %{entry_id: page.id, block_id: block.id, sequence: sequence}) |> Repo.insert!()
     block

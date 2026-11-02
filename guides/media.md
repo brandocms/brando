@@ -228,8 +228,10 @@ For Liquid, `Brando.Villain.map_images(images, language)` maps images with
 their texts resolved (the default language when `nil`).
 
 Use a meaningful caption only when it adds information. `caption: true` uses
-the image title; a string supplies an explicit caption. Captions are rendered
-as HTML, so only pass trusted editorial content.
+the image title, which prints as text, or as sanitized markup when it is rich
+text; the same holds for a video's caption or title. A string supplies an
+explicit caption and is printed as HTML, so pass only your own markup, with any
+stored value in it escaped.
 A nil image renders nothing. An **unloaded** association renders a diagnostic:
 fix the preload rather than hiding it with a CSS rule.
 

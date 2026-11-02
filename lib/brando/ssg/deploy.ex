@@ -114,7 +114,7 @@ defmodule Brando.SSG.Deploy do
 
     # The build carries the config it was made with, which may predate the
     # check on save
-    if DeployConfig.valid_rsync_target?(target) do
+    if DeployConfig.valid_rsync_target?(target, build.site.key) do
       case runner.("rsync", args, stderr_to_stdout: true) do
         {_output, 0} -> :ok
         {output, exit_status} -> {:error, {:rsync_failed, exit_status, output}}
@@ -130,11 +130,16 @@ defmodule Brando.SSG.Deploy do
     do: {:error, :deploy_target_not_configured}
 
   defp deploy_s3(build, target, opts) do
-    with {:ok, bucket, prefix} <- parse_s3_target(target),
+    # The build carries the config it was made with, which may predate the
+    # check on save
+    with {:ok, bucket, prefix} <- DeployConfig.s3_destination(target, build.site.key),
          request = Keyword.get(opts, :s3_request, &ExAws.request/1),
          {:ok, existing_keys} <- list_s3_keys(bucket, prefix, request),
          :ok <- delete_s3_keys(bucket, existing_keys, request) do
       upload_s3_files(build, bucket, prefix, request)
+    else
+      :error -> {:error, :invalid_deploy_target}
+      {:error, _reason} = error -> error
     end
   rescue
     exception -> {:error, {:s3_upload_failed, Exception.message(exception)}}
@@ -204,16 +209,6 @@ defmodule Brando.SSG.Deploy do
 
   defp s3_prefix(""), do: ""
   defp s3_prefix(prefix), do: String.trim_trailing(prefix, "/") <> "/"
-
-  defp parse_s3_target(target) do
-    case URI.parse(target) do
-      %URI{scheme: "s3", host: bucket, path: path} when is_binary(bucket) and bucket != "" ->
-        {:ok, bucket, path |> Kernel.||("/") |> String.trim("/")}
-
-      _invalid ->
-        {:error, {:invalid_s3_target, target}}
-    end
-  end
 
   defp regular_files(root) do
     root

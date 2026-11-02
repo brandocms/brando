@@ -506,11 +506,14 @@ defmodule BrandoAdmin.Components.Form.VideoDrawer do
   defp source_label(%{type: :vimeo_account}), do: "Vimeo"
   defp source_label(_), do: gettext("Video")
 
-  defp source_link(%{type: type, source_url: url})
-       when type in [:external_file, :vimeo, :youtube] and is_binary(url) and url != "",
-       do: url
+  # A row saved before addresses were checked can still hold another scheme
+  @doc false
+  def source_link(%{type: type, source_url: url})
+      when type in [:external_file, :vimeo, :youtube] and is_binary(url) and url != "" do
+    if Brando.Videos.Video.ValidSourceURL.allowed?(url), do: url
+  end
 
-  defp source_link(_), do: nil
+  def source_link(_), do: nil
 
   def reset_video_field(js \\ %JS{}, target) do
     js

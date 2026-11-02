@@ -353,6 +353,16 @@ sender first, before the first compile.
 
 **Not found by any task.** Their correct rewrite depends on the application:
 
+- **Vars written through a block changeset.** Seeds or scripts that pass a var
+  to `Block.block_changeset/3` or `recursive_block_changeset/4` get its type and
+  options from the module's definition of its key (the table template's, for a
+  row), and a key with no definition is left out. Define the var on the module
+  first. A block save no longer changes a saved block's module unless a
+  superuser or `:system` makes it.
+- **Global set setup in legacy mode.** `/admin/config/global_sets` opens for
+  superusers only, as the menu always implied; an admin or editor fills in
+  values on the Globals screen.
+
 - **Markup editors wrote where text belongs.** Liquid modules print `string`
   and `text` vars, globals and identity links HTML-escaped, braces included,
   so Liquid in them is printed rather than run (a comparison, `truncate` or
@@ -366,6 +376,11 @@ sender first, before the first compile.
   `<span class="soft">`: edit it. `{{ title | escape }}` keeps printing the
   text once. See
   [Writing templates safely](block_editor.md#writing-templates-safely).
+
+  `select`, `color`, `date` and `datetime` vars and other globals print
+  escaped as well: a `select` value with `&` or a quote compares as its
+  escaped text in a template. Values stored in them that are not valid for
+  their type stay until edited, print as text, and are left empty in a copy.
 
   **Liquid in what editors write prints as text.** A text or Markdown ref, a
   var, a global or a caption no longer runs Liquid, including a text ref on a
@@ -451,6 +466,11 @@ sender first, before the first compile.
   refresh the frontend's lockfile and rebuild it, and review a nonstandard
   manifest. Replace custom processing that relied on sharp-cli, and adopt
   `<.head>` (the 0.54.0 section of `CHANGELOG.md`).
+- **Redirects on listed SSG paths.** A static build no longer follows a redirect
+  off its own origin, and that URL fails the build. Where a path in your SSG
+  module redirects to an absolute URL, including one on the site's public
+  domain, write the target as a relative path or take the path off the list. Have
+  a custom `:fetcher` honour `redirect: false` and return `:headers`.
 - **Direct Hackney calls.** Declare `{:hackney, "~> 4.0"}`: hackney 1.x does not
   resolve next to Brando.
 - **Tokens in the request logs.** Add `"token"` and `"key"` to
@@ -468,6 +488,16 @@ sender first, before the first compile.
   `websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]`.
   In a generated `LockdownController`, call `Lockdown.password?(conn, password)`
   so password attempts are limited.
+- **Static deploys with several sites.** With `tenancy_mode: :multi`, an rsync
+  or S3 deploy needs a list of destinations, and builds refuse to deploy until
+  it is there. Add what each site's target needs to `config/runtime.exs`, with
+  `{site_key}` for the site's key so one site cannot name another's destination:
+  `config :brando, Brando.Sites.DeployConfig, rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}"], s3_targets: ["s3://static-bucket/sites/{site_key}"]`.
+  An entry without `{site_key}`, such as `s3://acme-www`, is open to every site,
+  so it suits only sites deployed by the same people. An existing `rsync_targets`
+  parent such as `deploy@static.example.com:/srv/sites/` keeps working, but leaves
+  the sites open to each other until it uses `{site_key}`. See
+  [Tenancy and environments](tenancy_and_environments.md).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with
@@ -797,6 +827,24 @@ index". Publish the fragments first.
    edit that changes a colour must make it one. Pick each colour again in the
    admin, rename each listed palette name, and update any CSS of your own that
    names a renamed palette's `b-section` or custom properties.
+9. **Rename fragment keys that are not identifiers.** A fragment's parent key
+   and key hold letters, digits, `_`, `-`, `.`, `/`, spaces and parentheses,
+   and can't start or end with a space. A stored key that doesn't fit keeps rendering,
+   saving and copying, printed escaped, but a change to it must fit. To list
+   them, run this in `public` and every environment schema:
+
+   ```sql
+   SELECT id, parent_key, key FROM pages_fragments
+   WHERE deleted_at IS NULL
+     AND (parent_key !~ '^[[:alnum:]_./()-]([[:alnum:]_./ ()-]*[[:alnum:]_./()-])?$'
+       OR key !~ '^[[:alnum:]_./()-]([[:alnum:]_./ ()-]*[[:alnum:]_./()-])?$');
+   ```
+
+   A key listed only for its non-ASCII letters may still fit: the query depends
+   on the database's locale. Rename the others in the admin, along with the
+   templates that look them up. A revision from before the rename holds the old
+   key, so restoring it, or publishing it on a schedule, is refused: schedule a
+   newer revision instead.
 
 `mix brando.doctor` reports migrations that have not run, in `public` and in
 each environment, and Oban queues that are missing. Under Module entry paths it
@@ -1170,6 +1218,12 @@ An application choosing tenancy runs, after this source upgrade,
 application source changes without running migrations or copying live data;
 [Tenancy and environments](tenancy_and_environments.md) has the ordered
 conversion workflow.
+
+An application already on named environments passes the actor when its own code
+sets a domain, `Brando.Tenant.Registry.update_environment(environment, %{domain:
+host}, actor: :system)` and `create_environment/3` likewise, and clears or
+rewrites any stored domain with a trailing dot, which no longer routes, or with
+a scheme or port, which never did. Per-site administrators no longer change domains; a superuser does.
 
 ### Review a generated Florist configuration
 

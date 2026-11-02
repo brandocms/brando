@@ -20,6 +20,7 @@ defmodule Brando.MarkdownSources.PublicationTest do
 
   setup do
     put_test_env(:tenancy_mode, :multi)
+    put_test_env(Brando.Sites.DeployConfig, rsync_targets: ["deploy@example.test:/srv/docs"])
     put_test_env(:authorization_mode, :legacy)
     root = Path.join(System.tmp_dir!(), "markdown-publish-#{System.unique_integer([:positive])}")
     put_test_env(:sites_path, root)

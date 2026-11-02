@@ -125,7 +125,7 @@ defmodule Brando.Villain.Parser do
       def header(data, opts), do: Brando.Villain.Parser.header(data, opts)
       defoverridable header: 2
 
-      def input(%{value: value}, _), do: value
+      def input(%{value: value}, _), do: Brando.Villain.Parser.escape_var_value(value)
       defoverridable input: 2
 
       def module(data, opts), do: Brando.Villain.Parser.module(data, opts)
@@ -251,6 +251,7 @@ defmodule Brando.Villain.Parser do
   import Brando.HTML
 
   alias Brando.Content
+  alias Brando.Content.Block
   alias Brando.Content.BlockSlots
   alias Brando.Content.Palette
   alias Brando.RuntimeConfig
@@ -298,7 +299,7 @@ defmodule Brando.Villain.Parser do
   def adapter_for(nil), do: TemplateAdapter.Liquex
 
   @doc """
-  Whether `adapter` gets its `string` and `text` vars HTML-escaped
+  Whether `adapter` gets its vars' text HTML-escaped
   (`process_vars/2`'s `escape:`): Liquid prints values as they are, HEEx
   escapes them itself.
   """
@@ -439,6 +440,7 @@ defmodule Brando.Villain.Parser do
         entry
         |> put_in([Access.key(:vars)], process_vars(entry.vars, escape: escape?))
         |> put_in([Access.key(:refs)], process_refs(entry.refs))
+        |> entry_table_rows(escape?)
       end)
 
     adapter.render_multi_module(
@@ -497,7 +499,7 @@ defmodule Brando.Villain.Parser do
   def render_block_slot(slot, opts) do
     html =
       if opts[:skip_children] === true do
-        "[$ slot:#{slot.uid} $]"
+        slot_placeholder(slot.uid)
       else
         slot
         |> BlockSlots.children()
@@ -507,6 +509,12 @@ defmodule Brando.Villain.Parser do
       end
 
     if opts[:annotate_blocks], do: html |> annotate_children(slot.uid) |> IO.iodata_to_binary(), else: html
+  end
+
+  # A row stored with a uid of another shape stays out of the page, as in its
+  # markers (`maybe_annotate/3`).
+  defp slot_placeholder(uid) do
+    if Block.valid_uid?(uid), do: "[$ slot:#{uid} $]", else: "[$ slot $]"
   end
 
   defp render_slot_child(child, opts) do
@@ -1679,7 +1687,7 @@ defmodule Brando.Villain.Parser do
 
   Options:
 
-    * `escape: true` HTML-escapes `string` and `text` values, for a template
+    * `escape: true` HTML-escapes every text value but `rich_text`, for a template
       that prints values as they are (Liquid). HEEx escapes what it prints.
   """
   def process_vars(vars, opts \\ [])
@@ -1691,8 +1699,11 @@ defmodule Brando.Villain.Parser do
     Map.new(vars, &(&1 |> process_var() |> maybe_escape_var(&1, escape?)))
   end
 
+  # On a link var whose text `escape_link_var/1` escaped
+  @escaped_link :brando_escaped_link
+
   @doc """
-  The text of a `string` or `text` var as Liquid gets it: HTML-escaped, so a
+  The text of a var as Liquid gets it, whatever its type but `rich_text`: HTML-escaped, so a
   `<` or a quote an editor typed is printed as text, and its braces
   character references (`Brando.Villain.InertLiquid`), so Liquid an editor
   typed is printed as text too rather than run by the entry's final Liquid
@@ -1703,7 +1714,34 @@ defmodule Brando.Villain.Parser do
 
   def escape_var_value(value), do: value
 
-  defp maybe_escape_var({key, value}, %{type: type}, true) when type in [:string, :text],
+  @doc """
+  A link var as Liquid gets it: `{{ link.value }}` and `{{ link.link_text }}`
+  print like any var's text. The `link_url` and `link_text` filters and
+  `{% link %}` read the text as typed (`typed_link_var/1`), which the key put
+  here tells apart from a link var that reached the template as stored.
+  """
+  def escape_link_var(%{type: :link} = link) do
+    escaped = link |> Map.take([:value, :link_text]) |> Map.new(fn {key, text} -> {key, escape_var_value(text)} end)
+    link |> Map.merge(escaped) |> Map.put(@escaped_link, true)
+  end
+
+  @doc """
+  A link var with its address and text as typed, for what checks the address
+  and escapes once.
+  """
+  def typed_link_var(%{@escaped_link => true} = link) do
+    typed = link |> Map.take([:value, :link_text]) |> Map.new(fn {key, text} -> {key, typed_text(text)} end)
+    link |> Map.merge(typed) |> Map.delete(@escaped_link)
+  end
+
+  def typed_link_var(link), do: link
+
+  defp typed_text(text) when is_binary(text), do: HtmlEntities.decode(text)
+  defp typed_text(text), do: text
+
+  # By exclusion: only sanitized rich text prints as markup, so a type added
+  # later, or a value stored before it was checked, is text.
+  defp maybe_escape_var({key, value}, %{type: type}, true) when is_binary(value) and type not in [:rich_text, :html],
     do: {key, escape_var_value(value)}
 
   # Sanitized, and text to the entry's final Liquid pass. HEEx has no use for
@@ -1711,7 +1749,16 @@ defmodule Brando.Villain.Parser do
   defp maybe_escape_var({key, value}, %{type: type}, true) when type in [:rich_text, :html],
     do: {key, Brando.Villain.InertLiquid.encode_all(value)}
 
+  defp maybe_escape_var({key, %{type: :link} = link}, _var, true), do: {key, escape_link_var(link)}
+
   defp maybe_escape_var(processed, _var, _escape?), do: processed
+
+  # An entry of a multi module, read as `entry.table_rows` by the parent's
+  # template, holds its rows as `block.table_rows` does.
+  defp entry_table_rows(%{table_rows: rows} = entry, true),
+    do: %{entry | table_rows: TemplateAdapter.table_rows(rows, true)}
+
+  defp entry_table_rows(entry, _escape?), do: entry
 
   defp process_var(
          %Brando.Content.Var{
@@ -2385,14 +2432,20 @@ defmodule Brando.Villain.Parser do
   defp apply_quality_override(video, nil), do: video
   defp apply_quality_override(video, quality), do: Map.put(video, :quality, quality)
 
+  # A row stored with a uid of another shape renders without markers: the uid
+  # would otherwise become part of the page.
   def maybe_annotate(code, uid, %{annotate_blocks: true}) do
-    ["<!-- [+:B<", uid, ">] -->\n  ", code, "\n<!-- [-:B<", uid, ">] -->\n"]
+    if Block.valid_uid?(uid),
+      do: ["<!-- [+:B<", uid, ">] -->\n  ", code, "\n<!-- [-:B<", uid, ">] -->\n"],
+      else: code
   end
 
   def maybe_annotate(code, _, _), do: code
 
   def annotate_children(code, uid) do
-    ["<!-- [+:C<", uid, ">] -->\n  ", code, "\n<!-- [-:C<", uid, ">] -->\n"]
+    if Block.valid_uid?(uid),
+      do: ["<!-- [+:C<", uid, ">] -->\n  ", code, "\n<!-- [-:C<", uid, ">] -->\n"],
+      else: code
   end
 
   defp maybe_annotate_children(code, uid, %{annotate_blocks: true}), do: annotate_children(code, uid)

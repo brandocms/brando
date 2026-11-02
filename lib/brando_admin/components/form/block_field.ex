@@ -2009,14 +2009,15 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   holding everything the child holds (`Ops.moved_params/1`). Its diff is
   then all of it, not only what changed: under the new parent it is a new
   row, and a diff of changes would save it without its module, type, refs
-  and vars.
+  and vars. A value its definition would refuse goes empty, as in any copy
+  (`Brando.Content.VarGuard.clear_copied_value/2`).
   """
   def moved_child_changeset(%Changeset{} = changeset, user_id) do
     params = changeset |> Ops.snapshot_params() |> Ops.moved_params(changed_galleries(changeset))
     base = %Brando.Content.Block{vars: [], refs: [], table_rows: [], children: [], block_identifiers: []}
 
     base
-    |> Brando.Content.Block.recursive_block_changeset(params, user_id)
+    |> Brando.Content.Block.recursive_block_changeset(params, user_id, copy: true)
     # its diff is its applied state: it carries them to the save
     |> BlockIdentity.keep(BlockIdentity.index([changeset.data]))
   end
@@ -3009,13 +3010,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # A uid is recoverable only if this process does not already have it. The
   # client decides what *looks* missing by diffing the DOM; the server is the
   # only side that knows what it actually holds, and it must not let a replayed
-  # or forged payload overwrite a block that is alive right now.
+  # or forged payload overwrite a block that is alive right now. The uid has
+  # to be one the server could have made, too.
   defp recoverable_uids(missing_uids, socket) when is_list(missing_uids) do
     known = MapSet.new(socket.assigns.block_ops.order)
     seeded = socket.assigns.seed_forms
 
     Enum.filter(missing_uids, fn uid ->
-      is_binary(uid) and not MapSet.member?(known, uid) and not Map.has_key?(seeded, uid)
+      Brando.Content.Block.valid_uid?(uid) and not MapSet.member?(known, uid) and not Map.has_key?(seeded, uid)
     end)
   end
 

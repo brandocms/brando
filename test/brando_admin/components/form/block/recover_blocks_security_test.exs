@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Components.Form.Block.RecoverBlocksSecurityTest do
           class: "text",
           code: "<div>{{ title }}</div>",
           refs: [],
-          vars: []
+          vars: [%{type: "string", key: "title", label: "Title"}]
         },
         user
       )
@@ -124,6 +124,46 @@ defmodule BrandoAdmin.Components.Form.Block.RecoverBlocksSecurityTest do
 
   defp recovered_cs(socket, uid) do
     socket.assigns.seed_forms |> Map.fetch!(uid) |> Map.fetch!(:source)
+  end
+
+  test "a badly shaped missing uid is not recovered", ctx do
+    %{user: user, page: page, module: module} = ctx
+    bad_uid = "x>] --><!-- [+:B<y"
+
+    params =
+      payload(base_block(module, user),
+        missing_uids: [bad_uid],
+        extra_forms: %{
+          "entry_block_form-#{bad_uid}" => %{
+            "entry_block" => %{"sequence" => "0", "block" => base_block(module, user, %{"uid" => bad_uid})}
+          }
+        }
+      )
+
+    assert {:reply, %{recovered: []}, socket} = recover(params, socket(user, page))
+    assert socket.assigns.seed_forms == %{}
+    assert socket.assigns.block_ops.order == []
+  end
+
+  test "a recovery copy's uid is recovered", ctx do
+    %{user: user, page: page, module: module} = ctx
+    uid = "rootA-kept-2"
+
+    params =
+      module
+      |> base_block(user, %{"uid" => uid})
+      |> payload(
+        missing_uids: [uid],
+        extra_forms: %{
+          "entry_block_form-#{uid}" => %{
+            "entry_block" => %{"sequence" => "0", "block" => base_block(module, user, %{"uid" => uid})}
+          }
+        }
+      )
+      |> Map.put("rootUids", [uid])
+
+    assert {:reply, %{recovered: [^uid]}, socket} = recover(params, socket(user, page))
+    assert recovered_cs(socket, uid).valid?
   end
 
   test "a forged block_id cannot attach the entry to another entry's block", ctx do
@@ -345,14 +385,13 @@ defmodule BrandoAdmin.Components.Form.Block.RecoverBlocksSecurityTest do
       end
     end
 
-    test "carried set is a strict subset of the cast surface" do
+    test "carried set is within the cast surface, and neither holds an owner" do
       carried = MapSet.new(Brando.Content.Block.carried_var_attrs())
       cast = MapSet.new(Brando.Content.Block.var_attrs())
 
-      # Anything carried but not cast would be a dead input; anything cast is
-      # allowed to be absent, but the two must not drift the other way.
+      # Anything carried but not cast would be a dead input.
       assert MapSet.subset?(carried, cast)
-      refute MapSet.equal?(carried, cast)
+      assert MapSet.disjoint?(cast, MapSet.new(Brando.Content.VarAttrs.owner()))
     end
 
     test "var_changeset ignores a client-supplied creator_id", %{user: user, attacker: attacker} do

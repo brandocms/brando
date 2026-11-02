@@ -39,6 +39,7 @@ defmodule Brando.Doctor do
     Checks.Modules,
     Checks.ModuleEntryPaths,
     Checks.EditorLiquid,
+    Checks.BlockUids,
     Checks.Colors,
     Checks.Sitemap,
     Checks.Robots,

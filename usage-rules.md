@@ -835,19 +835,17 @@ write is data: Liquid in a ref, a var, a global or a caption prints as text.
 HEEx escapes what it prints; Liquid in a value it prints is text. Liquid prints
 values as Brando gives them:
 
-- `string` and `text` vars and globals arrive HTML-escaped (by key, in
-  `entries`, in table rows), as do `links` and the `link_url`/`link_text`
-  filters; a comparison sees the escaped text. Markup belongs in a `rich_text`
-  var.
+- Every var and global holding text arrives HTML-escaped, whatever its type
+  (a link var's `.value` and `.link_text` too; by key, in `entries`, in table
+  rows), as do `links` and the `link_url`/`link_text` filters; a comparison or
+  `truncate` sees the escaped text. Markup belongs in a `rich_text` var.
 - `rich_text` vars and globals arrive sanitized, to print between tags.
 - `entry` and its preloads, `identity`, `configs`, `navigation`, `request`,
   `url`, ref data read through `refs` and a datasource's `entries` read the same
   way: `{{ entry.title }}` prints as text. A field declared `:rich_text` in the
   entry's form, and a text ref's `text`, arrive sanitized.
 - `{{ entry.embed | raw }}` is a template's opt-in, for a plain field whose
-  markup you trust. Liquid in the value stays text.
-- `escape` never encodes twice; `url_encode`, `slugify` and `markdown` read
-  escaped text as the text it stands for.
+  markup you trust.
 
 So:
 
@@ -856,8 +854,9 @@ So:
   `content="{{ intro | strip_html | escape_once }}"`.
 - Do not `url_decode` a value you print: it turns `%3C` back into `<` after
   every check. For a query string, `url_encode` the value.
-- `escape` does not check an address's scheme. Make a link from a link var
-  with `{% link %}`, which drops a script address.
+- `escape` does not check an address's scheme, and neither does a link var's
+  `.value`. Make a link from a link var with `{% link %}`, which drops a
+  script address, or `link_url`.
 
 ```liquid
 {%- comment -%} Don't {%- endcomment -%}

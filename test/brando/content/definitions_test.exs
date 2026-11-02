@@ -267,7 +267,9 @@ defmodule Brando.Content.DefinitionsTest do
       %Var{}
       |> Var.changeset(
         %{"key" => var.key, "type" => "select", "label" => "Theme", "value" => "dark", "block_id" => block.id},
-        c.user
+        c.user,
+        nil,
+        validate_var_values: false
       )
       |> Repo.insert!()
 
@@ -688,6 +690,16 @@ defmodule Brando.Content.DefinitionsTest do
     assert {:error, _} = Definitions.export(output, denied)
     refute File.exists?(output)
     assert {:ok, _} = Definitions.export(Path.join(c.path, "permitted"), c.user)
+  end
+
+  test "a stored default whose option has gone imports as it is, where the var is new", c do
+    option = %Brando.Content.Var.Option{label: %{"en" => "Small"}, value: "small"}
+    var = %Var{key: "kind", label: %{"en" => "Kind"}, type: :select, value: "gone", options: [option], sequence: 9}
+    record = Brando.Content.Definition.Model.stored_var_record(var)
+    bundle = edit(c.bundle, fn module -> Map.update!(module, "vars", &(&1 ++ [record])) end)
+
+    apply_bundle!(bundle, c.user)
+    assert %{type: :select, value: "gone", options: [%{value: "small"}]} = Enum.find(hero().vars, &(&1.key == "kind"))
   end
 
   test "a late database failure rolls back earlier definitions in the same import", c do

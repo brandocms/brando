@@ -5,10 +5,22 @@ defmodule Brando.Tenant.Registry do
   All writes pass through this module so successful mutations refresh the
   read-optimized tenant cache. The registry schemas themselves are permanently
   stored in PostgreSQL's `public` schema.
+
+  ## Binding a host
+
+  An environment's `domain` decides which site answers on a host, so changing
+  it is the installation's decision, not one site's. `create_environment/3`
+  and `update_environment/3` refuse a change to it unless `:actor` is an
+  installation superuser (`Brando.Authorization.Boundary.superuser?/1`), or
+  `:system` for trusted maintenance code. With no `:actor` the change is
+  refused too.
   """
+
+  use Gettext, backend: Brando.Gettext
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Authorization.Boundary
   alias Brando.Environments.Environment
   alias Brando.Repo
   alias Brando.Sites.Site
@@ -85,24 +97,28 @@ defmodule Brando.Tenant.Registry do
     |> Repo.one(@public_opts)
   end
 
-  @spec create_environment(Site.t() | pos_integer(), map()) ::
+  @spec create_environment(Site.t() | pos_integer(), map(), keyword()) ::
           {:ok, Environment.t()} | {:error, Ecto.Changeset.t()}
-  def create_environment(%Site{id: site_id}, attrs), do: create_environment(site_id, attrs)
+  def create_environment(site, attrs, opts \\ [])
 
-  def create_environment(site_id, attrs) do
+  def create_environment(%Site{id: site_id}, attrs, opts), do: create_environment(site_id, attrs, opts)
+
+  def create_environment(site_id, attrs, opts) do
     attrs = put_site_id(attrs, site_id)
 
     %Environment{}
     |> Environment.changeset(attrs)
+    |> authorize_domain(opts[:actor])
     |> Repo.insert(@public_opts)
     |> refresh_cache_on_success()
   end
 
-  @spec update_environment(Environment.t(), map()) ::
+  @spec update_environment(Environment.t(), map(), keyword()) ::
           {:ok, Environment.t()} | {:error, Ecto.Changeset.t()}
-  def update_environment(%Environment{} = environment, attrs) do
+  def update_environment(%Environment{} = environment, attrs, opts \\ []) do
     environment
     |> Environment.changeset(attrs)
+    |> authorize_domain(opts[:actor])
     |> Repo.update(@public_opts)
     |> refresh_cache_on_success()
   end
@@ -114,6 +130,22 @@ defmodule Brando.Tenant.Registry do
     |> Repo.delete(@public_opts)
     |> refresh_cache_on_success()
   end
+
+  defp authorize_domain(%{changes: %{domain: _domain}} = changeset, actor) do
+    if binds_hosts?(actor),
+      do: changeset,
+      else:
+        Ecto.Changeset.add_error(
+          changeset,
+          :domain,
+          gettext("Only a superuser can change the host an environment answers on.")
+        )
+  end
+
+  defp authorize_domain(changeset, _actor), do: changeset
+
+  defp binds_hosts?(nil), do: false
+  defp binds_hosts?(actor), do: Boundary.superuser?(actor)
 
   defp preload_environments(nil), do: nil
 

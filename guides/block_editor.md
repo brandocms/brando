@@ -201,19 +201,17 @@ write is data: Liquid in a ref, a var, a global or a caption prints as text.
 HEEx escapes what it prints; Liquid in a value it prints is text. Liquid prints
 values as Brando gives them:
 
-- `string` and `text` vars and globals arrive HTML-escaped (by key, in
-  `entries`, in table rows), as do `links` and the `link_url`/`link_text`
-  filters; a comparison sees the escaped text. Markup belongs in a `rich_text`
-  var.
+- Every var and global holding text arrives HTML-escaped, whatever its type
+  (a link var's `.value` and `.link_text` too; by key, in `entries`, in table
+  rows), as do `links` and the `link_url`/`link_text` filters; a comparison or
+  `truncate` sees the escaped text. Markup belongs in a `rich_text` var.
 - `rich_text` vars and globals arrive sanitized, to print between tags.
 - `entry` and its preloads, `identity`, `configs`, `navigation`, `request`,
   `url`, ref data read through `refs` and a datasource's `entries` read the same
   way: `{{ entry.title }}` prints as text. A field declared `:rich_text` in the
   entry's form, and a text ref's `text`, arrive sanitized.
 - `{{ entry.embed | raw }}` is a template's opt-in, for a plain field whose
-  markup you trust. Liquid in the value stays text.
-- `escape` never encodes twice; `url_encode`, `slugify` and `markdown` read
-  escaped text as the text it stands for.
+  markup you trust.
 
 So:
 
@@ -222,8 +220,9 @@ So:
   `content="{{ intro | strip_html | escape_once }}"`.
 - Do not `url_decode` a value you print: it turns `%3C` back into `<` after
   every check. For a query string, `url_encode` the value.
-- `escape` does not check an address's scheme. Make a link from a link var
-  with `{% link %}`, which drops a script address.
+- `escape` does not check an address's scheme, and neither does a link var's
+  `.value`. Make a link from a link var with `{% link %}`, which drops a
+  script address, or `link_url`.
 
 ```liquid
 {%- comment -%} Don't {%- endcomment -%}
@@ -252,7 +251,10 @@ entry data, also inside a list, and a filter given that map gets its credential
 fields empty. A tag of your own reads its argument with `Brando.Villain.TemplateView.eval/2`, and escapes what
 it prints.
 
-`raw` reads the text as what it stands for, so a rich-text field does not need
+`escape` never encodes twice; `url_encode`, `slugify` and `markdown` read escaped
+text as the text it stands for.
+
+Liquid in a value printed with `raw` stays text. `raw` reads the text as what it stands for, so a rich-text field does not need
 it. A comparison sees escaped text: `{% if entry.title == "R&D" %}` compares with
 `R&amp;D`.
 
@@ -302,7 +304,9 @@ Only a superuser (`Brando.Authorization.Boundary.superuser?/1`) changes an
 HTML ref's template and parameters, or an SVG ref's code, also in a media
 slot. The server holds every save to that (`Brando.Content.RefGuard`):
 markup another user sends is put back, and their other changes are kept. It
-also keeps each ref's type to what its module defines, for everyone. A copy
+also keeps each ref's type to what its module defines, for everyone, and only
+a superuser moves a saved block to another module, which holds the block's
+refs and vars to the new definition. A copy
 of a saved block keeps its markup, as long as a saved block of the same
 module holds that markup. The same holds when a non-superuser restores a
 revision, or saves while a superuser has unsaved markup changes in the
@@ -314,6 +318,24 @@ slot's settings.
 A project parser that overrides `html/2` gets the template, parameters and
 values in its data; call `Brando.Villain.Blocks.HtmlBlock.render/1` to fill
 them in.
+
+## What a var's definition holds
+
+A var's type, key and options belong to its definition: the module, the
+table template for a table row's var, or the global set. A block save holds
+them there (`Brando.Content.VarGuard`), for everyone: a saved var keeps its
+own, a new var takes its definition's, and a new var whose key has no
+definition is left out, so a copy of a block leaves behind a var its module no
+longer defines; restoring a revision brings it back. Saving a module and resolving stale blocks change them on the
+server.
+
+A value is checked for its type: a colour, a date, a datetime, or one of a
+`select` var's options. A value stored before these checks stays until it
+changes, and a copy of a block leaves it empty.
+
+The Globals screen fills in values only. Setting up global sets
+(`/admin/config/global_sets`) takes a superuser in legacy mode, and the update
+permission on global sets in groups mode.
 
 ## Named block regions
 

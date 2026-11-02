@@ -46,7 +46,7 @@ defmodule Brando.Sites.Site do
   def changeset(site \\ %__MODULE__{}, attrs) do
     site
     |> cast(attrs, @required_fields ++ @optional_fields)
-    |> cast_embed(:deploy_config, with: &DeployConfig.changeset/2)
+    |> cast_deploy_config()
     |> validate_required(@required_fields)
     |> validate_length(:name, min: 1)
     |> validate_format(:key, @key_format)
@@ -57,6 +57,12 @@ defmodule Brando.Sites.Site do
 
   def statuses, do: @statuses
   def delivery_modes, do: @delivery_modes
+
+  # After the key is cast: the site's destinations are bound to it
+  defp cast_deploy_config(changeset) do
+    site_key = get_field(changeset, :key)
+    cast_embed(changeset, :deploy_config, with: &DeployConfig.changeset(&1, &2, site_key))
+  end
 
   defp validate_languages(changeset) do
     languages = get_field(changeset, :languages, [])

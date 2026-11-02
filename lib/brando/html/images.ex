@@ -6,9 +6,11 @@ defmodule Brando.HTML.Images do
   use Phoenix.Component
 
   alias Brando.Blueprint.Assets
+  alias Brando.Captions
   alias Brando.Images.ConfigResolver
   alias Brando.Images.Operations.Sizing
   alias Brando.Utils
+  alias Brando.Villain.InertLiquid
 
   @placeholders [
     :svg,
@@ -170,10 +172,12 @@ defmodule Brando.HTML.Images do
 
   defp picture_tag(%{src: src, attrs: attrs, opts: opts} = assigns) do
     # A picture block with no title or credits passes `caption: ""`; that is no
-    # caption, not an empty <figcaption>.
+    # caption, not an empty <figcaption>. `true` is the record's own text, an
+    # editor's: printed as text or sanitized rich text. A caption the template
+    # passes is the template's markup.
     caption =
       case Keyword.get(opts, :caption, false) do
-        true -> src.title
+        true -> src.title |> Captions.caption_html() |> InertLiquid.encode()
         caption -> caption
       end
 

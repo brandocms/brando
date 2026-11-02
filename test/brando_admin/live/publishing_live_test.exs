@@ -8,6 +8,12 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
   setup do
     root = Path.join(System.tmp_dir!(), "brando-publishing-live-#{System.unique_integer([:positive])}")
     put_test_env(:tenancy_mode, :multi)
+
+    put_test_env(Brando.Sites.DeployConfig,
+      rsync_targets: ["deploy@example.test:/srv/www", "web@static.example.test:/srv/site"],
+      s3_targets: ["s3://publishing-site/releases"]
+    )
+
     put_test_env(:sites_path, Path.join(root, "sites"))
     put_test_env(:media_path, Path.join(root, "media"))
     Cache.clear()
@@ -93,9 +99,42 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     BrandoAdmin.Work.finish(user, Brando.Worker.SSGBuild.work_key(ready.id), nil, global: true)
   end
 
+  test "does not link a preview on a host where it would answer 404", context do
+    admin_host = URI.parse(Brando.endpoint().url()).host
+
+    context.environment
+    |> Ecto.Changeset.change(domain: admin_host)
+    |> Brando.Repo.update!(prefix: "public")
+
+    Brando.Tenant.Cache.invalidate()
+
+    build =
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, build} = Builds.request_build(context.site, context.environment, creator_id: context.current_user.id)
+        build
+      end)
+
+    File.mkdir_p!(build.build_path)
+    {:ok, _ready} = Builds.update(build, %{status: :ready, built_at: DateTime.utc_now()})
+
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+    refute has_element?(view, ~s(#ssg-build-#{build.id} a[href*="#{admin_host}"]))
+    refute has_element?(view, ~s(#ssg-build-#{build.id} a[href*="__ssg_preview__"]))
+
+    context.environment
+    |> Ecto.Changeset.change(domain: "https://static-acme.test")
+    |> Brando.Repo.update!(prefix: "public")
+
+    Brando.Tenant.Cache.invalidate()
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+    refute has_element?(view, ~s(#ssg-build-#{build.id} a[href*="__ssg_preview__"]))
+  end
+
   # A preview opens only on its own site's hosts, which need not be the admin's
   test "links a build's preview on its environment's domain", context do
-    {:ok, _environment} = Registry.update_environment(context.environment, %{domain: "static-acme.test"})
+    {:ok, _environment} = Registry.update_environment(context.environment, %{domain: "static-acme.test"}, actor: :system)
 
     build =
       Oban.Testing.with_testing_mode(:manual, fn ->

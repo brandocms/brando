@@ -121,6 +121,7 @@ and summaries are prose.
 | Modules | Blocks behind their module's version, per module |
 | Module entry paths | Liquid module code that reads a multi module's entries as Villain stored them, `{{ link.data.vars.url }}`, which renders nothing since the blocks conversion; `brando_219` rewrites it to `{{ link.vars.url }}`. Datasource modules are left out: their `entries` are records |
 | Liquid in editor text | Refs and vars holding `{{` or `{%`, on blocks and module definitions, which print as text; SVG and HTML refs are templates and are left out |
+| Block uids | The number of block rows whose uid is not letters, digits, `-` and `_` ending in anything but `-`, a shape Brando holds new uids to. A row stored before that check keeps its uid and renders without the markers frontend edit and live preview find it by. The fix duplicates each block and deletes the original, and gives the SQL that lists the rows; look into any uid holding markup. Earlier revisions that hold a deleted row can no longer be activated. Rows are not rewritten |
 | Stored colours | Colours stored before colour values were checked that are not colours (`Brando.Color`): module var defaults, colour vars in blocks and entries, palette colours and the `:color` fields of Blueprints, subform rows included. Palette keys, namespaces and colour keys that are not CSS names (letters, digits, `-` and `_`) are listed with them |
 | Sitemap | A sitemap module, and a sitemap generated within two days |
 | robots.txt | `/robots.txt` routed to Brando, and no static file in front of it: a `priv/static/robots.txt` counts only when the endpoint's `Plug.Static` serves it, by its `only:` (a literal list, or `static_paths/0` on Phoenix 1.7 and later) or for want of one, and the fix names that setting |
@@ -131,7 +132,7 @@ and summaries are prose.
 | Test database | In development, the Repo's database for `:test` (read from `config/config.exs` and `config/runtime.exs` in the current shell) against the one in use: a `runtime.exs` that reads the Repo `url:` from the environment in every environment makes `mix test` use, and migrate, the development database |
 
 With tenancy enabled, the content checks (image configs, modules, module
-entry paths, stored colours, sitemap, JSON-LD, alt text, media paths) run in every
+entry paths, block uids, stored colours, sitemap, JSON-LD, alt text, media paths) run in every
 environment of every active site, and their details name the environment.
 
 ## In the admin

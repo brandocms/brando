@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Content.VarGuard
   alias Brando.Sites
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.RenderVar
@@ -106,7 +107,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
 
     changeset =
       entry
-      |> Sites.GlobalSet.changeset(params, current_user)
+      |> Sites.GlobalSet.changeset(VarGuard.global_values(entry, params), current_user)
       |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, changeset: changeset)}
@@ -122,7 +123,7 @@ defmodule BrandoAdmin.Components.GlobalTabs do
 
     changeset =
       entry
-      |> Sites.GlobalSet.changeset(params, current_user)
+      |> Sites.GlobalSet.changeset(VarGuard.global_values(entry, params), current_user)
       |> Map.put(:action, :update)
 
     case Sites.update_global_set(changeset, current_user) do

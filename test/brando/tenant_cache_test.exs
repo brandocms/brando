@@ -8,6 +8,7 @@ defmodule Brando.TenantCacheTest do
 
   setup do
     put_test_env(:tenancy_mode, :multi)
+    put_test_env(Brando.Sites.DeployConfig, rsync_targets: ["web@example:/srv/acme"])
     Cache.clear()
     on_exit(&Cache.clear/0)
     :ok
@@ -113,6 +114,32 @@ defmodule Brando.TenantCacheTest do
       delivery_mode: :dynamic
     })
     |> Repo.insert!()
+  end
+
+  # Audit F02: the old changeset stored a trailing dot, which answered on its
+  # own beside the same host without one.
+  test "a stored trailing dot does not route; other stored spellings still do" do
+    site = insert_site!("acme")
+    dotted = insert_environment!(site, "dotted", false, nil)
+    underscore = insert_environment!(site, "underscore", false, nil)
+    capital = insert_environment!(site, "capital", true, nil)
+
+    for {environment, stored} <- [
+          {dotted, "www.b.test."},
+          {underscore, "my_site.acme.test"},
+          {capital, "WWW.Acme.TEST"}
+        ] do
+      Brando.Repo.update_all(from(e in Environment, where: e.id == ^environment.id), [set: [domain: stored]],
+        prefix: "public"
+      )
+    end
+
+    Cache.warm()
+
+    refute Cache.get_env_by_domain("www.b.test.")
+    refute Cache.get_env_by_domain("www.b.test")
+    assert {_site, %Environment{key: "underscore"}} = Cache.get_env_by_domain("my_site.acme.test")
+    assert {_site, %Environment{key: "capital"}} = Cache.get_env_by_domain("www.acme.test")
   end
 
   defp insert_environment!(site, key, live, domain) do

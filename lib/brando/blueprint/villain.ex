@@ -9,15 +9,17 @@ defmodule Brando.Blueprint.Villain do
     blocks_fields = module.__blocks_fields__()
 
     if cast_blocks do
-      recursive =
-        case Keyword.fetch(opts, :retained_slot_uids) do
-          {:ok, uids} -> {:transfer, uids}
-          :error -> true
-        end
-
-      cast_block_fields(changeset, blocks_fields, module, user, recursive)
+      cast_block_fields(changeset, blocks_fields, module, user, recursive(opts))
     else
       changeset
+    end
+  end
+
+  defp recursive(opts) do
+    cond do
+      Keyword.has_key?(opts, :retained_slot_uids) -> {:transfer, opts[:retained_slot_uids]}
+      opts[:restore_revision] -> :restore
+      true -> true
     end
   end
 

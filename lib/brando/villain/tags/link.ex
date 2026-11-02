@@ -13,7 +13,7 @@ defmodule Brando.Villain.Tags.Link do
 
   @impl true
   def render([link: link], context) do
-    evaled_link = TemplateView.eval(link, context)
+    evaled_link = link |> TemplateView.eval(context) |> Brando.Villain.Parser.typed_link_var()
 
     link_text =
       evaled_link

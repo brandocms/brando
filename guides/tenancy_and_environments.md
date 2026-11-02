@@ -470,6 +470,18 @@ archive, and prune old archives. Editors can inspect the same state without
 lifecycle mutation controls. In multi-site mode the sidebar contains only sites
 assigned to the current user; global superusers see every active site.
 
+Which site answers on a host is the installation's decision, so only a superuser
+(the Superuser group with group authorization) changes an environment's domain,
+on that screen or through `Brando.Tenant.Registry`, whose `create_environment/3`
+and `update_environment/3` take the acting user as `actor:` (`:system` for
+trusted maintenance code) and refuse a change without one. A domain is a bare
+host: no scheme, path, port or trailing dot. It may not be a host the
+installation itself uses: the endpoint's, where the admin answers, nor its
+static, media or CDN host. With several sites, a site that needs the admin's
+host means moving the admin to a host of its own through `PHX_HOST`. In
+`:single` the admin's host needs no domain: it answers from the live environment
+when no environment holds it.
+
 <!-- usage-rules:start topic="tenancy" -->
 
 `Brando.Repo` applies the current prefix to reads, writes, preloads, bulk
@@ -705,7 +717,9 @@ Any environment can become the live environment:
 Before changing the live pointer, Brando archives the previous live schema.
 The registry update is transactional, the one-live-environment database
 constraint remains authoritative, and the routing cache is refreshed after a
-successful switch.
+successful switch. A domain stays on its environment: a host bound to the
+previous live environment keeps answering from it until a superuser moves the
+host.
 
 Inspect and prune archives:
 
@@ -956,11 +970,21 @@ so a working environment can be built without assigning it a temporary domain.
 Responses outside the 200 range are retained in the build's failed-URL list and
 make the build fail without hiding partial logs or counts.
 
+A build requests only its own origin. A listed path that redirects to another
+path on that origin is stored with the answer the redirect ends at, and the
+signed header goes along. A redirect to another scheme, host or port, or to a
+URL carrying credentials, fails that URL: Brando makes no request there, and the
+failed-URL list names the target's origin. That includes an absolute URL to the
+site's public domain when the build renders through `http://localhost:4000`, so
+write a redirect on a listed path as a relative path, or take the path off the
+SSG module's list. A custom `:fetcher` gets `redirect: false` and returns a
+redirect with its `:headers`.
+
 Open `/admin/config/publishing` while a static site is selected. The deployment
 form supports:
 
 - `rsync`, with a target such as `deploy@example.com:/srv/www`;
-- `s3`, with `s3://bucket` or `s3://bucket/prefix`;
+- `s3`, with `s3://bucket/prefix` or, for a bucket of its own, `s3://bucket`;
 - an optional public CDN URL;
 - an optional completion webhook, posted after each deploy or rollback. Like
   a [webhook](webhooks.md), it must be `https` to a host with only public
@@ -979,24 +1003,65 @@ this server's addresses, paths with `.`, `..` or empty segments,
 are refused, both when the settings are saved and when a build deploys. A
 name can still reach this server in ways a check cannot see (DNS that
 changes after the check, an SSH config alias, a public address behind NAT),
-so to limit the destinations
-anyone who may deploy can choose, list them in config (admins cannot change
-it). A target must be one of them, or lie under one that ends in `/`:
+so to limit the destinations anyone who may deploy can choose, list them in
+config (below).
+
+An S3 deploy deletes every key under its target before it uploads the build,
+with the application's one set of ExAws credentials. Its prefix may not hold
+`.`, `..` or empty segments, or `?`, `#`, `%`, `{`, `}`, `\` or spaces, and
+its bucket no user or port; `s3://bucket` with no prefix is the whole bucket.
+
+List where each site may deploy in config, which admins cannot change. The
+placeholder `{site_key}` stands for the key of the site being saved or
+deployed, so an entry binds a destination to that site:
 
 ```elixir
 config :brando, Brando.Sites.DeployConfig,
-  rsync_targets: ["deploy@static.example.com:/srv/sites/"]
+  rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}"],
+  s3_targets: ["s3://static-bucket/sites/{site_key}"]
 ```
+
+A target must be an entry, or lie under one that ends in `/` (not the entry
+itself, which holds the others). A bucket with no prefix passes only an entry
+that names it exactly, such as `s3://{site_key}-static`; `s3://bucket/` allows
+every prefix in the bucket but not the bucket itself. Brando checks a target
+when the settings are saved and again each time a build deploys, since a build
+keeps the configuration it was made with. A refused deploy or rollback says so
+in the build's log. If the target is of the right form, fix the list and the
+build deploys; change a site's target and it takes a new build. An older build
+whose target no longer fits cannot be rolled back until its target is listed
+again, and one with a target of the wrong form cannot be deployed at all.
+
+**An entry without `{site_key}` grants every site.** That holds for an exact
+destination such as `s3://acme-www` as much as for a parent such as
+`deploy@static.example.com:/srv/sites/` or `s3://static-bucket/sites/`: anyone
+who may deploy one site can name that destination, or another site's directory
+or prefix under that parent, and the deploy replaces what is there. Nothing
+ties such an entry to a single site, so use one only if the same people deploy
+all the sites. An `rsync_targets` parent without the placeholder keeps working,
+and leaves the sites open to each other until it uses `{site_key}`.
+
+**Entries that extend each other collide on hyphenated keys.** With
+`s3://b/{site_key}` and `s3://b/{site_key}-staging`, site `a` may name
+`s3://b/a-staging`, which site `a-staging` owns through the first entry, so use
+one entry per site layout, or separate them with a character keys cannot hold,
+such as the `/` in `s3://b/{site_key}/www` and `s3://b/{site_key}/staging`.
+
+With `tenancy_mode: :multi` the list of a strategy the sites use is required:
+until it is set, no target of that strategy can be saved or deployed. With one
+site, an unset list allows any target of the right form, including a whole
+bucket; a list set there applies the same way.
 
 Generated output is persistent at
 `sites/{site_key}/ssg/builds/{version}`. Old ready, archived, and failed artifact
 directories are pruned after the retention window, while their database history
 and logs remain. Preview tokens expire after seven days and stop working as soon
 as their artifact is pruned. A preview opens only on a host that resolves to
-the build's own site (another site's host answers `404`); with several sites
+the build's own site (another site's host, or with several sites one of the
+installation's own hosts such as the admin's, answers `404`); with several sites
 the Publishing screen links it on the build environment's domain, or the live
 environment's, so that domain must reach the application, not only the static
-host. Previews are served with a Content-Security-Policy that keeps forms from
+host, and with neither it shows no link. Previews are served with a Content-Security-Policy that keeps forms from
 posting and the page from being framed elsewhere. The Publishing screen links
 to each build's preview every time it opens, so a build keeps its token itself,
 where a shared entry preview keeps only its key's hash: anyone who can read the

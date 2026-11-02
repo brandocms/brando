@@ -1,6 +1,8 @@
 defmodule Brando.HTML.Video do
   use Phoenix.Component
+  alias Brando.Captions
   alias Brando.Videos.Video
+  alias Brando.Villain.InertLiquid
 
   @type safe_string :: {:safe, [...]}
   @type video :: Video.t()
@@ -22,7 +24,8 @@ defmodule Brando.HTML.Video do
     - `preload`
     - `aspect_ratio`
     - `caption` -> `true` resolves to `opts[:title]`, then the record's caption
-      or title
+      or title, which print as text or sanitized rich text; a string, like
+      `opts[:title]`, is the template's markup and prints as it is
     - `progress`
     - `play_button` -> `true`, or a string to use as the button's label
     - `opacity` -> background opacity of the `:svg` cover
@@ -389,7 +392,8 @@ defmodule Brando.HTML.Video do
   # Captions stay opt-in — a record carrying a caption does not start rendering
   # a `<figcaption>` on templates that never asked for one. `caption: true`
   # resolves to `opts[:title]`, falling back to the record's caption, so an
-  # editor's caption is reachable from the tag syntax.
+  # editor's caption is reachable from the tag syntax. The record's text is an
+  # editor's or a video provider's: it prints as text or sanitized rich text.
   defp caption(opts, video) do
     opts
     |> Keyword.get(:caption, false)
@@ -405,7 +409,14 @@ defmodule Brando.HTML.Video do
   defp resolve_caption(caption, _opts, _video), do: caption
 
   defp record_caption(nil), do: false
-  defp record_caption(video), do: video.caption |> or_default(video.title) |> or_default(false)
+
+  defp record_caption(video) do
+    video.caption
+    |> Captions.caption_html()
+    |> or_default(Captions.library_html(video.title))
+    |> InertLiquid.encode()
+    |> or_default(false)
+  end
 
   # Providers know their ratio but not always their pixel dimensions, so the
   # ratio is the last-resort source for width/height. Kept total: the string can

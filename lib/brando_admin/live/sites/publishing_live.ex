@@ -266,7 +266,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                 <td>{format_datetime(build.scheduled_at || build.inserted_at)}</td>
                 <td class="environment-actions">
                   <a
-                    :if={previewable?(build)}
+                    :if={previewable?(build) && preview_url(build, @site, @admin_uri)}
                     class="btn btn--sm"
                     href={preview_url(build, @site, @admin_uri)}
                     target="_blank"
@@ -526,22 +526,33 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   # A preview opens only on a host of the build's own site
   # (`Brando.SSG.PreviewController`), which with several sites need not be
   # the admin's: link to the build environment's domain, or the live one's.
+  # With no such domain there is no host to link to, and no link.
   defp preview_url(build, site, admin_uri) do
     path = "/__ssg_preview__/#{build.preview_token}/"
 
-    with :multi <- Brando.Tenant.mode(),
-         %URI{} = uri <- admin_uri,
-         domain when is_binary(domain) <- preview_domain(build, site) do
-      URI.to_string(%{uri | host: domain, path: path, query: nil, fragment: nil})
+    if Brando.Tenant.mode() == :multi do
+      with %URI{} = uri <- admin_uri,
+           domain when is_binary(domain) <- preview_domain(build, site) do
+        URI.to_string(%{uri | host: domain, path: path, query: nil, fragment: nil})
+      else
+        _ -> nil
+      end
     else
-      _ -> path
+      path
     end
   end
 
   defp preview_domain(build, site),
     do: environment_domain(build.environment) || environment_domain(Brando.Tenant.Cache.get_live_env(site.key))
 
-  defp environment_domain(%{domain: domain}) when is_binary(domain) and domain != "", do: domain
+  # A host that would answer 404 is no link: one that does not route, or one
+  # of the installation's own, where a preview does not open.
+  defp environment_domain(%{domain: domain}) when is_binary(domain) and domain != "" do
+    if (not String.contains?(domain, ":") and Brando.Tenant.Cache.get_env_by_domain(domain)) &&
+         not Brando.Tenant.InstallationHosts.member?(domain),
+       do: domain
+  end
+
   defp environment_domain(_environment), do: nil
 
   defp public_url(build), do: build.deploy_config["cdn_url"]
