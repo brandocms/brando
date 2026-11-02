@@ -55,15 +55,13 @@ defmodule Brando.Cache.Palettes do
   end
 
   @doc """
-  Update palette cache
+  Update palette cache, once the transaction around the caller has
+  committed (`Brando.Cache.rebuild_after_commit/2`)
   """
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, palette}) do
-    {:ok, palettes} = get_palettes()
-    palettes_css = get_palettes_css(palettes)
-    Cache.put(:palettes, palettes, :infinite)
-    Cache.update(:palettes_css, palettes_css)
+    Cache.rebuild_after_commit(:palettes, &set/0)
     {:ok, palette}
   end
 

@@ -132,7 +132,7 @@ defmodule Brando.Navigation do
         select: 1,
         limit: 1
 
-    if Brando.Repo.one(query), do: Brando.Repo.after_commit(:navigation_cache, &Cache.Navigation.set/0)
+    if Brando.Repo.one(query), do: Cache.Navigation.update({:ok, identifier_id})
     :ok
   end
 

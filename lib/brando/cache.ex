@@ -65,6 +65,23 @@ defmodule Brando.Cache do
     :ok
   end
 
+  @doc """
+  Runs `rebuild`, which rebuilds the site cache `cache` from the database,
+  once the transaction around the caller has committed, or at once outside
+  one (`Brando.Repo.after_commit/2`). Read inside the transaction, rows that
+  roll back would stay in the cache. A transaction that saves several rows
+  rebuilds it once.
+
+  It runs under the caller's site, and unscoped: the cache is every
+  visitor's, not what the saving user may read.
+  """
+  @spec rebuild_after_commit(atom(), (-> any())) :: :ok
+  def rebuild_after_commit(cache, rebuild) do
+    key = {__MODULE__, cache, Brando.Tenant.current_prefix(), Brando.Tenant.public?()}
+    unscoped = fn -> Brando.Authorization.Boundary.with_scope(nil, rebuild) end
+    Brando.Repo.after_commit(key, Brando.Tenant.capture_context(unscoped))
+  end
+
   defp get_from_cache(key) do
     @cache_module.get(:cache, cache_key(key))
   end

@@ -45,18 +45,22 @@ defmodule Brando.Cache.Identity do
   end
 
   @doc """
-  Update identitys cache
+  Update identitys cache, once the transaction around the caller has
+  committed (`Brando.Cache.rebuild_after_commit/2`)
   """
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, identity}) do
-    {:ok, identities} = Sites.list_identities(%{preload: @preloads})
-    identity_map = process_identities(identities)
-    Cache.update(:identity, identity_map)
+    Cache.rebuild_after_commit(:identity, &rebuild/0)
     {:ok, identity}
   end
 
   def update({:error, changeset}), do: {:error, changeset}
+
+  defp rebuild do
+    {:ok, identities} = Sites.list_identities(%{preload: @preloads})
+    Cache.update(:identity, process_identities(identities))
+  end
 
   defp process_identities(identities) do
     Enum.reduce(identities, %{}, fn

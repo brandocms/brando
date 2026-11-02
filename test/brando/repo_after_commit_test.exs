@@ -57,6 +57,47 @@ defmodule Brando.RepoAfterCommitTest do
     assert log =~ ":evict_pages"
   end
 
+  # A nested transaction that rolls back fails the outer one too (`mode:
+  # :savepoint` included, which only covers each statement), so nothing held
+  # in either runs, though the outer carries on.
+  test "a nested transaction that rolls back drops what the outer one held" do
+    test = self()
+
+    {:error, :rollback} =
+      Repo.transaction(fn ->
+        Repo.after_commit(:evict_pages, fn -> send(test, :outer) end)
+
+        {:error, :undone} =
+          Repo.transaction(
+            fn ->
+              Repo.after_commit(:evict_posts, fn -> send(test, :inner) end)
+              Repo.rollback(:undone)
+            end,
+            mode: :savepoint
+          )
+
+        :done
+      end)
+
+    refute_received :outer
+    refute_received :inner
+  end
+
+  test "a multi that fails drops what its steps held" do
+    test = self()
+
+    multi =
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:hold, fn _repo, _ -> {:ok, Repo.after_commit(fn -> send(test, :held) end)} end)
+      |> Ecto.Multi.run(:fail, fn _repo, _ -> {:error, :undone} end)
+
+    assert {:error, :fail, :undone, _} = Repo.transaction(multi)
+    refute_received :held
+
+    assert {:ok, _} = Repo.transaction(Ecto.Multi.run(Ecto.Multi.new(), :hold, fn _repo, _ -> {:ok, Repo.after_commit(fn -> send(test, :held) end)} end))
+    assert_received :held
+  end
+
   test "outside a transaction, keyed work runs at once" do
     test = self()
     Repo.after_commit(:evict_pages, fn -> send(test, :now) end)
