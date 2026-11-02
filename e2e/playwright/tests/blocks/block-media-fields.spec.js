@@ -387,7 +387,8 @@ for (const reducedMotion of ['no-preference', 'reduce']) {
       await expect(page.locator('#brando-nav')).toHaveClass(/phx-connected/)
       await page.screenshot({ path: testInfo.outputPath(`${kind}-browser-desktop.png`) })
       await page.setViewportSize({ width: 390, height: 844 })
-      expect(await picker.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+      // The page settles in the frames after a resize, so poll the measurement
+      await expect.poll(() => picker.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
       await page.screenshot({ path: testInfo.outputPath(`${kind}-browser-mobile.png`) })
       await selected.focus()
       await page.keyboard.press('Enter')

@@ -39,11 +39,11 @@ async function capture(page, modal, testInfo, name) {
   }
   await page.screenshot({ path: testInfo.outputPath(`${name}-desktop.png`) })
   await page.setViewportSize({ width: 390, height: 844 })
-  const overflow = await modal.evaluate(el => {
+  // The page settles in the frames after a resize, so poll the measurement
+  await expect.poll(() => modal.evaluate(el => {
     const body = el.querySelector(':scope > .modal-dialog > .modal-content > .modal-body')
     return body.scrollWidth - body.clientWidth
-  })
-  expect(overflow).toBeLessThanOrEqual(1)
+  })).toBeLessThanOrEqual(1)
   await expect(modal.locator(':scope > .modal-dialog > .modal-content > .modal-footer')).toBeInViewport()
   await page.screenshot({ path: testInfo.outputPath(`${name}-mobile.png`) })
   if (await modal.locator('.identifier-picker-details').count()) {

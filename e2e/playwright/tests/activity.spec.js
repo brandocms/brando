@@ -67,8 +67,8 @@ test.describe('Activity log', () => {
 
     await page.screenshot({ path: testInfo.outputPath('activity-desktop.png'), fullPage: true })
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.waitForTimeout(350)
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    // The page settles in the frames after a resize, so poll the measurement
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath('activity-mobile.png'), fullPage: true })
   })
 
@@ -113,8 +113,8 @@ test.describe('Activity log', () => {
     await expect(actor).toHaveValue('assistant')
 
     await page.setViewportSize({ width: 390, height: 844 })
-    await page.waitForTimeout(350)
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    // The page settles in the frames after a resize, so poll the measurement
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 
     await rows.getByRole('link', { name: 'Åpne forslaget' }).click()
     await expect(page).toHaveURL(/\/admin\/assistant\/connected\/[0-9a-f-]{36}$/)

@@ -1,0 +1,1 @@
+- Opening a menu item's key now always moves focus into its field.

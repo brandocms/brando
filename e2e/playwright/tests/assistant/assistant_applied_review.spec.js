@@ -88,8 +88,8 @@ test('an applied proposal shows what it applied, and each card links to its page
 
   // The address is cut in the middle on a phone, and the card keeps its width.
   await page.setViewportSize({ width: 390, height: 844 })
-  const overflow = await strategy.evaluate(card => card.scrollWidth - card.clientWidth)
-  expect(overflow).toBeLessThanOrEqual(0)
+  // The page settles in the frames after a resize, so poll the measurement
+  await expect.poll(() => strategy.evaluate(card => card.scrollWidth - card.clientWidth)).toBeLessThanOrEqual(0)
   await page.screenshot({ path: testInfo.outputPath('assistant-applied-390.png'), fullPage: true })
 
   const opened = await page.goto(url)

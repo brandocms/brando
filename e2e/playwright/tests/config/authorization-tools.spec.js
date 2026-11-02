@@ -65,7 +65,8 @@ test('shows useful invalid-file feedback and fits narrow screens', async ({ page
   for (const width of [768, 390]) {
     await page.setViewportSize({ width, height: 900 })
     await expect(page.getByRole('link', { name: 'Review groups', exact: true })).toBeVisible()
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    // The page settles in the frames after a resize, so poll the measurement
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath(`authorization-tools-${width}.png`), fullPage: true })
   }
 })

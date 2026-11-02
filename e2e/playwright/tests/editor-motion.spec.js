@@ -431,10 +431,13 @@ test('offline details sit below the toolbar and wrap on a phone', async ({ page 
   await expect(page.locator('.preview-chooser-trigger .tab-text')).toHaveCount(0)
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 })
-    const toolbar = await page.locator('.form-tabs').boundingBox()
-    const box = await status.boundingBox()
-    expect(box.y).toBeGreaterThanOrEqual(toolbar.y + toolbar.height)
-    expect(await status.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    // The page settles in the frames after a resize, so poll the measurement
+    await expect.poll(async () => {
+      const toolbar = await page.locator('.form-tabs').boundingBox()
+      const box = await status.boundingBox()
+      return box.y - toolbar.y - toolbar.height
+    }).toBeGreaterThanOrEqual(0)
+    await expect.poll(() => status.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
     await expect(page.locator('.form-tool-save-button')).toBeInViewport()
     await page.screenshot({ path: testInfo.outputPath(`offline-status-${width}.png`) })
   }

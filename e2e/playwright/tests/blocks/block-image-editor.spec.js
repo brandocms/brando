@@ -67,7 +67,7 @@ test.describe('Image Editor from Blocks', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await expectCanvasOverlayAligned(page)
     await expect(saveNewBtn).toBeInViewport()
-    expect(await editorDrawer.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+    await expect.poll(() => editorDrawer.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
     await cropPreview.scrollIntoViewIfNeeded()
     const previewRatio = await cropPreview.evaluate(el => {
       const bounds = el.getBoundingClientRect()

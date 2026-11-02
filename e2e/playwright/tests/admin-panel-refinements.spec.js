@@ -58,7 +58,7 @@ for (const context of ['field', 'block']) {
     await page.screenshot({ path: testInfo.outputPath(`entries-${context}-desktop.png`) })
     await page.setViewportSize({ width: 390, height: 844 })
     await page.screenshot({ path: testInfo.outputPath(`entries-${context}-mobile.png`) })
-    expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await expect.poll(() => dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
     await filter.press('Escape')
     await expect(dialog).not.toBeVisible()
   })
@@ -98,7 +98,7 @@ test('selected options use equal row heights and square remove buttons', async (
   await option.click()
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: testInfo.outputPath('multiselect-mobile.png') })
-  expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+  await expect.poll(() => dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
 })
 
 test('rich text toolbar follows the form toolbar at desktop and mobile widths after validation', async ({ page }, testInfo) => {
@@ -142,7 +142,7 @@ test('entry drawers retain input, use their own scrolling surface and keep their
     await page.setViewportSize({ width: 390, height: 844 })
     await nextFrames(page)
     await page.screenshot({ path: testInfo.outputPath(`${suffix}-mobile.png`) })
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     // Closing from inside the drawer, not with its toolbar button, still
     // collapses that button: with the Close button, and with Escape on the last.
     const close = drawer.getByRole('button', { name: 'Close', exact: true })
@@ -295,7 +295,7 @@ test('revision metadata is readable in Norwegian at desktop and mobile widths', 
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 })
     await nextFrames(page)
-    expect(await drawer.locator('.drawer-form').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await expect.poll(() => drawer.locator('.drawer-form').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
     await drawer.screenshot({ path: testInfo.outputPath(`revisions-readable-${width}.png`) })
     if (width === 1440) await drawer.locator('.revisions-table').screenshot({ path: testInfo.outputPath('revisions-table-desktop.png') })
     const row = drawer.locator('.revisions-line.active')

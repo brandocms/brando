@@ -275,6 +275,19 @@ defmodule BrandoAdmin.Components.Form.InputTest do
     assert html =~ ~s(placeholder="Enter a title")
   end
 
+  test "a disclosed text field renders open while it has an error" do
+    changeset = cast(%TestEntry{}, %{}, [:title])
+    errored = Ecto.Changeset.add_error(changeset, :title, "can't be blank")
+
+    for {changeset, open?} <- [{changeset, false}, {errored, true}] do
+      form = to_form(%{changeset | action: :validate}, as: :page)
+      html = render_component(&Input.disclosed_text/1, %{field: form[:title], label: "Key", opts: []})
+
+      assert html =~ ~s(<div id="page_title-disclosure")
+      assert html =~ ~r/<div id="page_title-disclosure"[^>]* data-open[ >]/ == open?
+    end
+  end
+
   test "password confirmation accepts the HTML-safe labels produced by Blueprint forms" do
     form = to_form(%{"password" => nil, "password_confirmation" => nil}, as: :user)
 
