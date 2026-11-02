@@ -116,7 +116,9 @@ defmodule Brando.Environments do
   end
 
   defp do_delete_environment(%Environment{} = environment, opts) do
+    # Authorized for the struct's site: the row has to be that site's
     with %Environment{} = current_environment <- Registry.get_environment(environment.id),
+         true <- current_environment.site_id == environment.site_id || nil,
          %Site{} = site <- Registry.get_site(current_environment.site_id) do
       with_site_lock(site, fn -> delete_under_lock(site, current_environment.id, opts) end)
     else
@@ -128,10 +130,11 @@ defmodule Brando.Environments do
   @doc """
   Atomically marks one environment as the sole live environment for its site.
 
-  The site's host goes with it: in the same transaction, the outgoing live
-  environment's domain moves to this one, and this one's own domain, if it has
-  one, moves to the outgoing one. With no domain on the outgoing one, no domain
-  moves.
+  On a site with `delivery_mode: :dynamic`, the site's host goes with it: in
+  the same transaction, this environment and the outgoing live one swap
+  domains, a missing one included, so switching back restores both. On a
+  `:static` site the domains stay where they are: the deployed build decides
+  what a host serves.
   """
   @spec set_live(Environment.t(), keyword()) :: {:ok, Environment.t()} | {:error, term()}
   def set_live(environment, opts \\ [])
@@ -142,8 +145,12 @@ defmodule Brando.Environments do
     end)
   end
 
-  defp do_set_live(%Environment{} = environment, opts) do
+  defp do_set_live(%Environment{site_id: site_id} = environment, opts) do
+    # Authorized for the struct's site: the row has to be that site's
     case Registry.get_environment(environment.id) do
+      %Environment{site_id: other_site_id} when other_site_id != site_id ->
+        {:error, :environment_not_found}
+
       %Environment{live: true} = current_environment ->
         {:ok, current_environment}
 
@@ -189,8 +196,10 @@ defmodule Brando.Environments do
   end
 
   defp do_copy_environment(%Environment{} = source, %Environment{} = target, opts) do
+    # Authorized for the target struct's site: the target row has to be that site's
     with %Environment{} = current_source <- Registry.get_environment(source.id),
          %Environment{} = current_target <- Registry.get_environment(target.id),
+         true <- current_target.site_id == target.site_id || nil,
          true <- current_source.site_id == current_target.site_id,
          %Site{} = site <- Registry.get_site(current_source.site_id) do
       with_site_lock(site, fn ->
@@ -556,7 +565,7 @@ defmodule Brando.Environments do
   defp set_current_environment_live(site, environment, opts) do
     with {:ok, archive_prefix} <- archive_live_environment(site, environment.id),
          {:ok, live_environment} <-
-           persist_live_switch(environment, archive_prefix, opts) do
+           persist_live_switch(site, environment, archive_prefix, opts) do
       # Committed: webhooks paused because this environment was a copy now
       # call their endpoints. Those paused for another reason stay paused.
       Brando.Webhooks.after_going_live(Tenant.prefix(site, live_environment), opts[:creator] || :system)
@@ -566,9 +575,9 @@ defmodule Brando.Environments do
     end
   end
 
-  defp persist_live_switch(environment, archive_prefix, opts) do
+  defp persist_live_switch(site, environment, archive_prefix, opts) do
     Repo.transaction(fn ->
-      carry_host(environment)
+      carry_host(site, environment)
 
       from(candidate in Environment, where: candidate.site_id == ^environment.site_id)
       |> Repo.update_all([set: [live: false]], @public_opts)
@@ -593,13 +602,15 @@ defmodule Brando.Environments do
     end)
   end
 
-  # The site's host follows the live pointer: the outgoing live environment's
-  # domain moves to the one going live, which gives its own domain, if it has
-  # one, in exchange. Both hosts are already this site's, bound by a superuser,
-  # so this binds nothing new and needs no authority to bind a host
-  # (`Brando.Tenant.Registry`). With no domain on the outgoing one, nothing
-  # moves. The rows are locked so a domain changed meanwhile is not undone.
-  defp carry_host(%Environment{id: id, site_id: site_id}) do
+  # On dynamic delivery the site's host follows the live pointer: the
+  # environment going live and the outgoing live one swap domains, a missing
+  # one included, so a switch back restores both. Both hosts are already this
+  # site's, bound by a superuser, so this binds nothing new and needs no
+  # authority to bind a host (`Brando.Tenant.Registry`). The rows are locked so
+  # a domain changed meanwhile is not undone. On static delivery the deployed
+  # build decides what a host serves, and its forms post to the environment it
+  # was built from (`Brando.Forms.SubmissionController`), so nothing moves.
+  defp carry_host(%Site{delivery_mode: :dynamic}, %Environment{id: id, site_id: site_id}) do
     rows =
       from(candidate in Environment,
         where: candidate.site_id == ^site_id and (candidate.live or candidate.id == ^id),
@@ -607,14 +618,17 @@ defmodule Brando.Environments do
       )
       |> Repo.all(@public_opts)
 
-    with %Environment{domain: host} = outgoing when is_binary(host) <- Enum.find(rows, &(&1.live and &1.id != id)),
-         %Environment{} = incoming <- Enum.find(rows, &(&1.id == id)) do
-      # The unique index on `domain` is not deferred: release the host first
+    with %Environment{} = outgoing <- Enum.find(rows, &(&1.live and &1.id != id)),
+         %Environment{} = incoming <- Enum.find(rows, &(&1.id == id)),
+         false <- is_nil(outgoing.domain) and is_nil(incoming.domain) do
+      # The unique index on `domain` is not deferred: release both hosts first
       put_domain(outgoing, nil)
-      put_domain(incoming, host)
-      if incoming.domain, do: put_domain(outgoing, incoming.domain)
+      put_domain(incoming, outgoing.domain)
+      put_domain(outgoing, incoming.domain)
     end
   end
+
+  defp carry_host(%Site{}, %Environment{}), do: :ok
 
   defp put_domain(%Environment{id: id}, domain) do
     from(environment in Environment, where: environment.id == ^id)

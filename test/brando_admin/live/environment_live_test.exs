@@ -247,32 +247,36 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       end
     end
 
-    test "setting a live environment leaves its stored host alone, however it is spelled", %{
+    test "setting a live environment moves its stored host, however it is spelled", %{
       site: site,
       production: production,
       staging: staging
     } do
       for stored <- ["Staging.Acme.TEST", "staging.acme.test.", "https://staging.acme.test"] do
-        Brando.Repo.update_all(
-          from(e in Brando.Environments.Environment, where: e.id == ^staging.id),
-          [set: [domain: stored, live: false]],
-          prefix: "public"
-        )
+        # Back to production live with no domain, staging holding the stored one
+        for {id, set} <- [
+              {production.id, [domain: nil]},
+              {staging.id, [domain: stored, live: false]},
+              {production.id, [live: true]}
+            ] do
+          Brando.Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^id), [set: set],
+            prefix: "public"
+          )
+        end
 
-        Brando.Repo.update_all(
-          from(e in Brando.Environments.Environment, where: e.id == ^production.id),
-          [set: [live: true]],
-          prefix: "public"
-        )
-
-        assert {:ok, %{live: true, domain: ^stored}} =
+        assert {:ok, %{live: true, domain: nil}} =
                  Environments.set_live(Registry.get_environment(staging.id), creator: :system)
 
+        assert Registry.get_environment(production.id).domain == stored
         assert Cache.get_live_env(site.key).id == staging.id
       end
     end
 
-    test "a per-site admin sets an environment with a stored host live", %{site: site, staging: staging} do
+    test "a per-site admin sets an environment with a stored host live", %{
+      site: site,
+      production: production,
+      staging: staging
+    } do
       {:ok, view, _html} = live(site_admin_conn(site), "/admin/config/environments")
 
       Oban.Testing.with_testing_mode(:manual, fn ->
@@ -290,8 +294,41 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
 
       assert has_element?(view, "#environment-#{staging.id}")
 
-      assert {:ok, %{live: true, domain: "staging.acme.test"}} =
+      assert {:ok, %{live: true, domain: nil}} =
                Environments.set_live(Registry.get_environment(staging.id), creator: :system)
+
+      assert Registry.get_environment(production.id).domain == "staging.acme.test"
+    end
+
+    # A live switch moves hosts without a superuser, so a superuser's screen
+    # can show a host an environment no longer holds
+    test "a domain submitted from a stale screen leaves the moved hosts alone", %{
+      conn: conn,
+      production: production,
+      staging: staging
+    } do
+      {:ok, _production} = Registry.update_environment(production, %{domain: "www.acme.test"}, actor: :system)
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      # The hosts swap underneath, with nothing telling the screen
+      for {id, domain} <- [{production.id, nil}, {staging.id, "www.acme.test"}, {production.id, "staging.acme.test"}] do
+        Brando.Repo.update_all(
+          from(e in Brando.Environments.Environment, where: e.id == ^id),
+          [set: [domain: domain]],
+          prefix: "public"
+        )
+      end
+
+      # Clearing the www.acme.test the screen shows for production
+      submit_domain(view, production, "")
+
+      assert Registry.get_environment(production.id).domain == "staging.acme.test"
+      assert Registry.get_environment(staging.id).domain == "www.acme.test"
+      # The screen now shows the hosts where they are
+      assert has_element?(view, ~s(#environment-#{production.id} input[name="domain"][value="staging.acme.test"]))
+
+      submit_domain(view, production, "")
+      assert Registry.get_environment(production.id).domain == nil
     end
   end
 

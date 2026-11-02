@@ -325,11 +325,39 @@ defmodule Brando.TenantEnvironmentDomainTest do
       assert Cache.get_live_env(site.key).key == "staging"
     end
 
-    test "with no domain on the outgoing one, the incoming one keeps its own", %{site: site, staging: staging} do
+    test "the domains swap, a missing one too, so a round trip puts them back", %{
+      site: site,
+      environment: production,
+      staging: staging
+    } do
       {:ok, staging} = put_domain(staging, "staging.acme.test")
 
-      assert {:ok, %Environment{domain: "staging.acme.test"}} = Environments.set_live(staging, creator: :system)
+      assert {:ok, %Environment{domain: nil}} = Environments.set_live(staging, creator: :system)
+      assert domains(site) == %{"production" => "staging.acme.test", "staging" => nil}
+      assert answering("staging.acme.test") == "production"
+
+      assert {:ok, %Environment{domain: nil}} = Environments.set_live(production, creator: :system)
       assert domains(site) == %{"production" => nil, "staging" => "staging.acme.test"}
+      assert answering("staging.acme.test") == "staging"
+    end
+
+    # On static delivery the deployed build decides what a host serves, and its
+    # forms post to the environment the build was made from
+    test "on a statically delivered site, the hosts stay where they are", %{
+      site: site,
+      environment: production,
+      staging: staging
+    } do
+      {:ok, _site} = Registry.update_site(site, %{delivery_mode: :static})
+      {:ok, _production} = put_domain(production, "www.acme.test")
+      {:ok, staging} = put_domain(staging, "staging.acme.test")
+
+      assert {:ok, %Environment{live: true, domain: "staging.acme.test"}} =
+               Environments.set_live(staging, creator: :system)
+
+      assert domains(site) == %{"production" => "www.acme.test", "staging" => "staging.acme.test"}
+      assert answering("www.acme.test") == "production"
+      assert Cache.get_live_env(site.key).key == "staging"
     end
 
     test "another site's host stays where it is", %{site: site, environment: production, staging: staging} do
@@ -346,7 +374,9 @@ defmodule Brando.TenantEnvironmentDomainTest do
         })
 
       {:ok, other} =
-        Registry.create_environment(other_site, %{name: "Production", key: "production", live: true, domain: "www.other.test"},
+        Registry.create_environment(
+          other_site,
+          %{name: "Production", key: "production", live: true, domain: "www.other.test"},
           actor: :system
         )
 
@@ -465,6 +495,100 @@ defmodule Brando.TenantEnvironmentDomainTest do
           refute match?({%{id: id}, _} when id == site.id, Cache.get_env_by_domain(host)), host
         end
       end
+    end
+  end
+
+  # The call is authorized for the site the struct names; the registry's row
+  # decides which site it acts on, so the two must agree.
+  describe "an environment whose site_id names another site" do
+    setup do
+      {:ok, other_site} =
+        Registry.create_site(%{
+          name: "Other",
+          key: "other-forged",
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :dynamic
+        })
+
+      {:ok, other_production} =
+        Environments.create_environment(
+          other_site,
+          %{name: "Production", key: "production", live: true, domain: "www.other.test"},
+          creator: :system
+        )
+
+      {:ok, other_staging} =
+        Environments.create_environment(
+          other_site,
+          %{name: "Staging", key: "staging", domain: "staging.other.test"},
+          creator: :system
+        )
+
+      %{other_site: other_site, other_production: other_production, other_staging: other_staging}
+    end
+
+    defp other_state(other_site) do
+      Map.new(Registry.list_environments(other_site), &{&1.key, {&1.live, &1.domain}})
+    end
+
+    defp other_untouched(other_site) do
+      assert other_state(other_site) == %{
+               "production" => {true, "www.other.test"},
+               "staging" => {false, "staging.other.test"}
+             }
+
+      assert Environments.list_operation_logs(other_site) |> Enum.map(& &1.operation) |> Enum.sort() == [
+               :create,
+               :create
+             ]
+    end
+
+    for mode <- [:legacy, :groups] do
+      test "set_live refuses it, #{mode} mode", %{
+        site: site,
+        environment: production,
+        other_site: other_site,
+        other_staging: other_staging
+      } do
+        put_test_env(:authorization_mode, unquote(mode))
+        admin = if unquote(mode) == :groups, do: group_admin(site, production), else: site_admin(site)
+
+        assert {:error, :environment_not_found} =
+                 Environments.set_live(%{other_staging | site_id: site.id}, creator: admin)
+
+        other_untouched(other_site)
+        assert answering("www.other.test") == "production"
+      end
+    end
+
+    test "copy refuses it", %{
+      site: site,
+      other_site: other_site,
+      other_production: other_production,
+      other_staging: other_staging
+    } do
+      admin = site_admin(site)
+
+      assert {:error, :site_or_environment_not_found} =
+               Environments.copy_environment(
+                 %{other_production | site_id: site.id},
+                 %{other_staging | site_id: site.id},
+                 creator: admin
+               )
+
+      other_untouched(other_site)
+    end
+
+    test "delete refuses it", %{site: site, other_site: other_site, other_staging: other_staging} do
+      admin = site_admin(site)
+
+      assert {:error, :site_or_environment_not_found} =
+               Environments.delete_environment(%{other_staging | site_id: site.id}, creator: admin)
+
+      other_untouched(other_site)
+      assert Brando.Environments.Schema.exists?(Brando.Tenant.prefix(other_site, other_staging))
     end
   end
 end

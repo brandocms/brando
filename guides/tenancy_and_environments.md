@@ -480,9 +480,10 @@ installation itself uses: the endpoint's, where the admin answers, nor its
 static, media or CDN host. With several sites, a site that needs the admin's
 host means moving the admin to a host of its own through `PHX_HOST`. In
 `:single` the admin's host needs no domain: it answers from the live environment
-when no environment holds it. Setting an environment live moves the site's
-host to it (see [Switch live, rollback, and delete](#switch-live-rollback-and-delete)),
-which anyone who may switch live does: the host stays within the site.
+when no environment holds it. On a `:dynamic` site, setting an environment
+live moves the site's host to it (see
+[Switch live, rollback, and delete](#switch-live-rollback-and-delete)), which
+anyone who may switch live does: the host stays within the site.
 
 <!-- usage-rules:start topic="tenancy" -->
 
@@ -724,14 +725,15 @@ Any environment can become the live environment:
 Before changing the live pointer, Brando archives the previous live schema.
 The registry update is transactional, the one-live-environment database
 constraint remains authoritative, and the routing cache is refreshed after a
-successful switch. The site's host goes with the live pointer, in the same
-transaction: the previous live environment's domain moves to the environment
-going live, and if that environment had a domain of its own, the two swap, so
-`www.example.com` answers from the new live environment and
-`staging.example.com` from the one it replaced. Switching back, or setting a
-restored archive live, moves the host the same way. When the previous live
-environment has no domain, no domain moves. The hosts were bound by a superuser
-and stay within the site, so a switch binds nothing new.
+successful switch. On a `:dynamic` site, the site's host goes with the live
+pointer, in the same transaction: the environment going live and the previous
+live environment swap domains, so `www.example.com` answers from the new live
+environment and `staging.example.com` from the one it replaced. A missing
+domain swaps too, so switching back puts every host where it was. Setting a
+restored archive live moves the host the same way. The hosts were bound by a
+superuser and stay within the site, so a switch binds nothing new. On a
+`:static` site the domains stay where they are: the deployed build, not the
+live environment, decides what a host serves.
 
 Inspect and prune archives:
 

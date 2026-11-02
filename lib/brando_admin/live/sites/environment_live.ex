@@ -548,7 +548,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     domain = if domain == "", do: nil, else: domain
 
     with :ok <- authorize(socket),
-         {:ok, environment} <- environment_for_site(socket, id),
+         {:ok, shown} <- environment_for_site(socket, id),
+         {:ok, environment} <- current_domain(shown),
          {:ok, _updated} <-
            Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user) do
       {:noreply,
@@ -556,7 +557,14 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
        |> notify(gettext("Domain updated."))
        |> refresh_data()}
     else
-      {:error, reason} -> {:noreply, notify_error(socket, operation_error(reason))}
+      {:error, :domain_moved} ->
+        {:noreply,
+         socket
+         |> notify_error(gettext("That did not work. Reload the page and try again."))
+         |> refresh_data()}
+
+      {:error, reason} ->
+        {:noreply, notify_error(socket, operation_error(reason))}
     end
   end
 
@@ -752,6 +760,18 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
            Enum.find(socket.assigns.environments, &(&1.id == environment_id)) do
       {:ok, environment}
     else
+      _ -> {:error, :environment_not_found}
+    end
+  end
+
+  # A live switch moves hosts without a superuser, so the domain this screen
+  # shows may be gone from the row; a change made against it would overwrite
+  # or clear a host the screen never showed. The row as it is now is what the
+  # change applies to, and only while it still holds the domain shown.
+  defp current_domain(%Environment{id: id, site_id: site_id, domain: shown}) do
+    case Registry.get_environment(id) do
+      %Environment{site_id: ^site_id, domain: ^shown} = environment -> {:ok, environment}
+      %Environment{site_id: ^site_id} -> {:error, :domain_moved}
       _ -> {:error, :environment_not_found}
     end
   end
