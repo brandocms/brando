@@ -253,9 +253,10 @@ fields empty. A tag of your own reads its argument with
 
 A plain map a filter of your own builds reads like what the filter was given.
 Built from `entry` or a datasource's `entries`, it reads like entry data. Built
-from `block`, whose vars the parser has already escaped, it prints as it is:
-the markup in its strings is not escaped, and its credential fields show. Such
-a filter wraps what it returns with `Brando.Villain.TemplateView.wrap/2`, so it
+from what the parser has already escaped, such as `block`, `globals` or the
+`vars` of a multi module's entries, it reads as that data does: its strings
+print as they are, markup and all, and its credential fields show. Such a
+filter wraps what it returns with `Brando.Villain.TemplateView.wrap/2`, so it
 reads like entry data:
 
 ```elixir
