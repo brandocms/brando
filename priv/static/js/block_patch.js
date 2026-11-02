@@ -60,7 +60,9 @@ window.BrandoBlockPatch = (function () {
         get: (_shell, key) => readMember(target, prototypes, key, isWindow),
         set: (_shell, key, value) => Reflect.set(target, key, value),
         has: (_shell, key) => key in target,
-        getPrototypeOf: () => Object.getPrototypeOf(target)
+        getPrototypeOf: () => Object.getPrototypeOf(target),
+        // Sealed, the empty object would have to report its own prototype
+        preventExtensions: () => false
       })
       shields.set(target, shielded)
       proxies.add(shielded)
