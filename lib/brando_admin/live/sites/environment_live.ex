@@ -164,7 +164,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       phx-click="delete_environment"
                       phx-value-id={environment.id}
                       phx-confirm={
-                        gettext("Delete %{name} and its complete PostgreSQL schema? This cannot be undone.",
+                        gettext(
+                          "Delete %{name}, its complete PostgreSQL schema, and its form submissions and drafts? This cannot be undone.",
                           name: environment.name
                         )
                       }

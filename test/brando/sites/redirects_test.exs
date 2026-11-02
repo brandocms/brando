@@ -139,4 +139,14 @@ defmodule Brando.Sites.RedirectsTest do
     assert String.length(long) == Brando.Sites.FourOhFour.max_url_length()
     assert Redirects.not_found_source(long) == Redirects.exact_source(long) |> String.trim_trailing("$")
   end
+
+  test "a 404 the log cut short after a $ still compiles, and matches the paths it begins" do
+    long = "/" <> String.duplicate("a", Brando.Sites.FourOhFour.max_url_length() - 2) <> "$"
+
+    source = Redirects.not_found_source(long)
+    assert source == Redirects.exact_source(long) |> String.replace_suffix("$", "")
+
+    assert {:ok, regex} = Redirects.compile(source)
+    assert Regex.match?(regex, long <> "more")
+  end
 end

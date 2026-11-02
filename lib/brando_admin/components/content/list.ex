@@ -1481,6 +1481,12 @@ defmodule BrandoAdmin.Components.Content.List do
 
   defp confirm_text(_schema, _confirm), do: false
 
+  defp delete_selected_confirm(Brando.Forms.Form) do
+    gettext("Deleting the last language of a form also deletes its submissions. This can't be undone.")
+  end
+
+  defp delete_selected_confirm(_schema), do: false
+
   # Selection action button component
   attr :id, :string, default: nil
   attr :event, :any, required: true
@@ -1588,7 +1594,9 @@ defmodule BrandoAdmin.Components.Content.List do
             <% end %>
             <.selection_action_button
               :if={BrandoAdmin.Authorization.allowed?(:delete, @schema)}
+              id="selection-action-delete"
               event="delete_selected"
+              confirm={delete_selected_confirm(@schema)}
               encoded_ids={@encoded_selected_rows}
               danger
             >

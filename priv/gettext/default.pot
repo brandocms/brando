@@ -5350,7 +5350,7 @@ msgstr[1] ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "Delete %{name} and its complete PostgreSQL schema? This cannot be undone."
+msgid "Delete %{name}, its complete PostgreSQL schema, and its form submissions and drafts? This cannot be undone."
 msgstr ""
 
 #: lib/brando_admin/live/users/groups_live.ex
@@ -5566,6 +5566,11 @@ msgstr ""
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "Deleting stopped before it finished. The list shows what is left."
+msgstr ""
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting the last language of a form also deletes its submissions. This can't be undone."
 msgstr ""
 
 #: lib/brando_admin/live/sites/notifications_live.ex
@@ -8841,6 +8846,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Its schema version differs from the current schema, so some fields may not restore correctly."
 msgstr ""
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Its submission is deleted with it."
+msgid_plural "Its %{count} submissions are deleted with it."
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
