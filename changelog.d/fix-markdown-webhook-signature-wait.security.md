@@ -1,0 +1,1 @@
+- The Markdown webhook refuses a request with 429 after 10 seconds waiting for its signature to be checked, and checks deliveries from GitHub's webhook addresses before other clients' requests, so a flood of requests for a connection from other addresses no longer holds back genuine deliveries.

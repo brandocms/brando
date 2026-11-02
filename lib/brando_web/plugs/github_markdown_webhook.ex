@@ -48,9 +48,10 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
 
   # A request from GitHub's addresses is read, verified and accepted holding a
   # read slot, which bounds how many of their bodies are held at once. It has
-  # `timeout` to get a slot, and then `timeout` again to send its body.
+  # `timeout` to get a slot, `timeout` again to send its body, and `timeout`
+  # again for its turn in the signature check.
   defp receive_delivery(conn, connection, true, timeout) do
-    in_slot = fn -> receive_delivery(conn, connection, false, timeout) end
+    in_slot = fn -> read_and_accept(conn, connection, true, timeout) end
 
     case ReadSlots.run(System.monotonic_time(:millisecond) + timeout, in_slot) do
       {:error, :busy} -> respond(conn, 429, "rate_limited")
@@ -58,18 +59,22 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
     end
   end
 
-  defp receive_delivery(conn, connection, false, timeout) do
+  defp receive_delivery(conn, connection, false, timeout), do: read_and_accept(conn, connection, false, timeout)
+
+  defp read_and_accept(conn, connection, github?, timeout) do
     case body(conn, [], 0, System.monotonic_time(:millisecond) + timeout) do
-      {:ok, body, conn} -> authenticate_and_accept(conn, connection, body)
+      {:ok, body, conn} -> authenticate_and_accept(conn, connection, body, github?, timeout)
       {:error, :too_large, conn} -> respond(conn, 413, "request_too_large")
       {:error, :incomplete_body, conn} -> respond(conn, 400, "incomplete_body")
     end
   end
 
-  defp authenticate_and_accept(conn, connection, body) do
+  defp authenticate_and_accept(conn, connection, body, github?, timeout) do
     header = get_req_header(conn, "x-hub-signature-256")
+    check = fn -> verify(header, body, connection.secret) end
+    deadline = System.monotonic_time(:millisecond) + timeout
 
-    with :ok <- SignatureCheck.run(fn -> verify(header, body, connection.secret) end),
+    with :ok <- SignatureCheck.run(check, deadline: deadline, github?: github?),
          {:delivery, true} <- {:delivery, RateLimiter.allow_delivery?()},
          {:ok, payload} when is_map(payload) <- Jason.decode(body),
          :ok <- repository(payload, connection),
@@ -78,6 +83,7 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
          {:ok, _} <- accept(connection, event, payload, body, delivery_id) do
       respond(conn, 202, "accepted")
     else
+      {:error, :busy} -> respond(conn, 429, "rate_limited")
       {:delivery, false} -> respond(conn, 429, "rate_limited")
       {:error, :persistence_failed} -> respond(conn, 503, "temporarily_unavailable")
       _ -> respond(conn, 401, "delivery_rejected")

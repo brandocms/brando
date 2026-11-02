@@ -513,7 +513,7 @@ defmodule Brando.MarkdownSources.WebhookTest do
       end
     end
 
-    defp deliver(conn, opts \\ []) do
+    defp deliver(conn, opts) do
       Task.async(fn ->
         Oban.Testing.with_testing_mode(:manual, fn -> conn |> Webhook.call(opts) |> Map.get(:status) end)
       end)
@@ -527,6 +527,14 @@ defmodule Brando.MarkdownSources.WebhookTest do
 
       send(checking, :release)
       assert Task.await(task) == 401
+    end
+
+    test "a check that raises, or whose process dies, gives the turn back" do
+      assert_raise RuntimeError, fn -> SignatureCheck.run(fn -> raise "check failed" end) end
+
+      checking = hold_check()
+      Process.exit(checking, :kill)
+      assert SignatureCheck.run(fn -> :ran end, deadline: System.monotonic_time(:millisecond) + 1_000) == :ran
     end
 
     test "a request waiting past its deadline gets 429 and gives back its read slot" do
