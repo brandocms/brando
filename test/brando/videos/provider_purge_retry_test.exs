@@ -35,7 +35,13 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
   setup do
     put_test_env(:tenancy_mode, :none)
     Logger.put_module_level(Uploader, :info)
-    on_exit(fn -> Logger.delete_module_level(Uploader) end)
+    Logger.put_module_level(Brando.SoftDelete.Query, :info)
+
+    on_exit(fn ->
+      Logger.delete_module_level(Uploader)
+      Logger.delete_module_level(Brando.SoftDelete.Query)
+    end)
+
     :ok
   end
 
@@ -119,12 +125,7 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
     end
   end
 
-  describe "a purge with a provider that cannot answer" do
-    setup do
-      Logger.put_module_level(Brando.SoftDelete.Query, :info)
-      on_exit(fn -> Logger.delete_module_level(Brando.SoftDelete.Query) end)
-    end
-
+  describe "a purge with a provider that cannot be reached" do
     # Each call to a provider that hangs waits out its timeout, and the
     # purger has 30 seconds for every schema and environment.
     test "asks it once, keeps its other rows for the next run, and purges the other providers' rows" do
@@ -150,6 +151,38 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
       answer(Mux, :ok)
       assert purge_videos() == 2
       for video <- mux_videos, do: refute(Repo.get(Video, video.id))
+    end
+  end
+
+  describe "a purge with a provider that answers with an error" do
+    # An error status comes back at once, and may be one video's alone, such
+    # as an asset the provider cannot delete: its other videos are still asked.
+    test "asks it about each of its videos, and purges the ones it deletes" do
+      configure(Mux, :on_purge)
+
+      [failing, busy, deleted] =
+        for id <- ["asset-1", "asset-2", "asset-3"],
+            do: Mux |> insert_video(:mux, %{"mux" => %{"asset_id" => id}}) |> expire()
+
+      me = self()
+
+      Req.Test.stub(Mux, fn conn ->
+        send(me, {:provider, conn.method, conn.request_path})
+
+        case conn.request_path do
+          "/video/v1/assets/asset-1" -> send_resp(conn, 500, ~s({"error":"x"}))
+          "/video/v1/assets/asset-2" -> send_resp(conn, 429, ~s({"error":"x"}))
+          "/video/v1/assets/asset-3" -> send_resp(conn, 204, "")
+        end
+      end)
+
+      log = capture_log([level: :info], fn -> assert purge_videos() == 1 end)
+
+      for id <- ["asset-1", "asset-2", "asset-3"], do: assert_received({:provider, "DELETE", "/video/v1/assets/" <> ^id})
+      assert Repo.get!(Video, failing.id).deleted_at
+      assert Repo.get!(Video, busy.id).deleted_at
+      refute Repo.get(Video, deleted.id)
+      refute log =~ "without asking the provider"
     end
   end
 

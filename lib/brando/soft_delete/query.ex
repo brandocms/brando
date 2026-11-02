@@ -94,16 +94,19 @@ defmodule Brando.SoftDelete.Query do
     # leave the provider video behind for good. Only rows the delete removed
     # are counted.
     #
-    # Once a provider could not answer, it is not asked again this run: each
-    # call to a provider that hangs waits out its client's timeout, and the
-    # purger has one deadline for every schema and environment. Its other
-    # rows stay for the next run, and the other providers' rows go on.
+    # Once a provider could not be reached, or timed out, it is not asked
+    # again this run: each call to a provider that hangs waits out its
+    # client's timeout, and the purger has one deadline for every schema and
+    # environment. Its other rows stay for the next run, and the other
+    # providers' rows go on. A provider that answered with an error, even a
+    # 5xx, answered at once, and the error may be that one video's: it is
+    # asked about its other rows.
     {purged, kept} = Enum.reduce(on_purge, {0, %{}}, &purge_unless_unanswered(query, &1, &2))
 
     for {type, count} <- kept, count > 0 do
       Logger.warning(
         "#{count} more #{type} #{if count == 1, do: "video", else: "videos"} kept for the next purge, " <>
-          "without asking the provider, which could not answer this run"
+          "without asking the provider, which could not be reached this run"
       )
     end
 
@@ -134,18 +137,24 @@ defmodule Brando.SoftDelete.Query do
   end
 
   # `kept` counts, by provider, the videos left without asking it once it
-  # could not answer.
+  # could not be reached.
   defp purge_unless_unanswered(query, video, {purged, kept}) do
     if Map.has_key?(kept, video.type) do
       {purged, Map.update!(kept, video.type, &(&1 + 1))}
     else
       case purge_video(query, video) do
-        {:error, {:retry, _reason}} -> {purged, Map.put(kept, video.type, 0)}
+        {:error, {:retry, reason}} -> {purged, if(unreachable?(reason), do: Map.put(kept, video.type, 0), else: kept)}
         {:error, reason} when reason in [:holdings_unavailable, :busy, :not_purged] -> {purged, kept}
         _purged -> {purged + 1, kept}
       end
     end
   end
+
+  # The provider was not reached, or did not answer in time: the slow
+  # failures, each costing a client timeout.
+  defp unreachable?(%Req.TransportError{}), do: true
+  defp unreachable?(%Req.HTTPError{}), do: true
+  defp unreachable?(_reason), do: false
 
   defp purge_video(query, video) do
     Brando.Videos.Uploader.delete_remote(video, fn ->
