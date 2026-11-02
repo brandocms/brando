@@ -185,8 +185,8 @@ defmodule Brando.Worker.EntryPublisher do
 
   @doc """
   Whether the scheduled restore `job` made, refused with `changeset`, is tried
-  again: only a unique conflict (`unique_conflict?/1`), on the job's first two
-  attempts and not on its last. A job built without attempts (a test, a manual
+  again: only a unique conflict (`unique_conflict?/1`), on the job's attempts
+  1 and 2 (whatever failed them) and not on its last. A job built without attempts (a test, a manual
   run) is on its first. Any other refusal drops the schedule at once.
   """
   def retry_refused_revision?(%Oban.Job{attempt: attempt, max_attempts: max}, %Ecto.Changeset{} = changeset) do
@@ -197,21 +197,25 @@ defmodule Brando.Worker.EntryPublisher do
   end
 
   @doc """
-  Whether a unique index refused the restore (`constraint: :unique`), in the
-  entry or a nested record: two restores taking the same value at the same
-  moment both pass the check before the write, and the later one may go
-  through when it is tried again.
+  Whether only a unique index refused the restore (`constraint: :unique`), in
+  the entry or a nested record: two restores taking the same value at the
+  same moment both pass the check before the write, and the later one may go
+  through when it is tried again. With any other error besides, a retry
+  can't help.
   """
   def unique_conflict?(%Ecto.Changeset{} = changeset) do
-    changeset
-    |> Ecto.Changeset.traverse_errors(fn {_message, opts} -> Keyword.get(opts, :constraint) == :unique end)
-    |> flagged?()
+    flags =
+      changeset
+      |> Ecto.Changeset.traverse_errors(fn {_message, opts} -> Keyword.get(opts, :constraint) == :unique end)
+      |> flags()
+
+    flags != [] and Enum.all?(flags)
   end
 
-  defp flagged?(true), do: true
-  defp flagged?(list) when is_list(list), do: Enum.any?(list, &flagged?/1)
-  defp flagged?(%{} = map), do: map |> Map.values() |> flagged?()
-  defp flagged?(_other), do: false
+  defp flags(flag) when is_boolean(flag), do: [flag]
+  defp flags(list) when is_list(list), do: Enum.flat_map(list, &flags/1)
+  defp flags(%{} = map), do: map |> Map.values() |> flags()
+  defp flags(_other), do: []
 
   # A publish waits for its publish_at, publishes only a pending entry (one
   # set back to draft stays a draft) and is dropped once the entry has

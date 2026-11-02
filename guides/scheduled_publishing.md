@@ -231,10 +231,10 @@ its first attempt, the revision is no longer scheduled, and the entry's
 Activity names the fields, including one whose nested record (a variable, an
 embedded item) no longer validates. Activating it in the revisions drawer is
 refused with the same fields and why; load it, correct them and save it. A
-unique value the database refuses is the exception: another save may have taken
-it at the same moment, so that job is retried, twice. If the third attempt is
-refused too, the value is taken for good, and the job is cancelled and noted in
-Activity the same way.
+unique value the database refuses, with no other error, is the exception:
+another save may have taken it at the same moment, so the job is retried while
+it is on its first or second attempt. Refused so on a later attempt, the value
+is taken for good, and the job is cancelled and noted in Activity the same way.
 
 To cancel before execution, use **Cancel schedule** in the revision row:
 
@@ -272,7 +272,8 @@ Oban retries failures; an accepted schedule is not a guarantee that the content
 will publish successfully. A failed revision restore preserves the current
 entry, and a final failed attempt releases its scheduled retention flag. A
 revision refused by validation or because its entry is in the trash is not
-retried, and one refused by a unique index is retried twice (see above).
+retried, and one refused only by a unique index is retried on its first two
+attempts (see above).
 Check the job's error and the content's current validation/authorization before
 retrying. The actor is loaded again at execution, so changed access can matter.
 

@@ -1,4 +1,4 @@
-- A scheduled revision that no longer validates, such as one with a fragment key that no longer fits, is cancelled on its first attempt instead of after 10, and the entry's Activity names the fields, nested ones included; a value a unique index refuses is retried twice, then cancelled the same way.
+- A scheduled revision that no longer validates, such as one with a fragment key that no longer fits, is cancelled on its first attempt instead of after 10, and the entry's Activity names the fields, nested ones included; one refused only by a unique index is retried on its first two attempts, then cancelled the same way.
 - Activating a revision that no longer validates names the fields and why in the revisions drawer.
 - A fragment key that doesn't fit says which rule it breaks, in the editor's language, and the hint says a key can't start or end with a space.
 - A content transfer that refuses an entry names each field under its label, with a readable message.

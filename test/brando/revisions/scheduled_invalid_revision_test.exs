@@ -46,6 +46,19 @@ defmodule Brando.Revisions.ScheduledInvalidRevisionTest do
              Ecto.Changeset.add_error(changeset, :title, "can't be blank", validation: :required)
            )
 
+    # A refusal with a permanent error besides is dropped at once
+    refute changeset
+           |> Ecto.Changeset.add_error(:uri, "has already been taken", unique)
+           |> Ecto.Changeset.add_error(:title, "can't be blank", validation: :required)
+           |> EntryPublisher.unique_conflict?()
+
+    refute changeset
+           |> Ecto.Changeset.add_error(:title, "can't be blank", validation: :required)
+           |> Ecto.Changeset.put_assoc(:vars, [var])
+           |> EntryPublisher.unique_conflict?()
+
+    refute EntryPublisher.unique_conflict?(changeset)
+
     refute EntryPublisher.unique_conflict?(
              Ecto.Changeset.add_error(changeset, :uri, "has already been taken",
                validation: :unsafe_unique,
