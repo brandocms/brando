@@ -197,11 +197,11 @@ defmodule Brando.Videos.Uploaders.Mux do
       when is_binary(asset_id) do
     # Validate asset_id before making API call
     if valid_mux_id?(asset_id) do
-      case api_request(:delete, "/assets/#{asset_id}") do
+      case request(:delete, "/assets/#{asset_id}", nil) do
         {:ok, _} ->
           :ok
 
-        {:error, %{"error" => %{"type" => "not_found"}}} ->
+        {:error, {:http_error, _status, %{"error" => %{"type" => "not_found"}}}} ->
           # Asset already deleted or doesn't exist
           :ok
 
@@ -656,7 +656,7 @@ defmodule Brando.Videos.Uploaders.Mux do
   # the site being told its config is wrong.
   defp present?(value), do: is_binary(value) and value != ""
 
-  defp api_request(method, path, body \\ nil) do
+  defp request(method, path, body) do
     url = @base_url <> path
 
     # Missing credentials are a deploy-time configuration error, not a runtime
@@ -709,11 +709,21 @@ defmodule Brando.Videos.Uploaders.Mux do
 
       {:ok, %{status: status, body: body}} ->
         Logger.error("Mux API request failed: #{status} - #{inspect(body)}")
-        {:error, body}
+        {:error, {:http_error, status, body}}
 
       {:error, reason} ->
         Logger.error("Mux API request error: #{inspect(reason)}")
         {:error, reason}
+    end
+  end
+
+  # The error body alone, as the calls other than the delete take it; the
+  # delete keeps the status, which tells an outage from a refusal
+  # (`Brando.Videos.Uploader.transient_error?/1`).
+  defp api_request(method, path, body \\ nil) do
+    case request(method, path, body) do
+      {:error, {:http_error, _status, error_body}} -> {:error, error_body}
+      result -> result
     end
   end
 

@@ -133,11 +133,11 @@ defmodule Brando.Videos.Uploaders.Bunny do
     library_id = get_config(:library_id)
 
     if valid_bunny_id?(video_guid) do
-      case api_request(:delete, "/library/#{library_id}/videos/#{video_guid}") do
+      case request(:delete, "/library/#{library_id}/videos/#{video_guid}", nil) do
         {:ok, _} ->
           :ok
 
-        {:error, %{"Message" => "Not Found"}} ->
+        {:error, {:http_error, _status, %{"Message" => "Not Found"}}} ->
           # Video already deleted
           :ok
 
@@ -527,7 +527,7 @@ defmodule Brando.Videos.Uploaders.Bunny do
   # site being told its config is wrong.
   defp present?(value), do: is_binary(value) and value != ""
 
-  defp api_request(method, path, body \\ nil) do
+  defp request(method, path, body) do
     url = @base_url <> path
 
     # Missing credentials are a deploy-time configuration error, not a runtime
@@ -597,11 +597,21 @@ defmodule Brando.Videos.Uploaders.Bunny do
 
       {:ok, %{status: status, body: body}} ->
         Logger.error("Bunny API request failed: #{status} - #{inspect(body)}")
-        {:error, body}
+        {:error, {:http_error, status, body}}
 
       {:error, reason} ->
         Logger.error("Bunny API request error: #{inspect(reason)}")
         {:error, reason}
+    end
+  end
+
+  # The error body alone, as the calls other than the delete take it; the
+  # delete keeps the status, which tells an outage from a refusal
+  # (`Brando.Videos.Uploader.transient_error?/1`).
+  defp api_request(method, path, body \\ nil) do
+    case request(method, path, body) do
+      {:error, {:http_error, _status, error_body}} -> {:error, error_body}
+      result -> result
     end
   end
 

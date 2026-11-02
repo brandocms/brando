@@ -93,6 +93,9 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
 
       update_list_entries(schema)
     else
+      {:error, {:recorded_here, live}} ->
+        send(self(), {:toast, Brando.Videos.restore_refused_message(live)})
+
       {:error, _error} ->
         send(
           self(),

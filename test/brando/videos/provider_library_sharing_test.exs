@@ -458,20 +458,30 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       refute_received {:vimeo_delete, _path, _in_transaction?, _prefix}
     end
 
-    test "a video left at the provider is logged", %{sites: sites, held: held, lock_conn: conn} do
+    test "a video whose lock is busy is deleted at the provider later", %{sites: sites, held: held, lock_conn: conn} do
       put_test_env(Brando.Videos.ProviderHoldings, lock_timeout: 200)
       hold_lock(conn, "vimeo.video_id", "1")
-      Logger.put_module_level(Brando.Videos, :warning)
+      Logger.put_module_level(Brando.Videos, :info)
       on_exit(fn -> Logger.delete_module_level(Brando.Videos) end)
 
-      log =
-        capture_log([level: :warning], fn ->
-          as_site(sites.alpha, fn -> assert {:ok, _video} = Brando.Videos.delete_video(held.alpha.id, :system) end)
-        end)
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        log =
+          capture_log([level: :info], fn ->
+            as_site(sites.alpha, fn -> assert {:ok, _video} = Brando.Videos.delete_video(held.alpha.id, :system) end)
+          end)
 
-      refute_received {:vimeo_delete, _path, _in_transaction?, _prefix}
-      assert log =~ "Video #{held.alpha.id}"
-      assert log =~ "busy"
+        refute_received {:vimeo_delete, _path, _in_transaction?, _prefix}
+        assert log =~ "Video #{held.alpha.id}"
+        assert log =~ "busy"
+
+        [job] = all_enqueued(worker: Brando.Worker.VideoRemoteDelete)
+        assert job.args["video_id"] == held.alpha.id
+
+        release_lock(conn, "vimeo.video_id", "1")
+        assert :ok = perform_job(Brando.Worker.VideoRemoteDelete, job.args)
+      end)
+
+      assert_received {:vimeo_delete, "/videos/1", _in_transaction?, _prefix}
     end
   end
 
@@ -751,9 +761,9 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
 
         Tenant.with_prefix(context.staging_prefix, fn ->
           deleted = context.staging |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
-          assert {:ok, %Video{deleted_at: nil}} = Brando.Authorization.Boundary.restore(superuser, deleted)
+          assert {:ok, %Video{deleted_at: nil} = restored} = Brando.Authorization.Boundary.restore(superuser, deleted)
 
-          deleted = deleted |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+          deleted = restored |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
           live = Repo.insert!(%Video{type: :mux, title: "Added again", status: :ready, meta: imported_meta()})
 
           assert {:error, {:recorded_here, %Video{id: live_id}}} =

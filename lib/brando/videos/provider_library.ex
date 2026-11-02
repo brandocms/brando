@@ -47,6 +47,10 @@ defmodule Brando.Videos.ProviderLibrary do
   `delete_remote_on: :on_delete` is not restored, as its video may be gone
   at the provider; the video is added as a new record if the provider still
   has it.
+
+  Restoring a deleted record from the trash is refused while the
+  environment has a live record of the same remote video
+  (`guard_restore/3`): delete that one first, or use it instead.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -302,6 +306,36 @@ defmodule Brando.Videos.ProviderLibrary do
       )
       |> Brando.Repo.one()
     end)
+  end
+
+  @doc """
+  Runs `restore`, which restores the deleted `video`, unless the current
+  environment has a live record of the same remote video: then
+  `{:error, {:recorded_here, live}}`, with that record if `user` may read
+  it and `nil` otherwise. Every tenancy mode keeps one live record per remote
+  video and environment, as an add from the library does
+  (`Brando.Authorization.Boundary.restore/2` calls this).
+
+  The check and `restore` hold the video's lock, so an add of the same video
+  from the library, or its purge, does not land in between. A video with no
+  remote id is restored as it is.
+  """
+  @spec guard_restore(term(), Video.t(), (-> result)) :: result | {:error, term()} when result: term()
+  def guard_restore(user, %Video{} = video, restore) do
+    case Uploader.library_remote_id(video) do
+      {module, remote_id} ->
+        path = module.library_meta_path()
+
+        ProviderHoldings.with_video_lock(path, remote_id, fn ->
+          case ProviderHoldings.recorded_here(path, remote_id, video.id) do
+            nil -> restore.()
+            live -> {:error, {:recorded_here, if(Boundary.authorize(user, :read, live) == :ok, do: live)}}
+          end
+        end)
+
+      nil ->
+        restore.()
+    end
   end
 
   @doc "Whether the record was added from a provider library rather than uploaded."

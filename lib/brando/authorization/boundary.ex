@@ -185,16 +185,26 @@ defmodule Brando.Authorization.Boundary do
 
   def restore(actor, %{__struct__: schema} = entry) do
     run(actor, :restore, schema, fn user ->
-      with :ok <- authorize(user, :restore, entry),
-           changeset <- Ecto.Changeset.change(entry, deleted_at: nil),
-           :ok <- change(user, :update, changeset),
-           {:ok, restored} <- Repo.restore(entry) do
-        Brando.Activity.restored(restored, user)
-        Brando.Notes.entry_restored(schema, entry)
-        Brando.Cache.entry_changed(restored)
-        {:ok, restored}
-      end
+      with :ok <- authorize(user, :restore, entry), do: restore_entry(user, entry)
     end)
+  end
+
+  # Not a provider video while a live record of the same one is in the
+  # environment (`{:error, {:recorded_here, live}}`).
+  defp restore_entry(user, %Brando.Videos.Video{} = video),
+    do: Brando.Videos.ProviderLibrary.guard_restore(user, video, fn -> restore_unguarded(user, video) end)
+
+  defp restore_entry(user, entry), do: restore_unguarded(user, entry)
+
+  defp restore_unguarded(user, %{__struct__: schema} = entry) do
+    with changeset <- Ecto.Changeset.change(entry, deleted_at: nil),
+         :ok <- change(user, :update, changeset),
+         {:ok, restored} <- Repo.restore(entry) do
+      Brando.Activity.restored(restored, user)
+      Brando.Notes.entry_restored(schema, entry)
+      Brando.Cache.entry_changed(restored)
+      {:ok, restored}
+    end
   end
 
   def change(:system, _, _), do: :ok

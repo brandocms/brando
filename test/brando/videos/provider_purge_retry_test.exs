@@ -127,13 +127,13 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
     end
 
     test "leaves a record restored meanwhile, and its video" do
-      video = Mux |> insert_video(:mux, %{"mux" => %{"asset_id" => "asset-1"}}) |> Map.put(:deleted_at, nil)
-      assert :ok = perform_job(VideoRemoteDelete, %{"video_id" => video.id})
+      video = insert_video(Mux, :mux, %{"mux" => %{"asset_id" => "asset-1"}})
+      assert {:cancel, _} = perform_job(VideoRemoteDelete, %{"video_id" => video.id})
       refute_received {:provider, "DELETE", _path}
     end
 
     test "stops once the record is purged" do
-      assert :ok = perform_job(VideoRemoteDelete, %{"video_id" => 0})
+      assert {:cancel, _} = perform_job(VideoRemoteDelete, %{"video_id" => 0})
       refute_received {:provider, "DELETE", _path}
     end
 
@@ -147,7 +147,13 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
   end
 
   defp configure(Mux, timing),
-    do: put_test_env(Mux, access_token_id: "id", access_token_secret: "secret", delete_remote_on: timing, req_options: req(Mux))
+    do:
+      put_test_env(Mux,
+        access_token_id: "id",
+        access_token_secret: "secret",
+        delete_remote_on: timing,
+        req_options: req(Mux)
+      )
 
   defp configure(Bunny, timing),
     do:
@@ -160,9 +166,16 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
       )
 
   defp configure(Cloudflare, timing),
-    do: put_test_env(Cloudflare, account_id: "acc", api_token: "tok", delete_remote_on: timing, req_options: req(Cloudflare))
+    do:
+      put_test_env(Cloudflare,
+        account_id: "acc",
+        api_token: "tok",
+        delete_remote_on: timing,
+        req_options: req(Cloudflare)
+      )
 
-  defp configure(Vimeo, timing), do: put_test_env(Vimeo, access_token: "tok", delete_remote_on: timing, req_options: req(Vimeo))
+  defp configure(Vimeo, timing),
+    do: put_test_env(Vimeo, access_token: "tok", delete_remote_on: timing, req_options: req(Vimeo))
 
   # No retries by Req itself: each provider call is one request.
   defp req(module), do: [plug: {Req.Test, module}, retry: false]
