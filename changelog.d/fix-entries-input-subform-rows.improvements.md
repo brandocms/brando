@@ -1,0 +1,1 @@
+- A related entries input reads the entries it offers when its picker opens, rather than again on every save, so a save no longer reads the list once per input and per subform row.

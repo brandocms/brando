@@ -1123,14 +1123,15 @@ defmodule E2EFixtureController do
     json(conn, %{user_id: user.id})
   end
 
-  # With group authorization: the second editor may edit projects and read
-  # no pages, and a project's related entries name a page and a project. Its
-  # form shows the page as an entry they can't view (`:entries` input).
+  # With group authorization: the second editor may edit projects and
+  # clients and read no pages, and a project's related entries name a page
+  # and a project. Its form shows the page as an entry they can't view
+  # (`:entries` input). So does a client's row (`form :related_rows`).
   def masked_entries(conn, _params) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
     alias Brando.Authorization.{Catalog, Groups, Scope}
-    alias E2eProject.Projects.Project
+    alias E2eProject.Projects.{Client, InlineRow, Project}
 
     owner = get_admin_user()
     user = Brando.Users.get_user!(%{matches: %{email: "editor@brandocms.com"}})
@@ -1141,7 +1142,7 @@ defmodule E2EFixtureController do
     end
 
     keys = ~w(brando.admin.access brando.profile.read brando.profile.update brando.images.read brando.files.read)
-    keys = keys ++ for action <- [:read, :update, :publish], do: Catalog.get(action, Project).key
+    keys = keys ++ for action <- [:read, :update, :publish], schema <- [Project, Client], do: Catalog.get(action, schema).key
     {:ok, group} = Groups.create(Scope.standalone(owner), %{name: "Project editors"}, keys)
     {:ok, :ok} = Groups.add_member(Scope.standalone(owner), group.id, user.id)
 
@@ -1157,6 +1158,9 @@ defmodule E2EFixtureController do
 
     attrs = %{status: :published, language: :en, creator_id: owner.id}
     slug = &"#{&1}-#{System.unique_integer([:positive])}"
+    client = Brando.Repo.insert!(struct(Client, Map.merge(attrs, %{name: "Havglimt", slug: slug.("havglimt")})))
+    # What a save of the project requires
+    attrs = Map.merge(attrs, %{client_id: client.id, introduction: "<p>By the sea.</p>"})
     related = Brando.Repo.insert!(struct(Project, Map.merge(attrs, %{title: "The garden rooms", slug: slug.("garden")})))
     project = Brando.Repo.insert!(struct(Project, Map.merge(attrs, %{title: "Havglimt retreat", slug: slug.("havglimt")})))
     {:ok, page_identifier} = Brando.Content.create_identifier(Brando.Pages.Page, page)
@@ -1166,7 +1170,15 @@ defmodule E2EFixtureController do
     for {identifier, sequence} <- Enum.with_index([page_identifier, related_identifier]),
         do: Brando.Repo.insert!(struct(join, parent_id: project.id, identifier_id: identifier.id, sequence: sequence))
 
-    json(conn, %{project_id: project.id})
+    row = Brando.Repo.insert!(%InlineRow{client_id: client.id, title: "Rooms", status: :published, sequence: 0})
+    row_join = InlineRow.__schema__(:association, :related_entries).related
+
+    for {identifier, sequence} <- Enum.with_index([page_identifier, related_identifier]),
+        do: Brando.Repo.insert!(struct(row_join, parent_id: row.id, identifier_id: identifier.id, sequence: sequence))
+
+    # The entry a row picks
+    {:ok, _} = Brando.Content.create_identifier(Project, project)
+    json(conn, %{project_id: project.id, client_id: client.id})
   end
 
   def user_directory(conn, %{"action" => "create"}) do

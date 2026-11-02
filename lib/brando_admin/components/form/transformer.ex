@@ -165,14 +165,27 @@ defmodule BrandoAdmin.Components.Form.Transformer do
   end
 
   def update(assigns, socket) do
+    read_generation = socket.assigns[:read_generation]
     socket = assign(socket, assigns)
 
     if socket.assigns.initialized? do
-      {:ok, socket}
+      {:ok, redraw_for_reads(socket, read_generation)}
     else
       initialize(socket)
     end
   end
+
+  # The form's `read_generation` changed: what the editor may read can have
+  # changed. Entries render in a stream, and only an entry inserted again
+  # renders again, so an `:entries` input in them checks its rows again only
+  # once they are.
+  defp redraw_for_reads(%{assigns: %{read_generation: generation}} = socket, previous) when generation != previous do
+    if Enum.any?(socket.assigns.subform.sub_fields, &(&1.type == :entries)),
+      do: stream(socket, :transformer_items, Enum.map(socket.assigns.items, &stream_entry/1)),
+      else: socket
+  end
+
+  defp redraw_for_reads(socket, _previous), do: socket
 
   defp deliver(socket, ref, asset_field, asset, append_fun) do
     case find_upload(socket.assigns.items, ref) do

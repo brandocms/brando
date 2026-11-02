@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Content.Identifier, as: IdentifierRow
   alias BrandoAdmin.Components.Form.Input
+  alias BrandoAdmin.Components.Form.Input.SubformHelpers
   alias BrandoAdmin.Components.Form.Primitives
   alias Ecto.Changeset
 
@@ -63,7 +64,10 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
      |> assign_new(:join_schema, fn -> join_schema end)
      |> assign_new(:max_length, fn -> get_in(field_opts, [:constraints, :max_length]) end)
      |> assign_new(:min_length, fn -> get_in(field_opts, [:constraints, :min_length]) end)
-     |> refresh_filters(wanted_schemas)
+     |> assign_available_schemas(wanted_schemas)
+     |> assign_new(:selected_schema, fn %{available_schemas: schemas} -> single_schema(schemas) end)
+     |> assign_new(:available_identifiers, fn -> [] end)
+     |> keep_filters(wanted_schemas)
      |> assign_selected_identifiers(field)}
   end
 
@@ -109,7 +113,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
     preloaded =
       for association <- associations,
-          %{id: id, schema: _, entry_id: _} = identifier <- [Changeset.get_field(association, :identifier)],
+          %{id: id, schema: _, entry_id: _} = identifier <- [loaded_identifier(association)],
           id in ids,
           into: %{},
           do: {id, identifier}
@@ -142,6 +146,15 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     |> assign(:selected_text, Enum.map_join(selected, ", ", &((&1 && &1.title) || IdentifierRow.masked_label())))
   end
 
+  # The row's identifier, unless the query that read the row left it out
+  # (a project's own query for a subform's rows may): the row is then read
+  # by id
+  defp loaded_identifier(%Changeset{data: %{identifier: %Ecto.Association.NotLoaded{}}, changes: changes})
+       when not is_map_key(changes, :identifier),
+       do: nil
+
+  defp loaded_identifier(row), do: Changeset.get_field(row, :identifier)
+
   # By id, for `assign_selected_identifiers/2` to decide what may be named
   defp read_identifiers([]), do: %{}
 
@@ -150,10 +163,19 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     from(i in Brando.Content.Identifier, where: i.id in ^ids) |> Brando.Repo.all() |> Map.new(&{&1.id, &1})
   end
 
-  defp refresh_filters(socket, wanted_schemas) do
+  # What the picker's list depends on
+  defp filters_key(socket, wanted_schemas) do
     filter_language? = Keyword.get(socket.assigns.opts, :filter_language, false)
     language = if filter_language?, do: socket.assigns.field.form[:language].value
-    key = {wanted_schemas, filter_language?, language, read_key()}
+    {wanted_schemas, filter_language?, language, read_key()}
+  end
+
+  # The picker's list is read when the picker opens and before a pick is
+  # taken from it, and again only if what it depends on changed since.
+  # Not on a render: a save, a change of permissions or another editor's
+  # save would read it for every entries input, in every subform row.
+  defp refresh_filters(socket, wanted_schemas) do
+    key = filters_key(socket, wanted_schemas)
 
     if socket.assigns[:identifier_filters] == key do
       socket
@@ -165,9 +187,25 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     end
   end
 
+  # On a render, a list read before what it depends on changed is read
+  # again while the picker is open, and dropped while it is closed, so it
+  # names nothing the editor may no longer read. It is read when the picker
+  # opens.
+  defp keep_filters(socket, wanted_schemas) do
+    cond do
+      socket.assigns[:identifier_filters] in [nil, filters_key(socket, wanted_schemas)] -> socket
+      socket.assigns[:picker_open?] -> refresh_filters(socket, wanted_schemas)
+      true -> assign(socket, identifier_filters: nil, available_identifiers: [])
+    end
+  end
+
   def assign_available_schemas(socket, wanted_schemas) do
     assign(socket, :available_schemas, Identifier.get_entry_types(wanted_schemas))
   end
+
+  # The content type the picker opens on when it offers only one
+  defp single_schema([{_, schema, _}]), do: schema
+  defp single_schema(_schemas), do: nil
 
   def assign_selected_schema(socket) do
     schemas = socket.assigns.available_schemas
@@ -281,7 +319,11 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           </div>
           <div class="identifier-actions">
             <div class="media-field-split">
-              <button type="button" class="media-button" phx-click={show_modal("##{@field.id}-select-entries")}>
+              <button
+                type="button"
+                class="media-button"
+                phx-click={JS.push("open_picker", target: @myself) |> show_modal("##{@field.id}-select-entries")}
+              >
                 {gettext("Select entries")}
               </button>
               <button type="button" class="media-button" phx-click="clear_all" phx-target={@myself} disabled={!@has_entries}>
@@ -291,7 +333,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           </div>
         </div>
 
-        <Content.modal title={gettext("Select entries")} id={"#{@field.id}-select-entries"} narrow>
+        <Content.modal
+          title={gettext("Select entries")}
+          id={"#{@field.id}-select-entries"}
+          close={JS.push("close_picker", target: @myself) |> hide_modal("##{@field.id}-select-entries")}
+          narrow
+        >
           <h2 :if={!@selected_schema} class="titlecase">{gettext("Select content type")}</h2>
           <div :if={!@selected_schema} class="button-group-vertical">
             <button
@@ -360,17 +407,15 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
   def handle_event("clear_all", _, socket) do
     field = socket.assigns.field
-    changeset = Changeset.put_assoc(field.form.source, field.field, [])
-    module = changeset.data.__struct__
-
-    send_update(BrandoAdmin.Components.Form,
-      id: "#{module.__naming__().singular}_form",
-      action: :update_changeset,
-      changeset: changeset
-    )
-
+    put_changeset(socket, Changeset.put_assoc(field.form.source, field.field, []))
     {:noreply, socket}
   end
+
+  def handle_event("open_picker", _, socket) do
+    {:noreply, socket |> assign(:picker_open?, true) |> refresh_filters(Keyword.get(socket.assigns.opts, :sources))}
+  end
+
+  def handle_event("close_picker", _, socket), do: {:noreply, assign(socket, :picker_open?, false)}
 
   # Only an entry the picker lists: it may have reloaded since it showed one,
   # and lists again here if what the editor may read can have changed since
@@ -394,6 +439,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
         {:noreply,
          socket
+         |> assign(:identifier_filters, filters_key(socket, Keyword.get(socket.assigns.opts, :sources)))
          |> assign(:available_identifiers, identifiers)
          |> assign(:selected_schema, schema_module)}
     end
@@ -404,8 +450,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     field_name = identifiers_field.field
     form = identifiers_field.form
     changeset = form.source
-    module = changeset.data.__struct__
-    form_id = "#{module.__naming__().singular}_form"
     assoc_schema = socket.assigns.join_schema
     available_identifiers = socket.assigns.available_identifiers
     selected_identifiers = socket.assigns.selected_identifiers
@@ -449,12 +493,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
           updated_assoc_identifiers
         )
 
-      # ship this changeset off to the form component
-      send_update(BrandoAdmin.Components.Form,
-        id: form_id,
-        action: :update_changeset,
-        changeset: updated_changeset
-      )
+      put_changeset(socket, updated_changeset)
 
       updated_identifiers = [selected_identifier | selected_identifiers]
 
@@ -478,6 +517,29 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
 
       {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
     end
+  end
+
+  # The input's changeset, to the component that owns it: a subform row's
+  # to its subform, which puts the row in the form's latest list
+  # (`Subform.update/2`), the entry's own to the form. The changeset of a
+  # row names the row's schema, not the form.
+  defp put_changeset(%{assigns: %{subform_id: subform_id}} = socket, changeset) when not is_nil(subform_id) do
+    send_update(BrandoAdmin.Components.Form.Subform,
+      id: subform_id,
+      key: SubformHelpers.row_key(socket.assigns.field.form),
+      action: :update_changeset,
+      updated_changeset: changeset
+    )
+  end
+
+  defp put_changeset(_socket, changeset) do
+    module = changeset.data.__struct__
+
+    send_update(BrandoAdmin.Components.Form,
+      id: "#{module.__naming__().singular}_form",
+      action: :update_changeset,
+      changeset: changeset
+    )
   end
 
   attr :block_identifier, :any

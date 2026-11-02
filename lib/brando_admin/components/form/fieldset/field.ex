@@ -47,6 +47,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
             current_user={@current_user}
             form_cid={@form_cid}
             form_id={@form_id}
+            read_generation={@read_generation}
             opts={[]}
           />
         <% else %>
@@ -61,6 +62,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset.Field do
               current_user={@current_user}
               form_cid={@form_cid}
               form_id={@form_id}
+              read_generation={@read_generation}
             />
           <% else %>
             <.live_component

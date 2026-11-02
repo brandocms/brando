@@ -76,6 +76,14 @@ defmodule Brando.Blueprint.PreloadsTest do
     assert :location in RelationPreloads.for_schema(Brando.BlueprintTest.P1)
   end
 
+  # The entries input in a subform row names its rows from them (#3453)
+  test "a cast subform's entries relation preloads its identifiers" do
+    assert {:items, %Ecto.Query{} = query} =
+             Brando.SyncTest.Article |> RelationPreloads.for_schema() |> List.keyfind(:items, 0)
+
+    assert {:related_entries, [:identifier]} in query.preloads
+  end
+
   test "complete preloads retain entry identifiers and direct assets" do
     assert {:related_entries, [:identifier]} in Preloads.for_schema(Brando.Persons.Person, skip_blocks: true)
 
