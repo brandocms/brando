@@ -493,6 +493,12 @@
   [data-icon] { width: 24px; height: 24px; }
 }
 
+.assistant-empty-mark.is-error { background: var(--brando-error); color: var(--assistant-error); }
+
+/* A proposal that can no longer be loaded: the reason, then Discard. */
+.assistant-unloadable .assistant-feedback { justify-self: stretch; }
+.assistant-unloadable-actions { padding-top: 4px; }
+
 .assistant-proposal { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; padding-bottom: 8px; }
 .assistant-proposal > * { min-width: 0; }
 .assistant-proposal-head { display: grid; gap: 8px; padding-bottom: 24px; border-bottom: 1px solid var(--assistant-line); }

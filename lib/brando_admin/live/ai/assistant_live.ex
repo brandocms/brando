@@ -58,6 +58,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
        run: nil,
        progress: nil,
        proposal: nil,
+       unloadable_id: nil,
        review: [],
        media: %{},
        receipt: nil,
@@ -189,6 +190,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
        cost: nil,
        run: nil,
        proposal: nil,
+       unloadable_id: nil,
        review: [],
        receipt: nil,
        error: nil
@@ -484,6 +486,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             origin={origin_label(@proposal)}
             connected={@live_action == :connected}
             connected_empty?={@connected == []}
+            unloadable_id={@unloadable_id}
           />
         </section>
       </div>
@@ -780,6 +783,23 @@ defmodule BrandoAdmin.AI.AssistantLive do
   attr :origin, :string, default: nil
   attr :connected, :boolean, default: false
   attr :connected_empty?, :boolean, default: false
+  attr :unloadable_id, :string, default: nil
+
+  # A proposal of the user's under review that can no longer be loaded, so
+  # neither reviewed nor applied: the reason, and Discard.
+  defp review(%{proposal: nil, unloadable_id: id} = assigns) when is_binary(id) do
+    ~H"""
+    <div class="assistant-empty assistant-unloadable" id="assistant-unloadable">
+      <span class="assistant-empty-mark is-error" aria-hidden="true"><.icon name="triangle-alert" /></span>
+      <h2>{gettext("This proposal cannot be applied")}</h2>
+      <div :if={@error} class="assistant-feedback is-error" role="alert">{@error}</div>
+      <p>{gettext("Nothing from it has been saved. Discard it, then prepare the changes again.")}</p>
+      <div class="assistant-unloadable-actions">
+        <button type="button" class="btn btn--danger" phx-click="cancel_proposal">{gettext("Discard")}</button>
+      </div>
+    </div>
+    """
+  end
 
   defp review(%{proposal: nil, connected: true} = assigns) do
     ~H"""
@@ -1763,9 +1783,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
     end
   end
 
+  # The proposal on screen, or one that can no longer be loaded for review.
   def handle_event("cancel_proposal", _, socket) do
-    if proposal = socket.assigns.proposal,
-      do: Proposals.cancel(proposal.id, socket.assigns.current_user)
+    if id = (socket.assigns.proposal && socket.assigns.proposal.id) || socket.assigns.unloadable_id,
+      do: Proposals.cancel(id, socket.assigns.current_user)
 
     {:noreply, socket |> assign_proposal() |> assign_connected()}
   end
@@ -2111,7 +2132,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp assign_proposal(socket) do
     case proposal_id(socket.assigns) do
-      nil -> socket |> assign(proposal: nil, review: []) |> assign_media()
+      nil -> socket |> assign(proposal: nil, unloadable_id: nil, review: []) |> assign_media()
       id -> assign_proposal(socket, id)
     end
   end
@@ -2125,11 +2146,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
         review = proposal |> Review.entries() |> with_saved_urls(receipt)
 
         socket
-        |> assign(proposal: proposal, review: review, receipt: receipt)
+        |> assign(proposal: proposal, unloadable_id: nil, review: review, receipt: receipt)
         |> assign_media()
 
+      # One that can no longer be reviewed or applied, such as one naming a
+      # content type outside the catalogue, can still be discarded.
       {:error, message} ->
-        assign(socket, proposal: nil, review: [], error: message)
+        unloadable_id = if Proposals.discardable?(id, user), do: id
+        assign(socket, proposal: nil, unloadable_id: unloadable_id, review: [], error: message)
     end
   end
 
