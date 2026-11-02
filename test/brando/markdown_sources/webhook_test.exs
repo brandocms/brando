@@ -467,16 +467,100 @@ defmodule Brando.MarkdownSources.WebhookTest do
   defp slow_body(%{adapter: {Plug.Adapters.Test.Conn, inner}} = conn, needs),
     do: %{conn | adapter: {SlowBody, {inner, needs}}}
 
-  test "a busy signature check makes a request wait, and does not refuse it" do
+  describe "the signature check" do
     alias Brando.MarkdownSources.SignatureCheck
 
-    :sys.suspend(SignatureCheck)
-    on_exit(fn -> :sys.resume(SignatureCheck) end)
+    @github {192, 30, 252, 10}
 
-    task = Task.async(fn -> wrongly_signed("{}", {192, 0, 2, 55}) |> Webhook.call([]) |> Map.get(:status) end)
-    assert Task.yield(task, 200) == nil
+    setup do
+      Application.put_env(
+        :brando,
+        :markdown_sources,
+        Keyword.put(Application.get_env(:brando, :markdown_sources), :github_hook_ranges, ["192.30.252.0/22"])
+      )
 
-    :sys.resume(SignatureCheck)
-    assert Task.await(task) == 401
+      :ok
+    end
+
+    # A slow check holding the turn until released
+    defp hold_check do
+      parent = self()
+
+      holder =
+        spawn(fn ->
+          SignatureCheck.run(fn ->
+            send(parent, {:checking, self()})
+            receive do: (:release -> :ok)
+          end)
+        end)
+
+      assert_receive {:checking, checking}
+
+      on_exit(fn ->
+        send(checking, :release)
+        Process.exit(holder, :kill)
+      end)
+
+      checking
+    end
+
+    # Checks from other addresses in line, each taking `ms`
+    defp flood(count, ms) do
+      for _ <- 1..count do
+        pid = spawn(fn -> SignatureCheck.run(fn -> Process.sleep(ms) end) end)
+        on_exit(fn -> Process.exit(pid, :kill) end)
+        Process.sleep(5)
+      end
+    end
+
+    defp deliver(conn, opts \\ []) do
+      Task.async(fn ->
+        Oban.Testing.with_testing_mode(:manual, fn -> conn |> Webhook.call(opts) |> Map.get(:status) end)
+      end)
+    end
+
+    test "a busy check makes a request wait, and does not refuse it" do
+      checking = hold_check()
+
+      task = Task.async(fn -> wrongly_signed("{}", {192, 0, 2, 55}) |> Webhook.call([]) |> Map.get(:status) end)
+      assert Task.yield(task, 200) == nil
+
+      send(checking, :release)
+      assert Task.await(task) == 401
+    end
+
+    test "a request waiting past its deadline gets 429 and gives back its read slot" do
+      checking = hold_check()
+
+      task = deliver(%{signed(payload()) | remote_ip: @github}, body_timeout: 300)
+      assert Task.yield(task, 2_000) == {:ok, 429}
+      assert :sys.get_state(ReadSlots).free == 16
+
+      send(checking, :release)
+      assert %{waiting: waiting} = :sys.get_state(SignatureCheck)
+      assert waiting == %{}
+    end
+
+    test "a flood from other addresses does not hold back a delivery from GitHub's" do
+      checking = hold_check()
+      flood(20, 100)
+
+      task = deliver(%{signed(payload()) | remote_ip: @github}, body_timeout: 1_000)
+      Process.sleep(50)
+      send(checking, :release)
+
+      assert Task.yield(task, 1_500) == {:ok, 202}
+    end
+
+    test "a request from another address waits its turn in the flood, up to its deadline" do
+      checking = hold_check()
+      flood(20, 100)
+
+      task = deliver(%{signed(payload()) | remote_ip: {192, 0, 2, 56}}, body_timeout: 500)
+      Process.sleep(50)
+      send(checking, :release)
+
+      assert Task.yield(task, 1_500) == {:ok, 429}
+    end
   end
 end
