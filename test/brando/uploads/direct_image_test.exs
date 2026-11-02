@@ -84,12 +84,23 @@ defmodule Brando.Uploads.DirectImageTest do
       assert upload.upload_url =~ "testbucket"
       assert upload.upload_url =~ "X-Amz-Signature"
       assert Uploads.get_pending_intent(upload.ref).asset_type == :image
+
+      query = upload.upload_url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+      assert query["X-Amz-SignedHeaders"] =~ "content-length"
+      refute Map.has_key?(upload.upload_headers, "content-length")
     end
 
     test "without a direct CDN the image goes through the server, as before" do
       put_image_config(%{})
 
       assert {:ok, :server} = Direct.presign(:image, "default", meta())
+    end
+
+    test "a size over the field's limit is refused before anything is presigned" do
+      put_image_config(%{cdn: @cdn, size_limit: 1000})
+
+      assert {:error, "File is too large" <> _} = Direct.presign(:image, "default", meta(%{size: 1001}))
+      assert BrandoIntegration.Repo.all(Brando.Uploads.PendingIntent) == []
     end
 
     test "a type the field does not take is refused before anything is presigned" do
@@ -135,6 +146,35 @@ defmodule Brando.Uploads.DirectImageTest do
       # Done with: the ref cannot be completed twice
       assert Uploads.get_pending_intent(upload.ref) == nil
       assert {:error, :not_found} = Direct.complete(upload.ref)
+    end
+
+    test "an object that changed between the HEAD and the read is not stored" do
+      put_image_config(%{cdn: @cdn, size_limit: 1000})
+      body = File.read!(@fixture)
+      {:ok, upload} = Direct.presign(:image, "default", meta(%{size: 100}))
+
+      expect(Client.Mock, :head_object, fn "testbucket", _, _ -> {:ok, head_response(100, "image/jpeg")} end)
+      expect(Client.Mock, :get_object, fn "testbucket", _, _ -> {:ok, %{status_code: 200, body: body}} end)
+
+      assert {:error, message} = Direct.complete(upload.ref)
+      assert message =~ "size mismatch"
+      "media/" <> path = upload.key
+      refute File.exists?(Path.join(Brando.Tenant.Storage.current_media_root(), path))
+      assert BrandoIntegration.Repo.all(Image) == []
+    end
+
+    # Slugging a name of only punctuation leaves ".png", which has no extension
+    test "a key that lost its extension is not stored" do
+      put_image_config(%{cdn: @cdn, allowed_mimetypes: ["image/jpeg", "image/png"]})
+      body = File.read!(@fixture)
+      {:ok, upload} = Direct.presign(:image, "default", meta(%{name: "!!!.jpg", size: byte_size(body)}))
+      assert Path.extname(upload.key) == ""
+
+      expect(Client.Mock, :head_object, fn _, _, _ -> {:ok, head_response(byte_size(body), "image/jpeg")} end)
+      expect(Client.Mock, :get_object, fn _, _, _ -> {:ok, %{status_code: 200, body: body}} end)
+
+      assert {:error, "Unsupported image type" <> _} = Direct.complete(upload.ref)
+      assert BrandoIntegration.Repo.all(Image) == []
     end
 
     test "an object the bucket reports differently is not trusted" do

@@ -442,9 +442,10 @@ asset :video, :video,
   }
 ```
 
-The server signs the exact content type. After the browser PUT completes, it
-HEADs the server-owned key and verifies `Content-Length` and `Content-Type`
-before creating the CDN-backed File and ready Video rows. Modern AWS buckets
+The server signs the exact content type and the declared size, so the store
+refuses a body of any other size. After the browser PUT completes, it HEADs the
+server-owned key and verifies `Content-Length` and `Content-Type` before creating
+the CDN-backed File and ready Video rows. Modern AWS buckets
 should use bucket policies/Object Ownership and leave `direct_acl` unset; set it
 only for compatible services that explicitly require an object ACL.
 

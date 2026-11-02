@@ -389,6 +389,18 @@ defmodule Brando.UploadsTest do
       assert query["X-Amz-Credential"] =~ "TESTKEY"
     end
 
+    test "signs the declared size, without asking the browser to send the header" do
+      cfg = direct_cfg()
+
+      assert {:ok, %{upload_url: url, headers: headers}} =
+               Uploads.presign_put("media/files/tests/doc.pdf", cfg, mime_type: "application/pdf", size: 100)
+
+      query = url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+
+      assert query["X-Amz-SignedHeaders"] == "content-length;content-type;host"
+      assert headers == %{"content-type" => "application/pdf"}
+    end
+
     test "signs an ACL header only when explicitly configured" do
       cfg = direct_cfg()
       cfg = %{cfg | cdn: %{cfg.cdn | direct_acl: "public-read"}}

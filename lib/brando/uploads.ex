@@ -385,8 +385,11 @@ defmodule Brando.Uploads do
 
   # The object can have been replaced since the HEAD (the presigned URL stays
   # valid), and only here do the bytes themselves reach the server.
-  defp validate_direct_body(body, key, %{mime_type: mime_type}, cfg) do
-    with :ok <- validate_intake(:image, key, byte_size(body), size_limit(cfg)) do
+  defp validate_direct_body(body, key, %{filesize: expected_size, mime_type: mime_type}, cfg) do
+    size = byte_size(body)
+
+    with :ok <- validate_direct_size(Integer.to_string(size), expected_size),
+         :ok <- validate_intake(:image, key, size, size_limit(cfg)) do
       ContentType.verify_image(body, key, mime_type, Map.get(cfg, :allowed_mimetypes) || [])
     end
   end
@@ -568,12 +571,12 @@ defmodule Brando.Uploads do
     initiate_direct_asset(cfg, resolved_target, file_meta)
   end
 
-  defp initiate_direct_asset(cfg, resolved_target, %{name: name, type: mime_type}) do
+  defp initiate_direct_asset(cfg, resolved_target, %{name: name, type: mime_type, size: size}) do
     with :ok <- validate_mimetype(cfg, mime_type) do
       filename = build_direct_filename(name, cfg)
       key = Path.join(["media", cfg.upload_path, filename])
 
-      case presign_put(key, cfg, mime_type: mime_type) do
+      case presign_put(key, cfg, mime_type: mime_type, size: size) do
         {:ok, %{upload_url: upload_url, headers: headers}} ->
           {:ok,
            {:direct,
@@ -634,14 +637,21 @@ defmodule Brando.Uploads do
   Presign a PUT to the file CDN bucket for `key`.
 
   The URL is short-lived (#{@presign_expiry_seconds}s). `Content-Type` is a
-  signed header. An object ACL is included only when the CDN config explicitly
-  sets `direct_acl`; modern AWS buckets should keep this nil and use a bucket
-  policy instead.
+  signed header, and so is `Content-Length` with the `:size` option, so the
+  store refuses a body of any other size. A browser sets that header itself and
+  refuses to let a script do it, so it is not in the returned `headers`, which
+  are what the client must send. An object ACL is included only when the CDN
+  config explicitly sets `direct_acl`; modern AWS buckets should keep this nil
+  and use a bucket policy instead.
+
+  S3 has no single-use URL: until it expires, the holder can PUT another body
+  of the same size and type to the same key.
   """
   def presign_put(key, cfg, opts \\ []) do
     cdn_config = file_cdn_config(cfg)
     mime_type = Keyword.get(opts, :mime_type, "application/octet-stream")
     headers = presign_headers(cdn_config, mime_type)
+    signed = signed_length(Keyword.get(opts, :size)) ++ headers
 
     s3_config =
       %{cdn: cdn_config}
@@ -652,7 +662,7 @@ defmodule Brando.Uploads do
 
     case ExAws.S3.presigned_url(aws_config, :put, cdn_config.bucket, key,
            expires_in: @presign_expiry_seconds,
-           headers: headers
+           headers: signed
          ) do
       {:ok, upload_url} -> {:ok, %{upload_url: upload_url, headers: Map.new(headers)}}
       {:error, _reason} = error -> error
@@ -871,6 +881,9 @@ defmodule Brando.Uploads do
       _ -> "application/octet-stream"
     end
   end
+
+  defp signed_length(size) when is_integer(size) and size >= 0, do: [{"content-length", Integer.to_string(size)}]
+  defp signed_length(_size), do: []
 
   defp presign_headers(cdn_config, mime_type) do
     [{"content-type", mime_type}]
