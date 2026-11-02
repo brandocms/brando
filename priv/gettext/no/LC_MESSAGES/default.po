@@ -21041,6 +21041,16 @@ msgstr "må være en absolutt sti uten . eller .."
 msgid "must be an http or https address"
 msgstr "må være en http- eller https-adresse"
 
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "must be at most %{count} characters"
+msgstr "kan ha høyst %{count} tegn"
+
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "must be lowercase letters, digits and single dashes"
+msgstr "må bestå av små bokstaver, sifre og enkle bindestreker"
+
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format
 msgid "must be on another server"

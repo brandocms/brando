@@ -21039,6 +21039,16 @@ msgstr ""
 msgid "must be an http or https address"
 msgstr ""
 
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "must be at most %{count} characters"
+msgstr ""
+
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "must be lowercase letters, digits and single dashes"
+msgstr ""
+
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format
 msgid "must be on another server"

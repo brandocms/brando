@@ -398,6 +398,25 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       assert {:ok, %{provider_library_group: "news"}} = Registry.put_provider_library_group(sites.alpha, "news", owner)
     end
 
+    test "its errors are in the editor's language", %{sites: sites} do
+      superuser = Factory.insert(:random_user, role: :superuser)
+
+      # A malformed key, and one too long.
+      for group <- ["News Room", String.duplicate("a", 41)] do
+        [en, no] =
+          for locale <- ["en", "no"] do
+            Gettext.with_locale(Brando.Gettext, locale, fn ->
+              {:error, changeset} = Registry.put_provider_library_group(sites.alpha, group, superuser)
+              assert [provider_library_group: {message, _opts}] = changeset.errors
+              message
+            end)
+          end
+
+        refute en == no
+        refute en =~ "%{"
+      end
+    end
+
     test "an ordinary site update does not change it", %{sites: sites} do
       assert {:ok, site} = Registry.update_site(sites.beta, %{provider_library_group: nil, name: "Beta renamed"})
       assert site.provider_library_group == "news"

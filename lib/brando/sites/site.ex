@@ -8,6 +8,7 @@ defmodule Brando.Sites.Site do
   """
 
   use Ecto.Schema
+  use Gettext, backend: Brando.Gettext
 
   import Ecto.Changeset
 
@@ -67,9 +68,12 @@ defmodule Brando.Sites.Site do
 
     site
     |> cast(%{provider_library_group: group}, [:provider_library_group])
-    |> validate_length(:provider_library_group, max: 40)
+    |> validate_length(:provider_library_group,
+      max: 40,
+      message: gettext("must be at most %{count} characters", count: 40)
+    )
     |> validate_format(:provider_library_group, @key_format,
-      message: "must be lowercase letters, digits and single dashes"
+      message: gettext("must be lowercase letters, digits and single dashes")
     )
   end
 
