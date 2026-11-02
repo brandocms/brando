@@ -30,18 +30,26 @@ defmodule BrandoAdmin.HeexBlockModuleBoundTest do
     )
   end
 
-  test "blocks of one HEEx module load one module, and each still previews", %{conn: conn, page: page} do
+  test "blocks of one HEEx module load one module, and each still previews", %{conn: conn, page: page, current_user: user} do
     marker = "heex-bound-#{System.unique_integer([:positive])}"
     # A key no atom holds yet: the editor must compile the template before it
     # builds the assigns, as it does on the first render after a restart.
     key = "headline_#{System.unique_integer([:positive])}"
     code = ~s(<article data-marker="#{marker}">{@#{key}}</article>)
 
-    module =
-      Factory.insert(:module,
-        code: code,
-        type: :heex,
-        vars: [%Brando.Content.Var{type: :string, key: key, label: "Headline", value: "Preview value"}]
+    # Through the context, which evicts the cached module list inserting skips
+    {:ok, module} =
+      Brando.Content.create_module(
+        %{
+          name: marker,
+          namespace: "general",
+          help_text: "Help",
+          class: "heex-bound",
+          code: code,
+          type: :heex,
+          vars: [%{type: "string", key: key, label: "Headline", value: "Preview value"}]
+        },
+        user
       )
 
     {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")

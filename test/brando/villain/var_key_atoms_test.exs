@@ -23,7 +23,7 @@ defmodule Brando.Villain.VarKeyAtomsTest do
     %Module{id: System.unique_integer([:positive]), code: code, type: type, class: "c", refs: [], vars: []}
   end
 
-  defp block(module, vars \\ [], rows \\ []) do
+  defp block(module, vars, rows \\ []) do
     %{
       uid: "u",
       type: :module,
