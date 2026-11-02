@@ -56,6 +56,43 @@ defmodule Brando.UtilsTest do
     assert slugify_filename("testing.JPG") == "testing.jpg"
   end
 
+  describe "slugify_filename/1 edges" do
+    test "a basename with nothing to slug keeps its extension under the fallback name" do
+      assert slugify_filename("!!!.jpg") == "file.jpg"
+      assert slugify_filename("..png") == "file.png"
+      assert slugify_filename("🎉🎉.JPG") == "file.jpg"
+      assert slugify_filename("!!!") == "file"
+      # No name at all is left for the callers to refuse
+      assert slugify_filename("") == ""
+    end
+
+    test "a unicode basename is transliterated" do
+      assert slugify_filename("日本語.jpg") == "ri-ben-yu.jpg"
+      assert slugify_filename("ÆØÅ.JPEG") == "aeoa.jpeg"
+    end
+
+    # `Path.extname/1` gives a name that starts with a dot no extension
+    test "a dotfile name is slugged whole" do
+      assert slugify_filename(".htaccess") == "htaccess"
+      assert slugify_filename(".jpg") == "jpg"
+    end
+
+    test "an extension is slugged, and one with nothing to slug is dropped" do
+      assert slugify_filename("photo.!!!") == "photo"
+      assert slugify_filename("photo.") == "photo"
+      assert slugify_filename("report.P D;F") == "report.pdf"
+    end
+
+    test "a long name is cut to fit a filesystem name with room for suffixes" do
+      slugged = slugify_filename(String.duplicate("a", 300) <> "." <> String.duplicate("x", 40))
+      assert slugged == String.duplicate("a", 200) <> "." <> String.duplicate("x", 16)
+
+      slugged = slugify_filename(String.duplicate("word ", 80) <> ".jpg")
+      assert String.length(slugged) <= 204
+      assert slugged =~ ~r/^word(-word)*\.jpg$/
+    end
+  end
+
   test "random_filename/1" do
     f = random_filename("original-filename.jpg")
     refute f == "original-filename.jpg"

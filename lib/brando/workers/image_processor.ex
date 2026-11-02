@@ -61,12 +61,13 @@ defmodule Brando.Worker.ImageProcessor do
     result =
       try do
         with {:ok, _} <- broadcast_status(image, field_full_path, :processing),
-             # Before the sizes go: an image over the limit keeps the ones it has
+             # Before the sizes go: an image over the limit, or with no type,
+             # keeps the ones it has
              :ok <- Images.PixelLimit.check_image(image),
-             {:ok, _} <- Images.Utils.delete_sized_images(image),
              user = job_user(user_id),
              {:ok, config} <- Images.get_config_for(config_target),
              {:ok, operations} <- Images.Operations.create(image, config, user),
+             {:ok, _} <- Images.Utils.delete_sized_images(image),
              {:ok, process_map} <- Images.Operations.perform(operations, user, silent: silent?) do
           update_processed(image, Map.fetch!(process_map, image.id), config, user)
         end
@@ -88,6 +89,13 @@ defmodule Brando.Worker.ImageProcessor do
         Images.discard_restored_original(image, original)
         broadcast_processing_error(image.id, field_full_path)
         {:cancel, :too_many_pixels}
+
+      # The path decides the type, and a retry reads the same path
+      {:error, {:unsupported_image_type, _extension} = reason} ->
+        Logger.error("==> ImageProcessor: image #{image.id} has no image type: #{inspect(image.path)}")
+        Images.discard_restored_original(image, original)
+        broadcast_processing_error(image.id, field_full_path)
+        {:cancel, reason}
 
       err ->
         Images.discard_restored_original(image, original)

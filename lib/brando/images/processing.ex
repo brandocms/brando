@@ -13,6 +13,8 @@ defmodule Brando.Images.Processing do
   alias Brando.Worker
   alias Ecto.Changeset
 
+  require Logger
+
   @type changeset :: Changeset.t()
   @type id :: binary | integer
   @type image :: Image.t()
@@ -314,16 +316,7 @@ defmodule Brando.Images.Processing do
       images
       |> Enum.filter(&(Images.PixelLimit.check_image(&1) == :ok))
       |> Enum.flat_map(fn image ->
-        Images.Utils.delete_sized_images(image)
-
-        {:ok, operations} =
-          Operations.create(
-            image,
-            cfg,
-            user
-          )
-
-        operations
+        recreate_operations(image, cfg, user)
       end)
 
     {:ok, operation_results} = Operations.perform(operations, user)
@@ -352,16 +345,7 @@ defmodule Brando.Images.Processing do
       images
       |> Enum.filter(&(Images.PixelLimit.check_image(&1) == :ok))
       |> Enum.flat_map(fn image ->
-        Images.Utils.delete_sized_images(image)
-
-        {:ok, operations} =
-          Operations.create(
-            image,
-            cfg,
-            user
-          )
-
-        operations
+        recreate_operations(image, cfg, user)
       end)
 
     {:ok, operation_results} = Operations.perform(operations, user)
@@ -380,5 +364,19 @@ defmodule Brando.Images.Processing do
       end
 
     {:ok, Enum.map(updated_images, & &1.id)}
+  end
+
+  # An image no operations can be made for keeps the sizes it has, and the
+  # others are recreated all the same
+  defp recreate_operations(image, cfg, user) do
+    case Operations.create(image, cfg, user) do
+      {:ok, operations} ->
+        Images.Utils.delete_sized_images(image)
+        operations
+
+      {:error, reason} ->
+        Logger.error("==> Processing: not recreating sizes for image #{image.id}: #{inspect(reason)}")
+        []
+    end
   end
 end
