@@ -175,8 +175,11 @@ wrong repositories, unsupported events, oversized and incomplete bodies fail
 closed. It accepts at most 1 MiB and, per node and minute, 120 requests per
 client address and 1,200 deliveries whose signature verified, so unsigned
 requests cannot hold back GitHub's. A request over either limit gets 429, which
-shows in GitHub's delivery log. Apply distributed rate limits at the edge when
-running multiple nodes. The client address is taken from `X-Forwarded-For` only
+shows in GitHub's delivery log. Requests naming no connection get 429 past
+12,000 a minute on the node; requests naming one are read and verified however
+many arrive, one signature at a time, so the per-client limit and the 1 MiB
+maximum are what bound the memory their bodies take. Apply distributed rate
+limits at the edge when running multiple nodes. The client address is taken from `X-Forwarded-For` only
 when the request comes from a trusted proxy (`Brando.ClientIP`).
 
 Receipt uniqueness covers both connection-scoped delivery IDs and verified body

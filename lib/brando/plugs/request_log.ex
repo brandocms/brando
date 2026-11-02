@@ -48,8 +48,12 @@ defmodule Brando.Plug.RequestLog do
   @doc "`path_info` with its secret token filtered out, or `nil` when it has none."
   @spec filter([String.t()]) :: [String.t()] | nil
   def filter(path_info) do
-    path_info = Enum.map(path_info, &decode/1)
-    Enum.find_value(@at_root, &replace_after(path_info, &1)) || filter_below(path_info)
+    # Match as the router reads a segment; log the segments as received, so an
+    # encoded line feed stays encoded like on any other path.
+    case path_info |> Enum.map(&decode/1) |> token_index() do
+      nil -> nil
+      index -> List.replace_at(path_info, index, @filtered)
+    end
   end
 
   # As the router reads a segment before matching it: `%72eset-password`
@@ -60,24 +64,18 @@ defmodule Brando.Plug.RequestLog do
     ArgumentError -> segment
   end
 
-  defp filter_below([]), do: nil
-
-  defp filter_below([segment | rest] = path_info) do
-    case Enum.find_value(@anywhere, &replace_after(path_info, &1)) do
-      nil ->
-        case filter_below(rest) do
-          nil -> nil
-          filtered -> [segment | filtered]
-        end
-
-      filtered ->
-        filtered
-    end
+  defp token_index(decoded) do
+    Enum.find_value(@at_root, &token_index(decoded, &1, 0)) ||
+      Enum.find_value(0..(length(decoded) - 1)//1, fn offset ->
+        Enum.find_value(@anywhere, &token_index(Enum.drop(decoded, offset), &1, offset))
+      end)
   end
 
-  defp replace_after(path_info, marker) do
-    case Enum.split(path_info, length(marker)) do
-      {^marker, [_token | rest]} -> marker ++ [@filtered | rest]
+  defp token_index(decoded, marker, offset) do
+    size = length(marker)
+
+    case Enum.split(decoded, size) do
+      {^marker, [_token | _rest]} -> offset + size
       _ -> nil
     end
   end

@@ -8,7 +8,7 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
   Connections and allowed destinations are server-owned configuration.
   """
   import Plug.Conn
-  alias Brando.MarkdownSources.{Connection, Delivery, RateLimiter}
+  alias Brando.MarkdownSources.{Connection, Delivery, RateLimiter, SignatureCheck}
   alias Brando.Repo
   @max_body 1_048_576
 
@@ -24,10 +24,12 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
   end
 
   defp handle(conn, key, opts) do
+    connection = Connection.get(key)
+
     with true <- conn.scheme == :https or Keyword.get(opts, :allow_insecure, false),
          true <- conn.method == "POST",
-         {:client, true} <- {:client, RateLimiter.allow_client?(Brando.ClientIP.from_conn(conn))},
-         {:ok, connection} <- Connection.get(key),
+         {:client, true} <- {:client, allow_client?(conn, connection)},
+         {:ok, connection} <- connection,
          [content_type] <- get_req_header(conn, "content-type"),
          true <- String.downcase(hd(String.split(content_type, ";"))) == "application/json",
          {:ok, body, conn} <- body(conn, [], 0, System.monotonic_time(:millisecond) + 10_000) do
@@ -40,8 +42,13 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
     end
   end
 
+  defp allow_client?(conn, connection),
+    do: RateLimiter.allow_client?(Brando.ClientIP.from_conn(conn), match?({:ok, _}, connection))
+
   defp authenticate_and_accept(conn, connection, body) do
-    with :ok <- verify(get_req_header(conn, "x-hub-signature-256"), body, connection.secret),
+    header = get_req_header(conn, "x-hub-signature-256")
+
+    with :ok <- SignatureCheck.run(fn -> verify(header, body, connection.secret) end),
          {:delivery, true} <- {:delivery, RateLimiter.allow_delivery?()},
          {:ok, payload} when is_map(payload) <- Jason.decode(body),
          :ok <- repository(payload, connection),

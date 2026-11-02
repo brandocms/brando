@@ -88,7 +88,7 @@ defmodule BrandoWeb.Plugs.MuxWebhook do
     {:error, :invalid_signature}
   end
 
-  def verify_signature(_signature_header, _body, nil, _now) do
+  def verify_signature(_signature_header, _body, secret, _now) when secret in [nil, ""] do
     Logger.error("Mux webhook secret not configured - rejecting webhook for security")
     {:error, :invalid_signature}
   end

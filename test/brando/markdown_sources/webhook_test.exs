@@ -180,4 +180,84 @@ defmodule Brando.MarkdownSources.WebhookTest do
       assert proxied.("198.51.100.7").status == 401
     end
   end
+
+  # Audit F34: requests nobody signed filled the node-wide cap, and signed
+  # deliveries were refused with them until the next minute
+  describe "over the node's cap" do
+    alias Brando.MarkdownSources.RateLimiter
+
+    # A hundred IPv6 /64s at their limit, without the cost of 12,000 requests
+    setup do
+      for prefix <- 1..100, _ <- 1..120 do
+        assert RateLimiter.allow_client?({0x2001, 0xDB8, 0xF, prefix, 0, 0, 0, 1}, true)
+      end
+
+      :ok
+    end
+
+    defp unsigned_to(key, ip) do
+      %{Plug.Test.conn(:post, "https://cms.example.test/api/markdown-sources/webhooks/#{key}", "{}") | remote_ip: ip}
+      |> put_req_header("content-type", "application/json")
+    end
+
+    test "a signed delivery is accepted, and an unsigned one for a known key is rejected as unsigned" do
+      assert unsigned({192, 0, 2, 50}) |> Webhook.call([]) |> Map.get(:status) == 401
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert payload() |> signed() |> Webhook.call([]) |> Map.get(:status) == 202
+        assert [_job] = all_enqueued(worker: Brando.Worker.MarkdownSourceSync)
+      end)
+    end
+
+    test "a signed delivery is accepted while unsigned ones for its key are in flight" do
+      url = "https://cms.example.test/api/markdown-sources/webhooks/docs"
+
+      flood =
+        for i <- 1..200 do
+          Task.async(fn ->
+            %{Plug.Test.conn(:post, url, String.duplicate("x", 200_000)) | remote_ip: {198, 51, 100, i}}
+            |> put_req_header("content-type", "application/json")
+            |> Webhook.call([])
+            |> Map.get(:status)
+          end)
+        end
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert payload() |> signed() |> Webhook.call([]) |> Map.get(:status) == 202
+      end)
+
+      assert flood |> Task.await_many(30_000) |> Enum.uniq() == [401]
+    end
+
+    test "a client over its own budget is still refused" do
+      for _ <- 1..120, do: assert(unsigned({192, 0, 2, 51}) |> Webhook.call([]) |> Map.get(:status) == 401)
+      assert unsigned({192, 0, 2, 51}) |> Webhook.call([]) |> Map.get(:status) == 429
+    end
+
+    test "a request for an unknown key costs nothing to refuse and is not tracked" do
+      before = map_size(:sys.get_state(RateLimiter).clients)
+      assert unsigned_to("nope", {192, 0, 2, 52}) |> Webhook.call([]) |> Map.get(:status) == 429
+      assert map_size(:sys.get_state(RateLimiter).clients) == before
+    end
+  end
+
+  test "a request for an unknown key under the cap is rejected" do
+    conn =
+      %{
+        Plug.Test.conn(:post, "https://cms.example.test/api/markdown-sources/webhooks/nope", "{}")
+        | remote_ip: {192, 0, 2, 53}
+      }
+      |> put_req_header("content-type", "application/json")
+
+    assert conn |> Webhook.call([]) |> Map.get(:status) == 401
+  end
+
+  test "the limiter stops tracking new clients at its bound, and lets them through" do
+    :sys.replace_state(Brando.MarkdownSources.RateLimiter, fn state ->
+      %{state | requests: 12_000, clients: Map.new(1..200_000, &{{&1}, 1})}
+    end)
+
+    assert Brando.MarkdownSources.RateLimiter.allow_client?({192, 0, 2, 54}, true)
+    refute Map.has_key?(:sys.get_state(Brando.MarkdownSources.RateLimiter).clients, {192, 0, 2, 54})
+  end
 end

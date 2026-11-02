@@ -1,23 +1,29 @@
 defmodule Brando.MarkdownSources.RateLimiter do
   @moduledoc false
   # Per-minute budgets for the GitHub Markdown webhook, on this node. Every
-  # request counts against its client (120) and, while its client is within
-  # that, a loose cap for all requests (12,000), which bounds the work
-  # unsigned ones cause. Only a delivery whose signature verified counts
-  # against the deliveries' budget (1,200), so unsigned requests cannot use
-  # that up. Filling the loose cap takes about a hundred clients at their
-  # limit; past that, deliveries wait for the next minute too.
+  # request counts against its client (120). Only a delivery whose signature
+  # verified counts against the deliveries' budget (1,200), so unsigned requests
+  # cannot use that up. A loose cap for all requests (12,000) applies to those
+  # for a key no connection has: they cost no signature work, and past the cap
+  # they are refused. Requests for a known key go on past it, or anyone could
+  # refuse signed deliveries by filling it, since a key in a webhook URL is no
+  # secret; `Brando.MarkdownSources.SignatureCheck` bounds the work those cause.
   use GenServer
 
   @per_client 120
   @all_requests 12_000
   @verified 1200
+  @tracked_clients 200_000
 
   def start_link(_), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   def init(_), do: {:ok, fresh(nil)}
 
-  @doc "Counts a request from `address`; true while it is within its budget."
-  def allow_client?(address), do: GenServer.call(__MODULE__, {:client, client(address)})
+  @doc """
+  Counts a request from `address`; true while it is within its budget.
+  `known_key?` says the request names a connection, which the cap does not refuse.
+  """
+  def allow_client?(address, known_key?),
+    do: GenServer.call(__MODULE__, {:client, client(address), known_key?})
 
   @doc "Counts a verified delivery; true while the node's budget allows it."
   def allow_delivery?, do: GenServer.call(__MODULE__, :delivery)
@@ -36,19 +42,28 @@ defmodule Brando.MarkdownSources.RateLimiter do
   end
 
   # A client over its own budget is refused without touching the shared cap,
-  # so no one client can fill it. Once it is full, no new client is added.
-  defp count({:client, key}, _from, state) do
+  # so no one client can fill it. Past the cap a request for an unknown key adds
+  # nothing, and past the tracked clients a new one passes uncounted, so this map
+  # stays bounded when many addresses send for a known key.
+  defp count({:client, key, known_key?}, _from, state) do
     count = Map.get(state.clients, key, 0)
+    counted = %{state | clients: Map.put(state.clients, key, count + 1)}
 
     cond do
       count >= @per_client ->
-        {:reply, false, %{state | clients: Map.put(state.clients, key, count + 1)}}
+        {:reply, false, counted}
 
-      state.requests >= @all_requests ->
+      state.requests < @all_requests ->
+        {:reply, true, %{counted | requests: state.requests + 1}}
+
+      not known_key? ->
         {:reply, false, state}
 
+      count == 0 and map_size(state.clients) >= @tracked_clients ->
+        {:reply, true, state}
+
       true ->
-        {:reply, true, %{state | requests: state.requests + 1, clients: Map.put(state.clients, key, count + 1)}}
+        {:reply, true, counted}
     end
   end
 

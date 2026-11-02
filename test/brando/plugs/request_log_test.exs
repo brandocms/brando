@@ -33,6 +33,32 @@ defmodule Brando.Plug.RequestLogTest do
     end
   end
 
+  # Audit F38: the logged line came from the decoded segments, so an encoded line
+  # feed started a line of the sender's own
+  test "encoded control characters stay encoded in the logged line" do
+    for {path, logged} <- [
+          {"/__ssg_preview__/x/%0A10:00:00.000%20[info]%20POST%20/admin/login",
+           "GET /__ssg_preview__/[FILTERED]/%0A10:00:00.000%20[info]%20POST%20/admin/login"},
+          {"/a%0Ab/reset-password/s3cr3t", "GET /a%0Ab/reset-password/[FILTERED]"},
+          {"/admin/reset-password/s3cr3t/%0D%1B%FF", "GET /admin/reset-password/[FILTERED]/%0D%1B%FF"}
+        ] do
+      log = OwnLog.capture(fn -> assert RequestLog.level(conn(path), :error) == false end)
+      assert log =~ logged
+      refute log =~ "\n10:00"
+      refute log =~ "s3cr3t"
+    end
+  end
+
+  test "a marker sent encoded logs as sent, with the token at its index filtered" do
+    assert RequestLog.filter(["admin", "%72eset-password", "s3cr3t"]) == ["admin", "%72eset-password", "[FILTERED]"]
+
+    assert RequestLog.filter(["admin", "content-%74ransfer", "download", "s3cr3t", "x"]) ==
+             ["admin", "content-%74ransfer", "download", "[FILTERED]", "x"]
+
+    assert RequestLog.filter(["a", "__p__", "x"]) == nil
+    assert RequestLog.filter([]) == nil
+  end
+
   test "a malformed encoding is matched as it is" do
     assert OwnLog.capture(fn -> assert RequestLog.level(conn("/admin/%zz/x"), :error) == :error end) == ""
   end
