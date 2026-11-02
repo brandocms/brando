@@ -1,0 +1,1 @@
+- With named environments, deleting or purging a provider video (Mux, Bunny Stream, Cloudflare Stream, Vimeo) in one environment no longer deletes it at the provider while another current environment of the site still has a record of it; the last environment to delete it does.

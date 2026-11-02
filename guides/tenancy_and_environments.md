@@ -753,8 +753,7 @@ or another delete of the same video holds it up for more than 30 seconds.
 With `delete_remote_on: :on_purge`, the purge then keeps the record and
 tries again on its next run. With `delete_remote_on: :on_delete`, nothing
 tries again: the record is deleted in Brando, a warning in the log names it,
-and the video stays at the provider until someone removes it there. A site's
-own other environments do not stop the delete, as with one site.
+and the video stays at the provider until someone removes it there.
 
 From code, as the screen does:
 
@@ -767,6 +766,26 @@ site = Brando.Tenant.Registry.get_site_by_key("acme")
 `put_provider_library_group/3` refuses anyone but an installation superuser
 (or `:system`). With `:none` or `:single` tenancy there is one site, and the
 picker lists the whole account.
+
+### Videos in several environments of a site
+
+Copying an environment copies its video records, so production and the
+staging copied from it point at the same video at the provider. With
+`:single` or `:multi` tenancy, deleting a video at the provider is refused
+while another current environment of the same site has a record of it,
+deleted or not. The deleting environment's record is still deleted or
+purged, and the log names the environments that kept the video, at info
+level. When the last environment holding the video deletes or purges its
+record, the video is deleted at the provider. If production uploads a Mux
+video, staging is copied from production, and an editor deletes the video in
+staging, the purge 30 days later removes staging's record and leaves the Mux
+asset, and production's page keeps playing it. A delete refused because the
+video tables cannot be read or are locked behaves as described above.
+
+Rollback archives do not hold videos. A video whose last current record is
+deleted is deleted at the provider even when an archive still has a record
+of it, so a rolled-back archive may point at a video that is no longer
+there. Check an archive's provider videos before you roll back to it.
 
 ## Switch live, rollback, and delete
 

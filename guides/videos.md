@@ -526,7 +526,11 @@ config :brando, Brando.Videos.Uploaders.Vimeo,
 | `false` | Never delete from provider |
 
 Videos added from a provider's library are never deleted remotely, whatever
-this is set to.
+this is set to. With named environments, a video is not deleted remotely
+while another current environment of the site, such as the production that
+staging was copied from, still has a record of it; the deleting environment's
+record is deleted all the same. See
+[Videos in several environments of a site](tenancy_and_environments.md#videos-in-several-environments-of-a-site).
 
 #### Behavior
 

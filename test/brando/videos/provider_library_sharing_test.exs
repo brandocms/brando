@@ -192,12 +192,12 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       refute_received {:vimeo, "DELETE", _path}
     end
 
-    test "the site's own other environments do not hold it from another site", %{sites: sites, held: held} do
+    test "the site's own other environments hold it, as another site's", %{sites: sites, held: held} do
       staging = environment(sites.gamma, "staging")
       Tenant.with_prefix(Tenant.prefix(sites.gamma, staging), fn -> uploaded_here("2") end)
 
-      as_site(sites.gamma, fn -> assert :ok = Uploader.delete_remote(held.gamma) end)
-      assert_received {:vimeo, "DELETE", "/videos/2"}
+      as_site(sites.gamma, fn -> assert {:error, :held_by_another_environment} = Uploader.delete_remote(held.gamma) end)
+      refute_received {:vimeo, "DELETE", _path}
     end
 
     test "is refused when it cannot be told who holds it", %{sites: sites, held: held} do
@@ -539,6 +539,170 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
     end
   end
 
+  # #3420: an environment copied from another has the same remote videos, so
+  # one environment's delete must not take the video from the others.
+  describe "a site's named environments" do
+    setup %{sites: sites} do
+      put_test_env(Mux, access_token_id: "id", access_token_secret: "secret", req_options: [plug: {Req.Test, Mux}])
+      # With `:single` tenancy, alpha is the installation's site.
+      put_test_env(:site_key, sites.alpha.key)
+      Logger.put_module_level(Uploader, :info)
+      on_exit(fn -> Logger.delete_module_level(Uploader) end)
+      me = self()
+
+      Req.Test.stub(Mux, fn conn ->
+        send(me, {:mux, conn.method, conn.request_path, Tenant.current_prefix()})
+        send_resp(conn, 204, "")
+      end)
+
+      # Production uploaded the asset, and staging was copied from it.
+      staging = environment(sites.alpha, "staging")
+      production_prefix = site_prefix(sites.alpha)
+      staging_prefix = Tenant.prefix(sites.alpha, staging)
+
+      {:ok,
+       production: Tenant.with_prefix(production_prefix, fn -> mux_uploaded_here("asset-1") end),
+       staging: Tenant.with_prefix(staging_prefix, fn -> mux_uploaded_here("asset-1") end),
+       production_prefix: production_prefix,
+       staging_prefix: staging_prefix}
+    end
+
+    for tenancy_mode <- [:single, :multi] do
+      @tenancy_mode tenancy_mode
+
+      test "a purge in staging leaves production's video at the provider, #{tenancy_mode} tenancy", context do
+        put_test_env(:tenancy_mode, @tenancy_mode)
+        Tenant.with_prefix(context.staging_prefix, fn -> expire(context.staging) end)
+
+        log =
+          capture_log([level: :info], fn ->
+            Tenant.with_prefix(context.staging_prefix, fn ->
+              Brando.SoftDelete.Query.clean_up_soft_deletions()
+              assert Repo.aggregate(Video, :count) == 0
+            end)
+          end)
+
+        refute_received {:mux, "DELETE", _path, _prefix}
+        assert log =~ "Video #{context.staging.id} left at its provider: held_by_another_environment"
+        assert log =~ context.production_prefix
+
+        # Production still plays it, and once it is the last holder its own
+        # purge deletes the asset at Mux.
+        Tenant.with_prefix(context.production_prefix, fn ->
+          assert Repo.get!(Video, context.production.id).deleted_at == nil
+          expire(context.production)
+          Brando.SoftDelete.Query.clean_up_soft_deletions()
+          refute Repo.get(Video, context.production.id)
+        end)
+
+        production_prefix = context.production_prefix
+        assert_received {:mux, "DELETE", "/video/v1/assets/asset-1", ^production_prefix}
+      end
+    end
+
+    for authorization_mode <- [:legacy, :groups] do
+      @authorization_mode authorization_mode
+
+      test "with delete_remote_on: :on_delete, only the last holder's delete reaches the provider, " <>
+             "#{authorization_mode} authorization",
+           context do
+        put_test_env(:tenancy_mode, :single)
+
+        put_test_env(Mux,
+          access_token_id: "id",
+          access_token_secret: "secret",
+          delete_remote_on: :on_delete,
+          req_options: [plug: {Req.Test, Mux}]
+        )
+
+        superuser = superuser(@authorization_mode)
+
+        Tenant.with_prefix(context.staging_prefix, fn ->
+          assert {:ok, _video} = Brando.Videos.delete_video(context.staging.id, superuser)
+        end)
+
+        refute_received {:mux, "DELETE", _path, _prefix}
+
+        # Staging's soft-deleted record still holds it from production.
+        Tenant.with_prefix(context.production_prefix, fn ->
+          assert {:error, :held_by_another_environment} = Uploader.delete_remote(context.production)
+        end)
+
+        refute_received {:mux, "DELETE", _path, _prefix}
+
+        Tenant.with_prefix(context.staging_prefix, fn -> Repo.delete_all(Video) end)
+
+        Tenant.with_prefix(context.production_prefix, fn ->
+          assert {:ok, _video} = Brando.Videos.delete_video(context.production.id, superuser)
+        end)
+
+        production_prefix = context.production_prefix
+        assert_received {:mux, "DELETE", "/video/v1/assets/asset-1", ^production_prefix}
+      end
+    end
+
+    test "another site's environments do not count as the site's own", context do
+      gamma_prefix = site_prefix(context.sites.gamma)
+      gamma = Tenant.with_prefix(gamma_prefix, fn -> mux_uploaded_here("asset-2") end)
+
+      for mode <- [:single, :multi] do
+        put_test_env(:tenancy_mode, mode)
+
+        # Alpha's two environments hold asset-1, not gamma's asset-2.
+        Tenant.with_prefix(gamma_prefix, fn -> assert :ok = Uploader.delete_remote(gamma) end)
+        assert_received {:mux, "DELETE", "/video/v1/assets/asset-2", ^gamma_prefix}
+      end
+
+      # With one site, alpha's staging does not hold gamma's video, nor gamma
+      # alpha's: only the deleting site's environments are read.
+      put_test_env(:tenancy_mode, :single)
+      Tenant.with_prefix(gamma_prefix, fn -> mux_uploaded_here("asset-3") end)
+      alpha = Tenant.with_prefix(context.production_prefix, fn -> mux_uploaded_here("asset-3") end)
+
+      Tenant.with_prefix(context.production_prefix, fn -> assert :ok = Uploader.delete_remote(alpha) end)
+      assert_received {:mux, "DELETE", "/video/v1/assets/asset-3", _prefix}
+    end
+
+    test "an archive does not hold it", context do
+      archive = context.production_prefix <> "_archive_20260101000000"
+      SQL.query!(Repo.repo(), ~s(CREATE SCHEMA "#{archive}"))
+      Enum.each(content_tables(), &clone_table(archive, &1))
+      video = Tenant.with_prefix(context.production_prefix, fn -> mux_uploaded_here("asset-2") end)
+
+      SQL.query!(
+        Repo.repo(),
+        ~s(INSERT INTO "#{archive}"."videos" SELECT * FROM "#{context.production_prefix}"."videos" WHERE id = $1),
+        [video.id]
+      )
+
+      put_test_env(:tenancy_mode, :single)
+      Tenant.with_prefix(context.production_prefix, fn -> assert :ok = Uploader.delete_remote(video) end)
+      assert_received {:mux, "DELETE", "/video/v1/assets/asset-2", _prefix}
+    end
+
+    test "is refused when one of the site's environments cannot be read", context do
+      put_test_env(:tenancy_mode, :single)
+      environment(context.sites.alpha, "broken", tables: :unreadable)
+      Tenant.with_prefix(context.staging_prefix, fn -> expire(context.staging) end)
+
+      Tenant.with_prefix(context.staging_prefix, fn ->
+        assert {:error, :holdings_unavailable} = Uploader.delete_remote(context.staging)
+        Brando.SoftDelete.Query.clean_up_soft_deletions()
+        assert Repo.aggregate(Video, :count) == 1
+      end)
+
+      refute_received {:mux, "DELETE", _path, _prefix}
+    end
+
+    test "without named environments, deletes as before" do
+      put_test_env(:tenancy_mode, :none)
+      video = mux_uploaded_here("asset-1")
+
+      assert :ok = Uploader.delete_remote(video)
+      assert_received {:mux, "DELETE", "/video/v1/assets/asset-1", nil}
+    end
+  end
+
   describe "single-site installations" do
     test "list and add the whole account, and delete as before", %{sites: sites, held: held, user: user} do
       for mode <- [:single, :none] do
@@ -696,6 +860,15 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       remote_id: remote_id,
       status: :ready,
       meta: %{"provider" => "vimeo", "vimeo" => %{"video_id" => remote_id}}
+    })
+  end
+
+  defp mux_uploaded_here(asset_id) do
+    Repo.insert!(%Video{
+      type: :mux,
+      title: "Asset #{asset_id}",
+      status: :ready,
+      meta: %{"provider" => "mux", "mux" => %{"asset_id" => asset_id, "playback_id" => "pb-#{asset_id}"}}
     })
   end
 
