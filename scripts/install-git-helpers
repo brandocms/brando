@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Installs this tree's pre-push hook and Gettext merge driver for the whole
+# clone: copies them into brando-hooks/ in the Git common directory and points
+# core.hooksPath and merge.gettext.driver at the copies. scripts/worktree-setup
+# runs this. Safe to rerun.
+#
+#   scripts/install-git-helpers
+#
+# Git runs what its config points at during checkout, merge and rebase, so the
+# config never points into a working tree: a branch that adds
+# .githooks/post-checkout or replaces the merge script would run it on this
+# machine. No commit can write inside the Git directory, and the copies change
+# only when this script runs. So run it from a checkout you trust, after a
+# change to the hook or the driver reaches main; `mix check` says when the
+# copies differ from the tree.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+# From a Git hook these would point at another repository's state.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_IMPLICIT_WORK_TREE
+
+dir="$(cd "$(git rev-parse --git-common-dir)" && pwd -P)/brando-hooks"
+mkdir -p "$dir"
+
+# Replaced with a rename: another worktree may be pushing through the hook.
+tmp="$(mktemp "$dir/.pre-push.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+cp .githooks/pre-push "$tmp"
+chmod 755 "$tmp"
+mv -f "$tmp" "$dir/pre-push"
+
+# Writes only a change, so setups running in parallel don't race for the lock
+# on the shared config file.
+[ "$(git config --get core.hooksPath || true)" = "$dir" ] || git config core.hooksPath "$dir"
+
+python3 scripts/gettext-merge-driver --install

@@ -3,9 +3,12 @@
 #
 #   SKIP_CHECK=1 git push ...    push without running it
 #
-# Enabled per clone by `git config core.hooksPath .githooks`, which
-# scripts/worktree-setup does. It checks the working tree, not the pushed
-# commits, so commit or set aside unrelated changes first.
+# scripts/install-git-helpers (run by scripts/worktree-setup) copies this file
+# out of the tree and points core.hooksPath at the copy, which also serves
+# trees on older branches, so what it passes to scripts/check has to work
+# there. It checks the working tree, not the pushed commits, so commit or set
+# aside unrelated changes first. That check is the tree's own scripts/check, so
+# pushing runs the checked-out branch's code, as `mix check` does.
 #
 # When the check passes on a clean working tree, the hook records HEAD's tree
 # in .git (brando-check-passed, per worktree). A later push from a clean tree

@@ -47,15 +47,18 @@ see [Languages and translations](guides/i18n.md).
 `scripts/gettext-merge-driver` merges `.po` and `.pot` files message by message,
 so two branches that add different strings merge cleanly and every message
 keeps its msgstr. It conflicts only when both sides change the same translation
-differently. Register it once per clone, from the repository root (worktrees
-share it):
+differently. `scripts/worktree-setup` registers it once per clone (worktrees
+share it); to register or update it alone, run this from a checkout you trust:
 
 ```sh
-python3 scripts/gettext-merge-driver --install
+scripts/install-git-helpers
 ```
 
-This sets `merge.gettext.driver` in the repository's git config. Without it,
-git merges the catalogues line by line as before.
+This copies the script and the pre-push hook into `brando-hooks/` in the Git
+common directory and points the repository's git config at the copies, so a
+branch you check out, merge or rebase cannot run its own version. `mix check`
+says when a copy differs from the tree. Without the driver, git merges the
+catalogues line by line.
 
 After a merge or rebase, run `mix gettext.extract --merge` once more if code
 changed on both sides; it should change nothing else. The script's header

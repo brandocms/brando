@@ -2,6 +2,7 @@
 
 ## Build & Test Commands
 - Fresh worktree: `scripts/worktree-setup` (deps, private test DB, pnpm 12 installs, Git hooks; prints the env to use)
+- Git hooks and the Gettext merge driver: Git runs copies under the clone's Git directory, so a checked-out branch cannot run its own. When `mix check` says a copy is stale or a clone still runs them from the tree, run `scripts/install-git-helpers` from a trusted checkout.
 - Whole unit suite as CI runs it, in partitions: `scripts/test-partitions`
 - Before pushing: `mix check` (CI's fast gates; the pre-push hook runs `--fast`, `SKIP_CHECK=1` bypasses)
 - Wait for CI: `scripts/ci-wait <PR>` (background; silent until a summary line, then one line per failed job: known flake from `.github/known-flakes.txt`, CI infrastructure (failed setting up) or real failure; `--rerun-flakes` reruns flakes and infrastructure failures once)

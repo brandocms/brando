@@ -22,23 +22,22 @@ Every message written has its msgstr (msgstr[N] for a plural). Input that does
 not parse as a catalogue, such as a file that already holds conflict markers,
 falls back to a plain `git merge-file`.
 
-Register it once per clone, from the repository root (worktrees share the
-setting):
-
-    python3 scripts/gettext-merge-driver --install
-
-That sets `merge.gettext.name` and `merge.gettext.driver` (DRIVER_COMMAND
-below) in the repository's git config. The command runs the script from the
-checked-out tree, and falls back to a line merge when that tree does not have
-it yet (merging main into an older branch). .gitattributes sends
-priv/gettext/**/*.po and *.pot here.
+scripts/worktree-setup and scripts/install-git-helpers register it once per
+clone (worktrees share the setting), through `--install`. That copies this
+script into brando-hooks/ in the Git common directory and sets
+`merge.gettext.name` and `merge.gettext.driver` (driver_command below) in the
+repository's git config. The command runs the copy, never a script in the
+checked-out tree, which a branch being rebased could have replaced, and falls
+back to a line merge when the copy is gone (a clone moved since it was
+installed). .gitattributes sends priv/gettext/**/*.po and *.pot here.
 
 Usage:
     gettext-merge-driver BASE OURS THEIRS [MARKER_SIZE [PATH [BASE_LABEL OURS_LABEL THEIRS_LABEL]]]
         Merge into OURS, as git calls it (%O %A %B %L %P %S %X %Y). Exit 0
         when clean, 1 on conflicts.
     gettext-merge-driver --install
-        Register the driver in this repository's git config.
+        Copy this script out of the tree and register the copy in this
+        repository's git config.
     gettext-merge-driver --self-test
         Run the built-in tests, including real merges and a rebase in a
         scratch repository.
@@ -46,6 +45,7 @@ Usage:
 
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -54,12 +54,6 @@ import tempfile
 FIELD_RE = re.compile(r'^(msgctxt|msgid_plural|msgid|msgstr(?:\[\d+\])?)\s+(".*")\s*$')
 STRING_RE = re.compile(r'^".*"\s*$')
 ESCAPES = {"n": "\n", "t": "\t", "r": "\r", '"': '"', "\\": "\\", "a": "\a", "b": "\b", "f": "\f", "v": "\v"}
-DRIVER_COMMAND = (
-    "sh -c 'test -f scripts/gettext-merge-driver"
-    ' || exec git merge-file --marker-size="$3" -L "$6" -L "$5" -L "$7" "$1" "$0" "$2";'
-    ' exec python3 scripts/gettext-merge-driver "$0" "$@"\''
-    " %O %A %B %L %P %S %X %Y"
-)
 COMMENT_KINDS = ("translator", "extracted", "reference", "flag", "previous")
 FIELD_ORDER = ("msgctxt", "msgid", "msgid_plural")
 
@@ -387,9 +381,34 @@ def fallback(base_path, ours_path, theirs_path, marker_size, labels):
     )
 
 
+def driver_command(script):
+    # Git expands % in the whole command; the path may hold one.
+    quoted = shlex.quote(script).replace("%", "%%")
+    body = (
+        "test -f %s" % quoted
+        + ' || exec git merge-file --marker-size="$3" -L "$6" -L "$5" -L "$7" "$1" "$0" "$2";'
+        + ' exec python3 -I %s "$0" "$@"' % quoted
+    )
+    return "sh -c %s %%O %%A %%B %%L %%P %%S %%X %%Y" % shlex.quote(body)
+
+
 def install(cwd=None):
-    for key, value in (("merge.gettext.name", "Gettext catalogue merge"), ("merge.gettext.driver", DRIVER_COMMAND)):
-        subprocess.run(["git", "config", key, value], cwd=cwd, check=True)
+    common = subprocess.run(["git", "rev-parse", "--git-common-dir"], cwd=cwd, check=True, capture_output=True, text=True).stdout.rstrip("\n")
+    directory = os.path.join(os.path.realpath(os.path.join(cwd or os.getcwd(), common)), "brando-hooks")
+    os.makedirs(directory, exist_ok=True)
+    script = os.path.join(directory, "gettext-merge-driver")
+    # Replaced with a rename: another worktree may be merging through the copy.
+    handle, temporary = tempfile.mkstemp(prefix=".gettext-merge-driver.", dir=directory)
+    os.close(handle)
+    shutil.copyfile(os.path.abspath(__file__), temporary)
+    os.chmod(temporary, 0o755)
+    os.replace(temporary, script)
+    # Writes only a change, so setups running in parallel don't race for the
+    # lock on the shared config file.
+    for key, value in (("merge.gettext.name", "Gettext catalogue merge"), ("merge.gettext.driver", driver_command(script))):
+        current = subprocess.run(["git", "config", "--get", key], cwd=cwd, capture_output=True, text=True).stdout.rstrip("\n")
+        if current != value:
+            subprocess.run(["git", "config", key, value], cwd=cwd, check=True)
 
 
 def read(path):
@@ -625,10 +644,8 @@ class SelfTest:
             self.git(root, "init", "-q", "-b", "main")
             for key, value in (("user.name", "Test"), ("user.email", "test@example.com"), ("commit.gpgsign", "false")):
                 self.git(root, "config", key, value)
-            # The registered command runs the copy in the checked-out tree.
+            # The registered command runs the copy --install made.
             install(cwd=root)
-            os.mkdir(os.path.join(root, "scripts"))
-            shutil.copy(os.path.abspath(__file__), os.path.join(root, "scripts", "gettext-merge-driver"))
             with open(os.path.join(root, ".gitattributes"), "w") as handle:
                 handle.write("*.po merge=gettext\n*.pot merge=gettext\n")
             path = os.path.join(root, "default.po")
@@ -676,13 +693,13 @@ class SelfTest:
             self.check("git rebase", result.returncode == 0 and msgids(text) == ["Alpha", "Zulu", "%{n} line", "Mike"], result.stderr + text)
             self.msgfmt_ok(text, "git rebase")
 
-            # A tree without the script (an older branch) gets a line merge.
+            # Without the installed copy (a clone moved since) git gets a line merge.
+            os.remove(os.path.join(root, ".git", "brando-hooks", "gettext-merge-driver"))
             self.git(root, "checkout", "-q", "-b", "old", "main")
-            self.git(root, "rm", "-q", "-r", "scripts")
             commit(catalogue(PO_HEAD, entry("Alpha", "Alfa"), entry("Zulu", "Zulu"), entry("Kilo", "Kilo")), "old")
             result = self.git(root, "merge", "--no-edit", "two", check=False)
             text = contents()
-            self.check("line merge without the script", result.returncode != 0 and "<<<<<<< HEAD\n" in text and ">>>>>>> two\n" in text, result.stdout + result.stderr + text)
+            self.check("line merge without the installed copy", result.returncode != 0 and "<<<<<<< HEAD\n" in text and ">>>>>>> two\n" in text, result.stdout + result.stderr + text)
             self.git(root, "merge", "--abort")
         finally:
             shutil.rmtree(root, ignore_errors=True)

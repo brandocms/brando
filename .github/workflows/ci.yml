@@ -350,6 +350,10 @@ jobs:
         if: needs.reuse.outputs.reused != 'true'
         run: bash test/scripts/hook_env_test.sh
 
+      - name: Check that a branch cannot run its own Git hooks or merge driver
+        if: needs.reuse.outputs.reused != 'true'
+        run: bash test/scripts/git_helpers_test.sh
+
   docs:
     name: Published documentation
     needs: reuse
