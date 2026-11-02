@@ -772,20 +772,42 @@ picker lists the whole account.
 Copying an environment copies its video records, so production and the
 staging copied from it point at the same video at the provider. With
 `:single` or `:multi` tenancy, deleting a video at the provider is refused
-while another current environment of the same site has a record of it,
-deleted or not. The deleting environment's record is still deleted or
-purged, and the log names the environments that kept the video, at info
-level. When the last environment holding the video deletes or purges its
-record, the video is deleted at the provider. If production uploads a Mux
-video, staging is copied from production, and an editor deletes the video in
-staging, the purge 30 days later removes staging's record and leaves the Mux
-asset, and production's page keeps playing it. A delete refused because the
-video tables cannot be read or are locked behaves as described above.
+while another current environment of the same site has a record of it. The
+deleting environment's record is still deleted or purged, and the log names
+the environments that kept the video, at info level. When the last
+environment holding the video deletes or purges its record, the video is
+deleted at the provider. A delete refused because the video tables cannot be
+read or are locked behaves as described above.
+
+Whether another environment's deleted record holds the video depends on
+`delete_remote_on` ([Videos](videos.md)):
+
+- With `:on_purge` (the default), a deleted record holds the video until it
+  is purged, because its purge may still delete the video at the provider. If
+  production uploads a Mux video, staging is copied from production, and an
+  editor deletes the video in staging, the purge 30 days later removes
+  staging's record and leaves the Mux asset, and production's page keeps
+  playing it. When both environments' records are purged, the second purge
+  deletes the asset, even when the two purges run at the same time.
+- With `:on_delete`, a deleted record does not hold the video, because its
+  purge does not ask the provider. If staging deletes the video and later
+  production does, production's delete deletes it at the provider. Staging's
+  deleted record, if it is restored, then points at a video that is no
+  longer there.
+
+Another site's record holds the video whether it is deleted or not, as
+described under the provider library above.
 
 Rollback archives do not hold videos. A video whose last current record is
 deleted is deleted at the provider even when an archive still has a record
 of it, so a rolled-back archive may point at a video that is no longer
 there. Check an archive's provider videos before you roll back to it.
+
+Copying over an environment or deleting an environment removes its video
+records without asking the provider. If those were the last current records
+of a video, Brando never deletes that video at the provider: remove it there
+yourself, in the provider's dashboard, once no archive you may roll back to
+needs it.
 
 ## Switch live, rollback, and delete
 

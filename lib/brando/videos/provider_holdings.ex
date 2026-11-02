@@ -59,12 +59,14 @@ defmodule Brando.Videos.ProviderHoldings do
   end
 
   @doc """
-  The environments holding each of `remote_ids`, as `{site_id, prefix}` with
-  the environment's schema prefix, read as `sites_holding/3` reads the sites.
-  A remote id no environment holds is left out of the map.
+  The environments holding each of `remote_ids`, as `{site_id, prefix,
+  deleted?}` with the environment's schema prefix, read as `sites_holding/3`
+  reads the sites. `deleted?` is true when every row the environment has for
+  the video is soft-deleted. A remote id no environment holds is left out of
+  the map.
   """
   @spec environments_holding(String.t(), [String.t() | {String.t(), [holding_key()]}], [Site.t()]) ::
-          {:ok, %{String.t() => MapSet.t({pos_integer(), String.t()})}} | {:error, term()}
+          {:ok, %{String.t() => MapSet.t({pos_integer(), String.t(), boolean()})}} | {:error, term()}
   def environments_holding(path, remote_ids, sites \\ Registry.list_sites())
 
   def environments_holding(_path, [], _sites), do: {:ok, %{}}
@@ -211,7 +213,8 @@ defmodule Brando.Videos.ProviderHoldings do
 
         path_selects =
           Enum.map(prefixes, fn {site_id, prefix} ->
-            ~s|SELECT #{site_id}::bigint, '#{prefix}'::text, k.remote_id FROM "#{prefix}"."#{table}" v | <>
+            ~s|SELECT #{site_id}::bigint, '#{prefix}'::text, k.remote_id, v.deleted_at IS NOT NULL | <>
+              ~s|FROM "#{prefix}"."#{table}" v | <>
               ~s|JOIN unnest(#{values}::text[], #{remote_ids}::text[]) AS k(value, remote_id) | <>
               ~s|ON v.meta #>> #{keys}::text[] = k.value|
           end)
@@ -223,8 +226,12 @@ defmodule Brando.Videos.ProviderHoldings do
     case query(Enum.join(selects, " UNION ALL "), params) do
       {:ok, %{rows: rows}} ->
         {:ok,
-         Enum.reduce(rows, %{}, fn [site_id, prefix, remote_id], holders ->
-           holder = {site_id, prefix}
+         rows
+         |> Enum.reduce(%{}, fn [site_id, prefix, remote_id, deleted?], holders ->
+           Map.update(holders, {remote_id, site_id, prefix}, deleted?, &(&1 and deleted?))
+         end)
+         |> Enum.reduce(%{}, fn {{remote_id, site_id, prefix}, deleted?}, holders ->
+           holder = {site_id, prefix, deleted?}
            Map.update(holders, remote_id, MapSet.new([holder]), &MapSet.put(&1, holder))
          end)}
 
