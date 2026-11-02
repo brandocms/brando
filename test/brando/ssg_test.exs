@@ -209,7 +209,9 @@ defmodule Brando.SSGTest do
       for location <- [
             "http://site.test:4000@127.0.0.1:#{elsewhere_port}/internal",
             "http://user:secret@site.test:4000/about",
-            "https://site.test:4000/about"
+            "https://site.test:4000/about",
+            "//site.test/about",
+            "http://SITE.TEST:4001/about"
           ] do
         fetcher = fn url, _opts ->
           send(test, {:fetched, url})
