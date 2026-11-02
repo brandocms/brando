@@ -513,6 +513,20 @@ defmodule Brando.MarkdownSources.WebhookTest do
       end
     end
 
+    defp wait_until(check, tries \\ 400) do
+      cond do
+        check.() ->
+          :ok
+
+        tries == 0 ->
+          flunk("condition not met in time")
+
+        true ->
+          Process.sleep(5)
+          wait_until(check, tries - 1)
+      end
+    end
+
     defp deliver(conn, opts) do
       Task.async(fn ->
         Oban.Testing.with_testing_mode(:manual, fn -> conn |> Webhook.call(opts) |> Map.get(:status) end)
@@ -542,7 +556,8 @@ defmodule Brando.MarkdownSources.WebhookTest do
 
       task = deliver(%{signed(payload()) | remote_ip: @github}, body_timeout: 300)
       assert Task.yield(task, 2_000) == {:ok, 429}
-      assert :sys.get_state(ReadSlots).free == 16
+      # The read slot comes back by a cast from the request's process
+      wait_until(fn -> :sys.get_state(ReadSlots).free == 16 end)
 
       send(checking, :release)
       assert %{waiting: waiting} = :sys.get_state(SignatureCheck)

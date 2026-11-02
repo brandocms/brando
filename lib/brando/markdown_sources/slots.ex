@@ -32,8 +32,16 @@ defmodule Brando.MarkdownSources.Slots do
       GenServer.call(name, {:checkout, tag, line}, timeout(deadline))
     catch
       :exit, {:timeout, _} ->
-        # A slot given after the timeout goes back; a late reply is dropped
-        GenServer.call(name, {:cancel, tag})
+        # A slot given after the timeout goes back; a late reply is dropped.
+        # A cancel the server is too busy to answer in time is still queued,
+        # and this process's DOWN follows it, so the request is refused as
+        # busy rather than exiting.
+        try do
+          GenServer.call(name, {:cancel, tag})
+        catch
+          :exit, _ -> :ok
+        end
+
         {:error, :busy}
     else
       :ok ->
@@ -107,11 +115,19 @@ defmodule Brando.MarkdownSources.Slots do
     end
   end
 
+  # `others` is dequeued only when `first` is empty: a dequeue may reverse a
+  # queue's rear list, work a hand-over to `first` must not repeat over the
+  # backlog from other addresses.
   defp next(%{first: first, others: others} = queues) do
-    case {:queue.out(first), :queue.out(others)} do
-      {{{:value, tag}, first}, _} -> {tag, %{queues | first: first}}
-      {_, {{:value, tag}, others}} -> {tag, %{queues | others: others}}
-      _ -> :empty
+    case :queue.out(first) do
+      {{:value, tag}, first} ->
+        {tag, %{queues | first: first}}
+
+      {:empty, _} ->
+        case :queue.out(others) do
+          {{:value, tag}, others} -> {tag, %{queues | others: others}}
+          {:empty, _} -> :empty
+        end
     end
   end
 end
