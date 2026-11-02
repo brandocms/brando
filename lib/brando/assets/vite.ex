@@ -224,8 +224,12 @@ defmodule Brando.Assets.Vite do
 
         case :persistent_term.get(cache_key, nil) do
           nil ->
+            # Read from the active set: an activation meanwhile, here or on
+            # another node, may have dropped the key before this stores it
+            fence = Brando.Assets.SiteAssets.fence()
             res = build_critical_css(scope)
             :persistent_term.put(cache_key, res)
+            if Brando.Assets.SiteAssets.fence() != fence, do: :persistent_term.erase(cache_key)
             res
 
           res ->

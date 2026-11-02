@@ -102,6 +102,24 @@ position. It resolves domains from `Brando.Tenant.Cache`, assigns
 `current_site`, `current_environment`, and `tenant_prefix`, and stores the
 prefix in process context without a database query.
 
+### Several nodes
+
+`Brando.Tenant.Cache` keeps the site and environment registry in memory on
+each node. A registry write (a site created, changed, suspended or deleted, a
+domain moved, an environment created, copied, restored or set live), once its
+transaction has committed, refreshes the node that made it at once and the
+other nodes through `Brando.CacheSync`, over the application's
+`Phoenix.PubSub`. They follow within a fraction of a second, whichever node
+ran the write or the scheduled job. The active and pinned asset sets and each site's shared-library
+allowlist are refreshed the same way.
+
+This needs the nodes to share the application's `Phoenix.PubSub`: connected
+as one Erlang cluster (with `libcluster` or `dns_cluster`, for example) for
+the default adapter, or through an adapter such as `phoenix_pubsub_redis`.
+Nodes that do not share it keep what they read at boot until they restart. A
+node cut off when a write happens keeps its copy until the next write or a
+restart.
+
 A LiveView on the site's pages runs in its own process, which the plug never
 reaches. Mount it with `Brando.Tenant.FrontendLiveView`, which does the same
 from the page's host, or its queries read the `public` schema:

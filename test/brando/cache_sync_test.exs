@@ -241,6 +241,29 @@ defmodule Brando.CacheSyncTest do
       assert %{set: %{id: ^second_id}} = SiteAssets.cached()
     end
 
+    test "critical CSS read from the active set before another node changed it is not kept" do
+      {:ok, first} = register_set("20260816_one")
+      add_critical_css(first.path, "body{color:red}")
+      {:ok, second} = register_set("20260816_two")
+      {:ok, _active} = SiteAssets.activate_set(first.id)
+      SiteAssets.invalidate_cache()
+      on_exit(fn -> :persistent_term.erase({:vite, "critical_css"}) end)
+
+      # A render here has begun reading the active set's critical CSS...
+      fill = start_held("site_asset_sets", fn -> Brando.Assets.Vite.Manifest.critical_css() end)
+
+      # ...when another node switches the set, and this node hears of it
+      Brando.Repo.update_all(Brando.Assets.SiteAssetSet, [set: [active: false]], prefix: "public")
+      second |> Brando.Assets.SiteAssetSet.changeset(%{active: true}) |> Repo.update!()
+      remote_refresh({SiteAssets, {:active, :standalone}})
+
+      # What it read mixes the two sets: the old manifest, the new files
+      resume(fill)
+      Task.await(fill)
+
+      assert :persistent_term.get({:vite, "critical_css"}, :gone) == :gone
+    end
+
     test "a preview another node pins drops this node's pinned listing" do
       assert SiteAssets.pinned_sets() == []
       assert :persistent_term.get({:brando, :site_assets, :pinned, :standalone}, :gone) == []
@@ -360,6 +383,22 @@ defmodule Brando.CacheSyncTest do
       result ->
         result
     end
+  end
+
+  # A `critical` entry, whose CSS the layout inlines
+  defp add_critical_css(path, css) do
+    File.write!(Path.join([path, "assets", "critical.css"]), css)
+    manifest = path |> Path.join("manifest.json") |> File.read!() |> Jason.decode!()
+
+    critical = %{
+      "isEntry" => true,
+      "name" => "critical",
+      "file" => "assets/critical.js",
+      "css" => ["assets/critical.css"]
+    }
+
+    File.write!(Path.join([path, "assets", "critical.js"]), "")
+    File.write!(Path.join(path, "manifest.json"), Jason.encode!(Map.put(manifest, "src/critical.js", critical)))
   end
 
   defp register_set(name) do

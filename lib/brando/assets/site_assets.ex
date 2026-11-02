@@ -586,10 +586,10 @@ defmodule Brando.Assets.SiteAssets do
   # moved since it began drops what it stored: it may have read before the
   # change. Cached reads never look at the fence.
   defp fill(key, load) do
-    fence = :persistent_term.get(@fence_key, nil)
+    fence = fence()
     value = load.()
     store(key, value)
-    if :persistent_term.get(@fence_key, nil) != fence, do: :persistent_term.erase(key)
+    if fence() != fence, do: :persistent_term.erase(key)
     value
   end
 
@@ -598,6 +598,11 @@ defmodule Brando.Assets.SiteAssets do
     :persistent_term.erase(key)
     :ok
   end
+
+  @doc false
+  # For a cache filled from these, such as the critical CSS in
+  # `Brando.Assets.Vite.Manifest`: one that finds it moved drops what it stored.
+  def fence, do: :persistent_term.get(@fence_key, nil)
 
   # Unique on this node, so a fence never comes back to a value a fill holds
   defp move_fence, do: :persistent_term.put(@fence_key, System.unique_integer([:positive]))
