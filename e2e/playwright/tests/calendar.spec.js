@@ -170,7 +170,7 @@ test('the type filter, and a list of days on a phone', async ({ page }, testInfo
   // Days with nothing planned are left out, today excepted
   const empty = addDays(day, 1)
   await expect(dayCell(page, empty)).toBeHidden()
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
-  expect(overflow).toBeLessThanOrEqual(0)
+  // Measured once the layout has settled after the resize
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0)
   await page.screenshot({ path: testInfo.outputPath('calendar-phone.png'), fullPage: true })
 })
