@@ -145,7 +145,7 @@ defmodule Brando.Notifications.Routing do
   def can_manage?(user) do
     if Brando.Authorization.enabled?(),
       do: Boundary.authorize(user, :manage, :notifications) == :ok,
-      else: match?(%{role: role} when role in [:admin, :superuser], user)
+      else: match?(%{role: role} when role in [:admin, :superuser], Boundary.fresh_role(user))
   end
 
   defp authorize(user), do: if(can_manage?(user), do: :ok, else: {:error, :forbidden})

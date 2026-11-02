@@ -1247,6 +1247,14 @@ defmodule E2EFixtureController do
     end
   end
 
+  # Changes an account's role, as a superuser saving the user form does.
+  def two_factor(conn, %{"action" => "set-role", "id" => id, "role" => role}) when role in ~w(user editor admin superuser) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    {:ok, user} = Brando.Users.update_user(id, %{role: role}, :system)
+    json(conn, %{id: user.id, role: user.role})
+  end
+
   # Makes every session of `email` last confirm an hour ago, so the next
   # sensitive action asks for the password again (BrandoAdmin.Reauth).
   def two_factor(conn, %{"action" => "stale-sessions", "email" => email}) do

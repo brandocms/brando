@@ -109,7 +109,7 @@ defmodule Brando.AI.Agent.Guidance do
   def configurable?(actor) do
     if Brando.Authorization.Engine.enabled?(),
       do: Brando.Authorization.Boundary.authorize(actor, :configure, :assistant) == :ok,
-      else: match?(%{role: :superuser}, actor)
+      else: match?(%{role: :superuser}, Brando.Authorization.Boundary.fresh_role(actor))
   end
 
   @doc "The admin guidance in use in the current site/environment, or `nil`."

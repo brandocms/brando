@@ -520,6 +520,11 @@ authorization a user granted an installation-wide permission, also reaches the
 installation's screens for it (sites, users, groups, frontend assets, the
 shared library), and is sent to the sites screen from the others.
 
+Losing a site takes effect in views already open. Revoking a user's access,
+or suspending or archiving the site, sends that site's open admin views to the
+access-denied page, in both authorization modes. Other users, and screens that
+do not depend on the site, are left as they are.
+
 ## Shared modules, containers, and palettes
 
 In `:multi` mode, global superusers can manage reusable block building blocks
