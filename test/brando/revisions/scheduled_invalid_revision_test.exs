@@ -53,4 +53,30 @@ defmodule Brando.Revisions.ScheduledInvalidRevisionTest do
              )
            )
   end
+
+  # A value another entry holds for good fails the same way on every
+  # attempt: it is retried only a few times, then dropped like any other
+  # refusal. A job built without attempts counts as its first.
+  test "a unique conflict is retried on the first attempts only" do
+    taken =
+      %Page{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.add_error(:uri, "has already been taken",
+        constraint: :unique,
+        constraint_name: "pages_uri_index"
+      )
+
+    blank = Ecto.Changeset.add_error(Ecto.Changeset.change(%Page{}), :title, "can't be blank", validation: :required)
+    job = fn attempt -> %Oban.Job{attempt: attempt, max_attempts: 10} end
+
+    assert EntryPublisher.retry_refused_revision?(job.(1), taken)
+    assert EntryPublisher.retry_refused_revision?(job.(2), taken)
+    refute EntryPublisher.retry_refused_revision?(job.(3), taken)
+    refute EntryPublisher.retry_refused_revision?(job.(10), taken)
+    assert EntryPublisher.retry_refused_revision?(%Oban.Job{}, taken)
+    assert EntryPublisher.retry_refused_revision?(job.(0), taken)
+    refute EntryPublisher.retry_refused_revision?(%Oban.Job{attempt: 1, max_attempts: 1}, taken)
+
+    refute EntryPublisher.retry_refused_revision?(job.(1), blank)
+  end
 end

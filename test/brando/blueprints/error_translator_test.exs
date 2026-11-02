@@ -4,6 +4,7 @@ defmodule Brando.Blueprint.ErrorTranslatorTest do
   alias Brando.Blueprint.ErrorTranslator
   alias Brando.Blueprint.Forms
   alias Brando.Test.OwnLog
+  alias Ecto.Changeset
 
   defmodule Schema do
     @moduledoc false
@@ -64,6 +65,61 @@ defmodule Brando.Blueprint.ErrorTranslatorTest do
       end)
 
     refute log =~ "Could not get field"
+  end
+
+  describe "describe/3" do
+    # Each invalid var of a page under its own number, and the nested field
+    # under the var's label, in the editor's language
+    test "names a nested field under its schema's label, one entry per item" do
+      changeset = page_with_invalid_vars(2)
+      page_form = Brando.Pages.Page.__form__()
+
+      Gettext.with_locale(Brando.Gettext, "no", fn ->
+        variables = Gettext.dgettext(Brando.Gettext, "pages_page", "Page variables")
+        label = Brando.Content.Transfer.Labels.field(Brando.Content.Var, :label)
+        refute label == "Label"
+
+        assert ErrorTranslator.describe(changeset, page_form, &message/1) == [
+                 {"#{variables} 1 → #{label}", "can't be blank"},
+                 {"#{variables} 2 → #{label}", "can't be blank"}
+               ]
+      end)
+    end
+
+    test "a single item is not numbered" do
+      assert [{"Page variables → Label", "can't be blank"}] =
+               ErrorTranslator.describe(page_with_invalid_vars(1), Brando.Pages.Page.__form__(), &message/1)
+    end
+
+    # A changeset from inside a restore that isn't the entry's (its job, its
+    # identifier) with an error under a name the form also has
+    test "a changeset that is not a Blueprint's goes by humanized names" do
+      changeset = %Oban.Job{} |> Changeset.change() |> Changeset.add_error(:title, "is invalid")
+
+      assert ErrorTranslator.describe(changeset, Brando.Pages.Page.__form__(), &message/1) == [
+               {"Title", "is invalid"}
+             ]
+
+      identifier =
+        %Brando.Content.Identifier{} |> Changeset.change() |> Changeset.add_error(:title, "is invalid")
+
+      assert ErrorTranslator.describe(identifier, Brando.Pages.Page.__form__(), &message/1) == [
+               {"Title", "is invalid"}
+             ]
+    end
+  end
+
+  defp message({message, _opts}), do: message
+
+  defp page_with_invalid_vars(count) do
+    vars =
+      for n <- 1..count do
+        %Brando.Content.Var{key: "key-#{n}"}
+        |> Changeset.change()
+        |> Changeset.add_error(:label, "can't be blank", validation: :required)
+      end
+
+    %Brando.Pages.Page{vars: []} |> Changeset.change() |> Changeset.put_assoc(:vars, vars)
   end
 
   defp form_with_fields(fields) do
