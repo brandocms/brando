@@ -29,12 +29,14 @@ defmodule Brando.Plug.TenantTest do
     {:ok, site} = Registry.create_site(@site_attrs)
 
     {:ok, environment} =
-      Registry.create_environment(site, %{
-        name: "Production",
-        key: "production",
-        live: true,
-        domain: "www.acme.test"
-      })
+      Registry.create_environment(
+        site,
+        %{
+          name: "Production",
+          key: "production",
+          live: true,
+          domain: "www.acme.test"
+        }, actor: :system)
 
     %{site: site, environment: environment}
   end

@@ -470,6 +470,16 @@ archive, and prune old archives. Editors can inspect the same state without
 lifecycle mutation controls. In multi-site mode the sidebar contains only sites
 assigned to the current user; global superusers see every active site.
 
+Which site answers on a host is the installation's decision, so only a superuser
+(the Superuser group with group authorization) changes an environment's domain,
+on that screen or through `Brando.Tenant.Registry`, whose `create_environment/3`
+and `update_environment/3` take the acting user as `actor:` (`:system` for
+trusted maintenance code) and refuse a change without one. A domain is a bare
+host: no scheme, path, port or trailing dot. It may not be a host the
+installation itself uses: the endpoint's, where the admin answers, nor its
+static, media or CDN host. With several sites, a site that needs the admin's
+host means moving the admin to a host of its own through `PHX_HOST`.
+
 <!-- usage-rules:start topic="tenancy" -->
 
 `Brando.Repo` applies the current prefix to reads, writes, preloads, bulk
@@ -705,7 +715,9 @@ Any environment can become the live environment:
 Before changing the live pointer, Brando archives the previous live schema.
 The registry update is transactional, the one-live-environment database
 constraint remains authoritative, and the routing cache is refreshed after a
-successful switch.
+successful switch. A domain stays on its environment: a host bound to the
+previous live environment keeps answering from it until a superuser moves the
+host.
 
 Inspect and prune archives:
 
@@ -993,7 +1005,8 @@ Generated output is persistent at
 directories are pruned after the retention window, while their database history
 and logs remain. Preview tokens expire after seven days and stop working as soon
 as their artifact is pruned. A preview opens only on a host that resolves to
-the build's own site (another site's host answers `404`); with several sites
+the build's own site (another site's host, or with several sites one of the
+installation's own hosts such as the admin's, answers `404`); with several sites
 the Publishing screen links it on the build environment's domain, or the live
 environment's, so that domain must reach the application, not only the static
 host. Previews are served with a Content-Security-Policy that keeps forms from

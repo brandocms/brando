@@ -32,7 +32,7 @@ defmodule Brando.SiteAssetsFixtures do
       })
 
     {:ok, _environment} =
-      Registry.create_environment(site, %{name: "Production", key: "production", live: true, domain: domain})
+      Registry.create_environment(site, %{name: "Production", key: "production", live: true, domain: domain}, actor: :system)
 
     {:ok, Registry.get_site(site.id)}
   end

@@ -4,8 +4,10 @@ defmodule Brando.SSG.PreviewController do
 
   With tenancy enabled a preview is served only on a host that resolves to the
   build's own site: another site's host, or none, answers 404, so the
-  artifact's markup runs only in its own site's origin. The response carries
-  a restrictive Content-Security-Policy.
+  artifact's markup runs only in its own site's origin. With several sites it
+  never opens on one of the installation's own hosts, such as the admin's, even
+  for a site bound to it. The response carries a restrictive
+  Content-Security-Policy.
   """
 
   use BrandoAdmin, :controller
@@ -46,6 +48,7 @@ defmodule Brando.SSG.PreviewController do
   defp request_site(conn) do
     cond do
       not Tenant.enabled?() -> {:ok, :any}
+      Tenant.mode() == :multi and Brando.Tenant.InstallationHosts.member?(conn.host) -> :error
       match?(%Brando.Sites.Site{}, conn.assigns[:current_site]) -> {:ok, conn.assigns.current_site}
       true -> :error
     end

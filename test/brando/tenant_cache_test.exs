@@ -115,6 +115,32 @@ defmodule Brando.TenantCacheTest do
     |> Repo.insert!()
   end
 
+  # Audit F02: the old changeset stored a trailing dot, which answered on its
+  # own beside the same host without one.
+  test "a stored domain that is not a host does not route; a stored capital still does" do
+    site = insert_site!("acme")
+    dotted = insert_environment!(site, "dotted", false, nil)
+    url = insert_environment!(site, "url", false, nil)
+    capital = insert_environment!(site, "capital", true, nil)
+
+    for {environment, stored} <- [
+          {dotted, "www.b.test."},
+          {url, "https://www.c.test"},
+          {capital, "WWW.Acme.TEST"}
+        ] do
+      Brando.Repo.update_all(from(e in Environment, where: e.id == ^environment.id), [set: [domain: stored]],
+        prefix: "public"
+      )
+    end
+
+    Cache.warm()
+
+    refute Cache.get_env_by_domain("www.b.test.")
+    refute Cache.get_env_by_domain("www.b.test")
+    refute Cache.get_env_by_domain("https://www.c.test")
+    assert {_site, %Environment{key: "capital"}} = Cache.get_env_by_domain("www.acme.test")
+  end
+
   defp insert_environment!(site, key, live, domain) do
     %Environment{}
     |> Environment.changeset(%{

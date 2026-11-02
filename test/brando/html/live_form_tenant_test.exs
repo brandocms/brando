@@ -86,7 +86,7 @@ defmodule Brando.HTML.Forms.LiveFormTenantTest do
       Registry.create_site(%{name: key, key: key, languages: ["en"], default_language: "en", status: :active})
 
     {:ok, environment} =
-      Registry.create_environment(site, %{name: "Production", key: "production", domain: "#{key}.test", live: true})
+      Registry.create_environment(site, %{name: "Production", key: "production", domain: "#{key}.test", live: true}, actor: :system)
 
     prefix = Tenant.prefix(site, environment)
     Repo.query!(~s|CREATE SCHEMA "#{prefix}"|)

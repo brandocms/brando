@@ -48,12 +48,14 @@ defmodule Brando.TenantRegistryTest do
     {:ok, site} = Registry.create_site(@site_attrs)
 
     assert {:ok, %Environment{} = environment} =
-             Registry.create_environment(site, %{
-               name: "Production",
-               key: "production",
-               live: true,
-               domain: "OLD.Acme.test"
-             })
+             Registry.create_environment(
+               site,
+               %{
+                 name: "Production",
+                 key: "production",
+                 live: true,
+                 domain: "OLD.Acme.test"
+               }, actor: :system)
 
     assert %Environment{id: environment_id} = Cache.get_env("acme", "production")
     assert environment_id == environment.id
@@ -61,10 +63,12 @@ defmodule Brando.TenantRegistryTest do
     assert {_site, %Environment{id: ^environment_id}} = Cache.get_env_by_domain("old.acme.test")
 
     assert {:ok, updated_environment} =
-             Registry.update_environment(environment, %{
-               key: "live",
-               domain: "new.acme.test"
-             })
+             Registry.update_environment(
+               environment,
+               %{
+                 key: "live",
+                 domain: "new.acme.test"
+               }, actor: :system)
 
     refute Cache.get_env("acme", "production")
     refute Cache.get_env_by_domain("old.acme.test")

@@ -69,10 +69,7 @@ defmodule Brando.MCP.ClientMetadata do
     host in own_hosts()
   end
 
-  defp own_hosts do
-    media = [Brando.config(:media_url)] ++ Enum.map([Brando.Images, Brando.Files, Brando.Videos], &cdn_url/1)
-    Enum.flat_map([Brando.MCP.base_url() | media], &url_host/1) ++ environment_domains()
-  end
+  defp own_hosts, do: Brando.Tenant.InstallationHosts.list() ++ environment_domains()
 
   defp url_host(url) when is_binary(url) do
     case URI.parse(url) do
@@ -80,8 +77,6 @@ defmodule Brando.MCP.ClientMetadata do
       _ -> []
     end
   end
-
-  defp url_host(_url), do: []
 
   # Every site environment's own domain, a host such as "www.example.com"
   defp environment_domains do
@@ -92,15 +87,6 @@ defmodule Brando.MCP.ClientMetadata do
     |> Enum.flat_map(fn domain ->
       if String.contains?(domain, "://"), do: url_host(domain), else: url_host("https://" <> domain)
     end)
-  end
-
-  defp cdn_url(module) do
-    case Brando.CDN.config(module) do
-      %{enabled: true, media_url: url} -> url
-      _ -> nil
-    end
-  rescue
-    _ -> nil
   end
 
   @doc """

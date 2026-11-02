@@ -1168,6 +1168,12 @@ application source changes without running migrations or copying live data;
 [Tenancy and environments](tenancy_and_environments.md) has the ordered
 conversion workflow.
 
+An application already on named environments passes the actor when its own code
+sets a domain, `Brando.Tenant.Registry.update_environment(environment, %{domain:
+host}, actor: :system)` and `create_environment/3` likewise, and clears or
+rewrites any stored domain with a trailing dot, scheme or port, which no longer
+routes. Per-site administrators no longer change domains; a superuser does.
+
 ### Review a generated Florist configuration
 
 When both `deployment.cfg` and `fabfile.py` exist and there is no Florist

@@ -95,7 +95,7 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
 
   # A preview opens only on its own site's hosts, which need not be the admin's
   test "links a build's preview on its environment's domain", context do
-    {:ok, _environment} = Registry.update_environment(context.environment, %{domain: "static-acme.test"})
+    {:ok, _environment} = Registry.update_environment(context.environment, %{domain: "static-acme.test"}, actor: :system)
 
     build =
       Oban.Testing.with_testing_mode(:manual, fn ->
