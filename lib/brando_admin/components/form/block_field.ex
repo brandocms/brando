@@ -965,11 +965,8 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # entry, or a tab that does not edit it (another of the editor's tabs does).
   defp read_only?(socket), do: socket.assigns[:tab_editing?] == false or not may_update?(socket)
 
-  defp may_update?(%{assigns: %{entry: entry, current_user: user}}) do
-    Brando.Authorization.Boundary.authorize(user, :update, entry) == :ok
-  rescue
-    _ -> false
-  end
+  defp may_update?(%{assigns: %{entry: entry, current_user: user}}),
+    do: Brando.Authorization.Boundary.may_update?(user, entry)
 
   # One subscription per LiveView process, however many block fields join.
   defp subscribe_session(%{topic: topic}) do
@@ -1011,10 +1008,21 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # Someone who may not change the entry follows the others but sends nothing.
   defp submit_to_session(%{assigns: %{edit_session: %Replica{read_only: true}}} = socket, _op), do: socket
 
+  # Asked per op: an account demoted with the form open would otherwise keep
+  # writing through the flag it joined with, into the next editor's save. Only
+  # the stored role, which raises rather than answers when it can't be read: a
+  # form recovers from that on reconnect, but would not notice a session that
+  # stopped sending. With groups this asks nothing. The account is told, and a
+  # new role takes effect when the form is opened again.
   defp submit_to_session(%{assigns: %{edit_session: %Replica{session: session} = replica}} = socket, op) do
-    {replica, seq} = Replica.local(replica, op)
-    EditSession.submit(session, socket.assigns.block_field, op, seq)
-    assign(socket, :edit_session, replica)
+    if Brando.Authorization.Boundary.read_only_account?(socket.assigns.current_user) do
+      EditSession.set_read_only(session, true)
+      socket |> assign(:edit_session, %{replica | read_only: true}) |> BrandoAdmin.Authorization.Events.refuse()
+    else
+      {replica, seq} = Replica.local(replica, op)
+      EditSession.submit(session, socket.assigns.block_field, op, seq)
+      assign(socket, :edit_session, replica)
+    end
   end
 
   defp submit_to_session(socket, _op), do: socket

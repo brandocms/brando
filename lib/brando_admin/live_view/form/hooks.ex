@@ -1236,6 +1236,12 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
 
   defp handle_hooks_block_presence_info(_, socket), do: {:cont, socket}
 
+  # The others see the block as in use: not by someone who sends them nothing,
+  # as `Form.broadcast_active_field`. The event's check has just read the role the
+  # view holds, and this carries no value, so it reads no other.
+  defp may_send_presence?(%{assigns: %{schema: schema}}),
+    do: BrandoAdmin.Authorization.allowed?(:update, schema)
+
   defp presence_name(socket, user_id) do
     case socket.assigns[:presences] do
       %{^user_id => %{name: name}} when is_binary(name) -> name
@@ -1253,15 +1259,15 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     field = string_or_nil(params["field"])
     label = string_or_nil(params["label"])
 
-    if entry_id do
-      if old_uid && old_uid != uid do
-        PubSub.broadcast(
-          Brando.pubsub(),
-          Topic.entry("block_presence", socket.assigns.schema, entry_id),
-          {:block_blur, %{uid: old_uid, user_id: current_user_id}}
-        )
-      end
+    if entry_id && old_uid && old_uid != uid do
+      PubSub.broadcast(
+        Brando.pubsub(),
+        Topic.entry("block_presence", socket.assigns.schema, entry_id),
+        {:block_blur, %{uid: old_uid, user_id: current_user_id}}
+      )
+    end
 
+    if entry_id && may_send_presence?(socket) do
       PubSub.broadcast(
         Brando.pubsub(),
         Topic.entry("block_presence", socket.assigns.schema, entry_id),
@@ -1301,6 +1307,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     entry_id = socket.assigns[:entry_id]
 
     if current_uid do
+      # Always told: a block entered before a demotion has to be left.
       if entry_id do
         PubSub.broadcast(
           Brando.pubsub(),
@@ -1366,7 +1373,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
       focused_uid = socket.assigns[:current_focused_block_uid]
       entry_id = socket.assigns[:entry_id]
 
-      if focused_uid && entry_id do
+      if focused_uid && entry_id && may_send_presence?(socket) do
         PubSub.broadcast(
           Brando.pubsub(),
           Topic.entry("block_presence", socket.assigns.schema, entry_id),
@@ -1393,7 +1400,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     if from != me and Map.get(msg, :to) in [nil, me] do
       schema = socket.assigns[:schema]
 
-      if schema do
+      if schema && sender_may_update?(socket, msg.user_id, schema) do
         singular = schema.__naming__().singular
         form_id = "#{singular}_form"
 
@@ -1425,7 +1432,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   # component. Skipped by tab, not by user: two tabs of one editor sync like
   # two editors, so the tab that takes over editing has the picks.
   defp handle_hooks_block_sync_info({:multi_select_changed, %{tab: tab} = msg}, socket) do
-    if tab != BrandoAdmin.Presence.tab() do
+    if tab != BrandoAdmin.Presence.tab() and sender_may_update?(socket, msg.user_id, socket.assigns[:schema]) do
       send_update(BrandoAdmin.Components.Form.Input.MultiSelect,
         id: msg.component_id,
         event: "apply_remote_selections",
@@ -1437,6 +1444,14 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   end
 
   defp handle_hooks_block_sync_info(_, socket), do: {:cont, socket}
+
+  # A value in this form comes only from someone who may change the entry: it
+  # is stored as this editor's when they save. The sender checks too.
+  defp sender_may_update?(%{assigns: %{current_user: %{id: id}}}, id, _schema), do: true
+  defp sender_may_update?(_socket, _user_id, nil), do: false
+
+  defp sender_may_update?(_socket, user_id, schema),
+    do: Brando.Authorization.Boundary.authorize(%{id: user_id}, :update, schema) == :ok
 
   defp send_to_block_fields(socket, opts) do
     schema = socket.assigns[:schema]

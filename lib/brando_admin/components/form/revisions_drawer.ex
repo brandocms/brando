@@ -391,13 +391,20 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   end
 
   def handle_event("purge_inactive_revisions", _, socket) do
-    {count, _} = Brando.Revisions.purge_revisions(entry_schema(socket), socket.assigns.entry_id)
+    {count, _} =
+      Brando.Revisions.purge_revisions(entry_schema(socket), socket.assigns.entry_id, socket.assigns.current_user)
+
     send(self(), {:toast, gettext("Purged %{count} revisions", %{count: count})})
     {:noreply, load_revisions(socket)}
   end
 
   def handle_event("delete_revision", %{"value" => revision}, socket) do
-    case Brando.Revisions.delete_revision(entry_schema(socket), socket.assigns.entry_id, revision) do
+    case Brando.Revisions.delete_revision(
+           entry_schema(socket),
+           socket.assigns.entry_id,
+           revision,
+           socket.assigns.current_user
+         ) do
       {1, _} ->
         send(self(), {:toast, gettext("Revision deleted")})
         {:noreply, load_revisions(socket)}
@@ -448,7 +455,8 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
     case Brando.Publisher.cancel_scheduled_revision(
            entry_schema(socket),
            socket.assigns.entry_id,
-           revision
+           revision,
+           socket.assigns.current_user
          ) do
       :ok ->
         send(self(), {:toast, gettext("Scheduled publishing cancelled")})
@@ -663,7 +671,8 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
            entry_schema(socket),
            socket.assigns.entry_id,
            revision,
-           protect?
+           protect?,
+           socket.assigns.current_user
          ) do
       {1, _} -> {:noreply, load_revisions(socket)}
       {0, _} -> {:noreply, alert_error(socket, gettext("This revision no longer exists."))}

@@ -31,6 +31,7 @@ defmodule Brando.Content.BlockAudit do
 
   import Ecto.Query
 
+  alias Brando.Authorization.Boundary
   alias Brando.Content.BlockArchive
   alias Brando.Repo
   alias Brando.Revisions
@@ -192,6 +193,15 @@ defmodule Brando.Content.BlockAudit do
   """
   @spec remove([integer()], map() | nil) :: {:ok, map()} | {:error, term()}
   def remove(root_ids, user \\ nil) when is_list(root_ids) do
+    with :ok <- authorize(user), do: do_remove(root_ids, user)
+  end
+
+  # Maintenance code has no user. An admin's is checked as the screen's other
+  # writes are.
+  defp authorize(nil), do: :ok
+  defp authorize(user), do: Boundary.authorize(user, :update, :utilities)
+
+  defp do_remove(root_ids, user) do
     Repo.transaction(fn ->
       # Nothing may link a block, or store a revision holding one, between the
       # check and the delete.
@@ -240,8 +250,12 @@ defmodule Brando.Content.BlockAudit do
   archive. It comes back loose, as it was when removed. `{:error, message}`
   when the database refuses, for example because media it used is gone.
   """
-  @spec restore(integer()) :: {:ok, integer()} | {:error, term()}
-  def restore(archive_id) do
+  @spec restore(integer(), map() | nil) :: {:ok, integer()} | {:error, term()}
+  def restore(archive_id, user \\ nil) do
+    with :ok <- authorize(user), do: do_restore(archive_id)
+  end
+
+  defp do_restore(archive_id) do
     Repo.transaction(fn ->
       case Repo.get(BlockArchive, archive_id) do
         nil ->

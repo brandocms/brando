@@ -813,7 +813,7 @@ defmodule E2EFixtureController do
     page = Brando.Repo.get!(Brando.Pages.Page, 1)
     {:ok, _active} = Brando.Revisions.create_revision(page, author)
     {:ok, protected} = Brando.Revisions.create_revision(page, author, false)
-    Brando.Revisions.protect_revision(Brando.Pages.Page, page.id, protected.revision, true)
+    Brando.Revisions.protect_revision(Brando.Pages.Page, page.id, protected.revision, true, :system)
     {:ok, scheduled} = Brando.Revisions.create_revision(page, user, false)
     Brando.Revisions.mark_revision_scheduled(Brando.Pages.Page, page.id, scheduled.revision, true)
     {:ok, _inactive} = Brando.Revisions.create_revision(page, :system, false)

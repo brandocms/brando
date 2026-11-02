@@ -36,6 +36,7 @@ defmodule Brando.Notes do
 
   import Ecto.Query
 
+  alias Brando.Authorization.Boundary
   alias Brando.Notes.Mention
   alias Brando.Notes.Note
   alias Brando.Notifications.Recipient
@@ -128,8 +129,9 @@ defmodule Brando.Notes do
   anyone who may update it.
   """
   def can_write?(%User{} = user, entry) do
-    not Brando.Authorization.enabled?() or
-      Brando.Authorization.can?(Brando.Authorization.Scope.current(user), :update, entry)
+    if Brando.Authorization.enabled?(),
+      do: Brando.Authorization.can?(Brando.Authorization.Scope.current(user), :update, entry),
+      else: Boundary.authorize(user, :update, entry) == :ok
   end
 
   def can_write?(_, _), do: false

@@ -2973,7 +2973,8 @@ defmodule BrandoAdmin.Components.Form do
 
     if entry && entry.id && socket.assigns[:singular] do
       socket = apply_held_remote(socket)
-      {changes, socket} = socket |> pending_changes() |> stamp(socket)
+      pending = if may_update?(socket), do: pending_changes(socket), else: []
+      {changes, socket} = stamp(pending, socket)
 
       if changes != [], do: broadcast_field_changes(socket, entry.id, changes, nil)
 
@@ -2995,7 +2996,7 @@ defmodule BrandoAdmin.Components.Form do
   defp ship_fields_to(socket, user_id) do
     entry = socket.assigns[:entry]
 
-    if entry && entry.id do
+    if entry && entry.id && may_update?(socket) do
       {_fields, belongs_to} = sync_fields(socket)
 
       changes =
@@ -3067,6 +3068,24 @@ defmodule BrandoAdmin.Components.Form do
         value != Map.get(synced, field, Map.get(changeset.data, field)),
         do: change
   end
+
+  @doc """
+  What a refused event does here (`BrandoAdmin.Authorization.Events.refuse/3`).
+  A refused drawer save still closes the drawer: the browser has hidden it, and
+  the form's save waits for it. Nothing to tell: only looking is left.
+  """
+  def __event_refused__("save_image", socket), do: close_refused_drawer(socket, :editing_image?)
+  def __event_refused__("save_video", socket), do: close_refused_drawer(socket, :editing_video?)
+  def __event_refused__("save_file", socket), do: close_refused_drawer(socket, :editing_file?)
+  def __event_refused__(_event, _socket), do: nil
+
+  defp close_refused_drawer(socket, flag), do: socket |> assign(flag, false) |> assign_drawer_recovery_state()
+
+  # Someone who may not change the entry follows the others and sends nothing,
+  # as in a block field: whoever saves a value that reached their form stores
+  # it as their own.
+  defp may_update?(%{assigns: %{entry: entry, current_user: user}}),
+    do: Brando.Authorization.Boundary.may_update?(user, entry)
 
   # A required field cleared, or a value that didn't cast, is no change,
   # only an error. Shipped, it would be the value the form opened with,
@@ -3347,7 +3366,7 @@ defmodule BrandoAdmin.Components.Form do
     socket = socket |> mark_local(offline) |> ship_all_field_changes()
     entry = socket.assigns[:entry]
 
-    if entry && entry.id && is_map(entry_params) do
+    if entry && entry.id && is_map(entry_params) && may_update?(socket) do
       changeset = socket.assigns.form.source
       synced = synced_values(socket)
       {fields, belongs_to} = sync_fields(socket)
@@ -3752,9 +3771,13 @@ defmodule BrandoAdmin.Components.Form do
   # The field this editor is in (an input name, `page[title]`), or `nil`
   # when it left it: the other editors lock and release the field, and the
   # editor's presence carries it for those who join later.
+  # The others see this field as locked: not by someone who sends them nothing.
+  # Leaving always tells, as a lock taken before a demotion has to come off.
   defp broadcast_active_field(socket, field) do
     %{schema: schema, entry: entry, current_user: user} = socket.assigns
-    BrandoAdmin.Presence.broadcast_active_field(schema, entry.id, field, user.id)
+
+    if is_nil(field) or may_update?(socket),
+      do: BrandoAdmin.Presence.broadcast_active_field(schema, entry.id, field, user.id)
   end
 
   # Tells the other editors which of our changed fields they do not have yet,
@@ -3783,7 +3806,9 @@ defmodule BrandoAdmin.Components.Form do
   defp put_dirty_fields(socket, dirty_fields) do
     entry = socket.assigns.entry
 
-    if entry && entry.id do
+    # This runs on a keystroke, and a mark carries no value: the role the view holds
+    # will do, which `BrandoAdmin.Authorization` keeps up to date.
+    if entry && entry.id && (dirty_fields == [] or BrandoAdmin.Authorization.allowed?(:update, entry)) do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
         Brando.Tenant.Topic.entry("dirty_fields", socket.assigns.schema, entry.id),

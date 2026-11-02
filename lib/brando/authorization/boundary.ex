@@ -142,6 +142,26 @@ defmodule Brando.Authorization.Boundary do
   end
 
   @doc """
+  Whether `actor` is a legacy `:user` account as stored now: it reads and
+  exports, and writes nothing but its own profile. Always false with groups,
+  where `Engine` answers per permission. `BrandoAdmin.Authorization.Events`
+  asks this of a LiveComponent's event that may write.
+  """
+  def read_only_account?(actor) do
+    not Engine.enabled?() and actor |> fresh_role() |> legacy_role() == :user
+  end
+
+  @doc """
+  Whether `actor`, as stored now, may update `subject`, for what an open form
+  sends the other editors. Nothing to tell them when this cannot be answered.
+  """
+  def may_update?(actor, subject) do
+    authorize(actor, :update, subject) == :ok
+  rescue
+    _ -> false
+  end
+
+  @doc """
   What `authorize/3` would answer in legacy mode for the role `actor` already
   holds, with no read: for presentation, which a template may ask many times
   per render. An open view's held user is brought up to date by

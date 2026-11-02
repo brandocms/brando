@@ -22,11 +22,15 @@ defmodule BrandoAdmin.Authorization do
       instead;
     * otherwise, nothing happens: an editor whose authority did not change is left
       alone, and a role raised takes effect for the view's next check.
+
+  An event the check lets through then goes to `BrandoAdmin.Authorization.Events`,
+  which refuses a `:user` account's writes.
   """
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1, redirect: 2, put_flash: 3]
   alias Brando.Authorization.{Administration, Boundary, Engine, Scope}
   alias Brando.Tenant.{Access, Cache}
+  alias BrandoAdmin.Authorization.Events
 
   @legacy_actor_key {__MODULE__, :legacy_actor}
 
@@ -143,7 +147,16 @@ defmodule BrandoAdmin.Authorization do
     socket |> assign(:legacy_site_rule, legacy_site_rule(socket, params)) |> legacy_recheck()
   end
 
-  defp legacy_event_hook(_event, _params, socket), do: legacy_recheck(socket)
+  # Runs before every other hook of the view, a listing's and a form's included.
+  # A LiveComponent's events get here by `BrandoAdmin.Authorization.EventGuard`. The
+  # recheck has just read the role and the view holds it, so this reads no other.
+  defp legacy_event_hook(event, _params, socket) do
+    with {:cont, socket} <- legacy_recheck(socket) do
+      if Events.refused_to_role?(socket.view, event, socket.assigns.current_user.role),
+        do: {:halt, Events.refuse(socket)},
+        else: {:cont, socket}
+    end
+  end
 
   # Always halted: most views have no `handle_info` clause for it.
   defp legacy_info_hook({:authorization_changed, _}, socket) do
@@ -412,6 +425,9 @@ defmodule BrandoAdmin.Authorization do
   module's event check does not see.
   """
   def current_actor, do: Boundary.current_scope() || Process.get(@legacy_actor_key)
+
+  @doc "Nil with groups, unlike `current_actor/0`: there `Events` refuses nothing."
+  def legacy_actor, do: Process.get(@legacy_actor_key)
 
   @doc """
   Presentation checks against the current administration scope; in legacy

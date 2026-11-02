@@ -170,19 +170,31 @@ defmodule Brando.Revisions do
   end
 
   @doc "Mark or unmark a revision as protected."
-  def protect_revision(entry_type, entry_id, revision_number, protect) when is_boolean(protect) do
+  def protect_revision(entry_type, entry_id, revision_number, protect, actor) when is_boolean(protect) do
     entry_type_binary = to_string(entry_type)
     entry_id = normalize_entry_id(entry_id)
     revision_number = normalize_revision_number(revision_number)
 
-    from(r in Revision,
-      where:
-        r.entry_type == ^entry_type_binary and r.entry_id == ^entry_id and
-          r.revision == ^revision_number,
-      update: [set: [protected: ^protect]]
-    )
-    |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id, :update)
-    |> Repo.update_all([])
+    if_authorized(actor, :update, entry_type, entry_id, fn ->
+      from(r in Revision,
+        where:
+          r.entry_type == ^entry_type_binary and r.entry_id == ^entry_id and
+            r.revision == ^revision_number,
+        update: [set: [protected: ^protect]]
+      )
+      |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id, :update)
+      |> Repo.update_all([])
+    end)
+  end
+
+  # A refusal changes nothing, as a revision that doesn't qualify does.
+  defp if_authorized(actor, action, entry_type, entry_id, fun) do
+    alias Brando.Authorization.Boundary
+
+    case Boundary.authorize_record(actor, action, entry_type, entry_id) do
+      :ok -> fun.()
+      {:error, _} -> {0, nil}
+    end
   end
 
   @doc "Mark a revision as having a pending publishing job."
@@ -240,33 +252,37 @@ defmodule Brando.Revisions do
   end
 
   @doc "Purge inactive, unprotected, unscheduled revisions for an entry."
-  def purge_revisions(entry_type, entry_id) do
+  def purge_revisions(entry_type, entry_id, actor) do
     entry_type_binary = to_string(entry_type)
     entry_id = normalize_entry_id(entry_id)
 
-    from(r in Revision,
-      where:
-        r.entry_type == ^entry_type_binary and r.entry_id == ^entry_id and
-          r.protected == false and r.scheduled == false and r.active == false
-    )
-    |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id, :delete)
-    |> Repo.delete_all()
+    if_authorized(actor, :delete, entry_type, entry_id, fn ->
+      from(r in Revision,
+        where:
+          r.entry_type == ^entry_type_binary and r.entry_id == ^entry_id and
+            r.protected == false and r.scheduled == false and r.active == false
+      )
+      |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id, :delete)
+      |> Repo.delete_all()
+    end)
   end
 
   @doc "Delete one inactive, unprotected, unscheduled revision."
-  def delete_revision(entry_type, entry_id, revision_number) do
+  def delete_revision(entry_type, entry_id, revision_number, actor) do
     entry_type_binary = to_string(entry_type)
     entry_id = normalize_entry_id(entry_id)
     revision_number = normalize_revision_number(revision_number)
 
-    from(r in Revision,
-      where:
-        r.entry_type == ^entry_type_binary and r.entry_id == ^entry_id and
-          r.revision == ^revision_number and r.active == false and
-          r.protected == false and r.scheduled == false
-    )
-    |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id, :delete)
-    |> Repo.delete_all()
+    if_authorized(actor, :delete, entry_type, entry_id, fn ->
+      from(r in Revision,
+        where:
+          r.entry_type == ^entry_type_binary and r.entry_id == ^entry_id and
+            r.revision == ^revision_number and r.active == false and
+            r.protected == false and r.scheduled == false
+      )
+      |> Brando.Authorization.Boundary.subject_query(entry_type, entry_id, :delete)
+      |> Repo.delete_all()
+    end)
   end
 
   @doc """
@@ -350,7 +366,7 @@ defmodule Brando.Revisions do
         lock_entry!(entry_schema, entry_id)
 
         revision = get_revision_record!(entry_schema, entry_id, revision_number)
-        cancel_pending_activation!(entry_schema, entry_id, revision_number, publish?)
+        cancel_pending_activation!(entry_schema, entry_id, revision_number, publish?, user)
         target_entry = revision |> decode_revision!() |> clear_invalid_colors(entry_schema, entry_id)
         restore_missing_block_links!(entry_schema, entry_id, target_entry)
 
@@ -444,10 +460,10 @@ defmodule Brando.Revisions do
     Repo.preload(entry, Brando.Blueprint.preloads_for(entry_type))
   end
 
-  defp cancel_pending_activation!(_entry_schema, _entry_id, _revision_number, true), do: :ok
+  defp cancel_pending_activation!(_entry_schema, _entry_id, _revision_number, true, _user), do: :ok
 
-  defp cancel_pending_activation!(entry_schema, entry_id, revision_number, false) do
-    case Brando.Publisher.cancel_scheduled_revision(entry_schema, entry_id, revision_number) do
+  defp cancel_pending_activation!(entry_schema, entry_id, revision_number, false, user) do
+    case Brando.Publisher.cancel_scheduled_revision(entry_schema, entry_id, revision_number, user) do
       :ok -> :ok
       {:error, reason} -> Repo.rollback(reason)
     end

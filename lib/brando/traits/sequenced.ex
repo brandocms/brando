@@ -42,8 +42,9 @@ defmodule Brando.Trait.Sequenced do
 
   """
   def sequence(module, params, actor \\ nil, opts \\ []) do
-    result = do_sequence(module, params, actor)
-    by = Keyword.get(opts, :user) || actor || Boundary.current_scope()
+    user = Keyword.get(opts, :user)
+    result = do_sequence(module, params, actor, user)
+    by = user || actor || Boundary.current_scope()
     record_reorder(result, module, params, by)
     result
   end
@@ -65,13 +66,15 @@ defmodule Brando.Trait.Sequenced do
     _ -> :ok
   end
 
-  defp do_sequence(module, params, actor) do
+  defp do_sequence(module, params, actor, user) do
     if Brando.Authorization.enabled?() do
       actor = actor || Boundary.current_scope()
 
       Boundary.run(actor, :reorder, module, &authorized_sequence(module, params, &1))
     else
-      legacy_sequence(module, params)
+      if Boundary.read_only_account?(user || actor),
+        do: {:error, :forbidden},
+        else: legacy_sequence(module, params)
     end
   end
 

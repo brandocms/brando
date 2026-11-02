@@ -229,14 +229,14 @@ publishes nothing; schedule the revision again if it should still go out.
 To cancel before execution, use **Cancel schedule** in the revision row:
 
 ```elixir
-:ok = Brando.Publisher.cancel_scheduled_revision(Page, page.id, revision.revision)
+:ok = Brando.Publisher.cancel_scheduled_revision(Page, page.id, revision.revision, user)
 ```
 
-This API uses the current authorization scope. In application code, establish it
-with `Brando.Authorization.Boundary.with_scope/2`, as in the authorization guide;
-the authenticated admin already has it. Cancellation keeps the snapshot and
-clears its scheduled flag, making normal retention rules apply again. Activating
-that revision manually also cancels its pending job.
+The last argument is the acting user. It is checked for the right to schedule
+that entry, by its stored role or its groups, and `{:error, :forbidden}` comes
+back when it has none. Pass `:system` from trusted maintenance code. Cancellation
+keeps the snapshot and clears its scheduled flag, making normal retention rules
+apply again. Activating that revision manually also cancels its pending job.
 
 ## Time zones and environments
 

@@ -880,6 +880,14 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       assert role_reads(view.pid) == 1
     end
 
+    test "moving to another block reads the role once", c do
+      page = Factory.insert(:page, title: "Before", uri: "stale-focus", status: :draft)
+      {:ok, view, _} = live(c.conn, "/admin/pages/update/#{page.id}")
+      role_reads(view.pid)
+      render_hook(view, "block_focused", %{"uid" => "another", "field" => "f", "label" => "L"})
+      assert role_reads(view.pid) == 1
+    end
+
     test "a keystroke in an entry form reads the role no more than before", c do
       page = Factory.insert(:page, title: "Before", uri: "stale-keystroke", status: :draft)
       {:ok, view, _} = live(c.conn, "/admin/pages/update/#{page.id}")

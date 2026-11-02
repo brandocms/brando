@@ -173,10 +173,10 @@ defmodule Brando.Publisher do
   end
 
   @doc "Cancel one scheduled revision and make it eligible for retention again."
-  def cancel_scheduled_revision(schema, id, revision_number) do
+  def cancel_scheduled_revision(schema, id, revision_number, actor) do
     with {:ok, id} <- cast_entry_id(id),
          {:ok, revision_number} <- cast_revision_number(revision_number),
-         :ok <- Boundary.admin_record(:schedule, schema_module(schema), id) do
+         :ok <- Boundary.authorize_record(actor, :schedule, schema_module(schema), id) do
       cancel_valid_scheduled_revision(schema_module(schema), id, revision_number)
     end
   end
@@ -629,7 +629,7 @@ defmodule Brando.Publisher do
     with {:ok, id} <- cast_entry_id(id),
          %Oban.Job{} = job <- Repo.get(Oban.Job, id),
          true <- map_size(context) == 0 or Map.take(job.args, Map.keys(context)) == context,
-         :ok <- job_authorized?(job, :schedule),
+         :ok <- job_for_actor?(job, user),
          :ok <- clear_job_date(job, user),
          :ok <- Oban.cancel_job(job) do
       clear_revision_schedule(job)
@@ -687,6 +687,16 @@ defmodule Brando.Publisher do
   end
 
   defp job_authorized?(_, _), do: {:error, :forbidden}
+
+  # Whether `user` may cancel the job. A legacy admin view has no scope for
+  # `job_authorized?/2`, so this asks about the user.
+  defp job_for_actor?(%Oban.Job{worker: worker, args: %{"schema" => schema, "id" => id}}, user) do
+    if worker == inspect(Worker.EntryPublisher),
+      do: Boundary.authorize_record(user, :schedule, schema_module(schema), id),
+      else: {:error, :forbidden}
+  end
+
+  defp job_for_actor?(_, _), do: {:error, :forbidden}
 
   defp clear_revision_schedule(%Oban.Job{
          args: %{"schema" => schema, "id" => id, "revision" => revision_number}

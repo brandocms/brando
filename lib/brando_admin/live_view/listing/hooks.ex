@@ -66,9 +66,10 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
          socket,
          schema
        ) do
-    target_schema = Brando.Authorization.Catalog.schema(target_schema)
-    Brando.Trait.Status.update_status(target_schema, id, status, socket.assigns.current_user)
-    update_list_entries(schema)
+    if target_schema = Brando.Authorization.Catalog.schema(target_schema) do
+      Brando.Trait.Status.update_status(target_schema, id, status, socket.assigns.current_user)
+      update_list_entries(schema)
+    end
 
     {:halt, socket}
   end

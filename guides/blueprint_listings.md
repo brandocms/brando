@@ -778,7 +778,8 @@ view since. A sort is saved by its key (`sort=<key>`).
 Editors update, rename, share and delete their own views. Someone else's
 shared view takes the `brando.listing_views.manage` permission with group
 authorization ("Shared listing views" under Settings), the admin or
-superuser role without. Each editor can pick one view, theirs or a shared
+superuser role without. A User-role account in legacy mode changes only its
+private views, and cannot share them. Each editor can pick one view, theirs or a shared
 one, to open the listing with: opened without parameters, or by the menu's
 link, the listing shows that view. A listing the editor empties stays empty.
 
