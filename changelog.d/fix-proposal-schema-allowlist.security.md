@@ -1,0 +1,1 @@
+- Assistant and MCP proposals name only the content types `list_content_types` lists, and refuse Brando's internal schemas (users, global sets, menus, vars, modules, site settings) before anything is stored; before, a legacy editor's proposal to create a global set or menu left it in the site's cache although the save was rolled back.

@@ -19,8 +19,15 @@ defmodule Brando.Content.Transfer.Catalog do
   entries editors manage in an admin listing.
   """
   def editable_schemas do
-    listed = Enum.filter(entry_schemas(), &(function_exported?(&1, :__listings__, 0) and &1.__listings__() != []))
-    (schemas() ++ listed) |> Enum.uniq() |> Enum.sort_by(&Brando.Blueprint.get_plural/1)
+    Brando.Authorization.Catalog.schemas()
+    |> Enum.filter(&editable?/1)
+    |> Enum.sort_by(&Brando.Blueprint.get_plural/1)
+  end
+
+  @doc "Whether the registered schema `schema` is one of `editable_schemas/0`."
+  def editable?(schema) do
+    (function_exported?(schema, :__blocks_fields__, 0) && schema.__blocks_fields__() != []) ||
+      (entry_schema?(schema) && function_exported?(schema, :__listings__, 0) && schema.__listings__() != [])
   end
 
   def entry_schemas do

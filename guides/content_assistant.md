@@ -61,7 +61,11 @@ granted it; without groups authorization, only superusers. Everything the
 assistant reads or proposes is also checked against the editor's own
 permissions. It cannot see entries the editor cannot edit, create content
 types the editor cannot create, or change a published page unless the editor
-may publish.
+may publish. A proposal only names the content types `list_content_types`
+lists: those with block fields, and entries editors manage in an admin listing.
+Brando's own records (users, groups, global sets, menus, vars, modules, site
+settings) are refused before anything is stored, whatever the editor's
+permissions.
 
 ## How it works
 

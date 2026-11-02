@@ -1225,11 +1225,8 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp schema!(name) do
     case Codec.schema(name) do
-      {:ok, schema} ->
-        if schema in Catalog.editable_schemas(), do: schema, else: Error.fail!("#{name} cannot be changed here.")
-
-      :error ->
-        Error.fail!("Unknown content type #{inspect(name)}. Use list_content_types.")
+      {:ok, schema} -> schema
+      :error -> Error.fail!("Unknown content type #{inspect(name)}. Use list_content_types.")
     end
   end
 
