@@ -68,6 +68,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
      |> assign_new(:selected_schema, fn %{available_schemas: schemas} -> single_schema(schemas) end)
      |> assign_new(:available_identifiers, fn -> [] end)
      |> keep_filters(wanted_schemas)
+     |> follow_saved_row()
      |> assign_selected_identifiers(field)}
   end
 
@@ -525,6 +526,20 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
     end
   end
+
+  # A save gives a new row (a new key, or none in a one-to-one subform) its
+  # id, and only a save does: the open picker stays with the row. Any other
+  # change of the row the input serves is another row (`select_identifier`).
+  defp follow_saved_row(%{assigns: %{picker_open?: true, picker_row: picker_row}} = socket) do
+    current = row_key(socket)
+
+    if (picker_row == nil or SubformHelpers.new_key?(picker_row)) and current != nil and
+         not SubformHelpers.new_key?(current),
+       do: assign(socket, :picker_row, current),
+       else: socket
+  end
+
+  defp follow_saved_row(socket), do: socket
 
   # The subform row the input serves now, nil outside a subform
   defp row_key(%{assigns: %{subform_id: subform_id, field: field}}) when not is_nil(subform_id),

@@ -300,6 +300,33 @@ defmodule BrandoAdmin.EntriesInputSubformRowsTest do
       end
     end
 
+    # A save gives the new row its id; the open picker stays with it
+    test "a picker opened on a new row still picks once the row is saved", %{conn: conn} = c do
+      Repo.delete!(c.author)
+      view = open(conn, c.article, "author_entries")
+
+      view
+      |> element(@form)
+      |> render_change(
+        params(view)
+        |> put_in(["article", "author", "name"], "New author")
+        |> Map.put("_target", ["article", "author", "name"])
+      )
+
+      view |> element("#article_author_0_related_entries-field-wrapper button", "Select entries") |> render_click()
+
+      stay(view)
+      save(view)
+      author = await_author(c.article)
+      assert get_in(params(view), ["article", "author", "id"]) == to_string(author.id)
+
+      view
+      |> element("#article_author_0_related_entries-entries-options [data-id='#{c.picked.id}']")
+      |> render_click()
+
+      assert author_links(view) == [to_string(c.picked.id)]
+    end
+
     test "\"Clear all\" empties the row", %{conn: conn} = c do
       view = open(conn, c.article, "author_entries")
       view |> element("#article_author_0_related_entries-field-wrapper button", "Clear all") |> render_click()
