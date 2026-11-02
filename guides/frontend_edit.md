@@ -41,6 +41,11 @@ An admin gets an **Edit page** button in the corner of every HTML page. It
 switches edit mode on for their browser (a `_brando_frontend_edit` cookie), and
 **Done** in the edit-mode toolbar switches it off.
 
+An element on the page whose name or id replaces something the overlay's script
+uses, such as `<img name="body">`, stops the overlay: the button and the toolbar
+do not show, and the browser console has the reason. Edit mode usually goes off
+with it; if a page stays in edit mode, clear the `_brando_frontend_edit` cookie.
+
 In edit mode:
 
 - Pointing at a block outlines it and names it. A click opens it in the sidebar,

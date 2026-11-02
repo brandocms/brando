@@ -83,6 +83,9 @@ defmodule E2EFixtureController do
         "frontend-edit" ->
           create_frontend_edit_page()
 
+        "frontend-edit-planted" ->
+          plant_frontend_edit_lookalikes()
+
         "mcp-proposals" ->
           create_mcp_proposals()
 
@@ -507,6 +510,67 @@ defmodule E2EFixtureController do
       client_id: client.id
     )
     |> Brando.Repo.update!()
+
+    user
+  end
+
+  # What someone who can only write rich text can do to the `frontend-edit`
+  # page: look-alikes of the overlay's configuration in the first block's text,
+  # saved through the block changeset, so the sanitizer has passed them. Their
+  # manifest lists that block, and their editor address sets the page's title.
+  defp plant_frontend_edit_lookalikes do
+    import Ecto.Query, only: [from: 2]
+    user = get_admin_user()
+    page = Brando.Repo.get_by!(Brando.Pages.Page, uri: "frontend-edit")
+
+    block =
+      Brando.Repo.one!(
+        from b in Brando.Content.Block,
+          join: j in Brando.Pages.Page.Blocks,
+          on: j.block_id == b.id,
+          where: j.entry_id == ^page.id and j.sequence == 0,
+          preload: [:refs, :vars, :children, :block_identifiers, :table_rows]
+      )
+
+    config =
+      %{
+        active: true,
+        cookie: "planted",
+        editorUrl: "javascript:parent.document.title='planted-config-ran';void 0//",
+        text: %{},
+        manifest: %{
+          owners: %{"planted" => %{editable: true}},
+          blocks: %{block.uid => %{owner: "planted", target: block.uid}},
+          fields: %{}
+        }
+      }
+      |> Jason.encode!()
+      |> String.replace("{", "{ ")
+      |> String.replace("}", " }")
+
+    id = "brando-frontend-edit-config"
+
+    # The second is for a lookup through `document.currentScript`, which the
+    # image's name replaces, and its previous sibling's id and type.
+    text =
+      ~s(<p>Body of the planted block</p>) <>
+        ~s(<p id="#{id}" style="display:none">#{config}</p>) <>
+        ~s(<a id="#{id}" type="application/json" style="display:none">#{config}</a>) <>
+        ~s(<img name="currentScript">)
+
+    ref = hd(block.refs)
+
+    params = %{
+      "refs" => [
+        %{"id" => ref.id, "uid" => ref.uid, "name" => ref.name, "data" => %{"type" => "text", "data" => %{"text" => text}}}
+      ]
+    }
+
+    block
+    |> Brando.Content.Block.recursive_block_changeset(params, user)
+    |> Brando.Repo.update!()
+
+    {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
 
     user
   end

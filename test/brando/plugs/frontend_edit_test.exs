@@ -98,6 +98,27 @@ defmodule Brando.Plug.FrontendEditTest do
     refute FrontendEdit.active?()
   end
 
+  test "rich text cannot carry the element the overlay reads its configuration from" do
+    id = "brando-frontend-edit-config"
+
+    # An id is kept, which is why the overlay's lookup also names the element.
+    assert {:ok, kept} = Brando.RichText.sanitize_html(~s(<p id="#{id}">{ }</p>))
+    assert kept =~ id
+
+    for html <- [
+          ~s(<script id="#{id}" type="application/json">{ }</script>),
+          ~s(<SCRIPT id="#{id}" type="application/json">{ }</SCRIPT>),
+          ~s(<svg><script id="#{id}" type="application/json">{ }</script></svg>)
+        ] do
+      assert Brando.RichText.sanitize_html(html) == :error
+    end
+  end
+
+  test "the overlay accepts the address the plug sends as its editor" do
+    script = File.read!(Application.app_dir(:brando, "priv/static/js/frontend_edit.js"))
+    assert script =~ "const EDITOR_PATH = '#{Brando.Plug.FrontendEdit.editor_path()}'"
+  end
+
   test "the overlay copy is in the admin's language", %{user: user} do
     user = user |> Ecto.Changeset.change(language: :no) |> Brando.Repo.update!()
     %{page: page} = page_with_blocks(user)
@@ -147,6 +168,11 @@ defmodule Brando.Plug.FrontendEditTest do
       conn = build_conn(:get, path) |> signed_in(user) |> FrontendEditPlug.call([])
       refute Map.has_key?(conn.private, :brando_frontend_edit)
     end
+  end
+
+  test "sanitized rich text cannot carry the </body> the plug splits on" do
+    assert {:ok, clean} = Brando.RichText.sanitize_html(~s(<p title="</body><script>x</script>">a</p>))
+    refute clean =~ "</body>"
   end
 
   test "a pipeline without a session passes through" do
