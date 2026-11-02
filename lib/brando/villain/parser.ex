@@ -381,7 +381,6 @@ defmodule Brando.Villain.Parser do
         adapter.render_module(module, block, processed_vars, processed_refs, opts)
         |> Brando.Villain.Footnotes.attach(block, opts)
         |> maybe_annotate(block.uid, opts)
-        |> maybe_format(opts)
 
       {:error, {:module, :not_found, module_id}} ->
         module_not_found(module_id)
@@ -453,7 +452,6 @@ defmodule Brando.Villain.Parser do
       opts
     )
     |> maybe_annotate(block.uid, opts)
-    |> maybe_format(opts)
   end
 
   defp render_multi_child(child_block, index, count, parent_module_id, opts) do
@@ -1345,7 +1343,6 @@ defmodule Brando.Villain.Parser do
         </section>
         """
         |> maybe_annotate(block.uid, opts)
-        |> maybe_format(opts)
 
       {:error, {:palette, :not_found, nil}} ->
         """
@@ -1354,7 +1351,6 @@ defmodule Brando.Villain.Parser do
         </section>
         """
         |> maybe_annotate(block.uid, opts)
-        |> maybe_format(opts)
     end
   end
 
@@ -1385,7 +1381,6 @@ defmodule Brando.Villain.Parser do
 
     adapter.render_container(container, IO.iodata_to_binary(children_html), block, opts)
     |> maybe_annotate(block.uid, opts)
-    |> maybe_format(opts)
   end
 
   # Inactive and deleted children are left out of the container's output.
@@ -2450,28 +2445,4 @@ defmodule Brando.Villain.Parser do
 
   defp maybe_annotate_children(code, uid, %{annotate_blocks: true}), do: annotate_children(code, uid)
   defp maybe_annotate_children(code, _uid, _opts), do: code
-
-  def maybe_format(html, %{format_html: true}) do
-    html = IO.iodata_to_binary(html)
-
-    try do
-      Phoenix.LiveView.HTMLFormatter.format(html, [])
-    rescue
-      e ->
-        require Logger
-
-        Logger.error("""
-
-        ==> Error formatting HTML.
-        Pre-formatted HTML below:
-
-        #{html}")
-
-        """)
-
-        reraise e, __STACKTRACE__
-    end
-  end
-
-  def maybe_format(html, _), do: html
 end

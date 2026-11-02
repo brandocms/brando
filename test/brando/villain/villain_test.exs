@@ -1521,4 +1521,21 @@ defmodule Brando.VillainTest do
       assert result == []
     end
   end
+
+  describe "removed options" do
+    test "format_html raises, naming its removal, wherever it is passed" do
+      block = %Brando.Content.Block{type: :module, module_id: 0, uid: Brando.Utils.generate_uid(), vars: [], refs: []}
+
+      for value <- [true, false],
+          render <- [
+            fn opts -> Brando.Villain.parse([%{block: block}], nil, opts) end,
+            fn opts -> Brando.Villain.parse([], nil, opts) end,
+            fn opts -> Brando.Villain.render_block(block, nil, opts) end,
+            fn opts -> Brando.Villain.render_block(%{block | active: false}, nil, opts) end
+          ] do
+        assert_raise ArgumentError, ~r/:format_html option .* was removed/, fn -> render.(format_html: value) end
+        assert_raise ArgumentError, ~r/:format_html/, fn -> render.(%{format_html: value}) end
+      end
+    end
+  end
 end

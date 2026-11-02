@@ -368,6 +368,10 @@ sender first, before the first compile.
   prepared before the upgrade, which can only view global sets, cannot save
   on the Globals screen. To let it fill in values, tick Edit values for the
   group under **Configuration → Permissions**.
+- **`format_html:` on `Brando.Villain.parse/3`.** The option is gone, with
+  `Brando.Villain.Parser.maybe_format/2`: the HEEx formatter could turn an
+  editor's text into Liquid. A call that passes it, to `parse/3` or
+  `render_block/3`, raises an `ArgumentError`. Remove it from the call.
 - **Vars created with an owner in params.** `Brando.Content.Var.changeset/3`
   no longer takes an owner key (`page_id`, `module_id`, `global_set_id`,
   `table_template_id`, `table_row_id`, `block_id`, `menu_item_id`) from

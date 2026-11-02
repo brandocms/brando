@@ -123,7 +123,6 @@ with the extra keys described above).
 | `:context` | the Liquex context (entry, identity, globals, navigation, language, …) |
 | `:skip_children` | `true` renders a `[$ content $]` placeholder instead of children; `:force_render` renders children of an inactive container |
 | `:annotate_blocks` | wraps output in `<!-- [+:B<uid>] -->` comments, for live preview diffing |
-| `:format_html` | runs the result through the HEEx formatter |
 
 ## Overriding
 
