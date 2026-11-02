@@ -49,6 +49,8 @@ defmodule BrandoAdmin.DrawerForbiddenSaveTest do
     params = view |> render() |> form_params("#page_form_form") |> put_in(["page", "title"], "Typed")
     view |> element("#page_form_form") |> render_change(Map.put(params, "_target", ["page", "title"]))
 
+    # As the field opens it: loaded, not as the factory built it
+    asset = Repo.reload!(asset)
     edit = Map.put(%{id: asset.id, path: [:vars, 0], field: kind, relation_field: :"#{kind}_id"}, kind, asset)
     Phoenix.LiveView.send_update(view.pid, Form, id: "page_form", action: :"update_edit_#{kind}", "edit_#{kind}": edit)
     _ = :sys.get_state(view.pid)
@@ -114,6 +116,21 @@ defmodule BrandoAdmin.DrawerForbiddenSaveTest do
 
       save(view)
       assert saved_title(page, "Typed") == "Typed"
+    end
+  end
+
+  # Closing a drawer submits it: one that only looked closes as usual
+  for kind <- [:image, :file, :video] do
+    test "closing the #{kind} drawer unchanged without a grant on the #{kind}", %{conn: conn, page: page} = c do
+      kind = unquote(kind)
+      view = open(conn, page, kind, Map.fetch!(c.assets, kind))
+
+      params = view |> render() |> form_params("##{kind}-drawer-form")
+      view |> form() |> render_hook("save_#{kind}", params)
+
+      assert Process.alive?(view.pid)
+      refute Map.fetch!(form_assigns(view), :"editing_#{kind}?")
+      refute_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: @refused}}, 300
     end
   end
 

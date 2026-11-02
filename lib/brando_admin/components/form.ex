@@ -3084,10 +3084,33 @@ defmodule BrandoAdmin.Components.Form do
   # A drawer save the event check let through, which the asset's context
   # refuses: a grant to change the entry, none to change the asset. The drawer
   # closes as for a refused event, and the entry keeps what was typed in it.
-  defp refused_drawer_save(socket, flag) do
-    send(self(), {:toast, gettext("You do not have permission for this action.")})
-    {:noreply, close_refused_drawer(socket, flag)}
+  # Closing the drawer submits it, so one that only looked is refused too:
+  # that closes without a word.
+  defp refused_drawer_save(socket, type, changeset) do
+    if drawer_changed?(changeset, type),
+      do: send(self(), {:toast, gettext("You do not have permission for this action.")})
+
+    {:noreply, close_refused_drawer(socket, :"editing_#{type}?")}
   end
+
+  # What the editor changed in the drawer, not what a save fills in (who and
+  # when). A translated field comes back with every language, blank where the
+  # asset has none: blank is no change, and all blank is none, as stored.
+  defp drawer_changed?(%Changeset{data: data} = changeset, type) do
+    Enum.any?([:focal | drawer_fields(type)], fn field ->
+      Map.has_key?(changeset.changes, field) and
+        without_blanks(Changeset.get_field(changeset, field)) != without_blanks(Map.get(data, field))
+    end)
+  end
+
+  defp without_blanks(%{} = value) when not is_struct(value) do
+    case Map.reject(value, fn {_, v} -> v in [nil, ""] end) do
+      empty when empty == %{} -> nil
+      present -> present
+    end
+  end
+
+  defp without_blanks(value), do: value
 
   # Someone who may not change the entry follows the others and sends nothing,
   # as in a block field: whoever saves a value that reached their form stores
@@ -6369,7 +6392,7 @@ defmodule BrandoAdmin.Components.Form do
          })}
 
       {:error, :forbidden} ->
-        refused_drawer_save(socket, :editing_file?)
+        refused_drawer_save(socket, "file", validated_changeset)
     end
   end
 
@@ -6518,7 +6541,7 @@ defmodule BrandoAdmin.Components.Form do
          })}
 
       {:error, :forbidden} ->
-        refused_drawer_save(socket, :editing_image?)
+        refused_drawer_save(socket, "image", validated_changeset)
     end
   end
 
@@ -6682,7 +6705,7 @@ defmodule BrandoAdmin.Components.Form do
          })}
 
       {:error, :forbidden} ->
-        refused_drawer_save(socket, :editing_video?)
+        refused_drawer_save(socket, "video", validated_changeset)
     end
   end
 
