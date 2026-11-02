@@ -34,17 +34,19 @@ defmodule Brando.Plug.RequestLogTest do
   end
 
   # Audit F38: the logged line came from the decoded segments, so an encoded line
-  # feed started a line of the sender's own
+  # feed started a line of the sender's own. The forged timestamp is one no clock
+  # shows, so a real line's own timestamp cannot match it.
   test "encoded control characters stay encoded in the logged line" do
     for {path, logged} <- [
-          {"/__ssg_preview__/x/%0A10:00:00.000%20[info]%20POST%20/admin/login",
-           "GET /__ssg_preview__/[FILTERED]/%0A10:00:00.000%20[info]%20POST%20/admin/login"},
+          {"/__ssg_preview__/x/%0A99:99:99.999%20[info]%20POST%20/admin/login",
+           "GET /__ssg_preview__/[FILTERED]/%0A99:99:99.999%20[info]%20POST%20/admin/login"},
           {"/a%0Ab/reset-password/s3cr3t", "GET /a%0Ab/reset-password/[FILTERED]"},
           {"/admin/reset-password/s3cr3t/%0D%1B%FF", "GET /admin/reset-password/[FILTERED]/%0D%1B%FF"}
         ] do
       log = OwnLog.capture(fn -> assert RequestLog.level(conn(path), :error) == false end)
       assert log =~ logged
-      refute log =~ "\n10:00"
+      assert [_line] = String.split(log, ["\n", "\r"], trim: true)
+      refute log =~ "\n99:99"
       refute log =~ "s3cr3t"
     end
   end
