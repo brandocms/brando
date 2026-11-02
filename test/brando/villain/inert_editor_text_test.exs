@@ -28,6 +28,8 @@ defmodule Brando.Villain.InertEditorTextTest do
     def load_page(_key, _context), do: Process.get(:project_filter_page)
     def load_pages(_key, _context), do: [Process.get(:project_filter_page)]
     def load_settings(_key, _context), do: Process.get(:project_filter_settings)
+    def settings_for(_block, _context), do: Process.get(:project_filter_settings)
+    def wrapped_settings_for(block, context), do: TemplateView.wrap(settings_for(block, context))
   end
 
   # An image with a handler, percent-encoded so a sanitizer sees only text. Its
@@ -841,6 +843,30 @@ defmodule Brando.Villain.InertEditorTextTest do
         assert active_elements(html) == []
         assert html =~ "&lt;img"
       end
+    end
+
+    # As guides/block_editor.md ("What templates read") says: a map built after
+    # reading `block` comes back as the block's processed data, so the filter wraps it
+    test "a plain map a filter builds from block reads as entry data once wrapped" do
+      Process.put(:project_filter_settings, [%{"password" => @hash, "title" => @markup_title}])
+
+      context =
+        %{Villain.get_base_context(%Page{language: :en}) | filter_module: ProjectFilters}
+        |> Liquex.Context.assign(:block, TemplateView.wrap(%{uid: "x"}, :processed))
+
+      render = fn filter ->
+        code = "{% assign l = block | #{filter} %}{% for s in l %}{{ s.password }}{{ s.title }}{% endfor %}"
+        {:ok, parsed} = Liquex.parse(code, Brando.Villain.LiquexParser)
+        {result, _} = Liquex.Render.render!([], parsed, context)
+        IO.iodata_to_binary(result)
+      end
+
+      assert render.("settings_for") == @hash <> @markup_title
+
+      html = render.("wrapped_settings_for")
+      refute html =~ @hash
+      assert active_elements(html) == []
+      assert html =~ "&lt;img"
     end
 
     test "a plain map a filter returns reads as entry data does" do
