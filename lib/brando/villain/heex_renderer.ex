@@ -116,8 +116,7 @@ defmodule Brando.Villain.HeexRenderer do
     module_name = get_or_compile!(id, code_string)
     assigns = Map.put(assigns, :__changed__, %{})
 
-    # Open from the start: the block before this one can end in a `{`
-    {html, _open?} = assigns |> module_name.render() |> inert_iodata(true)
+    {html, _open?} = assigns |> module_name.render() |> inert_iodata(false)
 
     IO.iodata_to_binary(html)
   end

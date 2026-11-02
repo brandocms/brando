@@ -1159,6 +1159,41 @@ defmodule Brando.Villain.InertEditorTextTest do
       end
     end
 
+    test "a value after a block ending in a brace reads as itself", %{user: user} do
+      var = %Var{key: "title", label: "T", type: :string, value: "% off"}
+      html = render([block(module!(user, ".a {"), []), block(module!(user, "{{ title }}"), vars: [var])])
+
+      assert html |> Floki.parse_fragment!() |> Floki.text() == ".a {% off"
+    end
+
+    test "a module's first value stays JSON inside its container's script", %{user: user} do
+      code = ~S|<%= Phoenix.HTML.raw(Jason.encode!(%{a: 1})) %>|
+
+      {:ok, container} =
+        Content.create_container(
+          %{
+            name: "Script",
+            namespace: "all",
+            help_text: "x",
+            code: ~S|<script type="application/json">{{ content }}</script>|
+          },
+          user
+        )
+
+      html =
+        render(%Block{
+          type: :container,
+          active: true,
+          container_id: container.id,
+          uid: Utils.generate_uid(),
+          children: [block(module!(user, code, %{type: :heex}), [])],
+          vars: [],
+          refs: []
+        })
+
+      assert html =~ ~S|{"a":1}|
+    end
+
     test "a first value's leading brace or percent still reads as the same text", %{user: user} do
       var = %Var{key: "css", label: "C", type: :string, value: "% off"}
       html = render(block(module!(user, "<%= @css %>", %{type: :heex}), vars: [var]))
@@ -1182,6 +1217,8 @@ defmodule Brando.Villain.InertEditorTextTest do
 
   describe "globals through a filter" do
     test "a rich-text global keeps its markup", %{user: user} do
+      preserve_cache(:globals)
+
       {:ok, set} =
         Brando.Sites.create_global_set(
           %{
@@ -1214,18 +1251,28 @@ defmodule Brando.Villain.InertEditorTextTest do
             ".a { {{- entry.title | strip_html }}",
             ".a { {{- title | strip_html }}",
             ~S({{ "{" }}{{ title | strip_html }}),
-            ".a { {{- encoded | url_decode }}"
+            ".a { {{- encoded | url_decode }}",
+            ".a { {{- encoded | url_decode | strip }}",
+            ".a { {{- title | strip_html | strip }}"
           ],
-          value <- ["{ 1 | plus: 41 }}", "% assign x = 41 %}{{ x | plus: 1 }}"] do
+          value <- ["{ 1 | plus: 41 }}", "% if true %}42{% endif %}", " % if true %}42&#123;% endif %}"] do
         vars = [
           %Var{key: "title", label: "T", type: :string, value: value},
-          %Var{key: "encoded", label: "E", type: :string, value: URI.encode(value, &(&1 not in ~c"{}%"))}
+          %Var{key: "encoded", label: "E", type: :string, value: URI.encode(value, &(&1 not in ~c"{}% &#;"))}
         ]
 
         html = render(block(module!(user, code), vars: vars), %Page{title: value, language: :en})
 
-        refute html =~ "42", "#{code} ran #{value}: #{html}"
+        refute html =~ ~r/^(\.a )?42/, "#{code} ran #{value}: #{html}"
       end
+    end
+
+    test "a template that makes no HTML keeps a decoding filter's text" do
+      entry = %Page{title: "{Draft} \"x\"", language: :en}
+      {:ok, parsed} = Liquex.parse("{{ entry.title | strip_html }}", Brando.Villain.LiquexParser)
+      {result, _} = Liquex.Render.render!([], parsed, Villain.plain_context(entry))
+
+      assert IO.iodata_to_binary(result) == ~s({Draft} "x")
     end
 
     test "a text filter's result reads as the same text", %{user: user} do

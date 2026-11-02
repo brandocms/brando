@@ -66,7 +66,7 @@ defmodule Brando.Villain.TemplateView do
   @filters_giving_markup [:markdown, :json_ld, :inspect, :raw, :srcset, :size, :large, :xlarge]
 
   # Their text has what a view had as references as plain characters again, and
-  # is no JSON that must start with its brace.
+  # is no JSON that needs its braces.
   @filters_decoding_text [:strip_html, :url_decode]
 
   @doc """
@@ -179,11 +179,14 @@ defmodule Brando.Villain.TemplateView do
   def filter_result(result, filter, _mode, context) when is_binary(result) and filter in @filters_giving_markup,
     do: inert(result, context)
 
-  # A `{` written before a tag can reach it (`{ {{- x }}`): it starts no delimiter
-  # with the template's brace either.
+  # A `{` written before a tag can reach it (`{ {{- x }}`): no brace in this text
+  # makes a delimiter, with the template's or through a later filter.
   def filter_result(result, filter, mode, context) when is_binary(result) and filter in @filters_decoding_text do
     text = filter_result(result, :text, mode, context)
-    if Markdown.template_context?(context), do: text, else: InertLiquid.close_delimiter(text)
+
+    if Markdown.template_context?(context),
+      do: text,
+      else: text |> InertLiquid.encode_all() |> InertLiquid.close_delimiter()
   end
 
   def filter_result(result, _filter, nil, context), do: result |> wrap_records(context) |> inert(context)

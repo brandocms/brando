@@ -115,7 +115,7 @@ defmodule Brando.Villain do
       |> Enum.reduce([], fn
         nil, acc -> acc
         %{block: %{marked_as_deleted: true}}, acc -> acc
-        %{block: block}, acc -> [parse_node(parser, block, opts_map) | acc]
+        %{block: block}, acc -> [parser |> parse_node(block, opts_map) |> Brando.Villain.InertLiquid.close_end() | acc]
       end)
       |> Enum.reverse()
 
@@ -282,7 +282,7 @@ defmodule Brando.Villain do
   its identifier: entry data as it is, not as text for a page.
   """
   def plain_context(entry) do
-    context = get_base_context(entry)
+    context = entry |> get_base_context() |> Brando.Villain.Markdown.put_template_flag(true)
 
     Enum.reduce(@view_keys, context, fn key, acc ->
       Context.assign(acc, key, raw_context(acc, key))

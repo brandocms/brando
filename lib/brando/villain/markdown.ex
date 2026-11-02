@@ -386,8 +386,9 @@ defmodule Brando.Villain.Markdown do
   defp template_mode?(_opts), do: false
 
   @doc """
-  True while a module's `markdown` template renders in `context`: what it
-  outputs goes into the Markdown as it is, and no Liquid pass reads it after.
+  True while a module's `markdown` template renders in `context`, or a template
+  that makes no HTML (`Brando.Villain.plain_context/1`): what it outputs goes
+  where it is going as it is, and no Liquid pass reads it after.
   """
   def template_context?(%Context{private: private}), do: Map.get(private, @template_flag) == true
   def template_context?(_context), do: false
@@ -397,9 +398,11 @@ defmodule Brando.Villain.Markdown do
 
   defp put_flag(opts, _value), do: opts
 
-  # In the context's private data, where neither a template's `assign` nor a
-  # module variable can set it.
-  defp put_template_flag(%Context{private: private} = context, value),
+  @doc """
+  `context` with `template_context?/1` set to `value`. In the context's private
+  data, where neither a template's `assign` nor a module variable can set it.
+  """
+  def put_template_flag(%Context{private: private} = context, value),
     do: %{context | private: Map.put(private, @template_flag, value)}
 
   defp escape(text), do: text |> to_string() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()

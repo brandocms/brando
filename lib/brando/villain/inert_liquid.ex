@@ -51,6 +51,14 @@ defmodule Brando.Villain.InertLiquid do
   def close_delimiter(text), do: text
 
   @doc """
+  A block's output, its last `{` a character reference: blocks are joined for
+  the final pass, and it would make a delimiter with what the next block prints.
+  """
+  def close_end(html) when is_binary(html), do: String.replace_suffix(html, "{", "&#123;")
+  def close_end(html) when is_list(html), do: html |> IO.iodata_to_binary() |> close_end()
+  def close_end(other), do: other
+
+  @doc """
   Plain braces again, for output no Liquid pass reads after it, such as a
   Markdown template's (`Brando.Villain.Markdown`).
   """

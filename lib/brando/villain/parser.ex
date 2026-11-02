@@ -1381,7 +1381,7 @@ defmodule Brando.Villain.Parser do
     |> Enum.reduce([], fn
       %{active: false}, acc -> acc
       %{marked_as_deleted: true}, acc -> acc
-      d, acc -> [apply(parser_module(opts), d.type, [d, opts]) | acc]
+      d, acc -> [parser_module(opts) |> apply(d.type, [d, opts]) |> Brando.Villain.InertLiquid.close_end() | acc]
     end)
     |> Enum.reverse()
     |> maybe_annotate_children(block.uid, opts)
