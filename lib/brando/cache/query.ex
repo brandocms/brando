@@ -16,9 +16,19 @@ defmodule Brando.Cache.Query do
   itself it runs at once. The `{:mutation, ...}` broadcast of a generated
   create, delete or changeset update also goes out after the commit (an
   update by id sends none).
+
+  ## Other nodes
+
+  Each node has its own query cache. Once the write has committed, the other
+  nodes evict the written schema's lists and entries under its site
+  (`Brando.CacheSync.broadcast_gathered/2`, which sends a node's evictions
+  together, a tenth of a second at a time). They evict every cached entry of
+  the schema rather than the written ones, so a message stays small however
+  many rows a transaction writes.
   """
   use Brando.Tracing.Decorator
 
+  alias Brando.CacheSync
   alias Brando.Tracing
 
   @type changeset :: Ecto.Changeset.t()
@@ -133,12 +143,25 @@ defmodule Brando.Cache.Query do
   # once per cache entry however many writes the transaction makes.
   defp evict_committed(key, evict) do
     evict.()
+    prefix = Brando.Tenant.current_prefix()
 
-    if Brando.Repo.repo().in_transaction?() do
-      prefix = Brando.Tenant.current_prefix()
-      Brando.Repo.after_commit({__MODULE__, prefix, key}, fn -> Brando.Tenant.with_prefix(prefix, evict) end)
-    end
+    if Brando.Repo.repo().in_transaction?(),
+      do: Brando.Repo.after_commit({__MODULE__, prefix, key}, fn -> Brando.Tenant.with_prefix(prefix, evict) end)
 
+    CacheSync.broadcast_gathered(__MODULE__, {prefix, elem(key, 1)})
+  end
+
+  @doc """
+  Evicts this node's lists and entries of the source another node wrote,
+  under its tenant prefix (`Brando.CacheSync`).
+  """
+  @spec refresh_node_cache({String.t() | nil, String.t()}) :: :ok
+  def refresh_node_cache({nil, source}), do: evict_source(source)
+  def refresh_node_cache({prefix, source}), do: Brando.Tenant.with_prefix(prefix, fn -> evict_source(source) end)
+
+  defp evict_source(source) do
+    perform_eviction(:list, source)
+    perform_eviction(:single, source, :_)
     :ok
   end
 
@@ -154,7 +177,7 @@ defmodule Brando.Cache.Query do
     Cachex.Error -> :ok
   end
 
-  @spec perform_eviction(:single, binary(), integer()) :: [:ok]
+  @spec perform_eviction(:single, binary(), integer() | :_) :: [:ok]
   defp perform_eviction(:single, schema, id) do
     key_pattern = scoped_pattern({:single, schema, :_, id})
     ms = [{{:entry, key_pattern, :_, :_, :_}, [], [:"$_"]}]

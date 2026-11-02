@@ -32,7 +32,7 @@ defmodule Brando.Cache.Globals do
   @spec set :: map()
   @decorate span("brando.cache.set_globals")
   def set do
-    if Brando.Tenant.outside_site?(), do: %{}, else: do_set()
+    if Brando.Tenant.outside_site?(), do: %{}, else: Cache.serialize(:globals, &do_set/0)
   end
 
   defp do_set do
@@ -44,18 +44,20 @@ defmodule Brando.Cache.Globals do
 
   @doc """
   Update globals cache, once the transaction around the caller has
-  committed (`Brando.Cache.rebuild_after_commit/2`)
+  committed (`Brando.Cache.rebuild_after_commit/1`)
   """
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, global_set}) do
-    Cache.rebuild_after_commit(:globals, &rebuild/0)
+    Cache.rebuild_after_commit(:globals)
     {:ok, global_set}
   end
 
   def update({:error, changeset}), do: {:error, changeset}
 
-  defp rebuild do
+  @doc false
+  # Under `Brando.Cache`'s lock for the cache
+  def rebuild do
     {:ok, global_sets} = Sites.list_global_sets()
     Cache.update(:globals, process_globals(global_sets))
   end

@@ -42,10 +42,12 @@ defmodule Brando.Cache.Palettes do
   @spec set :: {:error, boolean} | {:ok, boolean}
   @decorate span("brando.cache.set_palettes")
   def set do
-    if Brando.Tenant.outside_site?(), do: {:ok, false}, else: do_set()
+    if Brando.Tenant.outside_site?(), do: {:ok, false}, else: Cache.serialize(:palettes, &rebuild/0)
   end
 
-  defp do_set do
+  @doc false
+  # Under `Brando.Cache`'s lock for the cache
+  def rebuild do
     {:ok, palettes} = get_palettes()
     palettes_css = get_palettes_css(palettes)
 
@@ -56,12 +58,12 @@ defmodule Brando.Cache.Palettes do
 
   @doc """
   Update palette cache, once the transaction around the caller has
-  committed (`Brando.Cache.rebuild_after_commit/2`)
+  committed (`Brando.Cache.rebuild_after_commit/1`)
   """
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, palette}) do
-    Cache.rebuild_after_commit(:palettes, &set/0)
+    Cache.rebuild_after_commit(:palettes)
     {:ok, palette}
   end
 
