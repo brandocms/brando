@@ -336,7 +336,8 @@ What a proposal writes is checked before it can be approved, as text a model
 or client wrote, not an editor:
 
 - text and markdown slots, text and rich_text variables, and an entry's
-  fields take rich text without scripts, event handlers or script addresses;
+  fields take rich text without scripts, event handlers, LiveView bindings or
+  script addresses;
   an HTML or SVG slot's markup is a superuser's and is never written;
 - an HTML slot's parameter values each take a value of their type, escaped
   when the slot renders;

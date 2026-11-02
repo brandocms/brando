@@ -1,0 +1,1 @@
+- Rich text with a LiveView binding (a `phx-*` or `data-phx-*` attribute) is refused on save, and such text already stored renders without its markup.
