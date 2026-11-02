@@ -444,7 +444,7 @@ defmodule Brando.Environments do
         Brando.Tenant.Access.can_manage?(user, site)
 
       true ->
-        user.role in [:admin, :superuser]
+        Brando.Authorization.Boundary.fresh_role(user).role in [:admin, :superuser]
     end
   end
 

@@ -62,13 +62,17 @@ defmodule Brando.Users do
 
   # A deactivated or deleted account cannot log in, and nor may its open
   # admin views and sockets go on: its sessions end with it, and so do the
-  # tools it connected over MCP.
+  # tools it connected over MCP. Open views check a role change at once
+  # (`BrandoAdmin.Authorization`); groups mode's `Boundary.run/4` tells them.
   mutation :update, User do
     fn entry ->
       if entry.active == false or not is_nil(entry.deleted_at) do
         revoke_sessions(entry)
         Repo.after_commit(fn -> Brando.MCP.revoke_user_grants(entry, "account_deactivated") end)
       end
+
+      if not Brando.Authorization.enabled?(),
+        do: Repo.after_commit(&Brando.Authorization.Realtime.broadcast_changed/0)
 
       {:ok, entry}
     end
@@ -139,14 +143,11 @@ defmodule Brando.Users do
 
   @doc """
   Whether `user` is a superuser: in the installation's superuser group with
-  groups authorization, or of the `:superuser` role without.
+  groups authorization, or of the `:superuser` role without. Reads the stored
+  state, not the struct's role.
   """
   @spec superuser?(user | term()) :: boolean()
-  def superuser?(%User{} = user) do
-    if Brando.Authorization.enabled?(),
-      do: Brando.Authorization.Engine.superuser?(Brando.Authorization.Scope.installation(user)),
-      else: user.role == :superuser
-  end
+  def superuser?(%User{} = user), do: Brando.Authorization.Boundary.superuser?(user)
 
   def superuser?(_), do: false
 
@@ -488,7 +489,8 @@ defmodule Brando.Users do
   @doc """
   Disconnects every socket of the session `token` — its LiveViews and its
   admin socket — and no other session's. Call it once the session's token
-  is deleted: the sockets try to reconnect, and are turned away. Inside a
+  is deleted: the sockets try to reconnect, and are turned away. With the
+  token kept they reconnect and remount, as for a lowered role. Inside a
   transaction (`Brando.Repo.transaction/2`) it waits for the commit, since a
   socket reconnecting before then would still find the session.
   """

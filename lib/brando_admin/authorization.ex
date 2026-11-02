@@ -3,10 +3,25 @@ defmodule BrandoAdmin.Authorization do
   Server-side LiveView authorization. Generated listings and forms declare their
   resource automatically. Custom admin views declare `__authorization__/0`, returning
   `{action, resource}`; mutations still authorize at their context boundary.
+
+  Authority can change while a view is open. In group mode every event, patch and
+  message checks the requirement again. In legacy mode every event and patch reads
+  the account and its site (`Brando.Tenant.Access.legacy_standing/2`), as does the
+  `authorization_changed` broadcast, which is what reaches a LiveComponent's events:
+
+    * a role lowered disconnects the session's sockets, so that its views remount at
+      the stored role and forms recover what was typed. Until then events are refused;
+    * a site that may no longer be entered sends the view to the access-denied page.
+      Installation screens and the user's own password do not depend on a site, and
+      the layout's sticky views (navigation, chrome, command palette), which cannot
+      tell what screen they sit beside, refuse their events and leave the rest to it;
+    * otherwise, nothing happens: an editor whose authority did not change is left
+      alone, and a role raised takes effect for the view's next check.
   """
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1, redirect: 2, put_flash: 3]
   alias Brando.Authorization.{Administration, Boundary, Engine, Scope}
+  alias Brando.Tenant.Access
 
   @legacy_actor_key {__MODULE__, :legacy_actor}
 
@@ -67,7 +82,7 @@ defmodule BrandoAdmin.Authorization do
     end
   end
 
-  def on_mount(:default, params, _session, socket) do
+  def on_mount(:default, params, session, socket) do
     if Engine.enabled?() or socket.view == BrandoAdmin.Users.GroupsLive do
       requirement = requirement(socket.view, params, socket.assigns[:live_action])
       scope = scope(socket, requirement, params)
@@ -79,7 +94,7 @@ defmodule BrandoAdmin.Authorization do
         denied -> denied
       end
     else
-      legacy_check(socket, params)
+      legacy_check(socket, params, session)
     end
   end
 
@@ -87,8 +102,8 @@ defmodule BrandoAdmin.Authorization do
   # module or container code opens for superusers, and so does the setup of
   # global sets, whose definitions say how an editor's values print; editors
   # fill those in on the Globals screen. `allowed?/2` asks the same for the
-  # user this view mounted with.
-  defp legacy_check(socket, params) do
+  # user this view holds, which the hooks below keep up to date.
+  defp legacy_check(socket, params, session) do
     user = socket.assigns.current_user
     Process.put(@legacy_actor_key, user)
     {action, subject} = requirement(socket.view, params, socket.assigns[:live_action])
@@ -98,7 +113,91 @@ defmodule BrandoAdmin.Authorization do
 
     if superuser_only? and not Boundary.superuser?(user),
       do: {:halt, redirect(socket, to: "/admin/access-denied")},
-      else: {:cont, socket}
+      else: {:cont, attach_legacy_hooks(socket, params, session)}
+  end
+
+  defp attach_legacy_hooks(socket, params, session) do
+    if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:authorization")
+
+    socket =
+      if params == :not_mounted_at_router,
+        do: socket,
+        else: attach_hook(socket, :legacy_authority_params, :handle_params, &legacy_params_hook/3)
+
+    socket
+    |> assign(:legacy_site_rule, legacy_site_rule(socket, params))
+    |> assign(:legacy_socket_id, legacy_socket_id(session))
+    |> attach_hook(:legacy_authority_events, :handle_event, &legacy_event_hook/3)
+    |> attach_hook(:legacy_authority_info, :handle_info, &legacy_info_hook/2)
+  end
+
+  # The id, a hash of the token: the token itself stays out of the socket's state.
+  defp legacy_socket_id(%{"user_token" => token}) when is_binary(token), do: Brando.Users.live_socket_id(token)
+  defp legacy_socket_id(_session), do: nil
+
+  defp legacy_params_hook(params, _url, socket) do
+    socket |> assign(:legacy_site_rule, legacy_site_rule(socket, params)) |> legacy_recheck()
+  end
+
+  defp legacy_event_hook(_event, _params, socket), do: legacy_recheck(socket)
+
+  # Always halted: most views have no `handle_info` clause for it.
+  defp legacy_info_hook({:authorization_changed, _}, socket) do
+    {_, socket} = legacy_recheck(socket)
+    {:halt, socket}
+  end
+
+  defp legacy_info_hook(_message, socket), do: {:cont, socket}
+
+  # What a site no longer enterable means for this view
+  defp legacy_site_rule(_socket, :not_mounted_at_router), do: :refuse
+
+  defp legacy_site_rule(socket, params) do
+    requirement = requirement(socket.view, params, socket.assigns[:live_action])
+    if requirement == {:update, :profile} or installation?(requirement, params), do: :ignore, else: :leave
+  end
+
+  defp legacy_recheck(socket) do
+    %{current_user: user, current_site: site} = socket.assigns
+    site_id = if site && Brando.Tenant.mode() == :multi, do: site.id
+
+    case Access.legacy_standing(user.id, site_id) do
+      nil ->
+        {:halt, redirect(socket, to: "/admin/access-denied")}
+
+      {role, enterable?} ->
+        cond do
+          lowered?(user.role, role) -> {:halt, remount(socket)}
+          enterable? or socket.assigns.legacy_site_rule == :ignore -> {:cont, legacy_hold_role(socket, role)}
+          socket.assigns.legacy_site_rule == :leave -> {:halt, redirect(socket, to: "/admin/access-denied")}
+          true -> {:halt, socket}
+        end
+    end
+  end
+
+  defp lowered?(held, stored), do: role_rank(stored) < role_rank(held)
+
+  defp role_rank(role) do
+    {:ok, rank} = Brando.Type.Role.dump(role)
+    rank
+  end
+
+  # The sockets reconnect with the session, and every view mounts at the stored
+  # role. A session with no socket id has nothing to reconnect: it goes to the
+  # admin's front page, at the stored role too.
+  defp remount(%{assigns: %{legacy_socket_id: id}} = socket) when is_binary(id) do
+    Brando.endpoint().broadcast(id, "disconnect", %{})
+    socket
+  end
+
+  defp remount(socket), do: redirect(socket, to: "/admin")
+
+  defp legacy_hold_role(%{assigns: %{current_user: %{role: role}}} = socket, role), do: socket
+
+  defp legacy_hold_role(%{assigns: %{current_user: user}} = socket, role) do
+    user = %{user | role: role}
+    Process.put(@legacy_actor_key, user)
+    assign(socket, :current_user, user)
   end
 
   defp attach_authorization_hooks(socket, params) do
@@ -161,6 +260,7 @@ defmodule BrandoAdmin.Authorization do
           case socket.view do
             BrandoAdmin.Nav -> BrandoAdmin.Nav.refresh_authorization(socket)
             BrandoAdmin.Chrome -> BrandoAdmin.Chrome.refresh_authorization(socket)
+            BrandoAdmin.Sites.ActivityLive -> BrandoAdmin.Sites.ActivityLive.refresh_authorization(socket)
             _ -> socket
           end
 
@@ -285,7 +385,7 @@ defmodule BrandoAdmin.Authorization do
 
   @doc """
   The user this admin view's process acts for: the authorization scope with
-  groups, the user the view mounted with in legacy mode, else nil. For
+  groups, the user the view holds in legacy mode, else nil. For
   LiveComponents, which may not be given the user, and whose events this
   module's event check does not see.
   """
@@ -293,7 +393,8 @@ defmodule BrandoAdmin.Authorization do
 
   @doc """
   Presentation checks against the current administration scope; in legacy
-  mode, against the user the view mounted with.
+  mode, against the user the view holds, with no read: a template may ask
+  often. What it answers follows a role change within the view's next check.
   """
   def allowed?(action, subject) do
     if Engine.enabled?(),
@@ -303,5 +404,5 @@ defmodule BrandoAdmin.Authorization do
 
   # Outside a mounted admin view there is nobody to ask: as before, allowed.
   defp legacy_allowed?(nil, _action, _subject), do: true
-  defp legacy_allowed?(actor, action, subject), do: Boundary.authorize(actor, action, subject) == :ok
+  defp legacy_allowed?(actor, action, subject), do: Boundary.role_allows?(actor, action, subject)
 end

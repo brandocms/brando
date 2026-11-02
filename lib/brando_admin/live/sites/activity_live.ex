@@ -39,7 +39,6 @@ defmodule BrandoAdmin.Sites.ActivityLive do
          |> set_admin_locale()
          |> assign(:limit, @page_size)
          |> assign(:comparison, nil)
-         |> assign(:readable, readable_schemas())
          |> assign(:viewer, Events.viewer(socket.assigns.current_user))
          |> assign_options()}
       else
@@ -47,6 +46,29 @@ defmodule BrandoAdmin.Sites.ActivityLive do
       end
     else
       {:ok, assign(socket, :socket_connected, false)}
+    end
+  end
+
+  @doc """
+  Drops what the reader may no longer see when authorization changed, rather
+  than at their next action (`BrandoAdmin.Authorization`).
+  """
+  def refresh_authorization(%{assigns: %{socket_connected: true, view: _}} = socket) do
+    socket |> close_unreadable_comparison() |> load()
+  end
+
+  def refresh_authorization(socket), do: socket
+
+  defp close_unreadable_comparison(%{assigns: %{comparison: %{event: event}}} = socket) do
+    if readable_event?(event), do: socket, else: assign(socket, :comparison, nil)
+  end
+
+  defp close_unreadable_comparison(socket), do: socket
+
+  defp readable_event?(event) do
+    case readable_schemas() do
+      nil -> true
+      readable -> Events.schema(event.schema) in readable
     end
   end
 
@@ -166,7 +188,8 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   # type the log narrows by entry (list, count, states) share it.
   defp load(socket) do
     Brando.Authorization.with_snapshots(fn ->
-      filters = query_filters(socket.assigns.filters, socket.assigns.readable)
+      # Asked on each load: a read grant may have gone since the view opened.
+      filters = query_filters(socket.assigns.filters, readable_schemas())
       events = Activity.list(filters, limit: socket.assigns.limit)
 
       socket
@@ -251,6 +274,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   def handle_event("compare", %{"id" => id}, socket) do
     with :content <- socket.assigns.view,
          event when not is_nil(event) <- Enum.find(socket.assigns.events, &(to_string(&1.id) == id)),
+         true <- readable_event?(event),
          schema when not is_nil(schema) <- Events.schema(event.schema),
          {from, to} <- Comparison.revisions(event) do
       result = Comparison.build(schema, event.entry_id, from, to, socket.assigns.current_user)

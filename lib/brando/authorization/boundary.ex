@@ -138,8 +138,16 @@ defmodule Brando.Authorization.Boundary do
   def authorize(actor, action, subject) do
     if Engine.enabled?(),
       do: Engine.authorize(actor_scope(actor), action, subject),
-      else: legacy_authorize(actor, action, subject)
+      else: legacy_authorize(fresh_role(actor), action, subject)
   end
+
+  @doc """
+  What `authorize/3` would answer in legacy mode for the role `actor` already
+  holds, with no read: for presentation, which a template may ask many times
+  per render. An open view's held user is brought up to date by
+  `BrandoAdmin.Authorization`. Decide nothing with this; use `authorize/3`.
+  """
+  def role_allows?(actor, action, subject), do: legacy_authorize(actor, action, subject) == :ok
 
   @doc """
   Whether `actor` is a superuser: in the installation's superuser group with groups
@@ -177,6 +185,7 @@ defmodule Brando.Authorization.Boundary do
         protect_account(changeset)
       end
     else
+      actor = fresh_role(actor)
       # A changeset built elsewhere may carry the target as it was: its stored role counts.
       changeset = with_stored_role(changeset)
 
@@ -340,7 +349,7 @@ defmodule Brando.Authorization.Boundary do
            do: :ok,
            else: (_ -> {:error, :forbidden})
     else
-      legacy_authorize(actor, action, schema)
+      legacy_authorize(fresh_role(actor), action, schema)
     end
   end
 
@@ -471,9 +480,13 @@ defmodule Brando.Authorization.Boundary do
   defp legacy_role(%{id: id}) when is_integer(id), do: stored_role(id)
   defp legacy_role(_), do: nil
 
-  # An admin view holds the user it mounted with; the role may have changed since.
-  defp fresh_role(%User{id: id} = user) when is_integer(id), do: %{user | role: stored_role(id) || user.role}
-  defp fresh_role(actor), do: actor
+  @doc """
+  `actor` with the role stored now. An admin view holds the user it mounted
+  with, and the role may have changed since: a check that decides anything in
+  legacy mode reads it here. Anything but a stored user comes back as it is.
+  """
+  def fresh_role(%User{id: id} = user) when is_integer(id), do: %{user | role: stored_role(id) || user.role}
+  def fresh_role(actor), do: actor
 
   defp stored_role(id) do
     import Ecto.Query, only: [from: 2]

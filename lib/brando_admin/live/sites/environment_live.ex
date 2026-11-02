@@ -735,8 +735,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   defp for_site(nil, _fun), do: []
   defp for_site(site, fun), do: fun.(site)
 
-  defp authorize(%{assigns: %{can_manage?: true}}), do: :ok
-  defp authorize(_socket), do: {:error, :not_authorized}
+  # Asked again for each action: a site's role may have been lowered since mount.
+  defp authorize(socket) do
+    if can_manage?(socket.assigns.current_user, socket.assigns[:current_site]),
+      do: :ok,
+      else: {:error, :not_authorized}
+  end
 
   defp environment_for_site(socket, id) do
     with {environment_id, ""} <- Integer.parse(to_string(id)),

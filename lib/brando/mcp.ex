@@ -383,7 +383,7 @@ defmodule Brando.MCP do
     active?(user) and
       if Engine.enabled?(),
         do: Brando.Authorization.Boundary.authorize(user, :manage, :mcp) == :ok,
-        else: user.role in [:admin, :superuser]
+        else: legacy_admin?(user, %{site: nil})
   end
 
   def can_manage_here?(_user), do: false
@@ -399,7 +399,7 @@ defmodule Brando.MCP do
     end
   end
 
-  defp legacy_admin?(user, %{site: nil}), do: user.role in [:admin, :superuser]
+  defp legacy_admin?(user, %{site: nil}), do: Brando.Authorization.Boundary.fresh_role(user).role in [:admin, :superuser]
   defp legacy_admin?(user, %{site: site}), do: Tenant.Access.can_manage?(user, site)
 
   ## Connections
