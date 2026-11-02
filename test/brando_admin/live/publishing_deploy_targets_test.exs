@@ -113,6 +113,32 @@ defmodule BrandoAdmin.Sites.PublishingDeployTargetsTest do
         assert saved_target(context.site_a) == own
       end
 
+      test "a per-site map gives each site only its own destinations", context do
+        own = saved_target(context.site_a)
+        alpha = context.site_a.key
+        beta = context.site_b.key
+
+        put_test_env(DeployConfig,
+          rsync_targets: %{alpha => [own], beta => ["deploy@beta-www.example.test:/srv/www"]},
+          s3_targets: %{alpha => ["s3://alpha-www"], beta => ["s3://beta-www"]}
+        )
+
+        user = unquote(person)(context)
+        {:ok, view, _html} = live(log_in_user(build_conn(), user), "/admin/config/publishing")
+
+        save(view, "rsync", "deploy@beta-www.example.test:/srv/www")
+        assert saved_target(context.site_a) == own
+
+        save(view, "s3", "s3://beta-www")
+        assert saved_target(context.site_a) == own
+
+        save(view, "s3", "s3://alpha-www")
+        assert saved_target(context.site_a) == "s3://alpha-www"
+
+        save(view, "rsync", own)
+        assert saved_target(context.site_a) == own
+      end
+
       test "with several sites and no list, no destination can be saved", context do
         own = saved_target(context.site_a)
         put_test_env(DeployConfig, [])

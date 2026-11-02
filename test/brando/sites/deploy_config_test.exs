@@ -219,6 +219,148 @@ defmodule Brando.Sites.DeployConfigTest do
     refute s3("s3://static-bucket").valid?
   end
 
+  describe "a map binds each site's destinations to that site" do
+    setup do
+      put_test_env(:tenancy_mode, :multi)
+
+      put_test_env(DeployConfig,
+        resolver: &resolve/2,
+        rsync_targets: %{
+          "alpha" => ["deploy@alpha-www.example.com:/srv/www", "deploy@static.example.com:/srv/alpha/"],
+          "beta" => ["deploy@beta-www.example.com:/srv/www"]
+        },
+        s3_targets: %{"alpha" => ["s3://alpha-www", "s3://shared-bucket/a/"], "beta" => ["s3://beta-www"]}
+      )
+    end
+
+    test "for rsync" do
+      assert rsync("deploy@alpha-www.example.com:/srv/www").valid?
+      assert rsync("deploy@static.example.com:/srv/alpha/production").valid?
+      assert DeployConfig.valid_rsync_target?("deploy@alpha-www.example.com:/srv/www", "alpha")
+      assert rsync("deploy@beta-www.example.com:/srv/www", "beta").valid?
+
+      refute rsync("deploy@beta-www.example.com:/srv/www").valid?
+      refute rsync("deploy@static.example.com:/srv/alpha").valid?
+      refute rsync("deploy@alpha-www.example.com:/srv/www", "beta").valid?
+      refute rsync("deploy@static.example.com:/srv/alpha/production", "beta").valid?
+      refute DeployConfig.valid_rsync_target?("deploy@beta-www.example.com:/srv/www", "alpha")
+    end
+
+    test "for S3" do
+      assert s3("s3://alpha-www").valid?
+      assert s3("s3://shared-bucket/a/production").valid?
+      assert {:ok, "alpha-www", ""} = DeployConfig.s3_destination("s3://alpha-www", "alpha")
+      assert {:ok, "beta-www", ""} = DeployConfig.s3_destination("s3://beta-www", "beta")
+
+      refute s3("s3://beta-www").valid?
+      refute s3("s3://alpha-www", "beta").valid?
+      refute s3("s3://shared-bucket/a/production", "beta").valid?
+      refute s3("s3://shared-bucket/a").valid?
+      assert :error = DeployConfig.s3_destination("s3://beta-www", "alpha")
+      assert :error = DeployConfig.s3_destination("s3://alpha-www", "beta")
+    end
+
+    test "a site the map does not name gets nothing" do
+      for target <- ["deploy@alpha-www.example.com:/srv/www", "deploy@beta-www.example.com:/srv/www"] do
+        refute rsync(target, "gamma").valid?
+        refute rsync(target, nil).valid?
+      end
+
+      for target <- ["s3://alpha-www", "s3://beta-www"] do
+        refute s3(target, "gamma").valid?
+        refute s3(target, nil).valid?
+        assert :error = DeployConfig.s3_destination(target, "gamma")
+      end
+    end
+
+    test "with one site too" do
+      put_test_env(:tenancy_mode, :single)
+
+      assert s3("s3://alpha-www").valid?
+      refute s3("s3://beta-www").valid?
+      refute s3("s3://alpha-www", "gamma").valid?
+    end
+
+    test "a site whose value is not a list, or a key that is not a string, gets nothing" do
+      put_test_env(DeployConfig,
+        resolver: &resolve/2,
+        s3_targets: %{"alpha" => "s3://alpha-www", beta: ["s3://beta-www"]}
+      )
+
+      refute s3("s3://alpha-www").valid?
+      refute s3("s3://beta-www", "beta").valid?
+    end
+
+    test "an entry may still use the placeholder" do
+      put_test_env(DeployConfig, resolver: &resolve/2, s3_targets: %{"alpha" => ["s3://static-bucket/sites/{site_key}"]})
+
+      assert s3("s3://static-bucket/sites/alpha").valid?
+      refute s3("s3://static-bucket/sites/beta").valid?
+    end
+
+    test "map entries are not shared" do
+      assert DeployConfig.shared_destinations() == []
+      assert DeployConfig.overlapping_destinations() == []
+      assert DeployConfig.unreadable_settings() == []
+    end
+  end
+
+  test "map entries of two sites that reach one destination overlap" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: %{
+        "alpha" => ["deploy@static.example.com:/srv/sites/"],
+        "beta" => ["deploy@Static.example.com.:/srv/sites/beta", "deploy@static.example.com:/srv/sites-b"],
+        "gamma" => ["deploy@[2001:db8::1]:/srv/www"],
+        "delta" => ["deploy@[2001:db8:0::1]:/srv/www/"]
+      },
+      s3_targets: %{
+        "alpha" => ["s3://bucket", "s3://other/a", "s3://other/{site_key}-x"],
+        "beta" => ["s3://bucket/beta", "s3://other/ab", "s3://other/alpha-x/y"],
+        "gamma" => ["s3://gamma-www"]
+      }
+    )
+
+    assert DeployConfig.overlapping_destinations() == [
+             {:rsync_targets, {"alpha", "deploy@static.example.com:/srv/sites/"},
+              {"beta", "deploy@Static.example.com.:/srv/sites/beta"}},
+             {:rsync_targets, {"delta", "deploy@[2001:db8:0::1]:/srv/www/"}, {"gamma", "deploy@[2001:db8::1]:/srv/www"}},
+             {:s3_targets, {"alpha", "s3://bucket"}, {"beta", "s3://bucket/beta"}},
+             {:s3_targets, {"alpha", "s3://other/{site_key}-x"}, {"beta", "s3://other/alpha-x/y"}}
+           ]
+  end
+
+  test "a setting no target can pass is unreadable" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: [acme: ["deploy@static.example.com:/srv/www"]],
+      s3_targets: %{"acme" => "s3://acme-www"}
+    )
+
+    assert DeployConfig.unreadable_settings() == [:rsync_targets, :s3_targets]
+
+    for value <- ["s3://acme-www", %{acme: ["s3://acme-www"]}, %{"acme" => [:atom]}, MapSet.new(["s3://acme-www"])] do
+      put_test_env(DeployConfig, resolver: &resolve/2, s3_targets: value)
+      assert DeployConfig.unreadable_settings() == [:s3_targets], inspect(value)
+    end
+  end
+
+  test "list entries without the placeholder are shared" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}", "deploy@static.example.com:/srv/all/", :ignored],
+      s3_targets: ["s3://acme-www", "s3://{site_key}-www"]
+    )
+
+    assert DeployConfig.shared_destinations() == [
+             {:rsync_targets, "deploy@static.example.com:/srv/all/"},
+             {:s3_targets, "s3://acme-www"}
+           ]
+
+    put_test_env(DeployConfig, resolver: &resolve/2, s3_targets: "s3://acme-www")
+    assert DeployConfig.shared_destinations() == []
+  end
+
   test "an S3 target reaches S3 as written" do
     for target <- [
           "not-an-s3-target",

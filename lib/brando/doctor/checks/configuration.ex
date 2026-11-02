@@ -1,14 +1,17 @@
 defmodule Brando.Doctor.Checks.Configuration do
   @moduledoc """
   Required configuration: the endpoint's URL, the mailer and its sender, the
-  media CDN settings when a CDN is enabled, and the Assistant's model and key
-  when the Assistant is configured.
+  media CDN settings when a CDN is enabled, the Assistant's model and key
+  when the Assistant is configured, and the deploy target settings: entries
+  of the wrong form and, with several sites, destinations that more than one
+  site may use.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
 
   alias Brando.Doctor.Result
   alias Brando.Mailer
+  alias Brando.Sites.DeployConfig
 
   @cdn_contexts [Brando.Images, Brando.Files]
 
@@ -20,7 +23,7 @@ defmodule Brando.Doctor.Checks.Configuration do
 
   @impl true
   def run(_context) do
-    evaluate([endpoint_url(), mailer()] ++ Enum.map(@cdn_contexts, &cdn/1) ++ [assistant()])
+    evaluate([endpoint_url(), mailer()] ++ Enum.map(@cdn_contexts, &cdn/1) ++ [assistant()] ++ deploy_targets())
   end
 
   @doc """
@@ -249,5 +252,78 @@ defmodule Brando.Doctor.Checks.Configuration do
         {:warning, dgettext("doctor", "Assistant: %{model} has no API key", model: agent[:model]),
          dgettext("doctor", "no API key for the Assistant")}
     end
+  end
+
+  @doc """
+  The operator's deploy target settings as findings (see `evaluate/1`). With
+  several sites, a list entry without `{site_key}` grants every site, and map
+  entries of two sites that reach the same destination let either replace
+  the other's files. A setting with an entry, key or value of the wrong form
+  refuses the targets it would have allowed.
+  """
+  def deploy_targets do
+    multi? = Brando.Tenant.mode() == :multi
+
+    shared =
+      if multi?,
+        do: [
+          shared_deploy_targets(DeployConfig.shared_destinations()),
+          overlapping_deploy_targets(DeployConfig.overlapping_destinations())
+        ],
+        else: []
+
+    findings = Enum.reject(shared ++ [unreadable_deploy_targets(DeployConfig.unreadable_settings())], &is_nil/1)
+
+    cond do
+      findings != [] -> findings
+      multi? -> [{:ok, dgettext("doctor", "Deploy targets: none shared between sites"), nil}]
+      true -> [{:ok, dgettext("doctor", "Deploy targets: one site"), nil}]
+    end
+  end
+
+  defp shared_deploy_targets([]), do: nil
+
+  defp shared_deploy_targets(shared) do
+    entries = Enum.map_join(shared, ", ", fn {setting, entry} -> "#{setting} #{entry}" end)
+
+    {:warning, dgettext("doctor", "Deploy targets: every site may use %{entries}", entries: entries),
+     dgettext("doctor", "deploy targets shared by every site"),
+     dgettext(
+       "doctor",
+       "bind each deploy target to one site with `{site_key}`, or list each site's own under its key: %{example}",
+       example: ~s(`s3_targets: %{"acme" => ["s3://acme-www"]}`)
+     )}
+  end
+
+  defp overlapping_deploy_targets([]), do: nil
+
+  defp overlapping_deploy_targets(pairs) do
+    pairs =
+      Enum.map_join(pairs, ", ", fn {setting, {key, entry}, {other_key, other_entry}} ->
+        dgettext("doctor", "%{setting} %{entry} for %{site} and %{other_entry} for %{other_site}",
+          setting: setting,
+          entry: entry,
+          site: key,
+          other_entry: other_entry,
+          other_site: other_key
+        )
+      end)
+
+    {:warning, dgettext("doctor", "Deploy targets: %{pairs} reach the same destination", pairs: pairs),
+     dgettext("doctor", "deploy targets shared between sites"),
+     dgettext("doctor", "give each site in the deploy target map destinations apart from the other sites'")}
+  end
+
+  defp unreadable_deploy_targets([]), do: nil
+
+  defp unreadable_deploy_targets(settings) do
+    {:warning,
+     dgettext("doctor", "Deploy targets: %{settings} have entries no target can pass",
+       settings: Enum.join(settings, ", ")
+     ), dgettext("doctor", "deploy target entries that allow nothing"),
+     dgettext(
+       "doctor",
+       "write each deploy target setting as a list of destinations, or as a map from each site key, a string, to a list of destinations"
+     )}
   end
 end

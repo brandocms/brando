@@ -402,6 +402,11 @@ msgstr "%{package} er ikke installert"
 msgid "%{schema}: %{helpers}"
 msgstr "%{schema}: %{helpers}"
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} %{entry} for %{site} and %{other_entry} for %{other_site}"
+msgstr "%{setting} %{entry} for %{site} og %{other_entry} for %{other_site}"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{target}: %{count} image"
@@ -504,6 +509,31 @@ msgstr "Kontrollerer…"
 #, elixir-autogen, elixir-format
 msgid "Configuration"
 msgstr "Konfigurasjon"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: %{pairs} reach the same destination"
+msgstr "Publiseringsmål: %{pairs} når samme mål"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: %{settings} have entries no target can pass"
+msgstr "Publiseringsmål: %{settings} har oppføringer som ingen mål passer"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: every site may use %{entries}"
+msgstr "Publiseringsmål: alle nettsteder kan bruke %{entries}"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: none shared between sites"
+msgstr "Publiseringsmål: ingen deles mellom nettstedene"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: one site"
+msgstr "Publiseringsmål: ett nettsted"
 
 #: lib/brando/doctor/checks/deprecations.ex
 #, elixir-autogen, elixir-format
@@ -831,6 +861,11 @@ msgstr "alle bilder samsvarer med innstillingene sine"
 msgid "an entry's vars and refs are entry.vars and entry.refs since the blocks conversion: run brando_219 (mix brando.gen.migrations, mix brando.migrate) or edit the module code, then mix brando.entries.resave"
 msgstr "etter blokkonverteringen er en oppførings variabler og referanser entry.vars og entry.refs: kjør brando_219 (mix brando.gen.migrations, mix brando.migrate) eller rediger modulkoden, og deretter mix brando.entries.resave"
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "bind each deploy target to one site with `{site_key}`, or list each site's own under its key: %{example}"
+msgstr "knytt hvert publiseringsmål til ett nettsted med `{site_key}`, eller list hvert nettsteds egne under nøkkelen dets: %{example}"
+
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid "brandojs %{version}"
@@ -947,6 +982,21 @@ msgstr "slett priv/static/robots.txt: Plug.Static i %{file} har ingen only:, så
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "deploy target entries that allow nothing"
+msgstr "oppføringer for publiseringsmål som ikke tillater noe"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "deploy targets shared between sites"
+msgstr "publiseringsmål som deles mellom nettsteder"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "deploy targets shared by every site"
+msgstr "publiseringsmål som deles av alle nettsteder"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "endpoint URL is localhost"
 msgstr "endpoint-URL er localhost"
 
@@ -1034,6 +1084,11 @@ msgstr "git %{commit}, tagg %{tag}"
 #, elixir-autogen, elixir-format
 msgid "give config :brando, Oban its queues (see Brando.Supervisor)"
 msgstr "gi config :brando, Oban køene sine (se Brando.Supervisor)"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "give each site in the deploy target map destinations apart from the other sites'"
+msgstr "gi hvert nettsted i kartet over publiseringsmål mål som er adskilt fra de andre nettstedenes"
 
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
@@ -1478,3 +1533,8 @@ msgstr "bruk versjonene denne Brando støtter (se installasjonsveiledningen)"
 #, elixir-autogen, elixir-format
 msgid "where the media is (on the server, or here once it is synced or mounted), run mix brando.images.adopt to record the images that match, then Utilities → Recreate changed images for the rest; here neither works, as adopting needs the files and recreating the originals"
 msgstr "der mediene ligger (på serveren, eller her når de er synkronisert eller montert), kjør mix brando.images.adopt for å registrere bildene som stemmer, og deretter Verktøy → Lag endrede bilder på nytt for resten; her virker ingen av delene, for registreringen trenger filene og å lage dem på nytt trenger originalene"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "write each deploy target setting as a list of destinations, or as a map from each site key, a string, to a list of destinations"
+msgstr "skriv hver innstilling for publiseringsmål som en liste over mål, eller som et kart fra hver nettstedsnøkkel, en streng, til en liste over mål"
