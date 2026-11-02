@@ -258,6 +258,15 @@ defmodule BrandoAdmin.RevisionLockedFieldsTest do
     assert %{subtitle: "Crafted"} = Revisions.restore_params(revised, article, superuser, locked)
   end
 
+  test "a form restoring a revision holds what it has no input for and no form offers" do
+    image = Factory.insert(:image, path: "images/a.jpg")
+    open_form = %Brando.Blueprint.Forms.Form{tabs: []}
+    params = Revisions.restore_params(%{image | path: "images/b.jpg", title: "New"}, image, editor(:legacy), open_form)
+
+    assert params.title == "New"
+    refute Map.has_key?(params, :path)
+  end
+
   test "a job restoring a revision holds what no form offers" do
     superuser = Users.insert_user(role: :superuser)
     image = Factory.insert(:image, path: "images/a.jpg")

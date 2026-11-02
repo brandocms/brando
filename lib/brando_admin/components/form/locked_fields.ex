@@ -145,13 +145,13 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
   def keys(_schema, _blueprint, _user), do: []
 
   @doc """
-  The params keys a writer past the form holds for anyone but a superuser.
-  With `form`, those of the form it acts for. Without one, those some form of
-  `schema` locks and none offers unlocked: a field another form lets the user
-  write is theirs to write.
+  The params keys a writer past the form holds for anyone but a superuser:
+  those some form of `schema` locks and none offers unlocked, as a field another
+  form lets the user write is theirs to write. With `form`, the one it acts for,
+  also those that form locks, whichever form offers them.
   """
   @spec held_keys(module(), struct() | nil) :: [atom()]
-  def held_keys(schema, %Form{} = form), do: keys(schema, form, @not_superuser)
+  def held_keys(schema, %Form{} = form), do: Enum.uniq(keys(schema, form, @not_superuser) ++ held_keys(schema, nil))
 
   def held_keys(schema, nil) do
     forms = forms(schema)

@@ -139,6 +139,14 @@ defmodule Brando.Content.TransferLockedFieldsTest do
       refute :year in article
       assert :subtitle in LockedFields.held_keys(Brando.SyncTest.Article, Brando.SyncTest.Article.__form__(:locked))
     end
+
+    test "a form holds its own locks and what the schema holds without one" do
+      held = LockedFields.held_keys(Image, %Brando.Blueprint.Forms.Form{tabs: []})
+      assert :path in held and :width in held and :cdn in held
+
+      locked = Brando.SyncTest.Article.__form__(:locked)
+      assert LockedFields.held_keys(Brando.SyncTest.Article, locked) == LockedFields.keys(Brando.SyncTest.Article, locked, nil)
+    end
   end
 
   describe "the crop editor" do
