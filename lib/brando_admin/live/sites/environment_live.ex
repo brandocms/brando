@@ -20,6 +20,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
   alias Brando.Environments
   alias Brando.Environments.Environment
+  alias Brando.Repo
   alias Brando.Tenant
   alias Brando.Tenant.Access
   alias Brando.Tenant.Registry
@@ -786,21 +787,23 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   defp update_shown_domain(socket, %Environment{id: id, site_id: site_id}, shown, domain) do
     shown = if shown == "", do: nil, else: shown
 
-    Brando.Repo.transaction(fn ->
-      case Brando.Repo.one(from(e in Environment, where: e.id == ^id, lock: "FOR UPDATE"), prefix: "public") do
-        %Environment{site_id: ^site_id, domain: ^shown} = environment ->
-          case Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user) do
-            {:ok, updated} -> updated
-            {:error, reason} -> Brando.Repo.rollback(reason)
-          end
-
-        %Environment{site_id: ^site_id} ->
-          Brando.Repo.rollback(:domain_moved)
-
-        _ ->
-          Brando.Repo.rollback(:environment_not_found)
+    Repo.transaction(fn ->
+      with {:ok, environment} <- locked_shown(id, site_id, shown),
+           {:ok, updated} <-
+             Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user) do
+        updated
+      else
+        {:error, reason} -> Repo.rollback(reason)
       end
     end)
+  end
+
+  defp locked_shown(id, site_id, shown) do
+    case Repo.one(from(e in Environment, where: e.id == ^id, lock: "FOR UPDATE"), prefix: "public") do
+      %Environment{site_id: ^site_id, domain: ^shown} = environment -> {:ok, environment}
+      %Environment{site_id: ^site_id} -> {:error, :domain_moved}
+      _ -> {:error, :environment_not_found}
+    end
   end
 
   defp parse_future_datetime(value) when is_binary(value) do
