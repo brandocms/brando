@@ -159,8 +159,9 @@ test.describe('Webhooks', () => {
       await page.goto(path)
       await syncLV(page)
       await expect(page.locator('.integrations-workspace')).toBeVisible()
-      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
-      expect(overflow, path).toBeLessThanOrEqual(1)
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), { message: path })
+        .toBeLessThanOrEqual(1)
     }
   })
 })
