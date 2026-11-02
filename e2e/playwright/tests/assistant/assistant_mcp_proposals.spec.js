@@ -76,3 +76,31 @@ test('reviews, applies and rejects proposals from a connected tool', async ({ pa
   await expect(page.getByRole('link', { name: 'Should not be applied' })).toHaveCount(0)
   expect(errors).toEqual([])
 })
+
+// A proposal stored before the content type catalogue was checked names a
+// global set. Its review is refused: the reason shows in its place, with
+// Discard, and discarding it takes it off the list.
+test('discards a proposal from a connected tool that can no longer be applied', async ({ page }) => {
+  const errors = []
+  page.on('pageerror', error => errors.push(error.message))
+
+  const response = await page.request.post('/e2e/setup_fixtures/mcp-unloadable-proposal')
+  expect(response.ok()).toBe(true)
+
+  await page.goto('/admin/assistant/connected')
+  await syncLV(page)
+  const list = page.locator('#assistant-connected-list')
+  await expect(list.locator('li')).toHaveCount(1)
+  await list.locator('a[data-proposal-id]').click()
+  await expect(page).toHaveURL(/\/admin\/assistant\/connected\/[0-9a-f-]+$/)
+  await syncLV(page)
+
+  const unloadable = page.locator('#assistant-unloadable')
+  await expect(unloadable.getByRole('alert')).toContainText('Brando.Sites.GlobalSet')
+  await expect(page.locator('button.assistant-apply')).toHaveCount(0)
+
+  await unloadable.locator('button[phx-click="cancel_proposal"]').click()
+  await expect(unloadable).toHaveCount(0)
+  await expect(page.locator('.assistant-connected-empty')).toBeVisible()
+  expect(errors).toEqual([])
+})

@@ -89,6 +89,9 @@ defmodule E2EFixtureController do
         "mcp-proposals" ->
           create_mcp_proposals()
 
+        "mcp-unloadable-proposal" ->
+          create_unloadable_mcp_proposal()
+
         "assistant-applied-copy" ->
           create_applied_copy_proposal()
 
@@ -656,6 +659,36 @@ defmodule E2EFixtureController do
       {:ok, %{applicable: true}} =
         Tools.call("prepare_proposal", %{"summary" => summary, "operations" => [op]}, context)
     end
+
+    user
+  end
+
+  # A proposal from a connected tool as an earlier version stored it, before
+  # the content type catalogue was checked: a page create whose content type
+  # names a global set. Its review is refused; it can only be discarded.
+  defp create_unloadable_mcp_proposal do
+    alias Brando.Content.Proposals.{Record, Tools}
+
+    user = get_admin_user()
+    context = %Tools.Context{actor: user, origin: :mcp, client: "Claude Code"}
+
+    op = %{
+      "op" => "create_entry",
+      "content_type" => "Brando.Pages.Page",
+      "ref" => "planted",
+      "fields" => %{"title" => "Planted", "uri" => "mcp-planted", "language" => "en"}
+    }
+
+    {:ok, %{proposal_id: id}} =
+      Tools.call("prepare_proposal", %{"summary" => "Add a global set", "operations" => [op]}, context)
+
+    record = Brando.Repo.get!(Record, id)
+    [stored] = record.operations
+    fields = %{"label" => "Planted", "key" => "planted", "language" => "en"}
+
+    record
+    |> Ecto.Changeset.change(operations: [%{stored | "content_type" => "Brando.Sites.GlobalSet", "fields" => fields}])
+    |> Brando.Repo.update!()
 
     user
   end
