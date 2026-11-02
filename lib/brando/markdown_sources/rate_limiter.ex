@@ -1,7 +1,14 @@
 defmodule Brando.MarkdownSources.RateLimiter do
   @moduledoc false
   # Per-minute budgets for the GitHub Markdown webhook, on this node. Every
-  # request counts against its client (120). Only a delivery whose signature
+  # request counts against its client: 120, or 1,200 for an address in GitHub's
+  # webhook ranges (`Brando.MarkdownSources.GitHubAddresses`), which every GitHub
+  # customer's webhooks are sent from, so anyone can send wrongly signed requests
+  # from them. At 1,200, as many as the node accepts verified deliveries, one
+  # address carries all the genuine deliveries the node would take before its
+  # own budget runs out, and a sender has to have GitHub send ten times as many
+  # through it as before to hold back genuine ones. Those bodies are read holding
+  # a slot (`Brando.MarkdownSources.ReadSlots`), which bounds their memory. Only a delivery whose signature
   # verified counts against the deliveries' budget (1,200), so unsigned requests
   # cannot use that up. A loose cap for all requests (12,000) applies to those
   # for a key no connection has: they cost no signature work, and past the cap
@@ -11,6 +18,7 @@ defmodule Brando.MarkdownSources.RateLimiter do
   use GenServer
 
   @per_client 120
+  @per_github_address 1200
   @all_requests 12_000
   @verified 1200
 
@@ -20,9 +28,10 @@ defmodule Brando.MarkdownSources.RateLimiter do
   @doc """
   Counts a request from `address`; true while it is within its budget.
   `known_key?` says the request names a connection, which the cap does not refuse.
+  `github?` says the address is in GitHub's webhook ranges, which have the larger budget.
   """
-  def allow_client?(address, known_key?),
-    do: GenServer.call(__MODULE__, {:client, client(address), known_key?})
+  def allow_client?(address, known_key?, github? \\ false),
+    do: GenServer.call(__MODULE__, {:client, client(address), known_key?, github?})
 
   @doc "Counts a verified delivery; true while the node's budget allows it."
   def allow_delivery?, do: GenServer.call(__MODULE__, :delivery)
@@ -45,12 +54,12 @@ defmodule Brando.MarkdownSources.RateLimiter do
   # nothing, and one for a known key still counts against its client. The map
   # starts empty every minute, so it holds at most one entry per client the node
   # accepts a request from in a minute, at about 100 bytes each.
-  defp count({:client, key, known_key?}, _from, state) do
+  defp count({:client, key, known_key?, github?}, _from, state) do
     count = Map.get(state.clients, key, 0)
     counted = %{state | clients: Map.put(state.clients, key, count + 1)}
 
     cond do
-      count >= @per_client ->
+      count >= if(github?, do: @per_github_address, else: @per_client) ->
         {:reply, false, counted}
 
       state.requests < @all_requests ->

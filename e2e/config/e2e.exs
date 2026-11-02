@@ -128,7 +128,9 @@ config :brando,
 # over a run; the per-account limits and the lockout stay as in production.
 config :brando, Brando.Users.Throttle, login_per_ip: 10_000, two_factor_per_ip: 10_000, reset_per_ip: 10_000
 
+# No fetch of GitHub's webhook addresses from its API
 config :brando, :markdown_sources,
+  github_hook_ranges: [],
   connections: %{
     "e2e-docs" => %{
       repository: "brando-e2e/docs",

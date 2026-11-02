@@ -23,6 +23,24 @@ defmodule Brando.MarkdownSources.HTTP do
     end
   end
 
+  # The address list behind `Brando.MarkdownSources.GitHubAddresses`. The URL is
+  # server configuration (GitHub's, or a GitHub Enterprise host, which may be on
+  # a private network), so it is connected to as configured.
+  def meta(url) when is_binary(url) do
+    with %URI{scheme: "https", host: host, port: port} = uri when is_binary(host) and host != "" <- URI.parse(url),
+         {:ok, conn} <-
+           Mint.HTTP.connect(:https, host, port,
+             mode: :passive,
+             protocols: [:http1],
+             timeout: 5_000,
+             transport_opts: [verify: :verify_peer]
+           ) do
+      request(conn, (uri.path || "/") <> if(uri.query, do: "?" <> uri.query, else: ""))
+    else
+      _ -> {:error, :github_unavailable}
+    end
+  end
+
   def public_address?({a, b, c, _d}), do: a in 1..223 and a not in [10, 127] and not reserved?(a, b, c)
   def public_address?(_), do: false
 
