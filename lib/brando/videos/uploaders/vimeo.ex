@@ -179,10 +179,17 @@ defmodule Brando.Videos.Uploaders.Vimeo do
   @spec embed_url(Video.t(), keyword()) :: String.t() | nil
   def embed_url(video, params \\ [])
 
-  def embed_url(%Video{meta: %{"vimeo" => %{"video_id" => id} = vimeo}}, params) when is_binary(id),
-    do: VimeoURL.player_url(id, vimeo["hash"], params)
+  def embed_url(%Video{meta: %{"vimeo" => %{"video_id" => id} = vimeo}} = video, params) when is_binary(id),
+    do: VimeoURL.player_url(id, vimeo["hash"] || address_hash(video, id), params)
 
   def embed_url(%Video{} = video, params), do: VimeoURL.embed_url(video, params)
+
+  defp address_hash(%Video{source_url: url}, id) do
+    case VimeoURL.parse(url) do
+      {:ok, %{id: ^id, hash: hash}} -> hash
+      _ -> nil
+    end
+  end
 
   @impl true
   def library_meta_path, do: "vimeo.video_id"

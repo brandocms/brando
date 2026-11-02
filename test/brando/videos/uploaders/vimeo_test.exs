@@ -351,4 +351,27 @@ defmodule Brando.Videos.Uploaders.VimeoTest do
       ]
     }
   end
+
+  describe "embed_url/2, the hash" do
+    test "keeps an unlisted video's hash from its address when meta has none" do
+      video = %Brando.Videos.Video{
+        type: :vimeo_account,
+        source_url: "https://vimeo.com/76979871/abcdef1234",
+        meta: %{"vimeo" => %{"video_id" => "76979871"}}
+      }
+
+      assert Brando.Videos.Uploaders.Vimeo.embed_url(video, autoplay: 1) ==
+               "https://player.vimeo.com/video/76979871?h=abcdef1234&autoplay=1"
+    end
+
+    test "does not take a hash from an address for another video" do
+      video = %Brando.Videos.Video{
+        type: :vimeo_account,
+        source_url: "https://vimeo.com/111111111/abcdef1234",
+        meta: %{"vimeo" => %{"video_id" => "76979871"}}
+      }
+
+      assert Brando.Videos.Uploaders.Vimeo.embed_url(video) == "https://player.vimeo.com/video/76979871"
+    end
+  end
 end
