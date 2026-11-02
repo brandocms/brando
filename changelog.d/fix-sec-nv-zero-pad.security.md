@@ -1,0 +1,1 @@
+- The `zero_pad` Liquid filter pads to at most 64 characters, and leaves the value as it is for a larger or invalid count.

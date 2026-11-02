@@ -2274,9 +2274,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
     do: for(%{"kind" => ^kind, "id" => id} <- conversation.attachments || [], do: id)
 
   # The model's reply is Markdown. It is not trusted like an editor's text, so
-  # raw HTML is left out.
+  # raw HTML is left out, and an image is a link: content the model read could
+  # ask for an image whose address carries the conversation, which the browser
+  # would fetch unasked.
   defp markdown(nil), do: ""
-  defp markdown(text), do: text |> Brando.Markdown.to_html!(breaks: true, safe: true) |> Phoenix.HTML.raw()
+
+  defp markdown(text),
+    do: text |> Brando.Markdown.to_html!(breaks: true, safe: true, images: :links) |> Phoenix.HTML.raw()
 
   # A fresh upload has no sizes until processing finishes; show the original.
   defp image_url(image) do

@@ -22,6 +22,15 @@ defmodule Brando.HTMLTest do
     assert zero_pad(1000) == "1000"
     assert zero_pad("1") == "001"
     assert zero_pad("1", 10) == "0000000001"
+    assert zero_pad(1, 64) == String.pad_leading("1", 64, "0")
+  end
+
+  test "zero_pad/2 leaves the value unpadded for a count it would not allocate" do
+    assert zero_pad(1, 65) == "1"
+    assert zero_pad("1", 1_000_000_000) == "1"
+    assert zero_pad(1, -1) == "1"
+    assert zero_pad(1, "1000000") == "1"
+    assert zero_pad(1, 1.5) == "1"
   end
 
   test "body_tag" do

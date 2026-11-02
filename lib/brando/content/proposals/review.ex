@@ -7,6 +7,8 @@ defmodule Brando.Content.Proposals.Review do
 
   Everything here is derived from the stored proposal — the same frozen
   operations `apply/3` executes — so the review cannot drift from the result.
+  What a change writes is shown whole, with any markup that does more than
+  format text; only the names that identify a block are shortened.
   """
   alias Brando.Authorization.Boundary
   alias Brando.Authorization.Engine
@@ -38,6 +40,15 @@ defmodule Brando.Content.Proposals.Review do
   alias Brando.Content.Transfer.Catalog
 
   @excerpt 90
+  # Around what changed in a long text
+  @change_context 40
+  # What a card leaves out of a change's text: exactly these tags, with nothing
+  # in them. No parser decides it, since what one parser drops another may keep
+  # (`Brando.Markdown` reads `<https://…>` as a link). Elements with attributes,
+  # links and anything else stay as they are written.
+  @any_tag ~r{<[a-zA-Z/!](?:"[^"]*"|'[^']*'|[^'"<>])*>}
+  @block_tag ~r{^</?(?:blockquote|br|dd|dl|dt|figcaption|figure|h[1-6]|hr|li|ol|p|pre|table|tbody|td|tfoot|th|thead|tr|ul)\s*/?>$}i
+  @inline_tag ~r{^</?(?:abbr|b|cite|code|em|i|kbd|mark|q|s|small|strike|strong|sub|sup|u)\s*>$}i
 
   @doc "Review cards for `proposal`."
   @spec entries(Proposal.t()) :: [map()]
@@ -220,12 +231,7 @@ defmodule Brando.Content.Proposals.Review do
     fields =
       for %SetFields{target: ^target, fields: fields} <- proposal.operations,
           {name, value} <- fields,
-          do:
-            Map.put(
-              field_view(entry.__struct__, name, value),
-              :before,
-              saved_value(entry, name)
-            )
+          do: field_change(entry, name, value)
 
     indices = for {%SetFields{target: ^target}, index} <- Enum.with_index(proposal.operations), do: index
     if fields == [], do: [], else: [%{type: :fields, fields: fields, operations: indices}]
@@ -272,13 +278,13 @@ defmodule Brando.Content.Proposals.Review do
             else: placement(op.placement, op.parent, entry, op.field, proposal)
           ),
         values: Enum.map(op.values, &value_view(&1, nil, op.uid, proposal)),
-        texts: Enum.map(op.texts, fn {ref, text} -> %{ref: ref, text: excerpt(text)} end),
+        texts: Enum.map(op.texts, fn {ref, text} -> %{ref: ref, text: readable(text)} end),
         media: Enum.flat_map(op.media, fn {ref, asset} -> media_items(ref, asset) end),
         settings:
           for {ref, config} <- op.configs,
               {key, value} <- config,
               !default_setting?(module, ref, op.media[ref], key, value) do
-            %{ref: ref, name: key, before: nil, value: shorten(value)}
+            %{ref: ref, name: key, before: nil, value: whole(value)}
           end
       }
     ]
@@ -309,7 +315,7 @@ defmodule Brando.Content.Proposals.Review do
         ref: op.ref,
         settings:
           for {key, before, value} <- RefConfig.diff(ref, op.config) do
-            %{name: key, before: shorten(before), value: shorten(value)}
+            %{name: key, before: whole(before), value: whole(value)}
           end,
         context: block_media(saved)
       }
@@ -333,14 +339,16 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp block_change(%SetBlockText{target: target} = op, target, entry, proposal) do
+    {before, text} = text_change(saved_text(entry, op.field, op.block_uid, op.ref), op.text)
+
     [
       %{
         type: :block_text,
         uid: op.block_uid,
         block: block_label(entry, op.field, op.block_uid, proposal),
         ref: to_string(op.ref),
-        before: excerpt(saved_text(entry, op.field, op.block_uid, op.ref)),
-        text: excerpt(op.text)
+        before: before,
+        text: text
       }
     ]
   end
@@ -855,7 +863,7 @@ defmodule Brando.Content.Proposals.Review do
   defp option(_var, {:gallery, items}),
     do: dngettext("content_proposals", "%{count} item", "%{count} items", length(items))
 
-  defp option(_var, value), do: shorten(value)
+  defp option(_var, value), do: whole(value)
 
   defp option_label(nil, value), do: value
 
@@ -919,6 +927,28 @@ defmodule Brando.Content.Proposals.Review do
       (problem_target && (problem_target == target or problem_target == key)) ||
         (is_integer(problem[:operation]) && Map.get(Enum.at(proposal.operations, problem.operation), :target) == target)
     end)
+  end
+
+  # A text field's change shows what differs in it, like a block's text. A
+  # field that is not rich text holds what it says: `<b>` in one is on the page
+  # as those three characters.
+  defp field_change(entry, name, value) do
+    schema = entry.__struct__
+    view = field_view(schema, name, value)
+    saved = current(entry, name)
+
+    if is_binary(value) and is_binary(saved) and is_nil(view.media) and name not in ~w(status language) do
+      reader = if rich_text?(schema, name), do: &readable/1, else: &collapse/1
+      {before, value} = text_change(saved, value, reader)
+      view |> Map.put(:value, value) |> Map.put(:before, before)
+    else
+      Map.put(view, :before, saved_value(entry, name))
+    end
+  end
+
+  defp rich_text?(schema, name) do
+    function_exported?(schema, :__rich_text_fields__, 0) and
+      to_string(name) in Enum.map(schema.__rich_text_fields__(), &to_string/1)
   end
 
   # Fields in the order an editor reads them: title first, then the rest.
@@ -985,9 +1015,13 @@ defmodule Brando.Content.Proposals.Review do
     _ -> id
   end
 
-  defp display(schema, name, value) when is_list(value), do: EntryFields.display(schema, name, value) || shorten(value)
-  defp display(_schema, _name, value) when is_binary(value), do: excerpt(value)
-  defp display(_schema, _name, value), do: shorten(value)
+  defp display(schema, name, value) when is_list(value), do: EntryFields.display(schema, name, value) || whole(value)
+
+  defp display(schema, name, value) when is_binary(value) do
+    if rich_text?(schema, name), do: readable(value), else: collapse(value)
+  end
+
+  defp display(_schema, _name, value), do: whole(value)
 
   defp first_mention(proposal, target) do
     Enum.find_index(proposal.operations, fn
@@ -1039,13 +1073,84 @@ defmodule Brando.Content.Proposals.Review do
   defp excerpt(nil), do: nil
 
   defp excerpt(text) do
-    text |> HtmlSanitizeEx.strip_tags() |> String.replace(~r/\s+/, " ") |> String.trim() |> shorten()
+    text |> HtmlSanitizeEx.strip_tags() |> collapse() |> shorten()
   end
 
   defp shorten(value) when is_binary(value) and byte_size(value) > @excerpt, do: String.slice(value, 0, @excerpt) <> "…"
-  defp shorten(value) when is_binary(value) or is_number(value) or is_boolean(value) or is_nil(value), do: value
-  defp shorten({:new, ref}), do: dgettext("content_proposals", "the new entry %{ref}", ref: ref)
-  defp shorten(value), do: inspect(value)
+  defp shorten(value), do: whole(value)
+
+  defp whole(value) when is_binary(value) or is_number(value) or is_boolean(value) or is_nil(value), do: value
+  defp whole({:new, ref}), do: dgettext("content_proposals", "the new entry %{ref}", ref: ref)
+  defp whole(value), do: inspect(value, limit: :infinity, printable_limit: :infinity)
+
+  # Text as a reviewer reads what it says and does: all of it, as written,
+  # without plain formatting.
+  defp readable(nil), do: nil
+
+  defp readable(text) when is_binary(text) do
+    @any_tag
+    |> Regex.replace(text, fn tag ->
+      cond do
+        tag =~ @block_tag -> " "
+        tag =~ @inline_tag -> ""
+        true -> tag
+      end
+    end)
+    |> String.replace("&lt;", "<")
+    |> String.replace("&gt;", ">")
+    |> String.replace("&nbsp;", " ")
+    |> String.replace("&amp;", "&")
+    |> collapse()
+  end
+
+  defp readable(text), do: whole(text)
+
+  defp collapse(text), do: text |> String.replace(~r/\s+/u, " ") |> String.trim()
+
+  # The saved and proposed text as the card shows them. Text that reads the
+  # same but differs shows its source, its line breaks marked, and long text
+  # only what differs, with some context, so a change cannot hide in either.
+  defp text_change(saved, proposed, reader \\ &readable/1) do
+    case {saved && reader.(saved), reader.(proposed)} do
+      {same, same} when is_binary(same) and saved != proposed -> narrow(source(saved), source(proposed))
+      {before, text} -> narrow(before, text)
+    end
+  end
+
+  defp source(text), do: String.replace(text, "\n", "↵ ")
+
+  # Nothing differs, as on a card reopened after applying: the text is all
+  # there is to show.
+  defp narrow(same, same), do: {nil, same}
+
+  defp narrow(before, text) when is_binary(before) and is_binary(text) do
+    if String.length(before) <= @excerpt and String.length(text) <= @excerpt do
+      {before, text}
+    else
+      a = String.graphemes(before)
+      b = String.graphemes(text)
+      prefix = common(a, b, 0)
+      suffix = common(a |> Enum.drop(prefix) |> Enum.reverse(), b |> Enum.drop(prefix) |> Enum.reverse(), 0)
+      {window(a, prefix, suffix), window(b, prefix, suffix)}
+    end
+  end
+
+  defp narrow(before, text), do: {before, text}
+
+  defp common([same | a], [same | b], count), do: common(a, b, count + 1)
+  defp common(_a, _b, count), do: count
+
+  defp window(graphemes, prefix, suffix) do
+    start = max(prefix - @change_context, 0)
+    stop = length(graphemes) - max(suffix - @change_context, 0)
+
+    [
+      if(start > 0, do: "…", else: ""),
+      graphemes |> Enum.slice(start, stop - start) |> Enum.join(),
+      if(stop < length(graphemes), do: "…", else: "")
+    ]
+    |> Enum.join()
+  end
 
   defp blank(""), do: nil
   defp blank(value), do: value
