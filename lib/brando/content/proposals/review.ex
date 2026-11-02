@@ -7,6 +7,8 @@ defmodule Brando.Content.Proposals.Review do
 
   Everything here is derived from the stored proposal — the same frozen
   operations `apply/3` executes — so the review cannot drift from the result.
+  What a change writes is shown whole, with any markup that does more than
+  format text; only the names that identify a block are shortened.
   """
   alias Brando.Content
 
@@ -36,6 +38,13 @@ defmodule Brando.Content.Proposals.Review do
   alias Brando.Content.Transfer.Catalog
 
   @excerpt 90
+  # Around what changed in a long text
+  @change_context 40
+  # Markup without attributes that only formats text. Anything else is shown
+  # as it is written: an address, a style or an image is part of the change.
+  @formatting ~w(a abbr b blockquote br cite code dd del div dl dt em figcaption figure h1 h2 h3 h4 h5 h6 hr i ins
+                 kbd li mark ol p pre q s small span strike strong sub sup table tbody td tfoot th thead tr u ul)
+  @void_tags ~w(area br col embed hr img input source track wbr)
 
   @doc "Review cards for `proposal`."
   @spec entries(Proposal.t()) :: [map()]
@@ -215,12 +224,7 @@ defmodule Brando.Content.Proposals.Review do
     fields =
       for %SetFields{target: ^target, fields: fields} <- proposal.operations,
           {name, value} <- fields,
-          do:
-            Map.put(
-              field_view(entry.__struct__, name, value),
-              :before,
-              saved_value(entry, name)
-            )
+          do: field_change(entry, name, value)
 
     indices = for {%SetFields{target: ^target}, index} <- Enum.with_index(proposal.operations), do: index
     if fields == [], do: [], else: [%{type: :fields, fields: fields, operations: indices}]
@@ -267,13 +271,13 @@ defmodule Brando.Content.Proposals.Review do
             else: placement(op.placement, op.parent, entry, op.field, proposal)
           ),
         values: Enum.map(op.values, &value_view(&1, nil, op.uid, proposal)),
-        texts: Enum.map(op.texts, fn {ref, text} -> %{ref: ref, text: excerpt(text)} end),
+        texts: Enum.map(op.texts, fn {ref, text} -> %{ref: ref, text: readable(text)} end),
         media: Enum.flat_map(op.media, fn {ref, asset} -> media_items(ref, asset) end),
         settings:
           for {ref, config} <- op.configs,
               {key, value} <- config,
               !default_setting?(module, ref, op.media[ref], key, value) do
-            %{ref: ref, name: key, before: nil, value: shorten(value)}
+            %{ref: ref, name: key, before: nil, value: whole(value)}
           end
       }
     ]
@@ -304,7 +308,7 @@ defmodule Brando.Content.Proposals.Review do
         ref: op.ref,
         settings:
           for {key, before, value} <- RefConfig.diff(ref, op.config) do
-            %{name: key, before: shorten(before), value: shorten(value)}
+            %{name: key, before: whole(before), value: whole(value)}
           end,
         context: block_media(saved)
       }
@@ -328,14 +332,16 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp block_change(%SetBlockText{target: target} = op, target, entry, proposal) do
+    {before, text} = text_change(saved_text(entry, op.field, op.block_uid, op.ref), op.text)
+
     [
       %{
         type: :block_text,
         uid: op.block_uid,
         block: block_label(entry, op.field, op.block_uid, proposal),
         ref: to_string(op.ref),
-        before: excerpt(saved_text(entry, op.field, op.block_uid, op.ref)),
-        text: excerpt(op.text)
+        before: before,
+        text: text
       }
     ]
   end
@@ -834,7 +840,7 @@ defmodule Brando.Content.Proposals.Review do
   defp option(_var, {:gallery, items}),
     do: dngettext("content_proposals", "%{count} item", "%{count} items", length(items))
 
-  defp option(_var, value), do: shorten(value)
+  defp option(_var, value), do: whole(value)
 
   defp option_label(nil, value), do: value
 
@@ -900,6 +906,19 @@ defmodule Brando.Content.Proposals.Review do
     end)
   end
 
+  # A text field's change shows what differs in it, like a block's text.
+  defp field_change(entry, name, value) do
+    view = field_view(entry.__struct__, name, value)
+    saved = current(entry, name)
+
+    if is_binary(value) and is_binary(saved) and view.value == readable(value) do
+      {before, value} = text_change(saved, value)
+      %{view | value: value} |> Map.put(:before, before)
+    else
+      Map.put(view, :before, saved_value(entry, name))
+    end
+  end
+
   # Fields in the order an editor reads them: title first, then the rest.
   defp order_fields(fields) do
     Enum.sort_by(fields, fn {name, _} ->
@@ -963,9 +982,9 @@ defmodule Brando.Content.Proposals.Review do
     _ -> id
   end
 
-  defp display(schema, name, value) when is_list(value), do: EntryFields.display(schema, name, value) || shorten(value)
-  defp display(_schema, _name, value) when is_binary(value), do: excerpt(value)
-  defp display(_schema, _name, value), do: shorten(value)
+  defp display(schema, name, value) when is_list(value), do: EntryFields.display(schema, name, value) || whole(value)
+  defp display(_schema, _name, value) when is_binary(value), do: readable(value)
+  defp display(_schema, _name, value), do: whole(value)
 
   defp first_mention(proposal, target) do
     Enum.find_index(proposal.operations, fn
@@ -1021,9 +1040,79 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp shorten(value) when is_binary(value) and byte_size(value) > @excerpt, do: String.slice(value, 0, @excerpt) <> "…"
-  defp shorten(value) when is_binary(value) or is_number(value) or is_boolean(value) or is_nil(value), do: value
-  defp shorten({:new, ref}), do: dgettext("content_proposals", "the new entry %{ref}", ref: ref)
-  defp shorten(value), do: inspect(value)
+  defp shorten(value), do: whole(value)
+
+  defp whole(value) when is_binary(value) or is_number(value) or is_boolean(value) or is_nil(value), do: value
+  defp whole({:new, ref}), do: dgettext("content_proposals", "the new entry %{ref}", ref: ref)
+  defp whole(value), do: inspect(value)
+
+  # Text as a reviewer reads what it says and does: plain, all of it, with
+  # every element that does more than format text written out.
+  defp readable(nil), do: nil
+
+  defp readable(text) when is_binary(text) do
+    with true <- String.contains?(text, "<"),
+         {:ok, nodes} <- Floki.parse_fragment(text) do
+      nodes |> Enum.map(&readable_node/1) |> IO.iodata_to_binary() |> collapse()
+    else
+      _ -> collapse(text)
+    end
+  end
+
+  defp readable(text), do: whole(text)
+
+  defp readable_node(text) when is_binary(text), do: text
+  defp readable_node({tag, [], children}) when tag in @formatting, do: [Enum.map(children, &readable_node/1), " "]
+
+  defp readable_node({tag, attrs, children}) when is_binary(tag) do
+    attrs = for {name, value} <- attrs, do: [" ", name, "=\"", value, "\""]
+    close = if tag in @void_tags, do: [], else: ["</", tag, ">"]
+    ["<", tag, attrs, ">", Enum.map(children, &readable_node/1), close]
+  end
+
+  defp readable_node({:comment, comment}), do: ["<!--", comment, "-->"]
+  defp readable_node(_node), do: []
+
+  defp collapse(text), do: text |> String.replace(~r/\s+/, " ") |> String.trim()
+
+  # The saved and proposed text as the card shows them. Text that reads the
+  # same but differs in its formatting shows its markup, and long text only
+  # what differs, with some context, so a change cannot hide in either.
+  defp text_change(saved, proposed) do
+    case {readable(saved), readable(proposed)} do
+      {same, same} when is_binary(same) and saved != proposed -> narrow(saved, proposed)
+      {before, text} -> narrow(before, text)
+    end
+  end
+
+  defp narrow(before, text) when is_binary(before) and is_binary(text) do
+    if String.length(before) <= @excerpt and String.length(text) <= @excerpt do
+      {before, text}
+    else
+      a = String.graphemes(before)
+      b = String.graphemes(text)
+      prefix = common(a, b, 0)
+      suffix = common(a |> Enum.drop(prefix) |> Enum.reverse(), b |> Enum.drop(prefix) |> Enum.reverse(), 0)
+      {window(a, prefix, suffix), window(b, prefix, suffix)}
+    end
+  end
+
+  defp narrow(before, text), do: {before, text}
+
+  defp common([same | a], [same | b], count), do: common(a, b, count + 1)
+  defp common(_a, _b, count), do: count
+
+  defp window(graphemes, prefix, suffix) do
+    start = max(prefix - @change_context, 0)
+    stop = length(graphemes) - max(suffix - @change_context, 0)
+
+    [
+      if(start > 0, do: "…", else: ""),
+      graphemes |> Enum.slice(start, stop - start) |> Enum.join(),
+      if(stop < length(graphemes), do: "…", else: "")
+    ]
+    |> Enum.join()
+  end
 
   defp blank(""), do: nil
   defp blank(value), do: value
