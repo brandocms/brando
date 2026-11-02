@@ -31,7 +31,8 @@ test('keeps Norwegian labels and navigation warnings after connecting', async ({
   await expect(page.locator('.authorization-review')).toContainText('2 tillatelser lagt til')
   await page.screenshot({ path: testInfo.outputPath('norwegian-groups-desktop.png'), fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  // The resize is laid out after the call returns
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('norwegian-groups-mobile.png'), fullPage: true })
 })
 

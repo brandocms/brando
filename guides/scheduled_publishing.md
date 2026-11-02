@@ -65,6 +65,13 @@ The job publishes only an entry that is still pending when it runs: a future
 date on a draft or a deactivated entry queues a job that does nothing, and the
 Scheduled publishing drawer says so. Use the published-to-pending flow above.
 
+With group authorization, setting an entry to pending takes the publish right,
+as publishing it does: the status list has it disabled without the right, and a
+save or a status change that sets it is refused, so a pending entry is always
+one someone who may publish it asked for. A user with the right to update it
+can still edit a pending entry or set it back to draft. Holding the schedule
+right alone moves a date, and queues nothing that would run.
+
 ## See it in the calendar
 
 **Calendar** in the sidebar, after Dashboard and Search, shows what is planned
@@ -162,7 +169,9 @@ Running it again changes nothing. With group authorization, a publication whose
 job is still waiting, running or retrying is left to that job, so the sweep
 never publishes what the job's user is refused; a job waiting for another,
 later date (one the entry had before an archive was restored) does not hold it
-up. Expiries do not wait.
+up. Expiries do not wait. A duplicate starts without either date, so the sweep
+never takes a date from the entry it was copied from; publishing it stamps its
+own.
 
 It only takes dates from the last seven days, so older missed dates are not
 acted on; change the window with

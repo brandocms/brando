@@ -499,7 +499,8 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
            entry_schema(socket),
            socket.assigns.entry_id,
            revision_number,
-           socket.assigns.current_user
+           socket.assigns.current_user,
+           form: socket.assigns.form_blueprint
          ) do
       {:ok, new_entry} ->
         send_update(BrandoAdmin.Components.Form,

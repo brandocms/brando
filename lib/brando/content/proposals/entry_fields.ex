@@ -7,9 +7,13 @@ defmodule Brando.Content.Proposals.EntryFields do
   as the related records' ids, or an `:entries` relation, set as entries
   (`{:entry, schema, id}`) and saved through their identifiers. Either list
   is replaced as a whole, in the order given.
+
+  `display/3` and `current/2` read a list for someone: under an admin scope,
+  a record that scope may not read keeps its place without its title.
   """
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Authorization.Boundary
   alias Brando.Content
   alias Brando.Content.Transfer.{Catalog, Error}
   alias Brando.Repo
@@ -162,12 +166,15 @@ defmodule Brando.Content.Proposals.EntryFields do
   def display(schema, name, value) when is_list(value) do
     case Map.get(lists(schema), name) do
       {:join, _key, related, _join} ->
-        titles = Map.new(Repo.all(from(r in related, where: r.id in ^value)), &{&1.id, title(&1)})
+        readable = value |> Enum.map(&{related, &1}) |> Boundary.readable_entries() |> Enum.map(&elem(&1, 1))
+        titles = Map.new(Repo.all(from(r in related, where: r.id in ^readable)), &{&1.id, title(&1)})
         Enum.map_join(value, ", ", &Map.get(titles, &1, "##{&1}"))
 
       {:entries, _join} ->
+        titles = readable_titles(for {:entry, schema, id} <- value, do: {schema, id})
+
         Enum.map_join(value, ", ", fn
-          {:entry, schema, id} -> entry_title(schema, id)
+          {:entry, schema, id} -> Map.get(titles, {schema, id}, "##{id}")
           other -> inspect(other)
         end)
 
@@ -180,11 +187,19 @@ defmodule Brando.Content.Proposals.EntryFields do
 
   def display(_schema, _name, _value), do: nil
 
-  defp entry_title(schema, id) do
-    case Content.get_identifier(schema, %{id: id}) do
-      {:ok, %{title: title}} -> title
-      _ -> "##{id}"
-    end
+  # The identifier titles of the `{schema, id}` entries the viewer may read.
+  defp readable_titles(entries) do
+    readable = Boundary.readable_entries(entries)
+    schemas = readable |> Enum.map(&elem(&1, 0)) |> Enum.uniq()
+    ids = Enum.map(readable, &elem(&1, 1))
+
+    from(i in Content.Identifier,
+      where: i.schema in ^schemas and i.entry_id in ^ids,
+      select: {{i.schema, i.entry_id}, i.title}
+    )
+    |> Repo.all()
+    |> Map.new()
+    |> Map.take(MapSet.to_list(readable))
   end
 
   @doc "A saved list, as the reviewer reads it."
@@ -195,15 +210,30 @@ defmodule Brando.Content.Proposals.EntryFields do
         display(entry.__struct__, name, Enum.map(rows, &Map.get(&1, key)))
 
       {{:entries, _}, rows} when is_list(rows) ->
-        rows
-        |> Enum.map(&Map.get(&1, :identifier))
-        |> Enum.map_join(", ", &((&1 && Map.get(&1, :title)) || "?"))
+        rows |> Enum.map(&Map.get(&1, :identifier)) |> saved_titles()
 
       _ ->
         nil
     end
   rescue
     _ -> nil
+  end
+
+  # In order, with "?" holding the place of what the viewer may not read.
+  defp saved_titles(identifiers) do
+    readable =
+      identifiers
+      |> Enum.reject(&is_nil/1)
+      |> Enum.map(&{&1.schema, &1.entry_id})
+      |> Boundary.readable_entries()
+
+    Enum.map_join(identifiers, ", ", fn
+      %{schema: schema, entry_id: id, title: title} when not is_nil(title) ->
+        if MapSet.member?(readable, {schema, id}), do: title, else: "?"
+
+      _ ->
+        "?"
+    end)
   end
 
   defp title(record), do: Map.get(record, :title) || Map.get(record, :name) || "##{record.id}"

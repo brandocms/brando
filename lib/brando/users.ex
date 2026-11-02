@@ -12,6 +12,7 @@ defmodule Brando.Users do
 
   alias Brando.Repo
   alias Brando.Users.SecurityLog
+  alias Brando.Users.Throttle
   alias Brando.Users.TwoFactor
   alias Brando.Users.User
   alias Brando.Users.UserNotifier
@@ -29,6 +30,22 @@ defmodule Brando.Users do
     "users_passkeys",
     "users_security_events",
     "users_security_policy"
+  ]
+
+  # A user's own working data and the record of what they did. Access to these
+  # rows goes by this owner column alone, so moving them would show them to
+  # someone who may not read what they quote. They stay with the deleted
+  # account and are back with it when it is restored. Purging it deletes those
+  # that cascade from it and leaves the others with no owner, out of reach.
+  @personal_tables [
+    "ai_conversations",
+    "entry_drafts",
+    "content_proposals",
+    "content_proposal_receipts",
+    "content_transfer_receipts",
+    "listing_view_defaults",
+    "notification_deliveries",
+    "uploads_pending_intents"
   ]
 
   query :list, User do
@@ -62,13 +79,17 @@ defmodule Brando.Users do
 
   # A deactivated or deleted account cannot log in, and nor may its open
   # admin views and sockets go on: its sessions end with it, and so do the
-  # tools it connected over MCP.
+  # tools it connected over MCP. Open views check a role change at once
+  # (`BrandoAdmin.Authorization`); groups mode's `Boundary.run/4` tells them.
   mutation :update, User do
     fn entry ->
       if entry.active == false or not is_nil(entry.deleted_at) do
         revoke_sessions(entry)
         Repo.after_commit(fn -> Brando.MCP.revoke_user_grants(entry, "account_deactivated") end)
       end
+
+      if not Brando.Authorization.enabled?(),
+        do: Repo.after_commit(&Brando.Authorization.Realtime.broadcast_changed/0)
 
       {:ok, entry}
     end
@@ -139,14 +160,11 @@ defmodule Brando.Users do
 
   @doc """
   Whether `user` is a superuser: in the installation's superuser group with
-  groups authorization, or of the `:superuser` role without.
+  groups authorization, or of the `:superuser` role without. Reads the stored
+  state, not the struct's role.
   """
   @spec superuser?(user | term()) :: boolean()
-  def superuser?(%User{} = user) do
-    if Brando.Authorization.enabled?(),
-      do: Brando.Authorization.Engine.superuser?(Brando.Authorization.Scope.installation(user)),
-      else: user.role == :superuser
-  end
+  def superuser?(%User{} = user), do: Brando.Authorization.Boundary.superuser?(user)
 
   def superuser?(_), do: false
 
@@ -741,10 +759,14 @@ defmodule Brando.Users do
   Logs the user out of every other session, keeping `current` — the session
   token of the browser doing the change, or that session's token row id —
   and deletes any password reset link. The user is emailed that the password changed.
+
+  A wrong `current_password` counts towards the lockout, as any wrong answer
+  to a confirmation does, whatever else is wrong with `attrs`, and a locked
+  account is refused. `meta` is what the security log records of the request.
   """
-  @spec update_user_password(user, String.t() | nil, map(), binary() | integer() | nil) ::
+  @spec update_user_password(user, String.t() | nil, map(), binary() | integer() | nil, SecurityLog.meta() | nil) ::
           {:ok, user} | {:error, Changeset.t()}
-  def update_user_password(%User{} = user, current_password, attrs, current \\ nil) do
+  def update_user_password(%User{} = user, current_password, attrs, current \\ nil, meta \\ nil) do
     all = UserToken.user_and_contexts_query(user, :all)
 
     revoked =
@@ -756,7 +778,7 @@ defmodule Brando.Users do
 
     user
     |> password_changeset(attrs)
-    |> validate_current_password(current_password)
+    |> validate_current_password(current_password, meta)
     |> save_password(revoked)
     |> log_password_change(%{"by" => "user"})
   end
@@ -800,12 +822,31 @@ defmodule Brando.Users do
   defp same_user?(%{id: id}, %{id: id}), do: true
   defp same_user?(_user, _other), do: false
 
-  defp validate_current_password(changeset, password) do
-    if is_binary(password) and Bcrypt.verify_pass(password, changeset.data.password) do
-      changeset
-    else
-      Changeset.add_error(changeset, :current_password, gettext("is not your current password"))
+  # Password only: `TwoFactor.confirm/3` would also take a code from the app.
+  defp validate_current_password(changeset, password, meta) do
+    user = changeset.data
+
+    cond do
+      Throttle.locked_until(user) ->
+        current_password_locked(changeset)
+
+      is_binary(password) and Bcrypt.verify_pass(password, user.password) ->
+        changeset
+
+      true ->
+        case Throttle.failed(user, :confirm, meta || %{}) do
+          {:locked, _until} -> current_password_locked(changeset)
+          :ok -> Changeset.add_error(changeset, :current_password, gettext("is not your current password"))
+        end
     end
+  end
+
+  defp current_password_locked(changeset) do
+    Changeset.add_error(
+      changeset,
+      :current_password,
+      gettext("Too many failed attempts. Your account is locked for a few minutes; try again later.")
+    )
   end
 
   # A password the user chose clears the first-login change; one an
@@ -899,14 +940,11 @@ defmodule Brando.Users do
   @spec get_user_content_summary(integer()) :: [map()]
   def get_user_content_summary(user_id) do
     get_user_foreign_key_references()
-    |> Enum.reject(fn {table, _column} ->
-      table in ["users_tokens", "user_sites", "activity_events", "entry_notes", "note_mentions"] or
-        table in @security_tables or
-        String.starts_with?(table, "authorization_")
-    end)
+    |> Enum.filter(fn {table, _column} -> transferred_table?(table) end)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
     |> Enum.map(fn {table, columns} ->
       matches = Enum.map_join(columns, " OR ", &"#{&1} = $1")
+      matches = if table == "listing_views", do: "(#{matches}) AND shared", else: matches
 
       %{rows: [[count]]} =
         Ecto.Adapters.SQL.query!(Brando.repo(), "SELECT count(*) FROM #{table} WHERE #{matches}", [user_id])
@@ -917,8 +955,25 @@ defmodule Brando.Users do
   end
 
   @doc """
-  Transfers all content from `from_user_id` to `to_user_id`.
-  Updates all FK references except `users_tokens` (which are deleted).
+  Whether `transfer_user_content/2` moves the references from `table`. Every
+  table moves unless it is listed here, so a new table that belongs to the
+  account rather than to the site's content has to be added.
+  """
+  @spec transferred_table?(String.t()) :: boolean()
+  def transferred_table?(table) do
+    not (table in ["users_tokens", "users_security", "users_recovery_codes", "users_passkeys"] or
+           table in ["user_sites", "activity_events", "entry_notes", "note_mentions", "ssg_builds"] or
+           table in @security_tables or
+           table in @personal_tables or
+           String.starts_with?(table, "authorization_") or
+           String.starts_with?(table, "mcp_"))
+  end
+
+  @doc """
+  Transfers all content from `from_user_id` to `to_user_id`: the references
+  `transferred_table?/1` allows. The user's session tokens and sign-in
+  credentials are deleted. Their tools connected over MCP stay theirs, and
+  end when the account is deleted.
   """
   @spec transfer_user_content(integer(), integer()) :: {:ok, map()} | {:error, any()}
   def transfer_user_content(from_user_id, to_user_id) do
@@ -963,6 +1018,32 @@ defmodule Brando.Users do
   defp transfer_or_delete_ref("note_mentions", _column, _from, _to), do: 0
   # The security log records who signed in and who changed what, and the policy who last saved it.
   defp transfer_or_delete_ref(table, _column, _from, _to) when table in @security_tables, do: 0
+  # A connection acts as the person who approved it, so it must never come to act as someone else.
+  defp transfer_or_delete_ref("mcp_" <> _, _column, _from, _to), do: 0
+  defp transfer_or_delete_ref(table, _column, _from, _to) when table in @personal_tables, do: 0
+  # A queued build runs on the authority of who requested it (`Brando.Worker.SSGBuild`),
+  # so moved it would run on the recipient's.
+  defp transfer_or_delete_ref("ssg_builds", _column, _from, _to), do: 0
+
+  # A shared view is the team's and outlives the account; one's private views
+  # are its own. A shared view whose name the recipient already uses stays too,
+  # as no one person holds two of a name on a listing.
+  defp transfer_or_delete_ref("listing_views", "creator_id", from_user_id, to_user_id) do
+    %{num_rows: num_rows} =
+      Ecto.Adapters.SQL.query!(
+        Brando.repo(),
+        """
+        UPDATE listing_views v SET creator_id = $1
+        WHERE v.creator_id = $2 AND v.shared AND NOT EXISTS (
+          SELECT 1 FROM listing_views o
+          WHERE o.creator_id = $1 AND o.schema = v.schema AND o.listing = v.listing AND o.name = v.name
+        )
+        """,
+        [to_user_id, from_user_id]
+      )
+
+    num_rows
+  end
 
   defp transfer_or_delete_ref(table, column, from_user_id, to_user_id) do
     %{num_rows: num_rows} =

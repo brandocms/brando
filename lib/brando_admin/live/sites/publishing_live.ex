@@ -350,7 +350,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
       retention_count: parse_integer(params["retention_count"], 10)
     }
 
-    with true <- socket.assigns.can_manage?,
+    with true <- can_manage?(socket.assigns.current_user, socket.assigns.site),
          {:ok, _site} <- Registry.update_site(socket.assigns.site, %{deploy_config: attrs}) do
       send(self(), {:toast, gettext("Static deployment settings saved")})
       {:noreply, refresh(socket)}
@@ -367,7 +367,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   def handle_event(action, %{"id" => id}, socket) when action in ["deploy", "rollback"] do
     user = socket.assigns.current_user
 
-    with true <- socket.assigns.can_manage?,
+    with true <- can_manage?(socket.assigns.current_user, socket.assigns.site),
          {build_id, ""} <- Integer.parse(id),
          %Build{site_id: site_id} = build <- Enum.find(socket.assigns.builds, &(&1.id == build_id)),
          true <- site_id == socket.assigns.site.id,
@@ -409,7 +409,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   end
 
   defp queue_build(socket, params, scheduled_at) do
-    with true <- socket.assigns.can_manage?,
+    with true <- can_manage?(socket.assigns.current_user, socket.assigns.site),
          %Environment{} = environment <- environment(socket, params["environment_id"]),
          {:ok, build} <-
            Builds.request_build(socket.assigns.site, environment,

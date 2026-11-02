@@ -171,6 +171,50 @@ defmodule Brando.SSGBuildsTest do
     assert_receive {:work, ^key, :failed, %BrandoAdmin.Work{message: "Static build v1 failed"}}
   end
 
+  describe "a build whose creator is gone, groups mode" do
+    setup do
+      put_test_env(:authorization_mode, :groups)
+      Brando.Authorization.Boundary.put_scope(nil)
+      on_exit(fn -> Brando.Authorization.Boundary.put_scope(nil) end)
+
+      # Superusers by role become members of the Superuser group
+      creator = Brando.Factory.insert(:random_user, role: :superuser)
+      recipient = Brando.Factory.insert(:random_user, role: :superuser)
+      deleter = Brando.Factory.insert(:random_user, role: :superuser)
+      {:ok, _} = Brando.Authorization.Migration.run()
+
+      %{creator: creator, recipient: recipient, deleter: deleter}
+    end
+
+    # Handed to the recipient, the build would run on the recipient's authority
+    test "is refused after a delete with transfer", context do
+      build = request_build(context.site, context.environment, creator_id: context.creator.id)
+
+      assert {:ok, _} = Brando.Users.delete_user_with_transfer(context.creator.id, context.recipient.id, context.deleter)
+
+      put_test_env(:ssg_builder, SuccessfulBuilder)
+      assert {:cancel, :forbidden} = perform_job(SSGBuild, %{"build_id" => build.id})
+
+      cancelled = Builds.get_build(build.id)
+      assert cancelled.status == :failed
+      assert cancelled.creator_id == context.creator.id
+      assert cancelled.build_log =~ "Build cancelled"
+    end
+
+    test "is refused once the purged account leaves it no creator", context do
+      build = request_build(context.site, context.environment, creator_id: context.creator.id)
+
+      Brando.Repo.update_all(
+        Ecto.Query.from(b in Brando.SSG.Build, where: b.id == ^build.id),
+        set: [creator_id: nil]
+      )
+
+      put_test_env(:ssg_builder, SuccessfulBuilder)
+      assert {:cancel, :forbidden} = perform_job(SSGBuild, %{"build_id" => build.id})
+      assert Builds.get_build(build.id).status == :failed
+    end
+  end
+
   test "persists failed URLs and a terminal failure log", context do
     build = request_build(context.site, context.environment)
     put_test_env(:ssg_builder, FailedBuilder)

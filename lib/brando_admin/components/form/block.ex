@@ -1831,7 +1831,7 @@ defmodule BrandoAdmin.Components.Form.Block do
       heex_compiled_module =
         try do
           Brando.Villain.HeexRenderer.get_or_compile!(
-            "admin_#{socket.assigns.uid}",
+            admin_template_id(socket.assigns.module_origin, socket.assigns.module_id),
             module_code
           )
         rescue
@@ -1851,6 +1851,14 @@ defmodule BrandoAdmin.Components.Form.Block do
   defp maybe_parse_module(socket) do
     assign(socket, liquid_splits: [])
   end
+
+  @doc """
+  What the editor compiles a HEEx module's template under: by template, never
+  by block. A compiled module stays loaded until the node restarts, and a new
+  block has a new uid each time. The generated name also holds the code's hash,
+  which alone is too short to tell unrelated templates apart.
+  """
+  def admin_template_id(module_origin, module_id), do: "admin_#{module_origin || :local}_#{module_id}"
 
   # Only markup left, e.g. a module that is its datasource and nothing else:
   # no preview, rather than an empty strip under the block's header.

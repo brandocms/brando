@@ -10,7 +10,8 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
   Media with usage tracking (`Brando.Content.Usage`: images, videos,
   galleries, files) also says where it is used, linked, so the editor sees
   what the delete takes from. So does a form, in any of its languages: a
-  page shows the form in its own language. Deleting is still allowed.
+  page shows the form in its own language. Deleting is still allowed. A form
+  that is the last language of its key says how many submissions go with it.
   """
   use Gettext, backend: Brando.Gettext
 
@@ -31,7 +32,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
 
     %{
       title: gettext("Delete %{singular}?", singular: singular),
-      html: message(schema, name, owned) <> usage(schema, entry),
+      html: message(schema, name, owned) <> submissions(schema, entry) <> usage(schema, entry),
       confirm: gettext("Delete"),
       cancel: gettext("Cancel")
     }
@@ -58,6 +59,18 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
     end
   end
 
+  defp submissions(Brando.Forms.Form, %{key: key}) do
+    with [_last_language] <- Brando.Forms.list_forms_by_key(key),
+         count when count > 0 <- Brando.Forms.count_submissions_going_with_form(key) do
+      " " <>
+        ngettext("Its submission is deleted with it.", "Its %{count} submissions are deleted with it.", count)
+    else
+      _ -> ""
+    end
+  end
+
+  defp submissions(_schema, _entry), do: ""
+
   @usage_kinds %{
     Module.concat(["Brando", "Images", "Image"]) => :image,
     Module.concat(["Brando", "Videos", "Video"]) => :video,
@@ -65,17 +78,21 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
     Module.concat(["Brando", "Files", "File"]) => :file
   }
 
-  # A long list is cut: the dialog names the first few and counts the rest.
+  # A long list is cut: the dialog names the first few and counts the rest,
+  # with the places the viewer may not read, which it never names.
   @usage_shown 5
 
   defp usage(schema, entry) do
-    case usages(schema, entry) do
-      [] ->
+    case schema |> usages(entry) |> Usage.split() do
+      {[], 0} ->
         ""
 
-      usages ->
+      {[], hidden} ->
+        " " <> ngettext("It is used in one place.", "It is used in %{count} places.", hidden)
+
+      {usages, hidden} ->
         shown = Enum.take(usages, @usage_shown)
-        rest = length(usages) - length(shown)
+        rest = length(usages) - length(shown) + hidden
 
         links =
           Enum.map(shown, fn
@@ -89,7 +106,10 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
         links = if rest > 0, do: links ++ [gettext("%{count} more", count: rest)], else: links
 
         " " <>
-          ngettext("It is used in one place: %{places}.", "It is used in %{count} places: %{places}.", length(usages),
+          ngettext(
+            "It is used in one place: %{places}.",
+            "It is used in %{count} places: %{places}.",
+            length(usages) + hidden,
             places: to_sentence(links)
           )
     end

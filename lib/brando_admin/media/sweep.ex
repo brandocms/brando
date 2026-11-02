@@ -20,6 +20,9 @@ defmodule BrandoAdmin.Media.Sweep do
       the folder's assets (a case before the category page showing its cover).
     * Assets no entry uses stay where they are. The library's "Not in use"
       filter lists them.
+    * A group whose entry the viewer may not read is `hidden`: it moves like
+      any other, under a key of no meaning and without label, type or URL, so
+      the preview does not name the entry.
 
   A move changes the asset's folder only. Files stay where they were
   uploaded, so no URL changes.
@@ -39,6 +42,7 @@ defmodule BrandoAdmin.Media.Sweep do
 
   import Ecto.Query
 
+  alias Brando.Authorization.Boundary
   alias Brando.Content.Usage
   alias Brando.Media.Folder
   alias Brando.Repo
@@ -48,11 +52,12 @@ defmodule BrandoAdmin.Media.Sweep do
   @type group :: %{
           key: String.t(),
           path: String.t(),
-          type: String.t(),
-          label: String.t(),
+          type: String.t() | nil,
+          label: String.t() | nil,
           url: String.t() | nil,
           ids: [integer()],
-          shared: non_neg_integer()
+          shared: non_neg_integer(),
+          hidden: boolean()
         }
   @type plan :: %{
           asset_type: asset_type(),
@@ -130,6 +135,8 @@ defmodule BrandoAdmin.Media.Sweep do
     labels = Usage.labels(Map.keys(by_owner))
     names = names(by_owner, labels)
 
+    readable = by_owner |> Map.keys() |> Boundary.readable_entries()
+
     groups =
       by_owner
       |> Enum.map(fn {entry, asset_ids} ->
@@ -140,10 +147,13 @@ defmodule BrandoAdmin.Media.Sweep do
           label: labels[entry].label,
           url: labels[entry].url,
           ids: asset_ids,
-          shared: Enum.count(asset_ids, &(length(owned[&1]) > 1))
+          shared: Enum.count(asset_ids, &(length(owned[&1]) > 1)),
+          hidden: not MapSet.member?(readable, entry)
         }
       end)
       |> Enum.sort_by(&{-length(&1.ids), &1.key})
+      |> Enum.with_index()
+      |> Enum.map(&unnamed_if_hidden/1)
 
     %{
       asset_type: asset_type,
@@ -154,6 +164,12 @@ defmodule BrandoAdmin.Media.Sweep do
       groups: groups
     }
   end
+
+  # Planned over every entry alike; only `path` still says where it goes.
+  defp unnamed_if_hidden({%{hidden: true} = group, index}),
+    do: %{group | key: "hidden-#{index}", label: nil, type: nil, url: nil}
+
+  defp unnamed_if_hidden({group, _index}), do: group
 
   @doc """
   Up to `per_group` assets of each of `plan`'s groups, by id, to show in the

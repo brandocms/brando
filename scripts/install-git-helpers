@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Installs this tree's pre-push hook and Gettext merge driver for the whole
+# clone: copies them into brando-hooks/ in the Git common directory and points
+# core.hooksPath and merge.gettext.driver at the copies. Safe to rerun.
+#
+#   scripts/install-git-helpers               replace the copies with this tree's
+#   scripts/install-git-helpers --if-missing  change nothing when the clone has
+#                                             both copies and runs them with an
+#                                             interpreter that is still there;
+#                                             otherwise replace both
+#                                             (scripts/worktree-setup)
+#
+# Git runs what its config points at during checkout, merge and rebase, so the
+# config never points into a working tree: a branch that adds
+# .githooks/post-checkout or replaces the merge script would run it on this
+# machine. No commit can write inside the Git directory, and the copies change
+# only when this script runs. So take an update by running it without
+# --if-missing from a checkout you trust, after a change to the hook or the
+# driver reaches main; `mix check` says when the copies differ from the tree.
+set -euo pipefail
+
+if_missing=false
+case "${1:-}" in
+  "") ;;
+  --if-missing) if_missing=true ;;
+  *) echo "install-git-helpers: unknown option $1" >&2; exit 2 ;;
+esac
+
+cd "$(dirname "$0")/.."
+# From a Git hook these would point at another repository's state.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_IMPLICIT_WORK_TREE
+
+dir="$(cd "$(git rev-parse --git-common-dir)" && pwd -P)/brando-hooks"
+
+# A python3 that does not run would read as "not installed" below, and fail only
+# after the hook copy is replaced.
+if ! python3 -I -c ''; then
+  echo "install-git-helpers: python3 does not run; nothing changed" >&2
+  exit 1
+fi
+
+# Whether merge.gettext.driver runs this clone's copy with an interpreter that is
+# still there: `exec PYTHON -I COPY` in the shell script in the command, where the
+# paths are quoted and their % escaped for Git. -I because the working directory
+# may be a branch's.
+driver_runs_copy() {
+  python3 -I -c 'import os, shlex, sys
+words = shlex.split(sys.argv[1])
+script = shlex.split(words[2]) if words[:2] == ["sh", "-c"] else []
+copy = sys.argv[2].replace("%", "%%")
+pythons = [word.replace("%%", "%") for word, flag, path in zip(script, script[1:], script[2:]) if flag == "-I" and path == copy]
+sys.exit(0 if any(os.path.isfile(python) and os.access(python, os.X_OK) for python in pythons) else 1)' \
+    "$(git config --get merge.gettext.driver || true)" "$dir/gettext-merge-driver" 2>/dev/null
+}
+
+if [ "$if_missing" = true ] && [ "$(git config --get core.hooksPath || true)" = "$dir" ] &&
+  [ -x "$dir/pre-push" ] && [ -f "$dir/gettext-merge-driver" ] && driver_runs_copy; then
+  exit 0
+fi
+
+mkdir -p "$dir"
+
+# Replaced with a rename: another worktree may be pushing through the hook.
+tmp="$(mktemp "$dir/.pre-push.XXXXXX")"
+trap 'rm -f "$tmp"' EXIT
+cp .githooks/pre-push "$tmp"
+chmod 755 "$tmp"
+mv -f "$tmp" "$dir/pre-push"
+
+# Writes only a change. A write fails at once while another setup holds the lock
+# on the shared config file, so it retries, rechecking: that setup may have
+# written the same value.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  [ "$(git config --get core.hooksPath || true)" = "$dir" ] && break
+  git config core.hooksPath "$dir" 2>/dev/null && break
+  sleep 0.5
+done
+[ "$(git config --get core.hooksPath || true)" = "$dir" ] || git config core.hooksPath "$dir"
+
+python3 scripts/gettext-merge-driver --install

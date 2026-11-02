@@ -83,17 +83,15 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
     context = schema.__modules__().context
     translated_singular = translated_singular(schema)
 
-    case apply(context, :"get_#{singular}", [entry_id]) do
-      {:ok, entry} ->
-        Brando.Authorization.Boundary.restore(socket.assigns.current_user, entry)
+    with {:ok, entry} <- apply(context, :"get_#{singular}", [entry_id]),
+         {:ok, _restored} <- Brando.Authorization.Boundary.restore(socket.assigns.current_user, entry) do
+      send(
+        self(),
+        {:toast, "#{String.capitalize(translated_singular)} #{gettext("undeleted")}"}
+      )
 
-        send(
-          self(),
-          {:toast, "#{String.capitalize(translated_singular)} #{gettext("undeleted")}"}
-        )
-
-        update_list_entries(schema)
-
+      update_list_entries(schema)
+    else
       {:error, _error} ->
         send(
           self(),

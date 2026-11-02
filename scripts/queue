@@ -26,8 +26,9 @@
 # When a PR drops out of the queue, it says why: the files that conflict with
 # main (from git merge-tree, which needs the remote named origin), the failed
 # merge-group jobs, or who dequeued it. When every failed merge-group job is a
-# known flake or CI infrastructure, it puts the PR back in the queue once and
-# says why.
+# known flake or CI infrastructure, it puts the PR back in the queue once, at
+# the commit whose checks it read, and says why. A head that has moved since,
+# or a PR that was already queued when this started, stays out and it says so.
 #
 # A PR whose base is another listed PR's branch waits for that PR to merge,
 # is retargeted to main, and then goes through the same steps; when that PR
@@ -271,10 +272,11 @@ wait_for_checks() {
 }
 
 # Follows a queued PR until it merges or leaves the queue. $1 is the PR, $2
-# how many times it had left the queue before.
+# how many times it had left the queue before, $3 the commit whose checks
+# passed, empty when it was already queued at the start.
 follow_queue() {
-  local pr="$1" before="$2" info state entry removal count reason files actor tries=0
-  local explained flaky flakes position requeued=false
+  local pr="$1" before="$2" verified="${3:-}" info state entry removal count reason files actor tries=0
+  local explained flaky flakes position head requeued=false
   while :; do
     if info="$(read_pr "$pr")"; then
       state="$(field "$info" .state)"
@@ -304,10 +306,22 @@ follow_queue() {
               --jq '.workflow_runs[] | select(.conclusion == "failure" or .conclusion == "timed_out") | .id' \
               2>>"$work/err"))"
             flaky=$?
-            # Once per PR: a second drop is not the same bad luck.
-            if [ "$requeued" = false ] && [ "$flaky" -eq 0 ] && flakes="$(drop_reasons "$explained")" &&
-              position="$(enqueue_at "$(field "$info" .id)" "$(field "$info" .headRefOid)" 2>"$work/requeue-$pr")"; then
-              say "$pr" "dropped on $flakes; re-queued at position $position"
+            head="$(field "$info" .headRefOid)"
+            # Once per PR: a second drop is not the same bad luck. Only at the
+            # commit whose checks passed; a moved head needs a person to look.
+            : >"$work/requeue-$pr"
+            if [ "$requeued" = false ] && [ "$flaky" -eq 0 ] && flakes="$(drop_reasons "$explained")"; then
+              if [ -z "$verified" ]; then
+                echo "it was already queued when this started, so no checks were read" >"$work/requeue-$pr"
+              elif [ "$head" != "$verified" ]; then
+                echo "its head is now ${head:0:7}, and the checks were read on ${verified:0:7}" >"$work/requeue-$pr"
+              fi
+            else
+              flakes=""
+            fi
+            if [ -n "$flakes" ] && [ ! -s "$work/requeue-$pr" ] &&
+              position="$(enqueue_at "$(field "$info" .id)" "$verified" 2>"$work/requeue-$pr")"; then
+              say "$pr" "dropped on $flakes; re-queued ${verified:0:7} at position $position"
               requeued=true
               before="$count"
               tries=0
@@ -379,7 +393,7 @@ wait_for_result() {
 }
 
 process() {
-  local pr="$1" info base base_pr removals checked skipped=""
+  local pr="$1" info base base_pr removals checked="" skipped=""
   info="$(cat "$work/$pr.info")"
   case "$(field "$info" .state)" in
     MERGED) say "$pr" "already merged"; return 0 ;;
@@ -419,7 +433,7 @@ process() {
   else
     removals="$(last_removal "$pr")" || { say "$pr" "could not read its timeline in $repo"; return 1; }
   fi
-  follow_queue "$pr" "$(field "$removals" .count)"
+  follow_queue "$pr" "$(field "$removals" .count)" "$checked"
 }
 
 if [ "$dequeue" = true ]; then

@@ -39,6 +39,7 @@ defmodule Brando.Uploads do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Images.PixelLimit
+  alias Brando.Uploads.ContentType
   alias Brando.Uploads.PendingIntent
   alias Brando.Uploads.Store
   alias Brando.Utils
@@ -48,9 +49,10 @@ defmodule Brando.Uploads do
   @image_exts ~w(.jpg .jpeg .png .gif .webp .svg)
   @max_file_size 50_000_000
   # This is the Phoenix transport envelope, not the per-asset authorization
-  # limit. Intake resolves the target config and applies its size_limit before
-  # any bytes move. Keep the envelope comfortably above normal media configs;
-  # installations accepting larger source files can raise it explicitly.
+  # limit. Intake applies the target config's size_limit to the size the client
+  # declares, and `store_upload/4` to the bytes that arrived. Keep the envelope
+  # comfortably above normal media configs; installations accepting larger
+  # source files can raise it explicitly.
   @manager_max_file_size 5_000_000_000
   @presign_expiry_seconds 600
 
@@ -129,17 +131,38 @@ defmodule Brando.Uploads do
   in a singleton sticky LiveView — an unmatched error shape there would crash
   the manager and kill every in-flight upload — so this facade guarantees
   `{:ok, asset} | {:error, message}` where `message` is safe to show the user.
+
+  What was checked before the bytes moved was only what the client declared, so
+  the file's real size and the entry's name go through `validate_intake/4` again
+  here, and the real size is what gets recorded.
   """
   def store_upload(meta, entry, cfg, user) do
-    case Store.handle_upload(meta, entry, cfg, user) do
-      {:ok, asset} ->
-        {:ok, asset}
-
+    with {:ok, entry} <- validate_received(meta, entry, cfg),
+         {:ok, asset} <- Store.handle_upload(meta, entry, cfg, user) do
+      {:ok, asset}
+    else
       error ->
         Logger.error("==> Uploads: store_upload failed: #{inspect(error)}")
         {:error, format_upload_error(error)}
     end
   end
+
+  # A temp file that cannot be read cannot be copied either: storage reports it
+  defp validate_received(%{path: path}, %{client_name: name} = entry, cfg) do
+    case File.stat(path) do
+      {:ok, %{size: size}} ->
+        with :ok <- validate_intake(cfg_asset_type(cfg), name, size, size_limit(cfg)) do
+          {:ok, Map.put(entry, :client_size, size)}
+        end
+
+      {:error, _} ->
+        {:ok, entry}
+    end
+  end
+
+  defp cfg_asset_type(%Brando.Type.ImageConfig{}), do: :image
+  defp cfg_asset_type(%Brando.Type.VideoConfig{}), do: :video
+  defp cfg_asset_type(_cfg), do: :file
 
   defp format_upload_error({:error, :content_type, rejected_type, allowed_types}) do
     gettext("Rejected type [%{rejected}]. Allowed: %{allowed}", %{
@@ -346,6 +369,7 @@ defmodule Brando.Uploads do
          {:ok, object} <- Brando.CDN.head_object(key, field_cfg),
          :ok <- validate_direct_object(object, params[:filesize], params[:mime_type]),
          {:ok, body} <- Brando.CDN.get_object(key, field_cfg),
+         :ok <- validate_direct_body(body, key, params, cfg),
          :ok <- check_direct_pixels(body, [key, params[:mime_type]]),
          {:ok, media_path} <- write_direct_original(key, body),
          {:ok, image} <- create_direct_image(cfg, media_path, resolved_target, params, user),
@@ -359,14 +383,27 @@ defmodule Brando.Uploads do
     end
   end
 
+  # The object can have been replaced since the HEAD (the presigned URL stays
+  # valid), and only here do the bytes themselves reach the server.
+  defp validate_direct_body(body, key, %{mime_type: mime_type}, cfg) do
+    with :ok <- validate_intake(:image, key, byte_size(body), size_limit(cfg)) do
+      ContentType.verify_image(body, key, mime_type, Map.get(cfg, :allowed_mimetypes) || [])
+    end
+  end
+
   # Before the original is written over one an `overwrite` config shares a
-  # name with. Bytes libvips cannot read are left to the later steps.
+  # name with. An SVG is not decoded to pixels.
   defp check_direct_pixels(body, names) do
-    with {:ok, image} <- Image.from_binary(body, PixelLimit.open_options(names)),
-         {:error, :too_many_pixels} <- PixelLimit.check(image) do
-      {:error, PixelLimit.error_message()}
+    if Enum.any?(names, &(&1 == "image/svg+xml")) do
+      :ok
     else
-      _ -> :ok
+      with {:ok, image} <- Image.from_binary(body, PixelLimit.open_options(names)),
+           :ok <- PixelLimit.check(image) do
+        :ok
+      else
+        {:error, :too_many_pixels} -> {:error, PixelLimit.error_message()}
+        {:error, _} -> {:error, "Failed to read image dimensions."}
+      end
     end
   end
 
@@ -559,6 +596,9 @@ defmodule Brando.Uploads do
   # ensure_correct_ext). The server dedupes on filesystem collision; we can't
   # cheaply check the bucket, so always uniquify unless the config overwrites.
   defp build_direct_filename(name, cfg) do
+    # A client's name for a file never selects a directory in the key
+    name = Path.basename(name)
+
     cond do
       Map.get(cfg, :random_filename, false) ->
         Utils.random_filename(name)
@@ -645,8 +685,9 @@ defmodule Brando.Uploads do
   @doc """
   Maximum payload accepted by the UploadManager's Phoenix transport.
 
-  This is only a transport backstop. `initiate/4` remains authoritative and
-  enforces the resolved image/file/video config's `size_limit` first.
+  This is only a transport backstop. `initiate/4` applies the resolved
+  image/file/video config's `size_limit` to the declared size, and
+  `store_upload/4` applies it again to the file that arrived.
 
       config :brando, Brando.Uploads,
         manager_max_file_size: 10_000_000_000

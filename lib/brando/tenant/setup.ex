@@ -17,6 +17,7 @@ defmodule Brando.Tenant.Setup do
   alias Brando.Tenant.Access
   alias Brando.Tenant.Lock
   alias Brando.Tenant.Registry
+  alias Brando.Tenant.ScopedRows
   alias Brando.Tenant.Storage
   alias Brando.Users.User
 
@@ -226,7 +227,9 @@ defmodule Brando.Tenant.Setup do
 
   defp delete_registry_and_schemas(site) do
     Repo.transaction(fn ->
-      Enum.each(site_schema_prefixes(site), &drop_schema!/1)
+      prefixes = site_schema_prefixes(site)
+      Enum.each(prefixes, &drop_schema!/1)
+      ScopedRows.delete(prefixes)
       delete_registry_site!(site)
     end)
   end
@@ -267,5 +270,7 @@ defmodule Brando.Tenant.Setup do
   end
 
   defp site_key(attrs), do: Map.get(attrs, :key, Map.get(attrs, "key"))
-  defp lifecycle_lock_key(site_key), do: "brando:site-lifecycle:#{site_key}"
+
+  @doc false
+  def lifecycle_lock_key(site_key), do: "brando:site-lifecycle:#{site_key}"
 end

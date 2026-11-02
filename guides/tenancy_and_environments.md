@@ -520,6 +520,11 @@ authorization a user granted an installation-wide permission, also reaches the
 installation's screens for it (sites, users, groups, frontend assets, the
 shared library), and is sent to the sites screen from the others.
 
+Losing a site takes effect in views already open. Revoking a user's access,
+or suspending or archiving the site, sends that site's open admin views to the
+access-denied page, in both authorization modes. Other users, and screens that
+do not depend on the site, are left as they are.
+
 ## Shared modules, containers, and palettes
 
 In `:multi` mode, global superusers can manage reusable block building blocks
@@ -790,6 +795,14 @@ Only non-live environments can be deleted:
 ```elixir
 {:ok, _deleted} = Brando.Environments.delete_environment(staging)
 ```
+
+Deleting an environment deletes its rows in the shared tables too: form
+submissions, entry drafts, assistant conversations, guidance versions, content
+proposals and transfer receipts. Those of an environment that was once live go
+with it, so export the submissions you want to keep first. Deleting a site does
+the same for all its environments. Conversations, guidance, proposals and receipts
+are found by a digest that includes the database's host and port, so those written
+before the database moved stay.
 
 Archives are schemas in the same database. They protect destructive environment
 operations, but they are not a substitute for an external database backup.

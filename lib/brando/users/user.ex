@@ -83,7 +83,8 @@ defmodule Brando.Users.User do
 
     attribute :password, :string,
       constraints: [min_length: 6, confirmation: true],
-      required: true
+      required: true,
+      redact: true
   end
 
   assets do

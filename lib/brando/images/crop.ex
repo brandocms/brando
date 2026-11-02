@@ -107,7 +107,7 @@ defmodule Brando.Images.Crop do
     result =
       with :ok <- Boundary.change(user, :update, changeset),
            {:ok, _} <- Ecto.Changeset.apply_action(changeset, :update),
-           :ok <- write(image.path, binary_data) do
+           :ok <- overwrite(image, binary_data) do
         Images.update_image(changeset, user)
       end
 
@@ -121,18 +121,35 @@ defmodule Brando.Images.Crop do
     end
   end
 
-  # The path comes from the image record, so it is checked against the media
-  # root before anything is written.
-  defp write(path, binary_data) do
-    case Storage.media_file(path) do
-      {:ok, dest_file} ->
-        File.mkdir_p!(Path.dirname(dest_file))
-        File.write!(dest_file, binary_data)
+  # The path comes from the image record, so it is checked before anything is
+  # written: it stays in the media root and names an image. A replace writes
+  # over a file that is there and creates none, but for an image on the CDN,
+  # whose upload may have removed the local original: its file comes back here
+  # for processing to upload again.
+  defp overwrite(%{cdn: true, path: path}, binary_data), do: write(path, binary_data)
 
-      :error ->
-        {:error, :unsafe_media_path}
+  defp overwrite(%{path: path}, binary_data) do
+    with {:ok, dest_file} <- Storage.media_file(path),
+         true <- File.regular?(dest_file) do
+      write(path, binary_data)
+    else
+      _ -> {:error, :unsafe_media_path}
     end
   end
+
+  defp write(path, binary_data) do
+    with {:ok, dest_file} <- Storage.media_file(path),
+         true <- image_path?(path) do
+      File.mkdir_p!(Path.dirname(dest_file))
+      File.write!(dest_file, binary_data)
+    else
+      _ -> {:error, :unsafe_media_path}
+    end
+  end
+
+  # Any stored original the image pipeline reads, which is more than an upload
+  # may be now (`Brando.Uploads.image_exts/0`)
+  defp image_path?(path), do: is_atom(Images.Metadata.type(path))
 
   # An image over the pixel limit is refused before it is written.
   defp measure(binary_data, fallback_dimensions) do

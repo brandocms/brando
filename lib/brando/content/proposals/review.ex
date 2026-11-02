@@ -8,6 +8,8 @@ defmodule Brando.Content.Proposals.Review do
   Everything here is derived from the stored proposal — the same frozen
   operations `apply/3` executes — so the review cannot drift from the result.
   """
+  alias Brando.Authorization.Boundary
+  alias Brando.Authorization.Engine
   alias Brando.Content
 
   alias Brando.Content.Proposals.{
@@ -40,9 +42,12 @@ defmodule Brando.Content.Proposals.Review do
   @doc "Review cards for `proposal`."
   @spec entries(Proposal.t()) :: [map()]
   def entries(%Proposal{} = proposal) do
-    proposal.targets
-    |> Enum.sort_by(fn {target, _} -> first_mention(proposal, target) end)
-    |> Enum.map(fn {target, value} -> entry(target, value, proposal) end)
+    # Each entry named checks the viewer's read access: on one snapshot.
+    Engine.with_snapshots(fn ->
+      proposal.targets
+      |> Enum.sort_by(fn {target, _} -> first_mention(proposal, target) end)
+      |> Enum.map(fn {target, value} -> entry(target, value, proposal) end)
+    end)
   end
 
   @doc """
@@ -407,11 +412,7 @@ defmodule Brando.Content.Proposals.Review do
         type: :block_selection,
         uid: op.block_uid,
         block: block_label(entry, op.field, op.block_uid, proposal),
-        before:
-          saved &&
-            Enum.map(saved.block_identifiers || [], fn bi ->
-              Content.Identifier.title_text(bi.identifier) || "##{bi.identifier_id}"
-            end),
+        before: saved && saved_selection(saved.block_identifiers || []),
         entries: Enum.map(op.identifiers, &Map.get(titles, &1, "##{&1}"))
       }
     ]
@@ -442,6 +443,19 @@ defmodule Brando.Content.Proposals.Review do
     is_map(data) and to_string(Map.get(data, String.to_existing_atom(key))) == to_string(value)
   rescue
     _ -> false
+  end
+
+  defp saved_selection(block_identifiers) do
+    readable =
+      Boundary.readable_entries(for %{identifier: %{schema: schema, entry_id: id}} <- block_identifiers, do: {schema, id})
+
+    Enum.map(block_identifiers, fn
+      %{identifier: %{schema: schema, entry_id: id} = identifier} = bi ->
+        (MapSet.member?(readable, {schema, id}) && Content.Identifier.title_text(identifier)) || "##{bi.identifier_id}"
+
+      bi ->
+        "##{bi.identifier_id}"
+    end)
   end
 
   defp identifier_titles(ids) do
@@ -745,13 +759,15 @@ defmodule Brando.Content.Proposals.Review do
     end
   end
 
-  # What a block is about: the entry a link variable points to — a project
-  # block names its project — or else the start of its text, or of its first
-  # text variable (a team member block holds only a name and a role).
+  # What a block is about: the entry a link variable points to, if the viewer
+  # may read it — a project block names its project — or else the start of its
+  # text, or of its first text variable (a team member block holds only a name
+  # and a role).
   defp describe(block) do
     Enum.find_value(block.vars || [], fn
       %{type: :link, identifier: %{title: title} = identifier} when is_binary(title) and title != "" ->
-        Content.Identifier.title_text(identifier)
+        if Boundary.readable_entry?(identifier.schema, identifier.entry_id),
+          do: Content.Identifier.title_text(identifier)
 
       _ ->
         nil
@@ -795,8 +811,11 @@ defmodule Brando.Content.Proposals.Review do
 
   defp saved_value(%{type: :boolean} = var), do: var.value_boolean
 
-  defp saved_value(%{type: :link, identifier: %{title: title} = identifier}) when is_binary(title),
-    do: Content.Identifier.title_text(identifier)
+  defp saved_value(%{type: :link, identifier: %{title: title} = identifier}) when is_binary(title) do
+    if Boundary.readable_entry?(identifier.schema, identifier.entry_id),
+      do: Content.Identifier.title_text(identifier),
+      else: "##{identifier.entry_id}"
+  end
 
   defp saved_value(%{type: type}) when type in [:image, :video], do: nil
   defp saved_value(var), do: option(var, var.value)
@@ -822,8 +841,10 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp option(_var, {:entry, schema, id}) do
-    case Content.get_identifier(schema, %{id: id}) do
-      {:ok, %{title: title} = identifier} when is_binary(title) -> Content.Identifier.title_text(identifier)
+    with true <- Boundary.readable_entry?(schema, id),
+         {:ok, %{title: title} = identifier} when is_binary(title) <- Content.get_identifier(schema, %{id: id}) do
+      Content.Identifier.title_text(identifier)
+    else
       _ -> "##{id}"
     end
   end
@@ -954,6 +975,7 @@ defmodule Brando.Content.Proposals.Review do
     with true <- String.ends_with?(name, "_id"),
          relation = String.to_existing_atom(String.replace_suffix(name, "_id", "")),
          %{related: related} <- schema.__schema__(:association, relation),
+         true <- Boundary.readable_entry?(related, id),
          %{} = record <- Brando.Repo.get(related, id) do
       Map.get(record, :title) || Map.get(record, :name) || "##{id}"
     else

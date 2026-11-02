@@ -160,7 +160,9 @@ defmodule BrandoAdmin.VideoListLiveTest do
       {:ok, view, _html} = live(conn, "/admin/assets/videos")
       Brando.Repo.update_all(Ecto.Query.from(u in Brando.Users.User, where: u.id == ^editor.id), set: [role: :user])
 
-      render_click(view, "fetch_metadata", %{})
+      # The view ends, for the client to rejoin at the stored role
+      Process.flag(:trap_exit, true)
+      catch_exit(render_click(view, "fetch_metadata", %{}))
       assert Brando.Repo.all(where(Oban.Job, worker: "Brando.Worker.VideoMetadataSweep")) == []
     end)
   end
