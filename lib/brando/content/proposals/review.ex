@@ -44,7 +44,7 @@ defmodule Brando.Content.Proposals.Review do
   # in them. No parser decides it, since what one parser drops another may keep
   # (`Brando.Markdown` reads `<https://…>` as a link). Elements with attributes,
   # links and anything else stay as they are written.
-  @any_tag ~r{<[a-zA-Z/!](?:"[^"]*"|'[^']*'|[^'">])*>}
+  @any_tag ~r{<[a-zA-Z/!](?:"[^"]*"|'[^']*'|[^'"<>])*>}
   @block_tag ~r{^</?(?:blockquote|br|dd|dl|dt|figcaption|figure|h[1-6]|hr|li|ol|p|pre|table|tbody|td|tfoot|th|thead|tr|ul)\s*/?>$}i
   @inline_tag ~r{^</?(?:abbr|b|cite|code|em|i|kbd|mark|q|s|small|strike|strong|sub|sup|u)\s*>$}i
 
@@ -1051,7 +1051,7 @@ defmodule Brando.Content.Proposals.Review do
   defp excerpt(nil), do: nil
 
   defp excerpt(text) do
-    text |> HtmlSanitizeEx.strip_tags() |> String.replace(~r/\s+/, " ") |> String.trim() |> shorten()
+    text |> HtmlSanitizeEx.strip_tags() |> collapse() |> shorten()
   end
 
   defp shorten(value) when is_binary(value) and byte_size(value) > @excerpt, do: String.slice(value, 0, @excerpt) <> "…"
