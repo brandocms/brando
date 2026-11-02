@@ -327,16 +327,18 @@ defmodule Brando.Videos.ProviderLibrary do
         path = module.library_meta_path()
 
         ProviderHoldings.with_video_lock(path, remote_id, fn ->
-          case ProviderHoldings.recorded_here(path, remote_id, video.id) do
-            nil -> restore.()
-            live -> {:error, {:recorded_here, if(Boundary.authorize(user, :read, live) == :ok, do: live)}}
-          end
+          path |> ProviderHoldings.recorded_here(remote_id, video.id) |> restore_unless_live(user, restore)
         end)
 
       nil ->
         restore.()
     end
   end
+
+  defp restore_unless_live(nil, _user, restore), do: restore.()
+
+  defp restore_unless_live(live, user, _restore),
+    do: {:error, {:recorded_here, if(Boundary.authorize(user, :read, live) == :ok, do: live)}}
 
   @doc "Whether the record was added from a provider library rather than uploaded."
   @spec imported?(Video.t()) :: boolean()

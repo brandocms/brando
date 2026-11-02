@@ -392,15 +392,7 @@ defmodule Brando.Videos.Uploader do
   # asking again would only fail again.
   defp purge_then_delete(video, purge) do
     Brando.Repo.repo().transaction(
-      fn ->
-        if purge.() do
-          with {:error, reason} = error <- dispatch_delete_remote(video) do
-            if transient_error?(reason), do: Brando.Repo.repo().rollback({:retry, reason}), else: error
-          end
-        else
-          not_purged(video)
-        end
-      end,
+      fn -> if purge.(), do: delete_or_roll_back(video), else: not_purged(video) end,
       timeout: :infinity
     )
     |> case do
@@ -410,6 +402,12 @@ defmodule Brando.Videos.Uploader do
       {:error, {:retry, reason}} = result ->
         Logger.warning("Video #{video.id} kept for the next purge: its provider could not delete it, #{inspect(reason)}")
         result
+    end
+  end
+
+  defp delete_or_roll_back(video) do
+    with {:error, reason} = error <- dispatch_delete_remote(video) do
+      if transient_error?(reason), do: Brando.Repo.repo().rollback({:retry, reason}), else: error
     end
   end
 
@@ -515,9 +513,10 @@ defmodule Brando.Videos.Uploader do
   end
 
   @doc """
-  The provider module of `video` and the provider's id for it, at the
-  module's `library_meta_path/0`, or `nil` for a video with no provider or
-  no id there.
+  `{module, remote_id}` for a provider video: its uploader, and the id its
+  provider knows it by, at the uploader's `library_meta_path/0`. That id
+  keys the video's lock and its holdings. `nil` for a video with no
+  provider, or none of its id.
   """
   @spec library_remote_id(Brando.Videos.Video.t()) :: {module(), String.t()} | nil
   def library_remote_id(video) do
