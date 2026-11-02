@@ -507,11 +507,13 @@ defmodule Brando.MarkdownSources.WebhookTest do
     # Checks from other addresses in line, each taking `ms`
     defp flood(count, ms) do
       for _ <- 1..count do
-        pid = spawn(fn -> SignatureCheck.run(fn -> Process.sleep(ms) end) end)
+        pid = spawn(fn -> SignatureCheck.run(sleep(ms)) end)
         on_exit(fn -> Process.exit(pid, :kill) end)
         Process.sleep(5)
       end
     end
+
+    defp sleep(ms), do: fn -> Process.sleep(ms) end
 
     defp wait_until(check, tries \\ 400) do
       cond do
