@@ -8,6 +8,12 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
   setup do
     root = Path.join(System.tmp_dir!(), "brando-publishing-live-#{System.unique_integer([:positive])}")
     put_test_env(:tenancy_mode, :multi)
+
+    put_test_env(Brando.Sites.DeployConfig,
+      rsync_targets: ["deploy@example.test:/srv/www", "web@static.example.test:/srv/site"],
+      s3_targets: ["s3://publishing-site/releases"]
+    )
+
     put_test_env(:sites_path, Path.join(root, "sites"))
     put_test_env(:media_path, Path.join(root, "media"))
     Cache.clear()

@@ -15,12 +15,25 @@ defmodule Brando.Sites.DeployConfig do
   SSH identity, and anyone who may deploy can set the target, so it is held
   to that remote form: no local paths, no loopback hosts, no `..` in the
   path, no rsync daemon or URL syntax, and no user or host that rsync or ssh
-  could read as an option. An operator can further limit targets to the
-  destinations they list, in config no admin can edit; a target must be one
-  of them or lie under one ending in `/`:
+  could read as an option. An S3 deploy deletes every key under its target
+  with the application's one set of credentials, so its prefix has no `.`,
+  `..` or empty segment either.
+
+  An operator lists the destinations each site may use, in config no admin
+  can edit. `{site_key}` stands for the key of the site being saved or
+  deployed, which binds an entry to that site. A target must be an entry, or
+  lie under one ending in `/`; a bucket with no prefix passes only an entry
+  naming it exactly:
 
       config :brando, Brando.Sites.DeployConfig,
-        rsync_targets: ["deploy@static.example.com:/srv/sites/"]
+        rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}"],
+        s3_targets: ["s3://static-bucket/sites/{site_key}"]
+
+  An entry without the placeholder grants every site: with
+  `deploy@static.example.com:/srv/sites/`, one site can name another's
+  directory. With `tenancy_mode: :multi` a strategy's list is required, and no
+  target passes without it. With one site, an unset list allows any target of
+  the right form.
   """
 
   use Ecto.Schema
@@ -46,11 +59,12 @@ defmodule Brando.Sites.DeployConfig do
 
   @fields [:strategy, :target, :cdn_url, :webhook_url, :auto_deploy, :retention_count]
 
-  def changeset(config, attrs) do
+  @doc "Changeset for the deployment settings of the site with key `site_key`."
+  def changeset(config, attrs, site_key) do
     config
     |> cast(attrs, @fields)
     |> require_target_for_strategy()
-    |> validate_strategy_target()
+    |> validate_strategy_target(site_key)
     |> validate_number(:retention_count, greater_than_or_equal_to: 1, less_than_or_equal_to: 100)
     |> validate_http_url(:cdn_url)
     |> validate_webhook_url()
@@ -60,16 +74,16 @@ defmodule Brando.Sites.DeployConfig do
     if get_field(changeset, :strategy), do: validate_required(changeset, [:target]), else: changeset
   end
 
-  defp validate_strategy_target(changeset) do
+  defp validate_strategy_target(changeset, site_key) do
     case {get_field(changeset, :strategy), get_field(changeset, :target)} do
       {:s3, target} when is_binary(target) ->
-        case URI.parse(target) do
-          %URI{scheme: "s3", host: host} when is_binary(host) and host != "" -> changeset
-          _invalid -> add_error(changeset, :target, gettext("must use s3://bucket/optional-prefix"))
+        case s3_target_error(target, site_key) do
+          nil -> changeset
+          message -> add_error(changeset, :target, message)
         end
 
       {:rsync, target} when is_binary(target) ->
-        case rsync_target_error(target) do
+        case rsync_target_error(target, site_key) do
           nil -> changeset
           message -> add_error(changeset, :target, message)
         end
@@ -85,23 +99,81 @@ defmodule Brando.Sites.DeployConfig do
   @rsync_target ~r/\A(?:(?<user>[A-Za-z0-9_][A-Za-z0-9._-]{0,63})@)?(?<host>[A-Za-z0-9](?:[A-Za-z0-9.-]{0,252})|\[[0-9A-Fa-f:.]+\]):(?<path>\/(?!\/)[A-Za-z0-9._~+@\/-]*)\z/
 
   @doc """
-  Whether `target` is an rsync target a deploy may use: the remote
-  `[user@]host:/absolute/path` form, on a host other than this one, and
-  among the operator's `rsync_targets` if they list them. Checked when the
-  config is saved and again before each deploy, since builds snapshot the
-  config.
+  Whether `target` is an rsync target the site with key `site_key` may deploy
+  to: the remote `[user@]host:/absolute/path` form, on a host other than this
+  one, and allowed by the operator's `rsync_targets`. Checked when the config
+  is saved and again before each deploy, since builds snapshot the config.
   """
-  @spec valid_rsync_target?(term()) :: boolean()
-  def valid_rsync_target?(target), do: is_binary(target) and is_nil(rsync_target_error(target))
+  @spec valid_rsync_target?(term(), String.t()) :: boolean()
+  def valid_rsync_target?(target, site_key), do: is_binary(target) and is_nil(rsync_target_error(target, site_key))
 
-  defp rsync_target_error(target) do
+  # A bucket of plain characters, and a prefix that reaches S3 as written: no
+  # query or fragment for a parser to drop, no escapes, no unexpanded `{...}`.
+  @s3_target ~r/\As3:\/\/(?<bucket>[A-Za-z0-9][A-Za-z0-9._-]{0,254})(?<path>\/[^\x00-\x20\x7f?#%\\{}]*)?\z/
+
+  @doc """
+  The bucket and prefix of an S3 target the site with key `site_key` may deploy
+  to, allowed by the operator's `s3_targets`. Checked when the config is saved
+  and again before each deploy, since builds snapshot the config.
+  """
+  @spec s3_destination(term(), String.t()) :: {:ok, String.t(), String.t()} | :error
+  def s3_destination(target, site_key) when is_binary(target) do
+    with nil <- s3_target_error(target, site_key), {:ok, bucket, prefix} <- parse_s3_target(target) do
+      {:ok, bucket, prefix}
+    else
+      _refused -> :error
+    end
+  end
+
+  def s3_destination(_target, _site_key), do: :error
+
+  defp s3_target_error(target, site_key) do
+    case parse_s3_target(target) do
+      {:ok, bucket, prefix} -> destination_error(:s3_targets, site_key, &s3_within?(bucket, prefix, &1))
+      :error -> gettext("must use s3://bucket/optional-prefix")
+    end
+  end
+
+  defp parse_s3_target(target) do
+    case Regex.named_captures(@s3_target, target) do
+      %{"bucket" => bucket, "path" => path} when path in ["", "/"] ->
+        {:ok, bucket, ""}
+
+      %{"bucket" => bucket, "path" => path} ->
+        prefix = path |> String.replace_prefix("/", "") |> String.replace_suffix("/", "")
+        if prefix |> String.split("/") |> Enum.any?(&(&1 in ["", ".", ".."])), do: :error, else: {:ok, bucket, prefix}
+
+      nil ->
+        :error
+    end
+  end
+
+  # The listed bucket and prefix itself, or for an entry ending in `/` a prefix
+  # under it (not the one that holds the others): `s3://bucket` names the whole
+  # bucket, and `s3://bucket/` every prefix in it, for one site or for all.
+  defp s3_within?(bucket, prefix, listed) when is_binary(listed) do
+    case parse_s3_target(listed) do
+      {:ok, ^bucket, listed_prefix} ->
+        cond do
+          not String.ends_with?(listed, "/") -> prefix == listed_prefix
+          listed_prefix == "" -> prefix != ""
+          true -> String.starts_with?(prefix, listed_prefix <> "/")
+        end
+
+      _other ->
+        false
+    end
+  end
+
+  defp s3_within?(_bucket, _prefix, _listed), do: false
+
+  defp rsync_target_error(target, site_key) do
     case Regex.named_captures(@rsync_target, target) do
       %{"host" => host, "path" => path} = parts ->
         cond do
           not plain_path?(path) -> gettext("must be an absolute path without . or ..")
           local_host?(host) -> gettext("must be on another server")
-          not listed_target?(parts) -> gettext("must be a destination this installation deploys to")
-          true -> nil
+          true -> destination_error(:rsync_targets, site_key, &within?(parts, &1))
         end
 
       nil ->
@@ -190,15 +262,29 @@ defmodule Brando.Sites.DeployConfig do
   defp local_address?({:ok, {0, 0, 0, 0, 0, 0, 0, n}}), do: n in [0, 1]
   defp local_address?({:ok, _ipv6}), do: false
 
-  # Unset: any target. Set to anything but a list of destinations: none, so
-  # a typo in the config never opens it up.
-  defp listed_target?(parts) do
-    case Application.get_env(:brando, __MODULE__, [])[:rsync_targets] do
-      nil -> true
-      targets when is_list(targets) -> Enum.any?(targets, &within?(parts, &1))
-      _misconfigured -> false
+  # Unset: any target with one site, none with several, where a target could be
+  # another site's. Set to anything but a list of destinations: none, so a typo
+  # in the config never opens it up.
+  defp destination_error(setting, site_key, within?) do
+    refused = gettext("must be a destination this installation deploys to")
+
+    case Application.get_env(:brando, __MODULE__, [])[setting] do
+      nil ->
+        if Brando.Tenant.mode() == :multi, do: gettext("needs this installation's config to list its deploy destinations")
+
+      targets when is_list(targets) ->
+        if not Enum.any?(targets, &within?.(for_site(&1, site_key))), do: refused
+
+      _misconfigured ->
+        refused
     end
   end
+
+  # Without a key an entry keeps its placeholder, which no target can match
+  defp for_site(listed, site_key) when is_binary(listed) and is_binary(site_key),
+    do: String.replace(listed, "{site_key}", site_key)
+
+  defp for_site(listed, _site_key), do: listed
 
   # The listed destination itself, or for an entry ending in `/` a directory
   # under it (not the directory itself, which holds the others). Hosts

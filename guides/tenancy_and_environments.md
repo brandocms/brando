@@ -970,7 +970,7 @@ Open `/admin/config/publishing` while a static site is selected. The deployment
 form supports:
 
 - `rsync`, with a target such as `deploy@example.com:/srv/www`;
-- `s3`, with `s3://bucket` or `s3://bucket/prefix`;
+- `s3`, with `s3://bucket/prefix` or, for a bucket of its own, `s3://bucket`;
 - an optional public CDN URL;
 - an optional completion webhook, posted after each deploy or rollback. Like
   a [webhook](webhooks.md), it must be `https` to a host with only public
@@ -989,14 +989,54 @@ this server's addresses, paths with `.`, `..` or empty segments,
 are refused, both when the settings are saved and when a build deploys. A
 name can still reach this server in ways a check cannot see (DNS that
 changes after the check, an SSH config alias, a public address behind NAT),
-so to limit the destinations
-anyone who may deploy can choose, list them in config (admins cannot change
-it). A target must be one of them, or lie under one that ends in `/`:
+so to limit the destinations anyone who may deploy can choose, list them in
+config (below).
+
+An S3 deploy deletes every key under its target before it uploads the build,
+with the application's one set of ExAws credentials. Its prefix may not hold
+`.`, `..` or empty segments, or `?`, `#`, `%`, `{`, `}`, `\` or spaces, and
+its bucket no user or port; `s3://bucket` with no prefix is the whole bucket.
+
+List where each site may deploy in config, which admins cannot change. The
+placeholder `{site_key}` stands for the key of the site being saved or
+deployed, so an entry binds a destination to that site:
 
 ```elixir
 config :brando, Brando.Sites.DeployConfig,
-  rsync_targets: ["deploy@static.example.com:/srv/sites/"]
+  rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}"],
+  s3_targets: ["s3://static-bucket/sites/{site_key}"]
 ```
+
+A target must be an entry, or lie under one that ends in `/` (not the entry
+itself, which holds the others). A bucket with no prefix passes only an entry
+that names it exactly, such as `s3://{site_key}-static`; `s3://bucket/` allows
+every prefix in the bucket but not the bucket itself. Brando checks a target
+when the settings are saved and again each time a build deploys, since a build
+keeps the configuration it was made with. A refused deploy or rollback says so
+in the build's log. If the target is of the right form, fix the list and the
+build deploys; change a site's target and it takes a new build. An older build
+whose target no longer fits cannot be rolled back until its target is listed
+again, and one with a target of the wrong form cannot be deployed at all.
+
+**An entry without `{site_key}` grants every site.** That holds for an exact
+destination such as `s3://acme-www` as much as for a parent such as
+`deploy@static.example.com:/srv/sites/` or `s3://static-bucket/sites/`: anyone
+who may deploy one site can name that destination, or another site's directory
+or prefix under that parent, and the deploy replaces what is there. Nothing
+ties such an entry to a single site, so use one only if the same people deploy
+all the sites. An `rsync_targets` parent without the placeholder keeps working,
+and leaves the sites open to each other until it uses `{site_key}`.
+
+**Entries that extend each other collide on hyphenated keys.** With
+`s3://b/{site_key}` and `s3://b/{site_key}-staging`, site `a` may name
+`s3://b/a-staging`, which site `a-staging` owns through the first entry, so use
+one entry per site layout, or separate them with a character keys cannot hold,
+such as the `/` in `s3://b/{site_key}/www` and `s3://b/{site_key}/staging`.
+
+With `tenancy_mode: :multi` the list of a strategy the sites use is required:
+until it is set, no target of that strategy can be saved or deployed. With one
+site, an unset list allows any target of the right form, including a whole
+bucket; a list set there applies the same way.
 
 Generated output is persistent at
 `sites/{site_key}/ssg/builds/{version}`. Old ready, archived, and failed artifact
