@@ -468,6 +468,11 @@ other sites upload are not listed otherwise. See
   has no token signer.
 - A video that already has a record in Brando is marked "In library", and
   adding it selects that record rather than creating a second one.
+- Adding a video whose record was deleted and waits for its purge restores
+  that record, for an editor who may restore videos, rather than creating a
+  second one. A record deleted with `delete_remote_on: :on_delete` is not
+  restored: its video may be gone at the provider, so it is added as a new
+  record if the provider still has it.
 - The button follows `allow_external_urls`, and needs permission to create
   videos.
 
@@ -526,7 +531,10 @@ config :brando, Brando.Videos.Uploaders.Vimeo,
 | `false` | Never delete from provider |
 
 Videos added from a provider's library are never deleted remotely, whatever
-this is set to. With named environments, a video is not deleted remotely
+this is set to. Nor is a video while another record of the same environment
+still plays it, such as one added again from the provider's library after
+the deleted record; the deleted record is purged all the same. With named
+environments, a video is not deleted remotely
 while another current environment of the site, such as the production that
 staging was copied from, still has a record of it (with `:on_delete`, a
 deleted record does not count); the deleting environment's record is deleted

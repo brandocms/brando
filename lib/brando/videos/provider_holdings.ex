@@ -21,6 +21,8 @@ defmodule Brando.Videos.ProviderHoldings do
   elsewhere.
   """
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Sites.Site
   alias Brando.Tenant
   alias Brando.Tenant.Registry
@@ -76,6 +78,26 @@ defmodule Brando.Videos.ProviderHoldings do
          {:ok, prefixes} <- readable(prefixes) do
       read_holdings(prefixes, matches(path, remote_ids))
     end
+  end
+
+  @doc """
+  Whether the current environment has a live record of the remote video,
+  the provider's id `remote_id` at the `meta` path `path`, other than the
+  record with the id `except_id`.
+  """
+  @spec recorded_here?(String.t(), String.t(), pos_integer() | nil) :: boolean()
+  def recorded_here?(path, remote_id, except_id \\ nil) do
+    keys = String.split(path, ".")
+
+    query =
+      from(v in Video,
+        where: is_nil(v.deleted_at) and fragment("?#>>? = ?", v.meta, ^keys, ^remote_id),
+        select: true,
+        limit: 1
+      )
+
+    query = if except_id, do: from(v in query, where: v.id != ^except_id), else: query
+    Brando.Repo.one(query) == true
   end
 
   @doc """

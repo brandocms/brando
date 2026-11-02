@@ -79,17 +79,25 @@ defmodule Brando.SoftDelete.Query do
 
     # Each row is purged while its video's lock is held, so another
     # environment's purge of the same video, waiting for the lock, no longer
-    # finds it among the holders and deletes the video at the provider. A
-    # video whose holders could not be read (`Brando.Videos.ProviderHoldings`),
-    # or whose lock an add or another delete held too long, is still at its
-    # provider. Its row stays for the next run to try again; deleting it would
-    # leave the provider video behind for good.
+    # finds it among the holders and deletes the video at the provider. The
+    # provider is asked once the row is gone, and not when the delete, still
+    # filtered on expiry, leaves it: a restore from the trash takes no lock,
+    # so the record may have been restored, or restored and deleted again,
+    # since it was read. The row's delete commits with the provider's answer,
+    # so a run that dies before the answer keeps the row. A video whose holders
+    # could not be read (`Brando.Videos.ProviderHoldings`), or whose lock an
+    # add or another delete held too long, is still at its provider. Its row
+    # stays for the next run to try again; deleting it would leave the
+    # provider video behind for good. Only rows the delete removed are
+    # counted.
     purged =
       Enum.count(on_purge, fn video ->
         result =
-          Brando.Videos.Uploader.delete_remote(video, fn -> Repo.delete_all(from t in query, where: t.id == ^video.id) end)
+          Brando.Videos.Uploader.delete_remote(video, fn ->
+            match?({1, _}, Repo.delete_all(from t in query, where: t.id == ^video.id))
+          end)
 
-        result not in [{:error, :holdings_unavailable}, {:error, :busy}]
+        result not in [{:error, :holdings_unavailable}, {:error, :busy}, {:error, :not_purged}]
       end)
 
     {count, nil} = Repo.delete_all(from t in query, where: t.id in ^Enum.map(others, & &1.id))

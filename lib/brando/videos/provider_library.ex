@@ -40,13 +40,22 @@ defmodule Brando.Videos.ProviderLibrary do
   records for one remote video would mean deleting either could remove the
   video from under the other, and the provider webhooks look a video up by
   its remote id and expect one answer.
+
+  Adding a video whose record was deleted and waits for its purge restores
+  that record, for an editor who may restore it: the purge would otherwise
+  delete at the provider the video a new record plays. A record deleted with
+  `delete_remote_on: :on_delete` is not restored, as its video may be gone
+  at the provider; the video is added as a new record if the provider still
+  has it.
   """
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Authorization.Boundary
   alias Brando.Tenant
   alias Brando.Tenant.Registry
   alias Brando.Videos.ProviderHoldings
+  alias Brando.Videos.Uploader
   alias Brando.Videos.Uploaders
   alias Brando.Videos.Video
 
@@ -179,13 +188,9 @@ defmodule Brando.Videos.ProviderLibrary do
     end
   end
 
-  defp add(module, :account, holding, user, opts), do: find_or_import(module, holding, user, opts)
-
-  # A delete of the same video at the provider waits, and this waits for one
-  # in progress (`Brando.Videos.ProviderHoldings.with_video_lock/3`).
-  defp add(module, {:group, _site_ids, _sites} = scope, holding, user, opts) do
-    {remote_id, _keys} = holding
-
+  # A delete or a purge of the same video at the provider waits, and this
+  # waits for one in progress (`Brando.Videos.ProviderHoldings.with_video_lock/3`).
+  defp add(module, scope, {remote_id, _keys} = holding, user, opts) do
     ProviderHoldings.with_video_lock(module.library_meta_path(), remote_id, fn ->
       with :ok <- may_add(module, scope, holding), do: find_or_import(module, holding, user, opts)
     end)
@@ -193,6 +198,8 @@ defmodule Brando.Videos.ProviderLibrary do
 
   # The listing's filter, again: the event names any remote id. A video the
   # site may not see is reported as one the provider does not have.
+  defp may_add(_module, :account, _holding), do: :ok
+
   defp may_add(module, {:group, _site_ids, sites} = scope, {remote_id, _keys} = holding) do
     case ProviderHoldings.sites_holding(module.library_meta_path(), [holding], sites) do
       {:ok, holders} -> if shared?(scope, holders[remote_id]), do: :ok, else: {:error, :not_found}
@@ -234,10 +241,52 @@ defmodule Brando.Videos.ProviderLibrary do
   end
 
   defp find_or_import(module, {remote_id, keys}, user, opts) do
-    case existing_video(module.library_meta_path(), remote_id, keys) do
+    path = module.library_meta_path()
+
+    with nil <- existing_video(path, remote_id, keys),
+         nil <- restore_deleted(path, remote_id, user) do
+      guarded(fn -> module.import_remote(remote_id, user, opts) end)
+    else
       %Video{} = video -> {:ok, video}
-      nil -> guarded(fn -> module.import_remote(remote_id, user, opts) end)
     end
+  end
+
+  # The environment's deleted record of the video, waiting for its purge,
+  # comes back rather than a second record: its purge would delete at the
+  # provider the video the second one plays. Not a record deleted with
+  # `delete_remote_on: :on_delete`, whose video the provider was asked to
+  # delete then: the provider is asked for it again, and a second record
+  # made, which that purge leaves alone. Nor one the user may not restore:
+  # the second record then keeps the video at the provider, as a live record
+  # of the environment does (`Brando.Videos.Uploader.delete_remote/1`).
+  defp restore_deleted(path, remote_id, user) do
+    keys = String.split(path, ".")
+
+    from(v in Video,
+      where: not is_nil(v.deleted_at) and fragment("?#>>? = ?", v.meta, ^keys, ^remote_id),
+      order_by: [desc: v.deleted_at, desc: v.id]
+    )
+    |> Brando.Repo.all()
+    |> Enum.find(&(Uploader.get_delete_timing(&1) != :on_delete))
+    |> case do
+      nil ->
+        nil
+
+      video ->
+        restore(user, video)
+    end
+  end
+
+  # A record never deleted at the provider (imported, or `delete_remote_on:
+  # false`) is purged without the video's lock, so it may be gone since it
+  # was read: the video is then added as a new record.
+  defp restore(user, video) do
+    case Boundary.restore(user, video) do
+      {:ok, restored} -> restored
+      {:error, _reason} -> nil
+    end
+  rescue
+    Ecto.StaleEntryError -> nil
   end
 
   # The current environment's record of the remote video: by the provider's
