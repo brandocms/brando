@@ -29,7 +29,13 @@ defmodule Brando.Cache.RefreshAfterCommitTest do
   defp menu(key), do: %{status: :published, title: "Menu", key: key, language: "en", items: []}
 
   defp palette(key),
-    do: %{name: key, key: key, namespace: "site", status: :published, colors: [%{name: "Red", key: "red", hex_value: "#ff0000"}]}
+    do: %{
+      name: key,
+      key: key,
+      namespace: "site",
+      status: :published,
+      colors: [%{name: "Red", key: "red", hex_value: "#ff0000"}]
+    }
 
   defp palette_keys, do: Enum.map(Cache.Palettes.get(), & &1.key)
 
@@ -114,8 +120,7 @@ defmodule Brando.Cache.RefreshAfterCommitTest do
 
                  send(
                    test,
-                   {:inside,
-                    Map.has_key?(Cache.Globals.get("en"), "kept"), Cache.Navigation.get("kept", "en"),
+                   {:inside, Map.has_key?(Cache.Globals.get("en"), "kept"), Cache.Navigation.get("kept", "en"),
                     "kept" in palette_keys()}
                  )
                end)

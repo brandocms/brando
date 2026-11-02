@@ -1324,12 +1324,20 @@ defmodule Brando.VillainTest do
 
     {:ok, set} =
       Brando.Sites.create_global_set(
-        %{label: "System", key: "system", language: "en", vars: [%{type: "text", label: "Text", key: "text", value: "Old"}]},
+        %{
+          label: "System",
+          key: "system",
+          language: "en",
+          vars: [%{type: "text", label: "Text", key: "text", value: "Old"}]
+        },
         user
       )
 
     {:ok, menu} =
-      Brando.Navigation.create_menu(%{status: :published, title: "Old title", key: "main", language: "en", items: []}, user)
+      Brando.Navigation.create_menu(
+        %{status: :published, title: "Old title", key: "main", language: "en", items: []},
+        user
+      )
 
     params = pf_module_cs(~s(<div>{{ globals.system.text }} {{ navigation.main.en.title }}</div>))
     {:ok, fragment} = Brando.Pages.create_fragment(params, user)

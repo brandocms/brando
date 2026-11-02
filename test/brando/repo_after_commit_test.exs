@@ -94,8 +94,40 @@ defmodule Brando.RepoAfterCommitTest do
     assert {:error, :fail, :undone, _} = Repo.transaction(multi)
     refute_received :held
 
-    assert {:ok, _} = Repo.transaction(Ecto.Multi.run(Ecto.Multi.new(), :hold, fn _repo, _ -> {:ok, Repo.after_commit(fn -> send(test, :held) end)} end))
+    assert {:ok, _} =
+             Repo.transaction(
+               Ecto.Multi.run(Ecto.Multi.new(), :hold, fn _repo, _ ->
+                 {:ok, Repo.after_commit(fn -> send(test, :held) end)}
+               end)
+             )
+
     assert_received :held
+  end
+
+  test "late work runs after the rest, whenever it was held" do
+    test = self()
+
+    {:ok, _} =
+      Repo.transaction(fn ->
+        Repo.after_commit(:rebuild_globals, fn -> send(test, :rebuild_globals) end)
+        Repo.after_commit(:render_globals, fn -> send(test, :render_globals) end, late: true)
+        Repo.after_commit(:rebuild_menus, fn -> send(test, :rebuild_menus) end)
+        Repo.after_commit(:render_menus, fn -> send(test, :render_menus) end, late: true)
+        Repo.after_commit(fn -> send(test, :broadcast) end)
+      end)
+
+    assert [:rebuild_globals, :rebuild_menus, :broadcast, :render_globals, :render_menus] = drain()
+
+    Repo.after_commit(:render_menus, fn -> send(test, :now) end, late: true)
+    assert_received :now
+  end
+
+  defp drain do
+    receive do
+      message -> [message | drain()]
+    after
+      0 -> []
+    end
   end
 
   test "outside a transaction, keyed work runs at once" do

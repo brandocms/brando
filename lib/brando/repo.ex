@@ -131,8 +131,10 @@ defmodule Brando.Repo do
   @doc """
   Runs `fun_or_multi` in a transaction, as `c:Ecto.Repo.transaction/2`.
 
-  The outermost one also runs what `after_commit/1` held back during it,
-  once it has committed, and drops it when it rolls back. Inside a
+  The outermost one also runs what `after_commit/1,2,3` held back during it,
+  once it has committed (in the order held, late work last), and drops it
+  when it rolls back. A nested transaction that rolls back rolls back the
+  outer one too. Inside a
   transaction begun on the repo itself, `after_commit/1` cannot wait, and
   runs its work at once.
   """
@@ -152,7 +154,10 @@ defmodule Brando.Repo do
           Process.delete(@after_commit)
         end
 
-      if elem(result, 0) == :ok, do: held |> Enum.reverse() |> Enum.each(&run_held/1)
+      # In the order held, late work after the rest
+      if elem(result, 0) == :ok,
+        do: held |> Enum.reverse() |> Enum.sort_by(&elem(&1, 2)) |> Enum.each(&run_held/1)
+
       result
     end
   end
@@ -166,7 +171,7 @@ defmodule Brando.Repo do
   sends them to read the database again, say.
   """
   @spec after_commit((-> any())) :: :ok
-  def after_commit(fun) when is_function(fun, 0), do: hold(make_ref(), fun)
+  def after_commit(fun) when is_function(fun, 0), do: hold(make_ref(), fun, false)
 
   @doc """
   Like `after_commit/1`, once per `key` in a transaction: work already held
@@ -174,12 +179,21 @@ defmodule Brando.Repo do
   as evicting the same cache entries.
   """
   @spec after_commit(term(), (-> any())) :: :ok
-  def after_commit(key, fun) when is_function(fun, 0), do: hold({:key, key}, fun)
+  def after_commit(key, fun) when is_function(fun, 0), do: hold({:key, key}, fun, false)
+
+  @doc """
+  Like `after_commit/2`; with `late: true` it runs after all the work held
+  without it, whenever that was held. For work that reads what the rest
+  rebuilds: rendering entries from a site cache the transaction refreshes.
+  """
+  @spec after_commit(term(), (-> any()), late: boolean()) :: :ok
+  def after_commit(key, fun, opts) when is_function(fun, 0) and is_list(opts),
+    do: hold({:key, key}, fun, Keyword.get(opts, :late, false))
 
   # The transaction has committed: work that fails is logged, and the rest
   # still runs, rather than skipped with the error raised to a caller whose
   # write is done.
-  defp run_held({key, fun}) do
+  defp run_held({key, fun, _late?}) do
     fun.()
   rescue
     error -> log_held_failure(key, fun, Exception.format(:error, error, __STACKTRACE__))
@@ -193,10 +207,10 @@ defmodule Brando.Repo do
   defp log_held_failure(work, message),
     do: Logger.error("[Brando.Repo] After-commit work #{inspect(work)} failed: " <> message)
 
-  defp hold(key, fun) do
+  defp hold(key, fun, late?) do
     case Process.get(@after_commit) do
       nil -> fun.()
-      held -> unless List.keymember?(held, key, 0), do: Process.put(@after_commit, [{key, fun} | held])
+      held -> unless List.keymember?(held, key, 0), do: Process.put(@after_commit, [{key, fun, late?} | held])
     end
 
     :ok
