@@ -1,1 +1,2 @@
 - On several nodes, a live switch, a moved or cleared host, a suspended or archived site, an activated or reverted asset set and a changed shared-library allowlist now reach every node within a fraction of a second, rather than only the node that made the change.
+- Two asset-set activations or reverts, or two shared-library allowlist changes, on one node no longer leave that node serving the earlier one when they finish in the opposite order.

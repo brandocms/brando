@@ -9,6 +9,7 @@ defmodule Brando.CacheSyncTest do
   alias Brando.Content.SharedLibrary
   alias Brando.Environments.Environment
   alias Brando.SiteAssetsFixtures
+  alias Brando.Sites.Preview
   alias Brando.Sites.Site
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
@@ -264,6 +265,93 @@ defmodule Brando.CacheSyncTest do
       assert :persistent_term.get({:vite, "critical_css"}, :gone) == :gone
     end
 
+    test "a fill dropped for a change takes the critical CSS read from it meanwhile" do
+      {:ok, first} = register_set("20260816_one")
+      add_critical_css(first.path, "body{color:red}")
+      {:ok, second} = register_set("20260816_two")
+      {:ok, _active} = SiteAssets.activate_set(first.id)
+      SiteAssets.invalidate_cache()
+      on_exit(fn -> :persistent_term.erase({:vite, "critical_css"}) end)
+
+      # A request here has read the active set...
+      fill = start_held("site_asset_sets", fn -> SiteAssets.cached() end)
+
+      # ...when another node switches it, and this node hears of it
+      Brando.Repo.update_all(Brando.Assets.SiteAssetSet, [set: [active: false]], prefix: "public")
+      second |> Brando.Assets.SiteAssetSet.changeset(%{active: true}) |> Repo.update!()
+      remote_refresh({SiteAssets, {:active, :standalone}})
+
+      # The request stores the old set before it finds the fence moved. A
+      # render in that moment, which began after the refresh, reads the old
+      # set's critical CSS from it and caches it
+      fence = SiteAssets.fence()
+      :persistent_term.put({:vite, "critical_css"}, "body{color:red}")
+
+      resume(fill)
+      Task.await(fill)
+
+      # Dropping the old set takes that CSS, and moves the fence for a render
+      # that stores it later
+      assert :persistent_term.get({:vite, "critical_css"}, :gone) == :gone
+      refute SiteAssets.fence() == fence
+    end
+
+    test "two activations here leave the set committed last, whichever finishes first" do
+      {:ok, first} = register_set("20260816_one")
+      {:ok, second} = register_set("20260816_two")
+
+      # One admin's activation has committed...
+      earlier = start_held(:commit, fn -> SiteAssets.activate_set(first.id) end)
+
+      # ...when another's commits and finishes
+      assert {:ok, _active} = SiteAssets.activate_set(second.id)
+
+      resume(earlier)
+      assert {:ok, _active} = Task.await(earlier)
+
+      second_id = second.id
+      assert %{set: %{id: ^second_id}} = SiteAssets.cached()
+    end
+
+    test "a revert and an activation here leave the one committed last, whichever finishes first" do
+      {:ok, first} = register_set("20260816_one")
+      {:ok, second} = register_set("20260816_two")
+      {:ok, _active} = SiteAssets.activate_set(first.id)
+
+      # One admin's revert has committed...
+      earlier = start_held(:commit, fn -> SiteAssets.deactivate() end)
+
+      # ...when another's activation commits and finishes
+      assert {:ok, _active} = SiteAssets.activate_set(second.id)
+
+      resume(earlier)
+      assert :ok = Task.await(earlier)
+
+      second_id = second.id
+      assert %{set: %{id: ^second_id}} = SiteAssets.cached()
+    end
+
+    test "a pinned listing that read a set before another node pruned it does not keep the set's listing" do
+      {:ok, set} = register_set("20260816_one")
+      preview = pin_preview(set)
+
+      # A request here has listed the pinned sets...
+      fill = start_held("site_asset_sets", fn -> SiteAssets.pinned_sets() end)
+
+      # ...when another node prunes the set, and this node hears of it before
+      # the files are gone
+      Repo.delete!(preview)
+      Repo.delete!(set)
+      remote_refresh({SiteAssets, {:set, set.id}})
+      remote_refresh({SiteAssets, {:pinned, :standalone}})
+
+      resume(fill)
+      Task.await(fill)
+
+      assert :persistent_term.get({:brando, :site_assets, :set, set.id}, :gone) == :gone
+      assert :persistent_term.get({:brando, :site_assets, :pinned, :standalone}, :gone) == :gone
+    end
+
     test "a preview another node pins drops this node's pinned listing" do
       assert SiteAssets.pinned_sets() == []
       assert :persistent_term.get({:brando, :site_assets, :pinned, :standalone}, :gone) == []
@@ -323,6 +411,23 @@ defmodule Brando.CacheSyncTest do
 
       assert SharedLibrary.enabled_ids(site, :module) == MapSet.new()
     end
+
+    test "two allowlist changes here leave the one committed last, whichever finishes first" do
+      site = insert_site!("acme")
+      user = Brando.Factory.insert(:random_user, role: :superuser)
+      {:ok, module} = SharedLibrary.create_shared(:module, module_attrs(), user)
+
+      # One admin's change has committed...
+      earlier = start_held(:commit, fn -> SharedLibrary.set_enabled(site, :module, [module.id]) end)
+
+      # ...when another's commits and finishes
+      assert :ok = SharedLibrary.set_enabled(site, :module, [])
+
+      resume(earlier)
+      assert :ok = Task.await(earlier)
+
+      assert SharedLibrary.enabled_ids(site, :module) == MapSet.new()
+    end
   end
 
   defp send_remote(origin \\ @other_node, refresh) do
@@ -334,8 +439,9 @@ defmodule Brando.CacheSyncTest do
     CacheSync.sync()
   end
 
-  # Runs `fun` in a task held after its first query on `source`, until
-  # `resume/1`: a cache fill caught between its read and its store.
+  # Runs `fun` in a task held after its first query on `source`, or its first
+  # commit for `:commit`, until `resume/1`: a cache fill caught between its
+  # read and its store, or a write between its commit and its cache update.
   defp start_held(source, fun) do
     test = self()
 
@@ -362,7 +468,8 @@ defmodule Brando.CacheSyncTest do
 
   defp resume(%Task{pid: pid}), do: send(pid, :resume)
 
-  # Runs `fun` in the querying process after each query on `source`
+  # Runs `fun` in the querying process after each query on `source` (each
+  # commit for `:commit`)
   defp on_query(source, fun) do
     id = make_ref()
     event = BrandoIntegration.Repo.config()[:telemetry_prefix] ++ [:query]
@@ -371,6 +478,7 @@ defmodule Brando.CacheSyncTest do
   end
 
   @doc false
+  def handle_query(_event, _measurements, %{query: "commit"}, {:commit, fun}), do: fun.()
   def handle_query(_event, _measurements, %{source: source}, {source, fun}), do: fun.()
   def handle_query(_event, _measurements, _metadata, _config), do: :ok
 
@@ -399,6 +507,18 @@ defmodule Brando.CacheSyncTest do
 
     File.write!(Path.join([path, "assets", "critical.js"]), "")
     File.write!(Path.join(path, "manifest.json"), Jason.encode!(Map.put(manifest, "src/critical.js", critical)))
+  end
+
+  defp pin_preview(set) do
+    user = Brando.Factory.insert(:random_user, avatar: nil)
+
+    Repo.insert!(%Preview{
+      creator_id: user.id,
+      preview_key: Ecto.UUID.generate(),
+      html: Brando.Utils.term_to_binary("<main>Pinned</main>"),
+      expires_at: DateTime.utc_now() |> DateTime.add(3_600, :second) |> DateTime.truncate(:second),
+      asset_set_id: set.id
+    })
   end
 
   defp register_set(name) do

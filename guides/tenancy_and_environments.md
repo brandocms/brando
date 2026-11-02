@@ -965,10 +965,11 @@ Brando.Assets.SiteAssets.register_set(
 Registration validates that the directory is an immediate child of the
 managed `sets` root, rejects symlinks and special files, and records the actual
 byte size and file count. A superuser activates or rolls back sets at
-`/admin/config/assets`. Activation caches both the complete regular-file
-`MapSet` and optional Vite manifest in `:persistent_term`. Requests absent from
-that set fall through to release assets without a filesystem lookup. Reverting
-clears the active cache and immediately restores `priv/static` fallback.
+`/admin/config/assets`. The first request after an activation caches both
+the complete regular-file `MapSet` and optional Vite manifest in
+`:persistent_term`. Requests absent from that set fall through to release
+assets without a filesystem lookup. Reverting clears the active cache and
+immediately restores `priv/static` fallback.
 Activating and reverting reach every node ([Several nodes](#several-nodes)).
 
 Vite manifest and critical CSS resolution follow the same active-set-first,

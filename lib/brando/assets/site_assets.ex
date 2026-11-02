@@ -3,10 +3,10 @@ defmodule Brando.Assets.SiteAssets do
   Registry and runtime cache for persistent, uploadable frontend asset sets.
 
   Standalone installations use `site_assets/sets/{set}`. Multi-site
-  installations use `sites/{site_key}/assets/sets/{set}`. Activation caches
-  the complete regular-file listing as a `MapSet` and the optional Vite
-  manifest in `:persistent_term`, making non-matching request rejection a
-  memory lookup with no filesystem access.
+  installations use `sites/{site_key}/assets/sets/{set}`. The first request
+  after an activation caches the active set's complete regular-file listing as
+  a `MapSet` and its optional Vite manifest in `:persistent_term`, making
+  non-matching request rejection a memory lookup with no filesystem access.
 
   Shared previews pin the set they were rendered against (see
   `with_preview_set/2` and `Brando.Assets.SiteAssets.Capture`). A pinned set
@@ -37,6 +37,7 @@ defmodule Brando.Assets.SiteAssets do
   @public_opts [prefix: "public"]
   @cache_keys_key {:brando, :site_assets, :cache_keys}
   @override_key {:brando, :site_assets, :override}
+  @change_fence_key {:brando, :site_assets, :change_fence}
   @fence_key {:brando, :site_assets, :fence}
 
   @type scope :: Site.t() | nil
@@ -94,11 +95,11 @@ defmodule Brando.Assets.SiteAssets do
   @doc "Activates a registered set and atomically deactivates its predecessor."
   @spec activate_set(pos_integer()) :: {:ok, SiteAssetSet.t()} | {:error, term()}
   def activate_set(set_id) do
+    # A set whose files cannot be read is not activated
     with %SiteAssetSet{} = asset_set <- Repo.get(SiteAssetSet, set_id, @public_opts),
-         {:ok, cached} <- build_cache(asset_set),
+         {:ok, _cached} <- build_cache(asset_set),
          {:ok, active_set} <- persist_activation(asset_set) do
-      put_cache(scope_key(active_set), %{cached | set: active_set})
-      invalidate_vite(active_set.site_id)
+      drop_active(scope_key(active_set))
       CacheSync.broadcast(__MODULE__, {:active, scope_key(active_set)})
       {:ok, active_set}
     else
@@ -116,8 +117,7 @@ defmodule Brando.Assets.SiteAssets do
            |> Repo.update_all([set: [active: false]], @public_opts)
          end) do
       {:ok, _updated} ->
-        put_cache(scope_key(site), :none)
-        invalidate_vite(site_id(site))
+        drop_active(scope_key(site))
         CacheSync.broadcast(__MODULE__, {:active, scope_key(site)})
         :ok
 
@@ -144,15 +144,16 @@ defmodule Brando.Assets.SiteAssets do
   until `forget_set/1` or `invalidate_cache/0` runs.
   """
   @spec set_cache(SiteAssetSet.t()) :: {:ok, cached_set()} | {:error, term()}
-  def set_cache(%SiteAssetSet{id: id} = asset_set) do
+  def set_cache(%SiteAssetSet{} = asset_set), do: set_cache_since(asset_set, change_fence())
+
+  # `fence` is from before the caller read `asset_set` from the database: a
+  # pinned listing passes its own, so a set forgotten since is not stored
+  defp set_cache_since(%SiteAssetSet{id: id} = asset_set, fence) do
     key = set_cache_key(id)
 
     case :persistent_term.get(key, :not_cached) do
       :not_cached ->
-        with {:ok, cached} <- build_cache(asset_set) do
-          store(key, cached)
-          {:ok, cached}
-        end
+        with {:ok, cached} <- build_cache(asset_set), do: {:ok, fill(key, cached, fence)}
 
       cached ->
         {:ok, cached}
@@ -237,16 +238,7 @@ defmodule Brando.Assets.SiteAssets do
   """
   @spec refresh_node_cache({:active | :pinned, :standalone | {:site_id, pos_integer()}} | {:set, pos_integer()}) ::
           :ok
-  def refresh_node_cache({:active, scope_key}) do
-    drop(cache_key(scope_key))
-
-    case scope_key do
-      :standalone -> invalidate_vite(nil)
-      {:site_id, site_id} -> invalidate_vite(site_id)
-    end
-
-    :ok
-  end
+  def refresh_node_cache({:active, scope_key}), do: drop_active(scope_key)
 
   def refresh_node_cache({:pinned, scope_key}), do: drop(pinned_cache_key(scope_key))
   def refresh_node_cache({:set, set_id}), do: drop(set_cache_key(set_id))
@@ -297,14 +289,14 @@ defmodule Brando.Assets.SiteAssets do
   @doc "Clears all active-set runtime caches."
   @spec invalidate_cache() :: :ok
   def invalidate_cache do
-    move_fence()
+    move_change_fence()
 
     @cache_keys_key
     |> :persistent_term.get([])
     |> Enum.each(&:persistent_term.erase/1)
 
     :persistent_term.erase(@cache_keys_key)
-    :ok
+    move_fence()
   end
 
   @doc """
@@ -481,13 +473,16 @@ defmodule Brando.Assets.SiteAssets do
     end)
   end
 
-  defp warm_pinned(site), do: fill(pinned_cache_key(scope_key(site)), fn -> load_pinned(site) end)
+  defp warm_pinned(site) do
+    fence = change_fence()
+    fill(pinned_cache_key(scope_key(site)), load_pinned(site, fence), fence)
+  end
 
-  defp load_pinned(site) do
+  defp load_pinned(site, fence) do
     site
     |> Retention.preview_pinned_sets()
     |> Enum.flat_map(fn asset_set ->
-      case set_cache(asset_set) do
+      case set_cache_since(asset_set, fence) do
         {:ok, cached} -> [cached]
         {:error, _reason} -> []
       end
@@ -545,7 +540,9 @@ defmodule Brando.Assets.SiteAssets do
   end
 
   defp warm_scope(site) do
-    case fill(cache_key(scope_key(site)), fn -> load_active(site) end) do
+    fence = change_fence()
+
+    case fill(cache_key(scope_key(site)), load_active(site), fence) do
       :none -> nil
       cached -> cached
     end
@@ -582,38 +579,66 @@ defmodule Brando.Assets.SiteAssets do
   defp set_cache_key(set_id), do: {:brando, :site_assets, :set, set_id}
 
   defp put_cache(scope_key, value) do
-    move_fence()
+    move_change_fence()
     store(cache_key(scope_key), value)
   end
 
-  # A fill reads the database and the files, then stores what it read. Every
-  # change to a cache moves the fence first, and a fill that finds the fence
-  # moved since it began drops what it stored: it may have read before the
-  # change. Cached reads never look at the fence.
-  defp fill(key, load) do
-    fence = fence()
-    value = load.()
+  # Dropped rather than replaced after a write, as two writes here may finish
+  # in either order: the next read loads the one committed last
+  defp drop_active(scope_key) do
+    drop(cache_key(scope_key))
+    invalidate_vite(scope_site_id(scope_key))
+  end
+
+  # A fill reads the database and the files, then stores `value`. Every change
+  # moves the change fence before it erases, and a fill that finds it moved
+  # since `fence`, taken before the read, withdraws what it stored: it may
+  # have read before the change. Cached reads never look at a fence.
+  defp fill(key, value, fence) do
     store(key, value)
-    if fence() != fence, do: :persistent_term.erase(key)
+    if change_fence() != fence, do: withdraw(key)
     value
   end
 
+  # Not a change: moving the change fence would make the fills running now
+  # withdraw theirs in turn, and under steady load none would ever stay. The
+  # critical CSS read from the withdrawn set goes with it, as on a change.
+  defp withdraw({:brando, :site_assets, :active, scope_key} = key) do
+    erase(key)
+    invalidate_vite(scope_site_id(scope_key))
+  end
+
+  defp withdraw(key), do: erase(key)
+
   defp drop(key) do
-    move_fence()
+    move_change_fence()
+    erase(key)
+  end
+
+  # The fence moves after the erase, so a cache filled from the erased value
+  # either finds it moved or is erased itself by what follows
+  defp erase(key) do
     :persistent_term.erase(key)
-    :ok
+    move_fence()
   end
 
   @doc """
-  A value that changes whenever one of these caches changes. A cache filled
-  from them, such as the critical CSS in `Brando.Assets.Vite.Manifest`, reads
-  it before and after the fill, and drops what it stored when it moved.
+  A value that changes whenever a value in these caches is dropped. A cache
+  filled from them, such as the critical CSS in `Brando.Assets.Vite.Manifest`,
+  reads it before and after the fill, and drops what it stored when it moved.
   """
   @spec fence() :: integer() | nil
   def fence, do: :persistent_term.get(@fence_key, nil)
 
-  # Unique on this node, so a fence never comes back to a value a fill holds
-  defp move_fence, do: :persistent_term.put(@fence_key, System.unique_integer([:positive]))
+  defp change_fence, do: :persistent_term.get(@change_fence_key, nil)
+
+  # Both unique on this node, so a fence never comes back to a value a fill holds
+  defp move_change_fence, do: :persistent_term.put(@change_fence_key, System.unique_integer([:positive]))
+
+  defp move_fence do
+    :persistent_term.put(@fence_key, System.unique_integer([:positive]))
+    :ok
+  end
 
   defp store(key, value) do
     :persistent_term.put(key, value)
@@ -657,6 +682,9 @@ defmodule Brando.Assets.SiteAssets do
 
   defp site_id(nil), do: nil
   defp site_id(%Site{id: site_id}), do: site_id
+
+  defp scope_site_id(:standalone), do: nil
+  defp scope_site_id({:site_id, site_id}), do: site_id
 
   defp invalidate_vite(site_id) do
     vite_prefixes(site_id)
