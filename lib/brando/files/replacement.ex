@@ -101,7 +101,7 @@ defmodule Brando.Files.Replacement do
 
     with :ok <- Uploads.validate_intake(:file, name, size, cfg.size_limit) do
       cond do
-        extension(file.filename) not in [extension(name), stored_extension(name, cfg)] ->
+        not same_extension?(file, cfg, name) ->
           {:error, "Choose a file with the same extension (#{extension(file.filename)})"}
 
         allowed != ["*"] and mime_type not in allowed ->
@@ -112,6 +112,46 @@ defmodule Brando.Files.Replacement do
       end
     end
   end
+
+  @doc """
+  The `accept` value for a picker choosing a replacement for `file`: the stored
+  extension and the other extensions of its type that `initiate/3` takes, as
+  `".jpg,.jpeg"`.
+
+  `nil`, for a picker that offers every file, when the stored extension is of
+  no known type and the config slugs names: the extension may have been slugged
+  from one no list can name, as `.jpglarge` from `.jpg_large`. `initiate/3`
+  still refuses a file it does not take.
+  """
+  def accept(file) do
+    with "." <> bare <- extension(file.filename),
+         {:ok, cfg} <- Files.get_config_for(file.config_target),
+         [_ | _] = candidates <- accept_candidates(bare, cfg) do
+      candidates
+      |> Enum.map(&("." <> &1))
+      |> Enum.filter(&same_extension?(file, cfg, "file" <> &1))
+      |> Enum.join(",")
+    else
+      _ -> nil
+    end
+  rescue
+    _ -> nil
+  end
+
+  defp accept_candidates(bare, cfg) do
+    type = MIME.type(bare)
+
+    cond do
+      bare in MIME.extensions(type) -> Enum.uniq([bare | MIME.extensions(type)])
+      slugs?(cfg) -> []
+      # A comma would split the `accept` list
+      bare =~ ~r/^[a-z0-9_-]+$/ -> [bare]
+      true -> []
+    end
+  end
+
+  defp same_extension?(file, cfg, name),
+    do: extension(file.filename) in [extension(name), stored_extension(name, cfg)]
 
   # A video's file is judged like an upload of one, by what arrived. Any other
   # file can hold anything: see `Brando.Uploads.ContentType`.
@@ -133,7 +173,7 @@ defmodule Brando.Files.Replacement do
   defp stored_extension(name, cfg) do
     name = Path.basename(name)
 
-    if Map.get(cfg, :slugify_filename, false) and not Map.get(cfg, :random_filename, false) do
+    if slugs?(cfg) do
       Utils.slugify_filename(name)
     else
       name
@@ -141,6 +181,8 @@ defmodule Brando.Files.Replacement do
     |> Utils.ensure_correct_extension()
     |> extension()
   end
+
+  defp slugs?(cfg), do: Map.get(cfg, :slugify_filename, false) and not Map.get(cfg, :random_filename, false)
 
   defp destination(file, cfg) do
     # A leading slash is tolerated in an upload path, as when the file was stored

@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Files.FileListLive do
 
   alias Brando.Files
   alias Brando.Files.File
+  alias Brando.Files.Replacement
   alias Brando.Uploads.AssetIntent
   alias BrandoAdmin.Components.Assets.FileBrowser
   alias BrandoAdmin.Components.Assets.SortByUse
@@ -27,6 +28,7 @@ defmodule BrandoAdmin.Files.FileListLive do
       |> assign(:deliver_topic, deliver_topic)
       |> assign(:replacement_file, nil)
       |> assign(:replacement_target, nil)
+      |> assign(:replacement_accept, nil)
       |> assign(:custom_folders, [])
       |> assign(:folders, [""])
       |> assign(:child_folders, [])
@@ -80,7 +82,11 @@ defmodule BrandoAdmin.Files.FileListLive do
              config_target: file.config_target,
              deliver_topic: socket.assigns.deliver_topic
            }) do
-      {:noreply, socket |> assign(:replacement_file, file) |> assign(:replacement_target, target)}
+      {:noreply,
+       socket
+       |> assign(:replacement_file, file)
+       |> assign(:replacement_target, target)
+       |> assign(:replacement_accept, Replacement.accept(file))}
     else
       _ ->
         send(self(), {:toast, gettext("The file is no longer available")})
@@ -301,7 +307,7 @@ defmodule BrandoAdmin.Files.FileListLive do
           data-file-id={@replacement_target["file_id"]}
           data-config-target={@replacement_target["config_target"]}
           data-deliver-topic={@replacement_target["deliver_topic"]}
-          data-accept={Path.extname(@replacement_file.filename)}
+          data-accept={@replacement_accept}
         >
           <input type="file" class="file-input hidden" aria-label={gettext("Replacement file")} />
           <p class="replacement-prompt">
