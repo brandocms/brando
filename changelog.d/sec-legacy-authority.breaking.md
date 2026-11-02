@@ -4,4 +4,4 @@
 - Only a superuser changes another user's email, in both authorization modes, as for their password. In legacy mode an Admin can no longer correct an Editor's email.
   Ask a superuser to change it, or let the user change it on their own form.
 
-- In legacy authorization mode, Brando now enforces the roles' meaning itself: a User-role account changes nothing but its own profile, an Admin gives roles up to Admin, and only a superuser deactivates or deletes another superuser.
+- In legacy authorization mode, Brando now enforces the roles' meaning itself: a User-role account changes nothing but its own profile, an Admin gives roles up to Admin, and an account deactivates, deletes, restores or re-enables only accounts at or below its own role.

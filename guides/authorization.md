@@ -195,8 +195,10 @@ Generated context mutations accept an authenticated user or `Scope` and enforce
 permissions when group mode is enabled. In legacy mode they enforce what the
 roles mean in Brando itself, reading the user's role afresh: only a
 Superuser writes modules and containers, a User-role account changes nothing
-but its own profile, and only a Superuser deactivates or deletes another
-Superuser. The application's legacy rules are not consulted. In both modes,
+but its own profile, and an account deactivates, deletes, restores or
+re-enables only accounts at or below its own role (User, Editor, Admin,
+Superuser, in that order): an Editor another Editor, but not an Admin. The
+application's legacy rules are not consulted. In both modes,
 only a Superuser changes another account's email or password (the email is
 where a password reset link goes).
 
