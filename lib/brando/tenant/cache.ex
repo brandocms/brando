@@ -53,8 +53,8 @@ defmodule Brando.Tenant.Cache do
     end)
   end
 
-  @doc false
-  # Another node wrote the registry: `Brando.CacheSync`
+  @doc "Warms this node's cache for a registry write on another node (`Brando.CacheSync`)."
+  @spec refresh_node_cache(:registry) :: :ok
   def refresh_node_cache(:registry), do: warm()
 
   @spec clear() :: :ok

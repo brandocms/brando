@@ -230,10 +230,13 @@ defmodule Brando.Assets.SiteAssets do
     CacheSync.broadcast(__MODULE__, {:pinned, scope_key(scope)})
   end
 
-  @doc false
-  # Another node changed a scope's active set, a scope's pinned sets, or
-  # removed a set (`Brando.CacheSync`). Dropped here, each is read again on
-  # its next use.
+  @doc """
+  Drops this node's copy of what another node changed (`Brando.CacheSync`):
+  a scope's active set (and its Vite manifest and critical CSS), a scope's
+  pinned sets, or a removed set. Each is read again on its next use.
+  """
+  @spec refresh_node_cache({:active | :pinned, :standalone | {:site_id, pos_integer()}} | {:set, pos_integer()}) ::
+          :ok
   def refresh_node_cache({:active, scope_key}) do
     drop(cache_key(scope_key))
 
@@ -241,6 +244,8 @@ defmodule Brando.Assets.SiteAssets do
       :standalone -> invalidate_vite(nil)
       {:site_id, site_id} -> invalidate_vite(site_id)
     end
+
+    :ok
   end
 
   def refresh_node_cache({:pinned, scope_key}), do: drop(pinned_cache_key(scope_key))
@@ -599,9 +604,12 @@ defmodule Brando.Assets.SiteAssets do
     :ok
   end
 
-  @doc false
-  # For a cache filled from these, such as the critical CSS in
-  # `Brando.Assets.Vite.Manifest`: one that finds it moved drops what it stored.
+  @doc """
+  A value that changes whenever one of these caches changes. A cache filled
+  from them, such as the critical CSS in `Brando.Assets.Vite.Manifest`, reads
+  it before and after the fill, and drops what it stored when it moved.
+  """
+  @spec fence() :: integer() | nil
   def fence, do: :persistent_term.get(@fence_key, nil)
 
   # Unique on this node, so a fence never comes back to a value a fill holds
