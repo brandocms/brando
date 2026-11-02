@@ -36,7 +36,9 @@ defmodule Brando.Plug.TenantTest do
           key: "production",
           live: true,
           domain: "www.acme.test"
-        }, actor: :system)
+        },
+        actor: :system
+      )
 
     %{site: site, environment: environment}
   end

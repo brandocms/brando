@@ -541,7 +541,12 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp preview_domain(build, site),
     do: environment_domain(build.environment) || environment_domain(Brando.Tenant.Cache.get_live_env(site.key))
 
-  defp environment_domain(%{domain: domain}) when is_binary(domain) and domain != "", do: domain
+  # A host that would answer 404 is no link: one that does not route, or one
+  # of the installation's own, where a preview does not open.
+  defp environment_domain(%{domain: domain}) when is_binary(domain) and domain != "" do
+    if Brando.Tenant.Cache.get_env_by_domain(domain) && not Brando.Tenant.InstallationHosts.member?(domain), do: domain
+  end
+
   defp environment_domain(_environment), do: nil
 
   defp public_url(build), do: build.deploy_config["cdn_url"]

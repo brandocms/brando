@@ -88,6 +88,8 @@ defmodule Brando.TenantMediaTest do
         key: "production",
         live: true,
         domain: domain
-      }, actor: :system)
+      },
+      actor: :system
+    )
   end
 end

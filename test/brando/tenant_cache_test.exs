@@ -117,15 +117,15 @@ defmodule Brando.TenantCacheTest do
 
   # Audit F02: the old changeset stored a trailing dot, which answered on its
   # own beside the same host without one.
-  test "a stored domain that is not a host does not route; a stored capital still does" do
+  test "a stored trailing dot does not route; other stored spellings still do" do
     site = insert_site!("acme")
     dotted = insert_environment!(site, "dotted", false, nil)
-    url = insert_environment!(site, "url", false, nil)
+    underscore = insert_environment!(site, "underscore", false, nil)
     capital = insert_environment!(site, "capital", true, nil)
 
     for {environment, stored} <- [
           {dotted, "www.b.test."},
-          {url, "https://www.c.test"},
+          {underscore, "my_site.acme.test"},
           {capital, "WWW.Acme.TEST"}
         ] do
       Brando.Repo.update_all(from(e in Environment, where: e.id == ^environment.id), [set: [domain: stored]],
@@ -137,7 +137,7 @@ defmodule Brando.TenantCacheTest do
 
     refute Cache.get_env_by_domain("www.b.test.")
     refute Cache.get_env_by_domain("www.b.test")
-    refute Cache.get_env_by_domain("https://www.c.test")
+    assert {_site, %Environment{key: "underscore"}} = Cache.get_env_by_domain("my_site.acme.test")
     assert {_site, %Environment{key: "capital"}} = Cache.get_env_by_domain("www.acme.test")
   end
 

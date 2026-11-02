@@ -129,7 +129,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                         type="text"
                         name="domain"
                         value={environment.domain}
-                        disabled={!@can_bind_hosts?}
+                        disabled={
+                          !@can_bind_hosts? || !@can_manage? || !BrandoAdmin.Authorization.allowed?(:update, :environments)
+                        }
                         placeholder={gettext("No domain")}
                         aria-label={gettext("Domain for %{name}", name: environment.name)}
                       />

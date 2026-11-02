@@ -18,15 +18,23 @@ defmodule Brando.Tenant.InstallationHosts do
 
   defp normalize(host), do: host |> String.trim() |> String.downcase() |> String.trim_trailing(".")
 
-  # An endpoint that has not started, as in a Mix task, answers nothing
   defp endpoint_urls do
     endpoint = Brando.endpoint()
     [endpoint.url(), endpoint.static_url()]
   rescue
-    _ -> []
+    _ -> configured_endpoint_urls()
+  end
+
+  # An endpoint that has not started, as in a release's `eval`, answers nothing
+  defp configured_endpoint_urls do
+    config = Application.get_env(Brando.config(:otp_app), Brando.endpoint(), [])
+    for key <- [:url, :static_url], host = config[key][:host], do: host
   end
 
   defp url_host(url) when is_binary(url) do
+    # Without a scheme, as a media URL may be written, it would parse as a path
+    url = if String.contains?(url, "://") or String.starts_with?(url, "/"), do: url, else: "//" <> url
+
     case URI.parse(url) do
       %URI{host: host} when is_binary(host) and host != "" -> [normalize(host)]
       _ -> []

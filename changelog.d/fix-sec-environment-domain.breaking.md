@@ -1,3 +1,3 @@
 - Changing the host an environment answers on takes an installation superuser, in both authorization modes, and a new host must be a bare host that the installation does not itself use (its endpoint, static, media or CDN host).
   Pass the acting user or `:system` when your code sets a domain: `Brando.Tenant.Registry.update_environment(environment, %{domain: host}, actor: :system)`, and likewise `Registry.create_environment/3`; `Brando.Environments.create_environment/3` takes `creator:`.
-  Check `SELECT domain FROM public.environments`: a value with a trailing dot, scheme or port no longer routes, so clear it or set the bare host.
+  Check `SELECT domain FROM public.environments`: a value with a trailing dot no longer routes, so clear it or set the bare host.

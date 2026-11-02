@@ -11,6 +11,10 @@ defmodule Brando.TenantEnvironmentDomainTest do
   alias Brando.Tenant.InstallationHosts
   alias Brando.Tenant.Registry
 
+  defmodule NotStartedEndpoint do
+    def url, do: raise(ArgumentError, "not started")
+  end
+
   defmodule Migrator do
     @behaviour Brando.Environments.Migrator
 
@@ -156,6 +160,25 @@ defmodule Brando.TenantEnvironmentDomainTest do
         assert {:error, changeset} = put_domain(environment, host)
         assert changeset.errors[:domain], host
       end
+    end
+
+    test "a media host written without a scheme is refused", %{environment: environment} do
+      original = Application.get_env(:brando, :media_url)
+      Application.put_env(:brando, :media_url, "media.example.com")
+      on_exit(fn -> Application.put_env(:brando, :media_url, original) end)
+
+      assert {:error, changeset} = put_domain(environment, "media.example.com")
+      assert changeset.errors[:domain]
+    end
+
+    test "an endpoint that has not started still reserves its configured host", %{environment: environment} do
+      otp_app = Brando.config(:otp_app)
+      put_test_env(:endpoint_module, NotStartedEndpoint)
+      Application.put_env(otp_app, NotStartedEndpoint, url: [host: "cms.configured.test"])
+      on_exit(fn -> Application.delete_env(otp_app, NotStartedEndpoint) end)
+
+      assert {:error, changeset} = put_domain(environment, "cms.configured.test")
+      assert changeset.errors[:domain]
     end
 
     test "a host bound before that was refused keeps working", %{environment: environment} do

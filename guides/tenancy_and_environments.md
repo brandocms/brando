@@ -478,7 +478,9 @@ trusted maintenance code) and refuse a change without one. A domain is a bare
 host: no scheme, path, port or trailing dot. It may not be a host the
 installation itself uses: the endpoint's, where the admin answers, nor its
 static, media or CDN host. With several sites, a site that needs the admin's
-host means moving the admin to a host of its own through `PHX_HOST`.
+host means moving the admin to a host of its own through `PHX_HOST`. With one
+site the admin's host needs no domain: it answers from the live environment
+when no environment holds it.
 
 <!-- usage-rules:start topic="tenancy" -->
 

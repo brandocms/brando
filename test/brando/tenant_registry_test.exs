@@ -55,7 +55,9 @@ defmodule Brando.TenantRegistryTest do
                  key: "production",
                  live: true,
                  domain: "OLD.Acme.test"
-               }, actor: :system)
+               },
+               actor: :system
+             )
 
     assert %Environment{id: environment_id} = Cache.get_env("acme", "production")
     assert environment_id == environment.id
@@ -68,7 +70,9 @@ defmodule Brando.TenantRegistryTest do
                %{
                  key: "live",
                  domain: "new.acme.test"
-               }, actor: :system)
+               },
+               actor: :system
+             )
 
     refute Cache.get_env("acme", "production")
     refute Cache.get_env_by_domain("old.acme.test")

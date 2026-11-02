@@ -214,7 +214,9 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
             key: "production",
             live: true,
             domain: "www.acme.test"
-          }, actor: :system)
+          },
+          actor: :system
+        )
 
       # The site's schema is not migrated here: the page's palettes CSS
       # querying it shows the page renders in the site's context.

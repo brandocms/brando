@@ -8,7 +8,6 @@ defmodule Brando.Tenant.Cache do
   entries and never queries the database.
   """
 
-  alias Brando.Environments.Environment
   alias Brando.Sites.Site
   alias Brando.Tenant
 
@@ -108,10 +107,8 @@ defmodule Brando.Tenant.Cache do
     site_entry ++ environment_entries
   end
 
-  # A value stored before `Environment` checked it, such as a trailing dot, is
-  # no host: it must not answer beside the real one.
-  defp routable_domain?(domain) when is_binary(domain),
-    do: domain |> String.trim() |> String.downcase() |> Environment.valid_host?()
-
+  # A trailing dot stored before `Environment` refused it names the same host
+  # as the spelling without one, and must not answer beside it.
+  defp routable_domain?(domain) when is_binary(domain), do: not (domain |> String.trim() |> String.ends_with?("."))
   defp routable_domain?(_domain), do: false
 end

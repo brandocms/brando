@@ -69,7 +69,9 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
           key: "production",
           live: true,
           domain: "existing.dashboard.test"
-        }, actor: :system)
+        },
+        actor: :system
+      )
 
     editor =
       Brando.Factory.insert(:random_user,

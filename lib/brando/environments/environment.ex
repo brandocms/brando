@@ -57,12 +57,7 @@ defmodule Brando.Environments.Environment do
     |> unique_constraint(:live, name: :environments_one_live_per_site_index)
   end
 
-  @doc "Whether `host` is a bare lowercase host: no scheme, path, port, whitespace or trailing dot."
-  @spec valid_host?(term()) :: boolean()
-  def valid_host?(host) when is_binary(host),
-    do: byte_size(host) <= @host_max_length and Regex.match?(@host_format, host)
-
-  def valid_host?(_host), do: false
+  defp valid_host?(host), do: byte_size(host) <= @host_max_length and Regex.match?(@host_format, host)
 
   defp validate_domain(changeset) do
     validate_change(changeset, :domain, fn :domain, domain ->
