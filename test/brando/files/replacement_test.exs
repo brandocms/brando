@@ -210,6 +210,48 @@ defmodule Brando.Files.ReplacementTest do
     assert File.read!(ctx.original) == "original"
   end
 
+  describe "a local video's file" do
+    setup ctx do
+      {:ok, file} =
+        Files.create_file(
+          %{
+            filename: "clip.mp4",
+            title: "Clip",
+            filesize: 8,
+            mime_type: "video/mp4",
+            config_target: "video:Elixir.Brando.JSONLDTest.Post:cover_video"
+          },
+          ctx.user
+        )
+
+      assert {:ok, %Brando.Type.VideoConfig{upload_path: upload_path}} = Files.get_config_for(file.config_target)
+
+      {:ok, original} = Brando.Tenant.Storage.media_file(Path.join(upload_path, "clip.mp4"))
+      File.mkdir_p!(Path.dirname(original))
+      File.write!(original, "original")
+
+      {:ok, clip: file, clip_path: original, clip_entry: %{ctx.entry | client_name: "new.mp4", client_type: "video/mp4"}}
+    end
+
+    test "bytes that are no video are refused, and the original stays", ctx do
+      File.write!(ctx.source, "<html></html>")
+
+      assert {:error, message} = Replacement.store(ctx.clip.id, %{path: ctx.source}, ctx.clip_entry, ctx.user)
+      assert is_binary(message)
+      assert File.read!(ctx.clip_path) == "original"
+      assert Brando.Repo.get!(Brando.Files.File, ctx.clip.id).filesize == 8
+    end
+
+    test "a video takes the place of the original", ctx do
+      body = <<24::32, "ftypisom", 0::96>> <> "marker"
+      File.write!(ctx.source, body)
+
+      assert {:ok, updated} = Replacement.store(ctx.clip.id, %{path: ctx.source}, ctx.clip_entry, ctx.user)
+      assert updated.filesize == byte_size(body)
+      assert File.read!(ctx.clip_path) == body
+    end
+  end
+
   describe "CDN files" do
     setup ctx do
       put_test_env(:cdn_client, Brando.CDN.Client.Mock)

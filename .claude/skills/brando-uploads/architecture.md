@@ -93,7 +93,8 @@ the key and resolved target, server-side.
   matching break on concurrent intakes and duplicate names.
 - `allow_upload(:queue, accept: :any, max_entries: 20, auto_upload: true,
   max_file_size: Uploads.manager_max_file_size())`. The max size is a transport
-  backstop (default 5 GB); the config's `size_limit` was already applied at intake.
+  backstop (default 5 GB); the config's `size_limit` is applied to the declared size
+  at intake and to the file that arrived at consume.
 - On `entry.done?`: resolve the config, apply the confirmed folder, then
   `consume_uploaded_entry` → `Brando.Uploads.store_upload/4` (wraps
   `Brando.Uploads.Store.handle_upload/4` and normalizes every error to
@@ -119,7 +120,9 @@ the key and resolved target, server-side.
 - At intake the manager records a `Brando.Uploads.PendingIntent` (ref, key,
   resolved target, declared size and type, target, creator).
 - The hook PUTs with exactly the signed headers via XHR, reports `direct_progress`,
-  then `direct_complete` or `direct_error`.
+  then `direct_complete` or `direct_error`. A progress report moves only an unfinished
+  item of its own transport, because `:uploading` is what lets a ref take a server
+  transfer.
 - `direct_complete` finalizes from server-side state only (`finalize_direct/3`
   HEAD-verifies size and type against the declared values), then delivers. A replay
   for a `:done` item is a no-op. An unknown ref (the manager remounted mid-transfer)
@@ -278,7 +281,10 @@ subscribe to their own `deliver_topic` the same way.
 - **Media library**: image and file listing intake uses `asset_library`; standalone
   gallery editors use `resource_gallery`.
 - **Image editor "save as new copy"** is the one form-owned upload
-  (`allow_upload(:image_editor_upload)` in `Form.allow_uploads/1`).
+  (`allow_upload(:image_editor_upload)` in `Form.allow_uploads/1`). It stores through
+  `Brando.Uploads.store_upload/4` like the manager, with the transport's 50 MB in place of
+  the field's `size_limit`, because the file is the editor's own JPEG export and can pass
+  the limit its source met. A refusal reaches the editor as a `b:alert`.
 
 ### File replacement
 
@@ -286,7 +292,7 @@ The Files listing's **Replace file** sends a `file_replace` target with `file_id
 `Brando.Files.Replacement` accepts one file, resolves the config from the stored
 record, requires the same extension, and always uses server transport (a presigned
 PUT to the live key could leave it half-written). After validating size and MIME
-type it renames atomically (local) or uploads to the existing bucket key (CDN),
+type, and a video's file by its contents too, it renames atomically (local) or uploads to the existing bucket key (CDN),
 keeping the record's id, URL, CDN flag, title, creator, folder, config target and
 references. Failure leaves the original untouched. It then evicts cached file
 queries and re-renders entries whose blocks reference the file through refs, vars
@@ -333,6 +339,20 @@ Sticky survival needs one `live_session`: all admin routes share
   extension (images `.jpg .jpeg .png .gif .webp .svg`; videos `.mp4 .webm .mov .avi .ogv`)
   and, for direct and video uploads, MIME type. Server-transport files get their
   MIME check at consume, in `Brando.Uploads.Store`.
+- **Validation after the bytes arrive:** intake only saw what the client declared.
+  The manager takes a file only under a ref intake accepted that has no file yet, with
+  the name and type intake judged. `store_upload/4` applies the size limit and extension
+  list to the temp file and records its real size. `Store` reads the file's head
+  (`Brando.Uploads.ContentType`): images and local videos must really be a type the
+  config allows, an SVG's name, declared type and contents must agree, and an SVG that
+  declares entities is refused. A raster image under another raster format's name keeps
+  working. A direct image gets the same checks on the body fetched back; a direct file
+  or video is judged by the bucket's HEAD, because its bytes never reach the server.
+  Everything is refused before the copy, so `overwrite` cannot lose an original.
+- **SVG sizes** come from `Brando.Images.SvgRoot`, a bounded scanner over the file's
+  first 64 KB. Never give an uploaded file to xmerl: it makes an atom of every name.
+- **Client names** are reduced to their last segment whatever the slug option, and
+  every destination goes through `Storage.media_file/1`.
 - **Presigned PUTs** are short-lived, keyed by the server, and finalized only from
   server-side state; a client never supplies a key.
 - **Bucket CORS (ops):** allow `PUT` from the admin origin, `AllowedHeaders` `*`
