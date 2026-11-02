@@ -8,7 +8,8 @@ defmodule Brando.Tenant.Cache do
   entries and never queries the database.
 
   The cache is per node: `invalidate/0` warms this node and tells the others
-  through `Brando.CacheSync`.
+  through `Brando.CacheSync`. Warms on a node run one at a time, so the last
+  to publish read the registry last.
   """
 
   alias Brando.CacheSync
@@ -20,6 +21,12 @@ defmodule Brando.Tenant.Cache do
 
   @spec warm() :: :ok
   def warm do
+    # One at a time on this node, read and publication together: a warm that
+    # read the registry before another must not publish after it
+    :global.trans({{__MODULE__, :warm}, self()}, &do_warm/0, [node()], :infinity)
+  end
+
+  defp do_warm do
     if Tenant.enabled?() do
       Site
       |> Brando.Repo.all(@public_opts)

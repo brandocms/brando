@@ -17,7 +17,8 @@ defmodule Brando.Assets.SiteAssets do
 
   The caches are per node: activating or deactivating a set, pinning or
   releasing one, and forgetting one refresh this node and tell the others
-  through `Brando.CacheSync`.
+  through `Brando.CacheSync`. A request that filled a cache from what it read
+  before such a change drops what it stored, so the change is not undone.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -36,6 +37,7 @@ defmodule Brando.Assets.SiteAssets do
   @public_opts [prefix: "public"]
   @cache_keys_key {:brando, :site_assets, :cache_keys}
   @override_key {:brando, :site_assets, :override}
+  @fence_key {:brando, :site_assets, :fence}
 
   @type scope :: Site.t() | nil
   @type cached_set :: %{
@@ -160,7 +162,7 @@ defmodule Brando.Assets.SiteAssets do
   @doc "Drops the runtime caches for one set, including the pinned listing of its scope."
   @spec forget_set(SiteAssetSet.t()) :: :ok
   def forget_set(%SiteAssetSet{id: id} = asset_set) do
-    :persistent_term.erase(set_cache_key(id))
+    drop(set_cache_key(id))
     CacheSync.broadcast(__MODULE__, {:set, id})
     invalidate_pinned(asset_set)
   end
@@ -224,7 +226,7 @@ defmodule Brando.Assets.SiteAssets do
   @doc "Clears the pinned-set listing for a scope so the next request rebuilds it."
   @spec invalidate_pinned(scope() | SiteAssetSet.t()) :: :ok
   def invalidate_pinned(scope \\ nil) do
-    :persistent_term.erase(pinned_cache_key(scope_key(scope)))
+    drop(pinned_cache_key(scope_key(scope)))
     CacheSync.broadcast(__MODULE__, {:pinned, scope_key(scope)})
   end
 
@@ -233,7 +235,7 @@ defmodule Brando.Assets.SiteAssets do
   # removed a set (`Brando.CacheSync`). Dropped here, each is read again on
   # its next use.
   def refresh_node_cache({:active, scope_key}) do
-    :persistent_term.erase(cache_key(scope_key))
+    drop(cache_key(scope_key))
 
     case scope_key do
       :standalone -> invalidate_vite(nil)
@@ -241,15 +243,8 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
-  def refresh_node_cache({:pinned, scope_key}) do
-    :persistent_term.erase(pinned_cache_key(scope_key))
-    :ok
-  end
-
-  def refresh_node_cache({:set, set_id}) do
-    :persistent_term.erase(set_cache_key(set_id))
-    :ok
-  end
+  def refresh_node_cache({:pinned, scope_key}), do: drop(pinned_cache_key(scope_key))
+  def refresh_node_cache({:set, set_id}), do: drop(set_cache_key(set_id))
 
   @doc "The advisory-lock key serializing capture, activation-sensitive pinning, and pruning."
   @spec lock_key(scope() | SiteAssetSet.t()) :: String.t()
@@ -297,6 +292,8 @@ defmodule Brando.Assets.SiteAssets do
   @doc "Clears all active-set runtime caches."
   @spec invalidate_cache() :: :ok
   def invalidate_cache do
+    move_fence()
+
     @cache_keys_key
     |> :persistent_term.get([])
     |> Enum.each(&:persistent_term.erase/1)
@@ -479,23 +476,19 @@ defmodule Brando.Assets.SiteAssets do
     end)
   end
 
-  defp warm_pinned(site) do
-    pinned =
-      site
-      |> Retention.preview_pinned_sets()
-      |> Enum.flat_map(fn asset_set ->
-        case set_cache(asset_set) do
-          {:ok, cached} -> [cached]
-          {:error, _reason} -> []
-        end
-      end)
+  defp warm_pinned(site), do: fill(pinned_cache_key(scope_key(site)), fn -> load_pinned(site) end)
 
-    store(pinned_cache_key(scope_key(site)), pinned)
-    pinned
+  defp load_pinned(site) do
+    site
+    |> Retention.preview_pinned_sets()
+    |> Enum.flat_map(fn asset_set ->
+      case set_cache(asset_set) do
+        {:ok, cached} -> [cached]
+        {:error, _reason} -> []
+      end
+    end)
   rescue
-    _migration_not_applied_yet ->
-      store(pinned_cache_key(scope_key(site)), [])
-      []
+    _migration_not_applied_yet -> []
   end
 
   defp with_override(cached, fun) do
@@ -547,24 +540,21 @@ defmodule Brando.Assets.SiteAssets do
   end
 
   defp warm_scope(site) do
-    case active_set(site) do
-      nil ->
-        put_cache(scope_key(site), :none)
-        nil
-
-      asset_set ->
-        case build_cache(asset_set) do
-          {:ok, cached} ->
-            put_cache(scope_key(site), cached)
-            cached
-
-          {:error, _reason} ->
-            put_cache(scope_key(site), :none)
-            nil
-        end
+    case fill(cache_key(scope_key(site)), fn -> load_active(site) end) do
+      :none -> nil
+      cached -> cached
     end
   rescue
     _migration_not_applied_yet -> nil
+  end
+
+  defp load_active(site) do
+    with %SiteAssetSet{} = asset_set <- active_set(site),
+         {:ok, cached} <- build_cache(asset_set) do
+      cached
+    else
+      _none_or_unreadable -> :none
+    end
   end
 
   defp scope_query(nil), do: from(asset_set in SiteAssetSet, where: is_nil(asset_set.site_id))
@@ -586,7 +576,31 @@ defmodule Brando.Assets.SiteAssets do
   defp pinned_cache_key(scope_key), do: {:brando, :site_assets, :pinned, scope_key}
   defp set_cache_key(set_id), do: {:brando, :site_assets, :set, set_id}
 
-  defp put_cache(scope_key, value), do: store(cache_key(scope_key), value)
+  defp put_cache(scope_key, value) do
+    move_fence()
+    store(cache_key(scope_key), value)
+  end
+
+  # A fill reads the database and the files, then stores what it read. Every
+  # change to a cache moves the fence first, and a fill that finds the fence
+  # moved since it began drops what it stored: it may have read before the
+  # change. Cached reads never look at the fence.
+  defp fill(key, load) do
+    fence = :persistent_term.get(@fence_key, nil)
+    value = load.()
+    store(key, value)
+    if :persistent_term.get(@fence_key, nil) != fence, do: :persistent_term.erase(key)
+    value
+  end
+
+  defp drop(key) do
+    move_fence()
+    :persistent_term.erase(key)
+    :ok
+  end
+
+  # Unique on this node, so a fence never comes back to a value a fill holds
+  defp move_fence, do: :persistent_term.put(@fence_key, System.unique_integer([:positive]))
 
   defp store(key, value) do
     :persistent_term.put(key, value)

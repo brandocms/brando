@@ -8,7 +8,10 @@ defmodule Brando.CacheSync do
   the transaction around the caller has committed, so a node that reads the
   database on hearing it reads the write. Each node runs one of these
   processes under `Brando.Supervisor`: it skips its own node's messages, whose
-  cache is already fresh, and refreshes for the rest.
+  cache is already fresh, and refreshes for the rest. A node knows its own by
+  an id drawn when it boots, not by its node name: servers outside an Erlang
+  cluster are all `nonode@nohost`, and a PubSub adapter such as
+  `phoenix_pubsub_redis` still connects them.
 
   A burst of writes refreshes once: messages heard within 100 ms of the first
   are gathered, and each distinct refresh runs once when that time is up. A
@@ -29,6 +32,7 @@ defmodule Brando.CacheSync do
 
   @topic "brando:cache_sync"
   @caches [Brando.Tenant.Cache, Brando.Assets.SiteAssets, Brando.Content.SharedLibrary.Cache]
+  @origin_key {__MODULE__, :origin}
   @debounce 100
   @retry_after :timer.seconds(5)
   @attempts 3
@@ -44,13 +48,22 @@ defmodule Brando.CacheSync do
   """
   @spec broadcast(module(), term()) :: :ok
   def broadcast(cache, refresh) when cache in @caches do
-    Brando.Repo.after_commit({__MODULE__, cache, refresh}, fn ->
-      Phoenix.PubSub.broadcast(Brando.pubsub(), @topic, {:brando_cache_sync, node(), {cache, refresh}})
-    end)
+    Brando.Repo.after_commit({__MODULE__, cache, refresh}, fn -> publish({cache, refresh}) end)
+  end
+
+  # Rescued here, as it may run after the commit, in the repo's held work
+  defp publish(refresh) do
+    Phoenix.PubSub.broadcast(Brando.pubsub(), @topic, {:brando_cache_sync, origin(), refresh})
   rescue
     # No PubSub registry under that name
     ArgumentError -> :ok
   end
+
+  @doc false
+  # This node's id, drawn once per boot. Without a running `Brando.CacheSync`
+  # there is none, and no process here to skip the message.
+  @spec origin() :: binary() | nil
+  def origin, do: :persistent_term.get(@origin_key, nil)
 
   def start_link(_opts), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
 
@@ -60,6 +73,8 @@ defmodule Brando.CacheSync do
 
   @impl true
   def init(nil) do
+    # Kept when this process restarts: a boot's messages stay its own
+    unless origin(), do: :persistent_term.put(@origin_key, Base.url_encode64(:crypto.strong_rand_bytes(12)))
     :ok = Phoenix.PubSub.subscribe(Brando.pubsub(), @topic)
     {:ok, %{pending: %{}, timer: nil}}
   end
@@ -71,10 +86,9 @@ defmodule Brando.CacheSync do
   end
 
   @impl true
-  def handle_info({:brando_cache_sync, origin, _refresh}, state) when origin == node(), do: {:noreply, state}
-
-  def handle_info({:brando_cache_sync, _origin, {cache, _refresh} = refresh}, state) when cache in @caches,
-    do: {:noreply, pend(state, refresh, 1)}
+  def handle_info({:brando_cache_sync, origin, {cache, _refresh} = refresh}, state) when cache in @caches do
+    if origin == origin(), do: {:noreply, state}, else: {:noreply, pend(state, refresh, 1)}
+  end
 
   def handle_info({:retry, refresh, attempt}, state), do: {:noreply, pend(state, refresh, attempt)}
 

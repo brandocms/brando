@@ -2,6 +2,8 @@ defmodule Brando.CacheSyncTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  import ExUnit.CaptureLog
+
   alias Brando.Assets.SiteAssets
   alias Brando.CacheSync
   alias Brando.Content.SharedLibrary
@@ -12,8 +14,8 @@ defmodule Brando.CacheSyncTest do
   alias Brando.Tenant.Registry
 
   # One node in a test run: a refresh "from another node" is a message that
-  # names a node other than this one.
-  @other_node :"brando@other-node"
+  # carries another node's origin.
+  @other_node "another-node"
 
   setup do
     put_test_env(:tenancy_mode, :multi)
@@ -34,7 +36,7 @@ defmodule Brando.CacheSyncTest do
     test "a write tells the other nodes" do
       {:ok, site} = Registry.create_site(site_attrs("acme"))
       assert_received {:brando_cache_sync, origin, {Cache, :registry}}
-      assert origin == node()
+      assert origin == CacheSync.origin()
 
       {:ok, _site} = Registry.update_site(site, %{status: :suspended})
       assert_received {:brando_cache_sync, _origin, {Cache, :registry}}
@@ -73,10 +75,55 @@ defmodule Brando.CacheSyncTest do
       Cache.warm()
 
       environment |> Environment.changeset(%{domain: "new.acme.test"}) |> Repo.update!()
-      Phoenix.PubSub.broadcast(Brando.pubsub(), CacheSync.topic(), {:brando_cache_sync, node(), {Cache, :registry}})
-      CacheSync.sync()
+      remote_refresh(CacheSync.origin(), {Cache, :registry})
 
       assert Cache.get_env_by_domain("old.acme.test")
+    end
+
+    test "another server under the same node name is not taken for this one" do
+      # Outside an Erlang cluster every server is nonode@nohost, and a PubSub
+      # adapter such as Redis still carries their messages here
+      site = insert_site!("acme")
+      environment = insert_environment!(site, "production", "old.acme.test")
+      Cache.warm()
+
+      environment |> Environment.changeset(%{domain: "new.acme.test"}) |> Repo.update!()
+      remote_refresh(node(), {Cache, :registry})
+
+      refute Cache.get_env_by_domain("old.acme.test")
+      assert Cache.get_env_by_domain("new.acme.test")
+    end
+
+    test "a warm that read the registry first cannot publish over a later one" do
+      site = insert_site!("acme")
+      environment = insert_environment!(site, "production", "old.acme.test")
+
+      # Warming for another node's write, this node has read the registry...
+      earlier = start_held("environments", &Cache.warm/0)
+
+      # ...when a write here commits and warms
+      environment |> Environment.changeset(%{domain: "new.acme.test"}) |> Repo.update!()
+      later = Task.async(&Cache.warm/0)
+      finished = Task.yield(later, 200)
+
+      resume(earlier)
+      assert :ok = Task.await(earlier)
+      assert {:ok, :ok} = finished || Task.yield(later, 5_000)
+
+      refute Cache.get_env_by_domain("old.acme.test")
+      assert Cache.get_env_by_domain("new.acme.test")
+    end
+
+    test "without a PubSub, a broadcast held for the commit is dropped quietly" do
+      # A mix task: `Brando.pubsub/0` names no running PubSub
+      put_test_env(:app_module, Brando.CacheSyncTest.NoApp)
+
+      log =
+        capture_log(fn ->
+          assert {:ok, :ok} = Brando.Repo.transaction(fn -> CacheSync.broadcast(Cache, :registry) end)
+        end)
+
+      refute log =~ "CacheSync"
     end
 
     test "the other nodes hear of a write only once its transaction commits" do
@@ -99,14 +146,19 @@ defmodule Brando.CacheSyncTest do
     end
 
     test "a burst of refreshes from other nodes warms once" do
+      test = self()
+      cache_sync = Process.whereis(CacheSync)
+      on_query("sites", fn -> if self() == cache_sync, do: send(test, :warmed) end)
+
+      # Held, the whole burst waits in the mailbox before the first is read,
+      # so the debounce cannot end inside it
+      :sys.suspend(CacheSync)
       for _ <- 1..25, do: send_remote({Cache, :registry})
-
-      state = :sys.get_state(CacheSync)
-      assert state.pending == %{{Cache, :registry} => 1}
-      assert is_reference(state.timer)
-
+      :sys.resume(CacheSync)
       CacheSync.sync()
-      assert :sys.get_state(CacheSync).pending == %{}
+
+      assert_received :warmed
+      refute_received :warmed
     end
 
     test "a pending refresh runs on its own after the debounce" do
@@ -167,6 +219,28 @@ defmodule Brando.CacheSyncTest do
       assert %{set: %{id: ^second_id}} = SiteAssets.cached()
     end
 
+    test "a fill that read the active set before another node changed it does not keep it" do
+      {:ok, first} = register_set("20260816_one")
+      {:ok, second} = register_set("20260816_two")
+      {:ok, _active} = SiteAssets.activate_set(first.id)
+      SiteAssets.invalidate_cache()
+
+      # A request here has read the active set...
+      fill = start_held("site_asset_sets", fn -> SiteAssets.cached() end)
+
+      # ...when another node switches it, and this node hears of it
+      Brando.Repo.update_all(Brando.Assets.SiteAssetSet, [set: [active: false]], prefix: "public")
+      second |> Brando.Assets.SiteAssetSet.changeset(%{active: true}) |> Repo.update!()
+      remote_refresh({SiteAssets, {:active, :standalone}})
+
+      resume(fill)
+      first_id = first.id
+      assert %{set: %{id: ^first_id}} = Task.await(fill)
+
+      second_id = second.id
+      assert %{set: %{id: ^second_id}} = SiteAssets.cached()
+    end
+
     test "a preview another node pins drops this node's pinned listing" do
       assert SiteAssets.pinned_sets() == []
       assert :persistent_term.get({:brando, :site_assets, :pinned, :standalone}, :gone) == []
@@ -206,16 +280,76 @@ defmodule Brando.CacheSyncTest do
       refute SharedLibrary.Cache.get(site.id, :module)
       assert SharedLibrary.enabled_ids(site, :module) == MapSet.new()
     end
+
+    test "a fill that read the allowlist before another node changed it does not keep it" do
+      site = insert_site!("acme")
+      user = Brando.Factory.insert(:random_user, role: :superuser)
+      {:ok, module} = SharedLibrary.create_shared(:module, module_attrs(), user)
+      assert :ok = SharedLibrary.set_enabled(site, :module, [module.id])
+      SharedLibrary.Cache.invalidate(site.id, :module)
+
+      # A request here has read the allowlist...
+      fill = start_held("site_enabled_modules", fn -> SharedLibrary.enabled_ids(site, :module) end)
+
+      # ...when another node empties it, and this node hears of it
+      Repo.delete_all(Brando.Content.SiteEnabledModule, prefix: "public")
+      remote_refresh({SharedLibrary.Cache, {site.id, :module}})
+
+      resume(fill)
+      assert Task.await(fill) == MapSet.new([module.id])
+
+      assert SharedLibrary.enabled_ids(site, :module) == MapSet.new()
+    end
   end
 
-  defp send_remote(refresh) do
-    Phoenix.PubSub.broadcast(Brando.pubsub(), CacheSync.topic(), {:brando_cache_sync, @other_node, refresh})
+  defp send_remote(origin \\ @other_node, refresh) do
+    Phoenix.PubSub.broadcast(Brando.pubsub(), CacheSync.topic(), {:brando_cache_sync, origin, refresh})
   end
 
-  defp remote_refresh(refresh) do
-    send_remote(refresh)
+  defp remote_refresh(origin \\ @other_node, refresh) do
+    send_remote(origin, refresh)
     CacheSync.sync()
   end
+
+  # Runs `fun` in a task held after its first query on `source`, until
+  # `resume/1`: a cache fill caught between its read and its store.
+  defp start_held(source, fun) do
+    test = self()
+
+    on_query(source, fn ->
+      if Process.delete(:cache_sync_test_hold) do
+        send(test, {:held, self()})
+
+        receive do
+          :resume -> :ok
+        end
+      end
+    end)
+
+    task =
+      Task.async(fn ->
+        Process.put(:cache_sync_test_hold, true)
+        fun.()
+      end)
+
+    pid = task.pid
+    assert_receive {:held, ^pid}, 5_000
+    task
+  end
+
+  defp resume(%Task{pid: pid}), do: send(pid, :resume)
+
+  # Runs `fun` in the querying process after each query on `source`
+  defp on_query(source, fun) do
+    id = make_ref()
+    event = BrandoIntegration.Repo.config()[:telemetry_prefix] ++ [:query]
+    :ok = :telemetry.attach(id, event, &__MODULE__.handle_query/4, {source, fun})
+    on_exit(fn -> :telemetry.detach(id) end)
+  end
+
+  @doc false
+  def handle_query(_event, _measurements, %{source: source}, {source, fun}), do: fun.()
+  def handle_query(_event, _measurements, _metadata, _config), do: :ok
 
   defp eventually(fun, attempts \\ 50) do
     case fun.() do
@@ -232,6 +366,16 @@ defmodule Brando.CacheSyncTest do
     nil
     |> SiteAssetsFixtures.create_set(name, name, "#{name}.css")
     |> SiteAssets.register_set(%{})
+  end
+
+  defp module_attrs do
+    %{
+      name: %{"en" => "Hero"},
+      namespace: %{"en" => "general"},
+      help_text: %{"en" => "Help"},
+      class: "module",
+      code: "<section>Hero</section>"
+    }
   end
 
   defp site_attrs(key) do

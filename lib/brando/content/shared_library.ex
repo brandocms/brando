@@ -68,7 +68,7 @@ defmodule Brando.Content.SharedLibrary do
   def enabled_ids(%Site{id: site_id}, kind) when kind in @kinds do
     case Cache.get(site_id, kind) do
       %MapSet{} = ids -> ids
-      nil -> load_enabled_ids(site_id, kind)
+      nil -> Cache.fill(site_id, kind, fn -> load_enabled_ids(site_id, kind) end)
     end
   end
 
@@ -721,15 +721,11 @@ defmodule Brando.Content.SharedLibrary do
   defp load_enabled_ids(site_id, kind) do
     definition = definition(kind)
 
-    ids =
-      from(access in definition.access_schema,
-        where: access.site_id == ^site_id,
-        select: field(access, ^definition.access_field)
-      )
-      |> Repo.all(@public_opts)
-
-    Cache.put(site_id, kind, ids)
-    MapSet.new(ids)
+    from(access in definition.access_schema,
+      where: access.site_id == ^site_id,
+      select: field(access, ^definition.access_field)
+    )
+    |> Repo.all(@public_opts)
   end
 
   defp preload_one(nil, _preloads, _opts), do: nil

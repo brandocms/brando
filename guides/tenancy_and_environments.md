@@ -453,10 +453,12 @@ other nodes through `Brando.CacheSync`, over the application's
 ran the write or the scheduled job. The active and pinned asset sets and each site's shared-library
 allowlist are refreshed the same way.
 
-This needs the nodes connected as one Erlang cluster (with `libcluster` or
-`dns_cluster`, for example), as Phoenix PubSub does. Nodes that are not
-connected keep what they read at boot until they restart. A node cut off when
-a write happens keeps its copy until the next write or a restart.
+This needs the nodes to share the application's `Phoenix.PubSub`: connected
+as one Erlang cluster (with `libcluster` or `dns_cluster`, for example) for
+the default adapter, or through an adapter such as `phoenix_pubsub_redis`.
+Nodes that do not share it keep what they read at boot until they restart. A
+node cut off when a write happens keeps its copy until the next write or a
+restart.
 
 A LiveView on the site's pages runs in its own process, which the plug never
 reaches. Mount it with `Brando.Tenant.FrontendLiveView`, which does the same
