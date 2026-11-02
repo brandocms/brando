@@ -221,6 +221,13 @@ reads should use `Authorization.scope/3` or `Boundary.with_scope/2`. Query cache
 are bypassed for scoped admin reads to prevent public cached results from escaping
 resource filters.
 
+A screen about one thing that names another entry (a link picker, where an image
+is used) asks `Boundary.readable_entries/1` which of them the viewer may read,
+and shows that the others exist without naming them. `Brando.Content.Usage.list/2`
+does this for asset usage, and ends its list with `%{hidden: count}`.
+A superuser is told of entries a scope is merely not the place for, such as a
+user in a site scope; a record read policy still applies.
+
 `:system` is an explicit trusted maintenance actor. Never derive it from a browser
 parameter or use it as a fallback for a missing account. Do not store a resolved
 permission snapshot in an Oban job. Retain the initiating account and tenant,
@@ -228,7 +235,9 @@ and authorize again when the operation executes. Scheduled publishing does: a
 publication its user may no longer carry out, or whose account is gone, is
 cancelled and its date cleared rather than run as `:system`, while an expiry
 is still carried out on time, as `:system`, with Activity saying why (see the
-scheduled publishing guide). Scheduled environment copies and live switches
+scheduled publishing guide). Setting an entry to pending takes the publish
+right when it is set, because the sweep later publishes it as `:system`.
+Scheduled environment copies and live switches
 authorize again too: one whose creator may no longer promote the site's
 environments is cancelled, with a warning in the log.
 

@@ -1,5 +1,8 @@
 defmodule BrandoAdmin.AuthorizationToolsLiveTest do
   use Brando.LiveCase
+
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Authorization.{Configuration, Group, Groups, Migration, Scope}
 
   setup do
@@ -116,5 +119,78 @@ defmodule BrandoAdmin.AuthorizationToolsLiveTest do
     render_click(view, "authorization_export")
     assert_redirect(view, "/admin/access-denied")
     assert {:error, :forbidden} = Configuration.export(Scope.standalone(admin))
+  end
+
+  describe "writing groups from here takes a recent confirmation" do
+    setup %{conn: conn} do
+      token = get_session(conn, :user_token)
+      at = NaiveDateTime.add(NaiveDateTime.utc_now(), -30 * 60, :second)
+      Repo.update_all(from(t in Brando.Users.UserToken, where: t.token == ^token), set: [confirmed_at: at])
+      :ok
+    end
+
+    defp upload_reviewed(view) do
+      json =
+        Jason.encode!(%{
+          format: "brando.authorization",
+          version: 1,
+          scope: "standalone",
+          groups: [
+            %{
+              key: "campaign",
+              name: "Campaign editors",
+              description: "Seasonal campaigns",
+              preset: nil,
+              permissions: ["brando.admin.access", "brando.pages.read"]
+            }
+          ]
+        })
+
+      upload =
+        file_input(view, "#authorization-import-form", :authorization_config, [
+          %{name: "reviewed.json", content: json, type: "application/json"}
+        ])
+
+      render_upload(upload, "reviewed.json")
+      view |> form("#authorization-import-form") |> render_submit()
+    end
+
+    defp campaign_groups, do: Repo.all(from g in Group, where: g.name == "Campaign editors")
+
+    for mode <- [:legacy, :groups] do
+      test "applying an import waits for the password, and the review does not, #{mode} mode", %{conn: conn} do
+        if unquote(mode) == :groups do
+          put_test_env(:authorization_mode, :groups)
+          {:ok, _} = Migration.run()
+        end
+
+        {:ok, view, _} = live(conn, "/admin/config/utils")
+
+        refute upload_reviewed(view) =~ "reauth-modal"
+        assert has_element?(view, "#authorization-import-preview", "Campaign editors")
+
+        html = view |> element("button", "Apply configuration") |> render_click()
+        assert html =~ "reauth-modal"
+        assert campaign_groups() == []
+
+        view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
+        assert [_] = campaign_groups()
+      end
+    end
+
+    test "preparing groups waits for the password, and the report does not", %{conn: conn} do
+      {:ok, view, _} = live(conn, "/admin/config/utils")
+
+      refute view |> element("button", "Run migration report") |> render_click() =~ "reauth-modal"
+      render_async(view, 5_000)
+
+      assert view |> element("button", "Prepare groups") |> render_click() =~ "reauth-modal"
+      render_async(view, 5_000)
+      assert Repo.all(Group) == []
+
+      view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
+      render_async(view, 5_000)
+      assert length(Repo.all(Group)) == 4
+    end
   end
 end

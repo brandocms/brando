@@ -922,7 +922,7 @@ defmodule Brando.Content do
         limit: 1
       )
 
-    case Brando.Repo.one(query) do
+    case query |> Brando.Authorization.Boundary.identifiers() |> Brando.Repo.one() do
       nil ->
         {:error, {:identifier, :not_found}}
 
@@ -938,7 +938,7 @@ defmodule Brando.Content do
         limit: 1
       )
 
-    Brando.Repo.one(query)
+    query |> Brando.Authorization.Boundary.identifiers() |> Brando.Repo.one()
   end
 
   def get_identifier(module, entry) do

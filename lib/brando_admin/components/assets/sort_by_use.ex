@@ -133,9 +133,9 @@ defmodule BrandoAdmin.Components.Assets.SortByUse do
               />
             </div>
             <div class="media-sweep-entry">
-              <strong>{group.label}</strong>
+              <strong>{group.label || gettext("An entry you cannot open")}</strong>
               <span>
-                {group.type} · {count_label(@asset_type, length(group.ids))}
+                <span :if={group.type}>{group.type} · </span>{count_label(@asset_type, length(group.ids))}
                 <span :if={group.shared > 0}>
                   · {ngettext(
                     "%{count} also used elsewhere",
@@ -147,6 +147,7 @@ defmodule BrandoAdmin.Components.Assets.SortByUse do
               </span>
             </div>
             <input
+              :if={!group.hidden}
               type="text"
               class="media-sweep-name"
               name={"name[#{group.key}]"}

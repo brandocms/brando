@@ -200,6 +200,10 @@ defmodule BrandoAdmin.Authorization do
     end
   end
 
+  # Answering the step-up prompt only proves who you are. The event it holds
+  # was checked on its way in, and the context checks it again when it runs.
+  defp event_action(_, "brando:reauth:" <> _), do: nil
+
   # Every event on the webhook screens needs the one permission they have.
   defp event_action(:webhooks, _event), do: :manage
   defp event_action(:notifications, _event), do: :manage

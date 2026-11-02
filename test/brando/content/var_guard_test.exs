@@ -541,7 +541,7 @@ defmodule Brando.Content.VarGuardTest do
       module = %{class: nil}
       row = %Brando.Content.TableRow{vars: [link]}
       block = %Block{uid: "x", table_rows: [row]}
-      [row] = Brando.Villain.TemplateAdapter.simple_block(module, block).table_rows
+      [row] = Brando.Villain.TemplateAdapter.simple_block(module, block, row_keys: :existing_atom).table_rows
       assert %{value: "/a?b=1&c=2", link_text: @handler} = hd(row.vars)
 
       html =

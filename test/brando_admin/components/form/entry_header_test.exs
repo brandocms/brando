@@ -80,8 +80,14 @@ defmodule BrandoAdmin.Components.Form.EntryHeaderTest do
       refute Enum.any?(options, & &1.disabled)
     end
 
-    test "without the publish permission, an unpublished entry can't be published" do
+    test "without the publish permission, an unpublished entry can't be published or set pending" do
       options = EntryHeader.status_options(:draft, false)
+
+      assert disabled(options) == ~w(pending published)
+    end
+
+    test "without the publish permission, a pending entry can stay or go back to draft" do
+      options = EntryHeader.status_options(:pending, false)
 
       assert disabled(options) == ["published"]
     end
@@ -93,7 +99,7 @@ defmodule BrandoAdmin.Components.Form.EntryHeaderTest do
     end
 
     test "a new entry without the permission can't start published" do
-      assert disabled(EntryHeader.status_options(nil, false)) == ["published"]
+      assert disabled(EntryHeader.status_options(nil, false)) == ~w(pending published)
     end
 
     test "labels are translated" do

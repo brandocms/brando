@@ -11,6 +11,7 @@ defmodule BrandoAdmin.Components.Form.Drafts do
   alias Brando.Drafts.Restore
   alias BrandoAdmin.Components.Form.DraftPreview
   alias BrandoAdmin.Components.Form.DraftRecoveryComponent
+  alias BrandoAdmin.Components.Form.LockedFields
   alias BrandoAdmin.Components.Form.PendingRows
   alias BrandoAdmin.Components.Form.RelationRows
 
@@ -196,7 +197,17 @@ defmodule BrandoAdmin.Components.Form.Drafts do
     # Relations another editor's save replaced after the browser drew this
     # form: the copy has them as the form does (`Form.stale_relations/2`).
     stale = RelationRows.stale(socket.assigns[:taken_relations] || %{}, main)
-    raw = PendingRows.drop(main[socket.assigns.singular], socket.assigns.schema, stale)
+
+    raw =
+      main[socket.assigns.singular]
+      |> LockedFields.lock(
+        socket.assigns.schema,
+        blueprint,
+        socket.assigns.current_user,
+        socket.assigns[:locked_values] || {%{}, %{}},
+        socket.assigns.entry
+      )
+      |> PendingRows.drop(socket.assigns.schema, stale)
 
     forms =
       Map.new(params["blocks"] || %{}, fn {uid, encoded} ->

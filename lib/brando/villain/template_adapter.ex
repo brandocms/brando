@@ -55,6 +55,11 @@ defmodule Brando.Villain.TemplateAdapter do
   in HEEx) reads the row's `city` var. Row fields win over a var of the same
   name, so positional access through `row.vars[0].value` keeps working.
 
+  A var's key comes from stored content and never becomes an atom. Liquid reads
+  string keys. HEEx reads atoms, so `row_keys: :existing_atom` keeps a key only
+  where the atom exists: compile the template first, which makes the ones it
+  reads exist.
+
   A row's `rich_text` vars are sanitized and, with `escape: true` (a Liquid
   template that renders HTML, not a module's Markdown template), its
   other text, a link's address and text included, HTML-escaped, by key and
@@ -63,6 +68,7 @@ defmodule Brando.Villain.TemplateAdapter do
   """
   def simple_block(module, block, opts \\ []) do
     escape? = Keyword.get(opts, :escape, false)
+    row_keys = Keyword.get(opts, :row_keys, :string)
 
     block
     |> Map.take([
@@ -76,7 +82,7 @@ defmodule Brando.Villain.TemplateAdapter do
       :anchor,
       :description
     ])
-    |> Map.replace_lazy(:table_rows, &table_rows(&1, escape?))
+    |> Map.replace_lazy(:table_rows, &table_rows(&1, escape?, row_keys))
     |> escape_texts(escape?)
     |> Map.put(:class, module.class)
   end
@@ -91,20 +97,33 @@ defmodule Brando.Villain.TemplateAdapter do
   defp escape_texts(block, false), do: block
 
   @doc false
-  def table_rows(rows, escape?) when is_list(rows), do: Enum.map(rows, &table_row(&1, escape?))
-  def table_rows(rows, _escape?), do: rows
+  def table_rows(rows, escape?, row_keys \\ :string)
+  def table_rows(rows, escape?, row_keys) when is_list(rows), do: Enum.map(rows, &table_row(&1, escape?, row_keys))
+  def table_rows(rows, _escape?, _row_keys), do: rows
 
-  defp table_row(%{vars: vars} = row, escape?) do
+  defp table_row(%{vars: vars} = row, escape?, row_keys) do
     row = if is_struct(row), do: Map.from_struct(row), else: row
     row = if is_list(vars), do: %{row | vars: Enum.map(vars, &row_var(&1, escape?))}, else: row
 
     vars
     |> Brando.Villain.Parser.process_vars(escape: escape?)
-    |> Map.new(fn {key, value} -> {to_atom(key), value} end)
+    |> row_vars_by_key(row, row_keys)
     |> Map.merge(row)
   end
 
-  defp table_row(row, _escape?), do: row
+  defp table_row(row, _escape?, _row_keys), do: row
+
+  # Liquex tries a string key before an atom, so a var named like a row field
+  # is left out for the field to win.
+  defp row_vars_by_key(vars, row, :string) do
+    fields = MapSet.new(Map.keys(row), &to_string/1)
+
+    for {key, value} <- vars, name = to_string(key), name not in fields, into: %{}, do: {name, value}
+  end
+
+  defp row_vars_by_key(vars, _row, :existing_atom) do
+    for {key, value} <- vars, {:ok, atom} <- [Brando.Utils.existing_atom(key)], into: %{}, do: {atom, value}
+  end
 
   # `row.vars` holds the vars themselves: their values as `process_vars/2`
   # gives them by key
@@ -120,7 +139,4 @@ defmodule Brando.Villain.TemplateAdapter do
     do: %{var | value: Brando.Villain.Parser.escape_var_value(value)}
 
   defp row_var(var, _escape?), do: var
-
-  defp to_atom(key) when is_atom(key), do: key
-  defp to_atom(key), do: String.to_atom(key)
 end

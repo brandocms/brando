@@ -53,18 +53,18 @@ defmodule Brando.Tenant do
 
   @doc "Returns the site key encoded in the current tenant prefix."
   @spec current_site_key() :: String.t() | nil
-  def current_site_key do
-    case current_prefix() do
-      "tenant_" <> remainder ->
-        case String.split(remainder, "_", parts: 2) do
-          [site_key, _environment_key] -> site_key
-          _invalid -> nil
-        end
+  def current_site_key, do: site_key_of(current_prefix())
 
-      _no_prefix ->
-        nil
+  @doc "Returns the site key encoded in a tenant prefix, or nil when it holds none."
+  @spec site_key_of(term()) :: String.t() | nil
+  def site_key_of("tenant_" <> remainder) do
+    case String.split(remainder, "_", parts: 2) do
+      [site_key, _environment_key] -> site_key
+      _invalid -> nil
     end
   end
+
+  def site_key_of(_no_prefix), do: nil
 
   @doc "Namespaces an application cache key by the active tenant prefix."
   @spec cache_key(term(), String.t() | nil) :: term()

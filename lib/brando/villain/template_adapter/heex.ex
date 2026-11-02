@@ -4,6 +4,11 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
 
   Builds an assigns map (vars at top level + system assigns) and
   delegates to `Brando.Villain.HeexRenderer` for compilation and rendering.
+
+  A template is compiled before its assigns are built: a var's key comes from
+  stored content and only becomes an assign if the atom exists, and compiling
+  makes the ones the template reads exist. The first render after a restart
+  would otherwise lose a key the template reads.
   """
 
   @behaviour Brando.Villain.TemplateAdapter
@@ -27,6 +32,7 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
 
   @impl true
   def render_module(module, block, processed_vars, processed_refs, opts) do
+    HeexRenderer.get_or_compile!(module.id, module.code)
     assigns = build_assigns(module, block, processed_vars, processed_refs, opts)
     assigns = maybe_add_datasource_entries(assigns, module, block)
 
@@ -35,6 +41,8 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
 
   @impl true
   def render_multi_module(module, block, base_vars, base_refs, children, content, opts) do
+    HeexRenderer.get_or_compile!(module.id, module.code)
+
     assigns =
       build_assigns(module, block, base_vars, base_refs, opts)
       |> Map.put(:entries, children)
@@ -45,10 +53,13 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
 
   @impl true
   def render_child_module(child_module, child_block, vars, refs, forloop, _parent_module_id, opts) do
+    id = "child_#{child_module.id}"
+    HeexRenderer.get_or_compile!(id, child_module.code)
+
     assigns = build_assigns(child_module, child_block, vars, refs, opts)
     assigns = Map.put(assigns, :forloop, forloop)
 
-    "child_#{child_module.id}" |> HeexRenderer.render_to_string(child_module.code, assigns) |> own_liquid(opts)
+    id |> HeexRenderer.render_to_string(child_module.code, assigns) |> own_liquid(opts)
   end
 
   @impl true
@@ -76,7 +87,7 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
   defp own_liquid(html, _opts), do: html
 
   defp build_assigns(module, block, processed_vars, processed_refs, opts) do
-    simple_block = TemplateAdapter.simple_block(module, block)
+    simple_block = TemplateAdapter.simple_block(module, block, row_keys: :existing_atom)
 
     base =
       context_assigns(opts[:context])
@@ -120,11 +131,17 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
     end)
   end
 
-  @doc "Merges processed block vars into `assigns` as top-level atom keys, so templates read `@my_var`."
+  @doc """
+  Merges processed block vars into `assigns` as top-level atom keys, so templates
+  read `@my_var`. A key that exists as no atom is left out: call this after the
+  template is compiled, so the keys it reads exist.
+  """
   def put_vars(assigns, processed_vars) do
     Enum.reduce(processed_vars, assigns, fn {k, v}, acc ->
-      key = if is_atom(k), do: k, else: String.to_atom(k)
-      Map.put(acc, key, v)
+      case Brando.Utils.existing_atom(k) do
+        {:ok, key} -> Map.put(acc, key, v)
+        :error -> acc
+      end
     end)
   end
 

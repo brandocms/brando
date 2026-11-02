@@ -77,6 +77,11 @@ not deploy application code or service credentials.
    again, saves a recovery snapshot, and imports all reviewed content in one
    database transaction. The result separates saved content from rendering and
    media processing. Static sites still use their normal build/deploy workflow.
+   For anyone but a superuser, a field the destination's forms lock keeps its
+   value whatever the bundle says, on an existing entry and a new one: only an
+   input's `default:` or a slug generated from its source fills it. A new entry
+   that needs such a value, as an image needs its `path`, is refused; images
+   come over as media dependencies instead.
 
 Uploading, previewing and cancelling are read-only. **Install missing
 definitions** is a separate, explicitly labelled write: those definitions remain

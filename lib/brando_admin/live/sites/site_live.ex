@@ -5,10 +5,11 @@ defmodule BrandoAdmin.Sites.SiteLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
-  # Deleting, suspending or archiving a site, and giving or taking someone's
-  # access to it, ask for the password, a code or a passkey when the session
-  # has not confirmed lately.
-  on_mount({BrandoAdmin.Reauth, events: ~w(delete suspend archive grant revoke)})
+  # Creating, activating, deleting, suspending or archiving a site, and giving
+  # or taking someone's access to it, ask for the password, a code or a passkey
+  # when the session has not confirmed lately. Activating puts the site's hosts
+  # back in public routing; creating one seeds its groups and grants.
+  on_mount({BrandoAdmin.Reauth, events: ~w(create_site activate_site delete suspend archive grant revoke)})
 
   alias Brando.Sites.Site
   alias Brando.Tenant.Access
