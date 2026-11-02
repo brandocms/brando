@@ -373,9 +373,11 @@ defmodule Brando.Videos.Uploader do
   # read the record may be live again, or deleted again and waiting for a
   # purge of its own. The row's delete commits after the provider answered,
   # so a purge that dies in between leaves the row, not a provider video no
-  # purge will delete. The cost is that this environment's video row, and
-  # its video table against a `DROP SCHEMA`, stay locked for the one
-  # provider call; the holdings, read before, lock no other environment's.
+  # purge will delete. The cost is that, for the one provider call, this
+  # environment's video row stays locked, with the rows its delete clears or
+  # removes through foreign keys (an entry's cover video, a block variable,
+  # a gallery object), and its video table against a `DROP SCHEMA`. The
+  # holdings, read before, take no lock on another environment's.
   # No checkout deadline, as in `with_video_lock/3`: the provider clients
   # have their own timeouts.
   defp purge_then_delete(video, purge) do
@@ -393,7 +395,7 @@ defmodule Brando.Videos.Uploader do
   defp then_purge(result, video, purge), do: if(purge.(), do: result, else: not_purged(video))
 
   defp not_purged(video) do
-    Logger.info("Video #{video.id} not purged: restored since it was read")
+    Logger.info("Video #{video.id} not purged: no longer expired, or already gone")
     {:error, :not_purged}
   end
 
