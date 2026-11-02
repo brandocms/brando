@@ -230,6 +230,7 @@ defmodule Brando.Videos.Uploaders.Vimeo do
   @impl true
   def import_remote(video_id, user, opts) do
     with {:ok, payload} <- fetch_video(video_id),
+         :ok <- check_video_id(payload, video_id),
          {:ok, video} <-
            Videos.create_video(%{
              type: :vimeo_account,
@@ -486,6 +487,12 @@ defmodule Brando.Videos.Uploaders.Vimeo do
   end
 
   defp video_id_from_uri(_uri), do: nil
+
+  # The holdings were checked for the id asked for, so the video must be that
+  # one: Vimeo may answer "000123" with video 123.
+  defp check_video_id(payload, video_id) do
+    if video_id_from_uri(payload["uri"]) == video_id, do: :ok, else: {:error, :not_found}
+  end
 
   defp vimeo_setting(opts, key, default) do
     config_meta =

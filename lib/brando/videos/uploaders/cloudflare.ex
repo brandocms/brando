@@ -142,6 +142,7 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
   def import_remote(uid, user, opts) do
     with :ok <- check_uid(uid),
          {:ok, %Req.Response{body: %{"result" => %{} = payload}}} <- api_request(:get, "/stream/#{uid}"),
+         :ok <- check_same_uid(payload, uid),
          :ok <- check_unsigned(payload),
          {:ok, video} <-
            Videos.create_video(%{
@@ -170,6 +171,11 @@ defmodule Brando.Videos.Uploaders.Cloudflare do
   end
 
   defp check_uid(uid), do: if(valid_uid?(uid), do: :ok, else: {:error, :invalid_uid})
+
+  # The holdings were checked for the uid asked for, so the video must be that
+  # one, not one Cloudflare matched to it in another case.
+  defp check_same_uid(%{"uid" => uid}, uid), do: :ok
+  defp check_same_uid(_payload, _uid), do: {:error, :not_found}
 
   # Signed playback needs a token signer Brando does not have.
   defp check_unsigned(%{"requireSignedURLs" => true}), do: {:error, :signed_playback_not_supported}

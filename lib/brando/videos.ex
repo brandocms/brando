@@ -19,6 +19,8 @@ defmodule Brando.Videos do
   alias Brando.Videos.Video
   alias BrandoAdmin.Work
 
+  require Logger
+
   @type id :: binary | integer
   @type changeset :: changeset
   @type params :: map
@@ -98,13 +100,33 @@ defmodule Brando.Videos do
     end
   end
 
+  # The provider is asked once the delete has committed (with group
+  # authorization it runs in a transaction), in the delete's environment: a
+  # delete rolled back leaves the video there, and the provider call and its
+  # lock (`Brando.Videos.ProviderHoldings.with_video_lock/3`) are not held
+  # inside the transaction. Nothing deletes it later, so a video left there
+  # is logged.
   mutation :delete, Video do
     fn entry ->
       if Brando.Videos.Uploader.get_delete_timing(entry) == :on_delete do
-        Brando.Videos.Uploader.delete_remote(entry)
+        Brando.Repo.after_commit(Brando.Tenant.capture_context(fn -> delete_remote_on_delete(entry) end))
       end
 
       {:ok, entry}
+    end
+  end
+
+  defp delete_remote_on_delete(entry) do
+    case Brando.Videos.Uploader.delete_remote(entry) do
+      # Another site's record of it; logged where that is told.
+      {:error, :held_by_another_site} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Video #{entry.id} was deleted, and left at its provider: #{inspect(reason)}")
+
+      _ok ->
+        :ok
     end
   end
 

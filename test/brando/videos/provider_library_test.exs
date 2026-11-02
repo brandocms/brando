@@ -149,11 +149,42 @@ defmodule Brando.Videos.ProviderLibraryTest do
       assert %{remote_id: "asset-1", title: "Launch film", width: 1920, playable?: true} = item
       assert item.created_at == "2026-01-01T00:00:00Z"
 
-      Req.Test.expect(Mux, &Req.Test.json(&1, %{"data" => asset}))
+      # Asked once for the upload the asset came from, which may be the
+      # library's already, and once to add it.
+      Req.Test.expect(Mux, 2, &Req.Test.json(&1, %{"data" => asset}))
 
       assert {:ok, video} = ProviderLibrary.import(:mux, "asset-1", user)
       assert {video.type, video.status, video.title} == {:mux, :ready, "Launch film"}
       assert get_in(video.meta, ["mux", "playback_id"]) == "pb-1"
+    end
+
+    test "refuse a video the provider reports under another id", %{user: user} do
+      Req.Test.expect(Vimeo, fn conn ->
+        assert conn.request_path == "/videos/0042"
+        Req.Test.json(conn, vimeo_video("42", "available"))
+      end)
+
+      assert {:error, :not_found} = ProviderLibrary.import(:vimeo, "0042", user)
+
+      put_test_env(Cloudflare,
+        account_id: "acc",
+        api_token: "token",
+        webhook_secret: "secret",
+        req_options: [plug: {Req.Test, Cloudflare}]
+      )
+
+      Req.Test.expect(Cloudflare, &Req.Test.json(&1, %{"result" => cloudflare_video("abc", nil)}))
+      assert {:error, :not_found} = ProviderLibrary.import(:cloudflare, "ABC", user)
+
+      put_test_env(Mux, access_token_id: "id", access_token_secret: "secret", req_options: [plug: {Req.Test, Mux}])
+
+      Req.Test.expect(Mux, 2, fn conn ->
+        assert conn.request_path == "/video/v1/assets/ASSET-1"
+        Req.Test.json(conn, %{"data" => %{"id" => "asset-1", "playback_ids" => [%{"id" => "pb", "policy" => "public"}]}})
+      end)
+
+      assert {:error, :not_found} = ProviderLibrary.import(:mux, "ASSET-1", user)
+      assert Brando.Repo.aggregate(Brando.Videos.Video, :count) == 0
     end
 
     test "Bunny lists a library page and imports a finished video", %{user: user} do

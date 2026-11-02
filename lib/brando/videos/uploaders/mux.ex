@@ -556,6 +556,7 @@ defmodule Brando.Videos.Uploaders.Mux do
   @impl true
   def import_remote(asset_id, user, opts) do
     with {:ok, asset} <- get_asset(asset_id),
+         :ok <- check_asset_id(asset, asset_id),
          :ok <- check_public_playback(asset),
          {:ok, video} <-
            Videos.create_video(%{
@@ -569,6 +570,22 @@ defmodule Brando.Videos.Uploaders.Mux do
       update_video_with_asset(video, asset)
     end
   end
+
+  # An upload's row has only its upload id until Mux reports the asset.
+  @impl true
+  def library_holding_keys(asset_id) do
+    with {:ok, asset} <- get_asset(asset_id), do: {:ok, upload_holding_keys(asset)}
+  end
+
+  defp upload_holding_keys(%{"upload_id" => upload_id}) when is_binary(upload_id) and upload_id != "",
+    do: [{"mux.upload_id", upload_id}]
+
+  defp upload_holding_keys(_asset), do: []
+
+  # The holdings were checked for the id asked for, so the asset must be that
+  # one, not one Mux matched to it otherwise.
+  defp check_asset_id(%{"id" => asset_id}, asset_id), do: :ok
+  defp check_asset_id(_asset, _asset_id), do: {:error, :not_found}
 
   # Signed playback needs a token signer Brando does not have.
   defp check_public_playback(asset) do
@@ -590,7 +607,8 @@ defmodule Brando.Videos.Uploaders.Mux do
       status: status,
       created_at: unix_to_iso8601(asset["created_at"]),
       # Signed playback needs a token signer Brando does not have.
-      playable?: status == :ready and not is_nil(playback_id)
+      playable?: status == :ready and not is_nil(playback_id),
+      holding_keys: upload_holding_keys(asset)
     }
   end
 

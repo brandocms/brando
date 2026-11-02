@@ -519,6 +519,12 @@ sender first, before the first compile.
   `{site_key}` or moves into a map; `mix brando.doctor` warns about each such
   entry. See
   [Tenancy and environments](tenancy_and_environments.md).
+- **Provider video libraries with several sites.** With `tenancy_mode: :multi`,
+  the video picker's "Add from …" button shows only on sites an installation
+  superuser has put in a provider library group, and lists what that group's
+  sites hold. Sites that should keep sharing the provider accounts need the
+  same group key, set under Sites (`/admin/sites`), after `brando_226` has
+  run. See [Video provider libraries](tenancy_and_environments.md#video-provider-libraries).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

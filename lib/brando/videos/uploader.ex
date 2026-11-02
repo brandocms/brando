@@ -151,7 +151,25 @@ defmodule Brando.Videos.Uploader do
   @doc "Whether `list_remote/1` honours `:query`."
   @callback library_searchable?() :: boolean()
 
-  @optional_callbacks list_remote: 1, import_remote: 3, library_meta_path: 0, library_searchable?: 0
+  @doc """
+  The other `meta` paths and values a record may hold the remote video at,
+  for a provider whose record does not get the id at `library_meta_path/0`
+  when it is created. A Mux upload has only its `mux.upload_id` until Mux
+  reports the asset, so an asset made by a direct upload returns
+  `[{"mux.upload_id", upload_id}]`.
+
+  Takes the remote id, and asks the provider. The items of `list_remote/1`
+  carry the same keys as `:holding_keys`, which
+  `Brando.Videos.ProviderLibrary` drops from its listing.
+  """
+  @callback library_holding_keys(remote_id :: String.t()) ::
+              {:ok, [{String.t(), String.t()}]} | {:error, any()}
+
+  @optional_callbacks list_remote: 1,
+                      import_remote: 3,
+                      library_meta_path: 0,
+                      library_searchable?: 0,
+                      library_holding_keys: 1
 
   @doc """
   Router function that dispatches to the appropriate uploader based on config.upload_strategy.
@@ -286,6 +304,12 @@ defmodule Brando.Videos.Uploader do
 
   ## Returns
   - `:ok` if deletion succeeds or is skipped
+  - `{:error, :held_by_another_site}` with several sites, while another site
+    has a record of the same remote video (`Brando.Videos.ProviderHoldings`);
+    `{:error, :holdings_unavailable}` when that cannot be read, and
+    `{:error, :busy}` when an add or another delete of the same video held
+    its lock too long (`Brando.Videos.ProviderHoldings.with_video_lock/3`).
+    Nothing is deleted at the provider.
   - `{:error, reason}` if deletion fails
   """
   # Added from the provider's library: someone else's video, possibly in use
@@ -293,6 +317,66 @@ defmodule Brando.Videos.Uploader do
   def delete_remote(%Brando.Videos.Video{meta: %{"imported" => true}}), do: :ok
 
   def delete_remote(%Brando.Videos.Video{} = video) do
+    with :multi <- Brando.Tenant.mode(),
+         {module, remote_id} when is_binary(remote_id) <- library_remote_id(video) do
+      # An add of the same video waits, and this waits for one in progress,
+      # so the check below still holds when the provider is asked.
+      Brando.Videos.ProviderHoldings.with_video_lock(module.library_meta_path(), remote_id, fn ->
+        delete_unless_held(video, module, remote_id)
+      end)
+    else
+      _single_site_or_no_remote_id -> dispatch_delete_remote(video)
+    end
+  end
+
+  defp delete_unless_held(video, module, remote_id) do
+    case held_by_another_site(module, remote_id) do
+      false ->
+        dispatch_delete_remote(video)
+
+      reason ->
+        Logger.info("Video #{video.id} left at its provider: #{reason}")
+        {:error, reason}
+    end
+  end
+
+  # With several sites, another site may hold the same remote video: added
+  # from the provider's library, or uploaded before the sites stopped sharing.
+  # Deleting it at the provider would break that site's record, so it stays
+  # there, and so it does when that cannot be told.
+  defp held_by_another_site(module, remote_id) do
+    site_key = Brando.Tenant.current_site_key()
+    sites = Brando.Tenant.Registry.list_sites()
+    own_site_id = Enum.find_value(sites, &(&1.key == site_key && &1.id))
+
+    case Brando.Videos.ProviderHoldings.sites_holding(module.library_meta_path(), [remote_id], sites) do
+      {:ok, holders} ->
+        holders
+        |> Map.get(remote_id, MapSet.new())
+        |> MapSet.delete(own_site_id)
+        |> Enum.empty?()
+        |> if(do: false, else: :held_by_another_site)
+
+      {:error, _reason} ->
+        :holdings_unavailable
+    end
+  end
+
+  defp library_remote_id(video) do
+    with provider when not is_nil(provider) <- get_provider(video),
+         module = provider_module(provider),
+         path = String.split(module.library_meta_path(), "."),
+         remote_id when is_binary(remote_id) <- get_in(video.meta || %{}, path) do
+      {module, remote_id}
+    end
+  end
+
+  defp provider_module(:mux), do: Brando.Videos.Uploaders.Mux
+  defp provider_module(:bunny), do: Brando.Videos.Uploaders.Bunny
+  defp provider_module(:cloudflare), do: Brando.Videos.Uploaders.Cloudflare
+  defp provider_module(:vimeo), do: Brando.Videos.Uploaders.Vimeo
+
+  defp dispatch_delete_remote(video) do
     case get_provider(video) do
       :mux ->
         Brando.Videos.Uploaders.Mux.delete_remote(video)

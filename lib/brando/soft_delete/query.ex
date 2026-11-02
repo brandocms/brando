@@ -77,13 +77,17 @@ defmodule Brando.SoftDelete.Query do
     # Check timing per video since different videos may have different providers
     videos = Repo.all(query)
 
-    for video <- videos do
-      if Brando.Videos.Uploader.get_delete_timing(video) == :on_purge do
-        Brando.Videos.Uploader.delete_remote(video)
-      end
-    end
+    # A video whose holders could not be read (`Brando.Videos.ProviderHoldings`),
+    # or whose lock an add or another delete held too long, is still at its
+    # provider. Its row stays for the next run to try again; deleting it would
+    # leave the provider video behind for good.
+    kept =
+      for video <- videos,
+          Brando.Videos.Uploader.get_delete_timing(video) == :on_purge,
+          Brando.Videos.Uploader.delete_remote(video) in [{:error, :holdings_unavailable}, {:error, :busy}],
+          do: video.id
 
-    Repo.delete_all(query)
+    Repo.delete_all(from t in query, where: t.id not in ^kept)
   end
 
   defp clean_up_schema(schema) do
