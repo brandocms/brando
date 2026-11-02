@@ -18,9 +18,8 @@ defmodule BrandoAdmin.AssistantUnloadableProposalTest do
     Brando.ProposalFixtures.context()
   end
 
-  # As an earlier version stored it, before the catalogue was checked: a page
-  # proposal from a tool connected over MCP, its content type swapped.
-  defp crafted(actor, opts \\ []) do
+  # A page proposal from a tool connected over MCP, or from a conversation.
+  defp prepared(actor, opts) do
     context = %Tools.Context{
       actor: actor,
       origin: if(opts[:conversation_id], do: :assistant, else: :mcp),
@@ -28,15 +27,23 @@ defmodule BrandoAdmin.AssistantUnloadableProposalTest do
       conversation_id: opts[:conversation_id]
     }
 
+    uri = Keyword.get(opts, :uri, "rooms-stored")
+
     op = %{
       "op" => "create_entry",
       "content_type" => "Brando.Pages.Page",
       "ref" => "rooms",
-      "fields" => %{"title" => "Rooms", "uri" => "rooms-stored", "language" => "en"}
+      "fields" => %{"title" => "Rooms", "uri" => uri, "language" => "en"}
     }
 
     {:ok, %{proposal_id: id}} = Tools.call("prepare_proposal", %{"summary" => "Planted", "operations" => [op]}, context)
-    record = Repo.get!(Record, id)
+    Repo.get!(Record, id)
+  end
+
+  # As an earlier version stored it, before the catalogue was checked: a page
+  # proposal, its content type swapped.
+  defp crafted(actor, opts \\ []) do
+    record = prepared(actor, opts)
     [stored] = record.operations
     fields = %{"label" => "Planted", "key" => "planted", "language" => "en"}
 
@@ -46,6 +53,10 @@ defmodule BrandoAdmin.AssistantUnloadableProposalTest do
   end
 
   defp status(record), do: Repo.get!(Record, record.id).status
+
+  defp set_proposal(conversation, record) do
+    Repo.update_all(from(cv in Agent.Conversation, where: cv.id == ^conversation.id), set: [proposal_id: record.id])
+  end
 
   defp shows_refusal_and_discards(conn, owner, record) do
     {:ok, view, _} = live(conn, "/admin/assistant/connected/#{record.id}")
@@ -68,7 +79,7 @@ defmodule BrandoAdmin.AssistantUnloadableProposalTest do
     refute has_element?(view, "#assistant-unloadable")
     refute has_element?(view, ~s(button[phx-click="cancel_proposal"]))
 
-    render_click(view, "cancel_proposal", %{})
+    render_click(view, "cancel_proposal", %{"id" => record.id})
     assert status(record) == "pending"
   end
 
@@ -111,6 +122,72 @@ defmodule BrandoAdmin.AssistantUnloadableProposalTest do
 
       assert status(record) == "cancelled"
       refute has_element?(view, "#assistant-unloadable")
+    end
+
+    # The error belongs to the proposal it came with: after Discard, the
+    # assistant's next, valid proposal shows without it.
+    test "a conversation's next proposal shows no error from the discarded one" do
+      editor = TestUsers.insert_user(role: :editor)
+      {:ok, conversation} = Agent.start_conversation(editor)
+      record = crafted(editor, conversation_id: conversation.id)
+      set_proposal(conversation, record)
+
+      {:ok, view, _} = live(log_in_user(build_conn(), editor), "/admin/assistant/#{conversation.id}")
+      view |> element("#assistant-unloadable button[phx-click=cancel_proposal]") |> render_click()
+      assert status(record) == "cancelled"
+
+      next = prepared(editor, conversation_id: conversation.id, uri: "rooms-next")
+      set_proposal(conversation, next)
+      send(view.pid, {:agent, conversation.id, {:proposal, next.id}})
+
+      assert has_element?(view, "#proposal-#{next.id}")
+      refute has_element?(view, ".assistant-feedback.is-error")
+      refute has_element?(view, "[role=alert]", "list_content_types")
+    end
+
+    # A click made before the review changed to another proposal names the
+    # one it was made on; the one on screen now stays.
+    test "Discard naming another proposal than the one on screen discards nothing" do
+      editor = TestUsers.insert_user(role: :editor)
+      unloadable = crafted(editor)
+      loadable = prepared(editor, uri: "rooms-loadable")
+      conn = log_in_user(build_conn(), editor)
+
+      {:ok, view, _} = live(conn, "/admin/assistant/connected/#{loadable.id}")
+      assert has_element?(view, ~s(.assistant-apply-bar button[phx-click=cancel_proposal][phx-value-id="#{loadable.id}"]))
+      render_click(view, "cancel_proposal", %{"id" => unloadable.id})
+      assert {status(loadable), status(unloadable)} == {"pending", "pending"}
+      assert has_element?(view, "#proposal-#{loadable.id}")
+
+      {:ok, view, _} = live(conn, "/admin/assistant/connected/#{unloadable.id}")
+
+      assert has_element?(
+               view,
+               ~s(#assistant-unloadable button[phx-click=cancel_proposal][phx-value-id="#{unloadable.id}"])
+             )
+
+      render_click(view, "cancel_proposal", %{"id" => loadable.id})
+      assert {status(loadable), status(unloadable)} == {"pending", "pending"}
+      assert has_element?(view, "#assistant-unloadable")
+    end
+
+    test "from an unloadable proposal to a loadable one, Discard discards the one on screen" do
+      editor = TestUsers.insert_user(role: :editor)
+      unloadable = crafted(editor)
+      loadable = prepared(editor, uri: "rooms-loadable")
+
+      {:ok, view, _} = live(log_in_user(build_conn(), editor), "/admin/assistant/connected/#{unloadable.id}")
+      assert has_element?(view, "#assistant-unloadable [role=alert]", "list_content_types")
+
+      render_patch(view, "/admin/assistant/connected/#{loadable.id}")
+      assert has_element?(view, "#proposal-#{loadable.id}")
+      refute has_element?(view, "#assistant-unloadable")
+      refute has_element?(view, ".assistant-feedback.is-error")
+
+      view |> element(".assistant-apply-bar button[phx-click=cancel_proposal]") |> render_click()
+      assert {status(loadable), status(unloadable)} == {"cancelled", "pending"}
+      refute has_element?(view, "#assistant-unloadable")
+      refute has_element?(view, ".assistant-feedback.is-error")
     end
 
     test "a discarded one shows no Discard", %{conn: conn, current_user: user} do
@@ -158,6 +235,7 @@ defmodule BrandoAdmin.AssistantUnloadableProposalTest do
 
     test "a member without the Assistant cannot open the review", c do
       record = crafted(assistant_member(c))
+
       editor =
         member(c, [
           Catalog.get(:access, :backend).key,

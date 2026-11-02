@@ -795,7 +795,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <div :if={@error} class="assistant-feedback is-error" role="alert">{@error}</div>
       <p>{gettext("None of its changes have been saved. Discard it, then prepare them again.")}</p>
       <div class="assistant-unloadable-actions">
-        <button type="button" class="btn btn--danger" phx-click="cancel_proposal">{gettext("Discard")}</button>
+        <button type="button" class="btn btn--danger" phx-click="cancel_proposal" phx-value-id={@unloadable_id}>
+          {gettext("Discard")}
+        </button>
       </div>
     </div>
     """
@@ -1045,7 +1047,12 @@ defmodule BrandoAdmin.AI.AssistantLive do
           <span>{block_summary(@proposal.effects)}</span>
         </div>
         <div class="assistant-apply-actions">
-          <button type="button" class="btn btn--lg btn--quiet btn--danger" phx-click="cancel_proposal">
+          <button
+            type="button"
+            class="btn btn--lg btn--quiet btn--danger"
+            phx-click="cancel_proposal"
+            phx-value-id={@proposal.id}
+          >
             {gettext("Discard")}
           </button>
           <button
@@ -1784,9 +1791,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   # The proposal on screen, or one that can no longer be loaded for review.
-  def handle_event("cancel_proposal", _, socket) do
-    if id = (socket.assigns.proposal && socket.assigns.proposal.id) || socket.assigns.unloadable_id,
-      do: Proposals.cancel(id, socket.assigns.current_user)
+  # The click names the one it was made on: if the review has changed to
+  # another proposal since, nothing is discarded.
+  def handle_event("cancel_proposal", params, socket) do
+    id = params["id"]
+    if id && id == shown_proposal_id(socket.assigns), do: Proposals.cancel(id, socket.assigns.current_user)
 
     {:noreply, socket |> assign_proposal() |> assign_connected()}
   end
@@ -2130,15 +2139,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
     socket |> assign(messages: messages, turns: turns(messages), cost: cost) |> assign_media()
   end
 
+  # An error belongs to the proposal it was shown with: a failed apply keeps
+  # it over the same proposal reloaded, another proposal starts without it.
   defp assign_proposal(socket) do
     case proposal_id(socket.assigns) do
-      nil -> socket |> assign(proposal: nil, unloadable_id: nil, review: []) |> assign_media()
+      nil -> socket |> assign(proposal: nil, unloadable_id: nil, review: [], error: nil) |> assign_media()
       id -> assign_proposal(socket, id)
     end
   end
 
   defp assign_proposal(socket, id) do
     user = socket.assigns.current_user
+    socket = if id == shown_proposal_id(socket.assigns), do: socket, else: assign(socket, :error, nil)
 
     case Proposals.get(id, user) do
       {:ok, proposal} ->
@@ -2150,12 +2162,17 @@ defmodule BrandoAdmin.AI.AssistantLive do
         |> assign_media()
 
       # One that can no longer be reviewed or applied, such as one naming a
-      # content type outside the catalogue, can still be discarded.
+      # content type outside the catalogue, can still be discarded. One that
+      # cannot, such as one just discarded, leaves the empty state, which
+      # shows no reason.
       {:error, message} ->
         unloadable_id = if Proposals.discardable?(id, user), do: id
-        assign(socket, proposal: nil, unloadable_id: unloadable_id, review: [], error: message)
+        assign(socket, proposal: nil, unloadable_id: unloadable_id, review: [], error: unloadable_id && message)
     end
   end
+
+  defp shown_proposal_id(%{proposal: %{id: id}}), do: id
+  defp shown_proposal_id(%{unloadable_id: id}), do: id
 
   # The proposal on screen: the one chosen under "From connected tools", or
   # the conversation's.
