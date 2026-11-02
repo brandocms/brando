@@ -8,6 +8,7 @@ test('has cache and clears cache', async ({ page }, testInfo) => {
   await expect(page.getByRole('link', { name: 'Brando CMS' })).toBeVisible()
 
   await page.goto('/admin')
+  await syncLV(page)
   await page.getByText('Configuration').click()
   await page.getByRole('link', { name: 'Cache' }).click()
   await expect(page).toHaveURL('/admin/config/cache')

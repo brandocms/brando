@@ -85,6 +85,32 @@ defmodule Brando.Test.Support do
     :ok
   end
 
+  @doc """
+  Puts the query cache's tenant-prefixed entries back as they were when the
+  test exits, and removes the ones the test added. `Brando.ConnCase` calls it
+  for every synchronous test.
+
+  An admin view on a multi-site install caches queries under its site's
+  prefix, the chrome's users map among them, with no expiry. Left behind, a
+  later test on the same site key reads rows its own sandbox never had, and
+  the Cache screen lists them.
+  """
+  def preserve_tenant_query_cache do
+    cached = tenant_query_entries()
+
+    ExUnit.Callbacks.on_exit(fn ->
+      for entry <- tenant_query_entries(), do: Cachex.del(:query, elem(entry, 1))
+      Cachex.import(:query, cached)
+    end)
+
+    :ok
+  end
+
+  defp tenant_query_entries do
+    {:ok, entries} = Cachex.export(:query)
+    Enum.filter(entries, &match?({:tenant, _prefix, _key}, elem(&1, 1)))
+  end
+
   defp query_entries(sources) do
     {:ok, entries} = Cachex.export(:query)
     Enum.filter(entries, &(query_source(elem(&1, 1)) in sources))

@@ -16051,6 +16051,7 @@ msgstr ""
 #: lib/brando_admin/live/content/shared_library_live.ex
 #: lib/brando_admin/live/mcp/consent_live.ex
 #: lib/brando_admin/live/nav.ex
+#: lib/brando_admin/live/sites/cache_live.ex
 #: lib/brando_admin/menu.ex
 #, elixir-autogen, elixir-format
 msgid "Site"

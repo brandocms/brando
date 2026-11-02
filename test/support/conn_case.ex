@@ -43,6 +43,9 @@ defmodule Brando.ConnCase do
   end
 
   def setup_sandbox(tags) do
+    # Registered first, so it runs after everything else on exit. Async tests
+    # share the cache with each other while they run.
+    unless tags[:async], do: Brando.Test.Support.preserve_tenant_query_cache()
     pid = Ecto.Adapters.SQL.Sandbox.start_owner!(BrandoIntegration.Repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
   end

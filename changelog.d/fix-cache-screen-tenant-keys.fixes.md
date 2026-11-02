@@ -1,0 +1,1 @@
+- The Cache screen opens on a multi-site installation with cached site queries, lists each entry's site and environment, and skips cache keys it does not know instead of failing to load.
