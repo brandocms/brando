@@ -5,12 +5,15 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
-  # Deleting an environment or its archives, copying into one and setting one
-  # live ask for the password, a code or a passkey when the session has not
+  # Deleting an environment or its archives, copying into one, setting one live,
+  # creating or restoring one, cancelling a scheduled operation and giving one a
+  # domain, which decides what a public host serves as surely as setting one live
+  # does, ask for the password, a code or a passkey when the session has not
   # confirmed lately.
   on_mount(
     {BrandoAdmin.Reauth,
-     events: ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy)}
+     events:
+       ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy update_domain create_environment rollback cancel_operation)}
   )
 
   alias Brando.Environments

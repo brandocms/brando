@@ -274,11 +274,13 @@ passkey, logging out a session, the user form (creating users, changing email
 or role, resetting another user's password or two-factor authentication,
 logging them out), disabling, enabling, deleting and restoring users (one at a
 time through the transfer dialog, or several selected in the listing), the sign-in policy,
-changing groups and their members, deleting, suspending or archiving a site
+changing groups and their members, preparing groups and applying a group import
+on the utilities screen, creating, activating, deleting, suspending or archiving a site
 and changing who has access to it, a static site's deploy target and webhook,
 building (which may deploy at once), deploying and rolling back, copying into
-an environment, deleting an environment or its archives, and setting an
-environment live. A copy into the live environment must also be ticked
+an environment, deleting an environment or its archives, setting an environment
+live, creating an environment or restoring one from an archive, cancelling a
+scheduled operation and changing an environment's domain. A copy into the live environment must also be ticked
 explicitly, since it replaces what visitors see. Changing your own password, turning the app off
 and adding a passkey ask for the current password or a code every time.
 
