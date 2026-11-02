@@ -59,6 +59,31 @@ defmodule Brando.Plug.RequestLogTest do
     assert RequestLog.filter([]) == nil
   end
 
+  test "a path of 20,000 segments has no token" do
+    assert RequestLog.filter(List.duplicate("a", 20_000)) == nil
+  end
+
+  test "a marker at the end of a long path filters the segment after it" do
+    segments = List.duplicate("a", 20_000)
+
+    assert RequestLog.filter(segments ++ ["content-transfer", "download", "s3cr3t"]) ==
+             segments ++ ["content-transfer", "download", "[FILTERED]"]
+  end
+
+  test "a root marker comes first, then the earliest marker with a token after it" do
+    assert RequestLog.filter(["__p__", "reset-password", "x"]) == ["__p__", "[FILTERED]", "x"]
+
+    assert RequestLog.filter(["reset-password", "assistant", "shared", "x"]) == [
+             "reset-password",
+             "[FILTERED]",
+             "shared",
+             "x"
+           ]
+
+    assert RequestLog.filter(["content-transfer", "content-transfer", "download", "x"]) ==
+             ["content-transfer", "content-transfer", "download", "[FILTERED]"]
+  end
+
   test "a malformed encoding is matched as it is" do
     assert OwnLog.capture(fn -> assert RequestLog.level(conn("/admin/%zz/x"), :error) == :error end) == ""
   end

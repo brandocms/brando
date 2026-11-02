@@ -13,7 +13,6 @@ defmodule Brando.MarkdownSources.RateLimiter do
   @per_client 120
   @all_requests 12_000
   @verified 1200
-  @tracked_clients 200_000
 
   def start_link(_), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   def init(_), do: {:ok, fresh(nil)}
@@ -43,8 +42,9 @@ defmodule Brando.MarkdownSources.RateLimiter do
 
   # A client over its own budget is refused without touching the shared cap,
   # so no one client can fill it. Past the cap a request for an unknown key adds
-  # nothing, and past the tracked clients a new one passes uncounted, so this map
-  # stays bounded when many addresses send for a known key.
+  # nothing, and one for a known key still counts against its client. The map
+  # starts empty every minute, so it holds at most one entry per client the node
+  # accepts a request from in a minute, at about 100 bytes each.
   defp count({:client, key, known_key?}, _from, state) do
     count = Map.get(state.clients, key, 0)
     counted = %{state | clients: Map.put(state.clients, key, count + 1)}
@@ -58,9 +58,6 @@ defmodule Brando.MarkdownSources.RateLimiter do
 
       not known_key? ->
         {:reply, false, state}
-
-      count == 0 and map_size(state.clients) >= @tracked_clients ->
-        {:reply, true, state}
 
       true ->
         {:reply, true, counted}

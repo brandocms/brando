@@ -32,6 +32,7 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
          {:ok, connection} <- connection,
          [content_type] <- get_req_header(conn, "content-type"),
          true <- String.downcase(hd(String.split(content_type, ";"))) == "application/json",
+         true <- signature_shaped?(get_req_header(conn, "x-hub-signature-256")),
          {:ok, body, conn} <- body(conn, [], 0, System.monotonic_time(:millisecond) + 10_000) do
       authenticate_and_accept(conn, connection, body)
     else
@@ -44,6 +45,10 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
 
   defp allow_client?(conn, connection),
     do: RateLimiter.allow_client?(Brando.ClientIP.from_conn(conn), match?({:ok, _}, connection))
+
+  # No HMAC can verify any other header, so its body is not worth reading
+  defp signature_shaped?(["sha256=" <> hex]) when byte_size(hex) == 64, do: true
+  defp signature_shaped?(_), do: false
 
   defp authenticate_and_accept(conn, connection, body) do
     header = get_req_header(conn, "x-hub-signature-256")

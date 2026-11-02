@@ -47,6 +47,13 @@ defmodule Brando.MarkdownSources.WebhookTest do
     )
   end
 
+  # A well-formed header, so the request is read and goes through the HMAC
+  defp wrongly_signed(body, ip) do
+    %{Plug.Test.conn(:post, "https://cms.example.test/api/markdown-sources/webhooks/docs", body) | remote_ip: ip}
+    |> put_req_header("content-type", "application/json")
+    |> put_req_header("x-hub-signature-256", "sha256=" <> String.duplicate("0", 64))
+  end
+
   test "authenticates exact bytes and durably deduplicates both delivery IDs and body fingerprints" do
     Oban.Testing.with_testing_mode(:manual, fn ->
       body = payload()
@@ -85,6 +92,19 @@ defmodule Brando.MarkdownSources.WebhookTest do
     assert signed(payload()) |> put_req_header("x-github-event", "ping") |> Webhook.call([]) |> Map.get(:status) == 401
     assert signed(String.duplicate("x", 1_048_577)) |> Webhook.call([]) |> Map.get(:status) == 413
     assert Repo.aggregate(Delivery, :count) == 0
+  end
+
+  test "a missing or malformed signature header is refused before the body is read" do
+    oversized = signed(String.duplicate("x", 1_048_577))
+
+    assert oversized |> delete_req_header("x-hub-signature-256") |> Webhook.call([]) |> Map.get(:status) == 401
+
+    for value <- ["sha1=abc", "sha256=" <> String.duplicate("0", 63), "sha256=" <> String.duplicate("0", 65)] do
+      assert oversized |> put_req_header("x-hub-signature-256", value) |> Webhook.call([]) |> Map.get(:status) == 401
+    end
+
+    twice = update_in(oversized.req_headers, &[{"x-hub-signature-256", "sha256=" <> String.duplicate("0", 64)} | &1])
+    assert twice |> Webhook.call([]) |> Map.get(:status) == 401
   end
 
   test "tenant routing comes only from configured destinations, never signed payload fields" do
@@ -209,14 +229,11 @@ defmodule Brando.MarkdownSources.WebhookTest do
       end)
     end
 
-    test "a signed delivery is accepted while unsigned ones for its key are in flight" do
-      url = "https://cms.example.test/api/markdown-sources/webhooks/docs"
-
+    test "a signed delivery is accepted while wrongly signed ones for its key are in flight" do
       flood =
         for i <- 1..200 do
           Task.async(fn ->
-            %{Plug.Test.conn(:post, url, String.duplicate("x", 200_000)) | remote_ip: {198, 51, 100, i}}
-            |> put_req_header("content-type", "application/json")
+            wrongly_signed(String.duplicate("x", 200_000), {198, 51, 100, i})
             |> Webhook.call([])
             |> Map.get(:status)
           end)
@@ -252,12 +269,28 @@ defmodule Brando.MarkdownSources.WebhookTest do
     assert conn |> Webhook.call([]) |> Map.get(:status) == 401
   end
 
-  test "the limiter stops tracking new clients at its bound, and lets them through" do
-    :sys.replace_state(Brando.MarkdownSources.RateLimiter, fn state ->
+  test "past the cap a client not counted before is refused after its budget, however many are tracked" do
+    alias Brando.MarkdownSources.RateLimiter
+
+    :sys.replace_state(RateLimiter, fn state ->
       %{state | requests: 12_000, clients: Map.new(1..200_000, &{{&1}, 1})}
     end)
 
-    assert Brando.MarkdownSources.RateLimiter.allow_client?({192, 0, 2, 54}, true)
-    refute Map.has_key?(:sys.get_state(Brando.MarkdownSources.RateLimiter).clients, {192, 0, 2, 54})
+    address = {192, 0, 2, 54}
+    for _ <- 1..120, do: assert(RateLimiter.allow_client?(address, true))
+    refute RateLimiter.allow_client?(address, true)
+  end
+
+  test "a busy signature check makes a request wait, and does not refuse it" do
+    alias Brando.MarkdownSources.SignatureCheck
+
+    :sys.suspend(SignatureCheck)
+    on_exit(fn -> :sys.resume(SignatureCheck) end)
+
+    task = Task.async(fn -> wrongly_signed("{}", {192, 0, 2, 55}) |> Webhook.call([]) |> Map.get(:status) end)
+    assert Task.yield(task, 200) == nil
+
+    :sys.resume(SignatureCheck)
+    assert Task.await(task) == 401
   end
 end

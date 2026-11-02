@@ -65,18 +65,18 @@ defmodule Brando.Plug.RequestLog do
   end
 
   defp token_index(decoded) do
-    Enum.find_value(@at_root, &token_index(decoded, &1, 0)) ||
-      Enum.find_value(0..(length(decoded) - 1)//1, fn offset ->
-        Enum.find_value(@anywhere, &token_index(Enum.drop(decoded, offset), &1, offset))
-      end)
+    Enum.find_value(@at_root, &after_marker(decoded, &1, 0)) || anywhere_index(decoded, 0)
   end
 
-  defp token_index(decoded, marker, offset) do
-    size = length(marker)
+  # Runs on every request that logs, and a path's length is the sender's choice:
+  # one pass over the segments, with the index carried along.
+  defp anywhere_index([], _offset), do: nil
 
-    case Enum.split(decoded, size) do
-      {^marker, [_token | _rest]} -> offset + size
-      _ -> nil
-    end
+  defp anywhere_index([_segment | rest] = decoded, offset) do
+    Enum.find_value(@anywhere, &after_marker(decoded, &1, offset)) || anywhere_index(rest, offset + 1)
   end
+
+  defp after_marker([segment | rest], [segment | marker], index), do: after_marker(rest, marker, index + 1)
+  defp after_marker([_token | _rest], [], index), do: index
+  defp after_marker(_decoded, _marker, _index), do: nil
 end

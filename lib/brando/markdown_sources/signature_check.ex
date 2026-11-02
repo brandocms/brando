@@ -1,11 +1,11 @@
 defmodule Brando.MarkdownSources.SignatureCheck do
   @moduledoc false
   # Computes the GitHub Markdown webhook's signatures one at a time, on one
-  # process, so a flood of unsigned bodies for a known connection key costs at
-  # most one scheduler. A busy check makes a request wait, never refuses it: its
-  # signature is unknown until it has run, so a refusal here would let unsigned
-  # requests refuse signed ones. Held only for the computation, after the plug
-  # has read the body.
+  # process, so a flood of wrongly signed bodies for a known connection key costs
+  # at most one scheduler. A busy check makes a request wait, never refuses it: a
+  # signature is unverified until it has run, so a refusal here would let wrongly
+  # signed requests refuse correctly signed ones. Held only for the computation,
+  # after the plug has read the body.
   use GenServer
 
   def start_link(_), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
