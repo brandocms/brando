@@ -48,8 +48,9 @@ see [Languages and translations](guides/i18n.md).
 so two branches that add different strings merge cleanly and every message
 keeps its msgstr. It conflicts only when both sides change the same translation
 differently. `scripts/worktree-setup` registers it once per clone (worktrees
-share it), only when the clone lacks the copies described below; to update it,
-replacing them, run this from a checkout you trust:
+share it), only when the clone lacks the copies described below or their Python
+interpreter is gone; to update it, replacing them, run this from a checkout you
+trust:
 
 ```sh
 scripts/install-git-helpers
@@ -59,8 +60,9 @@ This copies the script and the pre-push hook into `brando-hooks/` in the Git
 common directory and points the repository's git config at the copies, so a
 branch you check out, merge or rebase cannot run its own version; a push still
 runs the checked-out tree's `scripts/check`. `mix check` says when a copy differs
-from the tree. Without the driver, or when its copy or Python interpreter is
-gone, git merges the catalogues line by line.
+from the tree. Without the driver git merges the catalogues line by line, and
+when its copy or Python interpreter is gone it does so too and says to run the
+command above.
 
 After a merge or rebase, run `mix gettext.extract --merge` once more if code
 changed on both sides; it should change nothing else. The script's header

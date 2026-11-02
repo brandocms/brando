@@ -11,8 +11,11 @@
 # repository's Git hooks and merge driver when the clone lacks the copies
 # (scripts/install-git-helpers --if-missing). Those are clone-wide, so existing
 # copies stay as they are, and a first setup on a branch you don't trust installs
-# that branch's copies, on top of running its code. Ends by printing the
-# environment to use.
+# that branch's copies, on top of running its code. A branch forked before the
+# copies existed has its own older version of this script, which points the
+# clone's config back into the tree, and `mix check` from a newer tree then says
+# so: rebase such a branch before running setup in it, and if you did run it,
+# rerun scripts/install-git-helpers. Ends by printing the environment to use.
 #
 # Uses mise (`mise exec --`) for Elixir and Node when it is installed; otherwise
 # mix, node and npx must be on PATH. Works with macOS's bash 3.

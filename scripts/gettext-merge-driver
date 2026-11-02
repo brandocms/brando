@@ -28,9 +28,9 @@ Git common directory and sets `merge.gettext.name` and `merge.gettext.driver`
 (driver_command below) in the repository's git config. The command runs the copy
 with the interpreter that installed it, never a script in the checked-out tree
 or a `python3` found from it, either of which a branch being rebased could have
-replaced, and falls back to a line merge when the copy or the interpreter is
-gone (a clone moved, Python upgraded). .gitattributes sends priv/gettext/**/*.po
-and *.pot here.
+replaced, and when the copy or the interpreter is gone (a clone moved, Python
+upgraded) it says so on stderr and falls back to a line merge. .gitattributes
+sends priv/gettext/**/*.po and *.pot here.
 
 Usage:
     gettext-merge-driver BASE OURS THEIRS [MARKER_SIZE [PATH [BASE_LABEL OURS_LABEL THEIRS_LABEL]]]
@@ -387,10 +387,12 @@ def driver_command(script, python):
     # Git expands % in the whole command; the paths may hold one. Git runs this
     # in a working tree, where a version manager's python3 shim could read the
     # branch's .tool-versions, so the interpreter is an absolute path too.
+    # scripts/install-git-helpers reads the `exec PYTHON -I SCRIPT` back.
     quoted, interpreter = (shlex.quote(path).replace("%", "%%") for path in (script, python))
     body = (
         "test -f %s && test -x %s" % (quoted, interpreter)
-        + ' || exec git merge-file --marker-size="$3" -L "$6" -L "$5" -L "$7" "$1" "$0" "$2";'
+        + ' || { echo "gettext-merge-driver: the installed copy or its Python interpreter is gone, so this is a line merge; run scripts/install-git-helpers" >&2;'
+        + ' exec git merge-file --marker-size="$3" -L "$6" -L "$5" -L "$7" "$1" "$0" "$2"; };'
         + ' exec %s -I %s "$0" "$@"' % (interpreter, quoted)
     )
     return "sh -c %s %%O %%A %%B %%L %%P %%S %%X %%Y" % shlex.quote(body)
@@ -420,7 +422,9 @@ def install(cwd=None):
     os.chmod(temporary, 0o755)
     os.replace(temporary, script)
     set_config("merge.gettext.name", "Gettext catalogue merge", cwd)
-    set_config("merge.gettext.driver", driver_command(script, sys.executable), cwd)
+    # Resolved: a venv's python3 is a symlink to its base, and the venv may be in
+    # a working tree.
+    set_config("merge.gettext.driver", driver_command(script, os.path.realpath(sys.executable)), cwd)
 
 
 def read(path):
@@ -716,6 +720,7 @@ class SelfTest:
             result = self.git(root, "merge", "--no-edit", "two", check=False)
             text = contents()
             self.check("line merge without the installed interpreter", result.returncode != 0 and "<<<<<<< HEAD\n" in text and ">>>>>>> two\n" in text, result.stdout + result.stderr + text)
+            self.check("the line merge says the interpreter or copy is gone", "is gone" in result.stderr and "run scripts/install-git-helpers" in result.stderr, result.stderr)
             self.git(root, "merge", "--abort")
             self.git(root, "config", "merge.gettext.driver", registered)
 
@@ -724,6 +729,7 @@ class SelfTest:
             result = self.git(root, "merge", "--no-edit", "two", check=False)
             text = contents()
             self.check("line merge without the installed copy", result.returncode != 0 and "<<<<<<< HEAD\n" in text and ">>>>>>> two\n" in text, result.stdout + result.stderr + text)
+            self.check("the line merge says the copy or interpreter is gone", "is gone" in result.stderr and "run scripts/install-git-helpers" in result.stderr, result.stderr)
             self.git(root, "merge", "--abort")
         finally:
             shutil.rmtree(root, ignore_errors=True)

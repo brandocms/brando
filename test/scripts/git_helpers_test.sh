@@ -130,6 +130,13 @@ fresh() {
 # The configuration earlier versions of scripts/worktree-setup wrote.
 old_driver="sh -c 'test -f scripts/gettext-merge-driver || exec git merge-file --marker-size=\"\$3\" -L \"\$6\" -L \"\$5\" -L \"\$7\" \"\$1\" \"\$0\" \"\$2\"; exec python3 scripts/gettext-merge-driver \"\$0\" \"\$@\"' %O %A %B %L %P %S %X %Y"
 
+# register_driver DIR SCRIPT PYTHON — the command --install would write for them.
+register_driver() {
+  (cd "$1" && python3 -I -c 'import runpy, subprocess, sys
+command = runpy.run_path(sys.argv[1], run_name="driver")["driver_command"](sys.argv[2], sys.argv[3])
+subprocess.run(["git", "config", "merge.gettext.driver", command], check=True)' "$root/scripts/gettext-merge-driver" "$2" "$3")
+}
+
 echo "-- controls: Git pointed at the tree"
 fresh "$tmp/old"
 git -C "$tmp/old" config core.hooksPath .githooks
@@ -227,7 +234,7 @@ fresh "$odd"
 odd_bin="$odd/.git/odd bin's %P"
 mkdir -p "$odd_bin"
 ln -s "$(python3 -I -c 'import sys; print(sys.executable)')" "$odd_bin/python3"
-(cd "$odd" && "$odd_bin/python3" -I scripts/gettext-merge-driver --install) || fail "install with an interpreter under an odd path"
+register_driver "$odd" "$odd/.git/brando-hooks/gettext-merge-driver" "$odd_bin/python3" || fail "register an interpreter under an odd path"
 git -C "$odd" checkout -q contributor
 no_branch_code "checkout under an odd path"
 git -C "$odd" rebase -q origin/main >/dev/null 2>&1
@@ -239,6 +246,51 @@ cp "$odd/.git/brando-hooks/pre-push" "$tmp/odd-pre-push"
 (cd "$odd" && scripts/install-git-helpers --if-missing) || fail "--if-missing under an odd path"
 assert "--if-missing finds the copies under an odd path" cmp -s "$odd/.git/brando-hooks/pre-push" "$tmp/odd-pre-push"
 no_branch_code "--if-missing runs nothing from the branch"
+
+echo "-- the installed interpreter is gone"
+gone_line="the installed copy or its Python interpreter is gone"
+gone="$tmp/gone dir's %O"
+fresh "$gone"
+(cd "$gone" && scripts/install-git-helpers) || fail "install before the interpreter goes"
+register_driver "$gone" "$gone/.git/brando-hooks/gettext-merge-driver" "$tmp/gone bin's %P/python3" || fail "register a dead interpreter"
+out="$(git -C "$gone" merge --no-edit origin/contributor 2>&1)"
+grep -q 'scripts/install-git-helpers' <<<"$out" && grep -q "$gone_line" <<<"$out" && ok "the merge says the driver is gone and what to run" ||
+  fail "the merge says the driver is gone and what to run" "$out"
+grep -q '^<<<<<<<' "$gone/$catalogue" && ok "the line merge still happens" || fail "the line merge still happens" "$out"
+no_branch_code "the line merge runs nothing from the branch"
+git -C "$gone" merge --abort
+(cd "$gone" && scripts/install-git-helpers --if-missing) || fail "--if-missing with a dead interpreter"
+case "$(git -C "$gone" config merge.gettext.driver)" in
+  *"gone bin"*) fail "--if-missing replaces a dead interpreter" "$(git -C "$gone" config merge.gettext.driver)" ;;
+  *) ok "--if-missing replaces a dead interpreter" ;;
+esac
+out="$(git -C "$gone" merge --no-edit origin/contributor 2>&1)" && ok "the merge succeeds after the repair" || fail "the merge succeeds after the repair" "$out"
+assert "the config names a working interpreter again" merged_catalogue "$gone"
+grep -q "$gone_line" <<<"$out" && fail "a working driver does not say it is gone" "$out" || ok "a working driver does not say it is gone"
+no_branch_code "the repaired driver runs nothing from the branch"
+
+echo "-- a python3 that does not run"
+mkdir -p "$tmp/failing-bin"
+printf '#!/bin/sh\nexit 1\n' >"$tmp/failing-bin/python3"
+chmod +x "$tmp/failing-bin/python3"
+fresh "$tmp/no-python"
+(cd "$tmp/no-python" && scripts/install-git-helpers) || fail "install before python3 breaks"
+no_python_copies="$tmp/no-python/.git/brando-hooks"
+cp "$no_python_copies/pre-push" "$tmp/no-python-hook"
+config_before="$(cat "$tmp/no-python/.git/config")"
+echo "# changed in the tree" >>"$tmp/no-python/.githooks/pre-push"
+for mode in "" --if-missing; do
+  label="install-git-helpers ${mode:-without options}"
+  if out="$(cd "$tmp/no-python" && PATH="$tmp/failing-bin:$PATH" scripts/install-git-helpers $mode 2>&1)"; then
+    fail "$label stops" "$out"
+  else
+    ok "$label stops"
+  fi
+  grep -q 'python3' <<<"$out" && ok "$label says python3 does not run" || fail "$label says python3 does not run" "$out"
+  assert "$label leaves the hook copy alone" cmp -s "$no_python_copies/pre-push" "$tmp/no-python-hook"
+  [ "$(cat "$tmp/no-python/.git/config")" = "$config_before" ] && ok "$label leaves the config alone" || fail "$label leaves the config alone"
+  cp "$tmp/no-python-hook" "$no_python_copies/pre-push"
+done
 
 echo "-- the pre-push hook"
 git -C "$tmp/safe" worktree add -q "$tmp/push-wt" -b feature origin/main
