@@ -185,10 +185,9 @@ defmodule Brando.Tenant.Registry do
     end
   end
 
-  # Inside a transaction, after it commits: a refresh before then could be
-  # overtaken by another that reads the registry without this write
+  # Inside a transaction, after it commits (`Cache.invalidate/0`)
   defp refresh_cache_on_success({:ok, _record} = result) do
-    Repo.after_commit(:tenant_cache, &Cache.invalidate/0)
+    Cache.invalidate()
     result
   end
 

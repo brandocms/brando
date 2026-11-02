@@ -14,6 +14,10 @@ defmodule Brando.Assets.SiteAssets do
   the last preview that references it expires, so a later activation or release
   cannot break a link that has already been shared. `Brando.Assets.SiteAssets.Retention`
   owns the pruning rules that protect those sets.
+
+  The caches are per node: activating or deactivating a set, pinning or
+  releasing one, and forgetting one refresh this node and tell the others
+  through `Brando.CacheSync`.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -21,6 +25,7 @@ defmodule Brando.Assets.SiteAssets do
   alias Brando.Assets.SiteAssets.Capture
   alias Brando.Assets.SiteAssets.Retention
   alias Brando.Assets.SiteAssetSet
+  alias Brando.CacheSync
   alias Brando.Repo
   alias Brando.Sites.Site
   alias Brando.Tenant
@@ -92,6 +97,7 @@ defmodule Brando.Assets.SiteAssets do
          {:ok, active_set} <- persist_activation(asset_set) do
       put_cache(scope_key(active_set), %{cached | set: active_set})
       invalidate_vite(active_set.site_id)
+      CacheSync.broadcast(__MODULE__, {:active, scope_key(active_set)})
       {:ok, active_set}
     else
       nil -> {:error, :asset_set_not_found}
@@ -110,6 +116,7 @@ defmodule Brando.Assets.SiteAssets do
       {:ok, _updated} ->
         put_cache(scope_key(site), :none)
         invalidate_vite(site_id(site))
+        CacheSync.broadcast(__MODULE__, {:active, scope_key(site)})
         :ok
 
       {:error, reason} ->
@@ -154,6 +161,7 @@ defmodule Brando.Assets.SiteAssets do
   @spec forget_set(SiteAssetSet.t()) :: :ok
   def forget_set(%SiteAssetSet{id: id} = asset_set) do
     :persistent_term.erase(set_cache_key(id))
+    CacheSync.broadcast(__MODULE__, {:set, id})
     invalidate_pinned(asset_set)
   end
 
@@ -217,6 +225,29 @@ defmodule Brando.Assets.SiteAssets do
   @spec invalidate_pinned(scope() | SiteAssetSet.t()) :: :ok
   def invalidate_pinned(scope \\ nil) do
     :persistent_term.erase(pinned_cache_key(scope_key(scope)))
+    CacheSync.broadcast(__MODULE__, {:pinned, scope_key(scope)})
+  end
+
+  @doc false
+  # Another node changed a scope's active set, a scope's pinned sets, or
+  # removed a set (`Brando.CacheSync`). Dropped here, each is read again on
+  # its next use.
+  def refresh_node_cache({:active, scope_key}) do
+    :persistent_term.erase(cache_key(scope_key))
+
+    case scope_key do
+      :standalone -> invalidate_vite(nil)
+      {:site_id, site_id} -> invalidate_vite(site_id)
+    end
+  end
+
+  def refresh_node_cache({:pinned, scope_key}) do
+    :persistent_term.erase(pinned_cache_key(scope_key))
+    :ok
+  end
+
+  def refresh_node_cache({:set, set_id}) do
+    :persistent_term.erase(set_cache_key(set_id))
     :ok
   end
 

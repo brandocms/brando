@@ -87,6 +87,7 @@ defmodule Brando.Content.SharedLibrary do
     with :ok <- validate_shared_ids(definition.schema, ids),
          {:ok, _result} <- replace_access_rows(site.id, definition, ids) do
       Cache.put(site.id, kind, ids)
+      Brando.CacheSync.broadcast(Cache, {site.id, kind})
       :ok
     end
   end

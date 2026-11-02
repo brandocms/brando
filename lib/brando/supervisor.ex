@@ -54,6 +54,9 @@ defmodule Brando.Supervisor do
       },
       # Before Oban, so it hears the first job that reports (BrandoAdmin.Work)
       BrandoAdmin.Work.Registry,
+      # Refreshes this node's site and environment caches when another node
+      # writes them
+      Brando.CacheSync,
       {Oban, oban_config()}
     ]
 

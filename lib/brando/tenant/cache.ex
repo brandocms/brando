@@ -6,8 +6,12 @@ defmodule Brando.Tenant.Cache do
   global cost of updating `:persistent_term` for allocation-free lookups on
   every request. When tenancy is disabled, warming only clears old tenant
   entries and never queries the database.
+
+  The cache is per node: `invalidate/0` warms this node and tells the others
+  through `Brando.CacheSync`.
   """
 
+  alias Brando.CacheSync
   alias Brando.Sites.Site
   alias Brando.Tenant
 
@@ -28,8 +32,23 @@ defmodule Brando.Tenant.Cache do
     :ok
   end
 
+  @doc """
+  Warms every node's cache once the transaction around the caller has
+  committed (at once outside one): this node in the caller's process, the
+  others through `Brando.CacheSync`. Warmed before then, a node could read the
+  registry without the write, and a rollback would leave it cached.
+  """
   @spec invalidate() :: :ok
-  def invalidate, do: warm()
+  def invalidate do
+    Brando.Repo.after_commit(:tenant_cache, fn ->
+      warm()
+      CacheSync.broadcast(__MODULE__, :registry)
+    end)
+  end
+
+  @doc false
+  # Another node wrote the registry: `Brando.CacheSync`
+  def refresh_node_cache(:registry), do: warm()
 
   @spec clear() :: :ok
   def clear do

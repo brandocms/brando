@@ -64,7 +64,7 @@ not need to set `delivery_mode`; Phoenix serves them dynamically.
 
 | Mode | Public delivery | Content publication |
 | --- | --- | --- |
-| `:dynamic` | Phoenix serves each request from the site's current live environment | A live switch takes the site's host to the new live environment, so the change is visible on the next request; no static build or deploy is required |
+| `:dynamic` | Phoenix serves each request from the site's current live environment | A live switch takes the site's host to the new live environment, so the change is visible on the next request, on every node (see [Several nodes](#several-nodes)); no static build or deploy is required |
 | `:static` | A generated HTML build is intended to be served by a static host or CDN | Content becomes public only after an SSG build is generated and deployed |
 
 For `:dynamic`, the request host resolves the site and live environment,
@@ -442,6 +442,22 @@ position. It resolves domains from `Brando.Tenant.Cache`, assigns
 `current_site`, `current_environment`, and `tenant_prefix`, and stores the
 prefix in process context without a database query.
 
+### Several nodes
+
+`Brando.Tenant.Cache` keeps the site and environment registry in memory on
+each node. A registry write (a site created, changed, suspended or deleted, a
+domain moved, an environment created, copied, restored or set live), once its
+transaction has committed, refreshes the node that made it at once and the
+other nodes through `Brando.CacheSync`, over the application's
+`Phoenix.PubSub`. They follow within a fraction of a second, whichever node
+ran the write or the scheduled job. The active and pinned asset sets and each site's shared-library
+allowlist are refreshed the same way.
+
+This needs the nodes connected as one Erlang cluster (with `libcluster` or
+`dns_cluster`, for example), as Phoenix PubSub does. Nodes that are not
+connected keep what they read at boot until they restart. A node cut off when
+a write happens keeps its copy until the next write or a restart.
+
 A LiveView on the site's pages runs in its own process, which the plug never
 reaches. Mount it with `Brando.Tenant.FrontendLiveView`, which does the same
 from the page's host, or its queries read the `public` schema:
@@ -782,8 +798,8 @@ Any environment can become the live environment:
 
 Before changing the live pointer, Brando archives the previous live schema.
 The registry update is transactional, the one-live-environment database
-constraint remains authoritative, and the routing cache is refreshed after a
-successful switch. On a `:dynamic` site, the site's host goes with the live
+constraint remains authoritative, and the routing cache is refreshed on every
+node once the switch has committed ([Several nodes](#several-nodes)). On a `:dynamic` site, the site's host goes with the live
 pointer, in the same transaction: the environment going live and the previous
 live environment swap domains, so `www.example.com` answers from the new live
 environment and `staging.example.com` from the one it replaced. A missing
@@ -951,6 +967,7 @@ byte size and file count. A superuser activates or rolls back sets at
 `MapSet` and optional Vite manifest in `:persistent_term`. Requests absent from
 that set fall through to release assets without a filesystem lookup. Reverting
 clears the active cache and immediately restores `priv/static` fallback.
+Activating and reverting reach every node ([Several nodes](#several-nodes)).
 
 Vite manifest and critical CSS resolution follow the same active-set-first,
 release-fallback order. In multi-site mode caches are keyed by the full tenant

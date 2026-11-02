@@ -21,6 +21,10 @@ defmodule Brando.Content.SharedLibrary.Cache do
     :ok
   end
 
+  # Another node changed the site's allowlist: `Brando.CacheSync`. The next
+  # read loads it again.
+  def refresh_node_cache({site_id, kind}), do: invalidate(site_id, kind)
+
   def clear do
     @keys_key
     |> :persistent_term.get(MapSet.new())
