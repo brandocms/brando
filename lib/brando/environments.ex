@@ -46,7 +46,7 @@ defmodule Brando.Environments do
   end
 
   defp do_create_environment(%Site{} = site, attrs, opts) do
-    with {:ok, environment} <- Registry.create_environment(site, attrs),
+    with {:ok, environment} <- Registry.create_environment(site, attrs, actor: opts[:creator] || opts[:actor]),
          prefix = Tenant.prefix(site, environment),
          :ok <- create_schema_or_compensate(environment, prefix),
          :ok <- clone_structure_or_compensate(environment, prefix, opts),

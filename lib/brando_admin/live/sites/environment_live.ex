@@ -33,6 +33,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         socket
         |> assign(:socket_connected, true)
         |> assign(:can_manage?, can_manage?)
+        |> assign(:can_bind_hosts?, Brando.Authorization.Boundary.superuser?(socket.assigns.current_user))
         |> assign(:tenancy_enabled?, Tenant.enabled?())
         |> assign(:default_scheduled_at, default_scheduled_at())
         |> assign(:restoring, nil)
@@ -100,6 +101,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
             </span>
           </header>
 
+          <div :if={@can_manage? && !@can_bind_hosts?} class="alert environment-hint">
+            <.icon name="info" />
+            <span>{gettext("Only a superuser can change the host an environment answers on.")}</span>
+          </div>
+
           <div class="environment-table-wrap">
             <table>
               <thead>
@@ -123,7 +129,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                         type="text"
                         name="domain"
                         value={environment.domain}
-                        disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:update, :environments)}
+                        disabled={
+                          !@can_bind_hosts? || !@can_manage? || !BrandoAdmin.Authorization.allowed?(:update, :environments)
+                        }
                         placeholder={gettext("No domain")}
                         aria-label={gettext("Domain for %{name}", name: environment.name)}
                       />
@@ -187,7 +195,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <span>{gettext("Key")}</span>
                 <input name="environment[key]" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="spring-redesign" />
               </label>
-              <label>
+              <label :if={@can_bind_hosts?}>
                 <span>{gettext("Domain (optional)")}</span>
                 <input name="environment[domain]" placeholder="spring.example.com" />
               </label>
@@ -537,7 +545,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
     with :ok <- authorize(socket),
          {:ok, environment} <- environment_for_site(socket, id),
-         {:ok, _updated} <- Registry.update_environment(environment, %{domain: domain}) do
+         {:ok, _updated} <-
+           Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user) do
       {:noreply,
        socket
        |> notify(gettext("Domain updated."))
@@ -853,7 +862,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         String.replace(translated, "%{#{key}}", to_string(value))
       end)
     end)
-    |> Enum.flat_map(fn {field, messages} -> Enum.map(messages, &"#{field} #{&1}") end)
+    |> Enum.flat_map(fn
+      # The domain's messages are sentences of their own
+      {:domain, messages} -> messages
+      {field, messages} -> Enum.map(messages, &"#{field} #{&1}")
+    end)
     |> Enum.join(", ")
   end
 

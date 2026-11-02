@@ -3,6 +3,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Authorization.Groups
+  alias Brando.Authorization.Migration
+  alias Brando.Authorization.Scope
   alias Brando.Environments
   alias Brando.Environments.OperationLog
   alias Brando.Environments.Schema
@@ -65,9 +68,238 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     %{site: site, production: production}
   end
 
+  # Audit F02: which site answers on a host is the installation's decision.
+  describe "binding a host" do
+    setup %{site: site} do
+      {:ok, other_site} =
+        Registry.create_site(%{
+          name: "Other",
+          key: "other-environment-live",
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :dynamic
+        })
+
+      {:ok, other} =
+        Environments.create_environment(
+          other_site,
+          %{name: "Production", key: "production", live: true, domain: "www.other.test"},
+          creator: :system
+        )
+
+      {:ok, staging} =
+        Environments.create_environment(
+          site,
+          %{name: "Staging", key: "staging", domain: "staging.acme.test"},
+          creator: :system
+        )
+
+      %{other: other, staging: staging}
+    end
+
+    defp site_admin_conn(site) do
+      admin = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      {:ok, _assignment} = Access.grant(admin, site, :admin)
+      log_in_user(build_conn(), admin)
+    end
+
+    defp group_admin_conn(site, production, owner) do
+      {:ok, _} = Migration.run()
+      admin = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      owner_scope = Scope.site(owner, site, production)
+
+      {:ok, group} =
+        Groups.create(owner_scope, %{name: "Site admins"}, [
+          "brando.admin.access",
+          "brando.environments.read",
+          "brando.environments.create",
+          "brando.environments.update"
+        ])
+
+      {:ok, :ok} = Groups.add_member(owner_scope, group.id, admin.id)
+      log_in_user(build_conn(), admin)
+    end
+
+    defp submit_domain(view, environment, domain),
+      do: render_submit(view, "update_domain", %{"environment_id" => environment.id, "domain" => domain})
+
+    defp submit_new(view, key, domain),
+      do:
+        render_submit(view, "create_environment", %{"environment" => %{"name" => key, "key" => key, "domain" => domain}})
+
+    defp assert_refused(view, site, environment) do
+      for host <- ["cms.free.test", "localhost", "www.other.test.", ""] do
+        submit_domain(view, environment, host)
+        assert Registry.get_environment(environment.id).domain == environment.domain, inspect(host)
+      end
+
+      submit_new(view, "claimed", "cms.free.test")
+      refute Registry.get_environment_by_key(site, "claimed")
+      refute Cache.get_env_by_domain("cms.free.test")
+    end
+
+    test "a per-site admin in legacy mode cannot bind, move or clear one", %{site: site, staging: staging} do
+      {:ok, view, html} = live(site_admin_conn(site), "/admin/config/environments")
+
+      assert_refused(view, site, staging)
+      assert html =~ ~s(aria-label="Domain for Staging")
+      assert has_element?(view, ~s(#environment-#{staging.id} input[name="domain"][disabled]))
+      refute has_element?(view, ~s(#create-environment-form input[name="environment[domain]"]))
+    end
+
+    test "a site admin in groups mode cannot either", %{
+      site: site,
+      production: production,
+      staging: staging,
+      current_user: owner
+    } do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, view, _html} = live(group_admin_conn(site, production, owner), "/admin/config/environments")
+
+      assert_refused(view, site, staging)
+      assert has_element?(view, ~s(#environment-#{staging.id} input[name="domain"][disabled]))
+    end
+
+    test "an admin in single-site mode cannot either", %{conn: _conn, site: site, staging: staging} do
+      put_test_env(:tenancy_mode, :single)
+      put_test_env(:site_key, site.key)
+      Cache.invalidate()
+      admin = Factory.insert(:random_user, role: :admin, config: %Brando.Users.UserConfig{})
+      {:ok, view, _html} = live(log_in_user(build_conn(), admin), "/admin/config/environments")
+
+      assert_refused(view, site, staging)
+    end
+
+    test "a per-site admin still creates an environment without a host", %{site: site} do
+      {:ok, view, _html} = live(site_admin_conn(site), "/admin/config/environments")
+
+      submit_new(view, "no-host", "")
+
+      assert %{domain: nil} = Registry.get_environment_by_key(site, "no-host")
+    end
+
+    test "a superuser binds, moves and clears one, in both modes", %{
+      conn: conn,
+      site: site,
+      staging: staging
+    } do
+      for {mode, host} <- [legacy: "one.acme.test", groups: "two.acme.test"] do
+        put_test_env(:authorization_mode, mode)
+        if mode == :groups, do: {:ok, _} = Migration.run()
+        {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+        submit_domain(view, staging, "  #{String.upcase(host)} ")
+        assert Registry.get_environment(staging.id).domain == host
+        assert {%{id: site_id}, %{id: staging_id}} = Cache.get_env_by_domain(host)
+        assert {site_id, staging_id} == {site.id, staging.id}
+
+        submit_domain(view, staging, "")
+        assert Registry.get_environment(staging.id).domain == nil
+        refute Cache.get_env_by_domain(host)
+      end
+    end
+
+    test "a superuser in groups mode is the Superuser group's, not the role's", %{
+      site: site,
+      staging: staging,
+      production: production,
+      current_user: owner
+    } do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Migration.run()
+      # A superuser by legacy role, whose authority here is a site group only
+      role_only = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      owner_scope = Scope.site(owner, site, production)
+
+      {:ok, group} =
+        Groups.create(owner_scope, %{name: "Site admins"}, [
+          "brando.admin.access",
+          "brando.environments.read",
+          "brando.environments.update"
+        ])
+
+      {:ok, :ok} = Groups.add_member(owner_scope, group.id, role_only.id)
+
+      installation = Scope.installation(owner)
+      {:ok, installation_groups} = Groups.list(installation)
+
+      for %{id: id} <- installation_groups, id != group.id do
+        Groups.remove_member(installation, id, role_only.id)
+      end
+
+      {:ok, view, _html} = live(log_in_user(build_conn(), role_only), "/admin/config/environments")
+
+      submit_domain(view, staging, "cms.free.test")
+
+      assert Registry.get_environment(staging.id).domain == "staging.acme.test"
+    end
+
+    test "a superuser cannot bind what is no host, the installation's or another site's", %{
+      conn: conn,
+      staging: staging
+    } do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      for host <- ["localhost", "https://x.test", "x.test.", "www.other.test"] do
+        submit_domain(view, staging, host)
+        assert Registry.get_environment(staging.id).domain == "staging.acme.test", inspect(host)
+      end
+    end
+
+    test "setting a live environment leaves its stored host alone, however it is spelled", %{
+      site: site,
+      production: production,
+      staging: staging
+    } do
+      for stored <- ["Staging.Acme.TEST", "staging.acme.test.", "https://staging.acme.test"] do
+        Brando.Repo.update_all(
+          from(e in Brando.Environments.Environment, where: e.id == ^staging.id),
+          [set: [domain: stored, live: false]],
+          prefix: "public"
+        )
+
+        Brando.Repo.update_all(
+          from(e in Brando.Environments.Environment, where: e.id == ^production.id),
+          [set: [live: true]],
+          prefix: "public"
+        )
+
+        assert {:ok, %{live: true, domain: ^stored}} =
+                 Environments.set_live(Registry.get_environment(staging.id), creator: :system)
+
+        assert Cache.get_live_env(site.key).id == staging.id
+      end
+    end
+
+    test "a per-site admin sets an environment with a stored host live", %{site: site, staging: staging} do
+      {:ok, view, _html} = live(site_admin_conn(site), "/admin/config/environments")
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        render_submit(view, "schedule_set_live", %{
+          "operation" => %{
+            "environment_id" => staging.id,
+            "scheduled_at" =>
+              DateTime.utc_now()
+              |> DateTime.add(7200)
+              |> DateTime.shift_zone!(Brando.timezone())
+              |> Calendar.strftime("%Y-%m-%dT%H:%M")
+          }
+        })
+      end)
+
+      assert has_element?(view, "#environment-#{staging.id}")
+
+      assert {:ok, %{live: true, domain: "staging.acme.test"}} =
+               Environments.set_live(Registry.get_environment(staging.id), creator: :system)
+    end
+  end
+
   test "copying into the live environment has to be ticked", %{conn: conn, site: site, production: production} do
     {:ok, preview} =
-      Environments.create_environment(site, %{name: "Preview", key: "preview-copy-live", domain: "p.example.com"})
+      Environments.create_environment(site, %{name: "Preview", key: "preview-copy-live", domain: "p.example.com"},
+        creator: :system
+      )
 
     {:ok, view, _html} = live(conn, "/admin/config/environments")
 
@@ -272,7 +504,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
 
     view
     |> form("#create-environment-form",
-      environment: %{name: "Forbidden", key: "forbidden", domain: ""}
+      environment: %{name: "Forbidden", key: "forbidden"}
     )
     |> render_submit()
 

@@ -87,12 +87,16 @@ defmodule Brando.SSGBuildsTest do
       })
 
     {:ok, environment} =
-      Registry.create_environment(site, %{
-        name: "Production",
-        key: "production",
-        domain: "#{site.key}.test",
-        live: true
-      })
+      Registry.create_environment(
+        site,
+        %{
+          name: "Production",
+          key: "production",
+          domain: "#{site.key}.test",
+          live: true
+        },
+        actor: :system
+      )
 
     %{site: Registry.get_site(site.id), environment: environment, root: root}
   end
@@ -521,12 +525,16 @@ defmodule Brando.SSGBuildsTest do
       })
 
     {:ok, _environment} =
-      Registry.create_environment(other_site, %{
-        name: "Production",
-        key: "production",
-        domain: "#{other_site.key}.test",
-        live: true
-      })
+      Registry.create_environment(
+        other_site,
+        %{
+          name: "Production",
+          key: "production",
+          domain: "#{other_site.key}.test",
+          live: true
+        },
+        actor: :system
+      )
 
     build = ready_build(context.site, context.environment)
 
@@ -539,6 +547,24 @@ defmodule Brando.SSGBuildsTest do
 
     assert response(preview(build, "#{other_site.key}.test"), 404)
     assert response(preview(build, "unknown.test"), 404)
+  end
+
+  # Audit F02: a preview keeps its origin and lets scripts run, so it must not
+  # open on the admin's host, even for a site bound to it before that was
+  # refused.
+  test "refuses a preview on the installation's own host", context do
+    build = ready_build(context.site, context.environment)
+    admin_host = URI.parse(Brando.endpoint().url()).host
+
+    assert response(preview(build, admin_host), 404)
+
+    context.environment
+    |> Ecto.Changeset.change(domain: admin_host)
+    |> Brando.Repo.update!(prefix: "public")
+
+    Brando.Tenant.Cache.invalidate()
+
+    assert response(preview(build, admin_host), 404)
   end
 
   test "refuses a preview when tenancy is on but the request resolved no site", context do

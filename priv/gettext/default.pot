@@ -2261,6 +2261,11 @@ msgstr ""
 msgid "Another editor removed the block you were changing."
 msgstr ""
 
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "Another environment already uses this host."
+msgstr ""
+
 #: lib/brando_admin/components/form/saved_elsewhere.ex
 #, elixir-autogen, elixir-format
 msgid "Another tab or editor saved %{field}"
@@ -6709,6 +6714,11 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a group name (up to 100 characters) and a description up to 500 characters."
+msgstr ""
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a host only, such as www.example.com, with no scheme, path, port or trailing dot."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/html_params.ex
@@ -11808,6 +11818,12 @@ msgstr[1] ""
 #: lib/brando_admin/components/form/scheduled_publishing_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Only a pending entry is published at this time. Set the status to Pending to schedule it."
+msgstr ""
+
+#: lib/brando/tenant/registry.ex
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can change the host an environment answers on."
 msgstr ""
 
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
@@ -17185,6 +17201,11 @@ msgstr ""
 #: lib/brando_admin/components/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "The image was not set: the picker was opened for another field before its copy was ready"
+msgstr ""
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "The installation itself uses this host, for its admin, media or CDN."
 msgstr ""
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex

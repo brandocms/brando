@@ -2263,6 +2263,11 @@ msgstr "En annen redaktør beholdt sin versjon av en ny blokk du også hadde end
 msgid "Another editor removed the block you were changing."
 msgstr "En annen redaktør fjernet blokken du endret."
 
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "Another environment already uses this host."
+msgstr "Et annet miljø bruker allerede denne verten."
+
 #: lib/brando_admin/components/form/saved_elsewhere.ex
 #, elixir-autogen, elixir-format
 msgid "Another tab or editor saved %{field}"
@@ -6712,6 +6717,11 @@ msgstr "Skriv inn en dato."
 #, elixir-autogen, elixir-format
 msgid "Enter a group name (up to 100 characters) and a description up to 500 characters."
 msgstr "Skriv inn et gruppenavn på opptil 100 tegn og en beskrivelse på opptil 500 tegn."
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a host only, such as www.example.com, with no scheme, path, port or trailing dot."
+msgstr "Skriv bare inn en vert, for eksempel www.example.com, uten protokoll, sti, port eller punktum til slutt."
 
 #: lib/brando_admin/components/form/input/blocks/html_params.ex
 #, elixir-autogen, elixir-format
@@ -11811,6 +11821,12 @@ msgstr[1] "%{count} brukere dette gjelder, har ikke satt det opp. De setter det 
 #, elixir-autogen, elixir-format
 msgid "Only a pending entry is published at this time. Set the status to Pending to schedule it."
 msgstr "Bare en oppføring med status Venter publiseres på dette tidspunktet. Sett statusen til Venter for å planlegge den."
+
+#: lib/brando/tenant/registry.ex
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can change the host an environment answers on."
+msgstr "Bare en superbruker kan endre hvilken vert et miljø svarer på."
 
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
@@ -17190,6 +17206,11 @@ msgstr "Bildet denne innholdstypen deler, slik det deles."
 #, elixir-autogen, elixir-format
 msgid "The image was not set: the picker was opened for another field before its copy was ready"
 msgstr "Bildet ble ikke satt inn: bildevelgeren ble åpnet for et annet felt før kopien var klar"
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "The installation itself uses this host, for its admin, media or CDN."
+msgstr "Installasjonen bruker selv denne verten, til admin, media eller CDN."
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format

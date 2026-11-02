@@ -62,12 +62,16 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       })
 
     {:ok, _environment} =
-      Registry.create_environment(site, %{
-        name: "Production",
-        key: "production",
-        live: true,
-        domain: "existing.dashboard.test"
-      })
+      Registry.create_environment(
+        site,
+        %{
+          name: "Production",
+          key: "production",
+          live: true,
+          domain: "existing.dashboard.test"
+        },
+        actor: :system
+      )
 
     editor =
       Brando.Factory.insert(:random_user,
