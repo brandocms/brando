@@ -162,22 +162,24 @@ defmodule BrandoAdmin.Authorization do
   end
 
   defp legacy_recheck(socket, trigger \\ :own) do
-    %{current_user: user, current_site: site, legacy_site_rule: site_rule} = socket.assigns
+    %{current_user: user, current_site: site} = socket.assigns
     site_id = if site && Brando.Tenant.mode() == :multi, do: site.id
 
     case Access.legacy_standing(user.id, site_id) do
-      nil ->
-        {:halt, redirect(socket, to: "/admin/access-denied")}
+      nil -> {:halt, redirect(socket, to: "/admin/access-denied")}
+      {role, true} -> if lowered?(user.role, role), do: remount(socket), else: {:cont, legacy_hold_role(socket, role)}
+      {role, false} -> if lowered?(user.role, role), do: remount(socket), else: site_lost(socket, role, trigger)
+    end
+  end
 
-      {role, enterable?} ->
-        cond do
-          lowered?(user.role, role) -> remount(socket)
-          enterable? or site_rule == :ignore -> {:cont, legacy_hold_role(socket, role)}
-          site_rule == :leave -> {:halt, redirect(socket, to: "/admin/access-denied")}
-          trigger == :broadcast -> {:cont, legacy_hold_role(socket, role)}
-          rejoins_on_same_site?(user, site) -> {:halt, socket}
-          true -> remount(socket)
-        end
+  defp site_lost(socket, role, trigger) do
+    %{current_user: user, current_site: site, legacy_site_rule: site_rule} = socket.assigns
+
+    cond do
+      site_rule == :ignore or (site_rule == :rejoin and trigger == :broadcast) -> {:cont, legacy_hold_role(socket, role)}
+      site_rule == :leave -> {:halt, redirect(socket, to: "/admin/access-denied")}
+      rejoins_on_same_site?(user, site) -> {:halt, socket}
+      true -> remount(socket)
     end
   end
 
