@@ -59,10 +59,15 @@ defmodule BrandoAdmin.Sites.ActivityLive do
 
   def refresh_authorization(socket), do: socket
 
-  # The load narrows by read grant and record policy: an event it no longer
-  # lists is one the reader may no longer compare.
-  defp close_unreadable_comparison(%{assigns: %{comparison: %{event: %{id: id}}, events: events}} = socket) do
-    if Enum.any?(events, &(&1.id == id)), do: socket, else: assign(socket, :comparison, nil)
+  # Asked of the event itself: the load's list ends at its limit and its filters,
+  # which say nothing of what the reader may read.
+  defp close_unreadable_comparison(%{assigns: %{comparison: %{event: %{id: id}}}} = socket) do
+    readable? =
+      Brando.Authorization.with_snapshots(fn ->
+        readable_filters() |> Map.put(:id, id) |> Activity.count() > 0
+      end)
+
+    if readable?, do: socket, else: assign(socket, :comparison, nil)
   end
 
   defp close_unreadable_comparison(socket), do: socket
@@ -184,7 +189,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   defp load(socket) do
     Brando.Authorization.with_snapshots(fn ->
       # Asked on each load: a read grant may have gone since the view opened.
-      filters = query_filters(socket.assigns.filters, readable_schemas())
+      filters = query_filters(socket.assigns.filters)
       events = Activity.list(filters, limit: socket.assigns.limit)
 
       socket
@@ -195,7 +200,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
     end)
   end
 
-  defp query_filters(filters, readable) do
+  defp query_filters(filters) do
     filters["actor"]
     |> parse_actor()
     |> Map.merge(%{
@@ -203,10 +208,15 @@ defmodule BrandoAdmin.Sites.ActivityLive do
       user_id: parse_id(filters["user"]),
       schema: filters["type"],
       action: parse_action(filters["action"]),
-      since: since(filters["period"]),
-      schema_in: readable,
-      readable_entries: readable_entries(readable)
+      since: since(filters["period"])
     })
+    |> Map.merge(readable_filters())
+  end
+
+  # The read grant and the record policy
+  defp readable_filters do
+    readable = readable_schemas()
+    %{schema_in: readable, readable_entries: readable_entries(readable)}
   end
 
   # A record read policy hides some entries of a type the user may read: their

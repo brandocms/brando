@@ -75,7 +75,7 @@ defmodule BrandoAdmin.StaleAuthorityTest do
   end
 
   defp assert_remounted(ref) do
-    assert_receive {:DOWN, ^ref, :process, _, {:shutdown, :authority_lowered}}, 1000
+    assert_receive {:DOWN, ^ref, :process, _, {:shutdown, :authority_changed}}, 1000
   end
 
   # A write no broadcast tells of, as from another node or the database
@@ -387,9 +387,24 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       title
     end
 
+    # A site no longer enterable ends the sticky views too, which takes LiveViewTest's
+    # one client with them. These tests look at the page's own view.
+    defp live_page(conn, path) do
+      {:ok, view, _} = live(conn, path)
+
+      for child <- live_children(view) do
+        :sys.replace_state(child.pid, fn state ->
+          Phoenix.PubSub.unsubscribe(Brando.pubsub(), "brando:authorization")
+          state
+        end)
+      end
+
+      view
+    end
+
     test "revoking ends the view, on a LiveView event's screen and on the page form", c do
-      {:ok, list, _} = live(c.editor_conn, "/admin/pages")
-      {:ok, form, _} = live(c.editor_conn, "/admin/pages/update/#{c.page.id}")
+      list = live_page(c.editor_conn, "/admin/pages")
+      form = live_page(c.editor_conn, "/admin/pages/update/#{c.page.id}")
 
       :ok = Access.revoke(c.editor, c.site)
 
@@ -399,18 +414,18 @@ defmodule BrandoAdmin.StaleAuthorityTest do
     end
 
     test "suspending the site ends the view", c do
-      {:ok, form, _} = live(c.editor_conn, "/admin/pages/update/#{c.page.id}")
+      form = live_page(c.editor_conn, "/admin/pages/update/#{c.page.id}")
       {:ok, _} = Setup.suspend_site(c.site, actor: c.current_user)
       assert_redirect(form, "/admin/access-denied")
     end
 
     test "archiving the site ends the view", c do
-      {:ok, form, _} = live(c.editor_conn, "/admin/pages/update/#{c.page.id}")
+      form = live_page(c.editor_conn, "/admin/pages/update/#{c.page.id}")
       {:ok, _} = Setup.suspend_site(c.site, actor: c.current_user)
       assert_redirect(form, "/admin/access-denied")
 
       {:ok, _} = Setup.activate_site(Registry.get_site(c.site.id), actor: c.current_user)
-      {:ok, form, _} = live(c.editor_conn, "/admin/pages/update/#{c.page.id}")
+      form = live_page(c.editor_conn, "/admin/pages/update/#{c.page.id}")
       {:ok, _} = Setup.archive_site(Registry.get_site(c.site.id), actor: c.current_user)
       assert_redirect(form, "/admin/access-denied")
     end
@@ -440,7 +455,11 @@ defmodule BrandoAdmin.StaleAuthorityTest do
 
       :ok = Access.revoke(other, c.site)
 
-      assert view |> render() |> Floki.parse_document!() |> Floki.find("input[name='page[title]']") |> Floki.attribute("value") ==
+      assert view
+             |> render()
+             |> Floki.parse_document!()
+             |> Floki.find("input[name='page[title]']")
+             |> Floki.attribute("value") ==
                ["Typed"]
 
       refute_remounted(ref)
@@ -457,14 +476,110 @@ defmodule BrandoAdmin.StaleAuthorityTest do
     end
 
     test "a superuser suspending the site the session is on stays on the sites screen", c do
-      conn = post(c.conn, "/admin/environment", %{"site" => c.site.key})
-      {:ok, view, _} = live(recycle(conn), "/admin/sites")
+      view = on_site(c)
 
-      {:ok, _} = Setup.suspend_site(c.site, actor: c.current_user)
+      # Told to this view alone: its sticky views end (below), and the test's client with them.
+      Repo.update_all(from(s in Brando.Sites.Site, where: s.id == ^c.site.id), set: [status: :suspended])
+      Cache.invalidate()
+      send(view.pid, {:authorization_changed, :all})
 
       assert :sys.get_state(view.pid).socket.assigns.current_site.id == c.site.id
       assert render_click(view, "refresh") =~ "suspended"
-      for child <- live_children(view), do: assert(render(child))
+    end
+
+    defp on_site(c) do
+      conn = post(c.conn, "/admin/environment", %{"site" => c.site.key})
+      {:ok, view, _} = live(recycle(conn), "/admin/sites")
+      view
+    end
+
+    # A sticky view by itself, as the client rejoins it: with the session the page
+    # rendered it with, and its own LiveViewTest client.
+    defp sticky(c, module \\ BrandoAdmin.Nav) do
+      {:ok, view, _} =
+        live_isolated(c.conn, module,
+          session: %{
+            "user_token" => get_session(c.conn, :user_token),
+            "brando_site_key" => c.site.key,
+            "current_url" => "/admin/sites"
+          }
+        )
+
+      view
+    end
+
+    defp assigns_of(view), do: :sys.get_state(view.pid).socket.assigns
+
+    test "suspending the site ends the sticky views, and they rejoin on none or another", c do
+      refs =
+        for module <- [BrandoAdmin.Nav, BrandoAdmin.Chrome, BrandoAdmin.CommandPaletteLive],
+            do: c |> sticky(module) |> watch()
+
+      {:ok, _} = Setup.suspend_site(c.site, actor: c.current_user)
+
+      for ref <- refs, do: assert_remounted(ref)
+
+      nav = sticky(c)
+      refute assigns_of(nav).current_site
+      render_click(nav, "toggle_nav", %{"minimized" => "true"})
+      assert assigns_of(nav).minimized == "true"
+
+      other = site("stale-site-other")
+      environment(other, "production", true)
+
+      nav = sticky(c)
+      assert assigns_of(nav).current_site.id == other.id
+      render_click(nav, "toggle_nav", %{"minimized" => "true"})
+      assert assigns_of(nav).minimized == "true"
+    end
+
+    test "a suspension no broadcast told of ends a sticky view on its next event", c do
+      view = on_site(c)
+      nav = find_live_child(view, "brando-nav")
+
+      Repo.update_all(from(s in Brando.Sites.Site, where: s.id == ^c.site.id), set: [status: :suspended])
+      Cache.invalidate()
+
+      assert_event_ends_view(nav, fn -> render_click(nav, "toggle_nav", %{"minimized" => "true"}) end)
+    end
+
+    # A rejoin asks the same cache: it would get the same site back, and a form's
+    # recovery event would end the view again. It refuses until the cache has heard.
+    test "a sticky view stays and refuses while a rejoin would resolve the same site", c do
+      view = on_site(c)
+      nav = find_live_child(view, "brando-nav")
+      ref = watch(nav)
+
+      Repo.update_all(from(s in Brando.Sites.Site, where: s.id == ^c.site.id), set: [status: :suspended])
+
+      render_click(nav, "toggle_nav", %{"minimized" => "true"})
+      refute_remounted(ref)
+      refute assigns_of(nav)[:minimized] == "true"
+
+      assert assigns_of(sticky(c)).current_site.id == c.site.id
+    end
+
+    test "a sticky view with an ended session takes no hooks, and survives a broadcast and an event", c do
+      session = %{"user_token" => "ended", "current_url" => "/admin"}
+      {:ok, nav, _} = live_isolated(c.conn, BrandoAdmin.Nav, session: session)
+      {:ok, chrome, _} = live_isolated(c.conn, BrandoAdmin.Chrome, session: session)
+      {:ok, palette, _} = live_isolated(c.conn, BrandoAdmin.CommandPaletteLive, session: session)
+
+      refute assigns_of(nav).current_user
+      # What `legacy_check` asks of a view only superusers may open: no, without a raise
+      refute Boundary.superuser?(nil)
+
+      Brando.Authorization.Realtime.broadcast_changed()
+
+      for view <- [nav, chrome, palette], do: assert(render(view))
+
+      render_click(nav, "toggle_nav", %{"minimized" => "true"})
+      assert assigns_of(nav).minimized == "true"
+
+      for view <- [nav, chrome, palette] do
+        refute Map.has_key?(assigns_of(view), :legacy_site_rule)
+        refute "brando:authorization" in Elixir.Registry.keys(Brando.pubsub(), view.pid)
+      end
     end
   end
 
@@ -588,6 +703,82 @@ defmodule BrandoAdmin.StaleAuthorityTest do
 
       {:ok, :ok} = Groups.remove_member(Scope.current(c.current_user), grant.id, reader.id)
 
+      render(view)
+      refute :sys.get_state(view.pid).socket.assigns.comparison
+    end
+
+    # What compare stores, whichever revisions the event has.
+    defp hold_comparison(view, event) do
+      :sys.replace_state(view.pid, fn state ->
+        put_in(state.socket.assigns[:comparison], %{event: event, result: :error})
+      end)
+    end
+
+    # Enough newer events of `event`'s entry to push it off the log's first page.
+    defp push_out_of_list(event) do
+      later = DateTime.add(event.inserted_at, 60, :second)
+
+      rows =
+        for n <- 1..50 do
+          %{
+            action: :updated,
+            source: :admin,
+            schema: event.schema,
+            entry_id: event.entry_id,
+            title: "Newer #{n}",
+            inserted_at: DateTime.add(later, n, :second),
+            fields: [],
+            details: %{}
+          }
+        end
+
+      Repo.insert_all(Brando.Activity.Event, rows)
+    end
+
+    test "an open comparison stays when newer events push its event off the list", c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Migration.run()
+
+      {conn, reader} = Brando.Test.Users.log_in_as(build_conn(), permissions: ~w(brando.activity.read))
+      Brando.Test.Users.grant_permissions(reader, ~w(brando.pages.read))
+      create_page(c.current_user, "Compared")
+      [event] = Repo.all(Brando.Activity.Event)
+
+      {:ok, view, _} = live(conn, "/admin/config/activity")
+      hold_comparison(view, event)
+      push_out_of_list(event)
+
+      Brando.Authorization.Realtime.broadcast_changed()
+
+      render(view)
+      refute Enum.any?(:sys.get_state(view.pid).socket.assigns.events, &(&1.id == event.id))
+      assert :sys.get_state(view.pid).socket.assigns.comparison
+    end
+
+    test "an open comparison follows the record policy, not the list", c do
+      put_test_env(:authorization_mode, :groups)
+      viewer = account(:user)
+      {:ok, _} = Migration.run()
+      scope = Scope.standalone(c.current_user)
+      keys = ~w(brando.admin.access brando.activity.read authorization.policy_pages.read)
+      {:ok, group} = Groups.create(scope, %{name: "Policy readers"}, keys)
+      {:ok, :ok} = Groups.add_member(scope, group.id, viewer.id)
+
+      own = Factory.insert(:page, title: "Own", creator: viewer)
+      own = Repo.get!(Brando.AuthorizationTestResources.Page, own.id)
+      {:ok, _} = Brando.Activity.record(:updated, own, c.current_user, fields: ["title"])
+      [event] = Repo.all(Brando.Activity.Event)
+
+      {:ok, view, _} = live(log_in_user(build_conn(), viewer), "/admin/config/activity")
+      hold_comparison(view, event)
+      push_out_of_list(event)
+
+      Brando.Authorization.Realtime.broadcast_changed()
+      render(view)
+      assert :sys.get_state(view.pid).socket.assigns.comparison
+
+      Repo.update_all(from(p in Page, where: p.id == ^own.id), set: [creator_id: c.current_user.id])
+      Brando.Authorization.Realtime.broadcast_changed()
       render(view)
       refute :sys.get_state(view.pid).socket.assigns.comparison
     end

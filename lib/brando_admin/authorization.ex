@@ -12,16 +12,17 @@ defmodule BrandoAdmin.Authorization do
     * a role lowered ends the view's process. The client rejoins, as after a deploy:
       the view mounts at the stored role and its forms recover what was typed;
     * a site that may no longer be entered sends the view to the access-denied page.
-      Installation screens and the user's own password do not depend on a site, and
-      the layout's sticky views (navigation, chrome, command palette), which cannot
-      tell what screen they sit beside, refuse their events and leave the rest to it;
+      Installation screens and the user's own password do not depend on a site. The
+      layout's sticky views (navigation, chrome, command palette), which cannot tell
+      what screen they sit beside, end their process as for a lowered role, and rejoin
+      on the site the session resolves to now, or none;
     * otherwise, nothing happens: an editor whose authority did not change is left
       alone, and a role raised takes effect for the view's next check.
   """
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1, redirect: 2, put_flash: 3]
   alias Brando.Authorization.{Administration, Boundary, Engine, Scope}
-  alias Brando.Tenant.Access
+  alias Brando.Tenant.{Access, Cache}
 
   @legacy_actor_key {__MODULE__, :legacy_actor}
 
@@ -116,6 +117,10 @@ defmodule BrandoAdmin.Authorization do
       else: {:cont, attach_legacy_hooks(socket, params)}
   end
 
+  # Without a user its session has just ended: there is nobody to check again, and
+  # the page's own LiveView sends it to log in.
+  defp attach_legacy_hooks(%{assigns: %{current_user: nil}} = socket, _params), do: socket
+
   defp attach_legacy_hooks(socket, params) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:authorization")
 
@@ -145,7 +150,7 @@ defmodule BrandoAdmin.Authorization do
   defp legacy_info_hook(_message, socket), do: {:cont, socket}
 
   # What a site no longer enterable means for this view
-  defp legacy_site_rule(_socket, :not_mounted_at_router), do: :refuse
+  defp legacy_site_rule(_socket, :not_mounted_at_router), do: :rejoin
 
   defp legacy_site_rule(socket, params) do
     requirement = requirement(socket.view, params, socket.assigns[:live_action])
@@ -165,9 +170,18 @@ defmodule BrandoAdmin.Authorization do
           lowered?(user.role, role) -> remount()
           enterable? or socket.assigns.legacy_site_rule == :ignore -> {:cont, legacy_hold_role(socket, role)}
           socket.assigns.legacy_site_rule == :leave -> {:halt, redirect(socket, to: "/admin/access-denied")}
-          true -> {:halt, socket}
+          rejoins_on_same_site?(user, site) -> {:halt, socket}
+          true -> remount()
         end
     end
+  end
+
+  # A rejoin resolves the site from this node's cache (`Brando.Tenant.AdminContext`).
+  # Until the cache has heard of the change that is the same site, and the view would
+  # end again on the next event, a form's recovery among them: it refuses meanwhile.
+  defp rejoins_on_same_site?(user, site) do
+    cached = Cache.get_site(site.key)
+    not is_nil(cached) and Access.can_access?(user, cached)
   end
 
   defp lowered?(held, stored), do: role_rank(stored) < role_rank(held)
@@ -181,7 +195,7 @@ defmodule BrandoAdmin.Authorization do
   # the session's sockets: closing a socket makes the client reload the page, which
   # loses what a form holds, and a rejoin recovers it. No crash report either.
   @spec remount() :: no_return()
-  defp remount, do: exit({:shutdown, :authority_lowered})
+  defp remount, do: exit({:shutdown, :authority_changed})
 
   defp legacy_hold_role(%{assigns: %{current_user: %{role: role}}} = socket, role), do: socket
 
