@@ -16,6 +16,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
        ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy update_domain create_environment rollback cancel_operation)}
   )
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Environments
   alias Brando.Environments.Environment
   alias Brando.Tenant
@@ -774,33 +776,31 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   # or clear a host the screen never showed. The form submits the domain it was
   # rendered with, since the switch's broadcast may already have refreshed this
   # screen's assigns, and only the form posts this event, so a submission
-  # without it is refused too. The row is read and written under the site lock
-  # a live switch holds from before its transaction until after it commits, so
-  # no swap lands between the check and the write.
+  # without it is refused too. The row is locked from the check to the write,
+  # as a live switch locks it to swap domains (`Brando.Environments`), so no
+  # swap lands in between. A row lock, not the site lock: a switch holds that
+  # while it archives the live schema, which can take minutes.
   defp update_shown_domain(_socket, _environment, shown, _domain) when not is_binary(shown),
     do: {:error, :domain_moved}
 
   defp update_shown_domain(socket, %Environment{id: id, site_id: site_id}, shown, domain) do
     shown = if shown == "", do: nil, else: shown
 
-    case Registry.get_site(site_id) do
-      nil ->
-        {:error, :environment_not_found}
-
-      site ->
-        Environments.with_site_lock(site, fn ->
-          case Registry.get_environment(id) do
-            %Environment{site_id: ^site_id, domain: ^shown} = environment ->
-              Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user)
-
-            %Environment{site_id: ^site_id} ->
-              {:error, :domain_moved}
-
-            _ ->
-              {:error, :environment_not_found}
+    Brando.Repo.transaction(fn ->
+      case Brando.Repo.one(from(e in Environment, where: e.id == ^id, lock: "FOR UPDATE"), prefix: "public") do
+        %Environment{site_id: ^site_id, domain: ^shown} = environment ->
+          case Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user) do
+            {:ok, updated} -> updated
+            {:error, reason} -> Brando.Repo.rollback(reason)
           end
-        end)
-    end
+
+        %Environment{site_id: ^site_id} ->
+          Brando.Repo.rollback(:domain_moved)
+
+        _ ->
+          Brando.Repo.rollback(:environment_not_found)
+      end
+    end)
   end
 
   defp parse_future_datetime(value) when is_binary(value) do
