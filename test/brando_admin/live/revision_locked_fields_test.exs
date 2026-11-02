@@ -105,7 +105,7 @@ defmodule BrandoAdmin.RevisionLockedFieldsTest do
 
   defp source_field(view, field), do: Ecto.Changeset.get_field(form_assigns(view).form.source, field)
 
-  defp save(view, params \\ %{}) do
+  defp save(view, params) do
     view |> form(@form) |> render_submit(%{"article" => params})
     assert_push_event(view, "b:submit", %{}, 2_000)
     view |> form(@form) |> render_submit(%{"article" => params})
