@@ -157,6 +157,35 @@ defmodule Brando.Videos.ProviderVideoReaddTest do
     refute Repo.get(Video, uploaded.id)
   end
 
+  # A purge killed during the provider call is not tested: the SQL sandbox
+  # shuts the test's connection down when a process holding it exits. A
+  # raise rolls the row's delete back the same way.
+  test "a purge whose provider client raises keeps the row, and the next purge deletes the video" do
+    uploaded = "asset-1" |> mux_uploaded() |> expire()
+
+    # Missing credentials raise in the Mux client, once the row's delete ran.
+    put_test_env(Mux, delete_remote_on: :on_purge, req_options: [plug: {Req.Test, Mux}])
+    assert_raise RuntimeError, ~r/Mux credentials not configured/, &purge_videos/0
+    assert Repo.get!(Video, uploaded.id).deleted_at
+
+    mux(:on_purge)
+    assert purge_videos() == 1
+    assert_received {:mux, "DELETE", "/video/v1/assets/asset-1"}
+    refute Repo.get(Video, uploaded.id)
+  end
+
+  test "a held record restored after the purge read it is not counted as purged" do
+    uploaded = "asset-1" |> mux_uploaded() |> expire()
+    imported = mux_uploaded("asset-1", imported: true)
+
+    restore_after_purge_reads(uploaded)
+    assert purge_videos() == 0
+
+    refute_received {:mux, "DELETE", _path}
+    assert_plays(Repo.get!(Video, uploaded.id))
+    assert_plays(imported)
+  end
+
   for authorization_mode <- [:legacy, :groups] do
     @authorization_mode authorization_mode
 
@@ -291,6 +320,15 @@ defmodule Brando.Videos.ProviderVideoReaddTest do
     Repo.update_all(from(v in Video, where: not is_nil(v.deleted_at)),
       set: [deleted_at: DateTime.add(DateTime.utc_now(:second), -31, :day)]
     )
+  end
+
+  # Purges the expired records, and returns how many videos it purged.
+  defp purge_videos do
+    Brando.SoftDelete.Query.list_soft_delete_schemas()
+    |> Enum.zip(Brando.SoftDelete.Query.clean_up_soft_deletions())
+    |> Map.new()
+    |> Map.fetch!(Video)
+    |> elem(0)
   end
 
   # Restores `video` right after the purge's first read of the video table.

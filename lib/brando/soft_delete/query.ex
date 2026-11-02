@@ -83,11 +83,13 @@ defmodule Brando.SoftDelete.Query do
     # provider is asked once the row is gone, and not when the delete, still
     # filtered on expiry, leaves it: a restore from the trash takes no lock,
     # so the record may have been restored, or restored and deleted again,
-    # since it was read. A video whose holders could not be read
-    # (`Brando.Videos.ProviderHoldings`), or whose lock an add or another
-    # delete held too long, is still at its provider. Its row stays for the
-    # next run to try again; deleting it would leave the provider video behind
-    # for good.
+    # since it was read. The row's delete commits with the provider's answer,
+    # so a run that dies before the answer keeps the row. A video whose holders
+    # could not be read (`Brando.Videos.ProviderHoldings`), or whose lock an
+    # add or another delete held too long, is still at its provider. Its row
+    # stays for the next run to try again; deleting it would leave the
+    # provider video behind for good. Only rows the delete removed are
+    # counted.
     purged =
       Enum.count(on_purge, fn video ->
         result =

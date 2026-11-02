@@ -320,7 +320,7 @@ defmodule Brando.Videos.Uploader do
     at the provider.
   - `{:error, reason}` if deletion fails
   """
-  def delete_remote(%Brando.Videos.Video{} = video), do: delete_remote(video, fn -> true end)
+  def delete_remote(%Brando.Videos.Video{} = video), do: delete_then_purge(video, nil)
 
   @doc """
   Runs `purge`, which deletes the video's row and returns whether it did,
@@ -331,20 +331,25 @@ defmodule Brando.Videos.Uploader do
   another environment's purge of the same video reads the holdings: two
   purges that overlap cannot each see the other's row and both leave the
   video at the provider. It runs before the provider is asked, which is only
-  when it deleted the row. A restore from the trash takes no lock, so a
-  record restored since it was read, or restored and deleted again, is left
-  by `purge` and keeps its video (`{:error, :not_purged}`). Outside a
-  transaction, `purge`'s queries commit as they run. When the holdings
-  cannot be read or the lock is busy (`{:error, :holdings_unavailable}`,
-  `{:error, :busy}`), `purge` does not run, and the row stays for the next
-  purge to try again.
+  when it deleted the row, and in one transaction with that call: the row's
+  delete commits once the provider has answered, whatever the answer, and a
+  purge killed or raising before then leaves the row for the next purge. A
+  restore from the trash takes no lock, so a record restored since it was
+  read, or restored and deleted again, is left by `purge` and keeps its
+  video. Whenever `purge` leaves the row, held or not, the result is
+  `{:error, :not_purged}`. When the holdings cannot be read or the lock is
+  busy (`{:error, :holdings_unavailable}`, `{:error, :busy}`), `purge` does
+  not run, and the row stays for the next purge to try again.
   """
   @spec delete_remote(Brando.Videos.Video.t(), (-> boolean())) :: :ok | {:error, term()}
+  def delete_remote(%Brando.Videos.Video{} = video, purge) when is_function(purge, 0), do: delete_then_purge(video, purge)
+
   # Added from the provider's library: someone else's video, possibly in use
   # elsewhere. Brando forgets it but does not delete it.
-  def delete_remote(%Brando.Videos.Video{meta: %{"imported" => true}}, purge), do: then_purge(:ok, purge)
+  defp delete_then_purge(%Brando.Videos.Video{meta: %{"imported" => true}} = video, purge),
+    do: then_purge(:ok, video, purge)
 
-  def delete_remote(%Brando.Videos.Video{} = video, purge) do
+  defp delete_then_purge(video, purge) do
     case library_remote_id(video) do
       {module, remote_id} when is_binary(remote_id) ->
         # An add or a restore of the same video waits, and this waits for one
@@ -359,24 +364,37 @@ defmodule Brando.Videos.Uploader do
     end
   end
 
+  # `delete_remote/1` deletes no row: the record's own delete has committed,
+  # and the provider is asked outside any transaction.
+  defp purge_then_delete(video, nil), do: dispatch_delete_remote(video)
+
   # The row goes first, and the provider is asked only if it went: a restore
   # from the trash does not take the video's lock, so since the holdings were
   # read the record may be live again, or deleted again and waiting for a
-  # purge of its own.
+  # purge of its own. The row's delete commits after the provider answered,
+  # so a purge that dies in between leaves the row, not a provider video no
+  # purge will delete. The cost is that this environment's video row, and
+  # its video table against a `DROP SCHEMA`, stay locked for the one
+  # provider call; the holdings, read before, lock no other environment's.
+  # No checkout deadline, as in `with_video_lock/3`: the provider clients
+  # have their own timeouts.
   defp purge_then_delete(video, purge) do
-    if purge.() do
-      dispatch_delete_remote(video)
-    else
-      Logger.info("Video #{video.id} left at its provider: not_purged, restored since it was read")
-      {:error, :not_purged}
-    end
+    {:ok, result} =
+      Brando.Repo.repo().transaction(
+        fn -> if purge.(), do: dispatch_delete_remote(video), else: not_purged(video) end,
+        timeout: :infinity
+      )
+
+    result
   end
 
-  defp then_purge({:error, reason} = result, _purge) when reason in [:holdings_unavailable, :busy], do: result
+  defp then_purge({:error, reason} = result, _video, _purge) when reason in [:holdings_unavailable, :busy], do: result
+  defp then_purge(result, _video, nil), do: result
+  defp then_purge(result, video, purge), do: if(purge.(), do: result, else: not_purged(video))
 
-  defp then_purge(result, purge) do
-    purge.()
-    result
+  defp not_purged(video) do
+    Logger.info("Video #{video.id} not purged: restored since it was read")
+    {:error, :not_purged}
   end
 
   defp delete_unless_held(video, module, remote_id, mode, purge) do
@@ -390,11 +408,11 @@ defmodule Brando.Videos.Uploader do
             "still recorded in #{Enum.join(prefixes, ", ")}"
         )
 
-        then_purge({:error, reason}, purge)
+        then_purge({:error, reason}, video, purge)
 
       reason ->
         Logger.info("Video #{video.id} left at its provider: #{reason}")
-        then_purge({:error, reason}, purge)
+        then_purge({:error, reason}, video, purge)
     end
   end
 
