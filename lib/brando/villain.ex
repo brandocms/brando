@@ -513,7 +513,7 @@ defmodule Brando.Villain do
   end
 
   defp liquex_render(html_string, [], parsed_doc, context) do
-    Liquex.Render.render!([], parsed_doc, context)
+    Liquex.Render.render!([], parsed_doc, Brando.Villain.Tags.Output.reset(context))
   rescue
     error in Protocol.UndefinedError ->
       case error do

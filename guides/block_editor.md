@@ -252,7 +252,15 @@ fields empty. A tag of your own reads its argument with `Brando.Villain.Template
 it prints.
 
 `escape` never encodes twice; `url_encode`, `slugify` and `markdown` read escaped
-text as the text it stands for.
+text as the text it stands for. `size` and `truncate` count a brace as one
+character, and `replace` and `remove` find a placeholder such as `{{name}}` in
+what an earlier filter gave. `map` reads each field as `{{ item.field }}` does,
+so a rich-text field gives its markup.
+
+A value printed right after an output that ends in `{`, as in
+`{{ "{" }}{{ entry.title }}`, starts no Liquid: a `{` or `%` it starts with
+prints as a character reference. With template text between them, as in
+`{{ "{" }}"a": {{ json | raw }}}`, the value prints as it is.
 
 Liquid in a value printed with `raw` stays text. `raw` reads the text as what it stands for, so a rich-text field does not need
 it. A comparison sees escaped text: `{% if entry.title == "R&D" %}` compares with

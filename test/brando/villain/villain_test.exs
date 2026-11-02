@@ -653,138 +653,57 @@ defmodule Brando.VillainTest do
              ]
   end
 
-  test "list_block_ids_matching_regex", %{user: user} do
-    text_ref = %Brando.Content.Ref{
-      uid: "test_ref_#{System.unique_integer([:positive])}",
-      active: true,
-      data: %Brando.Villain.Blocks.TextBlock{
-        data: %Brando.Villain.Blocks.TextBlock.Data{
-          text: "<p>{{ globals.site.name }}</p>",
-          extensions: nil,
-          type: "paragraph"
-        }
-      },
-      description: nil,
-      name: "text"
-    }
+  test "list_block_ids_matching_regex finds Liquid in HTML and SVG refs only", %{user: user} do
+    {:ok, module} =
+      Brando.Content.create_module(Factory.params_for(:module, %{code: "{% ref refs.r %}", refs: [], vars: []}), user)
 
-    # insert module
-    module_params = %Brando.Content.Module{
-      uid: Brando.Utils.generate_uid(),
-      code: "{% ref refs.text %}",
-      name: "Name",
-      help_text: "Help text",
-      refs: [
-        text_ref
-      ],
-      namespace: "all",
-      class: "css class",
-      vars: []
-    }
+    ref = fn data -> %Brando.Content.Ref{uid: Brando.Utils.generate_uid(), active: true, name: "r", data: data} end
+    liquid = "<p>{{ globals.site.name }}</p>"
 
-    {:ok, module} = Brando.Repo.insert(module_params)
-
-    # Create a completely new ref for the block instead of modifying the existing one
-    block_text_ref = %Brando.Content.Ref{
-      uid: "test_ref_block_#{System.unique_integer([:positive])}",
-      active: true,
-      data: %Brando.Villain.Blocks.TextBlock{
-        type: "text",
-        data: %Brando.Villain.Blocks.TextBlock.Data{
-          text: "<p>{{ globals.site.name }}</p>",
-          extensions: nil,
-          type: "paragraph"
-        }
-      },
-      description: nil,
-      name: "text"
-    }
-
-    simple_blocks = [
-      %Brando.Pages.Fragment.Blocks{
-        block: %Brando.Content.Block{
-          type: :module,
-          source: "Elixir.Brando.Pages.Fragment.Blocks",
-          module_id: module.id,
-          uid: Brando.Utils.generate_uid(),
-          refs: [
-            block_text_ref
-          ],
-          vars: []
-        }
+    fragment! = fn refs, vars ->
+      block = %Brando.Content.Block{
+        type: :module,
+        source: "Elixir.Brando.Pages.Fragment.Blocks",
+        module_id: module.id,
+        uid: Brando.Utils.generate_uid(),
+        refs: refs,
+        vars: vars
       }
-      |> Ecto.Changeset.change()
-      |> Map.put(:action, :insert)
-    ]
 
-    fragment_params = Factory.params_for(:fragment)
+      entry_blocks = [
+        %Brando.Pages.Fragment.Blocks{block: block} |> Ecto.Changeset.change() |> Map.put(:action, :insert)
+      ]
 
-    fragment_cs = Brando.Pages.Fragment.changeset(%Brando.Pages.Fragment{}, fragment_params, user)
-    fragment_cs = Ecto.Changeset.put_assoc(fragment_cs, :entry_blocks, simple_blocks)
-    fragment_cs = Map.put(fragment_cs, :action, :insert)
+      cs =
+        %Brando.Pages.Fragment{}
+        |> Brando.Pages.Fragment.changeset(Factory.params_for(:fragment), user)
+        |> Ecto.Changeset.put_assoc(:entry_blocks, entry_blocks)
+        |> Map.put(:action, :insert)
 
-    params_empty_data = %{
-      parent_key: "parent_key",
-      key: "key",
-      language: "en",
-      creator_id: user.id,
-      entry_blocks: []
-    }
+      {:ok, fragment} = Brando.Pages.create_fragment(cs, user)
+      fragment
+    end
 
-    {:ok, pf1} = Brando.Pages.create_fragment(fragment_cs, user)
-    _pf2 = Brando.Pages.create_fragment(params_empty_data, user)
-    _pf3 = Brando.Pages.create_fragment(params_empty_data, user)
+    html =
+      fragment!.([ref.(%Brando.Villain.Blocks.HtmlBlock{data: %Brando.Villain.Blocks.HtmlBlock.Data{text: liquid}})], [])
 
-    # Create a new fragment changeset with new refs for pf4
-    block_text_ref_2 = %Brando.Content.Ref{
-      uid: "test_ref_block_2_#{System.unique_integer([:positive])}",
-      active: true,
-      data: %Brando.Villain.Blocks.TextBlock{
-        type: "text",
-        data: %Brando.Villain.Blocks.TextBlock.Data{
-          text: "<p>{{ globals.site.name }}</p>",
-          extensions: nil,
-          type: "paragraph"
-        }
-      },
-      description: nil,
-      name: "text"
-    }
+    svg =
+      fragment!.([ref.(%Brando.Villain.Blocks.SvgBlock{data: %Brando.Villain.Blocks.SvgBlock.Data{code: liquid}})], [])
 
-    simple_blocks_2 = [
-      %Brando.Pages.Fragment.Blocks{
-        block: %Brando.Content.Block{
-          type: :module,
-          source: "Elixir.Brando.Pages.Fragment.Blocks",
-          module_id: module.id,
-          uid: Brando.Utils.generate_uid(),
-          refs: [
-            block_text_ref_2
-          ],
-          vars: []
-        }
-      }
-      |> Ecto.Changeset.change()
-      |> Map.put(:action, :insert)
-    ]
-
-    fragment_cs_2 = Brando.Pages.Fragment.changeset(%Brando.Pages.Fragment{}, fragment_params, user)
-    fragment_cs_2 = Ecto.Changeset.put_assoc(fragment_cs_2, :entry_blocks, simple_blocks_2)
-    fragment_cs_2 = Map.put(fragment_cs_2, :action, :insert)
-
-    {:ok, pf4} = Brando.Pages.create_fragment(fragment_cs_2, user)
+    # Editor text, where Liquid prints as text
+    _text =
+      fragment!.(
+        [ref.(%Brando.Villain.Blocks.TextBlock{data: %Brando.Villain.Blocks.TextBlock.Data{text: liquid}})],
+        [%Brando.Content.Var{key: "v", label: "V", type: :string, value: liquid}]
+      )
 
     resulting_ids =
       Brando.Content.Blocks.list_block_ids_matching_regex(globals: "{{ globals\.(.*?) }}")
       |> Brando.Content.Blocks.list_root_block_ids_by_source()
       |> Brando.Content.Blocks.list_entry_ids_for_root_blocks_by_source()
-
-    # sort the ids
-    sorted_resulting_ids =
-      resulting_ids
       |> Map.new(fn {k, v} -> {k, Enum.sort(v)} end)
 
-    assert sorted_resulting_ids === %{Brando.Pages.Fragment => [pf1.id, pf4.id]}
+    assert resulting_ids === %{Brando.Pages.Fragment => Enum.sort([html.id, svg.id])}
   end
 
   test "create and update dependent module", %{user: user} do

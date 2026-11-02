@@ -7,6 +7,7 @@ defmodule Brando.Villain.Filters do
   alias Brando.Content.Identifier
   alias Brando.Content.Var
   alias Brando.Utils
+  alias Brando.Villain.InertLiquid
   alias Brando.Villain.TemplateView
   alias Liquex.Context
 
@@ -45,12 +46,19 @@ defmodule Brando.Villain.Filters do
         __MODULE__
       end
 
-    view_mode = TemplateView.view_mode([value | function_args])
-    args = [TemplateView.unwrap(value) | TemplateView.unwrap(function_args)] ++ [context]
+    case {mod, func, function_args} do
+      # Each field as the template reads it: a rich-text field as markup
+      {__MODULE__, :map, [key]} when is_list(value) ->
+        value |> TemplateView.map(key, context) |> TemplateView.filter_result(:map, nil, context)
 
-    mod
-    |> Kernel.apply(func, args)
-    |> TemplateView.filter_result(func, view_mode, context)
+      _ ->
+        view_mode = TemplateView.view_mode([value | function_args])
+        args = [TemplateView.unwrap(value) | TemplateView.unwrap(function_args)] ++ [context]
+
+        mod
+        |> Kernel.apply(func, args)
+        |> TemplateView.filter_result(func, view_mode, context)
+    end
   rescue
     # credo:disable-for-next-line
     ArgumentError -> raise Liquex.Error, "Invalid filter #{function}"
@@ -477,7 +485,7 @@ defmodule Brando.Villain.Filters do
       "Take your protein pills and put your helmet on"
   """
   def replace(value, original, replacement, _),
-    do: String.replace(to_string(value), to_string(original), to_string(replacement))
+    do: String.replace(to_string(value), patterns(original), to_string(replacement))
 
   @doc """
   Replaces only the first occurrence of the first argument in a string with the second argument.
@@ -488,7 +496,18 @@ defmodule Brando.Villain.Filters do
       "Take your protein pills and put my helmet on"
   """
   def replace_first(value, original, replacement, _),
-    do: String.replace(to_string(value), to_string(original), to_string(replacement), global: false)
+    do: String.replace(to_string(value), patterns(original), to_string(replacement), global: false)
+
+  # A filter's text has its Liquid delimiters encoded, and a view's every brace
+  # (`Brando.Villain.TemplateView.filter_result/4`): a placeholder such as
+  # `{{name}}` is found in what an earlier filter gave as well.
+  defp patterns(original) do
+    original = to_string(original)
+
+    if String.contains?(original, ["{", "}"]),
+      do: Enum.uniq([original, InertLiquid.encode_delimiters(original), InertLiquid.encode_all(original)]),
+      else: original
+  end
 
   @doc """
   Reverses the order of the items in an array. reverse cannot reverse a string.
@@ -545,7 +564,7 @@ defmodule Brando.Villain.Filters do
       4
   """
   def size(value, _) when is_list(value), do: length(value)
-  def size(value, _), do: String.length(to_string(value))
+  def size(value, _), do: with_braces_as_characters(to_string(value), &String.length/1)
 
   @doc """
   Returns a substring of 1 character beginning at the index specified by the
@@ -712,8 +731,12 @@ defmodule Brando.Villain.Filters do
       "..."
   """
   def truncate(value, length, ellipsis \\ "...", _) do
-    value = to_string(value)
+    value
+    |> to_string()
+    |> with_braces_as_characters(&truncate_text(&1, length, ellipsis))
+  end
 
+  defp truncate_text(value, length, ellipsis) do
     cond do
       String.length(value) <= length ->
         value
@@ -726,6 +749,33 @@ defmodule Brando.Villain.Filters do
         |> String.slice(0, length - String.length(ellipsis))
         |> String.replace(~r/&(?:#\d*|a|am|amp|l|lt|g|gt|q|qu|quo|quot)?$/, "")
         |> Kernel.<>(ellipsis)
+    end
+  end
+
+  # A brace as a character reference (`Brando.Villain.InertLiquid`) is one
+  # character of the text: `fun` reads each as a character of its own, which a
+  # text it returns has as the reference again.
+  @open_brace_mark "\uE000"
+  @close_brace_mark "\uE001"
+
+  defp with_braces_as_characters(text, fun) do
+    if String.contains?(text, ["&#123;", "&#125;"]) and not String.contains?(text, [@open_brace_mark, @close_brace_mark]) do
+      text
+      |> String.replace(["&#123;", "&#125;"], &if(&1 == "&#123;", do: @open_brace_mark, else: @close_brace_mark))
+      |> fun.()
+      |> then(fn
+        result when is_binary(result) ->
+          String.replace(
+            result,
+            [@open_brace_mark, @close_brace_mark],
+            &if(&1 == @open_brace_mark, do: "&#123;", else: "&#125;")
+          )
+
+        result ->
+          result
+      end)
+    else
+      fun.(text)
     end
   end
 

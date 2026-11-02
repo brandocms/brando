@@ -1,0 +1,1 @@
+- `{{ "{" }}{{ x | raw }}` no longer runs Liquid in `x`: a `{` or `%` that starts a value printed right after an output ending in `{` prints as a character reference.

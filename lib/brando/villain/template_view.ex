@@ -205,6 +205,24 @@ defmodule Brando.Villain.TemplateView do
   defp inert(value, _context), do: value
 
   @doc """
+  The `key` field of each of `items`, as a template reads it on the item
+  (`{{ item.key }}`), for the `map` filter.
+  """
+  @spec map(list(), term(), Context.t()) :: list()
+  def map(items, key, %Context{} = context) do
+    Enum.map(items, fn
+      %__MODULE__{} = view ->
+        case fetch(view, key, context) do
+          {:ok, field} -> field
+          :error -> nil
+        end
+
+      item ->
+        Liquex.Indifferent.get(item, key, nil)
+    end)
+  end
+
+  @doc """
   A plain map's pairs as a loop reads them, `[key, value]` as Liquex gives a
   map's: no hidden field, the key escaped, the value as this view reads it.
   """

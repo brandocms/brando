@@ -1395,20 +1395,120 @@ defmodule Brando.Villain.InertEditorTextTest do
 
       assert html |> Floki.parse_fragment!() |> Floki.attribute("title") == ["% off {x}"]
     end
+  end
+
+  describe "edges after the first round" do
+    test "a chained replace matches a placeholder after the first", %{user: user} do
+      code =
+        ~S({{ "Hi {{a}} and {{b}}" | replace: "{{a}}", "A" | replace: "{{b}}", "B" }}|) <>
+          ~S({{ "{{a}}{%b%}" | remove: "{{a}}" | remove_first: "{%b%}" }}|) <>
+          ~S({{ "{{a}} {{b}}" | replace_first: "{{a}}", "A" | replace_first: "{{b}}", "B" }}|) <>
+          ~S({{ entry.title | replace: "{{a}}", "A" | replace: "{{b}}", "B" }})
+
+      entry = %Page{title: "{{a}} {{b}}", language: :en}
+
+      assert render(block(module!(user, code), []), entry) == "Hi A and B||A B|A B"
+    end
+
+    test "a replaced placeholder starts no Liquid", %{user: user} do
+      code = ~S({{ "{{a}} 1 | plus: 41 }}" | replace: "x", "y" | replace: "{{a}}", "{{" }})
+      html = render(block(module!(user, code), []))
+
+      assert html =~ "plus: 41"
+    end
+
+    test "map reads a rich-text field as markup", %{user: user} do
+      vars = [
+        %Var{key: "body", label: "B", type: :rich_text, value: ~s(<p>One <strong>b</strong></p>)},
+        %Var{key: "unsafe", label: "U", type: :rich_text, value: ~s(<p>x</p><script>document.title=1</script>)},
+        %Var{key: "title", label: "T", type: :string, value: @markup_title}
+      ]
+
+      entry = %Page{title: "T", language: :en, vars: vars}
+
+      for code <- [~S({{ entry.vars | map: "value" | first }}), ~S({{ entry.vars | map: "value" | join: "" }})] do
+        html = render(block(module!(user, code), []), entry)
+
+        assert html =~ "<p>One <strong>b</strong></p>", "#{code} printed #{html}"
+        assert active_elements(html) == [], "#{code} printed #{html}"
+      end
+
+      html = render(block(module!(user, ~S({{ entry.vars | map: "value" | last }})), []), entry)
+      assert Floki.text(Floki.parse_fragment!(html)) == @markup_title
+    end
+
+    test "map leaves credentials out, as reading the field does", %{user: user} do
+      entry = %Page{title: "T", language: :en, children: [%Page{title: "C", creator: user}]}
+      code = ~S({{ entry.children | map: "creator" | map: "password" | join: "" }}|{{ entry.children | map: "title" }})
+
+      assert render(block(module!(user, code), []), entry) == "|C"
+    end
+
+    test "size and truncate count a brace a filter encoded as one character", %{user: user} do
+      entry = %Page{title: "{abcdef}", language: :en}
+
+      for {code, expected} <- [
+            {"{{ entry.title | strip_html | size }}", "8"},
+            {"{{ '%7Babcdef%7D' | url_decode | size }}", "8"},
+            {"{{ entry.title | size }}", "8"},
+            {"{{ entry.title | strip_html | truncate: 5 }}", "&#123;a..."},
+            {"{{ '%7Babcdef%7D' | url_decode | truncate: 5 }}", "&#123;a..."},
+            {"{{ '{abcdef}' | truncate: 5 }}", "{a..."}
+          ] do
+        assert render(block(module!(user, code), []), entry) == expected, code
+      end
+    end
 
     @tag :capture_log
-    test "a brace from a literal completes no delimiter with a value", %{user: user} do
+    test "a value after a literal brace prints as text, also starting with a percent sign", %{user: user} do
       for code <- [
             ~S({{ "{" }}{{ entry.title }}),
             ~S({{ "{" }}{{ entry.title | upcase | downcase }}),
-            ~S({{ "{" }}{{ title }})
+            ~S({{ "{" }}{{ title }}),
+            ~S({{ "{" }}{{ title | strip }}),
+            ~S({{ "{" }}{% echo entry.title %}),
+            ~S({% assign b = "{" %}{{ b }}{{ entry.title }}),
+            ~S({{ "{" }}{% if true %}{{ entry.title }}{% endif %}),
+            ~S({{ "{" -}}  {{ entry.title }}),
+            ~S({{ "{" }}  {{- entry.title }}),
+            ~S|{% for i in (1..2) %}{{ "{" }}{% endfor %}{{ entry.title }}|
           ],
-          value <- ["% if true %}42{% endif %}", "{ 1 | plus: 41 }}"] do
+          value <- ["% if true %}42{% endif %}", "% if x", " % if true %}42{% endif %}", "{ 1 | plus: 41 }}"] do
         var = %Var{key: "title", label: "T", type: :string, value: value}
 
         html = render(block(module!(user, code), vars: [var]), %Page{title: value, language: :en})
 
-        refute html =~ "42", "#{code} ran #{value}: #{html}"
+        refute html =~ "Error parsing", "#{code} with #{value}: #{html}"
+        assert Floki.text(Floki.parse_fragment!(html)) =~ ~r/\{ ?(% if|\{ 1 \| plus: 41)/, "#{code} ran #{value}: #{html}"
+      end
+    end
+
+    @tag :capture_log
+    test "raw after a literal brace completes no delimiter", %{user: user} do
+      for code <- [~S({{ "{" }}{{ title | raw }}), ~S({{ "{" }}{{ entry.title | raw }})],
+          value <- ["{ 1 | plus: 41 }}", "% if true %}42{% endif %}"] do
+        var = %Var{key: "title", label: "T", type: :string, value: value}
+
+        html = render(block(module!(user, code), vars: [var]), %Page{title: value, language: :en})
+
+        refute html =~ "Error parsing", "#{code} with #{value}: #{html}"
+        assert html =~ ~r/plus: 41|if true/, "#{code} ran #{value}: #{html}"
+      end
+    end
+
+    test "a literal brace keeps JSON printed through raw working", %{user: user} do
+      var = %Var{key: "json", label: "J", type: :string, value: ~s({"b":1})}
+      key = %Var{key: "key", label: "K", type: :string, value: "k"}
+
+      for {code, expected} <- [
+            {~S(<script>{{ "{" }}"a": {{ json | raw }}}</script>), ~S(<script>{"a": {"b":1}}</script>)},
+            {~S(<script>{{ "{" }}"{{ key }}": {{ json | raw }}}</script>), ~S(<script>{"k": {"b":1}}</script>)},
+            {~S(<script>{{ "{" }}{{ "x" }}{{ json | raw }}</script>), ~S(<script>{x{"b":1}</script>)},
+            {~S(<script>{{ json | raw }}{{ json | raw }}</script>), ~S(<script>{"b":1}{"b":1}</script>)},
+            {~S(<script>{{ "{" }}"a": 1}{% if true %}{{ json | raw }}{% endif %}</script>),
+             ~S(<script>{"a": 1}{"b":1}</script>)}
+          ] do
+        assert render(block(module!(user, code), vars: [var, key])) == expected, code
       end
     end
   end
