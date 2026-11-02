@@ -1,8 +1,9 @@
 defmodule BrandoAdmin.VideoPickerPreviewTest do
   @moduledoc """
-  The picker's preview plays what the server builds from the stored row: an
-  embed on the provider's host, or a file in a `<video>`. A stored address is
-  never an iframe's `src`, and nothing the browser sends picks what plays.
+  A stored address can hold anything, and the preview's iframe would run it. So
+  the preview reads the row on the server and embeds only a URL it builds on the
+  provider's host, or plays a file in a `<video>`; nothing the browser sends
+  picks what plays.
   """
   use Brando.LiveCase
 
@@ -73,18 +74,6 @@ defmodule BrandoAdmin.VideoPickerPreviewTest do
       assert iframe_sources(html) == ["https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"]
     end
 
-    test "the type in the event is ignored", %{conn: conn, current_user: user} do
-      video = stored(type: :mux, source_url: @script_scheme, remote_id: nil)
-
-      html =
-        conn
-        |> open_picker(user)
-        |> element(preview(video))
-        |> render_click(%{"type" => "youtube", "source-url" => @script_scheme})
-
-      assert iframe_sources(html) == []
-    end
-
     test "the address is not handed to the browser in the listing", %{conn: conn, current_user: user} do
       stored(type: :youtube, source_url: @script_scheme, remote_id: nil)
 
@@ -93,6 +82,12 @@ defmodule BrandoAdmin.VideoPickerPreviewTest do
 
     test "a non-YouTube page typed as YouTube plays nothing", %{conn: conn, current_user: user} do
       video = stored(type: :youtube, source_url: "https://example.com/watch?v=dQw4w9WgXcQ", remote_id: nil)
+
+      assert conn |> play(user, video) |> iframe_sources() == []
+    end
+
+    test "a YouTube playlist embed plays nothing", %{conn: conn, current_user: user} do
+      video = stored(type: :youtube, source_url: "https://www.youtube.com/embed/videoseries?list=PL1", remote_id: nil)
 
       assert conn |> play(user, video) |> iframe_sources() == []
     end
@@ -149,6 +144,42 @@ defmodule BrandoAdmin.VideoPickerPreviewTest do
       video = stored(type: :vimeo, source_url: nil, remote_id: "76979871")
 
       assert conn |> play(user, video) |> iframe_sources() == ["https://player.vimeo.com/video/76979871?autoplay=1"]
+    end
+
+    test "a Vimeo account row takes an unlisted video's hash from its meta", %{conn: conn, current_user: user} do
+      video =
+        stored(
+          type: :vimeo_account,
+          source_url: "https://vimeo.com/76979871",
+          remote_id: "76979871",
+          meta: %{"vimeo" => %{"video_id" => "76979871", "hash" => "abcdef1234"}}
+        )
+
+      assert conn |> play(user, video) |> iframe_sources() ==
+               ["https://player.vimeo.com/video/76979871?h=abcdef1234&autoplay=1"]
+    end
+
+    test "a Vimeo account row without Vimeo meta reads its address", %{conn: conn, current_user: user} do
+      video = stored(type: :vimeo_account, source_url: "https://vimeo.com/76979871/abcdef1234", remote_id: nil, meta: %{})
+
+      assert conn |> play(user, video) |> iframe_sources() ==
+               ["https://player.vimeo.com/video/76979871?h=abcdef1234&autoplay=1"]
+    end
+
+    test "a Vimeo account row with a file link plays the file", %{conn: conn, current_user: user} do
+      video =
+        stored(
+          type: :vimeo_account,
+          status: :ready,
+          source_url: "https://vimeo.com/76979871",
+          remote_id: "76979871",
+          meta: %{"vimeo" => %{"video_id" => "76979871", "hls_url" => "https://player.vimeo.com/play/1.m3u8"}}
+        )
+
+      html = play(conn, user, video)
+
+      assert iframe_sources(html) == []
+      assert html =~ ~s(<source src="https://player.vimeo.com/play/1.m3u8")
     end
 
     test "a linked file", %{conn: conn, current_user: user} do

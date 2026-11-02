@@ -95,5 +95,8 @@ defmodule Brando.Videos.YouTubeURL do
     if url =~ ~r/\Ahttps?:/i, do: url, else: "https://" <> url
   end
 
+  # `embed/videoseries` is a playlist: the list is in the query, which the embed
+  # URL does not carry.
+  defp id?("videoseries"), do: false
   defp id?(id), do: is_binary(id) and id =~ ~r/\A[A-Za-z0-9_-]+\z/
 end

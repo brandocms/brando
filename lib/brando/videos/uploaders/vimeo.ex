@@ -177,12 +177,12 @@ defmodule Brando.Videos.Uploaders.Vimeo do
   account without `video_files`, or a video Vimeo has not yet given one.
   """
   @spec embed_url(Video.t(), keyword()) :: String.t() | nil
-  def embed_url(%Video{meta: %{"vimeo" => %{} = vimeo}} = video, params \\ []) do
-    case vimeo do
-      %{"video_id" => id} when is_binary(id) -> VimeoURL.player_url(id, vimeo["hash"], params)
-      _ -> VimeoURL.embed_url(video, params)
-    end
-  end
+  def embed_url(video, params \\ [])
+
+  def embed_url(%Video{meta: %{"vimeo" => %{"video_id" => id} = vimeo}}, params) when is_binary(id),
+    do: VimeoURL.player_url(id, vimeo["hash"], params)
+
+  def embed_url(%Video{} = video, params), do: VimeoURL.embed_url(video, params)
 
   @impl true
   def library_meta_path, do: "vimeo.video_id"

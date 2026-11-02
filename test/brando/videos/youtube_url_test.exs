@@ -43,6 +43,9 @@ defmodule Brando.Videos.YouTubeURLTest do
           "https://www.youtube.com/watch?v=a%22b",
           "https://www.youtube.com/watch?v=../../x",
           "https://www.youtube.com/channel/dQw4w9WgXcQ",
+          "https://www.youtube.com/embed/videoseries?list=PL1",
+          "https://www.youtube-nocookie.com/embed/videoseries?list=PL1",
+          "https://www.youtube.com/watch?v=videoseries",
           "https://youtu.be/",
           "https://youtu.be/a/b",
           ""
@@ -76,6 +79,21 @@ defmodule Brando.Videos.YouTubeURLTest do
     # The older parser kept what followed the id
     test "falls back to the address when the stored id is not an id" do
       video = %{remote_id: "dQw4w9WgXcQ?t=5", source_url: "https://youtu.be/dQw4w9WgXcQ?t=5"}
+
+      assert YouTubeURL.embed_url(video) == @embed
+    end
+
+    # `videoseries` is a playlist's path, and without its list a broken player
+    test "does not read a playlist embed as a video" do
+      playlist = "https://www.youtube.com/embed/videoseries?list=PL1"
+
+      assert YouTubeURL.id(%{remote_id: "videoseries", source_url: playlist}) == nil
+      assert YouTubeURL.embed_url(%{remote_id: "videoseries", source_url: playlist}, autoplay: 1) == nil
+      assert YouTubeURL.embed_url(%{remote_id: nil, source_url: playlist}, autoplay: 1) == nil
+    end
+
+    test "falls back to the address when the stored id is a playlist's path" do
+      video = %{remote_id: "videoseries", source_url: "https://youtu.be/dQw4w9WgXcQ"}
 
       assert YouTubeURL.embed_url(video) == @embed
     end

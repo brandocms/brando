@@ -614,7 +614,7 @@ defmodule BrandoAdmin.Components.VideoPicker do
         _ -> {video_data.type, video_data.source_url}
       end
 
-    embed_url = get_embed_url(%{type: preview_type, source_url: playback_url, remote_id: video_data.remote_id})
+    embed_url = get_embed_url(preview_type, video_data)
 
     video = %{
       id: video_id,
@@ -1625,9 +1625,13 @@ defmodule BrandoAdmin.Components.VideoPicker do
     |> JS.remove_class("is-active", to: "##{id}-view-grid")
   end
 
-  defp get_embed_url(%{type: :youtube} = video), do: Brando.Videos.YouTubeURL.embed_url(video, autoplay: 1)
-  defp get_embed_url(%{type: :vimeo} = video), do: Brando.Videos.VimeoURL.embed_url(video, autoplay: 1)
-  defp get_embed_url(_video), do: nil
+  defp get_embed_url(:youtube, video), do: Brando.Videos.YouTubeURL.embed_url(video, autoplay: 1)
+
+  defp get_embed_url(:vimeo, %{type: :vimeo_account} = video),
+    do: Brando.Videos.Uploaders.Vimeo.embed_url(video, autoplay: 1)
+
+  defp get_embed_url(:vimeo, video), do: Brando.Videos.VimeoURL.embed_url(video, autoplay: 1)
+  defp get_embed_url(_preview_type, _video), do: nil
 
   # A provider video with nothing to embed says so instead of an empty player
   defp playing_type(type, nil) when type in [:youtube, :vimeo], do: nil

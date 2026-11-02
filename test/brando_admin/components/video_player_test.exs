@@ -31,6 +31,20 @@ defmodule BrandoAdmin.Components.VideoPlayerTest do
     end
   end
 
+  describe "player/1, a Vimeo account video without a file link" do
+    test "embeds the id and hash in its meta" do
+      meta = %{"vimeo" => %{"video_id" => "76979871", "hash" => "abcdef1234"}}
+
+      assert player(type: :vimeo_account, meta: meta) =~
+               ~s(src="https://player.vimeo.com/video/76979871?h=abcdef1234&amp;autoplay=1")
+    end
+
+    test "reads its address when it has no Vimeo meta" do
+      assert player(type: :vimeo_account, source_url: "https://vimeo.com/76979871", meta: %{}) =~
+               ~s(src="https://player.vimeo.com/video/76979871?autoplay=1")
+    end
+  end
+
   describe "the video drawer's source link" do
     test "links a stored address" do
       video = %{type: :external_file, source_url: "https://example.com/clip.mp4"}
