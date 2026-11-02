@@ -260,18 +260,29 @@ defmodule Brando.Authorization.Boundary do
   by each entry's own schema, so an entry with no identifier row counts too.
   One query per schema, however many entries. Outside an admin scope, and
   without group authorization, all of them.
+
+  A superuser keeps the entries of a schema this scope is merely not the place
+  for, such as a user in a site scope, whose permissions have no site scope. A
+  schema with a record read policy is held to it.
   """
   def readable_entries(entries) do
     if Engine.enabled?() and current_scope() do
       import Ecto.Query, only: [from: 2]
 
       Engine.with_snapshots(fn ->
+        snapshot = Engine.snapshot(current_scope())
+
         entries
         |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
         |> Enum.flat_map(fn {schema, ids} ->
           ids = Enum.uniq(ids)
 
-          from(entry in Engine.scope(current_scope(), :read, schema), where: entry.id in ^ids, select: entry.id)
+          query =
+            if out_of_scope_for_superuser?(snapshot, schema),
+              do: schema,
+              else: Engine.scope(current_scope(), :read, schema)
+
+          from(entry in query, where: entry.id in ^ids, select: entry.id)
           |> Repo.all()
           |> Enum.map(&{schema, &1})
         end)
@@ -284,6 +295,11 @@ defmodule Brando.Authorization.Boundary do
 
   @doc "Whether the current admin scope may read this entry. See `readable_entries/1`."
   def readable_entry?(schema, id), do: MapSet.member?(readable_entries([{schema, id}]), {schema, id})
+
+  defp out_of_scope_for_superuser?(snapshot, schema) do
+    snapshot.superuser? and is_nil(snapshot.reason) and not Engine.record_policy?(schema) and
+      Engine.explain(snapshot, :read, schema).reason in [:wrong_scope, :unknown_permission]
+  end
 
   def cache_options(args) do
     if Engine.enabled?() and current_scope(), do: Map.delete(args, :cache), else: args

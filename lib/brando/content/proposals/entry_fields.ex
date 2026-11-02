@@ -166,8 +166,8 @@ defmodule Brando.Content.Proposals.EntryFields do
   def display(schema, name, value) when is_list(value) do
     case Map.get(lists(schema), name) do
       {:join, _key, related, _join} ->
-        records = from(r in related, where: r.id in ^value) |> Boundary.query(related) |> Repo.all()
-        titles = Map.new(records, &{&1.id, title(&1)})
+        readable = value |> Enum.map(&{related, &1}) |> Boundary.readable_entries() |> Enum.map(&elem(&1, 1))
+        titles = Map.new(Repo.all(from(r in related, where: r.id in ^readable)), &{&1.id, title(&1)})
         Enum.map_join(value, ", ", &Map.get(titles, &1, "##{&1}"))
 
       {:entries, _join} ->

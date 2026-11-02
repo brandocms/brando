@@ -960,7 +960,8 @@ defmodule Brando.Content.Proposals.Review do
     with true <- String.ends_with?(name, "_id"),
          relation = String.to_existing_atom(String.replace_suffix(name, "_id", "")),
          %{related: related} <- schema.__schema__(:association, relation),
-         %{} = record <- related |> Ecto.Queryable.to_query() |> Boundary.query(related) |> Brando.Repo.get(id) do
+         true <- Boundary.readable_entry?(related, id),
+         %{} = record <- Brando.Repo.get(related, id) do
       Map.get(record, :title) || Map.get(record, :name) || "##{id}"
     else
       _ -> id

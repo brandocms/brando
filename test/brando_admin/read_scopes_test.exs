@@ -1,3 +1,39 @@
+# An entry with a join list of pages, as a case has of its categories.
+defmodule BrandoAdmin.ReadScopesTest.Shelf do
+  @moduledoc false
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "ReadScopesTest",
+    schema: "Shelf",
+    singular: "shelf",
+    plural: "shelves",
+    gettext_module: Brando.Gettext
+
+  table "read_scopes_shelves"
+
+  relations do
+    relation :shelved_pages, :has_many, module: BrandoAdmin.ReadScopesTest.ShelvedPage, cast: true
+  end
+end
+
+defmodule BrandoAdmin.ReadScopesTest.ShelvedPage do
+  @moduledoc false
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "ReadScopesTest",
+    schema: "ShelvedPage",
+    singular: "shelved_page",
+    plural: "shelved_pages",
+    gettext_module: Brando.Gettext
+
+  table "read_scopes_shelved_pages"
+
+  relations do
+    relation :shelf, :belongs_to, module: BrandoAdmin.ReadScopesTest.Shelf
+    relation :page, :belongs_to, module: Brando.Pages.Page
+  end
+end
+
 defmodule BrandoAdmin.ReadScopesTest do
   # Reads that name another entry answer for the viewer: an account that may
   # read the entry sees what it always did, and one that may not learns that
@@ -16,11 +52,13 @@ defmodule BrandoAdmin.ReadScopesTest do
   alias Brando.Repo
   alias Brando.SyncTest.Article
   alias Brando.Tenant
+  alias Brando.Users.User
   alias BrandoAdmin.Components.Content.SelectIdentifier
   alias BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog
   alias BrandoAdmin.Images.FolderBrowser
   alias BrandoAdmin.Images.Sweep
   alias BrandoAdmin.LiveView.Listing.DeleteDescription
+  alias BrandoAdmin.ReadScopesTest.Shelf
 
   @secret "Secret page marker"
   @page_read ~w(brando.pages.read)
@@ -484,6 +522,14 @@ defmodule BrandoAdmin.ReadScopesTest do
       put_test_env(:authorization_mode, :legacy)
       assert {:ok, %{lists: %{"related_entries" => @secret}}} = outline(c.article, c.superuser)
     end
+
+    test "a join list keeps the place of a record the viewer may not read", c do
+      as(article_reader())
+      assert EntryFields.display(Shelf, "shelved_pages", [c.page.id]) == "##{c.page.id}"
+
+      as(article_reader(@page_read))
+      assert EntryFields.display(Shelf, "shelved_pages", [c.page.id]) == @secret
+    end
   end
 
   describe "across sites" do
@@ -560,6 +606,82 @@ defmodule BrandoAdmin.ReadScopesTest do
 
       Tenant.with_prefix(beta.prefix, fn ->
         Boundary.with_scope(beta, fn -> refute MapSet.member?(Boundary.readable_entries([page]), page) end)
+      end)
+    end
+
+    defp in_scope(scope, fun), do: Tenant.with_prefix(scope.prefix, fn -> Boundary.with_scope(scope, fun) end)
+
+    defp creator_card(page, id) do
+      target = {Page, page.id}
+      operation = %Brando.Content.Proposals.SetFields{target: target, fields: %{"creator_id" => id}}
+      proposal = %Brando.Content.Proposals.Proposal{operations: [operation], targets: %{target => page}}
+      inspect(Brando.Content.Proposals.Review.entries(proposal))
+    end
+
+    test "a superuser in a site still names a user, whose permissions have no site scope", c do
+      image = Factory.insert(:image)
+      owner = insert_user(name: "Avatar Owner", avatar_id: image.id)
+      superuser = insert_user(role: :superuser)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      entry = {User, owner.id}
+
+      in_scope(Scope.site(superuser, c.alpha, c.alpha_live), fn ->
+        assert MapSet.member?(Boundary.readable_entries([entry]), entry)
+        refute MapSet.member?(Boundary.readable_entries([{User, -1}]), {User, -1})
+        assert [%{label: label}] = Usage.list(:image, [image.id])[image.id]
+        assert label =~ "#{owner.id}"
+        assert creator_card(c.page, owner.id) =~ "Avatar Owner"
+      end)
+    end
+
+    test "anyone else in a site does not", c do
+      image = Factory.insert(:image)
+      owner = insert_user(name: "Avatar Owner", avatar_id: image.id)
+      superuser = insert_user(role: :superuser)
+      reader = insert_user(role: :editor)
+      {:ok, _} = Brando.Authorization.Migration.run()
+
+      {:ok, group} =
+        Brando.Authorization.Groups.create(
+          Scope.site(superuser, c.alpha, c.alpha_live),
+          %{name: "Alpha readers #{System.unique_integer([:positive])}"},
+          ["brando.admin.access", "brando.pages.read", "brando.images.read"]
+        )
+
+      {:ok, :ok} =
+        Brando.Authorization.Groups.add_member(Scope.site(superuser, c.alpha, c.alpha_live), group.id, reader.id)
+
+      in_scope(Scope.site(reader, c.alpha, c.alpha_live), fn ->
+        assert [%{hidden: 1}] = Usage.list(:image, [image.id])[image.id]
+        refute creator_card(c.page, owner.id) =~ "Avatar Owner"
+      end)
+    end
+
+    test "a superuser outside a schema's scopes still names its join list's records", c do
+      superuser = insert_user(role: :superuser)
+      {:ok, _} = Brando.Authorization.Migration.run()
+
+      Tenant.with_prefix(Scope.site(superuser, c.alpha, c.alpha_live).prefix, fn ->
+        Boundary.with_scope(Scope.installation(superuser), fn ->
+          assert EntryFields.display(Shelf, "shelved_pages", [c.page.id, -1]) == "#{@secret}, #-1"
+        end)
+      end)
+    end
+
+    test "a superuser is still held to a record read policy", c do
+      policed = Brando.AuthorizationTestResources.Page
+      superuser = insert_user(role: :superuser)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      entry = {policed, c.page.id}
+
+      Tenant.with_prefix(Scope.site(superuser, c.alpha, c.alpha_live).prefix, fn ->
+        Boundary.with_scope(Scope.site(superuser, c.alpha, c.alpha_live), fn ->
+          refute MapSet.member?(Boundary.readable_entries([entry]), entry)
+        end)
+
+        Boundary.with_scope(Scope.installation(superuser), fn ->
+          refute MapSet.member?(Boundary.readable_entries([entry]), entry)
+        end)
       end)
     end
   end
