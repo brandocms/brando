@@ -149,7 +149,9 @@ defmodule Brando.Videos.ProviderLibraryTest do
       assert %{remote_id: "asset-1", title: "Launch film", width: 1920, playable?: true} = item
       assert item.created_at == "2026-01-01T00:00:00Z"
 
-      Req.Test.expect(Mux, &Req.Test.json(&1, %{"data" => asset}))
+      # Asked once for the upload the asset came from, which may be the
+      # library's already, and once to add it.
+      Req.Test.expect(Mux, 2, &Req.Test.json(&1, %{"data" => asset}))
 
       assert {:ok, video} = ProviderLibrary.import(:mux, "asset-1", user)
       assert {video.type, video.status, video.title} == {:mux, :ready, "Launch film"}
@@ -176,7 +178,7 @@ defmodule Brando.Videos.ProviderLibraryTest do
 
       put_test_env(Mux, access_token_id: "id", access_token_secret: "secret", req_options: [plug: {Req.Test, Mux}])
 
-      Req.Test.expect(Mux, fn conn ->
+      Req.Test.expect(Mux, 2, fn conn ->
         assert conn.request_path == "/video/v1/assets/ASSET-1"
         Req.Test.json(conn, %{"data" => %{"id" => "asset-1", "playback_ids" => [%{"id" => "pb", "policy" => "public"}]}})
       end)

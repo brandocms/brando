@@ -113,6 +113,31 @@ defmodule BrandoAdmin.VideoPickerLibrarySitesTest do
     assert [%Video{meta: %{"imported" => true}}] = Tenant.with_prefix(c.beta_prefix, fn -> Repo.all(Video) end)
   end
 
+  test "an add that waits too long for the video's lock says so, and adds nothing", c do
+    {:ok, _} = Registry.put_provider_library_group(c.alpha, "agency", :system)
+    {:ok, _} = Registry.put_provider_library_group(c.beta, "agency", :system)
+    put_test_env(Brando.Videos.ProviderHoldings, lock_timeout: 200)
+
+    # Another session holds it, as a delete of video 42 in progress.
+    {:ok, lock_conn} =
+      Postgrex.start_link(Keyword.drop(Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name]))
+
+    Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [
+      "brando:provider_video:vimeo.video_id:42"
+    ])
+
+    {view, _html} = live_form(c.conn, "/admin/pages/update/#{c.page.id}")
+    view |> element("#video-picker button", "Add from Vimeo") |> render_click()
+    render_async(view)
+    refute has_element?(view, ".video-picker-library-error")
+
+    view |> element(~s([data-remote-id="42"] button), "Add") |> render_click()
+
+    assert has_element?(view, ~s(.video-picker-library-error[role="alert"]))
+    assert Tenant.with_prefix(c.beta_prefix, fn -> Repo.all(Video) end) == []
+    refute_received {:vimeo, "GET", "/videos/42"}
+  end
+
   defp site(name, key) do
     {:ok, site} =
       Registry.create_site(%{

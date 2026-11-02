@@ -306,8 +306,10 @@ defmodule Brando.Videos.Uploader do
   - `:ok` if deletion succeeds or is skipped
   - `{:error, :held_by_another_site}` with several sites, while another site
     has a record of the same remote video (`Brando.Videos.ProviderHoldings`);
-    `{:error, :holdings_unavailable}` when that cannot be read. Nothing is
-    deleted at the provider.
+    `{:error, :holdings_unavailable}` when that cannot be read, and
+    `{:error, :busy}` when an add or another delete of the same video held
+    its lock too long (`Brando.Videos.ProviderHoldings.with_video_lock/3`).
+    Nothing is deleted at the provider.
   - `{:error, reason}` if deletion fails
   """
   # Added from the provider's library: someone else's video, possibly in use

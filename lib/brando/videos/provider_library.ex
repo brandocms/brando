@@ -34,10 +34,12 @@ defmodule Brando.Videos.ProviderLibrary do
   ## One record per remote video
 
   Adding a video that already has a record — uploaded through Brando, or added
-  before — returns that record instead of creating another. Two records for one
-  remote video would mean deleting either could remove the video from under
-  the other, and the provider webhooks look a video up by its remote id and
-  expect one answer.
+  before — returns that record instead of creating another. So does adding a
+  Mux asset whose upload the site started and Mux has not reported yet: the
+  upload's record has only the upload id, which the listing matches too. Two
+  records for one remote video would mean deleting either could remove the
+  video from under the other, and the provider webhooks look a video up by
+  its remote id and expect one answer.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -120,7 +122,7 @@ defmodule Brando.Videos.ProviderLibrary do
 
     with {:ok, module} <- provider(strategy, scope),
          {:ok, %{items: items} = page} <- list_page(module, scope, opts, @max_filtered_pages) do
-      existing = existing_video_ids(module.library_meta_path(), Enum.map(items, & &1.remote_id))
+      existing = existing_video_ids(module.library_meta_path(), items)
 
       {:ok,
        %{
@@ -161,20 +163,32 @@ defmodule Brando.Videos.ProviderLibrary do
     end
   end
 
-  defp import_in_scope(module, :account, remote_id, user, opts), do: find_or_import(module, remote_id, user, opts)
+  # The site's own record first, by the provider's id: that needs no call to
+  # the provider. Then by the other keys a record may hold the video at, such
+  # as the site's own Mux upload still waiting for its asset.
+  defp import_in_scope(module, scope, remote_id, user, opts) do
+    path = module.library_meta_path()
 
-  # A delete of the same video at the provider waits, and this waits for one
-  # in progress (`Brando.Videos.ProviderHoldings.with_video_lock/3`).
-  defp import_in_scope(module, {:group, _site_ids, _sites} = scope, remote_id, user, opts) do
-    with {:ok, keys} <- holding_keys(module, remote_id) do
-      ProviderHoldings.with_video_lock(module.library_meta_path(), remote_id, fn ->
-        add_if_shared(module, scope, {remote_id, keys}, user, opts)
-      end)
+    with nil <- existing_video(path, remote_id, []),
+         {:ok, keys} <- holding_keys(module, remote_id),
+         nil <- if(keys != [], do: existing_video(path, remote_id, keys)) do
+      add(module, scope, {remote_id, keys}, user, opts)
+    else
+      %Video{} = video -> {:ok, video}
+      {:error, _reason} = error -> error
     end
   end
 
-  defp add_if_shared(module, scope, {remote_id, _keys} = holding, user, opts) do
-    with :ok <- may_add(module, scope, holding), do: find_or_import(module, remote_id, user, opts)
+  defp add(module, :account, holding, user, opts), do: find_or_import(module, holding, user, opts)
+
+  # A delete of the same video at the provider waits, and this waits for one
+  # in progress (`Brando.Videos.ProviderHoldings.with_video_lock/3`).
+  defp add(module, {:group, _site_ids, _sites} = scope, holding, user, opts) do
+    {remote_id, _keys} = holding
+
+    ProviderHoldings.with_video_lock(module.library_meta_path(), remote_id, fn ->
+      with :ok <- may_add(module, scope, holding), do: find_or_import(module, holding, user, opts)
+    end)
   end
 
   # The listing's filter, again: the event names any remote id. A video the
@@ -219,11 +233,26 @@ defmodule Brando.Videos.ProviderLibrary do
     end
   end
 
-  defp find_or_import(module, remote_id, user, opts) do
-    case Brando.Videos.get_video_by_meta(module.library_meta_path(), remote_id) do
+  defp find_or_import(module, {remote_id, keys}, user, opts) do
+    case existing_video(module.library_meta_path(), remote_id, keys) do
       %Video{} = video -> {:ok, video}
       nil -> guarded(fn -> module.import_remote(remote_id, user, opts) end)
     end
+  end
+
+  # The current environment's record of the remote video: by the provider's
+  # id at `path`, or else by one of `keys`.
+  defp existing_video(path, remote_id, keys) do
+    Enum.find_value([{path, remote_id} | keys], fn {key_path, value} ->
+      keys = String.split(key_path, ".")
+
+      from(v in Video,
+        where: is_nil(v.deleted_at) and fragment("?#>>? = ?", v.meta, ^keys, ^value),
+        order_by: v.id,
+        limit: 1
+      )
+      |> Brando.Repo.one()
+    end)
   end
 
   @doc "Whether the record was added from a provider library rather than uploaded."
@@ -246,17 +275,35 @@ defmodule Brando.Videos.ProviderLibrary do
     function_exported?(module, :library_searchable?, 0) and module.library_searchable?()
   end
 
+  # The ids of the records holding the items, by remote id: a record with the
+  # provider's id at `path` first, else one with one of the item's
+  # `:holding_keys`.
   defp existing_video_ids(_path, []), do: %{}
 
-  defp existing_video_ids(path, remote_ids) do
-    keys = String.split(path, ".")
+  defp existing_video_ids(path, items) do
+    lookups = [{path, Enum.map(items, &{&1.remote_id, &1.remote_id})} | key_lookups(items)]
 
-    from(v in Video,
-      where: is_nil(v.deleted_at) and fragment("?#>>? = ANY(?)", v.meta, ^keys, ^remote_ids),
-      select: {fragment("?#>>?", v.meta, ^keys), v.id}
-    )
-    |> Brando.Repo.all()
-    |> Map.new()
+    Enum.reduce(lookups, %{}, fn {key_path, pairs}, existing ->
+      remote_ids = Map.new(pairs)
+      keys = String.split(key_path, ".")
+
+      from(v in Video,
+        where: is_nil(v.deleted_at) and fragment("?#>>? = ANY(?)", v.meta, ^keys, ^Map.keys(remote_ids)),
+        select: {fragment("?#>>?", v.meta, ^keys), v.id},
+        order_by: v.id
+      )
+      |> Brando.Repo.all()
+      |> Enum.reduce(existing, fn {value, id}, existing -> Map.put_new(existing, remote_ids[value], id) end)
+    end)
+  end
+
+  # `{key_path, [{value, remote_id}]}` for the items' holding keys.
+  defp key_lookups(items) do
+    for item <- items, {key_path, value} <- Map.get(item, :holding_keys, []), is_binary(value) do
+      {key_path, {value, item.remote_id}}
+    end
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Enum.to_list()
   end
 
   # Same contract as `Brando.Videos.Uploader.initiate_upload/3`: the callers are

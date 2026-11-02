@@ -18345,6 +18345,11 @@ msgstr "Denne videoen kan ikke spilles av her."
 
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
+msgid "This video is being added or deleted elsewhere. Try again in a moment."
+msgstr "Denne videoen blir lagt til eller slettet et annet sted. Prøv igjen om litt."
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
 msgid "This video needs signed playback, which Brando does not support."
 msgstr "Denne videoen krever signert avspilling, som Brando ikke støtter."
 

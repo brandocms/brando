@@ -18341,6 +18341,11 @@ msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
+msgid "This video is being added or deleted elsewhere. Try again in a moment."
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
 msgid "This video needs signed playback, which Brando does not support."
 msgstr ""
 

@@ -249,6 +249,43 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
         assert {:ok, %Video{meta: %{"imported" => true}}} = ProviderLibrary.import(:mux, "free", user)
       end)
     end
+
+    test "is the site's own record, listed and added as that", %{sites: sites, user: user} do
+      upload =
+        as_site(sites.delta, fn ->
+          Repo.insert!(%Video{
+            type: :mux,
+            title: "Uploading",
+            status: :uploading,
+            meta: %{"provider" => "mux", "mux" => %{"upload_id" => "up-1"}}
+          })
+        end)
+
+      for mode <- [:multi, :single] do
+        put_test_env(:tenancy_mode, mode)
+
+        as_site(sites.delta, fn ->
+          assert {:ok, %{items: items}} = ProviderLibrary.list(:mux)
+          assert %{"uploading" => upload.id, "free" => nil} == Map.new(items, &{&1.remote_id, &1.video_id})
+
+          count = Repo.aggregate(Video, :count)
+          assert {:ok, %Video{id: id}} = ProviderLibrary.import(:mux, "uploading", user)
+          assert id == upload.id
+          assert Repo.aggregate(Video, :count) == count
+        end)
+      end
+    end
+
+    test "a site's own asset is added without asking Mux about it", %{sites: sites, user: user} do
+      as_site(sites.beta, fn ->
+        assert {:ok, %Video{id: id}} = ProviderLibrary.import(:mux, "free", user)
+        assert_received {:mux, "GET", "/video/v1/assets/free"}
+        flush_mux()
+
+        assert {:ok, %Video{id: ^id}} = ProviderLibrary.import(:mux, "free", user)
+        refute_received {:mux, _method, _path}
+      end)
+    end
   end
 
   describe "a delete and an add of one video" do
@@ -277,6 +314,65 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
 
       assert {:ok, %Video{}} = Task.await(task)
       assert_received {:vimeo, "GET", "/videos/4"}
+    end
+
+    test "the provider is asked outside a transaction, and the lock ends with the call",
+         %{sites: sites, held: held, user: user, lock_conn: conn} do
+      me = self()
+
+      Req.Test.stub(Vimeo, fn conn ->
+        send(me, {:in_transaction?, conn.method, Repo.repo().in_transaction?()})
+
+        case conn.method do
+          "GET" -> Req.Test.json(conn, vimeo_video(Path.basename(conn.request_path)))
+          "DELETE" -> send_resp(conn, 204, "")
+        end
+      end)
+
+      as_site(sites.beta, fn -> assert {:ok, %Video{}} = ProviderLibrary.import(:vimeo, "4", user) end)
+      assert_received {:in_transaction?, "GET", false}
+      assert lock_free?(conn, "vimeo.video_id", "4")
+
+      as_site(sites.alpha, fn -> assert :ok = Uploader.delete_remote(held.alpha) end)
+      assert_received {:in_transaction?, "DELETE", false}
+      assert lock_free?(conn, "vimeo.video_id", "1")
+    end
+
+    test "inside the caller's transaction, the lock lasts until that ends", %{sites: sites, held: held, lock_conn: conn} do
+      as_site(sites.alpha, fn ->
+        Repo.transaction(fn ->
+          assert :ok = Uploader.delete_remote(held.alpha)
+          refute lock_free?(conn, "vimeo.video_id", "1")
+        end)
+      end)
+    end
+
+    test "a lock held too long is an error, and the delete is kept for the next purge",
+         %{sites: sites, held: held, user: user, lock_conn: conn} do
+      put_test_env(Brando.Videos.ProviderHoldings, lock_timeout: 200)
+      hold_lock(conn, "vimeo.video_id", "4")
+      hold_lock(conn, "vimeo.video_id", "1")
+
+      as_site(sites.beta, fn -> assert {:error, :busy} = ProviderLibrary.import(:vimeo, "4", user) end)
+      as_site(sites.alpha, fn -> assert {:error, :busy} = Uploader.delete_remote(held.alpha) end)
+
+      as_site(sites.alpha, fn ->
+        expire(held.alpha)
+        Brando.SoftDelete.Query.clean_up_soft_deletions()
+        assert Repo.aggregate(Video, :count) == 1
+      end)
+
+      refute_received {:vimeo, "GET", "/videos/4"}
+      refute_received {:vimeo, "DELETE", _path}
+
+      release_lock(conn, "vimeo.video_id", "1")
+
+      as_site(sites.alpha, fn ->
+        Brando.SoftDelete.Query.clean_up_soft_deletions()
+        assert Repo.aggregate(Video, :count) == 0
+      end)
+
+      assert_received {:vimeo, "DELETE", "/videos/1"}
     end
   end
 
@@ -501,7 +597,27 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
     Postgrex.query!(conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [lock_key(path, remote_id)])
   end
 
+  # Takes the lock and gives it back at once, if no other session holds it.
+  defp lock_free?(conn, path, remote_id) do
+    case Postgrex.query!(conn, "SELECT pg_try_advisory_lock(hashtextextended($1, 0))", [lock_key(path, remote_id)]) do
+      %{rows: [[true]]} ->
+        release_lock(conn, path, remote_id)
+        true
+
+      %{rows: [[false]]} ->
+        false
+    end
+  end
+
   defp lock_key(path, remote_id), do: "brando:provider_video:#{path}:#{remote_id}"
+
+  defp flush_mux do
+    receive do
+      {:mux, _method, _path} -> flush_mux()
+    after
+      0 -> :ok
+    end
+  end
 
   defp mux_asset(id, upload_id) do
     Map.reject(

@@ -911,6 +911,9 @@ defmodule BrandoAdmin.Components.VideoPicker do
   defp library_error(:holdings_unavailable, _provider),
     do: gettext("Could not check which sites use these videos. Try again in a moment.")
 
+  defp library_error(:busy, _provider),
+    do: gettext("This video is being added or deleted elsewhere. Try again in a moment.")
+
   defp library_error(:not_found, provider), do: gettext("%{provider} no longer has this video.", provider: provider)
 
   defp library_error(reason, _provider) when is_binary(reason), do: reason

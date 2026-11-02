@@ -26,6 +26,9 @@ defmodule Brando.Videos.ProviderHoldings do
 
   require Logger
 
+  @lock_timeout 30_000
+  @lock_poll_interval 100
+
   @typedoc """
   A `meta` path and the value there that ties a video row to a remote video:
   `{"mux.upload_id", "abc"}`.
@@ -59,27 +62,72 @@ defmodule Brando.Videos.ProviderHoldings do
   end
 
   @doc """
-  Runs `fun` in a transaction that holds the lock of one remote video, the
-  provider's id `remote_id` at the `meta` path `path`, and returns its result.
+  Runs `fun` holding the lock of one remote video, the provider's id
+  `remote_id` at the `meta` path `path`, and returns its result.
 
   A delete at the provider and an add of the same video take it around their
   holdings check and their provider call, so an add that waits out a delete
   sees the deleting site's row still there, or the provider's 404, and a
   delete that waits out an add sees the added row.
-  """
-  @spec with_video_lock(String.t(), String.t(), (-> result)) :: result when result: term()
-  def with_video_lock(path, remote_id, fun) do
-    Brando.Repo.transaction(fn ->
-      Ecto.Adapters.SQL.query!(Brando.Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [
-        "brando:provider_video:#{path}:#{remote_id}"
-      ])
 
-      fun.()
-    end)
-    |> case do
-      {:ok, result} -> result
-      {:error, _reason} = error -> error
+  Outside a transaction, the lock is the database session's, taken on a
+  connection checked out for `fun` and given back when it returns. `fun`'s
+  queries then commit as they run, and the holdings read does not keep the
+  video tables locked while the provider is asked, which would hold up an
+  environment copy's `DROP SCHEMA`. Inside the caller's transaction, the lock
+  lasts until that transaction ends, so what it writes is committed before
+  another delete or add reads the holdings.
+
+  The lock is waited for up to 30 seconds (`config :brando,
+  Brando.Videos.ProviderHoldings, lock_timeout: milliseconds`), then
+  `{:error, :busy}` is returned and `fun` does not run.
+  """
+  @spec with_video_lock(String.t(), String.t(), (-> result)) :: result | {:error, :busy | :holdings_unavailable}
+        when result: term()
+  def with_video_lock(path, remote_id, fun) do
+    repo = Brando.Repo.repo()
+    key = "brando:provider_video:#{path}:#{remote_id}"
+    deadline = System.monotonic_time(:millisecond) + lock_timeout()
+
+    if repo.in_transaction?() do
+      with :ok <- acquire("pg_try_advisory_xact_lock", key, deadline), do: fun.()
+    else
+      repo.checkout(fn -> with_session_lock(repo, key, deadline, fun) end)
     end
+  end
+
+  defp with_session_lock(repo, key, deadline, fun) do
+    with :ok <- acquire("pg_try_advisory_lock", key, deadline) do
+      try do
+        fun.()
+      after
+        Ecto.Adapters.SQL.query(repo, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+      end
+    end
+  end
+
+  # Tried rather than waited for: a wait longer than the query timeout would
+  # raise in the editor's LiveView, or in the delete's transaction.
+  defp acquire(function, key, deadline) do
+    case query("SELECT #{function}(hashtextextended($1, 0))", [key], "Could not lock a provider video: ") do
+      {:ok, %{rows: [[true]]}} ->
+        :ok
+
+      {:ok, %{rows: [[false]]}} ->
+        if System.monotonic_time(:millisecond) < deadline do
+          Process.sleep(@lock_poll_interval)
+          acquire(function, key, deadline)
+        else
+          {:error, :busy}
+        end
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  defp lock_timeout do
+    :brando |> Application.get_env(__MODULE__, []) |> Keyword.get(:lock_timeout, @lock_timeout)
   end
 
   # `{path, [{value, remote_id}]}` for each path a row may hold a video at.
@@ -167,7 +215,7 @@ defmodule Brando.Videos.ProviderHoldings do
 
   # Inside a transaction, such as a delete's, a failed read rolls back to
   # before it rather than aborting the caller's work.
-  defp query(sql, params) do
+  defp query(sql, params, failure \\ "Could not read which sites hold provider videos: ") do
     repo = Brando.Repo.repo()
     opts = if repo.in_transaction?(), do: [mode: :savepoint], else: []
 
@@ -176,7 +224,7 @@ defmodule Brando.Videos.ProviderHoldings do
         {:ok, result}
 
       {:error, reason} ->
-        Logger.warning("Could not read which sites hold provider videos: " <> Exception.message(reason))
+        Logger.warning(failure <> Exception.message(reason))
         {:error, :holdings_unavailable}
     end
   end
