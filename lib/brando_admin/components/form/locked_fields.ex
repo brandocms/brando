@@ -196,6 +196,22 @@ defmodule BrandoAdmin.Components.Form.LockedFields do
     Enum.reduce(forms(schema), params, &derive_slugs(&2, changeset, schema, &1, @not_superuser))
   end
 
+  @doc """
+  The changeset `cast` builds from `params` once `hold/3` and
+  `derive_held_slugs/3` have had them: a writer past the form's cast for anyone
+  but a superuser.
+  """
+  @spec cast_held(map(), module(), struct(), (map() -> Changeset.t())) :: Changeset.t()
+  def cast_held(params, schema, entry, cast) when is_function(cast, 1) do
+    params = hold(params, schema, entry)
+    changeset = cast.(params)
+
+    case derive_held_slugs(params, changeset, schema) do
+      ^params -> changeset
+      params -> cast.(params)
+    end
+  end
+
   defp forms(schema) do
     if Code.ensure_loaded?(schema) and function_exported?(schema, :__forms__, 0), do: schema.__forms__(), else: []
   end

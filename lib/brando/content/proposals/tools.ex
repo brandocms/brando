@@ -31,6 +31,7 @@ defmodule Brando.Content.Proposals.Tools do
   alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
   alias Brando.Media.Folders
   alias Brando.Type.I18nString
+  alias BrandoAdmin.Components.Form.LockedFields
 
   defmodule Context do
     @moduledoc """
@@ -320,14 +321,16 @@ defmodule Brando.Content.Proposals.Tools do
         do: [%{name: "status", type: "one of #{Enum.join(@statuses, ", ")}", required: false}],
         else: []
 
+    # A proposal that names a field locked for this actor is refused
+    locked = locked_field_names(schema, actor)
+    fields = attributes ++ references ++ assets ++ EntryFields.describe(schema) ++ status
+
     %{
       content_type: Codec.content_type(schema),
       label: Brando.Blueprint.get_singular(schema),
-      fields: attributes ++ references ++ assets ++ EntryFields.describe(schema) ++ status,
+      fields: Enum.reject(fields, &(&1.name in locked)),
       block_fields: block_fields(schema),
-      publication:
-        "New entries are created as drafts. Set an existing entry's status to change it: published shows it, " <>
-          "disabled deactivates it (hidden from the site, kept in the admin), draft takes it back to work on."
+      publication: publication("status" in locked)
     }
   end
 
@@ -1258,6 +1261,19 @@ defmodule Brando.Content.Proposals.Tools do
     do: String.slice(value, 0, @text_limit) <> "…"
 
   defp shorten(value), do: value
+
+  defp locked_field_names(schema, actor) do
+    if Boundary.superuser?(actor),
+      do: [],
+      else: schema |> LockedFields.held_keys(nil) |> Enum.map(&to_string/1)
+  end
+
+  defp publication(true), do: "New entries are created as drafts."
+
+  defp publication(false) do
+    "New entries are created as drafts. Set an existing entry's status to change it: published shows it, " <>
+      "disabled deactivates it (hidden from the site, kept in the admin), draft takes it back to work on."
+  end
 
   defp inspect_type(type) when is_atom(type), do: to_string(type)
   defp inspect_type(type), do: inspect(type)

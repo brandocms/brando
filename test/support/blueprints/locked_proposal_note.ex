@@ -1,6 +1,8 @@
-# A content type a proposal can change whose `subtitle` and `status` are locked
-# for anyone but a superuser in every form (Proposals.LockedFieldsTest), on the
-# `synctest_articles` table.
+# A content type a proposal can change whose `status`, `subtitle`, required `year`
+# and required `slug` are locked for anyone but a superuser in every form, the
+# last three with a default or a source (Proposals.LockedFieldsTest), on the
+# `synctest_articles` table. Its identifier shows the two required ones, so a draft
+# needs them too.
 defmodule Brando.LockedProposalTest.Note do
   @moduledoc false
   use Brando.Blueprint,
@@ -18,12 +20,13 @@ defmodule Brando.LockedProposalTest.Note do
   trait :status
   trait :timestamped
 
-  identifier "{{ entry.title }}"
+  identifier "{{ entry.title }} ({{ entry.slug }}, {{ entry.year }})"
 
   attributes do
     attribute :title, :string, required: true
-    attribute :slug, :string
+    attribute :slug, :slug, required: true
     attribute :subtitle, :text
+    attribute :year, :integer, required: true
   end
 
   listings do
@@ -38,7 +41,9 @@ defmodule Brando.LockedProposalTest.Note do
         fieldset do
           input :status, :status, readonly: :unless_superuser
           input :title, :text
-          input :subtitle, :text, readonly: :unless_superuser
+          input :slug, :slug, source: :title, readonly: :unless_superuser
+          input :subtitle, :text, readonly: :unless_superuser, default: "Standard"
+          input :year, :number, readonly: :unless_superuser, default: 2024
         end
       end
     end

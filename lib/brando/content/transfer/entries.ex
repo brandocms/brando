@@ -395,17 +395,8 @@ defmodule Brando.Content.Transfer.Entries do
   # or derived slug as a form's new entry has them. An image's `path` has neither,
   # so a new image can't be created this way (dependencies upload its file).
   defp held_changeset(%{entry: %schema{} = entry}, params, actor) do
-    if Boundary.superuser?(actor) do
-      Transfer.field_changeset(entry, params, actor)
-    else
-      params = LockedFields.hold(params, schema, entry)
-      cs = Transfer.field_changeset(entry, params, actor)
-
-      case LockedFields.derive_held_slugs(params, cs, schema) do
-        ^params -> cs
-        params -> Transfer.field_changeset(entry, params, actor)
-      end
-    end
+    cast = &Transfer.field_changeset(entry, &1, actor)
+    if Boundary.superuser?(actor), do: cast.(params), else: LockedFields.cast_held(params, schema, entry, cast)
   end
 
   # What `held_changeset/3` holds, on the relations claimed after the cast

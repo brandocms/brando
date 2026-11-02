@@ -9,7 +9,7 @@ defmodule Brando.Content.Proposals.LockedFieldsTest do
 
   alias Brando.Authorization.{Boundary, Groups, Migration, Scope}
   alias Brando.Content.Proposals
-  alias Brando.Content.Proposals.{CreateEntry, SetFields}
+  alias Brando.Content.Proposals.{Codec, CreateEntry, SetFields, Tools}
   alias Brando.Factory
   alias Brando.LockedProposalTest.Note
   alias Brando.Test.Users
@@ -43,6 +43,7 @@ defmodule Brando.Content.Proposals.LockedFieldsTest do
       title: "Saved",
       slug: "saved-#{System.unique_integer([:positive])}",
       subtitle: "Stored",
+      year: 2020,
       status: :draft
     })
   end
@@ -88,6 +89,24 @@ defmodule Brando.Content.Proposals.LockedFieldsTest do
         assert codes(proposal) == [:protected_field]
       end
 
+      # What it can't name, it gets as a form's new entry does, in the review's
+      # preview and in the save.
+      test "a non-superuser's new entry takes the locked fields' defaults and derived slug" do
+        user = editor(unquote(mode))
+        ops = [%CreateEntry{schema: Note, ref: "new", fields: %{title: "Første notat"}}]
+
+        assert {:ok, proposal} = Proposals.propose(ops, user)
+        assert proposal.problems == []
+
+        assert {:ok, %{{:new, "new"} => changeset}} = Proposals.materialize(proposal, user)
+        assert Ecto.Changeset.get_field(changeset, :slug) == "forste-notat"
+
+        assert {:ok, _} = approve_and_apply(proposal, user)
+
+        saved = Repo.get_by!(Note, title: "Første notat")
+        assert {saved.slug, saved.subtitle, saved.year, saved.status} == {"forste-notat", "Standard", 2024, :draft}
+      end
+
       test "a non-superuser's other fields still go through" do
         user = editor(unquote(mode))
         note = note()
@@ -119,6 +138,58 @@ defmodule Brando.Content.Proposals.LockedFieldsTest do
         assert {:ok, proposal} = Proposals.prepare(ops, user)
         refute :protected_field in codes(proposal)
       end
+    end
+  end
+
+  # A form's default doesn't reach a superuser, who can name the field
+  test "a superuser's new entry still has to name a required locked field" do
+    %{superuser: user} = put_mode(:legacy)
+    ops = [%CreateEntry{schema: Note, ref: "new", fields: %{title: "New"}}]
+
+    assert {:ok, proposal} = Proposals.prepare(ops, user)
+    assert codes(proposal) == [:invalid]
+  end
+
+  # The review is of what its author would save, whoever reads it
+  test "a colleague's preview of a new entry holds what its author's role holds" do
+    %{superuser: superuser} = put_mode(:legacy)
+    user = editor(:legacy)
+
+    by_editor = [%CreateEntry{schema: Note, ref: "new", fields: %{title: "From an editor"}}]
+    assert {:ok, proposal} = Proposals.prepare(by_editor, user)
+    assert proposal.problems == []
+    assert {:ok, %{{:new, "new"} => changeset}} = Proposals.materialize(proposal, superuser, shared: true)
+    assert Ecto.Changeset.get_field(changeset, :slug) == "from-an-editor"
+
+    named = %{title: "From a superuser", slug: "named", subtitle: "Named", year: 1999}
+    assert {:ok, proposal} = Proposals.prepare([%CreateEntry{schema: Note, ref: "new", fields: named}], superuser)
+    assert proposal.problems == []
+    assert {:ok, %{{:new, "new"} => changeset}} = Proposals.materialize(proposal, user, shared: true)
+    assert Ecto.Changeset.get_field(changeset, :slug) == "named"
+    assert Ecto.Changeset.get_field(changeset, :subtitle) == "Named"
+  end
+
+  describe "describe_content_type" do
+    defp described(user) do
+      {:ok, %{fields: fields} = described} =
+        Tools.call("describe_content_type", %{"content_type" => Codec.content_type(Note)}, %Tools.Context{actor: user})
+
+      {Enum.map(fields, & &1.name), described}
+    end
+
+    test "leaves out for a non-superuser what a proposal may not name" do
+      put_mode(:legacy)
+      {names, _} = described(editor(:legacy))
+
+      assert "title" in names
+      assert names -- ~w(slug subtitle year status) == names
+    end
+
+    test "lists it for a superuser" do
+      %{superuser: user} = put_mode(:legacy)
+      {names, _} = described(user)
+
+      assert ~w(slug status subtitle title year) -- names == []
     end
   end
 

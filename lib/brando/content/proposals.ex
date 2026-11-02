@@ -1471,7 +1471,16 @@ defmodule Brando.Content.Proposals do
   defp base_changeset({:new, ref} = target, proposal, _entries, user) do
     schema = Map.fetch!(proposal.targets, target)
     %CreateEntry{fields: fields} = Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1))
-    schema.changeset(struct(schema), schema |> EntryFields.params(fields) |> Map.put("status", "draft"), user, nil, [])
+    entry = struct(schema)
+    params = EntryFields.params(schema, fields)
+    cast = &schema.changeset(entry, Map.put(&1, "status", "draft"), user, nil, [])
+
+    # What a non-superuser can't name (`locked_fields/3`) it has as a form's new
+    # entry has it. The role is the author's here too: a colleague may be
+    # reading the review.
+    if Boundary.superuser?(%Brando.Users.User{id: proposal.actor_id}),
+      do: cast.(params),
+      else: LockedFields.cast_held(params, schema, entry, cast)
   end
 
   defp base_changeset({schema, _} = target, proposal, entries, user) do
