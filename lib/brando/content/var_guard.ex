@@ -30,8 +30,9 @@ defmodule Brando.Content.VarGuard do
   alias Brando.Content.Var.ValidateValue
   alias Ecto.Changeset
 
-  # What the Globals screen fills in. The rest of a global is its definition.
-  @value_params ~w(id value value_boolean image_id file_id video_id gallery_id form_id palette_id identifier_id
+  # What the Globals screen fills in. The rest of a global is its definition,
+  # such as the palette a colour global offers (`palette_id`).
+  @value_params ~w(id value value_boolean image_id file_id video_id gallery_id form_id identifier_id
                    link_text link_type link_target_blank)
 
   @doc """
@@ -279,6 +280,32 @@ defmodule Brando.Content.VarGuard do
     base = %{"id" => global_set.id}
     if Map.has_key?(params, "vars"), do: Map.put(base, "vars", values), else: base
   end
+
+  # Who changed a set or a var and when (the Creator trait) come with a value.
+  @stamps [:edited_at, :updated_by_id, :content_modified_at]
+
+  @doc """
+  Whether the global set changeset `changeset` changes values only, as a save
+  of `global_values/2` does: no var added, removed or redefined, and nothing
+  of the set's own but who changed it and when. A set or var stored with no
+  creator (one a seed or an import wrote as `:system`) takes the saving user
+  as its creator (`Brando.Trait.Creator`); one with a creator keeps it.
+  """
+  @spec values_only?(Changeset.t()) :: boolean()
+  def values_only?(%Changeset{changes: changes} = changeset) do
+    Enum.all?(changes, fn
+      {:vars, vars} -> Enum.all?(vars, &value_change?/1)
+      {field, _} -> stamp?(changeset, field)
+    end)
+  end
+
+  defp value_change?(%Changeset{action: :update, data: %{id: id}, changes: changes} = var) when not is_nil(id),
+    do: changes |> Map.keys() |> Enum.all?(&(stamp?(var, &1) or Atom.to_string(&1) in @value_params))
+
+  defp value_change?(_var), do: false
+
+  defp stamp?(%Changeset{data: data}, :creator_id), do: is_nil(Map.get(data, :creator_id))
+  defp stamp?(_changeset, field), do: field in @stamps
 
   defp module(changeset) do
     case Changeset.get_field(changeset, :module_id) do

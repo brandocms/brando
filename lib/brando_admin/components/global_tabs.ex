@@ -82,7 +82,9 @@ defmodule BrandoAdmin.Components.GlobalTabs do
         />
       </.inputs_for>
 
-      <div class="global-save-actions"><button class="btn btn--primary">{gettext("Save")}</button></div>
+      <div :if={BrandoAdmin.Authorization.allowed?(:update_values, Sites.GlobalSet)} class="global-save-actions">
+        <button class="btn btn--primary">{gettext("Save")}</button>
+      </div>
     </.form>
     """
   end
@@ -121,23 +123,21 @@ defmodule BrandoAdmin.Components.GlobalTabs do
     # get entry from params id
     entry = Enum.find(global_sets, &(&1.id == String.to_integer(params["id"])))
 
-    changeset =
-      entry
-      |> Sites.GlobalSet.changeset(VarGuard.global_values(entry, params), current_user)
-      |> Map.put(:action, :update)
-
-    case Sites.update_global_set(changeset, current_user) do
+    case Sites.update_global_values(entry, params, current_user) do
       {:ok, _entry} ->
         send(self(), {:toast, gettext("Global set updated")})
 
         {:noreply,
          socket
          |> assign(:active_tab, nil)
-         |> assign(changeset: changeset)
          |> load_global_sets()}
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, changeset: changeset)}
+
+      {:error, :forbidden} ->
+        send(self(), {:toast, gettext("You do not have permission for this action.")})
+        {:noreply, socket}
     end
   end
 

@@ -201,6 +201,7 @@ defmodule Brando.Authorization.Boundary do
   def change(actor, action, changeset) do
     if Engine.enabled?() do
       with :ok <- Engine.authorize_change(actor_scope(actor), action, changeset),
+           :ok <- values_only(action, changeset),
            :ok <- protect_credentials(actor, changeset),
            :ok <- protect_superuser_fields(actor, changeset) do
         protect_account(changeset)
@@ -211,6 +212,7 @@ defmodule Brando.Authorization.Boundary do
       changeset = with_stored_role(changeset)
 
       with :ok <- legacy_authorize(actor, action, changeset.data),
+           :ok <- values_only(action, changeset),
            :ok <- legacy_profile(actor, changeset),
            :ok <- legacy_role_change(actor, changeset),
            :ok <- protect_credentials(actor, changeset),
@@ -413,6 +415,13 @@ defmodule Brando.Authorization.Boundary do
   end
 
   defp protect_credentials(_actor, _changeset), do: :ok
+
+  # `update_values` fills in a global set's values; the rest of the set is
+  # its definition, which takes `update`.
+  defp values_only(:update_values, changeset),
+    do: if(Brando.Content.VarGuard.values_only?(changeset), do: :ok, else: {:error, :forbidden})
+
+  defp values_only(_action, _changeset), do: :ok
 
   # A superuser's field set in the change (a copy carries it as data, not as
   # a change). Read with `superuser?/1`, the rule module code follows.

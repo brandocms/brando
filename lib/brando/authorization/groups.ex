@@ -320,7 +320,7 @@ defmodule Brando.Authorization.Groups do
 
   defp delegable?(catalog, snapshot, key) do
     case Map.get(catalog, key) do
-      %{delegable: true} -> Map.has_key?(snapshot.grants, key)
+      %{delegable: true} = permission -> Catalog.held?(snapshot.grants, permission)
       _ -> false
     end
   end

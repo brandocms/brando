@@ -6,8 +6,11 @@ defmodule Brando.Sites do
 
   import Ecto.Query
 
+  alias Brando.Authorization.Boundary
   alias Brando.Cache
   alias Brando.Content.Blocks, as: ContentBlocks
+  alias Brando.Content.Var
+  alias Brando.Content.VarGuard
   alias Brando.Sites.GlobalSet
   alias Brando.Sites.Identity
   alias Brando.Sites.Preview
@@ -248,6 +251,47 @@ defmodule Brando.Sites do
   end
 
   mutation :delete, GlobalSet
+
+  @doc """
+  Saves the values in `params` to the vars of `global_set`, as the Globals
+  screen does. Keys, types, options, labels, palettes, the vars themselves,
+  their order and the set's own fields stay as they are
+  (`Brando.Content.VarGuard.global_values/2`). It takes the `update_values`
+  permission on global sets, which `update` includes.
+
+  The set is read anew in the save's run, so what is stored decides, not the
+  struct of a screen opened before another save: a creator that save stamped
+  on a set or var stored with none stays.
+  """
+  @spec update_global_values(global_set, params, user) :: {:ok, global_set} | {:error, changeset | :forbidden}
+  def update_global_values(%GlobalSet{id: id}, params, user) do
+    Boundary.run(user, :update_values, GlobalSet, fn user ->
+      GlobalSet
+      |> Brando.Repo.get!(id)
+      |> Brando.Repo.preload(:vars)
+      |> global_values_changeset(params, user)
+      |> update_global_set(user, action: :update_values)
+    end)
+  end
+
+  # The vars are cast unnumbered: a values save does not order the set, and
+  # numbering them by their place would change the sequence of vars stored
+  # with none or a shared one (`brando_109`), which the set's Creator trait
+  # counts as an edit. The set is stamped once their values are cast.
+  defp global_values_changeset(global_set, params, user) do
+    values = VarGuard.global_values(global_set, params)
+    changeset = GlobalSet.changeset(global_set, Map.delete(values, "vars"), user)
+
+    case values do
+      %{"vars" => vars} ->
+        %{changeset | params: Map.put(changeset.params, "vars", vars)}
+        |> Ecto.Changeset.cast_assoc(:vars, with: &Var.changeset(&1, &2, user))
+        |> Brando.Trait.Creator.stamp_if_edited(GlobalSet, user)
+
+      _ ->
+        changeset
+    end
+  end
 
   @doc """
   Get global by category and key

@@ -93,8 +93,11 @@ defmodule Brando.Content.StaleBlocksTest do
     (vars ++ defined_vars)
     |> Enum.with_index()
     |> Enum.each(fn {var, sequence} ->
-      params = Map.merge(var, %{"sequence" => sequence, "block_id" => block.id})
-      %Var{} |> Var.changeset(params, c.user, nil, validate_var_values: false) |> Repo.insert!()
+      params = Map.put(var, "sequence", sequence)
+
+      %Var{block_id: block.id}
+      |> Var.changeset(params, c.user, nil, validate_var_values: false)
+      |> Repo.insert!()
     end)
 
     struct(join_schema(page), %{entry_id: page.id, block_id: block.id, sequence: sequence}) |> Repo.insert!()

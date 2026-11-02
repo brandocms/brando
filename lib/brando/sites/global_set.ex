@@ -26,6 +26,11 @@ defmodule Brando.Sites.GlobalSet do
   identifier false
   persist_identifier false
 
+  # `update_values` fills in the values on the Globals screen
+  # (`Brando.Sites.update_global_values/3`), but changes no global's key, type,
+  # options or label. `update` covers both (`Brando.Authorization.Catalog`).
+  authorization actions: [:update_values]
+
   attributes do
     attribute :label, :string, required: true
     attribute :key, :string, unique: [prevent_collision: :language], required: true

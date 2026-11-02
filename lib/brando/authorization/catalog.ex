@@ -58,6 +58,9 @@ defmodule Brando.Authorization.Catalog do
     {:listing_views, "brando.listing_views", "Shared listing views", "Settings", [:manage], [:standalone, :site]},
     {:assistant, "brando.assistant", "Content assistant", "Content", [:use, :configure], [:standalone, :site]}
   ]
+  # A grant of the action in the value includes the one in the key: setting
+  # up a global set includes filling in its values. `held?/2` reads this.
+  @implied_actions %{{Brando.Sites.GlobalSet, :update_values} => :update}
 
   @doc "Lists all permissions, including application resources."
   def all do
@@ -187,6 +190,14 @@ defmodule Brando.Authorization.Catalog do
   @doc "The keys of the permissions only superusers hold (`superuser_only?/2`)."
   def superuser_only_keys, do: all() |> Enum.filter(& &1.superuser_only) |> MapSet.new(& &1.key)
 
+  @doc """
+  Whether `grants`, a map keyed by permission key, holds `permission`: its own
+  key, or one whose grant includes it, as `update` on global sets includes
+  `update_values`.
+  """
+  def held?(grants, %{key: key, implied_by: implied_by}),
+    do: Enum.any?([key | implied_by], &Map.has_key?(grants, &1))
+
   @doc "Default grants for a fresh preset. Existing groups are not modified."
   def preset_permissions(:user, _kind), do: []
   def preset_permissions(:superuser, _kind), do: []
@@ -202,8 +213,11 @@ defmodule Brando.Authorization.Catalog do
   defp in_preset?(_preset, %{superuser_only: true}), do: false
   defp in_preset?(:admin, permission), do: permission.delegable
 
+  # Editors fill in global values, as in legacy mode, but leave the
+  # definitions (keys, types, options) to whoever sets the sets up.
   defp in_preset?(:editor, permission) do
     permission.section in ["Content", "Media"] or permission.subject in [:backend, :profile] or
+      {permission.subject, permission.action} == {Brando.Sites.GlobalSet, :update_values} or
       (permission.action == :read and
          permission.subject in [
            Brando.Content.Module,
@@ -236,8 +250,16 @@ defmodule Brando.Authorization.Catalog do
       action: action,
       scopes: scopes,
       delegable: section != "Installation" and subject != Brando.Users.User and not superuser_only,
-      superuser_only: superuser_only
+      superuser_only: superuser_only,
+      implied_by: implied_by(subject, resource, action)
     }
+  end
+
+  defp implied_by(subject, resource, action) do
+    case Map.fetch(@implied_actions, {subject, action}) do
+      {:ok, broader} -> ["#{resource}.#{broader}"]
+      :error -> []
+    end
   end
 
   defp default_key(schema) do

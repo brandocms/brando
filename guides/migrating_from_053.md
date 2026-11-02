@@ -362,6 +362,18 @@ sender first, before the first compile.
 - **Global set setup in legacy mode.** `/admin/config/global_sets` opens for
   superusers only, as the menu always implied; an admin or editor fills in
   values on the Globals screen.
+- **Global values in groups mode.** Filling in global values has its own
+  permission, Global sets · Edit values, which Edit includes. A new Editor
+  group gets it; groups that exist keep their grants, so an Editor group
+  prepared before the upgrade, which can only view global sets, cannot save
+  on the Globals screen. To let it fill in values, tick Edit values for the
+  group under **Configuration → Permissions**.
+- **Vars created with an owner in params.** `Brando.Content.Var.changeset/3`
+  no longer takes an owner key (`page_id`, `module_id`, `global_set_id`,
+  `table_template_id`, `table_row_id`, `block_id`, `menu_item_id`) from
+  params. A seed or script that creates a var on its own sets the key on the
+  struct, `%Var{page_id: page.id} |> Var.changeset(params)`, or saves the var
+  through its owner (`Sites.update_global_set/3`, the page's changeset).
 
 - **Markup editors wrote where text belongs.** Liquid modules print `string`
   and `text` vars, globals and identity links HTML-escaped, braces included,

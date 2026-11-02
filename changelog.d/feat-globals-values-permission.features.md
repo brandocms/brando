@@ -1,0 +1,1 @@
+- In groups mode, Global sets · Edit values lets a group fill in values on the Globals screen without changing what the globals are; Edit includes it, and the Editor preset gets it.

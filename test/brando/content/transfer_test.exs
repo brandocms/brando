@@ -137,8 +137,8 @@ defmodule Brando.Content.TransferTest do
     |> Repo.update!()
 
     Brando.Content.Var.changeset(
-      %Brando.Content.Var{},
-      %{type: :string, key: "strapline", label: "Strapline", value: "Made here", page_id: c.source.id},
+      %Brando.Content.Var{page_id: c.source.id},
+      %{type: :string, key: "strapline", label: "Strapline", value: "Made here"},
       c.user
     )
     |> Repo.insert!()
@@ -176,8 +176,8 @@ defmodule Brando.Content.TransferTest do
   # brando_225 renamed html vars to rich_text after the import was recorded
   test "a whole entry imported before the html var rename can still be recovered", c do
     Brando.Content.Var.changeset(
-      %Brando.Content.Var{},
-      %{type: :rich_text, key: "intro", label: "Intro", value: "<p>Intro</p>", page_id: c.source.id},
+      %Brando.Content.Var{page_id: c.source.id},
+      %{type: :rich_text, key: "intro", label: "Intro", value: "<p>Intro</p>"},
       c.user
     )
     |> Repo.insert!()
@@ -311,8 +311,8 @@ defmodule Brando.Content.TransferTest do
 
     for key <- ["gallery_one", "gallery_two"] do
       Brando.Content.Var.changeset(
-        %Brando.Content.Var{},
-        %{type: :gallery, key: key, label: key, gallery_id: gallery.id, page_id: c.source.id},
+        %Brando.Content.Var{page_id: c.source.id},
+        %{type: :gallery, key: key, label: key, gallery_id: gallery.id},
         c.user
       )
       |> Repo.insert!()
@@ -431,14 +431,13 @@ defmodule Brando.Content.TransferTest do
 
     for {page, link} <- [{c.source, source_link}, {c.source, target_link}, {c.target, source_link}] do
       Brando.Content.Var.changeset(
-        %Brando.Content.Var{},
+        %Brando.Content.Var{page_id: page.id},
         %{
           type: :link,
           key: "link_#{link.id}",
           label: "Entry link",
           link_type: :identifier,
-          identifier_id: link.id,
-          page_id: page.id
+          identifier_id: link.id
         },
         c.user
       )

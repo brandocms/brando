@@ -1,0 +1,1 @@
+- A page or table template save, or a proposal creating a var, can no longer give a var another owner's key, which added a global to a global set or a var to a module the editor could not define.

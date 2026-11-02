@@ -131,7 +131,7 @@ defmodule Brando.Authorization.Engine do
       not has_backend_access?(snapshot) -> :backend_access_required
       # No group grants it; a grant left from before it was superuser-only is inert.
       permission.superuser_only and not snapshot.superuser? -> :superuser_only
-      not granted?(snapshot, permission.key) -> :missing_grant
+      not holds?(snapshot, permission) -> :missing_grant
       not protected_subject?(snapshot, action, subject) -> :protected_account
       not policy_allows?(snapshot.scope, action, subject) -> :policy_denied
       true -> nil
@@ -139,7 +139,9 @@ defmodule Brando.Authorization.Engine do
   end
 
   defp permission_groups(_snapshot, nil), do: []
-  defp permission_groups(snapshot, permission), do: Map.get(snapshot.grants, permission.key, [])
+
+  defp permission_groups(snapshot, permission),
+    do: [permission.key | permission.implied_by] |> Enum.flat_map(&Map.get(snapshot.grants, &1, [])) |> Enum.uniq()
 
   def scope(actor, action, schema) do
     scope_query(actor, action, Ecto.Queryable.to_query(schema), schema)
@@ -195,7 +197,7 @@ defmodule Brando.Authorization.Engine do
   defp fresh_original(_scope, :create, %{__meta__: %{state: :built}, id: nil} = entry), do: {:ok, entry}
 
   defp fresh_original(scope, action, %{__meta__: %{state: :loaded}, __struct__: schema, id: id})
-       when action in [:update, :reorder, :restore] do
+       when action in [:update, :update_values, :reorder, :restore] do
     # Lock the actual target while authorizing the resulting changes. A stale or
     # forged changeset's data cannot disguise a live entry as an unpublished one.
     query = from(entry in schema, where: entry.id == ^id, lock: "FOR UPDATE")
@@ -262,6 +264,8 @@ defmodule Brando.Authorization.Engine do
   defp has_backend_access?(snapshot), do: granted?(snapshot, "brando.admin.access")
   defp granted?(%Snapshot{superuser?: true}, _), do: true
   defp granted?(%Snapshot{grants: grants}, key), do: Map.has_key?(grants, key)
+  defp holds?(%Snapshot{superuser?: true}, _), do: true
+  defp holds?(%Snapshot{grants: grants}, permission), do: Catalog.held?(grants, permission)
 
   defp subject_scope?(scope, %{__meta__: %{state: :loaded, prefix: prefix}, __struct__: schema}) do
     if schema.__schema__(:prefix) == "public" do
