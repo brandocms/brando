@@ -411,21 +411,28 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     {:noreply, socket}
   end
 
+  # In a subform row, the picker is for the row it opened on (`picker_row`)
   def handle_event("open_picker", _, socket) do
-    {:noreply, socket |> assign(:picker_open?, true) |> refresh_filters(Keyword.get(socket.assigns.opts, :sources))}
+    {:noreply,
+     socket
+     |> assign(picker_open?: true, picker_row: row_key(socket))
+     |> refresh_filters(Keyword.get(socket.assigns.opts, :sources))}
   end
 
   def handle_event("close_picker", _, socket), do: {:noreply, assign(socket, :picker_open?, false)}
 
   # Only an entry the picker lists: it may have reloaded since it showed one,
   # and lists again here if what the editor may read can have changed since
-  # (`read_key/0`)
+  # (`read_key/0`). In a subform row, only while the input still serves the
+  # row the picker opened on: it is named by its position, so once a row
+  # above it is removed or the rows are reordered, it serves another row.
   def handle_event("select_identifier", %{"id" => identifier_id}, socket) do
     socket = refresh_filters(socket, Keyword.get(socket.assigns.opts, :sources))
 
-    if Enum.any?(socket.assigns.available_identifiers, &(to_string(&1.id) == to_string(identifier_id))),
-      do: select_identifier(socket, identifier_id),
-      else: {:noreply, socket}
+    if socket.assigns[:picker_row] == row_key(socket) and
+         Enum.any?(socket.assigns.available_identifiers, &(to_string(&1.id) == to_string(identifier_id))),
+       do: select_identifier(socket, identifier_id),
+       else: {:noreply, socket}
   end
 
   def handle_event("select_schema", %{"schema" => schema}, %{assigns: %{available_schemas: available_schemas}} = socket) do
@@ -519,6 +526,12 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     end
   end
 
+  # The subform row the input serves now, nil outside a subform
+  defp row_key(%{assigns: %{subform_id: subform_id, field: field}}) when not is_nil(subform_id),
+    do: SubformHelpers.row_key(field.form)
+
+  defp row_key(_socket), do: nil
+
   # The input's changeset, to the component that owns it: a subform row's
   # to its subform, which puts the row in the form's latest list
   # (`Subform.update/2`), the entry's own to the form. The changeset of a
@@ -526,7 +539,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   defp put_changeset(%{assigns: %{subform_id: subform_id}} = socket, changeset) when not is_nil(subform_id) do
     send_update(BrandoAdmin.Components.Form.Subform,
       id: subform_id,
-      key: SubformHelpers.row_key(socket.assigns.field.form),
+      key: row_key(socket),
       action: :update_changeset,
       updated_changeset: changeset
     )

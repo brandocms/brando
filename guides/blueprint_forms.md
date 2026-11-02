@@ -564,8 +564,9 @@ choices. `filter_language: true` offers only entries in the same language as
 the entry being edited. The relation's `constraints: [max_length: n]` and
 `min_length` limit how many can be picked.
 
-The input also works in a subform's rows (`inputs_for`), for an `:entries`
-relation of the row's schema, where a pick changes the row. The default
+The input also works in a subform's rows (`inputs_for`, other than a
+transformer's), for an `:entries` relation of the row's schema, where a
+pick changes the row. The default
 preloads load the rows' entries with their identifiers; a form `query` that
 preloads the rows' entries without them works too, and the input reads them
 by id. The picker reads its list of choices when it opens.

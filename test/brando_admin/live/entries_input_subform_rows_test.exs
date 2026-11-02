@@ -185,6 +185,29 @@ defmodule BrandoAdmin.EntriesInputSubformRowsTest do
       assert row_links(view) == []
     end
 
+    # The row's input is named by its position: once the row above it goes,
+    # the picker that stayed open serves another row
+    test "a pick from a picker whose row moved is dropped", %{conn: conn} = c do
+      other = Repo.insert!(%ArticleItem{article_id: c.article.id, label: "Second", sequence: 1})
+      view = open(conn, c.article, "item_entries")
+      view |> element("#article_items_0_related_entries-field-wrapper button", "Select entries") |> render_click()
+
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form,
+        id: "article_form",
+        action: :update_entries,
+        field: :items,
+        op: {:delete, "id-#{c.item.id}"}
+      )
+
+      assert get_in(params(view), ["article", "items", "0", "id"]) == to_string(other.id)
+
+      view
+      |> element("#article_items_0_related_entries-entries-options [data-id='#{c.picked.id}']")
+      |> render_click()
+
+      assert row_links(view) == []
+    end
+
     test "\"Clear all\" empties the row and is saved", %{conn: conn} = c do
       view = open(conn, c.article, "item_entries")
       view |> element("#article_items_0_related_entries-field-wrapper button", "Clear all") |> render_click()
