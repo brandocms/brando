@@ -1315,6 +1315,22 @@ defmodule Brando.Villain.InertEditorTextTest do
       refute html =~ ~r/>\s*42/, "ran: #{html}"
     end
 
+    test "stripping a note mark leaves a brace before any other span alone" do
+      html = ~S|<script>const a = "{<span>";</script><span data-brando-note="1">Text</span>|
+
+      assert Brando.Notes.strip_marks(html) == ~S|<script>const a = "{<span>";</script>Text|
+    end
+
+    test "a multi module's last child ending in a brace completes no delimiter", %{user: user} do
+      child_module = module!(user, ".a {")
+      parent = module!(user, "{{ content }}{{ body | raw }}")
+      var = %Var{key: "body", label: "B", type: :string, value: "{ 1 | plus: 41 }}"}
+
+      html = render(block(parent, multi: true, vars: [var], children: [block(child_module, type: :module_entry)]))
+
+      assert html =~ "plus: 41", "ran: #{html}"
+    end
+
     test "a real identifier attribute is still stripped", %{user: user} do
       html = render(block(module!(user, ~S(<a href="/" data-identifier-id="1">x</a>{{ entry.title }})), []))
 
