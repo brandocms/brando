@@ -154,6 +154,33 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
     end
   end
 
+  describe "a purge with a provider that answers with an error after a long wait" do
+    # A gateway's 504, after it waited on the provider behind it: the answer
+    # is a status, but it took as long as a timeout.
+    test "asks it once, and keeps its other rows for the next run" do
+      put_test_env(Brando.SoftDelete.Query, slow_failure_ms: 50)
+      configure(Mux, :on_purge)
+
+      videos =
+        for id <- ["asset-1", "asset-2"], do: Mux |> insert_video(:mux, %{"mux" => %{"asset_id" => id}}) |> expire()
+
+      me = self()
+
+      Req.Test.stub(Mux, fn conn ->
+        send(me, {:provider, conn.method, conn.request_path})
+        Process.sleep(60)
+        send_resp(conn, 504, ~s({"error":"x"}))
+      end)
+
+      log = capture_log([level: :info], fn -> assert purge_videos() == 0 end)
+
+      assert_received {:provider, "DELETE", "/video/v1/assets/" <> _id}
+      refute_received {:provider, "DELETE", "/video/v1/assets/" <> _id}
+      for video <- videos, do: assert(Repo.get!(Video, video.id).deleted_at)
+      assert log =~ "1 more mux video kept for the next purge"
+    end
+  end
+
   describe "a purge with a provider that answers with an error" do
     # An error status comes back at once, and may be one video's alone, such
     # as an asset the provider cannot delete: its other videos are still asked.

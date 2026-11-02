@@ -116,13 +116,17 @@ defmodule Brando.SoftDelete.Query do
     # leave the provider video behind for good. Only rows the delete removed
     # are counted.
     #
-    # Once a provider could not be reached, or timed out, it is not asked
-    # again this run (`as_one_run/1`): each call to a provider that hangs
-    # waits out its client's timeout, and the purger has one deadline for
+    # Once a provider could not be reached, timed out, or answered with an
+    # error only after a long wait (`unreachable?/2`), it is not asked again
+    # this run (`as_one_run/1`): each call to a provider that hangs waits out
+    # its client's timeout, and the purger has one 30-second deadline for
     # every schema and environment. Its other rows stay for the next run, and
-    # the other providers' rows go on. A provider that answered with an
-    # error, even a 5xx, answered at once, and the error may be that one
-    # video's: it is asked about its other rows.
+    # the other providers' rows go on. Req's own timeouts (30 seconds to
+    # connect, 15 to receive) are not shortened, so a single hanging call
+    # may still use up the deadline, and the purger is stopped before it
+    # gets to the rest; the rows it did not get to stay for the next run. A
+    # provider that answered with an error at once, even a 5xx, may have
+    # answered about that one video: it is asked about its other rows.
     unreachable = Process.get(@unreachable_key)
     kept = Map.new(unreachable || [], &{&1, 0})
     {purged, kept} = Enum.reduce(on_purge, {0, kept}, &purge_unless_unreachable(query, &1, &2))
@@ -167,19 +171,37 @@ defmodule Brando.SoftDelete.Query do
     if Map.has_key?(kept, video.type) do
       {purged, Map.update!(kept, video.type, &(&1 + 1))}
     else
+      started = System.monotonic_time(:millisecond)
+
       case purge_video(query, video) do
-        {:error, {:retry, reason}} -> {purged, if(unreachable?(reason), do: Map.put(kept, video.type, 0), else: kept)}
-        {:error, reason} when reason in [:holdings_unavailable, :busy, :not_purged] -> {purged, kept}
-        _purged -> {purged + 1, kept}
+        {:error, {:retry, reason}} ->
+          took = System.monotonic_time(:millisecond) - started
+          {purged, if(unreachable?(reason, took), do: Map.put(kept, video.type, 0), else: kept)}
+
+        {:error, reason} when reason in [:holdings_unavailable, :busy, :not_purged] ->
+          {purged, kept}
+
+        _purged ->
+          {purged + 1, kept}
       end
     end
   end
 
-  # The provider was not reached, or did not answer in time: the slow
-  # failures, each costing a client timeout.
-  defp unreachable?(%Req.TransportError{}), do: true
-  defp unreachable?(%Req.HTTPError{}), do: true
-  defp unreachable?(_reason), do: false
+  # A provider's error answer, a 500 or a 429, comes back within a second or
+  # so; one that took 3 seconds or more is a gateway's 502, 503 or 504 after
+  # it waited on the provider behind it, and the next call would wait as
+  # long. Three seconds leaves a slow network its margin, and is a tenth of
+  # the purger's 30 seconds. Tests set it lower, so they need not wait.
+  @slow_failure_ms 3_000
+
+  # The provider was not reached, or did not answer in time, or answered
+  # only after a long wait: the slow failures.
+  defp unreachable?(%Req.TransportError{}, _took), do: true
+  defp unreachable?(%Req.HTTPError{}, _took), do: true
+  defp unreachable?(_reason, took), do: took >= slow_failure_ms()
+
+  defp slow_failure_ms,
+    do: :brando |> Application.get_env(__MODULE__, []) |> Keyword.get(:slow_failure_ms, @slow_failure_ms)
 
   defp purge_video(query, video) do
     Brando.Videos.Uploader.delete_remote(video, fn ->
