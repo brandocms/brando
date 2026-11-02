@@ -730,19 +730,28 @@ A site holds a video while any of its current environments has a record of
 it, deleted or not. A Mux upload holds its video from the start, before Mux
 reports the asset. Brando reads that from the environments' video rows each
 time, so an environment copy or rollback needs nothing more. An environment
-whose schema is not there yet, while it is created or copied, holds nothing.
-If an environment's video table cannot be read, the picker lists nothing and
-adds nothing until it can.
+whose schema is not there yet, while it is created or copied, holds nothing:
+if the copy fails and Brando restores the environment's archive, another site
+may meanwhile have deleted, at the provider, a video only that environment
+held. If an environment's video table cannot be read, the picker lists
+nothing and adds nothing until it can.
 
 Deleting a video at the provider, when its record is deleted or purged
 (`delete_remote_on`), is refused while another site holds it: that site's
-record keeps playing. Brando does not delete the video at the provider later
-either, since the other site's record was added from the library and an
-added record is never deleted remotely: the video stays in the provider
-account until someone removes it there. A delete is refused too when the
-video tables cannot be read; a purge then keeps the record and tries again
-on its next run. A site's own other environments do not stop the delete, as
-with one site.
+record keeps playing. Brando does not delete the video later on the first
+site's behalf. If the other site's record is one it added from the library,
+it is never deleted remotely, and the video stays in the provider account
+until someone removes it there. If the record is that site's own upload, for
+example in a schema restored from an archive, deleting it deletes the video
+at the provider as usual.
+
+A delete is refused too when the video tables cannot be read, or when an add
+or another delete of the same video holds it up for more than 30 seconds.
+With `delete_remote_on: :on_purge`, the purge then keeps the record and
+tries again on its next run. With `delete_remote_on: :on_delete`, nothing
+tries again: the record is deleted in Brando, and the video stays at the
+provider until someone removes it there. A site's own other environments do
+not stop the delete, as with one site.
 
 From code, as the screen does:
 
