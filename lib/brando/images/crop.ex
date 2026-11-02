@@ -107,7 +107,7 @@ defmodule Brando.Images.Crop do
     result =
       with :ok <- Boundary.change(user, :update, changeset),
            {:ok, _} <- Ecto.Changeset.apply_action(changeset, :update),
-           :ok <- overwrite(image.path, binary_data) do
+           :ok <- overwrite(image, binary_data) do
         Images.update_image(changeset, user)
       end
 
@@ -123,8 +123,12 @@ defmodule Brando.Images.Crop do
 
   # The path comes from the image record, so it is checked before anything is
   # written: it stays in the media root and names an image. A replace writes
-  # over a file that is there and creates none.
-  defp overwrite(path, binary_data) do
+  # over a file that is there and creates none, but for an image on the CDN,
+  # whose upload may have removed the local original: its file comes back here
+  # for processing to upload again.
+  defp overwrite(%{cdn: true, path: path}, binary_data), do: write(path, binary_data)
+
+  defp overwrite(%{path: path}, binary_data) do
     with {:ok, dest_file} <- Storage.media_file(path),
          true <- File.regular?(dest_file) do
       write(path, binary_data)

@@ -172,6 +172,27 @@ defmodule Brando.Content.TransferLockedFieldsTest do
       end)
     end
 
+    test "an editor's replace writes a CDN image whose local original the upload removed",
+         %{user: user, root: root, dir: dir} do
+      path = Path.join(dir, "uploaded.jpg")
+      image = Factory.insert(:image, path: path, width: 100, height: 50, status: :processed, cdn: true)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, replaced} = Crop.save_replace(image, jpeg(), %{x: 50, y: 50}, user)
+        assert {replaced.path, replaced.width} == {path, 10}
+        assert File.regular?(Path.join(root, path))
+      end)
+    end
+
+    test "a CDN image still takes only a path under the media root that names an image",
+         %{user: user, root: root, dir: dir} do
+      path = Path.join(dir, "uploaded.html")
+      image = Factory.insert(:image, path: path, width: 100, height: 50, status: :processed, cdn: true)
+
+      assert {:error, :unsafe_media_path} = Crop.save_replace(image, jpeg(), %{x: 50, y: 50}, user)
+      refute File.exists?(Path.join(root, path))
+    end
+
     test "a replace doesn't write a file that isn't an image's", %{user: user, root: root, dir: dir} do
       other = Path.join(dir, "brochure.pdf")
       File.write!(Path.join(root, other), "untouched")
