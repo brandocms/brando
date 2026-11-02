@@ -87,12 +87,12 @@ defmodule Brando.Villain.LiquexParser.Builder do
       # call back into the complete document grammar.
       defcombinator(
         :document,
-        base |> repeat() |> post_traverse({Brando.Villain.Tags.Output, :mark_joins, []})
+        base |> repeat() |> post_traverse({tag_module.("Output"), :mark_joins, []})
       )
 
       defcombinator(
         :liquid_tag_contents,
-        liquid_tags_parser |> repeat() |> post_traverse({Brando.Villain.Tags.Output, :mark_joins, []})
+        liquid_tags_parser |> repeat() |> post_traverse({tag_module.("Output"), :mark_joins, []})
       )
 
       defparsec(:parse, parsec(:document) |> eos())
