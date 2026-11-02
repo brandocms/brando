@@ -1,6 +1,7 @@
 *.ex diff=elixir
 *.exs diff=elixir
-# Merge Gettext catalogues message by message. Register the driver once per
-# clone (see TRANSLATIONS.md); without it git merges them line by line.
+# Merge Gettext catalogues message by message. scripts/worktree-setup registers
+# the driver per clone (see TRANSLATIONS.md); without it git merges them line by
+# line.
 priv/gettext/**/*.po merge=gettext
 priv/gettext/**/*.pot merge=gettext

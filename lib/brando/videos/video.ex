@@ -18,6 +18,7 @@ defmodule Brando.Videos.Video do
   trait :creator, required: false, derived: [:status, :remote_id, :meta, :width, :height, :aspect_ratio, :duration]
   trait :timestamped
   trait :soft_delete
+  trait Brando.Videos.Video.ValidSourceURL
 
   @thumbnail_cfg %{
     formats: [:original, :webp],

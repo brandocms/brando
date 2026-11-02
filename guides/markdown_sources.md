@@ -175,9 +175,16 @@ wrong repositories, unsupported events, oversized and incomplete bodies fail
 closed. It accepts at most 1 MiB and, per node and minute, 120 requests per
 client address and 1,200 deliveries whose signature verified, so unsigned
 requests cannot hold back GitHub's. A request over either limit gets 429, which
-shows in GitHub's delivery log. Apply distributed rate limits at the edge when
-running multiple nodes. The client address is taken from `X-Forwarded-For` only
-when the request comes from a trusted proxy (`Brando.ClientIP`).
+shows in GitHub's delivery log. Requests naming no connection get 429 past
+12,000 a minute on the node. The other limits are per client, so a request naming
+a connection with a well-formed signature header is read and verified however
+many arrive from different clients; one without such a header gets 401 before its
+body is read. Signatures are computed one at a time, and a request waits for its
+turn rather than being refused. Memory is bounded by the listener's connection
+limit times 1 MiB, so running this exposed to floods needs a rate limit at the
+edge, as does running multiple nodes. The client address is taken from
+`X-Forwarded-For` only when the request comes from a trusted proxy
+(`Brando.ClientIP`).
 
 Receipt uniqueness covers both connection-scoped delivery IDs and verified body
 fingerprints. Renaming a delivery header cannot replay the same body. Receipts retain the accepted Oban job IDs for processing-status lookup. Receipt

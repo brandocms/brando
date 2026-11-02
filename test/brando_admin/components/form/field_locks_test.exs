@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Components.Form.FieldLocksTest do
     def mount(_, %{"user_id" => user_id}, socket) do
       var = %Brando.Content.Var{id: 4711, link_identifier_schemas: []}
       form = Phoenix.Component.to_form(Ecto.Changeset.change(var), as: "var")
-      {:ok, Phoenix.Component.assign(socket, form: form, current_user: %Brando.Users.User{id: user_id})}
+      {:ok, Phoenix.Component.assign(socket, form: form, current_user: %Brando.Users.User{id: user_id, role: :editor})}
     end
 
     def render(assigns) do

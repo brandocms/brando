@@ -131,7 +131,7 @@ defmodule Brando.Notes do
   def can_write?(%User{} = user, entry) do
     if Brando.Authorization.enabled?(),
       do: Brando.Authorization.can?(Brando.Authorization.Scope.current(user), :update, entry),
-      else: Boundary.authorize(Boundary.stored_actor(user), :update, entry) == :ok
+      else: Boundary.authorize(user, :update, entry) == :ok
   end
 
   def can_write?(_, _), do: false

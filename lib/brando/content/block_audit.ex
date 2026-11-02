@@ -199,7 +199,7 @@ defmodule Brando.Content.BlockAudit do
   # Maintenance code has no user. An admin's is checked as the screen's other
   # writes are.
   defp authorize(nil), do: :ok
-  defp authorize(user), do: Boundary.authorize(Boundary.stored_actor(user), :update, :utilities)
+  defp authorize(user), do: Boundary.authorize(user, :update, :utilities)
 
   defp do_remove(root_ids, user) do
     Repo.transaction(fn ->

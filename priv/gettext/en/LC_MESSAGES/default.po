@@ -211,6 +211,13 @@ msgid_plural "%{count} entries in the index"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/usage.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} entry you cannot open"
+msgid_plural "%{count} entries you cannot open"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} environment"
@@ -2183,6 +2190,12 @@ msgstr ""
 msgid "An entry is unpublished at its scheduled time."
 msgstr ""
 
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "An entry you cannot open"
+msgstr ""
+
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
 msgid "An estimate from the model's published prices and each image's size; your provider bills what is actually used. The images are sent to the provider."
@@ -2261,6 +2274,11 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "Another editor removed the block you were changing."
+msgstr ""
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "Another environment already uses this host."
 msgstr ""
 
 #: lib/brando_admin/components/form/saved_elsewhere.ex
@@ -4688,14 +4706,10 @@ msgid "Could not store the AI context fields"
 msgstr ""
 
 #: lib/brando/uploads.ex
+#: lib/brando/uploads/store.ex
 #: lib/brando_admin/live/upload_manager.ex
 #, elixir-autogen, elixir-format
 msgid "Could not store uploaded file"
-msgstr ""
-
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "Could not store uploaded file. Check upload settings and try again."
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
@@ -5334,7 +5348,7 @@ msgstr[1] ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "Delete %{name} and its complete PostgreSQL schema? This cannot be undone."
+msgid "Delete %{name}, its complete PostgreSQL schema, and its form submissions and drafts? This cannot be undone."
 msgstr ""
 
 #: lib/brando_admin/live/users/groups_live.ex
@@ -5550,6 +5564,11 @@ msgstr ""
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "Deleting stopped before it finished. The list shows what is left."
+msgstr ""
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting the last language of a form also deletes its submissions. This can't be undone."
 msgstr ""
 
 #: lib/brando_admin/live/sites/notifications_live.ex
@@ -6711,6 +6730,11 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Enter a group name (up to 100 characters) and a description up to 500 characters."
+msgstr ""
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a host only, such as www.example.com, with no scheme, path, port or trailing dot."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/blocks/html_params.ex
@@ -8760,6 +8784,13 @@ msgstr ""
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
+msgid "It is used in one place."
+msgid_plural "It is used in %{count} places."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
 msgid "It is used in one place: %{places}."
 msgid_plural "It is used in %{count} places: %{places}."
 msgstr[0] ""
@@ -8813,6 +8844,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Its schema version differs from the current schema, so some fields may not restore correctly."
 msgstr ""
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Its submission is deleted with it."
+msgid_plural "Its %{count} submissions are deleted with it."
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -11812,6 +11850,12 @@ msgstr[1] ""
 msgid "Only a pending entry is published at this time. Set the status to Pending to schedule it."
 msgstr ""
 
+#: lib/brando/tenant/registry.ex
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can change the host an environment answers on."
+msgstr ""
+
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Only a superuser can change the sign-in policy."
@@ -13524,6 +13568,7 @@ msgid "Reject"
 msgstr ""
 
 #: lib/brando/uploads.ex
+#: lib/brando/uploads/content_type.ex
 #, elixir-autogen, elixir-format
 msgid "Rejected type [%{rejected}]. Allowed: %{allowed}"
 msgstr ""
@@ -15488,11 +15533,6 @@ msgstr ""
 msgid "Server URL"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "Server rejected %{kind} type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
-msgstr ""
-
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Serves cuisine"
@@ -17113,6 +17153,11 @@ msgstr ""
 msgid "The file could not be uploaded. Remove it and try again."
 msgstr ""
 
+#: lib/brando_admin/live/upload_manager.ex
+#, elixir-autogen, elixir-format
+msgid "The file does not match the one that was checked."
+msgstr ""
+
 #: lib/brando_admin/components/definition_file.ex
 #, elixir-autogen, elixir-format
 msgid "The file has changes that are not imported. The server log says why — usually a change that needs a migration."
@@ -17126,6 +17171,11 @@ msgstr ""
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "The file is too large. Choose a JSON file under 1 MB."
+msgstr ""
+
+#: lib/brando/uploads/content_type.ex
+#, elixir-autogen, elixir-format
+msgid "The file's contents do not match its type."
 msgstr ""
 
 #: lib/brando/forms/notification.ex
@@ -17187,6 +17237,11 @@ msgstr ""
 #: lib/brando_admin/components/image_picker.ex
 #, elixir-autogen, elixir-format
 msgid "The image was not set: the picker was opened for another field before its copy was ready"
+msgstr ""
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "The installation itself uses this host, for its admin, media or CDN."
 msgstr ""
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
@@ -17488,6 +17543,11 @@ msgstr ""
 msgid "The secret could not be read; rotate it"
 msgstr ""
 
+#: lib/brando_admin/components/content/select_identifier.ex
+#, elixir-autogen, elixir-format
+msgid "The selected entry is unavailable."
+msgstr ""
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The selected text changed. Try again with the current text."
@@ -17759,6 +17819,16 @@ msgstr ""
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
 msgid "This MCP endpoint does not exist or is turned off."
+msgstr ""
+
+#: lib/brando/uploads/content_type.ex
+#, elixir-autogen, elixir-format
+msgid "This SVG declares entities, which are not allowed."
+msgstr ""
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "This address can't be used for a video."
 msgstr ""
 
 #: lib/brando_admin/live/sites/notifications_live.ex
@@ -18355,6 +18425,7 @@ msgstr[1] ""
 msgid "Too many attempts. Wait a minute, then start again from the app."
 msgstr ""
 
+#: lib/brando/users.ex
 #: lib/brando_admin/components/two_factor.ex
 #: lib/brando_admin/live/users/user_security_live.ex
 #: lib/brando_admin/reauth.ex
@@ -20695,11 +20766,6 @@ msgstr ""
 msgid "entry"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "file"
-msgstr ""
-
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "first %{count}/%{total}"
@@ -20763,11 +20829,6 @@ msgstr ""
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "identity"
-msgstr ""
-
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "image"
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -20926,6 +20987,11 @@ msgstr ""
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format
 msgid "must be an absolute path without . or .."
+msgstr ""
+
+#: lib/brando/videos/video/valid_source_url.ex
+#, elixir-autogen, elixir-format
+msgid "must be an http or https address"
 msgstr ""
 
 #: lib/brando/sites/deploy_config.ex
@@ -21242,7 +21308,6 @@ msgstr ""
 msgid "version %{number}"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "video"

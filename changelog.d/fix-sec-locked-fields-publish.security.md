@@ -1,0 +1,3 @@
+- A content transfer bundle or a content proposal no longer writes a field the destination's forms lock for anyone but a superuser, and the crop editor only overwrites an image file that exists, or that the CDN upload removed.
+- A recovery copy or a stored revision no longer changes a field locked for anyone but a superuser: restoring either keeps the field's value and restores the rest.
+- With group authorization, setting an entry to pending takes the publish right, and a duplicate no longer keeps the original's publication date, so the sweep can't publish what the user may not.

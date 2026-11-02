@@ -66,11 +66,16 @@ defmodule Brando.Content.Proposals do
   alias Brando.Drafts.Params
   alias Brando.Repo
   alias Brando.Utils
+  alias BrandoAdmin.Components.Form.LockedFields
   alias Ecto.Changeset
 
   @protected_fields ~w(id status publish_at unpublish_at deleted_at marked_as_deleted creator_id inserted_at updated_at)
   @text_vars [:string, :text, :rich_text]
   @media_kinds %{image: "picture", video: "video", gallery: "gallery", file: "file"}
+  # A uid chosen for a new block leaves room within what `Content.Block.valid_uid?/1`
+  # admits for the suffix of a copy made of it: the edit session rescues a block
+  # removed under an editor as `<uid>-kept`.
+  @new_uid_bytes 128
 
   ## Prepare
 
@@ -332,7 +337,7 @@ defmodule Brando.Content.Proposals do
           [problem(:forbidden, dgettext("content_proposals", "You do not have permission to create this entry."))]
 
         true ->
-          protected_fields(op.fields, op.schema) ++
+          Enum.uniq(protected_fields(op.fields, op.schema) ++ locked_fields(op.fields, op.schema, actor)) ++
             asset_fields(op.fields, op.schema, actor) ++
             list_fields(op.fields, op.schema, actor) ++ draft_dependencies(op.fields, proposal)
       end
@@ -348,7 +353,7 @@ defmodule Brando.Content.Proposals do
     {schema, _} = op.target
     {status, fields} = Map.split(op.fields, ["status"])
 
-    protected_fields(fields, schema) ++
+    Enum.uniq(protected_fields(fields, schema) ++ locked_fields(op.fields, schema, actor)) ++
       text_fields(fields) ++
       status_problems(status, schema, proposal.targets[op.target], actor) ++
       asset_fields(op.fields, schema, actor) ++
@@ -364,6 +369,7 @@ defmodule Brando.Content.Proposals do
 
   defp check_block(%InsertBlock{} = op, schema, tree, actor, proposal) do
     with :ok <- new_uid(op.uid, tree),
+         :ok <- new_ref_uids(op.ref_uids),
          {:ok, module, type} <- insertable(op, schema, tree),
          :ok <- sibling_placement(op.placement, op.parent, op.uid, tree) do
       node = %{
@@ -750,13 +756,37 @@ defmodule Brando.Content.Proposals do
        )}
 
   defp new_uid(uid, tree) do
-    taken? =
-      BlockTree.fetch(tree, uid) != nil or
-        Repo.one(from(b in Content.Block, where: b.uid == ^uid, select: true, limit: 1)) == true
+    cond do
+      is_binary(uid) and byte_size(uid) > @new_uid_bytes ->
+        {:error,
+         problem(
+           :invalid_uid,
+           dgettext("content_proposals", "A uid can be at most %{count} characters long.", count: @new_uid_bytes)
+         )}
 
-    if taken?,
-      do: {:error, problem(:duplicate_uid, dgettext("content_proposals", "Another block already uses this uid."))},
-      else: :ok
+      not Content.Block.valid_uid?(uid) ->
+        {:error, invalid_uid()}
+
+      BlockTree.fetch(tree, uid) != nil or
+          Repo.one(from(b in Content.Block, where: b.uid == ^uid, select: true, limit: 1)) == true ->
+        {:error, problem(:duplicate_uid, dgettext("content_proposals", "Another block already uses this uid."))}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp new_ref_uids(ref_uids) do
+    if ref_uids |> Map.values() |> Enum.all?(&Content.Block.valid_uid?/1),
+      do: :ok,
+      else: {:error, invalid_uid()}
+  end
+
+  defp invalid_uid do
+    problem(
+      :invalid_uid,
+      dgettext("content_proposals", "A uid can only hold letters, digits, - and _, and cannot end with -.")
+    )
   end
 
   # Which module a block may be built from depends on where it goes: the
@@ -825,11 +855,28 @@ defmodule Brando.Content.Proposals do
   defp protected_fields(fields, schema) do
     blocks = Enum.flat_map(schema.__blocks_fields__(), &[to_string(&1.name), "entry_#{&1.name}", "rendered_#{&1.name}"])
 
-    for key <- Map.keys(fields), key in @protected_fields or key in blocks do
-      problem(
-        :protected_field,
-        dgettext("content_proposals", "%{field} cannot be changed by a proposal.", field: key)
-      )
+    for key <- Map.keys(fields), key in @protected_fields or key in blocks, do: protected_field(key)
+  end
+
+  defp protected_field(key) do
+    problem(
+      :protected_field,
+      dgettext("content_proposals", "%{field} cannot be changed by a proposal.", field: key)
+    )
+  end
+
+  # A field the forms lock for anyone but a superuser, as a transfer bundle
+  # holds them (`LockedFields.held_keys/2`). The role is the author's: only they
+  # approve and apply a proposal, and it is read again each time.
+  defp locked_fields(fields, schema, actor) do
+    held = schema |> LockedFields.held_keys(nil) |> Enum.map(&to_string/1)
+
+    case Enum.filter(Map.keys(fields), &(&1 in held)) do
+      [] ->
+        []
+
+      locked ->
+        if Boundary.superuser?(actor), do: [], else: Enum.map(locked, &protected_field/1)
     end
   end
 
@@ -1424,7 +1471,16 @@ defmodule Brando.Content.Proposals do
   defp base_changeset({:new, ref} = target, proposal, _entries, user) do
     schema = Map.fetch!(proposal.targets, target)
     %CreateEntry{fields: fields} = Enum.find(proposal.operations, &match?(%CreateEntry{ref: ^ref}, &1))
-    schema.changeset(struct(schema), schema |> EntryFields.params(fields) |> Map.put("status", "draft"), user, nil, [])
+    entry = struct(schema)
+    params = EntryFields.params(schema, fields)
+    cast = &schema.changeset(entry, Map.put(&1, "status", "draft"), user, nil, [])
+
+    # What a non-superuser can't name (`locked_fields/3`) it has as a form's new
+    # entry has it. The role is the author's here too: a colleague may be
+    # reading the review.
+    if Boundary.superuser?(%Brando.Users.User{id: proposal.actor_id}),
+      do: cast.(params),
+      else: LockedFields.cast_held(params, schema, entry, cast)
   end
 
   defp base_changeset({schema, _} = target, proposal, entries, user) do

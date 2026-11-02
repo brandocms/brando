@@ -239,6 +239,25 @@ reads should use `Authorization.scope/3` or `Boundary.with_scope/2`. Query cache
 are bypassed for scoped admin reads to prevent public cached results from escaping
 resource filters.
 
+A screen about one thing that names another entry (a link picker, where an image
+is used) asks `Boundary.readable_entries/1` which of them the viewer may read,
+and shows that the others exist without naming them. `Brando.Content.Usage.list/2`
+does this for asset usage, and ends its list with `%{hidden: count}`.
+A superuser is told of entries a scope is merely not the place for, such as a
+user in a site scope; a record read policy still applies.
+
+Authority is read when it is used, so a change reaches a view that is already open.
+With groups every event, patch and message checks the view's requirement again. In
+legacy mode every event, patch and `authorization_changed` broadcast reads the
+account and its site: a lowered role ends the view's process, so it rejoins at the
+stored role and its forms recover what was typed, and a site no longer enterable
+sends the view to the access-denied page. Compiling a HEEx
+template while planning a module import takes a Superuser read at that moment, in
+both modes. In a custom view, decide with `Boundary.authorize/3`, or the helpers
+built on it such as `Brando.Users.superuser?/1`, rather than an assign set at mount.
+`BrandoAdmin.Authorization.allowed?/2` is for presentation: in legacy mode it answers
+for the role the view holds, with no read.
+
 `:system` is an explicit trusted maintenance actor. Never derive it from a browser
 parameter or use it as a fallback for a missing account. Do not store a resolved
 permission snapshot in an Oban job. Retain the initiating account and tenant,
@@ -246,7 +265,9 @@ and authorize again when the operation executes. Scheduled publishing does: a
 publication its user may no longer carry out, or whose account is gone, is
 cancelled and its date cleared rather than run as `:system`, while an expiry
 is still carried out on time, as `:system`, with Activity saying why (see the
-scheduled publishing guide). Scheduled environment copies and live switches
+scheduled publishing guide). Setting an entry to pending takes the publish
+right when it is set, because the sweep later publishes it as `:system`.
+Scheduled environment copies and live switches
 authorize again too: one whose creator may no longer promote the site's
 environments is cancelled, with a warning in the log.
 

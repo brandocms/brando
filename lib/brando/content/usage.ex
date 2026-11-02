@@ -14,10 +14,17 @@ defmodule Brando.Content.Usage do
 
   Lookups take the ids of one page of assets at a time, so a listing costs a
   handful of queries rather than a few per row.
+
+  `list/2`, `list_combined/2` and `put/2` are for showing to someone: with
+  group authorization they name only the entries the current scope may read,
+  and end the list with `%{hidden: count}` for the others, so the asset still
+  reads as used. `labels/1`, `used_ids/1` and `owners/2` are for deciding what
+  is used, and answer for every entry.
   """
 
   import Ecto.Query
 
+  alias Brando.Authorization.Boundary
   alias Brando.Content.BlockReferences
 
   @type kind :: :image | :video | :gallery | :file | :form
@@ -29,6 +36,7 @@ defmodule Brando.Content.Usage do
           status: atom() | nil,
           language: atom() | nil
         }
+  @type hidden :: %{hidden: pos_integer()}
 
   @kinds [:image, :video, :gallery, :file, :form]
   @gallery Module.concat(["Brando", "Galleries", "Gallery"])
@@ -37,19 +45,51 @@ defmodule Brando.Content.Usage do
   @global_set Module.concat(["Brando", "Sites", "GlobalSet"])
 
   @doc """
-  Where each of `ids` is used. Returns `%{id => [usage]}`, sorted by label;
-  ids used nowhere are left out.
+  Where each of `ids` is used. Returns `%{id => [usage]}`, sorted by label,
+  then `%{hidden: count}` when the viewer may not read some of the entries
+  (see the moduledoc). Ids used nowhere are left out.
   """
-  @spec list(kind(), [integer()]) :: %{optional(integer()) => [usage()]}
+  @spec list(kind(), [integer()]) :: %{optional(integer()) => [usage() | hidden()]}
   def list(_kind, []), do: %{}
 
   def list(kind, ids) when kind in @kinds do
     references = references(kind, ids)
-    labels = labels(Enum.map(references, &elem(&1, 1)))
+    labels = readable_labels(Enum.map(references, &elem(&1, 1)))
 
     references
-    |> Enum.group_by(&elem(&1, 0), fn {_, entry} -> Map.fetch!(labels, entry) end)
-    |> Map.new(fn {id, usages} -> {id, Enum.sort_by(usages, &String.downcase(&1.label))} end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Map.new(fn {id, entries} -> {id, shown(entries, labels)} end)
+  end
+
+  @doc """
+  Where any of `ids` is used, as one list with each entry once: the same form
+  in several languages, for one. Shaped as a list in `list/2`.
+  """
+  @spec list_combined(kind(), [integer()]) :: [usage() | hidden()]
+  def list_combined(_kind, []), do: []
+
+  def list_combined(kind, ids) when kind in @kinds do
+    entries = kind |> references(ids) |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
+    shown(entries, readable_labels(entries))
+  end
+
+  @doc "Splits a list from `list/2` into the entries it names and how many it hides."
+  @spec split([usage() | hidden()]) :: {[usage()], non_neg_integer()}
+  def split(usages) do
+    {hidden, named} = Enum.split_with(usages, &Map.has_key?(&1, :hidden))
+    {named, hidden |> Enum.map(& &1.hidden) |> Enum.sum()}
+  end
+
+  # What `labels/1` says of the entries the current scope may read.
+  defp readable_labels(entries) do
+    entries |> Boundary.readable_entries() |> MapSet.to_list() |> labels()
+  end
+
+  defp shown(entries, labels) do
+    {named, hidden} = Enum.split_with(entries, &Map.has_key?(labels, &1))
+    usages = named |> Enum.map(&Map.fetch!(labels, &1)) |> Enum.sort_by(&String.downcase(&1.label))
+
+    if hidden == [], do: usages, else: usages ++ [%{hidden: length(hidden)}]
   end
 
   @doc """

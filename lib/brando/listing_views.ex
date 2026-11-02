@@ -126,7 +126,7 @@ defmodule Brando.ListingViews do
   def moderator?(%User{} = user) do
     if Engine.enabled?(),
       do: Boundary.authorize(user, :manage, :listing_views) == :ok,
-      else: Boundary.stored_legacy_role(user) in [:admin, :superuser]
+      else: Boundary.fresh_role(user).role in [:admin, :superuser]
   end
 
   @doc "The view `user` opens `listing` of `schema` with, if they picked one they still see."

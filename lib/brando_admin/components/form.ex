@@ -22,6 +22,8 @@ defmodule BrandoAdmin.Components.Form do
 
 
   """
+  @image_editor_max_file_size 50_000_000
+
   use BrandoAdmin, :live_component
   use BrandoAdmin.Translator
 
@@ -914,7 +916,7 @@ defmodule BrandoAdmin.Components.Form do
   def update(%{action: :load_working_copy, revision_entry: revision_entry} = message, socket) do
     %{schema: schema, entry: entry, current_user: current_user, form_blueprint: blueprint} = socket.assigns
     block_assocs = Enum.map(blueprint.blocks, &:"entry_#{&1.name}")
-    params = revision_entry |> Brando.Revisions.restore_params(entry, current_user) |> Map.drop(block_assocs)
+    params = revision_entry |> Brando.Revisions.restore_params(entry, current_user, blueprint) |> Map.drop(block_assocs)
 
     changeset =
       entry
@@ -3804,7 +3806,9 @@ defmodule BrandoAdmin.Components.Form do
   defp put_dirty_fields(socket, dirty_fields) do
     entry = socket.assigns.entry
 
-    if entry && entry.id && (dirty_fields == [] or may_update?(socket)) do
+    # This runs on a keystroke, and a mark carries no value: the role the view holds
+    # will do, which `BrandoAdmin.Authorization` keeps up to date.
+    if entry && entry.id && (dirty_fields == [] or BrandoAdmin.Authorization.allowed?(:update, entry)) do
       Phoenix.PubSub.broadcast(
         Brando.pubsub(),
         Brando.Tenant.Topic.entry("dirty_fields", socket.assigns.schema, entry.id),
@@ -4994,6 +4998,7 @@ defmodule BrandoAdmin.Components.Form do
               current_user={@current_user}
               entry_id={@entry_id}
               form={@form}
+              form_blueprint={@form_blueprint}
               form_cid={@myself}
               form_id={@id}
               status={@status_revisions}
@@ -5442,7 +5447,7 @@ defmodule BrandoAdmin.Components.Form do
       socket
       |> allow_upload(:image_editor_upload,
         accept: ~w(.jpg .jpeg .png .webp),
-        max_file_size: 50_000_000,
+        max_file_size: @image_editor_max_file_size,
         max_entries: 1,
         auto_upload: true,
         progress: &__MODULE__.handle_image_editor_upload_progress/3
@@ -5928,8 +5933,7 @@ defmodule BrandoAdmin.Components.Form do
         saved_entry(socket, entry, save)
 
       {:error, %Changeset{} = changeset} ->
-        require Logger
-        Logger.error(inspect(changeset, pretty: true))
+        log_rejected_save(changeset)
 
         # A rejected save leaves the editor on the form by definition, so this
         # path always renders the button and must clear `processing`: errors
@@ -7104,8 +7108,15 @@ defmodule BrandoAdmin.Components.Form do
      |> source_controlled_error(paths)}
   end
 
+  # The errors only: the changes hold what was typed, passwords and email addresses too.
+  defp log_rejected_save(changeset) do
+    Logger.error(
+      "Saving #{inspect(changeset.data.__struct__)} failed: #{inspect(traverse_errors(changeset, & &1), pretty: true)}"
+    )
+  end
+
   defp failed_save_with_blocks(socket, changeset, save) do
-    Logger.error(inspect(changeset, pretty: true))
+    log_rejected_save(changeset)
     send(self(), {:progress_popup, "Saving entry failed..."})
     if socket.assigns.entry, do: EditSession.save_failed(socket.assigns.entry)
 
@@ -7831,7 +7842,7 @@ defmodule BrandoAdmin.Components.Form do
   defp apply_restored_changeset(socket, changeset, source, working_copy \\ nil) do
     revision_entry = working_copy_revision(socket, working_copy)
     revised = revised_changeset(socket, revision_entry)
-    {changeset, revised_assets} = put_revision_locked_assets(socket, changeset, revised, source)
+    {changeset, revised_assets} = put_revision_locked_fields(socket, changeset, revised, source)
     form = to_form(changeset)
 
     for field <- socket.assigns.form_blueprint.blocks do
@@ -7892,22 +7903,30 @@ defmodule BrandoAdmin.Components.Form do
   # The revision a recovered working copy is of, cast onto the entry
   defp revised_changeset(_socket, nil), do: nil
 
-  defp revised_changeset(%{assigns: %{schema: schema, entry: entry, current_user: user}}, revision_entry),
-    do: schema.changeset(entry, Brando.Revisions.restore_params(revision_entry, entry, user), user)
+  defp revised_changeset(%{assigns: %{schema: schema, entry: entry, current_user: user} = assigns}, revision_entry),
+    do:
+      schema.changeset(entry, Brando.Revisions.restore_params(revision_entry, entry, user, assigns.form_blueprint), user)
 
-  # A recovered working copy's locked assets are the revision's, as its
-  # locked scalars are (`put_revision_locked_values/2`): the copy holds what
-  # the browser sent. Returns the changeset with them, and their fields,
+  # A recovered working copy's locked fields are the revision's, as its
+  # locked values are (`put_revision_locked_values/2`): the copy holds what
+  # the browser sent. Returns the changeset with them, and the asset fields,
   # which the form owns. Those of another recovery copy are the entry's, as
-  # the save keeps them, so the form and the preview show them too. A
-  # translation's are the server's (`own_changed_assets/3`).
-  defp put_revision_locked_assets(socket, changeset, nil, :recovery_copy),
-    do: {Enum.reduce(locked_asset_kinds(socket), changeset, fn {key, _}, cs -> delete_change(cs, key) end), []}
+  # the save keeps them, so the form, the preview and a stored revision have
+  # them too. A translation's are the server's (`own_changed_assets/3`).
+  defp put_revision_locked_fields(socket, changeset, nil, :recovery_copy),
+    do: {hold_recovered_fields(socket, changeset), []}
 
-  defp put_revision_locked_assets(_socket, changeset, nil, _source), do: {changeset, []}
+  defp put_revision_locked_fields(_socket, changeset, nil, _source), do: {changeset, []}
 
-  defp put_revision_locked_assets(socket, changeset, revised, _source) do
+  defp put_revision_locked_fields(socket, changeset, revised, _source) do
     locked = locked_asset_kinds(socket)
+    assets = Keyword.keys(locked)
+    fields = socket.assigns.schema.__schema__(:fields)
+
+    changeset =
+      Enum.reduce(locked_keys(socket) -- assets, changeset, fn key, changeset ->
+        if key in fields, do: put_change(changeset, key, get_field(revised, key)), else: delete_change(changeset, key)
+      end)
 
     changeset =
       Enum.reduce(locked, changeset, fn
@@ -7915,8 +7934,40 @@ defmodule BrandoAdmin.Components.Form do
         {key, :gallery}, changeset -> put_gallery_into(changeset, [], key, owned_gallery(get_field(revised, key)))
       end)
 
-    {changeset, Keyword.keys(locked)}
+    {drop_locked_params(socket, changeset, assets), assets}
   end
+
+  # A recovery copy's locked fields are none of its own: they have a new
+  # entry's default params, an empty field's default and an empty slug derived
+  # from its source, as a cast gives them
+  defp hold_recovered_fields(socket, changeset) do
+    {values, defaults} = socket |> reset_locked_values() |> locked_values()
+    empty = Map.filter(defaults, fn {key, _} -> is_nil(Map.get(changeset.data, key)) end)
+    server = Map.merge(empty, values)
+
+    changeset =
+      socket
+      |> locked_keys()
+      |> Enum.reduce(changeset, &delete_change(&2, &1))
+      |> then(&Enum.reduce(server, &1, fn {key, value}, changeset -> put_change(changeset, key, value) end))
+
+    %{schema: schema, current_user: user, form_blueprint: blueprint} = socket.assigns
+
+    changeset =
+      %{}
+      |> LockedFields.derive_slugs(changeset, schema, blueprint, user)
+      |> Enum.reduce(changeset, fn {key, slug}, changeset ->
+        put_change(changeset, String.to_existing_atom(key), slug)
+      end)
+
+    drop_locked_params(socket, changeset)
+  end
+
+  # The form shows a param before a saved value, so a locked input loses the
+  # param the copy holds for it: it shows the change the server made, or the
+  # saved value.
+  defp drop_locked_params(socket, changeset, assets \\ []),
+    do: Enum.reduce(locked_keys(socket) ++ assets, changeset, &%{&2 | params: drop_param(&2.params, &1)})
 
   defp locked_asset_kinds(%{assigns: %{schema: schema}} = socket),
     do: for({key, kind} <- asset_field_kinds(schema), locked_field?(socket, [], key), do: {key, kind})
@@ -8294,8 +8345,8 @@ defmodule BrandoAdmin.Components.Form do
              current_user
            )
          end) do
-      {:upload_error, reason} ->
-        upload_error_noreply(socket, :image, reason)
+      {:upload_error, message} ->
+        upload_error_noreply(socket, message)
 
       new_image ->
         refocus_image_editor_copy(socket, new_image)
@@ -8427,58 +8478,26 @@ defmodule BrandoAdmin.Components.Form do
 
   defp normalize_upload_config_target(_), do: nil
 
+  # The copy's size is the editor's own JPEG export, not what the editor chose
+  # to upload: an image within the field's limit can export over it. So the
+  # transport's bound stands in for the limit, and the rest is checked as usual.
   defp safe_handle_upload(meta, upload_entry, cfg, current_user) do
-    case Brando.Uploads.Store.handle_upload(meta, upload_entry, cfg, current_user) do
+    cfg = Map.put(cfg, :size_limit, @image_editor_max_file_size)
+
+    case Brando.Uploads.store_upload(meta, upload_entry, cfg, current_user) do
       {:ok, asset} -> {:ok, asset}
-      {:error, reason} -> {:ok, {:upload_error, reason}}
+      {:error, message} -> {:ok, {:upload_error, message}}
     end
   end
 
-  defp upload_error_noreply(socket, kind, {:content_type, rejected_type, allowed_types}) do
-    error_title = gettext("Error uploading")
-
-    error_msg =
-      gettext(
-        "Server rejected %{kind} type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
-        %{
-          kind: Alert.escape(upload_kind_label(kind)),
-          rejected_type: Alert.escape(rejected_type),
-          allowed_types: Alert.escape(inspect(allowed_types))
-        }
-      )
-
-    {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", html: error_msg})}
-  end
-
-  defp upload_error_noreply(socket, _kind, %Changeset{} = changeset) do
-    require Logger
-
-    Logger.error("""
-    Upload failed with validation errors:
-    #{inspect(changeset.errors, pretty: true)}
-    """)
-
+  defp upload_error_noreply(socket, message) do
     {:noreply,
      push_event(socket, "b:alert", %{
        title: gettext("Error uploading"),
        type: "error",
-       message: gettext("Could not store uploaded file. Check upload settings and try again.")
+       message: message
      })}
   end
-
-  defp upload_error_noreply(socket, _kind, reason) do
-    {:noreply,
-     push_event(socket, "b:alert", %{
-       title: gettext("Error uploading"),
-       type: "error",
-       message: inspect(reason)
-     })}
-  end
-
-  defp upload_kind_label(:image), do: gettext("image")
-  defp upload_kind_label(:file), do: gettext("file")
-  defp upload_kind_label(:video), do: gettext("video")
-  defp upload_kind_label(_), do: gettext("file")
 
   def assign_form(
         %{

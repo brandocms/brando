@@ -363,7 +363,11 @@ defmodule Brando.Villain.Markdown do
     do: "https://www.youtube.com/watch?v=#{URI.encode_www_form(id)}"
 
   defp video_url(%{type: :vimeo, remote_id: id}) when is_binary(id) and id != "", do: "https://vimeo.com/#{id}"
-  defp video_url(%{type: :external_file, source_url: url}) when is_binary(url) and url != "", do: url
+
+  defp video_url(%{type: :external_file, source_url: url}) when is_binary(url) and url != "" do
+    if Brando.Videos.Video.ValidSourceURL.allowed?(url), do: url
+  end
+
   defp video_url(%{file: %Brando.Files.File{} = file}), do: Brando.Utils.file_url(file)
   defp video_url(%{type: :upload, remote_id: url}) when is_binary(url) and url != "", do: absolute(url)
   defp video_url(_video), do: nil

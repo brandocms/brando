@@ -89,7 +89,7 @@ defmodule Brando.Tenant.Cache do
         by_key = [{{:brando, :env, site.key, environment.key}, environment}]
 
         by_domain =
-          if site.status == :active and environment.domain do
+          if site.status == :active and routable_domain?(environment.domain) do
             domain = environment.domain |> String.trim() |> String.downcase()
             [{{:brando, :env_domain, domain}, {site, environment}}]
           else
@@ -106,4 +106,9 @@ defmodule Brando.Tenant.Cache do
 
     site_entry ++ environment_entries
   end
+
+  # A trailing dot stored before `Environment` refused it names the same host
+  # as the spelling without one, and must not answer beside it.
+  defp routable_domain?(domain) when is_binary(domain), do: not (domain |> String.trim() |> String.ends_with?("."))
+  defp routable_domain?(_domain), do: false
 end

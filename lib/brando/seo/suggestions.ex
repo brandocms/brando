@@ -274,7 +274,7 @@ defmodule Brando.SEO.Suggestions do
   @doc "Rejects a pending suggestion, or dismisses a failed one. The entry is left alone."
   @spec reject(integer() | String.t(), map()) :: {:ok, Suggestion.t()} | {:error, term()}
   def reject(id, user) do
-    with :ok <- Boundary.authorize(Boundary.stored_actor(user), :update, Brando.Sites.SEO) do
+    with :ok <- Boundary.authorize(user, :update, Brando.Sites.SEO) do
       case Repo.get(Suggestion, id) do
         %Suggestion{status: status} = suggestion when status in [:pending, :failed] ->
           suggestion

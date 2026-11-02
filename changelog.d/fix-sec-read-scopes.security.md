@@ -1,0 +1,4 @@
+- With group authorization, the entry link picker, the rich text link dialog, an asset's "Used in", its delete dialog, Sort by use, the block audit and the assistant's entry lists and review cards name only entries the viewer may read, and show that others exist without naming them.
+- Saved-entry toasts send other editors only the actor's name, not their email, role or account fields.
+- In legacy mode with several sites, an account with no site no longer sees the installation's other accounts on its password screen.
+- Copying assistant guidance from another site checks the permission in that site, not in the one the screen is open in.

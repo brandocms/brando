@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Authorization.Events do
   @moduledoc """
   What each admin event does, for a legacy `:user` account, which reads and
   exports and writes nothing but its own profile (`Brando.Authorization.Boundary`).
-  A LiveView's events reach `refused?/2` through the hook
+  A LiveView's events reach `refused_to_role?/3` through the hook
   `BrandoAdmin.Authorization` attaches, a LiveComponent's through
   `BrandoAdmin.Authorization.EventGuard`, and a block's through `Block.Events`.
   With groups the engine decides instead, and this table is not consulted.
@@ -506,18 +506,20 @@ defmodule BrandoAdmin.Authorization.Events do
   end
 
   @doc """
-  Whether `event` in the LiveView `view` is refused to this process's account.
-  The stored role is read only for a write, so typing into a form reads no role.
+  Whether `event` in the LiveView `view` is refused to an account of `role`: the
+  role the hook that asks has just read, so that an event reads it once.
   """
-  def refused?(view, event), do: refused_class?(fn -> class(view, event) end)
+  def refused_to_role?(view, event, role), do: role == :user and class(view, event) == :write
 
-  @doc "`refused?/2` for an event in the LiveComponent `module`."
-  def component_refused?(module, event), do: refused_class?(fn -> component_class(module, event) end)
-
-  defp refused_class?(class) do
+  @doc """
+  Whether `event` in the LiveComponent `module` is refused to this process's
+  account. No hook has read the role for a component's event. It is read only for
+  a write, so typing into a form reads no role.
+  """
+  def component_refused?(module, event) do
     case Authorization.legacy_actor() do
       nil -> false
-      actor -> class.() == :write and Boundary.read_only_account?(actor)
+      actor -> component_class(module, event) == :write and Boundary.read_only_account?(actor)
     end
   end
 

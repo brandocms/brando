@@ -859,6 +859,64 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "BlockUids" do
+    defp block_with_uid(user, uid) do
+      Brando.Repo.insert!(%Brando.Content.Block{uid: uid, type: :container, creator_id: user.id, sequence: 0})
+    end
+
+    test "counts rows with a uid of another shape, and never prints one" do
+      user = Factory.insert(:random_user)
+      block_with_uid(user, Brando.Utils.generate_uid() <> "-kept-2")
+      assert %Result{status: :ok} = Checks.BlockUids.run(context())
+
+      block_with_uid(user, "hero.block")
+      assert %Result{status: :warning, summary: "1 block with a badly shaped uid"} = Checks.BlockUids.run(context())
+
+      block_with_uid(user, "x>] --><script>document.title='MARKER'</script><!-- [+:B<y")
+      result = Checks.BlockUids.run(context())
+      assert result.status == :warning
+      assert result.summary == "2 blocks with badly shaped uids"
+      assert result.items == []
+      assert result.fix =~ Brando.Content.Block.uid_sql_pattern()
+      refute inspect(result) =~ "MARKER"
+      refute inspect(result) =~ "hero.block"
+    end
+
+    test "matches in SQL as Block.valid_uid?/1 does" do
+      pattern = Brando.Content.Block.uid_sql_pattern()
+
+      for uid <- [
+            "a",
+            "-a",
+            "_",
+            "snake_case-uid9",
+            String.duplicate("a", 255),
+            "",
+            "-",
+            "trailing-",
+            "line\n",
+            "\nline",
+            "two\nlines",
+            "has space",
+            "hero.block",
+            "æøå",
+            "{{ x }}",
+            String.duplicate("a", 256)
+          ] do
+        %{rows: [[matches?]]} =
+          Ecto.Adapters.SQL.query!(BrandoIntegration.Repo, "SELECT $1::text ~ $2::text", [uid, pattern])
+
+        assert matches? == Brando.Content.Block.valid_uid?(uid), "the two disagree on #{inspect(uid)}"
+      end
+    end
+
+    test "names the environment with tenancy" do
+      result = Checks.BlockUids.evaluate([{"site/live", 2}, {"site/staging", 0}])
+      assert result.summary == "2 blocks with badly shaped uids"
+      assert result.items == ["[site/live] 2 blocks"]
+    end
+  end
+
   describe "Module entry paths" do
     test "module code reading entries through .data.vars or .data.refs is a warning" do
       assert %Result{status: :ok} = Checks.ModuleEntryPaths.run(context())

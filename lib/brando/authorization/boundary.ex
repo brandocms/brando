@@ -17,7 +17,7 @@ defmodule Brando.Authorization.Boundary do
       `Brando.Authorization.Catalog.superuser_only_fields/1` names, such as a
       fragment's `wrapper`;
     * a `:user` account writes nothing but its own profile;
-    * only a superuser deactivates or deletes another superuser.
+    * only a superuser deactivates, deletes or brings back another superuser.
 
   Changing another user's email or password takes a superuser in both modes
   (`Brando.Trait.ProtectPassword.allowed?/2`): the email is where a password
@@ -138,40 +138,36 @@ defmodule Brando.Authorization.Boundary do
   def authorize(actor, action, subject) do
     if Engine.enabled?(),
       do: Engine.authorize(actor_scope(actor), action, subject),
-      else: legacy_authorize(actor, action, subject)
+      else: legacy_authorize(fresh_role(actor), action, subject)
   end
-
-  @doc """
-  The actor to check when `actor` may be a user an admin view mounted with:
-  by id, so legacy mode reads the role stored now rather than the one on the
-  struct. Anything else stays as it is, `:system` included. A bare integer id
-  is no actor: it has no role, and would pass.
-  """
-  def stored_actor(%User{id: id}) when is_integer(id), do: %{id: id}
-  def stored_actor(actor), do: actor
 
   @doc """
   Whether `actor` is a legacy `:user` account as stored now: it reads and
   exports, and writes nothing but its own profile. Always false with groups,
   where `Engine` answers per permission. `BrandoAdmin.Authorization.Events`
-  asks this of an event that may write.
+  asks this of a LiveComponent's event that may write.
   """
   def read_only_account?(actor) do
-    not Engine.enabled?() and stored_legacy_role(actor) == :user
+    not Engine.enabled?() and actor |> fresh_role() |> legacy_role() == :user
   end
-
-  @doc "The legacy role of `actor` as stored now, or nil. Means nothing with groups."
-  def stored_legacy_role(actor), do: actor |> stored_actor() |> legacy_role()
 
   @doc """
   Whether `actor`, as stored now, may update `subject`, for what an open form
   sends the other editors. Nothing to tell them when this cannot be answered.
   """
   def may_update?(actor, subject) do
-    authorize(stored_actor(actor), :update, subject) == :ok
+    authorize(actor, :update, subject) == :ok
   rescue
     _ -> false
   end
+
+  @doc """
+  What `authorize/3` would answer in legacy mode for the role `actor` already
+  holds, with no read: for presentation, which a template may ask many times
+  per render. An open view's held user is brought up to date by
+  `BrandoAdmin.Authorization`. Decide nothing with this; use `authorize/3`.
+  """
+  def role_allows?(actor, action, subject), do: legacy_authorize(actor, action, subject) == :ok
 
   @doc """
   Whether `actor` is a superuser: in the installation's superuser group with groups
@@ -209,6 +205,7 @@ defmodule Brando.Authorization.Boundary do
         protect_account(changeset)
       end
     else
+      actor = fresh_role(actor)
       # A changeset built elsewhere may carry the target as it was: its stored role counts.
       changeset = with_stored_role(changeset)
 
@@ -266,21 +263,76 @@ defmodule Brando.Authorization.Boundary do
   @doc "Applies each source resource's read policy before identifier pagination."
   def identifiers(query) do
     if Engine.enabled?() and current_scope() do
-      import Ecto.Query, only: [dynamic: 2, where: 3, from: 2, subquery: 1]
-      snapshot = Engine.snapshot(current_scope())
+      import Ecto.Query, only: [where: 3]
 
-      allowed =
-        Brando.Authorization.Catalog.schemas()
-        |> Enum.filter(&Engine.can?(snapshot, :read, &1))
-        |> Enum.reduce(dynamic([identifier], false), fn schema, allowed ->
-          ids = from(entry in Engine.scope(current_scope(), :read, schema), select: entry.id)
-          dynamic([identifier], ^allowed or (identifier.schema == ^schema and identifier.entry_id in subquery(ids)))
-        end)
-
-      where(query, [identifier], ^allowed)
+      Engine.with_snapshots(fn -> where(query, [identifier], ^readable_identifiers()) end)
     else
       query
     end
+  end
+
+  defp readable_identifiers do
+    import Ecto.Query, only: [dynamic: 2, from: 2, subquery: 1]
+    snapshot = Engine.snapshot(current_scope())
+
+    Brando.Authorization.Catalog.schemas()
+    |> Enum.filter(&Engine.can?(snapshot, :read, &1))
+    |> Enum.reduce(dynamic([identifier], false), fn schema, allowed ->
+      ids = from(entry in Engine.scope(current_scope(), :read, schema), select: entry.id)
+      dynamic([identifier], ^allowed or (identifier.schema == ^schema and identifier.entry_id in subquery(ids)))
+    end)
+  end
+
+  @doc """
+  The `{schema, id}` entries among `entries` the current admin scope may read,
+  as a `MapSet`: for naming an entry on a screen about something else. Decides
+  by each entry's own schema, so an entry with no identifier row counts too.
+  One query per schema, however many entries. Outside an admin scope, and
+  without group authorization, all of them.
+
+  A superuser keeps the entries of a schema this scope is merely not the place
+  for, such as a user in a site scope, whose permissions have no site scope. A
+  schema with a record read policy is held to it.
+  """
+  def readable_entries(entries) do
+    if Engine.enabled?() and current_scope() do
+      Engine.with_snapshots(fn -> readable_in_scope(entries) end)
+    else
+      MapSet.new(entries)
+    end
+  end
+
+  @doc "Whether the current admin scope may read this entry. See `readable_entries/1`."
+  def readable_entry?(schema, id), do: MapSet.member?(readable_entries([{schema, id}]), {schema, id})
+
+  defp readable_in_scope(entries) do
+    entries
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Enum.flat_map(fn {schema, ids} -> readable_of_schema(schema, Enum.uniq(ids)) end)
+    |> MapSet.new()
+  end
+
+  defp readable_of_schema(schema, ids) do
+    import Ecto.Query, only: [from: 2]
+
+    # A stored reference can outlive its Blueprint: nothing to read there.
+    if Code.ensure_loaded?(schema) and function_exported?(schema, :__schema__, 1) do
+      query =
+        if out_of_scope_for_superuser?(Engine.snapshot(current_scope()), schema),
+          do: schema,
+          else: Engine.scope(current_scope(), :read, schema)
+
+      from(entry in query, where: entry.id in ^ids, select: entry.id)
+      |> Repo.all()
+      |> Enum.map(&{schema, &1})
+    else
+      []
+    end
+  end
+
+  defp out_of_scope_for_superuser?(snapshot, schema) do
+    snapshot.superuser? and is_nil(snapshot.reason) and not Engine.record_policy?(schema) and
+      Engine.explain(snapshot, :read, schema).reason in [:wrong_scope, :unknown_permission]
   end
 
   def cache_options(args) do
@@ -317,7 +369,7 @@ defmodule Brando.Authorization.Boundary do
            do: :ok,
            else: (_ -> {:error, :forbidden})
     else
-      legacy_authorize(actor, action, schema)
+      legacy_authorize(fresh_role(actor), action, schema)
     end
   end
 
@@ -398,7 +450,7 @@ defmodule Brando.Authorization.Boundary do
 
   defp user_may?(actor, action, subject), do: action in [:read, :export] or own_profile?(actor, action, subject)
 
-  defp superuser_deletion?(:delete, subject), do: superuser_account?(subject)
+  defp superuser_deletion?(action, subject) when action in [:delete, :restore], do: superuser_account?(subject)
   defp superuser_deletion?(_action, _subject), do: false
 
   # The schema itself stands for "some user": `change/3` checks the record.
@@ -426,7 +478,7 @@ defmodule Brando.Authorization.Boundary do
   defp legacy_role_change(_actor, _changeset), do: :ok
 
   defp legacy_protect_superuser(actor, %{data: %User{id: id} = user, changes: changes}) when not is_nil(id) do
-    if (Map.get(changes, :active) == false or not is_nil(Map.get(changes, :deleted_at))) and superuser_account?(user) and
+    if (Map.has_key?(changes, :active) or Map.has_key?(changes, :deleted_at)) and superuser_account?(user) and
          not ProtectPassword.allowed?(actor, user),
        do: {:error, :forbidden},
        else: :ok
@@ -448,9 +500,13 @@ defmodule Brando.Authorization.Boundary do
   defp legacy_role(%{id: id}) when is_integer(id), do: stored_role(id)
   defp legacy_role(_), do: nil
 
-  # An admin view holds the user it mounted with; the role may have changed since.
-  defp fresh_role(%User{id: id} = user) when is_integer(id), do: %{user | role: stored_role(id) || user.role}
-  defp fresh_role(actor), do: actor
+  @doc """
+  `actor` with the role stored now. An admin view holds the user it mounted
+  with, and the role may have changed since: a check that decides anything in
+  legacy mode reads it here. Anything but a stored user comes back as it is.
+  """
+  def fresh_role(%User{id: id} = user) when is_integer(id), do: %{user | role: stored_role(id) || user.role}
+  def fresh_role(actor), do: actor
 
   defp stored_role(id) do
     import Ecto.Query, only: [from: 2]

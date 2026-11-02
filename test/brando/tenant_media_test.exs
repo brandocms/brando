@@ -81,11 +81,15 @@ defmodule Brando.TenantMediaTest do
   end
 
   defp create_environment(site, domain) do
-    Registry.create_environment(site, %{
-      name: "Production",
-      key: "production",
-      live: true,
-      domain: domain
-    })
+    Registry.create_environment(
+      site,
+      %{
+        name: "Production",
+        key: "production",
+        live: true,
+        domain: domain
+      },
+      actor: :system
+    )
   end
 end

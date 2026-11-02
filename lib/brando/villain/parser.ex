@@ -251,6 +251,7 @@ defmodule Brando.Villain.Parser do
   import Brando.HTML
 
   alias Brando.Content
+  alias Brando.Content.Block
   alias Brando.Content.BlockSlots
   alias Brando.Content.Palette
   alias Brando.RuntimeConfig
@@ -493,7 +494,7 @@ defmodule Brando.Villain.Parser do
   def render_block_slot(slot, opts) do
     html =
       if opts[:skip_children] === true do
-        "[$ slot:#{slot.uid} $]"
+        slot_placeholder(slot.uid)
       else
         slot
         |> BlockSlots.children()
@@ -503,6 +504,12 @@ defmodule Brando.Villain.Parser do
       end
 
     if opts[:annotate_blocks], do: html |> annotate_children(slot.uid) |> IO.iodata_to_binary(), else: html
+  end
+
+  # A row stored with a uid of another shape stays out of the page, as in its
+  # markers (`maybe_annotate/3`).
+  defp slot_placeholder(uid) do
+    if Block.valid_uid?(uid), do: "[$ slot:#{uid} $]", else: "[$ slot $]"
   end
 
   defp render_slot_child(child, opts) do
@@ -2409,14 +2416,20 @@ defmodule Brando.Villain.Parser do
   defp apply_quality_override(video, nil), do: video
   defp apply_quality_override(video, quality), do: Map.put(video, :quality, quality)
 
+  # A row stored with a uid of another shape renders without markers: the uid
+  # would otherwise become part of the page.
   def maybe_annotate(code, uid, %{annotate_blocks: true}) do
-    ["<!-- [+:B<", uid, ">] -->\n  ", code, "\n<!-- [-:B<", uid, ">] -->\n"]
+    if Block.valid_uid?(uid),
+      do: ["<!-- [+:B<", uid, ">] -->\n  ", code, "\n<!-- [-:B<", uid, ">] -->\n"],
+      else: code
   end
 
   def maybe_annotate(code, _, _), do: code
 
   def annotate_children(code, uid) do
-    ["<!-- [+:C<", uid, ">] -->\n  ", code, "\n<!-- [-:C<", uid, ">] -->\n"]
+    if Block.valid_uid?(uid),
+      do: ["<!-- [+:C<", uid, ">] -->\n  ", code, "\n<!-- [-:C<", uid, ">] -->\n"],
+      else: code
   end
 
   defp maybe_annotate_children(code, uid, %{annotate_blocks: true}), do: annotate_children(code, uid)

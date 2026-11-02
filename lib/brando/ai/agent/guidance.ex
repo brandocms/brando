@@ -109,7 +109,7 @@ defmodule Brando.AI.Agent.Guidance do
   def configurable?(actor) do
     if Brando.Authorization.Engine.enabled?(),
       do: Brando.Authorization.Boundary.authorize(actor, :configure, :assistant) == :ok,
-      else: match?(%{role: :superuser}, actor)
+      else: match?(%{role: :superuser}, Brando.Authorization.Boundary.fresh_role(actor))
   end
 
   @doc "The admin guidance in use in the current site/environment, or `nil`."
@@ -236,11 +236,13 @@ defmodule Brando.AI.Agent.Guidance do
     )
   end
 
-  # The actor's permission in another site/environment is checked there.
+  # The actor's permission in another site/environment is checked there, in
+  # that site's scope: an admin screen has pinned the one it is open in.
   defp configurable_in?(actor, prefix) do
-    if prefix == Brando.Tenant.current_prefix(),
-      do: configurable?(actor),
-      else: Brando.Tenant.with_prefix(prefix, fn -> configurable?(actor) end)
+    Brando.Tenant.with_prefix(prefix, fn ->
+      scope = Brando.Authorization.Scope.current(actor)
+      Brando.Authorization.Boundary.with_scope(scope, fn -> configurable?(actor) end)
+    end)
   rescue
     ArgumentError -> false
   end

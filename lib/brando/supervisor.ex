@@ -29,6 +29,7 @@ defmodule Brando.Supervisor do
 
     children = [
       Brando.MarkdownSources.RateLimiter,
+      Brando.MarkdownSources.SignatureCheck,
       {Task.Supervisor, name: Brando.AI.Agent.Supervisor},
       # Archive restores the admin starts, so they finish (or are undone)
       # when the page that started them is closed

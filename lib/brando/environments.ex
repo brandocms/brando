@@ -22,6 +22,7 @@ defmodule Brando.Environments do
   alias Brando.Tenant
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
+  alias Brando.Tenant.ScopedRows
   alias Brando.Users.User
   alias Brando.Worker.EnvironmentCopy
   alias Brando.Worker.EnvironmentSetLive
@@ -46,7 +47,7 @@ defmodule Brando.Environments do
   end
 
   defp do_create_environment(%Site{} = site, attrs, opts) do
-    with {:ok, environment} <- Registry.create_environment(site, attrs),
+    with {:ok, environment} <- Registry.create_environment(site, attrs, actor: opts[:creator] || opts[:actor]),
          prefix = Tenant.prefix(site, environment),
          :ok <- create_schema_or_compensate(environment, prefix),
          :ok <- clone_structure_or_compensate(environment, prefix, opts),
@@ -444,7 +445,7 @@ defmodule Brando.Environments do
         Brando.Tenant.Access.can_manage?(user, site)
 
       true ->
-        user.role in [:admin, :superuser]
+        Brando.Authorization.Boundary.fresh_role(user).role in [:admin, :superuser]
     end
   end
 
@@ -656,7 +657,7 @@ defmodule Brando.Environments do
     with %Environment{live: false} = environment <- Registry.get_environment(environment_id),
          prefix = Tenant.prefix(site, environment),
          :ok <- Schema.drop(prefix),
-         {:ok, deleted_environment} <- Registry.delete_environment(environment) do
+         {:ok, deleted_environment} <- delete_registry_and_rows(environment, prefix) do
       log_operation!(site.id, :delete,
         creator_id: creator_id(opts),
         note: opts[:note] || "Deleted environment #{environment.key}"
@@ -668,6 +669,19 @@ defmodule Brando.Environments do
       nil -> {:error, :site_or_environment_not_found}
       {:error, _reason} = error -> error
     end
+  end
+
+  # Only this deletion takes the rows: the rollback and failure paths that remove
+  # a registry row go on using `Registry.delete_environment/1` directly.
+  defp delete_registry_and_rows(environment, prefix) do
+    Repo.transaction(fn ->
+      ScopedRows.delete([prefix])
+
+      case Registry.delete_environment(environment) do
+        {:ok, deleted_environment} -> deleted_environment
+        {:error, reason} -> Repo.rollback(reason)
+      end
+    end)
   end
 
   # An archive taken before an upgrade migration that changes every
@@ -780,7 +794,8 @@ defmodule Brando.Environments do
          do: Logger.error("[Brando.Environments] Could not remove environment #{environment.key}: #{inspect(reason)}")
   end
 
-  defp with_site_lock(site, fun) do
+  @doc false
+  def with_site_lock(site, fun) do
     repo = Repo.repo()
     lock_key = "brando:environment-operation:#{site.id}"
 

@@ -36,7 +36,10 @@ defmodule Brando.Sites.FourOhFour do
   @max_url_length 1000
   @max_referrer_length 500
 
-  @doc "The longest URL logged; a longer one is logged cut to this length."
+  @doc """
+  The longest URL logged, in characters and in bytes; a longer one is logged cut
+  to this, less any character the cut would split.
+  """
   def max_url_length, do: @max_url_length
 
   @doc "How many URL, referrer and day counts the buffer holds between flushes."
@@ -46,7 +49,7 @@ defmodule Brando.Sites.FourOhFour do
   @spec add_404(Plug.Conn.t()) :: Plug.Conn.t()
   def add_404(conn) do
     path = Path.join(["/" | conn.path_info])
-    url = String.slice(path, 0, @max_url_length)
+    url = path |> String.slice(0, @max_url_length) |> cut_bytes(@max_url_length)
     key = Brando.Tenant.cache_key({url, referrer(conn, path, url), Date.utc_today()})
     Cachex.incr(@cache, key, 1)
     conn
@@ -58,18 +61,22 @@ defmodule Brando.Sites.FourOhFour do
   # recognises it however long the path.
   defp referrer(conn, path, url) do
     with [value | _] <- Plug.Conn.get_req_header(conn, "referer"),
+         true <- storable?(value),
          %URI{scheme: scheme, host: host} = uri when scheme in ["http", "https"] and is_binary(host) <- URI.parse(value) do
       uri = %URI{uri | query: nil, fragment: nil, userinfo: nil}
 
       if self_referrer?(path, URI.to_string(uri)) do
         cut_bytes(URI.to_string(%URI{uri | path: nil}), @max_referrer_length) <> url
       else
-        uri |> URI.to_string() |> String.slice(0, @max_referrer_length)
+        uri |> URI.to_string() |> cut_bytes(@max_referrer_length)
       end
     else
       _ -> ""
     end
   end
+
+  # A header is the sender's bytes; Postgres takes neither of these in text.
+  defp storable?(value), do: String.valid?(value) and not String.contains?(value, <<0>>)
 
   # At most `max` bytes, the unique index's limit being in bytes, without a
   # split character at the end.
@@ -128,13 +135,34 @@ defmodule Brando.Sites.FourOhFour do
 
     rows
     |> Enum.chunk_every(1000)
-    |> Enum.map(&(NotFoundHit |> Brando.Repo.insert_all(&1, opts) |> elem(0)))
+    |> Enum.map(&insert_rows(&1, opts))
     |> Enum.sum()
   rescue
-    error in [Postgrex.Error, DBConnection.ConnectionError] ->
+    error in [DBConnection.ConnectionError] ->
       Logger.warning("==> 404 log: could not store #{length(rows)} rows: #{Exception.message(error)}")
       0
   end
+
+  # A row the database refuses costs only itself: its chunk is retried a row at a
+  # time. Any other error, such as a missing table, would fail them all again, so
+  # the chunk is given up, and a lost connection gives up the prefix in `upsert/2`.
+  defp insert_rows(rows, opts) do
+    NotFoundHit |> Brando.Repo.insert_all(rows, opts) |> elem(0)
+  rescue
+    error in [Postgrex.Error, DBConnection.EncodeError] ->
+      if refused_data?(error) and match?([_, _ | _], rows) do
+        rows |> Enum.map(&insert_rows([&1], opts)) |> Enum.sum()
+      else
+        Logger.warning("==> 404 log: could not store #{length(rows)} rows: #{Exception.message(error)}")
+        0
+      end
+  end
+
+  # Class 22 is a data exception, class 54 a program limit (too long for the index).
+  defp refused_data?(%DBConnection.EncodeError{}), do: true
+  defp refused_data?(%Postgrex.Error{postgres: %{pg_code: "22" <> _}}), do: true
+  defp refused_data?(%Postgrex.Error{postgres: %{pg_code: "54" <> _}}), do: true
+  defp refused_data?(_error), do: false
 
   @doc """
   The missing URLs recorded in the current tenant, most requested first, with

@@ -350,6 +350,10 @@ jobs:
         if: needs.reuse.outputs.reused != 'true'
         run: bash test/scripts/hook_env_test.sh
 
+      - name: Check that a branch cannot run its own Git hooks or merge driver
+        if: needs.reuse.outputs.reused != 'true'
+        run: bash test/scripts/git_helpers_test.sh
+
   docs:
     name: Published documentation
     needs: reuse
@@ -875,7 +879,7 @@ jobs:
           PLAYWRIGHT_HTML_OUTPUT_DIR=playwright-report/groups \
           PLAYWRIGHT_JSON_OUTPUT_FILE=test-results/groups/results.json \
           BRANDO_AUTHORIZATION_MODE=groups ./test_e2e.sh --reset --output=test-results/groups \
-            tests/users/groups.spec.js tests/config/authorization-tools.spec.js \
+            tests/users/groups.spec.js tests/users/read-scopes.spec.js tests/config/authorization-tools.spec.js \
             tests/blocks/block-live-preview.spec.js \
             tests/blocks/block-multiuser-sync.spec.js tests/projects/file-field-sync.spec.js \
             tests/projects/multi-select-reorder.spec.js

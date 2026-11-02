@@ -1237,10 +1237,10 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   defp handle_hooks_block_presence_info(_, socket), do: {:cont, socket}
 
   # The others see the block as in use: not by someone who sends them nothing,
-  # as `Form.broadcast_active_field`. Focus is not typing: the schema is at hand,
-  # and one role read is fine.
-  defp may_send_presence?(%{assigns: %{current_user: user, schema: schema}}),
-    do: Brando.Authorization.Boundary.may_update?(user, schema)
+  # as `Form.broadcast_active_field`. The event's check has just read the role the
+  # view holds, and this carries no value, so it reads no other.
+  defp may_send_presence?(%{assigns: %{schema: schema}}),
+    do: BrandoAdmin.Authorization.allowed?(:update, schema)
 
   defp presence_name(socket, user_id) do
     case socket.assigns[:presences] do

@@ -34,6 +34,24 @@ cd "$(dirname "$0")/.." || exit 1
 # this one instead. The gates discover the repository from the directory.
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_IMPLICIT_WORK_TREE
 
+# Git runs the copies scripts/install-git-helpers makes, so nothing updates
+# them, and a clone set up before it existed still runs them from the tree.
+note_git_helpers() {
+  local hooks driver
+  hooks="$(git config --get core.hooksPath)"
+  driver="$(git config --get merge.gettext.driver)"
+  case "$hooks,$driver" in
+    .githooks,* | *,*scripts/gettext-merge-driver*)
+      echo "check: this clone runs Git hooks or the merge driver from the checked-out tree, so a branch can run code on checkout, merge or rebase. From a checkout you trust, run scripts/install-git-helpers." >&2
+      ;;
+    */brando-hooks,*)
+      if ! cmp -s .githooks/pre-push "$hooks/pre-push" || ! cmp -s scripts/gettext-merge-driver "$hooks/gettext-merge-driver"; then
+        echo "check: the installed Git hook or merge driver differs from this tree's. Once you trust this tree, run scripts/install-git-helpers to take its version." >&2
+      fi
+      ;;
+  esac
+}
+
 fast=false
 verbose=false
 passed=""
@@ -57,6 +75,7 @@ if [ -n "$passed" ] && [ "$fast" != true ]; then
   echo "check: --passed needs --fast" >&2
   exit 2
 fi
+note_git_helpers
 
 # The files the branch and the working tree change against the merge base with
 # CHECK_BASE (default origin/main), one per line, a rename as both its paths.
@@ -282,6 +301,8 @@ queue_reads='^(scripts/(queue|ci-wait)|test/scripts/(queue_test\.sh|isolate\.sh|
 # It copies scripts/, .githooks/ and test/ and runs every test in test/scripts/.
 hook_env_reads='^(scripts/.*|\.githooks/.*|test/scripts/.*|\.github/known-flakes\.txt)$'
 check_reads='^(scripts/check|\.githooks/pre-push|test/scripts/(check_test|isolate)\.sh)$'
+# It installs and runs copies of these in scratch repositories.
+git_helpers_reads='^(scripts/(install-git-helpers|gettext-merge-driver|worktree-setup)|\.githooks/.*|\.gitattributes|test/scripts/(git_helpers_test|isolate)\.sh)$'
 e2e_needed_reads='^(\.github/scripts/e2e-needed\.sh|test/scripts/e2e_needed_test\.sh)$'
 
 # tooling_step NAME PATTERN COMMAND... — run_step, when a file the branch or
@@ -311,6 +332,7 @@ if [ "$others" = true ]; then
   tooling_step "queue merge-queue steps" "$queue_reads" bash test/scripts/queue_test.sh
   tooling_step "shell tests safe under a Git hook" "$hook_env_reads" bash test/scripts/hook_env_test.sh
   tooling_step "check gate selection" "$check_reads" bash test/scripts/check_test.sh
+  tooling_step "Git hooks not from the tree" "$git_helpers_reads" bash test/scripts/git_helpers_test.sh
   tooling_step "E2E skip selection" "$e2e_needed_reads" bash test/scripts/e2e_needed_test.sh
 fi
 

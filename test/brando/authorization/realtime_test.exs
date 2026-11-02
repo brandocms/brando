@@ -276,6 +276,54 @@ defmodule Brando.Authorization.RealtimeTest do
     assert {:error, :forbidden} = Boundary.with_scope(c.scope, fn -> Preview.authorize_share(c.editor, c.changeset) end)
   end
 
+  describe "the legacy account directory with several sites" do
+    setup do
+      put_test_env(:authorization_mode, :legacy)
+      put_test_env(:tenancy_mode, :multi)
+      :ok
+    end
+
+    test "an account with no site sees only itself, and may still act on its own password screen", c do
+      scope = Scope.installation(c.editor)
+
+      assert Enum.map(Realtime.users(scope), & &1.id) == [c.editor.id]
+      assert Realtime.authorize_scope(scope) == :ok
+    end
+
+    test "a superuser's installation directory lists every account", c do
+      ids = Enum.map(Realtime.users(Scope.installation(c.owner)), & &1.id)
+      assert c.owner.id in ids
+      assert c.editor.id in ids
+      assert c.outsider.id in ids
+    end
+
+    test "the single-site and no-site modes are as they were", c do
+      for mode <- [:none, :single] do
+        put_test_env(:tenancy_mode, mode)
+        assert c.owner.id in Enum.map(Realtime.users(Scope.installation(c.editor)), & &1.id)
+      end
+    end
+  end
+
+  test "a real save's toast tells the lobby the actor's name and nothing else about the account", c do
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "presence")
+    socket = admin_socket(c.editor, "lobby")
+
+    {:ok, _, joined} =
+      subscribe_and_join(socket, BrandoAdmin.LobbyChannel, "lobby", %{url: "/admin", scope_token: Realtime.token(c.scope)})
+
+    assert_receive {BrandoAdmin.Presence, {:presence, %{user_joined: _}}}
+    {:ok, _} = Brando.Content.create_identifier(Page, c.page)
+
+    assert {:ok, _} = Brando.Pages.update_page(c.page.id, %{title: "Saved"}, c.editor)
+
+    assert_push "toast", %{type: :mutation, payload: %{user: user}}
+    assert Jason.decode!(Jason.encode!(user)) == %{"name" => c.editor.name}
+
+    Process.unlink(joined.channel_pid)
+    close(joined)
+  end
+
   test "lobby mutation notifications strip authority metadata and drop unreadable records", c do
     Phoenix.PubSub.subscribe(Brando.pubsub(), "presence")
     socket = admin_socket(c.editor, "lobby")

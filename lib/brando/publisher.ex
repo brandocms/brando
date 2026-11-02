@@ -176,7 +176,7 @@ defmodule Brando.Publisher do
   def cancel_scheduled_revision(schema, id, revision_number, actor) do
     with {:ok, id} <- cast_entry_id(id),
          {:ok, revision_number} <- cast_revision_number(revision_number),
-         :ok <- Boundary.authorize_record(Boundary.stored_actor(actor), :schedule, schema_module(schema), id) do
+         :ok <- Boundary.authorize_record(actor, :schedule, schema_module(schema), id) do
       cancel_valid_scheduled_revision(schema_module(schema), id, revision_number)
     end
   end
@@ -692,7 +692,7 @@ defmodule Brando.Publisher do
   # `job_authorized?/2`, so this asks about the user.
   defp job_for_actor?(%Oban.Job{worker: worker, args: %{"schema" => schema, "id" => id}}, user) do
     if worker == inspect(Worker.EntryPublisher),
-      do: Boundary.authorize_record(Boundary.stored_actor(user), :schedule, schema_module(schema), id),
+      do: Boundary.authorize_record(user, :schedule, schema_module(schema), id),
       else: {:error, :forbidden}
   end
 

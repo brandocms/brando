@@ -87,12 +87,16 @@ defmodule Brando.SSGBuildsTest do
       })
 
     {:ok, environment} =
-      Registry.create_environment(site, %{
-        name: "Production",
-        key: "production",
-        domain: "#{site.key}.test",
-        live: true
-      })
+      Registry.create_environment(
+        site,
+        %{
+          name: "Production",
+          key: "production",
+          domain: "#{site.key}.test",
+          live: true
+        },
+        actor: :system
+      )
 
     %{site: Registry.get_site(site.id), environment: environment, root: root}
   end
@@ -165,6 +169,50 @@ defmodule Brando.SSGBuildsTest do
     [job] = all_enqueued(worker: SSGBuild, args: %{"build_id" => build.id})
     :telemetry.execute([:oban, :job, :exception], %{}, %{job: job, state: :discard})
     assert_receive {:work, ^key, :failed, %BrandoAdmin.Work{message: "Static build v1 failed"}}
+  end
+
+  describe "a build whose creator is gone, groups mode" do
+    setup do
+      put_test_env(:authorization_mode, :groups)
+      Brando.Authorization.Boundary.put_scope(nil)
+      on_exit(fn -> Brando.Authorization.Boundary.put_scope(nil) end)
+
+      # Superusers by role become members of the Superuser group
+      creator = Brando.Factory.insert(:random_user, role: :superuser)
+      recipient = Brando.Factory.insert(:random_user, role: :superuser)
+      deleter = Brando.Factory.insert(:random_user, role: :superuser)
+      {:ok, _} = Brando.Authorization.Migration.run()
+
+      %{creator: creator, recipient: recipient, deleter: deleter}
+    end
+
+    # Handed to the recipient, the build would run on the recipient's authority
+    test "is refused after a delete with transfer", context do
+      build = request_build(context.site, context.environment, creator_id: context.creator.id)
+
+      assert {:ok, _} = Brando.Users.delete_user_with_transfer(context.creator.id, context.recipient.id, context.deleter)
+
+      put_test_env(:ssg_builder, SuccessfulBuilder)
+      assert {:cancel, :forbidden} = perform_job(SSGBuild, %{"build_id" => build.id})
+
+      cancelled = Builds.get_build(build.id)
+      assert cancelled.status == :failed
+      assert cancelled.creator_id == context.creator.id
+      assert cancelled.build_log =~ "Build cancelled"
+    end
+
+    test "is refused once the purged account leaves it no creator", context do
+      build = request_build(context.site, context.environment, creator_id: context.creator.id)
+
+      Brando.Repo.update_all(
+        Ecto.Query.from(b in Brando.SSG.Build, where: b.id == ^build.id),
+        set: [creator_id: nil]
+      )
+
+      put_test_env(:ssg_builder, SuccessfulBuilder)
+      assert {:cancel, :forbidden} = perform_job(SSGBuild, %{"build_id" => build.id})
+      assert Builds.get_build(build.id).status == :failed
+    end
   end
 
   test "persists failed URLs and a terminal failure log", context do
@@ -521,12 +569,16 @@ defmodule Brando.SSGBuildsTest do
       })
 
     {:ok, _environment} =
-      Registry.create_environment(other_site, %{
-        name: "Production",
-        key: "production",
-        domain: "#{other_site.key}.test",
-        live: true
-      })
+      Registry.create_environment(
+        other_site,
+        %{
+          name: "Production",
+          key: "production",
+          domain: "#{other_site.key}.test",
+          live: true
+        },
+        actor: :system
+      )
 
     build = ready_build(context.site, context.environment)
 
@@ -539,6 +591,24 @@ defmodule Brando.SSGBuildsTest do
 
     assert response(preview(build, "#{other_site.key}.test"), 404)
     assert response(preview(build, "unknown.test"), 404)
+  end
+
+  # Audit F02: a preview keeps its origin and lets scripts run, so it must not
+  # open on the admin's host, even for a site bound to it before that was
+  # refused.
+  test "refuses a preview on the installation's own host", context do
+    build = ready_build(context.site, context.environment)
+    admin_host = URI.parse(Brando.endpoint().url()).host
+
+    assert response(preview(build, admin_host), 404)
+
+    context.environment
+    |> Ecto.Changeset.change(domain: admin_host)
+    |> Brando.Repo.update!(prefix: "public")
+
+    Brando.Tenant.Cache.invalidate()
+
+    assert response(preview(build, admin_host), 404)
   end
 
   test "refuses a preview when tenancy is on but the request resolved no site", context do

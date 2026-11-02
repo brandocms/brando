@@ -5,12 +5,15 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
-  # Deleting an environment or its archives, copying into one and setting one
-  # live ask for the password, a code or a passkey when the session has not
+  # Deleting an environment or its archives, copying into one, setting one live,
+  # creating or restoring one, cancelling a scheduled operation and giving one a
+  # domain, which decides what a public host serves as surely as setting one live
+  # does, ask for the password, a code or a passkey when the session has not
   # confirmed lately.
   on_mount(
     {BrandoAdmin.Reauth,
-     events: ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy)}
+     events:
+       ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy update_domain create_environment rollback cancel_operation)}
   )
 
   alias Brando.Environments
@@ -33,6 +36,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         socket
         |> assign(:socket_connected, true)
         |> assign(:can_manage?, can_manage?)
+        |> assign(:can_bind_hosts?, Brando.Authorization.Boundary.superuser?(socket.assigns.current_user))
         |> assign(:tenancy_enabled?, Tenant.enabled?())
         |> assign(:default_scheduled_at, default_scheduled_at())
         |> assign(:restoring, nil)
@@ -100,6 +104,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
             </span>
           </header>
 
+          <div :if={@can_manage? && !@can_bind_hosts?} class="alert environment-hint">
+            <.icon name="info" />
+            <span>{gettext("Only a superuser can change the host an environment answers on.")}</span>
+          </div>
+
           <div class="environment-table-wrap">
             <table>
               <thead>
@@ -123,7 +132,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                         type="text"
                         name="domain"
                         value={environment.domain}
-                        disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:update, :environments)}
+                        disabled={
+                          !@can_bind_hosts? || !@can_manage? || !BrandoAdmin.Authorization.allowed?(:update, :environments)
+                        }
                         placeholder={gettext("No domain")}
                         aria-label={gettext("Domain for %{name}", name: environment.name)}
                       />
@@ -156,7 +167,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       phx-click="delete_environment"
                       phx-value-id={environment.id}
                       phx-confirm={
-                        gettext("Delete %{name} and its complete PostgreSQL schema? This cannot be undone.",
+                        gettext(
+                          "Delete %{name}, its complete PostgreSQL schema, and its form submissions and drafts? This cannot be undone.",
                           name: environment.name
                         )
                       }
@@ -187,7 +199,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <span>{gettext("Key")}</span>
                 <input name="environment[key]" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="spring-redesign" />
               </label>
-              <label>
+              <label :if={@can_bind_hosts?}>
                 <span>{gettext("Domain (optional)")}</span>
                 <input name="environment[domain]" placeholder="spring.example.com" />
               </label>
@@ -537,7 +549,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
     with :ok <- authorize(socket),
          {:ok, environment} <- environment_for_site(socket, id),
-         {:ok, _updated} <- Registry.update_environment(environment, %{domain: domain}) do
+         {:ok, _updated} <-
+           Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user) do
       {:noreply,
        socket
        |> notify(gettext("Domain updated."))
@@ -726,8 +739,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   defp for_site(nil, _fun), do: []
   defp for_site(site, fun), do: fun.(site)
 
-  defp authorize(%{assigns: %{can_manage?: true}}), do: :ok
-  defp authorize(_socket), do: {:error, :not_authorized}
+  # Asked again for each action: a site's role may have been lowered since mount.
+  defp authorize(socket) do
+    if can_manage?(socket.assigns.current_user, socket.assigns[:current_site]),
+      do: :ok,
+      else: {:error, :not_authorized}
+  end
 
   defp environment_for_site(socket, id) do
     with {environment_id, ""} <- Integer.parse(to_string(id)),
@@ -853,7 +870,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         String.replace(translated, "%{#{key}}", to_string(value))
       end)
     end)
-    |> Enum.flat_map(fn {field, messages} -> Enum.map(messages, &"#{field} #{&1}") end)
+    |> Enum.flat_map(fn
+      # The domain's messages are sentences of their own
+      {:domain, messages} -> messages
+      {field, messages} -> Enum.map(messages, &"#{field} #{&1}")
+    end)
     |> Enum.join(", ")
   end
 

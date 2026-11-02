@@ -31,6 +31,7 @@ defmodule Brando.Content.Proposals.Tools do
   alias Brando.Content.Transfer.{Catalog, Dependencies, Error}
   alias Brando.Media.Folders
   alias Brando.Type.I18nString
+  alias BrandoAdmin.Components.Form.LockedFields
 
   defmodule Context do
     @moduledoc """
@@ -250,7 +251,7 @@ defmodule Brando.Content.Proposals.Tools do
       {"op":"set_block_table","target":…,"block_uid":UID,"rows":[{KEY:VALUE}]}
       {"op":"set_block_selection","target":…,"block_uid":UID,"identifiers":[ID]}
       Media ("media" in insert_block, "asset" in set_block_media) is "image1", {"kind":"image"|"video"|"file","id":N}, or {"gallery":[media, …]} for a gallery ref: its full content, in order. texts and set_block_text take what describe_module lists for the slot. copy_block copies a block with everything below it ("append" puts the copy last among the original's siblings); with "to":{"content_type":T,"id":N}|{"new":R} (and "to_field") it copies a saved block to another entry or block field — to move it there, copy it and delete_block the original. set_block_table replaces a table block's rows (describe_module lists the row variables). set_block_selection sets the entries a selection datasource block shows. In any text, link to an entry with <a href="entry:CONTENT_TYPE:ID">; it becomes a link that follows the entry's address. List fields (describe_content_type: "list of …") take the whole list: ids, or entries as {"content_type":T,"id":N}. set_block_details sets the block's anchor (the id a link jumps to) and description (the editor's label); "" clears one. set_ref_config changes a slot's settings as describe_module lists them (insert_block takes "configs":{slot:{…}} too). Entry fields in create_entry and set_fields take media the same way for image, video and file fields (such as meta_image_id).
-      block_uid is any block in the field, at any depth. Without "parent", insert_block adds a root block (multi modules too); with "parent" it adds a child to that block: an entry module of a multi block, or a module in a container or slot. insert_block's placement anchors are siblings under that parent. move_block keeps the block and its content: "append" moves it last among its siblings, {"before"/"after":UID} moves it next to any block — into that block's parent — and {"into":UID} to the end of a block's children; the new parent must accept the module. set_block_active switches a block off or on, or with "ref" one of its refs (for example a cover image, so a template can fall back to something else); switched-off content is kept. Values follow describe_module's "settable" for each variable. Operations apply in order, so later ones see earlier moves, deletions and inserts; give insert_block a "uid" of your own to address the new block later. Returns problems to fix; call again with the corrected operations.
+      block_uid is any block in the field, at any depth. Without "parent", insert_block adds a root block (multi modules too); with "parent" it adds a child to that block: an entry module of a multi block, or a module in a container or slot. insert_block's placement anchors are siblings under that parent. move_block keeps the block and its content: "append" moves it last among its siblings, {"before"/"after":UID} moves it next to any block — into that block's parent — and {"into":UID} to the end of a block's children; the new parent must accept the module. set_block_active switches a block off or on, or with "ref" one of its refs (for example a cover image, so a template can fall back to something else); switched-off content is kept. Values follow describe_module's "settable" for each variable. Operations apply in order, so later ones see earlier moves, deletions and inserts; give insert_block a "uid" of your own to address the new block later (letters, digits, - and _, not ending with -, at most 128 characters). Returns problems to fix; call again with the corrected operations.
       """,
       parameters: %{
         type: "object",
@@ -320,14 +321,16 @@ defmodule Brando.Content.Proposals.Tools do
         do: [%{name: "status", type: "one of #{Enum.join(@statuses, ", ")}", required: false}],
         else: []
 
+    # A proposal that names a field locked for this actor is refused
+    locked = locked_field_names(schema, actor)
+    fields = attributes ++ references ++ assets ++ EntryFields.describe(schema) ++ status
+
     %{
       content_type: Codec.content_type(schema),
       label: Brando.Blueprint.get_singular(schema),
-      fields: attributes ++ references ++ assets ++ EntryFields.describe(schema) ++ status,
+      fields: Enum.reject(fields, &(&1.name in locked)),
       block_fields: block_fields(schema),
-      publication:
-        "New entries are created as drafts. Set an existing entry's status to change it: published shows it, " <>
-          "disabled deactivates it (hidden from the site, kept in the admin), draft takes it back to work on."
+      publication: publication("status" in locked)
     }
   end
 
@@ -392,14 +395,7 @@ defmodule Brando.Content.Proposals.Tools do
         status: to_string(Map.get(entry, :status)),
         live: Map.get(entry, :status) == :published,
         fields: scalar_fields(entry),
-        lists:
-          for(
-            {name, _} <- EntryFields.lists(schema),
-            current = EntryFields.current(entry, name),
-            current not in [nil, ""],
-            into: %{},
-            do: {name, current}
-          ),
+        lists: outline_lists(schema, entry, actor),
         media: Map.new(assets, fn {name, {kind, id}} -> {name, media_summary(kind, id, dimensions)} end)
       }
       |> put_present(:languages, languages(entry, actor))
@@ -774,6 +770,17 @@ defmodule Brando.Content.Proposals.Tools do
   defp readable_options(options, actor) do
     readable = options |> Enum.map(&Map.get(&1, :id)) |> readable_identifiers(actor)
     Enum.filter(options, &readable?(readable, Map.get(&1, :id)))
+  end
+
+  # The entry's lists, as `actor` may read them.
+  defp outline_lists(schema, entry, actor) do
+    Boundary.with_scope(Boundary.actor_scope(actor), fn ->
+      for {name, _} <- EntryFields.lists(schema),
+          current = EntryFields.current(entry, name),
+          current not in [nil, ""],
+          into: %{},
+          do: {name, current}
+    end)
   end
 
   # The identifiers among `ids` that `actor` may read, filtered as search and
@@ -1258,6 +1265,19 @@ defmodule Brando.Content.Proposals.Tools do
     do: String.slice(value, 0, @text_limit) <> "…"
 
   defp shorten(value), do: value
+
+  defp locked_field_names(schema, actor) do
+    if Boundary.superuser?(actor),
+      do: [],
+      else: schema |> LockedFields.held_keys(nil) |> Enum.map(&to_string/1)
+  end
+
+  defp publication(true), do: "New entries are created as drafts."
+
+  defp publication(false) do
+    "New entries are created as drafts. Set an existing entry's status to change it: published shows it, " <>
+      "disabled deactivates it (hidden from the site, kept in the admin), draft takes it back to work on."
+  end
 
   defp inspect_type(type) when is_atom(type), do: to_string(type)
   defp inspect_type(type), do: inspect(type)

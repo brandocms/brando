@@ -159,7 +159,7 @@ expect "runs the Elixir gates once deps/ has every package" 0 "check: all gates 
 
 # Tooling gates run when the branch or working tree changes a file they
 # exercise.
-all_tooling="ci_wait merge_queue_reuse changelog release_version queue hook_env check e2e_needed"
+all_tooling="ci_wait merge_queue_reuse changelog release_version queue hook_env check git_helpers e2e_needed"
 scenario lib-only
 change lib/a.ex
 deps alpha beta
@@ -185,7 +185,44 @@ scenario hook-change
 change .githooks/pre-push
 deps alpha beta
 expect "a pre-push hook change runs the check gate selection test" 0 "check: all gates passed" ran --fast
-expect_tooling "  … and the hook safety test" check hook_env
+expect_tooling "  … and the hook safety tests" check hook_env git_helpers
+
+# What check says about the clone's Git hooks and merge driver.
+scenario helpers
+deps alpha beta
+copies="$repo/.git/brando-hooks"
+mkdir -p "$copies"
+cp "$repo/.githooks/pre-push" "$copies/"
+mkdir -p "$repo/scripts" && echo driver >"$repo/scripts/gettext-merge-driver"
+cp "$repo/scripts/gettext-merge-driver" "$copies/"
+not_trusted="this clone runs Git hooks or the merge driver from the checked-out tree"
+differs="the installed Git hook or merge driver differs"
+helpers_note() { # helpers_note NAME WANT(text or empty)
+  rm -f "$tmp/mix_calls" "$tmp/gate_calls"
+  got="$(cd "$repo" && env PATH="$tmp/bin:$PATH" MIX_CALLS="$tmp/mix_calls" GATE_CALLS="$tmp/gate_calls" CHECK_BASE=base scripts/check --fast 2>&1)"
+  if { [ -z "$2" ] && ! grep -qE "$not_trusted|$differs" <<<"$got"; } || { [ -n "$2" ] && grep -qF "$2" <<<"$got"; }; then
+    echo "ok   $1"
+  else
+    failures=$((failures + 1))
+    echo "FAIL $1"
+    sed 's/^/     | /' <<<"$got"
+  fi
+}
+helpers_note "no note without hooks configured (CI)" ""
+git -C "$repo" config core.hooksPath .githooks
+helpers_note "hooks run from the tree: says so" "$not_trusted"
+git -C "$repo" config core.hooksPath "$copies"
+helpers_note "copies match the tree: no note" ""
+git -C "$repo" config merge.gettext.driver "sh -c 'exec python3 scripts/gettext-merge-driver \"\$0\" \"\$@\"' %O %A %B"
+helpers_note "merge driver run from the tree: says so" "$not_trusted"
+git -C "$repo" config --unset merge.gettext.driver
+echo stale >>"$copies/pre-push"
+helpers_note "a copy differs from the tree: says so" "$differs"
+cp "$repo/.githooks/pre-push" "$copies/"
+echo stale >>"$copies/gettext-merge-driver"
+helpers_note "the driver copy differs from the tree: says so" "$differs"
+git -C "$repo" config core.hooksPath /elsewhere/own-hooks
+helpers_note "someone's own hooks directory: no note" ""
 
 scenario untracked-fixture
 deps alpha beta

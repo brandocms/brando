@@ -11,7 +11,9 @@ defmodule Brando.Files.Replacement do
   alias Brando.Files
   alias Brando.Repo
   alias Brando.Tenant.Storage
+  alias Brando.Type.VideoConfig
   alias Brando.Uploads
+  alias Brando.Uploads.ContentType
 
   require Logger
 
@@ -60,6 +62,7 @@ defmodule Brando.Files.Replacement do
                :ok <- Boundary.authorize(user, :update, file),
                {:ok, cfg} <- Files.get_config_for(file.config_target),
                :ok <- validate(file, cfg, meta),
+               :ok <- validate_contents(cfg, path),
                {:ok, destination} <- destination(file, cfg),
                {:ok, updated} <-
                  file |> Ecto.Changeset.change(filesize: stat.size, mime_type: meta.type) |> Repo.update(),
@@ -109,10 +112,21 @@ defmodule Brando.Files.Replacement do
     end
   end
 
+  # A video's file is judged like an upload of one, by what arrived. Any other
+  # file can hold anything: see `Brando.Uploads.ContentType`.
+  defp validate_contents(%VideoConfig{allowed_mimetypes: allowed}, path) do
+    with {:ok, head} <- ContentType.head(path) do
+      ContentType.verify_video(head, allowed)
+    end
+  end
+
+  defp validate_contents(_cfg, _path), do: :ok
+
   defp extension(name), do: name |> Path.extname() |> String.downcase()
 
   defp destination(file, cfg) do
-    case Storage.media_file(Path.join(cfg.upload_path, file.filename)) do
+    # A leading slash is tolerated in an upload path, as when the file was stored
+    case Storage.media_file(cfg.upload_path |> String.trim_leading("/") |> Path.join(file.filename)) do
       {:ok, path} -> {:ok, path}
       :error -> {:error, "Invalid file storage path"}
     end

@@ -266,8 +266,14 @@ defmodule BrandoAdmin.Authorization.EventClassificationTest do
       assert Events.component_class(BrandoAdmin.Components.ImagePicker, "create_folder") == :write
     end
 
+    test "a write is refused to a :user only, a read to nobody" do
+      assert Events.refused_to_role?(BrandoAdmin.Sites.CacheLive, "empty_caches", :user)
+      refute Events.refused_to_role?(BrandoAdmin.Sites.CacheLive, "empty_caches", :editor)
+      refute Events.refused_to_role?(BrandoAdmin.Sites.UtilsLive, "refresh", :user)
+    end
+
     test "no actor, nothing refused: no legacy admin view mounted in this process" do
-      refute Events.refused?(BrandoAdmin.Sites.CacheLive, "empty_caches")
+      refute Events.component_refused?(BrandoAdmin.Components.ImagePicker, "create_folder")
     end
   end
 end

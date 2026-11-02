@@ -3018,13 +3018,14 @@ defmodule BrandoAdmin.Components.Form.BlockField do
   # A uid is recoverable only if this process does not already have it. The
   # client decides what *looks* missing by diffing the DOM; the server is the
   # only side that knows what it actually holds, and it must not let a replayed
-  # or forged payload overwrite a block that is alive right now.
+  # or forged payload overwrite a block that is alive right now. The uid has
+  # to be one the server could have made, too.
   defp recoverable_uids(missing_uids, socket) when is_list(missing_uids) do
     known = MapSet.new(socket.assigns.block_ops.order)
     seeded = socket.assigns.seed_forms
 
     Enum.filter(missing_uids, fn uid ->
-      is_binary(uid) and not MapSet.member?(known, uid) and not Map.has_key?(seeded, uid)
+      Brando.Content.Block.valid_uid?(uid) and not MapSet.member?(known, uid) and not Map.has_key?(seeded, uid)
     end)
   end
 

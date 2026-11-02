@@ -1083,7 +1083,7 @@ defmodule E2EFixtureController do
   end
 
   def authorization(conn, %{"role" => role})
-      when role in ["reader", "author", "publisher", "none"] do
+      when role in ["reader", "author", "publisher", "media", "none"] do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
     owner = get_admin_user()
@@ -1109,6 +1109,10 @@ defmodule E2EFixtureController do
 
         "publisher" ->
           base ++ ~w(brando.pages.update brando.pages.publish brando.pages.schedule)
+
+        # Manages the media libraries, and may read no pages
+        "media" ->
+          ~w(brando.admin.access brando.profile.read brando.profile.update brando.videos.read brando.videos.update brando.files.read brando.files.update brando.images.read)
 
         "none" ->
           []
@@ -1241,6 +1245,14 @@ defmodule E2EFixtureController do
     else
       json(conn, %{id: user.id, email: email, password: password})
     end
+  end
+
+  # Changes an account's role, as a superuser saving the user form does.
+  def two_factor(conn, %{"action" => "set-role", "id" => id, "role" => role}) when role in ~w(user editor admin superuser) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    {:ok, user} = Brando.Users.update_user(id, %{role: role}, :system)
+    json(conn, %{id: user.id, role: user.role})
   end
 
   # Makes every session of `email` last confirm an hour ago, so the next

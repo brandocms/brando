@@ -39,7 +39,6 @@ defmodule BrandoAdmin.Sites.ActivityLive do
          |> set_admin_locale()
          |> assign(:limit, @page_size)
          |> assign(:comparison, nil)
-         |> assign(:readable, readable_schemas())
          |> assign(:viewer, Events.viewer(socket.assigns.current_user))
          |> assign_options()}
       else
@@ -49,6 +48,29 @@ defmodule BrandoAdmin.Sites.ActivityLive do
       {:ok, assign(socket, :socket_connected, false)}
     end
   end
+
+  @doc """
+  Drops what the reader may no longer see when authorization changed, rather
+  than at their next action (`BrandoAdmin.Authorization`).
+  """
+  def refresh_authorization(%{assigns: %{socket_connected: true, view: _}} = socket) do
+    socket |> load() |> close_unreadable_comparison()
+  end
+
+  def refresh_authorization(socket), do: socket
+
+  # Asked of the event itself: the load's list ends at its limit and its filters,
+  # which say nothing of what the reader may read.
+  defp close_unreadable_comparison(%{assigns: %{comparison: %{event: %{id: id}}}} = socket) do
+    readable? =
+      Brando.Authorization.with_snapshots(fn ->
+        readable_filters() |> Map.put(:id, id) |> Activity.count() > 0
+      end)
+
+    if readable?, do: socket, else: assign(socket, :comparison, nil)
+  end
+
+  defp close_unreadable_comparison(socket), do: socket
 
   defp assign_current_user(socket, token),
     do: assign_new(socket, :current_user, fn -> Brando.Users.get_user_by_session_token(token) end)
@@ -166,7 +188,8 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   # type the log narrows by entry (list, count, states) share it.
   defp load(socket) do
     Brando.Authorization.with_snapshots(fn ->
-      filters = query_filters(socket.assigns.filters, socket.assigns.readable)
+      # Asked on each load: a read grant may have gone since the view opened.
+      filters = query_filters(socket.assigns.filters)
       events = Activity.list(filters, limit: socket.assigns.limit)
 
       socket
@@ -177,7 +200,7 @@ defmodule BrandoAdmin.Sites.ActivityLive do
     end)
   end
 
-  defp query_filters(filters, readable) do
+  defp query_filters(filters) do
     filters["actor"]
     |> parse_actor()
     |> Map.merge(%{
@@ -185,10 +208,15 @@ defmodule BrandoAdmin.Sites.ActivityLive do
       user_id: parse_id(filters["user"]),
       schema: filters["type"],
       action: parse_action(filters["action"]),
-      since: since(filters["period"]),
-      schema_in: readable,
-      readable_entries: readable_entries(readable)
+      since: since(filters["period"])
     })
+    |> Map.merge(readable_filters())
+  end
+
+  # The read grant and the record policy
+  defp readable_filters do
+    readable = readable_schemas()
+    %{schema_in: readable, readable_entries: readable_entries(readable)}
   end
 
   # A record read policy hides some entries of a type the user may read: their
@@ -249,6 +277,9 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   end
 
   def handle_event("compare", %{"id" => id}, socket) do
+    # Loaded again: what the reader may see may have changed since the list was.
+    socket = load(socket)
+
     with :content <- socket.assigns.view,
          event when not is_nil(event) <- Enum.find(socket.assigns.events, &(to_string(&1.id) == id)),
          schema when not is_nil(schema) <- Events.schema(event.schema),

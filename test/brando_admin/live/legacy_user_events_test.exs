@@ -43,6 +43,45 @@ defmodule BrandoAdmin.LegacyUserEventsTest do
 
   defp demote(user), do: Repo.update!(Ecto.Changeset.change(user, role: :user))
 
+  # The test process is linked to the view, and goes on.
+  defp assert_event_ends_view(view, fun) do
+    Process.flag(:trap_exit, true)
+    ref = Process.monitor(view.pid)
+    catch_exit(fun.())
+    assert_receive {:DOWN, ^ref, :process, _, {:shutdown, :authority_changed}}, 1000
+  end
+
+  # Counts what the view's process reads of account roles from here on.
+  defp watch_role_reads(view) do
+    test = self()
+    handler = "role-reads-#{System.unique_integer([:positive])}"
+    pid = view.pid
+
+    :telemetry.attach(
+      handler,
+      [:brando_integration, :repo, :query],
+      fn _event, _measurements, %{query: query}, _config ->
+        if self() == pid and query =~ ~s("users") and query =~ ~s(."role"), do: send(test, {handler, query})
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(handler) end)
+
+    fn ->
+      :sys.get_state(pid)
+      flush_role_reads(handler, 0)
+    end
+  end
+
+  defp flush_role_reads(handler, count) do
+    receive do
+      {^handler, _query} -> flush_role_reads(handler, count + 1)
+    after
+      0 -> count
+    end
+  end
+
   describe "set_status on a listing" do
     test "leaves the entry alone for a :user, from any listing", c do
       {:ok, view, _} = live(c.user_conn, "/admin/pages")
@@ -307,15 +346,42 @@ defmodule BrandoAdmin.LegacyUserEventsTest do
   end
 
   describe "an open socket" do
-    test "an editor demoted after mount is refused on it", c do
+    # `BrandoAdmin.Authorization` ends a view whose role was lowered, and the client
+    # rejoins it at the stored role: the event does nothing, and nor does a retry.
+    test "an editor demoted after mount does not act on it, nor after the rejoin", c do
       {:ok, view, _} = live(c.editor_conn, "/admin/pages")
       demote(c.editor)
 
+      assert_event_ends_view(view, fn ->
+        render_hook(view, "set_status", %{"id" => c.page.id, "status" => "published", "schema" => to_string(Page)})
+      end)
+
+      assert status(c.page) == :draft
+
+      {:ok, view, _} = live(c.editor_conn, "/admin/pages")
       render_hook(view, "set_status", %{"id" => c.page.id, "status" => "published", "schema" => to_string(Page)})
       assert status(c.page) == :draft
+      assert Process.alive?(view.pid)
     end
 
-    test "a read-only event reads no role: a :user's filter works", c do
+    test "a :user promoted after mount writes on it, at the role read for the event", c do
+      {:ok, view, _} = live(c.user_conn, "/admin/pages")
+      Repo.update!(Ecto.Changeset.change(c.user, role: :editor))
+
+      render_hook(view, "set_status", %{"id" => c.page.id, "status" => "published", "schema" => to_string(Page)})
+      assert status(c.page) == :published
+    end
+
+    test "a refused event reads the role once", c do
+      {:ok, view, _} = live(c.user_conn, "/admin/pages")
+      reads = watch_role_reads(view)
+
+      render_hook(view, "set_status", %{"id" => c.page.id, "status" => "published", "schema" => to_string(Page)})
+      assert status(c.page) == :draft
+      assert reads.() == 1
+    end
+
+    test "a read-only event is let through: a :user's filter works", c do
       {:ok, view, _} = live(c.user_conn, "/admin/pages")
       assert Process.alive?(view.pid)
       assert view |> list() |> render_click("next_filter_key", %{}) =~ "</"
@@ -417,7 +483,7 @@ defmodule BrandoAdmin.LegacyUserEventsTest do
       assert block_assign(view, :current_focused_block_uid) == nil
     end
 
-    test "a block entered before a demotion is left after it", c do
+    test "an editor demoted in a block enters no other: the view ends", c do
       watch_blocks(c.identity)
       uid = c.uid
       view = open_blocks(c.editor_conn, c.identity)
@@ -426,8 +492,11 @@ defmodule BrandoAdmin.LegacyUserEventsTest do
       assert_receive {:block_focus, %{uid: ^uid}}
 
       demote(c.editor)
-      render_hook(view, "block_focused", %{"uid" => "another", "field" => "f", "label" => "L"})
-      assert_receive {:block_blur, %{uid: ^uid}}
+
+      assert_event_ends_view(view, fn ->
+        render_hook(view, "block_focused", %{"uid" => "another", "field" => "f", "label" => "L"})
+      end)
+
       refute_receive {:block_focus, %{uid: "another"}}, 100
     end
 
@@ -751,9 +820,8 @@ defmodule BrandoAdmin.LegacyUserEventsTest do
       %{owner_conn: log_in_user(Phoenix.ConnTest.build_conn(), c.owner)}
     end
 
-    test "the legacy role decides nothing at the event layer", c do
+    test "the legacy role makes no account read-only", c do
       refute Boundary.read_only_account?(c.user)
-      refute BrandoAdmin.Authorization.Events.refused?(BrandoAdmin.Sites.CacheLive, "empty_caches")
     end
 
     test "members who may update still set a status and sync fields", c do
@@ -866,6 +934,22 @@ defmodule BrandoAdmin.LegacyUserEventsTest do
       assert {:error, :forbidden} = ListingViews.update_view(admin, shared, %{"name" => "Renamed"})
       assert {:error, :forbidden} = ListingViews.delete_view(admin, shared)
       assert Repo.get!(ListingViews.View, shared.id).name == shared.name
+    end
+
+    test "a shared view transferred to a :user stays the moderators', its private one stays behind", c do
+      admin = TestUsers.insert_user(role: :admin)
+      leaving = TestUsers.insert_user(role: :editor)
+      shared = saved_view(leaving, true)
+      private = saved_view(leaving, false)
+
+      assert {:ok, _} = Brando.Users.transfer_user_content(leaving.id, c.user.id)
+
+      assert %{creator_id: to_id} = Repo.get!(ListingViews.View, shared.id)
+      assert to_id == c.user.id
+      assert Repo.get!(ListingViews.View, private.id).creator_id == leaving.id
+
+      refute ListingViews.can_manage?(c.user, Repo.get!(ListingViews.View, shared.id))
+      assert ListingViews.can_manage?(admin, Repo.get!(ListingViews.View, shared.id))
     end
 
     test "their own private view stays theirs", c do

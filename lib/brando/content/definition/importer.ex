@@ -138,7 +138,7 @@ defmodule Brando.Content.Definition.Importer do
     Model.apply_valid!(changeset, uid)
     validate_ref_placements!(kind, changeset, uid, ctx.actor)
     validate_ref_uids!(definition, record)
-    validate_template!(definition)
+    validate_template!(definition, ctx.actor)
     digest = Value.digest(definition)
     old_digest = if old, do: Value.digest(old)
     baseline = plan_baseline(ctx.bundle, kind, uid, record, old, old_digest)
@@ -359,22 +359,30 @@ defmodule Brando.Content.Definition.Importer do
     end)
   end
 
-  defp validate_template!(%{"kind" => "table_template"}), do: :ok
+  defp validate_template!(%{"kind" => "table_template"}, _actor), do: :ok
 
-  defp validate_template!(%{"uid" => uid, "type" => "heex", "code" => code}) do
-    Brando.Villain.HeexRenderer.get_or_compile!("definition_" <> uid, code)
-    :ok
-  rescue
-    error -> Error.raise!(uid, "invalid HEEx template: #{Exception.message(error)}")
+  # Compiling runs the template's code, unquote fragments at once: only a
+  # superuser's, read now, in both authorization modes, even for a plan that
+  # saves nothing.
+  defp validate_template!(%{"uid" => uid, "type" => "heex", "code" => code}, actor) do
+    if not Boundary.superuser?(actor), do: Error.raise!("authorization", "forbidden")
+    compile_template!(uid, code)
   end
 
-  defp validate_template!(%{"uid" => uid, "code" => code}) do
+  defp validate_template!(%{"uid" => uid, "code" => code}, _actor) do
     parser = Brando.config(Brando.Villain, :liquex_parser) || Brando.Villain.LiquexParser
 
     case Liquex.parse(code, parser) do
       {:ok, _} -> :ok
       error -> Error.raise!(uid, "invalid Liquid template: #{inspect(error)}")
     end
+  end
+
+  defp compile_template!(uid, code) do
+    Brando.Villain.HeexRenderer.get_or_compile!("definition_" <> uid, code)
+    :ok
+  rescue
+    error -> Error.raise!(uid, "invalid HEEx template: #{Exception.message(error)}")
   end
 
   defp creator!(actor, opts) do

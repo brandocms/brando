@@ -27,9 +27,17 @@ url_port =
   System.get_env("BRANDO_URL_PORT", Integer.to_string(runtime_port))
   |> String.to_integer()
 
+# A value that is not a plain keyword list replaces the compile-time one instead
+# of merging with it. The fixture routes in the e2e build sign in without a
+# credential, so the test environments name loopback here too.
+http_options =
+  if config_env() in [:test, :e2e],
+    do: [ip: {127, 0, 0, 1}, port: runtime_port],
+    else: [:inet6, port: runtime_port]
+
 config :e2e_project, E2eProjectWeb.Endpoint,
   secret_key_base: System.get_env("BRANDO_SECRET_KEY_BASE"),
-  http: [:inet6, port: runtime_port],
+  http: http_options,
   url: [
     scheme: System.get_env("BRANDO_URL_SCHEME", "http"),
     host: System.get_env("BRANDO_URL_HOST", "localhost"),

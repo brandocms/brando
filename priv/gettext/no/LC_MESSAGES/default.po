@@ -211,6 +211,13 @@ msgid_plural "%{count} entries in the index"
 msgstr[0] "%{count} oppføring i indeksen"
 msgstr[1] "%{count} oppføringer i indeksen"
 
+#: lib/brando_admin/components/usage.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} entry you cannot open"
+msgid_plural "%{count} entries you cannot open"
+msgstr[0] "%{count} oppføring du ikke kan åpne"
+msgstr[1] "%{count} oppføringer du ikke kan åpne"
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} environment"
@@ -2183,6 +2190,12 @@ msgstr "En oppføring publiseres til planlagt tid."
 msgid "An entry is unpublished at its scheduled time."
 msgstr "En oppføring avpubliseres til planlagt tid."
 
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "An entry you cannot open"
+msgstr "En oppføring du ikke kan åpne"
+
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
 msgid "An estimate from the model's published prices and each image's size; your provider bills what is actually used. The images are sent to the provider."
@@ -2262,6 +2275,11 @@ msgstr "En annen redaktør beholdt sin versjon av en ny blokk du også hadde end
 #, elixir-autogen, elixir-format
 msgid "Another editor removed the block you were changing."
 msgstr "En annen redaktør fjernet blokken du endret."
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "Another environment already uses this host."
+msgstr "Et annet miljø bruker allerede denne verten."
 
 #: lib/brando_admin/components/form/saved_elsewhere.ex
 #, elixir-autogen, elixir-format
@@ -4688,15 +4706,11 @@ msgid "Could not store the AI context fields"
 msgstr "Klarte ikke lagre KI-kontekstfeltene"
 
 #: lib/brando/uploads.ex
+#: lib/brando/uploads/store.ex
 #: lib/brando_admin/live/upload_manager.ex
 #, elixir-autogen, elixir-format
 msgid "Could not store uploaded file"
 msgstr "Kunne ikke lagre opplastet fil"
-
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "Could not store uploaded file. Check upload settings and try again."
-msgstr "Klarte ikke lagre den opplastede filen. Sjekk opplastingsinnstillingene og prøv igjen."
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
@@ -5334,8 +5348,8 @@ msgstr[1] "Slette alle %{count} ubrukte videoer?"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "Delete %{name} and its complete PostgreSQL schema? This cannot be undone."
-msgstr "Slette %{name} og hele PostgreSQL-skjemaet? Dette kan ikke angres."
+msgid "Delete %{name}, its complete PostgreSQL schema, and its form submissions and drafts? This cannot be undone."
+msgstr "Slette %{name}, hele PostgreSQL-skjemaet og tilhørende skjemainnsendinger og utkast? Dette kan ikke angres."
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -5551,6 +5565,11 @@ msgstr "Slettet sammen med leveringsloggen"
 #, elixir-autogen, elixir-format
 msgid "Deleting stopped before it finished. The list shows what is left."
 msgstr "Slettingen stoppet før den var ferdig. Listen viser det som er igjen."
+
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting the last language of a form also deletes its submissions. This can't be undone."
+msgstr "Sletter du siste språk av et skjema, slettes også innsendingene. Dette kan ikke angres."
 
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -6712,6 +6731,11 @@ msgstr "Skriv inn en dato."
 #, elixir-autogen, elixir-format
 msgid "Enter a group name (up to 100 characters) and a description up to 500 characters."
 msgstr "Skriv inn et gruppenavn på opptil 100 tegn og en beskrivelse på opptil 500 tegn."
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "Enter a host only, such as www.example.com, with no scheme, path, port or trailing dot."
+msgstr "Skriv bare inn en vert, for eksempel www.example.com, uten protokoll, sti, port eller punktum til slutt."
 
 #: lib/brando_admin/components/form/input/blocks/html_params.ex
 #, elixir-autogen, elixir-format
@@ -8760,6 +8784,13 @@ msgstr "Den vises bare denne ene gangen. Mottakeren bruker den til å sjekke Bra
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
+msgid "It is used in one place."
+msgid_plural "It is used in %{count} places."
+msgstr[0] "Brukt ett sted."
+msgstr[1] "Brukt på %{count} steder."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
 msgid "It is used in one place: %{places}."
 msgid_plural "It is used in %{count} places: %{places}."
 msgstr[0] "Brukt ett sted: %{places}."
@@ -8813,6 +8844,13 @@ msgstr "Skjemaversjonen avviker fra gjeldende skjema, så noen felter lastes kan
 #, elixir-autogen, elixir-format
 msgid "Its schema version differs from the current schema, so some fields may not restore correctly."
 msgstr "Skjemaversjonen avviker fra gjeldende skjema, så noen felter gjenopprettes kanskje ikke riktig."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Its submission is deleted with it."
+msgid_plural "Its %{count} submissions are deleted with it."
+msgstr[0] "Innsendingen slettes sammen med det."
+msgstr[1] "De %{count} innsendingene slettes sammen med det."
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -11812,6 +11850,12 @@ msgstr[1] "%{count} brukere dette gjelder, har ikke satt det opp. De setter det 
 msgid "Only a pending entry is published at this time. Set the status to Pending to schedule it."
 msgstr "Bare en oppføring med status Venter publiseres på dette tidspunktet. Sett statusen til Venter for å planlegge den."
 
+#: lib/brando/tenant/registry.ex
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can change the host an environment answers on."
+msgstr "Bare en superbruker kan endre hvilken vert et miljø svarer på."
+
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Only a superuser can change the sign-in policy."
@@ -13524,6 +13568,7 @@ msgid "Reject"
 msgstr "Avvis"
 
 #: lib/brando/uploads.ex
+#: lib/brando/uploads/content_type.ex
 #, elixir-autogen, elixir-format
 msgid "Rejected type [%{rejected}]. Allowed: %{allowed}"
 msgstr "Avvist filtype [%{rejected}]. Tillatt: %{allowed}"
@@ -15488,11 +15533,6 @@ msgstr "Serverfeil"
 msgid "Server URL"
 msgstr "Server-URL"
 
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "Server rejected %{kind} type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
-msgstr "Tjeneren avviste %{kind}-typen [%{rejected_type}].<br><br>Tillatte typer er:<br>%{allowed_types}"
-
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Serves cuisine"
@@ -17113,6 +17153,11 @@ msgstr "Feltene denne handlingen leser fra, er tomme"
 msgid "The file could not be uploaded. Remove it and try again."
 msgstr "Filen kunne ikke lastes opp. Fjern den og prøv igjen."
 
+#: lib/brando_admin/live/upload_manager.ex
+#, elixir-autogen, elixir-format
+msgid "The file does not match the one that was checked."
+msgstr "Filen stemmer ikke med den som ble kontrollert."
+
 #: lib/brando_admin/components/definition_file.ex
 #, elixir-autogen, elixir-format
 msgid "The file has changes that are not imported. The server log says why — usually a change that needs a migration."
@@ -17127,6 +17172,11 @@ msgstr "Filen er ikke lenger tilgjengelig"
 #, elixir-autogen, elixir-format
 msgid "The file is too large. Choose a JSON file under 1 MB."
 msgstr "Filen er for stor. Velg en JSON-fil under 1 MB."
+
+#: lib/brando/uploads/content_type.ex
+#, elixir-autogen, elixir-format
+msgid "The file's contents do not match its type."
+msgstr "Innholdet i filen stemmer ikke med filtypen."
 
 #: lib/brando/forms/notification.ex
 #, elixir-autogen, elixir-format
@@ -17190,6 +17240,11 @@ msgstr "Bildet denne innholdstypen deler, slik det deles."
 #, elixir-autogen, elixir-format
 msgid "The image was not set: the picker was opened for another field before its copy was ready"
 msgstr "Bildet ble ikke satt inn: bildevelgeren ble åpnet for et annet felt før kopien var klar"
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "The installation itself uses this host, for its admin, media or CDN."
+msgstr "Installasjonen bruker selv denne verten, til admin, media eller CDN."
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -17490,6 +17545,11 @@ msgstr "Søkeindeksen mangler migreringen sin. Be en administrator om å kjøre 
 msgid "The secret could not be read; rotate it"
 msgstr "Hemmeligheten kunne ikke leses; bytt den"
 
+#: lib/brando_admin/components/content/select_identifier.ex
+#, elixir-autogen, elixir-format
+msgid "The selected entry is unavailable."
+msgstr "Den valgte oppføringen er ikke tilgjengelig."
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The selected text changed. Try again with the current text."
@@ -17762,6 +17822,16 @@ msgstr "Denne %{singular}"
 #, elixir-autogen, elixir-format
 msgid "This MCP endpoint does not exist or is turned off."
 msgstr "Dette MCP-endepunktet finnes ikke eller er slått av."
+
+#: lib/brando/uploads/content_type.ex
+#, elixir-autogen, elixir-format
+msgid "This SVG declares entities, which are not allowed."
+msgstr "Denne SVG-filen deklarerer entiteter, og det er ikke tillatt."
+
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "This address can't be used for a video."
+msgstr "Denne adressen kan ikke brukes til en video."
 
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -18357,6 +18427,7 @@ msgstr[1] "For mange forsøk. Prøv igjen om %{count} minutter."
 msgid "Too many attempts. Wait a minute, then start again from the app."
 msgstr "For mange forsøk. Vent et minutt, og start på nytt fra appen."
 
+#: lib/brando/users.ex
 #: lib/brando_admin/components/two_factor.ex
 #: lib/brando_admin/live/users/user_security_live.ex
 #: lib/brando_admin/reauth.ex
@@ -20697,11 +20768,6 @@ msgstr "kodede moduler fantes."
 msgid "entry"
 msgstr "oppføring"
 
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "file"
-msgstr "fil"
-
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "first %{count}/%{total}"
@@ -20766,11 +20832,6 @@ msgstr "f.eks: `video:Elixir.MyApp.Schema:function:fn_name`"
 #, elixir-autogen, elixir-format
 msgid "identity"
 msgstr "identitet"
-
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "image"
-msgstr "bilde"
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
@@ -20929,6 +20990,11 @@ msgstr "må være en gyldig grenreferanse"
 #, elixir-autogen, elixir-format
 msgid "must be an absolute path without . or .."
 msgstr "må være en absolutt sti uten . eller .."
+
+#: lib/brando/videos/video/valid_source_url.ex
+#, elixir-autogen, elixir-format
+msgid "must be an http or https address"
+msgstr "må være en http- eller https-adresse"
 
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format
@@ -21244,7 +21310,6 @@ msgstr "variabler"
 msgid "version %{number}"
 msgstr "versjon %{number}"
 
-#: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "video"

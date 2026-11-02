@@ -51,10 +51,24 @@ msgid_plural "%{count} already match (mix brando.images.adopt records that)"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/block_uids.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} block"
+msgid_plural "%{count} blocks"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} block on an outdated module version"
 msgid_plural "%{count} blocks on outdated module versions"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/brando/doctor/checks/block_uids.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} block with a badly shaped uid"
+msgid_plural "%{count} blocks with badly shaped uids"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -450,6 +464,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "Assistant: not configured"
+msgstr ""
+
+#: lib/brando/doctor/checks/block_uids.ex
+#, elixir-autogen, elixir-format
+msgid "Block uids"
 msgstr ""
 
 #: lib/brando/doctor/checks/colors.ex
@@ -912,6 +931,11 @@ msgstr ""
 #: lib/brando/doctor/checks/admin_routes.ex
 #, elixir-autogen, elixir-format
 msgid "every Blueprint's admin route helpers exist"
+msgstr ""
+
+#: lib/brando/doctor/checks/block_uids.ex
+#, elixir-autogen, elixir-format
+msgid "every block has a uid of the expected shape"
 msgstr ""
 
 #: lib/brando/doctor/checks/media_paths.ex
@@ -1381,6 +1405,11 @@ msgstr ""
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "they hold refs or vars their module no longer defines: resolve them under Block modules, or with mix brando.modules resolve --uid UID --user ID"
+msgstr ""
+
+#: lib/brando/doctor/checks/block_uids.ex
+#, elixir-autogen, elixir-format
+msgid "they render without frontend edit and live preview markers: duplicate each one in its entry, which gives the copy a good uid, and delete the original. Look into any uid holding markup. List them in SQL: SELECT id, source, uid FROM content_blocks WHERE coalesce(uid, '') !~ '%{pattern}'"
 msgstr ""
 
 #: lib/brando/doctor/source.ex
