@@ -106,7 +106,7 @@ defmodule Brando.Sites.Redirects do
 
     # Cut by characters, or by bytes, which drops at most 3 of a split character
     if String.length(url) >= max or byte_size(url) >= max - 3,
-      do: String.trim_trailing(source, "$"),
+      do: String.replace_suffix(source, "$", ""),
       else: source
   end
 

@@ -324,6 +324,9 @@ replaces Brando's crontab, and adds the job to its own:
 {"15 5 * * *", Brando.Worker.FormSubmissionPurger}
 ```
 
+Submissions sent before a form's key changed are deleted on the same schedule,
+unless a form now holds their old key: then that form's setting decides.
+
 Deleting a site or an environment deletes its submissions with it
 ([Tenancy and environments](tenancy_and_environments.md)). Copying an environment
 over another replaces its forms but keeps its submissions: a form the copy

@@ -300,12 +300,62 @@ defmodule Brando.Forms.NotificationTest do
       assert :ok = Brando.Worker.FormSubmissionPurger.perform(%Oban.Job{args: %{}})
       refute Brando.Repo.get(Submission, old.id)
     end
+
+    test "ages out what a renamed form received under its old key", %{user: user} do
+      {:ok, form} = create_form(user, %{"recipients" => [], "retention_days" => "30", "key" => "renamed"})
+
+      old = insert_submission("contact", DateTime.add(DateTime.utc_now(), -31, :day), form.id)
+      recent = insert_submission("contact", DateTime.add(DateTime.utc_now(), -29, :day), form.id)
+
+      assert Forms.purge_submissions() == 1
+      refute Brando.Repo.get(Submission, old.id)
+      assert Brando.Repo.get(Submission, recent.id)
+    end
+
+    test "ages out an old key through a language without retention of its own", %{user: user} do
+      {:ok, _} = create_form(user, %{"recipients" => [], "retention_days" => "30", "key" => "renamed"})
+      {:ok, other} = create_form(user, %{"recipients" => [], "key" => "renamed", "language" => "no"})
+
+      old = insert_submission("contact", DateTime.add(DateTime.utc_now(), -31, :day), other.id)
+
+      assert Forms.purge_submissions() == 1
+      refute Brando.Repo.get(Submission, old.id)
+    end
+
+    test "leaves a row under another live form's key to that form, whatever its form_id", %{user: user} do
+      {:ok, form} = create_form(user, %{"recipients" => [], "retention_days" => "30"})
+      {:ok, _} = create_form(user, %{"recipients" => [], "key" => "newsletter"})
+
+      collided = insert_submission("newsletter", ~U[2020-01-01 00:00:00.000000Z], form.id)
+
+      assert Forms.purge_submissions() == 0
+      assert Brando.Repo.get(Submission, collided.id)
+    end
+
+    test "counts a row once and leaves other scopes alone", %{user: user} do
+      {:ok, form} = create_form(user, %{"recipients" => [], "retention_days" => "30"})
+
+      own = insert_submission("contact", ~U[2020-01-01 00:00:00.000000Z], form.id)
+
+      elsewhere =
+        Brando.Repo.insert!(%Submission{
+          scope: "elsewhere",
+          form_id: form.id,
+          form_key: "gone",
+          language: "en",
+          inserted_at: ~U[2020-01-01 00:00:00.000000Z]
+        })
+
+      assert Forms.purge_submissions() == 1
+      refute Brando.Repo.get(Submission, own.id)
+      assert Brando.Repo.get(Submission, elsewhere.id)
+    end
   end
 
-  defp insert_submission(key, inserted_at) do
+  defp insert_submission(key, inserted_at, form_id \\ 0) do
     Brando.Repo.insert!(%Submission{
       scope: Submission.current_scope(),
-      form_id: 0,
+      form_id: form_id,
       form_key: key,
       language: "en",
       inserted_at: inserted_at

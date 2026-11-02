@@ -289,18 +289,30 @@ defmodule Brando.Forms do
   @doc """
   Deletes the submissions in the current scope that are older than their
   form's `retention_days`. Returns how many were deleted.
+
+  A form's submissions are the rows under its key, and the rows it received
+  under a key it has since left: their `form_id` is one of its languages and no
+  form holds their `form_key`. A row under a key a form holds is only ever that
+  form's, whatever its `form_id`: an environment copy can make ids collide.
   """
   def purge_submissions(now \\ DateTime.utc_now()) do
     scope = Submission.current_scope()
+    forms = Repo.all(from f in Form, order_by: [asc: f.id], select: {f.id, f.key, f.retention_days})
+    form_keys = forms |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
 
-    from(f in Form, where: not is_nil(f.retention_days), order_by: [asc: f.id], select: {f.key, f.retention_days})
-    |> Repo.all()
-    |> Enum.uniq_by(&elem(&1, 0))
-    |> Enum.reduce(0, fn {key, days}, total ->
+    forms
+    |> Enum.reject(&is_nil(elem(&1, 2)))
+    |> Enum.uniq_by(&elem(&1, 1))
+    |> Enum.reduce(0, fn {_id, key, days}, total ->
       cutoff = DateTime.add(now, -days, :day)
+      form_ids = for {id, ^key, _days} <- forms, do: id
 
       {count, _} =
-        Repo.delete_all(from s in Submission, where: s.scope == ^scope and s.form_key == ^key and s.inserted_at < ^cutoff)
+        Repo.delete_all(
+          from s in Submission,
+            where: s.scope == ^scope and s.inserted_at < ^cutoff,
+            where: s.form_key == ^key or (s.form_id in ^form_ids and s.form_key not in ^form_keys)
+        )
 
       total + count
     end)
