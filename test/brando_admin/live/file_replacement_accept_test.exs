@@ -69,7 +69,10 @@ defmodule BrandoAdmin.FileReplacementAcceptTest do
     end
 
     put_file_config(slugify_filename: false)
-    assert replacement_accept(conn, insert_file(user, "README")) == nil
+
+    for stored <- ["README", "data.x,y", "report."] do
+      assert replacement_accept(conn, insert_file(user, stored)) == nil, stored
+    end
   end
 
   defp replacement_accept(conn, file) do

@@ -144,7 +144,9 @@ defmodule Brando.Files.Replacement do
     cond do
       bare in MIME.extensions(type) -> Enum.uniq([bare | MIME.extensions(type)])
       slugs?(cfg) -> []
-      true -> [bare]
+      # A comma would split the `accept` list
+      bare =~ ~r/^[a-z0-9_-]+$/ -> [bare]
+      true -> []
     end
   end
 
