@@ -44,8 +44,9 @@ defmodule Brando.Content.Proposals.Review do
   # in them. No parser decides it, since what one parser drops another may keep
   # (`Brando.Markdown` reads `<https://…>` as a link). Elements with attributes,
   # links and anything else stay as they are written.
-  @block_tags ~r{</?(?:blockquote|br|dd|dl|dt|figcaption|figure|h[1-6]|hr|li|ol|p|pre|table|tbody|td|tfoot|th|thead|tr|ul)\s*/?>}i
-  @inline_tags ~r{</?(?:abbr|b|cite|code|em|i|kbd|mark|q|s|small|strike|strong|sub|sup|u)\s*>}i
+  @any_tag ~r{<[a-zA-Z/!](?:"[^"]*"|'[^']*'|[^'">])*>}
+  @block_tag ~r{^</?(?:blockquote|br|dd|dl|dt|figcaption|figure|h[1-6]|hr|li|ol|p|pre|table|tbody|td|tfoot|th|thead|tr|ul)\s*/?>$}i
+  @inline_tag ~r{^</?(?:abbr|b|cite|code|em|i|kbd|mark|q|s|small|strike|strong|sub|sup|u)\s*>$}i
 
   @doc "Review cards for `proposal`."
   @spec entries(Proposal.t()) :: [map()]
@@ -907,17 +908,26 @@ defmodule Brando.Content.Proposals.Review do
     end)
   end
 
-  # A text field's change shows what differs in it, like a block's text.
+  # A text field's change shows what differs in it, like a block's text. A
+  # field that is not rich text holds what it says: `<b>` in one is on the page
+  # as those three characters.
   defp field_change(entry, name, value) do
-    view = field_view(entry.__struct__, name, value)
+    schema = entry.__struct__
+    view = field_view(schema, name, value)
     saved = current(entry, name)
 
     if is_binary(value) and is_binary(saved) and is_nil(view.media) and name not in ~w(status language) do
-      {before, value} = text_change(saved, value)
+      reader = if rich_text?(schema, name), do: &readable/1, else: &collapse/1
+      {before, value} = text_change(saved, value, reader)
       view |> Map.put(:value, value) |> Map.put(:before, before)
     else
       Map.put(view, :before, saved_value(entry, name))
     end
+  end
+
+  defp rich_text?(schema, name) do
+    function_exported?(schema, :__rich_text_fields__, 0) and
+      to_string(name) in Enum.map(schema.__rich_text_fields__(), &to_string/1)
   end
 
   # Fields in the order an editor reads them: title first, then the rest.
@@ -985,7 +995,10 @@ defmodule Brando.Content.Proposals.Review do
 
   defp display(schema, name, value) when is_list(value), do: EntryFields.display(schema, name, value) || whole(value)
 
-  defp display(_schema, _name, value) when is_binary(value), do: readable(value)
+  defp display(schema, name, value) when is_binary(value) do
+    if rich_text?(schema, name), do: readable(value), else: collapse(value)
+  end
+
   defp display(_schema, _name, value), do: whole(value)
 
   defp first_mention(proposal, target) do
@@ -1053,9 +1066,14 @@ defmodule Brando.Content.Proposals.Review do
   defp readable(nil), do: nil
 
   defp readable(text) when is_binary(text) do
-    text
-    |> String.replace(@block_tags, " ")
-    |> String.replace(@inline_tags, "")
+    @any_tag
+    |> Regex.replace(text, fn tag ->
+      cond do
+        tag =~ @block_tag -> " "
+        tag =~ @inline_tag -> ""
+        true -> tag
+      end
+    end)
     |> String.replace("&lt;", "<")
     |> String.replace("&gt;", ">")
     |> String.replace("&nbsp;", " ")
@@ -1065,13 +1083,13 @@ defmodule Brando.Content.Proposals.Review do
 
   defp readable(text), do: whole(text)
 
-  defp collapse(text), do: text |> String.replace(~r/\s+/, " ") |> String.trim()
+  defp collapse(text), do: text |> String.replace(~r/\s+/u, " ") |> String.trim()
 
   # The saved and proposed text as the card shows them. Text that reads the
   # same but differs shows its source, its line breaks marked, and long text
   # only what differs, with some context, so a change cannot hide in either.
-  defp text_change(saved, proposed) do
-    case {readable(saved), readable(proposed)} do
+  defp text_change(saved, proposed, reader \\ &readable/1) do
+    case {saved && reader.(saved), reader.(proposed)} do
       {same, same} when is_binary(same) and saved != proposed -> narrow(source(saved), source(proposed))
       {before, text} -> narrow(before, text)
     end

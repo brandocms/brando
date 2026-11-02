@@ -168,6 +168,15 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
       assert proposed =~ "steam://run/1"
     end
 
+    test "a tag's shape inside an address stays in the address", %{conn: conn, current_user: user} = c do
+      {view, _} =
+        propose(conn, user, [text_op(c.identity, ~s(<p><a href="https://elsewhere.invalid/<b>x</b>">y</a></p>))])
+
+      {_before, proposed} = change(view)
+
+      assert proposed =~ "https://elsewhere.invalid/<b>x</b>"
+    end
+
     test "text after an unclosed bracket shows", %{conn: conn, current_user: user} = c do
       {view, _} = propose(conn, user, [text_op(c.identity, "If a&lt;b see more of this")])
       {_before, proposed} = change(view)
@@ -247,6 +256,26 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
       assert before =~ "The old ending."
       assert proposed =~ @tail
     end
+  end
+
+  test "a plain field shows its markup and entities as Apply stores them", %{conn: conn, current_user: user} = c do
+    field = %{
+      "op" => "set_fields",
+      "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+      "fields" => %{"meta_description" => "Fish &amp; chips at <b>Bob's</b>"}
+    }
+
+    {view, _} = propose(conn, user, [field])
+    {_before, proposed} = change(view)
+
+    assert proposed == "Fish &amp; chips at <b>Bob's</b>"
+  end
+
+  test "letters whose bytes look like whitespace to a byte regex stay whole", %{conn: conn, current_user: user} = c do
+    {view, _} = propose(conn, user, [text_op(c.identity, "<p>Åpningstider à la carte</p>")])
+    {_before, proposed} = change(view)
+
+    assert proposed == "Åpningstider à la carte"
   end
 
   test "a plain field's angle bracket is what it says", %{conn: conn, current_user: user} = c do
