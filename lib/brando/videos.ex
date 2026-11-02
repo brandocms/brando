@@ -17,9 +17,9 @@ defmodule Brando.Videos do
   alias Brando.Users.User
   alias Brando.Videos.Uploaders.Bunny
   alias Brando.Videos.Video
+  alias BrandoAdmin.Work
 
   require Logger
-  alias BrandoAdmin.Work
 
   @type id :: binary | integer
   @type changeset :: changeset
