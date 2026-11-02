@@ -162,5 +162,17 @@ defmodule Brando.Cache.RefreshOnDeleteRestoreTest do
       {:ok, _} = Brando.Sites.delete_global_set(set.id, c.owner)
       refute Map.has_key?(Cache.Globals.get("en"), "gone")
     end
+
+    # A copy runs in the boundary's own transaction: the refresh waits for it
+    test "a menu and an identity copied refresh the caches", c do
+      {:ok, menu} = Brando.Navigation.create_menu(menu("original"), c.owner)
+      {:ok, copy} = Brando.Navigation.duplicate_menu(menu.id, c.owner)
+      assert %{id: id} = Cache.Navigation.get(copy.key, "en")
+      assert id == copy.id
+
+      {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
+      {:ok, _} = Brando.Sites.duplicate_identity(identity.id, c.owner, merge_fields: %{language: :no})
+      assert %{language: :no} = Cache.Identity.get("no")
+    end
   end
 end
