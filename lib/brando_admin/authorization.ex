@@ -9,8 +9,8 @@ defmodule BrandoAdmin.Authorization do
   the account and its site (`Brando.Tenant.Access.legacy_standing/2`), as does the
   `authorization_changed` broadcast, which is what reaches a LiveComponent's events:
 
-    * a role lowered disconnects the session's sockets, so that its views remount at
-      the stored role and forms recover what was typed. Until then events are refused;
+    * a role lowered ends the view's process. The client rejoins, as after a deploy:
+      the view mounts at the stored role and its forms recover what was typed;
     * a site that may no longer be entered sends the view to the access-denied page.
       Installation screens and the user's own password do not depend on a site, and
       the layout's sticky views (navigation, chrome, command palette), which cannot
@@ -82,7 +82,7 @@ defmodule BrandoAdmin.Authorization do
     end
   end
 
-  def on_mount(:default, params, session, socket) do
+  def on_mount(:default, params, _session, socket) do
     if Engine.enabled?() or socket.view == BrandoAdmin.Users.GroupsLive do
       requirement = requirement(socket.view, params, socket.assigns[:live_action])
       scope = scope(socket, requirement, params)
@@ -94,7 +94,7 @@ defmodule BrandoAdmin.Authorization do
         denied -> denied
       end
     else
-      legacy_check(socket, params, session)
+      legacy_check(socket, params)
     end
   end
 
@@ -103,7 +103,7 @@ defmodule BrandoAdmin.Authorization do
   # global sets, whose definitions say how an editor's values print; editors
   # fill those in on the Globals screen. `allowed?/2` asks the same for the
   # user this view holds, which the hooks below keep up to date.
-  defp legacy_check(socket, params, session) do
+  defp legacy_check(socket, params) do
     user = socket.assigns.current_user
     Process.put(@legacy_actor_key, user)
     {action, subject} = requirement(socket.view, params, socket.assigns[:live_action])
@@ -113,10 +113,10 @@ defmodule BrandoAdmin.Authorization do
 
     if superuser_only? and not Boundary.superuser?(user),
       do: {:halt, redirect(socket, to: "/admin/access-denied")},
-      else: {:cont, attach_legacy_hooks(socket, params, session)}
+      else: {:cont, attach_legacy_hooks(socket, params)}
   end
 
-  defp attach_legacy_hooks(socket, params, session) do
+  defp attach_legacy_hooks(socket, params) do
     if connected?(socket), do: Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:authorization")
 
     socket =
@@ -126,14 +126,9 @@ defmodule BrandoAdmin.Authorization do
 
     socket
     |> assign(:legacy_site_rule, legacy_site_rule(socket, params))
-    |> assign(:legacy_socket_id, legacy_socket_id(session))
     |> attach_hook(:legacy_authority_events, :handle_event, &legacy_event_hook/3)
     |> attach_hook(:legacy_authority_info, :handle_info, &legacy_info_hook/2)
   end
-
-  # The id, a hash of the token: the token itself stays out of the socket's state.
-  defp legacy_socket_id(%{"user_token" => token}) when is_binary(token), do: Brando.Users.live_socket_id(token)
-  defp legacy_socket_id(_session), do: nil
 
   defp legacy_params_hook(params, _url, socket) do
     socket |> assign(:legacy_site_rule, legacy_site_rule(socket, params)) |> legacy_recheck()
@@ -167,7 +162,7 @@ defmodule BrandoAdmin.Authorization do
 
       {role, enterable?} ->
         cond do
-          lowered?(user.role, role) -> {:halt, remount(socket)}
+          lowered?(user.role, role) -> remount()
           enterable? or socket.assigns.legacy_site_rule == :ignore -> {:cont, legacy_hold_role(socket, role)}
           socket.assigns.legacy_site_rule == :leave -> {:halt, redirect(socket, to: "/admin/access-denied")}
           true -> {:halt, socket}
@@ -182,15 +177,11 @@ defmodule BrandoAdmin.Authorization do
     rank
   end
 
-  # The sockets reconnect with the session, and every view mounts at the stored
-  # role. A session with no socket id has nothing to reconnect: it goes to the
-  # admin's front page, at the stored role too.
-  defp remount(%{assigns: %{legacy_socket_id: id}} = socket) when is_binary(id) do
-    Brando.endpoint().broadcast(id, "disconnect", %{})
-    socket
-  end
-
-  defp remount(socket), do: redirect(socket, to: "/admin")
+  # Every gate a view set at mount is asked again, whatever it was. A shutdown, not
+  # the session's sockets: closing a socket makes the client reload the page, which
+  # loses what a form holds, and a rejoin recovers it. No crash report either.
+  @spec remount() :: no_return()
+  defp remount, do: exit({:shutdown, :authority_lowered})
 
   defp legacy_hold_role(%{assigns: %{current_user: %{role: role}}} = socket, role), do: socket
 

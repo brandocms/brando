@@ -118,13 +118,14 @@ defmodule BrandoAdmin.UtilsImageToolsLiveTest do
   # nothing, cannot start them by sending the event
   test "a legacy user demoted since the page opened cannot start an image tool", %{conn: conn, current_user: user} do
     Oban.Testing.with_testing_mode(:manual, fn ->
-      {:ok, view, _} = live(conn, "/admin/config/utils")
-      Brando.endpoint().subscribe(Brando.Users.live_socket_id(get_session(conn, :user_token)))
-      Brando.Users.User |> Brando.Repo.get!(user.id) |> Ecto.Changeset.change(role: :user) |> Brando.Repo.update!()
-
+      Process.flag(:trap_exit, true)
       for event <- ~w(recreate_image_sizes recreate_changed_image_sizes recalculate_dominant_colors) do
-        render_click(view, event, %{})
-        assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+        Brando.Users.User |> Brando.Repo.get!(user.id) |> Ecto.Changeset.change(role: :superuser) |> Brando.Repo.update!()
+        {:ok, view, _} = live(conn, "/admin/config/utils")
+        Brando.Users.User |> Brando.Repo.get!(user.id) |> Ecto.Changeset.change(role: :user) |> Brando.Repo.update!()
+
+        # The view ends, for the client to rejoin at the stored role
+        catch_exit(render_click(view, event, %{}))
       end
 
       assert [] = all_enqueued(worker: ImageMaintenance)

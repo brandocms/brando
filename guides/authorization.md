@@ -214,9 +214,9 @@ user in a site scope; a record read policy still applies.
 Authority is read when it is used, so a change reaches a view that is already open.
 With groups every event, patch and message checks the view's requirement again. In
 legacy mode every event, patch and `authorization_changed` broadcast reads the
-account and its site: a lowered role disconnects the session's sockets, so its
-views remount at the stored role and forms recover what was typed, and a site no
-longer enterable sends the view to the access-denied page. Compiling a HEEx
+account and its site: a lowered role ends the view's process, so it rejoins at the
+stored role and its forms recover what was typed, and a site no longer enterable
+sends the view to the access-denied page. Compiling a HEEx
 template while planning a module import takes a Superuser read at that moment, in
 both modes. In a custom view, decide with `Boundary.authorize/3`, or the helpers
 built on it such as `Brando.Users.superuser?/1`, rather than an assign set at mount.

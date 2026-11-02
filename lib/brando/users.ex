@@ -489,8 +489,7 @@ defmodule Brando.Users do
   @doc """
   Disconnects every socket of the session `token` — its LiveViews and its
   admin socket — and no other session's. Call it once the session's token
-  is deleted: the sockets try to reconnect, and are turned away. With the
-  token kept they reconnect and remount, as for a lowered role. Inside a
+  is deleted: the sockets try to reconnect, and are turned away. Inside a
   transaction (`Brando.Repo.transaction/2`) it waits for the commit, since a
   socket reconnecting before then would still find the session.
   """

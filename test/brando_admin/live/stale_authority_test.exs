@@ -66,16 +66,31 @@ defmodule BrandoAdmin.StaleAuthorityTest do
     view |> form("#module-files-import-form", references: "") |> render_submit()
   end
 
-  # The session's sockets are told to disconnect, so the view remounts at the
-  # stored role. Stands in for the transport, which LiveViewTest does not have.
-  defp listen_for_disconnect(conn), do: @endpoint.subscribe(Users.live_socket_id(get_session(conn, :user_token)))
-
-  defp assert_disconnected do
-    assert_receive %Phoenix.Socket.Broadcast{event: "disconnect"}
+  # A lowered role ends the view's process, which the client rejoins at the
+  # stored role: e2e/playwright/tests/users/stale-authority.spec.js sees that.
+  # The test process is linked to the view, and goes on.
+  defp watch(view) do
+    Process.flag(:trap_exit, true)
+    Process.monitor(view.pid)
   end
 
-  defp refute_disconnected do
-    refute_receive %Phoenix.Socket.Broadcast{event: "disconnect"}, 100
+  defp assert_remounted(ref) do
+    assert_receive {:DOWN, ^ref, :process, _, {:shutdown, :authority_lowered}}, 1000
+  end
+
+  # A write no broadcast tells of, as from another node or the database
+  defp lower_unannounced(user, role),
+    do: Repo.update_all(from(u in User, where: u.id == ^user.id), set: [role: role])
+
+  # The event arrives, whatever was missed: the view ends, and does not act.
+  defp assert_event_ends_view(view, fun) do
+    ref = watch(view)
+    catch_exit(fun.())
+    assert_remounted(ref)
+  end
+
+  defp refute_remounted(ref) do
+    refute_receive {:DOWN, ^ref, :process, _, _}, 100
   end
 
   describe "module code in an open view, legacy mode (audit F15)" do
@@ -86,7 +101,10 @@ defmodule BrandoAdmin.StaleAuthorityTest do
 
     test "a ZIP previewed after a demotion compiles nothing", c do
       {:ok, view, _} = live(c.conn, "/admin/config/content/modules")
-      demote(c.current_user)
+
+      # Unannounced: a LiveComponent's event, which passes no view hook, is what
+      # reaches the preview, so the fresh read has to hold by itself.
+      lower_unannounced(c.current_user, :editor)
 
       html = preview_zip(view, bundle(:stale_authority_open_view))
 
@@ -185,27 +203,26 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       assert Users.superuser?(held)
     end
 
-    test "an event in an open view is refused, and the view told to remount", c do
+    test "a demotion remounts an open view at once", c do
       {:ok, view, _} = live(c.conn, "/admin/users/sign-in-policy")
-      listen_for_disconnect(c.conn)
-      before = SecurityPolicy.get()
+      ref = watch(view)
 
       demote(c.current_user, :user)
-      assert_disconnected()
 
-      render_submit(view, "save", %{"policy" => %{"two_factor" => "everyone"}})
-
-      assert SecurityPolicy.get().two_factor == before.two_factor
+      assert_remounted(ref)
     end
 
-    test "a change no broadcast told of is found on the next event", c do
+    test "a demotion no broadcast told of ends the view on its next event, which does nothing", c do
       {:ok, view, _} = live(c.conn, "/admin/users/sign-in-policy")
-      listen_for_disconnect(c.conn)
+      before = SecurityPolicy.get()
 
-      Repo.update_all(from(u in User, where: u.id == ^c.current_user.id), set: [role: :user])
-      render_click(view, "change", %{"policy" => %{"two_factor" => "everyone"}})
+      lower_unannounced(c.current_user, :user)
 
-      assert_disconnected()
+      assert_event_ends_view(view, fn ->
+        render_submit(view, "save", %{"policy" => %{"two_factor" => "everyone"}})
+      end)
+
+      assert SecurityPolicy.get().two_factor == before.two_factor
     end
 
     test "a new mount at the lowered role is refused", c do
@@ -217,38 +234,39 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       user = account(:editor)
       conn = log_in_user(build_conn(), user)
       {:ok, view, _} = live(conn, "/admin/pages")
-      listen_for_disconnect(conn)
+      ref = watch(view)
 
       {:ok, _} = Users.update_user(user.id, %{role: :admin}, c.current_user)
 
       assert render(view)
       assert :sys.get_state(view.pid).socket.assigns.current_user.role == :admin
-      refute_disconnected()
+      refute_remounted(ref)
     end
 
     test "a user's save tells open views to check again, and an editor's view is not disturbed", c do
       user = account(:editor)
       conn = log_in_user(build_conn(), user)
       {:ok, view, _} = live(conn, "/admin/pages")
-      listen_for_disconnect(conn)
+      ref = watch(view)
       Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:authorization")
 
       {:ok, _} = Users.update_user(user.id, %{name: "Renamed"}, c.current_user)
 
       assert_receive {:authorization_changed, :all}
       assert render(view)
-      refute_disconnected()
+      refute_remounted(ref)
     end
 
     test "the webhook screen creates nothing after a demotion", c do
       {:ok, view, _} = live(c.conn, "/admin/config/webhooks/new")
-      listen_for_disconnect(c.conn)
-      demote(c.current_user, :user)
-      assert_disconnected()
+      lower_unannounced(c.current_user, :user)
 
-      render_submit(view, "save", %{"webhook" => %{"name" => "Late", "url" => "https://hooks.example.com/late"}})
+      assert_event_ends_view(view, fn ->
+        render_submit(view, "save", %{"webhook" => %{"name" => "Late", "url" => "https://hooks.example.com/late"}})
+      end)
 
       assert Repo.all(Webhook) == []
+      refute Brando.Webhooks.can_manage?(c.current_user)
     end
   end
 
@@ -270,19 +288,17 @@ defmodule BrandoAdmin.StaleAuthorityTest do
 
     test "the sites screen grants nothing to the demoted account", c do
       {:ok, view, _} = live(c.conn, "/admin/sites")
-      listen_for_disconnect(c.conn)
-      demote(c.current_user, :user)
-      assert_disconnected()
+      lower_unannounced(c.current_user, :user)
 
-      render_click(view, "refresh")
-
-      render_submit(view, "grant", %{
-        "assignment" => %{"site_id" => c.site.id, "user_id" => c.current_user.id, "role" => "admin"}
-      })
+      assert_event_ends_view(view, fn ->
+        render_submit(view, "grant", %{
+          "assignment" => %{"site_id" => c.site.id, "user_id" => c.current_user.id, "role" => "admin"}
+        })
+      end)
 
       refute Repo.exists?(from(a in UserSite, where: a.user_id == ^c.current_user.id), prefix: "public")
-      render_click(view, "suspend", %{"id" => c.site.id})
-      assert Registry.get_site(c.site.id).status == :active
+
+      assert {:error, {:redirect, %{to: "/admin/access-denied"}}} = live(c.conn, "/admin/sites")
     end
 
     test "a site's access reads the stored role of a held struct", c do
@@ -315,14 +331,14 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       {:ok, _} = Access.grant(manager, c.site, :admin)
       conn = c.conn |> recycle() |> log_in_user(manager)
       {:ok, view, _} = live(conn, "/admin/config/environments")
-      listen_for_disconnect(conn)
+      ref = watch(view)
 
       {:ok, _} = Access.grant(manager, c.site, :editor)
 
       render_click(view, "delete_environment", %{"id" => c.environment.id})
 
       assert Registry.get_environment(c.environment.id)
-      refute_disconnected()
+      refute_remounted(ref)
     end
 
     test "the publishing screen saves nothing after a site's role is lowered", c do
@@ -419,7 +435,7 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       other = account(:editor)
       {:ok, _} = Access.grant(other, c.site, :editor)
       {:ok, view, _} = live(c.editor_conn, "/admin/pages/update/#{c.page.id}")
-      listen_for_disconnect(c.editor_conn)
+      ref = watch(view)
       view |> form("#page_form_form", %{"page" => %{"title" => "Typed"}}) |> render_change()
 
       :ok = Access.revoke(other, c.site)
@@ -427,7 +443,7 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       assert view |> render() |> Floki.parse_document!() |> Floki.find("input[name='page[title]']") |> Floki.attribute("value") ==
                ["Typed"]
 
-      refute_disconnected()
+      refute_remounted(ref)
     end
 
     test "views with no catch-all handle_info survive the broadcast, the child views too", c do
@@ -580,15 +596,12 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       put_test_env(:authorization_mode, :legacy)
       create_page(c.current_user, "Listed")
       {:ok, view, _} = live(c.conn, "/admin/config/activity")
-      listen_for_disconnect(c.conn)
+      ref = watch(view)
 
       demote(c.current_user)
-      assert_disconnected()
 
-      create_page(superuser(), "After the demotion")
-      render_click(view, "load_more")
-
-      refute has_element?(view, ".activity-entry", "After the demotion")
+      assert_remounted(ref)
+      assert {:error, {:redirect, %{to: "/admin/access-denied"}}} = live(c.conn, "/admin/config/activity")
     end
   end
 
