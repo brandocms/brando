@@ -391,3 +391,85 @@ test('a listing of selected entries gets a new selection', async ({ page }) => {
   await page.reload()
   await expect(listing.locator('.project')).toHaveText(['Test Project Alpha', 'Test Project Beta'])
 })
+
+test.describe('page content standing in for the configuration', () => {
+  // What the look-alikes' editor address sets the title to if it ever runs
+  const RAN = 'planted-config-ran'
+  const iframe = page => page.locator('[data-testid="frontend-edit-sidebar"] iframe')
+
+  // Serves the page changed by `transform`, for what the sanitizer would not
+  // let through or the plug would not send.
+  const rewritePage = (page, transform) =>
+    page.route(/\/\/[^/]+\/frontend-edit$/, async route => {
+      const response = await route.fetch()
+      await route.fulfill({ response, body: transform(await response.text()) })
+    })
+
+  test('rich text cannot replace it, and the admin still edits the page', async ({ page }) => {
+    await startEditing(page)
+
+    const planted = await page.request.post('/e2e/setup_fixtures/frontend-edit-planted')
+    expect(planted.ok()).toBeTruthy()
+    await page.reload()
+
+    // The sanitizer kept them, and they come before the plug's
+    await expect(page.locator('p#brando-frontend-edit-config')).toHaveCount(1)
+    await expect(page.locator('a#brando-frontend-edit-config')).toHaveCount(1)
+    await expect(page.locator('img[name="currentScript"]')).toHaveCount(1)
+
+    await expect(page.getByTestId('frontend-edit-toolbar')).toBeVisible()
+
+    await headline(page, 'Welcome to the page').click()
+    await expect(iframe(page)).toHaveAttribute('src', /^\/admin\/frontend-edit\?uid=/)
+    await expect(headlineInput(sidebar(page))).toHaveValue('Welcome to the page', { timeout: 15000 })
+    expect(await page.title()).not.toBe(RAN)
+
+    await headlineInput(sidebar(page)).fill('Edited beside the look-alikes')
+    await expect(headline(page, 'Edited beside the look-alikes')).toBeVisible({ timeout: 10000 })
+    await sidebar(page).getByTestId('submit').click()
+    await expect(sidebar(page).locator('.frontend-edit-status .lucide-circle-check')).toBeVisible({ timeout: 15000 })
+    await page.reload()
+    await expect(headline(page, 'Edited beside the look-alikes')).toBeVisible()
+    expect(await page.title()).not.toBe(RAN)
+  })
+
+  test('a name in the content cannot stop the overlay as if it had already started', async ({ page }) => {
+    await startEditing(page)
+    await rewritePage(page, body => body.replace('<main id="content">', '<main id="content"><img name="BrandoFrontendEdit">'))
+    await page.reload()
+    await expect(page.getByTestId('frontend-edit-toolbar')).toBeVisible()
+  })
+
+  test('a look-alike still cannot run when the lookup itself is replaced', async ({ page }) => {
+    await startEditing(page)
+    const planted = await page.request.post('/e2e/setup_fixtures/frontend-edit-planted')
+    expect(planted.ok()).toBeTruthy()
+    await rewritePage(page, body => body.replace('<main id="content">', '<main id="content"><img name="querySelector">'))
+    await page.reload()
+
+    await expect(page.locator('brando-frontend-edit')).toHaveCount(0)
+    await headline(page, 'Welcome to the page').click()
+    await expect(iframe(page)).toHaveCount(0)
+    expect(await page.title()).not.toBe(RAN)
+  })
+
+  for (const [name, editorUrl] of [
+    ['a script address', `javascript:parent.document.title='${RAN}';void 0//`],
+    ['another origin', 'https://example.com/admin/frontend-edit'],
+    ['an address without a scheme on another origin', '//example.com/admin/frontend-edit'],
+    ['another admin path', '/admin/users']
+  ]) {
+    test(`the sidebar refuses ${name} as the editor address`, async ({ page }) => {
+      await startEditing(page)
+      await rewritePage(page, body => body.replace(/"editorUrl":"[^"]*"/, `"editorUrl":${JSON.stringify(editorUrl)}`))
+      const served = page.waitForResponse(/\/\/[^/]+\/frontend-edit$/)
+      await page.reload()
+      expect(await (await served).text()).toContain(JSON.stringify(editorUrl))
+
+      await expect(page.locator('brando-frontend-edit')).toHaveCount(0)
+      await headline(page, 'Welcome to the page').click()
+      await expect(iframe(page)).toHaveCount(0)
+      expect(await page.title()).not.toBe(RAN)
+    })
+  }
+})

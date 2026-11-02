@@ -1,0 +1,1 @@
+- Frontend edit reads its configuration only from the script element the plug adds, and its sidebar only loads the admin's own editor, so a look-alike in rich text can no longer run script in a signed-in admin's page.

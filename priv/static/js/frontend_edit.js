@@ -6,7 +6,7 @@
  * blocks under the pointer, opens the clicked block in a sidebar (an admin
  * view in an iframe) and patches the page as the block is edited there.
  *
- * Reads its configuration from `#brando-frontend-edit-config`. Block patching
+ * Reads its configuration from the plug's JSON script element. Block patching
  * comes from `block_patch.js` (`window.BrandoBlockPatch`).
  *
  * Besides blocks, entry fields a template marks with `editable_field` or
@@ -21,12 +21,35 @@
  *   page → sidebar: select, save
  */
 (function () {
-  const configEl = document.getElementById('brando-frontend-edit-config')
-  if (!configEl || window.BrandoFrontendEdit) {
+  // Page content comes first in the document and rich text keeps ids and names,
+  // so the lookup names what it cannot carry: a script element (`RichText`
+  // refuses those). An element named `querySelector` makes this throw, and the
+  // overlay does not start. The guard is the script's own property, not an
+  // element a name on the page puts on `window`.
+  const configEl = document.querySelector('script#brando-frontend-edit-config[type="application/json"]')
+  if (!configEl || Object.hasOwn(window, 'BrandoFrontendEdit')) {
     return
   }
 
   const config = JSON.parse(configEl.textContent)
+
+  // `Brando.Plug.FrontendEdit.editor_path/0`
+  const EDITOR_PATH = '/admin/frontend-edit'
+
+  // The sidebar only ever loads the admin's own editor.
+  function isEditorUrl(value) {
+    try {
+      const url = new URL(value, window.location.origin)
+      return url.origin === window.location.origin && url.pathname === EDITOR_PATH && !url.search && !url.hash
+    } catch (_error) {
+      return false
+    }
+  }
+
+  if (!isEditorUrl(config.editorUrl)) {
+    return
+  }
+
   const T = config.text
   const REOPEN_KEY = 'brando:frontend-edit:reopen'
   const SOURCE = 'brando:frontend-edit'
@@ -452,7 +475,7 @@
 
   function editorUrl(id) {
     const param = isField(id) ? 'field' : 'uid'
-    return `${config.editorUrl}?${param}=${encodeURIComponent(id)}`
+    return `${EDITOR_PATH}?${param}=${encodeURIComponent(id)}`
   }
 
   function select(uid, occurrence = null) {
