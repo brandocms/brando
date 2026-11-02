@@ -485,8 +485,8 @@ It runs, in order:
    parse HTML and stored as that parse serializes, without comments and
    without the elements browsers read differently from other parsers
    (`xmp`, `noembed`, `noframes`, `noscript`, `plaintext`, `template`,
-   `title`); scripts, event handlers, embedded documents and script
-   addresses are a validation error.
+   `title`); scripts, event handlers, LiveView bindings, embedded documents
+   and script addresses are a validation error.
 
 `user` is the current user, or `:system` for work done by Brando or a job.
 Traits use it to stamp creators and editors, and relation casts pass it on.

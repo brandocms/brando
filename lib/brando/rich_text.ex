@@ -6,8 +6,8 @@ defmodule Brando.RichText do
   serializes, so what was checked is what browsers build. Comments and the
   elements whose content browsers read differently from other parsers are
   left out; everything else is kept, and markup that is not safe (scripts,
-  event handlers, embedded documents, script addresses) is refused rather
-  than stripped. Unrelated raw HTML fields are not rewritten.
+  event handlers, LiveView bindings, embedded documents, script addresses) is
+  refused rather than stripped. Unrelated raw HTML fields are not rewritten.
   """
   alias Ecto.Changeset
 
@@ -322,7 +322,7 @@ defmodule Brando.RichText do
 
   defp safe_attribute?({name, value}) do
     cond do
-      String.starts_with?(name, "on") -> false
+      String.starts_with?(name, ["on", "phx-", "data-phx-"]) -> false
       name in ["href", "src", "xlink:href", "action", "formaction"] -> allowed_uri?(value)
       name == "srcdoc" -> false
       name == "style" -> !Regex.match?(~r/(?:url\s*\(|expression\s*\(|@import|\\)/i, value)

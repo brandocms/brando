@@ -53,6 +53,19 @@ defmodule Brando.RichTextTest do
     assert {:ok, "./example.com/path"} = RichText.normalize_url("./example.com/path")
   end
 
+  test "LiveView bindings are not safe, and stored ones render as text" do
+    binding = ~s|<p class="lede" phx-mounted="x">Text</p>|
+
+    assert RichText.sanitize_html(binding) == :error
+    refute RichText.safe_html?(binding)
+    refute RichText.safe_svg?(~s|<svg phx-click="x"></svg>|)
+    assert RichText.render_html(binding) == "Text"
+
+    # Other names that merely start the same way stay
+    kept = ~s|<p data-phoenix="x" data-type="phx-mounted">Text</p>|
+    assert RichText.sanitize_html(kept) == {:ok, kept}
+  end
+
   test "changed rich text is validated without stripping supported HTML" do
     html =
       ~s|<p class="lede"><span id="getting-here" data-type="jump-anchor"><a class="action-button extra" href="/rooms" data-identifier-id="12">Rooms</a></span><sup data-footnote-uid="note-1">•</sup></p>|
@@ -65,7 +78,10 @@ defmodule Brando.RichTextTest do
           ~s|<a href="javascript:void(0)">bad</a>|,
           ~s|<p onclick="alert(1)">bad</p>|,
           "<script>bad</script>",
-          ~s|<p style="background:url(https://example.com)">bad</p>|
+          ~s|<p style="background:url(https://example.com)">bad</p>|,
+          ~s|<p phx-mounted="x">bad</p>|,
+          ~s|<a PHX-CLICK="x" href="/x">bad</a>|,
+          ~s|<a data-phx-link="redirect" data-phx-link-state="push" href="/x">bad</a>|
         ] do
       refute Data.changeset(%Data{}, %{text: unsafe}).valid?
     end
