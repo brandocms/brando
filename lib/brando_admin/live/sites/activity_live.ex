@@ -54,23 +54,18 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   than at their next action (`BrandoAdmin.Authorization`).
   """
   def refresh_authorization(%{assigns: %{socket_connected: true, view: _}} = socket) do
-    socket |> close_unreadable_comparison() |> load()
+    socket |> load() |> close_unreadable_comparison()
   end
 
   def refresh_authorization(socket), do: socket
 
-  defp close_unreadable_comparison(%{assigns: %{comparison: %{event: event}}} = socket) do
-    if readable_event?(event), do: socket, else: assign(socket, :comparison, nil)
+  # The load narrows by read grant and record policy: an event it no longer
+  # lists is one the reader may no longer compare.
+  defp close_unreadable_comparison(%{assigns: %{comparison: %{event: %{id: id}}, events: events}} = socket) do
+    if Enum.any?(events, &(&1.id == id)), do: socket, else: assign(socket, :comparison, nil)
   end
 
   defp close_unreadable_comparison(socket), do: socket
-
-  defp readable_event?(event) do
-    case readable_schemas() do
-      nil -> true
-      readable -> Events.schema(event.schema) in readable
-    end
-  end
 
   defp assign_current_user(socket, token),
     do: assign_new(socket, :current_user, fn -> Brando.Users.get_user_by_session_token(token) end)
@@ -272,9 +267,11 @@ defmodule BrandoAdmin.Sites.ActivityLive do
   end
 
   def handle_event("compare", %{"id" => id}, socket) do
+    # Loaded again: what the reader may see may have changed since the list was.
+    socket = load(socket)
+
     with :content <- socket.assigns.view,
          event when not is_nil(event) <- Enum.find(socket.assigns.events, &(to_string(&1.id) == id)),
-         true <- readable_event?(event),
          schema when not is_nil(schema) <- Events.schema(event.schema),
          {from, to} <- Comparison.revisions(event) do
       result = Comparison.build(schema, event.entry_id, from, to, socket.assigns.current_user)

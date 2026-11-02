@@ -554,6 +554,28 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       refute has_element?(view, ".activity-entry", "Before revocation")
     end
 
+    test "an open comparison closes when the event is no longer readable", c do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Migration.run()
+
+      {conn, reader} = Brando.Test.Users.log_in_as(build_conn(), permissions: ~w(brando.activity.read))
+      grant = Brando.Test.Users.grant_permissions(reader, ~w(brando.pages.read))
+      create_page(c.current_user, "Compared")
+      [event] = Repo.all(Brando.Activity.Event)
+
+      {:ok, view, _} = live(conn, "/admin/config/activity")
+
+      # What compare stores, whichever revisions the event has: closing does not depend on them.
+      :sys.replace_state(view.pid, fn state ->
+        put_in(state.socket.assigns[:comparison], %{event: event, result: :error})
+      end)
+
+      {:ok, :ok} = Groups.remove_member(Scope.current(c.current_user), grant.id, reader.id)
+
+      render(view)
+      refute :sys.get_state(view.pid).socket.assigns.comparison
+    end
+
     test "an administrator demoted in legacy mode loads nothing more", c do
       put_test_env(:authorization_mode, :legacy)
       create_page(c.current_user, "Listed")
