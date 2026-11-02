@@ -547,6 +547,39 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
 
       refute_received {:vimeo, "DELETE", _path}
     end
+
+    # Each call to a provider that hangs waits out its client's timeout, and
+    # the purger has one deadline for every environment.
+    test "asks a provider that cannot be reached once in a run, for every environment", %{sites: sites, held: held} do
+      put_test_env(Vimeo, access_token: "vimeo-token", req_options: [plug: {Req.Test, Vimeo}, retry: false])
+
+      for {site, video} <- [alpha: held.alpha, gamma: held.gamma, delta: held.delta],
+          do: as_site(sites[site], fn -> expire(video) end)
+
+      me = self()
+
+      Req.Test.stub(Vimeo, fn conn ->
+        send(me, {:vimeo, conn.method, conn.request_path})
+        Req.Test.transport_error(conn, :timeout)
+      end)
+
+      capture_log(fn -> assert :ok = perform_job(Brando.Worker.SoftDeletePurger, %{}) end)
+
+      assert_received {:vimeo, "DELETE", _path}
+      refute_received {:vimeo, "DELETE", _path}
+      for site <- [:alpha, :gamma, :delta], do: as_site(sites[site], fn -> assert Repo.aggregate(Video, :count) == 1 end)
+
+      # The next run asks again.
+      Req.Test.stub(Vimeo, fn conn ->
+        send(me, {:vimeo, conn.method, conn.request_path})
+        send_resp(conn, 204, "")
+      end)
+
+      assert :ok = perform_job(Brando.Worker.SoftDeletePurger, %{})
+
+      for path <- ["/videos/1", "/videos/2", "/videos/3"], do: assert_received({:vimeo, "DELETE", ^path})
+      for site <- [:alpha, :gamma, :delta], do: as_site(sites[site], fn -> assert Repo.aggregate(Video, :count) == 0 end)
+    end
   end
 
   # #3420: an environment copied from another has the same remote videos, so

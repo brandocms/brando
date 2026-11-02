@@ -64,10 +64,32 @@ defmodule Brando.SoftDelete.Query do
     Repo.all(query)
   end
 
+  @unreachable_key {__MODULE__, :unreachable}
+
   @doc """
   Clean up and delete all expired soft deleted entries
   """
   def clean_up_soft_deletions, do: Enum.map(list_soft_delete_schemas(), &clean_up_schema/1)
+
+  @doc """
+  Runs `fun`, one purge of several environments, each calling
+  `clean_up_soft_deletions/0`: a video provider one of them could not reach
+  is not asked again by the others, until `fun` returns. The provider
+  accounts are the installation's, so one that hangs for an environment
+  hangs for all, and the soft-delete purger has one deadline for every
+  environment. Outside it, each call to `clean_up_soft_deletions/0` is a
+  run of its own.
+  """
+  def as_one_run(fun) when is_function(fun, 0) do
+    previous = Process.get(@unreachable_key)
+    Process.put(@unreachable_key, [])
+
+    try do
+      fun.()
+    after
+      if previous, do: Process.put(@unreachable_key, previous), else: Process.delete(@unreachable_key)
+    end
+  end
 
   # Handle Video schema specially to support remote deletion on purge
   defp clean_up_schema(Brando.Videos.Video = schema) do
@@ -95,13 +117,16 @@ defmodule Brando.SoftDelete.Query do
     # are counted.
     #
     # Once a provider could not be reached, or timed out, it is not asked
-    # again this run: each call to a provider that hangs waits out its
-    # client's timeout, and the purger has one deadline for every schema and
-    # environment. Its other rows stay for the next run, and the other
-    # providers' rows go on. A provider that answered with an error, even a
-    # 5xx, answered at once, and the error may be that one video's: it is
-    # asked about its other rows.
-    {purged, kept} = Enum.reduce(on_purge, {0, %{}}, &purge_unless_unanswered(query, &1, &2))
+    # again this run (`as_one_run/1`): each call to a provider that hangs
+    # waits out its client's timeout, and the purger has one deadline for
+    # every schema and environment. Its other rows stay for the next run, and
+    # the other providers' rows go on. A provider that answered with an
+    # error, even a 5xx, answered at once, and the error may be that one
+    # video's: it is asked about its other rows.
+    unreachable = Process.get(@unreachable_key)
+    kept = Map.new(unreachable || [], &{&1, 0})
+    {purged, kept} = Enum.reduce(on_purge, {0, kept}, &purge_unless_unreachable(query, &1, &2))
+    if unreachable, do: Process.put(@unreachable_key, Map.keys(kept))
 
     for {type, count} <- kept, count > 0 do
       Logger.warning(
@@ -138,7 +163,7 @@ defmodule Brando.SoftDelete.Query do
 
   # `kept` counts, by provider, the videos left without asking it once it
   # could not be reached.
-  defp purge_unless_unanswered(query, video, {purged, kept}) do
+  defp purge_unless_unreachable(query, video, {purged, kept}) do
     if Map.has_key?(kept, video.type) do
       {purged, Map.update!(kept, video.type, &(&1 + 1))}
     else
