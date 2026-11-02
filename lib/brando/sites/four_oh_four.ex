@@ -13,11 +13,16 @@ defmodule Brando.Sites.FourOhFour do
   flushes; past that, the least recently counted are dropped.
 
   Rows older than `retention_days/0` are deleted nightly by
-  `Brando.Worker.NotFoundPurger`.
+  `Brando.Worker.NotFoundPurger`. Anyone can request a URL that does not exist,
+  so a tenant also keeps at most `max_rows/0` rows: past that, a flush deletes
+  the rows hit least recently. A sustained burst of made-up URLs can push out
+  older rows, which come back with their next hit counting from there, but it
+  cannot keep a new broken link out of the log.
 
       config :brando, Brando.Sites.FourOhFour,
         flush_interval: :timer.seconds(60),
-        retention_days: 90
+        retention_days: 90,
+        max_rows: 100_000
 
   `flush_interval: false` turns the periodic flush off (the test config does);
   `list/0` still flushes before it reads.
@@ -32,6 +37,8 @@ defmodule Brando.Sites.FourOhFour do
   @cache :four_oh_four
   @default_flush_interval :timer.seconds(60)
   @default_retention_days 90
+  @default_max_rows 100_000
+  @trim_batch 10_000
   @list_limit 500
   @max_url_length 1000
   @max_referrer_length 500
@@ -133,10 +140,14 @@ defmodule Brando.Sites.FourOhFour do
     opts = [on_conflict: on_conflict, conflict_target: [:url, :referrer, :date]]
     opts = if prefix, do: Keyword.put(opts, :prefix, prefix), else: opts
 
-    rows
-    |> Enum.chunk_every(1000)
-    |> Enum.map(&insert_rows(&1, opts))
-    |> Enum.sum()
+    written =
+      rows
+      |> Enum.chunk_every(1000)
+      |> Enum.map(&insert_rows(&1, opts))
+      |> Enum.sum()
+
+    if written > 0, do: trim(prefix)
+    written
   rescue
     error in [DBConnection.ConnectionError] ->
       Logger.warning("==> 404 log: could not store #{length(rows)} rows: #{Exception.message(error)}")
@@ -163,6 +174,36 @@ defmodule Brando.Sites.FourOhFour do
   defp refused_data?(%Postgrex.Error{postgres: %{pg_code: "22" <> _}}), do: true
   defp refused_data?(%Postgrex.Error{postgres: %{pg_code: "54" <> _}}), do: true
   defp refused_data?(_error), do: false
+
+  # Counting costs one scan a flush, only when there was something to write;
+  # sorting the table to choose rows only happens over the limit. A batch at a
+  # time, so a table already far past it comes down over a few flushes rather
+  # than in one delete that may never finish in time. Two nodes trimming at
+  # once can delete up to one batch too many, which the log can afford.
+  #
+  # The least recently hit go first, whatever their hits: a requester chooses
+  # how many hits and rows a URL gets, and a ranking by them could be filled
+  # once and keep new links out until retention.
+  defp trim(prefix) do
+    opts = if prefix, do: [prefix: prefix], else: []
+    excess = Brando.Repo.aggregate(NotFoundHit, :count, opts) - max_rows()
+
+    if excess > 0 do
+      doomed =
+        from h in NotFoundHit,
+          order_by: [asc: h.last_hit_at, asc: h.hits, asc: h.id],
+          limit: ^min(excess, @trim_batch),
+          select: h.id
+
+      Brando.Repo.delete_all(from(h in NotFoundHit, where: h.id in subquery(doomed)), opts)
+    end
+
+    :ok
+  rescue
+    error in [Postgrex.Error, DBConnection.ConnectionError] ->
+      Logger.warning("==> 404 log: could not trim #{prefix || "public"}: #{Exception.message(error)}")
+      :ok
+  end
 
   @doc """
   The missing URLs recorded in the current tenant, most requested first, with
@@ -266,6 +307,10 @@ defmodule Brando.Sites.FourOhFour do
   @doc "How many days of 404s are kept (default #{@default_retention_days})."
   @spec retention_days() :: pos_integer()
   def retention_days, do: Keyword.get(config(), :retention_days, @default_retention_days)
+
+  @doc "How many rows a tenant keeps (default #{@default_max_rows})."
+  @spec max_rows() :: pos_integer()
+  def max_rows, do: Keyword.get(config(), :max_rows, @default_max_rows)
 
   @doc "How often the buffer is flushed, in milliseconds, or `false`."
   @spec flush_interval() :: pos_integer() | false

@@ -1,0 +1,1 @@
+- The 404 log keeps at most 100,000 rows per environment (`max_rows`), so requests for unique missing URLs can no longer grow its table without limit.
