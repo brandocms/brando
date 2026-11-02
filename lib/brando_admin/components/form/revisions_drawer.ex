@@ -8,6 +8,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   alias BrandoAdmin.Components.Button
   alias BrandoAdmin.Components.CircleDropdown
   alias BrandoAdmin.Components.Content
+  alias BrandoAdmin.Components.Form.Primitives
   alias Phoenix.LiveView.AsyncResult
 
   @page_size 50
@@ -526,10 +527,27 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
          |> load_revisions()
          |> load_activity()}
 
-      {:error, _reason} ->
-        {:noreply, alert_error(socket, gettext("The revision could not be activated."))}
+      {:error, reason} ->
+        {:noreply, alert_error(socket, activation_error(socket, reason))}
     end
   end
+
+  # A revision that no longer validates, such as a fragment key that no
+  # longer fits its format: which field, and why
+  defp activation_error(socket, %Ecto.Changeset{errors: [_ | _] = errors}) do
+    schema = entry_schema(socket)
+    form = socket.assigns.form_blueprint
+    labels = Brando.Blueprint.Utils.translate_error_keys(Keyword.keys(errors), form, schema)
+
+    reasons =
+      labels
+      |> Enum.zip(errors)
+      |> Enum.map_join("; ", fn {label, {_field, error}} -> "#{label}: #{Primitives.translate_error(error)}" end)
+
+    gettext("The revision could not be activated. %{reasons}. Load it, correct this and save it.", reasons: reasons)
+  end
+
+  defp activation_error(_socket, _reason), do: gettext("The revision could not be activated.")
 
   defp load_revisions(socket, loaded_revisions \\ []) do
     entry_id = socket.assigns.entry_id

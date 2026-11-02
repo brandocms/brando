@@ -870,8 +870,10 @@ index". Publish the fragments first.
    A key listed only for its non-ASCII letters may still fit: the query depends
    on the database's locale. Rename the others in the admin, along with the
    templates that look them up. A revision from before the rename holds the old
-   key, so restoring it, or publishing it on a schedule, is refused: schedule a
-   newer revision instead.
+   key, so restoring it, or publishing it on a schedule, is refused (the
+   scheduled job is cancelled and Activity says why): schedule a newer revision
+   instead. A content transfer that creates a fragment from such a key is
+   refused too; change the key in the transfer's preview.
 
 `mix brando.doctor` reports migrations that have not run, in `public` and in
 each environment, and Oban queues that are missing. Under Module entry paths it

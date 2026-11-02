@@ -11457,6 +11457,11 @@ msgstr ""
 msgid "Not used yet"
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Not valid: %{fields}"
+msgstr ""
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not visited"
@@ -14457,6 +14462,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Revision #%{revision}"
+msgstr ""
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{revision} was not published as scheduled: it is no longer valid"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex
@@ -17540,6 +17550,11 @@ msgstr ""
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "The revision could not be activated."
+msgstr ""
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The revision could not be activated. %{reasons}. Load it, correct this and save it."
 msgstr ""
 
 #: lib/brando_admin/components/form.ex

@@ -225,6 +225,11 @@ do not change the scheduled snapshot. A revision that comes due while its entry
 is in the trash is not published: the job is cancelled, the revision is no
 longer scheduled, and the entry's Activity says why. Restoring the entry
 publishes nothing; schedule the revision again if it should still go out.
+A revision that no longer validates, such as one holding a fragment key that
+no longer fits the key format, is not retried either: the job is cancelled on
+its first attempt, the revision is no longer scheduled, and the entry's
+Activity names the fields. Activating it in the revisions drawer is refused
+with the same fields and why; load it, correct them and save it.
 
 To cancel before execution, use **Cancel schedule** in the revision row:
 
@@ -260,7 +265,9 @@ from untrusted request input. See [Sites and environments](tenancy_and_environme
 The publisher worker allows 10 attempts and a 60-second timeout per attempt.
 Oban retries failures; an accepted schedule is not a guarantee that the content
 will publish successfully. A failed revision restore preserves the current
-entry, and a final failed attempt releases its scheduled retention flag.
+entry, and a final failed attempt releases its scheduled retention flag. A
+revision refused by validation or because its entry is in the trash is not
+retried (see above).
 Check the job's error and the content's current validation/authorization before
 retrying. The actor is loaded again at execution, so changed access can matter.
 

@@ -20,6 +20,10 @@ defmodule Brando.Worker.EntryPublisher do
   on the last attempt. Without group authorization nothing is refused: a
   schedule runs as its user, deactivated or not, and as the system when the
   user no longer exists.
+
+  A scheduled revision that no longer validates (a fragment key that no
+  longer fits its format) or whose entry is in the trash is not retried: the
+  job is cancelled and the schedule dropped, and Activity says why.
   """
   use Oban.Worker,
     queue: :default,
@@ -144,6 +148,14 @@ defmodule Brando.Worker.EntryPublisher do
       {:error, :in_trash} ->
         Revisions.drop_schedule_in_trash(schema, id, revision, user, fn -> current_revision_job?(job) end)
         {:cancel, :in_trash}
+
+      # The revision no longer validates, such as a fragment key that no
+      # longer fits its format: trying again gives the same answer. The
+      # schedule is dropped, with a note in Activity naming the fields.
+      {:error, %Ecto.Changeset{} = changeset} ->
+        fields = changeset.errors |> Keyword.keys() |> Enum.uniq() |> Enum.map(&to_string/1)
+        Revisions.drop_invalid_schedule(schema, id, revision, user, fields, fn -> current_revision_job?(job) end)
+        {:cancel, :invalid}
 
       {:error, reason} ->
         release_failed_revision_schedule(job, schema, id, revision)

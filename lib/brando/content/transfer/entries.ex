@@ -375,12 +375,7 @@ defmodule Brando.Content.Transfer.Entries do
     cs = held_changeset(item, params, actor) |> Brando.Publisher.maybe_override_status()
 
     unless cs.valid?,
-      do:
-        Error.fail!(
-          dgettext("content_transfer", "Entry validation: %{value1}",
-            value1: inspect(Changeset.traverse_errors(cs, fn {message, _} -> message end))
-          )
-        )
+      do: Error.fail!(dgettext("content_transfer", "Entry validation: %{value1}", value1: validation_errors(cs)))
 
     unique!(cs)
 
@@ -388,6 +383,29 @@ defmodule Brando.Content.Transfer.Entries do
       do: Error.fail!(dgettext("content_transfer", "You do not have permission to save or publish this entry."))
 
     cs
+  end
+
+  # Each field under its label, with its messages: "Key: can't start or end
+  # with a space". A nested changeset's errors are listed as they are.
+  defp validation_errors(%Changeset{data: %schema{}} = cs) do
+    errors = Changeset.traverse_errors(cs, &BrandoAdmin.Components.Form.Primitives.translate_error/1)
+    fields = Map.keys(errors)
+
+    labels =
+      case schema.__form__() do
+        nil -> Enum.map(fields, &Phoenix.Naming.humanize/1)
+        form -> Brando.Blueprint.Utils.translate_error_keys(fields, form, schema)
+      end
+
+    labels
+    |> Enum.zip(fields)
+    |> Enum.map_join("; ", fn {label, field} -> "#{label}: #{messages(errors[field])}" end)
+  end
+
+  defp messages(messages) do
+    if is_list(messages) and Enum.all?(messages, &is_binary/1),
+      do: Enum.join(messages, ", "),
+      else: inspect(messages)
   end
 
   # A bundle sets no field the forms lock for anyone but a superuser, on an
