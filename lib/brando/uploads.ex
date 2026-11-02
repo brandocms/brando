@@ -346,6 +346,7 @@ defmodule Brando.Uploads do
          {:ok, object} <- Brando.CDN.head_object(key, field_cfg),
          :ok <- validate_direct_object(object, params[:filesize], params[:mime_type]),
          {:ok, body} <- Brando.CDN.get_object(key, field_cfg),
+         :ok <- validate_direct_body(body, params[:filesize]),
          :ok <- check_direct_pixels(body, [key, params[:mime_type]]),
          {:ok, media_path} <- write_direct_original(key, body),
          {:ok, image} <- create_direct_image(cfg, media_path, resolved_target, params, user),
@@ -358,6 +359,13 @@ defmodule Brando.Uploads do
       {:error, reason} -> {:error, reason}
     end
   end
+
+  # The object can change between the HEAD and this read, while the presigned
+  # URL is valid.
+  defp validate_direct_body(body, size) when byte_size(body) == size, do: :ok
+
+  defp validate_direct_body(body, size),
+    do: {:error, "Uploaded object size mismatch (expected #{size}, got #{byte_size(body)})"}
 
   # Before the original is written over one an `overwrite` config shares a
   # name with. Bytes libvips cannot read are left to the later steps.
@@ -531,12 +539,12 @@ defmodule Brando.Uploads do
     initiate_direct_asset(cfg, resolved_target, file_meta)
   end
 
-  defp initiate_direct_asset(cfg, resolved_target, %{name: name, type: mime_type}) do
+  defp initiate_direct_asset(cfg, resolved_target, %{name: name, type: mime_type, size: size}) do
     with :ok <- validate_mimetype(cfg, mime_type) do
       filename = build_direct_filename(name, cfg)
       key = Path.join(["media", cfg.upload_path, filename])
 
-      case presign_put(key, cfg, mime_type: mime_type) do
+      case presign_put(key, cfg, mime_type: mime_type, size: size) do
         {:ok, %{upload_url: upload_url, headers: headers}} ->
           {:ok,
            {:direct,
@@ -594,14 +602,21 @@ defmodule Brando.Uploads do
   Presign a PUT to the file CDN bucket for `key`.
 
   The URL is short-lived (#{@presign_expiry_seconds}s). `Content-Type` is a
-  signed header. An object ACL is included only when the CDN config explicitly
-  sets `direct_acl`; modern AWS buckets should keep this nil and use a bucket
-  policy instead.
+  signed header, and so is `Content-Length` with the `:size` option, so the
+  store refuses a body of any other size. A browser sets that header itself and
+  refuses to let a script do it, so it is not in the returned `headers`, which
+  are what the client must send. An object ACL is included only when the CDN
+  config explicitly sets `direct_acl`; modern AWS buckets should keep this nil
+  and use a bucket policy instead.
+
+  S3 has no single-use URL: until it expires, the holder can PUT another body
+  of the same size and type to the same key.
   """
   def presign_put(key, cfg, opts \\ []) do
     cdn_config = file_cdn_config(cfg)
     mime_type = Keyword.get(opts, :mime_type, "application/octet-stream")
     headers = presign_headers(cdn_config, mime_type)
+    signed = signed_length(Keyword.get(opts, :size)) ++ headers
 
     s3_config =
       %{cdn: cdn_config}
@@ -612,7 +627,7 @@ defmodule Brando.Uploads do
 
     case ExAws.S3.presigned_url(aws_config, :put, cdn_config.bucket, key,
            expires_in: @presign_expiry_seconds,
-           headers: headers
+           headers: signed
          ) do
       {:ok, upload_url} -> {:ok, %{upload_url: upload_url, headers: Map.new(headers)}}
       {:error, _reason} = error -> error
@@ -830,6 +845,9 @@ defmodule Brando.Uploads do
       _ -> "application/octet-stream"
     end
   end
+
+  defp signed_length(size) when is_integer(size) and size >= 0, do: [{"content-length", Integer.to_string(size)}]
+  defp signed_length(_size), do: []
 
   defp presign_headers(cdn_config, mime_type) do
     [{"content-type", mime_type}]

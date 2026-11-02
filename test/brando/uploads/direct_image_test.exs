@@ -84,6 +84,10 @@ defmodule Brando.Uploads.DirectImageTest do
       assert upload.upload_url =~ "testbucket"
       assert upload.upload_url =~ "X-Amz-Signature"
       assert Uploads.get_pending_intent(upload.ref).asset_type == :image
+
+      query = upload.upload_url |> URI.parse() |> Map.fetch!(:query) |> URI.decode_query()
+      assert query["X-Amz-SignedHeaders"] =~ "content-length"
+      refute Map.has_key?(upload.upload_headers, "content-length")
     end
 
     test "without a direct CDN the image goes through the server, as before" do
@@ -135,6 +139,21 @@ defmodule Brando.Uploads.DirectImageTest do
       # Done with: the ref cannot be completed twice
       assert Uploads.get_pending_intent(upload.ref) == nil
       assert {:error, :not_found} = Direct.complete(upload.ref)
+    end
+
+    test "an object that changed between the HEAD and the read is not stored" do
+      put_image_config(%{cdn: @cdn, size_limit: 1000})
+      body = File.read!(@fixture)
+      {:ok, upload} = Direct.presign(:image, "default", meta(%{size: 100}))
+
+      expect(Client.Mock, :head_object, fn "testbucket", _, _ -> {:ok, head_response(100, "image/jpeg")} end)
+      expect(Client.Mock, :get_object, fn "testbucket", _, _ -> {:ok, %{status_code: 200, body: body}} end)
+
+      assert {:error, message} = Direct.complete(upload.ref)
+      assert message =~ "size mismatch"
+      "media/" <> path = upload.key
+      refute File.exists?(Path.join(Brando.Tenant.Storage.current_media_root(), path))
+      assert BrandoIntegration.Repo.all(Image) == []
     end
 
     test "an object the bucket reports differently is not trusted" do

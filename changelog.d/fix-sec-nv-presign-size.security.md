@@ -1,0 +1,1 @@
+- A presigned direct upload URL signs the declared size, so the bucket refuses a body of any other size, and a direct image whose bytes changed after its size was checked is not stored.
