@@ -189,21 +189,32 @@ edge, as does running multiple nodes. The client address is taken from
 GitHub sends every customer's webhooks from the same addresses, so anyone can
 point webhooks of their own at this URL and have GitHub send wrongly signed
 requests from them. An address in GitHub's webhook ranges therefore has 1,200
-requests a minute instead of 120, and at most 16 such requests read and verify
-their bodies at once (16 MiB); the others wait their turn. The ranges are the
-`hooks` list of GitHub's `/meta` API, fetched when a node with connections
-starts and every six hours after; requests never trigger a fetch. When a fetch
-fails the last list is kept, and until one has succeeded GitHub's addresses have
-the ordinary limit. For GitHub Enterprise, or to fix the list:
+requests a minute instead of 120, and at most 16 such requests are read,
+verified and stored at once (16 MiB). The others wait up to 10 seconds for
+their turn, then get 429; a request given its turn has 10 seconds to send its
+body. The ranges are the `hooks` list of GitHub's `/meta` API, fetched when a
+node with connections starts and every six hours after; requests never trigger
+a fetch. When a fetch fails the last list is kept, and until one has succeeded
+GitHub's addresses have the ordinary limit.
+
+GitHub Enterprise Server sends webhooks from the server's own address: list
+it in `github_hook_ranges`. `github_meta_url` names another API whose `/meta`
+has a `hooks` list, such as that of GitHub Enterprise Cloud with data
+residency:
 
 ```elixir
 config :brando, :markdown_sources,
-  # The API of a GitHub Enterprise server; nil fetches nothing
-  github_meta_url: "https://github.example.com/api/v3/meta",
-  # Or a fixed list, used instead of a fetch
-  github_hook_ranges: ["192.30.252.0/22", "185.199.108.0/22"],
+  # Another API to fetch the list from; nil fetches nothing
+  github_meta_url: "https://api.example.ghe.com/meta",
+  # Or a fixed list, used instead of a fetch, such as a GitHub Enterprise
+  # Server's address
+  github_hook_ranges: ["203.0.113.10/32"],
   connections: %{...}
 ```
+
+With connections in compile-time config, Brando fetches the list when a test
+run starts too; set `github_meta_url: nil` or a fixed `github_hook_ranges` in
+`config/test.exs` so tests make no network calls.
 
 Only the address `Brando.ClientIP` resolves counts. Behind a CDN or proxy that
 is not a trusted proxy, every request comes from the edge's address: GitHub's

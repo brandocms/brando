@@ -1,6 +1,6 @@
 defmodule Brando.MarkdownSources.WebhookTest do
   use Brando.ConnCase, async: false
-  alias Brando.MarkdownSources.Delivery
+  alias Brando.MarkdownSources.{Delivery, ReadSlots}
   alias BrandoWeb.Plugs.GitHubMarkdownWebhook, as: Webhook
   @secret String.duplicate("s", 40)
 
@@ -285,7 +285,7 @@ defmodule Brando.MarkdownSources.WebhookTest do
   # anyone's wrongly signed requests counted against the address genuine
   # deliveries come from, and past 120 a minute refused them
   describe "GitHub's webhook addresses" do
-    alias Brando.MarkdownSources.{GitHubAddresses, RateLimiter, ReadSlots}
+    alias Brando.MarkdownSources.{GitHubAddresses, RateLimiter}
 
     @github {192, 30, 252, 10}
 
@@ -354,20 +354,7 @@ defmodule Brando.MarkdownSources.WebhookTest do
 
     test "requests from GitHub's addresses are read holding a slot, and wait for one" do
       with_ranges(["192.30.252.0/22"])
-      parent = self()
-
-      holders =
-        for _ <- 1..16 do
-          spawn(fn ->
-            ReadSlots.run(System.monotonic_time(:millisecond) + 5_000, fn ->
-              send(parent, :holding)
-              receive do: (:release -> :ok)
-            end)
-          end)
-        end
-
-      for _ <- 1..16, do: assert_receive(:holding)
-      on_exit(fn -> Enum.each(holders, &Process.exit(&1, :kill)) end)
+      holders = hold_slots(16)
 
       waiting =
         Task.async(fn ->
@@ -384,7 +371,101 @@ defmodule Brando.MarkdownSources.WebhookTest do
       assert Task.await(waiting) == 202
       Enum.each(holders, &send(&1, :release))
     end
+
+    test "a delivery from GitHub's addresses holds its slot until it is accepted" do
+      with_ranges(["192.30.252.0/22"])
+      :telemetry.attach("stall-acceptance", [:oban, :engine, :insert_job, :start], &__MODULE__.stall/4, self())
+      on_exit(fn -> :telemetry.detach("stall-acceptance") end)
+      hold_slots(15)
+
+      accepting =
+        Task.async(fn ->
+          Process.put(:stall_acceptance, true)
+
+          Oban.Testing.with_testing_mode(:manual, fn ->
+            %{signed(payload()) | remote_ip: @github} |> Webhook.call([]) |> Map.get(:status)
+          end)
+        end)
+
+      assert_receive {:stalled, stalled}, 5_000
+
+      # A ping writes nothing, so only a slot can hold it back
+      ping = Jason.encode!(%{"repository" => %{"id" => 42}, "zen" => "Keep it logically awesome."})
+
+      waiting =
+        Task.async(fn ->
+          %{signed(ping) | remote_ip: @github} |> put_req_header("x-github-event", "ping") |> Webhook.call([])
+        end)
+
+      assert Task.yield(waiting, 200) == nil
+      send(stalled, :go)
+      assert Task.await(accepting) == 202
+      assert Task.await(waiting).status == 202
+    end
+
+    test "a request given a slot late has the whole window to send its body" do
+      with_ranges(["192.30.252.0/22"])
+      [first | _] = hold_slots(16)
+      conn = %{signed(payload()) | remote_ip: @github} |> slow_body(1_000)
+
+      request =
+        Task.async(fn ->
+          Oban.Testing.with_testing_mode(:manual, fn ->
+            conn |> Webhook.call(body_timeout: 2_000) |> Map.get(:status)
+          end)
+        end)
+
+      Process.sleep(1_200)
+      Process.exit(first, :kill)
+      assert Task.await(request) == 202
+    end
   end
+
+  def stall(_event, _measurements, _metadata, test) do
+    if Process.get(:stall_acceptance) do
+      send(test, {:stalled, self()})
+      receive do: (:go -> :ok)
+    end
+  end
+
+  defp hold_slots(count) do
+    parent = self()
+
+    holders =
+      for _ <- 1..count, do: spawn(fn -> ReadSlots.run(System.monotonic_time(:millisecond) + 5_000, hold(parent)) end)
+
+    for _ <- 1..count, do: assert_receive(:holding)
+    on_exit(fn -> Enum.each(holders, &Process.exit(&1, :kill)) end)
+    holders
+  end
+
+  defp hold(parent) do
+    fn ->
+      send(parent, :holding)
+      receive do: (:release -> :ok)
+    end
+  end
+
+  # A client that sends its body slowly: a read given less than `needs`
+  # milliseconds times out
+  defmodule SlowBody do
+    def read_req_body({inner, needs}, opts) do
+      if opts[:read_timeout] >= needs do
+        {status, data, inner} = Plug.Adapters.Test.Conn.read_req_body(inner, opts)
+        {status, data, {inner, needs}}
+      else
+        {:error, :timeout}
+      end
+    end
+
+    def send_resp({inner, needs}, status, headers, body) do
+      {:ok, sent, inner} = Plug.Adapters.Test.Conn.send_resp(inner, status, headers, body)
+      {:ok, sent, {inner, needs}}
+    end
+  end
+
+  defp slow_body(%{adapter: {Plug.Adapters.Test.Conn, inner}} = conn, needs),
+    do: %{conn | adapter: {SlowBody, {inner, needs}}}
 
   test "a busy signature check makes a request wait, and does not refuse it" do
     alias Brando.MarkdownSources.SignatureCheck

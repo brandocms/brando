@@ -63,12 +63,12 @@ defmodule Brando.MarkdownSources.GitHubAddressesTest do
     refute GitHubAddresses.member?(nil, @name)
   end
 
-  test "asks the configured URL, for GitHub Enterprise" do
-    config(github_meta_url: "https://github.example.com/api/v3/meta")
+  test "asks the configured URL" do
+    config(github_meta_url: "https://api.example.ghe.com/meta")
     answers([{:ok, %{"hooks" => ["10.0.0.0/24"]}}])
     start()
 
-    assert_received {:meta, "https://github.example.com/api/v3/meta"}
+    assert_received {:meta, "https://api.example.ghe.com/meta"}
     assert GitHubAddresses.member?({10, 0, 0, 7}, @name)
   end
 

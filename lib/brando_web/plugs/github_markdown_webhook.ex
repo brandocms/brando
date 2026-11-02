@@ -34,14 +34,10 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
          {:ok, connection} <- connection,
          [content_type] <- get_req_header(conn, "content-type"),
          true <- String.downcase(hd(String.split(content_type, ";"))) == "application/json",
-         true <- signature_shaped?(get_req_header(conn, "x-hub-signature-256")),
-         {:ok, body, conn} <- read_verified(conn, connection, github?, System.monotonic_time(:millisecond) + 10_000) do
-      accept_delivery(conn, connection, body)
+         true <- signature_shaped?(get_req_header(conn, "x-hub-signature-256")) do
+      receive_delivery(conn, connection, github?, Keyword.get(opts, :body_timeout, 10_000))
     else
       {:client, false} -> respond(conn, 429, "rate_limited")
-      {:error, :busy} -> respond(conn, 429, "rate_limited")
-      {:error, :too_large, conn} -> respond(conn, 413, "request_too_large")
-      {:error, :incomplete_body, conn} -> respond(conn, 400, "incomplete_body")
       _ -> respond(conn, 401, "delivery_rejected")
     end
   end
@@ -50,21 +46,31 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
   defp signature_shaped?(["sha256=" <> hex]) when byte_size(hex) == 64, do: true
   defp signature_shaped?(_), do: false
 
-  # A request from GitHub's addresses reads and verifies its body holding a read
-  # slot, which bounds how many of their bodies are held at once
-  defp read_verified(conn, connection, true, deadline),
-    do: ReadSlots.run(deadline, fn -> read_verified(conn, connection, false, deadline) end)
+  # A request from GitHub's addresses is read, verified and accepted holding a
+  # read slot, which bounds how many of their bodies are held at once. It has
+  # `timeout` to get a slot, and then `timeout` again to send its body.
+  defp receive_delivery(conn, connection, true, timeout) do
+    in_slot = fn -> receive_delivery(conn, connection, false, timeout) end
 
-  defp read_verified(conn, connection, false, deadline) do
-    header = get_req_header(conn, "x-hub-signature-256")
-
-    with {:ok, body, conn} <- body(conn, [], 0, deadline),
-         :ok <- SignatureCheck.run(fn -> verify(header, body, connection.secret) end),
-         do: {:ok, body, conn}
+    case ReadSlots.run(System.monotonic_time(:millisecond) + timeout, in_slot) do
+      {:error, :busy} -> respond(conn, 429, "rate_limited")
+      conn -> conn
+    end
   end
 
-  defp accept_delivery(conn, connection, body) do
-    with {:delivery, true} <- {:delivery, RateLimiter.allow_delivery?()},
+  defp receive_delivery(conn, connection, false, timeout) do
+    case body(conn, [], 0, System.monotonic_time(:millisecond) + timeout) do
+      {:ok, body, conn} -> authenticate_and_accept(conn, connection, body)
+      {:error, :too_large, conn} -> respond(conn, 413, "request_too_large")
+      {:error, :incomplete_body, conn} -> respond(conn, 400, "incomplete_body")
+    end
+  end
+
+  defp authenticate_and_accept(conn, connection, body) do
+    header = get_req_header(conn, "x-hub-signature-256")
+
+    with :ok <- SignatureCheck.run(fn -> verify(header, body, connection.secret) end),
+         {:delivery, true} <- {:delivery, RateLimiter.allow_delivery?()},
          {:ok, payload} when is_map(payload) <- Jason.decode(body),
          :ok <- repository(payload, connection),
          {:ok, event} <- event(get_req_header(conn, "x-github-event"), payload),

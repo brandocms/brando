@@ -8,9 +8,12 @@ defmodule Brando.MarkdownSources.GitHubAddresses do
   # retried sooner; with no list, no address is GitHub's and every client has the
   # ordinary budget. Configuration (`config :brando, :markdown_sources`):
   #
-  #   * `github_meta_url`: the API to fetch, for GitHub Enterprise
-  #     (`"https://github.example.com/api/v3/meta"`); `nil` fetches nothing
-  #   * `github_hook_ranges`: a fixed list of CIDR ranges, used instead of a fetch
+  #   * `github_meta_url`: another API whose `/meta` has a `hooks` list, such as
+  #     GitHub Enterprise Cloud with data residency
+  #     (`"https://api.example.ghe.com/meta"`); `nil` fetches nothing
+  #   * `github_hook_ranges`: a fixed list of CIDR ranges, used instead of a
+  #     fetch, such as the address of a GitHub Enterprise Server, which sends
+  #     webhooks from its own
   use GenServer
   require Logger
   alias Brando.ClientIP

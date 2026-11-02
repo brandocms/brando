@@ -1,8 +1,9 @@
 defmodule Brando.MarkdownSources.ReadSlots do
   @moduledoc false
   # Bounds how many bodies from GitHub's addresses the GitHub Markdown webhook
-  # holds at once: such a request reads and verifies its body holding one of 16
-  # slots, so they take at most 16 MiB however many arrive together. Their budget
+  # holds at once: such a request reads, verifies and accepts its body holding
+  # one of 16 slots, so they take at most 16 MiB however many arrive together,
+  # and however long the database takes to store a delivery. Their budget
   # per minute is larger than other clients' (`Brando.MarkdownSources.RateLimiter`),
   # so it bounds their reads a minute, not those at once. A request waits for a
   # slot, first come first served, and is refused only when its deadline passes:
