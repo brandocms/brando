@@ -57,12 +57,15 @@ defmodule Brando.MarkdownSources.SlotsTest do
     {:reductions, before} = Process.info(pid, :reductions)
     send(holder, :release)
 
-    for first <- firsts do
+    # Measured while the last one holds: its release goes on to the backlog
+    {waiting_firsts, [last]} = Enum.split(firsts, -1)
+
+    for first <- waiting_firsts do
       assert_receive {:holding, ^first}
       send(first, :release)
     end
 
-    wait_until(fn -> map_size(:sys.get_state(pid).holders) == 1 end)
+    assert_receive {:holding, ^last}
     {:reductions, after_handovers} = Process.info(pid, :reductions)
 
     assert after_handovers - before < 50_000
