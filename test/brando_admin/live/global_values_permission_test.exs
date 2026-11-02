@@ -5,6 +5,8 @@ defmodule BrandoAdmin.GlobalValuesPermissionTest do
   # events and direct context calls are tried as a member of each.
   use Brando.LiveCase
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Authorization.{Catalog, Engine, Groups, Migration, Scope}
   alias Brando.Sites
   alias Brando.Sites.GlobalSet
@@ -140,6 +142,59 @@ defmodule BrandoAdmin.GlobalValuesPermissionTest do
       assert %{key: "settings", label: "Settings", vars: [_, _]} = saved(set)
       assert %{type: :string, key: "tagline", label: %{"en" => "Tagline"}, value: "New"} = saved_var(set, "tagline")
       assert %{value: "large", options: [%{value: "small"}, %{value: "large"}]} = saved_var(set, "size")
+    end
+
+    # Globals moved to vars by brando_109 have no sequence, and vars a seed or
+    # an import wrote as `:system` no creator. A save numbers the vars by
+    # their place and stamps an empty creator.
+    test "a values member saves a value in a set stored with no sequence or creator",
+         %{values: values, set: set} do
+      Repo.update_all(from(v in Brando.Content.Var, where: v.global_set_id == ^set.id),
+        set: [sequence: nil, creator_id: nil]
+      )
+
+      Repo.update_all(from(s in GlobalSet, where: s.id == ^set.id), set: [creator_id: nil])
+
+      view = open_globals(log_in_user(build_conn(), values))
+      submit_globals(view, set, %{"vars" => %{"0" => %{"id" => var_id(set, "tagline"), "value" => "On screen"}}})
+      assert saved_var(set, "tagline").value == "On screen"
+
+      params = %{"vars" => %{"0" => %{"id" => var_id(set, "size"), "value" => "large"}}}
+      assert {:ok, _} = Sites.update_global_values(saved(set), params, values)
+      assert %{value: "large", sequence: nil} = saved_var(set, "size")
+      assert saved(set).creator_id == values.id
+    end
+
+    test "a values save does not hand a var to another creator", %{values: values, owner: owner, set: set} do
+      other = TestUsers.insert_user(role: :editor)
+      tagline = var_id(set, "tagline")
+      params = %{"vars" => %{"0" => %{"id" => tagline, "creator_id" => other.id}, "1" => %{"id" => var_id(set, "size")}}}
+
+      assert {:error, :forbidden} = values_save(set, params, values)
+      assert saved_var(set, "tagline").creator_id == owner.id
+    end
+
+    # Which palette a colour global offers is its definition.
+    test "a values member's crafted palette is not saved", %{values: values, owner: owner, set: set} do
+      offered = Factory.insert(:palette, creator: owner)
+      crafted = Factory.insert(:palette, key: "crafted", creator: owner)
+
+      colour =
+        %Brando.Content.Var{global_set_id: set.id, sequence: 2}
+        |> Brando.Content.Var.changeset(
+          %{key: "colour", label: "Colour", type: :color, color_picker: true, palette_id: offered.id},
+          owner
+        )
+        |> Repo.insert!()
+
+      view = open_globals(log_in_user(build_conn(), values))
+
+      submit_globals(view, set, %{
+        "vars" => %{"2" => %{"id" => colour.id, "value" => "#445566", "palette_id" => crafted.id}}
+      })
+
+      assert %{value: "#445566", palette_id: palette_id} = saved_var(set, "colour")
+      assert palette_id == offered.id
     end
 
     test "the setup screens are closed to a values member", %{values: values, set: set} do

@@ -431,14 +431,13 @@ defmodule Brando.Content.TransferTest do
 
     for {page, link} <- [{c.source, source_link}, {c.source, target_link}, {c.target, source_link}] do
       Brando.Content.Var.changeset(
-        %Brando.Content.Var{},
+        %Brando.Content.Var{page_id: page.id},
         %{
           type: :link,
           key: "link_#{link.id}",
           label: "Entry link",
           link_type: :identifier,
-          identifier_id: link.id,
-          page_id: page.id
+          identifier_id: link.id
         },
         c.user
       )

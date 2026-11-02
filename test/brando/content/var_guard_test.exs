@@ -925,7 +925,14 @@ defmodule Brando.Content.VarGuardTest do
         "key" => "renamed",
         "sort_var_ids" => ["0"],
         "vars" => %{
-          "0" => %{"id" => "1", "value" => "New", "type" => "rich_text", "key" => "x", "options" => %{}},
+          "0" => %{
+            "id" => "1",
+            "value" => "New",
+            "type" => "rich_text",
+            "key" => "x",
+            "options" => %{},
+            "palette_id" => "3"
+          },
           "1" => %{"key" => "planted", "value" => "x"}
         }
       }

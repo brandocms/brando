@@ -251,14 +251,16 @@ defmodule Brando.Sites do
 
   @doc """
   Saves the values in `params` to the vars of `global_set`, as the Globals
-  screen does. Keys, types, options, labels, the vars themselves and the set's
-  own fields stay as they are (`Brando.Content.VarGuard.global_values/2`). It
-  takes the `update_values` permission on global sets, which `update` includes.
+  screen does. Keys, types, options, labels, palettes, the vars themselves,
+  their order and the set's own fields stay as they are
+  (`Brando.Content.VarGuard.global_values/2`). It takes the `update_values`
+  permission on global sets, which `update` includes.
   """
   @spec update_global_values(global_set, params, user) :: {:ok, global_set} | {:error, changeset | :forbidden}
   def update_global_values(%GlobalSet{} = global_set, params, user) do
     global_set
     |> GlobalSet.changeset(Brando.Content.VarGuard.global_values(global_set, params), user)
+    |> Brando.Content.VarGuard.keep_sequence()
     |> update_global_set(user, action: :update_values)
   end
 
