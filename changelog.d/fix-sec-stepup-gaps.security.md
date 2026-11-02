@@ -1,0 +1,1 @@
+- Giving an environment a domain, creating an environment, and preparing groups or applying a group import on the utilities screen ask for a recent confirmation, as setting an environment live and changing groups do.
