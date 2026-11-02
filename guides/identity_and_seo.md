@@ -89,7 +89,9 @@ look links up in the cached record's `links` collection. Links also become
 pages their `twitter:site` handle; see [Page metadata](meta.md#x-cards).
 
 Identity updates refresh the cache and enqueue block content referencing identity,
-configs, or links for rendering. Direct `Repo` writes skip those callbacks. During
+configs, or links for rendering. Inside a transaction begun with
+`Brando.Repo.transaction/2`, the cache is refreshed once it commits, and not at
+all if it rolls back. Direct `Repo` writes skip those callbacks. During
 a controlled import, refresh the cache in each affected environment and invoke
 `Brando.Sites.update_villains_referencing_identity({:ok, identity})` afterwards.
 
