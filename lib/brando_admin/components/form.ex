@@ -7905,7 +7905,8 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   # A recovery copy's locked fields are none of its own: they have a new
-  # entry's default params and an empty field's default, as a cast gives them
+  # entry's default params, an empty field's default and an empty slug derived
+  # from its source, as a cast gives them
   defp hold_recovered_fields(socket, changeset) do
     {values, defaults} = socket |> reset_locked_values() |> locked_values()
     empty = Map.filter(defaults, fn {key, _} -> is_nil(Map.get(changeset.data, key)) end)
@@ -7916,6 +7917,15 @@ defmodule BrandoAdmin.Components.Form do
       |> locked_keys()
       |> Enum.reduce(changeset, &delete_change(&2, &1))
       |> then(&Enum.reduce(server, &1, fn {key, value}, changeset -> put_change(changeset, key, value) end))
+
+    %{schema: schema, current_user: user, form_blueprint: blueprint} = socket.assigns
+
+    changeset =
+      %{}
+      |> LockedFields.derive_slugs(changeset, schema, blueprint, user)
+      |> Enum.reduce(changeset, fn {key, slug}, changeset ->
+        put_change(changeset, String.to_existing_atom(key), slug)
+      end)
 
     drop_locked_params(socket, changeset)
   end

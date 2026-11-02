@@ -302,6 +302,37 @@ defmodule BrandoAdmin.RevisionLockedFieldsTest do
     end
   end
 
+  # The copy's slug is none of its own, and a new entry has none saved
+  test "a new entry's restored recovery copy renders its locked slug, derived from the copy's source" do
+    conn = Phoenix.ConnTest.build_conn() |> log_in_user(editor(:legacy))
+    {view, _html} = live_form(conn, "/admin/articles/create/locked-slug", "article_form")
+
+    capture(view, %{"title" => "Første sak", "slug" => "crafted"})
+
+    copy =
+      Repo.one!(
+        from d in Brando.Drafts.EntryDraft,
+          where: is_nil(d.entry_id) and is_nil(d.resolved_at),
+          order_by: [desc: d.id],
+          limit: 1
+      )
+
+    view |> with_target(form_cid(view)) |> render_hook("draft_restore", %{"id" => copy.id})
+
+    assert %{"title" => "Første sak", "slug" => "forste-sak"} = (view |> render() |> form_params(@form))["article"]
+  end
+
+  test "a saved entry's restored recovery copy renders its locked slug as saved" do
+    superuser = Users.insert_user(role: :superuser)
+    article = article(superuser)
+    view = open(editor(:legacy), article, "locked-slug")
+
+    capture(view, %{"title" => "Restored", "slug" => "crafted"})
+    restore_latest_copy(view, article)
+
+    assert %{"title" => "Restored", "slug" => "stored-slug"} = (view |> render() |> form_params(@form))["article"]
+  end
+
   test "groups: restoring holds a non-superuser's locked fields, and not a superuser's" do
     put_mode(:groups)
     superuser = Users.insert_user(role: :superuser)
