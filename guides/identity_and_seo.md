@@ -92,7 +92,8 @@ Creating, copying and updating an identity through the context refresh the
 cache and enqueue block content referencing identity, configs, or links for
 rendering. Inside a transaction begun with
 `Brando.Repo.transaction/2`, the cache is refreshed once it commits, and not at
-all if it rolls back. Direct `Repo` writes skip those callbacks. During
+all if it rolls back. With several nodes, each refreshes its own copy (see
+[Several nodes](tenancy_and_environments.md#several-nodes)). Direct `Repo` writes skip those callbacks. During
 a controlled import, refresh the cache in each affected environment and invoke
 `Brando.Sites.update_villains_referencing_identity({:ok, identity})` afterwards.
 

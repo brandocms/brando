@@ -485,8 +485,9 @@ MyApp.Projects.get_project(%{
 
 The complete query argument map is part of the cache key. Generated Brando
 mutations and the `Brando.Query.insert/2`, `update/2`, and `delete/1` helpers
-evict affected query entries. Direct `Brando.Repo` writes do not automatically
-evict this cache.
+evict affected query entries, on every node (see
+[Several nodes](tenancy_and_environments.md#several-nodes)). Direct
+`Brando.Repo` writes do not automatically evict this cache.
 
 Do not combine cached list queries with pagination or streaming. Cached list
 results are materialized as a plain list.

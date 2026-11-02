@@ -540,6 +540,19 @@ other nodes through `Brando.CacheSync`, over the application's
 ran the write or the scheduled job. The active and pinned asset sets and each
 site's shared-library allowlist are refreshed the same way.
 
+Each node also keeps its own copy of a site's identity, SEO, globals,
+palettes and menus, and its own query cache. A save through the context
+rebuilds the saving node's copy once it has committed, and the other nodes
+rebuild theirs when they hear of it. They evict cached queries of the saved
+schema under the same site: every cached entry of it, not only the saved
+rows, so that one message covers a whole import. A node sends its evictions
+together, a tenth of a second at a time. The entries a change of identity,
+globals or menus renders again are rendered once, on whichever node runs
+the job; a node that runs one before it has heard of the change rebuilds its
+copy first. **Empty all caches** on the **Cache** screen empties the node
+that served it; for a change no node heard of (SQL, a seed, a mix task),
+empty each node or restart them.
+
 This needs the nodes to share the application's `Phoenix.PubSub`: connected
 as one Erlang cluster (with `libcluster` or `dns_cluster`, for example) for
 the default adapter, or through an adapter such as `phoenix_pubsub_redis`.
