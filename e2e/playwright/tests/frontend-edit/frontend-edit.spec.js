@@ -453,6 +453,40 @@ test.describe('page content standing in for the configuration', () => {
     expect(await page.title()).not.toBe(RAN)
   })
 
+  // A name replaces the member the script is about to use. Without the check
+  // it throws part-way or writes to the element, and the admin gets half an
+  // overlay.
+  for (const [name, markup] of [
+    ['document addEventListener', '<img name="addEventListener">'],
+    ['document body', '<img name="body">'],
+    ['document cookie', '<img name="cookie">'],
+    ['document createElementNS, which morphdom uses', '<img name="createElementNS">'],
+    ['the exports and module morphdom looks for', '<img name="exports"><img name="module">'],
+    // Chromium, the browser here, keeps these under a name, so they are set
+    ['window addEventListener, as a browser following the spec would', '<script>window.addEventListener = {}</script>'],
+    ['window removeEventListener, as a browser following the spec would', '<script>window.removeEventListener = {}</script>']
+  ]) {
+    test(`the overlay does not start when a name replaces ${name}`, async ({ page }) => {
+      await startEditing(page)
+      await rewritePage(page, body => body.replace('<main id="content">', `<main id="content">${markup}`))
+      const served = page.waitForResponse(/\/\/[^/]+\/frontend-edit$/)
+      await page.reload()
+      expect(await (await served).text()).toContain(markup)
+
+      await expect(page.locator('brando-frontend-edit')).toHaveCount(0)
+    })
+  }
+
+  test('a name the scripts do not use leaves the overlay working', async ({ page }) => {
+    await startEditing(page)
+    await rewritePage(page, body => body.replace('<main id="content">', '<main id="content"><img name="gallery">'))
+    await page.reload()
+
+    await expect(page.locator('img[name="gallery"]')).toHaveCount(1)
+    await expect(page.getByTestId('frontend-edit-toolbar')).toBeVisible()
+    await openBlock(page, 'Welcome to the page')
+  })
+
   for (const [name, editorUrl] of [
     ['a script address', `javascript:parent.document.title='${RAN}';void 0//`],
     ['another origin', 'https://example.com/admin/frontend-edit'],

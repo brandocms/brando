@@ -170,6 +170,11 @@ defmodule Brando.Plug.FrontendEditTest do
     end
   end
 
+  test "sanitized rich text cannot carry the </body> the plug splits on" do
+    assert {:ok, clean} = Brando.RichText.sanitize_html(~s(<p title="</body><script>x</script>">a</p>))
+    refute clean =~ "</body>"
+  end
+
   test "a pipeline without a session passes through" do
     conn = FrontendEditPlug.call(build_conn(:get, "/"), [])
     refute Map.has_key?(conn.private, :brando_frontend_edit)

@@ -33,6 +33,34 @@
 
   const config = JSON.parse(configEl.textContent)
 
+  // A name in the page's content replaces a member of the same name: on
+  // `document` it then is an own property. By the spec it also hides what
+  // `window` inherits from EventTarget, though Chromium keeps those. morphdom's
+  // loader takes `exports` and `module` for CommonJS. Half an overlay is worse
+  // than none, so it does not start. The list is what this script,
+  // `block_patch.js` and morphdom read from `document`.
+  const DOCUMENT_MEMBERS = [
+    'addEventListener',
+    'body',
+    'cookie',
+    'createElement',
+    'createElementNS',
+    'createNodeIterator',
+    'createRange',
+    'dispatchEvent',
+    'documentElement',
+    'head',
+    'implementation'
+  ]
+  if (
+    DOCUMENT_MEMBERS.some(member => Object.hasOwn(document, member)) ||
+    typeof window.addEventListener !== 'function' ||
+    typeof window.removeEventListener !== 'function' ||
+    (config.active && typeof window.morphdom !== 'function')
+  ) {
+    return
+  }
+
   // `Brando.Plug.FrontendEdit.editor_path/0`
   const EDITOR_PATH = '/admin/frontend-edit'
 
