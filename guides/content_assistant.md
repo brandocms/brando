@@ -420,6 +420,10 @@ the details of a run that failed ("Content agent run … failed").
 - **Apply is refused because something changed.** An entry or module was
   saved after the proposal was prepared, or the proposal expired. Nothing was
   written. Ask the assistant to prepare it again.
+- **A proposal cannot be applied at all.** A proposal that can no longer be
+  loaded, such as one stored before an upgrade that names a content type
+  `list_content_types` does not list, shows the reason and **Discard** in
+  place of its review. Discard it and prepare the changes again.
 - **Apply fails partway.** Applying is one transaction, so nothing was
   written. The error names the cause, such as an address another page took in
   the meantime. Fix it and click **Apply** again. A second click, or one in

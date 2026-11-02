@@ -11508,6 +11508,11 @@ msgstr[1] ""
 msgid "Nothing expires soon"
 msgstr ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing from it has been saved. Discard it, then prepare the changes again."
+msgstr ""
+
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing has been applied"
@@ -18220,6 +18225,11 @@ msgstr ""
 #: lib/brando_admin/live/user_reset_password_live.ex
 #, elixir-autogen, elixir-format
 msgid "This password reset link is invalid or has expired. Ask for a new one below."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal cannot be applied"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex

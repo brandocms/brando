@@ -1,0 +1,1 @@
+- A proposal the Assistant can no longer review or apply, such as one stored before the upgrade naming a content type outside the catalogue, shows why and can be discarded; before, it showed the empty state and a connected tool's stayed listed until it expired.

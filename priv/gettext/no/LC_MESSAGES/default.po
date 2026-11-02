@@ -11510,6 +11510,11 @@ msgstr[1] "Notater, %{count} åpne"
 msgid "Nothing expires soon"
 msgstr "Ingenting utløper snart"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Nothing from it has been saved. Discard it, then prepare the changes again."
+msgstr "Ingenting fra det er lagret. Forkast det, og forbered endringene på nytt."
+
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing has been applied"
@@ -18225,6 +18230,11 @@ msgstr "Denne passnøkkelen er allerede lagt til."
 #, elixir-autogen, elixir-format
 msgid "This password reset link is invalid or has expired. Ask for a new one below."
 msgstr "Denne lenken for å tilbakestille passordet er ugyldig eller utløpt. Be om en ny nedenfor."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal cannot be applied"
+msgstr "Dette forslaget kan ikke utføres"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
