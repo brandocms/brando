@@ -500,6 +500,8 @@ defmodule Brando.MCP do
     * the account is deactivated (`"account_deactivated"`) or deleted
       (`"account_deleted"`).
 
+  Authorization codes not yet exchanged end with them.
+
   Callers inside a transaction run it with `Brando.Repo.after_commit/1`.
   Losing the Connect permission or the endpoint being turned off are not
   revocations here: the first stops the next call, the second revokes the
@@ -513,6 +515,11 @@ defmodule Brando.MCP do
       from(g in Grant, where: g.user_id == ^user_id and is_nil(g.revoked_at))
       |> Repo.all()
       |> Enum.each(&revoke_grant(&1, :system, reason))
+
+      # What the person approved a moment ago ends too: it would otherwise
+      # still make a connection, if the account comes back within its minute.
+      from(c in AuthorizationCode, where: c.user_id == ^user_id and is_nil(c.used_at))
+      |> Repo.update_all(set: [used_at: DateTime.utc_now()])
     end
 
     :ok

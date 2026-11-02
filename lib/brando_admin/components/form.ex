@@ -5905,8 +5905,7 @@ defmodule BrandoAdmin.Components.Form do
         saved_entry(socket, entry, save)
 
       {:error, %Changeset{} = changeset} ->
-        require Logger
-        Logger.error(inspect(changeset, pretty: true))
+        log_rejected_save(changeset)
 
         # A rejected save leaves the editor on the form by definition, so this
         # path always renders the button and must clear `processing`: errors
@@ -7081,8 +7080,15 @@ defmodule BrandoAdmin.Components.Form do
      |> source_controlled_error(paths)}
   end
 
+  # The errors only: the changes hold what was typed, passwords and email addresses too.
+  defp log_rejected_save(changeset) do
+    Logger.error(
+      "Saving #{inspect(changeset.data.__struct__)} failed: #{inspect(traverse_errors(changeset, & &1), pretty: true)}"
+    )
+  end
+
   defp failed_save_with_blocks(socket, changeset, save) do
-    Logger.error(inspect(changeset, pretty: true))
+    log_rejected_save(changeset)
     send(self(), {:progress_popup, "Saving entry failed..."})
     if socket.assigns.entry, do: EditSession.save_failed(socket.assigns.entry)
 

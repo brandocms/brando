@@ -17,7 +17,7 @@ defmodule Brando.Authorization.Boundary do
       `Brando.Authorization.Catalog.superuser_only_fields/1` names, such as a
       fragment's `wrapper`;
     * a `:user` account writes nothing but its own profile;
-    * only a superuser deactivates or deletes another superuser.
+    * only a superuser deactivates, deletes or brings back another superuser.
 
   Changing another user's email or password takes a superuser in both modes
   (`Brando.Trait.ProtectPassword.allowed?/2`): the email is where a password
@@ -366,7 +366,7 @@ defmodule Brando.Authorization.Boundary do
 
   defp user_may?(actor, action, subject), do: action in [:read, :export] or own_profile?(actor, action, subject)
 
-  defp superuser_deletion?(:delete, subject), do: superuser_account?(subject)
+  defp superuser_deletion?(action, subject) when action in [:delete, :restore], do: superuser_account?(subject)
   defp superuser_deletion?(_action, _subject), do: false
 
   # The schema itself stands for "some user": `change/3` checks the record.
@@ -394,7 +394,7 @@ defmodule Brando.Authorization.Boundary do
   defp legacy_role_change(_actor, _changeset), do: :ok
 
   defp legacy_protect_superuser(actor, %{data: %User{id: id} = user, changes: changes}) when not is_nil(id) do
-    if (Map.get(changes, :active) == false or not is_nil(Map.get(changes, :deleted_at))) and superuser_account?(user) and
+    if (Map.has_key?(changes, :active) or Map.has_key?(changes, :deleted_at)) and superuser_account?(user) and
          not ProtectPassword.allowed?(actor, user),
        do: {:error, :forbidden},
        else: :ok
