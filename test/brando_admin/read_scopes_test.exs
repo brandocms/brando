@@ -560,6 +560,38 @@ defmodule BrandoAdmin.ReadScopesTest do
       assert [%{excerpt: @secret}] = order.items
     end
 
+    test "the query count of a list does not grow with its entries" do
+      as(article_reader(@page_read))
+
+      entries =
+        for n <- 1..20 do
+          page = secret_page("Listed #{n}")
+          {:ok, _} = Brando.Content.create_identifier(Page, page)
+          {:entry, Page, page.id}
+        end
+
+      few = queries(fn -> EntryFields.display(Article, "related_entries", Enum.take(entries, 3)) end)
+      many = queries(fn -> EntryFields.display(Article, "related_entries", entries) end)
+      assert many == few, "#{few} queries for three entries, #{many} for twenty"
+      assert EntryFields.display(Article, "related_entries", Enum.take(entries, 2)) == "Listed 1, Listed 2"
+    end
+
+    test "a review card reads the viewer's permissions once", c do
+      as(article_reader(@page_read))
+      target = {Article, c.article.id}
+
+      card = fn count ->
+        values = Map.new(1..count, &{"link#{&1}", {:entry, Page, c.page.id}})
+        operation = %Brando.Content.Proposals.SetBlockValues{target: target, block_uid: "gone", values: values}
+        entry = %{c.article | entry_blocks: []}
+        proposal = %Brando.Content.Proposals.Proposal{operations: [operation], targets: %{target => entry}}
+        queries(fn -> Brando.Content.Proposals.Review.entries(proposal) end)
+      end
+
+      # Each value reads its entry and its identifier, and nothing about the viewer
+      assert card.(6) - card.(2) == 4 * 2
+    end
+
     test "legacy mode names it", c do
       put_test_env(:authorization_mode, :legacy)
       assert {:ok, %{lists: %{"related_entries" => @secret}}} = outline(c.article, c.superuser)

@@ -9,6 +9,7 @@ defmodule Brando.Content.Proposals.Review do
   operations `apply/3` executes — so the review cannot drift from the result.
   """
   alias Brando.Authorization.Boundary
+  alias Brando.Authorization.Engine
   alias Brando.Content
 
   alias Brando.Content.Proposals.{
@@ -41,9 +42,12 @@ defmodule Brando.Content.Proposals.Review do
   @doc "Review cards for `proposal`."
   @spec entries(Proposal.t()) :: [map()]
   def entries(%Proposal{} = proposal) do
-    proposal.targets
-    |> Enum.sort_by(fn {target, _} -> first_mention(proposal, target) end)
-    |> Enum.map(fn {target, value} -> entry(target, value, proposal) end)
+    # Each entry named checks the viewer's read access: on one snapshot.
+    Engine.with_snapshots(fn ->
+      proposal.targets
+      |> Enum.sort_by(fn {target, _} -> first_mention(proposal, target) end)
+      |> Enum.map(fn {target, value} -> entry(target, value, proposal) end)
+    end)
   end
 
   @doc """
@@ -443,9 +447,7 @@ defmodule Brando.Content.Proposals.Review do
 
   defp saved_selection(block_identifiers) do
     readable =
-      Boundary.readable_entries(
-        for %{identifier: %{schema: schema, entry_id: id}} <- block_identifiers, do: {schema, id}
-      )
+      Boundary.readable_entries(for %{identifier: %{schema: schema, entry_id: id}} <- block_identifiers, do: {schema, id})
 
     Enum.map(block_identifiers, fn
       %{identifier: %{schema: schema, entry_id: id} = identifier} = bi ->
