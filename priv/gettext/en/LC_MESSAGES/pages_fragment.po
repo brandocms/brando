@@ -39,7 +39,7 @@ msgstr ""
 
 #: lib/brando/pages/fragment.ex
 #, elixir-autogen, elixir-format
-msgid "Letters, digits, spaces and _ - . / ( )"
+msgid "Letters, digits, spaces and _ - . / ( ), with no space first or last"
 msgstr ""
 
 #: lib/brando/pages/fragment.ex
@@ -80,6 +80,16 @@ msgstr ""
 #: lib/brando/pages/fragment.ex
 #, elixir-autogen, elixir-format
 msgid "You can access the fragment's rendered content as <code>{{ content }}</code>"
+msgstr ""
+
+#: lib/brando/pages/fragment/key_format.ex
+#, elixir-autogen, elixir-format
+msgid "can only hold letters, digits, spaces and _ - . / ( )"
+msgstr ""
+
+#: lib/brando/pages/fragment/key_format.ex
+#, elixir-autogen, elixir-format
+msgid "can't start or end with a space"
 msgstr ""
 
 #: lib/brando/pages/fragment.ex

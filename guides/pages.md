@@ -191,7 +191,8 @@ rest of the fragment, and the keys it prints are HTML-escaped.
 A parent key or key holds letters, digits, `_`, `-`, `.`, `/`, spaces and
 parentheses, and can't start or end with a space, so `about/team`, `/about`,
 `site-footer` and a copy's `footer (copy)` all work. A save that changes one to
-anything else is refused. The `{% fragment %}` tag still takes only bare words
+anything else is refused, with a message that says which rule it breaks. A
+content transfer that creates a fragment holds its keys to the same rules. The `{% fragment %}` tag still takes only bare words
 (see [the block editor guide](block_editor.md)), so it can't name the others.
 
 Only a published fragment renders. An unpublished one stays in the map with no

@@ -11459,6 +11459,11 @@ msgstr "Ikke delt: videovelgeren tilbyr ikke leverandørbiblioteket på dette ne
 msgid "Not used yet"
 msgstr "Ikke brukt ennå"
 
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Not valid: %{fields}"
+msgstr "Ikke gyldig: %{fields}"
+
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not visited"
@@ -14460,6 +14465,11 @@ msgstr "Versjon #%{from} → versjon #%{to}"
 #, elixir-autogen, elixir-format
 msgid "Revision #%{revision}"
 msgstr "Versjon #%{revision}"
+
+#: lib/brando_admin/components/activity.ex
+#, elixir-autogen, elixir-format
+msgid "Revision #%{revision} was not published as scheduled: it is no longer valid"
+msgstr "Versjon #%{revision} ble ikke publisert som planlagt: den er ikke lenger gyldig"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
@@ -17546,6 +17556,11 @@ msgstr "Lenken for nytt passord kunne ikke sendes."
 #, elixir-autogen, elixir-format
 msgid "The revision could not be activated."
 msgstr "Versjonen kunne ikke aktiveres."
+
+#: lib/brando_admin/components/form/revisions_drawer.ex
+#, elixir-autogen, elixir-format
+msgid "The revision could not be activated. %{reasons}. Load it, correct this and save it."
+msgstr "Versjonen kunne ikke aktiveres. %{reasons}. Last den inn, rett dette og lagre den."
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format

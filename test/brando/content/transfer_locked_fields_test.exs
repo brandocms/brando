@@ -103,7 +103,7 @@ defmodule Brando.Content.TransferLockedFieldsTest do
         target = %{"mode" => "create", "publication" => "source"}
         assert {:ok, plan} = Transfer.preview(archive, %{key => target}, user, dependencies: %{})
         assert [problem] = plan.problems
-        assert problem =~ "path"
+        assert problem =~ "Path"
         refute Repo.get_by(Image, path: @repointed)
       end
 

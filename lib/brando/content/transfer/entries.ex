@@ -4,6 +4,7 @@ defmodule Brando.Content.Transfer.Entries do
   import Ecto.Query, only: [from: 2]
   alias Brando.Activity
   alias Brando.Authorization.Boundary
+  alias Brando.Blueprint.ErrorTranslator
   alias Brando.Content.Definition.Value
   alias Brando.Content.Transfer
 
@@ -375,12 +376,7 @@ defmodule Brando.Content.Transfer.Entries do
     cs = held_changeset(item, params, actor) |> Brando.Publisher.maybe_override_status()
 
     unless cs.valid?,
-      do:
-        Error.fail!(
-          dgettext("content_transfer", "Entry validation: %{value1}",
-            value1: inspect(Changeset.traverse_errors(cs, fn {message, _} -> message end))
-          )
-        )
+      do: Error.fail!(dgettext("content_transfer", "Entry validation: %{value1}", value1: validation_errors(cs)))
 
     unique!(cs)
 
@@ -388,6 +384,14 @@ defmodule Brando.Content.Transfer.Entries do
       do: Error.fail!(dgettext("content_transfer", "You do not have permission to save or publish this entry."))
 
     cs
+  end
+
+  # Each field under its label, with its messages: "Key: can't start or end
+  # with a space", and a nested record's under the path to it
+  defp validation_errors(%Changeset{data: %schema{}} = cs) do
+    cs
+    |> ErrorTranslator.describe(schema.__form__(), &BrandoAdmin.Components.Form.Primitives.translate_error/1)
+    |> Enum.map_join("; ", fn {label, message} -> "#{label}: #{message}" end)
   end
 
   # A bundle sets no field the forms lock for anyone but a superuser, on an

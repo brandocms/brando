@@ -295,13 +295,31 @@ defmodule Brando.Revisions do
   this its schedule would have no job.
   """
   def drop_schedule_in_trash(entry_schema, entry_id, revision_number, user, still_current?) do
+    drop_refused_schedule(entry_schema, entry_id, revision_number, still_current?, fn entry ->
+      Brando.Activity.scheduled_revision_in_trash(entry, user, revision_number)
+    end)
+  end
+
+  @doc """
+  Drops the schedule of `revision`, which scheduled publishing refused to
+  publish because it no longer validates (`{:error, changeset}` from
+  `set_entry_to_revision/5`), and notes it in Activity with the `fields`
+  that refused it. Locked and checked like `drop_schedule_in_trash/5`.
+  """
+  def drop_invalid_schedule(entry_schema, entry_id, revision_number, user, fields, still_current?) do
+    drop_refused_schedule(entry_schema, entry_id, revision_number, still_current?, fn entry ->
+      Brando.Activity.scheduled_revision_invalid(entry, user, revision_number, fields)
+    end)
+  end
+
+  defp drop_refused_schedule(entry_schema, entry_id, revision_number, still_current?, note) do
     Repo.transaction(fn ->
       lock_entry!(entry_schema, entry_id)
 
       if still_current?.() do
         entry = Repo.get!(entry_schema, entry_id)
         mark_revision_scheduled(entry_schema, entry_id, revision_number, false)
-        Brando.Activity.scheduled_revision_in_trash(entry, user, revision_number)
+        note.(entry)
       end
     end)
 

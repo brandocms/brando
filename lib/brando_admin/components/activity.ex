@@ -651,6 +651,13 @@ defmodule BrandoAdmin.Components.Activity do
       gettext("The schedule was cancelled")
     ]
 
+  defp lines(%{details: %{"scheduled_revision" => %{"reason" => "invalid"}}, revision: revision}, fields, _states),
+    do: [
+      gettext("Revision #%{revision} was not published as scheduled: it is no longer valid", revision: revision),
+      fields && gettext("Not valid: %{fields}", fields: fields),
+      gettext("The schedule was cancelled")
+    ]
+
   defp lines(%{action: :duplicated, details: %{"copied_from" => %{"title" => title} = copied}} = event, _fields, states) do
     if states[{event.schema, copied["id"]}] == :hidden,
       do: [gettext("Copied from another entry")],

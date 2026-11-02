@@ -26,6 +26,14 @@ defmodule Brando.Pages.FragmentKeyTest do
     |> Enum.filter(&(&1 in [:parent_key, :key]))
   end
 
+  defp message(field, value) do
+    %Fragment{}
+    |> Fragment.changeset(Map.merge(%{parent_key: "partials", key: "footer", language: "en"}, %{field => value}), %{id: 1})
+    |> Map.fetch!(:errors)
+    |> Keyword.fetch!(field)
+    |> elem(0)
+  end
+
   defp to_html(safe), do: Phoenix.HTML.safe_to_string(safe)
 
   defp markers(html), do: html |> Floki.parse_fragment!() |> Floki.find("[data-marker]")
@@ -69,6 +77,32 @@ defmodule Brando.Pages.FragmentKeyTest do
       for key <- @crafted do
         assert :key in errors(%{key: key}), "key #{inspect(key)} was accepted"
         assert :parent_key in errors(%{parent_key: key}), "parent key #{inspect(key)} was accepted"
+      end
+    end
+
+    test "says what is wrong, in the editor's language" do
+      for field <- [:key, :parent_key] do
+        assert message(field, " footer") == "can't start or end with a space"
+        assert message(field, "footer ") == "can't start or end with a space"
+        assert message(field, "a&b") == "can only hold letters, digits, spaces and _ - . / ( )"
+        assert message(field, " a&b") == "can only hold letters, digits, spaces and _ - . / ( )"
+
+        Gettext.with_locale(Brando.Gettext, "no", fn ->
+          assert message(field, " footer") == "kan ikke starte eller slutte med mellomrom"
+          assert message(field, "a&b") == "kan bare inneholde bokstaver, tall, mellomrom og _ - . / ( )"
+        end)
+      end
+    end
+
+    # The form holds the hint's msgid, translated in the schema's domain as it renders
+    test "the hint says a key can't start or end with a space" do
+      for field <- [:key, :parent_key] do
+        hint = Keyword.fetch!(Brando.Blueprint.Forms.get_field(field, Fragment.__form__()).opts, :instructions)
+        assert hint =~ "no space first or last"
+
+        Gettext.with_locale(Brando.Gettext, "no", fn ->
+          assert Gettext.dgettext(Brando.Gettext, "pages_fragment", hint) =~ "ikke mellomrom først eller sist"
+        end)
       end
     end
 
@@ -170,6 +204,37 @@ defmodule Brando.Pages.FragmentKeyTest do
 
       assert {:ok, %{title: "Footer", key: "Stored&key"}} =
                Brando.Revisions.set_entry_to_revision(Fragment, fragment.id, old, user)
+    end
+
+    # Retrying would not help: the job is cancelled on its first attempt and
+    # the schedule dropped, with a note in Activity naming the field.
+    test "scheduled, is cancelled at once, with a note", %{current_user: user} do
+      {fragment, old} = old_revision!("Stored&key", "footer", user)
+      assert {1, _} = Brando.Revisions.mark_revision_scheduled(Fragment, fragment.id, old, true)
+
+      job = %Oban.Job{
+        attempt: 1,
+        max_attempts: 10,
+        args: %{"schema" => to_string(Fragment), "id" => fragment.id, "revision" => old, "user_id" => user.id}
+      }
+
+      assert {:cancel, :invalid} = Brando.Worker.EntryPublisher.perform(job)
+
+      assert Repo.get!(Fragment, fragment.id).key == "footer"
+      assert {:ok, revisions} = Brando.Revisions.list_revision_metadata(Fragment, fragment.id)
+      refute Enum.find(revisions, &(&1.revision == old)).scheduled
+
+      assert [
+               %{
+                 source: :scheduler,
+                 revision: ^old,
+                 fields: ["key"],
+                 details: %{"scheduled_revision" => %{"reason" => "invalid"}}
+               }
+             ] =
+               Fragment
+               |> Brando.Activity.for_entry(fragment.id)
+               |> Enum.filter(&(&1.details["scheduled_revision"] != nil))
     end
 
     # Renaming the fragment is what the revision conflicts with, so a further

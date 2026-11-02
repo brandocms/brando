@@ -20,6 +20,13 @@ defmodule Brando.Worker.EntryPublisher do
   on the last attempt. Without group authorization nothing is refused: a
   schedule runs as its user, deactivated or not, and as the system when the
   user no longer exists.
+
+  A scheduled revision that no longer validates (a fragment key that no
+  longer fits its format) or whose entry is in the trash is not retried: the
+  job is cancelled and the schedule dropped, and Activity says why. A unique
+  value that the database refuses is retried on the next two attempts, as
+  another save may have taken it at the same moment; on the third it is
+  dropped the same way, as the value is taken for good.
   """
   use Oban.Worker,
     queue: :default,
@@ -145,11 +152,70 @@ defmodule Brando.Worker.EntryPublisher do
         Revisions.drop_schedule_in_trash(schema, id, revision, user, fn -> current_revision_job?(job) end)
         {:cancel, :in_trash}
 
+      # The revision no longer validates, such as a fragment key that no
+      # longer fits its format: trying again gives the same answer. The
+      # schedule is dropped, with a note in Activity naming the fields, at
+      # any depth. A unique index refusing it may be another save taking
+      # the value at the same moment, so that is tried again, a few times.
+      {:error, %Ecto.Changeset{} = changeset} ->
+        if retry_refused_revision?(job, changeset),
+          do: {:error, changeset},
+          else: drop_invalid_schedule(job, schema, id, revision, user, changeset)
+
       {:error, reason} ->
         release_failed_revision_schedule(job, schema, id, revision)
         {:error, reason}
     end
   end
+
+  defp drop_invalid_schedule(job, schema, id, revision, user, changeset) do
+    fields = changeset |> Brando.Blueprint.ErrorTranslator.error_fields() |> Enum.map(&to_string/1)
+    Revisions.drop_invalid_schedule(schema, id, revision, user, fields, fn -> current_revision_job?(job) end)
+    {:cancel, :invalid}
+  end
+
+  # The attempts on which a unique conflict is tried again. A value whose
+  # field avoids collisions (`prevent_collision`) is renamed on the next
+  # attempt, which sees the other save's committed value, so one retry
+  # settles a race and a second covers another save racing that one. A plain
+  # `unique: true` value another entry now holds fails the same way on every
+  # attempt: from the third on it is dropped like any other refusal, rather
+  # than retried for hours and unscheduled without a note.
+  @unique_conflict_attempts 2
+
+  @doc """
+  Whether the scheduled restore `job` made, refused with `changeset`, is tried
+  again: only a unique conflict (`unique_conflict?/1`), on the job's attempts
+  1 and 2 (whatever failed them) and not on its last. A job built without attempts (a test, a manual
+  run) is on its first. Any other refusal drops the schedule at once.
+  """
+  def retry_refused_revision?(%Oban.Job{attempt: attempt, max_attempts: max}, %Ecto.Changeset{} = changeset) do
+    attempt = if is_integer(attempt) and attempt > 0, do: attempt, else: 1
+    last? = is_integer(max) and attempt >= max
+
+    unique_conflict?(changeset) and attempt <= @unique_conflict_attempts and not last?
+  end
+
+  @doc """
+  Whether only a unique index refused the restore (`constraint: :unique`), in
+  the entry or a nested record: two restores taking the same value at the
+  same moment both pass the check before the write, and the later one may go
+  through when it is tried again. With any other error besides, a retry
+  can't help.
+  """
+  def unique_conflict?(%Ecto.Changeset{} = changeset) do
+    flags =
+      changeset
+      |> Ecto.Changeset.traverse_errors(fn {_message, opts} -> Keyword.get(opts, :constraint) == :unique end)
+      |> flags()
+
+    flags != [] and Enum.all?(flags)
+  end
+
+  defp flags(flag) when is_boolean(flag), do: [flag]
+  defp flags(list) when is_list(list), do: Enum.flat_map(list, &flags/1)
+  defp flags(%{} = map), do: map |> Map.values() |> flags()
+  defp flags(_other), do: []
 
   # A publish waits for its publish_at, publishes only a pending entry (one
   # set back to draft stays a draft) and is dropped once the entry has

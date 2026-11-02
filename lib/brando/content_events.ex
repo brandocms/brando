@@ -217,11 +217,15 @@ defmodule Brando.ContentEvents do
   # An entry in the trash is not on the site: a change to it (a stale-block
   # resolve, say) is in Activity but announces nothing, or webhooks would
   # hear of a deleted page changing and IndexNow submit its trash URL. Only
-  # its leaving (`entry.deleted`) goes out.
+  # its leaving (`entry.deleted`) goes out. A scheduled revision that was not
+  # published (`Brando.Activity.scheduled_revision_invalid/4`) changed only
+  # its own schedule, so its note announces nothing either.
   defp types(action, entry, opts) do
-    if Map.get(entry, :deleted_at) && action not in [:trashed, :deleted],
-      do: [],
-      else: types_for(action, entry, opts)
+    cond do
+      Map.get(entry, :deleted_at) && action not in [:trashed, :deleted] -> []
+      Map.has_key?(Keyword.get(opts, :details, %{}), "scheduled_revision") -> []
+      true -> types_for(action, entry, opts)
+    end
   end
 
   defp types_for(action, _entry, _opts) when is_map_key(@types_for_action, action),
