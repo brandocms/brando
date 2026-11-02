@@ -184,6 +184,30 @@ defmodule Brando.Content.Block do
     |> finalize_new_block(block)
   end
 
+  @doc """
+  Whether `uid` has the shape of a block uid: what `Brando.Utils.generate_uid/0`
+  makes and what is derived from it (a proposal's copies, the session's `-kept`
+  and `-kept-2` recovery copies).
+
+  A uid is written into the marker comments of edit-mode pages. Letters, digits,
+  `_` and `-` cannot close a comment or open Liquid, and a last character other
+  than `-` keeps the marker's own `>` from closing the comment. The length stays
+  within what the uid's unique index can hold.
+  """
+  @spec valid_uid?(term()) :: boolean()
+  def valid_uid?(uid) when is_binary(uid), do: Regex.match?(uid_format(), uid)
+  def valid_uid?(_uid), do: false
+
+  # `uid_sql_pattern/0` is this shape for Postgres: change them together.
+  defp uid_format, do: ~r/\A[A-Za-z0-9_-]{0,254}[A-Za-z0-9_]\z/
+
+  @doc """
+  `valid_uid?/1` as a Postgres regular expression, for `uid ~ pattern`. Postgres's
+  `$` only matches at the end of the string, as `\\z` does.
+  """
+  @spec uid_sql_pattern() :: String.t()
+  def uid_sql_pattern, do: "^[A-Za-z0-9_-]{0,254}[A-Za-z0-9_]$"
+
   # The block's own fields and rows, its module, refs and vars held to what
   # `user` may change (`Brando.Content.RefGuard`, `Brando.Content.VarGuard`)
   defp cast_block(block, attrs, user, opts) do
@@ -192,6 +216,7 @@ defmodule Brando.Content.Block do
       |> cast(attrs, @block_attrs)
       |> Brando.Content.RefGuard.hold_module(user)
       |> validate_required(:uid)
+      |> validate_format(:uid, uid_format())
       |> unique_constraint(:uid)
 
     definitions = VarGuard.definitions(changeset, opts)
