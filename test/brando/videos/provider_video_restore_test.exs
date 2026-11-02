@@ -114,6 +114,20 @@ defmodule Brando.Videos.ProviderVideoRestoreTest do
         assert {:ok, %Video{deleted_at: nil}} = Boundary.restore(user, deleted)
       end
 
+      # Not kept waiting for a lock it would have no use for.
+      test "is refused to an editor who may not restore, without waiting for the lock, " <>
+             "#{authorization_mode} authorization",
+           %{lock_conn: conn} do
+        user = read_only(@authorization_mode)
+        deleted = "asset-1" |> mux_video() |> soft_delete()
+        lock(conn, "pg_advisory_lock")
+        report_lock_queries()
+
+        assert {:error, :forbidden} = Boundary.restore(user, deleted)
+        refute_received {:lock_query, _in_transaction?}
+        assert Repo.get!(Video, deleted.id).deleted_at
+      end
+
       # The purge holds the lock while it deletes the row.
       test "a record purged while the restore waits for the lock is not restored, " <>
              "#{authorization_mode} authorization",
@@ -266,6 +280,17 @@ defmodule Brando.Videos.ProviderVideoRestoreTest do
     superuser = Factory.insert(:random_user, role: :superuser)
     {:ok, _} = Migration.run()
     superuser
+  end
+
+  # A `:user` account, which writes nothing in legacy mode, and is given no
+  # restore by the groups the migration makes of the roles.
+  defp read_only(:legacy), do: Factory.insert(:random_user, role: :user)
+
+  defp read_only(:groups) do
+    put_test_env(:authorization_mode, :groups)
+    user = Factory.insert(:random_user, role: :user)
+    {:ok, _} = Migration.run()
+    user
   end
 
   defp mux_video(asset_id, opts \\ []) do

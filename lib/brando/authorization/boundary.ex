@@ -187,11 +187,15 @@ defmodule Brando.Authorization.Boundary do
 
   # A video is restored holding its lock (`Brando.Videos.ProviderLibrary.with_restore_lock/2`),
   # taken before `run/4` opens its transaction: the lock may be waited for
-  # longer than a transaction may keep its connection. Not while a live
-  # record of the same provider video is in the environment
-  # (`{:error, {:recorded_here, live}}`), and not once it is purged.
-  def restore(actor, %Video{} = video),
-    do: ProviderLibrary.with_restore_lock(video, fn -> run(actor, :restore, Video, &restore_video(&1, video)) end)
+  # longer than a transaction may keep its connection. An actor who may not
+  # restore it is refused before that wait, and `run/4` checks again under
+  # the lock. Not while a live record of the same provider video is in the
+  # environment (`{:error, {:recorded_here, live}}`), and not once it is
+  # purged.
+  def restore(actor, %Video{} = video) do
+    with :ok <- authorize(actor, :restore, video),
+         do: ProviderLibrary.with_restore_lock(video, fn -> run(actor, :restore, Video, &restore_video(&1, video)) end)
+  end
 
   def restore(actor, %{__struct__: schema} = entry) do
     run(actor, :restore, schema, fn user ->
