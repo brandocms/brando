@@ -31,7 +31,13 @@ defmodule Brando.Sites.DeployConfig do
 
   An entry without the placeholder grants every site: with
   `deploy@static.example.com:/srv/sites/`, one site can name another's
-  directory. With `tenancy_mode: :multi` a strategy's list is required, and no
+  directory. Destinations not named by the site key go in a map from each
+  site's key to its own entries, and a site the map does not name gets none:
+
+      config :brando, Brando.Sites.DeployConfig,
+        s3_targets: %{"acme" => ["s3://acme-www"], "beta" => ["s3://beta-www"]}
+
+  With `tenancy_mode: :multi` a strategy's list or map is required, and no
   target passes without it. With one site, an unset list allows any target of
   the right form.
   """
@@ -263,8 +269,9 @@ defmodule Brando.Sites.DeployConfig do
   defp local_address?({:ok, _ipv6}), do: false
 
   # Unset: any target with one site, none with several, where a target could be
-  # another site's. Set to anything but a list of destinations: none, so a typo
-  # in the config never opens it up.
+  # another site's. A map gives each site key its own list, and a site it does
+  # not name gets none. Set to anything else: none, so a typo in the config
+  # never opens it up.
   defp destination_error(setting, site_key, within?) do
     refused = gettext("must be a destination this installation deploys to")
 
@@ -272,13 +279,43 @@ defmodule Brando.Sites.DeployConfig do
       nil ->
         if Brando.Tenant.mode() == :multi, do: gettext("needs this installation's config to list its deploy destinations")
 
-      targets when is_list(targets) ->
-        if not Enum.any?(targets, &within?.(for_site(&1, site_key))), do: refused
+      targets when is_list(targets) or is_map(targets) ->
+        if not Enum.any?(site_entries(targets, site_key), &within?.(for_site(&1, site_key))), do: refused
 
       _misconfigured ->
         refused
     end
   end
+
+  defp site_entries(targets, _site_key) when is_list(targets), do: targets
+
+  defp site_entries(targets, site_key) when is_binary(site_key) do
+    case Map.get(targets, site_key) do
+      entries when is_list(entries) -> entries
+      _none -> []
+    end
+  end
+
+  defp site_entries(_targets, _site_key), do: []
+
+  @doc """
+  The entries of the operator's `rsync_targets` and `s3_targets` lists that
+  grant every site, as `{setting, entry}`: those without `{site_key}`. Entries
+  of a per-site map belong to their site and are never shared.
+  """
+  @spec shared_destinations() :: [{:rsync_targets | :s3_targets, String.t()}]
+  def shared_destinations do
+    config = Application.get_env(:brando, __MODULE__, [])
+
+    for setting <- [:rsync_targets, :s3_targets],
+        entry <- list_entries(config[setting]),
+        is_binary(entry),
+        not String.contains?(entry, "{site_key}"),
+        do: {setting, entry}
+  end
+
+  defp list_entries(targets) when is_list(targets), do: targets
+  defp list_entries(_targets), do: []
 
   # Without a key an entry keeps its placeholder, which no target can match
   defp for_site(listed, site_key) when is_binary(listed) and is_binary(site_key),

@@ -450,6 +450,37 @@ defmodule Brando.SSGBuildsTest do
       assert_received {:s3, %ExAws.Operation.S3{http_method: :get}}
     end
 
+    test "a per-site map is checked at deploy: S3", context do
+      put_test_env(DeployConfig,
+        s3_targets: %{context.site.key => ["s3://acme-www"], context.other_key => ["s3://beta-www"]}
+      )
+
+      build = with_target(context.build, "s3", "s3://beta-www")
+      assert {:error, :invalid_deploy_target} = Deploy.deploy(build, s3_request: &recording_s3/1)
+      refute_received {:s3, _}
+
+      build = with_target(context.build, "s3", "s3://acme-www")
+      assert {:ok, %{status: :deployed}} = Deploy.deploy(build, s3_request: &recording_s3/1)
+      assert_received {:s3, %ExAws.Operation.S3{http_method: :get}}
+    end
+
+    test "a per-site map is checked at deploy: rsync", context do
+      put_test_env(DeployConfig,
+        rsync_targets: %{
+          context.site.key => ["deploy@acme-www.example.test:/srv/www"],
+          context.other_key => ["deploy@beta-www.example.test:/srv/www"]
+        }
+      )
+
+      build = with_target(context.build, "rsync", "deploy@beta-www.example.test:/srv/www")
+      assert {:error, :invalid_deploy_target} = Deploy.deploy(build, runner: &recording_runner/3)
+      refute_received {:command, _, _}
+
+      build = with_target(context.build, "rsync", "deploy@acme-www.example.test:/srv/www")
+      assert {:ok, %{status: :deployed}} = Deploy.deploy(build, runner: &recording_runner/3)
+      assert_received {:command, "rsync", _args}
+    end
+
     test "a queued S3 deploy to another site's prefix is cancelled, not retried", context do
       build = with_target(context.build, "s3", "s3://static-bucket/sites/#{context.other_key}")
 

@@ -352,6 +352,38 @@ defmodule Brando.Doctor.ChecksTest do
       assert {:warning, _item, "no API key for the Assistant"} = Checks.Configuration.assistant()
     end
 
+    test "with several sites, a deploy target without {site_key} is a warning" do
+      put_test_env(Brando.Mailer, from: {"Brando", "noreply@brandocms.com"})
+      put_test_env(:tenancy_mode, :multi)
+
+      put_test_env(Brando.Sites.DeployConfig,
+        rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}"],
+        s3_targets: ["s3://acme-www", "s3://{site_key}-www"]
+      )
+
+      assert {:warning, item, "deploy targets shared by every site", fix} = Checks.Configuration.deploy_targets()
+      assert item == "Deploy targets: s3_targets s3://acme-www grant every site"
+      assert fix =~ ~s(`s3_targets: %{"acme" => ["s3://acme-www"]}`)
+      assert %Result{status: :warning, summary: summary} = Checks.Configuration.run(context())
+      assert summary =~ "deploy targets shared by every site"
+
+      put_test_env(Brando.Sites.DeployConfig,
+        rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}"],
+        s3_targets: %{"acme" => ["s3://acme-www"], "beta" => ["s3://beta-www"]}
+      )
+
+      assert {:ok, _item, nil} = Checks.Configuration.deploy_targets()
+    end
+
+    test "with one site, a deploy target without {site_key} is fine" do
+      put_test_env(Brando.Sites.DeployConfig, s3_targets: ["s3://acme-www"])
+
+      for mode <- [:none, :single] do
+        put_test_env(:tenancy_mode, mode)
+        assert {:ok, _item, nil} = Checks.Configuration.deploy_targets()
+      end
+    end
+
     test "findings combine into one summary at the worst status" do
       result =
         Checks.Configuration.evaluate([

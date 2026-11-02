@@ -505,6 +505,21 @@ msgstr ""
 msgid "Configuration"
 msgstr ""
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: %{entries} grant every site"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: none shared between sites"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: one site"
+msgstr ""
+
 #: lib/brando/doctor/checks/deprecations.ex
 #, elixir-autogen, elixir-format
 msgid "Deprecations"
@@ -831,6 +846,11 @@ msgstr ""
 msgid "an entry's vars and refs are entry.vars and entry.refs since the blocks conversion: run brando_219 (mix brando.gen.migrations, mix brando.migrate) or edit the module code, then mix brando.entries.resave"
 msgstr ""
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "bind each deploy target to one site with `{site_key}`, or list each site's own under its key: %{example}"
+msgstr ""
+
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid "brandojs %{version}"
@@ -943,6 +963,11 @@ msgstr ""
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "delete priv/static/robots.txt: Plug.Static in %{file} has no only:, so it serves every file in priv/static"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "deploy targets shared by every site"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex

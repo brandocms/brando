@@ -1052,7 +1052,25 @@ who may deploy one site can name that destination, or another site's directory
 or prefix under that parent, and the deploy replaces what is there. Nothing
 ties such an entry to a single site, so use one only if the same people deploy
 all the sites. An `rsync_targets` parent without the placeholder keeps working,
-and leaves the sites open to each other until it uses `{site_key}`.
+and leaves the sites open to each other until it uses `{site_key}`. With
+`tenancy_mode: :multi`, the System check's Configuration line warns about each
+such entry (see [System check](doctor.md)).
+
+When a site's destination is not named by its key, such as a bucket of its
+own, give the setting a map from each site's key to that site's entries:
+
+```elixir
+config :brando, Brando.Sites.DeployConfig,
+  rsync_targets: %{"acme" => ["deploy@acme.example.com:/srv/www"], "beta" => ["deploy@beta.example.com:/srv/www"]},
+  s3_targets: %{"acme" => ["s3://acme-www"], "beta" => ["s3://beta-www"]}
+```
+
+An entry in the map grants only the site it is listed under, and follows the
+same rules as a list entry: an exact destination, or a parent ending in `/`.
+A site the map does not name has no destination of that strategy, and neither
+does a key that is not a string or a value that is not a list. The map is
+checked when the settings are saved and each time a build deploys, as the list
+is.
 
 **Entries that extend each other collide on hyphenated keys.** With
 `s3://b/{site_key}` and `s3://b/{site_key}-staging`, site `a` may name
@@ -1060,8 +1078,8 @@ and leaves the sites open to each other until it uses `{site_key}`.
 one entry per site layout, or separate them with a character keys cannot hold,
 such as the `/` in `s3://b/{site_key}/www` and `s3://b/{site_key}/staging`.
 
-With `tenancy_mode: :multi` the list of a strategy the sites use is required:
-until it is set, no target of that strategy can be saved or deployed. With one
+With `tenancy_mode: :multi` the list or map of a strategy the sites use is
+required: until it is set, no target of that strategy can be saved or deployed. With one
 site, an unset list allows any target of the right form, including a whole
 bucket; a list set there applies the same way.
 

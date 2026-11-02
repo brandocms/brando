@@ -1,8 +1,9 @@
 defmodule Brando.Doctor.Checks.Configuration do
   @moduledoc """
   Required configuration: the endpoint's URL, the mailer and its sender, the
-  media CDN settings when a CDN is enabled, and the Assistant's model and key
-  when the Assistant is configured.
+  media CDN settings when a CDN is enabled, the Assistant's model and key
+  when the Assistant is configured, and, with several sites, deploy targets
+  that every site may use.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
@@ -20,7 +21,7 @@ defmodule Brando.Doctor.Checks.Configuration do
 
   @impl true
   def run(_context) do
-    evaluate([endpoint_url(), mailer()] ++ Enum.map(@cdn_contexts, &cdn/1) ++ [assistant()])
+    evaluate([endpoint_url(), mailer()] ++ Enum.map(@cdn_contexts, &cdn/1) ++ [assistant(), deploy_targets()])
   end
 
   @doc """
@@ -248,6 +249,34 @@ defmodule Brando.Doctor.Checks.Configuration do
       true ->
         {:warning, dgettext("doctor", "Assistant: %{model} has no API key", model: agent[:model]),
          dgettext("doctor", "no API key for the Assistant")}
+    end
+  end
+
+  @doc """
+  The operator's deploy target lists as a finding (see `evaluate/1`): with
+  several sites, an entry without `{site_key}` grants every site, so whoever
+  may deploy one site can point it at another's destination.
+  """
+  def deploy_targets do
+    shared = Brando.Sites.DeployConfig.shared_destinations()
+
+    cond do
+      Brando.Tenant.mode() != :multi ->
+        {:ok, dgettext("doctor", "Deploy targets: one site"), nil}
+
+      shared == [] ->
+        {:ok, dgettext("doctor", "Deploy targets: none shared between sites"), nil}
+
+      true ->
+        entries = Enum.map_join(shared, ", ", fn {setting, entry} -> "#{setting} #{entry}" end)
+
+        {:warning, dgettext("doctor", "Deploy targets: %{entries} grant every site", entries: entries),
+         dgettext("doctor", "deploy targets shared by every site"),
+         dgettext(
+           "doctor",
+           "bind each deploy target to one site with `{site_key}`, or list each site's own under its key: %{example}",
+           example: ~s(`s3_targets: %{"acme" => ["s3://acme-www"]}`)
+         )}
     end
   end
 end

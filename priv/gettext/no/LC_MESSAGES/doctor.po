@@ -505,6 +505,21 @@ msgstr "Kontrollerer…"
 msgid "Configuration"
 msgstr "Konfigurasjon"
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: %{entries} grant every site"
+msgstr "Publiseringsmål: %{entries} gjelder alle nettsteder"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: none shared between sites"
+msgstr "Publiseringsmål: ingen deles mellom nettstedene"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: one site"
+msgstr "Publiseringsmål: ett nettsted"
+
 #: lib/brando/doctor/checks/deprecations.ex
 #, elixir-autogen, elixir-format
 msgid "Deprecations"
@@ -831,6 +846,11 @@ msgstr "alle bilder samsvarer med innstillingene sine"
 msgid "an entry's vars and refs are entry.vars and entry.refs since the blocks conversion: run brando_219 (mix brando.gen.migrations, mix brando.migrate) or edit the module code, then mix brando.entries.resave"
 msgstr "etter blokkonverteringen er en oppførings variabler og referanser entry.vars og entry.refs: kjør brando_219 (mix brando.gen.migrations, mix brando.migrate) eller rediger modulkoden, og deretter mix brando.entries.resave"
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "bind each deploy target to one site with `{site_key}`, or list each site's own under its key: %{example}"
+msgstr "knytt hvert publiseringsmål til ett nettsted med `{site_key}`, eller list hvert nettsteds egne under nøkkelen dets: %{example}"
+
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid "brandojs %{version}"
@@ -944,6 +964,11 @@ msgstr "slett priv/static/robots.txt, og fjern robots.txt fra only:-listen til e
 #, elixir-autogen, elixir-format
 msgid "delete priv/static/robots.txt: Plug.Static in %{file} has no only:, so it serves every file in priv/static"
 msgstr "slett priv/static/robots.txt: Plug.Static i %{file} har ingen only:, så den serverer alle filer i priv/static"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "deploy targets shared by every site"
+msgstr "publiseringsmål som deles av alle nettsteder"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format

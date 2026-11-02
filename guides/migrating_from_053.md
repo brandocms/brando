@@ -499,9 +499,13 @@ sender first, before the first compile.
   `{site_key}` for the site's key so one site cannot name another's destination:
   `config :brando, Brando.Sites.DeployConfig, rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}"], s3_targets: ["s3://static-bucket/sites/{site_key}"]`.
   An entry without `{site_key}`, such as `s3://acme-www`, is open to every site,
-  so it suits only sites deployed by the same people. An existing `rsync_targets`
-  parent such as `deploy@static.example.com:/srv/sites/` keeps working, but leaves
-  the sites open to each other until it uses `{site_key}`. See
+  so it suits only sites deployed by the same people. List a destination not
+  named by the site key under that site in a map instead:
+  `s3_targets: %{"acme" => ["s3://acme-www"], "beta" => ["s3://beta-www"]}`.
+  An existing `rsync_targets` parent such as `deploy@static.example.com:/srv/sites/`
+  keeps working, but leaves the sites open to each other until it uses
+  `{site_key}` or moves into a map; `mix brando.doctor` warns about each such
+  entry. See
   [Tenancy and environments](tenancy_and_environments.md).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
