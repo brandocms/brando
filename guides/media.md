@@ -418,7 +418,8 @@ Then, in a controller the site authorizes itself:
 
 # Hand upload.upload_url and upload.upload_headers to the browser, which
 # PUTs the file; keep upload.ref, signed (Phoenix.Token), to know which
-# entry the upload belongs to.
+# entry the upload belongs to. The URL signs `size`, so it must be the file's
+# exact byte count, sent whole rather than as a stream.
 
 # The browser says it is done
 {:ok, image} = Brando.Uploads.Direct.complete(upload.ref)

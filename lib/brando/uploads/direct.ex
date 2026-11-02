@@ -15,7 +15,9 @@ defmodule Brando.Uploads.Direct do
         })
 
       # upload.ref, upload.upload_url, upload.upload_headers — hand these to
-      # the browser, which PUTs the bytes with exactly those headers.
+      # the browser, which PUTs the bytes with exactly those headers. The URL
+      # signs `size`, so it must be the file's exact byte count, sent whole
+      # rather than as a stream: the bucket refuses anything else.
 
       # 2. The browser says it is done. Check the object and create the row.
       {:ok, image} = Brando.Uploads.Direct.complete(upload.ref)
