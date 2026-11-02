@@ -1,0 +1,1 @@
+- Frontend edit mode and the live preview patch edits into the page on a site with an AMD or CommonJS module loader, instead of showing them only after a reload.

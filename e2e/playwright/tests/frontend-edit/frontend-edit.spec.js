@@ -461,7 +461,6 @@ test.describe('page content standing in for the configuration', () => {
     ['document body', '<img name="body">'],
     ['document cookie', '<img name="cookie">'],
     ['document createElementNS, which morphdom uses', '<img name="createElementNS">'],
-    ['the exports and module morphdom looks for', '<img name="exports"><img name="module">'],
     // Chromium, the browser here, keeps these under a name, so they are set
     ['window addEventListener, as a browser following the spec would', '<script>window.addEventListener = {}</script>'],
     ['window removeEventListener, as a browser following the spec would', '<script>window.removeEventListener = {}</script>']
@@ -517,15 +516,42 @@ test.describe('page content standing in for the configuration', () => {
     await openBlock(page, 'Welcome to the page')
   })
 
-  // morphdom's loader hands itself to `define` there, so its global stays unset
-  test('a site with an AMD loader still gets the toolbar', async ({ page }) => {
-    await startEditing(page)
-    await rewritePage(page, body => body.replace('</head>', '<script>window.define = function () {}; window.define.amd = {}</script></head>'))
-    await page.reload()
+  // morphdom's loader would hand itself to these and leave its global unset,
+  // and edits in the sidebar would not reach the page until a reload. The
+  // loaders mark the page if anything is handed to them.
+  for (const [name, transform] of [
+    [
+      'an AMD loader',
+      body => body.replace('</head>', `<script>
+        window.define = function () { document.documentElement.dataset.loaderUsed = 'define' }
+        window.define.amd = {}
+      </script></head>`)
+    ],
+    [
+      'CommonJS globals',
+      body => body.replace('</head>', `<script>
+        window.exports = {}
+        window.module = { set exports(_value) { document.documentElement.dataset.loaderUsed = 'module' } }
+      </script></head>`)
+    ],
+    ['elements named exports and module', body => body.replace('<main id="content">', '<main id="content"><img name="exports"><img name="module">')]
+  ]) {
+    test(`a site with ${name} still has its edits patched into the page`, async ({ page }) => {
+      await startEditing(page)
+      await rewritePage(page, transform)
+      await page.reload()
+      await expect(page.getByTestId('frontend-edit-toolbar')).toBeVisible()
+      expect(await page.evaluate(() => typeof window.morphdom)).toBe('function')
 
-    expect(await page.evaluate(() => typeof window.morphdom)).toBe('undefined')
-    await expect(page.getByTestId('frontend-edit-toolbar')).toBeVisible()
-  })
+      const editor = await openBlock(page, 'Welcome to the page')
+      // Gone after a reload
+      await page.evaluate(() => (window.__notReloaded = true))
+      await headlineInput(editor).fill('Patched beside the loader')
+      await expect(headline(page, 'Patched beside the loader')).toBeVisible({ timeout: 10000 })
+      expect(await page.evaluate(() => window.__notReloaded)).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.dataset.loaderUsed)).toBeUndefined()
+    })
+  }
 
   test('a name the scripts do not use leaves the overlay working', async ({ page }) => {
     await startEditing(page)

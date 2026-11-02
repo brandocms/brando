@@ -140,6 +140,28 @@ test.describe('Live preview sandbox', () => {
     await expect(getPreviewFrame(page).locator('#lp-connection-status')).toHaveCount(0)
   })
 
+  // morphdom's loader would hand itself to the site's AMD loader and leave its
+  // global unset, and the preview would stop following the form. The loader
+  // marks the page if anything is handed to it.
+  test('a site with an AMD loader still has its preview updated', async ({ page }) => {
+    const errors = watchErrors(page)
+    await page.addInitScript(() => {
+      if (location.pathname.startsWith('/admin')) return
+      window.define = function () {
+        document.documentElement.dataset.loaderUsed = 'define'
+      }
+      window.define.amd = {}
+    })
+    await openPreview(page, 'Sandbox Loader')
+
+    const preview = getPreviewFrame(page)
+    await page.locator('.header-block textarea').fill('Loader Header')
+    await syncLV(page)
+    await expect(preview.locator('header[b-tpl="styled-header"] h1')).toContainText('Loader Header')
+    await expect(preview.locator('html')).not.toHaveAttribute('data-loader-used')
+    expect(errors).toEqual([])
+  })
+
   test('the standalone preview has no opener and keeps updating', async ({ page }) => {
     const errors = watchErrors(page)
     await openPreview(page, 'Sandbox Window')
