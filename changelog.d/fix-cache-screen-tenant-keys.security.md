@@ -1,0 +1,1 @@
+- On a multi-site installation the Cache screen lists, clears and empties only the entries of sites where the user may use it; entries cached outside every site are left to superusers.

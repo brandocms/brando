@@ -7,6 +7,9 @@ defmodule BrandoAdmin.Sites.CacheLive do
 
   import Phoenix.Component
 
+  alias Brando.Authorization.{Boundary, Engine, Scope}
+  alias Brando.Tenant
+  alias Brando.Tenant.Access
   alias BrandoAdmin.Components.Workspace
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
@@ -16,8 +19,9 @@ defmodule BrandoAdmin.Sites.CacheLive do
       {:ok,
        socket
        |> assign(:socket_connected, true)
-       |> assign_caches()
+       |> assign(:tenancy?, Tenant.enabled?())
        |> assign_current_user(token)
+       |> assign_caches()
        |> set_admin_locale()}
     else
       {:ok, assign(socket, :socket_connected, false)}
@@ -61,13 +65,15 @@ defmodule BrandoAdmin.Sites.CacheLive do
             <table class="workspace-table">
               <thead>
                 <tr>
-                  <th>{gettext("Type")}</th><th>{gettext("Module")}</th><th>{gettext("Cache key")}</th><th>
+                  <th>{gettext("Type")}</th><th :if={@tenancy?}>{gettext("Site")}</th><th>{gettext("Module")}</th><th>
+                    {gettext("Cache key")}
+                  </th><th>
                     {gettext("Entry ID")}
                   </th><th><span class="workspace-sr-only">{gettext("Actions")}</span></th>
                 </tr>
               </thead>
               <tbody>
-                <.cache_row :for={entry <- entries} entry={entry} />
+                <.cache_row :for={entry <- entries} entry={entry} tenancy?={@tenancy?} />
               </tbody>
             </table>
           </div>
@@ -83,21 +89,22 @@ defmodule BrandoAdmin.Sites.CacheLive do
   end
 
   defp cache_row(assigns) do
-    row =
-      case assigns.entry do
-        {:list, module, key} -> %{type: gettext("List"), module: module, key: key, id: nil}
-        {:single, module, key, id} -> %{type: gettext("Single"), module: module, key: key, id: id}
-      end
-
-    assigns = assigns |> assign(:row, row) |> assign(:cache_token, cache_token(assigns.entry))
+    assigns = assign(assigns, :cache_token, cache_token(assigns.entry.key))
 
     ~H"""
     <tr>
-      <td><span class="badge">{@row.type}</span></td>
-      <td><code>{@row.module}</code></td><td><code>{@row.key}</code></td>
+      <td><span class="badge">{type_label(@entry.type)}</span></td>
+      <td :if={@tenancy?}>
+        <%= if @entry.site do %>
+          {@entry.site}
+        <% else %>
+          <span class="cache-unavailable">—</span>
+        <% end %>
+      </td>
+      <td><code>{@entry.source}</code></td><td><code>{@entry.hash}</code></td>
       <td>
-        <%= if @row.id do %>
-          <code>#{@row.id}</code>
+        <%= if @entry.id do %>
+          <code>#{@entry.id}</code>
         <% else %>
           <span class="cache-unavailable">—</span>
         <% end %>
@@ -108,7 +115,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
           class="btn"
           phx-click="clear_cache_entry"
           phx-value-key={@cache_token}
-          aria-label={gettext("Clear cache %{key}", key: @row.key)}
+          aria-label={gettext("Clear cache %{key}", key: @entry.hash)}
         >
           {gettext("Clear")}
         </button>
@@ -116,6 +123,9 @@ defmodule BrandoAdmin.Sites.CacheLive do
     </tr>
     """
   end
+
+  defp type_label(:list), do: gettext("List")
+  defp type_label(:single), do: gettext("Single")
 
   def handle_params(params, url, socket) do
     uri = URI.parse(url)
@@ -127,16 +137,22 @@ defmodule BrandoAdmin.Sites.CacheLive do
   end
 
   def handle_event("empty_caches", _, socket) do
-    :ok = Brando.Cache.reload_all()
+    user = socket.assigns.current_user
+
+    :ok =
+      if every_entry?(user),
+        do: Brando.Cache.reload_all(),
+        else: user |> entries(:update) |> Enum.map(& &1.key) |> Brando.Cache.reload_all()
+
     send(self(), {:toast, gettext("Caches cleared!")})
 
     {:noreply, assign_caches(socket)}
   end
 
   def handle_event("clear_cache_entry", %{"key" => token}, socket) do
-    case Enum.find(socket.assigns.caches.query, &(cache_token(&1) == token)) do
+    case Enum.find(entries(socket.assigns.current_user, :update), &(cache_token(&1.key) == token)) do
       nil -> :ok
-      entry -> Cachex.del(:query, entry)
+      entry -> Cachex.del(:query, entry.key)
     end
 
     {:noreply, assign_caches(socket)}
@@ -163,7 +179,82 @@ defmodule BrandoAdmin.Sites.CacheLive do
   end
 
   defp assign_caches(socket) do
-    {:ok, query_caches} = Cachex.keys(:query)
-    assign(socket, :caches, %{query: query_caches})
+    assign(socket, :caches, %{query: entries(socket.assigns.current_user, :read)})
   end
+
+  # The query cache's entries this user may `action` (`:read` lists, `:update`
+  # clears). With tenancy on, a site environment's are under its prefix, for
+  # those who may use this screen there; the rest, cached outside every site
+  # or for a site no longer in the registry, for superusers. A key of another
+  # shape is no query result this screen knows, and is skipped.
+  defp entries(user, action) do
+    {:ok, keys} = Cachex.keys(:query)
+    entries = keys |> Enum.map(&entry/1) |> Enum.reject(&is_nil/1)
+
+    permitted =
+      if every_entry?(user),
+        do: entries,
+        else: entries |> Enum.group_by(& &1.prefix) |> permitted_groups(user, action)
+
+    permitted
+    |> Enum.map(&put_site/1)
+    |> Enum.sort_by(&{&1.site || "", &1.source, &1.type, &1.hash, &1.id || 0})
+  end
+
+  defp permitted_groups(groups, user, action) do
+    Enum.flat_map(groups, fn {prefix, entries} -> if permitted?(user, prefix, action), do: entries, else: [] end)
+  end
+
+  defp every_entry?(user), do: not Tenant.enabled?() or Boundary.superuser?(user)
+
+  defp entry({:tenant, prefix, key} = tenant_key) when is_binary(prefix) do
+    case entry(key) do
+      %{prefix: nil} = entry -> %{entry | key: tenant_key, prefix: prefix}
+      _ -> nil
+    end
+  end
+
+  defp entry({:list, source, hash} = key) when is_binary(source) and is_binary(hash),
+    do: %{key: key, prefix: nil, site: nil, type: :list, source: source, hash: hash, id: nil}
+
+  defp entry({:single, source, hash, id} = key)
+       when is_binary(source) and is_binary(hash) and (is_integer(id) or is_binary(id)),
+       do: %{key: key, prefix: nil, site: nil, type: :single, source: source, hash: hash, id: id}
+
+  defp entry(_key), do: nil
+
+  defp permitted?(_user, nil, _action), do: false
+
+  defp permitted?(user, prefix, action) do
+    case site_environment(prefix) do
+      {site, environment} ->
+        if Engine.enabled?(),
+          do: Engine.can?(Scope.site(user, site, environment), action, :utilities),
+          else: Access.can_access?(user, site)
+
+      nil ->
+        false
+    end
+  end
+
+  defp put_site(%{prefix: nil} = entry), do: entry
+
+  defp put_site(%{prefix: prefix} = entry) do
+    case site_environment(prefix) do
+      {site, environment} -> %{entry | site: "#{site.name} · #{environment.name}"}
+      nil -> %{entry | site: prefix}
+    end
+  end
+
+  defp site_environment("tenant_" <> suffix) do
+    with [site_key, environment_key] <- String.split(suffix, "_", parts: 2),
+         %{} = site <- Tenant.Cache.get_site(site_key),
+         %{} = environment <- Tenant.Cache.get_env(site_key, environment_key) do
+      {site, environment}
+    else
+      _ -> nil
+    end
+  end
+
+  defp site_environment(_prefix), do: nil
 end

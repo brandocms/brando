@@ -57,6 +57,20 @@ defmodule Brando.Cache do
   @decorate span("brando.cache.reload_all")
   def reload_all do
     Cachex.clear(:query)
+    reload_site_caches()
+  end
+
+  @doc """
+  As `reload_all/0`, but empties only the given query cache keys: for a user
+  who may not empty other sites' entries.
+  """
+  @decorate span("brando.cache.reload_all")
+  def reload_all(query_keys) when is_list(query_keys) do
+    Enum.each(query_keys, &Cachex.del(:query, &1))
+    reload_site_caches()
+  end
+
+  defp reload_site_caches do
     Brando.Cache.Identity.set()
     Brando.Cache.SEO.set()
     Brando.Cache.Globals.set()
