@@ -46,6 +46,7 @@ defmodule Brando.Content.Proposals.SchemaAllowlistTest do
   end
 
   defp warm_caches do
+    preserve_cache([:globals, :navigation])
     Brando.Cache.Globals.set()
     Brando.Cache.Navigation.set()
     caches()
