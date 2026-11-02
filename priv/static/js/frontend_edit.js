@@ -36,11 +36,10 @@
   // A name in the page's content replaces a member of the same name: on
   // `document` it then is an own property holding the element, unlike a site
   // script's own patch of a member. By the spec it also hides what `window`
-  // inherits from EventTarget, though Chromium keeps those. morphdom's loader
-  // takes `exports` and `module` for CommonJS when both are elements. Half an
-  // overlay is worse than none, so it does not start, and edit mode goes off as
-  // there is no Done button. The list is what this script, `block_patch.js` and
-  // morphdom read from `document`.
+  // inherits from EventTarget, though Chromium keeps those. Half an overlay is
+  // worse than none, so it does not start, and edit mode goes off as there is no
+  // Done button. The list is what this script, `block_patch.js` and morphdom
+  // read from `document`.
   const DOCUMENT_MEMBERS = [
     'addEventListener',
     'body',
@@ -59,8 +58,7 @@
   if (
     DOCUMENT_MEMBERS.some(isReplaced) ||
     typeof window.addEventListener !== 'function' ||
-    typeof window.removeEventListener !== 'function' ||
-    (isNamedElement(window.exports) && isNamedElement(window.module))
+    typeof window.removeEventListener !== 'function'
   ) {
     console.warn('Brando frontend edit did not start: an element on the page has a name or id that replaces something the script uses.')
     if (config.active && !isReplaced('cookie')) {

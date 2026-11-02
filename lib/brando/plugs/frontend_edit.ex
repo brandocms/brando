@@ -28,7 +28,16 @@ defmodule Brando.Plug.FrontendEdit do
   @external_resource Application.app_dir(:brando, "priv/static/js/frontend_edit.js")
   @external_resource Application.app_dir(:brando, "priv/static/css/frontend_edit.css")
 
-  @morphdom_js File.read!(Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js"))
+  # morphdom's UMD wrapper hands the library to the page's module loader when
+  # it finds one (an AMD `define` with `define.amd`, or CommonJS `exports` and
+  # `module`, which elements named so in the content also pass for) and then
+  # leaves `window.morphdom`, which `block_patch.js` calls, unset. Shadowing
+  # those names makes it always take the global.
+  @morphdom_js IO.iodata_to_binary([
+                 "(function (exports, module, define) {\n",
+                 File.read!(Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js")),
+                 "\n}).call(window);\n"
+               ])
   @block_patch_js File.read!(Application.app_dir(:brando, "priv/static/js/block_patch.js"))
   @frontend_edit_js File.read!(Application.app_dir(:brando, "priv/static/js/frontend_edit.js"))
   @frontend_edit_css File.read!(Application.app_dir(:brando, "priv/static/css/frontend_edit.css"))

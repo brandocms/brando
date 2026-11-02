@@ -38,16 +38,21 @@ defmodule Brando.Plug.LivePreview do
   @external_resource Application.app_dir(:brando, "priv/static/js/livepreview_highlight.js")
   @external_resource Application.app_dir(:brando, "priv/static/js/livepreview_storage.js")
 
-  @client_js Enum.map_join(
+  # morphdom's UMD wrapper hands the library to the site's module loader when
+  # it finds one (an AMD `define`, or CommonJS `exports` and `module`) and
+  # leaves `window.morphdom`, which the patching calls, unset. Shadowing those
+  # names makes it always take the global, as in `Brando.Plug.FrontendEdit`.
+  @client_js Enum.join(
                [
-                 Application.app_dir(:phoenix, "priv/static/phoenix.js"),
-                 Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js"),
-                 Application.app_dir(:brando, "priv/static/js/block_patch.js"),
-                 Application.app_dir(:brando, "priv/static/js/livepreview.js"),
-                 Application.app_dir(:brando, "priv/static/js/livepreview_highlight.js")
+                 File.read!(Application.app_dir(:phoenix, "priv/static/phoenix.js")),
+                 "(function (exports, module, define) {\n" <>
+                   File.read!(Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js")) <>
+                   "\n}).call(window);",
+                 File.read!(Application.app_dir(:brando, "priv/static/js/block_patch.js")),
+                 File.read!(Application.app_dir(:brando, "priv/static/js/livepreview.js")),
+                 File.read!(Application.app_dir(:brando, "priv/static/js/livepreview_highlight.js"))
                ],
-               "\n;\n",
-               &File.read!/1
+               "\n;\n"
              )
   @client_vsn :sha256 |> :crypto.hash(@client_js) |> Base.encode16(case: :lower) |> binary_part(0, 16)
 
