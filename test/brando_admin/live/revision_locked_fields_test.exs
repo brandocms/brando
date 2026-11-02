@@ -153,6 +153,65 @@ defmodule BrandoAdmin.RevisionLockedFieldsTest do
         assert {source_field(view, :subtitle), source_field(view, :year)} == {"Stored", 2020}
       end
 
+      test "a restored recovery copy renders the form's locked inputs as saved", %{article: article} do
+        view = open(editor(unquote(mode)), article, "locked")
+
+        capture(view, %{"title" => "Restored"})
+
+        # A copy stored before this rule still holds what the browser sent
+        copy = latest_copy(article)
+        main = Map.merge(copy.payload["main"], %{"subtitle" => "Crafted", "year" => 1999})
+        copy |> Ecto.Changeset.change(payload: %{copy.payload | "main" => main}) |> Repo.update!()
+
+        restore_latest_copy(view, article)
+
+        rendered = view |> render() |> form_params(@form)
+        assert rendered["article"]["title"] == "Restored"
+        assert {rendered["article"]["subtitle"], rendered["article"]["year"]} == {"Stored", "2020"}
+      end
+
+      test "a restored recovery copy renders an empty locked input's default", %{article: article} do
+        Repo.update_all(from(a in Article, where: a.id == ^article.id), set: [year: nil])
+        view = open(editor(unquote(mode)), article, "locked")
+
+        capture(view, %{"title" => "Restored"})
+
+        copy = latest_copy(article)
+        main = Map.put(copy.payload["main"], "year", 1999)
+        copy |> Ecto.Changeset.change(payload: %{copy.payload | "main" => main}) |> Repo.update!()
+
+        restore_latest_copy(view, article)
+
+        assert (view |> render() |> form_params(@form))["article"]["year"] == "2024"
+      end
+
+      test "a recovered working copy renders them as the revision has them",
+           %{article: article, superuser: superuser} do
+        number = revision_with_changed_values(article, superuser)
+        {_number, revision_entry} = snapshot(article)
+        view = open(editor(unquote(mode)), article, "locked")
+
+        Phoenix.LiveView.send_update(view.pid, Form,
+          id: "article_form",
+          action: :load_working_copy,
+          revision: number,
+          revision_entry: revision_entry
+        )
+
+        render(view)
+        capture(view, %{})
+
+        # A copy stored before this rule still holds what the browser sent
+        copy = latest_copy(article)
+        main = Map.merge(copy.payload["main"], %{"subtitle" => "Crafted", "year" => 1999})
+        copy |> Ecto.Changeset.change(payload: %{copy.payload | "main" => main}) |> Repo.update!()
+
+        restore_latest_copy(view, article)
+
+        rendered = view |> render() |> form_params(@form)
+        assert {rendered["article"]["subtitle"], rendered["article"]["year"]} == {"Stored", "2020"}
+      end
+
       test "a revision stored after a recovery copy holds the saved values", %{article: article} do
         view = open(editor(unquote(mode)), article, "locked")
 

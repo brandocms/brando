@@ -7901,7 +7901,7 @@ defmodule BrandoAdmin.Components.Form do
         {key, :gallery}, changeset -> put_gallery_into(changeset, [], key, owned_gallery(get_field(revised, key)))
       end)
 
-    {changeset, assets}
+    {drop_locked_params(socket, changeset, assets), assets}
   end
 
   # A recovery copy's locked fields are none of its own: they have a new
@@ -7911,11 +7911,20 @@ defmodule BrandoAdmin.Components.Form do
     empty = Map.filter(defaults, fn {key, _} -> is_nil(Map.get(changeset.data, key)) end)
     server = Map.merge(empty, values)
 
-    socket
-    |> locked_keys()
-    |> Enum.reduce(changeset, &delete_change(&2, &1))
-    |> then(&Enum.reduce(server, &1, fn {key, value}, changeset -> put_change(changeset, key, value) end))
+    changeset =
+      socket
+      |> locked_keys()
+      |> Enum.reduce(changeset, &delete_change(&2, &1))
+      |> then(&Enum.reduce(server, &1, fn {key, value}, changeset -> put_change(changeset, key, value) end))
+
+    drop_locked_params(socket, changeset)
   end
+
+  # The form shows a param before a saved value, so a locked input loses the
+  # param the copy holds for it: it shows the change the server made, or the
+  # saved value.
+  defp drop_locked_params(socket, changeset, assets \\ []),
+    do: Enum.reduce(locked_keys(socket) ++ assets, changeset, &%{&2 | params: drop_param(&2.params, &1)})
 
   defp locked_asset_kinds(%{assigns: %{schema: schema}} = socket),
     do: for({key, kind} <- asset_field_kinds(schema), locked_field?(socket, [], key), do: {key, kind})
