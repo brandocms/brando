@@ -146,7 +146,11 @@ defmodule Brando.Content.Proposals.ToolsScopeTest do
 
       refute listed =~ title
 
-      shown = c |> member(["brando.admin.access", "brando.mcp.connect", read_article, "brando.pages.read"]) |> enable_two_factor()
+      shown =
+        c
+        |> member(["brando.admin.access", "brando.mcp.connect", read_article, "brando.pages.read"])
+        |> enable_two_factor()
+
       %{"access_token" => token} = connect!(log_in_user(build_conn(), shown), tenant)
 
       assert %{"result" => %{"structuredContent" => %{"lists" => %{"related_entries" => ^title}}}} =

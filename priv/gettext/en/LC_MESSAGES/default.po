@@ -211,6 +211,13 @@ msgid_plural "%{count} entries in the index"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/components/usage.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} entry you cannot open"
+msgid_plural "%{count} entries you cannot open"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} environment"
@@ -2181,6 +2188,12 @@ msgstr ""
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "An entry is unpublished at its scheduled time."
+msgstr ""
+
+#: lib/brando_admin/components/assets/sort_by_use.ex
+#: lib/brando_admin/live/sites/block_audit_live.ex
+#, elixir-autogen, elixir-format
+msgid "An entry you cannot open"
 msgstr ""
 
 #: lib/brando_admin/live/images/alt_text_live.ex
@@ -8767,6 +8780,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "It is shown only this once. The receiver uses it to check the Brando-Signature header of every request."
 msgstr ""
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "It is used in one place."
+msgid_plural "It is used in %{count} places."
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/live_view/listing/delete_description.ex
 #, elixir-autogen, elixir-format
@@ -17507,6 +17527,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "The secret could not be read; rotate it"
+msgstr ""
+
+#: lib/brando_admin/components/content/select_identifier.ex
+#, elixir-autogen, elixir-format
+msgid "The selected entry is unavailable."
 msgstr ""
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex

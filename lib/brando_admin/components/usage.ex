@@ -63,7 +63,9 @@ defmodule BrandoAdmin.Components.Usage do
           <div :if={!usage.url}><.row usage={usage} /></div>
         </li>
         <li :if={@hidden > 0}>
-          <div class="usage-hidden"><span class="usage-cover"></span><span class="usage-label">{hidden_label(@hidden)}</span></div>
+          <div class="usage-hidden">
+            <span class="usage-cover"></span><span class="usage-label">{hidden_label(@hidden)}</span>
+          </div>
         </li>
       </ul>
     </section>

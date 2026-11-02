@@ -239,7 +239,9 @@ defmodule BrandoAdmin.ReadScopesTest do
       assert has_element?(view, ".usage-list .usage-hidden")
 
       {allowed, _} =
-        log_in_as(Phoenix.ConnTest.build_conn(), permissions: ~w(brando.images.read brando.images.update brando.pages.read))
+        log_in_as(Phoenix.ConnTest.build_conn(),
+          permissions: ~w(brando.images.read brando.images.update brando.pages.read)
+        )
 
       {:ok, view, _html} = live(allowed, Image.__admin_route__(:update, [c.image.id]))
       assert render(view) =~ @secret
@@ -391,7 +393,10 @@ defmodule BrandoAdmin.ReadScopesTest do
         fields: %{"related_entries" => [{:entry, Page, c.page.id}]}
       }
 
-      proposal = %Brando.Content.Proposals.Proposal{operations: [operation], targets: %{{Article, c.article.id} => c.article}}
+      proposal = %Brando.Content.Proposals.Proposal{
+        operations: [operation],
+        targets: %{{Article, c.article.id} => c.article}
+      }
 
       as(article_reader())
       refute inspect(Brando.Content.Proposals.Review.entries(proposal)) =~ @secret

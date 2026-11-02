@@ -169,7 +169,12 @@ defmodule Brando.AI.Agent.GuidanceTest do
         })
 
       {:ok, environment} = Tenant.Registry.create_environment(site, %{name: "production", key: "production", live: true})
-      Ecto.Adapters.SQL.query!(Brando.RuntimeConfig.get(:repo_module), ~s(CREATE SCHEMA "#{Tenant.prefix(site, environment)}"))
+
+      Ecto.Adapters.SQL.query!(
+        Brando.RuntimeConfig.get(:repo_module),
+        ~s(CREATE SCHEMA "#{Tenant.prefix(site, environment)}")
+      )
+
       %{site: site, environment: environment}
     end
 

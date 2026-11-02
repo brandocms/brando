@@ -63,7 +63,8 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
        selected_identifier: identifier,
        selected_identifier_id: identifier && identifier.id,
        unavailable_destination: !!params[:current_identifier_id] && is_nil(identifier),
-       kept_destination: if(is_nil(identifier) && params[:current_identifier_id], do: {params[:current_identifier_id], href}),
+       kept_destination:
+         if(is_nil(identifier) && params[:current_identifier_id], do: {params[:current_identifier_id], href}),
        has_existing_link?: href != "",
        original_class: params[:current_class],
        original_target: params[:current_target],

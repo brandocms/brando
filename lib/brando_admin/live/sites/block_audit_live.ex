@@ -309,7 +309,8 @@ defmodule BrandoAdmin.Sites.BlockAuditLive do
                     <.link :if={@holders[holder_key(holder)][:url]} navigate={@holders[holder_key(holder)].url}>
                       {@holders[holder_key(holder)].label}
                     </.link>
-                    <span :if={!@holders[holder_key(holder)][:url]}>{@holders[holder_key(holder)][:label] || gettext("An entry you cannot open")}</span>
+                    <span :if={!@holders[holder_key(holder)][:url]}>{@holders[holder_key(holder)][:label] ||
+                      gettext("An entry you cannot open")}</span>
                     · {gettext("version %{number}", number: holder.revision)}
                   </span>
                 </div>
