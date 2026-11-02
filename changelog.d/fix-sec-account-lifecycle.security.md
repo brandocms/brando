@@ -2,7 +2,7 @@
 
 - Deleting a user with a content transfer ends their MCP connections and pending approvals instead of handing them to the recipient.
 
-- A content transfer leaves the departing user's assistant conversations, recovery drafts, proposals, private listing views, notification deliveries and receipts with the deleted account.
+- A content transfer leaves the departing user's assistant conversations, recovery drafts, proposals, private listing views, notification deliveries, receipts and static builds with the deleted account.
 
 - A rejected user form no longer writes the typed password or other values to the log, and inspecting a user omits the password hash.
 

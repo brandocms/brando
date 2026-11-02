@@ -471,16 +471,37 @@ deletes the departing account's session-token rows, and soft-deletes the account
 It does **not** transfer authorization memberships or `user_sites`
 access: the recipient keeps their own permissions.
 
-What belongs to the account, or records what it did, does not move
-(`Brando.Users.transferred_table?/1`). The tools it connected over MCP are
-disconnected, and a pending approval ends with them: a connection never comes
-to act as someone else. Its assistant conversations, recovery drafts, stored
-proposals, private listing views and listing defaults, notification
-deliveries and transfer receipts stay with the deleted account, so the recipient
-reads none of them; they return if the account is restored and go when it is
-purged. A shared listing view moves, unless the recipient already has one
-with that name. A table of your own that references `users` moves unless its
-rows are left out in the same way, so check any that hold personal data.
+Some tables are left out of the transfer
+(`Brando.Users.transferred_table?/1`): the account's connections and private
+working data, its static builds and notes, and the activity and security logs.
+Other records of who did something move with the content, such as environment
+operation logs, archived blocks and SEO meta suggestions.
+
+The tools the account connected over MCP are disconnected, and a pending
+approval ends with them: a connection never comes to act as someone else. Its
+assistant conversations, recovery drafts, stored proposals, private listing
+views and listing defaults, notification deliveries and transfer receipts stay
+with the deleted account, so the recipient does not inherit them, and they
+return if the account is restored. Purging the account deletes its
+conversations, drafts, listing views and defaults, and the notifications
+delivered to it; proposals and receipts remain with no owner.
+
+Only the account that ran a [content transfer](content_transfer.md) or applied
+a proposal can undo it. The receipts stay with that account, so a departed
+user's content transfers and proposals cannot be undone unless the account is
+restored.
+
+A shared listing view moves, unless the recipient already has one with that
+name. That view stays with the deleted account and goes when the account is
+purged.
+
+A static build stays as well, because it runs on the authority of the user who
+requested it. With authorization groups, a build still queued when its creator
+is deleted is cancelled when its job runs. In a classic installation builds have
+no per-user check, and it runs.
+
+A table of your own that references `users` moves unless its rows are left out
+in the same way, so check any that hold personal data.
 
 The transfer helper discovers table/column names and issues unqualified
 SQL. It is **not a complete cross-environment migration tool** for a multi-site

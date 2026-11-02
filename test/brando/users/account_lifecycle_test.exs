@@ -20,6 +20,7 @@ defmodule Brando.Users.AccountLifecycleTest do
   alias Brando.Users.SecurityEvent
   alias Brando.Users.Throttle
   alias Brando.Users.User
+  alias Phoenix.Socket.Broadcast
 
   defp removed(user, how, by) do
     case how do
@@ -75,9 +76,12 @@ defmodule Brando.Users.AccountLifecycleTest do
     test "the screen says so when it refuses", %{deleted: deleted} do
       editor = TestUsers.insert_user(role: :editor)
       {:ok, view, _} = live(log_in_user(build_conn(), editor), "/admin/users")
+      Brando.endpoint().subscribe("user:#{editor.id}")
 
       render_hook(view, "undelete_entry", %{"id" => to_string(deleted.id)})
-      refute render(view) =~ "undeleted"
+
+      assert_receive %Broadcast{event: "toast", payload: %{payload: "Error undeleting" <> _}}, 2_000
+      refute_received %Broadcast{event: "toast", payload: %{payload: "User undeleted"}}
     end
 
     test "an account below a superuser comes back as before", %{current_user: superuser} do
@@ -249,6 +253,34 @@ defmodule Brando.Users.AccountLifecycleTest do
       assert Brando.Drafts.list(%{identity | owner_id: recipient.id}) == []
     end
 
+    # A queued build runs on the authority of who requested it (`Brando.Worker.SSGBuild`)
+    test "a static build stays with the account", %{source: source, recipient: recipient} do
+      {:ok, site} =
+        Brando.Tenant.Registry.create_site(%{
+          name: "Static",
+          key: "static-#{System.unique_integer([:positive])}",
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :static
+        })
+
+      Repo.insert!(%Brando.SSG.Build{
+        site_id: site.id,
+        creator_id: source.id,
+        version: "v1",
+        build_number: 1,
+        environment_name: "Production",
+        environment_key: "production",
+        status: :queued,
+        build_path: "/tmp/v1",
+        preview_token: Ecto.UUID.generate(),
+        preview_expires_at: DateTime.utc_now()
+      })
+
+      assert_stays(source, recipient, "ssg_builds", "creator_id")
+    end
+
     test "a listing default stays, and two people's defaults do not collide", %{source: source, recipient: recipient} do
       for user <- [source, recipient] do
         view = Repo.insert!(%View{name: "Mine", schema: "S", listing: "default", creator_id: user.id})
@@ -362,6 +394,7 @@ defmodule Brando.Users.AccountLifecycleTest do
           render(view)
         end)
 
+      assert log =~ "Saving Brando.Users.User failed"
       refute log =~ marker
       refute log =~ "a@example.net"
     end

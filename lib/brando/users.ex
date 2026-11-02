@@ -35,7 +35,8 @@ defmodule Brando.Users do
   # A user's own working data and the record of what they did. Access to these
   # rows goes by this owner column alone, so moving them would show them to
   # someone who may not read what they quote. They stay with the deleted
-  # account: back with it when it is restored, and gone when it is purged.
+  # account and are back with it when it is restored. Purging it deletes those
+  # that cascade from it and leaves the others with no owner, out of reach.
   @personal_tables [
     "ai_conversations",
     "entry_drafts",
@@ -960,7 +961,7 @@ defmodule Brando.Users do
   @spec transferred_table?(String.t()) :: boolean()
   def transferred_table?(table) do
     not (table in ["users_tokens", "users_security", "users_recovery_codes", "users_passkeys"] or
-           table in ["user_sites", "activity_events", "entry_notes", "note_mentions"] or
+           table in ["user_sites", "activity_events", "entry_notes", "note_mentions", "ssg_builds"] or
            table in @security_tables or
            table in @personal_tables or
            String.starts_with?(table, "authorization_") or
@@ -1019,6 +1020,9 @@ defmodule Brando.Users do
   # A connection acts as the person who approved it, so it must never come to act as someone else.
   defp transfer_or_delete_ref("mcp_" <> _, _column, _from, _to), do: 0
   defp transfer_or_delete_ref(table, _column, _from, _to) when table in @personal_tables, do: 0
+  # A queued build runs on the authority of who requested it (`Brando.Worker.SSGBuild`),
+  # so moved it would run on the recipient's.
+  defp transfer_or_delete_ref("ssg_builds", _column, _from, _to), do: 0
 
   # A shared view is the team's and outlives the account; one's private views
   # are its own. A shared view whose name the recipient already uses stays too,

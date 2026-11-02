@@ -53,7 +53,13 @@ defmodule Brando.MCP.OAuthConcurrencyTest do
       :telemetry.detach(@handler)
 
       Sandbox.unboxed_run(Repo, fn ->
-        Repo.delete_all(from e in Brando.Activity.Event, where: e.schema == ^to_string(Grant) and e.entry_id == ^grant.id)
+        # Every grant of the user: a test can make more than the one above
+        grant_ids = Repo.all(from g in Grant, where: g.user_id == ^user.id, select: g.id)
+
+        Repo.delete_all(
+          from e in Brando.Activity.Event, where: e.schema == ^to_string(Grant) and e.entry_id in ^grant_ids
+        )
+
         Repo.delete_all(from e in Brando.Users.SecurityEvent, where: e.user_id == ^user.id)
         # Takes its grant, tokens and two-factor row with it
         Repo.delete_all(from u in Brando.Users.User, where: u.id == ^user.id)
