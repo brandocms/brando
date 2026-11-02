@@ -17,7 +17,7 @@ defmodule Brando.Villain.Tags.Output do
   last ends in a `{` is kept in the context's private data: a tag that prints
   something sets it from its output, one that prints nothing (an empty value,
   `assign`, `capture`) leaves it as it was. A tag's body starts from what came
-  before the tag, a capture's and a tablerow's from nothing.
+  before the tag, a capture's and each tablerow cell from nothing.
   """
 
   alias Brando.Villain.InertLiquid
@@ -25,7 +25,7 @@ defmodule Brando.Villain.Tags.Output do
   alias Liquex.Context
 
   @open :brando_output_open_brace
-  @body_after_markup [Liquex.Tag.CaptureTag, Liquex.Tag.TablerowTag]
+  @body_after_markup [Liquex.Tag.CaptureTag]
 
   @doc """
   A `post_traverse` for a document's nodes, in the reverse order NimbleParsec
@@ -42,7 +42,7 @@ defmodule Brando.Villain.Tags.Output do
       {{:tag, __MODULE__},
        [
          tag: tag,
-         contents: contents,
+         contents: start_cells(tag, contents),
          after_text: match?([{:text, _} | _], previous),
          before_text: match?([{:text, _} | _], rest)
        ]}
@@ -52,11 +52,26 @@ defmodule Brando.Villain.Tags.Output do
 
   defp mark([node | rest], _previous), do: [node | mark(rest, [node])]
 
+  # Each cell of a tablerow is printed after its `<td>`, with the context the
+  # cell before returned: its first tag follows markup, as one after text does
+  defp start_cells(Liquex.Tag.TablerowTag, contents) do
+    case Keyword.get(contents, :contents) do
+      [{{:tag, __MODULE__}, first} | body] ->
+        first = List.keyreplace(first, :after_text, 0, {:after_text, true})
+        List.keyreplace(contents, :contents, 0, {:contents, [{{:tag, __MODULE__}, first} | body]})
+
+      _ ->
+        contents
+    end
+  end
+
+  defp start_cells(_tag, contents), do: contents
+
   def render([tag: tag, contents: contents, after_text: after_text?, before_text: before_text?], context) do
     open? = not after_text? and open?(context)
 
     # What a tag's body prints first follows what came before the tag, except a
-    # capture's, which goes into a variable, and a tablerow's, after its cell
+    # capture's, which goes into a variable (a tablerow's cells: `start_cells/2`)
     case tag.render(contents, put_open(context, open? and tag not in @body_after_markup)) do
       {output, %Context{} = rendered} -> printed(to_binary(output), rendered, open?, before_text?)
       # `break` and `continue`, which the loop around them handles

@@ -1558,5 +1558,25 @@ defmodule Brando.Villain.InertEditorTextTest do
         assert render(block(module!(user, code), vars: [var, key])) == expected, code
       end
     end
+
+    test "every tablerow cell starts after its cell's markup", %{user: user} do
+      vars = [
+        %Var{key: "json", label: "J", type: :string, value: ~s({"b":1})},
+        %Var{key: "pct", label: "P", type: :string, value: "%x"}
+      ]
+
+      cases = [
+        {~S[<script>{% tablerow i in (1..2) %}{{ json | raw }}{{ "{" }}{% endtablerow %}</script>],
+         ~s(<script><tr class="row1">\n<td class="col1">{"b":1}{</td><td class="col2">{"b":1}{</td></tr>\n</script>)},
+        {~S[{% tablerow i in (1..2) cols:1 %}{% if i == 1 %}{{ "{" }}{% else %}{{ pct | raw }}{% endif %}{% endtablerow %}],
+         ~s(<tr class="row1">\n<td class="col1">{</td></tr>\n<tr class="row2"><td class="col1">%x</td></tr>\n)},
+        {~S[{% tablerow i in (1..2) %}{% assign a = i %}{% if i == 1 %}{{ "{" }}{% else %}{{ pct | raw }}{% endif %}{% endtablerow %}],
+         ~s(<tr class="row1">\n<td class="col1">{</td><td class="col2">%x</td></tr>\n)}
+      ]
+
+      rendered = Enum.map(cases, fn {code, _} -> {code, render(block(module!(user, code), vars: vars))} end)
+
+      assert rendered -- cases == []
+    end
   end
 end
