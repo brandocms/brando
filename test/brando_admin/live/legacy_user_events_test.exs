@@ -43,6 +43,34 @@ defmodule BrandoAdmin.LegacyUserEventsTest do
 
   defp demote(user), do: Repo.update!(Ecto.Changeset.change(user, role: :user))
 
+  defp form_assigns(view) do
+    {components, _, _} = :sys.get_state(view.pid).components
+
+    Enum.find_value(components, fn
+      {_cid, {BrandoAdmin.Components.Form, _id, assigns, _private, _prints}} -> assigns
+      _ -> nil
+    end)
+  end
+
+  # The save runs once the blocks arrive; it ends with `processing` off,
+  # unless it crashed the form first.
+  defp await_saved_or_refused(view, tries \\ 100) do
+    cond do
+      not Process.alive?(view.pid) -> :ok
+      not form_assigns(view).processing -> :ok
+      tries == 0 -> flunk("the save never finished")
+      true -> Process.sleep(20) && await_saved_or_refused(view, tries - 1)
+    end
+  end
+
+  defp await_editing_tab(view, tries \\ 100) do
+    cond do
+      form_assigns(view).tab_editing? -> :ok
+      tries == 0 -> flunk("the tab never came to edit")
+      true -> Process.sleep(20) && await_editing_tab(view, tries - 1)
+    end
+  end
+
   # The test process is linked to the view, and goes on.
   defp assert_event_ends_view(view, fun) do
     Process.flag(:trap_exit, true)
@@ -879,6 +907,31 @@ defmodule BrandoAdmin.LegacyUserEventsTest do
       view |> element("#page_form_form") |> render_submit()
       view |> element("#page_form_form") |> render_submit()
 
+      assert Process.alive?(view.pid)
+      assert Repo.get!(Page, c.page.id).title == "Om oss"
+    end
+
+    test "a refused save from the editing tab stores nothing and keeps the form open", c do
+      # The tab that edits sends its save to the context, which refuses the
+      # account; the blocks arrive first, so the save runs after the submit.
+      params = %{"brando_tab" => "refused-save", "brando_tab_seq" => System.unique_integer([:monotonic, :positive])}
+
+      {view, _} =
+        c.user_conn |> Phoenix.LiveViewTest.put_connect_params(params) |> live_form("/admin/pages/update/#{c.page.id}")
+
+      await_editing_tab(view)
+
+      edit(view, "title", "Mine")
+      view |> form() |> render_hook("save_redirect_target", %{})
+      %{proxy: {ref, _topic, _}} = view
+
+      # Saving is two submits: the first collects the block fields, the
+      # second reaches the context.
+      view |> element("#page_form_form") |> render_submit()
+      assert_receive {^ref, {:push_event, "b:submit", _}}, 2_000
+      view |> element("#page_form_form") |> render_submit()
+
+      await_saved_or_refused(view)
       assert Process.alive?(view.pid)
       assert Repo.get!(Page, c.page.id).title == "Om oss"
     end
