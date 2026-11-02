@@ -15,8 +15,8 @@ defmodule Brando.Sites.FourOhFour do
   Rows older than `retention_days/0` are deleted nightly by
   `Brando.Worker.NotFoundPurger`. Anyone can request a URL that does not exist,
   so a tenant also keeps at most `max_rows/0` rows: past that, a flush deletes
-  the rows with the fewest hits, oldest first. A broken link people keep
-  following outlives a flood of URLs requested once.
+  the rows of the URLs with the fewest hits, oldest first. A broken link people
+  keep following outlives a flood of URLs requested once.
 
       config :brando, Brando.Sites.FourOhFour,
         flush_interval: :timer.seconds(60),
@@ -37,6 +37,8 @@ defmodule Brando.Sites.FourOhFour do
   @default_flush_interval :timer.seconds(60)
   @default_retention_days 90
   @default_max_rows 100_000
+  @trim_batch 10_000
+  @recent_hits 3
   @list_limit 500
   @max_url_length 1000
   @max_referrer_length 500
@@ -146,15 +148,48 @@ defmodule Brando.Sites.FourOhFour do
   end
 
   # Counting costs one scan a flush, only when there was something to write;
-  # sorting the table to choose rows only happens over the limit.
+  # sorting the table to choose rows only happens over the limit. A batch at a
+  # time, so a table already far past it comes down over a few flushes rather
+  # than in one delete that may never finish in time. Two nodes trimming at
+  # once can delete up to one batch too many, which the log can afford.
+  #
+  # A URL's rank is its hits across all its rows, as `list/0` ranks it, so a
+  # link followed once a day outlives one-off requests. Rows hit within the
+  # last hour count extra, so that a new broken link has time to gather hits
+  # and old rows requested a few times each cannot keep it out.
   defp trim(prefix) do
     opts = if prefix, do: [prefix: prefix], else: []
     excess = Brando.Repo.aggregate(NotFoundHit, :count, opts) - max_rows()
 
     if excess > 0 do
-      doomed = from h in NotFoundHit, order_by: [asc: h.hits, asc: h.last_hit_at, asc: h.id], limit: ^excess, select: h.id
+      recent = DateTime.add(DateTime.utc_now(), -1, :hour)
+
+      doomed =
+        from h in NotFoundHit,
+          order_by: [
+            asc:
+              fragment(
+                "sum(?) OVER (PARTITION BY ?) + CASE WHEN ? >= ? THEN ? ELSE 0 END",
+                h.hits,
+                h.url,
+                h.last_hit_at,
+                type(^recent, :utc_datetime),
+                ^@recent_hits
+              ),
+            asc: h.last_hit_at,
+            asc: h.id
+          ],
+          limit: ^min(excess, @trim_batch),
+          select: h.id
+
       Brando.Repo.delete_all(from(h in NotFoundHit, where: h.id in subquery(doomed)), opts)
     end
+
+    :ok
+  rescue
+    error in [Postgrex.Error, DBConnection.ConnectionError] ->
+      Logger.warning("==> 404 log: could not trim #{prefix || "public"}: #{Exception.message(error)}")
+      :ok
   end
 
   @doc """

@@ -65,13 +65,61 @@ defmodule Brando.Sites.FourOhFourLogTest do
 
     test "a flood of new URLs stays at the cap and keeps the links people follow" do
       put_test_env(FourOhFour, max_rows: 10)
-      stored("/followed", 2, ~U[2026-01-01 10:00:00Z])
+      stored("/followed", 5, ~U[2026-01-01 10:00:00Z])
 
       for n <- 1..25, do: miss("/flood/#{n}")
       assert FourOhFour.flush() == 25
 
       assert length(rows()) == 10
       assert "/followed" in Enum.map(FourOhFour.list(), & &1.url)
+    end
+
+    test "a URL ranks by its hits across days, not by each row" do
+      put_test_env(FourOhFour, max_rows: 3)
+
+      for days <- 1..3 do
+        Brando.Repo.insert!(%NotFoundHit{
+          url: "/daily",
+          date: Date.add(Date.utc_today(), -days),
+          hits: 1,
+          last_hit_at: ~U[2026-01-01 10:00:00Z]
+        })
+      end
+
+      stored("/twice", 2, ~U[2026-01-02 10:00:00Z])
+
+      miss("/new")
+      FourOhFour.flush()
+
+      assert rows() |> Enum.map(& &1.url) |> Enum.uniq() |> Enum.sort() == ["/daily", "/new"]
+    end
+
+    test "old rows requested a few times do not keep a new link out" do
+      put_test_env(FourOhFour, max_rows: 2)
+      stored("/flood/1", 2, ~U[2026-01-01 10:00:00Z])
+      stored("/flood/2", 2, ~U[2026-01-01 10:00:00Z])
+
+      miss("/new")
+      FourOhFour.flush()
+
+      assert "/new" in Enum.map(rows(), & &1.url)
+    end
+
+    test "a table far past the cap comes down one batch a flush" do
+      put_test_env(FourOhFour, max_rows: 1)
+      now = ~U[2026-01-01 10:00:00Z]
+      today = Date.utc_today()
+      entries = for n <- 1..10_050, do: %{url: "/old/#{n}", referrer: "", date: today, hits: 1, last_hit_at: now}
+
+      entries |> Enum.chunk_every(1000) |> Enum.each(&Brando.Repo.insert_all(NotFoundHit, &1))
+
+      miss("/new")
+      FourOhFour.flush()
+      assert Brando.Repo.aggregate(NotFoundHit, :count) == 51
+
+      miss("/newer")
+      FourOhFour.flush()
+      assert Brando.Repo.aggregate(NotFoundHit, :count) == 1
     end
 
     test "under the cap a flush deletes nothing" do
