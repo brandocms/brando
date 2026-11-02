@@ -86,7 +86,8 @@ defmodule Brando.Content.Proposals.Tools do
       name: "search_entries",
       description:
         "Search entries the user can edit by title or name, in every content type. Returns ids to use as " <>
-          "proposal targets. An empty query with a content_type lists that type's entries.",
+          "proposal targets and in links; a content type list_content_types does not list, such as palettes, " <>
+          "can only be linked to. An empty query with a content_type lists that type's entries.",
       parameters: %{
         type: "object",
         properties: %{
@@ -283,7 +284,7 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp run("list_content_types", _args, %{actor: actor}) do
     types =
-      for schema <- Catalog.editable_schemas(),
+      for schema <- Catalog.proposable_schemas(),
           Brando.Authorization.Boundary.authorize(actor, :update, schema) == :ok do
         %{
           content_type: Codec.content_type(schema),
@@ -1218,7 +1219,7 @@ defmodule Brando.Content.Proposals.Tools do
   # may edit one of those (`list_content_types`) may read them.
   defp editor!(actor) do
     editable? =
-      Enum.any?(Catalog.editable_schemas(), &(Brando.Authorization.Boundary.authorize(actor, :update, &1) == :ok))
+      Enum.any?(Catalog.proposable_schemas(), &(Brando.Authorization.Boundary.authorize(actor, :update, &1) == :ok))
 
     unless editable?, do: Error.fail!("There are no modules you can use.")
   end

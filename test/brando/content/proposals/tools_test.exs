@@ -48,13 +48,15 @@ defmodule Brando.Content.Proposals.ToolsTest do
     assert "title" in names and "uri" in names
     assert %{type: "one of published, draft, disabled, pending"} = Enum.find(fields, &(&1.name == "status"))
 
-    # Entries without block fields are listed too.
-    assert %{block_fields: []} = Enum.find(types, &(&1.content_type == "Brando.Content.Palette"))
+    # Entries without block fields are listed too, but not palettes, which a
+    # proposal may pick and not change.
+    assert %{block_fields: []} = Enum.find(types, &(&1.content_type == "Brando.LockedProposalTest.Note"))
+    refute Enum.find(types, &(&1.content_type == "Brando.Content.Palette"))
 
     palette = Brando.Factory.insert(:palette, name: "Evening", key: "evening")
     {:ok, _} = Brando.Content.create_identifier(Brando.Content.Palette, palette)
 
-    # Search finds them, by name or by listing the type.
+    # Search still finds them, by name or by listing the type.
     %{entries: found} =
       call!("search_entries", %{"query" => palette.name, "content_type" => "Brando.Content.Palette"}, c.context)
 

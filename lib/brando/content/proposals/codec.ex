@@ -8,7 +8,9 @@ defmodule Brando.Content.Proposals.Codec do
   the `prepare_proposal` tool, and the frozen operations stored with a
   proposal. Content types are Blueprint module names (`"Brando.Pages.Page"`)
   and are resolved against the content type catalogue (`schema/1`), never
-  turned into atoms.
+  turned into atoms. A target and a new entry name only a content type a
+  proposal may change (`writable_schema/1`); a value, such as a link, may
+  name any in the catalogue.
 
       %{"op" => "create_entry", "content_type" => "…", "ref" => "case", "fields" => %{}}
       %{"op" => "set_fields", "target" => target, "fields" => %{}}
@@ -82,7 +84,7 @@ defmodule Brando.Content.Proposals.Codec do
 
   defp decode!("create_entry", map, attachments),
     do: %CreateEntry{
-      schema: schema!(map["content_type"]),
+      schema: writable!(map["content_type"]),
       ref: string!(map["ref"], "ref"),
       fields: values(map!(map["fields"]), attachments)
     }
@@ -382,6 +384,48 @@ defmodule Brando.Content.Proposals.Codec do
   def schema(schema) when is_atom(schema) and not is_nil(schema), do: schema(inspect(schema))
   def schema(_), do: :error
 
+  @doc """
+  Resolve a content type name to a schema a proposal may create entries of
+  and change (`Brando.Content.Transfer.Catalog.proposable_schemas/0`, what
+  `list_content_types` lists). A palette resolves with `schema/1`, so a
+  proposal can pick one, but not here.
+  """
+  @spec writable_schema(term()) :: {:ok, module()} | :error
+  def writable_schema(name) do
+    with {:ok, schema} <- schema(name),
+         true <- Brando.Content.Transfer.Catalog.proposable?(schema) do
+      {:ok, schema}
+    else
+      _ -> :error
+    end
+  end
+
+  @doc "Why a proposal may not create or change entries of `name` (`writable_schema/1`)."
+  @spec unwritable_message(term()) :: String.t()
+  def unwritable_message(name) do
+    name = if is_atom(name) and not is_nil(name), do: content_type(name), else: name
+
+    case schema(name) do
+      {:ok, _schema} ->
+        dgettext(
+          "content_proposals",
+          "A proposal cannot create or change %{name} entries. It can only change the content types list_content_types lists.",
+          name: inspect(name)
+        )
+
+      :error ->
+        unknown_message(name)
+    end
+  end
+
+  defp unknown_message(name),
+    do:
+      dgettext(
+        "content_proposals",
+        "Unknown content type %{name}. A proposal can only name the content types list_content_types lists.",
+        name: inspect(name)
+      )
+
   @doc "Encode a proposal target."
   @spec target(term()) :: map()
   def target({:new, ref}), do: %{"new" => ref}
@@ -390,7 +434,7 @@ defmodule Brando.Content.Proposals.Codec do
   defp target!(%{"new" => ref}), do: {:new, string!(ref, "new")}
 
   defp target!(%{"content_type" => name, "id" => id}) do
-    {schema!(name), Brando.Content.Transfer.Catalog.id!(id)}
+    {writable!(name), Brando.Content.Transfer.Catalog.id!(id)}
   rescue
     Brando.Content.Transfer.Error -> invalid!(dgettext("content_proposals", "A target needs a numeric id."))
   end
@@ -400,17 +444,15 @@ defmodule Brando.Content.Proposals.Codec do
 
   defp schema!(name) do
     case schema(name) do
-      {:ok, schema} ->
-        schema
+      {:ok, schema} -> schema
+      :error -> invalid!(unknown_message(name))
+    end
+  end
 
-      :error ->
-        invalid!(
-          dgettext(
-            "content_proposals",
-            "Unknown content type %{name}. A proposal can only name the content types list_content_types lists.",
-            name: inspect(name)
-          )
-        )
+  defp writable!(name) do
+    case writable_schema(name) do
+      {:ok, schema} -> schema
+      :error -> invalid!(unwritable_message(name))
     end
   end
 

@@ -1,0 +1,1 @@
+- Assistant and MCP proposals no longer create or change palettes, which `list_content_types` no longer lists: a proposal can still find, read and pick an existing palette, and one stored before the upgrade that changes a palette is refused at approve and apply.

@@ -134,6 +134,11 @@ msgstr ""
 msgid "A newer version of this proposal exists. Review it instead."
 msgstr ""
 
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "A proposal cannot create or change %{name} entries. It can only change the content types list_content_types lists."
+msgstr ""
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "A proposal requires an authenticated user."
@@ -499,7 +504,6 @@ msgstr ""
 msgid "Undo failed: %{reason}"
 msgstr ""
 
-#: lib/brando/content/proposals.ex
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown content type %{name}. A proposal can only name the content types list_content_types lists."

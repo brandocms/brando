@@ -161,10 +161,12 @@ to the registry later is not offered here until it is added to
 `Brando.MCP.Tools`.
 
 Every call runs as the person, with their permissions in the site
-environment the connection belongs to. A proposal only names the content
-types `list_content_types` lists; Brando's own records (users, global sets,
-menus, vars, modules, site settings) are refused, and the tool gets an error. Results are bounded as in the
-Assistant: 20 results, 160-character excerpts, 24 KB per result. Proposals
+environment the connection belongs to. A proposal only creates and changes
+the content types `list_content_types` lists. A palette can be found, read
+and picked, but not created or changed; Brando's own records (users, global
+sets, menus, vars, modules, site settings) are refused too, and the tool gets
+an error. Results are bounded as in the Assistant: 20 results, 160-character
+excerpts, 24 KB per result. Proposals
 are marked with the tool's name, "From Claude via MCP", and wait under
 **Assistant → From connected tools**.
 

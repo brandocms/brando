@@ -14,9 +14,15 @@ defmodule Brando.Content.Transfer.Catalog do
     |> Enum.sort_by(&Brando.Blueprint.get_plural/1)
   end
 
+  # Palettes are design, not content: a proposal may pick one (search it,
+  # read it, link a block to it) but not create or change one. Nothing in a
+  # Blueprint marks a schema as design, so they are named here.
+  @reference_only [Brando.Content.Palette]
+
   @doc """
-  Content types a proposal can change: those with block fields, and other
-  entries editors manage in an admin listing.
+  Content types a proposal can name: those with block fields, and other
+  entries editors manage in an admin listing. It changes only
+  `proposable_schemas/0`; the others it may read and pick.
   """
   def editable_schemas do
     Brando.Authorization.Catalog.schemas()
@@ -29,6 +35,15 @@ defmodule Brando.Content.Transfer.Catalog do
     (function_exported?(schema, :__blocks_fields__, 0) && schema.__blocks_fields__() != []) ||
       (entry_schema?(schema) && function_exported?(schema, :__listings__, 0) && schema.__listings__() != [])
   end
+
+  @doc """
+  Content types a proposal can create entries of and change, the ones
+  `list_content_types` lists: `editable_schemas/0` without palettes.
+  """
+  def proposable_schemas, do: Enum.reject(editable_schemas(), &(&1 in @reference_only))
+
+  @doc "Whether the registered schema `schema` is one of `proposable_schemas/0`."
+  def proposable?(schema), do: schema not in @reference_only and editable?(schema)
 
   def entry_schemas do
     Brando.Authorization.Catalog.schemas()
