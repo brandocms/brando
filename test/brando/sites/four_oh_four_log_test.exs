@@ -50,59 +50,49 @@ defmodule Brando.Sites.FourOhFourLogTest do
       Brando.Repo.insert!(%NotFoundHit{url: url, date: Date.utc_today(), hits: hits, last_hit_at: last_hit_at})
     end
 
-    test "a flush past the cap deletes the fewest hits, oldest first, and keeps what it wrote" do
+    test "a flush past the cap deletes the least recently hit, and keeps what it wrote" do
       put_test_env(FourOhFour, max_rows: 3)
-      stored("/followed", 40, ~U[2026-01-01 10:00:00Z])
-      stored("/once-old", 1, ~U[2026-01-01 10:00:00Z])
-      stored("/once-newer", 1, ~U[2026-01-02 10:00:00Z])
+      stored("/followed-before", 40, ~U[2026-01-01 10:00:00Z])
+      stored("/once-recent", 1, ~U[2026-01-03 10:00:00Z])
+      stored("/recent", 2, ~U[2026-01-02 10:00:00Z])
 
-      miss("/new")
       miss("/new")
 
       assert FourOhFour.flush() == 1
-      assert rows() |> Enum.map(& &1.url) |> Enum.sort() == ["/followed", "/new", "/once-newer"]
+      assert rows() |> Enum.map(& &1.url) |> Enum.sort() == ["/new", "/once-recent", "/recent"]
     end
 
-    test "a flood of new URLs stays at the cap and keeps the links people follow" do
+    test "a flood of new URLs stays at the cap and keeps the list working" do
       put_test_env(FourOhFour, max_rows: 10)
-      stored("/followed", 5, ~U[2026-01-01 10:00:00Z])
 
       for n <- 1..25, do: miss("/flood/#{n}")
       assert FourOhFour.flush() == 25
-
       assert length(rows()) == 10
+
+      # A link people follow comes back with its next hit
+      miss("/followed")
       assert "/followed" in Enum.map(FourOhFour.list(), & &1.url)
+      assert length(rows()) == 10
     end
 
-    test "a URL ranks by its hits across days, not by each row" do
-      put_test_env(FourOhFour, max_rows: 3)
-
-      for days <- 1..3 do
-        Brando.Repo.insert!(%NotFoundHit{
-          url: "/daily",
-          date: Date.add(Date.utc_today(), -days),
-          hits: 1,
-          last_hit_at: ~U[2026-01-01 10:00:00Z]
-        })
-      end
-
-      stored("/twice", 2, ~U[2026-01-02 10:00:00Z])
-
-      miss("/new")
-      FourOhFour.flush()
-
-      assert rows() |> Enum.map(& &1.url) |> Enum.uniq() |> Enum.sort() == ["/daily", "/new"]
-    end
-
-    test "old rows requested a few times do not keep a new link out" do
+    test "rows with many hits or referrers do not keep a new link out" do
       put_test_env(FourOhFour, max_rows: 2)
-      stored("/flood/1", 2, ~U[2026-01-01 10:00:00Z])
-      stored("/flood/2", 2, ~U[2026-01-01 10:00:00Z])
+      stored("/flood/1", 50, ~U[2026-01-01 10:00:00Z])
+      stored("/flood/2", 50, ~U[2026-01-01 10:00:00Z])
+
+      Brando.Repo.insert!(%NotFoundHit{
+        url: "/flood/1",
+        referrer: "https://a.example/",
+        date: Date.utc_today(),
+        hits: 50,
+        last_hit_at: ~U[2026-01-01 10:00:00Z]
+      })
 
       miss("/new")
       FourOhFour.flush()
 
       assert "/new" in Enum.map(rows(), & &1.url)
+      assert length(rows()) == 2
     end
 
     test "a table far past the cap comes down one batch a flush" do
@@ -120,6 +110,7 @@ defmodule Brando.Sites.FourOhFourLogTest do
       miss("/newer")
       FourOhFour.flush()
       assert Brando.Repo.aggregate(NotFoundHit, :count) == 1
+      assert [%{url: "/newer"}] = rows()
     end
 
     test "under the cap a flush deletes nothing" do

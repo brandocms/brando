@@ -15,8 +15,8 @@ defmodule Brando.Sites.FourOhFour do
   Rows older than `retention_days/0` are deleted nightly by
   `Brando.Worker.NotFoundPurger`. Anyone can request a URL that does not exist,
   so a tenant also keeps at most `max_rows/0` rows: past that, a flush deletes
-  the rows of the URLs with the fewest hits, oldest first. A broken link people
-  keep following outlives a flood of URLs requested once.
+  the rows hit least recently. A burst of made-up URLs pushes out only what
+  nobody has requested since it began, and cannot keep a new broken link out.
 
       config :brando, Brando.Sites.FourOhFour,
         flush_interval: :timer.seconds(60),
@@ -38,7 +38,6 @@ defmodule Brando.Sites.FourOhFour do
   @default_retention_days 90
   @default_max_rows 100_000
   @trim_batch 10_000
-  @recent_hits 3
   @list_limit 500
   @max_url_length 1000
   @max_referrer_length 500
@@ -153,32 +152,18 @@ defmodule Brando.Sites.FourOhFour do
   # than in one delete that may never finish in time. Two nodes trimming at
   # once can delete up to one batch too many, which the log can afford.
   #
-  # A URL's rank is its hits across all its rows, as `list/0` ranks it, so a
-  # link followed once a day outlives one-off requests. Rows hit within the
-  # last hour count extra, so that a new broken link has time to gather hits
-  # and old rows requested a few times each cannot keep it out.
+  # The least recently hit go first, whatever their hits: a requester chooses
+  # how many hits and rows a URL gets, and a ranking by them could be filled
+  # once and keep new links out until retention. This way a flood only pushes
+  # out what nobody has requested since it began, and that returns when it does.
   defp trim(prefix) do
     opts = if prefix, do: [prefix: prefix], else: []
     excess = Brando.Repo.aggregate(NotFoundHit, :count, opts) - max_rows()
 
     if excess > 0 do
-      recent = DateTime.add(DateTime.utc_now(), -1, :hour)
-
       doomed =
         from h in NotFoundHit,
-          order_by: [
-            asc:
-              fragment(
-                "sum(?) OVER (PARTITION BY ?) + CASE WHEN ? >= ? THEN ? ELSE 0 END",
-                h.hits,
-                h.url,
-                h.last_hit_at,
-                type(^recent, :utc_datetime),
-                ^@recent_hits
-              ),
-            asc: h.last_hit_at,
-            asc: h.id
-          ],
+          order_by: [asc: h.last_hit_at, asc: h.hits, asc: h.id],
           limit: ^min(excess, @trim_batch),
           select: h.id
 
