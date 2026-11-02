@@ -82,6 +82,18 @@ defmodule Brando.Cache do
     Brando.Repo.after_commit(key, Brando.Tenant.capture_context(unscoped))
   end
 
+  @doc """
+  Runs `fun`, which reads the site cache `cache`, after the rebuild
+  `rebuild_after_commit/2` held: rendering the entries that show the cache,
+  say, which would otherwise store what it held before. Once per `cache` in
+  a transaction, at once outside one.
+  """
+  @spec after_rebuild(atom(), (-> any())) :: :ok
+  def after_rebuild(cache, fun) do
+    key = {__MODULE__, :after_rebuild, cache, Brando.Tenant.current_prefix(), Brando.Tenant.public?()}
+    Brando.Repo.after_commit(key, Brando.Tenant.capture_context(fun))
+  end
+
   defp get_from_cache(key) do
     @cache_module.get(:cache, cache_key(key))
   end

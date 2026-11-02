@@ -126,11 +126,15 @@ defmodule Brando.Sites do
     # invalidate stored block and entry renders just as Liquid output tags do.
     search_terms = RenderInvalidation.patterns([:identity, :configs, :links])
 
-    # Check for instances in blocks (refs/vars)
-    ContentBlocks.render_entries_matching_regex(search_terms)
+    # The entries render from the identity cache, so after its rebuild,
+    # which waits for the transaction around the caller to commit
+    Brando.Cache.after_rebuild(:identity, fn ->
+      # Check for instances in blocks (refs/vars)
+      ContentBlocks.render_entries_matching_regex(search_terms)
 
-    # Check for instances in modules (this handles the `code` portion of the module's template)
-    ContentBlocks.rerender_matching_modules(search_terms)
+      # Check for instances in modules (this handles the `code` portion of the module's template)
+      ContentBlocks.rerender_matching_modules(search_terms)
+    end)
 
     {:ok, identity}
   end
@@ -388,11 +392,15 @@ defmodule Brando.Sites do
   def update_villains_referencing_global({:ok, global_set}) do
     search_terms = RenderInvalidation.patterns([:globals])
 
-    # Check for instances in blocks (refs/vars)
-    ContentBlocks.render_entries_matching_regex(search_terms)
+    # The entries render from the globals cache, so after its rebuild,
+    # which waits for the transaction around the caller to commit
+    Brando.Cache.after_rebuild(:globals, fn ->
+      # Check for instances in blocks (refs/vars)
+      ContentBlocks.render_entries_matching_regex(search_terms)
 
-    # Check for instances in modules (this handles the `code` portion of the module's template)
-    ContentBlocks.rerender_matching_modules(search_terms)
+      # Check for instances in modules (this handles the `code` portion of the module's template)
+      ContentBlocks.rerender_matching_modules(search_terms)
+    end)
 
     {:ok, global_set}
   end

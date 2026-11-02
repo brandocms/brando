@@ -182,7 +182,7 @@ defmodule Brando.Navigation do
   end
 
   @doc """
-  Check all fields for references to GLOBAL
+  Check all fields for references to NAVIGATION
   Rerender if found.
   """
   @spec update_villains_referencing_navigation({:ok, menu} | {:error, changeset}) ::
@@ -192,11 +192,15 @@ defmodule Brando.Navigation do
   def update_villains_referencing_navigation({:ok, menu}) do
     search_terms = RenderInvalidation.patterns([:navigation])
 
-    # Check for instances in blocks (refs/vars)
-    ContentBlocks.render_entries_matching_regex(search_terms)
+    # The entries render from the navigation cache, so after its rebuild,
+    # which waits for the transaction around the caller to commit
+    Brando.Cache.after_rebuild(:navigation, fn ->
+      # Check for instances in blocks (refs/vars)
+      ContentBlocks.render_entries_matching_regex(search_terms)
 
-    # Check for instances in modules (this handles the `code` portion of the module's template)
-    ContentBlocks.rerender_matching_modules(search_terms)
+      # Check for instances in modules (this handles the `code` portion of the module's template)
+      ContentBlocks.rerender_matching_modules(search_terms)
+    end)
 
     {:ok, menu}
   end

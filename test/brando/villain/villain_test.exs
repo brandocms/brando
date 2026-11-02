@@ -1316,6 +1316,43 @@ defmodule Brando.VillainTest do
              "<div class=\"paragraph\">So the global says: 'My replaced text'.</div>"
   end
 
+  # The entries are rendered from the rebuilt cache: inside a transaction the
+  # rebuild waits for the commit, and so does the render that reads it.
+  test "a global set and a menu saved inside a transaction render their entries once committed", %{user: user} do
+    Brando.Cache.Globals.set()
+    Brando.Cache.Navigation.set()
+
+    {:ok, set} =
+      Brando.Sites.create_global_set(
+        %{label: "System", key: "system", language: "en", vars: [%{type: "text", label: "Text", key: "text", value: "Old"}]},
+        user
+      )
+
+    {:ok, menu} =
+      Brando.Navigation.create_menu(%{status: :published, title: "Old title", key: "main", language: "en", items: []}, user)
+
+    params = pf_module_cs(~s(<div>{{ globals.system.text }} {{ navigation.main.en.title }}</div>))
+    {:ok, fragment} = Brando.Pages.create_fragment(params, user)
+    {:ok, fragment} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, fragment.id)
+    assert fragment.rendered_blocks == "<div>Old Old title</div>"
+
+    [var] = Brando.Repo.preload(set, :vars).vars
+
+    {:ok, _} =
+      Brando.Repo.transaction(fn ->
+        {:ok, _} =
+          Brando.Sites.update_global_set(
+            set.id,
+            %{vars: [%{id: var.id, type: "text", label: "Text", key: "text", value: "New", creator_id: user.id}]},
+            :system
+          )
+
+        {:ok, _} = Brando.Navigation.update_menu(menu.id, %{title: "New title"}, user)
+      end)
+
+    assert Brando.Repo.get(Brando.Pages.Fragment, fragment.id).rendered_blocks == "<div>New New title</div>"
+  end
+
   test "ensure villains update on identity changes", %{user: user} do
     Brando.Cache.Identity.set()
 
