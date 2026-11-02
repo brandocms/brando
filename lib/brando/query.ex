@@ -74,7 +74,7 @@ defmodule Brando.Query do
   end
 
   defmacro mutation(operation, module, do: callback)
-           when operation in [:create, :update, :delete] do
+           when operation in [:create, :update, :delete, :duplicate] do
     Compiler.build_mutation(operation, module, callback, __CALLER__)
   end
 

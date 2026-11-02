@@ -88,8 +88,9 @@ look links up in the cached record's `links` collection. Links also become
 `og:see_also` tags, and a link to an X profile (`https://x.com/example`) gives
 pages their `twitter:site` handle; see [Page metadata](meta.md#x-cards).
 
-Identity updates refresh the cache and enqueue block content referencing identity,
-configs, or links for rendering. Inside a transaction begun with
+Creating, copying and updating an identity through the context refresh the
+cache and enqueue block content referencing identity, configs, or links for
+rendering. Inside a transaction begun with
 `Brando.Repo.transaction/2`, the cache is refreshed once it commits, and not at
 all if it rolls back. Direct `Repo` writes skip those callbacks. During
 a controlled import, refresh the cache in each affected environment and invoke
@@ -158,7 +159,8 @@ values are filled from these settings when metadata renders.
 
 `Brando.Cache.SEO.get(language)` returns an empty SEO struct if the language has
 no row. That keeps lookups possible but does not provide meaningful metadata.
-SEO context updates refresh the SEO cache; they do not automatically rerender
+Creating, copying and updating an SEO record through the context refresh the SEO
+cache; they do not automatically rerender
 arbitrary block templates or rebuild a static deployment. Rebuild those outputs
 when they embed settings at build time.
 

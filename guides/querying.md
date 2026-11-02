@@ -572,7 +572,8 @@ mutation :update, {Project, preload: [:category]}
 
 <!-- usage-rules:end -->
 
-Create, update, and delete declarations can run a callback after the mutation:
+Create, update, delete, and duplicate declarations can run a callback after the
+mutation. It gets the saved, deleted, or new copied entry:
 
 ```elixir
 mutation :update, Project do

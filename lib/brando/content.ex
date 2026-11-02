@@ -457,8 +457,15 @@ defmodule Brando.Content do
     end
   end
 
-  mutation :delete, Palette
-  mutation :duplicate, {Palette, change_fields: [:name, key: &__MODULE__.duplicate_palette_key/2]}
+  # Palettes are soft-deleted: `Brando.Cache.entry_changed/1` puts one
+  # restored from the trash back
+  mutation :delete, Palette do
+    fn entry -> Brando.Cache.Palettes.update({:ok, entry}) end
+  end
+
+  mutation :duplicate, {Palette, change_fields: [:name, key: &__MODULE__.duplicate_palette_key/2]} do
+    fn entry -> Brando.Cache.Palettes.update({:ok, entry}) end
+  end
 
   # A key names CSS (`Palette.css_name?/1`): " (copy)" would not be one. A
   # key taken in the namespace gets a number, so two copies' sections differ.

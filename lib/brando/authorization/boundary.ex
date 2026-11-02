@@ -191,6 +191,7 @@ defmodule Brando.Authorization.Boundary do
            {:ok, restored} <- Repo.restore(entry) do
         Brando.Activity.restored(restored, user)
         Brando.Notes.entry_restored(schema, entry)
+        Brando.Cache.entry_changed(restored)
         {:ok, restored}
       end
     end)

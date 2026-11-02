@@ -94,7 +94,7 @@ defmodule Brando.Query.Compiler do
   defp build_mutation_ast(:create, module, callback), do: mutation_create(module, callback)
   defp build_mutation_ast(:update, module, callback), do: mutation_update(module, callback)
   defp build_mutation_ast(:delete, module, callback), do: mutation_delete(module, callback)
-  defp build_mutation_ast(:duplicate, module, nil), do: mutation_duplicate(module)
+  defp build_mutation_ast(:duplicate, module, callback), do: mutation_duplicate(module, callback)
 
   defp mutation_engine_ast, do: quote(do: Brando.Query.Mutations)
 
@@ -414,10 +414,13 @@ defmodule Brando.Query.Compiler do
     end
   end
 
-  defp mutation_duplicate({module, opts}), do: do_mutation_duplicate(module, opts)
-  defp mutation_duplicate(module), do: do_mutation_duplicate(module, [])
+  defp mutation_duplicate({module, opts}, callback_block),
+    do: do_mutation_duplicate(module, opts, callback_block || @default_callback)
 
-  defp do_mutation_duplicate(module, opts) do
+  defp mutation_duplicate(module, callback_block),
+    do: do_mutation_duplicate(module, [], callback_block || @default_callback)
+
+  defp do_mutation_duplicate(module, opts, callback_block) do
     singular_schema = module.__naming__().singular
     mutation_engine = mutation_engine_ast()
 
@@ -430,7 +433,8 @@ defmodule Brando.Query.Compiler do
           id,
           user: user,
           duplicate_opts: unquote(opts),
-          override_opts: override_opts
+          override_opts: override_opts,
+          callback: unquote(callback_block)
         )
       end
     end

@@ -110,6 +110,36 @@ defmodule Brando.Cache do
     Brando.Repo.after_commit(key, Tenant.capture_context(fun), late: true)
   end
 
+  @doc """
+  Rebuilds the site cache that holds `entry` (a palette, global set, menu or
+  menu item, identity or SEO record) and renders the entries that show it,
+  as its context's mutation callbacks do, for a write that runs none: a
+  restore from the trash, a status set from a listing in legacy mode. Leaves
+  any other entry alone.
+  """
+  @spec entry_changed(struct()) :: :ok
+  def entry_changed(%{__struct__: Brando.Content.Palette} = entry),
+    do: refreshed(Brando.Cache.Palettes.update({:ok, entry}))
+
+  def entry_changed(%{__struct__: Brando.Sites.GlobalSet} = entry),
+    do: {:ok, entry} |> Brando.Cache.Globals.update() |> Brando.Sites.update_villains_referencing_global() |> refreshed()
+
+  def entry_changed(%{__struct__: schema} = entry) when schema in [Brando.Navigation.Menu, Brando.Navigation.Item],
+    do:
+      {:ok, entry}
+      |> Brando.Cache.Navigation.update()
+      |> Brando.Navigation.update_villains_referencing_navigation()
+      |> refreshed()
+
+  def entry_changed(%{__struct__: Brando.Sites.Identity} = entry),
+    do:
+      {:ok, entry} |> Brando.Cache.Identity.update() |> Brando.Sites.update_villains_referencing_identity() |> refreshed()
+
+  def entry_changed(%{__struct__: Brando.Sites.SEO} = entry), do: refreshed(Brando.Cache.SEO.update({:ok, entry}))
+  def entry_changed(_entry), do: :ok
+
+  defp refreshed({:ok, _entry}), do: :ok
+
   defp get_from_cache(key) do
     @cache_module.get(:cache, cache_key(key))
   end

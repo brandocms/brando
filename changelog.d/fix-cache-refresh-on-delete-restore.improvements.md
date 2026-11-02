@@ -1,0 +1,1 @@
+- `mutation :duplicate` takes a callback, as create, update and delete do; it gets the new copy.
