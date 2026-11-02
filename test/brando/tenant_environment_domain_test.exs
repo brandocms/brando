@@ -216,6 +216,16 @@ defmodule Brando.TenantEnvironmentDomainTest do
       assert {_site, %Environment{key: "staging"}} = Cache.get_env_by_domain("www.acme.test")
     end
 
+    test "in a transaction, the routing cache takes a host once it commits", %{environment: environment} do
+      {:ok, _} =
+        Brando.Repo.transaction(fn ->
+          {:ok, _environment} = put_domain(environment, "www.acme.test")
+          refute Cache.get_env_by_domain("www.acme.test")
+        end)
+
+      assert {_site, %Environment{key: "production"}} = Cache.get_env_by_domain("www.acme.test")
+    end
+
     test "a host one site released can be taken only by the installation", %{site: site, environment: environment} do
       {:ok, environment} = put_domain(environment, "www.acme.test")
       {:ok, _released} = put_domain(environment, nil)
