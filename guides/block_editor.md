@@ -246,10 +246,33 @@ own code runs.
 Tags (`{% picture %}`, `{% video %}`, `{% route %}`) read the record or the value
 itself, and filters on a record (`media_url`, `absolute_url`, `date`, `i18n`) get
 the record. A filter's text result goes back to being text; a filter of your own
-that makes markup returns `{:safe, html}`. A record or map it returns reads like
-entry data, also inside a list, and a filter given that map gets its credential
-fields empty. A tag of your own reads its argument with `Brando.Villain.TemplateView.eval/2`, and escapes what
-it prints.
+that makes markup returns `{:safe, html}`. A record it returns reads like entry
+data, also inside a list, and a filter given that record gets its credential
+fields empty. A tag of your own reads its argument with
+`Brando.Villain.TemplateView.eval/2`, and escapes what it prints.
+
+A plain map a filter of your own builds reads like what the filter was given.
+Built from `entry` or a datasource's `entries`, it reads like entry data. Built
+from `block`, whose vars the parser has already escaped, it prints as it is:
+the markup in its strings is not escaped, and its credential fields show. Such
+a filter wraps what it returns with `Brando.Villain.TemplateView.wrap/2`, so it
+reads like entry data:
+
+```elixir
+defmodule MyAppWeb.Villain.Filters do
+  use Brando.Villain.Filters
+  alias Brando.Villain.TemplateView
+
+  # {% assign cases = block | related_cases %}
+  # {% for case in cases %}<a href="{{ case.url }}">{{ case.title }}</a>{% endfor %}
+  def related_cases(block, _context) do
+    block.uid
+    |> MyApp.Cases.list_related()
+    |> Enum.map(&%{"title" => &1.title, "url" => &1.url})
+    |> TemplateView.wrap()
+  end
+end
+```
 
 `escape` never encodes twice; `url_encode`, `slugify` and `markdown` read escaped
 text as the text it stands for. `size` and `truncate` count a brace as one
