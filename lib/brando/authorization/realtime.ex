@@ -95,6 +95,18 @@ defmodule Brando.Authorization.Realtime do
         do: Engine.can?(%{scope | user_id: user.id}, :access, :backend),
         else: legacy_site_access?(scope, user)
     end)
+    |> limit_legacy_installation(scope)
+  end
+
+  # Outside a site in legacy multi-site mode, only a superuser works among
+  # colleagues. Everyone else there is an account on its own password screen,
+  # with no site in common with anyone.
+  defp limit_legacy_installation(users, %Scope{kind: :site}), do: users
+
+  defp limit_legacy_installation(users, %Scope{user_id: id}) do
+    if Engine.enabled?() or Brando.Tenant.mode() != :multi or Enum.any?(users, &(&1.id == id and &1.role == :superuser)),
+      do: users,
+      else: Enum.filter(users, &(&1.id == id))
   end
 
   def visible_meta?(scope, %{scope: presence_scope}), do: workspace(scope) == workspace(presence_scope)

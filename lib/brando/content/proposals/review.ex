@@ -8,6 +8,7 @@ defmodule Brando.Content.Proposals.Review do
   Everything here is derived from the stored proposal — the same frozen
   operations `apply/3` executes — so the review cannot drift from the result.
   """
+  alias Brando.Authorization.Boundary
   alias Brando.Content
 
   alias Brando.Content.Proposals.{
@@ -795,8 +796,11 @@ defmodule Brando.Content.Proposals.Review do
 
   defp saved_value(%{type: :boolean} = var), do: var.value_boolean
 
-  defp saved_value(%{type: :link, identifier: %{title: title} = identifier}) when is_binary(title),
-    do: Content.Identifier.title_text(identifier)
+  defp saved_value(%{type: :link, identifier: %{title: title} = identifier}) when is_binary(title) do
+    if Boundary.readable_entry?(identifier.schema, identifier.entry_id),
+      do: Content.Identifier.title_text(identifier),
+      else: "##{identifier.entry_id}"
+  end
 
   defp saved_value(%{type: type}) when type in [:image, :video], do: nil
   defp saved_value(var), do: option(var, var.value)
@@ -822,8 +826,10 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp option(_var, {:entry, schema, id}) do
-    case Content.get_identifier(schema, %{id: id}) do
-      {:ok, %{title: title} = identifier} when is_binary(title) -> Content.Identifier.title_text(identifier)
+    with true <- Boundary.readable_entry?(schema, id),
+         {:ok, %{title: title} = identifier} when is_binary(title) <- Content.get_identifier(schema, %{id: id}) do
+      Content.Identifier.title_text(identifier)
+    else
       _ -> "##{id}"
     end
   end
@@ -954,7 +960,7 @@ defmodule Brando.Content.Proposals.Review do
     with true <- String.ends_with?(name, "_id"),
          relation = String.to_existing_atom(String.replace_suffix(name, "_id", "")),
          %{related: related} <- schema.__schema__(:association, relation),
-         %{} = record <- Brando.Repo.get(related, id) do
+         %{} = record <- related |> Ecto.Queryable.to_query() |> Boundary.query(related) |> Brando.Repo.get(id) do
       Map.get(record, :title) || Map.get(record, :name) || "##{id}"
     else
       _ -> id

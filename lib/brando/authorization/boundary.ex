@@ -235,21 +235,55 @@ defmodule Brando.Authorization.Boundary do
   def identifiers(query) do
     if Engine.enabled?() and current_scope() do
       import Ecto.Query, only: [dynamic: 2, where: 3, from: 2, subquery: 1]
-      snapshot = Engine.snapshot(current_scope())
 
-      allowed =
-        Brando.Authorization.Catalog.schemas()
-        |> Enum.filter(&Engine.can?(snapshot, :read, &1))
-        |> Enum.reduce(dynamic([identifier], false), fn schema, allowed ->
-          ids = from(entry in Engine.scope(current_scope(), :read, schema), select: entry.id)
-          dynamic([identifier], ^allowed or (identifier.schema == ^schema and identifier.entry_id in subquery(ids)))
-        end)
+      Engine.with_snapshots(fn ->
+        snapshot = Engine.snapshot(current_scope())
 
-      where(query, [identifier], ^allowed)
+        allowed =
+          Brando.Authorization.Catalog.schemas()
+          |> Enum.filter(&Engine.can?(snapshot, :read, &1))
+          |> Enum.reduce(dynamic([identifier], false), fn schema, allowed ->
+            ids = from(entry in Engine.scope(current_scope(), :read, schema), select: entry.id)
+            dynamic([identifier], ^allowed or (identifier.schema == ^schema and identifier.entry_id in subquery(ids)))
+          end)
+
+        where(query, [identifier], ^allowed)
+      end)
     else
       query
     end
   end
+
+  @doc """
+  The `{schema, id}` entries among `entries` the current admin scope may read,
+  as a `MapSet`: for naming an entry on a screen about something else. Decides
+  by each entry's own schema, so an entry with no identifier row counts too.
+  One query per schema, however many entries. Outside an admin scope, and
+  without group authorization, all of them.
+  """
+  def readable_entries(entries) do
+    if Engine.enabled?() and current_scope() do
+      import Ecto.Query, only: [from: 2]
+
+      Engine.with_snapshots(fn ->
+        entries
+        |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+        |> Enum.flat_map(fn {schema, ids} ->
+          ids = Enum.uniq(ids)
+
+          from(entry in Engine.scope(current_scope(), :read, schema), where: entry.id in ^ids, select: entry.id)
+          |> Repo.all()
+          |> Enum.map(&{schema, &1})
+        end)
+        |> MapSet.new()
+      end)
+    else
+      MapSet.new(entries)
+    end
+  end
+
+  @doc "Whether the current admin scope may read this entry. See `readable_entries/1`."
+  def readable_entry?(schema, id), do: MapSet.member?(readable_entries([{schema, id}]), {schema, id})
 
   def cache_options(args) do
     if Engine.enabled?() and current_scope(), do: Map.delete(args, :cache), else: args

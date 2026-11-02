@@ -65,17 +65,21 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
     Module.concat(["Brando", "Files", "File"]) => :file
   }
 
-  # A long list is cut: the dialog names the first few and counts the rest.
+  # A long list is cut: the dialog names the first few and counts the rest,
+  # with the places the viewer may not read, which it never names.
   @usage_shown 5
 
   defp usage(schema, entry) do
-    case usages(schema, entry) do
-      [] ->
+    case schema |> usages(entry) |> Usage.split() do
+      {[], 0} ->
         ""
 
-      usages ->
+      {[], hidden} ->
+        " " <> ngettext("It is used in one place.", "It is used in %{count} places.", hidden)
+
+      {usages, hidden} ->
         shown = Enum.take(usages, @usage_shown)
-        rest = length(usages) - length(shown)
+        rest = length(usages) - length(shown) + hidden
 
         links =
           Enum.map(shown, fn
@@ -89,7 +93,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
         links = if rest > 0, do: links ++ [gettext("%{count} more", count: rest)], else: links
 
         " " <>
-          ngettext("It is used in one place: %{places}.", "It is used in %{count} places: %{places}.", length(usages),
+          ngettext("It is used in one place: %{places}.", "It is used in %{count} places: %{places}.", length(usages) + hidden,
             places: to_sentence(links)
           )
     end

@@ -215,6 +215,9 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
           </div>
           <aside class="identifier-picker-details">
             <h3>{gettext("Selected destination")}</h3>
+            <p :if={@selected_identifier_id && !@selected_identifier} class="modal-muted">
+              {gettext("The selected entry is unavailable.")}
+            </p>
             <%= if @selected_identifier do %>
               <div class="identifier-destination-heading">
                 <h4>{Identifier.title_text(@selected_identifier)}</h4>
@@ -240,7 +243,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
               </dl>
               <Content.modal_person :if={@selected_creator} user={@selected_creator} caption={gettext("Creator")} />
             <% else %>
-              <p class="modal-muted">{gettext("Select an entry to see its details.")}</p>
+              <p :if={!@selected_identifier_id} class="modal-muted">{gettext("Select an entry to see its details.")}</p>
             <% end %>
             <div :if={@details != []} class="identifier-link-settings">{render_slot(@details)}</div>
           </aside>
@@ -506,9 +509,9 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         _ -> socket.assigns.selected_identifier_id
       end
 
-    identifier = socket.assigns.selected_identifier
-
-    if (identifier && identifier.id) != id || !Map.has_key?(socket.assigns, :selected_creator) do
+    # By id: a selection the account may not read has an id and no identifier,
+    # and stays stored until someone chooses another.
+    if socket.assigns.selected_identifier_id != id || !Map.has_key?(socket.assigns, :selected_creator) do
       identifier = if id, do: Brando.Content.get_identifier!(id)
 
       socket
@@ -586,11 +589,14 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
         query
       end
 
-    if require_url do
-      # Entries with a page here, or a destination elsewhere (`link_others_to:`).
-      where(query, [t], (not is_nil(t.url) and t.url != "") or (not is_nil(t.external_url) and t.external_url != ""))
-    else
-      query
-    end
+    query =
+      if require_url do
+        # Entries with a page here, or a destination elsewhere (`link_others_to:`).
+        where(query, [t], (not is_nil(t.url) and t.url != "") or (not is_nil(t.external_url) and t.external_url != ""))
+      else
+        query
+      end
+
+    Brando.Authorization.Boundary.identifiers(query)
   end
 end

@@ -392,14 +392,7 @@ defmodule Brando.Content.Proposals.Tools do
         status: to_string(Map.get(entry, :status)),
         live: Map.get(entry, :status) == :published,
         fields: scalar_fields(entry),
-        lists:
-          for(
-            {name, _} <- EntryFields.lists(schema),
-            current = EntryFields.current(entry, name),
-            current not in [nil, ""],
-            into: %{},
-            do: {name, current}
-          ),
+        lists: outline_lists(schema, entry, actor),
         media: Map.new(assets, fn {name, {kind, id}} -> {name, media_summary(kind, id, dimensions)} end)
       }
       |> put_present(:languages, languages(entry, actor))
@@ -774,6 +767,17 @@ defmodule Brando.Content.Proposals.Tools do
   defp readable_options(options, actor) do
     readable = options |> Enum.map(&Map.get(&1, :id)) |> readable_identifiers(actor)
     Enum.filter(options, &readable?(readable, Map.get(&1, :id)))
+  end
+
+  # The entry's lists, as `actor` may read them.
+  defp outline_lists(schema, entry, actor) do
+    Boundary.with_scope(Boundary.actor_scope(actor), fn ->
+      for {name, _} <- EntryFields.lists(schema),
+          current = EntryFields.current(entry, name),
+          current not in [nil, ""],
+          into: %{},
+          do: {name, current}
+    end)
   end
 
   # The identifiers among `ids` that `actor` may read, filtered as search and

@@ -10,6 +10,7 @@ defmodule BrandoAdmin.Sites.BlockAuditLive do
 
   import Ecto.Query
 
+  alias Brando.Authorization.Boundary
   alias Brando.Content.BlockAudit
   alias Brando.Content.Usage
   alias Brando.Images.Image
@@ -53,6 +54,8 @@ defmodule BrandoAdmin.Sites.BlockAuditLive do
       |> Enum.flat_map(& &1.held_by)
       |> Enum.map(&holder_key/1)
       |> Enum.uniq()
+      |> Boundary.readable_entries()
+      |> MapSet.to_list()
       |> Usage.labels()
 
     removable = for tree <- scan.trees, tree.status == :removable, into: MapSet.new(), do: tree.id
@@ -306,7 +309,7 @@ defmodule BrandoAdmin.Sites.BlockAuditLive do
                     <.link :if={@holders[holder_key(holder)][:url]} navigate={@holders[holder_key(holder)].url}>
                       {@holders[holder_key(holder)].label}
                     </.link>
-                    <span :if={!@holders[holder_key(holder)][:url]}>{@holders[holder_key(holder)][:label]}</span>
+                    <span :if={!@holders[holder_key(holder)][:url]}>{@holders[holder_key(holder)][:label] || gettext("An entry you cannot open")}</span>
                     · {gettext("version %{number}", number: holder.revision)}
                   </span>
                 </div>

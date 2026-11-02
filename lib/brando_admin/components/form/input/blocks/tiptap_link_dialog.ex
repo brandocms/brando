@@ -30,6 +30,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
        language: nil,
        error: nil,
        unavailable_destination: false,
+       kept_destination: nil,
        original_class: nil,
        original_rel: nil,
        applying: false,
@@ -62,6 +63,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
        selected_identifier: identifier,
        selected_identifier_id: identifier && identifier.id,
        unavailable_destination: !!params[:current_identifier_id] && is_nil(identifier),
+       kept_destination: if(is_nil(identifier) && params[:current_identifier_id], do: {params[:current_identifier_id], href}),
        has_existing_link?: href != "",
        original_class: params[:current_class],
        original_target: params[:current_target],
@@ -381,12 +383,17 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.TipTapLinkDialog do
          class: assigns.original_class,
          link_text: draft["text"],
          mark_type: draft["appearance"],
-         identifier_id: if(assigns.link_type == :identifier, do: assigns.selected_identifier_id)
+         identifier_id: link_identifier_id(assigns)
        }}
     else
       _ -> {:error, :invalid_link}
     end
   end
+
+  defp link_identifier_id(%{link_type: :identifier, selected_identifier_id: id}), do: id
+  # A destination this account may not read stays on the link while its URL does.
+  defp link_identifier_id(%{link_type: :url, kept_destination: {id, href}, draft: %{"url" => href}}), do: id
+  defp link_identifier_id(_assigns), do: nil
 
   defp link_url(%{link_type: :url, draft: draft}), do: draft["url"]
 
