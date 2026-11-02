@@ -408,11 +408,7 @@ defmodule Brando.Content.Proposals.Review do
         type: :block_selection,
         uid: op.block_uid,
         block: block_label(entry, op.field, op.block_uid, proposal),
-        before:
-          saved &&
-            Enum.map(saved.block_identifiers || [], fn bi ->
-              Content.Identifier.title_text(bi.identifier) || "##{bi.identifier_id}"
-            end),
+        before: saved && saved_selection(saved.block_identifiers || []),
         entries: Enum.map(op.identifiers, &Map.get(titles, &1, "##{&1}"))
       }
     ]
@@ -443,6 +439,21 @@ defmodule Brando.Content.Proposals.Review do
     is_map(data) and to_string(Map.get(data, String.to_existing_atom(key))) == to_string(value)
   rescue
     _ -> false
+  end
+
+  defp saved_selection(block_identifiers) do
+    readable =
+      Boundary.readable_entries(
+        for %{identifier: %{schema: schema, entry_id: id}} <- block_identifiers, do: {schema, id}
+      )
+
+    Enum.map(block_identifiers, fn
+      %{identifier: %{schema: schema, entry_id: id} = identifier} = bi ->
+        (MapSet.member?(readable, {schema, id}) && Content.Identifier.title_text(identifier)) || "##{bi.identifier_id}"
+
+      bi ->
+        "##{bi.identifier_id}"
+    end)
   end
 
   defp identifier_titles(ids) do
@@ -746,13 +757,15 @@ defmodule Brando.Content.Proposals.Review do
     end
   end
 
-  # What a block is about: the entry a link variable points to — a project
-  # block names its project — or else the start of its text, or of its first
-  # text variable (a team member block holds only a name and a role).
+  # What a block is about: the entry a link variable points to, if the viewer
+  # may read it — a project block names its project — or else the start of its
+  # text, or of its first text variable (a team member block holds only a name
+  # and a role).
   defp describe(block) do
     Enum.find_value(block.vars || [], fn
       %{type: :link, identifier: %{title: title} = identifier} when is_binary(title) and title != "" ->
-        Content.Identifier.title_text(identifier)
+        if Boundary.readable_entry?(identifier.schema, identifier.entry_id),
+          do: Content.Identifier.title_text(identifier)
 
       _ ->
         nil

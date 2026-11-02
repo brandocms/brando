@@ -518,6 +518,48 @@ defmodule BrandoAdmin.ReadScopesTest do
       assert inspect(Brando.Content.Proposals.Review.entries(proposal)) =~ @secret
     end
 
+    test "a block is not named after a link or selection the viewer may not read", c do
+      link = %Brando.Content.Var{type: :link, key: "link", label: "Link", identifier: c.identifier}
+      text = %Brando.Content.Var{type: :string, key: "name", label: "Name", value: "Visible excerpt"}
+      selected = %Brando.Content.BlockIdentifier{identifier_id: c.identifier.id, identifier: c.identifier}
+
+      block = %Block{
+        uid: "named",
+        type: :module,
+        sequence: 0,
+        refs: [],
+        vars: [link, text],
+        block_identifiers: [selected],
+        children: []
+      }
+
+      entry = %{c.article | entry_blocks: [%{block: block, sequence: 0}]}
+      target = {Article, entry.id}
+
+      proposal = %Brando.Content.Proposals.Proposal{
+        operations: [
+          %Brando.Content.Proposals.SetBlockSelection{target: target, block_uid: "named", identifiers: [c.identifier.id]},
+          %Brando.Content.Proposals.MoveBlock{target: target, block_uid: "named", placement: :append}
+        ],
+        targets: %{target => entry}
+      }
+
+      as(article_reader())
+      [%{changes: [selection, order]}] = Brando.Content.Proposals.Review.entries(proposal)
+      assert selection.block =~ "Visible excerpt"
+      refute inspect(selection) =~ @secret
+      assert selection.before == ["##{c.identifier.id}"]
+      assert selection.entries == ["##{c.identifier.id}"]
+      assert [%{excerpt: "Visible excerpt"}] = order.items
+
+      as(article_reader(@page_read))
+      [%{changes: [selection, order]}] = Brando.Content.Proposals.Review.entries(proposal)
+      assert selection.block =~ @secret
+      assert selection.before == [@secret]
+      assert selection.entries == [@secret]
+      assert [%{excerpt: @secret}] = order.items
+    end
+
     test "legacy mode names it", c do
       put_test_env(:authorization_mode, :legacy)
       assert {:ok, %{lists: %{"related_entries" => @secret}}} = outline(c.article, c.superuser)
