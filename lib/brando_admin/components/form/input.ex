@@ -1228,13 +1228,15 @@ defmodule BrandoAdmin.Components.Form.Input do
     assigns = assign(assigns, :wrapper, wrapper)
 
     ~H"""
-    <div id={@wrapper} class={["disclosed-text", @field.errors != [] && "is-open"]}>
+    <div id={@wrapper} class="disclosed-text" data-open={@field.errors != []}>
+      <%!-- An attribute, not a class: JS.add_class applies in a later frame,
+      so the focus would find the field still hidden. --%>
       <button
         type="button"
         class="disclosed-text-summary"
         disabled={@locked}
         phx-click={
-          JS.add_class("is-open", to: "##{@wrapper}")
+          JS.set_attribute({"data-open", ""}, to: "##{@wrapper}")
           |> JS.focus(to: "##{@field.id}")
         }
       >

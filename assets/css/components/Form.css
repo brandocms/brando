@@ -1476,8 +1476,8 @@ html.not-mac .shortcut-other { display: inline; }
 }
 
 .disclosed-text-field { display: none; }
-.disclosed-text.is-open .disclosed-text-summary { display: none; }
-.disclosed-text.is-open .disclosed-text-field { display: block; }
+.disclosed-text[data-open] .disclosed-text-summary { display: none; }
+.disclosed-text[data-open] .disclosed-text-field { display: block; }
 
 
 .draft-offline .form-save-details { color: var(--brando-muted); }

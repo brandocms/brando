@@ -75,8 +75,9 @@ test('related entries can be cleared, saved and selected again without losing ot
     await page.setViewportSize({ width, height: 1100 })
     await field.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
     await page.mouse.move(0, 0)
-    expect(await field.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    // The page settles in the frames after a resize, so poll the measurement
+    await expect.poll(() => field.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await field.screenshot({ path: testInfo.outputPath(`related-entries-selected-${width}.png`) })
     if (width === 1440) {
       await selected.first().getByRole('button', { name: 'Remove', exact: true }).hover()
@@ -128,8 +129,8 @@ test('related entries can be cleared, saved and selected again without losing ot
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1100 })
     await field.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }))
-    expect(await field.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
-    expect(await gallery.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await expect.poll(() => field.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    await expect.poll(() => gallery.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
     await field.screenshot({ path: testInfo.outputPath(`related-entries-norwegian-${width}.png`) })
     await gallery.screenshot({ path: testInfo.outputPath(`project-gallery-norwegian-${width}.png`) })
   }
