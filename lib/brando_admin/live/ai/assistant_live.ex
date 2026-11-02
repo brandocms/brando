@@ -793,7 +793,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       <span class="assistant-empty-mark is-error" aria-hidden="true"><.icon name="triangle-alert" /></span>
       <h2>{gettext("This proposal cannot be applied")}</h2>
       <div :if={@error} class="assistant-feedback is-error" role="alert">{@error}</div>
-      <p>{gettext("Nothing from it has been saved. Discard it, then prepare the changes again.")}</p>
+      <p>{gettext("None of its changes have been saved. Discard it, then prepare them again.")}</p>
       <div class="assistant-unloadable-actions">
         <button type="button" class="btn btn--danger" phx-click="cancel_proposal">{gettext("Discard")}</button>
       </div>

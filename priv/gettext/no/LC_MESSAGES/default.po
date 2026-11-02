@@ -11249,6 +11249,11 @@ msgstr "Er ingen valgt, sendes hendelser for alle innholdstyper. Feilede jobber 
 msgid "None chosen sends events in every language."
 msgstr "Velger du ingen, sendes hendelser på alle språk."
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "None of its changes have been saved. Discard it, then prepare them again."
+msgstr "Ingen av endringene er lagret. Forkast det, og forbered dem på nytt."
+
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "None of the files in this folder are used by an entry, so there is nothing to sort."
@@ -11509,11 +11514,6 @@ msgstr[1] "Notater, %{count} åpne"
 #, elixir-autogen, elixir-format
 msgid "Nothing expires soon"
 msgstr "Ingenting utløper snart"
-
-#: lib/brando_admin/live/ai/assistant_live.ex
-#, elixir-autogen, elixir-format
-msgid "Nothing from it has been saved. Discard it, then prepare the changes again."
-msgstr "Ingenting fra det er lagret. Forkast det, og forbered endringene på nytt."
 
 #: lib/brando_admin/components/module_files.ex
 #, elixir-autogen, elixir-format

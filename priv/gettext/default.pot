@@ -11247,6 +11247,11 @@ msgstr ""
 msgid "None chosen sends events in every language."
 msgstr ""
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "None of its changes have been saved. Discard it, then prepare them again."
+msgstr ""
+
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "None of the files in this folder are used by an entry, so there is nothing to sort."
@@ -11506,11 +11511,6 @@ msgstr[1] ""
 #: lib/brando_admin/components/dashboard.ex
 #, elixir-autogen, elixir-format
 msgid "Nothing expires soon"
-msgstr ""
-
-#: lib/brando_admin/live/ai/assistant_live.ex
-#, elixir-autogen, elixir-format
-msgid "Nothing from it has been saved. Discard it, then prepare the changes again."
 msgstr ""
 
 #: lib/brando_admin/components/module_files.ex
