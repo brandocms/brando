@@ -134,6 +134,18 @@ defmodule BrandoAdmin.DrawerForbiddenSaveTest do
     end
   end
 
+  # An image stored without a focal point shows the middle, 50/50
+  test "closing an unchanged drawer on an image with no focal point", %{conn: conn, page: page} do
+    image = Factory.insert(:image, title: %{"en" => "Lobby"}, status: :processed, focal: nil)
+    view = open(conn, page, :image, image)
+
+    params = view |> render() |> form_params("#image-drawer-form")
+    view |> form() |> render_hook("save_image", params)
+
+    assert Process.alive?(view.pid)
+    refute_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: @refused}}, 300
+  end
+
   test "resetting the video's thumbnail without a grant on the video", %{conn: conn, page: page, assets: assets} do
     view = open(conn, page, :video, assets.video)
 

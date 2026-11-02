@@ -3099,9 +3099,13 @@ defmodule BrandoAdmin.Components.Form do
   defp drawer_changed?(%Changeset{data: data} = changeset, type) do
     Enum.any?([:focal | drawer_fields(type)], fn field ->
       Map.has_key?(changeset.changes, field) and
-        without_blanks(Changeset.get_field(changeset, field)) != without_blanks(Map.get(data, field))
+        without_blanks(Changeset.get_field(changeset, field)) != without_blanks(drawer_shown(data, field))
     end)
   end
+
+  # An image with no focal point shows, and sends back, the middle
+  defp drawer_shown(%Images.Image{focal: nil}, :focal), do: %Images.Focal{x: 50, y: 50}
+  defp drawer_shown(data, field), do: Map.get(data, field)
 
   defp without_blanks(%{} = value) when not is_struct(value) do
     case Map.reject(value, fn {_, v} -> v in [nil, ""] end) do
