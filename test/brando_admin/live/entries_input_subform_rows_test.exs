@@ -219,6 +219,47 @@ defmodule BrandoAdmin.EntriesInputSubformRowsTest do
     end
   end
 
+  # `inputs_for :author`, a `has_one`: the subform holds one row, not a list
+  describe "in a one-to-one subform" do
+    setup %{conn: conn} = c do
+      put_test_env(:authorization_mode, :legacy)
+      author = Repo.insert!(%Brando.SyncTest.ArticleAuthor{article_id: c.article.id, name: "Author"})
+      join = Brando.SyncTest.ArticleAuthor.__schema__(:association, :related_entries).related
+      Repo.insert!(struct(join, parent_id: author.id, identifier_id: c.linked.id, sequence: 0))
+      {:ok, conn: superuser(conn), author: author, author_join: join}
+    end
+
+    defp author_links(view) do
+      (get_in(params(view), ["article", "author", "related_entries"]) || %{})
+      |> Enum.sort_by(fn {index, _} -> String.to_integer(index) end)
+      |> Enum.map(fn {_, row} -> row["identifier_id"] end)
+      |> Enum.reject(&(&1 in [nil, ""]))
+    end
+
+    test "a pick goes to the row and is saved with it", %{conn: conn} = c do
+      view = open(conn, c.article, "author_entries")
+      view |> element("#article_author_0_related_entries-field-wrapper button", "Select entries") |> render_click()
+
+      view
+      |> element("#article_author_0_related_entries-entries-options [data-id='#{c.picked.id}']")
+      |> render_click()
+
+      assert author_links(view) == [to_string(c.linked.id), to_string(c.picked.id)]
+
+      stay(view)
+      save(view)
+      assert saved(c.author, c.author_join, [c.linked.id, c.picked.id]) == [c.linked.id, c.picked.id]
+    end
+
+    test "\"Clear all\" empties the row", %{conn: conn} = c do
+      view = open(conn, c.article, "author_entries")
+      view |> element("#article_author_0_related_entries-field-wrapper button", "Clear all") |> render_click()
+
+      assert author_links(view) == []
+      assert get_in(params(view), ["article", "author", "name"]) == "Author"
+    end
+  end
+
   # A record read policy decides: the owner reads the page. The rows have no
   # edit to draw them again; a change of permissions must.
   describe "once permissions change" do

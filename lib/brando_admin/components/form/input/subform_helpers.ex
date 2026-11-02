@@ -87,7 +87,7 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
   up by the row's index.
   """
   def row_keys(%Changeset{} = changeset, field_name),
-    do: changeset |> current_entries(field_name) |> Enum.map(&row_key/1)
+    do: changeset |> current_entries(field_name) |> List.wrap() |> Enum.map(&row_key/1)
 
   @doc "Whether `key` is a new row's, which the row renders as its hidden `_key` input."
   def new_key?("new-" <> _), do: true
@@ -194,9 +194,16 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpers do
 
   @doc """
   Applies `op` to `entries`, the relation's current entries. Returns the new
-  list, or `:stale` when the row it names is not there any more.
+  list, or `:stale` when the row it names is not there any more. A
+  one-to-one relation's entry is a single row, which only `:replace`
+  changes: a row's own input (an entries input, a multi-select) does that.
   """
-  @spec apply_op([term()], op()) :: [term()] | :stale
+  @spec apply_op([term()] | Changeset.t(), op()) :: [term()] | Changeset.t() | :stale
+  def apply_op(%Changeset{} = entry, {:replace, key, new_entry}),
+    do: if(row_key(entry) == key, do: new_entry, else: :stale)
+
+  def apply_op(%Changeset{}, _op), do: :stale
+
   def apply_op(entries, {:append, new_entries}), do: entries ++ List.wrap(new_entries)
 
   # Above the named row; without one, at the position, past the end appending

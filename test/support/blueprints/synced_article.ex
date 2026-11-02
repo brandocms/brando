@@ -345,6 +345,23 @@ defmodule Brando.SyncTest.Article do
       end
     end
 
+    # The input in a one-to-one subform (EntriesInputSubformRowsTest)
+    form :author_entries do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+
+          inputs_for :author do
+            cardinality :one
+
+            input :name, :text
+            input :related_entries, :entries, sources: [{Brando.AuthorizationTestResources.Page, %{}}]
+          end
+        end
+      end
+    end
+
     # The input in a transformer's rows and in a custom subform component's
     # (EntriesInputSubformRowsTest)
     form :transformer_item_entries do
@@ -624,6 +641,10 @@ defmodule Brando.SyncTest.ArticleAuthor do
       foreign_key: :author_id,
       on_replace: :delete,
       cast: true
+
+    # Entries input in a one-to-one subform (form `:author_entries`,
+    # EntriesInputSubformRowsTest)
+    relation :related_entries, :entries
   end
 end
 
