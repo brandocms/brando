@@ -54,7 +54,7 @@ defmodule Brando.Videos.UploadTest do
       user = Factory.insert(:random_user)
 
       tmp = Path.join(System.tmp_dir!(), "upload-test-#{System.unique_integer([:positive])}.mp4")
-      File.write!(tmp, :crypto.strong_rand_bytes(1024))
+      File.write!(tmp, <<24::32, "ftypisom", 0::104>> <> :crypto.strong_rand_bytes(1000))
       on_exit(fn -> File.rm(tmp) end)
 
       meta = %{path: tmp, config_target: "video:Some.Schema:field"}
@@ -94,7 +94,7 @@ defmodule Brando.Videos.UploadTest do
     test "runs an MFA callback after a local video is ready" do
       user = Factory.insert(:random_user)
       tmp = Path.join(System.tmp_dir!(), "upload-callback-#{System.unique_integer([:positive])}.mp4")
-      File.write!(tmp, :crypto.strong_rand_bytes(128))
+      File.write!(tmp, <<24::32, "ftypisom", 0::104>> <> :crypto.strong_rand_bytes(104))
       on_exit(fn -> File.rm(tmp) end)
 
       config = %{@cfg | completed_callback: {__MODULE__, :completed_callback, [self()]}}

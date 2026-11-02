@@ -4691,6 +4691,7 @@ msgid "Could not store the AI context fields"
 msgstr ""
 
 #: lib/brando/uploads.ex
+#: lib/brando/uploads/store.ex
 #: lib/brando_admin/live/upload_manager.ex
 #, elixir-autogen, elixir-format
 msgid "Could not store uploaded file"
@@ -13538,6 +13539,7 @@ msgid "Reject"
 msgstr ""
 
 #: lib/brando/uploads.ex
+#: lib/brando/uploads/content_type.ex
 #, elixir-autogen, elixir-format
 msgid "Rejected type [%{rejected}]. Allowed: %{allowed}"
 msgstr ""
@@ -17127,6 +17129,11 @@ msgstr ""
 msgid "The file could not be uploaded. Remove it and try again."
 msgstr ""
 
+#: lib/brando_admin/live/upload_manager.ex
+#, elixir-autogen, elixir-format
+msgid "The file does not match the one that was checked."
+msgstr ""
+
 #: lib/brando_admin/components/definition_file.ex
 #, elixir-autogen, elixir-format
 msgid "The file has changes that are not imported. The server log says why — usually a change that needs a migration."
@@ -17140,6 +17147,11 @@ msgstr ""
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "The file is too large. Choose a JSON file under 1 MB."
+msgstr ""
+
+#: lib/brando/uploads/content_type.ex
+#, elixir-autogen, elixir-format
+msgid "The file's contents do not match its type."
 msgstr ""
 
 #: lib/brando/forms/notification.ex
@@ -17778,6 +17790,11 @@ msgstr ""
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format
 msgid "This MCP endpoint does not exist or is turned off."
+msgstr ""
+
+#: lib/brando/uploads/content_type.ex
+#, elixir-autogen, elixir-format
+msgid "This SVG declares entities, which are not allowed."
 msgstr ""
 
 #: lib/brando_admin/components/video_picker.ex

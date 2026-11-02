@@ -4693,6 +4693,7 @@ msgid "Could not store the AI context fields"
 msgstr "Klarte ikke lagre KI-kontekstfeltene"
 
 #: lib/brando/uploads.ex
+#: lib/brando/uploads/store.ex
 #: lib/brando_admin/live/upload_manager.ex
 #, elixir-autogen, elixir-format
 msgid "Could not store uploaded file"
@@ -13540,6 +13541,7 @@ msgid "Reject"
 msgstr "Avvis"
 
 #: lib/brando/uploads.ex
+#: lib/brando/uploads/content_type.ex
 #, elixir-autogen, elixir-format
 msgid "Rejected type [%{rejected}]. Allowed: %{allowed}"
 msgstr "Avvist filtype [%{rejected}]. Tillatt: %{allowed}"
@@ -17129,6 +17131,11 @@ msgstr "Feltene denne handlingen leser fra, er tomme"
 msgid "The file could not be uploaded. Remove it and try again."
 msgstr "Filen kunne ikke lastes opp. Fjern den og prøv igjen."
 
+#: lib/brando_admin/live/upload_manager.ex
+#, elixir-autogen, elixir-format
+msgid "The file does not match the one that was checked."
+msgstr "Filen stemmer ikke med den som ble kontrollert."
+
 #: lib/brando_admin/components/definition_file.ex
 #, elixir-autogen, elixir-format
 msgid "The file has changes that are not imported. The server log says why — usually a change that needs a migration."
@@ -17143,6 +17150,11 @@ msgstr "Filen er ikke lenger tilgjengelig"
 #, elixir-autogen, elixir-format
 msgid "The file is too large. Choose a JSON file under 1 MB."
 msgstr "Filen er for stor. Velg en JSON-fil under 1 MB."
+
+#: lib/brando/uploads/content_type.ex
+#, elixir-autogen, elixir-format
+msgid "The file's contents do not match its type."
+msgstr "Innholdet i filen stemmer ikke med filtypen."
 
 #: lib/brando/forms/notification.ex
 #, elixir-autogen, elixir-format
@@ -17783,6 +17795,11 @@ msgstr "Denne %{singular}"
 #, elixir-autogen, elixir-format
 msgid "This MCP endpoint does not exist or is turned off."
 msgstr "Dette MCP-endepunktet finnes ikke eller er slått av."
+
+#: lib/brando/uploads/content_type.ex
+#, elixir-autogen, elixir-format
+msgid "This SVG declares entities, which are not allowed."
+msgstr "Denne SVG-filen deklarerer entiteter, og det er ikke tillatt."
 
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format

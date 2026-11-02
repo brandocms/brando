@@ -3,10 +3,14 @@ defmodule Brando.Images.Utils do
   General utilities pertaining to the Images module
   """
   import Brando.Utils
-  import SweetXml
 
   alias Brando.Images.Image
+  alias Brando.Images.SvgRoot
   alias Brando.Tenant.Storage
+  alias Brando.Uploads.ContentType
+
+  @default_svg_size %{width: 300, height: 150}
+  @max_svg_dimension 1_000_000
 
   @type id :: binary | integer
   @type image_struct :: Brando.Images.Image.t()
@@ -172,46 +176,51 @@ defmodule Brando.Images.Utils do
 
   @doc """
   The width and height an SVG file declares, from its `width` and `height`
-  attributes or its `viewBox`.
+  attributes or its `viewBox`, read by `Brando.Images.SvgRoot`.
 
-  The SVG is parsed without its external DTD: a DOCTYPE naming one (an
-  exported SVG's `svg11.dtd`, or a path on this server) is not fetched, and
-  entity declarations are refused.
+  A DOCTYPE naming an external DTD (an exported SVG's `svg11.dtd`, or a path
+  on this server) is not fetched. Raises `ArgumentError` for a file declaring
+  entities; a file that is not an SVG gets the default size.
   """
   def svg_size(file) do
-    doc = File.read!(file)
+    {:ok, head} = ContentType.head(file)
 
-    doc
-    |> SweetXml.parse(dtd: [only: []], fetch_fun: &skip_external_dtd/2)
-    |> xpath(~x"//svg", width: ~x"./@width", height: ~x"./@height", viewbox: ~x"./@viewBox")
-    |> Map.new(fn {k, v} -> {k, to_string(v)} end)
-    |> parse_svg_size()
-  end
+    case SvgRoot.parse(head) do
+      {:ok, attributes} ->
+        parse_svg_size(%{
+          width: Map.get(attributes, "width", ""),
+          height: Map.get(attributes, "height", ""),
+          viewbox: Map.get(attributes, "viewBox", "")
+        })
 
-  defp skip_external_dtd(_uri, state), do: {:ok, :not_fetched, state}
+      {:error, :entities} ->
+        raise ArgumentError, "SVG declares entities"
 
-  defp parse_svg_size(%{width: "", height: "", viewbox: ""}) do
-    %{width: 300, height: 150}
+      {:error, :not_svg} ->
+        @default_svg_size
+    end
   end
 
   defp parse_svg_size(%{width: "", height: "", viewbox: viewbox}) do
-    [_, _, parsed_width, parsed_height] = String.split(viewbox, " ")
-    parse_svg_size_dims(parsed_width, parsed_height)
-  rescue
-    MatchError ->
-      %{width: 300, height: 150}
+    case String.split(viewbox, ~r/[\s,]+/, trim: true) do
+      [_, _, parsed_width, parsed_height] -> parse_svg_size_dims(parsed_width, parsed_height)
+      _ -> @default_svg_size
+    end
   end
 
   defp parse_svg_size(%{width: width, height: height}) do
     parse_svg_size_dims(width, height)
   end
 
+  # The columns hold 32-bit integers, and a file can say anything
+  defp parse_svg_size_dims(width, height) when byte_size(width) > 32 or byte_size(height) > 32, do: @default_svg_size
+
   defp parse_svg_size_dims(width, height) do
-    with {parsed_width, _} <- Integer.parse(width),
-         {parsed_height, _} <- Integer.parse(height) do
+    with {parsed_width, _} when abs(parsed_width) <= @max_svg_dimension <- Integer.parse(width),
+         {parsed_height, _} when abs(parsed_height) <= @max_svg_dimension <- Integer.parse(height) do
       %{width: parsed_width, height: parsed_height}
     else
-      :error -> %{width: 300, height: 150}
+      _ -> @default_svg_size
     end
   end
 

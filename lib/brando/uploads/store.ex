@@ -30,6 +30,7 @@ defmodule Brando.Uploads.Store do
   alias Brando.Images.PixelLimit
   alias Brando.Tenant.Storage
   alias Brando.Tracing
+  alias Brando.Uploads.ContentType
   alias Brando.Type.FileConfig
   alias Brando.Type.ImageConfig
   alias Brando.Type.VideoConfig
@@ -61,6 +62,7 @@ defmodule Brando.Uploads.Store do
          {:ok, upload} <- get_valid_filename(upload),
          {:ok, upload} <- ensure_correct_ext(upload),
          {:ok, upload} <- check_mimetype(upload),
+         {:ok, upload} <- check_contents(upload),
          {:ok, upload} <- check_pixels(upload),
          {:ok, upload} <- create_upload_path(upload),
          {:ok, upload} <- copy_uploaded_file(upload) do
@@ -137,7 +139,8 @@ defmodule Brando.Uploads.Store do
         %{cfg: %ImageConfig{}, upload_entry: %{client_type: "image/svg+xml"}} = upload,
         user
       ) do
-    svg_size = Brando.Images.Utils.svg_size(upload.meta.uploaded_file)
+    # Both transports have stored it by now: the server's copy, a direct upload's original
+    svg_size = upload.meta.media_path |> Images.Utils.media_path() |> Images.Utils.svg_size()
     dominant_color = Images.Operations.Info.get_dominant_color(upload.meta.media_path)
 
     image_params = %{
@@ -219,6 +222,7 @@ defmodule Brando.Uploads.Store do
         {:error, {:handle_upload_type, PixelLimit.error_message()}}
 
       {:error, _} ->
+        unless Map.get(cfg, :overwrite), do: File.rm(full_path)
         {:error, {:handle_upload_type, "Failed to read image dimensions."}}
     end
   end
@@ -276,11 +280,16 @@ defmodule Brando.Uploads.Store do
     {:ok, %__MODULE__{meta: meta, upload_entry: upload_entry, cfg: cfg_struct}}
   end
 
-  defp get_valid_filename(%__MODULE__{upload_entry: %{client_name: ""}}) do
-    {:error, :empty_filename}
+  # A client's name for a file never selects a directory, whatever the
+  # filename options, so every later step sees the last segment alone.
+  defp get_valid_filename(%__MODULE__{upload_entry: %{client_name: client_name} = entry} = upload) do
+    case Path.basename(client_name) do
+      name when name in ["", ".", ".."] -> {:error, :empty_filename}
+      name -> put_valid_filename(%{upload | upload_entry: %{entry | client_name: name}})
+    end
   end
 
-  defp get_valid_filename(
+  defp put_valid_filename(
          %__MODULE__{
            upload_entry: %{client_name: _},
            cfg: %{force_filename: forced_filename, overwrite: true}
@@ -293,7 +302,7 @@ defmodule Brando.Uploads.Store do
     {:ok, upload}
   end
 
-  defp get_valid_filename(%__MODULE__{upload_entry: %{client_name: filename}, cfg: cfg} = upload) do
+  defp put_valid_filename(%__MODULE__{upload_entry: %{client_name: filename}, cfg: cfg} = upload) do
     random_filename? = Map.get(cfg, :random_filename, false)
     slugify_filename? = Map.get(cfg, :slugify_filename, false)
 
@@ -335,59 +344,90 @@ defmodule Brando.Uploads.Store do
     end
   end
 
-  # A raster image over the pixel limit is refused while it is still the
-  # temporary upload, before it can replace a stored original (`overwrite`).
+  # Judged while it is still the temporary upload, by what arrived: see
+  # `Brando.Uploads.ContentType`.
+  defp check_contents(%__MODULE__{cfg: %ImageConfig{} = cfg, upload_entry: entry, meta: meta} = upload) do
+    with {:ok, head} <- ContentType.head(meta.path),
+         :ok <- ContentType.verify_image(head, meta.filename, entry.client_type, cfg.allowed_mimetypes) do
+      {:ok, upload}
+    else
+      {:error, message} when is_binary(message) -> {:error, {:handle_upload_type, message}}
+      {:error, _} -> {:error, {:handle_upload_type, "Failed to read image dimensions."}}
+    end
+  end
+
+  defp check_contents(%__MODULE__{cfg: %VideoConfig{} = cfg, meta: meta} = upload) do
+    with {:ok, head} <- ContentType.head(meta.path),
+         :ok <- ContentType.verify_video(head, cfg.allowed_mimetypes) do
+      {:ok, upload}
+    else
+      {:error, message} when is_binary(message) -> {:error, {:handle_upload_type, message}}
+      {:error, _} -> {:error, {:handle_upload_type, gettext("Could not store uploaded file")}}
+    end
+  end
+
+  defp check_contents(upload), do: {:ok, upload}
+
+  # A raster image over the pixel limit or that cannot be read is refused while
+  # it is still the temporary upload, before it can replace a stored original
+  # (`overwrite`).
   defp check_pixels(%__MODULE__{cfg: %ImageConfig{}, upload_entry: %{client_type: type}} = upload)
        when type != "image/svg+xml" do
     case PixelLimit.check(upload.meta.path, PixelLimit.open_options([type, upload.meta[:filename]])) do
+      :ok -> {:ok, upload}
       {:error, :too_many_pixels} -> {:error, {:handle_upload_type, PixelLimit.error_message()}}
-      _ -> {:ok, upload}
+      {:error, _} -> {:error, {:handle_upload_type, "Failed to read image dimensions."}}
     end
   end
 
   defp check_pixels(upload), do: {:ok, upload}
 
   defp create_upload_path(%__MODULE__{cfg: cfg} = upload) do
-    upload_path = Path.join(Storage.current_media_root(), Map.get(cfg, :upload_path))
-
-    case File.mkdir_p(upload_path) do
-      :ok ->
-        {:ok, put_in(upload.meta, Map.put(upload.meta, :upload_path, upload_path))}
-
-      {:error, reason} ->
-        {:error, :mkdir, reason}
+    with {:ok, upload_path} <- Storage.media_file(Map.get(cfg, :upload_path)),
+         :ok <- File.mkdir_p(upload_path) do
+      {:ok, put_in(upload.meta, Map.put(upload.meta, :upload_path, upload_path))}
+    else
+      :error -> {:error, :mkdir, :outside_media_root}
+      {:error, reason} -> {:error, :mkdir, reason}
     end
   end
 
   defp copy_uploaded_file(
          %__MODULE__{
-           meta: %{filename: fname, path: src, upload_path: ul_path},
+           meta: %{filename: fname, path: src},
            cfg: %{upload_path: media_target_path} = cfg
          } = upload
        ) do
-    joined_dest = Path.join(ul_path, fname)
+    with {:ok, joined_dest} <- Storage.media_file(Path.join(media_target_path, fname)),
+         dest = copy_destination(joined_dest, cfg),
+         {:ok, media_path} <- copied_media_path(src, dest, media_target_path, cfg) do
+      {:ok,
+       put_in(
+         upload.meta,
+         Map.merge(upload.meta, %{
+           filename: Path.basename(dest),
+           uploaded_file: dest,
+           media_path: media_path
+         })
+       )}
+    else
+      :error -> {:error, :cp, {:outside_media_root, src, fname}}
+      {:error, reason, dest} -> {:error, :cp, {reason, src, dest}}
+    end
+  end
 
-    dest =
-      if Map.get(cfg, :overwrite) do
-        joined_dest
-      else
-        (File.exists?(joined_dest) && Path.join(ul_path, unique_filename(fname))) || joined_dest
-      end
+  defp copy_destination(joined_dest, cfg) do
+    if !Map.get(cfg, :overwrite) && File.exists?(joined_dest) do
+      Path.join(Path.dirname(joined_dest), unique_filename(Path.basename(joined_dest)))
+    else
+      joined_dest
+    end
+  end
 
+  defp copied_media_path(src, dest, media_target_path, cfg) do
     case File.cp(src, dest, on_conflict: fn _, _ -> cfg.overwrite end) do
-      :ok ->
-        {:ok,
-         put_in(
-           upload.meta,
-           Map.merge(upload.meta, %{
-             filename: Path.basename(dest),
-             uploaded_file: dest,
-             media_path: Path.join(media_target_path, Path.basename(dest))
-           })
-         )}
-
-      {:error, reason} ->
-        {:error, :cp, {reason, src, dest}}
+      :ok -> {:ok, Path.join(media_target_path, Path.basename(dest))}
+      {:error, reason} -> {:error, reason, dest}
     end
   end
 
