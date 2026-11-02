@@ -120,6 +120,67 @@ defmodule Brando.Videos.ProviderVideoReaddTest do
     assert_plays(Repo.get!(Video, uploaded.id))
   end
 
+  test "a record restored while the purge asks the provider is not purged, nor its video deleted" do
+    uploaded = "asset-1" |> mux_uploaded() |> expire()
+
+    # The purge has found no live record of the video, and a restore from
+    # the trash, which does not take the video's lock, lands then.
+    restore_after(uploaded, &String.contains?(&1, "LIMIT 1"))
+    Brando.SoftDelete.Query.clean_up_soft_deletions()
+
+    refute_received {:mux, "DELETE", _path}
+    assert_plays(Repo.get!(Video, uploaded.id))
+  end
+
+  test "a record restored and deleted again after the purge read it is not purged, nor its video deleted" do
+    uploaded = "asset-1" |> mux_uploaded() |> expire()
+
+    # The purge reads the expired records, then an editor restores the record
+    # and deletes it again before the purge asks the provider.
+    after_read(
+      fn _query -> true end,
+      fn ->
+        restored = uploaded |> Ecto.Changeset.change(deleted_at: nil) |> Repo.update!()
+        restored |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+      end
+    )
+
+    Brando.SoftDelete.Query.clean_up_soft_deletions()
+
+    refute_received {:mux, "DELETE", _path}
+    assert Repo.get!(Video, uploaded.id).deleted_at
+
+    # Its own purge deletes it at the provider.
+    expire_deleted()
+    Brando.SoftDelete.Query.clean_up_soft_deletions()
+    assert_received {:mux, "DELETE", "/video/v1/assets/asset-1"}
+    refute Repo.get(Video, uploaded.id)
+  end
+
+  for authorization_mode <- [:legacy, :groups] do
+    @authorization_mode authorization_mode
+
+    test "an add whose deleted record is purged meanwhile adds the video as a new record, " <>
+           "#{authorization_mode} authorization" do
+      # Never deleted at the provider, the record is purged without the
+      # video's lock.
+      mux(false)
+      user = superuser(@authorization_mode)
+      uploaded = "asset-1" |> mux_uploaded() |> expire()
+
+      # The purge lands right after the add found the deleted record.
+      after_read(
+        &String.contains?(&1, ~s("deleted_at" DESC)),
+        fn -> Repo.delete_all(from(v in Video, where: v.id == ^uploaded.id)) end
+      )
+
+      assert {:ok, added} = ProviderLibrary.import(:mux, "asset-1", user)
+      assert added.id != uploaded.id
+      assert ProviderLibrary.imported?(added)
+      assert Repo.aggregate(Video, :count) == 1
+    end
+  end
+
   test "a user who may not restore the deleted record adds the video as a new record" do
     put_test_env(:authorization_mode, :groups)
     owner = Factory.insert(:random_user, role: :superuser)
@@ -233,17 +294,28 @@ defmodule Brando.Videos.ProviderVideoReaddTest do
   end
 
   # Restores `video` right after the purge's first read of the video table.
-  defp restore_after_purge_reads(video) do
-    handler = {__MODULE__, :restore, make_ref()}
+  defp restore_after_purge_reads(video), do: restore_after(video, fn _query -> true end)
+
+  # Restores `video` right after the first read of the video table that
+  # `match?` accepts.
+  defp restore_after(video, match?) do
+    after_read(match?, fn -> video |> Ecto.Changeset.change(deleted_at: nil) |> Repo.update!() end)
+  end
+
+  # Runs `fun` right after the first read of the video table that `match?`
+  # accepts.
+  defp after_read(match?, fun) do
+    handler = {__MODULE__, :after_read, make_ref()}
     me = self()
 
     :telemetry.attach(
       handler,
       Repo.repo().config()[:telemetry_prefix] ++ [:query],
       fn _event, _measurements, metadata, _config ->
-        if self() == me and metadata.source == "videos" and String.starts_with?(metadata.query, "SELECT") do
+        if self() == me and metadata.source == "videos" and String.starts_with?(metadata.query, "SELECT") and
+             match?.(metadata.query) do
           :telemetry.detach(handler)
-          video |> Ecto.Changeset.change(deleted_at: nil) |> Repo.update!()
+          fun.()
         end
       end,
       nil

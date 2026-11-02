@@ -273,11 +273,20 @@ defmodule Brando.Videos.ProviderLibrary do
         nil
 
       video ->
-        case Boundary.restore(user, video) do
-          {:ok, restored} -> restored
-          {:error, _reason} -> nil
-        end
+        restore(user, video)
     end
+  end
+
+  # A record never deleted at the provider (imported, or `delete_remote_on:
+  # false`) is purged without the video's lock, so it may be gone since it
+  # was read: the video is then added as a new record.
+  defp restore(user, video) do
+    case Boundary.restore(user, video) do
+      {:ok, restored} -> restored
+      {:error, _reason} -> nil
+    end
+  rescue
+    Ecto.StaleEntryError -> nil
   end
 
   # The current environment's record of the remote video: by the provider's

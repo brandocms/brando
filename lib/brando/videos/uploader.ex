@@ -320,22 +320,26 @@ defmodule Brando.Videos.Uploader do
     at the provider.
   - `{:error, reason}` if deletion fails
   """
-  def delete_remote(%Brando.Videos.Video{} = video), do: delete_remote(video, fn -> :ok end)
+  def delete_remote(%Brando.Videos.Video{} = video), do: delete_remote(video, fn -> true end)
 
   @doc """
-  Deletes `video` at its provider as `delete_remote/1` does, then runs
-  `purge`, which deletes the video's row, and returns the provider delete's
-  result.
+  Runs `purge`, which deletes the video's row and returns whether it did,
+  then deletes `video` at its provider as `delete_remote/1` does, and
+  returns the provider delete's result.
 
-  `purge` runs while the video's lock is still held, so the row is gone
-  before another environment's purge of the same video reads the holdings:
-  two purges that overlap cannot each see the other's row and both leave the
-  video at the provider. Outside a transaction, `purge`'s queries commit as
-  they run. When the holdings cannot be read or the lock is busy
-  (`{:error, :holdings_unavailable}`, `{:error, :busy}`), `purge` does not
-  run, and the row stays for the next purge to try again.
+  `purge` runs while the video's lock is held, so the row is gone before
+  another environment's purge of the same video reads the holdings: two
+  purges that overlap cannot each see the other's row and both leave the
+  video at the provider. It runs before the provider is asked, which is only
+  when it deleted the row. A restore from the trash takes no lock, so a
+  record restored since it was read, or restored and deleted again, is left
+  by `purge` and keeps its video (`{:error, :not_purged}`). Outside a
+  transaction, `purge`'s queries commit as they run. When the holdings
+  cannot be read or the lock is busy (`{:error, :holdings_unavailable}`,
+  `{:error, :busy}`), `purge` does not run, and the row stays for the next
+  purge to try again.
   """
-  @spec delete_remote(Brando.Videos.Video.t(), (-> term())) :: :ok | {:error, term()}
+  @spec delete_remote(Brando.Videos.Video.t(), (-> boolean())) :: :ok | {:error, term()}
   # Added from the provider's library: someone else's video, possibly in use
   # elsewhere. Brando forgets it but does not delete it.
   def delete_remote(%Brando.Videos.Video{meta: %{"imported" => true}}, purge), do: then_purge(:ok, purge)
@@ -347,11 +351,24 @@ defmodule Brando.Videos.Uploader do
         # in progress, so the check below still holds when the provider is
         # asked.
         Brando.Videos.ProviderHoldings.with_video_lock(module.library_meta_path(), remote_id, fn ->
-          video |> delete_unless_held(module, remote_id, Brando.Tenant.mode()) |> then_purge(purge)
+          delete_unless_held(video, module, remote_id, Brando.Tenant.mode(), purge)
         end)
 
       _no_remote_id ->
-        video |> dispatch_delete_remote() |> then_purge(purge)
+        purge_then_delete(video, purge)
+    end
+  end
+
+  # The row goes first, and the provider is asked only if it went: a restore
+  # from the trash does not take the video's lock, so since the holdings were
+  # read the record may be live again, or deleted again and waiting for a
+  # purge of its own.
+  defp purge_then_delete(video, purge) do
+    if purge.() do
+      dispatch_delete_remote(video)
+    else
+      Logger.info("Video #{video.id} left at its provider: not_purged, restored since it was read")
+      {:error, :not_purged}
     end
   end
 
@@ -362,10 +379,10 @@ defmodule Brando.Videos.Uploader do
     result
   end
 
-  defp delete_unless_held(video, module, remote_id, mode) do
+  defp delete_unless_held(video, module, remote_id, mode, purge) do
     case held(video, module, remote_id, mode) do
       false ->
-        dispatch_delete_remote(video)
+        purge_then_delete(video, purge)
 
       {:held_by_another_environment = reason, prefixes} ->
         Logger.info(
@@ -373,11 +390,11 @@ defmodule Brando.Videos.Uploader do
             "still recorded in #{Enum.join(prefixes, ", ")}"
         )
 
-        {:error, reason}
+        then_purge({:error, reason}, purge)
 
       reason ->
         Logger.info("Video #{video.id} left at its provider: #{reason}")
-        {:error, reason}
+        then_purge({:error, reason}, purge)
     end
   end
 
