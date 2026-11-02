@@ -4563,6 +4563,11 @@ msgstr ""
 msgid "Could not check whether the recipient may read the entry"
 msgstr ""
 
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Could not check which sites use these videos. Try again in a moment."
+msgstr ""
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -10945,6 +10950,11 @@ msgstr ""
 msgid "No options found"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "No other site is in this group yet."
+msgstr ""
+
 #: lib/brando_admin/live/pages/page_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "No pages in this view"
@@ -11429,6 +11439,16 @@ msgstr ""
 msgid "Not set up: the brando_212 migration has not run"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not shared"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not shared: the video picker offers no provider library on this site."
+msgstr ""
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not used yet"
@@ -11859,6 +11879,11 @@ msgstr ""
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Only a superuser can change the sign-in policy."
+msgstr ""
+
+#: lib/brando/tenant/registry.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can choose which sites share a provider library."
 msgstr ""
 
 #: lib/brando_admin/live/users/user_form_live.ex
@@ -12957,6 +12982,16 @@ msgstr ""
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "Protected Superuser access covers this scope. Individual content policies still apply."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Provider library group"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Provider library group for %{name} saved."
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -14712,6 +14747,11 @@ msgstr ""
 msgid "Save deployment settings"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save group"
+msgstr ""
+
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
 msgid "Save guidance"
@@ -15786,6 +15826,11 @@ msgstr ""
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
 msgid "Shared wrappers for groups of blocks."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Shares the provider libraries with %{sites}."
 msgstr ""
 
 #: lib/brando/seo/checks.ex

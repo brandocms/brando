@@ -4563,6 +4563,11 @@ msgstr "Kunne ikke endre IndexNow"
 msgid "Could not check whether the recipient may read the entry"
 msgstr "Kunne ikke sjekke om mottakeren kan lese oppføringen"
 
+#: lib/brando_admin/components/video_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Could not check which sites use these videos. Try again in a moment."
+msgstr "Kunne ikke sjekke hvilke nettsteder som bruker disse videoene. Prøv igjen om litt."
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -10945,6 +10950,11 @@ msgstr "Ingen operasjoner er registrert for dette nettstedet."
 msgid "No options found"
 msgstr "Ingen valg fantes"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "No other site is in this group yet."
+msgstr "Ingen andre nettsteder er i denne gruppen ennå."
+
 #: lib/brando_admin/live/pages/page_list_live.ex
 #, elixir-autogen, elixir-format
 msgid "No pages in this view"
@@ -11429,6 +11439,16 @@ msgstr "Ikke satt opp. Når det er satt opp, kan ingen som får vite passordet d
 msgid "Not set up: the brando_212 migration has not run"
 msgstr "Ikke satt opp: migreringen brando_212 er ikke kjørt"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not shared"
+msgstr "Ikke delt"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not shared: the video picker offers no provider library on this site."
+msgstr "Ikke delt: videovelgeren tilbyr ikke leverandørbiblioteket på dette nettstedet."
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not used yet"
@@ -11860,6 +11880,11 @@ msgstr "Bare en superbruker kan endre hvilken vert et miljø svarer på."
 #, elixir-autogen, elixir-format
 msgid "Only a superuser can change the sign-in policy."
 msgstr "Bare en superbruker kan endre innloggingsreglene."
+
+#: lib/brando/tenant/registry.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can choose which sites share a provider library."
+msgstr "Bare en superbruker kan velge hvilke nettsteder som deler et leverandørbibliotek."
 
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
@@ -12958,6 +12983,16 @@ msgstr "Beskyttet"
 #, elixir-autogen, elixir-format
 msgid "Protected Superuser access covers this scope. Individual content policies still apply."
 msgstr "Beskyttet superbrukertilgang gjelder for dette området. Egne tilgangsregler for innhold gjelder fortsatt."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Provider library group"
+msgstr "Gruppe for leverandørbibliotek"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Provider library group for %{name} saved."
+msgstr "Gruppe for leverandørbibliotek for %{name} er lagret."
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
@@ -14712,6 +14747,11 @@ msgstr "Lagre gjeldende visning …"
 msgid "Save deployment settings"
 msgstr "Lagre publiseringsinnstillinger"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save group"
+msgstr "Lagre gruppe"
+
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
 msgid "Save guidance"
@@ -15787,6 +15827,11 @@ msgstr "Deles med %{count} andre oppføringer på dette språket."
 #, elixir-autogen, elixir-format
 msgid "Shared wrappers for groups of blocks."
 msgstr "Delte innpakninger for grupper av blokker."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Shares the provider libraries with %{sites}."
+msgstr "Deler leverandørbibliotekene med %{sites}."
 
 #: lib/brando/seo/checks.ex
 #: lib/brando/sites/seo.ex

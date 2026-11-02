@@ -452,10 +452,16 @@ only for compatible services that explicitly require an object ACL.
 ### Adding Videos Already in a Provider
 
 The video picker can add a video that is already in a provider's library —
-uploaded in the provider's own dashboard, by another site, or by Brando earlier.
-Every configured provider gets an "Add from …" button next to "Add from URL";
-it lists the account's videos newest first, with search where the provider's
-API has it (Bunny, Cloudflare and Vimeo; Mux has none).
+uploaded in the provider's own dashboard, or by Brando earlier. Every
+configured provider gets an "Add from …" button next to "Add from URL"; it
+lists the account's videos newest first, with search where the provider's API
+has it (Bunny, Cloudflare and Vimeo; Mux has none).
+
+With several sites (`tenancy_mode: :multi`), a site shows the button only when
+an installation superuser has put it in a provider library group, and then
+lists the videos the sites of its group hold and those no site holds. Videos
+other sites upload are not listed otherwise. See
+[Video provider libraries](tenancy_and_environments.md#video-provider-libraries).
 
 - A video that is still processing or has failed is listed but cannot be added.
 - Mux and Cloudflare videos that need signed playback cannot be added: Brando
@@ -467,7 +473,9 @@ API has it (Bunny, Cloudflare and Vimeo; Mux has none).
 
 An added video is marked `meta["imported"] = true`. Deleting it in Brando
 removes the record only — `delete_remote_on` never applies to it, since the
-video may be in use outside Brando.
+video may be in use outside Brando. With several sites, a video uploaded
+through Brando is not deleted at the provider either while another site
+holds it.
 
 The same operations are available in code through
 `Brando.Videos.ProviderLibrary`:
