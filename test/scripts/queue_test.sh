@@ -37,8 +37,9 @@ mkdir -p "$tmp/bin"
 cat >"$tmp/bin/gh" <<'EOF'
 #!/usr/bin/env bash
 # State lives in $STATE: <pr>.base, <pr>.head, <pr>.sha, <pr>.queue (one
-# "STATE ENTRY [REASON [COMMIT]]" per poll once queued, the last one
-# repeating), <pr>.queued once enqueued, checks-<sha> (check runs JSON, one
+# "STATE ENTRY [REASON [COMMIT [PUSHED]]]" per poll once queued, the last one
+# repeating; PUSHED is the head someone pushed by then, or - for none),
+# <pr>.queued once enqueued, checks-<sha> (check runs JSON, one
 # per poll, the last repeating), runs-<sha> (workflow runs JSON),
 # unreadable-<run> (that run's jobs fail to load), running-<run> (that run
 # has a job still going), step (the failed step, default Run Tests) and calls.
@@ -77,10 +78,11 @@ out() {
 }
 
 pr_json() {
-  local n="$1" state=OPEN entry=null line reason commit
+  local n="$1" state=OPEN entry=null line reason commit pushed
   if [ -f "$s/$n.queued" ]; then
     line="$(next "$s/$n.queue")"
-    read -r state entry reason commit <<<"$line"
+    read -r state entry reason commit pushed <<<"$line"
+    [ -z "${pushed:-}" ] || [ "$pushed" = - ] || echo "$pushed" >"$s/$n.sha"
     [ "$entry" = - ] && entry=null || entry="{\"position\": 1, \"state\": \"$entry\"}"
     if [ -n "$reason" ] && [ ! -f "$s/$n.seen.$line" ]; then
       touch "$s/$n.seen.$line"
@@ -279,7 +281,7 @@ pr 14 feat-14 main 8888888a "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999990
 checks 8888888a "$green"
 echo '{"workflow_runs": [{"id": 88, "conclusion": "failure"}]}' >"$state/runs-9999990"
 run "re-queues a PR the queue dropped on a known flake" 0 "PR 14: checks green on 8888888; queued at position 1
-PR 14: dropped on known flake beam-jit-crash (mix test); re-queued at position 1
+PR 14: dropped on known flake beam-jit-crash (mix test); re-queued 8888888 at position 1
 PR 14: merged" 14
 if [ "$(cat "$state/calls")" != "$(printf 'enqueue 14 8888888a\nenqueue 14 8888888a')" ]; then
   failures=$((failures + 1))
@@ -294,8 +296,56 @@ echo '{"workflow_runs": [{"id": 88, "conclusion": "failure"}]}' >"$state/runs-99
 cp "$logs/initialize-containers.log" "$state/job.log"
 echo "Initialize containers" >"$state/step"
 run "re-queues a PR the queue dropped on a job that failed setting up" 0 "PR 17: checks green on 8888888; queued at position 1
-PR 17: dropped on CI infrastructure failure in Initialize containers (mix test); re-queued at position 1
+PR 17: dropped on CI infrastructure failure in Initialize containers (mix test); re-queued 8888888 at position 1
 PR 17: merged" 17
+
+fresh flake-pushed-while-queued
+pr 22 feat-22 main 8888888d "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999994 bbbbbbb1"
+checks 8888888d "$green"
+checks bbbbbbb1 "$red"
+echo '{"workflow_runs": [{"id": 88, "conclusion": "failure"}]}' >"$state/runs-9999994"
+run "does not re-queue a head pushed while the PR was queued" 1 "PR 22: checks green on 8888888; queued at position 1
+PR 22: dropped from the queue: merge-group checks failed
+  mix test: known flake: beam-jit-crash — rerun with: gh run rerun 88 --failed
+  not re-queued: its head is now bbbbbbb, and the checks were read on 8888888" 22
+if [ "$(cat "$state/calls")" != "enqueue 22 8888888d" ]; then
+  failures=$((failures + 1))
+  echo "FAIL     calls:"
+  sed 's/^/     | /' "$state/calls"
+fi
+
+fresh flake-pushed-after-removal
+pr 23 feat-23 main 8888888e "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999995 ccccccc1"
+checks 8888888e "$green"
+checks ccccccc1 "$green"
+echo '{"workflow_runs": [{"id": 88, "conclusion": "failure"}]}' >"$state/runs-9999995"
+run "does not re-queue a moved head, even a green one" 1 "PR 23: checks green on 8888888; queued at position 1
+PR 23: dropped from the queue: merge-group checks failed
+  mix test: known flake: beam-jit-crash — rerun with: gh run rerun 88 --failed
+  not re-queued: its head is now ccccccc, and the checks were read on 8888888" 23
+if [ "$(cat "$state/calls")" != "enqueue 23 8888888e" ]; then
+  failures=$((failures + 1))
+  echo "FAIL     calls:"
+  sed 's/^/     | /' "$state/calls"
+fi
+
+fresh flake-already-queued
+pr 24 feat-24 main ddddddd1 "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999996"
+touch "$state/24.queued"
+echo '{"workflow_runs": [{"id": 88, "conclusion": "failure"}]}' >"$state/runs-9999996"
+run "does not re-queue a PR already queued at the start, whose checks it never read" 1 "PR 24: dropped from the queue: merge-group checks failed
+  mix test: known flake: beam-jit-crash — rerun with: gh run rerun 88 --failed
+  not re-queued: it was already queued when this started, so no checks were read" 24
+[ ! -f "$state/calls" ] || { failures=$((failures + 1)); echo "FAIL     queued anyway: $(cat "$state/calls")"; }
+
+fresh merge-group-pushed
+pr 25 feat-25 main 1111111b "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999997 eeeeeee1"
+checks 1111111b "$green"
+echo '{"workflow_runs": [{"id": 88, "conclusion": "failure"}]}' >"$state/runs-9999997"
+cp "$logs/compile-error.log" "$state/job.log"
+run "keeps a real merge-group failure's message when the head moved too" 1 "PR 25: checks green on 1111111; queued at position 1
+PR 25: dropped from the queue: merge-group checks failed
+  mix test: real failure: ** (CompileError) test/brando/foo_test.exs:3: undefined function bar/0 (there is no such import) (step: Run Tests)" 25
 
 fresh flake-unreadable
 pr 16 feat-16 main 6666666c "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999992"
@@ -314,7 +364,7 @@ checks 9999999b "$green"
 echo '{"workflow_runs": [{"id": 88, "conclusion": "failure"}]}' >"$state/runs-9999990"
 echo '{"workflow_runs": [{"id": 89, "conclusion": "failure"}]}' >"$state/runs-9999991"
 run "re-queues on a known flake only once" 1 "PR 15: checks green on 9999999; queued at position 1
-PR 15: dropped on known flake beam-jit-crash (mix test); re-queued at position 1
+PR 15: dropped on known flake beam-jit-crash (mix test); re-queued 9999999 at position 1
 PR 15: dropped from the queue: merge-group checks failed
   mix test: known flake: beam-jit-crash — rerun with: gh run rerun 89 --failed" 15
 
