@@ -20,6 +20,7 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
   @secret "Secret page marker"
   @listed "Listed page marker"
   @masked "An entry you can't view"
+  @owned "Owned page marker"
 
   setup do
     put_test_env(:tenancy_mode, :none)
@@ -99,6 +100,9 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
   defp change(view, params) do
     view |> element(@form) |> render_change(Map.put(params, "_target", ["article", "related_entries"]))
   end
+
+  # "Save and continue editing": the form stays open on the saved entry
+  defp stay(view), do: view |> with_target(cid_of(view, "#article_form-el")) |> render_hook("save_redirect_target", %{})
 
   # The first submit asks the browser for the form (`b:submit`), the second saves
   defp save(view) do
@@ -218,6 +222,94 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
 
       refute render(view) =~ @secret
       assert field_html(view) =~ @masked
+    end
+  end
+
+  # The grants alone don't tell what may be read: a record read policy
+  # (`Brando.AuthorizationTestPolicy`: the owner reads the entry) can decide
+  # otherwise with the same grants. A form that reads its entry again, and
+  # a change of permissions, check the rows and the picker's list again.
+  describe "with a record read policy" do
+    setup %{conn: conn} = c do
+      put_test_env(:authorization_mode, :groups)
+      keys = for action <- [:read, :update], do: Catalog.get(action, Article).key
+      {conn, editor} = log_in_as(conn, permissions: ["authorization.policy_pages.read" | keys])
+      other = insert_user()
+      page = Factory.insert(:page, title: @owned, uri: "owned-#{System.unique_integer([:positive])}", creator: other)
+
+      identifier =
+        Repo.insert!(%Brando.Content.Identifier{
+          schema: Brando.AuthorizationTestResources.Page,
+          entry_id: page.id,
+          title: @owned,
+          language: :en
+        })
+
+      Repo.insert!(struct(c.join, parent_id: c.article.id, identifier_id: identifier.id, sequence: 2))
+      {:ok, conn: conn, editor: editor, other: other, page: page, identifier: identifier}
+    end
+
+    defp own(page, user), do: Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [creator_id: user.id])
+
+    test "an entry handed to the editor is named after a save in place", %{conn: conn} = c do
+      view = open(conn, c.article, "policy_entries")
+      refute render(view) =~ @owned
+
+      own(c.page, c.editor)
+      change(view, put_in(params(view), ["article", "title"], "Handed"))
+      stay(view)
+      save(view)
+      assert saved_title(c.article, "Handed") == "Handed"
+
+      assert field_html(view) =~ @owned
+    end
+
+    test "an entry taken from the editor is masked after a save in place", %{conn: conn} = c do
+      own(c.page, c.editor)
+      view = open(conn, c.article, "policy_entries")
+      assert field_html(view) =~ @owned
+
+      own(c.page, c.other)
+      change(view, put_in(params(view), ["article", "title"], "Taken"))
+      stay(view)
+      save(view)
+      assert saved_title(c.article, "Taken") == "Taken"
+
+      refute render(view) =~ @owned
+    end
+
+    test "an entry handed to the editor is named once another editor's save is taken", %{conn: conn} = c do
+      view = open(conn, c.article, "policy_entries")
+      refute render(view) =~ @owned
+
+      own(c.page, c.editor)
+      Repo.update_all(from(a in Article, where: a.id == ^c.article.id), set: [title: "Saved elsewhere"])
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "article_form", event: "take_saved_entry")
+
+      assert field_html(view) =~ @owned
+    end
+
+    # As `Boundary` broadcasts after an account is written
+    test "a change of permissions that leaves the grants lists the picker again", %{conn: conn} = c do
+      Repo.delete_all(from l in c.join, where: l.identifier_id == ^c.identifier.id)
+      own(c.page, c.editor)
+      view = open(conn, c.article, "policy_entries")
+      options = "#article_related_entries-entries-options"
+      assert view |> element(options) |> render() =~ @owned
+
+      own(c.page, c.other)
+      send(view.pid, {:authorization_changed, :all})
+      change(view, put_in(params(view), ["article", "title"], "Typed"))
+      refute view |> element(options) |> render() =~ @owned
+
+      # Nor is a pick from the list it showed before taken
+      view
+      |> with_target(cid_of(view, options))
+      |> render_hook("select_identifier", %{"id" => c.identifier.id})
+
+      refute Enum.any?(params(view)["article"]["related_entries"] || %{}, fn {_, row} ->
+               row["identifier_id"] == to_string(c.identifier.id)
+             end)
     end
   end
 

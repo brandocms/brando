@@ -955,7 +955,7 @@ defmodule BrandoAdmin.Components.Form do
     socket
     |> assign(:blocks_detached?, false)
     |> assign(:working_copy, nil)
-    |> assign(:entry, updated_entry)
+    |> assign_read_entry(updated_entry)
     |> assign_refreshed_form()
     |> remount_block_fields()
     |> assign_entry_for_blocks()
@@ -972,7 +972,7 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> assign(:entry, updated_entry)
+     |> assign_read_entry(updated_entry)
      |> put_form(to_form(new_changeset, []))
      |> rebuild_preview_relations()
      |> clear_owned_assets()
@@ -1267,7 +1267,7 @@ defmodule BrandoAdmin.Components.Form do
 
     {:ok,
      socket
-     |> assign(:entry, updated_entry)
+     |> assign_read_entry(updated_entry)
      |> put_form(to_form(updated_changeset))
      |> rebuild_preview_relations()
      |> clear_owned_assets()
@@ -2464,8 +2464,16 @@ defmodule BrandoAdmin.Components.Form do
     entry = apply(context, :"get_#{singular}!", [query_params])
 
     socket
-    |> assign(:entry, entry)
+    |> assign_read_entry(entry)
     |> Drafts.keep_baseline(entry)
+  end
+
+  # The entry read again, as the form's base: what its relations name may be
+  # readable otherwise now (a record read policy, with the same grants), so
+  # the read decisions inputs kept go (`Boundary.read_generation/0`).
+  defp assign_read_entry(socket, entry) do
+    Brando.Authorization.Boundary.next_read_generation()
+    assign(socket, :entry, entry)
   end
 
   defp maybe_query(id, form_blueprint) do
@@ -3951,7 +3959,7 @@ defmodule BrandoAdmin.Components.Form do
       :conflict_bases,
       &Map.merge(&1, Map.new(conflicts, fn field -> {field, RelationRows.base(opened, field)} end))
     )
-    |> assign(:entry, entry)
+    |> assign_read_entry(entry)
     |> put_form(to_form(changeset, []))
     |> redraw_relations(previous, changeset, relations)
     |> assign(:replaced_values, replaced)

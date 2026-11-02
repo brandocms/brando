@@ -218,6 +218,52 @@ defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
     end)
   end
 
+  # The groups that give a grant may be renamed, and come in any order: the
+  # decisions keep while the grant keys stay the same
+  test "Entries reads nothing again when a group giving the grants is renamed" do
+    put_test_env(:authorization_mode, :groups)
+    put_test_env(:tenancy_mode, :none)
+    user = Brando.Test.Users.insert_user(permissions: ~w(brando.admin.access brando.pages.read))
+    scope = Brando.Authorization.Scope.standalone(user)
+    Brando.Authorization.Boundary.put_scope(scope)
+    on_exit(fn -> Brando.Authorization.Boundary.put_scope(nil) end)
+    snapshot = Brando.Authorization.Engine.snapshot(scope)
+    Brando.Authorization.Boundary.put_presentation(snapshot)
+
+    page = Brando.Factory.insert(:page, title: "Readable", uri: "readable-#{System.unique_integer([:positive])}")
+    a = Brando.Repo.insert!(%Identifier{schema: Brando.Pages.Page, entry_id: page.id, title: "Readable", language: :en})
+    joins = [%Brando.Content.BlockIdentifier{identifier_id: a.id, identifier: a}]
+    form = to_form(Changeset.change(%Brando.Content.Block{block_identifiers: joins}), as: "block")
+    props = %{id: "entries", field: form[:block_identifiers], opts: [sources: [{Brando.Pages.Page, %{}}]]}
+    {:ok, socket} = Entries.update(props, %Phoenix.LiveView.Socket{})
+    assert socket.assigns.selected_text == "Readable"
+
+    renamed = Map.new(snapshot.grants, fn {key, groups} -> {key, Enum.map(groups, &%{&1 | name: "Renamed"})} end)
+    Brando.Authorization.Boundary.put_presentation(%{snapshot | grants: renamed})
+
+    assert queries(fn -> Entries.update(props, socket) end) == 0
+  end
+
+  defp queries(fun) do
+    test = self()
+    counter = :counters.new(1, [])
+    id = {__MODULE__, make_ref()}
+
+    :telemetry.attach(
+      id,
+      [:brando_integration, :repo, :query],
+      fn _event, _measurements, _meta, _config -> if self() == test, do: :counters.add(counter, 1, 1) end,
+      nil
+    )
+
+    try do
+      fun.()
+      :counters.get(counter, 1)
+    after
+      :telemetry.detach(id)
+    end
+  end
+
   test "Entries ignores a pick its list no longer holds" do
     a = identifier(Brando.Pages.Page, :en, :published)
     form = to_form(Changeset.change(%Brando.Content.Block{block_identifiers: []}), as: "block")
@@ -229,7 +275,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
       |> Component.assign(:selected_identifiers, [])
       |> Component.assign(:opts, sources: [{Brando.Pages.Page, %{}}])
       # As the list was last read: nothing to read again
-      |> Component.assign(:identifier_filters, {[{Brando.Pages.Page, %{}}], false, nil, nil})
+      |> Component.assign(:identifier_filters, {[{Brando.Pages.Page, %{}}], false, nil, {0, nil}})
 
     assert {:noreply, ^socket} = Entries.handle_event("select_identifier", %{"id" => a.id}, socket)
   end

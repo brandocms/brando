@@ -67,15 +67,20 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
      |> assign_selected_identifiers(field)}
   end
 
-  # What the lists read here depend on: the grants the authorization hook
-  # loaded for this event (`Boundary.presentation/0`), so a change of
-  # permissions reloads them with the next render. Nil without group
-  # authorization.
-  defp read_grants do
-    case Boundary.presentation() do
-      %{grants: grants, superuser?: superuser?} -> {grants, superuser?}
-      _ -> nil
-    end
+  # What the lists read here depend on: the keys the authorization hook
+  # loaded for this event grants (`Boundary.presentation/0`, nil without
+  # group authorization) and `Boundary.read_generation/0`, which a change of
+  # permissions and a form reading its entry again raise: a record read
+  # policy can decide otherwise with the same grants. The keys alone: the
+  # groups that give them come in no set order, and may be renamed.
+  defp read_key do
+    grants =
+      case Boundary.presentation() do
+        %{grants: grants, superuser?: superuser?} -> {grants |> Map.keys() |> Enum.sort(), superuser?}
+        _ -> nil
+      end
+
+    {Boundary.read_generation(), grants}
   end
 
   # The selected entries the editor may read, in the order of the rows, as
@@ -84,15 +89,15 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   # preload has no read policy applied, so each row is named only if
   # `Boundary.readable_entries/1` allows it, and is otherwise left out of the
   # list and shown masked. A decision is kept with the identifier it was made
-  # on (`identifier_decisions`) while the grants stay the same
-  # (`read_grants/0`), so a render checks only rows it has not seen, and a
-  # row whose identifier changed (a form reloaded on its entry) again. The
-  # picker's entries come through `Boundary.identifiers/1` and are readable.
+  # on (`identifier_decisions`) while `read_key/0` stays the same, so a
+  # render checks only rows it has not seen, and a row whose identifier
+  # changed again. The picker's entries come through `Boundary.identifiers/1`
+  # and are readable.
   defp assign_selected_identifiers(socket, field) do
     associations = Changeset.get_assoc(field.form.source, field.field) |> Enum.reject(&(&1.action == :replace))
     ids = Enum.map(associations, &Changeset.get_field(&1, :identifier_id)) |> Enum.reject(&is_nil/1)
-    grants = read_grants()
-    fresh? = Map.has_key?(socket.assigns, :selected_grants) and socket.assigns.selected_grants == grants
+    key = read_key()
+    fresh? = Map.has_key?(socket.assigns, :selected_read_key) and socket.assigns.selected_read_key == key
     decisions = if fresh?, do: socket.assigns.identifier_decisions, else: %{}
     decisions = Map.take(decisions, ids)
 
@@ -131,7 +136,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       end)
 
     socket
-    |> assign(:selected_grants, grants)
+    |> assign(:selected_read_key, key)
     |> assign(:identifier_decisions, decisions)
     |> assign(:selected_identifiers, Enum.filter(selected, & &1))
     |> assign(:selected_text, Enum.map_join(selected, ", ", &((&1 && &1.title) || IdentifierRow.masked_label())))
@@ -148,7 +153,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   defp refresh_filters(socket, wanted_schemas) do
     filter_language? = Keyword.get(socket.assigns.opts, :filter_language, false)
     language = if filter_language?, do: socket.assigns.field.form[:language].value
-    key = {wanted_schemas, filter_language?, language, read_grants()}
+    key = {wanted_schemas, filter_language?, language, read_key()}
 
     if socket.assigns[:identifier_filters] == key do
       socket
@@ -368,7 +373,8 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   end
 
   # Only an entry the picker lists: it may have reloaded since it showed one,
-  # and lists again here if the editor's grants changed since
+  # and lists again here if what the editor may read can have changed since
+  # (`read_key/0`)
   def handle_event("select_identifier", %{"id" => identifier_id}, socket) do
     socket = refresh_filters(socket, Keyword.get(socket.assigns.opts, :sources))
 

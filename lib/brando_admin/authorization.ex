@@ -159,6 +159,7 @@ defmodule BrandoAdmin.Authorization do
 
   # Always halted: most views have no `handle_info` clause for it.
   defp legacy_info_hook({:authorization_changed, _}, socket) do
+    Boundary.next_read_generation()
     {_, socket} = legacy_recheck(socket, :broadcast)
     {:halt, socket}
   end
@@ -284,6 +285,8 @@ defmodule BrandoAdmin.Authorization do
   end
 
   defp info_hook({:authorization_changed, _}, socket) do
+    Boundary.next_read_generation()
+
     case check(socket) do
       {:cont, socket} ->
         socket =
