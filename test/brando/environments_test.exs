@@ -434,6 +434,17 @@ defmodule Brando.EnvironmentsTest do
     assert Registry.get_environment(target.id).live
   end
 
+  test "a scheduled live switch refreshes routing on every node", %{site: site} do
+    {:ok, _live} = Environments.create_environment(site, %{name: "Live", key: "live", live: true})
+    {:ok, target} = Environments.create_environment(site, %{name: "Target", key: "target", live: false})
+    Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.CacheSync.topic())
+
+    assert :ok = EnvironmentSetLive.perform(%Oban.Job{args: %{"environment_id" => target.id}})
+
+    assert_received {:brando_cache_sync, _origin, {Cache, :registry}}
+    assert %Environment{key: "target"} = Cache.get_live_env("acme")
+  end
+
   describe "a scheduled operation, when it runs" do
     setup %{site: site} do
       {:ok, source} = Environments.create_environment(site, %{name: "Source", key: "source", live: true})

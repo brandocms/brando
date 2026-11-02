@@ -223,15 +223,20 @@ defmodule Brando.Assets.Vite do
         cache_key = Brando.Tenant.cache_key(config(scope).critical_css_cache_key)
 
         case :persistent_term.get(cache_key, nil) do
-          nil ->
-            res = build_critical_css(scope)
-            :persistent_term.put(cache_key, res)
-            res
-
-          res ->
-            res
+          nil -> fill_critical_css(scope, cache_key)
+          res -> res
         end
       end
+    end
+
+    # Read from the active set: an activation meanwhile, here or on another
+    # node, may have dropped the key before this stores it
+    defp fill_critical_css(scope, cache_key) do
+      fence = Brando.Assets.SiteAssets.fence()
+      res = build_critical_css(scope)
+      :persistent_term.put(cache_key, res)
+      if Brando.Assets.SiteAssets.fence() != fence, do: :persistent_term.erase(cache_key)
+      res
     end
 
     @doc """

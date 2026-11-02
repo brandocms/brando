@@ -6,8 +6,13 @@ defmodule Brando.Tenant.Cache do
   global cost of updating `:persistent_term` for allocation-free lookups on
   every request. When tenancy is disabled, warming only clears old tenant
   entries and never queries the database.
+
+  The cache is per node: `invalidate/0` warms this node and tells the others
+  through `Brando.CacheSync`. Warms on a node run one at a time, so the last
+  to publish read the registry last.
   """
 
+  alias Brando.CacheSync
   alias Brando.Sites.Site
   alias Brando.Tenant
 
@@ -16,6 +21,12 @@ defmodule Brando.Tenant.Cache do
 
   @spec warm() :: :ok
   def warm do
+    # One at a time on this node, read and publication together: a warm that
+    # read the registry before another must not publish after it
+    :global.trans({{__MODULE__, :warm}, self()}, &do_warm/0, [node()], :infinity)
+  end
+
+  defp do_warm do
     if Tenant.enabled?() do
       Site
       |> Brando.Repo.all(@public_opts)
@@ -28,8 +39,23 @@ defmodule Brando.Tenant.Cache do
     :ok
   end
 
+  @doc """
+  Warms every node's cache once the transaction around the caller has
+  committed (at once outside one): this node in the caller's process, the
+  others through `Brando.CacheSync`. Warmed before then, a node could read the
+  registry without the write, and a rollback would leave it cached.
+  """
   @spec invalidate() :: :ok
-  def invalidate, do: warm()
+  def invalidate do
+    Brando.Repo.after_commit(:tenant_cache, fn ->
+      warm()
+      CacheSync.broadcast(__MODULE__, :registry)
+    end)
+  end
+
+  @doc "Warms this node's cache for a registry write on another node (`Brando.CacheSync`)."
+  @spec refresh_node_cache(:registry) :: :ok
+  def refresh_node_cache(:registry), do: warm()
 
   @spec clear() :: :ok
   def clear do

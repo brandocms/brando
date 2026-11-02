@@ -135,6 +135,22 @@ shared library, pass `prefix: "public"` or run the work in
 `Brando.Tenant.with_public/1`. Tables listed in `Brando.Tenant.SharedTables`, and schemas with
 their own `@schema_prefix`, are not refused.
 
+`Brando.Tenant.Cache` keeps the site and environment registry in memory on
+each node. A registry write (a site created, changed, suspended or deleted, a
+domain moved, an environment created, copied, restored or set live), once its
+transaction has committed, refreshes the node that made it at once and the
+other nodes through `Brando.CacheSync`, over the application's
+`Phoenix.PubSub`. They follow within a fraction of a second, whichever node
+ran the write or the scheduled job. The active and pinned asset sets and each
+site's shared-library allowlist are refreshed the same way.
+
+This needs the nodes to share the application's `Phoenix.PubSub`: connected
+as one Erlang cluster (with `libcluster` or `dns_cluster`, for example) for
+the default adapter, or through an adapter such as `phoenix_pubsub_redis`.
+Nodes that do not share it keep what they read at boot until they restart. A
+node cut off when a write happens keeps its copy until the next write or a
+restart.
+
 Declare public paths in your application's web SSG module:
 
 ```elixir
