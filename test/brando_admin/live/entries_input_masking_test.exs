@@ -199,6 +199,23 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
       assert html =~ @secret
       refute html =~ @masked
     end
+
+    # The next render after a change of permissions reads with the new ones
+    test "losing the grant to read it masks it", %{conn: conn} = c do
+      put_test_env(:authorization_mode, :groups)
+      keys = for action <- [:read, :update], do: Catalog.get(action, Article).key
+      {conn, _} = log_in_as(conn, permissions: ["brando.admin.access", "brando.pages.read" | keys])
+      view = open(conn, c.article)
+      assert field_html(view) =~ @secret
+
+      # As `Groups` does on a change: the view reloads its grants
+      Repo.delete_all(from g in Brando.Authorization.Grant, where: g.permission_key == "brando.pages.read")
+      send(view.pid, {:authorization_changed, :all})
+      change(view, put_in(params(view), ["article", "title"], "Typed"))
+
+      refute render(view) =~ @secret
+      assert field_html(view) =~ @masked
+    end
   end
 
   # A row whose entry no list holds (one the editor may not read, added by

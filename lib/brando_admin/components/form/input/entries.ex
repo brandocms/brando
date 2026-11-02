@@ -61,10 +61,21 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
      |> assign(:has_entries, active_count > 0)
      |> prepare_input_component()
      |> assign_new(:join_schema, fn -> join_schema end)
-     |> assign_selected_identifiers(field)
      |> assign_new(:max_length, fn -> get_in(field_opts, [:constraints, :max_length]) end)
      |> assign_new(:min_length, fn -> get_in(field_opts, [:constraints, :min_length]) end)
-     |> refresh_filters(wanted_schemas)}
+     |> refresh_filters(wanted_schemas)
+     |> assign_selected_identifiers(field)}
+  end
+
+  # What the lists read here depend on: the grants the authorization hook
+  # loaded for this event (`Boundary.presentation/0`), so a change of
+  # permissions reloads them with the next render. Nil without group
+  # authorization.
+  defp read_grants do
+    case Boundary.presentation() do
+      %{grants: grants, superuser?: superuser?} -> {grants, superuser?}
+      _ -> nil
+    end
   end
 
   # The selected entries the editor may read, in the order of the rows. The
@@ -72,12 +83,16 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   # a preloaded one is named only if `Boundary.readable_entries/1` allows it;
   # one fetched by id comes through `Boundary.identifiers/1`, as the picker's
   # do. A row the editor may not read stays out of the list and shows masked.
-  # Rows already decided are not checked again (`masked_identifier_ids`).
+  # Rows already decided are not checked again (`masked_identifier_ids`)
+  # while the grants stay the same.
   defp assign_selected_identifiers(socket, field) do
     associations = Changeset.get_assoc(field.form.source, field.field) |> Enum.reject(&(&1.action == :replace))
     ids = Enum.map(associations, &Changeset.get_field(&1, :identifier_id)) |> Enum.reject(&is_nil/1)
-    masked = socket.assigns[:masked_identifier_ids] || MapSet.new()
-    cached = List.wrap(socket.assigns[:selected_identifiers]) ++ List.wrap(socket.assigns[:available_identifiers])
+    grants = read_grants()
+    fresh? = Map.has_key?(socket.assigns, :selected_grants) and socket.assigns.selected_grants == grants
+    masked = if fresh?, do: socket.assigns.masked_identifier_ids, else: MapSet.new()
+    selected = if fresh?, do: socket.assigns.selected_identifiers, else: []
+    cached = selected ++ List.wrap(socket.assigns[:available_identifiers])
     by_id = Map.new(cached, &{&1.id, &1})
     unknown = Enum.reject(ids, &(Map.has_key?(by_id, &1) or MapSet.member?(masked, &1)))
 
@@ -102,6 +117,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     selected = Enum.map(ids, &Map.get(by_id, &1))
 
     socket
+    |> assign(:selected_grants, grants)
     |> assign(:selected_identifiers, Enum.reject(selected, &is_nil/1))
     |> assign(:masked_identifier_ids, MapSet.union(masked, MapSet.new(Enum.reject(unknown, &Map.has_key?(by_id, &1)))))
     |> assign(:selected_text, Enum.map_join(selected, ", ", &((&1 && &1.title) || IdentifierRow.masked_label())))
@@ -110,7 +126,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   defp refresh_filters(socket, wanted_schemas) do
     filter_language? = Keyword.get(socket.assigns.opts, :filter_language, false)
     language = if filter_language?, do: socket.assigns.field.form[:language].value
-    key = {wanted_schemas, filter_language?, language}
+    key = {wanted_schemas, filter_language?, language, read_grants()}
 
     if socket.assigns[:identifier_filters] == key do
       socket
