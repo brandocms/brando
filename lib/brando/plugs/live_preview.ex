@@ -48,14 +48,17 @@ defmodule Brando.Plug.LivePreview do
   # element named after them. morphdom's UMD wrapper hands the library to the
   # site's module loader when it finds one (an AMD `define`, or CommonJS
   # `exports` and `module`) and sets no global; shadowing those names makes it
-  # set one on an object of the client's own.
+  # set one on an object of the client's own. phoenix.js takes its global
+  # (`WebSocket`, `fetch`, `sessionStorage`) from `self`, which a site's
+  # top-level `let self` replaces for every classic script after it; it gets
+  # the real window there (`window` itself cannot be declared again).
   @client_js Enum.join(
                [
                  ";(function () {",
                  File.read!(Application.app_dir(:brando, "priv/static/js/block_patch.js")),
-                 "var Phoenix = (function (window) {\n" <>
+                 "var Phoenix = (function (window, self) {\n" <>
                    File.read!(Application.app_dir(:phoenix, "priv/static/phoenix.js")) <>
-                   "\n;return Phoenix\n})(window.BrandoBlockPatch.shield(window))",
+                   "\n;return Phoenix\n})(window.BrandoBlockPatch.shield(window), window)",
                  "var morphdom = (function (exports, module, define, document) {\n" <>
                    File.read!(Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js")) <>
                    "\n;return this.morphdom\n}).call({}, undefined, undefined, undefined, window.BrandoBlockPatch.shield(document))",

@@ -93,7 +93,10 @@ globals beyond those it sets on `window`. Its scripts read the page's
 `document` and `window` members through `BrandoBlockPatch.shield`, never
 directly: content can name an element `querySelector` or `addEventListener`,
 and `document` then returns that element in place of the member. Phoenix and
-morphdom get shielded objects from the plug's wrapper.
+morphdom get shielded objects from the plug's wrapper. A function read through
+the shield comes back bound to the real object, as a site's wrapper of a DOM
+method passes its `this` on to the native one; a constructor read that way has
+no static members, so read those from `window`.
 
 ## What the iframe shows
 

@@ -26,20 +26,22 @@ window.BrandoBlockPatch = (function () {
   const VALID_TARGET_NODES = [NODE_TYPES.ELEMENT, NODE_TYPES.DOCUMENT, NODE_TYPES.DOCUMENT_FRAGMENT]
 
   /**
-   * A document or the window whose members are read from the interfaces that
-   * define them; anything else as it is.
+   * A document or the window whose members are read past elements named after
+   * them; anything else as it is.
    *
    * A document returns an element named after one of its members in place of
    * the member: `<img name="createElement">` makes `document.createElement`
-   * that image. A name or id also hides the members the window inherits from
-   * `EventTarget`, `addEventListener` among them. Rich text keeps `name` and
-   * `id`, so the page's content, and the new HTML of an update, can do either.
+   * that image. By the spec a name or id also hides what the window inherits
+   * from `EventTarget`, `addEventListener` among them (Chromium keeps those).
+   * Rich text keeps `name` and `id`, so the page's content, and the new HTML of
+   * an update, can do either.
    *
    * The result is for reading members only: where a node is expected, pass the
    * document itself.
    * @param {Document|Window|Node} target
    */
   function shield(target) {
+    if (proxies.has(target)) return target
     const isWindow = target === window
     if (!isWindow && !(target instanceof Document)) return target
 
@@ -53,11 +55,15 @@ window.BrandoBlockPatch = (function () {
         set: (_target, key, value) => Reflect.set(target, key, value)
       })
       shields.set(target, shielded)
+      proxies.add(shielded)
     }
     return shielded
   }
 
   const shields = new WeakMap()
+  // What `shield` returned: one passed in again is already shielded, and a
+  // second proxy would call the first one's getters with it as `this`.
+  const proxies = new WeakSet()
 
   function prototypeChain(target) {
     const chain = []
@@ -65,25 +71,47 @@ window.BrandoBlockPatch = (function () {
     return chain
   }
 
-  // The window's own properties are its attributes and the page's globals,
-  // never a named element.
-  function readMember(target, prototypes, key, ownFirst) {
-    if (ownFirst && Object.hasOwn(target, key)) return bindMember(target, Reflect.get(target, key))
+  // An own property comes first: the window's are its attributes and the
+  // page's globals, never a named element; a document's are `location`, and
+  // what the site's scripts put there (a `cookie` stand-in in a sandboxed page,
+  // livepreview_storage.js, or a patched method), unless an element named after
+  // them has taken their place.
+  function readMember(target, prototypes, key, isWindow) {
+    const own = Object.getOwnPropertyDescriptor(target, key)
+    if (own && (isWindow || !isNamedElement(own))) return bindMember(target, own.get ? own.get.call(target) : own.value)
 
     for (const proto of prototypes) {
       const descriptor = Object.getOwnPropertyDescriptor(proto, key)
       if (descriptor) return bindMember(target, descriptor.get ? descriptor.get.call(target) : descriptor.value)
     }
 
-    // What no interface defines, `location` among them: no element hides it
+    // A name no interface defines: the element is what the page has there
     return bindMember(target, Reflect.get(target, key))
   }
 
-  // Methods are called on the real target. Constructors (they have a
-  // `prototype`) are left alone. A document reached through one, the window's
-  // `document`, is shielded too.
+  // What a document holds for a name in its content. Its descriptor is a
+  // writable data property like any a script sets, so the value tells: the
+  // element, an `HTMLCollection` when elements share the name, or the frame's
+  // window for an `<iframe>`.
+  function isNamedElement(descriptor) {
+    const value = descriptor.value
+    if (value instanceof Element || value instanceof HTMLCollection) return true
+    if (value === null || typeof value !== 'object') return false
+    try {
+      return value.window === value
+    } catch (_) {
+      return false
+    }
+  }
+
+  // Functions are called on the real target: a native method refuses the
+  // proxy as `this`, and so does one a site wrapped in a function of its own
+  // that passes its `this` on. A bound constructor still works with `new`, but
+  // carries none of the constructor's static members: read those from `window`.
+  // A document reached through the shield, the window's `document`, is
+  // shielded too.
   function bindMember(target, value) {
-    if (typeof value === 'function') return 'prototype' in value ? value : value.bind(target)
+    if (typeof value === 'function') return value.bind(target)
     return value instanceof Document ? shield(value) : value
   }
 

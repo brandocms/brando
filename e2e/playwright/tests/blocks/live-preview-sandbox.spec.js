@@ -221,8 +221,10 @@ test.describe('Live preview sandbox', () => {
     const errors = watchErrors(page)
     await beforeClient(page, () => {
       const script = document.createElement('script')
+      // `self` is where phoenix.js looks for `WebSocket`, and a site's `let`
+      // replaces it for every classic script after
       script.textContent =
-        "let token = 'site token'; const body = 'site body'; var Phoenix = 'site Phoenix'; var morphdom = 'site morphdom'"
+        "let token = 'site token'; const body = 'site body'; var Phoenix = 'site Phoenix'; var morphdom = 'site morphdom'; let self = 'site self'"
       document.body.append(script)
     })
     await openPreview(page, 'Sandbox Globals')
@@ -233,18 +235,49 @@ test.describe('Live preview sandbox', () => {
     await expect(preview.locator('header[b-tpl="styled-header"] h1')).toContainText('Globals Header')
 
     const frame = await (await page.locator('#live-preview-frame').elementHandle()).contentFrame()
-    expect(await frame.evaluate(() => [token, body, window.Phoenix, window.morphdom])).toEqual([
+    expect(await frame.evaluate(() => [token, body, window.Phoenix, window.morphdom, self])).toEqual([
       'site token',
       'site body',
       'site Phoenix',
-      'site morphdom'
+      'site morphdom',
+      'site self'
     ])
     expect(errors).toEqual([])
   })
 
+  // Error monitoring and other SDKs wrap DOM methods on their prototypes, and
+  // their wrappers call the original with the `this` they were called with.
+  // That must be the real window or document, which the native method accepts.
+  test('a site script wrapping DOM methods keeps its preview updated', async ({ page }) => {
+    const clientErrors = []
+    page.on('pageerror', error => {
+      if (/__livepreview\/client-/.test(error.stack || '')) clientErrors.push(error.message)
+    })
+    await beforeClient(page, () => {
+      const addEventListener = EventTarget.prototype.addEventListener
+      EventTarget.prototype.addEventListener = function (...args) {
+        return addEventListener.apply(this, args)
+      }
+      const createElement = Document.prototype.createElement
+      Document.prototype.createElement = function (...args) {
+        return createElement.apply(this, args)
+      }
+    })
+    await openPreview(page, 'Sandbox Wrapped')
+
+    const preview = getPreviewFrame(page)
+    await page.locator('.header-block textarea').fill('Wrapped Header')
+    await syncLV(page)
+    await expect(preview.locator('header[b-tpl="styled-header"] h1')).toContainText('Wrapped Header')
+    await expect(page.locator('.live-preview-notice')).toBeEmpty()
+    expect(clientErrors).toEqual([])
+  })
+
   // Content can name an element after a member of `document` (rich text keeps
-  // `name`), and `document` then returns the element for that name; the name
-  // also hides `window.addEventListener`. The client starts and patches anyway.
+  // `name`), and `document` then returns the element for that name. (By the
+  // spec the name also hides what `window` inherits from EventTarget; Chromium
+  // keeps those, so the `addEventListener` case here is `document`'s.) The
+  // client starts and patches anyway.
   for (const name of ['querySelector', 'createElement', 'createRange', 'addEventListener']) {
     test(`an element named ${name} in the content keeps the preview updating`, async ({ page }) => {
       const clientErrors = []
