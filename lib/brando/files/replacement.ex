@@ -101,7 +101,7 @@ defmodule Brando.Files.Replacement do
 
     with :ok <- Uploads.validate_intake(:file, name, size, cfg.size_limit) do
       cond do
-        stored_extension(name, cfg) != extension(file.filename) ->
+        extension(file.filename) not in [extension(name), stored_extension(name, cfg)] ->
           {:error, "Choose a file with the same extension (#{extension(file.filename)})"}
 
         allowed != ["*"] and mime_type not in allowed ->
@@ -125,10 +125,11 @@ defmodule Brando.Files.Replacement do
 
   defp extension(name), do: name |> Path.extname() |> String.downcase()
 
-  # The stored name was made from the client's by the config, as in
+  # A new upload's stored name is made from the client's by the config, as in
   # `Brando.Uploads.Store`: slugged, unless a random name kept the extension,
-  # and `.jpeg` written `.jpg`. A replacement's extension is compared after the
-  # same change.
+  # and `.jpeg` written `.jpg`. A replacement's extension is taken either as it
+  # arrived or after that change: names stored before extensions were slugged,
+  # while the config did not slug, or by hand keep extensions it cannot make.
   defp stored_extension(name, cfg) do
     name = Path.basename(name)
 

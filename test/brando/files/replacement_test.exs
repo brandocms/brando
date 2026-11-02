@@ -133,6 +133,30 @@ defmodule Brando.Files.ReplacementTest do
         assert {:ok, :server} = Replacement.initiate(file.id, meta), inspect(opts)
       end
     end
+
+    # Names stored before extensions were slugged, by hand, or while the config
+    # did not slug keep an extension no slug can make
+    test "takes the extension a file was stored with, however it was named", ctx do
+      refused =
+        for {opts, stored, client} <- [
+              {[slugify_filename: true], "scan.jpg_large", "scan.jpg_large"},
+              {[slugify_filename: true], "scan.abcdefghijklmnopqrst", "scan.abcdefghijklmnopqrst"},
+              {[slugify_filename: true], "x.jpeg", "x.jpeg"},
+              {[slugify_filename: false], "x.jpeg", "x.JPEG"}
+            ],
+            put_file_config(opts),
+            file = insert_file(ctx.user, stored),
+            Replacement.initiate(file.id, %{name: client, size: 20, type: "application/octet-stream"}) != {:ok, :server},
+            do: {opts, stored, client}
+
+      assert refused == []
+
+      put_file_config(slugify_filename: true)
+      file = insert_file(ctx.user, "scan.jpg_large")
+
+      assert {:error, "Choose a file with the same extension (.jpg_large)"} =
+               Replacement.initiate(file.id, %{name: "scan.jpg", size: 20, type: "application/octet-stream"})
+    end
   end
 
   defp put_file_config(opts) do
