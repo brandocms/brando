@@ -65,6 +65,29 @@ defmodule Brando.Tenant.Registry do
     result
   end
 
+  @doc """
+  Puts `site` in the provider library group `group`, or with `nil` or `""`
+  takes it out (see `Brando.Videos.ProviderLibrary`). What another site may
+  see of the provider accounts is the installation's decision: refused unless
+  `actor` is an installation superuser, or `:system`.
+  """
+  @spec put_provider_library_group(Site.t(), String.t() | nil, term()) ::
+          {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
+  def put_provider_library_group(%Site{} = site, group, actor) do
+    changeset = Site.provider_library_group_changeset(site, group)
+
+    if not is_nil(actor) and Boundary.superuser?(actor) do
+      changeset |> Repo.update(@public_opts) |> refresh_cache_on_success()
+    else
+      {:error,
+       Ecto.Changeset.add_error(
+         changeset,
+         :provider_library_group,
+         gettext("Only a superuser can choose which sites share a provider library.")
+       )}
+    end
+  end
+
   @spec delete_site(Site.t()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
   def delete_site(%Site{} = site) do
     site

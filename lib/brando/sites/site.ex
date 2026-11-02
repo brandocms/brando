@@ -32,6 +32,7 @@ defmodule Brando.Sites.Site do
     field :status, Ecto.Enum, values: @statuses, default: :active
     field :archived_at, :utc_datetime_usec
     field :delivery_mode, Ecto.Enum, values: @delivery_modes, default: :dynamic
+    field :provider_library_group, :string
 
     embeds_one :deploy_config, DeployConfig, on_replace: :update
 
@@ -53,6 +54,23 @@ defmodule Brando.Sites.Site do
     |> validate_languages()
     |> validate_default_language()
     |> unique_constraint(:key)
+  end
+
+  @doc """
+  Sets which sites share the video providers' libraries with this one
+  (`Brando.Videos.ProviderLibrary`): the sites with the same key. Blank keeps
+  the site's provider videos to itself. Not part of `changeset/2`, as only an
+  installation superuser chooses it (`Brando.Tenant.Registry.put_provider_library_group/3`).
+  """
+  def provider_library_group_changeset(site, group) do
+    group = if is_binary(group), do: String.trim(group), else: group
+
+    site
+    |> cast(%{provider_library_group: group}, [:provider_library_group])
+    |> validate_length(:provider_library_group, max: 40)
+    |> validate_format(:provider_library_group, @key_format,
+      message: "must be lowercase letters, digits and single dashes"
+    )
   end
 
   def statuses, do: @statuses

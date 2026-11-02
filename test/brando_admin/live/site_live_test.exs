@@ -145,6 +145,62 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
     assert Registry.get_site(site.id)
   end
 
+  describe "provider library group" do
+    test "a superuser puts sites in one group, and takes one out", %{conn: conn, site: site} do
+      {:ok, other} =
+        Registry.create_site(%{
+          name: "Sister Site",
+          key: "sister-site-dashboard",
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :dynamic
+        })
+
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      for {id, group} <- [{site.id, "agency"}, {other.id, " agency "}] do
+        view
+        |> form("#library-group-site-#{id}", site: %{id: id, provider_library_group: group})
+        |> render_submit()
+      end
+
+      assert Registry.get_site(site.id).provider_library_group == "agency"
+      assert Registry.get_site(other.id).provider_library_group == "agency"
+      assert has_element?(view, "#library-group-site-#{site.id}", "Sister Site")
+
+      view
+      |> form("#library-group-site-#{other.id}", site: %{id: other.id, provider_library_group: ""})
+      |> render_submit()
+
+      assert Registry.get_site(other.id).provider_library_group == nil
+      refute has_element?(view, "#library-group-site-#{site.id}", "Sister Site")
+    end
+
+    test "a malformed key is refused", %{conn: conn, site: site} do
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      view
+      |> form("#library-group-site-#{site.id}", site: %{id: site.id, provider_library_group: "Two Words"})
+      |> render_submit()
+
+      assert Registry.get_site(site.id).provider_library_group == nil
+    end
+
+    test "in groups mode, an installation superuser sets it", %{conn: conn, site: site} do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      view
+      |> form("#library-group-site-#{site.id}", site: %{id: site.id, provider_library_group: "agency"})
+      |> render_submit()
+
+      assert Registry.get_site(site.id).provider_library_group == "agency"
+    end
+  end
+
   test "non-superusers are redirected", %{editor: editor, site: site} do
     assert {:ok, _assignment} = Access.grant(editor, site, :admin)
     conn = log_in_user(Phoenix.ConnTest.build_conn(), editor)

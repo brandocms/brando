@@ -412,7 +412,7 @@ defmodule BrandoAdmin.Authorization.Events do
     ],
     "BrandoAdmin.Sites.SiteLive" => [
       read: ~w(refresh),
-      write: ~w(activate_site archive create_site delete grant revoke suspend)
+      write: ~w(activate_site archive create_site delete grant revoke set_library_group suspend)
     ],
     "BrandoAdmin.Sites.UtilsLive" => [
       read:

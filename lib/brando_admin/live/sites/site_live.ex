@@ -6,10 +6,13 @@ defmodule BrandoAdmin.Sites.SiteLive do
   use Gettext, backend: Brando.Gettext
 
   # Creating, activating, deleting, suspending or archiving a site, and giving
-  # or taking someone's access to it, ask for the password, a code or a passkey
-  # when the session has not confirmed lately. Activating puts the site's hosts
-  # back in public routing; creating one seeds its groups and grants.
-  on_mount({BrandoAdmin.Reauth, events: ~w(create_site activate_site delete suspend archive grant revoke)})
+  # or taking someone's access to it, and choosing which sites share the video
+  # providers' libraries, ask for the password, a code or a passkey when the
+  # session has not confirmed lately. Activating puts the site's hosts back in
+  # public routing; creating one seeds its groups and grants.
+  on_mount(
+    {BrandoAdmin.Reauth, events: ~w(create_site activate_site delete suspend archive grant revoke set_library_group)}
+  )
 
   alias Brando.Sites.Site
   alias Brando.Tenant.Access
@@ -161,6 +164,26 @@ defmodule BrandoAdmin.Sites.SiteLive do
           </button>
         </div>
 
+        <form
+          id={"library-group-site-#{site.id}"}
+          class="site-library-group"
+          phx-submit="set_library_group"
+        >
+          <input type="hidden" name="site[id]" value={site.id} />
+          <label>
+            <span>{gettext("Provider library group")}</span>
+            <input
+              name="site[provider_library_group]"
+              value={site.provider_library_group}
+              pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+              maxlength="40"
+              placeholder={gettext("Not shared")}
+            />
+            <small>{library_group_note(@sites, site)}</small>
+          </label>
+          <button type="submit" class="btn">{gettext("Save group")}</button>
+        </form>
+
         <p :if={Brando.Authorization.enabled?()}>
           <a href={"/admin/groups?brando_site_key=#{site.key}"}>{gettext("Manage this site’s groups and members →")}</a>
         </p>
@@ -230,6 +253,19 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
     case Setup.create_site(attrs, socket.assigns.current_user) do
       {:ok, site} -> {:noreply, socket |> notify(gettext("Site %{name} created.", name: site.name)) |> refresh()}
+      {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
+    end
+  end
+
+  def handle_event("set_library_group", %{"site" => params}, socket) do
+    with {:ok, site} <- site_from_socket(socket, params["id"]),
+         {:ok, site} <-
+           Registry.put_provider_library_group(site, params["provider_library_group"], socket.assigns.current_user) do
+      {:noreply,
+       socket
+       |> notify(gettext("Provider library group for %{name} saved.", name: site.name))
+       |> refresh()}
+    else
       {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
     end
   end
@@ -369,6 +405,21 @@ defmodule BrandoAdmin.Sites.SiteLive do
   defp parse_role("editor"), do: {:ok, :editor}
   defp parse_role("admin"), do: {:ok, :admin}
   defp parse_role(_role), do: {:error, :invalid_role}
+
+  # Who sees this site's provider videos in "Add from …", in the copy under
+  # the group field.
+  defp library_group_note(_sites, %Site{provider_library_group: nil}),
+    do: gettext("Not shared: the video picker offers no provider library on this site.")
+
+  defp library_group_note(sites, %Site{provider_library_group: group} = site) do
+    case for(other <- sites, other.id != site.id, other.provider_library_group == group, do: other.name) do
+      [] ->
+        gettext("No other site is in this group yet.")
+
+      names ->
+        gettext("Shares the provider libraries with %{sites}.", sites: Enum.join(names, ", "))
+    end
+  end
 
   defp assignments(assignments, site_id), do: Map.get(assignments, site_id, [])
   defp stat(stats, site_id, key), do: stats |> Map.get(site_id, %{}) |> Map.get(key, "—")
