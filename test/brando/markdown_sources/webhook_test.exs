@@ -281,6 +281,111 @@ defmodule Brando.MarkdownSources.WebhookTest do
     refute RateLimiter.allow_client?(address, true)
   end
 
+  # #3399: GitHub sends every customer's webhooks from the same addresses, so
+  # anyone's wrongly signed requests counted against the address genuine
+  # deliveries come from, and past 120 a minute refused them
+  describe "GitHub's webhook addresses" do
+    alias Brando.MarkdownSources.{GitHubAddresses, RateLimiter, ReadSlots}
+
+    @github {192, 30, 252, 10}
+
+    defmodule Meta do
+      def meta(url) do
+        send(Application.get_env(:brando, :github_meta_test_pid), {:meta, url})
+        {:ok, %{"hooks" => ["192.30.252.0/22", "2606:50c0::/32"]}}
+      end
+    end
+
+    defp with_ranges(ranges) do
+      Application.put_env(
+        :brando,
+        :markdown_sources,
+        Keyword.put(Application.get_env(:brando, :markdown_sources), :github_hook_ranges, ranges)
+      )
+    end
+
+    test "wrongly signed requests past 120 a minute leave a correctly signed delivery from the same address through" do
+      with_ranges(["192.30.252.0/22"])
+
+      for _ <- 1..150, do: assert(wrongly_signed("{}", @github) |> Webhook.call([]) |> Map.get(:status) == 401)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert %{signed(payload()) | remote_ip: @github} |> Webhook.call([]) |> Map.get(:status) == 202
+      end)
+    end
+
+    test "an address in the ranges has a budget of 1,200 a minute, and one outside them 120" do
+      with_ranges(["192.30.252.0/22", "2606:50c0::/32"])
+
+      for _ <- 1..1_200, do: assert(RateLimiter.allow_client?(@github, true, true))
+      assert wrongly_signed("{}", @github) |> Webhook.call([]) |> Map.get(:status) == 429
+
+      v6 = {0x2606, 0x50C0, 0, 1, 0, 0, 0, 1}
+      for _ <- 1..121, do: assert(wrongly_signed("{}", v6) |> Webhook.call([]) |> Map.get(:status) == 401)
+
+      outside = {192, 30, 251, 10}
+      for _ <- 1..120, do: assert(wrongly_signed("{}", outside) |> Webhook.call([]) |> Map.get(:status) == 401)
+      assert wrongly_signed("{}", outside) |> Webhook.call([]) |> Map.get(:status) == 429
+    end
+
+    test "with no list, GitHub's addresses have the ordinary budget" do
+      with_ranges([])
+
+      for _ <- 1..120, do: assert(wrongly_signed("{}", @github) |> Webhook.call([]) |> Map.get(:status) == 401)
+      assert wrongly_signed("{}", @github) |> Webhook.call([]) |> Map.get(:status) == 429
+    end
+
+    test "the list fetched from GitHub's /meta API gives its addresses the larger budget, and requests fetch nothing" do
+      Application.put_env(:brando, :github_meta_test_pid, self())
+      on_exit(fn -> Application.delete_env(:brando, :github_meta_test_pid) end)
+      on_exit(fn -> :persistent_term.erase({GitHubAddresses, GitHubAddresses}) end)
+
+      pid = start_supervised!({GitHubAddresses, client: Meta})
+      :sys.get_state(pid)
+      assert_received {:meta, "https://api.github.com/meta"}
+
+      for _ <- 1..150, do: assert(wrongly_signed("{}", @github) |> Webhook.call([]) |> Map.get(:status) == 401)
+      refute_received {:meta, _}
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert %{signed(payload()) | remote_ip: @github} |> Webhook.call([]) |> Map.get(:status) == 202
+      end)
+    end
+
+    test "requests from GitHub's addresses are read holding a slot, and wait for one" do
+      with_ranges(["192.30.252.0/22"])
+      parent = self()
+
+      holders =
+        for _ <- 1..16 do
+          spawn(fn ->
+            ReadSlots.run(System.monotonic_time(:millisecond) + 5_000, fn ->
+              send(parent, :holding)
+              receive do: (:release -> :ok)
+            end)
+          end)
+        end
+
+      for _ <- 1..16, do: assert_receive(:holding)
+      on_exit(fn -> Enum.each(holders, &Process.exit(&1, :kill)) end)
+
+      waiting =
+        Task.async(fn ->
+          Oban.Testing.with_testing_mode(:manual, fn ->
+            %{signed(payload()) | remote_ip: @github} |> Webhook.call([]) |> Map.get(:status)
+          end)
+        end)
+
+      assert Task.yield(waiting, 200) == nil
+      # A request from another address does not wait
+      assert wrongly_signed("{}", {192, 0, 2, 60}) |> Webhook.call([]) |> Map.get(:status) == 401
+
+      Process.exit(hd(holders), :kill)
+      assert Task.await(waiting) == 202
+      Enum.each(holders, &send(&1, :release))
+    end
+  end
+
   test "a busy signature check makes a request wait, and does not refuse it" do
     alias Brando.MarkdownSources.SignatureCheck
 

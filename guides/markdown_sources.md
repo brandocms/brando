@@ -186,6 +186,30 @@ edge, as does running multiple nodes. The client address is taken from
 `X-Forwarded-For` only when the request comes from a trusted proxy
 (`Brando.ClientIP`).
 
+GitHub sends every customer's webhooks from the same addresses, so anyone can
+point webhooks of their own at this URL and have GitHub send wrongly signed
+requests from them. An address in GitHub's webhook ranges therefore has 1,200
+requests a minute instead of 120, and at most 16 such requests read and verify
+their bodies at once (16 MiB); the others wait their turn. The ranges are the
+`hooks` list of GitHub's `/meta` API, fetched when a node with connections
+starts and every six hours after; requests never trigger a fetch. When a fetch
+fails the last list is kept, and until one has succeeded GitHub's addresses have
+the ordinary limit. For GitHub Enterprise, or to fix the list:
+
+```elixir
+config :brando, :markdown_sources,
+  # The API of a GitHub Enterprise server; nil fetches nothing
+  github_meta_url: "https://github.example.com/api/v3/meta",
+  # Or a fixed list, used instead of a fetch
+  github_hook_ranges: ["192.30.252.0/22", "185.199.108.0/22"],
+  connections: %{...}
+```
+
+Only the address `Brando.ClientIP` resolves counts. Behind a CDN or proxy that
+is not a trusted proxy, every request comes from the edge's address: GitHub's
+deliveries get the ordinary limit and share it with whoever else reaches the
+URL through the same edge address.
+
 Receipt uniqueness covers both connection-scoped delivery IDs and verified body
 fingerprints. Renaming a delivery header cannot replay the same body. Receipts retain the accepted Oban job IDs for processing-status lookup. Receipt
 and job creation are transactional; persistence failures return 503. Jobs

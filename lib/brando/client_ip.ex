@@ -142,7 +142,9 @@ defmodule Brando.ClientIP do
   defp prefix_length({prefix, ""}, bits) when prefix >= 0 and prefix <= bits, do: {:ok, prefix}
   defp prefix_length(_, _bits), do: :error
 
-  defp in_range?(address, {network, prefix}) do
+  @doc "Whether `address` is in a range from `parse_range/1`."
+  @spec in_range?(address(), {address(), non_neg_integer()}) :: boolean()
+  def in_range?(address, {network, prefix}) do
     address = to_bits(address)
     network = to_bits(network)
     shift = bit_size(address) - prefix

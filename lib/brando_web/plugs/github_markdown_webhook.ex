@@ -8,7 +8,7 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
   Connections and allowed destinations are server-owned configuration.
   """
   import Plug.Conn
-  alias Brando.MarkdownSources.{Connection, Delivery, RateLimiter, SignatureCheck}
+  alias Brando.MarkdownSources.{Connection, Delivery, GitHubAddresses, RateLimiter, ReadSlots, SignatureCheck}
   alias Brando.Repo
   @max_body 1_048_576
 
@@ -25,36 +25,46 @@ defmodule BrandoWeb.Plugs.GitHubMarkdownWebhook do
 
   defp handle(conn, key, opts) do
     connection = Connection.get(key)
+    address = Brando.ClientIP.from_conn(conn)
+    github? = GitHubAddresses.member?(address)
 
     with true <- conn.scheme == :https or Keyword.get(opts, :allow_insecure, false),
          true <- conn.method == "POST",
-         {:client, true} <- {:client, allow_client?(conn, connection)},
+         {:client, true} <- {:client, RateLimiter.allow_client?(address, match?({:ok, _}, connection), github?)},
          {:ok, connection} <- connection,
          [content_type] <- get_req_header(conn, "content-type"),
          true <- String.downcase(hd(String.split(content_type, ";"))) == "application/json",
          true <- signature_shaped?(get_req_header(conn, "x-hub-signature-256")),
-         {:ok, body, conn} <- body(conn, [], 0, System.monotonic_time(:millisecond) + 10_000) do
-      authenticate_and_accept(conn, connection, body)
+         {:ok, body, conn} <- read_verified(conn, connection, github?, System.monotonic_time(:millisecond) + 10_000) do
+      accept_delivery(conn, connection, body)
     else
       {:client, false} -> respond(conn, 429, "rate_limited")
+      {:error, :busy} -> respond(conn, 429, "rate_limited")
       {:error, :too_large, conn} -> respond(conn, 413, "request_too_large")
       {:error, :incomplete_body, conn} -> respond(conn, 400, "incomplete_body")
       _ -> respond(conn, 401, "delivery_rejected")
     end
   end
 
-  defp allow_client?(conn, connection),
-    do: RateLimiter.allow_client?(Brando.ClientIP.from_conn(conn), match?({:ok, _}, connection))
-
   # No HMAC can verify any other header, so its body is not worth reading
   defp signature_shaped?(["sha256=" <> hex]) when byte_size(hex) == 64, do: true
   defp signature_shaped?(_), do: false
 
-  defp authenticate_and_accept(conn, connection, body) do
+  # A request from GitHub's addresses reads and verifies its body holding a read
+  # slot, which bounds how many of their bodies are held at once
+  defp read_verified(conn, connection, true, deadline),
+    do: ReadSlots.run(deadline, fn -> read_verified(conn, connection, false, deadline) end)
+
+  defp read_verified(conn, connection, false, deadline) do
     header = get_req_header(conn, "x-hub-signature-256")
 
-    with :ok <- SignatureCheck.run(fn -> verify(header, body, connection.secret) end),
-         {:delivery, true} <- {:delivery, RateLimiter.allow_delivery?()},
+    with {:ok, body, conn} <- body(conn, [], 0, deadline),
+         :ok <- SignatureCheck.run(fn -> verify(header, body, connection.secret) end),
+         do: {:ok, body, conn}
+  end
+
+  defp accept_delivery(conn, connection, body) do
+    with {:delivery, true} <- {:delivery, RateLimiter.allow_delivery?()},
          {:ok, payload} when is_map(payload) <- Jason.decode(body),
          :ok <- repository(payload, connection),
          {:ok, event} <- event(get_req_header(conn, "x-github-event"), payload),
