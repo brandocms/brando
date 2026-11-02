@@ -1,0 +1,1 @@
+- Deleting, restoring or duplicating a palette, deleting a global set, duplicating a menu, creating or copying an identity or SEO record, and setting a palette's or menu's status from its listing refresh the site caches, and render again the entries that show the changed globals, menus or identity.

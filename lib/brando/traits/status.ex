@@ -56,6 +56,8 @@ defmodule Brando.Trait.Status do
       end
 
     Brando.Content.Blocks.enqueue_entry_cascade(schema, updated_entry, identifier_id)
+    # The context's update callbacks, which refresh a site cache, do not run here
+    Brando.Cache.entry_changed(updated_entry)
     Brando.Cache.Query.evict({:ok, %{__struct__: schema, id: id}})
   end
 end

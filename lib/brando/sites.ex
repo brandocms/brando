@@ -52,7 +52,13 @@ defmodule Brando.Sites do
   @doc """
   Create new identity
   """
-  mutation :create, Identity
+  mutation :create, Identity do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Identity.update()
+      |> update_villains_referencing_identity()
+    end
+  end
 
   @doc """
   Update existing identity
@@ -67,7 +73,14 @@ defmodule Brando.Sites do
     end
   end
 
-  mutation :duplicate, {Identity, change_fields: [:name]}
+  # The identity screen makes a language's identity by copying the first one
+  mutation :duplicate, {Identity, change_fields: [:name]} do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Identity.update()
+      |> update_villains_referencing_identity()
+    end
+  end
 
   @doc """
   Create default identity
@@ -166,7 +179,9 @@ defmodule Brando.Sites do
   @doc """
   Create new seo
   """
-  mutation :create, SEO
+  mutation :create, SEO do
+    fn entry -> Cache.SEO.update({:ok, entry}) end
+  end
 
   @doc """
   Update existing seo
@@ -179,7 +194,10 @@ defmodule Brando.Sites do
     end
   end
 
-  mutation :duplicate, {SEO, change_fields: [:fallback_meta_title]}
+  # The SEO screen makes a language's record by copying the first one
+  mutation :duplicate, {SEO, change_fields: [:fallback_meta_title]} do
+    fn entry -> Cache.SEO.update({:ok, entry}) end
+  end
 
   @doc """
   Create default seo
@@ -254,7 +272,13 @@ defmodule Brando.Sites do
     end
   end
 
-  mutation :delete, GlobalSet
+  mutation :delete, GlobalSet do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Globals.update()
+      |> update_villains_referencing_global()
+    end
+  end
 
   @doc """
   Saves the values in `params` to the vars of `global_set`, as the Globals

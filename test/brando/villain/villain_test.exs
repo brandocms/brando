@@ -1361,6 +1361,60 @@ defmodule Brando.VillainTest do
     assert Brando.Repo.get(Brando.Pages.Fragment, fragment.id).rendered_blocks == "<div>New New title</div>"
   end
 
+  test "deleting a global set renders the entries showing it", %{user: user} do
+    Brando.Cache.Globals.set()
+
+    {:ok, set} =
+      Brando.Sites.create_global_set(
+        %{
+          label: "System",
+          key: "system",
+          language: "en",
+          vars: [%{type: "text", label: "Text", key: "text", value: "Old"}]
+        },
+        user
+      )
+
+    params = pf_module_cs(~s(<div>{{ globals.system.text }}</div>))
+    {:ok, fragment} = Brando.Pages.create_fragment(params, user)
+    {:ok, fragment} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, fragment.id)
+    assert fragment.rendered_blocks == "<div>Old</div>"
+
+    {:ok, _} = Brando.Sites.delete_global_set(set.id, user)
+    assert Brando.Repo.get(Brando.Pages.Fragment, fragment.id).rendered_blocks == "<div></div>"
+  end
+
+  # A copy adds a menu, or the identity of a language that had none: the
+  # entries showing navigation or identity are rendered again, as for a save.
+  test "copying a menu or an identity renders the entries showing them", %{user: user} do
+    Brando.Cache.Navigation.set()
+    Brando.Cache.Identity.set()
+
+    {:ok, menu} =
+      Brando.Navigation.create_menu(%{status: :published, title: "Main", key: "main", language: "en", items: []}, user)
+
+    params = pf_module_cs(~s(<div>{{ navigation.main.en.title }} {{ identity.name }}</div>))
+    {:ok, fragment} = Brando.Pages.create_fragment(params, user)
+    {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, fragment.id)
+
+    stale = fn ->
+      Brando.Repo.update_all(from(f in Brando.Pages.Fragment, where: f.id == ^fragment.id),
+        set: [rendered_blocks: "stale"]
+      )
+    end
+
+    rendered = fn -> Brando.Repo.get(Brando.Pages.Fragment, fragment.id).rendered_blocks end
+
+    stale.()
+    {:ok, _} = Brando.Navigation.duplicate_menu(menu.id, user)
+    assert rendered.() == "<div>Main Organization name</div>"
+
+    stale.()
+    {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
+    {:ok, _} = Brando.Sites.duplicate_identity(identity.id, :system, merge_fields: %{language: :no})
+    assert rendered.() == "<div>Main Organization name</div>"
+  end
+
   test "ensure villains update on identity changes", %{user: user} do
     Brando.Cache.Identity.set()
 

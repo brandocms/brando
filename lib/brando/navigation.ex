@@ -97,7 +97,13 @@ defmodule Brando.Navigation do
               :key,
               :title,
               {:items, fn _entry, current_items -> fix_items(current_items) end}
-            ]}
+            ]} do
+    fn entry ->
+      {:ok, entry}
+      |> Cache.Navigation.update()
+      |> update_villains_referencing_navigation()
+    end
+  end
 
   defp fix_items(items) do
     Enum.map(items, fn item -> %{item | id: nil, link: %{item.link | id: nil}} end)

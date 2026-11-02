@@ -252,6 +252,7 @@ defmodule Brando.Query.Mutations do
     duplicate_opts = Keyword.get(opts, :duplicate_opts, [])
     override_opts = Keyword.get(opts, :override_opts, []) |> Enum.into(%{})
     preloads = Keyword.get(duplicate_opts, :preload) || Brando.Blueprint.preloads_for(module)
+    callback = Keyword.get(opts, :callback, &{:ok, &1})
 
     with {:ok, entry} <- apply(context, :"get_#{name}", [%{matches: %{id: id}, preload: preloads}]),
          :ok <- Boundary.authorize(user, :read, entry),
@@ -280,7 +281,7 @@ defmodule Brando.Query.Mutations do
       with :ok <- Boundary.change(user, :create, copy_changeset(entry, cloned_entry)),
            {:ok, copy} <- insert_copy(cloned_entry, module, user) do
         Activity.duplicated(copy, entry, user)
-        {:ok, copy}
+        callback.(copy)
       end
     end
   end
