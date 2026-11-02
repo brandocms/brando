@@ -834,6 +834,24 @@ defmodule Brando.Content.VarGuardTest do
       assert %{value: nil} = recast |> Changeset.apply_changes() |> var("tint")
     end
 
+    test "a duplicate of a var whose options lag its definition saves, its value left empty", c do
+      block = insert_block!(c)
+      size = var(block, "size")
+
+      size
+      |> Changeset.change(value: "old")
+      |> Changeset.put_embed(:options, [%{label: "Old", value: "old"}])
+      |> Repo.update!()
+
+      block = Repo.preload(block, [:vars], force: true)
+      copy = block |> Changeset.change() |> Brando.Content.Blocks.duplicate_block(user_id: c.editor.id)
+      params = Brando.Drafts.Params.snapshot(Changeset.apply_changes(copy))
+      recast = Block.block_changeset(%Block{}, Map.put(params, "uid", Utils.generate_uid()), c.editor.id)
+
+      assert recast.valid?
+      assert %{value: nil} = recast |> Changeset.apply_changes() |> var("size")
+    end
+
     test "a stale var keeps its saved type and key on an unrelated edit", c do
       block = insert_block!(c)
 
