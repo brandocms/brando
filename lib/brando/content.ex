@@ -132,13 +132,13 @@ defmodule Brando.Content do
     end
   end
 
+  # Open forms are told once the module is committed: one rolled back with
+  # the caller's transaction is never announced.
   mutation :create, Module do
     fn entry ->
-      Phoenix.PubSub.broadcast(
-        Brando.pubsub(),
-        "brando:modules",
-        {entry, [:module, :created]}
-      )
+      Brando.Repo.after_commit(fn ->
+        Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:modules", {entry, [:module, :created]})
+      end)
 
       {:ok, entry}
     end
@@ -148,11 +148,9 @@ defmodule Brando.Content do
     fn entry ->
       ContentBlocks.render_entries_with_module_id(entry.id)
 
-      Phoenix.PubSub.broadcast(
-        Brando.pubsub(),
-        "brando:modules",
-        {entry, [:module, :updated]}
-      )
+      Brando.Repo.after_commit(fn ->
+        Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:modules", {entry, [:module, :updated]})
+      end)
 
       {:ok, entry}
     end
@@ -449,19 +447,13 @@ defmodule Brando.Content do
   end
 
   mutation :create, Palette do
-    fn entry ->
-      Brando.Cache.Palettes.set()
-
-      {:ok, entry}
-    end
+    fn entry -> Brando.Cache.Palettes.update({:ok, entry}) end
   end
 
   mutation :update, Palette do
     fn palette ->
       ContentBlocks.render_entries_with_palette_id(palette.id)
-      Brando.Cache.Palettes.set()
-
-      {:ok, palette}
+      Brando.Cache.Palettes.update({:ok, palette})
     end
   end
 

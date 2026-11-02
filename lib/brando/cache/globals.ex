@@ -43,19 +43,22 @@ defmodule Brando.Cache.Globals do
   end
 
   @doc """
-  Update globals cache
+  Update globals cache, once the transaction around the caller has
+  committed (`Brando.Cache.rebuild_after_commit/2`)
   """
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, global_set}) do
-    {:ok, global_sets} = Sites.list_global_sets()
-    global_map = process_globals(global_sets)
-    Cache.update(:globals, global_map)
-
+    Cache.rebuild_after_commit(:globals, &rebuild/0)
     {:ok, global_set}
   end
 
   def update({:error, changeset}), do: {:error, changeset}
+
+  defp rebuild do
+    {:ok, global_sets} = Sites.list_global_sets()
+    Cache.update(:globals, process_globals(global_sets))
+  end
 
   defp process_globals(global_sets) do
     Enum.reduce(global_sets, %{}, fn

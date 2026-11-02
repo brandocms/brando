@@ -55,13 +55,13 @@ defmodule Brando.Cache.Navigation do
   end
 
   @doc """
-  Update navigation cache
+  Update navigation cache, once the transaction around the caller has
+  committed (`Brando.Cache.rebuild_after_commit/2`)
   """
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, menu}) do
-    menu_map = get_menu_map()
-    Cache.update(:navigation, menu_map)
+    Cache.rebuild_after_commit(:navigation, &set/0)
     {:ok, menu}
   end
 

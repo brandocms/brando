@@ -143,8 +143,10 @@ persists through the menu's sort parameter.
 ## Refresh and verify
 
 Navigation context mutations refresh the navigation cache and request rendering
-of block content that uses navigation. The cache is scoped to the current tenant
-when tenancy is enabled. A direct `Repo` import bypasses these callbacks; after
+of block content that uses navigation. Inside a transaction begun with
+`Brando.Repo.transaction/2`, the cache is refreshed once it commits, and not at
+all if it rolls back. The cache is scoped to the current tenant when tenancy is
+enabled. A direct `Repo` import bypasses these callbacks; after
 it finishes, call `Brando.Cache.Navigation.set()` in the same environment and
 rerender affected content through your normal content-rendering workflow.
 

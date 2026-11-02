@@ -46,18 +46,22 @@ defmodule Brando.Cache.SEO do
   end
 
   @doc """
-  Update seos cache
+  Update seos cache, once the transaction around the caller has committed
+  (`Brando.Cache.rebuild_after_commit/2`)
   """
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, seo}) do
-    {:ok, seos} = Sites.list_seos(%{preload: [:fallback_meta_image]})
-    seo_map = process_seos(seos)
-    Cache.update(:seo, seo_map)
+    Cache.rebuild_after_commit(:seo, &rebuild/0)
     {:ok, seo}
   end
 
   def update({:error, changeset}), do: {:error, changeset}
+
+  defp rebuild do
+    {:ok, seos} = Sites.list_seos(%{preload: [:fallback_meta_image]})
+    Cache.update(:seo, process_seos(seos))
+  end
 
   defp process_seos(seos) do
     Enum.reduce(seos, %{}, fn
