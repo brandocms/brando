@@ -17,7 +17,7 @@ defmodule Brando.Villain.Tags.Output do
   last ends in a `{` is kept in the context's private data: a tag that prints
   something sets it from its output, one that prints nothing (an empty value,
   `assign`, `capture`) leaves it as it was. A tag's body starts from what came
-  before the tag, and a capture's from nothing.
+  before the tag, a capture's and a tablerow's from nothing.
   """
 
   alias Brando.Villain.InertLiquid
@@ -25,6 +25,7 @@ defmodule Brando.Villain.Tags.Output do
   alias Liquex.Context
 
   @open :brando_output_open_brace
+  @body_after_markup [Liquex.Tag.CaptureTag, Liquex.Tag.TablerowTag]
 
   @doc """
   A `post_traverse` for a document's nodes, in the reverse order NimbleParsec
@@ -55,8 +56,8 @@ defmodule Brando.Villain.Tags.Output do
     open? = not after_text? and open?(context)
 
     # What a tag's body prints first follows what came before the tag, except a
-    # capture's, which goes into a variable: printing that is a tag of its own
-    case tag.render(contents, put_open(context, open? and tag != Liquex.Tag.CaptureTag)) do
+    # capture's, which goes into a variable, and a tablerow's, after its cell
+    case tag.render(contents, put_open(context, open? and tag not in @body_after_markup)) do
       {output, %Context{} = rendered} -> printed(to_binary(output), rendered, open?, before_text?)
       # `break` and `continue`, which the loop around them handles
       other -> other
@@ -79,7 +80,7 @@ defmodule Brando.Villain.Tags.Output do
 
   # As the rendered document is joined: a tag may print `nil` (an empty ref)
   defp to_binary(output) when is_binary(output), do: output
-  defp to_binary(output) when is_list(output), do: IO.iodata_to_binary(output)
+  defp to_binary(output) when is_list(output), do: IO.chardata_to_string(output)
   defp to_binary(output), do: to_string(output)
 
   # Nothing reached the page: what was printed before still ends it

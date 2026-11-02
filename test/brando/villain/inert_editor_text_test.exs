@@ -1522,6 +1522,17 @@ defmodule Brando.Villain.InertEditorTextTest do
       assert render(block(module!(user, code), refs: [svg, input])) == "<h2></h2><p></p>"
     end
 
+    defmodule CharlistTag do
+      @moduledoc false
+      def render(_contents, context), do: {[~c"Ĭ", "x"], context}
+    end
+
+    test "a tag's text prints as the joined document read it" do
+      contents = [tag: CharlistTag, contents: [], after_text: false, before_text: false]
+
+      assert {"Ĭx", _} = Brando.Villain.Tags.Output.render(contents, Villain.get_base_context())
+    end
+
     test "a literal brace keeps JSON printed through raw working", %{user: user} do
       var = %Var{key: "json", label: "J", type: :string, value: ~s({"b":1})}
       key = %Var{key: "key", label: "K", type: :string, value: "k"}
@@ -1540,7 +1551,9 @@ defmodule Brando.Villain.InertEditorTextTest do
             {~S(<script>{{ "{" }}{% if true %}"a": {% if true %}{{ json | raw }}{% endif %}{% endif %}}</script>),
              ~S(<script>{"a": {"b":1}}</script>)},
             {~S(<script>{{ "{" }}{% capture j %}{{ json | raw }}{% endcapture %}"a": {{ j }}}</script>),
-             ~S(<script>{"a": {"b":1}}</script>)}
+             ~S(<script>{"a": {"b":1}}</script>)},
+            {~S[<script>{{ "{" }}{% tablerow i in (1..1) %}{{ json | raw }}{% endtablerow %}</script>],
+             ~s(<script>{<tr class="row1">\n<td class="col1">{"b":1}</td></tr>\n</script>)}
           ] do
         assert render(block(module!(user, code), vars: [var, key])) == expected, code
       end
