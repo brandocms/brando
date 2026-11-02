@@ -1,0 +1,1 @@
+- Saving an entry the account may not change shows the permission message and keeps the form open, instead of crashing the form.

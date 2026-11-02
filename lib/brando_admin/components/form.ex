@@ -5859,6 +5859,7 @@ defmodule BrandoAdmin.Components.Form do
     case save_entry(socket, context, mutation_type, singular, rendered_changeset) do
       {:ok, entry} -> saved_entry_with_blocks(socket, entry, save)
       {:error, {:source_controlled, paths}} -> source_controlled_save_with_blocks(socket, paths)
+      {:error, :forbidden} -> forbidden_save_with_blocks(socket)
       {:error, %Changeset{} = changeset} -> failed_save_with_blocks(socket, changeset, save)
     end
   end
@@ -5955,6 +5956,14 @@ defmodule BrandoAdmin.Components.Form do
          socket
          |> assign(:processing, false)
          |> source_controlled_error(paths)}
+
+      # The context refused the account: a role or grant that may not write
+      # this entry. The form stays open with what was typed.
+      {:error, :forbidden} ->
+        {:noreply,
+         socket
+         |> assign(:processing, false)
+         |> forbidden_save_error()}
     end
   end
 
@@ -7106,6 +7115,27 @@ defmodule BrandoAdmin.Components.Form do
      |> clear_blocks_root_changesets()
      |> reset_transformer_changesets()
      |> source_controlled_error(paths)}
+  end
+
+  # The save collected the blocks first, so it reaches the context outside the
+  # event that started it; a refusal there must not crash the form.
+  defp forbidden_save_with_blocks(socket) do
+    if FrontendEditor.frontend?(socket), do: FrontendEditor.save_failed(socket, :forbidden)
+    if socket.assigns.entry, do: EditSession.save_failed(socket.assigns.entry)
+
+    {:noreply,
+     socket
+     |> assign(:processing, false)
+     |> assign(:all_blocks_received?, false)
+     |> clear_blocks_root_changesets()
+     |> reset_transformer_changesets()
+     |> forbidden_save_error()}
+  end
+
+  defp forbidden_save_error(socket) do
+    send(self(), {:progress_popup, "Saving entry failed..."})
+    send(self(), {:toast, gettext("You do not have permission for this action.")})
+    assign(socket, :minor_save?, false)
   end
 
   # The errors only: the changes hold what was typed, passwords and email addresses too.
