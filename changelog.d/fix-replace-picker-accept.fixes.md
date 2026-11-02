@@ -1,0 +1,1 @@
+- The Replace file dialog's file picker offers the files a replacement takes: a `.jpeg` for a stored `.jpg`, and every file when the stored extension is one slugging made, such as `.jpglarge` from `.jpg_large`.
