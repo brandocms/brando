@@ -212,9 +212,10 @@ config :brando, :markdown_sources,
   connections: %{...}
 ```
 
-With connections in compile-time config, Brando fetches the list when a test
-run starts too; set `github_meta_url: nil` or a fixed `github_hook_ranges` in
-`config/test.exs` so tests make no network calls.
+When the test environment has connections too (in `config.exs`, or in
+`runtime.exs` outside a `config_env() == :prod` guard), Brando fetches the list
+when a test run starts; set `github_meta_url: nil` or a fixed
+`github_hook_ranges` in `config/test.exs` so tests make no network calls.
 
 Only the address `Brando.ClientIP` resolves counts. Behind a CDN or proxy that
 is not a trusted proxy, every request comes from the edge's address: GitHub's
