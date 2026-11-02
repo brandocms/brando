@@ -1513,6 +1513,14 @@ defmodule Brando.Villain.InertEditorTextTest do
       end
     end
 
+    test "a ref that prints nothing renders as nothing", %{user: user} do
+      svg = ref("svg", %Brando.Villain.Blocks.SvgBlock{data: %Brando.Villain.Blocks.SvgBlock.Data{code: nil}})
+      input = ref("input", %Brando.Villain.Blocks.InputBlock{data: %Brando.Villain.Blocks.InputBlock.Data{value: nil}})
+      code = "<h2>{% ref refs.svg %}</h2><p>{% ref refs.input %}</p>"
+
+      assert render(block(module!(user, code), refs: [svg, input])) == "<h2></h2><p></p>"
+    end
+
     test "a literal brace keeps JSON printed through raw working", %{user: user} do
       var = %Var{key: "json", label: "J", type: :string, value: ~s({"b":1})}
       key = %Var{key: "key", label: "K", type: :string, value: "k"}

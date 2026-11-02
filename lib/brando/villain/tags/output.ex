@@ -54,7 +54,7 @@ defmodule Brando.Villain.Tags.Output do
     open? = not after_text? and open?(context)
 
     case tag.render(contents, context) do
-      {output, %Context{} = rendered} -> printed(IO.iodata_to_binary(output), rendered, open?, before_text?)
+      {output, %Context{} = rendered} -> printed(to_binary(output), rendered, open?, before_text?)
       # `break` and `continue`, which the loop around them handles
       other -> other
     end
@@ -73,6 +73,11 @@ defmodule Brando.Villain.Tags.Output do
 
   @doc "`context` for a document rendered on its own, with nothing printed before it."
   def reset(%Context{} = context), do: put_open(context, false)
+
+  # As the rendered document is joined: a tag may print `nil` (an empty ref)
+  defp to_binary(output) when is_binary(output), do: output
+  defp to_binary(output) when is_list(output), do: IO.iodata_to_binary(output)
+  defp to_binary(output), do: to_string(output)
 
   # Nothing reached the page: what was printed before still ends it
   defp printed("", context, open?, _before_text?), do: {"", put_open(context, open?)}
