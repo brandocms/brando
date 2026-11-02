@@ -225,6 +225,60 @@ defmodule BrandoAdmin.AssistantLiveTest do
     refute has_element?(view, "button.assistant-apply")
   end
 
+  # Audit F49: the step labels split on a character a stored title could hold
+  describe "a conversation that read an unusual value" do
+    defp conversation_with_step(c, name, arguments, result) do
+      {:ok, conversation} = Agent.start_conversation(c.current_user)
+
+      Brando.Repo.insert!(%Agent.Message{
+        conversation_id: conversation.id,
+        role: "assistant",
+        tool_calls: [%{"id" => "call-1", "name" => name, "arguments" => Jason.encode!(arguments)}]
+      })
+
+      Brando.Repo.insert!(%Agent.Message{
+        conversation_id: conversation.id,
+        role: "tool",
+        tool_call_id: "call-1",
+        tool_name: name,
+        content: Jason.encode!(result)
+      })
+
+      conversation
+    end
+
+    test "opens, and shows a title holding the step marker", %{conn: conn} = c do
+      mark = "\u{E000}"
+
+      for {title, shown} <- [
+            {"Tit#{mark}le", "Title"},
+            {"#{mark}a#{mark}b#{mark}", "ab"},
+            {"#{mark}unknown:kind#{mark}", "unknown:kind"},
+            {"#{mark}strong:x#{mark}", "strong:x"}
+          ] do
+        conversation = conversation_with_step(c, "entry_outline", %{}, %{"title" => title})
+        {:ok, view, html} = live(conn, "/admin/assistant/#{conversation.id}")
+
+        assert has_element?(view, ".assistant-step-term", shown)
+        refute html =~ mark
+      end
+    end
+
+    test "opens when a model's arguments are not text", %{conn: conn} = c do
+      for {name, arguments, result} <- [
+            {"search_entries", %{"query" => %{"a" => 1}}, %{}},
+            {"search_entries", %{"query" => ["a"], "content_type" => %{"a" => 1}}, %{}},
+            {"search_assets", %{"query" => %{"a" => 1}}, %{}},
+            {"describe_content_type", %{"content_type" => ["a"]}, %{}},
+            {"attach_folder", %{}, %{"folder" => %{"path" => %{"a" => 1}}, "attached" => []}},
+            {"prepare_proposal", %{}, %{"version" => %{"a" => 1}}}
+          ] do
+        conversation = conversation_with_step(c, name, arguments, result)
+        assert {:ok, _view, _html} = live(conn, "/admin/assistant/#{conversation.id}")
+      end
+    end
+  end
+
   @tag cassette: "assistant/read_entry", cassette_opts: @cassette_opts
   test "steps name what they read, and the cost so far is shown unless switched off", %{conn: conn} = c do
     bind(c)

@@ -777,6 +777,12 @@ Only non-live environments can be deleted:
 {:ok, _deleted} = Brando.Environments.delete_environment(staging)
 ```
 
+Deleting an environment deletes its rows in the shared tables too: form
+submissions, entry drafts, assistant conversations, guidance versions, content
+proposals and transfer receipts. Those of an environment that was once live go
+with it, so export the submissions you want to keep first. Deleting a site does
+the same for all its environments.
+
 Archives are schemas in the same database. They protect destructive environment
 operations, but they are not a substitute for an external database backup.
 

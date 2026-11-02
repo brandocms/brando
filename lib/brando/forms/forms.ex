@@ -56,9 +56,12 @@ defmodule Brando.Forms do
     end
   end
 
+  # Its submissions go with the last language of its key: nothing reads or
+  # purges them after that, and a new form with the key would list them.
   mutation :delete, Form do
     fn form ->
       render_entries_using_form(form)
+      purge_submissions_of_deleted_form(form.key)
       {:ok, form}
     end
   end
@@ -301,6 +304,38 @@ defmodule Brando.Forms do
 
       total + count
     end)
+  end
+
+  @doc """
+  Deletes the current scope's submissions of the form `key`, when no form in any
+  language has that key here. With one, it deletes nothing. Returns how many
+  were deleted.
+  """
+  def purge_submissions_of_deleted_form(key) do
+    {:ok, purged} =
+      Repo.transaction(fn ->
+        if Repo.aggregate(from(f in Form, where: f.key == ^key), :count) > 0 do
+          0
+        else
+          key |> submissions_query(nil) |> Repo.delete_all() |> elem(0)
+        end
+      end)
+
+    purged
+  end
+
+  @doc "The keys with submissions in the current scope and no form, as `%{scope:, key:, count:}`."
+  def submissions_without_form do
+    scope = Submission.current_scope()
+    form_keys = Repo.all(from f in Form, distinct: true, select: f.key)
+
+    from(s in Submission,
+      where: s.scope == ^scope and s.form_key not in ^form_keys,
+      group_by: s.form_key,
+      order_by: s.form_key,
+      select: %{scope: ^scope, key: s.form_key, count: count()}
+    )
+    |> Repo.all()
   end
 
   @doc """

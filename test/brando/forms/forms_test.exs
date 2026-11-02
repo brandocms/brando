@@ -41,6 +41,102 @@ defmodule Brando.FormsTest do
     form
   end
 
+  # Audit F51: nothing read or purged a deleted form's submissions but its key
+  describe "deleting a form" do
+    defp submission(key, scope \\ "public", language \\ "en") do
+      Brando.Repo.insert!(%Brando.Forms.Submission{
+        scope: scope,
+        form_id: 1,
+        form_key: key,
+        language: language,
+        data: %{"a" => "b"}
+      })
+    end
+
+    test "deleting the last language of a key deletes its submissions in this scope", %{user: user} do
+      {:ok, form} = create_form(user, %{"key" => "gone"})
+      submission("gone")
+      submission("gone")
+      elsewhere = submission("gone", "tenant_other_production")
+      other_key = submission("kept")
+
+      assert {:ok, _} = Forms.delete_form(form.id, user)
+
+      assert Forms.count_submissions("gone") == 0
+      assert Brando.Repo.get(Brando.Forms.Submission, elsewhere.id)
+      assert Brando.Repo.get(Brando.Forms.Submission, other_key.id)
+
+      assert {:ok, _} = create_form(user, %{"key" => "gone"})
+      assert Forms.stream_submissions("gone") == []
+    end
+
+    test "deleting one language of several keeps the submissions", %{user: user} do
+      {:ok, english} = create_form(user, %{"key" => "shared", "language" => "en"})
+      {:ok, norwegian} = create_form(user, %{"key" => "shared", "language" => "no"})
+      submission("shared")
+
+      assert {:ok, _} = Forms.delete_form(english.id, user)
+      assert Forms.count_submissions("shared") == 1
+
+      assert {:ok, _} = Forms.delete_form(norwegian.id, user)
+      assert Forms.count_submissions("shared") == 0
+    end
+
+    test "the delete dialog says what goes, for the last language only", %{user: user} do
+      alias BrandoAdmin.LiveView.Listing.DeleteDescription
+
+      {:ok, english} = create_form(user, %{"key" => "asked", "language" => "en"})
+      assert {:ok, %{html: html}} = {:ok, DeleteDescription.describe(Form, english)}
+      refute html =~ "submission"
+
+      submission("asked")
+      submission("asked")
+      assert DeleteDescription.describe(Form, english).html =~ "2 submissions"
+
+      {:ok, _norwegian} = create_form(user, %{"key" => "asked", "language" => "no"})
+      refute DeleteDescription.describe(Form, english).html =~ "submission"
+    end
+  end
+
+  # A purge deletes personal data for good. Whatever asks for it, it stops at a
+  # key a form in that scope holds.
+  describe "purging the submissions of deleted forms" do
+    alias Brando.Worker.OrphanedRowsPurge
+
+    test "never reaches a live form's submissions", %{user: user} do
+      {:ok, _live} = create_form(user, %{"key" => "live"})
+      live_row = submission("live")
+      orphan = submission("orphan")
+
+      assert Forms.purge_submissions_of_deleted_form("live") == 0
+
+      assert :ok =
+               OrphanedRowsPurge.perform(%Oban.Job{args: %{"form_keys" => ["live", "orphan"], "tenant_prefix" => nil}})
+
+      assert Brando.Repo.get(Brando.Forms.Submission, live_row.id)
+      refute Brando.Repo.get(Brando.Forms.Submission, orphan.id)
+    end
+
+    test "the report names keys without a form and deletes nothing", %{user: user} do
+      {:ok, _live} = create_form(user, %{"key" => "live"})
+      submission("live")
+      orphan = submission("orphan")
+      submission("orphan")
+      submission("other-scope", "tenant_other_production")
+
+      assert %{environments: %{}, forms: [%{scope: "public", key: "orphan", count: 2}]} = OrphanedRowsPurge.report()
+      assert Brando.Repo.get(Brando.Forms.Submission, orphan.id)
+    end
+
+    test "nothing is purged without naming a key", %{user: user} do
+      {:ok, _} = create_form(user, %{"key" => "live"})
+      orphan = submission("orphan")
+
+      assert :ok = OrphanedRowsPurge.perform(%Oban.Job{args: %{"form_keys" => [], "tenant_prefix" => nil}})
+      assert Brando.Repo.get(Brando.Forms.Submission, orphan.id)
+    end
+  end
+
   test "option rows become ordered values with labels by value", %{user: user} do
     {:ok, form} = create_form(user)
     [name, service] = load(form.id).fields

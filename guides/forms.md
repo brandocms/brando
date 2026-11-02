@@ -61,7 +61,9 @@ confirmation sent to the visitor, and how long submissions are kept; see
 Once a form is saved, its screen lists the entries whose blocks hold it, in any
 of its languages. Deleting a form from the list names them too: a page that
 holds a deleted form shows nothing in its place. A form named by key in a
-module's code (`{% form 'contact' %}`) is not listed.
+module's code (`{% form 'contact' %}`) is not listed. Deleting the last language
+of a form also deletes its submissions in that environment, for good, and the
+dialog says how many.
 
 ## Messages
 
@@ -319,6 +321,11 @@ replaces Brando's crontab, and adds the job to its own:
 ```elixir
 {"15 5 * * *", Brando.Worker.FormSubmissionPurger}
 ```
+
+Deleting a site or an environment deletes its submissions with it
+([Tenancy and environments](tenancy_and_environments.md)). Copying an environment
+over another replaces its forms but keeps its submissions: a form the copy
+removes has its submissions back when a form with that key returns.
 
 ### Protection
 

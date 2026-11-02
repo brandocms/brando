@@ -5334,8 +5334,8 @@ msgstr[1] "Slette alle %{count} ubrukte videoer?"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "Delete %{name} and its complete PostgreSQL schema? This cannot be undone."
-msgstr "Slette %{name} og hele PostgreSQL-skjemaet? Dette kan ikke angres."
+msgid "Delete %{name}, its complete PostgreSQL schema, and its form submissions and drafts? This cannot be undone."
+msgstr "Slette %{name}, hele PostgreSQL-skjemaet og tilhørende skjemainnsendinger og utkast? Dette kan ikke angres."
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
@@ -8813,6 +8813,13 @@ msgstr "Skjemaversjonen avviker fra gjeldende skjema, så noen felter lastes kan
 #, elixir-autogen, elixir-format
 msgid "Its schema version differs from the current schema, so some fields may not restore correctly."
 msgstr "Skjemaversjonen avviker fra gjeldende skjema, så noen felter gjenopprettes kanskje ikke riktig."
+
+#: lib/brando_admin/live_view/listing/delete_description.ex
+#, elixir-autogen, elixir-format
+msgid "Its submission is deleted with it."
+msgid_plural "Its %{count} submissions are deleted with it."
+msgstr[0] "Innsendingen slettes sammen med det."
+msgstr[1] "De %{count} innsendingene slettes sammen med det."
 
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #, elixir-autogen, elixir-format

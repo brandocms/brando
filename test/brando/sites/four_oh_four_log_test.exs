@@ -45,6 +45,55 @@ defmodule Brando.Sites.FourOhFourLogTest do
     assert [%{hits: 1}, %{hits: 3}] = rows()
   end
 
+  # Audit F45: one unstorable row took the whole flush with it
+  describe "an unstorable hit costs only itself" do
+    test "an invalid referrer is stored as no referrer, beside a genuine hit" do
+      miss("/genuine", "https://example.com/a")
+      miss("/crafted", "https://example.com/" <> <<0xFF>>)
+      miss("/nul", "https://example.com/" <> <<0>>)
+
+      assert FourOhFour.flush() == 3
+
+      assert [
+               %NotFoundHit{url: "/crafted", referrer: ""},
+               %NotFoundHit{url: "/genuine", referrer: "https://example.com/a"},
+               %NotFoundHit{url: "/nul", referrer: ""}
+             ] = rows()
+    end
+
+    test "long multibyte URLs and referrers fit the unique index" do
+      # Varied, so the index cannot compress them to fit
+      long =
+        :rand.seed_s(:exsss, 45)
+        |> then(
+          &Enum.map_reduce(1..1000, &1, fn _, seed ->
+            {n, seed} = :rand.uniform_s(0xFFFF, seed)
+            {<<0x10000 + n::utf8>>, seed}
+          end)
+        )
+        |> elem(0)
+        |> Enum.join()
+
+      miss("/genuine")
+      miss("/" <> long, "https://example.com/" <> long)
+      miss("/" <> long, "https://cms.example.com/" <> long)
+
+      assert FourOhFour.flush() == 3
+      assert length(rows()) == 3
+      assert Enum.all?(rows(), &(String.valid?(&1.url) and String.valid?(&1.referrer)))
+    end
+
+    test "a row the database refuses is retried alone, so the others are stored" do
+      key = fn url, referrer -> {url, referrer, Date.utc_today()} end
+      Cachex.incr(:four_oh_four, key.("/genuine", ""), 2)
+      Cachex.incr(:four_oh_four, key.("/refused\0", ""), 1)
+      Cachex.incr(:four_oh_four, key.("/also-genuine", ""), 1)
+
+      assert FourOhFour.flush() == 2
+      assert [%{url: "/also-genuine", hits: 1}, %{url: "/genuine", hits: 2}] = rows()
+    end
+  end
+
   test "list/0 flushes, totals each URL and names the referrer that sent most hits" do
     Brando.Repo.insert!(%NotFoundHit{
       url: "/moved",

@@ -2396,9 +2396,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
   # move them, and styled when the finished text is split into its parts.
   @mark "\u{E000}"
 
-  defp term(value), do: "#{@mark}term:#{value}#{@mark}"
-  defp type(value), do: "#{@mark}type:#{value}#{@mark}"
-  defp strong(value), do: "#{@mark}strong:#{value}#{@mark}"
+  defp term(value), do: "#{@mark}term:#{clean(value)}#{@mark}"
+  defp type(value), do: "#{@mark}type:#{clean(value)}#{@mark}"
+  defp strong(value), do: "#{@mark}strong:#{clean(value)}#{@mark}"
+
+  # These come from stored tool results and the model's arguments: any JSON.
+  defp clean(value) when is_binary(value), do: String.replace(value, @mark, "")
+  defp clean(value) when is_number(value), do: to_string(value)
+  defp clean(_value), do: ""
 
   defp parts(label) do
     label
@@ -2407,14 +2412,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
     |> Enum.reject(&(elem(&1, 0) == ""))
     |> Enum.map(fn
       {part, index} when rem(index, 2) == 1 ->
-        [kind, text] = String.split(part, ":", parts: 2)
-        {String.to_existing_atom(kind), text}
+        marked_part(part)
 
       {part, _} ->
         {:text, part}
     end)
     |> hug_quotes()
   end
+
+  defp marked_part("term:" <> text), do: {:term, text}
+  defp marked_part("type:" <> text), do: {:type, text}
+  defp marked_part("strong:" <> text), do: {:strong, text}
+  defp marked_part(text), do: {:text, text}
 
   # Quotes stay in the same run as the term they enclose: split across
   # elements, a font's kerning between « and the first letter is lost.
@@ -2447,7 +2456,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   defp step_text("search_entries", args, _) do
-    query = String.trim(to_string(args["query"]))
+    query = if is_binary(args["query"]), do: String.trim(args["query"]), else: ""
     type = args["content_type"] && content_type_plural(args["content_type"])
 
     cond do
