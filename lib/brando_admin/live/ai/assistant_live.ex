@@ -2334,6 +2334,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
     |> mark_open_request()
   end
 
+  @library_ids 1..0x7FFFFFFFFFFFFFFF
+
   # The assistant's request for media, with the library suggestions it was
   # made with.
   defp media_request(%{"arguments" => arguments}, result) do
@@ -2346,12 +2348,16 @@ defmodule BrandoAdmin.AI.AssistantLive do
     %{
       role: "request",
       kind: if(args["kind"] == "video", do: "video", else: "image"),
-      reason: args["reason"],
-      count: args["count"],
-      suggested: result["suggested"] || [],
+      reason: if(is_binary(args["reason"]), do: args["reason"]),
+      count: if(is_integer(args["count"]), do: args["count"]),
+      suggested: suggested_ids(result["suggested"]),
       open?: false
     }
   end
+
+  # Stored from the model's turn, and each is looked up as a library id.
+  defp suggested_ids(ids) when is_list(ids), do: Enum.filter(ids, &(&1 in @library_ids))
+  defp suggested_ids(_ids), do: []
 
   # Only the latest request, with no message from the editor after it, can be
   # answered from its card.

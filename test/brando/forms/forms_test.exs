@@ -41,21 +41,48 @@ defmodule Brando.FormsTest do
     form
   end
 
-  # Audit F51: nothing read or purged a deleted form's submissions but its key
-  describe "deleting a form" do
-    defp submission(key, scope \\ "public", language \\ "en") do
-      Brando.Repo.insert!(%Brando.Forms.Submission{
-        scope: scope,
-        form_id: 1,
-        form_key: key,
-        language: language,
-        data: %{"a" => "b"}
-      })
+  # No form has id 0.
+  defp submission(key, scope \\ "public", form_id \\ 0) do
+    Brando.Repo.insert!(%Brando.Forms.Submission{
+      scope: scope,
+      form_id: form_id,
+      form_key: key,
+      language: "en",
+      data: %{"a" => "b"}
+    })
+  end
+
+  def send_query(_event, _measurements, metadata, test_pid) do
+    if self() == test_pid, do: send(test_pid, {:query, metadata.query})
+  end
+
+  defp queries_of(fun) do
+    handler = "forms-purge-#{System.unique_integer([:positive])}"
+    event = Brando.Repo.repo().config()[:telemetry_prefix] ++ [:query]
+    :ok = :telemetry.attach(handler, event, &__MODULE__.send_query/4, self())
+
+    try do
+      fun.()
+    after
+      :telemetry.detach(handler)
     end
 
+    collect_queries([])
+  end
+
+  defp collect_queries(queries) do
+    receive do
+      {:query, query} -> collect_queries([query | queries])
+    after
+      0 -> Enum.reverse(queries)
+    end
+  end
+
+  # Audit F51: nothing read or purged a deleted form's submissions but its key
+  describe "deleting a form" do
     test "deleting the last language of a key deletes its submissions in this scope", %{user: user} do
       {:ok, form} = create_form(user, %{"key" => "gone"})
-      submission("gone")
+      submission("gone", "public", form.id)
       submission("gone")
       elsewhere = submission("gone", "tenant_other_production")
       other_key = submission("kept")
@@ -96,6 +123,21 @@ defmodule Brando.FormsTest do
       {:ok, _norwegian} = create_form(user, %{"key" => "asked", "language" => "no"})
       refute DeleteDescription.describe(Form, english).html =~ "submission"
     end
+
+    test "the delete dialog does not count what a renamed form keeps", %{user: user} do
+      alias BrandoAdmin.LiveView.Listing.DeleteDescription
+
+      {:ok, renamed} = create_form(user, %{"key" => "asked"})
+      submission("asked", "public", renamed.id)
+      {:ok, _} = Forms.update_form(renamed.id, %{"key" => "asked-now"}, user)
+      {:ok, reused} = create_form(user, %{"key" => "asked"})
+
+      refute DeleteDescription.describe(Form, reused).html =~ "submission"
+
+      submission("asked", "public", reused.id)
+      assert DeleteDescription.describe(Form, reused).html =~ "submission"
+      refute DeleteDescription.describe(Form, reused).html =~ "2 submissions"
+    end
   end
 
   # A purge deletes personal data for good. Whatever asks for it, it stops at a
@@ -128,12 +170,68 @@ defmodule Brando.FormsTest do
       assert Brando.Repo.get(Brando.Forms.Submission, orphan.id)
     end
 
+    test "the operator's purge locks the forms table first, deleting a form does not", %{user: user} do
+      submission("orphan")
+      queries = queries_of(fn -> assert Forms.purge_orphaned_submissions(["orphan"]) == 1 end)
+
+      lock = Enum.find_index(queries, &(&1 =~ ~s(LOCK TABLE "public".forms IN SHARE MODE)))
+      delete = Enum.find_index(queries, &(&1 =~ ~s(DELETE FROM "public"."forms_submissions")))
+      assert lock && delete && lock < delete
+
+      {:ok, form} = create_form(user, %{"key" => "gone"})
+      refute Enum.any?(queries_of(fn -> Forms.delete_form(form.id, user) end), &(&1 =~ "LOCK TABLE"))
+    end
+
+    # The key can be edited, and its rows keep the old one
+    test "a renamed form's rows are neither reported nor purged under the old key", %{user: user} do
+      {:ok, form} = create_form(user, %{"key" => "contact"})
+      old = submission("contact", "public", form.id)
+      {:ok, _} = Forms.update_form(form.id, %{"key" => "contact-us"}, user)
+
+      assert OrphanedRowsPurge.report().forms == []
+      assert Forms.submissions_without_form() == []
+      assert Forms.purge_orphaned_submissions(["contact"]) == 0
+      assert Forms.purge_submissions_of_deleted_form("contact") == 0
+
+      assert :ok = OrphanedRowsPurge.perform(%Oban.Job{args: %{"form_keys" => ["contact"], "tenant_prefix" => nil}})
+      assert Brando.Repo.get(Brando.Forms.Submission, old.id)
+    end
+
+    test "deleting a new form with a renamed form's old key leaves the renamed form's rows", %{user: user} do
+      {:ok, form} = create_form(user, %{"key" => "contact"})
+      old = submission("contact", "public", form.id)
+      {:ok, _} = Forms.update_form(form.id, %{"key" => "contact-us"}, user)
+
+      {:ok, new} = create_form(user, %{"key" => "contact"})
+      newer = submission("contact", "public", new.id)
+      assert {:ok, _} = Forms.delete_form(new.id, user)
+
+      assert Brando.Repo.get(Brando.Forms.Submission, old.id)
+      refute Brando.Repo.get(Brando.Forms.Submission, newer.id)
+    end
+
     test "nothing is purged without naming a key", %{user: user} do
       {:ok, _} = create_form(user, %{"key" => "live"})
       orphan = submission("orphan")
 
       assert :ok = OrphanedRowsPurge.perform(%Oban.Job{args: %{"form_keys" => [], "tenant_prefix" => nil}})
       assert Brando.Repo.get(Brando.Forms.Submission, orphan.id)
+    end
+
+    test "a job naming an environment without tenancy is cancelled, whatever the forms table holds" do
+      orphan = submission("orphan")
+      args = %{"form_keys" => ["orphan"], "tenant_prefix" => "public"}
+
+      assert {:cancel, _reason} = OrphanedRowsPurge.perform(%Oban.Job{args: args})
+      assert Brando.Repo.get(Brando.Forms.Submission, orphan.id)
+    end
+
+    test "without tenancy there is no environment operation to wait for" do
+      submission("orphan")
+      args = %{"form_keys" => ["orphan"], "tenant_prefix" => nil}
+
+      queries = queries_of(fn -> assert :ok = OrphanedRowsPurge.perform(%Oban.Job{args: args}) end)
+      refute Enum.any?(queries, &(&1 =~ "pg_advisory_lock"))
     end
   end
 

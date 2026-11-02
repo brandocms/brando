@@ -4,6 +4,7 @@ defmodule Brando.Sites.FourOhFourLogTest do
   use Brando.ConnCase
 
   import Ecto.Query, only: [from: 2]
+  import ExUnit.CaptureLog, only: [capture_log: 1]
 
   alias Brando.Sites.FourOhFour
   alias Brando.Sites.NotFoundHit
@@ -18,6 +19,13 @@ defmodule Brando.Sites.FourOhFourLogTest do
     conn = %Plug.Conn{path_info: String.split(path, "/", trim: true)}
     conn = if referrer, do: Plug.Conn.put_req_header(conn, "referer", referrer), else: conn
     FourOhFour.add_404(conn)
+  end
+
+  defp warnings_of(fun) do
+    level = Logger.level()
+    Logger.configure(level: :warning)
+    on_exit(fn -> Logger.configure(level: level) end)
+    capture_log(fun)
   end
 
   defp rows, do: Brando.Repo.all(from h in NotFoundHit, order_by: [asc: h.url, asc: h.referrer])
@@ -92,6 +100,61 @@ defmodule Brando.Sites.FourOhFourLogTest do
       assert FourOhFour.flush() == 2
       assert [%{url: "/also-genuine", hits: 1}, %{url: "/genuine", hits: 2}] = rows()
     end
+
+    test "a row the driver cannot encode is retried alone too" do
+      key = fn url -> {url, "", Date.utc_today()} end
+      Cachex.incr(:four_oh_four, key.("/genuine"), 2)
+      Cachex.incr(:four_oh_four, key.("/unencodable"), 2 ** 70)
+
+      assert FourOhFour.flush() == 1
+      assert [%{url: "/genuine", hits: 2}] = rows()
+    end
+
+    test "a table that is not there is no row's fault: one attempt, one line in the log" do
+      key = fn url -> {:tenant, "tenant_no-such_production", {url, "", Date.utc_today()}} end
+      Cachex.incr(:four_oh_four, key.("/a"), 1)
+      Cachex.incr(:four_oh_four, key.("/b"), 1)
+      Cachex.incr(:four_oh_four, key.("/c"), 1)
+
+      log = warnings_of(fn -> assert FourOhFour.flush() == 0 end)
+
+      assert length(String.split(log, "404 log:")) == 2
+    end
+
+    test "a lost connection gives up on the flush with one line in the log" do
+      miss("/a")
+      miss("/b")
+
+      %{rows: [[backend]]} = Ecto.Adapters.SQL.query!(Brando.Repo.repo(), "SELECT pg_backend_pid()")
+
+      fn ->
+        Ecto.Adapters.SQL.Sandbox.unboxed_run(Brando.Repo.repo(), fn ->
+          Ecto.Adapters.SQL.query!(Brando.Repo.repo(), "SELECT pg_terminate_backend($1)", [backend])
+        end)
+      end
+      |> Task.async()
+      |> Task.await()
+
+      log = warnings_of(fn -> assert FourOhFour.flush() == 0 end)
+
+      assert length(String.split(log, "404 log:")) == 2
+      assert log =~ "could not store 2 rows"
+    end
+  end
+
+  # The log cuts by bytes as well: this is 601 characters, stored cut to 500.
+  test "a long multibyte URL the log cut short becomes a rule for every path it begins" do
+    path = "/" <> String.duplicate("ø", 600)
+    miss(path)
+    assert FourOhFour.flush() == 1
+
+    assert [%{url: url}] = rows()
+    assert byte_size(url) < byte_size(path)
+    assert String.starts_with?(path, url)
+
+    source = Brando.Sites.Redirects.not_found_source(url)
+    refute String.ends_with?(source, "$")
+    assert Regex.match?(Regex.compile!("^" <> source, "u"), path)
   end
 
   test "list/0 flushes, totals each URL and names the referrer that sent most hits" do

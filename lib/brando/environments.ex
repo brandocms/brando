@@ -794,7 +794,8 @@ defmodule Brando.Environments do
          do: Logger.error("[Brando.Environments] Could not remove environment #{environment.key}: #{inspect(reason)}")
   end
 
-  defp with_site_lock(site, fun) do
+  @doc false
+  def with_site_lock(site, fun) do
     repo = Repo.repo()
     lock_key = "brando:environment-operation:#{site.id}"
 

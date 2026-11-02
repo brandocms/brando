@@ -271,11 +271,32 @@ defmodule BrandoAdmin.AssistantLiveTest do
             {"search_assets", %{"query" => %{"a" => 1}}, %{}},
             {"describe_content_type", %{"content_type" => ["a"]}, %{}},
             {"attach_folder", %{}, %{"folder" => %{"path" => %{"a" => 1}}, "attached" => []}},
-            {"prepare_proposal", %{}, %{"version" => %{"a" => 1}}}
+            {"prepare_proposal", %{}, %{"version" => %{"a" => 1}}},
+            {"request_media", %{"reason" => %{"a" => 1}, "count" => "two"}, %{"suggested" => "not a list"}},
+            {"request_media", %{"reason" => ["a"], "count" => %{"a" => 1}}, %{"suggested" => %{"a" => 1}}},
+            {"request_media", %{"kind" => ["a"]}, %{"suggested" => ["1", nil, %{"a" => 1}, 1.5, [1], -1, 2 ** 70]}}
           ] do
         conversation = conversation_with_step(c, name, arguments, result)
         assert {:ok, _view, _html} = live(conn, "/admin/assistant/#{conversation.id}")
       end
+    end
+
+    test "a media request shows what it can of what is stored", %{conn: conn} = c do
+      image = Brando.Factory.insert(:image, creator: c.current_user)
+
+      conversation =
+        conversation_with_step(c, "request_media", %{"reason" => "Photos", "count" => 2}, %{
+          "suggested" => [image.id, "1", %{"a" => 1}]
+        })
+
+      {:ok, view, _html} = live(conn, "/admin/assistant/#{conversation.id}")
+      assert has_element?(view, ".assistant-request-reason", "Photos")
+      assert has_element?(view, ~s(.assistant-request-item[phx-value-id="#{image.id}"]))
+      assert length(Floki.find(render(view) |> Floki.parse_document!(), ".assistant-request-item")) == 1
+
+      conversation = conversation_with_step(c, "request_media", %{"reason" => %{"a" => 1}}, %{})
+      {:ok, view, _html} = live(conn, "/admin/assistant/#{conversation.id}")
+      refute has_element?(view, ".assistant-request-reason")
     end
   end
 

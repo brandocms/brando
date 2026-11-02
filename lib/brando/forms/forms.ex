@@ -308,29 +308,66 @@ defmodule Brando.Forms do
 
   @doc """
   Deletes the current scope's submissions of the form `key`, when no form in any
-  language has that key here. With one, it deletes nothing. Returns how many
-  were deleted.
+  language has that key here. With one, it deletes nothing. A row whose `form_id`
+  is a form here belongs to a form since renamed, and stays. Returns how many were
+  deleted.
+
+  This is the path a form's deletion takes, and takes no table lock: group
+  authorization wraps that in a transaction already holding ROW EXCLUSIVE on
+  `forms`, and two deleters upgrading to SHARE could deadlock. Anything else
+  uses `purge_orphaned_submissions/1`.
   """
   def purge_submissions_of_deleted_form(key) do
+    {:ok, purged} = Repo.transaction(fn -> delete_submissions_without_form(key) end)
+    purged
+  end
+
+  @doc """
+  Deletes the current scope's submissions of `keys`, as
+  `purge_submissions_of_deleted_form/1` does, with `forms` locked against a form
+  being created between looking and deleting. Returns how many were deleted.
+  """
+  def purge_orphaned_submissions(keys) when is_list(keys) do
+    schema = Brando.Tenant.current_prefix() || "public"
+
     {:ok, purged} =
       Repo.transaction(fn ->
-        if Repo.aggregate(from(f in Form, where: f.key == ^key), :count) > 0 do
-          0
-        else
-          key |> submissions_query(nil) |> Repo.delete_all() |> elem(0)
-        end
+        Ecto.Adapters.SQL.query!(Repo.repo(), ~s(LOCK TABLE "#{schema}".forms IN SHARE MODE))
+        keys |> Enum.map(&delete_submissions_without_form/1) |> Enum.sum()
       end)
 
     purged
   end
 
-  @doc "The keys with submissions in the current scope and no form, as `%{scope:, key:, count:}`."
+  defp delete_submissions_without_form(key) do
+    if Repo.aggregate(from(f in Form, where: f.key == ^key), :count) > 0 do
+      0
+    else
+      key |> submissions_going_with_key() |> Repo.delete_all() |> elem(0)
+    end
+  end
+
+  @doc "How many submissions go with the last language of the form `key`."
+  def count_submissions_going_with_form(key), do: key |> submissions_going_with_key() |> Repo.aggregate(:count)
+
+  defp submissions_going_with_key(key) do
+    renamed = Repo.all(from f in Form, where: f.key != ^key, select: f.id)
+    key |> submissions_query(nil) |> where([s], s.form_id not in ^renamed)
+  end
+
+  @doc """
+  The keys with submissions in the current scope and no form, as `%{scope:, key:,
+  count:}`. A row whose `form_id` is a form here belongs to a form since renamed,
+  and is not counted.
+  """
   def submissions_without_form do
     scope = Submission.current_scope()
-    form_keys = Repo.all(from f in Form, distinct: true, select: f.key)
+    forms = Repo.all(from f in Form, select: {f.id, f.key})
+    form_ids = Enum.map(forms, &elem(&1, 0))
+    form_keys = forms |> Enum.map(&elem(&1, 1)) |> Enum.uniq()
 
     from(s in Submission,
-      where: s.scope == ^scope and s.form_key not in ^form_keys,
+      where: s.scope == ^scope and s.form_key not in ^form_keys and s.form_id not in ^form_ids,
       group_by: s.form_key,
       order_by: s.form_key,
       select: %{scope: ^scope, key: s.form_key, count: count()}

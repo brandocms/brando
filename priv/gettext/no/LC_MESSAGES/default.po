@@ -5552,6 +5552,11 @@ msgstr "Slettet sammen med leveringsloggen"
 msgid "Deleting stopped before it finished. The list shows what is left."
 msgstr "Slettingen stoppet før den var ferdig. Listen viser det som er igjen."
 
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting the last language of a form also deletes its submissions. This can't be undone."
+msgstr "Sletter du siste språk av et skjema, slettes også innsendingene. Dette kan ikke angres."
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format

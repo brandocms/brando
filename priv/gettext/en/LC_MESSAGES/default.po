@@ -5552,6 +5552,11 @@ msgstr ""
 msgid "Deleting stopped before it finished. The list shows what is left."
 msgstr ""
 
+#: lib/brando_admin/components/content/list.ex
+#, elixir-autogen, elixir-format
+msgid "Deleting the last language of a form also deletes its submissions. This can't be undone."
+msgstr ""
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format

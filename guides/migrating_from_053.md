@@ -845,7 +845,11 @@ Brando.Worker.OrphanedRowsPurge.report()
 ```
 
 `:environments` lists scopes that match no registered environment and no schema,
-with their rows per table. To delete those:
+with their rows per table. A scope is found by the tenant prefix stored in form
+submissions, entry drafts or guidance versions. Assistant conversations, proposals
+and receipts store a digest instead, which includes the database's host and port,
+so the rows of a deleted site with no trace in those three tables stay, and so do
+rows written before the database moved. To delete those listed:
 
 ```elixir
 Brando.Worker.OrphanedRowsPurge.purge_deleted_environments()
@@ -860,8 +864,10 @@ report shows, or `nil` for a site without tenancy:
 Brando.Worker.OrphanedRowsPurge.purge_form_submissions("tenant_acme_production", ["old-contact"])
 ```
 
-A key with a form in that environment is skipped, so this never reaches a live
-form's submissions. That also means rows left under a key that a form uses again,
+A key with a form in that environment is skipped, and so is a row of a form since
+renamed, so this never reaches a live form's submissions. A job whose scope no
+registered environment has is cancelled, and so is one naming a scope on a site
+without tenancy. That also means rows left under a key that a form uses again,
 or under a site key that a new site uses again, are not found: they look like
 that form's or site's own. Rows older than the environment's `inserted_at` are
 the sign of a reused site key; delete those by hand after reading them.

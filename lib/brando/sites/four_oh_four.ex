@@ -36,7 +36,10 @@ defmodule Brando.Sites.FourOhFour do
   @max_url_length 1000
   @max_referrer_length 500
 
-  @doc "The longest URL logged; a longer one is logged cut to this length."
+  @doc """
+  The longest URL logged, in characters and in bytes; a longer one is logged cut
+  to this, less any character the cut would split.
+  """
   def max_url_length, do: @max_url_length
 
   @doc "How many URL, referrer and day counts the buffer holds between flushes."
@@ -134,27 +137,32 @@ defmodule Brando.Sites.FourOhFour do
     |> Enum.chunk_every(1000)
     |> Enum.map(&insert_rows(&1, opts))
     |> Enum.sum()
-  end
-
-  # A row the database refuses costs only itself: its chunk is retried a row at a
-  # time. A lost connection would fail them all again, so that gives up.
-  defp insert_rows(rows, opts) do
-    NotFoundHit |> Brando.Repo.insert_all(rows, opts) |> elem(0)
   rescue
-    error in [Postgrex.Error, DBConnection.EncodeError] ->
-      case rows do
-        [_row] ->
-          Logger.warning("==> 404 log: could not store a row: #{Exception.message(error)}")
-          0
-
-        rows ->
-          rows |> Enum.map(&insert_rows([&1], opts)) |> Enum.sum()
-      end
-
     error in [DBConnection.ConnectionError] ->
       Logger.warning("==> 404 log: could not store #{length(rows)} rows: #{Exception.message(error)}")
       0
   end
+
+  # A row the database refuses costs only itself: its chunk is retried a row at a
+  # time. Any other error, such as a missing table, would fail them all again, so
+  # the chunk is given up, and a lost connection gives up the prefix in `upsert/2`.
+  defp insert_rows(rows, opts) do
+    NotFoundHit |> Brando.Repo.insert_all(rows, opts) |> elem(0)
+  rescue
+    error in [Postgrex.Error, DBConnection.EncodeError] ->
+      if refused_data?(error) and match?([_, _ | _], rows) do
+        rows |> Enum.map(&insert_rows([&1], opts)) |> Enum.sum()
+      else
+        Logger.warning("==> 404 log: could not store #{length(rows)} rows: #{Exception.message(error)}")
+        0
+      end
+  end
+
+  # Class 22 is a data exception, class 54 a program limit (too long for the index).
+  defp refused_data?(%DBConnection.EncodeError{}), do: true
+  defp refused_data?(%Postgrex.Error{postgres: %{pg_code: "22" <> _}}), do: true
+  defp refused_data?(%Postgrex.Error{postgres: %{pg_code: "54" <> _}}), do: true
+  defp refused_data?(_error), do: false
 
   @doc """
   The missing URLs recorded in the current tenant, most requested first, with

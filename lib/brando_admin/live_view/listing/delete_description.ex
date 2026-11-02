@@ -61,7 +61,7 @@ defmodule BrandoAdmin.LiveView.Listing.DeleteDescription do
 
   defp submissions(Brando.Forms.Form, %{key: key}) do
     with [_last_language] <- Brando.Forms.list_forms_by_key(key),
-         count when count > 0 <- Brando.Forms.count_submissions(key) do
+         count when count > 0 <- Brando.Forms.count_submissions_going_with_form(key) do
       " " <>
         ngettext("Its submission is deleted with it.", "Its %{count} submissions are deleted with it.", count)
     else

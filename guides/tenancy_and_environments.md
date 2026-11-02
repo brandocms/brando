@@ -781,7 +781,9 @@ Deleting an environment deletes its rows in the shared tables too: form
 submissions, entry drafts, assistant conversations, guidance versions, content
 proposals and transfer receipts. Those of an environment that was once live go
 with it, so export the submissions you want to keep first. Deleting a site does
-the same for all its environments.
+the same for all its environments. Conversations, guidance, proposals and receipts
+are found by a digest that includes the database's host and port, so those written
+before the database moved stay.
 
 Archives are schemas in the same database. They protect destructive environment
 operations, but they are not a substitute for an external database backup.

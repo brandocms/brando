@@ -102,8 +102,10 @@ defmodule Brando.Sites.Redirects do
   @spec not_found_source(String.t()) :: String.t()
   def not_found_source(url) do
     source = exact_source(url)
+    max = Brando.Sites.FourOhFour.max_url_length()
 
-    if String.length(url) >= Brando.Sites.FourOhFour.max_url_length(),
+    # Cut by characters, or by bytes, which drops at most 3 of a split character
+    if String.length(url) >= max or byte_size(url) >= max - 3,
       do: String.trim_trailing(source, "$"),
       else: source
   end

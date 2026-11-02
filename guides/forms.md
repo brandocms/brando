@@ -63,7 +63,9 @@ of its languages. Deleting a form from the list names them too: a page that
 holds a deleted form shows nothing in its place. A form named by key in a
 module's code (`{% form 'contact' %}`) is not listed. Deleting the last language
 of a form also deletes its submissions in that environment, for good, and the
-dialog says how many.
+dialog says how many; deleting several from the list warns of this, without a
+count. Submissions sent before a form's key changed keep the old key, stay with
+the form while it exists and are not deleted with a new form using that key.
 
 ## Messages
 
