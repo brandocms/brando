@@ -445,6 +445,11 @@ sender first, before the first compile.
   refresh the frontend's lockfile and rebuild it, and review a nonstandard
   manifest. Replace custom processing that relied on sharp-cli, and adopt
   `<.head>` (the 0.54.0 section of `CHANGELOG.md`).
+- **Redirects on listed SSG paths.** A static build no longer follows a redirect
+  off its own origin, and that URL fails the build. Where a path in your SSG
+  module redirects to an absolute URL, including one on the site's public
+  domain, write the target as a relative path or take the path off the list. Have
+  a custom `:fetcher` honour `redirect: false` and return `:headers`.
 - **Direct Hackney calls.** Declare `{:hackney, "~> 4.0"}`: hackney 1.x does not
   resolve next to Brando.
 - **Tokens in the request logs.** Add `"token"` and `"key"` to

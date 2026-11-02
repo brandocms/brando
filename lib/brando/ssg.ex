@@ -19,6 +19,8 @@ defmodule Brando.SSG do
 
   @default_base_url "http://localhost:4000"
   @default_receive_timeout 60_000
+  @redirect_statuses [301, 302, 303, 307, 308]
+  @max_redirects 10
 
   @doc """
   Declares a group of paths in the application's web SSG module.
@@ -110,8 +112,14 @@ defmodule Brando.SSG do
   Requests carry a short-lived signed SSG header so environments without a
   domain can be rendered through the normal endpoint and tenant plug.
 
+  A build requests only its own origin. A listed path that redirects within
+  the origin of `:base_url` is stored with the answer it ends at, and the header
+  goes along. A redirect to any other origin fails that URL without a request.
+
   The injectable `:fetcher` option has arity two (`url`, request options) and
-  is intended for tests or custom transports.
+  is intended for tests or custom transports. The request options include
+  `redirect: false`: a fetcher returns a redirect with its `:headers` rather
+  than following it, so that the build can check the target.
   """
   @spec build(keyword()) :: {:ok, map()} | {:error, term(), map()}
   def build(opts) when is_list(opts) do
@@ -270,15 +278,19 @@ defmodule Brando.SSG do
     request_opts = [
       headers: headers,
       receive_timeout: Keyword.get(opts, :receive_timeout, @default_receive_timeout),
-      retry: false
+      retry: false,
+      redirect: false
     ]
 
-    case fetcher.(request_url, request_opts) do
+    case fetch(fetcher, request_url, request_opts, @max_redirects) do
       {:ok, %{status: status, body: body}} when status in 200..299 ->
         write_response(output_path, url, body)
 
       {:ok, %{status: status}} ->
         {:error, {:http_status, status}}
+
+      {:refused_redirect, reason} ->
+        {:error, reason}
 
       {:error, reason} ->
         {:error, {:request_failed, reason}}
@@ -291,6 +303,50 @@ defmodule Brando.SSG do
   end
 
   defp default_fetcher(url, opts), do: Req.get(url, opts)
+
+  # Req would follow a redirect to any host with the signed header still on the
+  # request, and the caller could not tell. So a build follows redirects itself.
+  defp fetch(fetcher, url, request_opts, redirects_left) do
+    case fetcher.(url, request_opts) do
+      {:ok, %{status: status} = response} when status in @redirect_statuses ->
+        case redirect_location(response) do
+          nil -> {:ok, response}
+          location -> follow_redirect(fetcher, url, URI.merge(url, location), status, request_opts, redirects_left)
+        end
+
+      result ->
+        result
+    end
+  end
+
+  defp follow_redirect(fetcher, url, %URI{} = target, status, request_opts, redirects_left) do
+    cond do
+      origin(target) != origin(URI.parse(url)) ->
+        {:refused_redirect, {:redirect_off_origin, status, target}}
+
+      redirects_left == 0 ->
+        {:refused_redirect, :too_many_redirects}
+
+      true ->
+        fetch(fetcher, to_string(target), request_opts, redirects_left - 1)
+    end
+  end
+
+  # Userinfo counts: a target naming the origin's host as userinfo has another
+  # host, and one adding credentials is not a page of this site. A merged
+  # protocol-relative target has no port, and a target with no host has nil here.
+  defp origin(%URI{} = uri) do
+    host = uri.host && String.downcase(uri.host, :ascii)
+    {uri.scheme, uri.userinfo, host, uri.port || URI.default_port(uri.scheme)}
+  end
+
+  defp redirect_location(%{headers: headers}) do
+    Enum.find_value(headers, fn {name, value} ->
+      if String.downcase(to_string(name)) == "location", do: value |> List.wrap() |> List.first()
+    end)
+  end
+
+  defp redirect_location(_response), do: nil
 
   defp write_response(output_path, url, body) do
     target = output_file(output_path, url)
@@ -412,6 +468,15 @@ defmodule Brando.SSG do
   end
 
   defp format_failure(url, {:http_status, status}), do: "#{url} (HTTP #{status})"
+
+  # The target comes from the response and this text goes to the database: only
+  # its origin, since a URI with no host prints its raw authority, and inspected,
+  # since a header can hold invalid UTF-8.
+  defp format_failure(url, {:redirect_off_origin, status, %URI{} = target}) do
+    target_origin = to_string(%URI{scheme: target.scheme, host: target.host, port: target.port})
+    "#{url} (HTTP #{status} redirect to another origin: #{inspect(target_origin)})"
+  end
+
   defp format_failure(url, reason), do: "#{url} (#{inspect(reason)})"
 
   defp empty_result(output_path, dry_run?) do
