@@ -156,6 +156,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "A uid can be at most %{count} characters long."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "A uid can only hold letters, digits, - and _, and cannot end with -."
 msgstr ""
 

@@ -71,6 +71,10 @@ defmodule Brando.Content.Proposals do
   @protected_fields ~w(id status publish_at unpublish_at deleted_at marked_as_deleted creator_id inserted_at updated_at)
   @text_vars [:string, :text, :rich_text]
   @media_kinds %{image: "picture", video: "video", gallery: "gallery", file: "file"}
+  # A uid chosen for a new block leaves room within what `Content.Block.valid_uid?/1`
+  # admits for the suffix of a copy made of it: the edit session rescues a block
+  # removed under an editor as `<uid>-kept`.
+  @new_uid_bytes 128
 
   ## Prepare
 
@@ -752,6 +756,13 @@ defmodule Brando.Content.Proposals do
 
   defp new_uid(uid, tree) do
     cond do
+      is_binary(uid) and byte_size(uid) > @new_uid_bytes ->
+        {:error,
+         problem(
+           :invalid_uid,
+           dgettext("content_proposals", "A uid can be at most %{count} characters long.", count: @new_uid_bytes)
+         )}
+
       not Content.Block.valid_uid?(uid) ->
         {:error, invalid_uid()}
 

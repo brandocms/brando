@@ -10,6 +10,7 @@ defmodule Brando.Content.BlockUidTest do
   alias Brando.Content.Proposals.{BlockTree, CopyBlock, InsertBlock, Preview, Record}
   alias Brando.{Factory, FrontendEdit, FrontendEditFixtures, Repo}
   alias Brando.Pages.Page
+  alias Brando.Villain.Parser
   alias Ecto.Changeset
   import Ecto.Query, only: [from: 2]
 
@@ -112,7 +113,10 @@ defmodule Brando.Content.BlockUidTest do
       test "#{mode}: insert_block and copy_block report a bad uid, a good one passes", c do
         actor = if @mode == :groups, do: groups_editor(c), else: c.user
         target = {Page, c.identity.id}
-        [existing | _] = Enum.map(Brando.Content.Transfer.Catalog.load!(Page, c.identity.id, actor).entry_blocks, & &1.block.uid)
+
+        [existing | _] =
+          Enum.map(Brando.Content.Transfer.Catalog.load!(Page, c.identity.id, actor).entry_blocks, & &1.block.uid)
+
         before = Repo.aggregate(Block, :count)
 
         for uid <- [@breakout, @liquid, "closes--"] do
@@ -140,7 +144,9 @@ defmodule Brando.Content.BlockUidTest do
     end
 
     test "a copy to another entry reports a bad uid", c do
-      [existing | _] = Enum.map(Brando.Content.Transfer.Catalog.load!(Page, c.identity.id, c.user).entry_blocks, & &1.block.uid)
+      [existing | _] =
+        Enum.map(Brando.Content.Transfer.Catalog.load!(Page, c.identity.id, c.user).entry_blocks, & &1.block.uid)
+
       other = Factory.insert(:page, creator: c.user)
 
       op = %CopyBlock{
@@ -153,6 +159,38 @@ defmodule Brando.Content.BlockUidTest do
 
       assert {:ok, proposal} = Proposals.propose([op], c.user)
       assert Enum.map(proposal.problems, & &1.code) == [:invalid_uid]
+    end
+
+    test "a uid chosen for a new block leaves room for its recovery suffix", c do
+      target = {Page, c.identity.id}
+
+      [existing | _] =
+        Enum.map(Brando.Content.Transfer.Catalog.load!(Page, c.identity.id, c.user).entry_blocks, & &1.block.uid)
+
+      long = String.duplicate("a", 129)
+      assert Block.valid_uid?(long)
+
+      ops = [
+        %InsertBlock{target: target, module: c.text_module.id, uid: long},
+        %CopyBlock{target: target, block_uid: existing, placement: :append, uid: long}
+      ]
+
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      assert Enum.map(proposal.problems, &{&1.operation, &1.code}) == [{0, :invalid_uid}, {1, :invalid_uid}]
+      assert hd(proposal.problems).message =~ "128"
+
+      # Past the shape's own limit the length is still what the caller has to fix.
+      op = %InsertBlock{target: target, module: c.text_module.id, uid: String.duplicate("a", 300)}
+      assert {:ok, %{problems: [%{code: :invalid_uid, message: message}]}} = Proposals.propose([op], c.user)
+      assert message =~ "128"
+
+      longest = String.duplicate("a", 128)
+      assert Block.valid_uid?(longest <> "-kept-2")
+      insert = %InsertBlock{target: target, module: c.text_module.id, uid: longest}
+      assert {:ok, %{problems: []} = proposal} = Proposals.propose([insert], c.user)
+      assert {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+      assert {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+      assert Repo.get_by(Block, uid: longest)
     end
 
     test "a ref uid chosen for a new block is held to the same shape", c do
@@ -221,7 +259,12 @@ defmodule Brando.Content.BlockUidTest do
     for {name, uid} <- [{"comment terminator", @breakout}, {"Liquid", @liquid}, {"marker terminator", "closes--"}] do
       @uid uid
 
-      test "a stored uid with a #{name} leaves no marker or element", %{page: page, intro: intro, container: container, child: child} do
+      test "a stored uid with a #{name} leaves no marker or element", %{
+        page: page,
+        intro: intro,
+        container: container,
+        child: child
+      } do
         store_uid!(intro, "1" <> @uid)
         store_uid!(container, "2" <> @uid)
         store_uid!(child, "3" <> @uid)
@@ -255,6 +298,145 @@ defmodule Brando.Content.BlockUidTest do
       uid = Brando.Utils.generate_uid() <> "-kept-2"
       store_uid!(intro, uid)
       assert edit_mode_html(page) =~ "<!-- [+:B<#{uid}>] -->"
+    end
+  end
+
+  # Each place the parser writes a stored uid, on the path the admin's block
+  # previews take (`skip_children: true`, without the entry's children).
+  describe "the parser's markers and placeholders" do
+    @marker_opts %{annotate_blocks: true, skip_children: true, modules: [], palettes: [], containers: []}
+
+    defp assert_no_uid(iodata) do
+      html = IO.iodata_to_binary(iodata)
+      refute html =~ "MARKER"
+      refute html =~ "<script"
+      refute html =~ "[+:"
+      refute html =~ "[-:"
+      html
+    end
+
+    defp slot_block(uid), do: %Block{uid: uid, type: :slot, slot_kind: :region, slot_name: "sidebar", children: []}
+
+    defp multi_module do
+      %Brando.Content.Module{id: 987_654, type: :liquid, code: "<ul>{{ content }}</ul>", multi: true, vars: [], refs: []}
+    end
+
+    defp multi_block(uid) do
+      %Block{
+        uid: uid,
+        type: :module,
+        multi: true,
+        module_id: multi_module().id,
+        active: true,
+        vars: [],
+        refs: [],
+        children: []
+      }
+    end
+
+    defp multi_opts, do: Map.merge(@marker_opts, %{modules: [multi_module()], context: Brando.Villain.get_base_context()})
+
+    test "a slot with a bad uid writes no uid into its placeholder" do
+      for uid <- @bad_uids do
+        assert uid |> slot_block() |> Parser.render_block_slot(@marker_opts) |> assert_no_uid() == "[$ slot $]"
+        assert uid |> slot_block() |> Parser.render_block_slot(%{skip_children: true}) == "[$ slot $]"
+      end
+    end
+
+    test "a slot with a good uid keeps its uid and markers" do
+      html = "slot-uid" |> slot_block() |> Parser.render_block_slot(@marker_opts)
+      assert html =~ "[$ slot:slot-uid $]"
+      assert html =~ "<!-- [+:C<slot-uid>] -->"
+    end
+
+    test "a container with a bad uid renders [$ content $] without markers" do
+      containers = [%Brando.Content.Container{id: 987_655, type: :liquid, code: "<div>{{ content }}</div>"}]
+      opts = %{@marker_opts | containers: containers}
+
+      for container_id <- [nil, 987_655], active <- [true, false] do
+        block = %Block{uid: @breakout, type: :container, active: active, container_id: container_id, children: []}
+        html = block |> Parser.container(opts) |> assert_no_uid()
+        assert html =~ "[$ content $]"
+      end
+
+      good = %Block{uid: "good-uid", type: :container, active: true, children: []}
+      html = good |> Parser.container(opts) |> IO.iodata_to_binary()
+      assert html =~ "<!-- [+:C<good-uid>] -->"
+      assert html =~ "<!-- [+:B<good-uid>] -->"
+    end
+
+    test "an inactive block with a bad uid has no markers; a good one keeps them" do
+      assert %Block{uid: @breakout, type: :module, active: false} |> Parser.module(@marker_opts) |> assert_no_uid() == ""
+
+      html = %Block{uid: "good-uid", type: :module, active: false} |> Parser.module(@marker_opts) |> IO.iodata_to_binary()
+      assert html =~ "<!-- [+:B<good-uid>] -->"
+    end
+
+    test "a multi module with a bad uid has no markers; a good one keeps them" do
+      html = @breakout |> multi_block() |> Parser.module(multi_opts()) |> assert_no_uid()
+      assert html =~ "[$ content $]"
+
+      html = "good-uid" |> multi_block() |> Parser.module(multi_opts()) |> IO.iodata_to_binary()
+      assert html =~ "<!-- [+:C<good-uid>] -->"
+      assert html =~ "<!-- [+:B<good-uid>] -->"
+    end
+  end
+
+  # Only unreleased proposals wrote such uids, so a revision holding one for a
+  # block that is gone is refused rather than rewritten.
+  describe "restoring a revision" do
+    @old_shape "hero.block"
+
+    defp node(user, uid, children \\ []) do
+      %{
+        uid: uid,
+        type: :container,
+        active: true,
+        source: to_string(Page.Blocks),
+        creator_id: user.id,
+        description: "Block #{uid}",
+        children: Enum.with_index(children, &Map.put(&1, :sequence, &2))
+      }
+    end
+
+    defp tree(page) do
+      Repo.all(from(j in Page.Blocks, where: j.entry_id == ^page.id, order_by: j.sequence, preload: :block))
+      |> Enum.map(&subtree(&1.block))
+    end
+
+    defp subtree(block) do
+      children = Repo.all(from(b in Block, where: b.parent_id == ^block.id, order_by: b.sequence))
+      {block.description, block.uid, Enum.map(children, &subtree/1)}
+    end
+
+    test "a deleted block with a uid of an older shape refuses the restore and leaves the entry as it is" do
+      user = Factory.insert(:random_user)
+      page = Factory.insert(:page, creator: user)
+
+      %Page.Blocks{}
+      |> Changeset.change(%{entry_id: page.id, sequence: 0})
+      |> Changeset.put_assoc(
+        :block,
+        user |> node("the-root", [node(user, @old_shape), node(user, "sibling")]) |> Map.put(:sequence, 0)
+      )
+      |> Repo.insert!()
+
+      assert {:ok, revision} = Brando.Revisions.create_revision(page, user)
+      Repo.delete!(Repo.get_by!(Block, uid: @old_shape))
+      Repo.update_all(from(b in Block, where: b.uid == "sibling"), set: [description: "Edited since"])
+      assert {:ok, current} = Brando.Revisions.create_revision(page, user)
+      before = tree(page)
+
+      assert {:error, %Changeset{valid?: false}} =
+               Brando.Revisions.set_entry_to_revision(Page, page.id, revision.revision, user)
+
+      assert tree(page) == before
+      assert Repo.get!(Page, page.id).updated_at == page.updated_at
+
+      assert Repo.aggregate(
+               from(r in Brando.Revisions.Revision, where: r.active and r.revision == ^current.revision),
+               :count
+             ) == 1
     end
   end
 end

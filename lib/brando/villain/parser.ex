@@ -494,7 +494,7 @@ defmodule Brando.Villain.Parser do
   def render_block_slot(slot, opts) do
     html =
       if opts[:skip_children] === true do
-        "[$ slot:#{slot.uid} $]"
+        slot_placeholder(slot.uid)
       else
         slot
         |> BlockSlots.children()
@@ -504,6 +504,12 @@ defmodule Brando.Villain.Parser do
       end
 
     if opts[:annotate_blocks], do: html |> annotate_children(slot.uid) |> IO.iodata_to_binary(), else: html
+  end
+
+  # A row stored with a uid of another shape stays out of the page, as in its
+  # markers (`maybe_annotate/3`).
+  defp slot_placeholder(uid) do
+    if Block.valid_uid?(uid), do: "[$ slot:#{uid} $]", else: "[$ slot $]"
   end
 
   defp render_slot_child(child, opts) do

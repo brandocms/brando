@@ -198,7 +198,15 @@ defmodule Brando.Content.Block do
   def valid_uid?(uid) when is_binary(uid), do: Regex.match?(uid_format(), uid)
   def valid_uid?(_uid), do: false
 
+  # `uid_sql_pattern/0` is this shape for Postgres: change them together.
   defp uid_format, do: ~r/\A[A-Za-z0-9_-]{0,254}[A-Za-z0-9_]\z/
+
+  @doc """
+  `valid_uid?/1` as a Postgres regular expression, for `uid ~ pattern`. Postgres's
+  `$` only matches at the end of the string, as `\\z` does.
+  """
+  @spec uid_sql_pattern() :: String.t()
+  def uid_sql_pattern, do: "^[A-Za-z0-9_-]{0,254}[A-Za-z0-9_]$"
 
   # The block's own fields and rows, its module, refs and vars held to what
   # `user` may change (`Brando.Content.RefGuard`, `Brando.Content.VarGuard`)

@@ -156,6 +156,11 @@ msgstr "Et mål trenger en numerisk id."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "A uid can be at most %{count} characters long."
+msgstr "En uid kan ha høyst %{count} tegn."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "A uid can only hold letters, digits, - and _, and cannot end with -."
 msgstr "En uid kan bare inneholde bokstaver, sifre, - og _, og kan ikke slutte med -."
 

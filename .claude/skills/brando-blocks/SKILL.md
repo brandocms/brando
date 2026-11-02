@@ -149,7 +149,7 @@ module_origin, container_origin, palette_origin (:local/:shared)
 
 `uid` goes into the marker comments of edit-mode pages. A new uid format, derived ones
 included, has to pass `Block.valid_uid?/1`, which the changeset, proposals, recovery and
-the markers all use.
+the markers all use. `Block.uid_sql_pattern/0` is the same shape for the doctor's query.
 
 ### Block Relations
 ```
