@@ -27,6 +27,7 @@ defmodule Brando.Villain.InertEditorTextTest do
 
     def load_page(_key, _context), do: Process.get(:project_filter_page)
     def load_pages(_key, _context), do: [Process.get(:project_filter_page)]
+    def load_settings(_key, _context), do: Process.get(:project_filter_settings)
   end
 
   # An image with a handler, percent-encoded so a sanitizer sees only text. Its
@@ -714,6 +715,15 @@ defmodule Brando.Villain.InertEditorTextTest do
       refute md =~ @hash
     end
 
+    test "strip_html keeps quotes as typed in a Markdown template", %{user: user} do
+      module = module!(user, "<p>html</p>", %{markdown_code: "{{ entry.title | strip_html }}"})
+      md = Villain.Markdown.render([%{block: block(module, [])}], %Page{title: ~s(Say "hello" it's R&D), language: :en})
+
+      assert md =~ ~s(Say "hello" it's R&D)
+      refute md =~ "&quot;"
+      refute md =~ "&#39;"
+    end
+
     test "a module without one renders its HTML, and braces come through as text", %{user: user} do
       module = module!(user, "<p>{{ entry.title }}</p>{% ref refs.text %}")
       entry = %Page{title: "R&D {{ x }}", language: :en}
@@ -831,6 +841,46 @@ defmodule Brando.Villain.InertEditorTextTest do
         assert active_elements(html) == []
         assert html =~ "&lt;img"
       end
+    end
+
+    test "a plain map a filter returns reads as entry data does" do
+      settings = %{
+        "accessToken" => @hash,
+        "title" => @markup_title,
+        "nested" => %{"api_key" => @hash, "title" => @markup_title},
+        "items" => [%{"password" => @hash, "title" => @markup_title}],
+        atom_secret: @hash
+      }
+
+      Process.put(:project_filter_settings, settings)
+      context = %{Villain.get_base_context(%Page{language: :en}) | filter_module: ProjectFilters}
+
+      for code <- [
+            ~s({% assign s = "x" | load_settings %}{{ s.accessToken }}{{ s.atom_secret }}{{ s.title }}),
+            ~s({% assign s = "x" | load_settings %}{{ s.nested.api_key }}{{ s.nested.title }}),
+            ~s({% assign s = "x" | load_settings %}{% for i in s.items %}{{ i.password }}{{ i.title }}{% endfor %}),
+            ~s({% assign s = "x" | load_settings %}{{ s }}),
+            ~s({% assign s = "x" | load_settings %}{% inspect s %}),
+            ~s({% assign s = "x" | load_settings %}{% for p in s %}{{ p[0] }}{{ p[1] }}{% endfor %})
+          ] do
+        {:ok, parsed} = Liquex.parse(code, Brando.Villain.LiquexParser)
+        {result, _} = Liquex.Render.render!([], parsed, context)
+        html = IO.iodata_to_binary(result)
+
+        refute html =~ @hash, "#{code} printed the credential: #{html}"
+        assert active_elements(html) == [], "#{code} printed markup: #{html}"
+      end
+
+      Process.put(:project_filter_settings, [settings])
+
+      code = ~s({% assign l = "x" | load_settings %}{% for s in l %}{{ s.accessToken }}{{ s.title }}{% endfor %})
+      {:ok, parsed} = Liquex.parse(code, Brando.Villain.LiquexParser)
+      {result, _} = Liquex.Render.render!([], parsed, context)
+      html = IO.iodata_to_binary(result)
+
+      refute html =~ @hash
+      assert active_elements(html) == []
+      assert html =~ "&lt;img"
     end
 
     test "a date a filter returns stays a date" do
@@ -1071,6 +1121,63 @@ defmodule Brando.Villain.InertEditorTextTest do
 
         refute html =~ "42", "#{code} ran #{value}"
         assert html =~ ~r/\.a \{(&#123; 1|&#37; if)/, "#{code} printed #{html}"
+      end
+    end
+
+    test "a value cannot complete a delimiter a nested part started", %{user: user} do
+      for code <- [
+            ~S|<style><%= if true do %>.a {<% end %><%= @css %>}</style>|,
+            ~S|<style><%= if true do %>.a {<% end %><%= if true do %><%= @css %><% end %>}</style>|,
+            ~S|<style><%= if true do %><%= if true do %>.a {<% end %><% end %><%= @empty %><%= @css %>}</style>|,
+            ~S|<style>.a {<%= if true do %><%= @empty %><% end %><%= @css %>}</style>|,
+            ~S|<style><%= for _ <- [1] do %>.a {<% end %><%= @css %>}</style>|,
+            ~S|<style><%= for x <- [1, 2] do %><%= if x == 1, do: @css %>.a {<% end %><%= @css %>}</style>|,
+            ~S|<style><%= for v <- ["", @css] do %>.a {<%= v %><% end %>}</style>|,
+            ~S|<style>.a {<%= for v <- ["", @css] do %><%= v %><% end %>}</style>|,
+            ~S|<style>.a {<%= for _ <- [] do %>x<% end %><%= @css %>}</style>|
+          ],
+          value <- ["{ 1 | plus: 41 }}", "% if true %}41{% endif %}"] do
+        vars = [
+          %Var{key: "css", label: "C", type: :string, value: value},
+          %Var{key: "empty", label: "E", type: :string, value: ""}
+        ]
+
+        html = render(block(module!(user, code, %{type: :heex}), vars: vars))
+
+        assert html =~ ~r/plus: 41|if true/, "#{code} ran #{value}: #{html}"
+      end
+    end
+
+    test "a template's own Liquid across parts still runs", %{user: user} do
+      code =
+        ~S|<style><%= if true do %>{<% end %>{ entry.title }}<%= for _ <- [1] do %>{<% end %>% if true %}ok{% endif %}</style>|
+
+      html = render(block(module!(user, code, %{type: :heex}), []), %Page{title: "Mine", language: :en})
+
+      assert html == "<style>Mineok</style>"
+    end
+  end
+
+  describe "a value after a template's literal brace" do
+    test "a brace written right before a tag does not parse" do
+      for code <- ["{{{ entry.title }}", "{{% if true %}x{% endif %}"] do
+        refute match?({:ok, _}, Liquex.parse(code, Brando.Villain.LiquexParser)), "#{code} parsed"
+      end
+    end
+
+    @tag :capture_log
+    test "a brace from a literal completes no delimiter with a value", %{user: user} do
+      for code <- [
+            ~S({{ "{" }}{{ entry.title }}),
+            ~S({{ "{" }}{{ entry.title | upcase | downcase }}),
+            ~S({{ "{" }}{{ title }})
+          ],
+          value <- ["% if true %}42{% endif %}", "{ 1 | plus: 41 }}"] do
+        var = %Var{key: "title", label: "T", type: :string, value: value}
+
+        html = render(block(module!(user, code), vars: [var]), %Page{title: value, language: :en})
+
+        refute html =~ "42", "#{code} ran #{value}: #{html}"
       end
     end
   end

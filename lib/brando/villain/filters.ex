@@ -642,15 +642,22 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.strip_html("Have <em>you</em> read <strong>Ulysses</strong>?", %{})
       "Have you read Ulysses?"
   """
-  def strip_html(value, _) do
+  def strip_html(value, context) do
     value = to_string(value)
 
     # Text read from entry data has no tag left but its escaped ones, which are
-    # what it stands for. Markup's entities are its text. The result can go in an
-    # attribute: a quote the text held stays encoded.
-    if(String.contains?(value, "<"), do: value, else: HtmlEntities.decode(value))
-    |> HtmlSanitizeEx.strip_tags()
-    |> String.replace(["\"", "'"], fn quote -> if quote == "\"", do: "&quot;", else: "&#39;" end)
+    # what it stands for. Markup's entities are its text.
+    text =
+      if(String.contains?(value, "<"), do: value, else: HtmlEntities.decode(value))
+      |> HtmlSanitizeEx.strip_tags()
+
+    # A Markdown template prints text as typed
+    if Brando.Villain.Markdown.template_context?(context), do: HtmlEntities.decode(text), else: encode_quotes(text)
+  end
+
+  # The result can go in an attribute: a quote the text held stays encoded
+  defp encode_quotes(text) do
+    String.replace(text, ["\"", "'"], fn quote -> if quote == "\"", do: "&quot;", else: "&#39;" end)
   end
 
   @doc """

@@ -247,7 +247,8 @@ own code runs.
 Tags (`{% picture %}`, `{% video %}`, `{% route %}`) read the record or the value
 itself, and filters on a record (`media_url`, `absolute_url`, `date`, `i18n`) get
 the record. A filter's text result goes back to being text; a filter of your own
-that makes markup returns `{:safe, html}`. A tag of your own reads its argument with `Brando.Villain.TemplateView.eval/2`, and escapes what
+that makes markup returns `{:safe, html}`, and a record or map it returns reads
+like entry data, also inside a list. A tag of your own reads its argument with `Brando.Villain.TemplateView.eval/2`, and escapes what
 it prints.
 
 `raw` reads the text as what it stands for, so a rich-text field does not need

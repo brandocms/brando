@@ -379,7 +379,8 @@ sender first, before the first compile.
   escaped, like a `string` var. A rich-text field prints as before. Where a
   template prints a plain field that holds markup on purpose, add
   `{{ entry.embed | raw }}`. A filter of your own that returns markup for a record
-  returns `{:safe, html}`, and a tag of your own reads its argument with
+  returns `{:safe, html}`, a record or map it returns reads like entry data, and a
+  tag of your own reads its argument with
   `Brando.Villain.TemplateView.eval/2`. Passwords and other credentials no longer
   reach templates, through `{% inspect %}` either.
 

@@ -164,8 +164,8 @@ defmodule Brando.Villain.TemplateView do
 
   @doc """
   A filter's result, given `mode`, the mode of the view it read (`view_mode/1`).
-  It goes back in a view of that mode, and a record it returned goes in one
-  whatever it read. Text stays as a filter that makes markup or returns
+  It goes back in a view of that mode, and a record or map it returned goes in
+  one whatever it read. Text stays as a filter that makes markup or returns
   `{:safe, html}` gave it, and text from any filter starts no Liquid in the
   final pass, except in a Markdown template, which has none.
   """
@@ -178,7 +178,7 @@ defmodule Brando.Villain.TemplateView do
   def filter_result(result, _filter, nil, context), do: result |> wrap_records(context) |> inert(context)
   def filter_result(result, _filter, mode, context), do: result |> wrap(read_mode(mode, context)) |> inert(context)
 
-  defp wrap_records(%_{} = record, context), do: wrap_for(record, context)
+  defp wrap_records(value, context) when is_map(value), do: wrap_for(value, context)
   defp wrap_records(value, context) when is_list(value), do: Enum.map(value, &wrap_records(&1, context))
   defp wrap_records(value, _context), do: value
 
