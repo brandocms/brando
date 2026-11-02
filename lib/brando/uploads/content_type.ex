@@ -18,6 +18,8 @@ defmodule Brando.Uploads.ContentType do
 
   @svg "image/svg+xml"
   @isobmff_video ~w(video/mp4 video/quicktime video/x-m4v)
+  @avif_brands ~w(avif avis)
+  @heic_brands ~w(heic heix hevc mif1 msf1)
 
   @doc "The first bytes of a file, as many as the checks here look at."
   @spec head(Path.t()) :: {:ok, binary} | {:error, term}
@@ -35,11 +37,12 @@ defmodule Brando.Uploads.ContentType do
   def image(<<0x89, "PNG\r\n", 0x1A, "\n", _::binary>>), do: "image/png"
   def image(<<"GIF8", _::binary>>), do: "image/gif"
   def image(<<"RIFF", _size::binary-size(4), "WEBP", _::binary>>), do: "image/webp"
-  def image(<<_size::binary-size(4), "ftypavi", c, _::binary>>) when c in [?f, ?s], do: "image/avif"
 
-  def image(<<_size::binary-size(4), "ftyp", brand::binary-size(4), _::binary>>)
-      when brand in ~w(heic heix hevc mif1 msf1),
-      do: "image/heic"
+  def image(<<_size::binary-size(4), "ftyp", brand::binary-size(4), _::binary>>) when brand in @avif_brands,
+    do: "image/avif"
+
+  def image(<<_size::binary-size(4), "ftyp", brand::binary-size(4), _::binary>>) when brand in @heic_brands,
+    do: "image/heic"
 
   def image(<<"II*", 0, _::binary>>), do: "image/tiff"
   def image(<<"MM", 0, "*", _::binary>>), do: "image/tiff"
@@ -60,27 +63,9 @@ defmodule Brando.Uploads.ContentType do
   @spec verify_image(binary, String.t(), String.t(), [String.t()]) :: :ok | {:error, String.t()}
   def verify_image(data, name, declared_type, allowed) do
     actual = image(data)
-    svg_name? = name |> Path.extname() |> String.downcase() == ".svg"
 
-    cond do
-      (actual == @svg or declared_type == @svg or svg_name?) and
-          not (actual == @svg and declared_type == @svg and svg_name?) ->
-        {:error, mismatch_message()}
-
-      actual == @svg and SvgRoot.parse(data) == {:error, :entities} ->
-        {:error, gettext("This SVG declares entities, which are not allowed.")}
-
-      allowed == ["*"] ->
-        :ok
-
-      is_nil(actual) ->
-        {:error, mismatch_message()}
-
-      not allowed_image?(actual, allowed) ->
-        {:error, rejected_message(actual, allowed)}
-
-      true ->
-        :ok
+    with :ok <- verify_svg(data, actual, name, declared_type) do
+      verify_allowed_image(actual, allowed)
     end
   end
 
@@ -101,8 +86,38 @@ defmodule Brando.Uploads.ContentType do
     end
   end
 
+  defp verify_svg(data, actual, name, declared_type) do
+    claims = [actual == @svg, declared_type == @svg, name |> Path.extname() |> String.downcase() == ".svg"]
+
+    cond do
+      not Enum.any?(claims) ->
+        :ok
+
+      not Enum.all?(claims) ->
+        {:error, mismatch_message()}
+
+      SvgRoot.parse(data) == {:error, :entities} ->
+        {:error, gettext("This SVG declares entities, which are not allowed.")}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp verify_allowed_image(_actual, ["*"]), do: :ok
+  defp verify_allowed_image(nil, _allowed), do: {:error, mismatch_message()}
+
+  defp verify_allowed_image(actual, allowed) do
+    if allowed_image?(actual, allowed), do: :ok, else: {:error, rejected_message(actual, allowed)}
+  end
+
+  # An AVIF or HEIC is the same container as an MP4, told apart by its brand
+  defp video(<<_size::binary-size(4), "ftyp", brand::binary-size(4), _::binary>>)
+       when brand in @avif_brands or brand in @heic_brands,
+       do: []
+
   defp video(<<_size::binary-size(4), box::binary-size(4), _::binary>>)
-       when box in ~w(ftyp moov mdat free skip wide pnot),
+       when box in ~w(ftyp styp uuid moov mdat free skip wide pnot),
        do: @isobmff_video
 
   defp video(<<0x1A, 0x45, 0xDF, 0xA3, _::binary>>), do: ~w(video/webm video/x-matroska)

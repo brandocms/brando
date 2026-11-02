@@ -4701,11 +4701,6 @@ msgstr "Kunne ikke lagre opplastet fil"
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
-msgid "Could not store uploaded file. Check upload settings and try again."
-msgstr "Klarte ikke lagre den opplastede filen. Sjekk opplastingsinnstillingene og prøv igjen."
-
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
 msgid "Could not switch preview"
 msgstr "Kunne ikke bytte forhåndsvisning"
 
@@ -15506,11 +15501,6 @@ msgstr "Serverfeil"
 msgid "Server URL"
 msgstr "Server-URL"
 
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "Server rejected %{kind} type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
-msgstr "Tjeneren avviste %{kind}-typen [%{rejected_type}].<br><br>Tillatte typer er:<br>%{allowed_types}"
-
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Serves cuisine"
@@ -20739,11 +20729,6 @@ msgstr "kodede moduler fantes."
 msgid "entry"
 msgstr "oppføring"
 
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "file"
-msgstr "fil"
-
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "first %{count}/%{total}"
@@ -20808,11 +20793,6 @@ msgstr "f.eks: `video:Elixir.MyApp.Schema:function:fn_name`"
 #, elixir-autogen, elixir-format
 msgid "identity"
 msgstr "identitet"
-
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "image"
-msgstr "bilde"
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
@@ -21291,7 +21271,6 @@ msgstr "variabler"
 msgid "version %{number}"
 msgstr "versjon %{number}"
 
-#: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "video"

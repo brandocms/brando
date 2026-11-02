@@ -70,6 +70,7 @@ defmodule Brando.Images.SvgRoot do
 
   defp internal_subset("<!ENTITY" <> _rest), do: {:error, :entities}
   defp internal_subset("<!--" <> rest), do: rest |> after_marker("-->") |> internal_subset()
+  defp internal_subset("<?" <> rest), do: rest |> after_marker("?>") |> internal_subset()
   defp internal_subset("]" <> rest), do: doctype(rest)
 
   defp internal_subset(<<quote, rest::binary>>) when quote in [?", ?'],

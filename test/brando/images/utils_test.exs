@@ -4,6 +4,8 @@ defmodule Brando.Images.UtilsTest do
   use RouterHelper
   import Brando.Images.Utils
 
+  alias Brando.Images.SvgRoot
+
   test "get_sized_path/2 binary" do
     assert get_sized_path("test/dir/filename.jpg", "thumb") == "test/dir/thumb/filename.jpg"
   end
@@ -105,6 +107,22 @@ defmodule Brando.Images.UtilsTest do
       path = Path.join(dir, "late_root.svg")
       File.write!(path, ~s(<!-- #{String.duplicate("x", 70_000)} --><svg width="1" height="2"/>))
       assert svg_size(path) == %{width: 300, height: 150}
+    end
+
+    test "an entity declared past a processing instruction is still found" do
+      fake_root =
+        ~s(<!DOCTYPE svg [<?p ]><svg width="1" height="1"> ?><!ENTITY a "hello">]><svg width="100" height="200"/>)
+
+      lone_quote = ~s(<!DOCTYPE svg [<?p ' ?><!ENTITY a "hello"><?q ' ?>]><svg width="100" height="200"/>)
+
+      assert SvgRoot.parse(fake_root) == {:error, :entities}
+      assert SvgRoot.parse(lone_quote) == {:error, :entities}
+    end
+
+    test "a processing instruction in the DOCTYPE leaves the root alone" do
+      data = ~s(<!DOCTYPE svg [<?p ' ] > ?><!ELEMENT svg ANY>]><svg width="100" height="200"/>)
+
+      assert SvgRoot.parse(data) == {:ok, %{"width" => "100", "height" => "200"}}
     end
 
     test "refuses entity declarations", %{svg: svg} do

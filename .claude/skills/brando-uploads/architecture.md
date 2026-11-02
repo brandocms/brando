@@ -120,7 +120,9 @@ the key and resolved target, server-side.
 - At intake the manager records a `Brando.Uploads.PendingIntent` (ref, key,
   resolved target, declared size and type, target, creator).
 - The hook PUTs with exactly the signed headers via XHR, reports `direct_progress`,
-  then `direct_complete` or `direct_error`.
+  then `direct_complete` or `direct_error`. A progress report moves only an unfinished
+  item of its own transport, because `:uploading` is what lets a ref take a server
+  transfer.
 - `direct_complete` finalizes from server-side state only (`finalize_direct/3`
   HEAD-verifies size and type against the declared values), then delivers. A replay
   for a `:done` item is a no-op. An unknown ref (the manager remounted mid-transfer)
@@ -279,7 +281,9 @@ subscribe to their own `deliver_topic` the same way.
 - **Media library**: image and file listing intake uses `asset_library`; standalone
   gallery editors use `resource_gallery`.
 - **Image editor "save as new copy"** is the one form-owned upload
-  (`allow_upload(:image_editor_upload)` in `Form.allow_uploads/1`).
+  (`allow_upload(:image_editor_upload)` in `Form.allow_uploads/1`). It stores through
+  `Brando.Uploads.store_upload/4` like the manager; a refusal reaches the editor as a
+  `b:alert`.
 
 ### File replacement
 
@@ -287,7 +291,7 @@ The Files listing's **Replace file** sends a `file_replace` target with `file_id
 `Brando.Files.Replacement` accepts one file, resolves the config from the stored
 record, requires the same extension, and always uses server transport (a presigned
 PUT to the live key could leave it half-written). After validating size and MIME
-type it renames atomically (local) or uploads to the existing bucket key (CDN),
+type, and a video's file by its contents too, it renames atomically (local) or uploads to the existing bucket key (CDN),
 keeping the record's id, URL, CDN flag, title, creator, folder, config target and
 references. Failure leaves the original untouched. It then evicts cached file
 queries and re-renders entries whose blocks reference the file through refs, vars

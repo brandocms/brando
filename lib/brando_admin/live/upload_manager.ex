@@ -100,7 +100,7 @@ defmodule BrandoAdmin.UploadManager do
 
   def handle_event("direct_progress", %{"ref" => ref, "progress" => progress}, socket)
       when is_integer(progress) do
-    {:noreply, update_item(socket, ref, %{status: :uploading, progress: min(progress, 100)})}
+    {:noreply, client_progress(socket, ref, :direct, progress)}
   end
 
   def handle_event("direct_complete", _params, %{assigns: %{current_user: nil}} = socket) do
@@ -205,7 +205,7 @@ defmodule BrandoAdmin.UploadManager do
 
   def handle_event("external_progress", %{"ref" => ref, "progress" => progress}, socket)
       when is_integer(progress) do
-    {:noreply, update_item(socket, ref, %{status: :uploading, progress: min(progress, 100)})}
+    {:noreply, client_progress(socket, ref, :external, progress)}
   end
 
   def handle_event("external_complete", %{"ref" => ref}, socket) do
@@ -1043,6 +1043,19 @@ defmodule BrandoAdmin.UploadManager do
         socket
         |> update(:items, &Map.put(&1, ref, updated))
         |> push_event("b:uploads:state", Map.take(updated, [:ref, :status, :progress, :error]))
+    end
+  end
+
+  # What the client reports about a transfer it runs itself. `:uploading` is what
+  # lets a ref take a server transfer (`handle_progress/3`), so a report moves only
+  # an unfinished item of that transport.
+  defp client_progress(socket, ref, transport, progress) do
+    case Map.get(socket.assigns.items, ref) do
+      %{transport: ^transport, status: status} when status in [:queued, :uploading] ->
+        update_item(socket, ref, %{status: :uploading, progress: min(progress, 100)})
+
+      _other ->
+        socket
     end
   end
 

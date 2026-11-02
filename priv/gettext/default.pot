@@ -4699,11 +4699,6 @@ msgstr ""
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
-msgid "Could not store uploaded file. Check upload settings and try again."
-msgstr ""
-
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
 msgid "Could not switch preview"
 msgstr ""
 
@@ -15504,11 +15499,6 @@ msgstr ""
 msgid "Server URL"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "Server rejected %{kind} type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}"
-msgstr ""
-
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Serves cuisine"
@@ -20735,11 +20725,6 @@ msgstr ""
 msgid "entry"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "file"
-msgstr ""
-
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "first %{count}/%{total}"
@@ -20803,11 +20788,6 @@ msgstr ""
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "identity"
-msgstr ""
-
-#: lib/brando_admin/components/form.ex
-#, elixir-autogen, elixir-format
-msgid "image"
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -21287,7 +21267,6 @@ msgstr ""
 msgid "version %{number}"
 msgstr ""
 
-#: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "video"

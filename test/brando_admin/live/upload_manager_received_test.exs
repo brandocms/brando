@@ -88,6 +88,133 @@ defmodule BrandoAdmin.UploadManagerReceivedTest do
     assert [_] = stored(dir)
   end
 
+  describe "progress events" do
+    test "a progress event does not reopen a finished server upload", %{conn: conn, page: page, dir: dir} do
+      manager = mount_manager(conn, page)
+      body = File.read!(@fixture)
+      ref = intake(manager, "photo.jpg", byte_size(body), "image/jpeg")
+
+      transfer(manager, ref, "photo.jpg", body, "image/jpeg")
+      assert %{status: finished} = items(manager)[ref]
+      assert finished in [:processing, :done]
+
+      for event <- ["direct_progress", "external_progress"] do
+        render_hook(manager, event, %{"ref" => ref, "progress" => 10})
+        assert %{status: ^finished, progress: 100} = items(manager)[ref]
+      end
+
+      images = Repo.aggregate(Brando.Images.Image, :count)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), items(manager)[ref].target["deliver_topic"])
+
+      transfer(manager, ref, "photo.jpg", body, "image/jpeg")
+
+      assert [_] = stored(dir)
+      assert Repo.aggregate(Brando.Images.Image, :count) == images
+      refute_receive {:asset_ready, _target, _asset}, 100
+    end
+
+    test "a progress event does not move a queued server upload", %{conn: conn, page: page} do
+      manager = mount_manager(conn, page)
+      ref = intake(manager, "photo.jpg", 1_000, "image/jpeg")
+
+      render_hook(manager, "direct_progress", %{"ref" => ref, "progress" => 10})
+      render_hook(manager, "external_progress", %{"ref" => ref, "progress" => 10})
+
+      assert %{status: :queued, progress: 0} = items(manager)[ref]
+    end
+
+    test "a provider's progress reaches its item, until it finishes", %{conn: conn, page: page} do
+      manager = mount_manager(conn, page)
+      ref = Ecto.UUID.generate()
+      render_hook(manager, "external_track", %{"ref" => ref, "filename" => "clip.mp4", "size" => 10})
+
+      render_hook(manager, "external_progress", %{"ref" => ref, "progress" => 40})
+      assert %{status: :uploading, progress: 40} = items(manager)[ref]
+
+      render_hook(manager, "direct_progress", %{"ref" => ref, "progress" => 60})
+      assert %{status: :uploading, progress: 40} = items(manager)[ref]
+
+      render_hook(manager, "external_complete", %{"ref" => ref})
+      render_hook(manager, "external_progress", %{"ref" => ref, "progress" => 50})
+      assert %{status: :done, progress: 100} = items(manager)[ref]
+    end
+
+    test "a direct transfer's progress reaches its item, until it fails", %{conn: conn, page: page} do
+      original = Application.get_env(:brando, Brando.Images, [])
+
+      put_test_env(
+        Brando.Images,
+        Keyword.put(original, :default_config, %{
+          upload_path: @upload_path,
+          allowed_mimetypes: ["image/jpeg"],
+          random_filename: false,
+          size_limit: 1_000_000,
+          sizes: %{"thumb" => %{"size" => "150x150", "quality" => 70, "crop" => true}},
+          cdn: %{
+            enabled: true,
+            direct: true,
+            bucket: "testbucket",
+            media_url: "https://testbucket.ams3.digitaloceanspaces.com",
+            s3: %Brando.CDN.S3Config{
+              access_key_id: "TESTKEY",
+              secret_access_key: "TESTSECRET",
+              scheme: "https://",
+              host: "ams3.digitaloceanspaces.com",
+              region: "ams3"
+            },
+            keep_local_copy: false
+          }
+        })
+      )
+
+      manager = mount_manager(conn, page)
+      ref = intake(manager, "photo.jpg", 1_000, "image/jpeg")
+      assert %{transport: :direct, status: :queued} = items(manager)[ref]
+
+      render_hook(manager, "direct_progress", %{"ref" => ref, "progress" => 40})
+      assert %{status: :uploading, progress: 40} = items(manager)[ref]
+
+      render_hook(manager, "external_progress", %{"ref" => ref, "progress" => 60})
+      assert %{status: :uploading, progress: 40} = items(manager)[ref]
+
+      render_hook(manager, "direct_error", %{"ref" => ref, "message" => "failed"})
+      render_hook(manager, "direct_progress", %{"ref" => ref, "progress" => 50})
+      assert %{status: :error, progress: 40} = items(manager)[ref]
+    end
+  end
+
+  # The image editor's "save as new copy" is the one upload the form owns
+  describe "image editor copy" do
+    test "over the config's limit: refused, and the editor is told", %{conn: conn, page: page, dir: dir} do
+      {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+      images = Repo.aggregate(Brando.Images.Image, :count)
+      body = File.read!(@fixture) <> :binary.copy(<<0>>, 1_100_000)
+
+      view
+      |> file_input("#page_form_form", :image_editor_upload, [%{name: "copy.jpg", content: body, type: "image/jpeg"}])
+      |> render_upload("copy.jpg")
+
+      assert_push_event(view, "b:alert", %{type: "error", message: "File is too large" <> _}, 2_000)
+      assert Repo.aggregate(Brando.Images.Image, :count) == images
+      assert stored(dir) == []
+    end
+
+    test "a type the config does not allow: refused, and the editor is told", %{conn: conn, page: page, dir: dir} do
+      {view, _html} = live_form(conn, "/admin/pages/update/#{page.id}")
+      images = Repo.aggregate(Brando.Images.Image, :count)
+      body = File.read!(Path.expand("../../fixtures/sample.png", __DIR__))
+
+      view
+      |> file_input("#page_form_form", :image_editor_upload, [%{name: "copy.png", content: body, type: "image/png"}])
+      |> render_upload("copy.png")
+
+      assert_push_event(view, "b:alert", %{type: "error", message: message}, 2_000)
+      assert message =~ "image/png"
+      assert Repo.aggregate(Brando.Images.Image, :count) == images
+      assert stored(dir) == []
+    end
+  end
+
   test "an honest upload still lands, with the real size", %{conn: conn, page: page, dir: dir} do
     manager = mount_manager(conn, page)
     body = File.read!(@fixture)

@@ -8271,8 +8271,8 @@ defmodule BrandoAdmin.Components.Form do
              current_user
            )
          end) do
-      {:upload_error, reason} ->
-        upload_error_noreply(socket, :image, reason)
+      {:upload_error, message} ->
+        upload_error_noreply(socket, message)
 
       new_image ->
         refocus_image_editor_copy(socket, new_image)
@@ -8405,57 +8405,20 @@ defmodule BrandoAdmin.Components.Form do
   defp normalize_upload_config_target(_), do: nil
 
   defp safe_handle_upload(meta, upload_entry, cfg, current_user) do
-    case Brando.Uploads.Store.handle_upload(meta, upload_entry, cfg, current_user) do
+    case Brando.Uploads.store_upload(meta, upload_entry, cfg, current_user) do
       {:ok, asset} -> {:ok, asset}
-      {:error, reason} -> {:ok, {:upload_error, reason}}
+      {:error, message} -> {:ok, {:upload_error, message}}
     end
   end
 
-  defp upload_error_noreply(socket, kind, {:content_type, rejected_type, allowed_types}) do
-    error_title = gettext("Error uploading")
-
-    error_msg =
-      gettext(
-        "Server rejected %{kind} type [%{rejected_type}].<br><br>Allowed types are:<br>%{allowed_types}",
-        %{
-          kind: Alert.escape(upload_kind_label(kind)),
-          rejected_type: Alert.escape(rejected_type),
-          allowed_types: Alert.escape(inspect(allowed_types))
-        }
-      )
-
-    {:noreply, push_event(socket, "b:alert", %{title: error_title, type: "error", html: error_msg})}
-  end
-
-  defp upload_error_noreply(socket, _kind, %Changeset{} = changeset) do
-    require Logger
-
-    Logger.error("""
-    Upload failed with validation errors:
-    #{inspect(changeset.errors, pretty: true)}
-    """)
-
+  defp upload_error_noreply(socket, message) do
     {:noreply,
      push_event(socket, "b:alert", %{
        title: gettext("Error uploading"),
        type: "error",
-       message: gettext("Could not store uploaded file. Check upload settings and try again.")
+       message: message
      })}
   end
-
-  defp upload_error_noreply(socket, _kind, reason) do
-    {:noreply,
-     push_event(socket, "b:alert", %{
-       title: gettext("Error uploading"),
-       type: "error",
-       message: inspect(reason)
-     })}
-  end
-
-  defp upload_kind_label(:image), do: gettext("image")
-  defp upload_kind_label(:file), do: gettext("file")
-  defp upload_kind_label(:video), do: gettext("video")
-  defp upload_kind_label(_), do: gettext("file")
 
   def assign_form(
         %{

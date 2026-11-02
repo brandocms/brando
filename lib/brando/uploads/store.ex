@@ -30,10 +30,10 @@ defmodule Brando.Uploads.Store do
   alias Brando.Images.PixelLimit
   alias Brando.Tenant.Storage
   alias Brando.Tracing
-  alias Brando.Uploads.ContentType
   alias Brando.Type.FileConfig
   alias Brando.Type.ImageConfig
   alias Brando.Type.VideoConfig
+  alias Brando.Uploads.ContentType
 
   @doc """
   Initiate the upload handling.
@@ -383,7 +383,7 @@ defmodule Brando.Uploads.Store do
   defp check_pixels(upload), do: {:ok, upload}
 
   defp create_upload_path(%__MODULE__{cfg: cfg} = upload) do
-    with {:ok, upload_path} <- Storage.media_file(Map.get(cfg, :upload_path)),
+    with {:ok, upload_path} <- Storage.media_file(relative_upload_path(cfg)),
          :ok <- File.mkdir_p(upload_path) do
       {:ok, put_in(upload.meta, Map.put(upload.meta, :upload_path, upload_path))}
     else
@@ -398,7 +398,7 @@ defmodule Brando.Uploads.Store do
            cfg: %{upload_path: media_target_path} = cfg
          } = upload
        ) do
-    with {:ok, joined_dest} <- Storage.media_file(Path.join(media_target_path, fname)),
+    with {:ok, joined_dest} <- Storage.media_file(Path.join(relative_upload_path(cfg), fname)),
          dest = copy_destination(joined_dest, cfg),
          {:ok, media_path} <- copied_media_path(src, dest, media_target_path, cfg) do
       {:ok,
@@ -415,6 +415,16 @@ defmodule Brando.Uploads.Store do
       {:error, reason, dest} -> {:error, :cp, {reason, src, dest}}
     end
   end
+
+  # A file or video config's "/files/x" means the media root's "files/x". An
+  # image's stored path is built from its config's and has to be relative
+  # (`Images.Utils.media_path/1`), so such a config is refused before the copy.
+  defp relative_upload_path(%ImageConfig{upload_path: upload_path}), do: upload_path
+
+  defp relative_upload_path(%{upload_path: upload_path}) when is_binary(upload_path),
+    do: String.trim_leading(upload_path, "/")
+
+  defp relative_upload_path(cfg), do: Map.get(cfg, :upload_path)
 
   defp copy_destination(joined_dest, cfg) do
     if !Map.get(cfg, :overwrite) && File.exists?(joined_dest) do

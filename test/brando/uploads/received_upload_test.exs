@@ -17,6 +17,7 @@ defmodule Brando.Uploads.ReceivedUploadTest do
   alias Brando.Type.ImageConfig
   alias Brando.Type.VideoConfig
   alias Brando.Uploads
+  alias Brando.Uploads.ContentType
   alias Brando.Uploads.Direct
 
   @jpg Path.expand("../../fixtures/sample.jpg", __DIR__)
@@ -136,6 +137,46 @@ defmodule Brando.Uploads.ReceivedUploadTest do
 
       assert {:error, _} = Uploads.store_upload(meta(temp(dir, "x")), entry("a.txt", "text/plain"), cfg, user)
       refute File.exists?(Path.expand(Path.join(root, escape)))
+    end
+
+    test "a leading slash on a file or video config's upload path still lands in the media root",
+         %{dir: dir, user: user} = ctx do
+      cfg = file_cfg(%{upload_path: "/" <> @upload_path})
+      assert {:ok, file} = Uploads.store_upload(meta(temp(dir, "x")), entry("a.txt", "text/plain"), cfg, user)
+      assert file.filename == "a.txt"
+      assert stored(ctx) == ["a.txt"]
+
+      video_cfg = %VideoConfig{
+        upload_path: "//" <> @upload_path,
+        allowed_mimetypes: ["video/mp4"],
+        upload_strategy: :local,
+        allow_uploads: true
+      }
+
+      mp4 = File.read!(Path.expand("../../../e2e/playwright/fixtures/video.mp4", __DIR__))
+      assert {:ok, _video} = Uploads.store_upload(meta(temp(dir, mp4)), entry("a.mp4", "video/mp4"), video_cfg, user)
+      assert Enum.sort(stored(ctx)) == ["a.mp4", "a.txt"]
+    end
+
+    test "a leading slash does not let an upload path climb out of the root", %{dir: dir, root: root, user: user} do
+      escape = "received_upload_climb_#{System.unique_integer([:positive])}"
+      on_exit(fn -> File.rm_rf(Path.expand(Path.join([root, "..", escape]))) end)
+      cfg = file_cfg(%{upload_path: "/../" <> escape})
+
+      assert {:error, _} = Uploads.store_upload(meta(temp(dir, "x")), entry("a.txt", "text/plain"), cfg, user)
+      refute File.exists?(Path.expand(Path.join([root, "..", escape])))
+    end
+
+    # An image's stored path is its media path, which has to be relative: such a
+    # config is refused before anything is written, not after
+    test "a leading slash on an image config's upload path is refused cleanly", %{dir: dir, user: user} = ctx do
+      cfg = image_cfg(%{upload_path: "/" <> @upload_path, allowed_mimetypes: ["image/jpeg"]})
+
+      assert {:error, message} =
+               Uploads.store_upload(meta(temp(dir, File.read!(@jpg))), entry("a.jpg", "image/jpeg"), cfg, user)
+
+      assert is_binary(message)
+      assert stored(ctx) == []
     end
 
     test "a direct key keeps the name in the upload path" do
@@ -294,6 +335,36 @@ defmodule Brando.Uploads.ReceivedUploadTest do
 
       assert {:ok, video} = Uploads.store_upload(meta(temp(dir, mp4)), entry("a.mp4", "video/mp4"), cfg, user)
       assert video.status == :ready
+    end
+  end
+
+  describe "video type, read from the bytes that arrived" do
+    setup do
+      cfg = %VideoConfig{
+        upload_path: @upload_path,
+        allowed_mimetypes: ["video/mp4"],
+        upload_strategy: :local,
+        allow_uploads: true
+      }
+
+      {:ok, cfg: cfg}
+    end
+
+    defp iso_box(box, brand), do: <<24::32, box::binary-size(4), brand::binary-size(4), 0::96>>
+
+    for brand <- ~w(avif avis heic heix hevc mif1 msf1) do
+      test "an image with the #{brand} brand named as a video is refused", %{dir: dir, user: user, cfg: cfg} = ctx do
+        body = iso_box("ftyp", unquote(brand))
+
+        assert {:error, _} = Uploads.store_upload(meta(temp(dir, body)), entry("clip.mp4", "video/mp4"), cfg, user)
+        assert stored(ctx) == []
+      end
+    end
+
+    for {box, brand} <- [{"ftyp", "isom"}, {"ftyp", "mp42"}, {"styp", "msdh"}, {"uuid", "abcd"}, {"moov", "mvhd"}] do
+      test "an MP4 opening with #{box} #{brand} is taken", %{cfg: cfg} do
+        assert ContentType.verify_video(iso_box(unquote(box), unquote(brand)), cfg.allowed_mimetypes) == :ok
+      end
     end
   end
 

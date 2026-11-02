@@ -11,7 +11,9 @@ defmodule Brando.Files.Replacement do
   alias Brando.Files
   alias Brando.Repo
   alias Brando.Tenant.Storage
+  alias Brando.Type.VideoConfig
   alias Brando.Uploads
+  alias Brando.Uploads.ContentType
 
   require Logger
 
@@ -60,6 +62,7 @@ defmodule Brando.Files.Replacement do
                :ok <- Boundary.authorize(user, :update, file),
                {:ok, cfg} <- Files.get_config_for(file.config_target),
                :ok <- validate(file, cfg, meta),
+               :ok <- validate_contents(cfg, path),
                {:ok, destination} <- destination(file, cfg),
                {:ok, updated} <-
                  file |> Ecto.Changeset.change(filesize: stat.size, mime_type: meta.type) |> Repo.update(),
@@ -108,6 +111,16 @@ defmodule Brando.Files.Replacement do
       end
     end
   end
+
+  # A video's file is judged like an upload of one, by what arrived. Any other
+  # file can hold anything: see `Brando.Uploads.ContentType`.
+  defp validate_contents(%VideoConfig{allowed_mimetypes: allowed}, path) do
+    with {:ok, head} <- ContentType.head(path) do
+      ContentType.verify_video(head, allowed)
+    end
+  end
+
+  defp validate_contents(_cfg, _path), do: :ok
 
   defp extension(name), do: name |> Path.extname() |> String.downcase()
 
