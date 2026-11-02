@@ -333,8 +333,12 @@ defmodule Brando.SSG do
   end
 
   # Userinfo counts: a target naming the origin's host as userinfo has another
-  # host, and one adding credentials is not a page of this site.
-  defp origin(%URI{} = uri), do: Map.take(uri, [:scheme, :userinfo, :host, :port])
+  # host, and one adding credentials is not a page of this site. A merged
+  # protocol-relative target has no port, and a target with no host has nil here.
+  defp origin(%URI{} = uri) do
+    host = uri.host && String.downcase(uri.host, :ascii)
+    {uri.scheme, uri.userinfo, host, uri.port || URI.default_port(uri.scheme)}
+  end
 
   defp redirect_location(%{headers: headers}) do
     Enum.find_value(headers, fn {name, value} ->
@@ -465,9 +469,12 @@ defmodule Brando.SSG do
 
   defp format_failure(url, {:http_status, status}), do: "#{url} (HTTP #{status})"
 
+  # The target comes from the response and this text goes to the database: only
+  # its origin, since a URI with no host prints its raw authority, and inspected,
+  # since a header can hold invalid UTF-8.
   defp format_failure(url, {:redirect_off_origin, status, %URI{} = target}) do
-    target_origin = to_string(%{target | userinfo: nil, path: nil, query: nil, fragment: nil})
-    "#{url} (HTTP #{status} redirect to another origin: #{target_origin})"
+    target_origin = to_string(%URI{scheme: target.scheme, host: target.host, port: target.port})
+    "#{url} (HTTP #{status} redirect to another origin: #{inspect(target_origin)})"
   end
 
   defp format_failure(url, reason), do: "#{url} (#{inspect(reason)})"

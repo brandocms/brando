@@ -232,6 +232,65 @@ defmodule Brando.SSGTest do
       end
     end
 
+    test "with a Location the failure text keeps out credentials and invalid bytes", context do
+      test = self()
+
+      for location <- ["http://user:secret@/x", <<"http://bad", 0xFF, ".test/x">>] do
+        fetcher = fn url, _opts ->
+          send(test, {:fetched, url})
+          {:ok, %{status: 302, headers: %{"location" => [location]}, body: ""}}
+        end
+
+        assert {:error, :url_failures, %{failed_urls: [failure]}} =
+                 SSG.build(
+                   base_url: "http://site.test:4000",
+                   output_path: context.output_path,
+                   static_path: context.static_path,
+                   media_path: context.media_path,
+                   ssg_module: AboutOnly,
+                   fetcher: fetcher
+                 )
+
+        assert String.valid?(failure)
+        assert failure =~ "another origin"
+        refute failure =~ "secret"
+        refute failure =~ "user"
+        assert_received {:fetched, "http://site.test:4000/about"}
+        refute_received {:fetched, _second_request}
+      end
+    end
+
+    test "to the same origin in another form follows it and stores the answer", context do
+      test = self()
+
+      for {base_url, location, expected} <- [
+            {"http://site.test", "//site.test/om-oss", "http://site.test/om-oss"},
+            {"http://site.test:4000", "http://SITE.TEST:4000/x", "http://SITE.TEST:4000/x"},
+            {"http://SITE.test:4000", "http://site.TEST:4000/x", "http://site.TEST:4000/x"}
+          ] do
+        fetcher = fn url, _opts ->
+          send(test, {:fetched, url})
+
+          if url == base_url <> "/about",
+            do: {:ok, %{status: 302, headers: %{"location" => [location]}, body: ""}},
+            else: {:ok, %{status: 200, body: "<main>#{url}</main>"}}
+        end
+
+        assert {:ok, %{failed_urls: []}} =
+                 SSG.build(
+                   base_url: base_url,
+                   output_path: context.output_path,
+                   static_path: context.static_path,
+                   media_path: context.media_path,
+                   ssg_module: AboutOnly,
+                   fetcher: fetcher
+                 )
+
+        assert_received {:fetched, ^expected}
+        assert File.read!(context.page) =~ "<main>#{expected}</main>"
+      end
+    end
+
     test "inside the site stores the answer at the listed path and sends the token only there", context do
       base_url =
         start_site(fn

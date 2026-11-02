@@ -958,12 +958,13 @@ make the build fail without hiding partial logs or counts.
 
 A build requests only its own origin. A listed path that redirects to another
 path on that origin is stored with the answer the redirect ends at, and the
-signed header goes along. A redirect to another scheme, host or port fails that
-URL: Brando makes no request there, and the failed-URL list names the target's
-origin. That includes an absolute URL to the site's public domain when the build
-renders through `http://localhost:4000`, so write a redirect on a listed path as
-a relative path, or take the path off the SSG module's list. A custom `:fetcher`
-gets `redirect: false` and returns a redirect with its `:headers`.
+signed header goes along. A redirect to another scheme, host or port, or to a
+URL carrying credentials, fails that URL: Brando makes no request there, and the
+failed-URL list names the target's origin. That includes an absolute URL to the
+site's public domain when the build renders through `http://localhost:4000`, so
+write a redirect on a listed path as a relative path, or take the path off the
+SSG module's list. A custom `:fetcher` gets `redirect: false` and returns a
+redirect with its `:headers`.
 
 Open `/admin/config/publishing` while a static site is selected. The deployment
 form supports:
