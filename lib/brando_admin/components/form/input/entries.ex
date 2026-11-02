@@ -68,7 +68,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
      |> assign_new(:selected_schema, fn %{available_schemas: schemas} -> single_schema(schemas) end)
      |> assign_new(:available_identifiers, fn -> [] end)
      |> keep_filters(wanted_schemas)
-     |> follow_saved_row()
      |> assign_selected_identifiers(field)}
   end
 
@@ -426,14 +425,28 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
   # and lists again here if what the editor may read can have changed since
   # (`read_key/0`). In a subform row, only while the input still serves the
   # row the picker opened on: it is named by its position, so once a row
-  # above it is removed or the rows are reordered, it serves another row.
+  # above it is removed or the rows are reordered, it serves another row. A
+  # save changes a new row's key too, and can't be told from a move: the
+  # editor opens the picker again.
   def handle_event("select_identifier", %{"id" => identifier_id}, socket) do
     socket = refresh_filters(socket, Keyword.get(socket.assigns.opts, :sources))
 
-    if socket.assigns[:picker_row] == row_key(socket) and
-         Enum.any?(socket.assigns.available_identifiers, &(to_string(&1.id) == to_string(identifier_id))),
-       do: select_identifier(socket, identifier_id),
-       else: {:noreply, socket}
+    cond do
+      socket.assigns[:picker_row] != row_key(socket) ->
+        alert = %{
+          title: gettext("The row has changed"),
+          message: gettext("Close the list and open it again to pick for this row."),
+          type: "info"
+        }
+
+        {:noreply, push_event(socket, "b:alert", alert)}
+
+      Enum.any?(socket.assigns.available_identifiers, &(to_string(&1.id) == to_string(identifier_id))) ->
+        select_identifier(socket, identifier_id)
+
+      true ->
+        {:noreply, socket}
+    end
   end
 
   def handle_event("select_schema", %{"schema" => schema}, %{assigns: %{available_schemas: available_schemas}} = socket) do
@@ -526,20 +539,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
     end
   end
-
-  # A save gives a new row (a new key, or none in a one-to-one subform) its
-  # id, and only a save does: the open picker stays with the row. Any other
-  # change of the row the input serves is another row (`select_identifier`).
-  defp follow_saved_row(%{assigns: %{picker_open?: true, picker_row: picker_row}} = socket) do
-    current = row_key(socket)
-
-    if (picker_row == nil or SubformHelpers.new_key?(picker_row)) and current != nil and
-         not SubformHelpers.new_key?(current),
-       do: assign(socket, :picker_row, current),
-       else: socket
-  end
-
-  defp follow_saved_row(socket), do: socket
 
   # The subform row the input serves now, nil outside a subform
   defp row_key(%{assigns: %{subform_id: subform_id, field: field}}) when not is_nil(subform_id),

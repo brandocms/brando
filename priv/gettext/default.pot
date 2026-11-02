@@ -3897,6 +3897,11 @@ msgstr ""
 msgid "Close recovery panel"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/entries.ex
+#, elixir-autogen, elixir-format
+msgid "Close the list and open it again to pick for this row."
+msgstr ""
+
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Closed"
@@ -17560,6 +17565,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "The route was paused"
+msgstr ""
+
+#: lib/brando_admin/components/form/input/entries.ex
+#, elixir-autogen, elixir-format
+msgid "The row has changed"
 msgstr ""
 
 #: lib/brando_admin/components/activity.ex

@@ -206,6 +206,47 @@ defmodule BrandoAdmin.EntriesInputSubformRowsTest do
       |> render_click()
 
       assert row_links(view) == []
+      assert_push_event(view, "b:alert", %{type: "info"})
+    end
+
+    # A saved row reordered into a new row's place looks as a save would to
+    # the new row's input: its key goes from new to saved
+    test "a pick from a new row's picker is dropped once a saved row takes its place", %{conn: conn} = c do
+      view = open(conn, c.article, "item_entries")
+      form = BrandoAdmin.Components.Form
+      new_row = BrandoAdmin.Components.Form.Input.SubformHelpers.new_row(%ArticleItem{label: "New"})
+
+      Phoenix.LiveView.send_update(view.pid, form,
+        id: "article_form",
+        action: :update_entries,
+        field: :items,
+        op: {:append, [new_row]}
+      )
+
+      new_key = get_in(params(view), ["article", "items", "1", "_key"])
+      assert new_key =~ "new-"
+
+      view |> element("#article_items_1_related_entries-field-wrapper button", "Select entries") |> render_click()
+
+      Phoenix.LiveView.send_update(view.pid, form,
+        id: "article_form",
+        action: :update_entries,
+        field: :items,
+        op: {:reorder, [new_key, "id-#{c.item.id}"], false}
+      )
+
+      assert get_in(params(view), ["article", "items", "1", "id"]) == to_string(c.item.id)
+
+      view
+      |> element("#article_items_1_related_entries-entries-options [data-id='#{c.picked.id}']")
+      |> render_click()
+
+      assert get_in(params(view), ["article", "items", "1", "related_entries"])
+             |> Map.values()
+             |> Enum.map(& &1["identifier_id"]) ==
+               [to_string(c.linked.id)]
+
+      assert_push_event(view, "b:alert", %{type: "info"})
     end
 
     test "\"Clear all\" empties the row and is saved", %{conn: conn} = c do
@@ -300,8 +341,9 @@ defmodule BrandoAdmin.EntriesInputSubformRowsTest do
       end
     end
 
-    # A save gives the new row its id; the open picker stays with it
-    test "a picker opened on a new row still picks once the row is saved", %{conn: conn} = c do
+    # A save gives the new row its id, which can't be told from another row
+    # moving into its place: the pick is dropped, and the editor told
+    test "a picker opened on a new row drops a pick once the row is saved", %{conn: conn} = c do
       Repo.delete!(c.author)
       view = open(conn, c.article, "author_entries")
 
@@ -324,7 +366,8 @@ defmodule BrandoAdmin.EntriesInputSubformRowsTest do
       |> element("#article_author_0_related_entries-entries-options [data-id='#{c.picked.id}']")
       |> render_click()
 
-      assert author_links(view) == [to_string(c.picked.id)]
+      assert author_links(view) == []
+      assert_push_event(view, "b:alert", %{type: "info"})
     end
 
     test "\"Clear all\" empties the row", %{conn: conn} = c do
