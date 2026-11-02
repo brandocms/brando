@@ -4,6 +4,8 @@ defmodule Brando.Cache do
   """
   use Brando.Tracing.Decorator
 
+  alias Brando.Tenant
+
   @cache_module Application.compile_env(:brando, :cache_module, Cachex)
 
   @spec get(any) :: any
@@ -20,7 +22,7 @@ defmodule Brando.Cache do
   whatever `public`'s copy put under the unprefixed key.
   """
   @spec get_site(any) :: any
-  def get_site(key), do: if(Brando.Tenant.outside_site?(), do: nil, else: get(key))
+  def get_site(key), do: if(Tenant.outside_site?(), do: nil, else: get(key))
 
   @spec get(any, atom) :: any
   def get(key, sub_key) do
@@ -77,9 +79,9 @@ defmodule Brando.Cache do
   """
   @spec rebuild_after_commit(atom(), (-> any())) :: :ok
   def rebuild_after_commit(cache, rebuild) do
-    key = {__MODULE__, cache, Brando.Tenant.current_prefix(), Brando.Tenant.public?()}
+    key = {__MODULE__, cache, Tenant.current_prefix(), Tenant.public?()}
     unscoped = fn -> Brando.Authorization.Boundary.with_scope(nil, rebuild) end
-    Brando.Repo.after_commit(key, Brando.Tenant.capture_context(unscoped))
+    Brando.Repo.after_commit(key, Tenant.capture_context(unscoped))
   end
 
   @doc """
@@ -90,13 +92,13 @@ defmodule Brando.Cache do
   """
   @spec after_rebuild(atom(), (-> any())) :: :ok
   def after_rebuild(cache, fun) do
-    key = {__MODULE__, :after_rebuild, cache, Brando.Tenant.current_prefix(), Brando.Tenant.public?()}
-    Brando.Repo.after_commit(key, Brando.Tenant.capture_context(fun), late: true)
+    key = {__MODULE__, :after_rebuild, cache, Tenant.current_prefix(), Tenant.public?()}
+    Brando.Repo.after_commit(key, Tenant.capture_context(fun), late: true)
   end
 
   defp get_from_cache(key) do
     @cache_module.get(:cache, cache_key(key))
   end
 
-  defp cache_key(key), do: Brando.Tenant.cache_key(key)
+  defp cache_key(key), do: Tenant.cache_key(key)
 end
