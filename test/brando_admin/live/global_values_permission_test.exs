@@ -165,6 +165,52 @@ defmodule BrandoAdmin.GlobalValuesPermissionTest do
       assert saved(set).creator_id == values.id
     end
 
+    # The Globals screen saves with the set it loaded when it opened: the
+    # creator another save stamped since then stands.
+    test "a values save from a stale screen keeps the creator another save stamped",
+         %{values: values, owner: owner, set: set} do
+      Repo.update_all(from(v in Brando.Content.Var, where: v.global_set_id == ^set.id), set: [creator_id: nil])
+      Repo.update_all(from(s in GlobalSet, where: s.id == ^set.id), set: [creator_id: nil])
+
+      stale = saved(set)
+      first = member(owner, ["brando.admin.access", @read, @values])
+      tagline = var_id(set, "tagline")
+
+      save = fn value, user ->
+        Sites.update_global_values(stale, %{"vars" => %{"0" => %{"id" => tagline, "value" => value}}}, user)
+      end
+
+      assert {:ok, _} = save.("First", first)
+      assert {:ok, _} = save.("Second", values)
+
+      assert saved(set).creator_id == first.id
+      assert %{value: "Second", creator_id: tagline_creator} = saved_var(set, "tagline")
+      assert tagline_creator == first.id
+      assert saved_var(set, "size").creator_id == first.id
+    end
+
+    # Unnumbered globals (brando_109) keep no sequence, so a save that
+    # changes no value is no edit of the set.
+    test "a values save with no value changed leaves a set with unnumbered globals unedited",
+         %{values: values, set: set} do
+      Repo.update_all(from(v in Brando.Content.Var, where: v.global_set_id == ^set.id), set: [sequence: nil])
+
+      before = saved(set)
+      tagline = var_id(set, "tagline")
+
+      save = fn value ->
+        Sites.update_global_values(saved(set), %{"vars" => %{"0" => %{"id" => tagline, "value" => value}}}, values)
+      end
+
+      assert {:ok, _} = save.("Hello")
+      assert Map.take(saved(set), [:edited_at, :updated_by_id]) == Map.take(before, [:edited_at, :updated_by_id])
+
+      assert {:ok, _} = save.("Changed")
+      assert %{value: "Changed", sequence: nil} = saved_var(set, "tagline")
+      assert saved(set).updated_by_id == values.id
+      assert saved_var(set, "size").sequence == nil
+    end
+
     test "a values save does not hand a var to another creator", %{values: values, owner: owner, set: set} do
       other = TestUsers.insert_user(role: :editor)
       tagline = var_id(set, "tagline")

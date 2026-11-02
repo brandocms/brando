@@ -281,19 +281,6 @@ defmodule Brando.Content.VarGuard do
     if Map.has_key?(params, "vars"), do: Map.put(base, "vars", values), else: base
   end
 
-  @doc """
-  The global set changeset `changeset` of `global_values/2`'s params with its
-  vars' stored sequence kept. The cast numbers a var by its place in the
-  params, which is the stored order, but a sequence stored empty (globals
-  moved to vars by `brando_109`) or shared is not that number, and a values
-  save does not order the set.
-  """
-  @spec keep_sequence(Changeset.t()) :: Changeset.t()
-  def keep_sequence(%Changeset{changes: %{vars: vars} = changes} = changeset) when is_list(vars),
-    do: %{changeset | changes: %{changes | vars: Enum.map(vars, &Changeset.delete_change(&1, :sequence))}}
-
-  def keep_sequence(changeset), do: changeset
-
   # Who changed a set or a var and when (the Creator trait) come with a value.
   @stamps [:edited_at, :updated_by_id, :content_modified_at]
 
