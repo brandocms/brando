@@ -96,7 +96,10 @@ and `document` then returns that element in place of the member. Phoenix and
 morphdom get shielded objects from the plug's wrapper. A function read through
 the shield comes back bound to the real object, as a site's wrapper of a DOM
 method passes its `this` on to the native one; a constructor read that way has
-no static members, so read those from `window`.
+no static members, so read those from `window`. The shield's proxy stands over
+an empty object, not the real one: a proxy must return a non-configurable,
+non-writable own property of its target unchanged, and a site's
+`Object.defineProperty(document, 'createElement', …)` makes one.
 
 ## What the iframe shows
 

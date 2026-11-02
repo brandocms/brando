@@ -273,6 +273,40 @@ test.describe('Live preview sandbox', () => {
     expect(clientErrors).toEqual([])
   })
 
+  // A wrapper defined on the object itself with `Object.defineProperty` is
+  // neither writable nor configurable, and a proxy of that object would have
+  // to return it unbound.
+  test('a site script defining DOM methods on the document and window keeps its preview updated', async ({
+    page
+  }) => {
+    const clientErrors = []
+    page.on('pageerror', error => {
+      if (/__livepreview\/client-/.test(error.stack || '')) clientErrors.push(error.message)
+    })
+    await beforeClient(page, () => {
+      const createElement = document.createElement
+      Object.defineProperty(document, 'createElement', {
+        value: function (...args) {
+          return createElement.apply(this, args)
+        }
+      })
+      const addEventListener = window.addEventListener
+      Object.defineProperty(window, 'addEventListener', {
+        value: function (...args) {
+          return addEventListener.apply(this, args)
+        }
+      })
+    })
+    await openPreview(page, 'Sandbox Defined')
+
+    const preview = getPreviewFrame(page)
+    await page.locator('.header-block textarea').fill('Defined Header')
+    await syncLV(page)
+    await expect(preview.locator('header[b-tpl="styled-header"] h1')).toContainText('Defined Header')
+    await expect(page.locator('.live-preview-notice')).toBeEmpty()
+    expect(clientErrors).toEqual([])
+  })
+
   // Content can name an element after a member of `document` (rich text keeps
   // `name`), and `document` then returns the element for that name. (By the
   // spec the name also hides what `window` inherits from EventTarget; Chromium

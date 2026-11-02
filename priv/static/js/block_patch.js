@@ -36,8 +36,9 @@ window.BrandoBlockPatch = (function () {
    * Rich text keeps `name` and `id`, so the page's content, and the new HTML of
    * an update, can do either.
    *
-   * The result is for reading members only: where a node is expected, pass the
-   * document itself.
+   * The result is for reading members only (`in`, `instanceof` and setting a
+   * member reach the real object too, but it lists no properties of its own):
+   * where a node is expected, pass the document itself.
    * @param {Document|Window|Node} target
    */
   function shield(target) {
@@ -50,9 +51,16 @@ window.BrandoBlockPatch = (function () {
       // The window's named elements sit in its prototype chain, right above
       // `Window.prototype`; a document's are its own properties.
       const prototypes = isWindow ? [Window.prototype, EventTarget.prototype, Object.prototype] : prototypeChain(target)
-      shielded = new Proxy(target, {
-        get: (_target, key) => readMember(target, prototypes, key, isWindow),
-        set: (_target, key, value) => Reflect.set(target, key, value)
+      // The proxy stands over an empty object of its own, and its traps reach
+      // the real one. A proxy must return a non-configurable, non-writable own
+      // property of its target as it is, and a site defining a wrapper on the
+      // document or window with `Object.defineProperty` makes one: over the
+      // real object, the bound function read in its place would throw.
+      shielded = new Proxy(Object.create(null), {
+        get: (_shell, key) => readMember(target, prototypes, key, isWindow),
+        set: (_shell, key, value) => Reflect.set(target, key, value),
+        has: (_shell, key) => key in target,
+        getPrototypeOf: () => Object.getPrototypeOf(target)
       })
       shields.set(target, shielded)
       proxies.add(shielded)
