@@ -180,8 +180,9 @@ cannot use it on their own account.
 **Change your own password.** Your own form links to `/admin/users/password`,
 which asks for the current password and the new one twice. Saving logs out
 your other sessions and keeps the one you are using
-(`Brando.Users.update_user_password/4`). The first-login password change is
-the same page.
+(`Brando.Users.update_user_password/4`). A wrong current password counts
+towards the lockout, and a locked account cannot change it here. The
+first-login password change is the same page.
 
 Whichever way a password changes, the user is emailed to say so, with a link
 to reset it if they did not. Without a mailer the password still changes,
@@ -320,7 +321,8 @@ the security log with who did it.
 `Brando.Users.Throttle` limits sign-in attempts, two-factor codes and
 password reset requests per IP address and per account, in 15-minute windows.
 Five failures within 15 minutes of the first — a wrong password, a wrong
-code, or a wrong password or code when confirming a change — lock the account
+code, a wrong password or code when confirming a change, or a wrong current
+password when changing it — lock the account
 for 15 minutes, on every node; the second lockout in a day lasts an hour, and
 any after that four hours, counted over a rolling day for an account and for
 an address without one alike. The user is emailed when their account is locked. While it is locked even the right password does not sign in, and an
@@ -440,7 +442,10 @@ operation. `Brando.Users.delete_session_token(token)` revokes one known token;
 it is not an all-device API. A password reset deletes them all. Test both an
 already open tab and a fresh request.
 
-Only a superuser deactivates or deletes a superuser. Group mode also
+Only a superuser deactivates, re-enables, deletes or restores a superuser. In
+group mode a removed account counts as a superuser while it is in the
+installation's Superuser group, as it would be one again the moment it came
+back; any other account takes the `restore` or `update` grant. Group mode also
 protects the last active Superuser from removal/deactivation. If an
 operation is denied, retain the account and establish another authorized active
 administrator first; do not work around the guard with a raw database update.
@@ -460,11 +465,44 @@ underlying operation is:
 
 Use a real, different, active recipient selected by your application; the raw
 context call should not be treated as a recipient-validation UI. Brando discovers
-foreign-key references to `users` and moves every one to the recipient — content
+foreign-key references to `users` and moves them to the recipient — content
 ownership and edit history (`updated_by_id`) alike,
 deletes the departing account's session-token rows, and soft-deletes the account.
 It does **not** transfer authorization memberships or `user_sites`
 access: the recipient keeps their own permissions.
+
+Some tables are left out of the transfer
+(`Brando.Users.transferred_table?/1`): the account's connections and private
+working data, its static builds and notes, and the activity and security logs.
+Other records of who did something move with the content, such as environment
+operation logs, archived blocks and SEO meta suggestions.
+
+The tools the account connected over MCP are disconnected, and a pending
+approval ends with them: a connection never comes to act as someone else. Its
+assistant conversations, recovery drafts, stored proposals, private listing
+views and listing defaults, notification deliveries and transfer receipts stay
+with the deleted account, so the recipient does not inherit them, and they
+return if the account is restored. Purging the account deletes its
+conversations, drafts, listing views and defaults, and the notifications
+delivered to it; proposals and receipts remain with no owner.
+
+Only the account that ran a [content transfer](content_transfer.md) or applied
+a proposal can undo it. The receipts stay with that account, so a departed
+user's content transfers and proposals cannot be undone unless the account is
+restored.
+
+A shared listing view moves, unless the recipient already has one with that
+name. That view stays with the deleted account and goes when the account is
+purged.
+
+A static build stays as well, because it runs on the authority of the user who
+requested it. With authorization groups, a build still queued when its creator
+is deleted is cancelled when its job runs, and only the build's log says so:
+check queued and scheduled builds before you delete someone. In a classic
+installation builds have no per-user check, and it runs.
+
+A table of your own that references `users` moves unless its rows are left out
+in the same way, so check any that hold personal data.
 
 The transfer helper discovers table/column names and issues unqualified
 SQL. It is **not a complete cross-environment migration tool** for a multi-site

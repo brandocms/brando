@@ -286,10 +286,23 @@ defmodule Brando.Authorization.Engine do
   defp protected_subject?(%Snapshot{superuser?: true}, _, _), do: true
 
   defp protected_subject?(snapshot, action, %{__struct__: Brando.Users.User, id: id}) when action != :read do
-    id == nil or id == snapshot.user.id or not superuser?(Scope.installation(%{id: id}))
+    id == nil or id == snapshot.user.id or not superuser_member?(id)
   end
 
   defp protected_subject?(_, _, _), do: true
+
+  # By membership, not by a snapshot: a deleted or deactivated account has no
+  # authority of its own, but it comes back a superuser, so it stays protected.
+  defp superuser_member?(user_id) do
+    query =
+      from(m in Membership,
+        join: g in Group,
+        on: g.id == m.group_id,
+        where: m.user_id == ^user_id and g.preset == :superuser and g.scope_kind == :installation
+      )
+
+    Repo.aggregate(query, :count) > 0
+  end
 
   defp protected_changes?(snapshot, %{data: %{__struct__: Brando.Users.User} = user, changes: changes}) do
     role_valid? = not Map.has_key?(changes, :role) or (is_nil(user.id) and changes.role == :user)

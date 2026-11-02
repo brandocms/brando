@@ -231,7 +231,7 @@ defmodule Brando.Query.Mutations do
         Logger.error("""
 
         update_with_changeset failed with error:
-        #{inspect(err, pretty: true)}
+        #{inspect(without_changes(err), pretty: true)}
 
         """)
 
@@ -784,6 +784,10 @@ defmodule Brando.Query.Mutations do
       callback.(entry)
     end
   end
+
+  # The changes hold what was typed, email addresses and the like.
+  defp without_changes({:error, %Ecto.Changeset{errors: errors}}), do: {:error, errors}
+  defp without_changes(err), do: err
 
   defp authorize_deletion(:system, _), do: :ok
 
