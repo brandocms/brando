@@ -6530,6 +6530,11 @@ msgstr ""
 msgid "Edit the shared library video."
 msgstr ""
 
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Edit values"
+msgstr ""
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "Edit variable"
@@ -20211,6 +20216,7 @@ msgstr ""
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/alternates_drawer.ex
 #: lib/brando_admin/components/form/input/render_var.ex
+#: lib/brando_admin/components/global_tabs.ex
 #: lib/brando_admin/components/image_picker.ex
 #: lib/brando_admin/components/module_files.ex
 #: lib/brando_admin/components/video_picker.ex

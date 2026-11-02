@@ -19,6 +19,7 @@ defmodule Brando.Content.Var do
   trait :sequenced
   trait :timestamped
   trait Brando.Content.Var.FollowLinkDefault
+  trait Brando.Content.Var.HoldOwner
   trait Brando.Content.Var.SanitizeRichText
   trait Brando.Content.Var.ValidateValue
 

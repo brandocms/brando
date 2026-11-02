@@ -908,8 +908,8 @@ defmodule Brando.Content.VarGuardTest do
     test "a stale var keeps its saved type and key on an unrelated edit", c do
       block = insert_block!(c)
 
-      %Var{}
-      |> Var.changeset(%{key: "dropped", label: "Dropped", type: :string, value: "Kept", block_id: block.id}, c.superuser)
+      %Var{block_id: block.id}
+      |> Var.changeset(%{key: "dropped", label: "Dropped", type: :string, value: "Kept"}, c.superuser)
       |> Repo.insert!()
 
       block = Repo.preload(block, [:vars], force: true)

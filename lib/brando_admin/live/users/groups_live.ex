@@ -997,7 +997,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
     # render/event; repeating Engine.can?/3 also repeats catalog discovery.
     if group.preset != :superuser and can_save?(snapshot, group) do
       permissions
-      |> Enum.filter(&(snapshot.superuser? or (&1.delegable and Map.has_key?(snapshot.grants, &1.key))))
+      |> Enum.filter(&(snapshot.superuser? or (&1.delegable and Catalog.held?(snapshot.grants, &1))))
       |> MapSet.new(& &1.key)
     else
       MapSet.new()
@@ -1022,6 +1022,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
       :read,
       :create,
       :update,
+      :update_values,
       :delete,
       :duplicate,
       :publish,
@@ -1051,6 +1052,7 @@ defmodule BrandoAdmin.Users.GroupsLive do
 
   defp action_label(:read), do: gettext("View")
   defp action_label(:update), do: gettext("Edit")
+  defp action_label(:update_values), do: gettext("Edit values")
   defp action_label(:assign), do: gettext("Members")
   defp action_label(:access), do: gettext("Access")
   defp action_label(:create), do: gettext("Create")

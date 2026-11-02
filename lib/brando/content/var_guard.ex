@@ -280,6 +280,27 @@ defmodule Brando.Content.VarGuard do
     if Map.has_key?(params, "vars"), do: Map.put(base, "vars", values), else: base
   end
 
+  # Who changed a set or a var and when (the Creator trait) come with a value.
+  @stamps [:edited_at, :updated_by_id, :content_modified_at]
+
+  @doc """
+  Whether the global set changeset `changeset` changes values only, as a save
+  of `global_values/2` does: no var added, removed or redefined, and nothing
+  of the set's own but who changed it and when.
+  """
+  @spec values_only?(Changeset.t()) :: boolean()
+  def values_only?(%Changeset{changes: changes}) do
+    Enum.all?(changes, fn
+      {:vars, vars} -> Enum.all?(vars, &value_change?/1)
+      {field, _} -> field in @stamps
+    end)
+  end
+
+  defp value_change?(%Changeset{action: :update, data: %{id: id}, changes: changes}) when not is_nil(id),
+    do: changes |> Map.drop(@stamps) |> Map.keys() |> Enum.all?(&(Atom.to_string(&1) in @value_params))
+
+  defp value_change?(_var), do: false
+
   defp module(changeset) do
     case Changeset.get_field(changeset, :module_id) do
       nil -> nil

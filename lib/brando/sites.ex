@@ -250,6 +250,19 @@ defmodule Brando.Sites do
   mutation :delete, GlobalSet
 
   @doc """
+  Saves the values in `params` to the vars of `global_set`, as the Globals
+  screen does. Keys, types, options, labels, the vars themselves and the set's
+  own fields stay as they are (`Brando.Content.VarGuard.global_values/2`). It
+  takes the `update_values` permission on global sets, which `update` includes.
+  """
+  @spec update_global_values(global_set, params, user) :: {:ok, global_set} | {:error, changeset | :forbidden}
+  def update_global_values(%GlobalSet{} = global_set, params, user) do
+    global_set
+    |> GlobalSet.changeset(Brando.Content.VarGuard.global_values(global_set, params), user)
+    |> update_global_set(user, action: :update_values)
+  end
+
+  @doc """
   Get global by category and key
   """
   def get_global(cat_key, key, globals) when is_map(globals) do

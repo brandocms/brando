@@ -334,8 +334,10 @@ A value is checked for its type: a colour, a date, a datetime, or one of a
 changes, and a copy of a block leaves it empty.
 
 The Globals screen fills in values only. Setting up global sets
-(`/admin/config/global_sets`) takes a superuser in legacy mode, and the update
-permission on global sets in groups mode.
+(`/admin/config/global_sets`) takes a superuser in legacy mode. In groups
+mode filling in values takes the Edit values permission on global sets, and
+setting them up takes Edit, which includes it (see
+[Groups and authorization](authorization.md)).
 
 ## Named block regions
 

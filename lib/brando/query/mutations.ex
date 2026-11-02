@@ -178,12 +178,14 @@ defmodule Brando.Query.Mutations do
     end
   end
 
+  # `opts[:action]` is the permission the save takes, `:update` unless a
+  # narrower one is named, such as `:update_values` (`Boundary.change/3`).
   @decorate span("brando.query.update", schema: :module, entry_id: [:changeset, :data, :id])
   def update_with_changeset(module, changeset, user, preloads, callback_block, opts) do
     if changeset.data.__struct__ == module do
       Boundary.run(
         user,
-        :update,
+        Keyword.get(opts, :action, :update),
         module,
         &do_update_with_changeset(module, changeset, &1, preloads, callback_block, opts)
       )
@@ -199,7 +201,7 @@ defmodule Brando.Query.Mutations do
     with changeset <- Publisher.maybe_override_status(changeset),
          changeset <- ContentModified.stamp(changeset, user),
          changeset <- set_action(changeset, :update),
-         :ok <- Boundary.change(user, :update, changeset),
+         :ok <- Boundary.change(user, Keyword.get(opts, :action, :update), changeset),
          {:ok, entry} <- Query.update(changeset),
          {:ok, entry} <- maybe_preload(entry, preloads),
          {:ok, identifier_result} <- Content.update_identifier(module, entry),

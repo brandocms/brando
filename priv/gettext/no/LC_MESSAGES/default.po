@@ -6530,6 +6530,11 @@ msgstr "Rediger det delte bildet i biblioteket."
 msgid "Edit the shared library video."
 msgstr "Rediger den delte videoen i biblioteket."
 
+#: lib/brando_admin/live/users/groups_live.ex
+#, elixir-autogen, elixir-format
+msgid "Edit values"
+msgstr "Rediger verdier"
+
 #: lib/brando_admin/components/form/module_props.ex
 #, elixir-autogen, elixir-format
 msgid "Edit variable"
@@ -20213,6 +20218,7 @@ msgstr "Du endret det også. Skjemaet viser din versjon, og når du lagrer, erst
 #: lib/brando_admin/components/form.ex
 #: lib/brando_admin/components/form/alternates_drawer.ex
 #: lib/brando_admin/components/form/input/render_var.ex
+#: lib/brando_admin/components/global_tabs.ex
 #: lib/brando_admin/components/image_picker.ex
 #: lib/brando_admin/components/module_files.ex
 #: lib/brando_admin/components/video_picker.ex
