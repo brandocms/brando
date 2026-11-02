@@ -40,11 +40,6 @@ defmodule Brando.Content.Proposals.Review do
   @excerpt 90
   # Around what changed in a long text
   @change_context 40
-  # Markup without attributes that only formats text. Anything else is shown
-  # as it is written: an address, a style or an image is part of the change.
-  @formatting ~w(a abbr b blockquote br cite code dd del div dl dt em figcaption figure h1 h2 h3 h4 h5 h6 hr i ins
-                 kbd li mark ol p pre q s small span strike strong sub sup table tbody td tfoot th thead tr u ul)
-  @void_tags ~w(area br col embed hr img input source track wbr)
 
   @doc "Review cards for `proposal`."
   @spec entries(Proposal.t()) :: [map()]
@@ -908,12 +903,16 @@ defmodule Brando.Content.Proposals.Review do
 
   # A text field's change shows what differs in it, like a block's text.
   defp field_change(entry, name, value) do
-    view = field_view(entry.__struct__, name, value)
+    schema = entry.__struct__
+    view = field_view(schema, name, value)
     saved = current(entry, name)
 
-    if is_binary(value) and is_binary(saved) and view.value == readable(value) do
-      {before, value} = text_change(saved, value)
-      %{view | value: value} |> Map.put(:before, before)
+    if is_binary(value) and is_binary(saved) and view.value == display(schema, name, value) and view.media == nil and
+         name not in ~w(status language) do
+      {before, value} =
+        if rich_text?(schema, name), do: text_change(saved, value), else: narrow(collapse(saved), collapse(value))
+
+      view |> Map.put(:value, value) |> Map.put(:before, before)
     else
       Map.put(view, :before, saved_value(entry, name))
     end
@@ -983,8 +982,18 @@ defmodule Brando.Content.Proposals.Review do
   end
 
   defp display(schema, name, value) when is_list(value), do: EntryFields.display(schema, name, value) || whole(value)
-  defp display(_schema, _name, value) when is_binary(value), do: readable(value)
+
+  defp display(schema, name, value) when is_binary(value) do
+    if rich_text?(schema, name), do: readable(value), else: collapse(value)
+  end
+
   defp display(_schema, _name, value), do: whole(value)
+
+  # Any other text field is plain: `R<D` in it is what it says.
+  defp rich_text?(schema, name) do
+    function_exported?(schema, :__rich_text_fields__, 0) and
+      to_string(name) in Enum.map(schema.__rich_text_fields__(), &to_string/1)
+  end
 
   defp first_mention(proposal, target) do
     Enum.find_index(proposal.operations, fn
@@ -1044,34 +1053,13 @@ defmodule Brando.Content.Proposals.Review do
 
   defp whole(value) when is_binary(value) or is_number(value) or is_boolean(value) or is_nil(value), do: value
   defp whole({:new, ref}), do: dgettext("content_proposals", "the new entry %{ref}", ref: ref)
-  defp whole(value), do: inspect(value)
+  defp whole(value), do: inspect(value, limit: :infinity, printable_limit: :infinity)
 
-  # Text as a reviewer reads what it says and does: plain, all of it, with
-  # every element that does more than format text written out.
+  # Text as a reviewer reads what it says and does: what saving it stores,
+  # all of it (`Brando.RichText.readable_html/1`).
   defp readable(nil), do: nil
-
-  defp readable(text) when is_binary(text) do
-    with true <- String.contains?(text, "<"),
-         {:ok, nodes} <- Floki.parse_fragment(text) do
-      nodes |> Enum.map(&readable_node/1) |> IO.iodata_to_binary() |> collapse()
-    else
-      _ -> collapse(text)
-    end
-  end
-
+  defp readable(text) when is_binary(text), do: Brando.RichText.readable_html(text)
   defp readable(text), do: whole(text)
-
-  defp readable_node(text) when is_binary(text), do: text
-  defp readable_node({tag, [], children}) when tag in @formatting, do: [Enum.map(children, &readable_node/1), " "]
-
-  defp readable_node({tag, attrs, children}) when is_binary(tag) do
-    attrs = for {name, value} <- attrs, do: [" ", name, "=\"", value, "\""]
-    close = if tag in @void_tags, do: [], else: ["</", tag, ">"]
-    ["<", tag, attrs, ">", Enum.map(children, &readable_node/1), close]
-  end
-
-  defp readable_node({:comment, comment}), do: ["<!--", comment, "-->"]
-  defp readable_node(_node), do: []
 
   defp collapse(text), do: text |> String.replace(~r/\s+/, " ") |> String.trim()
 
@@ -1084,6 +1072,10 @@ defmodule Brando.Content.Proposals.Review do
       {before, text} -> narrow(before, text)
     end
   end
+
+  # Nothing differs, as on a card reopened after applying: the text is all
+  # there is to show.
+  defp narrow(same, same), do: {nil, same}
 
   defp narrow(before, text) when is_binary(before) and is_binary(text) do
     if String.length(before) <= @excerpt and String.length(text) <= @excerpt do

@@ -7,6 +7,8 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
   use Brando.LiveCase
   use Brando.Test
 
+  require Ecto.Query
+
   alias Brando.AI.Agent
   alias Brando.AIStub
   alias Brando.Pages.Page
@@ -151,6 +153,41 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
     end
   end
 
+  describe "text a browser reads differently from other parsers" do
+    test "an attribute after a slash still shows", %{conn: conn, current_user: user} = c do
+      {view, _} = propose(conn, user, [text_op(c.identity, ~s(<p>Offer: <a/href="#{@address}">more</a></p>))])
+      {_before, proposed} = change(view)
+
+      assert proposed =~ @address
+    end
+
+    test "a stray end tag hides nothing after it", %{conn: conn, current_user: user} = c do
+      text = ~s(<p>Short.</p></floki><p><a href="#{@address}">more</a></p>)
+      {view, _} = propose(conn, user, [text_op(c.identity, text)])
+      {_before, proposed} = change(view)
+
+      assert proposed =~ @address
+    end
+  end
+
+  test "inline formatting adds no spaces to the words", %{conn: conn, current_user: user} = c do
+    {view, _} = propose(conn, user, [text_op(c.identity, "<p>Pay 1<strong>0</strong>0 dollars.</p><p>Then more.</p>")])
+    {_before, proposed} = change(view)
+
+    assert proposed == "Pay 100 dollars. Then more."
+  end
+
+  test "a long text reopened after apply shows the text, not its tail", %{conn: conn, current_user: user} = c do
+    {_view, proposal} = propose(conn, user, [text_op(c.identity, "<p>#{@opening}#{@tail}</p>")])
+    apply!(proposal, user)
+
+    {:ok, reopened, _} = live(conn, "/admin/assistant/#{proposal.conversation_id}")
+    {_before, proposed} = change(reopened)
+
+    assert proposed =~ "Harmless opening words."
+    assert proposed =~ @tail
+  end
+
   describe "a field change" do
     test "shows the whole value, and what differs in a long one", %{conn: conn, current_user: user} = c do
       field = fn value ->
@@ -169,6 +206,36 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
 
       assert before =~ "The old ending."
       assert proposed =~ @tail
+    end
+  end
+
+  test "a plain field's angle bracket is what it says", %{conn: conn, current_user: user} = c do
+    Brando.Repo.update_all(Ecto.Query.from(p in Page, where: p.id == ^c.identity.id), set: [title: "R<D og utvikling"])
+
+    field = %{
+      "op" => "set_fields",
+      "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+      "fields" => %{"title" => "Pris på utvikling"}
+    }
+
+    {view, _} = propose(conn, user, [field])
+    {before, proposed} = change(view)
+
+    assert before == "R<D og utvikling"
+    assert proposed == "Pris på utvikling"
+  end
+
+  describe "readable text" do
+    alias Brando.RichText
+
+    test "is what saving stores" do
+      assert RichText.readable_html(~s(<p>A &amp; B &lt; C</p>)) == "A & B < C"
+      assert RichText.readable_html("<p>one</p><p>two</p>") == "one two"
+      assert RichText.readable_html("<p>one<br>two</p>") == "one two"
+      assert RichText.readable_html("<!-- gone --><p>kept</p>") == "kept"
+      assert RichText.readable_html(~s(<p><a title="x"/href="/y">z</a></p>)) =~ ~s(href="/y")
+      assert RichText.readable_html(~s(<ul><li class="a">one</li><li>two</li></ul>)) == ~s(<li class="a">one</li> two)
+      assert RichText.readable_html(~s(<p>x<img src="/i.png">y</p>)) == ~s(x<img src="/i.png">y)
     end
   end
 end
