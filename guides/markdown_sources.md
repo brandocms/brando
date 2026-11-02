@@ -179,10 +179,11 @@ shows in GitHub's delivery log. Requests naming no connection get 429 past
 12,000 a minute on the node. The other limits are per client, so a request naming
 a connection with a well-formed signature header is read and verified however
 many arrive from different clients; one without such a header gets 401 before its
-body is read. Signatures are computed one at a time, and a request waits for its
-turn rather than being refused. Memory is bounded by the listener's connection
-limit times 1 MiB, so running this exposed to floods needs a rate limit at the
-edge, as does running multiple nodes. The client address is taken from
+body is read. Signatures are computed one at a time: a request waits up to 10
+seconds for its turn after its body has arrived, then gets 429. Memory is
+bounded by the listener's connection limit times 1 MiB, so running this
+exposed to floods needs a rate limit at the edge, as does running multiple
+nodes. The client address is taken from
 `X-Forwarded-For` only when the request comes from a trusted proxy
 (`Brando.ClientIP`).
 
@@ -192,9 +193,12 @@ requests from them. An address in GitHub's webhook ranges therefore has 1,200
 requests a minute instead of 120, and at most 16 such requests are read,
 verified and stored at once (16 MiB). The others wait up to 10 seconds for
 their turn, then get 429; a request given its turn has 10 seconds to send its
-body. The ranges are the `hooks` list of GitHub's `/meta` API, fetched when a
-node with connections starts and every six hours after; requests never trigger
-a fetch. When a fetch fails the last list is kept, and until one has succeeded
+body. Their signatures are computed ahead of other clients', so a flood of
+requests for the connection from other addresses does not hold them back: a
+delivery from GitHub waits only for the signature being computed and for the
+other requests from GitHub's addresses. The ranges are the `hooks` list of
+GitHub's `/meta` API, fetched when a node with connections starts and every
+six hours after; requests never trigger a fetch. When a fetch fails the last list is kept, and until one has succeeded
 GitHub's addresses have the ordinary limit.
 
 GitHub Enterprise Server sends webhooks from the server's own address: list
