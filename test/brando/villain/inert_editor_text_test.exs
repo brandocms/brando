@@ -1309,7 +1309,7 @@ defmodule Brando.Villain.InertEditorTextTest do
     end
 
     test "a rich-text var printed by HEEx completes no delimiter through the strip", %{user: user} do
-      var = %Var{key: "body", label: "B", type: :rich_text, value: ~S|<p>{ data-identifier-id="1"{ 1 \| plus: 41 }}</p>|}
+      var = %Var{key: "body", label: "B", type: :rich_text, value: ~S(<p>{ data-identifier-id="1"{ 1 | plus: 41 }}</p>)}
       html = render(block(module!(user, ~S|<%= Phoenix.HTML.raw(@body) %>|, %{type: :heex}), vars: [var]))
 
       refute html =~ ~r/>\s*42/, "ran: #{html}"
