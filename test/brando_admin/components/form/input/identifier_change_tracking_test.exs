@@ -162,6 +162,35 @@ defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
     end)
   end
 
+  # A form reloaded on its entry (a save in place) preloads the entries again
+  test "Entries names a selected entry as the changeset last preloaded it" do
+    a = identifier(Brando.Pages.Page, :en, :draft)
+    socket = %Phoenix.LiveView.Socket{}
+
+    Enum.reduce([{"Old", :draft}, {"New", :published}], socket, fn {title, status}, socket ->
+      joins = [%Brando.Content.BlockIdentifier{identifier_id: a.id, identifier: %{a | title: title, status: status}}]
+      form = to_form(Changeset.change(%Brando.Content.Block{block_identifiers: joins}), as: "block")
+      props = %{id: "entries", field: form[:block_identifiers], opts: [sources: [{Brando.Pages.Page, %{}}]]}
+      {:ok, socket} = Entries.update(props, socket)
+      assert [%{title: ^title, status: ^status}] = socket.assigns.selected_identifiers
+      assert socket.assigns.selected_text == title
+      socket
+    end)
+  end
+
+  test "Entries ignores a pick its list no longer holds" do
+    a = identifier(Brando.Pages.Page, :en, :published)
+    form = to_form(Changeset.change(%Brando.Content.Block{block_identifiers: []}), as: "block")
+
+    socket =
+      %Phoenix.LiveView.Socket{}
+      |> Component.assign(:field, form[:block_identifiers])
+      |> Component.assign(:available_identifiers, [])
+      |> Component.assign(:selected_identifiers, [])
+
+    assert {:noreply, ^socket} = Entries.handle_event("select_identifier", %{"id" => a.id}, socket)
+  end
+
   test "Entries reloads its chosen schema when language changes" do
     a = identifier(Brando.Pages.Page, :en, :published)
     b = identifier(Brando.Pages.Page, :no, :published)

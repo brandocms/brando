@@ -78,49 +78,57 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     end
   end
 
-  # The selected entries the editor may read, in the order of the rows. The
-  # changeset preloads each row's identifier with no read policy applied, so
-  # a preloaded one is named only if `Boundary.readable_entries/1` allows it;
-  # one fetched by id comes through `Boundary.identifiers/1`, as the picker's
-  # do. A row the editor may not read stays out of the list and shows masked.
-  # Rows already decided are not checked again (`masked_identifier_ids`)
-  # while the grants stay the same.
+  # The selected entries the editor may read, in the order of the rows, as
+  # the changeset preloaded them, or else as last read: a row added since
+  # (picked, synced from another editor, recovered) is read by id. The
+  # preload has no read policy applied, so each row is named only if
+  # `Boundary.readable_entries/1` allows it, and is otherwise left out of the
+  # list and shown masked. Decisions are kept while the grants stay the same
+  # (`read_grants/0`), so a render checks only rows it has not seen; the
+  # picker's entries come through `Boundary.identifiers/1` and are readable.
   defp assign_selected_identifiers(socket, field) do
     associations = Changeset.get_assoc(field.form.source, field.field) |> Enum.reject(&(&1.action == :replace))
     ids = Enum.map(associations, &Changeset.get_field(&1, :identifier_id)) |> Enum.reject(&is_nil/1)
     grants = read_grants()
     fresh? = Map.has_key?(socket.assigns, :selected_grants) and socket.assigns.selected_grants == grants
-    masked = if fresh?, do: socket.assigns.masked_identifier_ids, else: MapSet.new()
     selected = if fresh?, do: socket.assigns.selected_identifiers, else: []
-    cached = selected ++ List.wrap(socket.assigns[:available_identifiers])
-    by_id = Map.new(cached, &{&1.id, &1})
-    unknown = Enum.reject(ids, &(Map.has_key?(by_id, &1) or MapSet.member?(masked, &1)))
+    masked = if fresh?, do: socket.assigns.masked_identifier_ids, else: MapSet.new()
+    readable_ids = if fresh?, do: socket.assigns.readable_identifier_ids, else: MapSet.new()
+
+    known = selected ++ List.wrap(socket.assigns[:available_identifiers])
+    readable_ids = MapSet.union(readable_ids, MapSet.new(List.wrap(socket.assigns[:available_identifiers]), & &1.id))
 
     preloaded =
       for association <- associations,
           %{id: id, schema: _, entry_id: _} = identifier <- [Changeset.get_field(association, :identifier)],
-          id in unknown,
-          do: identifier
+          id in ids,
+          into: %{},
+          do: {id, identifier}
 
-    readable = Boundary.readable_entries(Enum.map(preloaded, &{&1.schema, &1.entry_id}))
-    by_id = Map.merge(by_id, Map.new(Enum.filter(preloaded, &({&1.schema, &1.entry_id} in readable)), &{&1.id, &1}))
-    missing = unknown -- Enum.map(preloaded, & &1.id)
-
-    by_id =
-      if missing == [] do
-        by_id
-      else
-        {:ok, identifiers} = Brando.Content.list_identifiers(%{filter: %{ids: missing}})
-        Map.merge(by_id, Map.new(identifiers, &{&1.id, &1}))
-      end
-
-    selected = Enum.map(ids, &Map.get(by_id, &1))
+    by_id = known |> Map.new(&{&1.id, &1}) |> Map.merge(preloaded)
+    unknown = Enum.reject(ids, &(MapSet.member?(readable_ids, &1) or MapSet.member?(masked, &1)))
+    missing = Enum.reject(unknown, &Map.has_key?(by_id, &1))
+    by_id = Map.merge(by_id, read_identifiers(missing))
+    checked = for id <- unknown, identifier = by_id[id], do: identifier
+    readable = Boundary.readable_entries(Enum.map(checked, &{&1.schema, &1.entry_id}))
+    newly_readable = for i <- checked, {i.schema, i.entry_id} in readable, into: MapSet.new(), do: i.id
+    readable_ids = MapSet.union(readable_ids, newly_readable)
+    selected = Enum.map(ids, &(MapSet.member?(readable_ids, &1) && by_id[&1]))
 
     socket
     |> assign(:selected_grants, grants)
-    |> assign(:selected_identifiers, Enum.reject(selected, &is_nil/1))
-    |> assign(:masked_identifier_ids, MapSet.union(masked, MapSet.new(Enum.reject(unknown, &Map.has_key?(by_id, &1)))))
+    |> assign(:readable_identifier_ids, readable_ids)
+    |> assign(:masked_identifier_ids, MapSet.union(masked, MapSet.new(unknown -- MapSet.to_list(newly_readable))))
+    |> assign(:selected_identifiers, Enum.filter(selected, & &1))
     |> assign(:selected_text, Enum.map_join(selected, ", ", &((&1 && &1.title) || IdentifierRow.masked_label())))
+  end
+
+  # By id, for `assign_selected_identifiers/2` to decide what may be named
+  defp read_identifiers([]), do: %{}
+
+  defp read_identifiers(ids) do
+    import Ecto.Query, only: [from: 2]
+    from(i in Brando.Content.Identifier, where: i.id in ^ids) |> Brando.Repo.all() |> Map.new(&{&1.id, &1})
   end
 
   defp refresh_filters(socket, wanted_schemas) do
@@ -345,7 +353,30 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
     {:noreply, socket}
   end
 
+  # Only an entry the picker lists: it may have reloaded since it showed one
   def handle_event("select_identifier", %{"id" => identifier_id}, socket) do
+    if Enum.any?(socket.assigns.available_identifiers, &(to_string(&1.id) == to_string(identifier_id))),
+      do: select_identifier(socket, identifier_id),
+      else: {:noreply, socket}
+  end
+
+  def handle_event("select_schema", %{"schema" => schema}, %{assigns: %{available_schemas: available_schemas}} = socket) do
+    case Enum.find(available_schemas, &(to_string(elem(&1, 1)) == schema)) do
+      nil ->
+        {:noreply, socket}
+
+      {_, schema_module, list_opts} ->
+        list_opts = maybe_filter_by_language(list_opts, socket.assigns.opts, socket)
+        {:ok, identifiers} = Identifier.list_entries_for(schema_module, list_opts)
+
+        {:noreply,
+         socket
+         |> assign(:available_identifiers, identifiers)
+         |> assign(:selected_schema, schema_module)}
+    end
+  end
+
+  defp select_identifier(socket, identifier_id) do
     identifiers_field = socket.assigns.field
     field_name = identifiers_field.field
     form = identifiers_field.form
@@ -423,22 +454,6 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       # )
 
       {:noreply, assign(socket, :selected_identifiers, updated_identifiers)}
-    end
-  end
-
-  def handle_event("select_schema", %{"schema" => schema}, %{assigns: %{available_schemas: available_schemas}} = socket) do
-    case Enum.find(available_schemas, &(to_string(elem(&1, 1)) == schema)) do
-      nil ->
-        {:noreply, socket}
-
-      {_, schema_module, list_opts} ->
-        list_opts = maybe_filter_by_language(list_opts, socket.assigns.opts, socket)
-        {:ok, identifiers} = Identifier.list_entries_for(schema_module, list_opts)
-
-        {:noreply,
-         socket
-         |> assign(:available_identifiers, identifiers)
-         |> assign(:selected_schema, schema_module)}
     end
   end
 
