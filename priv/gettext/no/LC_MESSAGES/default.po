@@ -3899,11 +3899,6 @@ msgstr "Lukk forhåndsvisningen"
 msgid "Close recovery panel"
 msgstr "Lukk gjenopprettingspanelet"
 
-#: lib/brando_admin/components/form/input/entries.ex
-#, elixir-autogen, elixir-format
-msgid "Close the list and open it again to pick for this row."
-msgstr "Lukk listen og åpne den igjen for å velge for denne raden."
-
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Closed"
@@ -12001,6 +11996,11 @@ msgstr "Dekkevne (0–100)"
 msgid "Open"
 msgstr "Åpne"
 
+#: lib/brando_admin/components/form/input/entries.ex
+#, elixir-autogen, elixir-format
+msgid "Open \"Select entries\" again to pick for this row."
+msgstr "Åpne «Velg innlegg» igjen for å velge for denne raden."
+
 #: lib/brando/files/file.ex
 #, elixir-autogen, elixir-format
 msgid "Open %{filename}"
@@ -17573,8 +17573,8 @@ msgstr "Ruten ble satt på pause"
 
 #: lib/brando_admin/components/form/input/entries.ex
 #, elixir-autogen, elixir-format
-msgid "The row has changed"
-msgstr "Raden er endret"
+msgid "The row was saved or moved"
+msgstr "Raden ble lagret eller flyttet"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
