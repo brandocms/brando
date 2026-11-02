@@ -16,6 +16,12 @@ defmodule Brando.Content.RefGuard do
     * a saved ref keeps its name when the module defines a ref of the new
       name with a type it does not allow.
 
+  A saved block's module changes for a superuser only: the editor never
+  offers it, and it would change what the block's refs and vars have to
+  satisfy under them (`hold_module/2`). When it does change, every saved ref
+  is held to the new definition: a ref of a type it does not allow takes the
+  definition's data.
+
   For anyone but a superuser (`Brando.Authorization.Boundary.superuser?/1`),
   the markup of an HTML ref (`text` and `params`), an SVG ref (`code` and
   `class`) and a media slot's SVG template (`template_svg`) stays what it
@@ -48,19 +54,56 @@ defmodule Brando.Content.RefGuard do
   def markup_types, do: @markup_types
 
   @doc """
+  The block changeset `changeset` with a saved block's module put back,
+  unless `user` is a superuser.
+  """
+  @spec hold_module(Changeset.t(), term()) :: Changeset.t()
+  def hold_module(%Changeset{} = changeset, user) do
+    if module_changed?(changeset) and not Boundary.superuser?(actor(user)) do
+      changeset |> Changeset.delete_change(:module_id) |> Changeset.delete_change(:module_origin)
+    else
+      changeset
+    end
+  end
+
+  @doc "Whether a saved block's module changes in `changeset`."
+  @spec module_changed?(Changeset.t()) :: boolean()
+  def module_changed?(%Changeset{data: %{id: id}} = changeset) when not is_nil(id),
+    do: Changeset.changed?(changeset, :module_id) or Changeset.changed?(changeset, :module_origin)
+
+  def module_changed?(_changeset), do: false
+
+  @doc """
   The block changeset `changeset` with its cast refs held to what `user`
   may change.
   """
   @spec guard(Changeset.t(), term()) :: Changeset.t()
-  def guard(%Changeset{changes: %{refs: [_ | _] = refs}} = changeset, user) do
-    state = %{block: changeset, user: user, module: :unloaded, superuser: :unknown}
-    {refs, _state} = Enum.map_reduce(refs, state, &guard_ref/2)
-
-    changeset = %{changeset | changes: Map.put(changeset.changes, :refs, refs)}
-    %{changeset | valid?: changeset.errors == [] and nested_valid?(changeset)}
+  def guard(%Changeset{} = changeset, user) do
+    if module_changed?(changeset),
+      do: changeset |> put_saved_refs() |> guard_refs(user, true),
+      else: guard_refs(changeset, user, false)
   end
 
-  def guard(changeset, _user), do: changeset
+  defp guard_refs(%Changeset{changes: %{refs: [_ | _] = refs}} = changeset, user, moved?) do
+    state = %{block: changeset, user: user, module: :unloaded, superuser: :unknown, moved?: moved?}
+    {refs, _state} = Enum.map_reduce(refs, state, &guard_ref/2)
+
+    revalidate(%{changeset | changes: Map.put(changeset.changes, :refs, refs)})
+  end
+
+  defp guard_refs(changeset, _user, _moved?), do: changeset
+
+  # A module change holds refs the save does not mention as well
+  defp put_saved_refs(%Changeset{data: block} = changeset) do
+    %{refs: saved} = Brando.Repo.preload(block, :refs)
+    cast = Map.get(changeset.changes, :refs, [])
+    cast_ids = MapSet.new(cast, & &1.data.id)
+
+    unmentioned =
+      saved |> Enum.reject(&MapSet.member?(cast_ids, &1.id)) |> Enum.map(&%{Changeset.change(&1) | action: :update})
+
+    %{changeset | changes: Map.put(changeset.changes, :refs, cast ++ unmentioned)}
+  end
 
   defp guard_ref(%Changeset{action: action} = ref, state) when action in [:replace, :delete, :ignore],
     do: {ref, state}
@@ -74,7 +117,7 @@ defmodule Brando.Content.RefGuard do
       is_nil(new) ->
         {ref, state}
 
-      not is_nil(old) and type(old) == type(new) ->
+      not is_nil(old) and type(old) == type(new) and not state.moved? ->
         guard_markup(ref, old, new, old, state)
 
       true ->
@@ -105,6 +148,9 @@ defmodule Brando.Content.RefGuard do
     cond do
       definition && type_allowed?(definition, type(new)) ->
         guard_markup(ref, old, new, markup_source(old, new, definition), state)
+
+      definition && state.moved? ->
+        {put_data(ref, definition.data), state}
 
       old ->
         {put_data(ref, old), state}
@@ -224,9 +270,12 @@ defmodule Brando.Content.RefGuard do
   defp put_data(ref, data) do
     errors = Keyword.delete(ref.errors, :data)
     ref = %{ref | errors: errors}
-    ref = Changeset.force_change(ref, :data, data)
-    %{ref | valid?: ref.errors == [] and nested_valid?(ref)}
+    ref |> Changeset.force_change(:data, data) |> revalidate()
   end
+
+  @doc "`changeset` with `valid?` read from its errors and nested changesets, after one of them was changed by hand."
+  @spec revalidate(Changeset.t()) :: Changeset.t()
+  def revalidate(%Changeset{} = changeset), do: %{changeset | valid?: changeset.errors == [] and nested_valid?(changeset)}
 
   defp nested_valid?(%Changeset{changes: changes}) do
     Enum.all?(changes, fn
@@ -289,6 +338,7 @@ defmodule Brando.Content.RefGuard do
 
   defp superuser?(%{superuser: superuser?} = state), do: {state, superuser?}
 
+  defp actor(nil), do: %{id: nil}
   defp actor(id) when is_integer(id), do: %{id: id}
   defp actor(user), do: user
 

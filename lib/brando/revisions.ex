@@ -365,7 +365,7 @@ defmodule Brando.Revisions do
 
         changeset =
           current_entry
-          |> entry_schema.changeset(restore_params, user, nil, cast_blocks: true)
+          |> entry_schema.changeset(restore_params, user, nil, cast_blocks: true, restore_revision: true)
           |> keep_block_identity(entry_schema, current_entry, target_entry)
           |> Brando.Trait.run_trait_before_save_callbacks(entry_schema, user)
 

@@ -8,6 +8,8 @@ defmodule Brando.Content.BlockMediaAttrsTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Content.Block
   alias Brando.Factory
   alias Brando.Repo
@@ -17,9 +19,24 @@ defmodule Brando.Content.BlockMediaAttrsTest do
     user = Factory.insert(:random_user)
     page = Factory.insert(:page, creator: user)
 
+    {:ok, module} =
+      Brando.Content.create_module(
+        Factory.params_for(:module,
+          vars: [
+            %{key: "img", label: "Image", type: "image"},
+            %{key: "vid", label: "Video", type: "video"},
+            %{key: "fil", label: "File", type: "file"},
+            %{key: "gal", label: "Gallery", type: "gallery"},
+            %{key: "bad", label: "Bad", type: "string"}
+          ]
+        ),
+        user
+      )
+
     {:ok,
      user: user,
      page: page,
+     module: module,
      image: Factory.insert(:image, creator: user),
      video: Factory.insert(:video),
      asset_file: insert_file(user),
@@ -37,6 +54,9 @@ defmodule Brando.Content.BlockMediaAttrsTest do
     })
   end
 
+  # The module `setup` created
+  defp module_id, do: Repo.one!(from(m in Brando.Content.Module, select: max(m.id)))
+
   defp save_block(page, user, block_params) do
     params =
       Map.merge(
@@ -45,6 +65,7 @@ defmodule Brando.Content.BlockMediaAttrsTest do
           "type" => "module",
           "active" => true,
           "source" => "Elixir.Brando.Pages.Page.Blocks",
+          "module_id" => module_id(),
           "creator_id" => user.id
         },
         block_params
@@ -216,6 +237,7 @@ defmodule Brando.Content.BlockMediaAttrsTest do
             "type" => "module",
             "active" => true,
             "source" => "Elixir.Brando.Pages.Page.Blocks",
+            "module_id" => module_id(),
             "creator_id" => user.id
           },
           block_params

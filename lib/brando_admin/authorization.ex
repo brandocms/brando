@@ -34,6 +34,8 @@ defmodule BrandoAdmin.Authorization do
     "Elixir.BrandoAdmin.CommandPaletteLive" => {:access, :backend}
   }
 
+  @legacy_superuser_views [BrandoAdmin.Sites.GlobalSetListLive, BrandoAdmin.Sites.GlobalSetFormLive]
+
   def requirement(view, params, live_action) do
     Code.ensure_loaded?(view)
 
@@ -82,14 +84,19 @@ defmodule BrandoAdmin.Authorization do
   end
 
   # Legacy mode checks the roles' fixed meaning only (`Boundary`): a form for
-  # module or container code opens for superusers. `allowed?/2` asks the same
-  # for the user this view mounted with.
+  # module or container code opens for superusers, and so does the setup of
+  # global sets, whose definitions say how an editor's values print; editors
+  # fill those in on the Globals screen. `allowed?/2` asks the same for the
+  # user this view mounted with.
   defp legacy_check(socket, params) do
     user = socket.assigns.current_user
     Process.put(@legacy_actor_key, user)
     {action, subject} = requirement(socket.view, params, socket.assigns[:live_action])
 
-    if Brando.Authorization.Catalog.superuser_only?(action, subject) and not Boundary.superuser?(user),
+    superuser_only? =
+      Brando.Authorization.Catalog.superuser_only?(action, subject) or socket.view in @legacy_superuser_views
+
+    if superuser_only? and not Boundary.superuser?(user),
       do: {:halt, redirect(socket, to: "/admin/access-denied")},
       else: {:cont, socket}
   end

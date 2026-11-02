@@ -353,6 +353,16 @@ sender first, before the first compile.
 
 **Not found by any task.** Their correct rewrite depends on the application:
 
+- **Vars written through a block changeset.** Seeds or scripts that pass a var
+  to `Block.block_changeset/3` or `recursive_block_changeset/4` get its type and
+  options from the module's definition of its key (the table template's, for a
+  row), and a key with no definition is left out. Define the var on the module
+  first. A block save no longer changes a saved block's module unless a
+  superuser or `:system` makes it.
+- **Global set setup in legacy mode.** `/admin/config/global_sets` opens for
+  superusers only, as the menu always implied; an admin or editor fills in
+  values on the Globals screen.
+
 - **Markup editors wrote where text belongs.** Liquid modules print `string`
   and `text` vars, globals and identity links HTML-escaped, braces included,
   so Liquid in them is printed rather than run (a comparison, `truncate` or
@@ -366,6 +376,11 @@ sender first, before the first compile.
   `<span class="soft">`: edit it. `{{ title | escape }}` keeps printing the
   text once. See
   [Writing templates safely](block_editor.md#writing-templates-safely).
+
+  `select`, `color`, `date` and `datetime` vars and other globals print
+  escaped as well: a `select` value with `&` or a quote compares as its
+  escaped text in a template. Values stored in them that are not valid for
+  their type stay until edited, print as text, and are left empty in a copy.
 
   A `string` or `text` var that is meant to hold HTML becomes a `rich_text`
   var, its values kept (they render sanitized). In `iex -S mix`, for each

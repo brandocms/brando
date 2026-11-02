@@ -38,7 +38,7 @@ defmodule BrandoAdmin.Components.Form.Block.RecoverBlocksSecurityTest do
           class: "text",
           code: "<div>{{ title }}</div>",
           refs: [],
-          vars: []
+          vars: [%{type: "string", key: "title", label: "Title"}]
         },
         user
       )
@@ -345,14 +345,13 @@ defmodule BrandoAdmin.Components.Form.Block.RecoverBlocksSecurityTest do
       end
     end
 
-    test "carried set is a strict subset of the cast surface" do
+    test "carried set is within the cast surface, and neither holds an owner" do
       carried = MapSet.new(Brando.Content.Block.carried_var_attrs())
       cast = MapSet.new(Brando.Content.Block.var_attrs())
 
-      # Anything carried but not cast would be a dead input; anything cast is
-      # allowed to be absent, but the two must not drift the other way.
+      # Anything carried but not cast would be a dead input.
       assert MapSet.subset?(carried, cast)
-      refute MapSet.equal?(carried, cast)
+      assert MapSet.disjoint?(cast, MapSet.new(Brando.Content.VarAttrs.owner()))
     end
 
     test "var_changeset ignores a client-supplied creator_id", %{user: user, attacker: attacker} do

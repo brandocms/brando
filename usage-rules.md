@@ -831,11 +831,13 @@ Besides `{% ref %}` and `{% headless_ref %}`:
 
 HEEx escapes what it prints; Liquid prints values as Brando hands them over:
 
-- `string` and `text` vars and globals arrive HTML-escaped (by key, in
-  `entries`, in table rows), as do `links` and the `link_url`/`link_text`
-  filters: `{{ title }}` prints the text as typed, braces included (Liquid
-  in it is not run), also in a double-quoted attribute; a comparison or
-  `truncate` sees the escaped text. Markup belongs in a `rich_text` var.
+- Every var and global holding text arrives HTML-escaped, whatever its type
+  (`string`, `text`, `select`, `color`, `date`, `datetime`, a link var's
+  `.value` and `.link_text`; by key, in `entries`, in table rows), as do
+  `links` and the `link_url`/`link_text` filters: `{{ title }}` prints the
+  text as typed, braces included (Liquid in it is not run), also in a
+  double-quoted attribute; a comparison or `truncate` sees the escaped text.
+  Markup belongs in a `rich_text` var.
 - `rich_text` vars and globals arrive sanitized, to print between tags.
 - `escape` never encodes a character reference twice; `url_encode`,
   `slugify` and `markdown` read an escaped var as the text it stands for.
@@ -850,8 +852,9 @@ filter output print as stored. So:
   `content="{{ intro | strip_html | escape_once }}"`.
 - Do not `url_decode` a value you print: it turns `%3C` back into `<` after
   every check. For a query string, `url_encode` the value.
-- `escape` does not check an address's scheme. Make a link from a link var
-  with `{% link %}`, which drops a script address.
+- `escape` does not check an address's scheme, and neither does a link var's
+  `.value`. Make a link from a link var with `{% link %}`, which drops a
+  script address, or `link_url`.
 
 ```liquid
 {%- comment -%} Don't {%- endcomment -%}

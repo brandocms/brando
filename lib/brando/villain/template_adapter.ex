@@ -57,7 +57,8 @@ defmodule Brando.Villain.TemplateAdapter do
 
   A row's `rich_text` vars are sanitized and, with `escape: true` (a Liquid
   template that renders HTML, not a module's Markdown template), its
-  `string` and `text` vars HTML-escaped, by key and in `row.vars` alike
+  other text, a link's address and text included, HTML-escaped, by key and
+  in `row.vars` alike
   (`Brando.Villain.Parser.process_vars/2`).
   """
   def simple_block(module, block, opts \\ []) do
@@ -79,8 +80,9 @@ defmodule Brando.Villain.TemplateAdapter do
     |> Map.put(:class, module.class)
   end
 
-  defp table_rows(rows, escape?) when is_list(rows), do: Enum.map(rows, &table_row(&1, escape?))
-  defp table_rows(rows, _escape?), do: rows
+  @doc false
+  def table_rows(rows, escape?) when is_list(rows), do: Enum.map(rows, &table_row(&1, escape?))
+  def table_rows(rows, _escape?), do: rows
 
   defp table_row(%{vars: vars} = row, escape?) do
     row = if is_struct(row), do: Map.from_struct(row), else: row
@@ -96,11 +98,13 @@ defmodule Brando.Villain.TemplateAdapter do
 
   # `row.vars` holds the vars themselves: their values as `process_vars/2`
   # gives them by key
-  defp row_var(%{type: type, value: value} = var, true) when type in [:string, :text],
-    do: %{var | value: Brando.Villain.Parser.escape_var_value(value)}
-
   defp row_var(%{type: type, value: value} = var, _escape?) when type in [:rich_text, :html],
     do: %{var | value: Brando.RichText.render_html(value)}
+
+  defp row_var(%{type: :link} = var, true), do: Brando.Villain.Parser.escape_link_var(var)
+
+  defp row_var(%{value: value} = var, true) when is_binary(value),
+    do: %{var | value: Brando.Villain.Parser.escape_var_value(value)}
 
   defp row_var(var, _escape?), do: var
 

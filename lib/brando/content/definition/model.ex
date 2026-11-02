@@ -164,7 +164,7 @@ defmodule Brando.Content.Definition.Model do
     |> legacy_link_default(assets["identifier"])
     # Creator is persistence metadata, supplied by the import actor. A sentinel
     # satisfies that required field while normalizing without any database I/O.
-    |> then(&Var.changeset(struct(Var), &1, %{id: 0}))
+    |> then(&Var.changeset(struct(Var), &1, %{id: 0}, nil, validate_var_values: false))
     |> apply_valid!(uid <> ".vars." <> key)
     |> var_record(assets["identifier"])
     |> Map.put("assets", assets)
@@ -256,6 +256,7 @@ defmodule Brando.Content.Definition.Model do
     struct(Var)
     |> Var.changeset(Map.delete(var_record(record), "assets"), %{id: 0}, nil,
       validate_colors: false,
+      validate_var_values: false,
       sanitize_rich_text: false
     )
     |> apply_valid!(record.key)

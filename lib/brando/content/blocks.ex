@@ -1421,6 +1421,7 @@ defmodule Brando.Content.Blocks do
     vars = Changeset.get_assoc(block_cs, :vars, :struct)
     table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
     refs = Changeset.get_assoc(block_cs, :refs, :struct)
+    {vars, table_rows} = Brando.Content.VarGuard.with_definition_types(block, vars, table_rows)
 
     block_cs
     |> Changeset.apply_changes()
@@ -1527,6 +1528,8 @@ defmodule Brando.Content.Blocks do
   def duplicate_var(var, current_user_id) do
     var
     |> Map.merge(%{id: nil, block_id: nil})
+    |> Brando.Color.clear_invalid_var()
+    |> Brando.Content.Var.ValidateValue.clear_invalid()
     |> clone_ref_gallery(current_user_id)
     |> put_in([Access.key(:__meta__), Access.key(:state)], :built)
     |> Var.changeset(%{

@@ -2,7 +2,8 @@ defmodule Brando.Content.Definition.Params do
   @moduledoc false
 
   alias Brando.Content.Definition.{Model, References}
-  alias Brando.Content.{Module, TableTemplate}
+  alias Brando.Content.{Module, RefGuard, TableTemplate}
+  alias Brando.Content.Var.ValidateValue
   alias Ecto.Changeset
 
   def changeset(definition, record, references, creator, tables, parent_id \\ nil) do
@@ -11,7 +12,10 @@ defmodule Brando.Content.Definition.Params do
     case definition["kind"] do
       "table_template" ->
         attrs = definition |> Map.take(~w(uid name)) |> Map.put("vars", vars)
-        TableTemplate.changeset(record || struct(TableTemplate), attrs, creator)
+
+        (record || struct(TableTemplate))
+        |> TableTemplate.changeset(attrs, creator)
+        |> read_stored_defaults()
 
       "module" ->
         refs = association(definition["refs"], loaded(record, :refs), "uid", references)
@@ -24,10 +28,21 @@ defmodule Brando.Content.Definition.Params do
         table_id = if uid = definition["table_template"], do: Map.get(tables, uid), else: nil
 
         Module.changeset(record || struct(Module), attrs, creator)
+        |> read_stored_defaults()
         |> Changeset.put_change(:table_template_id, table_id)
         |> Changeset.put_change(:parent_id, parent_id)
     end
   end
+
+  # A definition's default is read as it is, as `Model` reads it: a stored one
+  # whose option has gone must not stop the import. A has_many cast takes no
+  # options, so the check comes off here.
+  defp read_stored_defaults(%Changeset{changes: %{vars: vars}} = changeset) do
+    vars = Enum.map(vars, &(&1 |> ValidateValue.forget_error() |> RefGuard.revalidate()))
+    RefGuard.revalidate(%{changeset | changes: %{changeset.changes | vars: vars}})
+  end
+
+  defp read_stored_defaults(changeset), do: changeset
 
   defp loaded(nil, _field), do: []
   defp loaded(record, field), do: Map.fetch!(record, field)

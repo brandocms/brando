@@ -1217,7 +1217,9 @@ defmodule Brando.Villain.Filters do
   # the address and the text are HTML-escaped, as a string var's value is;
   # `link_url/1` and `link_text/1` give them as they are, for markup that
   # escapes them itself (`{% link %}`, `entry_link/1`).
-  def link_url(%Var{type: :link} = var, _ctx), do: var |> link_url() |> Brando.Villain.Parser.escape_var_value()
+  def link_url(%Var{type: :link} = var, _ctx),
+    do: var |> Brando.Villain.Parser.typed_link_var() |> link_url() |> Brando.Villain.Parser.escape_var_value()
+
   def link_url(nil, _ctx), do: nil
 
   def link_url(%Var{type: :link} = var), do: var |> get_link_url() |> Brando.Villain.Parser.safe_url()
@@ -1227,7 +1229,7 @@ defmodule Brando.Villain.Filters do
   def link_text(nil), do: nil
 
   def link_text(%Var{type: :link} = var, _ctx) do
-    var |> link_text() |> Brando.Villain.Parser.escape_var_value()
+    var |> Brando.Villain.Parser.typed_link_var() |> link_text() |> Brando.Villain.Parser.escape_var_value()
   end
 
   def link_text(nil, _ctx) do
