@@ -21,7 +21,7 @@ defmodule Brando.CacheSync do
   A cache takes part by being listed here and implementing
   `refresh_node_cache/1`, which refreshes this node's copy for a refresh
   another node broadcast: `Brando.Tenant.Cache`, `Brando.Assets.SiteAssets`
-  and `Brando.Content.SharedLibrary.Cache`.
+  and the shared-library allowlists of `Brando.Content.SharedLibrary`.
 
   A node cut off from the others when a write is broadcast does not hear it,
   and keeps its copy until the next write or a restart.
