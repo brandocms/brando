@@ -120,7 +120,7 @@ defmodule BrandoAdmin.Sites.BlockAuditLive do
   end
 
   def handle_event("restore", %{"id" => id}, socket) do
-    case BlockAudit.restore(String.to_integer(id)) do
+    case BlockAudit.restore(String.to_integer(id), socket.assigns.current_user) do
       {:ok, _root_id} ->
         send(self(), {:toast, gettext("The blocks are back, as loose as they were.")})
 

@@ -142,6 +142,38 @@ defmodule Brando.Authorization.Boundary do
   end
 
   @doc """
+  The actor to check when `actor` may be a user an admin view mounted with:
+  by id, so legacy mode reads the role stored now rather than the one on the
+  struct. Anything else stays as it is, `:system` included. A bare integer id
+  is no actor: it has no role, and would pass.
+  """
+  def stored_actor(%User{id: id}) when is_integer(id), do: %{id: id}
+  def stored_actor(actor), do: actor
+
+  @doc """
+  Whether `actor` is a legacy `:user` account as stored now: it reads and
+  exports, and writes nothing but its own profile. Always false with groups,
+  where `Engine` answers per permission. `BrandoAdmin.Authorization.Events`
+  asks this of an event that may write.
+  """
+  def read_only_account?(actor) do
+    not Engine.enabled?() and stored_legacy_role(actor) == :user
+  end
+
+  @doc "The legacy role of `actor` as stored now, or nil. Means nothing with groups."
+  def stored_legacy_role(actor), do: actor |> stored_actor() |> legacy_role()
+
+  @doc """
+  Whether `actor`, as stored now, may update `subject`, for what an open form
+  sends the other editors. Nothing to tell them when this cannot be answered.
+  """
+  def may_update?(actor, subject) do
+    authorize(stored_actor(actor), :update, subject) == :ok
+  rescue
+    _ -> false
+  end
+
+  @doc """
   Whether `actor` is a superuser: in the installation's superuser group with groups
   authorization, of the `:superuser` role without. Only superusers write module and
   container code, and act on another user's credentials. Reads the role afresh.

@@ -132,10 +132,10 @@ defmodule Brando.Authorization.OperationsTest do
     grant(c, ["brando.admin.access", "brando.pages.read"])
 
     Boundary.with_scope(Scope.standalone(c.user), fn ->
-      assert {0, _} = Brando.Revisions.protect_revision(Page, c.page.id, revision.revision, true)
+      assert {0, _} = Brando.Revisions.protect_revision(Page, c.page.id, revision.revision, true, c.user)
       assert {0, _} = Brando.Revisions.describe_revision(Page, c.page.id, revision.revision, "Unauthorized")
-      assert {0, _} = Brando.Revisions.delete_revision(Page, c.page.id, revision.revision)
-      assert {:error, :forbidden} = Brando.Publisher.cancel_scheduled_revision(Page, c.page.id, revision.revision)
+      assert {0, _} = Brando.Revisions.delete_revision(Page, c.page.id, revision.revision, c.user)
+      assert {:error, :forbidden} = Brando.Publisher.cancel_scheduled_revision(Page, c.page.id, revision.revision, c.user)
     end)
 
     assert Repo.get_by!(Brando.Revisions.Revision,

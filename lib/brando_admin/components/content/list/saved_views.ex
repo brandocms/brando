@@ -43,6 +43,7 @@ defmodule BrandoAdmin.Components.Content.List.SavedViews do
       |> assign_new(:views, fn -> ListingViews.list_views(assigns.current_user, assigns.schema, assigns.listing.name) end)
       |> assign_new(:default_id, fn -> default_id(assigns.current_user, assigns.schema, assigns.listing.name) end)
       |> assign_new(:moderator?, fn -> ListingViews.moderator?(assigns.current_user) end)
+      |> assign_new(:read_only?, fn -> Brando.Authorization.Boundary.read_only_account?(assigns.current_user) end)
 
     {:ok, assign_current(socket)}
   end
@@ -63,14 +64,17 @@ defmodule BrandoAdmin.Components.Content.List.SavedViews do
       :modified?,
       selected != nil and current != Params.sanitize(selected.params, assigns.listing, assigns.schema)
     )
-    |> assign(:can_manage?, can_manage?(selected, assigns.current_user, assigns.moderator?))
+    |> assign(:can_manage?, can_manage?(selected, assigns))
   end
 
   # As `ListingViews.can_manage?/2`, with the permission looked up once;
   # the context checks it again on every change.
-  defp can_manage?(nil, _user, _moderator?), do: false
-  defp can_manage?(%View{creator_id: id}, %{id: id}, _moderator?), do: true
-  defp can_manage?(%View{shared: shared}, _user, moderator?), do: shared and moderator?
+  defp can_manage?(nil, _assigns), do: false
+
+  defp can_manage?(%View{creator_id: id, shared: shared}, %{current_user: %{id: id}} = assigns),
+    do: not shared or not assigns.read_only?
+
+  defp can_manage?(%View{shared: shared}, assigns), do: shared and assigns.moderator?
 
   defp default_id(user, schema, listing) do
     case ListingViews.default_view(user, schema, listing) do

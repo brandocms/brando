@@ -11,6 +11,8 @@ defmodule BrandoAdmin.Components.Form.DraftRecoveryComponent do
   """
   use Phoenix.LiveComponent
 
+  @before_compile BrandoAdmin.Authorization.EventGuard
+
   alias BrandoAdmin.Components.Form.DraftRecovery
 
   @doc "The component id for the form with `form_id`."

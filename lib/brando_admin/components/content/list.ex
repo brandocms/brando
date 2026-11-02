@@ -244,15 +244,22 @@ defmodule BrandoAdmin.Components.Content.List do
         relation =
           Brando.Blueprint.Relations.__relation__(schema, String.to_existing_atom(child_field))
 
-        Sequenced.sequence(relation.opts.module, params, nil, user: socket.assigns.current_user)
-        send(self(), {:toast, gettext("Sequence updated")})
-        {:noreply, assign_entries(socket, socket.assigns)}
+        {:noreply, resequence(socket, relation.opts.module, params)}
 
       ["content_listing", _] ->
-        Sequenced.sequence(schema, params, nil, user: socket.assigns.current_user)
-        send(self(), {:toast, gettext("Sequence updated")})
-        {:noreply, assign_entries(socket, socket.assigns)}
+        {:noreply, resequence(socket, schema, params)}
     end
+  end
+
+  # A refusal changed nothing, so it reports nothing either. The list reads back
+  # the order the store has in both cases.
+  defp resequence(socket, module, params) do
+    case Sequenced.sequence(module, params, nil, user: socket.assigns.current_user) do
+      {:error, _} -> :ok
+      _ -> send(self(), {:toast, gettext("Sequence updated")})
+    end
+
+    assign_entries(socket, socket.assigns)
   end
 
   defp select_row(socket, id, :toggle) do

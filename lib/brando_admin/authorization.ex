@@ -7,6 +7,7 @@ defmodule BrandoAdmin.Authorization do
   import Phoenix.Component, only: [assign: 3]
   import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1, redirect: 2, put_flash: 3]
   alias Brando.Authorization.{Administration, Boundary, Engine, Scope}
+  alias BrandoAdmin.Authorization.Events
 
   @legacy_actor_key {__MODULE__, :legacy_actor}
 
@@ -98,7 +99,13 @@ defmodule BrandoAdmin.Authorization do
 
     if superuser_only? and not Boundary.superuser?(user),
       do: {:halt, redirect(socket, to: "/admin/access-denied")},
-      else: {:cont, socket}
+      else: {:cont, attach_hook(socket, :authorization_legacy_events, :handle_event, &legacy_event_hook/3)}
+  end
+
+  # Runs before every other hook of the view, a listing's and a form's included.
+  # A LiveComponent's events get here by `BrandoAdmin.Authorization.EventGuard`.
+  defp legacy_event_hook(event, _params, socket) do
+    if Events.refused?(socket.view, event), do: {:halt, Events.refuse(socket)}, else: {:cont, socket}
   end
 
   defp attach_authorization_hooks(socket, params) do
@@ -290,6 +297,9 @@ defmodule BrandoAdmin.Authorization do
   module's event check does not see.
   """
   def current_actor, do: Boundary.current_scope() || Process.get(@legacy_actor_key)
+
+  @doc "The user a legacy admin view in this process mounted with, else nil."
+  def legacy_actor, do: Process.get(@legacy_actor_key)
 
   @doc """
   Presentation checks against the current administration scope; in legacy

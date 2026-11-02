@@ -89,6 +89,16 @@ defmodule BrandoAdmin.ListingSavedViewsLiveTest do
     assert ListingViews.list_views(user, Article, :filters) == []
   end
 
+  test "an account demoted since is offered changes to its private views, not its shared ones" do
+    {user, conn} = editor()
+    shared = saved(user, "Everyone's", %{}, %{"shared" => true})
+    private = saved(user, "Mine", %{}, %{"shared" => false})
+    user |> Ecto.Changeset.change(role: :user) |> Brando.Repo.update!()
+
+    assert has_element?(open(conn, "?view=#{private.id}"), "#{@menu} button[phx-click='open_rename']")
+    refute has_element?(open(conn, "?view=#{shared.id}"), "#{@menu} button[phx-click='open_rename']")
+  end
+
   test "applying a view navigates to its parameters", %{conn: conn, current_user: user} do
     saved = saved(user, "Featured", %{"filter:featured" => "true", "limit" => "50"})
     view = open(conn)

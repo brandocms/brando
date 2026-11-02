@@ -211,7 +211,7 @@ defmodule BrandoAdmin.CalendarLiveTest do
       Oban.Testing.with_testing_mode(:manual, fn ->
         {:ok, _job} = Brando.Publisher.schedule_revision(Page, original.id, 0, at(day(3), ~T[07:00:00]), user)
         {:ok, view, _html} = live(conn, month_path(day()))
-        :ok = Brando.Publisher.cancel_scheduled_revision(Page, original.id, 0)
+        :ok = Brando.Publisher.cancel_scheduled_revision(Page, original.id, 0, :system)
 
         render_hook(view, "move", %{"item" => "revision-pages_page-#{original.id}-0", "date" => Date.to_iso8601(day(5))})
         assert_push_event(view, "b:alert", %{type: "warning"})

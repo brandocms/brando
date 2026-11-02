@@ -65,6 +65,8 @@ defmodule BrandoAdmin do
     quote do
       use Phoenix.LiveComponent
 
+      @before_compile BrandoAdmin.Authorization.EventGuard
+
       unquote(html_helpers())
     end
   end

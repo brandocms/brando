@@ -5,6 +5,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
 
   import BrandoAdmin.Utils, only: [show_modal: 2, hide_modal: 2, prepare_input_component: 1]
 
+  alias Brando.Authorization.Boundary
   alias Brando.Exception.BlueprintError
   alias BrandoAdmin.Components.Content
   alias BrandoAdmin.Components.Content.Identifier, as: IdentifierRow
@@ -1578,7 +1579,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
       # so the receiver's multi-select can rebuild its state
       relation_type = socket.assigns.relation_type
 
-      if relation_type in [:has_many, {:subform, :has_many}] and current_user do
+      if relation_type in [:has_many, {:subform, :has_many}] && current_user &&
+           Boundary.may_update?(current_user, field.form.data) do
         selected_ids = selected_ids(socket)
 
         Phoenix.PubSub.broadcast(
@@ -1612,7 +1614,8 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     current_user = socket.assigns[:current_user]
     field_name = if open?, do: "#{field.form.name}[#{field.field}]"
 
-    if entry_id && current_user do
+    # Closing always tells: a lock taken before a demotion has to come off.
+    if entry_id && current_user && (is_nil(field_name) || Boundary.may_update?(current_user, field.form.data)) do
       BrandoAdmin.Presence.broadcast_active_field(field.form.data.__struct__, entry_id, field_name, current_user.id)
     end
 

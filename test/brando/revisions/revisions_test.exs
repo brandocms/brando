@@ -110,14 +110,14 @@ defmodule Brando.Revisions.RevisionsTest do
     assert {:ok, revisions} = Revisions.list_revision_metadata(Page, page.id)
     assert Enum.count(revisions, & &1.active) == 1
     assert Enum.find(revisions, & &1.active).revision == second.revision
-    assert {0, _} = Revisions.delete_revision(Page, page.id, second.revision)
+    assert {0, _} = Revisions.delete_revision(Page, page.id, second.revision, :system)
 
-    assert {1, _} = Revisions.protect_revision(Page, page.id, first.revision, true)
-    assert {0, _} = Revisions.delete_revision(Page, page.id, first.revision)
-    assert {1, _} = Revisions.protect_revision(Page, page.id, first.revision, false)
+    assert {1, _} = Revisions.protect_revision(Page, page.id, first.revision, true, :system)
+    assert {0, _} = Revisions.delete_revision(Page, page.id, first.revision, :system)
+    assert {1, _} = Revisions.protect_revision(Page, page.id, first.revision, false, :system)
     assert {1, _} = Revisions.mark_revision_scheduled(Page, page.id, first.revision, true)
-    assert {0, _} = Revisions.delete_revision(Page, page.id, first.revision)
-    assert {0, _} = Revisions.purge_revisions(Page, page.id)
+    assert {0, _} = Revisions.delete_revision(Page, page.id, first.revision, :system)
+    assert {0, _} = Revisions.purge_revisions(Page, page.id, :system)
   end
 
   test "get_last_revision", %{user: user} do
@@ -614,9 +614,9 @@ defmodule Brando.Revisions.RevisionsTest do
 
     assert {:ok, revisions} = Revisions.list_revision_metadata(Page, changed.id)
     assert Enum.find(revisions, &(&1.revision == 0)).scheduled
-    assert {0, _} = Revisions.purge_revisions(Page, changed.id)
+    assert {0, _} = Revisions.purge_revisions(Page, changed.id, :system)
 
-    assert :ok = Brando.Publisher.cancel_scheduled_revision(Page, changed.id, 0)
+    assert :ok = Brando.Publisher.cancel_scheduled_revision(Page, changed.id, 0, :system)
     assert {:ok, revisions} = Revisions.list_revision_metadata(Page, changed.id)
     refute Enum.find(revisions, &(&1.revision == 0)).scheduled
 

@@ -423,6 +423,11 @@ sender first, before the first compile.
   `gallery_objects`.
 - **Datasources outside Blueprints.** Move a `use Brando.Datasource` in a
   standalone schema onto the appropriate Blueprint.
+- **Events of your own admin views, for User-role accounts.** In legacy mode an
+  event in an application's admin LiveView or LiveComponent is refused to a
+  User-role account unless the module lists it as read-only:
+  `def __read_only_events__, do: ~w(open_tab toggle_row)`. Editors and admins
+  are not affected. List only events that store nothing and send nothing.
 - **Custom admin form components.** Call the input primitives
   (`field_base/1`, `input/1`, `label/1`, `error_tag/1`, `submit_button/1`,
   `inputs_for_block/1`, `inputs_for_poly/1`, `array_inputs/1`,

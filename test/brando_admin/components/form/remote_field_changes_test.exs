@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Components.Form.RemoteFieldChangesTest do
           schema: Entry,
           entry: entry,
           singular: "entry",
-          current_user: %{id: 1},
+          current_user: %{id: 1, role: :editor},
           form: Component.to_form(changeset, as: "entry"),
           tiptap_epoch: "mounted-form",
           dirty_fields: [],

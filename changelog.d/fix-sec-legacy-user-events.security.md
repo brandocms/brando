@@ -1,0 +1,1 @@
+- In legacy mode a User-role account can no longer write through admin events: publishing from a listing, reordering, revisions, notes, scheduled publishing, the utility and SEO screens, or fields sent into another editor's open form.

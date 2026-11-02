@@ -66,7 +66,7 @@ defmodule Brando.ListingViews do
   @spec create_view(User.t(), module(), listing(), map()) ::
           {:ok, View.t()} | {:error, :forbidden | :unavailable | Ecto.Changeset.t()}
   def create_view(%User{} = user, schema, listing, attrs) do
-    if can_see?(user, schema) do
+    if can_see?(user, schema) and may_set_sharing?(user, attrs) do
       %View{creator_id: user.id, schema: schema_name(schema), listing: to_string(listing)}
       |> View.changeset(attrs)
       |> Repo.insert(savepoint())
@@ -83,7 +83,7 @@ defmodule Brando.ListingViews do
   @doc "Changes a view's name, parameters or sharing, when `user` may (`can_manage?/2`)."
   @spec update_view(User.t(), View.t(), map()) :: {:ok, View.t()} | {:error, :forbidden | Ecto.Changeset.t()}
   def update_view(%User{} = user, %View{} = view, attrs) do
-    if can_manage?(user, view) do
+    if can_manage?(user, view) and may_set_sharing?(user, attrs) do
       view
       |> View.changeset(attrs)
       |> Repo.update()
@@ -99,25 +99,34 @@ defmodule Brando.ListingViews do
     if can_manage?(user, view), do: Repo.delete(view), else: {:error, :forbidden}
   end
 
+  # A view shared is one others see. An account that writes nothing but its own
+  # keeps its views to itself.
+  defp may_set_sharing?(user, attrs) do
+    not (Map.get(attrs, "shared", Map.get(attrs, :shared)) in [true, "true"] and Boundary.read_only_account?(user))
+  end
+
   @doc """
   Whether `user` may rename, update and delete `view`: their own, or a shared
-  one when they may manage shared views (`moderator?/1`).
+  one when they may manage shared views (`moderator?/1`). An account that writes
+  nothing but its own (`Boundary.read_only_account?/1`) keeps its private views
+  only: a shared one is others' too.
   """
   @spec can_manage?(User.t(), View.t()) :: boolean()
-  def can_manage?(%User{id: id}, %View{creator_id: id}), do: true
+  def can_manage?(%User{id: id}, %View{creator_id: id, shared: false}), do: true
+  def can_manage?(%User{id: id} = user, %View{creator_id: id}), do: not Boundary.read_only_account?(user)
   def can_manage?(%User{} = user, %View{shared: true}), do: moderator?(user)
   def can_manage?(_user, _view), do: false
 
   @doc """
   Whether `user` may manage the views other people share: the
   `brando.listing_views.manage` permission with group authorization, the
-  admin or superuser role without.
+  admin or superuser role as stored now without.
   """
   @spec moderator?(User.t()) :: boolean()
   def moderator?(%User{} = user) do
     if Engine.enabled?(),
       do: Boundary.authorize(user, :manage, :listing_views) == :ok,
-      else: user.role in [:admin, :superuser]
+      else: Boundary.stored_legacy_role(user) in [:admin, :superuser]
   end
 
   @doc "The view `user` opens `listing` of `schema` with, if they picked one they still see."

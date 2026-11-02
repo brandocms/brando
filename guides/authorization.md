@@ -198,7 +198,25 @@ Superuser writes modules and containers, a User-role account changes nothing
 but its own profile, and only a Superuser deactivates or deletes another
 Superuser. The application's legacy rules are not consulted. In both modes,
 only a Superuser changes another account's email or password (the email is
-where a password reset link goes). Outside a scoped administration request,
+where a password reset link goes).
+
+A User-role account in legacy mode reads every listing, entry form and history,
+exports, and changes its own profile, security settings and private saved views.
+It keeps its own recovery drafts and live previews. Everything else it sends is
+refused before it reaches the code behind it, whether from a LiveView, a hook or
+a LiveComponent, and its role is read afresh, so a demotion holds on a socket
+already open. Its typing in another entry's form stays in that form: nothing
+reaches the other editors, and it still sees theirs. To refuse by default,
+`BrandoAdmin.Authorization.Events` lists each of Brando's admin events by what it
+does, and a test fails on an event missing from the list. An event of your own
+admin LiveView or LiveComponent is refused to this role too, until it declares
+those that only read:
+
+```elixir
+def __read_only_events__, do: ~w(open_tab toggle_row)
+```
+
+Outside a scoped administration request,
 ordinary frontend queries are not filtered by permissions. Custom administration
 reads should use `Authorization.scope/3` or `Boundary.with_scope/2`. Query caches
 are bypassed for scoped admin reads to prevent public cached results from escaping

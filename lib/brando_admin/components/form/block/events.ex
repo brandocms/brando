@@ -19,6 +19,9 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
   # form, for a recovery copy the editing tab offers.
   defp guard_block_event(event, params, socket) do
     cond do
+      BrandoAdmin.Authorization.Events.component_refused?(__MODULE__, event) ->
+        {:halt, BrandoAdmin.Authorization.Events.refuse(socket)}
+
       BrandoAdmin.LiveView.Form.Tabs.editing?() ->
         handle_block_event(event, params, socket)
 
@@ -780,7 +783,8 @@ defmodule BrandoAdmin.Components.Form.Block.Events do
     current_user_id = socket.assigns.current_user_id
     entry = socket.assigns.entry
 
-    BrandoAdmin.Presence.broadcast_active_field(entry.__struct__, entry.id, field_name, current_user_id)
+    if Brando.Authorization.Boundary.may_update?(%{id: current_user_id}, entry),
+      do: BrandoAdmin.Presence.broadcast_active_field(entry.__struct__, entry.id, field_name, current_user_id)
 
     {:halt, socket}
   end

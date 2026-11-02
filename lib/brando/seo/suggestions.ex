@@ -17,6 +17,7 @@ defmodule Brando.SEO.Suggestions do
 
   require Logger
 
+  alias Brando.Authorization.Boundary
   alias Brando.Repo
   alias Brando.SEO.Audit.Row
   alias Brando.SEO.Generate
@@ -273,14 +274,16 @@ defmodule Brando.SEO.Suggestions do
   @doc "Rejects a pending suggestion, or dismisses a failed one. The entry is left alone."
   @spec reject(integer() | String.t(), map()) :: {:ok, Suggestion.t()} | {:error, term()}
   def reject(id, user) do
-    case Repo.get(Suggestion, id) do
-      %Suggestion{status: status} = suggestion when status in [:pending, :failed] ->
-        suggestion
-        |> Suggestion.changeset(%{status: :rejected, reviewed_by_id: user_id(user)})
-        |> Repo.update()
+    with :ok <- Boundary.authorize(Boundary.stored_actor(user), :update, Brando.Sites.SEO) do
+      case Repo.get(Suggestion, id) do
+        %Suggestion{status: status} = suggestion when status in [:pending, :failed] ->
+          suggestion
+          |> Suggestion.changeset(%{status: :rejected, reviewed_by_id: user_id(user)})
+          |> Repo.update()
 
-      _ ->
-        {:error, :not_found}
+        _ ->
+          {:error, :not_found}
+      end
     end
   end
 

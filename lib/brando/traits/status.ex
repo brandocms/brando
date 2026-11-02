@@ -5,6 +5,7 @@ defmodule Brando.Trait.Status do
   """
   use Brando.Trait
 
+  alias Brando.Authorization.Boundary
   alias Brando.Trait.Status.Compiler
 
   import Ecto.Query
@@ -14,7 +15,7 @@ defmodule Brando.Trait.Status do
 
   @doc "Updates an entry's status and synchronizes its identifier, content cascade, and query cache."
   def update_status(schema, id, status, actor \\ nil) do
-    actor = actor || Brando.Authorization.Boundary.current_scope()
+    actor = actor || Boundary.current_scope()
 
     if Brando.Authorization.enabled?() do
       schema = Brando.Authorization.Catalog.schema(schema)
@@ -31,11 +32,21 @@ defmodule Brando.Trait.Status do
   end
 
   defp legacy_update_status(schema, id, status, actor) do
-    entry = Brando.Repo.one(from q in schema, where: q.id == ^id)
-    changeset = Ecto.Changeset.cast(entry, %{status: status}, [:status])
-    {:ok, updated_entry} = Brando.Repo.update(changeset)
-    Brando.Activity.saved(changeset, updated_entry, actor)
+    Boundary.run(actor, :update, schema, fn user ->
+      with %{} = entry <- Brando.Repo.one(from q in schema, where: q.id == ^id),
+           changeset = Ecto.Changeset.cast(entry, %{status: status}, [:status]),
+           :ok <- Boundary.change(user, :update, changeset),
+           {:ok, updated_entry} <- Brando.Repo.update(changeset) do
+        Brando.Activity.saved(changeset, updated_entry, actor)
+        update_status_side_effects(schema, id, updated_entry)
+      else
+        nil -> {:error, :not_found}
+        error -> error
+      end
+    end)
+  end
 
+  defp update_status_side_effects(schema, id, updated_entry) do
     {:ok, identifier_result} = Brando.Content.update_identifier(schema, updated_entry)
 
     identifier_id =
