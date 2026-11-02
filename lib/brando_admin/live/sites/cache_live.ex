@@ -183,10 +183,12 @@ defmodule BrandoAdmin.Sites.CacheLive do
   end
 
   # The query cache's entries this user may `action` (`:read` lists, `:update`
-  # clears). With tenancy on, a site environment's are under its prefix, for
-  # those who may use this screen there; the rest, cached outside every site
-  # or for a site no longer in the registry, for superusers. A key of another
-  # shape is no query result this screen knows, and is skipped.
+  # clears). On a multi-site install, a site environment's are under its
+  # prefix, for those who may use this screen there; the rest, cached outside
+  # every site or for a site no longer in the registry, for superusers. With
+  # one site, the screen's own authorization covers it, and everyone here may
+  # use every entry. A key of another shape is no query result this screen
+  # knows, and is skipped.
   defp entries(user, action) do
     {:ok, keys} = Cachex.keys(:query)
     entries = keys |> Enum.map(&entry/1) |> Enum.reject(&is_nil/1)
@@ -205,7 +207,7 @@ defmodule BrandoAdmin.Sites.CacheLive do
     Enum.flat_map(groups, fn {prefix, entries} -> if permitted?(user, prefix, action), do: entries, else: [] end)
   end
 
-  defp every_entry?(user), do: not Tenant.enabled?() or Boundary.superuser?(user)
+  defp every_entry?(user), do: Tenant.mode() != :multi or Boundary.superuser?(user)
 
   defp entry({:tenant, prefix, key} = tenant_key) when is_binary(prefix) do
     case entry(key) do

@@ -76,6 +76,21 @@ defmodule BrandoAdmin.CacheLiveTest do
       assert_site_scoped(c, log_in_user(build_conn(), editor))
     end
 
+    test "a :user account sees its site's entries and clears none", c do
+      user = account(:user)
+      {:ok, _} = Access.grant(user, c.site_a, :editor)
+      {:ok, view, _html} = live(log_in_user(build_conn(), user), @path)
+
+      assert has_element?(row(view, c.key_a))
+      assert has_element?(row(view, c.single_a))
+      refute has_element?(row(view, c.key_b))
+      refute has_element?(row(view, c.public_key))
+
+      view |> row(c.single_a) |> render_click()
+      render_click(view, "empty_caches", %{})
+      for key <- [c.key_a, c.single_a, c.key_b, c.public_key], do: assert(cached?(key))
+    end
+
     test "a superuser sees every site's entries and those cached outside every site", c do
       {:ok, view, _html} = live(c.conn, @path)
 
@@ -106,6 +121,51 @@ defmodule BrandoAdmin.CacheLiveTest do
 
     test "a member of one site's group sees and clears only that site's entries", c do
       assert_site_scoped(c, log_in_user(build_conn(), c.editor))
+    end
+
+    test "a member who may only read on another site sees its entries and clears none of them", c do
+      scope = Scope.site(c.current_user, c.site_b)
+      {:ok, group} = Groups.create(scope, %{name: "Cache readers"}, ~w(brando.admin.access brando.utilities.read))
+      {:ok, :ok} = Groups.add_member(scope, group.id, c.editor.id)
+
+      {:ok, view, _html} = live(log_in_user(build_conn(), c.editor), @path)
+
+      for key <- [c.key_a, c.single_a, c.key_b], do: assert(has_element?(row(view, key)))
+      refute has_element?(row(view, c.public_key))
+
+      view |> row(c.key_b) |> render_click()
+      assert cached?(c.key_b)
+
+      render_click(view, "empty_caches", %{})
+      refute cached?(c.key_a)
+      refute cached?(c.single_a)
+      assert cached?(c.key_b)
+      assert cached?(c.public_key)
+    end
+  end
+
+  # One site: the screen's own authorization covers it, so an account that may
+  # open the screen sees and clears every entry, its site's included.
+  describe "with tenancy in single mode, legacy mode" do
+    setup :sites
+
+    setup %{site_a: site_a} do
+      put_test_env(:authorization_mode, :legacy)
+      put_test_env(:tenancy_mode, :single)
+      put_test_env(:site_key, site_a.key)
+      :ok
+    end
+
+    test "an editor with no site assignment sees and clears every entry", c do
+      {:ok, view, _html} = live(log_in_user(build_conn(), account(:editor)), @path)
+
+      for key <- [c.key_a, c.single_a, c.key_b, c.public_key], do: assert(has_element?(row(view, key)))
+
+      view |> row(c.single_a) |> render_click()
+      refute cached?(c.single_a)
+
+      render_click(view, "empty_caches", %{})
+      for key <- [c.key_a, c.key_b, c.public_key], do: refute(cached?(key))
     end
   end
 
