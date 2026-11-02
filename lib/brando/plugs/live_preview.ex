@@ -38,19 +38,30 @@ defmodule Brando.Plug.LivePreview do
   @external_resource Application.app_dir(:brando, "priv/static/js/livepreview_highlight.js")
   @external_resource Application.app_dir(:brando, "priv/static/js/livepreview_storage.js")
 
-  # morphdom's UMD wrapper hands the library to the site's module loader when
-  # it finds one (an AMD `define`, or CommonJS `exports` and `module`) and
-  # leaves `window.morphdom`, which the patching calls, unset. Shadowing those
-  # names makes it always take the global, as in `Brando.Plug.FrontendEdit`.
+  # The client shares the page's global scope with the site's own classic
+  # scripts, so it all runs in one function: a name declared on both sides
+  # neither stops it loading nor replaces the site's global. It sets only
+  # `window.BrandoBlockPatch`, `livePreviewKey` and `livePreviewVersion`.
+  #
+  # block_patch.js comes first, for its `shield`: phoenix.js and morphdom get
+  # a `window` and `document` whose members content cannot replace with an
+  # element named after them. morphdom's UMD wrapper hands the library to the
+  # site's module loader when it finds one (an AMD `define`, or CommonJS
+  # `exports` and `module`) and sets no global; shadowing those names makes it
+  # set one on an object of the client's own.
   @client_js Enum.join(
                [
-                 File.read!(Application.app_dir(:phoenix, "priv/static/phoenix.js")),
-                 "(function (exports, module, define) {\n" <>
-                   File.read!(Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js")) <>
-                   "\n}).call(window);",
+                 ";(function () {",
                  File.read!(Application.app_dir(:brando, "priv/static/js/block_patch.js")),
+                 "var Phoenix = (function (window) {\n" <>
+                   File.read!(Application.app_dir(:phoenix, "priv/static/phoenix.js")) <>
+                   "\n;return Phoenix\n})(window.BrandoBlockPatch.shield(window))",
+                 "var morphdom = (function (exports, module, define, document) {\n" <>
+                   File.read!(Application.app_dir(:brando, "priv/static/js/morphdom-umd.min.js")) <>
+                   "\n;return this.morphdom\n}).call({}, undefined, undefined, undefined, window.BrandoBlockPatch.shield(document))",
                  File.read!(Application.app_dir(:brando, "priv/static/js/livepreview.js")),
-                 File.read!(Application.app_dir(:brando, "priv/static/js/livepreview_highlight.js"))
+                 File.read!(Application.app_dir(:brando, "priv/static/js/livepreview_highlight.js")),
+                 "})()"
                ],
                "\n;\n"
              )

@@ -280,6 +280,10 @@ Most frontend code runs unchanged. What an opaque origin changes:
   routes (an API, a JSON feed) gets no response in the preview unless that
   route sends the header too. With the Vite dev server in development, allow
   any origin in its `server.cors` setting.
+- The preview's own script sets only `window.BrandoBlockPatch`,
+  `window.livePreviewKey` and `window.livePreviewVersion`. It declares nothing
+  else in the page's global scope, so a site script can use any other name
+  (`token`, `body`, its own `Phoenix` or `morphdom`) and keep its value.
 
 ### Restricting scripts further
 

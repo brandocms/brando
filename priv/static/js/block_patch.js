@@ -10,7 +10,7 @@
  * `[+:C<uid>]` … `[-:C<uid>]` around the children inside it. Frontend edit
  * mode also wraps each block field in `[+:F<key>]` … `[-:F<key>]`.
  *
- * Needs `morphdom` (loaded before this file).
+ * Patching needs `morphdom`, loaded with this file.
  */
 window.BrandoBlockPatch = (function () {
   // DOM Node Type Constants
@@ -24,6 +24,71 @@ window.BrandoBlockPatch = (function () {
 
   // Valid node types for lazy loading operations
   const VALID_TARGET_NODES = [NODE_TYPES.ELEMENT, NODE_TYPES.DOCUMENT, NODE_TYPES.DOCUMENT_FRAGMENT]
+
+  /**
+   * A document or the window whose members are read from the interfaces that
+   * define them; anything else as it is.
+   *
+   * A document returns an element named after one of its members in place of
+   * the member: `<img name="createElement">` makes `document.createElement`
+   * that image. A name or id also hides the members the window inherits from
+   * `EventTarget`, `addEventListener` among them. Rich text keeps `name` and
+   * `id`, so the page's content, and the new HTML of an update, can do either.
+   *
+   * The result is for reading members only: where a node is expected, pass the
+   * document itself.
+   * @param {Document|Window|Node} target
+   */
+  function shield(target) {
+    const isWindow = target === window
+    if (!isWindow && !(target instanceof Document)) return target
+
+    let shielded = shields.get(target)
+    if (!shielded) {
+      // The window's named elements sit in its prototype chain, right above
+      // `Window.prototype`; a document's are its own properties.
+      const prototypes = isWindow ? [Window.prototype, EventTarget.prototype, Object.prototype] : prototypeChain(target)
+      shielded = new Proxy(target, {
+        get: (_target, key) => readMember(target, prototypes, key, isWindow),
+        set: (_target, key, value) => Reflect.set(target, key, value)
+      })
+      shields.set(target, shielded)
+    }
+    return shielded
+  }
+
+  const shields = new WeakMap()
+
+  function prototypeChain(target) {
+    const chain = []
+    for (let proto = Object.getPrototypeOf(target); proto; proto = Object.getPrototypeOf(proto)) chain.push(proto)
+    return chain
+  }
+
+  // The window's own properties are its attributes and the page's globals,
+  // never a named element.
+  function readMember(target, prototypes, key, ownFirst) {
+    if (ownFirst && Object.hasOwn(target, key)) return bindMember(target, Reflect.get(target, key))
+
+    for (const proto of prototypes) {
+      const descriptor = Object.getOwnPropertyDescriptor(proto, key)
+      if (descriptor) return bindMember(target, descriptor.get ? descriptor.get.call(target) : descriptor.value)
+    }
+
+    // What no interface defines, `location` among them: no element hides it
+    return bindMember(target, Reflect.get(target, key))
+  }
+
+  // Methods are called on the real target. Constructors (they have a
+  // `prototype`) are left alone. A document reached through one, the window's
+  // `document`, is shielded too.
+  function bindMember(target, value) {
+    if (typeof value === 'function') return 'prototype' in value ? value : value.bind(target)
+    return value instanceof Document ? shield(value) : value
+  }
+
+  // The page's document, to read members of
+  const doc = shield(document)
 
   /**
    * The uid in a `[+:B<uid>]`-style marker comment.
@@ -41,7 +106,7 @@ window.BrandoBlockPatch = (function () {
    * @returns {Element[]}
    */
   function withSelf(target, selector) {
-    const found = Array.from(target.querySelectorAll(selector))
+    const found = Array.from(shield(target).querySelectorAll(selector))
     return target.nodeType === NODE_TYPES.ELEMENT && target.matches(selector) ? [target, ...found] : found
   }
 
@@ -51,7 +116,7 @@ window.BrandoBlockPatch = (function () {
    */
   function initializeLazyImages(target = document) {
     // Ensure target is a valid element node
-    if (!VALID_TARGET_NODES.includes(target.nodeType)) {
+    if (!VALID_TARGET_NODES.includes(shield(target).nodeType)) {
       return
     }
 
@@ -81,7 +146,7 @@ window.BrandoBlockPatch = (function () {
    */
   function initializeLazyVideos(target = document) {
     // Ensure target is a valid element node
-    if (!VALID_TARGET_NODES.includes(target.nodeType)) {
+    if (!VALID_TARGET_NODES.includes(shield(target).nodeType)) {
       return
     }
 
@@ -129,11 +194,11 @@ window.BrandoBlockPatch = (function () {
    * @param {Node} root - document or parsed document body to stamp
    */
   function stampBlockKeys(root) {
-    if (!root || !VALID_TARGET_NODES.includes(root.nodeType)) {
+    if (!root || !VALID_TARGET_NODES.includes(shield(root).nodeType)) {
       return
     }
 
-    const iterator = document.createNodeIterator(root, NodeFilter.SHOW_COMMENT, null, false)
+    const iterator = doc.createNodeIterator(root, NodeFilter.SHOW_COMMENT, null, false)
     let curNode
 
     while ((curNode = iterator.nextNode())) {
@@ -287,12 +352,12 @@ window.BrandoBlockPatch = (function () {
   /**
    * Build a map of content blocks for efficient updates.
    * Blocks are identified by HTML comments with UIDs.
-   * @param {Node} root - Where to look (defaults to document.body)
+   * @param {Node} root - Where to look (defaults to doc.body)
    * @returns {Map} uid → { uid, elements, insertionPoint, start }
    */
-  function buildRegistry(root = document.body) {
+  function buildRegistry(root = doc.body) {
     const registry = new Map()
-    const iterator = document.createNodeIterator(root, NodeFilter.SHOW_COMMENT, null, false)
+    const iterator = doc.createNodeIterator(root, NodeFilter.SHOW_COMMENT, null, false)
 
     let curNode
     while ((curNode = iterator.nextNode())) {
@@ -328,7 +393,7 @@ window.BrandoBlockPatch = (function () {
       const element = blockEl.element
       const childNodes = []
 
-      const iterator = document.createNodeIterator(element, NodeFilter.SHOW_COMMENT, null, false)
+      const iterator = doc.createNodeIterator(element, NodeFilter.SHOW_COMMENT, null, false)
 
       let curNode
       while ((curNode = iterator.nextNode())) {
@@ -361,7 +426,7 @@ window.BrandoBlockPatch = (function () {
    * @returns {Node|null} - The text node marking the insertion point
    */
   function findContentInsertionMarker(blockElement) {
-    const iterator = document.createNodeIterator(blockElement, NodeFilter.SHOW_TEXT, null, false)
+    const iterator = doc.createNodeIterator(blockElement, NodeFilter.SHOW_TEXT, null, false)
     let curNode
 
     while ((curNode = iterator.nextNode())) {
@@ -383,7 +448,7 @@ window.BrandoBlockPatch = (function () {
    * @returns {Element[]} The fragment's top-level elements
    */
   function parseFragment(html) {
-    const template = document.createElement('template')
+    const template = doc.createElement('template')
     template.innerHTML = html
     return Array.from(template.content.childNodes).filter(node => node.nodeType === NODE_TYPES.ELEMENT)
   }
@@ -405,7 +470,7 @@ window.BrandoBlockPatch = (function () {
    * `frontend-edit`.
    */
   function announcePatch(type, elements, uid, source = 'livepreview') {
-    document.dispatchEvent(
+    doc.dispatchEvent(
       new CustomEvent('brando:livepreview:patched', { detail: { type, uid, elements, source } })
     )
   }
@@ -537,8 +602,8 @@ window.BrandoBlockPatch = (function () {
    * @param {string} key
    * @param {Node} root
    */
-  function findField(key, root = document.body) {
-    const iterator = document.createNodeIterator(root, NodeFilter.SHOW_COMMENT, null, false)
+  function findField(key, root = doc.body) {
+    const iterator = doc.createNodeIterator(root, NodeFilter.SHOW_COMMENT, null, false)
     let start = null
     let curNode
 
@@ -577,7 +642,7 @@ window.BrandoBlockPatch = (function () {
     const parent = field.start.parentNode
     // Built in a document of its own, where media `prepareMorph` initialises
     // does not load: a copy in the page's document would fetch it.
-    const inert = document.implementation.createHTMLDocument('')
+    const inert = doc.implementation.createHTMLDocument('')
     const next = inert.importNode(parent, false)
     let node = parent.firstChild
     let inField = false
@@ -587,7 +652,7 @@ window.BrandoBlockPatch = (function () {
         next.appendChild(inert.importNode(node, false))
         // Parsed by the page's document, which has scripting on like the page:
         // in one without, `<noscript>` content parses as elements.
-        const template = document.createElement('template')
+        const template = doc.createElement('template')
         template.innerHTML = html
         next.appendChild(inert.adoptNode(template.content))
         inField = true
@@ -608,6 +673,7 @@ window.BrandoBlockPatch = (function () {
 
   return {
     NODE_TYPES,
+    shield,
     markerUid,
     initializeLazyImages,
     initializeLazyVideos,
