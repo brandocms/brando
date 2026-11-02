@@ -223,6 +223,10 @@
     }
   }
 
+  .environment-overview > .environment-hint {
+    margin-top: 16px;
+  }
+
   .environment-table-wrap {
     margin-top: 26px;
     overflow-x: auto;
