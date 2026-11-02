@@ -727,15 +727,22 @@ superuser sets for each site on the Sites screen:
   listed, and adding it by its id is refused.
 
 A site holds a video while any of its current environments has a record of
-it, deleted or not. Brando reads that from the environments' video rows each
-time, so an environment copy or rollback needs nothing more. If one
-environment schema cannot be read, the picker lists nothing and adds nothing
-until it can.
+it, deleted or not. A Mux upload holds its video from the start, before Mux
+reports the asset. Brando reads that from the environments' video rows each
+time, so an environment copy or rollback needs nothing more. An environment
+whose schema is not there yet, while it is created or copied, holds nothing.
+If an environment's video table cannot be read, the picker lists nothing and
+adds nothing until it can.
 
 Deleting a video at the provider, when its record is deleted or purged
 (`delete_remote_on`), is refused while another site holds it: that site's
-record keeps playing, and the video stays in the provider account. A site's
-own other environments do not stop the delete, as with one site.
+record keeps playing. Brando does not delete the video at the provider later
+either, since the other site's record was added from the library and an
+added record is never deleted remotely: the video stays in the provider
+account until someone removes it there. A delete is refused too when the
+video tables cannot be read; a purge then keeps the record and tries again
+on its next run. A site's own other environments do not stop the delete, as
+with one site.
 
 From code, as the screen does:
 
