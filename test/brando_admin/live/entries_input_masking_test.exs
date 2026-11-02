@@ -207,6 +207,9 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
       {conn, _} = log_in_as(conn, permissions: ["brando.admin.access", "brando.pages.read" | keys])
       view = open(conn, c.article)
       assert field_html(view) =~ @secret
+      # The picker lists it too
+      view |> element("#article_related_entries-select-entries button", "Pages") |> render_click()
+      assert view |> element("#article_related_entries-entries-options") |> render() =~ @secret
 
       # As `Groups` does on a change: the view reloads its grants
       Repo.delete_all(from g in Brando.Authorization.Grant, where: g.permission_key == "brando.pages.read")

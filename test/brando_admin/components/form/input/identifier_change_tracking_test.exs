@@ -178,6 +178,46 @@ defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
     end)
   end
 
+  # The picker lists another content type, so only the row itself names it
+  test "Entries names a row removed and added again without a preload" do
+    a = identifier(Brando.Pages.Page, :en, :published)
+    socket = %Phoenix.LiveView.Socket{}
+
+    Enum.reduce([[%{identifier_id: a.id, identifier: a}], [], [%{identifier_id: a.id}]], socket, fn rows, socket ->
+      joins = Enum.map(rows, &struct(Brando.Content.BlockIdentifier, &1))
+      form = to_form(Changeset.change(%Brando.Content.Block{block_identifiers: joins}), as: "block")
+      props = %{id: "entries", field: form[:block_identifiers], opts: [sources: [{Brando.Pages.Fragment, %{}}]]}
+      {:ok, socket} = Entries.update(props, socket)
+      assert Enum.map(socket.assigns.selected_identifiers, & &1.id) == Enum.map(rows, & &1.identifier_id)
+      socket
+    end)
+  end
+
+  # Grants alone do not tell what may be read: a record read policy, or the
+  # entry itself, can change. A reload that preloads a changed identifier is
+  # checked again.
+  test "Entries checks a row again when the form preloads it changed" do
+    put_test_env(:authorization_mode, :groups)
+    put_test_env(:tenancy_mode, :none)
+    user = Brando.Test.Users.insert_user(permissions: ~w(brando.admin.access brando.pages.read))
+    Brando.Authorization.Boundary.put_scope(Brando.Authorization.Scope.standalone(user))
+    on_exit(fn -> Brando.Authorization.Boundary.put_scope(nil) end)
+
+    page = Brando.Factory.insert(:page, title: "Readable", uri: "readable-#{System.unique_integer([:positive])}")
+    a = Brando.Repo.insert!(%Identifier{schema: Brando.Pages.Page, entry_id: page.id, title: "Readable", language: :en})
+    gone = %{a | entry_id: page.id + 1_000_000, title: "Elsewhere"}
+    socket = %Phoenix.LiveView.Socket{}
+
+    Enum.reduce([{a, "Readable"}, {gone, "An entry you can't view"}], socket, fn {preload, text}, socket ->
+      joins = [%Brando.Content.BlockIdentifier{identifier_id: a.id, identifier: preload}]
+      form = to_form(Changeset.change(%Brando.Content.Block{block_identifiers: joins}), as: "block")
+      props = %{id: "entries", field: form[:block_identifiers], opts: [sources: [{Brando.Pages.Page, %{}}]]}
+      {:ok, socket} = Entries.update(props, socket)
+      assert socket.assigns.selected_text == text
+      socket
+    end)
+  end
+
   test "Entries ignores a pick its list no longer holds" do
     a = identifier(Brando.Pages.Page, :en, :published)
     form = to_form(Changeset.change(%Brando.Content.Block{block_identifiers: []}), as: "block")
@@ -187,6 +227,9 @@ defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
       |> Component.assign(:field, form[:block_identifiers])
       |> Component.assign(:available_identifiers, [])
       |> Component.assign(:selected_identifiers, [])
+      |> Component.assign(:opts, sources: [{Brando.Pages.Page, %{}}])
+      # As the list was last read: nothing to read again
+      |> Component.assign(:identifier_filters, {[{Brando.Pages.Page, %{}}], false, nil, nil})
 
     assert {:noreply, ^socket} = Entries.handle_event("select_identifier", %{"id" => a.id}, socket)
   end
