@@ -19,7 +19,7 @@ defmodule Brando.Notifications do
       action: action,
       identifier: identifier,
       # Goes to everyone who may read the entry: what the toast shows, no more.
-      user: %{name: user.name}
+      user: %{name: Map.get(user, :name)}
     }
 
     Toast.send(payload, %{type: :mutation})
