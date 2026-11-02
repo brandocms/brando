@@ -737,6 +737,34 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       end
     end
 
+    # Only a live record of the restoring environment refuses a restore from
+    # the trash: production's record is the copy staging was made from.
+    for tenancy_mode <- [:single, :multi], authorization_mode <- [:legacy, :groups] do
+      @tenancy_mode tenancy_mode
+      @authorization_mode authorization_mode
+
+      test "a restore is refused while a live record of the environment plays the video, " <>
+             "#{tenancy_mode} tenancy, #{authorization_mode} authorization",
+           context do
+        put_test_env(:tenancy_mode, @tenancy_mode)
+        superuser = superuser(@authorization_mode)
+
+        Tenant.with_prefix(context.staging_prefix, fn ->
+          deleted = context.staging |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+          assert {:ok, %Video{deleted_at: nil}} = Brando.Authorization.Boundary.restore(superuser, deleted)
+
+          deleted = deleted |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+          live = Repo.insert!(%Video{type: :mux, title: "Added again", status: :ready, meta: imported_meta()})
+
+          assert {:error, {:recorded_here, %Video{id: live_id}}} =
+                   Brando.Authorization.Boundary.restore(superuser, deleted)
+
+          assert live_id == live.id
+          assert Repo.get!(Video, deleted.id).deleted_at
+        end)
+      end
+    end
+
     test "another site's environments do not count as the site's own", context do
       gamma_prefix = site_prefix(context.sites.gamma)
       gamma = Tenant.with_prefix(gamma_prefix, fn -> mux_uploaded_here("asset-2") end)
