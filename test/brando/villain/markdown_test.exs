@@ -108,6 +108,20 @@ defmodule Brando.Villain.MarkdownTest do
       assert markdown == "[A tour](https://www.youtube.com/watch?v=abc123)"
     end
 
+    test "a linked file with an address of another scheme is left out" do
+      module = module!("{% ref refs.ok %}{% ref refs.video %}")
+
+      markdown =
+        render([
+          block(module, [
+            ref("ok", "video", %{type: :external_file, source_url: "https://example.com/a.mp4", title: "A tour"}),
+            ref("video", "video", %{type: :external_file, source_url: "javascript:document.title='f05'", title: "B"})
+          ])
+        ])
+
+      assert markdown == "[A tour](https://example.com/a.mp4)"
+    end
+
     test "variables printed by the HTML template are kept" do
       module = module!(~s(<div class="member"><h3>{{ member_name }}</h3><p>{{ member_role }}</p></div>))
 
