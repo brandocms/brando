@@ -1503,7 +1503,8 @@ defmodule Brando.Villain.InertEditorTextTest do
             ~S({{ "{" }}{% capture unused %}{{ "x" }}{% endcapture %}{{ entry.title | raw }}),
             ~S({{ "{" }}{% if false %}x{% endif %}{{ entry.title | raw }}),
             ~S({{ "{" }}{% assign a = "x" %}{{ entry.title }}),
-            ~S({{ "{" }}{% if true %}{% endif %}{{ entry.title }})
+            ~S({{ "{" }}{% if true %}{% endif %}{{ entry.title }}),
+            ~S({{ "{" }}{% capture c %}{{ entry.title | raw }}{% endcapture %}{{ c }})
           ],
           value <- ["{ 1 | plus: 41 }}", "% if true %}42{% endif %}"] do
         html = render(block(module!(user, code), []), %Page{title: value, language: :en})
@@ -1535,6 +1536,10 @@ defmodule Brando.Villain.InertEditorTextTest do
             {~S(<script>{{ "{" }}{% if true %}"a": {% endif %}{{ json | raw }}}</script>),
              ~S(<script>{"a": {"b":1}}</script>)},
             {~S[<script>{{ "{" }}{% for i in (1..1) %}"a": {% endfor %}{{ json | raw }}}</script>],
+             ~S(<script>{"a": {"b":1}}</script>)},
+            {~S(<script>{{ "{" }}{% if true %}"a": {% if true %}{{ json | raw }}{% endif %}{% endif %}}</script>),
+             ~S(<script>{"a": {"b":1}}</script>)},
+            {~S(<script>{{ "{" }}{% capture j %}{{ json | raw }}{% endcapture %}"a": {{ j }}}</script>),
              ~S(<script>{"a": {"b":1}}</script>)}
           ] do
         assert render(block(module!(user, code), vars: [var, key])) == expected, code

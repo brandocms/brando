@@ -16,7 +16,8 @@ defmodule Brando.Villain.Tags.Output do
   comes right before and after it (`mark_joins/5`). Whether what was printed
   last ends in a `{` is kept in the context's private data: a tag that prints
   something sets it from its output, one that prints nothing (an empty value,
-  `assign`, `capture`) leaves it as it was.
+  `assign`, `capture`) leaves it as it was. A tag's body starts from what came
+  before the tag, and a capture's from nothing.
   """
 
   alias Brando.Villain.InertLiquid
@@ -53,7 +54,9 @@ defmodule Brando.Villain.Tags.Output do
   def render([tag: tag, contents: contents, after_text: after_text?, before_text: before_text?], context) do
     open? = not after_text? and open?(context)
 
-    case tag.render(contents, context) do
+    # What a tag's body prints first follows what came before the tag, except a
+    # capture's, which goes into a variable: printing that is a tag of its own
+    case tag.render(contents, put_open(context, open? and tag != Liquex.Tag.CaptureTag)) do
       {output, %Context{} = rendered} -> printed(to_binary(output), rendered, open?, before_text?)
       # `break` and `continue`, which the loop around them handles
       other -> other
