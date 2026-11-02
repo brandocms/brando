@@ -119,56 +119,49 @@ defmodule Brando.MCP.OAuthConcurrencyTest do
 
   test "revoking a user's connections waits for a code being exchanged, and ends what it made", %{
     tenant: tenant,
-    grant: %{user_id: user_id}
+    grant: %{user_id: user_id},
+    params: %{"client_id" => client_id}
   } do
+    code = "bmcp_code_" <> Base.url_encode64(:crypto.strong_rand_bytes(32), padding: false)
+    {verifier, challenge} = pkce()
+
+    Sandbox.unboxed_run(Repo, fn ->
+      Repo.insert!(%AuthorizationCode{
+        code_hash: OAuth.hash(code),
+        user_id: user_id,
+        resource: MCP.resource(tenant),
+        client_id: client_id,
+        client_name: "Test Client",
+        redirect_uri: redirect_uri(),
+        code_challenge: challenge,
+        scope: MCP.scope(),
+        expires_at: DateTime.add(DateTime.utc_now(), 60, :second)
+      })
+    end)
+
+    :ok = :telemetry.attach(@handler, Repo.config()[:telemetry_prefix] ++ [:query], &__MODULE__.pause_at/4, nil)
     parent = self()
 
-    code =
-      Sandbox.unboxed_run(Repo, fn ->
-        Repo.insert!(%AuthorizationCode{
-          code_hash: OAuth.hash("in-flight-#{System.unique_integer([:positive])}"),
-          user_id: user_id,
-          resource: MCP.resource(tenant),
-          client_id: client_id(),
-          client_name: "Test Client",
-          redirect_uri: redirect_uri(),
-          code_challenge: "challenge",
-          scope: MCP.scope(),
-          expires_at: DateTime.add(DateTime.utc_now(), 60, :second)
-        })
-      end)
-
-    # As `OAuth`'s exchange does: holds the code's row until its grant is in
     exchange =
       Task.async(fn ->
         Sandbox.unboxed_run(Repo, fn ->
-          Repo.transaction(fn ->
-            locked = Repo.one!(from c in AuthorizationCode, where: c.id == ^code.id, lock: "FOR UPDATE")
-            send(parent, :locked)
+          Process.put(@handler, parent)
 
-            receive do
-              :finish -> :ok
-            after
-              10_000 -> :ok
-            end
-
-            made =
-              Repo.insert!(%Grant{
-                user_id: user_id,
-                resource: locked.resource,
-                client_id: locked.client_id,
-                client_name: locked.client_name,
-                redirect_uri: locked.redirect_uri,
-                scope: locked.scope
-              })
-
-            locked |> Ecto.Changeset.change(used_at: DateTime.utc_now(), grant_id: made.id) |> Repo.update!()
-            made
-          end)
+          OAuth.token(
+            %{
+              "grant_type" => "authorization_code",
+              "code" => code,
+              "code_verifier" => verifier,
+              "client_id" => client_id,
+              "redirect_uri" => redirect_uri()
+            },
+            tenant
+          )
         end)
       end)
 
-    assert_receive :locked, 5_000
+    # The exchange holds the code's row lock and has not made its grant yet
+    assert_receive {:paused, :code_locked, exchange_pid}, 5_000
 
     revocation =
       Task.async(fn ->
@@ -176,13 +169,16 @@ defmodule Brando.MCP.OAuthConcurrencyTest do
       end)
 
     await_lock_wait("mcp_authorization_codes")
-    send(exchange.pid, :finish)
+    send(exchange_pid, {:resume, :committed})
+    send(exchange_pid, {:resume, :code_locked})
 
-    assert {:ok, made} = Task.await(exchange, 10_000)
+    assert {:ok, _pair} = Task.await(exchange, 10_000)
     assert :ok = Task.await(revocation, 10_000)
 
     Sandbox.unboxed_run(Repo, fn ->
-      assert %Grant{revoked_reason: "password_changed"} = Repo.get!(Grant, made.id)
+      grants = Repo.all(from g in Grant, where: g.user_id == ^user_id)
+      assert length(grants) == 2
+      assert Enum.all?(grants, &(&1.revoked_reason == "password_changed"))
     end)
   end
 
@@ -208,6 +204,7 @@ defmodule Brando.MCP.OAuthConcurrencyTest do
   end
 
   defp pause_point(%{source: "mcp_tokens", query: "UPDATE" <> _}), do: :rotated
+  defp pause_point(%{source: "mcp_authorization_codes", query: "SELECT" <> _}), do: :code_locked
   defp pause_point(%{query: "commit"}), do: :committed
   defp pause_point(_metadata), do: nil
 

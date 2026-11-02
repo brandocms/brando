@@ -497,8 +497,9 @@ purged.
 
 A static build stays as well, because it runs on the authority of the user who
 requested it. With authorization groups, a build still queued when its creator
-is deleted is cancelled when its job runs. In a classic installation builds have
-no per-user check, and it runs.
+is deleted is cancelled when its job runs, and only the build's log says so:
+check queued and scheduled builds before you delete someone. In a classic
+installation builds have no per-user check, and it runs.
 
 A table of your own that references `users` moves unless its rows are left out
 in the same way, so check any that hold personal data.
