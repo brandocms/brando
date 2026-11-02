@@ -1245,6 +1245,63 @@ defmodule Brando.Villain.InertEditorTextTest do
       end
     end
 
+    test "whitespace control keeps the space after a template's brace", %{user: user} do
+      value = "{ 1 | plus: 41 }}"
+      var = %Var{key: "title", label: "T", type: :string, value: value}
+      entry = %Page{title: value, language: :en}
+
+      for code <- [
+            ".a { {{- entry.title | raw }}",
+            ".a {\n  {{- title | raw }}",
+            ".a { {%- if true %}{{ entry.title | raw }}{% endif %}"
+          ] do
+        html = render(block(module!(user, code), vars: [var]), entry)
+
+        refute html =~ ~r/^\.a\s*42/, "#{code} ran: #{html}"
+        assert html =~ "plus: 41", "#{code} printed #{html}"
+      end
+
+      assert render(block(module!(user, "<p>  {{- entry.title | upcase }}</p>"), []), %Page{title: "x", language: :en}) ==
+               "<p>X</p>"
+    end
+
+    test "a slot's child ending in a brace completes no delimiter with the next", %{user: user} do
+      var = %Var{key: "css", label: "C", type: :string, value: "{ 1 | plus: 41 }}"}
+
+      slot = %Block{
+        type: :slot,
+        active: true,
+        uid: Utils.generate_uid(),
+        vars: [],
+        refs: [],
+        children: [block(module!(user, ".a {"), []), block(module!(user, "<%= @css %>", %{type: :heex}), vars: [var])]
+      }
+
+      html = render(slot)
+
+      assert html =~ "plus: 41", "ran: #{html}"
+    end
+
+    test "a container's brace before its content completes no delimiter", %{user: user} do
+      var = %Var{key: "css", label: "C", type: :string, value: "{ 1 | plus: 41 }}"}
+
+      {:ok, container} =
+        Content.create_container(%{name: "B", namespace: "all", help_text: "x", code: ".a {{{ content }}"}, user)
+
+      html =
+        render(%Block{
+          type: :container,
+          active: true,
+          container_id: container.id,
+          uid: Utils.generate_uid(),
+          children: [block(module!(user, "<%= @css %>", %{type: :heex}), vars: [var])],
+          vars: [],
+          refs: []
+        })
+
+      assert html =~ "plus: 41", "ran: #{html}"
+    end
+
     @tag :capture_log
     test "a filter that decodes text completes no delimiter", %{user: user} do
       for code <- [
@@ -1253,17 +1310,19 @@ defmodule Brando.Villain.InertEditorTextTest do
             ~S({{ "{" }}{{ title | strip_html }}),
             ".a { {{- encoded | url_decode }}",
             ".a { {{- encoded | url_decode | strip }}",
+            ~S({{ "{" }}{{ encoded | url_decode | strip }}),
             ".a { {{- title | strip_html | strip }}"
           ],
-          value <- ["{ 1 | plus: 41 }}", "% if true %}42{% endif %}", " % if true %}42&#123;% endif %}"] do
+          value <- ["{ 1 | plus: 41 }}", " { 1 | plus: 41 }}", "% if true %}42{% endif %}"] do
         vars = [
           %Var{key: "title", label: "T", type: :string, value: value},
-          %Var{key: "encoded", label: "E", type: :string, value: URI.encode(value, &(&1 not in ~c"{}% &#;"))}
+          %Var{key: "encoded", label: "E", type: :string, value: URI.encode(value, &URI.char_unreserved?/1)}
         ]
 
         html = render(block(module!(user, code), vars: vars), %Page{title: value, language: :en})
 
         refute html =~ ~r/^(\.a )?42/, "#{code} ran #{value}: #{html}"
+        if value =~ "plus", do: assert(html =~ "plus: 41", "#{code} printed #{html}")
       end
     end
 

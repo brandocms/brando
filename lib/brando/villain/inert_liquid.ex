@@ -59,6 +59,17 @@ defmodule Brando.Villain.InertLiquid do
   def close_end(other), do: other
 
   @doc """
+  A template's whitespace control without its dash where only whitespace follows
+  a `{` of the template: `{ {{- x }}` would print the value right after the brace,
+  where it could complete a delimiter.
+  """
+  def keep_space_after_brace(template) do
+    if String.contains?(template, ["{{-", "{%-"]),
+      do: String.replace(template, ~r/\{(\s+\{[{%])-/, "{\\1"),
+      else: template
+  end
+
+  @doc """
   Plain braces again, for output no Liquid pass reads after it, such as a
   Markdown template's (`Brando.Villain.Markdown`).
   """

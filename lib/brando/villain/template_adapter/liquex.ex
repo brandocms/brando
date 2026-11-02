@@ -9,6 +9,7 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
   @behaviour Brando.Villain.TemplateAdapter
 
   alias Brando.Villain
+  alias Brando.Villain.InertLiquid
   alias Brando.Villain.TemplateAdapter
   alias Brando.Villain.TemplateView
   alias Liquex.Context
@@ -69,8 +70,12 @@ defmodule Brando.Villain.TemplateAdapter.Liquex do
 
   @impl true
   def render_container(container, children_html, _block, _opts) do
+    # A `{` right before it would join what the children print first
     container.code
-    |> String.replace("{{ content }}", children_html)
+    |> String.replace(~r/\{?\{\{ content \}\}/, fn
+      "{{{ content }}" -> "{" <> InertLiquid.close_delimiter(children_html)
+      _content -> children_html
+    end)
     |> Brando.Villain.Parser.replace_fragments()
   end
 

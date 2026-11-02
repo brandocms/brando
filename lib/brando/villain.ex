@@ -374,6 +374,7 @@ defmodule Brando.Villain do
       html
       |> ensure_string()
       |> strip_identifier_data_attributes()
+      |> Brando.Villain.InertLiquid.keep_space_after_brace()
 
     liquid? = String.contains?(html_string, ["{{", "{%"])
     Tracing.set_attributes(%{"brando.html_bytes": byte_size(html_string), "brando.liquid": liquid?})
@@ -420,6 +421,7 @@ defmodule Brando.Villain do
       template
       |> ensure_string()
       |> strip_identifier_data_attributes()
+      |> Brando.Villain.InertLiquid.keep_space_after_brace()
 
     key = :erlang.phash2({html_string, liquex_parser})
 

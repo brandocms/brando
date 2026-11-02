@@ -506,7 +506,7 @@ defmodule Brando.Villain.Parser do
 
   defp render_slot_child(child, opts) do
     type = if child.type == :module_entry, do: :module, else: child.type
-    apply(parser_module(opts), type, [child, opts])
+    opts |> parser_module() |> apply(type, [child, opts]) |> Brando.Villain.InertLiquid.close_end()
   end
 
   def text(%{text: text}, _) when text in [nil, ""], do: ""
