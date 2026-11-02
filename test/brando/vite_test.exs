@@ -81,6 +81,12 @@ defmodule Brando.ViteTest do
     pid_file |> File.read!() |> String.trim()
   end
 
+  # Errors other processes log while a test runs (a Presence shard left by an
+  # earlier test, say) land in the same capture; count only Vite's own.
+  defp vite_errors(log) do
+    log |> String.split("[error]") |> Enum.filter(&(&1 =~ "Vite for"))
+  end
+
   test "without node_modules, logs once what to run and returns", %{backend: backend} do
     File.mkdir_p!(backend)
 
@@ -89,7 +95,7 @@ defmodule Brando.ViteTest do
     assert log =~ "Vite for the admin did not start"
     assert log =~ "node_modules/vite/bin/vite.js"
     assert log =~ "mix brando.assets.setup"
-    assert length(String.split(log, "[error]")) == 2
+    assert length(vite_errors(log)) == 1
   end
 
   test "a directory that does not exist is named", %{tmp_dir: tmp_dir} do
@@ -128,7 +134,7 @@ defmodule Brando.ViteTest do
             assert watcher_pid(supervisor) == :undefined
           end)
 
-        assert [_, error] = String.split(log, "[error]")
+        assert [error] = vite_errors(log)
         assert error =~ "Vite for the admin"
         assert error =~ "port 4999 is already in use"
         assert error =~ "BRANDO_VITE_ADMIN_PORT and BRANDO_VITE_FRONTEND_PORT"
@@ -143,7 +149,7 @@ defmodule Brando.ViteTest do
 
     capture_io(fn ->
       log = capture_log(fn -> assert Brando.Vite.watch(backend) == :ok end)
-      assert [_, error] = String.split(log, "[error]")
+      assert [error] = vite_errors(log)
       assert error =~ "exited with status 3; its output is above"
     end)
   end
