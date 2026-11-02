@@ -27,7 +27,7 @@ defmodule BrandoAdmin.Authorization do
   which refuses a `:user` account's writes.
   """
   import Phoenix.Component, only: [assign: 3]
-  import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1, redirect: 2, put_flash: 3]
+  import Phoenix.LiveView, only: [attach_hook: 4, connected?: 1, redirect: 2, put_flash: 3, send_update: 2]
   alias Brando.Authorization.{Administration, Boundary, Engine, Scope}
   alias Brando.Tenant.{Access, Cache}
   alias BrandoAdmin.Authorization.Events
@@ -159,7 +159,6 @@ defmodule BrandoAdmin.Authorization do
 
   # Always halted: most views have no `handle_info` clause for it.
   defp legacy_info_hook({:authorization_changed, _}, socket) do
-    Boundary.next_read_generation()
     {_, socket} = legacy_recheck(socket, :broadcast)
     {:halt, socket}
   end
@@ -297,6 +296,7 @@ defmodule BrandoAdmin.Authorization do
             _ -> socket
           end
 
+        recheck_form_reads(socket)
         {:halt, socket}
 
       denied ->
@@ -305,6 +305,24 @@ defmodule BrandoAdmin.Authorization do
   end
 
   defp info_hook(_, socket), do: check(socket)
+
+  # An entry form's inputs keep what they decided may be read
+  # (`Boundary.read_generation/0`) and decide again only when they update:
+  # the form draws its fields again now, so an idle form shows the change
+  # without waiting for an edit. Form views and the frontend editor name
+  # their Form after the schema (`LiveView.Form.Hooks`).
+  defp recheck_form_reads(socket) do
+    schema = socket.assigns[:schema]
+
+    if schema && form_view?(socket.view) do
+      send_update(BrandoAdmin.Components.Form, id: "#{schema.__naming__().singular}_form", event: "recheck_reads")
+    end
+  end
+
+  defp form_view?(BrandoAdmin.FrontendEdit.EditorLive), do: true
+
+  defp form_view?(view),
+    do: function_exported?(view, :__authorization_resource__, 0) and match?({:form, _}, view.__authorization_resource__())
 
   defp check(socket) do
     scope = socket.assigns.authorization_scope

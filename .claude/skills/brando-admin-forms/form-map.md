@@ -75,6 +75,8 @@ reconnect after a save elsewhere: `relation_bases` (`_relation_bases`,
   `:open_image_editor_from_picker`, `:open_video_drawer`, video upload actions
   (`:get_video_upload_url`, `:video_upload_progress`, `:video_upload_complete`).
 - Drafts: `event: "draft_dirty"`, `"draft_part"`, `"draft_timeout"`, `handle_event("draft_`.
+- What the editor may read changed (`BrandoAdmin.Authorization`, or the entry read again):
+  `event: "recheck_reads"`, `assign_read_entry`; `read_generation` draws the fields again.
 
 ## Blocks, save collection and live preview
 

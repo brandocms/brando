@@ -173,6 +173,8 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:live_preview_cache_key, nil)
      |> assign(:preview_update, nil)
      |> assign(:blocks_wanting_entry, %{})
+     # What its editor may read can have changed since (`assign_read_entry/2`)
+     |> assign(:read_generation, Brando.Authorization.Boundary.read_generation())
      |> assign(:blocks_ready_for_sharing, false)
      |> assign(:fields_demanding_full_live_preview_rerender, [])
      |> assign(:fields_demanding_live_preview_reassign, [])
@@ -387,6 +389,11 @@ defmodule BrandoAdmin.Components.Form do
   # Another tab saved the entry (`{:entry_saved, …}` in LiveView.Form): the
   # fields this editor has not edited take the saved values.
   def update(%{event: "take_saved_entry"}, socket), do: {:ok, take_saved_entry(socket)}
+
+  # The editor's permissions changed (`BrandoAdmin.Authorization`): the
+  # fields draw again, and inputs that keep read decisions decide anew.
+  def update(%{event: "recheck_reads"}, socket),
+    do: {:ok, assign(socket, :read_generation, Brando.Authorization.Boundary.read_generation())}
 
   def update(%{action: :image_processed, image_id: id}, socket) do
     {:ok, update(socket, :processing_images, &Enum.reject(&1, fn proc_id -> proc_id == id end))}
@@ -2470,10 +2477,13 @@ defmodule BrandoAdmin.Components.Form do
 
   # The entry read again, as the form's base: what its relations name may be
   # readable otherwise now (a record read policy, with the same grants), so
-  # the read decisions inputs kept go (`Boundary.read_generation/0`).
+  # the read decisions inputs kept go (`Boundary.read_generation/0`). The
+  # fields draw again on `read_generation` (`form_tabs/1`), even when the
+  # entry reads as before: a policy may decide on another record.
   defp assign_read_entry(socket, entry) do
-    Brando.Authorization.Boundary.next_read_generation()
-    assign(socket, :entry, entry)
+    socket
+    |> assign(:read_generation, Brando.Authorization.Boundary.next_read_generation())
+    |> assign(:entry, entry)
   end
 
   defp maybe_query(id, form_blueprint) do
@@ -5076,6 +5086,7 @@ defmodule BrandoAdmin.Components.Form do
               form_cid={@myself}
               form_id={@id}
               schema={@schema}
+              read_generation={@read_generation}
             />
           </.form>
 
@@ -5389,6 +5400,10 @@ defmodule BrandoAdmin.Components.Form do
 
   defp presence_title(user, _count), do: presence_label(user)
 
+  # A change of `read_generation` calls `tab_fields/1` again, which draws
+  # every fieldset (`relations` and the fields' derived assigns change on
+  # each call), so inputs that keep read decisions (`Input.Entries`) update
+  # and decide anew. EntriesInputMaskingTest covers it.
   def form_tabs(assigns) do
     ~H"""
     <div
@@ -5406,6 +5421,7 @@ defmodule BrandoAdmin.Components.Form do
           form={@form}
           form_cid={@form_cid}
           form_id={@form_id}
+          read_generation={@read_generation}
         />
       </div>
     </div>
@@ -5573,8 +5589,10 @@ defmodule BrandoAdmin.Components.Form do
       {:ok, socket, changeset} ->
         draft = %{socket.assigns.draft | open?: socket.assigns.draft.issues != [], status: :ready}
 
+        # The copy is restored onto the entry `prepare_restore` read again
         {:noreply,
          socket
+         |> assign_read_entry(socket.assigns.entry)
          |> Drafts.put_draft(draft)
          |> apply_restored_changeset(changeset, :recovery_copy, draft.selected.payload["working_copy"])}
     end

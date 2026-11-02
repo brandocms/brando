@@ -220,7 +220,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
 
   # The groups that give a grant may be renamed, and come in any order: the
   # decisions keep while the grant keys stay the same
-  test "Entries reads nothing again when a group giving the grants is renamed" do
+  test "Entries reads nothing again when the groups giving the grants are renamed or reordered" do
     put_test_env(:authorization_mode, :groups)
     put_test_env(:tenancy_mode, :none)
     user = Brando.Test.Users.insert_user(permissions: ~w(brando.admin.access brando.pages.read))
@@ -228,6 +228,9 @@ defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
     Brando.Authorization.Boundary.put_scope(scope)
     on_exit(fn -> Brando.Authorization.Boundary.put_scope(nil) end)
     snapshot = Brando.Authorization.Engine.snapshot(scope)
+    # A second group gives each key too
+    grants = Map.new(snapshot.grants, fn {key, groups} -> {key, groups ++ [%{id: -1, name: "Second"}]} end)
+    snapshot = %{snapshot | grants: grants}
     Brando.Authorization.Boundary.put_presentation(snapshot)
 
     page = Brando.Factory.insert(:page, title: "Readable", uri: "readable-#{System.unique_integer([:positive])}")
@@ -240,8 +243,38 @@ defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
 
     renamed = Map.new(snapshot.grants, fn {key, groups} -> {key, Enum.map(groups, &%{&1 | name: "Renamed"})} end)
     Brando.Authorization.Boundary.put_presentation(%{snapshot | grants: renamed})
-
     assert queries(fn -> Entries.update(props, socket) end) == 0
+
+    reordered = Map.new(snapshot.grants, fn {key, groups} -> {key, Enum.reverse(groups)} end)
+    Brando.Authorization.Boundary.put_presentation(%{snapshot | grants: reordered})
+    assert queries(fn -> Entries.update(props, socket) end) == 0
+  end
+
+  # What the editor may read can change between the picker's last render
+  # and a pick (`Boundary.read_generation/0`): the pick reads the list again
+  test "Entries takes a pick only from the list read again after what may be read changed" do
+    put_test_env(:authorization_mode, :groups)
+    put_test_env(:tenancy_mode, :none)
+    user = Brando.Test.Users.insert_user(permissions: ~w(brando.admin.access brando.pages.read))
+    scope = Brando.Authorization.Scope.standalone(user)
+    Brando.Authorization.Boundary.put_scope(scope)
+    on_exit(fn -> Brando.Authorization.Boundary.put_scope(nil) end)
+    Brando.Authorization.Boundary.put_presentation(Brando.Authorization.Engine.snapshot(scope))
+
+    page = Brando.Factory.insert(:page, title: "Listed", uri: "listed-#{System.unique_integer([:positive])}")
+    a = Brando.Repo.insert!(%Identifier{schema: Brando.Pages.Page, entry_id: page.id, title: "Listed", language: :en})
+    form = to_form(Changeset.change(%Brando.Content.Block{block_identifiers: []}), as: "block")
+    props = %{id: "entries", field: form[:block_identifiers], opts: [sources: [{Brando.Pages.Page, %{}}]]}
+    {:ok, socket} = Entries.update(props, %Phoenix.LiveView.Socket{})
+    assert Enum.map(socket.assigns.available_identifiers, & &1.id) == [a.id]
+
+    # No longer listed, as a record read policy would decide
+    Brando.Repo.delete!(a)
+    Brando.Authorization.Boundary.next_read_generation()
+
+    assert {:noreply, socket} = Entries.handle_event("select_identifier", %{"id" => a.id}, socket)
+    assert socket.assigns.available_identifiers == []
+    refute_received {:phoenix, :send_update, _}
   end
 
   defp queries(fun) do

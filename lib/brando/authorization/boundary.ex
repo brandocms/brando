@@ -71,13 +71,21 @@ defmodule Brando.Authorization.Boundary do
   since a record read policy (an owner check) can decide otherwise with the
   same grants. Presentation that keeps read decisions between renders keys
   them on it, with the grants.
+
+  Group authorization only: without it everything may be read
+  (`readable_entries/1`, `identifiers/1`), so the count stays put and
+  nothing is read again for it.
   """
   def read_generation, do: Process.get(@read_generation_key, 0)
 
   def next_read_generation do
-    generation = read_generation() + 1
-    Process.put(@read_generation_key, generation)
-    generation
+    if Engine.enabled?() do
+      generation = read_generation() + 1
+      Process.put(@read_generation_key, generation)
+      generation
+    else
+      read_generation()
+    end
   end
 
   @doc "Runs scoped admin reads, restoring the previous process context afterwards."

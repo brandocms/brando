@@ -126,6 +126,39 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
     Repo.all(from l in join, where: l.parent_id == ^article.id, order_by: l.sequence, select: l.identifier_id)
   end
 
+  # As `Boundary` broadcasts after a write to groups or accounts. The view
+  # takes it, and the form then draws its fields again: the first render
+  # returns once the view has taken it, the next once the form has drawn.
+  defp permissions_changed(view) do
+    send(view.pid, {:authorization_changed, :all})
+    render(view)
+    render(view)
+  end
+
+  # Queries of the entries' tables (`pages`, `content_identifiers`) the view
+  # runs in `fun`
+  defp read_queries(view, fun) do
+    pid = view.pid
+    counter = :counters.new(1, [])
+    id = {__MODULE__, make_ref()}
+
+    :telemetry.attach(
+      id,
+      [:brando_integration, :repo, :query],
+      fn _event, _measurements, meta, _config ->
+        if self() == pid and meta[:source] in ["pages", "content_identifiers"], do: :counters.add(counter, 1, 1)
+      end,
+      nil
+    )
+
+    try do
+      fun.()
+      :counters.get(counter, 1)
+    after
+      :telemetry.detach(id)
+    end
+  end
+
   describe "with group authorization" do
     test "a selected entry the editor may not read shows without its title", %{conn: conn} = c do
       view = conn |> article_editor() |> open(c.article)
@@ -204,7 +237,7 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
       refute html =~ @masked
     end
 
-    # The next render after a change of permissions reads with the new ones
+    # A change of permissions reaches the input with no edit in between
     test "losing the grant to read it masks it", %{conn: conn} = c do
       put_test_env(:authorization_mode, :groups)
       keys = for action <- [:read, :update], do: Catalog.get(action, Article).key
@@ -217,11 +250,21 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
 
       # As `Groups` does on a change: the view reloads its grants
       Repo.delete_all(from g in Brando.Authorization.Grant, where: g.permission_key == "brando.pages.read")
-      send(view.pid, {:authorization_changed, :all})
-      change(view, put_in(params(view), ["article", "title"], "Typed"))
+      permissions_changed(view)
 
       refute render(view) =~ @secret
       assert field_html(view) =~ @masked
+    end
+
+    # What the input decided is kept between edits
+    test "an edit reads none of the entries again", %{conn: conn} = c do
+      view = conn |> article_editor() |> open(c.article)
+      view |> element("#article_related_entries-select-entries button", "Pages") |> render_click()
+
+      assert read_queries(view, fn ->
+               change(view, put_in(params(view), ["article", "title"], "Typed"))
+               render(view)
+             end) == 0
     end
   end
 
@@ -289,7 +332,56 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
       assert field_html(view) =~ @owned
     end
 
-    # As `Boundary` broadcasts after an account is written
+    test "an entry handed to the editor is named after the form reads its entry again", %{conn: conn} = c do
+      view = open(conn, c.article, "policy_entries")
+      refute render(view) =~ @owned
+
+      own(c.page, c.editor)
+      Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form, id: "article_form", action: :refresh_entry)
+
+      assert field_html(view) =~ @owned
+    end
+
+    test "an entry taken from the editor is masked when a recovery copy is restored", %{conn: conn} = c do
+      own(c.page, c.editor)
+      view = open(conn, c.article, "policy_entries")
+      assert field_html(view) =~ @owned
+      form_cid = cid_of(view, "#article_form-el")
+      main = params(view) |> put_in(["article", "title"], "Restored") |> Plug.Conn.Query.encode()
+
+      view
+      |> with_target(form_cid)
+      |> render_hook("draft_capture", %{"main" => main, "blocks" => %{}, "generation" => 1, "request_id" => 1})
+
+      copy =
+        Repo.one!(
+          from d in Brando.Drafts.EntryDraft,
+            where: d.entry_id == ^c.article.id and is_nil(d.resolved_at),
+            order_by: [desc: d.id],
+            limit: 1
+        )
+
+      own(c.page, c.other)
+      view |> with_target(form_cid) |> render_hook("draft_restore", %{"id" => copy.id})
+
+      assert params(view)["article"]["title"] == "Restored"
+      refute render(view) =~ @owned
+      assert field_html(view) =~ @masked
+    end
+
+    # As `Boundary` broadcasts after an account is written, with no edit after
+    test "an entry taken from the editor is masked once permissions change", %{conn: conn} = c do
+      own(c.page, c.editor)
+      view = open(conn, c.article, "policy_entries")
+      assert field_html(view) =~ @owned
+
+      own(c.page, c.other)
+      permissions_changed(view)
+
+      refute render(view) =~ @owned
+      assert field_html(view) =~ @masked
+    end
+
     test "a change of permissions that leaves the grants lists the picker again", %{conn: conn} = c do
       Repo.delete_all(from l in c.join, where: l.identifier_id == ^c.identifier.id)
       own(c.page, c.editor)
@@ -298,14 +390,23 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
       assert view |> element(options) |> render() =~ @owned
 
       own(c.page, c.other)
-      send(view.pid, {:authorization_changed, :all})
-      change(view, put_in(params(view), ["article", "title"], "Typed"))
-      refute view |> element(options) |> render() =~ @owned
+      permissions_changed(view)
 
-      # Nor is a pick from the list it showed before taken
-      view
-      |> with_target(cid_of(view, options))
-      |> render_hook("select_identifier", %{"id" => c.identifier.id})
+      refute view |> element(options) |> render() =~ @owned
+    end
+
+    # Picked from the list shown before the change, with no edit between
+    test "a pick from the picker's list before a change of permissions is checked", %{conn: conn} = c do
+      Repo.delete_all(from l in c.join, where: l.identifier_id == ^c.identifier.id)
+      own(c.page, c.editor)
+      view = open(conn, c.article, "policy_entries")
+      options = "#article_related_entries-entries-options"
+      picker = cid_of(view, options)
+      assert view |> element(options) |> render() =~ @owned
+
+      own(c.page, c.other)
+      send(view.pid, {:authorization_changed, :all})
+      view |> with_target(picker) |> render_hook("select_identifier", %{"id" => c.identifier.id})
 
       refute Enum.any?(params(view)["article"]["related_entries"] || %{}, fn {_, row} ->
                row["identifier_id"] == to_string(c.identifier.id)
@@ -351,6 +452,20 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
         view |> render() |> Floki.parse_document!() |> Floki.find("#article_related_entries-field-wrapper .field-value")
 
       assert Floki.text(value) =~ @secret
+    end
+
+    # Nothing it shows depends on what may be read: a change of permissions
+    # (any account written, a language switched) reads none of it again
+    test "a change of permissions reads none of the entries again", %{conn: conn} = c do
+      put_test_env(:authorization_mode, :legacy)
+      view = open(conn, c.article)
+      view |> element("#article_related_entries-select-entries button", "Pages") |> render_click()
+
+      assert read_queries(view, fn ->
+               permissions_changed(view)
+               change(view, put_in(params(view), ["article", "title"], "Typed"))
+               render(view)
+             end) == 0
     end
   end
 end
