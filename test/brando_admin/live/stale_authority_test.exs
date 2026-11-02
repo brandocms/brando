@@ -225,6 +225,25 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       assert SecurityPolicy.get().two_factor == before.two_factor
     end
 
+    # Between the auth plug's read and the hook's: an exit here would be an error page.
+    test "a role lowered during the HTTP render redirects", c do
+      test = self()
+      id = "stale-authority-dead-render-#{System.unique_integer([:positive])}"
+
+      :telemetry.attach(
+        id,
+        [:phoenix, :live_view, :handle_params, :start],
+        fn _, _, _, _ -> if self() == test, do: lower_unannounced(c.current_user, :user) end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(id) end)
+
+      conn = get(c.conn, "/admin/users/sign-in-policy")
+
+      assert redirected_to(conn) == "/admin"
+    end
+
     test "a new mount at the lowered role is refused", c do
       demote(c.current_user, :user)
       assert {:error, {:live_redirect, %{to: "/admin/users"}}} = live(c.conn, "/admin/users/sign-in-policy")
@@ -387,24 +406,9 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       title
     end
 
-    # A site no longer enterable ends the sticky views too, which takes LiveViewTest's
-    # one client with them. These tests look at the page's own view.
-    defp live_page(conn, path) do
-      {:ok, view, _} = live(conn, path)
-
-      for child <- live_children(view) do
-        :sys.replace_state(child.pid, fn state ->
-          Phoenix.PubSub.unsubscribe(Brando.pubsub(), "brando:authorization")
-          state
-        end)
-      end
-
-      view
-    end
-
     test "revoking ends the view, on a LiveView event's screen and on the page form", c do
-      list = live_page(c.editor_conn, "/admin/pages")
-      form = live_page(c.editor_conn, "/admin/pages/update/#{c.page.id}")
+      {:ok, list, _} = live(c.editor_conn, "/admin/pages")
+      {:ok, form, _} = live(c.editor_conn, "/admin/pages/update/#{c.page.id}")
 
       :ok = Access.revoke(c.editor, c.site)
 
@@ -414,18 +418,18 @@ defmodule BrandoAdmin.StaleAuthorityTest do
     end
 
     test "suspending the site ends the view", c do
-      form = live_page(c.editor_conn, "/admin/pages/update/#{c.page.id}")
+      {:ok, form, _} = live(c.editor_conn, "/admin/pages/update/#{c.page.id}")
       {:ok, _} = Setup.suspend_site(c.site, actor: c.current_user)
       assert_redirect(form, "/admin/access-denied")
     end
 
     test "archiving the site ends the view", c do
-      form = live_page(c.editor_conn, "/admin/pages/update/#{c.page.id}")
+      {:ok, form, _} = live(c.editor_conn, "/admin/pages/update/#{c.page.id}")
       {:ok, _} = Setup.suspend_site(c.site, actor: c.current_user)
       assert_redirect(form, "/admin/access-denied")
 
       {:ok, _} = Setup.activate_site(Registry.get_site(c.site.id), actor: c.current_user)
-      form = live_page(c.editor_conn, "/admin/pages/update/#{c.page.id}")
+      {:ok, form, _} = live(c.editor_conn, "/admin/pages/update/#{c.page.id}")
       {:ok, _} = Setup.archive_site(Registry.get_site(c.site.id), actor: c.current_user)
       assert_redirect(form, "/admin/access-denied")
     end
@@ -478,10 +482,7 @@ defmodule BrandoAdmin.StaleAuthorityTest do
     test "a superuser suspending the site the session is on stays on the sites screen", c do
       view = on_site(c)
 
-      # Told to this view alone: its sticky views end (below), and the test's client with them.
-      Repo.update_all(from(s in Brando.Sites.Site, where: s.id == ^c.site.id), set: [status: :suspended])
-      Cache.invalidate()
-      send(view.pid, {:authorization_changed, :all})
+      {:ok, _} = Setup.suspend_site(c.site, actor: c.current_user)
 
       assert :sys.get_state(view.pid).socket.assigns.current_site.id == c.site.id
       assert render_click(view, "refresh") =~ "suspended"
@@ -510,14 +511,43 @@ defmodule BrandoAdmin.StaleAuthorityTest do
 
     defp assigns_of(view), do: :sys.get_state(view.pid).socket.assigns
 
-    test "suspending the site ends the sticky views, and they rejoin on none or another", c do
-      refs =
-        for module <- [BrandoAdmin.Nav, BrandoAdmin.Chrome, BrandoAdmin.CommandPaletteLive],
-            do: c |> sticky(module) |> watch()
+    defp sticky_views(c) do
+      for module <- [BrandoAdmin.Nav, BrandoAdmin.Chrome, BrandoAdmin.CommandPaletteLive], do: sticky(c, module)
+    end
+
+    test "a broadcast leaves the sticky views alive on their site", c do
+      views = sticky_views(c)
+      refs = Enum.map(views, &watch/1)
 
       {:ok, _} = Setup.suspend_site(c.site, actor: c.current_user)
 
-      for ref <- refs, do: assert_remounted(ref)
+      for ref <- refs, do: refute_remounted(ref)
+      for view <- views, do: assert(assigns_of(view).current_site.id == c.site.id)
+    end
+
+    # The screen beside them may activate it again, and a `navigate` keeps the sticky views.
+    test "suspending and activating the site leaves the sticky views on it", c do
+      views = sticky_views(c)
+      refs = Enum.map(views, &watch/1)
+
+      {:ok, _} = Setup.suspend_site(c.site, actor: c.current_user)
+      {:ok, _} = Setup.activate_site(Registry.get_site(c.site.id), actor: c.current_user)
+
+      for ref <- refs, do: refute_remounted(ref)
+      for view <- views, do: assert(assigns_of(view).current_site.id == c.site.id)
+
+      nav = hd(views)
+      render_click(nav, "toggle_nav", %{"minimized" => "true"})
+      assert assigns_of(nav).minimized == "true"
+    end
+
+    test "an event while the site is not enterable ends a sticky view, which rejoins on none or another", c do
+      views = sticky_views(c)
+      {:ok, _} = Setup.suspend_site(c.site, actor: c.current_user)
+
+      for view <- views do
+        assert_event_ends_view(view, fn -> render_click(view, "stale_authority_probe") end)
+      end
 
       nav = sticky(c)
       refute assigns_of(nav).current_site
@@ -533,6 +563,18 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       assert assigns_of(nav).minimized == "true"
     end
 
+    test "a broadcast still ends a sticky view on a lowered role, and leaves on an inactive account", c do
+      nav = sticky(c)
+      ref = watch(nav)
+      demote(c.current_user)
+      assert_remounted(ref)
+
+      nav = sticky(c)
+      Repo.update_all(from(u in User, where: u.id == ^c.current_user.id), set: [active: false])
+      Brando.Authorization.Realtime.broadcast_changed()
+      assert_redirect(nav, "/admin/access-denied")
+    end
+
     test "a suspension no broadcast told of ends a sticky view on its next event", c do
       view = on_site(c)
       nav = find_live_child(view, "brando-nav")
@@ -543,8 +585,8 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       assert_event_ends_view(nav, fn -> render_click(nav, "toggle_nav", %{"minimized" => "true"}) end)
     end
 
-    # A rejoin asks the same cache: it would get the same site back, and a form's
-    # recovery event would end the view again. It refuses until the cache has heard.
+    # A rejoin asks this node's cache: while that holds the site it would get it back,
+    # and a form's recovery event would end the view again. It refuses meanwhile.
     test "a sticky view stays and refuses while a rejoin would resolve the same site", c do
       view = on_site(c)
       nav = find_live_child(view, "brando-nav")

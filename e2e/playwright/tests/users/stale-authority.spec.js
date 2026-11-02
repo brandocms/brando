@@ -37,29 +37,37 @@ const signedIn = async (browser, userAgent, role) => {
   return { user, context, page }
 }
 
+// The first of Phoenix's `rejoinAfterMs`, which the admin's LiveSocket leaves as it is
+const CHANNEL_REJOIN_MS = 1000
+
+// A rejoin opens no new websocket: it is a join sent on the one that stays.
+const countJoins = (page) => {
+  const joins = { count: 0 }
+  page.on('websocket', (socket) => {
+    socket.on('framesent', ({ payload }) => {
+      if (String(payload).includes('"phx_join"') && String(payload).includes('"lv:phx-')) joins.count += 1
+    })
+  })
+  return joins
+}
+
 test('an entry form stays, with what was typed, when an administrator becomes an editor', async ({ browser, sandboxUserAgent }) => {
   const { user, context, page } = await signedIn(browser, sandboxUserAgent, 'admin')
 
   try {
-    // A rejoin opens no new websocket: it is a join sent on the one that stays.
-    let joins = 0
-    page.on('websocket', (socket) => {
-      socket.on('framesent', ({ payload }) => {
-        if (String(payload).includes('"phx_join"') && String(payload).includes('"lv:phx-')) joins += 1
-      })
-    })
+    const joins = countJoins(page)
 
     await page.goto('/admin/pages/update/1')
     await syncLV(page)
     const title = page.getByLabel('Title', { exact: true })
     await title.fill('Typed before the demotion')
     await syncLV(page)
-    const joinsBefore = joins
+    const joinsBefore = joins.count
     // Gone if the page reloads, which would lose what was typed
     await page.evaluate(() => { window.staleAuthorityMarker = true })
 
     await fixture(sandboxUserAgent, 'set-role', { id: user.id, role: 'editor' })
-    await expect.poll(() => joins).toBeGreaterThan(joinsBefore)
+    await expect.poll(() => joins.count).toBeGreaterThan(joinsBefore)
     await syncLV(page)
 
     expect(await page.evaluate(() => window.staleAuthorityMarker)).toBe(true)
@@ -89,21 +97,25 @@ test('a superuser screen leaves when its superuser is demoted', async ({ browser
 test('saving someone else leaves an open form as it is', async ({ browser, sandboxUserAgent }) => {
   const { context, page } = await signedIn(browser, sandboxUserAgent, 'editor')
   const other = await fixture(sandboxUserAgent, 'user')
-  const sockets = []
 
   try {
+    const joins = countJoins(page)
+
     await page.goto('/admin/pages/update/1')
     await syncLV(page)
-    page.on('websocket', (socket) => sockets.push(socket))
     const title = page.getByLabel('Title', { exact: true })
     await title.fill('Typed by an editor')
     await syncLV(page)
+    const joinsBefore = joins.count
 
     await fixture(sandboxUserAgent, 'set-role', { id: other.id, role: 'admin' })
+    // Nothing to wait on when nothing happens: a view ended by mistake would rejoin
+    // when the channel's rejoin timer fires, so watch past it.
+    await page.waitForTimeout(CHANNEL_REJOIN_MS + 500)
     await syncLV(page)
 
+    expect(joins.count).toBe(joinsBefore)
     await expect(title).toHaveValue('Typed by an editor')
-    expect(sockets).toEqual([])
   } finally {
     await context.close()
   }

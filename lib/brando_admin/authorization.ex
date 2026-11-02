@@ -14,8 +14,12 @@ defmodule BrandoAdmin.Authorization do
     * a site that may no longer be entered sends the view to the access-denied page.
       Installation screens and the user's own password do not depend on a site. The
       layout's sticky views (navigation, chrome, command palette), which cannot tell
-      what screen they sit beside, end their process as for a lowered role, and rejoin
-      on the site the session resolves to now, or none;
+      what screen they sit beside and outlive a `navigate`, do nothing about their site
+      on the broadcast, so a site suspended and activated again leaves them on it. An
+      event of their own while it may not be entered ends their process as for a
+      lowered role, and they rejoin on the site the session resolves to now, or none.
+      While this node's cache still holds the site enterable, they refuse the event
+      instead;
     * otherwise, nothing happens: an editor whose authority did not change is left
       alone, and a role raised takes effect for the view's next check.
   """
@@ -143,7 +147,7 @@ defmodule BrandoAdmin.Authorization do
 
   # Always halted: most views have no `handle_info` clause for it.
   defp legacy_info_hook({:authorization_changed, _}, socket) do
-    {_, socket} = legacy_recheck(socket)
+    {_, socket} = legacy_recheck(socket, :broadcast)
     {:halt, socket}
   end
 
@@ -157,8 +161,8 @@ defmodule BrandoAdmin.Authorization do
     if requirement == {:update, :profile} or installation?(requirement, params), do: :ignore, else: :leave
   end
 
-  defp legacy_recheck(socket) do
-    %{current_user: user, current_site: site} = socket.assigns
+  defp legacy_recheck(socket, trigger \\ :own) do
+    %{current_user: user, current_site: site, legacy_site_rule: site_rule} = socket.assigns
     site_id = if site && Brando.Tenant.mode() == :multi, do: site.id
 
     case Access.legacy_standing(user.id, site_id) do
@@ -167,18 +171,21 @@ defmodule BrandoAdmin.Authorization do
 
       {role, enterable?} ->
         cond do
-          lowered?(user.role, role) -> remount()
-          enterable? or socket.assigns.legacy_site_rule == :ignore -> {:cont, legacy_hold_role(socket, role)}
-          socket.assigns.legacy_site_rule == :leave -> {:halt, redirect(socket, to: "/admin/access-denied")}
+          lowered?(user.role, role) -> remount(socket)
+          enterable? or site_rule == :ignore -> {:cont, legacy_hold_role(socket, role)}
+          site_rule == :leave -> {:halt, redirect(socket, to: "/admin/access-denied")}
+          trigger == :broadcast -> {:cont, legacy_hold_role(socket, role)}
           rejoins_on_same_site?(user, site) -> {:halt, socket}
-          true -> remount()
+          true -> remount(socket)
         end
     end
   end
 
   # A rejoin resolves the site from this node's cache (`Brando.Tenant.AdminContext`).
-  # Until the cache has heard of the change that is the same site, and the view would
-  # end again on the next event, a form's recovery among them: it refuses meanwhile.
+  # While that holds the site enterable a rejoin gets it back, and the view would end
+  # again on the next event, a form's recovery among them: it refuses meanwhile. No
+  # other node's write reaches this cache, so that can last until a registry write
+  # here or a restart.
   defp rejoins_on_same_site?(user, site) do
     cached = Cache.get_site(site.key)
     not is_nil(cached) and Access.can_access?(user, cached)
@@ -193,9 +200,13 @@ defmodule BrandoAdmin.Authorization do
 
   # Every gate a view set at mount is asked again, whatever it was. A shutdown, not
   # the session's sockets: closing a socket makes the client reload the page, which
-  # loses what a form holds, and a rejoin recovers it. No crash report either.
-  @spec remount() :: no_return()
-  defp remount, do: exit({:shutdown, :authority_changed})
+  # loses what a form holds, and a rejoin recovers it. No crash report either. An HTTP
+  # render has no client to rejoin, and an exit would be an error page.
+  defp remount(socket) do
+    if connected?(socket),
+      do: exit({:shutdown, :authority_changed}),
+      else: {:halt, redirect(socket, to: "/admin")}
+  end
 
   defp legacy_hold_role(%{assigns: %{current_user: %{role: role}}} = socket, role), do: socket
 
