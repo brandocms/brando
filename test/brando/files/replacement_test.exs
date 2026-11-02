@@ -137,19 +137,18 @@ defmodule Brando.Files.ReplacementTest do
     # Names stored before extensions were slugged, by hand, or while the config
     # did not slug keep an extension no slug can make
     test "takes the extension a file was stored with, however it was named", ctx do
-      refused =
-        for {opts, stored, client} <- [
-              {[slugify_filename: true], "scan.jpg_large", "scan.jpg_large"},
-              {[slugify_filename: true], "scan.abcdefghijklmnopqrst", "scan.abcdefghijklmnopqrst"},
-              {[slugify_filename: true], "x.jpeg", "x.jpeg"},
-              {[slugify_filename: false], "x.jpeg", "x.JPEG"}
-            ],
-            put_file_config(opts),
-            file = insert_file(ctx.user, stored),
-            Replacement.initiate(file.id, %{name: client, size: 20, type: "application/octet-stream"}) != {:ok, :server},
-            do: {opts, stored, client}
+      for {opts, stored, client} <- [
+            {[slugify_filename: true], "scan.jpg_large", "scan.jpg_large"},
+            {[slugify_filename: true], "scan.abcdefghijklmnopqrst", "scan.abcdefghijklmnopqrst"},
+            {[slugify_filename: true], "x.jpeg", "x.jpeg"},
+            {[slugify_filename: false], "x.jpeg", "x.JPEG"}
+          ] do
+        put_file_config(opts)
+        file = insert_file(ctx.user, stored)
+        meta = %{name: client, size: 20, type: "application/octet-stream"}
 
-      assert refused == []
+        assert {:ok, :server} = Replacement.initiate(file.id, meta), "#{client} replacing #{stored}"
+      end
 
       put_file_config(slugify_filename: true)
       file = insert_file(ctx.user, "scan.jpg_large")
