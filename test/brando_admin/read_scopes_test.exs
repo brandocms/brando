@@ -133,6 +133,62 @@ defmodule BrandoAdmin.ReadScopesTest do
       assert socket.assigns.selected_creator.id == creator.id
     end
 
+    test "reopening on another selection shows that one", c do
+      creator = insert_user(name: "Creator Name")
+      other = secret_page("Other page")
+      Repo.update!(Ecto.Changeset.change(other, creator_id: creator.id))
+      {:ok, other_identifier} = Brando.Content.create_identifier(Page, other)
+      as(insert_user(permissions: ["brando.admin.access" | @page_read]))
+
+      socket = picker(%{selected_identifier_id: c.identifier.id})
+      assert socket.assigns.selected_identifier.id == c.identifier.id
+
+      props = %{id: "picker", layout: :workspace, require_url: true, wanted_schemas: [Page]}
+      {:ok, socket} = SelectIdentifier.update(Map.put(props, :selected_identifier_id, other_identifier.id), socket)
+
+      assert socket.assigns.selected_identifier_id == other_identifier.id
+      assert socket.assigns.selected_identifier.id == other_identifier.id
+      assert socket.assigns.selected_creator.id == creator.id
+
+      {:ok, socket} = SelectIdentifier.update(Map.put(props, :selected_identifier_id, nil), socket)
+      assert socket.assigns.selected_identifier == nil
+      assert socket.assigns.selected_creator == nil
+    end
+
+    test "an unreadable selection is not read again on each update", c do
+      as(insert_user(permissions: ~w(brando.admin.access brando.images.read)))
+      socket = picker(%{selected_identifier_id: c.identifier.id})
+
+      props = %{
+        id: "picker",
+        layout: :workspace,
+        require_url: true,
+        wanted_schemas: [Page],
+        selected_identifier_id: c.identifier.id
+      }
+
+      assert queries(fn -> {:ok, _} = SelectIdentifier.update(props, socket) end) == 0
+    end
+
+    test "a selection made in the picker survives the update that echoes it", c do
+      Repo.update!(Ecto.Changeset.change(c.identifier, url: "/secret"))
+      as(insert_user(permissions: ["brando.admin.access" | @page_read]))
+      socket = picker()
+
+      {:noreply, socket} = SelectIdentifier.handle_event("select_identifier", %{"id" => c.identifier.id}, socket)
+      assert socket.assigns.selected_identifier.id == c.identifier.id
+
+      props = %{
+        id: "picker",
+        layout: :workspace,
+        require_url: true,
+        wanted_schemas: [Page],
+        selected_identifier_id: c.identifier.id
+      }
+
+      assert queries(fn -> {:ok, _} = SelectIdentifier.update(props, socket) end) == 0
+    end
+
     test "the rich text dialog treats an unreadable destination as unavailable, keeping the saved address", c do
       Brando.Repo.update!(Ecto.Changeset.change(c.identifier, url: "/secret"))
       as(insert_user(permissions: ~w(brando.admin.access brando.images.read)))

@@ -497,6 +497,7 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
     socket
     |> assign(:selected_identifier, identifier)
     |> assign(:selected_identifier_id, identifier.id)
+    |> assign(:loaded_identifier_id, identifier.id)
     |> assign(:selected_creator, selected_creator(identifier))
     |> then(&{:noreply, &1})
   end
@@ -510,12 +511,14 @@ defmodule BrandoAdmin.Components.Content.SelectIdentifier do
       end
 
     # By id: a selection the account may not read has an id and no identifier,
-    # and stays stored until someone chooses another.
-    if socket.assigns.selected_identifier_id != id || !Map.has_key?(socket.assigns, :selected_creator) do
+    # and stays stored until someone chooses another. `assign/2` has already put
+    # an incoming id on the socket, so what was read is tracked on its own.
+    if Map.fetch(socket.assigns, :loaded_identifier_id) != {:ok, id} do
       identifier = if id, do: Brando.Content.get_identifier!(id)
 
       socket
       |> assign(:selected_identifier_id, id)
+      |> assign(:loaded_identifier_id, id)
       |> assign(:selected_identifier, identifier)
       |> assign(:selected_creator, selected_creator(identifier))
     else
