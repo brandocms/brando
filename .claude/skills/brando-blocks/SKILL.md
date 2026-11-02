@@ -147,6 +147,10 @@ module_origin, container_origin, palette_origin (:local/:shared)
 `module_version` and `sync_uid` are server-controlled and deliberately absent from
 `@block_attrs` — see section 14.
 
+`uid` goes into the marker comments of edit-mode pages. A new uid format, derived ones
+included, has to pass `Block.valid_uid?/1`, which the changeset, proposals, recovery and
+the markers all use.
+
 ### Block Relations
 ```
 belongs_to: container, fragment, module, palette, parent (self-ref)

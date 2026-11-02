@@ -126,6 +126,46 @@ defmodule BrandoAdmin.Components.Form.Block.RecoverBlocksSecurityTest do
     socket.assigns.seed_forms |> Map.fetch!(uid) |> Map.fetch!(:source)
   end
 
+  test "a badly shaped missing uid is not recovered", ctx do
+    %{user: user, page: page, module: module} = ctx
+    bad_uid = "x>] --><!-- [+:B<y"
+
+    params =
+      payload(base_block(module, user),
+        missing_uids: [bad_uid],
+        extra_forms: %{
+          "entry_block_form-#{bad_uid}" => %{
+            "entry_block" => %{"sequence" => "0", "block" => base_block(module, user, %{"uid" => bad_uid})}
+          }
+        }
+      )
+
+    assert {:reply, %{recovered: []}, socket} = recover(params, socket(user, page))
+    assert socket.assigns.seed_forms == %{}
+    assert socket.assigns.block_ops.order == []
+  end
+
+  test "a recovery copy's uid is recovered", ctx do
+    %{user: user, page: page, module: module} = ctx
+    uid = "rootA-kept-2"
+
+    params =
+      module
+      |> base_block(user, %{"uid" => uid})
+      |> payload(
+        missing_uids: [uid],
+        extra_forms: %{
+          "entry_block_form-#{uid}" => %{
+            "entry_block" => %{"sequence" => "0", "block" => base_block(module, user, %{"uid" => uid})}
+          }
+        }
+      )
+      |> Map.put("rootUids", [uid])
+
+    assert {:reply, %{recovered: [^uid]}, socket} = recover(params, socket(user, page))
+    assert recovered_cs(socket, uid).valid?
+  end
+
   test "a forged block_id cannot attach the entry to another entry's block", ctx do
     %{user: user, page: page, module: module, other_entry_block: other} = ctx
 

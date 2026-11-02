@@ -154,6 +154,11 @@ msgstr ""
 msgid "A target needs a numeric id."
 msgstr ""
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "A uid can only hold letters, digits, - and _, and cannot end with -."
+msgstr ""
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "After %{block}"

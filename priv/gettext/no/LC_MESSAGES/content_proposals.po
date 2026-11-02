@@ -154,6 +154,11 @@ msgstr "Et mål er {content_type, id} eller {new: ref}."
 msgid "A target needs a numeric id."
 msgstr "Et mål trenger en numerisk id."
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "A uid can only hold letters, digits, - and _, and cannot end with -."
+msgstr "En uid kan bare inneholde bokstaver, sifre, - og _, og kan ikke slutte med -."
+
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "After %{block}"

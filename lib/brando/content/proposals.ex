@@ -364,6 +364,7 @@ defmodule Brando.Content.Proposals do
 
   defp check_block(%InsertBlock{} = op, schema, tree, actor, proposal) do
     with :ok <- new_uid(op.uid, tree),
+         :ok <- new_ref_uids(op.ref_uids),
          {:ok, module, type} <- insertable(op, schema, tree),
          :ok <- sibling_placement(op.placement, op.parent, op.uid, tree) do
       node = %{
@@ -750,13 +751,30 @@ defmodule Brando.Content.Proposals do
        )}
 
   defp new_uid(uid, tree) do
-    taken? =
-      BlockTree.fetch(tree, uid) != nil or
-        Repo.one(from(b in Content.Block, where: b.uid == ^uid, select: true, limit: 1)) == true
+    cond do
+      not Content.Block.valid_uid?(uid) ->
+        {:error, invalid_uid()}
 
-    if taken?,
-      do: {:error, problem(:duplicate_uid, dgettext("content_proposals", "Another block already uses this uid."))},
-      else: :ok
+      BlockTree.fetch(tree, uid) != nil or
+          Repo.one(from(b in Content.Block, where: b.uid == ^uid, select: true, limit: 1)) == true ->
+        {:error, problem(:duplicate_uid, dgettext("content_proposals", "Another block already uses this uid."))}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp new_ref_uids(ref_uids) do
+    if ref_uids |> Map.values() |> Enum.all?(&Content.Block.valid_uid?/1),
+      do: :ok,
+      else: {:error, invalid_uid()}
+  end
+
+  defp invalid_uid do
+    problem(
+      :invalid_uid,
+      dgettext("content_proposals", "A uid can only hold letters, digits, - and _, and cannot end with -.")
+    )
   end
 
   # Which module a block may be built from depends on where it goes: the

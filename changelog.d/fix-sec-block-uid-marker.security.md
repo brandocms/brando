@@ -1,0 +1,1 @@
+- A block uid must now hold only letters, digits, `-` and `_` and not end with `-`: proposals report any other uid as a problem, block changesets and block recovery refuse it, and frontend edit and live preview leave markers out for a row already stored with one, so a uid can no longer add markup to an edit-mode page.
