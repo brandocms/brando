@@ -99,8 +99,7 @@ defmodule Brando.Assets.SiteAssets do
     with %SiteAssetSet{} = asset_set <- Repo.get(SiteAssetSet, set_id, @public_opts),
          {:ok, _cached} <- build_cache(asset_set),
          {:ok, active_set} <- persist_activation(asset_set) do
-      drop_active(scope_key(active_set))
-      CacheSync.broadcast(__MODULE__, {:active, scope_key(active_set)})
+      active_changed(scope_key(active_set))
       {:ok, active_set}
     else
       nil -> {:error, :asset_set_not_found}
@@ -117,8 +116,7 @@ defmodule Brando.Assets.SiteAssets do
            |> Repo.update_all([set: [active: false]], @public_opts)
          end) do
       {:ok, _updated} ->
-        drop_active(scope_key(site))
-        CacheSync.broadcast(__MODULE__, {:active, scope_key(site)})
+        active_changed(scope_key(site))
         :ok
 
       {:error, reason} ->
@@ -585,6 +583,13 @@ defmodule Brando.Assets.SiteAssets do
 
   # Dropped rather than replaced after a write, as two writes here may finish
   # in either order: the next read loads the one committed last
+  # Inside a transaction, once it commits: a fill here before then would read
+  # the set it replaces and keep it
+  defp active_changed(scope_key) do
+    Repo.after_commit({__MODULE__, :active, scope_key}, fn -> drop_active(scope_key) end)
+    CacheSync.broadcast(__MODULE__, {:active, scope_key})
+  end
+
   defp drop_active(scope_key) do
     drop(cache_key(scope_key))
     invalidate_vite(scope_site_id(scope_key))

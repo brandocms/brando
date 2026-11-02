@@ -313,6 +313,24 @@ defmodule Brando.CacheSyncTest do
       assert %{set: %{id: ^second_id}} = SiteAssets.cached()
     end
 
+    test "an activation inside a transaction drops this node's copy once it commits" do
+      {:ok, first} = register_set("20260816_one")
+      {:ok, second} = register_set("20260816_two")
+      {:ok, _active} = SiteAssets.activate_set(first.id)
+      first_id = first.id
+      assert %{set: %{id: ^first_id}} = SiteAssets.cached()
+
+      Brando.Repo.transaction(fn ->
+        assert {:ok, _active} = SiteAssets.activate_set(second.id)
+        # Dropped now, a request elsewhere would read the uncommitted switch's
+        # predecessor and keep it
+        assert %{set: %{id: ^first_id}} = SiteAssets.cached()
+      end)
+
+      second_id = second.id
+      assert %{set: %{id: ^second_id}} = SiteAssets.cached()
+    end
+
     test "a revert and an activation here leave the one committed last, whichever finishes first" do
       {:ok, first} = register_set("20260816_one")
       {:ok, second} = register_set("20260816_two")
@@ -410,6 +428,18 @@ defmodule Brando.CacheSyncTest do
       assert Task.await(fill) == MapSet.new([module.id])
 
       assert SharedLibrary.enabled_ids(site, :module) == MapSet.new()
+    end
+
+    test "an allowlist change inside a transaction drops this node's copy once it commits" do
+      site = insert_site!("acme")
+      SharedLibrary.Cache.put(site.id, :module, [123])
+
+      Brando.Repo.transaction(fn ->
+        assert :ok = SharedLibrary.set_enabled(site, :module, [])
+        assert SharedLibrary.Cache.get(site.id, :module) == MapSet.new([123])
+      end)
+
+      refute SharedLibrary.Cache.get(site.id, :module)
     end
 
     test "two allowlist changes here leave the one committed last, whichever finishes first" do

@@ -87,8 +87,9 @@ defmodule Brando.Content.SharedLibrary do
     with :ok <- validate_shared_ids(definition.schema, ids),
          {:ok, _result} <- replace_access_rows(site.id, definition, ids) do
       # Dropped rather than replaced, as two changes here may finish in either
-      # order: the next read loads the one committed last
-      Cache.invalidate(site.id, kind)
+      # order: the next read loads the one committed last. Inside a
+      # transaction, once it commits, so a read before then is not kept.
+      Repo.after_commit({Cache, site.id, kind}, fn -> Cache.invalidate(site.id, kind) end)
       Brando.CacheSync.broadcast(Cache, {site.id, kind})
       :ok
     end
