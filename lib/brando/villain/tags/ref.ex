@@ -2,8 +2,10 @@ defmodule Brando.Villain.Tags.Ref do
   @moduledoc false
   @behaviour Liquex.Tag
 
+  alias Brando.Villain.InertLiquid
   alias Brando.Villain.LiquexParser.TagGrammar
   alias Brando.Villain.RenderSourceQuery
+  alias Brando.Villain.TemplateView
   alias Ecto.Changeset
 
   @brando_env Application.compile_env(:brando, :env)
@@ -18,7 +20,7 @@ defmodule Brando.Villain.Tags.Ref do
   def render([ref: ref], context) do
     {:field, [_ | [{:key, ref_name}]]} = ref
     brando_render_for_admin = Access.get(context, :brando_render_for_admin)
-    {evaled_ref, _context} = Liquex.Argument.eval(ref, context)
+    evaled_ref = TemplateView.eval(ref, context)
 
     {:ok, modules} = RenderSourceQuery.list_modules(@module_cache_ttl)
     {:ok, containers} = RenderSourceQuery.list_containers(@container_cache_ttl)
@@ -54,7 +56,7 @@ defmodule Brando.Villain.Tags.Ref do
   defp render_ref(_, %{active: false}, _id, ref_name, _, _), do: "<!-- !a[#{ref_name}] -->"
 
   defp render_ref(parser, %{data: block, description: description}, id, ref_name, true, opts) do
-    rendered_ref = apply(parser, parser_function(parser, block.type), [block.data, opts])
+    rendered_ref = render_block_data(parser, block, opts)
 
     """
     <section phx-click="edit_ref" b-module-id="#{id}" b-ref="#{ref_name}" b-ref-desc="#{description}">
@@ -72,11 +74,27 @@ defmodule Brando.Villain.Tags.Ref do
          opts
        ) do
     block = Changeset.apply_changes(block_cs)
-    apply(parser, parser_function(parser, block.type), [block.data, opts])
+    render_block_data(parser, block, opts)
   end
 
   defp render_ref(parser, %{data: block, description: _description}, _id, _ref_name, _, opts) do
-    apply(parser, parser_function(parser, block.type), [block.data, opts])
+    render_block_data(parser, block, opts)
+  end
+
+  # What a ref renders is text to the entry's final Liquid pass, however its
+  # parser made it, alt attributes and a project's own parser included. An SVG
+  # or HTML ref is a superuser's template, and a slot holds modules' and
+  # containers' output. A Markdown render has no final pass.
+  defp render_block_data(Brando.Villain.Markdown = parser, block, opts),
+    do: apply(parser, parser_function(parser, block.type), [block.data, opts])
+
+  defp render_block_data(parser, %{type: type} = block, opts) when type in ~w(svg html blocks),
+    do: apply(parser, parser_function(parser, type), [block.data, opts])
+
+  defp render_block_data(parser, block, opts) do
+    parser
+    |> apply(parser_function(parser, block.type), [block.data, opts])
+    |> InertLiquid.encode()
   end
 
   @doc false

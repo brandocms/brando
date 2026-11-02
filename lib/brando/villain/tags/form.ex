@@ -24,7 +24,9 @@ defmodule Brando.Villain.Tags.Form do
 
   alias Brando.Forms
   alias Brando.Forms.Delivery
+  alias Brando.Villain.InertLiquid
   alias Brando.Villain.LiquexParser.TagGrammar
+  alias Brando.Villain.TemplateView
 
   @impl true
   def parse, do: TagGrammar.parse(:form)
@@ -33,7 +35,7 @@ defmodule Brando.Villain.Tags.Form do
   def render(parsed, context) do
     source = Keyword.fetch!(parsed, :source)
     args = Keyword.get(parsed, :args, [])
-    {evaled_source, _context} = Liquex.Argument.eval(source, context)
+    evaled_source = TemplateView.eval(source, context)
     language = Liquex.Context.get(context, "language")
 
     case resolve(evaled_source, language) do
@@ -44,12 +46,12 @@ defmodule Brando.Villain.Tags.Form do
         assigns =
           args
           |> Map.new(fn arg ->
-            {{key, value}, _context} = Liquex.Argument.eval(arg, context)
-            {key, value}
+            TemplateView.eval(arg, context)
           end)
           |> assigns(form, Liquex.Context.get(context, "brando_render_for_admin") == true)
 
-        {[render_component(assigns)], context}
+        # Editors' text in it (a label, a help text) is text to the final pass
+        {[assigns |> render_component() |> InertLiquid.encode()], context}
     end
   end
 

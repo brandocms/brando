@@ -195,25 +195,27 @@ Besides `{% ref %}` and `{% headless_ref %}`:
 
 ### Writing templates safely
 
-HEEx escapes what it prints; Liquid prints values as Brando hands them over:
+Only module, container, SVG and HTML ref templates run as Liquid. What editors
+write is data: Liquid in a ref, a var, a global or a caption prints as text.
+
+HEEx escapes what it prints; Liquid in a value it prints is text. Liquid prints
+values as Brando gives them:
 
 - Every var and global holding text arrives HTML-escaped, whatever its type
-  (`string`, `text`, `select`, `color`, `date`, `datetime`, a link var's
-  `.value` and `.link_text`; by key, in `entries`, in table rows), as do
-  `links` and the `link_url`/`link_text` filters: `{{ title }}` prints the
-  text as typed, braces included (Liquid in it is not run), also in a
-  double-quoted attribute; a comparison or `truncate` sees the escaped text.
-  Markup belongs in a `rich_text` var.
+  (a link var's `.value` and `.link_text` too; by key, in `entries`, in table
+  rows), as do `links` and the `link_url`/`link_text` filters; a comparison or
+  `truncate` sees the escaped text. Markup belongs in a `rich_text` var.
 - `rich_text` vars and globals arrive sanitized, to print between tags.
-- `escape` never encodes a character reference twice; `url_encode`,
-  `slugify` and `markdown` read an escaped var as the text it stands for.
+- `entry` and its preloads, `identity`, `configs`, `navigation`, `request`,
+  `url`, ref data read through `refs` and a datasource's `entries` read the same
+  way: `{{ entry.title }}` prints as text. A field declared `:rich_text` in the
+  entry's form, and a text ref's `text`, arrive sanitized.
+- `{{ entry.embed | raw }}` is a template's opt-in, for a plain field whose
+  markup you trust.
 
-Entry fields (`entry.title`), `identity`, ref data read through `refs` and
-filter output print as stored. So:
+So:
 
-- In an attribute, write double quotes around the output and pass such text
-  through `escape`, which encodes `"`, `'`, `&`, `<` and `>`; between tags,
-  `escape` it as well.
+- In an attribute, write double quotes around the output.
 - Never put rich text in an attribute as it is:
   `content="{{ intro | strip_html | escape_once }}"`.
 - Do not `url_decode` a value you print: it turns `%3C` back into `<` after
@@ -228,11 +230,38 @@ filter output print as stored. So:
 <a href="/search?q={{ query | url_decode }}">{{ query | url_decode }}</a>
 
 {%- comment -%} Do {%- endcomment -%}
-<figure title="{{ entry.title | escape }}">
+<figure title="{{ entry.title }}">
 <a href="/search?q={{ query | url_encode }}">{{ query }}</a>
 ```
 
 <!-- usage-rules:end -->
+
+### What templates read
+
+A character reference in entry text (`&shy;`) prints as the character it names.
+In `<script>` and `<style>`, where character references stay literal, a brace in
+a value a HEEx template prints shows as `&#123;`. Liquid in a HEEx template's
+own code runs.
+
+Tags (`{% picture %}`, `{% video %}`, `{% route %}`) read the record or the value
+itself, and filters on a record (`media_url`, `absolute_url`, `date`, `i18n`) get
+the record. A filter's text result goes back to being text; a filter of your own
+that makes markup returns `{:safe, html}`. A record or map it returns reads like
+entry data, also inside a list, and a filter given that map gets its credential
+fields empty. A tag of your own reads its argument with `Brando.Villain.TemplateView.eval/2`, and escapes what
+it prints.
+
+`escape` never encodes twice; `url_encode`, `slugify` and `markdown` read escaped
+text as the text it stands for.
+
+Liquid in a value printed with `raw` stays text. `raw` reads the text as what it stands for, so a rich-text field does not need
+it. A comparison sees escaped text: `{% if entry.title == "R&D" %}` compares with
+`R&amp;D`.
+
+A user shows only `id`, `name`, `email`, `language`, `role`, `avatar`, `active`,
+`job_title`, `same_as` and its timestamps. No field with a credential word in its
+name (`password`, `secret`, `token`, `api_key` and the like) reaches a template,
+through `{% inspect %}` either.
 
 ## HTML refs
 

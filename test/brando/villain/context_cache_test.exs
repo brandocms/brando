@@ -42,7 +42,8 @@ defmodule Brando.Villain.ContextCacheTest do
 
     context = Brando.Villain.get_base_context(%{language: "en"})
 
-    assert Liquex.Context.get(context, "configs") == %{lockdown_enabled: true}
+    assert Brando.Villain.raw_context(context, "configs") == %{lockdown_enabled: true}
+    assert Liquex.Argument.eval({:field, [key: "configs", key: "lockdown_enabled"]}, context) |> elem(0) == true
   end
 
   defp restore(key, nil), do: Cache.del(key)

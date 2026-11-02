@@ -516,7 +516,7 @@ defmodule Brando.Notes do
 
   defp do_strip_marks(html) do
     @span
-    |> Regex.split(html, include_captures: true)
+    |> Regex.split(html, include_captures: true, trim: true)
     |> Enum.reduce({[], []}, &strip_part/2)
     |> elem(0)
     |> Enum.reverse()
@@ -530,20 +530,25 @@ defmodule Brando.Notes do
     cond do
       Regex.match?(~r{\A</span\s*>\z}i, part) ->
         case stack do
-          [:note | rest] -> {out, rest}
+          [:note | rest] -> {close_brace(out), rest}
           [_ | rest] -> {[part | out], rest}
           [] -> {[part | out], []}
         end
 
       Regex.match?(~r/\A<span\b[^>]*>\z/i, part) ->
         if String.contains?(part, @mark_attribute),
-          do: {out, [:note | stack]},
+          do: {close_brace(out), [:note | stack]},
           else: {[part | out], [:keep | stack]}
 
       true ->
         {[part | out], stack}
     end
   end
+
+  # Taking a mark away must not join a brace to what follows the mark, which a
+  # later Liquid pass would read as a delimiter.
+  defp close_brace([last | out]), do: [Brando.Villain.InertLiquid.close_end(last) | out]
+  defp close_brace([]), do: []
 
   ## Entry lifecycle
 

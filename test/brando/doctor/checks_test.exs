@@ -953,6 +953,37 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "Liquid in editor text" do
+    test "a ref or var holding Liquid is a warning; an SVG or HTML ref is a template" do
+      assert %Result{status: :ok} = Checks.EditorLiquid.run(context())
+
+      module = Factory.insert(:module, code: "{% ref refs.text %}")
+
+      for {name, data} <- [
+            {"copy", %{type: "text", data: %{text: "<p>{{ entry.title }}</p>"}}},
+            {"tag", %{type: "text", data: %{text: "<p>{% if x %}</p>"}}},
+            {"plain", %{type: "text", data: %{text: "<p>{ one brace }</p>"}}},
+            {"embed", %{type: "html", data: %{text: "<div>{{ entry.title }}</div>"}}}
+          ] do
+        Brando.Repo.insert_all("content_refs", [
+          %{
+            name: name,
+            uid: Brando.Utils.generate_uid(),
+            module_id: module.id,
+            data: data,
+            inserted_at: NaiveDateTime.utc_now(:second),
+            updated_at: NaiveDateTime.utc_now(:second)
+          }
+        ])
+      end
+
+      result = Checks.EditorLiquid.run(context())
+      assert result.status == :warning
+      assert result.summary == "2 refs and vars hold Liquid, which prints as text"
+      assert Enum.sort(result.items) == ["copy on module ##{module.id}", "tag on module ##{module.id}"]
+    end
+  end
+
   describe "Sitemap" do
     test "not generated is an error" do
       assert %Result{status: :error, summary: "not generated"} = Checks.Sitemap.evaluate([{nil, nil}], @now)

@@ -19,6 +19,7 @@ defmodule Brando.Villain do
   alias Brando.Villain.Parser
   alias Brando.Villain.RenderScope
   alias Brando.Villain.RenderSourceQuery
+  alias Brando.Villain.TemplateView
   alias Liquex.Context
 
   @brando_env Application.compile_env(:brando, :env)
@@ -51,6 +52,10 @@ defmodule Brando.Villain do
   @palette_cache_ttl (@brando_env in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
   @fragment_cache_ttl (@brando_env in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
   @block_module Module.concat(["Brando", "Content", "Block"])
+
+  # Data no template wrote: what Liquid reads of it prints as text
+  # (`Brando.Villain.TemplateView`).
+  @view_keys ~w(entry identity configs navigation request url)
 
   @doc """
   Parse blocks
@@ -110,7 +115,7 @@ defmodule Brando.Villain do
       |> Enum.reduce([], fn
         nil, acc -> acc
         %{block: %{marked_as_deleted: true}}, acc -> acc
-        %{block: block}, acc -> [parse_node(parser, block, opts_map) | acc]
+        %{block: block}, acc -> [parser |> parse_node(block, opts_map) |> Brando.Villain.InertLiquid.close_end() | acc]
       end)
       |> Enum.reverse()
 
@@ -272,6 +277,18 @@ defmodule Brando.Villain do
     |> add_to_context("navigation", navigation)
   end
 
+  @doc """
+  The base context for a template that makes no HTML, such as an entry's URL or
+  its identifier: entry data as it is, not as text for a page.
+  """
+  def plain_context(entry) do
+    context = entry |> get_base_context() |> Brando.Villain.Markdown.put_template_flag(true)
+
+    Enum.reduce(@view_keys, context, fn key, acc ->
+      Context.assign(acc, key, raw_context(acc, key))
+    end)
+  end
+
   def create_context(vars) do
     Context.new(
       vars,
@@ -306,8 +323,12 @@ defmodule Brando.Villain do
   # reads them unescaped (`raw_context/2`).
   def add_to_context(context, "globals" = key, global_sets) do
     context
-    |> Context.assign(key, globals(global_sets, true))
+    |> Context.assign(key, TemplateView.wrap(globals(global_sets, true), :processed))
     |> put_raw(key, globals(global_sets, false))
+  end
+
+  def add_to_context(context, key, value) when key in @view_keys do
+    context |> Context.assign(key, TemplateView.wrap(value)) |> put_raw(key, value)
   end
 
   def add_to_context(context, key, value) do
@@ -316,8 +337,8 @@ defmodule Brando.Villain do
 
   @doc """
   The value of `key` in `context` for a template that escapes what it
-  prints (HEEx): `globals` and `links` unescaped, as Liquid does not get
-  them, anything else as it is in the context.
+  prints (HEEx): `globals`, `links` and entry data unescaped, as Liquid does
+  not get them, anything else as it is in the context.
   """
   def raw_context(%Context{private: private} = context, key) do
     case Map.fetch(private, {:brando_raw, key}) do
@@ -336,6 +357,9 @@ defmodule Brando.Villain do
 
   defp global_value({key, global}, escape?), do: {key, global_value(global, escape?)}
 
+  defp global_value(%{type: type, value: value}, true) when type in [:rich_text, :html],
+    do: value |> Brando.RichText.render_html() |> Brando.Villain.InertLiquid.encode_all()
+
   defp global_value(%{type: type, value: value}, _escape?) when type in [:rich_text, :html],
     do: Brando.RichText.render_html(value)
 
@@ -349,11 +373,13 @@ defmodule Brando.Villain do
       html
       |> ensure_string()
       |> strip_identifier_data_attributes()
+      |> Brando.Villain.InertLiquid.keep_space_after_brace()
 
     liquid? = String.contains?(html_string, ["{{", "{%"])
     Tracing.set_attributes(%{"brando.html_bytes": byte_size(html_string), "brando.liquid": liquid?})
 
-    # Refs can emit Liquid for this final pass. Ordinary rendered HTML needs
+    # A container's template and a HEEx module's own Liquid run in this final
+    # pass; what editors write reaches it inert. Ordinary rendered HTML needs
     # only the identifier cleanup, without allocating another parsed document.
     rendered =
       if liquid? do
@@ -394,6 +420,7 @@ defmodule Brando.Villain do
       template
       |> ensure_string()
       |> strip_identifier_data_attributes()
+      |> Brando.Villain.InertLiquid.keep_space_after_brace()
 
     key = :erlang.phash2({html_string, liquex_parser})
 
@@ -474,7 +501,9 @@ defmodule Brando.Villain do
   Strip editor-only `data-identifier-id` attributes from rendered output.
   """
   def strip_identifier_data_attributes(html) when is_binary(html) do
-    String.replace(html, ~r/ data-identifier-id="\d+"/, "")
+    # Never right after a brace, where it is no attribute: taking it away would
+    # make a Liquid delimiter of what a value holds.
+    String.replace(html, ~r/(?<!\{) data-identifier-id="\d+"/, "")
   end
 
   def strip_identifier_data_attributes(html), do: html

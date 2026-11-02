@@ -6,14 +6,14 @@ defmodule Brando.Villain.Tags.Link do
 
   alias Brando.Content.Identifier
   alias Brando.Villain.LiquexParser.TagGrammar
+  alias Brando.Villain.TemplateView
 
   @impl true
   def parse, do: TagGrammar.parse(:link)
 
   @impl true
   def render([link: link], context) do
-    {evaled_link, _context} = Liquex.Argument.eval(link, context)
-    evaled_link = Brando.Villain.Parser.typed_link_var(evaled_link)
+    evaled_link = link |> TemplateView.eval(context) |> Brando.Villain.Parser.typed_link_var()
 
     link_text =
       evaled_link

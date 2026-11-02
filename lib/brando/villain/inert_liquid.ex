@@ -14,7 +14,59 @@ defmodule Brando.Villain.InertLiquid do
   def encode(nil), do: nil
 
   def encode(html) do
-    outside_raw_text(html, &String.replace(&1, ["{", "}"], fn brace -> if brace == "{", do: "&#123;", else: "&#125;" end))
+    html = IO.iodata_to_binary(html)
+
+    if :binary.match(html, "{") == :nomatch, do: html, else: outside_raw_text(html, &encode_braces/1)
+  end
+
+  @doc """
+  Every brace a character reference, script and style included: for a value
+  on its own, which no template wrote and which could hold a whole script
+  element. In script or style the references stay literal.
+  """
+  def encode_all(nil), do: nil
+  def encode_all(html), do: html |> IO.iodata_to_binary() |> encode_braces()
+
+  @doc """
+  A template's dynamic output (`Brando.Villain.HeexRenderer`) and a filter's
+  (`Brando.Villain.TemplateView.filter_result/4`): the Liquid delimiters in it
+  character references, so what a value holds starts no Liquid,
+  and any other brace as it is, so printed JSON stays JSON. A brace at the end
+  could start one with what comes next.
+  """
+  def encode_delimiters(html) do
+    html = IO.iodata_to_binary(html)
+
+    if :binary.match(html, "{") == :nomatch,
+      do: html,
+      else: String.replace(html, ~r/\{(?=[{%]|\z)/, "&#123;")
+  end
+
+  @doc """
+  The start of a value that follows a `{`, as a character reference where it
+  would complete a Liquid delimiter.
+  """
+  def close_delimiter("{" <> rest), do: "&#123;" <> rest
+  def close_delimiter("%" <> rest), do: "&#37;" <> rest
+  def close_delimiter(text), do: text
+
+  @doc """
+  A block's output, its last `{` a character reference: blocks are joined for
+  the final pass, and it would make a delimiter with what the next block prints.
+  """
+  def close_end(html) when is_binary(html), do: String.replace_suffix(html, "{", "&#123;")
+  def close_end(html) when is_list(html), do: html |> IO.iodata_to_binary() |> close_end()
+  def close_end(other), do: other
+
+  @doc """
+  A template's whitespace control without its dash where only whitespace follows
+  a `{` of the template: `{ {{- x }}` would print the value right after the brace,
+  where it could complete a delimiter.
+  """
+  def keep_space_after_brace(template) do
+    if String.contains?(template, ["{{-", "{%-"]),
+      do: String.replace(template, ~r/\{(\s+\{[{%])-/, "{\\1"),
+      else: template
   end
 
   @doc """
@@ -29,6 +81,9 @@ defmodule Brando.Villain.InertLiquid do
       &String.replace(&1, ["&#123;", "&#125;"], fn entity -> if entity == "&#123;", do: "{", else: "}" end)
     )
   end
+
+  defp encode_braces(html),
+    do: String.replace(html, ["{", "}"], fn brace -> if brace == "{", do: "&#123;", else: "&#125;" end)
 
   defp outside_raw_text(html, fun) do
     html

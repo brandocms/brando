@@ -247,6 +247,13 @@ msgid_plural "%{count} queues"
 msgstr[0] "%{count} kø"
 msgstr[1] "%{count} køer"
 
+#: lib/brando/doctor/checks/editor_liquid.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} ref or var holds Liquid, which prints as text"
+msgid_plural "%{count} refs and vars hold Liquid, which prints as text"
+msgstr[0] "%{count} ref eller variabel inneholder Liquid, som vises som tekst"
+msgstr[1] "%{count} refs og variabler inneholder Liquid, som vises som tekst"
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} run"
@@ -349,6 +356,16 @@ msgstr "%{name} %{version} (støttet: %{requirement})"
 #, elixir-autogen, elixir-format
 msgid "%{name} %{version}, needs %{requirement}"
 msgstr "%{name} %{version}, krever %{requirement}"
+
+#: lib/brando/doctor/checks/editor_liquid.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} on block #%{id}"
+msgstr "%{name} på blokk #%{id}"
+
+#: lib/brando/doctor/checks/editor_liquid.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} on module #%{id}"
+msgstr "%{name} på modul #%{id}"
 
 #: lib/brando/doctor/checks/colors.ex
 #, elixir-autogen, elixir-format
@@ -552,6 +569,11 @@ msgstr "Bilder → Alt-tekst lager utkast med KI, til gjennomgang før lagring"
 #, elixir-autogen, elixir-format
 msgid "JSON-LD"
 msgstr "JSON-LD"
+
+#: lib/brando/doctor/checks/editor_liquid.ex
+#, elixir-autogen, elixir-format
+msgid "Liquid in editor text"
+msgstr "Liquid i redaktørtekst"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -1096,6 +1118,11 @@ msgstr "e-postmodulen mangler"
 msgid "mix test would use the development database %{database}"
 msgstr "mix test ville brukt utviklingsdatabasen %{database}"
 
+#: lib/brando/doctor/checks/editor_liquid.ex
+#, elixir-autogen, elixir-format
+msgid "move what should run into the module's code, or edit the text if it should not show: Liquid in refs and vars is not run"
+msgstr "flytt det som skal kjøres til modulens kode, eller rediger teksten hvis den ikke skal vises: Liquid i refs og variabler kjøres ikke"
+
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
 msgid "name"
@@ -1171,6 +1198,11 @@ msgstr "ingen e-postadapter for produksjon"
 #, elixir-autogen, elixir-format
 msgid "no queues, so background jobs never run"
 msgstr "ingen køer, så bakgrunnsjobber kjøres aldri"
+
+#: lib/brando/doctor/checks/editor_liquid.ex
+#, elixir-autogen, elixir-format
+msgid "no ref or var holds Liquid"
+msgstr "ingen ref eller variabel inneholder Liquid"
 
 #: lib/brando/doctor/checks/admin_routes.ex
 #, elixir-autogen, elixir-format

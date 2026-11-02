@@ -7,6 +7,7 @@ defmodule Brando.Villain.Tags.Route do
 
   import NimbleParsec
   alias Brando.Villain.LiquexParser.TagGrammar
+  alias Brando.Villain.TemplateView
   alias Liquex.Parser.Argument
   alias Liquex.Parser.Literal
 
@@ -17,7 +18,7 @@ defmodule Brando.Villain.Tags.Route do
   # that exist: an atom made from it would never be freed.
   @impl true
   def render([function: function, action: action, args: args], context) do
-    evaled_args = Enum.map(args, fn arg -> Liquex.Argument.eval(arg, context) |> elem(0) end)
+    evaled_args = Enum.map(args, &TemplateView.eval(&1, context))
 
     evaled_args =
       if function == "page_path" and action == "show", do: [evaled_args], else: evaled_args

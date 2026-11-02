@@ -4,9 +4,13 @@ defmodule Brando.Content do
 
   ### Available variables when rendering
 
+  For module and container templates. What editors write in refs and vars is
+  text: Liquid in it is printed, not run.
+
     - `{{ entry.<key> }}`
     Gets `<key>` from currently rendering entry. So if we are rendering a `%Page{}` and we
-    want the `meta_description` we can do `{{ entry.meta_description }}`.
+    want the `meta_description` we can do `{{ entry.meta_description }}`. Text prints escaped,
+    rich-text fields sanitized (`Brando.Villain.TemplateView`).
 
     - `{{ links.<key> }}`
     Gets `<key>` from list of links in the Identity configuration.

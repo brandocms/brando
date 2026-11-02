@@ -8,6 +8,10 @@ defmodule Brando.Villain.HeexRenderer do
   content module cannot point at whichever version happened to compile last.
   """
 
+  alias Brando.Villain.InertLiquid
+  alias Phoenix.LiveView.Comprehension
+  alias Phoenix.LiveView.Rendered
+
   @ets_table :brando_heex_cache
 
   @doc """
@@ -103,17 +107,58 @@ defmodule Brando.Villain.HeexRenderer do
   @doc """
   Compile (or fetch from cache) and render a HEEx template to an HTML string.
 
-  Assigns are passed to the compiled `render/1` function component.
+  Assigns are passed to the compiled `render/1` function component. What the
+  template prints is inert to Liquid (`Brando.Villain.InertLiquid`): only
+  Liquid written in the template itself runs, whatever a value holds.
   """
   @spec render_to_string(integer() | binary(), String.t(), map()) :: String.t()
   def render_to_string(id, code_string, assigns) do
     module_name = get_or_compile!(id, code_string)
     assigns = Map.put(assigns, :__changed__, %{})
 
-    module_name.render(assigns)
-    |> Phoenix.HTML.Safe.to_iodata()
-    |> IO.iodata_to_binary()
+    {html, _open?} = assigns |> module_name.render() |> inert_iodata(false)
+
+    IO.iodata_to_binary(html)
   end
+
+  # `open?`: what is printed so far ends in a `{` of the template, which a value
+  # could complete to a Liquid delimiter. It carries across nested templates and
+  # comprehension entries, as the output they join into does.
+  defp inert_iodata(%Rendered{static: static, dynamic: dynamic}, open?), do: inert_parts(static, dynamic.(false), open?)
+
+  # Its static parts are the template's own, as a rendered template's are
+  defp inert_iodata(%Comprehension{static: static, entries: entries}, open?) when is_list(static) and is_list(entries) do
+    Enum.map_reduce(entries, open?, fn {_key, _vars, render}, open? ->
+      inert_parts(static, render.(%{}, false), open?)
+    end)
+  end
+
+  defp inert_iodata(dynamic, open?) do
+    text = dynamic |> printed() |> InertLiquid.encode_delimiters()
+
+    if open? do
+      text = InertLiquid.close_delimiter(text)
+      {text, text == ""}
+    else
+      {text, false}
+    end
+  end
+
+  defp inert_parts([static], [], open?), do: {[static], open_after(static, open?)}
+
+  defp inert_parts([static | statics], [dynamic | dynamics], open?) do
+    {printed, open?} = inert_iodata(dynamic, open_after(static, open?))
+    {rest, open?} = inert_parts(statics, dynamics, open?)
+
+    {[static, printed | rest], open?}
+  end
+
+  defp open_after("", open?), do: open?
+  defp open_after(static, _open?), do: String.ends_with?(static, "{")
+
+  defp printed(%_{} = struct), do: Phoenix.HTML.Safe.to_iodata(struct)
+  defp printed(nil), do: []
+  defp printed(iodata), do: iodata
 
   @doc """
   Invalidate all cached modules for a given id (any code hash).

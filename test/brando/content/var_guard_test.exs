@@ -439,7 +439,7 @@ defmodule Brando.Content.VarGuardTest do
         end
 
       context = Brando.Villain.add_to_context(Liquex.Context.new(%{}), "globals", %{"set" => sets})
-      escaped = Liquex.Context.fetch(context, "globals") |> then(fn {:ok, globals} -> globals["set"] end)
+      escaped = Liquex.Context.fetch(context, "globals") |> then(fn {:ok, globals} -> globals.value["set"] end)
 
       for {_type, value} <- escaped do
         refute value =~ "<"

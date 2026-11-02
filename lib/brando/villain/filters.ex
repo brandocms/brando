@@ -7,6 +7,7 @@ defmodule Brando.Villain.Filters do
   alias Brando.Content.Identifier
   alias Brando.Content.Var
   alias Brando.Utils
+  alias Brando.Villain.TemplateView
   alias Liquex.Context
 
   @type filter_t :: {:filter, [...]}
@@ -25,6 +26,10 @@ defmodule Brando.Villain.Filters do
   @spec filter_name(filter_t) :: String.t()
   def filter_name({:filter, [filter_name | _]}), do: filter_name
 
+  # A filter is given the value in a view, and its result goes back in one of the
+  # same mode: text read from entry data stays text through a filter. A project's
+  # filter that makes markup returns `{:safe, html}`. Text from any filter starts
+  # no Liquid in the final pass (`Brando.Villain.TemplateView.filter_result/4`).
   def apply(mod \\ __MODULE__, value, {:filter, [function, {:arguments, arguments}]}, context) do
     func = String.to_existing_atom(function)
 
@@ -40,7 +45,12 @@ defmodule Brando.Villain.Filters do
         __MODULE__
       end
 
-    Kernel.apply(mod, func, [value | function_args] ++ [context])
+    view_mode = TemplateView.view_mode([value | function_args])
+    args = [TemplateView.unwrap(value) | TemplateView.unwrap(function_args)] ++ [context]
+
+    mod
+    |> Kernel.apply(func, args)
+    |> TemplateView.filter_result(func, view_mode, context)
   rescue
     # credo:disable-for-next-line
     ArgumentError -> raise Liquex.Error, "Invalid filter #{function}"
@@ -632,7 +642,23 @@ defmodule Brando.Villain.Filters do
       iex> Brando.Villain.Filters.strip_html("Have <em>you</em> read <strong>Ulysses</strong>?", %{})
       "Have you read Ulysses?"
   """
-  def strip_html(value, _), do: HtmlSanitizeEx.strip_tags(to_string(value))
+  def strip_html(value, context) do
+    value = to_string(value)
+
+    # Text read from entry data has no tag left but its escaped ones, which are
+    # what it stands for. Markup's entities are its text.
+    text =
+      if(String.contains?(value, "<"), do: value, else: HtmlEntities.decode(value))
+      |> HtmlSanitizeEx.strip_tags()
+
+    # A Markdown template prints text as typed
+    if Brando.Villain.Markdown.template_context?(context), do: HtmlEntities.decode(text), else: encode_quotes(text)
+  end
+
+  # The result can go in an attribute: a quote the text held stays encoded
+  defp encode_quotes(text) do
+    String.replace(text, ["\"", "'"], fn quote -> if quote == "\"", do: "&quot;", else: "&#39;" end)
+  end
 
   @doc """
   Removes any newline characters (line breaks) from a string.
@@ -696,7 +722,10 @@ defmodule Brando.Villain.Filters do
         ellipsis
 
       true ->
-        String.slice(value, 0, length - String.length(ellipsis)) <> ellipsis
+        value
+        |> String.slice(0, length - String.length(ellipsis))
+        |> String.replace(~r/&(?:#\d*|a|am|amp|l|lt|g|gt|q|qu|quo|quot)?$/, "")
+        |> Kernel.<>(ellipsis)
     end
   end
 
@@ -876,7 +905,32 @@ defmodule Brando.Villain.Filters do
     Utils.Datetime.format_datetime(value, format, locale)
   end
 
-  def inspect(value, _), do: "#{Kernel.inspect(value, pretty: true)}"
+  # Escaped, with credentials left out: it prints whole structs
+  def inspect(value, _) do
+    value
+    |> TemplateView.printable()
+    |> Kernel.inspect(pretty: true)
+    |> Brando.Villain.Parser.escape_var_value()
+  end
+
+  @doc """
+  Prints text read from entry data as what it stands for, its markup live, where
+  `{{ entry.title }}` would print it as text. The template's opt-in: use it only
+  for a field whose markup you trust. A rich-text field needs no `raw`: it
+  arrives sanitized, to print as it is. Liquid in the value stays text.
+
+  ## Examples
+
+      iex> Brando.Villain.Filters.raw("&lt;em&gt;Hi&lt;/em&gt; &#123;&#123; x &#125;&#125;", %{})
+      "<em>Hi</em> &#123;{ x }}"
+  """
+  def raw(value, context) when is_binary(value) do
+    if Brando.Villain.Markdown.template_context?(context),
+      do: value,
+      else: value |> HtmlEntities.decode() |> Brando.Villain.InertLiquid.encode_delimiters()
+  end
+
+  def raw(value, _), do: value
 
   def rows(%{data: %{data: %{rows: rows}}}, _) do
     rows
@@ -1091,7 +1145,7 @@ defmodule Brando.Villain.Filters do
 
   def json_ld(entries, type, "page", context) do
     page = %{
-      url: Context.get(context, "url"),
+      url: Brando.Villain.raw_context(context, "url"),
       language: Context.get(context, "language")
     }
 

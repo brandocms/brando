@@ -36,7 +36,7 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
     assigns = build_assigns(module, block, processed_vars, processed_refs, opts)
     assigns = maybe_add_datasource_entries(assigns, module, block)
 
-    HeexRenderer.render_to_string(module.id, module.code, assigns)
+    module.id |> HeexRenderer.render_to_string(module.code, assigns) |> own_liquid(opts)
   end
 
   @impl true
@@ -48,7 +48,7 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
       |> Map.put(:entries, children)
       |> Map.put(:content, content)
 
-    HeexRenderer.render_to_string(module.id, module.code, assigns)
+    module.id |> HeexRenderer.render_to_string(module.code, assigns) |> own_liquid(opts)
   end
 
   @impl true
@@ -59,7 +59,7 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
     assigns = build_assigns(child_module, child_block, vars, refs, opts)
     assigns = Map.put(assigns, :forloop, forloop)
 
-    HeexRenderer.render_to_string(id, child_module.code, assigns)
+    id |> HeexRenderer.render_to_string(child_module.code, assigns) |> own_liquid(opts)
   end
 
   @impl true
@@ -73,10 +73,18 @@ defmodule Brando.Villain.TemplateAdapter.Heex do
         render_context: render_context(opts)
       })
 
-    HeexRenderer.render_to_string("container_#{container.id}", container.code, assigns)
+    "container_#{container.id}" |> HeexRenderer.render_to_string(container.code, assigns) |> own_liquid(opts)
   end
 
   # -- Private --
+
+  # Liquid written in the template runs here, not when the output is printed
+  # inside another HEEx template, where it is a value and stays text.
+  defp own_liquid(html, %{context: %Liquex.Context{} = context}) do
+    if String.contains?(html, ["{{", "{%"]), do: Brando.Villain.parse_and_render(html, context), else: html
+  end
+
+  defp own_liquid(html, _opts), do: html
 
   defp build_assigns(module, block, processed_vars, processed_refs, opts) do
     simple_block = TemplateAdapter.simple_block(module, block, row_keys: :existing_atom)

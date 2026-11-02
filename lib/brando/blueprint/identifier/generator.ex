@@ -33,7 +33,7 @@ defmodule Brando.Blueprint.Identifier.Generator do
   def generate(module, entry, parsed_identifier, opts \\ [])
 
   def generate(module, entry, parsed_identifier, opts) when is_list(parsed_identifier) do
-    context = Villain.get_base_context(entry)
+    context = Villain.plain_context(entry)
     {result, _} = Liquex.Render.render!([], parsed_identifier, context)
     generate(module, entry, Enum.join(result), opts)
   end

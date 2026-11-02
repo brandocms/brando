@@ -411,9 +411,14 @@ defmodule Brando.Villain.Parser do
         children
         |> Enum.with_index()
         |> Enum.map(fn
-          {%{active: false}, _} -> ""
-          {%{marked_as_deleted: true}, _} -> ""
-          {child_block, index} -> render_multi_child(child_block, index, count, id, opts)
+          {%{active: false}, _} ->
+            ""
+
+          {%{marked_as_deleted: true}, _} ->
+            ""
+
+          {child_block, index} ->
+            child_block |> render_multi_child(index, count, id, opts) |> Brando.Villain.InertLiquid.close_end()
         end)
         |> Enum.intersperse("\n")
         |> maybe_annotate_children(block.uid, opts)
@@ -514,12 +519,16 @@ defmodule Brando.Villain.Parser do
 
   defp render_slot_child(child, opts) do
     type = if child.type == :module_entry, do: :module, else: child.type
-    apply(parser_module(opts), type, [child, opts])
+    opts |> parser_module() |> apply(type, [child, opts]) |> Brando.Villain.InertLiquid.close_end()
   end
 
   def text(%{text: text}, _) when text in [nil, ""], do: ""
 
+  # What an editor wrote is text to the entry's final Liquid pass, as it is
+  # everywhere an editor's value reaches the page.
   def text(%{text: text} = params, _) do
+    text = Brando.Villain.InertLiquid.encode_all(text)
+
     case Map.get(params, :type) do
       nil -> text
       "paragraph" -> text
@@ -534,7 +543,9 @@ defmodule Brando.Villain.Parser do
   def svg(%{code: html}, _), do: html
 
   def markdown(%{text: markdown}, _) do
-    Brando.Markdown.to_html!(markdown, breaks: true)
+    markdown
+    |> Brando.Markdown.to_html!(breaks: true)
+    |> Brando.Villain.InertLiquid.encode_all()
   end
 
   def markdown_source(data, _), do: Brando.MarkdownSources.render(data)
@@ -1146,7 +1157,7 @@ defmodule Brando.Villain.Parser do
   # A placement caption is stored normalized (`Brando.Captions.normalize/1`)
   # when the editor writes it; one that reached the ref another way is
   # normalized here.
-  defp rich_caption(text), do: Brando.Captions.normalize(text)
+  defp rich_caption(text), do: Brando.Captions.rich_html(text)
 
   defp gallery_image_tag(assigns, :panner), do: Brando.Villain.Parser.panner_item(assigns)
   defp gallery_image_tag(assigns, :plain), do: Brando.Villain.Parser.picture_tag(assigns)
@@ -1383,7 +1394,7 @@ defmodule Brando.Villain.Parser do
     |> Enum.reduce([], fn
       %{active: false}, acc -> acc
       %{marked_as_deleted: true}, acc -> acc
-      d, acc -> [apply(parser_module(opts), d.type, [d, opts]) | acc]
+      d, acc -> [parser_module(opts) |> apply(d.type, [d, opts]) |> Brando.Villain.InertLiquid.close_end() | acc]
     end)
     |> Enum.reverse()
     |> maybe_annotate_children(block.uid, opts)
@@ -1732,6 +1743,11 @@ defmodule Brando.Villain.Parser do
   # later, or a value stored before it was checked, is text.
   defp maybe_escape_var({key, value}, %{type: type}, true) when is_binary(value) and type not in [:rich_text, :html],
     do: {key, escape_var_value(value)}
+
+  # Sanitized, and text to the entry's final Liquid pass. HEEx has no use for
+  # this: what it prints is made inert after it (`Brando.Villain.HeexRenderer`).
+  defp maybe_escape_var({key, value}, %{type: type}, true) when type in [:rich_text, :html],
+    do: {key, Brando.Villain.InertLiquid.encode_all(value)}
 
   defp maybe_escape_var({key, %{type: :link} = link}, _var, true), do: {key, escape_link_var(link)}
 

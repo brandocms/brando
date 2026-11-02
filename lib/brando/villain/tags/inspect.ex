@@ -6,16 +6,18 @@ defmodule Brando.Villain.Tags.Inspect do
 
   import Phoenix.Component
 
+  alias Brando.Villain.InertLiquid
   alias Brando.Villain.LiquexParser.TagGrammar
+  alias Brando.Villain.TemplateView
 
   @impl true
   def parse, do: TagGrammar.parse(:inspect_tag)
 
   @impl true
   def render([source: source], context) do
-    {evaled_source, _context} = Liquex.Argument.eval(source, context)
-
-    assigns = %{src: evaled_source}
+    # Whole structs, printed for a developer: no credentials, and Liquid in
+    # them is text to the entry's final pass.
+    assigns = %{src: source |> TemplateView.eval(context) |> TemplateView.printable()}
 
     comp = ~H"""
     <div class="brando-inspect">
@@ -27,7 +29,7 @@ defmodule Brando.Villain.Tags.Inspect do
     </div>
     """
 
-    html = Phoenix.LiveViewTest.rendered_to_string(comp)
+    html = comp |> Phoenix.LiveViewTest.rendered_to_string() |> InertLiquid.encode_all()
 
     {[html], context}
   end

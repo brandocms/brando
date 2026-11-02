@@ -9,6 +9,7 @@ defmodule Brando.Villain.Tags.RouteI18n do
   alias Brando.I18n
   alias Brando.Villain.LiquexParser.TagGrammar
   alias Brando.Villain.Tags.Route
+  alias Brando.Villain.TemplateView
 
   # {% route_i18n entry.language page_path list %}
   # {% route_i18n entry.language page_path detail { entry.uri } %}
@@ -20,7 +21,7 @@ defmodule Brando.Villain.Tags.RouteI18n do
   # that exist: an atom made from it would never be freed.
   @impl true
   def render([locale: locale, function: function, action: action, args: args], context) do
-    {evaled_locale, _context} = Liquex.Argument.eval(locale, context)
+    evaled_locale = TemplateView.eval(locale, context)
     evaled_args = prepare_args(args, context, function, action)
 
     rendered_route =
@@ -43,7 +44,7 @@ defmodule Brando.Villain.Tags.RouteI18n do
   end
 
   def render([locale: locale, function: function, action: action], context) do
-    {evaled_locale, _context} = Liquex.Argument.eval(locale, context)
+    evaled_locale = TemplateView.eval(locale, context)
 
     rendered_route =
       if function == "page_path" do
@@ -63,7 +64,7 @@ defmodule Brando.Villain.Tags.RouteI18n do
   defp prepare_args(args, context, function, action) do
     evaled_args =
       args
-      |> Enum.map(fn arg -> Liquex.Argument.eval(arg, context) |> elem(0) end)
+      |> Enum.map(&TemplateView.eval(&1, context))
       |> Enum.reject(&(&1 == nil))
 
     if function == "page_path" and action == "show" do

@@ -6,7 +6,9 @@ defmodule Brando.Villain.Tags.Video do
 
   import Phoenix.Component
 
+  alias Brando.Villain.InertLiquid
   alias Brando.Villain.LiquexParser.TagGrammar
+  alias Brando.Villain.TemplateView
 
   @impl true
   def parse, do: TagGrammar.parse(:video)
@@ -29,12 +31,12 @@ defmodule Brando.Villain.Tags.Video do
     # Force load them
     _ = allowed_atoms
 
-    {evaled_source, _context} = Liquex.Argument.eval(source, context)
+    evaled_source = TemplateView.eval(source, context)
 
     evaled_args =
       args
       |> Enum.map(fn arg ->
-        {{key, val}, _context} = Liquex.Argument.eval(arg, context)
+        {key, val} = TemplateView.eval(arg, context)
         {String.to_existing_atom(key), val}
       end)
 
@@ -44,7 +46,8 @@ defmodule Brando.Villain.Tags.Video do
     <Brando.HTML.Video.video video={@video} opts={@opts} />
     """
 
-    html = Phoenix.LiveViewTest.rendered_to_string(comp)
+    # Texts an editor wrote about the media: text to the entry's final Liquid pass
+    html = comp |> Phoenix.LiveViewTest.rendered_to_string() |> InertLiquid.encode()
 
     {[html], context}
   end

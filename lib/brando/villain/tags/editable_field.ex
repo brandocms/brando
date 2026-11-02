@@ -11,7 +11,9 @@ defmodule Brando.Villain.Tags.EditableField do
   @behaviour Liquex.Tag
 
   alias Brando.FrontendEdit.Fields
+  alias Brando.Villain.InertLiquid
   alias Brando.Villain.LiquexParser.TagGrammar
+  alias Brando.Villain.TemplateView
 
   @impl true
   def parse, do: TagGrammar.parse(:editable_field)
@@ -20,13 +22,14 @@ defmodule Brando.Villain.Tags.EditableField do
   def render([field: argument], context) do
     case Brando.Villain.Tags.Editable.resolve(argument, context) do
       {%{__struct__: _} = entry, field, context} when is_atom(field) and not is_nil(field) ->
-        html = Fields.render_value(entry, field)
+        # Liquid in the field is text to the entry's final pass
+        html = entry |> Fields.render_value(field) |> InertLiquid.encode_all()
         {[Fields.wrap(html, entry, field, :value)], context}
 
       {_other, _field, context} ->
         # Not an entry field: print the value escaped.
-        {value, context} = Liquex.Argument.eval(argument, context)
-        {[value |> printable() |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()], context}
+        value = TemplateView.eval(argument, context)
+        {[value |> printable() |> Brando.Villain.Parser.escape_var_value()], context}
     end
   end
 

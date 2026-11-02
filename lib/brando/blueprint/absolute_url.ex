@@ -182,7 +182,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
       def __absolute_url__(entry) do
         context =
           entry
-          |> Villain.get_base_context()
+          |> Villain.plain_context()
           |> Liquex.Context.assign(:config, %{
             default_language: to_string(Brando.RuntimeConfig.get(:default_language)),
             scope_default_language_routes: Brando.RuntimeConfig.get(:scope_default_language_routes)

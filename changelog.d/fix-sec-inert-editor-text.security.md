@@ -1,0 +1,1 @@
+- Passwords and other credentials no longer reach Liquid templates, through preloaded users or `{% inspect %}`.
