@@ -8,9 +8,11 @@
 # Steps: Elixir deps (offline from the Hex cache first), E2E deps, a test-env
 # compile, the unit-test database (create, migrate, seed once), pnpm installs
 # with pnpm 12, E2E asset builds when missing, Playwright's Chromium, and the
-# repository's Git hooks and merge driver (scripts/install-git-helpers: clone-wide,
-# so setup on a branch you don't trust installs that branch's copies, on top of
-# running its code). Ends by printing the environment to use.
+# repository's Git hooks and merge driver when the clone lacks the copies
+# (scripts/install-git-helpers --if-missing). Those are clone-wide, so existing
+# copies stay as they are, and a first setup on a branch you don't trust installs
+# that branch's copies, on top of running its code. Ends by printing the
+# environment to use.
 #
 # Uses mise (`mise exec --`) for Elixir and Node when it is installed; otherwise
 # mix, node and npx must be on PATH. Works with macOS's bash 3.
@@ -147,7 +149,7 @@ else
   step "build E2E frontend assets" frontend_build
 fi
 step "Playwright Chromium" playwright_browser
-step "git hooks and Gettext merge driver" scripts/install-git-helpers
+step "git hooks and Gettext merge driver" scripts/install-git-helpers --if-missing
 
 # What .envrc derives for this worktree, or for the slug given.
 e2e_env="$(

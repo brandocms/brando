@@ -22,14 +22,15 @@ Every message written has its msgstr (msgstr[N] for a plural). Input that does
 not parse as a catalogue, such as a file that already holds conflict markers,
 falls back to a plain `git merge-file`.
 
-scripts/worktree-setup and scripts/install-git-helpers register it once per
-clone (worktrees share the setting), through `--install`. That copies this
-script into brando-hooks/ in the Git common directory and sets
-`merge.gettext.name` and `merge.gettext.driver` (driver_command below) in the
-repository's git config. The command runs the copy, never a script in the
-checked-out tree, which a branch being rebased could have replaced, and falls
-back to a line merge when the copy is gone (a clone moved since it was
-installed). .gitattributes sends priv/gettext/**/*.po and *.pot here.
+scripts/install-git-helpers registers it once per clone (worktrees share the
+setting), through `--install`. That copies this script into brando-hooks/ in the
+Git common directory and sets `merge.gettext.name` and `merge.gettext.driver`
+(driver_command below) in the repository's git config. The command runs the copy
+with the interpreter that installed it, never a script in the checked-out tree
+or a `python3` found from it, either of which a branch being rebased could have
+replaced, and falls back to a line merge when the copy or the interpreter is
+gone (a clone moved, Python upgraded). .gitattributes sends priv/gettext/**/*.po
+and *.pot here.
 
 Usage:
     gettext-merge-driver BASE OURS THEIRS [MARKER_SIZE [PATH [BASE_LABEL OURS_LABEL THEIRS_LABEL]]]
@@ -50,6 +51,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 FIELD_RE = re.compile(r'^(msgctxt|msgid_plural|msgid|msgstr(?:\[\d+\])?)\s+(".*")\s*$')
 STRING_RE = re.compile(r'^".*"\s*$')
@@ -381,15 +383,29 @@ def fallback(base_path, ours_path, theirs_path, marker_size, labels):
     )
 
 
-def driver_command(script):
-    # Git expands % in the whole command; the path may hold one.
-    quoted = shlex.quote(script).replace("%", "%%")
+def driver_command(script, python):
+    # Git expands % in the whole command; the paths may hold one. Git runs this
+    # in a working tree, where a version manager's python3 shim could read the
+    # branch's .tool-versions, so the interpreter is an absolute path too.
+    quoted, interpreter = (shlex.quote(path).replace("%", "%%") for path in (script, python))
     body = (
-        "test -f %s" % quoted
+        "test -f %s && test -x %s" % (quoted, interpreter)
         + ' || exec git merge-file --marker-size="$3" -L "$6" -L "$5" -L "$7" "$1" "$0" "$2";'
-        + ' exec python3 -I %s "$0" "$@"' % quoted
+        + ' exec %s -I %s "$0" "$@"' % (interpreter, quoted)
     )
     return "sh -c %s %%O %%A %%B %%L %%P %%S %%X %%Y" % shlex.quote(body)
+
+
+def set_config(key, value, cwd=None):
+    # Writes only a change. A write fails at once while another setup holds the
+    # lock on the shared config file, so it retries, rechecking: that setup may
+    # have written the same value.
+    for _ in range(10):
+        current = subprocess.run(["git", "config", "--get", key], cwd=cwd, capture_output=True, text=True).stdout.rstrip("\n")
+        if current == value or subprocess.run(["git", "config", key, value], cwd=cwd, capture_output=True).returncode == 0:
+            return
+        time.sleep(0.5)
+    subprocess.run(["git", "config", key, value], cwd=cwd, check=True)
 
 
 def install(cwd=None):
@@ -403,12 +419,8 @@ def install(cwd=None):
     shutil.copyfile(os.path.abspath(__file__), temporary)
     os.chmod(temporary, 0o755)
     os.replace(temporary, script)
-    # Writes only a change, so setups running in parallel don't race for the
-    # lock on the shared config file.
-    for key, value in (("merge.gettext.name", "Gettext catalogue merge"), ("merge.gettext.driver", driver_command(script))):
-        current = subprocess.run(["git", "config", "--get", key], cwd=cwd, capture_output=True, text=True).stdout.rstrip("\n")
-        if current != value:
-            subprocess.run(["git", "config", key, value], cwd=cwd, check=True)
+    set_config("merge.gettext.name", "Gettext catalogue merge", cwd)
+    set_config("merge.gettext.driver", driver_command(script, sys.executable), cwd)
 
 
 def read(path):
@@ -693,10 +705,22 @@ class SelfTest:
             self.check("git rebase", result.returncode == 0 and msgids(text) == ["Alpha", "Zulu", "%{n} line", "Mike"], result.stderr + text)
             self.msgfmt_ok(text, "git rebase")
 
-            # Without the installed copy (a clone moved since) git gets a line merge.
-            os.remove(os.path.join(root, ".git", "brando-hooks", "gettext-merge-driver"))
             self.git(root, "checkout", "-q", "-b", "old", "main")
             commit(catalogue(PO_HEAD, entry("Alpha", "Alfa"), entry("Zulu", "Zulu"), entry("Kilo", "Kilo")), "old")
+
+            # Without the interpreter it was installed with (upgraded since) git
+            # gets a line merge, not a crash.
+            registered = self.git(root, "config", "--get", "merge.gettext.driver").stdout.rstrip("\n")
+            script = os.path.join(os.path.realpath(root), ".git", "brando-hooks", "gettext-merge-driver")
+            self.git(root, "config", "merge.gettext.driver", driver_command(script, "/nonexistent/python3"))
+            result = self.git(root, "merge", "--no-edit", "two", check=False)
+            text = contents()
+            self.check("line merge without the installed interpreter", result.returncode != 0 and "<<<<<<< HEAD\n" in text and ">>>>>>> two\n" in text, result.stdout + result.stderr + text)
+            self.git(root, "merge", "--abort")
+            self.git(root, "config", "merge.gettext.driver", registered)
+
+            # Without the installed copy (a clone moved since) git gets a line merge.
+            os.remove(script)
             result = self.git(root, "merge", "--no-edit", "two", check=False)
             text = contents()
             self.check("line merge without the installed copy", result.returncode != 0 and "<<<<<<< HEAD\n" in text and ">>>>>>> two\n" in text, result.stdout + result.stderr + text)

@@ -37,7 +37,8 @@ defmodule E2eProject.EndpointBindingTest do
     :gen_tcp.close(socket)
 
     # An address the config does not name, standing in for another interface.
-    assert {:error, :econnrefused} = :gen_tcp.connect({127, 0, 0, 2}, port, [], 1_000)
+    # Refused on Linux; macOS has no such alias, so there it may time out.
+    assert {:error, _} = :gen_tcp.connect({127, 0, 0, 2}, port, [], 1_000)
     assert {:error, _} = :gen_tcp.connect({0, 0, 0, 0, 0, 0, 0, 1}, port, [:inet6], 1_000)
   end
 

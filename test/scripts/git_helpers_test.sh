@@ -3,8 +3,9 @@
 # or rebase: scripts/install-git-helpers points Git at copies outside the tree.
 # Controls with the configuration it replaced show the fixture branch does run
 # code when Git is pointed at the tree. Also checks that the pre-push hook still
-# runs from every worktree and that scripts/worktree-setup installs it, with
-# stubs for its tools.
+# runs from every worktree, also on a branch older than the hook, and that
+# scripts/worktree-setup installs it only when the copies are missing, with stubs
+# for its tools.
 #
 # Only scratch repositories, whose one remote is a local bare repository, with
 # Git's global and system config shut out. Needs bash, git and python3.
@@ -16,10 +17,10 @@ set -uo pipefail
 . "$(dirname "$0")/isolate.sh"
 
 root="$(cd "$(dirname "$0")/../.." && pwd)"
-tmp="$(mktemp -d "${TMPDIR:-/tmp}/git-helpers-test.XXXXXX")"
+tmp="$(mktemp -d "${TMPDIR:-/tmp}/git-helpers-test.XXXXXX")" || exit 1
+tmp="$(cd "$tmp" && pwd -P)" || exit 1
 trap 'rm -rf "$tmp"' EXIT
 
-tmp="$(cd "$tmp" && pwd -P)"
 export HOME="$tmp/home" GIT_CONFIG_GLOBAL="$tmp/gitconfig" GIT_CONFIG_NOSYSTEM=1
 mkdir -p "$HOME"
 git config --file "$GIT_CONFIG_GLOBAL" user.name me
@@ -208,15 +209,36 @@ git -C "$tmp/safe-wt" rebase -q origin/main >/dev/null 2>&1
 no_branch_code "rebase in a linked worktree runs nothing from the branch"
 assert "the linked worktree uses the installed driver" merged_catalogue "$tmp/safe-wt"
 
+echo "-- a python3 on PATH that the tree's version manager could pick"
+mkdir -p "$tmp/planted-bin"
+printf '#!/bin/sh\necho "python3 on PATH" >>"%s"\nexit 0\n' "$marker" >"$tmp/planted-bin/python3"
+chmod +x "$tmp/planted-bin/python3"
+fresh "$tmp/planted"
+(cd "$tmp/planted" && scripts/install-git-helpers) || fail "install before the planted python3"
+git -C "$tmp/planted" checkout -q contributor
+PATH="$tmp/planted-bin:$PATH" git -C "$tmp/planted" rebase -q origin/main >/dev/null 2>&1
+no_branch_code "the driver does not run the python3 on PATH"
+assert "the rebase still merges through the installed driver" merged_catalogue "$tmp/planted"
+
 echo "-- a path that needs quoting"
 odd="$tmp/odd dir's %O \$(echo path >>'$marker')"
 fresh "$odd"
 (cd "$odd" && scripts/install-git-helpers) || fail "install under an odd path"
+odd_bin="$odd/.git/odd bin's %P"
+mkdir -p "$odd_bin"
+ln -s "$(python3 -I -c 'import sys; print(sys.executable)')" "$odd_bin/python3"
+(cd "$odd" && "$odd_bin/python3" -I scripts/gettext-merge-driver --install) || fail "install with an interpreter under an odd path"
 git -C "$odd" checkout -q contributor
 no_branch_code "checkout under an odd path"
 git -C "$odd" rebase -q origin/main >/dev/null 2>&1
 no_branch_code "rebase under an odd path"
 assert "rebase under an odd path uses the installed driver" merged_catalogue "$odd"
+# The tree is the contributor's now: its hook differs, its merge script and
+# Python modules would write the marker if anything ran them.
+cp "$odd/.git/brando-hooks/pre-push" "$tmp/odd-pre-push"
+(cd "$odd" && scripts/install-git-helpers --if-missing) || fail "--if-missing under an odd path"
+assert "--if-missing finds the copies under an odd path" cmp -s "$odd/.git/brando-hooks/pre-push" "$tmp/odd-pre-push"
+no_branch_code "--if-missing runs nothing from the branch"
 
 echo "-- the pre-push hook"
 git -C "$tmp/safe" worktree add -q "$tmp/push-wt" -b feature origin/main
@@ -232,6 +254,28 @@ SKIP_CHECK=1 git -C "$tmp/push-wt" push -q origin feature:refs/heads/skipped 2>/
 [ ! -s "$check_calls" ] && ok "SKIP_CHECK=1 skips it" || fail "SKIP_CHECK=1 skips it"
 git -C "$tmp/safe-wt" push -q origin HEAD:refs/heads/from-branch 2>/dev/null
 no_branch_code "a push from the branch runs the installed hook, not the branch's"
+
+echo "-- the pre-push hook on a branch older than --passed"
+git -C "$tmp/safe" worktree add -q "$tmp/older-wt" -b older origin/main
+cat >"$tmp/older-wt/scripts/check" <<CHECK
+#!/bin/sh
+for arg in "\$@"; do
+  case "\$arg" in
+    --fast) ;;
+    *) echo "check: unknown option \$arg" >&2; exit 2 ;;
+  esac
+done
+echo ran >>"$check_calls"
+CHECK
+git -C "$tmp/older-wt" add scripts/check
+git -C "$tmp/older-wt" commit -qm "a check without --passed"
+: >"$check_calls"
+out="$(git -C "$tmp/older-wt" push -q origin older:refs/heads/older-1 2>&1)" && ok "the first push succeeds" ||
+  fail "the first push succeeds" "$out"
+out="$(git -C "$tmp/older-wt" push -q origin older:refs/heads/older-2 2>&1)" && ok "the second push, with a recorded tree, succeeds" ||
+  fail "the second push, with a recorded tree, succeeds" "$out"
+[ "$(wc -l <"$check_calls" | tr -d ' ')" = 2 ] && ok "both pushes ran the branch's check" ||
+  fail "both pushes ran the branch's check" "$(cat "$check_calls")"
 
 echo "-- rerunning takes the tree's version"
 echo "# updated" >>"$tmp/push-wt/.githooks/pre-push"
@@ -251,10 +295,14 @@ printf '#!/bin/sh\nexit 0\n' >"$tmp/bin/mix"
 printf '#!/bin/sh\nexit 0\n' >"$tmp/bin/npx"
 printf '#!/bin/sh\n[ "$1" = exec ] && shift && [ "$1" = -- ] && shift\nexec "$@"\n' >"$tmp/bin/mise"
 chmod +x "$tmp/bin/mix" "$tmp/bin/npx" "$tmp/bin/mise"
+# setup DIR — scripts/worktree-setup in DIR, with its tools stubbed.
+setup() {
+  mkdir -p "$1/assets" "$1/e2e/assets/backend" "$1/e2e/assets/frontend" "$1/e2e/playwright"
+  (cd "$1" && env -u BRANDO_TEST_DATABASE_URL PATH="$tmp/bin:$PATH" scripts/worktree-setup 2>&1)
+}
 fresh "$tmp/new"
 git -C "$tmp/new" worktree add -q "$tmp/new-wt" -b wt origin/main
-mkdir -p "$tmp/new-wt/assets" "$tmp/new-wt/e2e/assets/backend" "$tmp/new-wt/e2e/assets/frontend" "$tmp/new-wt/e2e/playwright"
-if out="$(cd "$tmp/new-wt" && env -u BRANDO_TEST_DATABASE_URL PATH="$tmp/bin:$PATH" scripts/worktree-setup 2>&1)"; then
+if out="$(setup "$tmp/new-wt")"; then
   ok "setup runs in a linked worktree"
 else
   fail "setup runs in a linked worktree" "$out"
@@ -271,6 +319,64 @@ git -C "$tmp/new-wt" push -q origin wt 2>/dev/null
 grep -q -- '--fast' "$check_calls" && ok "after setup a push runs the hook" || fail "after setup a push runs the hook"
 git -C "$tmp/new" checkout -q contributor
 no_branch_code "after setup a checkout runs nothing from the branch"
+
+echo "-- setup leaves the clone's copies alone"
+git -C "$tmp/new" checkout -q main
+new_copies="$tmp/new/.git/brando-hooks"
+cp "$new_copies/pre-push" "$tmp/kept-pre-push"
+cp "$new_copies/gettext-merge-driver" "$tmp/kept-driver"
+echo "# from a stale branch" >>"$tmp/new-wt/.githooks/pre-push"
+echo "# from a stale branch" >>"$tmp/new-wt/scripts/gettext-merge-driver"
+config_before="$(cat "$tmp/new/.git/config")"
+if out="$(setup "$tmp/new-wt")"; then ok "setup on a tree that changed the hook runs"; else fail "setup on a tree that changed the hook runs" "$out"; fi
+assert "setup leaves the hook copy alone" cmp -s "$new_copies/pre-push" "$tmp/kept-pre-push"
+assert "setup leaves the driver copy alone" cmp -s "$new_copies/gettext-merge-driver" "$tmp/kept-driver"
+[ "$(cat "$tmp/new/.git/config")" = "$config_before" ] && ok "setup leaves the config alone" || fail "setup leaves the config alone"
+
+(cd "$tmp/new-wt" && scripts/install-git-helpers) || fail "a plain install from that tree"
+assert "a plain install takes the tree's hook" cmp -s "$tmp/new-wt/.githooks/pre-push" "$new_copies/pre-push"
+assert "a plain install takes the tree's driver" cmp -s "$tmp/new-wt/scripts/gettext-merge-driver" "$new_copies/gettext-merge-driver"
+
+rm "$new_copies/pre-push"
+(cd "$tmp/new" && scripts/install-git-helpers --if-missing) || fail "--if-missing without the hook copy"
+[ -x "$new_copies/pre-push" ] && ok "--if-missing restores a missing hook copy" || fail "--if-missing restores a missing hook copy"
+rm "$new_copies/gettext-merge-driver"
+(cd "$tmp/new" && scripts/install-git-helpers --if-missing) || fail "--if-missing without the driver copy"
+[ -f "$new_copies/gettext-merge-driver" ] && ok "--if-missing restores a missing driver copy" || fail "--if-missing restores a missing driver copy"
+git -C "$tmp/new" config merge.gettext.driver "$old_driver"
+(cd "$tmp/new" && scripts/install-git-helpers --if-missing) || fail "--if-missing with the driver in the tree"
+case "$(git -C "$tmp/new" config merge.gettext.driver)" in
+  *"$new_copies/gettext-merge-driver"*) ok "--if-missing moves a driver in the tree to the copy" ;;
+  *) fail "--if-missing moves a driver in the tree to the copy" "$(git -C "$tmp/new" config merge.gettext.driver)" ;;
+esac
+
+fresh "$tmp/old-setup"
+git -C "$tmp/old-setup" config core.hooksPath .githooks
+git -C "$tmp/old-setup" config merge.gettext.driver "$old_driver"
+if out="$(setup "$tmp/old-setup")"; then ok "setup runs on a clone with the old configuration"; else fail "setup runs on a clone with the old configuration" "$out"; fi
+[ "$(git -C "$tmp/old-setup" config core.hooksPath)" = "$tmp/old-setup/.git/brando-hooks" ] && [ -x "$tmp/old-setup/.git/brando-hooks/pre-push" ] &&
+  ok "setup installs over the old configuration" || fail "setup installs over the old configuration"
+
+echo "-- a first install while another setup holds the config lock"
+# hold_config_lock DIR — takes the lock on DIR's config for about a second.
+hold_config_lock() {
+  : >"$1/.git/config.lock"
+  (sleep 1; rm -f "$1/.git/config.lock") &
+}
+fresh "$tmp/locked"
+hold_config_lock "$tmp/locked"
+if out="$(cd "$tmp/locked" && scripts/install-git-helpers 2>&1)"; then ok "scripts/install-git-helpers waits for the lock"; else fail "scripts/install-git-helpers waits for the lock" "$out"; fi
+wait
+[ "$(git -C "$tmp/locked" config core.hooksPath)" = "$tmp/locked/.git/brando-hooks" ] && ok "core.hooksPath is set after the wait" ||
+  fail "core.hooksPath is set after the wait"
+fresh "$tmp/locked-driver"
+hold_config_lock "$tmp/locked-driver"
+if out="$(cd "$tmp/locked-driver" && python3 -I scripts/gettext-merge-driver --install 2>&1)"; then ok "the driver's --install waits for the lock"; else fail "the driver's --install waits for the lock" "$out"; fi
+wait
+case "$(git -C "$tmp/locked-driver" config merge.gettext.driver)" in
+  *"$tmp/locked-driver/.git/brando-hooks/gettext-merge-driver"*) ok "the driver is registered after the wait" ;;
+  *) fail "the driver is registered after the wait" ;;
+esac
 
 if [ "$failures" -gt 0 ]; then
   echo "git_helpers_test: $failures failure(s)" >&2
