@@ -37,6 +37,9 @@ defmodule Brando.Sites.DeployConfig do
       config :brando, Brando.Sites.DeployConfig,
         s3_targets: %{"acme" => ["s3://acme-www"], "beta" => ["s3://beta-www"]}
 
+  A parent in one site's entries grants that site everything under it, other
+  sites' directories included, so keep the sites' entries apart.
+
   With `tenancy_mode: :multi` a strategy's list or map is required, and no
   target passes without it. With one site, an unset list allows any target of
   the right form.
@@ -298,24 +301,96 @@ defmodule Brando.Sites.DeployConfig do
 
   defp site_entries(_targets, _site_key), do: []
 
+  @settings [:rsync_targets, :s3_targets]
+
   @doc """
   The entries of the operator's `rsync_targets` and `s3_targets` lists that
   grant every site, as `{setting, entry}`: those without `{site_key}`. Entries
-  of a per-site map belong to their site and are never shared.
+  of a per-site map belong to their site, but see `overlapping_destinations/0`.
   """
   @spec shared_destinations() :: [{:rsync_targets | :s3_targets, String.t()}]
   def shared_destinations do
-    config = Application.get_env(:brando, __MODULE__, [])
-
-    for setting <- [:rsync_targets, :s3_targets],
-        entry <- list_entries(config[setting]),
+    for setting <- @settings,
+        targets = setting_value(setting),
+        is_list(targets),
+        entry <- targets,
         is_binary(entry),
         not String.contains?(entry, "{site_key}"),
         do: {setting, entry}
   end
 
-  defp list_entries(targets) when is_list(targets), do: targets
-  defp list_entries(_targets), do: []
+  @doc """
+  Pairs of entries in a per-site map that reach the same destination for two
+  sites, as `{setting, {site_key, entry}, {other_site_key, other_entry}}`: the
+  same directory or prefix, or one inside the other, such as a parent under
+  one key holding another key's directory. Either site's deploy replaces what
+  the other's put there.
+  """
+  @spec overlapping_destinations() :: [{atom(), {String.t(), String.t()}, {String.t(), String.t()}}]
+  def overlapping_destinations do
+    for setting <- @settings,
+        targets = setting_value(setting),
+        is_map(targets),
+        entries = map_entries(targets),
+        {key, entry} <- entries,
+        {other_key, other_entry} <- entries,
+        key < other_key,
+        same_place?(setting, for_site(entry, key), for_site(other_entry, other_key)),
+        do: {setting, {key, entry}, {other_key, other_entry}}
+  end
+
+  @doc """
+  The settings no target can pass, so every save and deploy of that strategy
+  is refused: anything but a list of strings, or a map from string site keys
+  to lists of strings (`%{acme: [...]}` with an atom key, for one).
+  """
+  @spec unreadable_settings() :: [atom()]
+  def unreadable_settings do
+    Enum.filter(@settings, fn setting ->
+      case setting_value(setting) do
+        nil -> false
+        targets when is_list(targets) -> not Enum.all?(targets, &is_binary/1)
+        targets when is_map(targets) -> not Enum.all?(targets, &readable_site_entries?/1)
+        _other -> true
+      end
+    end)
+  end
+
+  defp setting_value(setting), do: Application.get_env(:brando, __MODULE__, [])[setting]
+
+  defp readable_site_entries?({key, entries}),
+    do: is_binary(key) and is_list(entries) and Enum.all?(entries, &is_binary/1)
+
+  defp map_entries(targets) do
+    for {key, entries} when is_binary(key) and is_list(entries) <- Enum.sort(targets),
+        entry when is_binary(entry) <- entries,
+        do: {key, entry}
+  end
+
+  # One host's or bucket's paths where either holds the other. A whole bucket,
+  # or `s3://bucket/`, holds every prefix in it.
+  defp same_place?(:rsync_targets, entry, other) do
+    with %{"host" => host, "path" => path} <- Regex.named_captures(@rsync_target, entry),
+         %{"host" => other_host, "path" => other_path} <- Regex.named_captures(@rsync_target, other) do
+      String.downcase(host) == String.downcase(other_host) and
+        nested?(String.trim_trailing(path, "/"), String.trim_trailing(other_path, "/"))
+    else
+      _unparsed -> false
+    end
+  end
+
+  defp same_place?(:s3_targets, entry, other) do
+    case {parse_s3_target(entry), parse_s3_target(other)} do
+      {{:ok, bucket, prefix}, {:ok, bucket, other_prefix}} ->
+        prefix == "" or other_prefix == "" or nested?(prefix, other_prefix)
+
+      _other ->
+        false
+    end
+  end
+
+  defp nested?(path, other),
+    do: path == other or String.starts_with?(path, other <> "/") or String.starts_with?(other, path <> "/")
 
   # Without a key an entry keeps its placeholder, which no target can match
   defp for_site(listed, site_key) when is_binary(listed) and is_binary(site_key),

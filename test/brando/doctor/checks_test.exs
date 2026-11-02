@@ -361,8 +361,8 @@ defmodule Brando.Doctor.ChecksTest do
         s3_targets: ["s3://acme-www", "s3://{site_key}-www"]
       )
 
-      assert {:warning, item, "deploy targets shared by every site", fix} = Checks.Configuration.deploy_targets()
-      assert item == "Deploy targets: s3_targets s3://acme-www grant every site"
+      assert [{:warning, item, "deploy targets shared by every site", fix}] = Checks.Configuration.deploy_targets()
+      assert item == "Deploy targets: every site may use s3_targets s3://acme-www"
       assert fix =~ ~s(`s3_targets: %{"acme" => ["s3://acme-www"]}`)
       assert %Result{status: :warning, summary: summary} = Checks.Configuration.run(context())
       assert summary =~ "deploy targets shared by every site"
@@ -372,7 +372,29 @@ defmodule Brando.Doctor.ChecksTest do
         s3_targets: %{"acme" => ["s3://acme-www"], "beta" => ["s3://beta-www"]}
       )
 
-      assert {:ok, _item, nil} = Checks.Configuration.deploy_targets()
+      assert [{:ok, _item, nil}] = Checks.Configuration.deploy_targets()
+    end
+
+    test "with several sites, map entries of two sites that reach one destination are a warning" do
+      put_test_env(:tenancy_mode, :multi)
+
+      put_test_env(Brando.Sites.DeployConfig,
+        s3_targets: %{"acme" => ["s3://shared-bucket/"], "beta" => ["s3://shared-bucket/beta"]}
+      )
+
+      assert [{:warning, item, "deploy targets shared between sites", _fix}] = Checks.Configuration.deploy_targets()
+      assert item =~ "s3_targets s3://shared-bucket/ for acme and s3://shared-bucket/beta for beta"
+    end
+
+    test "a deploy target setting no target can pass is a warning" do
+      put_test_env(Brando.Sites.DeployConfig, s3_targets: %{acme: ["s3://acme-www"]})
+
+      for mode <- [:single, :multi] do
+        put_test_env(:tenancy_mode, mode)
+
+        assert [{:warning, "Deploy targets: s3_targets allow no destination", "deploy targets that allow nothing", _fix}] =
+                 Checks.Configuration.deploy_targets()
+      end
     end
 
     test "with one site, a deploy target without {site_key} is fine" do
@@ -380,7 +402,7 @@ defmodule Brando.Doctor.ChecksTest do
 
       for mode <- [:none, :single] do
         put_test_env(:tenancy_mode, mode)
-        assert {:ok, _item, nil} = Checks.Configuration.deploy_targets()
+        assert [{:ok, _item, nil}] = Checks.Configuration.deploy_targets()
       end
     end
 

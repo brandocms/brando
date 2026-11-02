@@ -300,6 +300,45 @@ defmodule Brando.Sites.DeployConfigTest do
 
     test "map entries are not shared" do
       assert DeployConfig.shared_destinations() == []
+      assert DeployConfig.overlapping_destinations() == []
+      assert DeployConfig.unreadable_settings() == []
+    end
+  end
+
+  test "map entries of two sites that reach one destination overlap" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: %{
+        "alpha" => ["deploy@static.example.com:/srv/sites/"],
+        "beta" => ["deploy@Static.example.com:/srv/sites/beta", "deploy@static.example.com:/srv/sites-b"]
+      },
+      s3_targets: %{
+        "alpha" => ["s3://bucket", "s3://other/a", "s3://other/{site_key}-x"],
+        "beta" => ["s3://bucket/beta", "s3://other/ab", "s3://other/alpha-x/y"],
+        "gamma" => ["s3://gamma-www"]
+      }
+    )
+
+    assert DeployConfig.overlapping_destinations() == [
+             {:rsync_targets, {"alpha", "deploy@static.example.com:/srv/sites/"},
+              {"beta", "deploy@Static.example.com:/srv/sites/beta"}},
+             {:s3_targets, {"alpha", "s3://bucket"}, {"beta", "s3://bucket/beta"}},
+             {:s3_targets, {"alpha", "s3://other/{site_key}-x"}, {"beta", "s3://other/alpha-x/y"}}
+           ]
+  end
+
+  test "a setting no target can pass is unreadable" do
+    put_test_env(DeployConfig,
+      resolver: &resolve/2,
+      rsync_targets: [acme: ["deploy@static.example.com:/srv/www"]],
+      s3_targets: %{"acme" => "s3://acme-www"}
+    )
+
+    assert DeployConfig.unreadable_settings() == [:rsync_targets, :s3_targets]
+
+    for value <- ["s3://acme-www", %{acme: ["s3://acme-www"]}, %{"acme" => [:atom]}] do
+      put_test_env(DeployConfig, resolver: &resolve/2, s3_targets: value)
+      assert DeployConfig.unreadable_settings() == [:s3_targets], inspect(value)
     end
   end
 

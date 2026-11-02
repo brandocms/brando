@@ -401,6 +401,11 @@ msgstr ""
 msgid "%{schema}: %{helpers}"
 msgstr ""
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "%{setting} %{entry} for %{site} and %{other_entry} for %{other_site}"
+msgstr ""
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{target}: %{count} image"
@@ -506,7 +511,17 @@ msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
-msgid "Deploy targets: %{entries} grant every site"
+msgid "Deploy targets: %{pairs} reach the same destination"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: %{settings} allow no destination"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy targets: every site may use %{entries}"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -966,7 +981,17 @@ msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
+msgid "deploy targets shared between sites"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
 msgid "deploy targets shared by every site"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "deploy targets that allow nothing"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -1057,6 +1082,11 @@ msgstr ""
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "give config :brando, Oban its queues (see Brando.Supervisor)"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "give each site in the deploy target map destinations apart from the other sites'"
 msgstr ""
 
 #: lib/brando/doctor/checks/json_ld.ex
@@ -1501,4 +1531,9 @@ msgstr ""
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "where the media is (on the server, or here once it is synced or mounted), run mix brando.images.adopt to record the images that match, then Utilities → Recreate changed images for the rest; here neither works, as adopting needs the files and recreating the originals"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "write each deploy target setting as a list of destinations, or as a map from each site key, a string, to a list of destinations"
 msgstr ""

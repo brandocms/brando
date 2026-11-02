@@ -1052,9 +1052,7 @@ who may deploy one site can name that destination, or another site's directory
 or prefix under that parent, and the deploy replaces what is there. Nothing
 ties such an entry to a single site, so use one only if the same people deploy
 all the sites. An `rsync_targets` parent without the placeholder keeps working,
-and leaves the sites open to each other until it uses `{site_key}`. With
-`tenancy_mode: :multi`, the System check's Configuration line warns about each
-such entry (see [System check](doctor.md)).
+and leaves the sites open to each other until it uses `{site_key}`.
 
 When a site's destination is not named by its key, such as a bucket of its
 own, give the setting a map from each site's key to that site's entries:
@@ -1067,10 +1065,18 @@ config :brando, Brando.Sites.DeployConfig,
 
 An entry in the map grants only the site it is listed under, and follows the
 same rules as a list entry: an exact destination, or a parent ending in `/`.
+A parent grants its site everything under it, so keep each site's entries
+apart: with `"acme" => ["s3://shared-bucket/"]` and
+`"beta" => ["s3://shared-bucket/beta"]`, acme can deploy over beta's prefix.
 A site the map does not name has no destination of that strategy, and neither
-does a key that is not a string or a value that is not a list. The map is
-checked when the settings are saved and each time a build deploys, as the list
-is.
+does a key that is not a string, such as `%{acme: [...]}`, or a value that is
+not a list. The map is checked when the settings are saved and each time a
+build deploys, as the list is.
+
+The System check's Configuration line warns when, with `tenancy_mode: :multi`,
+a list entry has no `{site_key}` or two sites' map entries reach the same
+destination, and when a setting has a form no target can pass (see
+[System check](doctor.md)).
 
 **Entries that extend each other collide on hyphenated keys.** With
 `s3://b/{site_key}` and `s3://b/{site_key}-staging`, site `a` may name
