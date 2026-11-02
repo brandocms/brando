@@ -464,7 +464,7 @@ defmodule Brando.Activity do
   ## Reading
 
   @doc """
-  Events, newest first. Filters: `:user_id`, `:schema` (module or string),
+  Events, newest first. Filters: `:id`, `:user_id`, `:schema` (module or string),
   `:action`, `:since` (`DateTime`), `:q` (title search), `:schema_in` (the
   schemas the reader may see), `:readable_entries`, `:actor` (a kind, see
   `actor_kind/1`), `:client` (an MCP client's name) and `:proposal_id`.
@@ -496,6 +496,7 @@ defmodule Brando.Activity do
     Enum.reduce(filters, from(e in Event), fn
       {_key, nil}, query -> query
       {_key, ""}, query -> query
+      {:id, id}, query -> where(query, [e], e.id == ^id)
       {:user_id, id}, query -> where(query, [e], e.user_id == ^id)
       {:schema, schema}, query -> where(query, [e], e.schema == ^to_string(schema))
       {:schema_in, schemas}, query -> where(query, [e], e.schema in ^Enum.map(schemas, &to_string/1))

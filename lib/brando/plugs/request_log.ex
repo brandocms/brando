@@ -48,8 +48,12 @@ defmodule Brando.Plug.RequestLog do
   @doc "`path_info` with its secret token filtered out, or `nil` when it has none."
   @spec filter([String.t()]) :: [String.t()] | nil
   def filter(path_info) do
-    path_info = Enum.map(path_info, &decode/1)
-    Enum.find_value(@at_root, &replace_after(path_info, &1)) || filter_below(path_info)
+    # Match as the router reads a segment; log the segments as received, so an
+    # encoded line feed stays encoded like on any other path.
+    case path_info |> Enum.map(&decode/1) |> token_index() do
+      nil -> nil
+      index -> List.replace_at(path_info, index, @filtered)
+    end
   end
 
   # As the router reads a segment before matching it: `%72eset-password`
@@ -60,25 +64,19 @@ defmodule Brando.Plug.RequestLog do
     ArgumentError -> segment
   end
 
-  defp filter_below([]), do: nil
-
-  defp filter_below([segment | rest] = path_info) do
-    case Enum.find_value(@anywhere, &replace_after(path_info, &1)) do
-      nil ->
-        case filter_below(rest) do
-          nil -> nil
-          filtered -> [segment | filtered]
-        end
-
-      filtered ->
-        filtered
-    end
+  defp token_index(decoded) do
+    Enum.find_value(@at_root, &after_marker(decoded, &1, 0)) || anywhere_index(decoded, 0)
   end
 
-  defp replace_after(path_info, marker) do
-    case Enum.split(path_info, length(marker)) do
-      {^marker, [_token | rest]} -> marker ++ [@filtered | rest]
-      _ -> nil
-    end
+  # Runs on every request that logs, and a path's length is the sender's choice:
+  # one pass over the segments, with the index carried along.
+  defp anywhere_index([], _offset), do: nil
+
+  defp anywhere_index([_segment | rest] = decoded, offset) do
+    Enum.find_value(@anywhere, &after_marker(decoded, &1, offset)) || anywhere_index(rest, offset + 1)
   end
+
+  defp after_marker([segment | rest], [segment | marker], index), do: after_marker(rest, marker, index + 1)
+  defp after_marker([_token | _rest], [], index), do: index
+  defp after_marker(_decoded, _marker, _index), do: nil
 end

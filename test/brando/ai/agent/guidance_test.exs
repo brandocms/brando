@@ -4,8 +4,9 @@ defmodule Brando.AI.Agent.GuidanceTest do
   alias Brando.AI.Agent
   alias Brando.AI.Agent.{Conversation, Guidance, Prompt}
   alias Brando.AI.Agent.Guidance.Version
+  alias Brando.Authorization.{Boundary, Catalog, Groups, Migration, Scope}
   alias Brando.Content.Transfer
-  alias Brando.{Factory, Repo}
+  alias Brando.{Factory, Repo, Tenant}
 
   setup do
     previous = Application.get_env(:brando, Agent)
@@ -115,5 +116,101 @@ defmodule Brando.AI.Agent.GuidanceTest do
     assert {:ok, %{text: "Elsewhere guidance"}} = Guidance.source(staging.id, c.superuser)
     assert {:error, _} = Guidance.source(staging.id, c.admin)
     assert {:error, _} = Guidance.source(Ecto.UUID.generate(), c.superuser)
+  end
+
+  describe "guidance from another site, on a screen pinned to this one" do
+    setup do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :multi)
+      Tenant.put_prefix(nil)
+      Boundary.put_scope(nil)
+
+      on_exit(fn ->
+        Tenant.put_prefix(nil)
+        Boundary.put_scope(nil)
+        Tenant.Cache.clear()
+      end)
+
+      owner = Factory.insert(:random_user, role: :superuser)
+      user = Factory.insert(:random_user, role: :editor)
+      alpha = guidance_site("guidance-alpha")
+      beta = guidance_site("guidance-beta")
+      {:ok, _} = Migration.run()
+
+      permissions = ["brando.admin.access", Catalog.get(:configure, :assistant).key]
+      alpha_scope = Scope.site(owner, alpha.site, alpha.environment)
+      {:ok, group} = Groups.create(alpha_scope, %{name: "Alpha setup"}, permissions)
+      {:ok, :ok} = Groups.add_member(alpha_scope, group.id, user.id)
+
+      version = fn site, text ->
+        prefix = Tenant.prefix(site.site, site.environment)
+
+        other_scope!(%{
+          scope: "#{site.site.key}/#{site.environment.key}",
+          prefix: prefix,
+          site_key: site.site.key,
+          environment_key: site.environment.key,
+          text: text
+        })
+      end
+
+      %{user: user, owner: owner, alpha: alpha, beta: beta, version: version}
+    end
+
+    defp guidance_site(key) do
+      {:ok, site} =
+        Tenant.Registry.create_site(%{
+          name: key,
+          key: key,
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :dynamic
+        })
+
+      {:ok, environment} = Tenant.Registry.create_environment(site, %{name: "production", key: "production", live: true})
+
+      Ecto.Adapters.SQL.query!(
+        Brando.RuntimeConfig.get(:repo_module),
+        ~s(CREATE SCHEMA "#{Tenant.prefix(site, environment)}")
+      )
+
+      %{site: site, environment: environment}
+    end
+
+    defp pinned(user, %{site: site, environment: environment}, fun) do
+      scope = Scope.site(user, site, environment)
+      Tenant.with_prefix(scope.prefix, fn -> Boundary.with_scope(scope, fun) end)
+    end
+
+    test "is not offered to a manager of this site alone", c do
+      beta = c.version.(c.beta, "Beta's own conventions")
+
+      pinned(c.user, c.alpha, fn ->
+        assert Guidance.configurable?(c.user)
+        assert Guidance.sources(c.user) == []
+        assert {:error, _} = Guidance.source(beta.id, c.user)
+      end)
+    end
+
+    test "is offered to whoever may configure that site too", c do
+      {:ok, group} =
+        Groups.create(Scope.site(c.owner, c.beta.site, c.beta.environment), %{name: "Beta setup"}, [
+          "brando.admin.access",
+          Catalog.get(:configure, :assistant).key
+        ])
+
+      {:ok, :ok} = Groups.add_member(Scope.site(c.owner, c.beta.site, c.beta.environment), group.id, c.user.id)
+      beta = c.version.(c.beta, "Beta's own conventions")
+
+      pinned(c.user, c.alpha, fn ->
+        assert [%{id: id, text: "Beta's own conventions"}] = Guidance.sources(c.user)
+        assert id == beta.id
+      end)
+
+      pinned(c.owner, c.alpha, fn ->
+        assert Enum.map(Guidance.sources(c.owner), & &1.id) == [beta.id]
+      end)
+    end
   end
 end

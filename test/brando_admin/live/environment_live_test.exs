@@ -510,4 +510,82 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
 
     refute Registry.get_environment_by_key(site, "forbidden")
   end
+
+  describe "changing the host an environment answers on takes a recent confirmation" do
+    setup %{conn: conn} do
+      token = get_session(conn, :user_token)
+      at = NaiveDateTime.add(NaiveDateTime.utc_now(), -30 * 60, :second)
+      Repo.update_all(from(t in Brando.Users.UserToken, where: t.token == ^token), set: [confirmed_at: at])
+      :ok
+    end
+
+    for mode <- [:legacy, :groups] do
+      test "assigning a domain waits for the password, #{mode} mode", %{conn: conn, site: site} do
+        {:ok, staging} = Environments.create_environment(site, %{name: "Staging", key: "staging", live: false})
+        groups_mode(unquote(mode))
+        {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+        html = render_submit(view, "update_domain", %{"environment_id" => staging.id, "domain" => "moved.acme.test"})
+        assert html =~ "reauth-modal"
+        assert Registry.get_environment(staging.id).domain == staging.domain
+
+        view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
+        assert Registry.get_environment(staging.id).domain == "moved.acme.test"
+      end
+
+      test "creating an environment on a domain waits for the password, #{mode} mode", %{conn: conn, site: site} do
+        groups_mode(unquote(mode))
+        {:ok, view, _html} = live(conn, "/admin/config/environments")
+        attrs = %{"name" => "Claimed", "key" => "claimed", "domain" => "claimed.acme.test"}
+
+        html = render_submit(view, "create_environment", %{"environment" => attrs})
+        assert html =~ "reauth-modal"
+        refute Registry.get_environment_by_key(site, "claimed")
+        refute Cache.get_env_by_domain("claimed.acme.test")
+
+        view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
+        assert %{domain: "claimed.acme.test"} = Registry.get_environment_by_key(site, "claimed")
+      end
+    end
+
+    # Answering proves who you are: it takes no grant of its own, or a holder of
+    # the create grant alone could never get past the prompt.
+    test "the prompt can be answered with the create grant alone", %{
+      site: site,
+      production: production,
+      current_user: owner
+    } do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Migration.run()
+      creator = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      owner_scope = Scope.site(owner, site, production)
+
+      {:ok, group} =
+        Groups.create(owner_scope, %{name: "Environment creators"}, [
+          "brando.admin.access",
+          "brando.environments.read",
+          "brando.environments.create"
+        ])
+
+      {:ok, :ok} = Groups.add_member(owner_scope, group.id, creator.id)
+      conn = log_in_user(build_conn(), creator)
+      token = get_session(conn, :user_token)
+      at = NaiveDateTime.add(NaiveDateTime.utc_now(), -30 * 60, :second)
+      Repo.update_all(from(t in Brando.Users.UserToken, where: t.token == ^token), set: [confirmed_at: at])
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      html = render_submit(view, "create_environment", %{"environment" => %{"name" => "New", "key" => "new-one"}})
+      assert html =~ "reauth-modal"
+
+      view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
+      assert Registry.get_environment_by_key(site, "new-one")
+    end
+
+    defp groups_mode(:legacy), do: :ok
+
+    defp groups_mode(:groups) do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Migration.run()
+    end
+  end
 end

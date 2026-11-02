@@ -116,8 +116,8 @@ so the store refuses a body of any other size; browsers set `Content-Length`
 themselves, so it needs no CORS entry. Until the URL expires, after ten minutes,
 its holder can still replace the object with one of the same size and type. Leave
 `direct_acl: nil` unless your bucket requires an ACL header. A direct image's
-original is fetched back once it lands, checked against that size, stored like a
-server upload and processed into its sizes, which
+original is fetched back once it lands, checked against that size and for its
+real type, stored like a server upload and processed into its sizes, which
 are delivered to the bucket as usual; set `keep_local_copy: false` to have
 the local copies removed afterwards. Direct S3 video stores an original
 rather than transcoding it.

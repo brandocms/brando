@@ -467,6 +467,9 @@ the folders you want different, and move them. The bar above the list offers
 - "Not in use" errs towards used: an asset in a table block's rows, in an
   entry in the trash, or in an editor's unsaved recovery copy counts as used,
   though the "Used in" list names only the live entries.
+- With group authorization, an entry you may not read shows in the preview
+  without its name, type or a folder to rename. Its assets still move, to the
+  folder it would get for anyone, and that folder's name is the entry's.
 - A move changes the asset's folder, not its files, so no URL changes.
 - Undo puts back what is still where the sort put it, and removes the folders
   the sort made once they are empty.

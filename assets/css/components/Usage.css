@@ -16,6 +16,8 @@
 
 .usage-unused { color: var(--brando-attention-ink); }
 
+.usage-list li > .usage-hidden { color: var(--brando-muted); }
+
 .usage-list {
   max-width: 1120px;
   margin-top: 32px;

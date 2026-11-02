@@ -124,7 +124,7 @@ defmodule BrandoAdmin.VideoPickerScopeTest do
 
     {cfg, ^target} = Brando.Uploads.resolve_video_config(target)
     tmp = Path.join(System.tmp_dir!(), "picker-upload-#{System.unique_integer([:positive])}.mp4")
-    File.write!(tmp, :crypto.strong_rand_bytes(1024))
+    File.write!(tmp, <<24::32, "ftypisom", 0::104>> <> :crypto.strong_rand_bytes(1000))
     on_exit(fn -> File.rm(tmp) end)
 
     entry = %{client_name: "clip.mp4", client_type: "video/mp4", client_size: 1024}

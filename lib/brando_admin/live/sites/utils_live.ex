@@ -13,6 +13,11 @@ defmodule BrandoAdmin.Sites.UtilsLive do
 
   on_mount({BrandoAdmin.LiveView.Form, {:hooks_toast, __MODULE__}})
 
+  # What writes group grants asks for the password, a code or a passkey when the
+  # session has not confirmed lately, as the groups screen does. The report,
+  # export and review only read.
+  on_mount({BrandoAdmin.Reauth, events: ~w(authorization_apply authorization_backfill)})
+
   def mount(params, %{"user_token" => token}, socket) do
     if connected?(socket) do
       {:ok,

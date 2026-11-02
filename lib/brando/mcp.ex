@@ -383,7 +383,7 @@ defmodule Brando.MCP do
     active?(user) and
       if Engine.enabled?(),
         do: Brando.Authorization.Boundary.authorize(user, :manage, :mcp) == :ok,
-        else: user.role in [:admin, :superuser]
+        else: legacy_admin?(user, %{site: nil})
   end
 
   def can_manage_here?(_user), do: false
@@ -399,7 +399,7 @@ defmodule Brando.MCP do
     end
   end
 
-  defp legacy_admin?(user, %{site: nil}), do: user.role in [:admin, :superuser]
+  defp legacy_admin?(user, %{site: nil}), do: Brando.Authorization.Boundary.fresh_role(user).role in [:admin, :superuser]
   defp legacy_admin?(user, %{site: site}), do: Tenant.Access.can_manage?(user, site)
 
   ## Connections
@@ -500,6 +500,8 @@ defmodule Brando.MCP do
     * the account is deactivated (`"account_deactivated"`) or deleted
       (`"account_deleted"`).
 
+  Authorization codes not yet exchanged end with them.
+
   Callers inside a transaction run it with `Brando.Repo.after_commit/1`.
   Losing the Connect permission or the endpoint being turned off are not
   revocations here: the first stops the next call, the second revokes the
@@ -510,6 +512,13 @@ defmodule Brando.MCP do
     # Before the brando_213 migration there is nothing to revoke, and a
     # failed query would abort the caller's transaction.
     if installed?() do
+      # What the person approved a moment ago ends too: it would otherwise
+      # still make a connection, if the account comes back within its minute.
+      # First: this waits on the row lock of a code being exchanged, so the
+      # grant that exchange makes is among the ones revoked below.
+      from(c in AuthorizationCode, where: c.user_id == ^user_id and is_nil(c.used_at))
+      |> Repo.update_all(set: [used_at: DateTime.utc_now()])
+
       from(g in Grant, where: g.user_id == ^user_id and is_nil(g.revoked_at))
       |> Repo.all()
       |> Enum.each(&revoke_grant(&1, :system, reason))

@@ -20,6 +20,17 @@ defmodule BrandoWeb.Plugs.MuxWebhookTest do
            end) =~ "Mux webhook secret not configured"
   end
 
+  # Audit F35: an empty MUX_WEBHOOK_SECRET is an HMAC key anyone can sign with
+  test "rejects a delivery signed with an empty key when the secret is empty" do
+    timestamp = @now
+    signature = :hmac |> :crypto.mac(:sha256, "", "#{timestamp}.#{@body}") |> Base.encode16(case: :lower)
+
+    assert Brando.Test.OwnLog.capture(fn ->
+             assert {:error, :invalid_signature} =
+                      MuxWebhook.verify_signature("t=#{timestamp},v1=#{signature}", @body, "", @now)
+           end) =~ "Mux webhook secret not configured"
+  end
+
   test "rejects a signature computed over a different body" do
     assert {:error, :invalid_signature} =
              MuxWebhook.verify_signature(signed(@body, @now), @body <> " ", @secret, @now)

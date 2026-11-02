@@ -127,7 +127,7 @@ defmodule Brando.EditorSinksTest do
       # An empty one stays empty, so `{% if body %}` is still false
       assert Parser.process_vars([var(:rich_text, "body", nil)]) == %{"body" => nil}
 
-      %{table_rows: [%{body: nil, vars: [%{value: nil}]}]} =
+      %{table_rows: [%{"body" => nil, vars: [%{value: nil}]}]} =
         Brando.Villain.TemplateAdapter.simple_block(%{class: nil}, %{
           table_rows: [%{vars: [var(:rich_text, "body", nil)]}]
         })
@@ -183,11 +183,11 @@ defmodule Brando.EditorSinksTest do
       block = %{uid: "b", type: :module, table_rows: [row]}
 
       %{table_rows: [liquid]} = Brando.Villain.TemplateAdapter.simple_block(%{class: nil}, block, escape: true)
-      assert active(liquid.city) == 0
-      assert active(liquid.note) == 0
+      assert active(liquid["city"]) == 0
+      assert active(liquid["note"]) == 0
       assert Enum.all?(liquid.vars, &(active(&1.value) == 0))
 
-      %{table_rows: [heex]} = Brando.Villain.TemplateAdapter.simple_block(%{class: nil}, block)
+      %{table_rows: [heex]} = Brando.Villain.TemplateAdapter.simple_block(%{class: nil}, block, row_keys: :existing_atom)
       assert heex.city == @handler
       assert [%{value: @handler}, %{value: note}] = heex.vars
       assert active(note) == 0

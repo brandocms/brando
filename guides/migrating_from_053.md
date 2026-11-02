@@ -832,6 +832,46 @@ lists module code that still reads a multi module's entries the 0.53 way
 could not rewrite: each entry is a block, so change `.data.vars.` to `.vars.`
 and `.data.refs.` to `.refs.`, then run `mix brando.entries.resave`.
 
+### Rows left by deleted sites and forms
+
+Sites, environments and forms deleted before 0.55 left rows behind: form
+submissions hold visitors' personal data, and a later site with the same keys
+or a new form with the same key reads them. Brando does not delete them on its
+own, because it cannot be undone. Take a backup, then read what there is in
+`iex -S mix` (in a release, `bin/<app> remote`):
+
+```elixir
+Brando.Worker.OrphanedRowsPurge.report()
+```
+
+`:environments` lists scopes that match no registered environment and no schema,
+with their rows per table. A scope is found by the tenant prefix stored in form
+submissions, entry drafts or guidance versions. Assistant conversations, proposals
+and receipts store a digest instead, which includes the database's host and port,
+so the rows of a deleted site with no trace in those three tables stay, and so do
+rows written before the database moved. To delete those listed:
+
+```elixir
+Brando.Worker.OrphanedRowsPurge.purge_deleted_environments()
+```
+
+`:forms` lists keys with submissions and no form in an active environment.
+Copying an environment over another keeps its submissions, so a key here may be
+one the next copy brings back. Name those you know are gone, with the scope the
+report shows, or `nil` for a site without tenancy:
+
+```elixir
+Brando.Worker.OrphanedRowsPurge.purge_form_submissions("tenant_acme_production", ["old-contact"])
+```
+
+A key with a form in that environment is skipped, and so is a row of a form since
+renamed, so this never reaches a live form's submissions. A job whose scope no
+registered environment has is cancelled, and so is one naming a scope on a site
+without tenancy. That also means rows left under a key that a form uses again,
+or under a site key that a new site uses again, are not found: they look like
+that form's or site's own. Rows older than the environment's `inserted_at` are
+the sign of a reused site key; delete those by hand after reading them.
+
 ## 5. Reconcile Gettext catalogs
 
 `mix brando.migrate55` has already completed incomplete `Plural-Forms` headers

@@ -7,7 +7,7 @@ defmodule Brando.Type.ImageConfig do
     * random_filename - use filename given at upload, or create a random filename
     * slugify_filename - slugify the uploaded filename (default `true`). Only
       applies when `random_filename` is false, which takes precedence. Leaving
-      this off stores the client's filename verbatim, so spaces and commas end
+      this off stores the last segment of the client's filename as it is, so spaces and commas end
       up in image urls — which is a problem for `srcset`, where both characters
       are structural.
     * hidden_folder - name of a folder kept out of the media library (the

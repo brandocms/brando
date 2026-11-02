@@ -96,6 +96,13 @@ defmodule Brando.Uploads.DirectImageTest do
       assert {:ok, :server} = Direct.presign(:image, "default", meta())
     end
 
+    test "a size over the field's limit is refused before anything is presigned" do
+      put_image_config(%{cdn: @cdn, size_limit: 1000})
+
+      assert {:error, "File is too large" <> _} = Direct.presign(:image, "default", meta(%{size: 1001}))
+      assert BrandoIntegration.Repo.all(Brando.Uploads.PendingIntent) == []
+    end
+
     test "a type the field does not take is refused before anything is presigned" do
       put_image_config(%{cdn: @cdn})
 
@@ -153,6 +160,20 @@ defmodule Brando.Uploads.DirectImageTest do
       assert message =~ "size mismatch"
       "media/" <> path = upload.key
       refute File.exists?(Path.join(Brando.Tenant.Storage.current_media_root(), path))
+      assert BrandoIntegration.Repo.all(Image) == []
+    end
+
+    # Slugging a name of only punctuation leaves ".png", which has no extension
+    test "a key that lost its extension is not stored" do
+      put_image_config(%{cdn: @cdn, allowed_mimetypes: ["image/jpeg", "image/png"]})
+      body = File.read!(@fixture)
+      {:ok, upload} = Direct.presign(:image, "default", meta(%{name: "!!!.jpg", size: byte_size(body)}))
+      assert Path.extname(upload.key) == ""
+
+      expect(Client.Mock, :head_object, fn _, _, _ -> {:ok, head_response(byte_size(body), "image/jpeg")} end)
+      expect(Client.Mock, :get_object, fn _, _, _ -> {:ok, %{status_code: 200, body: body}} end)
+
+      assert {:error, "Unsupported image type" <> _} = Direct.complete(upload.ref)
       assert BrandoIntegration.Repo.all(Image) == []
     end
 

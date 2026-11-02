@@ -1,0 +1,1 @@
+- A lowered role, a revoked site, a suspended or archived site, and a removed read grant now take effect in admin views that are already open, on their next action rather than their next mount; a demoted superuser's open view can no longer compile module code through a ZIP or content transfer preview.

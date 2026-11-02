@@ -75,6 +75,7 @@ defmodule Brando.TenantEnvironmentDomainTest do
 
     test "Environments.create_environment takes the creator as the actor", %{site: site} do
       admin = Factory.insert(:random_user, role: :editor)
+      {:ok, _} = Brando.Tenant.Access.grant(admin, site, :admin)
       attrs = %{name: "Staging", key: "staging", domain: "staging.acme.test"}
 
       assert {:error, %Ecto.Changeset{}} = Environments.create_environment(site, attrs, creator: admin)

@@ -5,12 +5,15 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
-  # Deleting an environment or its archives, copying into one and setting one
-  # live ask for the password, a code or a passkey when the session has not
+  # Deleting an environment or its archives, copying into one, setting one live,
+  # creating or restoring one, cancelling a scheduled operation and giving one a
+  # domain, which decides what a public host serves as surely as setting one live
+  # does, ask for the password, a code or a passkey when the session has not
   # confirmed lately.
   on_mount(
     {BrandoAdmin.Reauth,
-     events: ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy)}
+     events:
+       ~w(delete_environment queue_set_live schedule_set_live prune_archives queue_copy schedule_copy update_domain create_environment rollback cancel_operation)}
   )
 
   alias Brando.Environments
@@ -164,7 +167,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       phx-click="delete_environment"
                       phx-value-id={environment.id}
                       phx-confirm={
-                        gettext("Delete %{name} and its complete PostgreSQL schema? This cannot be undone.",
+                        gettext(
+                          "Delete %{name}, its complete PostgreSQL schema, and its form submissions and drafts? This cannot be undone.",
                           name: environment.name
                         )
                       }
@@ -735,8 +739,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   defp for_site(nil, _fun), do: []
   defp for_site(site, fun), do: fun.(site)
 
-  defp authorize(%{assigns: %{can_manage?: true}}), do: :ok
-  defp authorize(_socket), do: {:error, :not_authorized}
+  # Asked again for each action: a site's role may have been lowered since mount.
+  defp authorize(socket) do
+    if can_manage?(socket.assigns.current_user, socket.assigns[:current_site]),
+      do: :ok,
+      else: {:error, :not_authorized}
+  end
 
   defp environment_for_site(socket, id) do
     with {environment_id, ""} <- Integer.parse(to_string(id)),

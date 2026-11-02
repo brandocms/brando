@@ -49,9 +49,10 @@ defmodule BrandoAdmin.UploadManager do
      |> allow_upload(:queue,
        accept: :any,
        max_entries: 20,
-       # Intake has already applied the resolved target config's size_limit.
-       # This larger value is the Phoenix transport backstop; using the 50 MB
-       # fallback here rejected otherwise-valid 100 MB+ file/video configs.
+       # Intake applies the resolved target config's size_limit to the declared
+       # size, and consuming the entry applies it to the file that arrived. This
+       # larger value is the Phoenix transport backstop; using the 50 MB fallback
+       # here rejected otherwise-valid 100 MB+ file/video configs.
        max_file_size: Uploads.manager_max_file_size(),
        auto_upload: true,
        progress: &handle_progress/3
@@ -99,7 +100,7 @@ defmodule BrandoAdmin.UploadManager do
 
   def handle_event("direct_progress", %{"ref" => ref, "progress" => progress}, socket)
       when is_integer(progress) do
-    {:noreply, update_item(socket, ref, %{status: :uploading, progress: min(progress, 100)})}
+    {:noreply, client_progress(socket, ref, :direct, progress)}
   end
 
   def handle_event("direct_complete", _params, %{assigns: %{current_user: nil}} = socket) do
@@ -204,7 +205,7 @@ defmodule BrandoAdmin.UploadManager do
 
   def handle_event("external_progress", %{"ref" => ref, "progress" => progress}, socket)
       when is_integer(progress) do
-    {:noreply, update_item(socket, ref, %{status: :uploading, progress: min(progress, 100)})}
+    {:noreply, client_progress(socket, ref, :external, progress)}
   end
 
   def handle_event("external_complete", %{"ref" => ref}, socket) do
@@ -396,7 +397,7 @@ defmodule BrandoAdmin.UploadManager do
          end) do
       {:ok, :server} ->
         {item, socket} =
-          put_intake_item(socket, name, size, asset_type, target, transport: :server)
+          put_intake_item(socket, name, size, asset_type, target, transport: :server, mime_type: mime_type)
 
         {%{index: index, ref: item.ref, transport: "server"}, socket}
 
@@ -505,12 +506,18 @@ defmodule BrandoAdmin.UploadManager do
           {:noreply, socket}
         end
 
-      item ->
+      %{transport: :server, status: status} = item when status in [:queued, :uploading] ->
         if entry.done? do
           consume_and_deliver(socket, entry, item)
         else
           {:noreply, update_item(socket, item.ref, %{status: :uploading, progress: entry.progress})}
         end
+
+      # Intake refused this ref, it uploads directly, or it already has its file:
+      # no bytes are accepted under it.
+      item ->
+        {:noreply,
+         if(entry.done?, do: socket |> cancel_upload(:queue, entry.ref) |> push_released(item.ref), else: socket)}
     end
   end
 
@@ -543,8 +550,10 @@ defmodule BrandoAdmin.UploadManager do
 
         # Always {:ok, _} so the entry is consumed (and its temp file cleaned)
         # even on storage failure; store_upload normalizes every error shape.
-        case store_upload(item.target, meta, clean_entry, cfg, user) do
-          {:ok, asset} -> {:ok, asset}
+        with :ok <- matches_intake(clean_entry, item),
+             {:ok, asset} <- store_upload(item.target, meta, clean_entry, cfg, user) do
+          {:ok, asset}
+        else
           {:error, message} -> {:ok, {:upload_error, message}}
         end
       end)
@@ -565,6 +574,11 @@ defmodule BrandoAdmin.UploadManager do
         {:noreply, track_stored_asset(socket, item, asset, user)}
     end
   end
+
+  # Intake judged the name and type the client announced. The hook tags the same
+  # file it announced, so anything else was not the file that was judged.
+  defp matches_intake(%{client_name: name, client_type: type}, %{filename: name, mime_type: type}), do: :ok
+  defp matches_intake(_entry, _item), do: {:error, gettext("The file does not match the one that was checked.")}
 
   defp track_stored_asset(socket, %{asset_type: :image} = item, asset, user) do
     Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{asset.id}")
@@ -968,6 +982,7 @@ defmodule BrandoAdmin.UploadManager do
       asset_type: asset_type,
       transport: Keyword.fetch!(opts, :transport),
       direct: Keyword.get(opts, :direct),
+      mime_type: Keyword.get(opts, :mime_type),
       status: Keyword.get(opts, :status, :queued),
       progress: 0,
       error: Keyword.get(opts, :error),
@@ -1028,6 +1043,19 @@ defmodule BrandoAdmin.UploadManager do
         socket
         |> update(:items, &Map.put(&1, ref, updated))
         |> push_event("b:uploads:state", Map.take(updated, [:ref, :status, :progress, :error]))
+    end
+  end
+
+  # What the client reports about a transfer it runs itself. `:uploading` is what
+  # lets a ref take a server transfer (`handle_progress/3`), so a report moves only
+  # an unfinished item of that transport.
+  defp client_progress(socket, ref, transport, progress) do
+    case Map.get(socket.assigns.items, ref) do
+      %{transport: ^transport, status: status} when status in [:queued, :uploading] ->
+        update_item(socket, ref, %{status: :uploading, progress: min(progress, 100)})
+
+      _other ->
+        socket
     end
   end
 
