@@ -94,6 +94,7 @@ test.describe('Markdown source placements', () => {
     await expect(editor).toContainText('dddddddddddd')
     await page.setViewportSize({ width: 390, height: 844 })
     await page.screenshot({ path: testInfo.outputPath('placement-mobile.png'), fullPage: true })
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
+    // The page settles in the frames after a resize, so poll the measurement
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   })
 })

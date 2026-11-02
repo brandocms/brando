@@ -59,7 +59,8 @@ test('rich text links preserve wording through validation, another field change,
   await page.screenshot({ path: testInfo.outputPath('expanded-editor-desktop.png') })
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: testInfo.outputPath('expanded-editor-mobile.png') })
-  expect(await expanded.evaluate(el => el.scrollWidth <= el.clientWidth && el.scrollHeight <= el.clientHeight)).toBe(true)
+  // The page settles in the frames after a resize, so poll the measurement
+  await expect.poll(() => expanded.evaluate(el => el.scrollWidth <= el.clientWidth && el.scrollHeight <= el.clientHeight)).toBe(true)
   await expanded.getByRole('button', { name: 'Done', exact: true }).click()
   await expect(editor).toBeFocused()
   await page.setViewportSize({ width: 1440, height: 900 })
@@ -78,7 +79,7 @@ test('rich text links preserve wording through validation, another field change,
   await page.setViewportSize({ width: 390, height: 844 })
   await dialog.getByLabel('Mark as nofollow').scrollIntoViewIfNeeded()
   await page.screenshot({ path: testInfo.outputPath('link-content-mobile.png') })
-  expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+  await expect.poll(() => dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
   await dialog.getByRole('button', { name: 'Apply link', exact: true }).click()
   await expect(editor.locator('a')).toHaveAttribute('data-identifier-id', /\d+/)
   await expect(editor.locator('a')).toHaveAttribute('href', '/project/link-destination')

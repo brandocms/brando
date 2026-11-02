@@ -77,7 +77,8 @@ for (const adapter of ['Liquid', 'HEEx']) test(`single datasource chooses, repla
     await page.setViewportSize({ width, height: 1000 })
     const field = page.locator('.block-datasource')
     await field.scrollIntoViewIfNeeded()
-    expect(await field.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+    // The page settles in the frames after a resize, so poll the measurement
+    await expect.poll(() => field.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
     await field.screenshot({ path: testInfo.outputPath(`single-datasource-${width}.png`) })
   }
   await page.setViewportSize({ width: 1440, height: 1000 })

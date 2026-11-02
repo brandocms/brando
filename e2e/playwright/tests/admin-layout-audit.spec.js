@@ -107,7 +107,7 @@ test('menu controls align, keyboard status works and save follows the items', as
   await noOverflow(page)
   // The table scrolls inside its frame, and the opened key keeps a usable width
   await expect(page.locator('.subform-table-head').getByText('Key')).toBeVisible()
-  expect((await page.locator('#menu_items_0_key').boundingBox()).width).toBeGreaterThanOrEqual(150)
+  await expect.poll(async () => (await page.locator('#menu_items_0_key').boundingBox()).width).toBeGreaterThanOrEqual(150)
   await page.screenshot({ path: testInfo.outputPath('menu-editor-mobile.png'), fullPage: true })
   await page.getByTestId('submit').click()
   await expect(page).toHaveURL('/admin/config/navigation/menus')

@@ -69,7 +69,8 @@ test.describe('Block Identifier Selection', () => {
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 1000 })
       await identifierField.scrollIntoViewIfNeeded()
-      expect(await identifierField.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+      // The page settles in the frames after a resize, so poll the measurement
+      await expect.poll(() => identifierField.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
       await identifierField.screenshot({ path: testInfo.outputPath(`block-identifiers-${width}.png`) })
     }
     await page.setViewportSize({ width: 1440, height: 1000 })

@@ -64,7 +64,7 @@ test('browses folders, uploads and searches images without exposing folder filte
     // The page settles in the frames after a resize, so poll the measurement
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     await expect(avatar).toBeVisible()
-    expect((await avatar.boundingBox()).width).toBe(30)
+    await expect.poll(async () => (await avatar.boundingBox()).width).toBe(30)
     await page.screenshot({ path: testInfo.outputPath('images-mobile.png'), fullPage: true })
   } finally {
     if (fixture) await page.request.post('/e2e/user-directory/cleanup', { data: fixture })

@@ -86,9 +86,8 @@ test('uploads media, prepares a proposal from a message and applies it', async (
   await expect(page.locator('#assistant-history-list')).toContainText('Put image1 on the Index page')
 
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.waitForTimeout(300)
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-  expect(overflow).toBeLessThanOrEqual(0)
+  // The page settles in the frames after a resize, so poll the measurement
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
   await page.screenshot({ path: testInfo.outputPath('assistant-applied-mobile.png'), fullPage: true })
   expect(errors).toEqual([])
 })

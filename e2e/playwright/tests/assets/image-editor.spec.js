@@ -63,7 +63,8 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   await page.screenshot({ path: testInfo.outputPath('image-details-desktop.png') })
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(details.getByRole('button', { name: 'Done', exact: true })).toBeInViewport()
-  expect(await details.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+  // The page settles in the frames after a resize, so poll the measurement
+  await expect.poll(() => details.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
   await page.screenshot({ path: testInfo.outputPath('image-details-mobile.png') })
   await details.getByRole('button', { name: 'Done', exact: true }).click()
   await expect(details).not.toBeVisible()
@@ -132,7 +133,7 @@ test('opens image editor, adjusts focal point, and saves', async ({ page }, test
   await page.setViewportSize({ width: 390, height: 844 })
   await expectCanvasOverlayAligned(page)
   await expect(page.locator('#image-editor-save-new')).toBeInViewport()
-  expect(await editorDrawer.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+  await expect.poll(() => editorDrawer.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
   await zoomSlider.scrollIntoViewIfNeeded()
   await expect(zoomSlider).toBeInViewport()
   await previewCanvases.first().scrollIntoViewIfNeeded()
