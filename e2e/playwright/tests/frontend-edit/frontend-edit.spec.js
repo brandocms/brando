@@ -477,6 +477,56 @@ test.describe('page content standing in for the configuration', () => {
     })
   }
 
+  test('a name stops the overlay outside edit mode too, leaving no button', async ({ page }) => {
+    await rewritePage(page, body => body.replace('<main id="content">', '<main id="content"><img name="createRange">'))
+    await page.goto('/frontend-edit')
+
+    await expect(page.locator('img[name="createRange"]')).toHaveCount(1)
+    await expect(page.locator('brando-frontend-edit')).toHaveCount(0)
+  })
+
+  test('stopping in edit mode switches edit mode off, as there is no Done button', async ({ page }) => {
+    await startEditing(page)
+    const editCookie = async () => (await page.context().cookies()).find(cookie => cookie.name === '_brando_frontend_edit')
+    expect(await editCookie()).toBeTruthy()
+
+    // Not `createRange` or `createElement`: on those morphdom, in the same
+    // script element, throws while loading and the check never runs
+    await rewritePage(page, body => body.replace('<main id="content">', '<main id="content"><img name="body">'))
+    await page.reload()
+
+    await expect(page.locator('brando-frontend-edit')).toHaveCount(0)
+    expect(await editCookie()).toBeUndefined()
+  })
+
+  test("a site's own document.cookie accessor leaves the overlay working", async ({ page }) => {
+    await page.goto('/frontend-edit')
+    await rewritePage(page, body => body.replace('</head>', `<script>
+      const real = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')
+      Object.defineProperty(document, 'cookie', {
+        configurable: true,
+        get: () => real.get.call(document),
+        set: value => real.set.call(document, value)
+      })
+    </script></head>`))
+    await page.reload()
+    expect(await page.evaluate(() => Object.hasOwn(document, 'cookie'))).toBe(true)
+
+    await page.getByTestId('frontend-edit-toggle').click()
+    await expect(page.getByTestId('frontend-edit-toolbar')).toBeVisible()
+    await openBlock(page, 'Welcome to the page')
+  })
+
+  // morphdom's loader hands itself to `define` there, so its global stays unset
+  test('a site with an AMD loader still gets the toolbar', async ({ page }) => {
+    await startEditing(page)
+    await rewritePage(page, body => body.replace('</head>', '<script>window.define = function () {}; window.define.amd = {}</script></head>'))
+    await page.reload()
+
+    expect(await page.evaluate(() => typeof window.morphdom)).toBe('undefined')
+    await expect(page.getByTestId('frontend-edit-toolbar')).toBeVisible()
+  })
+
   test('a name the scripts do not use leaves the overlay working', async ({ page }) => {
     await startEditing(page)
     await rewritePage(page, body => body.replace('<main id="content">', '<main id="content"><img name="gallery">'))
