@@ -101,6 +101,10 @@ case "$1 $2" in
     case "$query" in
       *enqueuePullRequest*)
         echo "enqueue $number${oid:+ $oid}" >>"$s/calls"
+        if [ -n "$oid" ] && [ "$oid" != "$(cat "$s/$number.sha")" ]; then
+          echo "the head has moved" >&2
+          exit 1
+        fi
         touch "$s/$number.queued"
         echo '{"data": {"enqueuePullRequest": {"mergeQueueEntry": {"position": 1}}}}' | out ;;
       *dequeuePullRequest*)
@@ -130,7 +134,12 @@ case "$1 $2" in
         # only the first.
         next "$s/checks-$sha" | jq -c --argjson all "$paginate" \
           'if type == "array" then (if $all then .[] else .[0] end) else . end' | out ;;
-      */actions/runs\?head_sha=*) cat "$s/runs-${2#*head_sha=}" | out ;;
+      */actions/runs\?head_sha=*)
+        # Someone pushes while the failed runs are being read.
+        if [ -f "$s/push-on-runs" ]; then
+          read -r n new <"$s/push-on-runs" && echo "$new" >"$s/$n.sha"
+        fi
+        cat "$s/runs-${2#*head_sha=}" | out ;;
       */actions/runs/*/jobs*)
         id="${2#*/actions/runs/}" && id="${id%%/*}"
         [ -f "$s/unreadable-$id" ] && { echo "HTTP 502" >&2; exit 1; }
@@ -304,7 +313,7 @@ pr 22 feat-22 main 8888888d "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999994
 checks 8888888d "$green"
 checks bbbbbbb1 "$red"
 echo '{"workflow_runs": [{"id": 88, "conclusion": "failure"}]}' >"$state/runs-9999994"
-run "does not re-queue a head pushed while the PR was queued" 1 "PR 22: checks green on 8888888; queued at position 1
+run "does not re-queue a moved head with red checks" 1 "PR 22: checks green on 8888888; queued at position 1
 PR 22: dropped from the queue: merge-group checks failed
   mix test: known flake: beam-jit-crash — rerun with: gh run rerun 88 --failed
   not re-queued: its head is now bbbbbbb, and the checks were read on 8888888" 22
@@ -337,6 +346,21 @@ run "does not re-queue a PR already queued at the start, whose checks it never r
   mix test: known flake: beam-jit-crash — rerun with: gh run rerun 88 --failed
   not re-queued: it was already queued when this started, so no checks were read" 24
 [ ! -f "$state/calls" ] || { failures=$((failures + 1)); echo "FAIL     queued anyway: $(cat "$state/calls")"; }
+
+fresh flake-pushed-at-the-last-moment
+pr 26 feat-26 main 8888888f "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999998"
+checks 8888888f "$green"
+echo '{"workflow_runs": [{"id": 88, "conclusion": "failure"}]}' >"$state/runs-9999998"
+echo "26 fffffff1" >"$state/push-on-runs"
+run "says GitHub refused the re-queue when the head moves as it is sent" 1 "PR 26: checks green on 8888888; queued at position 1
+PR 26: dropped from the queue: merge-group checks failed
+  mix test: known flake: beam-jit-crash — rerun with: gh run rerun 88 --failed
+  not re-queued: the head has moved" 26
+if [ "$(cat "$state/calls")" != "$(printf 'enqueue 26 8888888f\nenqueue 26 8888888f')" ]; then
+  failures=$((failures + 1))
+  echo "FAIL     calls:"
+  sed 's/^/     | /' "$state/calls"
+fi
 
 fresh merge-group-pushed
 pr 25 feat-25 main 1111111b "OPEN AWAITING_CHECKS" "OPEN - failed_checks 9999997 eeeeeee1"

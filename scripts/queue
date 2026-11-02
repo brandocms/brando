@@ -26,8 +26,9 @@
 # When a PR drops out of the queue, it says why: the files that conflict with
 # main (from git merge-tree, which needs the remote named origin), the failed
 # merge-group jobs, or who dequeued it. When every failed merge-group job is a
-# known flake or CI infrastructure, it puts the PR back in the queue once and
-# says why.
+# known flake or CI infrastructure, it puts the PR back in the queue once, at
+# the commit whose checks it read, and says why. A head that has moved since,
+# or a PR that was already queued when this started, stays out and it says so.
 #
 # A PR whose base is another listed PR's branch waits for that PR to merge,
 # is retargeted to main, and then goes through the same steps; when that PR
