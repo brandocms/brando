@@ -119,6 +119,40 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
     end
   end
 
+  describe "a purge with a provider that cannot answer" do
+    setup do
+      Logger.put_module_level(Brando.SoftDelete.Query, :info)
+      on_exit(fn -> Logger.delete_module_level(Brando.SoftDelete.Query) end)
+    end
+
+    # Each call to a provider that hangs waits out its timeout, and the
+    # purger has 30 seconds for every schema and environment.
+    test "asks it once, keeps its other rows for the next run, and purges the other providers' rows" do
+      configure(Mux, :on_purge)
+      configure(Bunny, :on_purge)
+
+      mux_videos =
+        for id <- ["asset-1", "asset-2"], do: Mux |> insert_video(:mux, %{"mux" => %{"asset_id" => id}}) |> expire()
+
+      bunny_video = Bunny |> insert_video(:bunny, %{"bunny" => %{"video_guid" => "guid-1"}}) |> expire()
+
+      answer(Mux, {:transport, :timeout})
+      answer(Bunny, :ok)
+      log = capture_log([level: :info], fn -> assert purge_videos() == 1 end)
+
+      assert_received {:provider, "DELETE", "/video/v1/assets/" <> _id}
+      refute_received {:provider, "DELETE", "/video/v1/assets/" <> _id}
+      assert_received {:provider, "DELETE", "/library/1/videos/guid-1"}
+      refute Repo.get(Video, bunny_video.id)
+      for video <- mux_videos, do: assert(Repo.get!(Video, video.id).deleted_at)
+      assert log =~ "1 more mux video kept for the next purge"
+
+      answer(Mux, :ok)
+      assert purge_videos() == 2
+      for video <- mux_videos, do: refute(Repo.get(Video, video.id))
+    end
+  end
+
   describe "the delete retried after delete_remote_on: :on_delete" do
     setup do
       configure(Mux, :on_delete)

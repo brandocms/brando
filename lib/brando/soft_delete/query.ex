@@ -6,6 +6,8 @@ defmodule Brando.SoftDelete.Query do
   alias Brando.Repo
   alias Brando.Trait
 
+  require Logger
+
   @doc """
   Excludes all deleted entries from query
   """
@@ -91,19 +93,39 @@ defmodule Brando.SoftDelete.Query do
     # provider. Its row stays for the next run to try again; deleting it would
     # leave the provider video behind for good. Only rows the delete removed
     # are counted.
-    purged =
-      Enum.count(on_purge, fn video ->
-        result =
-          Brando.Videos.Uploader.delete_remote(video, fn ->
-            match?({1, _}, Repo.delete_all(from t in query, where: t.id == ^video.id))
-          end)
-
-        not match?({:error, reason} when reason in [:holdings_unavailable, :busy, :not_purged], result) and
-          not match?({:error, {:retry, _reason}}, result)
+    #
+    # Once a provider could not answer, it is not asked again this run: each
+    # call to a provider that hangs waits out its client's timeout, and the
+    # purger has one deadline for every schema and environment. Its other
+    # rows stay for the next run, and the other providers' rows go on.
+    {purged, kept} =
+      Enum.reduce(on_purge, {0, %{}}, fn video, {purged, kept} ->
+        if Map.has_key?(kept, video.type) do
+          {purged, Map.update!(kept, video.type, &(&1 + 1))}
+        else
+          case purge_video(query, video) do
+            {:error, {:retry, _reason}} -> {purged, Map.put(kept, video.type, 0)}
+            {:error, reason} when reason in [:holdings_unavailable, :busy, :not_purged] -> {purged, kept}
+            _purged -> {purged + 1, kept}
+          end
+        end
       end)
+
+    for {type, count} <- kept, count > 0 do
+      Logger.warning(
+        "#{count} more #{type} #{if count == 1, do: "video", else: "videos"} kept for the next purge, " <>
+          "without asking the provider, which could not answer this run"
+      )
+    end
 
     {count, nil} = Repo.delete_all(from t in query, where: t.id in ^Enum.map(others, & &1.id))
     {count + purged, nil}
+  end
+
+  defp purge_video(query, video) do
+    Brando.Videos.Uploader.delete_remote(video, fn ->
+      match?({1, _}, Repo.delete_all(from t in query, where: t.id == ^video.id))
+    end)
   end
 
   defp clean_up_schema(schema) do
