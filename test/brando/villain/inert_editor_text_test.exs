@@ -853,7 +853,7 @@ defmodule Brando.Villain.InertEditorTextTest do
       context =
         %{Villain.get_base_context(%Page{language: :en}) | filter_module: ProjectFilters}
         |> Liquex.Context.assign(:block, TemplateView.wrap(%{uid: "x"}, :processed))
-        |> Liquex.Context.assign("globals", TemplateView.wrap(%{"site" => %{"name" => "x"}}, :processed))
+        |> Villain.add_to_context("globals", %{"site" => %{"name" => %{type: :string, value: "x"}}})
 
       render = fn input, filter ->
         code = "{% assign l = #{input} | #{filter} %}{% for s in l %}{{ s.password }}{{ s.title }}{% endfor %}"
@@ -870,6 +870,37 @@ defmodule Brando.Villain.InertEditorTextTest do
         assert active_elements(html) == []
         assert html =~ "&lt;img"
       end
+    end
+
+    # The same holds for a multi module entry's vars (guides/block_editor.md)
+    test "a plain map a filter builds from a multi module entry's vars reads as entry data once wrapped" do
+      Process.put(:project_filter_settings, [%{"password" => @hash, "title" => @markup_title}])
+      context = %{Villain.get_base_context(%Page{language: :en}) | filter_module: ProjectFilters}
+      child = %Block{type: :module_entry, uid: Utils.generate_uid(), vars: %{"heading" => "x"}, refs: %{}}
+      block = %Block{type: :module, multi: true, uid: Utils.generate_uid(), module_id: 1, table_rows: []}
+
+      render = fn filter ->
+        code =
+          "{% for e in entries %}{% assign l = e.vars | #{filter} %}" <>
+            "{% for s in l %}{{ s.password }}{{ s.title }}{% endfor %}{% endfor %}"
+
+        Brando.Villain.TemplateAdapter.Liquex.render_multi_module(
+          %Brando.Content.Module{code: code, class: "m"},
+          block,
+          %{},
+          %{},
+          [child],
+          "",
+          %{context: context}
+        )
+      end
+
+      assert render.("settings_for") == @hash <> @markup_title
+
+      html = render.("wrapped_settings_for")
+      refute html =~ @hash
+      assert active_elements(html) == []
+      assert html =~ "&lt;img"
     end
 
     test "a plain map a filter returns reads as entry data does" do
