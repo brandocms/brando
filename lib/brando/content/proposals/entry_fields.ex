@@ -210,24 +210,30 @@ defmodule Brando.Content.Proposals.EntryFields do
         display(entry.__struct__, name, Enum.map(rows, &Map.get(&1, key)))
 
       {{:entries, _}, rows} when is_list(rows) ->
-        identifiers = rows |> Enum.map(&Map.get(&1, :identifier)) |> Enum.reject(&is_nil/1)
-        readable = Boundary.readable_entries(Enum.map(identifiers, &{&1.schema, &1.entry_id}))
-
-        rows
-        |> Enum.map(&Map.get(&1, :identifier))
-        |> Enum.map_join(", ", fn
-          %{schema: schema, entry_id: id, title: title} when not is_nil(title) ->
-            if MapSet.member?(readable, {schema, id}), do: title, else: "?"
-
-          _ ->
-            "?"
-        end)
+        rows |> Enum.map(&Map.get(&1, :identifier)) |> saved_titles()
 
       _ ->
         nil
     end
   rescue
     _ -> nil
+  end
+
+  # In order, with "?" holding the place of what the viewer may not read.
+  defp saved_titles(identifiers) do
+    readable =
+      identifiers
+      |> Enum.reject(&is_nil/1)
+      |> Enum.map(&{&1.schema, &1.entry_id})
+      |> Boundary.readable_entries()
+
+    Enum.map_join(identifiers, ", ", fn
+      %{schema: schema, entry_id: id, title: title} when not is_nil(title) ->
+        if MapSet.member?(readable, {schema, id}), do: title, else: "?"
+
+      _ ->
+        "?"
+    end)
   end
 
   defp title(record), do: Map.get(record, :title) || Map.get(record, :name) || "##{record.id}"

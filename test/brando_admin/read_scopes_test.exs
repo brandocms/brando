@@ -59,6 +59,7 @@ defmodule BrandoAdmin.ReadScopesTest do
   alias BrandoAdmin.Images.Sweep
   alias BrandoAdmin.LiveView.Listing.DeleteDescription
   alias BrandoAdmin.ReadScopesTest.Shelf
+  alias Ecto.Adapters.SQL
 
   @secret "Secret page marker"
   @page_read ~w(brando.pages.read)
@@ -641,15 +642,15 @@ defmodule BrandoAdmin.ReadScopesTest do
       {:ok, environment} = Tenant.Registry.create_environment(site, %{name: key, key: key, live: key == "production"})
       prefix = Tenant.prefix(site, environment)
       repo = Brando.RuntimeConfig.get(:repo_module)
-      Ecto.Adapters.SQL.query!(repo, ~s(CREATE SCHEMA "#{prefix}"))
-      tables = Ecto.Adapters.SQL.query!(repo, "SELECT tablename FROM pg_tables WHERE schemaname = 'public'").rows
+      SQL.query!(repo, ~s(CREATE SCHEMA "#{prefix}"))
+      tables = SQL.query!(repo, "SELECT tablename FROM pg_tables WHERE schemaname = 'public'").rows
 
       tables
       |> List.flatten()
       |> Enum.reject(&Tenant.SharedTables.member?/1)
       |> Enum.each(fn table ->
-        Ecto.Adapters.SQL.query!(repo, ~s|CREATE TABLE "#{prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|)
-        Ecto.Adapters.SQL.query!(repo, ~s(INSERT INTO "#{prefix}"."#{table}" SELECT * FROM public."#{table}"))
+        SQL.query!(repo, ~s|CREATE TABLE "#{prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|)
+        SQL.query!(repo, ~s(INSERT INTO "#{prefix}"."#{table}" SELECT * FROM public."#{table}"))
       end)
 
       environment
@@ -778,6 +779,11 @@ defmodule BrandoAdmin.ReadScopesTest do
     test "answers per record, following the resource's read policy" do
       as(insert_user(permissions: ~w(brando.admin.access)))
       refute MapSet.member?(Boundary.readable_entries([{Page, -1}]), {Page, -1})
+    end
+
+    test "an entry of a schema that no longer exists is not readable, and does not raise" do
+      as(insert_user(permissions: ["brando.admin.access"]))
+      assert Boundary.readable_entries([{Gone.Blueprint, 1}]) == MapSet.new()
     end
 
     test "without a scope or groups, every entry is readable", c do
