@@ -299,8 +299,9 @@ referrer is kept without its query string. Rows are deleted after 90 days by
 `Brando.Worker.NotFoundPurger`, nightly at 05:25 UTC in every active
 environment. Anyone can request a URL that does not exist, so each environment
 also keeps at most 100,000 rows: past that, a flush deletes the rows hit least
-recently. A burst of made-up URLs pushes out only what nobody has requested since
-it began, and a broken link people still follow returns with its next hit:
+recently. A sustained burst of made-up URLs can push out older rows, which come
+back with their next hit, counting from there, but it cannot keep a new broken
+link out of the log:
 
 ```elixir
 config :brando, Brando.Sites.FourOhFour,

@@ -15,8 +15,9 @@ defmodule Brando.Sites.FourOhFour do
   Rows older than `retention_days/0` are deleted nightly by
   `Brando.Worker.NotFoundPurger`. Anyone can request a URL that does not exist,
   so a tenant also keeps at most `max_rows/0` rows: past that, a flush deletes
-  the rows hit least recently. A burst of made-up URLs pushes out only what
-  nobody has requested since it began, and cannot keep a new broken link out.
+  the rows hit least recently. A sustained burst of made-up URLs can push out
+  older rows, which come back with their next hit counting from there, but it
+  cannot keep a new broken link out of the log.
 
       config :brando, Brando.Sites.FourOhFour,
         flush_interval: :timer.seconds(60),
@@ -154,8 +155,7 @@ defmodule Brando.Sites.FourOhFour do
   #
   # The least recently hit go first, whatever their hits: a requester chooses
   # how many hits and rows a URL gets, and a ranking by them could be filled
-  # once and keep new links out until retention. This way a flood only pushes
-  # out what nobody has requested since it began, and that returns when it does.
+  # once and keep new links out until retention.
   defp trim(prefix) do
     opts = if prefix, do: [prefix: prefix], else: []
     excess = Brando.Repo.aggregate(NotFoundHit, :count, opts) - max_rows()
