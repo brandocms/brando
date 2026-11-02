@@ -1,0 +1,1 @@
+- Setting an environment live takes the site's host with it: the previous live environment's domain moves to the new live environment, and an environment that had a domain of its own swaps it for the live one, so a per-site admin's live switch reaches visitors on the next request without a superuser moving the host.

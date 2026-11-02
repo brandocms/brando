@@ -13,7 +13,8 @@ defmodule Brando.Tenant.Registry do
   and `update_environment/3` refuse a change to it unless `:actor` is an
   installation superuser (`Brando.Authorization.Boundary.superuser?/1`), or
   `:system` for trusted maintenance code. With no `:actor` the change is
-  refused too.
+  refused too. `Brando.Environments.set_live/2` moves a site's host between
+  its own environments without one: the host is already the site's.
   """
 
   use Gettext, backend: Brando.Gettext

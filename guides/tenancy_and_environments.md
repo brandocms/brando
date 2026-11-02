@@ -64,7 +64,7 @@ not need to set `delivery_mode`; Phoenix serves them dynamically.
 
 | Mode | Public delivery | Content publication |
 | --- | --- | --- |
-| `:dynamic` | Phoenix serves each request from the site's current live environment | A live-environment change is visible on the next request; no static build or deploy is required |
+| `:dynamic` | Phoenix serves each request from the site's current live environment | A live switch takes the site's host to the new live environment, so the change is visible on the next request; no static build or deploy is required |
 | `:static` | A generated HTML build is intended to be served by a static host or CDN | Content becomes public only after an SSG build is generated and deployed |
 
 For `:dynamic`, the request host resolves the site and live environment,
@@ -480,7 +480,9 @@ installation itself uses: the endpoint's, where the admin answers, nor its
 static, media or CDN host. With several sites, a site that needs the admin's
 host means moving the admin to a host of its own through `PHX_HOST`. In
 `:single` the admin's host needs no domain: it answers from the live environment
-when no environment holds it.
+when no environment holds it. Setting an environment live moves the site's
+host to it (see [Switch live, rollback, and delete](#switch-live-rollback-and-delete)),
+which anyone who may switch live does: the host stays within the site.
 
 <!-- usage-rules:start topic="tenancy" -->
 
@@ -722,9 +724,14 @@ Any environment can become the live environment:
 Before changing the live pointer, Brando archives the previous live schema.
 The registry update is transactional, the one-live-environment database
 constraint remains authoritative, and the routing cache is refreshed after a
-successful switch. A domain stays on its environment: a host bound to the
-previous live environment keeps answering from it until a superuser moves the
-host.
+successful switch. The site's host goes with the live pointer, in the same
+transaction: the previous live environment's domain moves to the environment
+going live, and if that environment had a domain of its own, the two swap, so
+`www.example.com` answers from the new live environment and
+`staging.example.com` from the one it replaced. Switching back, or setting a
+restored archive live, moves the host the same way. When the previous live
+environment has no domain, no domain moves. The hosts were bound by a superuser
+and stay within the site, so a switch binds nothing new.
 
 Inspect and prune archives:
 

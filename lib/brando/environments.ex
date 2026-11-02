@@ -125,7 +125,14 @@ defmodule Brando.Environments do
     end
   end
 
-  @doc "Atomically marks one environment as the sole live environment for its site."
+  @doc """
+  Atomically marks one environment as the sole live environment for its site.
+
+  The site's host goes with it: in the same transaction, the outgoing live
+  environment's domain moves to this one, and this one's own domain, if it has
+  one, moves to the outgoing one. With no domain on the outgoing one, no domain
+  moves.
+  """
   @spec set_live(Environment.t(), keyword()) :: {:ok, Environment.t()} | {:error, term()}
   def set_live(environment, opts \\ [])
 
@@ -561,10 +568,12 @@ defmodule Brando.Environments do
 
   defp persist_live_switch(environment, archive_prefix, opts) do
     Repo.transaction(fn ->
+      carry_host(environment)
+
       from(candidate in Environment, where: candidate.site_id == ^environment.site_id)
       |> Repo.update_all([set: [live: false]], @public_opts)
 
-      environment
+      Registry.get_environment(environment.id)
       |> Environment.changeset(%{live: true})
       |> Repo.update(@public_opts)
       |> case do
@@ -582,6 +591,34 @@ defmodule Brando.Environments do
           Repo.rollback(changeset)
       end
     end)
+  end
+
+  # The site's host follows the live pointer: the outgoing live environment's
+  # domain moves to the one going live, which gives its own domain, if it has
+  # one, in exchange. Both hosts are already this site's, bound by a superuser,
+  # so this binds nothing new and needs no authority to bind a host
+  # (`Brando.Tenant.Registry`). With no domain on the outgoing one, nothing
+  # moves. The rows are locked so a domain changed meanwhile is not undone.
+  defp carry_host(%Environment{id: id, site_id: site_id}) do
+    rows =
+      from(candidate in Environment,
+        where: candidate.site_id == ^site_id and (candidate.live or candidate.id == ^id),
+        lock: "FOR UPDATE"
+      )
+      |> Repo.all(@public_opts)
+
+    with %Environment{domain: host} = outgoing when is_binary(host) <- Enum.find(rows, &(&1.live and &1.id != id)),
+         %Environment{} = incoming <- Enum.find(rows, &(&1.id == id)) do
+      # The unique index on `domain` is not deferred: release the host first
+      put_domain(outgoing, nil)
+      put_domain(incoming, host)
+      if incoming.domain, do: put_domain(outgoing, incoming.domain)
+    end
+  end
+
+  defp put_domain(%Environment{id: id}, domain) do
+    from(environment in Environment, where: environment.id == ^id)
+    |> Repo.update_all([set: [domain: domain, updated_at: DateTime.utc_now()]], @public_opts)
   end
 
   defp archive_live_environment(site, next_live_environment_id) do
