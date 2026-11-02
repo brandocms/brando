@@ -297,11 +297,14 @@ row per URL, referrer and day. A burst of requests for missing pages therefore
 costs one database statement a minute, and the log survives deploys. The
 referrer is kept without its query string. Rows are deleted after 90 days by
 `Brando.Worker.NotFoundPurger`, nightly at 05:25 UTC in every active
-environment:
+environment. Anyone can request a URL that does not exist, so each environment
+also keeps at most 100,000 rows: past that, a flush deletes the rows with the
+fewest hits, oldest first, and links people keep following stay in the list:
 
 ```elixir
 config :brando, Brando.Sites.FourOhFour,
   retention_days: 30,
+  max_rows: 100_000,
   flush_interval: :timer.seconds(60)
 ```
 

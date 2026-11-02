@@ -45,6 +45,70 @@ defmodule Brando.Sites.FourOhFourLogTest do
     assert [%{hits: 1}, %{hits: 3}] = rows()
   end
 
+  describe "the row cap" do
+    defp stored(url, hits, last_hit_at) do
+      Brando.Repo.insert!(%NotFoundHit{url: url, date: Date.utc_today(), hits: hits, last_hit_at: last_hit_at})
+    end
+
+    test "a flush past the cap deletes the fewest hits, oldest first, and keeps what it wrote" do
+      put_test_env(FourOhFour, max_rows: 3)
+      stored("/followed", 40, ~U[2026-01-01 10:00:00Z])
+      stored("/once-old", 1, ~U[2026-01-01 10:00:00Z])
+      stored("/once-newer", 1, ~U[2026-01-02 10:00:00Z])
+
+      miss("/new")
+      miss("/new")
+
+      assert FourOhFour.flush() == 1
+      assert rows() |> Enum.map(& &1.url) |> Enum.sort() == ["/followed", "/new", "/once-newer"]
+    end
+
+    test "a flood of new URLs stays at the cap and keeps the links people follow" do
+      put_test_env(FourOhFour, max_rows: 10)
+      stored("/followed", 2, ~U[2026-01-01 10:00:00Z])
+
+      for n <- 1..25, do: miss("/flood/#{n}")
+      assert FourOhFour.flush() == 25
+
+      assert length(rows()) == 10
+      assert "/followed" in Enum.map(FourOhFour.list(), & &1.url)
+    end
+
+    test "under the cap a flush deletes nothing" do
+      put_test_env(FourOhFour, max_rows: 3)
+      stored("/a", 1, ~U[2026-01-01 10:00:00Z])
+      stored("/b", 1, ~U[2026-01-01 10:00:00Z])
+
+      miss("/c")
+
+      assert FourOhFour.flush() == 1
+      assert length(rows()) == 3
+    end
+
+    test "each tenant has its own cap, whichever tenant the flush runs in" do
+      put_test_env(FourOhFour, max_rows: 2)
+
+      for schema <- ~w(tenant_nv404a_production tenant_nv404b_production) do
+        Ecto.Adapters.SQL.query!(Brando.repo(), ~s(CREATE SCHEMA "#{schema}"))
+        Ecto.Adapters.SQL.query!(Brando.repo(), ~s|CREATE TABLE "#{schema}".sites_not_found_hits (LIKE public.sites_not_found_hits INCLUDING ALL)|)
+      end
+
+      on_exit(fn -> Brando.Tenant.put_prefix(nil) end)
+      Brando.Tenant.with_prefix("tenant_nv404a_production", fn -> for n <- 1..4, do: miss("/a/#{n}") end)
+      Brando.Tenant.with_prefix("tenant_nv404b_production", fn -> miss("/b/1") end)
+
+      # list/0 flushes from a request in one tenant
+      Brando.Tenant.with_prefix("tenant_nv404b_production", fn -> assert FourOhFour.flush() == 5 end)
+
+      assert Brando.Repo.aggregate(NotFoundHit, :count, prefix: "tenant_nv404a_production") == 2
+      assert Brando.Repo.aggregate(NotFoundHit, :count, prefix: "tenant_nv404b_production") == 1
+    end
+
+    test "the default leaves room for a real site's log" do
+      assert FourOhFour.max_rows() == 100_000
+    end
+  end
+
   test "list/0 flushes, totals each URL and names the referrer that sent most hits" do
     Brando.Repo.insert!(%NotFoundHit{
       url: "/moved",
