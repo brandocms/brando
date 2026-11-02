@@ -746,15 +746,17 @@ site's behalf. If the other site's record is one it added from the library,
 it is never deleted remotely, and the video stays in the provider account
 until someone removes it there. If the record is that site's own upload, for
 example in a schema restored from an archive, deleting it deletes the video
-at the provider as usual.
+at the provider as usual, once no other site holds it. Another site's record
+holds the video even when it is deleted, so with `delete_remote_on:
+:on_delete`, where a purge never asks the provider, a video both sites have
+deleted stays in the provider account until someone removes it there.
 
 A delete is refused too when the video tables cannot be read, or when an add
 or another delete of the same video holds it up for more than 30 seconds.
 With `delete_remote_on: :on_purge`, the purge then keeps the record and
 tries again on its next run. With `delete_remote_on: :on_delete`, nothing
 tries again: the record is deleted in Brando, a warning in the log names it,
-and the video stays at the provider until someone removes it there. A site's
-own other environments do not stop the delete, as with one site.
+and the video stays at the provider until someone removes it there.
 
 From code, as the screen does:
 
@@ -767,6 +769,54 @@ site = Brando.Tenant.Registry.get_site_by_key("acme")
 `put_provider_library_group/3` refuses anyone but an installation superuser
 (or `:system`). With `:none` or `:single` tenancy there is one site, and the
 picker lists the whole account.
+
+### Videos in several environments of a site
+
+Copying an environment copies its video records, so production and the
+staging copied from it point at the same video at the provider. With
+`:single` or `:multi` tenancy, deleting a video at the provider is refused
+while another current environment of the same site has a record of it. The
+deleting environment's record is still deleted or purged, and the log names
+the environments that kept the video, at info level. When the last
+environment holding the video deletes or purges its record, the video is
+deleted at the provider. A delete refused because the video tables cannot be
+read or are locked behaves as described above.
+
+Whether another environment's deleted record holds the video depends on
+`delete_remote_on` ([Videos](videos.md)):
+
+- With `:on_purge` (the default), a deleted record holds the video until it
+  is purged, because its purge may still delete the video at the provider. If
+  production uploads a Mux video, staging is copied from production, and an
+  editor deletes the video in staging, the purge 30 days later removes
+  staging's record and leaves the Mux asset, and production's page keeps
+  playing it. When both environments' records are purged, the second purge
+  deletes the asset, even when the two purges run at the same time.
+- With `:on_delete`, a deleted record does not hold the video, because its
+  purge does not ask the provider. If staging deletes the video and later
+  production does, production's delete deletes it at the provider. Staging's
+  deleted record, if it is restored, then points at a video that is no
+  longer there.
+
+Another site's record holds the video whether it is deleted or not, as
+described under the provider library above.
+
+A record an environment added from the provider's library holds the video
+as any other record does, but deleting it never deletes the video at the
+provider. If staging adds production's upload from the library, and both
+records are later deleted, the video stays in the provider account until
+someone removes it there.
+
+Rollback archives do not hold videos. A video whose last current record is
+deleted is deleted at the provider even when an archive still has a record
+of it, so a rolled-back archive may point at a video that is no longer
+there. Check an archive's provider videos before you roll back to it.
+
+Copying over an environment or deleting an environment removes its video
+records without asking the provider. If those were the last current records
+of a video, Brando never deletes that video at the provider: remove it there
+yourself, in the provider's dashboard, once no archive you may roll back to
+needs it.
 
 ## Switch live, rollback, and delete
 

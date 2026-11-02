@@ -118,8 +118,8 @@ defmodule Brando.Videos do
 
   defp delete_remote_on_delete(entry) do
     case Brando.Videos.Uploader.delete_remote(entry) do
-      # Another site's record of it; logged where that is told.
-      {:error, :held_by_another_site} ->
+      # Another site's or environment's record of it; logged where that is told.
+      {:error, reason} when reason in [:held_by_another_site, :held_by_another_environment] ->
         :ok
 
       {:error, reason} ->

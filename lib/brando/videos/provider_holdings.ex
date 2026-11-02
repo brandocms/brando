@@ -1,11 +1,13 @@
 defmodule Brando.Videos.ProviderHoldings do
   @moduledoc """
-  Which sites of a multi-site installation hold a provider's video.
+  Which sites, and which of their environments, hold a provider's video.
 
   Provider credentials are the installation's, so every site uploads to and
-  adds from the same provider accounts. A site holds a remote video while one
-  of its environments has a video row for it, deleted or not: uploaded there,
-  added from the provider's library, or copied in from another environment.
+  adds from the same provider accounts, and every environment of a site
+  copied from another holds the same remote videos. An environment holds a
+  remote video while it has a video row for it, deleted or not: uploaded
+  there, added from the provider's library, or copied in from another
+  environment. A site holds it while one of its environments does.
 
   The answer is read from the rows themselves, across every current
   environment schema of every site, as `Brando.Media.OrphanCleanup` reads the
@@ -15,8 +17,8 @@ defmodule Brando.Videos.ProviderHoldings do
 
   A schema without a video table, while its environment is created or
   copied, holds nothing. If one video table cannot be read, the whole answer
-  is an error: the callers treat a video whose holders are unknown as held by
-  another site.
+  is an error: the callers treat a video whose holders are unknown as held
+  elsewhere.
   """
 
   alias Brando.Sites.Site
@@ -50,11 +52,26 @@ defmodule Brando.Videos.ProviderHoldings do
   """
   @spec sites_holding(String.t(), [String.t() | {String.t(), [holding_key()]}], [Site.t()]) ::
           {:ok, %{String.t() => MapSet.t(pos_integer())}} | {:error, term()}
-  def sites_holding(path, remote_ids, sites \\ Registry.list_sites())
+  def sites_holding(path, remote_ids, sites \\ Registry.list_sites()) do
+    with {:ok, holders} <- environments_holding(path, remote_ids, sites) do
+      {:ok, Map.new(holders, fn {remote_id, environments} -> {remote_id, MapSet.new(environments, &elem(&1, 0))} end)}
+    end
+  end
 
-  def sites_holding(_path, [], _sites), do: {:ok, %{}}
+  @doc """
+  The environments holding each of `remote_ids`, as `{site_id, prefix,
+  deleted?}` with the environment's schema prefix, read as `sites_holding/3`
+  reads the sites. `deleted?` is true when every row the environment has for
+  the video is soft-deleted. A remote id no environment holds is left out of
+  the map.
+  """
+  @spec environments_holding(String.t(), [String.t() | {String.t(), [holding_key()]}], [Site.t()]) ::
+          {:ok, %{String.t() => MapSet.t({pos_integer(), String.t(), boolean()})}} | {:error, term()}
+  def environments_holding(path, remote_ids, sites \\ Registry.list_sites())
 
-  def sites_holding(path, remote_ids, sites) do
+  def environments_holding(_path, [], _sites), do: {:ok, %{}}
+
+  def environments_holding(path, remote_ids, sites) do
     with {:ok, prefixes} <- prefixes(sites),
          {:ok, prefixes} <- readable(prefixes) do
       read_holdings(prefixes, matches(path, remote_ids))
@@ -150,7 +167,8 @@ defmodule Brando.Videos.ProviderHoldings do
   defp with_keys(remote_id), do: {remote_id, []}
 
   # Prefixes come from the registry and are checked against the tenant prefix
-  # format before they are quoted.
+  # format before they are quoted, as identifiers and as the literal naming
+  # the environment.
   defp prefixes(sites) do
     prefixes = for site <- sites, environment <- site.environments, do: {site.id, Tenant.prefix(site, environment)}
 
@@ -195,7 +213,8 @@ defmodule Brando.Videos.ProviderHoldings do
 
         path_selects =
           Enum.map(prefixes, fn {site_id, prefix} ->
-            ~s|SELECT #{site_id}::bigint, k.remote_id FROM "#{prefix}"."#{table}" v | <>
+            ~s|SELECT #{site_id}::bigint, '#{prefix}'::text, k.remote_id, v.deleted_at IS NOT NULL | <>
+              ~s|FROM "#{prefix}"."#{table}" v | <>
               ~s|JOIN unnest(#{values}::text[], #{remote_ids}::text[]) AS k(value, remote_id) | <>
               ~s|ON v.meta #>> #{keys}::text[] = k.value|
           end)
@@ -207,8 +226,13 @@ defmodule Brando.Videos.ProviderHoldings do
     case query(Enum.join(selects, " UNION ALL "), params) do
       {:ok, %{rows: rows}} ->
         {:ok,
-         Enum.reduce(rows, %{}, fn [site_id, remote_id], holders ->
-           Map.update(holders, remote_id, MapSet.new([site_id]), &MapSet.put(&1, site_id))
+         rows
+         |> Enum.reduce(%{}, fn [site_id, prefix, remote_id, deleted?], holders ->
+           Map.update(holders, {remote_id, site_id, prefix}, deleted?, &(&1 and deleted?))
+         end)
+         |> Enum.reduce(%{}, fn {{remote_id, site_id, prefix}, deleted?}, holders ->
+           holder = {site_id, prefix, deleted?}
+           Map.update(holders, remote_id, MapSet.new([holder]), &MapSet.put(&1, holder))
          end)}
 
       {:error, _reason} = error ->
@@ -218,7 +242,7 @@ defmodule Brando.Videos.ProviderHoldings do
 
   # Inside a transaction, such as a delete's, a failed read rolls back to
   # before it rather than aborting the caller's work.
-  defp query(sql, params, failure \\ "Could not read which sites hold provider videos: ") do
+  defp query(sql, params, failure \\ "Could not read which environments hold provider videos: ") do
     repo = Brando.Repo.repo()
     opts = if repo.in_transaction?(), do: [mode: :savepoint], else: []
 

@@ -305,34 +305,70 @@ defmodule Brando.Videos.Uploader do
   ## Returns
   - `:ok` if deletion succeeds or is skipped
   - `{:error, :held_by_another_site}` with several sites, while another site
-    has a record of the same remote video (`Brando.Videos.ProviderHoldings`);
-    `{:error, :holdings_unavailable}` when that cannot be read, and
-    `{:error, :busy}` when an add or another delete of the same video held
-    its lock too long (`Brando.Videos.ProviderHoldings.with_video_lock/3`).
-    Nothing is deleted at the provider.
+    has a record of the same remote video, deleted or not, and
+    `{:error, :held_by_another_environment}` with named environments, while
+    another current environment of the site has one
+    (`Brando.Videos.ProviderHoldings`). With `delete_remote_on: :on_delete`,
+    another environment's soft-deleted record does not hold the video: its
+    purge will not ask the provider. `{:error, :holdings_unavailable}` when
+    the holdings cannot be read, and `{:error, :busy}` when an add or another
+    delete of the same video held its lock too long
+    (`Brando.Videos.ProviderHoldings.with_video_lock/3`). Nothing is deleted
+    at the provider.
   - `{:error, reason}` if deletion fails
   """
+  def delete_remote(%Brando.Videos.Video{} = video), do: delete_remote(video, fn -> :ok end)
+
+  @doc """
+  Deletes `video` at its provider as `delete_remote/1` does, then runs
+  `purge`, which deletes the video's row, and returns the provider delete's
+  result.
+
+  `purge` runs while the video's lock is still held, so the row is gone
+  before another environment's purge of the same video reads the holdings:
+  two purges that overlap cannot each see the other's row and both leave the
+  video at the provider. Outside a transaction, `purge`'s queries commit as
+  they run. When the holdings cannot be read or the lock is busy
+  (`{:error, :holdings_unavailable}`, `{:error, :busy}`), `purge` does not
+  run, and the row stays for the next purge to try again.
+  """
+  @spec delete_remote(Brando.Videos.Video.t(), (-> term())) :: :ok | {:error, term()}
   # Added from the provider's library: someone else's video, possibly in use
   # elsewhere. Brando forgets it but does not delete it.
-  def delete_remote(%Brando.Videos.Video{meta: %{"imported" => true}}), do: :ok
+  def delete_remote(%Brando.Videos.Video{meta: %{"imported" => true}}, purge), do: then_purge(:ok, purge)
 
-  def delete_remote(%Brando.Videos.Video{} = video) do
-    with :multi <- Brando.Tenant.mode(),
+  def delete_remote(%Brando.Videos.Video{} = video, purge) do
+    with mode when mode in [:single, :multi] <- Brando.Tenant.mode(),
          {module, remote_id} when is_binary(remote_id) <- library_remote_id(video) do
       # An add of the same video waits, and this waits for one in progress,
       # so the check below still holds when the provider is asked.
       Brando.Videos.ProviderHoldings.with_video_lock(module.library_meta_path(), remote_id, fn ->
-        delete_unless_held(video, module, remote_id)
+        video |> delete_unless_held(module, remote_id, mode) |> then_purge(purge)
       end)
     else
-      _single_site_or_no_remote_id -> dispatch_delete_remote(video)
+      _no_environments_or_no_remote_id -> video |> dispatch_delete_remote() |> then_purge(purge)
     end
   end
 
-  defp delete_unless_held(video, module, remote_id) do
-    case held_by_another_site(module, remote_id) do
+  defp then_purge({:error, reason} = result, _purge) when reason in [:holdings_unavailable, :busy], do: result
+
+  defp then_purge(result, purge) do
+    purge.()
+    result
+  end
+
+  defp delete_unless_held(video, module, remote_id, mode) do
+    case held_elsewhere(video, module, remote_id, mode) do
       false ->
         dispatch_delete_remote(video)
+
+      {:held_by_another_environment = reason, prefixes} ->
+        Logger.info(
+          "Video #{video.id} left at its provider: held_by_another_environment, " <>
+            "still recorded in #{Enum.join(prefixes, ", ")}"
+        )
+
+        {:error, reason}
 
       reason ->
         Logger.info("Video #{video.id} left at its provider: #{reason}")
@@ -340,22 +376,40 @@ defmodule Brando.Videos.Uploader do
     end
   end
 
-  # With several sites, another site may hold the same remote video: added
-  # from the provider's library, or uploaded before the sites stopped sharing.
-  # Deleting it at the provider would break that site's record, so it stays
-  # there, and so it does when that cannot be told.
-  defp held_by_another_site(module, remote_id) do
-    site_key = Brando.Tenant.current_site_key()
+  # An environment copied from another has the same remote videos, and with
+  # several sites another site may hold one too: added from the provider's
+  # library, or uploaded before the sites stopped sharing. Deleting it at the
+  # provider would break the other record, so it stays there, and so it does
+  # when that cannot be told. With one site, only its own environments are
+  # read.
+  #
+  # Another site's record holds the video, deleted or not. So does another
+  # environment's of the same site, unless the video is deleted remotely
+  # `:on_delete`: that environment's purge will not ask the provider, so its
+  # soft-deleted record would keep the video there for good.
+  defp held_elsewhere(video, module, remote_id, mode) do
+    prefix = Brando.Tenant.current_prefix()
+    site_key = Brando.Tenant.site_key_of(prefix)
     sites = Brando.Tenant.Registry.list_sites()
     own_site_id = Enum.find_value(sites, &(&1.key == site_key && &1.id))
+    sites = if mode == :single, do: Enum.filter(sites, &(&1.key == site_key)), else: sites
+    deleted_hold_own? = get_delete_timing(video) != :on_delete
 
-    case Brando.Videos.ProviderHoldings.sites_holding(module.library_meta_path(), [remote_id], sites) do
+    case Brando.Videos.ProviderHoldings.environments_holding(module.library_meta_path(), [remote_id], sites) do
       {:ok, holders} ->
-        holders
-        |> Map.get(remote_id, MapSet.new())
-        |> MapSet.delete(own_site_id)
-        |> Enum.empty?()
-        |> if(do: false, else: :held_by_another_site)
+        others =
+          holders
+          |> Map.get(remote_id, MapSet.new())
+          |> Enum.reject(fn {_site_id, held_in, _deleted?} -> held_in == prefix end)
+
+        {own_site, other_sites} = Enum.split_with(others, fn {site_id, _prefix, _deleted?} -> site_id == own_site_id end)
+        own_site = Enum.filter(own_site, fn {_site_id, _prefix, deleted?} -> deleted_hold_own? or not deleted? end)
+
+        cond do
+          other_sites != [] -> :held_by_another_site
+          own_site != [] -> {:held_by_another_environment, own_site |> Enum.map(&elem(&1, 1)) |> Enum.sort()}
+          true -> false
+        end
 
       {:error, _reason} ->
         :holdings_unavailable

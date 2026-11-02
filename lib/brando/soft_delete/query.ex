@@ -73,21 +73,27 @@ defmodule Brando.SoftDelete.Query do
       from t in schema,
         where: fragment("? < current_timestamp - interval '30 day'", t.deleted_at)
 
-    # Fetch videos to delete remotely first
     # Check timing per video since different videos may have different providers
-    videos = Repo.all(query)
+    {on_purge, others} =
+      query |> Repo.all() |> Enum.split_with(&(Brando.Videos.Uploader.get_delete_timing(&1) == :on_purge))
 
-    # A video whose holders could not be read (`Brando.Videos.ProviderHoldings`),
+    # Each row is purged while its video's lock is held, so another
+    # environment's purge of the same video, waiting for the lock, no longer
+    # finds it among the holders and deletes the video at the provider. A
+    # video whose holders could not be read (`Brando.Videos.ProviderHoldings`),
     # or whose lock an add or another delete held too long, is still at its
     # provider. Its row stays for the next run to try again; deleting it would
     # leave the provider video behind for good.
-    kept =
-      for video <- videos,
-          Brando.Videos.Uploader.get_delete_timing(video) == :on_purge,
-          Brando.Videos.Uploader.delete_remote(video) in [{:error, :holdings_unavailable}, {:error, :busy}],
-          do: video.id
+    purged =
+      Enum.count(on_purge, fn video ->
+        result =
+          Brando.Videos.Uploader.delete_remote(video, fn -> Repo.delete_all(from t in query, where: t.id == ^video.id) end)
 
-    Repo.delete_all(from t in query, where: t.id not in ^kept)
+        result not in [{:error, :holdings_unavailable}, {:error, :busy}]
+      end)
+
+    {count, nil} = Repo.delete_all(from t in query, where: t.id in ^Enum.map(others, & &1.id))
+    {count + purged, nil}
   end
 
   defp clean_up_schema(schema) do
