@@ -123,6 +123,36 @@ defmodule Brando.Content.Proposals.ToolsScopeTest do
       assert c.identifier.id in Enum.map(options, & &1.identifier_id)
     end
 
+    test "entry_outline keeps the place of a list's unreadable entry, without its title, over MCP too", c do
+      {:ok, article} =
+        Brando.SyncTest.create_article(
+          %{title: "Readable", slug: "readable", language: "en", status: "published", creator_id: c.user.id},
+          :system
+        )
+
+      join = Brando.SyncTest.Article.__schema__(:association, :related_entries).related
+      Brando.Repo.insert!(struct(join, parent_id: article.id, identifier_id: c.identifier.id, sequence: 0))
+
+      read_article = Brando.Authorization.Catalog.get(:read, Brando.SyncTest.Article).key
+      args = %{"content_type" => "Brando.SyncTest.Article", "id" => article.id}
+      title = c.identifier.title
+      tenant = MCP.tenant(nil, nil) |> switch!()
+
+      hidden = c |> member(["brando.admin.access", "brando.mcp.connect", read_article]) |> enable_two_factor()
+      %{"access_token" => token} = connect!(log_in_user(build_conn(), hidden), tenant)
+
+      assert %{"result" => %{"structuredContent" => %{"lists" => %{"related_entries" => listed}}}} =
+               call_tool(tenant, token, "entry_outline", args)
+
+      refute listed =~ title
+
+      shown = c |> member(["brando.admin.access", "brando.mcp.connect", read_article, "brando.pages.read"]) |> enable_two_factor()
+      %{"access_token" => token} = connect!(log_in_user(build_conn(), shown), tenant)
+
+      assert %{"result" => %{"structuredContent" => %{"lists" => %{"related_entries" => ^title}}}} =
+               call_tool(tenant, token, "entry_outline", args)
+    end
+
     test "over MCP too", c do
       tenant = MCP.tenant(nil, nil) |> switch!()
       args = %{"module" => "local:#{c.featured.id}"}

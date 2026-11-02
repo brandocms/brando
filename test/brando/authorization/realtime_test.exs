@@ -305,6 +305,25 @@ defmodule Brando.Authorization.RealtimeTest do
     end
   end
 
+  test "a real save's toast tells the lobby the actor's name and nothing else about the account", c do
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "presence")
+    socket = admin_socket(c.editor, "lobby")
+
+    {:ok, _, joined} =
+      subscribe_and_join(socket, BrandoAdmin.LobbyChannel, "lobby", %{url: "/admin", scope_token: Realtime.token(c.scope)})
+
+    assert_receive {BrandoAdmin.Presence, {:presence, %{user_joined: _}}}
+    {:ok, _} = Brando.Content.create_identifier(Page, c.page)
+
+    assert {:ok, _} = Brando.Pages.update_page(c.page.id, %{title: "Saved"}, c.editor)
+
+    assert_push "toast", %{type: :mutation, payload: %{user: user}}
+    assert Jason.decode!(Jason.encode!(user)) == %{"name" => c.editor.name}
+
+    Process.unlink(joined.channel_pid)
+    close(joined)
+  end
+
   test "lobby mutation notifications strip authority metadata and drop unreadable records", c do
     Phoenix.PubSub.subscribe(Brando.pubsub(), "presence")
     socket = admin_socket(c.editor, "lobby")

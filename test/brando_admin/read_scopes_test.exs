@@ -144,6 +144,16 @@ defmodule BrandoAdmin.ReadScopesTest do
       assert socket.assigns.selected_identifier == nil
       assert socket.assigns.unavailable_destination
       assert socket.assigns.draft["url"] == "/saved-address"
+      refute socket.assigns.selected_identifier_id
+
+      # Applying it unchanged keeps the stored destination on the link
+      {:noreply, _} = TipTapLinkDialog.handle_event("confirm_link", %{"link" => %{"url" => "/saved-address"}}, socket)
+      assert_received {:tiptap_set_link, _, %{identifier_id: id}}
+      assert id == c.identifier.id
+
+      # A new address is a new destination
+      {:noreply, _} = TipTapLinkDialog.handle_event("confirm_link", %{"link" => %{"url" => "/elsewhere"}}, socket)
+      assert_received {:tiptap_set_link, _, %{identifier_id: nil}}
     end
 
     test "legacy mode lists everything", c do
@@ -285,6 +295,26 @@ defmodule BrandoAdmin.ReadScopesTest do
     end
   end
 
+  describe "the block audit" do
+    test "names the entry a version holds a block for only to who may read it", %{conn: conn} = c do
+      source = "Elixir.Brando.Pages.Page.Blocks"
+      held = Repo.insert!(%Block{type: :module, source: source, uid: Brando.Utils.generate_uid()})
+      join = Repo.insert!(%Page.Blocks{entry_id: c.page.id, block_id: held.id, sequence: 0})
+      page = Repo.preload(Repo.get!(Page, c.page.id), Brando.Blueprint.preloads_for(Page))
+      {:ok, _} = Brando.Revisions.create_revision(page, insert_user(role: :superuser), false)
+      Repo.delete!(join)
+
+      {reader, _} = log_in_as(conn, permissions: ~w(brando.utilities.read))
+      {:ok, view, _html} = live(reader, "/admin/config/utils/loose-blocks")
+      assert has_element?(view, ".block-audit-held")
+      refute render(view) =~ @secret
+
+      {allowed, _} = log_in_as(Phoenix.ConnTest.build_conn(), permissions: ["brando.utilities.read" | @page_read])
+      {:ok, view, _html} = live(allowed, "/admin/config/utils/loose-blocks")
+      assert render(view) =~ @secret
+    end
+  end
+
   describe "a form's usage" do
     test "counts each entry once across the form's languages, and names none it may not read", c do
       forms =
@@ -353,6 +383,21 @@ defmodule BrandoAdmin.ReadScopesTest do
 
       as(article_reader(@page_read))
       assert EntryFields.display(Article, "related_entries", [{:entry, Page, c.page.id}]) == @secret
+    end
+
+    test "a proposal's review card does not name it to a viewer who may not read it", c do
+      operation = %Brando.Content.Proposals.SetFields{
+        target: {Article, c.article.id},
+        fields: %{"related_entries" => [{:entry, Page, c.page.id}]}
+      }
+
+      proposal = %Brando.Content.Proposals.Proposal{operations: [operation], targets: %{{Article, c.article.id} => c.article}}
+
+      as(article_reader())
+      refute inspect(Brando.Content.Proposals.Review.entries(proposal)) =~ @secret
+
+      as(article_reader(@page_read))
+      assert inspect(Brando.Content.Proposals.Review.entries(proposal)) =~ @secret
     end
 
     test "legacy mode names it", c do
