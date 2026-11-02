@@ -254,9 +254,7 @@ defmodule Brando.Sites do
     end
   end
 
-  mutation :delete, GlobalSet do
-    fn entry -> Cache.Globals.update({:ok, entry}) end
-  end
+  mutation :delete, GlobalSet
 
   @doc """
   Saves the values in `params` to the vars of `global_set`, as the Globals

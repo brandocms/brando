@@ -127,17 +127,11 @@ defmodule Brando.Cache.RefreshAfterCommitTest do
     end
 
     test "outside a transaction, refreshes at once", c do
-      {:ok, palette} = Brando.Content.create_palette(palette("now"), c.user)
+      {:ok, _} = Brando.Content.create_palette(palette("now"), c.user)
       assert "now" in palette_keys()
 
-      {:ok, _} = Brando.Content.delete_palette(palette.id, c.user)
-      refute "now" in palette_keys()
-
-      {:ok, set} = Brando.Sites.create_global_set(global_set("now", c.user), c.user)
+      {:ok, _} = Brando.Sites.create_global_set(global_set("now", c.user), c.user)
       assert Map.has_key?(Cache.Globals.get("en"), "now")
-
-      {:ok, _} = Brando.Sites.delete_global_set(set.id, c.user)
-      refute Map.has_key?(Cache.Globals.get("en"), "now")
     end
   end
 

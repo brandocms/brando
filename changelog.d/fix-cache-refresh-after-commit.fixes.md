@@ -1,3 +1,1 @@
 - A save rolled back with the transaction around it (a proposal that fails to apply, say) no longer leaves its global set, menu, palette, identity or SEO settings in the site caches, and open forms are only told of a module once it is committed.
-
-- Deleting a palette or a global set removes it from the site cache at once.
