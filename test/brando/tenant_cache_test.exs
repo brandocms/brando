@@ -8,6 +8,7 @@ defmodule Brando.TenantCacheTest do
 
   setup do
     put_test_env(:tenancy_mode, :multi)
+    put_test_env(Brando.Sites.DeployConfig, rsync_targets: ["web@example:/srv/acme"])
     Cache.clear()
     on_exit(&Cache.clear/0)
     :ok

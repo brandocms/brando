@@ -20940,6 +20940,11 @@ msgstr ""
 msgid "needs an absolute URL"
 msgstr ""
 
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "needs this installation's config to list its deploy destinations"
+msgstr ""
+
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format
 msgid "new"

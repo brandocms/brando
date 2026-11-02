@@ -16,6 +16,7 @@ end
 defmodule Brando.SSGBuildsTest do
   use Brando.ConnCase
 
+  alias Brando.Sites.DeployConfig
   alias Brando.SSG.Builds
   alias Brando.SSG.Deploy
   alias Brando.Tenant.Cache
@@ -55,6 +56,12 @@ defmodule Brando.SSGBuildsTest do
   setup do
     root = Path.join(System.tmp_dir!(), "brando-ssg-builds-#{System.unique_integer([:positive])}")
     put_test_env(:tenancy_mode, :multi)
+
+    put_test_env(DeployConfig,
+      rsync_targets: ["deploy@example.test:/srv/www"],
+      s3_targets: ["s3://static-bucket/sites/acme"]
+    )
+
     put_test_env(:sites_path, Path.join(root, "sites"))
     put_test_env(:media_path, Path.join(root, "media"))
     Cache.clear()
@@ -318,6 +325,118 @@ defmodule Brando.SSGBuildsTest do
 
     assert {:cancel, :invalid_deploy_target} =
              perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
+  end
+
+  describe "a snapshotted target, checked again at deploy" do
+    setup context do
+      {:ok, other} =
+        Registry.create_site(%{
+          name: "Static Beta",
+          key: "static-beta-#{System.unique_integer([:positive])}",
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :static
+        })
+
+      put_test_env(DeployConfig,
+        rsync_targets: ["deploy@static.example.test:/srv/sites/{site_key}"],
+        s3_targets: ["s3://static-bucket/sites/{site_key}"]
+      )
+
+      %{other_key: other.key, build: ready_build(context.site, context.environment)}
+    end
+
+    defp with_target(build, strategy, target) do
+      {:ok, build} = Builds.update(build, %{deploy_config: %{"strategy" => strategy, "target" => target}})
+      build
+    end
+
+    defp recording_runner(command, args, _opts) do
+      send(self(), {:command, command, args})
+      {"", 0}
+    end
+
+    defp recording_s3(operation) do
+      send(self(), {:s3, operation})
+      {:ok, %{body: %{contents: [], is_truncated: "false"}}}
+    end
+
+    test "rsync into another site's directory runs nothing", context do
+      build = with_target(context.build, "rsync", "deploy@static.example.test:/srv/sites/#{context.other_key}")
+
+      assert {:error, :invalid_deploy_target} = Deploy.deploy(build, runner: &recording_runner/3)
+      refute_received {:command, _, _}
+    end
+
+    test "rsync into its own directory deploys", context do
+      target = "deploy@static.example.test:/srv/sites/#{context.site.key}"
+      build = with_target(context.build, "rsync", target)
+
+      assert {:ok, %{status: :deployed}} = Deploy.deploy(build, runner: &recording_runner/3)
+      assert_received {:command, "rsync", args}
+      assert List.last(args) == target
+    end
+
+    test "S3 at another site's prefix or a whole bucket lists and deletes nothing", context do
+      for target <- [
+            "s3://static-bucket/sites/#{context.other_key}",
+            "s3://static-bucket",
+            "s3://static-bucket/",
+            "s3://static-bucket//",
+            "s3://static-bucket/sites/#{context.site.key}/../#{context.other_key}",
+            "s3://static-bucket/sites/#{context.other_key}?/sites/#{context.site.key}",
+            "s3://other-bucket/sites/#{context.site.key}"
+          ] do
+        build = with_target(context.build, "s3", target)
+
+        assert {:error, :invalid_deploy_target} = Deploy.deploy(build, s3_request: &recording_s3/1), target
+        refute_received {:s3, _}
+      end
+    end
+
+    test "S3 at its own prefix deploys", context do
+      build = with_target(context.build, "s3", "s3://static-bucket/sites/#{context.site.key}")
+
+      assert {:ok, %{status: :deployed}} = Deploy.deploy(build, s3_request: &recording_s3/1)
+      assert_received {:s3, %ExAws.Operation.S3{http_method: :get}}
+    end
+
+    test "a queued S3 deploy to another site's prefix is cancelled, not retried", context do
+      build = with_target(context.build, "s3", "s3://static-bucket/sites/#{context.other_key}")
+
+      assert {:cancel, :invalid_deploy_target} =
+               perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
+    end
+
+    test "with several sites and no list, nothing deploys", context do
+      put_test_env(DeployConfig, [])
+
+      build = with_target(context.build, "rsync", "deploy@static.example.test:/srv/sites/#{context.site.key}")
+      assert {:error, :invalid_deploy_target} = Deploy.deploy(build, runner: &recording_runner/3)
+      refute_received {:command, _, _}
+
+      build = with_target(build, "s3", "s3://static-bucket/sites/#{context.site.key}")
+      assert {:error, :invalid_deploy_target} = Deploy.deploy(build, s3_request: &recording_s3/1)
+      refute_received {:s3, _}
+    end
+
+    test "with one site and no list, any remote or S3 target deploys as before", context do
+      put_test_env(DeployConfig, [])
+
+      for mode <- [:single, :none] do
+        put_test_env(:tenancy_mode, mode)
+
+        build = with_target(context.build, "rsync", "deploy@static.example.test:/srv/www")
+        assert {:ok, deployed} = Deploy.deploy(build, runner: &recording_runner/3)
+        assert_received {:command, "rsync", _}
+
+        build = with_target(deployed, "s3", "s3://whole-bucket")
+        assert {:ok, deployed} = Deploy.deploy(build, s3_request: &recording_s3/1)
+        assert_received {:s3, %ExAws.Operation.S3{http_method: :get}}
+        assert deployed.status == :deployed
+      end
+    end
   end
 
   test "S3 deployment removes stale target keys before uploading the artifact", context do

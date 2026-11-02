@@ -447,6 +447,13 @@ sender first, before the first compile.
   `websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]`.
   In a generated `LockdownController`, call `Lockdown.password?(conn, password)`
   so password attempts are limited.
+- **Static deploys with several sites.** With `tenancy_mode: :multi`, an rsync
+  or S3 deploy needs a list of destinations, and builds refuse to deploy until
+  it is there. Add what each site's target needs to `config/runtime.exs`, with
+  `{site_key}` for the site's key so one site cannot name another's destination:
+  `config :brando, Brando.Sites.DeployConfig, rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}"], s3_targets: ["s3://static-bucket/sites/{site_key}"]`.
+  Targets not laid out by site key can be listed one by one; see
+  [Tenancy and environments](tenancy_and_environments.md).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with
