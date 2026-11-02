@@ -5,6 +5,7 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
   use Brando.ConnCase, async: false
 
   import Brando.Test.Support, only: [put_test_env: 2]
+  import ExUnit.CaptureLog
   import Plug.Conn
 
   alias Brando.Authorization.Migration
@@ -295,10 +296,7 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
   end
 
   describe "a delete and an add of one video" do
-    setup do
-      {:ok, conn} = Postgrex.start_link(Keyword.drop(Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name]))
-      {:ok, lock_conn: conn}
-    end
+    setup :start_lock_conn
 
     test "a delete waits while the video is being added", %{sites: sites, held: held, lock_conn: conn} do
       hold_lock(conn, "vimeo.video_id", "2")
@@ -401,6 +399,79 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       hold_lock(conn, "vimeo.video_id", "slow")
 
       assert {:error, :busy} = ProviderHoldings.with_video_lock("vimeo.video_id", "slow", fn -> :ran end)
+    end
+  end
+
+  describe "a delete with delete_remote_on: :on_delete" do
+    setup :start_lock_conn
+
+    setup do
+      put_test_env(Vimeo,
+        access_token: "vimeo-token",
+        delete_remote_on: :on_delete,
+        req_options: [plug: {Req.Test, Vimeo}]
+      )
+
+      me = self()
+
+      Req.Test.stub(Vimeo, fn conn ->
+        send(me, {:vimeo_delete, conn.request_path, Repo.repo().in_transaction?(), Tenant.current_prefix()})
+        send_resp(conn, 204, "")
+      end)
+
+      :ok
+    end
+
+    for authorization_mode <- [:legacy, :groups], tenancy_mode <- [:none, :multi] do
+      @authorization_mode authorization_mode
+      @tenancy_mode tenancy_mode
+
+      test "asks the provider once it has committed, #{authorization_mode} authorization, #{tenancy_mode} tenancy",
+           %{sites: sites, held: held} do
+        put_test_env(:tenancy_mode, @tenancy_mode)
+        superuser = superuser(@authorization_mode)
+
+        {video, prefix} =
+          case @tenancy_mode do
+            :none -> {uploaded_here("5"), nil}
+            :multi -> {held.alpha, site_prefix(sites.alpha)}
+          end
+
+        in_prefix(prefix, fn -> assert {:ok, _video} = Brando.Videos.delete_video(video.id, superuser) end)
+
+        path = "/videos/#{video.remote_id}"
+        assert_received {:vimeo_delete, ^path, false, ^prefix}
+      end
+    end
+
+    test "a delete rolled back is not made at the provider", %{sites: sites, held: held} do
+      superuser = superuser(:groups)
+
+      as_site(sites.alpha, fn ->
+        assert {:error, :undone} =
+                 Repo.transaction(fn ->
+                   {:ok, _video} = Brando.Videos.delete_video(held.alpha.id, superuser)
+                   Repo.rollback(:undone)
+                 end)
+      end)
+
+      refute_received {:vimeo_delete, _path, _in_transaction?, _prefix}
+    end
+
+    test "a video left at the provider is logged", %{sites: sites, held: held, lock_conn: conn} do
+      put_test_env(Brando.Videos.ProviderHoldings, lock_timeout: 200)
+      hold_lock(conn, "vimeo.video_id", "1")
+      Logger.put_module_level(Brando.Videos, :warning)
+      on_exit(fn -> Logger.delete_module_level(Brando.Videos) end)
+
+      log =
+        capture_log([level: :warning], fn ->
+          as_site(sites.alpha, fn -> assert {:ok, _video} = Brando.Videos.delete_video(held.alpha.id, :system) end)
+        end)
+
+      refute_received {:vimeo_delete, _path, _in_transaction?, _prefix}
+      assert log =~ "Video #{held.alpha.id}"
+      assert log =~ "busy"
     end
   end
 
@@ -595,9 +666,25 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
   end
 
   defp as_site(site, fun) do
+    Tenant.with_prefix(site_prefix(site), fun)
+  end
+
+  defp site_prefix(site) do
     site = Registry.get_site(site.id)
     environment = Enum.find(site.environments, & &1.live)
-    Tenant.with_prefix(Tenant.prefix(site, environment), fun)
+    Tenant.prefix(site, environment)
+  end
+
+  defp in_prefix(nil, fun), do: fun.()
+  defp in_prefix(prefix, fun), do: Tenant.with_prefix(prefix, fun)
+
+  defp superuser(:legacy), do: Factory.insert(:random_user, role: :superuser)
+
+  defp superuser(:groups) do
+    put_test_env(:authorization_mode, :groups)
+    superuser = Factory.insert(:random_user, role: :superuser)
+    {:ok, _} = Migration.run()
+    superuser
   end
 
   defp uploaded(site, remote_id), do: as_site(site, fn -> uploaded_here(remote_id) end)
@@ -614,6 +701,12 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
 
   defp expire(video) do
     video |> Ecto.Changeset.change(deleted_at: DateTime.add(DateTime.utc_now(:second), -31, :day)) |> Repo.update!()
+  end
+
+  # A session of its own, outside the sandbox, to hold and test locks with.
+  defp start_lock_conn(_context) do
+    {:ok, conn} = Postgrex.start_link(Keyword.drop(Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name]))
+    {:ok, lock_conn: conn}
   end
 
   # Another session holds the video's lock, as a delete or an add in progress.

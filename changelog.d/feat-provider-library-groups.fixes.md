@@ -1,0 +1,1 @@
+- With `delete_remote_on: :on_delete`, a video is deleted at its provider once its delete has been saved, so a delete rolled back no longer removes it there, and one the provider delete fails for is logged with the video's id.

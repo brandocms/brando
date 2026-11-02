@@ -749,9 +749,9 @@ A delete is refused too when the video tables cannot be read, or when an add
 or another delete of the same video holds it up for more than 30 seconds.
 With `delete_remote_on: :on_purge`, the purge then keeps the record and
 tries again on its next run. With `delete_remote_on: :on_delete`, nothing
-tries again: the record is deleted in Brando, and the video stays at the
-provider until someone removes it there. A site's own other environments do
-not stop the delete, as with one site.
+tries again: the record is deleted in Brando, a warning in the log names it,
+and the video stays at the provider until someone removes it there. A site's
+own other environments do not stop the delete, as with one site.
 
 From code, as the screen does:
 

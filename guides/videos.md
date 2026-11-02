@@ -530,7 +530,7 @@ this is set to.
 
 #### Behavior
 
-- **`:on_delete`**: When a user deletes a video in the admin, it's immediately removed from its provider. The video cannot be restored from the provider.
+- **`:on_delete`**: When a user deletes a video in the admin, it's removed from its provider as soon as the delete is saved; a delete that is rolled back leaves it there. The video cannot be restored from the provider. If the provider delete fails, the video stays at the provider, and a warning in the log names the video.
 - **`:on_purge`** (default): Videos are soft-deleted locally first. After 30 days, when the soft-delete purger runs, the video is permanently deleted from both the database and the provider. This allows video restoration during the grace period.
 - **`false`**: Videos are only deleted locally. Provider videos remain and must be manually cleaned up.
 
