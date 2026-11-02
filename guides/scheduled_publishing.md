@@ -228,8 +228,11 @@ publishes nothing; schedule the revision again if it should still go out.
 A revision that no longer validates, such as one holding a fragment key that
 no longer fits the key format, is not retried either: the job is cancelled on
 its first attempt, the revision is no longer scheduled, and the entry's
-Activity names the fields. Activating it in the revisions drawer is refused
-with the same fields and why; load it, correct them and save it.
+Activity names the fields, including one whose nested record (a variable, an
+embedded item) no longer validates. Activating it in the revisions drawer is
+refused with the same fields and why; load it, correct them and save it. A
+unique value the database refuses is the exception: another save may have taken
+it at the same moment, so that job is retried like any other failure.
 
 To cancel before execution, use **Cancel schedule** in the revision row:
 
@@ -266,8 +269,8 @@ The publisher worker allows 10 attempts and a 60-second timeout per attempt.
 Oban retries failures; an accepted schedule is not a guarantee that the content
 will publish successfully. A failed revision restore preserves the current
 entry, and a final failed attempt releases its scheduled retention flag. A
-revision refused by validation or because its entry is in the trash is not
-retried (see above).
+revision refused by validation, other than by a unique index, or because its
+entry is in the trash is not retried (see above).
 Check the job's error and the content's current validation/authorization before
 retrying. The actor is loaded again at execution, so changed access can matter.
 

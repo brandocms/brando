@@ -237,6 +237,7 @@ defmodule Brando.Activity do
   @doc """
   Record that scheduled publishing did not publish `revision` of `entry`
   because it no longer validates, in `fields`, and dropped the schedule.
+  The entry did not change, so this sends no content event.
   """
   def scheduled_revision_invalid(entry, user, revision, fields) do
     guard(entry, fn ->

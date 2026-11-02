@@ -9,6 +9,7 @@ defmodule Brando.Blueprint.ErrorTranslator do
   require Logger
 
   alias Brando.Blueprint.Forms
+  alias Ecto.Changeset
 
   @doc """
   Returns translated labels for `error_keys` in the Blueprint `form`.
@@ -20,11 +21,59 @@ defmodule Brando.Blueprint.ErrorTranslator do
   """
   @spec translate_keys([atom() | String.t()], struct(), module()) :: [String.t()]
   def translate_keys(error_keys, form, schema) do
-    gettext_module = schema.__modules__().gettext
-    gettext_domain = String.downcase("#{schema.__naming__().domain}_#{schema.__naming__().schema}")
-
-    Enum.map(error_keys, &translate_key(&1, form, gettext_module, gettext_domain))
+    Enum.map(error_keys, &translate_key(&1, form, schema, fn key -> log_missing_field(key, form) end))
   end
+
+  @doc """
+  The fields of `changeset` that carry errors, at any depth: an error in a
+  nested changeset (an embed or a relation) is under the field that holds
+  it. The changeset's own errors come first, in their order.
+  """
+  @spec error_fields(Changeset.t()) :: [atom()]
+  def error_fields(%Changeset{errors: errors} = changeset) do
+    nested = changeset |> Changeset.traverse_errors(& &1) |> Map.keys() |> Enum.sort()
+    Enum.uniq(Keyword.keys(errors) ++ nested)
+  end
+
+  @doc """
+  Describes the errors of a Blueprint `changeset` as `{label, message}`
+  pairs, in `error_fields/1`'s order: each field under its label in `form`,
+  with its messages, each translated by `translate` (given `{message, opts}`),
+  joined. An error in a nested changeset is under the path to it, as
+  "Page variables → Label".
+
+  A field `form` has no input for, or any field when `form` is nil, goes by
+  its humanized name. Unlike `translate_keys/3` this is not logged: the
+  changeset is from a save the form did not make (a revision, an import).
+  """
+  @spec describe(Changeset.t(), struct() | nil, ({String.t(), keyword()} -> String.t())) :: [{String.t(), String.t()}]
+  def describe(%Changeset{data: %schema{}} = changeset, form, translate) do
+    errors = Changeset.traverse_errors(changeset, translate)
+
+    changeset
+    |> error_fields()
+    |> Enum.flat_map(&entries(label(&1, form, schema), Map.get(errors, &1, [])))
+    |> Enum.uniq()
+  end
+
+  defp label(field, nil, _schema), do: humanize(field)
+  defp label(field, form, schema), do: translate_key(field, form, schema, fn _key -> :ok end)
+
+  # A field's messages, and those of the nested changesets under it (a list
+  # of them for a many relation, an empty map for each that is valid)
+  defp entries(path, messages) when is_list(messages) do
+    {own, nested} = Enum.split_with(messages, &is_binary/1)
+    own = if own == [], do: [], else: [{path, Enum.join(own, ", ")}]
+    own ++ Enum.flat_map(nested, &entries(path, &1))
+  end
+
+  defp entries(path, %{} = nested) do
+    nested
+    |> Enum.sort_by(fn {field, _messages} -> to_string(field) end)
+    |> Enum.flat_map(fn {field, messages} -> entries("#{path} → #{humanize(field)}", messages) end)
+  end
+
+  defp entries(path, message), do: [{path, inspect(message)}]
 
   # The meta drawer (`Brando.Trait.Meta`) edits these outside the Blueprint
   # form, under these labels in Brando's own catalog.
@@ -38,17 +87,18 @@ defmodule Brando.Blueprint.ErrorTranslator do
     "meta_image_id" => "Meta image"
   }
 
-  defp translate_key(error_key, form, gettext_module, gettext_domain) do
+  defp translate_key(error_key, form, schema, on_missing) do
     case {Forms.get_field(error_key, form), Map.get(@meta_drawer_labels, to_string(error_key))} do
       {nil, nil} ->
-        log_missing_field(error_key, form)
+        on_missing.(error_key)
         humanize(error_key)
 
       {nil, meta_label} ->
         Gettext.dgettext(Brando.Gettext, "default", meta_label)
 
       {field, _} ->
-        Gettext.dgettext(gettext_module, gettext_domain, field_label(field, error_key))
+        gettext_domain = String.downcase("#{schema.__naming__().domain}_#{schema.__naming__().schema}")
+        Gettext.dgettext(schema.__modules__().gettext, gettext_domain, field_label(field, error_key))
     end
   end
 

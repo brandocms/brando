@@ -4,6 +4,7 @@ defmodule Brando.Content.Transfer.Entries do
   import Ecto.Query, only: [from: 2]
   alias Brando.Activity
   alias Brando.Authorization.Boundary
+  alias Brando.Blueprint.ErrorTranslator
   alias Brando.Content.Definition.Value
   alias Brando.Content.Transfer
 
@@ -386,26 +387,11 @@ defmodule Brando.Content.Transfer.Entries do
   end
 
   # Each field under its label, with its messages: "Key: can't start or end
-  # with a space". A nested changeset's errors are listed as they are.
+  # with a space", and a nested record's under the path to it
   defp validation_errors(%Changeset{data: %schema{}} = cs) do
-    errors = Changeset.traverse_errors(cs, &BrandoAdmin.Components.Form.Primitives.translate_error/1)
-    fields = Map.keys(errors)
-
-    labels =
-      case schema.__form__() do
-        nil -> Enum.map(fields, &Phoenix.Naming.humanize/1)
-        form -> Brando.Blueprint.Utils.translate_error_keys(fields, form, schema)
-      end
-
-    labels
-    |> Enum.zip(fields)
-    |> Enum.map_join("; ", fn {label, field} -> "#{label}: #{messages(errors[field])}" end)
-  end
-
-  defp messages(messages) do
-    if is_list(messages) and Enum.all?(messages, &is_binary/1),
-      do: Enum.join(messages, ", "),
-      else: inspect(messages)
+    cs
+    |> ErrorTranslator.describe(schema.__form__(), &BrandoAdmin.Components.Form.Primitives.translate_error/1)
+    |> Enum.map_join("; ", fn {label, message} -> "#{label}: #{message}" end)
   end
 
   # A bundle sets no field the forms lock for anyone but a superuser, on an

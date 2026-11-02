@@ -203,6 +203,21 @@ defmodule Brando.ContentEventsTest do
       assert [%{type: "entry.published", actor: "scheduler"}] = collected()
     end
 
+    # Nothing changed: the restore was refused and only its schedule dropped
+    test "a scheduled revision refused by validation is in Activity but not announced", %{user: user} do
+      {page, revision} = Brando.InvalidRevisions.page_with_invalid_var!(user)
+      {1, _} = Revisions.mark_revision_scheduled(Page, page.id, revision, true)
+      collected()
+
+      job = Brando.InvalidRevisions.scheduled_job(page, revision, user)
+      assert {:cancel, :invalid} = Brando.Worker.EntryPublisher.perform(job)
+
+      assert collected() == []
+
+      assert [%{action: :updated, source: :scheduler}] =
+               Page |> Activity.for_entry(page.id) |> Enum.filter(&(&1.details["scheduled_revision"] != nil))
+    end
+
     test "the actor kind follows the source", %{user: user} do
       page = create_page(user)
       collected()

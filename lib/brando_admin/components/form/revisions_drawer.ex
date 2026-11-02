@@ -3,6 +3,7 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   use BrandoAdmin, :live_component
   use Gettext, backend: Brando.Gettext
 
+  alias Brando.Blueprint.ErrorTranslator
   alias BrandoAdmin.Components.Activity, as: Events
   alias BrandoAdmin.Components.Activity.Comparison
   alias BrandoAdmin.Components.Button
@@ -533,18 +534,17 @@ defmodule BrandoAdmin.Components.Form.RevisionsDrawer do
   end
 
   # A revision that no longer validates, such as a fragment key that no
-  # longer fits its format: which field, and why
-  defp activation_error(socket, %Ecto.Changeset{errors: [_ | _] = errors}) do
-    schema = entry_schema(socket)
-    form = socket.assigns.form_blueprint
-    labels = Brando.Blueprint.Utils.translate_error_keys(Keyword.keys(errors), form, schema)
+  # longer fits its format or a nested record missing a field it now
+  # requires: which fields, and why
+  defp activation_error(socket, %Ecto.Changeset{valid?: false} = changeset) do
+    case ErrorTranslator.describe(changeset, socket.assigns.form_blueprint, &Primitives.translate_error/1) do
+      [] ->
+        gettext("The revision could not be activated.")
 
-    reasons =
-      labels
-      |> Enum.zip(errors)
-      |> Enum.map_join("; ", fn {label, {_field, error}} -> "#{label}: #{Primitives.translate_error(error)}" end)
-
-    gettext("The revision could not be activated. %{reasons}. Load it, correct this and save it.", reasons: reasons)
+      described ->
+        reasons = Enum.map_join(described, "; ", fn {label, message} -> "#{label}: #{message}" end)
+        gettext("The revision could not be activated. %{reasons}. Load it, correct this and save it.", reasons: reasons)
+    end
   end
 
   defp activation_error(_socket, _reason), do: gettext("The revision could not be activated.")

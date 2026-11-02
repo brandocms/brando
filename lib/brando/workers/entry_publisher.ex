@@ -23,7 +23,9 @@ defmodule Brando.Worker.EntryPublisher do
 
   A scheduled revision that no longer validates (a fragment key that no
   longer fits its format) or whose entry is in the trash is not retried: the
-  job is cancelled and the schedule dropped, and Activity says why.
+  job is cancelled and the schedule dropped, and Activity says why. A unique
+  value that the database refuses is retried, as another save may have
+  taken it at the same moment.
   """
   use Oban.Worker,
     queue: :default,
@@ -151,17 +153,44 @@ defmodule Brando.Worker.EntryPublisher do
 
       # The revision no longer validates, such as a fragment key that no
       # longer fits its format: trying again gives the same answer. The
-      # schedule is dropped, with a note in Activity naming the fields.
+      # schedule is dropped, with a note in Activity naming the fields, at
+      # any depth. A unique index refusing it may be another save taking
+      # the value at the same moment, so that is tried again.
       {:error, %Ecto.Changeset{} = changeset} ->
-        fields = changeset.errors |> Keyword.keys() |> Enum.uniq() |> Enum.map(&to_string/1)
-        Revisions.drop_invalid_schedule(schema, id, revision, user, fields, fn -> current_revision_job?(job) end)
-        {:cancel, :invalid}
+        if unique_conflict?(changeset) do
+          release_failed_revision_schedule(job, schema, id, revision)
+          {:error, changeset}
+        else
+          drop_invalid_schedule(job, schema, id, revision, user, changeset)
+        end
 
       {:error, reason} ->
         release_failed_revision_schedule(job, schema, id, revision)
         {:error, reason}
     end
   end
+
+  defp drop_invalid_schedule(job, schema, id, revision, user, changeset) do
+    fields = changeset |> Brando.Blueprint.ErrorTranslator.error_fields() |> Enum.map(&to_string/1)
+    Revisions.drop_invalid_schedule(schema, id, revision, user, fields, fn -> current_revision_job?(job) end)
+    {:cancel, :invalid}
+  end
+
+  @doc false
+  # Whether a unique index refused the restore (`constraint: :unique`), in
+  # the entry or a nested record: two restores taking the same value at the
+  # same moment both pass the check before the write, and the later one may
+  # go through when it is tried again.
+  def unique_conflict?(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> Ecto.Changeset.traverse_errors(fn {_message, opts} -> Keyword.get(opts, :constraint) == :unique end)
+    |> flagged?()
+  end
+
+  defp flagged?(true), do: true
+  defp flagged?(list) when is_list(list), do: Enum.any?(list, &flagged?/1)
+  defp flagged?(%{} = map), do: map |> Map.values() |> flagged?()
+  defp flagged?(_other), do: false
 
   # A publish waits for its publish_at, publishes only a pending entry (one
   # set back to draft stays a draft) and is dropped once the entry has

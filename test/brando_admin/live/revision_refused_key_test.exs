@@ -52,4 +52,17 @@ defmodule BrandoAdmin.RevisionRefusedKeyTest do
     assert html =~ "##{c.old}"
     assert html =~ "Not valid: key"
   end
+
+  # A revision whose var lost its required label: the page itself validates
+  test "activating one that no longer validates in a nested record names it", c do
+    {page, revision} = Brando.InvalidRevisions.page_with_invalid_var!(c.current_user)
+    {view, _html} = live_form(c.conn, "/admin/pages/update/#{page.id}", "page_form")
+    drawer = view |> cid_of("#page_form-revisions-drawer-tab-activity") |> then(&with_target(view, &1))
+
+    drawer |> render_hook("activate_revision", %{"value" => to_string(revision)})
+
+    assert_push_event(view, "b:alert", %{type: "error", message: message})
+    assert message =~ "Page variables → Label: can't be blank"
+    assert Repo.get!(Brando.Pages.Page, page.id).title == "Changed since"
+  end
 end
