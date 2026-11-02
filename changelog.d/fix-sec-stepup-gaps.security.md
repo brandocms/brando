@@ -1,1 +1,1 @@
-- Giving an environment a domain, creating an environment, and preparing groups or applying a group import on the utilities screen ask for a recent confirmation, as setting an environment live and changing groups do.
+- Giving an environment a domain, creating or restoring an environment, cancelling a scheduled operation, creating or activating a site, and preparing groups or applying a group import on the utilities screen ask for a recent confirmation, as setting an environment live and changing groups do.

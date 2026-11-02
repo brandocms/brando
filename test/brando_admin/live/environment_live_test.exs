@@ -548,6 +548,39 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       end
     end
 
+    # Answering proves who you are: it takes no grant of its own, or a holder of
+    # the create grant alone could never get past the prompt.
+    test "the prompt can be answered with the create grant alone", %{
+      site: site,
+      production: production,
+      current_user: owner
+    } do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Migration.run()
+      creator = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      owner_scope = Scope.site(owner, site, production)
+
+      {:ok, group} =
+        Groups.create(owner_scope, %{name: "Environment creators"}, [
+          "brando.admin.access",
+          "brando.environments.read",
+          "brando.environments.create"
+        ])
+
+      {:ok, :ok} = Groups.add_member(owner_scope, group.id, creator.id)
+      conn = log_in_user(build_conn(), creator)
+      token = get_session(conn, :user_token)
+      at = NaiveDateTime.add(NaiveDateTime.utc_now(), -30 * 60, :second)
+      Repo.update_all(from(t in Brando.Users.UserToken, where: t.token == ^token), set: [confirmed_at: at])
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      html = render_submit(view, "create_environment", %{"environment" => %{"name" => "New", "key" => "new-one"}})
+      assert html =~ "reauth-modal"
+
+      view |> form("#reauth-form", reauth: %{proof: "admin"}) |> render_submit()
+      assert Registry.get_environment_by_key(site, "new-one")
+    end
+
     defp groups_mode(:legacy), do: :ok
 
     defp groups_mode(:groups) do
