@@ -316,7 +316,12 @@ defmodule Brando.Authorization.Engine do
   defp own_profile?(_, _, _), do: false
 
   defp publication_allowed?(snapshot, %{data: original, changes: changes} = changeset) do
-    published? = Map.get(original, :status) == :published or Ecto.Changeset.get_field(changeset, :status) == :published
+    # Setting an entry to pending takes it online when its date comes: the
+    # sweep carries that out as the system, without asking again.
+    published? =
+      Map.get(original, :status) == :published or Ecto.Changeset.get_field(changeset, :status) == :published or
+        Map.get(changes, :status) == :pending
+
     scheduled? = Map.has_key?(changes, :publish_at)
     # An expiry unpublishes the entry when it comes, so setting or clearing
     # one takes both rights.

@@ -136,8 +136,8 @@ defmodule BrandoAdmin.Components.Form.EntryHeader do
   @doc """
   The status choices with their labels. Mirrors the publishing rule of
   the authorization engine: without the publish permission, a user can't
-  publish an entry, and can't change a published one, so those choices are
-  disabled rather than refused on save.
+  publish an entry or set it to pending, and can't change a published one, so
+  those choices are disabled rather than refused on save.
   """
   def status_options(saved_status, can_publish?, statuses \\ @statuses) do
     saved = normalize(saved_status)
@@ -146,7 +146,7 @@ defmodule BrandoAdmin.Components.Form.EntryHeader do
       %{
         value: to_string(status),
         label: status_label(status),
-        disabled: not can_publish? and status != saved and (status == :published or saved == :published)
+        disabled: not can_publish? and status != saved and (status in [:published, :pending] or saved == :published)
       }
     end)
   end

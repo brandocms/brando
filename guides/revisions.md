@@ -32,6 +32,9 @@ old draft can therefore make a currently published entry a draft. Use scheduled
 revision publication when the intended operation is explicitly “restore this
 snapshot and publish it.”
 
+For anyone but a superuser, a field the form locks keeps its value when a revision is activated or
+loaded as a working copy, whatever the snapshot holds; the rest of the revision restores.
+
 Ordinary successful context saves capture revisions synchronously. There is one active revision per entry; storing
 an inactive working copy leaves the active marker where it was.
 

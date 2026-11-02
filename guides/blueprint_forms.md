@@ -324,7 +324,7 @@ Every input type reads these:
 
   A save ignores any value sent for a locked top-level input. The field
   keeps its saved value, or one Brando set: a new entry's `default_params`,
-  a translation or a revision's working copy. A restored recovery copy
+  a translation or, for a superuser, a revision's working copy. A restored recovery copy
   doesn't change it. An empty field takes the input's `default:`. A locked
   `:image`, `:file`, `:video` or `:gallery` input keeps its asset too: a
   picker's selection, an upload, removing it or resetting its drawer, a new
