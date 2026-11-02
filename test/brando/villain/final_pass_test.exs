@@ -28,6 +28,13 @@ defmodule Brando.Villain.FinalPassTest do
     assert Villain.parse_and_render(html, Context.new(%{"visible" => false})) == "beforehiddenafter"
   end
 
+  test "zero_pad pads no further than its limit" do
+    context = Context.new(%{}, filter_module: Brando.Villain.Filters)
+
+    assert Villain.parse_and_render("{{ 5 | zero_pad: 4 }}", context) == "0005"
+    assert Villain.parse_and_render("{{ 5 | zero_pad: 1000000 }}", context) == "5"
+  end
+
   test "retains parse error handling when Liquid is malformed" do
     assert Brando.Test.OwnLog.capture(fn ->
              assert Villain.parse_and_render("{% if visible %}unclosed", Context.new(%{})) ==

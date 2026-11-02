@@ -12,6 +12,8 @@ defmodule Brando.HTML do
   alias Brando.Blueprint.URL
   alias Brando.Utils
 
+  @zero_pad_limit 64
+
   @type alert_levels :: :default | :primary | :info | :success | :warning | :danger
   @type safe_string :: {:safe, [...]}
   @type conn :: Plug.Conn.t()
@@ -414,12 +416,16 @@ defmodule Brando.HTML do
       iex> zero_pad(5)
       "005"
 
+  Templates choose `count`, and it allocates that many bytes, so a count that
+  is not an integer from 0 to #{@zero_pad_limit} leaves `val` unpadded.
   """
-  @spec zero_pad(binary | integer, non_neg_integer) :: binary
+  @spec zero_pad(binary | integer, term) :: binary
   def zero_pad(str, count \\ 3)
-  def zero_pad(val, count) when is_binary(val), do: String.pad_leading(val, count, "0")
+  def zero_pad(val, count) when is_integer(val), do: zero_pad(Integer.to_string(val), count)
 
-  def zero_pad(val, count) when is_integer(val), do: String.pad_leading(Integer.to_string(val), count, "0")
+  def zero_pad(val, count) when is_binary(val) and count in 0..@zero_pad_limit, do: String.pad_leading(val, count, "0")
+
+  def zero_pad(val, _count) when is_binary(val), do: val
 
   @doc """
   Split `name` and return first name
