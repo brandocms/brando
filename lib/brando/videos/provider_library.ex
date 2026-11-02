@@ -29,7 +29,7 @@ defmodule Brando.Videos.ProviderLibrary do
   outside the group hold is left out of the listing and refused on adding,
   and so is every video when it cannot be told which sites hold them.
 
-  Without tenancy, or with one site, the whole account is listed.
+  With `:single` or `:none` tenancy, the whole account is listed.
 
   ## One record per remote video
 
@@ -121,7 +121,12 @@ defmodule Brando.Videos.ProviderLibrary do
     with {:ok, module} <- provider(strategy, scope),
          {:ok, %{items: items} = page} <- list_page(module, scope, opts, @max_filtered_pages) do
       existing = existing_video_ids(module.library_meta_path(), Enum.map(items, & &1.remote_id))
-      {:ok, %{page | items: Enum.map(items, &Map.put(&1, :video_id, existing[&1.remote_id]))}}
+
+      {:ok,
+       %{
+         page
+         | items: Enum.map(items, &(&1 |> Map.delete(:holding_keys) |> Map.put(:video_id, existing[&1.remote_id])))
+       }}
     end
   end
 
@@ -130,7 +135,7 @@ defmodule Brando.Videos.ProviderLibrary do
   defp list_page(module, {:group, _site_ids, sites} = scope, opts, pages_left) do
     with {:ok, %{items: items, next: next}} <- guarded(fn -> module.list_remote(opts) end),
          {:ok, holders} <-
-           ProviderHoldings.sites_holding(module.library_meta_path(), Enum.map(items, & &1.remote_id), sites) do
+           ProviderHoldings.sites_holding(module.library_meta_path(), Enum.map(items, &holding/1), sites) do
       items = Enum.filter(items, &shared?(scope, holders[&1.remote_id]))
 
       if (items == [] and next) && pages_left > 1,
@@ -151,22 +156,43 @@ defmodule Brando.Videos.ProviderLibrary do
   def import(strategy, remote_id, user, opts \\ []) when is_binary(remote_id) do
     with :ok <- Brando.Authorization.Media.authorize(user, :video),
          scope = scope(),
-         {:ok, module} <- provider(strategy, scope),
-         :ok <- may_add(module, scope, remote_id) do
-      find_or_import(module, remote_id, user, opts)
+         {:ok, module} <- provider(strategy, scope) do
+      import_in_scope(module, scope, remote_id, user, opts)
     end
+  end
+
+  defp import_in_scope(module, :account, remote_id, user, opts), do: find_or_import(module, remote_id, user, opts)
+
+  # A delete of the same video at the provider waits, and this waits for one
+  # in progress (`Brando.Videos.ProviderHoldings.with_video_lock/3`).
+  defp import_in_scope(module, {:group, _site_ids, _sites} = scope, remote_id, user, opts) do
+    with {:ok, keys} <- holding_keys(module, remote_id) do
+      ProviderHoldings.with_video_lock(module.library_meta_path(), remote_id, fn ->
+        add_if_shared(module, scope, {remote_id, keys}, user, opts)
+      end)
+    end
+  end
+
+  defp add_if_shared(module, scope, {remote_id, _keys} = holding, user, opts) do
+    with :ok <- may_add(module, scope, holding), do: find_or_import(module, remote_id, user, opts)
   end
 
   # The listing's filter, again: the event names any remote id. A video the
   # site may not see is reported as one the provider does not have.
-  defp may_add(_module, :account, _remote_id), do: :ok
-
-  defp may_add(module, {:group, _site_ids, sites} = scope, remote_id) do
-    case ProviderHoldings.sites_holding(module.library_meta_path(), [remote_id], sites) do
+  defp may_add(module, {:group, _site_ids, sites} = scope, {remote_id, _keys} = holding) do
+    case ProviderHoldings.sites_holding(module.library_meta_path(), [holding], sites) do
       {:ok, holders} -> if shared?(scope, holders[remote_id]), do: :ok, else: {:error, :not_found}
       {:error, _reason} = error -> error
     end
   end
+
+  defp holding_keys(module, remote_id) do
+    if function_exported?(module, :library_holding_keys, 1),
+      do: guarded(fn -> module.library_holding_keys(remote_id) end),
+      else: {:ok, []}
+  end
+
+  defp holding(%{remote_id: remote_id} = item), do: {remote_id, Map.get(item, :holding_keys, [])}
 
   defp shared?(_scope, nil), do: true
   defp shared?({:group, site_ids, _sites}, holders), do: not MapSet.disjoint?(holders, site_ids)

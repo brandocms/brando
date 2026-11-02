@@ -146,7 +146,7 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
     end
 
     test "when it cannot be told who holds a video, none is listed or added", %{sites: sites, user: user} do
-      broken = site("Broken", "nv-broken", "news", tables: false)
+      broken = site("Broken", "nv-broken", "news", tables: :unreadable)
       assert broken.provider_library_group == "news"
 
       as_site(sites.beta, fn ->
@@ -194,10 +194,150 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
     end
 
     test "is refused when it cannot be told who holds it", %{sites: sites, held: held} do
-      site("Broken", "nv-broken", nil, tables: false)
+      site("Broken", "nv-broken", nil, tables: :unreadable)
 
       as_site(sites.alpha, fn ->
         assert {:error, :holdings_unavailable} = Uploader.delete_remote(held.alpha)
+      end)
+
+      refute_received {:vimeo, "DELETE", _path}
+    end
+  end
+
+  describe "a Mux upload still waiting for its asset" do
+    setup do
+      put_test_env(Mux, access_token_id: "id", access_token_secret: "secret", req_options: [plug: {Req.Test, Mux}])
+      me = self()
+
+      Req.Test.stub(Mux, fn conn ->
+        send(me, {:mux, conn.method, conn.request_path})
+
+        case {conn.method, conn.request_path} do
+          {"GET", "/video/v1/assets"} ->
+            Req.Test.json(conn, %{"data" => [mux_asset("uploading", "up-1"), mux_asset("free", nil)]})
+
+          {"GET", "/video/v1/assets/" <> id} ->
+            Req.Test.json(conn, %{"data" => mux_asset(id, if(id == "uploading", do: "up-1"))})
+        end
+      end)
+
+      :ok
+    end
+
+    test "is held by the site uploading it", %{sites: sites, user: user} do
+      # Delta's upload: Mux has made the asset, and its webhook has not come.
+      as_site(sites.delta, fn ->
+        Repo.insert!(%Video{
+          type: :mux,
+          title: "Uploading",
+          status: :uploading,
+          meta: %{"provider" => "mux", "mux" => %{"upload_id" => "up-1"}}
+        })
+      end)
+
+      as_site(sites.beta, fn ->
+        assert {:ok, %{items: [item]}} = ProviderLibrary.list(:mux)
+        assert item.remote_id == "free"
+        refute Map.has_key?(item, :holding_keys)
+        assert {:error, :not_found} = ProviderLibrary.import(:mux, "uploading", user)
+        assert Repo.aggregate(Video, :count) == 0
+      end)
+
+      as_site(sites.delta, fn ->
+        assert {:ok, %{items: items}} = ProviderLibrary.list(:mux)
+        assert Enum.map(items, & &1.remote_id) == ["uploading", "free"]
+        assert {:ok, %Video{meta: %{"imported" => true}}} = ProviderLibrary.import(:mux, "free", user)
+      end)
+    end
+  end
+
+  describe "a delete and an add of one video" do
+    setup do
+      {:ok, conn} = Postgrex.start_link(Keyword.drop(Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name]))
+      {:ok, lock_conn: conn}
+    end
+
+    test "a delete waits while the video is being added", %{sites: sites, held: held, lock_conn: conn} do
+      hold_lock(conn, "vimeo.video_id", "2")
+      task = Task.async(fn -> as_site(sites.gamma, fn -> Uploader.delete_remote(held.gamma) end) end)
+
+      refute_receive {:vimeo, "DELETE", _path}, 300
+      release_lock(conn, "vimeo.video_id", "2")
+
+      assert Task.await(task) == :ok
+      assert_received {:vimeo, "DELETE", "/videos/2"}
+    end
+
+    test "an add waits while the video is being deleted", %{sites: sites, user: user, lock_conn: conn} do
+      hold_lock(conn, "vimeo.video_id", "4")
+      task = Task.async(fn -> as_site(sites.beta, fn -> ProviderLibrary.import(:vimeo, "4", user) end) end)
+
+      refute_receive {:vimeo, "GET", "/videos/4"}, 300
+      release_lock(conn, "vimeo.video_id", "4")
+
+      assert {:ok, %Video{}} = Task.await(task)
+      assert_received {:vimeo, "GET", "/videos/4"}
+    end
+  end
+
+  describe "an environment being created or copied" do
+    test "holds nothing until its schema is there", %{sites: sites, held: held, user: user} do
+      pending = site("Pending", "nv-pending", "news", schema: false)
+      environment(pending, "staging", tables: false)
+
+      as_site(sites.beta, fn ->
+        assert {:ok, %{items: items}} = ProviderLibrary.list(:vimeo)
+        assert Enum.map(items, & &1.remote_id) == ["2", "4"]
+        assert {:ok, _video} = ProviderLibrary.import(:vimeo, "4", user)
+      end)
+
+      as_site(sites.alpha, fn -> assert :ok = Uploader.delete_remote(held.alpha) end)
+      assert_received {:vimeo, "DELETE", "/videos/1"}
+    end
+
+    test "an unreadable holding leaves the editor's transaction usable", %{sites: sites, held: held} do
+      site("Broken", "nv-broken", nil, tables: :unreadable)
+
+      as_site(sites.alpha, fn ->
+        assert {:ok, 1} =
+                 Repo.transaction(fn ->
+                   assert {:error, :holdings_unavailable} = Uploader.delete_remote(held.alpha)
+                   Repo.aggregate(Video, :count)
+                 end)
+      end)
+    end
+  end
+
+  describe "purging soft-deleted videos" do
+    test "keeps a video whose holders cannot be told, for the next run", %{sites: sites, held: held} do
+      broken = site("Broken", "nv-broken", nil, tables: :unreadable)
+      as_site(sites.alpha, fn -> expire(held.alpha) end)
+
+      as_site(sites.alpha, fn ->
+        Brando.SoftDelete.Query.clean_up_soft_deletions()
+        assert Repo.aggregate(Video, :count) == 1
+      end)
+
+      refute_received {:vimeo, "DELETE", _path}
+
+      [environment] = broken.environments
+      SQL.query!(Repo.repo(), ~s(DROP TABLE "#{Tenant.prefix(broken, environment)}"."videos"))
+
+      as_site(sites.alpha, fn ->
+        Brando.SoftDelete.Query.clean_up_soft_deletions()
+        assert Repo.aggregate(Video, :count) == 0
+      end)
+
+      assert_received {:vimeo, "DELETE", "/videos/1"}
+    end
+
+    test "deletes a video another site holds, and leaves it at the provider", %{sites: sites, held: held, user: user} do
+      as_site(sites.beta, fn -> {:ok, _added} = ProviderLibrary.import(:vimeo, "2", user) end)
+      as_site(sites.gamma, fn -> expire(held.gamma) end)
+
+      as_site(sites.gamma, fn ->
+        Brando.SoftDelete.Query.clean_up_soft_deletions()
+        assert Repo.aggregate(Video, :count) == 0
       end)
 
       refute_received {:vimeo, "DELETE", _path}
@@ -280,13 +420,24 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
     Registry.get_site(site.id)
   end
 
-  # The content tables' structure, as an environment has them; with
-  # `tables: false`, a schema with none, which the holdings cannot read.
+  # The content tables' structure, as an environment has them. With
+  # `tables: false`, a schema with none, as while an environment is created
+  # or copied; with `schema: false`, no schema at all. With
+  # `tables: :unreadable`, a `videos` table the holdings cannot read.
   defp environment(site, key, opts \\ []) do
     {:ok, environment} = Registry.create_environment(site, %{name: key, key: key, live: key == "production"})
     prefix = Tenant.prefix(site, environment)
-    SQL.query!(Repo.repo(), ~s(CREATE SCHEMA "#{prefix}"))
-    if Keyword.get(opts, :tables, true), do: Enum.each(content_tables(), &clone_table(prefix, &1))
+
+    if Keyword.get(opts, :schema, true) do
+      SQL.query!(Repo.repo(), ~s(CREATE SCHEMA "#{prefix}"))
+
+      case Keyword.get(opts, :tables, true) do
+        true -> Enum.each(content_tables(), &clone_table(prefix, &1))
+        false -> :ok
+        :unreadable -> SQL.query!(Repo.repo(), ~s|CREATE TABLE "#{prefix}"."videos" (id bigint)|)
+      end
+    end
+
     environment
   end
 
@@ -316,6 +467,35 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       status: :ready,
       meta: %{"provider" => "vimeo", "vimeo" => %{"video_id" => remote_id}}
     })
+  end
+
+  defp expire(video) do
+    video |> Ecto.Changeset.change(deleted_at: DateTime.add(DateTime.utc_now(:second), -31, :day)) |> Repo.update!()
+  end
+
+  # Another session holds the video's lock, as a delete or an add in progress.
+  defp hold_lock(conn, path, remote_id) do
+    Postgrex.query!(conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [lock_key(path, remote_id)])
+  end
+
+  defp release_lock(conn, path, remote_id) do
+    Postgrex.query!(conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [lock_key(path, remote_id)])
+  end
+
+  defp lock_key(path, remote_id), do: "brando:provider_video:#{path}:#{remote_id}"
+
+  defp mux_asset(id, upload_id) do
+    Map.reject(
+      %{
+        "id" => id,
+        "status" => "ready",
+        "upload_id" => upload_id,
+        "passthrough" => "Asset #{id}",
+        "playback_ids" => [%{"id" => "pb-#{id}", "policy" => "public"}],
+        "tracks" => []
+      },
+      fn {_key, value} -> is_nil(value) end
+    )
   end
 
   defp vimeo_video(id) do

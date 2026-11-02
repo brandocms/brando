@@ -156,6 +156,35 @@ defmodule Brando.Videos.ProviderLibraryTest do
       assert get_in(video.meta, ["mux", "playback_id"]) == "pb-1"
     end
 
+    test "refuse a video the provider reports under another id", %{user: user} do
+      Req.Test.expect(Vimeo, fn conn ->
+        assert conn.request_path == "/videos/0042"
+        Req.Test.json(conn, vimeo_video("42", "available"))
+      end)
+
+      assert {:error, :not_found} = ProviderLibrary.import(:vimeo, "0042", user)
+
+      put_test_env(Cloudflare,
+        account_id: "acc",
+        api_token: "token",
+        webhook_secret: "secret",
+        req_options: [plug: {Req.Test, Cloudflare}]
+      )
+
+      Req.Test.expect(Cloudflare, &Req.Test.json(&1, %{"result" => cloudflare_video("abc", nil)}))
+      assert {:error, :not_found} = ProviderLibrary.import(:cloudflare, "ABC", user)
+
+      put_test_env(Mux, access_token_id: "id", access_token_secret: "secret", req_options: [plug: {Req.Test, Mux}])
+
+      Req.Test.expect(Mux, fn conn ->
+        assert conn.request_path == "/video/v1/assets/ASSET-1"
+        Req.Test.json(conn, %{"data" => %{"id" => "asset-1", "playback_ids" => [%{"id" => "pb", "policy" => "public"}]}})
+      end)
+
+      assert {:error, :not_found} = ProviderLibrary.import(:mux, "ASSET-1", user)
+      assert Brando.Repo.aggregate(Brando.Videos.Video, :count) == 0
+    end
+
     test "Bunny lists a library page and imports a finished video", %{user: user} do
       put_test_env(Bunny,
         api_key: "key",
