@@ -43,6 +43,14 @@ defmodule Brando.Villain.InertLiquid do
   end
 
   @doc """
+  The start of a value that follows a `{`, as a character reference where it
+  would complete a Liquid delimiter.
+  """
+  def close_delimiter("{" <> rest), do: "&#123;" <> rest
+  def close_delimiter("%" <> rest), do: "&#37;" <> rest
+  def close_delimiter(text), do: text
+
+  @doc """
   Plain braces again, for output no Liquid pass reads after it, such as a
   Markdown template's (`Brando.Villain.Markdown`).
   """

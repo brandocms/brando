@@ -1148,6 +1148,28 @@ defmodule Brando.Villain.InertEditorTextTest do
       end
     end
 
+    test "a value cannot complete a delimiter the block before it left open", %{user: user} do
+      before = block(module!(user, ".a {"), [])
+
+      for value <- ["{ 1 | plus: 41 }}", "% if true %}41{% endif %}"] do
+        var = %Var{key: "css", label: "C", type: :string, value: value}
+        html = render([before, block(module!(user, "<%= @css %>", %{type: :heex}), vars: [var])])
+
+        assert html =~ ~r/plus: 41|if true/, "#{value} ran: #{html}"
+      end
+    end
+
+    test "a first value's leading brace or percent still reads as the same text", %{user: user} do
+      var = %Var{key: "css", label: "C", type: :string, value: "% off"}
+      html = render(block(module!(user, "<%= @css %>", %{type: :heex}), vars: [var]))
+
+      assert html |> Floki.parse_fragment!() |> Floki.text() == "% off"
+
+      md = Villain.Markdown.render([%{block: block(module!(user, "<%= @css %>", %{type: :heex}), vars: [var])}], %Page{})
+
+      assert md =~ "% off"
+    end
+
     test "a template's own Liquid across parts still runs", %{user: user} do
       code =
         ~S|<style><%= if true do %>{<% end %>{ entry.title }}<%= for _ <- [1] do %>{<% end %>% if true %}ok{% endif %}</style>|
@@ -1158,11 +1180,59 @@ defmodule Brando.Villain.InertEditorTextTest do
     end
   end
 
+  describe "globals through a filter" do
+    test "a rich-text global keeps its markup", %{user: user} do
+      {:ok, set} =
+        Brando.Sites.create_global_set(
+          %{
+            label: "Site",
+            key: "site",
+            language: "en",
+            vars: [%{key: "body", label: "B", type: "rich_text", value: "<p>Hi</p>"}]
+          },
+          user
+        )
+
+      Brando.Cache.Globals.update({:ok, set})
+
+      html = render(block(module!(user, ~S({% assign g = globals.site | default: "" %}{{ g.body }})), []))
+
+      assert html =~ "<p>Hi</p>"
+    end
+  end
+
   describe "a value after a template's literal brace" do
     test "a brace written right before a tag does not parse" do
       for code <- ["{{{ entry.title }}", "{{% if true %}x{% endif %}"] do
         refute match?({:ok, _}, Liquex.parse(code, Brando.Villain.LiquexParser)), "#{code} parsed"
       end
+    end
+
+    @tag :capture_log
+    test "a filter that decodes text completes no delimiter", %{user: user} do
+      for code <- [
+            ".a { {{- entry.title | strip_html }}",
+            ".a { {{- title | strip_html }}",
+            ~S({{ "{" }}{{ title | strip_html }}),
+            ".a { {{- encoded | url_decode }}"
+          ],
+          value <- ["{ 1 | plus: 41 }}", "% assign x = 41 %}{{ x | plus: 1 }}"] do
+        vars = [
+          %Var{key: "title", label: "T", type: :string, value: value},
+          %Var{key: "encoded", label: "E", type: :string, value: URI.encode(value, &(&1 not in ~c"{}%"))}
+        ]
+
+        html = render(block(module!(user, code), vars: vars), %Page{title: value, language: :en})
+
+        refute html =~ "42", "#{code} ran #{value}: #{html}"
+      end
+    end
+
+    test "a text filter's result reads as the same text", %{user: user} do
+      entry = %Page{title: "% off {x}", language: :en}
+      html = render(block(module!(user, "<a title=\"{{ entry.title | strip_html }}\">x</a>"), []), entry)
+
+      assert html |> Floki.parse_fragment!() |> Floki.attribute("title") == ["% off {x}"]
     end
 
     @tag :capture_log

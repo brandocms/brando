@@ -323,7 +323,7 @@ defmodule Brando.Villain do
   # prints, reads them unescaped (`raw_context/2`).
   def add_to_context(context, "globals" = key, global_sets) do
     context
-    |> Context.assign(key, globals(global_sets, true))
+    |> Context.assign(key, TemplateView.wrap(globals(global_sets, true), :processed))
     |> put_raw(key, globals(global_sets, false))
   end
 

@@ -116,7 +116,8 @@ defmodule Brando.Villain.HeexRenderer do
     module_name = get_or_compile!(id, code_string)
     assigns = Map.put(assigns, :__changed__, %{})
 
-    {html, _open?} = assigns |> module_name.render() |> inert_iodata(false)
+    # Open from the start: the block before this one can end in a `{`
+    {html, _open?} = assigns |> module_name.render() |> inert_iodata(true)
 
     IO.iodata_to_binary(html)
   end
@@ -137,7 +138,7 @@ defmodule Brando.Villain.HeexRenderer do
     text = dynamic |> printed() |> InertLiquid.encode_delimiters()
 
     if open? do
-      text = close_delimiter(text)
+      text = InertLiquid.close_delimiter(text)
       {text, text == ""}
     else
       {text, false}
@@ -155,10 +156,6 @@ defmodule Brando.Villain.HeexRenderer do
 
   defp open_after("", open?), do: open?
   defp open_after(static, _open?), do: String.ends_with?(static, "{")
-
-  defp close_delimiter("{" <> rest), do: "&#123;" <> rest
-  defp close_delimiter("%" <> rest), do: "&#37;" <> rest
-  defp close_delimiter(text), do: text
 
   defp printed(%_{} = struct), do: Phoenix.HTML.Safe.to_iodata(struct)
   defp printed(nil), do: []

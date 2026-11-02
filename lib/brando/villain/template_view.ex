@@ -65,6 +65,10 @@ defmodule Brando.Villain.TemplateView do
 
   @filters_giving_markup [:markdown, :json_ld, :inspect, :raw, :srcset, :size, :large, :xlarge]
 
+  # Their text has what a view had as references as plain characters again, and
+  # is no JSON that must start with its brace.
+  @filters_decoding_text [:strip_html, :url_decode]
+
   @doc """
   `value` as a template reads it. Mode `:escape` escapes the strings in it as
   they are read. Mode `:processed` is for what the parser has already escaped
@@ -174,6 +178,13 @@ defmodule Brando.Villain.TemplateView do
 
   def filter_result(result, filter, _mode, context) when is_binary(result) and filter in @filters_giving_markup,
     do: inert(result, context)
+
+  # A `{` written before a tag can reach it (`{ {{- x }}`): it starts no delimiter
+  # with the template's brace either.
+  def filter_result(result, filter, mode, context) when is_binary(result) and filter in @filters_decoding_text do
+    text = filter_result(result, :text, mode, context)
+    if Markdown.template_context?(context), do: text, else: InertLiquid.close_delimiter(text)
+  end
 
   def filter_result(result, _filter, nil, context), do: result |> wrap_records(context) |> inert(context)
   def filter_result(result, _filter, mode, context), do: result |> wrap(read_mode(mode, context)) |> inert(context)
