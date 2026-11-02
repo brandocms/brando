@@ -118,18 +118,16 @@ defmodule Brando.Files.Replacement do
   extension and the other extensions of its type that `initiate/3` takes, as
   `".jpg,.jpeg"`.
 
-  `nil`, for a picker that offers every file, when the stored extension is not
-  one of a known type. Such an extension, like `.jpglarge`, was most likely
-  slugged from a client name (`.jpg_large`) that no list can name, and
-  `initiate/3` still refuses a file it does not take.
+  `nil`, for a picker that offers every file, when the stored extension is of
+  no known type and the config slugs names: the extension may have been slugged
+  from one no list can name, as `.jpglarge` from `.jpg_large`. `initiate/3`
+  still refuses a file it does not take.
   """
   def accept(file) do
     with "." <> bare <- extension(file.filename),
-         type = MIME.type(bare),
-         true <- bare in MIME.extensions(type),
-         {:ok, cfg} <- Files.get_config_for(file.config_target) do
-      [bare | MIME.extensions(type)]
-      |> Enum.uniq()
+         {:ok, cfg} <- Files.get_config_for(file.config_target),
+         [_ | _] = candidates <- accept_candidates(bare, cfg) do
+      candidates
       |> Enum.map(&("." <> &1))
       |> Enum.filter(&same_extension?(file, cfg, "file" <> &1))
       |> Enum.join(",")
@@ -138,6 +136,16 @@ defmodule Brando.Files.Replacement do
     end
   rescue
     _ -> nil
+  end
+
+  defp accept_candidates(bare, cfg) do
+    type = MIME.type(bare)
+
+    cond do
+      bare in MIME.extensions(type) -> Enum.uniq([bare | MIME.extensions(type)])
+      slugs?(cfg) -> []
+      true -> [bare]
+    end
   end
 
   defp same_extension?(file, cfg, name),
@@ -163,7 +171,7 @@ defmodule Brando.Files.Replacement do
   defp stored_extension(name, cfg) do
     name = Path.basename(name)
 
-    if Map.get(cfg, :slugify_filename, false) and not Map.get(cfg, :random_filename, false) do
+    if slugs?(cfg) do
       Utils.slugify_filename(name)
     else
       name
@@ -171,6 +179,8 @@ defmodule Brando.Files.Replacement do
     |> Utils.ensure_correct_extension()
     |> extension()
   end
+
+  defp slugs?(cfg), do: Map.get(cfg, :slugify_filename, false) and not Map.get(cfg, :random_filename, false)
 
   defp destination(file, cfg) do
     # A leading slash is tolerated in an upload path, as when the file was stored

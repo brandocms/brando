@@ -42,8 +42,11 @@ defmodule BrandoAdmin.FileReplacementAcceptTest do
 
   # `scan.jpglarge` was slugged from a name such as `scan.jpg_large`, which the
   # check takes but no list can name
-  test "does not filter the picker for a stored extension of no known type", %{conn: conn, current_user: user} do
-    for stored <- ["scan.jpglarge", "scan.jpg_large", "README"] do
+  test "does not filter the picker for an extension of no known type when the config slugs", %{
+    conn: conn,
+    current_user: user
+  } do
+    for stored <- ["scan.jpglarge", "scan.jpg_large", "brochure.indd", "README"] do
       file = insert_file(user, stored)
 
       assert replacement_accept(conn, file) == nil, stored
@@ -51,6 +54,22 @@ defmodule BrandoAdmin.FileReplacementAcceptTest do
 
     file = insert_file(user, "scan.jpglarge")
     assert {:ok, :server} = initiate(file, "scan.jpg_large")
+  end
+
+  # Without slugging, the check takes such an extension only as stored
+  test "lists an extension of no known type when the config does not slug", %{conn: conn, current_user: user} do
+    for opts <- [[slugify_filename: false], [slugify_filename: true, random_filename: true]],
+        {stored, accept} <- [{"scan.jpg_large", ".jpg_large"}, {"brochure.INDD", ".indd"}] do
+      put_file_config(opts)
+      file = insert_file(user, stored)
+
+      assert replacement_accept(conn, file) == accept, "#{stored} #{inspect(opts)}"
+      assert {:ok, :server} = initiate(file, "picked" <> accept)
+      assert {:error, _} = initiate(file, "picked.pdf")
+    end
+
+    put_file_config(slugify_filename: false)
+    assert replacement_accept(conn, insert_file(user, "README")) == nil
   end
 
   defp replacement_accept(conn, file) do
