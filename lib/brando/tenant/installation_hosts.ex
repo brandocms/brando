@@ -27,7 +27,8 @@ defmodule Brando.Tenant.InstallationHosts do
 
   # An endpoint that has not started, as in a release's `eval`, answers nothing
   defp configured_endpoint_urls do
-    config = Application.get_env(Brando.config(:otp_app), Brando.endpoint(), [])
+    endpoint = Brando.endpoint()
+    config = Application.get_env(Application.get_application(endpoint) || Brando.config(:otp_app), endpoint, [])
     for key <- [:url, :static_url], host = config[key][:host], do: host
   end
 

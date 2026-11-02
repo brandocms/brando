@@ -1171,7 +1171,8 @@ conversion workflow.
 An application already on named environments passes the actor when its own code
 sets a domain, `Brando.Tenant.Registry.update_environment(environment, %{domain:
 host}, actor: :system)` and `create_environment/3` likewise, and clears or
-rewrites any stored domain with a trailing dot, which no longer routes. Per-site administrators no longer change domains; a superuser does.
+rewrites any stored domain with a trailing dot, which no longer routes, or with
+a scheme or port, which never did. Per-site administrators no longer change domains; a superuser does.
 
 ### Review a generated Florist configuration
 

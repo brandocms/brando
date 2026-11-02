@@ -114,7 +114,16 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
 
     refute has_element?(view, ~s(#ssg-build-#{build.id} a[href*="#{admin_host}"]))
-    assert has_element?(view, ~s(#ssg-build-#{build.id} a[href^="/__ssg_preview__/"]))
+    refute has_element?(view, ~s(#ssg-build-#{build.id} a[href*="__ssg_preview__"]))
+
+    context.environment
+    |> Ecto.Changeset.change(domain: "https://static-acme.test")
+    |> Brando.Repo.update!(prefix: "public")
+
+    Brando.Tenant.Cache.invalidate()
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+    refute has_element?(view, ~s(#ssg-build-#{build.id} a[href*="__ssg_preview__"]))
   end
 
   # A preview opens only on its own site's hosts, which need not be the admin's

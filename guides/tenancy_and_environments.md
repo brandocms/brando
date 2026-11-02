@@ -478,8 +478,8 @@ trusted maintenance code) and refuse a change without one. A domain is a bare
 host: no scheme, path, port or trailing dot. It may not be a host the
 installation itself uses: the endpoint's, where the admin answers, nor its
 static, media or CDN host. With several sites, a site that needs the admin's
-host means moving the admin to a host of its own through `PHX_HOST`. With one
-site the admin's host needs no domain: it answers from the live environment
+host means moving the admin to a host of its own through `PHX_HOST`. In
+`:single` the admin's host needs no domain: it answers from the live environment
 when no environment holds it.
 
 <!-- usage-rules:start topic="tenancy" -->
@@ -1011,7 +1011,7 @@ the build's own site (another site's host, or with several sites one of the
 installation's own hosts such as the admin's, answers `404`); with several sites
 the Publishing screen links it on the build environment's domain, or the live
 environment's, so that domain must reach the application, not only the static
-host. Previews are served with a Content-Security-Policy that keeps forms from
+host, and with neither it shows no link. Previews are served with a Content-Security-Policy that keeps forms from
 posting and the page from being framed elsewhere. The Publishing screen links
 to each build's preview every time it opens, so a build keeps its token itself,
 where a shared entry preview keeps only its key's hash: anyone who can read the
