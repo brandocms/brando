@@ -85,9 +85,9 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       name: "search_entries",
       description:
-        "Search entries the user can edit by title or name, in every content type. Returns ids to use as " <>
-          "proposal targets and in links; a content type list_content_types does not list, such as palettes, " <>
-          "can only be linked to. An empty query with a content_type lists that type's entries.",
+        "Search entries the user can edit by title or name, in every content type, and the palettes the user " <>
+          "can read. Returns ids to use as proposal targets and in links; palettes, which list_content_types " <>
+          "does not list, can only be picked, not changed. An empty query with a content_type lists that type's entries.",
       parameters: %{
         type: "object",
         properties: %{
@@ -338,9 +338,14 @@ defmodule Brando.Content.Proposals.Tools do
   defp run("search_entries", args, %{actor: actor}) do
     schemas = if type = args["content_type"], do: [to_string(schema!(type))]
 
+    query = to_string(args["query"] || "")
+
+    # Entries the user may change, and palettes, which a proposal only
+    # picks, that the user may read.
     results =
-      actor
-      |> Catalog.search(to_string(args["query"] || ""), action: :update, schemas: schemas, editable: true)
+      (Catalog.search(actor, query, action: :update, schemas: schemas, proposable: true) ++
+         Catalog.search(actor, query, action: :read, schemas: schemas, reference_only: true))
+      |> Enum.sort_by(&{&1.title, &1.schema, &1.id})
       |> Enum.take(limit(args))
       |> Enum.map(fn entry ->
         %{

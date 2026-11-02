@@ -230,8 +230,13 @@ defmodule Brando.Content.Proposals.PalettesTest do
 
     test "an Editor-preset member may pick a palette but not create or change one", c do
       editor = member(c, Catalog.preset_permissions(:editor, :standalone) ++ ["brando.assistant.use"])
+      # The preset reads palettes and does not change them.
+      assert :ok = Boundary.authorize(editor, :read, c.palette)
+      refute Boundary.authorize(editor, :update, c.palette) == :ok
+
       assert_refused(editor, c)
       assert_readable(editor, c)
+      assert_searchable(editor, c)
       assert_palette_picked(editor, c)
     end
 

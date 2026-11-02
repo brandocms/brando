@@ -45,6 +45,9 @@ defmodule Brando.Content.Transfer.Catalog do
   @doc "Whether the registered schema `schema` is one of `proposable_schemas/0`."
   def proposable?(schema), do: schema not in @reference_only and editable?(schema)
 
+  @doc "The `editable_schemas/0` a proposal may read and pick but not change: palettes."
+  def reference_only_schemas, do: Enum.filter(editable_schemas(), &(&1 in @reference_only))
+
   def entry_schemas do
     Brando.Authorization.Catalog.schemas()
     |> Enum.filter(&entry_schema?/1)
@@ -113,7 +116,8 @@ defmodule Brando.Content.Transfer.Catalog do
       opts[:schema] && opts[:entries] -> [Brando.Content.Transfer.EntryCodec.schema!(opts[:schema])]
       opts[:schema] -> [schema!(opts[:schema])]
       opts[:entries] -> entry_schemas()
-      opts[:editable] -> editable_schemas()
+      opts[:proposable] -> proposable_schemas()
+      opts[:reference_only] -> reference_only_schemas()
       true -> schemas()
     end
   end
