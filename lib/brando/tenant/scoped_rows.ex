@@ -9,7 +9,7 @@ defmodule Brando.Tenant.ScopedRows do
   assistant conversation's messages and runs go with it.
 
   Form submissions and entry drafts hold the tenant prefix in `scope`. The other
-  tables hold `Brando.Content.Definition.References.scope/0`: a digest of the
+  tables hold a digest of the
   database's host, port and name and the tenant prefix. Rows written before the
   database moved hold another digest, and these functions do not reach them.
 
