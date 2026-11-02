@@ -16,14 +16,9 @@ defmodule Brando.Worker.SSGDeploy do
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"build_id" => build_id, "action" => action} = args})
       when action in ["deploy", "rollback"] do
-    with %Build{} = build <- Builds.get_build(build_id),
-         {:ok, _deployed} <- run(action, build, args["creator_id"]) do
-      :ok
-    else
+    case Builds.get_build(build_id) do
+      %Build{} = build -> action |> run(build, args["creator_id"]) |> outcome(build)
       nil -> {:cancel, :build_not_found}
-      # The build's target stays what it was: retrying cannot help
-      {:error, :invalid_deploy_target} -> {:cancel, :invalid_deploy_target}
-      {:error, reason} -> {:error, reason}
     end
   end
 
@@ -32,4 +27,18 @@ defmodule Brando.Worker.SSGDeploy do
 
   defp run("deploy", build, creator_id), do: Deploy.deploy(build, creator_id: creator_id)
   defp run("rollback", build, creator_id), do: Deploy.rollback(build.site, build, creator_id: creator_id)
+
+  defp outcome({:ok, _deployed}, _build), do: :ok
+
+  # The build's target stays what it was: retrying cannot help
+  defp outcome({:error, :invalid_deploy_target}, build) do
+    Builds.append_log(
+      build,
+      "Deployment refused: its target is not one this installation allows. Check rsync_targets or s3_targets in the config."
+    )
+
+    {:cancel, :invalid_deploy_target}
+  end
+
+  defp outcome({:error, reason}, _build), do: {:error, reason}
 end

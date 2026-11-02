@@ -1002,14 +1002,25 @@ itself, which holds the others). A bucket with no prefix passes only an entry
 that names it exactly, such as `s3://{site_key}-static`; `s3://bucket/` allows
 every prefix in the bucket but not the bucket itself. Brando checks a target
 when the settings are saved and again each time a build deploys, since a build
-keeps the configuration it was made with. Fix the list and the build deploys;
-change a site's target and it takes a new build.
+keeps the configuration it was made with. A refused deploy or rollback says so
+in the build's log. Fix the list and the build deploys; change a site's target
+and it takes a new build. An older build whose target no longer fits cannot be
+rolled back until its target is listed again.
 
-**A shared parent grants every site.** With an entry that has no `{site_key}`,
-such as `deploy@static.example.com:/srv/sites/` or `s3://static-bucket/sites/`,
-anyone who may deploy one site can name another site's directory or prefix, and
-the deploy replaces what is there. Use one only if the same people deploy all
-the sites.
+**An entry without `{site_key}` grants every site.** That holds for an exact
+destination such as `s3://acme-www` as much as for a parent such as
+`deploy@static.example.com:/srv/sites/` or `s3://static-bucket/sites/`: anyone
+who may deploy one site can name that destination, or another site's directory
+or prefix under that parent, and the deploy replaces what is there. Nothing
+ties such an entry to a single site, so use one only if the same people deploy
+all the sites. An `rsync_targets` parent without the placeholder keeps working,
+and leaves the sites open to each other until it uses `{site_key}`.
+
+**Entries that extend each other collide on hyphenated keys.** With
+`s3://b/{site_key}` and `s3://b/{site_key}-staging`, site `a` may name
+`s3://b/a-staging`, which site `a-staging` owns through the first entry, so use
+one entry per site layout, or separate them with a character keys cannot hold,
+such as the `/` in `s3://b/{site_key}/www` and `s3://b/{site_key}/staging`.
 
 With `tenancy_mode: :multi` the list of a strategy the sites use is required:
 until it is set, no target of that strategy can be saved or deployed. With one

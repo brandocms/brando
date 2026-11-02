@@ -409,6 +409,20 @@ defmodule Brando.SSGBuildsTest do
                perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
     end
 
+    test "a queued deploy or rollback to a refused target says why in the build log", context do
+      for action <- ["deploy", "rollback"] do
+        {:ok, build} =
+          context.build
+          |> with_target("s3", "s3://static-bucket/sites/#{context.other_key}")
+          |> Builds.update(%{build_log: ""})
+
+        assert {:cancel, :invalid_deploy_target} =
+                 perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => action})
+
+        assert Builds.get_build(build.id).build_log =~ "refused"
+      end
+    end
+
     test "with several sites and no list, nothing deploys", context do
       put_test_env(DeployConfig, [])
 

@@ -452,7 +452,10 @@ sender first, before the first compile.
   it is there. Add what each site's target needs to `config/runtime.exs`, with
   `{site_key}` for the site's key so one site cannot name another's destination:
   `config :brando, Brando.Sites.DeployConfig, rsync_targets: ["deploy@static.example.com:/srv/sites/{site_key}"], s3_targets: ["s3://static-bucket/sites/{site_key}"]`.
-  Targets not laid out by site key can be listed one by one; see
+  An entry without `{site_key}`, such as `s3://acme-www`, is open to every site,
+  so it suits only sites deployed by the same people. An existing `rsync_targets`
+  parent such as `deploy@static.example.com:/srv/sites/` keeps working, but leaves
+  the sites open to each other until it uses `{site_key}`. See
   [Tenancy and environments](tenancy_and_environments.md).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
