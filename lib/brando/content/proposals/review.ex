@@ -40,6 +40,12 @@ defmodule Brando.Content.Proposals.Review do
   @excerpt 90
   # Around what changed in a long text
   @change_context 40
+  # What a card leaves out of a change's text: exactly these tags, with nothing
+  # in them. No parser decides it, since what one parser drops another may keep
+  # (`Brando.Markdown` reads `<https://…>` as a link). Elements with attributes,
+  # links and anything else stay as they are written.
+  @block_tags ~r{</?(?:blockquote|br|dd|dl|dt|figcaption|figure|h[1-6]|hr|li|ol|p|pre|table|tbody|td|tfoot|th|thead|tr|ul)\s*/?>}i
+  @inline_tags ~r{</?(?:abbr|b|cite|code|em|i|kbd|mark|q|s|small|strike|strong|sub|sup|u)\s*>}i
 
   @doc "Review cards for `proposal`."
   @spec entries(Proposal.t()) :: [map()]
@@ -903,15 +909,11 @@ defmodule Brando.Content.Proposals.Review do
 
   # A text field's change shows what differs in it, like a block's text.
   defp field_change(entry, name, value) do
-    schema = entry.__struct__
-    view = field_view(schema, name, value)
+    view = field_view(entry.__struct__, name, value)
     saved = current(entry, name)
 
-    if is_binary(value) and is_binary(saved) and view.value == display(schema, name, value) and view.media == nil and
-         name not in ~w(status language) do
-      {before, value} =
-        if rich_text?(schema, name), do: text_change(saved, value), else: narrow(collapse(saved), collapse(value))
-
+    if is_binary(value) and is_binary(saved) and is_nil(view.media) and name not in ~w(status language) do
+      {before, value} = text_change(saved, value)
       view |> Map.put(:value, value) |> Map.put(:before, before)
     else
       Map.put(view, :before, saved_value(entry, name))
@@ -983,17 +985,8 @@ defmodule Brando.Content.Proposals.Review do
 
   defp display(schema, name, value) when is_list(value), do: EntryFields.display(schema, name, value) || whole(value)
 
-  defp display(schema, name, value) when is_binary(value) do
-    if rich_text?(schema, name), do: readable(value), else: collapse(value)
-  end
-
+  defp display(_schema, _name, value) when is_binary(value), do: readable(value)
   defp display(_schema, _name, value), do: whole(value)
-
-  # Any other text field is plain: `R<D` in it is what it says.
-  defp rich_text?(schema, name) do
-    function_exported?(schema, :__rich_text_fields__, 0) and
-      to_string(name) in Enum.map(schema.__rich_text_fields__(), &to_string/1)
-  end
 
   defp first_mention(proposal, target) do
     Enum.find_index(proposal.operations, fn
@@ -1055,23 +1048,36 @@ defmodule Brando.Content.Proposals.Review do
   defp whole({:new, ref}), do: dgettext("content_proposals", "the new entry %{ref}", ref: ref)
   defp whole(value), do: inspect(value, limit: :infinity, printable_limit: :infinity)
 
-  # Text as a reviewer reads what it says and does: what saving it stores,
-  # all of it (`Brando.RichText.readable_html/1`).
+  # Text as a reviewer reads what it says and does: all of it, as written,
+  # without plain formatting.
   defp readable(nil), do: nil
-  defp readable(text) when is_binary(text), do: Brando.RichText.readable_html(text)
+
+  defp readable(text) when is_binary(text) do
+    text
+    |> String.replace(@block_tags, " ")
+    |> String.replace(@inline_tags, "")
+    |> String.replace("&lt;", "<")
+    |> String.replace("&gt;", ">")
+    |> String.replace("&nbsp;", " ")
+    |> String.replace("&amp;", "&")
+    |> collapse()
+  end
+
   defp readable(text), do: whole(text)
 
   defp collapse(text), do: text |> String.replace(~r/\s+/, " ") |> String.trim()
 
   # The saved and proposed text as the card shows them. Text that reads the
-  # same but differs in its formatting shows its markup, and long text only
-  # what differs, with some context, so a change cannot hide in either.
+  # same but differs shows its source, its line breaks marked, and long text
+  # only what differs, with some context, so a change cannot hide in either.
   defp text_change(saved, proposed) do
     case {readable(saved), readable(proposed)} do
-      {same, same} when is_binary(same) and saved != proposed -> narrow(saved, proposed)
+      {same, same} when is_binary(same) and saved != proposed -> narrow(source(saved), source(proposed))
       {before, text} -> narrow(before, text)
     end
   end
+
+  defp source(text), do: String.replace(text, "\n", "↵ ")
 
   # Nothing differs, as on a card reopened after applying: the text is all
   # there is to show.

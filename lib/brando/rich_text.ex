@@ -138,63 +138,6 @@ defmodule Brando.RichText do
   def render_html(nil), do: nil
   def render_html(other), do: other |> to_string() |> render_html()
 
-  @void ~w(area base br col embed hr img input link meta param source track wbr keygen)
-
-  # Markup without attributes that only formats text.
-  @formatting ~w(a abbr b blockquote br cite code dd del div dl dt em figcaption figure h1 h2 h3 h4 h5 h6 hr i ins
-                 kbd li mark ol p pre q s small span strike strong sub sup table tbody td tfoot th thead tr u ul)
-  @block ~w(blockquote br dd div dl dt figcaption figure h1 h2 h3 h4 h5 h6 hr li ol p pre table tbody td tfoot th
-            thead tr ul)
-
-  @doc """
-  Rich text as someone approving it should read it: what browsers will parse
-  and what saving it stores, as plain text, with every element that does more
-  than format text written out, so an address, a style or an image shows. Plain
-  formatting is left out. Text it cannot read comes back serialized, whole.
-  """
-  @spec readable_html(String.t()) :: String.t()
-  def readable_html(html) when is_binary(html) do
-    clean = canonical(html, @html_tags, true)
-
-    case tokens(clean) do
-      {:ok, tokens} -> tokens |> readable_tokens([], []) |> IO.iodata_to_binary()
-      :error -> clean
-    end
-    |> String.replace(~r/\s+/u, " ")
-    |> String.trim()
-  end
-
-  defp readable_tokens([], _open, acc), do: Enum.reverse(acc)
-
-  defp readable_tokens([{:text, text} | rest], open, acc), do: readable_tokens(rest, open, [unescape_text(text) | acc])
-
-  defp readable_tokens([{:start, tag, []} | rest], open, acc) when tag in @formatting do
-    separator = if tag in @block, do: " ", else: ""
-    open = if tag in @void, do: open, else: [{tag, ""} | open]
-    readable_tokens(rest, open, [separator | acc])
-  end
-
-  defp readable_tokens([{:start, tag, attrs} | rest], open, acc) do
-    written = ["<", tag, Enum.map(attrs, fn {name, value} -> [" ", name, "=\"", value, "\""] end), ">"]
-    open = if tag in @void, do: open, else: [{tag, "</#{tag}>"} | open]
-    readable_tokens(rest, open, [written | acc])
-  end
-
-  defp readable_tokens([{:end, _tag} | rest], [{tag, close} | open], acc) do
-    separator = if tag in @block, do: " ", else: ""
-    readable_tokens(rest, open, [separator, close | acc])
-  end
-
-  defp readable_tokens([_token | rest], open, acc), do: readable_tokens(rest, open, acc)
-
-  defp unescape_text(text) do
-    text
-    |> String.replace("&lt;", "<")
-    |> String.replace("&gt;", ">")
-    |> String.replace("&nbsp;", "\u00a0")
-    |> String.replace("&amp;", "&")
-  end
-
   # The text, as browsers parse it, without any element or what the hidden,
   # script and style elements hold.
   defp text_only(html) do
@@ -262,6 +205,7 @@ defmodule Brando.RichText do
   defp trim(token), do: token
 
   # The tokens after the element the first token opens.
+  @void ~w(area base br col embed hr img input link meta param source track wbr keygen)
   defp close([{:start, name, _} | rest], depth) when name in @void, do: close(rest, depth)
   defp close([{:start, _, _} | rest], depth), do: close(rest, depth + 1)
   defp close([{:end, _} | rest], 1), do: {:ok, rest}

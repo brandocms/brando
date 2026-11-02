@@ -153,7 +153,28 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
     end
   end
 
-  describe "text a browser reads differently from other parsers" do
+  describe "text one parser reads differently from another" do
+    test "a Markdown autolink shows", %{conn: conn, current_user: user} = c do
+      {view, _} = propose(conn, user, [text_op(c.identity, "<p>Read &lt;https://elsewhere.invalid/x&gt; today</p>")])
+      {_before, proposed} = change(view)
+
+      assert proposed =~ "https://elsewhere.invalid/x"
+    end
+
+    test "an address with a scheme the sanitizer drops shows", %{conn: conn, current_user: user} = c do
+      {view, _} = propose(conn, user, [text_op(c.identity, ~s(<p><a href="steam://run/1">Free</a></p>))])
+      {_before, proposed} = change(view)
+
+      assert proposed =~ "steam://run/1"
+    end
+
+    test "text after an unclosed bracket shows", %{conn: conn, current_user: user} = c do
+      {view, _} = propose(conn, user, [text_op(c.identity, "If a&lt;b see more of this")])
+      {_before, proposed} = change(view)
+
+      assert proposed =~ "see more of this"
+    end
+
     test "an attribute after a slash still shows", %{conn: conn, current_user: user} = c do
       {view, _} = propose(conn, user, [text_op(c.identity, ~s(<p>Offer: <a/href="#{@address}">more</a></p>))])
       {_before, proposed} = change(view)
@@ -168,6 +189,25 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
 
       assert proposed =~ @address
     end
+  end
+
+  test "a change only in line breaks shows them", %{conn: conn, current_user: user} = c do
+    field = fn value ->
+      %{
+        "op" => "set_fields",
+        "target" => %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id},
+        "fields" => %{"meta_description" => value}
+      }
+    end
+
+    {_view, first} = propose(conn, user, [field.("First sentence. Second sentence.")])
+    apply!(first, user)
+
+    {view, _} = propose(conn, user, [field.("First sentence.\n\nSecond sentence.")])
+    {before, proposed} = change(view)
+
+    assert before == "First sentence. Second sentence."
+    assert proposed =~ "↵"
   end
 
   test "inline formatting adds no spaces to the words", %{conn: conn, current_user: user} = c do
@@ -223,19 +263,5 @@ defmodule BrandoAdmin.AssistantReviewCardTest do
 
     assert before == "R<D og utvikling"
     assert proposed == "Pris på utvikling"
-  end
-
-  describe "readable text" do
-    alias Brando.RichText
-
-    test "is what saving stores" do
-      assert RichText.readable_html(~s(<p>A &amp; B &lt; C</p>)) == "A & B < C"
-      assert RichText.readable_html("<p>one</p><p>two</p>") == "one two"
-      assert RichText.readable_html("<p>one<br>two</p>") == "one two"
-      assert RichText.readable_html("<!-- gone --><p>kept</p>") == "kept"
-      assert RichText.readable_html(~s(<p><a title="x"/href="/y">z</a></p>)) =~ ~s(href="/y")
-      assert RichText.readable_html(~s(<ul><li class="a">one</li><li>two</li></ul>)) == ~s(<li class="a">one</li> two)
-      assert RichText.readable_html(~s(<p>x<img src="/i.png">y</p>)) == ~s(x<img src="/i.png">y)
-    end
   end
 end
