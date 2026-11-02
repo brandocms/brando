@@ -45,7 +45,7 @@ const countJoins = (page) => {
   const joins = { count: 0 }
   page.on('websocket', (socket) => {
     socket.on('framesent', ({ payload }) => {
-      if (String(payload).includes('"phx_join"') && String(payload).includes('"lv:phx-')) joins.count += 1
+      if (String(payload).includes('"phx_join"') && String(payload).includes('"lv:')) joins.count += 1
     })
   })
   return joins
