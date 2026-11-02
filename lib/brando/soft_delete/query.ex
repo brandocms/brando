@@ -122,12 +122,6 @@ defmodule Brando.SoftDelete.Query do
     {count + purged, nil}
   end
 
-  defp purge_video(query, video) do
-    Brando.Videos.Uploader.delete_remote(video, fn ->
-      match?({1, _}, Repo.delete_all(from t in query, where: t.id == ^video.id))
-    end)
-  end
-
   defp clean_up_schema(schema) do
     query =
       from t in schema,
@@ -147,6 +141,12 @@ defmodule Brando.SoftDelete.Query do
       result = Repo.delete_all(query)
       Enum.each(purged, &Brando.Activity.deleted(&1, :system, false, %{"purged" => true}))
       result
+    end)
+  end
+
+  defp purge_video(query, video) do
+    Brando.Videos.Uploader.delete_remote(video, fn ->
+      match?({1, _}, Repo.delete_all(from t in query, where: t.id == ^video.id))
     end)
   end
 end
