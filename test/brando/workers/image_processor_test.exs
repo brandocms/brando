@@ -18,17 +18,18 @@ defmodule Brando.Worker.ImageProcessorTest do
     on_exit(fn -> File.rm_rf(dir) end)
 
     File.cp!(@sample, Path.join(dir, ".jpg"))
-    File.write!(Path.join(dir, "small/.jpg"), "a size made earlier")
+    # A size `delete_sized_images/1` reaches: the size's path in each format
+    File.write!(Path.join(dir, "small/x.jpg"), "a size made earlier")
 
     image =
       Brando.Factory.insert(:image, %{
         path: "images/no-type/.jpg",
         formats: [:jpg],
-        sizes: %{"small" => "images/no-type/small/.jpg"},
+        sizes: %{"small" => "images/no-type/small/x.jpg"},
         status: :processed
       })
 
-    {:ok, image: image, size: Path.join(dir, "small/.jpg")}
+    {:ok, image: image, size: Path.join(dir, "small/x.jpg")}
   end
 
   test "an image whose path has no image type is cancelled, keeping its sizes", %{image: image, size: size} do

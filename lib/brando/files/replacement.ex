@@ -14,6 +14,7 @@ defmodule Brando.Files.Replacement do
   alias Brando.Type.VideoConfig
   alias Brando.Uploads
   alias Brando.Uploads.ContentType
+  alias Brando.Utils
 
   require Logger
 
@@ -100,7 +101,7 @@ defmodule Brando.Files.Replacement do
 
     with :ok <- Uploads.validate_intake(:file, name, size, cfg.size_limit) do
       cond do
-        extension(name) != extension(file.filename) ->
+        stored_extension(name, cfg) != extension(file.filename) ->
           {:error, "Choose a file with the same extension (#{extension(file.filename)})"}
 
         allowed != ["*"] and mime_type not in allowed ->
@@ -123,6 +124,17 @@ defmodule Brando.Files.Replacement do
   defp validate_contents(_cfg, _path), do: :ok
 
   defp extension(name), do: name |> Path.extname() |> String.downcase()
+
+  # The stored name was made from the client's by the config, as in
+  # `Brando.Uploads.Store`: slugged, unless a random name kept the extension.
+  # A replacement's extension is compared after the same change.
+  defp stored_extension(name, cfg) do
+    if Map.get(cfg, :slugify_filename, false) and not Map.get(cfg, :random_filename, false) do
+      name |> Path.basename() |> Utils.slugify_filename() |> extension()
+    else
+      extension(name)
+    end
+  end
 
   defp destination(file, cfg) do
     # A leading slash is tolerated in an upload path, as when the file was stored

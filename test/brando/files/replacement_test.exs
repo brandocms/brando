@@ -82,6 +82,65 @@ defmodule Brando.Files.ReplacementTest do
     assert File.read!(ctx.original) == "original"
   end
 
+  describe "the extension of a replacement" do
+    # An upload's stored name is made from its client name by the field's
+    # config, so a replacement's extension is compared after the same change.
+    test "is slugged as the stored name was, when the config slugs", ctx do
+      put_file_config(slugify_filename: true)
+
+      for {stored, client} <- [
+            {"scan.jpglarge", "scan.jpg_large"},
+            {"scan.abcdefghijklmnop", "scan.abcdefghijklmnopqrst"},
+            {"scan.pdf", "scan.PDF"}
+          ] do
+        file = insert_file(ctx.user, stored)
+        meta = %{name: client, size: 20, type: "application/octet-stream"}
+        assert {:ok, :server} = Replacement.initiate(file.id, meta), "#{client} replacing #{stored}"
+      end
+
+      file = insert_file(ctx.user, "scan.jpglarge")
+
+      assert {:error, "Choose a file with the same extension (.jpglarge)"} =
+               Replacement.initiate(file.id, %{name: "scan.jpg", size: 20, type: "application/octet-stream"})
+    end
+
+    test "is compared as it arrived, when the config does not slug", ctx do
+      put_file_config(slugify_filename: false)
+      file = insert_file(ctx.user, "scan.jpg_large")
+      meta = %{name: "scan.jpg_large", size: 20, type: "application/octet-stream"}
+
+      assert {:ok, :server} = Replacement.initiate(file.id, meta)
+
+      assert {:error, "Choose a file with the same extension (.jpg_large)"} =
+               Replacement.initiate(file.id, %{meta | name: "scan.jpglarge"})
+    end
+
+    test "is not slugged for a random filename, which keeps the extension it arrived with", ctx do
+      put_file_config(slugify_filename: true, random_filename: true)
+      file = insert_file(ctx.user, "a1b2c3.jpg_large")
+      meta = %{name: "scan.jpg_large", size: 20, type: "application/octet-stream"}
+
+      assert {:ok, :server} = Replacement.initiate(file.id, meta)
+    end
+  end
+
+  defp put_file_config(opts) do
+    put_test_env(Files,
+      default_config:
+        Map.merge(%{upload_path: "files/replacement", allowed_mimetypes: ["*"], size_limit: 100}, Map.new(opts))
+    )
+  end
+
+  defp insert_file(user, filename) do
+    {:ok, file} =
+      Files.create_file(
+        %{filename: filename, filesize: 8, mime_type: "application/octet-stream", config_target: "default"},
+        user
+      )
+
+    file
+  end
+
   for placement <- [:ref, :var, :table_row, :nested_var] do
     @placement placement
     test "refreshes stored entry HTML for a file in a #{@placement}", ctx do
