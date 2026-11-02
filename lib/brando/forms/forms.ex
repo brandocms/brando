@@ -310,12 +310,7 @@ defmodule Brando.Forms do
   def list_usage(key) do
     ids = Repo.all(from f in Form, where: f.key == ^key, select: f.id)
 
-    :form
-    |> Brando.Content.Usage.list(ids)
-    |> Map.values()
-    |> List.flatten()
-    |> Enum.uniq_by(&{&1.url, &1.label})
-    |> Enum.sort_by(&String.downcase(&1.label))
+    Brando.Content.Usage.list_combined(:form, ids)
   end
 
   defp submissions_query(key, language) do
