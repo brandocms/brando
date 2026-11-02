@@ -80,8 +80,9 @@ defmodule Brando.Villain.TemplateAdapter do
     |> Map.put(:class, module.class)
   end
 
-  defp table_rows(rows, escape?) when is_list(rows), do: Enum.map(rows, &table_row(&1, escape?))
-  defp table_rows(rows, _escape?), do: rows
+  @doc false
+  def table_rows(rows, escape?) when is_list(rows), do: Enum.map(rows, &table_row(&1, escape?))
+  def table_rows(rows, _escape?), do: rows
 
   defp table_row(%{vars: vars} = row, escape?) do
     row = if is_struct(row), do: Map.from_struct(row), else: row

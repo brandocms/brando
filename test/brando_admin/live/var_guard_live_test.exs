@@ -180,7 +180,7 @@ defmodule BrandoAdmin.VarGuardLiveTest do
         await(fn -> Repo.get!(Var, var_id).value == @handler end)
         assert %{type: :string, key: "title"} = Repo.get!(Var, var_id)
 
-        [entry_block] = Repo.all(Brando.Pages.Page.Blocks) |> Enum.filter(&(&1.entry_id == c.page.id))
+        entry_block = Repo.get_by!(Brando.Pages.Page.Blocks, entry_id: c.page.id)
         block = Repo.preload(Repo.get!(Brando.Content.Block, entry_block.block_id), [:vars, :refs])
         html = Brando.Villain.parse([%{block: block}], Repo.get!(Brando.Pages.Page, c.page.id))
 

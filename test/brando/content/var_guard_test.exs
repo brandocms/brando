@@ -374,6 +374,44 @@ defmodule Brando.Content.VarGuardTest do
       end
     end
 
+    test "a multi module's template reads its entries' table rows inert", c do
+      parent =
+        ProposalFixtures.module!(
+          c.superuser,
+          "Parent",
+          "{% for e in entries %}{% for row in e.table_rows %}{{ row.vars[0].value }}{% endfor %}{% endfor %}",
+          multi: true
+        )
+
+      child = ProposalFixtures.module!(c.superuser, "Child", "<i></i>", parent_id: parent.id)
+      cell = %Var{type: :string, key: "cell", label: %{"en" => "cell"}, value: @handler}
+
+      entry = %Block{
+        type: :module_entry,
+        module_id: child.id,
+        uid: Utils.generate_uid(),
+        active: true,
+        vars: [],
+        refs: [],
+        table_rows: [%Brando.Content.TableRow{vars: [cell]}]
+      }
+
+      block = %Block{
+        type: :module,
+        multi: true,
+        module_id: parent.id,
+        uid: Utils.generate_uid(),
+        vars: [],
+        refs: [],
+        children: [entry]
+      }
+
+      html = [%{block: block}] |> Brando.Villain.parse(%Brando.Pages.Page{}) |> IO.iodata_to_binary()
+
+      assert active(html) == 0
+      assert html =~ "&lt;"
+    end
+
     test "a color prints as it is", c do
       {:ok, module} =
         Brando.Content.create_module(Factory.params_for(:module, %{type: :liquid, code: "{{ v }}"}), c.superuser)
@@ -850,6 +888,21 @@ defmodule Brando.Content.VarGuardTest do
 
       assert recast.valid?
       assert %{value: nil} = recast |> Changeset.apply_changes() |> var("size")
+    end
+
+    test "a duplicate of a var whose type lags its definition is judged by the definition's", c do
+      block = insert_block!(c)
+      var(block, "title") |> Changeset.change(type: :select, value: "Kept") |> Repo.update!()
+      var(block, "size") |> Changeset.change(type: :string, value: "Plain") |> Repo.update!()
+      block = Repo.preload(block, [:vars], force: true)
+
+      copy = block |> Changeset.change() |> Brando.Content.Blocks.duplicate_block(user_id: c.editor.id)
+      params = Brando.Drafts.Params.snapshot(Changeset.apply_changes(copy))
+      recast = Block.block_changeset(%Block{}, Map.put(params, "uid", Utils.generate_uid()), c.editor.id)
+
+      assert recast.valid?
+      assert %{type: :string, value: "Kept"} = recast |> Changeset.apply_changes() |> var("title")
+      assert %{type: :select, value: nil} = recast |> Changeset.apply_changes() |> var("size")
     end
 
     test "a stale var keeps its saved type and key on an unrelated edit", c do

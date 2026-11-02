@@ -434,6 +434,7 @@ defmodule Brando.Villain.Parser do
         entry
         |> put_in([Access.key(:vars)], process_vars(entry.vars, escape: escape?))
         |> put_in([Access.key(:refs)], process_refs(entry.refs))
+        |> entry_table_rows(escape?)
       end)
 
     adapter.render_multi_module(
@@ -1728,6 +1729,13 @@ defmodule Brando.Villain.Parser do
   defp maybe_escape_var({key, %{type: :link} = link}, _var, true), do: {key, escape_link_var(link)}
 
   defp maybe_escape_var(processed, _var, _escape?), do: processed
+
+  # An entry of a multi module, read as `entry.table_rows` by the parent's
+  # template, holds its rows as `block.table_rows` does.
+  defp entry_table_rows(%{table_rows: rows} = entry, true),
+    do: %{entry | table_rows: TemplateAdapter.table_rows(rows, true)}
+
+  defp entry_table_rows(entry, _escape?), do: entry
 
   defp process_var(
          %Brando.Content.Var{

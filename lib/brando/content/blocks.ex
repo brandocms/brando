@@ -1421,7 +1421,7 @@ defmodule Brando.Content.Blocks do
     vars = Changeset.get_assoc(block_cs, :vars, :struct)
     table_rows = Changeset.get_assoc(block_cs, :table_rows, :struct)
     refs = Changeset.get_assoc(block_cs, :refs, :struct)
-    {vars, table_rows} = Brando.Content.VarGuard.with_definition_options(block, vars, table_rows)
+    {vars, table_rows} = Brando.Content.VarGuard.with_definition_types(block, vars, table_rows)
 
     block_cs
     |> Changeset.apply_changes()

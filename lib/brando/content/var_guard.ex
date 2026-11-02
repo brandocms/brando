@@ -59,29 +59,29 @@ defmodule Brando.Content.VarGuard do
   end
 
   @doc """
-  `vars` and the vars of `table_rows` of `block` with the options of their
-  definitions, which a copy of them gets when saved: its value is judged by
-  those. A block whose last module save did not reach it can hold others.
+  `vars` and the vars of `table_rows` of `block` with the type and options of
+  their definitions, which a copy of them gets when saved: its value is judged
+  by those. A block whose last module save did not reach it can hold others.
   """
-  @spec with_definition_options(map(), list(), list()) :: {list(), list()}
-  def with_definition_options(%{module_id: nil}, vars, table_rows), do: {vars, table_rows}
+  @spec with_definition_types(map(), list(), list()) :: {list(), list()}
+  def with_definition_types(%{module_id: nil}, vars, table_rows), do: {vars, table_rows}
 
-  def with_definition_options(%{module_id: id} = block, vars, table_rows) do
+  def with_definition_types(%{module_id: id} = block, vars, table_rows) do
     case Brando.Content.fetch_module(id, Map.get(block, :module_origin) || :local) do
       %{vars: module_vars} = module ->
         cells = if table_rows == [], do: %{}, else: by_key(Proposals.table_vars(module))
-        rows = Enum.map(table_rows, &%{&1 | vars: definition_options(loaded(&1, :vars), cells)})
-        {definition_options(vars, by_key(module_vars)), rows}
+        rows = Enum.map(table_rows, &%{&1 | vars: definition_types(loaded(&1, :vars), cells)})
+        {definition_types(vars, by_key(module_vars)), rows}
 
       _ ->
         {vars, table_rows}
     end
   end
 
-  defp definition_options(vars, definitions) do
+  defp definition_types(vars, definitions) do
     Enum.map(vars, fn var ->
       case Map.get(definitions, var.key) do
-        %{options: options} -> %{var | options: options || []}
+        %{type: type, options: options} -> %{var | type: type, options: options || []}
         nil -> var
       end
     end)
