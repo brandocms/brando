@@ -275,9 +275,9 @@ defmodule MyAppWeb.Villain.Filters do
 end
 ```
 
-In a multi module, pass a filter an entry's `vars` (`e.vars | my_filter`),
-not the entry: given the entry, the filter gets its `vars` as a view, and
-`vars["title"]` raises.
+In a multi module, pass a filter an entry's `vars` (`e.vars | my_filter`), not
+the entry. Given the entry, the filter gets `vars` as a view: `vars["title"]`
+fails inside it and Liquid treats the filter as unknown, so it prints nothing.
 
 `escape` never encodes twice; `url_encode`, `slugify` and `markdown` read escaped
 text as the text it stands for. `size` and `truncate` count a brace as one
