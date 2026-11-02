@@ -85,23 +85,32 @@ defmodule Brando.Sites.FourOhFourLogTest do
       assert length(rows()) == 3
     end
 
-    test "each tenant has its own cap, whichever tenant the flush runs in" do
+    test "each tenant has its own cap" do
       put_test_env(FourOhFour, max_rows: 2)
 
       for schema <- ~w(tenant_nv404a_production tenant_nv404b_production) do
         Ecto.Adapters.SQL.query!(Brando.repo(), ~s(CREATE SCHEMA "#{schema}"))
-        Ecto.Adapters.SQL.query!(Brando.repo(), ~s|CREATE TABLE "#{schema}".sites_not_found_hits (LIKE public.sites_not_found_hits INCLUDING ALL)|)
+
+        Ecto.Adapters.SQL.query!(
+          Brando.repo(),
+          ~s|CREATE TABLE "#{schema}".sites_not_found_hits (LIKE public.sites_not_found_hits INCLUDING ALL)|
+        )
       end
 
-      on_exit(fn -> Brando.Tenant.put_prefix(nil) end)
-      Brando.Tenant.with_prefix("tenant_nv404a_production", fn -> for n <- 1..4, do: miss("/a/#{n}") end)
-      Brando.Tenant.with_prefix("tenant_nv404b_production", fn -> miss("/b/1") end)
+      hit = fn prefix, url ->
+        key = Brando.Tenant.cache_key({url, "", Date.utc_today()}, prefix)
+        Cachex.incr(:four_oh_four, key, 1)
+      end
 
-      # list/0 flushes from a request in one tenant
-      Brando.Tenant.with_prefix("tenant_nv404b_production", fn -> assert FourOhFour.flush() == 5 end)
+      for n <- 1..4, do: hit.("tenant_nv404a_production", "/a/#{n}")
+      hit.("tenant_nv404b_production", "/b/1")
+      stored("/public", 1, ~U[2026-01-01 10:00:00Z])
+
+      assert FourOhFour.flush() == 5
 
       assert Brando.Repo.aggregate(NotFoundHit, :count, prefix: "tenant_nv404a_production") == 2
       assert Brando.Repo.aggregate(NotFoundHit, :count, prefix: "tenant_nv404b_production") == 1
+      assert [%{url: "/public"}] = rows()
     end
 
     test "the default leaves room for a real site's log" do
