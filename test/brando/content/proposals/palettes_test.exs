@@ -16,6 +16,7 @@ defmodule Brando.Content.Proposals.PalettesTest do
   alias Brando.Content.Proposals.{CreateEntry, Record, SetFields, Tools}
   alias Brando.Content.Proposals.Tools.Context
   alias Brando.MCP
+  alias Brando.Pages.Page
   alias Brando.Test.Users, as: TestUsers
 
   @palette_fields %{
@@ -97,6 +98,27 @@ defmodule Brando.Content.Proposals.PalettesTest do
       args = %{"query" => c.palette.name, "content_type" => "Brando.Content.Palette"}
       assert {:ok, %{entries: found}} = Tools.call("search_entries", args, context)
       assert Enum.any?(found, &(&1.id == c.palette.id and &1.content_type == "Brando.Content.Palette"))
+    end
+  end
+
+  # Without a content type, palettes and the entries to change come back
+  # together, in title order, and the limit counts both.
+  defp assert_searched_together(actor, c) do
+    page = Brando.ProposalFixtures.page!(c.user, "Evening walk", c.text_module)
+    {:ok, _} = Brando.Content.create_identifier(Page, page)
+
+    for {_origin, context} <- contexts(actor) do
+      assert {:ok, %{entries: found}} = Tools.call("search_entries", %{"query" => "Evening"}, context)
+
+      assert Enum.sort(Enum.map(found, &{&1.content_type, &1.id})) ==
+               [{"Brando.Content.Palette", c.palette.id}, {"Brando.Pages.Page", page.id}]
+
+      assert Enum.map(found, & &1.title) == Enum.sort(Enum.map(found, & &1.title))
+
+      assert {:ok, %{entries: [first]}} =
+               Tools.call("search_entries", %{"query" => "Evening", "limit" => 1}, context)
+
+      assert first == hd(found)
     end
   end
 
@@ -237,7 +259,21 @@ defmodule Brando.Content.Proposals.PalettesTest do
       assert_refused(editor, c)
       assert_readable(editor, c)
       assert_searchable(editor, c)
+      assert_searched_together(editor, c)
       assert_palette_picked(editor, c)
+    end
+
+    test "a member who may not read palettes finds none", c do
+      keys = Catalog.preset_permissions(:editor, :standalone) -- [Catalog.get(:read, Palette).key]
+      member = member(c, keys ++ ["brando.assistant.use"])
+      refute Boundary.authorize(member, :read, c.palette) == :ok
+      {:ok, _} = Brando.Content.create_identifier(Page, c.identity)
+
+      for {_origin, context} <- contexts(member) do
+        assert {:ok, %{entries: found}} = Tools.call("search_entries", %{"query" => ""}, context)
+        assert Enum.any?(found, &(&1.content_type == "Brando.Pages.Page"))
+        refute Enum.any?(found, &(&1.content_type == "Brando.Content.Palette"))
+      end
     end
 
     test "a member who may create and change palettes still cannot through a proposal", c do
