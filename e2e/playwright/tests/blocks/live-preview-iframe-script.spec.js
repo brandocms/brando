@@ -198,6 +198,111 @@ test.describe('Live preview iframe script', () => {
     expect(errors).toEqual([])
   })
 
+  // An element named `currentScript` in the content is what `document` returns
+  // for that name. The page asks the server with its own script's address
+  // (none here, an inline script: the page's), never the element's.
+  test('a connect refused after the token expired asks the server, not an element named currentScript', async ({
+    page
+  }) => {
+    const errors = await load(page, '<main><img name="currentScript" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></main>', 1, {
+      maxAge: 30
+    })
+
+    await page.evaluate(() => {
+      window.fetch = async url => {
+        window.__lp.probed = String(url)
+        throw new TypeError('Failed to fetch')
+      }
+      window.__lp.socketError()
+    })
+    await expect.poll(() => page.evaluate(() => window.__lp.probed)).toBe('about:blank')
+    expect(errors).toEqual([])
+  })
+
+  // The new HTML of an update or rerender can name an element after a member
+  // of `document`. Once it is in the page, `document` returns the element for
+  // that name, and the next update, or the block patches after a rerender,
+  // must still work. (Its own parsed document is read the same way: Chromium
+  // gives a document without a window no named elements, the spec does.)
+  test('an update whose content has an element named querySelector lands, and so does the next', async ({ page }) => {
+    const errors = await load(page, '<main><p>old</p></main>')
+
+    await push(page, 'update', { html: '<main><img name="querySelector"><p>new</p></main>' })
+    await expect(page.locator('main p')).toHaveText('new')
+    await expect(page.locator('main img[name="querySelector"]')).toHaveCount(1)
+
+    await push(page, 'update', { html: '<main><img name="querySelector"><p>newer</p></main>' })
+    await expect(page.locator('main p')).toHaveText('newer')
+    expect(errors).toEqual([])
+  })
+
+  test('a rerender whose content has an element named body lands, and its blocks still patch', async ({ page }) => {
+    const errors = await load(page, '<main><!-- [+:B<a>] --><p class="a">old</p><!-- [-:B<a>] --></main>')
+
+    await push(page, 'rerender', {
+      html: '<html><body><main><img name="body"><!-- [+:B<a>] --><p class="a">again</p><!-- [-:B<a>] --></main></body></html>',
+    })
+    await expect(page.locator('main p.a')).toHaveText('again')
+    await expect(page.locator('main img[name="body"]')).toHaveCount(1)
+
+    await push(page, 'update_block', { uid: 'a', rendered_html: '<p class="a">patched</p>', has_children: false })
+    await expect(page.locator('main p.a')).toHaveText('patched')
+    expect(errors).toEqual([])
+  })
+
+  // What the site's scripts put on the document itself, a `cookie` stand-in in
+  // a sandboxed page (livepreview_storage.js) or a patched method, is what the
+  // shield reads; an element named after a member is not.
+  test('the shield reads the document’s own properties, past elements named after its members', async ({ page }) => {
+    const errors = await load(
+      page,
+      '<main><form name="createComment"></form><img name="importNode"><img name="importNode"><iframe name="createTreeWalker"></iframe></main>'
+    )
+
+    const read = await page.evaluate(() => {
+      Object.defineProperty(document, 'cookie', { configurable: true, get: () => 'stand-in', set() {} })
+      const createElement = document.createElement
+      document.createElement = function (...args) {
+        window.__created = (window.__created || 0) + 1
+        return createElement.apply(this, args)
+      }
+      const doc = window.BrandoBlockPatch.shield(document)
+      return {
+        cookie: doc.cookie,
+        created: doc.createElement('div') instanceof HTMLDivElement && window.__created,
+        location: doc.location === window.location,
+        named: [doc.createComment(''), doc.importNode(document.body, false), doc.createTreeWalker(document.body)].map(
+          (value) => value.constructor.name
+        ),
+      }
+    })
+
+    expect(read).toEqual({
+      cookie: 'stand-in',
+      created: 1,
+      location: true,
+      named: ['Comment', 'HTMLBodyElement', 'TreeWalker'],
+    })
+    expect(errors).toEqual([])
+  })
+
+  test('a shielded document shielded again reads the same', async ({ page }) => {
+    const errors = await load(page, '<main><img name="createNodeIterator"></main>')
+
+    const read = await page.evaluate(() => {
+      const doc = window.BrandoBlockPatch.shield(document)
+      const again = window.BrandoBlockPatch.shield(doc)
+      return {
+        same: again === doc,
+        body: again.body === document.body,
+        iterator: again.createNodeIterator(document.body).constructor.name,
+      }
+    })
+
+    expect(read).toEqual({ same: true, body: true, iterator: 'NodeIterator' })
+    expect(errors).toEqual([])
+  })
+
   // The server does not answer: the page stays, and tries again on the next
   // refused connect
   test('an expired token does not reload the page while the server is away', async ({ page }) => {

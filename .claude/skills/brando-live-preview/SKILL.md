@@ -87,6 +87,20 @@ updates are unavailable. Site scripts get in-memory storage
 (`livepreview_storage.js`) and CORS on static files (`Brando.Plug.SiteAssets`).
 `e2e/playwright/tests/blocks/live-preview-sandbox.spec.js` covers all of it.
 
+The client runs beside the site's classic scripts and the editors' content.
+`Brando.Plug.LivePreview` runs it in one function scope, so it declares no
+globals beyond those it sets on `window`. Its scripts read the page's
+`document` and `window` members through `BrandoBlockPatch.shield`, never
+directly: content can name an element `querySelector` or `addEventListener`,
+and `document` then returns that element in place of the member. Phoenix and
+morphdom get shielded objects from the plug's wrapper. A function read through
+the shield comes back bound to the real object, as a site's wrapper of a DOM
+method passes its `this` on to the native one; a constructor read that way has
+no static members, so read those from `window`. The shield's proxy stands over
+an empty object, not the real one: a proxy must return a non-configurable,
+non-writable own property of its target unchanged, and a site's
+`Object.defineProperty(document, 'createElement', …)` makes one.
+
 ## What the iframe shows
 
 The iframe joins with the generation of the cache it shows

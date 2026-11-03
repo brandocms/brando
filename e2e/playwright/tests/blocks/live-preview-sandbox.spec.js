@@ -199,4 +199,142 @@ test.describe('Live preview sandbox', () => {
     await standalone.close()
     expect(errors).toEqual([])
   })
+
+  // Runs `setup(arg)` in the preview page once it has a `<body>`, before the
+  // client script the plug puts at its end, as the site's own scripts and
+  // content would be there.
+  const beforeClient = (page, setup, arg) =>
+    page.addInitScript(
+      `if (location.pathname.startsWith('/__livepreview')) new MutationObserver((_, observer) => {
+        if (!document.body) return
+        observer.disconnect()
+        ;(${setup})(${JSON.stringify(arg)})
+      }).observe(document, { childList: true, subtree: true })`
+    )
+
+  // The site's classic scripts share one global scope with the client. Names
+  // they declare must not keep the client from loading, and the client must
+  // leave the site's globals as they were.
+  test('a site script declaring the names the client uses keeps its globals and its preview updated', async ({
+    page
+  }) => {
+    const errors = watchErrors(page)
+    await beforeClient(page, () => {
+      const script = document.createElement('script')
+      // `self` is where phoenix.js looks for `WebSocket`, and a site's `let`
+      // replaces it for every classic script after
+      script.textContent =
+        "let token = 'site token'; const body = 'site body'; var Phoenix = 'site Phoenix'; var morphdom = 'site morphdom'; let self = 'site self'"
+      document.body.append(script)
+    })
+    await openPreview(page, 'Sandbox Globals')
+
+    const preview = getPreviewFrame(page)
+    await page.locator('.header-block textarea').fill('Globals Header')
+    await syncLV(page)
+    await expect(preview.locator('header[b-tpl="styled-header"] h1')).toContainText('Globals Header')
+
+    const frame = await (await page.locator('#live-preview-frame').elementHandle()).contentFrame()
+    expect(await frame.evaluate(() => [token, body, window.Phoenix, window.morphdom, self])).toEqual([
+      'site token',
+      'site body',
+      'site Phoenix',
+      'site morphdom',
+      'site self'
+    ])
+    expect(errors).toEqual([])
+  })
+
+  // Error monitoring and other SDKs wrap DOM methods on their prototypes, and
+  // their wrappers call the original with the `this` they were called with.
+  // That must be the real window or document, which the native method accepts.
+  test('a site script wrapping DOM methods keeps its preview updated', async ({ page }) => {
+    const clientErrors = []
+    page.on('pageerror', error => {
+      if (/__livepreview\/client-/.test(error.stack || '')) clientErrors.push(error.message)
+    })
+    await beforeClient(page, () => {
+      const addEventListener = EventTarget.prototype.addEventListener
+      EventTarget.prototype.addEventListener = function (...args) {
+        return addEventListener.apply(this, args)
+      }
+      const createElement = Document.prototype.createElement
+      Document.prototype.createElement = function (...args) {
+        return createElement.apply(this, args)
+      }
+    })
+    await openPreview(page, 'Sandbox Wrapped')
+
+    const preview = getPreviewFrame(page)
+    await page.locator('.header-block textarea').fill('Wrapped Header')
+    await syncLV(page)
+    await expect(preview.locator('header[b-tpl="styled-header"] h1')).toContainText('Wrapped Header')
+    await expect(page.locator('.live-preview-notice')).toBeEmpty()
+    expect(clientErrors).toEqual([])
+  })
+
+  // A wrapper defined on the object itself with `Object.defineProperty` is
+  // neither writable nor configurable, and a proxy of that object would have
+  // to return it unbound.
+  test('a site script defining DOM methods on the document and window keeps its preview updated', async ({
+    page
+  }) => {
+    const clientErrors = []
+    page.on('pageerror', error => {
+      if (/__livepreview\/client-/.test(error.stack || '')) clientErrors.push(error.message)
+    })
+    await beforeClient(page, () => {
+      const createElement = document.createElement
+      Object.defineProperty(document, 'createElement', {
+        value: function (...args) {
+          return createElement.apply(this, args)
+        }
+      })
+      const addEventListener = window.addEventListener
+      Object.defineProperty(window, 'addEventListener', {
+        value: function (...args) {
+          return addEventListener.apply(this, args)
+        }
+      })
+    })
+    await openPreview(page, 'Sandbox Defined')
+
+    const preview = getPreviewFrame(page)
+    await page.locator('.header-block textarea').fill('Defined Header')
+    await syncLV(page)
+    await expect(preview.locator('header[b-tpl="styled-header"] h1')).toContainText('Defined Header')
+    await expect(page.locator('.live-preview-notice')).toBeEmpty()
+    expect(clientErrors).toEqual([])
+  })
+
+  // Content can name an element after a member of `document` (rich text keeps
+  // `name`), and `document` then returns the element for that name. (By the
+  // spec the name also hides what `window` inherits from EventTarget; Chromium
+  // keeps those, so the `addEventListener` case here is `document`'s.) The
+  // client starts and patches anyway.
+  for (const name of ['querySelector', 'createElement', 'createRange', 'addEventListener']) {
+    test(`an element named ${name} in the content keeps the preview updating`, async ({ page }) => {
+      const clientErrors = []
+      page.on('pageerror', error => {
+        if (/__livepreview\/client-/.test(error.stack || '')) clientErrors.push(error.message)
+      })
+      await beforeClient(
+        page,
+        name => {
+          const image = document.createElement('img')
+          image.name = name
+          document.body.prepend(image)
+        },
+        name
+      )
+      await openPreview(page, `Sandbox Named ${name}`)
+
+      const preview = getPreviewFrame(page)
+      await page.locator('.header-block textarea').fill(`Named ${name}`)
+      await syncLV(page)
+      await expect(preview.locator('header[b-tpl="styled-header"] h1')).toContainText(`Named ${name}`)
+      await expect(page.locator('.live-preview-notice')).toBeEmpty()
+      expect(clientErrors).toEqual([])
+    })
+  }
 })

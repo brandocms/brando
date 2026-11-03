@@ -14,24 +14,28 @@
  * hidden, as a live preview does once it has updated.
  */
 ;(function () {
+  // Read past elements in the content named after their members
+  // (`BrandoBlockPatch.shield`, from `block_patch.js`, loaded before this file)
+  const page = window.BrandoBlockPatch.shield(document)
+  const view = window.BrandoBlockPatch.shield(window)
   const OVERLAY_CLASS = 'brando-proposal-highlight'
   let state = { uids: [], show: false }
   let observer = null
 
-  window.addEventListener('message', event => {
+  view.addEventListener('message', event => {
     const data = event.data
     // Only from the admin page framing this one, on the origin it was served from
     if (window.parent === window || event.source !== window.parent || event.origin !== location.origin) return
     if (!data || data.source !== 'brando-admin' || data.type !== 'highlight') return
 
-    document.documentElement.classList.add('is-updated-live-preview')
+    page.documentElement.classList.add('is-updated-live-preview')
     state = { uids: Array.isArray(data.uids) ? data.uids.map(String) : [], show: data.show === true }
     highlight(data.scroll === true)
     watchLayout()
   })
 
   function watchLayout() {
-    if (observer || !document.body || !window.ResizeObserver) return
+    if (observer || !page.body || !window.ResizeObserver) return
     let frame = null
     observer = new ResizeObserver(() => {
       if (frame) return
@@ -40,19 +44,19 @@
         highlight(false)
       })
     })
-    observer.observe(document.body)
-    document.addEventListener('load', () => highlight(false), true)
+    observer.observe(page.body)
+    page.addEventListener('load', () => highlight(false), true)
   }
 
   function highlight(scroll) {
-    if (!document.body) return
-    document.querySelectorAll(`.${OVERLAY_CLASS}`).forEach(node => node.remove())
+    if (!page.body) return
+    page.querySelectorAll(`.${OVERLAY_CLASS}`).forEach(node => node.remove())
     if (!state.show) return
 
     const rects = state.uids.map(blockRect).filter(Boolean)
 
     rects.forEach(rect => {
-      const box = document.createElement('div')
+      const box = page.createElement('div')
       box.className = OVERLAY_CLASS
       box.setAttribute('aria-hidden', 'true')
       Object.assign(box.style, {
@@ -68,7 +72,7 @@
         pointerEvents: 'none',
         zIndex: '2147483647',
       })
-      document.body.appendChild(box)
+      page.body.appendChild(box)
     })
 
     if (scroll && rects.length > 0) {
@@ -78,7 +82,7 @@
 
   // The bounding box of the elements between a block's start and end comments.
   function blockRect(uid) {
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_COMMENT)
+    const walker = page.createTreeWalker(page.body, NodeFilter.SHOW_COMMENT)
     const start = `[+:B<${uid}>]`
     const end = `[-:B<${uid}>]`
     let node
@@ -88,7 +92,7 @@
       const value = node.nodeValue.trim()
       if (value === start) open = node
       else if (value === end && open) {
-        const range = document.createRange()
+        const range = page.createRange()
         range.setStartAfter(open)
         range.setEndBefore(node)
         const rect = range.getBoundingClientRect()
