@@ -1948,7 +1948,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   defp agent_event({:message, _}, socket), do: {:noreply, assign_new_messages(socket)}
-  defp agent_event({:proposal, _}, socket), do: {:noreply, proposal_changed(socket)}
+
+  defp agent_event({:proposal, _}, socket) do
+    socket = socket |> refresh_conversation() |> assign_proposal()
+    {:noreply, if(preview = socket.assigns.preview, do: render_preview(socket, preview), else: socket)}
+  end
 
   defp agent_event({:attachments, _}, socket), do: {:noreply, refresh_conversation(socket)}
   # Events from different processes may arrive out of order: a stale
@@ -2147,18 +2151,17 @@ defmodule BrandoAdmin.AI.AssistantLive do
   # before their events arrive, the run's `{:proposal, id}` among them. The
   # run points the conversation at its proposal before it writes the tool
   # result, so a tool result not shown before brings the proposal with it.
+  # An open preview waits for that event: each render reloads its frame.
   defp assign_new_messages(socket) do
     shown = tool_results(socket.assigns.messages)
     socket = assign_messages(socket)
-    if tool_results(socket.assigns.messages) == shown, do: socket, else: proposal_changed(socket)
+
+    if tool_results(socket.assigns.messages) == shown,
+      do: socket,
+      else: socket |> refresh_conversation() |> assign_proposal()
   end
 
   defp tool_results(messages), do: for(%{role: "tool", id: id} <- messages, do: id)
-
-  defp proposal_changed(socket) do
-    socket = socket |> refresh_conversation() |> assign_proposal()
-    if preview = socket.assigns.preview, do: render_preview(socket, preview), else: socket
-  end
 
   # An error belongs to the proposal it was shown with: a failed apply keeps
   # it over the same proposal reloaded, another proposal starts without it.

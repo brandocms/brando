@@ -278,12 +278,14 @@ defmodule BrandoAdmin.AssistantLiveTest do
 
     id = make_ref()
     test = self()
+    # The query's params hold the id dumped to its 16 bytes.
+    uuid = Ecto.UUID.dump!(conversation.id)
 
     :telemetry.attach(
       id,
       BrandoIntegration.Repo.config()[:telemetry_prefix] ++ [:query],
       fn _event, _measurements, metadata, _config ->
-        if self() != test and metadata.source == "ai_conversations" do
+        if self() != test and metadata.source == "ai_conversations" and uuid in metadata.params do
           :telemetry.detach(id)
           finish.()
         end
@@ -771,6 +773,26 @@ defmodule BrandoAdmin.AssistantLiveTest do
       view |> element("button", "All changes") |> render_click()
       assert has_element?(view, ".assistant-cards")
       assert length(Catalog.load!(Page, c.identity.id, c.current_user).entry_blocks) == 3
+    end
+
+    # Each render reloads the frame and resets its scroll; the run's proposal
+    # event renders it when the proposal changes.
+    @tag :capture_log
+    test "a tool result does not render the open preview again", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      view
+      |> element(~s(button.assistant-card-preview[phx-value-key="Brando.Pages.Page:#{c.identity.id}"]))
+      |> render_click()
+
+      key = view |> element(~s(button[phx-value-target="blocks"])) |> render_click() |> frame_key()
+
+      content = Jason.encode!(%{results: []})
+      fields = %{role: "tool", tool_call_id: "call-1", tool_name: "search", content: content}
+      message = Brando.Repo.insert!(struct(Agent.Message, Map.put(fields, :conversation_id, c.conversation.id)))
+      send(view.pid, {:agent, c.conversation.id, {:message, message}})
+
+      assert frame_key(render(view)) == key
     end
   end
 
