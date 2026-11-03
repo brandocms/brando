@@ -97,11 +97,51 @@ defmodule Brando.Content.RenderQueueTest do
 
         # The producer that took `next` read the time, then waited for a
         # connection while `running` was taken and started
-        set_job(running, state: "executing", attempt: 1, attempted_at: DateTime.utc_now(), meta: started_at(-1))
+        set_job(running, state: "executing", attempt: 1, meta: started_at(-1))
         set_job(next, state: "executing", attempt: 1, attempted_at: DateTime.add(DateTime.utc_now(), -10))
 
         assert {:snooze, _} = EntryRenderer.perform(Repo.get!(Oban.Job, next.id))
       end)
+    end
+
+    test "that waits takes the tokens of the one it waits for", c do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        save_module(c.module, "two")
+        assert [running] = renders(c.fragment)
+        {:ok, next} = RenderQueue.coalesce({:ok, %Oban.Job{conflict?: true, id: nil}}, render_changeset(c), & &1)
+
+        # Queued on another node, after a write this one may not have heard of
+        tokens = %{"globals" => "their-token"}
+        meta = started_at(-1)
+
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^running.id),
+          set: [args: Map.put(running.args, "site_caches", tokens)]
+        )
+
+        set_job(running, state: "executing", attempt: 1, meta: meta)
+
+        assert {:snooze, _} = EntryRenderer.perform(Repo.get!(Oban.Job, next.id))
+        assert %{"globals" => "their-token"} = Repo.get!(Oban.Job, next.id).args["site_caches"]
+      end)
+    end
+
+    test "does not wait for a stamp an earlier attempt left", c do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        save_module(c.module, "two")
+        assert [retried] = renders(c.fragment)
+        {:ok, next} = RenderQueue.coalesce({:ok, %Oban.Job{conflict?: true, id: nil}}, render_changeset(c), & &1)
+
+        # Taken again for its retry, and not stamped yet: the stamp is its
+        # first attempt's
+        meta = Map.put(started_at(-20), "render_attempted_at", "2026-01-01 00:00:00")
+        set_job(retried, state: "executing", attempt: 2, attempted_at: DateTime.utc_now(), meta: meta)
+
+        assert {:ok, _} = EntryRenderer.perform(Repo.get!(Oban.Job, next.id))
+      end)
+    end
+
+    test "run without a job row renders", c do
+      assert {:ok, _} = perform_job(EntryRenderer, %{schema: Fragment, entry_id: c.fragment.id})
     end
 
     test "while a render left running by a node that went down renders without waiting", c do
