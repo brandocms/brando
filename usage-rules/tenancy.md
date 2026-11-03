@@ -154,9 +154,9 @@ together, a tenth of a second at a time. An entry is rendered on whichever
 node runs its render job; a node that runs one before it has heard of a
 change made on the node that queued it (to identity, globals or menus, or
 to the modules, containers, palettes or fragments entries render with)
-refreshes its copy first. **Empty all caches** on the **Cache** screen empties the node
-that served it; for a change no node heard of (SQL, a seed, a mix task),
-empty each node or restart them.
+refreshes its copy first. **Empty all caches** on the **Cache** screen
+empties the node that served it; for a change no node heard of (SQL, a
+seed, a mix task), empty each node or restart them.
 
 This needs the nodes to share the application's `Phoenix.PubSub`: connected
 as one Erlang cluster (with `libcluster` or `dns_cluster`, for example) for
