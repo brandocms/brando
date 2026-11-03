@@ -121,6 +121,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
          |> assign_run(run)
          |> assign_conversations()
          |> assign_messages()
+         # Read after the messages: a run working meanwhile points the
+         # conversation at its proposal before it writes the tool result.
+         |> assign(:conversation, reload(conversation, user))
          |> assign_proposal()
          |> assign_guidance()
          |> assign_connected()}
@@ -1652,7 +1655,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
        socket
        |> assign(conversation: reload(conversation, user), draft: "", progress: gettext("Thinking"))
        |> assign_run(run)
-       |> assign_messages()
+       |> assign_new_messages()
        |> push_event("b:assistant:clear", %{})}
     else
       {:error, message} -> {:noreply, put_toast(socket, :error, message)}
@@ -1944,12 +1947,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
       else: {:noreply, assign(socket, :progress, text)}
   end
 
-  defp agent_event({:message, _}, socket), do: {:noreply, assign_messages(socket)}
-
-  defp agent_event({:proposal, _}, socket) do
-    socket = socket |> refresh_conversation() |> assign_proposal()
-    {:noreply, if(preview = socket.assigns.preview, do: render_preview(socket, preview), else: socket)}
-  end
+  defp agent_event({:message, _}, socket), do: {:noreply, assign_new_messages(socket)}
+  defp agent_event({:proposal, _}, socket), do: {:noreply, proposal_changed(socket)}
 
   defp agent_event({:attachments, _}, socket), do: {:noreply, refresh_conversation(socket)}
   # Events from different processes may arrive out of order: a stale
@@ -2142,6 +2141,23 @@ defmodule BrandoAdmin.AI.AssistantLive do
     messages = Agent.messages(conversation.id, user)
     cost = if Agent.config()[:show_cost], do: Agent.cost(conversation.id, user)
     socket |> assign(messages: messages, turns: turns(messages), cost: cost) |> assign_media()
+  end
+
+  # Messages are read whole, so the page can show a run's later messages
+  # before their events arrive, the run's `{:proposal, id}` among them. The
+  # run points the conversation at its proposal before it writes the tool
+  # result, so a tool result not shown before brings the proposal with it.
+  defp assign_new_messages(socket) do
+    shown = tool_results(socket.assigns.messages)
+    socket = assign_messages(socket)
+    if tool_results(socket.assigns.messages) == shown, do: socket, else: proposal_changed(socket)
+  end
+
+  defp tool_results(messages), do: for(%{role: "tool", id: id} <- messages, do: id)
+
+  defp proposal_changed(socket) do
+    socket = socket |> refresh_conversation() |> assign_proposal()
+    if preview = socket.assigns.preview, do: render_preview(socket, preview), else: socket
   end
 
   # An error belongs to the proposal it was shown with: a failed apply keeps

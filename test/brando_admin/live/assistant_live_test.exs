@@ -203,8 +203,8 @@ defmodule BrandoAdmin.AssistantLiveTest do
 
     # The proposal arrives before the model's final reply.
     html = eventually(view, &(&1 =~ "Prepared a text block for Identity."))
-    # This has failed in CI without a reproduction: the reply shown, the
-    # proposal not. CI cuts the page short, so say what the view holds.
+    # The reply once showed before the proposal (the two tests below). CI
+    # cuts the page short, so say what the view holds.
     assert html =~ "Ready for your review", review_state(view)
     # A step's search words, content type and version are marked out; the
     # quotes stay with the words, so the font's kerning holds.
@@ -223,6 +223,79 @@ defmodule BrandoAdmin.AssistantLiveTest do
     assert html =~ "The changes are saved"
     assert length(Catalog.load!(Page, c.identity.id, c.current_user).entry_blocks) == 4
     refute has_element?(view, "button.assistant-apply")
+  end
+
+  # The page reads every message on each message event, so a run that finished
+  # meanwhile shows its reply while the run's proposal event is still queued.
+  test "a reply read ahead of its proposal event shows with the proposal", %{conn: conn, current_user: user} = c do
+    {:ok, conversation} = Agent.start_conversation(user)
+    {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
+
+    {:ok, proposal} =
+      [%Brando.Content.Proposals.InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
+      |> Brando.Content.Proposals.propose(user, conversation_id: conversation.id)
+
+    conversation |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+    message = &Brando.Repo.insert!(struct(Agent.Message, Map.put(&1, :conversation_id, conversation.id)))
+    asked = message.(%{role: "user", content: "Add a text block to Identity"})
+    arguments = Jason.encode!(%{})
+
+    message.(%{
+      role: "assistant",
+      tool_calls: [%{"id" => "call-1", "name" => "prepare_proposal", "arguments" => arguments}]
+    })
+
+    result = Jason.encode!(%{proposal_id: proposal.id, version: 1, problems: []})
+    message.(%{role: "tool", tool_call_id: "call-1", tool_name: "prepare_proposal", content: result})
+    message.(%{role: "assistant", content: "Prepared a text block for Identity."})
+
+    # Only the editor's own message has reached the page.
+    send(view.pid, {:agent, conversation.id, {:message, asked}})
+    html = render(view)
+    assert html =~ "Prepared a text block for Identity."
+    assert html =~ "Ready for your review"
+  end
+
+  test "a reply written while the page opens shows with its proposal", %{conn: conn, current_user: user} = c do
+    {:ok, conversation} = Agent.start_conversation(user)
+
+    {:ok, proposal} =
+      [%Brando.Content.Proposals.InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
+      |> Brando.Content.Proposals.propose(user, conversation_id: conversation.id)
+
+    # The run finishes between the page's read of the conversation and its
+    # read of the messages.
+    finish = fn ->
+      conversation |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+      result = Jason.encode!(%{proposal_id: proposal.id, version: 1, problems: []})
+
+      for message <- [
+            %{role: "tool", tool_call_id: "call-1", tool_name: "prepare_proposal", content: result},
+            %{role: "assistant", content: "Prepared a text block for Identity."}
+          ],
+          do: Brando.Repo.insert!(struct(Agent.Message, Map.put(message, :conversation_id, conversation.id)))
+    end
+
+    id = make_ref()
+    test = self()
+
+    :telemetry.attach(
+      id,
+      BrandoIntegration.Repo.config()[:telemetry_prefix] ++ [:query],
+      fn _event, _measurements, metadata, _config ->
+        if self() != test and metadata.source == "ai_conversations" do
+          :telemetry.detach(id)
+          finish.()
+        end
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(id) end)
+
+    {:ok, _view, html} = live(conn, "/admin/assistant/#{conversation.id}")
+    assert html =~ "Prepared a text block for Identity."
+    assert html =~ "Ready for your review"
   end
 
   # Audit F49: the step labels split on a character a stored title could hold
