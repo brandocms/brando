@@ -121,7 +121,7 @@ defmodule BrandoAdmin.RenderStoreOrderTest do
 
   defp resume(%Task{pid: pid}), do: send(pid, :resume)
 
-  @doc false
+  @doc "The telemetry handler `start_held_render/1` attaches."
   def hold_render(_event, _measurements, _metadata, test) do
     if Process.delete(:render_store_order_hold) do
       send(test, {:held, self()})
@@ -144,7 +144,7 @@ defmodule BrandoAdmin.RenderStoreOrderTest do
     ref
   end
 
-  @doc false
+  @doc "The telemetry handler `hold_inline_render/1` attaches."
   def hold_view_render(_event, _measurements, _metadata, %{pid: pid, armed: armed, ref: ref} = config) do
     if self() == pid and :counters.get(armed, 1) == 1 do
       :counters.put(armed, 1, 0)

@@ -175,7 +175,7 @@ defmodule Brando.Content.RenderEntryStoreTest do
 
   defp resume(%Task{pid: pid}), do: send(pid, :resume)
 
-  @doc false
+  @doc "The telemetry handler `start_held_render/2` attaches."
   def handle_render(_event, _measurements, _metadata, test) do
     if Process.delete(:render_entry_store_hold) do
       send(test, {:held, self()})
