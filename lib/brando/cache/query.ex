@@ -24,9 +24,10 @@ defmodule Brando.Cache.Query do
   (`Brando.CacheSync.broadcast_gathered/2`, which sends a node's evictions
   together, a tenth of a second at a time). They evict every cached entry of
   the schema rather than the written ones, so a message stays small however
-  many rows a transaction writes. The render jobs queued after an eviction of
-  the lists renders read (modules, containers, palettes, fragments) evict
-  them first on a node that has not heard of it yet
+  many rows a transaction writes. The render jobs queued after a write to a
+  schema whose lists renders read (modules, containers, palettes,
+  fragments), by its transaction or after it has committed, evict those
+  lists first on a node that has not heard of it yet
   (`Brando.Cache.ensure_fresh/1`).
   """
   use Brando.Tracing.Decorator
@@ -135,9 +136,10 @@ defmodule Brando.Cache.Query do
     schema
   end
 
-  # The lists renders read carry a token in the render jobs queued from here
-  # on (`Brando.Cache.ensure_fresh/1`), known to this node once it has
-  # evicted them after the commit
+  # The lists renders read carry a token (`Brando.Cache.ensure_fresh/1`): in
+  # the render jobs the transaction queues, and once it has committed in
+  # every render job this node queues. This node knows it once it has
+  # evicted them after the commit.
   defp evict_list(source) do
     evict = fn -> perform_eviction(:list, source) end
 

@@ -7,6 +7,7 @@ defmodule Brando.Cache.ClusterRefreshTest do
   use Brando.ConnCase, async: false
 
   alias Brando.Cache
+  alias Brando.Cache.Freshness
   alias Brando.Cache.Query, as: QueryCache
   alias Brando.CacheSync
   alias Brando.Content.Module
@@ -420,6 +421,78 @@ defmodule Brando.Cache.ClusterRefreshTest do
       assert {:ok, [_]} = Cachex.get(:query, stale)
     end
   end
+
+  describe "a module write in a transaction" do
+    setup do
+      {:ok, module} =
+        Brando.Content.create_module(
+          Factory.params_for(:module, %{code: ~s(<div class="paragraph">Module: old.</div>)}),
+          :system
+        )
+
+      %{module: module, source: Module.__schema__(:source)}
+    end
+
+    test "carries its token in its own render jobs, and in other processes' only once committed", c do
+      before = carried(c.source)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, token} =
+          Repo.transaction(fn ->
+            {:ok, _} = Brando.Content.update_module(c.module.id, %{code: ~s(<div>Module: new.</div>)}, :system)
+            token = carried(c.source)
+            refute token == before
+
+            # Another process on this node queues a render: the write has not committed
+            assert run_elsewhere(fn -> carried(c.source) end) == before
+
+            {:ok, job} = RenderQueue.enqueue(%{schema: Fragment, entry_id: 1_000_001})
+            assert job.args["query_sources"][c.source] == token
+            token
+          end)
+
+        assert carried(c.source) == token
+        assert run_elsewhere(fn -> carried(c.source) end) == token
+        assert Freshness.unknown(%{"query_sources" => %{c.source => token}}) == []
+      end)
+    end
+
+    test "rolled back, its token is gone, and no later transaction of the process carries it", c do
+      before = carried(c.source)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:error, token} =
+          Repo.transaction(fn ->
+            {:ok, _} = Brando.Content.update_module(c.module.id, %{code: ~s(<div>Module: new.</div>)}, :system)
+            Repo.rollback(carried(c.source))
+          end)
+
+        refute token == before
+        assert carried(c.source) == before
+        assert run_elsewhere(fn -> carried(c.source) end) == before
+        assert {:ok, ^before} = Repo.transaction(fn -> carried(c.source) end)
+      end)
+    end
+
+    test "makes one token however many times it writes the source", c do
+      {:ok, {first, second}} =
+        Repo.transaction(fn ->
+          QueryCache.evict({:ok, c.module})
+          first = carried(c.source)
+          QueryCache.evict({:ok, c.module})
+          {first, carried(c.source)}
+        end)
+
+      assert first == second
+      assert carried(c.source) == first
+      assert Freshness.unknown(%{"query_sources" => %{c.source => first}}) == []
+    end
+  end
+
+  # The token for `source` a render job queued now would carry
+  defp carried(source), do: Freshness.attach(%{})["query_sources"][source]
+
+  defp run_elsewhere(fun), do: fun |> Task.async() |> Task.await()
 
   describe "the query cache" do
     test "a save tells the other nodes to evict its schema once committed, gathered" do

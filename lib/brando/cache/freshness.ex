@@ -5,18 +5,27 @@ defmodule Brando.Cache.Freshness do
   #
   # The render inputs are the site caches the renders read and the query
   # cache sources they list. A node that refreshes one for a write makes a
-  # token: its latest for the input at once, known once the refresh has run.
-  # Every render job it queues carries its latest tokens, and a node that
-  # does not know one refreshes the input before it renders, and then knows
-  # it. A token a node learns from a job is not its latest: its own latest
-  # may stand for a write the token's maker never saw.
+  # token: its latest for the input, known once the refresh has run. Every
+  # render job it queues carries its latest tokens, and a node that does not
+  # know one refreshes the input before it renders, and then knows it. A
+  # token a node learns from a job is not its latest: its own latest may
+  # stand for a write the token's maker never saw.
   #
-  # Kept per site, for each input, as `%{latest: token, known: [token]}`.
+  # A token made inside a transaction (`Brando.Repo.transaction/2`) is the
+  # transaction's until it commits: the jobs it queues carry it, and it
+  # becomes the node's latest once committed. Before that, a node that ran a
+  # job carrying it would refresh from rows still without the write, and
+  # then skip the refresh the commit sends. Rolled back, it is gone. One
+  # transaction makes one token per input, however often it writes it.
+  #
+  # Kept per site, for each input, as `%{latest: token, known: [token]}`;
+  # a transaction's as `%{site_key => %{input => token}}`.
 
   alias Brando.Tenant
 
   @cache_module Application.compile_env(:brando, :cache_module, Cachex)
   @key {__MODULE__, :tokens}
+  @pending {__MODULE__, :pending}
   @known 32
   @site_caches ~w(identity globals navigation)a
   @render_schemas [
@@ -34,38 +43,61 @@ defmodule Brando.Cache.Freshness do
   def input(:site_cache, cache), do: if(cache in @site_caches, do: {:site_cache, cache})
   def input(:query_source, source), do: if(source in sources(), do: {:query_source, source})
 
-  @doc "Makes a token for a refresh of `input` about to run, this node's latest."
+  @doc """
+  Makes a token for a refresh of `input` about to run: this node's latest,
+  at once outside a transaction, once it commits inside one.
+  """
   @spec make(input()) :: String.t()
   def make(input) do
-    {_, tokens} =
-      update(fn tokens ->
-        token = Base.url_encode64(:crypto.strong_rand_bytes(9))
-        Map.update(tokens, input, %{latest: token, known: []}, &%{&1 | latest: token})
-      end)
+    site = Tenant.cache_key(@key)
+    pending = Brando.Repo.transaction_value(@pending) || %{}
 
-    tokens[input].latest
+    case pending do
+      %{^site => %{^input => token}} ->
+        token
+
+      _ ->
+        token = Base.url_encode64(:crypto.strong_rand_bytes(9))
+        pending = Map.update(pending, site, %{input => token}, &Map.put(&1, input, token))
+
+        case Brando.Repo.put_transaction_value(@pending, pending) do
+          :ok -> Brando.Repo.after_commit({__MODULE__, site, input}, fn -> publish(site, input, token) end)
+          :error -> publish(site, input, token)
+        end
+
+        token
+    end
+  end
+
+  defp publish(site, input, token) do
+    update(site, &Map.update(&1, input, %{latest: token, known: []}, fn record -> %{record | latest: token} end))
   end
 
   @doc "Records that this node's copy of `input` has caught up with `token`."
   @spec known(input(), String.t()) :: :ok
   def known(input, token) do
-    update(fn tokens ->
+    update(Tenant.cache_key(@key), fn tokens ->
       Map.update(tokens, input, %{latest: nil, known: [token]}, fn record ->
-        %{record | known: Enum.take([token | record.known], @known)}
+        %{record | known: Enum.take([token | List.delete(record.known, token)], @known)}
       end)
     end)
 
     :ok
   end
 
-  @doc "Adds this node's latest tokens to a render job's arguments."
+  @doc """
+  Adds this node's latest tokens to a render job's arguments, and inside a
+  transaction those it made, in their place.
+  """
   @spec attach(map()) :: map()
   def attach(args) do
-    tokens = Map.to_list(tokens())
+    latest = for {input, %{latest: token}} <- tokens(), token, into: %{}, do: {input, token}
+    pending = Map.get(Brando.Repo.transaction_value(@pending) || %{}, Tenant.cache_key(@key), %{})
+    tokens = latest |> Map.merge(pending) |> Map.to_list()
 
     args
-    |> put_latest("site_caches", for({{:site_cache, cache}, %{latest: t}} <- tokens, t, do: {to_string(cache), t}))
-    |> put_latest("query_sources", for({{:query_source, source}, %{latest: t}} <- tokens, t, do: {source, t}))
+    |> put_latest("site_caches", for({{:site_cache, cache}, t} <- tokens, do: {to_string(cache), t}))
+    |> put_latest("query_sources", for({{:query_source, source}, t} <- tokens, do: {source, t}))
   end
 
   defp put_latest(args, _field, []), do: args
@@ -99,5 +131,5 @@ defmodule Brando.Cache.Freshness do
     end
   end
 
-  defp update(fun), do: @cache_module.get_and_update(:cache, Tenant.cache_key(@key), &fun.(&1 || %{}))
+  defp update(site, fun), do: @cache_module.get_and_update(:cache, site, &fun.(&1 || %{}))
 end

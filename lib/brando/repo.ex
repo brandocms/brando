@@ -127,6 +127,7 @@ defmodule Brando.Repo do
   end
 
   @after_commit :brando_repo_after_commit
+  @transaction_values :brando_repo_transaction_values
 
   @doc """
   Runs `fun_or_multi` in a transaction, as `c:Ecto.Repo.transaction/2`.
@@ -145,6 +146,7 @@ defmodule Brando.Repo do
       repo().transaction(fun_or_multi, opts)
     else
       Process.put(@after_commit, [])
+      Process.put(@transaction_values, %{})
 
       {result, held} =
         try do
@@ -152,6 +154,7 @@ defmodule Brando.Repo do
           {result, Process.get(@after_commit)}
         after
           Process.delete(@after_commit)
+          Process.delete(@transaction_values)
         end
 
       # In the order held, late work after the rest
@@ -214,6 +217,29 @@ defmodule Brando.Repo do
     end
 
     :ok
+  end
+
+  @doc false
+  # A value kept for the transaction begun with `transaction/2` around the
+  # caller, or nil: gone once the outermost one ends, committed or rolled
+  # back, so a later transaction of the process never sees it.
+  @spec transaction_value(term()) :: term()
+  def transaction_value(key), do: Map.get(Process.get(@transaction_values) || %{}, key)
+
+  @doc false
+  # Keeps `value` under `key` for the transaction around the caller, or
+  # returns `:error` outside one begun with `transaction/2` (where
+  # `after_commit/1` runs its work at once).
+  @spec put_transaction_value(term(), term()) :: :ok | :error
+  def put_transaction_value(key, value) do
+    case Process.get(@transaction_values) do
+      nil ->
+        :error
+
+      values ->
+        Process.put(@transaction_values, Map.put(values, key, value))
+        :ok
+    end
   end
 
   def rollback(reason) do
