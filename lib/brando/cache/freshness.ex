@@ -21,6 +21,7 @@ defmodule Brando.Cache.Freshness do
   # Kept per site, for each input, as `%{latest: token, known: [token]}`;
   # a transaction's as `%{site_key => %{input => token}}`.
 
+  alias Brando.Repo
   alias Brando.Tenant
 
   @cache_module Application.compile_env(:brando, :cache_module, Cachex)
@@ -50,7 +51,7 @@ defmodule Brando.Cache.Freshness do
   @spec make(input()) :: String.t()
   def make(input) do
     site = Tenant.cache_key(@key)
-    pending = Brando.Repo.transaction_value(@pending) || %{}
+    pending = Repo.transaction_value(@pending) || %{}
 
     case pending do
       %{^site => %{^input => token}} ->
@@ -59,15 +60,15 @@ defmodule Brando.Cache.Freshness do
       _ ->
         token = Base.url_encode64(:crypto.strong_rand_bytes(9))
         pending = Map.update(pending, site, %{input => token}, &Map.put(&1, input, token))
-
-        case Brando.Repo.put_transaction_value(@pending, pending) do
-          :ok -> Brando.Repo.after_commit({__MODULE__, site, input}, fn -> publish(site, input, token) end)
-          :error -> publish(site, input, token)
-        end
-
+        hold_or_publish(Repo.put_transaction_value(@pending, pending), site, input, token)
         token
     end
   end
+
+  defp hold_or_publish(:ok, site, input, token),
+    do: Repo.after_commit({__MODULE__, site, input}, fn -> publish(site, input, token) end)
+
+  defp hold_or_publish(:error, site, input, token), do: publish(site, input, token)
 
   defp publish(site, input, token) do
     update(site, &Map.update(&1, input, %{latest: token, known: []}, fn record -> %{record | latest: token} end))
@@ -92,7 +93,7 @@ defmodule Brando.Cache.Freshness do
   @spec attach(map()) :: map()
   def attach(args) do
     latest = for {input, %{latest: token}} <- tokens(), token, into: %{}, do: {input, token}
-    pending = Map.get(Brando.Repo.transaction_value(@pending) || %{}, Tenant.cache_key(@key), %{})
+    pending = Map.get(Repo.transaction_value(@pending) || %{}, Tenant.cache_key(@key), %{})
     tokens = latest |> Map.merge(pending) |> Map.to_list()
 
     args

@@ -219,17 +219,20 @@ defmodule Brando.Repo do
     :ok
   end
 
-  @doc false
-  # A value kept for the transaction begun with `transaction/2` around the
-  # caller, or nil: gone once the outermost one ends, committed or rolled
-  # back, so a later transaction of the process never sees it.
+  @doc """
+  The value kept under `key` for the transaction begun with `transaction/2`
+  around the caller (`put_transaction_value/2`), or nil. It is gone once the
+  outermost transaction ends, committed or rolled back, so a later
+  transaction of the process never sees it.
+  """
   @spec transaction_value(term()) :: term()
   def transaction_value(key), do: Map.get(Process.get(@transaction_values) || %{}, key)
 
-  @doc false
-  # Keeps `value` under `key` for the transaction around the caller, or
-  # returns `:error` outside one begun with `transaction/2` (where
-  # `after_commit/1` runs its work at once).
+  @doc """
+  Keeps `value` under `key` for the transaction around the caller, or
+  returns `:error` outside one begun with `transaction/2` (where
+  `after_commit/1` runs its work at once).
+  """
   @spec put_transaction_value(term(), term()) :: :ok | :error
   def put_transaction_value(key, value) do
     case Process.get(@transaction_values) do
