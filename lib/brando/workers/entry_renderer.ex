@@ -47,32 +47,27 @@ defmodule Brando.Worker.EntryRenderer do
   # A stamp counts for the attempt that made it only. Waits no longer than
   # the other one's timeout, which a node that went down leaves executing
   # until `Oban.Lifeline` rescues it.
-  defp rendering_before(%Oban.Job{id: id, worker: worker, args: args}) when is_integer(id) do
-    case stamp_start(id) do
-      nil ->
-        nil
-
-      started ->
-        since = started - (@timeout + :timer.seconds(5)) * 1000
-        entry = Map.take(args, ["tenant_prefix", "schema", "entry_id"])
-
-        query =
-          from j in Oban.Job,
-            where:
-              j.worker == ^worker and j.state == "executing" and j.id != ^id and
-                fragment("?->>'render_attempted_at' IS NOT DISTINCT FROM ?::text", j.meta, j.attempted_at) and
-                fragment("(?->>'render_started')::bigint", j.meta) > ^since and
-                (fragment("(?->>'render_started')::bigint", j.meta) < ^started or
-                   (fragment("(?->>'render_started')::bigint", j.meta) == ^started and j.id < ^id)) and
-                fragment("? @> ?", j.args, type(^entry, :map)),
-            select: j.args,
-            limit: 1
-
-        Brando.Repo.one(query)
-    end
+  defp rendering_before(%Oban.Job{id: id} = job) when is_integer(id) do
+    if started = stamp_start(id), do: Brando.Repo.one(started_before(job, started))
   end
 
   defp rendering_before(_job), do: nil
+
+  defp started_before(%Oban.Job{id: id, worker: worker, args: args}, started) do
+    since = started - (@timeout + :timer.seconds(5)) * 1000
+    entry = Map.take(args, ["tenant_prefix", "schema", "entry_id"])
+
+    from j in Oban.Job,
+      where: j.worker == ^worker and j.state == "executing" and j.id != ^id,
+      where: fragment("? @> ?", j.args, type(^entry, :map)),
+      where: fragment("?->>'render_attempted_at' IS NOT DISTINCT FROM ?::text", j.meta, j.attempted_at),
+      where: fragment("(?->>'render_started')::bigint", j.meta) > ^since,
+      where:
+        fragment("(?->>'render_started')::bigint", j.meta) < ^started or
+          (fragment("(?->>'render_started')::bigint", j.meta) == ^started and j.id < ^id),
+      select: j.args,
+      limit: 1
+  end
 
   # Microseconds, by the database's clock. Nil when the job has no row: run
   # by `Oban.Testing.perform_job/3`, say.
