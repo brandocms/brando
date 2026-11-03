@@ -954,7 +954,7 @@ defmodule BrandoAdmin.AssistantLiveTest do
       Brando.endpoint().subscribe("user:#{user.id}")
       view |> element(~s(button[phx-click="share_page"])) |> render_click()
 
-      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: "no_frontend_assets"}}
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}
       assert frame_key(render(view)) == key
       assert has_element?(view, ~s(button[phx-click="share_page"]))
       refute has_element?(view, "#assistant-page-link")

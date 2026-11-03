@@ -1826,7 +1826,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             {:noreply, socket |> render_open_preview() |> put_toast(:error, to_string(reason))}
 
           _refined ->
-            message = gettext("The proposal changed in another tab. Share the page again from this version.")
+            message = gettext("The proposal has changed: review the new version before sharing.")
             {:noreply, socket |> render_open_preview() |> put_toast(:error, message)}
         end
     end

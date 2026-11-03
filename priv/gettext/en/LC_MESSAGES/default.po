@@ -17542,7 +17542,7 @@ msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
-msgid "The proposal changed in another tab. Share the page again from this version."
+msgid "The proposal has changed: review the new version before sharing."
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex

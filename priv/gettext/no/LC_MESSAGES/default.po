@@ -17544,8 +17544,8 @@ msgstr "Den forrige forhåndsvisningen er fortsatt åpen. Kontroller målkonfigu
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
-msgid "The proposal changed in another tab. Share the page again from this version."
-msgstr "Forslaget ble endret i en annen fane. Del siden på nytt fra denne versjonen."
+msgid "The proposal has changed: review the new version before sharing."
+msgstr "Forslaget er endret: se gjennom den nye versjonen før du deler."
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
