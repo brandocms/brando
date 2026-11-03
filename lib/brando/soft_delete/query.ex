@@ -121,10 +121,11 @@ defmodule Brando.SoftDelete.Query do
     # this run (`as_one_run/1`): each call to a provider that hangs waits out
     # its client's timeout, and the purger has one 30-second deadline for
     # every schema and environment. Its other rows stay for the next run, and
-    # the other providers' rows go on. Req's own timeouts (30 seconds to
-    # connect, 15 to receive) are not shortened, so a single hanging call
-    # may still use up the deadline, and the purger is stopped before it
-    # gets to the rest; the rows it did not get to stay for the next run. A
+    # the other providers' rows go on. A delete gives up after 5 seconds to
+    # connect and 10 for the answer (`Brando.Videos.Uploaders.ReqOptions`),
+    # so one hanging provider leaves the run time for the rest. Several
+    # hanging in one run may still use up the deadline: the purger is then
+    # stopped, and the rows it did not get to stay for the next run. A
     # provider that answered with an error at once, even a 5xx, may have
     # answered about that one video: it is asked about its other rows.
     unreachable = Process.get(@unreachable_key)

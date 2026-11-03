@@ -10,10 +10,12 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
 
   alias Brando.Factory
   alias Brando.Repo
+  alias Brando.Test.HangingProvider
   alias Brando.Videos.Uploader
   alias Brando.Videos.Uploaders.Bunny
   alias Brando.Videos.Uploaders.Cloudflare
   alias Brando.Videos.Uploaders.Mux
+  alias Brando.Videos.Uploaders.ReqOptions
   alias Brando.Videos.Uploaders.Vimeo
   alias Brando.Videos.Video
   alias Brando.Worker.VideoRemoteDelete
@@ -122,6 +124,84 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
           refute_enqueued(worker: VideoRemoteDelete)
         end)
       end
+    end
+  end
+
+  # #3457: the purger has one 30-second deadline for every schema and
+  # environment, and Req alone waits 15 seconds for each chunk of an answer,
+  # with no limit on the whole.
+  for {provider, {module, type, meta}} <- @providers do
+    @module module
+    @type_ type
+    @meta meta
+
+    describe "a purge with a #{provider} provider that never answers" do
+      test "gives up at the delete's receive timeout, and keeps the row" do
+        configure(@module, :on_purge)
+        put_test_env(@module, Keyword.merge(Application.get_env(:brando, @module), hanging(delete_receive_timeout: 200)))
+        HangingProvider.route(HangingProvider.silent())
+        video = @module |> insert_video(@type_, @meta) |> expire()
+
+        started = System.monotonic_time(:millisecond)
+        log = capture_log([level: :info], fn -> assert purge_videos() == 0 end)
+
+        assert System.monotonic_time(:millisecond) - started < 2_000
+        assert_received {:hanging_provider, "DELETE", _path}
+        assert Repo.get!(Video, video.id).deleted_at
+        assert log =~ "Video #{video.id} kept for the next purge"
+      end
+    end
+  end
+
+  describe "a provider's DELETE" do
+    test "connects within 5 seconds and has 10 for the answer, well inside the purger's deadline" do
+      opts = ReqOptions.merge(Mux, method: :delete, url: "https://api.mux.com/video/v1/assets/a")
+
+      assert opts[:connect_options][:timeout] == 5_000
+      assert opts[:receive_timeout] == 10_000
+      assert opts[:request_timeout] == 10_000
+
+      # One provider that hangs, and another that cannot be connected to, still leave the purge time.
+      assert 2 * opts[:connect_options][:timeout] + opts[:request_timeout] <
+               Brando.Worker.SoftDeletePurger.timeout(%Oban.Job{})
+    end
+
+    test "is the only request that gets them" do
+      for method <- [:get, :post] do
+        opts = ReqOptions.merge(Mux, method: method, url: "https://api.mux.com/video/v1/assets")
+        refute Keyword.has_key?(opts, :connect_options)
+        refute Keyword.has_key?(opts, :receive_timeout)
+        refute Keyword.has_key?(opts, :request_timeout)
+      end
+    end
+
+    test "takes them from the provider's config, over the other calls' req_options" do
+      put_test_env(Mux,
+        delete_connect_timeout: 1_000,
+        delete_receive_timeout: 2_000,
+        req_options: [receive_timeout: 60_000, connect_options: [timeout: 60_000, proxy: {:http, "proxy", 8080, []}]]
+      )
+
+      opts = ReqOptions.merge(Mux, method: :delete, url: "https://api.mux.com/video/v1/assets/a")
+
+      assert opts[:connect_options] == [timeout: 1_000, proxy: {:http, "proxy", 8080, []}]
+      assert opts[:receive_timeout] == 2_000
+      assert opts[:request_timeout] == 2_000
+
+      get = ReqOptions.merge(Mux, method: :get, url: "https://api.mux.com/video/v1/assets")
+      assert get[:receive_timeout] == 60_000
+      assert get[:connect_options][:timeout] == 60_000
+    end
+
+    test "leaves the connect timeout to a configured Finch pool" do
+      put_test_env(Mux, req_options: [finch: [name: Req.Finch]])
+
+      opts = ReqOptions.merge(Mux, method: :delete, url: "https://api.mux.com/video/v1/assets/a")
+
+      refute Keyword.has_key?(opts, :connect_options)
+      assert opts[:receive_timeout] == 10_000
+      # Req refuses :connect_options beside :finch, so this would raise.
+      assert %Req.Request{} = Req.new(opts)
     end
   end
 
@@ -273,6 +353,9 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
 
   # No retries by Req itself: each provider call is one request.
   defp req(module), do: [plug: {Req.Test, module}, retry: false]
+
+  # Over a real connection to `Brando.Test.HangingProvider`.
+  defp hanging(config), do: Keyword.put(config, :req_options, adapter: HangingProvider, retry: false)
 
   defp answer(module, outcome) do
     me = self()

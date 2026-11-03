@@ -9,8 +9,11 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
 
   What *was* byte-identical across all three, and therefore what could drift in
   one of them without anyone noticing, is this merge. That is what this module
-  owns.
+  owns, with the timeouts a provider's DELETE gets (see `merge/2`).
   """
+
+  @delete_connect_timeout 5_000
+  @delete_receive_timeout 10_000
 
   @doc """
   Puts `provider`'s configured `:req_options` **underneath** `built_opts`.
@@ -79,6 +82,33 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
   `runtime.exs` — the merge order is a guard against accident, not against the
   operator.
 
+  ## A DELETE's timeouts
+
+  A provider's DELETE, which only its `delete_remote/1` sends, gets short
+  timeouts: 5 seconds to connect and 10 to receive, which also caps the
+  whole response (`:request_timeout`). The soft-delete purger asks each
+  provider to delete its expired videos within one 30-second deadline for
+  every schema and environment (`Brando.Worker.SoftDeletePurger`); left to
+  Req, a provider that accepts the connection and never answers holds the
+  call for 15 seconds a chunk, with no limit on the whole. A delete that
+  times out is a transport error, so the purge keeps the row for the next
+  run and asks that provider nothing more this run
+  (`Brando.SoftDelete.Query.as_one_run/1`). A delete the provider made after
+  the call gave up is found gone next time, which every provider takes as
+  done. The retry of a delete with `delete_remote_on: :on_delete`
+  (`Brando.Worker.VideoRemoteDelete`) sends the same request.
+
+  Set them per provider, in milliseconds, beside `:req_options`:
+
+      config :brando, Brando.Videos.Uploaders.Mux,
+        delete_connect_timeout: 5_000,
+        delete_receive_timeout: 10_000
+
+  They win over the same keys in `:req_options`, which tune the provider's
+  other calls, and a configured `:connect_options` keeps its other entries.
+  With a `:finch` pool configured, the pool's own `conn_opts` set the
+  connect timeout.
+
   ## `nil` is not absent
 
   Reads `nil` as absent as well as unset: `Application.put_env(key, nil)` is not
@@ -87,11 +117,29 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
   """
   @spec merge(module(), keyword()) :: keyword()
   def merge(provider, built_opts) do
-    configured =
-      :brando
-      |> Application.get_env(provider, [])
-      |> Keyword.get(:req_options)
+    config = Application.get_env(:brando, provider, [])
+    configured = Keyword.get(config, :req_options) || []
 
-    Keyword.merge(configured || [], built_opts)
+    configured
+    |> put_delete_timeouts(built_opts[:method], config)
+    |> Keyword.merge(built_opts)
+  end
+
+  defp put_delete_timeouts(opts, :delete, config) do
+    connect_timeout = Keyword.get(config, :delete_connect_timeout, @delete_connect_timeout)
+    receive_timeout = Keyword.get(config, :delete_receive_timeout, @delete_receive_timeout)
+
+    opts
+    |> Keyword.merge(receive_timeout: receive_timeout, request_timeout: receive_timeout)
+    |> put_connect_timeout(connect_timeout)
+  end
+
+  defp put_delete_timeouts(opts, _method, _config), do: opts
+
+  # Req refuses `:connect_options` beside a `:finch` pool.
+  defp put_connect_timeout(opts, timeout) do
+    if Keyword.has_key?(opts, :finch),
+      do: opts,
+      else: Keyword.put(opts, :connect_options, Keyword.put(opts[:connect_options] || [], :timeout, timeout))
   end
 end

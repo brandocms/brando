@@ -1,0 +1,1 @@
+- A video provider's delete gives up after 5 seconds to connect and 10 for the answer, so one provider that hangs no longer holds up the nightly purge of everything else; set `delete_connect_timeout` and `delete_receive_timeout` in the provider's config to change them.
