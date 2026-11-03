@@ -10,8 +10,13 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
   # prop form, :any
   # prop translations, :any
   # prop form_cid, :any
+  # prop read_generation, :integer — the form's `Boundary.read_generation/0`:
+  #   a change draws the fields again, so inputs that keep read decisions
+  #   (`Input.Entries`, in a subform's rows too) decide anew
 
   def render(assigns) do
+    assigns = assign_new(assigns, :read_generation, fn -> nil end)
+
     ~H"""
     <fieldset
       :if={!@fieldset.superuser or superuser?(@current_user)}
@@ -33,6 +38,7 @@ defmodule BrandoAdmin.Components.Form.Fieldset do
         current_user={@current_user}
         form_cid={@form_cid}
         form_id={@form_id}
+        read_generation={@read_generation}
       />
     </fieldset>
     """

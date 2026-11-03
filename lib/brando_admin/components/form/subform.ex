@@ -18,6 +18,8 @@ defmodule BrandoAdmin.Components.Form.Subform do
   # prop label, :string
   # prop instructions, :string
   # prop placeholder, :string
+  # prop read_generation, :integer — the form's (`Fieldset`): a change draws
+  #   the rows again, so their inputs that keep read decisions decide anew
 
   # A row's own field (a multi select in it) changed: replace that row in the
   # form's latest list, not in the copy this subform last rendered with.
@@ -34,6 +36,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
       |> assign(assigns)
       |> prepare_subform_component()
       |> assign_new(:open_entries, fn -> %{} end)
+      |> assign_new(:read_generation, fn -> nil end)
       |> assign_relation()
       |> assign(
         :empty_subform_fields,
@@ -79,6 +82,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
               parent_form_id={@parent_form_id}
               subform_id={@id}
               current_user={@current_user}
+              read_generation={@read_generation}
             />
           </div>
         </.inputs_for>
@@ -210,6 +214,7 @@ defmodule BrandoAdmin.Components.Form.Subform do
                         parent_form_id={@parent_form_id}
                         subform_id={@id}
                         current_user={@current_user}
+                        read_generation={@read_generation}
                       />
                     </div>
                     <div :if={@table?} class="subform-row-end">

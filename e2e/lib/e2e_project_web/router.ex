@@ -63,6 +63,7 @@ defmodule E2eProjectWeb.Router do
       post "/synchronized-translation", E2EFixtureController, :synchronized_translation
       post "/dashboard-access/:mode", E2EFixtureController, :dashboard_access
       post "/authorization/:role", E2EFixtureController, :authorization
+      post "/masked-entries-fixtures", E2EFixtureController, :masked_entries
       post "/authorization-sites/:action", E2EAuthorizationController, :run
       post "/webhook-receiver/:inbox", E2EWebhookReceiverController, :receive_delivery
       get "/webhook-receiver/:inbox", E2EWebhookReceiverController, :list

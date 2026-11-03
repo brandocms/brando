@@ -1,0 +1,1 @@
+- With group authorization, a form's related entries input no longer names a selected entry the editor may not read: the row shows as an entry they can't view, keeps the link when the form is saved, and can still be moved or removed.

@@ -57,6 +57,29 @@ defmodule BrandoAdmin.Components.Content.Identifier do
   end
 
   @doc """
+  A selected entry the viewer may not read: its place, without its title,
+  URL, cover or type.
+  """
+  attr :draggable, :boolean, default: false
+  slot :delete
+
+  def masked(assigns) do
+    ~H"""
+    <span :if={@draggable} class="identifier-grip" aria-hidden="true">
+      <i></i><i></i><i></i><i></i><i></i><i></i>
+    </span>
+    <span class="identifier-cover"><.icon name="lock" /></span>
+    <span class="identifier-copy">
+      <span class="identifier-title">{masked_label()}</span>
+    </span>
+    <span :if={@delete != []} class="identifier-remove remove">{render_slot(@delete)}</span>
+    """
+  end
+
+  @doc "What stands for an entry the viewer may not read."
+  def masked_label, do: gettext("An entry you can't view")
+
+  @doc """
   Where a link to the entry goes: its path on this site, or, for an entry its
   blueprint links elsewhere (`absolute_url ..., link_others_to:`), an arrow and
   the destination's host, with the whole address on hover.

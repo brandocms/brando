@@ -13,6 +13,8 @@ defmodule BrandoAdmin.Components.Form.Subform.Field do
   # prop instructions, :string
   # prop placeholder, :string
   # prop cardinality, :atom
+  # prop read_generation, :integer — not read here: the subform passes it so
+  #   that a change draws its rows, and their inputs, again (`Subform`)
 
   def render(assigns) do
     assigns =

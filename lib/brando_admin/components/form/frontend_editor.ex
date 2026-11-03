@@ -217,6 +217,7 @@ defmodule BrandoAdmin.Components.Form.FrontendEditor do
               current_user={@current_user}
               form_cid={@myself}
               form_id={@id}
+              read_generation={@read_generation}
             />
           </.form>
 

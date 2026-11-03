@@ -1156,6 +1156,52 @@ defmodule E2EFixtureController do
     json(conn, %{user_id: user.id})
   end
 
+  # With group authorization: the second editor may edit projects and read
+  # no pages, and a project's related entries name a page and a project. Its
+  # form shows the page as an entry they can't view (`:entries` input).
+  def masked_entries(conn, _params) do
+    [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
+    Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
+    alias Brando.Authorization.{Catalog, Groups, Scope}
+    alias E2eProject.Projects.Project
+
+    owner = get_admin_user()
+    user = Brando.Users.get_user!(%{matches: %{email: "editor@brandocms.com"}})
+
+    for scope <- [Scope.installation(owner), Scope.standalone(owner)] do
+      {:ok, groups} = Groups.list(scope)
+      for group <- groups, do: Groups.remove_member(scope, group.id, user.id)
+    end
+
+    keys = ~w(brando.admin.access brando.profile.read brando.profile.update brando.images.read brando.files.read)
+    keys = keys ++ for action <- [:read, :update, :publish], do: Catalog.get(action, Project).key
+    {:ok, group} = Groups.create(Scope.standalone(owner), %{name: "Project editors"}, keys)
+    {:ok, :ok} = Groups.add_member(Scope.standalone(owner), group.id, user.id)
+
+    page =
+      Brando.Repo.insert!(%Brando.Pages.Page{
+        title: "Staff handbook",
+        uri: "staff-handbook-#{System.unique_integer([:positive])}",
+        language: :en,
+        status: :published,
+        template: "default.html",
+        creator_id: owner.id
+      })
+
+    attrs = %{status: :published, language: :en, creator_id: owner.id}
+    slug = &"#{&1}-#{System.unique_integer([:positive])}"
+    related = Brando.Repo.insert!(struct(Project, Map.merge(attrs, %{title: "The garden rooms", slug: slug.("garden")})))
+    project = Brando.Repo.insert!(struct(Project, Map.merge(attrs, %{title: "Havglimt retreat", slug: slug.("havglimt")})))
+    {:ok, page_identifier} = Brando.Content.create_identifier(Brando.Pages.Page, page)
+    {:ok, related_identifier} = Brando.Content.create_identifier(Project, related)
+    join = Project.__schema__(:association, :related_entries).related
+
+    for {identifier, sequence} <- Enum.with_index([page_identifier, related_identifier]),
+        do: Brando.Repo.insert!(struct(join, parent_id: project.id, identifier_id: identifier.id, sequence: sequence))
+
+    json(conn, %{project_id: project.id})
+  end
+
   def user_directory(conn, %{"action" => "create"}) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)

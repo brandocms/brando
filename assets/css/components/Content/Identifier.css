@@ -25,6 +25,7 @@
   }
   .identifier-copy { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
   .identifier-title { color: var(--brando-ink); font: 500 var(--brando-text-lg)/19px var(--brando-font-sans); overflow-wrap: anywhere; }
+  &.masked .identifier-title { color: var(--brando-muted); font-weight: 400; }
   .identifier-url { color: var(--brando-muted); font: var(--brando-text-xs)/16px var(--brando-font-sans); overflow-wrap: anywhere; }
   .identifier-details { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; color: var(--brando-muted); font: var(--brando-text-xs)/16px var(--brando-font-sans); }
   .identifier-details > span { display: inline-flex; align-items: center; gap: 6px; }

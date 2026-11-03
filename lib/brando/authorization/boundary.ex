@@ -46,6 +46,7 @@ defmodule Brando.Authorization.Boundary do
   @scope_key {__MODULE__, :scope}
   @presentation_key {__MODULE__, :presentation}
   @query_action_key {__MODULE__, :query_action}
+  @read_generation_key {__MODULE__, :read_generation}
 
   def current_scope, do: Process.get(@scope_key)
   def put_scope(%Scope{} = scope), do: Process.put(@scope_key, scope)
@@ -62,6 +63,30 @@ defmodule Brando.Authorization.Boundary do
     case Process.get(@presentation_key) do
       %{scope: scope} = snapshot -> if scope == current_scope(), do: snapshot
       _ -> nil
+    end
+  end
+
+  @doc """
+  A count this process raises (`next_read_generation/0`) whenever what its
+  admin may read can have changed: on a change of permissions
+  (`{:authorization_changed, _}`), and when a form reads its entry again,
+  since a record read policy (an owner check) can decide otherwise with the
+  same grants. Presentation that keeps read decisions between renders keys
+  them on it, with the grants.
+
+  Group authorization only: without it everything may be read
+  (`readable_entries/1`, `identifiers/1`), so the count stays put and
+  nothing is read again for it.
+  """
+  def read_generation, do: Process.get(@read_generation_key, 0)
+
+  def next_read_generation do
+    if Engine.enabled?() do
+      generation = read_generation() + 1
+      Process.put(@read_generation_key, generation)
+      generation
+    else
+      read_generation()
     end
   end
 

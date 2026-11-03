@@ -2190,6 +2190,11 @@ msgstr "En oppføring publiseres til planlagt tid."
 msgid "An entry is unpublished at its scheduled time."
 msgstr "En oppføring avpubliseres til planlagt tid."
 
+#: lib/brando_admin/components/content/identifier.ex
+#, elixir-autogen, elixir-format
+msgid "An entry you can't view"
+msgstr "En oppføring du ikke har tilgang til"
+
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
