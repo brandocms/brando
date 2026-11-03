@@ -358,7 +358,7 @@ defmodule Brando.SearchTest do
       # and the site's identity and SEO for its identifier
       %{rows: tables} =
         Repo.query!(
-          "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND (tablename LIKE 'pages%' OR tablename LIKE 'content_%' OR tablename LIKE 'sites_%' OR tablename = 'search_documents')"
+          "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND (tablename LIKE 'pages%' OR tablename LIKE 'content_%' OR tablename LIKE 'sites_%' OR tablename LIKE 'navigation_%' OR tablename = 'search_documents')"
         )
 
       for [table] <- tables do
