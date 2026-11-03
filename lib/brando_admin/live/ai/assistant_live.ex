@@ -1771,11 +1771,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   def handle_event("share_page", _, socket) do
     %{proposal: proposal, preview: preview, current_user: user} = socket.assigns
-    {target, _} = Enum.find(proposal.targets, fn {target, _} -> Proposals.Proposal.key(target) == preview.key end)
 
-    case Proposals.Preview.share(proposal, target, user, preview_target: preview.target, shared: !!socket.assigns.shared) do
-      {:ok, url, days} ->
-        {:noreply, assign(socket, :share_url, %{url: url, days: days})}
+    with {target, _} <- Enum.find(proposal.targets, fn {target, _} -> Proposals.Proposal.key(target) == preview.key end),
+         {:ok, url, days} <-
+           Proposals.Preview.share(proposal, target, user,
+             preview_target: preview.target,
+             shared: !!socket.assigns.shared
+           ) do
+      {:noreply, assign(socket, :share_url, %{url: url, days: days})}
+    else
+      # The proposal changed before its event could render the preview again.
+      nil ->
+        {:noreply, socket |> discard_previews() |> assign(:preview, nil)}
 
       {:error, :forbidden} ->
         {:noreply, put_toast(socket, :error, gettext("You do not have permission to share pages."))}

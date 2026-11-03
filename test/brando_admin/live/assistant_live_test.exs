@@ -794,6 +794,31 @@ defmodule BrandoAdmin.AssistantLiveTest do
 
       assert frame_key(render(view)) == key
     end
+
+    # Until that event, the frame can show an entry the new proposal left out.
+    @tag :capture_log
+    test "sharing a page the proposal no longer holds closes the preview", %{conn: conn, current_user: user} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      view
+      |> element(~s(button.assistant-card-preview[phx-value-key="Brando.Pages.Page:#{c.identity.id}"]))
+      |> render_click()
+
+      view |> element(~s(button[phx-value-target="blocks"])) |> render_click()
+
+      {:ok, other} =
+        [%Brando.Content.Proposals.SetFields{target: {Page, c.naming.id}, fields: %{uri: "naming-renamed"}}]
+        |> Brando.Content.Proposals.propose(user, conversation_id: c.conversation.id)
+
+      c.conversation |> Ecto.Changeset.change(proposal_id: other.id) |> Brando.Repo.update!()
+      content = Jason.encode!(%{proposal_id: other.id, version: 1, problems: []})
+      fields = %{role: "tool", tool_call_id: "call-1", tool_name: "prepare_proposal", content: content}
+      message = Brando.Repo.insert!(struct(Agent.Message, Map.put(fields, :conversation_id, c.conversation.id)))
+      send(view.pid, {:agent, c.conversation.id, {:message, message}})
+
+      view |> element(~s(button[phx-click="share_page"])) |> render_click()
+      refute has_element?(view, ~s(button[phx-click="share_page"]))
+    end
   end
 
   describe "child block changes" do
