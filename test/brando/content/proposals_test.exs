@@ -591,6 +591,15 @@ defmodule Brando.Content.ProposalsTest do
       Preview.discard([proposed_key, before_key])
     end
 
+    test "a discarded proposal makes no page link", c do
+      assert {:ok, proposal} = Proposals.propose(workflow(c), c.user)
+      :ok = Proposals.cancel(proposal.id, c.user)
+
+      # The proposal as it was read before another tab discarded it.
+      assert {:error, message} = Preview.share(proposal, {Page, c.identity.id}, c.user, preview_target: :blocks)
+      assert is_binary(message)
+    end
+
     test "a content type without a preview target says so", c do
       ops = [%CreateEntry{schema: Brando.Pages.Fragment, ref: "f", fields: %{key: "f", parent_key: "p", language: "en"}}]
       assert {:ok, proposal} = Proposals.propose(ops, c.user)

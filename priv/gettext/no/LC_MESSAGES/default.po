@@ -17286,6 +17286,7 @@ msgid "The form's default markup, live from the fields beside it."
 msgstr "Skjemaets standardoppmerking, oppdatert fra feltene ved siden av."
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "The frontend assets for this preview could not be captured, so no link was created. Check the server log and try again."
 msgstr "Frontend-ressursene for denne forhåndsvisningen kunne ikke lagres, så ingen lenke ble laget. Sjekk serverloggen og prøv igjen."
@@ -17357,6 +17358,11 @@ msgstr "Biblioteket har allerede dette bildet:"
 #, elixir-autogen, elixir-format
 msgid "The link could not be applied. Check the destination and selection."
 msgstr "Lenken kunne ikke legges til. Kontroller lenkemålet og den valgte teksten."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The link could not be created. Check the server log and try again."
+msgstr "Lenken kunne ikke lages. Sjekk serverloggen og prøv igjen."
 
 #: lib/brando/users/user_notifier.ex
 #, elixir-autogen, elixir-format
@@ -17551,6 +17557,11 @@ msgstr "Forhåndsvisningen manglet noen endringer, så den ble oppdatert."
 #, elixir-autogen, elixir-format
 msgid "The previous preview is still open. Check the target configuration and your access, then try again."
 msgstr "Den forrige forhåndsvisningen er fortsatt åpen. Kontroller målkonfigurasjonen og tilgangen din, og prøv igjen."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The proposal has changed: review the new version before sharing."
+msgstr "Forslaget er endret: se gjennom den nye versjonen før du deler."
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format

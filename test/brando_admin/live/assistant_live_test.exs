@@ -848,6 +848,246 @@ defmodule BrandoAdmin.AssistantLiveTest do
       render_click(view, "share_page", %{})
       assert :sys.get_state(view.pid).socket.assigns.preview == nil
     end
+
+    defp open_blocks_preview(view, c) do
+      view
+      |> element(~s(button.assistant-card-preview[phx-value-key="Brando.Pages.Page:#{c.identity.id}"]))
+      |> render_click()
+
+      view |> element(~s(button[phx-value-target="blocks"])) |> render_click()
+    end
+
+    defp share_page(view) do
+      view |> element(~s(button[phx-click="share_page"])) |> render_click()
+      assert has_element?(view, "#assistant-page-link")
+    end
+
+    # A click sent before the page's last patch reached the browser arrives
+    # after the preview or its proposal is gone.
+    @tag :capture_log
+    test "a share click after the preview closed leaves the page working", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      open_blocks_preview(view, c)
+      view |> element("button", "All changes") |> render_click()
+
+      render_click(view, "share_page", %{})
+      assert has_element?(view, ".assistant-cards")
+      refute has_element?(view, "#assistant-page-link")
+    end
+
+    @tag :capture_log
+    test "another conversation opens without the last one's preview", %{conn: conn, current_user: user} = c do
+      {:ok, other} = Agent.start_conversation(user)
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      for path <- ["/admin/assistant/#{other.id}", "/admin/assistant"] do
+        render_patch(view, "/admin/assistant/#{c.conversation.id}")
+        open_blocks_preview(view, c)
+        render_patch(view, path)
+
+        render_click(view, "share_page", %{})
+        assert render(view) =~ "No proposal yet"
+        refute has_element?(view, "#assistant-page-link")
+      end
+    end
+
+    # The links made in one conversation do not show in the next one's
+    # proposal, nor does its preview.
+    @tag :capture_log
+    test "another conversation's proposal shows without the last one's links", %{conn: conn, current_user: user} = c do
+      {:ok, other} = Agent.start_conversation(user)
+
+      {:ok, proposal} =
+        [%Brando.Content.Proposals.SetFields{target: {Page, c.identity.id}, fields: %{uri: "identity-renamed"}}]
+        |> Brando.Content.Proposals.propose(user, conversation_id: other.id)
+
+      other |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      render_click(view, "share_review", %{"keys" => ["Brando.Pages.Page:#{c.identity.id}"]})
+      assert has_element?(view, "#assistant-review-link")
+      open_blocks_preview(view, c)
+      share_page(view)
+
+      render_patch(view, "/admin/assistant/#{other.id}")
+      assert has_element?(view, "#proposal-#{proposal.id}")
+      refute has_element?(view, ".assistant-preview")
+      refute has_element?(view, "#assistant-review-link")
+      refute has_element?(view, "#assistant-page-link")
+    end
+
+    @tag :capture_log
+    test "a discarded proposal makes no page link", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      open_blocks_preview(view, c)
+      view |> element(~s(button[phx-click="cancel_proposal"])) |> render_click()
+
+      refute has_element?(view, ~s(button[phx-click="share_page"]))
+      render_click(view, "share_page", %{})
+      refute has_element?(view, "#assistant-page-link")
+    end
+
+    @tag :capture_log
+    test "a proposal discarded in another tab makes no page link", %{conn: conn, current_user: user} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      key = view |> open_blocks_preview(c) |> frame_key()
+      :ok = Brando.Content.Proposals.cancel(c.proposal.id, user)
+
+      view |> element(~s(button[phx-click="share_page"])) |> render_click()
+      refute has_element?(view, "#assistant-page-link")
+      refute has_element?(view, ~s(button[phx-click="share_page"]))
+      assert frame_key(render(view)) == key
+    end
+
+    # Only a changed proposal renders the frame again: a retry after any
+    # other failure keeps its scroll and a tab opened from it.
+    @tag :capture_log
+    test "a share that fails for another reason leaves the open preview", %{conn: conn, current_user: user} = c do
+      release = Path.join(System.tmp_dir!(), "brando-assistant-share-#{System.unique_integer([:positive])}")
+      File.mkdir_p!(release)
+      on_exit(fn -> File.rm_rf(release) end)
+
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      key = view |> open_blocks_preview(c) |> frame_key()
+
+      put_test_env(:release_static_path, release)
+      Brando.endpoint().subscribe("user:#{user.id}")
+      view |> element(~s(button[phx-click="share_page"])) |> render_click()
+
+      # Said in the editor's words, not as the reason's name.
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
+      refute message =~ "no_frontend_assets"
+      assert frame_key(render(view)) == key
+      assert has_element?(view, ~s(button[phx-click="share_page"]))
+      refute has_element?(view, "#assistant-page-link")
+    end
+
+    # A reason is not always an atom or a message: the asset capture names a
+    # file it could not read in a tuple, and a stored preview's insert returns
+    # a changeset.
+    @tag :capture_log
+    test "a share refused with a reason of any shape leaves the page working", %{conn: conn, current_user: user} = c do
+      release = Path.join(System.tmp_dir!(), "brando-assistant-share-#{System.unique_integer([:positive])}")
+      File.mkdir_p!(release)
+      on_exit(fn -> File.rm_rf(release) end)
+      # A link to itself: the capture cannot read it.
+      File.ln_s!("loop.js", Path.join(release, "loop.js"))
+
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      key = view |> open_blocks_preview(c) |> frame_key()
+
+      put_test_env(:release_static_path, release)
+      Brando.endpoint().subscribe("user:#{user.id}")
+
+      {_, log} =
+        ExUnit.CaptureLog.with_log(fn -> view |> element(~s(button[phx-click="share_page"])) |> render_click() end)
+
+      # The capture's tuple reached the page, which logged it.
+      assert log =~ "asset_file_stat_failed"
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
+      refute message =~ "asset_file_stat_failed"
+      assert frame_key(render(view)) == key
+      refute has_element?(view, "#assistant-page-link")
+    end
+
+    @tag :capture_log
+    test "discarding the proposal takes its page link away", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      open_blocks_preview(view, c)
+      share_page(view)
+
+      view |> element(~s(button[phx-click="cancel_proposal"])) |> render_click()
+      refute has_element?(view, "#assistant-page-link")
+    end
+
+    # A run the page could not hear from stands in for its proposal event.
+    @tag :capture_log
+    test "a finished run's proposal renders the open preview again", %{conn: conn, current_user: user} = c do
+      run = remote_run(c.conversation, %{})
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      key = view |> open_blocks_preview(c) |> frame_key()
+      share_page(view)
+
+      op = %Brando.Content.Proposals.InsertBlock{
+        target: {Page, c.identity.id},
+        module: c.text_module.id,
+        texts: %{body: "<p>Written again</p>"}
+      }
+
+      {:ok, other} = Brando.Content.Proposals.propose([op], user, conversation_id: c.conversation.id)
+      c.conversation |> Ecto.Changeset.change(proposal_id: other.id) |> Brando.Repo.update!()
+      run |> Ecto.Changeset.change(status: "completed", finished_at: DateTime.utc_now()) |> Brando.Repo.update!()
+
+      send(view.pid, :check_run)
+      new_key = frame_key(render(view))
+      assert new_key != key
+      assert {:ok, html} = Brando.LivePreview.get_cache(new_key)
+      assert html =~ "Written again"
+      refute has_element?(view, "#assistant-page-link")
+    end
+
+    @tag :capture_log
+    test "a finished run without a new proposal leaves the open preview", %{conn: conn} = c do
+      run = remote_run(c.conversation, %{})
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      key = view |> open_blocks_preview(c) |> frame_key()
+      share_page(view)
+
+      run |> Ecto.Changeset.change(status: "completed", finished_at: DateTime.utc_now()) |> Brando.Repo.update!()
+
+      send(view.pid, :check_run)
+      assert frame_key(render(view)) == key
+      assert has_element?(view, "#assistant-page-link")
+    end
+
+    # Leaving a change out in another tab points the conversation at the
+    # refined proposal; a refused share shows that one.
+    @tag :capture_log
+    test "a share refused for a proposal refined in another tab shows the refined one", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      open_blocks_preview(view, c)
+
+      {:ok, refined} = Brando.Content.Proposals.leave_out(c.proposal.id, c.proposal.version, [0], c.current_user)
+      c.conversation |> Ecto.Changeset.change(proposal_id: refined.id) |> Brando.Repo.update!()
+
+      Brando.endpoint().subscribe("user:#{c.current_user.id}")
+      view |> element(~s(button[phx-click="share_page"])) |> render_click()
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}
+      assert has_element?(view, "#proposal-#{refined.id}")
+      refute has_element?(view, "#assistant-page-link")
+      assert {:ok, html} = view |> render() |> frame_key() |> Brando.LivePreview.get_cache()
+      assert html =~ "Written in the assistant"
+    end
+
+    # A link shows the page as it was rendered when it was made: it goes when
+    # the frame is rendered again or closed.
+    @tag :capture_log
+    test "a page link goes with the frame it was made for", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      open_blocks_preview(view, c)
+      share_page(view)
+
+      # The viewport and the highlights do not render the frame again.
+      view |> element(~s(button[phx-value-viewport="mobile"])) |> render_click()
+      view |> element(~s(input[phx-click="toggle_highlight"])) |> render_click()
+      assert has_element?(view, "#assistant-page-link")
+
+      view |> element(~s(button[phx-value-version="before"])) |> render_click()
+      refute has_element?(view, "#assistant-page-link")
+      view |> element(~s(button[phx-value-version="proposed"])) |> render_click()
+      refute has_element?(view, "#assistant-page-link")
+
+      share_page(view)
+      view |> element(~s(nav button[phx-value-key="new:example_hotel"])) |> render_click()
+      refute has_element?(view, "#assistant-page-link")
+
+      view |> element(~s(nav button[phx-value-key="Brando.Pages.Page:#{c.identity.id}"])) |> render_click()
+      view |> element(~s(button[phx-value-target="blocks"])) |> render_click()
+      share_page(view)
+      view |> element("button", "All changes") |> render_click()
+      open_blocks_preview(view, c)
+      refute has_element?(view, "#assistant-page-link")
+    end
   end
 
   describe "child block changes" do

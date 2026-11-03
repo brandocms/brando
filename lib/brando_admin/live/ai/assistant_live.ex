@@ -17,6 +17,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   use Gettext, backend: Brando.Gettext
 
   import Ecto.Query, only: [from: 2]
+  require Logger
 
   alias Brando.AI.Agent
   alias Brando.Content.Proposals
@@ -113,9 +114,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
         if connected?(socket), do: Agent.subscribe(conversation.id)
         run = Agent.latest_run(id, user)
+        same? = match?(%{id: ^id}, socket.assigns.conversation)
 
         {:noreply,
          socket
+         |> then(&if(same?, do: &1, else: leave_review(&1)))
          # A run still working after a reconnect or a restart can be stopped.
          |> assign(conversation: conversation, error: nil, receipt: nil, progress: nil)
          |> assign_run(run)
@@ -186,6 +189,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
     {:noreply,
      socket
+     |> leave_review()
      |> assign(
        conversation: nil,
        messages: [],
@@ -939,6 +943,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         media={@media}
         aliases={@aliases}
         share_url={@share_url}
+        shareable?={page_shareable?(@proposal)}
       />
 
       <div :if={!@preview} class="assistant-section-head">
@@ -1148,6 +1153,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   attr :media, :map, required: true
   attr :aliases, :map, default: %{}
   attr :share_url, :string, default: nil
+  attr :shareable?, :boolean, default: false
 
   defp page_preview(assigns) do
     assigns = assign(assigns, :entry, Enum.find(assigns.review, &(&1.key == assigns.preview.key)))
@@ -1255,7 +1261,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <.icon name="external-link" />{gettext("Open in a new tab")}
           </a>
           <button
-            :if={@preview.version == "proposed" and match?({:ok, _}, @preview.frame)}
+            :if={@shareable? and @preview.version == "proposed" and match?({:ok, _}, @preview.frame)}
             type="button"
             class="assistant-frame-action"
             phx-click="share_page"
@@ -1769,11 +1775,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   def handle_event("cancel_share", _, socket), do: {:noreply, assign(socket, :share_choice, nil)}
 
-  def handle_event("share_page", _, socket) do
-    %{proposal: proposal, preview: preview, current_user: user} = socket.assigns
+  # A click sent before the last patch reached the browser can arrive after
+  # the preview closed or the proposal went (refused at review, or another
+  # conversation opened).
+  def handle_event("share_page", _, %{assigns: %{proposal: proposal, preview: %{}}} = socket)
+      when not is_nil(proposal) do
+    %{preview: preview, current_user: user} = socket.assigns
 
-    with %{} <- proposal,
-         %{} <- preview,
+    with true <- page_shareable?(proposal),
          {target, _} <- Enum.find(proposal.targets, fn {target, _} -> Proposals.Proposal.key(target) == preview.key end),
          {:ok, url, days} <-
            Proposals.Preview.share(proposal, target, user,
@@ -1782,7 +1791,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
            ) do
       {:noreply, assign(socket, :share_url, %{url: url, days: days})}
     else
-      # The proposal changed, or was refused, before the page took the button away.
+      false ->
+        {:noreply, socket}
+
+      # The proposal changed before its event could render the preview again.
       nil ->
         {:noreply, socket |> discard_previews() |> assign(:preview, nil)}
 
@@ -1797,10 +1809,31 @@ defmodule BrandoAdmin.AI.AssistantLive do
            gettext("A proposal with problems cannot be shared. Leave out the changes with problems first.")
          )}
 
+      # A proposal discarded or refined in another tab shows as it is now.
+      # Each render reloads the frame, so only a new proposal renders it.
       {:error, reason} ->
-        {:noreply, put_toast(socket, :error, to_string(reason))}
+        shown = proposal_version(proposal)
+
+        socket =
+          if socket.assigns.shared,
+            do: socket,
+            else: socket |> refresh_conversation() |> assign_proposal()
+
+        case proposal_version(socket.assigns.proposal) do
+          ^shown ->
+            {:noreply, put_toast(socket, :error, share_refusal(reason))}
+
+          nil ->
+            {:noreply, socket |> render_open_preview() |> put_toast(:error, share_refusal(reason))}
+
+          _refined ->
+            message = gettext("The proposal has changed: review the new version before sharing.")
+            {:noreply, socket |> render_open_preview() |> put_toast(:error, message)}
+        end
     end
   end
+
+  def handle_event("share_page", _, socket), do: {:noreply, socket |> discard_previews() |> assign(:preview, nil)}
 
   # The proposal on screen, or one that can no longer be loaded for review.
   # The click names the one it was made on: if the review has changed to
@@ -1914,7 +1947,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         socket = assign_run(socket, Agent.latest_run(id, socket.assigns.current_user))
 
         if busy? and not running?(socket.assigns.run),
-          do: {:noreply, socket |> refresh_conversation() |> assign_messages() |> assign_proposal()},
+          do: {:noreply, finished_run(socket)},
           else: {:noreply, socket}
 
       nil ->
@@ -1958,10 +1991,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp agent_event({:message, _}, socket), do: {:noreply, assign_new_messages(socket)}
 
-  defp agent_event({:proposal, _}, socket) do
-    socket = socket |> refresh_conversation() |> assign_proposal()
-    {:noreply, if(preview = socket.assigns.preview, do: render_preview(socket, preview), else: socket)}
-  end
+  defp agent_event({:proposal, _}, socket),
+    do: {:noreply, socket |> refresh_conversation() |> assign_proposal() |> render_open_preview()}
 
   defp agent_event({:attachments, _}, socket), do: {:noreply, refresh_conversation(socket)}
   # Events from different processes may arrive out of order: a stale
@@ -1971,6 +2002,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
     do: {:noreply, assign_run(socket, Agent.latest_run(socket.assigns.conversation.id, socket.assigns.current_user))}
 
   defp agent_event(_event, socket), do: {:noreply, socket}
+
+  # Each render reloads the frame and resets its scroll: as the proposal
+  # event, only a new proposal renders the open preview again.
+  defp finished_run(socket) do
+    shown = proposal_version(socket.assigns.proposal)
+    socket = socket |> refresh_conversation() |> assign_messages() |> assign_proposal()
+
+    if proposal_version(socket.assigns.proposal) == shown, do: socket, else: render_open_preview(socket)
+  end
+
+  defp proposal_version(nil), do: nil
+  defp proposal_version(proposal), do: {proposal.id, proposal.version}
 
   ## Page preview
 
@@ -1983,6 +2026,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   defp render_preview(socket, preview), do: preview!(socket, preview)
+
+  defp render_open_preview(socket),
+    do: if(preview = socket.assigns.preview, do: render_preview(socket, preview), else: socket)
 
   defp preview!(socket, preview) do
     socket = discard_previews(socket)
@@ -2015,10 +2061,44 @@ defmodule BrandoAdmin.AI.AssistantLive do
     end
   end
 
+  # A page link shows the frame it was made from, so it goes with the frame.
   defp discard_previews(socket) do
     Proposals.Preview.discard(socket.assigns.preview_keys)
-    assign(socket, :preview_keys, [])
+    assign(socket, preview_keys: [], share_url: nil)
   end
+
+  # The preview, the links and the entries to publish belong to the proposal
+  # of the conversation the page leaves.
+  defp leave_review(socket) do
+    socket
+    |> discard_previews()
+    |> assign(preview: nil, publish: MapSet.new(), review_link: nil, share_choice: nil)
+  end
+
+  # Why a page link was not made, in the editor's words. A proposal's own
+  # reasons come as translated messages; the site's asset and storage reasons
+  # (atoms, tuples, a changeset) are logged and named by what failed.
+  defp share_refusal(message) when is_binary(message), do: message
+
+  defp share_refusal(:no_preview_target),
+    do: gettext("Page preview is not configured for this content type. Review the changes in the entry card.")
+
+  # As the entry form's share: anything but a missing site or a stored
+  # preview's failed insert is the site's assets failing to be captured.
+  defp share_refusal(reason) do
+    Logger.error("Sharing an assistant page failed: #{inspect(reason)}")
+
+    if reason == :missing_site_context or is_struct(reason, Ecto.Changeset),
+      do: gettext("The link could not be created. Check the server log and try again."),
+      else:
+        gettext(
+          "The frontend assets for this preview could not be captured, so no link was created. Check the server log and try again."
+        )
+  end
+
+  # A page link is made for a proposal a review link could still show.
+  defp page_shareable?(nil), do: false
+  defp page_shareable?(proposal), do: proposal.status in ~w(pending approved applied)
 
   def terminate(_reason, socket) do
     Proposals.Preview.discard(socket.assigns[:preview_keys] || [])
@@ -2174,11 +2254,15 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   # An error belongs to the proposal it was shown with: a failed apply keeps
   # it over the same proposal reloaded, another proposal starts without it.
+  # A page link made before the proposal was discarded or undone goes with it.
   defp assign_proposal(socket) do
-    case proposal_id(socket.assigns) do
-      nil -> socket |> assign(proposal: nil, unloadable_id: nil, review: [], error: nil) |> assign_media()
-      id -> assign_proposal(socket, id)
-    end
+    socket =
+      case proposal_id(socket.assigns) do
+        nil -> socket |> assign(proposal: nil, unloadable_id: nil, review: [], error: nil) |> assign_media()
+        id -> assign_proposal(socket, id)
+      end
+
+    if page_shareable?(socket.assigns.proposal), do: socket, else: assign(socket, :share_url, nil)
   end
 
   defp assign_proposal(socket, id) do
