@@ -843,20 +843,22 @@ defmodule Brando.Content.Blocks do
     nested? = Repo.repo().in_transaction?()
 
     Repo.transaction(fn ->
-      if version != nil and Repo.one(lock(row_version(schema, id), "FOR NO KEY UPDATE")) == version do
-        case Repo.update(changeset, update_opts) do
-          {:ok, stored} -> stored
-          {:error, _} = err when nested? -> err
-          {:error, changeset} -> Repo.rollback(changeset)
-        end
-      else
-        :changed
-      end
+      if version != nil and Repo.one(lock(row_version(schema, id), "FOR NO KEY UPDATE")) == version,
+        do: update_render(changeset, update_opts, nested?),
+        else: :changed
     end)
     |> case do
       {:ok, :changed} -> :changed
       {:ok, {:error, _} = err} -> err
       result -> result
+    end
+  end
+
+  defp update_render(changeset, update_opts, nested?) do
+    case Repo.update(changeset, update_opts) do
+      {:ok, stored} -> stored
+      {:error, _} = err when nested? -> err
+      {:error, changeset} -> Repo.rollback(changeset)
     end
   end
 
