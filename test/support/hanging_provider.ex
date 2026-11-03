@@ -28,7 +28,7 @@ defmodule Brando.Test.HangingProvider do
   defp fill_accept_queue(_port, 0), do: raise("could not fill the accept queue of a local port")
 
   defp fill_accept_queue(port, tries) do
-    case :gen_tcp.connect({127, 0, 0, 1}, port, [active: false], 100) do
+    case :gen_tcp.connect({127, 0, 0, 1}, port, [active: false], 300) do
       {:ok, _socket} -> fill_accept_queue(port, tries - 1)
       {:error, :timeout} -> :ok
     end

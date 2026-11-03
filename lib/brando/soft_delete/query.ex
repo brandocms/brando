@@ -122,8 +122,9 @@ defmodule Brando.SoftDelete.Query do
     # its client's timeout, and the purger has one 30-second deadline for
     # every schema and environment. Its other rows stay for the next run, and
     # the other providers' rows go on. A delete gives up after 5 seconds to
-    # connect and 10 for the answer (`Brando.Videos.Uploaders.ReqOptions`),
-    # so one hanging provider leaves the run time for the rest. Several
+    # connect and 10 for the answer to come, 20 for one that trickles in
+    # (`Brando.Videos.Uploaders.ReqOptions`), so one hanging provider
+    # leaves the run time for the rest. Several
     # hanging in one run may still use up the deadline: the purger is then
     # stopped, and the rows it did not get to stay for the next run. A
     # provider that answered with an error at once, even a 5xx, may have

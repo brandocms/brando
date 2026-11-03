@@ -85,12 +85,16 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
   ## A DELETE's timeouts
 
   A provider's DELETE, which only its `delete_remote/1` sends, gets short
-  timeouts: 5 seconds to connect and 10 to receive, which also caps the
-  whole response (`:request_timeout`). The soft-delete purger asks each
-  provider to delete its expired videos within one 30-second deadline for
-  every schema and environment (`Brando.Worker.SoftDeletePurger`); left to
+  timeouts: 5 seconds to connect and 10 for the answer to come
+  (`:receive_timeout`, and `:request_timeout` for the whole answer). Finch
+  checks the request timeout only between reads, and each read waits up to
+  the receive timeout, so an answer that trickles in is cut off within
+  twice that: 20 seconds.
+
+  The soft-delete purger asks each provider to delete its expired videos
+  within one 30-second deadline for every schema and environment. Left to
   Req, a provider that accepts the connection and never answers holds the
-  call for 15 seconds a chunk, with no limit on the whole. A delete that
+  call for 15 seconds a read, with no limit on the whole. A delete that
   times out is a transport error, so the purge keeps the row for the next
   run and asks that provider nothing more this run
   (`Brando.SoftDelete.Query.as_one_run/1`). A delete the provider made after
@@ -98,16 +102,19 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
   done. The retry of a delete with `delete_remote_on: :on_delete`
   (`Brando.Worker.VideoRemoteDelete`) sends the same request.
 
-  Set them per provider, in milliseconds, beside `:req_options`:
+  Set them per provider, in milliseconds, beside `:req_options`. `nil`
+  keeps the default:
 
       config :brando, Brando.Videos.Uploaders.Mux,
         delete_connect_timeout: 5_000,
         delete_receive_timeout: 10_000
 
-  They win over the same keys in `:req_options`, which tune the provider's
-  other calls, and a configured `:connect_options` keeps its other entries.
-  With a `:finch` pool configured, the pool's own `conn_opts` set the
-  connect timeout.
+  They win over the same timeouts in `:req_options` and in Req's app-wide
+  `default_options`, which tune the provider's other calls. That includes
+  the ones nested in `:finch` and in `connect_options: [transport_opts: …]`.
+  A configured `:connect_options` or `:finch` keeps its other entries. With
+  a `:finch` pool configured, the pool's own `conn_opts` set the connect
+  timeout.
 
   ## `nil` is not absent
 
@@ -126,20 +133,43 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
   end
 
   defp put_delete_timeouts(opts, :delete, config) do
-    connect_timeout = Keyword.get(config, :delete_connect_timeout, @delete_connect_timeout)
-    receive_timeout = Keyword.get(config, :delete_receive_timeout, @delete_receive_timeout)
+    connect_timeout = Keyword.get(config, :delete_connect_timeout) || @delete_connect_timeout
+    receive_timeout = Keyword.get(config, :delete_receive_timeout) || @delete_receive_timeout
+    timeouts = [receive_timeout: receive_timeout, request_timeout: receive_timeout]
+
+    # What Req sends: `Req.new/2` puts its app-wide default options
+    # underneath, one level deep, so a `:finch` or `:connect_options` put
+    # here replaces the default's whole entry.
+    effective = Keyword.merge(Req.default_options(), opts)
 
     opts
-    |> Keyword.merge(receive_timeout: receive_timeout, request_timeout: receive_timeout)
-    |> put_connect_timeout(connect_timeout)
+    |> Keyword.merge(timeouts)
+    |> put_transport_timeouts(effective, connect_timeout, timeouts)
   end
 
   defp put_delete_timeouts(opts, _method, _config), do: opts
 
-  # Req refuses `:connect_options` beside a `:finch` pool.
-  defp put_connect_timeout(opts, timeout) do
-    if Keyword.has_key?(opts, :finch),
-      do: opts,
-      else: Keyword.put(opts, :connect_options, Keyword.put(opts[:connect_options] || [], :timeout, timeout))
+  # Req refuses `:connect_options` beside a `:finch` pool, and the pool's own
+  # options win over the top-level receive and request timeouts.
+  defp put_transport_timeouts(opts, effective, connect_timeout, timeouts) do
+    case effective[:finch] do
+      finch when is_list(finch) ->
+        Keyword.put(opts, :finch, Keyword.merge(finch, timeouts))
+
+      no_pool when no_pool in [nil, false] ->
+        Keyword.put(opts, :connect_options, put_connect_timeout(effective[:connect_options] || [], connect_timeout))
+
+      _pool_name ->
+        opts
+    end
+  end
+
+  # Req merges `:transport_opts` over `:timeout`, so a timeout there wins.
+  defp put_connect_timeout(connect_options, timeout) do
+    connect_options = Keyword.put(connect_options, :timeout, timeout)
+
+    if Keyword.has_key?(connect_options, :transport_opts),
+      do: Keyword.update!(connect_options, :transport_opts, &Keyword.put(&1, :timeout, timeout)),
+      else: connect_options
   end
 end

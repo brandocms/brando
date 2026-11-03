@@ -161,9 +161,17 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
       assert opts[:receive_timeout] == 10_000
       assert opts[:request_timeout] == 10_000
 
-      # One provider that hangs, and another that cannot be connected to, still leave the purge time.
-      assert 2 * opts[:connect_options][:timeout] + opts[:request_timeout] <
-               Brando.Worker.SoftDeletePurger.timeout(%Oban.Job{})
+      deadline = Brando.Worker.SoftDeletePurger.timeout(%Oban.Job{})
+      connect = opts[:connect_options][:timeout]
+
+      # Finch checks the request timeout only between reads, and each read
+      # waits up to the receive timeout: an answer that trickles in can take
+      # both. One such provider still leaves the purge time.
+      assert connect + opts[:request_timeout] + opts[:receive_timeout] < deadline
+
+      # A provider that accepts and never answers, and another that cannot be
+      # connected to, leave the purge time for the rest.
+      assert connect + opts[:receive_timeout] + connect < deadline
     end
 
     test "is the only request that gets them" do
@@ -193,15 +201,67 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
       assert get[:connect_options][:timeout] == 60_000
     end
 
-    test "leaves the connect timeout to a configured Finch pool" do
-      put_test_env(Mux, req_options: [finch: [name: Req.Finch]])
+    test "reads nil timeouts in the provider's config as unset" do
+      put_test_env(Mux, delete_connect_timeout: nil, delete_receive_timeout: nil)
 
       opts = ReqOptions.merge(Mux, method: :delete, url: "https://api.mux.com/video/v1/assets/a")
 
-      refute Keyword.has_key?(opts, :connect_options)
+      assert opts[:connect_options][:timeout] == 5_000
       assert opts[:receive_timeout] == 10_000
-      # Req refuses :connect_options beside :finch, so this would raise.
-      assert %Req.Request{} = Req.new(opts)
+      assert opts[:request_timeout] == 10_000
+    end
+
+    test "leaves the connect timeout to a configured Finch pool" do
+      # Req refuses :connect_options beside :finch when it sends the request.
+      assert {{:error, %Req.TransportError{reason: :timeout}}, _log} =
+               delete_at(HangingProvider.silent(), [finch: [name: Req.Finch]], delete_receive_timeout: 100)
+    end
+
+    test "wins over the timeouts in a configured Finch pool's options" do
+      finch = [name: Req.Finch, receive_timeout: 3_000, request_timeout: 3_000]
+      started = System.monotonic_time(:millisecond)
+
+      assert {{:error, %Req.TransportError{reason: :timeout}}, _log} =
+               delete_at(HangingProvider.silent(), [finch: finch], delete_receive_timeout: 100)
+
+      assert System.monotonic_time(:millisecond) - started < 1_500
+    end
+
+    test "wins over a connect timeout in the configured transport options, and keeps the others" do
+      connect_options = [transport_opts: [timeout: 3_000, nodelay: true]]
+      started = System.monotonic_time(:millisecond)
+
+      assert {{:error, %Req.TransportError{reason: :timeout}}, _log} =
+               delete_at(HangingProvider.unanswered_connect(), [connect_options: connect_options],
+                 delete_connect_timeout: 200
+               )
+
+      assert System.monotonic_time(:millisecond) - started < 1_500
+
+      opts = ReqOptions.merge(Mux, method: :delete, url: "https://api.mux.com/video/v1/assets/a")
+      assert opts[:connect_options][:transport_opts] == [timeout: 200, nodelay: true]
+    end
+
+    test "keeps a Finch pool in Req's default options, and wins over its timeouts" do
+      put_req_default_options(finch: [name: Req.Finch, receive_timeout: 3_000])
+      started = System.monotonic_time(:millisecond)
+
+      assert {{:error, %Req.TransportError{reason: :timeout}}, _log} =
+               delete_at(HangingProvider.silent(), [], delete_receive_timeout: 100)
+
+      assert System.monotonic_time(:millisecond) - started < 1_500
+    end
+
+    test "keeps the connect options in Req's default options" do
+      put_req_default_options(connect_options: [proxy: {:http, "proxy", 8080, []}, transport_opts: [timeout: 60_000]])
+
+      opts = ReqOptions.merge(Mux, method: :delete, url: "https://api.mux.com/video/v1/assets/a")
+
+      assert opts[:connect_options] == [
+               timeout: 5_000,
+               proxy: {:http, "proxy", 8080, []},
+               transport_opts: [timeout: 5_000]
+             ]
     end
   end
 
@@ -356,6 +416,33 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
 
   # Over a real connection to `Brando.Test.HangingProvider`.
   defp hanging(config), do: Keyword.put(config, :req_options, adapter: HangingProvider, retry: false)
+
+  # Mux's delete over a real connection to `port`, with `req_options` beside
+  # the adapter and `config` beside them. Returns the result and the log.
+  defp delete_at(port, req_options, config) do
+    HangingProvider.route(port)
+
+    put_test_env(
+      Mux,
+      [access_token_id: "id", access_token_secret: "secret"] ++
+        config ++ [req_options: [adapter: HangingProvider, retry: false] ++ req_options]
+    )
+
+    with_log(fn -> Mux.delete_remote(%Video{type: :mux, meta: %{"mux" => %{"asset_id" => "asset-1"}}}) end)
+  end
+
+  # Req's default options are global: put back as they were when the test exits.
+  defp put_req_default_options(options) do
+    previous = Application.fetch_env(:req, :default_options)
+    Req.default_options(options)
+
+    on_exit(fn ->
+      case previous do
+        {:ok, value} -> Application.put_env(:req, :default_options, value)
+        :error -> Application.delete_env(:req, :default_options)
+      end
+    end)
+  end
 
   defp answer(module, outcome) do
     me = self()
