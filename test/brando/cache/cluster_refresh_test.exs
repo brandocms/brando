@@ -365,7 +365,7 @@ defmodule Brando.Cache.ClusterRefreshTest do
       job = Enum.find(jobs, &(&1.args["entry_id"] == c.fragment.id))
       token = job.args["site_caches"]["globals"]
 
-      # The same entry queued again within the unique period replaces the args
+      # The same entry queued again before its render starts adds its tokens
       jobs =
         Oban.Testing.with_testing_mode(:manual, fn ->
           {:ok, _} = RenderQueue.enqueue(%{schema: Fragment, entry_id: c.fragment.id})

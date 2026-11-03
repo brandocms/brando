@@ -1,0 +1,1 @@
+- A change made while an entry's background render or reference cascade is running renders that entry again afterwards, instead of being lost until the next render. Renders queued and not started still run once, and on a cluster with every queuing node's changes.

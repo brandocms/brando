@@ -20,6 +20,12 @@ defmodule Brando.Cache.Freshness do
   #
   # Kept per site, for each input, as `%{latest: token, known: [token]}`;
   # a transaction's as `%{site_key => %{input => token}}`.
+  #
+  # A job carries one token per input, or a list once renders queued for the
+  # same entry coalesced into it (`merge/2`): tokens from different nodes, or
+  # from either side of a commit, have no order, so the job keeps them all.
+  # Past `@carried` of them it keeps `@any` instead, which no node knows: a
+  # node that runs the job refreshes the input whatever it has heard.
 
   alias Brando.Repo
   alias Brando.Tenant
@@ -28,6 +34,8 @@ defmodule Brando.Cache.Freshness do
   @key {__MODULE__, :tokens}
   @pending {__MODULE__, :pending}
   @known 32
+  @carried 16
+  @any "*"
   @site_caches ~w(identity globals navigation)a
   @render_schemas [
     Module.concat(["Brando", "Content", "Module"]),
@@ -76,6 +84,8 @@ defmodule Brando.Cache.Freshness do
 
   @doc "Records that this node's copy of `input` has caught up with `token`."
   @spec known(input(), String.t()) :: :ok
+  def known(_input, @any), do: :ok
+
   def known(input, token) do
     update(Tenant.cache_key(@key), fn tokens ->
       Map.update(tokens, input, %{latest: nil, known: [token]}, fn record ->
@@ -104,6 +114,26 @@ defmodule Brando.Cache.Freshness do
   defp put_latest(args, _field, []), do: args
   defp put_latest(args, field, latest), do: Map.put(args, field, Map.new(latest))
 
+  @doc """
+  The arguments of a queued render job, `args`, with the tokens of another
+  render queued for the same entry (`more`) added: a render that runs once
+  for both refreshes what either needs.
+  """
+  @spec merge(map(), map()) :: map()
+  def merge(args, more) do
+    Enum.reduce(~w(site_caches query_sources), args, fn field, args ->
+      tokens = Map.merge(Map.get(args, field) || %{}, Map.get(more, field) || %{}, fn _, a, b -> union(a, b) end)
+      if tokens == %{}, do: args, else: Map.put(args, field, tokens)
+    end)
+  end
+
+  defp union(a, b) do
+    case Enum.uniq(List.wrap(a) ++ List.wrap(b)) do
+      [token] -> token
+      tokens -> if @any in tokens or length(tokens) > @carried, do: @any, else: tokens
+    end
+  end
+
   @doc "The inputs and tokens in a render job's arguments this node does not know."
   @spec unknown(map()) :: [{input(), String.t()}]
   def unknown(args) do
@@ -112,12 +142,19 @@ defmodule Brando.Cache.Freshness do
     for {input, token} <- carried(args), input, not known?(tokens[input], token), do: {input, token}
   end
 
+  defp known?(_record, @any), do: false
   defp known?(%{known: known}, token), do: token in known
   defp known?(nil, _token), do: false
 
   defp carried(args) do
-    site_caches = for {name, token} <- Map.get(args, "site_caches") || %{}, do: {site_cache(name), token}
-    sources = for {source, token} <- Map.get(args, "query_sources") || %{}, do: {input(:query_source, source), token}
+    site_caches =
+      for {name, tokens} <- Map.get(args, "site_caches") || %{}, token <- List.wrap(tokens), do: {site_cache(name), token}
+
+    sources =
+      for {source, tokens} <- Map.get(args, "query_sources") || %{},
+          token <- List.wrap(tokens),
+          do: {input(:query_source, source), token}
+
     site_caches ++ sources
   end
 
