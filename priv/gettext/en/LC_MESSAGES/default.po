@@ -17276,6 +17276,7 @@ msgid "The form's default markup, live from the fields beside it."
 msgstr ""
 
 #: lib/brando_admin/components/form.ex
+#: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "The frontend assets for this preview could not be captured, so no link was created. Check the server log and try again."
 msgstr ""
@@ -17344,6 +17345,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The link could not be applied. Check the destination and selection."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The link could not be created. Check the server log and try again."
 msgstr ""
 
 #: lib/brando/users/user_notifier.ex

@@ -17,6 +17,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   use Gettext, backend: Brando.Gettext
 
   import Ecto.Query, only: [from: 2]
+  require Logger
 
   alias Brando.AI.Agent
   alias Brando.Content.Proposals
@@ -1820,10 +1821,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
         case proposal_version(socket.assigns.proposal) do
           ^shown ->
-            {:noreply, put_toast(socket, :error, to_string(reason))}
+            {:noreply, put_toast(socket, :error, share_refusal(reason))}
 
           nil ->
-            {:noreply, socket |> render_open_preview() |> put_toast(:error, to_string(reason))}
+            {:noreply, socket |> render_open_preview() |> put_toast(:error, share_refusal(reason))}
 
           _refined ->
             message = gettext("The proposal has changed: review the new version before sharing.")
@@ -2073,6 +2074,32 @@ defmodule BrandoAdmin.AI.AssistantLive do
     |> discard_previews()
     |> assign(preview: nil, publish: MapSet.new(), review_link: nil, share_choice: nil)
   end
+
+  # Why a page link was not made, in the editor's words. A proposal's own
+  # reasons come as translated messages; the site's asset and storage reasons
+  # (atoms, tuples, a changeset) are logged and named by what failed.
+  defp share_refusal(message) when is_binary(message), do: message
+
+  defp share_refusal(:no_preview_target),
+    do: gettext("Page preview is not configured for this content type. Review the changes in the entry card.")
+
+  defp share_refusal(reason) do
+    Logger.error("Sharing an assistant page failed: #{inspect(reason)}")
+
+    if assets_refusal?(reason),
+      do:
+        gettext(
+          "The frontend assets for this preview could not be captured, so no link was created. Check the server log and try again."
+        ),
+      else: gettext("The link could not be created. Check the server log and try again.")
+  end
+
+  defp assets_refusal?(reason) when reason in [:no_frontend_assets, :asset_set_not_found], do: true
+
+  defp assets_refusal?(reason) when is_tuple(reason) and is_atom(elem(reason, 0)),
+    do: reason |> elem(0) |> Atom.to_string() |> String.starts_with?("asset_")
+
+  defp assets_refusal?(_reason), do: false
 
   # A page link is made for a proposal a review link could still show.
   defp page_shareable?(nil), do: false

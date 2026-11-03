@@ -954,9 +954,35 @@ defmodule BrandoAdmin.AssistantLiveTest do
       Brando.endpoint().subscribe("user:#{user.id}")
       view |> element(~s(button[phx-click="share_page"])) |> render_click()
 
-      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}
+      # Said in the editor's words, not as the reason's name.
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
+      refute message =~ "no_frontend_assets"
       assert frame_key(render(view)) == key
       assert has_element?(view, ~s(button[phx-click="share_page"]))
+      refute has_element?(view, "#assistant-page-link")
+    end
+
+    # A reason is not always an atom or a message: the asset capture names a
+    # file it could not read in a tuple, and a stored preview's insert returns
+    # a changeset.
+    @tag :capture_log
+    test "a share refused with a reason of any shape leaves the page working", %{conn: conn, current_user: user} = c do
+      release = Path.join(System.tmp_dir!(), "brando-assistant-share-#{System.unique_integer([:positive])}")
+      File.mkdir_p!(release)
+      on_exit(fn -> File.rm_rf(release) end)
+      # A link to itself: the capture cannot read it.
+      File.ln_s!("loop.js", Path.join(release, "loop.js"))
+
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      key = view |> open_blocks_preview(c) |> frame_key()
+
+      put_test_env(:release_static_path, release)
+      Brando.endpoint().subscribe("user:#{user.id}")
+      view |> element(~s(button[phx-click="share_page"])) |> render_click()
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
+      refute message =~ "asset_file_stat_failed"
+      assert frame_key(render(view)) == key
       refute has_element?(view, "#assistant-page-link")
     end
 
