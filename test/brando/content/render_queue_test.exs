@@ -72,6 +72,22 @@ defmodule Brando.Content.RenderQueueTest do
       assert rendered(c.fragment) =~ "Module: three."
     end
 
+    test "waits for one that started first, though queued after it", c do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        # Queued in a transaction that commits after another node's render
+        # of the entry was queued and started: a lower id, started later
+        save_module(c.module, "two")
+        assert [first] = renders(c.fragment)
+        {:ok, started} = RenderQueue.coalesce({:ok, %Oban.Job{conflict?: true, id: nil}}, render_changeset(c), & &1)
+        assert started.id > first.id
+        set_job(started, state: "executing", attempt: 1, attempted_at: DateTime.add(DateTime.utc_now(), -1))
+        set_job(first, state: "executing", attempt: 1, attempted_at: DateTime.utc_now())
+
+        assert {:snooze, _} = EntryRenderer.perform(Repo.get!(Oban.Job, first.id))
+        assert {:ok, _} = EntryRenderer.perform(Repo.get!(Oban.Job, started.id))
+      end)
+    end
+
     test "while a render left running by a node that went down renders without waiting", c do
       Oban.Testing.with_testing_mode(:manual, fn ->
         save_module(c.module, "two")
@@ -216,6 +232,8 @@ defmodule Brando.Content.RenderQueueTest do
     {:ok, _} =
       Brando.Content.update_module(module.id, %{code: ~s(<div class="paragraph">Module: #{code}.</div>)}, :system)
   end
+
+  defp render_changeset(c), do: EntryRenderer.new(%{schema: Fragment, entry_id: c.fragment.id})
 
   defp renders(fragment), do: all_enqueued(worker: EntryRenderer, args: %{entry_id: fragment.id})
 

@@ -31,19 +31,23 @@ defmodule Brando.Worker.EntryRenderer do
     end
   end
 
-  # An older render of the entry still running, on any node, began before
-  # this one was queued: it may store after this one what it read before the
-  # write that queued this one. This one renders once it has stored. Waits
-  # no longer than the older one's timeout, which a node that went down
-  # leaves executing until `Oban.Lifeline` rescues it.
-  defp rendering_before?(%Oban.Job{id: id, worker: worker, args: args}) when is_integer(id) do
+  # A render of the entry that started before this one, on any node, may
+  # have read the entry before the write that queued this one, and store
+  # after this one. This one renders once it has stored. Ordered by start,
+  # not id: a job queued in a transaction has the lower id but may start
+  # later. Start times are each node's clock, so they assume clocks in step.
+  # Waits no longer than the other one's timeout, which a node that went
+  # down leaves executing until `Oban.Lifeline` rescues it.
+  defp rendering_before?(%Oban.Job{id: id, worker: worker, args: args} = job) when is_integer(id) do
+    started = job.attempted_at || DateTime.utc_now()
     since = DateTime.add(DateTime.utc_now(), -(@timeout + :timer.seconds(5)), :millisecond)
     entry = Map.take(args, ["tenant_prefix", "schema", "entry_id"])
 
     query =
       from j in Oban.Job,
         where:
-          j.worker == ^worker and j.state == "executing" and j.id < ^id and j.attempted_at > ^since and
+          j.worker == ^worker and j.state == "executing" and j.id != ^id and j.attempted_at > ^since and
+            (j.attempted_at < ^started or (j.attempted_at == ^started and j.id < ^id)) and
             fragment("? @> ?", j.args, type(^entry, :map)),
         select: true,
         limit: 1
