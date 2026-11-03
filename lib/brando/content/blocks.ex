@@ -727,9 +727,9 @@ defmodule Brando.Content.Blocks do
   defdelegate enqueue_entries_for_render(schema, ids), to: Brando.Content.RenderQueue, as: :enqueue_many
 
   @doc """
-  Enqueues one entry-rendering job.
+  Enqueues one entry-rendering job (`Brando.Content.RenderQueue.enqueue/2`).
   """
-  defdelegate enqueue_entry_for_render(args), to: Brando.Content.RenderQueue, as: :enqueue
+  defdelegate enqueue_entry_for_render(args, opts \\ []), to: Brando.Content.RenderQueue, as: :enqueue
 
   # --- Entry Rendering Orchestration ---
 
@@ -874,6 +874,9 @@ defmodule Brando.Content.Blocks do
   A background render that stored the entry while this one rendered may have
   read newer modules, globals or fragments than this one did, and this save
   stores over it: once the save succeeds, the entry is queued for a render.
+  This node rendered from inputs it had not caught up with, though its own
+  tokens may say it has, so whichever node runs that render refreshes every
+  render input first (`Brando.Content.RenderQueue.enqueue/2`).
   The save checks under the row's lock, which it holds until it commits, so
   a render can't store between the check and the save. A background render
   still running then renders again from what the save stored
@@ -900,7 +903,7 @@ defmodule Brando.Content.Blocks do
       end
 
     if written? and match?({:ok, _}, result),
-      do: Repo.after_commit(fn -> enqueue_entry_for_render(%{schema: to_string(schema), entry_id: id}) end)
+      do: Repo.after_commit(fn -> enqueue_entry_for_render(%{schema: to_string(schema), entry_id: id}, refresh: :all) end)
 
     result
   end

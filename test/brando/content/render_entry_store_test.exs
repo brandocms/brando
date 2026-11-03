@@ -9,6 +9,7 @@ defmodule Brando.Content.RenderEntryStoreTest do
   import Brando.EditSessionEditors, only: [rows: 1]
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Cache.Freshness
   alias Brando.Content.Blocks
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.SetBlockText
@@ -78,6 +79,34 @@ defmodule Brando.Content.RenderEntryStoreTest do
 
     assert {:ok, _} = Blocks.render_entry(Page, c.identity.id)
     assert row_version(c.identity) == version
+  end
+
+  test "a save that stored over a render queues one that refreshes every render input", c do
+    changeset = Page |> Repo.get!(c.identity.id) |> Ecto.Changeset.change(title: "Saved")
+    fence = Blocks.render_fence(changeset)
+
+    # A background render stores while the save renders
+    Repo.update_all(from(p in Page, where: p.id == ^c.identity.id), set: [title: "Rendered"])
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, _} = Blocks.store_fenced(fence, changeset, &Repo.update/1)
+      assert [job] = all_enqueued(worker: Brando.Worker.EntryRenderer, args: %{entry_id: c.identity.id})
+
+      # The node that rendered from stale inputs may run it before it has
+      # heard of the writes it missed
+      inputs = job.args |> Freshness.unknown() |> Enum.map(&elem(&1, 0)) |> Enum.sort()
+      assert inputs == Enum.sort(render_inputs())
+    end)
+  end
+
+  defp render_inputs do
+    site_caches = for cache <- ~w(identity globals navigation)a, do: Freshness.input(:site_cache, cache)
+
+    sources =
+      for schema <- [Brando.Content.Module, Brando.Content.Container, Brando.Content.Palette, Brando.Pages.Fragment],
+          do: Freshness.input(:query_source, schema.__schema__(:source))
+
+    site_caches ++ sources
   end
 
   # A module save queues the entry's render, which renders something new

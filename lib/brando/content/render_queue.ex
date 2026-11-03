@@ -38,17 +38,23 @@ defmodule Brando.Content.RenderQueue do
   inputs have caught up with, so a node that has not caught up yet does
   before it renders (`Brando.Cache.ensure_fresh/1`).
 
+  With `refresh: :all` it carries instead that every input is to be
+  refreshed, whatever the node that runs it has heard: for a render queued
+  because this node rendered from inputs it had not caught up with
+  (`Brando.Content.Blocks.store_fenced/3`).
+
   A render of the entry queued and not started yet takes this one's tokens
   instead (`coalesce/3`). One that has started may have read the entry and
   its inputs before the write that queues this one, so this one runs after it.
   """
-  @spec enqueue(map()) :: term()
-  def enqueue(args) do
+  @spec enqueue(map(), keyword()) :: term()
+  def enqueue(args, opts \\ []) do
     worker = @entry_renderer
+    attach = if Keyword.get(opts, :refresh) == :all, do: &Freshness.attach_any/1, else: &Freshness.attach/1
 
     changeset =
       args
-      |> Freshness.attach()
+      |> attach.()
       |> Brando.Tenant.Job.attach()
       |> worker.new(tags: [:render_entry])
 
