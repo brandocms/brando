@@ -71,6 +71,54 @@ defmodule Mix.Tasks.Brando.Entries.ResaveTest do
     refute output =~ "\e["
   end
 
+  test "renders each entry from what it holds when its turn comes, not when the task began" do
+    user = Brando.Factory.insert(:random_user, role: :superuser)
+
+    {:ok, module} =
+      Brando.Content.create_module(
+        Brando.Factory.params_for(:module, %{code: ~s(<div class="paragraph">Title: {{ entry.title }}</div>)}),
+        :system
+      )
+
+    [_first, second] = for key <- ~w(first second), do: fragment(user, module, key)
+
+    # An editor saves the second entry while the task renders the first
+    id = make_ref()
+    :ok = :telemetry.attach(id, [:brando, :villain, :parse_and_render], &__MODULE__.save_once/4, second.id)
+    on_exit(fn -> :telemetry.detach(id) end)
+
+    ExUnit.CaptureIO.capture_io(fn -> Resave.run(["--yes", "Brando.Pages.Fragment"]) end)
+
+    assert Brando.Repo.get!(Brando.Pages.Fragment, second.id).rendered_blocks =~ "Title: Saved meanwhile"
+  end
+
+  @doc false
+  def save_once(_event, _measurements, _metadata, id) do
+    unless Process.put(:resave_test_saved, true) do
+      Brando.Repo.update_all(Ecto.Query.from(f in Brando.Pages.Fragment, where: f.id == ^id),
+        set: [title: "Saved meanwhile"]
+      )
+    end
+  end
+
+  defp fragment(user, module, key) do
+    {:ok, fragment} =
+      %Brando.Pages.Fragment{}
+      |> Ecto.Changeset.change(
+        Brando.Factory.params_for(:fragment, %{
+          parent_key: "resave",
+          key: key,
+          title: key,
+          entry_blocks: [
+            %{block: %{type: :module, source: "Elixir.Brando.Pages.Fragment.Blocks", module_id: module.id, refs: []}}
+          ]
+        })
+      )
+      |> Brando.Pages.create_fragment(user)
+
+    fragment
+  end
+
   test "an unknown option or a second Blueprint stops the task" do
     assert_raise Mix.Error, ~r/unknown or invalid option --all. It takes: --yes, --force/, fn -> Resave.run(["--all"]) end
 

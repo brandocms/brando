@@ -145,13 +145,11 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
         ])
       )
 
-      changeset =
-        entry
-        |> Ecto.Changeset.change()
-        |> Brando.Content.Blocks.render_all_block_fields_and_add_to_changeset(blueprint_module, entry)
-        |> Ecto.Changeset.force_change(:updated_at, entry.updated_at)
+      # Loaded again as it is now, and stored only over that: an editor may
+      # have saved it since the list was read, or save it while it renders
+      keep_updated_at = &Ecto.Changeset.force_change(&1, :updated_at, &1.data.updated_at)
 
-      case Brando.Repo.update(changeset, force: true) do
+      case Brando.Content.Blocks.render_and_store(blueprint_module, entry.id, prepare: keep_updated_at, force: true) do
         {:ok, _} ->
           IO.write(ANSI.format([:green, "done!\n"]))
 

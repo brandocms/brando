@@ -765,48 +765,59 @@ defmodule Brando.Content.Blocks do
   The render stores only if the entry's row is as it was when the render
   loaded it, and renders again from the entry as it is now if not: an
   editor's save, which renders inline, may have stored newer blocks while it
-  rendered (`store_render/4`). After #{@render_attempts} renders that each
+  rendered (`store_render/5`). After #{@render_attempts} renders that each
   lost to a write it returns `{:error, :entry_changed}`.
   """
   @spec render_entry(schema :: module, entry_id :: integer | binary) ::
           {:ok, map} | {:error, changeset | :entry_changed | term}
   @decorate span("brando.blocks.render_entry", schema: :schema, entry_id: :id)
-  def render_entry(schema, id), do: render_entry(schema, id, @render_attempts)
+  def render_entry(schema, id) do
+    case render_and_store(schema, id) do
+      {:ok, %{__struct__: fragment_module} = fragment} when fragment_module == @fragment_module ->
+        Brando.Cache.Query.evict({:ok, fragment})
+        render_entries_with_fragment_id(fragment.id)
+        {:ok, fragment}
 
-  defp render_entry(schema, id, attempts) do
+      {:ok, result} ->
+        Brando.Cache.Query.evict({:ok, result})
+        {:ok, result}
+
+      {:error, %Changeset{}} = err ->
+        err
+
+      {:error, _} = err ->
+        log_render_error(schema, id, err)
+    end
+  end
+
+  @doc false
+  # Loads the entry, renders it and stores the HTML under the check
+  # `render_entry/2` describes, and nothing after: no cache eviction, no
+  # fragment cascade. For `mix brando.entries.resave`, which stores each
+  # entry with `prepare: fun` applied to the rendered changeset and
+  # `force: true` passed to the update.
+  @spec render_and_store(module, term, keyword) :: {:ok, map} | {:error, changeset | :entry_changed | term}
+  def render_and_store(schema, id, opts \\ []), do: render_and_store(schema, id, opts, @render_attempts)
+
+  defp render_and_store(schema, id, opts, attempts) do
     # Read before the entry: a write in between makes the render again,
     # never one that goes unseen
     version = Repo.one(row_version(schema, id))
 
-    case Brando.Blueprint.EntryQuery.get(schema, id) do
-      {:ok, entry} ->
-        changeset =
-          entry
-          |> Changeset.change()
-          |> render_all_block_fields_and_add_to_changeset(schema, entry)
+    prepare = Keyword.get(opts, :prepare, & &1)
 
-        case store_render(schema, id, version, changeset) do
-          {:ok, %{__struct__: fragment_module} = fragment} when fragment_module == @fragment_module ->
-            Brando.Cache.Query.evict({:ok, fragment})
-            render_entries_with_fragment_id(fragment.id)
-            {:ok, fragment}
+    with {:ok, entry} <- Brando.Blueprint.EntryQuery.get(schema, id) do
+      changeset =
+        entry
+        |> Changeset.change()
+        |> render_all_block_fields_and_add_to_changeset(schema, entry)
+        |> prepare.()
 
-          {:ok, result} ->
-            Brando.Cache.Query.evict({:ok, result})
-            {:ok, result}
-
-          :changed when attempts > 1 ->
-            render_entry(schema, id, attempts - 1)
-
-          :changed ->
-            log_render_error(schema, id, {:error, :entry_changed})
-
-          {:error, _} = err ->
-            err
-        end
-
-      {:error, _} = err ->
-        log_render_error(schema, id, err)
+      case store_render(schema, id, version, changeset, Keyword.take(opts, [:force])) do
+        :changed when attempts > 1 -> render_and_store(schema, id, opts, attempts - 1)
+        :changed -> {:error, :entry_changed}
+        result -> result
+      end
     end
   end
 
@@ -815,17 +826,18 @@ defmodule Brando.Content.Blocks do
   # it since the render read it changed its version (`xmin`, which every
   # write of the row moves), and every save that renders inline writes the
   # row (it forces its `rendered_*_at`), so this renders again from what
-  # that save stored. A render that changes nothing stores nothing.
+  # that save stored. A render that changes nothing stores nothing (unless
+  # forced).
   #
   # NO KEY UPDATE, as the update takes: FOR UPDATE would also wait for
   # inserts of rows that point at the entry.
-  defp store_render(_schema, _id, _version, %Changeset{changes: changes} = changeset) when changes == %{},
+  defp store_render(_schema, _id, _version, %Changeset{changes: changes} = changeset, []) when changes == %{},
     do: {:ok, changeset.data}
 
-  defp store_render(schema, id, version, changeset) do
+  defp store_render(schema, id, version, changeset, update_opts) do
     Repo.transaction(fn ->
       if version != nil and Repo.one(lock(row_version(schema, id), "FOR NO KEY UPDATE")) == version do
-        case Repo.update(changeset) do
+        case Repo.update(changeset, update_opts) do
           {:ok, stored} -> stored
           {:error, changeset} -> Repo.rollback(changeset)
         end
@@ -894,7 +906,7 @@ defmodule Brando.Content.Blocks do
 
     changeset =
       Changeset.prepare_changes(changeset, fn changeset ->
-        # The lock the save's update takes, as in `store_render/4`
+        # The lock the save's update takes, as in `store_render/5`
         if Repo.one(lock(row_version(schema, id), "FOR NO KEY UPDATE")) != version,
           do: Process.put(written, true)
 
