@@ -101,8 +101,9 @@ defmodule Brando.Cache do
   back would stay in the cache. A transaction that saves several rows
   rebuilds it once.
 
-  It runs under the caller's site, and unscoped: the cache is every
-  visitor's, not what the saving user may read. The other nodes rebuild
+  It runs under the caller's site, and unscoped, as does a read that finds
+  the cache empty and fills it: the cache is every visitor's, not what the
+  saving or reading user may read. The other nodes rebuild
   their copies when they hear of it, after the commit too
   (`Brando.CacheSync`).
 
@@ -148,7 +149,7 @@ defmodule Brando.Cache do
     unless Tenant.outside_site?() do
       generation = System.unique_integer()
       put(generation_key(cache), generation, :infinite)
-      Boundary.with_scope(nil, fn -> store(cache, generation) end)
+      store(cache, generation)
     end
 
     :ok
@@ -166,8 +167,13 @@ defmodule Brando.Cache do
   # held may be from before that rebuild's write, which a render job that
   # carries the write would read (`ensure_fresh/1`), and the rebuild may
   # still be reading. The next read fills it from the database.
+  #
+  # It reads unscoped, a fill as a rebuild: the cache is every visitor's, not
+  # what the user whose request found it cold may read. Under that user's
+  # groups a menu they may not read would leave every visitor's pages
+  # without it until the next save.
   defp store(cache, generation) do
-    values = Map.fetch!(@site_caches, cache).load()
+    values = Boundary.with_scope(nil, fn -> Map.fetch!(@site_caches, cache).load() end)
     if get(generation_key(cache)) == generation, do: keep(cache, values, generation), else: withdraw(values)
     values
   end

@@ -6,6 +6,7 @@ defmodule Brando.Cache.ClusterRefreshTest do
   # node's origin, and a row "another node wrote" is written with the repo.
   use Brando.ConnCase, async: false
 
+  alias Brando.Authorization.{Boundary, Groups, Migration, Scope}
   alias Brando.Cache
   alias Brando.Cache.Freshness
   alias Brando.Cache.Query, as: QueryCache
@@ -206,6 +207,42 @@ defmodule Brando.Cache.ClusterRefreshTest do
 
       assert ContextCache.navigation()["main"]["en"].title == "Old"
       assert Cache.get(:navigation)["main"]["en"].title == "Old"
+    end
+
+    # The caches are every visitor's: an editor whose groups may not read
+    # menus, global sets or identities opens a page while they are cold
+    test "a cold fill under an admin's scope stores every visitor's rows, not what the admin may read", c do
+      put_test_env(:authorization_mode, :groups)
+      put_test_env(:tenancy_mode, :none)
+      Boundary.put_scope(nil)
+      {:ok, _} = Migration.run()
+
+      {:ok, _} =
+        Brando.Navigation.create_menu(
+          %{status: :published, title: "Main", key: "main", language: "en", items: []},
+          c.user
+        )
+
+      {:ok, _} = Brando.Sites.create_global_set(global_set("shown", "Shown", c.user), c.user)
+
+      editor = Factory.insert(:random_user, role: :user)
+      owner_scope = Scope.standalone(c.user)
+      {:ok, group} = Groups.create(owner_scope, %{name: "Page editors"}, ~w(brando.admin.access brando.pages.read))
+      {:ok, :ok} = Groups.add_member(owner_scope, group.id, editor.id)
+
+      Cache.del(:navigation)
+      Cache.del(:globals)
+      Cache.del(:identity)
+
+      Boundary.with_scope(Scope.standalone(editor), fn ->
+        ContextCache.navigation()
+        ContextCache.globals("en")
+        ContextCache.identity("en")
+      end)
+
+      assert Cache.get(:navigation)["main"]["en"].title == "Main"
+      assert Map.has_key?(Cache.get(:globals)["en"], "shown")
+      assert %{language: :en} = Cache.get(:identity)["en"]
     end
 
     test "public's copy and the unprefixed one are one cache to the fence", c do
