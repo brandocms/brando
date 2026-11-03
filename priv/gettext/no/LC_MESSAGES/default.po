@@ -11386,6 +11386,21 @@ msgstr "Ikke publisert som planlagt: brukeren som planla den, har ikke lenger lo
 msgid "Not required"
 msgstr "Ikke påkrevd"
 
+#: lib/brando/videos.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: the library already has this video as “%{title}”. Use that one, or delete it first."
+msgstr "Ikke gjenopprettet: biblioteket har allerede denne videoen som «%{title}». Bruk den, eller slett den først."
+
+#: lib/brando/videos.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: the library already has this video, in a record you cannot see."
+msgstr "Ikke gjenopprettet: biblioteket har allerede denne videoen, i en oppføring du ikke kan se."
+
+#: lib/brando/videos.ex
+#, elixir-autogen, elixir-format
+msgid "Not restored: the library already has this video, untitled. Use that one, or delete it first."
+msgstr "Ikke gjenopprettet: biblioteket har allerede denne videoen, uten tittel. Bruk den, eller slett den først."
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not run: %{name}, who scheduled it, may no longer copy or switch this site's environments."

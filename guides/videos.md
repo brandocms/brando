@@ -543,9 +543,15 @@ all the same. See
 
 #### Behavior
 
-- **`:on_delete`**: When a user deletes a video in the admin, it's removed from its provider as soon as the delete is saved; a delete that is rolled back leaves it there. The video cannot be restored from the provider. If the provider delete fails, the video stays at the provider, and a warning in the log names the video.
-- **`:on_purge`** (default): Videos are soft-deleted locally first. After 30 days, when the soft-delete purger runs, the video is permanently deleted from both the database and the provider. This allows video restoration during the grace period.
+- **`:on_delete`**: When a user deletes a video in the admin, it's removed from its provider as soon as the delete is saved; a delete that is rolled back leaves it there. The video cannot be restored from the provider. If the provider could not answer (a timeout, a connection error, a 5xx or a 429 response), a background job (`Brando.Worker.VideoRemoteDelete`) asks it again, up to 20 times over about twelve days. If the provider refuses the delete in any other way, or is still unavailable after the last try, the video stays at the provider, and a warning in the log names the video.
+- **`:on_purge`** (default): Videos are soft-deleted locally first. After 30 days, when the soft-delete purger runs, the video is permanently deleted from both the database and the provider. This allows video restoration during the grace period. If the provider could not answer (a timeout, a connection error, a 5xx or a 429 response), the record is kept, a warning in the log names it, and the next purge asks the provider again. When the provider could not be reached, timed out, or took 3 seconds or more to answer with an error (such as a gateway's 504), that purge does not ask it about its other videos either, in any environment: they are kept for the next purge too. A provider that answered with an error status at once is still asked about each of its other videos. The purger has 30 seconds for each run and the provider clients keep Req's timeouts (30 seconds to connect, 15 to receive), so one call to a provider that hangs can use up the run; the purger is then stopped, and the records it did not get to wait for the next run. If the provider refuses the delete in any other way, such as a revoked token, the record is purged all the same and the video stays at the provider.
 - **`false`**: Videos are only deleted locally. Provider videos remain and must be manually cleaned up.
+
+A deleted video is not restored from the trash while the library of its
+environment has a live record of the same provider video, such as one added
+again from the provider's library: the trash says which record that is, and
+the deleted one comes back once that record is deleted. One record per
+provider video keeps the provider's webhooks finding the right one.
 
 ### Uploading in a Video Field, Block or Variable
 

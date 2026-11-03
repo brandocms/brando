@@ -104,8 +104,9 @@ defmodule Brando.Videos do
   # authorization it runs in a transaction), in the delete's environment: a
   # delete rolled back leaves the video there, and the provider call and its
   # lock (`Brando.Videos.ProviderHoldings.with_video_lock/3`) are not held
-  # inside the transaction. Nothing deletes it later, so a video left there
-  # is logged.
+  # inside the transaction. A provider that could not answer is asked again
+  # by `Brando.Worker.VideoRemoteDelete`; nothing deletes a video left there
+  # otherwise, so that is logged.
   mutation :delete, Video do
     fn entry ->
       if Brando.Videos.Uploader.get_delete_timing(entry) == :on_delete do
@@ -124,7 +125,12 @@ defmodule Brando.Videos do
         :ok
 
       {:error, reason} ->
-        Logger.warning("Video #{entry.id} was deleted, and left at its provider: #{inspect(reason)}")
+        if Brando.Worker.VideoRemoteDelete.retry?(reason) do
+          Logger.info("Video #{entry.id} was deleted, and its provider is asked again later: #{inspect(reason)}")
+          Brando.Worker.VideoRemoteDelete.enqueue(entry)
+        else
+          Logger.warning("Video #{entry.id} was deleted, and left at its provider: #{inspect(reason)}")
+        end
 
       _ok ->
         :ok
@@ -268,6 +274,27 @@ defmodule Brando.Videos do
   """
   @spec display_title(Video.t()) :: String.t() | nil
   def display_title(%Video{} = video), do: if(placeholder_title?(video), do: nil, else: URI.decode(video.title))
+
+  @doc """
+  Why a deleted video was not restored from the trash: `live`, the live
+  record of the same provider video in the environment, or `nil` when the
+  user may not read it (`Brando.Videos.ProviderLibrary.guard_restore/3`).
+  """
+  @spec restore_refused_message(Video.t() | nil) :: String.t()
+  def restore_refused_message(%Video{} = live) do
+    case display_title(live) do
+      nil ->
+        gettext("Not restored: the library already has this video, untitled. Use that one, or delete it first.")
+
+      title ->
+        gettext("Not restored: the library already has this video as “%{title}”. Use that one, or delete it first.",
+          title: title
+        )
+    end
+  end
+
+  def restore_refused_message(nil),
+    do: gettext("Not restored: the library already has this video, in a record you cannot see.")
 
   @doc """
   Whether the video's title says nothing: empty, or just the file name of its

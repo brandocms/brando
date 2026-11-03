@@ -86,18 +86,26 @@ defmodule Brando.Videos.ProviderHoldings do
   record with the id `except_id`.
   """
   @spec recorded_here?(String.t(), String.t(), pos_integer() | nil) :: boolean()
-  def recorded_here?(path, remote_id, except_id \\ nil) do
+  def recorded_here?(path, remote_id, except_id \\ nil), do: not is_nil(recorded_here(path, remote_id, except_id))
+
+  @doc """
+  The current environment's live record of the remote video, as
+  `recorded_here?/3` finds it, or `nil`. Not narrowed to what a user may
+  read: a record the user cannot see holds the video all the same.
+  """
+  @spec recorded_here(String.t(), String.t(), pos_integer() | nil) :: Video.t() | nil
+  def recorded_here(path, remote_id, except_id \\ nil) do
     keys = String.split(path, ".")
 
     query =
       from(v in Video,
         where: is_nil(v.deleted_at) and fragment("?#>>? = ?", v.meta, ^keys, ^remote_id),
-        select: true,
+        order_by: v.id,
         limit: 1
       )
 
     query = if except_id, do: from(v in query, where: v.id != ^except_id), else: query
-    Brando.Repo.one(query) == true
+    Brando.Repo.one(query)
   end
 
   @doc """

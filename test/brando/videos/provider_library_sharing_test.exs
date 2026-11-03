@@ -458,20 +458,30 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       refute_received {:vimeo_delete, _path, _in_transaction?, _prefix}
     end
 
-    test "a video left at the provider is logged", %{sites: sites, held: held, lock_conn: conn} do
+    test "a video whose lock is busy is deleted at the provider later", %{sites: sites, held: held, lock_conn: conn} do
       put_test_env(Brando.Videos.ProviderHoldings, lock_timeout: 200)
       hold_lock(conn, "vimeo.video_id", "1")
-      Logger.put_module_level(Brando.Videos, :warning)
+      Logger.put_module_level(Brando.Videos, :info)
       on_exit(fn -> Logger.delete_module_level(Brando.Videos) end)
 
-      log =
-        capture_log([level: :warning], fn ->
-          as_site(sites.alpha, fn -> assert {:ok, _video} = Brando.Videos.delete_video(held.alpha.id, :system) end)
-        end)
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        log =
+          capture_log([level: :info], fn ->
+            as_site(sites.alpha, fn -> assert {:ok, _video} = Brando.Videos.delete_video(held.alpha.id, :system) end)
+          end)
 
-      refute_received {:vimeo_delete, _path, _in_transaction?, _prefix}
-      assert log =~ "Video #{held.alpha.id}"
-      assert log =~ "busy"
+        refute_received {:vimeo_delete, _path, _in_transaction?, _prefix}
+        assert log =~ "Video #{held.alpha.id}"
+        assert log =~ "busy"
+
+        [job] = all_enqueued(worker: Brando.Worker.VideoRemoteDelete)
+        assert job.args["video_id"] == held.alpha.id
+
+        release_lock(conn, "vimeo.video_id", "1")
+        assert :ok = perform_job(Brando.Worker.VideoRemoteDelete, job.args)
+      end)
+
+      assert_received {:vimeo_delete, "/videos/1", _in_transaction?, _prefix}
     end
   end
 
@@ -536,6 +546,39 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
       end)
 
       refute_received {:vimeo, "DELETE", _path}
+    end
+
+    # Each call to a provider that hangs waits out its client's timeout, and
+    # the purger has one deadline for every environment.
+    test "asks a provider that cannot be reached once in a run, for every environment", %{sites: sites, held: held} do
+      put_test_env(Vimeo, access_token: "vimeo-token", req_options: [plug: {Req.Test, Vimeo}, retry: false])
+
+      for {site, video} <- [alpha: held.alpha, gamma: held.gamma, delta: held.delta],
+          do: as_site(sites[site], fn -> expire(video) end)
+
+      me = self()
+
+      Req.Test.stub(Vimeo, fn conn ->
+        send(me, {:vimeo, conn.method, conn.request_path})
+        Req.Test.transport_error(conn, :timeout)
+      end)
+
+      capture_log(fn -> assert :ok = perform_job(Brando.Worker.SoftDeletePurger, %{}) end)
+
+      assert_received {:vimeo, "DELETE", _path}
+      refute_received {:vimeo, "DELETE", _path}
+      for site <- [:alpha, :gamma, :delta], do: as_site(sites[site], fn -> assert Repo.aggregate(Video, :count) == 1 end)
+
+      # The next run asks again.
+      Req.Test.stub(Vimeo, fn conn ->
+        send(me, {:vimeo, conn.method, conn.request_path})
+        send_resp(conn, 204, "")
+      end)
+
+      assert :ok = perform_job(Brando.Worker.SoftDeletePurger, %{})
+
+      for path <- ["/videos/1", "/videos/2", "/videos/3"], do: assert_received({:vimeo, "DELETE", ^path})
+      for site <- [:alpha, :gamma, :delta], do: as_site(sites[site], fn -> assert Repo.aggregate(Video, :count) == 0 end)
     end
   end
 
@@ -734,6 +777,34 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
         assert_received {:staging_row_deleted, false}
         refute_received {:mux, "DELETE", _path, _prefix}
         assert lock_free?(conn, "mux.asset_id", "asset-1")
+      end
+    end
+
+    # Only a live record of the restoring environment refuses a restore from
+    # the trash: production's record is the copy staging was made from.
+    for tenancy_mode <- [:single, :multi], authorization_mode <- [:legacy, :groups] do
+      @tenancy_mode tenancy_mode
+      @authorization_mode authorization_mode
+
+      test "a restore is refused while a live record of the environment plays the video, " <>
+             "#{tenancy_mode} tenancy, #{authorization_mode} authorization",
+           context do
+        put_test_env(:tenancy_mode, @tenancy_mode)
+        superuser = superuser(@authorization_mode)
+
+        Tenant.with_prefix(context.staging_prefix, fn ->
+          deleted = context.staging |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+          assert {:ok, %Video{deleted_at: nil} = restored} = Brando.Authorization.Boundary.restore(superuser, deleted)
+
+          deleted = restored |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Repo.update!()
+          live = Repo.insert!(%Video{type: :mux, title: "Added again", status: :ready, meta: imported_meta()})
+
+          assert {:error, {:recorded_here, %Video{id: live_id}}} =
+                   Brando.Authorization.Boundary.restore(superuser, deleted)
+
+          assert live_id == live.id
+          assert Repo.get!(Video, deleted.id).deleted_at
+        end)
       end
     end
 

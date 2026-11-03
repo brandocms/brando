@@ -40,6 +40,8 @@ defmodule Brando.Authorization.Boundary do
   alias Brando.Trait.ProtectPassword
   alias Brando.Trait.ProtectRole
   alias Brando.Users.User
+  alias Brando.Videos.ProviderLibrary
+  alias Brando.Videos.Video
 
   @scope_key {__MODULE__, :scope}
   @presentation_key {__MODULE__, :presentation}
@@ -183,18 +185,38 @@ defmodule Brando.Authorization.Boundary do
       else: actor |> fresh_role() |> legacy_role() == :superuser
   end
 
+  # A video is restored holding its lock (`Brando.Videos.ProviderLibrary.with_restore_lock/2`),
+  # taken before `run/4` opens its transaction: the lock may be waited for
+  # longer than a transaction may keep its connection. An actor who may not
+  # restore it is refused before that wait, and `run/4` checks again under
+  # the lock. Not while a live record of the same provider video is in the
+  # environment (`{:error, {:recorded_here, live}}`), and not once it is
+  # purged.
+  def restore(actor, %Video{} = video) do
+    with :ok <- authorize(actor, :restore, video),
+         do: ProviderLibrary.with_restore_lock(video, fn -> run(actor, :restore, Video, &restore_video(&1, video)) end)
+  end
+
   def restore(actor, %{__struct__: schema} = entry) do
     run(actor, :restore, schema, fn user ->
-      with :ok <- authorize(user, :restore, entry),
-           changeset <- Ecto.Changeset.change(entry, deleted_at: nil),
-           :ok <- change(user, :update, changeset),
-           {:ok, restored} <- Repo.restore(entry) do
-        Brando.Activity.restored(restored, user)
-        Brando.Notes.entry_restored(schema, entry)
-        Brando.Cache.entry_changed(restored)
-        {:ok, restored}
-      end
+      with :ok <- authorize(user, :restore, entry), do: restore_entry(user, entry)
     end)
+  end
+
+  defp restore_video(user, video) do
+    with :ok <- authorize(user, :restore, video),
+         do: ProviderLibrary.guard_restore(user, video, &restore_entry(user, &1))
+  end
+
+  defp restore_entry(user, %{__struct__: schema} = entry) do
+    with changeset <- Ecto.Changeset.change(entry, deleted_at: nil),
+         :ok <- change(user, :update, changeset),
+         {:ok, restored} <- Repo.restore(entry) do
+      Brando.Activity.restored(restored, user)
+      Brando.Notes.entry_restored(schema, entry)
+      Brando.Cache.entry_changed(restored)
+      {:ok, restored}
+    end
   end
 
   def change(:system, _, _), do: :ok

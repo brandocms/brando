@@ -103,7 +103,10 @@ defmodule Brando.Videos.Uploader do
 
   ## Returns
   - `:ok` if deletion succeeds or asset doesn't exist
-  - `{:error, reason}` if deletion fails
+  - `{:error, {:http_error, status, body}}` if the provider answered with an
+    error status, `{:error, exception}` with Req's exception if it could not
+    be reached, and `{:error, reason}` for any other failure:
+    `transient_error?/1` tells which may pass if tried again
   """
   @callback delete_remote(video :: video()) :: :ok | {:error, any()}
 
@@ -332,14 +335,16 @@ defmodule Brando.Videos.Uploader do
   purges that overlap cannot each see the other's row and both leave the
   video at the provider. It runs before the provider is asked, which is only
   when it deleted the row, and in one transaction with that call: the row's
-  delete commits once the provider has answered, whatever the answer, and a
-  purge killed or raising before then leaves the row for the next purge. A
-  restore from the trash takes no lock, so a record restored since it was
-  read, or restored and deleted again, is left by `purge` and keeps its
-  video. Whenever `purge` leaves the row, held or not, the result is
-  `{:error, :not_purged}`. When the holdings cannot be read or the lock is
-  busy (`{:error, :holdings_unavailable}`, `{:error, :busy}`), `purge` does
-  not run, and the row stays for the next purge to try again.
+  delete commits once the provider has answered, and a purge killed or
+  raising before then leaves the row for the next purge. A record restored since it was read, or restored and deleted again, is left
+  by `purge` and keeps its video. Whenever `purge` leaves the row, held or
+  not, the result is `{:error, :not_purged}`. When the holdings cannot be
+  read or the lock is busy (`{:error, :holdings_unavailable}`,
+  `{:error, :busy}`), `purge` does not run, and the row stays for the next
+  purge to try again. So does it when the provider could not answer
+  (`transient_error?/1`): `purge`'s delete is rolled back, and the result is
+  `{:error, {:retry, reason}}`. Any other error from the provider is the
+  result, and the row is gone.
   """
   @spec delete_remote(Brando.Videos.Video.t(), (-> boolean())) :: :ok | {:error, term()}
   def delete_remote(%Brando.Videos.Video{} = video, purge) when is_function(purge, 0), do: delete_then_purge(video, purge)
@@ -351,7 +356,7 @@ defmodule Brando.Videos.Uploader do
 
   defp delete_then_purge(video, purge) do
     case library_remote_id(video) do
-      {module, remote_id} when is_binary(remote_id) ->
+      {module, remote_id} ->
         # An add or a restore of the same video waits, and this waits for one
         # in progress, so the check below still holds when the provider is
         # asked.
@@ -359,7 +364,7 @@ defmodule Brando.Videos.Uploader do
           delete_unless_held(video, module, remote_id, Brando.Tenant.mode(), purge)
         end)
 
-      _no_remote_id ->
+      nil ->
         purge_then_delete(video, purge)
     end
   end
@@ -369,8 +374,9 @@ defmodule Brando.Videos.Uploader do
   defp purge_then_delete(video, nil), do: dispatch_delete_remote(video)
 
   # The row goes first, and the provider is asked only if it went: a restore
-  # from the trash does not take the video's lock, so since the holdings were
-  # read the record may be live again, or deleted again and waiting for a
+  # that takes no video lock (of a record with no remote id, or a write past
+  # `Brando.Authorization.Boundary.restore/2`) may have made the record live
+  # again since the holdings were read, or deleted again and waiting for a
   # purge of its own. The row's delete commits after the provider answered,
   # so a purge that dies in between leaves the row, not a provider video no
   # purge will delete. The cost is that, for the one provider call, this
@@ -380,15 +386,45 @@ defmodule Brando.Videos.Uploader do
   # holdings, read before, take no lock on another environment's.
   # No checkout deadline, as in `with_video_lock/3`: the provider clients
   # have their own timeouts.
+  #
+  # A provider that could not answer (`transient_error?/1`) rolls the delete
+  # back too, so the next purge asks again; any other error commits it, as
+  # asking again would only fail again.
   defp purge_then_delete(video, purge) do
-    {:ok, result} =
-      Brando.Repo.repo().transaction(
-        fn -> if purge.(), do: dispatch_delete_remote(video), else: not_purged(video) end,
-        timeout: :infinity
-      )
+    Brando.Repo.repo().transaction(
+      fn -> if purge.(), do: delete_or_roll_back(video), else: not_purged(video) end,
+      timeout: :infinity
+    )
+    |> case do
+      {:ok, result} ->
+        result
 
-    result
+      {:error, {:retry, reason}} = result ->
+        Logger.warning("Video #{video.id} kept for the next purge: its provider could not delete it, #{inspect(reason)}")
+        result
+    end
   end
+
+  defp delete_or_roll_back(video) do
+    with {:error, reason} = error <- dispatch_delete_remote(video) do
+      if transient_error?(reason), do: Brando.Repo.repo().rollback({:retry, reason}), else: error
+    end
+  end
+
+  @doc """
+  Whether a provider's error, from a `delete_remote/1` callback, may pass if
+  the call is tried again: the provider was not reached, or timed out
+  (`Req.TransportError`, `Req.HTTPError`), or answered 408, 429 or a 5xx.
+  Any other answer, such as a 401 for a revoked token or a 403, is taken as
+  final.
+  """
+  @spec transient_error?(term()) :: boolean()
+  def transient_error?({:http_error, status, _body}) when is_integer(status),
+    do: status in [408, 429] or status in 500..599
+
+  def transient_error?(%Req.TransportError{}), do: true
+  def transient_error?(%Req.HTTPError{}), do: true
+  def transient_error?(_reason), do: false
 
   defp then_purge({:error, reason} = result, _video, _purge) when reason in [:holdings_unavailable, :busy], do: result
   defp then_purge(result, _video, nil), do: result
@@ -476,12 +512,21 @@ defmodule Brando.Videos.Uploader do
     end
   end
 
-  defp library_remote_id(video) do
+  @doc """
+  `{module, remote_id}` for a provider video: its uploader, and the id its
+  provider knows it by, at the uploader's `library_meta_path/0`. That id
+  keys the video's lock and its holdings. `nil` for a video with no
+  provider, or none of its id.
+  """
+  @spec library_remote_id(Brando.Videos.Video.t()) :: {module(), String.t()} | nil
+  def library_remote_id(video) do
     with provider when not is_nil(provider) <- get_provider(video),
          module = provider_module(provider),
          path = String.split(module.library_meta_path(), "."),
          remote_id when is_binary(remote_id) <- get_in(video.meta || %{}, path) do
       {module, remote_id}
+    else
+      _no_provider_or_id -> nil
     end
   end
 

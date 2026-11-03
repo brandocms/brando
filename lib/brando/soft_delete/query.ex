@@ -6,6 +6,8 @@ defmodule Brando.SoftDelete.Query do
   alias Brando.Repo
   alias Brando.Trait
 
+  require Logger
+
   @doc """
   Excludes all deleted entries from query
   """
@@ -62,10 +64,32 @@ defmodule Brando.SoftDelete.Query do
     Repo.all(query)
   end
 
+  @unreachable_key {__MODULE__, :unreachable}
+
   @doc """
   Clean up and delete all expired soft deleted entries
   """
   def clean_up_soft_deletions, do: Enum.map(list_soft_delete_schemas(), &clean_up_schema/1)
+
+  @doc """
+  Runs `fun`, one purge of several environments, each calling
+  `clean_up_soft_deletions/0`: a video provider one of them could not reach
+  is not asked again by the others, until `fun` returns. The provider
+  accounts are the installation's, so one that hangs for an environment
+  hangs for all, and the soft-delete purger has one deadline for every
+  environment. Outside it, each call to `clean_up_soft_deletions/0` is a
+  run of its own.
+  """
+  def as_one_run(fun) when is_function(fun, 0) do
+    previous = Process.get(@unreachable_key)
+    Process.put(@unreachable_key, [])
+
+    try do
+      fun.()
+    after
+      if previous, do: Process.put(@unreachable_key, previous), else: Process.delete(@unreachable_key)
+    end
+  end
 
   # Handle Video schema specially to support remote deletion on purge
   defp clean_up_schema(Brando.Videos.Video = schema) do
@@ -81,24 +105,39 @@ defmodule Brando.SoftDelete.Query do
     # environment's purge of the same video, waiting for the lock, no longer
     # finds it among the holders and deletes the video at the provider. The
     # provider is asked once the row is gone, and not when the delete, still
-    # filtered on expiry, leaves it: a restore from the trash takes no lock,
-    # so the record may have been restored, or restored and deleted again,
-    # since it was read. The row's delete commits with the provider's answer,
-    # so a run that dies before the answer keeps the row. A video whose holders
-    # could not be read (`Brando.Videos.ProviderHoldings`), or whose lock an
-    # add or another delete held too long, is still at its provider. Its row
-    # stays for the next run to try again; deleting it would leave the
-    # provider video behind for good. Only rows the delete removed are
-    # counted.
-    purged =
-      Enum.count(on_purge, fn video ->
-        result =
-          Brando.Videos.Uploader.delete_remote(video, fn ->
-            match?({1, _}, Repo.delete_all(from t in query, where: t.id == ^video.id))
-          end)
+    # filtered on expiry, leaves it: a record with no remote id is restored
+    # without the lock, so it may have been restored, or restored and deleted
+    # again, since it was read. The row's delete commits with the provider's
+    # answer, so a run that dies before the answer keeps the row, and so does
+    # a provider that could not answer (`Brando.Videos.Uploader.transient_error?/1`).
+    # A video whose holders could not be read (`Brando.Videos.ProviderHoldings`),
+    # or whose lock an add or another delete held too long, is still at its
+    # provider. Its row stays for the next run to try again; deleting it would
+    # leave the provider video behind for good. Only rows the delete removed
+    # are counted.
+    #
+    # Once a provider could not be reached, timed out, or answered with an
+    # error only after a long wait (`unreachable?/2`), it is not asked again
+    # this run (`as_one_run/1`): each call to a provider that hangs waits out
+    # its client's timeout, and the purger has one 30-second deadline for
+    # every schema and environment. Its other rows stay for the next run, and
+    # the other providers' rows go on. Req's own timeouts (30 seconds to
+    # connect, 15 to receive) are not shortened, so a single hanging call
+    # may still use up the deadline, and the purger is stopped before it
+    # gets to the rest; the rows it did not get to stay for the next run. A
+    # provider that answered with an error at once, even a 5xx, may have
+    # answered about that one video: it is asked about its other rows.
+    unreachable = Process.get(@unreachable_key)
+    kept = Map.new(unreachable || [], &{&1, 0})
+    {purged, kept} = Enum.reduce(on_purge, {0, kept}, &purge_unless_unreachable(query, &1, &2))
+    if unreachable, do: Process.put(@unreachable_key, Map.keys(kept))
 
-        result not in [{:error, :holdings_unavailable}, {:error, :busy}, {:error, :not_purged}]
-      end)
+    for {type, count} <- kept, count > 0 do
+      Logger.warning(
+        "#{count} more #{type} #{if count == 1, do: "video", else: "videos"} kept for the next purge, " <>
+          "without asking the provider, which could not be reached this run"
+      )
+    end
 
     {count, nil} = Repo.delete_all(from t in query, where: t.id in ^Enum.map(others, & &1.id))
     {count + purged, nil}
@@ -123,6 +162,50 @@ defmodule Brando.SoftDelete.Query do
       result = Repo.delete_all(query)
       Enum.each(purged, &Brando.Activity.deleted(&1, :system, false, %{"purged" => true}))
       result
+    end)
+  end
+
+  # `kept` counts, by provider, the videos left without asking it once it
+  # could not be reached.
+  defp purge_unless_unreachable(query, video, {purged, kept}) do
+    if Map.has_key?(kept, video.type) do
+      {purged, Map.update!(kept, video.type, &(&1 + 1))}
+    else
+      started = System.monotonic_time(:millisecond)
+
+      case purge_video(query, video) do
+        {:error, {:retry, reason}} ->
+          took = System.monotonic_time(:millisecond) - started
+          {purged, if(unreachable?(reason, took), do: Map.put(kept, video.type, 0), else: kept)}
+
+        {:error, reason} when reason in [:holdings_unavailable, :busy, :not_purged] ->
+          {purged, kept}
+
+        _purged ->
+          {purged + 1, kept}
+      end
+    end
+  end
+
+  # A provider's error answer, a 500 or a 429, comes back within a second or
+  # so; one that took 3 seconds or more is a gateway's 502, 503 or 504 after
+  # it waited on the provider behind it, and the next call would wait as
+  # long. Three seconds leaves a slow network its margin, and is a tenth of
+  # the purger's 30 seconds. Tests set it lower, so they need not wait.
+  @slow_failure_ms 3_000
+
+  # The provider was not reached, or did not answer in time, or answered
+  # only after a long wait: the slow failures.
+  defp unreachable?(%Req.TransportError{}, _took), do: true
+  defp unreachable?(%Req.HTTPError{}, _took), do: true
+  defp unreachable?(_reason, took), do: took >= slow_failure_ms()
+
+  defp slow_failure_ms,
+    do: :brando |> Application.get_env(__MODULE__, []) |> Keyword.get(:slow_failure_ms, @slow_failure_ms)
+
+  defp purge_video(query, video) do
+    Brando.Videos.Uploader.delete_remote(video, fn ->
+      match?({1, _}, Repo.delete_all(from t in query, where: t.id == ^video.id))
     end)
   end
 end

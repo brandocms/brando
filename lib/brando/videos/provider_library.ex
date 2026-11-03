@@ -47,6 +47,10 @@ defmodule Brando.Videos.ProviderLibrary do
   `delete_remote_on: :on_delete` is not restored, as its video may be gone
   at the provider; the video is added as a new record if the provider still
   has it.
+
+  Restoring a deleted record from the trash is refused while the
+  environment has a live record of the same remote video
+  (`guard_restore/3`): delete that one first, or use it instead.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -279,14 +283,13 @@ defmodule Brando.Videos.ProviderLibrary do
 
   # A record never deleted at the provider (imported, or `delete_remote_on:
   # false`) is purged without the video's lock, so it may be gone since it
-  # was read: the video is then added as a new record.
+  # was read (`{:error, :not_found}`): the video is then added as a new
+  # record.
   defp restore(user, video) do
     case Boundary.restore(user, video) do
       {:ok, restored} -> restored
       {:error, _reason} -> nil
     end
-  rescue
-    Ecto.StaleEntryError -> nil
   end
 
   # The current environment's record of the remote video: by the provider's
@@ -303,6 +306,66 @@ defmodule Brando.Videos.ProviderLibrary do
       |> Brando.Repo.one()
     end)
   end
+
+  @doc """
+  Runs `fun` holding the lock of `video`'s remote video
+  (`Brando.Videos.ProviderHoldings.with_video_lock/3`), so an add of the same
+  video from the library, or its purge, does not land while it runs. A video
+  with no remote id has no lock, and `fun` just runs.
+  `Brando.Authorization.Boundary.restore/2` takes it before its transaction
+  opens and calls `guard_restore/3` inside.
+  """
+  @spec with_restore_lock(Video.t(), (-> result)) :: result | {:error, :busy | :holdings_unavailable}
+        when result: term()
+  def with_restore_lock(%Video{} = video, fun) do
+    case Uploader.library_remote_id(video) do
+      {module, remote_id} -> ProviderHoldings.with_video_lock(module.library_meta_path(), remote_id, fun)
+      nil -> fun.()
+    end
+  end
+
+  @doc """
+  Runs `restore` with the deleted `video` as stored now, read again under
+  `with_restore_lock/2`, unless:
+
+    * it is gone, purged since it was read, or before `restore` writes it:
+      `{:error, :not_found}`;
+    * it is live, restored since it was read: `{:ok, video}`, as it is,
+      and `restore` does not run;
+    * the current environment has a live record of the same remote video:
+      `{:error, {:recorded_here, live}}`, with that record if `user` may read
+      it and `nil` otherwise. Every tenancy mode keeps one live record per
+      remote video and environment, as an add from the library does.
+  """
+  @spec guard_restore(term(), Video.t(), (Video.t() -> result)) :: result | {:ok, Video.t()} | {:error, term()}
+        when result: term()
+  def guard_restore(user, %Video{id: id}, restore) do
+    case Brando.Repo.get(Video, id) do
+      nil -> {:error, :not_found}
+      %Video{deleted_at: nil} = video -> {:ok, video}
+      video -> video |> live_record() |> restore_unless_live(user, fn -> restore.(video) end)
+    end
+  end
+
+  defp live_record(video) do
+    case Uploader.library_remote_id(video) do
+      {module, remote_id} -> ProviderHoldings.recorded_here(module.library_meta_path(), remote_id, video.id)
+      nil -> nil
+    end
+  end
+
+  # A record the purge deletes without the video's lock (imported, or not
+  # deleted at the provider on purge) may go between the read and the write.
+  # With groups authorization, the change's check locks the row first and
+  # refuses one that is gone (`{:error, :forbidden}`).
+  defp restore_unless_live(nil, _user, restore) do
+    restore.()
+  rescue
+    Ecto.StaleEntryError -> {:error, :not_found}
+  end
+
+  defp restore_unless_live(live, user, _restore),
+    do: {:error, {:recorded_here, if(Boundary.authorize(user, :read, live) == :ok, do: live)}}
 
   @doc "Whether the record was added from a provider library rather than uploaded."
   @spec imported?(Video.t()) :: boolean()
