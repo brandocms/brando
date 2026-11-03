@@ -816,12 +816,15 @@ defmodule Brando.Content.Blocks do
   # write of the row moves), and every save that renders inline writes the
   # row (it forces its `rendered_*_at`), so this renders again from what
   # that save stored. A render that changes nothing stores nothing.
+  #
+  # NO KEY UPDATE, as the update takes: FOR UPDATE would also wait for
+  # inserts of rows that point at the entry.
   defp store_render(_schema, _id, _version, %Changeset{changes: changes} = changeset) when changes == %{},
     do: {:ok, changeset.data}
 
   defp store_render(schema, id, version, changeset) do
     Repo.transaction(fn ->
-      if version != nil and Repo.one(lock(row_version(schema, id), "FOR UPDATE")) == version do
+      if version != nil and Repo.one(lock(row_version(schema, id), "FOR NO KEY UPDATE")) == version do
         case Repo.update(changeset) do
           {:ok, stored} -> stored
           {:error, changeset} -> Repo.rollback(changeset)
@@ -891,7 +894,10 @@ defmodule Brando.Content.Blocks do
 
     changeset =
       Changeset.prepare_changes(changeset, fn changeset ->
-        if Repo.one(lock(row_version(schema, id), "FOR UPDATE")) != version, do: Process.put(written, true)
+        # The lock the save's update takes, as in `store_render/4`
+        if Repo.one(lock(row_version(schema, id), "FOR NO KEY UPDATE")) != version,
+          do: Process.put(written, true)
+
         changeset
       end)
 
