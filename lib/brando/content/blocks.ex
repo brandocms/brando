@@ -892,9 +892,14 @@ defmodule Brando.Content.Blocks do
         changeset
       end)
 
-    result = save.(changeset)
+    {result, written?} =
+      try do
+        {save.(changeset), Process.get(written, false)}
+      after
+        Process.delete(written)
+      end
 
-    if Process.delete(written) && match?({:ok, _}, result),
+    if written? and match?({:ok, _}, result),
       do: Repo.after_commit(fn -> enqueue_entry_for_render(%{schema: to_string(schema), entry_id: id}) end)
 
     result
