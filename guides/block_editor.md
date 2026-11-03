@@ -74,7 +74,14 @@ Blocks are rendered to HTML at save time and stored on the entry:
 ```
 
 `render_blocks/1` reads `entry.rendered_<field>` — no parsing at request
-time. To parse at request time instead (e.g. for blocks containing
+time.
+
+A change to a module, container, palette, fragment or global renders the
+entries that use it again in the background. A background render stores its
+HTML only if the entry was not written while it rendered, and otherwise
+renders again from what was saved, so it never stores over an editor's newer
+blocks. A save that stores over a background render that read newer modules
+queues another render of the entry. To parse at request time instead (e.g. for blocks containing
 runtime-dynamic content), use `Brando.Villain.parse(entry.entry_blocks, entry)`
 or the `render_data/1` component.
 

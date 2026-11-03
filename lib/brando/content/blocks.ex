@@ -27,6 +27,8 @@ defmodule Brando.Content.Blocks do
 
   @type changeset :: Ecto.Changeset.t()
   @fragment_module Module.concat(["Brando", "Pages", "Fragment"])
+  # Renders of an entry that each lost to a write before `render_entry/2` gives up
+  @render_attempts 5
 
   # --- Block Construction ---
 
@@ -82,6 +84,12 @@ defmodule Brando.Content.Blocks do
   The generated `create_*`/`update_*` mutations save what they are given; the
   admin form renders before calling them, and so must any other writer that
   changes blocks.
+
+  The `rendered_*_at` columns are always written, even with the value they
+  had, so the save writes the entry's row: a background render that loaded
+  the entry before the save sees that and renders again (`render_entry/2`).
+  A writer that renders outside the entry's row lock also stores with
+  `store_fenced/3`.
   """
   @spec render_block_fields(changeset) :: changeset
   @decorate span("brando.blocks.render_fields", schema: :schema, entry_id: [:changeset, :data, :id])
@@ -99,7 +107,7 @@ defmodule Brando.Content.Blocks do
 
       acc
       |> Changeset.put_change(:"rendered_#{name}", Villain.parse(blocks, entry, []))
-      |> Changeset.put_change(:"rendered_#{name}_at", DateTime.truncate(DateTime.utc_now(), :second))
+      |> Changeset.force_change(:"rendered_#{name}_at", DateTime.truncate(DateTime.utc_now(), :second))
     end)
   end
 
@@ -753,11 +761,23 @@ defmodule Brando.Content.Blocks do
 
   We treat page fragments special, since they need to propagate to other
   referencing pages and fragments.
+
+  The render stores only if the entry's row is as it was when the render
+  loaded it, and renders again from the entry as it is now if not: an
+  editor's save, which renders inline, may have stored newer blocks while it
+  rendered (`store_render/4`). After #{@render_attempts} renders that each
+  lost to a write it returns `{:error, :entry_changed}`.
   """
   @spec render_entry(schema :: module, entry_id :: integer | binary) ::
-          {:ok, map} | {:error, changeset}
+          {:ok, map} | {:error, changeset | :entry_changed | term}
   @decorate span("brando.blocks.render_entry", schema: :schema, entry_id: :id)
-  def render_entry(schema, id) do
+  def render_entry(schema, id), do: render_entry(schema, id, @render_attempts)
+
+  defp render_entry(schema, id, attempts) do
+    # Read before the entry: a write in between makes the render again,
+    # never one that goes unseen
+    version = Repo.one(row_version(schema, id))
+
     case Brando.Blueprint.EntryQuery.get(schema, id) do
       {:ok, entry} ->
         changeset =
@@ -765,7 +785,7 @@ defmodule Brando.Content.Blocks do
           |> Changeset.change()
           |> render_all_block_fields_and_add_to_changeset(schema, entry)
 
-        case Repo.update(changeset) do
+        case store_render(schema, id, version, changeset) do
           {:ok, %{__struct__: fragment_module} = fragment} when fragment_module == @fragment_module ->
             Brando.Cache.Query.evict({:ok, fragment})
             render_entries_with_fragment_id(fragment.id)
@@ -774,24 +794,110 @@ defmodule Brando.Content.Blocks do
           {:ok, result} ->
             Brando.Cache.Query.evict({:ok, result})
             {:ok, result}
+
+          :changed when attempts > 1 ->
+            render_entry(schema, id, attempts - 1)
+
+          :changed ->
+            log_render_error(schema, id, {:error, :entry_changed})
+
+          {:error, _} = err ->
+            err
         end
 
       {:error, _} = err ->
-        require Logger
-
-        Logger.error("""
-        ==> Failed to render_entry/2
-
-        Schema..: #{inspect(schema, pretty: true)}
-        Id......: #{inspect(id, pretty: true)}
-
-        ERROR:
-        #{inspect(err, pretty: true)}
-
-        """)
-
-        err
+        log_render_error(schema, id, err)
     end
+  end
+
+  # Under the row's lock, briefly: the render is done. A save that writes
+  # the row while this holds it waits, and stores after it. One that wrote
+  # it since the render read it changed its version (`xmin`, which every
+  # write of the row moves), and every save that renders inline writes the
+  # row (it forces its `rendered_*_at`), so this renders again from what
+  # that save stored. A render that changes nothing stores nothing.
+  defp store_render(_schema, _id, _version, %Changeset{changes: changes} = changeset) when changes == %{},
+    do: {:ok, changeset.data}
+
+  defp store_render(schema, id, version, changeset) do
+    Repo.transaction(fn ->
+      if version != nil and Repo.one(lock(row_version(schema, id), "FOR UPDATE")) == version do
+        case Repo.update(changeset) do
+          {:ok, stored} -> stored
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      else
+        :changed
+      end
+    end)
+    |> case do
+      {:ok, :changed} -> :changed
+      result -> result
+    end
+  end
+
+  # The version of the entry's row: the transaction that wrote it last
+  defp row_version(schema, id), do: from(e in schema, where: e.id == ^id, select: fragment("xmin::text"))
+
+  defp log_render_error(schema, id, err) do
+    require Logger
+
+    Logger.error("""
+    ==> Failed to render_entry/2
+
+    Schema..: #{inspect(schema, pretty: true)}
+    Id......: #{inspect(id, pretty: true)}
+
+    ERROR:
+    #{inspect(err, pretty: true)}
+
+    """)
+
+    err
+  end
+
+  @doc """
+  What `store_fenced/3` checks a save against: the version of the entry's
+  row before an inline render. Take it before rendering. Nil for a new entry.
+  """
+  @spec render_fence(changeset) :: {module, term, String.t() | nil} | nil
+  def render_fence(%Changeset{data: %{__struct__: schema, id: id}}) when not is_nil(id),
+    do: {schema, id, Repo.one(row_version(schema, id))}
+
+  def render_fence(_changeset), do: nil
+
+  @doc """
+  Saves `changeset`, rendered inline after `fence` was taken
+  (`render_fence/1`), with `save`, a function that stores it and returns
+  `{:ok, entry}` or an error.
+
+  A background render that stored the entry while this one rendered may have
+  read newer modules, globals or fragments than this one did, and this save
+  stores over it: once the save succeeds, the entry is queued for a render.
+  The save checks under the row's lock, which it holds until it commits, so
+  a render can't store between the check and the save. A background render
+  still running then renders again from what the save stored
+  (`render_entry/2`).
+  """
+  @spec store_fenced({module, term, String.t() | nil} | nil, changeset, (changeset -> result)) :: result
+        when result: term
+  def store_fenced(nil, changeset, save), do: save.(changeset)
+
+  def store_fenced({schema, id, version}, changeset, save) do
+    written = {__MODULE__, :written_since_render, make_ref()}
+
+    changeset =
+      Changeset.prepare_changes(changeset, fn changeset ->
+        if Repo.one(lock(row_version(schema, id), "FOR UPDATE")) != version, do: Process.put(written, true)
+        changeset
+      end)
+
+    result = save.(changeset)
+
+    if Process.delete(written) && match?({:ok, _}, result),
+      do: Repo.after_commit(fn -> enqueue_entry_for_render(%{schema: to_string(schema), entry_id: id}) end)
+
+    result
   end
 
   @doc """

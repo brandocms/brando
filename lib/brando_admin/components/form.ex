@@ -5893,6 +5893,7 @@ defmodule BrandoAdmin.Components.Form do
       |> Brando.Trait.Creator.stamp_if_edited(schema, current_user)
 
     entry_for_blocks = build_entry_for_blocks(new_changeset, block_map)
+    fence = Blocks.render_fence(new_changeset)
 
     send(self(), {:progress_popup, "Rendering blocks for entry..."})
 
@@ -5918,7 +5919,11 @@ defmodule BrandoAdmin.Components.Form do
       changeset: rendered_changeset
     }
 
-    case save_entry(socket, context, mutation_type, singular, rendered_changeset) do
+    # A background render that stored while this one rendered gets another
+    # after the save
+    stored = Blocks.store_fenced(fence, rendered_changeset, &save_entry(socket, context, mutation_type, singular, &1))
+
+    case stored do
       {:ok, entry} -> saved_entry_with_blocks(socket, entry, save)
       {:error, {:source_controlled, paths}} -> source_controlled_save_with_blocks(socket, paths)
       {:error, :forbidden} -> forbidden_save_with_blocks(socket)
@@ -8737,7 +8742,9 @@ defmodule BrandoAdmin.Components.Form do
 
       updated_changeset
       |> put_change(rendered_field_name, rendered_blocks)
-      |> put_change(rendered_at_field_name, DateTime.truncate(DateTime.utc_now(), :second))
+      # Written even when unchanged: a background render checks the row
+      # (`Brando.Content.Blocks.render_entry/2`)
+      |> force_change(rendered_at_field_name, DateTime.truncate(DateTime.utc_now(), :second))
     end)
   end
 
