@@ -11249,6 +11249,11 @@ msgstr "Er ingen valgt, sendes hendelser for alle innholdstyper. Feilede jobber 
 msgid "None chosen sends events in every language."
 msgstr "Velger du ingen, sendes hendelser på alle språk."
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "None of its changes have been saved. Discard it, then prepare them again."
+msgstr "Ingen av endringene er lagret. Forkast det, og forbered dem på nytt."
+
 #: lib/brando_admin/components/assets/sort_by_use.ex
 #, elixir-autogen, elixir-format
 msgid "None of the files in this folder are used by an entry, so there is nothing to sort."
@@ -18241,6 +18246,11 @@ msgstr "Denne passnøkkelen er allerede lagt til."
 #, elixir-autogen, elixir-format
 msgid "This password reset link is invalid or has expired. Ask for a new one below."
 msgstr "Denne lenken for å tilbakestille passordet er ugyldig eller utløpt. Be om en ny nedenfor."
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This proposal cannot be applied"
+msgstr "Dette forslaget kan ikke utføres"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format

@@ -2473,6 +2473,20 @@ defmodule Brando.Content.Proposals do
   defp cancel!(record), do: record
 
   @doc """
+  Whether `cancel/2` would discard proposal `id` for the actor: it is the
+  actor's, in this site/environment, and under review. Its operations are not
+  read, so a proposal that can no longer be loaded for review, such as one
+  stored naming a content type the catalogue does not list, can be discarded.
+  """
+  @spec discardable?(Ecto.UUID.t(), term()) :: boolean()
+  def discardable?(id, actor) do
+    case Error.protect(fn -> record!(id, actor) end) do
+      {:ok, %Record{status: status}} -> status in ~w(pending approved)
+      {:error, _} -> false
+    end
+  end
+
+  @doc """
   Apply the approved `version` of proposal `id` atomically and return its receipt.
 
   Entries are locked and compared with the proposal's fingerprints; a changed
