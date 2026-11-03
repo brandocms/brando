@@ -121,6 +121,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
          |> assign_run(run)
          |> assign_conversations()
          |> assign_messages()
+         # Read after the messages: a run working meanwhile points the
+         # conversation at its proposal before it writes the tool result.
+         |> assign(:conversation, reload(conversation, user))
          |> assign_proposal()
          |> assign_guidance()
          |> assign_connected()}
@@ -1652,7 +1655,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
        socket
        |> assign(conversation: reload(conversation, user), draft: "", progress: gettext("Thinking"))
        |> assign_run(run)
-       |> assign_messages()
+       |> assign_new_messages()
        |> push_event("b:assistant:clear", %{})}
     else
       {:error, message} -> {:noreply, put_toast(socket, :error, message)}
@@ -1768,11 +1771,20 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   def handle_event("share_page", _, socket) do
     %{proposal: proposal, preview: preview, current_user: user} = socket.assigns
-    {target, _} = Enum.find(proposal.targets, fn {target, _} -> Proposals.Proposal.key(target) == preview.key end)
 
-    case Proposals.Preview.share(proposal, target, user, preview_target: preview.target, shared: !!socket.assigns.shared) do
-      {:ok, url, days} ->
-        {:noreply, assign(socket, :share_url, %{url: url, days: days})}
+    with %{} <- proposal,
+         %{} <- preview,
+         {target, _} <- Enum.find(proposal.targets, fn {target, _} -> Proposals.Proposal.key(target) == preview.key end),
+         {:ok, url, days} <-
+           Proposals.Preview.share(proposal, target, user,
+             preview_target: preview.target,
+             shared: !!socket.assigns.shared
+           ) do
+      {:noreply, assign(socket, :share_url, %{url: url, days: days})}
+    else
+      # The proposal changed, or was refused, before the page took the button away.
+      nil ->
+        {:noreply, socket |> discard_previews() |> assign(:preview, nil)}
 
       {:error, :forbidden} ->
         {:noreply, put_toast(socket, :error, gettext("You do not have permission to share pages."))}
@@ -1944,7 +1956,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       else: {:noreply, assign(socket, :progress, text)}
   end
 
-  defp agent_event({:message, _}, socket), do: {:noreply, assign_messages(socket)}
+  defp agent_event({:message, _}, socket), do: {:noreply, assign_new_messages(socket)}
 
   defp agent_event({:proposal, _}, socket) do
     socket = socket |> refresh_conversation() |> assign_proposal()
@@ -2143,6 +2155,22 @@ defmodule BrandoAdmin.AI.AssistantLive do
     cost = if Agent.config()[:show_cost], do: Agent.cost(conversation.id, user)
     socket |> assign(messages: messages, turns: turns(messages), cost: cost) |> assign_media()
   end
+
+  # Messages are read whole, so the page can show a run's later messages
+  # before their events arrive, the run's `{:proposal, id}` among them. The
+  # run points the conversation at its proposal before it writes the tool
+  # result, so a tool result not shown before brings the proposal with it.
+  # An open preview waits for that event: each render reloads its frame.
+  defp assign_new_messages(socket) do
+    shown = tool_results(socket.assigns.messages)
+    socket = assign_messages(socket)
+
+    if tool_results(socket.assigns.messages) == shown,
+      do: socket,
+      else: socket |> refresh_conversation() |> assign_proposal()
+  end
+
+  defp tool_results(messages), do: for(%{role: "tool", id: id} <- messages, do: id)
 
   # An error belongs to the proposal it was shown with: a failed apply keeps
   # it over the same proposal reloaded, another proposal starts without it.

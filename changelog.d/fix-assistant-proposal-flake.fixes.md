@@ -1,0 +1,1 @@
+- The assistant shows a proposal together with the reply that announces it, not a moment after.

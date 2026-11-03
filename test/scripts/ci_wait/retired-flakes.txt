@@ -4,3 +4,7 @@
 
 # The Presence shard died when a users lookup failed in its fetch task.
 presence-shard-owner-exited Presence_shard[0-9]+.*owner #PID<[0-9.]+> exited
+
+# The page showed the assistant's reply before its proposal: it read the
+# messages ahead of the run's proposal event.
+assistant-text-block-proposal a message produces a reviewed proposal that one click applies \(BrandoAdmin\.AssistantLiveTest\).*The view holds:

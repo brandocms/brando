@@ -203,8 +203,8 @@ defmodule BrandoAdmin.AssistantLiveTest do
 
     # The proposal arrives before the model's final reply.
     html = eventually(view, &(&1 =~ "Prepared a text block for Identity."))
-    # This has failed in CI without a reproduction: the reply shown, the
-    # proposal not. CI cuts the page short, so say what the view holds.
+    # The reply once showed before the proposal (the two tests below). CI
+    # cuts the page short, so say what the view holds.
     assert html =~ "Ready for your review", review_state(view)
     # A step's search words, content type and version are marked out; the
     # quotes stay with the words, so the font's kerning holds.
@@ -223,6 +223,81 @@ defmodule BrandoAdmin.AssistantLiveTest do
     assert html =~ "The changes are saved"
     assert length(Catalog.load!(Page, c.identity.id, c.current_user).entry_blocks) == 4
     refute has_element?(view, "button.assistant-apply")
+  end
+
+  # The page reads every message on each message event, so a run that finished
+  # meanwhile shows its reply while the run's proposal event is still queued.
+  test "a reply read ahead of its proposal event shows with the proposal", %{conn: conn, current_user: user} = c do
+    {:ok, conversation} = Agent.start_conversation(user)
+    {:ok, view, _} = live(conn, "/admin/assistant/#{conversation.id}")
+
+    {:ok, proposal} =
+      [%Brando.Content.Proposals.InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
+      |> Brando.Content.Proposals.propose(user, conversation_id: conversation.id)
+
+    conversation |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+    message = &Brando.Repo.insert!(struct(Agent.Message, Map.put(&1, :conversation_id, conversation.id)))
+    asked = message.(%{role: "user", content: "Add a text block to Identity"})
+    arguments = Jason.encode!(%{})
+
+    message.(%{
+      role: "assistant",
+      tool_calls: [%{"id" => "call-1", "name" => "prepare_proposal", "arguments" => arguments}]
+    })
+
+    result = Jason.encode!(%{proposal_id: proposal.id, version: 1, problems: []})
+    message.(%{role: "tool", tool_call_id: "call-1", tool_name: "prepare_proposal", content: result})
+    message.(%{role: "assistant", content: "Prepared a text block for Identity."})
+
+    # Only the editor's own message has reached the page.
+    send(view.pid, {:agent, conversation.id, {:message, asked}})
+    html = render(view)
+    assert html =~ "Prepared a text block for Identity."
+    assert html =~ "Ready for your review"
+  end
+
+  test "a reply written while the page opens shows with its proposal", %{conn: conn, current_user: user} = c do
+    {:ok, conversation} = Agent.start_conversation(user)
+
+    {:ok, proposal} =
+      [%Brando.Content.Proposals.InsertBlock{target: {Page, c.identity.id}, module: c.case_module.id}]
+      |> Brando.Content.Proposals.propose(user, conversation_id: conversation.id)
+
+    # The run finishes between the page's read of the conversation and its
+    # read of the messages.
+    finish = fn ->
+      conversation |> Ecto.Changeset.change(proposal_id: proposal.id) |> Brando.Repo.update!()
+      result = Jason.encode!(%{proposal_id: proposal.id, version: 1, problems: []})
+
+      for message <- [
+            %{role: "tool", tool_call_id: "call-1", tool_name: "prepare_proposal", content: result},
+            %{role: "assistant", content: "Prepared a text block for Identity."}
+          ],
+          do: Brando.Repo.insert!(struct(Agent.Message, Map.put(message, :conversation_id, conversation.id)))
+    end
+
+    id = make_ref()
+    test = self()
+    # The query's params hold the id dumped to its 16 bytes.
+    uuid = Ecto.UUID.dump!(conversation.id)
+
+    :telemetry.attach(
+      id,
+      BrandoIntegration.Repo.config()[:telemetry_prefix] ++ [:query],
+      fn _event, _measurements, metadata, _config ->
+        if self() != test and metadata.source == "ai_conversations" and uuid in metadata.params do
+          :telemetry.detach(id)
+          finish.()
+        end
+      end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(id) end)
+
+    {:ok, _view, html} = live(conn, "/admin/assistant/#{conversation.id}")
+    assert html =~ "Prepared a text block for Identity."
+    assert html =~ "Ready for your review"
   end
 
   # Audit F49: the step labels split on a character a stored title could hold
@@ -698,6 +773,80 @@ defmodule BrandoAdmin.AssistantLiveTest do
       view |> element("button", "All changes") |> render_click()
       assert has_element?(view, ".assistant-cards")
       assert length(Catalog.load!(Page, c.identity.id, c.current_user).entry_blocks) == 3
+    end
+
+    # Each render reloads the frame and resets its scroll; the run's proposal
+    # event renders it when the proposal changes.
+    @tag :capture_log
+    test "a tool result does not render the open preview again", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      view
+      |> element(~s(button.assistant-card-preview[phx-value-key="Brando.Pages.Page:#{c.identity.id}"]))
+      |> render_click()
+
+      key = view |> element(~s(button[phx-value-target="blocks"])) |> render_click() |> frame_key()
+
+      content = Jason.encode!(%{results: []})
+      fields = %{role: "tool", tool_call_id: "call-1", tool_name: "search", content: content}
+      message = Brando.Repo.insert!(struct(Agent.Message, Map.put(fields, :conversation_id, c.conversation.id)))
+      send(view.pid, {:agent, c.conversation.id, {:message, message}})
+
+      assert frame_key(render(view)) == key
+    end
+
+    # Until that event, the frame can show an entry the new proposal left out.
+    @tag :capture_log
+    test "sharing a page the proposal no longer holds closes the preview", %{conn: conn, current_user: user} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      view
+      |> element(~s(button.assistant-card-preview[phx-value-key="Brando.Pages.Page:#{c.identity.id}"]))
+      |> render_click()
+
+      view |> element(~s(button[phx-value-target="blocks"])) |> render_click()
+
+      {:ok, other} =
+        [%Brando.Content.Proposals.SetFields{target: {Page, c.naming.id}, fields: %{uri: "naming-renamed"}}]
+        |> Brando.Content.Proposals.propose(user, conversation_id: c.conversation.id)
+
+      c.conversation |> Ecto.Changeset.change(proposal_id: other.id) |> Brando.Repo.update!()
+      content = Jason.encode!(%{proposal_id: other.id, version: 1, problems: []})
+      fields = %{role: "tool", tool_call_id: "call-1", tool_name: "prepare_proposal", content: content}
+      message = Brando.Repo.insert!(struct(Agent.Message, Map.put(fields, :conversation_id, c.conversation.id)))
+      send(view.pid, {:agent, c.conversation.id, {:message, message}})
+
+      view |> element(~s(button[phx-click="share_page"])) |> render_click()
+      refute has_element?(view, ~s(button[phx-click="share_page"]))
+    end
+
+    # A proposal refused at review leaves none on screen; a click sent before
+    # the page took the button away still arrives.
+    @tag :capture_log
+    test "sharing a page once the proposal is refused closes the preview", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      view
+      |> element(~s(button.assistant-card-preview[phx-value-key="Brando.Pages.Page:#{c.identity.id}"]))
+      |> render_click()
+
+      view |> element(~s(button[phx-value-target="blocks"])) |> render_click()
+
+      # As an earlier version stored it: a content type outside the catalogue.
+      record = Brando.Repo.get!(Brando.Content.Proposals.Record, c.proposal.id)
+      [created | rest] = record.operations
+      fields = %{"label" => "Planted", "key" => "planted", "language" => "en"}
+      crafted = %{created | "content_type" => "Brando.Sites.GlobalSet", "fields" => fields}
+      record |> Ecto.Changeset.change(operations: [crafted | rest]) |> Brando.Repo.update!()
+
+      content = Jason.encode!(%{proposal_id: c.proposal.id, version: 1, problems: []})
+      fields = %{role: "tool", tool_call_id: "call-1", tool_name: "prepare_proposal", content: content}
+      message = Brando.Repo.insert!(struct(Agent.Message, Map.put(fields, :conversation_id, c.conversation.id)))
+      send(view.pid, {:agent, c.conversation.id, {:message, message}})
+      assert has_element?(view, "#assistant-unloadable")
+
+      render_click(view, "share_page", %{})
+      assert :sys.get_state(view.pid).socket.assigns.preview == nil
     end
   end
 
