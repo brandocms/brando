@@ -572,8 +572,11 @@ config :brando, Brando.Videos.Uploaders.Mux,
 
 They win over the same timeouts in the provider's `req_options` and in
 Req's `default_options`, also when they are set inside `finch` or
-`connect_options`. With a `finch` pool, the pool's own connection options
-set the connect timeout.
+`connect_options`. A proxy in `connect_options` gets the connect timeout
+both to connect and to answer the tunnel request. With a `finch` pool, the
+pool's own connection options set the connect timeout. Finch's default is 5
+seconds, so a pool started with a longer connect timeout makes the delete
+wait that long.
 
 ### Uploading in a Video Field, Block or Variable
 

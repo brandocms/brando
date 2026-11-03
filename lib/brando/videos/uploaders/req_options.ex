@@ -112,9 +112,13 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
   They win over the same timeouts in `:req_options` and in Req's app-wide
   `default_options`, which tune the provider's other calls. That includes
   the ones nested in `:finch` and in `connect_options: [transport_opts: …]`.
-  A configured `:connect_options` or `:finch` keeps its other entries. With
-  a `:finch` pool configured, the pool's own `conn_opts` set the connect
-  timeout.
+  A `connect_options: [proxy: {scheme, host, port, opts}]` gets the connect
+  timeout for the connect to the proxy and for its answer to the tunnel
+  request (`:transport_opts` and `:tunnel_timeout` in `opts`).
+  A configured `:connect_options`, `:proxy` or `:finch` keeps its other
+  entries. With a `:finch` pool configured, the pool's own `conn_opts` set
+  the connect timeout. Finch's default is 5 seconds, so a pool started with
+  a longer connect timeout makes the delete wait that long.
 
   ## `nil` is not absent
 
@@ -168,8 +172,28 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
   defp put_connect_timeout(connect_options, timeout) do
     connect_options = Keyword.put(connect_options, :timeout, timeout)
 
-    if Keyword.has_key?(connect_options, :transport_opts),
-      do: Keyword.update!(connect_options, :transport_opts, &Keyword.put(&1, :timeout, timeout)),
-      else: connect_options
+    connect_options =
+      if Keyword.has_key?(connect_options, :transport_opts),
+        do: Keyword.update!(connect_options, :transport_opts, &Keyword.put(&1, :timeout, timeout)),
+        else: connect_options
+
+    case connect_options[:proxy] do
+      {scheme, host, port, proxy_opts} when is_list(proxy_opts) ->
+        Keyword.put(connect_options, :proxy, {scheme, host, port, put_proxy_timeouts(proxy_opts, timeout)})
+
+      _no_proxy ->
+        connect_options
+    end
+  end
+
+  # Mint connects to a proxy with the proxy's own options, not the top-level
+  # timeout, and then waits up to `:tunnel_timeout` for the answer to an https
+  # target's CONNECT. Each is 30 seconds by default.
+  defp put_proxy_timeouts(proxy_opts, timeout) do
+    transport_opts = Keyword.put(proxy_opts[:transport_opts] || [], :timeout, timeout)
+
+    proxy_opts
+    |> Keyword.put(:tunnel_timeout, timeout)
+    |> Keyword.put(:transport_opts, transport_opts)
   end
 end

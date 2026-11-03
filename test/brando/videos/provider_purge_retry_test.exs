@@ -192,7 +192,11 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
 
       opts = ReqOptions.merge(Mux, method: :delete, url: "https://api.mux.com/video/v1/assets/a")
 
-      assert opts[:connect_options] == [timeout: 1_000, proxy: {:http, "proxy", 8080, []}]
+      assert Enum.sort(opts[:connect_options]) == [
+               proxy: {:http, "proxy", 8080, [transport_opts: [timeout: 1_000], tunnel_timeout: 1_000]},
+               timeout: 1_000
+             ]
+
       assert opts[:receive_timeout] == 2_000
       assert opts[:request_timeout] == 2_000
 
@@ -252,14 +256,55 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
       assert System.monotonic_time(:millisecond) - started < 1_500
     end
 
+    test "gives up on a proxy that never answers its CONNECT within the connect timeout" do
+      started = System.monotonic_time(:millisecond)
+
+      # No adapter: the request keeps its https URL and asks the proxy for a
+      # tunnel, which it never answers, so nothing leaves the machine.
+      assert {{:error, error}, _log} = delete_through_proxy(HangingProvider.silent(), delete_connect_timeout: 200)
+
+      assert System.monotonic_time(:millisecond) - started < 1_500
+      assert %Req.HTTPError{reason: {:proxy, :tunnel_timeout}} = error
+      assert Uploader.transient_error?(error)
+    end
+
+    test "gives up on a proxy it cannot connect to within the connect timeout" do
+      started = System.monotonic_time(:millisecond)
+
+      assert {{:error, error}, _log} =
+               delete_through_proxy(HangingProvider.unanswered_connect(), delete_connect_timeout: 200)
+
+      assert System.monotonic_time(:millisecond) - started < 1_500
+      assert %Req.TransportError{reason: :timeout} = error
+      assert Uploader.transient_error?(error)
+    end
+
+    test "keeps a proxy's other options, and wins over its timeouts" do
+      proxy_opts = [tunnel_timeout: 60_000, transport_opts: [timeout: 60_000, nodelay: true]]
+
+      put_test_env(Mux,
+        delete_connect_timeout: 200,
+        req_options: [connect_options: [proxy: {:http, "proxy", 8080, proxy_opts}]]
+      )
+
+      opts = ReqOptions.merge(Mux, method: :delete, url: "https://api.mux.com/video/v1/assets/a")
+
+      assert {:http, "proxy", 8080, merged} = opts[:connect_options][:proxy]
+      assert merged[:tunnel_timeout] == 200
+      assert merged[:transport_opts] == [timeout: 200, nodelay: true]
+
+      get = ReqOptions.merge(Mux, method: :get, url: "https://api.mux.com/video/v1/assets")
+      assert get[:connect_options][:proxy] == {:http, "proxy", 8080, proxy_opts}
+    end
+
     test "keeps the connect options in Req's default options" do
       put_req_default_options(connect_options: [proxy: {:http, "proxy", 8080, []}, transport_opts: [timeout: 60_000]])
 
       opts = ReqOptions.merge(Mux, method: :delete, url: "https://api.mux.com/video/v1/assets/a")
 
-      assert opts[:connect_options] == [
+      assert Enum.sort(opts[:connect_options]) == [
+               proxy: {:http, "proxy", 8080, [transport_opts: [timeout: 5_000], tunnel_timeout: 5_000]},
                timeout: 5_000,
-               proxy: {:http, "proxy", 8080, []},
                transport_opts: [timeout: 5_000]
              ]
     end
@@ -426,6 +471,16 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
       Mux,
       [access_token_id: "id", access_token_secret: "secret"] ++
         config ++ [req_options: [adapter: HangingProvider, retry: false] ++ req_options]
+    )
+
+    with_log(fn -> Mux.delete_remote(%Video{type: :mux, meta: %{"mux" => %{"asset_id" => "asset-1"}}}) end)
+  end
+
+  defp delete_through_proxy(port, config) do
+    put_test_env(
+      Mux,
+      [access_token_id: "id", access_token_secret: "secret"] ++
+        config ++ [req_options: [retry: false, connect_options: [proxy: {:http, "127.0.0.1", port, []}]]]
     )
 
     with_log(fn -> Mux.delete_remote(%Video{type: :mux, meta: %{"mux" => %{"asset_id" => "asset-1"}}}) end)
