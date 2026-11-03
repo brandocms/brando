@@ -1,7 +1,7 @@
 defmodule Brando.Worker.EntryRenderer do
   @moduledoc false
   # Renders of an entry queued within 5 seconds and not started coalesce
-  # (`Brando.Content.RenderQueue.enqueue/1`). One running, or waiting to
+  # (`Brando.Content.RenderQueue.enqueue/2`). One running, or waiting to
   # retry, gets another after it: it may have read the entry before the write.
   use Oban.Worker,
     queue: :default,

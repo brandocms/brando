@@ -206,7 +206,7 @@ defmodule Brando.Cache do
   renders read, or a query cache source they list. The job may run on a
   node that has not heard of the write that queued it yet, and would render
   from what its caches held before. The job carries a token for each write
-  the queuing node had refreshed for (`Brando.Content.RenderQueue.enqueue/1`),
+  the queuing node had refreshed for (`Brando.Content.RenderQueue.enqueue/2`),
   and this node refreshes for any token it does not know.
   """
   @spec ensure_fresh(map()) :: :ok
