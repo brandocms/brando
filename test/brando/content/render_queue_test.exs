@@ -56,11 +56,29 @@ defmodule Brando.Content.RenderQueueTest do
         # The job has read the entry and the module, and not stored yet
         running = start_held(job)
         save_module(c.module, "three")
+        assert [next] = renders(c.fragment)
+
+        # Run on another node, it waits: it would store before the first
+        assert {:snooze, _} = EntryRenderer.perform(next)
+
         resume(running)
         assert {:ok, _} = Task.await(running)
         finish(job)
         assert rendered(c.fragment) =~ "Module: two."
 
+        assert {:ok, _} = EntryRenderer.perform(next)
+      end)
+
+      assert rendered(c.fragment) =~ "Module: three."
+    end
+
+    test "while a render left running by a node that went down renders without waiting", c do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        save_module(c.module, "two")
+        assert [job] = renders(c.fragment)
+        set_job(job, state: "executing", attempt: 1, attempted_at: DateTime.add(DateTime.utc_now(), -60))
+
+        save_module(c.module, "three")
         assert [next] = renders(c.fragment)
         assert {:ok, _} = EntryRenderer.perform(next)
       end)
@@ -153,6 +171,24 @@ defmodule Brando.Content.RenderQueueTest do
         # A node that runs it refreshes for either, this one for theirs
         assert [{{:site_cache, :globals}, "their-token"}] = Brando.Cache.Freshness.unknown(job.args)
       end)
+    end
+  end
+
+  describe "tokens" do
+    test "past the most one job carries for an input, its renders refresh the input whatever they know" do
+      tokens = for n <- 1..17, do: "token-#{n}"
+
+      args =
+        Enum.reduce(tokens, %{}, fn token, args ->
+          Brando.Cache.Freshness.merge(args, %{"site_caches" => %{"globals" => token}})
+        end)
+
+      assert %{"site_caches" => %{"globals" => any}} = args
+      assert [{{:site_cache, :globals}, ^any}] = Brando.Cache.Freshness.unknown(args)
+      Brando.Cache.Freshness.known({:site_cache, :globals}, any)
+      assert [{{:site_cache, :globals}, ^any}] = Brando.Cache.Freshness.unknown(args)
+      # And stays so as more coalesce into it
+      assert ^args = Brando.Cache.Freshness.merge(args, %{"site_caches" => %{"globals" => "token-18"}})
     end
   end
 

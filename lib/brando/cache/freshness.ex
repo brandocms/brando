@@ -24,6 +24,8 @@ defmodule Brando.Cache.Freshness do
   # A job carries one token per input, or a list once renders queued for the
   # same entry coalesced into it (`merge/2`): tokens from different nodes, or
   # from either side of a commit, have no order, so the job keeps them all.
+  # Past `@carried` of them it keeps `@any` instead, which no node knows: a
+  # node that runs the job refreshes the input whatever it has heard.
 
   alias Brando.Repo
   alias Brando.Tenant
@@ -32,8 +34,8 @@ defmodule Brando.Cache.Freshness do
   @key {__MODULE__, :tokens}
   @pending {__MODULE__, :pending}
   @known 32
-  # Tokens one coalesced job keeps per input, the newest
   @carried 16
+  @any "*"
   @site_caches ~w(identity globals navigation)a
   @render_schemas [
     Module.concat(["Brando", "Content", "Module"]),
@@ -82,6 +84,8 @@ defmodule Brando.Cache.Freshness do
 
   @doc "Records that this node's copy of `input` has caught up with `token`."
   @spec known(input(), String.t()) :: :ok
+  def known(_input, @any), do: :ok
+
   def known(input, token) do
     update(Tenant.cache_key(@key), fn tokens ->
       Map.update(tokens, input, %{latest: nil, known: [token]}, fn record ->
@@ -126,7 +130,7 @@ defmodule Brando.Cache.Freshness do
   defp union(a, b) do
     case Enum.uniq(List.wrap(a) ++ List.wrap(b)) do
       [token] -> token
-      tokens -> Enum.take(tokens, -@carried)
+      tokens -> if @any in tokens or length(tokens) > @carried, do: @any, else: tokens
     end
   end
 
@@ -138,6 +142,7 @@ defmodule Brando.Cache.Freshness do
     for {input, token} <- carried(args), input, not known?(tokens[input], token), do: {input, token}
   end
 
+  defp known?(_record, @any), do: false
   defp known?(%{known: known}, token), do: token in known
   defp known?(nil, _token), do: false
 
