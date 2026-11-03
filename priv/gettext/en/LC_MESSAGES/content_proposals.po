@@ -485,6 +485,7 @@ msgid "This proposal is no longer available."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
+#: lib/brando/content/proposals/preview.ex
 #, elixir-autogen, elixir-format
 msgid "This proposal is no longer under review."
 msgstr ""

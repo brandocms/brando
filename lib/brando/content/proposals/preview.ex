@@ -1,5 +1,6 @@
 defmodule Brando.Content.Proposals.Preview do
   use Gettext, backend: Brando.Gettext
+  import Ecto.Query, only: [from: 2]
 
   @moduledoc """
   Private page previews of a proposal, rendered by the site's own live-preview
@@ -15,6 +16,7 @@ defmodule Brando.Content.Proposals.Preview do
   """
   alias Brando.Authorization.Boundary
   alias Brando.Content.Proposals
+  alias Brando.Content.Transfer
   alias Brando.Content.Transfer.Error
   alias Brando.LivePreview
 
@@ -104,13 +106,14 @@ defmodule Brando.Content.Proposals.Preview do
   A public link to the proposed page, for any browser: a static snapshot
   rendered by the site's own template, as the editor's "Get shareable link"
   makes. Anyone with the link can view it until it expires; it takes the
-  export permission. Returns `{:ok, url, expiry_days}`, or `{:error, reason}`
-  as `render/4` does.
+  export permission, and a stored proposal a review link could still show.
+  Returns `{:ok, url, expiry_days}`, or `{:error, reason}` as `render/4` does.
   """
   @spec share(Proposals.Proposal.t(), Proposals.Proposal.target(), term(), keyword()) ::
           {:ok, String.t(), integer()} | {:error, atom() | String.t()}
   def share(proposal, target, actor, opts \\ []) do
     with :ok <- renderable(proposal, target, :proposed),
+         :ok <- shown(proposal),
          {:ok, changeset} <- changeset(proposal, target, actor, :proposed, opts[:shared]) do
       scope = Boundary.actor_scope(actor)
       user = Brando.Repo.get!(Brando.Users.User, scope.user_id)
@@ -119,6 +122,20 @@ defmodule Brando.Content.Proposals.Preview do
         LivePreview.share(changeset.data.__struct__, changeset, user, %{}, opts[:preview_target])
       end)
     end
+  end
+
+  # The proposal on screen may have been discarded in another tab since it
+  # was read: its stored status decides, as for `Proposals.get_shared/3`.
+  defp shown(%{id: id}) do
+    status =
+      id &&
+        Brando.Repo.one(
+          from(r in Proposals.Record, where: r.id == ^id and r.scope == ^Transfer.scope(), select: r.status)
+        )
+
+    if status in ~w(pending approved applied),
+      do: :ok,
+      else: {:error, dgettext("content_proposals", "This proposal is no longer under review.")}
   end
 
   defp initialize(changeset, actor, preview_target) do

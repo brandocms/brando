@@ -927,6 +927,53 @@ defmodule BrandoAdmin.AssistantLiveTest do
       refute has_element?(view, "#assistant-page-link")
     end
 
+    @tag :capture_log
+    test "a proposal discarded in another tab makes no page link", %{conn: conn, current_user: user} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      open_blocks_preview(view, c)
+      :ok = Brando.Content.Proposals.cancel(c.proposal.id, user)
+
+      view |> element(~s(button[phx-click="share_page"])) |> render_click()
+      refute has_element?(view, "#assistant-page-link")
+      refute has_element?(view, ~s(button[phx-click="share_page"]))
+    end
+
+    @tag :capture_log
+    test "discarding the proposal takes its page link away", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      open_blocks_preview(view, c)
+      share_page(view)
+
+      view |> element(~s(button[phx-click="cancel_proposal"])) |> render_click()
+      refute has_element?(view, "#assistant-page-link")
+    end
+
+    # A run the page could not hear from stands in for its proposal event.
+    @tag :capture_log
+    test "a finished run's proposal renders the open preview again", %{conn: conn, current_user: user} = c do
+      run = remote_run(c.conversation, %{})
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      key = view |> open_blocks_preview(c) |> frame_key()
+      share_page(view)
+
+      op = %Brando.Content.Proposals.InsertBlock{
+        target: {Page, c.identity.id},
+        module: c.text_module.id,
+        texts: %{body: "<p>Written again</p>"}
+      }
+
+      {:ok, other} = Brando.Content.Proposals.propose([op], user, conversation_id: c.conversation.id)
+      c.conversation |> Ecto.Changeset.change(proposal_id: other.id) |> Brando.Repo.update!()
+      run |> Ecto.Changeset.change(status: "completed", finished_at: DateTime.utc_now()) |> Brando.Repo.update!()
+
+      send(view.pid, :check_run)
+      new_key = frame_key(render(view))
+      assert new_key != key
+      assert {:ok, html} = Brando.LivePreview.get_cache(new_key)
+      assert html =~ "Written again"
+      refute has_element?(view, "#assistant-page-link")
+    end
+
     # A link shows the page as it was rendered when it was made: it goes when
     # the frame is rendered again or closed.
     @tag :capture_log

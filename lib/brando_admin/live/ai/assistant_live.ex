@@ -1808,7 +1808,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
            gettext("A proposal with problems cannot be shared. Leave out the changes with problems first.")
          )}
 
+      # A proposal discarded in another tab shows as it is now.
       {:error, reason} ->
+        socket = if socket.assigns.shared, do: socket, else: assign_proposal(socket)
         {:noreply, put_toast(socket, :error, to_string(reason))}
     end
   end
@@ -1927,7 +1929,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
         socket = assign_run(socket, Agent.latest_run(id, socket.assigns.current_user))
 
         if busy? and not running?(socket.assigns.run),
-          do: {:noreply, socket |> refresh_conversation() |> assign_messages() |> assign_proposal()},
+          do:
+            {:noreply,
+             socket |> refresh_conversation() |> assign_messages() |> assign_proposal() |> render_open_preview()},
           else: {:noreply, socket}
 
       nil ->
@@ -1971,10 +1975,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   defp agent_event({:message, _}, socket), do: {:noreply, assign_new_messages(socket)}
 
-  defp agent_event({:proposal, _}, socket) do
-    socket = socket |> refresh_conversation() |> assign_proposal()
-    {:noreply, if(preview = socket.assigns.preview, do: render_preview(socket, preview), else: socket)}
-  end
+  defp agent_event({:proposal, _}, socket),
+    do: {:noreply, socket |> refresh_conversation() |> assign_proposal() |> render_open_preview()}
 
   defp agent_event({:attachments, _}, socket), do: {:noreply, refresh_conversation(socket)}
   # Events from different processes may arrive out of order: a stale
@@ -1996,6 +1998,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   defp render_preview(socket, preview), do: preview!(socket, preview)
+
+  defp render_open_preview(socket),
+    do: if(preview = socket.assigns.preview, do: render_preview(socket, preview), else: socket)
 
   defp preview!(socket, preview) do
     socket = discard_previews(socket)
@@ -2200,11 +2205,15 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   # An error belongs to the proposal it was shown with: a failed apply keeps
   # it over the same proposal reloaded, another proposal starts without it.
+  # A page link made before the proposal was discarded or undone goes with it.
   defp assign_proposal(socket) do
-    case proposal_id(socket.assigns) do
-      nil -> socket |> assign(proposal: nil, unloadable_id: nil, review: [], error: nil) |> assign_media()
-      id -> assign_proposal(socket, id)
-    end
+    socket =
+      case proposal_id(socket.assigns) do
+        nil -> socket |> assign(proposal: nil, unloadable_id: nil, review: [], error: nil) |> assign_media()
+        id -> assign_proposal(socket, id)
+      end
+
+    if page_shareable?(socket.assigns.proposal), do: socket, else: assign(socket, :share_url, nil)
   end
 
   defp assign_proposal(socket, id) do
