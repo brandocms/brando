@@ -1772,7 +1772,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
   def handle_event("share_page", _, socket) do
     %{proposal: proposal, preview: preview, current_user: user} = socket.assigns
 
-    with {target, _} <- Enum.find(proposal.targets, fn {target, _} -> Proposals.Proposal.key(target) == preview.key end),
+    with %{} <- proposal,
+         %{} <- preview,
+         {target, _} <- Enum.find(proposal.targets, fn {target, _} -> Proposals.Proposal.key(target) == preview.key end),
          {:ok, url, days} <-
            Proposals.Preview.share(proposal, target, user,
              preview_target: preview.target,
@@ -1780,7 +1782,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
            ) do
       {:noreply, assign(socket, :share_url, %{url: url, days: days})}
     else
-      # The proposal changed before its event could render the preview again.
+      # The proposal changed, or was refused, before the page took the button away.
       nil ->
         {:noreply, socket |> discard_previews() |> assign(:preview, nil)}
 

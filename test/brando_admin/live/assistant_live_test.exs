@@ -819,6 +819,35 @@ defmodule BrandoAdmin.AssistantLiveTest do
       view |> element(~s(button[phx-click="share_page"])) |> render_click()
       refute has_element?(view, ~s(button[phx-click="share_page"]))
     end
+
+    # A proposal refused at review leaves none on screen; a click sent before
+    # the page took the button away still arrives.
+    @tag :capture_log
+    test "sharing a page once the proposal is refused closes the preview", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+
+      view
+      |> element(~s(button.assistant-card-preview[phx-value-key="Brando.Pages.Page:#{c.identity.id}"]))
+      |> render_click()
+
+      view |> element(~s(button[phx-value-target="blocks"])) |> render_click()
+
+      # As an earlier version stored it: a content type outside the catalogue.
+      record = Brando.Repo.get!(Brando.Content.Proposals.Record, c.proposal.id)
+      [created | rest] = record.operations
+      fields = %{"label" => "Planted", "key" => "planted", "language" => "en"}
+      crafted = %{created | "content_type" => "Brando.Sites.GlobalSet", "fields" => fields}
+      record |> Ecto.Changeset.change(operations: [crafted | rest]) |> Brando.Repo.update!()
+
+      content = Jason.encode!(%{proposal_id: c.proposal.id, version: 1, problems: []})
+      fields = %{role: "tool", tool_call_id: "call-1", tool_name: "prepare_proposal", content: content}
+      message = Brando.Repo.insert!(struct(Agent.Message, Map.put(fields, :conversation_id, c.conversation.id)))
+      send(view.pid, {:agent, c.conversation.id, {:message, message}})
+      assert has_element?(view, "#assistant-unloadable")
+
+      render_click(view, "share_page", %{})
+      assert :sys.get_state(view.pid).socket.assigns.preview == nil
+    end
   end
 
   describe "child block changes" do
