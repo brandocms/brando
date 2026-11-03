@@ -107,8 +107,9 @@ defmodule Brando.Cache do
   (`Brando.CacheSync`).
 
   A fill or rebuild that read the database before another rebuild began
-  does not keep what it stored: it may have read before that rebuild's write,
-  and the next read fills the cache again. Nothing waits for another.
+  does not keep what it read: it may have read before that rebuild's write.
+  It empties the cache instead, rather than leave what the cache held before
+  that write, and the next read fills it again. Nothing waits for another.
   """
   @spec rebuild_after_commit(atom()) :: :ok
   def rebuild_after_commit(cache) when is_map_key(@site_caches, cache) do
@@ -161,17 +162,22 @@ defmodule Brando.Cache do
   def fill(cache) when is_map_key(@site_caches, cache), do: store(cache, get(generation_key(cache)))
 
   # Stores what the cache's module reads, unless a rebuild began since
-  # `generation`, and withdraws it if one began while it stored
+  # `generation`. One that began first empties the cache instead: what it
+  # held may be from before that rebuild's write, which a render job that
+  # carries the write would read (`ensure_fresh/1`), and the rebuild may
+  # still be reading. The next read fills it from the database.
   defp store(cache, generation) do
     values = Map.fetch!(@site_caches, cache).load()
-    if get(generation_key(cache)) == generation, do: keep(cache, values, generation)
+    if get(generation_key(cache)) == generation, do: keep(cache, values, generation), else: withdraw(values)
     values
   end
 
   defp keep(cache, values, generation) do
     Enum.each(values, fn {key, value} -> put(key, value, :infinite) end)
-    if get(generation_key(cache)) != generation, do: Enum.each(values, fn {key, _} -> del(key) end)
+    if get(generation_key(cache)) != generation, do: withdraw(values)
   end
+
+  defp withdraw(values), do: Enum.each(values, fn {key, _} -> del(key) end)
 
   # Under the site's cache key: `public`'s copy and the unprefixed one are one
   defp generation_key(cache), do: {__MODULE__, :generation, cache}
@@ -193,7 +199,9 @@ defmodule Brando.Cache do
   node has not refreshed for since the job was queued: a site cache the
   renders read, or a query cache source they list. The job may run on a
   node that has not heard of the write that queued it yet, and would render
-  from what its caches held before (`Brando.Cache.Freshness`).
+  from what its caches held before. The job carries a token for each write
+  the queuing node had refreshed for (`Brando.Content.RenderQueue.enqueue/1`),
+  and this node refreshes for any token it does not know.
   """
   @spec ensure_fresh(map()) :: :ok
   def ensure_fresh(args) do

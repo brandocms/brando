@@ -14,6 +14,7 @@ defmodule Brando.Cache.ClusterRefreshTest do
   alias Brando.{Factory, Repo}
   alias Brando.Navigation.Menu
   alias Brando.Pages.{Fragment, Page}
+  alias Brando.Villain.ContextCache
 
   @other_node "another-node"
   # This node's record of the writes its render inputs have caught up with
@@ -169,6 +170,41 @@ defmodule Brando.Cache.ClusterRefreshTest do
 
       resume(earlier)
       Task.await(earlier)
+    end
+
+    test "a job's rebuild that loses the fence leaves the cache to fill, not as it was", c do
+      {:ok, menu} =
+        Brando.Navigation.create_menu(%{status: :published, title: "Old", key: "main", language: "en", items: []}, c.user)
+
+      # Another node's write, which this node has not heard of
+      menu |> Ecto.Changeset.change(title: "New") |> Repo.update!()
+
+      # A render job carrying the write's token rebuilds, and has read the menus...
+      args = %{"site_caches" => %{"navigation" => "another-node-token"}}
+      job = start_held(Menu.__schema__(:source), fn -> Cache.ensure_fresh(args) end)
+
+      # ...when this node's refresh for the same write begins, and reads too
+      refresh = start_held(Menu.__schema__(:source), fn -> Cache.refresh_node_cache({:navigation, nil}) end)
+
+      resume(job)
+      assert Task.await(job) == :ok
+
+      # The job renders next: from the write, not from what the cache held
+      assert ContextCache.navigation()["main"]["en"].title == "New"
+      assert Cache.Navigation.get("main", "en").title == "New"
+
+      resume(refresh)
+      Task.await(refresh)
+    end
+
+    test "a render reads the menus from the database when their cache is cold", c do
+      {:ok, _menu} =
+        Brando.Navigation.create_menu(%{status: :published, title: "Old", key: "main", language: "en", items: []}, c.user)
+
+      Cache.del(:navigation)
+
+      assert ContextCache.navigation()["main"]["en"].title == "Old"
+      assert Cache.get(:navigation)["main"]["en"].title == "Old"
     end
 
     test "public's copy and the unprefixed one are one cache to the fence", c do
