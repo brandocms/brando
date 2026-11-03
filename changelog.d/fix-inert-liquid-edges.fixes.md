@@ -1,0 +1,4 @@
+- A chained `replace` or `remove` finds a `{{name}}` placeholder after the first filter, and `size` and `truncate` count a brace in a filter's text as one character.
+- `map` on a rich-text field gives its sanitized markup instead of printing it as text.
+- A value starting with `%` printed right after `{{ "{" }}` prints as text instead of giving the Liquid parse-error page.
+- Saving a global, identity or menu re-renders only entries whose module code or HTML and SVG refs read it, not those whose vars or text refs mention it as text.

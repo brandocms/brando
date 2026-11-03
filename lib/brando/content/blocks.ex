@@ -372,37 +372,39 @@ defmodule Brando.Content.Blocks do
   """
   defdelegate list_root_block_ids_by_source(block_ids), to: Brando.Content.BlockReferences
 
+  # A ref whose template a superuser writes: Liquid in it runs in the final pass.
+  # What editors write in other refs and in vars prints as text.
+  @liquid_ref_types ~w(html svg)
+
   @doc """
-  List all occurences of regex in blocks.
+  Lists the ids of blocks whose HTML or SVG refs match a regex of
+  `search_terms`. Only these refs hold Liquid that runs; Liquid in other refs
+  and in vars prints as text.
   """
   @spec list_block_ids_matching_regex(search_terms :: {atom, binary} | [{atom, binary}]) :: [any]
   def list_block_ids_matching_regex(search_terms) do
-    org_query = from(b in Block, select: %{"id" => b.id})
     search_terms = (is_list(search_terms) && search_terms) || [search_terms]
+
+    org_query =
+      from(b in Block,
+        join: refs in assoc(b, :refs),
+        on: fragment("?->>'type'", refs.data) in ^@liquid_ref_types,
+        as: :refs,
+        select: %{"id" => b.id},
+        order_by: [asc: b.id]
+      )
 
     built_query =
       Enum.reduce(search_terms, org_query, fn {search_name, search_term}, query ->
-        search_name_refs = to_string(search_name) <> "_refs"
-        search_name_vars = to_string(search_name) <> "_vars"
-
-        from(q in query,
-          left_join: vars in assoc(q, :vars),
-          left_join: refs in assoc(q, :refs),
+        from([q, refs: refs] in query,
           select_merge: %{
-            ^search_name_refs =>
+            ^to_string(search_name) =>
               fragment(
                 "regexp_matches(?, ?, 'g')",
                 type(refs.data, :string),
                 ^search_term
-              ),
-            ^search_name_vars =>
-              fragment(
-                "regexp_matches(?, ?, 'g')",
-                type(vars.value, :string),
-                ^search_term
               )
-          },
-          order_by: [asc: q.id]
+          }
         )
       end)
 

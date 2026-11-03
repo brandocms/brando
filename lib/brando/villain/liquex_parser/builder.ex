@@ -85,8 +85,15 @@ defmodule Brando.Villain.LiquexParser.Builder do
 
       # Exported for the split built-in parsers, whose recursive block tags
       # call back into the complete document grammar.
-      defcombinator(:document, repeat(base))
-      defcombinator(:liquid_tag_contents, repeat(liquid_tags_parser))
+      defcombinator(
+        :document,
+        base |> repeat() |> post_traverse({tag_module.("Output"), :mark_joins, []})
+      )
+
+      defcombinator(
+        :liquid_tag_contents,
+        liquid_tags_parser |> repeat() |> post_traverse({tag_module.("Output"), :mark_joins, []})
+      )
 
       defparsec(:parse, parsec(:document) |> eos())
     end

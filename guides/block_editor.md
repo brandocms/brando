@@ -246,13 +246,50 @@ own code runs.
 Tags (`{% picture %}`, `{% video %}`, `{% route %}`) read the record or the value
 itself, and filters on a record (`media_url`, `absolute_url`, `date`, `i18n`) get
 the record. A filter's text result goes back to being text; a filter of your own
-that makes markup returns `{:safe, html}`. A record or map it returns reads like
-entry data, also inside a list, and a filter given that map gets its credential
-fields empty. A tag of your own reads its argument with `Brando.Villain.TemplateView.eval/2`, and escapes what
-it prints.
+that makes markup returns `{:safe, html}`. A record it returns reads like entry
+data, also inside a list, and a filter given that record gets its credential
+fields empty. A tag of your own reads its argument with
+`Brando.Villain.TemplateView.eval/2`, and escapes what it prints.
+
+A plain map a filter of your own builds reads like what the filter was given.
+Built from `entry` or a datasource's `entries`, it reads like entry data. Built
+from what the parser has already escaped, such as `block`, `globals` or the
+`vars` of a multi module's entries, it reads as that data does: its strings
+print as they are, markup and all, and its credential fields show. Such a
+filter wraps what it returns with `Brando.Villain.TemplateView.wrap/2`, so it
+reads like entry data:
+
+```elixir
+defmodule MyAppWeb.Villain.Filters do
+  use Brando.Villain.Filters
+  alias Brando.Villain.TemplateView
+
+  # {% assign cases = block | related_cases %}
+  # {% for case in cases %}<a href="{{ case.url }}">{{ case.title }}</a>{% endfor %}
+  def related_cases(block, _context) do
+    block.uid
+    |> MyApp.Cases.list_related()
+    |> Enum.map(&%{"title" => &1.title, "url" => &1.url})
+    |> TemplateView.wrap()
+  end
+end
+```
+
+In a multi module, pass a filter an entry's `vars` (`e.vars | my_filter`), not
+the entry. Given the entry, the filter gets `vars` as a view: `vars["title"]`
+fails inside it and Liquid treats the filter as unknown, so it prints nothing.
 
 `escape` never encodes twice; `url_encode`, `slugify` and `markdown` read escaped
-text as the text it stands for.
+text as the text it stands for. `size` and `truncate` count a brace as one
+character, and `replace` and `remove` find a placeholder such as `{{name}}` in
+what an earlier filter gave. `map` reads each field as `{{ item.field }}` does,
+so a rich-text field gives its markup.
+
+A value printed right after a `{` the template printed, as in
+`{{ "{" }}{{ entry.title }}`, starts no Liquid: a `{` or `%` it starts with
+prints as a character reference, also with a tag between them that prints
+nothing. With text between them, as in `{{ "{" }}"a": {{ json | raw }}}`, the
+value prints as it is.
 
 Liquid in a value printed with `raw` stays text. `raw` reads the text as what it stands for, so a rich-text field does not need
 it. A comparison sees escaped text: `{% if entry.title == "R&D" %}` compares with

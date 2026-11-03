@@ -2,6 +2,7 @@ defmodule Brando.Villain.LiquexParserTest do
   use ExUnit.Case, async: true
 
   alias Brando.Villain.LiquexParser
+  alias Brando.Villain.Tags.Output
 
   test "split built-in grammars retain base Liquex parsing parity" do
     templates = [
@@ -26,8 +27,33 @@ defmodule Brando.Villain.LiquexParserTest do
 
     for template <- templates do
       assert {:ok, expected} = Liquex.parse(template, Liquex.Parser.Base)
-      assert {:ok, ^expected} = Liquex.parse(template, LiquexParser)
+      assert {:ok, parsed} = Liquex.parse(template, LiquexParser)
+      assert Output.unwrap(parsed) == expected
     end
+  end
+
+  test "a tag knows whether template text comes right before and after it" do
+    template = ~S(a{{ x }}{{ y }}{% if z %}{% echo w %}b{% endif %})
+
+    assert {:ok,
+            [
+              {:text, "a"},
+              {{:tag, Output}, [tag: Liquex.Tag.ObjectTag, contents: _, after_text: true, before_text: false]},
+              {{:tag, Output}, [tag: Liquex.Tag.ObjectTag, contents: _, after_text: false, before_text: false]},
+              {{:tag, Output},
+               [
+                 tag: Liquex.Tag.IfTag,
+                 contents: [
+                   expression: _,
+                   contents: [
+                     {{:tag, Output}, [tag: Liquex.Tag.EchoTag, contents: _, after_text: false, before_text: true]},
+                     {:text, "b"}
+                   ]
+                 ],
+                 after_text: false,
+                 before_text: false
+               ]}
+            ]} = Liquex.parse(template, LiquexParser)
   end
 
   test "built-in block tags recurse into Brando custom tags" do
@@ -40,6 +66,6 @@ defmodule Brando.Villain.LiquexParserTest do
                  expression: _expression,
                  contents: [{{:tag, Brando.Villain.Tags.Ref}, [ref: _ref]}]
                ]}
-            ]} = Liquex.parse(template, LiquexParser)
+            ]} = template |> Liquex.parse(LiquexParser) |> Output.unwrap()
   end
 end

@@ -133,7 +133,7 @@ defmodule Brando.Villain.LiquexTest do
 
     {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
 
-    assert parsed_tpl == [
+    assert Brando.Villain.Tags.Output.unwrap(parsed_tpl) == [
              {:text, "the route is "},
              {{:tag, Brando.Villain.Tags.Route}, [function: "project_path", action: "index"]}
            ]
@@ -150,7 +150,7 @@ defmodule Brando.Villain.LiquexTest do
 
     {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
 
-    assert parsed_tpl == [
+    assert Brando.Villain.Tags.Output.unwrap(parsed_tpl) == [
              {:text, "the route is "},
              {{:tag, Brando.Villain.Tags.Route},
               [
@@ -173,7 +173,7 @@ defmodule Brando.Villain.LiquexTest do
 
     {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
 
-    assert parsed_tpl == [
+    assert Brando.Villain.Tags.Output.unwrap(parsed_tpl) == [
              {:text, "the route is "},
              {{:tag, Brando.Villain.Tags.Route},
               [
@@ -221,7 +221,7 @@ defmodule Brando.Villain.LiquexTest do
 
     {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
 
-    assert parsed_tpl == [
+    assert Brando.Villain.Tags.Output.unwrap(parsed_tpl) == [
              {{:tag, Brando.Villain.Tags.Picture}, [source: {:field, [key: "entry", key: "cover"]}]}
            ]
 
@@ -233,7 +233,7 @@ defmodule Brando.Villain.LiquexTest do
 
     {:ok, parsed_tpl} = Liquex.parse(tpl, Brando.Villain.LiquexParser)
 
-    assert parsed_tpl == [
+    assert Brando.Villain.Tags.Output.unwrap(parsed_tpl) == [
              {
                {:tag, Brando.Villain.Tags.Picture},
                [

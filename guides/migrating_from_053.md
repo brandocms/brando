@@ -368,6 +368,10 @@ sender first, before the first compile.
   prepared before the upgrade, which can only view global sets, cannot save
   on the Globals screen. To let it fill in values, tick Edit values for the
   group under **Configuration → Permissions**.
+- **`format_html:` on `Brando.Villain.parse/3`.** The option is gone, with
+  `maybe_format/2` in `Brando.Villain.Parser`: the HEEx formatter could turn an
+  editor's text into Liquid. A call that passes it, to `parse/3` or
+  `render_block/3`, raises an `ArgumentError`. Remove it from the call.
 - **Vars created with an owner in params.** `Brando.Content.Var.changeset/3`
   no longer takes an owner key (`page_id`, `module_id`, `global_set_id`,
   `table_template_id`, `table_row_id`, `block_id`, `menu_item_id`) from
@@ -406,9 +410,12 @@ sender first, before the first compile.
   escaped, like a `string` var. A rich-text field prints as before. Where a
   template prints a plain field that holds markup on purpose, add
   `{{ entry.embed | raw }}`. A filter of your own that returns markup for a record
-  returns `{:safe, html}`, a record or map it returns reads like entry data, and a
-  tag of your own reads its argument with
-  `Brando.Villain.TemplateView.eval/2`. Passwords and other credentials no longer
+  returns `{:safe, html}`, a record it returns reads like entry data, and a map
+  it builds from `block`, `globals` or a multi module entry's `vars` it wraps
+  with `Brando.Villain.TemplateView.wrap/2`, or its markup and credential fields
+  print
+  ([What templates read](block_editor.md#what-templates-read)). A tag of your
+  own reads its argument with `Brando.Villain.TemplateView.eval/2`. Passwords and other credentials no longer
   reach templates, through `{% inspect %}` either.
 
   Stored pages keep what they rendered until they are rendered again:

@@ -64,12 +64,15 @@ defmodule Brando.Villain do
   Renders to HTML.
   """
   def parse(entry_blocks_list, entry \\ nil, opts \\ [])
-  def parse([], _, _), do: ""
-  def parse("", _, _), do: ""
-  def parse(nil, _, _), do: ""
+
+  def parse(empty, _, opts) when empty in [[], "", nil] do
+    check_opts!(opts)
+    ""
+  end
 
   @decorate span("brando.villain.parse", schema: [:entry, :__struct__], entry_id: [:entry, :id])
   def parse(entry_blocks_list, entry, opts) do
+    check_opts!(opts)
     annotate? = opts[:annotate_blocks] == true
 
     Tracing.set_attributes(%{
@@ -138,16 +141,36 @@ defmodule Brando.Villain do
   end
 
   def render_block(block, entry, opts \\ [])
-  def render_block(%{active: false}, _entry, _opts), do: ""
-  def render_block(%{marked_as_deleted: true}, _entry, _opts), do: ""
+
+  def render_block(%{active: false}, _entry, opts) do
+    check_opts!(opts)
+    ""
+  end
+
+  def render_block(%{marked_as_deleted: true}, _entry, opts) do
+    check_opts!(opts)
+    ""
+  end
 
   def render_block(%{__struct__: block_module} = block, entry, opts) when block_module == @block_module do
+    check_opts!(opts)
     annotate? = opts[:annotate_blocks] == true
     RenderScope.run(fn -> FrontendEdit.annotation_scope(annotate?, fn -> do_render_block(block, entry, opts) end) end)
   end
 
   def render_block(%{block: block} = _entry_block, entry, opts) do
     render_block(block, entry, opts)
+  end
+
+  # An option Brando no longer reads fails loudly rather than being ignored
+  defp check_opts!(opts) do
+    if Enum.any?(opts, &match?({:format_html, _}, &1)) do
+      raise ArgumentError, """
+      the :format_html option of Brando.Villain.parse/3 and render_block/3 was removed in 0.55: \
+      the HEEx formatter it ran could turn an editor's text into Liquid, and raised on a lone `{`. \
+      Remove the option from the call.\
+      """
+    end
   end
 
   defp do_render_block(block, entry, opts) do
@@ -513,7 +536,7 @@ defmodule Brando.Villain do
   end
 
   defp liquex_render(html_string, [], parsed_doc, context) do
-    Liquex.Render.render!([], parsed_doc, context)
+    Liquex.Render.render!([], parsed_doc, Brando.Villain.Tags.Output.reset(context))
   rescue
     error in Protocol.UndefinedError ->
       case error do
