@@ -8,8 +8,8 @@ defmodule Brando.Cache.RefreshAfterCommitTest do
   alias Brando.Authorization.{Boundary, Migration}
   alias Brando.Cache
   alias Brando.Content.Proposals
-  alias Brando.Content.Proposals.CreateEntry
-  alias Brando.{Factory, Repo}
+  alias Brando.Content.Proposals.SetFields
+  alias Brando.{Factory, HTML, Repo}
   alias Brando.Pages.Page
 
   setup do
@@ -169,30 +169,47 @@ defmodule Brando.Cache.RefreshAfterCommitTest do
     end
   end
 
-  # The proposal apply in #3435: the palette is saved, then a page whose URI
-  # another page has taken since approval fails the unique check, and the
-  # whole apply rolls back.
-  test "a proposal apply that fails after creating a palette leaves it out of the cache" do
+  # The proposal apply in #3435, on the site cache a proposal can still
+  # reach: the first page's new URI moves the identifier a cached menu links
+  # to, then the second page's, which another page has taken since approval,
+  # fails the unique check, and the whole apply rolls back.
+  test "a proposal apply that fails after moving a page a menu links to leaves the menu as it was" do
     c = Brando.ProposalFixtures.context()
+    {:ok, identifier} = Brando.Content.create_identifier(Page, c.naming)
+
+    {:ok, _} =
+      Brando.Navigation.create_menu(
+        %{
+          menu("linked")
+          | items: [
+              %{
+                key: "naming",
+                status: :published,
+                sequence: 0,
+                link: %{type: :link, key: "link", label: "Link", link_type: :identifier, identifier_id: identifier.id}
+              }
+            ]
+        },
+        c.user
+      )
+
+    menu_url = fn -> "linked" |> Cache.Navigation.get("en") |> Map.fetch!(:items) |> hd() |> HTML.get_menu_item_url() end
+    url = menu_url.()
+    assert url =~ "naming"
 
     ops = [
-      %CreateEntry{schema: Brando.Content.Palette, ref: :ghost, fields: Map.delete(palette("ghost"), :status)},
-      %CreateEntry{
-        schema: Page,
-        ref: :later,
-        fields: %{title: "Later", uri: "later-taken", language: "en", template: "default.html"}
-      }
+      %SetFields{target: {Page, c.naming.id}, fields: %{uri: "naming-moved"}},
+      %SetFields{target: {Page, c.identity.id}, fields: %{uri: "identity-taken"}}
     ]
 
     assert {:ok, proposal} = Proposals.propose(ops, c.user)
     assert proposal.problems == []
     assert {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
 
-    Factory.insert(:page, uri: "later-taken", language: "en", creator: c.user)
+    Factory.insert(:page, uri: "identity-taken", language: "en", creator: c.user)
 
     assert {:error, _} = Proposals.apply(proposal.id, proposal.version, c.user)
-    refute Repo.get_by(Brando.Content.Palette, key: "ghost")
-    refute "ghost" in palette_keys()
-    refute Phoenix.HTML.safe_to_string(Cache.Palettes.get_css()) =~ "ghost"
+    assert Repo.get!(Page, c.naming.id).uri == "naming"
+    assert menu_url.() == url
   end
 end

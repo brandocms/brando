@@ -118,22 +118,20 @@ defmodule Brando.Content.Proposals do
     %{proposal | problems: problems, effects: effects(proposal)}
   end
 
-  # A proposal creates entries only of the content types in the catalogue,
-  # as it changes only theirs (`load!/3`): Brando's internal schemas, such as
-  # users, global sets, menus or vars, are refused before anything is stored.
+  # A proposal creates and changes entries only of the content types
+  # `list_content_types` lists (`Codec.writable_schema/1`): Brando's internal
+  # schemas, such as users, global sets, menus or vars, and palettes, which
+  # a proposal may only pick, are refused before anything is stored.
   defp catalogued!(operations) do
-    for %CreateEntry{schema: schema} <- operations, Codec.schema(schema) != {:ok, schema} do
-      Error.fail!(
-        dgettext(
-          "content_proposals",
-          "Unknown content type %{name}. A proposal can only name the content types list_content_types lists.",
-          name: inspect(Codec.content_type(schema))
-        )
-      )
+    for op <- operations, schema <- written_schemas(op), Codec.writable_schema(schema) != {:ok, schema} do
+      Error.fail!(Codec.unwritable_message(schema))
     end
 
     :ok
   end
+
+  defp written_schemas(%CreateEntry{schema: schema}), do: [schema]
+  defp written_schemas(op), do: for({schema, _id} <- op_targets(op), schema != :new, do: schema)
 
   @doc """
   Whether the proposed version of `proposal` may be rendered for review:
@@ -348,7 +346,7 @@ defmodule Brando.Content.Proposals do
         duplicate? ->
           [problem(:duplicate_ref, dgettext("content_proposals", "Two new entries use the same reference."))]
 
-        Codec.schema(op.schema) != {:ok, op.schema} ->
+        Codec.writable_schema(op.schema) != {:ok, op.schema} ->
           [problem(:unknown_schema, dgettext("content_proposals", "This content type is not registered on this site."))]
 
         Boundary.authorize(actor, :create, op.schema) != :ok ->
