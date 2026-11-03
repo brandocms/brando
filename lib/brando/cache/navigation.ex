@@ -15,12 +15,8 @@ defmodule Brando.Cache.Navigation do
   @spec get :: map() | nil
   def get do
     case Cache.get_site(:navigation) do
-      nil ->
-        set()
-        Cache.get_site(:navigation)
-
-      navigation ->
-        navigation
+      nil -> if Brando.Tenant.outside_site?(), do: nil, else: Cache.fill(:navigation)[:navigation]
+      navigation -> navigation
     end
   end
 
@@ -49,19 +45,26 @@ defmodule Brando.Cache.Navigation do
   @spec set :: {:error, boolean} | {:ok, boolean}
   @decorate span("brando.cache.set_navigation")
   def set do
-    if Brando.Tenant.outside_site?(),
-      do: {:ok, false},
-      else: Cache.put(:navigation, get_menu_map(), :infinite)
+    if Brando.Tenant.outside_site?() do
+      {:ok, false}
+    else
+      Cache.fill(:navigation)
+      {:ok, true}
+    end
   end
+
+  @doc false
+  # What `Brando.Cache` stores for the cache
+  def load, do: [navigation: get_menu_map()]
 
   @doc """
   Update navigation cache, once the transaction around the caller has
-  committed (`Brando.Cache.rebuild_after_commit/2`)
+  committed (`Brando.Cache.rebuild_after_commit/1`)
   """
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, menu}) do
-    Cache.rebuild_after_commit(:navigation, &set/0)
+    Cache.rebuild_after_commit(:navigation)
     {:ok, menu}
   end
 

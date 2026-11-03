@@ -408,7 +408,10 @@ if Brando.Cache.Identity.set() == %{} or Brando.Cache.SEO.set() == %{} do
   )
 end
 
+# Renders read globals and menus too, and fill them from the database when
+# cold: warm here, an async test that renders without a database reads them.
 Brando.Cache.Globals.set()
+Brando.Cache.Navigation.set()
 
 # ReqLLM's model catalogue loads on its first lookup, which takes seconds on a
 # loaded runner. Loaded here, no test pays for it inside a timed wait.

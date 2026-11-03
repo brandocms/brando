@@ -10,6 +10,8 @@ test('update identity', async ({ page }) => {
 
   // Wait for navigation and check that the URL is /admin/login
   await expect(page).toHaveURL('/admin')
+  // The sticky nav joins after the page: a click on its server render is lost
+  await syncLV(page)
 
   await page.getByText('Configuration').click()
   await page.getByText('Identity').click()
@@ -58,8 +60,11 @@ test('update identity', async ({ page }) => {
     .nth(1)
     .click()
 
+  // The save has landed when the form's save state goes from dirty to clean
+  const saveState = page.locator('.draft-save-state').first()
+  await expect(saveState).toHaveAttribute('data-state', 'dirty')
   await page.getByTestId('submit').click()
-  await syncLV(page)
+  await expect(saveState).toHaveAttribute('data-state', 'clean', { timeout: 15000 })
 
   await page.goto('/')
   await expect(page).toHaveTitle('Acme // Index')

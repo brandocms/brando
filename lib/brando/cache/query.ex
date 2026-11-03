@@ -16,9 +16,24 @@ defmodule Brando.Cache.Query do
   itself it runs at once. The `{:mutation, ...}` broadcast of a generated
   create, delete or changeset update also goes out after the commit (an
   update by id sends none).
+
+  ## Other nodes
+
+  Each node has its own query cache. Once the write has committed, the other
+  nodes evict the written schema's lists and entries under its site
+  (`Brando.CacheSync.broadcast_gathered/2`, which sends a node's evictions
+  together, a tenth of a second at a time). They evict every cached entry of
+  the schema rather than the written ones, so a message stays small however
+  many rows a transaction writes. The render jobs queued after a write to a
+  schema whose lists renders read (modules, containers, palettes,
+  fragments), by its transaction or after it has committed, evict those
+  lists first on a node that has not heard of it yet
+  (`Brando.Cache.ensure_fresh/1`).
   """
   use Brando.Tracing.Decorator
 
+  alias Brando.Cache.Freshness
+  alias Brando.CacheSync
   alias Brando.Tracing
 
   @type changeset :: Ecto.Changeset.t()
@@ -121,7 +136,22 @@ defmodule Brando.Cache.Query do
     schema
   end
 
-  defp evict_list(source), do: evict_committed({:list, source}, fn -> perform_eviction(:list, source) end)
+  # The lists renders read carry a token (`Brando.Cache.ensure_fresh/1`): in
+  # the render jobs the transaction queues, and once it has committed in
+  # every render job this node queues. This node knows it once it has
+  # evicted them after the commit.
+  defp evict_list(source) do
+    evict = fn -> perform_eviction(:list, source) end
+
+    case Freshness.input(:query_source, source) do
+      nil ->
+        evict_committed({:list, source}, evict)
+
+      input ->
+        token = Freshness.make(input)
+        evict_committed({:list, source}, evict, fn -> Freshness.known(input, token) end)
+    end
+  end
 
   defp evict_single(source, id),
     do: evict_committed({:single, source, id}, fn -> perform_eviction(:single, source, id) end)
@@ -131,14 +161,36 @@ defmodule Brando.Cache.Query do
   # in between still sees the old row and caches it again. The second runs
   # under the tenant prefix of the write, which may be gone by then, and
   # once per cache entry however many writes the transaction makes.
-  defp evict_committed(key, evict) do
+  # `evicted` runs after the last eviction.
+  defp evict_committed(key, evict, evicted \\ fn -> :ok end) do
     evict.()
+    prefix = Brando.Tenant.current_prefix()
 
     if Brando.Repo.repo().in_transaction?() do
-      prefix = Brando.Tenant.current_prefix()
-      Brando.Repo.after_commit({__MODULE__, prefix, key}, fn -> Brando.Tenant.with_prefix(prefix, evict) end)
+      committed = fn ->
+        evict.()
+        evicted.()
+      end
+
+      Brando.Repo.after_commit({__MODULE__, prefix, key}, fn -> Brando.Tenant.with_prefix(prefix, committed) end)
+    else
+      evicted.()
     end
 
+    CacheSync.broadcast_gathered(__MODULE__, {prefix, elem(key, 1)})
+  end
+
+  @doc """
+  Evicts this node's lists and entries of the source another node wrote,
+  under its tenant prefix (`Brando.CacheSync`).
+  """
+  @spec refresh_node_cache({String.t() | nil, String.t()}) :: :ok
+  def refresh_node_cache({nil, source}), do: evict_source(source)
+  def refresh_node_cache({prefix, source}), do: Brando.Tenant.with_prefix(prefix, fn -> evict_source(source) end)
+
+  defp evict_source(source) do
+    perform_eviction(:list, source)
+    perform_eviction(:single, source, :_)
     :ok
   end
 
@@ -154,7 +206,7 @@ defmodule Brando.Cache.Query do
     Cachex.Error -> :ok
   end
 
-  @spec perform_eviction(:single, binary(), integer()) :: [:ok]
+  @spec perform_eviction(:single, binary(), integer() | :_) :: [:ok]
   defp perform_eviction(:single, schema, id) do
     key_pattern = scoped_pattern({:single, schema, :_, id})
     ms = [{{:entry, key_pattern, :_, :_, :_}, [], [:"$_"]}]

@@ -27,13 +27,16 @@ defmodule Brando.Content.RenderQueue do
   end
 
   @doc """
-  Enqueues one entry-rendering job.
+  Enqueues one entry-rendering job. It carries what this node's render
+  inputs have caught up with, so a node that has not caught up yet does
+  before it renders (`Brando.Cache.ensure_fresh/1`).
   """
   @spec enqueue(map()) :: term()
   def enqueue(args) do
     worker = @entry_renderer
 
     args
+    |> Brando.Cache.Freshness.attach()
     |> Brando.Tenant.Job.attach()
     |> worker.new(replace_args: true, tags: [:render_entry])
     |> Oban.insert()

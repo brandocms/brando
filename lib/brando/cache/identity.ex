@@ -34,32 +34,27 @@ defmodule Brando.Cache.Identity do
   @spec set :: map()
   @decorate span("brando.cache.set_identity")
   def set do
-    if Brando.Tenant.outside_site?(), do: %{}, else: do_set()
-  end
-
-  defp do_set do
-    {:ok, identities} = Sites.list_identities(%{preload: @preloads})
-    identity_map = process_identities(identities)
-    Cache.put(:identity, identity_map, :infinite)
-    identity_map
+    if Brando.Tenant.outside_site?(), do: %{}, else: Cache.fill(:identity)[:identity]
   end
 
   @doc """
   Update identitys cache, once the transaction around the caller has
-  committed (`Brando.Cache.rebuild_after_commit/2`)
+  committed (`Brando.Cache.rebuild_after_commit/1`)
   """
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, identity}) do
-    Cache.rebuild_after_commit(:identity, &rebuild/0)
+    Cache.rebuild_after_commit(:identity)
     {:ok, identity}
   end
 
   def update({:error, changeset}), do: {:error, changeset}
 
-  defp rebuild do
+  @doc false
+  # What `Brando.Cache` stores for the cache
+  def load do
     {:ok, identities} = Sites.list_identities(%{preload: @preloads})
-    Cache.update(:identity, process_identities(identities))
+    [identity: process_identities(identities)]
   end
 
   defp process_identities(identities) do

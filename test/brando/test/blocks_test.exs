@@ -79,7 +79,7 @@ defmodule Brando.Test.BlocksTest do
       repo.query!(~s(CREATE SCHEMA "#{@prefix}"))
 
       for table <-
-            ~w(content_modules content_blocks content_refs content_vars content_table_rows content_block_identifiers content_containers sites_identities pages pages_blocks pages_alternates pages_fragments content_palettes sites_global_sets) do
+            ~w(content_modules content_blocks content_refs content_vars content_table_rows content_block_identifiers content_containers sites_identities pages pages_blocks pages_alternates pages_fragments content_palettes sites_global_sets navigation_menus navigation_items) do
         repo.query!(~s|CREATE TABLE "#{@prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|)
       end
 

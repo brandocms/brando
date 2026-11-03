@@ -32,32 +32,27 @@ defmodule Brando.Cache.Globals do
   @spec set :: map()
   @decorate span("brando.cache.set_globals")
   def set do
-    if Brando.Tenant.outside_site?(), do: %{}, else: do_set()
-  end
-
-  defp do_set do
-    {:ok, global_sets} = Sites.list_global_sets()
-    global_map = process_globals(global_sets)
-    Cache.put(:globals, global_map, :infinite)
-    global_map
+    if Brando.Tenant.outside_site?(), do: %{}, else: Cache.fill(:globals)[:globals]
   end
 
   @doc """
   Update globals cache, once the transaction around the caller has
-  committed (`Brando.Cache.rebuild_after_commit/2`)
+  committed (`Brando.Cache.rebuild_after_commit/1`)
   """
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, global_set}) do
-    Cache.rebuild_after_commit(:globals, &rebuild/0)
+    Cache.rebuild_after_commit(:globals)
     {:ok, global_set}
   end
 
   def update({:error, changeset}), do: {:error, changeset}
 
-  defp rebuild do
+  @doc false
+  # What `Brando.Cache` stores for the cache
+  def load do
     {:ok, global_sets} = Sites.list_global_sets()
-    Cache.update(:globals, process_globals(global_sets))
+    [globals: process_globals(global_sets)]
   end
 
   defp process_globals(global_sets) do

@@ -35,32 +35,27 @@ defmodule Brando.Cache.SEO do
   @spec set :: map()
   @decorate span("brando.cache.set_seo")
   def set do
-    if Brando.Tenant.outside_site?(), do: %{}, else: do_set()
-  end
-
-  defp do_set do
-    {:ok, seos} = Sites.list_seos(%{preload: [:fallback_meta_image]})
-    seo_map = process_seos(seos)
-    Cache.put(:seo, seo_map, :infinite)
-    seo_map
+    if Brando.Tenant.outside_site?(), do: %{}, else: Cache.fill(:seo)[:seo]
   end
 
   @doc """
   Update seos cache, once the transaction around the caller has committed
-  (`Brando.Cache.rebuild_after_commit/2`)
+  (`Brando.Cache.rebuild_after_commit/1`)
   """
   @spec update({:ok, any()} | {:error, changeset}) ::
           {:ok, map()} | {:error, changeset}
   def update({:ok, seo}) do
-    Cache.rebuild_after_commit(:seo, &rebuild/0)
+    Cache.rebuild_after_commit(:seo)
     {:ok, seo}
   end
 
   def update({:error, changeset}), do: {:error, changeset}
 
-  defp rebuild do
+  @doc false
+  # What `Brando.Cache` stores for the cache
+  def load do
     {:ok, seos} = Sites.list_seos(%{preload: [:fallback_meta_image]})
-    Cache.update(:seo, process_seos(seos))
+    [seo: process_seos(seos)]
   end
 
   defp process_seos(seos) do

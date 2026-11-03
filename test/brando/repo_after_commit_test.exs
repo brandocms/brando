@@ -130,6 +130,31 @@ defmodule Brando.RepoAfterCommitTest do
     end
   end
 
+  test "a transaction value lasts to the end of the outermost transaction, committed or rolled back" do
+    assert Repo.put_transaction_value(:token, :outside) == :error
+    assert Repo.transaction_value(:token) == nil
+
+    {:ok, :inner} =
+      Repo.transaction(fn ->
+        assert Repo.transaction_value(:token) == nil
+        :ok = Repo.put_transaction_value(:token, :outer)
+        {:ok, :outer} = Repo.transaction(fn -> Repo.transaction_value(:token) end)
+        {:ok, :ok} = Repo.transaction(fn -> Repo.put_transaction_value(:token, :inner) end)
+        Repo.transaction_value(:token)
+      end)
+
+    assert Repo.transaction_value(:token) == nil
+
+    {:error, :undone} =
+      Repo.transaction(fn ->
+        :ok = Repo.put_transaction_value(:token, :rolled_back)
+        Repo.rollback(:undone)
+      end)
+
+    assert Repo.transaction_value(:token) == nil
+    assert {:ok, nil} = Repo.transaction(fn -> Repo.transaction_value(:token) end)
+  end
+
   test "outside a transaction, keyed work runs at once" do
     test = self()
     Repo.after_commit(:evict_pages, fn -> send(test, :now) end)
