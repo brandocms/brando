@@ -211,9 +211,10 @@ defmodule Brando.Cache do
   """
   @spec ensure_fresh(map()) :: :ok
   def ensure_fresh(args) do
-    for {input, token} <- Freshness.unknown(args) do
+    # One refresh per input, however many tokens a coalesced job carries for it
+    for {input, unknown} <- Enum.group_by(Freshness.unknown(args), &elem(&1, 0), &elem(&1, 1)) do
       refresh(input)
-      Freshness.known(input, token)
+      Enum.each(unknown, &Freshness.known(input, &1))
     end
 
     :ok

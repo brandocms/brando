@@ -695,10 +695,17 @@ defmodule Brando.Content.Blocks do
   discovery and enqueues EntryRenderer jobs in the background.
   """
   def enqueue_entry_cascade(module, entry, identifier_id) do
-    %{schema: to_string(module), entry_id: entry.id, identifier_id: identifier_id}
-    |> Brando.Tenant.Job.attach()
-    |> Brando.Worker.EntryCascade.new()
+    changeset =
+      %{schema: to_string(module), entry_id: entry.id, identifier_id: identifier_id}
+      |> Brando.Tenant.Job.attach()
+      |> Brando.Worker.EntryCascade.new()
+
+    # One queued and not started yet runs for this write too
+    changeset
     |> Oban.insert()
+    |> Brando.Content.RenderQueue.coalesce(changeset, fn args, _ ->
+      Map.update(args, "identifier_id", identifier_id, &(&1 || identifier_id))
+    end)
   end
 
   @doc """

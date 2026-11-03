@@ -9,7 +9,9 @@ defmodule Brando.Worker.EntryCascade do
   use Oban.Worker,
     queue: :default,
     max_attempts: 3,
-    unique: [keys: [:tenant_prefix, :schema, :entry_id], period: 5, states: :incomplete]
+    # Not running: one that has started may have listed the entries before
+    # the write that queues another (`Brando.Content.Blocks.enqueue_entry_cascade/3`)
+    unique: [keys: [:tenant_prefix, :schema, :entry_id], period: 5, states: [:available, :scheduled]]
 
   require Logger
 

@@ -1,9 +1,12 @@
 defmodule Brando.Worker.EntryRenderer do
   @moduledoc false
+  # Renders of an entry queued within 5 seconds and not started coalesce
+  # (`Brando.Content.RenderQueue.enqueue/1`). One running, or waiting to
+  # retry, gets another after it: it may have read the entry before the write.
   use Oban.Worker,
     queue: :default,
     max_attempts: 5,
-    unique: [keys: [:tenant_prefix, :schema, :entry_id], period: 5, states: :incomplete]
+    unique: [keys: [:tenant_prefix, :schema, :entry_id], period: 5, states: [:available, :scheduled]]
 
   require Logger
 
