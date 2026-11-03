@@ -435,7 +435,7 @@ defmodule BrandoAdmin.Components.Form.Input.Entries do
       socket.assigns[:picker_row] != row_key(socket) ->
         alert = %{
           title: gettext("The row was saved or moved"),
-          message: gettext("Open \"Select entries\" again to pick for this row."),
+          message: gettext("Close this list and open \"Select entries\" again to pick for this row."),
           type: "info"
         }
 

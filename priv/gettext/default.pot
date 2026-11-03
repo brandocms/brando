@@ -3897,6 +3897,11 @@ msgstr ""
 msgid "Close recovery panel"
 msgstr ""
 
+#: lib/brando_admin/components/form/input/entries.ex
+#, elixir-autogen, elixir-format
+msgid "Close this list and open \"Select entries\" again to pick for this row."
+msgstr ""
+
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Closed"
@@ -11992,11 +11997,6 @@ msgstr ""
 #: lib/brando_admin/live/forms/submissions_live.ex
 #, elixir-autogen, elixir-format
 msgid "Open"
-msgstr ""
-
-#: lib/brando_admin/components/form/input/entries.ex
-#, elixir-autogen, elixir-format
-msgid "Open \"Select entries\" again to pick for this row."
 msgstr ""
 
 #: lib/brando/files/file.ex
