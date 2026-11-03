@@ -978,8 +978,12 @@ defmodule BrandoAdmin.AssistantLiveTest do
 
       put_test_env(:release_static_path, release)
       Brando.endpoint().subscribe("user:#{user.id}")
-      view |> element(~s(button[phx-click="share_page"])) |> render_click()
 
+      {_, log} =
+        ExUnit.CaptureLog.with_log(fn -> view |> element(~s(button[phx-click="share_page"])) |> render_click() end)
+
+      # The capture's tuple reached the page, which logged it.
+      assert log =~ "asset_file_stat_failed"
       assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
       refute message =~ "asset_file_stat_failed"
       assert frame_key(render(view)) == key
