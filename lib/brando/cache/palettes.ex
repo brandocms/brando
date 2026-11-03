@@ -16,25 +16,19 @@ defmodule Brando.Cache.Palettes do
   @spec get_css :: binary() | nil
   def get_css do
     case Cache.get_site(:palettes_css) do
-      nil ->
-        set()
-        Cache.get_site(:palettes_css)
-
-      css ->
-        css
+      nil -> filled(:palettes_css)
+      css -> css
     end
   end
 
   def get do
     case Cache.get_site(:palettes) do
-      nil ->
-        set()
-        Cache.get_site(:palettes)
-
-      palettes ->
-        palettes
+      nil -> filled(:palettes)
+      palettes -> palettes
     end
   end
+
+  defp filled(key), do: if(Brando.Tenant.outside_site?(), do: nil, else: Cache.fill(:palettes)[key])
 
   @doc """
   Set initial palette cache. Called on startup
@@ -42,18 +36,19 @@ defmodule Brando.Cache.Palettes do
   @spec set :: {:error, boolean} | {:ok, boolean}
   @decorate span("brando.cache.set_palettes")
   def set do
-    if Brando.Tenant.outside_site?(), do: {:ok, false}, else: Cache.serialize(:palettes, &rebuild/0)
+    if Brando.Tenant.outside_site?() do
+      {:ok, false}
+    else
+      Cache.fill(:palettes)
+      {:ok, true}
+    end
   end
 
   @doc false
-  # Under `Brando.Cache`'s lock for the cache
-  def rebuild do
+  # What `Brando.Cache` stores for the cache
+  def load do
     {:ok, palettes} = get_palettes()
-    palettes_css = get_palettes_css(palettes)
-
-    with {:ok, true} <- Cache.put(:palettes, palettes, :infinite) do
-      Cache.put(:palettes_css, palettes_css, :infinite)
-    end
+    [palettes: palettes, palettes_css: get_palettes_css(palettes)]
   end
 
   @doc """

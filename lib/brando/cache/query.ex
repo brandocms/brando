@@ -24,10 +24,14 @@ defmodule Brando.Cache.Query do
   (`Brando.CacheSync.broadcast_gathered/2`, which sends a node's evictions
   together, a tenth of a second at a time). They evict every cached entry of
   the schema rather than the written ones, so a message stays small however
-  many rows a transaction writes.
+  many rows a transaction writes. The render jobs queued after an eviction of
+  the lists renders read (modules, containers, palettes, fragments) evict
+  them first on a node that has not heard of it yet
+  (`Brando.Cache.ensure_fresh/1`).
   """
   use Brando.Tracing.Decorator
 
+  alias Brando.Cache.Freshness
   alias Brando.CacheSync
   alias Brando.Tracing
 
@@ -131,7 +135,21 @@ defmodule Brando.Cache.Query do
     schema
   end
 
-  defp evict_list(source), do: evict_committed({:list, source}, fn -> perform_eviction(:list, source) end)
+  # The lists renders read carry a token in the render jobs queued from here
+  # on (`Brando.Cache.ensure_fresh/1`), known to this node once it has
+  # evicted them after the commit
+  defp evict_list(source) do
+    evict = fn -> perform_eviction(:list, source) end
+
+    case Freshness.input(:query_source, source) do
+      nil ->
+        evict_committed({:list, source}, evict)
+
+      input ->
+        token = Freshness.make(input)
+        evict_committed({:list, source}, evict, fn -> Freshness.known(input, token) end)
+    end
+  end
 
   defp evict_single(source, id),
     do: evict_committed({:single, source, id}, fn -> perform_eviction(:single, source, id) end)
@@ -141,12 +159,21 @@ defmodule Brando.Cache.Query do
   # in between still sees the old row and caches it again. The second runs
   # under the tenant prefix of the write, which may be gone by then, and
   # once per cache entry however many writes the transaction makes.
-  defp evict_committed(key, evict) do
+  # `evicted` runs after the last eviction.
+  defp evict_committed(key, evict, evicted \\ fn -> :ok end) do
     evict.()
     prefix = Brando.Tenant.current_prefix()
 
-    if Brando.Repo.repo().in_transaction?(),
-      do: Brando.Repo.after_commit({__MODULE__, prefix, key}, fn -> Brando.Tenant.with_prefix(prefix, evict) end)
+    if Brando.Repo.repo().in_transaction?() do
+      committed = fn ->
+        evict.()
+        evicted.()
+      end
+
+      Brando.Repo.after_commit({__MODULE__, prefix, key}, fn -> Brando.Tenant.with_prefix(prefix, committed) end)
+    else
+      evicted.()
+    end
 
     CacheSync.broadcast_gathered(__MODULE__, {prefix, elem(key, 1)})
   end

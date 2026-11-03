@@ -10,7 +10,8 @@ defmodule Brando.Content.RenderQueueTest do
              end)
 
     assert job.worker == "Brando.Worker.EntryRenderer"
-    assert job.args == %{entry_id: 12_345, schema: Brando.Pages.Page}
+    # With this node's render input tokens, if it has any (`Brando.Cache.Freshness`)
+    assert %{entry_id: 12_345, schema: Brando.Pages.Page} = job.args
     assert job.tags == ["render_entry"]
   end
 end

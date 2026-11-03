@@ -34,14 +34,7 @@ defmodule Brando.Cache.Identity do
   @spec set :: map()
   @decorate span("brando.cache.set_identity")
   def set do
-    if Brando.Tenant.outside_site?(), do: %{}, else: Cache.serialize(:identity, &do_set/0)
-  end
-
-  defp do_set do
-    {:ok, identities} = Sites.list_identities(%{preload: @preloads})
-    identity_map = process_identities(identities)
-    Cache.put(:identity, identity_map, :infinite)
-    identity_map
+    if Brando.Tenant.outside_site?(), do: %{}, else: Cache.fill(:identity)[:identity]
   end
 
   @doc """
@@ -58,10 +51,10 @@ defmodule Brando.Cache.Identity do
   def update({:error, changeset}), do: {:error, changeset}
 
   @doc false
-  # Under `Brando.Cache`'s lock for the cache
-  def rebuild do
+  # What `Brando.Cache` stores for the cache
+  def load do
     {:ok, identities} = Sites.list_identities(%{preload: @preloads})
-    Cache.update(:identity, process_identities(identities))
+    [identity: process_identities(identities)]
   end
 
   defp process_identities(identities) do

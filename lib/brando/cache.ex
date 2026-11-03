@@ -5,6 +5,7 @@ defmodule Brando.Cache do
   use Brando.Tracing.Decorator
 
   alias Brando.Authorization.Boundary
+  alias Brando.Cache.Freshness
   alias Brando.CacheSync
   alias Brando.Tenant
 
@@ -18,10 +19,6 @@ defmodule Brando.Cache do
     palettes: Brando.Cache.Palettes,
     navigation: Brando.Cache.Navigation
   }
-  @held_locks {__MODULE__, :held_locks}
-  @render_needs {__MODULE__, :render_needs}
-  # Rebuilds a node remembers, per site cache, for the render jobs that ask
-  @fresh_tokens 32
 
   @spec get(any) :: any
   def get(key) do
@@ -89,12 +86,10 @@ defmodule Brando.Cache do
     reload_site_caches()
   end
 
+  # Rebuilt rather than filled: a fill that read before the change cannot keep
+  # what it stores
   defp reload_site_caches do
-    Brando.Cache.Identity.set()
-    Brando.Cache.SEO.set()
-    Brando.Cache.Globals.set()
-    Brando.Cache.Palettes.set()
-    Brando.Cache.Navigation.set()
+    for cache <- Map.keys(@site_caches), do: rebuild(cache)
     :ok
   end
 
@@ -109,16 +104,34 @@ defmodule Brando.Cache do
   It runs under the caller's site, and unscoped: the cache is every
   visitor's, not what the saving user may read. The other nodes rebuild
   their copies when they hear of it, after the commit too
-  (`Brando.CacheSync`). On a node, the site cache's rebuilds and fills run
-  one at a time, so one that read the database before another cannot store
-  after it.
+  (`Brando.CacheSync`).
+
+  A fill or rebuild that read the database before another rebuild began
+  does not keep what it stored: it may have read before that rebuild's write,
+  and the next read fills the cache again. Nothing waits for another.
   """
   @spec rebuild_after_commit(atom()) :: :ok
   def rebuild_after_commit(cache) when is_map_key(@site_caches, cache) do
     context = context()
-    Brando.Repo.after_commit({__MODULE__, cache, context}, Tenant.capture_context(fn -> rebuild(cache) end))
+    rebuild = Tenant.capture_context(fn -> rebuild_for_write(cache) end)
+    Brando.Repo.after_commit({__MODULE__, cache, context}, rebuild)
     unless Tenant.outside_site?(), do: CacheSync.broadcast(__MODULE__, {cache, context})
     :ok
+  end
+
+  # Render jobs queued from here on carry the token, so a node that has not
+  # rebuilt since rebuilds before it renders. This node knows it only once
+  # its own rebuild has run: one that raised leaves its jobs to rebuild too.
+  defp rebuild_for_write(cache) do
+    input = Freshness.input(:site_cache, cache)
+
+    if input && not Tenant.outside_site?() do
+      token = Freshness.make(input)
+      rebuild(cache)
+      Freshness.known(input, token)
+    else
+      rebuild(cache)
+    end
   end
 
   @doc "Rebuilds this node's copy of a site cache another node rebuilt (`Brando.CacheSync`)."
@@ -128,112 +141,72 @@ defmodule Brando.Cache do
     :ok
   end
 
+  # Moves the cache's generation before it reads, so a fill or rebuild that
+  # read before it withdraws what it stores
   defp rebuild(cache) do
     unless Tenant.outside_site?() do
-      module = Map.fetch!(@site_caches, cache)
-      serialize(cache, fn -> Boundary.with_scope(nil, &module.rebuild/0) end)
+      generation = System.unique_integer()
+      put(generation_key(cache), generation, :infinite)
+      Boundary.with_scope(nil, fn -> store(cache, generation) end)
     end
 
     :ok
   end
 
   @doc false
-  # Runs `fun`, which stores the site cache `cache` from the database, while
-  # no other process on this node stores it for this site.
-  @spec serialize(atom(), (-> result)) :: result when result: var
-  def serialize(cache, fun) do
-    lock = {__MODULE__, cache, context()}
-    held = Process.get(@held_locks, [])
+  # Fills the site cache `cache` from the database (its module's `set/0`, and
+  # a read that found it empty), and returns what it read as `[key: value]`,
+  # whether it kept it or not.
+  @spec fill(atom()) :: keyword()
+  def fill(cache) when is_map_key(@site_caches, cache), do: store(cache, get(generation_key(cache)))
 
-    if lock in held do
-      fun.()
-    else
-      :global.trans({lock, self()}, fn -> holding([lock | held], held, fun) end, [node()], :infinity)
-    end
+  # Stores what the cache's module reads, unless a rebuild began since
+  # `generation`, and withdraws it if one began while it stored
+  defp store(cache, generation) do
+    values = Map.fetch!(@site_caches, cache).load()
+    if get(generation_key(cache)) == generation, do: keep(cache, values, generation)
+    values
   end
 
-  defp holding(locks, held, fun) do
-    Process.put(@held_locks, locks)
-
-    try do
-      fun.()
-    after
-      Process.put(@held_locks, held)
-    end
+  defp keep(cache, values, generation) do
+    Enum.each(values, fn {key, value} -> put(key, value, :infinite) end)
+    if get(generation_key(cache)) != generation, do: Enum.each(values, fn {key, _} -> del(key) end)
   end
+
+  # Under the site's cache key: `public`'s copy and the unprefixed one are one
+  defp generation_key(cache), do: {__MODULE__, :generation, cache}
 
   @doc """
   Runs `fun`, which reads the site cache `cache`, after every rebuild
   `rebuild_after_commit/1` held in the transaction: rendering the entries
   that show the cache, say, which would otherwise store what it held before.
   Once per `cache` in a transaction, at once outside one.
-
-  The render jobs `fun` queues may run on any node, and another node may not
-  have heard of the rebuild yet. They carry a token for it, and a node that
-  has not rebuilt its copy since rebuilds it before it renders
-  (`ensure_fresh/1`).
   """
   @spec after_rebuild(atom(), (-> any())) :: :ok
   def after_rebuild(cache, fun) when is_map_key(@site_caches, cache) do
     key = {__MODULE__, :after_rebuild, cache, context()}
-    Brando.Repo.after_commit(key, Tenant.capture_context(fn -> render_fresh(cache, fun) end), late: true)
-  end
-
-  # This node has rebuilt `cache` for the write
-  defp render_fresh(cache, fun) do
-    token = Base.url_encode64(:crypto.strong_rand_bytes(9))
-    mark_fresh(cache, token)
-    needs = Process.get(@render_needs, %{})
-    Process.put(@render_needs, Map.put(needs, to_string(cache), token))
-
-    try do
-      fun.()
-    after
-      if needs == %{}, do: Process.delete(@render_needs), else: Process.put(@render_needs, needs)
-    end
-  end
-
-  @doc false
-  # Adds the site caches an entry render queued from `after_rebuild/2` must
-  # read rebuilt to the job's arguments.
-  @spec put_render_needs(map()) :: map()
-  def put_render_needs(args) do
-    case Process.get(@render_needs) do
-      nil -> args
-      needs -> Map.put(args, "site_caches", needs)
-    end
+    Brando.Repo.after_commit(key, Tenant.capture_context(fun), late: true)
   end
 
   @doc """
-  Rebuilds this node's copy of each site cache in `needs` (an entry render
-  job's `"site_caches"`, from `after_rebuild/2`) that it has not rebuilt
-  since the write that queued the job: a node that runs the job before it
-  hears of the write would render from what its cache held before.
+  Refreshes each render input in an entry render job's arguments that this
+  node has not refreshed for since the job was queued: a site cache the
+  renders read, or a query cache source they list. The job may run on a
+  node that has not heard of the write that queued it yet, and would render
+  from what its caches held before (`Brando.Cache.Freshness`).
   """
-  @spec ensure_fresh(map() | nil) :: :ok
-  def ensure_fresh(needs) when is_map(needs) do
-    for {name, token} <- needs, cache <- List.wrap(cache_named(name)), not fresh?(cache, token) do
-      serialize(cache, fn ->
-        unless fresh?(cache, token) do
-          rebuild(cache)
-          mark_fresh(cache, token)
-        end
-      end)
+  @spec ensure_fresh(map()) :: :ok
+  def ensure_fresh(args) do
+    for {input, token} <- Freshness.unknown(args) do
+      refresh(input)
+      Freshness.known(input, token)
     end
 
     :ok
   end
 
-  def ensure_fresh(_needs), do: :ok
-
-  defp cache_named(name), do: Enum.find_value(@site_caches, fn {cache, _} -> to_string(cache) == name && cache end)
-
-  defp fresh?(cache, token), do: token in (get({__MODULE__, :fresh, cache}) || [])
-
-  defp mark_fresh(cache, token) do
-    tokens = get({__MODULE__, :fresh, cache}) || []
-    put({__MODULE__, :fresh, cache}, Enum.take([token | tokens], @fresh_tokens), :infinite)
-  end
+  defp refresh({:site_cache, cache}), do: rebuild(cache)
+  defp refresh({:query_source, source}), do: Brando.Cache.Query.refresh_node_cache({Tenant.current_prefix(), source})
 
   # Where the caller's site caches are: its site, `public` on purpose, or neither
   defp context, do: if(Tenant.public?(), do: :public, else: Tenant.current_prefix())

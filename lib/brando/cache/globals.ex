@@ -32,14 +32,7 @@ defmodule Brando.Cache.Globals do
   @spec set :: map()
   @decorate span("brando.cache.set_globals")
   def set do
-    if Brando.Tenant.outside_site?(), do: %{}, else: Cache.serialize(:globals, &do_set/0)
-  end
-
-  defp do_set do
-    {:ok, global_sets} = Sites.list_global_sets()
-    global_map = process_globals(global_sets)
-    Cache.put(:globals, global_map, :infinite)
-    global_map
+    if Brando.Tenant.outside_site?(), do: %{}, else: Cache.fill(:globals)[:globals]
   end
 
   @doc """
@@ -56,10 +49,10 @@ defmodule Brando.Cache.Globals do
   def update({:error, changeset}), do: {:error, changeset}
 
   @doc false
-  # Under `Brando.Cache`'s lock for the cache
-  def rebuild do
+  # What `Brando.Cache` stores for the cache
+  def load do
     {:ok, global_sets} = Sites.list_global_sets()
-    Cache.update(:globals, process_globals(global_sets))
+    [globals: process_globals(global_sets)]
   end
 
   defp process_globals(global_sets) do

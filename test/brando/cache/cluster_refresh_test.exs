@@ -9,15 +9,19 @@ defmodule Brando.Cache.ClusterRefreshTest do
   alias Brando.Cache
   alias Brando.Cache.Query, as: QueryCache
   alias Brando.CacheSync
+  alias Brando.Content.Module
+  alias Brando.Content.RenderQueue
   alias Brando.{Factory, Repo}
   alias Brando.Navigation.Menu
   alias Brando.Pages.{Fragment, Page}
 
   @other_node "another-node"
+  # This node's record of the writes its render inputs have caught up with
+  @tokens {Brando.Cache.Freshness, :tokens}
 
   setup do
-    preserve_cache([:globals, :navigation, :palettes, :palettes_css, :identity, :seo, {Cache, :fresh, :globals}])
-    preserve_query_cache([Page, Fragment])
+    preserve_cache([:globals, :navigation, :palettes, :palettes_css, :identity, :seo, @tokens])
+    preserve_query_cache([Page, Fragment, Module])
     Cache.Globals.set()
     Cache.Navigation.set()
     Cache.Palettes.set()
@@ -134,13 +138,66 @@ defmodule Brando.Cache.ClusterRefreshTest do
 
       assert Cache.Navigation.get("main", "en").title == "New"
     end
+
+    test "a rebuild that read the database before another's cannot store over it", c do
+      {:ok, menu} =
+        Brando.Navigation.create_menu(%{status: :published, title: "Old", key: "main", language: "en", items: []}, c.user)
+
+      # This node rebuilds for one write and has read the menus...
+      earlier = start_held(Menu.__schema__(:source), fn -> Cache.refresh_node_cache({:navigation, nil}) end)
+
+      # ...when another write commits and its rebuild runs to the end
+      menu |> Ecto.Changeset.change(title: "New") |> Repo.update!()
+      later = Task.async(fn -> Cache.refresh_node_cache({:navigation, nil}) end)
+      assert {:ok, :ok} = Task.yield(later, 2_000)
+
+      resume(earlier)
+      Task.await(earlier)
+
+      assert Cache.Navigation.get("main", "en").title == "New"
+    end
+
+    test "fills and rebuilds do not wait for one another", c do
+      {:ok, _menu} =
+        Brando.Navigation.create_menu(%{status: :published, title: "Old", key: "main", language: "en", items: []}, c.user)
+
+      Cache.del(:navigation)
+      earlier = start_held(Menu.__schema__(:source), &Cache.Navigation.set/0)
+
+      assert {:ok, {:ok, true}} = Task.yield(Task.async(&Cache.Navigation.set/0), 2_000)
+      assert {:ok, :ok} = Task.yield(Task.async(fn -> Cache.refresh_node_cache({:navigation, nil}) end), 2_000)
+
+      resume(earlier)
+      Task.await(earlier)
+    end
+
+    test "public's copy and the unprefixed one are one cache to the fence", c do
+      {:ok, menu} =
+        Brando.Navigation.create_menu(%{status: :published, title: "Old", key: "main", language: "en", items: []}, c.user)
+
+      put_test_env(:tenancy_mode, :single)
+
+      earlier =
+        start_held(Menu.__schema__(:source), fn -> Brando.Tenant.with_public(&Cache.Navigation.set/0) end)
+
+      menu |> Ecto.Changeset.change(title: "New") |> Repo.update!()
+      later = Task.async(fn -> Cache.refresh_node_cache({:navigation, nil}) end)
+      assert {:ok, :ok} = Task.yield(later, 2_000)
+
+      resume(earlier)
+      Task.await(earlier)
+
+      assert Cache.Navigation.get("main", "en").title == "New"
+    end
   end
 
   describe "rendering after a site cache's rebuild" do
     setup c do
       {:ok, module} =
         Brando.Content.create_module(
-          Factory.params_for(:module, %{code: ~s(<div class="paragraph">Says: '{{ globals.system.text }}'.</div>)}),
+          Factory.params_for(:module, %{
+            code: ~s(<div class="paragraph">Says: '{{ globals.system.text }}'. Name: '{{ identity.name }}'.</div>)
+          }),
           :system
         )
 
@@ -159,7 +216,8 @@ defmodule Brando.Cache.ClusterRefreshTest do
 
       {:ok, set} = Brando.Sites.create_global_set(global_set("system", "Old", c.user), c.user)
       {:ok, _} = Brando.Content.Blocks.render_entry(Fragment, fragment.id)
-      %{fragment: fragment, set: set}
+      {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
+      %{fragment: fragment, set: set, identity: identity}
     end
 
     test "a job run by a node that has not heard of the rebuild yet rebuilds its copy first", c do
@@ -171,7 +229,7 @@ defmodule Brando.Cache.ClusterRefreshTest do
       # As on a node that has not heard: what its cache held before, and no
       # rebuild for this write
       Cache.put(:globals, stale, :infinite)
-      Cache.del({Cache, :fresh, :globals})
+      Cache.del(@tokens)
 
       assert {:ok, _} = perform(job)
       assert Repo.get!(Fragment, c.fragment.id).rendered_blocks =~ "Says: 'New'."
@@ -190,14 +248,140 @@ defmodule Brando.Cache.ClusterRefreshTest do
       assert Repo.get!(Fragment, c.fragment.id).rendered_blocks =~ "Says: 'Marker'."
     end
 
-    test "a render queued for any other reason carries no site caches", c do
+    test "a render queued for any other reason carries this node's rebuilds too", c do
+      update_text_queueing(c.set, "New", c.user)
+
       job =
         Oban.Testing.with_testing_mode(:manual, fn ->
-          Brando.Content.RenderQueue.enqueue(%{schema: Fragment, entry_id: c.fragment.id})
+          RenderQueue.enqueue(%{schema: Fragment, entry_id: c.fragment.id + 1_000_000})
         end)
 
-      assert {:ok, %Oban.Job{args: args}} = job
-      refute Map.has_key?(args, "site_caches")
+      assert {:ok, %Oban.Job{args: %{"site_caches" => %{"globals" => _token}}}} = job
+    end
+
+    test "one transaction that changes identity and globals queues renders that need both", c do
+      stale_globals = Cache.get(:globals)
+      stale_identity = Cache.get(:identity)
+
+      jobs =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          {:ok, _} =
+            Repo.transaction(fn ->
+              {:ok, _} = Brando.Sites.update_identity(c.identity.id, %{name: "New name"}, :system)
+              vars = [%{type: "text", label: "Text", key: "text", value: "New", creator_id: c.user.id}]
+              {:ok, _} = Brando.Sites.update_global_set(c.set.id, %{vars: vars}, :system)
+            end)
+
+          all_enqueued(worker: Brando.Worker.EntryRenderer)
+        end)
+
+      job = Enum.find(jobs, &(&1.args["entry_id"] == c.fragment.id))
+      assert %{"identity" => _, "globals" => _} = job.args["site_caches"]
+
+      Cache.put(:globals, stale_globals, :infinite)
+      Cache.put(:identity, stale_identity, :infinite)
+      Cache.del(@tokens)
+
+      assert {:ok, _} = perform(job)
+      assert Repo.get!(Fragment, c.fragment.id).rendered_blocks =~ "Says: 'New'. Name: 'New name'."
+    end
+
+    test "an entry saved after the change keeps what its render needs", c do
+      jobs = update_text_queueing(c.set, "New", c.user)
+      job = Enum.find(jobs, &(&1.args["entry_id"] == c.fragment.id))
+      token = job.args["site_caches"]["globals"]
+
+      # The same entry queued again within the unique period replaces the args
+      jobs =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          {:ok, _} = RenderQueue.enqueue(%{schema: Fragment, entry_id: c.fragment.id})
+          all_enqueued(worker: Brando.Worker.EntryRenderer)
+        end)
+
+      replaced = Enum.find(jobs, &(&1.args["entry_id"] == c.fragment.id))
+      assert %{"globals" => ^token} = replaced.args["site_caches"]
+    end
+  end
+
+  describe "a rebuild that raises" do
+    setup do
+      put_test_env(:tenancy_mode, :multi)
+      # A site whose schema is gone: every read of its tables raises
+      prefix = "tenant_gone_production"
+      keys = for key <- [@tokens, {Cache, :generation, :globals}], do: {:tenant, prefix, key}
+      cached = for key <- keys, do: {key, Cachex.get!(:cache, key)}
+
+      on_exit(fn ->
+        for {key, value} <- cached,
+            do: if(value, do: Cachex.put(:cache, key, value), else: Cachex.del(:cache, key))
+      end)
+
+      %{prefix: prefix}
+    end
+
+    test "leaves the render jobs it queues to rebuild on this node too", c do
+      Brando.Tenant.with_prefix(c.prefix, fn ->
+        assert_raise Postgrex.Error, fn -> in_savepoint(fn -> Cache.rebuild_after_commit(:globals) end) end
+
+        args = Brando.Cache.Freshness.attach(%{})
+        assert %{"globals" => _token} = args["site_caches"]
+
+        # The job tries the rebuild again rather than render from the old copy
+        assert_raise Postgrex.Error, fn -> in_savepoint(fn -> Cache.ensure_fresh(args) end) end
+      end)
+    end
+  end
+
+  describe "rendering after a module's change" do
+    setup c do
+      {:ok, module} =
+        Brando.Content.create_module(
+          Factory.params_for(:module, %{code: ~s(<div class="paragraph">Module: old.</div>)}),
+          :system
+        )
+
+      {:ok, fragment} =
+        %Fragment{}
+        |> Ecto.Changeset.change(
+          Factory.params_for(:fragment, %{
+            parent_key: "module_change",
+            key: "module_change",
+            entry_blocks: [
+              %{block: %{type: :module, source: "Elixir.Brando.Pages.Fragment.Blocks", module_id: module.id, refs: []}}
+            ]
+          })
+        )
+        |> Brando.Pages.create_fragment(c.user)
+
+      {:ok, _} = Brando.Content.Blocks.render_entry(Fragment, fragment.id)
+      %{module: module, fragment: fragment}
+    end
+
+    test "a job run by a node that has not evicted the modules evicts them first", c do
+      jobs =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          {:ok, _} = Brando.Content.update_module(c.module.id, %{code: ~s(<div>Module: new.</div>)}, :system)
+          all_enqueued(worker: Brando.Worker.EntryRenderer)
+        end)
+
+      job = Enum.find(jobs, &(&1.args["entry_id"] == c.fragment.id))
+      source = Module.__schema__(:source)
+      assert %{^source => _token} = job.args["query_sources"]
+
+      # As on a node that has not heard: the module list cached before, and
+      # no eviction for this write
+      stale = {:list, source, "stale"}
+      Cachex.put(:query, stale, [c.module])
+      Cache.del(@tokens)
+
+      assert {:ok, _} = perform(job)
+      assert {:ok, nil} = Cachex.get(:query, stale)
+      assert Repo.get!(Fragment, c.fragment.id).rendered_blocks =~ "Module: new."
+
+      # Known now: the next job for the write evicts nothing
+      Cachex.put(:query, stale, [c.module])
+      assert {:ok, _} = perform(job)
+      assert {:ok, [_]} = Cachex.get(:query, stale)
     end
   end
 
@@ -245,8 +429,8 @@ defmodule Brando.Cache.ClusterRefreshTest do
         {:tenant, "tenant_other_production", {:list, pages, "f"}}
       ]
 
+      # `preserve_query_cache/1` in setup puts the sources' entries back
       for key <- keys, do: Cachex.put(:query, key, :cached)
-      on_exit(fn -> for key <- keys, do: Cachex.del(:query, key) end)
 
       remote_refresh({:batch, [{QueryCache, {prefix, pages}}]})
       assert cached(keys) == [true, true, true, false, false, true]
@@ -276,6 +460,10 @@ defmodule Brando.Cache.ClusterRefreshTest do
   end
 
   defp perform(job), do: Brando.Worker.EntryRenderer.perform(job)
+
+  # A transaction on the repo itself, so a query that fails leaves the test's
+  # own usable, and `Brando.Repo.after_commit/2` runs its work at once
+  defp in_savepoint(fun), do: BrandoIntegration.Repo.transaction(fun)
 
   defp send_remote(origin \\ @other_node, refresh) do
     Phoenix.PubSub.broadcast(Brando.pubsub(), CacheSync.topic(), {:brando_cache_sync, origin, refresh})

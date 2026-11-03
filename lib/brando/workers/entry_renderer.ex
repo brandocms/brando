@@ -13,8 +13,8 @@ defmodule Brando.Worker.EntryRenderer do
   def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
 
   defp perform_tenant(%Oban.Job{args: %{"entry_id" => entry_id, "schema" => schema} = args}) do
-    # Queued for a site cache's rebuild, which this node may not have heard of
-    Brando.Cache.ensure_fresh(args["site_caches"])
+    # Queued after writes this node may not have heard of yet
+    Brando.Cache.ensure_fresh(args)
     schema = Module.concat([schema])
     Logger.info("==> [CRON] Rendering entry #{entry_id} for schema #{schema}")
     Brando.Content.Blocks.render_entry(schema, entry_id)

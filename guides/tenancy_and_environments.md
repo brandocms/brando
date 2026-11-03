@@ -546,10 +546,11 @@ rebuilds the saving node's copy once it has committed, and the other nodes
 rebuild theirs when they hear of it. They evict cached queries of the saved
 schema under the same site: every cached entry of it, not only the saved
 rows, so that one message covers a whole import. A node sends its evictions
-together, a tenth of a second at a time. The entries a change of identity,
-globals or menus renders again are rendered once, on whichever node runs
-the job; a node that runs one before it has heard of the change rebuilds its
-copy first. **Empty all caches** on the **Cache** screen empties the node
+together, a tenth of a second at a time. An entry is rendered on whichever
+node runs its render job; a node that runs one before it has heard of a
+change made on the node that queued it (to identity, globals or menus, or
+to the modules, containers, palettes or fragments entries render with)
+refreshes its copy first. **Empty all caches** on the **Cache** screen empties the node
 that served it; for a change no node heard of (SQL, a seed, a mix task),
 empty each node or restart them.
 
