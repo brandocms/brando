@@ -84,6 +84,15 @@ guide.
 
 <!-- usage-rules:end -->
 
+### Background renders
+
+A change to a module, container, palette, fragment or global renders the
+entries that use it again in the background. A background render stores its
+HTML only if the entry was not written while it rendered, and otherwise
+renders again from what was saved, so it never stores over an editor's newer
+blocks. A save that stores over a background render that read newer modules
+queues another render of the entry.
+
 <!-- usage-rules:start -->
 
 ## Modules, refs and vars

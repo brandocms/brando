@@ -111,6 +111,19 @@ defmodule Brando.Cache.Freshness do
     |> put_latest("query_sources", for({{:query_source, source}, t} <- tokens, do: {source, t}))
   end
 
+  @doc """
+  Marks every render input in a render job's arguments with `@any`, which
+  no node knows: a node that runs the job refreshes them all before it
+  renders. For a render queued by a node that rendered from inputs it had
+  not caught up with, while its own tokens say it had.
+  """
+  @spec attach_any(map()) :: map()
+  def attach_any(args) do
+    args
+    |> Map.put("site_caches", Map.new(@site_caches, &{to_string(&1), @any}))
+    |> Map.put("query_sources", Map.new(sources(), &{&1, @any}))
+  end
+
   defp put_latest(args, _field, []), do: args
   defp put_latest(args, field, latest), do: Map.put(args, field, Map.new(latest))
 
