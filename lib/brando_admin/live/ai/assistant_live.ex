@@ -113,9 +113,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
         if connected?(socket), do: Agent.subscribe(conversation.id)
         run = Agent.latest_run(id, user)
+        same? = match?(%{id: ^id}, socket.assigns.conversation)
 
         {:noreply,
          socket
+         |> then(&if(same?, do: &1, else: leave_review(&1)))
          # A run still working after a reconnect or a restart can be stopped.
          |> assign(conversation: conversation, error: nil, receipt: nil, progress: nil)
          |> assign_run(run)
@@ -186,6 +188,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
     {:noreply,
      socket
+     |> leave_review()
      |> assign(
        conversation: nil,
        messages: [],
@@ -939,6 +942,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         media={@media}
         aliases={@aliases}
         share_url={@share_url}
+        shareable?={page_shareable?(@proposal)}
       />
 
       <div :if={!@preview} class="assistant-section-head">
@@ -1148,6 +1152,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   attr :media, :map, required: true
   attr :aliases, :map, default: %{}
   attr :share_url, :string, default: nil
+  attr :shareable?, :boolean, default: false
 
   defp page_preview(assigns) do
     assigns = assign(assigns, :entry, Enum.find(assigns.review, &(&1.key == assigns.preview.key)))
@@ -1255,7 +1260,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <.icon name="external-link" />{gettext("Open in a new tab")}
           </a>
           <button
-            :if={@preview.version == "proposed" and match?({:ok, _}, @preview.frame)}
+            :if={@shareable? and @preview.version == "proposed" and match?({:ok, _}, @preview.frame)}
             type="button"
             class="assistant-frame-action"
             phx-click="share_page"
@@ -1769,11 +1774,14 @@ defmodule BrandoAdmin.AI.AssistantLive do
 
   def handle_event("cancel_share", _, socket), do: {:noreply, assign(socket, :share_choice, nil)}
 
-  def handle_event("share_page", _, socket) do
-    %{proposal: proposal, preview: preview, current_user: user} = socket.assigns
+  # A click sent before the last patch reached the browser can arrive after
+  # the preview closed or the proposal went (refused at review, or another
+  # conversation opened).
+  def handle_event("share_page", _, %{assigns: %{proposal: proposal, preview: %{}}} = socket)
+      when not is_nil(proposal) do
+    %{preview: preview, current_user: user} = socket.assigns
 
-    with %{} <- proposal,
-         %{} <- preview,
+    with true <- page_shareable?(proposal),
          {target, _} <- Enum.find(proposal.targets, fn {target, _} -> Proposals.Proposal.key(target) == preview.key end),
          {:ok, url, days} <-
            Proposals.Preview.share(proposal, target, user,
@@ -1782,7 +1790,10 @@ defmodule BrandoAdmin.AI.AssistantLive do
            ) do
       {:noreply, assign(socket, :share_url, %{url: url, days: days})}
     else
-      # The proposal changed, or was refused, before the page took the button away.
+      false ->
+        {:noreply, socket}
+
+      # The proposal changed before its event could render the preview again.
       nil ->
         {:noreply, socket |> discard_previews() |> assign(:preview, nil)}
 
@@ -1801,6 +1812,8 @@ defmodule BrandoAdmin.AI.AssistantLive do
         {:noreply, put_toast(socket, :error, to_string(reason))}
     end
   end
+
+  def handle_event("share_page", _, socket), do: {:noreply, socket |> discard_previews() |> assign(:preview, nil)}
 
   # The proposal on screen, or one that can no longer be loaded for review.
   # The click names the one it was made on: if the review has changed to
@@ -2015,10 +2028,23 @@ defmodule BrandoAdmin.AI.AssistantLive do
     end
   end
 
+  # A page link shows the frame it was made from, so it goes with the frame.
   defp discard_previews(socket) do
     Proposals.Preview.discard(socket.assigns.preview_keys)
-    assign(socket, :preview_keys, [])
+    assign(socket, preview_keys: [], share_url: nil)
   end
+
+  # The preview, the links and the entries to publish belong to the proposal
+  # of the conversation the page leaves.
+  defp leave_review(socket) do
+    socket
+    |> discard_previews()
+    |> assign(preview: nil, publish: MapSet.new(), review_link: nil, share_choice: nil)
+  end
+
+  # A page link is made for a proposal a review link could still show.
+  defp page_shareable?(nil), do: false
+  defp page_shareable?(proposal), do: proposal.status in ~w(pending approved applied)
 
   def terminate(_reason, socket) do
     Proposals.Preview.discard(socket.assigns[:preview_keys] || [])
