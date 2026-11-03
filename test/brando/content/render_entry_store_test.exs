@@ -81,6 +81,29 @@ defmodule Brando.Content.RenderEntryStoreTest do
     assert row_version(c.identity) == version
   end
 
+  test "a render that changes nothing, over a write of the entry, renders that write", c do
+    # One write of the row, after the first render and before it stores
+    write = fn ->
+      unless Process.put(:render_entry_store_written, true),
+        do: Repo.update_all(from(p in Page, where: p.id == ^c.identity.id), set: [title: "Written"])
+    end
+
+    render = start_held_render(c.identity, write)
+    resume(render)
+
+    assert {:ok, %{title: "Written"}} = Task.await(render)
+  end
+
+  test "a store that fails inside a caller's transaction leaves the transaction to the caller", c do
+    invalid = &(&1 |> Ecto.Changeset.force_change(:title, "Invalid") |> Ecto.Changeset.add_error(:title, "invalid"))
+
+    assert {:ok, {:error, %Ecto.Changeset{}}} =
+             Repo.transaction(fn -> Blocks.render_and_store(Page, c.identity.id, prepare: invalid) end)
+
+    assert {:error, %Ecto.Changeset{}} = Blocks.render_and_store(Page, c.identity.id, prepare: invalid)
+    refute Repo.get!(Page, c.identity.id).title == "Invalid"
+  end
+
   test "a save that stored over a render queues one that refreshes every render input", c do
     changeset = Page |> Repo.get!(c.identity.id) |> Ecto.Changeset.change(title: "Saved")
     fence = Blocks.render_fence(changeset)

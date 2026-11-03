@@ -827,18 +827,26 @@ defmodule Brando.Content.Blocks do
   # write of the row moves), and every save that renders inline writes the
   # row (it forces its `rendered_*_at`), so this renders again from what
   # that save stored. A render that changes nothing stores nothing (unless
-  # forced).
+  # forced), but checks all the same: the entry it returns is what the
+  # caller acts on.
   #
   # NO KEY UPDATE, as the update takes: FOR UPDATE would also wait for
   # inserts of rows that point at the entry.
-  defp store_render(_schema, _id, _version, %Changeset{changes: changes} = changeset, []) when changes == %{},
-    do: {:ok, changeset.data}
+  defp store_render(schema, id, version, %Changeset{changes: changes} = changeset, [])
+       when changes == %{} do
+    if version != nil and Repo.one(row_version(schema, id)) == version, do: {:ok, changeset.data}, else: :changed
+  end
 
   defp store_render(schema, id, version, changeset, update_opts) do
+    # Nested, Ecto takes no savepoint: a rollback would abort the caller's
+    # transaction too, so the failed update is returned instead
+    nested? = Repo.repo().in_transaction?()
+
     Repo.transaction(fn ->
       if version != nil and Repo.one(lock(row_version(schema, id), "FOR NO KEY UPDATE")) == version do
         case Repo.update(changeset, update_opts) do
           {:ok, stored} -> stored
+          {:error, _} = err when nested? -> err
           {:error, changeset} -> Repo.rollback(changeset)
         end
       else
@@ -847,6 +855,7 @@ defmodule Brando.Content.Blocks do
     end)
     |> case do
       {:ok, :changed} -> :changed
+      {:ok, {:error, _} = err} -> err
       result -> result
     end
   end
