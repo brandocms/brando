@@ -266,6 +266,7 @@ defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
     form = to_form(Changeset.change(%Brando.Content.Block{block_identifiers: []}), as: "block")
     props = %{id: "entries", field: form[:block_identifiers], opts: [sources: [{Brando.Pages.Page, %{}}]]}
     {:ok, socket} = Entries.update(props, %Phoenix.LiveView.Socket{})
+    {:noreply, socket} = Entries.handle_event("open_picker", %{}, socket)
     assert Enum.map(socket.assigns.available_identifiers, & &1.id) == [a.id]
 
     # No longer listed, as a record read policy would decide

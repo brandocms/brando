@@ -43,6 +43,34 @@ defmodule E2eProject.Projects.Client do
   end
 
   forms do
+    # An `:entries` input in each row (masked-entries.spec.js). Opened at
+    # /admin/projects/clients/related_rows/:entry_id.
+    form :related_rows do
+      tab gettext("Content") do
+        fieldset do
+          size :half
+          input :name, :text, label: t("Name")
+          input :slug, :slug, source: :name, label: t("Slug")
+        end
+
+        fieldset do
+          size :full
+
+          inputs_for :inline_rows do
+            label "Rows"
+            cardinality :many
+            default %{title: "New row", status: :published}
+
+            input :title, :text, label: "Title"
+
+            input :related_entries, :entries,
+              label: "Related entries",
+              sources: [{Projects.Project, %{order: "asc title", status: :published}}]
+          end
+        end
+      end
+    end
+
     # The same persisted rows through the transformer state/save path.
     form :transformer do
       tab gettext("Content") do

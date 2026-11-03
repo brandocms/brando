@@ -5,7 +5,8 @@ defmodule E2eProject.Projects.InlineRow do
   Shown under the client form's "Inline fields" tab.
 
   Link, relation multi-select, gallery and entries inputs need their own relations and
-  are covered by the menus, form builder and project forms instead.
+  are covered by the menus, form builder and project forms instead. The rows'
+  related entries are edited in the client form's `:related_rows`.
   """
 
   use Brando.Blueprint,
@@ -67,6 +68,8 @@ defmodule E2eProject.Projects.InlineRow do
 
   relations do
     relation :client, :belongs_to, module: E2eProject.Projects.Client
+    # Picked in the client form's `:related_rows` (masked-entries.spec.js)
+    relation :related_entries, :entries
   end
 
   # Every input of the row on its own, declared locked, alternating

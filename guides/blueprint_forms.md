@@ -564,6 +564,13 @@ choices. `filter_language: true` offers only entries in the same language as
 the entry being edited. The relation's `constraints: [max_length: n]` and
 `min_length` limit how many can be picked.
 
+The input also works in a subform's rows (`inputs_for`, other than a
+transformer's), for an `:entries` relation of the row's schema, where a
+pick changes the row. The default
+preloads load the rows' entries with their identifiers; a form `query` that
+preloads the rows' entries without them works too, and the input reads them
+by id. The picker reads its list of choices when it opens.
+
 The picker lists the schema's identifiers (`Brando.Content.Identifier`), not
 its entries, so the options apply to the identifiers: `order:` by their
 columns (`id`, `entry_id`, `schema`, `title`, `status`, `language`, `cover`, `url`,
@@ -1163,8 +1170,15 @@ are available as tokens: `:vars`, `:page_vars`, `:gallery_objects`,
 `:identity_type_config`, `:image_focal` and `:form_fields`. Tokens keep the
 Blueprint from compiling against the admin component tree. Any other value
 must be a module. The component receives `field`, `subform`, `label`,
-`instructions`, `placeholder`, `current_user`, `form_cid` and `form_id`. The
-cardinality check is skipped for subforms with a component.
+`instructions`, `placeholder`, `current_user`, `form_cid`, `form_id` and
+`read_generation`. The cardinality check is skipped for subforms with a
+component.
+
+`read_generation` changes when what the editor may read can have changed: a
+change of permissions, or the form reading its entry again. A component that
+renders `:entries` inputs in its rows reads it inside the rows (passing it to
+each row's inputs is enough), so they render again and check which selected
+entries the editor may see.
 
 ## How traits change the form
 

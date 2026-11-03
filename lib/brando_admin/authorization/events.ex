@@ -159,7 +159,7 @@ defmodule BrandoAdmin.Authorization.Events do
       write: ~w(get_video_upload_url)
     ],
     "BrandoAdmin.Components.Form.Input.Entries" => [
-      read: ~w(clear_all select_identifier select_schema)
+      read: ~w(clear_all close_picker open_picker select_identifier select_schema)
     ],
     "BrandoAdmin.Components.Form.Input.File" => [
       read: ~w(browse_file open_file remove_file select_file)

@@ -126,6 +126,12 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
     Repo.all(from l in join, where: l.parent_id == ^article.id, order_by: l.sequence, select: l.identifier_id)
   end
 
+  defp open_picker(view, field \\ "article_related_entries"),
+    do: view |> element("##{field}-field-wrapper button", "Select entries") |> render_click()
+
+  defp close_picker(view, field \\ "article_related_entries"),
+    do: view |> element("##{field}-select-entries .modal-close") |> render_click()
+
   # As `Boundary` broadcasts after a write to groups or accounts. The view
   # takes it, and the form then draws its fields again: the first render
   # returns once the view has taken it, the next once the form has drawn.
@@ -137,7 +143,16 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
 
   # Queries of the entries' tables (`pages`, `content_identifiers`) the view
   # runs in `fun`
-  defp read_queries(view, fun) do
+  defp read_queries(view, fun), do: count_queries(view, fun, &(&1[:source] in ["pages", "content_identifiers"]))
+
+  # Reads of a picker's list, the only ordered read of identifiers
+  # (`Brando.Content.list_identifiers/2`): a save writes the entry's own
+  # identifier, and reads it first
+  defp list_reads(view, fun) do
+    count_queries(view, fun, &(&1[:source] == "content_identifiers" and &1[:query] =~ "ORDER BY"))
+  end
+
+  defp count_queries(view, fun, counted?) do
     pid = view.pid
     counter = :counters.new(1, [])
     id = {__MODULE__, make_ref()}
@@ -146,7 +161,7 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
       id,
       [:brando_integration, :repo, :query],
       fn _event, _measurements, meta, _config ->
-        if self() == pid and meta[:source] in ["pages", "content_identifiers"], do: :counters.add(counter, 1, 1)
+        if self() == pid and counted?.(meta), do: :counters.add(counter, 1, 1)
       end,
       nil
     )
@@ -408,10 +423,11 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
       assert field_html(view) =~ @masked
     end
 
-    test "a change of permissions that leaves the grants lists the picker again", %{conn: conn} = c do
+    test "a change of permissions that leaves the grants lists the open picker again", %{conn: conn} = c do
       Repo.delete_all(from l in c.join, where: l.identifier_id == ^c.identifier.id)
       own(c.page, c.editor)
       view = open(conn, c.article, "policy_entries")
+      open_picker(view)
       options = "#article_related_entries-entries-options"
       assert view |> element(options) |> render() =~ @owned
 
@@ -419,6 +435,61 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
       permissions_changed(view)
 
       refute view |> element(options) |> render() =~ @owned
+    end
+
+    # A closed picker's list is dropped, and read when it opens
+    test "a change of permissions drops a closed picker's list", %{conn: conn} = c do
+      # No selected entry to check again
+      Repo.delete_all(from l in c.join, where: l.parent_id == ^c.article.id)
+      own(c.page, c.editor)
+      view = open(conn, c.article, "policy_entries")
+      open_picker(view)
+      close_picker(view)
+      options = "#article_related_entries-entries-options"
+      assert view |> element(options) |> render() =~ @owned
+
+      own(c.page, c.other)
+      assert read_queries(view, fn -> permissions_changed(view) end) == 0
+      refute view |> element(options) |> render() =~ @owned
+
+      own(c.page, c.editor)
+      open_picker(view)
+      assert view |> element(options) |> render() =~ @owned
+    end
+
+    # Each entries input, in each row, read its list on every save before
+    test "saves and changes of permissions read no closed picker's list", %{conn: conn} = c do
+      Repo.delete_all(from l in c.join, where: l.parent_id == ^c.article.id)
+
+      for sequence <- 0..2,
+          do: Repo.insert!(%Brando.SyncTest.ArticleItem{article_id: c.article.id, label: "Row", sequence: sequence})
+
+      view = open(conn, c.article, "item_entries")
+
+      assert list_reads(view, fn ->
+               permissions_changed(view)
+
+               Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form,
+                 id: "article_form",
+                 action: :refresh_entry
+               )
+
+               render(view)
+               change(view, put_in(params(view), ["article", "title"], "Saved"))
+               stay(view)
+               save(view)
+               assert saved_title(c.article, "Saved") == "Saved"
+               render(view)
+             end) == 0
+    end
+
+    test "opening the picker reads its list once", %{conn: conn} = c do
+      own(c.page, c.editor)
+      view = open(conn, c.article, "policy_entries")
+
+      assert list_reads(view, fn -> open_picker(view) end) == 1
+      close_picker(view)
+      assert list_reads(view, fn -> open_picker(view) end) == 0
     end
 
     # The entries input of a subform row (form `:item_entries`) and the
@@ -480,6 +551,7 @@ defmodule BrandoAdmin.EntriesInputMaskingTest do
       Repo.delete_all(from l in c.join, where: l.identifier_id == ^c.identifier.id)
       own(c.page, c.editor)
       view = open(conn, c.article, "policy_entries")
+      open_picker(view)
       options = "#article_related_entries-entries-options"
       picker = cid_of(view, options)
       assert view |> element(options) |> render() =~ @owned

@@ -62,11 +62,14 @@ defmodule Brando.Blueprint.RelationPreloads do
 
   defp asset_preloads(schema), do: Enum.map(Assets.__assets__(schema), & &1.name)
 
+  # An `:entries` relation's join rows come with their identifiers, as the
+  # entry's own do (`Brando.Content.Identifier.preloads_for/1`): the
+  # entries input names a row from it.
   defp relation_preloads(schema, parent_schema) do
     for relation <- Relations.__relations__(schema),
         relation.opts.module not in [parent_schema, :blocks],
         relation.type not in [:embeds_many, :embeds_one] do
-      relation.name
+      if relation.type == :entries, do: {relation.name, [:identifier]}, else: relation.name
     end
   end
 

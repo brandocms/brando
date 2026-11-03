@@ -71,9 +71,20 @@ defmodule Brando.Blueprint.PreloadsTest do
   end
 
   test "cast one-to-one preloads include the related entry's own assets" do
-    assert {:author, [:portrait, :links]} in RelationPreloads.for_schema(Brando.SyncTest.Article)
+    assert {:author, [:portrait, :links, {:related_entries, [:identifier]}]} in RelationPreloads.for_schema(
+             Brando.SyncTest.Article
+           )
+
     # A cast belongs_to whose schema has no assets or relations of its own
     assert :location in RelationPreloads.for_schema(Brando.BlueprintTest.P1)
+  end
+
+  # The entries input in a subform row names its rows from them (#3453)
+  test "a cast subform's entries relation preloads its identifiers" do
+    assert {:items, %Ecto.Query{} = query} =
+             Brando.SyncTest.Article |> RelationPreloads.for_schema() |> List.keyfind(:items, 0)
+
+    assert {:related_entries, [:identifier]} in query.preloads
   end
 
   test "complete preloads retain entry identifiers and direct assets" do

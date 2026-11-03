@@ -882,7 +882,7 @@ jobs:
             tests/users/groups.spec.js tests/users/read-scopes.spec.js tests/config/authorization-tools.spec.js \
             tests/blocks/block-live-preview.spec.js \
             tests/blocks/block-multiuser-sync.spec.js tests/projects/file-field-sync.spec.js \
-            tests/projects/multi-select-reorder.spec.js
+            tests/projects/multi-select-reorder.spec.js tests/projects/masked-entries.spec.js
 
       - name: Run multi-site authorization regressions
         if: matrix.suite == 'authorization'

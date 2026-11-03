@@ -303,10 +303,30 @@ defmodule Brando.SyncTest.Article do
     end
 
     # The same input in a subform's rows: a read decision there follows a
-    # change of permissions as the top-level one does. The rows' entries
-    # come with their identifiers, which the input names them from.
+    # change of permissions as the top-level one does, and a pick goes to
+    # the row (EntriesInputSubformRowsTest). The default preloads.
     form :item_entries do
-      query &Brando.SyncTest.Article.item_entries_query/1
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+
+          inputs_for :items do
+            cardinality :many
+            style :inline
+            default %{}
+
+            input :label, :text
+            input :related_entries, :entries, sources: [{Brando.AuthorizationTestResources.Page, %{}}]
+          end
+        end
+      end
+    end
+
+    # The rows' entries read without their identifiers, as a project's own
+    # query may read them (EntriesInputSubformRowsTest)
+    form :bare_item_entries do
+      query &Brando.SyncTest.Article.bare_item_entries_query/1
 
       tab "Content" do
         fieldset do
@@ -317,6 +337,58 @@ defmodule Brando.SyncTest.Article do
             cardinality :many
             style :inline
             default %{}
+
+            input :label, :text
+            input :related_entries, :entries, sources: [{Brando.AuthorizationTestResources.Page, %{}}]
+          end
+        end
+      end
+    end
+
+    # The input in a one-to-one subform (EntriesInputSubformRowsTest)
+    form :author_entries do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+
+          inputs_for :author do
+            cardinality :one
+
+            input :name, :text
+            input :related_entries, :entries, sources: [{Brando.AuthorizationTestResources.Page, %{}}]
+          end
+        end
+      end
+    end
+
+    # The input in a transformer's rows and in a custom subform component's
+    # (EntriesInputSubformRowsTest)
+    form :transformer_item_entries do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+
+          inputs_for :items do
+            cardinality :many
+            style {:transformer, :cover}
+
+            input :label, :text
+            input :related_entries, :entries, sources: [{Brando.AuthorizationTestResources.Page, %{}}]
+          end
+        end
+      end
+    end
+
+    form :custom_item_entries do
+      tab "Content" do
+        fieldset do
+          input :title, :text
+          input :slug, :slug, source: :title
+
+          inputs_for :items do
+            component Brando.SyncTest.ItemRows
 
             input :label, :text
             input :related_entries, :entries, sources: [{Brando.AuthorizationTestResources.Page, %{}}]
@@ -433,19 +505,23 @@ defmodule Brando.SyncTest.Article do
 
   def module_options(_, _), do: Brando.Content.list_modules!(%{filter: %{parent_id: nil}, order: "asc name"})
 
-  # Form `:item_entries`: the default preloads, the rows' entries with their
-  # identifiers
-  def item_entries_query(id) do
-    require Ecto.Query
-
+  # Form `:bare_item_entries`: the default preloads, but the rows' entries
+  # without their identifiers
+  def bare_item_entries_query(id) do
     preloads =
       Enum.map(Brando.Blueprint.preloads_for(__MODULE__), fn
-        {:items, %Ecto.Query{} = query} -> {:items, Ecto.Query.preload(query, related_entries: :identifier)}
-        preload -> preload
+        {:items, %Ecto.Query{preloads: row_preloads} = query} ->
+          {:items, %{query | preloads: Enum.map(row_preloads, &bare_entries/1)}}
+
+        preload ->
+          preload
       end)
 
     %{matches: %{id: id}, preload: preloads}
   end
+
+  defp bare_entries({:related_entries, _}), do: :related_entries
+  defp bare_entries(preload), do: preload
 end
 
 defmodule Brando.SyncTest.ArticleItem do
@@ -565,6 +641,10 @@ defmodule Brando.SyncTest.ArticleAuthor do
       foreign_key: :author_id,
       on_replace: :delete,
       cast: true
+
+    # Entries input in a one-to-one subform (form `:author_entries`,
+    # EntriesInputSubformRowsTest)
+    relation :related_entries, :entries
   end
 end
 
@@ -604,5 +684,38 @@ defmodule Brando.SyncTest.ArticleAuthorLink do
     relation :author, :belongs_to, module: Brando.SyncTest.ArticleAuthor
     relation :blocks, :has_many, module: :blocks
     relation :related_entries, :entries
+  end
+end
+
+defmodule Brando.SyncTest.ItemRows do
+  @moduledoc false
+  # A custom subform component (form `:custom_item_entries`): the rows'
+  # inputs drawn as the built-in subform draws them. Its rows read
+  # `read_generation`, so they draw again when it changes, and an `:entries`
+  # input in them checks again what the editor may read.
+  use Phoenix.LiveComponent
+
+  alias BrandoAdmin.Components.Form.Subform
+
+  def update(assigns, socket), do: {:ok, socket |> assign(assigns) |> assign_new(:read_generation, fn -> nil end)}
+
+  def render(assigns) do
+    ~H"""
+    <div id={@id}>
+      <.inputs_for :let={row} field={@field}>
+        <Subform.Field.render
+          :for={input <- @subform.sub_fields}
+          cardinality={:many}
+          sub_form={row}
+          input={input}
+          path={[@subform.name]}
+          parent_form_id={@form_id}
+          subform_id={nil}
+          current_user={@current_user}
+          read_generation={@read_generation}
+        />
+      </.inputs_for>
+    </div>
+    """
   end
 end

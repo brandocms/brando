@@ -3899,6 +3899,11 @@ msgstr "Lukk forhåndsvisningen"
 msgid "Close recovery panel"
 msgstr "Lukk gjenopprettingspanelet"
 
+#: lib/brando_admin/components/form/input/entries.ex
+#, elixir-autogen, elixir-format
+msgid "Close this list and open \"Select entries\" again to pick for this row."
+msgstr "Lukk denne listen og åpne «Velg innlegg» igjen for å velge for denne raden."
+
 #: lib/brando_admin/components/form/input/identity_type_config.ex
 #, elixir-autogen, elixir-format
 msgid "Closed"
@@ -17601,6 +17606,11 @@ msgstr "Ringen viser fokuspunktet."
 #, elixir-autogen, elixir-format
 msgid "The route was paused"
 msgstr "Ruten ble satt på pause"
+
+#: lib/brando_admin/components/form/input/entries.ex
+#, elixir-autogen, elixir-format
+msgid "The row was saved or moved"
+msgstr "Raden ble lagret eller flyttet"
 
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
