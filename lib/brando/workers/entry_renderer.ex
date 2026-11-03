@@ -33,21 +33,26 @@ defmodule Brando.Worker.EntryRenderer do
 
   # A render of the entry that started before this one, on any node, may
   # have read the entry before the write that queued this one, and store
-  # after this one. This one renders once it has stored. Ordered by start,
-  # not id: a job queued in a transaction has the lower id but may start
-  # later. Start times are each node's clock, so they assume clocks in step.
+  # after this one. This one renders once it has stored. Each render stamps
+  # its start in its job's meta with the database's clock, before it looks:
+  # not the job's id, since a job queued in a transaction has the lower id
+  # but may start later, and not Oban's `attempted_at`, read from the
+  # fetching node's clock before the fetch has a connection. A render that
+  # stamps after this one has looked reads after it, so after the write.
   # Waits no longer than the other one's timeout, which a node that went
   # down leaves executing until `Oban.Lifeline` rescues it.
-  defp rendering_before?(%Oban.Job{id: id, worker: worker, args: args} = job) when is_integer(id) do
-    started = job.attempted_at || DateTime.utc_now()
-    since = DateTime.add(DateTime.utc_now(), -(@timeout + :timer.seconds(5)), :millisecond)
+  defp rendering_before?(%Oban.Job{id: id, worker: worker, args: args}) when is_integer(id) do
+    started = stamp_start(id)
+    since = started - (@timeout + :timer.seconds(5)) * 1000
     entry = Map.take(args, ["tenant_prefix", "schema", "entry_id"])
 
     query =
       from j in Oban.Job,
         where:
-          j.worker == ^worker and j.state == "executing" and j.id != ^id and j.attempted_at > ^since and
-            (j.attempted_at < ^started or (j.attempted_at == ^started and j.id < ^id)) and
+          j.worker == ^worker and j.state == "executing" and j.id != ^id and
+            fragment("(?->>'render_started')::bigint", j.meta) > ^since and
+            (fragment("(?->>'render_started')::bigint", j.meta) < ^started or
+               (fragment("(?->>'render_started')::bigint", j.meta) == ^started and j.id < ^id)) and
             fragment("? @> ?", j.args, type(^entry, :map)),
         select: true,
         limit: 1
@@ -56,6 +61,26 @@ defmodule Brando.Worker.EntryRenderer do
   end
 
   defp rendering_before?(_job), do: false
+
+  # Microseconds, by the database's clock
+  defp stamp_start(id) do
+    query =
+      from j in Oban.Job,
+        where: j.id == ^id,
+        update: [
+          set: [
+            meta:
+              fragment(
+                "? || jsonb_build_object('render_started', (extract(epoch from clock_timestamp()) * 1000000)::bigint)",
+                j.meta
+              )
+          ]
+        ],
+        select: fragment("(?->>'render_started')::bigint", j.meta)
+
+    {1, [started]} = Brando.Repo.update_all(query, [])
+    started
+  end
 
   @impl Oban.Worker
   def timeout(_job), do: @timeout

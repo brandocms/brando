@@ -80,11 +80,27 @@ defmodule Brando.Content.RenderQueueTest do
         assert [first] = renders(c.fragment)
         {:ok, started} = RenderQueue.coalesce({:ok, %Oban.Job{conflict?: true, id: nil}}, render_changeset(c), & &1)
         assert started.id > first.id
-        set_job(started, state: "executing", attempt: 1, attempted_at: DateTime.add(DateTime.utc_now(), -1))
-        set_job(first, state: "executing", attempt: 1, attempted_at: DateTime.utc_now())
+        set_job(started, state: "executing", attempt: 1, meta: started_at(-1))
+        set_job(first, state: "executing", attempt: 1)
 
         assert {:snooze, _} = EntryRenderer.perform(Repo.get!(Oban.Job, first.id))
+        set_job(first, state: "scheduled")
         assert {:ok, _} = EntryRenderer.perform(Repo.get!(Oban.Job, started.id))
+      end)
+    end
+
+    test "waits for one that started first, though Oban stamped this one's attempt earlier", c do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        save_module(c.module, "two")
+        assert [running] = renders(c.fragment)
+        {:ok, next} = RenderQueue.coalesce({:ok, %Oban.Job{conflict?: true, id: nil}}, render_changeset(c), & &1)
+
+        # The producer that took `next` read the time, then waited for a
+        # connection while `running` was taken and started
+        set_job(running, state: "executing", attempt: 1, attempted_at: DateTime.utc_now(), meta: started_at(-1))
+        set_job(next, state: "executing", attempt: 1, attempted_at: DateTime.add(DateTime.utc_now(), -10))
+
+        assert {:snooze, _} = EntryRenderer.perform(Repo.get!(Oban.Job, next.id))
       end)
     end
 
@@ -92,7 +108,7 @@ defmodule Brando.Content.RenderQueueTest do
       Oban.Testing.with_testing_mode(:manual, fn ->
         save_module(c.module, "two")
         assert [job] = renders(c.fragment)
-        set_job(job, state: "executing", attempt: 1, attempted_at: DateTime.add(DateTime.utc_now(), -60))
+        set_job(job, state: "executing", attempt: 1, meta: started_at(-60))
 
         save_module(c.module, "three")
         assert [next] = renders(c.fragment)
@@ -241,6 +257,9 @@ defmodule Brando.Content.RenderQueueTest do
 
   # As the queue's producer does when it takes the job
   defp set_job(job, fields), do: Repo.update_all(from(j in Oban.Job, where: j.id == ^job.id), set: fields)
+
+  # As a render stamps its start (`EntryRenderer`), `seconds` from now
+  defp started_at(seconds), do: %{"render_started" => System.os_time(:microsecond) + seconds * 1_000_000}
 
   defp finish(job), do: set_job(job, state: "completed", completed_at: DateTime.utc_now())
 
