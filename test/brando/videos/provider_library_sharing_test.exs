@@ -14,6 +14,7 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
   alias Brando.Tenant
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
+  alias Brando.Test.HangingProvider
   alias Brando.Videos.ProviderHoldings
   alias Brando.Videos.ProviderLibrary
   alias Brando.Videos.Uploader
@@ -579,6 +580,57 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
 
       for path <- ["/videos/1", "/videos/2", "/videos/3"], do: assert_received({:vimeo, "DELETE", ^path})
       for site <- [:alpha, :gamma, :delta], do: as_site(sites[site], fn -> assert Repo.aggregate(Video, :count) == 0 end)
+    end
+
+    # #3457: a provider that never completes the connect, such as one behind
+    # a firewall that drops its packets. The delete gives up at its connect
+    # timeout, set low here so the test need not wait 5 seconds, and the
+    # purge goes on within its deadline.
+    test "gives up on a provider that never answers the connect, and purges everything else", %{sites: sites, held: held} do
+      HangingProvider.route(HangingProvider.unanswered_connect())
+      me = self()
+
+      put_test_env(Vimeo,
+        access_token: "vimeo-token",
+        delete_connect_timeout: 200,
+        req_options: [adapter: HangingProvider, retry: false]
+      )
+
+      put_test_env(Mux,
+        access_token_id: "id",
+        access_token_secret: "secret",
+        req_options: [plug: {Req.Test, Mux}, retry: false]
+      )
+
+      Req.Test.stub(Mux, fn conn ->
+        send(me, {:mux, conn.method, conn.request_path})
+        send_resp(conn, 204, "")
+      end)
+
+      for {site, video} <- [alpha: held.alpha, gamma: held.gamma, delta: held.delta] do
+        as_site(sites[site], fn ->
+          expire(video)
+          expire(mux_uploaded_here("asset-#{site}"))
+          Factory.insert(:image, deleted_at: DateTime.add(DateTime.utc_now(:second), -31, :day))
+        end)
+      end
+
+      started = System.monotonic_time(:millisecond)
+      capture_log(fn -> assert :ok = perform_job(Brando.Worker.SoftDeletePurger, %{}) end)
+      assert System.monotonic_time(:millisecond) - started < 2_000
+
+      # Asked once, and kept for the next run, in every environment.
+      assert_received {:hanging_provider, "DELETE", _path}
+      refute_received {:hanging_provider, "DELETE", _path}
+
+      for site <- [:alpha, :gamma, :delta] do
+        assert_received {:mux, "DELETE", "/video/v1/assets/asset-" <> _site}
+
+        as_site(sites[site], fn ->
+          assert [%Video{type: :vimeo_account}] = Repo.all(Video)
+          assert Repo.aggregate(Brando.Images.Image, :count) == 0
+        end)
+      end
     end
   end
 

@@ -9,8 +9,11 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
 
   What *was* byte-identical across all three, and therefore what could drift in
   one of them without anyone noticing, is this merge. That is what this module
-  owns.
+  owns, with the timeouts a provider's DELETE gets (see `merge/2`).
   """
+
+  @delete_connect_timeout 5_000
+  @delete_receive_timeout 10_000
 
   @doc """
   Puts `provider`'s configured `:req_options` **underneath** `built_opts`.
@@ -79,6 +82,48 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
   `runtime.exs` — the merge order is a guard against accident, not against the
   operator.
 
+  ## A DELETE's timeouts
+
+  A provider's DELETE, which only its `delete_remote/1` sends, gets short
+  timeouts: 5 seconds to connect and 10 for the answer to come
+  (`:receive_timeout`, and `:request_timeout` for the whole answer). Through
+  a proxy, each step of the connect has its own 5 seconds: the connect to
+  the proxy, its answer to the tunnel request, and the TLS handshake through
+  the tunnel. Finch
+  checks the request timeout only between reads, and each read waits up to
+  the receive timeout, so an answer that trickles in is cut off within
+  twice that: 20 seconds.
+
+  The soft-delete purger asks each provider to delete its expired videos
+  within one 30-second deadline for every schema and environment. Left to
+  Req, a provider that accepts the connection and never answers holds the
+  call for 15 seconds a read, with no limit on the whole. A delete that
+  times out is a transport error, so the purge keeps the row for the next
+  run and asks that provider nothing more this run
+  (`Brando.SoftDelete.Query.as_one_run/1`). A delete the provider made after
+  the call gave up is found gone next time, which every provider takes as
+  done. The retry of a delete with `delete_remote_on: :on_delete`
+  (`Brando.Worker.VideoRemoteDelete`) sends the same request.
+
+  Set them per provider, in milliseconds, beside `:req_options`. `nil`
+  keeps the default:
+
+      config :brando, Brando.Videos.Uploaders.Mux,
+        delete_connect_timeout: 5_000,
+        delete_receive_timeout: 10_000
+
+  They win over the same timeouts in `:req_options` and in Req's app-wide
+  `default_options`, which tune the provider's other calls. That includes
+  the ones nested in `:finch` and in `connect_options: [transport_opts: …]`.
+  A `connect_options: [proxy: {scheme, host, port, opts}]` gets the connect
+  timeout in `opts` too: `:transport_opts` for the connect to the proxy and
+  `:tunnel_timeout` for its answer to the tunnel request. The top-level one
+  bounds the TLS handshake through the tunnel.
+  A configured `:connect_options`, `:proxy` or `:finch` keeps its other
+  entries. With a `:finch` pool configured, the pool's own `conn_opts` set
+  the connect timeout. Finch's default is 5 seconds, so a pool started with
+  a longer connect timeout makes the delete wait that long.
+
   ## `nil` is not absent
 
   Reads `nil` as absent as well as unset: `Application.put_env(key, nil)` is not
@@ -87,11 +132,72 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
   """
   @spec merge(module(), keyword()) :: keyword()
   def merge(provider, built_opts) do
-    configured =
-      :brando
-      |> Application.get_env(provider, [])
-      |> Keyword.get(:req_options)
+    config = Application.get_env(:brando, provider, [])
+    configured = Keyword.get(config, :req_options) || []
 
-    Keyword.merge(configured || [], built_opts)
+    configured
+    |> put_delete_timeouts(built_opts[:method], config)
+    |> Keyword.merge(built_opts)
+  end
+
+  defp put_delete_timeouts(opts, :delete, config) do
+    connect_timeout = Keyword.get(config, :delete_connect_timeout) || @delete_connect_timeout
+    receive_timeout = Keyword.get(config, :delete_receive_timeout) || @delete_receive_timeout
+    timeouts = [receive_timeout: receive_timeout, request_timeout: receive_timeout]
+
+    # What Req sends: `Req.new/2` puts its app-wide default options
+    # underneath, one level deep, so a `:finch` or `:connect_options` put
+    # here replaces the default's whole entry.
+    effective = Keyword.merge(Req.default_options(), opts)
+
+    opts
+    |> Keyword.merge(timeouts)
+    |> put_transport_timeouts(effective, connect_timeout, timeouts)
+  end
+
+  defp put_delete_timeouts(opts, _method, _config), do: opts
+
+  # Req refuses `:connect_options` beside a `:finch` pool, and the pool's own
+  # options win over the top-level receive and request timeouts.
+  defp put_transport_timeouts(opts, effective, connect_timeout, timeouts) do
+    case effective[:finch] do
+      finch when is_list(finch) ->
+        Keyword.put(opts, :finch, Keyword.merge(finch, timeouts))
+
+      no_pool when no_pool in [nil, false] ->
+        Keyword.put(opts, :connect_options, put_connect_timeout(effective[:connect_options] || [], connect_timeout))
+
+      _pool_name ->
+        opts
+    end
+  end
+
+  # Req merges `:transport_opts` over `:timeout`, so a timeout there wins.
+  defp put_connect_timeout(connect_options, timeout) do
+    connect_options = Keyword.put(connect_options, :timeout, timeout)
+
+    connect_options =
+      if Keyword.has_key?(connect_options, :transport_opts),
+        do: Keyword.update!(connect_options, :transport_opts, &Keyword.put(&1, :timeout, timeout)),
+        else: connect_options
+
+    case connect_options[:proxy] do
+      {scheme, host, port, proxy_opts} when is_list(proxy_opts) ->
+        Keyword.put(connect_options, :proxy, {scheme, host, port, put_proxy_timeouts(proxy_opts, timeout)})
+
+      _no_proxy ->
+        connect_options
+    end
+  end
+
+  # Mint connects to a proxy with the proxy's own options, not the top-level
+  # timeout, and then waits up to `:tunnel_timeout` for the answer to an https
+  # target's CONNECT. Each is 30 seconds by default.
+  defp put_proxy_timeouts(proxy_opts, timeout) do
+    transport_opts = Keyword.put(proxy_opts[:transport_opts] || [], :timeout, timeout)
+
+    proxy_opts
+    |> Keyword.put(:tunnel_timeout, timeout)
+    |> Keyword.put(:transport_opts, transport_opts)
   end
 end
