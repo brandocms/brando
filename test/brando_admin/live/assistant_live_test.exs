@@ -974,6 +974,37 @@ defmodule BrandoAdmin.AssistantLiveTest do
       refute has_element?(view, "#assistant-page-link")
     end
 
+    @tag :capture_log
+    test "a finished run without a new proposal leaves the open preview", %{conn: conn} = c do
+      run = remote_run(c.conversation, %{})
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      key = view |> open_blocks_preview(c) |> frame_key()
+      share_page(view)
+
+      run |> Ecto.Changeset.change(status: "completed", finished_at: DateTime.utc_now()) |> Brando.Repo.update!()
+
+      send(view.pid, :check_run)
+      assert frame_key(render(view)) == key
+      assert has_element?(view, "#assistant-page-link")
+    end
+
+    # Leaving a change out in another tab points the conversation at the
+    # refined proposal; a refused share shows that one.
+    @tag :capture_log
+    test "a share refused for a proposal refined in another tab shows the refined one", %{conn: conn} = c do
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      open_blocks_preview(view, c)
+
+      {:ok, refined} = Brando.Content.Proposals.leave_out(c.proposal.id, c.proposal.version, [0], c.current_user)
+      c.conversation |> Ecto.Changeset.change(proposal_id: refined.id) |> Brando.Repo.update!()
+
+      view |> element(~s(button[phx-click="share_page"])) |> render_click()
+      assert has_element?(view, "#proposal-#{refined.id}")
+      refute has_element?(view, "#assistant-page-link")
+      assert {:ok, html} = view |> render() |> frame_key() |> Brando.LivePreview.get_cache()
+      assert html =~ "Written in the assistant"
+    end
+
     # A link shows the page as it was rendered when it was made: it goes when
     # the frame is rendered again or closed.
     @tag :capture_log

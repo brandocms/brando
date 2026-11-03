@@ -1808,9 +1808,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
            gettext("A proposal with problems cannot be shared. Leave out the changes with problems first.")
          )}
 
-      # A proposal discarded in another tab shows as it is now.
+      # A proposal discarded or refined in another tab shows as it is now.
       {:error, reason} ->
-        socket = if socket.assigns.shared, do: socket, else: assign_proposal(socket)
+        socket =
+          if socket.assigns.shared,
+            do: socket,
+            else: socket |> refresh_conversation() |> assign_proposal() |> render_open_preview()
+
         {:noreply, put_toast(socket, :error, to_string(reason))}
     end
   end
@@ -1929,9 +1933,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
         socket = assign_run(socket, Agent.latest_run(id, socket.assigns.current_user))
 
         if busy? and not running?(socket.assigns.run),
-          do:
-            {:noreply,
-             socket |> refresh_conversation() |> assign_messages() |> assign_proposal() |> render_open_preview()},
+          do: {:noreply, finished_run(socket)},
           else: {:noreply, socket}
 
       nil ->
@@ -1986,6 +1988,18 @@ defmodule BrandoAdmin.AI.AssistantLive do
     do: {:noreply, assign_run(socket, Agent.latest_run(socket.assigns.conversation.id, socket.assigns.current_user))}
 
   defp agent_event(_event, socket), do: {:noreply, socket}
+
+  # Each render reloads the frame and resets its scroll: as the proposal
+  # event, only a new proposal renders the open preview again.
+  defp finished_run(socket) do
+    shown = proposal_version(socket.assigns.proposal)
+    socket = socket |> refresh_conversation() |> assign_messages() |> assign_proposal()
+
+    if proposal_version(socket.assigns.proposal) == shown, do: socket, else: render_open_preview(socket)
+  end
+
+  defp proposal_version(nil), do: nil
+  defp proposal_version(proposal), do: {proposal.id, proposal.version}
 
   ## Page preview
 
