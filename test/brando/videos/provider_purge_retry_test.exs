@@ -11,6 +11,7 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
   alias Brando.Factory
   alias Brando.Repo
   alias Brando.Test.HangingProvider
+  alias Brando.Videos.ProviderPurgeRetryTest.RawMintError
   alias Brando.Videos.Uploader
   alias Brando.Videos.Uploaders.Bunny
   alias Brando.Videos.Uploaders.Cloudflare
@@ -339,6 +340,36 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
     end
   end
 
+  # Older Req (0.5) and Finch (< 0.22) hand some Mint errors on unconverted,
+  # such as a proxy's tunnel timeout.
+  describe "a raw Mint error from a provider's delete" do
+    test "is transient when the connection failed or a proxy did not answer" do
+      assert Uploader.transient_error?(%Mint.TransportError{reason: :timeout})
+      assert Uploader.transient_error?(%Mint.TransportError{reason: :econnrefused})
+
+      for reason <- [:tunnel_timeout, {:unexpected_status, 407}] do
+        assert Uploader.transient_error?(%Mint.HTTPError{module: Mint.TunnelProxy, reason: {:proxy, reason}})
+      end
+    end
+
+    test "keeps the row in a purge, and the provider is not asked again this run" do
+      configure(Mux, :on_purge)
+
+      videos =
+        for id <- ["asset-1", "asset-2"], do: Mux |> insert_video(:mux, %{"mux" => %{"asset_id" => id}}) |> expire()
+
+      put_test_env(Mux, Keyword.put(Application.get_env(:brando, Mux), :req_options, adapter: RawMintError, retry: false))
+      Process.put(RawMintError, self())
+
+      log = capture_log([level: :info], fn -> assert purge_videos() == 0 end)
+
+      assert_received {:raw_mint_error, "/video/v1/assets/" <> _id}
+      refute_received {:raw_mint_error, _path}
+      for video <- videos, do: assert(Repo.get!(Video, video.id).deleted_at)
+      assert log =~ "1 more mux video kept for the next purge"
+    end
+  end
+
   describe "a purge with a provider that answers with an error after a long wait" do
     # A gateway's 504, after it waited on the provider behind it: the answer
     # is a status, but it took as long as a timeout.
@@ -528,5 +559,16 @@ defmodule Brando.Videos.ProviderPurgeRetryTest do
     |> Map.new()
     |> Map.fetch!(Video)
     |> elem(0)
+  end
+end
+
+defmodule Brando.Videos.ProviderPurgeRetryTest.RawMintError do
+  @moduledoc false
+  # A Req adapter that fails as older Req and Finch do on a proxy that never
+  # answers its CONNECT: with Mint's own error, not Req's.
+
+  def run(request) do
+    send(Process.get(__MODULE__), {:raw_mint_error, request.url.path})
+    {request, %Mint.HTTPError{module: Mint.TunnelProxy, reason: {:proxy, :tunnel_timeout}}}
   end
 end

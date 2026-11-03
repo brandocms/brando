@@ -415,6 +415,10 @@ defmodule Brando.Videos.Uploader do
   Whether a provider's error, from a `delete_remote/1` callback, may pass if
   the call is tried again: the provider was not reached, or timed out
   (`Req.TransportError`, `Req.HTTPError`), or answered 408, 429 or a 5xx.
+  Older Req and Finch pass some of Mint's errors on as they are: a
+  `Mint.TransportError`, and a configured proxy's failure, such as its
+  tunnel timeout (`%Mint.HTTPError{module: Mint.TunnelProxy}`), are
+  transient too. A proxy's failure says nothing about the video.
   Any other answer, such as a 401 for a revoked token or a 403, is taken as
   final.
   """
@@ -424,6 +428,8 @@ defmodule Brando.Videos.Uploader do
 
   def transient_error?(%Req.TransportError{}), do: true
   def transient_error?(%Req.HTTPError{}), do: true
+  def transient_error?(%Mint.TransportError{}), do: true
+  def transient_error?(%Mint.HTTPError{module: Mint.TunnelProxy}), do: true
   def transient_error?(_reason), do: false
 
   defp then_purge({:error, reason} = result, _video, _purge) when reason in [:holdings_unavailable, :busy], do: result

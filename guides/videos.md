@@ -557,7 +557,10 @@ provider video keeps the provider's webhooks finding the right one.
 
 A delete at the provider, whether the purge's, an `:on_delete` delete or its
 retry, waits 5 seconds to connect and 10 seconds for the answer to come. An
-answer that trickles in is cut off within twice that. The provider's other
+answer that trickles in is cut off within twice that. Through a proxy, the
+connect has three steps, each with its own 5 seconds: the connect to the
+proxy, the proxy's answer to the tunnel request, and the TLS handshake
+through the tunnel. The provider's other
 calls keep Req's timeouts. A provider that answers more slowly loses the
 call, and its video is deleted on the next try, which finds it gone if the
 provider finished the first delete after all. Set them per provider, in
@@ -572,8 +575,7 @@ config :brando, Brando.Videos.Uploaders.Mux,
 
 They win over the same timeouts in the provider's `req_options` and in
 Req's `default_options`, also when they are set inside `finch` or
-`connect_options`. A proxy in `connect_options` gets the connect timeout
-both to connect and to answer the tunnel request. With a `finch` pool, the
+`connect_options`, and in a proxy's options there. With a `finch` pool, the
 pool's own connection options set the connect timeout. Finch's default is 5
 seconds, so a pool started with a longer connect timeout makes the delete
 wait that long.

@@ -121,8 +121,9 @@ defmodule Brando.SoftDelete.Query do
     # this run (`as_one_run/1`): each call to a provider that hangs waits out
     # its client's timeout, and the purger has one 30-second deadline for
     # every schema and environment. Its other rows stay for the next run, and
-    # the other providers' rows go on. A delete gives up after 5 seconds to
-    # connect and 10 for the answer to come, 20 for one that trickles in
+    # the other providers' rows go on. A delete gives up after 5 seconds for
+    # each step of the connect (three through a proxy) and 10 for the answer
+    # to come, 20 for one that trickles in
     # (`Brando.Videos.Uploaders.ReqOptions`), so one hanging provider
     # leaves the run time for the rest. Several
     # hanging in one run may still use up the deadline: the purger is then
@@ -197,9 +198,12 @@ defmodule Brando.SoftDelete.Query do
   @slow_failure_ms 3_000
 
   # The provider was not reached, or did not answer in time, or answered
-  # only after a long wait: the slow failures.
+  # only after a long wait: the slow failures. Older Req and Finch pass
+  # some of Mint's errors on as they are (`Brando.Videos.Uploader.transient_error?/1`).
   defp unreachable?(%Req.TransportError{}, _took), do: true
   defp unreachable?(%Req.HTTPError{}, _took), do: true
+  defp unreachable?(%Mint.TransportError{}, _took), do: true
+  defp unreachable?(%Mint.HTTPError{module: Mint.TunnelProxy}, _took), do: true
   defp unreachable?(_reason, took), do: took >= slow_failure_ms()
 
   defp slow_failure_ms,

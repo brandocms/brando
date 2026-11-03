@@ -86,7 +86,10 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
 
   A provider's DELETE, which only its `delete_remote/1` sends, gets short
   timeouts: 5 seconds to connect and 10 for the answer to come
-  (`:receive_timeout`, and `:request_timeout` for the whole answer). Finch
+  (`:receive_timeout`, and `:request_timeout` for the whole answer). Through
+  a proxy, each step of the connect has its own 5 seconds: the connect to
+  the proxy, its answer to the tunnel request, and the TLS handshake through
+  the tunnel. Finch
   checks the request timeout only between reads, and each read waits up to
   the receive timeout, so an answer that trickles in is cut off within
   twice that: 20 seconds.
@@ -113,8 +116,9 @@ defmodule Brando.Videos.Uploaders.ReqOptions do
   `default_options`, which tune the provider's other calls. That includes
   the ones nested in `:finch` and in `connect_options: [transport_opts: …]`.
   A `connect_options: [proxy: {scheme, host, port, opts}]` gets the connect
-  timeout for the connect to the proxy and for its answer to the tunnel
-  request (`:transport_opts` and `:tunnel_timeout` in `opts`).
+  timeout in `opts` too: `:transport_opts` for the connect to the proxy and
+  `:tunnel_timeout` for its answer to the tunnel request. The top-level one
+  bounds the TLS handshake through the tunnel.
   A configured `:connect_options`, `:proxy` or `:finch` keeps its other
   entries. With a `:finch` pool configured, the pool's own `conn_opts` set
   the connect timeout. Finch's default is 5 seconds, so a pool started with
