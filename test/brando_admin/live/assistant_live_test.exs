@@ -930,12 +930,34 @@ defmodule BrandoAdmin.AssistantLiveTest do
     @tag :capture_log
     test "a proposal discarded in another tab makes no page link", %{conn: conn, current_user: user} = c do
       {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
-      open_blocks_preview(view, c)
+      key = view |> open_blocks_preview(c) |> frame_key()
       :ok = Brando.Content.Proposals.cancel(c.proposal.id, user)
 
       view |> element(~s(button[phx-click="share_page"])) |> render_click()
       refute has_element?(view, "#assistant-page-link")
       refute has_element?(view, ~s(button[phx-click="share_page"]))
+      assert frame_key(render(view)) == key
+    end
+
+    # Only a changed proposal renders the frame again: a retry after any
+    # other failure keeps its scroll and a tab opened from it.
+    @tag :capture_log
+    test "a share that fails for another reason leaves the open preview", %{conn: conn, current_user: user} = c do
+      release = Path.join(System.tmp_dir!(), "brando-assistant-share-#{System.unique_integer([:positive])}")
+      File.mkdir_p!(release)
+      on_exit(fn -> File.rm_rf(release) end)
+
+      {:ok, view, _} = live(conn, "/admin/assistant/#{c.conversation.id}")
+      key = view |> open_blocks_preview(c) |> frame_key()
+
+      put_test_env(:release_static_path, release)
+      Brando.endpoint().subscribe("user:#{user.id}")
+      view |> element(~s(button[phx-click="share_page"])) |> render_click()
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: "no_frontend_assets"}}
+      assert frame_key(render(view)) == key
+      assert has_element?(view, ~s(button[phx-click="share_page"]))
+      refute has_element?(view, "#assistant-page-link")
     end
 
     @tag :capture_log
@@ -998,7 +1020,9 @@ defmodule BrandoAdmin.AssistantLiveTest do
       {:ok, refined} = Brando.Content.Proposals.leave_out(c.proposal.id, c.proposal.version, [0], c.current_user)
       c.conversation |> Ecto.Changeset.change(proposal_id: refined.id) |> Brando.Repo.update!()
 
+      Brando.endpoint().subscribe("user:#{c.current_user.id}")
       view |> element(~s(button[phx-click="share_page"])) |> render_click()
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error}}
       assert has_element?(view, "#proposal-#{refined.id}")
       refute has_element?(view, "#assistant-page-link")
       assert {:ok, html} = view |> render() |> frame_key() |> Brando.LivePreview.get_cache()

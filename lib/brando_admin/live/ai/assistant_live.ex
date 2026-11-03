@@ -1809,13 +1809,26 @@ defmodule BrandoAdmin.AI.AssistantLive do
          )}
 
       # A proposal discarded or refined in another tab shows as it is now.
+      # Each render reloads the frame, so only a new proposal renders it.
       {:error, reason} ->
+        shown = proposal_version(proposal)
+
         socket =
           if socket.assigns.shared,
             do: socket,
-            else: socket |> refresh_conversation() |> assign_proposal() |> render_open_preview()
+            else: socket |> refresh_conversation() |> assign_proposal()
 
-        {:noreply, put_toast(socket, :error, to_string(reason))}
+        case proposal_version(socket.assigns.proposal) do
+          ^shown ->
+            {:noreply, put_toast(socket, :error, to_string(reason))}
+
+          nil ->
+            {:noreply, socket |> render_open_preview() |> put_toast(:error, to_string(reason))}
+
+          _refined ->
+            message = gettext("The proposal changed in another tab. Share the page again from this version.")
+            {:noreply, socket |> render_open_preview() |> put_toast(:error, message)}
+        end
     end
   end
 

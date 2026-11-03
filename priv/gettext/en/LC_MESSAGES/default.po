@@ -17542,6 +17542,11 @@ msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
+msgid "The proposal changed in another tab. Share the page again from this version."
+msgstr ""
+
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
 msgid "The proposal is undone"
 msgstr ""
 
