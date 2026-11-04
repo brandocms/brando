@@ -1,0 +1,1 @@
+- Jupiter `5.0.0-beta.20` in BrandoJS and the generated frontend and backend: a page left through the default page transition no longer comes back blank after the browser's back button.
