@@ -1894,6 +1894,12 @@ older `twined/fehn` tag in the `deps` stage's `FROM` is named in a notice and
 kept (see [Dependencies and toolchain](#dependencies-and-toolchain)). It moves
 the admin's CSS build to native EuropaCSS (see
 [Native EuropaCSS](#native-europacss)). Customized CSS and other existing files
-are kept. It also moves the `assets_frontend` stage up to the same Node major
+are kept. The new `vite.config.js` sets `publicDir: false`: the admin build
+wrote `assets/backend/public` to the root of `priv/static`, so a local
+`pnpm build` replaced the site's `favicon.ico` with Brando's. The task removes
+the files an earlier template put there (the favicon, an avatar and the
+admin's fonts, which BrandoJS now ships) when they are unchanged, and names any
+other file in it, which the build no longer ships: move the ones the site
+serves to `assets/frontend/public`. It also moves the `assets_frontend` stage up to the same Node major
 when `assets/frontend/package.json` sets no `engines.node`, or one that allows
 it; otherwise a notice says why it was kept.

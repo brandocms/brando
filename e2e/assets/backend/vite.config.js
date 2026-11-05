@@ -8,6 +8,9 @@ export default defineConfig({
     port: 3333
   },
   resolve: {},
+  // As the template: the admin build writes into priv/static, where public
+  // files would land over the site's own.
+  publicDir: false,
   css: {
     devSourcemap: true,
     // No PostCSS config: EuropaCSS and Vite's Lightning CSS pass do its work.

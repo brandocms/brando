@@ -58,10 +58,6 @@ defmodule Mix.Brando.Install.Templates do
     {:copy, "assets/backend/README.md", "assets/backend/README.md"},
     {:copy, "assets/backend/vite.config.js", "assets/backend/vite.config.js"},
 
-    # Backend resources
-    {:copy, "assets/backend/public/favicon.ico", "assets/backend/public/favicon.ico"},
-    {:copy, "assets/backend/public/images/admin/avatar.svg", "assets/backend/public/images/admin/avatar.svg"},
-
     # Backend src
     {:copy, "assets/backend/src/main.js", "assets/backend/src/main.js"},
     {:copy, "assets/backend/css/app.css", "assets/backend/css/app.css"},
