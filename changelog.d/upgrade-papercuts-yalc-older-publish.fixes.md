@@ -1,0 +1,1 @@
+- The admin's Vite dev server no longer replaces the BrandoJS copy `mix brando.assets.setup` installed with an older publish in `~/.yalc`: it pulls only publishes made after the admin last pulled, and says at startup when it keeps one out.

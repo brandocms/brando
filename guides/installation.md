@@ -728,8 +728,10 @@ Admin JavaScript and CSS come from the checkout through Yalc while the site's
 admin takes BrandoJS from a local source (`mix brando.assets.setup --local`;
 see [Build assets](#build-assets)): run `npx yalc publish` in Brando's
 `assets` after a change. The admin's Vite config includes BrandoJS's
-`yalcAutoUpdate` plugin, so its running Vite dev server pulls each publish,
-and with HMR on there is nothing else to do. Without it, rerun
+`yalcAutoUpdate` plugin, so its running Vite dev server pulls each publish
+made after it last pulled, and with HMR on there is nothing else to do. An
+older publish in the store, from another checkout, is kept out with a warning
+at startup. Without it, rerun
 `mix brando.assets.setup --backend-only` to rebuild.
 
 The rules `mix brando.install` gives coding agents link to
