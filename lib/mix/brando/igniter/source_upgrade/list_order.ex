@@ -7,18 +7,27 @@ if Code.ensure_loaded?(Igniter) do
     # Finds calls to the application's generated `list_<plural>/1` queries
     # (`Brando.Query`'s `query :list`) whose options leave the row order to
     # Postgres. The 0.55 migrations rewrite rows, which changes that order.
+    # Calls without an order are warned about until the application has
+    # copies of those migrations: on a 0.55 development build the warning
+    # would repeat on every run.
     #
     # Only a literal options map is read: in the call, or bound to a variable
     # earlier in the same function and passed as it is. The rewrite edits that
     # map's text, so `.heex` templates and unformatted code keep their layout.
 
     alias Mix.Brando.Igniter.TemplateCode
+    alias Mix.Brando.Igniter.UpgradeOrder
     alias Rewrite.Source
 
     @sequence_order ~s("asc sequence, desc inserted_at")
     @id_order ~s("asc sequence, asc id")
     @extensions ~w(.ex .heex)
     @limit 50
+    # The first of Brando's 0.55 migrations (0.54 ends at brando_130). The
+    # warning is for the upgrade that copies them: once the application has a
+    # copy, its rows have been rewritten, or are about to be, and the warning
+    # was given on the run before.
+    @first_055_migration 131
 
     @call ~r/(?<![\w.:])((?:[A-Z]\w*\.)*[A-Z]\w*)\.(list_\w+)!?\(/
     @local_call ~r/(?<![\w.:])(list_\w+)!?\(/
@@ -440,6 +449,13 @@ if Code.ensure_loaded?(Igniter) do
     defp warn(igniter, []), do: igniter
 
     defp warn(igniter, findings) do
+      case UpgradeOrder.newest_brando_migration(igniter) do
+        {igniter, newest} when is_integer(newest) and newest >= @first_055_migration -> igniter
+        {igniter, _newest} -> add_warning(igniter, findings)
+      end
+    end
+
+    defp add_warning(igniter, findings) do
       Igniter.add_warning(igniter, """
       These list queries leave the order of their rows to Postgres, which
       returns them as stored. The 0.55 data migrations rewrite rows, so the

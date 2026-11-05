@@ -290,7 +290,8 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
       template: @template
     }
 
-    files = for {key, contents} <- Map.merge(files, overrides), into: %{}, do: {@paths[key], contents}
+    # A string key is a path of its own.
+    files = for {key, contents} <- Map.merge(files, overrides), into: %{}, do: {Map.get(@paths, key, key), contents}
     igniter = test_project(app_name: :lett, files: files)
 
     igniter.assigns.test_files
@@ -346,6 +347,20 @@ defmodule Mix.Brando.Igniter.SourceUpgrade.ListOrderTest do
     # Explicit orders, and `get_categories`' admin-side order, are left alone.
     refute warning =~ "list_menuitems"
     refute warning =~ "article.ex"
+  end
+
+  test "warns while the application has no copy of Brando's 0.55 migrations, which rewrite the rows" do
+    migration = "defmodule Lett.Repo.Migrations.Copy do\n  use Ecto.Migration\nend\n"
+
+    on_054 = lett(%{"priv/repo/migrations/20240101000130_brando_130_rename_galleries_domain.exs" => migration})
+    assert Enum.any?(on_054.warnings, &(&1 =~ "leave the order of their rows"))
+
+    # A 0.55 development build: rerunning the task after updating Brando.
+    on_055 = lett(%{"priv/repo/migrations/20261001000131_brando_131_x.exs" => migration})
+    refute Enum.any?(on_055.warnings, &(&1 =~ "leave the order of their rows"))
+
+    # The tiebreaks are still added.
+    assert source(on_055, :article) == sequence_only(@article, "order: {:asc, :sequence}")
   end
 
   test "an order map passed as it is, or no options at all, are found for any Blueprint" do

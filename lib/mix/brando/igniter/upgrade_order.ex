@@ -43,13 +43,7 @@ if Code.ensure_loaded?(Igniter) do
         |> Igniter.include_glob(@snapshots_glob)
 
       sources = Rewrite.sources(igniter.rewrite)
-      paths = Enum.map(sources, &Source.get(&1, :path))
-
-      migration =
-        paths
-        |> Enum.filter(&(Path.dirname(&1) == "priv/repo/migrations"))
-        |> Enum.flat_map(&brando_number/1)
-        |> Enum.max(fn -> nil end)
+      {igniter, migration} = newest_brando_migration(igniter)
 
       migration_reason =
         if migration && migration <= @last_pre_blocks_migration,
@@ -71,6 +65,26 @@ if Code.ensure_loaded?(Igniter) do
         end
 
       {igniter, migration_reason ++ snapshot_reasons}
+    end
+
+    @doc """
+    The number of the newest copy of a Brando migration in
+    `priv/repo/migrations` (`brando_131` is 131), or nil when there is none,
+    and the igniter with the copies included.
+    """
+    @spec newest_brando_migration(Igniter.t()) :: {Igniter.t(), non_neg_integer() | nil}
+    def newest_brando_migration(igniter) do
+      igniter = Igniter.include_glob(igniter, @migrations_glob)
+
+      newest =
+        igniter.rewrite
+        |> Rewrite.sources()
+        |> Enum.map(&Source.get(&1, :path))
+        |> Enum.filter(&(Path.dirname(&1) == "priv/repo/migrations"))
+        |> Enum.flat_map(&brando_number/1)
+        |> Enum.max(fn -> nil end)
+
+      {igniter, newest}
     end
 
     defp brando_number(path) do

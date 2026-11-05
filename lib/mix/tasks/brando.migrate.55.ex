@@ -67,7 +67,9 @@ if Code.ensure_loaded?(Igniter) do
     asc id"` without `Brando.Trait.Timestamped`). The 0.55 data
     migrations rewrite rows, and rows with equal `sequence` came back in
     storage order. Calls with no `order:` at all are listed, since adding one
-    changes what the site shows.
+    changes what the site shows, until the application has copies of
+    Brando's 0.55 migrations (`brando_131` and later): rerunning the task on a
+    0.55 development build does not list them again.
 
     Blueprint declarations 0.55 no longer compiles are rewritten, each listed
     with file and line: an embedded Blueprint's `identifier` as

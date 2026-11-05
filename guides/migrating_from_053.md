@@ -70,9 +70,12 @@ Stop and review at these points:
   [Fix what the tasks list](#fix-what-the-tasks-list) before compiling.
 - **After `mix brando.gen.backend --upgrade`.** Review its diff, and port the
   application's own admin CSS ([Admin assets](#admin-assets)).
-- **At each stop of `mix brando.upgrade.database`.** It stops after copying
-  Brando's migrations, after a failed conversion check, and after writing the
-  Blueprint migrations, and asks before every step that changes the database.
+- **At each stop of `mix brando.upgrade.database`.** It stops after a failed
+  conversion check and after writing the Blueprint migrations, and asks before
+  every step that changes the database. The copies of Brando's migrations it
+  makes are Brando's templates, checked before they run: commit them with the
+  rest of the upgrade. On a Fabric deployment, hand the database user
+  `oban_job_state` (below) before you answer yes to the migrations.
   Publish the fragments the site shows before you answer yes to the resave
   ([section 4](#4-repair-derived-data)).
 - **After `mix brando.gettext.reconcile`.** Review the catalog diff.
@@ -625,7 +628,7 @@ run the steps by hand.
 An application on a 0.55 development build starts here, after rerunning
 `mix brando.migrate55`, to pick up the migrations added since it last upgraded.
 
-1. **Copy Brando's missing migrations**, then review and commit them:
+1. **Copy Brando's missing migrations**, and commit them with the upgrade:
 
    ```shell
    mix brando.gen.migrations
@@ -1777,7 +1780,8 @@ has the fixes.
 - gives calls to the application's `list_*` queries that order a Sequenced
   schema only by `sequence` a tiebreak (`"asc sequence, desc inserted_at"`, or
   `"asc sequence, asc id"` without timestamps), and lists the calls with no
-  `order:` with file and line;
+  `order:` with file and line, until the application has copies of Brando's
+  0.55 migrations (`brando_131` and later);
 - lists front-end scripts under `assets/` that read `data-src` from a
   `<video>`;
 - warns when `config/runtime.exs` reads the Repo `url:` from the environment
