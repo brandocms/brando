@@ -20,7 +20,8 @@
   /* A subform renders in a bare fieldset beside the inputs of its fieldset. */
   .brando-form fieldset:not(.inline) > .brando-input + fieldset,
   .brando-form fieldset:not(.inline) > fieldset + .brando-input { margin-top: 16px; }
-  .brando-form .field-wrapper { margin-bottom: 0; }
+  /* The form's rows space its fields; a field's modal spaces its own */
+  .brando-form .field-wrapper:where(:not(.modal *)) { margin-bottom: 0; }
   .field-wrapper > .label-wrapper { margin-bottom: 8px; }
   .field-wrapper > .label-wrapper label { font-size: var(--brando-text-md); line-height: 20px; color: var(--brando-ink); }
   .field-wrapper input.text, .field-wrapper input[type="email"], .field-wrapper input[type="tel"], .field-wrapper textarea, .field-wrapper .multiselect { border-color: var(--brando-line); border-radius: 6px; color: var(--workspace-ink); background: var(--brando-surface); box-shadow: 0 1px 2px color-mix(in srgb, var(--brando-ink) 2%, transparent); font-size: var(--brando-text-lg); }

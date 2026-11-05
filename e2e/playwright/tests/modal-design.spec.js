@@ -72,10 +72,9 @@ test('link picker aligns metadata and keeps the selected content through parent 
     await expect.poll(async () => (await name.locator('xpath=..').boundingBox())?.width ?? 0).toBeGreaterThan(10)
   }
   for (const text of ['URL', 'Link text', 'Open link in new window/tab']) await shown(modal.locator('.link-picker-url'), text)
-  // Fields keep their spacing rather than touching: the next field's label
-  // sits between the URL and the link text
-  const [url, text] = await modal.locator('.link-picker-url input[type="text"]').evaluateAll(inputs => inputs.slice(0, 2).map(i => i.getBoundingClientRect()))
-  expect(text.top - url.bottom).toBeGreaterThanOrEqual(16)
+  // The modal spaces its fields as it does elsewhere (the menu form is a
+  // settings workspace, whose fields take their spacing from the form's rows)
+  await expect(modal.locator('.link-picker-url > .field-wrapper').first()).toHaveCSS('margin-bottom', '20px')
   await modal.getByLabel('Content', { exact: true }).check()
   await shown(modal.locator('.identifier-picker-details'), 'Link text')
   await modal.getByRole('button', { name: /All content/ }).click()
