@@ -62,7 +62,22 @@ test('link picker aligns metadata and keeps the selected content through parent 
   await linkDestination(page)
   await page.locator('#menu_items_0_link_0_identifier_id-field-base .link-preview').click()
   const modal = page.locator('#var-menu_items_0_link_0-link-config')
+  // The modal renders inside the menu item's table cell, whose rules hide a
+  // field's label (the column heading carries it) and its help text; they
+  // must stop at the modal. getByLabel finds a visually hidden label too,
+  // and toBeVisible passes its 1px box, so measure the label.
+  const shown = async (scope, text) => {
+    const name = scope.locator('label.control-label > span:first-child').filter({ hasText: new RegExp(`^${text}$`) })
+    await expect(name).toBeVisible()
+    await expect.poll(async () => (await name.locator('xpath=..').boundingBox())?.width ?? 0).toBeGreaterThan(10)
+  }
+  for (const text of ['URL', 'Link text', 'Open link in new window/tab']) await shown(modal.locator('.link-picker-url'), text)
+  // Fields keep their spacing rather than touching: the next field's label
+  // sits between the URL and the link text
+  const [url, text] = await modal.locator('.link-picker-url input[type="text"]').evaluateAll(inputs => inputs.slice(0, 2).map(i => i.getBoundingClientRect()))
+  expect(text.top - url.bottom).toBeGreaterThanOrEqual(16)
   await modal.getByLabel('Content', { exact: true }).check()
+  await shown(modal.locator('.identifier-picker-details'), 'Link text')
   await modal.getByRole('button', { name: /All content/ }).click()
   await expect(modal.getByRole('button', { name: /All content/ })).toHaveAttribute('aria-pressed', 'true')
   // The filter is client-side: the Brando.SelectFilter hook toggles
