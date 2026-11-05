@@ -1,0 +1,1 @@
+- `mix brando.assets.setup` empties the admin's Vite dependency cache (`assets/backend/node_modules/.vite`), so the dev server no longer keeps serving the previous BrandoJS, and with it an older LiveView client, after an update.

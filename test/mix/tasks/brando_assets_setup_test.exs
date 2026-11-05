@@ -157,6 +157,13 @@ defmodule Mix.Tasks.Brando.Assets.SetupRunTest do
 
     fake_tools!(bin, calls, ~s(if [ "$1" = --version ]; then echo 12.15.0; fi))
 
+    # The dev server's bundle of the previous BrandoJS, which the lockfile
+    # would not invalidate.
+    node_modules = Path.join(directory, "assets/backend/node_modules")
+    File.mkdir_p!(Path.join(node_modules, ".vite/deps"))
+    File.write!(Path.join(node_modules, ".vite/deps/@brandocms_brandojs.js"), "")
+    File.mkdir_p!(Path.join(node_modules, "svelte"))
+
     with_path(bin, fn ->
       File.cd!(directory, fn ->
         Setup.run(["--source", Path.join(directory, "brandojs"), "--backend-only", "--no-build"])
@@ -169,6 +176,9 @@ defmodule Mix.Tasks.Brando.Assets.SetupRunTest do
 
     package = directory |> Path.join("assets/backend/package.json") |> File.read!() |> Jason.decode!()
     assert package["dependencies"]["@brandocms/brandojs"] == "file:.yalc/@brandocms/brandojs"
+
+    refute File.exists?(Path.join(node_modules, ".vite"))
+    assert File.dir?(Path.join(node_modules, "svelte"))
   end
 
   describe "the pnpm on PATH" do
