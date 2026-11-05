@@ -1766,7 +1766,8 @@ has the fixes.
 - gives calls to the application's `list_*` queries that order a Sequenced
   schema only by `sequence` a tiebreak (`"asc sequence, desc inserted_at"`, or
   `"asc sequence, asc id"` without timestamps), and lists the calls with no
-  `order:` with file and line;
+  `order:` with file and line, until the application has copies of Brando's
+  0.55 migrations (`brando_131` and later);
 - lists front-end scripts under `assets/` that read `data-src` from a
   `<video>`;
 - warns when `config/runtime.exs` reads the Repo `url:` from the environment
