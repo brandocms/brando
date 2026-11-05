@@ -47,6 +47,9 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
   `pnpm-workspace.yaml`. pnpm
   installs the native EuropaCSS compiler the admin's CSS, and a generated
   site's, build with from npm.
+  After installing the admin, it empties Vite's dependency cache
+  (`assets/backend/node_modules/.vite`), which would otherwise keep the
+  previous BrandoJS (see `empty_vite_cache/1`); restart a running dev server.
   Unless `--no-build` is supplied, builds both consumers. It does not run a
   standalone framework build.
 
@@ -88,8 +91,32 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
 
     Enum.each(consumers, fn path ->
       run!("pnpm", ["install"], path)
+      if path == backend, do: empty_vite_cache(backend)
       if options[:build] != false, do: run!("pnpm", ["build"], path)
     end)
+  end
+
+  @doc """
+  Empties the Vite dev server's dependency cache in `backend`
+  (`node_modules/.vite`), so the next dev server bundles the BrandoJS just
+  installed.
+
+  Vite keys that cache on the package manager's lockfile, and a BrandoJS
+  from a Yalc copy or a checkout is a directory dependency, which the
+  lockfile records by path: a new BrandoJS with the same dependencies leaves
+  the lockfile as it was, and the dev server keeps serving the bundle it made
+  of the previous one. The next start re-bundles, which takes seconds.
+  """
+  def empty_vite_cache(backend) do
+    cache = Path.join(backend, "node_modules/.vite")
+
+    if File.exists?(cache) do
+      File.rm_rf!(cache)
+
+      Mix.shell().info(
+        "Emptied #{Path.relative_to_cwd(cache)}: the admin's Vite dev server bundles the new BrandoJS when it next starts."
+      )
+    end
   end
 
   @doc """

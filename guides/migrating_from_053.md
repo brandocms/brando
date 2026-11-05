@@ -1107,7 +1107,9 @@ With a Yalc copy, `mix brando.assets.setup --backend-only` publishes the
 dependency's `assets` directory to a store under `_build` and updates
 `assets/backend/.yalc`. By hand, the steps are `npx yalc publish` in Brando's
 `assets`, then `npx yalc update @brandocms/brandojs` and `pnpm install` in the
-application's `assets/backend`, and a restart of its Vite. Do not use
+application's `assets/backend`, and a restart of its Vite after deleting
+`assets/backend/node_modules/.vite`: Vite's dependency cache does not notice a
+new BrandoJS, and the setup deletes it for you. Do not use
 `yalc push`: it rewrites every project registered with Yalc on the machine.
 
 While working on Brando, `npx yalc publish` in its `assets` is enough: the
