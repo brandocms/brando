@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
-import { installedFromYalc, storePublishes } from '../../assets/vite/yalcAutoUpdate.mjs'
+import { installedFromYalc, storeState } from '../../assets/vite/yalcAutoUpdate.mjs'
 
 // The plugin follows Yalc publishes only for a project whose package.json
 // takes BrandoJS from .yalc. A yalc.lock left behind after switching to npm
@@ -37,72 +37,120 @@ test('a devDependency counts, and a missing package.json does not', async () => 
 
 // The store the dev server watches (~/.yalc) need not be the one the project
 // last pulled from (`mix brando.assets.setup` uses one under _build). Only a
-// publish made after the last pull is an update; an older one, from another
-// checkout, would downgrade the installed copy.
+// publish made after the project's copy was pulled is an update; an older one,
+// from another checkout, would downgrade the installed copy.
 const day = 24 * 60 * 60 * 1000
+const pkg = '@brandocms/brandojs'
 
-async function store(publishes, pulled) {
-  const root = await mkdtemp(path.join(tmpdir(), 'yalc-store-'))
-  const storeDir = path.join(root, 'store/packages/@brandocms/brandojs')
-
-  for (const { version, signature, at } of publishes) {
-    await mkdir(path.join(storeDir, version), { recursive: true })
-    const sig = path.join(storeDir, version, 'yalc.sig')
-    await writeFile(sig, `${signature}\n`)
-    await utimes(sig, new Date(at), new Date(at))
-  }
-
-  const lockFile = path.join(root, 'yalc.lock')
-  const lock = { version: 'v1', packages: { '@brandocms/brandojs': { signature: pulled.signature, file: true } } }
-  await writeFile(lockFile, JSON.stringify(lock))
-  await utimes(lockFile, new Date(pulled.at), new Date(pulled.at))
-
-  return { storeDir, lockFile }
+async function stamp(file, contents, at) {
+  await mkdir(path.dirname(file), { recursive: true })
+  await writeFile(file, contents)
+  await utimes(file, new Date(at), new Date(at))
 }
 
-const signatures = ({ newer, older }) => ({
-  newer: newer.map((publish) => publish.signature),
-  older: older.map((publish) => publish.signature),
-})
+// `publishes` in the store; `installed`, the project's .yalc copy; `lock`, the
+// signature and time yalc.lock records (written by any package's update).
+async function backend({ publishes, installed, lock }) {
+  const dir = await mkdtemp(path.join(tmpdir(), 'yalc-store-'))
+  const storeDir = path.join(dir, 'store/packages', pkg)
+  const root = path.join(dir, 'backend')
+  await mkdir(root, { recursive: true })
 
-test('a publish made after the last pull is newer', async () => {
-  const now = Date.now()
-  const { storeDir, lockFile } = await store([{ version: '0.55.0-dev', signature: 'b', at: now }], {
-    signature: 'a',
-    at: now - day,
+  for (const { version, signature, at } of publishes) {
+    await stamp(path.join(storeDir, version, 'yalc.sig'), `${signature}\n`, at)
+  }
+
+  if (installed) await stamp(path.join(root, '.yalc', pkg, 'yalc.sig'), installed.signature, installed.at)
+
+  if (lock) {
+    const contents = JSON.stringify({ version: 'v1', packages: { [pkg]: { signature: lock.signature, pure: true } } })
+    await stamp(path.join(root, 'yalc.lock'), contents, lock.at)
+  }
+
+  return { storeDir, root }
+}
+
+const now = Date.now()
+
+test('a publish made after the copy was pulled is newer', async () => {
+  const { storeDir, root } = await backend({
+    publishes: [{ version: '0.55.0-dev', signature: 'b', at: now }],
+    installed: { signature: 'a', at: now - day },
   })
 
-  assert.deepEqual(signatures(storePublishes(storeDir, lockFile)), { newer: ['b'], older: [] })
+  const state = storeState(storeDir, root)
+  assert.equal(state.status, 'newer')
+  assert.equal(state.publish.signature, 'b')
 })
 
-test('a publish made before the last pull, from another store, is older and not pulled', async () => {
-  const now = Date.now()
-  const { storeDir, lockFile } = await store([{ version: '0.55.0-dev', signature: 'old', at: now - 10 * day }], {
-    signature: 'setup',
-    at: now,
+test('a publish made before the copy was pulled, from another store, is older and not pulled', async () => {
+  const { storeDir, root } = await backend({
+    publishes: [{ version: '0.55.0-dev', signature: 'old', at: now - 10 * day }],
+    installed: { signature: 'setup', at: now },
   })
 
-  const { newer, older } = storePublishes(storeDir, lockFile)
-  assert.deepEqual(newer, [])
-  assert.equal(older[0].signature, 'old')
-  assert.equal(older[0].version, '0.55.0-dev')
+  const state = storeState(storeDir, root)
+  assert.equal(state.status, 'older')
+  assert.equal(state.publish.version, '0.55.0-dev')
+  assert.equal(state.pulled, now)
 })
 
-test('the pulled signature is neither, and every version the store holds is read, newest first', async () => {
-  const now = Date.now()
-  const { storeDir, lockFile } = await store(
-    [
+test('the copy installed is current, and an old version left in the store is no news', async () => {
+  const { storeDir, root } = await backend({
+    publishes: [
+      { version: '0.54.3', signature: 'months-old', at: now - 90 * day },
+      { version: '0.55.0-dev', signature: 'pulled', at: now - 2 * day },
+    ],
+    installed: { signature: 'pulled', at: now - day },
+  })
+
+  assert.deepEqual(storeState(storeDir, root), { status: 'current' })
+})
+
+test('every version is read: a bumped version published later is newer', async () => {
+  const { storeDir, root } = await backend({
+    publishes: [
       { version: '0.55.0-dev', signature: 'pulled', at: now - 2 * day },
       { version: '0.55.0-beta.0', signature: 'bumped', at: now },
-      { version: '0.56.0-dev', signature: 'later', at: now - 1000 },
     ],
-    { signature: 'pulled', at: now - day }
-  )
+    installed: { signature: 'pulled', at: now - day },
+  })
 
-  assert.deepEqual(signatures(storePublishes(storeDir, lockFile)), { newer: ['bumped', 'later'], older: [] })
+  const state = storeState(storeDir, root)
+  assert.equal(state.status, 'newer')
+  assert.equal(state.publish.version, '0.55.0-beta.0')
 })
 
-test('a store or lock that is missing reads as nothing to pull', async () => {
-  const root = await mkdtemp(path.join(tmpdir(), 'yalc-store-'))
-  assert.deepEqual(storePublishes(path.join(root, 'none'), path.join(root, 'yalc.lock')), { newer: [], older: [] })
+test('another package updating yalc.lock after a publish does not hide it', async () => {
+  // Pulled A; B published while the server was down; then `yalc update other`.
+  const { storeDir, root } = await backend({
+    publishes: [{ version: '0.55.0-dev', signature: 'B', at: now - day }],
+    installed: { signature: 'A', at: now - 2 * day },
+    lock: { signature: 'A', at: now },
+  })
+
+  assert.equal(storeState(storeDir, root).status, 'newer')
+})
+
+test('a publish landing while a pull copies is newer than the copy that pull made', async () => {
+  // The pull copied yalc.sig, then the next publish wrote the store's.
+  const { storeDir, root } = await backend({
+    publishes: [{ version: '0.55.0-dev', signature: 'second', at: now }],
+    installed: { signature: 'first', at: now - 500 },
+    lock: { signature: 'first', at: now + 500 },
+  })
+
+  assert.equal(storeState(storeDir, root).status, 'newer')
+})
+
+test("without a copied yalc.sig, the lock's signature counts; an empty store is current", async () => {
+  const { storeDir, root } = await backend({
+    publishes: [{ version: '0.55.0-dev', signature: 'a', at: now }],
+    lock: { signature: 'a', at: now },
+  })
+
+  assert.deepEqual(storeState(storeDir, root), { status: 'current' })
+
+  const empty = await mkdtemp(path.join(tmpdir(), 'yalc-store-'))
+  assert.deepEqual(storeState(path.join(empty, 'none'), empty), { status: 'current' })
 })

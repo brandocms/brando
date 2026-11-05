@@ -20,21 +20,43 @@ export function installedFromYalc(root, packageName = DEFAULT_PACKAGE) {
   }
 }
 
-/** When `yalc.lock` was last written: the time the project last pulled, or 0. */
-export function pulledAt(lockFile) {
+/**
+ * What the project's `.yalc` copy of `packageName` holds: the signature yalc
+ * copied in with it and the time it was copied (`at`), from that copy's
+ * `yalc.sig`. yalc writes the file anew on every add or update of this
+ * package, and of no other, so its time is when this package was last pulled.
+ * The signature falls back to the one `yalc.lock` records.
+ */
+export function installedCopy(root, packageName = DEFAULT_PACKAGE) {
+  const sig = path.join(root, '.yalc', ...packageName.split('/'), 'yalc.sig')
+  let signature = null
+  let at = 0
+
   try {
-    return fs.statSync(lockFile).mtimeMs
+    signature = fs.readFileSync(sig, 'utf8').trim()
+    at = fs.statSync(sig).mtimeMs
   } catch {
-    return 0
+    try {
+      const lock = JSON.parse(fs.readFileSync(path.join(root, 'yalc.lock'), 'utf8'))
+      signature = lock.packages?.[packageName]?.signature ?? null
+    } catch {}
   }
+
+  return { signature, at }
 }
 
 /**
- * The publishes of `packageName` in a Yalc store (`storeDir` is the package's
- * directory there) whose signature differs from the one `yalc.lock` records,
- * newest first: `newer` were published after the project last pulled, `older`
- * before it. Each is `{ version, signature, at }`, `at` the publish time in
- * milliseconds.
+ * The newest publish of `packageName` in a Yalc store (`storeDir` is the
+ * package's directory there), set against the project's copy:
+ *
+ *   * `{ status: 'current' }`, it is the copy installed, or the store is empty;
+ *   * `{ status: 'newer', publish }`, published after the copy was pulled;
+ *   * `{ status: 'older', publish, pulled }`, published before it: another
+ *     store's or checkout's, which would replace the copy with an older one.
+ *
+ * `publish` is `{ version, signature, at }`, `at` the publish time in
+ * milliseconds. Only the newest publish counts: yalc leaves a version's
+ * directory in the store after a version bump, and an old one is no news.
  *
  * Every version the store holds is read, so a version bump in the published
  * package does not leave this reading a file nothing writes to any more.
@@ -42,20 +64,13 @@ export function pulledAt(lockFile) {
  * resolved once can be gone by the next read, and mid-publish it can be
  * missing outright, which is not the same thing as being behind.
  */
-export function storePublishes(storeDir, lockFile, packageName = DEFAULT_PACKAGE) {
-  let pulled = null
-  try {
-    pulled = JSON.parse(fs.readFileSync(lockFile, 'utf8')).packages?.[packageName]?.signature ?? null
-  } catch {}
-
+export function storeState(storeDir, root, packageName = DEFAULT_PACKAGE) {
   let versions = []
   try {
     versions = fs.readdirSync(storeDir)
   } catch {}
 
-  const since = pulledAt(lockFile)
-
-  const unpulled = versions
+  const [publish] = versions
     .flatMap((version) => {
       const sig = path.join(storeDir, version, 'yalc.sig')
       try {
@@ -64,13 +79,13 @@ export function storePublishes(storeDir, lockFile, packageName = DEFAULT_PACKAGE
         return []
       }
     })
-    .filter((publish) => publish.signature !== pulled)
     .sort((a, b) => b.at - a.at)
 
-  return {
-    newer: unpulled.filter((publish) => publish.at > since),
-    older: unpulled.filter((publish) => publish.at <= since),
-  }
+  const installed = installedCopy(root, packageName)
+
+  if (!publish || publish.signature === installed.signature) return { status: 'current' }
+  if (publish.at > installed.at) return { status: 'newer', publish }
+  return { status: 'older', publish, pulled: installed.at }
 }
 
 const when = (ms) => {
@@ -95,8 +110,8 @@ const when = (ms) => {
  * yalc rewrites `yalc.sig` in the store on every publish, and records the
  * signature the project last pulled in its own `yalc.lock`, so those two files
  * say whether the project is behind. Watch the store's copy and pull when they
- * disagree and the store's was published after the project last pulled (the
- * time `yalc.lock` was written).
+ * disagree and the store's newest was published after the project last pulled
+ * this package (the time yalc copied `.yalc/<package>/yalc.sig` in).
  *
  * The time matters because the store watched here (`YALC_STORE_FOLDER`, or
  * `~/.yalc`) need not be the one the project pulled from: `mix
@@ -138,7 +153,7 @@ export default function yalcAutoUpdate(packageName = DEFAULT_PACKAGE) {
       const storeDir = path.join(store, 'packages', ...packageName.split('/'))
       if (!fs.existsSync(storeDir)) return
 
-      const behind = () => storePublishes(storeDir, lockFile, packageName).newer.length > 0
+      const behind = () => storeState(storeDir, server.config.root, packageName).status === 'newer'
 
       // yalc points node_modules at its own copy of the package, which carries
       // no node_modules of its own. npm and yarn hoist the package's
@@ -170,13 +185,13 @@ export default function yalcAutoUpdate(packageName = DEFAULT_PACKAGE) {
       // Catch up on whatever was published while the server was down. Blocking
       // rather than async: the server is about to start answering requests, and
       // a copy we already know is stale must not be one of the answers.
-      const { newer, older } = storePublishes(storeDir, lockFile, packageName)
+      const state = storeState(storeDir, root, packageName)
 
-      if (newer.length > 0) {
+      if (state.status === 'newer') {
         try {
           execFileSync('yalc', ['update', packageName], { cwd: root, stdio: 'pipe' })
           if (relinks) execFileSync('pnpm', relinkArgs, { cwd: root, stdio: 'pipe' })
-          const [publish] = newer
+          const { publish } = state
           onBanner(() =>
             server.config.logger.info(
               `[yalc] pulled ${packageName} ${publish.version} on start, published to ${store} ${when(publish.at)}`
@@ -185,16 +200,16 @@ export default function yalcAutoUpdate(packageName = DEFAULT_PACKAGE) {
         } catch (error) {
           failed(error)
         }
-      } else if (older.length > 0) {
+      } else if (state.status === 'older') {
         // The store watched here can hold a copy older than the installed one
         // (another checkout's publish to ~/.yalc, while `mix
         // brando.assets.setup` pulled from the project's own store). Said, so
         // the publish that was not pulled reads as kept out, not as missed.
-        const [publish] = older
+        const { publish, pulled } = state
         onBanner(() =>
           server.config.logger.warn(
             `[yalc] kept the installed ${packageName}: ${store} holds ${publish.version} published ` +
-              `${when(publish.at)}, before this project last pulled (yalc.lock, ${when(pulledAt(lockFile))}). ` +
+              `${when(publish.at)}, before this project last pulled it (${when(pulled)}). ` +
               'Publish again to pull it.'
           )
         )

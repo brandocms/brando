@@ -1104,8 +1104,8 @@ application's `assets/backend`, and a restart of its Vite. Do not use
 
 While working on Brando, `npx yalc publish` in its `assets` is enough: the
 admin's Vite dev server watches `~/.yalc` (or `YALC_STORE_FOLDER`) and pulls
-each publish made after the admin last pulled, which is when
-`assets/backend/yalc.lock` was written. An older publish there, such as one
+its newest publish when it was made after the admin last pulled BrandoJS
+(when Yalc copied it into `assets/backend/.yalc`). An older publish there, such as one
 from another checkout before `mix brando.assets.setup` installed the
 dependency's copy, is left alone with a warning at startup; publish again to
 pull it.
