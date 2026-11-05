@@ -19,8 +19,13 @@ defmodule Mix.Tasks.Brando.Doctor do
   `mix test` would use the development database, plus any checks the
   application registers (see `Brando.Doctor`).
 
-  Nothing is changed. The application starts without its web server and with
-  Oban's queues stopped, so no job runs while the doctor looks.
+  Nothing is changed. The application starts without its web server, with
+  Oban's queues stopped and with the Logger at `:error`, so no job runs while
+  the doctor looks and no debug log runs through the report.
+
+  The report ends with the names of the checks that failed or warned. Where
+  standard output is not Unicode (a `LANG` without UTF-8), its marks and
+  arrows are ASCII.
 
     * `--verbose` lists what each check found.
     * `--json` prints the report as JSON, for scripts.
@@ -57,7 +62,7 @@ defmodule Mix.Tasks.Brando.Doctor do
     if opts[:json] do
       Mix.shell().info(results |> Report.json(versions) |> Jason.encode!(pretty: true))
     else
-      Mix.shell().info(Report.text(results, versions, verbose: opts[:verbose]))
+      Mix.shell().info(Report.text(results, versions, verbose: opts[:verbose], ascii: not Report.unicode_output?()))
     end
 
     if Doctor.exit_status(results, opts[:strict] == true) == 1, do: exit({:shutdown, 1})

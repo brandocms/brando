@@ -29,7 +29,7 @@ defmodule Mix.Tasks.Brando.DoctorTest do
     text = output()
     assert text =~ "✓ Healthy"
     assert text =~ "! Warns"
-    assert text =~ "1 warning."
+    assert text =~ "1 warning: Warns."
   end
 
   test "--strict fails on warnings" do

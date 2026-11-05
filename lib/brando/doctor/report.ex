@@ -11,20 +11,57 @@ defmodule Brando.Doctor.Report do
 
   @doc """
   The terminal report as ANSI data for `Mix.shell().info/1`: the versions, a
-  line per check with its fix under it, and a summary. With `verbose: true`,
-  each check's items are listed too.
+  line per check with its fix under it, and a summary naming the checks that
+  warned or failed. With `verbose: true`, each check's items are listed too.
+
+  With `ascii: true`, the marks, bullets and arrows are ASCII (`+`, `!`, `x`,
+  `-`, `->`), for an output that is not Unicode: Erlang prints a character
+  above U+00FF there as an escape such as `\\x{2713}`, and the bullet as a byte
+  a UTF-8 terminal cannot show.
   """
   @spec text([Result.t()], map(), keyword()) :: IO.ANSI.ansidata()
   def text(results, versions, opts \\ []) do
     verbose? = Keyword.get(opts, :verbose, false)
 
-    [
+    report = [
       [:faint, header(versions), :reset, "\n\n"],
       Enum.map(results, &check_lines(&1, verbose?)),
       "\n",
       footer(results, verbose?)
     ]
+
+    if Keyword.get(opts, :ascii, false), do: ascii(report), else: report
   end
+
+  @doc """
+  Whether standard output takes Unicode. Erlang decides it from the locale
+  when the VM starts (`LANG`, `LC_ALL`, `LC_CTYPE`).
+  """
+  def unicode_output? do
+    :io.getopts(:standard_io)[:encoding] == :unicode
+  end
+
+  # Characters the report and Brando's checks print, and their ASCII.
+  @ascii [
+    {"✓", "+"},
+    {"✗", "x"},
+    {"·", "-"},
+    {"→", "->"},
+    {"←", "<-"},
+    {"…", "..."},
+    {"—", "--"},
+    {"–", "-"},
+    {"‘", "'"},
+    {"’", "'"},
+    {"“", "\""},
+    {"”", "\""}
+  ]
+
+  defp ascii(text) when is_binary(text),
+    do: Enum.reduce(@ascii, text, fn {from, to}, text -> String.replace(text, from, to) end)
+
+  defp ascii(data) when is_list(data), do: Enum.map(data, &ascii/1)
+  defp ascii(data), do: data
 
   @doc """
   The header line: Brando's version and source, Phoenix and LiveView
@@ -61,15 +98,17 @@ defmodule Brando.Doctor.Report do
   defp mark(:error), do: [:red, "✗", :reset]
   defp mark(:skipped), do: [:faint, "–", :reset]
 
+  # Names the checks behind each count, errors first: the report above can be
+  # long, and in development the application's own log lines may run through it.
   defp footer(results, verbose?) do
     counts = Doctor.counts(results)
 
     problems =
-      [
-        counts.warning > 0 && count(counts.warning, "warning", "warnings"),
-        counts.error > 0 && count(counts.error, "error", "errors")
-      ]
-      |> Enum.filter(& &1)
+      for {status, singular, plural} <- [{:error, "error", "errors"}, {:warning, "warning", "warnings"}],
+          counts[status] > 0 do
+        names = for result <- results, result.status == status, do: result.label || result.id
+        "#{count(counts[status], singular, plural)}: #{Enum.join(names, ", ")}."
+      end
 
     skipped = if counts.skipped > 0, do: " #{count(counts.skipped, "check", "checks")} skipped.", else: ""
 
@@ -79,7 +118,7 @@ defmodule Brando.Doctor.Report do
 
       problems ->
         details = if verbose?, do: [], else: [:faint, " Details: mix brando.doctor --verbose", :reset]
-        [:blue, Enum.join(problems, ", "), ".", :reset, skipped, details, "\n"]
+        [:blue, Enum.join(problems, " "), :reset, skipped, details, "\n"]
     end
   end
 

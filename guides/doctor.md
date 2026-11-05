@@ -33,13 +33,17 @@ Brando 0.55.0-dev (git 12c2289, branch main) · Phoenix 1.8.16 · LiveView 1.2.1
 ✓ Deprecations               none in lib/
 ✓ Test database              my_app_test, not the development database
 
-5 warnings, 1 error. Details: mix brando.doctor --verbose
+1 error: Sitemap. 4 warnings: Admin assets, Image configs, Modules, Alt text. Details: mix brando.doctor --verbose
 ```
 
 The checks only read. Nothing is migrated, regenerated or recreated: each
 failing check names the fix, and in the admin links to the screen for it. The
 task starts the application without its web server and with Oban's queues
 stopped, so it can run beside a running server and no job runs while it looks.
+The Logger stays at `:error` while it runs, so development's SQL log does not
+run through the report, and the last line names the checks that failed or
+warned. Where the shell's locale is not UTF-8, the marks, bullets and arrows
+print as ASCII (`+`, `!`, `x`, `-`, `->`).
 
 <!-- usage-rules:start topic="deployment" -->
 
