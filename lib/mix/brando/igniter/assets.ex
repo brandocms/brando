@@ -44,15 +44,57 @@ if Code.ensure_loaded?(Igniter) do
     # Files earlier backend templates installed that nothing reads any more.
     # vite-plugin-svelte 7 loads only svelte.config.{js,ts,mjs,mts}.
     @retired_backend_files ~w(assets/backend/svelte.config.cjs)
-    # The files earlier backend templates put in assets/backend/public, by
-    # SHA-256: Brando's generic favicon and an avatar nothing used. The admin
-    # now builds with `publicDir: false`, as that directory's files landed at
-    # the root of priv/static, over the site's own favicon.
-    @retired_backend_public %{
-      "assets/backend/public/favicon.ico" => "7fd5f60f53b761ac33bfa86dac99083b6d727a421172fdc1579c60b733381b76",
-      "assets/backend/public/images/admin/avatar.svg" =>
-        "130cde3c107807855da2140e08d8df24f303bd72a83aa3bd6857d0982f584d1c"
-    }
+    # Every file a backend template has put in assets/backend/public, as
+    # `{path under public/, SHA-256}`, from the template's Git history: the
+    # generic favicon, an avatar nothing used, and the admin's fonts of each
+    # era (Font Awesome, Open Sans, Manrope, the 0.54 Main/Mono fonts), which
+    # BrandoJS now ships. The admin builds with `publicDir: false`, as that
+    # directory's files landed at the root of priv/static, over the site's own.
+    @retired_backend_public [
+      {"favicon.ico", "7fd5f60f53b761ac33bfa86dac99083b6d727a421172fdc1579c60b733381b76"},
+      {"fonts/Blocks-Bold.woff2", "c63158babcb7902203ed73476ccf901db34825ea524d4a36a52b5e5f97e1abf7"},
+      {"fonts/Blocks-Light.woff2", "36b86832422c8b2f8eb7a0de635369c10fcebbeb8d3a0f80edeacf8252bfd6da"},
+      {"fonts/Blocks-Medium.woff2", "1b498b959e5b7decbf9185803591d25bc1fbf83e798372ed30d32d5c79d82ff6"},
+      {"fonts/Blocks-Regular.woff2", "d612f1212b452af07f1a5defb2b672e76a91f7139e7499fa48bb9b2b985c22d6"},
+      {"fonts/Bold.woff2", "c63158babcb7902203ed73476ccf901db34825ea524d4a36a52b5e5f97e1abf7"},
+      {"fonts/fa-light-300.eot", "7573b9779a44fd22159a0dce86fa382aef4972d8de0e2a07d946f9e0fd5a503a"},
+      {"fonts/fa-light-300.otf", "4df89d35af1f1e3a6252b3dc4dab623d25b045a152f46a6b49d803837b820844"},
+      {"fonts/fa-light-300.svg", "549b90c0ac6d49f9f099a5a64c7cf5f45a06d078df1970455b37bcfd5737f7c9"},
+      {"fonts/fa-light-300.ttf", "7f2790a7b026255c62f7de341e4a748aa407c80f2cffaedae77109b26052e801"},
+      {"fonts/fa-light-300.woff2", "40dabbb5d4b294d8f1ffb165f745885b4d6a0c3cfaef81bd0a3011ef0950016a"},
+      {"fonts/fa-light-300.woff", "ec5f73a2fab258c314b4953a7166adb047076dd0351d9fcb537c903d040202d0"},
+      {"fonts/fa-solid-900.eot", "8d3ce0ca57318bc8fcdeea4a1de35f5ff3c9b4e2d1d785fd109ef8b7b0e9c80d"},
+      {"fonts/fa-solid-900.otf", "3ffd60a86718be1578adecf6fc32d4a42ab4d4219b333d5dc315042b2355d2e4"},
+      {"fonts/fa-solid-900.svg", "92449c140306a92d7bb94c6807f8d5a51e37b17d975bfbbf942d37ddc3966cd0"},
+      {"fonts/fa-solid-900.ttf", "aa3cd6c84b2259be8c7b1e77513bb601790955bbdb09b4357b2ab293fc6ca43e"},
+      {"fonts/fa-solid-900.woff2", "13862fa8d2f3167099462a350c1703fdff863697795f395bfe853cf202f3693c"},
+      {"fonts/fa-solid-900.woff", "dfd18e1ff574159a31de6c089769d02f2461cb782a30eb0519e517ab2e60c1c0"},
+      {"fonts/fontsplaceholder", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+      {"fonts/Light.woff2", "36b86832422c8b2f8eb7a0de635369c10fcebbeb8d3a0f80edeacf8252bfd6da"},
+      {"fonts/Main-Bold.woff2", "b6aa9d23eac053c594937da212ff1193477c943622e0a8a874ba806aa44fb115"},
+      {"fonts/Main-Bold.woff", "d8abf5f44fb142033bb2fdc60afa9251808073946369fb43047f080d25dff71d"},
+      {"fonts/Main-Light.woff2", "c57bb8bc505a2080507c616138d74dd15ac4763ef3a600f1210752f845f77e55"},
+      {"fonts/Main-Light.woff2", "df1831d49aa63e03d08065c7c2a837dd7b8519c90b2167b87e5da095e815c28b"},
+      {"fonts/Main-Light.woff", "79aeb3775097f22a1fe9c8138514fc5a9798ff80fd1016ef1a7670f0ea270dc1"},
+      {"fonts/Main-Medium.woff2", "14de32049b8551895adb408cbe87fe1b440421a71fba2f5d7e3ff27035603689"},
+      {"fonts/Main-Medium.woff", "23618abc19b8bceae0aba7d08325ec8673d29452f7e7b442607811e7ac3bf97a"},
+      {"fonts/Main-Medium.woff2", "d8f715027b75ccd783b1abdbc2446be931cc15d6cb832da2b5b036fbf47c7aeb"},
+      {"fonts/Main-Regular.woff2", "487fd81b0f770e108d22802efef849f55f428b5e467b5113c591b2a3cd2640fc"},
+      {"fonts/Main-Regular.woff2", "cb2441ad1ee8aed98415472ee2d0a9c7be1c8bef828582c83028a980fc57607b"},
+      {"fonts/Main-Regular.woff", "a03f2b82c461d7438f84423fadc2aee1bae06de415974c7b94b8e75e7f5cb3b4"},
+      {"fonts/Manrope-Bold.woff2", "b6aa9d23eac053c594937da212ff1193477c943622e0a8a874ba806aa44fb115"},
+      {"fonts/Manrope-Light.woff2", "df1831d49aa63e03d08065c7c2a837dd7b8519c90b2167b87e5da095e815c28b"},
+      {"fonts/Manrope-Medium.woff2", "14de32049b8551895adb408cbe87fe1b440421a71fba2f5d7e3ff27035603689"},
+      {"fonts/Manrope-Regular.woff2", "cb2441ad1ee8aed98415472ee2d0a9c7be1c8bef828582c83028a980fc57607b"},
+      {"fonts/Medium.woff2", "1b498b959e5b7decbf9185803591d25bc1fbf83e798372ed30d32d5c79d82ff6"},
+      {"fonts/Mono.woff2", "80a5dc9ee5c98aa278db4d618d253a1a9de8cfd5ff9d43a7a9cf41cbc4b6ce78"},
+      {"fonts/osb.woff", "e5105fe1a38e654f05da82f674bedfbb9c7c7246e57441fb5e20be359d0a2317"},
+      {"fonts/osr.woff2", "be9cff1da958624fe2f11815f22f2d7bcb49a295307b5712db68f701886c6752"},
+      {"fonts/osr.woff", "efb1e1154608d09765a35bfdedc9ec596e3d51b7df2fcf1ffeaddddbe12aa12f"},
+      {"fonts/Regular.woff2", "d612f1212b452af07f1a5defb2b672e76a91f7139e7499fa48bb9b2b985c22d6"},
+      {"images/admin/avatar.png", "d9f8d2deb81c38c839c6a3d523dae979c6a23c042d7a4424fe1d5899206e17ed"},
+      {"images/admin/avatar.svg", "130cde3c107807855da2140e08d8df24f303bd72a83aa3bd6857d0982f584d1c"}
+    ]
     # Lockfiles of the package managers earlier templates used.
     @legacy_backend_lockfiles ~w(assets/backend/yarn.lock assets/backend/package-lock.json)
     @backend_package "assets/backend/package.json"
@@ -116,9 +158,9 @@ if Code.ensure_loaded?(Igniter) do
     The template's package versions, `engines` and `packageManager` replace
     the application's (its own extra packages, scripts and BrandoJS source
     stay), `vite.config.js` is replaced, files the template retired and
-    yarn/npm lockfiles are removed (an earlier template's `favicon.ico` and
-    `images/admin/avatar.svg` in `assets/backend/public`, which the admin
-    build no longer copies, among them), the settings of `package.json`'s `pnpm`
+    yarn/npm lockfiles are removed (the files earlier templates put in
+    `assets/backend/public`, which the admin build no longer copies, among
+    them: the favicon, an avatar and the admin's fonts), the settings of `package.json`'s `pnpm`
     field that pnpm 11 stopped reading (`overrides`, `onlyBuiltDependencies`,
     `ignoredBuiltDependencies`) move to `pnpm-workspace.yaml` as
     `overrides` and `allowBuilds`, and the Dockerfile's `assets_backend`
@@ -184,7 +226,8 @@ if Code.ensure_loaded?(Igniter) do
         |> Enum.filter(&String.starts_with?(&1.path, "assets/backend/public/"))
         |> Enum.sort_by(& &1.path)
         |> Enum.split_with(fn source ->
-          sha256(Rewrite.Source.get(source, :content)) == @retired_backend_public[source.path]
+          path = String.replace_prefix(source.path, "assets/backend/public/", "")
+          {path, sha256(Rewrite.Source.get(source, :content))} in @retired_backend_public
         end)
 
       igniter = Enum.reduce(retired, igniter, &Igniter.rm(&2, &1.path))

@@ -379,17 +379,23 @@ defmodule Mix.Brando.Igniter.AssetsTest do
     test "removes the public files an earlier template wrote, and names a site's own" do
       favicon = File.read!("test/fixtures/backend_054/favicon.ico")
       avatar = File.read!("test/fixtures/backend_054/avatar.svg")
+      # 0.54's admin font, and an earlier template's empty placeholder
+      mono = File.read!("test/fixtures/backend_054/Mono.woff2")
 
       plan =
         upgrade(
           old_backend(%{
             "assets/backend/public/favicon.ico" => favicon,
-            "assets/backend/public/images/admin/avatar.svg" => avatar
+            "assets/backend/public/images/admin/avatar.svg" => avatar,
+            "assets/backend/public/fonts/Mono.woff2" => mono,
+            "assets/backend/public/fonts/fontsplaceholder" => ""
           })
         )
 
       Igniter.Test.assert_rms(plan, [
         "assets/backend/public/favicon.ico",
+        "assets/backend/public/fonts/Mono.woff2",
+        "assets/backend/public/fonts/fontsplaceholder",
         "assets/backend/public/images/admin/avatar.svg",
         "assets/backend/svelte.config.cjs",
         "assets/backend/yarn.lock"
@@ -402,14 +408,24 @@ defmodule Mix.Brando.Igniter.AssetsTest do
           old_backend(%{
             "assets/backend/public/favicon.ico" => "the site's own icon",
             "assets/backend/public/robots.txt" => "User-agent: *\n",
+            # A template's file name with other contents is the site's own
+            "assets/backend/public/fonts/Mono.woff2" => "the site's own font",
             "assets/backend/public/images/admin/avatar.svg" => avatar
           })
         )
 
-      Igniter.Test.assert_unchanged(plan, ["assets/backend/public/favicon.ico", "assets/backend/public/robots.txt"])
+      Igniter.Test.assert_unchanged(plan, [
+        "assets/backend/public/favicon.ico",
+        "assets/backend/public/fonts/Mono.woff2",
+        "assets/backend/public/robots.txt"
+      ])
+
       assert "assets/backend/public/images/admin/avatar.svg" in plan.rms
       assert notice = Enum.find(plan.notices, &(&1 =~ "publicDir: false"))
-      assert notice =~ "  assets/backend/public/favicon.ico\n  assets/backend/public/robots.txt\n"
+
+      assert notice =~
+               "  assets/backend/public/favicon.ico\n  assets/backend/public/fonts/Mono.woff2\n  assets/backend/public/robots.txt\n"
+
       refute notice =~ "avatar.svg"
     end
 

@@ -1,2 +1,2 @@
 - Building the admin no longer writes Brando's generic `favicon.ico` over the site's own in `priv/static`: the admin's Vite config sets `publicDir: false`, and the generated `assets/backend/public` is gone.
-  Run `mix brando.gen.backend --upgrade`: it removes the template's `assets/backend/public/favicon.ico` and `images/admin/avatar.svg`, and names any file of your own there to move to `assets/frontend/public`.
+  Run `mix brando.gen.backend --upgrade`: it removes the files earlier templates put in `assets/backend/public` (the favicon, an avatar and the admin's fonts) when unchanged, and names any file of your own there to move to `assets/frontend/public`.
