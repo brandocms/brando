@@ -19,8 +19,10 @@ defmodule Mix.Tasks.Brando.Upgrade.Database do
   on, which is usually to run it again. Nothing is kept between runs. In
   order:
 
-    1. `mix brando.gen.migrations` copies Brando's missing migrations. It
-       writes source files, so the run stops: review and commit them.
+    1. `mix brando.gen.migrations` copies Brando's missing migrations, and
+       the run reads the state again and goes on: the copies are Brando's
+       templates with the application's module names, which step 2 checks.
+       Commit them with the rest of the upgrade.
     2. `mix brando.migrations.check` checks the pending copies against
        Brando's templates, then `mix brando.migrate` runs every pending
        migration, after asking.
@@ -93,6 +95,12 @@ defmodule Mix.Tasks.Brando.Upgrade.Database do
     end
   end
 
+  defp replan(opts) do
+    state = read_state()
+    print_state(state)
+    {state, Database.plan(state, opts)}
+  end
+
   defp configured_repo! do
     repo = Brando.repo()
 
@@ -141,14 +149,17 @@ defmodule Mix.Tasks.Brando.Upgrade.Database do
   ## Executing a plan
 
   @doc """
-  Runs `plan` for `state`. `opts` takes the task's options, and `:runner`, a
+  Runs `plan` for `state`. `opts` takes the task's options, `:runner`, a
   function of a step and the options that runs it and returns `:ok`,
   `{:ok, note}`, `{:declined, note}` or `{:error, message}`
-  (`run_step/2` by default). Returns the `{status, step, note}` log.
+  (`run_step/2` by default), and `:replan`, a function returning the state
+  and plan read again at `:replan` (after copying Brando's migrations).
+  Returns the `{status, step, note}` log.
   """
   def execute(plan, state, opts) do
     runner = Keyword.get(opts, :runner, &run_step/2)
-    {log, stop} = walk(plan, [], %{runner: runner, opts: opts, state: state})
+    replan = Keyword.get(opts, :replan, fn -> replan(opts) end)
+    {log, stop} = walk(plan, [], %{runner: runner, replan: replan, opts: opts, state: state})
     log = Enum.reverse(log)
     print_summary(log)
 
@@ -167,6 +178,33 @@ defmodule Mix.Tasks.Brando.Upgrade.Database do
   end
 
   defp walk([], log, _ctx), do: {log, :done}
+
+  # The rest of the plan is made from the state the steps before it left,
+  # without the steps that already ran.
+  defp walk([:replan | _rest], log, ctx) do
+    Mix.shell().info([
+      :cyan,
+      "\n==> Reading the state again\n",
+      :reset,
+      "The copies are Brando's templates with this application's module names, so the run goes on: ",
+      "mix brando.migrations.check confirms they match, and mix brando.migrate asks before running them. ",
+      "Commit them with the rest of the upgrade.\n"
+    ])
+
+    {state, plan} = ctx.replan.()
+    done = for {_status, step, _note} <- log, do: step
+
+    plan =
+      plan
+      |> Enum.reject(&(is_tuple(&1) and elem(&1, 1) in done and elem(&1, 0) != :stop))
+      # Templates still without a copy after copying would plan the copy again.
+      |> Enum.map(fn
+        :replan -> {:stop, :copies_missing}
+        entry -> entry
+      end)
+
+    walk(plan, log, %{ctx | state: state})
+  end
 
   defp walk([{:stop, reason} | rest], log, _ctx) do
     {later(rest, "waits for the review", log), reason}
@@ -218,6 +256,7 @@ defmodule Mix.Tasks.Brando.Upgrade.Database do
       {:later, step, reason}, log -> [{:later, step, reason} | log]
       {:skip, step, reason}, log -> [{:skipped, step, reason} | log]
       {:stop, _reason}, log -> log
+      :replan, log -> log
     end)
   end
 
@@ -427,6 +466,7 @@ defmodule Mix.Tasks.Brando.Upgrade.Database do
       {:skip, step, why} -> Mix.shell().info("  skip   #{Database.command(step)}: #{why}")
       {:later, step, why} -> Mix.shell().info("  later  #{Database.command(step)}: #{why}")
       {:stop, reason} -> Mix.shell().info("  stop   #{stop_title(reason)}")
+      :replan -> Mix.shell().info("  then   read the state again and plan the rest from it")
     end)
 
     Mix.shell().info("\nDry run: nothing was run.")
@@ -456,7 +496,7 @@ defmodule Mix.Tasks.Brando.Upgrade.Database do
   defp status_label(:later), do: "not run "
 
   defp stop_title(:tenancy), do: "named environments: run the steps by hand"
-  defp stop_title(:review_migrations), do: "review and commit the copied migrations"
+  defp stop_title(:copies_missing), do: "Brando's migrations were not all copied"
   defp stop_title(:review_blueprint_migrations), do: "review, test and commit the Blueprint migrations"
   defp stop_title(:blueprint_error), do: "the Blueprints could not be planned"
   defp stop_title(:done), do: "done"
@@ -472,11 +512,11 @@ defmodule Mix.Tasks.Brando.Upgrade.Database do
     """
   end
 
-  def stop_message(:review_migrations, _state) do
+  def stop_message(:copies_missing, state) do
     """
-    Stopped for review. Read the copied migrations (git status priv/repo/migrations),
-    then commit them. Then run mix brando.upgrade.database again: it checks the
-    copies against Brando's templates and runs them after asking.
+    Stopped: mix brando.gen.migrations ran, but these of Brando's migration templates
+    still have no copy in the application: #{Enum.join(state.missing_templates, ", ")}.
+    Run mix brando.gen.migrations, read what it says, then run mix brando.upgrade.database again.
     """
   end
 

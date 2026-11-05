@@ -1,0 +1,1 @@
+- `mix brando.upgrade.database` no longer stops after copying Brando's migrations: the copies are Brando's templates, so it goes on to `mix brando.migrations.check`, which stops the run if one differs, and `mix brando.migrate` still asks before running them.

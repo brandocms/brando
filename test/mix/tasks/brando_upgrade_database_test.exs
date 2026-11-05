@@ -146,12 +146,12 @@ defmodule Mix.Tasks.Brando.Upgrade.DatabaseTest do
       assert Database.plan(state(%{tenancy: :multi})) == [{:stop, :tenancy}]
     end
 
-    test "copies missing templates first and stops for their review" do
-      assert [{:run, :gen_migrations}, {:stop, :review_migrations} | later] =
+    test "copies missing templates first, then plans the rest from the state after copying" do
+      assert [{:run, :gen_migrations}, :replan | later] =
                Database.plan(state(%{missing_templates: ["brando_103_x.exs"]}))
 
       assert Enum.map(later, &elem(&1, 1)) == Database.steps() -- [:gen_migrations]
-      assert Enum.all?(later, &match?({:later, _, _}, &1))
+      assert Enum.all?(later, &match?({:later, _, "waits for the copies"}, &1))
     end
 
     test "with Brando's migrations pending: check, migrate, check the conversion, write Blueprint migrations, stop" do
@@ -317,16 +317,46 @@ defmodule Mix.Tasks.Brando.Upgrade.DatabaseTest do
       assert output() =~ "mix brando.migrations.check --update"
     end
 
-    test "copying templates stops for review, and a declined copy says nothing was written" do
+    test "copying templates goes on to check and run the copies, and a declined copy says nothing was written" do
       copying = state(%{missing_templates: ["brando_103_x.exs"]})
-      Task.execute(Database.plan(copying), copying, runner: recorder())
-      assert ran() == [:gen_migrations]
-      assert output() =~ "Stopped for review. Read the copied migrations"
+      copied = state()
+      replan = fn -> {copied, Database.plan(copied, yes: true)} end
+
+      log = Task.execute(Database.plan(copying), copying, runner: recorder(), replan: replan, yes: true)
+
+      # The copies are checked against Brando's templates before anything runs them.
+      assert ran() == [:gen_migrations, :migrations_check, :migrate, :legacy_check, :gen_blueprint]
+      assert Enum.count(log, &match?({_status, :gen_migrations, _note}, &1)) == 1
+      text = output()
+      assert text =~ "Commit them with the rest of the upgrade."
+      assert text =~ "Stopped for review of the Blueprint migrations"
 
       runner = recorder(%{gen_migrations: {:declined, "nothing was written"}})
-      log = Task.execute(Database.plan(copying), copying, runner: runner)
+      log = Task.execute(Database.plan(copying), copying, runner: runner, replan: fn -> flunk("replanned") end)
       assert {:declined, :gen_migrations, "nothing was written"} in log
       assert output() =~ "nothing more was done"
+    end
+
+    test "copies that differ from their templates stop before anything runs them" do
+      copying = state(%{missing_templates: ["brando_103_x.exs"]})
+      replan = fn -> {state(), Database.plan(state())} end
+      runner = recorder(%{migrations_check: {:error, "it exited with status 1"}})
+
+      assert catch_exit(Task.execute(Database.plan(copying), copying, runner: runner, replan: replan)) ==
+               {:shutdown, 1}
+
+      assert ran() == [:gen_migrations, :migrations_check]
+      assert output() =~ "mix brando.migrations.check --update"
+    end
+
+    test "templates still without a copy after copying stop the run instead of copying again" do
+      copying = state(%{missing_templates: ["brando_103_x.exs"]})
+      replan = fn -> {copying, Database.plan(copying)} end
+
+      Task.execute(Database.plan(copying), copying, runner: recorder(), replan: replan)
+
+      assert ran() == [:gen_migrations]
+      assert output() =~ "still have no copy in the application: brando_103_x.exs"
     end
 
     test "derived data: asks once for the stretch, and again before adopting images" do

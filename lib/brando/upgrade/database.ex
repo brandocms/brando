@@ -37,7 +37,8 @@ defmodule Brando.Upgrade.Database do
           | :image_texts
           | :search_index
 
-  @type entry :: {:run, step()} | {:skip, step(), String.t()} | {:later, step(), String.t()} | {:stop, atom()}
+  @type entry ::
+          {:run, step()} | {:skip, step(), String.t()} | {:later, step(), String.t()} | {:stop, atom()} | :replan
 
   @type state :: %{
           tenancy: Brando.Tenant.mode(),
@@ -193,7 +194,9 @@ defmodule Brando.Upgrade.Database do
   @doc """
   The steps for `state`, in order: `{:run, step}`, `{:skip, step, why}`, a
   `{:stop, reason}` at the first review point, and `{:later, step, why}` for
-  the steps after it. A plan without a stop ends in `{:stop, :done}`.
+  the steps after it. A plan without a stop ends in `{:stop, :done}`. After
+  copying Brando's migrations, `:replan` reads the state again and plans the
+  rest from it.
 
   `opts`: `skip_conversion_check: true` skips `mix brando.check.legacy_conversion`.
 
@@ -206,8 +209,11 @@ defmodule Brando.Upgrade.Database do
 
   def plan(%{tenancy: mode}, _opts) when mode in [:single, :multi], do: [{:stop, :tenancy}]
 
+  # The copies are Brando's templates with the application's module names,
+  # which `mix brando.migrations.check` confirms first thing in the plan made
+  # from the state after copying: nothing in them needs a review of its own.
   def plan(%{missing_templates: [_ | _]}, _opts) do
-    [{:run, :gen_migrations}, {:stop, :review_migrations} | later(@steps -- [:gen_migrations])]
+    [{:run, :gen_migrations}, :replan | Enum.map(@steps -- [:gen_migrations], &{:later, &1, "waits for the copies"})]
   end
 
   def plan(state, opts) do

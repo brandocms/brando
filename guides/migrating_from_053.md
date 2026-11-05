@@ -70,9 +70,11 @@ Stop and review at these points:
   [Fix what the tasks list](#fix-what-the-tasks-list) before compiling.
 - **After `mix brando.gen.backend --upgrade`.** Review its diff, and port the
   application's own admin CSS ([Admin assets](#admin-assets)).
-- **At each stop of `mix brando.upgrade.database`.** It stops after copying
-  Brando's migrations, after a failed conversion check, and after writing the
-  Blueprint migrations, and asks before every step that changes the database.
+- **At each stop of `mix brando.upgrade.database`.** It stops after a failed
+  conversion check and after writing the Blueprint migrations, and asks before
+  every step that changes the database. The copies of Brando's migrations it
+  makes are Brando's templates, checked before they run: commit them with the
+  rest of the upgrade.
   Publish the fragments the site shows before you answer yes to the resave
   ([section 4](#4-repair-derived-data)).
 - **After `mix brando.gettext.reconcile`.** Review the catalog diff.
@@ -620,7 +622,7 @@ run the steps by hand.
 An application on a 0.55 development build starts here, after rerunning
 `mix brando.migrate55`, to pick up the migrations added since it last upgraded.
 
-1. **Copy Brando's missing migrations**, then review and commit them:
+1. **Copy Brando's missing migrations**, and commit them with the upgrade:
 
    ```shell
    mix brando.gen.migrations
