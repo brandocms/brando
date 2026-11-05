@@ -272,22 +272,27 @@
   }
 
   /* A cell: its label is the column heading, and an error goes under the
-     control, so the row grows rather than the control moving */
+     control, so the row grows rather than the control moving.
+
+     A field's modal (a link's, a media field's) renders inside its cell, so
+     every rule here that reaches past the cell's own control ends in
+     `:where(:not(.modal *))`: the modal's fields keep their labels, help text
+     and spacing. `:where` adds no specificity. */
   .subform-fields > .brando-input {
-    .field-wrapper {
+    .field-wrapper:where(:not(.modal *)) {
       display: flex;
       flex-direction: column;
       margin: 0;
     }
 
-    .label-wrapper {
+    .label-wrapper:where(:not(.modal *)) {
       order: 2;
       height: auto;
       margin: 0;
       overflow: visible;
     }
 
-    .label-wrapper > .control-label {
+    .label-wrapper > .control-label:where(:not(.modal *)) {
       position: absolute;
       width: 1px;
       height: 1px;
@@ -296,25 +301,25 @@
       white-space: nowrap;
     }
 
-    .field-errors:not(:empty) {
+    .field-errors:not(:empty):where(:not(.modal *)) {
       padding: 3px 9px 0;
     }
 
-    .field-error {
+    .field-error:where(:not(.modal *)) {
       color: var(--brando-error-ink);
       font-size: var(--brando-text-xs);
       line-height: 15px;
       white-space: normal;
     }
 
-    :is(.meta, .help-text, .field-wrapper-header) {
+    :is(.meta, .help-text, .field-wrapper-header):where(:not(.modal *)) {
       display: none;
     }
   }
 
   /* Text controls */
-  .subform-fields :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], input[type="password"]),
-  .subform-fields textarea.text {
+  .subform-fields :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], input[type="password"]):where(:not(.modal *)),
+  .subform-fields textarea.text:where(:not(.modal *)) {
     width: 100%;
     min-width: 0;
     height: 32px;
@@ -329,14 +334,14 @@
     transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
   }
 
-  .subform-fields :is(input, textarea).monospace {
+  .subform-fields :is(input, textarea).monospace:where(:not(.modal *)) {
     font-family: var(--brando-font-mono);
     font-size: var(--brando-text-md);
     letter-spacing: -.01em;
   }
 
   /* One line until there is more to say */
-  .subform-fields textarea.text {
+  .subform-fields textarea.text:where(:not(.modal *)) {
     display: block;
     padding-block: 5px;
     resize: none;
@@ -344,19 +349,19 @@
     max-height: 120px;
   }
 
-  .subform-entry:hover .subform-fields :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], input[type="password"], textarea.text) {
+  .subform-entry:hover .subform-fields :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], input[type="password"], textarea.text):where(:not(.modal *)) {
     border-color: var(--table-line);
     background: var(--brando-surface);
   }
 
-  .subform-fields :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], input[type="password"], textarea.text):focus {
+  .subform-fields :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], input[type="password"], textarea.text):focus:where(:not(.modal *)) {
     border-color: var(--table-focus);
     background: var(--brando-surface);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--brando-accent) 8%, transparent);
     outline: none;
   }
 
-  .subform-fields .brando-input:has(.field-error) :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], textarea.text) {
+  .subform-fields .brando-input:has(.field-error) :is(input.text, input.input, input[type="email"], input[type="number"], input[type="phone"], input[type="tel"], textarea.text):where(:not(.modal *)) {
     border-color: var(--brando-error-line);
     background: var(--brando-surface);
   }
@@ -376,7 +381,7 @@
 
   /* String list: its values side by side, without the frame and row tools
      it has outside a table */
-  .subform-fields .string-list {
+  .subform-fields .string-list:where(:not(.modal *)) {
     flex-direction: row;
     gap: 4px;
     min-width: 150px;
@@ -410,7 +415,7 @@
   }
 
   /* Status: the dot alone, centred in its column and the control height */
-  .subform-fields .radios-wrapper.status.compact {
+  .subform-fields .radios-wrapper.status.compact:where(:not(.modal *)) {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -425,14 +430,14 @@
     box-shadow: none;
   }
 
-  .subform-entry:hover .subform-fields .radios-wrapper.status.compact {
+  .subform-entry:hover .subform-fields .radios-wrapper.status.compact:where(:not(.modal *)) {
     border-color: var(--table-line);
     background: var(--brando-surface);
   }
 
   /* Link: one line, the title and then its destination, like a block
      variable's link */
-  .subform-fields .link-preview {
+  .subform-fields .link-preview:where(:not(.modal *)) {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -511,20 +516,20 @@
     }
   }
 
-  .subform-entry:hover .subform-fields .link-preview {
+  .subform-entry:hover .subform-fields .link-preview:where(:not(.modal *)) {
     border-color: var(--table-line);
     background: var(--brando-surface);
   }
 
   /* A menu item's key: its quiet "Key: …" summary, opening into a field */
-  .subform-fields .disclosed-text-summary {
+  .subform-fields .disclosed-text-summary:where(:not(.modal *)) {
     min-height: 32px;
     padding: 0 8px;
     font-size: var(--brando-text-sm);
     white-space: nowrap;
   }
 
-  .subform-fields .disclosed-text-field input {
+  .subform-fields .disclosed-text-field input:where(:not(.modal *)) {
     min-width: 150px;
   }
 
@@ -558,12 +563,12 @@
     padding: 0 8px;
   }
 
-  .subform-fields .switch {
+  .subform-fields .switch:where(:not(.modal *)) {
     margin: 0;
   }
 
   /* The circle is drawn by the label, which otherwise holds nothing here */
-  .subform-fields .check-wrapper {
+  .subform-fields .check-wrapper:where(:not(.modal *)) {
     --checkbox-size: 18px;
     --checkmark-width: 14px;
     --padding-size: 18px;
@@ -574,7 +579,7 @@
   }
 
   /* Select: the value with a chevron, like a block variable's select */
-  .subform-fields .multiselect {
+  .subform-fields .multiselect:where(:not(.modal *)) {
     position: relative;
     width: 100%;
     min-width: 130px;
@@ -601,7 +606,7 @@
     }
   }
 
-  .subform-entry:hover .subform-fields .multiselect {
+  .subform-entry:hover .subform-fields .multiselect:where(:not(.modal *)) {
     border-color: var(--table-line);
     background-color: var(--brando-surface);
   }
@@ -648,7 +653,7 @@
   }
 
   /* Dates: the box shrinks to its value; Clear shows on hover */
-  .subform-fields .field-base > .datetime-wrapper > div {
+  .subform-fields .field-base > .datetime-wrapper > div:where(:not(.modal *)) {
     height: 32px;
     min-height: 32px;
     gap: 6px;
@@ -683,7 +688,7 @@
     }
   }
 
-  .subform-entry:hover .subform-fields .field-base > .datetime-wrapper > div {
+  .subform-entry:hover .subform-fields .field-base > .datetime-wrapper > div:where(:not(.modal *)) {
     border-color: var(--table-line);
     background: var(--brando-surface);
 
@@ -693,7 +698,7 @@
   }
 
   /* Media: one line — a small preview, the name, and one menu */
-  .subform-fields .media-field--line {
+  .subform-fields .media-field--line:where(:not(.modal *)) {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -771,7 +776,7 @@
     }
   }
 
-  .subform-entry:hover .subform-fields .media-field--line .media-action-menu > .media-button {
+  .subform-entry:hover .subform-fields .media-field--line .media-action-menu > .media-button:where(:not(.modal *)) {
     border-color: var(--table-line);
     background: var(--brando-surface);
     color: var(--table-ink);
@@ -779,7 +784,7 @@
 
   /* Rich text: its preview as one line of text, boxed only on row hover, with
      a small edit button. Opened, the editor keeps its own size. */
-  .subform-table-body > :is(.subform-entry, .table-row) .field-base > .tiptap-wrapper {
+  .subform-table-body > :is(.subform-entry, .table-row) .field-base > .tiptap-wrapper:where(:not(.modal *)) {
     border-color: transparent;
     background: transparent;
 
@@ -832,7 +837,7 @@
     }
   }
 
-  .subform-table-body > :is(.subform-entry, .table-row):is(:hover, :focus-within) .field-base > .tiptap-wrapper {
+  .subform-table-body > :is(.subform-entry, .table-row):is(:hover, :focus-within) .field-base > .tiptap-wrapper:where(:not(.modal *)) {
     border-color: var(--table-line);
     background: var(--brando-surface);
 
@@ -848,7 +853,7 @@
   }
 
   @media (pointer: coarse) {
-    .subform-table-body .field-base > .tiptap-wrapper .tiptap-activate {
+    .subform-table-body .field-base > .tiptap-wrapper .tiptap-activate:where(:not(.modal *)) {
       opacity: 1;
     }
   }

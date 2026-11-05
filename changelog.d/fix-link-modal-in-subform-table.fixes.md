@@ -1,0 +1,1 @@
+- A link field's modal opened from an inline subform table, such as a navigation menu item's link, shows its field labels, help text and spacing again, instead of taking the table cells' compact look.
