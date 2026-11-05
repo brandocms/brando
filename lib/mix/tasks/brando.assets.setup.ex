@@ -41,7 +41,10 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
 
   A Yalc copy is published to a project-local Yalc store under `_build`.
   Node.js, pnpm and, for a Yalc copy, Yalc must already be installed; the
-  task checks them before it changes anything. pnpm
+  task checks them before it changes anything, and checks that the pnpm on
+  PATH runs each consumer: pnpm 10.5 or later runs the version its
+  `packageManager` names, while an older one cannot read the generated
+  `pnpm-workspace.yaml`. pnpm
   installs the native EuropaCSS compiler the admin's CSS, and a generated
   site's, build with from npm.
   Unless `--no-build` is supplied, builds both consumers. It does not run a
@@ -53,6 +56,10 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
   This is an operational task. The Igniter installer only generates source;
   it never runs this command as part of accepting a diff.
   """
+
+  # The first pnpm that reads a pnpm-workspace.yaml without `packages`, and
+  # so the oldest that runs the version a generated packageManager names.
+  @switching_pnpm Version.parse!("10.5.0")
 
   @switches [source: :string, local: :boolean, npm: :boolean, build: :boolean, backend_only: :boolean]
   @usage "Usage: mix brando.assets.setup [--local | --source PATH | --npm] [--no-build] [--backend-only]"
@@ -76,6 +83,7 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
     # missing tool or source never leaves it half-switched.
     source = options |> source(spec, Brando.version()) |> check_source!(backend, spec)
     Enum.each(required_tools(source), &require_tool!/1)
+    Enum.each(consumers, &check_pnpm!/1)
     install_brandojs(source, backend, spec)
 
     Enum.each(consumers, fn path ->
@@ -239,6 +247,88 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
   end
 
   defp read_package(dir), do: dir |> Path.join("package.json") |> File.read!() |> Jason.decode!()
+
+  @doc """
+  Checks that the pnpm on PATH can install the consumer in `dir`.
+
+  pnpm 10.5 and later run the version `packageManager` names, so `pnpm
+  --version` in `dir` reports the pnpm the install will use. An older one
+  stops at the generated `pnpm-workspace.yaml` ("packages field missing or
+  empty") without naming its version, and would do so after the admin had
+  changed; so would a pnpm older than the major `packageManager` names, if
+  it does not switch.
+  """
+  def check_pnpm!(dir) do
+    name = Path.relative_to_cwd(dir)
+    wanted = dir |> read_package() |> Map.get("packageManager") |> pnpm_version()
+
+    case System.cmd("pnpm", ["--version"], cd: dir, stderr_to_stdout: true) do
+      {output, 0} ->
+        version = pnpm_version(output)
+
+        if wanted && version && version.major < wanted.major,
+          do: Mix.raise(pnpm_error({:no_switch, version}, name, wanted))
+
+      {output, _status} ->
+        global = global_pnpm()
+
+        if global && Version.compare(global, @switching_pnpm) == :lt,
+          do: Mix.raise(pnpm_error({:too_old, global}, name, wanted)),
+          else: Mix.raise(pnpm_error({:failed, output}, name, wanted))
+    end
+  end
+
+  # The version pnpm reports outside any project, whose packageManager would
+  # otherwise choose it.
+  defp global_pnpm do
+    case System.cmd("pnpm", ["--version"], cd: System.tmp_dir!(), stderr_to_stdout: true) do
+      {output, 0} -> pnpm_version(output)
+      _ -> nil
+    end
+  end
+
+  defp pnpm_version(nil), do: nil
+
+  defp pnpm_version(text) do
+    with [_, version] <- Regex.run(~r/(?:^|pnpm@|\n)\s*(\d+\.\d+\.\d+(?:-[\w.]+)?)/, text),
+         {:ok, version} <- Version.parse(version),
+         do: version,
+         else: (_ -> nil)
+  end
+
+  defp pnpm_error({:too_old, version}, name, wanted) do
+    """
+    pnpm #{version} is too old for #{name}#{uses(wanted)}: pnpm before #{@switching_pnpm} cannot read its \
+    pnpm-workspace.yaml ("packages field missing or empty"). #{install_pnpm(wanted)}
+    """
+  end
+
+  defp pnpm_error({:no_switch, version}, name, wanted) do
+    """
+    pnpm #{version} runs #{name}, which uses pnpm #{wanted} (its packageManager), and does not switch to it \
+    (is pnpm's manage-package-manager-versions off?). #{install_pnpm(wanted)}
+    """
+  end
+
+  defp pnpm_error({:failed, output}, name, _wanted) do
+    """
+    pnpm --version failed in #{name}, so pnpm cannot install it:
+
+    #{String.trim(output)}
+
+    Fix that, then rerun mix brando.assets.setup. Nothing has changed yet.
+    """
+  end
+
+  defp uses(nil), do: ""
+  defp uses(wanted), do: ", which uses pnpm #{wanted} (its packageManager)"
+
+  defp install_pnpm(wanted) do
+    version = if wanted, do: to_string(wanted), else: "12"
+
+    "Install pnpm #{version} (npm install --global pnpm@#{version}, or corepack enable on a Node.js that " <>
+      "ships Corepack), then rerun mix brando.assets.setup. Nothing has changed yet."
+  end
 
   defp require_tool!(tool) do
     unless System.find_executable(tool),

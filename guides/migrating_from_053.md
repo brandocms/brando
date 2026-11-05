@@ -580,6 +580,11 @@ existing `pnpm-workspace.yaml` of the application's own, gets a notice naming
 what to move. The Dockerfile's `assets_backend` stage copies the file before
 `pnpm install`.
 
+The pnpm on your PATH must be 10.5 or later: it then runs the pnpm 12 that
+`packageManager` names, while an older one cannot read that
+`pnpm-workspace.yaml`. `mix brando.assets.setup` checks this before it changes
+anything; `npm install --global pnpm@12.15.0` brings an older one up to date.
+
 `assets/frontend` keeps the pnpm its `packageManager` names; pnpm 12 runs that
 version for it. To move the site to pnpm 12 as well, set its `packageManager`
 to `pnpm@12.15.0`, move its `pnpm` field to `assets/frontend/pnpm-workspace.yaml`

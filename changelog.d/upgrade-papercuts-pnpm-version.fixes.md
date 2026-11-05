@@ -1,0 +1,1 @@
+- `mix brando.assets.setup` checks the pnpm on PATH before it changes anything, and names a pnpm older than 10.5 as too old instead of stopping halfway with pnpm's "packages field missing or empty".

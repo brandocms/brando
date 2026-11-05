@@ -603,7 +603,8 @@ run `mix brando.assets.setup --local` (or `--source PATH`) to take BrandoJS
 from a Yalc copy of a checkout, and `mix brando.assets.setup --npm` to go back
 to the npm release of Brando's version. `--npm` also removes the Yalc copy.
 The task checks for Node.js, pnpm and, for a Yalc copy, Yalc before it changes
-anything. Use `--no-build` to install only, and `--backend-only` to install
+anything, and that the pnpm on PATH is 10.5 or later, which runs the pnpm 12
+each `packageManager` names. Use `--no-build` to install only, and `--backend-only` to install
 and build the admin alone.
 
 `pnpm build` writes `admin_manifest.json`, `manifest.json` and assets to the
