@@ -155,29 +155,114 @@ defmodule Mix.Tasks.Brando.Assets.SetupRunTest do
     calls = Path.join(directory, "calls")
     File.mkdir_p!(bin)
 
-    for tool <- ~w(node pnpm yalc) do
-      script = Path.join(bin, tool)
-      File.write!(script, "#!/bin/sh\necho \"#{tool} $*\" >> #{calls}\n")
-      File.chmod!(script, 0o755)
-    end
+    fake_tools!(bin, calls, ~s(if [ "$1" = --version ]; then echo 12.15.0; fi))
 
-    path = System.get_env("PATH")
-    System.put_env("PATH", bin)
-
-    try do
+    with_path(bin, fn ->
       File.cd!(directory, fn ->
         Setup.run(["--source", Path.join(directory, "brandojs"), "--backend-only", "--no-build"])
       end)
-    after
-      System.put_env("PATH", path)
-    end
+    end)
 
-    assert [publish, add, "pnpm install"] = calls |> File.read!() |> String.split("\n", trim: true)
+    assert ["pnpm --version", publish, add, "pnpm install"] = calls |> File.read!() |> String.split("\n", trim: true)
     assert publish =~ ~r/^yalc publish --store-folder /
     assert add =~ ~r/^yalc add @brandocms\/brandojs --pure --store-folder /
 
     package = directory |> Path.join("assets/backend/package.json") |> File.read!() |> Jason.decode!()
     assert package["dependencies"]["@brandocms/brandojs"] == "file:.yalc/@brandocms/brandojs"
+  end
+
+  describe "the pnpm on PATH" do
+    setup %{directory: directory} do
+      File.mkdir_p!(Path.join(directory, "brandojs"))
+      File.write!(Path.join(directory, "brandojs/package.json"), ~s({"name": "@brandocms/brandojs"}))
+
+      package = ~s({"dependencies": {"@brandocms/brandojs": "0.55.0"}, "packageManager": "pnpm@12.15.0"}\n)
+      File.write!(Path.join(directory, "assets/backend/package.json"), package)
+      File.write!(Path.join(directory, "assets/backend/pnpm-workspace.yaml"), "allowBuilds:\n  esbuild: true\n")
+
+      %{bin: Path.join(directory, "bin"), calls: Path.join(directory, "calls"), package: package}
+    end
+
+    defp switch!(directory, bin) do
+      with_path(bin, fn ->
+        File.cd!(directory, fn ->
+          Setup.run(["--source", Path.join(directory, "brandojs"), "--backend-only", "--no-build"])
+        end)
+      end)
+    end
+
+    defp unchanged!(directory, calls, package) do
+      assert File.read!(Path.join(directory, "assets/backend/package.json")) == package
+      refute File.exists?(Path.join(directory, "assets/backend/.yalc"))
+      refute calls |> File.read!() |> String.contains?("yalc")
+    end
+
+    test "before 10.5 cannot read the admin's pnpm-workspace.yaml, and says so before anything changes",
+         %{directory: directory, bin: bin, calls: calls, package: package} do
+      # As pnpm 10.4.1 does: inside the admin it stops at the workspace file.
+      fake_tools!(bin, calls, """
+      if [ "$1" = --version ]; then
+        if [ -f pnpm-workspace.yaml ]; then echo " ERROR  packages field missing or empty"; exit 1; fi
+        echo 10.4.1
+      fi
+      """)
+
+      error = assert_raise Mix.Error, fn -> switch!(directory, bin) end
+      assert error.message =~ "pnpm 10.4.1 is too old for assets/backend, which uses pnpm 12.15.0"
+      assert error.message =~ "npm install --global pnpm@12.15.0"
+      unchanged!(directory, calls, package)
+    end
+
+    test "older than the packageManager's major, when it does not switch, is refused",
+         %{directory: directory, bin: bin, calls: calls, package: package} do
+      fake_tools!(bin, calls, ~s(if [ "$1" = --version ]; then echo 11.1.0; fi))
+
+      assert_raise Mix.Error, ~r/pnpm 11\.1\.0 runs assets\/backend, .* does not switch to it/s, fn ->
+        switch!(directory, bin)
+      end
+
+      unchanged!(directory, calls, package)
+    end
+
+    test "that switches but fails for another reason shows pnpm's output",
+         %{directory: directory, bin: bin, calls: calls, package: package} do
+      fake_tools!(bin, calls, """
+      if [ "$1" = --version ]; then
+        if [ -f pnpm-workspace.yaml ]; then echo " ERR_PNPM_META_FETCH_FAIL  GET https://registry.npmjs.org/pnpm"; exit 1; fi
+        echo 12.15.0
+      fi
+      """)
+
+      assert_raise Mix.Error, ~r/pnpm --version failed in assets\/backend.*ERR_PNPM_META_FETCH_FAIL/s, fn ->
+        switch!(directory, bin)
+      end
+
+      unchanged!(directory, calls, package)
+    end
+  end
+
+  # Executables named node, pnpm and yalc in `bin` that record each call in
+  # `calls`; pnpm runs `pnpm` (shell) after recording.
+  defp fake_tools!(bin, calls, pnpm) do
+    File.mkdir_p!(bin)
+
+    for tool <- ~w(node pnpm yalc) do
+      script = Path.join(bin, tool)
+      body = if tool == "pnpm", do: pnpm, else: ""
+      File.write!(script, "#!/bin/sh\necho \"#{tool} $*\" >> #{calls}\n#{body}\n")
+      File.chmod!(script, 0o755)
+    end
+  end
+
+  defp with_path(bin, fun) do
+    path = System.get_env("PATH")
+    System.put_env("PATH", bin)
+
+    try do
+      fun.()
+    after
+      System.put_env("PATH", path)
+    end
   end
 
   test "a linked checkout is kept as it is, and a missing tool stops setup before anything changes",
