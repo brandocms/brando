@@ -35,6 +35,10 @@ export default defineConfig({
     // No PostCSS config: EuropaCSS and Vite's Lightning CSS pass do its work.
     postcss: { plugins: [] },
   },
+  // The admin build writes into the site's priv/static, where a public
+  // directory's files would land at the root, over the site's own favicon.ico
+  // and the like. The admin's assets come from BrandoJS; it has none.
+  publicDir: false,
   build: {
     manifest: 'admin_manifest.json',
     emptyOutDir: false,

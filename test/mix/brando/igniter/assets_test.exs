@@ -6,11 +6,11 @@ defmodule Mix.Brando.Igniter.AssetsTest do
   alias Mix.Tasks.Brando.Assets.Copy
 
   test "binary copies are scheduled, preserve bytes on disk, and never replace a changed target" do
-    igniter = IgniterCase.phoenix_project() |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Backend, [])
+    igniter = IgniterCase.phoenix_project() |> Igniter.compose_task(Mix.Tasks.Brando.Gen.Frontend, [])
     assert igniter.issues == []
 
     {"brando.assets.copy", [target, digest]} =
-      Enum.find(igniter.tasks, fn {_, [target, _]} -> String.ends_with?(target, "backend/public/favicon.ico") end)
+      Enum.find(igniter.tasks, fn {_, [target, _]} -> target == "assets/frontend/public/favicon.ico" end)
 
     refute Rewrite.has_source?(igniter.rewrite, target)
     refute Map.has_key?(igniter.assigns.test_files, target)
@@ -41,7 +41,7 @@ defmodule Mix.Brando.Igniter.AssetsTest do
     assert_raise Mix.Error, ~r/Unknown Brando binary asset/, fn -> Copy.run(["../outside.ico", "unused"]) end
 
     assert_raise Mix.Error, ~r/changed since planning/, fn ->
-      Copy.run(["assets/backend/public/favicon.ico", "stale"])
+      Copy.run(["assets/frontend/public/favicon.ico", "stale"])
     end
   end
 
@@ -368,6 +368,49 @@ defmodule Mix.Brando.Igniter.AssetsTest do
 
       assert upgraded["dependencies"]["@brandocms/brandojs"] == "0.55.0"
       refute Map.has_key?(upgraded["devDependencies"], "@brandocms/brandojs")
+    end
+
+    test "the admin build copies no public directory into priv/static, over the site's favicon" do
+      plan = upgrade(old_backend())
+      assert IgniterCase.source(plan, "assets/backend/vite.config.js") =~ "publicDir: false"
+      refute Enum.any?(plan.tasks, fn {_task, [target | _]} -> String.starts_with?(target, "assets/backend/") end)
+    end
+
+    test "removes the public files an earlier template wrote, and names a site's own" do
+      favicon = File.read!("test/fixtures/backend_054/favicon.ico")
+      avatar = File.read!("test/fixtures/backend_054/avatar.svg")
+
+      plan =
+        upgrade(
+          old_backend(%{
+            "assets/backend/public/favicon.ico" => favicon,
+            "assets/backend/public/images/admin/avatar.svg" => avatar
+          })
+        )
+
+      Igniter.Test.assert_rms(plan, [
+        "assets/backend/public/favicon.ico",
+        "assets/backend/public/images/admin/avatar.svg",
+        "assets/backend/svelte.config.cjs",
+        "assets/backend/yarn.lock"
+      ])
+
+      refute Enum.any?(plan.notices, &(&1 =~ "publicDir: false"))
+
+      plan =
+        upgrade(
+          old_backend(%{
+            "assets/backend/public/favicon.ico" => "the site's own icon",
+            "assets/backend/public/robots.txt" => "User-agent: *\n",
+            "assets/backend/public/images/admin/avatar.svg" => avatar
+          })
+        )
+
+      Igniter.Test.assert_unchanged(plan, ["assets/backend/public/favicon.ico", "assets/backend/public/robots.txt"])
+      assert "assets/backend/public/images/admin/avatar.svg" in plan.rms
+      assert notice = Enum.find(plan.notices, &(&1 =~ "publicDir: false"))
+      assert notice =~ "  assets/backend/public/favicon.ico\n  assets/backend/public/robots.txt\n"
+      refute notice =~ "avatar.svg"
     end
 
     test "removes an earlier template's legacy EuropaCSS configs and keeps a site's own with a notice" do

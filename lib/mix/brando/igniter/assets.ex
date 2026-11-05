@@ -44,6 +44,15 @@ if Code.ensure_loaded?(Igniter) do
     # Files earlier backend templates installed that nothing reads any more.
     # vite-plugin-svelte 7 loads only svelte.config.{js,ts,mjs,mts}.
     @retired_backend_files ~w(assets/backend/svelte.config.cjs)
+    # The files earlier backend templates put in assets/backend/public, by
+    # SHA-256: Brando's generic favicon and an avatar nothing used. The admin
+    # now builds with `publicDir: false`, as that directory's files landed at
+    # the root of priv/static, over the site's own favicon.
+    @retired_backend_public %{
+      "assets/backend/public/favicon.ico" => "7fd5f60f53b761ac33bfa86dac99083b6d727a421172fdc1579c60b733381b76",
+      "assets/backend/public/images/admin/avatar.svg" =>
+        "130cde3c107807855da2140e08d8df24f303bd72a83aa3bd6857d0982f584d1c"
+    }
     # Lockfiles of the package managers earlier templates used.
     @legacy_backend_lockfiles ~w(assets/backend/yarn.lock assets/backend/package-lock.json)
     @backend_package "assets/backend/package.json"
@@ -107,7 +116,9 @@ if Code.ensure_loaded?(Igniter) do
     The template's package versions, `engines` and `packageManager` replace
     the application's (its own extra packages, scripts and BrandoJS source
     stay), `vite.config.js` is replaced, files the template retired and
-    yarn/npm lockfiles are removed, the settings of `package.json`'s `pnpm`
+    yarn/npm lockfiles are removed (an earlier template's `favicon.ico` and
+    `images/admin/avatar.svg` in `assets/backend/public`, which the admin
+    build no longer copies, among them), the settings of `package.json`'s `pnpm`
     field that pnpm 11 stopped reading (`overrides`, `onlyBuiltDependencies`,
     `ignoredBuiltDependencies`) move to `pnpm-workspace.yaml` as
     `overrides` and `allowBuilds`, and the Dockerfile's `assets_backend`
@@ -126,6 +137,7 @@ if Code.ensure_loaded?(Igniter) do
       |> move_pnpm_settings()
       |> notice_workspace_gaps(@backend_workspace)
       |> remove_files(@retired_backend_files ++ @legacy_backend_lockfiles)
+      |> retire_backend_public()
       |> retire_legacy_europa_files()
       |> notice_legacy_css()
       |> upgrade_dockerfile()
@@ -159,6 +171,43 @@ if Code.ensure_loaded?(Igniter) do
           igniter
       end
     end
+
+    # The template's vite.config.js, which the upgrade writes, no longer copies
+    # assets/backend/public: an earlier template's files there go, and a
+    # site's own are named, as the admin build stops shipping them.
+    defp retire_backend_public(igniter) do
+      igniter = Igniter.include_glob(igniter, "assets/backend/public/**/*")
+
+      {retired, own} =
+        igniter.rewrite
+        |> Rewrite.sources()
+        |> Enum.filter(&String.starts_with?(&1.path, "assets/backend/public/"))
+        |> Enum.sort_by(& &1.path)
+        |> Enum.split_with(fn source ->
+          sha256(Rewrite.Source.get(source, :content)) == @retired_backend_public[source.path]
+        end)
+
+      igniter = Enum.reduce(retired, igniter, &Igniter.rm(&2, &1.path))
+
+      case own do
+        [] ->
+          igniter
+
+        own ->
+          Igniter.add_notice(igniter, """
+          The admin's vite.config.js now sets `publicDir: false`, so its build no longer copies
+          assets/backend/public into priv/static, where those files landed at the root, over the site's own.
+          These are not files Brando's templates wrote, so they were kept:
+
+          #{Enum.map_join(own, "\n", &"  #{&1.path}")}
+
+          Move any the site serves to assets/frontend/public, which the frontend build copies to priv/static,
+          and delete the rest.
+          """)
+      end
+    end
+
+    defp sha256(contents), do: :sha256 |> :crypto.hash(contents) |> Base.encode16(case: :lower)
 
     defp retire_legacy_europa_files(igniter) do
       Enum.reduce(@legacy_europa_files, igniter, &retire_legacy_europa_file/2)
