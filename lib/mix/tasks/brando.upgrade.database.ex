@@ -163,6 +163,13 @@ defmodule Mix.Tasks.Brando.Upgrade.Database do
     log = Enum.reverse(log)
     print_summary(log)
 
+    # A stop after `:replan` is told from the state read there.
+    {state, stop} =
+      case stop do
+        {:replanned, state, stop} -> {state, stop}
+        stop -> {state, stop}
+      end
+
     case stop do
       {:no_answer, message} ->
         Mix.raise(message)
@@ -203,7 +210,8 @@ defmodule Mix.Tasks.Brando.Upgrade.Database do
         entry -> entry
       end)
 
-    walk(plan, log, %{ctx | state: state})
+    {log, stop} = walk(plan, log, %{ctx | state: state})
+    {log, {:replanned, state, stop}}
   end
 
   defp walk([{:stop, reason} | rest], log, _ctx) do

@@ -74,7 +74,8 @@ Stop and review at these points:
   conversion check and after writing the Blueprint migrations, and asks before
   every step that changes the database. The copies of Brando's migrations it
   makes are Brando's templates, checked before they run: commit them with the
-  rest of the upgrade.
+  rest of the upgrade. On a Fabric deployment, hand the database user
+  `oban_job_state` (below) before you answer yes to the migrations.
   Publish the fragments the site shows before you answer yes to the resave
   ([section 4](#4-repair-derived-data)).
 - **After `mix brando.gettext.reconcile`.** Review the catalog diff.

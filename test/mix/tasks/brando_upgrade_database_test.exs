@@ -349,14 +349,17 @@ defmodule Mix.Tasks.Brando.Upgrade.DatabaseTest do
       assert output() =~ "mix brando.migrations.check --update"
     end
 
-    test "templates still without a copy after copying stop the run instead of copying again" do
-      copying = state(%{missing_templates: ["brando_103_x.exs"]})
-      replan = fn -> {copying, Database.plan(copying)} end
+    test "templates still without a copy after copying stop the run, naming those, instead of copying again" do
+      copying = state(%{missing_templates: ["brando_103_x.exs", "brando_104_y.exs"]})
+      left = state(%{missing_templates: ["brando_104_y.exs"]})
+      replan = fn -> {left, Database.plan(left)} end
 
       Task.execute(Database.plan(copying), copying, runner: recorder(), replan: replan)
 
       assert ran() == [:gen_migrations]
-      assert output() =~ "still have no copy in the application: brando_103_x.exs"
+      text = output()
+      assert text =~ "still have no copy in the application: brando_104_y.exs."
+      refute text =~ "brando_103_x"
     end
 
     test "derived data: asks once for the stretch, and again before adopting images" do
