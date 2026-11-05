@@ -28,6 +28,11 @@ defmodule Mix.Brando do
       end
 
       Mix.Task.run("app.start")
+
+      # Again, for an application or a dependency that sets the level as it
+      # starts: its debug log (SQL, in development) would otherwise run through
+      # the task's output.
+      Logger.configure(level: :error)
     end
 
     oban

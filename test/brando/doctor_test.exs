@@ -93,8 +93,46 @@ defmodule Brando.DoctorTest do
       assert text =~ ~r/^✓ Healthy\s+all good$/m
       assert text =~ ~r/^! Warns\s+2 things\n\s{29}do the thing$/m
       assert text =~ ~r/^✗ Fails\s+broken\n\s{29}mend it$/m
-      assert text =~ "1 warning, 1 error. Details: mix brando.doctor --verbose"
+      assert text =~ "1 error: Fails. 1 warning: Warns. Details: mix brando.doctor --verbose"
       refute text =~ "one thing"
+    end
+
+    test "the summary names every check behind each count" do
+      text =
+        [Warns, Healthy, Fails, Warns]
+        |> then(&Doctor.run(checks: &1))
+        |> Report.text(@versions)
+        |> IO.ANSI.format(false)
+        |> IO.iodata_to_binary()
+
+      assert text =~ "1 error: Fails. 2 warnings: Warns, Warns. Details:"
+    end
+
+    test "ascii: true prints ASCII marks, bullets and arrows, for an output that is not Unicode" do
+      text =
+        [Healthy, Warns, Fails]
+        |> then(&Doctor.run(checks: &1))
+        |> Kernel.++([
+          %Result{
+            id: "search",
+            label: "Search",
+            status: :warning,
+            summary: "stale…",
+            fix: "rebuild it under Configuration → Utilities",
+            items: []
+          }
+        ])
+        |> Report.text(@versions, verbose: true, ascii: true)
+        |> IO.ANSI.format(false)
+        |> IO.iodata_to_binary()
+
+      assert text =~ "Brando 0.55.0-dev - Phoenix 1.8.16 - LiveView 1.2.13"
+      assert text =~ ~r/^\+ Healthy\s+all good$/m
+      assert text =~ ~r/^! Warns\s+2 things$/m
+      assert text =~ ~r/^x Fails\s+broken$/m
+      assert text =~ "- one thing"
+      assert text =~ "Configuration -> Utilities"
+      assert text =~ ~r/\A[\x00-\x7F]*\z/
     end
 
     test "--verbose lists the items" do
