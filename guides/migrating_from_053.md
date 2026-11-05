@@ -1102,6 +1102,14 @@ dependency's `assets` directory to a store under `_build` and updates
 application's `assets/backend`, and a restart of its Vite. Do not use
 `yalc push`: it rewrites every project registered with Yalc on the machine.
 
+While working on Brando, `npx yalc publish` in its `assets` is enough: the
+admin's Vite dev server watches `~/.yalc` (or `YALC_STORE_FOLDER`) and pulls
+its newest publish when it was made after the admin last pulled BrandoJS
+(when Yalc copied it into `assets/backend/.yalc`). An older publish there, such as one
+from another checkout before `mix brando.assets.setup` installed the
+dependency's copy, is left alone with a warning at startup; publish again to
+pull it.
+
 `mix brando.gen.backend --upgrade` keeps where the admin takes BrandoJS from:
 an npm version moves to Brando's, and a Yalc copy or linked checkout stays.
 When Brando is a release and the admin still uses a Yalc copy, a notice
