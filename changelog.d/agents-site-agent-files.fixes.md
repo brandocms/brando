@@ -1,0 +1,1 @@
+- Rerunning `mix brando.install` or a versioned `mix brando.upgrade` no longer replaces the skill files in `.claude/skills/` that a site has edited.

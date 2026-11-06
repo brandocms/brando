@@ -512,12 +512,30 @@ Otherwise a notice shows the file's contents to add yourself.
   file. `mix usage_rules.sync` from the `usage_rules` package can take that
   section over; it loads the topic files in `deps/brando/usage-rules/` as
   `brando:<topic>`.
+* `AGENTS.md` also gets a short site section, between
+  `<!-- brando-site-start -->` and `<!-- brando-site-end -->` and before the
+  usage-rules block, so a sync never rewrites it. It has a placeholder for
+  the client and the site's purpose, how to run the site and its two Vite
+  bundles, and when to load the frontend skills. Fill it in: agents read it
+  on every turn.
+* `CLAUDE.md` contains `@AGENTS.md`, so Claude Code reads the same file as
+  other agents. An existing `CLAUDE.md` is kept, with a notice when it does
+  not import `AGENTS.md`.
 * `.claude/skills/` gets Brando's skills for building a site: Blueprints,
-  blocks and modules, live preview, media fields and deploys.
+  blocks and modules, the public frontend (CSS file map, module styling,
+  palettes, Moonwalk, fonts), EuropaCSS, live preview, media fields and
+  deploys.
 
-A versioned `mix brando.upgrade` adds the ones that are missing. Neither task
-replaces a skill file or a `brando` section that already exists, so edit them
-freely.
+A versioned `mix brando.upgrade` adds the ones that are missing, and
+`mix brando.gen.agents` adds them on its own, for a site installed before
+they existed. None of these replaces a skill file, the `brando` section, the
+site section or `CLAUDE.md` once it exists, so edit them freely.
+
+To take the skills Brando ships now over the copies in `.claude/skills/`,
+run `mix brando.gen.agents --refresh` and review the diff before accepting
+it: it replaces every shipped skill file the application has, edited or not.
+Skills the application added itself are left alone, and `AGENTS.md` and
+`CLAUDE.md` are still kept.
 
 <!-- usage-rules:end -->
 
