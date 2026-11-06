@@ -6,7 +6,7 @@ defmodule Brando.SequenceLoadOrderTest do
   # breaks the tie everywhere these rows are loaded. Each test writes two rows
   # with the same sequence, rewrites the first so it moves behind the second
   # on disk, and checks they still load in the order they were written.
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   use Brando.ConnCase
 
   import Ecto.Query

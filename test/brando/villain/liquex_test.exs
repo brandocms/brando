@@ -1,5 +1,8 @@
 defmodule Brando.Villain.LiquexTest do
-  use ExUnit.Case, async: true
+  # Synchronous: create_global_set/2 in its setup replaces the shared
+  # globals cache with what its sandbox holds, which tests running beside it
+  # would read
+  use ExUnit.Case, async: false
   use Brando.ConnCase
   alias Brando.Factory
   doctest Brando.Villain.Filters

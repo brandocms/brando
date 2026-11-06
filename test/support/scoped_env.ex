@@ -6,11 +6,12 @@ defmodule Brando.Test.ScopedEnv do
 
   `Brando.RuntimeConfig.get/1` (`Brando.config/1`) looks a key up for the
   calling process, then for each process in its `$callers`, before the
-  application environment. That reaches what a test starts on its behalf: a
-  LiveView mounted with `Phoenix.LiveViewTest.live/2` (which puts the test in
-  its `$callers`), a Task, a `start_supervised` child. A long-lived process
-  that does not carry the test in its `$callers` (one in the application's
-  supervision tree) reads the application environment, as it does in a site.
+  application environment. That reaches a Task the test starts, and a
+  LiveView or channel it mounts (`Phoenix.LiveViewTest.live/2` puts the test
+  in the view's `$callers`), and the Tasks those start. A GenServer, even a
+  `start_supervised` child, does not carry `$callers`, nor does an `on_exit`
+  callback: they read the application environment, as a process in the
+  application's supervision tree does in a site.
 
   Only `Brando.RuntimeConfig.get/1` reads this, and only when Brando is
   compiled with `config :brando, scoped_test_env: true` (config/test.exs): a

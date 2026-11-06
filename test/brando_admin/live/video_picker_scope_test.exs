@@ -8,7 +8,10 @@ defmodule BrandoAdmin.VideoPickerScopeTest do
   A video picked from the library is linked as it is. New videos still take
   the field's config, whichever scope is on screen.
   """
-  use Brando.LiveCase, async: true
+  # Grouped, one at a time: a media list or picker inserts the folders of
+  # the upload paths (BrandoAdmin.Images.FolderBrowser), unique by path, which
+  # concurrent transactions would wait on
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   alias Brando.Videos.Video
   alias BrandoAdmin.Components.VideoPicker

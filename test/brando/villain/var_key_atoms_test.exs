@@ -1,7 +1,7 @@
 defmodule Brando.Villain.VarKeyAtomsTest do
   # A var's key comes from stored content. Rendering a block makes no atom of
   # it: a template reads the keys it names, and those exist once it is compiled.
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Brando.Content.Module
   alias Brando.Content.Var

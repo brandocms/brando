@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.WorkTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   use Brando.ConnCase
 
   alias BrandoAdmin.Work

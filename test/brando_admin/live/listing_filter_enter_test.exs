@@ -1,7 +1,10 @@
 defmodule BrandoAdmin.ListingFilterEnterTest do
   # Enter in a listing's text filter (`submit_filter` in `Content.List`) on the
   # test Article's `:filters` listing, whose "Title" filter is a text filter.
-  use Brando.LiveCase, async: true
+  # Grouped, one at a time: a media list or picker inserts the folders of
+  # the upload paths (BrandoAdmin.Images.FolderBrowser), unique by path, which
+  # concurrent transactions would wait on
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   alias Brando.SyncTest
 

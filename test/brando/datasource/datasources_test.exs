@@ -1,5 +1,5 @@
 defmodule Brando.DatasourcesTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
   use Brando.ConnCase
 
   alias Brando.Factory

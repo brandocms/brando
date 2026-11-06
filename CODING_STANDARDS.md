@@ -28,9 +28,11 @@ sandbox, so a leak shows up as another test failing, by suite order.
 - **An unshared sandbox.** Start the owner with `Sandbox.start_owner!/1` and
   `Sandbox.allow/3` the processes that need it; in shared mode a process left
   over from an earlier test can take the connection and lock rows (#3119).
-  Shared mode belongs only in an `async: false` case template whose processes
-  the test cannot name (LiveView, channels); the `TestSandboxShared` Credo
-  check enforces this against the allowlist, with reasons, in `.credo.exs`.
+  Shared mode belongs only in an `async: false` case template, for processes
+  that do not carry the test in their `$callers` (a GenServer in the
+  application's supervision tree); a LiveView mounted with `live/2` and the
+  Tasks it starts do carry it. The `TestSandboxShared` Credo check enforces
+  this against the allowlist, with reasons, in `.credo.exs`.
 - **Application env through `put_test_env/2`**, which restores an absent key
   as absent; a restored `nil` breaks the next `get_env/3` default.
 - **Unique values against unique indexes.** Take ids and keys from
@@ -48,6 +50,39 @@ sandbox, so a leak shows up as another test failing, by suite order.
   stopping a process, wait for its `:DOWN`, or make the code treat a dead
   registered pid as absent. The edit session lookup returned a pid the
   Registry had not yet removed (`d06740f1d`).
+
+### Async unless something shared says otherwise
+
+A synchronous module runs alone, after every async one, so the unit suite
+takes as long as its longest chain of synchronous modules. A new module is
+`async: true`, `Brando.LiveCase` included, unless it touches one of these:
+
+- **Application env other than `:tenancy_mode` and `:authorization_mode`.**
+  `put_test_env/2` sets those two for the test and the Tasks, LiveViews and
+  channels it starts (`Brando.Test.ScopedEnv`); every other key, and either
+  of the two with `global: true` for a GenServer to see, is global. So are
+  helpers that save and restore it (`AIStub.configure/0`,
+  `AnalyticsStub.configure/1`, `MCPHelpers.setup_fetcher/0`): two at once
+  restore each other's values.
+- **A singleton cache refreshed from the sandbox**: identity, SEO, global
+  sets, palettes, navigation (`Sites.update_identity/2`,
+  `create_global_set/2`, and the admin forms that save them). The query
+  cache is not one: each test reads only its own entries.
+- **DDL or `LOCK TABLE`**: migration tests, `MigrationTemplates`,
+  `BlockAudit`, the definition importer. A lock taken in the sandbox lasts
+  until the test ends, and blocks every test that writes the table.
+- **Igniter tasks that format**: Igniter puts the project's config into the
+  application environment while it formats.
+- **The whole VM or a shared topic**: atom or process counts, a telemetry
+  handler that does not check `self()` against the test and its `$callers`,
+  the next broadcast on `"lobby"`.
+
+A module that waits on a fixed row or lock (the authorization lock
+`Groups.lock!/0`, the proposal and transfer advisory locks, ProposalFixtures'
+pages, the media folders a list or picker creates) is
+`async: true, group: :shared_locks`: one at a time with the others in that
+group, beside everything else. Run a new async module's file with
+`--repeat-until-failure`, and the suite with a few `--seed`s.
 
 ### Flaky means broken
 

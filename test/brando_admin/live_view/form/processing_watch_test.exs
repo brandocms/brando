@@ -363,6 +363,7 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
       end,
       nil
     )
+
     on_exit(fn -> :telemetry.detach(handler) end)
 
     fn ->

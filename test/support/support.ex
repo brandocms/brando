@@ -13,15 +13,16 @@ defmodule Brando.Test.Support do
   Sets `key` for one test and restores it properly afterwards.
 
   `:tenancy_mode` and `:authorization_mode` are set for this test and the
-  processes it starts (`Brando.Test.ScopedEnv`), so a module that sets only
-  those can be `async: true`. Every other key goes into the application
+  Tasks, LiveViews and channels it starts (`Brando.Test.ScopedEnv`), so a
+  module that sets only those can be `async: true`. A GenServer it starts
+  does not see them. Every other key goes into the application
   environment, `Application.put_env(:brando, key, value)`, which every test
   running at the time reads: a module that sets one stays synchronous.
 
   `global: true` sets one of the two in the application environment as well,
-  for a test of a process in the application's supervision tree (cluster
-  cache sync, the assistant's runs), which does not carry the test in its
-  `$callers`. Such a module stays synchronous too.
+  for a test of a GenServer or a process in the application's supervision
+  tree (cluster cache sync, the assistant's runs), which does not carry the
+  test in its `$callers`. Such a module stays synchronous too.
 
   "Properly" is the whole reason this exists. The obvious restore —
 

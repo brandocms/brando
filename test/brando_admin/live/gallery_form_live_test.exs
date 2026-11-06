@@ -1,5 +1,8 @@
 defmodule BrandoAdmin.GalleryFormLiveTest do
-  use Brando.LiveCase, async: true
+  # Grouped, one at a time: a media list or picker inserts the folders of
+  # the upload paths (BrandoAdmin.Images.FolderBrowser), unique by path, which
+  # concurrent transactions would wait on
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   alias Brando.Content.Block
   alias Brando.Factory

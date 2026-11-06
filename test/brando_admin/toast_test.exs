@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.ToastTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   alias Brando.Content.Identifier
   alias Phoenix.Socket.Broadcast

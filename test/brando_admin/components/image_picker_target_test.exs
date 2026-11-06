@@ -2,7 +2,10 @@ defmodule BrandoAdmin.Components.ImagePickerTargetTest do
   # A block's upload opened the picker scoped to whatever field opened it
   # last: without a `config_target` of its own it kept the previous one, so
   # after a page's meta image the block browsed `images/meta`.
-  use Brando.ConnCase, async: true
+  # Grouped, one at a time: a media list or picker inserts the folders of
+  # the upload paths (BrandoAdmin.Images.FolderBrowser), unique by path, which
+  # concurrent transactions would wait on
+  use Brando.ConnCase, async: true, group: :shared_locks
 
   alias BrandoAdmin.Components.ImagePicker
 
