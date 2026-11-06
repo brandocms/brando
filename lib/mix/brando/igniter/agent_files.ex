@@ -73,7 +73,6 @@ if Code.ensure_loaded?(Igniter) do
     def plan(igniter, opts \\ []) do
       igniter
       |> skills(Keyword.get(opts, :refresh, false))
-      # Before AGENTS.md changes: a CLAUDE.md linked to it reads as its content.
       |> claude_md()
       |> agents_md()
     end
@@ -140,14 +139,24 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # An `@AGENTS.md` import anywhere, or the same content as AGENTS.md: a
-    # CLAUDE.md symlinked to it reads as AGENTS.md, and replacing it as the
-    # notice says would overwrite AGENTS.md through the link.
+    # An `@AGENTS.md` import outside code blocks (Claude Code ignores those),
+    # or a symlink to AGENTS.md: replacing that as the notice says would
+    # overwrite AGENTS.md through the link.
     defp imports_agents?(igniter) do
-      claude = content(igniter, @claude)
+      code_blocks = ~r/^\s*```.*?^\s*```/ms
+      claude = Regex.replace(code_blocks, content(igniter, @claude), "")
 
-      claude =~ ~r{(^|\s)@(\./)?AGENTS\.md(\s|$)} or
-        (Igniter.exists?(igniter, @agents) and claude == content(igniter, @agents))
+      claude =~ ~r{(^|\s)@(\./)?AGENTS\.md(\s|$)} or links_to_agents?(igniter)
+    end
+
+    # Test projects have no symlinks; their CLAUDE.md is not on disk.
+    defp links_to_agents?(igniter) do
+      with false <- Map.get(igniter.assigns, :test_mode?, false),
+           {:ok, target} <- File.read_link(@claude) do
+        Path.basename(target) == @agents
+      else
+        _ -> false
+      end
     end
 
     defp content(igniter, path) do

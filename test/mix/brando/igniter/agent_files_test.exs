@@ -107,21 +107,23 @@ defmodule Mix.Brando.Igniter.AgentFilesTest do
   test "an existing CLAUDE.md is untouched, with a notice when it does not import AGENTS.md" do
     copied = "# Old site notes\n\nRun yarn in assets/frontend.\n"
 
-    # An import on its own line or inline, and a symlink to AGENTS.md (read as its content).
-    for {claude, agents} <- [
-          {"# Notes\n\n@AGENTS.md\n", @phoenix_agents},
-          {"Read @./AGENTS.md first.\n", @phoenix_agents},
-          {@site_section <> @phoenix_agents, @site_section <> @phoenix_agents}
-        ] do
-      importing = install(project(%{"CLAUDE.md" => claude, "AGENTS.md" => agents}))
+    # An import on its own line or inline.
+    for claude <- ["# Notes\n\n@AGENTS.md\n", "Read @./AGENTS.md first.\n"] do
+      importing = install(project(%{"CLAUDE.md" => claude, "AGENTS.md" => @phoenix_agents}))
       Igniter.Test.assert_unchanged(importing, "CLAUDE.md")
       refute Enum.any?(importing.notices, &(&1 =~ "CLAUDE.md")), claude
     end
 
-    copy = install(project(%{"CLAUDE.md" => copied}))
-    assert copy.issues == []
-    Igniter.Test.assert_unchanged(copy, "CLAUDE.md")
-    assert Enum.any?(copy.notices, &(&1 =~ "CLAUDE.md does not import AGENTS.md"))
+    # An old copy, a copy of AGENTS.md (which then misses what install adds to
+    # it), and an import shown only in a code block.
+    fenced = "# Notes\n\nAdd this line:\n\n```\n@AGENTS.md\n```\n"
+
+    for claude <- [copied, @phoenix_agents, fenced] do
+      copy = install(project(%{"CLAUDE.md" => claude, "AGENTS.md" => @phoenix_agents}))
+      assert copy.issues == []
+      Igniter.Test.assert_unchanged(copy, "CLAUDE.md")
+      assert Enum.any?(copy.notices, &(&1 =~ "CLAUDE.md does not import AGENTS.md")), claude
+    end
   end
 
   test "the site section goes once before the usage-rules markers, and reruns leave it alone" do
