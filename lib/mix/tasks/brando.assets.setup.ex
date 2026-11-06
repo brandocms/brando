@@ -326,14 +326,14 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
   defp pnpm_error({:too_old, version}, name, wanted) do
     """
     pnpm #{version} is too old for #{name}#{uses(wanted)}: pnpm before #{@switching_pnpm} cannot read its \
-    pnpm-workspace.yaml ("packages field missing or empty"). #{install_pnpm(wanted)}
+    pnpm-workspace.yaml ("packages field missing or empty"). #{on_path()}#{install_pnpm(wanted)}
     """
   end
 
   defp pnpm_error({:no_switch, version}, name, wanted) do
     """
     pnpm #{version} runs #{name}, which uses pnpm #{wanted} (its packageManager), and does not switch to it \
-    (is pnpm's manage-package-manager-versions off?). #{install_pnpm(wanted)}
+    (is pnpm's manage-package-manager-versions off?). #{on_path()}#{install_pnpm(wanted)}
     """
   end
 
@@ -345,6 +345,39 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
 
     Fix that, then rerun mix brando.assets.setup. Nothing has changed yet.
     """
+  end
+
+  # Which pnpm ran, and the others on PATH after it: a pnpm that asdf, mise
+  # or Corepack pins is not the one run when another comes before it.
+  defp on_path do
+    case pnpms_on_path() do
+      [] ->
+        ""
+
+      [first] ->
+        "That is #{first}, the only pnpm on PATH. "
+
+      [first | later] ->
+        verb = if match?([_], later), do: "comes", else: "come"
+
+        "That is #{first}, the first pnpm on PATH; #{Enum.join(later, ", ")} #{verb} after it, so a newer " <>
+          "pnpm among them (one a version manager pins, say) runs only once #{first} is removed or comes " <>
+          "later on PATH. "
+    end
+  end
+
+  # The pnpm executables on PATH, in the order PATH gives them, each once.
+  defp pnpms_on_path do
+    "PATH"
+    |> System.get_env("")
+    |> String.split(":", trim: true)
+    |> Enum.map(&Path.join(Path.expand(&1), "pnpm"))
+    |> Enum.filter(&executable?/1)
+    |> Enum.uniq()
+  end
+
+  defp executable?(file) do
+    match?({:ok, %File.Stat{type: :regular, mode: mode}} when Bitwise.band(mode, 0o111) != 0, File.stat(file))
   end
 
   defp uses(nil), do: ""

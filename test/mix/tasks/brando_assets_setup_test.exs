@@ -219,7 +219,28 @@ defmodule Mix.Tasks.Brando.Assets.SetupRunTest do
 
       error = assert_raise Mix.Error, fn -> switch!(directory, bin) end
       assert error.message =~ "pnpm 10.4.1 is too old for assets/backend, which uses pnpm 12.15.0"
+      assert error.message =~ "That is #{bin}/pnpm, the only pnpm on PATH."
       assert error.message =~ "npm install --global pnpm@12.15.0"
+      unchanged!(directory, calls, package)
+    end
+
+    test "that is too old names it, and the pnpm executables PATH has after it",
+         %{directory: directory, bin: bin, calls: calls, package: package} do
+      # As a standalone pnpm 10.4.1 ahead of the pnpm 12 a version manager pins.
+      fake_tools!(bin, calls, """
+      if [ "$1" = --version ]; then
+        if [ -f pnpm-workspace.yaml ]; then echo " ERROR  packages field missing or empty"; exit 1; fi
+        echo 10.4.1
+      fi
+      """)
+
+      pinned = Path.join(directory, "pinned")
+      File.mkdir_p!(pinned)
+      File.write!(Path.join(pinned, "pnpm"), "#!/bin/sh\necho 12.15.0\n")
+      File.chmod!(Path.join(pinned, "pnpm"), 0o755)
+
+      error = assert_raise Mix.Error, fn -> switch!(directory, bin <> ":" <> pinned <> ":" <> bin) end
+      assert error.message =~ "That is #{bin}/pnpm, the first pnpm on PATH; #{pinned}/pnpm comes after it"
       unchanged!(directory, calls, package)
     end
 
