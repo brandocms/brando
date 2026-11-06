@@ -37,7 +37,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
-    "@brandocms/jupiter": "5.0.0-beta.20",
+    "@brandocms/jupiter": "5.0.0-beta.21",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-html": "^6.4.12",
     "@codemirror/lang-liquid": "^6.3.3",

@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@brandocms/brandojs": "link:../../../assets",
-    "@brandocms/jupiter": "5.0.0-beta.20"
+    "@brandocms/jupiter": "5.0.0-beta.21"
   },
   "devDependencies": {
     "@brandocms/europacss-cli": "0.1.0-beta.0",
