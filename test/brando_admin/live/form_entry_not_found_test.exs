@@ -3,7 +3,7 @@ defmodule BrandoAdmin.FormEntryNotFoundTest do
   # another tab) must not raise from its async load. The LiveView would die
   # after it had connected, the client would rejoin, and the next mount would
   # raise again: a crash loop that only ends when the tab is closed.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   test "a missing entry sends the form back to its listing", %{conn: conn} do
     {:ok, view, _html} = live(conn, "/admin/pages/update/0")

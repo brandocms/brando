@@ -3,7 +3,9 @@ defmodule BrandoAdmin.BlockMoveMenuTest do
   # through the parent's `reposition`, the path a drag takes: root blocks in
   # the block field, children in their container or multi module. A move
   # past either end does nothing.
-  use Brando.LiveCase
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Ecto.Query, only: [from: 2]
 

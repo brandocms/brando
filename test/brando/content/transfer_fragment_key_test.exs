@@ -3,7 +3,9 @@ defmodule Brando.Content.TransferFragmentKeyTest do
   # signed, so creating one from it holds the key to the format, as the form
   # does, and the preview says which key and why. Changing the key in the
   # preview, or updating a fragment that has the key already, goes through.
-  use Brando.ConnCase, async: false
+  # Grouped, one at a time: Transfer.apply/3 takes a content advisory lock, which a
+  # test's sandbox transaction holds until the test ends
+  use Brando.ConnCase, async: true, group: :shared_locks
 
   alias Brando.Content.Transfer
   alias Brando.{Factory, Repo}

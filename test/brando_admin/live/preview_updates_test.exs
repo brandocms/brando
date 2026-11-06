@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.PreviewUpdatesTest do
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   import Brando.EditSessionEditors, only: [await: 1]
 

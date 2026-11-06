@@ -5,7 +5,7 @@ defmodule BrandoAdmin.Live.Content.ModuleDestructiveSaveTest do
   the change reaches, and that it does not stand between the editor and an
   ordinary save.
   """
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 2]

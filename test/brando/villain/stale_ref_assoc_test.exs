@@ -13,7 +13,7 @@ defmodule Brando.Villain.StaleRefAssocTest do
   These tests pin the disagreement directly: build a ref whose FK and
   association point at different assets, and assert the FK wins.
   """
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Content

@@ -4,7 +4,7 @@ defmodule Brando.Content.OrphanedBlocksTest do
   # child — and every block belonging to any other join schema — as orphaned.
   # Acting on that list would delete live content, and deleting even a genuine
   # orphan breaks revision restore.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Content.Blocks, as: ContentBlocks

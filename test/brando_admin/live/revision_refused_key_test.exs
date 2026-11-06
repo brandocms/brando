@@ -3,7 +3,7 @@ defmodule BrandoAdmin.RevisionRefusedKeyTest do
   # bring that key back once the fragment is renamed. The revisions drawer
   # says which field refused it, and Activity shows a scheduled one that was
   # cancelled for it.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Pages
   alias Brando.Pages.Fragment

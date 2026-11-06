@@ -1,5 +1,5 @@
 defmodule Brando.Trait.PermalinkPreloadsTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   defmodule Entry do

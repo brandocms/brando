@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.SelectUpdateRelationTest do
   # returns on the relation. Fetchers are written both ways: `{:ok, record}`
   # (as documented) and the record itself (a `get_x!` query, as
   # `Brando.Content.Container.get_palette/1` is).
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory

@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.ContentLanguageSwitchTest do
   # The content language row at the foot of the sidebar: it names the language
   # being edited and opens a list to switch.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   test "names the content language and lists the others on click", %{conn: conn} do
     {:ok, view, html} = live(conn, "/admin/pages")

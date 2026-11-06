@@ -2,7 +2,9 @@ defmodule Brando.PublisherPendingRightTest do
   # Pending is a request to publish that `Brando.Publisher.sweep/1` carries out
   # as the system once the date has come, so setting it takes the publish
   # right, as publishing does. Who may publish keeps pending as it was.
-  use ExUnit.Case
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use ExUnit.Case, async: true, group: :shared_locks
   use Brando.ConnCase
 
   import Ecto.Query, only: [from: 2]

@@ -2,7 +2,7 @@ defmodule BrandoAdmin.PageUriPrefixTest do
   # A page resolves by its whole path, so a child of `about` needs the URI
   # `about/team`. The URI input carries the parent's URI as a prefix for the
   # slug it generates from the title; the Slug hook puts it in front.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Factory
   alias Brando.Pages.Page

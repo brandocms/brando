@@ -1,7 +1,7 @@
 defmodule Brando.AI.TranslationHtmlRefTest do
   # AI translation of a copied entry reads and writes only the values of an
   # HTML ref's `text` parameters, never its markup or an SVG ref's code.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.AI.Translation

@@ -10,7 +10,7 @@ defmodule BrandoAdmin.Components.Form.Block.ChildDiffTest do
   #
   # Roots are unaffected: they rebase on `changeset.data`, so their diffs are
   # already cumulative vs. the DB and replacing is the correct semantic there.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 2]

@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.DatesTest do
   # One way to show a date in the admin: local time, the admin's language.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   import Phoenix.LiveViewTest, only: [rendered_to_string: 1]
 

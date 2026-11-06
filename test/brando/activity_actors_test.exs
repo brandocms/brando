@@ -2,7 +2,9 @@ defmodule Brando.ActivityActorsTest do
   # Who made each change: a person, the Assistant, a tool connected over MCP
   # or an automatic job, with the proposal a change came from and the user
   # who approved and applied it.
-  use Brando.ConnCase, async: false
+  # Grouped, one at a time: Proposals.apply takes a content advisory lock, which a
+  # test's sandbox transaction holds until the test ends
+  use Brando.ConnCase, async: true, group: :shared_locks
 
   import Ecto.Query, only: [from: 2]
 

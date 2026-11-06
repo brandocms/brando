@@ -1,5 +1,8 @@
 defmodule BrandoAdmin.Images.SweepTest do
-  use ExUnit.Case, async: false
+  # Grouped, one at a time: a media list or picker inserts the folders of
+  # the upload paths (BrandoAdmin.Images.FolderBrowser), unique by path, which
+  # concurrent transactions would wait on
+  use ExUnit.Case, async: true, group: :shared_locks
   use Brando.ConnCase
 
   import Ecto.Query

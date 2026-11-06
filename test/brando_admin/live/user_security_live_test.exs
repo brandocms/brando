@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.UserSecurityLiveTest do
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   import Ecto.Query, only: [from: 2]
 

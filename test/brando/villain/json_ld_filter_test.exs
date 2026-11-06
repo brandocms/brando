@@ -1,5 +1,5 @@
 defmodule Brando.Villain.JSONLDFilterTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   # The Liquid test reads the base context, which falls back to the database
   # when the cache is cold
   use Brando.ConnCase

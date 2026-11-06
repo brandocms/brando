@@ -2,7 +2,7 @@ defmodule BrandoAdmin.LockedBlockMoveTest do
   # A synchronized translation's blocks follow its source: moving a child,
   # from the block menu or by a drag's `reposition`, is refused with a
   # notice, and the order the editor sees is the order that stays.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Content.Block
   alias Brando.Repo

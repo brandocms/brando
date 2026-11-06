@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Components.Form.EntryPictureBlockSyncTest do
   # Picking, uploading, removing or resetting the image in the form commits the
   # relation's id; the block reads the relation, so the form delivers the
   # relation itself, and the preview follows.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 1]

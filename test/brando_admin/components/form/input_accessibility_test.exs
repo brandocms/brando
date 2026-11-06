@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.InputAccessibilityTest do
   Every control the admin renders goes through `Input.input/1`, so the accessible
   state of a field is decided in one place. These pin what it emits — issue #1996.
   """
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   import Ecto.Changeset, only: [cast: 3, add_error: 3]
   import Phoenix.Component, only: [to_form: 2]

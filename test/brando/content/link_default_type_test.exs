@@ -2,7 +2,7 @@ defmodule Brando.Content.LinkDefaultTypeTest do
   # A link var's default tab (`link_default_type`) is where its dialog opens
   # while the link is empty: copies from the module start there, and a changed
   # default moves the empty vars of existing blocks and of the var itself.
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
 
   import Ecto.Query, only: [from: 2]
 

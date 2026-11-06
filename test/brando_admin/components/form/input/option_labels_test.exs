@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Components.Form.Input.OptionLabelsTest do
   # label's markup as written. Code that wants markup in a label (a palette's
   # swatches) passes it as `{:safe, iodata}`. Each payload is an image with an
   # inert marker attribute; a live one in the render would be markup that runs.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 2]

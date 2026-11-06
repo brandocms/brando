@@ -5,7 +5,7 @@ defmodule Brando.Content.ConditionalRefsTest do
   # before the editor splits it into ref slots, so no inputs render for a ref
   # that lives inside one. `refs` is `on_replace: :delete_if_exists`, so these
   # pin what `cast_assoc(:refs)` does when params list a subset.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.LiveViewTest, only: [render_component: 2]

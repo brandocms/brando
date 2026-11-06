@@ -1,5 +1,5 @@
 defmodule Brando.Blueprint.MigrationPlanTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias Brando.Blueprint.Migrations
   alias Brando.Blueprint.Snapshot

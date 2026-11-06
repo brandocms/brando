@@ -1,5 +1,5 @@
 defmodule BrandoWeb.PreviewControllerTest do
-  use Brando.ConnCase
+  use Brando.ConnCase, async: true
   alias Brando.Sites.Preview
 
   test "shared previews expire even when the purge worker has not run" do

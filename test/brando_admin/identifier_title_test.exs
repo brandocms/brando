@@ -3,7 +3,9 @@ defmodule BrandoAdmin.IdentifierTitleTest do
   # title escaped. The admin screens printing it decode it first, so it is
   # escaped exactly once and markup in a title stays text. A Liquid
   # identifier stores the title as written, and it is printed as written.
-  use Brando.ConnCase, async: false
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.ConnCase, async: true, group: :shared_locks
 
   import Phoenix.Component, only: [sigil_H: 2]
   import Phoenix.LiveViewTest

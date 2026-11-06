@@ -1,7 +1,10 @@
 defmodule BrandoAdmin.ImageSweepLiveTest do
   # The image library's "Sort by use" (BrandoAdmin.Images.Sweep) and the
   # "Not in use" filter's delete-all.
-  use Brando.LiveCase
+  # Grouped, one at a time: a media list or picker inserts the folders of
+  # the upload paths (BrandoAdmin.Images.FolderBrowser), unique by path, which
+  # concurrent transactions would wait on
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Ecto.Query
 

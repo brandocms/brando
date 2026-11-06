@@ -1,5 +1,5 @@
 defmodule Brando.Villain.Block.PictureBlockTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   alias Brando.Content.Module
   alias Brando.Content.Ref
   alias Brando.Content.Var

@@ -1,5 +1,5 @@
 defmodule Brando.Blueprint.TraitTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Trait

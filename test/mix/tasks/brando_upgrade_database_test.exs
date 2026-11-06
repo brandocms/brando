@@ -32,6 +32,8 @@ end
 defmodule Mix.Tasks.Brando.Upgrade.DatabaseTest do
   use ExUnit.Case, async: false
 
+  import Brando.Test.Support, only: [put_test_env: 2]
+
   alias Brando.Blueprint.Migrations
   alias Brando.Upgrade.Database
   alias Mix.Tasks.Brando.Upgrade.Database, as: Task
@@ -445,15 +447,7 @@ defmodule Mix.Tasks.Brando.Upgrade.DatabaseTest do
 
   describe "run/1" do
     test "refuses an application with named environments" do
-      original = Application.fetch_env(:brando, :tenancy_mode)
-      Application.put_env(:brando, :tenancy_mode, :single)
-
-      on_exit(fn ->
-        case original do
-          {:ok, mode} -> Application.put_env(:brando, :tenancy_mode, mode)
-          :error -> Application.delete_env(:brando, :tenancy_mode)
-        end
-      end)
+      put_test_env(:tenancy_mode, :single)
 
       assert_raise Mix.Error, ~r/named environments/, fn -> Task.run(["--dry-run"]) end
     end

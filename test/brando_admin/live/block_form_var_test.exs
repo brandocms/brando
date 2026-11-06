@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Live.BlockFormVarTest do
   # A block with a form var opens in the page editor, its select offering the
   # forms there are.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Content.Block
   alias Brando.Content.Var

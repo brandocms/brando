@@ -1,5 +1,5 @@
 defmodule Brando.Type.I18nStringTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias Brando.Type.I18nString
 

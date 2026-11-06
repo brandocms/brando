@@ -1,5 +1,5 @@
 defmodule Brando.Blueprint.FormsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Phoenix.Component
 
   import Brando.Test.Support, only: [strip_spark_metadata: 1]

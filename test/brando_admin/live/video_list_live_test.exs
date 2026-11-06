@@ -1,5 +1,7 @@
 defmodule BrandoAdmin.VideoListLiveTest do
-  use Brando.LiveCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Ecto.Query, only: [where: 2]
 
@@ -57,8 +59,11 @@ defmodule BrandoAdmin.VideoListLiveTest do
     :telemetry.attach(
       handler,
       [:oban, :engine, :insert_job, :start],
+      # Called in the process that inserts: this test's jobs only
       fn _event, _measurements, %{changeset: changeset}, _config ->
-        send(test, {:queued, Ecto.Changeset.get_field(changeset, :worker), Ecto.Changeset.get_field(changeset, :args)})
+        if self() == test or test in Process.get(:"$callers", []) do
+          send(test, {:queued, Ecto.Changeset.get_field(changeset, :worker), Ecto.Changeset.get_field(changeset, :args)})
+        end
       end,
       nil
     )

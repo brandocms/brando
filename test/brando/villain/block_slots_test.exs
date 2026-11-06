@@ -1,5 +1,5 @@
 defmodule Brando.Villain.BlockSlotsTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
   alias Brando.Content.Block
   alias Brando.Content.BlockSlots

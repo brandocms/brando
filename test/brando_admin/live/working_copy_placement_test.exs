@@ -4,7 +4,9 @@ defmodule BrandoAdmin.WorkingCopyPlacementTest do
   # them. A child that moved to another container since stayed where it is
   # now, written over in place with the revision's content but the module
   # version it has now, so it never showed as needing an upgrade.
-  use Brando.LiveCase
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Brando.EditSessionEditors, only: [await: 1]
   import Ecto.Query, only: [from: 2]

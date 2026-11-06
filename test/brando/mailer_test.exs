@@ -39,7 +39,7 @@ defmodule Brando.MailerTest do
         sites: %{"acme" => [from: {"Acme", "noreply@acme.no"}, reply_to: "post@acme.no"]}
       )
 
-      Application.put_env(:brando, :tenancy_mode, :multi)
+      put_test_env(:tenancy_mode, :multi)
 
       assert Brando.Tenant.with_prefix("tenant_acme_live", &Mailer.sender/0) ==
                [from: {"Acme", "noreply@acme.no"}, reply_to: "post@acme.no"]

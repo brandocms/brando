@@ -3,7 +3,9 @@ defmodule BrandoAdmin.MediaAuthorizationTest do
   # media libraries change library assets only with a grant on them: the
   # view's event check never sees a picker's events (they go to a
   # LiveComponent), so the context functions check the actor themselves.
-  use Brando.LiveCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Brando.Test.Users
 

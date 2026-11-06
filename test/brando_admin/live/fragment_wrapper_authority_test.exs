@@ -2,7 +2,9 @@ defmodule BrandoAdmin.FragmentWrapperAuthorityTest do
   # A fragment's `wrapper` is markup printed around it as it is, so only a
   # superuser sets it, as only a superuser writes module code. Editors keep
   # editing the rest of the fragment and may copy one that has a wrapper.
-  use Brando.LiveCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   alias Brando.Authorization.{Groups, Migration, Scope}
   alias Brando.Pages

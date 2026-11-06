@@ -5,7 +5,7 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
   # `test/brando_admin/live/processing_status_sync_test.exs`; a video's
   # provider cannot run in tests, so its report is sent here the way
   # `ProviderUpdate` sends it.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory
@@ -353,7 +353,17 @@ defmodule BrandoAdmin.LiveView.Form.ProcessingWatchTest do
     owner = self()
     handler = {__MODULE__, make_ref()}
     event = Brando.repo().config()[:telemetry_prefix] ++ [:query]
-    :telemetry.attach(handler, event, fn _, _, _, _ -> send(owner, {:query, handler}) end, nil)
+    # Telemetry calls the handler in the process that queried: the
+    # handler skips the tests running beside this one
+    :telemetry.attach(
+      handler,
+      event,
+      fn _, _, _, _ ->
+        if self() == owner or owner in Process.get(:"$callers", []), do: send(owner, {:query, handler})
+      end,
+      nil
+    )
+
     on_exit(fn -> :telemetry.detach(handler) end)
 
     fn ->

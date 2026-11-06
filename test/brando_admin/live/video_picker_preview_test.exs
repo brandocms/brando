@@ -5,7 +5,10 @@ defmodule BrandoAdmin.VideoPickerPreviewTest do
   provider's host, or plays a file in a `<video>`; nothing the browser sends
   picks what plays.
   """
-  use Brando.LiveCase
+  # Grouped, one at a time: a media list or picker inserts the folders of
+  # the upload paths (BrandoAdmin.Images.FolderBrowser), unique by path, which
+  # concurrent transactions would wait on
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   alias BrandoAdmin.Components.VideoPicker
 

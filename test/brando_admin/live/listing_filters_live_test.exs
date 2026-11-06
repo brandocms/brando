@@ -5,7 +5,7 @@ defmodule BrandoAdmin.ListingFiltersLiveTest do
   # The test Article's `:filters` listing declares the same three filters
   # with the same kinds of query clauses, and the controls are all
   # server-rendered.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.SyncTest
 

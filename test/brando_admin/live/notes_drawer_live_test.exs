@@ -3,7 +3,7 @@ defmodule BrandoAdmin.NotesDrawerLiveTest do
   # detached and no longer pointing at a block. The drawer is server-rendered,
   # so this is tested here; placing notes and the per-block counts are covered
   # by e2e/playwright/tests/blocks/block-notes.spec.js.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Notes
   alias Brando.Pages.Page

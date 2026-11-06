@@ -1,5 +1,5 @@
 defmodule Brando.Plug.I18nTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Brando.ConnCase
   alias Brando.Factory
   alias Brando.Plug.I18n

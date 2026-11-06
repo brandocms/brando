@@ -3,7 +3,9 @@ defmodule BrandoAdmin.EntriesInputSubformRowsTest do
   # form's query loaded the rows' identifiers, a pick or "Clear all" changes
   # its row, and in a transformer's rows and a custom subform component's it
   # checks again what the editor may read once permissions change.
-  use Brando.LiveCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Brando.Test.Users
   import Ecto.Query, only: [from: 2]

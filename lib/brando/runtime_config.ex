@@ -13,7 +13,18 @@ defmodule Brando.RuntimeConfig do
   Gets the configuration for `key` under the `:brando` application.
   """
   @spec get(term()) :: term()
-  def get(key), do: Application.get_env(:brando, key)
+  # Brando's own tests set some keys for one test at a time
+  # (`Brando.Test.ScopedEnv`, in test/support); nothing else compiles this in.
+  if Application.compile_env(:brando, :scoped_test_env, false) do
+    def get(key) do
+      case Brando.Test.ScopedEnv.fetch(key) do
+        {:ok, value} -> value
+        :error -> Application.get_env(:brando, key)
+      end
+    end
+  else
+    def get(key), do: Application.get_env(:brando, key)
+  end
 
   @doc """
   Where videos upload when a config doesn't choose: the site's

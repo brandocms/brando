@@ -11,7 +11,7 @@ defmodule BrandoAdmin.Components.Form.Block.RefMediaTest do
   #   (a) `merge_programmatic_ref_media/2` folds the FKs back onto the DB base
   #   (b) the FK hidden inputs render even once a ref has a primary key, so
   #       LiveView form recovery can replay them after the process dies
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   use Phoenix.Component

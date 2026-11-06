@@ -2,7 +2,7 @@ defmodule BrandoAdmin.ListingOrderParamTest do
   # A listing's `?order=` comes from the URL, which any signed-in user can
   # write. It names the schema's fields, or it is ignored; it never becomes
   # new atoms, which are never freed and stop the node when the table is full.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   setup %{current_user: user} do
     ids =

@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.DraftCaptureTest do
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
   alias Brando.DraftFixtures
   alias Brando.Drafts
   alias Brando.Drafts.Content

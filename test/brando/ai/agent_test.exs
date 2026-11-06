@@ -302,7 +302,8 @@ defmodule Brando.AI.AgentTest do
   end
 
   test "permissions taken away during a run apply to its next tool call and stop its next model call", c do
-    put_test_env(:authorization_mode, :groups)
+    # The run's permission checks happen in its own process
+    put_test_env(:authorization_mode, :groups, global: true)
     {:ok, _} = Brando.Authorization.Migration.run()
     alias Brando.Authorization.{Catalog, Groups, Scope}
     editor = Factory.insert(:random_user, role: :user)

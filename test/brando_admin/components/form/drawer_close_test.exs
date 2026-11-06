@@ -18,7 +18,7 @@ defmodule BrandoAdmin.Components.Form.DrawerCloseTest do
   #     `reset_image_field` / `reset_file_field` / `reset_video_field` clear the
   #     flag when they close their drawer; otherwise the main save would be
   #     stranded behind "close the drawer first" with no drawer left to close.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 1]

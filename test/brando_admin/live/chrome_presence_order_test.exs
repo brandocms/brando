@@ -4,7 +4,7 @@ defmodule BrandoAdmin.ChromePresenceOrderTest do
   order the users come back from the database in.
   """
 
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.LiveViewTest

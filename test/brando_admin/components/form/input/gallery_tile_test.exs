@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.GalleryTileTest do
   # The gallery grid (contact sheet) shared by the gallery field and the gallery
   # block: tile states, the caption/alt popover, and where its edits are stored.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   import Phoenix.Component, only: [to_form: 2]
   import Phoenix.LiveViewTest, only: [render_component: 2]

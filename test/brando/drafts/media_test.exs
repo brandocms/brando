@@ -1,5 +1,5 @@
 defmodule Brando.Drafts.MediaTest do
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
 
   alias Brando.Drafts
   alias Brando.Drafts.Modules

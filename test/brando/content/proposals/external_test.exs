@@ -3,7 +3,9 @@ defmodule Brando.Content.Proposals.ExternalTest do
   # `Proposals.Tools` as the admin's agent, as BrandoMCP calls them, but with
   # no conversation. They record their origin and are reviewed in the Assistant
   # under "From connected tools".
-  use Brando.ConnCase, async: false
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on
+  use Brando.ConnCase, async: true, group: :shared_locks
 
   import Ecto.Query, only: [from: 2]
 

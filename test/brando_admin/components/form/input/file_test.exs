@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Form.Input.FileTest do
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
 
   alias Brando.Files.File
   alias Brando.Repo

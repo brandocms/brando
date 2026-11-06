@@ -4,7 +4,9 @@ defmodule Brando.Content.BlockLoadOrderTest do
   # rewritten (an update, or space freed by other transactions). In a loaded
   # test run that put a block's "clip" ref before its "info" ref, and
   # set_field_test.exs typed into the wrong one. `:id` breaks the tie.
-  use ExUnit.Case, async: false
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on
+  use ExUnit.Case, async: true, group: :shared_locks
   use Brando.ConnCase
 
   import Ecto.Query

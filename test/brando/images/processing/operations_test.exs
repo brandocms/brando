@@ -1,5 +1,5 @@
 defmodule Brando.OperationsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   import Brando.Images.Operations
 
   @image_struct %Brando.Images.Image{

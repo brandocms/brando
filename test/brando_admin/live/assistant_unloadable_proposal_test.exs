@@ -4,7 +4,11 @@ defmodule BrandoAdmin.AssistantUnloadableProposalTest do
   # and apply, and before, the review showed the empty state: no reason and
   # no Discard, so an MCP proposal stayed listed and counted until it expired
   # a day later. Its owner sees why and can discard it; nobody else can.
-  use Brando.LiveCase
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on; and
+  # it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
   use Brando.Test
   import Ecto.Query, only: [from: 2]
 

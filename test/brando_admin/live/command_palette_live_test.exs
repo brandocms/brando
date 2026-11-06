@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.CommandPaletteLiveTest do
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   # Without motion the palette closes at once, so the search its input
   # debounced can arrive after `close`. It must not render results for a

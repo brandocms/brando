@@ -1,5 +1,7 @@
 defmodule BrandoAdmin.SearchLiveTest do
-  use Brando.LiveCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Ecto.Query, only: [from: 2]
 

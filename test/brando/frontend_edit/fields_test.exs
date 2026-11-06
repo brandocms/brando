@@ -1,5 +1,5 @@
 defmodule Brando.FrontendEdit.FieldsTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Brando.FrontendEditFixtures

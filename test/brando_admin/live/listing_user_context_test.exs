@@ -2,7 +2,7 @@ defmodule BrandoAdmin.ListingUserContextTest do
   # A listing that depends on who is looking: user-aware filters, decorate and
   # row components, function sorts, and selection actions with a confirmation
   # or a visibility rule. The listing is `:user_context` on Brando.SyncTest.Article.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.SyncTest
 

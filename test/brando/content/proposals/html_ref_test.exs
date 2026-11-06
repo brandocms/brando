@@ -1,7 +1,9 @@
 defmodule Brando.Content.Proposals.HtmlRefTest do
   # A proposal fills in an HTML ref's parameter values, checked against
   # their types, and never writes its markup.
-  use Brando.ConnCase, async: false
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on
+  use Brando.ConnCase, async: true, group: :shared_locks
 
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.InsertBlock

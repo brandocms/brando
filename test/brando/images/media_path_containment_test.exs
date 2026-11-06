@@ -3,7 +3,7 @@ defmodule Brando.Images.MediaPathContainmentTest do
   # file operation keyed on it stays there. A row whose path climbs out (one
   # written before paths were validated, or by hand) is refused, not followed:
   # the crop editor wrote its upload to wherever an image's path pointed.
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory

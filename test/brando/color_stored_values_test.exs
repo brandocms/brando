@@ -24,7 +24,7 @@ defmodule Brando.ColorStoredValuesTest do
   # Colours stored before `Brando.Color` checked them: a module's colour var
   # default, a revision's colour. Copies and restores leave them empty rather
   # than refusing the save.
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
 
   import Ecto.Query, only: [from: 2]
 

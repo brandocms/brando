@@ -3,7 +3,9 @@ defmodule BrandoAdmin.UsersLiveTest do
   # and deleting one by handing their content to someone else. This was
   # e2e/playwright/tests/users/users.spec.js; all of it is server-rendered.
   # The spec branched on the authorization mode, so both modes run here.
-  use Brando.LiveCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   alias Brando.Users.User
 

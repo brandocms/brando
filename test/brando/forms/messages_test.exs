@@ -1,5 +1,5 @@
 defmodule Brando.Forms.MessagesTest do
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
 
   import Phoenix.LiveViewTest, only: [render_component: 2]
 

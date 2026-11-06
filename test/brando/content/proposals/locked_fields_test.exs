@@ -3,7 +3,9 @@ defmodule Brando.Content.Proposals.LockedFieldsTest do
   # (`LockedFields.held_keys/2`), in either authorization mode, as a transfer
   # bundle doesn't. Only its author can approve and apply a proposal, and each
   # checks again, so the author's role decides.
-  use Brando.ConnCase, async: false
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.ConnCase, async: true, group: :shared_locks
 
   import Ecto.Query, only: [from: 2]
 

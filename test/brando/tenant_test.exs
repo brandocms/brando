@@ -31,7 +31,7 @@ defmodule Brando.TenantTest do
     assert Tenant.enabled?()
     assert Tenant.validate_config!() == :ok
 
-    Application.put_env(:brando, :tenancy_mode, :multi)
+    put_test_env(:tenancy_mode, :multi)
     assert Tenant.mode() == :multi
     assert Tenant.validate_config!() == :ok
   end

@@ -2,7 +2,7 @@ defmodule BrandoAdmin.RevisionInvalidColorsTest do
   # A revision taken before colour values were checked may hold a colour
   # that is not one. Activating it, or loading it as a working copy, leaves
   # that colour empty and says so, rather than refusing.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Pages.Page
 

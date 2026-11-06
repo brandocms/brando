@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.SubformRelationTest do
   # An image field inside a subform row: picking, processing and removing it
   # keep the form alive and save onto the row.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Repo
   alias Brando.SyncTest
@@ -526,8 +526,10 @@ defmodule BrandoAdmin.SubformRelationTest do
       :telemetry.attach(
         handler,
         [:oban, :job, :start],
+        # Inline jobs run in the process that inserts them: this test's only
         fn _event, _measurements, %{job: job}, _config ->
-          if job.worker == "Brando.Worker.ImageProcessor", do: send(test_pid, {:image_job, job.args})
+          ours? = self() == test_pid or test_pid in Process.get(:"$callers", [])
+          if ours? and job.worker == "Brando.Worker.ImageProcessor", do: send(test_pid, {:image_job, job.args})
         end,
         nil
       )

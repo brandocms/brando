@@ -1,5 +1,5 @@
 defmodule Brando.Plug.SentryUserContextTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Plug.Test

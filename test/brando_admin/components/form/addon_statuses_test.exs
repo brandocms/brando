@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Components.Form.AddonStatusesTest do
   # The transformer assigns are the sharp edge: they are STATE owned by
   # `reset_transformer_changesets/1`, and re-initialising them on every update
   # would discard whatever a transformer had already reported.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory

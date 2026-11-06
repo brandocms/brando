@@ -1,5 +1,5 @@
 defmodule Brando.ImagesTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory

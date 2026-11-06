@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.HeexBlockModuleBoundTest do
   # The block editor compiles a HEEx module's template once per template, not
   # once per block: inserting blocks, saved or not, loads no more modules.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias BrandoAdmin.Components.Form.BlockField
 

@@ -1,6 +1,6 @@
 defmodule Brando.JSONLD.GraphLinkageTest do
   # Renders the whole @graph, which reads the cached identity.
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Brando.ConnCase, async: false
   import Phoenix.Component
   import Phoenix.LiveViewTest

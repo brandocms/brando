@@ -1,6 +1,8 @@
 defmodule Brando.Villain.RenderScopeTest do
   use ExUnit.Case, async: false
 
+  import Brando.Test.Support, only: [put_test_env: 2]
+
   alias Brando.Tenant
   alias Brando.Villain.RenderScope
 
@@ -35,14 +37,7 @@ defmodule Brando.Villain.RenderScopeTest do
   end
 
   test "tenant switches inside a render cannot reuse another tenant's inputs" do
-    previous = Application.get_env(:brando, :tenancy_mode)
-    Application.put_env(:brando, :tenancy_mode, :multi)
-
-    on_exit(fn ->
-      if previous,
-        do: Application.put_env(:brando, :tenancy_mode, previous),
-        else: Application.delete_env(:brando, :tenancy_mode)
-    end)
+    put_test_env(:tenancy_mode, :multi)
 
     RenderScope.run(fn ->
       for prefix <- ["tenant_alpha_production", "tenant_beta_production", "tenant_alpha_preview"] do

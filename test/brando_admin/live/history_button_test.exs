@@ -2,7 +2,7 @@ defmodule BrandoAdmin.HistoryButtonTest do
   # An entry that was never saved has no revisions. History says so and
   # leaves the drawer shut: opened anyway, closing it would ask the server
   # again and repeat the notice.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Factory
 

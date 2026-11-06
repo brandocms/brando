@@ -10,7 +10,10 @@ defmodule BrandoAdmin.Components.Form.Block.PickerCurrentSelectionTest do
   #
   # `send_update/2` outside a LiveView process is just a message to `self()`,
   # so the payload each handler ships to the picker is directly assertable.
-  use ExUnit.Case, async: false
+  # Grouped, one at a time: a media list or picker inserts the folders of
+  # the upload paths (BrandoAdmin.Images.FolderBrowser), unique by path, which
+  # concurrent transactions would wait on
+  use ExUnit.Case, async: true, group: :shared_locks
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 1]

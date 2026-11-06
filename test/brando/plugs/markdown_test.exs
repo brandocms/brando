@@ -10,7 +10,7 @@ defmodule Brando.MarkdownOffTest.Entry do
 end
 
 defmodule Brando.Plug.MarkdownTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.Component, only: [sigil_H: 2]

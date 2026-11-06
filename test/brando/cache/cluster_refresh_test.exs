@@ -212,8 +212,8 @@ defmodule Brando.Cache.ClusterRefreshTest do
     # The caches are every visitor's: an editor whose groups may not read
     # menus, global sets or identities opens a page while they are cold
     test "a cold fill under an admin's scope stores every visitor's rows, not what the admin may read", c do
-      put_test_env(:authorization_mode, :groups)
-      put_test_env(:tenancy_mode, :none)
+      put_test_env(:authorization_mode, :groups, global: true)
+      put_test_env(:tenancy_mode, :none, global: true)
       Boundary.put_scope(nil)
       {:ok, _} = Migration.run()
 
@@ -249,7 +249,7 @@ defmodule Brando.Cache.ClusterRefreshTest do
       {:ok, menu} =
         Brando.Navigation.create_menu(%{status: :published, title: "Old", key: "main", language: "en", items: []}, c.user)
 
-      put_test_env(:tenancy_mode, :single)
+      put_test_env(:tenancy_mode, :single, global: true)
 
       earlier =
         start_held(Menu.__schema__(:source), fn -> Brando.Tenant.with_public(&Cache.Navigation.set/0) end)
@@ -379,7 +379,7 @@ defmodule Brando.Cache.ClusterRefreshTest do
 
   describe "a rebuild that raises" do
     setup do
-      put_test_env(:tenancy_mode, :multi)
+      put_test_env(:tenancy_mode, :multi, global: true)
       # A site whose schema is gone: every read of its tables raises
       prefix = "tenant_gone_production"
       keys = for key <- [@tokens, {Cache, :generation, :globals}], do: {:tenant, prefix, key}
@@ -561,7 +561,7 @@ defmodule Brando.Cache.ClusterRefreshTest do
     end
 
     test "an eviction from another node drops the schema's lists and entries under its site only" do
-      put_test_env(:tenancy_mode, :multi)
+      put_test_env(:tenancy_mode, :multi, global: true)
       pages = Page.__schema__(:source)
       fragments = Fragment.__schema__(:source)
       prefix = "tenant_acme_production"

@@ -3,7 +3,7 @@ defmodule BrandoAdmin.ProcessingStatusSyncTest do
   # "Processing image…" in every field, ref and var that holds it, and each
   # editor's view must leave that state when processing finishes, not only
   # the view of the editor who uploaded it.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   import Brando.EditSessionEditors, only: [await: 1]
 

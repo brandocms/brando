@@ -54,7 +54,7 @@ defmodule Brando.TenantCacheTest do
     Cache.warm()
     assert Cache.get_site("acme")
 
-    Application.put_env(:brando, :tenancy_mode, :none)
+    put_test_env(:tenancy_mode, :none)
 
     assert Cache.warm() == :ok
     refute Cache.get_site("acme")

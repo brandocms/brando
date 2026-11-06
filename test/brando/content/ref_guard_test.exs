@@ -3,7 +3,7 @@ defmodule Brando.Content.RefGuardTest do
   # (`Brando.Content.RefGuard`): a ref's type follows its module, and only a
   # superuser changes the markup of an HTML or SVG ref. Editors fill in an
   # HTML ref's parameter values.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Content.Block

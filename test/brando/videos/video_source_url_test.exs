@@ -3,7 +3,7 @@ defmodule Brando.Videos.VideoSourceURLTest do
   A video's address is http(s) or has no scheme. The browser strips whitespace
   and control characters before it reads a scheme, so the check does too.
   """
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory

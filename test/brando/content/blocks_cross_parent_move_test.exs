@@ -8,7 +8,7 @@ defmodule Brando.Content.BlocksCrossParentMoveTest do
   # sees an unknown id → fresh insert (:id is not castable on children).
   # The MOVE must survive that mechanic: content ends up under the new
   # parent, nothing is duplicated, nothing is lost.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Content.Blocks, as: ContentBlocks

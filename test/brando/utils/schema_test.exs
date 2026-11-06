@@ -1,5 +1,5 @@
 defmodule Brando.Utils.SchemaTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Brando.ConnCase
   use BrandoIntegration.TestCase
 

@@ -3,7 +3,9 @@ defmodule BrandoAdmin.AlternatesAuthorizationTest do
   # takes `:update` on both entries, from the listing row and from the entry
   # form's alternates drawer alike: their events go to LiveComponents, which
   # the view's event check never sees. The schema is the entry's own.
-  use Brando.LiveCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Brando.Test.Users
   import Ecto.Query

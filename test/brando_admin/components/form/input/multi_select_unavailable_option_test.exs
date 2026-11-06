@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelectUnavailableOptionTest do
   # language or status, or its entry deleted) still shows under "Currently
   # selected". Its Remove button must carry the relation's foreign key, the
   # value the select_option handler matches on, not the join row's own id.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
   import Phoenix.LiveViewTest
 

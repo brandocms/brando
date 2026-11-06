@@ -1,5 +1,5 @@
 defmodule Brando.Blueprint.Identifier.HEExTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Brando.Blueprint.Identifier.HEExTest.HEExAbsoluteURLSchema
   alias Brando.Blueprint.Identifier.HEExTest.HEExIdentifierSchema

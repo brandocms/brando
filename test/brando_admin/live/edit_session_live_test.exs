@@ -3,7 +3,9 @@ defmodule BrandoAdmin.EditSessionLiveTest do
   # (`Brando.EditSession`) orders their block ops, gives a joiner the unsaved
   # state, survives being killed, and takes an applied Assistant proposal in
   # without a reload.
-  use Brando.LiveCase
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Brando.EditSessionEditors
 

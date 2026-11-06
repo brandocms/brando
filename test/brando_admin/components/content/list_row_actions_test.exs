@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Components.Content.ListRowActionsTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   import Phoenix.LiveViewTest, only: [rendered_to_string: 1]
 
   alias Brando.Pages.Page

@@ -1,5 +1,5 @@
 defmodule Brando.Drafts.TransformerTest do
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
   alias Brando.Content.Var
   alias Brando.Drafts.Params
   alias BrandoAdmin.Components.Form.Transformer

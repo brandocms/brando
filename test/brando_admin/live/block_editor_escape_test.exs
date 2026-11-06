@@ -4,7 +4,7 @@ defmodule BrandoAdmin.Live.BlockEditorEscapeTest do
   # and a select var's option labels all arrive as text, never as markup.
   # Each payload is an image element with an inert marker attribute; a live
   # one in the superuser's render means the editor's markup would run there.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Content.Block
   alias Brando.Content.Ref

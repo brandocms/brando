@@ -1,5 +1,5 @@
 defmodule Brando.SEO.GenerateTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
   use BrandoIntegration.TestCase
 

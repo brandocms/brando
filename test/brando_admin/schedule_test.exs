@@ -1,6 +1,6 @@
 defmodule BrandoAdmin.ScheduleTest do
   # What the calendar and the dashboard read and move (BrandoAdmin.Schedule)
-  use Brando.ConnCase
+  use Brando.ConnCase, async: true
 
   alias Brando.Factory
   alias Brando.Pages
@@ -64,7 +64,11 @@ defmodule BrandoAdmin.ScheduleTest do
     :telemetry.attach(
       handler,
       Brando.repo().config()[:telemetry_prefix] ++ [:query],
-      fn _, _, _, _ -> send(owner, :query) end,
+      # Telemetry calls the handler in the process that queried: the
+      # handler skips the tests running beside this one
+      fn _, _, _, _ ->
+        if self() == owner or owner in Process.get(:"$callers", []), do: send(owner, :query)
+      end,
       nil
     )
 

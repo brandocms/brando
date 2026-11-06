@@ -5,7 +5,7 @@ defmodule BrandoAdmin.DraftRecoveryLiveTest do
   # server-rendered; copies are made here the way the form's hook makes them,
   # by sending `draft_capture`. Capturing as you type, clipboard, downloads,
   # reload recovery and module changes stay in that spec.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Drafts
   alias Brando.Pages.Page

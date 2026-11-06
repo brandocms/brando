@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.StartingModulesTest do
   # An empty block field offers the modules it usually starts with. Clicking
   # one inserts it as the first block, through the module picker's insert.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Content.StartingModules
   alias Brando.SyncTest

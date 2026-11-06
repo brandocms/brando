@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.TransformerPickedVideoTest do
   # a URL or a provider's library is handed over as `video_created_from_url`,
   # which the transformer had no clause for: its general `update/2` took the
   # message as assigns and the entry kept its old video.
-  use Brando.ConnCase
+  use Brando.ConnCase, async: true
 
   alias Brando.Factory
   alias BrandoAdmin.Components.Form.Transformer

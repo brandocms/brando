@@ -1,5 +1,5 @@
 defmodule Brando.Content.Identifier.QueriesTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Brando.Content.Identifier.Queries
   alias Brando.Pages.Page

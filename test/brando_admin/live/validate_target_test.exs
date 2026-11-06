@@ -3,7 +3,7 @@ defmodule BrandoAdmin.ValidateTargetTest do
   # entry. `_target` comes from the browser, so a name that is not an entry
   # field, or a path that does not fit the entry's data, leaves the blocks
   # alone instead of taking the form down.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Content.Block
   alias Brando.Pages.Page

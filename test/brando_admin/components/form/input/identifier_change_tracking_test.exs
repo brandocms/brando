@@ -1,5 +1,7 @@
 defmodule BrandoAdmin.Components.Form.Input.IdentifierChangeTrackingTest do
-  use ExUnit.Case, async: false
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use ExUnit.Case, async: true, group: :shared_locks
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 2]

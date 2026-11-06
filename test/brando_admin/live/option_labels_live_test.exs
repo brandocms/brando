@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Live.OptionLabelsLiveTest do
   # pages by title. Another admin opening the fragment sees the title as text.
   # The payload is an image with an inert marker attribute; a live one in the
   # render means the editor's markup would run in that admin's browser.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Factory
 
