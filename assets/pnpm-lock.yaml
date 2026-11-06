@@ -172,8 +172,8 @@ importers:
   .:
     dependencies:
       '@brandocms/jupiter':
-        specifier: 5.0.0-beta.20
-        version: 5.0.0-beta.20
+        specifier: 5.0.0-beta.21
+        version: 5.0.0-beta.21
       '@codemirror/commands':
         specifier: ^6.11.1
         version: 6.11.1
@@ -295,8 +295,8 @@ importers:
 
 packages:
 
-  '@brandocms/jupiter@5.0.0-beta.20':
-    resolution: {integrity: sha512-tn1sghd0Y2QF64K8B3OzF3wo5RF45MvFrwDxbx9SBpE73MgGA+kR/58Vot7AhmgneT0CFA4R2C6y7d6f3VLweQ==}
+  '@brandocms/jupiter@5.0.0-beta.21':
+    resolution: {integrity: sha512-DdAUu++waObs3a99m1nI+SEatUK0t2+C4TdlYQUpILI3FlrUYe3vPBpO7wacLRyFlBxnklZnHLuZ+FbbRT1Q9g==}
 
   '@codemirror/autocomplete@6.20.0':
     resolution: {integrity: sha512-bOwvTOIJcG5FVo5gUUupiwYh8MioPLQ4UcqbcRf7UQ98X90tCa9E1kZ3Z7tqwpZxYyOvh1YTYbmZE9RTfTp5hg==}
@@ -1162,7 +1162,7 @@ packages:
 
 snapshots:
 
-  '@brandocms/jupiter@5.0.0-beta.20':
+  '@brandocms/jupiter@5.0.0-beta.21':
     dependencies:
       lodash.defaultsdeep: 4.6.1
       motion: 12.43.0

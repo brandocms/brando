@@ -1,0 +1,1 @@
+- Jupiter `5.0.0-beta.21` in BrandoJS and the generated frontend and backend: Moonwalk no longer stops revealing the page on an anchor that is not a valid CSS selector (`#1-intro`) or a walk name missing from its config, and Jupiter removes `no-js` from `<html>` itself when a CSP blocks the inline head script.

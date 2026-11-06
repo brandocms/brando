@@ -16,7 +16,7 @@
     "vite": "^8.3.3"
   },
   "dependencies": {
-    "@brandocms/jupiter": "5.0.0-beta.20",
+    "@brandocms/jupiter": "5.0.0-beta.21",
     "css-vars-ponyfill": "^2.4.9",
     "custom-event-polyfill": "^1.0.7",
     "element-polyfill": "^1.1.0",

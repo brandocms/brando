@@ -7,6 +7,10 @@ it in `js/index.js` with the config in `js/config/MOONWALK.js`; it begins about
 `@europa base` hide every walk, section and run under `html.moonwalk` until
 Moonwalk reveals them.
 
+This describes Jupiter 5.0.0-beta.21 and later (the version is in
+`assets/frontend/package.json`). Before it, an unknown walk name and an anchor
+such as `#1-intro` throw, which stops the reveal of every walk after them.
+
 ## The rule
 
 **A `[data-moonwalk]` is revealed only inside a `[data-moonwalk-section]`.**
@@ -36,9 +40,9 @@ The template styles only `[data-moonwalk=""]` and `[data-moonwalk="panner"]`.
 A named walk such as `data-moonwalk="rise"` needs both:
 
 1. a `walks.rise` entry in `MOONWALK.js` with its own `interval` and
-   `duration`. Named walks inherit nothing from `default`, and an unknown name
-   throws when the element scrolls in, which also skips the other walks
-   entering with it;
+   `duration`. Named walks inherit nothing from `default`. An unknown name
+   logs a console error and takes the `default` walk's timing, and the element
+   stays hidden unless step 2's CSS exists;
 2. CSS for its start and end states under `html.moonwalk`, as for
    `[data-moonwalk=""]` in `app.css`:
 
@@ -75,7 +79,9 @@ Easing goes in `transition.to.ease`.
   named section are ignored.
 - `data-moonwalk-stage="name"` (on a section): the section itself animates
   from `walks.name.transition.from` to `.to` as it enters. That walk needs a
-  real `transition`; `null` throws.
+  real `transition`. With `null` or an unknown name, Moonwalk logs a console
+  error and treats the section as a plain one, as it does for a named section
+  whose walk is missing.
 - `data-moonwalk-run="name"`: runs `runs.name` from `MOONWALK.js` when the
   element enters. A run needs no section, and an unknown name only warns.
 
@@ -107,8 +113,7 @@ to load before it reveals.
 
 - **Anchors**: loading a page with `#anchor` marks every walk before the
   target, the target and its ancestors as revealed at once, and the sections
-  before it as ready. A hash that is not a valid CSS selector (`#1-intro`)
-  throws; give anchors ids that start with a letter.
+  before it as ready. The target is found by id, so `#1-intro` works too.
 - **No JS**: without JS, `html` keeps `no-js` and never gets `moonwalk`, so
   Moonwalk hides nothing. Palette containers (`[b-section]`) are the
   exception: `critical.css` hides them until Jupiter runs.

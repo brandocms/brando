@@ -170,8 +170,8 @@ importers:
         specifier: link:../../../assets
         version: link:../../../assets
       '@brandocms/jupiter':
-        specifier: 5.0.0-beta.20
-        version: 5.0.0-beta.20
+        specifier: 5.0.0-beta.21
+        version: 5.0.0-beta.21
     devDependencies:
       '@brandocms/europacss-cli':
         specifier: 0.1.0-beta.0
@@ -235,8 +235,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@brandocms/jupiter@5.0.0-beta.20':
-    resolution: {integrity: sha512-tn1sghd0Y2QF64K8B3OzF3wo5RF45MvFrwDxbx9SBpE73MgGA+kR/58Vot7AhmgneT0CFA4R2C6y7d6f3VLweQ==}
+  '@brandocms/jupiter@5.0.0-beta.21':
+    resolution: {integrity: sha512-DdAUu++waObs3a99m1nI+SEatUK0t2+C4TdlYQUpILI3FlrUYe3vPBpO7wacLRyFlBxnklZnHLuZ+FbbRT1Q9g==}
 
   '@brandocms/vite-plugin-europacss@0.1.0-beta.0':
     resolution: {integrity: sha512-Am4fGiwKifH+GagxQ0g8jgNfMfta7uuzVu/PnUAydmyPE+0IXO0KpXJotiMH5kguID2OBCE2+jj693pSDah8qA==}
@@ -680,7 +680,7 @@ snapshots:
   '@brandocms/europacss-win32-x64@0.1.0-beta.0':
     optional: true
 
-  '@brandocms/jupiter@5.0.0-beta.20':
+  '@brandocms/jupiter@5.0.0-beta.21':
     dependencies:
       lodash.defaultsdeep: 4.6.1
       motion: 12.43.0
