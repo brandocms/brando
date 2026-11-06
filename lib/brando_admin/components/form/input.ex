@@ -1643,6 +1643,8 @@ defmodule BrandoAdmin.Components.Form.Input do
         )
       end)
       |> assign(:first, languages |> List.first() |> then(&(&1 && elem(&1, 0))))
+      # One language has nothing to switch to: no tabs, just the input.
+      |> assign(:tabs?, match?([_, _ | _], languages))
       |> assign(:label_text, label_text(assigns[:label]))
       # A language is only missing once another has text; an empty field is
       # just empty, not missing a translation in every language.
@@ -1665,8 +1667,8 @@ defmodule BrandoAdmin.Components.Form.Input do
           name={"#{@field.name}[#{language}]"}
           value={text}
         />
-        <div class="i18n-head">
-          <div class="i18n-tabs" role="tablist" aria-label={@label}>
+        <div :if={@tabs? || (@suggest_alt? && !@locked)} class="i18n-head">
+          <div :if={@tabs?} class="i18n-tabs" role="tablist" aria-label={@label}>
             <button
               :for={{language, name} <- @languages}
               type="button"
@@ -1698,8 +1700,8 @@ defmodule BrandoAdmin.Components.Form.Input do
         <div
           :for={{language, name} <- @languages}
           id={"#{@i18n_id}-panel-#{language}"}
-          role="tabpanel"
-          aria-labelledby={"#{@i18n_id}-tab-#{language}"}
+          role={@tabs? && "tabpanel"}
+          aria-labelledby={@tabs? && "#{@i18n_id}-tab-#{language}"}
           class={["i18n-panel", language == @first && "is-active"]}
         >
           <input

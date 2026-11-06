@@ -282,12 +282,6 @@
     .inner {
       padding: clamp(18px, 2vw, 28px);
 
-      input.text,
-      label,
-      textarea {
-        font-size: var(--brando-text-xl);
-      }
-
       /* Dividers belong between sections, never above the first one — each
          panel now starts with whichever section its tab owns. */
       .module-settings {
