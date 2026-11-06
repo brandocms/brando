@@ -1,13 +1,35 @@
 #!/usr/bin/env bash
-# Runs the unit suite as N partitions at once (`mix test --partitions N`),
-# each in its own BEAM with its own TMPDIR, test database and media directory
-# (config/test.exs appends MIX_TEST_PARTITION to both). Most of the suite is
-# synchronous, so one `mix test` leaves most cores idle. CI's mix test jobs
-# run this.
+# Runs the unit suite as N partitions at once, each in its own BEAM with its
+# own TMPDIR, test database and media directory (config/test.exs appends
+# MIX_TEST_PARTITION to both). Most of the suite is synchronous, so one
+# `mix test` leaves most cores idle. CI's mix test jobs run this.
 #
-#   scripts/test-partitions              4 partitions
-#   scripts/test-partitions 3            3 partitions
-#   scripts/test-partitions 4 --seed 0   the rest goes to every `mix test`
+#   scripts/test-partitions                    4 partitions
+#   scripts/test-partitions 3                  3 partitions
+#   scripts/test-partitions 2 --shard 3/4      this machine's 2 of 8 partitions
+#   scripts/test-partitions --record           also rewrite test/timings.tsv
+#   scripts/test-partitions --timings DIR      keep each partition's timings
+#   scripts/test-partitions --record-from F…   only merge timings files
+#   scripts/test-partitions 4 --seed 0         the rest goes to every `mix test`
+#
+# The test files are split by how long they took (test/timings.tsv), longest
+# first, each to the partition with the least time so far, so the partitions
+# finish together; `mix test --partitions` deals the sorted files out in turn,
+# and left one partition with twice the work of another. A file the timings do
+# not list counts as an average one. --shard I/M splits the suite into N×M
+# partitions and runs the Ith N of them: CI runs one shard per job.
+#
+# --record times every test file and, when every partition passed, writes
+# the times into test/timings.tsv: files the run did not cover keep theirs,
+# deleted ones drop out. --timings DIR writes each partition's times to
+# DIR/timings-<partition>.json instead, as CI's shards do for their
+# artifacts. When the shards drift apart, record a CI run's times:
+#
+#   gh run download <run-id> -p 'unit-timings-1.20.4-*' -D /tmp/unit-timings
+#   scripts/test-partitions --record-from /tmp/unit-timings/*/*.json
+#
+# Given test paths, it falls back to `mix test --partitions N` over them, and
+# takes no --shard or timings option.
 #
 # Compiles once, then creates, migrates and seeds each partition's database
 # when it is new (seeds once, as scripts/worktree-setup does). Prints one line
@@ -19,24 +41,103 @@ set -uo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
 
+usage() { sed -n '2,39p' "$0" | sed 's/^# \{0,1\}//'; }
+
+positive() {
+  case "$1" in
+    ''|*[!0-9]*|0*) return 1 ;;
+  esac
+}
+
 partitions=4
-case "${1:-}" in
-  -h|--help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-  [0-9]*)
-    case "$1" in
-      *[!0-9]*|0*) echo "test-partitions: the number of partitions must be a positive integer, not $1" >&2; exit 2 ;;
-    esac
-    partitions="$1"
-    shift
-    ;;
-esac
+shard=1
+shards=1
+record=false
+timings_dir=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help) usage; exit 0 ;;
+    [0-9]*)
+      positive "$1" || { echo "test-partitions: the number of partitions must be a positive integer, not $1" >&2; exit 2; }
+      partitions="$1"
+      ;;
+    --shard|--shard=*)
+      if [ "$1" = --shard ]; then value="${2:-}"; shift; else value="${1#--shard=}"; fi
+      shard="${value%%/*}" shards="${value#*/}"
+      if [ "$value" = "$shard" ] || ! positive "$shard" || ! positive "$shards" || [ "$shard" -gt "$shards" ]; then
+        echo "test-partitions: --shard takes I/M with 1 <= I <= M, not '$value'" >&2
+        exit 2
+      fi
+      ;;
+    --record) record=true ;;
+    --timings|--timings=*)
+      if [ "$1" = --timings ]; then timings_dir="${2:-}"; shift; else timings_dir="${1#--timings=}"; fi
+      [ -n "$timings_dir" ] || { echo "test-partitions: --timings takes a directory" >&2; exit 2; }
+      ;;
+    --record-from) shift; record_from=true; break ;;
+    *) break ;;
+  esac
+  shift
+done
+
+timings=test/timings.tsv
+
+# Writes test/timings.tsv from the formatter's JSON files given: seconds per
+# test file, over the old times of the files they do not cover; files that
+# are gone drop out.
+merge_timings() {
+  local tmp
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "test-partitions: recording timings needs jq" >&2
+    return 1
+  fi
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/brando-timings.XXXXXX")" || return 1
+  jq -r '.modules[] | [.file, .seconds] | @tsv' "$@" > "$tmp/new" || { rm -rf "$tmp"; return 1; }
+  find test -name '*_test.exs' -not -path '*/.*' > "$tmp/existing"
+  [ -e "$timings" ] && cp "$timings" "$tmp/old" || : > "$tmp/old"
+  {
+    echo "# Seconds each test file took, for scripts/test-partitions to balance its"
+    echo "# partitions. Written by scripts/test-partitions --record or --record-from."
+    awk -F'\t' '
+      FILENAME == ARGV[1] { exists[$0] = 1; next }
+      FILENAME == ARGV[2] { if ($0 !~ /^#/ && $0 != "") old[$1] = $2; next }
+      { new[$1] += $2 }
+      END {
+        for (file in new) if (file in exists) printf "%s\t%.1f\n", file, new[file]
+        for (file in old) if ((file in exists) && !(file in new)) printf "%s\t%s\n", file, old[file]
+      }' "$tmp/existing" "$tmp/old" "$tmp/new" | LC_ALL=C sort
+  } > "$tmp/timings.tsv" && mv "$tmp/timings.tsv" "$timings"
+  local status=$?
+  rm -rf "$tmp"
+  [ "$status" -eq 0 ] && echo "test-partitions: wrote $timings"
+  return "$status"
+}
+
+if [ "${record_from:-false}" = true ]; then
+  [ $# -gt 0 ] || { echo "test-partitions: --record-from takes the timings files to merge" >&2; exit 2; }
+  merge_timings "$@"
+  exit
+fi
+
+# Test paths among the arguments: they choose the files themselves
+by_paths=false
+for arg in ${1+"$@"}; do
+  if [ -e "${arg%%:*}" ]; then by_paths=true; fi
+done
+if [ "$by_paths" = true ] && { [ "$shards" -gt 1 ] || [ "$record" = true ] || [ -n "$timings_dir" ]; }; then
+  echo "test-partitions: --shard and the timings options cover the whole suite; drop the test paths" >&2
+  exit 2
+fi
 
 if command -v mix >/dev/null 2>&1; then
   mix_cmd=(mix)
+  elixir_cmd=(elixir)
 elif command -v mise >/dev/null 2>&1; then
   mix_cmd=(mise exec -- mix)
+  elixir_cmd=(mise exec -- elixir)
 elif [ -x "$HOME/.local/bin/mise" ]; then
   mix_cmd=("$HOME/.local/bin/mise" exec -- mix)
+  elixir_cmd=("$HOME/.local/bin/mise" exec -- elixir)
 else
   echo "test-partitions: mix not found on PATH, and no mise to run it with" >&2
   exit 1
@@ -47,11 +148,48 @@ tmp_root="${TMPDIR:-/tmp}"
 logs="$(mktemp -d "${tmp_root%/}/brando-partitions.XXXXXX")"
 trap 'rm -rf "$logs"' EXIT
 
+# Every test file mix test runs (`test/**/*_test.exs`; the wildcard skips
+# hidden directories), with its partition among N×M: longest first, each to
+# the partition with the least time so far, ties to the lower number.
+assign() {
+  local buckets="$1"
+  find test -name '*_test.exs' -not -path '*/.*' | LC_ALL=C sort |
+    awk -F'\t' -v timings="$timings" '
+      BEGIN {
+        while ((getline line < timings) > 0) {
+          if (line ~ /^#/ || line == "") continue
+          split(line, field, "\t")
+          time[field[1]] = field[2] + 0; sum += field[2]; known++
+        }
+        average = known ? sum / known : 1
+      }
+      { printf "%.3f\t%s\n", (($0 in time) ? time[$0] : average), $0 }' |
+    LC_ALL=C sort -t "$(printf '\t')" -k1,1gr -k2,2 |
+    awk -F'\t' -v buckets="$buckets" '
+      BEGIN { for (b = 1; b <= buckets; b++) load[b] = 0 }
+      {
+        best = 1
+        for (b = 2; b <= buckets; b++) if (load[b] < load[best]) best = b
+        load[best] += $1
+        print best "\t" $2
+      }'
+}
+
 # Compiling in each partition at once would race on _build
 if ! "${mix_cmd[@]}" compile > "$logs/compile" 2>&1; then
   cat "$logs/compile"
   echo "test-partitions: FAILED to compile" >&2
   exit 1
+fi
+
+if [ "$by_paths" = false ]; then
+  assign $((partitions * shards)) > "$logs/assignment"
+  i=1
+  while [ "$i" -le "$partitions" ]; do
+    awk -F'\t' -v bucket=$(((shard - 1) * partitions + i)) '$1 == bucket { print $2 }' "$logs/assignment" \
+      > "$logs/files$i"
+    i=$((i + 1))
+  done
 fi
 
 prepare() {
@@ -79,6 +217,16 @@ for pid in "${pids[@]}"; do
   i=$((i + 1))
 done
 
+# `elixir -r` loads the timing formatter before Mix starts
+if [ "$record" = true ] || [ -n "$timings_dir" ]; then
+  test_cmd=("${elixir_cmd[@]}" -r scripts/test_timings.exs -S mix test
+    --formatter ExUnit.CLIFormatter --formatter Brando.TestTimingsFormatter)
+else
+  test_cmd=("${mix_cmd[@]}" test)
+fi
+
+if [ "$shards" -gt 1 ]; then label="shard $shard/$shards partition"; else label="partition"; fi
+
 started=$SECONDS
 i=1
 pids=()
@@ -86,9 +234,21 @@ while [ "$i" -le "$partitions" ]; do
   # Names made from System.unique_integer/1 repeat between BEAMs, so each
   # partition's System.tmp_dir!/0 is a directory of its own
   mkdir -p "$logs/tmp$i"
-  TMPDIR="$logs/tmp$i" MIX_TEST_PARTITION="$i" "${mix_cmd[@]}" test --no-compile --partitions "$partitions" ${1+"$@"} \
-    > "$logs/test$i" 2>&1 &
-  pids+=($!)
+  if [ "$by_paths" = true ]; then
+    TMPDIR="$logs/tmp$i" MIX_TEST_PARTITION="$i" "${test_cmd[@]}" --no-compile --partitions "$partitions" ${1+"$@"} \
+      > "$logs/test$i" 2>&1 &
+    pids+=($!)
+  elif [ -s "$logs/files$i" ]; then
+    # shellcheck disable=SC2046 # one argument per file; test paths have no spaces
+    TMPDIR="$logs/tmp$i" MIX_TEST_PARTITION="$i" BRANDO_TEST_TIMINGS="$logs/timings$i.json" \
+      "${test_cmd[@]}" --no-compile $(cat "$logs/files$i") ${1+"$@"} > "$logs/test$i" 2>&1 &
+    pids+=($!)
+  else
+    # More partitions than test files
+    echo "no test files" > "$logs/test$i"
+    (exit 0) &
+    pids+=($!)
+  fi
   i=$((i + 1))
 done
 
@@ -122,13 +282,29 @@ i=1
 while [ "$i" -le "$partitions" ]; do
   status="$(cat "$logs/status$i")"
   summary="$(grep -E '^Finished in |^Result: |^Failed: |^[0-9]+ (doctests?|tests?), ' "$logs/test$i" | tr '\n' ' ')"
-  printf 'test-partitions: partition %s/%s %s %s\n' "$i" "$partitions" \
+  printf 'test-partitions: %s %s/%s %s %s\n' "$label" "$i" "$partitions" \
     "$([ "$status" -eq 0 ] && echo ok || echo "FAILED (exit $status)")" "$summary"
   i=$((i + 1))
 done
 
 if [ "$failed" -gt 0 ]; then
+  [ "$record" = false ] || echo "test-partitions: $timings left as it was: a partition failed" >&2
   echo "test-partitions: $failed of $partitions partition(s) failed ($((SECONDS - started))s)" >&2
   exit 1
 fi
+
+if [ -n "$timings_dir" ]; then
+  mkdir -p "$timings_dir"
+  i=1
+  while [ "$i" -le "$partitions" ]; do
+    [ ! -e "$logs/timings$i.json" ] || cp "$logs/timings$i.json" "$timings_dir/timings-$i.json"
+    i=$((i + 1))
+  done
+fi
+
+if [ "$record" = true ]; then
+  set -- "$logs"/timings*.json
+  [ -e "$1" ] && { merge_timings "$@" || exit 1; }
+fi
+
 echo "test-partitions: all $partitions partitions passed ($((SECONDS - started))s)"

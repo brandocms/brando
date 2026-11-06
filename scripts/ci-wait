@@ -132,8 +132,17 @@ fetch_run() {
 
 # Drops the checks that may fail without failing their run: ci.yml's
 # merge-queue record job (continue-on-error) only spares the queue a rerun.
+# Also a failed `mix test (S)` when one of its `unit tests (S) / …` shards
+# failed: it passes only when they all did (ci.yml), and the shard's log is
+# the one that says why. A rerun of the failed jobs reruns it too.
 drop_ignored() {
-  jq '[.[] | select(.name != "Record the tested tree for the merge queue")]'
+  jq '[.[] | select(.name != "Record the tested tree for the merge queue")]
+    | def failed: .bucket == "fail" or .bucket == "cancel";
+      . as $checks
+      | [.[] | select(
+          (failed and (.name | startswith("mix test ("))
+            and (("unit tests " + (.name | ltrimstr("mix test ")) + " / ") as $jobs
+              | any($checks[]; failed and (.name | startswith($jobs))))) | not)]'
 }
 
 not_found() {

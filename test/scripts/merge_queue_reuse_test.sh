@@ -289,7 +289,9 @@ fi
 
 # ci.yml: every step of a job that needs reuse skips on a reused run, or has
 # a condition that is never true in the merge queue. A step left to run would
-# fail or cost the time the reuse saves.
+# fail or cost the time the reuse saves. A job whose own `if` skips it on a
+# reused run (the unit test shards) needs no guard on its steps: no required
+# check reports under its name, and the job that does reads its result.
 unguarded="$(awk -v gated=" $gated" '
   function check() {
     if (step == "") return
@@ -301,8 +303,9 @@ unguarded="$(awk -v gated=" $gated" '
     if (!ok) print job ": " step " (if: " (cond == "" ? "none" : cond) ")"
     step = ""
   }
-  /^  [a-z0-9_]+:$/ { check(); job = substr($1, 1, length($1) - 1); in_steps = 0; next }
-  /^    steps:$/ { in_steps = index(gated, " " job " ") > 0; next }
+  /^  [a-z0-9_]+:$/ { check(); job = substr($1, 1, length($1) - 1); in_steps = 0; job_skips = 0; next }
+  /^    if: / { job_skips = index($0, "&& needs.reuse.outputs.reused != '"'"'true'"'"'") > 0 && index($0, "||") == 0 }
+  /^    steps:$/ { in_steps = index(gated, " " job " ") > 0 && !job_skips; next }
   /^    [a-z]/ { check(); in_steps = 0; next }
   in_steps && /^      - / { check(); step = $0; sub(/^      - /, "", step); cond = ""; next }
   in_steps && /^        if: / { cond = $0; sub(/^        if: /, "", cond) }

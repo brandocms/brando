@@ -1083,8 +1083,9 @@ The old lock holds packages at versions the new Brando cannot use (`swoosh`
 1.14, or `elixir_make` 0.6, which `vix` and `image` cannot use), hence
 `mix deps.unlock --all` before `mix deps.get`.
 
-Brando's CI tests Elixir 1.18, 1.19 and 1.20 on OTP 27 and 28, and Brando's
-own `.mise.toml` pins the versions it is developed on. The template
+Brando's CI runs its tests on Elixir 1.20 and OTP 28, and compiles Brando and
+its tests on Elixir 1.18 and OTP 27, the oldest it supports. Brando's own
+`.mise.toml` pins the versions it is developed on. The template
 Dockerfile's `node:24` stages build the admin, and
 [The Docker build](deployment.md#the-docker-build) has the Elixir and OTP of
 each fehn 4.2 variant.

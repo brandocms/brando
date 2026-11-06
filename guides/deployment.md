@@ -555,8 +555,10 @@ variant that matches the server's Ubuntu release:
 | Ubuntu 20.04 | `twined/fehn:4.2-focal`                           | 1.19.5, 28.4.3   | 2.31, 1.1.1f   |
 
 hexpm no longer publishes current Elixir and OTP for Ubuntu 20.04, so
-`4.2-focal` has Elixir 1.19.5 on OTP 28.4.3, behind the other variants
-(Brando's CI tests Elixir 1.19.5 on OTP 28 too). A site that builds on it pins Erlang 28.4.3
+`4.2-focal` has Elixir 1.19.5 on OTP 28.4.3, behind the other variants.
+Brando's CI runs its tests on Elixir 1.20.4 and OTP 28.5.0.8, and compiles
+Brando on Elixir 1.18.1 and OTP 27.2, the oldest it supports; it does not run
+the tests on 1.19.5. A site that builds on it pins Erlang 28.4.3
 and Elixir 1.19.5-otp-28 in its `.tool-versions` or `.mise.toml`, to develop on
 what its releases are built with. Moving a 20.04 server to Ubuntu 22.04 or
 24.04, or to a new server, is the better path.
