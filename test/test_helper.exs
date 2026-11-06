@@ -398,6 +398,9 @@ ExUnit.start(assert_receive_timeout: 1_000)
 # Its handler stays for the run: adding one per capture raced the others
 :ok = Brando.Test.OwnLog.install()
 
+# What put_test_env/2 sets for one test (Brando.Test.ScopedEnv)
+:ok = Brando.Test.ScopedEnv.install()
+
 # priv/repo/seeds.exs creates the identity and SEO rows that the Permalink,
 # IdentityServices and SEO tests read. These two cache fills are the only
 # queries the check needs.

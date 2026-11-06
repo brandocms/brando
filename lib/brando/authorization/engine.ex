@@ -4,7 +4,7 @@ defmodule Brando.Authorization.Engine do
   alias Brando.Authorization.{Catalog, Grant, Group, Membership, Scope, Snapshot}
   alias Brando.Repo
 
-  def enabled?, do: Application.get_env(:brando, :authorization_mode, :legacy) == :groups
+  def enabled?, do: Brando.config(:authorization_mode) == :groups
 
   @doc "Whether this account can enter any available administration scope."
   def backend_access?(actor) do

@@ -10,8 +10,18 @@ defmodule Brando.Test.Support do
   end
 
   @doc """
-  Sets `Application.put_env(:brando, key, value)` for one test and restores it
-  properly afterwards.
+  Sets `key` for one test and restores it properly afterwards.
+
+  `:tenancy_mode` and `:authorization_mode` are set for this test and the
+  processes it starts (`Brando.Test.ScopedEnv`), so a module that sets only
+  those can be `async: true`. Every other key goes into the application
+  environment, `Application.put_env(:brando, key, value)`, which every test
+  running at the time reads: a module that sets one stays synchronous.
+
+  `global: true` sets one of the two in the application environment as well,
+  for a test of a process in the application's supervision tree (cluster
+  cache sync, the assistant's runs), which does not carry the test in its
+  `$callers`. Such a module stays synchronous too.
 
   "Properly" is the whole reason this exists. The obvious restore —
 
@@ -28,7 +38,29 @@ defmodule Brando.Test.Support do
   `fetch_env/2` distinguishes "absent" from "present and nil", and `delete_env/2`
   is what restores the former.
   """
-  def put_test_env(key, value) do
+  def put_test_env(key, value, opts \\ []) do
+    cond do
+      key not in Brando.Test.ScopedEnv.keys() ->
+        put_global_env(key, value)
+
+      Keyword.get(opts, :global, false) ->
+        put_scoped_env(key, value)
+        put_global_env(key, value)
+
+      true ->
+        put_scoped_env(key, value)
+    end
+  end
+
+  # Seen by this test and what it starts, not the tests beside it, which may
+  # then run at the same time (`Brando.Test.ScopedEnv`)
+  defp put_scoped_env(key, value) do
+    owner = self()
+    :ok = Brando.Test.ScopedEnv.put(key, value)
+    ExUnit.Callbacks.on_exit(fn -> Brando.Test.ScopedEnv.delete(owner, key) end)
+  end
+
+  defp put_global_env(key, value) do
     original = Application.fetch_env(:brando, key)
     Application.put_env(:brando, key, value)
 

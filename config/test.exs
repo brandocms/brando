@@ -47,6 +47,10 @@ config :brando, Brando.Images,
   }
 
 config :brando, Brando.EditSession, grace_period: 0
+# `put_test_env(:tenancy_mode | :authorization_mode, …)` sets the key for one
+# test and what it starts, not for the tests running beside it
+# (`Brando.Test.ScopedEnv`). Compiled in: a site never builds the lookup.
+config :brando, scoped_test_env: true
 # Lets tests hold an entry form's load back (`:form_load_gate`), and shorten
 # the form's own waits that are not what a test is about. The block map wait
 # must still outlast the client's round trip that removes the old block

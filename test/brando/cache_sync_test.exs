@@ -19,7 +19,7 @@ defmodule Brando.CacheSyncTest do
   @other_node "another-node"
 
   setup do
-    put_test_env(:tenancy_mode, :multi)
+    put_test_env(:tenancy_mode, :multi, global: true)
     Cache.clear()
     SharedLibrary.Cache.clear()
     Phoenix.PubSub.subscribe(Brando.pubsub(), CacheSync.topic())
@@ -181,7 +181,7 @@ defmodule Brando.CacheSyncTest do
   describe "site assets" do
     setup do
       root = Path.join(System.tmp_dir!(), "brando-cache-sync-#{System.unique_integer([:positive])}")
-      put_test_env(:tenancy_mode, :none)
+      put_test_env(:tenancy_mode, :none, global: true)
       put_test_env(:site_assets_path, Path.join(root, "site_assets"))
       SiteAssets.invalidate_cache()
 
