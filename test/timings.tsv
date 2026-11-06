@@ -289,7 +289,9 @@ test/brando/migrations/brando_224_add_link_default_type_to_vars_test.exs	0.0
 test/brando/migrations/brando_225_rename_html_vars_to_rich_text_test.exs	0.0
 test/brando/migrations/templates_compile_test.exs	6.1
 test/brando/migrations/upgrade_from_051_test.exs	0.3
-test/brando/migrations/upgrade_from_villain_test.exs	100.3
+test/brando/migrations/upgrade_from_villain_check_test.exs	8.2
+test/brando/migrations/upgrade_from_villain_repair_test.exs	22.6
+test/brando/migrations/upgrade_from_villain_test.exs	14.8
 test/brando/migrations/upgrade_with_environments_test.exs	2.5
 test/brando/navigation/item_derive_key_test.exs	1.7
 test/brando/notes_test.exs	6.2
