@@ -119,10 +119,14 @@ if [ "${record_from:-false}" = true ]; then
   exit
 fi
 
-# Test paths among the arguments: they choose the files themselves
+# Test paths among the arguments (a test file, with or without :line, or a
+# path under test/): they choose the files themselves. Not any argument that
+# names a path: `--exclude test` names the directory.
 by_paths=false
 for arg in ${1+"$@"}; do
-  if [ -e "${arg%%:*}" ]; then by_paths=true; fi
+  case "$arg" in
+    *.exs|*.exs:*|test/*) [ ! -e "${arg%%:*}" ] || by_paths=true ;;
+  esac
 done
 if [ "$by_paths" = true ] && { [ "$shards" -gt 1 ] || [ "$record" = true ] || [ -n "$timings_dir" ]; }; then
   echo "test-partitions: --shard and the timings options cover the whole suite; drop the test paths" >&2
@@ -150,7 +154,10 @@ trap 'rm -rf "$logs"' EXIT
 
 # Every test file mix test runs (`test/**/*_test.exs`; the wildcard skips
 # hidden directories), with its partition among N×M: longest first, each to
-# the partition with the least time so far, ties to the lower number.
+# the partition with the least time so far, ties to the lower number. Each
+# file also costs a fixed 0.2 s, for loading it and its setup_all, which the
+# timings leave out: without it, the files that record 0.0 s all went to one
+# partition.
 assign() {
   local buckets="$1"
   find test -name '*_test.exs' -not -path '*/.*' | LC_ALL=C sort |
@@ -163,7 +170,7 @@ assign() {
         }
         average = known ? sum / known : 1
       }
-      { printf "%.3f\t%s\n", (($0 in time) ? time[$0] : average), $0 }' |
+      { printf "%.3f\t%s\n", (($0 in time) ? time[$0] : average) + 0.2, $0 }' |
     LC_ALL=C sort -t "$(printf '\t')" -k1,1gr -k2,2 |
     awk -F'\t' -v buckets="$buckets" '
       BEGIN { for (b = 1; b <= buckets; b++) load[b] = 0 }
