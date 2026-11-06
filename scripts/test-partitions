@@ -25,7 +25,7 @@
 # DIR/timings-<partition>.json instead, as CI's shards do for their
 # artifacts. When the shards drift apart, record a CI run's times:
 #
-#   gh run download <run-id> -p 'unit-timings-1.20.4-*' -D /tmp/unit-timings
+#   gh run download <run-id> -p 'unit-timings-*' -D /tmp/unit-timings
 #   scripts/test-partitions --record-from /tmp/unit-timings/*/*.json
 #
 # Given test paths, it falls back to `mix test --partitions N` over them, and

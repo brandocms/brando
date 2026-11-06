@@ -277,12 +277,12 @@ jobs:
         # Incremental builds replay stored warnings, including unchanged files.
         run: mix compile --all-warnings --warnings-as-errors
 
-      # Loads, and so compiles, every test file, and runs none of them
+      # Loads, and so compiles, every test file, and runs none of them.
+      # test_helper.exs refuses a database without the seeds.
       - name: Compile the test files without warnings
         if: needs.reuse.outputs.reused != 'true'
         run: |
-          mix ecto.create --quiet
-          mix ecto.migrate --quiet
+          mix ecto.setup
           mix test --warnings-as-errors --exclude test
 
   css_colors:
