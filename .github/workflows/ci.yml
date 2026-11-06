@@ -8,7 +8,7 @@ on:
   # Merge queue readiness: a queue on `main` runs this workflow on its
   # temporary merge commit (refs/heads/gh-readonly-queue/main/…) and waits for
   # the required checks there. Those are the jobs below that run on every
-  # event: mix test (all three), E2E app unit tests, Admin CSS colour tokens,
+  # event: the two mix test jobs, E2E app unit tests, Admin CSS colour tokens,
   # Blueprint quality gates and Published documentation. They read no pull_request context, so
   # they behave the same on the queued commit. The E2E jobs stay PR-only
   # (informational, and the PR already ran them); igniter-smoke.yml has no
@@ -19,7 +19,7 @@ on:
   # finds it, and those jobs keep reporting under their own names but skip
   # every step. Skipping the jobs themselves would not do: a skipped matrix job
   # reports once as `mix test (OTP ${{matrix.otp_label}} | …)`, never under
-  # the three required names. A PR run records what it tested in the `record` job; see
+  # the required names. A PR run records what it tested in the `record` job; see
   # .github/scripts/merge-queue-reuse.sh. A reused run trusts what lies
   # outside the tree as it was at PR time (e2e_unit's brando_json_api and
   # brando_graphql checkouts); the push to main after the merge reruns
@@ -78,47 +78,160 @@ jobs:
           BASE_REF: ${{ github.event.merge_group.base_ref }}
         run: .github/scripts/merge-queue-reuse.sh lookup "$GITHUB_SHA" "$BASE_REF" | tee -a "$GITHUB_STEP_SUMMARY"
 
-  mix_test:
-    name: mix test (OTP ${{matrix.otp_label}} | Elixir ${{matrix.elixir}})
+  # The unit suite on the newest Elixir and OTP, in timing-balanced shards:
+  # each job runs `scripts/test-partitions` with --shard, its share of the
+  # test files split by test/timings.tsv, so the shards take about as long. A
+  # BEAM in the synchronous part of the suite keeps about two of a runner's
+  # four vCPUs busy, so two share a job. A coverage run is one job, one
+  # `mix test --cover`, which exports one file for the coverage job.
+  #
+  # The older Elixir and OTP Brando supports get `floor_compile` instead.
+  # The names start with `unit tests (…) / ` for scripts/ci-wait: it leaves
+  # out `mix_test` when one of these failed, whose log says why.
+  unit_shards:
+    name: ${{ inputs.coverage && 'unit tests (OTP 28.5.0.8 | Elixir 1.20.4) / coverage' || format('unit tests (OTP 28.5.0.8 | Elixir 1.20.4) / shard {0} of {1}', matrix.shard, strategy.job-total) }}
     needs: reuse
-    if: ${{ !cancelled() }}
-
-    env:
-      MIX_ENV: test
-
-    strategy:
-      fail-fast: false
-      # `otp_label` and `elixir` name the job, and the main ruleset requires
-      # these three names: changing either means changing the ruleset with it. The 1.19
-      # leg keeps the label "28" from when it ran OTP 28.0, where the Erlang
-      # JIT crashed now and then (beam-jit-crash in .github/known-flakes.txt);
-      # OTP 28.4 upgraded asmjit to v1.18 (OTP-19979).
-      matrix:
-        include:
-          - elixir: 1.18.1
-            otp: "27.2"
-            otp_label: "27.2"
-          - elixir: 1.19.5
-            otp: "28.5.0.7"
-            otp_label: "28"
-          - elixir: 1.20.4
-            otp: "28.5.0.8"
-            otp_label: "28.5.0.8"
-
+    if: ${{ !cancelled() && needs.reuse.outputs.reused != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-
+    env:
+      MIX_ENV: test
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(inputs.coverage && '[1]' || '[1, 2, 3, 4, 5, 6]') }}
     steps:
       # The runner's own PostgreSQL (16 on ubuntu-latest). A service
       # container pulled its image on every job, and the registry's pull
       # limits failed jobs before a test ran.
+      - name: Start PostgreSQL
+        run: |
+          sudo systemctl start postgresql.service
+          timeout 60 sh -c 'until pg_isready -h localhost -q; do sleep 1; done'
+          sudo -u postgres psql -q -c "ALTER USER postgres PASSWORD 'postgres'"
+          sudo -u postgres createdb brando_test
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
+        with:
+          elixir-version: 1.20.4
+          otp-version: 28.5.0.8
+
+      - name: Restore deps and _build cache
+        id: cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: deps-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
+          restore-keys: |
+            deps-${{ runner.os }}-28.5.0.8-1.20.4-${{ hashFiles('**/mix.lock') }}-
+            deps-${{ runner.os }}-28.5.0.8-1.20.4
+
+      - name: Install dependencies
+        run: mix deps.get --only test
+
+      - name: Compile without warnings
+        # Incremental builds replay stored warnings, including unchanged files.
+        run: mix compile --all-warnings --warnings-as-errors
+
+      # One shard saves what they all compiled; the others would only race it
+      # for the same key. A merge queue run saves none: its temporary branch
+      # could never reuse it, and the entries would evict main's from the
+      # 10 GB cache.
+      - name: Save deps and _build cache
+        if: matrix.shard == 1 && github.event_name != 'merge_group' && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ steps.cache.outputs.cache-primary-key }}
+
+      - name: Reset db (coverage run)
+        if: inputs.coverage
+        run: mix ecto.reset
+
+      - name: Run Tests (coverage run)
+        if: inputs.coverage
+        run: mix test --warnings-as-errors --cover --export-coverage unit
+
+      - name: Upload unit coverage data
+        if: inputs.coverage
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: coverdata-unit
+          path: cover/unit.coverdata
+          retention-days: 7
+
+      # The script creates, migrates and seeds each partition's database
+      - name: Run Tests
+        if: ${{ !inputs.coverage }}
+        run: >-
+          scripts/test-partitions 2
+          --shard ${{ matrix.shard }}/${{ strategy.job-total }}
+          --timings "$RUNNER_TEMP/unit-timings" --warnings-as-errors
+
+      # Each file's time, for `scripts/test-partitions --record-from` to
+      # refresh test/timings.tsv when the shards drift apart
+      - name: Upload test file timings
+        if: ${{ !inputs.coverage && !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unit-timings-${{ matrix.shard }}
+          path: ${{ runner.temp }}/unit-timings
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Required by the main ruleset under this name (changing it means changing
+  # the ruleset with it): passes when every shard did, or when the merge queue
+  # reused the pull request's run.
+  mix_test:
+    name: mix test (OTP 28.5.0.8 | Elixir 1.20.4)
+    needs: [reuse, unit_shards]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the unit test shards
+        env:
+          RESULT: ${{ needs.unit_shards.result }}
+          REUSED: ${{ needs.reuse.outputs.reused }}
+        run: |
+          if [ "$RESULT" = success ]; then
+            echo "Every unit test shard passed"
+          elif [ "$RESULT" = skipped ] && [ "$REUSED" = true ]; then
+            echo "The merge queue reused the pull request's run"
+          else
+            echo "::error::The unit test shards ended in '$RESULT'"
+            exit 1
+          fi
+
+  # The oldest Elixir and OTP Brando supports (mix.exs, README): lib and the
+  # test files compile on them without warnings. The suite itself runs on the
+  # newest only; in five months the older versions' full runs found a type
+  # checker warning, which this catches, and one OTP 27 difference in the
+  # test harness. Its name is the one the main ruleset requires, from when
+  # it ran the suite.
+  floor_compile:
+    name: mix test (OTP 27.2 | Elixir 1.18.1)
+    needs: reuse
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MIX_ENV: test
+    steps:
+      # test_helper.exs starts the repo before the test files load
       - name: Start PostgreSQL
         if: needs.reuse.outputs.reused != 'true'
         run: |
           sudo systemctl start postgresql.service
           timeout 60 sh -c 'until pg_isready -h localhost -q; do sleep 1; done'
           sudo -u postgres psql -q -c "ALTER USER postgres PASSWORD 'postgres'"
-          sudo -u postgres createdb brando_test
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: needs.reuse.outputs.reused != 'true'
@@ -127,8 +240,8 @@ jobs:
         if: needs.reuse.outputs.reused != 'true'
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
-          elixir-version: ${{ matrix.elixir }}
-          otp-version: ${{ matrix.otp }}
+          elixir-version: 1.18.1
+          otp-version: "27.2"
 
       - name: Restore deps and _build cache
         if: github.event_name != 'merge_group'
@@ -137,14 +250,12 @@ jobs:
           path: |
             deps
             _build
-          key: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
+          key: deps-${{ runner.os }}-27.2-1.18.1-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
           restore-keys: |
-            deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}-
-            deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}
+            deps-${{ runner.os }}-27.2-1.18.1-${{ hashFiles('**/mix.lock') }}-
+            deps-${{ runner.os }}-27.2-1.18.1
 
-      # A merge queue run restores the cache but does not save one: its
-      # temporary branch could never reuse it, and the entries would evict
-      # main's from the 10 GB cache.
+      # A merge queue run restores the cache but does not save one
       - name: Restore deps and _build cache (merge queue, restore only)
         if: github.event_name == 'merge_group' && needs.reuse.outputs.reused != 'true'
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -152,10 +263,10 @@ jobs:
           path: |
             deps
             _build
-          key: deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
+          key: deps-${{ runner.os }}-27.2-1.18.1-${{ hashFiles('**/mix.lock') }}-${{ github.sha }}
           restore-keys: |
-            deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-${{ hashFiles('**/mix.lock') }}-
-            deps-${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}
+            deps-${{ runner.os }}-27.2-1.18.1-${{ hashFiles('**/mix.lock') }}-
+            deps-${{ runner.os }}-27.2-1.18.1
 
       - name: Install dependencies
         if: needs.reuse.outputs.reused != 'true'
@@ -166,29 +277,13 @@ jobs:
         # Incremental builds replay stored warnings, including unchanged files.
         run: mix compile --all-warnings --warnings-as-errors
 
-      # A coverage run stays in one `mix test`, so it exports one file
-      - name: Reset db (coverage run)
-        if: inputs.coverage && matrix.elixir == '1.20.4' && needs.reuse.outputs.reused != 'true'
-        run: mix ecto.reset
-
-      - name: Run Tests (coverage run)
-        if: inputs.coverage && matrix.elixir == '1.20.4' && needs.reuse.outputs.reused != 'true'
-        run: mix test --warnings-as-errors --cover --export-coverage unit
-
-      # Four `mix test --partitions 4` at once, each with its own database: the
-      # suite is mostly synchronous, so one run leaves most of the runner idle.
-      # The script creates, migrates and seeds the databases.
-      - name: Run Tests
-        if: "!(inputs.coverage && matrix.elixir == '1.20.4') && needs.reuse.outputs.reused != 'true'"
-        run: scripts/test-partitions 4 --warnings-as-errors
-
-      - name: Upload unit coverage data
-        if: inputs.coverage && matrix.elixir == '1.20.4'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: coverdata-unit
-          path: cover/unit.coverdata
-          retention-days: 7
+      # Loads, and so compiles, every test file, and runs none of them.
+      # test_helper.exs refuses a database without the seeds.
+      - name: Compile the test files without warnings
+        if: needs.reuse.outputs.reused != 'true'
+        run: |
+          mix ecto.setup
+          mix test --warnings-as-errors --exclude test
 
   css_colors:
     name: Admin CSS colour tokens
@@ -502,10 +597,11 @@ jobs:
   # success() and a `needs.*.result` filter both find a skipped job.
   record:
     name: Record the tested tree for the merge queue
-    needs: [mix_test, css_colors, quality, docs, e2e_unit]
+    needs: [unit_shards, floor_compile, css_colors, quality, docs, e2e_unit]
     if: >-
       ${{ !cancelled() && github.event_name == 'pull_request'
-      && needs.mix_test.result == 'success' && needs.css_colors.result == 'success'
+      && needs.unit_shards.result == 'success' && needs.floor_compile.result == 'success'
+      && needs.css_colors.result == 'success'
       && needs.quality.result == 'success' && needs.docs.result == 'success'
       && needs.e2e_unit.result == 'success' }}
     continue-on-error: true

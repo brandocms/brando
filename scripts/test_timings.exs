@@ -6,6 +6,11 @@ defmodule Brando.TestTimingsFormatter do
 
   def init(_opts), do: {:ok, []}
 
+  # An excluded or skipped test takes no time, and would record its file as
+  # one that takes none (`--only`, `--exclude`, `--failed`)
+  def handle_cast({:test_finished, %{state: {status, _}}}, tests) when status in [:excluded, :skipped],
+    do: {:noreply, tests}
+
   def handle_cast({:test_finished, test}, tests), do: {:noreply, [test | tests]}
 
   def handle_cast({:suite_finished, timing}, tests) do

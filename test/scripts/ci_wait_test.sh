@@ -19,8 +19,9 @@ export CI_WAIT_FLAKES="$stub/known-flakes.txt"
 
 cat >"$stub/gh" <<'EOF'
 #!/usr/bin/env bash
-# gh api <path> …: the run's failed job (and CASE_PASSING, a passed one, and
-# CASE_RUNNING, one still running), its log, its failed step (CASE_STEP,
+# gh api <path> …: the run's failed job (and CASE_PASSING, a passed one,
+# CASE_RUNNING, one still running, and CASE_ALSO_FAILED, another failed one
+# with the same log), its log, its failed step (CASE_STEP,
 # default Run Tests) or the run's status (the next line of CASE_STATUS).
 # gh pr checks: the next line of CASE_CHECKS. gh run rerun: noted in
 # CASE_CALLS, and refused, as GitHub does, while the run is not completed.
@@ -57,13 +58,15 @@ esac
 case "$2" in
   */actions/runs/*/jobs*)
     jq -n --arg name "$CASE_JOB" --arg id "$CASE_ID" --arg passing "${CASE_PASSING:-}" \
-      --arg running "${CASE_RUNNING:-}" '{jobs: ([{name: $name,
+      --arg running "${CASE_RUNNING:-}" --arg also "${CASE_ALSO_FAILED:-}" '{jobs: ([{name: $name,
       html_url: "https://github.com/o/r/actions/runs/\($id)/job/\($id)",
       status: "completed", conclusion: "failure"}] + if $passing == "" then [] else [{name: $passing,
       html_url: "https://github.com/o/r/actions/runs/\($id)/job/0",
       status: "completed", conclusion: "success"}] end + if $running == "" then [] else [{name: $running,
       html_url: "https://github.com/o/r/actions/runs/\($id)/job/1",
-      status: "in_progress", conclusion: null}] end)}' ;;
+      status: "in_progress", conclusion: null}] end + if $also == "" then [] else [{name: $also,
+      html_url: "https://github.com/o/r/actions/runs/\($id)/job/2",
+      status: "completed", conclusion: "failure"}] end)}' ;;
   */actions/runs/*) next "$CASE_STATUS" | tee "$CASE_STATUS.now" ;;
   */actions/jobs/*/logs) cat "$CASE_LOG" ;;
   */actions/jobs/*) echo "${CASE_STEP:-Run Tests}" ;;
@@ -158,6 +161,21 @@ id=$((id + 1))
 expect "ignores the merge queue's record job" 0 "Run $id: all 1 checks green" \
   env CASE_JOB="Record the tested tree for the merge queue" CASE_PASSING="mix test" CASE_ID="$id" \
   CASE_LOG=/dev/null PATH="$stub:$PATH" "$ci_wait" --run "$id" --repo o/r
+
+# A version's `mix test (…)` fails when one of its unit test jobs did, which
+# is the one reported; another version's failed job does not excuse it.
+shard="unit tests (OTP 28.5.0.8 | Elixir 1.20.4) / shard 2 of 6"
+id=$((id + 1))
+expect "leaves out a version's mix test job when its shard failed" 1 "Run $id: FAILED (known flakes only): $shard — https://github.com/o/r/actions/runs/$id
+  $shard: known flake: beam-jit-crash — rerun with: gh run rerun $id --failed" \
+  env CASE_JOB="$shard" CASE_ALSO_FAILED="mix test (OTP 28.5.0.8 | Elixir 1.20.4)" CASE_ID="$id" \
+  CASE_LOG="$fixtures/jit-crash.log" PATH="$stub:$PATH" "$ci_wait" --run "$id" --repo o/r
+id=$((id + 1))
+expect "keeps a version's mix test job when another version's shard failed" 1 "Run $id: FAILED (known flakes only): $shard, mix test (OTP 27.2 | Elixir 1.18.1) — https://github.com/o/r/actions/runs/$id
+  $shard: known flake: beam-jit-crash — rerun with: gh run rerun $id --failed
+  mix test (OTP 27.2 | Elixir 1.18.1): known flake: beam-jit-crash — rerun with: gh run rerun $id --failed" \
+  env CASE_JOB="$shard" CASE_ALSO_FAILED="mix test (OTP 27.2 | Elixir 1.18.1)" CASE_ID="$id" \
+  CASE_LOG="$fixtures/jit-crash.log" PATH="$stub:$PATH" "$ci_wait" --run "$id" --repo o/r
 
 # --rerun-flakes reruns a job that failed setting up once its run has
 # finished (GitHub refuses before), then waits for the rerun.

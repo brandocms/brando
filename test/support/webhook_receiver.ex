@@ -128,4 +128,12 @@ defmodule Brando.WebhookTestResolver do
   end
 
   def rebind(address), do: :persistent_term.put({__MODULE__, :rebind}, address)
+
+  @doc """
+  The same names for `Brando.Sites.DeployConfig`'s deploy hosts, which it
+  resolves per address family (`config :brando, Brando.Sites.DeployConfig,
+  resolver: ...`): a test never waits on real DNS for a made-up host.
+  """
+  def resolve(host, :inet), do: resolve(host)
+  def resolve(_host, :inet6), do: {:error, :nxdomain}
 end
