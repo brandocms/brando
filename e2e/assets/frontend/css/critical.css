@@ -21,6 +21,10 @@ html.moonwalk {
   opacity: 0;
 }
 
+.no-js [b-section] {
+  opacity: 1;
+}
+
 [data-app-ready="true"] [b-section] {
   opacity: 1;
   transition: opacity 0.5s ease;

@@ -110,8 +110,9 @@ to load before it reveals.
   before it as ready. A hash that is not a valid CSS selector (`#1-intro`)
   throws; give anchors ids that start with a letter.
 - **No JS**: without JS, `html` keeps `no-js` and never gets `moonwalk`, so
-  Moonwalk hides nothing. Palette containers (`[b-section]`) are the
-  exception: `critical.css` hides them until Jupiter runs.
+  Moonwalk hides nothing, and `.no-js` rules show what `critical.css` hides
+  (palette containers, `[b-section]`, until Jupiter runs). They need
+  `class="no-js"` on the root layout's `<html>`, which older layouts lack.
 - **Reduced motion**: only with `respectReducedMotion: true` on the
   `Application` (off in the template). Jupiter then removes the walk and
   section attributes and adds `prefers-reduced-motion` to `<html>`, which

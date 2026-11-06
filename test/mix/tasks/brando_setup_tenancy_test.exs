@@ -100,6 +100,22 @@ defmodule Mix.Tasks.BrandoSetupTenancyTest do
     assert_unchanged(second_pass)
   end
 
+  # On disk but not yet read by any task, as on a real rerun.
+  test "keeps an edited tenant migration" do
+    edited = "# edited by the application\n"
+
+    igniter =
+      [
+        app_name: :legacy_app,
+        files: %{@config_path => @config, @router_path => @router, @tenant_migration_path => edited}
+      ]
+      |> test_project_with_files()
+      |> then(&%{&1 | rewrite: Rewrite.drop(&1.rewrite, [@tenant_migration_path])})
+      |> run_task(["--mode", "single", "--site-key", "legacy-site"])
+
+    assert igniter |> Igniter.include_existing_file(@tenant_migration_path) |> source(@tenant_migration_path) == edited
+  end
+
   test "warns when no Phoenix router can be found" do
     igniter =
       [app_name: :legacy_app, files: %{@config_path => @config}]

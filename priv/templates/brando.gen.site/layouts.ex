@@ -4,7 +4,7 @@ defmodule <%= web_module %>.CMS.Layouts do
   def root(assigns) do
     ~H"""
     <!DOCTYPE html>
-    <html lang={@language}>
+    <html class="no-js" lang={@language}>
       <.head conn={@conn} />
       <.body_tag conn={@conn} id="top">
         <header data-nav>

@@ -98,7 +98,7 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
     {layout, name} = target.layout
     root_assigns = Map.merge(assigns, %{conn: conn, language: "en", inner_content: {:safe, inner}})
     html = render_to_string(layout, to_string(name), "html", root_assigns)
-    assert html =~ ~s(<html lang="en">)
+    assert html =~ ~s(<html class="no-js" lang="en">)
     assert html =~ "<p>Edited</p>"
     assert target.template_section.(page) == "index"
 
@@ -121,7 +121,7 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
   test "endpoint errors render the error inside the site's root layout", %{conn: conn} do
     for {status, text} <- [{"404", "Page not found"}, {"500", "Something went wrong"}] do
       html = render_to_string(RenderSiteWeb.ErrorHTML, status, "html", conn: conn)
-      assert html =~ ~s(<html lang="en">)
+      assert html =~ ~s(<html class="no-js" lang="en">)
       assert html =~ ~s(id="top")
       assert html =~ text
     end
@@ -156,7 +156,7 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
     log =
       capture_log(fn ->
         html = render_to_string(RenderSiteWeb.ErrorHTML, "500", "html", conn: conn)
-        assert html =~ ~s(<html lang="xx">)
+        assert html =~ ~s(<html class="no-js" lang="xx">)
         assert html =~ ~s(id="top")
         assert html =~ "Something went wrong"
       end)

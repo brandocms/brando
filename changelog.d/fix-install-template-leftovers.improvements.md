@@ -1,0 +1,1 @@
+- The admin CSS template (`assets/backend/css/app.css`) no longer ships block editor styles for modules Brando does not seed; it keeps the layer order and the Moonwalk override, with an example module rule in a comment.

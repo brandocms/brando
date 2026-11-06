@@ -141,9 +141,12 @@ Blueprint, or every application Blueprint with `brando.gen.blueprint_migration
 --all` (`plan_all/1` and `commit_plans/1`: written together or not at all, and
 it takes neither `--migration-path` nor `--rebaseline`).
 
-Igniter accepts automatically when stdin is not a terminal (outside
-`MIX_ENV=test`). Unattended previews use `--dry-run --yes`; `--yes` also
-suppresses the large-diff question.
+Outside `MIX_ENV=test`, Igniter adds `--yes` when stdin is not a device (a
+pipe or a file), and `--yes` prints neither the diff nor the queued tasks. Preview with
+`--dry-run < /dev/null`, which Igniter takes for a terminal, so it prints the
+diff. Past 1000 diff lines, Igniter asks instead how to show the diff,
+and closed input raises there: answer on a real terminal, or apply the run
+in a clean Git tree and read `git diff`.
 
 ## Auxiliary and upgrade contracts
 
