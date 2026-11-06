@@ -16,5 +16,5 @@ if (
 ) {
   app.initialize()
 } else {
-  document.addEventListener('DOMContentLoaded', app.initialize.apply(app))
+  document.addEventListener('DOMContentLoaded', () => app.initialize())
 }

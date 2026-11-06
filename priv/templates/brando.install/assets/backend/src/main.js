@@ -13,5 +13,5 @@ const app = buildApplication(hooks)
 if (document.attachEvent ? document.readyState === 'complete' : document.readyState !== 'loading') {
   app.initialize()
 } else {
-  document.addEventListener('DOMContentLoaded', app.initialize.apply(app))
+  document.addEventListener('DOMContentLoaded', () => app.initialize())
 }
