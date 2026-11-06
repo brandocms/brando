@@ -152,8 +152,10 @@ Igniter calls the library-owned `brando.upgrade FROM TO` hook. It accepts forwar
 upgrades from `0.54.0-dev` onward to a 0.54 or 0.55 target, never beyond the
 loaded dependency version. Each crossed minor version composes its recipe
 before missing framework migrations are planned: a 0.54 → 0.55 upgrade runs
-`brando.migrate55` first. The hook also adds Brando's agent skills and the
-`AGENTS.md` link where they are missing. It generates no Blueprint migrations
+`brando.migrate55` first. The hook also adds Brando's agent files where they
+are missing: the skills, the `AGENTS.md` sections and `CLAUDE.md` (see
+[Files for coding agents](installation.md#files-for-coding-agents); `mix
+brando.gen.agents` adds them without an upgrade). It generates no Blueprint migrations
 and runs nothing against the database. A `-dev` version counts as older than
 every prerelease and the release of the same version, so a Git or path installation
 at `0.55.0-dev` moves onto `0.55.0-beta.0` or `0.55.0` as an upgrade, without a
@@ -172,6 +174,7 @@ mix brando.gen.sitemap
 mix brando.gen.authorization
 mix brando.gen.release
 mix brando.gen.tenant_migration add_projects
+mix brando.gen.agents
 ```
 
 All commands use reviewed source plans and consumer namespaces. New dependencies
@@ -208,6 +211,11 @@ application (it adds no second release then). Build with `MIX_ENV=prod mix relea
 then invoke migrations explicitly as described in [Deployment](deployment.md).
 `brando.install.fabfile` is retired and directs callers to release generation and
 Florist; it does not modify existing Fabric files.
+
+`mix brando.gen.agents` adds the files for coding agents that `brando.install`
+writes and the application lacks, and keeps the ones it has; `--refresh`
+replaces the skill files with the versions this Brando ships. See
+[Files for coding agents](installation.md#files-for-coding-agents).
 
 ```sh
 mix brando.gen.otel

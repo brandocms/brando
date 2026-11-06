@@ -30,7 +30,12 @@ defmodule Mix.Brando.Igniter.AgentFilesTest do
     )
   end
 
+  @site_section "<!-- brando-site-start -->\n## Our studio\n<!-- brando-site-end -->\n"
+
   defp install(igniter), do: Igniter.compose_task(igniter, Mix.Tasks.Brando.Install, [])
+  defp gen_agents(igniter, argv \\ []), do: Igniter.compose_task(igniter, Mix.Tasks.Brando.Gen.Agents, argv)
+
+  defp count(string, pattern), do: length(String.split(string, pattern)) - 1
 
   test "Brando ships site skills with a name and description that match their directory" do
     files = AgentFiles.skill_files()
@@ -79,13 +84,104 @@ defmodule Mix.Brando.Igniter.AgentFilesTest do
   test "edited skills and an existing Brando section are left alone on reruns" do
     [{skill, _} | _] = AgentFiles.skill_files()
     edited = "---\nname: mine\ndescription: Edited by the application.\n---\n"
-    agents = @phoenix_agents <> "\n<!-- brando-start -->\nOur own notes.\n<!-- brando-end -->\n"
+    agents = @site_section <> @phoenix_agents <> "\n<!-- brando-start -->\nOur own notes.\n<!-- brando-end -->\n"
 
-    igniter = project(%{skill => edited, "AGENTS.md" => agents}) |> install()
+    igniter = project(%{skill => edited, "AGENTS.md" => agents, "CLAUDE.md" => "@AGENTS.md\n"}) |> install()
 
     assert igniter.issues == []
     Igniter.Test.assert_unchanged(igniter, skill)
     Igniter.Test.assert_unchanged(igniter, "AGENTS.md")
+    Igniter.Test.assert_unchanged(igniter, "CLAUDE.md")
+  end
+
+  test "install creates a CLAUDE.md that imports AGENTS.md" do
+    igniter = install(project())
+
+    Igniter.Test.assert_creates(igniter, "CLAUDE.md", "@AGENTS.md\n")
+  end
+
+  test "an existing CLAUDE.md is untouched, with a notice when it does not import AGENTS.md" do
+    imports = "# Notes\n\n@AGENTS.md\n"
+    copied = "# Old site notes\n\nRun yarn in assets/frontend.\n"
+
+    importing = install(project(%{"CLAUDE.md" => imports}))
+    Igniter.Test.assert_unchanged(importing, "CLAUDE.md")
+    refute Enum.any?(importing.notices, &(&1 =~ "CLAUDE.md"))
+
+    copy = install(project(%{"CLAUDE.md" => copied}))
+    assert copy.issues == []
+    Igniter.Test.assert_unchanged(copy, "CLAUDE.md")
+    assert Enum.any?(copy.notices, &(&1 =~ "CLAUDE.md does not import AGENTS.md"))
+  end
+
+  test "the site section goes once before the usage-rules markers, and reruns leave it alone" do
+    for existing <- [%{}, %{"AGENTS.md" => @phoenix_agents}] do
+      agents = project(existing) |> install() |> IgniterCase.source("AGENTS.md")
+
+      assert count(agents, "<!-- brando-site-start -->") == 1
+      assert count(agents, "<!-- brando-site-end -->") == 1
+      [site, rules] = String.split(agents, "<!-- usage-rules-start -->", parts: 2)
+      assert site =~ ~r/<!-- brando-site-start -->.*<!-- brando-site-end -->\n\n\z/s
+      refute rules =~ "brando-site"
+
+      # The application's edits to the section, and the section, survive a rerun.
+      edited = String.replace(agents, ~r/TODO: .*?\n\n/s, "A portfolio site for Studio.\n\n")
+      rerun = project(%{"AGENTS.md" => edited, "CLAUDE.md" => "@AGENTS.md\n"}) |> install()
+      Igniter.Test.assert_unchanged(rerun, "AGENTS.md")
+    end
+
+    phoenix = project(%{"AGENTS.md" => @phoenix_agents}) |> install() |> IgniterCase.source("AGENTS.md")
+    assert String.starts_with?(phoenix, "This is a web application written using the Phoenix web framework.\n\n")
+  end
+
+  test "an AGENTS.md without usage-rules markers gets the site section once" do
+    agents = "# Studio\n\n<!-- brando-start -->\nOur own notes.\n<!-- brando-end -->\n"
+    result = project(%{"AGENTS.md" => agents}) |> install() |> IgniterCase.source("AGENTS.md")
+
+    assert String.starts_with?(result, agents)
+    assert count(result, "<!-- brando-site-start -->") == 1
+
+    Igniter.Test.assert_unchanged(
+      project(%{"AGENTS.md" => result, "CLAUDE.md" => "@AGENTS.md\n"}) |> install(),
+      "AGENTS.md"
+    )
+  end
+
+  test "mix brando.gen.agents adds the missing agent files and keeps existing ones" do
+    [{edited_skill, _}, {missing_skill, contents} | _] = AgentFiles.skill_files()
+
+    igniter = project(%{edited_skill => "edited\n", "AGENTS.md" => @phoenix_agents}) |> gen_agents()
+
+    assert igniter.issues == []
+    Igniter.Test.assert_unchanged(igniter, edited_skill)
+    Igniter.Test.assert_creates(igniter, missing_skill, contents)
+    Igniter.Test.assert_creates(igniter, "CLAUDE.md", "@AGENTS.md\n")
+
+    agents = IgniterCase.source(igniter, "AGENTS.md")
+    assert agents =~ "(deps/brando/usage-rules.md)"
+    assert count(agents, "<!-- brando-site-start -->") == 1
+
+    # It touches nothing but the agent files.
+    assert Enum.sort(Map.keys(igniter.rewrite.sources)) --
+             ["AGENTS.md", "CLAUDE.md" | Enum.map(AgentFiles.skill_files(), &elem(&1, 0))] ==
+             Enum.sort(Map.keys(project().rewrite.sources))
+  end
+
+  test "mix brando.gen.agents --refresh replaces edited skills and keeps AGENTS.md and CLAUDE.md" do
+    [{edited_skill, shipped} | _] = AgentFiles.skill_files()
+    own_skill = ".claude/skills/our-own/SKILL.md"
+    agents = @site_section <> @phoenix_agents
+    claude = "# Notes\n@AGENTS.md\n"
+
+    igniter =
+      project(%{edited_skill => "edited\n", own_skill => "ours\n", "AGENTS.md" => agents, "CLAUDE.md" => claude})
+      |> gen_agents(["--refresh"])
+
+    assert igniter.issues == []
+    assert IgniterCase.source(igniter, edited_skill) == shipped
+    Igniter.Test.assert_unchanged(igniter, own_skill)
+    Igniter.Test.assert_unchanged(igniter, "CLAUDE.md")
+    assert IgniterCase.source(igniter, "AGENTS.md") =~ "<!-- brando-site-start -->\n## Our studio\n"
   end
 
   test "a versioned upgrade adds missing skills without replacing edited ones" do

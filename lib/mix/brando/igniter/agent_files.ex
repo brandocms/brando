@@ -9,14 +9,50 @@ if Code.ensure_loaded?(Igniter) do
     #
     #   * the site-building skills in Brando's `usage-rules/skills/`, copied to
     #     `.claude/skills/`. A skill file that already exists is left alone, so
-    #     reruns and upgrades keep the application's edits;
+    #     reruns and upgrades keep the application's edits; `refresh: true`
+    #     (`mix brando.gen.agents --refresh`) replaces them with the shipped
+    #     versions;
     #   * a link to `deps/brando/usage-rules.md` in AGENTS.md, inside the
     #     markers the `usage_rules` package maintains, so `mix usage_rules.sync`
-    #     can later take the section over.
+    #     can later take the section over;
+    #   * a site section in AGENTS.md, before those markers so a sync never
+    #     rewrites it: the application owns it once written;
+    #   * CLAUDE.md importing AGENTS.md, so both agents read one file.
 
     @skills_source "usage-rules/skills"
     @skills_target ".claude/skills"
     @agents "AGENTS.md"
+    @claude "CLAUDE.md"
+    @claude_import "@AGENTS.md"
+    @usage_rules_start "<!-- usage-rules-start -->"
+    @site_start "<!-- brando-site-start -->"
+    @site_section """
+    <!-- brando-site-start -->
+    ## This site
+
+    TODO: who the client is, what the site is for, and anything about its
+    content an agent should know before changing it.
+
+    ### Running it
+
+    - `mix phx.server` serves the site and the admin (`/admin`). Its
+      `Brando.Vite` watchers in `config/dev.exs` start the two Vite dev
+      servers; without them, run `pnpm dev` in each bundle.
+    - The bundles each have their own `pnpm install`: `assets/frontend` (the
+      public site, port 3000) and `assets/backend` (the admin, port 3333).
+      Both ports are strict, so a taken port fails. To move one, set
+      `BRANDO_VITE_FRONTEND_PORT` or `BRANDO_VITE_ADMIN_PORT` in the
+      environment both Vite and Phoenix read.
+    - `pnpm build` in each bundle writes to `priv/static`.
+
+    ### Frontend work
+
+    - Load the `brando-frontend` skill before writing CSS, module markup,
+      Moonwalk attributes or JS for the public site, or admin module previews.
+    - Load the `brando-europacss` skill before writing EuropaCSS at-rules
+      (`@space`, `@fontsize`, `@responsive`…), `theme()` or `europa.json5`.
+    <!-- brando-site-end -->
+    """
     @section_start "<!-- brando-start -->"
     @section """
     <!-- brando-start -->
@@ -27,10 +63,16 @@ if Code.ensure_loaded?(Igniter) do
     <!-- brando-end -->\
     """
 
-    def plan(igniter) do
+    @doc """
+    Plans the agent files. Existing files are kept unless `refresh: true`,
+    which replaces existing skill files with the shipped versions (CLAUDE.md
+    and AGENTS.md are always kept).
+    """
+    def plan(igniter, opts \\ []) do
       igniter
-      |> skills()
+      |> skills(Keyword.get(opts, :refresh, false))
       |> agents_md()
+      |> claude_md()
     end
 
     @doc "The skill files Brando ships, as `{target_path, contents}`."
@@ -45,26 +87,72 @@ if Code.ensure_loaded?(Igniter) do
       |> Enum.map(&{Path.join(@skills_target, Path.relative_to(&1, source)), File.read!(&1)})
     end
 
-    defp skills(igniter) do
+    defp skills(igniter, refresh?) do
       Enum.reduce(skill_files(), igniter, fn {path, contents}, igniter ->
-        Igniter.create_new_file(igniter, path, contents, on_exists: :skip)
+        if refresh?,
+          do: Igniter.create_or_update_file(igniter, path, contents, &Rewrite.Source.update(&1, :content, contents)),
+          else: Igniter.create_new_file(igniter, path, contents, on_exists: :skip)
       end)
     end
 
     defp agents_md(igniter) do
       if Igniter.exists?(igniter, @agents) do
-        Igniter.update_file(igniter, @agents, &link_rules/1)
+        Igniter.update_file(igniter, @agents, fn source ->
+          content = Rewrite.Source.get(source, :content)
+          updated = content |> link_rules() |> add_site_section()
+
+          if updated == content, do: source, else: Rewrite.Source.update(source, :content, updated)
+        end)
       else
-        Igniter.create_new_file(igniter, @agents, add_section(""))
+        Igniter.create_new_file(igniter, @agents, "" |> add_section() |> add_site_section())
       end
     end
 
-    defp link_rules(source) do
-      content = Rewrite.Source.get(source, :content)
+    defp claude_md(igniter) do
+      cond do
+        not Igniter.exists?(igniter, @claude) ->
+          Igniter.create_new_file(igniter, @claude, @claude_import <> "\n")
 
-      if String.contains?(content, @section_start),
-        do: source,
-        else: Rewrite.Source.update(source, :content, add_section(content))
+        imports_agents?(igniter) ->
+          igniter
+
+        true ->
+          Igniter.add_notice(
+            igniter,
+            "CLAUDE.md does not import AGENTS.md, so Claude Code misses Brando's rules and the site section. " <>
+              "Move what it adds over to AGENTS.md and replace it with a line reading #{@claude_import}."
+          )
+      end
+    end
+
+    defp imports_agents?(igniter) do
+      igniter
+      |> Igniter.include_existing_file(@claude)
+      |> Map.fetch!(:rewrite)
+      |> Rewrite.source!(@claude)
+      |> Rewrite.Source.get(:content)
+      |> String.split("\n")
+      |> Enum.any?(&(String.trim(&1) == @claude_import))
+    end
+
+    defp link_rules(content) do
+      if String.contains?(content, @section_start), do: content, else: add_section(content)
+    end
+
+    # Outside the usage-rules markers, which `mix usage_rules.sync` rewrites.
+    defp add_site_section(content) do
+      cond do
+        String.contains?(content, @site_start) ->
+          content
+
+        String.contains?(content, @usage_rules_start) ->
+          [before, rest] = String.split(content, @usage_rules_start, parts: 2)
+          prefix = if String.trim(before) == "", do: "", else: String.trim_trailing(before) <> "\n\n"
+          prefix <> @site_section <> "\n" <> @usage_rules_start <> rest
+
+        true ->
+          String.trim_trailing(content) <> "\n\n" <> @site_section
+      end
     end
 
     # Phoenix 1.8 writes its own rules between usage-rules markers; join them.

@@ -9,6 +9,9 @@ Editors compose entries from modules: templates with editable refs (block
 primitives such as text, picture or gallery) and typed vars. Blocks are
 rendered to HTML when the entry is saved, through the site's parser module.
 
+Writing a module's markup, its CSS, Moonwalk attributes or how it looks in
+the block editor: load the `brando-frontend` skill as well.
+
 ## Read first
 
 - `deps/brando/usage-rules.md`: the Block editor section;
