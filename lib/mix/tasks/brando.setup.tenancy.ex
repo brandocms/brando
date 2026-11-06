@@ -251,7 +251,13 @@ if Code.ensure_loaded?(Igniter) do
 
       target = Path.join(["priv", "repo", "tenant_migrations", @tenant_migration])
 
-      Igniter.copy_template(igniter, source, target, [], on_exists: :skip)
+      # Not `on_exists: :skip` alone: Igniter reads a file that exists on disk
+      # but no task has loaded yet, and adds it with the template's contents.
+      if Igniter.exists?(igniter, target) do
+        igniter
+      else
+        Igniter.copy_template(igniter, source, target, [], on_exists: :skip)
+      end
     end
 
     defp add_instructions(igniter, mode, site_key) do
