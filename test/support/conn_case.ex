@@ -48,5 +48,10 @@ defmodule Brando.ConnCase do
     unless tags[:async], do: Brando.Test.Support.preserve_tenant_query_cache()
     pid = Ecto.Adapters.SQL.Sandbox.start_owner!(BrandoIntegration.Repo, shared: not tags[:async])
     on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(pid) end)
+
+    # The query cache entries this test makes are its own (Brando.Test.ScopedEnv)
+    owner = self()
+    :ok = Brando.Test.ScopedEnv.own_cache()
+    on_exit(fn -> Brando.Test.ScopedEnv.delete(owner, :cache_owner) end)
   end
 end

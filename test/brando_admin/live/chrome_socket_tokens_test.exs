@@ -7,7 +7,7 @@ defmodule BrandoAdmin.ChromeSocketTokensTest do
   hands the page fresh ones.
   """
 
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.LiveViewTest

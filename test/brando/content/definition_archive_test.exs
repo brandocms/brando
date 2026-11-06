@@ -1,5 +1,5 @@
 defmodule Brando.Content.Definition.ArchiveTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   alias Brando.Content.Definition.Archive
 
   defp zip(files) do

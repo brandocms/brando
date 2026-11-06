@@ -6,7 +6,7 @@ defmodule Brando.Villain.DuplicationTest do
   duplicate_child, add_uid_to_refs, and the block_changeset vs
   recursive_block_changeset replace-rejection behavior.
   """
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
   alias Brando.Content.{Block, Ref, TableRow, Var}
   alias Brando.Content.Blocks, as: ContentBlocks

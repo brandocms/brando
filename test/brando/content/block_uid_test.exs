@@ -2,7 +2,11 @@ defmodule Brando.Content.BlockUidTest do
   # A block uid is written into marker comments on edit-mode pages, so its shape
   # is what keeps it from changing the page's structure. The markup below would
   # only set document.title.
-  use Brando.ConnCase, async: false
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on; and
+  # it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.ConnCase, async: true, group: :shared_locks
 
   alias Brando.Authorization.{Catalog, Groups, Migration, Scope}
   alias Brando.Content.Block

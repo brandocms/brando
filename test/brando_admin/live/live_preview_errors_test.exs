@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.LivePreviewErrorsTest do
   # A form with errors can't open the live preview. The alert says so, not
   # that saving failed: nothing was saved.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Factory
 

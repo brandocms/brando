@@ -5,7 +5,7 @@ defmodule BrandoAdmin.ContentConfigurationLiveTest do
   # nothing in them needs a browser: the forms are server-rendered, and the
   # container's CodeMirror editor only mirrors its text into the `code`
   # textarea, which the form below fills in directly.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   @base "/admin/config/content"
 

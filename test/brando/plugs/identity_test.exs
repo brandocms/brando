@@ -1,5 +1,5 @@
 defmodule Brando.Plug.IdentityTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   import Plug.Test
 
   alias Brando.Plug.Identity

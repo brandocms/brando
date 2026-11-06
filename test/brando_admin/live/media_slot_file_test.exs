@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.MediaSlotFileTest do
   # A media ref is a slot: the editor picks what it holds. A module can offer
   # a file there, next to pictures and videos (an animation file, a PDF).
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Content.Block
   alias Brando.Repo

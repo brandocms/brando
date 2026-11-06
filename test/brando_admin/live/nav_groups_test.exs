@@ -2,7 +2,7 @@ defmodule BrandoAdmin.NavGroupsTest do
   # Configuration's sidebar submenu lists its screens under small headings,
   # each group labelled by its heading. Groups with nothing the user may open
   # show no heading.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   @groups ~w(site publishing building_blocks operations)
 

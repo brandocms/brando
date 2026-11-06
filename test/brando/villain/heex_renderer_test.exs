@@ -1,5 +1,5 @@
 defmodule Brando.Villain.HeexRendererTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   alias Brando.Villain.HeexRenderer
 
   describe "compile_module!/2" do

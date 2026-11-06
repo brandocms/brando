@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.UtilsImageToolsLiveTest do
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
   use Oban.Testing, repo: BrandoIntegration.Repo
 
   alias Brando.Factory

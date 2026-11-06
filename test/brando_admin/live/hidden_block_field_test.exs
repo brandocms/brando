@@ -2,7 +2,7 @@ defmodule BrandoAdmin.HiddenBlockFieldTest do
   # `blocks :blocks, hidden: {:title, "Hide the blocks"}` on the test article:
   # the block field follows the form, and a hidden one is still saved, since
   # the save waits for every block field's changesets.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Content.Block
   alias Brando.Repo

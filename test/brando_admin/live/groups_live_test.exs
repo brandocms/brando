@@ -1,5 +1,7 @@
 defmodule BrandoAdmin.Users.GroupsLiveTest do
-  use Brando.LiveCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
   alias Brando.Authorization.{Boundary, Groups, Migration, Scope}
 
   setup %{current_user: user} do

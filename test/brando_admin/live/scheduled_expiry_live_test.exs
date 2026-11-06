@@ -2,7 +2,7 @@ defmodule BrandoAdmin.ScheduledExpiryLiveTest do
   # The expiry (`unpublish_at`) in the admin: its field in the entry's
   # scheduled publishing drawer, the label in listings and the dashboard's
   # "Expiring soon" panel.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Pages.Page
 

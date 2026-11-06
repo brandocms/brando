@@ -7,7 +7,7 @@ defmodule BrandoAdmin.Components.Form.VideoThumbnailPickTest do
   # Driven through the handlers the browser reaches: the drawer's "Select
   # image" (`browse_video_thumbnail`), the picker opening it sends, the copy's
   # reply, and the `select_image` the picker's hook sends on with the reply.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 1]

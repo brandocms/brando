@@ -1,5 +1,5 @@
 defmodule Brando.SoftDelete.QueryTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Content.Container

@@ -6,7 +6,7 @@ defmodule BrandoAdmin.Components.Form.Input.VideoTest do
   # for a referenced-but-hard-deleted video — or the nil `video_id` on the
   # path-lookup branch — and destroy the entire entry form LiveView process,
   # taking every unsaved change with it.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 2]

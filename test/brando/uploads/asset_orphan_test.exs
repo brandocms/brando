@@ -18,7 +18,7 @@ defmodule Brando.Uploads.AssetOrphanTest do
   A future asset GC has to change this file on purpose, which is the same job
   `orphaned_blocks_test.exs` does for blocks.
   """
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory

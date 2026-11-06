@@ -1,5 +1,5 @@
 defmodule Brando.Villain.TemplateAdapter.HeexTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
 
   alias Brando.Content.Module, as: ContentModule
   alias Brando.Content.Var

@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.PasswordHashRenderTest do
   # No admin page renders a user's stored password hash, which is the value of
   # `password` in a form built from a saved user.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   import Swoosh.TestAssertions
 

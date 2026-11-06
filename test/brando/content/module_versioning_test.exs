@@ -2,7 +2,7 @@ defmodule Brando.Content.ModuleVersioningTest do
   @moduledoc """
   The version bump and the stale-block bookkeeping it drives, against the database.
   """
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Content.Block

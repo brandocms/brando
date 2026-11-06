@@ -2,7 +2,7 @@ defmodule BrandoAdmin.FormWithoutBlocksFieldTest do
   # The test article's `:no_blocks` form leaves out the schema's `blocks`
   # relation. Saving must not wait for a block field that is never mounted,
   # or it would wait forever.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.SyncTest
 

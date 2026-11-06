@@ -1,5 +1,8 @@
 defmodule Mix.Brando.Igniter.ProjectTest do
-  use ExUnit.Case, async: true
+  # Synchronous: Igniter puts the project's config into the application
+  # environment while it formats a file, which tests running beside this one
+  # would read.
+  use ExUnit.Case, async: false
 
   import Igniter.Test
 

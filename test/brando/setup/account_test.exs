@@ -1,5 +1,5 @@
 defmodule Brando.Setup.AccountTest do
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Setup.Account
   alias Brando.Users.UserConfig

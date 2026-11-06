@@ -11,7 +11,7 @@ defmodule BrandoAdmin.Components.Form.PickerSelectTest do
   # Esc/backdrop are client-side, so what is asserted here is the invariant that
   # makes every dismissal path safe: the select itself commits the FK, so no
   # dismissal path has anything left to lose.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 1]

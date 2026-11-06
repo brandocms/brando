@@ -6,7 +6,9 @@ defmodule BrandoAdmin.MediaFolderReadTest do
   # leaves no folders behind; a folder not stored yet shows empty, and its
   # images are found by their paths as before. Adding or organizing media
   # still stores the folder on screen, for the uploads into it.
-  use Brando.LiveCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Brando.Test.Users
 

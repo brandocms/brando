@@ -3,7 +3,7 @@ defmodule BrandoAdmin.FormValidationA11yTest do
   # region; correcting the field clears both. The attributes are rendered by
   # the server. Moving focus to the field after the save alert stays in
   # e2e/playwright/tests/editor-motion.spec.js.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   defp title_field(view), do: view |> element("#page_title") |> render()
 

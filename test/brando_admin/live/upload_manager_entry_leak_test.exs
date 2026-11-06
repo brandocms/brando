@@ -42,7 +42,7 @@ defmodule BrandoAdmin.UploadManagerEntryLeakTest do
   read as "uploads are broken" from the outside.
   """
 
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   @fixture Path.expand("../../fixtures/sample.jpg", __DIR__)
   @queue_form "form#brando-upload-manager-queue-form"

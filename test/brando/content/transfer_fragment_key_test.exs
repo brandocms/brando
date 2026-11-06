@@ -3,7 +3,7 @@ defmodule Brando.Content.TransferFragmentKeyTest do
   # signed, so creating one from it holds the key to the format, as the form
   # does, and the preview says which key and why. Changing the key in the
   # preview, or updating a fragment that has the key already, goes through.
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
 
   alias Brando.Content.Transfer
   alias Brando.{Factory, Repo}

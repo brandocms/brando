@@ -1,6 +1,6 @@
 defmodule Brando.JSONLD.PageArticleTest do
   # Builds the whole @graph, which reads the cached identity.
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
 
   alias Brando.JSONLD.Graph
   alias Brando.Pages.Page

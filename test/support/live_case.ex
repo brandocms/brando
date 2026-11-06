@@ -17,10 +17,15 @@ defmodule Brando.LiveCase do
     * the admin routes sit behind `{BrandoAdmin.UserAuth, :ensure_authenticated}`,
       so the conn needs a logged-in user — `setup` below does that.
 
-  The sandbox is shared (`Brando.ConnCase.setup_sandbox/1` passes
-  `shared: not async`), which is what lets the LiveView process — a different
-  process from the test — see the test's data. **These tests must not be
-  `async: true`.**
+  The LiveView process sees the test's data without a shared sandbox:
+  `Phoenix.LiveViewTest.live/2` puts the test in its `$callers`, and the
+  sandbox finds the connection's owner there, as it does for the Tasks the
+  view starts. So a module can be `async: true` (`Brando.ConnCase.setup_sandbox/1`
+  then checks out a connection of its own), unless it changes what other
+  tests read: application environment other than the two keys
+  `put_test_env/2` sets for one test, a cache, a schema with a fixed name.
+  A synchronous module shares its sandbox, which a process outside the test's
+  `$callers` (one in the application's supervision tree) needs.
 
   ## Killing the LiveView
 

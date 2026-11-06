@@ -3,7 +3,7 @@ defmodule BrandoAdmin.ListingCountsLiveTest do
   # filters, and the footer counts, shows the range and picks the page size.
   # This was e2e/playwright/tests/pages/listing-counts.spec.js; all of it is
   # server-rendered, so it runs here against the Pages listing.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   @path "/admin/pages"
 

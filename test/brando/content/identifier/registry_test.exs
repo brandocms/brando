@@ -1,5 +1,5 @@
 defmodule Brando.Content.Identifier.RegistryTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Brando.Content.Identifier.Registry
 

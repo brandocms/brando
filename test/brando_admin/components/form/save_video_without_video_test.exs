@@ -21,7 +21,7 @@ defmodule BrandoAdmin.Components.Form.SaveVideoWithoutVideoTest do
   clause already did.
   """
 
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias BrandoAdmin.Components.Form

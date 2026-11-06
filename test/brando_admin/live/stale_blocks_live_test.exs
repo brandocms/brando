@@ -1,7 +1,9 @@
 defmodule BrandoAdmin.StaleBlocksLiveTest do
   # Block modules → Blocks on older versions, the module editor's notice, and
   # what an editor with the entry open sees when the blocks are resolved.
-  use Brando.LiveCase
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Brando.EditSessionEditors
   import Ecto.Query, only: [from: 2]

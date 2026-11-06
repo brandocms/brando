@@ -2,7 +2,9 @@ defmodule Brando.Content.Proposals.RichTextGuardTest do
   # The proposal guard reports rich text a browser would build a handler or
   # script address from, however another parser reads it. The handlers
   # would only set document.title.
-  use Brando.ConnCase, async: false
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on
+  use Brando.ConnCase, async: true, group: :shared_locks
 
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.InsertBlock

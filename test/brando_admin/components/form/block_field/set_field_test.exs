@@ -3,7 +3,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.SetFieldTest do
   # last arrival wins per field. Two editors in different fields of one
   # block both keep their changes, in a root (whose diff is cumulative) and
   # in a child (whose diff merges).
-  use ExUnit.Case, async: false
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on
+  use ExUnit.Case, async: true, group: :shared_locks
   use Brando.ConnCase
 
   alias Brando.Content.Block

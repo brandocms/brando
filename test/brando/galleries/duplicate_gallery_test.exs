@@ -4,7 +4,7 @@ defmodule Brando.Galleries.DuplicateGalleryTest do
   duplicate the gallery — otherwise the copy and the original share one row and
   editing either one edits both.
   """
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory

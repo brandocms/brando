@@ -1,5 +1,5 @@
 defmodule Brando.Images.UtilsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Brando.ConnCase
   use RouterHelper
   import Brando.Images.Utils

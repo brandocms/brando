@@ -8,7 +8,7 @@ defmodule Brando.Content.PartialBlockSaveTest do
   # Drives the same save path `BlockField`'s `fetch_root_blocks` and the Form
   # run: materialize each root, cast recursively over the persisted entry block,
   # `reject_deleted` → `strip_render_artifacts` → `put_assoc` → update.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Content.Block

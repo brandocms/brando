@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.NavSearchItemTest do
   # Search is a row of the sidebar's first section: a button that opens the
   # command palette, after Dashboard, never marked as the current page.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias BrandoAdmin.Nav
 

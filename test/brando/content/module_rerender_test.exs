@@ -4,7 +4,9 @@ defmodule Brando.Content.ModuleRerenderTest do
   them, from scratch (Oban runs inline here). Blocks inside a multi block are
   reached through their root.
   """
-  use ExUnit.Case, async: false
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on
+  use ExUnit.Case, async: true, group: :shared_locks
   use Brando.ConnCase
 
   alias Brando.Content.Blocks

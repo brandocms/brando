@@ -14,7 +14,7 @@ defmodule BrandoAdmin.Components.Form.Block.ConfigEventUidTest do
   # also be re-created, since the id changes.
   #
   # Child blocks are not affected — their changeset *is* the block changeset.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory

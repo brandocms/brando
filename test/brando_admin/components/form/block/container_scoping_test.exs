@@ -10,7 +10,7 @@ defmodule BrandoAdmin.Components.Form.Block.ContainerScopingTest do
   # `type == :container or belongs_to == :root` would make root module blocks pay
   # for both lists. These tests pin the boundary, since nothing else would
   # notice it drifting.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory

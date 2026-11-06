@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Images.SweepTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Ecto.Query

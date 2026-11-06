@@ -1,5 +1,5 @@
 defmodule Brando.Blueprint.RelationsTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Blueprint.Relations

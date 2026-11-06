@@ -5,7 +5,7 @@ defmodule Brando.Content.BlockMediaAttrsTest do
   # renders and commits — `image_id`, `video_id`, `file_id`, `gallery_id` and
   # the config-target fields. Anything omitted is dropped silently by `cast/3`
   # — no error, no warning, the value just never reaches the database.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Ecto.Query, only: [from: 2]

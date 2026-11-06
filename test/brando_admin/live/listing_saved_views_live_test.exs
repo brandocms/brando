@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.ListingSavedViewsLiveTest do
   # The listing toolbar's Views menu (`Content.List.SavedViews`) on the test
   # Article's `:filters` listing: a text, a boolean and a select filter.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.ListingViews
   alias Brando.SyncTest

@@ -12,7 +12,7 @@ defmodule BrandoAdmin.Components.Form.Block.RecoverBlocksSecurityTest do
   # These are all "authenticated admin" concerns — Brando has no tenant boundary
   # and every admin can already reach every asset through the pickers. What is
   # defended here is ownership and identity, not visibility.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory

@@ -15,7 +15,7 @@ defmodule BrandoAdmin.Components.Form.Block.RecoverChildrenTest do
   #
   # These tests drive the server half — `handle_event("recover_blocks", …)` —
   # with the payload shape the hook sends, including `childOrder`.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory

@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.Form.PendingRowsTest do
   # A change serialized before an add or a removal reached the browser lists
   # the rows as they were (#3157). `PendingRows` corrects only that, before
   # Ecto casts the params as usual.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Content.Var

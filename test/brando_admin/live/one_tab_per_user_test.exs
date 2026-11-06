@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.OneTabPerUserTest do
   # One editor, two tabs on one entry, through real LiveViews: one tab edits
   # at a time (`BrandoAdmin.LiveView.Form.Tabs`).
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   import Brando.EditSessionEditors, only: [await: 1]
 

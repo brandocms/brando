@@ -6,7 +6,7 @@ defmodule BrandoAdmin.Components.Form.Block.RefEventsTest do
   # "expected refs to be an embed, got: assoc" and takes the editor LiveView
   # down — discarding every unsaved change in that process. All three are
   # reachable from live buttons in `block/render.ex`.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Content.Blocks, as: ContentBlocks

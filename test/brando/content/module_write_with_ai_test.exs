@@ -5,7 +5,7 @@ defmodule Brando.Content.ModuleWriteWithAITest do
   import, the module definition files and a version bump for the shared
   library's copies.
   """
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Content

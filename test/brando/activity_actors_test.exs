@@ -2,7 +2,7 @@ defmodule Brando.ActivityActorsTest do
   # Who made each change: a person, the Assistant, a tool connected over MCP
   # or an automatic job, with the proposal a change came from and the user
   # who approved and applied it.
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
 
   import Ecto.Query, only: [from: 2]
 

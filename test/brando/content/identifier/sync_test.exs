@@ -1,5 +1,5 @@
 defmodule Brando.Content.Identifier.SyncTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Brando.ConnCase
   use BrandoIntegration.TestCase
 

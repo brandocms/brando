@@ -11,7 +11,7 @@ defmodule BrandoAdmin.StaleValidateAssetRaceTest do
   the server: params never supply them again until the form is rebuilt from a
   stored entry.
   """
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   import Phoenix.Component, only: [to_form: 1, to_form: 2]
 

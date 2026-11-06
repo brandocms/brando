@@ -3,7 +3,7 @@ defmodule BrandoAdmin.Components.Form.Input.GalleryBlockTest do
   # and videos are numbered by separate sequences. These tests put image N and
   # video N in the same gallery block and check that each keeps its own override
   # in the editor.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
   use Phoenix.Component
 

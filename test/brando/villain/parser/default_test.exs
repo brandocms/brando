@@ -1,5 +1,5 @@
 defmodule Brando.Villain.ParserTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use BrandoIntegration.TestCase
   use Brando.ConnCase
 

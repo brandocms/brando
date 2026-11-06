@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.GalleryFormLiveTest do
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Content.Block
   alias Brando.Factory

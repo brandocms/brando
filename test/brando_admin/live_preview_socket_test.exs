@@ -7,7 +7,9 @@ defmodule BrandoAdmin.LivePreviewSocketTest do
   connects from origin `null`, to `BrandoAdmin.LivePreviewSocket` at
   `/__livepreview/socket`, which takes nothing but that token.
   """
-  use Brando.ConnCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.ConnCase, async: true, group: :shared_locks
   import Phoenix.ChannelTest, only: [subscribe_and_join: 2]
   require Phoenix.ChannelTest
   alias Brando.Authorization.{Boundary, Migration, Preview, Scope}

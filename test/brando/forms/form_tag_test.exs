@@ -1,5 +1,5 @@
 defmodule Brando.Forms.FormTagTest do
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
 
   alias Brando.Factory
   alias Brando.Forms

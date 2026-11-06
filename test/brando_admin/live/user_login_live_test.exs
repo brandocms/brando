@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.UserLoginLiveTest do
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   # The two Brando marks once both carried Illustrator's `id="Layer_1"`, and
   # LiveView logs a duplicate id as an error in the browser console.

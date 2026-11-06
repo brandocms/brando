@@ -2,7 +2,7 @@ defmodule Brando.Revisions.ScheduledInvalidRevisionTest do
   # A scheduled revision whose nested record no longer validates (a var that
   # lost its required label) has no errors at the top level: it is cancelled
   # at once all the same, and Activity names the field that holds the record.
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Factory

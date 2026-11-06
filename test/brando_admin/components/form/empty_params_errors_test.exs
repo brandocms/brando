@@ -8,7 +8,7 @@ defmodule BrandoAdmin.Components.Form.EmptyParamsErrorsTest do
   #
   # There is no e2e coverage of validation-error display, so this test is what
   # shows the forced action is not needed.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 1]

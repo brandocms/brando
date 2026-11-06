@@ -1,7 +1,9 @@
 defmodule BrandoAdmin.MediaSweepLiveTest do
   # "Sort by use" and "Delete unused" in the video and file libraries, the
   # image library's (image_sweep_live_test.exs) on the shared sweep.
-  use Brando.LiveCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Ecto.Query
 

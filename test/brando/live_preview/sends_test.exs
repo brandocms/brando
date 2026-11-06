@@ -1,5 +1,5 @@
 defmodule Brando.LivePreview.SendsTest do
-  use Brando.ConnCase
+  use Brando.ConnCase, async: true
 
   alias Brando.LivePreview
   alias Brando.Pages.Page

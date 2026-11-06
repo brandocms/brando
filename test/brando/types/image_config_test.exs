@@ -1,5 +1,5 @@
 defmodule Brando.Types.ImageConfigTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
   alias Brando.Type.ImageConfig
 
   @result2 %Brando.Type.ImageConfig{

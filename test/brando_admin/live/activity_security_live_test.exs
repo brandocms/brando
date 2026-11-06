@@ -1,7 +1,9 @@
 defmodule BrandoAdmin.ActivitySecurityLiveTest do
   # Configuration → Activity → Security: every user's sign-in security events,
   # for those who may see them, enforced on the server.
-  use Brando.LiveCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Ecto.Query, only: [from: 2]
 

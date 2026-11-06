@@ -3,7 +3,11 @@ defmodule BrandoAdmin.RenderStoreOrderTest do
   # blocks. A background render of the same entry (a module save's, say)
   # loads the entry, renders and stores. Whichever stores last, the stored
   # HTML is the saved blocks rendered from the newest modules (#3471).
-  use Brando.LiveCase
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on; and
+  # it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Brando.EditSessionEditors
   import Brando.Test.Users

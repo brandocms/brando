@@ -2,7 +2,7 @@ defmodule BrandoAdmin.Components.ImagePickerTargetTest do
   # A block's upload opened the picker scoped to whatever field opened it
   # last: without a `config_target` of its own it kept the previous one, so
   # after a page's meta image the block browsed `images/meta`.
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
 
   alias BrandoAdmin.Components.ImagePicker
 

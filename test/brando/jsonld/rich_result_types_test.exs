@@ -1,6 +1,6 @@
 defmodule Brando.JSONLD.RichResultTypesTest do
   # The graph reads the cached identity.
-  use Brando.ConnCase, async: false
+  use Brando.ConnCase, async: true
 
   alias Brando.JSONLD.Inspector
   alias Brando.JSONLD.Rules

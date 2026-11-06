@@ -2,7 +2,7 @@ defmodule BrandoAdmin.StartFromTemplateTest do
   # An empty block field offers the content templates of its namespace (here
   # the one named after the schema, "articles"). Choosing one fills the field
   # with copies of the template's blocks.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Content.Block
   alias Brando.Content.StartingTemplates

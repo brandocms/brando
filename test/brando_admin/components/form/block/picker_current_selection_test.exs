@@ -10,7 +10,7 @@ defmodule BrandoAdmin.Components.Form.Block.PickerCurrentSelectionTest do
   #
   # `send_update/2` outside a LiveView process is just a message to `self()`,
   # so the payload each handler ships to the picker is directly assertable.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   import Phoenix.Component, only: [to_form: 1]

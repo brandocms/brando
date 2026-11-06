@@ -1,5 +1,5 @@
 defmodule BrandoAdmin.Forms.FormFormLiveTest do
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Forms
   alias Brando.Forms.Form

@@ -8,7 +8,7 @@ defmodule BrandoAdmin.VideoPickerScopeTest do
   A video picked from the library is linked as it is. New videos still take
   the field's config, whichever scope is on screen.
   """
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.Videos.Video
   alias BrandoAdmin.Components.VideoPicker

@@ -56,6 +56,35 @@ defmodule Brando.Test.ScopedEnv do
   end
 
   @doc """
+  Makes the calling process own a namespace of the query cache
+  (`Brando.Cache.Query`), for itself and the processes that carry it in
+  their `$callers`, until `delete/2` with `:cache_owner`: an async test then
+  never reads a list another test cached from its own sandbox. Every test
+  with a sandbox calls it (`Brando.ConnCase.setup_sandbox/1`).
+  """
+  @spec own_cache() :: :ok
+  def own_cache do
+    true = :ets.insert(@table, {{self(), :cache_owner}, self()})
+    :ok
+  end
+
+  @doc """
+  The test that owns the calling process's query cache namespace
+  (`own_cache/0`), or `nil` for one outside any test's `$callers`.
+  """
+  @spec cache_owner() :: pid() | nil
+  def cache_owner do
+    if :ets.whereis(@table) == :undefined do
+      nil
+    else
+      case lookup([self() | Process.get(:"$callers", [])], :cache_owner) do
+        {:ok, owner} -> owner
+        :error -> nil
+      end
+    end
+  end
+
+  @doc """
   The value set for `key` by the calling process or the first of its
   `$callers` that set one, or `:error`. Also `:error` before `install/0`
   (Brando reads its configuration while the tests compile).

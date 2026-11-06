@@ -51,8 +51,18 @@ defmodule Brando.Cache.Query do
   """
   @spec hash_query({atom(), binary(), term()}) :: term()
   def hash_query({query_type, query_name, _} = query_key) do
-    key = {query_type, query_name, Base.encode16(<<:erlang.phash2(query_key, @hash_range)::size(32)>>)}
+    key = {query_type, query_name, Base.encode16(<<:erlang.phash2(scoped(query_key), @hash_range)::size(32)>>)}
     Brando.Tenant.cache_key(key)
+  end
+
+  # Brando's own tests hash each test's queries apart (`Brando.Test.ScopedEnv`,
+  # in test/support), so async tests never read a list another one cached from
+  # its sandbox. Keys keep their shape, which evictions match on. Nothing else
+  # compiles this in.
+  if Application.compile_env(:brando, :scoped_test_env, false) do
+    defp scoped(query_key), do: {Brando.Test.ScopedEnv.cache_owner(), query_key}
+  else
+    defp scoped(query_key), do: query_key
   end
 
   @doc """

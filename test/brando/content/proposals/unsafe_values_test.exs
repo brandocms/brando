@@ -4,7 +4,9 @@ defmodule Brando.Content.Proposals.UnsafeValuesTest do
   # reports markup in them as :unsafe_text, which blocks approval and the
   # preview. The parser's own escaping is tested in
   # test/brando/villain/parser/escaping_test.exs.
-  use Brando.ConnCase, async: false
+  # Grouped, one at a time: ProposalFixtures.context/0 inserts the pages "identity" and
+  # "naming", whose URIs concurrent transactions would wait on
+  use Brando.ConnCase, async: true, group: :shared_locks
 
   alias Brando.Content.Proposals
   alias Brando.Content.Proposals.{InsertBlock, Preview, SetBlockValues, SetFields, SetRefConfig}

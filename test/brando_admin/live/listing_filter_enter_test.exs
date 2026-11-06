@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.ListingFilterEnterTest do
   # Enter in a listing's text filter (`submit_filter` in `Content.List`) on the
   # test Article's `:filters` listing, whose "Title" filter is a text filter.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias Brando.SyncTest
 

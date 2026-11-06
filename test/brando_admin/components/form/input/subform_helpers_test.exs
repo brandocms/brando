@@ -11,7 +11,7 @@ defmodule BrandoAdmin.Components.Form.Input.SubformHelpersTest do
   #
   # The same rule as for ref media FKs: a value in `data` rather than in
   # `changes` never reaches SQL.
-  use ExUnit.Case, async: false
+  use ExUnit.Case, async: true
   use Brando.ConnCase
 
   alias Brando.Content.Var

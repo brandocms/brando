@@ -5,7 +5,9 @@ defmodule BrandoAdmin.RevisionLockedFieldsTest do
   # and a revision whose snapshot already has another value restores everything
   # but that field. The test article's `:locked` form locks `subtitle` and
   # `year` for everyone, and `:locked_slug` its slug for anyone but a superuser.
-  use Brando.LiveCase
+  # Grouped, one at a time: it takes the authorization lock (Brando.Authorization.Groups.lock!/0),
+  # which a test's sandbox transaction holds until the test ends
+  use Brando.LiveCase, async: true, group: :shared_locks
 
   import Ecto.Query, only: [from: 2]
 

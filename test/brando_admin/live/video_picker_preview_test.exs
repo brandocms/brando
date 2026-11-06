@@ -5,7 +5,7 @@ defmodule BrandoAdmin.VideoPickerPreviewTest do
   provider's host, or plays a file in a `<video>`; nothing the browser sends
   picks what plays.
   """
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   alias BrandoAdmin.Components.VideoPicker
 

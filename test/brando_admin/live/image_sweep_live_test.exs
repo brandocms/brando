@@ -1,7 +1,7 @@
 defmodule BrandoAdmin.ImageSweepLiveTest do
   # The image library's "Sort by use" (BrandoAdmin.Images.Sweep) and the
   # "Not in use" filter's delete-all.
-  use Brando.LiveCase
+  use Brando.LiveCase, async: true
 
   import Ecto.Query
 
