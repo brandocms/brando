@@ -11,9 +11,17 @@ compiler: the `europa` executable from `@brandocms/europacss-cli`, run by
 `@brandocms/vite-plugin-europacss` with the `europa.json5` beside
 `vite.config.js`. There is no PostCSS step.
 
-CSS or a config from a site on the older PostCSS plugin (`@brandocms/europacss`,
-`europa.config.js` or `.cjs`, `@row`, `&__suffix`) needs porting: read
-[porting.md](porting.md) first.
+**Check the bundle's compiler first**, in its `package.json`:
+
+- `@brandocms/europacss-cli` and `@brandocms/vite-plugin-europacss`: the
+  native compiler, which this skill describes. The admin (`assets/backend`)
+  is always on it.
+- `@brandocms/europacss` with `europa.config.js` or `.cjs` and a
+  `postcss.config`: the legacy PostCSS plugin, which a site installed before
+  Brando 0.55 may keep for its frontend. Native-only syntax (`negate()`,
+  `@mq`, `breakout`, `europa.json5`) does not compile there. Write CSS in the
+  style the site's files already use, and port only when asked:
+  [porting.md](porting.md) covers the config, the CSS and checking the result.
 
 ## The site's two configs
 

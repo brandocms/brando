@@ -35,6 +35,10 @@ defmodule Mix.Brando.Igniter.AgentFilesTest do
   defp install(igniter), do: Igniter.compose_task(igniter, Mix.Tasks.Brando.Install, [])
   defp gen_agents(igniter, argv \\ []), do: Igniter.compose_task(igniter, Mix.Tasks.Brando.Gen.Agents, argv)
 
+  # A file the application has on disk but no task has read yet: what a real
+  # rerun sees, where the test project otherwise loads every file up front.
+  defp unread(igniter, path), do: %{igniter | rewrite: Rewrite.drop(igniter.rewrite, [path])}
+
   defp count(string, pattern), do: length(String.split(string, pattern)) - 1
 
   test "Brando ships site skills with a name and description that match their directory" do
@@ -101,12 +105,18 @@ defmodule Mix.Brando.Igniter.AgentFilesTest do
   end
 
   test "an existing CLAUDE.md is untouched, with a notice when it does not import AGENTS.md" do
-    imports = "# Notes\n\n@AGENTS.md\n"
     copied = "# Old site notes\n\nRun yarn in assets/frontend.\n"
 
-    importing = install(project(%{"CLAUDE.md" => imports}))
-    Igniter.Test.assert_unchanged(importing, "CLAUDE.md")
-    refute Enum.any?(importing.notices, &(&1 =~ "CLAUDE.md"))
+    # An import on its own line or inline, and a symlink to AGENTS.md (read as its content).
+    for {claude, agents} <- [
+          {"# Notes\n\n@AGENTS.md\n", @phoenix_agents},
+          {"Read @./AGENTS.md first.\n", @phoenix_agents},
+          {@site_section <> @phoenix_agents, @site_section <> @phoenix_agents}
+        ] do
+      importing = install(project(%{"CLAUDE.md" => claude, "AGENTS.md" => agents}))
+      Igniter.Test.assert_unchanged(importing, "CLAUDE.md")
+      refute Enum.any?(importing.notices, &(&1 =~ "CLAUDE.md")), claude
+    end
 
     copy = install(project(%{"CLAUDE.md" => copied}))
     assert copy.issues == []
@@ -182,6 +192,21 @@ defmodule Mix.Brando.Igniter.AgentFilesTest do
     Igniter.Test.assert_unchanged(igniter, own_skill)
     Igniter.Test.assert_unchanged(igniter, "CLAUDE.md")
     assert IgniterCase.source(igniter, "AGENTS.md") =~ "<!-- brando-site-start -->\n## Our studio\n"
+  end
+
+  test "a skill on disk that no task has read yet is kept by reruns and replaced by --refresh" do
+    [{skill, shipped} | _] = AgentFiles.skill_files()
+    project = fn -> project(%{skill => "edited\n"}) |> unread(skill) end
+
+    kept? = fn igniter ->
+      igniter.issues == [] and
+        (not Rewrite.has_source?(igniter.rewrite, skill) or IgniterCase.source(igniter, skill) == "edited\n")
+    end
+
+    assert project.() |> gen_agents() |> kept?.()
+    assert project.() |> install() |> kept?.()
+
+    assert project.() |> gen_agents(["--refresh"]) |> IgniterCase.source(skill) == shipped
   end
 
   test "a versioned upgrade adds missing skills without replacing edited ones" do

@@ -10,6 +10,12 @@ its CSS (load `brando-europacss` for the at-rules and `europa.json5`), and
 Jupiter (`@brandocms/jupiter`) runs its JS. Modules are the unit of the page:
 an editor stacks them, so each one is styled on its own.
 
+The file map and rules below are what `mix brando.install` writes. A site
+installed before Brando 0.55 may differ, and its frontend may still build with
+the legacy PostCSS plugin (`@brandocms/europacss` and `europa.config.cjs` in
+`assets/frontend`): follow the site's own files there, and port it only when
+asked.
+
 ## File map
 
 | File | Holds |
@@ -23,7 +29,7 @@ an editor stacks them, so each one is styled on its own.
 | `js/index.js` | The Jupiter `Application`. |
 | `js/config/*.js` | One config per Jupiter module (`MOONWALK.js`, `HEADER.js`…). |
 | `js/modules/` | The site's own JS modules. |
-| `public/` | Copied to `priv/static` by `pnpm build`, served from `/`. |
+| `public/` | Copied to `priv/static` by `pnpm build`. Phoenix serves only the web module's `static_paths/0` (`assets fonts images favicon.ico`), so files go under `public/fonts/` or `public/images/`, or their directory goes into `static_paths/0`. |
 
 A new module's styles go in `modules.css`; a new partial gets its own file in
 `css/includes/`, imported from `app.css`.
@@ -63,7 +69,8 @@ A container block renders `<section b-section="namespace-key">` with the
 palette's colours as `--<color key>` custom properties on it (`Brando.Cache.Palettes`
 also writes them for `[b-section="namespace-key"]`). Style a palette-aware
 module with `var(--<key>)`. `critical.css` hides every `[b-section]` until
-Jupiter sets `data-app-ready="true"` on the body, once the fonts have loaded.
+Jupiter sets `data-app-ready="true"` on the body, once the fonts have loaded,
+so without JS a container stays hidden.
 
 ## Admin module previews
 

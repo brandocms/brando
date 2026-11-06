@@ -83,7 +83,7 @@ Easing goes in `transition.to.ease`.
 runs: {
   counter: {
     threshold: 0.5,              // the run's own; the global one is not used
-    rootMargin: '0px',           // default: the global rootMargin
+    rootMargin: '0px',           // default: the global one; the last run on the page always gets '0px'
     repeated: false,             // true keeps observing after it has run
     initialize: el => {},        // when Moonwalk is created
     onReady: el => {},           // when Moonwalk starts, before observing
@@ -110,7 +110,8 @@ to load before it reveals.
   before it as ready. A hash that is not a valid CSS selector (`#1-intro`)
   throws; give anchors ids that start with a letter.
 - **No JS**: without JS, `html` keeps `no-js` and never gets `moonwalk`, so
-  nothing is hidden.
+  Moonwalk hides nothing. Palette containers (`[b-section]`) are the
+  exception: `critical.css` hides them until Jupiter runs.
 - **Reduced motion**: only with `respectReducedMotion: true` on the
   `Application` (off in the template). Jupiter then removes the walk and
   section attributes and adds `prefers-reduced-motion` to `<html>`, which

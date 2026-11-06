@@ -47,10 +47,12 @@ if Code.ensure_loaded?(Igniter) do
 
     ### Frontend work
 
-    - Load the `brando-frontend` skill before writing CSS, module markup,
-      Moonwalk attributes or JS for the public site, or admin module previews.
-    - Load the `brando-europacss` skill before writing EuropaCSS at-rules
-      (`@space`, `@fontsize`, `@responsive`…), `theme()` or `europa.json5`.
+    - Read `.claude/skills/brando-frontend/SKILL.md` before writing CSS,
+      module markup, Moonwalk attributes or JS for the public site, or admin
+      module previews.
+    - Read `.claude/skills/brando-europacss/SKILL.md` before writing EuropaCSS
+      at-rules (`@space`, `@fontsize`, `@responsive`…), `theme()` or
+      `europa.json5`.
     <!-- brando-site-end -->
     """
     @section_start "<!-- brando-start -->"
@@ -71,8 +73,9 @@ if Code.ensure_loaded?(Igniter) do
     def plan(igniter, opts \\ []) do
       igniter
       |> skills(Keyword.get(opts, :refresh, false))
-      |> agents_md()
+      # Before AGENTS.md changes: a CLAUDE.md linked to it reads as its content.
       |> claude_md()
+      |> agents_md()
     end
 
     @doc "The skill files Brando ships, as `{target_path, contents}`."
@@ -87,25 +90,37 @@ if Code.ensure_loaded?(Igniter) do
       |> Enum.map(&{Path.join(@skills_target, Path.relative_to(&1, source)), File.read!(&1)})
     end
 
+    # Not `create_new_file(..., on_exists: :skip)`: Igniter reads a file that
+    # exists on disk but no task has loaded yet, and adds it with the new
+    # contents, replacing it.
     defp skills(igniter, refresh?) do
       Enum.reduce(skill_files(), igniter, fn {path, contents}, igniter ->
-        if refresh?,
-          do: Igniter.create_or_update_file(igniter, path, contents, &Rewrite.Source.update(&1, :content, contents)),
-          else: Igniter.create_new_file(igniter, path, contents, on_exists: :skip)
+        cond do
+          refresh? ->
+            Igniter.create_or_update_file(igniter, path, contents, &Rewrite.Source.update(&1, :content, contents))
+
+          Igniter.exists?(igniter, path) ->
+            igniter
+
+          true ->
+            Igniter.create_new_file(igniter, path, contents)
+        end
       end)
     end
 
     defp agents_md(igniter) do
       if Igniter.exists?(igniter, @agents) do
-        Igniter.update_file(igniter, @agents, fn source ->
-          content = Rewrite.Source.get(source, :content)
-          updated = content |> link_rules() |> add_site_section()
-
-          if updated == content, do: source, else: Rewrite.Source.update(source, :content, updated)
-        end)
+        Igniter.update_file(igniter, @agents, &update_agents_md/1)
       else
         Igniter.create_new_file(igniter, @agents, "" |> add_section() |> add_site_section())
       end
+    end
+
+    defp update_agents_md(source) do
+      content = Rewrite.Source.get(source, :content)
+      updated = content |> link_rules() |> add_site_section()
+
+      if updated == content, do: source, else: Rewrite.Source.update(source, :content, updated)
     end
 
     defp claude_md(igniter) do
@@ -125,14 +140,22 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    # An `@AGENTS.md` import anywhere, or the same content as AGENTS.md: a
+    # CLAUDE.md symlinked to it reads as AGENTS.md, and replacing it as the
+    # notice says would overwrite AGENTS.md through the link.
     defp imports_agents?(igniter) do
+      claude = content(igniter, @claude)
+
+      claude =~ ~r{(^|\s)@(\./)?AGENTS\.md(\s|$)} or
+        (Igniter.exists?(igniter, @agents) and claude == content(igniter, @agents))
+    end
+
+    defp content(igniter, path) do
       igniter
-      |> Igniter.include_existing_file(@claude)
+      |> Igniter.include_existing_file(path)
       |> Map.fetch!(:rewrite)
-      |> Rewrite.source!(@claude)
+      |> Rewrite.source!(path)
       |> Rewrite.Source.get(:content)
-      |> String.split("\n")
-      |> Enum.any?(&(String.trim(&1) == @claude_import))
     end
 
     defp link_rules(content) do
