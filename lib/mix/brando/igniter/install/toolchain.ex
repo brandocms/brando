@@ -16,6 +16,11 @@ if Code.ensure_loaded?(Igniter) do
       .config/mise.toml .config/mise/config.toml .nvmrc .node-version
     )
 
+    # The asdf pnpm plugin installs pnpm 12 from its 1 September 2026 version
+    # on; an older copy stops at "Could not find pnpm binary". mise uses an
+    # installed plugin in place of its own pnpm support.
+    @pnpm_plugin "An asdf pnpm plugin older than September 2026 cannot install pnpm 12: if one stops at \"Could not find pnpm binary\", run `mise plugins update pnpm` (or `asdf plugin update pnpm`)."
+
     @doc """
     Pins the toolchain Brando is tested with in a new application's
     `.tool-versions`, so a plain `mix` or `pnpm` there uses it.
@@ -45,7 +50,8 @@ if Code.ensure_loaded?(Igniter) do
           |> Files.create(".tool-versions", contents)
           |> Igniter.add_notice("""
           .tool-versions pins Erlang #{pins["erlang"]}, Elixir #{pins["elixir"]}, Node.js #{pins["nodejs"]} and pnpm #{pins["pnpm"]}.
-          Run `mise install` (or `asdf install`) for the Node.js and pnpm it names.
+          Run `mise install nodejs pnpm` (or `asdf install nodejs` and `asdf install pnpm`) for the Node.js and pnpm it names.
+          #{@pnpm_plugin}
           """)
 
         reason ->
@@ -54,7 +60,8 @@ if Code.ensure_loaded?(Igniter) do
 
           #{contents |> String.split("\n", trim: true) |> Enum.map_join("\n", &("  " <> &1))}
 
-          To pin those, write them to .tool-versions and run `mise install` (or `asdf install`).
+          To pin those, write them to .tool-versions and run `mise install erlang elixir nodejs pnpm` (or `asdf install`).
+          #{@pnpm_plugin}
           """)
       end
     end

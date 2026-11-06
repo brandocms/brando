@@ -271,13 +271,19 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
   end
 
   defp no_pin_notice?(igniter, reason),
-    do: Enum.any?(igniter.notices, &(&1 =~ "No .tool-versions was written: #{reason}" and &1 =~ "erlang 28.5.0.8"))
+    do:
+      Enum.any?(
+        igniter.notices,
+        &(&1 =~ "No .tool-versions was written: #{reason}" and &1 =~ "erlang 28.5.0.8" and
+            &1 =~ "`mise install erlang elixir nodejs pnpm`")
+      )
 
   test "a new application gets a .tool-versions when it runs the pinned Erlang and Elixir, once" do
     igniter = project() |> toolchain() |> install()
     assert igniter.issues == []
     assert IgniterCase.source(igniter, ".tool-versions") == Templates.contents(:copy, "tool-versions")
-    assert notice?(igniter, "Run `mise install` (or `asdf install`) for the Node.js and pnpm it names.")
+    assert notice?(igniter, "Run `mise install nodejs pnpm` (or `asdf install nodejs` and `asdf install pnpm`)")
+    assert notice?(igniter, "`mise plugins update pnpm`")
 
     rerun = igniter |> IgniterCase.apply_and_reload() |> install()
     assert rerun.issues == []

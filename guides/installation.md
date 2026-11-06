@@ -484,8 +484,13 @@ A new install pins that toolchain in a `.tool-versions`, which asdf and
 mise both read: Erlang 28.5.0.8, Elixir 1.20.4, Node.js 24 and pnpm 12.15.0 (the
 Node.js major and pnpm the Dockerfile's asset stages use). With asdf or mise,
 `mix` and `pnpm` in the application then run those versions whatever the
-machine's defaults are; run `mise install` or `asdf install` for the Node.js
-and pnpm it names. The file is written only when the install itself runs the
+machine's defaults are; run `mise install nodejs pnpm`, or `asdf install nodejs`
+and `asdf install pnpm`, for the Node.js and pnpm it names. Naming them keeps
+mise from also installing every tool your global mise configuration lists. An
+asdf pnpm plugin older than September 2026 (mise uses one once it is installed)
+cannot install pnpm 12 and stops at "Could not find pnpm binary in any expected
+location"; `mise plugins update pnpm` or `asdf plugin update pnpm` updates it.
+The file is written only when the install itself runs the
 Erlang and Elixir that asdf or mise installed under those names (an Elixir
 from Homebrew, or one asdf built from source as `1.20.4`, doesn't count),
 since the install's follow-up `mix` tasks run in the application and a shim
