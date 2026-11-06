@@ -75,6 +75,20 @@ defmodule BrandoAdmin.Components.Form.I18nInputTest do
     end
   end
 
+  for kind <- [:i18n_text, :i18n_textarea] do
+    test "#{kind} with one language has no language tabs" do
+      put_test_env(:admin_languages, [[value: "en", text: "English"]])
+      var = %Var{label: %{"en" => "English", "no" => "Norsk"}}
+      html = render_input(unquote(kind), var, :admin)
+      document = Floki.parse_document!(html)
+
+      assert Floki.find(document, ".i18n-head, .i18n-tab, [role=tabpanel]") == []
+      assert [_] = Floki.find(document, ".i18n-panel.is-active")
+      label = get_field(cast(var, submitted_params(html), [:label]), :label)
+      assert {:ok, %{"en" => "English", "no" => "Norsk"}} = I18nString.dump(label)
+    end
+  end
+
   defp render_input(kind, var, source, opts \\ []) do
     form = var |> change() |> to_form(as: :var)
     opts = if source == :admin, do: opts, else: Keyword.put(opts, :languages, :content)

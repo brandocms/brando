@@ -12,6 +12,8 @@
     margin-bottom: 6px;
 
     .i18n-tabs { margin-bottom: 0; }
+    /* Stays right when a single language leaves it without tabs */
+    .i18n-suggest { margin-inline-start: auto; }
   }
 
 
