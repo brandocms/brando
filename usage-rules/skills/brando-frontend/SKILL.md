@@ -69,8 +69,8 @@ A container block renders `<section b-section="namespace-key">` with the
 palette's colours as `--<color key>` custom properties on it (`Brando.Cache.Palettes`
 also writes them for `[b-section="namespace-key"]`). Style a palette-aware
 module with `var(--<key>)`. `critical.css` hides every `[b-section]` until
-Jupiter sets `data-app-ready="true"` on the body, once the fonts have loaded,
-so without JS a container stays hidden.
+Jupiter sets `data-app-ready="true"` on the body, once the fonts have loaded;
+without JS, `.no-js [b-section]` shows it.
 
 ## Admin module previews
 

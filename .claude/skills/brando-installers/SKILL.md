@@ -142,8 +142,7 @@ Blueprint, or every application Blueprint with `brando.gen.blueprint_migration
 it takes neither `--migration-path` nor `--rebaseline`).
 
 Outside `MIX_ENV=test`, Igniter adds `--yes` when stdin is not a device (a
-pipe or a file), and `--yes` prints neither the diff nor the queued tasks, only
-moves and removals. Preview with
+pipe or a file), and `--yes` prints neither the diff nor the queued tasks. Preview with
 `--dry-run < /dev/null`, which Igniter takes for a terminal, so it prints the
 diff. Past 1000 diff lines, Igniter asks instead how to show the diff,
 and closed input raises there: answer on a real terminal, or apply the run
