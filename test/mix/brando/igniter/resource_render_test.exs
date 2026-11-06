@@ -195,7 +195,7 @@ defmodule Mix.Brando.Igniter.ResourceRenderTest do
   test "an entry renders its title and blocks inside the site's layout, with Brando meta" do
     conn = call(ArticleController, "/articles/known", :show, %{"slug" => "known"})
     assert conn.status == 200
-    assert conn.resp_body =~ ~s(<html lang="en">)
+    assert conn.resp_body =~ ~s(<html class="no-js" lang="en">)
     assert conn.resp_body =~ ~s(id="top")
     assert conn.resp_body =~ "<h1>Known article</h1>"
     assert conn.resp_body =~ "<p>Rendered blocks</p>"
@@ -218,7 +218,7 @@ defmodule Mix.Brando.Igniter.ResourceRenderTest do
     assert [_] = Floki.find(index_html, ~s(main > section.page-section > .inner > ul a[href="/articles/known"]))
     assert index.resp_body =~ ~s(href="/articles/known")
     refute index.resp_body =~ "kjent"
-    assert index.resp_body =~ ~s(<html lang="en">)
+    assert index.resp_body =~ ~s(<html class="no-js" lang="en">)
   end
 
   test "a translation is at its language's prefix, which its links keep" do
