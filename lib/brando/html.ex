@@ -922,11 +922,17 @@ defmodule Brando.HTML do
     )
   end
 
+  # `js/critical.js` is loaded only when the site has one, as a build loads it
+  # only when its manifest lists it. A site without one (its frontend from
+  # before the installer added it) would request it, get a 404 and show the
+  # notice with its dev server running fine. Relative to the working
+  # directory, the application's, like the manifests development reads.
   defp frontend_dev_scripts(assigns) do
     assigns =
       assign(assigns,
         vite_origin: vite_dev_server_origin("FRONTEND", 3000),
-        notice?: Brando.env() == :dev
+        notice?: Brando.env() == :dev,
+        critical?: File.exists?("assets/frontend/js/critical.js")
       )
 
     ~H"""
@@ -940,6 +946,7 @@ defmodule Brando.HTML do
     >
     </script>
     <script
+      :if={@critical?}
       type="module"
       src={@vite_origin <> "/js/critical.js"}
       onerror={@notice? && "brandoAssetsMissing('brando-site-assets-notice')"}
