@@ -89,6 +89,9 @@ defmodule E2EFixtureController do
         "mcp-proposals" ->
           create_mcp_proposals()
 
+        "assistant-block-swap" ->
+          create_block_swap_proposal()
+
         "mcp-unloadable-proposal" ->
           create_unloadable_mcp_proposal()
 
@@ -659,6 +662,43 @@ defmodule E2EFixtureController do
       {:ok, %{applicable: true}} =
         Tools.call("prepare_proposal", %{"summary" => summary, "operations" => [op]}, context)
     end
+
+    user
+  end
+
+  # A proposal from a connected tool, waiting for review, that replaces the
+  # Index page's first block with a new Example module block: one insert and
+  # one deletion.
+  defp create_block_swap_proposal do
+    alias Brando.Content.Proposals.Tools
+
+    user = get_admin_user()
+    context = %Tools.Context{actor: user, origin: :mcp, client: "Claude Code"}
+    module = Brando.Repo.get_by!(Brando.Content.Module, class: "example")
+    index = Brando.Repo.get_by!(Brando.Pages.Page, uri: "index", language: "en")
+
+    [%{block: %{uid: old}} | _] =
+      Brando.Content.Transfer.Catalog.load!(Brando.Pages.Page, index.id, user).entry_blocks
+
+    target = %{"content_type" => "Brando.Pages.Page", "id" => index.id}
+
+    ops = [
+      %{
+        "op" => "insert_block",
+        "target" => target,
+        "module" => "local:#{module.id}",
+        "placement" => %{"after" => old},
+        "uid" => "swap",
+        "texts" => %{
+          "h1" => "Why work with us?",
+          "p" => "We work with students, designers, companies and schools that want to shape design practice."
+        }
+      },
+      %{"op" => "delete_block", "target" => target, "block_uid" => old}
+    ]
+
+    {:ok, %{applicable: true}} =
+      Tools.call("prepare_proposal", %{"summary" => "Swap the first block", "operations" => ops}, context)
 
     user
   end

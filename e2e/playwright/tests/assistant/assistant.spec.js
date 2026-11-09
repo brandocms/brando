@@ -49,7 +49,7 @@ test('uploads media, prepares a proposal from a message and applies it', async (
 
   // The page preview renders the proposed page in the site's own template and
   // outlines the new block outside the page's content.
-  await card.getByRole('button', { name: 'Preview page' }).click()
+  await card.getByRole('button', { name: 'Preview proposed page' }).click()
   await expect(review.getByRole('heading', { name: 'Page preview' })).toBeVisible()
   const frame = page.frameLocator('.assistant-frame iframe')
   await expect(frame.locator('.brando-proposal-highlight')).toHaveCount(1, { timeout: 15000 })

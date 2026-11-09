@@ -1,0 +1,1 @@
+- On the Assistant's entry cards, the preview of the proposed page is a full-size button named Preview proposed page, and the link to an unpublished entry's saved page is named Open the saved version, so the two are no longer confused.
