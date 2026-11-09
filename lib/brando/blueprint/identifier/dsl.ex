@@ -98,7 +98,7 @@ defmodule Brando.Blueprint.Identifier.DSL do
       def __identifier_type__, do: :liquid
       def __identifier_fields__, do: unquote(identifier_fields(tpl))
 
-      @parsed_identifier unquote(parsed_identifier)
+      @parsed_identifier unquote(Macro.escape(parsed_identifier))
       def __identifier__(entry, opts \\ []) do
         Brando.Blueprint.Identifier.Generator.generate(
           __MODULE__,

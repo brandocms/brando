@@ -6,7 +6,15 @@ defmodule Brando.Villain.BlankKeywordTest do
 
   # `:missing` leaves `x` out of the context.
   @blank [nil, "", false, [], %{}, :missing]
-  @present ["/a", " ", 0, true, ["a"], %{"a" => 1}]
+  @present ["/a", " ", 0, true, ["a"], %{"a" => 1}, Decimal.new("0"), Decimal.new("24.49")]
+
+  # Compiling this module is the test that a Blueprint template using
+  # `blank` builds: the parsed document goes through `Macro.escape/1`.
+  defmodule BlankURL do
+    import Brando.Blueprint.AbsoluteURL
+
+    absolute_url "{% if slug != blank %}/{{ slug }}{% endif %}{% case kind %}{% when blank %}/none{% endcase %}"
+  end
 
   defp render(template, x, extra \\ %{}) do
     vars = if x == :missing, do: extra, else: Map.put(extra, "x", x)
@@ -48,6 +56,24 @@ defmodule Brando.Villain.BlankKeywordTest do
       assert render("{% if false %}a{% elsif x == blank %}b{% endif %}", "") == "b"
       assert render("{% unless x == blank %}shown{% endunless %}", nil) == ""
       assert render("{% unless x == blank %}shown{% endunless %}", "/a") == "shown"
+
+      template = "{% unless y %}a{% elsif x != blank %}b{% else %}c{% endunless %}"
+      assert render(template, "/a", %{"y" => true}) == "b"
+      assert render(template, "", %{"y" => true}) == "c"
+      assert render(template, "", %{"y" => false}) == "a"
+    end
+
+    test "works in a liquid tag" do
+      template = """
+      {% liquid
+        if x != blank
+          echo "shown"
+        endif
+      %}
+      """
+
+      assert render(template, "/a") =~ "shown"
+      refute render(template, "") =~ "shown"
     end
 
     test "works on a nested field" do
@@ -85,6 +111,25 @@ defmodule Brando.Villain.BlankKeywordTest do
     end
   end
 
+  test "a Decimal compares without raising" do
+    # Liquex raises comparing a Decimal with nil or false.
+    price = Decimal.new("24.49")
+
+    assert render("{% if x != blank %}{{ x }}{% endif %}", price) == "24.49"
+    assert render("{% if x == blank %}blank{% else %}present{% endif %}", price) == "present"
+    assert render("{% if x > 10 and x != blank %}dear{% endif %}", price) == "dear"
+  end
+
+  test "other conditions in the same tag still evaluate with Liquex" do
+    template = ~S|{% if x != blank and y contains "b" or z == 1.5 %}shown{% endif %}|
+
+    assert render(template, "/a", %{"y" => "abc"}) == "shown"
+    assert render(template, "/a", %{"y" => "xyz"}) == ""
+    # Right to left: `x != blank and (y contains "b" or z == 1.5)`.
+    assert render(template, "/a", %{"y" => "xyz", "z" => 1.5}) == "shown"
+    assert render(template, "", %{"y" => "xyz", "z" => 1.5}) == ""
+  end
+
   test "when blank matches each blank value" do
     template = "{% case x %}{% when blank %}blank{% when 1 %}one{% else %}other{% endcase %}"
 
@@ -118,9 +163,15 @@ defmodule Brando.Villain.BlankKeywordTest do
 
   test "Blueprint templates rewrite too" do
     {:ok, document} = TemplateParser.parse("{% if slug != blank %}/{{ slug }}{% endif %}")
-    render = fn vars -> document |> Liquex.render!(Liquex.Context.new(vars)) |> elem(0) |> IO.iodata_to_binary() end
 
-    assert render.(%{"slug" => ""}) == ""
-    assert render.(%{"slug" => "about"}) == "/about"
+    assert render_document(document, %{"slug" => ""}) == ""
+    assert render_document(document, %{"slug" => "about"}) == "/about"
+
+    document = BlankURL.__absolute_url_parsed__()
+    assert render_document(document, %{"slug" => "about", "kind" => "page"}) == "/about"
+    assert render_document(document, %{"slug" => nil, "kind" => nil}) == "/none"
   end
+
+  defp render_document(document, vars),
+    do: document |> Liquex.render!(Liquex.Context.new(vars)) |> elem(0) |> IO.iodata_to_binary()
 end
