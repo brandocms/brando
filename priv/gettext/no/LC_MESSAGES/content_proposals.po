@@ -274,6 +274,11 @@ msgstr "Forventet et objekt."
 msgid "File #%{id}"
 msgstr "Fil #%{id}"
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Markdown"
+msgstr "Markdown"
+
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "Media is {kind: image|video|file, id}, an attachment alias or {gallery: [media]}."
@@ -358,6 +363,21 @@ msgstr "Sett feltene til en ny oppføring når du oppretter den."
 #, elixir-autogen, elixir-format
 msgid "Table rows cannot hold galleries."
 msgstr "Tabellrader kan ikke inneholde gallerier."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Text %{ref} in block %{uid} has footnotes, which stay with their block, so it cannot be copied."
+msgstr "Teksten %{ref} i blokk %{uid} har fotnoter, som hører til blokken sin, så den kan ikke kopieres."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Text %{ref} in block %{uid} is %{from}, and the slot takes %{to}: write it out in that form instead."
+msgstr "Teksten %{ref} i blokk %{uid} er %{from}, og feltet tar %{to}: skriv den ut i den formen i stedet."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Text %{ref} in block %{uid} is empty."
+msgstr "Teksten %{ref} i blokk %{uid} er tom."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -599,6 +619,11 @@ msgstr "åpnes i ny fane"
 #, elixir-autogen, elixir-format
 msgid "opens in the same tab"
 msgstr "åpnes i samme fane"
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "rich text"
+msgstr "rik tekst"
 
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format

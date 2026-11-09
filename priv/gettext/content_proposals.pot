@@ -273,6 +273,11 @@ msgstr ""
 msgid "File #%{id}"
 msgstr ""
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Markdown"
+msgstr ""
+
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "Media is {kind: image|video|file, id}, an attachment alias or {gallery: [media]}."
@@ -356,6 +361,21 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "Table rows cannot hold galleries."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Text %{ref} in block %{uid} has footnotes, which stay with their block, so it cannot be copied."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Text %{ref} in block %{uid} is %{from}, and the slot takes %{to}: write it out in that form instead."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Text %{ref} in block %{uid} is empty."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -597,6 +617,11 @@ msgstr ""
 #: lib/brando/content/proposals/review.ex
 #, elixir-autogen, elixir-format
 msgid "opens in the same tab"
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "rich text"
 msgstr ""
 
 #: lib/brando/content/proposals/codec.ex

@@ -285,6 +285,31 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert {:error, message} = copy.(%{"from" => "body"})
       assert message =~ "block_uid"
 
+      empty = text_block!(c, "", 11)
+      assert {:error, message} = copy.(%{"from" => %{"block_uid" => empty, "ref" => "body"}})
+      assert message =~ "empty"
+
+      # Markdown leaves rich text's markup out.
+      notes =
+        Brando.ProposalFixtures.module!(c.user, "Notes", "{% ref refs.md %}",
+          refs: [Brando.ProposalFixtures.ref("md", %{type: "markdown", data: %{text: ""}})]
+        )
+
+      op = %{
+        "op" => "insert_block",
+        "target" => target,
+        "module" => "local:#{notes.id}",
+        "texts" => %{"md" => %{"from" => %{"block_uid" => block, "ref" => "body"}}}
+      }
+
+      assert {:error, message} = Tools.call("prepare_proposal", %{"summary" => "Copy", "operations" => [op]}, c.context)
+      assert message =~ "Markdown"
+
+      # A footnote belongs to the block its text is in.
+      noted = text_block!(c, ~s(<p>Claim<sup data-footnote-uid="note1">1</sup></p>), 10)
+      assert {:error, message} = copy.(%{"from" => %{"block_uid" => noted, "ref" => "body"}})
+      assert message =~ "footnotes"
+
       [%{uid: elsewhere} | _] =
         Brando.Content.Transfer.Catalog.load!(Page, c.naming.id, c.user).entry_blocks |> Enum.map(& &1.block)
 
@@ -399,8 +424,44 @@ defmodule Brando.Content.Proposals.ToolsTest do
 
       assert message =~ "fixed"
 
+      # Clearing it would drop the module's text too.
+      assert {:ok, %{applicable: false, problems: [%{code: :unsupported_value}]}} =
+               insert.(%{"fixed" => %{"text" => ""}})
+
       assert {:ok, %{applicable: true}} = insert.(%{"fixed" => %{"link" => "https://example.com", "new_tab" => true}})
       assert {:ok, %{problems: [%{code: :unsafe_text}]}} = insert.(%{"cta" => %{"text" => "<b>Bold</b>"}})
+      # A placeholder in it keeps the entry from being published, as in any text.
+      {_, proposal} =
+        propose!(c, [
+          %{
+            "op" => "insert_block",
+            "target" => target,
+            "module" => "local:#{c.button.id}",
+            "values" => %{"cta" => %{"link" => "https://example.com", "text" => "[[button label]]"}}
+          }
+        ])
+
+      assert [%{placeholders: [%{text: "button label"}]}] = Proposals.Review.entries(proposal)
+
+      # A link to an entry the proposal creates, written flat, still names it.
+      {result, _} =
+        propose!(c, [
+          %{
+            "op" => "create_entry",
+            "content_type" => "Brando.Pages.Page",
+            "ref" => "case",
+            "fields" => %{"title" => "Case"}
+          },
+          %{
+            "op" => "insert_block",
+            "target" => target,
+            "module" => "local:#{c.button.id}",
+            "values" => %{"cta" => %{"new" => "case", "text" => "The case"}}
+          }
+        ])
+
+      assert Enum.any?(result.problems, &(&1.code == :draft_dependency))
+
       assert {:error, _} = insert.(%{"cta" => %{"text" => 5}})
       assert {:error, _} = insert.(%{"cta" => %{"link" => 5}})
       assert {:error, _} = insert.(%{"cta" => %{"new_tab" => "yes"}})

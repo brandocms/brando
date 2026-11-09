@@ -530,6 +530,7 @@ defmodule Brando.Content.Proposals.Codec do
         is_map_key(map, "link") -> link_target!(map["link"], attachments)
         is_map_key(map, "url") -> link_target!(map["url"], attachments)
         is_map_key(map, "content_type") -> link_target!(Map.take(map, ["content_type", "id"]), attachments)
+        is_map_key(map, "new") -> link_target!(Map.take(map, ["new"]), attachments)
         true -> nil
       end
 

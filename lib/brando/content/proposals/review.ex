@@ -179,6 +179,7 @@ defmodule Brando.Content.Proposals.Review do
   def placeholders_in(text) when is_binary(text),
     do: for([_, inner] <- Regex.scan(@placeholder, text), do: inner |> strip_tags() |> String.trim())
 
+  def placeholders_in({:link, _target, %{text: text}}), do: placeholders_in(text)
   def placeholders_in(_), do: []
 
   defp strip_tags(html), do: String.replace(html, ~r/<[^>]*>/, "")
