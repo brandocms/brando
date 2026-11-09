@@ -8,7 +8,7 @@ defmodule Brando.Villain.EmptyKeywordsTest do
   # `:missing` leaves `x` out of the context.
   @empty [nil, "", [], %{}, :missing]
   @blank [false | @empty]
-  @present ["/a", " ", 0, true, ["a"], %{"a" => 1}, Decimal.new("0"), Decimal.new("24.49")]
+  @present ["/a", " ", 0, true, ["a"], %{"a" => 1}, Decimal.new("0"), Decimal.new("24.49"), 1..0//1, %URI{}]
 
   # Compiling this module is the test that a Blueprint template using
   # `blank` or `empty` builds: the parsed document goes through `Macro.escape/1`.
@@ -163,6 +163,15 @@ defmodule Brando.Villain.EmptyKeywordsTest do
 
       for x <- @empty, do: assert(render(template, x) == "empty", "#{inspect(x)} should be empty")
       for x <- [false | @present], do: assert(render(template, x) == "present", "#{inspect(x)} should not be empty")
+    end
+
+    test "agrees with Liquex's empty on every value but nil" do
+      for x <- List.delete(@empty, :missing) ++ [false | @present], x != nil do
+        assert EmptyKeywords.empty?(x) == Liquex.Special.equal?(Liquex.Special.empty(), x), inspect(x)
+      end
+
+      assert EmptyKeywords.empty?(nil)
+      refute Liquex.Special.equal?(Liquex.Special.empty(), nil)
     end
 
     test "hides a datasource's markup when it has no entries" do

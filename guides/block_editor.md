@@ -207,9 +207,10 @@ Besides `{% ref %}` and `{% headless_ref %}`:
 <!-- usage-rules:start topic="rendering" -->
 
 `empty` matches a var with no value: `nil`, `""`, `[]` and `{}`. `blank`
-matches those and `false`. So `{% if cta != empty %}` hides the markup around
-an empty var, and `{% when blank %}` matches any of those values. A string of
-only spaces matches neither. In standard Liquid, `nil` is not `empty`.
+matches those and `false`. So `{% if caption != empty %}` hides the markup
+around an empty text var, and `{% when blank %}` matches any of those values.
+A string of only spaces matches neither, and nor does a struct such as a link
+var: test its `value`. In standard Liquid, `nil` is not `empty`.
 
 <!-- usage-rules:end -->
 
