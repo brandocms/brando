@@ -10,10 +10,10 @@ defmodule Brando.Villain.BlankKeyword do
 
   `parse/2` parses with Liquex, then `rewrite/1` changes the document:
 
-    * each `x == blank` and `x != blank` becomes a blank test that `eval/2`
-      evaluates, and `{% if %}` and `{% unless %}` render through `IfTag`
-      and `UnlessTag` here, which evaluate every other condition with
-      Liquex;
+    * each `x == blank` and `x != blank` in an `{% if %}`, `{% elsif %}`
+      or `{% unless %}` becomes a blank test that `eval/2` evaluates, and
+      those tags render through `IfTag` and `UnlessTag` here, which
+      evaluate every other condition with Liquex;
     * `{% when blank %}` becomes one `when` value per blank value.
 
   The test cannot be written as Liquex comparisons: comparing a Decimal
@@ -44,12 +44,13 @@ defmodule Brando.Villain.BlankKeyword do
   Rewrites the `blank` comparisons in a parsed Liquex document.
   """
   @spec rewrite(term()) :: term()
-  def rewrite(left: left, op: op, right: [literal: @blank]) when op in [:==, :!=], do: {__MODULE__, op, rewrite(left)}
-  def rewrite(left: [literal: @blank], op: op, right: right) when op in [:==, :!=], do: {__MODULE__, op, rewrite(right)}
+  def rewrite({{:tag, tag}, arguments}) when is_map_key(@tags, tag),
+    do: {{:tag, Map.fetch!(@tags, tag)}, if_arguments(arguments)}
 
-  # `{{:tag, IfTag}, arguments}` from Liquex's grammar, `tag: IfTag` inside
-  # `Brando.Villain.Tags.Output`.
-  def rewrite({:tag, tag}) when is_map_key(@tags, tag), do: {:tag, Map.fetch!(@tags, tag)}
+  # Brando's parser wraps each tag in `Brando.Villain.Tags.Output`.
+  def rewrite({{:tag, Brando.Villain.Tags.Output} = output, [tag: tag, contents: arguments] ++ rest})
+      when is_map_key(@tags, tag),
+      do: {output, [tag: Map.fetch!(@tags, tag), contents: if_arguments(arguments)] ++ rewrite(rest)}
 
   def rewrite({:when, [expression: expressions, contents: contents]}) do
     expressions = Enum.flat_map(expressions, &when_values/1)
@@ -60,12 +61,33 @@ defmodule Brando.Villain.BlankKeyword do
   def rewrite(tuple) when is_tuple(tuple), do: tuple |> Tuple.to_list() |> rewrite() |> List.to_tuple()
   def rewrite(term), do: term
 
+  # Only an `if`'s or `unless`'s conditions get blank tests: another tag
+  # that evaluates a condition does so with Liquex, which has no clause for
+  # them.
+  defp if_arguments(arguments) do
+    Enum.map(arguments, fn
+      {:expression, expression} ->
+        {:expression, condition(expression)}
+
+      {:elsif, [expression: expression, contents: contents]} ->
+        {:elsif, [expression: condition(expression), contents: rewrite(contents)]}
+
+      {key, value} ->
+        {key, rewrite(value)}
+    end)
+  end
+
+  defp condition(left: left, op: op, right: [literal: @blank]) when op in [:==, :!=], do: {__MODULE__, op, left}
+  defp condition(left: [literal: @blank], op: op, right: right) when op in [:==, :!=], do: {__MODULE__, op, right}
+  defp condition(chain) when is_list(chain), do: Enum.map(chain, &condition/1)
+  defp condition(term), do: term
+
   defp when_values({:literal, @blank}), do: Enum.map(@blank_values, &{:literal, &1})
   defp when_values(expression), do: [rewrite(expression)]
 
   @doc """
-  Evaluates a condition the way `Liquex.Expression.eval/2` does, with the
-  blank tests `rewrite/1` leaves in it.
+  Evaluates an `if` or `unless` condition as Liquex does, with the blank
+  tests `rewrite/1` leaves in it.
   """
   @spec eval(term(), Liquex.Context.t()) :: {boolean(), Liquex.Context.t()}
   def eval({__MODULE__, op, operand}, context) do

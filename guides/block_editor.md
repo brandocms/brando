@@ -201,10 +201,19 @@ Besides `{% ref %}` and `{% headless_ref %}`:
   over Brando's of the same name.
 - A Liquex container template's `{{ content }}` is replaced literally: write
   it exactly so, with single spaces.
-- `blank` matches `nil`, `""`, `false`, `[]` and `{}`, so
-  `{% if cta != blank %}` hides markup around an empty var, and
-  `{% when blank %}` matches any of them. A string of only spaces is not
-  blank. `empty` keeps Liquid's meaning: `""`, `[]` and `{}`, not `nil`.
+
+<!-- usage-rules:end -->
+
+<!-- usage-rules:start topic="rendering" -->
+
+`blank` matches `nil`, `false`, `""`, `[]` and `{}`, so
+`{% if cta != blank %}` hides the markup around an empty var, and
+`{% when blank %}` matches any of them. A string of only spaces is not blank.
+`empty` keeps Liquid's meaning: `""`, `[]` and `{}`, not `nil`.
+
+<!-- usage-rules:end -->
+
+<!-- usage-rules:start -->
 
 ### Writing templates safely
 

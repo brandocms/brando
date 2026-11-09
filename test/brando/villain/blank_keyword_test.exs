@@ -3,6 +3,7 @@ defmodule Brando.Villain.BlankKeywordTest do
 
   alias Brando.Blueprint.TemplateParser
   alias Brando.Villain
+  alias Brando.Villain.BlankKeyword
 
   # `:missing` leaves `x` out of the context.
   @blank [nil, "", false, [], %{}, :missing]
@@ -14,6 +15,13 @@ defmodule Brando.Villain.BlankKeywordTest do
     import Brando.Blueprint.AbsoluteURL
 
     absolute_url "{% if slug != blank %}/{{ slug }}{% endif %}{% case kind %}{% when blank %}/none{% endcase %}"
+  end
+
+  defmodule BlankIdentifier do
+    import Brando.Blueprint.Identifier.DSL
+
+    @data_layer :database
+    identifier "{% if entry.title != blank %}{{ entry.title }}{% else %}Untitled{% endif %}"
   end
 
   defp render(template, x, extra \\ %{}) do
@@ -85,8 +93,9 @@ defmodule Brando.Villain.BlankKeywordTest do
 
   describe "in an and/or chain" do
     test "keeps its place when the expansion sits before an or" do
-      # Liquid chains right to left: an inline `x != nil and x != empty or y`
-      # would read as `x != nil and (x != empty or y)`, false for a nil x.
+      # Liquid chains right to left, so the blank test must stay one term:
+      # `x != nil and x != empty or y` would read as
+      # `x != nil and (x != empty or y)`, false for a nil x.
       template = "{% if x != blank or y %}shown{% endif %}"
 
       assert render(template, nil, %{"y" => true}) == "shown"
@@ -152,6 +161,40 @@ defmodule Brando.Villain.BlankKeywordTest do
              ~S|<a target="_blank">blank</a>|
   end
 
+  test "a template that only spells _blank renders its conditions as before" do
+    # The text "blank" sends every if and unless through BlankKeyword's tags.
+    template = ~S"""
+    {%- for i in (1..6) -%}
+    {%- if i == 2 %}{% continue %}{% elsif i == 5 %}{% break %}{% endif -%}
+    {%- unless i == 3 or y contains "b" and z %}[{{ i }}]{% else %}<{{ i }}>{% endunless -%}
+    {%- if y == "abc" and z or i > 3 %}!{% endif -%}
+    {%- endfor -%}
+    """
+
+    for vars <- [%{"y" => "abc", "z" => true}, %{"y" => "xyz", "z" => false}, %{}] do
+      plain = Villain.parse_and_render(template, Liquex.Context.new(vars))
+      with_blank = Villain.parse_and_render(~S|<a target="_blank">| <> template, Liquex.Context.new(vars))
+
+      assert ~S|<a target="_blank">| <> plain == with_blank
+    end
+  end
+
+  test "break and continue work under a blank test" do
+    template =
+      "{% for i in items %}{% if i == blank %}{% continue %}{% endif %}{% if i == 'stop' %}{% break %}{% endif %}{{ i }}{% endfor %}"
+
+    context = Liquex.Context.new(%{"items" => ["a", "", nil, "b", "stop", "c"]})
+
+    assert Villain.parse_and_render(template, context) == "ab"
+  end
+
+  test "leaves a blank comparison outside if and unless as Liquex parsed it" do
+    comparison = [left: [field: [key: "x"]], op: :!=, right: [literal: %Liquex.Special{type: :blank}]]
+    document = [{{:tag, MyApp.ConditionTag}, [expression: [comparison], contents: []]}]
+
+    assert BlankKeyword.rewrite(document) == document
+  end
+
   test "the cached module render rewrites too" do
     template = "{% if x != blank %}cached-#{System.unique_integer([:positive])}{% endif %}"
     context = Liquex.Context.new(%{"x" => ""})
@@ -166,6 +209,8 @@ defmodule Brando.Villain.BlankKeywordTest do
 
     assert render_document(document, %{"slug" => ""}) == ""
     assert render_document(document, %{"slug" => "about"}) == "/about"
+
+    assert BlankIdentifier.__has_identifier__()
 
     document = BlankURL.__absolute_url_parsed__()
     assert render_document(document, %{"slug" => "about", "kind" => "page"}) == "/about"
