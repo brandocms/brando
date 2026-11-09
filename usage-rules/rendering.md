@@ -10,10 +10,10 @@ are in `deps/brando/usage-rules.md`.
 
 Guide: `deps/brando/guides/block_editor.md`
 
-`blank` matches `nil`, `false`, `""`, `[]` and `{}`, so
-`{% if cta != blank %}` hides the markup around an empty var, and
-`{% when blank %}` matches any of them. A string of only spaces is not blank.
-`empty` keeps Liquid's meaning: `""`, `[]` and `{}`, not `nil`.
+`empty` matches a var with no value: `nil`, `""`, `[]` and `{}`. `blank`
+matches those and `false`. So `{% if cta != empty %}` hides the markup around
+an empty var, and `{% when blank %}` matches any of those values. A string of
+only spaces matches neither. In standard Liquid, `nil` is not `empty`.
 
 ## Villain parser
 

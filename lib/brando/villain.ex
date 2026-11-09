@@ -532,7 +532,7 @@ defmodule Brando.Villain do
   def strip_identifier_data_attributes(html), do: html
 
   defp liquex_parse(html, liquex_parser) do
-    Brando.Villain.BlankKeyword.parse(html, liquex_parser)
+    Brando.Villain.EmptyKeywords.parse(html, liquex_parser)
   end
 
   defp liquex_render(html_string, [], parsed_doc, context) do

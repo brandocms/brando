@@ -1,20 +1,21 @@
-defmodule Brando.Villain.BlankKeywordTest do
+defmodule Brando.Villain.EmptyKeywordsTest do
   use ExUnit.Case, async: true
 
   alias Brando.Blueprint.TemplateParser
   alias Brando.Villain
-  alias Brando.Villain.BlankKeyword
+  alias Brando.Villain.EmptyKeywords
 
   # `:missing` leaves `x` out of the context.
-  @blank [nil, "", false, [], %{}, :missing]
+  @empty [nil, "", [], %{}, :missing]
+  @blank [false | @empty]
   @present ["/a", " ", 0, true, ["a"], %{"a" => 1}, Decimal.new("0"), Decimal.new("24.49")]
 
   # Compiling this module is the test that a Blueprint template using
-  # `blank` builds: the parsed document goes through `Macro.escape/1`.
+  # `blank` or `empty` builds: the parsed document goes through `Macro.escape/1`.
   defmodule BlankURL do
     import Brando.Blueprint.AbsoluteURL
 
-    absolute_url "{% if slug != blank %}/{{ slug }}{% endif %}{% case kind %}{% when blank %}/none{% endcase %}"
+    absolute_url "{% if slug != blank %}/{{ slug }}{% endif %}{% case kind %}{% when empty %}/none{% endcase %}"
   end
 
   defmodule BlankIdentifier do
@@ -127,6 +128,8 @@ defmodule Brando.Villain.BlankKeywordTest do
     assert render("{% if x != blank %}{{ x }}{% endif %}", price) == "24.49"
     assert render("{% if x == blank %}blank{% else %}present{% endif %}", price) == "present"
     assert render("{% if x > 10 and x != blank %}dear{% endif %}", price) == "dear"
+    assert render("{% if x != empty %}{{ x }}{% endif %}", price) == "24.49"
+    assert render("{% if x == empty %}empty{% else %}present{% endif %}", price) == "present"
   end
 
   test "other conditions in the same tag still evaluate with Liquex" do
@@ -147,11 +150,46 @@ defmodule Brando.Villain.BlankKeywordTest do
     assert render(template, "/a") == "other"
   end
 
-  test "leaves empty with Liquid's meaning" do
-    template = "{% if x == empty %}empty{% else %}not empty{% endif %}"
+  describe "empty" do
+    test "x != empty is false for empty values, nil among them, and true for the rest" do
+      template = "{% if x != empty %}shown{% endif %}"
 
-    assert render(template, "") == "empty"
-    assert render(template, nil) == "not empty"
+      for x <- @empty, do: assert(render(template, x) == "", "#{inspect(x)} should be empty")
+      for x <- [false | @present], do: assert(render(template, x) == "shown", "#{inspect(x)} should not be empty")
+    end
+
+    test "x == empty is true for empty values and false for the rest" do
+      template = "{% if x == empty %}empty{% else %}present{% endif %}"
+
+      for x <- @empty, do: assert(render(template, x) == "empty", "#{inspect(x)} should be empty")
+      for x <- [false | @present], do: assert(render(template, x) == "present", "#{inspect(x)} should not be empty")
+    end
+
+    test "hides a datasource's markup when it has no entries" do
+      template = "{% if entries != empty %}<ul>{% for e in entries %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}"
+
+      assert Villain.parse_and_render(template, Liquex.Context.new(%{"entries" => nil})) == ""
+      assert Villain.parse_and_render(template, Liquex.Context.new(%{"entries" => []})) == ""
+      assert Villain.parse_and_render(template, Liquex.Context.new(%{"entries" => ["a"]})) == "<ul><li>a</li></ul>"
+    end
+
+    test "works in unless, with empty on the left and beside blank" do
+      assert render("{% unless x == empty %}shown{% endunless %}", nil) == ""
+      assert render("{% if empty != x %}shown{% endif %}", "/a") == "shown"
+
+      template = "{% if x != empty and y != blank %}shown{% endif %}"
+      assert render(template, "/a", %{"y" => "b"}) == "shown"
+      assert render(template, "/a", %{"y" => false}) == ""
+      assert render(template, nil, %{"y" => "b"}) == ""
+    end
+
+    test "when empty matches each empty value and not false" do
+      template = "{% case x %}{% when empty %}empty{% else %}other{% endcase %}"
+
+      for x <- @empty, do: assert(render(template, x) == "empty", "#{inspect(x)} should be empty")
+      assert render(template, false) == "other"
+      assert render(template, "/a") == "other"
+    end
   end
 
   test "does not change text or output that spells blank" do
@@ -162,7 +200,7 @@ defmodule Brando.Villain.BlankKeywordTest do
   end
 
   test "a template that only spells _blank renders its conditions as before" do
-    # The text "blank" sends every if and unless through BlankKeyword's tags.
+    # The text "blank" sends every if and unless through EmptyKeywords' tags.
     template = ~S"""
     {%- for i in (1..6) -%}
     {%- if i == 2 %}{% continue %}{% elsif i == 5 %}{% break %}{% endif -%}
@@ -188,11 +226,12 @@ defmodule Brando.Villain.BlankKeywordTest do
     assert Villain.parse_and_render(template, context) == "ab"
   end
 
-  test "leaves a blank comparison outside if and unless as Liquex parsed it" do
-    comparison = [left: [field: [key: "x"]], op: :!=, right: [literal: %Liquex.Special{type: :blank}]]
-    document = [{{:tag, MyApp.ConditionTag}, [expression: [comparison], contents: []]}]
+  test "leaves a comparison outside if and unless as Liquex parsed it" do
+    blank = [left: [field: [key: "x"]], op: :!=, right: [literal: %Liquex.Special{type: :blank}]]
+    empty = [left: [field: [key: "x"]], op: :==, right: [literal: %Liquex.Special{type: :empty}]]
+    document = [{{:tag, MyApp.ConditionTag}, [expression: [blank, :or, empty], contents: []]}]
 
-    assert BlankKeyword.rewrite(document) == document
+    assert EmptyKeywords.rewrite(document) == document
   end
 
   test "the cached module render rewrites too" do

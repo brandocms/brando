@@ -1,22 +1,26 @@
-defmodule Brando.Villain.BlankKeyword do
+defmodule Brando.Villain.EmptyKeywords do
   @moduledoc """
-  Gives Liquid's `blank` keyword the meaning templates expect.
+  Gives Liquid's `empty` and `blank` keywords the meaning templates expect.
 
-  Liquex resolves `blank` with plain-Ruby semantics, where nothing is blank,
-  so `{% if x != blank %}` is always true. Brando templates use the keyword
-  to hide empty vars: here `blank` matches `nil`, `false`, `""`, `[]` and
-  `%{}`. A string of only whitespace is not blank, and `empty` keeps
-  Liquid's meaning.
+  Liquex resolves both with plain-Ruby semantics: nothing is `blank`, so
+  `{% if x != blank %}` is always true, and `nil` is not `empty`. Brando
+  templates use the keywords to hide markup around a var with no value:
+
+    * `empty` matches `nil`, `""`, `[]` and `%{}`;
+    * `blank` matches those and `false`.
+
+  A string of only whitespace matches neither.
 
   `parse/2` parses with Liquex, then `rewrite/1` changes the document:
 
-    * each `x == blank` and `x != blank` in an `{% if %}`, `{% elsif %}`
-      or `{% unless %}` becomes a blank test that `eval/2` evaluates, and
-      those tags render through `IfTag` and `UnlessTag` here, which
-      evaluate every other condition with Liquex;
-    * `{% when blank %}` becomes one `when` value per blank value.
+    * each `==` or `!=` comparison with `empty` or `blank` in an
+      `{% if %}`, `{% elsif %}` or `{% unless %}` becomes a test that
+      `eval/2` evaluates, and those tags render through `IfTag` and
+      `UnlessTag` here, which evaluate every other condition with Liquex;
+    * `{% when empty %}` and `{% when blank %}` become one `when` value per
+      value the keyword matches.
 
-  The test cannot be written as Liquex comparisons: comparing a Decimal
+  The tests cannot be written as Liquex comparisons: comparing a Decimal
   with `nil` or `false` raises in Liquex, and Liquex conditions have no
   negation for `x == blank`.
   """
@@ -24,24 +28,30 @@ defmodule Brando.Villain.BlankKeyword do
   alias __MODULE__.IfTag
   alias __MODULE__.UnlessTag
 
-  @blank %Liquex.Special{type: :blank}
-  @blank_values [nil, false, "", [], %{}]
+  @keywords %{
+    %Liquex.Special{type: :empty} => :empty,
+    %Liquex.Special{type: :blank} => :blank
+  }
+  @values %{empty: [nil, "", [], %{}], blank: [nil, false, "", [], %{}]}
   @tags %{Liquex.Tag.IfTag => IfTag, Liquex.Tag.UnlessTag => UnlessTag}
 
   @doc """
-  Parses a template with `Liquex.parse/2` and rewrites its `blank`
-  comparisons. Only a template that spells `blank` is walked.
+  Parses a template with `Liquex.parse/2` and rewrites its `empty` and
+  `blank` comparisons. Only a template that spells one of them is walked.
   """
   @spec parse(String.t(), module()) :: {:ok, Liquex.document_t()} | {:error, String.t(), pos_integer()}
   def parse(template, parser) do
     case Liquex.parse(template, parser) do
-      {:ok, document} -> {:ok, if(String.contains?(template, "blank"), do: rewrite(document), else: document)}
-      error -> error
+      {:ok, document} ->
+        {:ok, if(String.contains?(template, ["empty", "blank"]), do: rewrite(document), else: document)}
+
+      error ->
+        error
     end
   end
 
   @doc """
-  Rewrites the `blank` comparisons in a parsed Liquex document.
+  Rewrites the `empty` and `blank` comparisons in a parsed Liquex document.
   """
   @spec rewrite(term()) :: term()
   def rewrite({{:tag, tag}, arguments}) when is_map_key(@tags, tag),
@@ -61,7 +71,7 @@ defmodule Brando.Villain.BlankKeyword do
   def rewrite(tuple) when is_tuple(tuple), do: tuple |> Tuple.to_list() |> rewrite() |> List.to_tuple()
   def rewrite(term), do: term
 
-  # Only an `if`'s or `unless`'s conditions get blank tests: another tag
+  # Only an `if`'s or `unless`'s conditions get keyword tests: another tag
   # that evaluates a condition does so with Liquex, which has no clause for
   # them.
   defp if_arguments(arguments) do
@@ -77,22 +87,29 @@ defmodule Brando.Villain.BlankKeyword do
     end)
   end
 
-  defp condition(left: left, op: op, right: [literal: @blank]) when op in [:==, :!=], do: {__MODULE__, op, left}
-  defp condition(left: [literal: @blank], op: op, right: right) when op in [:==, :!=], do: {__MODULE__, op, right}
+  defp condition(left: left, op: op, right: [literal: special]) when op in [:==, :!=] and is_map_key(@keywords, special),
+    do: {__MODULE__, Map.fetch!(@keywords, special), op, left}
+
+  defp condition(left: [literal: special], op: op, right: right) when op in [:==, :!=] and is_map_key(@keywords, special),
+    do: {__MODULE__, Map.fetch!(@keywords, special), op, right}
+
   defp condition(chain) when is_list(chain), do: Enum.map(chain, &condition/1)
   defp condition(term), do: term
 
-  defp when_values({:literal, @blank}), do: Enum.map(@blank_values, &{:literal, &1})
+  defp when_values({:literal, special}) when is_map_key(@keywords, special),
+    do: Enum.map(Map.fetch!(@values, Map.fetch!(@keywords, special)), &{:literal, &1})
+
   defp when_values(expression), do: [rewrite(expression)]
 
   @doc """
-  Evaluates an `if` or `unless` condition as Liquex does, with the blank
+  Evaluates an `if` or `unless` condition as Liquex does, with the keyword
   tests `rewrite/1` leaves in it.
   """
   @spec eval(term(), Liquex.Context.t()) :: {boolean(), Liquex.Context.t()}
-  def eval({__MODULE__, op, operand}, context) do
+  def eval({__MODULE__, keyword, op, operand}, context) do
     {value, context} = Liquex.Argument.eval(operand, context)
-    {blank?(value) == (op == :==), context}
+    matches? = if keyword == :empty, do: empty?(value), else: blank?(value)
+    {matches? == (op == :==), context}
   end
 
   def eval([left: _, op: _, right: _] = comparison, context), do: Liquex.Expression.eval(comparison, context)
@@ -112,19 +129,26 @@ defmodule Brando.Villain.BlankKeyword do
   def eval(expression, context), do: Liquex.Expression.eval(expression, context)
 
   @doc """
+  True for the values `empty` matches.
+  """
+  @spec empty?(term()) :: boolean()
+  def empty?(value) when value in [nil, "", []], do: true
+  def empty?(map) when is_map(map) and not is_struct(map), do: map_size(map) == 0
+  def empty?(_), do: false
+
+  @doc """
   True for the values `blank` matches.
   """
   @spec blank?(term()) :: boolean()
-  def blank?(value) when value in [nil, false, "", []], do: true
-  def blank?(map) when is_map(map) and not is_struct(map), do: map_size(map) == 0
-  def blank?(_), do: false
+  def blank?(false), do: true
+  def blank?(value), do: empty?(value)
 
   defmodule IfTag do
     @moduledoc false
     # `Liquex.Tag.IfTag.render/2`, with conditions evaluated by
-    # `Brando.Villain.BlankKeyword.eval/2`.
+    # `Brando.Villain.EmptyKeywords.eval/2`.
 
-    alias Brando.Villain.BlankKeyword
+    alias Brando.Villain.EmptyKeywords
 
     def render([{:expression, expression}, {:contents, contents} | tail], context),
       do: branch(expression, contents, tail, context)
@@ -136,7 +160,7 @@ defmodule Brando.Villain.BlankKeyword do
     def render([], context), do: {[], context}
 
     defp branch(expression, contents, tail, context) do
-      {truthy?, context} = BlankKeyword.eval(expression, context)
+      {truthy?, context} = EmptyKeywords.eval(expression, context)
       if truthy?, do: Liquex.Render.render!(contents, context), else: render(tail, context)
     end
   end
@@ -146,10 +170,10 @@ defmodule Brando.Villain.BlankKeyword do
     # `Liquex.Tag.UnlessTag.render/2`, whose `elsif` and `else` render as
     # an `if`'s do.
 
-    alias Brando.Villain.BlankKeyword
+    alias Brando.Villain.EmptyKeywords
 
     def render([{:expression, expression}, {:contents, contents} | tail], context) do
-      {truthy?, context} = BlankKeyword.eval(expression, context)
+      {truthy?, context} = EmptyKeywords.eval(expression, context)
       if truthy?, do: IfTag.render(tail, context), else: Liquex.Render.render!(contents, context)
     end
   end
