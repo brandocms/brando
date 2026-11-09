@@ -18,6 +18,11 @@ defmodule Brando.Content.Proposals.ToolsTest do
     Map.put(c, :context, context)
   end
 
+  defp apply!(proposal, c) do
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+  end
+
   defp call!(name, args, context) do
     assert {:ok, result} = Tools.call(name, args, context)
     # Results go back to the model as JSON.
@@ -305,6 +310,32 @@ defmodule Brando.Content.Proposals.ToolsTest do
       assert {:error, message} = Tools.call("prepare_proposal", %{"summary" => "Copy", "operations" => [op]}, c.context)
       assert message =~ "Markdown"
 
+      # Into a block another operation makes: a copy of a saved Markdown block.
+      %{
+        "op" => "insert_block",
+        "target" => target,
+        "module" => "local:#{notes.id}",
+        "uid" => "notes",
+        "texts" => %{"md" => "*Saved*"}
+      }
+      |> then(&call!("prepare_proposal", %{"summary" => "Notes", "operations" => [&1]}, c.context))
+      |> then(&Proposals.get(&1.proposal_id, c.user))
+      |> then(fn {:ok, proposal} -> apply!(proposal, c) end)
+
+      ops = [
+        %{"op" => "copy_block", "target" => target, "block_uid" => "notes", "uid" => "notes2"},
+        %{
+          "op" => "set_block_text",
+          "target" => target,
+          "block_uid" => "notes2",
+          "ref" => "md",
+          "text" => %{"from" => %{"block_uid" => block, "ref" => "body"}}
+        }
+      ]
+
+      assert {:error, message} = Tools.call("prepare_proposal", %{"summary" => "Copy", "operations" => ops}, c.context)
+      assert message =~ "Markdown"
+
       # A footnote belongs to the block its text is in.
       noted = text_block!(c, ~s(<p>Claim<sup data-footnote-uid="note1">1</sup></p>), 10)
       assert {:error, message} = copy.(%{"from" => %{"block_uid" => noted, "ref" => "body"}})
@@ -343,11 +374,6 @@ defmodule Brando.Content.Proposals.ToolsTest do
       result = call!("prepare_proposal", %{"summary" => "Links", "operations" => ops}, c.context)
       {:ok, proposal} = Proposals.get(result.proposal_id, c.user)
       {result, proposal}
-    end
-
-    defp apply!(proposal, c) do
-      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
-      {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
     end
 
     defp button_values(c) do

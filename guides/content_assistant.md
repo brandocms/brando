@@ -335,7 +335,7 @@ is applied.
   it and deletes the old one. A copied text comes from a saved block of the
   same entry and field, whole and with its markup. Text with footnotes is not
   copied, because its notes belong to its block, and neither is text going
-  from rich text to Markdown or back.
+  into or out of Markdown from another kind of slot.
 - On new and existing blocks, at any depth:
   - set text in text, header, markdown and map slots, and fill in the
     parameters of an HTML slot through its settings (`values`), each checked

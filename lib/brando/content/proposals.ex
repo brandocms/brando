@@ -164,9 +164,10 @@ defmodule Brando.Content.Proposals do
               )
             )
 
-          # Markdown leaves rich text's markup out, and rich text would show
-          # Markdown's as it is.
-          Enum.sort([type, slot_type]) == ["markdown", "text"] ->
+          # Markdown leaves rich text's markup out, rich text and headings
+          # would show Markdown's as it is, and Markdown would read a
+          # heading's * and _ as markup.
+          type != slot_type and "markdown" in [type, slot_type] and slot_type != nil ->
             Error.fail!(
               dgettext(
                 "content_proposals",
@@ -187,6 +188,7 @@ defmodule Brando.Content.Proposals do
   defp copied_text(text, _slot_type, _op, _entries), do: text
 
   defp text_kind("markdown"), do: dgettext("content_proposals", "Markdown")
+  defp text_kind("header"), do: dgettext("content_proposals", "plain text")
   defp text_kind(_text), do: dgettext("content_proposals", "rich text")
 
   defp saved_text(entries, target, field, uid, name) do
@@ -219,8 +221,18 @@ defmodule Brando.Content.Proposals do
 
       nil ->
         Enum.find_value(operations, fn
-          %InsertBlock{uid: uid, module: module} when uid == op.block_uid -> slot_type(module, name)
-          _ -> nil
+          %InsertBlock{uid: uid, module: module} when uid == op.block_uid ->
+            slot_type(module, name)
+
+          # A copy has the refs of the saved block it copies.
+          %CopyBlock{uid: uid} = copy when uid == op.block_uid ->
+            case saved_entry_block(entries, copy.target, copy.field, copy.block_uid) do
+              %{refs: refs} -> ref_type(refs, name)
+              nil -> nil
+            end
+
+          _ ->
+            nil
         end)
     end
   end
