@@ -29,7 +29,17 @@ defmodule Brando.HTML.ViteAssetsTest do
   <!-- end admin dev/test -->
   """
 
-  setup do
+  # Development reads the site's files from the working directory: here an
+  # application whose frontend has a `js/critical.js`, as the installer's does
+  @moduletag :tmp_dir
+
+  setup %{tmp_dir: tmp_dir} do
+    File.mkdir_p!(Path.join(tmp_dir, "assets/frontend/js"))
+    File.write!(Path.join(tmp_dir, "assets/frontend/js/critical.js"), "")
+    cwd = File.cwd!()
+    File.cd!(tmp_dir)
+    on_exit(fn -> File.cd!(cwd) end)
+
     put_test_env(:env, :dev)
     put_test_env(:ssg_run, false)
     put_test_env(:otp_app, @host_app)
@@ -72,6 +82,16 @@ defmodule Brando.HTML.ViteAssetsTest do
     assert frontend_scripts() == @frontend_html
     assert frontend_scripts(only_css: true) == @frontend_html
     assert admin_scripts() == @admin_html
+  end
+
+  test "a site without js/critical.js does not request it from its dev server" do
+    File.rm!("assets/frontend/js/critical.js")
+
+    for html <- [frontend_scripts(), frontend_scripts(only_css: true)] do
+      refute html =~ "critical.js"
+      assert html =~ ~s(src="http://localhost:3000/@vite/client")
+      assert html =~ ~s(src="http://localhost:3000/js/index.js")
+    end
   end
 
   describe "the notice when the admin's assets are missing in development" do
