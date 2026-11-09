@@ -12135,6 +12135,11 @@ msgstr "Åpne listen med denne visningen"
 msgid "Open the list without a view"
 msgstr "Åpne listen uten visning"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open the saved version"
+msgstr "Åpne lagret versjon"
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Open the source"
@@ -12881,18 +12886,13 @@ msgstr "Forhåndsvisning av standard metadata. Enkeltsider kan overstyre disse v
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
-msgid "Preview page"
-msgstr "Forhåndsvis siden"
+msgid "Preview proposed page"
+msgstr "Forhåndsvis forslaget"
 
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "Preview size"
 msgstr "Forhåndsvisningsstørrelse"
-
-#: lib/brando_admin/live/ai/assistant_live.ex
-#, elixir-autogen, elixir-format
-msgid "Preview the saved page"
-msgstr "Forhåndsvis den lagrede siden"
 
 #: lib/brando_admin/components/form/meta_drawer.ex
 #, elixir-autogen, elixir-format

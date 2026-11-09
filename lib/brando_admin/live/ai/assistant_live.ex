@@ -973,11 +973,11 @@ defmodule BrandoAdmin.AI.AssistantLive do
             <button
               :if={entry.preview? and @under_review? and entry.action != :source}
               type="button"
-              class="btn btn--sm assistant-card-preview"
+              class="btn assistant-card-preview"
               phx-click="preview"
               phx-value-key={entry.key}
             >
-              <.icon name="eye" />{gettext("Preview page")}
+              <.icon name="eye" />{gettext("Preview proposed page")}
             </button>
 
             <div :if={entry.placeholders != []} class="assistant-placeholders">
@@ -1135,7 +1135,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
       phx-click="preview_saved"
       phx-value-key={@entry.key}
     >
-      {gettext("Preview the saved page")}<.icon name="external-link" />
+      {gettext("Open the saved version")}<.icon name="external-link" />
     </button>
     """
   end
@@ -1283,10 +1283,9 @@ defmodule BrandoAdmin.AI.AssistantLive do
         <.frame preview={@preview} entry={@entry} />
       </div>
 
-      <ul :if={@entry} class="assistant-preview-summary">
+      <ul :if={@entry} class="assistant-changes assistant-preview-summary">
         <li :for={change <- @entry.changes}>
-          <.icon name="check" />
-          <div><.change change={change} aliases={@aliases} /></div>
+          <.change change={change} aliases={@aliases} media={@media} />
         </li>
       </ul>
     </section>

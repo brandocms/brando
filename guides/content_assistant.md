@@ -295,9 +295,11 @@ which of it is used. Nothing is placed until you apply the proposal.
 
 ## Page previews
 
-**Preview page** on an entry card renders the entry as proposed, through the
-site's own [live preview](live_preview.md) targets and templates. Nothing is
-saved to do this.
+**Preview proposed page** on an entry card renders the entry as proposed,
+through the site's own [live preview](live_preview.md) targets and templates.
+Nothing is saved to do this. An unpublished entry also has **Open the saved
+version** at the foot of its card, which opens the entry as it is saved in a
+new tab.
 
 - **Entry tabs** switch between the entries in the proposal. The apply bar
   keeps describing the whole batch.

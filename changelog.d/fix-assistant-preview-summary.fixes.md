@@ -1,0 +1,1 @@
+- In the Assistant's page preview, the list of changes below the page is laid out as on the entry card: padded, no wider than a card, without check marks, and with media thumbnails.

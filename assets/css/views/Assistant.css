@@ -857,17 +857,14 @@
   &.is-error { color: var(--assistant-error); }
 }
 
-.assistant-preview-summary {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
+/* The entry's changes, as its card lists them and as wide as a card.
+   Two classes: the workspace's list reset (class + element) wins over one. */
+.assistant-preview .assistant-preview-summary {
+  max-width: 720px;
+  padding: 20px;
+  border: 1px solid var(--assistant-line);
   border-radius: 8px;
-  background: var(--assistant-sage);
-  font-size: var(--brando-text-md);
-
-  li { display: flex; gap: 8px; }
-  li > [data-icon] { margin-top: 3px; color: var(--assistant-accent); }
-  li > div { display: grid; gap: 8px; min-width: 0; flex: 1; }
+  background: var(--brando-surface);
 }
 
 /* Narrow screens: one column, nothing sticky, nothing wider than the screen. */
