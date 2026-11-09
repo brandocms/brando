@@ -60,6 +60,11 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{key} shows the text the module gives it."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} cannot hold a {, which the page could read as Liquid."
 msgstr ""
 
@@ -118,9 +123,19 @@ msgstr ""
 msgid "A gallery holds images and videos."
 msgstr ""
 
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "A link points to a URL or an entry {\"content_type\": T, \"id\": N}."
+msgstr ""
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "A link points to an entry that was not found or has no page yet."
+msgstr ""
+
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "A link's text is a string."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -258,6 +273,11 @@ msgstr ""
 msgid "File #%{id}"
 msgstr ""
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Markdown"
+msgstr ""
+
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "Media is {kind: image|video|file, id}, an attachment alias or {gallery: [media]}."
@@ -345,6 +365,21 @@ msgstr ""
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "Text %{ref} in block %{uid} has footnotes, which stay with their block, so it cannot be copied."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Text %{ref} in block %{uid} is %{from}, and the slot takes %{to}: write it out in that form instead."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Text %{ref} in block %{uid} is empty."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "The block to place it next to is not in the field."
 msgstr ""
 
@@ -386,6 +421,11 @@ msgstr ""
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "The status is published, draft, disabled or pending."
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "There is no saved text %{ref} in block %{uid} of this entry and field to copy."
 msgstr ""
 
 #: lib/brando/content/proposals.ex
@@ -554,9 +594,39 @@ msgstr ""
 msgid "a block"
 msgstr ""
 
+#: lib/brando/content/proposals/review.ex
+#, elixir-autogen, elixir-format
+msgid "default link text"
+msgstr ""
+
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "from takes {\"block_uid\": UID, \"ref\": NAME}."
+msgstr ""
+
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "identifiers is a list of identifier ids."
+msgstr ""
+
+#: lib/brando/content/proposals/review.ex
+#, elixir-autogen, elixir-format
+msgid "opens in a new tab"
+msgstr ""
+
+#: lib/brando/content/proposals/review.ex
+#, elixir-autogen, elixir-format
+msgid "opens in the same tab"
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "plain text"
+msgstr ""
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "rich text"
 msgstr ""
 
 #: lib/brando/content/proposals/codec.ex

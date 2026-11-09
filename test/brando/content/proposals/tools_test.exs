@@ -18,6 +18,11 @@ defmodule Brando.Content.Proposals.ToolsTest do
     Map.put(c, :context, context)
   end
 
+  defp apply!(proposal, c) do
+    {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+    {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+  end
+
   defp call!(name, args, context) do
     assert {:ok, result} = Tools.call(name, args, context)
     # Results go back to the model as JSON.
@@ -173,6 +178,320 @@ defmodule Brando.Content.Proposals.ToolsTest do
              )
 
     assert message =~ "image9"
+  end
+
+  describe "changing a block's module" do
+    defp text_block!(c, text, sequence) do
+      block =
+        %Brando.Content.Block{}
+        |> Brando.Content.Block.recursive_block_changeset(
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "type" => "module",
+            "module_id" => c.text_module.id,
+            "creator_id" => c.user.id,
+            "source" => to_string(Page.Blocks),
+            "refs" => [
+              %{
+                "uid" => Brando.Utils.generate_uid(),
+                "name" => "body",
+                "data" => %{"type" => "text", "data" => %{"text" => text}}
+              }
+            ]
+          },
+          c.user
+        )
+        |> Brando.Repo.insert!()
+
+      Brando.Repo.insert!(struct(Page.Blocks, %{entry_id: c.identity.id, block_id: block.id, sequence: sequence}))
+      block.uid
+    end
+
+    defp part!(c, uid) do
+      call!(
+        "entry_outline",
+        %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id, "block_uid" => uid},
+        c.context
+      )
+    end
+
+    test "a text is read whole and copied to a block of another module", c do
+      text =
+        "<p>" <>
+          String.duplicate("A long paragraph. ", 20) <> ~s(<strong>Bold</strong> and <a href="/about">a link</a>.</p>)
+
+      old = text_block!(c, text, 10)
+
+      [%{uid: other} | _] =
+        Brando.Content.Transfer.Catalog.load!(Page, c.identity.id, c.user).entry_blocks |> Enum.map(& &1.block)
+
+      lead =
+        Brando.ProposalFixtures.module!(c.user, "Lead", "{% ref refs.lead %}",
+          refs: [Brando.ProposalFixtures.ref("lead", %{type: "text", data: %{text: ""}})]
+        )
+
+      # The whole outline shortens it; one block's part shows it whole.
+      outline = call!("entry_outline", %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}, c.context)
+      assert %{texts: %{"body" => short}} = Enum.find(outline.blocks.blocks, &(&1.uid == old))
+      assert String.ends_with?(short, "…") and not String.contains?(short, "<")
+      assert [%{texts: %{"body" => ^text}}] = part!(c, old).blocks.part
+
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+      from = %{"from" => %{"block_uid" => old, "ref" => "body"}}
+
+      ops = [
+        %{
+          "op" => "insert_block",
+          "target" => target,
+          "module" => "local:#{lead.id}",
+          "placement" => %{"after" => old},
+          "uid" => "lead",
+          "texts" => %{"lead" => from}
+        },
+        %{"op" => "set_block_text", "target" => target, "block_uid" => other, "ref" => "body", "text" => from},
+        %{"op" => "delete_block", "target" => target, "block_uid" => old}
+      ]
+
+      result = call!("prepare_proposal", %{"summary" => "Make it a lead", "operations" => ops}, c.context)
+      assert %{applicable: true, effects: %{inserted_blocks: 1, deletions: 1}} = result
+
+      # The proposal holds the text itself, as the reviewer sees it.
+      {:ok, proposal} = Proposals.get(result.proposal_id, c.user)
+      assert [%{texts: %{"lead" => ^text}}, %{text: ^text}, _] = proposal.operations
+
+      {:ok, _} = Proposals.approve(proposal.id, proposal.version, c.user)
+      {:ok, _} = Proposals.apply(proposal.id, proposal.version, c.user)
+
+      assert [%{texts: %{"lead" => ^text}}] = part!(c, "lead").blocks.part
+      assert [%{texts: %{"body" => ^text}}] = part!(c, other).blocks.part
+
+      assert {:error, _} =
+               Tools.call(
+                 "entry_outline",
+                 %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id, "block_uid" => old},
+                 c.context
+               )
+    end
+
+    test "a text is copied only from a saved text of the same entry and field", c do
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+
+      [%{uid: block} | _] =
+        Brando.Content.Transfer.Catalog.load!(Page, c.identity.id, c.user).entry_blocks |> Enum.map(& &1.block)
+
+      copy = fn from ->
+        op = %{"op" => "set_block_text", "target" => target, "block_uid" => block, "ref" => "body", "text" => from}
+        Tools.call("prepare_proposal", %{"summary" => "Copy", "operations" => [op]}, c.context)
+      end
+
+      assert {:error, message} = copy.(%{"from" => %{"block_uid" => "nope", "ref" => "body"}})
+      assert message =~ "nope"
+      assert {:error, _} = copy.(%{"from" => %{"block_uid" => block, "ref" => "missing"}})
+      assert {:error, message} = copy.(%{"from" => "body"})
+      assert message =~ "block_uid"
+
+      empty = text_block!(c, "", 11)
+      assert {:error, message} = copy.(%{"from" => %{"block_uid" => empty, "ref" => "body"}})
+      assert message =~ "empty"
+
+      # Markdown leaves rich text's markup out.
+      notes =
+        Brando.ProposalFixtures.module!(c.user, "Notes", "{% ref refs.md %}",
+          refs: [Brando.ProposalFixtures.ref("md", %{type: "markdown", data: %{text: ""}})]
+        )
+
+      op = %{
+        "op" => "insert_block",
+        "target" => target,
+        "module" => "local:#{notes.id}",
+        "texts" => %{"md" => %{"from" => %{"block_uid" => block, "ref" => "body"}}}
+      }
+
+      assert {:error, message} = Tools.call("prepare_proposal", %{"summary" => "Copy", "operations" => [op]}, c.context)
+      assert message =~ "Markdown"
+
+      # Into a block another operation makes: a copy of a saved Markdown block.
+      %{
+        "op" => "insert_block",
+        "target" => target,
+        "module" => "local:#{notes.id}",
+        "uid" => "notes",
+        "texts" => %{"md" => "*Saved*"}
+      }
+      |> then(&call!("prepare_proposal", %{"summary" => "Notes", "operations" => [&1]}, c.context))
+      |> then(&Proposals.get(&1.proposal_id, c.user))
+      |> then(fn {:ok, proposal} -> apply!(proposal, c) end)
+
+      ops = [
+        %{"op" => "copy_block", "target" => target, "block_uid" => "notes", "uid" => "notes2"},
+        %{
+          "op" => "set_block_text",
+          "target" => target,
+          "block_uid" => "notes2",
+          "ref" => "md",
+          "text" => %{"from" => %{"block_uid" => block, "ref" => "body"}}
+        }
+      ]
+
+      assert {:error, message} = Tools.call("prepare_proposal", %{"summary" => "Copy", "operations" => ops}, c.context)
+      assert message =~ "Markdown"
+
+      # A footnote belongs to the block its text is in.
+      noted = text_block!(c, ~s(<p>Claim<sup data-footnote-uid="note1">1</sup></p>), 10)
+      assert {:error, message} = copy.(%{"from" => %{"block_uid" => noted, "ref" => "body"}})
+      assert message =~ "footnotes"
+
+      [%{uid: elsewhere} | _] =
+        Brando.Content.Transfer.Catalog.load!(Page, c.naming.id, c.user).entry_blocks |> Enum.map(& &1.block)
+
+      assert {:error, _} = copy.(%{"from" => %{"block_uid" => elsewhere, "ref" => "body"}})
+    end
+
+    test "a part too long to show whole shows its texts shortened, and says how to copy them", c do
+      uid = text_block!(c, "<p>" <> String.duplicate("Word ", 5_000) <> "</p>", 10)
+
+      part = part!(c, uid)
+      assert [%{texts: %{"body" => body}}] = part.blocks.part
+      assert String.ends_with?(body, "…")
+      assert part.note =~ ~s("from")
+    end
+  end
+
+  describe "link variables" do
+    setup c do
+      button =
+        Brando.ProposalFixtures.module!(c.user, "Button", "{{ cta }}{{ fixed }}",
+          vars: [
+            %{type: "link", key: "cta", label: "Button", link_allow_custom_text: true},
+            %{type: "link", key: "fixed", label: "Fixed", link_allow_custom_text: false}
+          ]
+        )
+
+      Map.put(c, :button, button)
+    end
+
+    defp propose!(c, ops) do
+      result = call!("prepare_proposal", %{"summary" => "Links", "operations" => ops}, c.context)
+      {:ok, proposal} = Proposals.get(result.proposal_id, c.user)
+      {result, proposal}
+    end
+
+    defp button_values(c) do
+      [%{values: values}] =
+        call!(
+          "entry_outline",
+          %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id, "block_uid" => "button"},
+          c.context
+        ).blocks.part
+
+      values
+    end
+
+    test "a link's text and new tab are read and set, with or without its target", c do
+      contract = call!("describe_module", %{"module" => "local:#{c.button.id}"}, c.context)
+      assert Enum.find(contract.variables, &(&1.key == "cta")).settable =~ ~s("text")
+      assert Enum.find(contract.variables, &(&1.key == "fixed")).settable =~ "the module gives it its text"
+
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+
+      {%{applicable: true}, proposal} =
+        propose!(c, [
+          %{
+            "op" => "insert_block",
+            "target" => target,
+            "module" => "local:#{c.button.id}",
+            "uid" => "button",
+            "values" => %{"cta" => %{"link" => "https://example.com/a", "text" => "Read more"}}
+          }
+        ])
+
+      apply!(proposal, c)
+      assert %{"cta" => %{url: "https://example.com/a", text: "Read more"}} = button_values(c)
+
+      # Only the text and the tab: the link keeps where it points.
+      set = fn values ->
+        %{"op" => "set_block_values", "target" => target, "block_uid" => "button", "values" => values}
+      end
+
+      {%{applicable: true}, proposal} = propose!(c, [set.(%{"cta" => %{"text" => "Les mer", "new_tab" => true}})])
+
+      [card] = Proposals.Review.entries(proposal)
+      assert [%{values: [view]}] = card.changes
+      assert view.before == "https://example.com/a · “Read more”"
+      assert view.value == "“Les mer” · opens in a new tab"
+
+      apply!(proposal, c)
+      assert button_values(c)["cta"] == %{url: "https://example.com/a", text: "Les mer", new_tab: true}
+
+      # To an entry, back to its default text: the entry's title.
+      entry = %{"content_type" => "Brando.Pages.Page", "id" => c.naming.id}
+      {%{applicable: true}, proposal} = propose!(c, [set.(%{"cta" => %{"link" => entry, "text" => ""}})])
+      apply!(proposal, c)
+      assert %{entry: "Naming", id: id, new_tab: true} = cta = button_values(c)["cta"]
+      assert id == c.naming.id
+      refute Map.has_key?(cta, :text)
+
+      # A plain URL still sets only where it points.
+      {%{applicable: true}, proposal} = propose!(c, [set.(%{"fixed" => "https://example.com/b"})])
+      apply!(proposal, c)
+      assert button_values(c)["fixed"] == "https://example.com/b"
+    end
+
+    test "a link's text is plain, and only where the module lets it be set", c do
+      target = %{"content_type" => "Brando.Pages.Page", "id" => c.identity.id}
+
+      insert = fn values ->
+        op = %{"op" => "insert_block", "target" => target, "module" => "local:#{c.button.id}", "values" => values}
+        Tools.call("prepare_proposal", %{"summary" => "Links", "operations" => [op]}, c.context)
+      end
+
+      assert {:ok, %{applicable: false, problems: [%{code: :unsupported_value, message: message}]}} =
+               insert.(%{"fixed" => %{"link" => "https://example.com", "text" => "Mine"}})
+
+      assert message =~ "fixed"
+
+      # Clearing it would drop the module's text too.
+      assert {:ok, %{applicable: false, problems: [%{code: :unsupported_value}]}} =
+               insert.(%{"fixed" => %{"text" => ""}})
+
+      assert {:ok, %{applicable: true}} = insert.(%{"fixed" => %{"link" => "https://example.com", "new_tab" => true}})
+      assert {:ok, %{problems: [%{code: :unsafe_text}]}} = insert.(%{"cta" => %{"text" => "<b>Bold</b>"}})
+      # A placeholder in it keeps the entry from being published, as in any text.
+      {_, proposal} =
+        propose!(c, [
+          %{
+            "op" => "insert_block",
+            "target" => target,
+            "module" => "local:#{c.button.id}",
+            "values" => %{"cta" => %{"link" => "https://example.com", "text" => "[[button label]]"}}
+          }
+        ])
+
+      assert [%{placeholders: [%{text: "button label"}]}] = Proposals.Review.entries(proposal)
+
+      # A link to an entry the proposal creates, written flat, still names it.
+      {result, _} =
+        propose!(c, [
+          %{
+            "op" => "create_entry",
+            "content_type" => "Brando.Pages.Page",
+            "ref" => "case",
+            "fields" => %{"title" => "Case"}
+          },
+          %{
+            "op" => "insert_block",
+            "target" => target,
+            "module" => "local:#{c.button.id}",
+            "values" => %{"cta" => %{"new" => "case", "text" => "The case"}}
+          }
+        ])
+
+      assert Enum.any?(result.problems, &(&1.code == :draft_dependency))
+
+      assert {:error, _} = insert.(%{"cta" => %{"text" => 5}})
+      assert {:error, _} = insert.(%{"cta" => %{"link" => 5}})
+      assert {:error, _} = insert.(%{"cta" => %{"new_tab" => "yes"}})
+    end
   end
 
   test "guidance cannot make the assistant invent modules or settings", c do
@@ -562,8 +881,11 @@ defmodule Brando.Content.Proposals.ToolsTest do
           c.context
         )
 
-      assert [%{uid: uid, texts: %{"body" => "200. " <> _}}] = part.blocks.part
+      # Whole, with its markup, as set_block_text takes it.
+      assert [%{uid: uid, texts: %{"body" => body}}] = part.blocks.part
       assert uid == last.uid
+      assert body == "<p>200. #{long}</p>"
+      refute part[:note]
     end
 
     test "list_modules offers multi modules at the root", c do

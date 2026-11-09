@@ -179,6 +179,7 @@ defmodule Brando.Content.Proposals.Review do
   def placeholders_in(text) when is_binary(text),
     do: for([_, inner] <- Regex.scan(@placeholder, text), do: inner |> strip_tags() |> String.trim())
 
+  def placeholders_in({:link, _target, %{text: text}}), do: placeholders_in(text)
   def placeholders_in(_), do: []
 
   defp strip_tags(html), do: String.replace(html, ~r/<[^>]*>/, "")
@@ -817,16 +818,40 @@ defmodule Brando.Content.Proposals.Review do
     }
   end
 
+  defp saved_value(%{type: :link} = var),
+    do: link_view(saved_link_target(var), var.link_text, if(var.link_target_blank, do: true))
+
   defp saved_value(%{type: :boolean} = var), do: var.value_boolean
 
-  defp saved_value(%{type: :link, identifier: %{title: title} = identifier}) when is_binary(title) do
+  defp saved_value(%{type: type}) when type in [:image, :video], do: nil
+  defp saved_value(var), do: option(var, var.value)
+
+  defp saved_link_target(%{identifier: %{title: title} = identifier}) when is_binary(title) do
     if Boundary.readable_entry?(identifier.schema, identifier.entry_id),
       do: Content.Identifier.title_text(identifier),
       else: "##{identifier.entry_id}"
   end
 
-  defp saved_value(%{type: type}) when type in [:image, :video], do: nil
-  defp saved_value(var), do: option(var, var.value)
+  defp saved_link_target(var), do: option(var, var.value)
+
+  # Where a link points, the text it shows and whether it opens a new tab.
+  defp link_view(target, text, new_tab) do
+    [
+      target,
+      case text do
+        nil -> nil
+        "" -> dgettext("content_proposals", "default link text")
+        text -> "“#{text}”"
+      end,
+      new_tab && dgettext("content_proposals", "opens in a new tab"),
+      new_tab == false && dgettext("content_proposals", "opens in the same tab")
+    ]
+    |> Enum.reject(&(&1 in [nil, false, ""]))
+    |> case do
+      [] -> nil
+      parts -> Enum.join(parts, " · ")
+    end
+  end
 
   defp media_value({kind, id}) when kind in [:image, :video], do: %{kind: kind, id: id}
   defp media_value({:gallery, [{kind, id} | _]}), do: %{kind: kind, id: id}
@@ -847,6 +872,9 @@ defmodule Brando.Content.Proposals.Review do
       _ -> value
     end
   end
+
+  defp option(var, {:link, target, opts}),
+    do: link_view(target && option(var, target), opts[:text], opts[:new_tab])
 
   defp option(_var, {:entry, schema, id}) do
     with true <- Boundary.readable_entry?(schema, id),

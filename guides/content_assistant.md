@@ -330,6 +330,12 @@ is applied.
   another block.
 - Move, copy and delete blocks, children included, and turn a block or one of
   its slots on or off.
+- Give a block another module. A block keeps its module, so the proposal
+  inserts a block of the new module with the old block's texts copied into
+  it and deletes the old one. A copied text comes from a saved block of the
+  same entry and field, whole and with its markup. Text with footnotes is not
+  copied, because its notes belong to its block, and neither is text going
+  into or out of Markdown from another kind of slot.
 - On new and existing blocks, at any depth:
   - set text in text, header, markdown and map slots, and fill in the
     parameters of an HTML slot through its settings (`values`), each checked
@@ -338,7 +344,9 @@ is applied.
   - put images, videos and files in media slots, and set a gallery's whole,
     ordered content;
   - set variables: text, boolean, select, colour, date, image, video, and
-    links to a URL or an entry;
+    links to a URL or an entry, with the text the link or button shows and
+    whether it opens in a new tab. A module that gives a link its own text
+    keeps it;
   - change a slot's settings: a heading's level, a picture's alt text, title,
     credits or link, a video's autoplay or loop, a gallery's display;
   - replace a table's rows, and choose the entries a selection datasource
@@ -356,8 +364,8 @@ or client wrote, not an editor:
   script addresses; an HTML or SVG slot's markup is a superuser's and is never written;
 - an HTML slot's parameter values each take a value of their type, escaped
   when the slot renders;
-- header slots and single-line text variables take plain text, without
-  markup;
+- header slots, single-line text variables and a link variable's text take
+  plain text, without markup;
 - a link variable or a slot's link takes a web, mail or phone address, or a
   path;
 - a map slot takes an https Google Maps embed address;
@@ -384,7 +392,8 @@ These are the defaults:
   reserved for calls in flight.
 - **A tool result** is at most 24 KB. A larger one is replaced by a request to
   narrow it. Searches return at most 20 results, an entry's outline shrinks
-  to about 20 KB, and a folder is attached 100 items at a time.
+  to about 20 KB and shows the first 160 characters of each text (one block
+  read on its own shows its texts whole), and a folder is attached 100 items at a time.
 - **A proposal** can be applied for 24 hours, and its review links last as
   long. After that it must be prepared again.
 - **A model call** waits at most two minutes for the provider

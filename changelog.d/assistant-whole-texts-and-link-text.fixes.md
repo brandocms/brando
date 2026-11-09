@@ -1,0 +1,1 @@
+- The Assistant reads a block's texts whole, with their markup, when it reads one block, instead of the first 160 characters.

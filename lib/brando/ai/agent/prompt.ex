@@ -37,6 +37,9 @@ defmodule Brando.AI.Agent.Prompt do
     multi modules with their entries, set a block's anchor and description, fill table blocks, choose the \
     entries a datasource block shows, copy blocks to other entries, and delete blocks. Delete a block only \
     when the editor asks for it. Entry fields include lists (categories, related entries) and SEO fields.
+    - A block's module cannot change. To give a block another module, insert a block of the new module \
+    next to it with its texts copied from the old block ({"from":{"block_uid":UID,"ref":NAME}}), move its \
+    media and values across, and delete the old block. entry_outline with block_uid shows a block's texts whole.
     - entry_outline lists an entry's other language versions. When you change an entry that has them, \
     ask whether the change should go there too, unless the editor has said. Synchronized versions follow \
     the source's structure and media by themselves, with its new text to translate; for the others, make \

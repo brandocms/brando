@@ -61,6 +61,11 @@ msgstr "%{key} er true eller false."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "%{key} shows the text the module gives it."
+msgstr "%{key} viser teksten modulen gir den."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "%{name} cannot hold a {, which the page could read as Liquid."
 msgstr "%{name} kan ikke inneholde {, som siden kan lese som Liquid."
 
@@ -119,10 +124,20 @@ msgstr "En blokkbeskrivelse kan være på høyst 255 tegn."
 msgid "A gallery holds images and videos."
 msgstr "Et galleri inneholder bilder og videoer."
 
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "A link points to a URL or an entry {\"content_type\": T, \"id\": N}."
+msgstr "En lenke peker til en URL eller en oppføring {\"content_type\": T, \"id\": N}."
+
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
 msgid "A link points to an entry that was not found or has no page yet."
 msgstr "En lenke peker til en oppføring som ikke finnes eller ikke har noen side ennå."
+
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "A link's text is a string."
+msgstr "Teksten til en lenke er en streng."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -259,6 +274,11 @@ msgstr "Forventet et objekt."
 msgid "File #%{id}"
 msgstr "Fil #%{id}"
 
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Markdown"
+msgstr "Markdown"
+
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "Media is {kind: image|video|file, id}, an attachment alias or {gallery: [media]}."
@@ -346,6 +366,21 @@ msgstr "Tabellrader kan ikke inneholde gallerier."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
+msgid "Text %{ref} in block %{uid} has footnotes, which stay with their block, so it cannot be copied."
+msgstr "Teksten %{ref} i blokk %{uid} har fotnoter, som hører til blokken sin, så den kan ikke kopieres."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Text %{ref} in block %{uid} is %{from}, and the slot takes %{to}: write it out in that form instead."
+msgstr "Teksten %{ref} i blokk %{uid} er %{from}, og feltet tar %{to}: skriv den ut i den formen i stedet."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "Text %{ref} in block %{uid} is empty."
+msgstr "Teksten %{ref} i blokk %{uid} er tom."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
 msgid "The block to place it next to is not in the field."
 msgstr "Blokken den skal plasseres ved siden av, finnes ikke i feltet."
 
@@ -388,6 +423,11 @@ msgstr "Modulen har ingen variabel som heter %{key}."
 #, elixir-autogen, elixir-format
 msgid "The status is published, draft, disabled or pending."
 msgstr "Statusen er publisert, utkast, deaktivert eller venter."
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "There is no saved text %{ref} in block %{uid} of this entry and field to copy."
+msgstr "Det finnes ingen lagret tekst %{ref} i blokk %{uid} i denne oppføringen og dette feltet å kopiere."
 
 #: lib/brando/content/proposals.ex
 #, elixir-autogen, elixir-format
@@ -555,10 +595,40 @@ msgstr "Du har ikke tilgang til å lagre denne oppføringen."
 msgid "a block"
 msgstr "en blokk"
 
+#: lib/brando/content/proposals/review.ex
+#, elixir-autogen, elixir-format
+msgid "default link text"
+msgstr "standard lenketekst"
+
+#: lib/brando/content/proposals/codec.ex
+#, elixir-autogen, elixir-format
+msgid "from takes {\"block_uid\": UID, \"ref\": NAME}."
+msgstr "from tar {\"block_uid\": UID, \"ref\": NAME}."
+
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
 msgid "identifiers is a list of identifier ids."
 msgstr "identifiers er en liste med identifikator-id-er."
+
+#: lib/brando/content/proposals/review.ex
+#, elixir-autogen, elixir-format
+msgid "opens in a new tab"
+msgstr "åpnes i ny fane"
+
+#: lib/brando/content/proposals/review.ex
+#, elixir-autogen, elixir-format
+msgid "opens in the same tab"
+msgstr "åpnes i samme fane"
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "plain text"
+msgstr "ren tekst"
+
+#: lib/brando/content/proposals.ex
+#, elixir-autogen, elixir-format
+msgid "rich text"
+msgstr "rik tekst"
 
 #: lib/brando/content/proposals/codec.ex
 #, elixir-autogen, elixir-format
