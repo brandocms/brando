@@ -103,6 +103,8 @@ defmodule Brando.Content.Proposals do
       |> Enum.uniq()
       |> Map.new(fn target -> {target, load!(target, actor)} end)
 
+    operations = Enum.map(operations, &copy_texts(&1, entries))
+
     proposal = %Proposal{
       id: Ecto.UUID.generate(),
       scope: Transfer.scope(),
@@ -117,6 +119,37 @@ defmodule Brando.Content.Proposals do
     problems = if problems == [], do: check_changesets(proposal, entries, user), else: problems
     %{proposal | problems: problems, effects: effects(proposal)}
   end
+
+  # A text given as `{:from, uid, ref}` (`Codec`) is that saved block's text,
+  # copied as it is stored, so an agent can move a long text to a block of
+  # another module without writing it out again. The copy is checked and
+  # reviewed as any other text.
+  defp copy_texts(%InsertBlock{} = op, entries),
+    do: %{op | texts: Map.new(op.texts, fn {name, text} -> {name, copied_text(text, op, entries)} end)}
+
+  defp copy_texts(%SetBlockText{} = op, entries), do: %{op | text: copied_text(op.text, op, entries)}
+  defp copy_texts(op, _entries), do: op
+
+  defp copied_text({:from, uid, name}, op, entries) do
+    with %{} = entry <- Map.get(entries, op.target),
+         {block, _parent, _index} <- BlockTree.find_saved(Map.get(entry, :"entry_#{op.field}", []), uid),
+         %{data: %{type: type, data: %{text: text}}} when type in ~w(text header markdown) and is_binary(text) <-
+           Enum.find(block.refs || [], &(&1.name == name)) do
+      text
+    else
+      _ ->
+        Error.fail!(
+          dgettext(
+            "content_proposals",
+            "There is no saved text %{ref} in block %{uid} of this entry and field to copy.",
+            ref: name,
+            uid: uid
+          )
+        )
+    end
+  end
+
+  defp copied_text(text, _op, _entries), do: text
 
   # A proposal creates and changes entries only of the content types
   # `list_content_types` lists (`Codec.writable_schema/1`): Brando's internal
@@ -945,7 +978,9 @@ defmodule Brando.Content.Proposals do
   end
 
   defp draft_dependencies(values, proposal) do
-    for {_, {:new, ref}} <- values, Map.has_key?(proposal.targets, {:new, to_string(ref)}) do
+    for {_, value} <- values,
+        {:new, ref} <- [link_target(value)],
+        Map.has_key?(proposal.targets, {:new, to_string(ref)}) do
       problem(
         :draft_dependency,
         dgettext(
@@ -955,6 +990,9 @@ defmodule Brando.Content.Proposals do
       )
     end
   end
+
+  defp link_target({:link, target, _opts}), do: target
+  defp link_target(value), do: value
 
   defp target_schema({:new, _} = target, proposal) do
     case Map.fetch(proposal.targets, target) do
@@ -1040,6 +1078,30 @@ defmodule Brando.Content.Proposals do
 
   defp value_problems(nil, key, _value, _actor),
     do: [problem(:unknown_var, dgettext("content_proposals", "The module has no variable %{key}.", key: key))]
+
+  # A link's text shows as it is, so it is plain text; a module can keep it
+  # for itself (`link_allow_custom_text`).
+  defp value_problems(%{type: :link} = var, key, {:link, target, opts}, actor) do
+    target_problems = if target, do: value_problems(var, key, target, actor), else: []
+
+    text_problems =
+      case opts do
+        %{text: text} when text != "" ->
+          if var.link_allow_custom_text == false,
+            do: [
+              problem(
+                :unsupported_value,
+                dgettext("content_proposals", "%{key} shows the text the module gives it.", key: key)
+              )
+            ],
+            else: unsafe(plain_text_problem(text, key))
+
+        _ ->
+          []
+      end
+
+    target_problems ++ text_problems
+  end
 
   # A new entry is reported by `draft_dependencies/2`.
   defp value_problems(%{type: :link}, _key, {:new, _}, _actor), do: []
@@ -2012,6 +2074,9 @@ defmodule Brando.Content.Proposals do
   defp var_value(:boolean, value), do: %{value_boolean: value}
   defp var_value(kind, {kind, id}) when kind in [:image, :video, :file], do: %{:"#{kind}_id" => id}
 
+  defp var_value(:link, {:link, target, opts}),
+    do: Map.merge(if(target, do: var_value(:link, target), else: %{}), link_options(opts))
+
   defp var_value(:link, {:entry, schema, id}) do
     {:ok, identifier} = Content.get_identifier(schema, %{id: id})
     %{link_type: :identifier, identifier_id: identifier.id}
@@ -2026,6 +2091,11 @@ defmodule Brando.Content.Proposals do
   defp put_value(var, kind, {kind, id}, _user) when kind in [:image, :video, :file],
     do: Changeset.put_change(var, :"#{kind}_id", id)
 
+  defp put_value(var, :link, {:link, target, opts}, user) do
+    var = if target, do: put_value(var, :link, target, user), else: var
+    Changeset.change(var, link_options(opts))
+  end
+
   defp put_value(var, :link, {:entry, schema, id}, _user) do
     {:ok, identifier} = Content.get_identifier(schema, %{id: id})
     Changeset.change(var, link_type: :identifier, identifier_id: identifier.id)
@@ -2033,6 +2103,14 @@ defmodule Brando.Content.Proposals do
 
   defp put_value(var, :link, url, _user) when is_binary(url), do: Changeset.change(var, link_type: :url, value: url)
   defp put_value(var, _type, value, _user), do: Changeset.put_change(var, :value, value)
+
+  # An empty text leaves the link to show its default: an entry's title.
+  defp link_options(opts) do
+    Enum.reduce(opts, %{}, fn
+      {:text, text}, acc -> Map.put(acc, :link_text, if(text == "", do: nil, else: text))
+      {:new_tab, new_tab}, acc -> Map.put(acc, :link_target_blank, new_tab)
+    end)
+  end
 
   ## Store, approve and apply
 

@@ -101,13 +101,17 @@ defmodule Brando.Content.Proposals.Tools do
     %{
       name: "entry_outline",
       description:
-        "Read one entry: its fields, its own media (such as a listing image) and an outline of its blocks — root blocks and their children, nested (uid, module, active, short text, media, refs_off, settings that differ from the defaults, variable values, anchor, description). Media carries width, height and orientation. refs_off lists refs that are switched off. Children are the entries of a multi module, or the blocks of a container or slot. Use block uids for placement and block edits; every block at any depth can be edited, switched on or off, moved or deleted.",
+        "Read one entry: its fields, its own media (such as a listing image) and an outline of its blocks — root blocks and their children, nested (uid, module, active, the first 160 characters of each text without markup (with block_uid, whole), media, refs_off, settings that differ from the defaults, variable values, anchor, description). Media carries width, height and orientation. refs_off lists refs that are switched off. Children are the entries of a multi module, or the blocks of a container or slot. Use block uids for placement and block edits; every block at any depth can be edited, switched on or off, moved or deleted.",
       parameters: %{
         type: "object",
         properties: %{
           content_type: %{type: "string"},
           id: %{type: "integer"},
-          block_uid: %{type: "string", description: "Read only this block and everything below it, in full."}
+          block_uid: %{
+            type: "string",
+            description:
+              "Read only this block and everything below it, in full: texts whole, as stored (rich text as HTML, Markdown as Markdown)."
+          }
         },
         required: ["content_type", "id"]
       }
@@ -251,7 +255,7 @@ defmodule Brando.Content.Proposals.Tools do
       {"op":"set_ref_config","target":…,"block_uid":UID,"ref":NAME,"config":{}}
       {"op":"set_block_table","target":…,"block_uid":UID,"rows":[{KEY:VALUE}]}
       {"op":"set_block_selection","target":…,"block_uid":UID,"identifiers":[ID]}
-      Media ("media" in insert_block, "asset" in set_block_media) is "image1", {"kind":"image"|"video"|"file","id":N}, or {"gallery":[media, …]} for a gallery ref: its full content, in order. texts and set_block_text take what describe_module lists for the slot. copy_block copies a block with everything below it ("append" puts the copy last among the original's siblings); with "to":{"content_type":T,"id":N}|{"new":R} (and "to_field") it copies a saved block to another entry or block field — to move it there, copy it and delete_block the original. set_block_table replaces a table block's rows (describe_module lists the row variables). set_block_selection sets the entries a selection datasource block shows. In any text, link to an entry with <a href="entry:CONTENT_TYPE:ID">; it becomes a link that follows the entry's address. List fields (describe_content_type: "list of …") take the whole list: ids, or entries as {"content_type":T,"id":N}. set_block_details sets the block's anchor (the id a link jumps to) and description (the editor's label); "" clears one. set_ref_config changes a slot's settings as describe_module lists them (insert_block takes "configs":{slot:{…}} too). Entry fields in create_entry and set_fields take media the same way for image, video and file fields (such as meta_image_id).
+      Media ("media" in insert_block, "asset" in set_block_media) is "image1", {"kind":"image"|"video"|"file","id":N}, or {"gallery":[media, …]} for a gallery ref: its full content, in order. texts and set_block_text take what describe_module lists for the slot, or {"from":{"block_uid":UID,"ref":NAME}}: that saved block's text in the same entry and field, copied whole with its markup — to change a block's module, insert_block the new one with its texts from the old block, then delete_block the old one. copy_block copies a block with everything below it ("append" puts the copy last among the original's siblings); with "to":{"content_type":T,"id":N}|{"new":R} (and "to_field") it copies a saved block to another entry or block field — to move it there, copy it and delete_block the original. set_block_table replaces a table block's rows (describe_module lists the row variables). set_block_selection sets the entries a selection datasource block shows. In any text, link to an entry with <a href="entry:CONTENT_TYPE:ID">; it becomes a link that follows the entry's address. List fields (describe_content_type: "list of …") take the whole list: ids, or entries as {"content_type":T,"id":N}. set_block_details sets the block's anchor (the id a link jumps to) and description (the editor's label); "" clears one. set_ref_config changes a slot's settings as describe_module lists them (insert_block takes "configs":{slot:{…}} too). Entry fields in create_entry and set_fields take media the same way for image, video and file fields (such as meta_image_id).
       block_uid is any block in the field, at any depth. Without "parent", insert_block adds a root block (multi modules too); with "parent" it adds a child to that block: an entry module of a multi block, or a module in a container or slot. insert_block's placement anchors are siblings under that parent. move_block keeps the block and its content: "append" moves it last among its siblings, {"before"/"after":UID} moves it next to any block — into that block's parent — and {"into":UID} to the end of a block's children; the new parent must accept the module. set_block_active switches a block off or on, or with "ref" one of its refs (for example a cover image, so a template can fall back to something else); switched-off content is kept. Values follow describe_module's "settable" for each variable. Operations apply in order, so later ones see earlier moves, deletions and inserts; give insert_block a "uid" of your own to address the new block later (letters, digits, - and _, not ending with -, at most 128 characters). Returns problems to fix; call again with the corrected operations.
       """,
       parameters: %{
@@ -406,7 +410,13 @@ defmodule Brando.Content.Proposals.Tools do
       }
       |> put_present(:languages, languages(entry, actor))
 
-    Enum.find_value(@outline_budgets, fn budget ->
+    # A part shows its texts whole, as stored, unless that does not fit.
+    attempts = for budget <- @outline_budgets, do: {budget, false}
+    attempts = if Map.has_key?(roots, :part), do: [{hd(@outline_budgets), true} | attempts], else: attempts
+
+    Enum.find_value(attempts, fn {budget, whole?} ->
+      dimensions = Map.put(dimensions, :whole_texts, whole?)
+
       {blocks, described} =
         Enum.map_reduce(roots, 0, fn {name, blocks}, described ->
           {blocks, described} = outline(blocks, dimensions, described, budget)
@@ -414,16 +424,8 @@ defmodule Brando.Content.Proposals.Tools do
         end)
 
       outline = Map.put(head, :blocks, Map.new(blocks))
-
-      outline =
-        if described > budget,
-          do:
-            Map.put(
-              outline,
-              :note,
-              "Only the first #{budget} blocks are described in full; the rest show uid and module. Read one part in full with entry_outline and block_uid."
-            ),
-          else: outline
+      notes = outline_notes(described > budget && budget, Map.has_key?(roots, :part) and not whole?)
+      outline = if notes == [], do: outline, else: Map.put(outline, :note, Enum.join(notes, " "))
 
       if budget == 0 or byte_size(Jason.encode!(outline)) <= @outline_bytes, do: outline
     end)
@@ -890,7 +892,7 @@ defmodule Brando.Content.Proposals.Tools do
             label: I18nString.localized(var.label),
             instructions: var.instructions,
             options: if(var.type == :select, do: Enum.map(var.options || [], &option/1)),
-            settable: settable(var.type)
+            settable: settable(var)
           }
         end)
     }
@@ -927,6 +929,12 @@ defmodule Brando.Content.Proposals.Tools do
 
   defp html_values?(_ref), do: false
 
+  defp settable(%{type: :link, link_allow_custom_text: false}),
+    do:
+      ~s(a URL, an entry {"content_type":T,"id":N}, or {"link":URL or entry,"new_tab":true|false}; the module gives it its text)
+
+  defp settable(%{type: type}), do: settable(type)
+
   defp settable(type) when type in [:string, :text, :rich_text], do: "a string"
   defp settable(:boolean), do: "true or false"
   defp settable(:select), do: "one of the options"
@@ -935,7 +943,12 @@ defmodule Brando.Content.Proposals.Tools do
   defp settable(:datetime), do: "an ISO datetime, 2026-09-26T12:00:00Z"
   defp settable(:image), do: ~s({"kind":"image","id":N} or {"asset":"image1"})
   defp settable(:video), do: ~s({"kind":"video","id":N} or {"asset":"video1"})
-  defp settable(:link), do: ~s(a URL, or an entry {"content_type":T,"id":N})
+
+  defp settable(:link),
+    do:
+      ~s(a URL, an entry {"content_type":T,"id":N}, or {"link":URL or entry,"text":T,"new_tab":true|false}: ) <>
+        ~s(the text the link or button shows, plain, "" for the default; without "link" it keeps where it points)
+
   defp settable(:file), do: ~s({"kind":"file","id":N})
   defp settable(:gallery), do: ~s({"gallery":[media, …]}, images and videos in order)
   defp settable(_), do: "no"
@@ -995,11 +1008,21 @@ defmodule Brando.Content.Proposals.Tools do
     if full?, do: Map.merge(summary, details(block, dimensions)), else: summary
   end
 
+  defp outline_notes(budget, shortened?) do
+    [
+      budget &&
+        "Only the first #{budget} blocks are described in full; the rest show uid and module. Read one part in full with entry_outline and block_uid.",
+      shortened? &&
+        ~s(This part is too long to show its texts whole, so they are shortened. Read a smaller part, or copy a text to another block with {"from":{"block_uid":UID,"ref":NAME}} in prepare_proposal.)
+    ]
+    |> Enum.filter(& &1)
+  end
+
   defp details(block, dimensions) do
     %{
       module: block.module_id && "#{block.module_origin || :local}:#{block.module_id}",
       active: block.active,
-      texts: ref_texts(block.refs),
+      texts: ref_texts(block.refs, dimensions[:whole_texts]),
       media: ref_media(block.refs, dimensions),
       values: var_values(block.vars, dimensions)
     }
@@ -1081,9 +1104,19 @@ defmodule Brando.Content.Proposals.Tools do
   defp put_kind(summary, %{multi: true}), do: Map.put(summary, :multi, true)
   defp put_kind(summary, _block), do: summary
 
-  defp ref_texts(refs) do
-    for %{data: %{type: type, data: data}} = ref <- refs, text = ref_text(type, data), into: %{}, do: {ref.name, text}
+  defp ref_texts(refs, whole?) do
+    for %{data: %{type: type, data: data}} = ref <- refs,
+        text = ref_text(type, data, whole?),
+        into: %{},
+        do: {ref.name, text}
   end
+
+  # Whole, a text is what `set_block_text` takes: rich text and Markdown with
+  # their markup, so it can be written back or copied without losing any.
+  defp ref_text(type, %{text: text}, true) when type in ["text", "header", "markdown"] and is_binary(text),
+    do: text
+
+  defp ref_text(type, data, _whole?), do: ref_text(type, data)
 
   defp ref_text(type, data) when type in ["text", "header", "markdown", "html"],
     do: shorten(HtmlSanitizeEx.strip_tags(data.text || ""))
@@ -1183,7 +1216,9 @@ defmodule Brando.Content.Proposals.Tools do
   # A link names the entry it points to; the editor knows a project by its
   # title. Of an entry the actor may not read, it says only that.
   defp var_value(%{type: :link, identifier_id: id} = var, dimensions) when is_integer(id),
-    do: link_value(var, readable?(dimensions[:identifiers], id))
+    do: var |> link_value(readable?(dimensions[:identifiers], id)) |> link_details(var)
+
+  defp var_value(%{type: :link} = var, _), do: var.value |> shorten() |> link_details(var)
 
   defp var_value(%{type: kind} = var, dimensions) when kind in [:image, :video] do
     case Map.get(var, :"#{kind}_id") do
@@ -1209,6 +1244,20 @@ defmodule Brando.Content.Proposals.Tools do
     do: %{entry: shorten(title), content_type: Codec.content_type(identifier.schema), id: identifier.entry_id}
 
   defp link_value(var, true), do: shorten(var.value)
+
+  # The text a link shows instead of its default, and a new tab, when set.
+  defp link_details(target, %{link_text: text, link_target_blank: new_tab})
+       when (is_binary(text) and text != "") or new_tab do
+    target
+    |> case do
+      %{} = target -> target
+      url -> %{url: url}
+    end
+    |> put_present(:text, text)
+    |> then(&if(new_tab, do: Map.put(&1, :new_tab, true), else: &1))
+  end
+
+  defp link_details(target, _var), do: target
 
   # A content type the actor may read, described as unknown otherwise, so a
   # tool tells nothing about types the actor cannot see.

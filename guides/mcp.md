@@ -166,7 +166,8 @@ the content types `list_content_types` lists. A palette can be found, read
 and picked, but not created or changed; Brando's own records (users, global
 sets, menus, vars, modules, site settings) are refused too, and the tool gets
 an error. Results are bounded as in the Assistant: 20 results, 160-character
-excerpts, 24 KB per result. Proposals
+excerpts (a text is whole when `entry_outline` reads one block), 24 KB per
+result. Proposals
 are marked with the tool's name, "From Claude via MCP", and wait under
 **Assistant → From connected tools**.
 

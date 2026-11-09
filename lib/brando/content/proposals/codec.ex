@@ -34,7 +34,12 @@ defmodule Brando.Content.Proposals.Codec do
   of a conversation attachment such as `"image1"`, or `%{"gallery" => [asset]}`
   for a gallery. In `values`, a media var takes `%{"kind" => …, "id" => …}`,
   `%{"asset" => "image1"}` or `%{"gallery" => […]}`, and a link var an entry
-  as `%{"content_type" => …, "id" => …}`.
+  as `%{"content_type" => …, "id" => …}`, or
+  `%{"link" => url | entry, "text" => text, "new_tab" => boolean}` for its
+  text and target too (without `"link"` it keeps its target). A text, in `texts` or
+  `set_block_text`, may be `%{"from" => %{"block_uid" => uid, "ref" => name}}`:
+  the text of a saved block's ref in the same entry and field, which
+  `Brando.Content.Proposals.prepare/2` copies in.
   """
   alias Brando.Content.Proposals.{
     CopyBlock,
@@ -99,8 +104,8 @@ defmodule Brando.Content.Proposals.Codec do
       module: module!(map["module"]),
       parent: optional_string!(map["parent"], "parent"),
       placement: placement!(map["placement"] || "append"),
-      values: values(map!(map["values"]), attachments),
-      texts: map!(map["texts"]),
+      values: block_values(map!(map["values"]), attachments),
+      texts: Map.new(map!(map["texts"]), fn {name, text} -> {name, copied_text(text)} end),
       media: Map.new(map!(map["media"]), fn {name, asset} -> {name, asset!(asset, attachments)} end),
       configs: Map.new(map!(map["configs"]), fn {name, config} -> {name, map!(config)} end),
       uid: optional_string!(map["uid"], "uid"),
@@ -123,7 +128,7 @@ defmodule Brando.Content.Proposals.Codec do
       target: target!(map["target"]),
       field: map["field"] || "blocks",
       block_uid: string!(map["block_uid"], "block_uid"),
-      values: values(map!(map["values"]), attachments)
+      values: block_values(map!(map["values"]), attachments)
     }
   end
 
@@ -143,7 +148,7 @@ defmodule Brando.Content.Proposals.Codec do
       field: map["field"] || "blocks",
       block_uid: string!(map["block_uid"], "block_uid"),
       ref: string!(map["ref"], "ref"),
-      text: string!(map["text"], "text")
+      text: text!(map["text"])
     }
   end
 
@@ -159,7 +164,7 @@ defmodule Brando.Content.Proposals.Codec do
   defp decode!("set_block_table", map, attachments) do
     rows =
       case map["rows"] do
-        rows when is_list(rows) -> Enum.map(rows, &values(map!(&1), attachments))
+        rows when is_list(rows) -> Enum.map(rows, &block_values(map!(&1), attachments))
         _ -> invalid!(dgettext("content_proposals", "rows is a list of objects."))
       end
 
@@ -254,7 +259,7 @@ defmodule Brando.Content.Proposals.Codec do
       "parent" => op.parent,
       "placement" => placement(op.placement),
       "values" => Map.new(op.values, fn {key, value} -> {key, value(value)} end),
-      "texts" => op.texts,
+      "texts" => Map.new(op.texts, fn {name, text} -> {name, text(text)} end),
       "media" => Map.new(op.media, fn {name, asset} -> {name, asset(asset)} end),
       "configs" => op.configs,
       "uid" => op.uid,
@@ -288,7 +293,7 @@ defmodule Brando.Content.Proposals.Codec do
       "field" => op.field,
       "block_uid" => op.block_uid,
       "ref" => to_string(op.ref),
-      "text" => op.text
+      "text" => text(op.text)
     }
 
   def encode(%MoveBlock{} = op),
@@ -513,11 +518,40 @@ defmodule Brando.Content.Proposals.Codec do
         dgettext("content_proposals", "Media is {kind: image|video|file, id}, an attachment alias or {gallery: [media]}.")
       )
 
-  # A reference to an entry the proposal creates. It is kept so validation
-  # can report the draft dependency.
+  # A block variable's value. A link may come with its text or new-tab
+  # setting; without "link" (or "url"), it keeps where it points.
+  defp block_values(values, attachments),
+    do: Map.new(values, fn {key, value} -> {key, block_value(value, attachments)} end)
+
+  defp block_value(%{} = map, attachments)
+       when is_map_key(map, "link") or is_map_key(map, "text") or is_map_key(map, "new_tab") do
+    target =
+      cond do
+        is_map_key(map, "link") -> link_target!(map["link"], attachments)
+        is_map_key(map, "url") -> link_target!(map["url"], attachments)
+        is_map_key(map, "content_type") -> link_target!(Map.take(map, ["content_type", "id"]), attachments)
+        true -> nil
+      end
+
+    opts =
+      map
+      |> Map.take(["text", "new_tab"])
+      |> Map.new(fn
+        {"text", text} when is_binary(text) -> {:text, text}
+        {"text", _} -> invalid!(dgettext("content_proposals", "A link's text is a string."))
+        {"new_tab", new_tab} -> {:new_tab, boolean!(new_tab, "new_tab")}
+      end)
+
+    {:link, target, opts}
+  end
+
+  defp block_value(value, attachments), do: decode_value(value, attachments)
+
   defp values(values, attachments),
     do: Map.new(values, fn {key, value} -> {key, decode_value(value, attachments)} end)
 
+  # A reference to an entry the proposal creates. It is kept so validation
+  # can report the draft dependency.
   defp decode_value(%{"new" => ref}, _) when is_binary(ref), do: {:new, ref}
   defp decode_value(%{"asset" => alias}, attachments), do: asset!(alias, attachments)
   defp decode_value(%{"kind" => _, "id" => _} = asset, attachments), do: asset!(asset, attachments)
@@ -533,6 +567,12 @@ defmodule Brando.Content.Proposals.Codec do
   defp decode_value(value, _), do: value
 
   defp value(list) when is_list(list), do: Enum.map(list, &value/1)
+
+  defp value({:link, target, opts}) do
+    opts = Map.new(opts, fn {key, value} -> {to_string(key), value} end)
+    if target, do: Map.put(opts, "link", value(target)), else: opts
+  end
+
   defp value({:new, ref}), do: %{"new" => ref}
   defp value({:entry, schema, id}), do: %{"content_type" => content_type(schema), "id" => id}
   defp value({kind, _} = asset) when kind in [:image, :video, :file, :gallery], do: asset(asset)
@@ -563,6 +603,32 @@ defmodule Brando.Content.Proposals.Codec do
   # Text that may be cleared with "".
   defp optional_text!(value, _key) when is_nil(value) or is_binary(value), do: value
   defp optional_text!(_, key), do: invalid!(dgettext("content_proposals", "%{key} is text.", key: key))
+
+  # A text copied from a saved block: `Proposals.prepare/2` puts that block's
+  # text in its place.
+  defp copied_text(%{"from" => %{} = from}) do
+    from = map!(from)
+    {:from, string!(from["block_uid"], "from.block_uid"), string!(from["ref"], "from.ref")}
+  end
+
+  defp copied_text(%{"from" => _}),
+    do: invalid!(dgettext("content_proposals", ~s(from takes {"block_uid": UID, "ref": NAME}.)))
+
+  defp copied_text(text), do: text
+
+  defp text!(%{"from" => _} = text), do: copied_text(text)
+  defp text!(text), do: string!(text, "text")
+
+  defp text({:from, uid, ref}), do: %{"from" => %{"block_uid" => uid, "ref" => ref}}
+  defp text(text), do: text
+
+  defp link_target!(url, _attachments) when is_binary(url) and url != "", do: url
+
+  defp link_target!(%{} = entry, attachments) when is_map_key(entry, "content_type") or is_map_key(entry, "new"),
+    do: decode_value(entry, attachments)
+
+  defp link_target!(_, _),
+    do: invalid!(dgettext("content_proposals", ~s(A link points to a URL or an entry {"content_type": T, "id": N}.)))
 
   defp optional_string!(nil, _key), do: nil
   defp optional_string!(value, key), do: string!(value, key)
