@@ -6,6 +6,16 @@ Brando's guides/*.md. Edit the guides, then run the task again. -->
 Load these rules (`brando:rendering`) for page controllers and templates, fragments, menus, site forms, and changing the HTML blocks render to. The core rules
 are in `deps/brando/usage-rules.md`.
 
+## Block editor
+
+Guide: `deps/brando/guides/block_editor.md`
+
+`empty` matches a var with no value: `nil`, `""`, `[]` and `{}`. `blank`
+matches those and `false`. So `{% if caption != empty %}` hides the markup
+around an empty text var, and `{% when blank %}` matches any of those values.
+A string of only spaces matches neither, and nor does a struct such as a link
+var: test its `value`. In standard Liquid, `nil` is not `empty`.
+
 ## Villain parser
 
 Guide: `deps/brando/guides/villain_parser.md`

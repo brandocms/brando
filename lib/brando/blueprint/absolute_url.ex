@@ -178,7 +178,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
     quote location: :keep do
       @absolute_url_tpl unquote(tpl)
       @absolute_url_type :liquid
-      @parsed_absolute_url_tpl unquote(parsed_absolute_url_tpl)
+      @parsed_absolute_url_tpl unquote(Macro.escape(parsed_absolute_url_tpl))
       def __absolute_url__(entry) do
         context =
           entry
@@ -203,7 +203,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
       end
 
       def __absolute_url_parsed__ do
-        unquote(parsed_absolute_url_tpl)
+        unquote(Macro.escape(parsed_absolute_url_tpl))
       end
 
       def __absolute_url_type__, do: :liquid

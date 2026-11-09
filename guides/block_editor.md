@@ -202,6 +202,20 @@ Besides `{% ref %}` and `{% headless_ref %}`:
 - A Liquex container template's `{{ content }}` is replaced literally: write
   it exactly so, with single spaces.
 
+<!-- usage-rules:end -->
+
+<!-- usage-rules:start topic="rendering" -->
+
+`empty` matches a var with no value: `nil`, `""`, `[]` and `{}`. `blank`
+matches those and `false`. So `{% if caption != empty %}` hides the markup
+around an empty text var, and `{% when blank %}` matches any of those values.
+A string of only spaces matches neither, and nor does a struct such as a link
+var: test its `value`. In standard Liquid, `nil` is not `empty`.
+
+<!-- usage-rules:end -->
+
+<!-- usage-rules:start -->
+
 ### Writing templates safely
 
 Only module, container, SVG and HTML ref templates run as Liquid. What editors
