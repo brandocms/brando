@@ -1,0 +1,1 @@
+- `{% if x != blank %}` in module and Blueprint templates is false again when `x` is `nil`, `""`, `false`, `[]` or `{}`: since the Liquex 0.15 upgrade it was always true, so 0.54 templates printed the empty links and labels it guarded. `{% when blank %}` matches the same values.

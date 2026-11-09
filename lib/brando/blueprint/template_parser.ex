@@ -23,7 +23,7 @@ defmodule Brando.Blueprint.TemplateParser do
   def parse(template) when is_binary(template) do
     parser = parser_for(template)
     Code.ensure_compiled!(parser)
-    Liquex.parse(template, parser)
+    Brando.Villain.BlankKeyword.parse(template, parser)
   end
 
   @doc """
