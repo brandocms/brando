@@ -317,6 +317,8 @@ defmodule Brando.HTML.ViteAssetsTest do
       # A Vite that starts between two reads of the record would give the page
       # the build's styles and no scripts, so the head may read it only once
       mfa = {Brando.Vite, :start_failure, 1}
+      # A trace pattern matches only loaded code, and no earlier test may have loaded it
+      Code.ensure_loaded!(Brando.Vite)
       :erlang.trace_pattern(mfa, true, [:local])
       on_exit(fn -> :erlang.trace_pattern(mfa, false, [:local]) end)
       test = self()
