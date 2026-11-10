@@ -86,7 +86,9 @@ all the same.
 
 ## Write and review meta descriptions with AI
 
-With `Brando.AI` configured, the tab can:
+With `Brando.AI` configured (and its optional `{:req_llm, "~> 1.29"}`
+dependency in the site's `mix.exs`, see
+[Content assistant](content_assistant.md#configure-a-model)), the tab can:
 
 - write or rewrite one entry's meta description from its row;
 - write every missing description in the background. Nothing is saved until

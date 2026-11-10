@@ -1,8 +1,9 @@
 defmodule Brando.Doctor.Checks.Configuration do
   @moduledoc """
   Required configuration: the endpoint's URL, the mailer and its sender, the
-  media CDN settings when a CDN is enabled, the Assistant's model and key
-  when the Assistant is configured, and the deploy target settings: entries
+  media CDN settings when a CDN is enabled, the optional `:req_llm`
+  dependency when AI is configured, the Assistant's model and key when the
+  Assistant is configured, and the deploy target settings: entries
   of the wrong form and, with several sites, destinations that more than one
   site may use.
   """
@@ -23,7 +24,9 @@ defmodule Brando.Doctor.Checks.Configuration do
 
   @impl true
   def run(_context) do
-    evaluate([endpoint_url(), mailer()] ++ Enum.map(@cdn_contexts, &cdn/1) ++ [assistant()] ++ deploy_targets())
+    evaluate(
+      [endpoint_url(), mailer()] ++ Enum.map(@cdn_contexts, &cdn/1) ++ [ai_dependency(), assistant()] ++ deploy_targets()
+    )
   end
 
   @doc """
@@ -234,11 +237,36 @@ defmodule Brando.Doctor.Checks.Configuration do
 
   defp blank?(value), do: value in [nil, ""]
 
+  @doc """
+  The optional `:req_llm` dependency as a finding (see `evaluate/1`). Every
+  AI feature needs it, so AI settings without it are a warning: the admin
+  shows no AI actions and no Assistant then.
+  """
+  def ai_dependency, do: ai_dependency(Brando.AI.available?(), Brando.AI.settings())
+
+  @doc "The finding for whether `:req_llm` is loaded and the AI settings that are set."
+  def ai_dependency(true, _settings), do: {:ok, dgettext("doctor", "AI: req_llm installed"), nil}
+
+  def ai_dependency(false, []), do: {:ok, dgettext("doctor", "AI: not installed (no req_llm dependency)"), nil}
+
+  def ai_dependency(false, settings) do
+    {:warning,
+     dgettext("doctor", "AI: %{settings} set, but the req_llm dependency is missing",
+       settings: Enum.join(settings, ", ")
+     ), dgettext("doctor", "AI configured without req_llm"),
+     dgettext("doctor", "add %{dependency} to deps in mix.exs and run mix deps.get, or remove the AI settings",
+       dependency: inspect(Brando.AI.dependency())
+     )}
+  end
+
   @doc "The Assistant's model and key as a finding (see `evaluate/1`)."
   def assistant do
     agent = Application.get_env(:brando, Brando.AI.Agent, [])
 
     cond do
+      not Brando.AI.available?() ->
+        {:ok, dgettext("doctor", "Assistant: needs the req_llm dependency"), nil}
+
       not Brando.AI.enabled?() ->
         {:ok, dgettext("doctor", "Assistant: AI turned off"), nil}
 

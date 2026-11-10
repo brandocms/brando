@@ -178,6 +178,10 @@ in a clean Git tree and read `git diff`.
   no-op. Recipes are keyed by target minor (`55 => "brando.migrate55"`). The
   pre-0.54 DSL conversion (`brando.migrate54`) stays an explicit compilation
   prerequisite with its own rewrite tests.
+  Steps every version change needs, whether or not a recipe runs, go in
+  `apply_version/3` beside the recipes (`AIDependency.plan/1` adds `req_llm`
+  for an application whose config sets AI up): a `0.55.0-dev` build moving
+  to a 0.55 prerelease crosses no minor.
 
 ## Verification
 

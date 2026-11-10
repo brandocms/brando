@@ -339,7 +339,8 @@ defmodule Brando.Mixfile do
       {:html_sanitize_ex, "~> 1.5.0"},
 
       # Misc
-      {:req_llm, "~> 1.29"},
+      # AI: optional; a site that uses it adds it to its own deps (Brando.AI)
+      {:req_llm, "~> 1.29", optional: true},
       {:req, "~> 0.5 or ~> 1.0"},
       {:gettext, "~> 1.0.0"},
       {:mdex, "~> 0.14.0"},

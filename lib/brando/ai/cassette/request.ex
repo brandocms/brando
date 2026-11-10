@@ -32,6 +32,11 @@ defmodule Brando.AI.Cassette.Request do
 
   alias ReqLLM.Message.ContentPart
 
+  # Struct fields as map patterns, not struct patterns: the cassette compiles
+  # without the optional :req_llm dependency (it is only reached through it).
+  @compile {:no_warn_undefined,
+            if(Code.ensure_loaded?(ReqLLM), do: [], else: [ReqLLM.Context, ReqLLM.ToolCall, ReqLLM.Schema])}
+
   @params ~w(temperature max_tokens top_p top_k presence_penalty frequency_penalty tool_choice stop seed
              reasoning_effort response_format)a
 
@@ -80,7 +85,7 @@ defmodule Brando.AI.Cassette.Request do
   defp context(prompt, opts) do
     case ReqLLM.Context.normalize(prompt, system_prompt: opts[:system_prompt], validate: false) do
       {:ok, context} -> context
-      {:error, _} -> %ReqLLM.Context{messages: [ReqLLM.Context.user(inspect(prompt))]}
+      {:error, _} -> ReqLLM.Context.new([ReqLLM.Context.user(inspect(prompt))])
     end
   end
 
@@ -90,11 +95,11 @@ defmodule Brando.AI.Cassette.Request do
   defp text_of(parts) when is_binary(parts), do: parts
   defp text_of(parts), do: Enum.map_join(parts, "\n", &(&1["text"] || ""))
 
-  defp message(%ReqLLM.Message{role: :tool} = message) do
+  defp message(%{__struct__: ReqLLM.Message, role: :tool} = message) do
     %{"role" => "tool", "name" => message.name, "content" => message.content |> parts() |> decode_parts()}
   end
 
-  defp message(%ReqLLM.Message{} = message) do
+  defp message(%{__struct__: ReqLLM.Message} = message) do
     base = %{"role" => to_string(message.role), "content" => message.content |> parts() |> decode_parts()}
 
     case message.tool_calls do
@@ -113,18 +118,18 @@ defmodule Brando.AI.Cassette.Request do
   defp parts(content) when is_list(content), do: Enum.flat_map(content, &part/1)
   defp parts(_), do: []
 
-  defp part(%ContentPart{type: :text, text: text}), do: [%{"type" => "text", "text" => text}]
+  defp part(%{__struct__: ContentPart, type: :text, text: text}), do: [%{"type" => "text", "text" => text}]
 
-  defp part(%ContentPart{type: :image, data: data, media_type: type}) when is_binary(data),
+  defp part(%{__struct__: ContentPart, type: :image, data: data, media_type: type}) when is_binary(data),
     do: [%{"type" => "image", "media_type" => type, "bytes" => byte_size(data), "sha256" => digest(data)}]
 
-  defp part(%ContentPart{type: :image_url, url: url}), do: [%{"type" => "image_url", "url" => url}]
+  defp part(%{__struct__: ContentPart, type: :image_url, url: url}), do: [%{"type" => "image_url", "url" => url}]
 
-  defp part(%ContentPart{type: :file, data: data} = part) when is_binary(data),
+  defp part(%{__struct__: ContentPart, type: :file, data: data} = part) when is_binary(data),
     do: [%{"type" => "file", "media_type" => part.media_type, "filename" => part.filename, "sha256" => digest(data)}]
 
-  defp part(%ContentPart{type: :thinking}), do: []
-  defp part(%ContentPart{type: type}), do: [%{"type" => to_string(type)}]
+  defp part(%{__struct__: ContentPart, type: :thinking}), do: []
+  defp part(%{__struct__: ContentPart, type: type}), do: [%{"type" => to_string(type)}]
   defp part(other) when is_binary(other), do: [%{"type" => "text", "text" => other}]
   defp part(_), do: []
 

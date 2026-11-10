@@ -29,6 +29,24 @@ defmodule Brando.AI.Cassette.Response do
   alias ReqLLM.Message.ContentPart
   alias ReqLLM.StreamResponse.MetadataHandle
 
+  # Struct fields as map patterns and structs built with struct!/2: the
+  # module compiles the same without the optional :req_llm dependency, so it
+  # needs no recompiling when a site adds it. Without it nothing calls here.
+  @compile {:no_warn_undefined,
+            if(Code.ensure_loaded?(ReqLLM),
+              do: [],
+              else: [
+                ReqLLM,
+                ReqLLM.Context,
+                ReqLLM.Error.API.Request,
+                ToolCall,
+                LLMResponse,
+                ContentPart,
+                StreamChunk,
+                MetadataHandle
+              ]
+            )}
+
   @usage_keys ~w(input_tokens output_tokens total_tokens cached_tokens cache_read_input_tokens
                  cache_creation_input_tokens reasoning_tokens input_cost output_cost total_cost)
 
@@ -36,7 +54,7 @@ defmodule Brando.AI.Cassette.Response do
 
   @doc "The JSON form of a `ReqLLM.Response`."
   @spec dump(LLMResponse.t()) :: map()
-  def dump(%LLMResponse{} = response) do
+  def dump(response) when is_struct(response, LLMResponse) do
     %{
       "text" => LLMResponse.text(response),
       "tool_calls" => response |> LLMResponse.tool_calls() |> Enum.map(&dump_tool_call/1),
@@ -79,11 +97,13 @@ defmodule Brando.AI.Cassette.Response do
 
   defp dump_usage(_), do: nil
 
-  defp dump_chunk(%StreamChunk{type: :tool_call} = chunk),
+  defp dump_chunk(%{__struct__: StreamChunk, type: :tool_call} = chunk),
     do: %{"type" => "tool_call", "name" => chunk.name, "arguments" => Request.stringify(chunk.arguments || %{})}
 
-  defp dump_chunk(%StreamChunk{type: :meta} = chunk), do: %{"type" => "meta", "data" => Request.stringify(chunk.metadata)}
-  defp dump_chunk(%StreamChunk{type: type, text: text}), do: %{"type" => to_string(type), "text" => text}
+  defp dump_chunk(%{__struct__: StreamChunk, type: :meta} = chunk),
+    do: %{"type" => "meta", "data" => Request.stringify(chunk.metadata)}
+
+  defp dump_chunk(%{__struct__: StreamChunk, type: type, text: text}), do: %{"type" => to_string(type), "text" => text}
 
   defp reject_empty(map), do: Map.reject(map, fn {_key, value} -> value in [nil, [], ""] end)
 
@@ -106,18 +126,18 @@ defmodule Brando.AI.Cassette.Response do
 
     text = reply["text"]
     content = if text in [nil, ""], do: [], else: [ContentPart.text(text)]
-    message = %Message{role: :assistant, content: content, tool_calls: if(calls == [], do: nil, else: calls)}
+    message = struct!(Message, role: :assistant, content: content, tool_calls: if(calls == [], do: nil, else: calls))
     context = context(prompt, opts)
 
     {:ok,
-     %LLMResponse{
+     struct!(LLMResponse,
        id: "cassette-" <> Integer.to_string(System.unique_integer([:positive])),
        model: Request.model_spec(model),
        context: %{context | messages: context.messages ++ [message]},
        message: message,
        usage: load_usage(reply["usage"]),
        finish_reason: finish_reason(reply["finish_reason"], calls)
-     }}
+     )}
   end
 
   @doc "A `ReqLLM.StreamResponse` that replays recorded chunks."
@@ -131,13 +151,13 @@ defmodule Brando.AI.Cassette.Response do
     {:ok, handle} = MetadataHandle.start_link(fn -> metadata end)
 
     {:ok,
-     %ReqLLM.StreamResponse{
+     struct!(ReqLLM.StreamResponse,
        stream: Stream.map(chunks, & &1),
        metadata_handle: handle,
        cancel: fn -> :ok end,
        model: stream_model(model),
        context: context(prompt, opts)
-     }}
+     )}
   end
 
   defp load_chunk(%{"type" => "tool_call"} = chunk), do: StreamChunk.tool_call(chunk["name"], chunk["arguments"] || %{})

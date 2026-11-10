@@ -155,7 +155,11 @@ before missing framework migrations are planned: a 0.54 → 0.55 upgrade runs
 `brando.migrate55` first. The hook also adds Brando's agent files where they
 are missing: the skills, the `AGENTS.md` sections and `CLAUDE.md` (see
 [Files for coding agents](installation.md#files-for-coding-agents); `mix
-brando.gen.agents` adds them without an upgrade). It generates no Blueprint migrations
+brando.gen.agents` adds them without an upgrade), and adds `{:req_llm, "~> 1.29"}` to
+`mix.exs` when the application's config sets AI up (`config :brando, Brando.AI`
+models, providers, keys or prompts, an Assistant model, or keys under
+`config :req_llm`) and it has no `req_llm` of its own: Brando's AI features
+need it, and Brando does not bring it in. It generates no Blueprint migrations
 and runs nothing against the database. A `-dev` version counts as older than
 every prerelease and the release of the same version, so a Git or path installation
 at `0.55.0-dev` moves onto `0.55.0-beta.0` or `0.55.0` as an upgrade, without a

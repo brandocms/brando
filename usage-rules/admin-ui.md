@@ -141,8 +141,9 @@ One action shows as a button beside the field's label, several as a menu.
 They show only on top-level inputs of an entry form and on the meta fields
 in its Meta drawer, not in subforms or blocks, not on inputs that are
 `readonly` or `disabled` for the editor, and only when `Brando.AI` is
-configured for the action's model; anyone else who can edit the entry can
-run them. The prompt, the model and its key stay on the server.
+configured for the action's model (which needs the optional `req_llm`
+dependency, see [Content assistant](deps/brando/guides/content_assistant.md#configure-a-model));
+anyone else who can edit the entry can run them. The prompt, the model and its key stay on the server.
 
 The options are checked when the Blueprint compiles: a missing prompt or
 `from`, an unknown option, a `max` that is not a positive integer, a name

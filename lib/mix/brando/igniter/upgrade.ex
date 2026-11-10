@@ -6,6 +6,7 @@ if Code.ensure_loaded?(Igniter) do
     @moduledoc false
 
     alias Mix.Brando.Igniter.AgentFiles
+    alias Mix.Brando.Igniter.AIDependency
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.Install.Migrations
@@ -167,9 +168,13 @@ if Code.ensure_loaded?(Igniter) do
         )
       else
         # Skills and the AGENTS.md link are added when missing and never
-        # replace the application's copies.
+        # replace the application's copies. req_llm, optional since 0.55, is
+        # added for an application whose config sets AI up, on every version
+        # change: the 0.55 development builds that had it as Brando's own
+        # dependency upgrade to a 0.55 prerelease without a recipe.
         igniter
         |> compose_recipes(from, to)
+        |> AIDependency.plan()
         |> AgentFiles.plan()
         |> migrations()
       end

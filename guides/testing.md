@@ -40,7 +40,9 @@ end
 This imports the helpers below and `use_cassette/3`, and lets a test pick a
 recorded AI cassette with `@tag cassette: "name"`.
 
-In `config/test.exs`, keep tests away from live models:
+In `config/test.exs`, keep tests away from live models (cassettes record and
+replay ReqLLM's calls, so they need the `req_llm` dependency the site's AI
+uses):
 
 ```elixir
 # A model call outside a cassette fails instead of reaching a provider.

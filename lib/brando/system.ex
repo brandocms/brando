@@ -43,9 +43,10 @@ defmodule Brando.System do
     Logger.info("==> Brando >> System checks complete!")
   end
 
-  # Deprecated config names that still work, with the name to use instead.
+  # Deprecated config names that still work, with the name to use instead,
+  # and AI settings without the optional dependency they need.
   defp warn_deprecated_config do
-    Enum.each(Brando.AI.deprecations(), &Brando.System.Log.warn/1)
+    Enum.each(Brando.AI.deprecations() ++ Brando.AI.dependency_warnings(), &Brando.System.Log.warn/1)
   end
 
   defp check_tenancy_config do

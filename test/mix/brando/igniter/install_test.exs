@@ -153,6 +153,30 @@ defmodule Mix.Brando.Igniter.InstallTest do
              Map.new(composed.rewrite.sources, fn {path, source} -> {path, Rewrite.Source.get(source, :content)} end)
   end
 
+  test "AI's req_llm dependency comes with --ai, also on a rerun; without it the notice says how to add it" do
+    plain = project() |> install()
+    refute IgniterCase.source(plain, "mix.exs") =~ "req_llm"
+    assert Enum.any?(plain.notices, &(&1 =~ ~s|mix brando.install --ai, or add {:req_llm, "~> 1.29"} to deps in mix.exs|))
+
+    ai = project() |> install(["--ai"])
+    assert ai.issues == []
+    assert IgniterCase.source(ai, "mix.exs") =~ ~s({:req_llm, "~> 1.29"})
+    assert Enum.any?(ai.notices, &(&1 =~ "mix.exs has the req_llm dependency"))
+
+    applied = Igniter.Test.apply_igniter!(plain)
+    reloaded = Enum.reduce(Map.keys(applied.assigns.test_files), applied, &Igniter.include_existing_file(&2, &1))
+    rerun = install(reloaded, ["--ai"])
+    assert rerun.issues == []
+    assert IgniterCase.source(rerun, "mix.exs") =~ ~s({:req_llm, "~> 1.29"})
+
+    # The notice follows mix.exs, not the flag: a later rerun without --ai keeps it.
+    applied = Igniter.Test.apply_igniter!(rerun)
+    reloaded = Enum.reduce(Map.keys(applied.assigns.test_files), applied, &Igniter.include_existing_file(&2, &1))
+    again = install(reloaded)
+    assert Enum.any?(again.notices, &(&1 =~ "mix.exs has the req_llm dependency"))
+    refute Enum.any?(again.notices, &(&1 =~ "which was not added"))
+  end
+
   test "an applied install can be rerun with no changes or duplicate initialization" do
     igniter = project() |> install(["--tenancy-mode", "single", "--site-key", "studio"]) |> Igniter.Test.apply_igniter!()
     reloaded = Enum.reduce(Map.keys(igniter.assigns.test_files), igniter, &Igniter.include_existing_file(&2, &1))

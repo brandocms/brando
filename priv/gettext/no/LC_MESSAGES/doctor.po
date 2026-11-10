@@ -443,6 +443,26 @@ msgstr "%{version}: Node %{major} er eldre enn det Brando er testet på"
 msgid ".yalc brandojs %{version}"
 msgstr ".yalc brandojs %{version}"
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "AI configured without req_llm"
+msgstr "KI satt opp uten req_llm"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "AI: %{settings} set, but the req_llm dependency is missing"
+msgstr "KI: %{settings} er satt, men avhengigheten req_llm mangler"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "AI: not installed (no req_llm dependency)"
+msgstr "KI: ikke installert (ingen req_llm-avhengighet)"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "AI: req_llm installed"
+msgstr "KI: req_llm er installert"
+
 #: lib/brando/doctor/checks/admin_css.ex
 #, elixir-autogen, elixir-format
 msgid "Admin CSS compiler"
@@ -482,6 +502,11 @@ msgstr "Assistent: %{model} mangler API-nøkkel"
 #, elixir-autogen, elixir-format
 msgid "Assistant: AI turned off"
 msgstr "Assistent: KI er slått av"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Assistant: needs the req_llm dependency"
+msgstr "Assistent: trenger avhengigheten req_llm"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -835,6 +860,11 @@ msgstr "en statisk robots.txt kan skygge for SEO-teksten"
 #, elixir-autogen, elixir-format
 msgid "a static robots.txt stands in front of the SEO text"
 msgstr "en statisk robots.txt skygger for SEO-teksten"
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "add %{dependency} to deps in mix.exs and run mix deps.get, or remove the AI settings"
+msgstr "legg til %{dependency} i deps i mix.exs og kjør mix deps.get, eller fjern KI-innstillingene"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format

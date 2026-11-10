@@ -79,7 +79,9 @@ defmodule Brando.AI.Agent.Budget do
 
   @doc "A rough token estimate for a request: about four characters per token."
   @spec estimate(term()) :: non_neg_integer()
-  def estimate(%ReqLLM.Context{messages: messages} = context) do
+  # is_struct/2, not a struct pattern: Brando compiles without the optional
+  # :req_llm dependency.
+  def estimate(%{messages: messages} = context) when is_struct(context, ReqLLM.Context) do
     # A picture costs what a model charges for it, not its bytes.
     {messages, pictures} =
       Enum.map_reduce(messages, 0, fn message, count ->

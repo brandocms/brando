@@ -17,6 +17,18 @@ Screenshots: [empty workspace](../docs/admin-ui/assistant-empty-desktop.png),
 
 ## Configure a model
 
+The assistant, like every AI feature in Brando, calls models through
+[ReqLLM](https://hexdocs.pm/req_llm), an optional dependency. Add it to the
+site's `mix.exs` (`mix brando.install --ai` does this) and run `mix deps.get`:
+
+```elixir
+{:req_llm, "~> 1.29"}
+```
+
+Without it Brando runs with AI unavailable: the admin shows no AI actions and
+no Assistant, as with `config :brando, Brando.AI, enabled: false`, and
+`mix brando.doctor` warns when AI settings are present.
+
 The assistant uses `Brando.AI`'s providers and keys:
 
 ```elixir

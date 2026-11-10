@@ -13,6 +13,7 @@ if Code.ensure_loaded?(Igniter) do
         mix brando.install --interactive
         mix brando.install --tenancy-mode single --site-key my-site
         mix brando.install --no-public-site
+        mix brando.install --ai
         mix brando.install --domain example.com --origin '//*.agency.example'
 
     A new installation defaults to `--tenancy-mode none` without prompting.
@@ -64,6 +65,12 @@ if Code.ensure_loaded?(Igniter) do
     `robots.txt` is removed, with `robots.txt` in `static_paths/0`. A file
     changed since phx.new wrote it is kept, with a notice.
 
+    `--ai` adds the optional `req_llm` dependency that Brando's AI features
+    (field AI actions, alt text drafts, the content assistant) need. Without
+    it Brando runs with AI unavailable, and the admin shows no AI actions.
+    Rerun with `--ai` to add it to an installed application, then set a model
+    and an API key in `config :brando, Brando.AI`.
+
     A new installation gets a `.tool-versions` pinning the Erlang, Elixir,
     Node.js and pnpm versions Brando is tested with, for asdf and mise, when
     the install runs the Erlang and Elixir asdf or mise installed under those
@@ -86,7 +93,8 @@ if Code.ensure_loaded?(Igniter) do
               public_site: :boolean,
               domain: :string,
               staging_domain: :string,
-              origin: :keep
+              origin: :keep,
+              ai: :boolean
             ]
       }
     end

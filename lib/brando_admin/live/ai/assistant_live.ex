@@ -41,6 +41,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
        socket_connected: connected?(socket),
        deliver_topic: deliver_topic,
        available?: Agent.available?(),
+       ai_installed?: Brando.AI.available?(),
        video_uploads?: Brando.default_video_upload_strategy() == :local,
        scope_label: scope_label(socket),
        conversation: nil,
@@ -329,9 +330,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
       </details>
 
       <div :if={!@available? and @live_action != :connected} class="assistant-notice" role="status">
-        {gettext(
-          "No AI model is configured for this site. Add a model and key to the Brando.AI configuration to use the assistant."
-        )}
+        <%= if @ai_installed? do %>
+          {gettext(
+            "No AI model is configured for this site. Add a model and key to the Brando.AI configuration to use the assistant."
+          )}
+        <% else %>
+          {gettext("AI is not installed on this site. Add the req_llm dependency to the site's mix.exs to use the assistant.")}
+        <% end %>
       </div>
 
       <div class="assistant-body">

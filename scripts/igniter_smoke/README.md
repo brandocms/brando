@@ -41,6 +41,12 @@ back to its seeded copy (`<database>_seeded`), `config/dev.exs` gets
 `BRANDO_SMOKE_PHX_EBIN` optionally selects a compiled phx_new beam directory
 instead of the installed archive.
 
+The consumer has no `req_llm`, Brando's optional AI dependency, which the
+installer adds only with `--ai`: the script checks that AI is unavailable,
+and everything after runs that way. The precompiled case also checks that
+Brando compiles without Igniter and req_llm with no warning
+(`brando-without-optional-deps.log`).
+
 The script verifies an unattended dry run and an installation rerun against
 source fingerprints, and that the installer wrote what Florist's release build
 needs (Brando's Dockerfile and `.dockerignore`, ReleaseTasks, a release that

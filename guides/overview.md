@@ -96,7 +96,8 @@ execution. [Content lifecycle](content_lifecycle.md) covers status, soft deletio
 restoration, purge, and sequence ordering.
 
 [Content assistant](content_assistant.md) lets an editor describe changes in a
-conversation and review them as a proposal before anything is saved.
+conversation and review them as a proposal before anything is saved. It and
+Brando's other AI features need the optional `req_llm` dependency.
 [Connected AI tools](mcp.md) lets people connect Claude, ChatGPT and other MCP
 clients to read content and propose changes the same way.
 [Content import and export](content_transfer.md) moves saved entries between

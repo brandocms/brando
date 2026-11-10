@@ -39,6 +39,14 @@ defmodule Brando.AI do
   full `"provider:model"` spec. `default_model: "..."` is still read, as
   `models: [default: "..."]`.
 
+  ## The req_llm dependency
+
+  Model calls go through `ReqLLM`, an optional dependency: a site that uses
+  AI adds `{:req_llm, "~> 1.29"}` to its deps. Without it Brando compiles and
+  runs with AI unavailable (`available?/0`): `enabled?/0` and `configured?/1`
+  report false, so the admin hides its AI actions and the content assistant
+  as it does when AI is turned off, and requests return `{:error, :disabled}`.
+
   ## Tests
 
   `config :brando, Brando.AI, client: Brando.AI.Cassette` in `config/test.exs`
@@ -77,8 +85,13 @@ defmodule Brando.AI do
 
   use Gettext, backend: Brando.Gettext
 
-  alias ReqLLM.Keys
   alias ReqLLM.Response
+
+  # Brando compiles without the optional :req_llm dependency. The calls into
+  # it are then unreachable: `available?/0`, and so `enabled?/0`, is false.
+  @compile {:no_warn_undefined, if(Code.ensure_loaded?(ReqLLM), do: [], else: [ReqLLM, ReqLLM.Keys, Response, LLMDB])}
+
+  @available_key {__MODULE__, :req_llm_available?}
 
   @request_opt_keys [
     :temperature,
@@ -94,8 +107,91 @@ defmodule Brando.AI do
     :thinking_timeout
   ]
 
+  @doc """
+  Whether the optional `:req_llm` dependency, which every model call needs,
+  is loaded. Without it AI is unavailable, whatever the config.
+
+  Looked up once per node: in interactive mode a missing module is searched
+  for on the whole code path.
+  """
+  @spec available?() :: boolean()
+  def available? do
+    case :persistent_term.get(@available_key, nil) do
+      nil ->
+        available? = Code.ensure_loaded?(ReqLLM)
+        :persistent_term.put(@available_key, available?)
+        available?
+
+      available? ->
+        available?
+    end
+  end
+
+  @doc "The dependency a site adds to its deps for AI: `{:req_llm, \"~> 1.29\"}`, as in Brando's mix.exs."
+  @spec dependency() :: {:req_llm, String.t()}
+  def dependency, do: {:req_llm, "~> 1.29"}
+
+  @doc """
+  The AI settings the application's config sets, by name: models,
+  providers or site prompts for `Brando.AI`, a model for the content
+  assistant, provider keys under `config :req_llm`. None with
+  `enabled: false`. Each needs `:req_llm` to do anything.
+  """
+  @spec settings() :: [String.t()]
+  def settings do
+    config = config()
+    agent = Application.get_env(:brando, Brando.AI.Agent, [])
+
+    if Keyword.get(config, :enabled, true) in [false, nil] do
+      []
+    else
+      for {name, set?} <- [
+            {"Brando.AI models", present?(config[:default_model]) or present?(config[:models])},
+            {"Brando.AI providers", present?(config[:providers]) or api_keys?(config)},
+            # Site prompts may carry their own model and key (`fields:` before 0.55)
+            {"Brando.AI prompts", present?(config[:prompts]) or present?(config[:fields])},
+            # The last place a key is looked up (`resolve_api_key/2`)
+            {"req_llm API keys", api_keys?(Application.get_all_env(:req_llm))},
+            {"Brando.AI.Agent model", present?(agent[:model])}
+          ],
+          set?,
+          do: name
+    end
+  end
+
+  defp present?(value), do: value not in [nil, "", [], %{}]
+
+  # `<provider>_api_key`, under `Brando.AI` or `config :req_llm`
+  defp api_keys?(config) do
+    Enum.any?(config, fn {key, value} -> String.ends_with?(to_string(key), "_api_key") and present?(value) end)
+  end
+
+  @doc """
+  A warning when the application sets AI settings (`settings/0`) without
+  the `:req_llm` dependency, which leaves AI off. `Brando.System` prints it
+  at boot.
+  """
+  @spec dependency_warnings() :: [String.t()]
+  def dependency_warnings do
+    case {available?(), settings()} do
+      {false, [_ | _] = settings} ->
+        [
+          "#{Enum.join(settings, ", ")} set, but the req_llm dependency is missing, so AI is off. " <>
+            "Add #{inspect(dependency())} to deps in mix.exs and run mix deps.get."
+        ]
+
+      _ ->
+        []
+    end
+  end
+
+  @doc """
+  Whether AI is on: `:req_llm` is available (`available?/0`) and
+  `config :brando, Brando.AI, enabled:` is not `false`.
+  """
+  @spec enabled?() :: boolean()
   def enabled? do
-    Keyword.get(config(), :enabled, true)
+    available?() and Keyword.get(config(), :enabled, true)
   end
 
   def configured?(ai_opts \\ []) do
@@ -184,11 +280,13 @@ defmodule Brando.AI do
   def model_info(ai_opts \\ []) do
     with {:ok, spec} <- resolve_model(normalize_ai_opts(ai_opts)),
          {:ok, provider} <- provider_from_model(spec) do
-      {:ok, catalogue_info(spec, provider, LLMDB.model(spec))}
+      {:ok, catalogue_info(spec, provider, catalogue_model(spec))}
     end
   rescue
     _ -> {:error, :unknown_model}
   end
+
+  defp catalogue_model(spec), do: if(available?(), do: LLMDB.model(spec), else: {:error, :not_found})
 
   # Straight from the catalogue ReqLLM reads, which, unlike ReqLLM.model/1,
   # answers a model it does not know without a warning per lookup. Outside the
@@ -423,9 +521,7 @@ defmodule Brando.AI do
   defp get_provider_api_key(_), do: nil
 
   defp fallback_req_llm_key(provider) do
-    provider
-    |> Keys.config_key()
-    |> ReqLLM.get_key()
+    if available?(), do: provider |> ReqLLM.Keys.config_key() |> ReqLLM.get_key()
   rescue
     _ -> nil
   end
