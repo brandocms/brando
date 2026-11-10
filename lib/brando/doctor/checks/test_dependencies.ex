@@ -28,17 +28,15 @@ defmodule Brando.Doctor.Checks.TestDependencies do
   @impl true
   def label, do: dgettext("doctor", "Test dependencies")
 
-  # A doctor run from a release's remote shell has the default :mix mode but
-  # no Mix, so the project's dependencies are read only where Mix is. They are
-  # the list mix.exs gives for the current environment, and under :test that
-  # can hold entries a `Mix.env()` condition adds for tests only.
+  # In a release (its admin or a remote shell, which has the default :mix
+  # mode) there is no mix.exs to read, so the loaded applications answer. The
+  # dependency list is the one mix.exs gives for the current environment, and
+  # under :test it can hold entries a `Mix.env()` condition adds for tests only.
   @impl true
-  def run(%Context{mode: :mix}) do
-    cond do
-      not Code.ensure_loaded?(Mix.Project) or is_nil(Mix.Project.get()) -> from_release()
-      Mix.env() == :test -> skipped(dgettext("doctor", "checked outside MIX_ENV=test, whose dependencies can differ"))
-      true -> evaluate(from_deps(Mix.Project.config()[:deps] || []))
-    end
+  def run(%Context{mode: :mix, source?: true}) do
+    if Mix.env() == :test,
+      do: skipped(dgettext("doctor", "checked outside MIX_ENV=test, whose dependencies can differ")),
+      else: evaluate(from_deps(Mix.Project.config()[:deps] || []))
   end
 
   def run(_context), do: from_release()
@@ -46,7 +44,7 @@ defmodule Brando.Doctor.Checks.TestDependencies do
   defp from_release do
     if Brando.env() == :prod,
       do: evaluate(Enum.filter(@test_only, &Application.spec(&1, :vsn))),
-      else: skipped(dgettext("doctor", "checked in a production release or from the terminal"))
+      else: skipped(dgettext("doctor", "checked in a production release, or with mix brando.doctor in the source tree"))
   end
 
   @doc """

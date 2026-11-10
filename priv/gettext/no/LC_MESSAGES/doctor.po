@@ -937,8 +937,8 @@ msgstr "se feilene til de forkastede jobbene"
 
 #: lib/brando/doctor/checks/test_dependencies.ex
 #, elixir-autogen, elixir-format
-msgid "checked in a production release or from the terminal"
-msgstr "sjekkes i en produksjonsrelease eller fra terminalen"
+msgid "checked in a production release, or with mix brando.doctor in the source tree"
+msgstr "sjekkes i en produksjonsrelease, eller med mix brando.doctor i kildekoden"
 
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
@@ -948,7 +948,7 @@ msgstr "sjekkes i utvikling"
 #: lib/brando/doctor/checks/test_dependencies.ex
 #, elixir-autogen, elixir-format
 msgid "checked outside MIX_ENV=test, whose dependencies can differ"
-msgstr "sjekkes utenfor MIX_ENV=test, der avhengighetene kan være andre"
+msgstr "sjekkes utenfor MIX_ENV=test, som kan ha andre avhengigheter"
 
 #: lib/brando/doctor/checks/colors.ex
 #, elixir-autogen, elixir-format

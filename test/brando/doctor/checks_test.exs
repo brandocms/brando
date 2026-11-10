@@ -1326,6 +1326,9 @@ defmodule Brando.Doctor.ChecksTest do
       assert result.status == :warning
       assert result.summary =~ ":ex_machina"
       refute result.summary =~ ":wallaby"
+
+      # A release's remote shell runs the doctor in :mix mode, without the source.
+      assert %Result{status: :warning} = Checks.TestDependencies.run(context(mode: :mix, source?: false))
     end
   end
 

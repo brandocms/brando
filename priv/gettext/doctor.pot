@@ -936,7 +936,7 @@ msgstr ""
 
 #: lib/brando/doctor/checks/test_dependencies.ex
 #, elixir-autogen, elixir-format
-msgid "checked in a production release or from the terminal"
+msgid "checked in a production release, or with mix brando.doctor in the source tree"
 msgstr ""
 
 #: lib/brando/doctor/checks/test_database.ex
