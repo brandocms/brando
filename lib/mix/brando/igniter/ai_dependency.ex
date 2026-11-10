@@ -66,10 +66,14 @@ if Code.ensure_loaded?(Igniter) do
     # read is on, and so is one under a condition (runtime.exs's
     # `config_env()` branches): runtime.exs applies to both environments.
     defp ai_settings(events) do
-      # The default, when no file sets it, is on.
-      enabled = for {:enabled, value} <- events, do: value
+      # The last one set wins; the default, when no file sets it, is on.
+      enabled =
+        Enum.reduce(events, true, fn
+          {:enabled, value}, _enabled -> value
+          _event, enabled -> enabled
+        end)
 
-      case List.last([true | enabled]) do
+      case enabled do
         off when off in [false, nil] -> []
         _on -> for {:setting, name} <- events, do: name
       end
@@ -103,24 +107,26 @@ if Code.ensure_loaded?(Igniter) do
         seen = MapSet.put(seen, path)
 
         case include(igniter, path) do
-          {:ok, igniter, quoted} ->
-            quoted
-            |> scan(path, conditional?)
-            |> Enum.reduce({igniter, [], seen}, fn
-              {:import, file, conditional?}, {igniter, acc, seen} ->
-                {igniter, imported, seen} = events(igniter, file, seen, conditional?)
-                {igniter, Enum.reverse(imported, acc), seen}
-
-              event, {igniter, acc, seen} ->
-                {igniter, [event | acc], seen}
-            end)
-            |> then(fn {igniter, acc, seen} -> {igniter, Enum.reverse(acc), seen} end)
-
+          {:ok, igniter, quoted} -> expand(igniter, scan(quoted, path, conditional?), seen)
           # A file that does not parse sets nothing here; the upgrade goes on.
-          :error ->
-            {igniter, [], seen}
+          :error -> {igniter, [], seen}
         end
       end
+    end
+
+    # A file's events with each import's events in its place.
+    defp expand(igniter, events, seen) do
+      {igniter, acc, seen} =
+        Enum.reduce(events, {igniter, [], seen}, fn
+          {:import, file, conditional?}, {igniter, acc, seen} ->
+            {igniter, imported, seen} = events(igniter, file, seen, conditional?)
+            {igniter, Enum.reverse(imported, acc), seen}
+
+          event, {igniter, acc, seen} ->
+            {igniter, [event | acc], seen}
+        end)
+
+      {igniter, Enum.reverse(acc), seen}
     end
 
     # Igniter parses a source as it includes it, and raises on a syntax error.
