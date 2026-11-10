@@ -99,6 +99,8 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     release_env = IgniterCase.source(igniter, "rel/env.sh.eex")
     assert release_env =~ ~s(. "$RELEASE_ROOT/.envrc.runtime")
     assert release_env =~ "export RELEASE_NODE=${RELEASE_NODE:-<%= @release.name %>@127.0.0.1}"
+    # After .envrc.runtime is sourced, so the environment file can choose embedded.
+    assert release_env =~ ~r/\.envrc\.runtime".*export RELEASE_MODE=\$\{RELEASE_MODE:-interactive\}/s
 
     gitignore = IgniterCase.source(igniter, ".gitignore")
     assert gitignore =~ "/_build/"
