@@ -47,6 +47,7 @@ defmodule Brando.Doctor do
     Checks.AltText,
     Checks.MediaPaths,
     Checks.Deprecations,
+    Checks.ReleaseDependencies,
     Checks.TestDatabase
   ]
 

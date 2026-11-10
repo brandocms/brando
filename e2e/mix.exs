@@ -52,7 +52,7 @@ defmodule E2eProject.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:tidewave, "~> 0.1"},
+      {:tidewave, "~> 0.1", only: [:dev, :test, :e2e]},
       {:igniter, "~> 0.6"},
       # phoenix
       {:phoenix, "1.8.16"},
@@ -79,7 +79,6 @@ defmodule E2eProject.MixProject do
       {:gettext, "~> 1.0"},
       {:swoosh, "~> 1.0"},
       {:jason, "~> 1.0"},
-      {:ex_machina, "~> 2.3"},
       {:remote_ip, "~> 1.0"},
 
       # release management and production tools

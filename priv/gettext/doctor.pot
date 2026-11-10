@@ -750,6 +750,11 @@ msgstr ""
 msgid "Palette [%{namespace}] %{name}: %{item}"
 msgstr ""
 
+#: lib/brando/doctor/checks/release_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "Release dependencies"
+msgstr ""
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "Resolve blocks"
@@ -803,6 +808,11 @@ msgstr ""
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "The checks could not run. Check the application logs, or run mix brando.doctor."
+msgstr ""
+
+#: lib/brando/doctor/checks/release_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "Tidewave is for development: give it only: :dev in mix.exs and plug it inside if Mix.env() == :dev in the endpoint"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -959,9 +969,19 @@ msgstr ""
 msgid "check the errors of the discarded jobs"
 msgstr ""
 
+#: lib/brando/doctor/checks/release_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "checked in a production release, or with mix brando.doctor in the source tree"
+msgstr ""
+
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "checked in development"
+msgstr ""
+
+#: lib/brando/doctor/checks/release_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "checked outside MIX_ENV=test, whose dependencies can differ"
 msgstr ""
 
 #: lib/brando/doctor/checks/colors.ex
@@ -1177,6 +1197,11 @@ msgstr ""
 msgid "less than an hour"
 msgstr ""
 
+#: lib/brando/doctor/checks/release_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "limit test libraries in mix.exs to the environments the tests run in, such as only: :test or only: [:test, :e2e], and move a factory under lib/ that uses ExMachina to test/support, which elixirc_paths compiles for those environments"
+msgstr ""
+
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
 msgid "linked to %{path}, brandojs %{version}"
@@ -1321,6 +1346,11 @@ msgstr ""
 #: lib/brando/doctor/checks/deprecations.ex
 #, elixir-autogen, elixir-format
 msgid "none in lib/"
+msgstr ""
+
+#: lib/brando/doctor/checks/release_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "none in the release"
 msgstr ""
 
 #: lib/brando/doctor.ex
@@ -1516,6 +1546,11 @@ msgstr ""
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "the locked commit is not the latest on %{branch} (%{commit}): mix deps.update brando"
+msgstr ""
+
+#: lib/brando/doctor/checks/release_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "the release ships %{apps}"
 msgstr ""
 
 #: lib/brando/doctor/checks/modules.ex

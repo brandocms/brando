@@ -1284,6 +1284,83 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "ReleaseDependencies" do
+    test "a development or test library reaches the release without an only: that leaves out :prod" do
+      deps = [
+        {:ex_machina, "~> 2.3"},
+        {:mox, "~> 1.2", only: :test},
+        {:bypass, "~> 2.1", only: [:dev, :test]},
+        {:mimic, "~> 1.7", only: [:test, :prod]},
+        {:lazy_html, ">= 0.1.0"},
+        {:excoveralls, "~> 0.18", runtime: false},
+        {:wallaby, github: "elixir-wallaby/wallaby"},
+        {:tidewave, "~> 0.9"},
+        {:phoenix, "~> 1.8"}
+      ]
+
+      assert Checks.ReleaseDependencies.from_deps(deps) == [:ex_machina, :mimic, :wallaby, :tidewave]
+      assert Checks.ReleaseDependencies.from_deps([{:tidewave, "~> 0.9", only: :dev}]) == []
+      assert Checks.ReleaseDependencies.from_deps([{:tidewave, "~> 0.9", only: [:dev, :e2e]}]) == []
+    end
+
+    test "names the libraries and how to keep them out" do
+      assert %Result{status: :ok} = Checks.ReleaseDependencies.evaluate([])
+
+      result = Checks.ReleaseDependencies.evaluate([:ex_machina])
+      assert result.status == :warning
+      assert result.summary == "the release ships :ex_machina"
+      assert result.fix =~ "only: [:test, :e2e]"
+      assert result.fix =~ "test/support"
+      refute result.fix =~ "Tidewave"
+    end
+
+    test "Tidewave in mix.exs is a warning, loaded in a production release an error" do
+      result = Checks.ReleaseDependencies.evaluate([:tidewave, :ex_machina], :mix_exs)
+      assert result.status == :warning
+      assert result.summary == "the release ships :tidewave, :ex_machina"
+      assert result.fix =~ "only: :dev"
+      assert result.fix =~ "test/support"
+
+      assert %Result{status: :error} = Checks.ReleaseDependencies.evaluate([:tidewave], :release)
+      assert %Result{status: :warning} = Checks.ReleaseDependencies.evaluate([:ex_machina], :release)
+    end
+
+    test "under MIX_ENV=test the dependency list can differ from production's" do
+      assert %Result{status: :skipped} = Checks.ReleaseDependencies.run(context(mode: :mix))
+    end
+
+    test "the admin of a development server cannot tell what a release ships" do
+      assert %Result{status: :skipped} = Checks.ReleaseDependencies.run(context(mode: :admin))
+    end
+
+    test "a production release reports the libraries it loaded" do
+      put_test_env(:env, :prod)
+
+      # Brando's own test dependencies are loaded here, as in a release that ships them.
+      result = Checks.ReleaseDependencies.run(context(mode: :admin))
+      assert result.status == :warning
+      assert result.summary =~ ":ex_machina"
+      refute result.summary =~ ":wallaby"
+
+      # A release's remote shell runs the doctor in :mix mode, without the source.
+      assert %Result{status: :warning} = Checks.ReleaseDependencies.run(context(mode: :mix, source?: false))
+    end
+
+    test "a production release that loaded Tidewave is an error" do
+      put_test_env(:env, :prod)
+
+      # Brando has no Tidewave dependency; a stand-in application is enough
+      # for Application.spec/2.
+      :ok = :application.load({:application, :tidewave, [vsn: ~c"0.9.2", modules: [], applications: [:kernel, :stdlib]]})
+      on_exit(fn -> :application.unload(:tidewave) end)
+
+      result = Checks.ReleaseDependencies.run(context(mode: :admin))
+      assert result.status == :error
+      assert result.summary =~ ":tidewave"
+      assert result.fix =~ "only: :dev"
+    end
+  end
+
   describe "Deprecations" do
     @deprecated_calls %{
       {Brando.HTML, :picture_tag, 2} => "Use <.picture>",
