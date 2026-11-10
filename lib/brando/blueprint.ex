@@ -800,7 +800,7 @@ defmodule Brando.Blueprint do
                           Villain.Blocks.MarkdownBlock.Data Villain.Blocks.MarkdownSourceBlock.Data
                           Villain.Blocks.MediaBlock.Data Villain.Blocks.PictureBlock.Data
                           Villain.Blocks.SvgBlock.Data Villain.Blocks.VideoBlock.Data),
-                       &Module.concat(Brando, &1)
+                       &Module.concat("Brando", &1)
                      )
 
   @doc """
