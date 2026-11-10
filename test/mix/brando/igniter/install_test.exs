@@ -161,13 +161,20 @@ defmodule Mix.Brando.Igniter.InstallTest do
     ai = project() |> install(["--ai"])
     assert ai.issues == []
     assert IgniterCase.source(ai, "mix.exs") =~ ~s({:req_llm, "~> 1.29"})
-    assert Enum.any?(ai.notices, &(&1 =~ "--ai added the req_llm dependency"))
+    assert Enum.any?(ai.notices, &(&1 =~ "mix.exs has the req_llm dependency"))
 
     applied = Igniter.Test.apply_igniter!(plain)
     reloaded = Enum.reduce(Map.keys(applied.assigns.test_files), applied, &Igniter.include_existing_file(&2, &1))
     rerun = install(reloaded, ["--ai"])
     assert rerun.issues == []
     assert IgniterCase.source(rerun, "mix.exs") =~ ~s({:req_llm, "~> 1.29"})
+
+    # The notice follows mix.exs, not the flag: a later rerun without --ai keeps it.
+    applied = Igniter.Test.apply_igniter!(rerun)
+    reloaded = Enum.reduce(Map.keys(applied.assigns.test_files), applied, &Igniter.include_existing_file(&2, &1))
+    again = install(reloaded)
+    assert Enum.any?(again.notices, &(&1 =~ "mix.exs has the req_llm dependency"))
+    refute Enum.any?(again.notices, &(&1 =~ "which was not added"))
   end
 
   test "an applied install can be rerun with no changes or duplicate initialization" do

@@ -62,9 +62,30 @@ defmodule Brando.AI.WithoutReqLLMTest do
     assert AI.settings() == []
     assert AI.dependency_warnings() == []
 
-    put_test_env(Brando.AI, [])
     put_test_env(Brando.AI.Agent, [])
+
+    # Site prompts carry their own model and key, under `prompts:` or `fields:`
+    for key <- [:prompts, :fields] do
+      put_test_env(Brando.AI, [{key, [alt: [model: "openai:gpt-4o", api_key: "a-key"]]}])
+      assert AI.settings() == ["Brando.AI prompts"]
+      assert [_warning] = AI.dependency_warnings()
+    end
+
+    put_test_env(Brando.AI, [])
     assert AI.dependency_warnings() == []
+
+    # A provider key given to ReqLLM itself
+    original = Application.fetch_env(:req_llm, :anthropic_api_key)
+    Application.put_env(:req_llm, :anthropic_api_key, "a-key")
+
+    on_exit(fn ->
+      case original do
+        {:ok, key} -> Application.put_env(:req_llm, :anthropic_api_key, key)
+        :error -> Application.delete_env(:req_llm, :anthropic_api_key)
+      end
+    end)
+
+    assert AI.settings() == ["req_llm API keys"]
   end
 
   test "the doctor warns about AI settings without req_llm, with the dependency to add" do

@@ -77,8 +77,7 @@ defmodule Brando.AI.Cassette do
 
   # Model calls, and so the code that records and replays them, need the
   # optional :req_llm dependency; `Brando.AI` makes no call without it.
-  @compile {:no_warn_undefined,
-            if(Code.ensure_loaded?(ReqLLM), do: [], else: [Response, ReqLLM.StreamResponse.MetadataHandle])}
+  @compile {:no_warn_undefined, if(Code.ensure_loaded?(ReqLLM), do: [], else: [ReqLLM.StreamResponse.MetadataHandle])}
 
   @modes [:replay, :record, :auto]
   @version 1

@@ -48,9 +48,8 @@ defmodule Brando.AI.OptionalDependencyTest do
     {:error, :disabled} = Brando.AI.generate_text("Describe the lighthouse", model: "openai:gpt-4o", api_key: "a-key")
     {:ok, %{input_price: nil}} = Brando.AI.model_info(model: "openai:gpt-4o")
 
-    # Nothing to record or replay; Mix recompiles it once req_llm is added.
-    false = Brando.AI.Cassette.Response.__mix_recompile__?()
-    false = function_exported?(Brando.AI.Cassette.Response, :load, 5)
+    # The same module as with req_llm, so adding it needs no recompiling.
+    true = function_exported?(Brando.AI.Cassette.Response, :load, 5)
     false = Brando.AI.Cassette.active?()
 
     # A map that is not a ReqLLM.Context is estimated by its size.

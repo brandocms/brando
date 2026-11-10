@@ -68,7 +68,7 @@ if Code.ensure_loaded?(Igniter) do
         # Last: Rewrite rereads the formatters when .formatter.exs changes, and
         # the files above are formatted as the project's formatters stood.
         |> formatter()
-        |> instructions(tenancy, options)
+        |> instructions(tenancy)
       else
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)
@@ -408,7 +408,7 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp instructions(igniter, tenancy, options) do
+    defp instructions(igniter, tenancy) do
       Igniter.add_notice(igniter, """
       Brando source setup prepared (tenancy: #{tenancy.mode}). Review the diff before applying it.
       No database, account, asset build, or deployment was run.
@@ -437,19 +437,20 @@ if Code.ensure_loaded?(Igniter) do
       For coding agents, AGENTS.md links Brando's usage rules
       (deps/brando/usage-rules.md), and .claude/skills has Brando's site skills.
 
-      #{options[:ai] |> ai_instructions() |> String.trim_trailing()}
+      #{igniter |> Igniter.Project.Deps.has_dep?(:req_llm) |> ai_instructions() |> String.trim_trailing()}
       """)
     end
 
+    # From mix.exs as planned: with --ai, or a req_llm the application had.
     defp ai_instructions(true) do
       """
-      AI: --ai added the req_llm dependency. Set a model and an API key in
+      AI: mix.exs has the req_llm dependency. Set a model and an API key in
       config :brando, Brando.AI to turn on AI actions, alt text drafts and the
       Assistant (deps/brando/guides/content_assistant.md).
       """
     end
 
-    defp ai_instructions(_) do
+    defp ai_instructions(false) do
       """
       AI (field actions, alt text drafts, the Assistant) needs the req_llm
       dependency, which was not added. To use it later, run

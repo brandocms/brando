@@ -132,8 +132,9 @@ defmodule Brando.AI do
   def dependency, do: {:req_llm, "~> 1.29"}
 
   @doc """
-  The AI settings the application's config sets, by name: a model or
-  providers for `Brando.AI`, a model for the content assistant. None with
+  The AI settings the application's config sets, by name: models,
+  providers or site prompts for `Brando.AI`, a model for the content
+  assistant, provider keys under `config :req_llm`. None with
   `enabled: false`. Each needs `:req_llm` to do anything.
   """
   @spec settings() :: [String.t()]
@@ -147,6 +148,10 @@ defmodule Brando.AI do
       for {name, set?} <- [
             {"Brando.AI models", present?(config[:default_model]) or present?(config[:models])},
             {"Brando.AI providers", present?(config[:providers])},
+            # Site prompts may carry their own model and key (`fields:` before 0.55)
+            {"Brando.AI prompts", present?(config[:prompts]) or present?(config[:fields])},
+            # The last place a key is looked up (`resolve_api_key/2`)
+            {"req_llm API keys", req_llm_keys?()},
             {"Brando.AI.Agent model", present?(agent[:model])}
           ],
           set?,
@@ -155,6 +160,12 @@ defmodule Brando.AI do
   end
 
   defp present?(value), do: value not in [nil, "", [], %{}]
+
+  defp req_llm_keys? do
+    Enum.any?(Application.get_all_env(:req_llm), fn {key, value} ->
+      String.ends_with?(to_string(key), "_api_key") and present?(value)
+    end)
+  end
 
   @doc """
   A warning when the application sets AI settings (`settings/0`) without
