@@ -85,6 +85,9 @@ And these, which no task does for you:
 - Change the Dockerfile's `FROM … twined/fehn:<tag>` to a fehn 4.2 variant for
   the server's Ubuntu release, and build the admin with Node 24
   ([Dependencies and toolchain](#dependencies-and-toolchain)).
+- Add the two `Brando.Vite` watchers to the endpoint in `config/dev.exs`, so
+  `mix phx.server` starts the Vite dev servers
+  ([Vite dev servers in development](#vite-dev-servers-in-development)).
 - On a database deployed with the bundled Fabric workflow, give the
   application's database user ownership of `oban_job_state` before
   `brando_153` runs ([section 3](#3-generate-and-review-database-migrations)).
@@ -615,6 +618,39 @@ for where the admin takes BrandoJS from ([BrandoJS](#brandojs)).
 
 The site's own frontend keeps building on the legacy EuropaCSS PostCSS plugin;
 moving it is optional ([Site frontend](#site-frontend)).
+
+### Vite dev servers in development
+
+A site installed before 0.55 has no Vite watchers, and no source task adds
+them, because the endpoint config is the application's own. `mix phx.server`
+then serves pages whose assets never load: the page shows that the admin's or
+the site's assets failed to load from `http://localhost:3333` or
+`http://localhost:3000`, and with another site's Vite on port 3333 the admin
+loads that site's admin. Add the watchers to the endpoint in `config/dev.exs`:
+
+```elixir
+config :my_app, MyAppWeb.Endpoint,
+  watchers: [
+    vite_admin: {Brando.Vite, :watch, [Path.expand("../assets/backend", __DIR__)]},
+    vite_site: {Brando.Vite, :watch, [Path.expand("../assets/frontend", __DIR__)]}
+  ]
+```
+
+`Brando.Vite.watch/1` runs each directory's own Vite from `node_modules`, so
+install both directories first; it works for a frontend that still installs
+with yarn, and it stops Vite when Phoenix stops. It runs the first `node` on
+the `PATH` that `mix phx.server` was started with: a Node pinned in
+`.mise.toml` applies only when mise is active in that shell. Leave out
+`vite_site` for a frontend without Vite.
+
+To keep running `pnpm dev` in each directory by hand instead, leave the
+watchers out. Stop those servers before adding the watchers:
+`mix brando.gen.backend --upgrade` writes `server.strictPort` into the admin's
+`vite.config.js`, so a Vite started by hand holds the port and the watcher's
+Vite logs that the port is taken. The site's own `vite.config.js` keeps what it
+had; add `strictPort: true` beside its `port` for the same behaviour. [Vite dev
+servers](installation.md#vite-dev-servers) covers failed starts and running
+two sites at once.
 
 ## 3. Generate and review database migrations
 
