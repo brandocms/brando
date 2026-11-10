@@ -147,11 +147,11 @@ defmodule Brando.AI do
     else
       for {name, set?} <- [
             {"Brando.AI models", present?(config[:default_model]) or present?(config[:models])},
-            {"Brando.AI providers", present?(config[:providers])},
+            {"Brando.AI providers", present?(config[:providers]) or api_keys?(config)},
             # Site prompts may carry their own model and key (`fields:` before 0.55)
             {"Brando.AI prompts", present?(config[:prompts]) or present?(config[:fields])},
             # The last place a key is looked up (`resolve_api_key/2`)
-            {"req_llm API keys", req_llm_keys?()},
+            {"req_llm API keys", api_keys?(Application.get_all_env(:req_llm))},
             {"Brando.AI.Agent model", present?(agent[:model])}
           ],
           set?,
@@ -161,10 +161,9 @@ defmodule Brando.AI do
 
   defp present?(value), do: value not in [nil, "", [], %{}]
 
-  defp req_llm_keys? do
-    Enum.any?(Application.get_all_env(:req_llm), fn {key, value} ->
-      String.ends_with?(to_string(key), "_api_key") and present?(value)
-    end)
+  # `<provider>_api_key`, under `Brando.AI` or `config :req_llm`
+  defp api_keys?(config) do
+    Enum.any?(config, fn {key, value} -> String.ends_with?(to_string(key), "_api_key") and present?(value) end)
   end
 
   @doc """

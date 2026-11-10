@@ -71,6 +71,10 @@ defmodule Brando.AI.WithoutReqLLMTest do
       assert [_warning] = AI.dependency_warnings()
     end
 
+    # A provider key on Brando.AI itself
+    put_test_env(Brando.AI, openai_api_key: "a-key")
+    assert AI.settings() == ["Brando.AI providers"]
+
     put_test_env(Brando.AI, [])
     assert AI.dependency_warnings() == []
 
