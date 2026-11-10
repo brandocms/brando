@@ -17,9 +17,6 @@ defmodule Brando.Worker.FileUploader do
            "field_full_path" => field_full_path
          }
        }) do
-    field_full_path =
-      Brando.Utils.existing_atom_path(field_full_path)
-
     with {:ok, file} <- Files.get_file(file_id),
          {:ok, config} <- Files.get_config_for(config_target),
          {:ok, _s3_key} <- CDN.upload_file(file, config, user_id || :system) do

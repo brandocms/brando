@@ -27,9 +27,6 @@ defmodule Brando.Worker.ImageProcessor do
        ) do
     silent? = Map.get(args, "silent", false)
 
-    field_full_path =
-      Brando.Utils.existing_atom_path(field_full_path)
-
     with {:ok, image} <- Images.get_image(image_id),
          {:ok, original} <- Images.restore_original(image) do
       process(job, image, original, config_target, user_id, field_full_path, silent?)

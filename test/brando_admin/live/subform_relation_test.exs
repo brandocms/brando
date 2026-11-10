@@ -306,12 +306,23 @@ defmodule BrandoAdmin.SubformRelationTest do
              Enum.find(form_assigns(view).entry.items, &(&1.id == second_id))
   end
 
+  test "a row's image shows as processing when the worker sends the path as strings", ctx do
+    view = open(ctx)
+    pick(view, ctx.image)
+
+    send(view.pid, {ctx.image, [:image, :processing], ["items", 0, "cover"]})
+    render(view)
+
+    item_id = ctx.item.id
+    assert %{cover: %{status: :unprocessed}} = Enum.find(form_assigns(view).entry.items, &(&1.id == item_id))
+  end
+
   test "a processed image lands on its row when the worker's node had no atoms for the path", ctx do
     view = open(ctx)
     pick(view, ctx.image)
 
-    # A worker on a node that has not loaded the schema yet keeps the field
-    # segments it has no atom for as strings (`Brando.Utils.existing_atom_path/1`).
+    # Workers broadcast the path as the job stored it, as strings; the form
+    # converts it (`Brando.Utils.existing_atom_path/1`).
     processed = %{ctx.image | path: "image/processed.jpg"}
     send(view.pid, {processed, [:image, :updated], ["items", 0, "cover"]})
     render(view)
