@@ -12,9 +12,12 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Mix.Brando.Igniter.Dependencies
 
-    # The configuration a release or a development server reads. test.exs is
-    # left out: it points the client at cassettes, which is no AI of its own.
-    @configs ~w(config/config.exs config/dev.exs config/prod.exs config/runtime.exs)
+    # The configuration a release or a development server reads, in the
+    # order it applies: the base, the environment's file, then runtime.exs.
+    # test.exs is left out: it points the client at cassettes, no AI of its own.
+    @base "config/config.exs"
+    @environments ~w(config/dev.exs config/prod.exs)
+    @runtime "config/runtime.exs"
 
     @ai_keys [:models, :default_model, :providers, :prompts, :fields]
 
@@ -24,9 +27,18 @@ if Code.ensure_loaded?(Igniter) do
     as it is otherwise, whatever form a `req_llm` it has takes.
     """
     def plan(igniter) do
-      {igniter, files} = settings(igniter, @configs, MapSet.new(), [])
+      {igniter, read} =
+        Enum.reduce([@base, @runtime | @environments], {igniter, %{}}, fn root, {igniter, read} ->
+          {igniter, files} = settings(igniter, [root], MapSet.new(), [])
+          {igniter, Map.put(read, root, files)}
+        end)
 
-      case ai_settings(files) do
+      found =
+        @environments
+        |> Enum.flat_map(&ai_settings(read[@base] ++ read[&1] ++ read[@runtime]))
+        |> Enum.uniq()
+
+      case found do
         [] ->
           igniter
 
@@ -41,15 +53,16 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # Settings count unless every `enabled:` the files set is a literal false,
-    # which turns AI off wherever the settings are (the doctor reads the
-    # merged config the same way). An `enabled:` it cannot read leaves AI on.
+    # One environment's settings, `files` in the order its config applies
+    # them: none when the last `enabled:` set is a literal false, as in the
+    # merged config the doctor reads. An `enabled:` it cannot read is on.
+    # runtime.exs is read as applying to both environments, its `config_env()`
+    # branches included.
     defp ai_settings(files) do
-      enabled = Enum.flat_map(files, fn {_found, enabled} -> enabled end)
-
-      if enabled != [] and Enum.all?(enabled, &(&1 == false)),
-        do: [],
-        else: files |> Enum.flat_map(fn {found, _enabled} -> found end) |> Enum.uniq()
+      case files |> Enum.flat_map(fn {_found, enabled} -> enabled end) |> List.last() do
+        false -> []
+        _on -> Enum.flat_map(files, fn {found, _enabled} -> found end)
+      end
     end
 
     defp added(igniter, found) do
@@ -129,7 +142,7 @@ if Code.ensure_loaded?(Igniter) do
             {node, acc}
         end)
 
-      {{Enum.reverse(found), enabled}, Enum.reverse(imports)}
+      {{Enum.reverse(found), Enum.reverse(enabled)}, Enum.reverse(imports)}
     end
 
     defp brando_ai(opts, {found, imports, enabled}) do

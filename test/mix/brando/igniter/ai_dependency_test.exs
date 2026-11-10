@@ -117,6 +117,21 @@ defmodule Mix.Brando.Igniter.AIDependencyTest do
     assert IgniterCase.source(result, "mix.exs") =~ @req_llm
   end
 
+  test "AI off in one environment still needs req_llm for the other" do
+    models = config(~s(config :brando, Brando.AI, models: [default: "openai:gpt-4o"]))
+    off = config("config :brando, Brando.AI, enabled: false")
+
+    for {files, added?} <- [
+          {%{"config/config.exs" => models, "config/dev.exs" => off}, true},
+          {%{"config/config.exs" => models, "config/prod.exs" => off}, true},
+          {%{"config/config.exs" => models, "config/dev.exs" => off, "config/prod.exs" => off}, false},
+          {%{"config/config.exs" => models, "config/runtime.exs" => off}, false}
+        ] do
+      result = files |> project() |> AIDependency.plan()
+      assert IgniterCase.source(result, "mix.exs") =~ "req_llm" == added?, inspect(Map.keys(files))
+    end
+  end
+
   test "enabled: false turns AI off wherever the settings are, unless a file turns it on again" do
     off = ~s(config :brando, Brando.AI, enabled: false)
     models = ~s(config :brando, Brando.AI, models: [default: "openai:gpt-4o"])
