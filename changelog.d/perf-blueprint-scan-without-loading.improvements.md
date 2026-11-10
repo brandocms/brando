@@ -1,0 +1,1 @@
+- The admin no longer loads every Brando module to find Brando's Blueprints, so a release that runs in interactive mode stays at about half the memory after editors sign in.

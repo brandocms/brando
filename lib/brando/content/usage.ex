@@ -337,16 +337,9 @@ defmodule Brando.Content.Usage do
   end
 
   defp collect_asset_fields do
-    [Brando.RuntimeConfig.get(:otp_app), :brando]
-    |> Enum.flat_map(fn app ->
-      case :application.get_key(app, :modules) do
-        {:ok, modules} -> modules
-        _ -> []
-      end
-    end)
+    (Brando.Blueprint.app_blueprints(Brando.RuntimeConfig.get(:otp_app)) ++ Brando.Blueprint.brando_blueprints())
     |> Enum.uniq()
-    |> Brando.Blueprint.load_modules()
-    |> Enum.filter(&(Brando.Blueprint.blueprint?(&1) and is_binary(&1.__schema__(:source))))
+    |> Enum.filter(&is_binary(&1.__schema__(:source)))
     |> Enum.flat_map(fn schema ->
       for asset <- Brando.Blueprint.Assets.__assets__(schema),
           asset.type in @kinds,
