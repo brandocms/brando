@@ -79,7 +79,6 @@ defmodule E2eProject.MixProject do
       {:gettext, "~> 1.0"},
       {:swoosh, "~> 1.0"},
       {:jason, "~> 1.0"},
-      {:ex_machina, "~> 2.3"},
       {:remote_ip, "~> 1.0"},
 
       # release management and production tools

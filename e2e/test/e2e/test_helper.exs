@@ -1,7 +1,5 @@
 Logger.configure(level: :debug)
 
-{:ok, _} = Application.ensure_all_started(:ex_machina)
-
 Process.sleep(250)
 ExUnit.start()
 
