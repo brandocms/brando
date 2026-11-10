@@ -42,6 +42,7 @@ mode `none`), placeholder deployment hosts and the CMS public site at `/`.
 | `--tenancy-mode single --site-key my-site` or `--tenancy-mode multi` | One named site, or several sites in one installation | [Install options](#install-options) |
 | `--domain example.com`, with `--staging-domain` and `--origin` | The production and staging hosts and other trusted origins, for `check_origin` and the Florist environment files | [Deployment hosts](#deployment-hosts) |
 | `--no-public-site` | Keeping Phoenix's homepage and installing the admin alone | [Add CMS public pages](#add-cms-public-pages) |
+| `--ai` | AI actions on fields, alt text drafts and the content assistant | [AI](#ai) |
 | `--interactive` | Being asked for the choices left out | [Install options](#install-options) |
 | `--dry-run` | Previewing the changes without writing them | [Install options](#install-options) |
 | `--yes` | Accepting the changes without the prompt; a conflicting file still stops the install | [Install options](#install-options) |
@@ -208,6 +209,20 @@ The installer discovers custom namespaces and allows `--module`, `--web-module`,
 `--admin-module`, `--repo`, `--router` and `--endpoint` selection. Ambiguous modules
 and unsupported application layouts produce instructions before files are written.
 Umbrella roots are not supported.
+
+### AI
+
+```sh
+mix brando.install --ai
+```
+
+Brando's AI features (AI actions on fields, Write with AI, alt text and meta
+description drafts, the content assistant) call models through the optional
+`req_llm` dependency. `--ai` adds `{:req_llm, "~> 1.29"}` to `mix.exs`; a
+rerun with `--ai` adds it to an installed application. Without it, Brando
+runs with AI unavailable and the admin shows no AI actions. With it, set a
+model and an API key as [Content assistant](content_assistant.md#configure-a-model)
+describes.
 
 ## Deployment hosts
 

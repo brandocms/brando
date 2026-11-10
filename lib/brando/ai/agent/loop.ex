@@ -20,6 +20,14 @@ defmodule Brando.AI.Agent.Loop do
   alias Brando.Repo
   alias ReqLLM.{Context, Response, ToolCall}
 
+  # A run starts only while `Brando.AI.Agent.available?/0`, which needs the
+  # optional :req_llm dependency.
+  @compile {:no_warn_undefined,
+            if(Code.ensure_loaded?(ReqLLM),
+              do: [],
+              else: [Context, Response, ToolCall, ReqLLM.Tool, ReqLLM.Message.ContentPart]
+            )}
+
   @result_limit 24_000
 
   @doc "Run `run_id` for user `user_id` to completion and return the finished run."

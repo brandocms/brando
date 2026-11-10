@@ -75,6 +75,11 @@ defmodule Brando.AI.Cassette do
 
   alias Brando.AI.Cassette.{Matcher, MismatchError, Redact, Request, Response, Server}
 
+  # Model calls, and so the code that records and replays them, need the
+  # optional :req_llm dependency; `Brando.AI` makes no call without it.
+  @compile {:no_warn_undefined,
+            if(Code.ensure_loaded?(ReqLLM), do: [], else: [Response, ReqLLM.StreamResponse.MetadataHandle])}
+
   @modes [:replay, :record, :auto]
   @version 1
 
@@ -363,7 +368,7 @@ defmodule Brando.AI.Cassette do
     secrets = [opts[:api_key]]
 
     case client.stream_text(model, prompt, opts) do
-      {:ok, %ReqLLM.StreamResponse{} = response} ->
+      {:ok, response} when is_struct(response, ReqLLM.StreamResponse) ->
         {:ok, %{response | stream: tap(response, server, state, request, secrets)}}
 
       {:error, error} = result ->

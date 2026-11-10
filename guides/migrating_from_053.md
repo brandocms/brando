@@ -1066,6 +1066,11 @@ Brando's `mix.exs` as well. In particular:
   Floki at runtime, and `mix deps.get` stops with "Dependencies have diverged"
   while the application restricts it to tests.
 - Igniter is an optional Brando dependency the source tasks are built on.
+- AI (AI actions on fields, alt text and meta description drafts, the
+  content assistant) is new in 0.55 and needs the optional
+  `{:req_llm, "~> 1.29"}` dependency, which Brando does not bring in. Add it
+  to use AI; without it Brando runs with AI unavailable. See
+  [Content assistant](content_assistant.md#configure-a-model).
 - Sentry 14 removes the `:enable_logs` and `:enable_metrics` options. A
   `config :sentry` that sets `enable_logs: true` instead sets the level to
   send in its `:logs` block (`logs: [level: :info]`); without a `:level`,

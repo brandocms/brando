@@ -50,7 +50,7 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, hosts} <- resolve_hosts(options, project, deployment) do
         igniter
         |> Configuration.configure(project, tenancy)
-        |> dependencies()
+        |> dependencies(options)
         |> Version.plan()
         |> Deployment.plan(project, hosts, deployment)
         |> Docker.plan(project)
@@ -68,7 +68,7 @@ if Code.ensure_loaded?(Igniter) do
         # Last: Rewrite rereads the formatters when .formatter.exs changes, and
         # the files above are formatted as the project's formatters stood.
         |> formatter()
-        |> instructions(tenancy)
+        |> instructions(tenancy, options)
       else
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)
@@ -132,11 +132,10 @@ if Code.ensure_loaded?(Igniter) do
       error in Mix.Error -> {:error, Exception.message(error)}
     end
 
-    defp dependencies(igniter) do
+    defp dependencies(igniter, options) do
       # Preserve the user's package/git/path selection, including local Brando.
-      Enum.reduce([{:gettext, "~> 1.0"}, {:jason, "~> 1.0"}], igniter, fn dep, igniter ->
-        Dependencies.add_new(igniter, dep)
-      end)
+      deps = [{:gettext, "~> 1.0"}, {:jason, "~> 1.0"}] ++ if(options[:ai], do: [Brando.AI.dependency()], else: [])
+      Enum.reduce(deps, igniter, &Dependencies.add_new(&2, &1))
     end
 
     # Brando's .formatter.exs exports the Blueprint DSL's locals_without_parens.
@@ -409,7 +408,7 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp instructions(igniter, tenancy) do
+    defp instructions(igniter, tenancy, options) do
       Igniter.add_notice(igniter, """
       Brando source setup prepared (tenancy: #{tenancy.mode}). Review the diff before applying it.
       No database, account, asset build, or deployment was run.
@@ -437,7 +436,27 @@ if Code.ensure_loaded?(Igniter) do
 
       For coding agents, AGENTS.md links Brando's usage rules
       (deps/brando/usage-rules.md), and .claude/skills has Brando's site skills.
+
+      #{options[:ai] |> ai_instructions() |> String.trim_trailing()}
       """)
+    end
+
+    defp ai_instructions(true) do
+      """
+      AI: --ai added the req_llm dependency. Set a model and an API key in
+      config :brando, Brando.AI to turn on AI actions, alt text drafts and the
+      Assistant (deps/brando/guides/content_assistant.md).
+      """
+    end
+
+    defp ai_instructions(_) do
+      """
+      AI (field actions, alt text drafts, the Assistant) needs the req_llm
+      dependency, which was not added. To use it later, run
+      mix brando.install --ai, or add #{inspect(Brando.AI.dependency())} to deps in mix.exs,
+      then set a model and an API key in config :brando, Brando.AI
+      (deps/brando/guides/content_assistant.md).
+      """
     end
   end
 else

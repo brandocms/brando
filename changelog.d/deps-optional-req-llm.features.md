@@ -1,0 +1,1 @@
+- `mix brando.install --ai` adds the `req_llm` dependency AI needs, to a new or an installed application; without `--ai` the closing notice says how to add it later.

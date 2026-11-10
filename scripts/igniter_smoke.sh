@@ -88,6 +88,15 @@ if [[ "$smoke_bootstrap" == precompiled ]]; then
   mix deps.get > "$smoke_root/logs/deps-without-igniter.log" 2>&1
   mix compile > "$smoke_root/logs/compile-without-igniter.log" 2>&1
   mix run --no-start -e 'false = Code.ensure_loaded?(Igniter); false = Mix.Brando.Igniter.Project.__mix_recompile__?()' > "$smoke_root/logs/check-without-igniter.log" 2>&1
+  # Brando compiled there without either optional dependency, Igniter or
+  # req_llm: its part of the log (from "==> brando" to the next app) has no
+  # warning.
+  awk '/^==> /{brando = ($2 == "brando")} brando' "$smoke_root/logs/compile-without-igniter.log" > "$smoke_root/logs/brando-without-optional-deps.log"
+  if ! grep -q 'Generated brando app' "$smoke_root/logs/brando-without-optional-deps.log" ||
+    grep -q 'warning:' "$smoke_root/logs/brando-without-optional-deps.log"; then
+    echo "Brando did not compile warning-free without Igniter and req_llm; see $smoke_root/logs/brando-without-optional-deps.log" >&2
+    exit 1
+  fi
   elixir "$framework_dir/scripts/igniter_smoke/optional_dependency.exs" add
 fi
 mix deps.get > "$smoke_root/logs/deps.log" 2>&1
@@ -105,6 +114,10 @@ install_options=(--yes --tenancy-mode "$smoke_mode")
 if [[ "$smoke_mode" == single ]]; then install_options+=(--site-key smoke); fi
 mix igniter.install "brando@path:$brando_dir" "${install_options[@]}" > "$smoke_root/logs/install.log" 2>&1
 mix compile --warnings-as-errors > "$smoke_root/logs/compile.log" 2>&1
+# AI needs the optional req_llm, which the installer adds only with --ai: the
+# consumer, its admin and its site below run with AI unavailable.
+if grep -q ':req_llm' mix.exs; then echo "brando.install added req_llm without --ai" >&2; exit 1; fi
+mix run --no-start -e 'false = Code.ensure_loaded?(ReqLLM); false = Brando.AI.available?(); false = Brando.AI.enabled?()' > "$smoke_root/logs/check-without-req-llm.log" 2>&1
 if grep -l '__BRANDO_' .envrc.prod .envrc.staging; then echo "brando.install.secrets left markers in the files above" >&2; exit 1; fi
 # What Florist's release build needs, and the live preview of CMS pages.
 cmp Dockerfile "$brando_dir/priv/templates/brando.install/Dockerfile"

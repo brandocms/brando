@@ -1379,6 +1379,11 @@ msgstr "KI"
 msgid "AI crawlers"
 msgstr "AI-roboter"
 
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "AI is not installed on this site. Add the req_llm dependency to the site's mix.exs to use the assistant."
+msgstr "KI er ikke installert på dette nettstedet. Legg til avhengigheten req_llm i nettstedets mix.exs for å bruke assistenten."
+
 #: lib/brando/ai.ex
 #, elixir-autogen, elixir-format
 msgid "AI returned an empty response"

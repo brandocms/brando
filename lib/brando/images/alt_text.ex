@@ -27,6 +27,11 @@ defmodule Brando.Images.AltText do
   alias Brando.AI
   alias Brando.Images.Image
 
+  # describe/2 reaches ReqLLM only while `Brando.AI.enabled?/0`, which needs
+  # the optional :req_llm dependency.
+  @compile {:no_warn_undefined,
+            if(Code.ensure_loaded?(ReqLLM), do: [], else: [ReqLLM.Context, ReqLLM.Message.ContentPart])}
+
   @alt_length 125
   # Per requested language: the reply's sentence, and the prompt's mention.
   @reply_tokens_per_language 60
@@ -169,7 +174,8 @@ defmodule Brando.Images.AltText do
   def describe(id, opts \\ []) do
     ai_opts = ai_opts()
 
-    with {:ok, image} <- fetch(id),
+    with true <- AI.enabled?() || {:error, :disabled},
+         {:ok, image} <- fetch(id),
          languages = opts[:languages] || requested_languages(image),
          {:ok, binary, media_type} <- read(image),
          {:ok, %{text: text, model: model}} <-

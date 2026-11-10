@@ -89,6 +89,8 @@ defmodule E2eProject.MixProject do
       # brando
       # {:brando, github: "brandocms/brando"}
       {:brando, path: "../"},
+      # Brando's optional AI dependency: the specs drive the assistant and AI actions
+      {:req_llm, "~> 1.29"},
       {:brando_json_api, path: "../../brando_json_api"},
       {:brando_graphql, path: "../../brando_graphql"},
       {:opentelemetry_exporter, "~> 1.6"},

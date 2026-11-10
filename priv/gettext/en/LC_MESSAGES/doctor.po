@@ -443,6 +443,26 @@ msgstr ""
 msgid ".yalc brandojs %{version}"
 msgstr ""
 
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "AI configured without req_llm"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "AI: %{settings} set, but the req_llm dependency is missing"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "AI: not installed (no req_llm dependency)"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "AI: req_llm installed"
+msgstr ""
+
 #: lib/brando/doctor/checks/admin_css.ex
 #, elixir-autogen, elixir-format
 msgid "Admin CSS compiler"
@@ -481,6 +501,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "Assistant: AI turned off"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "Assistant: needs the req_llm dependency"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex
@@ -834,6 +859,11 @@ msgstr ""
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "a static robots.txt stands in front of the SEO text"
+msgstr ""
+
+#: lib/brando/doctor/checks/configuration.ex
+#, elixir-autogen, elixir-format
+msgid "add %{dependency} to deps in mix.exs and run mix deps.get, or remove the AI settings"
 msgstr ""
 
 #: lib/brando/doctor/checks/oban.ex
