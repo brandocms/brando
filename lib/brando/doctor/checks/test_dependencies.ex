@@ -29,12 +29,16 @@ defmodule Brando.Doctor.Checks.TestDependencies do
   def label, do: dgettext("doctor", "Test dependencies")
 
   # A doctor run from a release's remote shell has the default :mix mode but
-  # no Mix, so the project's dependencies are read only where Mix is.
+  # no Mix, so the project's dependencies are read only where Mix is. They are
+  # the list mix.exs gives for the current environment, and under :test that
+  # can hold entries a `Mix.env()` condition adds for tests only.
   @impl true
   def run(%Context{mode: :mix}) do
-    if Code.ensure_loaded?(Mix.Project) and Mix.Project.get(),
-      do: evaluate(from_deps(Mix.Project.config()[:deps] || [])),
-      else: from_release()
+    cond do
+      not Code.ensure_loaded?(Mix.Project) or is_nil(Mix.Project.get()) -> from_release()
+      Mix.env() == :test -> skipped(dgettext("doctor", "checked outside MIX_ENV=test, whose dependencies can differ"))
+      true -> evaluate(from_deps(Mix.Project.config()[:deps] || []))
+    end
   end
 
   def run(_context), do: from_release()

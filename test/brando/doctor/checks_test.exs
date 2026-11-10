@@ -1310,6 +1310,10 @@ defmodule Brando.Doctor.ChecksTest do
       assert result.fix =~ "test/support"
     end
 
+    test "under MIX_ENV=test the dependency list can differ from production's" do
+      assert %Result{status: :skipped} = Checks.TestDependencies.run(context(mode: :mix))
+    end
+
     test "the admin of a development server cannot tell what a release ships" do
       assert %Result{status: :skipped} = Checks.TestDependencies.run(context(mode: :admin))
     end

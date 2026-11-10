@@ -945,6 +945,11 @@ msgstr ""
 msgid "checked in development"
 msgstr ""
 
+#: lib/brando/doctor/checks/test_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "checked outside MIX_ENV=test, whose dependencies can differ"
+msgstr ""
+
 #: lib/brando/doctor/checks/colors.ex
 #, elixir-autogen, elixir-format
 msgid "colour %{key}: %{value}"
