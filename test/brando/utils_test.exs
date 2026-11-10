@@ -17,6 +17,11 @@ defmodule Brando.UtilsTest do
     defstruct a: "a", b: "b"
   end
 
+  test "existing_atom_path keeps a segment no atom names as a string" do
+    unknown = "no_atom_has_this_name_#{System.unique_integer([:positive])}"
+    assert existing_atom_path(["title", 0, unknown, :cover]) == [:title, 0, unknown, :cover]
+  end
+
   test "slugify basic stripping/no ending dash" do
     assert slugify("This is basic functionality!!!    ") == "this-is-basic-functionality"
   end

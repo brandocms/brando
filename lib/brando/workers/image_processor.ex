@@ -28,10 +28,7 @@ defmodule Brando.Worker.ImageProcessor do
     silent? = Map.get(args, "silent", false)
 
     field_full_path =
-      Enum.map(field_full_path, fn
-        segment when is_binary(segment) -> String.to_existing_atom(segment)
-        integer -> integer
-      end)
+      Brando.Utils.existing_atom_path(field_full_path)
 
     with {:ok, image} <- Images.get_image(image_id),
          {:ok, original} <- Images.restore_original(image) do

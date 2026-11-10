@@ -123,12 +123,7 @@ defmodule Brando.Worker.ImageUploader do
   defp user(nil), do: :system
   defp user(user_id), do: %{id: user_id}
 
-  defp field_path(field_full_path) do
-    Enum.map(field_full_path, fn
-      segment when is_binary(segment) -> String.to_existing_atom(segment)
-      integer -> integer
-    end)
-  end
+  defp field_path(field_full_path), do: Brando.Utils.existing_atom_path(field_full_path)
 
   # Each file has three minutes
   @impl Oban.Worker

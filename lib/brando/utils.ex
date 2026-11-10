@@ -371,6 +371,27 @@ defmodule Brando.Utils do
   end
 
   @doc """
+  A field path stored in a job's arguments (`["cover", 0, "image"]`), with
+  each string segment as the atom it names. A segment no atom has stays a
+  string. The path only says which form field a broadcast is for, and on a
+  node that has not loaded the schema yet, as an interactive release just
+  after it starts, no form on that node shows the field.
+  """
+  @spec existing_atom_path([String.t() | atom() | integer()]) :: [String.t() | atom() | integer()]
+  def existing_atom_path(path) do
+    Enum.map(path, fn
+      segment when is_binary(segment) ->
+        case existing_atom(segment) do
+          {:ok, atom} -> atom
+          :error -> segment
+        end
+
+      segment ->
+        segment
+    end)
+  end
+
+  @doc """
   The module `name` names (`"MyApp.Projects.Project"`, with or without
   `"Elixir."`), if it exists, or `nil`. Unlike `Module.concat/1` it creates no
   atom, so it is the one for names from a request or stored content.

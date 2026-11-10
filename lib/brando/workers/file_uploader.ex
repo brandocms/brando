@@ -18,10 +18,7 @@ defmodule Brando.Worker.FileUploader do
          }
        }) do
     field_full_path =
-      Enum.map(field_full_path, fn
-        segment when is_binary(segment) -> String.to_existing_atom(segment)
-        integer -> integer
-      end)
+      Brando.Utils.existing_atom_path(field_full_path)
 
     with {:ok, file} <- Files.get_file(file_id),
          {:ok, config} <- Files.get_config_for(config_target),
