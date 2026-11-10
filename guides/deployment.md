@@ -345,7 +345,9 @@ schedulers, an idle release measured about 125 MB resident in interactive mode
 and 550 MB in embedded mode. Code an editor's work loads stays loaded until
 the release restarts. The first request that needs a module waits for it to
 load, some tens of milliseconds once. A module missing from the release fails
-at that call, where embedded mode fails at boot. Put
+at that call, where embedded mode fails at boot. Brando still loads its
+libraries with native code (bcrypt, libvips, MDEx) at boot, so a server that
+cannot run them fails to start in either mode. Put
 `export RELEASE_MODE=embedded` in the environment file to load everything at
 boot. The line comes after the environment file is sourced so that setting
 wins.
