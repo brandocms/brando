@@ -167,7 +167,7 @@ defmodule Brando.Supervisor do
   # embedded release does.
   @native_modules [Bcrypt.Base, Vix.Nif, MDExNative.Native]
 
-  @doc false
+  @doc "The modules with native code that boot loads."
   def native_modules, do: @native_modules
 
   # A module a dependency update renamed is skipped rather than stopping
