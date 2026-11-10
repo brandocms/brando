@@ -1284,6 +1284,36 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "TestDependencies" do
+    test "a test library reaches the release without only: :test" do
+      deps = [
+        {:ex_machina, "~> 2.3"},
+        {:mox, "~> 1.2", only: :test},
+        {:bypass, "~> 2.1", only: [:dev, :test]},
+        {:lazy_html, ">= 0.1.0", only: [:test, :prod]},
+        {:excoveralls, "~> 0.18", runtime: false},
+        {:wallaby, github: "elixir-wallaby/wallaby"},
+        {:phoenix, "~> 1.8"}
+      ]
+
+      assert Checks.TestDependencies.from_deps(deps) == [:ex_machina, :lazy_html, :wallaby]
+    end
+
+    test "names the libraries and how to keep them out" do
+      assert %Result{status: :ok} = Checks.TestDependencies.evaluate([])
+
+      result = Checks.TestDependencies.evaluate([:ex_machina])
+      assert result.status == :warning
+      assert result.summary == "the release ships :ex_machina"
+      assert result.fix =~ "only: :test"
+      assert result.fix =~ "test/support"
+    end
+
+    test "the admin of a development server cannot tell what a release ships" do
+      assert %Result{status: :skipped} = Checks.TestDependencies.run(context(mode: :admin))
+    end
+  end
+
   describe "Deprecations" do
     @deprecated_calls %{
       {Brando.HTML, :picture_tag, 2} => "Use <.picture>",

@@ -776,6 +776,11 @@ msgstr "Tabellmal"
 msgid "Test database"
 msgstr "Testdatabase"
 
+#: lib/brando/doctor/checks/test_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "Test dependencies"
+msgstr "Testavhengigheter"
+
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "The checks could not run. Check the application logs, or run mix brando.doctor."
@@ -840,6 +845,11 @@ msgstr "en statisk robots.txt skygger for SEO-teksten"
 #, elixir-autogen, elixir-format
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
 msgstr "legg %{queues} til køene i config :brando, Oban (se Brando.Supervisor)"
+
+#: lib/brando/doctor/checks/test_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "add only: :test to them in mix.exs. A factory under lib/ that uses ExMachina moves to test/support, which elixirc_paths compiles for :test"
+msgstr "legg only: :test på dem i mix.exs. En factory under lib/ som bruker ExMachina flyttes til test/support, som elixirc_paths kompilerer for :test"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
@@ -929,6 +939,11 @@ msgstr "sjekk at den nattlige SitemapGenerator-jobben kjører, eller Verktøy �
 #, elixir-autogen, elixir-format
 msgid "check the errors of the discarded jobs"
 msgstr "se feilene til de forkastede jobbene"
+
+#: lib/brando/doctor/checks/test_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "checked in a production release or from the terminal"
+msgstr "sjekkes i en produksjonsrelease eller fra terminalen"
 
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
@@ -1294,6 +1309,11 @@ msgstr "node --version skrev %{version}"
 msgid "none in lib/"
 msgstr "ingen i lib/"
 
+#: lib/brando/doctor/checks/test_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "none in the release"
+msgstr "ingen i releasen"
+
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format
 msgid "not a Brando.Doctor.Check"
@@ -1488,6 +1508,11 @@ msgstr "standardgrenen"
 #, elixir-autogen, elixir-format
 msgid "the locked commit is not the latest on %{branch} (%{commit}): mix deps.update brando"
 msgstr "den låste commiten er ikke den nyeste på %{branch} (%{commit}): mix deps.update brando"
+
+#: lib/brando/doctor/checks/test_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "the release ships %{apps}"
+msgstr "releasen inneholder %{apps}"
 
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
