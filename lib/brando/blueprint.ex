@@ -836,7 +836,7 @@ defmodule Brando.Blueprint do
       Module.concat(["Brando", "Pages", "Fragment"])
     ]
 
-    list_blueprints() ++ brando_blueprints
+    list_blueprints() ++ load_modules(brando_blueprints)
   end
 
   def get_singular(module) do

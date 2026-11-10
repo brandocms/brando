@@ -62,7 +62,7 @@ defmodule Brando.Worker.ImageUploader do
         BrandoAdmin.Progress.show(user_id || :system)
 
         try do
-          upload(job, image_id, user_id, field_path(field_full_path), after_per_file: args["after_per_file"] == true)
+          upload(job, image_id, user_id, field_full_path, after_per_file: args["after_per_file"] == true)
         after
           BrandoAdmin.Progress.hide(user_id || :system)
         end
@@ -122,13 +122,6 @@ defmodule Brando.Worker.ImageUploader do
 
   defp user(nil), do: :system
   defp user(user_id), do: %{id: user_id}
-
-  defp field_path(field_full_path) do
-    Enum.map(field_full_path, fn
-      segment when is_binary(segment) -> String.to_existing_atom(segment)
-      integer -> integer
-    end)
-  end
 
   # Each file has three minutes
   @impl Oban.Worker

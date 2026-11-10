@@ -8,6 +8,15 @@ defmodule Brando.SupervisorTest do
   # every production Brando actually runs has never been started by a test —
   # and an Oban major that drops a compatibility shim would land in a release
   # rather than in CI.
+  # Boot loads these so a server that cannot load their native code fails to
+  # start, in interactive releases too. A module a dependency renamed would be
+  # skipped there without a word.
+  test "every module whose native code boot loads exists" do
+    for module <- Brando.Supervisor.native_modules() do
+      assert {:module, ^module} = Code.ensure_loaded(module)
+    end
+  end
+
   describe "oban_config/0" do
     setup do
       # The default only appears when no app-level config overrides it.

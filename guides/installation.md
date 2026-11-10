@@ -262,7 +262,9 @@ The installer writes:
   secrets. The diff and `--dry-run` show markers in place of the secrets,
   which the installer fills in after you accept the changes.
 - `rel/env.sh.eex`, which makes the release source the environment file
-  Florist copies into it (`.envrc.runtime`) and sets long node names.
+  Florist copies into it (`.envrc.runtime`), sets long node names and starts
+  the release in interactive mode (see
+  [Runtime environment](deployment.md#runtime-environment-envrc-flavor)).
 
 Prod connects as `<app>`, Florist's default database user, and staging as
 its own `<app>_staging`. Set up the Florist targets to match: in the staging target,

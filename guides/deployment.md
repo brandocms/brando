@@ -325,6 +325,8 @@ fi
 
 export RELEASE_DISTRIBUTION=name
 export RELEASE_NODE=${RELEASE_NODE:-<%= @release.name %>@127.0.0.1}
+
+export RELEASE_MODE=${RELEASE_MODE:-interactive}
 ```
 
 Florist's blue/green services set `RELEASE_NODE` per colour
@@ -333,6 +335,22 @@ respect it, so keep the `${RELEASE_NODE:-...}` form. For `:single`
 deployments, set a per-target default in the env file, also in that form, so
 prod and staging on one server don't share a node name:
 `export RELEASE_NODE="${RELEASE_NODE:-myapp_staging@127.0.0.1}"`.
+
+The last line starts the release in interactive mode: the VM loads a module
+the first time it is called. Elixir's own default for releases is embedded
+mode, which loads every module of every application at boot. Most of a Brando
+release's memory is loaded code, and a site that serves pages and is edited
+now and then never calls most of it. On a newly installed site with two
+schedulers, an idle release measured about 125 MB resident in interactive mode
+and 550 MB in embedded mode. Code an editor's work loads stays loaded until
+the release restarts. The first request that needs a module waits for it to
+load, some tens of milliseconds once. A module missing from the release fails
+at that call, where embedded mode fails at boot. Brando still loads its
+libraries with native code (bcrypt, libvips, MDEx) at boot, so a server that
+cannot run them fails to start in either mode. Put
+`export RELEASE_MODE=embedded` in the environment file to load everything at
+boot. The line comes after the environment file is sourced so that setting
+wins.
 
 `mix brando.install` generates both files and `rel/env.sh.eex` for a new
 application (see [Deployment hosts](installation.md#deployment-hosts)), with the

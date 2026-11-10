@@ -27,6 +27,8 @@ defmodule Brando.Supervisor do
     # Runtime translation configs (Page's) aren't checked by the compiler.
     Brando.Trait.Translatable.check_runtime_config!()
 
+    load_native_code!()
+
     children = [
       Brando.MarkdownSources.RateLimiter,
       Brando.MarkdownSources.SignatureCheck,
@@ -155,5 +157,29 @@ defmodule Brando.Supervisor do
   defp extra_oban_cron_jobs do
     otp_app = Application.get_env(:brando, :otp_app)
     Application.get_env(otp_app, :cron_jobs) || []
+  end
+
+  # Modules with native code load it when the module loads. An interactive
+  # release loads a module on first use, so a library this server cannot load
+  # (a missing or mismatched system library) would first fail an editor's
+  # login, upload or Markdown preview, after a blue/green switch has already
+  # stopped the old colour. Loading them here fails the boot instead, as an
+  # embedded release does.
+  @native_modules [Bcrypt.Base, Vix.Nif, MDExNative.Native]
+
+  @doc "The modules with native code that boot loads."
+  def native_modules, do: @native_modules
+
+  # A module a dependency update renamed is skipped rather than stopping
+  # every site's boot; Brando's tests check the list. An embedded release has
+  # loaded every module it has, and answers :embedded for one it lacks.
+  defp load_native_code! do
+    Enum.each(@native_modules, fn module ->
+      case Code.ensure_loaded(module) do
+        {:module, ^module} -> :ok
+        {:error, reason} when reason in [:nofile, :embedded] -> :ok
+        {:error, reason} -> raise "#{inspect(module)} could not load its native code: #{inspect(reason)}"
+      end
+    end)
   end
 end

@@ -88,7 +88,7 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:cont,
      socket
      |> assign(:pending_block_image_updates, %{})
-     |> attach_hook(:b_form_images, :handle_info, &handle_hooks_image_info/2)}
+     |> attach_hook(:b_form_images, :handle_info, &handle_image_message/2)}
   end
 
   # Every editor's fields, refs and vars follow the assets they show in
@@ -263,6 +263,15 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
   # Catch-all for focus events from portal forms (multi-select create modals, etc)
   defp handle_hooks_focus_event("focus", _, socket), do: {:halt, socket}
   defp handle_hooks_focus_event(_, _, socket), do: {:cont, socket}
+
+  # Image workers broadcast a job's field path as the job stored it, as
+  # strings. A worker's node may not have loaded the schema the path names
+  # yet, as an interactive release just after it starts; this node shows the
+  # form, so it has the atoms.
+  defp handle_image_message({image, [:image, _status] = event, path}, socket) when is_list(path),
+    do: handle_hooks_image_info({image, event, Brando.Utils.existing_atom_path(path)}, socket)
+
+  defp handle_image_message(message, socket), do: handle_hooks_image_info(message, socket)
 
   defp handle_hooks_image_info({image, [:image, :processing], path}, socket) do
     case String.split(image.config_target, ":") do

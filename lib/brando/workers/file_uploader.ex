@@ -17,12 +17,6 @@ defmodule Brando.Worker.FileUploader do
            "field_full_path" => field_full_path
          }
        }) do
-    field_full_path =
-      Enum.map(field_full_path, fn
-        segment when is_binary(segment) -> String.to_existing_atom(segment)
-        integer -> integer
-      end)
-
     with {:ok, file} <- Files.get_file(file_id),
          {:ok, config} <- Files.get_config_for(config_target),
          {:ok, _s3_key} <- CDN.upload_file(file, config, user_id || :system) do

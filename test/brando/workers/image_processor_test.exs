@@ -47,6 +47,22 @@ defmodule Brando.Worker.ImageProcessorTest do
     assert Brando.Repo.get!(Image, image.id).sizes == image.sizes
   end
 
+  # On a node that has not loaded the schema yet, as an interactive release
+  # just after it starts, the path's field names have no atoms. The worker
+  # only passes the path on; the form converts it.
+  test "a field path naming no atom on this node is passed on as stored", %{image: image} do
+    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:image:#{image.id}")
+    field = "no_atom_has_this_name_#{System.unique_integer([:positive])}"
+    path = ["items", 0, field]
+    args = %{"image_id" => image.id, "config_target" => "default", "user_id" => nil, "field_full_path" => path}
+
+    capture_log(fn ->
+      assert {:cancel, {:unsupported_image_type, ""}} = perform_job(Brando.Worker.ImageProcessor, args)
+    end)
+
+    assert_receive {%Image{id: id}, [:image, :error], ^path} when id == image.id
+  end
+
   test "a bulk recreate skips it and keeps its sizes", %{image: image, size: size} do
     Brando.Repo.update_all(Image, set: [config_target: "default"])
 
