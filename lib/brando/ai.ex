@@ -142,7 +142,7 @@ defmodule Brando.AI do
     config = config()
     agent = Application.get_env(:brando, Brando.AI.Agent, [])
 
-    if Keyword.get(config, :enabled, true) == false do
+    if Keyword.get(config, :enabled, true) in [false, nil] do
       []
     else
       for {name, set?} <- [

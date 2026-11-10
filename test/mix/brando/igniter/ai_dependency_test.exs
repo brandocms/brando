@@ -132,6 +132,46 @@ defmodule Mix.Brando.Igniter.AIDependencyTest do
     end
   end
 
+  test "an enabled: under a config_env() condition in runtime.exs does not decide both environments" do
+    models = config(~s(config :brando, Brando.AI, models: [default: "openai:gpt-4o"]))
+
+    for runtime <- [
+          "if config_env() == :dev, do: config(:brando, Brando.AI, enabled: false)",
+          """
+          if config_env() == :prod do
+            config :brando, Brando.AI, enabled: true, openai_api_key: System.get_env("OPENAI_API_KEY")
+          else
+            config :brando, Brando.AI, enabled: false
+          end
+          """
+        ] do
+      result = project(%{"config/config.exs" => models, "config/runtime.exs" => config(runtime)}) |> AIDependency.plan()
+      assert IgniterCase.source(result, "mix.exs") =~ @req_llm, runtime
+    end
+  end
+
+  test "enabled: nil is off, as for Brando.AI.enabled?/0" do
+    body = ~s(config :brando, Brando.AI, enabled: nil, models: [default: "openai:gpt-4o"])
+    result = project(%{"config/config.exs" => config(body)}) |> AIDependency.plan()
+    Igniter.Test.assert_unchanged(result, "mix.exs")
+  end
+
+  test "an import applies where import_config stands, so what follows it wins" do
+    defaults = config("config :brando, Brando.AI, enabled: false")
+    on = ~s(config :brando, Brando.AI, enabled: true, models: [default: "openai:gpt-4o"])
+
+    for {body, added?} <- [
+          {~s(import_config "ai_defaults.exs"\n) <> on, true},
+          {on <> ~s(\nimport_config "ai_defaults.exs"), false}
+        ] do
+      result =
+        project(%{"config/config.exs" => config(body), "config/ai_defaults.exs" => defaults})
+        |> AIDependency.plan()
+
+      assert IgniterCase.source(result, "mix.exs") =~ "req_llm" == added?, body
+    end
+  end
+
   test "enabled: false turns AI off wherever the settings are, unless a file turns it on again" do
     off = ~s(config :brando, Brando.AI, enabled: false)
     models = ~s(config :brando, Brando.AI, models: [default: "openai:gpt-4o"])

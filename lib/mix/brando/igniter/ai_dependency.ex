@@ -29,8 +29,8 @@ if Code.ensure_loaded?(Igniter) do
     def plan(igniter) do
       {igniter, read} =
         Enum.reduce([@base, @runtime | @environments], {igniter, %{}}, fn root, {igniter, read} ->
-          {igniter, files} = settings(igniter, [root], MapSet.new(), [])
-          {igniter, Map.put(read, root, files)}
+          {igniter, events, _seen} = events(igniter, root, MapSet.new())
+          {igniter, Map.put(read, root, events)}
         end)
 
       found =
@@ -53,15 +53,18 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # One environment's settings, `files` in the order its config applies
-    # them: none when the last `enabled:` set is a literal false, as in the
-    # merged config the doctor reads. An `enabled:` it cannot read is on.
-    # runtime.exs is read as applying to both environments, its `config_env()`
-    # branches included.
-    defp ai_settings(files) do
-      case files |> Enum.flat_map(fn {_found, enabled} -> enabled end) |> List.last() do
-        false -> []
-        _on -> Enum.flat_map(files, fn {found, _enabled} -> found end)
+    # One environment's settings, from `events` in the order its config
+    # applies them: none when the last `enabled:` set is a literal false or
+    # nil, as in the merged config the doctor reads. An `enabled:` it cannot
+    # read is on, and so is one under a condition (runtime.exs's
+    # `config_env()` branches): runtime.exs applies to both environments.
+    defp ai_settings(events) do
+      # The default, when no file sets it, is on.
+      enabled = for {:enabled, value} <- events, do: value
+
+      case List.last([true | enabled]) do
+        off when off in [false, nil] -> []
+        _on -> for {:setting, name} <- events, do: name
       end
     end
 
@@ -82,22 +85,32 @@ if Code.ensure_loaded?(Igniter) do
       """)
     end
 
-    # `{settings, enabled values}` of each file in `paths` and the files they
-    # import, each read once.
-    defp settings(igniter, [], _seen, files), do: {igniter, Enum.reverse(files)}
-
-    defp settings(igniter, [path | paths], seen, files) do
+    # The `{:setting, name}` and `{:enabled, value}` events of `path` in source
+    # order, with each literal import_config's events in its place, as Config
+    # applies them. A file is read once per root, which also stops cycles.
+    defp events(igniter, path, seen) do
       if path in seen or not Igniter.exists?(igniter, path) do
-        settings(igniter, paths, MapSet.put(seen, path), files)
+        {igniter, [], MapSet.put(seen, path)}
       else
+        seen = MapSet.put(seen, path)
+
         case include(igniter, path) do
           {:ok, igniter, quoted} ->
-            {file, imports} = scan(quoted, path)
-            settings(igniter, paths ++ imports, MapSet.put(seen, path), [file | files])
+            quoted
+            |> scan(path)
+            |> Enum.reduce({igniter, [], seen}, fn
+              {:import, file}, {igniter, acc, seen} ->
+                {igniter, imported, seen} = events(igniter, file, seen)
+                {igniter, Enum.reverse(imported, acc), seen}
+
+              event, {igniter, acc, seen} ->
+                {igniter, [event | acc], seen}
+            end)
+            |> then(fn {igniter, acc, seen} -> {igniter, Enum.reverse(acc), seen} end)
 
           # A file that does not parse sets nothing here; the upgrade goes on.
           :error ->
-            settings(igniter, paths, MapSet.put(seen, path), files)
+            {igniter, [], seen}
         end
       end
     end
@@ -115,46 +128,53 @@ if Code.ensure_loaded?(Igniter) do
       _ in [SyntaxError, TokenMissingError, MismatchedDelimiterError] -> :error
     end
 
-    defp scan(quoted, path) do
-      {_, {found, imports, enabled}} =
-        Macro.prewalk(quoted, {[], [], []}, fn
-          {:config, _, [:brando, {:__aliases__, _, [:Brando, :AI]}, opts]} = node, acc when is_list(opts) ->
-            {node, brando_ai(opts, acc)}
+    @conditionals [:if, :unless, :case, :cond, :with]
 
-          {:config, _, [:brando, {:__aliases__, _, [:Brando, :AI, :Agent]}, opts]} = node, {found, imports, enabled}
-          when is_list(opts) ->
-            found = if present?(opts[:model]), do: ["Brando.AI.Agent model" | found], else: found
-            {node, {found, imports, enabled}}
+    # This file's events in source order, imports as `{:import, path}`. An
+    # `enabled:` under a condition is `:conditional`: it may not apply.
+    defp scan(quoted, path, conditional? \\ false) do
+      {_, events} =
+        Macro.prewalk(quoted, [], fn
+          {kind, _, args}, events when kind in @conditionals and is_list(args) ->
+            # Scanned here, flagged; the walk does not go into it again.
+            {:conditional, Enum.reverse(scan(args, path, true), events)}
 
-          {:config, _, [:req_llm, opts]} = node, {found, imports, enabled} when is_list(opts) ->
-            found = if api_keys?(opts), do: ["req_llm API keys" | found], else: found
-            {node, {found, imports, enabled}}
+          {:config, _, [:brando, {:__aliases__, _, [:Brando, :AI]}, opts]} = node, events when is_list(opts) ->
+            {node, Enum.reverse(brando_ai(opts, conditional?), events)}
 
-          {:config, _, [:req_llm, key, value]} = node, {found, imports, enabled} when is_atom(key) ->
-            found = if api_keys?([{key, value}]), do: ["req_llm API keys" | found], else: found
-            {node, {found, imports, enabled}}
+          {:config, _, [:brando, {:__aliases__, _, [:Brando, :AI, :Agent]}, opts]} = node, events when is_list(opts) ->
+            {node, if(present?(opts[:model]), do: [{:setting, "Brando.AI.Agent model"} | events], else: events)}
 
-          {:import_config, _, [import]} = node, {found, imports, enabled} when is_binary(import) ->
+          {:config, _, [:req_llm, opts]} = node, events when is_list(opts) ->
+            {node, if(api_keys?(opts), do: [{:setting, "req_llm API keys"} | events], else: events)}
+
+          {:config, _, [:req_llm, key, value]} = node, events when is_atom(key) ->
+            {node, if(api_keys?([{key, value}]), do: [{:setting, "req_llm API keys"} | events], else: events)}
+
+          {:import_config, _, [import]} = node, events when is_binary(import) ->
             file = import |> Path.expand(Path.dirname(Path.expand(path))) |> Path.relative_to_cwd()
-            {node, {found, [file | imports], enabled}}
+            {node, [{:import, file} | events]}
 
-          node, acc ->
-            {node, acc}
+          node, events ->
+            {node, events}
         end)
 
-      {{Enum.reverse(found), Enum.reverse(enabled)}, Enum.reverse(imports)}
+      Enum.reverse(events)
     end
 
-    defp brando_ai(opts, {found, imports, enabled}) do
-      named =
+    defp brando_ai(opts, conditional?) do
+      settings =
         for {key, value} <- opts,
             is_atom(key),
             key in @ai_keys or String.ends_with?(Atom.to_string(key), "_api_key"),
             present?(value),
-            do: setting(key)
+            do: {:setting, setting(key)}
 
-      enabled = if Keyword.has_key?(opts, :enabled), do: [opts[:enabled] | enabled], else: enabled
-      {named ++ found, imports, enabled}
+      cond do
+        not Keyword.has_key?(opts, :enabled) -> settings
+        conditional? -> settings ++ [{:enabled, :conditional}]
+        true -> settings ++ [{:enabled, opts[:enabled]}]
+      end
     end
 
     defp setting(key) when key in [:models, :default_model], do: "Brando.AI models"

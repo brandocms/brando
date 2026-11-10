@@ -60,6 +60,9 @@ defmodule Brando.AI.WithoutReqLLMTest do
 
     put_test_env(Brando.AI, enabled: false, default_model: "openai:gpt-4o-mini")
     assert AI.settings() == []
+
+    put_test_env(Brando.AI, enabled: nil, default_model: "openai:gpt-4o-mini")
+    assert AI.settings() == []
     assert AI.dependency_warnings() == []
 
     put_test_env(Brando.AI.Agent, [])
