@@ -5,14 +5,13 @@ defmodule Brando.Doctor.Checks.ReleaseDependencies do
   compiled for production and its application starts with the release.
 
     * Tidewave, the coding agents' MCP server, evaluates code and runs SQL in
-      the application it is plugged into. Its own instructions add it with
-      `only: :dev` and plug it inside `if Mix.env() == :dev`. Shipped in a
-      production release it is an error: the check cannot tell whether the
-      endpoint plugs it. Tidewave takes a request from a loopback address,
-      for the site's own host, and on `/tidewave/mcp` without an `Origin`
-      header. Behind a reverse proxy on the same server, a client that is not
-      a browser meets all three, unless the endpoint sets `remote_ip` from
-      the proxy's forwarding header.
+      the application it is plugged into while Mix runs there. A release
+      without Mix does not start its MCP server, but a plugged Tidewave still
+      removes `X-Frame-Options` and the CSP `frame-ancestors` from every
+      response, and its toolbar, on by default, fails HTML responses. Its own
+      instructions add it with `only: :dev` and plug it inside
+      `if Mix.env() == :dev`. Loaded in a production release it is an error:
+      the check cannot tell whether the endpoint plugs it.
     * Test libraries (ExMachina, Mox, Bypass, Mimic, Wallaby, ExCoveralls).
       Brando's installers before 0.55 added `{:ex_machina, "~> 2.3"}` to every
       environment, with the factory under `lib/`.
@@ -104,7 +103,7 @@ defmodule Brando.Doctor.Checks.ReleaseDependencies do
       Enum.any?(apps, &(&1 in @dev_only)) &&
         dgettext(
           "doctor",
-          "Tidewave runs code for whoever reaches it: give it only: :dev in mix.exs and plug it inside if Mix.env() == :dev in the endpoint"
+          "Tidewave is for development: give it only: :dev in mix.exs and plug it inside if Mix.env() == :dev in the endpoint"
         ),
       Enum.any?(apps, &(&1 in @test_only)) &&
         dgettext(

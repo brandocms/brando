@@ -788,8 +788,8 @@ msgstr "Kontrollene kunne ikke kjøres. Se i applikasjonsloggene, eller kjør mi
 
 #: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
-msgid "Tidewave runs code for whoever reaches it: give it only: :dev in mix.exs and plug it inside if Mix.env() == :dev in the endpoint"
-msgstr "Tidewave kjører kode for alle som når den: gi den only: :dev i mix.exs og plugg den inn i if Mix.env() == :dev i endpointet"
+msgid "Tidewave is for development: give it only: :dev in mix.exs and plug it inside if Mix.env() == :dev in the endpoint"
+msgstr "Tidewave er for utvikling: gi den only: :dev i mix.exs og plugg den inn i if Mix.env() == :dev i endpointet"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format

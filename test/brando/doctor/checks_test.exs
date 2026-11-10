@@ -1345,6 +1345,20 @@ defmodule Brando.Doctor.ChecksTest do
       # A release's remote shell runs the doctor in :mix mode, without the source.
       assert %Result{status: :warning} = Checks.ReleaseDependencies.run(context(mode: :mix, source?: false))
     end
+
+    test "a production release that loaded Tidewave is an error" do
+      put_test_env(:env, :prod)
+
+      # Brando has no Tidewave dependency; a stand-in application is enough
+      # for Application.spec/2.
+      :ok = :application.load({:application, :tidewave, [vsn: ~c"0.9.2", modules: [], applications: [:kernel, :stdlib]]})
+      on_exit(fn -> :application.unload(:tidewave) end)
+
+      result = Checks.ReleaseDependencies.run(context(mode: :admin))
+      assert result.status == :error
+      assert result.summary =~ ":tidewave"
+      assert result.fix =~ "only: :dev"
+    end
   end
 
   describe "Deprecations" do
