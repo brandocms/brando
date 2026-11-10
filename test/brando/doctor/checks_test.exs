@@ -1290,13 +1290,14 @@ defmodule Brando.Doctor.ChecksTest do
         {:ex_machina, "~> 2.3"},
         {:mox, "~> 1.2", only: :test},
         {:bypass, "~> 2.1", only: [:dev, :test]},
-        {:lazy_html, ">= 0.1.0", only: [:test, :prod]},
+        {:mimic, "~> 1.7", only: [:test, :prod]},
+        {:lazy_html, ">= 0.1.0"},
         {:excoveralls, "~> 0.18", runtime: false},
         {:wallaby, github: "elixir-wallaby/wallaby"},
         {:phoenix, "~> 1.8"}
       ]
 
-      assert Checks.TestDependencies.from_deps(deps) == [:ex_machina, :lazy_html, :wallaby]
+      assert Checks.TestDependencies.from_deps(deps) == [:ex_machina, :mimic, :wallaby]
     end
 
     test "names the libraries and how to keep them out" do
@@ -1305,12 +1306,22 @@ defmodule Brando.Doctor.ChecksTest do
       result = Checks.TestDependencies.evaluate([:ex_machina])
       assert result.status == :warning
       assert result.summary == "the release ships :ex_machina"
-      assert result.fix =~ "only: :test"
+      assert result.fix =~ "only: [:test, :e2e]"
       assert result.fix =~ "test/support"
     end
 
     test "the admin of a development server cannot tell what a release ships" do
       assert %Result{status: :skipped} = Checks.TestDependencies.run(context(mode: :admin))
+    end
+
+    test "a production release reports the test libraries it loaded" do
+      put_test_env(:env, :prod)
+
+      # Brando's own test dependencies are loaded here, as in a release that ships them.
+      result = Checks.TestDependencies.run(context(mode: :admin))
+      assert result.status == :warning
+      assert result.summary =~ ":ex_machina"
+      refute result.summary =~ ":wallaby"
     end
   end
 

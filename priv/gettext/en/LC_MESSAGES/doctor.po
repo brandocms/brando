@@ -846,11 +846,6 @@ msgstr ""
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
 msgstr ""
 
-#: lib/brando/doctor/checks/test_dependencies.ex
-#, elixir-autogen, elixir-format
-msgid "add only: :test to them in mix.exs. A factory under lib/ that uses ExMachina moves to test/support, which elixirc_paths compiles for :test"
-msgstr ""
-
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "add {\"*/10 * * * *\", Brando.Worker.ScheduledPublishingSweep} to the crontab in config :brando, Oban"
@@ -1161,6 +1156,11 @@ msgstr ""
 #: lib/brando/doctor/checks/sitemap.ex
 #, elixir-autogen, elixir-format
 msgid "less than an hour"
+msgstr ""
+
+#: lib/brando/doctor/checks/test_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "limit them in mix.exs to the environments the tests run in, such as only: :test or only: [:test, :e2e]. A factory under lib/ that uses ExMachina moves to test/support, which elixirc_paths compiles for those environments"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex

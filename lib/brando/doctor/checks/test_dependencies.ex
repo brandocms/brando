@@ -15,8 +15,9 @@ defmodule Brando.Doctor.Checks.TestDependencies do
 
   alias Brando.Doctor.Context
 
-  # Libraries a site only uses in its tests.
-  @test_only [:ex_machina, :mox, :bypass, :mimic, :wallaby, :excoveralls, :lazy_html]
+  # Libraries a site only uses in its tests. LazyHTML is left out: it is an
+  # HTML parser a site may also use at runtime.
+  @test_only [:ex_machina, :mox, :bypass, :mimic, :wallaby, :excoveralls]
 
   @doc "The libraries this check looks for."
   def test_only, do: @test_only
@@ -27,10 +28,18 @@ defmodule Brando.Doctor.Checks.TestDependencies do
   @impl true
   def label, do: dgettext("doctor", "Test dependencies")
 
+  # A doctor run from a release's remote shell has the default :mix mode but
+  # no Mix, so the project's dependencies are read only where Mix is.
   @impl true
-  def run(%Context{mode: :mix}), do: evaluate(from_deps(Mix.Project.config()[:deps] || []))
+  def run(%Context{mode: :mix}) do
+    if Code.ensure_loaded?(Mix.Project) and Mix.Project.get(),
+      do: evaluate(from_deps(Mix.Project.config()[:deps] || [])),
+      else: from_release()
+  end
 
-  def run(_context) do
+  def run(_context), do: from_release()
+
+  defp from_release do
     if Brando.env() == :prod,
       do: evaluate(Enum.filter(@test_only, &Application.spec(&1, :vsn))),
       else: skipped(dgettext("doctor", "checked in a production release or from the terminal"))
@@ -67,7 +76,7 @@ defmodule Brando.Doctor.Checks.TestDependencies do
       fix:
         dgettext(
           "doctor",
-          "add only: :test to them in mix.exs. A factory under lib/ that uses ExMachina moves to test/support, which elixirc_paths compiles for :test"
+          "limit them in mix.exs to the environments the tests run in, such as only: :test or only: [:test, :e2e]. A factory under lib/ that uses ExMachina moves to test/support, which elixirc_paths compiles for those environments"
         )
     )
   end

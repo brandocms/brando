@@ -846,11 +846,6 @@ msgstr "en statisk robots.txt skygger for SEO-teksten"
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
 msgstr "legg %{queues} til køene i config :brando, Oban (se Brando.Supervisor)"
 
-#: lib/brando/doctor/checks/test_dependencies.ex
-#, elixir-autogen, elixir-format
-msgid "add only: :test to them in mix.exs. A factory under lib/ that uses ExMachina moves to test/support, which elixirc_paths compiles for :test"
-msgstr "legg only: :test på dem i mix.exs. En factory under lib/ som bruker ExMachina flyttes til test/support, som elixirc_paths kompilerer for :test"
-
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "add {\"*/10 * * * *\", Brando.Worker.ScheduledPublishingSweep} to the crontab in config :brando, Oban"
@@ -1162,6 +1157,11 @@ msgstr "sist generert for %{age} siden"
 #, elixir-autogen, elixir-format
 msgid "less than an hour"
 msgstr "under en time"
+
+#: lib/brando/doctor/checks/test_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "limit them in mix.exs to the environments the tests run in, such as only: :test or only: [:test, :e2e]. A factory under lib/ that uses ExMachina moves to test/support, which elixirc_paths compiles for those environments"
+msgstr "begrens dem i mix.exs til miljøene testene kjører i, for eksempel only: :test eller only: [:test, :e2e]. En factory under lib/ som bruker ExMachina flyttes til test/support, som elixirc_paths kompilerer for disse miljøene"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
