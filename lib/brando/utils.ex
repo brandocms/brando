@@ -373,9 +373,10 @@ defmodule Brando.Utils do
   @doc """
   A field path stored in a job's arguments (`["cover", 0, "image"]`), with
   each string segment as the atom it names. A segment no atom has stays a
-  string. The path only says which form field a broadcast is for, and on a
-  node that has not loaded the schema yet, as an interactive release just
-  after it starts, no form on that node shows the field.
+  string: a node that has not loaded the schema yet, as an interactive
+  release just after it starts, has no atom for its fields. The path only
+  says which form field a broadcast is for, and the form that receives it
+  converts it again with its schema loaded.
   """
   @spec existing_atom_path([String.t() | atom() | integer()]) :: [String.t() | atom() | integer()]
   def existing_atom_path(path) do

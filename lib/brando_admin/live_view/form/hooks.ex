@@ -309,9 +309,12 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
         schema = socket.assigns.schema
         image_schema = Brando.Utils.existing_module(image_schema_binary)
 
+        # A worker on a node that had not loaded the schema yet sends the
+        # segments it has no atom for as strings; this node has the form's
+        # schema loaded.
         full_path =
           if image_schema != schema do
-            path
+            Brando.Utils.existing_atom_path(path)
           else
             [field_atom]
           end

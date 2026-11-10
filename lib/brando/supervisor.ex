@@ -171,12 +171,13 @@ defmodule Brando.Supervisor do
   def native_modules, do: @native_modules
 
   # A module a dependency update renamed is skipped rather than stopping
-  # every site's boot; Brando's tests check the list.
+  # every site's boot; Brando's tests check the list. An embedded release has
+  # loaded every module it has, and answers :embedded for one it lacks.
   defp load_native_code! do
     Enum.each(@native_modules, fn module ->
       case Code.ensure_loaded(module) do
         {:module, ^module} -> :ok
-        {:error, :nofile} -> :ok
+        {:error, reason} when reason in [:nofile, :embedded] -> :ok
         {:error, reason} -> raise "#{inspect(module)} could not load its native code: #{inspect(reason)}"
       end
     end)

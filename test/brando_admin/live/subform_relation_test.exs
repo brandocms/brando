@@ -306,6 +306,22 @@ defmodule BrandoAdmin.SubformRelationTest do
              Enum.find(form_assigns(view).entry.items, &(&1.id == second_id))
   end
 
+  test "a processed image lands on its row when the worker's node had no atoms for the path", ctx do
+    view = open(ctx)
+    pick(view, ctx.image)
+
+    # A worker on a node that has not loaded the schema yet keeps the field
+    # segments it has no atom for as strings (`Brando.Utils.existing_atom_path/1`).
+    processed = %{ctx.image | path: "image/processed.jpg"}
+    send(view.pid, {processed, [:image, :updated], ["items", 0, "cover"]})
+    render(view)
+
+    item_id = ctx.item.id
+
+    assert %{cover: %{path: "image/processed.jpg"}} =
+             Enum.find(form_assigns(view).entry.items, &(&1.id == item_id))
+  end
+
   # A row marked for deletion is still a row of the form until the
   # browser's next change (`PendingRows` then takes it out), so a delivery's
   # path counts it. The deliveries write through `put_key_at/4`: the picker,
