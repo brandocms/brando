@@ -85,8 +85,14 @@ defmodule Mix.Brando.Igniter.AIDependencyTest do
     for files <- [
           %{},
           %{"config/config.exs" => config(~s(config :brando, media_path: "./media"))},
-          # The cassette client of the test config is no AI of its own.
-          %{"config/test.exs" => config("config :brando, Brando.AI, client: Brando.AI.Cassette")},
+          # The test config is no site's AI: it points at cassettes and scripted models.
+          %{
+            "config/test.exs" =>
+              config("""
+              config :brando, Brando.AI, client: Brando.AI.Cassette, models: [default: "openai:gpt-4o"]
+              config :brando, Brando.AI.Agent, model: "anthropic:claude-opus-5-5"
+              """)
+          },
           %{"config/config.exs" => config("config :brando, Brando.AI, enabled: true, providers: [], models: nil")},
           %{
             "config/config.exs" =>
@@ -98,6 +104,76 @@ defmodule Mix.Brando.Igniter.AIDependencyTest do
       assert result.tasks == []
       refute Enum.any?(result.notices, &(&1 =~ "req_llm")), inspect(files)
     end
+  end
+
+  test "a config file that does not parse is skipped, not a failed upgrade" do
+    igniter = project(%{"config/config.exs" => config(~s(config :brando, Brando.AI, models: [default: "openai:gpt-4o"]))})
+
+    # On disk, as a real run finds it: IgniterCase includes (and parses) what it is given.
+    files = Map.put(igniter.assigns.test_files, "config/prod.exs", config("config :brando, Brando.AI, providers: ["))
+    result = igniter |> Igniter.assign(:test_files, files) |> AIDependency.plan()
+
+    assert result.issues == []
+    assert IgniterCase.source(result, "mix.exs") =~ @req_llm
+  end
+
+  test "enabled: false turns AI off wherever the settings are, unless a file turns it on again" do
+    off = ~s(config :brando, Brando.AI, enabled: false)
+    models = ~s(config :brando, Brando.AI, models: [default: "openai:gpt-4o"])
+
+    for {files, added?} <- [
+          # Off in config.exs, settings in the file it imports
+          {%{
+             "config/config.exs" => config(off <> ~s(\nimport_config "brando.exs")),
+             "config/brando.exs" => config(models)
+           }, false},
+          # Off in config.exs, on again in production
+          {%{
+             "config/config.exs" => config(off <> ", " <> String.trim_leading(models, "config :brando, Brando.AI, ")),
+             "config/prod.exs" => config("config :brando, Brando.AI, enabled: true")
+           }, true},
+          # On at runtime by a setting it cannot read
+          {%{
+             "config/config.exs" => config(off <> "\n" <> models),
+             "config/runtime.exs" => config(~s|config :brando, Brando.AI, enabled: System.get_env("AI") == "1"|)
+           }, true}
+        ] do
+      result = files |> project() |> AIDependency.plan()
+      assert IgniterCase.source(result, "mix.exs") =~ "req_llm" == added?, inspect(files)
+    end
+  end
+
+  test "config it cannot read as settings, and import cycles, change nothing and stop nothing" do
+    for body <- [
+          "opts = [models: [default: \"openai:gpt-4o\"]]\nconfig :brando, Brando.AI, opts",
+          "config :brando, Brando.AI, [:models, {:providers}]",
+          ~s(config :brando, Brando.AI, [{"models", "openai:gpt-4o"}]),
+          ~s(import_config "config.exs")
+        ] do
+      result = project(%{"config/config.exs" => config(body)}) |> AIDependency.plan()
+      assert result.issues == [], body
+      Igniter.Test.assert_unchanged(result, "mix.exs")
+    end
+  end
+
+  test "a deps/0 that is not one list is left alone, with a notice to add req_llm by hand" do
+    result =
+      project(%{
+        "mix.exs" => """
+        defmodule Studio.MixProject do
+          use Mix.Project
+          def project, do: [app: :studio, version: "0.1.0", deps: deps()]
+          defp deps, do: [{:brando, path: "../framework"}] ++ dev_deps()
+          defp dev_deps, do: [{:igniter, "~> 0.8", only: :dev}]
+        end
+        """,
+        "config/config.exs" => config(~s(config :brando, Brando.AI, models: [default: "openai:gpt-4o"]))
+      })
+      |> AIDependency.plan()
+
+    assert result.issues == []
+    Igniter.Test.assert_unchanged(result, "mix.exs")
+    assert Enum.any?(result.notices, &(&1 =~ ~s(the upgrade left it as it is: add {:req_llm, "~> 1.29"})))
   end
 
   describe "mix igniter.upgrade brando" do

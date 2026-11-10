@@ -24,78 +24,115 @@ if Code.ensure_loaded?(Igniter) do
     as it is otherwise, whatever form a `req_llm` it has takes.
     """
     def plan(igniter) do
-      {igniter, found} = settings(igniter, @configs, MapSet.new(), [])
+      {igniter, files} = settings(igniter, @configs, MapSet.new(), [])
 
-      cond do
-        found == [] -> igniter
-        Igniter.Project.Deps.has_dep?(igniter, :req_llm) -> igniter
-        true -> igniter |> Dependencies.add_new(Brando.AI.dependency()) |> notice(found)
+      case ai_settings(files) do
+        [] ->
+          igniter
+
+        found ->
+          # Not has_dep?/2: it reads a deps/0 Igniter cannot place as no req_llm,
+          # and adding to it then fails the whole upgrade.
+          case Igniter.Project.Deps.get_dep(igniter, :req_llm) do
+            {:ok, nil} -> igniter |> Dependencies.add_new(Brando.AI.dependency()) |> added(found)
+            {:ok, _declared} -> igniter
+            _unreadable -> by_hand(igniter, found)
+          end
       end
     end
 
-    defp notice(igniter, found) do
+    # Settings count unless every `enabled:` the files set is a literal false,
+    # which turns AI off wherever the settings are (the doctor reads the
+    # merged config the same way). An `enabled:` it cannot read leaves AI on.
+    defp ai_settings(files) do
+      enabled = Enum.flat_map(files, fn {_found, enabled} -> enabled end)
+
+      if enabled != [] and Enum.all?(enabled, &(&1 == false)),
+        do: [],
+        else: files |> Enum.flat_map(fn {found, _enabled} -> found end) |> Enum.uniq()
+    end
+
+    defp added(igniter, found) do
       Igniter.add_notice(igniter, """
       Added #{inspect(Brando.AI.dependency())} to mix.exs: the application configures AI
-      (#{found |> Enum.reverse() |> Enum.uniq() |> Enum.join(", ")}), and Brando's AI features
-      (AI actions, alt text drafts, the content assistant) call models through req_llm,
-      which Brando no longer brings in. Without it they would turn off. mix deps.get fetches it.
+      (#{Enum.join(found, ", ")}), and Brando's AI features (AI actions, alt text drafts,
+      the content assistant) call models through req_llm, which Brando no longer brings in.
+      Without it they would turn off. mix deps.get fetches it.
       """)
     end
 
-    # The settings in `paths` and the files they import, each read once.
-    defp settings(igniter, [], _seen, found), do: {igniter, found}
+    defp by_hand(igniter, found) do
+      Igniter.add_notice(igniter, """
+      The application configures AI (#{Enum.join(found, ", ")}), and Brando's AI features
+      need req_llm, which Brando no longer brings in. Its deps/0 in mix.exs is not one list,
+      so the upgrade left it as it is: add #{inspect(Brando.AI.dependency())} unless it has it.
+      """)
+    end
 
-    defp settings(igniter, [path | paths], seen, found) do
+    # `{settings, enabled values}` of each file in `paths` and the files they
+    # import, each read once.
+    defp settings(igniter, [], _seen, files), do: {igniter, Enum.reverse(files)}
+
+    defp settings(igniter, [path | paths], seen, files) do
       if path in seen or not Igniter.exists?(igniter, path) do
-        settings(igniter, paths, MapSet.put(seen, path), found)
+        settings(igniter, paths, MapSet.put(seen, path), files)
       else
-        igniter = Igniter.include_existing_file(igniter, path)
-        content = igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
+        case include(igniter, path) do
+          {:ok, igniter, quoted} ->
+            {file, imports} = scan(quoted, path)
+            settings(igniter, paths ++ imports, MapSet.put(seen, path), [file | files])
 
-        {in_file, imports} =
-          case Code.string_to_quoted(content) do
-            {:ok, quoted} -> scan(quoted, path)
-            {:error, _} -> {[], []}
-          end
-
-        settings(igniter, paths ++ imports, MapSet.put(seen, path), in_file ++ found)
+          # A file that does not parse sets nothing here; the upgrade goes on.
+          :error ->
+            settings(igniter, paths, MapSet.put(seen, path), files)
+        end
       end
     end
 
+    # Igniter parses a source as it includes it, and raises on a syntax error.
+    defp include(igniter, path) do
+      igniter = Igniter.include_existing_file(igniter, path)
+      content = igniter.rewrite |> Rewrite.source!(path) |> Rewrite.Source.get(:content)
+
+      case Code.string_to_quoted(content) do
+        {:ok, quoted} -> {:ok, igniter, quoted}
+        {:error, _} -> :error
+      end
+    rescue
+      _ in [SyntaxError, TokenMissingError, MismatchedDelimiterError] -> :error
+    end
+
     defp scan(quoted, path) do
-      {_, {found, imports, disabled}} =
+      {_, {found, imports, enabled}} =
         Macro.prewalk(quoted, {[], [], []}, fn
           {:config, _, [:brando, {:__aliases__, _, [:Brando, :AI]}, opts]} = node, acc when is_list(opts) ->
             {node, brando_ai(opts, acc)}
 
-          {:config, _, [:brando, {:__aliases__, _, [:Brando, :AI, :Agent]}, opts]} = node, {found, imports, disabled}
+          {:config, _, [:brando, {:__aliases__, _, [:Brando, :AI, :Agent]}, opts]} = node, {found, imports, enabled}
           when is_list(opts) ->
             found = if present?(opts[:model]), do: ["Brando.AI.Agent model" | found], else: found
-            {node, {found, imports, disabled}}
+            {node, {found, imports, enabled}}
 
-          {:config, _, [:req_llm, opts]} = node, {found, imports, disabled} when is_list(opts) ->
+          {:config, _, [:req_llm, opts]} = node, {found, imports, enabled} when is_list(opts) ->
             found = if api_keys?(opts), do: ["req_llm API keys" | found], else: found
-            {node, {found, imports, disabled}}
+            {node, {found, imports, enabled}}
 
-          {:config, _, [:req_llm, key, value]} = node, {found, imports, disabled} when is_atom(key) ->
+          {:config, _, [:req_llm, key, value]} = node, {found, imports, enabled} when is_atom(key) ->
             found = if api_keys?([{key, value}]), do: ["req_llm API keys" | found], else: found
-            {node, {found, imports, disabled}}
+            {node, {found, imports, enabled}}
 
-          {:import_config, _, [import]} = node, {found, imports, disabled} when is_binary(import) ->
+          {:import_config, _, [import]} = node, {found, imports, enabled} when is_binary(import) ->
             file = import |> Path.expand(Path.dirname(Path.expand(path))) |> Path.relative_to_cwd()
-            {node, {found, [file | imports], disabled}}
+            {node, {found, [file | imports], enabled}}
 
           node, acc ->
             {node, acc}
         end)
 
-      # `enabled: false` in the same file turns the settings beside it off, as
-      # it does for the doctor; an `enabled:` it cannot read leaves them on.
-      found = if disabled != [] and Enum.all?(disabled, &(&1 == false)), do: [], else: found
-      {found, Enum.reverse(imports)}
+      {{Enum.reverse(found), enabled}, Enum.reverse(imports)}
     end
 
-    defp brando_ai(opts, {found, imports, disabled}) do
+    defp brando_ai(opts, {found, imports, enabled}) do
       named =
         for {key, value} <- opts,
             is_atom(key),
@@ -103,8 +140,8 @@ if Code.ensure_loaded?(Igniter) do
             present?(value),
             do: setting(key)
 
-      disabled = if Keyword.has_key?(opts, :enabled), do: [opts[:enabled] | disabled], else: disabled
-      {named ++ found, imports, disabled}
+      enabled = if Keyword.has_key?(opts, :enabled), do: [opts[:enabled] | enabled], else: enabled
+      {named ++ found, imports, enabled}
     end
 
     defp setting(key) when key in [:models, :default_model], do: "Brando.AI models"

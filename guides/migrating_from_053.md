@@ -1071,10 +1071,12 @@ Brando's `mix.exs` as well. In particular:
   `{:req_llm, "~> 1.29"}` dependency, which Brando does not bring in. Add it
   to use AI; without it Brando runs with AI unavailable. See
   [Content assistant](content_assistant.md#configure-a-model).
-  `mix igniter.upgrade brando` adds it when the application's config sets AI
-  up and `mix.exs` has no `req_llm`. A site that follows a Git branch, whose
-  version does not change, runs no upgrade task: it adds the line itself, as
-  the boot log and `mix brando.doctor` say.
+  A 0.53 or 0.54 site has no AI config yet, so nothing here adds it. A site
+  already on a 0.55 development build that configured AI gets it from
+  `mix igniter.upgrade brando` when its version moves on (to a 0.55
+  prerelease, say), as long as `mix.exs` has no `req_llm`. One that follows a
+  Git branch, whose version does not change, gets no upgrade step: it adds
+  the line itself, as the boot log and `mix brando.doctor` say.
 - Sentry 14 removes the `:enable_logs` and `:enable_metrics` options. A
   `config :sentry` that sets `enable_logs: true` instead sets the level to
   send in its `:logs` block (`logs: [level: :info]`); without a `:level`,
