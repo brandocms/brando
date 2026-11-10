@@ -150,6 +150,46 @@ defmodule Mix.Brando.Igniter.AIDependencyTest do
     end
   end
 
+  test "settings under a condition count" do
+    for runtime <- [
+          """
+          if config_env() == :prod do
+            config :brando, Brando.AI, openai_api_key: System.get_env("OPENAI_API_KEY")
+          end
+          """,
+          """
+          case config_env() do
+            :prod -> config :brando, Brando.AI.Agent, model: "anthropic:claude-opus-5-5"
+            _ -> :ok
+          end
+          """
+        ] do
+      result = project(%{"config/runtime.exs" => config(runtime)}) |> AIDependency.plan()
+      assert IgniterCase.source(result, "mix.exs") =~ @req_llm, runtime
+    end
+  end
+
+  test "a file imported under a condition is conditional throughout" do
+    body = """
+    config :brando, Brando.AI, models: [default: "openai:gpt-4o"]
+
+    if config_env() == :dev do
+      import_config "ai_disabled.exs"
+    end
+    """
+
+    for off <- ["false", "nil"] do
+      result =
+        project(%{
+          "config/config.exs" => config(body),
+          "config/ai_disabled.exs" => config("config :brando, Brando.AI, enabled: #{off}")
+        })
+        |> AIDependency.plan()
+
+      assert IgniterCase.source(result, "mix.exs") =~ @req_llm, off
+    end
+  end
+
   test "enabled: nil is off, as for Brando.AI.enabled?/0" do
     body = ~s(config :brando, Brando.AI, enabled: nil, models: [default: "openai:gpt-4o"])
     result = project(%{"config/config.exs" => config(body)}) |> AIDependency.plan()

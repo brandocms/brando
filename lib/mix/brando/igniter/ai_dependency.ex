@@ -9,6 +9,13 @@ if Code.ensure_loaded?(Igniter) do
     # An upgrade adds it to an application whose config sets AI up, with the
     # settings `Brando.AI.settings/0` counts for the doctor and the boot log,
     # read from source: the application's config may not evaluate yet.
+    #
+    # It reads literal `config` calls in config.exs, dev.exs, prod.exs and
+    # runtime.exs and the files they import by a literal path. Settings under a
+    # condition count, and an `enabled:` under one reads as on, so it errs
+    # towards adding req_llm. Config built any other way (options in a
+    # variable, a computed import path) is not seen: the boot log and the
+    # doctor still warn about it.
 
     alias Mix.Brando.Igniter.Dependencies
 
@@ -87,8 +94,9 @@ if Code.ensure_loaded?(Igniter) do
 
     # The `{:setting, name}` and `{:enabled, value}` events of `path` in source
     # order, with each literal import_config's events in its place, as Config
-    # applies them. A file is read once per root, which also stops cycles.
-    defp events(igniter, path, seen) do
+    # applies them. A file is read once per root, which also stops cycles. A
+    # file imported under a condition is read as conditional throughout.
+    defp events(igniter, path, seen, conditional? \\ false) do
       if path in seen or not Igniter.exists?(igniter, path) do
         {igniter, [], MapSet.put(seen, path)}
       else
@@ -97,10 +105,10 @@ if Code.ensure_loaded?(Igniter) do
         case include(igniter, path) do
           {:ok, igniter, quoted} ->
             quoted
-            |> scan(path)
+            |> scan(path, conditional?)
             |> Enum.reduce({igniter, [], seen}, fn
-              {:import, file}, {igniter, acc, seen} ->
-                {igniter, imported, seen} = events(igniter, file, seen)
+              {:import, file, conditional?}, {igniter, acc, seen} ->
+                {igniter, imported, seen} = events(igniter, file, seen, conditional?)
                 {igniter, Enum.reverse(imported, acc), seen}
 
               event, {igniter, acc, seen} ->
@@ -130,9 +138,10 @@ if Code.ensure_loaded?(Igniter) do
 
     @conditionals [:if, :unless, :case, :cond, :with]
 
-    # This file's events in source order, imports as `{:import, path}`. An
+    # This file's events in source order, imports as `{:import, path,
+    # conditional?}`. An
     # `enabled:` under a condition is `:conditional`: it may not apply.
-    defp scan(quoted, path, conditional? \\ false) do
+    defp scan(quoted, path, conditional?) do
       {_, events} =
         Macro.prewalk(quoted, [], fn
           {kind, _, args}, events when kind in @conditionals and is_list(args) ->
@@ -153,7 +162,7 @@ if Code.ensure_loaded?(Igniter) do
 
           {:import_config, _, [import]} = node, events when is_binary(import) ->
             file = import |> Path.expand(Path.dirname(Path.expand(path))) |> Path.relative_to_cwd()
-            {node, [{:import, file} | events]}
+            {node, [{:import, file, conditional?} | events]}
 
           node, events ->
             {node, events}
