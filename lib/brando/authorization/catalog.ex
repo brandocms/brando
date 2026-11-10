@@ -151,17 +151,7 @@ defmodule Brando.Authorization.Catalog do
 
   @doc "Lists registered schemas, without turning submitted strings into atoms."
   def schemas do
-    [:brando, Brando.RuntimeConfig.get(:otp_app)]
-    |> Enum.uniq()
-    |> Enum.flat_map(fn app ->
-      case :application.get_key(app, :modules) do
-        {:ok, modules} -> modules
-        _ -> []
-      end
-    end)
-    |> Enum.uniq()
-    |> Brando.Blueprint.load_modules()
-    |> Enum.filter(&blueprint?/1)
+    Enum.uniq(Brando.Blueprint.brando_blueprints() ++ Brando.Blueprint.app_blueprints(Brando.RuntimeConfig.get(:otp_app)))
   end
 
   @doc "Resolves a schema name against registered resources only."

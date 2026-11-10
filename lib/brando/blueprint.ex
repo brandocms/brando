@@ -763,12 +763,66 @@ defmodule Brando.Blueprint do
   @doc """
   Loads `modules` in one batch and returns them. Checking each module of an
   application in turn loads it on first use, one code server call at a time,
-  and scans running side by side queue behind each other.
+  and scans running side by side queue behind each other. Modules already
+  loaded are left out of the batch, which costs about half a millisecond
+  even when it has nothing to load.
   """
   @spec load_modules([module()]) :: [module()]
   def load_modules(modules) do
-    _ = :code.ensure_modules_loaded(modules)
+    case Enum.reject(modules, &:erlang.module_loaded/1) do
+      [] -> :ok
+      unloaded -> _ = :code.ensure_modules_loaded(unloaded)
+    end
+
     modules
+  end
+
+  # Brando's own Blueprints, sorted as its application lists its modules.
+  # Kept by hand: scanning the `:brando` application for them loads every one
+  # of its modules, about 1,700, and they stay loaded until the node restarts.
+  # `test/brando/blueprints/brando_blueprints_test.exs` fails when a Blueprint
+  # in lib/ is missing here. Names, not aliases: Blueprints use this module
+  # at compile time, and an alias would tie each of them to all of these.
+  @brando_blueprints Enum.map(
+                       ~w(Content.Block Content.BlockIdentifier Content.Container Content.Module
+                          Content.ModuleSet Content.ModuleSetModule Content.Palette Content.Palette.Color
+                          Content.Ref Content.TableRow Content.TableTemplate Content.Template Content.Var
+                          Content.Var.Option Files.File Forms.Field Forms.Form Forms.Messages
+                          Forms.Recipient Galleries.Gallery Galleries.GalleryObject Images.Focal
+                          Images.Image Navigation.Item Navigation.Menu Pages.Fragment Pages.Page
+                          Pages.Property Revisions.Revision Sites.Config Sites.GlobalSet Sites.Identity
+                          Sites.Identity.TypeConfig Sites.Link Sites.Meta Sites.Preview Sites.Redirect
+                          Sites.SEO Sites.Service Users.User Users.UserConfig Videos.Video
+                          Villain.Blocks.CommentBlock.Data Villain.Blocks.FileBlock.Data
+                          Villain.Blocks.FragmentBlock.Data Villain.Blocks.GalleryBlock.Data
+                          Villain.Blocks.GalleryObjectOverride Villain.Blocks.HeaderBlock.Data
+                          Villain.Blocks.InputBlock.Data Villain.Blocks.MapBlock.Data
+                          Villain.Blocks.MarkdownBlock.Data Villain.Blocks.MarkdownSourceBlock.Data
+                          Villain.Blocks.MediaBlock.Data Villain.Blocks.PictureBlock.Data
+                          Villain.Blocks.SvgBlock.Data Villain.Blocks.VideoBlock.Data),
+                       &Module.concat(Brando, &1)
+                     )
+
+  @doc """
+  Brando's own Blueprint modules, embedded ones included, loaded. Unlike
+  `app_blueprints(:brando)`, it loads none of Brando's other modules.
+  """
+  @spec brando_blueprints :: [module()]
+  def brando_blueprints, do: load_modules(@brando_blueprints)
+
+  @doc """
+  The Blueprint modules of the application `app`, loaded, in the order the
+  application lists its modules; `[]` for an application that is not loaded.
+  Loads every module of `app` to check it.
+  """
+  @spec app_blueprints(atom()) :: [module()]
+  def app_blueprints(app) do
+    case :application.get_key(app, :modules) do
+      # Once loaded, `function_exported?/3` answers without calling into the
+      # module, as `blueprint?/1` does, and skips one that failed to load.
+      {:ok, modules} -> modules |> Enum.uniq() |> load_modules() |> Enum.filter(&function_exported?(&1, :__blueprint__, 0))
+      _ -> []
+    end
   end
 
   def list_blueprints(:include_brando) do
