@@ -47,11 +47,28 @@ defmodule Brando.Blueprint.BrandoBlueprintsTest do
   end
 
   describe "Catalog.schemas/0" do
+    # A site's application, its modules some Blueprints and some not.
+    @site :brando_blueprints_test_site
+    @site_modules [Brando.BlueprintTest.Project, Brando.Test.Support, Brando.TraitTest.Project]
+
+    setup do
+      :ok =
+        :application.load(
+          {:application, @site,
+           [description: ~c"test site", vsn: ~c"0.0.0", modules: @site_modules, registered: [], applications: []]}
+        )
+
+      on_exit(fn -> :application.unload(@site) end)
+    end
+
     test "is the full scan of Brando and the site, Brando's first" do
-      # A site's application: Brando's Blueprints come from the list, the
-      # site's from its own modules.
-      put_test_env(:otp_app, :ecto)
-      assert Catalog.schemas() == [:brando, :ecto] |> full_scan() |> Enum.filter(&in_lib?/1)
+      put_test_env(:otp_app, @site)
+      site = full_scan([@site])
+
+      assert site == [Brando.BlueprintTest.Project, Brando.TraitTest.Project]
+      assert Brando.Blueprint.app_blueprints(@site) == site
+      # Brando's half of the old scan, as a release has it: lib/ only.
+      assert Catalog.schemas() == Enum.filter(full_scan([:brando]), &in_lib?/1) ++ site
     end
 
     test "holds the same schemas as the full scan when Brando is the application" do

@@ -808,7 +808,9 @@ defmodule Brando.Blueprint do
   `app_blueprints(:brando)`, it loads none of Brando's other modules.
   """
   @spec brando_blueprints :: [module()]
-  def brando_blueprints, do: load_modules(@brando_blueprints)
+  def brando_blueprints do
+    @brando_blueprints |> load_modules() |> Enum.filter(&function_exported?(&1, :__blueprint__, 0))
+  end
 
   @doc """
   The Blueprint modules of the application `app`, loaded, in the order the
@@ -820,8 +822,11 @@ defmodule Brando.Blueprint do
     case :application.get_key(app, :modules) do
       # Once loaded, `function_exported?/3` answers without calling into the
       # module, as `blueprint?/1` does, and skips one that failed to load.
-      {:ok, modules} -> modules |> Enum.uniq() |> load_modules() |> Enum.filter(&function_exported?(&1, :__blueprint__, 0))
-      _ -> []
+      {:ok, modules} ->
+        modules |> Enum.uniq() |> load_modules() |> Enum.filter(&function_exported?(&1, :__blueprint__, 0))
+
+      _ ->
+        []
     end
   end
 
