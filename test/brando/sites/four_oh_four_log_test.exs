@@ -369,6 +369,33 @@ defmodule Brando.Sites.FourOhFourLogTest do
     assert [%{url: "/before-deploy", hits: 1}] = rows()
   end
 
+  test "the flusher hibernates after each flush, so it holds no rows between them" do
+    pid = start_supervised!({FourOhFour.Flusher, :timer.hours(1)})
+    Ecto.Adapters.SQL.Sandbox.allow(Brando.Repo.repo(), self(), pid)
+
+    for n <- 1..200, do: miss("/gone-#{n}")
+    send(pid, :flush)
+    # Handled after :flush, so the flush is done when it returns.
+    :sys.get_state(pid)
+    assert length(rows()) == 200
+
+    # A flush of 200 rows grows the heap to thousands of words; hibernating
+    # leaves the minimum.
+    assert small_heap?(pid, 50)
+
+    # Still flushing on shutdown after waking from hibernation.
+    miss("/after")
+    stop_supervised!(FourOhFour.Flusher)
+    assert Enum.any?(rows(), &(&1.url == "/after"))
+  end
+
+  defp small_heap?(_pid, 0), do: false
+
+  defp small_heap?(pid, tries) do
+    {:total_heap_size, words} = Process.info(pid, :total_heap_size)
+    words < 1_000 or (Process.sleep(10) && small_heap?(pid, tries - 1))
+  end
+
   # The logged URL keeps its escapes, as the request had them
   test "an escaped URL is its own referrer, however long its path" do
     for _ <- 1..2, do: miss("/bl%C3%A5b%C3%A6r", "https://site.no/bl%C3%A5b%C3%A6r")
