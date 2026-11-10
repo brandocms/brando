@@ -27,11 +27,14 @@ defmodule Brando.Sites.FourOhFour.Flusher do
     {:ok, interval}
   end
 
+  # A flush builds its rows on this process's heap, and an idle process keeps
+  # that heap until its next collection, one interval later. Hibernating drops
+  # it: the process holds only the interval between flushes.
   @impl true
   def handle_info(:flush, interval) do
     FourOhFour.flush()
     schedule(interval)
-    {:noreply, interval}
+    {:noreply, interval, :hibernate}
   end
 
   def handle_info(_message, interval), do: {:noreply, interval}

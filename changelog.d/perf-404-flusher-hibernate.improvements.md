@@ -1,0 +1,1 @@
+- The 404 log's flusher no longer keeps the last flush's working memory between flushes, several megabytes on a site with many broken links.

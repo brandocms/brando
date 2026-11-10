@@ -369,6 +369,14 @@ defmodule Brando.Sites.FourOhFourLogTest do
     assert [%{url: "/before-deploy", hits: 1}] = rows()
   end
 
+  test "the flusher hibernates after each flush, so it holds no rows between them" do
+    miss("/gone")
+    interval = :timer.hours(1)
+
+    assert {:noreply, ^interval, :hibernate} = FourOhFour.Flusher.handle_info(:flush, interval)
+    assert [%{url: "/gone", hits: 1}] = rows()
+  end
+
   # The logged URL keeps its escapes, as the request had them
   test "an escaped URL is its own referrer, however long its path" do
     for _ <- 1..2, do: miss("/bl%C3%A5b%C3%A6r", "https://site.no/bl%C3%A5b%C3%A6r")
