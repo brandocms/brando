@@ -726,6 +726,11 @@ msgstr "Side"
 msgid "Palette [%{namespace}] %{name}: %{item}"
 msgstr "Palett [%{namespace}] %{name}: %{item}"
 
+#: lib/brando/doctor/checks/release_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "Release dependencies"
+msgstr "Avhengigheter i releasen"
+
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format
 msgid "Resolve blocks"
@@ -776,15 +781,15 @@ msgstr "Tabellmal"
 msgid "Test database"
 msgstr "Testdatabase"
 
-#: lib/brando/doctor/checks/test_dependencies.ex
-#, elixir-autogen, elixir-format
-msgid "Test dependencies"
-msgstr "Testavhengigheter"
-
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "The checks could not run. Check the application logs, or run mix brando.doctor."
 msgstr "Kontrollene kunne ikke kjøres. Se i applikasjonsloggene, eller kjør mix brando.doctor."
+
+#: lib/brando/doctor/checks/release_dependencies.ex
+#, elixir-autogen, elixir-format
+msgid "Tidewave runs code for whoever reaches it: give it only: :dev in mix.exs and plug it inside if Mix.env() == :dev in the endpoint"
+msgstr "Tidewave kjører kode for alle som når den: gi den only: :dev i mix.exs og plugg den inn i if Mix.env() == :dev i endpointet"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -935,7 +940,7 @@ msgstr "sjekk at den nattlige SitemapGenerator-jobben kjører, eller Verktøy �
 msgid "check the errors of the discarded jobs"
 msgstr "se feilene til de forkastede jobbene"
 
-#: lib/brando/doctor/checks/test_dependencies.ex
+#: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
 msgid "checked in a production release, or with mix brando.doctor in the source tree"
 msgstr "sjekkes i en produksjonsrelease, eller med mix brando.doctor i kildekoden"
@@ -945,7 +950,7 @@ msgstr "sjekkes i en produksjonsrelease, eller med mix brando.doctor i kildekode
 msgid "checked in development"
 msgstr "sjekkes i utvikling"
 
-#: lib/brando/doctor/checks/test_dependencies.ex
+#: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
 msgid "checked outside MIX_ENV=test, whose dependencies can differ"
 msgstr "sjekkes utenfor MIX_ENV=test, som kan ha andre avhengigheter"
@@ -1163,10 +1168,10 @@ msgstr "sist generert for %{age} siden"
 msgid "less than an hour"
 msgstr "under en time"
 
-#: lib/brando/doctor/checks/test_dependencies.ex
+#: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
-msgid "limit them in mix.exs to the environments the tests run in, such as only: :test or only: [:test, :e2e]. A factory under lib/ that uses ExMachina moves to test/support, which elixirc_paths compiles for those environments"
-msgstr "begrens dem i mix.exs til miljøene testene kjører i, for eksempel only: :test eller only: [:test, :e2e]. En factory under lib/ som bruker ExMachina flyttes til test/support, som elixirc_paths kompilerer for disse miljøene"
+msgid "limit test libraries in mix.exs to the environments the tests run in, such as only: :test or only: [:test, :e2e], and move a factory under lib/ that uses ExMachina to test/support, which elixirc_paths compiles for those environments"
+msgstr "begrens testbibliotekene i mix.exs til miljøene testene kjører i, for eksempel only: :test eller only: [:test, :e2e], og flytt en factory under lib/ som bruker ExMachina til test/support, som elixirc_paths kompilerer for disse miljøene"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
@@ -1314,7 +1319,7 @@ msgstr "node --version skrev %{version}"
 msgid "none in lib/"
 msgstr "ingen i lib/"
 
-#: lib/brando/doctor/checks/test_dependencies.ex
+#: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
 msgid "none in the release"
 msgstr "ingen i releasen"
@@ -1514,7 +1519,7 @@ msgstr "standardgrenen"
 msgid "the locked commit is not the latest on %{branch} (%{commit}): mix deps.update brando"
 msgstr "den låste commiten er ikke den nyeste på %{branch} (%{commit}): mix deps.update brando"
 
-#: lib/brando/doctor/checks/test_dependencies.ex
+#: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
 msgid "the release ships %{apps}"
 msgstr "releasen inneholder %{apps}"
