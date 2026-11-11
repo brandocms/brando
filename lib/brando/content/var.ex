@@ -137,6 +137,11 @@ defmodule Brando.Content.Var do
       Brando.RichText.render_html(value) || ""
     end
 
+    # Its URL, as it prints in HEEx (`Phoenix.HTML.Safe` below): interpolated
+    # (`"#{@globals["footer"]["email"]}"`) or printed in Liquid (`{{ link }}`),
+    # not the struct
+    def to_string(%{type: :link} = var), do: Brando.Villain.Filters.link_url(var) || ""
+
     def to_string(%{type: _} = var) do
       inspect(var, pretty: true)
     end

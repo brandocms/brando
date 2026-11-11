@@ -1015,6 +1015,67 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "Link globals in HEEx" do
+    test "HEEx code using a link global as a string is a warning" do
+      user = Factory.insert(:user)
+
+      {:ok, _} =
+        Brando.Sites.create_global_set(
+          %{
+            label: "Footer",
+            key: "footer",
+            language: "en",
+            vars: [
+              %{type: :link, key: "email", label: "E-mail", link_type: :url, value: "mailto:a@example.com"},
+              %{type: :text, key: "address", label: "Address", value: "Street 1"}
+            ]
+          },
+          user
+        )
+
+      assert %Result{status: :ok} = Checks.HeexLinkGlobals.run(context())
+
+      footer =
+        Factory.insert(:module,
+          name: %{"en" => "Footer"},
+          type: :heex,
+          code: ~S"""
+          <footer>
+            <.entry_link :if={@globals["footer"]["email"]} var={@globals["footer"]["email"]} />
+            <a href={@globals["footer"]["email"] || "/contact"}>{@globals["footer"]["email"]}</a>
+            <a href={"mailto:" <> @globals["footer"]["email"]}>x</a>
+            <%= if @globals["footer"]["email"] == "" do %>none<% end %>
+            <span>{String.upcase(get_in(@globals, ["footer", "email"]))} {"Street: " <> @globals["footer"]["address"]}</span>
+          </footer>
+          """
+        )
+
+      # Liquid reads link globals as before, and a deleted HEEx module is gone
+      Factory.insert(:module, code: ~S({{ globals.footer.email | append: "?x" }}))
+      Factory.insert(:module, type: :heex, deleted_at: DateTime.utc_now(), code: ~S({"x" <> @globals["footer"]["email"]}))
+
+      container =
+        Brando.Repo.insert!(%Brando.Content.Container{
+          name: "Section",
+          namespace: "general",
+          type: :heex,
+          code: ~S(<section data-mail={@globals["footer"]["email"] <> "?x"}><.content /></section>)
+        })
+
+      result = Checks.HeexLinkGlobals.run(context())
+      assert result.status == :warning
+      assert result.summary == "2 HEEx templates use a link global as a string, which raises since link globals are vars"
+      assert result.fix =~ "Brando.Villain.Filters.link_url/1"
+
+      assert result.items == [
+               ~s|Footer (##{footer.id}), line 4: <a href={"mailto:" <> @globals["footer"]["email"]}>x</a>|,
+               ~s|Footer (##{footer.id}), line 5: <%= if @globals["footer"]["email"] == "" do %>none<% end %>|,
+               ~s|Footer (##{footer.id}), line 6: <span>{String.upcase(get_in(@globals, ["footer", "email"]))} {"Street: " <> @globals["footer"]["address"]}</span>|,
+               ~s|container Section (##{container.id}), line 1: <section data-mail={@globals["footer"]["email"] <> "?x"}><.content /></section>|
+             ]
+    end
+  end
+
   describe "Liquid in editor text" do
     test "a ref or var holding Liquid is a warning; an SVG or HTML ref is a template" do
       assert %Result{status: :ok} = Checks.EditorLiquid.run(context())
