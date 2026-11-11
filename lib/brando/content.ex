@@ -817,18 +817,25 @@ defmodule Brando.Content do
     with {:ok, :has_identifier} <- has_identifier(module),
          {:ok, :persist_identifier} <- persist_identifier(module),
          {:ok, identifier} <- get_identifier(module, entry) do
-      identifier
-      |> Brando.Repo.delete()
-      |> Brando.Cache.Query.evict()
+      delete_identifier(identifier)
     else
       _ -> {:ok, false}
     end
   end
 
   def delete_identifier(identifier) do
-    identifier
-    |> Brando.Repo.delete()
-    |> Brando.Cache.Query.evict()
+    # The delete clears `identifier_id` on vars that link to it, so ask first
+    linked_from_globals? = Brando.Sites.globals_link_to?(identifier.id)
+
+    result =
+      identifier
+      |> Brando.Repo.delete()
+      |> Brando.Cache.Query.evict()
+
+    # Cached link globals hold the identifier
+    if linked_from_globals? and match?({:ok, _}, result), do: Brando.Sites.refresh_globals()
+
+    result
   end
 
   def create_identifier(Brando.Images.Image, _entry), do: {:ok, false}
@@ -897,22 +904,25 @@ defmodule Brando.Content do
       # A destination that goes away leaves stored links as they are: an
       # absolute_url that reads an association the entry was loaded without
       # gives nil until the entry is next saved whole.
-      if new_link_url && new_link_url != old_link_url do
-        update_identifier_links(updated_identifier.id, new_link_url)
-      end
+      moved? = new_link_url && new_link_url != old_link_url
+      if moved?, do: update_identifier_links(updated_identifier.id, new_link_url)
+
+      # Cached link globals hold the identifier: its URL, and its title for a
+      # link with no text of its own
+      if moved? || Ecto.Changeset.changed?(changeset, :title),
+        do: Brando.Sites.refresh_globals_for_identifier(updated_identifier.id)
 
       {:ok, updated_identifier}
     end
   end
 
   # Stored rich-text links to the entry carry its link destination as `href`,
-  # and cached menus and link globals hold the identifier.
+  # and cached menus hold the identifier.
   defp update_identifier_links(identifier_id, new_url) do
     Brando.Content.Blocks.update_identifier_links_in_refs(identifier_id, new_url)
     Brando.Content.Blocks.update_identifier_links_in_html_vars(identifier_id, new_url)
     Brando.Content.Blocks.update_identifier_links_in_rich_text_fields(identifier_id, new_url)
     Brando.Navigation.refresh_cache_for_identifier(identifier_id)
-    Brando.Sites.refresh_globals_for_identifier(identifier_id)
   end
 
   def get_identifier(id) do

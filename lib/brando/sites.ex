@@ -406,22 +406,36 @@ defmodule Brando.Sites do
   @doc """
   Rebuilds the globals cache, and re-renders what reads globals once it is
   rebuilt, when a link global goes to `identifier_id`: the cache holds the
-  identifier, whose URL changes with the entry's link destination.
+  identifier, whose URL and title follow the entry.
   """
   @spec refresh_globals_for_identifier(pos_integer()) :: :ok
   def refresh_globals_for_identifier(identifier_id) do
+    if globals_link_to?(identifier_id), do: refresh_globals()
+    :ok
+  end
+
+  @doc """
+  Whether a link global goes to `identifier_id`. Ask before deleting the
+  identifier: the delete clears the link's `identifier_id`.
+  """
+  @spec globals_link_to?(pos_integer()) :: boolean()
+  def globals_link_to?(identifier_id) do
     query =
       from v in Var,
         where: v.identifier_id == ^identifier_id and not is_nil(v.global_set_id),
         select: 1,
         limit: 1
 
-    if Brando.Repo.one(query) do
-      {:ok, identifier_id}
-      |> Cache.Globals.update()
-      |> update_villains_referencing_global()
-    end
+    Brando.Repo.one(query) == 1
+  end
 
+  @doc """
+  Rebuilds the globals cache and re-renders what reads globals once it is
+  rebuilt, both after the transaction around the caller commits.
+  """
+  @spec refresh_globals() :: :ok
+  def refresh_globals do
+    {:ok, nil} |> Cache.Globals.update() |> update_villains_referencing_global()
     :ok
   end
 

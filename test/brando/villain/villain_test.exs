@@ -1235,6 +1235,65 @@ defmodule Brando.VillainTest do
              "<div class=\"paragraph\">So the global says: 'My replaced text'.</div>"
   end
 
+  test "a HEEx module renders a link global, and renders again when the entry it links to moves", %{user: user} do
+    Brando.Cache.Globals.set()
+
+    page = Factory.insert(:page, uri: "contact", title: "Contact", language: "en", creator: user)
+    {:ok, identifier} = Brando.Content.create_identifier(Brando.Pages.Page, page)
+
+    {:ok, _} =
+      Brando.Sites.create_global_set(
+        %{
+          label: "Footer",
+          key: "footer",
+          language: "en",
+          vars: [
+            %{type: :link, key: "contact", label: "Contact", link_type: :identifier, identifier_id: identifier.id},
+            %{
+              type: :link,
+              key: "email",
+              label: "E-mail",
+              link_type: :url,
+              value: "mailto:a@example.com",
+              link_text: "Mail"
+            }
+          ]
+        },
+        user
+      )
+
+    {:ok, module} =
+      Brando.Content.create_module(
+        Factory.params_for(:module, %{
+          type: :heex,
+          code: ~S"""
+          <footer><.entry_link var={@globals["footer"]["contact"]} /> <.entry_link var={@globals["footer"]["email"]} /></footer>
+          """
+        }),
+        :system
+      )
+
+    params =
+      Factory.params_for(:fragment, %{
+        parent_key: "footer",
+        key: "footer",
+        entry_blocks: [
+          %{block: %{type: :module, source: "Elixir.Brando.Pages.Fragment.Blocks", module_id: module.id, refs: []}}
+        ]
+      })
+
+    {:ok, fragment} = Brando.Pages.create_fragment(Ecto.Changeset.change(%Brando.Pages.Fragment{}, params), user)
+    {:ok, fragment} = Brando.Content.Blocks.render_entry(Brando.Pages.Fragment, fragment.id)
+
+    assert fragment.rendered_blocks =~ ~r{<a href="[^"]*/contact" class="link">\s*Contact\s*</a>}
+    assert fragment.rendered_blocks =~ ~r{<a href="mailto:a@example.com" class="link">\s*Mail\s*</a>}
+
+    {:ok, _} = Brando.Pages.update_page(page.id, %{uri: "contact-moved"}, user)
+
+    rendered = Brando.Repo.get(Brando.Pages.Fragment, fragment.id).rendered_blocks
+    assert rendered =~ ~r{<a href="[^"]*/contact-moved" class="link">\s*Contact\s*</a>}
+  end
+
   # The entries are rendered from the rebuilt cache: inside a transaction the
   # rebuild waits for the commit, and so does the render that reads it.
   test "a global set and a menu saved inside a transaction render their entries once committed", %{user: user} do

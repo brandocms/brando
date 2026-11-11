@@ -389,8 +389,11 @@ defmodule Brando.Villain do
   defp global_value(%{value: value}, true) when is_binary(value), do: Parser.escape_var_value(value)
 
   # HEEx gets a link global whole, so `<.entry_link var={...} />` has its text
-  # and target, and printing it gives its URL (`Phoenix.HTML.Safe` for `Var`)
-  defp global_value(%Brando.Content.Var{type: :link} = var, false), do: var
+  # and target, and printing it gives its URL (`Phoenix.HTML.Safe` for `Var`).
+  # One with no address to go to is nil, as its empty value was, so `:if` and
+  # `||` on it still skip it.
+  defp global_value(%Brando.Content.Var{type: :link} = var, false),
+    do: if(Brando.Villain.Filters.link_url(var), do: var)
 
   defp global_value(%{value: value}, _escape?), do: value
 

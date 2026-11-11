@@ -107,12 +107,13 @@ defmodule Brando.Villain.TemplateAdapter.HeexTest do
       }
 
       unsafe = %Var{type: :link, key: "unsafe", label: "Unsafe", link_type: :url, value: "javascript:alert(1)"}
+      empty = %Var{type: :link, key: "empty", label: "Empty", link_type: :url, value: nil, link_text: "Nowhere"}
       title = %Var{type: :text, key: "title", label: "Title", value: "Footer"}
 
       %{}
       |> Brando.Villain.create_context()
       |> Brando.Villain.add_to_context("globals", %{
-        "footer" => %{"email" => email, "unsafe" => unsafe, "title" => title}
+        "footer" => %{"email" => email, "unsafe" => unsafe, "empty" => empty, "title" => title}
       })
     end
 
@@ -131,15 +132,28 @@ defmodule Brando.Villain.TemplateAdapter.HeexTest do
     test "a printed link global gives its URL, escaped, and text globals stay values" do
       html =
         render_with_globals(~S"""
-        <p data-href={@globals["footer"]["email"]} data-unsafe={@globals["footer"]["unsafe"]}>
+        <p data-href={@globals["footer"]["email"]}>
           {@globals["footer"]["email"]}|{@globals["footer"]["title"]}
         </p>
         """)
 
       assert html =~ ~s(data-href="mailto:booking@example.com?subject=a&amp;b")
-      assert html =~ ~s(data-unsafe="")
-      refute html =~ "javascript:"
       assert html =~ "mailto:booking@example.com?subject=a&amp;b|Footer"
+    end
+
+    # As its empty value was before HEEx got the var
+    test "a link global with no safe address is nil, so :if and || skip it" do
+      html =
+        render_with_globals(~S"""
+        <a :if={@globals["footer"]["empty"]} class="empty">x</a>
+        <a :if={@globals["footer"]["unsafe"]} class="unsafe">x</a>
+        <span data-fallback={@globals["footer"]["empty"] || "/contact"}></span>
+        """)
+
+      refute html =~ ~s(class="empty")
+      refute html =~ ~s(class="unsafe")
+      refute html =~ "javascript:"
+      assert html =~ ~s(data-fallback="/contact")
     end
 
     test "Liquid still reads a link global as its URL" do
