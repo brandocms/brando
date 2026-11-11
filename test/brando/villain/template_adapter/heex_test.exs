@@ -94,6 +94,113 @@ defmodule Brando.Villain.TemplateAdapter.HeexTest do
     assert html =~ "Hello"
   end
 
+  describe "link globals" do
+    defp link_globals_context do
+      email = %Var{
+        type: :link,
+        key: "email",
+        label: "E-mail",
+        link_type: :url,
+        value: "mailto:booking@example.com?subject=a&b",
+        link_text: "Book us",
+        link_target_blank: true
+      }
+
+      unsafe = %Var{type: :link, key: "unsafe", label: "Unsafe", link_type: :url, value: "javascript:alert(1)"}
+      empty = %Var{type: :link, key: "empty", label: "Empty", link_type: :url, value: nil, link_text: "Nowhere"}
+      title = %Var{type: :text, key: "title", label: "Title", value: "Footer"}
+
+      %{}
+      |> Brando.Villain.create_context()
+      |> Brando.Villain.add_to_context("globals", %{
+        "footer" => %{"email" => email, "unsafe" => unsafe, "empty" => empty, "title" => title}
+      })
+    end
+
+    defp render_with_globals(code),
+      do: Heex.render_module(module(code), block(), %{}, %{}, opts(link_globals_context()))
+
+    test "entry_link renders a link global with its text and target" do
+      html = render_with_globals(~S(<.entry_link var={@globals["footer"]["email"]} />))
+
+      assert html =~ ~s(href="mailto:booking@example.com?subject=a&amp;b")
+      assert html =~ ~s(target="_blank")
+      assert html =~ ~s(class="link")
+      assert html =~ "Book us"
+    end
+
+    test "a printed link global gives its URL, escaped, and text globals stay values" do
+      html =
+        render_with_globals(~S"""
+        <p data-href={@globals["footer"]["email"]}>
+          {@globals["footer"]["email"]}|{@globals["footer"]["title"]}
+        </p>
+        """)
+
+      assert html =~ ~s(data-href="mailto:booking@example.com?subject=a&amp;b")
+      assert html =~ "mailto:booking@example.com?subject=a&amp;b|Footer"
+    end
+
+    # As its empty value was before HEEx got the var
+    test "a link global with no safe address is nil, so :if and || skip it" do
+      html =
+        render_with_globals(~S"""
+        <a :if={@globals["footer"]["empty"]} class="empty">x</a>
+        <a :if={@globals["footer"]["unsafe"]} class="unsafe">x</a>
+        <span data-fallback={@globals["footer"]["empty"] || "/contact"}></span>
+        """)
+
+      refute html =~ ~s(class="empty")
+      refute html =~ ~s(class="unsafe")
+      refute html =~ "javascript:"
+      assert html =~ ~s(data-fallback="/contact")
+    end
+
+    test "entry_link takes a link global as href, as it took its URL" do
+      html = render_with_globals(~S|<.entry_link href={@globals["footer"]["email"]}>Mail</.entry_link>|)
+
+      assert html =~ ~s(href="mailto:booking@example.com?subject=a&amp;b")
+      assert html =~ "Mail"
+    end
+
+    test "a link to an entry printed in Liquid gives its URL escaped" do
+      link = %Var{
+        type: :link,
+        key: "cta",
+        label: "CTA",
+        link_type: :identifier,
+        identifier: %Brando.Content.Identifier{url: ~s(/contact?a=1&b="2")}
+      }
+
+      context = Brando.Villain.create_context(%{"cta" => Brando.Villain.Parser.escape_link_var(link)})
+
+      assert Brando.Villain.parse_and_render("<a href=\"{{ cta }}\">x</a>", context) ==
+               ~s(<a href="/contact?a=1&amp;b=&quot;2&quot;">x</a>)
+    end
+
+    test "an interpolated link global gives its URL, not the struct" do
+      html = render_with_globals(~S|<a href={"#{@globals["footer"]["email"]}&cc=x"}>x</a>|)
+
+      assert html =~ ~s(href="mailto:booking@example.com?subject=a&amp;b&amp;cc=x")
+      refute html =~ "Brando.Content.Var"
+    end
+
+    test "a link var printed in Liquid gives its URL, not the struct" do
+      link = %Var{type: :link, key: "cta", label: "CTA", link_type: :url, value: "/contact?a=1&b=2"}
+      context = Brando.Villain.create_context(%{"cta" => Brando.Villain.Parser.escape_link_var(link)})
+
+      assert Brando.Villain.parse_and_render("<a href=\"{{ cta }}\">x</a>", context) ==
+               ~s(<a href="/contact?a=1&amp;b=2">x</a>)
+    end
+
+    test "Liquid still reads a link global as its URL" do
+      context = link_globals_context()
+
+      assert Brando.Villain.parse_and_render("{{ globals.footer.email }}", context) ==
+               "mailto:booking@example.com?subject=a&amp;b"
+    end
+  end
+
   test "single modules receive safe defaults for assigns only used by multi and datasource modules" do
     code = """
     <span data-content={@content} data-entries={length(@entries)} data-forloop={inspect(@forloop)}>

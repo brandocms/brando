@@ -44,6 +44,13 @@ msgid_plural "%{count} Blueprints link to admin routes the router does not defin
 msgstr[0] "%{count} Blueprint lenker til admin-ruter som ruteren ikke definerer"
 msgstr[1] "%{count} Blueprints lenker til admin-ruter som ruteren ikke definerer"
 
+#: lib/brando/doctor/checks/heex_link_globals.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} HEEx template uses a link global as a string, which raises or compares false since link globals are vars"
+msgid_plural "%{count} HEEx templates use a link global as a string, which raises or compares false since link globals are vars"
+msgstr[0] "%{count} HEEx-mal bruker en lenkeglobal som tekst, noe som feiler eller sammenligner usant nå som lenkeglobaler er variabler"
+msgstr[1] "%{count} HEEx-maler bruker en lenkeglobal som tekst, noe som feiler eller sammenligner usant nå som lenkeglobaler er variabler"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} already matches (mix brando.images.adopt records that)"
@@ -335,6 +342,7 @@ msgstr "%{language}: %{missing} av %{total} uten alt-tekst (%{coverage} dekket)"
 msgid "%{language}: no %{missing}"
 msgstr "%{language}: mangler %{missing}"
 
+#: lib/brando/doctor/checks/heex_link_globals.ex
 #: lib/brando/doctor/checks/module_entry_paths.ex
 #, elixir-autogen, elixir-format
 msgid "%{module} (#%{id}), line %{line}: %{code}"
@@ -625,6 +633,11 @@ msgstr "Bilder → Alt-tekst lager utkast med KI, til gjennomgang før lagring"
 msgid "JSON-LD"
 msgstr "JSON-LD"
 
+#: lib/brando/doctor/checks/heex_link_globals.ex
+#, elixir-autogen, elixir-format
+msgid "Link globals in HEEx"
+msgstr "Lenkeglobaler i HEEx"
+
 #: lib/brando/doctor/checks/editor_liquid.ex
 #, elixir-autogen, elixir-format
 msgid "Liquid in editor text"
@@ -725,6 +738,7 @@ msgstr "Oban-køer"
 msgid "Open SEO"
 msgstr "Åpne SEO"
 
+#: lib/brando/doctor/checks/heex_link_globals.ex
 #: lib/brando/doctor/checks/module_entry_paths.ex
 #, elixir-autogen, elixir-format
 msgid "Open block modules"
@@ -1005,6 +1019,11 @@ msgstr "commit %{commit} fra %{url}"
 msgid "configure the mailer's production adapter and credentials in config/runtime.exs"
 msgstr "sett opp e-postmodulens produksjonsadapter og tilgangsnøkler i config/runtime.exs"
 
+#: lib/brando/doctor/checks/heex_link_globals.ex
+#, elixir-autogen, elixir-format
+msgid "container %{name}"
+msgstr "seksjon %{name}"
+
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "could not read the test config: %{error}"
@@ -1252,6 +1271,11 @@ msgstr "ingen %{queues}-kø"
 #, elixir-autogen, elixir-format
 msgid "no API key for the Assistant"
 msgstr "ingen API-nøkkel for assistenten"
+
+#: lib/brando/doctor/checks/heex_link_globals.ex
+#, elixir-autogen, elixir-format
+msgid "no HEEx template uses a link global as a string"
+msgstr "ingen HEEx-mal bruker en lenkeglobal som tekst"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #: lib/brando/doctor/checks/admin_css.ex
@@ -1598,6 +1622,11 @@ msgstr "bruk versjonene denne Brando støtter (se installasjonsveiledningen)"
 #, elixir-autogen, elixir-format
 msgid "where the media is (on the server, or here once it is synced or mounted), run mix brando.images.adopt to record the images that match, then Utilities → Recreate changed images for the rest; here neither works, as adopting needs the files and recreating the originals"
 msgstr "der mediene ligger (på serveren, eller her når de er synkronisert eller montert), kjør mix brando.images.adopt for å registrere bildene som stemmer, og deretter Verktøy → Lag endrede bilder på nytt for resten; her virker ingen av delene, for registreringen trenger filene og å lage dem på nytt trenger originalene"
+
+#: lib/brando/doctor/checks/heex_link_globals.ex
+#, elixir-autogen, elixir-format
+msgid "where the template joins, compares or transforms the global, or gives it to a component attribute, wrap it in Brando.Villain.Filters.link_url/1; <.entry_link var={...} />, :if and printing it need no change"
+msgstr "der malen setter sammen, sammenligner eller bearbeider globalen, eller gir den til et komponentattributt, pakk den inn i Brando.Villain.Filters.link_url/1; <.entry_link var={...} />, :if og utskrift av den trenger ingen endring"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format

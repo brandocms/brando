@@ -134,7 +134,14 @@ Villain imports these HEEx components into module templates:
 - `<.picture src={...} opts={[...]} />` and `<.video src={...} opts={[...]} />`
   render media.
 - `<.entry_link var={@link_var} />` renders a link var; it also accepts a
-  direct `href` or `entry` plus `field`.
+  direct `href` or `entry` plus `field`. A link global is a link var too:
+  `<.entry_link var={@globals["footer"]["email"]} />` renders its text and
+  target. Printed as `{@globals["footer"]["email"]}`, interpolated or in an
+  HTML attribute, a link var gives its URL, and so does `href` here; another
+  component's attribute or a string function takes
+  `Brando.Villain.Filters.link_url(@globals["footer"]["email"])`. A link global
+  with no address, or one with a script or unknown scheme, is `nil`, so `:if`
+  skips it. Other globals arrive as their values.
 - `<.route ... />`, `<.route_i18n ... />`, `<.fragment ... />` and `<.t ... />`
   provide the corresponding Villain helpers.
 - `<.content />` inserts rendered children in multi modules and containers.

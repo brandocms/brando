@@ -43,6 +43,13 @@ msgid_plural "%{count} Blueprints link to admin routes the router does not defin
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/heex_link_globals.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} HEEx template uses a link global as a string, which raises or compares false since link globals are vars"
+msgid_plural "%{count} HEEx templates use a link global as a string, which raises or compares false since link globals are vars"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} already matches (mix brando.images.adopt records that)"
@@ -334,6 +341,7 @@ msgstr ""
 msgid "%{language}: no %{missing}"
 msgstr ""
 
+#: lib/brando/doctor/checks/heex_link_globals.ex
 #: lib/brando/doctor/checks/module_entry_paths.ex
 #, elixir-autogen, elixir-format
 msgid "%{module} (#%{id}), line %{line}: %{code}"
@@ -624,6 +632,11 @@ msgstr ""
 msgid "JSON-LD"
 msgstr ""
 
+#: lib/brando/doctor/checks/heex_link_globals.ex
+#, elixir-autogen, elixir-format
+msgid "Link globals in HEEx"
+msgstr ""
+
 #: lib/brando/doctor/checks/editor_liquid.ex
 #, elixir-autogen, elixir-format
 msgid "Liquid in editor text"
@@ -724,6 +737,7 @@ msgstr ""
 msgid "Open SEO"
 msgstr ""
 
+#: lib/brando/doctor/checks/heex_link_globals.ex
 #: lib/brando/doctor/checks/module_entry_paths.ex
 #, elixir-autogen, elixir-format
 msgid "Open block modules"
@@ -1004,6 +1018,11 @@ msgstr ""
 msgid "configure the mailer's production adapter and credentials in config/runtime.exs"
 msgstr ""
 
+#: lib/brando/doctor/checks/heex_link_globals.ex
+#, elixir-autogen, elixir-format
+msgid "container %{name}"
+msgstr ""
+
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "could not read the test config: %{error}"
@@ -1250,6 +1269,11 @@ msgstr ""
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no API key for the Assistant"
+msgstr ""
+
+#: lib/brando/doctor/checks/heex_link_globals.ex
+#, elixir-autogen, elixir-format
+msgid "no HEEx template uses a link global as a string"
 msgstr ""
 
 #: lib/brando/doctor/checks/admin_assets.ex
@@ -1596,6 +1620,11 @@ msgstr ""
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "where the media is (on the server, or here once it is synced or mounted), run mix brando.images.adopt to record the images that match, then Utilities → Recreate changed images for the rest; here neither works, as adopting needs the files and recreating the originals"
+msgstr ""
+
+#: lib/brando/doctor/checks/heex_link_globals.ex
+#, elixir-autogen, elixir-format
+msgid "where the template joins, compares or transforms the global, or gives it to a component attribute, wrap it in Brando.Villain.Filters.link_url/1; <.entry_link var={...} />, :if and printing it need no change"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex

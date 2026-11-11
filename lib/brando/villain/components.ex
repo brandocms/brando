@@ -275,7 +275,7 @@ defmodule Brando.Villain.Components do
 
   # -- entry_link component --
 
-  attr :href, :string, default: nil
+  attr :href, :any, default: nil
   attr :entry, :map, default: nil
   attr :field, :atom, default: :url
   attr :var, :any, default: nil
@@ -287,7 +287,8 @@ defmodule Brando.Villain.Components do
 
   Can be used with a direct `href`, by extracting the URL from an entry field,
   or with a link var. A link var supplies its configured text, target and the
-  standard `link` class when no inner content is given.
+  standard `link` class when no inner content is given. A link var given as
+  `href` gives its URL only.
   """
   def entry_link(assigns) do
     var_href = Brando.Villain.Filters.link_url(assigns.var)
@@ -300,7 +301,7 @@ defmodule Brando.Villain.Components do
       end
 
     # An address with a script or unknown scheme leaves the link inert
-    href = Brando.Villain.Parser.safe_url(assigns.href || var_href || get_in(assigns, [:entry, assigns.field]))
+    href = Brando.Villain.Parser.safe_url(href_url(assigns.href) || var_href || get_in(assigns, [:entry, assigns.field]))
     target = if assigns.var && Map.get(assigns.var, :link_target_blank), do: "_blank"
     class = assigns.class || (assigns.var && "link")
 
@@ -321,6 +322,10 @@ defmodule Brando.Villain.Components do
     </a>
     """
   end
+
+  # A link global was its URL before HEEx got the var, so `href={@globals[...]}`
+  defp href_url(%Brando.Content.Var{type: :link} = var), do: Brando.Villain.Filters.link_url(var)
+  defp href_url(href), do: href
 
   # -- route component --
 

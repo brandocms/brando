@@ -137,22 +137,33 @@ defmodule Brando.Content.Var do
       Brando.RichText.render_html(value) || ""
     end
 
+    # Its URL, not the struct: interpolated in HEEx
+    # (`"#{@globals["footer"]["email"]}"`), which escapes it, as it prints
+    # there (`Phoenix.HTML.Safe` below), or printed in Liquid (`{{ link }}`)
+    # escaped, as the `link_url` filter gives it
+    def to_string(%{type: :link} = var) do
+      if Brando.Villain.Parser.escaped_link_var?(var),
+        do: Brando.Villain.Filters.link_url(var, nil) || "",
+        else: Brando.Villain.Filters.link_url(var) || ""
+    end
+
     def to_string(%{type: _} = var) do
       inspect(var, pretty: true)
     end
   end
 
-  # defimpl Phoenix.HTML.Safe do
-  #   def to_iodata(%{type: :link, link_type: :url, value: value}) do
-  #     value
-  #     |> Phoenix.HTML.raw()
-  #     |> Phoenix.HTML.Safe.to_iodata()
-  #   end
+  # A link var printed in HEEx (`{@globals["footer"]["email"]}`, `href={@link}`)
+  # gives its URL, escaped, and nothing for one with a script or unknown scheme.
+  # Other vars have no single text to print.
+  defimpl Phoenix.HTML.Safe do
+    def to_iodata(%{type: :link} = var),
+      do: Phoenix.HTML.Engine.html_escape(Brando.Villain.Filters.link_url(var) || "")
 
-  #   def to_iodata(%{type: :link, link_type: :identifier, identifier: identifier}) do
-  #     identifier.url
-  #     |> Phoenix.HTML.raw()
-  #     |> Phoenix.HTML.Safe.to_iodata()
-  #   end
-  # end
+    def to_iodata(var) do
+      raise Protocol.UndefinedError,
+        protocol: @protocol,
+        value: var,
+        description: "only a link var prints in HEEx, as its URL"
+    end
+  end
 end

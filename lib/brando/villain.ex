@@ -343,7 +343,7 @@ defmodule Brando.Villain do
 
   # A global prints as its value, as a var does in a Liquid module: rich text
   # sanitized, any other text escaped. HEEx, which escapes what it prints,
-  # reads them unescaped (`raw_context/2`).
+  # reads them unescaped (`raw_context/2`), and a link global as its var.
   def add_to_context(context, "globals" = key, global_sets) do
     context
     |> Context.assign(key, TemplateView.wrap(globals(global_sets, true), :processed))
@@ -387,6 +387,13 @@ defmodule Brando.Villain do
     do: Brando.RichText.render_html(value)
 
   defp global_value(%{value: value}, true) when is_binary(value), do: Parser.escape_var_value(value)
+
+  # HEEx gets a link global whole, so `<.entry_link var={...} />` has its text
+  # and target, and printing it gives its URL (`Phoenix.HTML.Safe` for `Var`).
+  # One with no address to go to is nil, as its empty value was, so `:if` and
+  # `||` on it still skip it.
+  defp global_value(%Brando.Content.Var{type: :link} = var, false),
+    do: if(Brando.Villain.Filters.link_url(var), do: var)
 
   defp global_value(%{value: value}, _escape?), do: value
 
