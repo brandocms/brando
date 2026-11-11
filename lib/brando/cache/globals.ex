@@ -94,5 +94,9 @@ defmodule Brando.Cache.Globals do
 
   defp preload_images(%Brando.Content.Var{type: :form} = form_var), do: Brando.Repo.preload(form_var, :form)
 
+  # A link to an entry takes its URL and default text from the identifier
+  # (`Brando.Sites.refresh_globals_for_identifier/1` keeps it current)
+  defp preload_images(%Brando.Content.Var{type: :link} = link_var), do: Brando.Repo.preload(link_var, :identifier)
+
   defp preload_images(var), do: var
 end

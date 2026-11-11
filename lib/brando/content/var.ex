@@ -142,17 +142,18 @@ defmodule Brando.Content.Var do
     end
   end
 
-  # defimpl Phoenix.HTML.Safe do
-  #   def to_iodata(%{type: :link, link_type: :url, value: value}) do
-  #     value
-  #     |> Phoenix.HTML.raw()
-  #     |> Phoenix.HTML.Safe.to_iodata()
-  #   end
+  # A link var printed in HEEx (`{@globals["footer"]["email"]}`, `href={@link}`)
+  # gives its URL, escaped, and nothing for one with a script or unknown scheme.
+  # Other vars have no single text to print.
+  defimpl Phoenix.HTML.Safe do
+    def to_iodata(%{type: :link} = var),
+      do: Phoenix.HTML.Engine.html_escape(Brando.Villain.Filters.link_url(var) || "")
 
-  #   def to_iodata(%{type: :link, link_type: :identifier, identifier: identifier}) do
-  #     identifier.url
-  #     |> Phoenix.HTML.raw()
-  #     |> Phoenix.HTML.Safe.to_iodata()
-  #   end
-  # end
+    def to_iodata(var) do
+      raise Protocol.UndefinedError,
+        protocol: @protocol,
+        value: var,
+        description: "only a link var prints in HEEx, as its URL"
+    end
+  end
 end

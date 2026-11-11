@@ -404,6 +404,28 @@ defmodule Brando.Sites do
   end
 
   @doc """
+  Rebuilds the globals cache, and re-renders what reads globals once it is
+  rebuilt, when a link global goes to `identifier_id`: the cache holds the
+  identifier, whose URL changes with the entry's link destination.
+  """
+  @spec refresh_globals_for_identifier(pos_integer()) :: :ok
+  def refresh_globals_for_identifier(identifier_id) do
+    query =
+      from v in Var,
+        where: v.identifier_id == ^identifier_id and not is_nil(v.global_set_id),
+        select: 1,
+        limit: 1
+
+    if Brando.Repo.one(query) do
+      {:ok, identifier_id}
+      |> Cache.Globals.update()
+      |> update_villains_referencing_global()
+    end
+
+    :ok
+  end
+
+  @doc """
   Check all fields for references to GLOBAL
   Rerender if found.
   """

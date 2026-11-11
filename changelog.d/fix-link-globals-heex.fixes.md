@@ -1,0 +1,1 @@
+- A HEEx module template renders a link global with `<.entry_link var={@globals["set"]["key"]} />`, with its link text and target, and a link global to an entry has its URL, kept current when the entry moves.

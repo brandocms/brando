@@ -134,7 +134,10 @@ Villain imports these HEEx components into module templates:
 - `<.picture src={...} opts={[...]} />` and `<.video src={...} opts={[...]} />`
   render media.
 - `<.entry_link var={@link_var} />` renders a link var; it also accepts a
-  direct `href` or `entry` plus `field`.
+  direct `href` or `entry` plus `field`. A link global is a link var too:
+  `<.entry_link var={@globals["footer"]["email"]} />` renders its text and
+  target. Printed as `{@globals["footer"]["email"]}` or in an attribute, a link
+  var gives its URL. Other globals arrive as their values.
 - `<.route ... />`, `<.route_i18n ... />`, `<.fragment ... />` and `<.t ... />`
   provide the corresponding Villain helpers.
 - `<.content />` inserts rendered children in multi modules and containers.

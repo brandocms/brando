@@ -94,6 +94,62 @@ defmodule Brando.Villain.TemplateAdapter.HeexTest do
     assert html =~ "Hello"
   end
 
+  describe "link globals" do
+    defp link_globals_context do
+      email = %Var{
+        type: :link,
+        key: "email",
+        label: "E-mail",
+        link_type: :url,
+        value: "mailto:booking@example.com?subject=a&b",
+        link_text: "Book us",
+        link_target_blank: true
+      }
+
+      unsafe = %Var{type: :link, key: "unsafe", label: "Unsafe", link_type: :url, value: "javascript:alert(1)"}
+      title = %Var{type: :text, key: "title", label: "Title", value: "Footer"}
+
+      %{}
+      |> Brando.Villain.create_context()
+      |> Brando.Villain.add_to_context("globals", %{
+        "footer" => %{"email" => email, "unsafe" => unsafe, "title" => title}
+      })
+    end
+
+    defp render_with_globals(code),
+      do: Heex.render_module(module(code), block(), %{}, %{}, opts(link_globals_context()))
+
+    test "entry_link renders a link global with its text and target" do
+      html = render_with_globals(~S(<.entry_link var={@globals["footer"]["email"]} />))
+
+      assert html =~ ~s(href="mailto:booking@example.com?subject=a&amp;b")
+      assert html =~ ~s(target="_blank")
+      assert html =~ ~s(class="link")
+      assert html =~ "Book us"
+    end
+
+    test "a printed link global gives its URL, escaped, and text globals stay values" do
+      html =
+        render_with_globals(~S"""
+        <p data-href={@globals["footer"]["email"]} data-unsafe={@globals["footer"]["unsafe"]}>
+          {@globals["footer"]["email"]}|{@globals["footer"]["title"]}
+        </p>
+        """)
+
+      assert html =~ ~s(data-href="mailto:booking@example.com?subject=a&amp;b")
+      assert html =~ ~s(data-unsafe="")
+      refute html =~ "javascript:"
+      assert html =~ "mailto:booking@example.com?subject=a&amp;b|Footer"
+    end
+
+    test "Liquid still reads a link global as its URL" do
+      context = link_globals_context()
+
+      assert Brando.Villain.parse_and_render("{{ globals.footer.email }}", context) ==
+               "mailto:booking@example.com?subject=a&amp;b"
+    end
+  end
+
   test "single modules receive safe defaults for assigns only used by multi and datasource modules" do
     code = """
     <span data-content={@content} data-entries={length(@entries)} data-forloop={inspect(@forloop)}>

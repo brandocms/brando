@@ -906,12 +906,13 @@ defmodule Brando.Content do
   end
 
   # Stored rich-text links to the entry carry its link destination as `href`,
-  # and cached menus hold the identifier.
+  # and cached menus and link globals hold the identifier.
   defp update_identifier_links(identifier_id, new_url) do
     Brando.Content.Blocks.update_identifier_links_in_refs(identifier_id, new_url)
     Brando.Content.Blocks.update_identifier_links_in_html_vars(identifier_id, new_url)
     Brando.Content.Blocks.update_identifier_links_in_rich_text_fields(identifier_id, new_url)
     Brando.Navigation.refresh_cache_for_identifier(identifier_id)
+    Brando.Sites.refresh_globals_for_identifier(identifier_id)
   end
 
   def get_identifier(id) do
