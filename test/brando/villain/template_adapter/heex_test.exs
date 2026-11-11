@@ -156,6 +156,28 @@ defmodule Brando.Villain.TemplateAdapter.HeexTest do
       assert html =~ ~s(data-fallback="/contact")
     end
 
+    test "entry_link takes a link global as href, as it took its URL" do
+      html = render_with_globals(~S|<.entry_link href={@globals["footer"]["email"]}>Mail</.entry_link>|)
+
+      assert html =~ ~s(href="mailto:booking@example.com?subject=a&amp;b")
+      assert html =~ "Mail"
+    end
+
+    test "a link to an entry printed in Liquid gives its URL escaped" do
+      link = %Var{
+        type: :link,
+        key: "cta",
+        label: "CTA",
+        link_type: :identifier,
+        identifier: %Brando.Content.Identifier{url: ~s(/contact?a=1&b="2")}
+      }
+
+      context = Brando.Villain.create_context(%{"cta" => Brando.Villain.Parser.escape_link_var(link)})
+
+      assert Brando.Villain.parse_and_render("<a href=\"{{ cta }}\">x</a>", context) ==
+               ~s(<a href="/contact?a=1&amp;b=&quot;2&quot;">x</a>)
+    end
+
     test "an interpolated link global gives its URL, not the struct" do
       html = render_with_globals(~S|<a href={"#{@globals["footer"]["email"]}&cc=x"}>x</a>|)
 

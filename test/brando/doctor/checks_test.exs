@@ -1017,6 +1017,7 @@ defmodule Brando.Doctor.ChecksTest do
 
   describe "Link globals in HEEx" do
     test "HEEx code using a link global as a string is a warning" do
+      Brando.Test.Support.preserve_cache(:globals)
       user = Factory.insert(:user)
 
       {:ok, _} =
@@ -1046,6 +1047,9 @@ defmodule Brando.Doctor.ChecksTest do
             <a href={"mailto:" <> @globals["footer"]["email"]}>x</a>
             <%= if @globals["footer"]["email"] == "" do %>none<% end %>
             <span>{String.upcase(get_in(@globals, ["footer", "email"]))} {"Street: " <> @globals["footer"]["address"]}</span>
+            <.link class="x" href={@globals["footer"]["email"]}>x</.link>
+            <.entry_link class="x" href={@globals["footer"]["email"]}>x</.entry_link>
+            <a href={"#{@globals["footer"]["email"]}?x"}>{Brando.Villain.Filters.link_url(@globals["footer"]["email"]) <> "?x"}</a>
           </footer>
           """
         )
@@ -1064,13 +1068,17 @@ defmodule Brando.Doctor.ChecksTest do
 
       result = Checks.HeexLinkGlobals.run(context())
       assert result.status == :warning
-      assert result.summary == "2 HEEx templates use a link global as a string, which raises since link globals are vars"
+
+      assert result.summary ==
+               "2 HEEx templates use a link global as a string, which raises or compares false since link globals are vars"
+
       assert result.fix =~ "Brando.Villain.Filters.link_url/1"
 
       assert result.items == [
                ~s|Footer (##{footer.id}), line 4: <a href={"mailto:" <> @globals["footer"]["email"]}>x</a>|,
                ~s|Footer (##{footer.id}), line 5: <%= if @globals["footer"]["email"] == "" do %>none<% end %>|,
                ~s|Footer (##{footer.id}), line 6: <span>{String.upcase(get_in(@globals, ["footer", "email"]))} {"Street: " <> @globals["footer"]["address"]}</span>|,
+               ~s|Footer (##{footer.id}), line 7: <.link class="x" href={@globals["footer"]["email"]}>x</.link>|,
                ~s|container Section (##{container.id}), line 1: <section data-mail={@globals["footer"]["email"] <> "?x"}><.content /></section>|
              ]
     end

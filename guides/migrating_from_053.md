@@ -378,8 +378,9 @@ sender first, before the first compile.
   `Brando.Content.Var`, so `<.entry_link var={@globals["set"]["key"]} />`
   renders its text and target. Printing one, as text or in an attribute, gives
   its URL as before, interpolated too, and one with no address is `nil` as
-  before, so `:if` and `||` work as they did. Where a template uses one as a
-  string (`<>`, a `String` function, a comparison), wrap it in
+  before, so `:if`, `||` and `<.entry_link href={...}>` work as they did.
+  Where a template uses one as a string (`<>`, a `String` function, a
+  comparison, a component attribute such as `<.link href={...}>`), wrap it in
   `Brando.Villain.Filters.link_url/1`. `mix brando.doctor` lists these uses
   under Link globals in HEEx.
 - **`format_html:` on `Brando.Villain.parse/3`.** The option is gone, with

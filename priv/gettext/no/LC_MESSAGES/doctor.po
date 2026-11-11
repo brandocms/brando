@@ -46,10 +46,10 @@ msgstr[1] "%{count} Blueprints lenker til admin-ruter som ruteren ikke definerer
 
 #: lib/brando/doctor/checks/heex_link_globals.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} HEEx template uses a link global as a string, which raises since link globals are vars"
-msgid_plural "%{count} HEEx templates use a link global as a string, which raises since link globals are vars"
-msgstr[0] "%{count} HEEx-mal bruker en lenkeglobal som tekst, noe som feiler nå som lenkeglobaler er variabler"
-msgstr[1] "%{count} HEEx-maler bruker en lenkeglobal som tekst, noe som feiler nå som lenkeglobaler er variabler"
+msgid "%{count} HEEx template uses a link global as a string, which raises or compares false since link globals are vars"
+msgid_plural "%{count} HEEx templates use a link global as a string, which raises or compares false since link globals are vars"
+msgstr[0] "%{count} HEEx-mal bruker en lenkeglobal som tekst, noe som feiler eller sammenligner usant nå som lenkeglobaler er variabler"
+msgstr[1] "%{count} HEEx-maler bruker en lenkeglobal som tekst, noe som feiler eller sammenligner usant nå som lenkeglobaler er variabler"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
@@ -1625,8 +1625,8 @@ msgstr "der mediene ligger (på serveren, eller her når de er synkronisert elle
 
 #: lib/brando/doctor/checks/heex_link_globals.ex
 #, elixir-autogen, elixir-format
-msgid "where the template joins, compares or transforms the global, wrap it in Brando.Villain.Filters.link_url/1; <.entry_link var={...} />, :if and printing it need no change"
-msgstr "der malen setter sammen, sammenligner eller bearbeider globalen, pakk den inn i Brando.Villain.Filters.link_url/1; <.entry_link var={...} />, :if og utskrift av den trenger ingen endring"
+msgid "where the template joins, compares or transforms the global, or gives it to a component attribute, wrap it in Brando.Villain.Filters.link_url/1; <.entry_link var={...} />, :if and printing it need no change"
+msgstr "der malen setter sammen, sammenligner eller bearbeider globalen, eller gir den til et komponentattributt, pakk den inn i Brando.Villain.Filters.link_url/1; <.entry_link var={...} />, :if og utskrift av den trenger ingen endring"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format

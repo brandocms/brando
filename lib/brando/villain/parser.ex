@@ -1720,6 +1720,9 @@ defmodule Brando.Villain.Parser do
     link |> Map.merge(escaped) |> Map.put(@escaped_link, true)
   end
 
+  @doc "Whether `link` is a link var as Liquid gets it (`escape_link_var/1`)."
+  def escaped_link_var?(link), do: Map.get(link, @escaped_link) == true
+
   @doc """
   A link var with its address and text as typed, for what checks the address
   and escapes once.

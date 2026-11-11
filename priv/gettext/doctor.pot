@@ -45,8 +45,8 @@ msgstr[1] ""
 
 #: lib/brando/doctor/checks/heex_link_globals.ex
 #, elixir-autogen, elixir-format
-msgid "%{count} HEEx template uses a link global as a string, which raises since link globals are vars"
-msgid_plural "%{count} HEEx templates use a link global as a string, which raises since link globals are vars"
+msgid "%{count} HEEx template uses a link global as a string, which raises or compares false since link globals are vars"
+msgid_plural "%{count} HEEx templates use a link global as a string, which raises or compares false since link globals are vars"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -1624,7 +1624,7 @@ msgstr ""
 
 #: lib/brando/doctor/checks/heex_link_globals.ex
 #, elixir-autogen, elixir-format
-msgid "where the template joins, compares or transforms the global, wrap it in Brando.Villain.Filters.link_url/1; <.entry_link var={...} />, :if and printing it need no change"
+msgid "where the template joins, compares or transforms the global, or gives it to a component attribute, wrap it in Brando.Villain.Filters.link_url/1; <.entry_link var={...} />, :if and printing it need no change"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex

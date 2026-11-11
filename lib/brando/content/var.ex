@@ -137,10 +137,15 @@ defmodule Brando.Content.Var do
       Brando.RichText.render_html(value) || ""
     end
 
-    # Its URL, as it prints in HEEx (`Phoenix.HTML.Safe` below): interpolated
-    # (`"#{@globals["footer"]["email"]}"`) or printed in Liquid (`{{ link }}`),
-    # not the struct
-    def to_string(%{type: :link} = var), do: Brando.Villain.Filters.link_url(var) || ""
+    # Its URL, not the struct: interpolated in HEEx
+    # (`"#{@globals["footer"]["email"]}"`), which escapes it, as it prints
+    # there (`Phoenix.HTML.Safe` below), or printed in Liquid (`{{ link }}`)
+    # escaped, as the `link_url` filter gives it
+    def to_string(%{type: :link} = var) do
+      if Brando.Villain.Parser.escaped_link_var?(var),
+        do: Brando.Villain.Filters.link_url(var, nil) || "",
+        else: Brando.Villain.Filters.link_url(var) || ""
+    end
 
     def to_string(%{type: _} = var) do
       inspect(var, pretty: true)
