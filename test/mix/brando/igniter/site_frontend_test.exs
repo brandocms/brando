@@ -96,6 +96,8 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
     assert notice?(result, "No site record, content or frontend assets were created")
     assert notice?(result, "takes effect\nwith the next release")
     assert notice?(result, "every other site now\nanswers 404")
+    # Where the site's module preview rules go
+    assert notice?(result, ~s(assets/backend/css/app.css, in a [data-site="acme-travel"] { … }))
 
     rerun = result |> IgniterCase.apply_and_reload() |> generate(["--site", "acme-travel"])
     assert rerun.issues == []
