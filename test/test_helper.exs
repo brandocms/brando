@@ -265,7 +265,7 @@ defmodule BrandoIntegrationWeb.LivePreview do
   preview_target Brando.Pages.Page do
     name :site
     label "Site"
-    layout fn _ -> Brando.Site.Frontend.current().root_layout() end
+    layout fn _ -> Brando.Site.Frontend.root_layout({BrandoIntegrationWeb.Layouts, :app}) end
     template fn page -> {Brando.Site.Frontend.page_html(), page.template} end
     template_prop :page
     site_assigns(true)

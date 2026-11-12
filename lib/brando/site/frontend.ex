@@ -121,6 +121,19 @@ defmodule Brando.Site.Frontend do
     end
   end
 
+  @doc """
+  The current site's frontend's `root_layout/0`, or `default` when nothing is
+  configured. `nil` for a site with no frontend.
+  """
+  @spec root_layout({module(), atom()}) :: {module(), atom()} | nil
+  def root_layout({_module, _template} = default) do
+    case current() do
+      :legacy -> default
+      nil -> nil
+      frontend -> frontend.root_layout()
+    end
+  end
+
   @doc "Merges the current frontend's `page_assigns/2` for `page` into the conn's assigns."
   @spec put_page_assigns(Plug.Conn.t(), struct()) :: Plug.Conn.t()
   def put_page_assigns(conn, page) do

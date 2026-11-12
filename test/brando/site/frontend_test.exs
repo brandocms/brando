@@ -138,6 +138,22 @@ defmodule Brando.Site.FrontendTest do
     end
   end
 
+  describe "root_layout/1" do
+    test "is the frontend's root layout, nil for a site without one, and the default with nothing configured" do
+      default = {BrandoIntegrationWeb.Layouts, :app}
+      put_test_env(:site_frontends, %{"acme" => Acme})
+
+      current(:multi, "tenant_acme_production")
+      assert Frontend.root_layout(default) == {AcmeLayouts, :root}
+
+      current(:multi, "tenant_globex_production")
+      assert Frontend.root_layout(default) == nil
+
+      put_test_env(:site_frontends, nil)
+      assert Frontend.root_layout(default) == default
+    end
+  end
+
   describe "Brando.Pages.list_templates/0" do
     test "lists the templates of the site whose prefix the process holds" do
       put_test_env(:site_frontends, %{"acme" => Acme, {"acme", "staging"} => AcmeNext})

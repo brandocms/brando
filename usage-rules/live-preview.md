@@ -41,7 +41,7 @@ preview the assigns a request gets:
 
 ```elixir
 preview_target Brando.Pages.Page do
-  layout fn _page -> Brando.Site.Frontend.current().root_layout() end
+  layout fn _page -> Brando.Site.Frontend.root_layout({MyAppWeb.Layouts, :root}) end
   template fn page -> {Brando.Site.Frontend.page_html(), page.template} end
   template_prop :page
   site_assigns true
@@ -51,7 +51,9 @@ end
 `site_assigns true` merges the site's `layout_assigns/1` for the entry's
 language and, when the entry is a page, its `page_assigns/2`, over the other
 assigns. The admin works under the selected site's prefix, so the preview
-renders that site's frontend.
+renders that site's frontend. With nothing configured,
+`Brando.Site.Frontend.root_layout/1` returns the layout it is given. A site
+with no registered frontend cannot be previewed.
 
 ### Preloads, assigns, and refresh behavior
 
