@@ -322,29 +322,27 @@ defmodule Brando.Pages do
   end
 
   @doc """
-  List available page eex templates
+  Lists the page templates of the current site (`Brando.Site.Frontend.page_html/0`):
+  the functions of its `PageHTML`, or a legacy `PageView`'s templates. A site
+  with no frontend module has none.
   """
   def list_templates do
-    view_module = Brando.web_module(PageView)
-    configured_html = Brando.config(:page_html_module)
+    case Brando.Site.Frontend.page_html() do
+      nil -> {:ok, []}
+      module -> {:ok, templates_of(module)}
+    end
+  end
 
-    if is_nil(configured_html) && Code.ensure_loaded?(view_module) do
-      {_, _, templates} = view_module.__templates__()
-
-      main_templates = Enum.filter(templates, &(not String.starts_with?(&1, "_")))
-
-      {:ok, main_templates}
+  defp templates_of(module) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :__templates__, 0) do
+      {_, _, templates} = module.__templates__()
+      Enum.reject(templates, &String.starts_with?(&1, "_"))
     else
-      html_module = configured_html || Brando.web_module(PageHTML)
-
-      main_templates =
-        :functions
-        |> html_module.__info__()
-        |> Enum.map(fn {fun, _arity} -> to_string(fun) end)
-        |> Enum.reject(&String.starts_with?(&1, "__"))
-        |> Enum.map(&(&1 <> ".html"))
-
-      {:ok, main_templates}
+      :functions
+      |> module.__info__()
+      |> Enum.map(fn {fun, _arity} -> to_string(fun) end)
+      |> Enum.reject(&String.starts_with?(&1, "__"))
+      |> Enum.map(&(&1 <> ".html"))
     end
   end
 

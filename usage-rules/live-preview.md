@@ -32,6 +32,29 @@ Use the same layout/template assigns as your controller. `template_prop` is the
 assign containing the edited entry (`:entry` by default). A single configured
 view opens immediately from the editor's eye button.
 
+`layout`, like `template`, takes a `{module, template}` tuple or a function of
+the entry returning one. On an installation whose sites have their own
+frontend modules (see
+[Per-site layouts and templates](deps/brando/guides/tenancy_and_environments.md#per-site-layouts-and-templates)),
+let the previewed site pick both, and set `site_assigns true` to give the
+preview the assigns a request gets:
+
+```elixir
+preview_target Brando.Pages.Page do
+  layout fn _page -> Brando.Site.Frontend.root_layout({MyAppWeb.Layouts, :root}) end
+  template fn page -> {Brando.Site.Frontend.page_html(), page.template} end
+  template_prop :page
+  site_assigns true
+end
+```
+
+`site_assigns true` merges the site's `layout_assigns/1` for the entry's
+language and, when the entry is a page, its `page_assigns/2`, over the other
+assigns. The admin works under the selected site's prefix, so the preview
+renders that site's frontend. With nothing configured,
+`Brando.Site.Frontend.root_layout/1` returns the layout it is given. A site
+with no registered frontend cannot be previewed.
+
 ### Preloads, assigns, and refresh behavior
 
 - `schema_preloads` is passed to `Repo.preload/2` before assign callbacks. Include
