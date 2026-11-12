@@ -914,7 +914,8 @@ defmodule Brando.Content.Transfer.Entries do
     unless Transfer.applicable?(plan), do: Error.fail!("Recovery needs attention: " <> Enum.join(plan.problems, " "))
     Transfer.lock_records!(%{fields: plan.entries, bindings: plan.bindings})
     bindings = Transfer.persist_dependencies!(plan, %{items: %{}}, actor)
-    persist!(plan, bindings, actor)
+    {saved, _bindings} = persist!(plan, bindings, actor)
+    update_breadcrumbs!(saved)
     Activity.import_undone(entry, actor, :update)
   end
 

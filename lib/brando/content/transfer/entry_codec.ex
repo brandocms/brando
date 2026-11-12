@@ -432,21 +432,27 @@ defmodule Brando.Content.Transfer.EntryCodec do
   defp authored(value, fun, state) when is_binary(value), do: fun.(value, state)
   defp authored(value, _, state), do: {value, state}
 
-  def fingerprint(entry), do: entry |> snapshot() |> Value.digest()
+  def fingerprint(entry), do: entry |> snapshot() |> without_derived(entry) |> Value.digest()
 
   @doc """
   Whether `entry` still has the `fingerprint` recorded when it was imported:
   a fingerprint from before brando_225 digested its `rich_text` vars as
-  `html`.
+  `html`, and an earlier one a page's `breadcrumbs`.
   """
   def fingerprint?(entry, fingerprint) do
     snapshot = snapshot(entry)
 
-    fingerprint in [
-      Value.digest(snapshot),
-      Value.digest(Brando.Content.Transfer.Contracts.with_html_vars(snapshot))
-    ]
+    fingerprint in for(
+      snapshot <- [without_derived(snapshot, entry), snapshot],
+      snapshot <- [snapshot, Brando.Content.Transfer.Contracts.with_html_vars(snapshot)],
+      do: Value.digest(snapshot)
+    )
   end
+
+  # A page's trail is computed from its parents and the site's name
+  # (`Brando.Pages.update_breadcrumbs/1`): a recompute is no edit.
+  defp without_derived(snapshot, %Brando.Pages.Page{}), do: Map.delete(snapshot, "breadcrumbs")
+  defp without_derived(snapshot, _entry), do: snapshot
 
   def records(%Brando.Content.Block{} = block) do
     [
