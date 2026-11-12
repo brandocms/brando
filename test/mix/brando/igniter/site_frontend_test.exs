@@ -162,6 +162,8 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
     assert result.issues == []
     Igniter.Test.assert_unchanged(result, "config/brando.exs")
     assert notice?(result, ~s(already registers StudioWeb.Sites.Acme for "acme-travel"))
+    assert notice?(result, ~s(is not the frontend of the site with key "acme-travel"))
+    refute notice?(result, ~s(is the frontend of the site with key "acme-travel"))
   end
 
   test "refuses, saying what to do", %{multi: multi, none: none} do

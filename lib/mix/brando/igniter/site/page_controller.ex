@@ -171,7 +171,8 @@ if Code.ensure_loaded?(Igniter) do
              |> Sourceror.Zipper.zip()
              |> CodeFunction.move_to_function_call(
                :plug,
-               [1, 2],
+               # `view: false` keeps the controller's own view: not the site's templates
+               1,
                &CodeFunction.argument_equals?(&1, 0, Brando.Plug.SiteFrontend)
              ) do
         String.contains?(contents, "put_page_assigns(")

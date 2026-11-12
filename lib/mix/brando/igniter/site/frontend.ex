@@ -37,13 +37,26 @@ if Code.ensure_loaded?(Igniter) do
         |> live_preview_notice(project)
         |> error_html_notice(project)
         |> Igniter.add_notice("""
-        #{inspect(module)} is the frontend of the site with key "#{key}"#{rendered(project, wired?)}
+        #{summary(igniter, project, key, module, wired?)}
         No site record, content or frontend assets were created. The frontend takes effect
         with the next release: its modules are compiled into it.
         """)
       else
         {:error, %Igniter{} = igniter, message} -> Igniter.add_issue(igniter, message)
         {:error, message} -> Igniter.add_issue(igniter, message)
+      end
+    end
+
+    # The registry was left alone when it names another module for the key,
+    # or is not a map this task can read.
+    defp summary(igniter, project, key, module, wired?) do
+      case Configuration.read(igniter, :site_frontends) do
+        {:ok, _igniter, %{^key => ^module}} ->
+          ~s(#{inspect(module)} is the frontend of the site with key "#{key}"#{rendered(project, wired?)})
+
+        _ ->
+          ~s(#{inspect(module)} was written, and is not the frontend of the site with key "#{key}" ) <>
+            "until config :brando, :site_frontends registers it: see above."
       end
     end
 
