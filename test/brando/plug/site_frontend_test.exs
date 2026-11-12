@@ -1,0 +1,183 @@
+defmodule Brando.Plug.SiteFrontendTest do
+  # Not async: it sets :site_frontends and :default_site_frontend, and the
+  # tenant cache is shared.
+  use ExUnit.Case, async: false
+  use Brando.ConnCase
+
+  alias Brando.Tenant
+  alias Brando.Tenant.Cache
+  alias Brando.Tenant.Registry
+
+  defmodule AcmeLayouts do
+    @moduledoc false
+    use Phoenix.Component
+
+    def root(assigns), do: ~H|<html data-site="acme">
+  {@inner_content}
+  <footer>{@footer}</footer>
+</html>|
+  end
+
+  defmodule AcmePageHTML do
+    @moduledoc false
+    use Phoenix.Component
+
+    def home(assigns), do: ~H"<main>acme home</main>"
+  end
+
+  defmodule NextLayouts do
+    @moduledoc false
+    use Phoenix.Component
+
+    def root(assigns), do: ~H|<html data-site="acme-next">{@inner_content}</html>|
+  end
+
+  defmodule NextPageHTML do
+    @moduledoc false
+    use Phoenix.Component
+
+    def home(assigns), do: ~H"<main>acme next home</main>"
+  end
+
+  defmodule GlobexLayouts do
+    @moduledoc false
+    use Phoenix.Component
+
+    def root(assigns), do: ~H|<html data-site="globex">{@inner_content}</html>|
+  end
+
+  defmodule GlobexPageHTML do
+    @moduledoc false
+    use Phoenix.Component
+
+    def home(assigns), do: ~H"<main>globex home</main>"
+  end
+
+  defmodule Acme do
+    @moduledoc false
+    use Brando.Site.Frontend, root_layout: {AcmeLayouts, :root}, page_html: AcmePageHTML
+
+    def layout_assigns(language), do: %{footer: "acme footer:#{language}"}
+  end
+
+  defmodule AcmeNext do
+    @moduledoc false
+    use Brando.Site.Frontend, root_layout: {NextLayouts, :root}, page_html: NextPageHTML
+  end
+
+  defmodule Globex do
+    @moduledoc false
+    use Brando.Site.Frontend, root_layout: {GlobexLayouts, :root}, page_html: GlobexPageHTML
+  end
+
+  # The one page controller every site shares
+  defmodule PageController do
+    @moduledoc false
+    use Phoenix.Controller, formats: [:html]
+
+    def show(conn, _params), do: render(conn, :home)
+  end
+
+  setup do
+    put_test_env(:tenancy_mode, :multi)
+    put_test_env(:site_frontends, nil)
+    put_test_env(:default_site_frontend, nil)
+    Tenant.put_prefix(nil)
+    Cache.clear()
+
+    on_exit(fn ->
+      Tenant.put_prefix(nil)
+      Cache.clear()
+    end)
+
+    for {key, environments} <- [
+          {"acme", [{"production", true, "www.acme.test"}, {"staging", false, "staging.acme.test"}]},
+          {"globex", [{"production", true, "www.globex.test"}]}
+        ] do
+      {:ok, site} =
+        Registry.create_site(%{
+          name: key,
+          key: key,
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :dynamic
+        })
+
+      for {environment_key, live, domain} <- environments do
+        {:ok, _environment} =
+          Registry.create_environment(site, %{name: environment_key, key: environment_key, live: live, domain: domain},
+            actor: :system
+          )
+      end
+    end
+
+    :ok
+  end
+
+  defp request(host) do
+    :get
+    |> Plug.Test.conn("https://#{host}/about")
+    |> Map.put(:host, host)
+    |> Plug.Conn.assign(:language, "en")
+    |> Brando.Plug.Tenant.call([])
+    |> Brando.Plug.SiteFrontend.call([])
+    |> then(fn
+      %{halted: true} = conn -> conn
+      conn -> conn |> Phoenix.Controller.put_format("html") |> PageController.call(PageController.init(:show))
+    end)
+  end
+
+  # The templates as written, without the formatter's line breaks
+  defp html(conn), do: String.replace(conn.resp_body, ~r/>\s+</, "><")
+
+  test "the same path renders each site's layout, layout assigns and template" do
+    put_test_env(:site_frontends, %{"acme" => Acme, "globex" => Globex})
+
+    acme = request("www.acme.test")
+    assert acme.status == 200
+    assert html(acme) == ~s(<html data-site="acme"><main>acme home</main><footer>acme footer:en</footer></html>)
+
+    globex = request("www.globex.test")
+    assert globex.status == 200
+    assert html(globex) == ~s(<html data-site="globex"><main>globex home</main></html>)
+  end
+
+  test "an environment entry renders its module on that environment only" do
+    put_test_env(:site_frontends, %{"acme" => Acme, {"acme", "staging"} => AcmeNext})
+
+    assert html(request("staging.acme.test")) ==
+             ~s(<html data-site="acme-next"><main>acme next home</main></html>)
+
+    assert html(request("www.acme.test")) =~ ~s(<html data-site="acme"><main>acme home</main>)
+  end
+
+  test "a site without an entry answers 404 once the registry has one" do
+    put_test_env(:site_frontends, %{"acme" => Acme})
+    put_test_env(:default_site_frontend, Globex)
+
+    conn = request("www.globex.test")
+    assert conn.halted
+    assert conn.status == 404
+  end
+
+  test "with an empty registry a site renders the default frontend" do
+    put_test_env(:site_frontends, %{})
+    put_test_env(:default_site_frontend, Globex)
+
+    conn = request("www.acme.test")
+    assert conn.status == 200
+    assert html(conn) == ~s(<html data-site="globex"><main>globex home</main></html>)
+  end
+
+  test "with nothing configured the conn passes through unchanged" do
+    conn =
+      :get
+      |> Plug.Test.conn("https://www.acme.test/about")
+      |> Map.put(:host, "www.acme.test")
+      |> Plug.Conn.assign(:language, "en")
+      |> Brando.Plug.Tenant.call([])
+
+    assert Brando.Plug.SiteFrontend.call(conn, []) == conn
+  end
+end
