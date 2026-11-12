@@ -26,22 +26,45 @@ if Code.ensure_loaded?(Igniter) do
     Existing Phoenix files are preserved. Custom homepages, catch-alls and owned
     file conflicts require explicit integration, including with `--yes`.
     Create and publish the index page separately in /admin/pages after setup.
+
+    ## One site's frontend
+
+    With tenancy on, `--site KEY` generates the layouts and page templates of
+    the site with that key instead, as a `Brando.Site.Frontend` module under
+    Web.Sites (`acme-travel` gives `Web.Sites.AcmeTravel`; `--module Name`
+    names it), and registers it in `config :brando, site_frontends`. The page
+    controller gets `Brando.Plug.SiteFrontend` while it is as generated.
+
+        mix brando.gen.site --site acme-travel
+        mix brando.gen.site --site 2025 --module Anniversary
+
+    It creates no site record, content or frontend assets.
     """
 
     @impl Igniter.Mix.Task
     def info(_, _) do
       %Igniter.Mix.Task.Info{
         group: :brando,
-        schema: Mix.Brando.Igniter.Project.options() ++ [interactive: :boolean, replace_phoenix_home: :boolean]
+        schema:
+          Mix.Brando.Igniter.Project.options() ++
+            [interactive: :boolean, replace_phoenix_home: :boolean, site: :string]
       }
     end
 
     @impl Igniter.Mix.Task
     def igniter(igniter) do
-      with {:ok, igniter, options} <-
-             Mix.Brando.Igniter.Install.Configuration.namespace_options(igniter, igniter.args.options),
+      # With --site, --module names the site's module, not the application's.
+      {site_module, options} =
+        if igniter.args.options[:site],
+          do: Keyword.pop(igniter.args.options, :module),
+          else: {nil, igniter.args.options}
+
+      with {:ok, igniter, options} <- Mix.Brando.Igniter.Install.Configuration.namespace_options(igniter, options),
            {:ok, igniter, project} <- Mix.Brando.Igniter.Project.discover(igniter, options) do
-        Mix.Brando.Igniter.Site.plan(igniter, project, options)
+        case options[:site] do
+          nil -> Mix.Brando.Igniter.Site.plan(igniter, project, options)
+          key -> Mix.Brando.Igniter.Site.Frontend.plan(igniter, project, key, site_module)
+        end
       else
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)

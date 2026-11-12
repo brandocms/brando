@@ -438,8 +438,19 @@ if Code.ensure_loaded?(Igniter) do
       (deps/brando/usage-rules.md), and .claude/skills has Brando's site skills.
 
       #{igniter |> Igniter.Project.Deps.has_dep?(:req_llm) |> ai_instructions() |> String.trim_trailing()}
+      #{site_frontend_instructions(tenancy.mode)}\
       """)
     end
+
+    defp site_frontend_instructions(:multi) do
+      """
+
+      Each site can render in its own layouts and page templates. Once a site is
+      provisioned, generate its frontend: mix brando.gen.site --site KEY
+      """
+    end
+
+    defp site_frontend_instructions(_mode), do: ""
 
     # From mix.exs as planned: with --ai, or a req_llm the application had.
     defp ai_instructions(true) do

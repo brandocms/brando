@@ -317,8 +317,19 @@ if Code.ensure_loaded?(Igniter) do
       is only for changes that must reach environments that already exist.
 
       See `guides/tenancy_and_environments.md` for the complete workflow.
+      #{site_frontend_instructions(mode)}\
       """)
     end
+
+    defp site_frontend_instructions(:multi) do
+      """
+
+      Each site can render in its own layouts and page templates. Once a site is
+      provisioned, generate its frontend: mix brando.gen.site --site KEY
+      """
+    end
+
+    defp site_frontend_instructions(_mode), do: ""
   end
 else
   defmodule Mix.Tasks.Brando.Setup.Tenancy do

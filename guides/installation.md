@@ -338,7 +338,10 @@ generator.
 
 ### Error pages
 
-The site's 404 and 500 pages render in its layout, `YourWeb.CMS.Layouts`.
+The site's 404 and 500 pages render in its layout: the root layout of the
+site's [frontend](tenancy_and_environments.md#per-site-layouts-and-templates),
+or `YourWeb.CMS.Layouts` when none is configured, with the frontend's
+`layout_assigns/1`. A site without a frontend gets the page without a layout.
 phx.new's `YourWeb.ErrorHTML`, which `render_errors` in `config/config.exs`
 names, is replaced while it is unchanged from what phx.new generated, and the
 404 and 500 templates go in `controllers/error_html/` next to it. Other
@@ -360,9 +363,12 @@ layout's error is logged.
 
 The generator gives `YourWeb.LivePreview` a `preview_target` for
 `Brando.Pages.Page` that renders the edited page as `CMS.PageController`
-does: `CMS.PageHTML` and the page's template inside `CMS.Layouts`' root
-layout, with the identity, the `main` navigation and the `partials`
-fragments assigned. Changing the page's language recomputes those and
+does: the page's template in its site's `PageHTML` inside the site's root
+layout, both from the site's
+[frontend](tenancy_and_environments.md#per-site-layouts-and-templates)
+(`CMS.PageHTML` and `CMS.Layouts` when none is configured), with the
+identity, the `main` navigation, the `partials` fragments and the frontend's
+assigns (`site_assigns true`). Changing the page's language recomputes those and
 re-renders the page's body, header and footer included; `<html lang>` and
 `<head>` update when the preview reloads. The module `brando.install`
 writes, which has no targets, is replaced; a missing one is created. A

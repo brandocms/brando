@@ -4,6 +4,7 @@ defmodule <%= web_module %>.CMS.PageController do
   plug :put_view, html: <%= web_module %>.CMS.PageHTML
   plug :put_layout, false
   plug :put_root_layout, html: {<%= web_module %>.CMS.Layouts, :root}
+  plug Brando.Plug.SiteFrontend
 
   alias Brando.I18n
   alias Brando.Pages
@@ -41,6 +42,7 @@ defmodule <%= web_module %>.CMS.PageController do
       |> put_title(page.title, skip_prefix: true, skip_postfix: true)
       |> assign(:partials, partials)
       |> assign(:page, page)
+      |> Brando.Site.Frontend.put_page_assigns(page)
       |> render(page.template)
     end
   end
@@ -75,6 +77,7 @@ defmodule <%= web_module %>.CMS.PageController do
         |> put_title(page.title)
         |> assign(:partials, partials)
         |> assign(:page, page)
+        |> Brando.Site.Frontend.put_page_assigns(page)
         |> render(page.template)
       end
     end

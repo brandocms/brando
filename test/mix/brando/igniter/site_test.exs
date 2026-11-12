@@ -468,7 +468,7 @@ defmodule Mix.Brando.Igniter.SiteTest do
     assert result.issues == []
     error_html = IgniterCase.source(result, @error_html)
     assert error_html =~ ~s(embed_templates "error_html/*")
-    assert error_html =~ "StudioWeb.CMS.Layouts.root()"
+    assert error_html =~ "Brando.Site.Frontend.root_layout({StudioWeb.CMS.Layouts, :root})"
     assert IgniterCase.source(result, "lib/studio_web/controllers/error_html/404.html.heex") =~ "<.error_page"
     assert IgniterCase.source(result, "lib/studio_web/controllers/error_html/500.html.heex") =~ "<.error_page"
     assert IgniterCase.source(result, @error_test) =~ "StudioWeb.CMS.Layouts, :root"
@@ -498,7 +498,7 @@ defmodule Mix.Brando.Igniter.SiteTest do
         |> generate(["--replace-phoenix-home", "--yes"])
 
       assert result.issues == []
-      assert IgniterCase.source(result, @error_html) =~ "StudioWeb.CMS.Layouts.root()"
+      assert IgniterCase.source(result, @error_html) =~ "Brando.Site.Frontend.root_layout({StudioWeb.CMS.Layouts, :root})"
       assert IgniterCase.source(result, @error_test) =~ "StudioWeb.CMS.Layouts, :root"
       refute Enum.any?(result.notices, &(&1 =~ "customized" or &1 =~ "was kept"))
     end
@@ -597,8 +597,9 @@ defmodule Mix.Brando.Igniter.SiteTest do
 
     preview = IgniterCase.source(result, @live_preview)
     assert preview =~ "preview_target Pages.Page do"
-    assert preview =~ "layout {StudioWeb.CMS.Layouts, :root}"
-    assert preview =~ "template fn page -> {StudioWeb.CMS.PageHTML, page.template} end"
+    assert preview =~ "layout fn _page -> Brando.Site.Frontend.root_layout({StudioWeb.CMS.Layouts, :root}) end"
+    assert preview =~ "template fn page -> {Brando.Site.Frontend.page_html(), page.template} end"
+    assert preview =~ "site_assigns true"
     assert preview =~ "template_prop :page"
     assert preview =~ ~s|Pages.get_fragments(%{filter: %{parent_key: "partials", language: language}})|
   end
@@ -641,7 +642,7 @@ defmodule Mix.Brando.Igniter.SiteTest do
     assert Enum.any?(
              result.notices,
              &(&1 =~ "#{@live_preview} is customized and has no preview target for Brando.Pages.Page" and
-                 &1 =~ "layout {StudioWeb.CMS.Layouts, :root}")
+                 &1 =~ "Brando.Site.Frontend.root_layout({StudioWeb.CMS.Layouts, :root})")
            )
   end
 

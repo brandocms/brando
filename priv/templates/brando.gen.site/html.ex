@@ -1,4 +1,4 @@
-defmodule <%= web_module %>.CMS.PageHTML do
+defmodule <%= module %> do
   use BrandoWeb, :html
 
   def index(assigns), do: default(assigns)

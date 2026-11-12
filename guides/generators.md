@@ -57,7 +57,9 @@ With the [CMS public pages](installation.md#add-cms-public-pages) (installed by
 navigation and [lockdown](installation.md#lockdown) apply to them. The scope goes after the
 `:brando_site` pipeline and before the CMS catch-all. The controller renders in
 `YourWeb.CMS.Layouts` with the `partials` fragments, as `CMS.PageController`
-does, and puts the entry's meta tags, title and, for a translatable Blueprint,
+does, or in the root layout of the site's [frontend](#site-frontends) when
+one is registered (its last plug is `Brando.Plug.SiteFrontend, view: false`),
+and puts the entry's meta tags, title and, for a translatable Blueprint,
 hreflang links. A missing entry goes to `BrandoWeb.FallbackController`, which
 follows a matching redirect or renders the site's [404 page](installation.md#error-pages).
 The rendered blocks are direct children of `main`, and the heading, list and
@@ -107,6 +109,53 @@ consumer override. Conflicting output files are preserved for manual integration
 
 [Blueprint migrations](blueprint_migrations.md) explains snapshot history,
 subsequent storage changes, rollback, and explicit rebaseline.
+
+## Site frontends
+
+With tenancy on, each site can render its pages in its own root layout and
+page templates (see
+[Per-site layouts and templates](tenancy_and_environments.md#per-site-layouts-and-templates)).
+`mix brando.gen.site --site KEY` generates them for the site with that key:
+
+```sh
+mix brando.gen.site --site acme-travel
+# A key that gives no module name, such as one starting with a digit:
+mix brando.gen.site --site 2025 --module Anniversary
+```
+
+| File | Module |
+| --- | --- |
+| `lib/my_app_web/sites/acme_travel.ex` | `MyAppWeb.Sites.AcmeTravel`, with `use Brando.Site.Frontend` and commented examples of `layout_assigns/1` and `page_assigns/2` |
+| `lib/my_app_web/sites/acme_travel/layouts.ex` | `MyAppWeb.Sites.AcmeTravel.Layouts`, with `root/1` as the CMS site's layout has it |
+| `lib/my_app_web/sites/acme_travel/page_html.ex` | `MyAppWeb.Sites.AcmeTravel.PageHTML`, with `index/1` and `default/1` |
+
+The module is the key camelized, or `--module`. The task adds
+`"acme-travel" => MyAppWeb.Sites.AcmeTravel` to `config :brando, site_frontends:`
+in `config/brando.exs`, or in `config/config.exs` when the application
+configures tenancy there, keeping the map's other entries; an existing entry
+for the key is kept, with a notice. It writes no `default_site_frontend`.
+
+It refuses, saying what to do, with `tenancy_mode :none`, before the CMS site
+exists (run `mix brando.gen.site` first), for a key that is not a site key
+(lowercase letters, digits and single hyphens), for a key that gives no
+module name without `--module`, when `site_frontends` is set in both
+`config/config.exs` and `config/brando.exs`, and when a
+`priv/templates/brando.gen.site` override of `layouts.ex` or `html.ex` does not
+define the site's module (`defmodule <%= module %> do`). The page controller
+gets `Brando.Plug.SiteFrontend` and the `put_page_assigns/2` calls while it is
+as the generator wrote it, now or before, with its comments kept; a changed
+one is left alone, with a notice of the steps to take by hand. A
+`YourWeb.LivePreview` or `YourWeb.ErrorHTML` that does not use
+`Brando.Site.Frontend`, as generated before site frontends, is left alone too,
+with a notice of the edits that make it render the site's frontend. Other
+controllers that render in the site's layout need
+`plug Brando.Plug.SiteFrontend, view: false`, which the notice says. A second
+run with the same key changes nothing.
+
+The task creates no site record, no content and no frontend assets, and the
+frontend takes effect with the next release. With `tenancy_mode :multi`, once
+the registry has an entry every site without one answers 404, which the notice
+for the first entry says.
 
 ## Framework migrations and upgrades
 
@@ -257,7 +306,7 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.migrate_to_tenant` | Operational data conversion |
 | `brando.migrate` | Runs public or tenant migrations |
 | `brando.modules` | Export, plan and import module-definition DSL files |
-| `brando.gen.site` | Plans CMS page rendering (a new install composes it) with explicit homepage ownership |
+| `brando.gen.site` | Plans CMS page rendering (a new install composes it) with explicit homepage ownership; `--site KEY` (and `--module Name`) plans [one site's frontend](#site-frontends) |
 | `brando.gen.sitemap` / `brando.gen.mail` / `brando.gen.authorization` | Reviewed auxiliary modules with conflict checks |
 | `brando.gen.release` | Reviewed release helpers and missing Mix configuration |
 | `brando.install.fabfile` | Retired; use release generation and Florist |

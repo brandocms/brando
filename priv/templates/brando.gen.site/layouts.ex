@@ -1,4 +1,4 @@
-defmodule <%= web_module %>.CMS.Layouts do
+defmodule <%= module %> do
   use BrandoWeb, :html
 
   def root(assigns) do
