@@ -656,6 +656,7 @@ defmodule Brando.Content.Transfer.Entries do
 
     bindings = Transfer.persist_dependencies!(current, stage, actor)
     {saved, bindings} = persist!(current, bindings, actor)
+    update_breadcrumbs!(saved)
     label = plan.archive.bundle["source"]["label"]
 
     Activity.with_source(:import, fn ->
@@ -694,6 +695,12 @@ defmodule Brando.Content.Transfer.Entries do
           )
       }
     })
+  end
+
+  # A page's stored trail is the destination's: its parents and the site's
+  # name there. The write skips the `Brando.Pages` mutations that store it.
+  defp update_breadcrumbs!(saved) do
+    for %{entry: %Brando.Pages.Page{} = page} <- saved, do: {:ok, _} = Brando.Pages.update_breadcrumbs(page)
   end
 
   defp before_snapshot(%{mode: "update"} = item, actor) do

@@ -266,8 +266,14 @@ defmodule Brando.Content.TransferTest do
     assert plan.problems == []
     assert {:ok, receipt} = Transfer.apply(plan, c.user)
     saved = Repo.get!(Page, receipt.after[entry["key"]]["id"])
-    assert saved.breadcrumbs == crumbs
     assert saved.parent_id == c.target.id
+
+    # The trail is the destination's, computed after the write
+    assert saved.breadcrumbs == [
+             %{"title" => Brando.Sites.site_name(saved.language), "uri" => "/"},
+             %{"title" => c.target.title, "uri" => "/" <> c.target.uri},
+             %{"title" => saved.title, "uri" => "/" <> saved.uri}
+           ]
   end
 
   test "entry recovery refuses to remove newly referenced content", c do
