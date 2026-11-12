@@ -50,7 +50,11 @@
       <%!-- An entry editor's first render, before LiveView connects --%>
       <main :if={assigns[:entry_skeleton]} id="brando-main">
         <article class="content">
-          <BrandoAdmin.Components.Form.EntrySkeleton.form id="entry-skeleton" skeleton={@entry_skeleton} />
+          <BrandoAdmin.Components.Form.EntrySkeleton.form
+            id="entry-skeleton"
+            skeleton={@entry_skeleton}
+            site={@current_site && @current_site.key}
+          />
         </article>
       </main>
     <% end %>

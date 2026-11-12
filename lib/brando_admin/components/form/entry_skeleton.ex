@@ -71,6 +71,7 @@ defmodule BrandoAdmin.Components.Form.EntrySkeleton do
   attr :id, :string, required: true
   attr :skeleton, :map, required: true, doc: "from `describe/2`"
   attr :header?, :boolean, default: true
+  attr :site, :string, default: nil, doc: "the selected site's key, for the block field's `data-site`"
 
   @doc "The whole entry editor as a skeleton: nothing of the entry is known yet."
   def form(assigns) do
@@ -134,7 +135,7 @@ defmodule BrandoAdmin.Components.Form.EntrySkeleton do
             <span class="sk-input"><span class="sk sk-value" style={"width: #{value}%"}></span></span>
           </div>
         </div>
-        <.blocks :if={@skeleton.blocks?} count={4} label?={false} />
+        <.blocks :if={@skeleton.blocks?} count={4} label?={false} site={@site} />
       </div>
     </div>
     """
@@ -147,12 +148,16 @@ defmodule BrandoAdmin.Components.Form.EntrySkeleton do
   attr :count, :integer, required: true, doc: "the field's blocks; at most #{@max_outlines} outlines are drawn"
   attr :label?, :boolean, default: true
 
+  attr :site, :string,
+    default: nil,
+    doc: "the selected site's key: `data-site`, as on `BlockField`'s wrapper, which modules are previewed in"
+
   @doc "A block field's outlines while its blocks load."
   def blocks(assigns) do
     assigns = assign(assigns, :outlines, Enum.take(outline_shapes(), min(assigns.count, @max_outlines)))
 
     ~H"""
-    <div class="blocks-wrapper blocks-loading" aria-hidden="true">
+    <div class="blocks-wrapper blocks-loading" data-site={@site} aria-hidden="true">
       <div class="label-wrapper">
         <label :if={@label?} class="control-label"><span>{gettext("Blocks")}</span></label>
         <span :if={!@label?} class="sk sk-label" style="width: 44px"></span>
