@@ -691,12 +691,14 @@ defmodule Brando.Pages do
     Page
     |> where([p], p.language == ^language and is_nil(p.deleted_at))
     |> Brando.Repo.all()
-    |> Enum.each(fn page ->
-      page = Brando.Repo.preload(page, [:parent])
-      {:ok, _} = page |> Changeset.change(%{breadcrumbs: build_breadcrumbs(page)}) |> Brando.Repo.update()
-    end)
+    |> Enum.each(&store_breadcrumbs/1)
 
     Brando.Cache.Query.evict_all(Page)
+  end
+
+  defp store_breadcrumbs(page) do
+    page = Brando.Repo.preload(page, [:parent])
+    {:ok, _} = page |> Changeset.change(%{breadcrumbs: build_breadcrumbs(page)}) |> Brando.Repo.update()
   end
 
   defp build_breadcrumbs(%Page{is_homepage: true}) do
