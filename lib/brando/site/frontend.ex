@@ -134,6 +134,20 @@ defmodule Brando.Site.Frontend do
     end
   end
 
+  @doc """
+  The current frontend's `layout_assigns/1` for `language`, or `%{}` when
+  nothing is configured or the site has no frontend. For rendering the site's
+  layout without a request through `Brando.Plug.SiteFrontend`, as an error
+  page does.
+  """
+  @spec layout_assigns(String.t()) :: map()
+  def layout_assigns(language) do
+    case current() do
+      frontend when frontend in [:legacy, nil] -> %{}
+      frontend -> frontend.layout_assigns(language)
+    end
+  end
+
   @doc "Merges the current frontend's `page_assigns/2` for `page` into the conn's assigns."
   @spec put_page_assigns(Plug.Conn.t(), struct()) :: Plug.Conn.t()
   def put_page_assigns(conn, page) do

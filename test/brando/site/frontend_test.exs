@@ -34,6 +34,7 @@ defmodule Brando.Site.FrontendTest do
     @moduledoc false
     use Brando.Site.Frontend, root_layout: {AcmeLayouts, :root}, page_html: AcmePageHTML
 
+    def layout_assigns(language), do: %{footer: "acme:#{language}"}
     def page_assigns(page, assigns), do: %{footer_color: "#{page.title}:#{assigns.language}"}
   end
 
@@ -167,6 +168,19 @@ defmodule Brando.Site.FrontendTest do
 
       current(:multi, "tenant_globex_production")
       assert Brando.Pages.list_templates() == {:ok, []}
+    end
+  end
+
+  describe "layout_assigns/1" do
+    test "is the frontend's layout assigns, and empty for a site without one or with nothing configured" do
+      assert Frontend.layout_assigns("en") == %{}
+
+      put_test_env(:site_frontends, %{"acme" => Acme})
+      current(:multi, "tenant_acme_production")
+      assert Frontend.layout_assigns("en") == %{footer: "acme:en"}
+
+      current(:multi, "tenant_globex_production")
+      assert Frontend.layout_assigns("en") == %{}
     end
   end
 
