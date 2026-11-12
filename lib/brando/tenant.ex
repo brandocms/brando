@@ -66,6 +66,21 @@ defmodule Brando.Tenant do
 
   def site_key_of(_no_prefix), do: nil
 
+  @doc "Returns the environment key encoded in the current tenant prefix."
+  @spec current_environment_key() :: String.t() | nil
+  def current_environment_key, do: environment_key_of(current_prefix())
+
+  @doc "Returns the environment key encoded in a tenant prefix, or nil when it holds none."
+  @spec environment_key_of(term()) :: String.t() | nil
+  def environment_key_of("tenant_" <> remainder) do
+    case String.split(remainder, "_", parts: 2) do
+      [_site_key, environment_key] -> environment_key
+      _invalid -> nil
+    end
+  end
+
+  def environment_key_of(_no_prefix), do: nil
+
   @doc "Namespaces an application cache key by the active tenant prefix."
   @spec cache_key(term(), String.t() | nil) :: term()
   def cache_key(key, prefix \\ current_prefix()) do
@@ -173,6 +188,8 @@ defmodule Brando.Tenant do
       :single -> validate_single_site_key!()
       _ -> :ok
     end
+
+    Brando.Site.Frontend.validate_config!()
   end
 
   @spec valid_key?(term()) :: boolean()
