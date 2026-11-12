@@ -179,10 +179,14 @@ defmodule BrandoWeb.FallbackControllerTest do
 
     # The site's redirects, as its SEO cache holds them: the site has no schema
     seo = %Brando.Sites.SEO{redirects: [%Brando.Sites.Redirect{from: "/articles/gone", to: "/", code: 410}]}
+    cached = Cachex.get!(:cache, {:tenant, prefix, :seo})
     Cachex.put(:cache, {:tenant, prefix, :seo}, %{"en" => seo})
 
     on_exit(fn ->
-      Cachex.del(:cache, {:tenant, prefix, :seo})
+      if cached,
+        do: Cachex.put(:cache, {:tenant, prefix, :seo}, cached),
+        else: Cachex.del(:cache, {:tenant, prefix, :seo})
+
       Brando.Tenant.put_prefix(nil)
     end)
 
