@@ -120,32 +120,35 @@ if Code.ensure_loaded?(Igniter) do
           |> first_entry_notice(key, mode)
 
         {:ok, igniter, frontends} when is_map(frontends) ->
-          case Map.fetch(frontends, key) do
-            {:ok, ^module} ->
-              igniter
-
-            {:ok, other} ->
-              Igniter.add_notice(igniter, """
-              config :brando, site_frontends: already registers #{inspect(other)} for "#{key}", so it was left as it is.
-              To render the site with #{inspect(module)}, register it there in place of #{inspect(other)}.
-              """)
-
-            :error ->
-              igniter
-              |> Config.configure(config_file(igniter), :brando, [:site_frontends], {:code, entry(key, module)},
-                updater:
-                  &Igniter.Code.Map.set_map_key(&1, key, Sourceror.parse_string!(inspect(module)), fn zipper ->
-                    {:ok, zipper}
-                  end)
-              )
-              |> then(&if(map_size(frontends) == 0, do: first_entry_notice(&1, key, mode), else: &1))
-          end
+          add_entry(igniter, frontends, key, module, mode)
 
         _ ->
           Igniter.add_notice(igniter, """
           config :brando, :site_frontends is not a map this task can read, so it was left as it is.
           Add the site's entry to it by hand: "#{key}" => #{inspect(module)}
           """)
+      end
+    end
+
+    defp add_entry(igniter, frontends, key, module, mode) do
+      case Map.fetch(frontends, key) do
+        {:ok, ^module} ->
+          igniter
+
+        {:ok, other} ->
+          Igniter.add_notice(igniter, """
+          config :brando, site_frontends: already registers #{inspect(other)} for "#{key}", so it was left as it is.
+          To render the site with #{inspect(module)}, register it there in place of #{inspect(other)}.
+          """)
+
+        :error ->
+          value = Sourceror.parse_string!(inspect(module))
+
+          igniter
+          |> Config.configure(config_file(igniter), :brando, [:site_frontends], {:code, entry(key, module)},
+            updater: &Igniter.Code.Map.set_map_key(&1, key, value, fn zipper -> {:ok, zipper} end)
+          )
+          |> then(&if(map_size(frontends) == 0, do: first_entry_notice(&1, key, mode), else: &1))
       end
     end
 

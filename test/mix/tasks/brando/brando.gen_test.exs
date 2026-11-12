@@ -424,6 +424,7 @@ defmodule Mix.Tasks.Brando.Gen.Test do
     # Last, so the site's frontend replaces the CMS layout; the controller's own view stays.
     assert controller =~
              ~r/plug\(?:put_root_layout, html: \{GeneratorStudioWeb.CMS.Layouts, :root\}\)?\s+plug\(?Brando.Plug.SiteFrontend, view: false\)?\n/
+
     assert controller =~ ~r/action_fallback\(?BrandoWeb.FallbackController/
     assert controller =~ "put_meta(GeneratorStudio.Catalog.Article, entry)"
     # Translations may share a slug: the query engine's language option picks the request's.

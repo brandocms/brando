@@ -167,8 +167,20 @@ restart.
 
 Each site can render in its own root layout and page templates. A site's
 layouts and templates are ordinary Phoenix modules compiled into the release,
-so changing one takes a deploy. Register a frontend module per site key in
-config:
+so changing one takes a deploy. Generate them, with the site's entry in the
+registry, for each site key:
+
+```sh
+mix brando.gen.site --site acme
+```
+
+This writes `MyAppWeb.Sites.Acme`, its `Layouts` and its `PageHTML` under
+`lib/my_app_web/sites/`, and gives the CMS page controller the plug and the
+page assigns described below while it is as generated. See
+[Site frontends](deps/brando/guides/generators.md#site-frontends) for its options and what it
+leaves alone. The generator creates no site record, content or assets.
+
+The registry maps a site key to its frontend module in config:
 
 ```elixir
 # config/brando.exs
@@ -205,7 +217,9 @@ prefix: the `{site_key, environment_key}` entry, then the site key's entry,
 then `default_site_frontend`. With neither configured, rendering uses
 `:page_html_module` and the application's `PageHTML` as before.
 
-To render each site with its frontend in an existing application:
+The page controller and resource controllers that `mix brando.gen.site` and
+`mix brando.gen` generate already render the site's frontend. For a controller
+the generator will not touch, one the application has changed:
 
 1. Add `Brando.Plug.SiteFrontend` to the page controller as its last plug,
    after any `put_view`, `put_layout` or `put_root_layout` it already has:

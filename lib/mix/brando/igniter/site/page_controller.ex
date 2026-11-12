@@ -29,15 +29,16 @@ if Code.ensure_loaded?(Igniter) do
     def plan(igniter, project) do
       with_generated(igniter, project, fn igniter, generated ->
         case find(igniter, project) do
-          {:ok, igniter, source} ->
-            if same_code?(Source.get(source, :content), previous(generated)),
-              do: replace(igniter, source, generated),
-              else: Files.create(igniter, Source.get(source, :path), generated)
-
-          {:error, igniter} ->
-            Files.create(igniter, path(project), generated)
+          {:ok, igniter, source} -> plan_existing(igniter, source, generated)
+          {:error, igniter} -> Files.create(igniter, path(project), generated)
         end
       end)
+    end
+
+    defp plan_existing(igniter, source, generated) do
+      if same_code?(Source.get(source, :content), previous(generated)),
+        do: replace(igniter, source, generated),
+        else: Files.create(igniter, Source.get(source, :path), generated)
     end
 
     @doc """
@@ -49,20 +50,21 @@ if Code.ensure_loaded?(Igniter) do
     def ensure_frontend(igniter, project) do
       with_generated(igniter, project, fn igniter, generated ->
         case find(igniter, project) do
-          {:ok, igniter, source} ->
-            current = Source.get(source, :content)
-
-            cond do
-              same_code?(current, generated) -> igniter
-              same_code?(current, previous(generated)) -> replace(igniter, source, generated)
-              renders_frontend?(current) -> igniter
-              true -> steps_notice(igniter, project, Source.get(source, :path))
-            end
-
-          {:error, igniter} ->
-            igniter
+          {:ok, igniter, source} -> ensure_existing(igniter, project, source, generated)
+          {:error, igniter} -> igniter
         end
       end)
+    end
+
+    defp ensure_existing(igniter, project, source, generated) do
+      current = Source.get(source, :content)
+
+      cond do
+        same_code?(current, generated) -> igniter
+        same_code?(current, previous(generated)) -> replace(igniter, source, generated)
+        renders_frontend?(current) -> igniter
+        true -> steps_notice(igniter, project, Source.get(source, :path))
+      end
     end
 
     @doc "The page controller module, `Web.CMS.PageController`."
