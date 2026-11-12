@@ -6,6 +6,8 @@ defmodule Brando.Sites do
 
   import Ecto.Query
 
+  require Logger
+
   alias Brando.Authorization.Boundary
   alias Brando.Cache
   alias Brando.Content.Blocks, as: ContentBlocks
@@ -69,8 +71,8 @@ defmodule Brando.Sites do
   # Services are cast as a nested collection, so the entry must carry them
   # before the changeset runs — whether the caller passed an id or a struct.
   mutation :update, {Identity, preload: [services: :identifier]} do
-    fn entry ->
-      renamed? = renamed?(entry)
+    fn entry, changeset ->
+      renamed? = Brando.Tenant.mode() == :multi and present(changeset.data.name) != present(entry.name)
 
       {:ok, entry}
       |> Cache.Identity.update()
@@ -92,8 +94,9 @@ defmodule Brando.Sites do
   end
 
   # In `:multi` the home entry of each stored trail carries the identity's
-  # name (`site_name/1`). Read before the identity cache rebuilds: a cold
-  # cache counts as a rename.
+  # name (`site_name/1`). For a new identity, which has no earlier record:
+  # read before the identity cache rebuilds, and a cold cache counts as a
+  # rename.
   defp renamed?(%Identity{language: language, name: name}) do
     Brando.Tenant.mode() == :multi and
       case Cache.get_site(:identity) do
@@ -106,12 +109,24 @@ defmodule Brando.Sites do
   # transaction around the caller to commit.
   defp update_breadcrumbs_on_rename({:ok, %Identity{language: language}} = result, true) do
     key = {__MODULE__, :breadcrumbs, language, Brando.Tenant.current_prefix()}
-    work = Brando.Tenant.capture_context(fn -> Brando.Pages.update_breadcrumbs_for_language(language) end)
+    work = Brando.Tenant.capture_context(fn -> update_breadcrumbs_for_language(language) end)
     Brando.Repo.after_commit(key, work, late: true)
     result
   end
 
   defp update_breadcrumbs_on_rename(result, _renamed?), do: result
+
+  # Outside a transaction `after_commit/3` runs it at once: the identity is
+  # saved by then, so a failure is logged rather than raised to the caller.
+  defp update_breadcrumbs_for_language(language) do
+    Brando.Pages.update_breadcrumbs_for_language(language)
+  rescue
+    error ->
+      Logger.error(
+        "[Brando.Sites] Computing the #{language} breadcrumbs again failed: " <>
+          Exception.format(:error, error, __STACKTRACE__)
+      )
+  end
 
   @doc """
   Create default identity

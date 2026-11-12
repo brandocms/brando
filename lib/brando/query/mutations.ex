@@ -171,7 +171,7 @@ defmodule Brando.Query.Mutations do
         sync_translations(entry, opts)
         maybe_notify(entry, "updated", user, notify?)
 
-        callback.(entry)
+        run_update_callback(callback, entry, changeset)
       else
         {:ok, entry}
       end
@@ -219,7 +219,7 @@ defmodule Brando.Query.Mutations do
         maybe_notify(entry, "updated", user, notify?)
         maybe_broadcast(module, entry, :updated, pubsub?)
 
-        callback_block.(entry)
+        run_update_callback(callback_block, entry, changeset)
       else
         {:ok, entry}
       end
@@ -240,6 +240,11 @@ defmodule Brando.Query.Mutations do
         err
     end
   end
+
+  # An update's callback may take the changeset as well, which holds the
+  # record as it was before the save (`changeset.data`).
+  defp run_update_callback(callback, entry, _changeset) when is_function(callback, 1), do: callback.(entry)
+  defp run_update_callback(callback, entry, changeset) when is_function(callback, 2), do: callback.(entry, changeset)
 
   @decorate span("brando.query.duplicate", schema: :module, entry_id: :id)
   def duplicate(context, module, name, id, opts) do

@@ -4,7 +4,7 @@ defmodule Brando.Cache.Query do
 
   ## Evict after commit
 
-  `evict/1`, `evict_entry/2` and `evict_schema/1` (and so `Brando.Query`'s
+  `evict/1`, `evict_entry/2`, `evict_schema/1` and `evict_all/1` (and so `Brando.Query`'s
   `insert/2`, `update/2` and `delete/1`) evict at once. Inside a transaction
   (with group authorization a generated context mutation always runs in one)
   that is before the commit, and a read by another process in between still
@@ -138,6 +138,13 @@ defmodule Brando.Cache.Query do
 
   def evict_schema(schema) do
     evict_list(schema.__schema__(:source))
+    schema
+  end
+
+  @doc "Evicts every cached list and entry of `schema`."
+  def evict_all(schema) do
+    source = schema.__schema__(:source)
+    evict_committed({:source, source}, fn -> evict_source(source) end)
     schema
   end
 

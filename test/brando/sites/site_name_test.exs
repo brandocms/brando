@@ -226,6 +226,65 @@ defmodule Brando.Sites.SiteNameTest do
       assert home_titles([c.root, c.child]) == ["Stored", "Stored"]
     end
 
+    test "recomputes the trail of a live page under a trashed parent" do
+      c = renamed_site(:multi)
+      c.root |> Ecto.Changeset.change(deleted_at: DateTime.utc_now(:second)) |> Brando.Repo.update!()
+
+      {:ok, _} = Brando.Sites.update_identity(c.identity, %{name: "Acme Identity"}, :system)
+
+      assert home_titles([c.child]) == ["Acme Identity"]
+    end
+
+    test "recomputes after the identity cache rebuilds when saved in a transaction" do
+      c = renamed_site(:multi)
+
+      {:ok, {:ok, _}} =
+        Brando.Repo.transaction(fn ->
+          result = Brando.Sites.update_identity(c.identity, %{name: "Acme Identity"}, :system)
+          # Read before the commit: the recompute waits for the cache's rebuild
+          assert home_titles([c.root, c.child]) == ["Organization name", "Organization name"]
+          result
+        end)
+
+      assert home_titles([c.root, c.child]) == ["Acme Identity", "Acme Identity"]
+    end
+
+    test "leaves the trails alone when the name stays and the identity cache is cold" do
+      c = renamed_site(:multi)
+      Brando.Repo.update_all(Page, set: [breadcrumbs: [%{"title" => "Stored", "uri" => "/"}]])
+      Brando.Cache.put(:identity, nil, :infinite)
+
+      {:ok, _} = Brando.Sites.update_identity(c.identity, %{email: "post@acme.test"}, :system)
+
+      assert home_titles([c.root, c.child]) == ["Stored", "Stored"]
+    end
+
+    test "logs a recompute that raises and keeps the save" do
+      c = renamed_site(:multi)
+      # A trail entry is built from the page's uri
+      Brando.Repo.insert!(%Page{title: "No uri", language: :en, template: "default.html"})
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:ok, _} = Brando.Sites.update_identity(c.identity, %{name: "Acme Identity"}, :system)
+        end)
+
+      assert log =~ "breadcrumbs"
+    end
+
+    test "evicts the cached page queries" do
+      c = renamed_site(:multi)
+      {:ok, _} = Pages.get_page(%{matches: %{id: c.child.id}, cache: true})
+      {:ok, _} = Pages.list_pages(%{cache: true})
+
+      {:ok, _} = Brando.Sites.update_identity(c.identity, %{name: "Acme Identity"}, :system)
+
+      {:ok, child} = Pages.get_page(%{matches: %{id: c.child.id}, cache: true})
+      {:ok, pages} = Pages.list_pages(%{cache: true})
+      assert hd(child.breadcrumbs)["title"] == "Acme Identity"
+      assert Enum.map(pages, &hd(&1.breadcrumbs)["title"]) == ["Acme Identity", "Acme Identity"]
+    end
+
     test "leaves the trails alone in :single" do
       c = renamed_site(:single)
       Brando.Repo.update_all(Page, set: [breadcrumbs: [%{"title" => "Stored", "uri" => "/"}]])
