@@ -125,7 +125,7 @@ mix brando.gen.site --site 2025 --module Anniversary
 
 | File | Module |
 | --- | --- |
-| `lib/my_app_web/sites/acme_travel.ex` | `MyAppWeb.Sites.AcmeTravel`, with `use Brando.Site.Frontend` and commented examples of `layout_assigns/1` and `page_assigns/2` |
+| `lib/my_app_web/sites/acme_travel.ex` | `MyAppWeb.Sites.AcmeTravel`, with `use Brando.Site.Frontend` and commented examples of `layout_assigns/1`, `page_assigns/2` and `admin_brand/0` |
 | `lib/my_app_web/sites/acme_travel/layouts.ex` | `MyAppWeb.Sites.AcmeTravel.Layouts`, with `root/1` as the CMS site's layout has it |
 | `lib/my_app_web/sites/acme_travel/page_html.ex` | `MyAppWeb.Sites.AcmeTravel.PageHTML`, with `index/1` and `default/1` |
 
@@ -149,8 +149,11 @@ one is left alone, with a notice of the steps to take by hand. A
 `Brando.Site.Frontend`, as generated before site frontends, is left alone too,
 with a notice of the edits that make it render the site's frontend. Other
 controllers that render in the site's layout need
-`plug Brando.Plug.SiteFrontend, view: false`, which the notice says. A second
-run with the same key changes nothing.
+`plug Brando.Plug.SiteFrontend, view: false`, which the notice says. The notice
+ends with where the site's module preview rules go, a `[data-site="acme-travel"]`
+block in `assets/backend/css/app.css` (see
+[Admin and site CSS](installation.md#admin-and-site-css)); the task writes no CSS.
+A second run with the same key changes nothing.
 
 The task creates no site record, no content and no frontend assets, and the
 frontend takes effect with the next release. With `tenancy_mode :multi`, once
