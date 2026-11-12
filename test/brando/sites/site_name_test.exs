@@ -235,6 +235,18 @@ defmodule Brando.Sites.SiteNameTest do
       assert home_titles([c.child]) == ["Acme Identity"]
     end
 
+    test "leaves a trashed parent out of the trail" do
+      c = renamed_site(:multi)
+      {:ok, _} = Pages.delete_page(c.root.id, :system)
+
+      {:ok, _} = Brando.Sites.update_identity(c.identity, %{name: "Acme Identity"}, :system)
+
+      assert Brando.Repo.get!(Page, c.child.id).breadcrumbs == [
+               %{"title" => "Acme Identity", "uri" => "/"},
+               %{"title" => "Team", "uri" => "/about/team"}
+             ]
+    end
+
     test "recomputes after the identity cache rebuilds when saved in a transaction" do
       c = renamed_site(:multi)
 
@@ -263,6 +275,7 @@ defmodule Brando.Sites.SiteNameTest do
       c = renamed_site(:multi)
       # A trail entry is built from the page's uri
       Brando.Repo.insert!(%Page{title: "No uri", language: :en, template: "default.html"})
+      later = Brando.Repo.insert!(%Page{title: "Contact", uri: "contact", language: :en, template: "default.html"})
 
       log =
         ExUnit.CaptureLog.capture_log(fn ->
@@ -270,6 +283,8 @@ defmodule Brando.Sites.SiteNameTest do
         end)
 
       assert log =~ "breadcrumbs"
+      # The page that failed does not stop the others
+      assert home_titles([c.root, c.child, later]) == ["Acme Identity", "Acme Identity", "Acme Identity"]
     end
 
     test "evicts the cached page queries" do

@@ -700,7 +700,10 @@ defmodule Brando.Content.Transfer.Entries do
   # A page's stored trail is the destination's: its parents and the site's
   # name there. The write skips the `Brando.Pages` mutations that store it.
   defp update_breadcrumbs!(saved) do
-    for %{entry: %Brando.Pages.Page{} = page} <- saved, do: {:ok, _} = Brando.Pages.update_breadcrumbs(page)
+    pages = for %{entry: %Brando.Pages.Page{} = page} <- saved, do: page
+    Enum.each(pages, fn page -> {:ok, _} = Brando.Pages.update_breadcrumbs(page) end)
+    # The pages under them got a new trail too, and no save evicted those
+    if pages != [], do: Brando.Cache.Query.evict_all(Brando.Pages.Page)
   end
 
   defp before_snapshot(%{mode: "update"} = item, actor) do
@@ -867,9 +870,13 @@ defmodule Brando.Content.Transfer.Entries do
         {key, entry}
       end)
 
-    Enum.each(receipt.before, fn {key, snapshot} ->
-      unless snapshot["created"], do: restore_updated!(snapshot, current[key], actor)
-    end)
+    restored =
+      Enum.flat_map(receipt.before, fn {key, snapshot} ->
+        if snapshot["created"], do: [], else: restore_updated!(snapshot, current[key], actor)
+      end)
+
+    # Once every entry has its parent back: a trail follows the parents
+    update_breadcrumbs!(restored)
 
     created = Enum.map(receipt.mappings["created_order"] || [], &current[&1])
     ensure_unused!(created)
@@ -915,8 +922,8 @@ defmodule Brando.Content.Transfer.Entries do
     Transfer.lock_records!(%{fields: plan.entries, bindings: plan.bindings})
     bindings = Transfer.persist_dependencies!(plan, %{items: %{}}, actor)
     {saved, _bindings} = persist!(plan, bindings, actor)
-    update_breadcrumbs!(saved)
     Activity.import_undone(entry, actor, :update)
+    saved
   end
 
   defp delete_owned!(entry) do

@@ -240,8 +240,12 @@ defmodule Brando.Content.TransferTest do
     assert {:ok, receipt} = Transfer.apply(plan, c.user)
     assert %{"title" => "Source", "uri" => "/about-us"} in Repo.get!(Page, child.id).breadcrumbs
 
+    {:ok, _} = Brando.Pages.get_page(%{matches: %{id: child.id}, cache: true})
+
     assert {:ok, _} = Transfer.restore(receipt.id, c.user)
     assert Repo.get!(Page, child.id).breadcrumbs == before
+    # The child was not in the import: only the recompute wrote it
+    assert {:ok, %{breadcrumbs: ^before}} = Brando.Pages.get_page(%{matches: %{id: child.id}, cache: true})
   end
 
   # A page's trail is derived: a recompute (an identity renamed, a parent
