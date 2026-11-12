@@ -58,6 +58,7 @@ defmodule Brando.Plug.SiteFrontendTest do
     use Brando.Site.Frontend, root_layout: {AcmeLayouts, :root}, page_html: AcmePageHTML
 
     def layout_assigns(language), do: %{footer: "acme footer:#{language}"}
+    def page_assigns(page, _assigns), do: %{footer_color: "acme:#{page.title}"}
   end
 
   defmodule AcmeNext do
@@ -70,10 +71,73 @@ defmodule Brando.Plug.SiteFrontendTest do
     use Brando.Site.Frontend, root_layout: {GlobexLayouts, :root}, page_html: GlobexPageHTML
   end
 
-  # The one page controller every site shares
+  # The application's own page templates and layouts, for when nothing is configured
+  defmodule CMSLayouts do
+    @moduledoc false
+    use Phoenix.Component
+
+    def root(assigns), do: ~H|<html data-site="cms">{@inner_content}</html>|
+  end
+
+  defmodule CMSPageHTML do
+    @moduledoc false
+    use Phoenix.Component
+
+    def home(assigns), do: ~H"<main>cms home</main>"
+  end
+
+  # Renders the page as `put_page_assigns/2` leaves the assigns
+  defmodule PageAction do
+    @moduledoc false
+    def show(conn) do
+      page = %Brando.Pages.Page{title: "About"}
+
+      conn
+      |> Plug.Conn.assign(:page, page)
+      |> Brando.Site.Frontend.put_page_assigns(page)
+      |> then(&Plug.Conn.assign(&1, :seen, Map.take(&1.assigns, [:footer, :footer_color])))
+      |> Phoenix.Controller.render(:home)
+    end
+  end
+
+  # The one page controller every site shares, as `mix brando.gen.site` writes it
   defmodule PageController do
     @moduledoc false
-    use Phoenix.Controller, formats: [:html]
+    use BrandoWeb, :controller
+
+    plug :put_view, html: Brando.Plug.SiteFrontendTest.CMSPageHTML
+    plug :put_layout, false
+    plug :put_root_layout, html: {Brando.Plug.SiteFrontendTest.CMSLayouts, :root}
+    plug Brando.Plug.SiteFrontend
+
+    def show(conn, _params), do: PageAction.show(conn)
+  end
+
+  # A page controller with the defaults of `use BrandoWeb, :controller`: the
+  # application's `Layouts.app` as its layout and `LegacyPageHTML` as its view
+  defmodule LegacyPageController do
+    @moduledoc false
+    use BrandoWeb, :controller
+
+    plug Brando.Plug.SiteFrontend
+
+    def show(conn, _params), do: PageAction.show(conn)
+  end
+
+  defmodule LegacyPageHTML do
+    @moduledoc false
+    use Phoenix.Component
+
+    def home(assigns), do: ~H"<main>legacy home</main>"
+  end
+
+  # Another controller, with its own templates, in the site's layout
+  defmodule ProjectController do
+    @moduledoc false
+    use BrandoWeb, :controller
+
+    plug :put_view, html: Brando.Plug.SiteFrontendTest.CMSPageHTML
+    plug Brando.Plug.SiteFrontend, view: false
 
     def show(conn, _params), do: render(conn, :home)
   end
@@ -115,17 +179,14 @@ defmodule Brando.Plug.SiteFrontendTest do
     :ok
   end
 
-  defp request(host) do
+  defp request(host, controller \\ PageController) do
     :get
     |> Plug.Test.conn("https://#{host}/about")
     |> Map.put(:host, host)
     |> Plug.Conn.assign(:language, "en")
     |> Brando.Plug.Tenant.call([])
-    |> Brando.Plug.SiteFrontend.call([])
-    |> then(fn
-      %{halted: true} = conn -> conn
-      conn -> conn |> Phoenix.Controller.put_format("html") |> PageController.call(PageController.init(:show))
-    end)
+    |> Phoenix.Controller.put_format("html")
+    |> controller.call(controller.init(:show))
   end
 
   # The templates as written, without the formatter's line breaks
@@ -168,6 +229,36 @@ defmodule Brando.Plug.SiteFrontendTest do
     conn = request("www.acme.test")
     assert conn.status == 200
     assert html(conn) == ~s(<html data-site="globex"><main>globex home</main></html>)
+  end
+
+  test "the site's view, root layout and assigns replace the page controller's, with no inner layout" do
+    put_test_env(:site_frontends, %{"acme" => Acme})
+
+    for controller <- [PageController, LegacyPageController] do
+      conn = request("www.acme.test", controller)
+      assert conn.status == 200
+      assert html(conn) == ~s(<html data-site="acme"><main>acme home</main><footer>acme footer:en</footer></html>)
+      assert conn.assigns.seen == %{footer: "acme footer:en", footer_color: "acme:About"}
+    end
+  end
+
+  test "with nothing configured the page controller renders its own view and layouts" do
+    conn = request("www.acme.test")
+    assert conn.status == 200
+    assert html(conn) == ~s(<html data-site="cms"><main>cms home</main></html>)
+    assert conn.assigns.seen == %{}
+
+    conn = request("www.acme.test", LegacyPageController)
+    assert conn.status == 200
+    assert html(conn) == "<html><head></head><body><main>legacy home</main></body></html>"
+  end
+
+  test "view: false gives the site's layout and keeps the controller's view" do
+    put_test_env(:site_frontends, %{"acme" => Acme})
+
+    conn = request("www.acme.test", ProjectController)
+    assert conn.status == 200
+    assert html(conn) == ~s(<html data-site="acme"><main>cms home</main><footer>acme footer:en</footer></html>)
   end
 
   test "with nothing configured the conn passes through unchanged" do

@@ -606,27 +606,49 @@ prefix: the `{site_key, environment_key}` entry, then the site key's entry,
 then `default_site_frontend`. With neither configured, rendering uses
 `:page_html_module` and the application's `PageHTML` as before.
 
-Add `Brando.Plug.SiteFrontend` to the browser pipeline after the locale plug
-and `Brando.Plug.Tenant`:
+To render each site with its frontend in an existing application:
 
-```elixir
-pipeline :browser do
-  # ...
-  plug :put_locale
-  # ...
-  plug Brando.Plug.Tenant
-  plug Brando.Plug.SiteFrontend
-  plug Brando.Plug.Identity
-end
-```
+1. Add `Brando.Plug.SiteFrontend` to the page controller as its last plug,
+   after any `put_view`, `put_layout` or `put_root_layout` it already has:
 
-The plug sets the site's `PageHTML` as the HTML view and its root layout, and
-merges `layout_assigns/1` for `conn.assigns.language` into the assigns. The
-page controller merges the page's assigns with
-`Brando.Site.Frontend.put_page_assigns(conn, page)` before it renders. The
-view applies to every controller the pipeline leads to: a controller that
-renders its own templates there sets its view itself, with
-`plug :put_view, html: MyAppWeb.ProjectHTML`.
+   ```elixir
+   defmodule MyAppWeb.CMS.PageController do
+     use BrandoWeb, :controller
+
+     plug :put_view, html: MyAppWeb.CMS.PageHTML
+     plug :put_layout, false
+     plug :put_root_layout, html: {MyAppWeb.CMS.Layouts, :root}
+     plug Brando.Plug.SiteFrontend
+
+     # ...
+   end
+   ```
+
+   The plug reads the site from `Brando.Plug.Tenant` and the language from
+   the locale plug, which run before it in the router pipeline. It sets the
+   site's `PageHTML` as the HTML view and its root layout with no inner
+   layout, and merges `layout_assigns/1` for `conn.assigns.language` into the
+   assigns. With nothing configured it changes nothing, so the controller's
+   own view and layouts stand.
+
+2. In both page actions (`index` and `show`), call
+   `Brando.Site.Frontend.put_page_assigns(conn, page)` after assigning the
+   page and before rendering:
+
+   ```elixir
+   conn
+   |> assign(:page, page)
+   |> Brando.Site.Frontend.put_page_assigns(page)
+   |> render(page.template)
+   ```
+
+3. In any other controller that should render in the site's layout, add the
+   plug with `view: false` as its last plug. It sets the site's root layout
+   and layout assigns and leaves the controller's view alone:
+
+   ```elixir
+   plug Brando.Plug.SiteFrontend, view: false
+   ```
 
 In `:multi`, once `site_frontends` has an entry, a site with no entry (and no
 entry for its environment) answers 404, as an unknown host does;
