@@ -137,42 +137,45 @@ defmodule BrandoAdmin.Components.Form.BlockFieldSiteTest do
     end
   end
 
-  describe "typing in an entry field" do
+  describe "a block field render" do
     setup %{conn: conn, current_user: user} do
       put_test_env(:authorization_mode, :legacy)
       put_test_env(:tenancy_mode, :multi)
       tenant_site()
 
-      page = Tenant.with_prefix(@prefix, fn -> page_with_blocks(user, 30) end)
+      page = Tenant.with_prefix(@prefix, fn -> page_with_blocks(user, 1) end)
       %{conn: on_site(conn), page: page}
     end
 
-    test "sends neither the block field's wrapper nor its data-site", %{conn: conn, page: page} do
+    test "does not send the wrapper's data-site again", %{conn: conn, page: page} do
       {view, html} = live_form(conn, "/admin/pages/update/#{page.id}")
       assert html =~ ~s(data-site="#{@site_key}")
+
+      [wrapper | _] = view |> render() |> wrappers()
+      [wrapper_id] = Floki.attribute(wrapper, "id")
+      block_field_id = String.replace_suffix(wrapper_id, "-wrapper", "")
+      block_field_cid = cid_of(view, "##{wrapper_id}")
+      [uid | _] = view |> render() |> Floki.parse_document!() |> Floki.attribute("[data-block-uid]", "data-block-uid")
 
       {_ref, _topic, proxy} = view.proxy
       :erlang.trace(proxy, true, [:receive])
 
       try do
-        params =
-          html
-          |> form_params("#page_form_form")
-          |> put_in(["page", "title"], "A new title")
-          |> Map.put("_target", ["page", "title"])
+        Phoenix.LiveView.send_update(view.pid, BrandoAdmin.Components.Form.BlockField,
+          id: block_field_id,
+          event: "delete_block",
+          uid: uid
+        )
 
-        view |> element("#page_form_form") |> render_change(params)
-        render(view)
+        refute render(view) =~ ~s(data-block-uid="#{uid}")
 
         payloads = received_payloads()
-        assert inspect(payloads, limit: :infinity, printable_limit: :infinity) =~ "A new title"
+        # The delete re-rendered the block field, its wrapper's undo marker too
+        assert Enum.any?(payloads, &(inspect(get_in(&1, [:c, block_field_cid])) =~ "data-undo-at"))
 
         for payload <- payloads do
-          sent = inspect(payload, limit: :infinity, printable_limit: :infinity)
           # Statics go once, so a re-sent attribute is its value
-          refute sent =~ @site_key
-          refute sent =~ "blocks-wrapper"
-          refute sent =~ "Paragraph 1"
+          refute inspect(payload, limit: :infinity, printable_limit: :infinity) =~ @site_key
         end
       after
         :erlang.trace(proxy, false, [:receive])

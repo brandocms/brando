@@ -41,17 +41,16 @@ defmodule Brando.Sites.SiteNameTest do
     %{site: site}
   end
 
-  # `preserve_cache/1` restores in the on_exit process, which has no prefix.
+  # The test writes the site's cache keys, `{:tenant, prefix, key}`. They are
+  # named here rather than through the process's prefix, which namespaces
+  # nothing while tenancy is `:none`, as it is in setup and on_exit.
   defp preserve_tenant_cache(keys) do
-    snapshot = Tenant.with_prefix(@prefix, fn -> Map.new(keys, &{&1, Brando.Cache.get(&1)}) end)
-
-    on_exit(fn -> Tenant.with_prefix(@prefix, fn -> restore_tenant_cache(snapshot) end) end)
+    snapshot = Map.new(keys, &{{:tenant, @prefix, &1}, Cachex.get!(:cache, {:tenant, @prefix, &1})})
+    on_exit(fn -> Enum.each(snapshot, &restore_tenant_cache/1) end)
   end
 
-  defp restore_tenant_cache(snapshot), do: Enum.each(snapshot, fn {key, cached} -> restore_tenant_cache(key, cached) end)
-
-  defp restore_tenant_cache(key, nil), do: Brando.Cache.del(key)
-  defp restore_tenant_cache(key, cached), do: Brando.Cache.put(key, cached, :infinite)
+  defp restore_tenant_cache({key, nil}), do: Cachex.del!(:cache, key)
+  defp restore_tenant_cache({key, cached}), do: Cachex.put!(:cache, key, cached)
 
   defp on_site(mode, identities) do
     put_test_env(:tenancy_mode, mode)
