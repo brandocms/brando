@@ -240,6 +240,20 @@ msgid_plural "%{count} on the CDN only"
 msgstr[0] "%{count} bare på CDN"
 msgstr[1] "%{count} bare på CDN"
 
+#: lib/brando/doctor/checks/page_templates.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} page (%{templates})"
+msgid_plural "%{count} pages (%{templates})"
+msgstr[0] "%{count} side (%{templates})"
+msgstr[1] "%{count} sider (%{templates})"
+
+#: lib/brando/doctor/checks/page_templates.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} page whose template its site's PageHTML lacks"
+msgid_plural "%{count} pages whose template their site's PageHTML lacks"
+msgstr[0] "%{count} side med en mal nettstedets PageHTML mangler"
+msgstr[1] "%{count} sider med en mal nettstedets PageHTML mangler"
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} paused"
@@ -274,6 +288,20 @@ msgid "%{count} running"
 msgid_plural "%{count} running"
 msgstr[0] "%{count} kjører"
 msgstr[1] "%{count} kjører"
+
+#: lib/brando/doctor/checks/site_frontends.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} site without a frontend: its pages answer 404 and cannot be previewed"
+msgid_plural "%{count} sites without a frontend: their pages answer 404 and cannot be previewed"
+msgstr[0] "%{count} nettsted uten frontend: sidene svarer 404 og kan ikke forhåndsvises"
+msgstr[1] "%{count} nettsteder uten frontend: sidene svarer 404 og kan ikke forhåndsvises"
+
+#: lib/brando/doctor/checks/site_frontends.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} site_frontends entry names no site"
+msgid_plural "%{count} site_frontends entries name no site"
+msgstr[0] "%{count} oppføring i site_frontends viser ikke til noe nettsted"
+msgstr[1] "%{count} oppføringer i site_frontends viser ikke til noe nettsted"
 
 #: lib/brando/doctor/checks/colors.ex
 #, elixir-autogen, elixir-format
@@ -331,6 +359,11 @@ msgstr "%{file} avviker fra %{template}"
 #, elixir-autogen, elixir-format
 msgid "%{file} is now %{template}"
 msgstr "%{file} heter nå %{template}"
+
+#: lib/brando/doctor/checks/site_frontends.ex
+#, elixir-autogen, elixir-format
+msgid "%{key}: names no site"
+msgstr "%{key}: viser ikke til noe nettsted"
 
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
@@ -414,6 +447,11 @@ msgstr "%{schema}: %{helpers}"
 #, elixir-autogen, elixir-format
 msgid "%{setting} %{entry} for %{site} and %{other_entry} for %{other_site}"
 msgstr "%{setting} %{entry} for %{site} og %{other_entry} for %{other_site}"
+
+#: lib/brando/doctor/checks/site_frontends.ex
+#, elixir-autogen, elixir-format
+msgid "%{site}: no frontend"
+msgstr "%{site}: ingen frontend"
 
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
@@ -760,6 +798,11 @@ msgstr "Åpne bilder"
 msgid "Page"
 msgstr "Side"
 
+#: lib/brando/doctor/checks/page_templates.ex
+#, elixir-autogen, elixir-format
+msgid "Pages without their template"
+msgstr "Sider uten malen sin"
+
 #: lib/brando/doctor/checks/colors.ex
 #, elixir-autogen, elixir-format
 msgid "Palette [%{namespace}] %{name}: %{item}"
@@ -789,6 +832,11 @@ msgstr "Kjører kontrollene…"
 #, elixir-autogen, elixir-format
 msgid "Sitemap"
 msgstr "Nettstedskart"
+
+#: lib/brando/doctor/checks/site_frontends.ex
+#, elixir-autogen, elixir-format
+msgid "Sites without a frontend"
+msgstr "Nettsteder uten frontend"
 
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
@@ -1074,6 +1122,11 @@ msgstr "endpoint-URL er localhost"
 msgid "every Blueprint's admin route helpers exist"
 msgstr "admin-rutehjelperne til alle Blueprints finnes"
 
+#: lib/brando/doctor/checks/site_frontends.ex
+#, elixir-autogen, elixir-format
+msgid "every active site has a frontend"
+msgstr "alle aktive nettsteder har en frontend"
+
 #: lib/brando/doctor/checks/block_uids.ex
 #, elixir-autogen, elixir-format
 msgid "every block has a uid of the expected shape"
@@ -1088,6 +1141,11 @@ msgstr "alle bilder og filer ligger i mediemappen"
 #, elixir-autogen, elixir-format
 msgid "every image has alt text"
 msgstr "alle bilder har alt-tekst"
+
+#: lib/brando/doctor/checks/page_templates.ex
+#, elixir-autogen, elixir-format
+msgid "every page's template is in its site's PageHTML"
+msgstr "malen til hver side finnes i nettstedets PageHTML"
 
 #: lib/brando/doctor/checks/colors.ex
 #, elixir-autogen, elixir-format
@@ -1123,6 +1181,11 @@ msgstr "fil"
 #, elixir-autogen, elixir-format
 msgid "fill in the identity's name and logo"
 msgstr "fyll inn navn og logo i identiteten"
+
+#: lib/brando/doctor/checks/site_frontends.ex
+#, elixir-autogen, elixir-format
+msgid "generate one with mix brando.gen.site --site KEY, or register the module that renders the site in config :brando, site_frontends"
+msgstr "generer en med mix brando.gen.site --site KEY, eller registrer modulen som viser nettstedet i config :brando, site_frontends"
 
 #: lib/brando/doctor/checks/sitemap.ex
 #, elixir-autogen, elixir-format
@@ -1403,6 +1466,12 @@ msgstr "serveres ikke av Brando"
 msgid "of those: %{differences}"
 msgstr "av dem: %{differences}"
 
+#: lib/brando/doctor/checks/page_templates.ex
+#: lib/brando/doctor/checks/site_frontends.ex
+#, elixir-autogen, elixir-format
+msgid "only with tenancy_mode :multi and site_frontends"
+msgstr "bare med tenancy_mode :multi og site_frontends"
+
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "open each image marked “No alt text” under Images and write its Alt. text (no AI provider is configured to draft it)"
@@ -1442,6 +1511,11 @@ msgstr "kø %{queue}, grense %{limit}, satt på pause"
 #, elixir-autogen, elixir-format
 msgid "read the Repo url: in config/runtime.exs only outside tests, inside if config_env() != :test do … end"
 msgstr "les Repo-ens url: i config/runtime.exs bare utenfor tester, inni if config_env() != :test do … end"
+
+#: lib/brando/doctor/checks/site_frontends.ex
+#, elixir-autogen, elixir-format
+msgid "remove the entry, or correct its site key, in config :brando, site_frontends"
+msgstr "fjern oppføringen, eller rett nettstedsnøkkelen, i config :brando, site_frontends"
 
 #: lib/brando/doctor/checks/deprecations.ex
 #, elixir-autogen, elixir-format
@@ -1577,6 +1651,11 @@ msgstr "den låste commiten er ikke den nyeste på %{branch} (%{commit}): mix de
 #, elixir-autogen, elixir-format
 msgid "the release ships %{apps}"
 msgstr "releasen inneholder %{apps}"
+
+#: lib/brando/doctor/checks/page_templates.ex
+#, elixir-autogen, elixir-format
+msgid "they fail to render: add the template to the site's PageHTML, or choose another for the page"
+msgstr "de kan ikke vises: legg malen til i nettstedets PageHTML, eller velg en annen for siden"
 
 #: lib/brando/doctor/checks/modules.ex
 #, elixir-autogen, elixir-format

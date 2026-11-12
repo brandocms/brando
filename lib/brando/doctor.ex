@@ -32,6 +32,8 @@ defmodule Brando.Doctor do
     Checks.Migrations,
     Checks.Oban,
     Checks.Configuration,
+    Checks.SiteFrontends,
+    Checks.PageTemplates,
     Checks.AdminRoutes,
     Checks.AdminAssets,
     Checks.AdminCss,
