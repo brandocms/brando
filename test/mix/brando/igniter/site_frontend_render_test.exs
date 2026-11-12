@@ -126,6 +126,8 @@ defmodule Mix.Brando.Igniter.SiteFrontendRenderTest do
   # The tenant content a page request reads: its schema is not migrated here.
   @content_tables "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename ~ '^(pages|content_|sites_)'"
 
+  @prefixes ["tenant_acme-render_production", "tenant_globex-render_production"]
+
   setup do
     put_test_env(:tenancy_mode, :multi)
     put_test_env(:site_frontends, nil)
@@ -141,7 +143,10 @@ defmodule Mix.Brando.Igniter.SiteFrontendRenderTest do
       Tenant.put_prefix(nil)
       Tenant.Cache.clear()
       Cachex.clear(:query)
-      Cachex.clear(:cache)
+
+      {:ok, keys} = Cachex.keys(:cache)
+
+      for {:tenant, prefix, _} = key <- keys, prefix in @prefixes, do: Cachex.del(:cache, key)
     end)
 
     user = Brando.Factory.insert(:random_user)
