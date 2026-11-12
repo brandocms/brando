@@ -23,47 +23,53 @@ if Code.ensure_loaded?(Igniter) do
 
     @doc """
     Plans `Web.CMS.PageController`. One as generated before it rendered the
-    site's frontend becomes the current template; any other existing one must
-    be the template (`Mix.Brando.Igniter.Files.create/3`).
+    site's frontend gets the plug and the page assigns; any other existing one
+    must be the template (`Mix.Brando.Igniter.Files.create/3`).
     """
     def plan(igniter, project) do
       with_generated(igniter, project, fn igniter, generated ->
         case find(igniter, project) do
-          {:ok, igniter, source} -> plan_existing(igniter, source, generated)
+          {:ok, igniter, source} -> plan_existing(igniter, project, source, generated)
           {:error, igniter} -> Files.create(igniter, path(project), generated)
         end
       end)
     end
 
-    defp plan_existing(igniter, source, generated) do
-      if same_code?(Source.get(source, :content), previous(generated)),
-        do: replace(igniter, source, generated),
+    defp plan_existing(igniter, project, source, generated) do
+      current = Source.get(source, :content)
+
+      if same_code?(current, previous(generated)) and not same_code?(current, generated),
+        do: igniter |> add_frontend(project, source, generated) |> elem(0),
         else: Files.create(igniter, Source.get(source, :path), generated)
     end
 
     @doc """
     Makes sure the existing page controller renders the site's frontend: one
-    as generated, now or before, gets the template; one with the plug and the
-    page assigns is kept; any other is kept with a notice of the steps to take
-    by hand.
+    with the plug and the page assigns is kept; one generated before them gets
+    them; any other is kept with a notice of the steps to take by hand.
+    Returns `{igniter, renders_frontend?}`.
     """
     def ensure_frontend(igniter, project) do
-      with_generated(igniter, project, fn igniter, generated ->
-        case find(igniter, project) do
-          {:ok, igniter, source} -> ensure_existing(igniter, project, source, generated)
-          {:error, igniter} -> igniter
-        end
-      end)
+      with {:ok, igniter, generated} <- generated(igniter, project),
+           {:ok, igniter, source} <- find(igniter, project) do
+        ensure_existing(igniter, project, source, generated)
+      else
+        {:error, igniter} -> {igniter, false}
+      end
     end
 
     defp ensure_existing(igniter, project, source, generated) do
       current = Source.get(source, :content)
 
       cond do
-        same_code?(current, generated) -> igniter
-        same_code?(current, previous(generated)) -> replace(igniter, source, generated)
-        renders_frontend?(current) -> igniter
-        true -> steps_notice(igniter, project, Source.get(source, :path))
+        renders_frontend?(current) ->
+          {igniter, true}
+
+        renders_frontend?(generated) and same_code?(current, previous(generated)) ->
+          add_frontend(igniter, project, source, generated)
+
+        true ->
+          {steps_notice(igniter, project, Source.get(source, :path)), false}
       end
     end
 
@@ -80,16 +86,81 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp with_generated(igniter, project, fun) do
-      case Template.render(igniter, "brando.gen.site", @template, web_module: inspect(project.web_module)) do
+      case generated(igniter, project) do
         {:ok, igniter, generated} -> fun.(igniter, generated)
-        {:error, message} -> Igniter.add_issue(igniter, message)
+        {:error, igniter} -> igniter
+      end
+    end
+
+    defp generated(igniter, project) do
+      case Template.render(igniter, "brando.gen.site", @template, web_module: inspect(project.web_module)) do
+        {:ok, igniter, generated} -> {:ok, igniter, generated}
+        {:error, message} -> {:error, Igniter.add_issue(igniter, message)}
       end
     end
 
     defp previous(generated), do: Enum.reduce(@frontend_lines, generated, &String.replace(&2, &1, ""))
 
-    defp replace(igniter, source, generated),
-      do: Igniter.update_file(igniter, Source.get(source, :path), &Source.update(&1, :content, generated))
+    # Inserts the plug and the page assigns into the controller's own text, so
+    # that its comments and layout stay.
+    defp add_frontend(igniter, project, source, generated) do
+      path = Source.get(source, :path)
+
+      case insert_frontend(Source.get(source, :content)) do
+        {:ok, contents} ->
+          if same_code?(contents, generated),
+            do: {Igniter.update_file(igniter, path, &Source.update(&1, :content, contents)), true},
+            else: {steps_notice(igniter, project, path), false}
+
+        :error ->
+          {steps_notice(igniter, project, path), false}
+      end
+    end
+
+    defp insert_frontend(contents) do
+      lines = String.split(contents, ~r/(?<=\n)/)
+
+      {_, {plug_lines, render_lines}} =
+        contents
+        |> Sourceror.parse_string!()
+        |> Macro.prewalk({[], []}, fn
+          {:plug, _, [_ | _]} = node, {plugs, renders} ->
+            range = Sourceror.get_range(node)
+            {node, {[{range.start[:line], range.end[:line]} | plugs], renders}}
+
+          {:|>, _, [_, {:render, meta, _}]} = node, {plugs, renders} ->
+            {node, {plugs, [meta[:line] | renders]}}
+
+          node, acc ->
+            {node, acc}
+        end)
+
+      with {start, finish} <- Enum.max_by(plug_lines, &elem(&1, 1), fn -> nil end),
+           [_, indent, paren] <- Regex.run(~r/^([ \t]*)plug(\(?)/, Enum.at(lines, start - 1)),
+           {:ok, renders} <- render_insertions(lines, render_lines) do
+        plug = if paren == "(", do: "plug(Brando.Plug.SiteFrontend)", else: "plug Brando.Plug.SiteFrontend"
+
+        [{finish, "#{indent}#{plug}\n"} | renders]
+        |> Enum.sort_by(&elem(&1, 0), :desc)
+        |> Enum.reduce(lines, fn {at, line}, lines -> List.insert_at(lines, at, line) end)
+        |> Enum.join()
+        |> then(&{:ok, &1})
+      else
+        _ -> :error
+      end
+    end
+
+    # The generated controller renders in two pipelines, index's and show's.
+    defp render_insertions(lines, [_, _] = render_lines) do
+      Enum.reduce_while(render_lines, {:ok, []}, fn line, {:ok, acc} ->
+        case Regex.run(~r/^([ \t]*)\|> render\(/, Enum.at(lines, line - 1)) do
+          [_, indent] -> {:cont, {:ok, [{line - 1, "#{indent}|> Brando.Site.Frontend.put_page_assigns(page)\n"} | acc]}}
+          nil -> {:halt, :error}
+        end
+      end)
+    end
+
+    defp render_insertions(_lines, _render_lines), do: :error
 
     defp same_code?(left, right), do: ErrorPages.same_code?(left, right)
 

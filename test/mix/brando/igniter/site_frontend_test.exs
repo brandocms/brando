@@ -231,6 +231,138 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
 
   defp code(source), do: source |> Sourceror.parse_string!() |> Sourceror.strip_meta()
 
+  test "the page controller keeps its comments when it gets the plug and the page assigns", %{multi: multi} do
+    comment = fn source ->
+      source
+      |> String.replace("  alias Brando.I18n\n", "  # Our own note.\n  alias Brando.I18n\n")
+      |> String.replace("  @doc false\n", "  # Kept.\n  @doc false\n")
+    end
+
+    current = multi |> IgniterCase.source(@controller) |> comment.()
+
+    frontend_lines =
+      ~r/^[ \t]*(plug\(?Brando\.Plug\.SiteFrontend\)?|\|> Brando\.Site\.Frontend\.put_page_assigns\(page\))\n/m
+
+    earlier = with_controller(multi, fn _ -> String.replace(current, frontend_lines, "") end)
+    refute IgniterCase.source(earlier, @controller) =~ "SiteFrontend"
+
+    for options <- [["--site", "acme-travel"], []] do
+      result = generate(earlier, options)
+      assert result.issues == []
+      assert IgniterCase.source(result, @controller) == current
+    end
+  end
+
+  test "an application generated before site frontends gets notices for its preview, error pages and controllers",
+       %{multi: multi} do
+    live_preview = "lib/studio_web/live_preview.ex"
+    error_html = "lib/studio_web/error_html.ex"
+
+    earlier =
+      multi
+      |> Igniter.update_file(
+        live_preview,
+        &Rewrite.Source.update(&1, :content, fn source ->
+          source
+          |> String.replace(
+            "layout fn _page -> Brando.Site.Frontend.root_layout({StudioWeb.CMS.Layouts, :root}) end",
+            "layout {StudioWeb.CMS.Layouts, :root}"
+          )
+          |> String.replace(
+            "{Brando.Site.Frontend.page_html(), page.template}",
+            "{StudioWeb.CMS.PageHTML, page.template}"
+          )
+          |> String.replace("    site_assigns true\n", "")
+          |> String.replace("Brando.Site.Frontend", "the site's frontend")
+        end)
+      )
+      |> Igniter.create_new_file(
+        error_html,
+        "defmodule StudioWeb.ErrorHTML do\n  def error_page(assigns), do: StudioWeb.CMS.Layouts.root(assigns)\nend\n"
+      )
+      |> IgniterCase.apply_and_reload()
+
+    refute IgniterCase.source(earlier, live_preview) =~ "Brando.Site.Frontend"
+
+    result = generate(earlier, ["--site", "acme-travel"])
+    assert result.issues == []
+    Igniter.Test.assert_unchanged(result, [live_preview, error_html])
+
+    for text <- [
+          "#{live_preview} does not use Brando.Site.Frontend",
+          "layout fn _page -> Brando.Site.Frontend.root_layout({StudioWeb.CMS.Layouts, :root}) end",
+          "template fn page -> {Brando.Site.Frontend.page_html(), page.template} end",
+          "site_assigns true",
+          "#{error_html} does not use Brando.Site.Frontend",
+          ~s|layout = Brando.Site.Frontend.root_layout({StudioWeb.CMS.Layouts, :root}) -> in_layout(assigns, layout)|,
+          "Brando.Site.Frontend.layout_assigns(layout_assigns.language)",
+          "`plug Brando.Plug.SiteFrontend, view: false`",
+          "StudioWeb.CMS.PageController renders its pages in its layouts and page templates"
+        ],
+        do: assert(notice?(result, text), text)
+
+    # A current application needs none of them.
+    fresh = generate(multi, ["--site", "acme-travel"])
+    refute notice?(fresh, "does not use Brando.Site.Frontend")
+    assert notice?(fresh, "`plug Brando.Plug.SiteFrontend, view: false`")
+  end
+
+  defp with_template(igniter, name, template) do
+    Igniter.assign(
+      igniter,
+      :test_files,
+      Map.put(igniter.assigns.test_files, "priv/templates/brando.gen.site/#{name}", template)
+    )
+  end
+
+  test "an override template that defines another module stops the task", %{multi: multi} do
+    for {name, module} <- [{"layouts.ex", "Layouts"}, {"html.ex", "PageHTML"}] do
+      template = "defmodule <%= web_module %>.CMS.Layouts do\n  use BrandoWeb, :html\nend\n"
+      result = multi |> with_template(name, template) |> generate(["--site", "acme-travel"])
+      assert [issue] = result.issues, name
+      assert issue =~ "priv/templates/brando.gen.site/#{name} defines no StudioWeb.Sites.AcmeTravel.#{module}."
+      assert issue =~ "<%= module %>"
+    end
+  end
+
+  test "an override controller template without the frontend gets the steps, not success", %{multi: multi} do
+    template =
+      multi
+      |> IgniterCase.source(@controller)
+      |> previous()
+      |> String.replace("StudioWeb.", "<%= web_module %>.")
+
+    # The installed controller is what the override renders.
+    installed = multi |> with_controller(&previous/1) |> with_template("controller.ex", template)
+
+    result = generate(installed, ["--site", "acme-travel"])
+    assert result.issues == []
+    Igniter.Test.assert_unchanged(result, @controller)
+    for step <- @customized_steps, do: assert(notice?(result, step), step)
+    refute notice?(result, "renders its pages in its layouts")
+  end
+
+  test "site_frontends declared in both config.exs and brando.exs stops the task", %{multi: multi} do
+    both =
+      multi
+      |> Igniter.update_file(
+        "config/brando.exs",
+        &Rewrite.Source.update(&1, :content, fn c ->
+          c <> ~s(\nconfig :brando, site_frontends: %{"globex" => StudioWeb.Sites.Globex}\n)
+        end)
+      )
+      |> Igniter.update_file(
+        "config/config.exs",
+        &Rewrite.Source.update(&1, :content, fn c -> c <> "\nconfig :brando, site_frontends: %{}\n" end)
+      )
+      |> IgniterCase.apply_and_reload()
+
+    result = generate(both, ["--site", "acme-travel"])
+    assert [issue] = result.issues
+    assert issue =~ "config :brando, :site_frontends is set in both config/config.exs and config/brando.exs"
+    Igniter.Test.assert_unchanged(result, ["config/config.exs", "config/brando.exs"])
+  end
+
   test "a multi install and mix brando.setup.tenancy --mode multi end with the command" do
     assert install(["--tenancy-mode", "multi"]).notices
            |> Enum.any?(&String.ends_with?(&1, "mix brando.gen.site --site KEY\n"))

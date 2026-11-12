@@ -27,18 +27,89 @@ if Code.ensure_loaded?(Igniter) do
            {:ok, name} <- module_name(key, name) do
         module = Module.concat([project.web_module, Sites, name])
 
+        {igniter, wired?} =
+          igniter
+          |> files(project, key, module)
+          |> register(key, module, mode)
+          |> PageController.ensure_frontend(project)
+
         igniter
-        |> files(project, key, module)
-        |> register(key, module, mode)
-        |> PageController.ensure_frontend(project)
+        |> live_preview_notice(project)
+        |> error_html_notice(project)
         |> Igniter.add_notice("""
-        #{inspect(module)} is the frontend of the site with key "#{key}", in its own layouts and page templates.
+        #{inspect(module)} is the frontend of the site with key "#{key}"#{rendered(project, wired?)}
         No site record, content or frontend assets were created. The frontend takes effect
         with the next release: its modules are compiled into it.
         """)
       else
         {:error, %Igniter{} = igniter, message} -> Igniter.add_issue(igniter, message)
         {:error, message} -> Igniter.add_issue(igniter, message)
+      end
+    end
+
+    defp rendered(project, true) do
+      """
+      , and #{inspect(PageController.module(project))} renders its pages in its layouts and page templates.
+      Any other controller that renders in the site's layout, such as a resource controller
+      generated before this version, needs `plug Brando.Plug.SiteFrontend, view: false` as its last plug.\
+      """
+    end
+
+    defp rendered(project, false),
+      do: ". Its pages render in it once #{inspect(PageController.module(project))} does: see the steps above."
+
+    # Modules generated before site frontends render the CMS site's layout.
+    defp live_preview_notice(igniter, project) do
+      with_unwired(igniter, Module.concat(project.web_module, LivePreview), fn path ->
+        web = inspect(project.web_module)
+
+        """
+        #{path} does not use Brando.Site.Frontend, so its preview renders every site's pages in
+        the CMS site's layout and templates. In its preview target for Brando.Pages.Page, replace
+        the layout and template with these, and add site_assigns:
+
+            layout fn _page -> Brando.Site.Frontend.root_layout({#{web}.CMS.Layouts, :root}) end
+            template fn page -> {Brando.Site.Frontend.page_html(), page.template} end
+            site_assigns true
+        """
+      end)
+    end
+
+    defp error_html_notice(igniter, project) do
+      with_unwired(igniter, Module.concat(project.web_module, ErrorHTML), fn path ->
+        web = inspect(project.web_module)
+
+        """
+        #{path} does not use Brando.Site.Frontend, so every site's error pages render in the
+        CMS site's layout. To render them in each site's layout, as
+        priv/templates/brando.gen.site/error_html.ex in Brando does:
+
+          1. In error_page/1, choose the layout with
+
+               cond do
+                 Phoenix.Controller.root_layout(conn, "html") -> content(assigns)
+                 layout = Brando.Site.Frontend.root_layout({#{web}.CMS.Layouts, :root}) -> in_layout(assigns, layout)
+                 true -> bare(assigns)
+               end
+
+          2. Make in_layout/1 in_layout(assigns, {layout, template}): merge
+             Brando.Site.Frontend.layout_assigns(layout_assigns.language) into the layout's
+             assigns, and render the layout with
+             Phoenix.Template.render_to_iodata(layout, to_string(template), "html", assigns)
+             in place of #{web}.CMS.Layouts.root/1.
+        """
+      end)
+    end
+
+    defp with_unwired(igniter, module, notice) do
+      case ProjectModule.find_module(igniter, module) do
+        {:ok, {igniter, source, _zipper}} ->
+          if Rewrite.Source.get(source, :content) =~ "Brando.Site.Frontend",
+            do: igniter,
+            else: Igniter.add_notice(igniter, notice.(Rewrite.Source.get(source, :path)))
+
+        {:error, igniter} ->
+          igniter
       end
     end
 
@@ -102,17 +173,57 @@ if Code.ensure_loaded?(Igniter) do
         fn {template, module}, igniter ->
           binding = [web_module: inspect(project.web_module), module: inspect(module), key: key]
 
-          case Template.render(igniter, "brando.gen.site", template, binding) do
-            {:ok, igniter, source} -> Files.create(igniter, "lib/#{Macro.underscore(module)}.ex", source)
-            {:error, message} -> Igniter.add_issue(igniter, message)
+          with {:ok, igniter, source} <- Template.render(igniter, "brando.gen.site", template, binding),
+               true <- defines?(source, module) do
+            Files.create(igniter, "lib/#{Macro.underscore(module)}.ex", source)
+          else
+            {:error, message} ->
+              Igniter.add_issue(igniter, message)
+
+            false ->
+              Igniter.add_issue(igniter, """
+              priv/templates/brando.gen.site/#{template} defines no #{inspect(module)}. Each site's
+              module is bound to `module`: start the template with `defmodule <%= module %> do`.
+              """)
           end
         end
       )
     end
 
+    defp defines?(source, module) do
+      case Sourceror.parse_string(source) do
+        {:ok, ast} ->
+          ast
+          |> Macro.prewalker()
+          |> Enum.any?(fn
+            {:defmodule, _, [{:__aliases__, _, segments} | _]} ->
+              Enum.all?(segments, &is_atom/1) and Module.concat(segments) == module
+
+            _ ->
+              false
+          end)
+
+        {:error, _} ->
+          false
+      end
+    end
+
     # In the file that configures :brando's tenancy: brando.exs, or config.exs
-    # when the application keeps it there.
+    # when the application keeps it there. Declared in both, only one map
+    # takes effect.
     defp register(igniter, key, module, mode) do
+      if Config.configures_key?(igniter, "config.exs", :brando, [:site_frontends]) and
+           Config.configures_key?(igniter, "brando.exs", :brando, [:site_frontends]) do
+        Igniter.add_issue(igniter, """
+        config :brando, :site_frontends is set in both config/config.exs and config/brando.exs, and
+        only one of them takes effect. Keep it in one file, then run the task again.
+        """)
+      else
+        register_entry(igniter, key, module, mode)
+      end
+    end
+
+    defp register_entry(igniter, key, module, mode) do
       case Configuration.read(igniter, :site_frontends) do
         {:ok, igniter, nil} ->
           igniter

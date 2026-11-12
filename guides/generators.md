@@ -137,12 +137,20 @@ for the key is kept, with a notice. It writes no `default_site_frontend`.
 
 It refuses, saying what to do, with `tenancy_mode :none`, before the CMS site
 exists (run `mix brando.gen.site` first), for a key that is not a site key
-(lowercase letters, digits and single hyphens), and for a key that gives no
-module name without `--module`. The page controller gets
-`Brando.Plug.SiteFrontend` and the `put_page_assigns/2` calls while it is as
-the generator wrote it, now or before; a changed one is left alone, with a
-notice of the steps to take by hand. A second run with the same key changes
-nothing.
+(lowercase letters, digits and single hyphens), for a key that gives no
+module name without `--module`, when `site_frontends` is set in both
+`config/config.exs` and `config/brando.exs`, and when a
+`priv/templates/brando.gen.site` override of `layouts.ex` or `html.ex` does not
+define the site's module (`defmodule <%= module %> do`). The page controller
+gets `Brando.Plug.SiteFrontend` and the `put_page_assigns/2` calls while it is
+as the generator wrote it, now or before, with its comments kept; a changed
+one is left alone, with a notice of the steps to take by hand. A
+`YourWeb.LivePreview` or `YourWeb.ErrorHTML` that does not use
+`Brando.Site.Frontend`, as generated before site frontends, is left alone too,
+with a notice of the edits that make it render the site's frontend. Other
+controllers that render in the site's layout need
+`plug Brando.Plug.SiteFrontend, view: false`, which the notice says. A second
+run with the same key changes nothing.
 
 The task creates no site record, no content and no frontend assets, and the
 frontend takes effect with the next release. With `tenancy_mode :multi`, once
