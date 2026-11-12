@@ -109,6 +109,42 @@ defmodule Brando.Sites do
   end
 
   @doc """
+  The name the current site goes by in `language`: its pages' `og:site_name`
+  and the title of the first entry in their breadcrumbs.
+
+  In `tenancy_mode: :multi`, the first that is set of the identity's `name`
+  for `language`, the current site's `name` and `config :brando, :app_name`.
+  Otherwise `app_name`.
+  """
+  @spec site_name(String.t() | atom()) :: String.t() | nil
+  def site_name(language) do
+    app_name = Brando.config(:app_name)
+
+    if Brando.Tenant.mode() == :multi do
+      present(identity_name(language)) || present(tenant_site_name()) || app_name
+    else
+      app_name
+    end
+  end
+
+  defp identity_name(language) do
+    case Cache.Identity.get(to_string(language)) do
+      %{name: name} -> name
+      _ -> nil
+    end
+  end
+
+  defp tenant_site_name do
+    case Brando.Tenant.current_site_key() do
+      nil -> nil
+      site_key -> with %{name: name} <- Brando.Tenant.Cache.get_site(site_key), do: name
+    end
+  end
+
+  defp present(value) when is_binary(value), do: if(String.trim(value) == "", do: nil, else: value)
+  defp present(_value), do: nil
+
+  @doc """
   Try to get `name` from list of `links` in `identity`.
   """
   def get_link(name) do

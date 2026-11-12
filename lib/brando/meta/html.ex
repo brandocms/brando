@@ -33,14 +33,13 @@ defmodule Brando.Meta.HTML do
   """
   @spec render_meta(map) :: any
   def render_meta(%{conn: %{assigns: %{language: language}} = conn} = assigns) do
-    app_name = Brando.config(:app_name)
     seo = Brando.Cache.SEO.get(language)
 
     metas =
       conn
       |> put_meta_if_missing("title", seo.fallback_meta_title)
       |> put_meta_if_missing("og:title", seo.fallback_meta_title)
-      |> put_meta_if_missing("og:site_name", app_name)
+      |> put_meta_if_missing("og:site_name", Brando.Sites.site_name(language))
       |> put_meta_if_missing("og:type", "website")
       |> put_meta_if_missing("og:url", get_canonical(conn) || Utils.current_url(conn))
       |> maybe_put_meta_description(seo.fallback_meta_description)

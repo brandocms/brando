@@ -687,7 +687,7 @@ defmodule Brando.Pages do
   end
 
   defp build_breadcrumbs(%Page{} = page) do
-    home_entry = %{"title" => Brando.config(:app_name), "uri" => "/"}
+    home_entry = %{"title" => Brando.Sites.site_name(page.language), "uri" => "/"}
     ancestors = collect_ancestors(page, [])
 
     trail =
