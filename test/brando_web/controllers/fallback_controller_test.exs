@@ -170,6 +170,61 @@ defmodule BrandoWeb.FallbackControllerTest do
     assert log =~ "The 404 page rendered without the partials"
   end
 
+  test "a site without a frontend gets the built-in 404 and 410 pages" do
+    put_test_env(:tenancy_mode, :multi)
+    put_test_env(:site_frontends, %{"fallback-acme" => Acme})
+    put_test_env(:endpoint_module, ErrorEndpoint)
+    prefix = "tenant_fallback-globex_production"
+    Brando.Tenant.put_prefix(prefix)
+
+    # The site's redirects, as its SEO cache holds them: the site has no schema
+    seo = %Brando.Sites.SEO{redirects: [%Brando.Sites.Redirect{from: "/articles/gone", to: "/", code: 410}]}
+    Cachex.put(:cache, {:tenant, prefix, :seo}, %{"en" => seo})
+
+    on_exit(fn ->
+      Cachex.del(:cache, {:tenant, prefix, :seo})
+      Brando.Tenant.put_prefix(nil)
+    end)
+
+    conn =
+      build_conn(:get, "/articles/missing")
+      |> Plug.Test.init_test_session(%{})
+      |> assign(:language, "en")
+      |> Controller.put_view(html: ResourceHTML)
+      |> Controller.put_layout(false)
+      |> FallbackController.call({:error, {:article, :not_found}})
+
+    assert conn.status == 404
+    assert conn.resp_body == "Page not found"
+
+    conn =
+      build_conn(:get, "/articles/gone")
+      |> Plug.Test.init_test_session(%{})
+      |> assign(:language, "en")
+      |> FallbackController.call({:error, {:article, :not_found}})
+
+    assert conn.status == 410
+    assert conn.resp_body == "Gone."
+  end
+
+  defmodule HaltingRouter do
+    @moduledoc false
+    def browser(conn, _opts), do: conn |> Plug.Conn.send_resp(403, "Halted") |> Plug.Conn.halt()
+  end
+
+  test "an error page leaves a conn the browser pipeline halted alone" do
+    put_test_env(:router_module, HaltingRouter)
+
+    conn =
+      build_conn(:get, "/articles/missing")
+      |> assign(:language, "en")
+      |> FallbackController.call({:error, {:article, :not_found}})
+
+    assert conn.halted
+    assert conn.status == 403
+    assert conn.resp_body == "Halted"
+  end
+
   test "the built-in 404 without a root layout reads no partials" do
     conn = built_in_404(false)
 

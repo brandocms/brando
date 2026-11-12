@@ -30,9 +30,7 @@ defmodule BrandoWeb.FallbackController do
         if Brando.config(:use_default_errors) == false do
           render_error_page(conn, 410)
         else
-          conn
-          |> resp(410, "Gone.")
-          |> halt()
+          render_built_in_error_page(conn, 410)
         end
 
       {:ok, {:redirect, {url, code}}} ->
@@ -60,8 +58,18 @@ defmodule BrandoWeb.FallbackController do
     |> render(:"400")
   end
 
-  defp render_error_page(conn, 404) do
-    conn = browser_pipeline(conn)
+  # A pipeline plug may answer itself, a 404 for a site without a frontend
+  defp render_error_page(conn, code) do
+    case browser_pipeline(conn) do
+      %{halted: true} = conn -> conn
+      conn -> render_cms_error_page(conn, code, Frontend.page_html())
+    end
+  end
+
+  # A site with no frontend has no templates to render its error page with
+  defp render_cms_error_page(conn, code, nil), do: render_built_in_error_page(conn, code)
+
+  defp render_cms_error_page(conn, 404, page_html) do
     path = conn.path_info
     {language, parsed_path} = I18n.parse_path(path)
 
@@ -90,13 +98,12 @@ defmodule BrandoWeb.FallbackController do
       |> assign(:page, page)
       |> assign(:parsed_path, parsed_path)
       |> Frontend.put_page_assigns(page)
-      |> put_cms_page_view()
+      |> put_view(html: page_html)
       |> render(page.template)
     end
   end
 
-  defp render_error_page(conn, 410) do
-    conn = browser_pipeline(conn)
+  defp render_cms_error_page(conn, 410, page_html) do
     path = conn.path_info
     {language, parsed_path} = I18n.parse_path(path)
 
@@ -124,7 +131,7 @@ defmodule BrandoWeb.FallbackController do
       |> assign(:page, page)
       |> assign(:parsed_path, parsed_path)
       |> Frontend.put_page_assigns(page)
-      |> put_cms_page_view()
+      |> put_view(html: page_html)
       |> render(page.template)
     end
   end
@@ -138,10 +145,6 @@ defmodule BrandoWeb.FallbackController do
     if root_layout, do: put_root_layout(conn, html: root_layout), else: conn
   end
 
-  # Error pages are CMS pages, whatever view the failing controller had: the
-  # site's templates, as `Brando.Pages.list_templates/0` finds them.
-  defp put_cms_page_view(conn), do: put_view(conn, html: Frontend.page_html())
-
   defp render_built_in_error_page(conn, 404) do
     conn
     |> put_status(:not_found)
@@ -150,6 +153,12 @@ defmodule BrandoWeb.FallbackController do
     |> FourOhFour.add_404()
     |> assign_partials()
     |> render(:"404")
+  end
+
+  defp render_built_in_error_page(conn, 410) do
+    conn
+    |> resp(410, "Gone.")
+    |> halt()
   end
 
   # The error renders in the root layout the failing controller chose, and the
