@@ -22,7 +22,14 @@ defmodule Brando.Site.Frontend do
 
         def page_assigns(page, _assigns),
           do: %{footer_color: Brando.Pages.get_var(page, "footer_color")}
+
+        def admin_brand, do: ~s(<img src="/images/acme-logo.svg" alt="Acme">)
       end
+
+  `admin_brand/0` is the HTML at the top of the admin's navigation while the
+  site is selected, in place of `config :brando, :client_brand`. Like
+  `client_brand` it is trusted: it is code compiled into the release. The
+  login screen, where no site is selected, keeps `client_brand`.
 
   The callbacks take no `conn`, so the page controller, live preview and
   error pages all call them. The frontend is resolved from the process's
@@ -42,6 +49,8 @@ defmodule Brando.Site.Frontend do
   @callback page_html() :: module()
   @callback layout_assigns(language :: String.t()) :: map()
   @callback page_assigns(page :: struct(), assigns :: map()) :: map()
+  @callback admin_brand() :: String.t() | nil
+  @optional_callbacks admin_brand: 0
 
   defmacro __using__(opts) do
     root_layout = Keyword.fetch!(opts, :root_layout)
@@ -62,7 +71,10 @@ defmodule Brando.Site.Frontend do
       @impl Brando.Site.Frontend
       def page_assigns(_page, _assigns), do: %{}
 
-      defoverridable root_layout: 0, page_html: 0, layout_assigns: 1, page_assigns: 2
+      @impl Brando.Site.Frontend
+      def admin_brand, do: nil
+
+      defoverridable root_layout: 0, page_html: 0, layout_assigns: 1, page_assigns: 2, admin_brand: 0
     end
   end
 
@@ -147,6 +159,21 @@ defmodule Brando.Site.Frontend do
       frontend -> frontend.layout_assigns(language)
     end
   end
+
+  @doc """
+  The current site's frontend's `admin_brand/0`, or `nil` when nothing is
+  configured, the site has no frontend, or its frontend defines none.
+  """
+  @spec admin_brand() :: String.t() | nil
+  def admin_brand do
+    case current() do
+      frontend when frontend in [:legacy, nil] -> nil
+      frontend -> if exports?(frontend, :admin_brand, 0), do: frontend.admin_brand()
+    end
+  end
+
+  defp exports?(module, function, arity),
+    do: Code.ensure_loaded?(module) and function_exported?(module, function, arity)
 
   @doc "Merges the current frontend's `page_assigns/2` for `page` into the conn's assigns."
   @spec put_page_assigns(Plug.Conn.t(), struct()) :: Plug.Conn.t()
