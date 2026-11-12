@@ -209,8 +209,16 @@ defmodule MyAppWeb.Sites.Acme do
 
   def page_assigns(page, _assigns),
     do: %{footer_color: Brando.Pages.get_var(page, "footer_color")}
+
+  def admin_brand, do: ~s(<img src="/images/acme-logo.svg" alt="Acme">)
 end
 ```
+
+`admin_brand/0` is optional. It returns the HTML the admin shows at the top of
+its navigation while the site is selected, in place of
+`config :brando, :client_brand`. Like `client_brand` it is trusted, being code
+compiled into the release, so never build it from content. The login screen,
+where no site is selected yet, shows `client_brand`.
 
 `Brando.Site.Frontend.current/0` picks the module from the process's tenant
 prefix: the `{site_key, environment_key}` entry, then the site key's entry,
@@ -272,6 +280,35 @@ Startup fails when a `site_frontends` key is neither a site key nor a
 `{site_key, environment_key}` tuple, or when a registered module, or
 `default_site_frontend`, does not load or lacks `root_layout/0` and
 `page_html/0`.
+
+### What follows the site
+
+Four things that are one value for the whole installation without tenancy
+follow the site:
+
+- **`og:site_name`.** In `:multi`, the identity's name for the page's
+  language, else the site's name, else `config :brando, :app_name`. A value the
+  page or the identity's custom metas set still wins. In `:none` and
+  `:single` it is `app_name`.
+- **The breadcrumbs' first entry.** `Brando.Pages` stores each page's trail
+  when the page is saved, and in `:multi` titles its home entry the same way
+  as `og:site_name`, in the page's language. Saving an identity with a new
+  name computes the trails of that language's pages again in the environment
+  it was saved in. A site renamed in the registry reaches a stored trail when
+  the page is next saved, or with `Brando.Pages.update_breadcrumbs/1`, which
+  computes a page's trail and those of the pages under it, under the site and
+  environment's prefix.
+- **The admin's brand.** The navigation shows the selected site's
+  `admin_brand/0`, else `client_brand`; a `{site_key, environment_key}`
+  entry applies as it does for layouts. Switching site reloads the admin,
+  which then shows the new site's brand.
+- **Module preview CSS.** The block editor shows modules with the
+  application's admin stylesheet, `assets/backend/css/app.css`, keyed on their
+  `b-tpl` names. With a site selected, every element that wraps module markup
+  in the admin has `data-site="<site key>"`, so rules for one site's modules
+  go inside its block; rules outside one apply to every site, as a module
+  from the shared library needs. See
+  [Admin and site CSS](deps/brando/guides/installation.md#admin-and-site-css).
 
 Declare public paths in your application's web SSG module:
 

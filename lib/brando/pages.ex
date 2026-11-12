@@ -682,12 +682,38 @@ defmodule Brando.Pages do
     end
   end
 
+  @doc """
+  Compute and store breadcrumbs for every page in `language` that is not
+  deleted, under the current site and environment, a page under a deleted
+  parent included.
+  """
+  def update_breadcrumbs_for_language(language) do
+    Page
+    |> where([p], p.language == ^language and is_nil(p.deleted_at))
+    |> Brando.Repo.all()
+    |> Enum.each(&store_breadcrumbs/1)
+
+    Brando.Cache.Query.evict_all(Page)
+  end
+
+  # One page that can't take a trail is logged: the others still get theirs
+  defp store_breadcrumbs(page) do
+    page = Brando.Repo.preload(page, [:parent])
+    {:ok, _} = page |> Changeset.change(%{breadcrumbs: build_breadcrumbs(page)}) |> Brando.Repo.update()
+  rescue
+    error ->
+      Logger.error(
+        "[Brando.Pages] Computing the breadcrumbs of page #{page.id} again failed: " <>
+          Exception.format(:error, error, __STACKTRACE__)
+      )
+  end
+
   defp build_breadcrumbs(%Page{is_homepage: true}) do
     []
   end
 
   defp build_breadcrumbs(%Page{} = page) do
-    home_entry = %{"title" => Brando.config(:app_name), "uri" => "/"}
+    home_entry = %{"title" => Brando.Sites.site_name(page.language), "uri" => "/"}
     ancestors = collect_ancestors(page, [])
 
     trail =
@@ -707,9 +733,11 @@ defmodule Brando.Pages do
 
   defp collect_ancestors(%Page{parent: nil}, acc), do: acc
 
+  # A deleted parent has no address (its uri is obfuscated until it is
+  # restored), so the trail goes past it
   defp collect_ancestors(%Page{parent: parent}, acc) do
     parent = Brando.Repo.preload(parent, [:parent])
-    collect_ancestors(parent, [parent | acc])
+    collect_ancestors(parent, if(parent.deleted_at, do: acc, else: [parent | acc]))
   end
 
   defp update_descendant_breadcrumbs(%Page{} = page) do

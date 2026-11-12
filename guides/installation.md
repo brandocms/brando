@@ -681,6 +681,24 @@ generated `assets/backend/css/app.css` does: they then outrank Brando's
 whatever their selectors, though an `!important` in Brando's layer still
 outranks one in `app`.
 
+The block editor shows each module with these styles, keyed on the module's
+`b-tpl` name, as the generated `app.css` shows. On an installation with
+several sites, two sites may each have a module of the same name. With a site
+selected, the block editor's wrapper and its loading skeleton carry the site's
+key in `data-site`, so put one site's rules inside its block:
+
+```css
+[data-site="acme"] {
+  [b-tpl="hero"] {
+    @space padding-y 2;
+  }
+}
+```
+
+Rules outside a `[data-site]` block apply to every site, which is what a
+module from the shared library needs. `mix brando.gen.site --site acme` says
+the same when it finishes, and writes no CSS.
+
 ### Vite dev servers
 
 In development the installer sets `config :my_app, hmr: true` in

@@ -173,6 +173,8 @@ defmodule BrandoAdmin.Components.Form do
      |> assign(:live_preview_cache_key, nil)
      |> assign(:preview_update, nil)
      |> assign(:blocks_wanting_entry, %{})
+     # The block field skeleton's `data-site`, as on `BlockField`'s wrapper
+     |> assign(:site_key, Brando.Tenant.current_site_key())
      # What its editor may read can have changed since (`assign_read_entry/2`)
      |> assign(:read_generation, Brando.Authorization.Boundary.read_generation())
      |> assign(:blocks_ready_for_sharing, false)
@@ -4583,7 +4585,7 @@ defmodule BrandoAdmin.Components.Form do
     <div class="frontend-edit-form-wrapper">
       <div id={"#{@id}-loading"} class="frontend-edit-loading">
         <EntrySkeleton.load_state label={gettext("Opening")} />
-        <EntrySkeleton.blocks count={2} label?={false} />
+        <EntrySkeleton.blocks count={2} label?={false} site={@site_key} />
       </div>
     </div>
     """
@@ -4594,7 +4596,7 @@ defmodule BrandoAdmin.Components.Form do
 
     ~H"""
     <div>
-      <EntrySkeleton.form id={"#{@id}-loading"} skeleton={@skeleton} header?={@layout == :entry} />
+      <EntrySkeleton.form id={"#{@id}-loading"} skeleton={@skeleton} header?={@layout == :entry} site={@site_key} />
     </div>
     """
   end
@@ -5110,6 +5112,7 @@ defmodule BrandoAdmin.Components.Form do
                 block_field not in @hidden_block_fields
             }
             count={Map.get(@block_counts, block_field, 0)}
+            site={@site_key}
           />
           <.live_component
             :for={{block_field, block_module, entry_blocks, field_opts} <- (@blocks_ready? && @block_map) || []}

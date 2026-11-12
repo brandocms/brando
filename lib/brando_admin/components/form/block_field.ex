@@ -107,7 +107,11 @@ defmodule BrandoAdmin.Components.Form.BlockField do
        slot_title: nil,
        note_observers: %{},
        live_preview_active?: false,
-       live_preview_cache_key: nil
+       live_preview_cache_key: nil,
+       # `data-site` on the wrapper, which the application's admin stylesheet
+       # scopes a site's module preview rules to. Set once: it never changes
+       # for a mounted field, so a render never sends it again.
+       site_key: Brando.Tenant.current_site_key()
      )}
   end
 
@@ -3099,6 +3103,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       id={"#{@id}-wrapper"}
       phx-hook="Brando.BlockField"
       class={["blocks-wrapper is-frontend-focus", @source_locked && "is-source-locked"]}
+      data-site={@site_key}
       data-block-field={"#{@form_name}[#{@block_field}]"}
       data-entry-id={@entry.id}
       data-paste-allow={Block.Render.paste_allow(@clipboard_meta)}
@@ -3190,6 +3195,7 @@ defmodule BrandoAdmin.Components.Form.BlockField do
       hidden={@hidden}
       inert={!@tab_editing?}
       class={["blocks-wrapper", @note_collection? && "footnote-storage", @source_locked && "is-source-locked"]}
+      data-site={@site_key}
       data-block-field={"#{@form_name}[#{@block_field}]"}
       data-entry-id={@entry.id}
       data-paste-allow={Block.Render.paste_allow(@clipboard_meta)}

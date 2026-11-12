@@ -585,6 +585,18 @@ mutation :update, Project do
 end
 ```
 
+An update's callback can take the changeset as a second argument, and
+`changeset.data` is the entry as it was before the save:
+
+```elixir
+mutation :update, Project do
+  fn project, changeset ->
+    if changeset.data.title != project.title, do: MyApp.ProjectNotifier.renamed(project)
+    {:ok, project}
+  end
+end
+```
+
 ## Composing queries directly
 
 The public helpers can be used without a generated context function when a

@@ -6,6 +6,8 @@ defmodule Brando.Sites do
 
   import Ecto.Query
 
+  require Logger
+
   alias Brando.Authorization.Boundary
   alias Brando.Cache
   alias Brando.Content.Blocks, as: ContentBlocks
@@ -54,9 +56,12 @@ defmodule Brando.Sites do
   """
   mutation :create, Identity do
     fn entry ->
+      renamed? = renamed?(entry)
+
       {:ok, entry}
       |> Cache.Identity.update()
       |> update_villains_referencing_identity()
+      |> update_breadcrumbs_on_rename(renamed?)
     end
   end
 
@@ -66,20 +71,61 @@ defmodule Brando.Sites do
   # Services are cast as a nested collection, so the entry must carry them
   # before the changeset runs — whether the caller passed an id or a struct.
   mutation :update, {Identity, preload: [services: :identifier]} do
-    fn entry ->
+    fn entry, changeset ->
+      renamed? = Brando.Tenant.mode() == :multi and present(changeset.data.name) != present(entry.name)
+
       {:ok, entry}
       |> Cache.Identity.update()
       |> update_villains_referencing_identity()
+      |> update_breadcrumbs_on_rename(renamed?)
     end
   end
 
   # The identity screen makes a language's identity by copying the first one
   mutation :duplicate, {Identity, change_fields: [:name]} do
     fn entry ->
+      renamed? = renamed?(entry)
+
       {:ok, entry}
       |> Cache.Identity.update()
       |> update_villains_referencing_identity()
+      |> update_breadcrumbs_on_rename(renamed?)
     end
+  end
+
+  # In `:multi` the home entry of each stored trail carries the identity's
+  # name (`site_name/1`). For a new identity, which has no earlier record:
+  # read before the identity cache rebuilds, and a cold cache counts as a
+  # rename.
+  defp renamed?(%Identity{language: language, name: name}) do
+    Brando.Tenant.mode() == :multi and
+      case Cache.get_site(:identity) do
+        nil -> true
+        identities -> present(Map.get(Map.get(identities, to_string(language), %{}), :name)) != present(name)
+      end
+  end
+
+  # Late, so it runs after the identity cache's rebuild, which waits for the
+  # transaction around the caller to commit.
+  defp update_breadcrumbs_on_rename({:ok, %Identity{language: language}} = result, true) do
+    key = {__MODULE__, :breadcrumbs, language, Brando.Tenant.current_prefix()}
+    work = Brando.Tenant.capture_context(fn -> update_breadcrumbs_for_language(language) end)
+    Brando.Repo.after_commit(key, work, late: true)
+    result
+  end
+
+  defp update_breadcrumbs_on_rename(result, _renamed?), do: result
+
+  # Outside a transaction `after_commit/3` runs it at once: the identity is
+  # saved by then, so a failure is logged rather than raised to the caller.
+  defp update_breadcrumbs_for_language(language) do
+    Brando.Pages.update_breadcrumbs_for_language(language)
+  rescue
+    error ->
+      Logger.error(
+        "[Brando.Sites] Computing the #{language} breadcrumbs again failed: " <>
+          Exception.format(:error, error, __STACKTRACE__)
+      )
   end
 
   @doc """
@@ -107,6 +153,42 @@ defmodule Brando.Sites do
 
     Brando.Repo.insert!(default_identity)
   end
+
+  @doc """
+  The name the current site goes by in `language`: its pages' `og:site_name`
+  and the title of the first entry in their breadcrumbs.
+
+  In `tenancy_mode: :multi`, the first that is set of the identity's `name`
+  for `language`, the current site's `name` and `config :brando, :app_name`.
+  Otherwise `app_name`.
+  """
+  @spec site_name(String.t() | atom()) :: String.t() | nil
+  def site_name(language) do
+    app_name = Brando.config(:app_name)
+
+    if Brando.Tenant.mode() == :multi do
+      present(identity_name(language)) || present(tenant_site_name()) || app_name
+    else
+      app_name
+    end
+  end
+
+  defp identity_name(language) do
+    case Cache.Identity.get(to_string(language)) do
+      %{name: name} -> name
+      _ -> nil
+    end
+  end
+
+  defp tenant_site_name do
+    case Brando.Tenant.current_site_key() do
+      nil -> nil
+      site_key -> with %{name: name} <- Brando.Tenant.Cache.get_site(site_key), do: name
+    end
+  end
+
+  defp present(value) when is_binary(value), do: if(String.trim(value) == "", do: nil, else: value)
+  defp present(_value), do: nil
 
   @doc """
   Try to get `name` from list of `links` in `identity`.

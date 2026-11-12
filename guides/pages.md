@@ -138,7 +138,8 @@ content SEO audit leaves it out. Filter the flag in your controllers, and use
 Page context creates and updates recompute `breadcrumbs` for the page and its
 non-deleted descendants. Each element has string keys `"title"` and `"uri"`.
 The stored trail starts with the configured app name at `/`, followed by the
-ancestors and current page. It stores `"/" <> page.uri`; it does **not** add a
+ancestors and current page; a deleted ancestor is left out. It stores
+`"/" <> page.uri`; it does **not** add a
 language prefix. Localize those URLs in a multilingual breadcrumb component,
 and verify both languages. Raw `Repo` writes bypass this recomputation; after a
 controlled import use `Brando.Pages.update_breadcrumbs(page)` and refresh any

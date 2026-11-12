@@ -18,8 +18,14 @@ defmodule Brando.Tenant.Seeder do
 
   @impl true
   def seed(%Site{} = site, %Environment{}, %User{}) do
+    # The default identity's name is a placeholder, and in `:multi` the
+    # identity's name is what the site's pages go by (`Brando.Sites.site_name/1`).
     Enum.each(site.languages, fn language ->
-      Brando.Sites.create_default_identity(language)
+      language
+      |> Brando.Sites.create_default_identity()
+      |> Ecto.Changeset.change(name: site.name)
+      |> Brando.Repo.update!()
+
       Brando.Sites.create_default_seo(language)
     end)
 

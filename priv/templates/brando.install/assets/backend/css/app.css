@@ -31,5 +31,16 @@
       }
     }
   }
+
+     With several sites, the block editor carries the selected site's key in
+     `data-site`. Rules for one site's modules go inside its block; rules
+     outside one apply to every site, as a module from the shared library
+     needs:
+
+  [data-site="acme"] {
+    [b-tpl="hero"] {
+      @space padding-y 2;
+    }
+  }
   */
 }

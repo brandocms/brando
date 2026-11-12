@@ -16,4 +16,9 @@ defmodule <%= module %> do
   #
   #     def page_assigns(page, _assigns),
   #       do: %{footer_color: Brando.Pages.get_var(page, "footer_color")}
+
+  # The admin navigation's brand while this site is selected, in place of
+  # config :brando, :client_brand. Trusted HTML, as client_brand is:
+  #
+  #     def admin_brand, do: ~s(<img src="/images/<%= key %>-logo.svg" alt="">)
 end

@@ -656,6 +656,7 @@ defmodule Brando.Content.Transfer.Entries do
 
     bindings = Transfer.persist_dependencies!(current, stage, actor)
     {saved, bindings} = persist!(current, bindings, actor)
+    update_breadcrumbs!(saved)
     label = plan.archive.bundle["source"]["label"]
 
     Activity.with_source(:import, fn ->
@@ -694,6 +695,15 @@ defmodule Brando.Content.Transfer.Entries do
           )
       }
     })
+  end
+
+  # A page's stored trail is the destination's: its parents and the site's
+  # name there. The write skips the `Brando.Pages` mutations that store it.
+  defp update_breadcrumbs!(saved) do
+    pages = for %{entry: %Brando.Pages.Page{} = page} <- saved, do: page
+    Enum.each(pages, fn page -> {:ok, _} = Brando.Pages.update_breadcrumbs(page) end)
+    # The pages under them got a new trail too, and no save evicted those
+    if pages != [], do: Brando.Cache.Query.evict_all(Brando.Pages.Page)
   end
 
   defp before_snapshot(%{mode: "update"} = item, actor) do
@@ -860,9 +870,13 @@ defmodule Brando.Content.Transfer.Entries do
         {key, entry}
       end)
 
-    Enum.each(receipt.before, fn {key, snapshot} ->
-      unless snapshot["created"], do: restore_updated!(snapshot, current[key], actor)
-    end)
+    restored =
+      Enum.flat_map(receipt.before, fn {key, snapshot} ->
+        if snapshot["created"], do: [], else: restore_updated!(snapshot, current[key], actor)
+      end)
+
+    # Once every entry has its parent back: a trail follows the parents
+    update_breadcrumbs!(restored)
 
     created = Enum.map(receipt.mappings["created_order"] || [], &current[&1])
     ensure_unused!(created)
@@ -907,8 +921,9 @@ defmodule Brando.Content.Transfer.Entries do
     unless Transfer.applicable?(plan), do: Error.fail!("Recovery needs attention: " <> Enum.join(plan.problems, " "))
     Transfer.lock_records!(%{fields: plan.entries, bindings: plan.bindings})
     bindings = Transfer.persist_dependencies!(plan, %{items: %{}}, actor)
-    persist!(plan, bindings, actor)
+    {saved, _bindings} = persist!(plan, bindings, actor)
     Activity.import_undone(entry, actor, :update)
+    saved
   end
 
   defp delete_owned!(entry) do

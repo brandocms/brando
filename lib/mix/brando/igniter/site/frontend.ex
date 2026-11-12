@@ -40,6 +40,10 @@ if Code.ensure_loaded?(Igniter) do
         #{summary(igniter, project, key, module, wired?)}
         No site record, content or frontend assets were created. The frontend takes effect
         with the next release: its modules are compiled into it.
+
+        The block editor previews the site's modules inside [data-site="#{key}"]. Put rules
+        for this site's modules in assets/backend/css/app.css, in a [data-site="#{key}"] { … }
+        block; rules outside one apply to every site.
         """)
       else
         {:error, %Igniter{} = igniter, message} -> Igniter.add_issue(igniter, message)

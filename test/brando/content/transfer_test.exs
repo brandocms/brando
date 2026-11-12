@@ -229,6 +229,40 @@ defmodule Brando.Content.TransferTest do
     assert blocks(c.target, c.user) == []
   end
 
+  test "recovering an updated page computes the trails under it again", c do
+    child = Factory.insert(:page, creator: c.user, title: "Team", uri: "destination/team", parent_id: c.target.id)
+    {:ok, _} = Brando.Pages.update_breadcrumbs(c.target)
+    before = Repo.get!(Page, child.id).breadcrumbs
+    archive = entry_archive(c)
+    [entry] = archive.bundle["entries"]
+    targets = %{entry["key"] => %{"mode" => "update", "id" => c.target.id, "attributes" => %{"uri" => "about-us"}}}
+    assert {:ok, plan} = Transfer.preview(archive, targets, c.user)
+    assert {:ok, receipt} = Transfer.apply(plan, c.user)
+    assert %{"title" => "Source", "uri" => "/about-us"} in Repo.get!(Page, child.id).breadcrumbs
+
+    {:ok, _} = Brando.Pages.get_page(%{matches: %{id: child.id}, cache: true})
+
+    assert {:ok, _} = Transfer.restore(receipt.id, c.user)
+    assert Repo.get!(Page, child.id).breadcrumbs == before
+    # The child was not in the import: only the recompute wrote it
+    assert {:ok, %{breadcrumbs: ^before}} = Brando.Pages.get_page(%{matches: %{id: child.id}, cache: true})
+  end
+
+  # A page's trail is derived: a recompute (an identity renamed, a parent
+  # moved) is no edit of the imported content
+  test "a recomputed trail does not block recovery", c do
+    archive = entry_archive(c)
+    [entry] = archive.bundle["entries"]
+    targets = %{entry["key"] => %{"attributes" => %{"uri" => "recomputed-trail"}}}
+    assert {:ok, plan} = Transfer.preview(archive, targets, c.user)
+    assert {:ok, receipt} = Transfer.apply(plan, c.user)
+    id = receipt.after[entry["key"]]["id"]
+    Repo.update_all(from(p in Page, where: p.id == ^id), set: [breadcrumbs: [%{"title" => "Renamed", "uri" => "/"}]])
+
+    assert {:ok, _} = Transfer.restore(receipt.id, c.user)
+    assert is_nil(Repo.get(Page, id))
+  end
+
   test "included parent entries remap their identities and a changed entry blocks recovery", c do
     c.source |> Changeset.change(parent_id: c.target.id) |> Repo.update!()
     archive = entry_archive(c, [%{schema: Page, id: c.source.id}, %{schema: Page, id: c.target.id}])
@@ -266,8 +300,14 @@ defmodule Brando.Content.TransferTest do
     assert plan.problems == []
     assert {:ok, receipt} = Transfer.apply(plan, c.user)
     saved = Repo.get!(Page, receipt.after[entry["key"]]["id"])
-    assert saved.breadcrumbs == crumbs
     assert saved.parent_id == c.target.id
+
+    # The trail is the destination's, computed after the write
+    assert saved.breadcrumbs == [
+             %{"title" => Brando.Sites.site_name(saved.language), "uri" => "/"},
+             %{"title" => c.target.title, "uri" => "/" <> c.target.uri},
+             %{"title" => saved.title, "uri" => "/" <> saved.uri}
+           ]
   end
 
   test "entry recovery refuses to remove newly referenced content", c do

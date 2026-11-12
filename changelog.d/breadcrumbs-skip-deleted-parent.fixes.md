@@ -1,0 +1,1 @@
+- A page's stored breadcrumbs leave out a deleted parent, instead of linking to the address that parent has while it is in the trash.

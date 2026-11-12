@@ -19,6 +19,7 @@ defmodule BrandoAdmin.Nav do
       |> assign(:current_url, url)
       |> put_locale()
       |> assign_tenant_options()
+      |> assign_brand()
       |> assign_menu_sections()
       |> then(&{:ok, &1})
     else
@@ -30,10 +31,18 @@ defmodule BrandoAdmin.Nav do
       |> assign(:current_url, url)
       |> put_locale()
       |> assign_tenant_options()
+      |> assign_brand()
       |> assign_menu_sections()
       |> then(&{:ok, &1})
     end
   end
+
+  # The selected site's frontend's `admin_brand/0`, else `client_brand`. Trusted
+  # HTML: both are code and config compiled into the release. The site is set
+  # for this process by `Brando.Tenant.LiveView`, and switching site reloads
+  # the page, which mounts the navigation again.
+  defp assign_brand(socket),
+    do: assign(socket, :brand, Brando.Site.Frontend.admin_brand() || Brando.config(:client_brand))
 
   defp assign_menu_sections(%{assigns: %{current_user: user}} = socket) when not is_nil(user) do
     sections = BrandoAdmin.Menu.get_menu(user, socket.assigns[:current_site])
@@ -179,8 +188,8 @@ defmodule BrandoAdmin.Nav do
             <header class="navigation-header">
               <div class="logo">
                 <%= cond do %>
-                  <% Brando.config(:client_brand) -> %>
-                    {Phoenix.HTML.raw(Brando.config(:client_brand))}
+                  <% @brand -> %>
+                    {Phoenix.HTML.raw(@brand)}
                   <% logo = identity_logo_url() -> %>
                     <img src={logo} alt="" class="identity-logo" />
                   <% true -> %>
