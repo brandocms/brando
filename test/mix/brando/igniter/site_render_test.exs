@@ -38,6 +38,8 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
 
     files =
       for path <- [
+            "#{@web}/cms/page_controller.ex",
+            "#{@web}/cms/site_context.ex",
             "#{@web}/cms/layouts.ex",
             "#{@web}/cms/page_html.ex",
             "#{@web}/live_preview.ex",
@@ -84,6 +86,8 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
   # The steps Brando.LivePreview.render/4 takes with a target, which reads the
   # configured application's LivePreview rather than this one.
   test "the live preview renders a page with the CMS template, inside the CMS layout", %{conn: conn} do
+    # As brando.gen.site configures it.
+    put_test_env(:page_html_module, RenderSiteWeb.CMS.PageHTML)
     [target] = Spark.Dsl.Extension.get_entities(Module.concat(RenderSiteWeb, LivePreview), [:live_preview])
     assert target.schema == Brando.Pages.Page
 
@@ -95,7 +99,8 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
     inner = render_to_string(html_module, String.replace(template, ".html", ""), "html", Map.put(assigns, :page, page))
     assert inner =~ ~s(<main id="content">)
 
-    {layout, name} = target.layout
+    assert target.site_assigns
+    {layout, name} = target.layout.(page)
     root_assigns = Map.merge(assigns, %{conn: conn, language: "en", inner_content: {:safe, inner}})
     html = render_to_string(layout, to_string(name), "html", root_assigns)
     assert html =~ ~s(<html class="no-js" lang="en">)

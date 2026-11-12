@@ -4,8 +4,9 @@ defmodule <%= web_module %>.ErrorHTML do
   config/config.exs) and for Brando's fallback controller.
 
   404 and 500 render the templates in error_html/ inside the site's root
-  layout, `<%= web_module %>.CMS.Layouts.root/1`. Other statuses render their
-  status message as plain text.
+  layout: its frontend's (`Brando.Site.Frontend.root_layout/1`), or
+  `<%= web_module %>.CMS.Layouts.root/1` with no frontends configured. Other
+  statuses render their status message as plain text.
   """
   use BrandoWeb, :html
 
@@ -24,32 +25,36 @@ defmodule <%= web_module %>.ErrorHTML do
   endpoint renders errors without a layout, with the conn as it was when the
   error was raised, so the layout gets that conn's assigns, the default
   language when its pipeline never set one, and the `partials` fragments for
-  its footer when its controller never assigned them. If the layout raises
-  (say, the database is down and its caches are cold), the error is logged and
-  the page renders without it. Without a conn, only the message renders.
+  its footer when its controller never assigned them, and the site's
+  `layout_assigns/1`. A site with no frontend gets the page without a layout.
+  If the layout raises (say, the database is down and its caches are cold),
+  the error is logged and the page renders without it. Without a conn, only
+  the message renders.
   """
   attr :conn, Plug.Conn, default: nil
   slot :inner_block, required: true
 
   def error_page(%{conn: %Plug.Conn{} = conn} = assigns) do
-    if Phoenix.Controller.root_layout(conn, "html"),
-      do: content(assigns),
-      else: in_layout(assigns)
+    cond do
+      Phoenix.Controller.root_layout(conn, "html") -> content(assigns)
+      layout = Brando.Site.Frontend.root_layout({<%= web_module %>.CMS.Layouts, :root}) -> in_layout(assigns, layout)
+      true -> bare(assigns)
+    end
   end
 
   def error_page(assigns), do: content(assigns)
 
   # Rendered to iodata here rather than when the response is sent, so that an
   # error the layout raises is rescued.
-  defp in_layout(assigns) do
+  defp in_layout(assigns, {layout, template}) do
     layout_assigns = Map.put_new(assigns.conn.assigns, :language, Brando.config(:default_language))
 
     page =
       layout_assigns
       |> Map.put_new_lazy(:partials, fn -> partials(layout_assigns.language) end)
+      |> Map.merge(Brando.Site.Frontend.layout_assigns(layout_assigns.language))
       |> Map.merge(%{conn: assigns.conn, inner_content: content(assigns), __changed__: nil})
-      |> <%= web_module %>.CMS.Layouts.root()
-      |> Phoenix.HTML.Safe.to_iodata()
+      |> then(&Phoenix.Template.render_to_iodata(layout, to_string(template), "html", &1))
 
     assigns = assign(assigns, :page, {:safe, page})
 

@@ -3,12 +3,14 @@ defmodule <%= web_module %>.LivePreview do
 
   alias Brando.Pages
 
-  # Renders a page as <%= web_module %>.CMS.PageController does, with the
-  # identity, navigation and footer partials its pipeline and action assign.
+  # Renders a page as <%= web_module %>.CMS.PageController does: in its site's
+  # layout and templates (Brando.Site.Frontend), with the identity, navigation
+  # and footer partials its pipeline and action assign, and the site's assigns.
   preview_target Pages.Page do
     label "Page"
-    layout {<%= web_module %>.CMS.Layouts, :root}
-    template fn page -> {<%= web_module %>.CMS.PageHTML, page.template} end
+    layout fn _page -> Brando.Site.Frontend.root_layout({<%= web_module %>.CMS.Layouts, :root}) end
+    template fn page -> {Brando.Site.Frontend.page_html(), page.template} end
+    site_assigns true
     template_section fn page -> page.uri end
     template_prop :page
 

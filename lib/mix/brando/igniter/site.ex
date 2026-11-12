@@ -13,6 +13,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.RouteInventory
     alias Mix.Brando.Igniter.Site.ErrorPages
     alias Mix.Brando.Igniter.Site.LivePreview
+    alias Mix.Brando.Igniter.Site.PageController, as: CMSPageController
     alias Mix.Brando.Igniter.Site.PhoenixHome
     alias Mix.Brando.Igniter.Template
     alias Sourceror.Zipper
@@ -338,18 +339,21 @@ if Code.ensure_loaded?(Igniter) do
           do: [],
           else: [{"lockdown_controller.ex", CMS.LockdownController}, {"lockdown_html.ex", CMS.LockdownHTML}]
 
+      igniter = CMSPageController.plan(igniter, project)
+
       Enum.reduce(
         [
-          {"controller.ex", CMS.PageController},
           {"html.ex", CMS.PageHTML},
           {"layouts.ex", CMS.Layouts},
           {"context.ex", CMS.SiteContext}
         ] ++ lockdown_files,
         igniter,
         fn {template, suffix}, igniter ->
-          path = "lib/#{Macro.underscore(Module.concat(project.web_module, suffix))}.ex"
+          module = Module.concat(project.web_module, suffix)
+          path = "lib/#{Macro.underscore(module)}.ex"
+          binding = [web_module: inspect(project.web_module), module: inspect(module)]
 
-          case Template.render(igniter, "brando.gen.site", template, web_module: inspect(project.web_module)) do
+          case Template.render(igniter, "brando.gen.site", template, binding) do
             {:ok, igniter, source} -> Files.create(igniter, path, source)
             {:error, message} -> Igniter.add_issue(igniter, message)
           end

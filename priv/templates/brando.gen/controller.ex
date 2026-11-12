@@ -16,6 +16,7 @@
   plug :put_view, html: <%= inspect html_module %>
   plug :put_layout, false
   plug :put_root_layout, html: {<%= inspect site_layouts %>, :root}
+  plug Brando.Plug.SiteFrontend, view: false
 
   alias Brando.Pages
 
