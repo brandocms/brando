@@ -8,6 +8,7 @@ defmodule BrandoWeb.FallbackController do
 
   alias Brando.I18n
   alias Brando.Pages
+  alias Brando.Site.Frontend
   alias Brando.Sites.FourOhFour
   alias Brando.Sites.Redirects
 
@@ -88,7 +89,8 @@ defmodule BrandoWeb.FallbackController do
       |> assign(:partials, partials)
       |> assign(:page, page)
       |> assign(:parsed_path, parsed_path)
-      |> put_view(html: page_html_module())
+      |> Frontend.put_page_assigns(page)
+      |> put_cms_page_view()
       |> render(page.template)
     end
   end
@@ -121,7 +123,8 @@ defmodule BrandoWeb.FallbackController do
       |> assign(:partials, partials)
       |> assign(:page, page)
       |> assign(:parsed_path, parsed_path)
-      |> put_view(html: page_html_module())
+      |> Frontend.put_page_assigns(page)
+      |> put_cms_page_view()
       |> render(page.template)
     end
   end
@@ -135,17 +138,9 @@ defmodule BrandoWeb.FallbackController do
     if root_layout, do: put_root_layout(conn, html: root_layout), else: conn
   end
 
-  # Error pages are CMS pages, whatever view the failing controller had. As
-  # `Brando.Pages.list_templates/0` finds their templates.
-  defp page_html_module do
-    page_view = Brando.web_module(PageView)
-
-    cond do
-      configured = Brando.config(:page_html_module) -> configured
-      Code.ensure_loaded?(page_view) -> page_view
-      true -> Brando.web_module(PageHTML)
-    end
-  end
+  # Error pages are CMS pages, whatever view the failing controller had: the
+  # site's templates, as `Brando.Pages.list_templates/0` finds them.
+  defp put_cms_page_view(conn), do: put_view(conn, html: Frontend.page_html())
 
   defp render_built_in_error_page(conn, 404) do
     conn

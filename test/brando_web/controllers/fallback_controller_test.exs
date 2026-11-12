@@ -57,6 +57,60 @@ defmodule BrandoWeb.FallbackControllerTest do
     assert conn.resp_body == ~s(<body id="site"><main>Not here<footer>Footer</footer></main></body>)
   end
 
+  defmodule AcmePageHTML do
+    @moduledoc false
+    use Phoenix.Component
+
+    def default(assigns), do: ~H|<main class="acme">{@page.title}{@footer_color}</main>|
+  end
+
+  defmodule Acme do
+    @moduledoc false
+    use Brando.Site.Frontend, root_layout: {Layouts, :root}, page_html: AcmePageHTML
+
+    def page_assigns(page, _assigns), do: %{footer_color: ":#{page.uri}"}
+  end
+
+  test "a registered site's 404 page renders with its frontend's templates and page assigns" do
+    put_test_env(:tenancy_mode, :multi)
+    put_test_env(:site_frontends, %{"fallback-acme" => Acme})
+    prefix = "tenant_fallback-acme_production"
+    BrandoIntegration.Repo.query!(~s(CREATE SCHEMA "#{prefix}"))
+
+    for table <- ~w(pages pages_alternates content_vars pages_fragments sites_seos sites_identities) do
+      BrandoIntegration.Repo.query!(~s{CREATE TABLE "#{prefix}".#{table} (LIKE public.#{table} INCLUDING ALL)})
+    end
+
+    # The site's error page caches its SEO and identity under its prefix
+    cached = for key <- [:seo, :identity], into: %{}, do: {key, Cachex.get!(:cache, {:tenant, prefix, key})}
+
+    on_exit(fn ->
+      for {key, value} <- cached do
+        if value,
+          do: Cachex.put(:cache, {:tenant, prefix, key}, value),
+          else: Cachex.del(:cache, {:tenant, prefix, key})
+      end
+    end)
+
+    Brando.Tenant.put_prefix(prefix)
+
+    page = Factory.insert(:page, uri: "404", has_url: false, title: "Not here")
+    BrandoIntegration.Repo.query!(~s{INSERT INTO "#{prefix}".pages SELECT * FROM public.pages WHERE id = $1}, [page.id])
+    BrandoIntegration.Repo.query!("DELETE FROM public.pages WHERE id = $1", [page.id])
+
+    conn =
+      build_conn(:get, "/articles/missing")
+      |> Plug.Test.init_test_session(%{})
+      |> assign(:language, "en")
+      |> Controller.put_view(html: ResourceHTML)
+      |> Controller.put_layout(false)
+      |> Controller.put_root_layout(html: {Layouts, :root})
+      |> FallbackController.call({:error, {:article, :not_found}})
+
+    assert conn.status == 404
+    assert conn.resp_body == ~s(<body id="site"><main class="acme">Not here:404</main></body>)
+  end
+
   defmodule ErrorHTML do
     @moduledoc false
     use Phoenix.Component
