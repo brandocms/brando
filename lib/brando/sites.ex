@@ -54,9 +54,12 @@ defmodule Brando.Sites do
   """
   mutation :create, Identity do
     fn entry ->
+      renamed? = renamed?(entry)
+
       {:ok, entry}
       |> Cache.Identity.update()
       |> update_villains_referencing_identity()
+      |> update_breadcrumbs_on_rename(renamed?)
     end
   end
 
@@ -67,20 +70,48 @@ defmodule Brando.Sites do
   # before the changeset runs — whether the caller passed an id or a struct.
   mutation :update, {Identity, preload: [services: :identifier]} do
     fn entry ->
+      renamed? = renamed?(entry)
+
       {:ok, entry}
       |> Cache.Identity.update()
       |> update_villains_referencing_identity()
+      |> update_breadcrumbs_on_rename(renamed?)
     end
   end
 
   # The identity screen makes a language's identity by copying the first one
   mutation :duplicate, {Identity, change_fields: [:name]} do
     fn entry ->
+      renamed? = renamed?(entry)
+
       {:ok, entry}
       |> Cache.Identity.update()
       |> update_villains_referencing_identity()
+      |> update_breadcrumbs_on_rename(renamed?)
     end
   end
+
+  # In `:multi` the home entry of each stored trail carries the identity's
+  # name (`site_name/1`). Read before the identity cache rebuilds: a cold
+  # cache counts as a rename.
+  defp renamed?(%Identity{language: language, name: name}) do
+    Brando.Tenant.mode() == :multi and
+      case Cache.get_site(:identity) do
+        nil -> true
+        identities -> present(Map.get(Map.get(identities, to_string(language), %{}), :name)) != present(name)
+      end
+  end
+
+  # Late, so it runs after the identity cache's rebuild, which waits for the
+  # transaction around the caller to commit.
+  defp update_breadcrumbs_on_rename({:ok, %Identity{language: language}} = result, true) do
+    key = {__MODULE__, :breadcrumbs, language, Brando.Tenant.current_prefix()}
+    work = Brando.Tenant.capture_context(fn -> Brando.Pages.update_breadcrumbs_for_language(language) end)
+    Brando.Repo.after_commit(key, work, late: true)
+    result
+  end
+
+  defp update_breadcrumbs_on_rename(result, _renamed?), do: result
 
   @doc """
   Create default identity

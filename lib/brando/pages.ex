@@ -682,6 +682,17 @@ defmodule Brando.Pages do
     end
   end
 
+  @doc """
+  Compute and store breadcrumbs for every page in `language` that is not
+  deleted, under the current site and environment.
+  """
+  def update_breadcrumbs_for_language(language) do
+    Page
+    |> where([p], p.language == ^language and is_nil(p.parent_id) and is_nil(p.deleted_at))
+    |> Brando.Repo.all()
+    |> Enum.each(&update_breadcrumbs/1)
+  end
+
   defp build_breadcrumbs(%Page{is_homepage: true}) do
     []
   end

@@ -693,9 +693,12 @@ follow the site:
   `:single` it is `app_name`.
 - **The breadcrumbs' first entry.** `Brando.Pages` stores each page's trail
   when the page is saved, and in `:multi` titles its home entry the same way
-  as `og:site_name`, in the page's language. A stored trail keeps its title
-  until it is computed again: `Brando.Pages.update_breadcrumbs/1` does that
-  for a page and the pages under it, under the site and environment's prefix.
+  as `og:site_name`, in the page's language. Saving an identity with a new
+  name computes the trails of that language's pages again in the environment
+  it was saved in. A site renamed in the registry reaches a stored trail when
+  the page is next saved, or with `Brando.Pages.update_breadcrumbs/1`, which
+  computes a page's trail and those of the pages under it, under the site and
+  environment's prefix.
 - **The admin's brand.** The navigation shows the selected site's
   `admin_brand/0`, else `client_brand`; a `{site_key, environment_key}`
   entry applies as it does for layouts. Switching site reloads the admin,

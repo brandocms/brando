@@ -165,4 +165,74 @@ defmodule Brando.Sites.SiteNameTest do
       assert home_title() == "MyApp"
     end
   end
+
+  describe "renaming the identity" do
+    setup do
+      # Every other tenant table, empty: an identity save reaches services,
+      # identifiers and the entries that render from the identity.
+      "SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'pages'"
+      |> Repo.query!()
+      |> Map.fetch!(:rows)
+      |> List.flatten()
+      |> Enum.reject(&Tenant.SharedTables.member?/1)
+      |> Enum.each(fn table ->
+        escaped = String.replace(table, "\"", "\"\"")
+        Repo.query!(~s|CREATE TABLE "#{@prefix}"."#{escaped}" (LIKE public."#{escaped}" INCLUDING ALL)|)
+      end)
+
+      :ok
+    end
+
+    # An identity, the cache holding it, and a page with a child under it,
+    # their trails stored under the old name
+    defp renamed_site(mode) do
+      on_site(mode, %{})
+      identity = Brando.Sites.create_default_identity("en")
+      Brando.Cache.put(:identity, Brando.Cache.Identity.load()[:identity], :infinite)
+
+      root = Brando.Repo.insert!(%Page{title: "About", uri: "about", language: :en, template: "default.html"})
+
+      child =
+        Brando.Repo.insert!(%Page{
+          title: "Team",
+          uri: "about/team",
+          language: :en,
+          template: "default.html",
+          parent_id: root.id
+        })
+
+      {:ok, _} = Pages.update_breadcrumbs(root)
+
+      %{identity: identity, root: root, child: child}
+    end
+
+    defp home_titles(pages), do: Enum.map(pages, &hd(Brando.Repo.get!(Page, &1.id).breadcrumbs)["title"])
+
+    test "recomputes the language's stored trails in :multi" do
+      c = renamed_site(:multi)
+      assert home_titles([c.root, c.child]) == ["Organization name", "Organization name"]
+
+      {:ok, _} = Brando.Sites.update_identity(c.identity, %{name: "Acme Identity"}, :system)
+
+      assert home_titles([c.root, c.child]) == ["Acme Identity", "Acme Identity"]
+    end
+
+    test "leaves the trails alone when the name stays in :multi" do
+      c = renamed_site(:multi)
+      Brando.Repo.update_all(Page, set: [breadcrumbs: [%{"title" => "Stored", "uri" => "/"}]])
+
+      {:ok, _} = Brando.Sites.update_identity(c.identity, %{email: "post@acme.test"}, :system)
+
+      assert home_titles([c.root, c.child]) == ["Stored", "Stored"]
+    end
+
+    test "leaves the trails alone in :single" do
+      c = renamed_site(:single)
+      Brando.Repo.update_all(Page, set: [breadcrumbs: [%{"title" => "Stored", "uri" => "/"}]])
+
+      {:ok, _} = Brando.Sites.update_identity(c.identity, %{name: "Acme Identity"}, :system)
+
+      assert home_titles([c.root, c.child]) == ["Stored", "Stored"]
+    end
+  end
 end
