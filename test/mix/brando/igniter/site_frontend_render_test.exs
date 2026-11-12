@@ -105,8 +105,8 @@ defmodule Mix.Brando.Igniter.SiteFrontendRenderTest do
     compiled = [
       plan(:render_single, ["--tenancy-mode", "single", "--site-key", "render-single"], ["render-single"])
       |> compile!(:render_single, ["render-single"]),
-      plan(:render_multi, ["--tenancy-mode", "multi"], ["acme", "globex"])
-      |> compile!(:render_multi, ["acme", "globex"])
+      plan(:render_multi, ["--tenancy-mode", "multi"], ["acme-render", "globex-render"])
+      |> compile!(:render_multi, ["acme-render", "globex-render"])
     ]
 
     on_exit(fn ->
@@ -135,15 +135,18 @@ defmodule Mix.Brando.Igniter.SiteFrontendRenderTest do
     Tenant.Cache.clear()
     Cachex.clear(:query)
 
+    # The site caches the layouts read (palettes, SEO) are kept per prefix,
+    # and these schemas go with the test's transaction.
     on_exit(fn ->
       Tenant.put_prefix(nil)
       Tenant.Cache.clear()
       Cachex.clear(:query)
+      Cachex.clear(:cache)
     end)
 
     user = Brando.Factory.insert(:random_user)
 
-    for key <- ["acme", "globex"] do
+    for key <- ["acme-render", "globex-render"] do
       {:ok, site} =
         Registry.create_site(%{
           name: key,
@@ -202,9 +205,12 @@ defmodule Mix.Brando.Igniter.SiteFrontendRenderTest do
   defp template(conn), do: conn.resp_body |> Floki.parse_document!() |> Floki.attribute("main", "data-template")
 
   test "with two sites registered, each renders in its own layout and template" do
-    put_test_env(:site_frontends, %{"acme" => module(Sites.Acme), "globex" => module(Sites.Globex)})
+    put_test_env(:site_frontends, %{
+      "acme-render" => module(Sites.AcmeRender),
+      "globex-render" => module(Sites.GlobexRender)
+    })
 
-    for key <- ["acme", "globex"] do
+    for key <- ["acme-render", "globex-render"] do
       conn = request("www.#{key}.test")
       assert conn.status == 200
       assert site(conn) == [key]
@@ -214,7 +220,7 @@ defmodule Mix.Brando.Igniter.SiteFrontendRenderTest do
   end
 
   test "with none registered, every site renders the CMS site's layout and template" do
-    for key <- ["acme", "globex"] do
+    for key <- ["acme-render", "globex-render"] do
       conn = request("www.#{key}.test")
       assert conn.status == 200
       assert site(conn) == []
@@ -225,28 +231,28 @@ defmodule Mix.Brando.Igniter.SiteFrontendRenderTest do
   end
 
   test "the live preview renders a site's page in its layout and template, with its assigns" do
-    put_test_env(:site_frontends, %{"acme" => module(Sites.Acme)})
-    Tenant.put_prefix("tenant_acme_production")
+    put_test_env(:site_frontends, %{"acme-render" => module(Sites.AcmeRender)})
+    Tenant.put_prefix("tenant_acme-render_production")
 
     [target] = Spark.Dsl.Extension.get_entities(module(LivePreview), [:live_preview])
     page = %Brando.Pages.Page{template: "index.html", uri: "index", language: :en}
 
-    assert target.layout.(page) == {module(Sites.Acme.Layouts), :root}
-    assert target.template.(page) == {module(Sites.Acme.PageHTML), "index.html"}
+    assert target.layout.(page) == {module(Sites.AcmeRender.Layouts), :root}
+    assert target.template.(page) == {module(Sites.AcmeRender.PageHTML), "index.html"}
     assert target.site_assigns
   end
 
   test "an error page renders in the site's layout, and bare for a site without a frontend" do
-    put_test_env(:site_frontends, %{"acme" => module(Sites.Acme)})
+    put_test_env(:site_frontends, %{"acme-render" => module(Sites.AcmeRender)})
     error_html = module(ErrorHTML)
 
-    Tenant.put_prefix("tenant_acme_production")
+    Tenant.put_prefix("tenant_acme-render_production")
     conn = Plug.Conn.assign(build_conn(), :partials, %{})
     html = Phoenix.Template.render_to_string(error_html, "404", "html", conn: conn)
-    assert html =~ ~s(<html data-site="acme" class="no-js")
+    assert html =~ ~s(<html data-site="acme-render" class="no-js")
     assert html =~ "Page not found"
 
-    Tenant.put_prefix("tenant_globex_production")
+    Tenant.put_prefix("tenant_globex-render_production")
     html = Phoenix.Template.render_to_string(error_html, "404", "html", conn: conn)
     refute html =~ "data-site"
     refute html =~ ~s(id="top")

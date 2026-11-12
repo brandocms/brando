@@ -54,7 +54,7 @@ defmodule Brando.Doctor.SiteFrontendsTest do
 
     user = Brando.Factory.insert(:random_user)
 
-    for {key, environments} <- [{"acme", ["production", "staging"]}, {"globex", ["production"]}] do
+    for {key, environments} <- [{"acme-check", ["production", "staging"]}, {"globex-check", ["production"]}] do
       {:ok, site} =
         Registry.create_site(%{
           name: key,
@@ -87,31 +87,36 @@ defmodule Brando.Doctor.SiteFrontendsTest do
     test "is skipped outside :multi or with an empty registry" do
       assert %Result{status: :skipped} = Checks.SiteFrontends.run(context())
 
-      put_test_env(:site_frontends, %{"acme" => Acme})
+      put_test_env(:site_frontends, %{"acme-check" => Acme})
       put_test_env(:tenancy_mode, :single)
       assert %Result{status: :skipped} = Checks.SiteFrontends.run(context())
     end
 
     test "passes when every active site has an entry, its own or one per environment" do
-      put_test_env(:site_frontends, %{"acme" => Acme, "globex" => Globex})
+      put_test_env(:site_frontends, %{"acme-check" => Acme, "globex-check" => Globex})
       assert %Result{status: :ok} = Checks.SiteFrontends.run(context())
 
-      put_test_env(:site_frontends, %{{"acme", "production"} => Acme, {"acme", "staging"} => Acme, "globex" => Globex})
+      put_test_env(:site_frontends, %{
+        {"acme-check", "production"} => Acme,
+        {"acme-check", "staging"} => Acme,
+        "globex-check" => Globex
+      })
+
       assert %Result{status: :ok} = Checks.SiteFrontends.run(context())
     end
 
     test "warns for each active site or environment without an entry" do
-      put_test_env(:site_frontends, %{{"acme", "production"} => Acme})
+      put_test_env(:site_frontends, %{{"acme-check", "production"} => Acme})
       result = Checks.SiteFrontends.run(context())
       assert result.status == :warning
       assert result.summary == "2 sites without a frontend: their pages answer 404 and cannot be previewed"
-      assert result.items == ["acme/staging: no frontend", "globex: no frontend"]
+      assert result.items == ["acme-check/staging: no frontend", "globex-check: no frontend"]
       assert result.fix =~ "mix brando.gen.site --site KEY"
     end
 
     test "leaves out a site that is not active" do
-      put_test_env(:site_frontends, %{"acme" => Acme})
-      globex = Enum.find(Registry.list_sites(), &(&1.key == "globex"))
+      put_test_env(:site_frontends, %{"acme-check" => Acme})
+      globex = Enum.find(Registry.list_sites(), &(&1.key == "globex-check"))
       {:ok, _} = Registry.update_site(globex, %{status: :suspended})
       Tenant.Cache.clear()
 
@@ -120,25 +125,25 @@ defmodule Brando.Doctor.SiteFrontendsTest do
 
     test "warns for each entry that names no site or environment" do
       put_test_env(:site_frontends, %{
-        "acme" => Acme,
-        "globex" => Globex,
+        "acme-check" => Acme,
+        "globex-check" => Globex,
         "initech" => Acme,
-        {"globex", "staging"} => Globex
+        {"globex-check", "staging"} => Globex
       })
 
       result = Checks.SiteFrontends.run(context())
       assert result.status == :warning
       assert result.summary == "2 site_frontends entries name no site"
-      assert Enum.sort(result.items) == ["globex/staging: names no site", "initech: names no site"]
+      assert Enum.sort(result.items) == ["globex-check/staging: names no site", "initech: names no site"]
     end
 
     test "in the admin, checks the site it runs in" do
-      put_test_env(:site_frontends, %{"acme" => Acme})
-      admin = Context.new(locale: "en", mode: :admin, prefix: "tenant_acme_production")
+      put_test_env(:site_frontends, %{"acme-check" => Acme})
+      admin = Context.new(locale: "en", mode: :admin, prefix: "tenant_acme-check_production")
       assert %Result{status: :ok} = Checks.SiteFrontends.run(admin)
 
-      admin = Context.new(locale: "en", mode: :admin, prefix: "tenant_globex_production")
-      assert %Result{status: :warning, items: ["globex: no frontend"]} = Checks.SiteFrontends.run(admin)
+      admin = Context.new(locale: "en", mode: :admin, prefix: "tenant_globex-check_production")
+      assert %Result{status: :warning, items: ["globex-check: no frontend"]} = Checks.SiteFrontends.run(admin)
     end
   end
 
@@ -148,34 +153,34 @@ defmodule Brando.Doctor.SiteFrontendsTest do
     end
 
     test "passes when every page's template is in its site's PageHTML", %{user: user} do
-      put_test_env(:site_frontends, %{"acme" => Acme, "globex" => Globex})
-      page("tenant_acme_production", "default.html", user)
-      page("tenant_globex_production", "index.html", user)
+      put_test_env(:site_frontends, %{"acme-check" => Acme, "globex-check" => Globex})
+      page("tenant_acme-check_production", "default.html", user)
+      page("tenant_globex-check_production", "index.html", user)
 
       assert %Result{status: :ok} = Checks.PageTemplates.run(context())
     end
 
     test "counts, per site and environment, the pages whose template the site's PageHTML lacks", %{user: user} do
-      put_test_env(:site_frontends, %{"acme" => Acme, "globex" => Globex})
-      page("tenant_acme_production", "default.html", user)
-      page("tenant_acme_staging", "landing.html", user)
+      put_test_env(:site_frontends, %{"acme-check" => Acme, "globex-check" => Globex})
+      page("tenant_acme-check_production", "default.html", user)
+      page("tenant_acme-check_staging", "landing.html", user)
       # Globex's PageHTML has no default/1.
-      for _ <- 1..2, do: page("tenant_globex_production", "default.html", user)
-      page("tenant_globex_production", "landing.html", user)
+      for _ <- 1..2, do: page("tenant_globex-check_production", "default.html", user)
+      page("tenant_globex-check_production", "landing.html", user)
 
       result = Checks.PageTemplates.run(context())
       assert result.status == :warning
       assert result.summary == "4 pages whose template their site's PageHTML lacks"
 
       assert result.items == [
-               "[acme/staging] 1 page (landing.html)",
-               "[globex/production] 3 pages (default.html, landing.html)"
+               "[acme-check/staging] 1 page (landing.html)",
+               "[globex-check/production] 3 pages (default.html, landing.html)"
              ]
     end
 
     test "leaves a site without a frontend to the other check", %{user: user} do
-      put_test_env(:site_frontends, %{"acme" => Acme})
-      page("tenant_globex_production", "landing.html", user)
+      put_test_env(:site_frontends, %{"acme-check" => Acme})
+      page("tenant_globex-check_production", "landing.html", user)
 
       assert %Result{status: :ok} = Checks.PageTemplates.run(context())
     end
