@@ -55,7 +55,7 @@ defmodule Brando.Plug.SiteFrontend do
       frontend ->
         conn
         |> maybe_put_view(frontend, Keyword.get(opts, :view, true))
-        |> put_layout(false)
+        |> put_layout(html: false)
         |> put_root_layout(html: frontend.root_layout())
         |> merge_assigns(Map.to_list(frontend.layout_assigns(conn.assigns.language)))
     end

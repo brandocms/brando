@@ -222,6 +222,7 @@ defmodule BrandoWeb.FallbackControllerTest do
     conn =
       build_conn(:get, "/articles/missing")
       |> assign(:language, "en")
+      |> Controller.put_root_layout(html: {Layouts, :root})
       |> FallbackController.call({:error, {:article, :not_found}})
 
     assert conn.halted

@@ -142,7 +142,8 @@ defmodule BrandoWeb.FallbackController do
     root_layout = root_layout(conn, "html")
     conn = Brando.router().browser(conn, [])
 
-    if root_layout, do: put_root_layout(conn, html: root_layout), else: conn
+    # A plug that answered has sent the response: its conn takes no layout
+    if root_layout && !conn.halted, do: put_root_layout(conn, html: root_layout), else: conn
   end
 
   defp render_built_in_error_page(conn, 404) do
