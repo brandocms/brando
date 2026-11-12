@@ -45,12 +45,10 @@ defmodule Brando.Sites.SiteNameTest do
   defp preserve_tenant_cache(keys) do
     snapshot = Tenant.with_prefix(@prefix, fn -> Map.new(keys, &{&1, Brando.Cache.get(&1)}) end)
 
-    on_exit(fn ->
-      Tenant.with_prefix(@prefix, fn ->
-        for {key, cached} <- snapshot, do: restore_tenant_cache(key, cached)
-      end)
-    end)
+    on_exit(fn -> Tenant.with_prefix(@prefix, fn -> restore_tenant_cache(snapshot) end) end)
   end
+
+  defp restore_tenant_cache(snapshot), do: Enum.each(snapshot, fn {key, cached} -> restore_tenant_cache(key, cached) end)
 
   defp restore_tenant_cache(key, nil), do: Brando.Cache.del(key)
   defp restore_tenant_cache(key, cached), do: Brando.Cache.put(key, cached, :infinite)
