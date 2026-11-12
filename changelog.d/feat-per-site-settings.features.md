@@ -1,4 +1,4 @@
-- With `tenancy_mode: :multi`, `og:site_name` and the title of a page's first breadcrumb are the identity's name for the page's language, else the site's name, else `app_name`.
+- With `tenancy_mode: :multi`, `og:site_name` and the title of a page's first breadcrumb are the identity's name for the page's language, else the site's name, else `app_name`. Saving an identity with a new name computes its language's stored breadcrumbs again, a content transfer computes those of the pages it writes, and a new site's identities are seeded with the site's name.
   Stored breadcrumbs keep the old title until they are computed again: run `Brando.Pages.update_breadcrumbs/1` per site and environment, for example
   `Brando.Tenant.with_prefix("tenant_acme_production", fn -> {:ok, roots} = Brando.Pages.list_pages(%{filter: %{parents: true}}); for page <- roots, do: Brando.Pages.update_breadcrumbs(page) end)`, which takes the root pages that are not deleted and computes the pages under them too.
 
