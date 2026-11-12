@@ -15,6 +15,7 @@ defmodule Brando.LivePreview.Target do
             template_prop: nil,
             template_section: nil,
             template_css_classes: nil,
+            site_assigns: false,
             assigns: []
 
   @schema [
@@ -33,7 +34,7 @@ defmodule Brando.LivePreview.Target do
     layout: [
       type: {:or, [{:tuple, [:atom, {:or, [:string, :atom]}]}, {:fun, 1}]},
       required: false,
-      doc: "Layout"
+      doc: "Layout, as `{module, template}` or a function of the entry returning one"
     ],
     template: [
       type: {:or, [{:tuple, [:atom, {:or, [:string, :atom]}]}, {:fun, 1}]},
@@ -78,6 +79,13 @@ defmodule Brando.LivePreview.Target do
       required: false,
       default: [],
       doc: "Preloads passed to `Repo.preload/2`. Accepts nested preloads, e.g. `[related_cases: :identifier]`"
+    ],
+    site_assigns: [
+      type: :boolean,
+      required: false,
+      default: false,
+      doc:
+        "Merge the current site's `Brando.Site.Frontend` assigns: `layout_assigns/1`, and `page_assigns/2` when the entry is a page"
     ],
     assigns: [
       type: {:list, {:tuple, [:atom, {:or, [{:fun, 1}, {:fun, 2}]}]}},

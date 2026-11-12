@@ -29,7 +29,8 @@ defmodule Brando.LivePreview do
     - `schema_preloads` - List of atoms to preload on `entry`
     - `mutate_data` - function to mutate entry data `entry`
           mutate_data fn entry -> %{entry | title: "custom"} end
-    - `layout` - The layout template we want to use for rendering
+    - `layout` - The layout template we want to use for rendering, as `{module, template}`
+      or a function of the entry returning one
     - `rerender_on_change` – List of key paths that will force a rerender of the entire
       page when changed, for instance `[[:palette]]` if we have code outside of the block
       fields we must rerender when the palette changes.
@@ -40,6 +41,8 @@ defmodule Brando.LivePreview do
     - `template_prop` - What we are refering to the entry as in our template
     - `template_section` - Run this with `put_section` on conn
     - `template_css_classes` - Run this with `put_css_classes` on conn
+    - `site_assigns` - `true` merges the current site's `Brando.Site.Frontend` assigns:
+      `layout_assigns/1`, and `page_assigns/2` when the entry is a page
 
   ## Assign
 
@@ -85,6 +88,7 @@ defmodule Brando.LivePreview do
             template_prop: nil,
             template_section: nil,
             template_css_classes: nil,
+            site_assigns: false,
             assigns: []
 
   @decorate span("brando.preview.render", schema: :schema_module, language: [:entry, :language])
@@ -112,7 +116,12 @@ defmodule Brando.LivePreview do
         opts.template
       end
 
-    {layout_module, layout_template} = opts.layout
+    {layout_module, layout_template} =
+      if is_function(opts.layout) do
+        opts.layout.(entry)
+      else
+        opts.layout
+      end
 
     section =
       if is_function(opts.template_section) do
@@ -182,6 +191,7 @@ defmodule Brando.LivePreview do
            {atom_prop, entry}
          ] ++ processed_assigns)
       |> Enum.into(%{})
+      |> maybe_put_site_assigns(opts.site_assigns, entry, language)
 
     inner_content =
       render_inner_content(
@@ -209,6 +219,24 @@ defmodule Brando.LivePreview do
 
       _ ->
         nil
+    end
+  end
+
+  # As `Brando.Plug.SiteFrontend` and `Brando.Site.Frontend.put_page_assigns/2`
+  # give them to a request for the page.
+  defp maybe_put_site_assigns(assigns, false, _entry, _language), do: assigns
+
+  defp maybe_put_site_assigns(assigns, true, entry, language) do
+    case Brando.Site.Frontend.current() do
+      frontend when frontend in [:legacy, nil] ->
+        assigns
+
+      frontend ->
+        assigns = Map.merge(assigns, frontend.layout_assigns(to_string(language)))
+
+        if is_struct(entry, Brando.Pages.Page),
+          do: Map.merge(assigns, frontend.page_assigns(entry, assigns)),
+          else: assigns
     end
   end
 
