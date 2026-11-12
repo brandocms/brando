@@ -103,6 +103,13 @@ The template selector discovers functions in `MyAppWeb.PageHTML` (or legacy
 `embed_templates "page_html/*"`. The stored value includes `.html`, such as
 `"default.html"`; a stored template without a matching function cannot render.
 
+Once a site has a frontend module (see
+[Per-site layouts and templates](tenancy_and_environments.md#per-site-layouts-and-templates)),
+its templates come from that module's `page_html/0` instead, both in the
+selector, which lists the selected site's templates, and when the page and its
+404 and 410 pages render. A page's `template` is resolved against the current
+site's `PageHTML`, so each site needs the templates its pages name.
+
 <!-- usage-rules:end -->
 
 <!-- usage-rules:start topic="rendering" -->

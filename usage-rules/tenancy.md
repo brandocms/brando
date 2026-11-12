@@ -165,6 +165,78 @@ Nodes that do not share it keep what they read at boot until they restart. A
 node cut off when a write happens keeps its copy until the next write or a
 restart.
 
+Each site can render in its own root layout and page templates. A site's
+layouts and templates are ordinary Phoenix modules compiled into the release,
+so changing one takes a deploy. Register a frontend module per site key in
+config:
+
+```elixir
+# config/brando.exs
+config :brando,
+  site_frontends: %{
+    "acme" => MyAppWeb.Sites.Acme,
+    {"acme", "staging"} => MyAppWeb.Sites.AcmeNext
+  },
+  default_site_frontend: MyAppWeb.CMS
+```
+
+A `{site_key, environment_key}` key covers one environment, so Staging can
+try a new layout before Production. Several keys may name the same module.
+
+A frontend module names its root layout and its `PageHTML`, and may add
+assigns for the layout, per language, and for each page:
+
+```elixir
+defmodule MyAppWeb.Sites.Acme do
+  use Brando.Site.Frontend,
+    root_layout: {MyAppWeb.Sites.Acme.Layouts, :root},
+    page_html: MyAppWeb.Sites.Acme.PageHTML
+
+  def layout_assigns(language),
+    do: %{footer_menu: Brando.Cache.Navigation.get("footer", language)}
+
+  def page_assigns(page, _assigns),
+    do: %{footer_color: Brando.Pages.get_var(page, "footer_color")}
+end
+```
+
+`Brando.Site.Frontend.current/0` picks the module from the process's tenant
+prefix: the `{site_key, environment_key}` entry, then the site key's entry,
+then `default_site_frontend`. With neither configured, rendering uses
+`:page_html_module` and the application's `PageHTML` as before.
+
+Add `Brando.Plug.SiteFrontend` to the browser pipeline after the locale plug
+and `Brando.Plug.Tenant`:
+
+```elixir
+pipeline :browser do
+  # ...
+  plug :put_locale
+  # ...
+  plug Brando.Plug.Tenant
+  plug Brando.Plug.SiteFrontend
+  plug Brando.Plug.Identity
+end
+```
+
+The plug sets the site's `PageHTML` as the HTML view and its root layout, and
+merges `layout_assigns/1` for `conn.assigns.language` into the assigns. The
+page controller merges the page's assigns with
+`Brando.Site.Frontend.put_page_assigns(conn, page)` before it renders. The
+view applies to every controller the pipeline leads to: a controller that
+renders its own templates there sets its view itself, with
+`plug :put_view, html: MyAppWeb.ProjectHTML`.
+
+In `:multi`, once `site_frontends` has an entry, a site with no entry (and no
+entry for its environment) answers 404, as an unknown host does;
+`default_site_frontend` then applies only while `site_frontends` is empty. In
+`:none` and `:single`, a site without an entry gets `default_site_frontend`.
+
+Startup fails when a `site_frontends` key is neither a site key nor a
+`{site_key, environment_key}` tuple, or when a registered module, or
+`default_site_frontend`, does not load or lacks `root_layout/0` and
+`page_html/0`.
+
 Declare public paths in your application's web SSG module:
 
 ```elixir
