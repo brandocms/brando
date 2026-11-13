@@ -258,6 +258,10 @@ defmodule Brando.Assets.DevSiteTest do
       put_test_env(:ssg_run, true)
       assert DevSite.key() == nil
 
+      Application.put_env(@host_app, :dev_site, "gamma")
+      assert capture_io(:stderr, fn -> DevSite.warn_misconfigured() end) == ""
+      Application.put_env(@host_app, :dev_site, "acme")
+
       as_site("acme")
       assert render_component(&HTML.include_assets/1) =~ "/assets/acme-set.js"
     end

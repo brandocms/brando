@@ -75,12 +75,14 @@ defmodule Brando.Assets.DevSite do
 
   @doc """
   Warns once when `dev_site` is set where it does nothing: outside `:multi`,
-  or naming a site that does not exist. Development only; reads the site
+  or naming a site that does not exist. Development only, outside static
+  builds, as `key/0`; reads the site
   cache, so call it after `Brando.Tenant.Cache.warm/0`.
   """
   @spec warn_misconfigured() :: :ok
   def warn_misconfigured do
     with :dev <- Brando.env(),
+         false <- Application.get_env(:brando, :ssg_run, false),
          site_key when not is_nil(site_key) <- configured(),
          message when is_binary(message) <- misconfiguration(site_key) do
       Brando.System.Log.warn(message)
