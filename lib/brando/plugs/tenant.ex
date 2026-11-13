@@ -52,9 +52,10 @@ defmodule Brando.Plug.Tenant do
   # A shared preview's link is on the endpoint's host, which belongs to no
   # site: it opens there under the site and environment it was shared from.
   # Only that path is looked up, and only an unexpired preview of an active
-  # site lets the request through.
-  defp shared_preview_tenant(%{path_info: ["__p__", key]}) do
-    if Tenant.mode() == :multi do
+  # site lets the request through. A suspended or archived site's host
+  # resolves to no site either, and opens nothing.
+  defp shared_preview_tenant(%{path_info: ["__p__", key], host: host}) do
+    if Tenant.mode() == :multi and not Frontend.inactive_site_host?(host) do
       case Brando.Sites.get_shared_preview(key) do
         {:ok, preview} -> Frontend.shared_preview_tenant(preview)
         {:error, _not_found} -> nil

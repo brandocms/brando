@@ -33,6 +33,24 @@ defmodule Brando.Tenant.Frontend do
 
   def shared_preview_tenant(_preview), do: nil
 
+  @doc """
+  Whether `host` is an environment's domain of a site that is not active.
+
+  Such a host resolves to no site, as the endpoint's does, but it is a site's
+  own: it opens no other site's shared preview.
+  """
+  @spec inactive_site_host?(String.t()) :: boolean()
+  def inactive_site_host?(host) when is_binary(host) do
+    host = normalize_host(host)
+
+    Enum.any?(Cache.list_sites(), fn site ->
+      site.status != :active and Enum.any?(site.environments, &(normalize_host(&1.domain) == host))
+    end)
+  end
+
+  defp normalize_host(host) when is_binary(host), do: host |> String.trim() |> String.downcase()
+  defp normalize_host(_host), do: nil
+
   defp resolve_single_site do
     if Tenant.mode() == :single do
       site_key = Brando.config(:site_key)

@@ -1366,7 +1366,10 @@ In `:multi`, a preview opens only under its own site:
   404, as every other path on that host does.
 - On a site's own hosts, the link opens that site's previews only. Another
   site's preview answers 404, with the site's 404 page.
-- A suspended or archived site's preview opens on no host.
+- A suspended or archived site's preview opens on no host, and its own
+  hosts open no preview at all.
+- A preview whose environment is deleted before it expires opens under the
+  site's live environment.
 - A preview shared before previews recorded their site has the site of its
   pinned asset set (the upgrade migration fills it in) and opens under that
   site's live environment. A preview with neither opens on any site's host,

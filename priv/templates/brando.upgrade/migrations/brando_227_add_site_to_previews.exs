@@ -14,7 +14,9 @@ defmodule Brando.Repo.Migrations.Brando227AddSiteToPreviews do
   def up do
     alter table(:sites_previews, prefix: "public") do
       add :site_id, references(:sites, prefix: "public", on_delete: :delete_all)
-      add :environment_id, references(:environments, prefix: "public", on_delete: :delete_all)
+      # An environment deleted before its preview expires leaves the row to
+      # the purger, which releases the preview's pinned asset set
+      add :environment_id, references(:environments, prefix: "public", on_delete: :nilify_all)
     end
 
     create index(:sites_previews, [:site_id], prefix: "public")

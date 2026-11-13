@@ -95,6 +95,25 @@ defmodule BrandoWeb.SharedPreviewHostsTest do
     end
   end
 
+  test "a suspended site's host opens no other site's preview", context do
+    key = insert_preview(context.user, site_id: context.acme.id, environment_id: context.production.id)
+    {:ok, _} = Registry.update_site(Registry.get_site(context.beta.id), %{status: :suspended})
+
+    # Neither host resolves to a site now
+    assert Tenant.Frontend.resolve("beta.test") == nil
+    assert get_preview(key, "BETA.test").status == 404
+    assert get_preview(key, @admin_host).status == 200
+  end
+
+  test "a preview outlives its environment, and opens under the site's live one", context do
+    key = insert_preview(context.user, site_id: context.acme.id, environment_id: context.staging.id)
+    {:ok, _} = Registry.delete_environment(context.staging)
+
+    conn = get_preview(key, @admin_host)
+    assert conn.status == 200
+    assert conn.assigns.current_environment.id == context.production.id
+  end
+
   test "an expired or unknown key answers 404 on every host", context do
     site_404_page()
 
