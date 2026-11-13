@@ -104,6 +104,10 @@ defmodule Brando.Assets.DevSiteTest do
       refute set.active
     end
 
+    test "gets no legacy bundles" do
+      refute render_component(&HTML.include_legacy_assets/1) =~ "-legacy.js"
+    end
+
     test "names its own Vite project in the notice" do
       html = render_component(&HTML.include_assets/1)
       assert html =~ "<code>assets/sites/acme</code>"
@@ -136,6 +140,10 @@ defmodule Brando.Assets.DevSiteTest do
       assert Manifest.read(:app).entries.files == ["/assets/beta-set.js"]
       assert render_component(&HTML.inject_critical_css/1) =~ ".beta-set-critical"
       assert Brando.Plug.SiteAssets.call(conn_for("assets/beta-set.js", "beta.test"), []).halted
+    end
+
+    test "gets its active set's legacy bundles, as in production" do
+      assert render_component(&HTML.include_legacy_assets/1) =~ "/assets/beta-set-legacy.js"
     end
 
     test "renders from the release's build without an active set", %{beta: beta} do
@@ -180,6 +188,7 @@ defmodule Brando.Assets.DevSiteTest do
         assert Manifest.read(:app).entries.files == ["/assets/#{key}-set.js"]
         assert render_component(&HTML.inject_critical_css/1) =~ ".#{key}-set-critical"
         assert Brando.Plug.SiteAssets.call(conn_for("assets/#{key}-set.js", "#{key}.test"), []).halted
+        refute render_component(&HTML.include_legacy_assets/1) =~ "-legacy.js"
         # The project the notice names is the release's default frontend
         assert render_component(&HTML.include_assets/1) =~ "<code>assets/frontend</code>"
       end
@@ -326,8 +335,11 @@ defmodule Brando.Assets.DevSiteTest do
     File.write!(Path.join([path, "assets", "#{name}-critical.js"]), "js")
     File.write!(Path.join([path, "assets", "#{name}-critical.css"]), ".#{name}-critical{}")
 
+    File.write!(Path.join([path, "assets", "#{name}-legacy.js"]), "js")
+
     manifest = %{
       "js/index.js" => %{"isEntry" => true, "file" => "assets/#{name}.js", "css" => ["assets/#{name}.css"]},
+      "js/index-legacy.js" => %{"isEntry" => true, "file" => "assets/#{name}-legacy.js"},
       "js/critical.js" => %{
         "isEntry" => true,
         "name" => "critical",

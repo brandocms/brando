@@ -1126,10 +1126,12 @@ defmodule Brando.HTML do
   @doc """
   Include legacy bundles
 
-  Call this right before your closing `</body>` tag.
+  Call this right before your closing `</body>` tag. They come from the build,
+  so they render with HMR off and, with `dev_site` set, for every site but the
+  dev site (`Brando.Assets.DevSite`).
   """
   def include_legacy_assets(assigns) do
-    if Application.get_env(Brando.otp_app(), :hmr) === false do
+    if hmr_disabled?() or DevSite.other_site?() do
       ~H"{Vite.Render.legacy_js() |> raw()}"
     else
       ~H||
