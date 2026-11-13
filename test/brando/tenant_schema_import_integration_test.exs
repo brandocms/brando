@@ -120,7 +120,9 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
       production = "tenant_#{site.key}_production"
       staging = "tenant_#{site.key}_staging"
 
-      # Not active until the copy is remapped, neutralised and complete
+      # Never active, nor listed by a sweep, until the copy is remapped,
+      # neutralised and complete: not even while Production is provisioned
+      assert_received {:migrated, "production", :suspended, false}
       assert_received {:migrated, "staging", :suspended, false}
       assert site.status == :active
       assert Registry.get_site(site.id).status == :active

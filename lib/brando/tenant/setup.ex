@@ -102,7 +102,7 @@ defmodule Brando.Tenant.Setup do
          :ok <- validate_environments(environments),
          [live_attrs | remaining_attrs] <- order_live_first(environments),
          {:ok, _assignment} <- assign_creator(creator, site),
-         {:ok, live_environment} <- Environments.create_environment(site, live_attrs, creator: creator),
+         {:ok, live_environment} <- Environments.create_environment(site, live_attrs, actor_opts(site, creator)),
          :ok <- seed(site, live_environment, creator, opts),
          {:ok, _environments} <- create_copies(site, live_environment, remaining_attrs, creator) do
       {:ok, Registry.get_site(site.id)}
@@ -139,15 +139,21 @@ defmodule Brando.Tenant.Setup do
     end
   end
 
+  # A site created suspended admits no one, its creator included: its
+  # environments are provisioned as the system, which the installation's
+  # create check on the creator has already authorized
+  defp actor_opts(%Site{status: :active}, creator), do: [creator: creator]
+  defp actor_opts(%Site{}, creator), do: [actor: :system, creator_id: creator.id]
+
   defp create_copies(site, live_environment, environment_attrs, creator) do
     Enum.reduce_while(environment_attrs, {:ok, [live_environment]}, fn attrs, {:ok, environments} ->
       with {:ok, environment} <-
-             Environments.create_environment(site, attrs, creator: creator, clone_structure: false),
+             Environments.create_environment(site, attrs, [clone_structure: false] ++ actor_opts(site, creator)),
            {:ok, _copy} <-
-             Environments.copy_environment(live_environment, environment,
-               creator: creator,
-               keep_archives: 0,
-               note: "Initial site provisioning"
+             Environments.copy_environment(
+               live_environment,
+               environment,
+               [keep_archives: 0, note: "Initial site provisioning"] ++ actor_opts(site, creator)
              ) do
         {:cont, {:ok, environments ++ [environment]}}
       else

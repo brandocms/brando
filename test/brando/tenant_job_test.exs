@@ -69,6 +69,24 @@ defmodule Brando.TenantJobTest do
              ["tenant_acme_production"]
   end
 
+  test "skips a site suspended while the sweep runs" do
+    sites = for key <- ["acme", "beta"], do: create_site(key, :active)
+    for site <- sites, do: create_environment(site, "production", true)
+
+    ran =
+      Job.each_active_environment(:all, fn ->
+        prefix = Tenant.current_prefix()
+
+        for site <- sites, not String.contains?(prefix, site.key) do
+          {:ok, _} = Registry.update_site(Registry.get_site(site.id), %{status: :suspended})
+        end
+
+        prefix
+      end)
+
+    assert length(ran) == 1
+  end
+
   test "keeps legacy public-schema behavior when tenancy is disabled" do
     put_test_env(:tenancy_mode, :none)
     Tenant.put_prefix(nil)

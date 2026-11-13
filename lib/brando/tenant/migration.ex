@@ -124,29 +124,24 @@ defmodule Brando.Tenant.Migration do
     end)
   end
 
-  # With `hold: true` the site is suspended while the copy is made and given
-  # its status last. A suspended site admits no one, so its environments are
-  # then created as the system, the creator having been authorized to create
-  # the site. `:after_copy` runs on the site once the copy has returned;
-  # with `relocates: true` the copy is the only one, and a failure after it
-  # keeps the site.
+  # With `hold: true` the site is inserted suspended, so it is never active
+  # (nor listed by a sweep of active sites) before it is given its status
+  # last. A suspended site admits no one, so its environments are created as
+  # the system, the creator having been authorized to create the site.
+  # `:after_copy` runs on the site once the copy has returned; with
+  # `relocates: true` the copy is the only one, and a failure after it keeps
+  # the site.
   defp migrate(attrs, creator, copy, note, opts) do
     setup_opts = [environments: [@production], seed: false]
+    site_attrs = if opts[:hold], do: Map.put(attrs, :status, :suspended), else: attrs
 
-    with {:ok, site} <- Setup.create_site(attrs, creator, setup_opts) do
+    with {:ok, site} <- Setup.create_site(site_attrs, creator, setup_opts) do
       production = Registry.get_environment_by_key(site, "production")
 
-      case compensated(fn -> hold_and_copy(site, Tenant.prefix(site, production), copy, opts) end) do
-        {:ok, site, result} -> finish(site, production, attrs, creator, note, result, opts)
+      case compensated(fn -> copy.(site, Tenant.prefix(site, production)) end) do
+        {:ok, result} -> finish(site, production, attrs, creator, note, result, opts)
         {:error, reason} -> clean_up(site, reason)
       end
-    end
-  end
-
-  defp hold_and_copy(site, prefix, copy, opts) do
-    with {:ok, site} <- if(opts[:hold], do: Setup.suspend_site(site, actor: :system), else: {:ok, site}),
-         {:ok, result} <- copy.(site, prefix) do
-      {:ok, site, result}
     end
   end
 

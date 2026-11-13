@@ -8,6 +8,8 @@ defmodule Brando.Tenant.Job do
   worker touches content or media.
   """
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Tenant
   alias Brando.Tenant.Registry
 
@@ -64,14 +66,18 @@ defmodule Brando.Tenant.Job do
     end
   end
 
-  @doc "Runs a function once per environment belonging to every active site."
+  @doc """
+  Runs a function once per environment belonging to every active site. Each
+  site's status is read again just before its turn, so a site suspended while
+  the sweep runs is skipped.
+  """
   @spec each_active_environment(:all | :live, (-> result)) :: [result] when result: var
   def each_active_environment(scope, fun)
       when scope in [:all, :live] and is_function(fun, 0) do
     if Tenant.enabled?() do
       Registry.list_sites()
       |> Enum.filter(&(&1.status == :active))
-      |> Enum.flat_map(&run_for_site(&1, scope, fun))
+      |> Enum.flat_map(&if(still_active?(&1), do: run_for_site(&1, scope, fun), else: []))
     else
       [fun.()]
     end
@@ -86,6 +92,12 @@ defmodule Brando.Tenant.Job do
   end
 
   defp prefix_from(args), do: Map.get(args, @prefix_key) || Map.get(args, :tenant_prefix)
+
+  defp still_active?(site) do
+    from(s in Brando.Sites.Site, where: s.id == ^site.id and s.status == :active, select: true)
+    |> Brando.Repo.one(prefix: "public")
+    |> Kernel.==(true)
+  end
 
   defp run_for_site(site, scope, fun) do
     site.environments
