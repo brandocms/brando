@@ -90,7 +90,8 @@ defmodule Brando.Doctor.Context do
 
   defp environments(:mix, _prefix) do
     if Tenant.enabled?() do
-      for site <- Tenant.Registry.list_sites(),
+      # The registry lists sites in no order: by key, a report reads the same each run
+      for site <- Enum.sort_by(Tenant.Registry.list_sites(), & &1.key),
           site.status == :active,
           environment <- Enum.sort_by(site.environments, & &1.id),
           do: {"#{site.key}/#{environment.key}", Tenant.prefix(site, environment)}
