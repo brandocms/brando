@@ -208,7 +208,8 @@ defmodule Brando.Assets.SiteAssets do
   old set never shadows un-hashed files such as favicons.
 
   The development site (`Brando.Assets.DevSite`) skips its active set, so the
-  release's files answer as they do for the Vite dev server's page.
+  release's files answer as they do for the Vite dev server's page, and a
+  pinned set answers it only for a path the release lacks.
   """
   @spec serve_path(scope(), String.t()) :: String.t() | nil
   def serve_path(site, relative_path) when is_binary(relative_path) do
@@ -472,7 +473,16 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
+  # A build may name a manifest file without a hash: for the development
+  # site, a pinned set (perhaps its active one) must not shadow the release
+  # file its pages get
   defp pinned_file(site, relative_path) do
+    if DevSite.dev_site?(site) and File.regular?(Path.join(Capture.release_root(), relative_path)),
+      do: nil,
+      else: find_pinned_file(site, relative_path)
+  end
+
+  defp find_pinned_file(site, relative_path) do
     site
     |> pinned_sets()
     |> Enum.find_value(fn %{pinned: pinned, path: root} ->

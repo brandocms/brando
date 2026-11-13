@@ -108,6 +108,51 @@ defmodule Brando.Assets.DevSiteTest do
       refute render_component(&HTML.include_legacy_assets/1) =~ "-legacy.js"
     end
 
+    # A link shared before `dev_site` was set pins the active set. Its
+    # content-hashed files keep the link working; a file at a stable name
+    # (Vite's `public/` files, or build output named without a hash) must
+    # not shadow the release's file the dev server's page gets.
+    test "gets a pinned set's hashed files, never one at a stable name", %{acme: acme, tmp_dir: tmp_dir} do
+      path = create_set(acme, "acme-pinned")
+      File.write!(Path.join(path, "favicon.ico"), "pinned icon")
+      File.mkdir_p!(Path.join(path, "fonts"))
+      File.write!(Path.join(path, "fonts/brand.woff2"), "pinned font")
+
+      manifest = path |> Path.join("manifest.json") |> File.read!() |> Jason.decode!()
+      manifest = put_in(manifest, ["js/index.js", "assets"], ["fonts/brand.woff2"])
+      File.write!(Path.join(path, "manifest.json"), Jason.encode!(manifest))
+
+      {:ok, set} = SiteAssets.register_set(acme, path, %{})
+      {:ok, _active} = SiteAssets.activate_set(set.id)
+
+      user = Brando.Factory.insert(:random_user, avatar: nil)
+
+      Brando.Repo.insert!(
+        %Brando.Sites.Preview{
+          creator_id: user.id,
+          preview_key: Ecto.UUID.generate(),
+          html: Brando.Utils.term_to_binary("<main>Pinned</main>"),
+          expires_at: DateTime.utc_now() |> DateTime.add(3_600, :second) |> DateTime.truncate(:second),
+          asset_set_id: set.id
+        },
+        prefix: "public"
+      )
+
+      SiteAssets.invalidate_pinned(acme)
+
+      release = Path.join(tmp_dir, "priv/static")
+      File.write!(Path.join(release, "favicon.ico"), "release icon")
+      File.mkdir_p!(Path.join(release, "fonts"))
+      File.write!(Path.join(release, "fonts/brand.woff2"), "release font")
+
+      served = Brando.Plug.SiteAssets.call(conn_for("assets/acme-pinned.js", "acme.test"), [])
+      assert served.halted
+
+      for stable <- ["favicon.ico", "fonts/brand.woff2"] do
+        refute Brando.Plug.SiteAssets.call(conn_for(stable, "acme.test"), []).halted, stable
+      end
+    end
+
     test "names its own Vite project in the notice" do
       html = render_component(&HTML.include_assets/1)
       assert html =~ "<code>assets/sites/acme</code>"
