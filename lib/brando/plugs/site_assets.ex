@@ -44,10 +44,10 @@ defmodule Brando.Plug.SiteAssets do
     conn = allow_any_origin(conn)
 
     with relative_path when is_binary(relative_path) <- relative_path(conn.path_info),
-         file when is_binary(file) <- serve_path(conn, relative_path) do
+         {file, cache_control} when is_binary(file) <- serve_path(conn, relative_path) do
       conn
       |> put_resp_header("content-type", MIME.from_path(relative_path))
-      |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
+      |> put_resp_header("cache-control", cache_control)
       |> send_file(200, file)
       |> halt()
     else
@@ -74,16 +74,23 @@ defmodule Brando.Plug.SiteAssets do
     end
   end
 
+  @immutable "public, max-age=31536000, immutable"
+
+  # A host with no site answers a path for whichever site holds it, and stops
+  # when a second site brings other content under that name: a cache must ask
+  # again each time, or it keeps sending the first site's file
+  @ask_again "no-cache"
+
   defp serve_path(conn, relative_path) do
     case Brando.Tenant.mode() do
       :multi ->
         case Frontend.resolve(conn.host) do
-          {site, _environment} -> SiteAssets.serve_path(site, relative_path)
-          nil -> SiteAssets.unscoped_path(relative_path)
+          {site, _environment} -> {SiteAssets.serve_path(site, relative_path), @immutable}
+          nil -> {SiteAssets.unscoped_path(relative_path), @ask_again}
         end
 
       _standalone ->
-        SiteAssets.serve_path(nil, relative_path)
+        {SiteAssets.serve_path(nil, relative_path), @immutable}
     end
   end
 

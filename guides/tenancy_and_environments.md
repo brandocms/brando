@@ -1368,6 +1368,9 @@ do, so the admin's host answers them:
   Give such files hashed or site-specific names to have them in previews.
 - The release's `priv/static` wins: a path it holds is left to the release's
   `Plug.Static`.
+- Its answers there carry `cache-control: no-cache`, since which file a path
+  gets can change when another site's set does. On a site's own host the
+  files stay cacheable for a year.
 - Sets of a suspended or archived site do not answer there, and do not
   count when contents are compared, as the admin lets no one preview such a
   site. The site's status is read on each request.

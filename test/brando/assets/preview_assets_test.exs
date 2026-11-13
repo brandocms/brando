@@ -114,7 +114,7 @@ defmodule Brando.Assets.PreviewAssetsTest do
     assert_served(html, host, acme_set)
   end
 
-  test "a site's host does not open a preview pinned to another site's set" do
+  test "a site's host opens a preview pinned to its own set, and not one pinned to another site's", %{beta: beta} do
     user = Brando.Factory.insert(:random_user, avatar: nil)
     Tenant.put_prefix(Tenant.prefix("acme", "production"))
     changeset = page() |> Map.put(:key, "about") |> Ecto.Changeset.change()
@@ -133,19 +133,11 @@ defmodule Brando.Assets.PreviewAssetsTest do
     assert {:error, {:preview, :not_found}} = show_preview(key, "beta.test")
     assert %{status: 200} = show_preview(key, @admin_host)
 
+    own = insert_preview(user, activate(beta, "beta-one").id)
+    assert %{status: 200} = show_preview(own, "beta.test")
+
     # A preview pinned to no set opens on any host
-    unpinned = Ecto.UUID.generate()
-
-    Repo.insert!(
-      %Preview{
-        creator_id: user.id,
-        preview_key: Preview.hash_key(unpinned),
-        html: Brando.Utils.term_to_binary("<main>Unpinned</main>"),
-        expires_at: DateTime.utc_now() |> DateTime.add(3_600, :second) |> DateTime.truncate(:second)
-      },
-      prefix: "public"
-    )
-
+    unpinned = insert_preview(user, nil)
     assert %{status: 200} = show_preview(unpinned, "beta.test")
   end
 
@@ -167,14 +159,15 @@ defmodule Brando.Assets.PreviewAssetsTest do
 
   test "a path two sites hold with different content stays unanswered", %{beta: beta, acme_set: acme_set} do
     beta_set = activate(beta, "beta-one")
+    # The fonts differ in size; the icons are the same size and differ in content
     write_font(acme_set, "acme")
-    write_font(beta_set, "beta")
+    write_font(beta_set, "beta, longer")
 
     refute served?("fonts/brand.woff2", @admin_host)
     refute served?("favicon.ico", @admin_host)
 
     # Each site's own host still has its own
-    assert body("fonts/brand.woff2", "beta.test") == "beta"
+    assert body("fonts/brand.woff2", "beta.test") == "beta, longer"
     assert served?("assets/acme-one.js", @admin_host)
     assert served?("assets/beta-one.js", @admin_host)
   end
@@ -340,6 +333,24 @@ defmodule Brando.Assets.PreviewAssetsTest do
     )
   end
 
+  # The key a link carries; the row keeps its hash
+  defp insert_preview(user, asset_set_id) do
+    key = Ecto.UUID.generate()
+
+    Repo.insert!(
+      %Preview{
+        creator_id: user.id,
+        preview_key: Preview.hash_key(key),
+        html: Brando.Utils.term_to_binary("<main>Shared</main>"),
+        expires_at: DateTime.utc_now() |> DateTime.add(3_600, :second) |> DateTime.truncate(:second),
+        asset_set_id: asset_set_id
+      },
+      prefix: "public"
+    )
+
+    key
+  end
+
   defp show_preview(key, host) do
     BrandoWeb.PreviewController.show(%{build_conn() | host: host}, %{"preview_key" => key})
   end
@@ -362,7 +373,9 @@ defmodule Brando.Assets.PreviewAssetsTest do
     served = call(path, host)
     assert served.halted, "expected #{path} to be served on #{host}"
     assert served.status == 200
-    assert get_resp_header(served, "cache-control") == ["public, max-age=31536000, immutable"]
+    # What a host with no site answers changes as other sites' sets do
+    cache_control = if Frontend.resolve(host), do: "public, max-age=31536000, immutable", else: "no-cache"
+    assert get_resp_header(served, "cache-control") == [cache_control]
     served.resp_body
   end
 
