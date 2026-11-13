@@ -1355,20 +1355,30 @@ do, so the admin's host answers them:
 - On a host that resolves to a site, `Brando.Plug.SiteAssets` serves that
   site's active and pinned sets only, as described above.
 - In `:multi`, on a host that resolves to no site, such as the admin's, it
-  serves the files any site's set lists in its Vite manifest, from the active
-  set of every site and from every set an unexpired shared preview pins.
-  These names carry their content hash, so the same path in two sites' sets
-  is the same file. A site with no domain yet previews the same way.
+  answers a path with the file a site's own host would send: any file of the
+  site's active set, scripts and styles as well as the fonts and images of
+  the build's `public/` directory, else a file that a set pinned by an
+  unexpired shared preview lists in its Vite manifest. The active set wins
+  over a pinned one. A site with no domain yet previews the same way.
+- When several sites hold a path, it answers only if they all hold the same
+  content. When their contents differ (`favicon.ico`, a font or logo with
+  the same name in two sites' builds, a build with unhashed names), the path
+  stays unanswered on that host: the request does not say which site's
+  preview asked, and one site's file is never sent to another's preview.
+  Give such files hashed or site-specific names to have them in previews.
 - The release's `priv/static` wins: a path it holds is left to the release's
-  `Plug.Static`. Paths outside every manifest (`favicon.ico`, `robots.txt`)
-  are not answered from a set.
-- Sets of a suspended or archived site do not answer there, as the admin
-  lets no one preview such a site.
+  `Plug.Static`.
+- Sets of a suspended or archived site do not answer there, and do not
+  count when contents are compared, as the admin lets no one preview such a
+  site. The site's status is read on each request.
+- On a host that resolves to a site, a shared preview link whose pinned set
+  belongs to another site answers 404.
 
-A miss is rejected from a cached listing of every set's manifest files,
-without touching the filesystem. The listing is dropped whenever a set is
+A miss is rejected from a cached listing of every set's files, without
+touching the filesystem; the contents of a path several sites hold are
+compared when the listing is built. The listing is dropped whenever a set is
 activated, deactivated, pinned, released or pruned, on every node
-([Several nodes](#several-nodes)).
+([Several nodes](#several-nodes)), and is built again on the next request.
 
 ### Pruning contract
 

@@ -10,11 +10,12 @@ defmodule Brando.Plug.SiteAssets do
   so a preview rendered against an older build keeps loading its stylesheets,
   chunks, and fonts after the active set or release changes.
 
-  In `:multi`, a host that belongs to no site, as the admin's does, gets the
-  same manifest-listed files from every site's active and pinned sets
-  (`Brando.Assets.SiteAssets.unscoped_path/1`): the admin serves live and
-  shared previews from its own host, and their pages name the site's assets
-  host-relative. A host that belongs to a site gets that site's sets only.
+  In `:multi`, a host that belongs to no site, as the admin's does, gets, per
+  path, the file a site's own host would send, unless sites hold different
+  content under that path (`Brando.Assets.SiteAssets.unscoped_path/1`): the
+  admin serves live and shared previews from its own host, and their pages
+  name the site's assets host-relative. A host that belongs to a site gets
+  that site's sets only.
 
   Its files, and those of the plugs after it that answer before the router
   (the release's `Plug.Static`, `Brando.Plug.Media`), are sent with

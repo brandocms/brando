@@ -114,10 +114,120 @@ defmodule Brando.Assets.PreviewAssetsTest do
     assert_served(html, host, acme_set)
   end
 
-  test "a path outside every manifest stays unanswered on the admin's host" do
-    for path <- ["favicon.ico", "manifest.json", "assets/missing.js", "assets/acme-one.js/x"] do
+  test "a site's host does not open a preview pinned to another site's set" do
+    user = Brando.Factory.insert(:random_user, avatar: nil)
+    Tenant.put_prefix(Tenant.prefix("acme", "production"))
+    changeset = page() |> Map.put(:key, "about") |> Ecto.Changeset.change()
+
+    # Sharing writes a shared row and renders nothing
+    {:ok, url, _days} =
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        result = LivePreview.share(Page, changeset, user, %{}, :site)
+        refute_enqueued(worker: Brando.Worker.EntryCascade)
+        result
+      end)
+
+    Tenant.put_prefix(nil)
+    "/__p__/" <> key = URI.parse(url).path
+
+    assert {:error, {:preview, :not_found}} = show_preview(key, "beta.test")
+    assert %{status: 200} = show_preview(key, @admin_host)
+
+    # A preview pinned to no set opens on any host
+    unpinned = Ecto.UUID.generate()
+
+    Repo.insert!(
+      %Preview{
+        creator_id: user.id,
+        preview_key: Preview.hash_key(unpinned),
+        html: Brando.Utils.term_to_binary("<main>Unpinned</main>"),
+        expires_at: DateTime.utc_now() |> DateTime.add(3_600, :second) |> DateTime.truncate(:second)
+      },
+      prefix: "public"
+    )
+
+    assert %{status: 200} = show_preview(unpinned, "beta.test")
+  end
+
+  test "a path no set holds stays unanswered on the admin's host" do
+    for path <- ["robots.txt", "assets/missing.js", "assets/acme-one.js/x"] do
       refute served?(path, @admin_host), path
     end
+  end
+
+  test "a file outside the manifest answers from an active set, as on the site's own host", %{acme_set: acme_set} do
+    # From the build's `public/` directory
+    File.mkdir_p!(Path.join(acme_set.path, "fonts"))
+    File.write!(Path.join(acme_set.path, "fonts/brand.woff2"), "acme-font")
+    SiteAssets.invalidate_cache()
+
+    assert body("fonts/brand.woff2", @admin_host) == "acme-font"
+    assert body("favicon.ico", @admin_host) == "icon-acme-one"
+  end
+
+  test "a path two sites hold with different content stays unanswered", %{beta: beta, acme_set: acme_set} do
+    beta_set = activate(beta, "beta-one")
+    write_font(acme_set, "acme")
+    write_font(beta_set, "beta")
+
+    refute served?("fonts/brand.woff2", @admin_host)
+    refute served?("favicon.ico", @admin_host)
+
+    # Each site's own host still has its own
+    assert body("fonts/brand.woff2", "beta.test") == "beta"
+    assert served?("assets/acme-one.js", @admin_host)
+    assert served?("assets/beta-one.js", @admin_host)
+  end
+
+  test "a path two sites hold with the same content answers", %{beta: beta, acme_set: acme_set} do
+    beta_set = activate(beta, "beta-one")
+    write_font(acme_set, "same")
+    write_font(beta_set, "same")
+
+    assert body("fonts/brand.woff2", @admin_host) == "same"
+  end
+
+  test "a suspended site's file neither answers nor blocks another site's", %{beta: beta, acme_set: acme_set} do
+    beta_set = activate(beta, "beta-one")
+    write_font(acme_set, "acme")
+    write_font(beta_set, "beta")
+    refute served?("fonts/brand.woff2", @admin_host)
+
+    # Suspended after the lookup was filled
+    {:ok, beta} = Registry.update_site(beta, %{status: :suspended})
+    assert body("fonts/brand.woff2", @admin_host) == "acme"
+    assert body("favicon.ico", @admin_host) == "icon-acme-one"
+
+    {:ok, _beta} = Registry.update_site(beta, %{status: :active})
+    refute served?("fonts/brand.woff2", @admin_host)
+  end
+
+  test "within one site, the active set's file wins over a pinned set's", %{acme: acme} do
+    # A build that names a manifest file without a hash
+    pinned = register(acme, "acme-pinned", "main.css")
+    File.write!(Path.join(pinned.path, "assets/main.css"), "pinned")
+    pin_preview(pinned)
+
+    active = activate(acme, "acme-active", "main.css")
+    File.write!(Path.join(active.path, "assets/main.css"), "active")
+    SiteAssets.invalidate_cache()
+
+    assert body("assets/main.css", @admin_host) == "active"
+
+    assert :ok = SiteAssets.deactivate(acme)
+    assert body("assets/main.css", @admin_host) == "pinned"
+  end
+
+  test "a lookup that fails to load is not kept" do
+    SiteAssets.invalidate_cache()
+
+    Repo.transaction(fn ->
+      Repo.query!("ALTER TABLE public.site_asset_sets RENAME TO site_asset_sets_away")
+      refute served?("assets/acme-one.js", @admin_host)
+      Repo.rollback(:restored)
+    end)
+
+    assert served?("assets/acme-one.js", @admin_host)
   end
 
   test "the release's file wins over a set's", %{release: release} do
@@ -197,16 +307,22 @@ defmodule Brando.Assets.PreviewAssetsTest do
 
   defp page, do: %Page{title: "About", uri: "about", template: "default.html", language: :en, entry_blocks: []}
 
-  defp register(site, name) do
-    path = SiteAssetsFixtures.create_set(site, name, "js-#{name}", "#{name}.css")
+  defp register(site, name, css_file \\ nil) do
+    path = SiteAssetsFixtures.create_set(site, name, "js-#{name}", css_file || "#{name}.css")
     File.write!(Path.join(path, "favicon.ico"), "icon-#{name}")
     {:ok, set} = SiteAssets.register_set(site, path, %{})
     set
   end
 
-  defp activate(site, name) do
-    {:ok, set} = site |> register(name) |> Map.fetch!(:id) |> SiteAssets.activate_set()
+  defp activate(site, name, css_file \\ nil) do
+    {:ok, set} = site |> register(name, css_file) |> Map.fetch!(:id) |> SiteAssets.activate_set()
     set
+  end
+
+  defp write_font(asset_set, content) do
+    File.mkdir_p!(Path.join(asset_set.path, "fonts"))
+    File.write!(Path.join(asset_set.path, "fonts/brand.woff2"), content)
+    SiteAssets.invalidate_cache()
   end
 
   defp pin_preview(set) do
@@ -222,6 +338,10 @@ defmodule Brando.Assets.PreviewAssetsTest do
       },
       prefix: "public"
     )
+  end
+
+  defp show_preview(key, host) do
+    BrandoWeb.PreviewController.show(%{build_conn() | host: host}, %{"preview_key" => key})
   end
 
   defp asset_paths(html) do

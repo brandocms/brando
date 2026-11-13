@@ -16,8 +16,8 @@ defmodule Brando.Assets.SiteAssets do
   owns the pruning rules that protect those sets.
 
   A host that belongs to no site in `:multi` (the admin's, where live and
-  shared previews are served) gets the manifest files of every site's sets
-  instead (`unscoped_path/1`).
+  shared previews are served) gets what each site's own host would send,
+  for the paths the sites do not disagree on (`unscoped_path/1`).
 
   The caches are per node: activating or deactivating a set, pinning or
   releasing one, and forgetting one refresh this node and tell the others
@@ -223,24 +223,32 @@ defmodule Brando.Assets.SiteAssets do
 
   @doc """
   Resolves a request path on a host that belongs to no site, in `:multi` the
-  admin's host, which serves live previews and shared previews: from the
-  active set of any site, or from any set an unexpired shared preview pins.
+  admin's host, which serves live previews and shared previews.
 
-  Only the content-addressed files a set's Vite manifest lists answer (see
-  `pinned_sets/1`): their names carry their content hash, so a path two sets
-  list is the same file in both. A path the release's `priv/static` holds is
-  left to it. Sets of a suspended or archived site do not answer, as the
-  admin lets no one preview such a site.
+  Per site, the candidate is the file its own host would send: any file of
+  its active set (the development site's excepted, as in `serve_path/2`),
+  else a manifest file of a set an unexpired shared preview pins. The path
+  answers when one site has it, or when every site that has it holds the
+  same content; when their contents differ it stays unanswered, as nothing
+  tells which site's preview asked. A path the release's `priv/static` holds
+  is left to it.
 
-  The paths of every set are cached together, so a miss is rejected without
-  touching the filesystem. The cache is dropped with the active, pinned and
-  set caches, on every node.
+  Sites that are suspended or archived neither answer nor count towards
+  that comparison, as the admin lets no one preview such a site. Their
+  status is read per request, so it takes effect without a cache drop.
+
+  The paths of every set are cached together, with the contents of the paths
+  more than one site has compared when the cache is filled, so a miss is
+  rejected without touching the filesystem. The cache is dropped with the
+  active, pinned and set caches, on every node.
   """
   @spec unscoped_path(String.t()) :: String.t() | nil
   def unscoped_path(relative_path) when is_binary(relative_path) do
     with [_ | _] = candidates <- Map.get(unscoped_index(), relative_path, []),
          false <- File.regular?(Path.join(Capture.release_root(), relative_path)) do
-      Enum.find_value(candidates, &previewable_file/1)
+      candidates
+      |> Enum.filter(&previewable?/1)
+      |> agreed_file()
     else
       _miss -> nil
     end
@@ -545,43 +553,113 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
+  # Not stored when it fails to load (a pool timeout, the migration not run
+  # yet): the next request loads it again
   defp warm_unscoped do
     fence = change_fence()
-    fill(@unscoped_key, load_unscoped(fence), fence)
-  end
 
-  # Path => [{site_key, file}], from every site's active and preview-pinned sets
-  defp load_unscoped(fence) do
-    pinned_ids = MapSet.to_list(Retention.preview_pinned_set_ids())
-
-    from(asset_set in SiteAssetSet,
-      join: site in Site,
-      on: site.id == asset_set.site_id,
-      where: asset_set.active or asset_set.id in ^pinned_ids,
-      select: {site.key, asset_set}
-    )
-    |> Repo.all(@public_opts)
-    |> Enum.reduce(%{}, &index_set(&1, &2, fence))
-  rescue
-    _migration_not_applied_yet -> %{}
-  end
-
-  defp index_set({site_key, asset_set}, index, fence) do
-    case set_cache_since(asset_set, fence) do
-      {:ok, %{pinned: pinned, path: root}} ->
-        Enum.reduce(pinned, index, fn path, index ->
-          candidate = {site_key, Path.join(root, path)}
-          Map.update(index, path, [candidate], &[candidate | &1])
-        end)
-
-      {:error, _reason} ->
-        index
+    case load_unscoped(fence) do
+      {:ok, index} -> fill(@unscoped_key, index, fence)
+      :error -> %{}
     end
   end
 
-  defp previewable_file({site_key, file}) do
-    if match?(%Site{status: :active}, Brando.Tenant.Cache.get_site(site_key)), do: file
+  # Path => [{site_key, file, content}], one candidate per site, from every
+  # site's active and preview-pinned sets. `content` is nil for a path one
+  # site has, else what tells two candidates' contents apart.
+  defp load_unscoped(fence) do
+    pinned_ids = Retention.preview_pinned_set_ids()
+
+    index =
+      from(asset_set in SiteAssetSet,
+        join: site in Site,
+        on: site.id == asset_set.site_id,
+        where: asset_set.active or asset_set.id in ^MapSet.to_list(pinned_ids),
+        order_by: [desc: asset_set.uploaded_at, desc: asset_set.id],
+        select: {site.key, asset_set}
+      )
+      |> Repo.all(@public_opts)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.reduce(%{}, fn {site_key, sets}, index ->
+        site_key
+        |> site_files(sets, pinned_ids, fence)
+        |> Enum.reduce(index, fn {path, file}, index ->
+          Map.update(index, path, [{site_key, file}], &[{site_key, file} | &1])
+        end)
+      end)
+      |> Map.new(fn {path, candidates} -> {path, with_content(candidates)} end)
+
+    {:ok, index}
+  rescue
+    _unavailable -> :error
   end
+
+  # Path => file, as `serve_path/2` resolves it for the site's own host: its
+  # active set first, then its pinned sets in `pinned_sets/1` order
+  defp site_files(site_key, sets, pinned_ids, fence) do
+    cached =
+      Enum.flat_map(sets, fn asset_set ->
+        case set_cache_since(asset_set, fence) do
+          {:ok, cached} -> [{asset_set, cached}]
+          {:error, _reason} -> []
+        end
+      end)
+
+    pinned =
+      for {asset_set, %{pinned: paths, path: root}} <- Enum.reverse(cached),
+          MapSet.member?(pinned_ids, asset_set.id),
+          path <- paths,
+          into: %{},
+          do: {path, Path.join(root, path)}
+
+    active =
+      for {%SiteAssetSet{active: true}, %{files: paths, path: root}} <- cached,
+          not DevSite.dev_site?(site_key),
+          path <- paths,
+          into: %{},
+          do: {path, Path.join(root, path)}
+
+    Map.merge(pinned, active)
+  end
+
+  defp with_content([{site_key, file}]), do: [{site_key, file, nil}]
+
+  # The size, and a digest only where another candidate has the same size
+  defp with_content(candidates) do
+    sized = Enum.map(candidates, fn {site_key, file} -> {site_key, file, file_size(file)} end)
+    sizes = Enum.frequencies_by(sized, &elem(&1, 2))
+
+    Enum.map(sized, fn {site_key, file, size} ->
+      if is_integer(size) and sizes[size] > 1,
+        do: {site_key, file, {size, digest(file)}},
+        else: {site_key, file, {size, nil}}
+    end)
+  end
+
+  defp file_size(file) do
+    case File.stat(file) do
+      {:ok, %File.Stat{size: size}} -> size
+      {:error, _reason} -> {:unreadable, file}
+    end
+  end
+
+  defp digest(file) do
+    file
+    |> File.stream!(65_536)
+    |> Enum.reduce(:crypto.hash_init(:sha256), &:crypto.hash_update(&2, &1))
+    |> :crypto.hash_final()
+  rescue
+    File.Error -> {:unreadable, file}
+  end
+
+  defp previewable?({site_key, _file, _content}),
+    do: match?(%Site{status: :active}, Brando.Tenant.Cache.get_site(site_key))
+
+  defp agreed_file([{_site_key, file, content} | others]) do
+    if Enum.all?(others, &(elem(&1, 2) == content)), do: file
+  end
+
+  defp agreed_file([]), do: nil
 
   defp with_override(cached, fun) do
     previous = Process.get(@override_key)

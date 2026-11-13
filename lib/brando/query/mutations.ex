@@ -848,6 +848,9 @@ defmodule Brando.Query.Mutations do
     Repo.after_commit(fn -> Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:mutation, module, entry, action}) end)
   end
 
+  # A shared preview is a snapshot no content references: no identifier, no datasource
+  defp enqueue_entry_cascade(Brando.Sites.Preview, _entry, _identifier_id), do: :ok
+
   defp enqueue_entry_cascade(module, entry, identifier_id) do
     # Shared records can be referenced by content in any environment. At initial
     # account setup there may be no environments yet, so there is nothing to render.
