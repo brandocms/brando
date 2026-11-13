@@ -439,6 +439,28 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
       assert %{key: :tables_not_in_source, count: 1, action: :check, names: ["sites_indexnow"]} in report
       assert %{rows: [[0]]} = query!(~s|SELECT count(*) FROM "tenant_#{site.key}_production".sites_indexnow|)
     end
+
+    test "names a table Brando derives from content, which the source does not have, with how to rebuild it",
+         context do
+      query!(~s|DROP TABLE "#{context.source}".search_documents|)
+      Mix.shell(Mix.Shell.Process)
+      on_exit(fn -> Mix.shell(Mix.Shell.IO) end)
+      Mix.Task.reenable("brando.migrate_to_tenant")
+
+      Mix.Tasks.Brando.MigrateToTenant.run([
+        "--site-key=#{context.site_key}",
+        "--source-schema=#{context.source}",
+        "--source-media=#{context.source_media}",
+        "--creator-email=#{context.creator.email}"
+      ])
+
+      output = collect_output()
+
+      assert output =~
+               "1 tables Brando derives from content, which the source does not have: rebuild each with the Configuration → Utilities action named, in Production and in Staging: search_documents (Rebuild search index)"
+
+      refute output =~ "left empty"
+    end
   end
 
   test "the task prints the user mapping before writing, the report, and the DROP SCHEMA it leaves to the operator",

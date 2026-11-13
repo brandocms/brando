@@ -77,7 +77,8 @@ defmodule Brando.Tenant.SchemaImport do
   The source's tenant tables must match this installation's (`compare/1`). A
   table the source does not have is not a difference: an application's
   content type the imported site never used. Nothing is copied into it, and
-  the report names it. Content in a language this installation does not
+  the report names it; a table Brando derives from content (`derived_tables/0`)
+  is named apart, with the action that rebuilds it. Content in a language this installation does not
   configure cannot be loaded here (`content_languages/1`).
 
   The dump's own sequence positions (`setval`) are dropped, since an older
@@ -103,6 +104,9 @@ defmodule Brando.Tenant.SchemaImport do
   @unforeigned_columns [{"content_markdown_events", "actor_id"}]
   @provider_video_types ~w(mux bunny cloudflare vimeo_account)
   @mention_token ~r/<@(\d+)>/
+  # Tables Brando derives from content, with the Configuration → Utilities
+  # action that rebuilds each in the current environment
+  @derived_tables %{"search_documents" => "Rebuild search index", "content_identifiers" => "Sync identifiers"}
   @batch_size 500
 
   @typedoc "One source user and the user here it becomes."
@@ -118,7 +122,8 @@ defmodule Brando.Tenant.SchemaImport do
 
   @typedoc """
   One line of the closing report: what was found, how many, what was done,
-  and for some the names of what was found (`:tables_not_in_source`).
+  and for some the names of what was found (`:tables_not_in_source`,
+  `:derived_tables_not_in_source`).
   """
   @type report_item :: %{
           required(:key) => atom(),
@@ -323,6 +328,14 @@ defmodule Brando.Tenant.SchemaImport do
       end)
     end
   end
+
+  @doc """
+  The tables Brando derives from content, each with the Configuration →
+  Utilities action that rebuilds it in an environment. The report names
+  those the source does not have as `:derived_tables_not_in_source`.
+  """
+  @spec derived_tables() :: %{String.t() => String.t()}
+  def derived_tables, do: @derived_tables
 
   ## Structure
 
@@ -855,8 +868,11 @@ defmodule Brando.Tenant.SchemaImport do
 
   # What the copy carries that the operator decides on
   defp to_check!(target, undecoded, not_in_source) do
+    {derived, left_empty} = Enum.split_with(not_in_source, &Map.has_key?(@derived_tables, &1))
+
     [
-      %{key: :tables_not_in_source, count: length(not_in_source), names: not_in_source},
+      %{key: :tables_not_in_source, count: length(left_empty), names: left_empty},
+      %{key: :derived_tables_not_in_source, count: length(derived), names: derived},
       count!(target, :scheduled_revisions, {"revisions", "scheduled"}, "scheduled = true"),
       scheduled_dates!(target),
       count!(

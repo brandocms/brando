@@ -44,8 +44,10 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     1. compares the source's tenant tables with this installation's and stops,
        before creating anything, with a list of what differs. Migrate the
        copy with the other installation's application first. A table only
-       this installation has is left empty and named in the report. It also
-       stops, before creating anything, when the source has content in a
+       this installation has is left empty and named in the report (one
+       Brando derives from content, such as the search index, with the
+       action that rebuilds it). It also stops, before creating anything
+       and before asking anything, when the source has entries in a
        language this installation does not configure;
     2. prints how the source's users map to users here: one whose email
        matches, ignoring case, becomes that user (the first by id, when
@@ -375,7 +377,9 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     cdn_files: "files on a CDN: their files stay in the source's bucket and were not copied",
     undecoded_snapshots:
       "revisions or pending translations whose user ids could not be remapped (they cannot be decoded here)",
-    tables_not_in_source: "tables the source does not have, left empty"
+    tables_not_in_source: "tables the source does not have, left empty",
+    derived_tables_not_in_source:
+      "tables Brando derives from content, which the source does not have: rebuild each with the Configuration → Utilities action named, in Production and in Staging"
   }
 
   defp print_report(report) do
@@ -394,6 +398,12 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
 
   defp report_lines([]), do: "  (nothing)"
   defp report_lines(items), do: Enum.map_join(items, "\n", &report_line/1)
+
+  defp report_line(%{key: :derived_tables_not_in_source, names: names} = item) do
+    actions = SchemaImport.derived_tables()
+    named = Enum.map_join(names, ", ", &"#{&1} (#{Map.fetch!(actions, &1)})")
+    "  #{item.count} #{Map.fetch!(@report_lines, item.key)}: #{named}"
+  end
 
   defp report_line(%{names: [_ | _] = names} = item),
     do: "  #{item.count} #{Map.fetch!(@report_lines, item.key)}: #{Enum.join(names, ", ")}"

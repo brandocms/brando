@@ -1631,7 +1631,10 @@ site `acme`.
    it lists the differences and stops before creating anything: go back to
    step 2 and migrate the copy. A table only this installation has, such as
    an application content type the source never used, is left empty and
-   named in the report. The task also stops before creating anything when the
+   named in the report. The search index and content identifiers, which
+   Brando derives from content, are named apart: rebuild each with
+   **Rebuild search index** and **Sync identifiers** in Configuration →
+   Utilities, in Production and in Staging. The task also stops before creating anything when the
    source has entries in a language this installation does not configure (a
    Blueprint's `language` field loads only a configured language; a plain
    `language` string, such as an activity event's, is copied as it is): add
