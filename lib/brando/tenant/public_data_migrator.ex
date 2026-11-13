@@ -4,6 +4,16 @@ defmodule Brando.Tenant.PublicDataMigrator do
   @callback migrate(source_prefix :: String.t(), target_prefix :: String.t()) ::
               :ok | {:error, term()}
 
+  @doc """
+  Whether `migrate/2` relocates the content rather than copying it, leaving
+  the target the only copy. `Brando.Tenant.Migration.migrate_public/3` then
+  keeps the new site when a step after the migrator fails. Defaults to
+  `false` when not implemented.
+  """
+  @callback relocates?() :: boolean()
+
+  @optional_callbacks relocates?: 0
+
   @behaviour __MODULE__
 
   @impl true

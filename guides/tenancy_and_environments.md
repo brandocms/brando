@@ -1488,7 +1488,8 @@ the first active superuser should not own the new site. The task:
 5. copies classic local media into `media/{site_key}` without deleting the
    legacy media tree;
 6. creates Staging as a complete copy of Production; and
-7. removes the entire partial site if data, media, or Staging creation fails.
+7. removes the entire partial site if data, media, or Staging creation fails
+   (with `--move`, only when the move itself fails; see below).
 
 The media copy rejects symlinks and special files so it cannot cross a tenant
 storage boundary. Provisioning also refuses to reuse an existing
@@ -1516,6 +1517,12 @@ cloned tables, moves the populated tables in, and moves the template tables back
 into `public` — all in one transaction, so a failure leaves both schemas as they
 were. `public` is left with the same tables, empty, still serving as the
 structural template for the next site or environment.
+
+Once the move has committed, the site's Production schema holds the only
+copy of the content. If a later step fails (the media copy, or creating
+Staging), the task keeps the site and its schema, says which step failed and
+that the content now lives in `tenant_{site_key}_production`, and prints the
+commands that finish the remaining steps.
 
 `--move` also sidesteps circular foreign keys. A Brando schema has several —
 `pages` and `media_folders` reference themselves, and `images` and `users`

@@ -19,21 +19,35 @@ defmodule Brando.Tenant.Migration do
   @production %{name: "Production", key: "production", live: true}
   @staging %{name: "Staging", key: "staging", live: false}
 
+  @doc """
+  Creates a site from this installation's `public` content: the data
+  migrator copies (or moves) it into Production, the media migrator copies
+  the media into the site's root, and Staging is created as a copy.
+
+  A failure removes the new site, except once a migrator that relocates the
+  content (`c:Brando.Tenant.PublicDataMigrator.relocates?/0`) has returned:
+  the site's Production schema then holds the only copy, so a later failure
+  keeps the site and returns `{:error, {:migration_incomplete, step,
+  reason}}`, `step` being `:media`, `:staging` or `:staging_copy`.
+  """
   @spec migrate_public(map(), User.t(), keyword()) :: {:ok, Site.t()} | {:error, term()}
   def migrate_public(attrs, %User{} = creator, opts \\ []) do
     migrator = Keyword.get(opts, :public_data_migrator, configured_migrator())
     media_migrator = Keyword.get(opts, :public_media_migrator, configured_media_migrator())
 
-    copy = fn site, prefix ->
-      with :ok <- migrator.migrate("public", prefix),
-           :ok <- media_migrator.migrate(site) do
-        {:ok, nil}
-      end
+    copy = fn _site, prefix ->
+      with :ok <- migrator.migrate("public", prefix), do: {:ok, nil}
     end
 
-    with {:ok, site, _result} <- migrate(attrs, creator, copy, "Initial public-schema migration") do
+    migrate_opts = [after_copy: &media_migrator.migrate/1, relocates: relocates?(migrator)]
+
+    with {:ok, site, _result} <- migrate(attrs, creator, copy, "Initial public-schema migration", migrate_opts) do
       {:ok, site}
     end
+  end
+
+  defp relocates?(migrator) do
+    Code.ensure_loaded?(migrator) and function_exported?(migrator, :relocates?, 0) and migrator.relocates?()
   end
 
   @doc """
@@ -113,20 +127,59 @@ defmodule Brando.Tenant.Migration do
   # With `hold: true` the site is suspended while the copy is made and given
   # its status last. A suspended site admits no one, so its environments are
   # then created as the system, the creator having been authorized to create
-  # the site.
-  defp migrate(attrs, creator, copy, note, opts \\ []) do
+  # the site. `:after_copy` runs on the site once the copy has returned;
+  # with `relocates: true` the copy is the only one, and a failure after it
+  # keeps the site.
+  defp migrate(attrs, creator, copy, note, opts) do
     setup_opts = [environments: [@production], seed: false]
 
     with {:ok, site} <- Setup.create_site(attrs, creator, setup_opts) do
-      fn -> copy_and_create_staging(site, attrs, creator, copy, note, opts) end
-      |> compensated()
-      |> clean_up_on_failure(site)
+      production = Registry.get_environment_by_key(site, "production")
+
+      case compensated(fn -> hold_and_copy(site, Tenant.prefix(site, production), copy, opts) end) do
+        {:ok, site, result} -> finish(site, production, attrs, creator, note, result, opts)
+        {:error, reason} -> clean_up(site, reason)
+      end
     end
   end
 
-  defp clean_up_on_failure({:ok, migrated_site, result}, _site), do: {:ok, migrated_site, result}
+  defp hold_and_copy(site, prefix, copy, opts) do
+    with {:ok, site} <- if(opts[:hold], do: Setup.suspend_site(site, actor: :system), else: {:ok, site}),
+         {:ok, result} <- copy.(site, prefix) do
+      {:ok, site, result}
+    end
+  end
 
-  defp clean_up_on_failure({:error, reason}, site) do
+  defp finish(site, production, attrs, creator, note, result, opts) do
+    hold? = Keyword.get(opts, :hold, false)
+    after_copy = Keyword.get(opts, :after_copy, fn _site -> :ok end)
+    actor = if hold?, do: [actor: :system, creator_id: creator.id], else: [creator: creator]
+
+    with :ok <- step(:media, fn -> after_copy.(site) end),
+         {:ok, staging} <-
+           step(:staging, fn -> Environments.create_environment(site, @staging, [clone_structure: false] ++ actor) end),
+         {:ok, _copy} <-
+           step(:staging_copy, fn ->
+             Environments.copy_environment(production, staging, [keep_archives: 0, note: note] ++ actor)
+           end),
+         {:ok, _site} <- step(:activation, fn -> release(site, attrs, hold?) end) do
+      {:ok, Registry.get_site(site.id), result}
+    else
+      {:error, step, reason} ->
+        if Keyword.get(opts, :relocates, false),
+          do: {:error, {:migration_incomplete, step, reason}},
+          else: clean_up(site, reason)
+    end
+  end
+
+  defp step(name, fun) do
+    case compensated(fun) do
+      {:error, reason} -> {:error, name, reason}
+      result -> result
+    end
+  end
+
+  defp clean_up(site, reason) do
     cleanup = compensated(fn -> cleanup_failed_site(site) end)
     {:error, {:public_migration_failed, reason, cleanup}}
   end
@@ -137,21 +190,6 @@ defmodule Brando.Tenant.Migration do
     exception -> {:error, {:raised, Exception.message(exception)}}
   catch
     kind, reason -> {:error, {:raised, Exception.format_banner(kind, reason)}}
-  end
-
-  defp copy_and_create_staging(site, attrs, creator, copy, note, opts) do
-    hold? = Keyword.get(opts, :hold, false)
-    production = Registry.get_environment_by_key(site, "production")
-    prefix = Tenant.prefix(site, production)
-    actor = if hold?, do: [actor: :system, creator_id: creator.id], else: [creator: creator]
-
-    with {:ok, site} <- if(hold?, do: Setup.suspend_site(site, actor: :system), else: {:ok, site}),
-         {:ok, result} <- copy.(site, prefix),
-         {:ok, staging} <- Environments.create_environment(site, @staging, [clone_structure: false] ++ actor),
-         {:ok, _copy} <- Environments.copy_environment(production, staging, [keep_archives: 0, note: note] ++ actor),
-         {:ok, _site} <- release(site, attrs, hold?) do
-      {:ok, Registry.get_site(site.id), result}
-    end
   end
 
   defp release(site, attrs, true) do

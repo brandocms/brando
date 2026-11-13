@@ -41,6 +41,9 @@ defmodule Brando.Tenant.PublicDataMigrator.Move do
   alias Ecto.Adapters.SQL
 
   @impl true
+  def relocates?, do: true
+
+  @impl true
   def migrate(source_prefix, target_prefix) do
     with {:ok, tables} <- StructureCloner.tenant_tables(source_prefix),
          :ok <- ensure_any(tables, source_prefix),

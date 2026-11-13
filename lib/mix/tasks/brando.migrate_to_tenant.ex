@@ -66,7 +66,10 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
 
   A failure removes the new site; the source schema and media are untouched.
   If removing the site fails too, the task says what may be left and prints
-  the commands that remove it. The same holds without `--source-schema`.
+  the commands that remove it. The same holds without `--source-schema`,
+  except after a successful `--move`: the site's Production schema then holds
+  the only copy of the content, so a later failure keeps the site, and the
+  task says which step failed and prints the commands that finish the rest.
   """
 
   use Mix.Task
@@ -160,6 +163,16 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     """
   end
 
+  def failure_message(site_key, {:migration_incomplete, step, reason}) do
+    """
+    #{incomplete_step(step)} failed: #{inspect(reason)}
+
+    The content was moved: it now lives in the schema tenant_#{site_key}_production,
+    and the tables in public are empty. The site #{site_key} was kept, so nothing
+    was lost. #{incomplete_remedy(site_key, step)}
+    """
+  end
+
   def failure_message(_site_key, {:unconfigured_languages, languages}) do
     lines = Enum.map_join(languages, "\n", fn {language, tables} -> "  #{language}: #{Enum.join(tables, ", ")}" end)
 
@@ -174,6 +187,55 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
   end
 
   def failure_message(_site_key, reason), do: "#{inspect(reason)}\n\nNothing was created."
+
+  defp incomplete_step(:media), do: "Copying the media"
+  defp incomplete_step(:staging), do: "Creating Staging"
+  defp incomplete_step(:staging_copy), do: "Copying Production into Staging"
+  defp incomplete_step(step), do: "The step #{inspect(step)}"
+
+  defp incomplete_remedy(site_key, :media) do
+    """
+    To finish, fix the cause, then copy the media and
+    create Staging:
+
+        mix run -e 'site = Brando.Tenant.Registry.get_site_by_key("#{site_key}")
+          :ok = Brando.Tenant.PublicMediaMigrator.migrate(site)
+          #{create_staging_command()}
+          #{copy_staging_command()}'
+    """
+  end
+
+  defp incomplete_remedy(site_key, :staging) do
+    """
+    To finish, fix the cause, then create Staging as a
+    copy of Production:
+
+        mix run -e 'site = Brando.Tenant.Registry.get_site_by_key("#{site_key}")
+          #{create_staging_command()}
+          #{copy_staging_command()}'
+    """
+  end
+
+  defp incomplete_remedy(site_key, :staging_copy) do
+    """
+    To finish, fix the cause, then copy Production into
+    Staging:
+
+        mix run -e 'site = Brando.Tenant.Registry.get_site_by_key("#{site_key}")
+          staging = Brando.Tenant.Registry.get_environment_by_key(site, "staging")
+          #{copy_staging_command()}'
+    """
+  end
+
+  defp incomplete_remedy(_site_key, _step), do: "Finish the remaining steps by hand."
+
+  defp create_staging_command do
+    ~s|{:ok, staging} = Brando.Environments.create_environment(site, %{name: "Staging", key: "staging", live: false}, actor: :system, clone_structure: false)|
+  end
+
+  defp copy_staging_command do
+    ~s|{:ok, _} = Brando.Environments.copy_environment(Brando.Tenant.Registry.get_environment_by_key(site, "production"), staging, actor: :system, keep_archives: 0)|
+  end
 
   defp cleanup_reason({:error, reason}), do: reason
   defp cleanup_reason(other), do: other

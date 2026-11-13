@@ -51,11 +51,41 @@ defmodule Brando.TenantMigrationTest do
     def migrate(_source_prefix, _target_prefix), do: raise("copy blew up")
   end
 
+  defmodule RelocatingPublicMigrator do
+    @behaviour Brando.Tenant.PublicDataMigrator
+
+    @impl true
+    def migrate(source_prefix, target_prefix) do
+      send(self(), {:public_data_migrated, source_prefix, target_prefix})
+      :ok
+    end
+
+    @impl true
+    def relocates?, do: true
+  end
+
+  defmodule FailingRelocatingPublicMigrator do
+    @behaviour Brando.Tenant.PublicDataMigrator
+
+    @impl true
+    def migrate(_source_prefix, _target_prefix), do: {:error, :public_copy_failed}
+
+    @impl true
+    def relocates?, do: true
+  end
+
   defmodule FailingMediaMigrator do
     @behaviour Brando.Tenant.PublicMediaMigrator
 
     @impl true
     def migrate(_site), do: {:error, :media_copy_failed}
+  end
+
+  defmodule RaisingMediaMigrator do
+    @behaviour Brando.Tenant.PublicMediaMigrator
+
+    @impl true
+    def migrate(_site), do: raise("media blew up")
   end
 
   setup do
@@ -162,6 +192,65 @@ defmodule Brando.TenantMigrationTest do
     assert message =~ "copy blew up"
     refute Registry.get_site_by_key("raising-migration")
     refute Schema.exists?("tenant_raising-migration_production")
+  end
+
+  describe "after a migrator that relocates the content" do
+    test "keeps the site and its Production schema when a later step fails", %{creator: creator} do
+      assert {:error, {:migration_incomplete, :media, :media_copy_failed}} =
+               Migration.migrate_public(site_attrs("relocated-media"), creator,
+                 public_data_migrator: RelocatingPublicMigrator,
+                 public_media_migrator: FailingMediaMigrator
+               )
+
+      assert_received {:public_data_migrated, "public", "tenant_relocated-media_production"}
+      assert %{} = Registry.get_site_by_key("relocated-media")
+      assert Schema.exists?("tenant_relocated-media_production")
+    end
+
+    test "the task says where the content is and how to finish, and its commands do", %{creator: creator} do
+      legacy_file = Path.join([Brando.config(:media_path), "images", "legacy.txt"])
+      File.mkdir_p!(Path.dirname(legacy_file))
+      File.write!(legacy_file, "legacy media")
+
+      assert {:error, reason} =
+               Migration.migrate_public(site_attrs("relocated-finish"), creator,
+                 public_data_migrator: RelocatingPublicMigrator,
+                 public_media_migrator: FailingMediaMigrator
+               )
+
+      message = Mix.Tasks.Brando.MigrateToTenant.failure_message("relocated-finish", reason)
+      assert message =~ "Copying the media failed: :media_copy_failed"
+      assert message =~ "now lives in the schema tenant_relocated-finish_production"
+      refute message =~ "removed"
+
+      [_, command] = Regex.run(~r/mix run -e '(.*)'/s, message)
+      Code.eval_string(command)
+
+      site = Registry.get_site_by_key("relocated-finish")
+      assert Enum.map(site.environments, & &1.key) |> Enum.sort() == ["production", "staging"]
+      assert File.read!(Path.join([Brando.config(:media_path), site.key, "images", "legacy.txt"])) == "legacy media"
+    end
+
+    test "keeps the site when a later step raises", %{creator: creator} do
+      assert {:error, {:migration_incomplete, :media, {:raised, message}}} =
+               Migration.migrate_public(site_attrs("relocated-raise"), creator,
+                 public_data_migrator: RelocatingPublicMigrator,
+                 public_media_migrator: RaisingMediaMigrator
+               )
+
+      assert message =~ "media blew up"
+      assert Registry.get_site_by_key("relocated-raise")
+      assert Schema.exists?("tenant_relocated-raise_production")
+    end
+
+    test "removes the site when the relocation itself fails", %{creator: creator} do
+      assert {:error, {:public_migration_failed, :public_copy_failed, :ok}} =
+               Migration.migrate_public(site_attrs("relocation-failed"), creator,
+                 public_data_migrator: FailingRelocatingPublicMigrator
+               )
+
+      refute Registry.get_site_by_key("relocation-failed")
+    end
   end
 
   defp site_attrs(key) do
