@@ -41,6 +41,13 @@ defmodule Brando.Tenant.SetupTest do
     end
   end
 
+  defmodule RaisingStructureCloner do
+    @behaviour Brando.Environments.StructureCloner
+
+    @impl true
+    def clone_structure(_source_prefix, _target_prefix), do: raise(ErlangError, original: :enoent)
+  end
+
   defmodule Seeder do
     @behaviour Brando.Tenant.Seeder
 
@@ -110,6 +117,18 @@ defmodule Brando.Tenant.SetupTest do
     refute Schema.exists?("tenant_broken-site_production")
     refute File.exists?(Path.join(Brando.config(:media_path), "broken-site"))
     refute File.exists?(Path.join(Brando.config(:sites_path), "broken-site"))
+  end
+
+  test "compensates the partial site when provisioning raises", %{creator: creator} do
+    put_test_env(:tenant_structure_cloner, RaisingStructureCloner)
+
+    assert {:error, {:site_setup_failed, {:raised, message}, :ok}} =
+             Setup.create_site(site_attrs("raising-site"), creator)
+
+    assert message =~ "enoent"
+    refute Registry.get_site_by_key("raising-site")
+    refute Schema.exists?("tenant_raising-site_production")
+    refute File.exists?(Path.join(Brando.config(:media_path), "raising-site"))
   end
 
   test "an installation provisioner receives access to the new site before environment setup", %{creator: creator} do

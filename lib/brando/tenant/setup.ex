@@ -83,19 +83,29 @@ defmodule Brando.Tenant.Setup do
 
   defp create_under_lock(attrs, creator, opts) do
     with {:ok, site} <- Registry.create_site(attrs) do
-      case provision(site, creator, opts) do
+      case rescued(fn -> provision(site, creator, opts) end) do
         {:ok, provisioned_site} ->
           {:ok, provisioned_site}
 
         {:error, {:storage_not_created, reason}} ->
-          compensation = compensate(site, delete_storage: false)
+          compensation = rescued(fn -> compensate(site, delete_storage: false) end)
           {:error, {:site_setup_failed, reason, compensation}}
 
         {:error, reason} ->
-          compensation = compensate(site)
+          compensation = rescued(fn -> compensate(site) end)
           {:error, {:site_setup_failed, reason, compensation}}
       end
     end
+  end
+
+  # Once the registry row exists, a raise in provisioning (a structure clone
+  # whose executable is missing, say) is compensated like a returned error
+  defp rescued(fun) do
+    fun.()
+  rescue
+    exception -> {:error, {:raised, Exception.message(exception)}}
+  catch
+    kind, reason -> {:error, {:raised, Exception.format_banner(kind, reason)}}
   end
 
   defp provision(site, creator, opts) do
@@ -257,15 +267,18 @@ defmodule Brando.Tenant.Setup do
     end
   end
 
+  # `:ok` only when everything it removes is gone; otherwise the first error
   defp compensate(site, opts \\ []) do
-    Enum.each(site_schema_prefixes(site), &Schema.drop/1)
+    drops = Enum.map(site_schema_prefixes(site), &Schema.drop/1)
+    storage = if Keyword.get(opts, :delete_storage, true), do: Storage.delete(site), else: :ok
 
-    if Keyword.get(opts, :delete_storage, true), do: Storage.delete(site)
+    registry =
+      case Registry.get_site(site.id) do
+        nil -> :ok
+        current_site -> with {:ok, _deleted} <- Registry.delete_site(current_site), do: :ok
+      end
 
-    case Registry.get_site(site.id) do
-      nil -> :ok
-      current_site -> Registry.delete_site(current_site)
-    end
+    Enum.find(drops ++ [storage, registry], :ok, &(&1 != :ok))
   end
 
   defp site_schema_prefixes(site) do
