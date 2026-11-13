@@ -48,7 +48,8 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
        stops, before creating anything, when the source has content in a
        language this installation does not configure;
     2. prints how the source's users map to users here: one whose email
-       matches, ignoring case, becomes that user, and every other one the
+       matches, ignoring case, becomes that user (the first by id, when
+       several match the same one), and every other one the
        `--creator-email` user. No user is created;
     3. reports the size of the media copy and, above 1 GB, asks first;
     4. creates the site suspended, so no request, editor or job reaches it,
@@ -318,7 +319,13 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
   defp print_mapping(source, mapping) do
     lines =
       Enum.map_join(mapping, "\n", fn entry ->
-        how = if entry.matched, do: "same email", else: "no match, creator"
+        how =
+          cond do
+            entry.matched -> "same email"
+            entry[:duplicate_of] -> "same email as source user #{entry.duplicate_of}, which takes it; creator"
+            true -> "no match, creator"
+          end
+
         "  #{entry.source_id} #{entry.source_email} -> #{entry.target_id} #{entry.target_email} (#{how})"
       end)
 

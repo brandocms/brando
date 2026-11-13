@@ -204,7 +204,10 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
     test "remaps users whose source ids are the ids of other users here", context do
       %{creator: creator, local: local, source: source} = context
 
-      # The source's ids of the two users are each other's ids here
+      # The source's ids of the two users are each other's ids here; source
+      # user 1 takes another email, so that each user here has one match
+      query!(~s|UPDATE "#{source}".users SET email = 'other@elsewhere.example' WHERE id = 1|)
+
       query!(~s|INSERT INTO "#{source}".users (id, email) VALUES ($1, $2), ($3, $4)|, [
         local.id,
         creator.email,
@@ -363,6 +366,33 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
                query!(
                  ~s|SELECT id, name, creator_id FROM "tenant_#{site.key}_production".listing_views WHERE shared ORDER BY id|
                )
+    end
+
+    test "maps only the first of two source users with the same email to the user here", context do
+      query!(~s|INSERT INTO "#{context.source}".users (id, email, name) VALUES (3, $1, 'Editor Again')|, [
+        String.upcase(context.local.email)
+      ])
+
+      query!(~s|INSERT INTO "#{context.source}".note_mentions (note_id, user_id, inserted_at) VALUES (1, 3, now())|)
+
+      assert {:ok, mapping} = SchemaImport.user_mapping(context.source, context.creator)
+      local_id = context.local.id
+      creator_id = context.creator.id
+
+      assert [
+               %{source_id: 1, target_id: ^local_id, matched: true},
+               %{source_id: 2, matched: false},
+               %{source_id: 3, target_id: ^creator_id, matched: false, duplicate_of: 1}
+             ] = mapping
+
+      assert {:ok, site, _report} =
+               Migration.import_schema(site_attrs(context.site_key), context.creator,
+                 source_schema: context.source,
+                 source_media: context.source_media
+               )
+
+      assert %{rows: [[^local_id]]} =
+               query!(~s|SELECT user_id FROM "tenant_#{site.key}_production".note_mentions|)
     end
 
     test "takes the site's attributes with string keys or string values", context do

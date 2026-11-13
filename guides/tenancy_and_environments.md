@@ -1637,8 +1637,9 @@ site `acme`.
    `language` string, such as an activity event's, is copied as it is): add
    the language to `config :brando, languages:`, or remove those entries
    from the copy. It then prints how each source user maps to a user here
-   (the same email, ignoring case, or the `--creator-email` user; no user is
-   created), reports the media size, and asks before copying more than 1 GB
+   (the same email, ignoring case, or the `--creator-email` user; when two
+   source users have the same email here, the first by id takes it and the
+   other becomes the `--creator-email` user; no user is created), reports the media size, and asks before copying more than 1 GB
    (`--yes` skips the question).
 
    The site is created suspended, so no request, editor or background job

@@ -12,8 +12,9 @@ defmodule Brando.Tenant.SchemaImport do
   Users stay this installation's: the source's `users` table and the other
   shared tables (`Brando.Tenant.SharedTables`) are not copied. Every reference
   to a user in the copied rows is remapped (`user_mapping/2`): a source user
-  whose email matches a user here, ignoring case, becomes that user, and every
-  other one becomes the creator.
+  whose email matches a user here, ignoring case, becomes that user (the
+  first by id, when several match the same one), and every other one becomes
+  the creator.
 
   The references are found from the target's foreign keys to `public.users`,
   plus the user ids Brando stores without one:
@@ -109,6 +110,7 @@ defmodule Brando.Tenant.SchemaImport do
           required(:source_id) => integer(),
           required(:source_email) => String.t() | nil,
           optional(:source_name) => String.t() | nil,
+          optional(:duplicate_of) => integer(),
           required(:target_id) => integer(),
           required(:target_email) => String.t(),
           required(:matched) => boolean()
@@ -188,7 +190,10 @@ defmodule Brando.Tenant.SchemaImport do
 
   @doc """
   Maps every user in the source's `users` table to a user here: the one whose
-  email matches, ignoring case, or `creator`. Creates no user.
+  email matches, ignoring case, or `creator`. Creates no user. When several
+  source users match the same user here, the first by id does, and each
+  later one becomes `creator`, unmatched, with `:duplicate_of` the first
+  one's source id.
   """
   @spec user_mapping(String.t(), User.t()) :: {:ok, [mapping_entry()]} | {:error, term()}
   def user_mapping(source, %User{} = creator) do
@@ -205,9 +210,29 @@ defmodule Brando.Tenant.SchemaImport do
         |> Brando.Repo.all(prefix: "public")
         |> Enum.reduce(%{}, fn {lower, id, email}, acc -> Map.put_new(acc, lower, {id, email}) end)
 
-      {:ok, Enum.map(source_users, &map_user(&1, local, creator))}
+      {:ok,
+       source_users
+       |> Enum.map(&map_user(&1, local, creator))
+       |> Enum.map_reduce(%{}, &first_match(&1, &2, creator))
+       |> elem(0)}
     end
   end
+
+  # One user here is matched by one source user at most, the first by id: two
+  # would collide in a table with a unique index on the user column. A later
+  # one becomes the creator, as a user with no match does.
+  defp first_match(%{matched: true, target_id: target_id} = entry, matched, creator) do
+    case Map.fetch(matched, target_id) do
+      {:ok, first} ->
+        {%{entry | target_id: creator.id, target_email: creator.email, matched: false} |> Map.put(:duplicate_of, first),
+         matched}
+
+      :error ->
+        {entry, Map.put(matched, target_id, entry.source_id)}
+    end
+  end
+
+  defp first_match(entry, matched, _creator), do: {entry, matched}
 
   defp map_user([id, email, name], local, creator) do
     source = %{source_id: id, source_email: email, source_name: name}
