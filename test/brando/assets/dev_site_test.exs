@@ -197,10 +197,9 @@ defmodule Brando.Assets.DevSiteTest do
       assert render_component(&HTML.include_legacy_assets/1) =~ "/assets/beta-set-legacy.js"
     end
 
-    # Live preview renders in the admin's process under the site's prefix,
-    # and the page's asset requests reach `Brando.Plug.SiteAssets` on the
-    # admin's host, which may belong to another site or to none
-    test "gets the same live preview assets as in production" do
+    # The page names the same file, and the same hosts serve it: the site's
+    # own, not the dev site's nor a host that belongs to no site
+    test "names the same assets as in production, served on the same hosts" do
       outcome = fn env ->
         put_test_env(:env, env)
         reset_caches()
