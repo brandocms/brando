@@ -154,6 +154,29 @@ defmodule Brando.Assets.DevSiteTest do
       refute html =~ "localhost:3000"
     end
 
+    # The usual HMR checkout has no build in priv/static
+    test "without any build: a notice, and a later build is read at once", %{beta: beta, tmp_dir: tmp_dir} do
+      :ok = SiteAssets.deactivate(beta)
+      release = Path.join(tmp_dir, "priv/static")
+      File.rm_rf!(release)
+
+      for html <- [render_component(&HTML.include_assets/1), render_component(&HTML.include_assets/1, only_css: true)] do
+        assert html =~ "Site assets not built for beta"
+        assert html =~ ~s(dev_site: "acme")
+        assert html =~ "<code>assets/sites/beta</code>"
+        assert html =~ ~s[brandoAssetsMissing("brando-site-assets-notice")]
+        refute html =~ "localhost:3000"
+      end
+
+      render_component(&HTML.inject_critical_css/1)
+      write_release(release)
+
+      html = render_component(&HTML.include_assets/1)
+      assert html =~ "/assets/release.js"
+      refute html =~ "assets-notice"
+      assert render_component(&HTML.inject_critical_css/1) =~ ".release-critical"
+    end
+
     test "pins its active set to a shared preview", %{beta: beta} do
       assert {:ok, set} = SiteAssets.with_preview_set(beta, & &1)
       assert set.active

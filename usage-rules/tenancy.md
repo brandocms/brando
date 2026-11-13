@@ -350,8 +350,10 @@ With `tenancy_mode: :multi` and HMR on:
   watcher could not start Vite, the dev site renders the release's build
   with a notice saying why.
 - A request for any other site renders as in production: from its active
-  set, or without one from the release's `priv/static`. Give the other sites
-  a build with the steps under
+  set, or without one from the release's `priv/static`, read afresh on each
+  request so a new build shows without a restart. A site with neither
+  shows a notice saying so. Give the other sites a build with the steps
+  under
   [Uploading a site's build by hand](deps/brando/guides/tenancy_and_environments.md#uploading-a-sites-build-by-hand).
 - Live preview and shared previews follow the same rule for the site they
   render: a shared preview of the dev site pins a capture of the release's
