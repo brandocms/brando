@@ -1461,6 +1461,10 @@ project from `:none` to `:single` or `:multi`. A project remaining in `:none`
 must not run this task and can leave its existing content and media in their
 classic locations.
 
+This section converts the installation in place. To bring another
+installation's site onto a multi-site installation, see
+[Move a standalone site onto a multi-site installation](#move-a-standalone-site-onto-a-multi-site-installation).
+
 First prepare the application's source and review the Igniter diff:
 
 ```bash
@@ -1539,6 +1543,154 @@ asset management screen.
 
 The source `public` data is not deleted. Keep it and a restorable external
 backup until the tenant installation has been verified and cut over.
+
+## Move a standalone site onto a multi-site installation
+
+A standalone installation's site moves onto a `tenancy_mode: :multi`
+installation as a copy of its database and media. The source installation is
+never touched: it is read twice (one `pg_dump`, one copy of its media tree),
+nothing writes to it or upgrades it, and the task opens no connection to it. It
+keeps serving visitors and editors throughout and stays the way back.
+
+<!-- usage-rules:start topic="tenancy" -->
+
+To bring another installation's site onto a `:multi` installation, restore a
+copy of its `public` schema into a schema of this installation's database and
+run `mix brando.migrate_to_tenant` with `--source-schema` and
+`--source-media`. Never point the task, or a migration, at the source
+installation's own database. The task only reads the source schema and media
+directory, refuses `--move`, requires `--creator-email`, remaps every user
+reference to this installation's users (by email, otherwise the creator), and
+prints the `DROP SCHEMA` for the source schema without running it.
+
+<!-- usage-rules:end -->
+
+The examples move the site of the standalone installation `MyApp` into a new
+site `acme`.
+
+1. Take one dump of the source database and one copy of its media tree:
+
+   ```sh
+   pg_dump --format=custom --no-owner --no-privileges --file=myapp.dump myapp_prod
+   rsync -a myapp-server:/srv/myapp/media/ /srv/import/acme-media/
+   ```
+
+   Check: `pg_restore --list myapp.dump` lists the `public` tables, and the
+   media copy holds the `images` and `files` directories the source serves.
+   These are the only two reads of the source.
+
+2. Restore the dump into a scratch database on a machine of your own:
+
+   ```sh
+   createdb myapp_scratch
+   pg_restore --no-owner --dbname=myapp_scratch myapp.dump
+   ```
+
+   If the source runs an older Brando than this installation, upgrade a copy
+   of the source application to the same Brando version and run its
+   migrations against `myapp_scratch`, never against the source.
+
+   Check: the restore and the migrations finish without an error. Step 4
+   compares the result with this installation and stops if they still
+   differ.
+
+3. Rename the scratch database's `public` schema, dump that schema, and
+   restore it into this installation's database:
+
+   ```sh
+   psql myapp_scratch -c 'ALTER SCHEMA public RENAME TO import_acme'
+   pg_dump --format=custom --no-owner --no-privileges --schema=import_acme \
+     --file=import_acme.dump myapp_scratch
+   pg_restore --no-owner --dbname=brando_multi_prod import_acme.dump
+   ```
+
+   Check: `\dn` in this installation's database lists `import_acme`, and
+   `SELECT count(*) FROM import_acme.pages` gives the source's page count.
+
+4. Run the task:
+
+   ```sh
+   mix brando.migrate_to_tenant --site-key=acme --name="Acme" \
+     --source-schema=import_acme --source-media=/srv/import/acme-media \
+     --creator-email=admin@example.com
+   ```
+
+   The task first compares the source's tenant tables with this
+   installation's. When a table or column is missing on either side, or a
+   column's type differs, it lists the differences and stops before creating
+   anything: go back to step 2 and migrate the copy. It then prints how each
+   source user maps to a user here (the same email, ignoring case, or the
+   `--creator-email` user; no user is created), reports the media size, and
+   asks before copying more than 1 GB (`--yes` skips the question).
+
+   It copies the tenant tables into the site's Production schema with every
+   user reference remapped, copies the media into `media/acme`, computes the
+   stored page breadcrumbs again (their home entry becomes the identity's name
+   instead of `app_name`), and creates Staging as a copy of Production. On a
+   failure the new site is removed, and the source schema and media are as
+   they were.
+
+   Check: the task ends with "Imported import_acme into site acme", a report
+   of what it neutralised and what to check by hand (step 8), and a
+   `DROP SCHEMA "import_acme" CASCADE;` statement that it did not run. Then
+   generate the site's frontend modules and port the source's layouts and
+   templates into them ([Per-site layouts and templates](#per-site-layouts-and-templates)):
+
+   ```sh
+   mix brando.gen.site --site acme
+   ```
+
+5. Build the site's frontend assets and upload and activate them as an asset
+   set ([Uploadable frontend asset sets](#uploadable-frontend-asset-sets)).
+
+   Check: the asset management screen shows the set as active for `acme`.
+
+6. Check the site before any DNS change, on a host of its own or on Staging.
+   Add the source's hostname to the site only at cutover.
+
+   Check: pages, menus, globals, images and files render as on the source, and
+   an editor whose email exists here sees their own name on the entries they
+   created.
+
+7. Cut over by changing DNS. Content edited on the source after the dump in
+   step 1 is not in the copy: freeze editing on the source for the cutover, or
+   run the move again from step 1 under a new site key.
+
+   Check: the source's hostname serves the new site, and the source's admin is
+   closed to editors.
+
+8. Go through what the copy does not carry, or carries made inert. The task's
+   report gives the count of each:
+
+   * Users and their logins, two-factor settings and group memberships stay
+     the source's. Editors who are not here sign in only once you create
+     their users and give them access to the site; their content was given
+     to the `--creator-email` user. Their personal listing views and mentions
+     were not copied.
+   * Webhooks and notification routes are paused. Their secrets were
+     encrypted with the source's `Brando.Crypto` secret and do not decrypt
+     here unless the two installations share it: rotate a webhook's secret
+     and enter a route's URL again, then resume each.
+   * Markdown sources are disabled. Check each one's connection, then enable
+     it.
+   * IndexNow is disabled. Enable it once the site serves its own hostname.
+   * Videos at a provider are marked as imported, so deleting one here leaves
+     it at the provider, where the source still plays it.
+   * Deploy targets belong to the source's site record, which is not copied:
+     the site delivers dynamically until you configure a target here.
+   * Oban jobs stay with the source. A revision scheduled there is not applied
+     here: schedule it again. An entry's `publish_at` and `unpublish_at` are
+     carried out by `Brando.Worker.ScheduledPublishingSweep`, in Production
+     and in Staging.
+   * Forms that email their recipients on a submission start sending from
+     here once visitors reach the site. Check the addresses.
+   * Images and files stored on a CDN stay in the source's bucket and were
+     not copied.
+   * Form submissions, AI conversations, content proposals and the other
+     shared tables (`Brando.Tenant.SharedTables`) are not copied.
+
+   Check: after verifying the site, remove the source schema with the
+   `DROP SCHEMA` statement the task printed, and the media copy from step 1.
 
 ## Operation log
 

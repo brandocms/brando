@@ -25,6 +25,40 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
   reports the size first and asks before copying a large tree; `--yes` skips
   that question for scripted runs. `:single` keeps using the existing media
   root and copies nothing.
+
+  ## Importing another installation's site
+
+  In `:multi`, `--source-schema` names a schema in this installation's
+  database that holds a restored copy of another installation's `public`
+  schema, and `--source-media` a copy of its media tree:
+
+      mix brando.migrate_to_tenant --site-key=acme --name="Acme" \\
+        --source-schema=import_acme --source-media=/srv/import/acme-media \\
+        --creator-email=admin@example.com
+
+  Both are only read, and the task opens no connection to the other
+  installation. `--creator-email` and `--source-media` are required, and
+  `--move` is refused. The task:
+
+    1. compares the source's tenant tables with this installation's and stops,
+       before creating anything, with a list of what differs. Migrate the
+       copy with the other installation's application first;
+    2. prints how the source's users map to users here: one whose email
+       matches, ignoring case, becomes that user, and every other one the
+       `--creator-email` user. No user is created;
+    3. reports the size of the media copy and, above 1 GB, asks first;
+    4. copies the tenant tables (never the shared ones, users included) with
+       their user references remapped, pauses the copied webhooks and
+       notification routes, disables markdown sources and IndexNow, and
+       marks provider videos so deleting one here leaves it at the provider
+       (`Brando.Tenant.SchemaImport`);
+    5. copies the media into `media/{site_key}`, computes the stored page
+       breadcrumbs again, and creates Staging as a copy of Production;
+    6. prints what it neutralised and what to check by hand, and the
+       `DROP SCHEMA` statement that removes the source schema, which it does
+       not run.
+
+  A failure removes the new site; the source schema and media are untouched.
   """
 
   use Mix.Task
@@ -32,6 +66,7 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Tenant.PublicDataMigrator
+  alias Brando.Tenant.SchemaImport
   alias Brando.Users.User
 
   @switches [
@@ -39,7 +74,9 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     name: :string,
     creator_email: :string,
     move: :boolean,
-    yes: :boolean
+    yes: :boolean,
+    source_schema: :string,
+    source_media: :string
   ]
 
   # Below this, the copy is quick enough not to be worth interrupting for.
@@ -53,6 +90,8 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     if invalid != [], do: Mix.raise("Invalid options: #{inspect(invalid)}")
 
     site_key = opts[:site_key] || Mix.raise("--site-key is required")
+    if opts[:source_schema], do: validate_import_options!(opts)
+
     name = opts[:name] || site_key |> String.replace("-", " ") |> String.capitalize()
     creator = creator!(opts[:creator_email])
     languages = configured_languages()
@@ -67,6 +106,10 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
       delivery_mode: :dynamic
     }
 
+    if opts[:source_schema], do: import_schema(attrs, creator, opts), else: migrate_public(attrs, creator, opts)
+  end
+
+  defp migrate_public(attrs, creator, opts) do
     confirm_media_copy!(opts)
 
     case Brando.Tenant.Migration.migrate_public(attrs, creator, migration_opts(opts)) do
@@ -78,11 +121,134 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     end
   end
 
+  defp validate_import_options!(opts) do
+    cond do
+      Brando.Tenant.mode() != :multi ->
+        Mix.raise("--source-schema needs tenancy_mode: :multi")
+
+      opts[:move] ->
+        Mix.raise("--move cannot be used with --source-schema: the source schema is only read")
+
+      is_nil(opts[:creator_email]) ->
+        Mix.raise("--creator-email is required with --source-schema")
+
+      is_nil(opts[:source_media]) ->
+        Mix.raise("--source-media is required with --source-schema")
+
+      not File.dir?(opts[:source_media]) ->
+        Mix.raise("--source-media=#{opts[:source_media]} is not a directory")
+
+      true ->
+        :ok
+    end
+  end
+
+  defp import_schema(attrs, creator, opts) do
+    source = opts[:source_schema]
+    check_source!(source)
+
+    mapping =
+      case SchemaImport.user_mapping(source, creator) do
+        {:ok, mapping} -> mapping
+        {:error, reason} -> Mix.raise("Could not read the users of #{source}: #{inspect(reason)}")
+      end
+
+    print_mapping(source, mapping)
+    confirm_media_copy!(opts, opts[:source_media])
+
+    import_opts = [source_schema: source, source_media: opts[:source_media], user_mapping: mapping]
+
+    case Brando.Tenant.Migration.import_schema(attrs, creator, import_opts) do
+      {:ok, site, report} ->
+        Mix.shell().info("Imported #{source} into site #{site.key} with Production and Staging environments")
+        print_report(report)
+
+        Mix.shell().info("""
+
+        The source schema is no longer needed once the site is verified. To remove it, run:
+
+            DROP SCHEMA "#{source}" CASCADE;
+        """)
+
+      {:error, reason} ->
+        Mix.raise("Import failed, and the new site was removed: #{inspect(reason)}")
+    end
+  end
+
+  defp check_source!(source) do
+    with :ok <- SchemaImport.validate_source(source),
+         :ok <- SchemaImport.compare(source) do
+      :ok
+    else
+      {:error, {:source_structure_differs, differences}} ->
+        Mix.raise("""
+        The tenant tables of #{source} do not match this installation's:
+
+        #{SchemaImport.format_differences(differences)}
+
+        Nothing was created. Migrate the copy first: run the source application's
+        migrations, at a version that matches this installation, against the scratch
+        database the copy came from, then restore it here again.
+        """)
+
+      {:error, reason} ->
+        Mix.raise("Cannot import from #{source}: #{inspect(reason)}")
+    end
+  end
+
+  defp print_mapping(source, mapping) do
+    lines =
+      Enum.map_join(mapping, "\n", fn entry ->
+        how = if entry.matched, do: "same email", else: "no match, creator"
+        "  #{entry.source_id} #{entry.source_email} -> #{entry.target_id} #{entry.target_email} (#{how})"
+      end)
+
+    Mix.shell().info("""
+
+    Users of #{source}, and the user here each one becomes:
+
+    #{if lines == "", do: "  (none)", else: lines}
+    """)
+  end
+
+  @report_lines %{
+    webhooks_paused: "webhooks paused: resume each after checking its URL, and rotate its secret",
+    notification_routes_paused: "notification routes paused: check the channel and recipients, then resume",
+    markdown_sources_disabled: "markdown sources disabled: check the connection, then enable",
+    index_now_disabled: "IndexNow disabled: enable it once the site serves its own host",
+    provider_videos_kept_at_provider:
+      "provider videos marked imported: deleting one here leaves it at the provider, where the source plays it",
+    scheduled_revisions: "scheduled revisions: their jobs stayed with the source, so schedule them again",
+    scheduled_dates:
+      "entries with a future publish or unpublish date: the scheduled publishing sweep carries them out, in both environments",
+    forms_with_recipients: "forms that email recipients on a submission: check the addresses",
+    cdn_images: "images on a CDN: their files stay in the source's bucket and were not copied",
+    cdn_files: "files on a CDN: their files stay in the source's bucket and were not copied",
+    undecoded_snapshots:
+      "revisions or pending translations whose user ids could not be remapped (they cannot be decoded here)"
+  }
+
+  defp print_report(report) do
+    {neutralised, to_check} = Enum.split_with(report, &(&1.action == :neutralised))
+
+    Mix.shell().info("""
+
+    Neutralised in the copy:
+    #{report_lines(Enum.filter(neutralised, &(&1.count > 0)))}
+
+    To check by hand:
+    #{report_lines(to_check)}
+      deploy targets are not copied: the site delivers dynamically until one is configured
+    """)
+  end
+
+  defp report_lines([]), do: "  (nothing)"
+  defp report_lines(items), do: Enum.map_join(items, "\n", &"  #{&1.count} #{Map.fetch!(@report_lines, &1.key)}")
+
   # Only `:multi` copies media; `:single` keeps using the existing media root,
   # so there is nothing to duplicate and nothing to warn about.
-  defp confirm_media_copy!(opts) do
+  defp confirm_media_copy!(opts, media_path \\ Brando.config(:media_path)) do
     if Brando.Tenant.mode() == :multi do
-      media_path = Brando.config(:media_path)
       bytes = directory_size(media_path)
 
       Mix.shell().info("""

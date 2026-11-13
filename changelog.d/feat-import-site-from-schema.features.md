@@ -1,0 +1,1 @@
+- `mix brando.migrate_to_tenant --source-schema=… --source-media=…` creates a site on a multi-site installation from a restored copy of another installation's database and media, reading the copy only, remapping its users by email and pausing what could call other systems. See "Move a standalone site onto a multi-site installation" in the tenancy guide.
