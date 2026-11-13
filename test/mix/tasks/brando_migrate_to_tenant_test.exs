@@ -2,6 +2,8 @@ defmodule Mix.Tasks.BrandoMigrateToTenantTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Environments.Schema
   alias Mix.Tasks.Brando.MigrateToTenant
 
@@ -147,8 +149,19 @@ defmodule Mix.Tasks.BrandoMigrateToTenantTest do
     end
 
     test "says nothing was created when the site was never made" do
-      assert MigrateToTenant.failure_message("acme", {:site_setup_failed, :seed_failed, :ok}) =~ ":seed_failed"
+      assert MigrateToTenant.failure_message("acme", :forbidden) =~ "Nothing was created"
       refute MigrateToTenant.failure_message("acme", :forbidden) =~ "removed"
+    end
+
+    test "says a partly provisioned site was removed only when it was" do
+      removed = MigrateToTenant.failure_message("acme", {:site_setup_failed, :seed_failed, :ok})
+      assert removed =~ ":seed_failed"
+      assert removed =~ "nothing the task created is left"
+
+      left = MigrateToTenant.failure_message("acme", {:site_setup_failed, :seed_failed, {:error, :busy}})
+      refute left =~ "Nothing was created"
+      refute left =~ "nothing the task created is left"
+      assert left =~ "The new site acme could not be removed (:busy)"
     end
   end
 
@@ -177,6 +190,32 @@ defmodule Mix.Tasks.BrandoMigrateToTenantTest do
       :ok
     end
 
+    test "the removal command it prints works when only the directories are left" do
+      site = %Brando.Sites.Site{key: "leftover"}
+      :ok = Brando.Tenant.Storage.create(site)
+      assert File.dir?(Brando.Tenant.Storage.media_root(site))
+
+      message = MigrateToTenant.failure_message("leftover", {:public_migration_failed, :failed, {:error, :busy}})
+      [_, command] = Regex.run(~r/mix run -e '(.*)'/s, message)
+      Code.eval_string(command)
+
+      refute File.exists?(Brando.Tenant.Storage.media_root(site))
+      refute File.exists?(Path.join(Brando.config(:sites_path), "leftover"))
+    end
+
+    test "the removal command it prints removes a site that is left" do
+      creator = Brando.Repo.one(from(u in Brando.Users.User, where: u.role == :superuser, limit: 1))
+      {:ok, site} = Brando.Tenant.Setup.create_site(site_attrs("leftover-site"), creator, seed: false)
+
+      message = MigrateToTenant.failure_message("leftover-site", {:public_migration_failed, :failed, {:error, :busy}})
+      [_, command] = Regex.run(~r/mix run -e '(.*)'/s, message)
+      Code.eval_string(command)
+
+      refute Brando.Tenant.Registry.get_site_by_key("leftover-site")
+      refute Schema.exists?("tenant_leftover-site_production")
+      refute File.exists?(Brando.Tenant.Storage.media_root(site))
+    end
+
     test "copies this installation's public schema, as before" do
       legacy_file = Path.join([Brando.config(:media_path), "images", "legacy.txt"])
       File.mkdir_p!(Path.dirname(legacy_file))
@@ -192,5 +231,9 @@ defmodule Mix.Tasks.BrandoMigrateToTenantTest do
       assert File.read!(Path.join([Brando.config(:media_path), "legacy-task", "images", "legacy.txt"])) == "legacy media"
       assert File.read!(legacy_file) == "legacy media"
     end
+  end
+
+  defp site_attrs(key) do
+    %{name: "Leftover", key: key, languages: ["en"], default_language: "en", status: :active, delivery_mode: :dynamic}
   end
 end

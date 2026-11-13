@@ -101,8 +101,14 @@ defmodule Brando.Tenant.Migration do
     end)
   end
 
-  defp check_languages(source, attrs) do
-    languages = attrs |> Map.get(:languages, []) |> Enum.map(&to_string/1)
+  @doc """
+  Checks that the source's entries are in languages `attrs` configures for
+  the site: `{:error, {:unconfigured_languages, [{language, tables}]}}`
+  otherwise (`SchemaImport.content_languages/1`). Only reads the source.
+  """
+  @spec check_languages(String.t(), map()) :: :ok | {:error, term()}
+  def check_languages(source, attrs) do
+    languages = attrs |> normalise_attrs() |> Map.get(:languages, []) |> Enum.map(&to_string/1)
 
     with {:ok, found} <- SchemaImport.content_languages(source) do
       found

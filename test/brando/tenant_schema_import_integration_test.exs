@@ -467,6 +467,31 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
     assert %{rows: [[true]]} = query!("SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = $1)", [context.source])
   end
 
+  test "the task stops on an unconfigured language before printing the mapping or the media size", context do
+    Mix.shell(Mix.Shell.Process)
+    on_exit(fn -> Mix.shell(Mix.Shell.IO) end)
+    Mix.Task.reenable("brando.migrate_to_tenant")
+
+    query!("""
+    INSERT INTO "#{context.source}".pages (id, title, uri, language, is_homepage, breadcrumbs, inserted_at, updated_at)
+    VALUES (9, 'Hallo', 'hallo', 'de', false, '[]', now(), now())
+    """)
+
+    assert_raise Mix.Error, ~r/languages this installation does not configure:\n\n  de: pages/, fn ->
+      Mix.Tasks.Brando.MigrateToTenant.run([
+        "--site-key=#{context.site_key}",
+        "--source-schema=#{context.source}",
+        "--source-media=#{context.source_media}",
+        "--creator-email=#{context.creator.email}"
+      ])
+    end
+
+    output = collect_output()
+    refute output =~ "and the user here each one becomes"
+    refute output =~ "Media at"
+    refute Registry.get_site_by_key(context.site_key)
+  end
+
   defp drop_configured({:ok, found}, languages),
     do: {:ok, Enum.reject(found, fn {language, _tables} -> language in languages end)}
 

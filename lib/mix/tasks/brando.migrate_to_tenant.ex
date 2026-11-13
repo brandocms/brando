@@ -151,17 +151,15 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
   end
 
   def failure_message(site_key, {:public_migration_failed, reason, cleanup}) do
-    """
-    #{inspect(reason)}
+    "#{inspect(reason)}\n\n" <> not_removed(site_key, cleanup)
+  end
 
-    The new site #{site_key} could not be removed (#{inspect(cleanup_reason(cleanup))}). What may be left:
-    its row in the sites registry, the schemas tenant_#{site_key}_*, and the
-    directories media/#{site_key} and sites/#{site_key}. Remove them with:
+  def failure_message(_site_key, {:site_setup_failed, reason, :ok}) do
+    "#{inspect(reason)}\n\nThe partly created site was removed: nothing the task created is left."
+  end
 
-        mix run -e 'site = Brando.Tenant.Registry.get_site_by_key("#{site_key}")
-          {:ok, site} = Brando.Tenant.Setup.archive_site(site, actor: :system)
-          {:ok, _} = Brando.Tenant.Setup.delete_site(site, force: true, actor: :system)'
-    """
+  def failure_message(site_key, {:site_setup_failed, reason, compensation}) do
+    "#{inspect(reason)}\n\n" <> not_removed(site_key, compensation)
   end
 
   def failure_message(site_key, {:migration_incomplete, step, reason}) do
@@ -238,6 +236,27 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     ~s|{:ok, _} = Brando.Environments.copy_environment(Brando.Tenant.Registry.get_environment_by_key(site, "production"), staging, actor: :system, keep_archives: 0)|
   end
 
+  # The registry row goes before the directories, so the command also works
+  # when only the directories, or only the schemas, are left
+  defp not_removed(site_key, cleanup) do
+    """
+    The new site #{site_key} could not be removed (#{inspect(cleanup_reason(cleanup))}). What may be left:
+    its row in the sites registry, the schemas tenant_#{site_key}_production and
+    tenant_#{site_key}_staging, and the directories media/#{site_key} and
+    sites/#{site_key}. Remove them with:
+
+        mix run -e 'case Brando.Tenant.Registry.get_site_by_key("#{site_key}") do
+            nil -> :ok
+            site ->
+              {:ok, site} = Brando.Tenant.Setup.archive_site(site, actor: :system)
+              {:ok, _} = Brando.Tenant.Setup.delete_site(site, force: true, actor: :system)
+          end
+          :ok = Brando.Environments.Schema.drop("tenant_#{site_key}_production")
+          :ok = Brando.Environments.Schema.drop("tenant_#{site_key}_staging")
+          :ok = Brando.Tenant.Storage.delete(%Brando.Sites.Site{key: "#{site_key}"})'
+    """
+  end
+
   defp cleanup_reason({:error, reason}), do: reason
   defp cleanup_reason(other), do: other
 
@@ -265,7 +284,7 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
 
   defp import_schema(attrs, creator, opts) do
     source = opts[:source_schema]
-    check_source!(source)
+    check_source!(source, attrs)
 
     mapping =
       case SchemaImport.user_mapping(source, creator) do
@@ -295,11 +314,15 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     end
   end
 
-  defp check_source!(source) do
+  defp check_source!(source, attrs) do
     with :ok <- SchemaImport.validate_source(source),
-         :ok <- SchemaImport.compare(source) do
+         :ok <- SchemaImport.compare(source),
+         :ok <- Brando.Tenant.Migration.check_languages(source, attrs) do
       :ok
     else
+      {:error, {:unconfigured_languages, _languages} = reason} ->
+        Mix.raise("Cannot import from #{source}: " <> failure_message(attrs.key, reason))
+
       {:error, {:source_structure_differs, differences}} ->
         Mix.raise("""
         The tenant tables of #{source} do not match this installation's:
