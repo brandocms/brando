@@ -163,6 +163,17 @@ defmodule Mix.Tasks.BrandoMigrateToTenantTest do
       refute left =~ "nothing the task created is left"
       assert left =~ "The new site acme could not be removed (:busy)"
     end
+
+    test "leaves directories that were there before the run out of the removal command" do
+      reason = {:site_setup_failed, {:site_storage_already_exists, "media/acme"}, {:error, :busy}}
+      message = MigrateToTenant.failure_message("acme", reason)
+
+      assert message =~ "The new site acme could not be removed (:busy)"
+      assert message =~ "were there before this run"
+      assert message =~ "Registry.delete_site(site)"
+      refute message =~ "Storage.delete"
+      refute message =~ "Setup.delete_site"
+    end
   end
 
   describe "without --source-schema" do

@@ -1522,7 +1522,9 @@ Once the move has committed, the site's Production schema holds the only
 copy of the content. If a later step fails (the media copy, or creating
 Staging), the task keeps the site and its schema, says which step failed and
 that the content now lives in `tenant_{site_key}_production`, and prints the
-commands that finish the remaining steps.
+commands that finish the remaining steps. It does the same when the move
+itself reports an error and the schema holds rows all the same, as when the
+connection is lost while the move commits.
 
 `--move` also sidesteps circular foreign keys. A Brando schema has several —
 `pages` and `media_folders` reference themselves, and `images` and `users`

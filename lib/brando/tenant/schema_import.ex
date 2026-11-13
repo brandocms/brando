@@ -278,7 +278,7 @@ defmodule Brando.Tenant.SchemaImport do
   end
 
   defp language_enum_tables do
-    (Brando.Blueprint.brando_blueprints() ++ Brando.Blueprint.list_blueprints())
+    ([Brando.Content.Identifier] ++ Brando.Blueprint.brando_blueprints() ++ Brando.Blueprint.list_blueprints())
     |> Enum.uniq()
     |> Enum.filter(&(function_exported?(&1, :__schema__, 2) and language_enum?(&1.__schema__(:type, :language))))
     |> Enum.map(& &1.__schema__(:source))
@@ -287,6 +287,8 @@ defmodule Brando.Tenant.SchemaImport do
   end
 
   defp language_enum?({:parameterized, {Ecto.Enum, _params}}), do: true
+  # Loads with `String.to_existing_atom/1`, so an unknown language raises too
+  defp language_enum?(Brando.Type.Atom), do: true
   defp language_enum?(_type), do: false
 
   defp collect_languages(source, table, {:ok, acc}) do

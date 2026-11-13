@@ -160,8 +160,23 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     "#{inspect(reason)}\n\nThe partly created site was removed: nothing the task created is left."
   end
 
+  # The directories were there before the run, so they are not the task's to remove
+  def failure_message(site_key, {:site_setup_failed, {:site_storage_already_exists, _path} = reason, compensation}) do
+    "#{inspect(reason)}\n\n" <> not_removed(site_key, compensation, :keep_storage)
+  end
+
   def failure_message(site_key, {:site_setup_failed, reason, compensation}) do
     "#{inspect(reason)}\n\n" <> not_removed(site_key, compensation)
+  end
+
+  def failure_message(site_key, {:migration_incomplete, :move, reason}) do
+    """
+    The move reported an error: #{inspect(reason)}
+
+    Its content had arrived all the same: the schema tenant_#{site_key}_production
+    holds rows, so the site #{site_key} was kept and nothing was removed. Check
+    that the tables in public are empty. #{incomplete_remedy(site_key, :media)}
+    """
   end
 
   def failure_message(site_key, {:migration_incomplete, step, reason}) do
@@ -200,7 +215,7 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     create Staging:
 
         mix run -e 'site = Brando.Tenant.Registry.get_site_by_key("#{site_key}")
-          :ok = Brando.Tenant.PublicMediaMigrator.migrate(site)
+          :ok = #{inspect(media_migrator())}.migrate(site)
           #{create_staging_command()}
           #{copy_staging_command()}'
     """
@@ -230,9 +245,12 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
 
   defp incomplete_remedy(_site_key, _step), do: "Finish the remaining steps by hand."
 
+  # A Staging that a failed run left is used as it is
   defp create_staging_command do
-    ~s|{:ok, staging} = Brando.Environments.create_environment(site, %{name: "Staging", key: "staging", live: false}, actor: :system, clone_structure: false)|
+    ~s|staging = with nil <- Brando.Tenant.Registry.get_environment_by_key(site, "staging"), do: elem({:ok, _} = Brando.Environments.create_environment(site, %{name: "Staging", key: "staging", live: false}, actor: :system, clone_structure: false), 1)|
   end
+
+  defp media_migrator, do: Brando.config(:tenant_public_media_migrator) || Brando.Tenant.PublicMediaMigrator
 
   defp copy_staging_command do
     ~s|{:ok, _} = Brando.Environments.copy_environment(Brando.Tenant.Registry.get_environment_by_key(site, "production"), staging, actor: :system, keep_archives: 0)|
@@ -256,6 +274,20 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
           :ok = Brando.Environments.Schema.drop("tenant_#{site_key}_production")
           :ok = Brando.Environments.Schema.drop("tenant_#{site_key}_staging")
           :ok = Brando.Tenant.Storage.delete(%Brando.Sites.Site{key: "#{site_key}"})'
+    """
+  end
+
+  defp not_removed(site_key, cleanup, :keep_storage) do
+    """
+    The new site #{site_key} could not be removed (#{inspect(cleanup_reason(cleanup))}). What may be left:
+    its row in the sites registry and the schemas tenant_#{site_key}_production
+    and tenant_#{site_key}_staging. The directories media/#{site_key} and
+    sites/#{site_key} were there before this run: the command leaves them.
+
+        mix run -e 'with %{} = site <- Brando.Tenant.Registry.get_site_by_key("#{site_key}"),
+            do: {:ok, _} = Brando.Tenant.Registry.delete_site(site)
+          :ok = Brando.Environments.Schema.drop("tenant_#{site_key}_production")
+          :ok = Brando.Environments.Schema.drop("tenant_#{site_key}_staging")'
     """
   end
 

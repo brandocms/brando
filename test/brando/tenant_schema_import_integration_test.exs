@@ -45,6 +45,35 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
     end
   end
 
+  # A move commits at once, and the answer to its commit can be lost: the
+  # content is in the schema, and the migrator returns an error
+  defmodule ArrivedThenFailedMigrator do
+    @behaviour Brando.Tenant.PublicDataMigrator
+
+    @impl true
+    def migrate(_source_prefix, target_prefix) do
+      SQL.query!(
+        Repo,
+        ~s|INSERT INTO "#{target_prefix}".pages (language, inserted_at, updated_at) VALUES ('en', now(), now())|
+      )
+
+      {:error, :connection_lost}
+    end
+
+    @impl true
+    def relocates?, do: true
+  end
+
+  defmodule FailedRelocationMigrator do
+    @behaviour Brando.Tenant.PublicDataMigrator
+
+    @impl true
+    def migrate(_source_prefix, _target_prefix), do: {:error, :move_failed}
+
+    @impl true
+    def relocates?, do: true
+  end
+
   setup_all do
     IntegrationRepo.start(Repo)
   end
@@ -560,6 +589,21 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
       assert source_snapshot(context.source) == before_schema
     end
 
+    # An identifier's language loads with `String.to_existing_atom/1`
+    test "stops when an identifier is in a language not configured here", context do
+      query!(
+        ~s|INSERT INTO "#{context.source}".content_identifiers (entry_id, schema, title, language) VALUES (9, 'Elixir.Brando.Pages.Page', 'Hallo', 'de')|
+      )
+
+      assert {:error, {:unconfigured_languages, [{"de", ["content_identifiers"]}]}} =
+               Migration.import_schema(site_attrs(context.site_key), context.creator,
+                 source_schema: context.source,
+                 source_media: context.source_media
+               )
+
+      refute Registry.get_site_by_key(context.site_key)
+    end
+
     test "removes the new site and leaves the source as it was", context do
       outside = Path.join(Path.dirname(context.source_media), "outside.txt")
       File.write!(outside, "not media")
@@ -581,6 +625,31 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
 
       assert source_snapshot(context.source) == before_schema
       assert media_snapshot(context.source_media) == before_media
+    end
+  end
+
+  describe "a relocation that returns an error" do
+    test "keeps the site when its Production schema holds rows all the same", context do
+      assert {:error, {:migration_incomplete, :move, :connection_lost} = reason} =
+               Migration.migrate_public(site_attrs(context.site_key), context.creator,
+                 public_data_migrator: ArrivedThenFailedMigrator
+               )
+
+      assert Registry.get_site_by_key(context.site_key)
+      assert %{rows: [[1]]} = query!(~s|SELECT count(*) FROM "tenant_#{context.site_key}_production".pages|)
+
+      message = Mix.Tasks.Brando.MigrateToTenant.failure_message(context.site_key, reason)
+      assert message =~ "the site #{context.site_key} was kept"
+      refute message =~ "removed the"
+    end
+
+    test "removes the site when its Production schema is as provisioning left it", context do
+      assert {:error, {:public_migration_failed, :move_failed, :ok}} =
+               Migration.migrate_public(site_attrs(context.site_key), context.creator,
+                 public_data_migrator: FailedRelocationMigrator
+               )
+
+      refute Registry.get_site_by_key(context.site_key)
     end
   end
 
@@ -697,9 +766,11 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
     """)
   end
 
+  # Newer pg_dump releases wrap a dump in `\restrict <token>` and
+  # `\unrestrict <token>` lines, with a new token for each dump
   defp source_snapshot(source) do
     {:ok, dump} = SchemaCloner.dump_schema(source)
-    dump
+    String.replace(dump, ~r/^\\(un)?restrict \S+$/m, "")
   end
 
   defp media_snapshot(root) do

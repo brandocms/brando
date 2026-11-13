@@ -8,6 +8,7 @@ defmodule Brando.Tenant.Migration do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Environments
+  alias Brando.Environments.StructureCloner.Postgres, as: StructureCloner
   alias Brando.Sites.Site
   alias Brando.Tenant
   alias Brando.Tenant.PublicMediaMigrator
@@ -15,6 +16,7 @@ defmodule Brando.Tenant.Migration do
   alias Brando.Tenant.SchemaImport
   alias Brando.Tenant.Setup
   alias Brando.Users.User
+  alias Ecto.Adapters.SQL
 
   @production %{name: "Production", key: "production", live: true}
   @staging %{name: "Staging", key: "staging", live: false}
@@ -28,7 +30,10 @@ defmodule Brando.Tenant.Migration do
   content (`c:Brando.Tenant.PublicDataMigrator.relocates?/0`) has returned:
   the site's Production schema then holds the only copy, so a later failure
   keeps the site and returns `{:error, {:migration_incomplete, step,
-  reason}}`, `step` being `:media`, `:staging` or `:staging_copy`.
+  reason}}`, `step` being `:media`, `:staging` or `:staging_copy`. So does
+  such a migrator's own error when the schema holds rows all the same
+  (`step` is then `:move`): a move commits at once, and the answer to its
+  commit can be lost.
   """
   @spec migrate_public(map(), User.t(), keyword()) :: {:ok, Site.t()} | {:error, term()}
   def migrate_public(attrs, %User{} = creator, opts \\ []) do
@@ -170,7 +175,28 @@ defmodule Brando.Tenant.Migration do
   defp after_copy({:ok, result}, site, production, attrs, creator, note, opts),
     do: finish(site, production, attrs, creator, note, result, opts)
 
-  defp after_copy({:error, reason}, site, _production, _attrs, _creator, _note, _opts), do: clean_up(site, reason)
+  defp after_copy({:error, reason}, site, production, _attrs, _creator, _note, opts) do
+    if Keyword.get(opts, :relocates, false) and holds_content?(Tenant.prefix(site, production)),
+      do: {:error, {:migration_incomplete, :move, reason}},
+      else: clean_up(site, reason)
+  end
+
+  # Provisioning leaves the schema's tables empty, so a row in one arrived
+  # with the move. Anything but a clear "no rows" counts as content: the
+  # schema is dropped next.
+  defp holds_content?(prefix) do
+    case StructureCloner.tenant_tables(prefix) do
+      {:ok, []} ->
+        false
+
+      {:ok, tables} ->
+        checks = Enum.map_join(tables, " OR ", &~s|EXISTS (SELECT 1 FROM "#{prefix}"."#{&1}")|)
+        not match?({:ok, %{rows: [[false]]}}, SQL.query(Brando.Repo.repo(), "SELECT " <> checks, []))
+
+      {:error, _reason} ->
+        true
+    end
+  end
 
   defp finish(site, production, attrs, creator, note, result, opts) do
     hold? = Keyword.get(opts, :hold, false)
