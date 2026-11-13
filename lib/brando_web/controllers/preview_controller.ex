@@ -7,8 +7,11 @@ defmodule BrandoWeb.PreviewController do
   """
   use BrandoAdmin, :controller
 
+  alias Brando.Assets.SiteAssetSet
   alias Brando.Sites
   alias Brando.Sites.Preview
+  alias Brando.Sites.Site
+  alias Brando.Tenant.Frontend
   alias Brando.Utils
 
   action_fallback BrandoWeb.FallbackController
@@ -18,7 +21,8 @@ defmodule BrandoWeb.PreviewController do
     preview_opts = %{matches: %{preview_key: Preview.hash_key(preview_key)}}
 
     with {:ok, preview} <- Sites.get_preview(preview_opts),
-         :gt <- DateTime.compare(preview.expires_at, DateTime.utc_now()) do
+         :gt <- DateTime.compare(preview.expires_at, DateTime.utc_now()),
+         :ok <- same_site(conn, preview) do
       # Sandboxed as a live preview is (`Brando.Plug.LivePreview`): the
       # snapshot holds editor content and is served on the site's origin.
       # The policy the pipeline set (`put_secure_browser_headers`, the
@@ -34,4 +38,19 @@ defmodule BrandoWeb.PreviewController do
       _ -> {:error, {:preview, :not_found}}
     end
   end
+
+  # The key alone finds a preview, whichever site shared it: a site's host
+  # must not render another site's page under its domain
+  defp same_site(conn, %Preview{asset_set_id: set_id}) when is_integer(set_id) do
+    with :multi <- Brando.Tenant.mode(),
+         {%Site{id: site_id}, _environment} <- Frontend.resolve(conn.host),
+         %SiteAssetSet{site_id: other_id} when other_id != site_id <-
+           Brando.Repo.get(SiteAssetSet, set_id, prefix: "public") do
+      :not_found
+    else
+      _same_site_or_no_site -> :ok
+    end
+  end
+
+  defp same_site(_conn, _preview), do: :ok
 end

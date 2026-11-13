@@ -1345,6 +1345,44 @@ repaired from a later manifest and must be recreated.
 A capture failure fails sharing visibly instead of storing a preview tied to
 ephemeral release files.
 
+### Where a preview's assets are served from
+
+A live preview (`/__livepreview`) is served on the admin's host, and a shared
+preview link is built with the endpoint's URL, on the same host. Both pages
+name the site's assets host-relative (`/assets/…`), as the site's own pages
+do, so the admin's host answers them:
+
+- On a host that resolves to a site, `Brando.Plug.SiteAssets` serves that
+  site's active and pinned sets only, as described above.
+- In `:multi`, on a host that resolves to no site, such as the admin's, it
+  answers a path with the file a site's own host would send: any file of the
+  site's active set, scripts and styles as well as the fonts and images of
+  the build's `public/` directory, else a file that a set pinned by an
+  unexpired shared preview lists in its Vite manifest. The active set wins
+  over a pinned one. A site with no domain yet previews the same way.
+- When several sites hold a path, it answers only if they all hold the same
+  content. When their contents differ (`favicon.ico`, a font or logo with
+  the same name in two sites' builds, a build with unhashed names), the path
+  stays unanswered on that host: the request does not say which site's
+  preview asked, and one site's file is never sent to another's preview.
+  Give such files hashed or site-specific names to have them in previews.
+- The release's `priv/static` wins: a path it holds is left to the release's
+  `Plug.Static`.
+- Its answers there carry `cache-control: no-cache`, since which file a path
+  gets can change when another site's set does. On a site's own host the
+  files stay cacheable for a year.
+- Sets of a suspended or archived site do not answer there, and do not
+  count when contents are compared, as the admin lets no one preview such a
+  site. The site's status is read on each request.
+- On a host that resolves to a site, a shared preview link whose pinned set
+  belongs to another site answers 404.
+
+A miss is rejected from a cached listing of every set's files, without
+touching the filesystem; the contents of a path several sites hold are
+compared when the listing is built. The listing is dropped whenever a set is
+activated, deactivated, pinned, released or pruned, on every node
+([Several nodes](#several-nodes)), and is built again on the next request.
+
 ### Pruning contract
 
 `Brando.Assets.SiteAssets.Retention` owns the deletion decision. A set is

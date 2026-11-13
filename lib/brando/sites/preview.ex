@@ -13,6 +13,10 @@ defmodule Brando.Sites.Preview do
     plural: "previews",
     gettext_module: Brando.Gettext
 
+  # A shared table (`Brando.Tenant.SharedTables`): one place for every site's
+  # previews, whatever environment shared them
+  @schema_prefix "public"
+
   trait :creator
   trait :timestamped
 
