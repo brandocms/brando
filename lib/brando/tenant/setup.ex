@@ -4,7 +4,10 @@ defmodule Brando.Tenant.Setup do
 
   A site is not returned until its live and staging environments, tenant
   schemas, initial content, storage directories, and creator assignment all
-  exist. Any provisioning failure removes the partial site. Permanent deletion
+  exist. Any provisioning failure removes the partial site. A site created
+  with `status: :suspended` admits no one, so its environments are
+  provisioned as the system once the creator is authorized to create sites.
+  Permanent deletion
   is intentionally a second step after archival and a configurable retention
   period.
   """

@@ -59,8 +59,8 @@ defmodule Brando.Tenant.Migration do
   (`SchemaImport.compare/1`), and that its content is in languages the site
   has (`{:error, {:unconfigured_languages, [{language, tables}]}}`
   otherwise, since Brando cannot load the rows of another language). The
-  site is created with an empty Production and suspended at once, so no
-  worker, request or admin acts on what is copied. Its rows are copied into
+  site is created suspended, with an empty Production, so no worker,
+  request, admin or sweep of active sites acts on what is copied. Its rows are copied into
   Production with their user references remapped by `:user_mapping`
   (`SchemaImport.user_mapping/2`, computed when not given), its media into
   `media/{site_key}`, and the stored page breadcrumbs are computed again for
