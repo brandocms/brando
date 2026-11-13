@@ -349,8 +349,11 @@ run `mix brando.migrate_to_tenant` with `--source-schema` and
 `--source-media`. Never point the task, or a migration, at the source
 installation's own database. The task only reads the source schema and media
 directory, refuses `--move`, requires `--creator-email`, remaps every user
-reference to this installation's users (by email, otherwise the creator), and
-prints the `DROP SCHEMA` for the source schema without running it.
+reference to this installation's users (by email, otherwise the creator),
+keeps the new site suspended until the copy is complete, and prints the
+`DROP SCHEMA` for the source schema without running it. Content in a
+language this installation does not configure stops the task before it
+creates anything.
 
 ## Groups and authorization
 

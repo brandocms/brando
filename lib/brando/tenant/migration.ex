@@ -41,12 +41,18 @@ defmodule Brando.Tenant.Migration do
   restored copy of another installation's `public` schema, and
   `source_media`, a copy of its media tree. Both are only read.
 
-  The source is checked before the site is created (`SchemaImport.compare/1`).
-  Its rows are copied into Production with their user references remapped
-  by `:user_mapping` (`SchemaImport.user_mapping/2`, computed when not given),
-  its media into `media/{site_key}`, and the stored page breadcrumbs are
-  computed again for this installation before Staging is created as a copy.
-  A failure removes the new site.
+  The source is checked before the site is created: its structure
+  (`SchemaImport.compare/1`), and that its content is in languages the site
+  has (`{:error, {:unconfigured_languages, [{language, tables}]}}`
+  otherwise, since Brando cannot load the rows of another language). The
+  site is created with an empty Production and suspended at once, so no
+  worker, request or admin acts on what is copied. Its rows are copied into
+  Production with their user references remapped by `:user_mapping`
+  (`SchemaImport.user_mapping/2`, computed when not given), its media into
+  `media/{site_key}`, and the stored page breadcrumbs are computed again for
+  this installation before Staging is created as a copy. The site takes the
+  status in `attrs` (`:active` when not given) as the last step. A failure,
+  raised or returned, removes the new site.
 
   Returns `{:ok, site, report}`, the report being `SchemaImport.copy/4`'s.
   """
@@ -57,9 +63,21 @@ defmodule Brando.Tenant.Migration do
 
     with :ok <- SchemaImport.validate_source(source),
          :ok <- SchemaImport.compare(source),
+         :ok <- check_languages(source, attrs),
          {:ok, mapping} <- mapping(opts, source, creator) do
       copy = &import_into(&1, &2, source, source_media, mapping, creator)
-      migrate(attrs, creator, copy, "Initial import from schema #{source}")
+      migrate(attrs, creator, copy, "Initial import from schema #{source}", hold: true)
+    end
+  end
+
+  defp check_languages(source, attrs) do
+    languages = attrs |> Map.get(:languages, []) |> Enum.map(&to_string/1)
+
+    with {:ok, found} <- SchemaImport.content_languages(source) do
+      case Enum.reject(found, fn {language, _tables} -> language in languages end) do
+        [] -> :ok
+        unconfigured -> {:error, {:unconfigured_languages, unconfigured}}
+      end
     end
   end
 
@@ -90,41 +108,59 @@ defmodule Brando.Tenant.Migration do
     end)
   end
 
-  defp migrate(attrs, creator, copy, note) do
+  # With `hold: true` the site is suspended while the copy is made and given
+  # its status last. A suspended site admits no one, so its environments are
+  # then created as the system, the creator having been authorized to create
+  # the site.
+  defp migrate(attrs, creator, copy, note, opts \\ []) do
     setup_opts = [environments: [@production], seed: false]
 
     with {:ok, site} <- Setup.create_site(attrs, creator, setup_opts) do
-      case copy_and_create_staging(site, creator, copy, note) do
+      case compensated(fn -> copy_and_create_staging(site, attrs, creator, copy, note, opts) end) do
         {:ok, migrated_site, result} ->
           {:ok, migrated_site, result}
 
         {:error, reason} ->
-          cleanup = cleanup_failed_site(site)
+          cleanup = compensated(fn -> cleanup_failed_site(site) end)
           {:error, {:public_migration_failed, reason, cleanup}}
       end
     end
   end
 
-  defp copy_and_create_staging(site, creator, copy, note) do
+  defp compensated(fun) do
+    fun.()
+  rescue
+    exception -> {:error, {:raised, Exception.message(exception)}}
+  catch
+    kind, reason -> {:error, {:raised, Exception.format_banner(kind, reason)}}
+  end
+
+  defp copy_and_create_staging(site, attrs, creator, copy, note, opts) do
+    hold? = Keyword.get(opts, :hold, false)
     production = Registry.get_environment_by_key(site, "production")
     prefix = Tenant.prefix(site, production)
+    actor = if hold?, do: [actor: :system, creator_id: creator.id], else: [creator: creator]
 
-    with {:ok, result} <- copy.(site, prefix),
-         {:ok, staging} <-
-           Environments.create_environment(site, @staging, creator: creator, clone_structure: false),
-         {:ok, _copy} <-
-           Environments.copy_environment(production, staging,
-             creator: creator,
-             keep_archives: 0,
-             note: note
-           ) do
+    with {:ok, site} <- if(hold?, do: Setup.suspend_site(site, actor: :system), else: {:ok, site}),
+         {:ok, result} <- copy.(site, prefix),
+         {:ok, staging} <- Environments.create_environment(site, @staging, [clone_structure: false] ++ actor),
+         {:ok, _copy} <- Environments.copy_environment(production, staging, [keep_archives: 0, note: note] ++ actor),
+         {:ok, _site} <- release(site, attrs, hold?) do
       {:ok, Registry.get_site(site.id), result}
     end
   end
 
+  defp release(site, attrs, true) do
+    if Map.get(attrs, :status, :active) == :active, do: Setup.activate_site(site, actor: :system), else: {:ok, site}
+  end
+
+  defp release(site, _attrs, false), do: {:ok, site}
+
+  # Undoes this call's own site: the creator was authorized to create it, and
+  # may not be to delete sites, so the removal runs as the system
   defp cleanup_failed_site(site) do
-    with {:ok, archived} <- Setup.archive_site(site),
-         {:ok, _deleted} <- Setup.delete_site(archived, force: true) do
+    with {:ok, archived} <- Setup.archive_site(site, actor: :system),
+         {:ok, _deleted} <- Setup.delete_site(archived, force: true, actor: :system) do
       :ok
     end
   end

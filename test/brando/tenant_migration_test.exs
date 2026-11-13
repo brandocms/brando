@@ -44,6 +44,13 @@ defmodule Brando.TenantMigrationTest do
     def migrate(_source_prefix, _target_prefix), do: {:error, :public_copy_failed}
   end
 
+  defmodule RaisingPublicMigrator do
+    @behaviour Brando.Tenant.PublicDataMigrator
+
+    @impl true
+    def migrate(_source_prefix, _target_prefix), do: raise("copy blew up")
+  end
+
   defmodule FailingMediaMigrator do
     @behaviour Brando.Tenant.PublicMediaMigrator
 
@@ -117,6 +124,44 @@ defmodule Brando.TenantMigrationTest do
     refute Registry.get_site_by_key("failed-media-migration")
     assert File.read!(legacy_file) == "keep me"
     refute File.exists?(Path.join(Brando.config(:media_path), "failed-media-migration"))
+  end
+
+  test "removes the partial site under group authorization, with no scope in the process" do
+    put_test_env(:authorization_mode, :groups)
+    owner = Brando.Factory.insert(:random_user, role: :superuser)
+    {:ok, _} = Brando.Authorization.Migration.run()
+    scope = Brando.Authorization.Scope.installation(owner)
+
+    # May create sites, not delete them
+    {:ok, group} =
+      Brando.Authorization.Groups.create(scope, %{name: "Site provisioners"}, [
+        "brando.admin.access",
+        "brando.sites.create"
+      ])
+
+    provisioner = Brando.Factory.insert(:random_user, role: :admin)
+    {:ok, :ok} = Brando.Authorization.Groups.add_member(scope, group.id, provisioner.id)
+    refute Brando.Authorization.Boundary.current_scope()
+
+    assert {:error, {:public_migration_failed, :public_copy_failed, :ok}} =
+             Migration.migrate_public(site_attrs("grouped-failed-migration"), provisioner,
+               public_data_migrator: FailingPublicMigrator
+             )
+
+    refute Registry.get_site_by_key("grouped-failed-migration")
+    refute Schema.exists?("tenant_grouped-failed-migration_production")
+    refute File.exists?(Path.join(Brando.config(:media_path), "grouped-failed-migration"))
+  end
+
+  test "removes the partial site when the copy raises", %{creator: creator} do
+    assert {:error, {:public_migration_failed, {:raised, message}, :ok}} =
+             Migration.migrate_public(site_attrs("raising-migration"), creator,
+               public_data_migrator: RaisingPublicMigrator
+             )
+
+    assert message =~ "copy blew up"
+    refute Registry.get_site_by_key("raising-migration")
+    refute Schema.exists?("tenant_raising-migration_production")
   end
 
   defp site_attrs(key) do

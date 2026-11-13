@@ -22,16 +22,29 @@ defmodule Brando.Tenant.SchemaImport do
     * `notification_routes.recipient_ids`, where a recipient with no match
       here is dropped rather than replaced by the creator;
     * the entry snapshots in `revisions.encoded_entry` and
-      `translation_pending_versions.payload`, whose user fields (the names of
-      the foreign key columns, such as `creator_id`) are remapped, so that
-      restoring a revision does not write a source user's id. A snapshot that
-      cannot be decoded here is left as it is and counted in the report;
-    * the block rows kept in `content_block_archive.data`.
+      `translation_pending_versions.payload`, so that restoring a revision
+      does not write a source user's id. In each struct of a snapshot the
+      fields remapped are the columns of that struct's table with a foreign
+      key to `users`, so an application's `author_id` that points at its own
+      authors table is left alone. A snapshot that cannot be decoded here is
+      left as it is and counted in the report;
+    * the block rows kept in `content_block_archive.data`, by the same rule
+      per table;
+    * the mention tokens (`<@12>`) in `entry_notes.body`: a mention of a
+      matched user names that user here, and one of a user with no match
+      becomes plain text, `@` and the source user's name (or email), so that
+      it names no one here. A token of an id the source's `users` table does
+      not have becomes `@?`, as `Brando.Notes.plain_text/2` shows an unknown
+      mention.
 
-  A row whose user column is part of a unique index (saved listing views,
-  listing defaults, note mentions, notification deliveries) belongs to that
+  A row whose user column is part of a unique index (listing defaults, note
+  mentions, notification deliveries, personal listing views) belongs to that
   user: for a user with no match here it is deleted, since giving every such
-  row to the creator would collide.
+  row to the creator would collide. A shared listing view is everyone's, so
+  one made by a user with no match goes to the creator (renamed `name (id)`
+  when the creator already has a view of that name), and the defaults that
+  point at it stay. Ids are moved through negative values, which no user has,
+  so users whose ids are each other's ids here never collide on the way.
 
   ## What could act on the outside world
 
@@ -47,11 +60,28 @@ defmodule Brando.Tenant.SchemaImport do
     * a video at a provider is marked `imported`, so deleting it here leaves it
       at the provider, where the source still plays it.
 
+  `Brando.Tenant.Migration.import_schema/3` keeps the new site suspended
+  until all of this has committed, so no worker or request acts on the copy
+  before.
+
   Deploy targets live in the shared `sites` registry and are not copied: the
   new site delivers dynamically until an operator configures one. Oban jobs
   are shared and not copied either, so a scheduled revision's job stays with
   the source (the report counts them), while `publish_at` and `unpublish_at`
   dates are carried out by `Brando.Worker.ScheduledPublishingSweep`.
+
+  ## Structure, languages and sequences
+
+  The source's tenant tables must match this installation's (`compare/1`). A
+  table the source does not have is not a difference: an application's
+  content type the imported site never used. Nothing is copied into it, and
+  the report names it. Content in a language this installation does not
+  configure cannot be loaded here (`content_languages/1`).
+
+  The dump's own sequence positions (`setval`) are dropped, since an older
+  installation may name a sequence differently. Each sequence here is set
+  from the source's sequence of the same table and column, or past the
+  column's largest value, whichever is further.
   """
 
   import Ecto.Query, only: [from: 2]
@@ -70,18 +100,29 @@ defmodule Brando.Tenant.SchemaImport do
   @json_columns [{"content_block_archive", "data"}]
   @unforeigned_columns [{"content_markdown_events", "actor_id"}]
   @provider_video_types ~w(mux bunny cloudflare vimeo_account)
+  @mention_token ~r/<@(\d+)>/
+  @batch_size 500
 
   @typedoc "One source user and the user here it becomes."
   @type mapping_entry :: %{
-          source_id: integer(),
-          source_email: String.t() | nil,
-          target_id: integer(),
-          target_email: String.t(),
-          matched: boolean()
+          required(:source_id) => integer(),
+          required(:source_email) => String.t() | nil,
+          optional(:source_name) => String.t() | nil,
+          required(:target_id) => integer(),
+          required(:target_email) => String.t(),
+          required(:matched) => boolean()
         }
 
-  @typedoc "One line of the closing report: what was found, how many, and what was done."
-  @type report_item :: %{key: atom(), count: non_neg_integer(), action: :neutralised | :check}
+  @typedoc """
+  One line of the closing report: what was found, how many, what was done,
+  and for some the names of what was found (`:tables_not_in_source`).
+  """
+  @type report_item :: %{
+          required(:key) => atom(),
+          required(:count) => non_neg_integer(),
+          required(:action) => :neutralised | :check,
+          optional(:names) => [String.t()]
+        }
 
   @type report :: [report_item()]
 
@@ -113,12 +154,14 @@ defmodule Brando.Tenant.SchemaImport do
   @doc """
   Compares the source's tenant tables with this installation's (`public`'s).
 
-  Returns `{:error, {:source_structure_differs, differences}}` when a table or
-  column is missing on either side or a column's type differs. Each difference
-  is `{:missing_table, table}` (here, not in the source), `{:extra_table, table}`
-  (in the source, not here), `{:missing_column, table, column}`,
-  `{:extra_column, table, column}` or `{:type_differs, table, column,
-  source_type, type_here}`.
+  Returns `{:error, {:source_structure_differs, differences}}` when the source
+  has a table this installation does not, a table both have lacks a column on
+  either side, or a column's type differs. Each difference is
+  `{:extra_table, table}` (in the source, not here), `{:missing_column,
+  table, column}`, `{:extra_column, table, column}` or `{:type_differs,
+  table, column, source_type, type_here}`. A table here that the source does
+  not have is not a difference: `copy/4` copies nothing into it and names it
+  in the report.
   """
   @spec compare(String.t()) :: :ok | {:error, term()}
   def compare(source) do
@@ -135,7 +178,6 @@ defmodule Brando.Tenant.SchemaImport do
   @spec format_differences([tuple()]) :: String.t()
   def format_differences(differences) do
     Enum.map_join(differences, "\n", fn
-      {:missing_table, table} -> "  table #{table}: missing in the source"
       {:extra_table, table} -> "  table #{table}: only in the source"
       {:missing_column, table, column} -> "  column #{table}.#{column}: missing in the source"
       {:extra_column, table, column} -> "  column #{table}.#{column}: only in the source"
@@ -149,8 +191,10 @@ defmodule Brando.Tenant.SchemaImport do
   """
   @spec user_mapping(String.t(), User.t()) :: {:ok, [mapping_entry()]} | {:error, term()}
   def user_mapping(source, %User{} = creator) do
+    name = if column_exists?(source, "users", "name"), do: "name", else: "NULL::text"
+
     with :ok <- validate_source(source),
-         {:ok, %{rows: source_users}} <- query(~s|SELECT id, email FROM "#{source}"."users" ORDER BY id|) do
+         {:ok, %{rows: source_users}} <- query(~s|SELECT id, email, #{name} FROM "#{source}"."users" ORDER BY id|) do
       local =
         from(u in User,
           where: is_nil(u.deleted_at),
@@ -164,13 +208,49 @@ defmodule Brando.Tenant.SchemaImport do
     end
   end
 
-  defp map_user([id, email], local, creator) do
-    case is_binary(email) && Map.get(local, String.downcase(email)) do
-      {target_id, target_email} ->
-        %{source_id: id, source_email: email, target_id: target_id, target_email: target_email, matched: true}
+  defp map_user([id, email, name], local, creator) do
+    source = %{source_id: id, source_email: email, source_name: name}
 
-      _ ->
-        %{source_id: id, source_email: email, target_id: creator.id, target_email: creator.email, matched: false}
+    case is_binary(email) && Map.get(local, String.downcase(email)) do
+      {target_id, target_email} -> Map.merge(source, %{target_id: target_id, target_email: target_email, matched: true})
+      _ -> Map.merge(source, %{target_id: creator.id, target_email: creator.email, matched: false})
+    end
+  end
+
+  @doc """
+  The languages of the source's content: every value of a `language` column
+  in its tenant tables, with the tables that hold it, as `[{language,
+  [table]}]`. Only reads the source.
+  """
+  @spec content_languages(String.t()) :: {:ok, [{String.t(), [String.t()]}]} | {:error, term()}
+  def content_languages(source) do
+    sql = """
+    SELECT table_name FROM information_schema.columns
+    WHERE table_schema = $1 AND column_name = 'language' AND data_type IN ('text', 'character varying')
+    ORDER BY table_name
+    """
+
+    with :ok <- validate_source(source),
+         {:ok, %{rows: rows}} <- query(sql, [source]) do
+      rows
+      |> Enum.map(&List.first/1)
+      |> Enum.reject(&SharedTables.member?/1)
+      |> Enum.reduce_while({:ok, []}, fn table, {:ok, acc} ->
+        case query(~s|SELECT DISTINCT "language" FROM "#{source}"."#{table}" WHERE "language" IS NOT NULL|) do
+          {:ok, %{rows: languages}} -> {:cont, {:ok, acc ++ Enum.map(languages, &{List.first(&1), table})}}
+          {:error, reason} -> {:halt, {:error, reason}}
+        end
+      end)
+      |> case do
+        {:ok, pairs} ->
+          {:ok,
+           pairs
+           |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+           |> Enum.sort()}
+
+        error ->
+          error
+      end
     end
   end
 
@@ -184,20 +264,22 @@ defmodule Brando.Tenant.SchemaImport do
   def copy(source, target, mapping, creator_id) do
     with :ok <- validate_source(source),
          {:ok, tables} <- copyable_tables(source, target),
+         {:ok, not_in_source} <- tables_not_in_source(target, tables),
          {:ok, references} <- user_references(target),
          :ok <- drop_constraints(target, references),
          {:ok, dump} <- SchemaCloner.dump_schema(source, dump_args(source, tables)),
          {:ok, rewritten} <- SchemaCloner.rewrite_schema(dump, source, target),
-         :ok <- SchemaCloner.restore_dump(rewritten) do
+         :ok <- SchemaCloner.restore_dump(without_sequence_positions(rewritten)) do
       transaction(fn ->
         remap_references!(target, references, mapping, creator_id)
         remap_unforeigned!(target, references, creator_id)
         undecoded = remap_snapshots!(target, references, mapping, creator_id)
         remap_json!(target, references, mapping, creator_id)
+        remap_mentions!(target, mapping)
         add_constraints!(target, references)
-        advance_sequences!(target)
+        advance_sequences!(source, target)
         neutralised = neutralise!(target)
-        neutralised ++ to_check!(target, undecoded)
+        neutralised ++ to_check!(target, undecoded, not_in_source)
       end)
     end
   end
@@ -238,7 +320,7 @@ defmodule Brando.Tenant.SchemaImport do
 
     Enum.flat_map(tables, fn table ->
       case {Map.get(there, table), Map.get(here, table)} do
-        {nil, _} -> [{:missing_table, table}]
+        {nil, _} -> []
         {_, nil} -> [{:extra_table, table}]
         {source_columns, columns} -> column_differences(table, source_columns, columns)
       end
@@ -277,6 +359,31 @@ defmodule Brando.Tenant.SchemaImport do
       end
     end
   end
+
+  defp tables_not_in_source(target, copied) do
+    with {:ok, %{rows: rows}} <-
+           query("SELECT tablename FROM pg_tables WHERE schemaname = $1 ORDER BY tablename", [target]) do
+      {:ok, rows |> Enum.map(&List.first/1) |> Enum.reject(&(SharedTables.member?(&1) or &1 in copied))}
+    end
+  end
+
+  # The source's names for its sequences may not be the names here; they are
+  # set by table and column in `advance_sequences!/2`
+  defp without_sequence_positions(dump) do
+    dump
+    |> String.split("\n")
+    |> Enum.map_reduce(:sql, fn
+      "\\." = line, :copy_data -> {[line], :sql}
+      line, :copy_data -> {[line], :copy_data}
+      "SELECT pg_catalog.setval(" <> _, :sql -> {[], :sql}
+      line, :sql -> {[line], if(copy_from_stdin?(line), do: :copy_data, else: :sql)}
+    end)
+    |> elem(0)
+    |> Enum.concat()
+    |> Enum.join("\n")
+  end
+
+  defp copy_from_stdin?(line), do: String.starts_with?(line, "COPY ") and String.ends_with?(line, " FROM stdin;")
 
   defp dump_args(source, tables) do
     schema = StructureCloner.quote_identifier(source)
@@ -350,23 +457,34 @@ defmodule Brando.Tenant.SchemaImport do
     end)
   end
 
-  # A personal row of a user with no match here is deleted; every other
-  # reference becomes its match or the creator, an id not in the source's
-  # users table included.
-  defp remap_column!(target, table, column, true, _creator_id) do
+  # A personal row of a user with no match here is deleted, except a shared
+  # listing view, which goes to the creator; every other reference becomes its
+  # match or the creator, an id not in the source's users table included.
+  # Personal rows move through negative ids, which no user has: a row moved
+  # straight to its new id could meet the row of a user whose source id that
+  # is, and fail its unique index.
+  defp remap_column!(target, table, column, true, creator_id) do
     qualified = ~s|"#{target}"."#{table}"|
+    shared_views? = {table, column} == {"listing_views", "creator_id"} and column_exists?(target, table, "shared")
 
     query!("""
     DELETE FROM #{qualified} AS t
-    WHERE t."#{column}" IS NOT NULL
+    WHERE t."#{column}" IS NOT NULL #{if shared_views?, do: "AND NOT t.shared"}
       AND NOT EXISTS (SELECT 1 FROM pg_temp.brando_import_users AS m WHERE m.source_id = t."#{column}" AND m.matched)
     """)
 
-    query!("""
-    UPDATE #{qualified} AS t SET "#{column}" = m.target_id
-    FROM pg_temp.brando_import_users AS m
-    WHERE m.source_id = t."#{column}"
-    """)
+    if shared_views?, do: rename_colliding_views!(qualified, creator_id)
+
+    query!(
+      """
+      UPDATE #{qualified} AS t
+      SET "#{column}" = -coalesce((SELECT m.target_id FROM pg_temp.brando_import_users AS m WHERE m.source_id = t."#{column}"), $1)
+      WHERE t."#{column}" IS NOT NULL
+      """,
+      [creator_id]
+    )
+
+    query!(~s|UPDATE #{qualified} SET "#{column}" = -"#{column}" WHERE "#{column}" < 0|)
   end
 
   defp remap_column!(target, table, column, false, creator_id) do
@@ -375,6 +493,27 @@ defmodule Brando.Tenant.SchemaImport do
       UPDATE "#{target}"."#{table}" AS t
       SET "#{column}" = coalesce((SELECT m.target_id FROM pg_temp.brando_import_users AS m WHERE m.source_id = t."#{column}"), $1)
       WHERE t."#{column}" IS NOT NULL
+      """,
+      [creator_id]
+    )
+  end
+
+  # A view's name is unique per owner and listing: a view that would take the
+  # name of another of its new owner's views gets its id after the name. A
+  # matched user's views keep theirs.
+  defp rename_colliding_views!(qualified, creator_id) do
+    query!(
+      """
+      UPDATE #{qualified} AS v SET name = v.name || ' (' || v.id || ')'
+      FROM (
+        SELECT w.id, row_number() OVER (
+          PARTITION BY coalesce(m.target_id, $1), w.schema, w.listing, w.name
+          ORDER BY coalesce(m.matched, false) DESC, w.id
+        ) AS n
+        FROM #{qualified} AS w
+        LEFT JOIN pg_temp.brando_import_users AS m ON m.source_id = w.creator_id
+      ) AS r
+      WHERE r.id = v.id AND r.n > 1
       """,
       [creator_id]
     )
@@ -404,24 +543,31 @@ defmodule Brando.Tenant.SchemaImport do
     end
   end
 
-  # Revisions and pending translations keep the entry as a term; its user
-  # fields are named like the foreign key columns.
+  # Revisions and pending translations keep the entry as a term. In each
+  # struct, the user fields are its table's columns with a foreign key to
+  # users.
   defp remap_snapshots!(target, references, mapping, creator_id) do
-    keys = references |> MapSet.new(& &1.column)
+    keys = keys_by_table(references)
     lookup = Map.new(mapping, &{&1.source_id, &1.target_id})
 
     @snapshot_columns
     |> Enum.filter(fn {table, column} -> column_exists?(target, table, column) end)
     |> Enum.reduce(0, fn {table, column}, undecoded ->
-      %{rows: rows} = query!(~s|SELECT ctid, "#{column}" FROM "#{target}"."#{table}" WHERE "#{column}" IS NOT NULL|)
       update = ~s|UPDATE "#{target}"."#{table}" SET "#{column}" = $1 WHERE ctid = $2|
-      undecoded + Enum.count(rows, &(remap_snapshot!(&1, update, keys, lookup, creator_id) == :error))
+
+      reduce_rows!(
+        ~s|SELECT ctid, "#{column}" FROM "#{target}"."#{table}" WHERE "#{column}" IS NOT NULL|,
+        undecoded,
+        fn row, acc ->
+          if remap_snapshot!(row, update, keys, lookup, creator_id) == :error, do: acc + 1, else: acc
+        end
+      )
     end)
   end
 
   defp remap_snapshot!([ctid, binary], update, keys, lookup, creator_id) do
     with {:ok, term} <- decode(binary) do
-      remapped = remap_value(term, keys, lookup, creator_id)
+      remapped = remap_value(term, MapSet.new(), keys, lookup, creator_id)
       if remapped != term, do: query!(update, [Brando.Utils.term_to_binary(remapped), ctid])
       :ok
     end
@@ -433,50 +579,150 @@ defmodule Brando.Tenant.SchemaImport do
     _ -> :error
   end
 
-  # Walks maps, structs and lists. An integer under a user key becomes the
-  # user here; a preloaded user (the source's) is unloaded.
-  defp remap_value(map, keys, lookup, creator_id) when is_map(map) do
+  defp keys_by_table(references) do
+    references
+    |> Enum.group_by(& &1.table, & &1.column)
+    |> Map.new(fn {table, columns} -> {table, MapSet.new(columns)} end)
+  end
+
+  # Walks maps, structs and lists. An integer under one of `user_keys`
+  # becomes the user here; a preloaded user (the source's) is unloaded. An
+  # Ecto struct's user keys are its own table's, and a plain map in it has
+  # none.
+  defp remap_value(%{__struct__: module} = struct, _user_keys, keys, lookup, creator_id) do
+    remap_fields(struct, struct_keys(module, keys), keys, lookup, creator_id)
+  end
+
+  defp remap_value(map, user_keys, keys, lookup, creator_id) when is_map(map),
+    do: remap_fields(map, user_keys, keys, lookup, creator_id)
+
+  defp remap_value(list, user_keys, keys, lookup, creator_id) when is_list(list),
+    do: Enum.map(list, &remap_value(&1, user_keys, keys, lookup, creator_id))
+
+  defp remap_value(other, _user_keys, _keys, _lookup, _creator_id), do: other
+
+  defp remap_fields(map, user_keys, keys, lookup, creator_id) do
     map
     |> Map.to_list()
     |> Map.new(fn
       {key, value} when is_integer(value) ->
-        if user_key?(key, keys), do: {key, Map.get(lookup, value, creator_id)}, else: {key, value}
+        if user_key?(key, user_keys), do: {key, Map.get(lookup, value, creator_id)}, else: {key, value}
 
       {key, %User{}} ->
         {key, %Ecto.Association.NotLoaded{__field__: key, __owner__: Map.get(map, :__struct__), __cardinality__: :one}}
 
       {key, value} ->
-        {key, remap_value(value, keys, lookup, creator_id)}
+        {key, remap_value(value, MapSet.new(), keys, lookup, creator_id)}
     end)
   end
 
-  defp remap_value(list, keys, lookup, creator_id) when is_list(list),
-    do: Enum.map(list, &remap_value(&1, keys, lookup, creator_id))
-
-  defp remap_value(other, _keys, _lookup, _creator_id), do: other
+  defp struct_keys(module, keys) do
+    source = Code.ensure_loaded?(module) and function_exported?(module, :__schema__, 1) and module.__schema__(:source)
+    if is_binary(source), do: Map.get(keys, source, MapSet.new()), else: MapSet.new()
+  end
 
   defp user_key?(key, keys) when is_atom(key) or is_binary(key), do: MapSet.member?(keys, to_string(key))
   defp user_key?(_key, _keys), do: false
 
+  # The archive keeps each table's rows under the table's name
   defp remap_json!(target, references, mapping, creator_id) do
-    keys = references |> MapSet.new(& &1.column)
+    keys = keys_by_table(references)
     lookup = Map.new(mapping, &{&1.source_id, &1.target_id})
 
     for {table, column} <- @json_columns, column_exists?(target, table, column) do
-      %{rows: rows} = query!(~s|SELECT ctid, "#{column}" FROM "#{target}"."#{table}" WHERE "#{column}" IS NOT NULL|)
       update = ~s|UPDATE "#{target}"."#{table}" SET "#{column}" = $1 WHERE ctid = $2|
 
-      for [ctid, data] <- rows, (remapped = remap_value(data, keys, lookup, creator_id)) != data do
-        query!(update, [remapped, ctid])
-      end
+      reduce_rows!(
+        ~s|SELECT ctid, "#{column}" FROM "#{target}"."#{table}" WHERE "#{column}" IS NOT NULL|,
+        :ok,
+        fn [ctid, data], :ok ->
+          remapped = remap_tables(data, keys, lookup, creator_id)
+          if remapped != data, do: query!(update, [remapped, ctid])
+          :ok
+        end
+      )
     end
 
     :ok
   end
 
-  # The dump sets each sequence to the source's position; one behind its
-  # column's largest value is moved past it
-  defp advance_sequences!(target) do
+  defp remap_tables(data, keys, lookup, creator_id) when is_map(data) do
+    Map.new(data, fn {table, rows} ->
+      {table, remap_value(rows, Map.get(keys, table, MapSet.new()), keys, lookup, creator_id)}
+    end)
+  end
+
+  defp remap_tables(data, _keys, _lookup, _creator_id), do: data
+
+  defp remap_mentions!(target, mapping) do
+    if column_exists?(target, "entry_notes", "body") do
+      by_id = Map.new(mapping, &{&1.source_id, &1})
+      update = ~s|UPDATE "#{target}"."entry_notes" SET body = $1 WHERE ctid = $2|
+
+      reduce_rows!(~s|SELECT ctid, body FROM "#{target}"."entry_notes" WHERE body ~ '<@[0-9]+>'|, :ok, fn
+        [ctid, body], :ok ->
+          query!(update, [replace_mentions(body, by_id), ctid])
+          :ok
+      end)
+    end
+  end
+
+  # A matched user's token names the user here; an unmatched one's becomes
+  # plain text, and one of an id the source's users do not have `@?`
+  defp replace_mentions(body, by_id) do
+    Regex.replace(@mention_token, body, fn _token, id ->
+      case Map.get(by_id, String.to_integer(id)) do
+        %{matched: true, target_id: target_id} -> "<@#{target_id}>"
+        %{} = entry -> "@" <> (Map.get(entry, :source_name) || entry.source_email || "?")
+        nil -> "@?"
+      end
+    end)
+  end
+
+  # Through a cursor, `@batch_size` rows at a time. It reads the rows as they
+  # were when it was opened, so a row the callback updates is not read again.
+  defp reduce_rows!(sql, acc, fun) do
+    query!("DECLARE brando_import_rows NO SCROLL CURSOR FOR #{sql}")
+    result = fetch_rows!(acc, fun)
+    query!("CLOSE brando_import_rows")
+    result
+  end
+
+  defp fetch_rows!(acc, fun) do
+    case query!("FETCH #{@batch_size} FROM brando_import_rows") do
+      %{rows: []} -> acc
+      %{rows: rows} -> fetch_rows!(Enum.reduce(rows, acc, fun), fun)
+    end
+  end
+
+  # Each sequence here continues after the source's sequence of the same
+  # table and column (read, not changed) and after the column's largest value
+  defp advance_sequences!(source, target) do
+    positions =
+      source
+      |> owned_sequences!()
+      |> Map.new(fn [sequence, table, column] ->
+        %{rows: [[position]]} =
+          query!(~s|SELECT CASE WHEN is_called THEN last_value ELSE last_value - 1 END FROM "#{source}"."#{sequence}"|)
+
+        {{table, column}, position}
+      end)
+
+    target
+    |> owned_sequences!()
+    |> Enum.each(fn [sequence, table, column] ->
+      query!(
+        """
+        SELECT setval('"#{target}"."#{sequence}"', m.position)
+        FROM (SELECT greatest(max("#{column}")::bigint, $1::bigint) AS position FROM "#{target}"."#{table}") AS m
+        WHERE m.position > 0
+        """,
+        [Map.get(positions, {table, column})]
+      )
+    end)
+  end
+
+  defp owned_sequences!(schema) do
     sql = """
     SELECT s.relname, t.relname, a.attname
     FROM pg_class AS s
@@ -487,16 +733,7 @@ defmodule Brando.Tenant.SchemaImport do
     WHERE s.relkind = 'S' AND n.nspname = $1
     """
 
-    %{rows: rows} = query!(sql, [target])
-
-    Enum.each(rows, fn [sequence, table, column] ->
-      query!("""
-      SELECT setval('"#{target}"."#{sequence}"', m.max_value)
-      FROM (SELECT max("#{column}")::bigint AS max_value FROM "#{target}"."#{table}") AS m
-      WHERE m.max_value IS NOT NULL
-        AND m.max_value > (SELECT CASE WHEN is_called THEN last_value ELSE last_value - 1 END FROM "#{target}"."#{sequence}")
-      """)
-    end)
+    query!(sql, [schema]).rows
   end
 
   ## Outside world
@@ -539,8 +776,9 @@ defmodule Brando.Tenant.SchemaImport do
   end
 
   # What the copy carries that the operator decides on
-  defp to_check!(target, undecoded) do
+  defp to_check!(target, undecoded, not_in_source) do
     [
+      %{key: :tables_not_in_source, count: length(not_in_source), names: not_in_source},
       count!(target, :scheduled_revisions, {"revisions", "scheduled"}, "scheduled = true"),
       scheduled_dates!(target),
       count!(

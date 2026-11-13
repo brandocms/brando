@@ -38,27 +38,35 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
 
   Both are only read, and the task opens no connection to the other
   installation. `--creator-email` and `--source-media` are required, and
-  `--move` is refused. The task:
+  `--move` is refused; `--source-media` without `--source-schema` is refused
+  too. The task:
 
     1. compares the source's tenant tables with this installation's and stops,
        before creating anything, with a list of what differs. Migrate the
-       copy with the other installation's application first;
+       copy with the other installation's application first. A table only
+       this installation has is left empty and named in the report. It also
+       stops, before creating anything, when the source has content in a
+       language this installation does not configure;
     2. prints how the source's users map to users here: one whose email
        matches, ignoring case, becomes that user, and every other one the
        `--creator-email` user. No user is created;
     3. reports the size of the media copy and, above 1 GB, asks first;
-    4. copies the tenant tables (never the shared ones, users included) with
-       their user references remapped, pauses the copied webhooks and
+    4. creates the site suspended, so no request, editor or job reaches it,
+       and copies the tenant tables (never the shared ones, users included)
+       with their user references remapped, pauses the copied webhooks and
        notification routes, disables markdown sources and IndexNow, and
        marks provider videos so deleting one here leaves it at the provider
        (`Brando.Tenant.SchemaImport`);
     5. copies the media into `media/{site_key}`, computes the stored page
-       breadcrumbs again, and creates Staging as a copy of Production;
+       breadcrumbs again, creates Staging as a copy of Production, and
+       activates the site;
     6. prints what it neutralised and what to check by hand, and the
        `DROP SCHEMA` statement that removes the source schema, which it does
        not run.
 
   A failure removes the new site; the source schema and media are untouched.
+  If removing the site fails too, the task says what may be left and prints
+  the commands that remove it. The same holds without `--source-schema`.
   """
 
   use Mix.Task
@@ -90,7 +98,17 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     if invalid != [], do: Mix.raise("Invalid options: #{inspect(invalid)}")
 
     site_key = opts[:site_key] || Mix.raise("--site-key is required")
-    if opts[:source_schema], do: validate_import_options!(opts)
+
+    cond do
+      opts[:source_schema] ->
+        validate_import_options!(opts)
+
+      opts[:source_media] ->
+        Mix.raise("--source-media needs --source-schema: without it the task copies this installation's own media")
+
+      true ->
+        :ok
+    end
 
     name = opts[:name] || site_key |> String.replace("-", " ") |> String.capitalize()
     creator = creator!(opts[:creator_email])
@@ -117,9 +135,48 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
         Mix.shell().info("#{verb(opts)} public content into site #{site.key} with Production and Staging environments")
 
       {:error, reason} ->
-        Mix.raise("Tenant migration failed: #{inspect(reason)}")
+        Mix.raise("Tenant migration failed: " <> failure_message(attrs.key, reason))
     end
   end
+
+  @doc false
+  # What a failed run left behind: nothing, the new site removed, or the
+  # site and how to remove it
+  def failure_message(site_key, {:public_migration_failed, reason, :ok}) do
+    "#{inspect(reason)}\n\nThe new site #{site_key} was removed."
+  end
+
+  def failure_message(site_key, {:public_migration_failed, reason, cleanup}) do
+    """
+    #{inspect(reason)}
+
+    The new site #{site_key} could not be removed (#{inspect(cleanup_reason(cleanup))}). What may be left:
+    its row in the sites registry, the schemas tenant_#{site_key}_*, and the
+    directories media/#{site_key} and sites/#{site_key}. Remove them with:
+
+        mix run -e 'site = Brando.Tenant.Registry.get_site_by_key("#{site_key}")
+          {:ok, site} = Brando.Tenant.Setup.archive_site(site, actor: :system)
+          {:ok, _} = Brando.Tenant.Setup.delete_site(site, force: true, actor: :system)'
+    """
+  end
+
+  def failure_message(_site_key, {:unconfigured_languages, languages}) do
+    lines = Enum.map_join(languages, "\n", fn {language, tables} -> "  #{language}: #{Enum.join(tables, ", ")}" end)
+
+    """
+    the source has content in languages this installation does not configure:
+
+    #{lines}
+
+    Nothing was created. Add the languages to `config :brando, languages:`, or
+    remove that content from the copy, then run the task again.
+    """
+  end
+
+  def failure_message(_site_key, reason), do: "#{inspect(reason)}\n\nNothing was created."
+
+  defp cleanup_reason({:error, reason}), do: reason
+  defp cleanup_reason(other), do: other
 
   defp validate_import_options!(opts) do
     cond do
@@ -171,7 +228,7 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
         """)
 
       {:error, reason} ->
-        Mix.raise("Import failed, and the new site was removed: #{inspect(reason)}")
+        Mix.raise("Import failed: " <> failure_message(attrs.key, reason))
     end
   end
 
@@ -225,7 +282,8 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     cdn_images: "images on a CDN: their files stay in the source's bucket and were not copied",
     cdn_files: "files on a CDN: their files stay in the source's bucket and were not copied",
     undecoded_snapshots:
-      "revisions or pending translations whose user ids could not be remapped (they cannot be decoded here)"
+      "revisions or pending translations whose user ids could not be remapped (they cannot be decoded here)",
+    tables_not_in_source: "tables the source does not have, left empty"
   }
 
   defp print_report(report) do
@@ -243,7 +301,12 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
   end
 
   defp report_lines([]), do: "  (nothing)"
-  defp report_lines(items), do: Enum.map_join(items, "\n", &"  #{&1.count} #{Map.fetch!(@report_lines, &1.key)}")
+  defp report_lines(items), do: Enum.map_join(items, "\n", &report_line/1)
+
+  defp report_line(%{names: [_ | _] = names} = item),
+    do: "  #{item.count} #{Map.fetch!(@report_lines, item.key)}: #{Enum.join(names, ", ")}"
+
+  defp report_line(item), do: "  #{item.count} #{Map.fetch!(@report_lines, item.key)}"
 
   # Only `:multi` copies media; `:single` keeps using the existing media root,
   # so there is nothing to duplicate and nothing to warn about.

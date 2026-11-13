@@ -106,6 +106,14 @@ defmodule Mix.Tasks.BrandoMigrateToTenantTest do
       end
     end
 
+    test "--source-media is refused without it" do
+      put_test_env(:tenancy_mode, :multi)
+
+      assert_raise Mix.Error, ~r/--source-media needs --source-schema/, fn ->
+        MigrateToTenant.run(~w(--site-key=acme --source-media=/tmp))
+      end
+    end
+
     test "stops on a schema that does not exist, before creating anything" do
       put_test_env(:tenancy_mode, :multi)
       Brando.Factory.insert(:random_user, email: "importer@example.com", role: :superuser)
@@ -117,6 +125,30 @@ defmodule Mix.Tasks.BrandoMigrateToTenantTest do
       end
 
       refute Brando.Tenant.Registry.get_site_by_key("acme")
+    end
+  end
+
+  describe "a failed migration's message" do
+    test "says the new site was removed" do
+      message = MigrateToTenant.failure_message("acme", {:public_migration_failed, :public_copy_failed, :ok})
+
+      assert message =~ ":public_copy_failed"
+      assert message =~ "The new site acme was removed"
+    end
+
+    test "says what is left, and how to remove it, when removing the site failed" do
+      message =
+        MigrateToTenant.failure_message("acme", {:public_migration_failed, :public_copy_failed, {:error, :busy}})
+
+      assert message =~ "The new site acme could not be removed (:busy)"
+      assert message =~ "tenant_acme_"
+      assert message =~ "media/acme"
+      assert message =~ ~s|Brando.Tenant.Setup.delete_site(site, force: true, actor: :system)|
+    end
+
+    test "says nothing was created when the site was never made" do
+      assert MigrateToTenant.failure_message("acme", {:site_setup_failed, :seed_failed, :ok}) =~ ":seed_failed"
+      refute MigrateToTenant.failure_message("acme", :forbidden) =~ "removed"
     end
   end
 

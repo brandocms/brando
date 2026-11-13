@@ -24,8 +24,25 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
   defmodule Migrator do
     @behaviour Brando.Environments.Migrator
 
+    # Staging is created after the data copy: what a worker would see then
     @impl true
-    def migrate(_site, _environment), do: {:ok, []}
+    def migrate(site, environment) do
+      status = Registry.get_site(site.id).status
+      visible = Brando.Tenant.Job.each_active_environment(:all, &Brando.Tenant.current_prefix/0)
+      send(self(), {:migrated, environment.key, status, Enum.any?(visible, &String.contains?(&1, site.key))})
+      {:ok, []}
+    end
+  end
+
+  # An application's entry whose `author_id` points at its own table, not at users
+  defmodule Article do
+    use Ecto.Schema
+
+    schema "import_articles" do
+      field :title, :string
+      field :author_id, :integer
+      field :creator_id, :integer
+    end
   end
 
   setup_all do
@@ -103,12 +120,28 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
       production = "tenant_#{site.key}_production"
       staging = "tenant_#{site.key}_staging"
 
-      # Users: the match by email, the rest the creator; a listing view of a
-      # user who is not here is gone
-      assert %{rows: [[^local_id, ^creator_id], [^creator_id, ^local_id]]} =
-               query!(~s|SELECT creator_id, updated_by_id FROM "#{production}".pages ORDER BY id|)
+      # Not active until the copy is remapped, neutralised and complete
+      assert_received {:migrated, "staging", :suspended, false}
+      assert site.status == :active
+      assert Registry.get_site(site.id).status == :active
 
-      assert %{rows: [[^local_id]]} = query!(~s|SELECT creator_id FROM "#{production}".listing_views|)
+      # Users: the match by email, the rest the creator
+      assert %{rows: [[^local_id, ^creator_id], [^creator_id, ^local_id]]} =
+               query!(~s|SELECT creator_id, updated_by_id FROM "#{production}".pages WHERE id IN (10, 11) ORDER BY id|)
+
+      # A personal listing view of a user who is not here is gone, with that
+      # user's default; a shared one goes to the creator and keeps the
+      # defaults that point at it, renamed when the creator has one of that name
+      assert %{rows: [["mine", ^local_id, false], ["team", ^creator_id, true], ["team (4)", ^creator_id, true]]} =
+               query!(~s|SELECT name, creator_id, shared FROM "#{production}".listing_views ORDER BY id|)
+
+      assert %{rows: [[^local_id, 3]]} =
+               query!(~s|SELECT user_id, view_id FROM "#{production}".listing_view_defaults|)
+
+      # Mentions name the users here; one of a user with no match is plain text
+      assert %{rows: [[body]]} = query!(~s|SELECT body FROM "#{production}".entry_notes|)
+      assert body == "Ask <@#{local_id}> and @Gone Person, not @?"
+      assert %{rows: [[^local_id]]} = query!(~s|SELECT user_id FROM "#{production}".note_mentions|)
       assert %{rows: [[^creator_id]]} = query!(~s|SELECT actor_id FROM "#{production}".content_markdown_events|)
       assert %{rows: [[[^local_id]]]} = query!(~s|SELECT recipient_ids FROM "#{production}".notification_routes|)
 
@@ -128,7 +161,7 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
       # Breadcrumbs carry the identity's name in both environments
       for prefix <- [production, staging] do
         %{rows: [[breadcrumbs]]} =
-          query!(~s|SELECT breadcrumbs FROM "#{prefix}".pages WHERE is_homepage = false|)
+          query!(~s|SELECT breadcrumbs FROM "#{prefix}".pages WHERE id = 11|)
 
         assert [%{"title" => "Acme Identity", "uri" => "/"} | _] = breadcrumbs
       end
@@ -164,6 +197,164 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
 
       assert source_snapshot(context.source) == before_schema
       assert media_snapshot(context.source_media) == before_media
+    end
+
+    test "remaps users whose source ids are the ids of other users here", context do
+      %{creator: creator, local: local, source: source} = context
+
+      # The source's ids of the two users are each other's ids here
+      query!(~s|INSERT INTO "#{source}".users (id, email) VALUES ($1, $2), ($3, $4)|, [
+        local.id,
+        creator.email,
+        creator.id,
+        local.email
+      ])
+
+      query!(
+        """
+        INSERT INTO "#{source}".listing_views (id, name, schema, listing, creator_id, inserted_at, updated_at)
+        VALUES (10, 'swap', 'pages', 'default', $1, now(), now()), (11, 'swap', 'pages', 'default', $2, now(), now())
+        """,
+        [local.id, creator.id]
+      )
+
+      query!(
+        """
+        INSERT INTO "#{source}".listing_view_defaults (user_id, view_id, schema, listing, inserted_at, updated_at)
+        VALUES ($1, 10, 'pages', 'swap', now(), now()), ($2, 11, 'pages', 'swap', now(), now())
+        """,
+        [local.id, creator.id]
+      )
+
+      query!("""
+      INSERT INTO "#{source}".entry_notes (id, entry_type, entry_id, body, inserted_at, updated_at)
+      VALUES (2, 'Elixir.Brando.Pages.Page', 11, 'Both', now(), now())
+      """)
+
+      query!(
+        ~s|INSERT INTO "#{source}".note_mentions (note_id, user_id, inserted_at) VALUES (2, $1, now()), (2, $2, now())|,
+        [local.id, creator.id]
+      )
+
+      before_schema = source_snapshot(source)
+
+      assert {:ok, site, _report} =
+               Migration.import_schema(site_attrs(context.site_key), creator,
+                 source_schema: source,
+                 source_media: context.source_media
+               )
+
+      production = "tenant_#{site.key}_production"
+
+      assert %{rows: [[10, creator_id], [11, local_id]]} =
+               query!(~s|SELECT id, creator_id FROM "#{production}".listing_views WHERE name = 'swap' ORDER BY id|)
+
+      assert {creator_id, local_id} == {creator.id, local.id}
+
+      assert %{rows: [[^creator_id, 10], [^local_id, 11]]} =
+               query!(
+                 ~s|SELECT user_id, view_id FROM "#{production}".listing_view_defaults WHERE listing = 'swap' ORDER BY view_id|
+               )
+
+      assert source_snapshot(source) == before_schema
+    end
+
+    test "remaps the user fields of a snapshot by its entry type's own references to users", context do
+      query!("""
+      CREATE TABLE public.import_articles (
+        id bigserial PRIMARY KEY, title text, author_id bigint, creator_id bigint REFERENCES public.users (id)
+      )
+      """)
+
+      on_exit(fn -> with_repo(fn -> query!("DROP TABLE IF EXISTS public.import_articles") end) end)
+
+      query!(
+        ~s|CREATE TABLE "#{context.source}".import_articles (id bigserial PRIMARY KEY, title text, author_id bigint, creator_id bigint)|
+      )
+
+      query!(~s|INSERT INTO "#{context.source}".import_articles (id, title, author_id, creator_id) VALUES (1, 'A', 1, 1)|)
+
+      snapshot = Brando.Utils.term_to_binary(%Article{id: 1, title: "A", author_id: 1, creator_id: 1})
+
+      query!(
+        """
+        INSERT INTO "#{context.source}".revisions (entry_type, entry_id, revision, encoded_entry, metadata, creator_id, inserted_at, updated_at)
+        VALUES ($1, 1, 1, $2, '{}', 1, now(), now())
+        """,
+        [to_string(Article), snapshot]
+      )
+
+      assert {:ok, site, _report} =
+               Migration.import_schema(site_attrs(context.site_key), context.creator,
+                 source_schema: context.source,
+                 source_media: context.source_media
+               )
+
+      production = "tenant_#{site.key}_production"
+
+      %{rows: [[encoded]]} =
+        query!(~s|SELECT encoded_entry FROM "#{production}".revisions WHERE entry_type = $1|, [to_string(Article)])
+
+      assert %Article{author_id: 1, creator_id: creator_id} = Brando.Utils.binary_to_term(encoded)
+      assert creator_id == context.local.id
+    end
+
+    test "remaps every snapshot when there are more than one batch of them", context do
+      snapshot = Brando.Utils.term_to_binary(%Brando.Pages.Page{id: 10, title: "Home", creator_id: 1})
+
+      query!(
+        """
+        INSERT INTO "#{context.source}".revisions (entry_type, entry_id, revision, encoded_entry, metadata, creator_id, inserted_at, updated_at)
+        SELECT 'Elixir.Brando.Pages.Page', 10, n, $1, '{}', 1, now(), now() FROM generate_series(1, 1201) AS n
+        """,
+        [snapshot]
+      )
+
+      assert {:ok, site, _report} =
+               Migration.import_schema(site_attrs(context.site_key), context.creator,
+                 source_schema: context.source,
+                 source_media: context.source_media
+               )
+
+      %{rows: rows} =
+        query!(~s|SELECT encoded_entry FROM "tenant_#{site.key}_production".revisions WHERE entry_id = 10|)
+
+      assert length(rows) == 1201
+      local_id = context.local.id
+      assert Enum.all?(rows, fn [encoded] -> match?(%{creator_id: ^local_id}, Brando.Utils.binary_to_term(encoded)) end)
+    end
+
+    test "sets the sequences from the source's positions whatever the source named them", context do
+      query!(~s|ALTER SEQUENCE "#{context.source}".pages_id_seq RENAME TO brando_pages_id_seq|)
+      query!(~s|SELECT setval('"#{context.source}"."brando_pages_id_seq"', 20)|)
+
+      assert {:ok, site, _report} =
+               Migration.import_schema(site_attrs(context.site_key), context.creator,
+                 source_schema: context.source,
+                 source_media: context.source_media
+               )
+
+      %{rows: [[next_id]]} =
+        query!(
+          ~s|INSERT INTO "tenant_#{site.key}_production".pages (language, inserted_at, updated_at) VALUES ('en', now(), now()) RETURNING id|
+        )
+
+      assert next_id == 21
+    end
+
+    test "copies nothing into a table the source does not have, and names it", context do
+      query!(~s|DROP TABLE "#{context.source}".sites_indexnow|)
+
+      assert :ok = SchemaImport.compare(context.source)
+
+      assert {:ok, site, report} =
+               Migration.import_schema(site_attrs(context.site_key), context.creator,
+                 source_schema: context.source,
+                 source_media: context.source_media
+               )
+
+      assert %{key: :tables_not_in_source, count: 1, action: :check, names: ["sites_indexnow"]} in report
+      assert %{rows: [[0]]} = query!(~s|SELECT count(*) FROM "tenant_#{site.key}_production".sites_indexnow|)
     end
   end
 
@@ -214,6 +405,24 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
 
       assert {:missing_column, "pages", "meta_description"} in differences
       assert SchemaImport.format_differences(differences) =~ "pages.meta_description: missing in the source"
+      refute Registry.get_site_by_key(context.site_key)
+      assert source_snapshot(context.source) == before_schema
+    end
+
+    test "stops before creating anything when the content is in a language not configured here", context do
+      query!("""
+      INSERT INTO "#{context.source}".pages (id, title, uri, language, is_homepage, breadcrumbs, inserted_at, updated_at)
+      VALUES (9, 'Hallo', 'hallo', 'de', false, '[]', now(), now())
+      """)
+
+      before_schema = source_snapshot(context.source)
+
+      assert {:error, {:unconfigured_languages, [{"de", ["pages"]}]}} =
+               Migration.import_schema(site_attrs(context.site_key), context.creator,
+                 source_schema: context.source,
+                 source_media: context.source_media
+               )
+
       refute Registry.get_site_by_key(context.site_key)
       assert source_snapshot(context.source) == before_schema
     end
@@ -269,11 +478,12 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
       query!(~s|ALTER TABLE "#{source}"."#{table}" DROP CONSTRAINT "#{name}"|)
     end)
 
-    query!(~s|CREATE TABLE "#{source}".users (id bigserial PRIMARY KEY, email text NOT NULL)|)
+    query!(~s|CREATE TABLE "#{source}".users (id bigserial PRIMARY KEY, email text NOT NULL, name text)|)
 
-    query!(~s|INSERT INTO "#{source}".users (id, email) VALUES (1, $1), (2, 'gone@elsewhere.example')|, [
-      "EDITOR-#{unique}@Example.com"
-    ])
+    query!(
+      ~s|INSERT INTO "#{source}".users (id, email, name) VALUES (1, $1, 'Editor'), (2, 'gone@elsewhere.example', 'Gone Person')|,
+      ["EDITOR-#{unique}@Example.com"]
+    )
 
     query!("""
     INSERT INTO "#{source}".sites_identities (name, language, inserted_at, updated_at)
@@ -307,8 +517,26 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
     )
 
     query!("""
-    INSERT INTO "#{source}".listing_views (name, schema, listing, creator_id, inserted_at, updated_at)
-    VALUES ('mine', 'pages', 'default', 1, now(), now()), ('theirs', 'pages', 'default', 2, now(), now())
+    INSERT INTO "#{source}".listing_views (id, name, schema, listing, shared, creator_id, inserted_at, updated_at)
+    VALUES
+      (1, 'mine', 'pages', 'default', false, 1, now(), now()),
+      (2, 'theirs', 'pages', 'default', false, 2, now(), now()),
+      (3, 'team', 'pages', 'default', true, 2, now(), now()),
+      (4, 'team', 'pages', 'default', true, 7, now(), now())
+    """)
+
+    query!("""
+    INSERT INTO "#{source}".listing_view_defaults (user_id, view_id, schema, listing, inserted_at, updated_at)
+    VALUES (1, 3, 'pages', 'default', now(), now()), (2, 2, 'pages', 'default', now(), now())
+    """)
+
+    query!("""
+    INSERT INTO "#{source}".entry_notes (id, entry_type, entry_id, body, author_id, inserted_at, updated_at)
+    VALUES (1, 'Elixir.Brando.Pages.Page', 11, 'Ask <@1> and <@2>, not <@3>', 1, now(), now())
+    """)
+
+    query!("""
+    INSERT INTO "#{source}".note_mentions (note_id, user_id, inserted_at) VALUES (1, 1, now()), (1, 2, now())
     """)
 
     query!("""

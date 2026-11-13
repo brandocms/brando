@@ -1560,8 +1560,11 @@ run `mix brando.migrate_to_tenant` with `--source-schema` and
 `--source-media`. Never point the task, or a migration, at the source
 installation's own database. The task only reads the source schema and media
 directory, refuses `--move`, requires `--creator-email`, remaps every user
-reference to this installation's users (by email, otherwise the creator), and
-prints the `DROP SCHEMA` for the source schema without running it.
+reference to this installation's users (by email, otherwise the creator),
+keeps the new site suspended until the copy is complete, and prints the
+`DROP SCHEMA` for the source schema without running it. Content in a
+language this installation does not configure stops the task before it
+creates anything.
 
 <!-- usage-rules:end -->
 
@@ -1616,19 +1619,28 @@ site `acme`.
    ```
 
    The task first compares the source's tenant tables with this
-   installation's. When a table or column is missing on either side, or a
-   column's type differs, it lists the differences and stops before creating
-   anything: go back to step 2 and migrate the copy. It then prints how each
-   source user maps to a user here (the same email, ignoring case, or the
-   `--creator-email` user; no user is created), reports the media size, and
-   asks before copying more than 1 GB (`--yes` skips the question).
+   installation's. When the source has a table this installation does not, a
+   table both have lacks a column on either side, or a column's type differs,
+   it lists the differences and stops before creating anything: go back to
+   step 2 and migrate the copy. A table only this installation has, such as
+   an application content type the source never used, is left empty and
+   named in the report. The task also stops before creating anything when the
+   source has content in a language this installation does not configure:
+   add the language to `config :brando, languages:`, or remove that content
+   from the copy. It then prints how each source user maps to a user here
+   (the same email, ignoring case, or the `--creator-email` user; no user is
+   created), reports the media size, and asks before copying more than 1 GB
+   (`--yes` skips the question).
 
-   It copies the tenant tables into the site's Production schema with every
-   user reference remapped, copies the media into `media/acme`, computes the
-   stored page breadcrumbs again (their home entry becomes the identity's name
-   instead of `app_name`), and creates Staging as a copy of Production. On a
+   The site is created suspended, so no request, editor or background job
+   reaches it while the copy is made. The task copies the tenant tables into
+   the site's Production schema with every user reference remapped, copies
+   the media into `media/acme`, computes the stored page breadcrumbs again
+   (their home entry becomes the identity's name instead of `app_name`),
+   creates Staging as a copy of Production, and activates the site last. On a
    failure the new site is removed, and the source schema and media are as
-   they were.
+   they were. If removing it fails too, the task says so, lists what may be
+   left, and prints the commands that remove it.
 
    Check: the task ends with "Imported import_acme into site acme", a report
    of what it neutralised and what to check by hand (step 8), and a
@@ -1665,8 +1677,12 @@ site `acme`.
    * Users and their logins, two-factor settings and group memberships stay
      the source's. Editors who are not here sign in only once you create
      their users and give them access to the site; their content was given
-     to the `--creator-email` user. Their personal listing views and mentions
-     were not copied.
+     to the `--creator-email` user. Their personal listing views, listing
+     defaults, mention records and notification deliveries were not copied;
+     their shared listing views now belong to the `--creator-email` user,
+     with the view's id after a name that user already has. In a note, a
+     mention of such an editor is plain text with their name and links to
+     no one.
    * Webhooks and notification routes are paused. Their secrets were
      encrypted with the source's `Brando.Crypto` secret and do not decrypt
      here unless the two installations share it: rotate a webhook's secret
