@@ -197,6 +197,26 @@ defmodule Brando.Assets.DevSiteTest do
       assert render_component(&HTML.include_legacy_assets/1) =~ "/assets/beta-set-legacy.js"
     end
 
+    # Live preview renders in the admin's process under the site's prefix,
+    # and the page's asset requests reach `Brando.Plug.SiteAssets` on the
+    # admin's host, which may belong to another site or to none
+    test "gets the same live preview assets as in production" do
+      outcome = fn env ->
+        put_test_env(:env, env)
+        reset_caches()
+        html = render_component(&HTML.include_assets/1)
+        [src] = Regex.run(~r{src="(/assets/[^"]+\.js)"}, html, capture: :all_but_first)
+
+        served =
+          for host <- ["admin.test", "acme.test", "beta.test"],
+              do: {host, Brando.Plug.SiteAssets.call(conn_for(String.trim_leading(src, "/"), host), []).halted}
+
+        {src, served}
+      end
+
+      assert outcome.(:dev) == outcome.(:prod)
+    end
+
     test "renders from the release's build without an active set", %{beta: beta} do
       :ok = SiteAssets.deactivate(beta)
       html = render_component(&HTML.include_assets/1)
