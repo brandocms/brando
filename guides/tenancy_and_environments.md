@@ -761,7 +761,9 @@ With `tenancy_mode: :multi` and HMR on:
   [Uploading a site's build by hand](#uploading-a-sites-build-by-hand).
 - Live preview and shared previews follow the same rule for the site they
   render: a shared preview of the dev site pins a capture of the release's
-  build, never the site's active set.
+  build, never the site's active set, so sharing one needs a build in
+  `priv/static` (`pnpm build` in `assets/frontend`); without it the admin
+  says so.
 
 Without `dev_site`, every site loads from the dev server, as on a
 single-site installation. Set in `:none` or `:single`, or naming a site that
