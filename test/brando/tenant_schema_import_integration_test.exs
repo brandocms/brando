@@ -344,6 +344,27 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
       assert next_id == 21
     end
 
+    test "renames a shared view that moves to the creator to a name free under both owners", context do
+      # The user with no match here already has a view named as the rename would be
+      query!("""
+      INSERT INTO "#{context.source}".listing_views (id, name, schema, listing, shared, creator_id, inserted_at, updated_at)
+      VALUES (5, 'team (4)', 'pages', 'default', true, 7, now(), now())
+      """)
+
+      assert {:ok, site, _report} =
+               Migration.import_schema(site_attrs(context.site_key), context.creator,
+                 source_schema: context.source,
+                 source_media: context.source_media
+               )
+
+      creator_id = context.creator.id
+
+      assert %{rows: [[3, "team", ^creator_id], [4, "team (4, 2)", ^creator_id], [5, "team (4)", ^creator_id]]} =
+               query!(
+                 ~s|SELECT id, name, creator_id FROM "tenant_#{site.key}_production".listing_views WHERE shared ORDER BY id|
+               )
+    end
+
     test "copies a language column that is a plain string, whatever its value", context do
       query!("""
       INSERT INTO "#{context.source}".activity_events (action, schema, language, inserted_at)

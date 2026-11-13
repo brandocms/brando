@@ -41,8 +41,9 @@ defmodule Brando.Tenant.SchemaImport do
   mentions, notification deliveries, personal listing views) belongs to that
   user: for a user with no match here it is deleted, since giving every such
   row to the creator would collide. A shared listing view is everyone's, so
-  one made by a user with no match goes to the creator (renamed `name (id)`
-  when the creator already has a view of that name), and the defaults that
+  one made by a user with no match goes to the creator (renamed `name (id)`,
+  or `name (id, 2)` and so on when that is taken too, when the creator
+  already has a view of that name), and the defaults that
   point at it stay. Ids are moved through negative values, which no user has,
   so users whose ids are each other's ids here never collide on the way.
 
@@ -513,24 +514,58 @@ defmodule Brando.Tenant.SchemaImport do
   end
 
   # A view's name is unique per owner and listing: a view that would take the
-  # name of another of its new owner's views gets its id after the name. A
-  # matched user's views keep theirs.
+  # name of another of its new owner's views gets its id after the name
+  # (`team (4)`, then `team (4, 2)`, …), the first such name that neither its
+  # current owner nor its new owner has. A matched user's views keep theirs.
   defp rename_colliding_views!(qualified, creator_id) do
-    query!(
-      """
-      UPDATE #{qualified} AS v SET name = v.name || ' (' || v.id || ')'
-      FROM (
-        SELECT w.id, row_number() OVER (
-          PARTITION BY coalesce(m.target_id, $1), w.schema, w.listing, w.name
-          ORDER BY coalesce(m.matched, false) DESC, w.id
-        ) AS n
-        FROM #{qualified} AS w
-        LEFT JOIN pg_temp.brando_import_users AS m ON m.source_id = w.creator_id
-      ) AS r
-      WHERE r.id = v.id AND r.n > 1
-      """,
-      [creator_id]
-    )
+    %{rows: rows} =
+      query!(
+        """
+        SELECT r.id, r.name, r.creator_id, r.owner, r.schema, r.listing
+        FROM (
+          SELECT w.id, w.name, w.creator_id, w.schema, w.listing, coalesce(m.target_id, $1) AS owner,
+            row_number() OVER (
+              PARTITION BY coalesce(m.target_id, $1), w.schema, w.listing, w.name
+              ORDER BY coalesce(m.matched, false) DESC, w.id
+            ) AS n
+          FROM #{qualified} AS w
+          LEFT JOIN pg_temp.brando_import_users AS m ON m.source_id = w.creator_id
+        ) AS r
+        WHERE r.n > 1
+        ORDER BY r.id
+        """,
+        [creator_id]
+      )
+
+    Enum.each(rows, fn [id, name, current, owner, schema, listing] ->
+      free =
+        1
+        |> Stream.iterate(&(&1 + 1))
+        |> Stream.map(fn
+          1 -> "#{name} (#{id})"
+          n -> "#{name} (#{id}, #{n})"
+        end)
+        |> Enum.find(&(not view_name_taken?(qualified, &1, {current, owner, schema, listing}, creator_id)))
+
+      query!("UPDATE #{qualified} SET name = $1 WHERE id = $2", [free, id])
+    end)
+  end
+
+  defp view_name_taken?(qualified, name, {current, owner, schema, listing}, creator_id) do
+    %{rows: [[taken]]} =
+      query!(
+        """
+        SELECT EXISTS (
+          SELECT 1 FROM #{qualified} AS w
+          LEFT JOIN pg_temp.brando_import_users AS m ON m.source_id = w.creator_id
+          WHERE w.schema = $1 AND w.listing = $2 AND w.name = $3
+            AND (w.creator_id = $4 OR coalesce(m.target_id, $5) = $6)
+        )
+        """,
+        [schema, listing, name, current, creator_id, owner]
+      )
+
+    taken
   end
 
   # Once one of these has a foreign key, it was remapped with the others
