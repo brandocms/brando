@@ -74,12 +74,14 @@ defmodule Brando.Tenant.Migration do
     languages = attrs |> Map.get(:languages, []) |> Enum.map(&to_string/1)
 
     with {:ok, found} <- SchemaImport.content_languages(source) do
-      case Enum.reject(found, fn {language, _tables} -> language in languages end) do
-        [] -> :ok
-        unconfigured -> {:error, {:unconfigured_languages, unconfigured}}
-      end
+      found
+      |> Enum.reject(fn {language, _tables} -> language in languages end)
+      |> unconfigured_languages()
     end
   end
+
+  defp unconfigured_languages([]), do: :ok
+  defp unconfigured_languages(unconfigured), do: {:error, {:unconfigured_languages, unconfigured}}
 
   defp import_into(site, prefix, source, source_media, mapping, creator) do
     with {:ok, report} <- SchemaImport.copy(source, prefix, mapping, creator.id),
@@ -116,15 +118,17 @@ defmodule Brando.Tenant.Migration do
     setup_opts = [environments: [@production], seed: false]
 
     with {:ok, site} <- Setup.create_site(attrs, creator, setup_opts) do
-      case compensated(fn -> copy_and_create_staging(site, attrs, creator, copy, note, opts) end) do
-        {:ok, migrated_site, result} ->
-          {:ok, migrated_site, result}
-
-        {:error, reason} ->
-          cleanup = compensated(fn -> cleanup_failed_site(site) end)
-          {:error, {:public_migration_failed, reason, cleanup}}
-      end
+      fn -> copy_and_create_staging(site, attrs, creator, copy, note, opts) end
+      |> compensated()
+      |> clean_up_on_failure(site)
     end
+  end
+
+  defp clean_up_on_failure({:ok, migrated_site, result}, _site), do: {:ok, migrated_site, result}
+
+  defp clean_up_on_failure({:error, reason}, site) do
+    cleanup = compensated(fn -> cleanup_failed_site(site) end)
+    {:error, {:public_migration_failed, reason, cleanup}}
   end
 
   defp compensated(fun) do

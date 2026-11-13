@@ -235,24 +235,20 @@ defmodule Brando.Tenant.SchemaImport do
       rows
       |> Enum.map(&List.first/1)
       |> Enum.reject(&SharedTables.member?/1)
-      |> Enum.reduce_while({:ok, []}, fn table, {:ok, acc} ->
-        case query(~s|SELECT DISTINCT "language" FROM "#{source}"."#{table}" WHERE "language" IS NOT NULL|) do
-          {:ok, %{rows: languages}} -> {:cont, {:ok, acc ++ Enum.map(languages, &{List.first(&1), table})}}
-          {:error, reason} -> {:halt, {:error, reason}}
-        end
-      end)
-      |> case do
-        {:ok, pairs} ->
-          {:ok,
-           pairs
-           |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-           |> Enum.sort()}
-
-        error ->
-          error
-      end
+      |> Enum.reduce_while({:ok, []}, &collect_languages(source, &1, &2))
+      |> group_languages()
     end
   end
+
+  defp collect_languages(source, table, {:ok, acc}) do
+    case query(~s|SELECT DISTINCT "language" FROM "#{source}"."#{table}" WHERE "language" IS NOT NULL|) do
+      {:ok, %{rows: languages}} -> {:cont, {:ok, acc ++ Enum.map(languages, &{List.first(&1), table})}}
+      {:error, reason} -> {:halt, {:error, reason}}
+    end
+  end
+
+  defp group_languages({:ok, pairs}), do: {:ok, pairs |> Enum.group_by(&elem(&1, 0), &elem(&1, 1)) |> Enum.sort()}
+  defp group_languages(error), do: error
 
   @doc """
   Copies the source's tenant tables into `target`, remaps their user
@@ -558,11 +554,13 @@ defmodule Brando.Tenant.SchemaImport do
       reduce_rows!(
         ~s|SELECT ctid, "#{column}" FROM "#{target}"."#{table}" WHERE "#{column}" IS NOT NULL|,
         undecoded,
-        fn row, acc ->
-          if remap_snapshot!(row, update, keys, lookup, creator_id) == :error, do: acc + 1, else: acc
-        end
+        &count_undecoded!(&1, &2, update, keys, lookup, creator_id)
       )
     end)
+  end
+
+  defp count_undecoded!(row, undecoded, update, keys, lookup, creator_id) do
+    if remap_snapshot!(row, update, keys, lookup, creator_id) == :error, do: undecoded + 1, else: undecoded
   end
 
   defp remap_snapshot!([ctid, binary], update, keys, lookup, creator_id) do
@@ -635,14 +633,16 @@ defmodule Brando.Tenant.SchemaImport do
       reduce_rows!(
         ~s|SELECT ctid, "#{column}" FROM "#{target}"."#{table}" WHERE "#{column}" IS NOT NULL|,
         :ok,
-        fn [ctid, data], :ok ->
-          remapped = remap_tables(data, keys, lookup, creator_id)
-          if remapped != data, do: query!(update, [remapped, ctid])
-          :ok
-        end
+        fn row, :ok -> remap_json_row!(row, update, keys, lookup, creator_id) end
       )
     end
 
+    :ok
+  end
+
+  defp remap_json_row!([ctid, data], update, keys, lookup, creator_id) do
+    remapped = remap_tables(data, keys, lookup, creator_id)
+    if remapped != data, do: query!(update, [remapped, ctid])
     :ok
   end
 
