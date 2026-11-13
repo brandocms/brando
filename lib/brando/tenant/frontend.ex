@@ -12,6 +12,27 @@ defmodule Brando.Tenant.Frontend do
     end
   end
 
+  @doc """
+  The site and environment a shared preview opens under on a host with no
+  site: the ones it was shared from, or its site's live environment for a
+  preview stored before previews recorded their environment. Nil for a
+  preview with no site, or one whose site is not active.
+  """
+  @spec shared_preview_tenant(Brando.Sites.Preview.t()) ::
+          {Brando.Sites.Site.t(), Brando.Environments.Environment.t()} | nil
+  def shared_preview_tenant(%Brando.Sites.Preview{site_id: site_id, environment_id: environment_id})
+      when is_integer(site_id) do
+    with %{status: :active} = site <- Enum.find(Cache.list_sites(), &(&1.id == site_id)),
+         %{} = environment <-
+           Enum.find(site.environments, &(&1.id == environment_id)) || Cache.get_live_env(site.key) do
+      {site, environment}
+    else
+      _ -> nil
+    end
+  end
+
+  def shared_preview_tenant(_preview), do: nil
+
   defp resolve_single_site do
     if Tenant.mode() == :single do
       site_key = Brando.config(:site_key)

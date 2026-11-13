@@ -440,7 +440,11 @@ end
 Existing applications opting into tenancy must add the tenant plug in the same
 position. It resolves domains from `Brando.Tenant.Cache`, assigns
 `current_site`, `current_environment`, and `tenant_prefix`, and stores the
-prefix in process context without a database query.
+prefix in process context without a database query. In `:multi` it answers
+404 on a host that resolves to no site, except for a shared preview's link
+(`/__p__/:preview_key`), which opens under the site and environment the
+preview was shared from ([Where a shared preview link
+opens](#where-a-shared-preview-link-opens)).
 
 A LiveView on the site's pages runs in its own process, which the plug never
 reaches. Mount it with `Brando.Tenant.FrontendLiveView`, which does the same
@@ -1345,6 +1349,32 @@ repaired from a later manifest and must be recreated.
 A capture failure fails sharing visibly instead of storing a preview tied to
 ephemeral release files.
 
+### Where a shared preview link opens
+
+`Brando.LivePreview.share/5` records the site and environment the preview is
+shared from in `sites_previews.site_id` and `environment_id`; without tenancy
+both stay empty. The link is built with the endpoint's URL, so it is on the
+admin's host, and it works before the site has a domain.
+
+In `:multi`, a preview opens only under its own site:
+
+- On a host that resolves to no site, such as the admin's,
+  `Brando.Plug.Tenant` lets `/__p__/:preview_key` through, and no other path.
+  It looks the key up, one query on that path only, and for an unexpired
+  preview of an active site sets the request's tenant context to the site and
+  environment the preview was shared from. An unknown or expired key answers
+  404, as every other path on that host does.
+- On a site's own hosts, the link opens that site's previews only. Another
+  site's preview answers 404, with the site's 404 page.
+- A suspended or archived site's preview opens on no host.
+- A preview shared before previews recorded their site has the site of its
+  pinned asset set (the upgrade migration fills it in) and opens under that
+  site's live environment. A preview with neither opens on any site's host,
+  and not on a host with no site.
+
+With one site, or without tenancy, the link opens on any host the application
+answers.
+
 ### Where a preview's assets are served from
 
 A live preview (`/__livepreview`) is served on the admin's host, and a shared
@@ -1374,8 +1404,6 @@ do, so the admin's host answers them:
 - Sets of a suspended or archived site do not answer there, and do not
   count when contents are compared, as the admin lets no one preview such a
   site. The site's status is read on each request.
-- On a host that resolves to a site, a shared preview link whose pinned set
-  belongs to another site answers 404.
 
 A miss is rejected from a cached listing of every set's files, without
 touching the filesystem; the contents of a path several sites hold are

@@ -100,7 +100,11 @@ end
 Existing applications opting into tenancy must add the tenant plug in the same
 position. It resolves domains from `Brando.Tenant.Cache`, assigns
 `current_site`, `current_environment`, and `tenant_prefix`, and stores the
-prefix in process context without a database query.
+prefix in process context without a database query. In `:multi` it answers
+404 on a host that resolves to no site, except for a shared preview's link
+(`/__p__/:preview_key`), which opens under the site and environment the
+preview was shared from ([Where a shared preview link
+opens](deps/brando/guides/tenancy_and_environments.md#where-a-shared-preview-link-opens)).
 
 A LiveView on the site's pages runs in its own process, which the plug never
 reaches. Mount it with `Brando.Tenant.FrontendLiveView`, which does the same

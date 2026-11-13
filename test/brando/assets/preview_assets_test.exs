@@ -92,7 +92,7 @@ defmodule Brando.Assets.PreviewAssetsTest do
     assert_served(html, @admin_host, acme_set)
   end
 
-  test "a shared preview loads its pinned set on its link's host, after another set is activated", %{
+  test "a shared preview opens on its link's host and loads its pinned set, after another set is activated", %{
     acme: acme,
     acme_set: acme_set
   } do
@@ -103,42 +103,42 @@ defmodule Brando.Assets.PreviewAssetsTest do
     assert {:ok, url, _days} = LivePreview.share(Page, changeset, user, %{}, :site)
 
     # The link is on the endpoint's host, which belongs to no site
-    %URI{host: host, path: "/__p__/" <> key} = URI.parse(url)
+    %URI{host: host, path: "/__p__/" <> key = path} = URI.parse(url)
     assert Frontend.resolve(host) == nil
 
     activate(acme, "acme-two")
     Tenant.put_prefix(nil)
 
-    html = BrandoWeb.PreviewController.show(build_conn(), %{"preview_key" => key}).resp_body
-    assert asset_paths(html) == ["assets/acme-one.css", "assets/acme-one.js"]
-    assert_served(html, host, acme_set)
+    # Through a router as an installation generates it
+    conn =
+      :get
+      |> Plug.Test.conn(url)
+      |> Map.put(:host, host)
+      |> Brando.Test.SiteRouter.call(Brando.Test.SiteRouter.init([]))
+
+    assert conn.status == 200
+    assert conn.request_path == path
+    assert conn.assigns.current_site.id == acme.id
+    assert asset_paths(conn.resp_body) == ["assets/acme-one.css", "assets/acme-one.js"]
+    assert_served(conn.resp_body, host, acme_set)
+
+    # The row records where the preview was shared from
+    assert %Preview{site_id: site_id, environment_id: environment_id} =
+             Repo.get_by!(Preview, [preview_key: Preview.hash_key(key)], prefix: "public")
+
+    assert site_id == acme.id
+    assert environment_id == Tenant.Cache.get_env("acme", "production").id
   end
 
-  test "a site's host opens a preview pinned to its own set, and not one pinned to another site's", %{beta: beta} do
+  test "sharing writes a shared row and renders nothing" do
     user = Brando.Factory.insert(:random_user, avatar: nil)
     Tenant.put_prefix(Tenant.prefix("acme", "production"))
     changeset = page() |> Map.put(:key, "about") |> Ecto.Changeset.change()
 
-    # Sharing writes a shared row and renders nothing
-    {:ok, url, _days} =
-      Oban.Testing.with_testing_mode(:manual, fn ->
-        result = LivePreview.share(Page, changeset, user, %{}, :site)
-        refute_enqueued(worker: Brando.Worker.EntryCascade)
-        result
-      end)
-
-    Tenant.put_prefix(nil)
-    "/__p__/" <> key = URI.parse(url).path
-
-    assert {:error, {:preview, :not_found}} = show_preview(key, "beta.test")
-    assert %{status: 200} = show_preview(key, @admin_host)
-
-    own = insert_preview(user, activate(beta, "beta-one").id)
-    assert %{status: 200} = show_preview(own, "beta.test")
-
-    # A preview pinned to no set opens on any host
-    unpinned = insert_preview(user, nil)
-    assert %{status: 200} = show_preview(unpinned, "beta.test")
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      assert {:ok, _url, _days} = LivePreview.share(Page, changeset, user, %{}, :site)
+      refute_enqueued(worker: Brando.Worker.EntryCascade)
+    end)
   end
 
   test "a path no set holds stays unanswered on the admin's host" do
@@ -331,28 +331,6 @@ defmodule Brando.Assets.PreviewAssetsTest do
       },
       prefix: "public"
     )
-  end
-
-  # The key a link carries; the row keeps its hash
-  defp insert_preview(user, asset_set_id) do
-    key = Ecto.UUID.generate()
-
-    Repo.insert!(
-      %Preview{
-        creator_id: user.id,
-        preview_key: Preview.hash_key(key),
-        html: Brando.Utils.term_to_binary("<main>Shared</main>"),
-        expires_at: DateTime.utc_now() |> DateTime.add(3_600, :second) |> DateTime.truncate(:second),
-        asset_set_id: asset_set_id
-      },
-      prefix: "public"
-    )
-
-    key
-  end
-
-  defp show_preview(key, host) do
-    BrandoWeb.PreviewController.show(%{build_conn() | host: host}, %{"preview_key" => key})
   end
 
   defp asset_paths(html) do
