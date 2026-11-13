@@ -231,6 +231,27 @@ defmodule Brando.TenantMigrationTest do
       assert File.read!(Path.join([Brando.config(:media_path), site.key, "images", "legacy.txt"])) == "legacy media"
     end
 
+    # Creating Staging failed after its row was written and its schema dropped
+    test "its commands replace a Staging row that a failed run left without a schema", %{creator: creator} do
+      assert {:error, reason} =
+               Migration.migrate_public(site_attrs("relocated-row"), creator,
+                 public_data_migrator: RelocatingPublicMigrator,
+                 public_media_migrator: FailingMediaMigrator
+               )
+
+      site = Registry.get_site_by_key("relocated-row")
+      {:ok, left} = Registry.create_environment(site, %{name: "Staging", key: "staging", live: false})
+      refute Schema.exists?("tenant_relocated-row_staging")
+
+      message = Mix.Tasks.Brando.MigrateToTenant.failure_message("relocated-row", reason)
+      [_, command] = Regex.run(~r/mix run -e '(.*)'/s, message)
+      Code.eval_string(command)
+
+      staging = Registry.get_environment_by_key(Registry.get_site_by_key("relocated-row"), "staging")
+      assert staging.id != left.id
+      assert Schema.exists?("tenant_relocated-row_staging")
+    end
+
     test "keeps the site when a later step raises", %{creator: creator} do
       assert {:error, {:migration_incomplete, :media, {:raised, message}}} =
                Migration.migrate_public(site_attrs("relocated-raise"), creator,

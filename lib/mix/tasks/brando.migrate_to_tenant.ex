@@ -245,9 +245,16 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
 
   defp incomplete_remedy(_site_key, _step), do: "Finish the remaining steps by hand."
 
-  # A Staging that a failed run left is used as it is
+  # A Staging that a failed run left, with or without its schema, holds
+  # nothing: it is removed and created again
   defp create_staging_command do
-    ~s|staging = with nil <- Brando.Tenant.Registry.get_environment_by_key(site, "staging"), do: elem({:ok, _} = Brando.Environments.create_environment(site, %{name: "Staging", key: "staging", live: false}, actor: :system, clone_structure: false), 1)|
+    ~s"""
+    with %{} = left <- Brando.Tenant.Registry.get_environment_by_key(site, "staging") do
+            :ok = Brando.Environments.Schema.drop(Brando.Tenant.prefix(site, left))
+            {:ok, _} = Brando.Tenant.Registry.delete_environment(left)
+          end
+          {:ok, staging} = Brando.Environments.create_environment(Brando.Tenant.Registry.get_site(site.id), %{name: "Staging", key: "staging", live: false}, actor: :system, clone_structure: false)\
+    """
   end
 
   defp media_migrator, do: Brando.config(:tenant_public_media_migrator) || Brando.Tenant.PublicMediaMigrator

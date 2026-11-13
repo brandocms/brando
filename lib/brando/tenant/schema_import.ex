@@ -280,7 +280,8 @@ defmodule Brando.Tenant.SchemaImport do
   defp language_enum_tables do
     ([Brando.Content.Identifier] ++ Brando.Blueprint.brando_blueprints() ++ Brando.Blueprint.list_blueprints())
     |> Enum.uniq()
-    |> Enum.filter(&(function_exported?(&1, :__schema__, 2) and language_enum?(&1.__schema__(:type, :language))))
+    |> Enum.filter(&(Code.ensure_loaded?(&1) and function_exported?(&1, :__schema__, 2)))
+    |> Enum.filter(&language_enum?(&1.__schema__(:type, :language)))
     |> Enum.map(& &1.__schema__(:source))
     |> Enum.reject(&is_nil/1)
     |> MapSet.new()
