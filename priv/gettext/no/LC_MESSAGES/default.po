@@ -17698,6 +17698,12 @@ msgstr "Innloggingsreglene krever tofaktorautentisering: legg til en annen passn
 msgid "The sign-in policy was saved."
 msgstr "Innloggingsreglene er lagret."
 
+#: lib/brando_admin/components/form.ex
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site has no frontend build to share this preview with, so no link was created. Build it into priv/static with pnpm build in assets/frontend, then try again."
+msgstr "Nettstedet har ikke et bygg av frontend som forhåndsvisningen kan deles med, så ingen lenke ble laget. Bygg det til priv/static med pnpm build i assets/frontend, og prøv igjen."
+
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "The site has no identity in this language, so its pages give no structured data."

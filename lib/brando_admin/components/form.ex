@@ -4340,6 +4340,16 @@ defmodule BrandoAdmin.Components.Form do
             type: "error"
           })
 
+        {:error, :no_frontend_assets} ->
+          push_event(socket, "b:alert", %{
+            title: gettext("Cannot share preview"),
+            message:
+              gettext(
+                "The site has no frontend build to share this preview with, so no link was created. Build it into priv/static with pnpm build in assets/frontend, then try again."
+              ),
+            type: "error"
+          })
+
         {:error, reason} ->
           Logger.error("Sharing a preview failed: #{inspect(reason)}")
 

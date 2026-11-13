@@ -153,6 +153,12 @@ defmodule Brando.Assets.DevSiteTest do
       end
     end
 
+    # The admin turns this reason into what to do (pnpm build)
+    test "refuses a shared preview without a release build", %{acme: acme, tmp_dir: tmp_dir} do
+      File.rm_rf!(Path.join(tmp_dir, "priv/static"))
+      assert {:error, :no_frontend_assets} = SiteAssets.with_preview_set(acme, & &1)
+    end
+
     test "names its own Vite project in the notice" do
       html = render_component(&HTML.include_assets/1)
       assert html =~ "<code>assets/sites/acme</code>"
