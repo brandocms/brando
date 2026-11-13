@@ -98,6 +98,10 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
     assert notice?(result, "every other site now\nanswers 404")
     # Where the site's module preview rules go
     assert notice?(result, ~s(assets/backend/css/app.css, in a [data-site="acme-travel"] { … }))
+    # Where the site's own Vite project goes, and how to develop it
+    assert notice?(result, "assets/sites/acme-travel/, whose build is uploaded")
+
+    assert notice?(result, ~s(dev_site: "acme-travel"))
 
     rerun = result |> IgniterCase.apply_and_reload() |> generate(["--site", "acme-travel"])
     assert rerun.issues == []

@@ -328,6 +328,17 @@ defmodule Brando.ViteTest do
       assert %{reason: {:port_in_use, "4999"}} = Brando.Vite.start_failure(:admin)
     end
 
+    test "is kept for the site's for a site's own project in assets/sites", %{tmp_dir: tmp_dir} do
+      project = Path.join(tmp_dir, "assets/sites/acme")
+      File.mkdir_p!(project)
+
+      capture_log(fn -> Brando.Vite.watch(project) end)
+
+      assert %{reason: {:not_started, _detail}, dir: dir} = Brando.Vite.start_failure(:site)
+      assert String.ends_with?(dir, "assets/sites/acme")
+      assert Brando.Vite.start_failure(:admin) == nil
+    end
+
     test "is not kept for a directory that is neither the admin's nor the site's", %{tmp_dir: tmp_dir} do
       capture_log(fn -> Brando.Vite.watch(Path.join(tmp_dir, "assets/other")) end)
 

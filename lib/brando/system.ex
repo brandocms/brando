@@ -10,6 +10,7 @@ defmodule Brando.System do
   def initialize do
     run_checks()
     Brando.Tenant.Cache.warm()
+    Brando.Assets.DevSite.warn_misconfigured()
     Brando.Assets.SiteAssets.warm()
     initialize_content_caches()
     :ok

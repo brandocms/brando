@@ -44,6 +44,12 @@ if Code.ensure_loaded?(Igniter) do
         The block editor previews the site's modules inside [data-site="#{key}"]. Put rules
         for this site's modules in assets/backend/css/app.css, in a [data-site="#{key}"] { … }
         block; rules outside one apply to every site.
+
+        In :multi, the site's own frontend source can be a Vite project in
+        assets/sites/#{key}/, whose build is uploaded as the site's asset set; until then
+        it gets assets/frontend. Set config :#{project.otp_app}, dev_site: "#{key}" in
+        config/dev.exs to run its Vite dev server (see the "Each site's frontend source"
+        section of guides/tenancy_and_environments.md).
         """)
       else
         {:error, %Igniter{} = igniter, message} -> Igniter.add_issue(igniter, message)

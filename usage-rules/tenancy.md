@@ -310,6 +310,58 @@ follow the site:
   from the shared library needs. See
   [Admin and site CSS](deps/brando/guides/installation.md#admin-and-site-css).
 
+### Each site's frontend source
+
+A site's layouts are compiled into the release, but its scripts and styles
+need not be. In `:multi`, each site's frontend source can be a Vite project
+of its own in `assets/sites/<key>/`, whose build is uploaded as that site's
+[asset set](deps/brando/guides/tenancy_and_environments.md#uploadable-frontend-asset-sets). `assets/frontend` stays the
+release's default frontend, which a site without an active set gets.
+`mix brando.gen.site --site acme` names `assets/sites/acme/` in what it
+prints; it does not create the project. Start one by copying
+`assets/frontend` (without its `node_modules`), so its Vite config reads
+`BRANDO_VITE_FRONTEND_HOST` and `BRANDO_VITE_FRONTEND_PORT` as the default
+frontend's does.
+
+In development, one Vite dev server runs one site's project. Say which
+with `dev_site`, beside `hmr`, and point the `vite_site` watcher at the same
+project:
+
+```elixir
+# config/dev.exs
+dev_site = "acme"
+
+config :my_app, hmr: true, dev_site: dev_site
+
+config :my_app, MyAppWeb.Endpoint,
+  watchers: [
+    vite_admin: {Brando.Vite, :watch, [Path.expand("../assets/backend", __DIR__)]},
+    vite_site: {Brando.Vite, :watch, [Path.expand("../assets/sites/#{dev_site}", __DIR__)]}
+  ]
+```
+
+With `tenancy_mode: :multi` and HMR on:
+
+- A request for the dev site loads its frontend from the Vite dev server. It
+  reads nothing from the site's active asset set: not the script and style
+  tags, the Vite manifest, the critical CSS (which comes from the release's
+  `priv/static`, as in any development setup), nor a file
+  `Brando.Plug.SiteAssets` would serve from the set. When the `vite_site`
+  watcher could not start Vite, the dev site renders the release's build
+  with a notice saying why.
+- A request for any other site renders as in production: from its active
+  set, or without one from the release's `priv/static`. Give the other sites
+  a build with the steps under
+  [Uploading a site's build by hand](deps/brando/guides/tenancy_and_environments.md#uploading-a-sites-build-by-hand).
+- Live preview and shared previews follow the same rule for the site they
+  render: a shared preview of the dev site pins a capture of the release's
+  build, never the site's active set.
+
+Without `dev_site`, every site loads from the dev server, as on a
+single-site installation. Set in `:none` or `:single`, or naming a site that
+does not exist, `dev_site` is ignored, with a warning at boot. Production,
+`:e2e`, `:test` and static builds never read it.
+
 Declare public paths in your application's web SSG module:
 
 ```elixir

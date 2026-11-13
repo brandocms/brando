@@ -8,6 +8,7 @@ defmodule Brando.HTML do
 
   import Phoenix.HTML
 
+  alias Brando.Assets.DevSite
   alias Brando.Assets.Vite
   alias Brando.Blueprint.URL
   alias Brando.Utils
@@ -746,6 +747,10 @@ defmodule Brando.HTML do
   for example because another site's Vite holds the port, the admin or the
   site renders its manifest assets instead, with a notice saying why.
 
+  On a multi-site installation, `config :your_app, dev_site: "acme"` limits
+  the site's dev server to that site; every other site renders from its build
+  (see `Brando.Assets.DevSite`).
+
   These values are read at render time, rather than through application config,
   because they only configure development servers and must agree with Vite's
   process environment without recompiling. Disable HMR as before with
@@ -888,10 +893,14 @@ defmodule Brando.HTML do
     end
   end
 
+  # On a multi-site installation with `dev_site` set, only that site loads
+  # from the dev server, and only it gets the notice when Vite did not start:
+  # the others render from their build (`Brando.Assets.DevSite`)
   defp site_assets_source do
     cond do
       Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) -> :manifest
       hmr_disabled?() -> :manifest
+      DevSite.other_site?() -> :manifest
       failure = Brando.Vite.start_failure(:site) -> vite_failed(:app, failure)
       true -> :dev_server
     end
@@ -932,7 +941,7 @@ defmodule Brando.HTML do
       assign(assigns,
         vite_origin: vite_dev_server_origin("FRONTEND", 3000),
         notice?: Brando.env() == :dev,
-        critical?: File.exists?("assets/frontend/js/critical.js")
+        critical?: File.exists?(Path.join(DevSite.frontend_dir(), "js/critical.js"))
       )
 
     ~H"""
@@ -985,7 +994,7 @@ defmodule Brando.HTML do
     {label, name, dir, port_var, manifest} =
       case assigns.scope do
         :admin -> {"Admin", "the admin", "assets/backend", "BRANDO_VITE_ADMIN_PORT", "admin_manifest.json"}
-        :site -> {"Site", "the site", "assets/frontend", "BRANDO_VITE_FRONTEND_PORT", "manifest.json"}
+        :site -> {"Site", "the site", DevSite.frontend_dir(), "BRANDO_VITE_FRONTEND_PORT", "manifest.json"}
       end
 
     assigns =

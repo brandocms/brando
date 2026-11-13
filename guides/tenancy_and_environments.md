@@ -711,6 +711,58 @@ follow the site:
   from the shared library needs. See
   [Admin and site CSS](installation.md#admin-and-site-css).
 
+### Each site's frontend source
+
+A site's layouts are compiled into the release, but its scripts and styles
+need not be. In `:multi`, each site's frontend source can be a Vite project
+of its own in `assets/sites/<key>/`, whose build is uploaded as that site's
+[asset set](#uploadable-frontend-asset-sets). `assets/frontend` stays the
+release's default frontend, which a site without an active set gets.
+`mix brando.gen.site --site acme` names `assets/sites/acme/` in what it
+prints; it does not create the project. Start one by copying
+`assets/frontend` (without its `node_modules`), so its Vite config reads
+`BRANDO_VITE_FRONTEND_HOST` and `BRANDO_VITE_FRONTEND_PORT` as the default
+frontend's does.
+
+In development, one Vite dev server runs one site's project. Say which
+with `dev_site`, beside `hmr`, and point the `vite_site` watcher at the same
+project:
+
+```elixir
+# config/dev.exs
+dev_site = "acme"
+
+config :my_app, hmr: true, dev_site: dev_site
+
+config :my_app, MyAppWeb.Endpoint,
+  watchers: [
+    vite_admin: {Brando.Vite, :watch, [Path.expand("../assets/backend", __DIR__)]},
+    vite_site: {Brando.Vite, :watch, [Path.expand("../assets/sites/#{dev_site}", __DIR__)]}
+  ]
+```
+
+With `tenancy_mode: :multi` and HMR on:
+
+- A request for the dev site loads its frontend from the Vite dev server. It
+  reads nothing from the site's active asset set: not the script and style
+  tags, the Vite manifest, the critical CSS (which comes from the release's
+  `priv/static`, as in any development setup), nor a file
+  `Brando.Plug.SiteAssets` would serve from the set. When the `vite_site`
+  watcher could not start Vite, the dev site renders the release's build
+  with a notice saying why.
+- A request for any other site renders as in production: from its active
+  set, or without one from the release's `priv/static`. Give the other sites
+  a build with the steps under
+  [Uploading a site's build by hand](#uploading-a-sites-build-by-hand).
+- Live preview and shared previews follow the same rule for the site they
+  render: a shared preview of the dev site pins a capture of the release's
+  build, never the site's active set.
+
+Without `dev_site`, every site loads from the dev server, as on a
+single-site installation. Set in `:none` or `:single`, or naming a site that
+does not exist, `dev_site` is ignored, with a warning at boot. Production,
+`:e2e`, `:test` and static builds never read it.
+
 <!-- usage-rules:end -->
 
 ## Shared modules, containers, and palettes
@@ -1196,6 +1248,60 @@ or manifests. Every queued static build snapshots the active asset-set record
 and deployment configuration at creation time. A later asset activation or
 target edit therefore affects new builds, never an artifact already being
 reviewed or deployed.
+
+### Uploading a site's build by hand
+
+Until Florist uploads a site's own build, put a build of
+`assets/sites/<key>/` in front of the site's visitors by hand. The same
+steps on a development machine give the sites other than `dev_site` their
+last built set. For `acme`:
+
+1. Build the project into a directory of its own, never into `priv/static`,
+   which is the release's default frontend:
+
+   ```sh
+   cd assets/sites/acme
+   pnpm exec vite build --outDir dist --emptyOutDir
+   ```
+
+2. Copy the output into the site's `sets` root, in a directory named for
+   the build. The root is `sites/acme/assets/sets/` beside the media
+   directory, or under `config :brando, :sites_path` when set
+   (`Brando.Assets.SiteAssets.sets_root/1` gives it):
+
+   ```sh
+   cp -R dist /srv/my_app/sites/acme/assets/sets/20261113_abc123
+   ```
+
+3. Register it, from a remote console (`bin/my_app remote`) or `iex -S mix`:
+
+   ```elixir
+   Brando.Assets.SiteAssets.register_set(
+     "acme",
+     "/srv/my_app/sites/acme/assets/sets/20261113_abc123",
+     %{revision: "abc123"}
+   )
+   ```
+
+4. Activate it at `/admin/config/assets`, with `acme` selected.
+
+The build directory must contain, at its top level:
+
+- `manifest.json`, the Vite manifest (`build.manifest: 'manifest.json'`, as
+  the installer's Vite config sets; Vite's default, `.vite/manifest.json`,
+  is not read). Its `isEntry` entries give the page its script and style
+  tags, and the entry named `critical` (`js/critical.js`) its inlined
+  critical CSS.
+- Every file the manifest lists, at the path it lists it under, relative
+  to the directory: `assets/…` for Vite's output. The page links them as
+  `/assets/…`, which `Brando.Plug.SiteAssets` serves from the set.
+- Anything else the site requests from its own root, such as the files
+  Vite copies from the project's `public/` (`favicon.ico`, fonts, images),
+  at the path it is requested under. A path the set lacks falls through to
+  the release's `priv/static`.
+
+Only regular files and directories: registration refuses a symlink or other
+special file.
 
 ### Shared previews pin an asset set
 

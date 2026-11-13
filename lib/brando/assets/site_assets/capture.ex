@@ -12,12 +12,16 @@ defmodule Brando.Assets.SiteAssets.Capture do
   is published by an atomic rename out of a staging directory, so a concurrent
   reader never sees a partial set.
 
+  The development site of a multi-site installation (`Brando.Assets.DevSite`)
+  always captures the release build, as its pages never read its active set.
+
   When an uploaded set is active and self-contained (every file its manifest
   lists is present), it is reused directly. An uploaded set that relies on
   release fallback files is merged with the release, uploaded files taking
   precedence, so the pinned copy is complete.
   """
 
+  alias Brando.Assets.DevSite
   alias Brando.Assets.SiteAssets
   alias Brando.Assets.SiteAssetSet
   alias Brando.Repo
@@ -43,7 +47,11 @@ defmodule Brando.Assets.SiteAssets.Capture do
   """
   @spec ensure_set(SiteAssets.scope()) :: {:ok, SiteAssetSet.t()} | {:error, term()}
   def ensure_set(site) do
-    case SiteAssets.active_set(site) do
+    # The development site renders from the dev server and the release's
+    # build, never from its active set (`Brando.Assets.DevSite`)
+    active = unless DevSite.dev_site?(site), do: SiteAssets.active_set(site)
+
+    case active do
       nil -> capture(site, [release_root()])
       %SiteAssetSet{} = active -> ensure_from_active(site, active)
     end
