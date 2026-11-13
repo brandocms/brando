@@ -72,6 +72,7 @@ defmodule Brando.Tenant.Migration do
   """
   @spec import_schema(map(), User.t(), keyword()) :: {:ok, Site.t(), SchemaImport.report()} | {:error, term()}
   def import_schema(attrs, %User{} = creator, opts) do
+    attrs = normalise_attrs(attrs)
     source = Keyword.fetch!(opts, :source_schema)
     source_media = Keyword.fetch!(opts, :source_media)
 
@@ -82,6 +83,22 @@ defmodule Brando.Tenant.Migration do
       copy = &import_into(&1, &2, source, source_media, mapping, creator)
       migrate(attrs, creator, copy, "Initial import from schema #{source}", hold: true)
     end
+  end
+
+  # Atom keys, as `Site.changeset/2` casts them, and the status an atom.
+  # A string key that is not a site field is dropped, as the cast would.
+  defp normalise_attrs(attrs) do
+    fields = Map.new(Site.__schema__(:fields), &{to_string(&1), &1})
+
+    attrs
+    |> Enum.flat_map(fn
+      {key, value} when is_binary(key) -> if field = fields[key], do: [{field, value}], else: []
+      pair -> [pair]
+    end)
+    |> Map.new()
+    |> Map.update(:status, :active, fn status ->
+      Enum.find(Site.statuses(), status, &(to_string(&1) == to_string(status)))
+    end)
   end
 
   defp check_languages(source, attrs) do
@@ -188,7 +205,7 @@ defmodule Brando.Tenant.Migration do
   end
 
   defp release(site, attrs, true) do
-    if Map.get(attrs, :status, :active) == :active, do: Setup.activate_site(site, actor: :system), else: {:ok, site}
+    if attrs.status == :active, do: Setup.activate_site(site, actor: :system), else: {:ok, site}
   end
 
   defp release(site, _attrs, false), do: {:ok, site}

@@ -365,6 +365,19 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
                )
     end
 
+    test "takes the site's attributes with string keys or string values", context do
+      attrs = Map.new(site_attrs(context.site_key), fn {key, value} -> {to_string(key), to_string(value)} end)
+      attrs = Map.put(attrs, "languages", ["en"])
+
+      assert {:ok, site, _report} =
+               Migration.import_schema(attrs, context.creator,
+                 source_schema: context.source,
+                 source_media: context.source_media
+               )
+
+      assert Registry.get_site(site.id).status == :active
+    end
+
     test "copies a language column that is a plain string, whatever its value", context do
       query!("""
       INSERT INTO "#{context.source}".activity_events (action, schema, language, inserted_at)
