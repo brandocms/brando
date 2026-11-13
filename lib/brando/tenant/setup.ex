@@ -4,7 +4,10 @@ defmodule Brando.Tenant.Setup do
 
   A site is not returned until its live and staging environments, tenant
   schemas, initial content, storage directories, and creator assignment all
-  exist. Any provisioning failure removes the partial site. Permanent deletion
+  exist. Any provisioning failure removes the partial site. A site created
+  with `status: :suspended` admits no one, so its environments are
+  provisioned as the system once the creator is authorized to create sites.
+  Permanent deletion
   is intentionally a second step after archival and a configurable retention
   period.
   """
@@ -31,10 +34,26 @@ defmodule Brando.Tenant.Setup do
   def create_site(attrs, %User{} = creator, opts \\ []) do
     scope = Brando.Authorization.Scope.installation(creator)
 
-    with :ok <- Brando.Authorization.Boundary.authorize(scope, :create, :sites) do
+    with :ok <- Brando.Authorization.Boundary.authorize(scope, :create, :sites),
+         :ok <- authorize_hosts(attrs, creator, opts) do
       do_create_site(attrs, creator, opts)
     end
   end
+
+  # A suspended site's environments are created as the system, which may bind
+  # hosts, so the creator's own right to is checked here; for an active site
+  # the registry checks the creator
+  defp authorize_hosts(attrs, creator, opts) do
+    as_system? = Map.get(attrs, :status, Map.get(attrs, "status", :active)) not in [:active, "active"]
+    binds_host? = opts |> Keyword.get(:environments, @default_environments) |> Enum.any?(&domain?/1)
+
+    if as_system? and binds_host? and not Brando.Authorization.Boundary.superuser?(creator),
+      do: {:error, :forbidden},
+      else: :ok
+  end
+
+  defp domain?(attrs) when is_map(attrs), do: Map.get(attrs, :domain, Map.get(attrs, "domain")) not in [nil, ""]
+  defp domain?(_attrs), do: false
 
   defp do_create_site(attrs, creator, opts) do
     case site_key(attrs) do
@@ -73,6 +92,34 @@ defmodule Brando.Tenant.Setup do
     lifecycle(:delete, opts, fn -> Lock.with(lifecycle_lock_key(site.key), fn -> delete_under_lock(site, opts) end) end)
   end
 
+  @doc """
+  Removes what a failed `create_site/3` or migration left of the site `key`
+  when its own cleanup failed: the registry row with its environments'
+  schemas, the schemas `tenant_<key>_production` and `tenant_<key>_staging`,
+  and the site's directories unless `keep_storage: true`.
+
+  The site's lifecycle lock is held throughout, so a site created with the
+  key while this runs is not touched. One created before it runs is removed:
+  this is for the key of a site that failed.
+  """
+  @spec remove_leftovers(String.t(), keyword()) :: :ok | {:error, term()}
+  def remove_leftovers(key, opts \\ []) when is_binary(key) do
+    lifecycle(:delete, opts, fn -> Lock.with(lifecycle_lock_key(key), fn -> remove_under_lock(key, opts) end) end)
+  end
+
+  defp remove_under_lock(key, opts) do
+    registered =
+      case Registry.get_site_by_key(key) do
+        nil -> :ok
+        site -> with {:ok, _deleted} <- delete_registry_and_schemas(site), do: :ok
+      end
+
+    drops = Enum.map(["production", "staging"], &Schema.drop(Tenant.prefix(key, &1)))
+    storage = if Keyword.get(opts, :keep_storage, false), do: :ok, else: Storage.delete(%Site{key: key})
+
+    Enum.find([registered | drops] ++ [storage], :ok, &(&1 != :ok))
+  end
+
   defp lifecycle(action, opts, fun) do
     actor = opts[:actor] || Brando.Authorization.Boundary.current_scope()
     with :ok <- Brando.Authorization.Boundary.authorize(actor, action, :sites), do: fun.()
@@ -80,19 +127,32 @@ defmodule Brando.Tenant.Setup do
 
   defp create_under_lock(attrs, creator, opts) do
     with {:ok, site} <- Registry.create_site(attrs) do
-      case provision(site, creator, opts) do
-        {:ok, provisioned_site} ->
-          {:ok, provisioned_site}
-
-        {:error, {:storage_not_created, reason}} ->
-          compensation = compensate(site, delete_storage: false)
-          {:error, {:site_setup_failed, reason, compensation}}
-
-        {:error, reason} ->
-          compensation = compensate(site)
-          {:error, {:site_setup_failed, reason, compensation}}
-      end
+      fn -> provision(site, creator, opts) end
+      |> rescued()
+      |> compensate_failure(site)
     end
+  end
+
+  defp compensate_failure({:ok, provisioned_site}, _site), do: {:ok, provisioned_site}
+
+  defp compensate_failure({:error, {:storage_not_created, reason}}, site) do
+    compensation = rescued(fn -> compensate(site, delete_storage: false) end)
+    {:error, {:site_setup_failed, reason, compensation}}
+  end
+
+  defp compensate_failure({:error, reason}, site) do
+    compensation = rescued(fn -> compensate(site) end)
+    {:error, {:site_setup_failed, reason, compensation}}
+  end
+
+  # Once the registry row exists, a raise in provisioning (a structure clone
+  # whose executable is missing, say) is compensated like a returned error
+  defp rescued(fun) do
+    fun.()
+  rescue
+    exception -> {:error, {:raised, Exception.message(exception)}}
+  catch
+    kind, reason -> {:error, {:raised, Exception.format_banner(kind, reason)}}
   end
 
   defp provision(site, creator, opts) do
@@ -102,7 +162,7 @@ defmodule Brando.Tenant.Setup do
          :ok <- validate_environments(environments),
          [live_attrs | remaining_attrs] <- order_live_first(environments),
          {:ok, _assignment} <- assign_creator(creator, site),
-         {:ok, live_environment} <- Environments.create_environment(site, live_attrs, creator: creator),
+         {:ok, live_environment} <- Environments.create_environment(site, live_attrs, actor_opts(site, creator)),
          :ok <- seed(site, live_environment, creator, opts),
          {:ok, _environments} <- create_copies(site, live_environment, remaining_attrs, creator) do
       {:ok, Registry.get_site(site.id)}
@@ -139,15 +199,21 @@ defmodule Brando.Tenant.Setup do
     end
   end
 
+  # A site created suspended admits no one, its creator included: its
+  # environments are provisioned as the system, which the installation's
+  # create check on the creator has already authorized
+  defp actor_opts(%Site{status: :active}, creator), do: [creator: creator]
+  defp actor_opts(%Site{}, creator), do: [actor: :system, creator_id: creator.id]
+
   defp create_copies(site, live_environment, environment_attrs, creator) do
     Enum.reduce_while(environment_attrs, {:ok, [live_environment]}, fn attrs, {:ok, environments} ->
       with {:ok, environment} <-
-             Environments.create_environment(site, attrs, creator: creator, clone_structure: false),
+             Environments.create_environment(site, attrs, [clone_structure: false] ++ actor_opts(site, creator)),
            {:ok, _copy} <-
-             Environments.copy_environment(live_environment, environment,
-               creator: creator,
-               keep_archives: 0,
-               note: "Initial site provisioning"
+             Environments.copy_environment(
+               live_environment,
+               environment,
+               [keep_archives: 0, note: "Initial site provisioning"] ++ actor_opts(site, creator)
              ) do
         {:cont, {:ok, environments ++ [environment]}}
       else
@@ -248,15 +314,18 @@ defmodule Brando.Tenant.Setup do
     end
   end
 
+  # `:ok` only when everything it removes is gone; otherwise the first error
   defp compensate(site, opts \\ []) do
-    Enum.each(site_schema_prefixes(site), &Schema.drop/1)
+    drops = Enum.map(site_schema_prefixes(site), &Schema.drop/1)
+    storage = if Keyword.get(opts, :delete_storage, true), do: Storage.delete(site), else: :ok
 
-    if Keyword.get(opts, :delete_storage, true), do: Storage.delete(site)
+    registry =
+      case Registry.get_site(site.id) do
+        nil -> :ok
+        current_site -> with {:ok, _deleted} <- Registry.delete_site(current_site), do: :ok
+      end
 
-    case Registry.get_site(site.id) do
-      nil -> :ok
-      current_site -> Registry.delete_site(current_site)
-    end
+    Enum.find(drops ++ [storage, registry], :ok, &(&1 != :ok))
   end
 
   defp site_schema_prefixes(site) do

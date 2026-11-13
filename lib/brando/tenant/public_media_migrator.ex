@@ -40,6 +40,39 @@ defmodule Brando.Tenant.PublicMediaMigrator do
     end
   end
 
+  @doc """
+  Copies every entry of `source_root`, a copy of another installation's media
+  tree, into the site's media root, refusing symlinks and special files as
+  `migrate/1` does. `source_root` is only read.
+  """
+  @spec copy_tree(Site.t(), String.t()) :: :ok | {:error, term()}
+  def copy_tree(%Site{} = site, source_root) do
+    source_root = Path.expand(source_root)
+    target_root = site |> Storage.media_root() |> Path.expand()
+
+    with :ok <- validate_source_root(source_root, target_root),
+         {:ok, entries} <- File.ls(source_root),
+         :ok <- validate_entries(source_root, entries),
+         :ok <- copy_entries(source_root, target_root, entries) do
+      :ok
+    else
+      {:error, reason} -> {:error, {:media_migration_failed, reason}}
+    end
+  end
+
+  defp validate_source_root(source_root, target_root) do
+    cond do
+      not File.dir?(source_root) ->
+        {:error, {:source_media_not_a_directory, source_root}}
+
+      String.starts_with?(target_root <> "/", source_root <> "/") ->
+        {:error, {:source_media_contains_target, source_root}}
+
+      true ->
+        :ok
+    end
+  end
+
   defp validate_entries(root, entries) do
     Enum.reduce_while(entries, :ok, fn entry, :ok ->
       case validate_path(Path.join(root, entry)) do

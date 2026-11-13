@@ -41,6 +41,13 @@ defmodule Brando.Tenant.SetupTest do
     end
   end
 
+  defmodule RaisingStructureCloner do
+    @behaviour Brando.Environments.StructureCloner
+
+    @impl true
+    def clone_structure(_source_prefix, _target_prefix), do: raise(ErlangError, original: :enoent)
+  end
+
   defmodule Seeder do
     @behaviour Brando.Tenant.Seeder
 
@@ -81,6 +88,54 @@ defmodule Brando.Tenant.SetupTest do
     %{creator: creator, root: root}
   end
 
+  describe "a site created suspended" do
+    @bound [
+      %{name: "Production", key: "production", live: true, domain: "bound.example.com"},
+      %{name: "Staging", key: "staging", live: false}
+    ]
+
+    # Its environments are created as the system, which may bind hosts
+    test "refuses a host from a creator who may not bind one", %{creator: creator} do
+      attrs = Map.put(site_attrs("bound-site"), :status, :suspended)
+
+      assert {:error, :forbidden} = Setup.create_site(attrs, creator, environments: @bound)
+      refute Registry.get_site_by_key("bound-site")
+    end
+
+    test "takes a host from a superuser" do
+      owner = Brando.Factory.insert(:random_user, role: :superuser)
+      attrs = Map.put(site_attrs("bound-owner"), :status, :suspended)
+
+      assert {:ok, site} = Setup.create_site(attrs, owner, environments: @bound)
+      assert Enum.find(site.environments, & &1.live).domain == "bound.example.com"
+    end
+  end
+
+  describe "remove_leftovers/2" do
+    test "removes the row, the schemas and the directories of a site", %{creator: creator} do
+      assert {:ok, site} = Setup.create_site(site_attrs("left-whole"), creator)
+
+      assert :ok = Setup.remove_leftovers("left-whole", actor: :system)
+
+      refute Registry.get_site_by_key("left-whole")
+      refute Schema.exists?("tenant_left-whole_production")
+      refute Schema.exists?("tenant_left-whole_staging")
+      refute File.exists?(Storage.media_root(site))
+    end
+
+    test "removes a schema and directories that no row is left for, and keeps the directories when told to" do
+      :ok = Schema.create("tenant_left-parts_production")
+      :ok = Storage.create(%Brando.Sites.Site{key: "left-parts"})
+
+      assert :ok = Setup.remove_leftovers("left-parts", actor: :system, keep_storage: true)
+      refute Schema.exists?("tenant_left-parts_production")
+      assert File.dir?(Storage.media_root(%Brando.Sites.Site{key: "left-parts"}))
+
+      assert :ok = Setup.remove_leftovers("left-parts", actor: :system)
+      refute File.exists?(Storage.media_root(%Brando.Sites.Site{key: "left-parts"}))
+    end
+  end
+
   test "creates, seeds, copies, and assigns a complete site", %{creator: creator} do
     assert {:ok, site} = Setup.create_site(site_attrs("provisioned-site"), creator)
 
@@ -110,6 +165,18 @@ defmodule Brando.Tenant.SetupTest do
     refute Schema.exists?("tenant_broken-site_production")
     refute File.exists?(Path.join(Brando.config(:media_path), "broken-site"))
     refute File.exists?(Path.join(Brando.config(:sites_path), "broken-site"))
+  end
+
+  test "compensates the partial site when provisioning raises", %{creator: creator} do
+    put_test_env(:tenant_structure_cloner, RaisingStructureCloner)
+
+    assert {:error, {:site_setup_failed, {:raised, message}, :ok}} =
+             Setup.create_site(site_attrs("raising-site"), creator)
+
+    assert message =~ "enoent"
+    refute Registry.get_site_by_key("raising-site")
+    refute Schema.exists?("tenant_raising-site_production")
+    refute File.exists?(Path.join(Brando.config(:media_path), "raising-site"))
   end
 
   test "an installation provisioner receives access to the new site before environment setup", %{creator: creator} do
