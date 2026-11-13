@@ -161,12 +161,16 @@ defmodule Brando.Tenant.Migration do
     with {:ok, site} <- Setup.create_site(site_attrs, creator, setup_opts) do
       production = Registry.get_environment_by_key(site, "production")
 
-      case compensated(fn -> copy.(site, Tenant.prefix(site, production)) end) do
-        {:ok, result} -> finish(site, production, attrs, creator, note, result, opts)
-        {:error, reason} -> clean_up(site, reason)
-      end
+      fn -> copy.(site, Tenant.prefix(site, production)) end
+      |> compensated()
+      |> after_copy(site, production, attrs, creator, note, opts)
     end
   end
+
+  defp after_copy({:ok, result}, site, production, attrs, creator, note, opts),
+    do: finish(site, production, attrs, creator, note, result, opts)
+
+  defp after_copy({:error, reason}, site, _production, _attrs, _creator, _note, _opts), do: clean_up(site, reason)
 
   defp finish(site, production, attrs, creator, note, result, opts) do
     hold? = Keyword.get(opts, :hold, false)

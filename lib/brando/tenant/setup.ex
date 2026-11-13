@@ -83,19 +83,22 @@ defmodule Brando.Tenant.Setup do
 
   defp create_under_lock(attrs, creator, opts) do
     with {:ok, site} <- Registry.create_site(attrs) do
-      case rescued(fn -> provision(site, creator, opts) end) do
-        {:ok, provisioned_site} ->
-          {:ok, provisioned_site}
-
-        {:error, {:storage_not_created, reason}} ->
-          compensation = rescued(fn -> compensate(site, delete_storage: false) end)
-          {:error, {:site_setup_failed, reason, compensation}}
-
-        {:error, reason} ->
-          compensation = rescued(fn -> compensate(site) end)
-          {:error, {:site_setup_failed, reason, compensation}}
-      end
+      fn -> provision(site, creator, opts) end
+      |> rescued()
+      |> compensate_failure(site)
     end
+  end
+
+  defp compensate_failure({:ok, provisioned_site}, _site), do: {:ok, provisioned_site}
+
+  defp compensate_failure({:error, {:storage_not_created, reason}}, site) do
+    compensation = rescued(fn -> compensate(site, delete_storage: false) end)
+    {:error, {:site_setup_failed, reason, compensation}}
+  end
+
+  defp compensate_failure({:error, reason}, site) do
+    compensation = rescued(fn -> compensate(site) end)
+    {:error, {:site_setup_failed, reason, compensation}}
   end
 
   # Once the registry row exists, a raise in provisioning (a structure clone
