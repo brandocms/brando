@@ -328,7 +328,7 @@ defmodule Brando.ViteTest do
       assert %{reason: {:port_in_use, "4999"}} = Brando.Vite.start_failure(:admin)
     end
 
-    test "is kept for the site's for a site's own project in assets/sites", %{tmp_dir: tmp_dir} do
+    test "is kept as the site's for a site's own project in assets/sites", %{tmp_dir: tmp_dir} do
       project = Path.join(tmp_dir, "assets/sites/acme")
       File.mkdir_p!(project)
 
@@ -337,6 +337,33 @@ defmodule Brando.ViteTest do
       assert %{reason: {:not_started, _detail}, dir: dir} = Brando.Vite.start_failure(:site)
       assert String.ends_with?(dir, "assets/sites/acme")
       assert Brando.Vite.start_failure(:admin) == nil
+    end
+
+    # `backend` and `frontend` are valid site keys
+    for key <- ["backend", "frontend"] do
+      test "is kept as the site's for a site keyed #{key} in assets/sites", %{tmp_dir: tmp_dir} do
+        project = Path.join(tmp_dir, "assets/sites/#{unquote(key)}")
+        File.mkdir_p!(project)
+
+        capture_log(fn -> Brando.Vite.watch(project) end)
+
+        assert %{dir: dir} = Brando.Vite.start_failure(:site)
+        assert String.ends_with?(dir, "assets/sites/#{unquote(key)}")
+        assert Brando.Vite.start_failure(:admin) == nil
+      end
+    end
+
+    test "is kept as the admin's for assets/backend and the site's for assets/frontend", %{tmp_dir: tmp_dir} do
+      for name <- ["backend", "frontend"], do: File.mkdir_p!(Path.join(tmp_dir, "assets/#{name}"))
+
+      capture_log(fn -> Brando.Vite.watch(Path.join(tmp_dir, "assets/backend")) end)
+      assert %{dir: admin_dir} = Brando.Vite.start_failure(:admin)
+      assert String.ends_with?(admin_dir, "assets/backend")
+      assert Brando.Vite.start_failure(:site) == nil
+
+      capture_log(fn -> Brando.Vite.watch(Path.join(tmp_dir, "assets/frontend")) end)
+      assert %{dir: site_dir} = Brando.Vite.start_failure(:site)
+      assert String.ends_with?(site_dir, "assets/frontend")
     end
 
     test "is not kept for a directory that is neither the admin's nor the site's", %{tmp_dir: tmp_dir} do

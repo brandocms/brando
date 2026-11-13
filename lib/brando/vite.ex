@@ -302,10 +302,11 @@ defmodule Brando.Vite do
     relative = Path.relative_to_cwd(dir)
 
     case {Path.basename(Path.dirname(dir)), Path.basename(dir)} do
+      # A site's own Vite project, run for `dev_site` (Brando.Assets.DevSite),
+      # first: `backend` and `frontend` are valid site keys
+      {"sites", _key} -> %{label: "the site", dir: relative, role: :site}
       {_, "backend"} -> %{label: "the admin", dir: relative, role: :admin}
       {_, "frontend"} -> %{label: "the site", dir: relative, role: :site}
-      # A site's own Vite project, run for `dev_site` (Brando.Assets.DevSite)
-      {"sites", _key} -> %{label: "the site", dir: relative, role: :site}
       _ -> %{label: "the dev server", dir: relative, role: nil}
     end
   end
