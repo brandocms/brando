@@ -1,0 +1,1 @@
+- With `tenancy_mode: :multi`, live previews and shared previews of a site with an uploaded asset set load the set's scripts, styles and fonts on the admin's host, and sharing a preview stores it in `public` instead of failing.

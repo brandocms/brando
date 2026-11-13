@@ -15,6 +15,10 @@ defmodule Brando.Assets.SiteAssets do
   cannot break a link that has already been shared. `Brando.Assets.SiteAssets.Retention`
   owns the pruning rules that protect those sets.
 
+  A host that belongs to no site in `:multi` (the admin's, where live and
+  shared previews are served) gets the manifest files of every site's sets
+  instead (`unscoped_path/1`).
+
   The caches are per node: activating or deactivating a set, pinning or
   releasing one, and forgetting one refresh this node and tell the others
   through `Brando.CacheSync`. A request that filled a cache from what it read
@@ -40,6 +44,7 @@ defmodule Brando.Assets.SiteAssets do
   @override_key {:brando, :site_assets, :override}
   @change_fence_key {:brando, :site_assets, :change_fence}
   @fence_key {:brando, :site_assets, :fence}
+  @unscoped_key {:brando, :site_assets, :unscoped}
 
   @type scope :: Site.t() | nil
   @type cached_set :: %{
@@ -162,7 +167,7 @@ defmodule Brando.Assets.SiteAssets do
   @doc "Drops the runtime caches for one set, including the pinned listing of its scope."
   @spec forget_set(SiteAssetSet.t()) :: :ok
   def forget_set(%SiteAssetSet{id: id} = asset_set) do
-    drop(set_cache_key(id))
+    drop_set(id)
     CacheSync.broadcast(__MODULE__, {:set, id})
     invalidate_pinned(asset_set)
   end
@@ -216,6 +221,31 @@ defmodule Brando.Assets.SiteAssets do
     active_file(site, relative_path) || pinned_file(site, relative_path)
   end
 
+  @doc """
+  Resolves a request path on a host that belongs to no site, in `:multi` the
+  admin's host, which serves live previews and shared previews: from the
+  active set of any site, or from any set an unexpired shared preview pins.
+
+  Only the content-addressed files a set's Vite manifest lists answer (see
+  `pinned_sets/1`): their names carry their content hash, so a path two sets
+  list is the same file in both. A path the release's `priv/static` holds is
+  left to it. Sets of a suspended or archived site do not answer, as the
+  admin lets no one preview such a site.
+
+  The paths of every set are cached together, so a miss is rejected without
+  touching the filesystem. The cache is dropped with the active, pinned and
+  set caches, on every node.
+  """
+  @spec unscoped_path(String.t()) :: String.t() | nil
+  def unscoped_path(relative_path) when is_binary(relative_path) do
+    with [_ | _] = candidates <- Map.get(unscoped_index(), relative_path, []),
+         false <- File.regular?(Path.join(Capture.release_root(), relative_path)) do
+      Enum.find_value(candidates, &previewable_file/1)
+    else
+      _miss -> nil
+    end
+  end
+
   @doc "Returns cached information for every set still pinned by a preview in the scope."
   @spec pinned_sets(scope()) :: [cached_set()]
   def pinned_sets(site \\ nil) do
@@ -230,7 +260,7 @@ defmodule Brando.Assets.SiteAssets do
   @doc "Clears the pinned-set listing for a scope so the next request rebuilds it."
   @spec invalidate_pinned(scope() | SiteAssetSet.t()) :: :ok
   def invalidate_pinned(scope \\ nil) do
-    drop(pinned_cache_key(scope_key(scope)))
+    drop_pinned(scope_key(scope))
     CacheSync.broadcast(__MODULE__, {:pinned, scope_key(scope)})
   end
 
@@ -243,8 +273,8 @@ defmodule Brando.Assets.SiteAssets do
           :ok
   def refresh_node_cache({:active, scope_key}), do: drop_active(scope_key)
 
-  def refresh_node_cache({:pinned, scope_key}), do: drop(pinned_cache_key(scope_key))
-  def refresh_node_cache({:set, set_id}), do: drop(set_cache_key(set_id))
+  def refresh_node_cache({:pinned, scope_key}), do: drop_pinned(scope_key)
+  def refresh_node_cache({:set, set_id}), do: drop_set(set_id)
 
   @doc "The advisory-lock key serializing capture, activation-sensitive pinning, and pruning."
   @spec lock_key(scope() | SiteAssetSet.t()) :: String.t()
@@ -508,6 +538,51 @@ defmodule Brando.Assets.SiteAssets do
     _migration_not_applied_yet -> []
   end
 
+  defp unscoped_index do
+    case :persistent_term.get(@unscoped_key, :not_cached) do
+      :not_cached -> warm_unscoped()
+      index -> index
+    end
+  end
+
+  defp warm_unscoped do
+    fence = change_fence()
+    fill(@unscoped_key, load_unscoped(fence), fence)
+  end
+
+  # Path => [{site_key, file}], from every site's active and preview-pinned sets
+  defp load_unscoped(fence) do
+    pinned_ids = MapSet.to_list(Retention.preview_pinned_set_ids())
+
+    from(asset_set in SiteAssetSet,
+      join: site in Site,
+      on: site.id == asset_set.site_id,
+      where: asset_set.active or asset_set.id in ^pinned_ids,
+      select: {site.key, asset_set}
+    )
+    |> Repo.all(@public_opts)
+    |> Enum.reduce(%{}, &index_set(&1, &2, fence))
+  rescue
+    _migration_not_applied_yet -> %{}
+  end
+
+  defp index_set({site_key, asset_set}, index, fence) do
+    case set_cache_since(asset_set, fence) do
+      {:ok, %{pinned: pinned, path: root}} ->
+        Enum.reduce(pinned, index, fn path, index ->
+          candidate = {site_key, Path.join(root, path)}
+          Map.update(index, path, [candidate], &[candidate | &1])
+        end)
+
+      {:error, _reason} ->
+        index
+    end
+  end
+
+  defp previewable_file({site_key, file}) do
+    if match?(%Site{status: :active}, Brando.Tenant.Cache.get_site(site_key)), do: file
+  end
+
   defp with_override(cached, fun) do
     previous = Process.get(@override_key)
     Process.put(@override_key, cached)
@@ -610,7 +685,18 @@ defmodule Brando.Assets.SiteAssets do
 
   defp drop_active(scope_key) do
     drop(cache_key(scope_key))
+    erase(@unscoped_key)
     invalidate_vite(scope_site_id(scope_key))
+  end
+
+  defp drop_pinned(scope_key) do
+    drop(pinned_cache_key(scope_key))
+    erase(@unscoped_key)
+  end
+
+  defp drop_set(set_id) do
+    drop(set_cache_key(set_id))
+    erase(@unscoped_key)
   end
 
   # A fill reads the database and the files, then stores `value`. Every change

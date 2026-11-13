@@ -38,17 +38,31 @@ defmodule Brando.Assets.SiteAssets.Retention do
   @doc "Sets in the scope that an unexpired shared preview still references."
   @spec preview_pinned_sets(SiteAssets.scope()) :: [SiteAssetSet.t()]
   def preview_pinned_sets(site \\ nil) do
-    referenced = preview_referenced_ids()
+    referenced = preview_pinned_set_ids()
 
     site
     |> SiteAssets.list_sets()
     |> Enum.filter(&MapSet.member?(referenced, &1.id))
   end
 
+  @doc "IDs of the sets an unexpired shared preview references, in every scope."
+  @spec preview_pinned_set_ids() :: MapSet.t(pos_integer())
+  def preview_pinned_set_ids do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+
+    from(preview in Preview,
+      where: preview.expires_at > ^now and not is_nil(preview.asset_set_id),
+      select: preview.asset_set_id,
+      distinct: true
+    )
+    |> Repo.all(@public_opts)
+    |> MapSet.new()
+  end
+
   @doc "IDs of every set in the scope that must not be deleted right now."
   @spec protected_set_ids(SiteAssets.scope()) :: MapSet.t(pos_integer())
   def protected_set_ids(site \\ nil) do
-    referenced = MapSet.union(preview_referenced_ids(), build_referenced_ids())
+    referenced = MapSet.union(preview_pinned_set_ids(), build_referenced_ids())
 
     site
     |> SiteAssets.list_sets()
@@ -158,18 +172,6 @@ defmodule Brando.Assets.SiteAssets.Retention do
     else
       _problem -> Logger.warning("Could not remove asset set directory #{inspect(path)}")
     end
-  end
-
-  defp preview_referenced_ids do
-    now = DateTime.utc_now() |> DateTime.truncate(:second)
-
-    from(preview in Preview,
-      where: preview.expires_at > ^now and not is_nil(preview.asset_set_id),
-      select: preview.asset_set_id,
-      distinct: true
-    )
-    |> Repo.all(@public_opts)
-    |> MapSet.new()
   end
 
   defp build_referenced_ids do

@@ -1345,6 +1345,31 @@ repaired from a later manifest and must be recreated.
 A capture failure fails sharing visibly instead of storing a preview tied to
 ephemeral release files.
 
+### Where a preview's assets are served from
+
+A live preview (`/__livepreview`) is served on the admin's host, and a shared
+preview link is built with the endpoint's URL, on the same host. Both pages
+name the site's assets host-relative (`/assets/…`), as the site's own pages
+do, so the admin's host answers them:
+
+- On a host that resolves to a site, `Brando.Plug.SiteAssets` serves that
+  site's active and pinned sets only, as described above.
+- In `:multi`, on a host that resolves to no site, such as the admin's, it
+  serves the files any site's set lists in its Vite manifest, from the active
+  set of every site and from every set an unexpired shared preview pins.
+  These names carry their content hash, so the same path in two sites' sets
+  is the same file. A site with no domain yet previews the same way.
+- The release's `priv/static` wins: a path it holds is left to the release's
+  `Plug.Static`. Paths outside every manifest (`favicon.ico`, `robots.txt`)
+  are not answered from a set.
+- Sets of a suspended or archived site do not answer there, as the admin
+  lets no one preview such a site.
+
+A miss is rejected from a cached listing of every set's manifest files,
+without touching the filesystem. The listing is dropped whenever a set is
+activated, deactivated, pinned, released or pruned, on every node
+([Several nodes](#several-nodes)).
+
 ### Pruning contract
 
 `Brando.Assets.SiteAssets.Retention` owns the deletion decision. A set is

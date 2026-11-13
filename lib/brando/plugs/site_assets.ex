@@ -10,6 +10,12 @@ defmodule Brando.Plug.SiteAssets do
   so a preview rendered against an older build keeps loading its stylesheets,
   chunks, and fonts after the active set or release changes.
 
+  In `:multi`, a host that belongs to no site, as the admin's does, gets the
+  same manifest-listed files from every site's active and pinned sets
+  (`Brando.Assets.SiteAssets.unscoped_path/1`): the admin serves live and
+  shared previews from its own host, and their pages name the site's assets
+  host-relative. A host that belongs to a site gets that site's sets only.
+
   Its files, and those of the plugs after it that answer before the router
   (the release's `Plug.Static`, `Brando.Plug.Media`), are sent with
   `Access-Control-Allow-Origin: *`. Live previews and shared preview snapshots
@@ -37,8 +43,7 @@ defmodule Brando.Plug.SiteAssets do
     conn = allow_any_origin(conn)
 
     with relative_path when is_binary(relative_path) <- relative_path(conn.path_info),
-         {:ok, site} <- request_scope(conn),
-         file when is_binary(file) <- SiteAssets.serve_path(site, relative_path) do
+         file when is_binary(file) <- serve_path(conn, relative_path) do
       conn
       |> put_resp_header("content-type", MIME.from_path(relative_path))
       |> put_resp_header("cache-control", "public, max-age=31536000, immutable")
@@ -68,16 +73,16 @@ defmodule Brando.Plug.SiteAssets do
     end
   end
 
-  defp request_scope(conn) do
+  defp serve_path(conn, relative_path) do
     case Brando.Tenant.mode() do
       :multi ->
         case Frontend.resolve(conn.host) do
-          {site, _environment} -> {:ok, site}
-          nil -> :error
+          {site, _environment} -> SiteAssets.serve_path(site, relative_path)
+          nil -> SiteAssets.unscoped_path(relative_path)
         end
 
       _standalone ->
-        {:ok, nil}
+        SiteAssets.serve_path(nil, relative_path)
     end
   end
 
