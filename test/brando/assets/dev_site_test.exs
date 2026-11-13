@@ -268,24 +268,31 @@ defmodule Brando.Assets.DevSiteTest do
   end
 
   # guides/tenancy_and_environments.md, "Uploading a site's build by hand",
-  # with a build in the shape `vite build` writes: manifest.json, assets/…
-  # and the project's public/ files at the top level
-  test "the documented steps give another site its build", %{beta: beta, tmp_dir: tmp_dir} do
-    dist = Path.join(tmp_dir, "assets/sites/beta/dist")
-    write_build(dist, "beta-new")
+  # run as written for a site that never had a set, with a build in the
+  # shape `vite build` writes: manifest.json, assets/… and the project's
+  # public/ files at the top level
+  test "the documented steps give another site its build", %{tmp_dir: tmp_dir} do
+    {:ok, gamma} = SiteAssetsFixtures.create_site("Gamma", "gamma", "gamma.test")
+    :ok = Brando.Tenant.Storage.create(gamma)
+    sets_root = SiteAssets.sets_root(gamma)
+    refute File.exists?(sets_root)
+
+    dist = Path.join(tmp_dir, "assets/sites/gamma/dist")
+    write_build(dist, "gamma-new")
     File.write!(Path.join(dist, "favicon.ico"), "ico")
 
-    dest = Path.join(SiteAssets.sets_root(beta), "20261113_abc123")
-    File.cp_r!(dist, dest)
-    assert {:ok, set} = SiteAssets.register_set("beta", dest, %{revision: "abc123"})
+    dest = Path.join(sets_root, "20261113_abc123")
+    assert {_, 0} = System.cmd("mkdir", ["-p", sets_root])
+    assert {_, 0} = System.cmd("cp", ["-R", dist, dest])
+    assert {:ok, set} = SiteAssets.register_set("gamma", dest, %{revision: "abc123"})
     assert {:ok, _active} = SiteAssets.activate_set(set.id)
 
-    as_site("beta")
-    assert render_component(&HTML.include_assets/1) =~ "/assets/beta-new.js"
-    assert render_component(&HTML.inject_critical_css/1) =~ ".beta-new-critical"
+    as_site("gamma")
+    assert render_component(&HTML.include_assets/1) =~ "/assets/gamma-new.js"
+    assert render_component(&HTML.inject_critical_css/1) =~ ".gamma-new-critical"
 
-    for path <- ["assets/beta-new.js", "assets/beta-new-critical.css", "favicon.ico"] do
-      assert Brando.Plug.SiteAssets.call(conn_for(path, "beta.test"), []).status == 200, path
+    for path <- ["assets/gamma-new.js", "assets/gamma-new-critical.css", "favicon.ico"] do
+      assert Brando.Plug.SiteAssets.call(conn_for(path, "gamma.test"), []).status == 200, path
     end
   end
 
@@ -336,7 +343,7 @@ defmodule Brando.Assets.DevSiteTest do
     SiteAssets.invalidate_cache()
     :persistent_term.erase({Brando.Vite, :start_failure, :site})
 
-    for prefix <- [nil, "tenant_acme_production", "tenant_beta_production"],
+    for prefix <- [nil, "tenant_acme_production", "tenant_beta_production", "tenant_gamma_production"],
         name <- ["cache_manifest", "critical_css"] do
       :persistent_term.erase(Tenant.cache_key({:vite, name}, prefix))
     end

@@ -1267,9 +1267,11 @@ last built set. For `acme`:
 2. Copy the output into the site's `sets` root, in a directory named for
    the build. The root is `sites/acme/assets/sets/` beside the media
    directory, or under `config :brando, :sites_path` when set
-   (`Brando.Assets.SiteAssets.sets_root/1` gives it):
+   (`Brando.Assets.SiteAssets.sets_root/1` gives it). A site that never had
+   a set has no `sets` directory yet:
 
    ```sh
+   mkdir -p /srv/my_app/sites/acme/assets/sets
    cp -R dist /srv/my_app/sites/acme/assets/sets/20261113_abc123
    ```
 
