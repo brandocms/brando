@@ -1632,8 +1632,10 @@ site `acme`.
    step 2 and migrate the copy. A table only this installation has, such as
    an application content type the source never used, is left empty and
    named in the report. The task also stops before creating anything when the
-   source has content in a language this installation does not configure:
-   add the language to `config :brando, languages:`, or remove that content
+   source has entries in a language this installation does not configure (a
+   Blueprint's `language` field loads only a configured language; a plain
+   `language` string, such as an activity event's, is copied as it is): add
+   the language to `config :brando, languages:`, or remove those entries
    from the copy. It then prints how each source user maps to a user here
    (the same email, ignoring case, or the `--creator-email` user; no user is
    created), reports the media size, and asks before copying more than 1 GB

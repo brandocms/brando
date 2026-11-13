@@ -344,6 +344,23 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
       assert next_id == 21
     end
 
+    test "copies a language column that is a plain string, whatever its value", context do
+      query!("""
+      INSERT INTO "#{context.source}".activity_events (action, schema, language, inserted_at)
+      VALUES ('updated', 'Elixir.Brando.Pages.Page', 'de', now())
+      """)
+
+      assert {:ok, []} = SchemaImport.content_languages(context.source) |> drop_configured(["en"])
+
+      assert {:ok, site, _report} =
+               Migration.import_schema(site_attrs(context.site_key), context.creator,
+                 source_schema: context.source,
+                 source_media: context.source_media
+               )
+
+      assert %{rows: [["de"]]} = query!(~s|SELECT language FROM "tenant_#{site.key}_production".activity_events|)
+    end
+
     test "copies nothing into a table the source does not have, and names it", context do
       query!(~s|DROP TABLE "#{context.source}".sites_indexnow|)
 
@@ -385,6 +402,9 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
     assert output =~ ~s|DROP SCHEMA "#{context.source}" CASCADE;|
     assert %{rows: [[true]]} = query!("SELECT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = $1)", [context.source])
   end
+
+  defp drop_configured({:ok, found}, languages),
+    do: {:ok, Enum.reject(found, fn {language, _tables} -> language in languages end)}
 
   defp collect_output(acc \\ "") do
     receive do

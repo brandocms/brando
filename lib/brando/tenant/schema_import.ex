@@ -220,7 +220,11 @@ defmodule Brando.Tenant.SchemaImport do
   @doc """
   The languages of the source's content: every value of a `language` column
   in its tenant tables, with the tables that hold it, as `[{language,
-  [table]}]`. Only reads the source.
+  [table]}]`. Only the tables of Blueprints (Brando's and the
+  application's) whose `language` is the language enum are read: they are
+  the rows that cannot load a language this installation does not configure.
+  A `language` that is a plain string, such as an activity event's, loads
+  whatever its value. Only reads the source.
   """
   @spec content_languages(String.t()) :: {:ok, [{String.t(), [String.t()]}]} | {:error, term()}
   def content_languages(source) do
@@ -232,13 +236,27 @@ defmodule Brando.Tenant.SchemaImport do
 
     with :ok <- validate_source(source),
          {:ok, %{rows: rows}} <- query(sql, [source]) do
+      enum_tables = language_enum_tables()
+
       rows
       |> Enum.map(&List.first/1)
-      |> Enum.reject(&SharedTables.member?/1)
+      |> Enum.filter(&(&1 in enum_tables and not SharedTables.member?(&1)))
       |> Enum.reduce_while({:ok, []}, &collect_languages(source, &1, &2))
       |> group_languages()
     end
   end
+
+  defp language_enum_tables do
+    (Brando.Blueprint.brando_blueprints() ++ Brando.Blueprint.list_blueprints())
+    |> Enum.uniq()
+    |> Enum.filter(&(function_exported?(&1, :__schema__, 2) and language_enum?(&1.__schema__(:type, :language))))
+    |> Enum.map(& &1.__schema__(:source))
+    |> Enum.reject(&is_nil/1)
+    |> MapSet.new()
+  end
+
+  defp language_enum?({:parameterized, {Ecto.Enum, _params}}), do: true
+  defp language_enum?(_type), do: false
 
   defp collect_languages(source, table, {:ok, acc}) do
     case query(~s|SELECT DISTINCT "language" FROM "#{source}"."#{table}" WHERE "language" IS NOT NULL|) do
