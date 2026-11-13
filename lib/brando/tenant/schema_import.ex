@@ -280,11 +280,16 @@ defmodule Brando.Tenant.SchemaImport do
   defp language_enum_tables do
     ([Brando.Content.Identifier] ++ Brando.Blueprint.brando_blueprints() ++ Brando.Blueprint.list_blueprints())
     |> Enum.uniq()
-    |> Enum.filter(&(Code.ensure_loaded?(&1) and function_exported?(&1, :__schema__, 2)))
-    |> Enum.filter(&language_enum?(&1.__schema__(:type, :language)))
+    |> Enum.filter(&language_schema?/1)
     |> Enum.map(& &1.__schema__(:source))
     |> Enum.reject(&is_nil/1)
     |> MapSet.new()
+  end
+
+  # A module that nothing has called yet is not loaded, and exports nothing
+  defp language_schema?(module) do
+    Code.ensure_loaded?(module) and function_exported?(module, :__schema__, 2) and
+      language_enum?(module.__schema__(:type, :language))
   end
 
   defp language_enum?({:parameterized, {Ecto.Enum, _params}}), do: true
