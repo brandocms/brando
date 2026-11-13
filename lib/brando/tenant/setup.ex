@@ -34,10 +34,26 @@ defmodule Brando.Tenant.Setup do
   def create_site(attrs, %User{} = creator, opts \\ []) do
     scope = Brando.Authorization.Scope.installation(creator)
 
-    with :ok <- Brando.Authorization.Boundary.authorize(scope, :create, :sites) do
+    with :ok <- Brando.Authorization.Boundary.authorize(scope, :create, :sites),
+         :ok <- authorize_hosts(attrs, creator, opts) do
       do_create_site(attrs, creator, opts)
     end
   end
+
+  # A suspended site's environments are created as the system, which may bind
+  # hosts, so the creator's own right to is checked here; for an active site
+  # the registry checks the creator
+  defp authorize_hosts(attrs, creator, opts) do
+    as_system? = Map.get(attrs, :status, Map.get(attrs, "status", :active)) not in [:active, "active"]
+    binds_host? = opts |> Keyword.get(:environments, @default_environments) |> Enum.any?(&domain?/1)
+
+    if as_system? and binds_host? and not Brando.Authorization.Boundary.superuser?(creator),
+      do: {:error, :forbidden},
+      else: :ok
+  end
+
+  defp domain?(attrs) when is_map(attrs), do: Map.get(attrs, :domain, Map.get(attrs, "domain")) not in [nil, ""]
+  defp domain?(_attrs), do: false
 
   defp do_create_site(attrs, creator, opts) do
     case site_key(attrs) do
@@ -74,6 +90,34 @@ defmodule Brando.Tenant.Setup do
   @spec delete_site(Site.t(), keyword()) :: {:ok, Site.t()} | {:error, term()}
   def delete_site(%Site{} = site, opts \\ []) do
     lifecycle(:delete, opts, fn -> Lock.with(lifecycle_lock_key(site.key), fn -> delete_under_lock(site, opts) end) end)
+  end
+
+  @doc """
+  Removes what a failed `create_site/3` or migration left of the site `key`
+  when its own cleanup failed: the registry row with its environments'
+  schemas, the schemas `tenant_<key>_production` and `tenant_<key>_staging`,
+  and the site's directories unless `keep_storage: true`.
+
+  The site's lifecycle lock is held throughout, so a site created with the
+  key while this runs is not touched. One created before it runs is removed:
+  this is for the key of a site that failed.
+  """
+  @spec remove_leftovers(String.t(), keyword()) :: :ok | {:error, term()}
+  def remove_leftovers(key, opts \\ []) when is_binary(key) do
+    lifecycle(:delete, opts, fn -> Lock.with(lifecycle_lock_key(key), fn -> remove_under_lock(key, opts) end) end)
+  end
+
+  defp remove_under_lock(key, opts) do
+    registered =
+      case Registry.get_site_by_key(key) do
+        nil -> :ok
+        site -> with {:ok, _deleted} <- delete_registry_and_schemas(site), do: :ok
+      end
+
+    drops = Enum.map(["production", "staging"], &Schema.drop(Tenant.prefix(key, &1)))
+    storage = if Keyword.get(opts, :keep_storage, false), do: :ok, else: Storage.delete(%Site{key: key})
+
+    Enum.find([registered | drops] ++ [storage], :ok, &(&1 != :ok))
   end
 
   defp lifecycle(action, opts, fun) do

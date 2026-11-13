@@ -256,24 +256,17 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     ~s|{:ok, _} = Brando.Environments.copy_environment(Brando.Tenant.Registry.get_environment_by_key(site, "production"), staging, actor: :system, keep_archives: 0)|
   end
 
-  # The registry row goes before the directories, so the command also works
-  # when only the directories, or only the schemas, are left
+  # `Brando.Tenant.Setup.remove_leftovers/2` works whichever of them is left,
+  # and removes a site that holds the key: hence the warning
   defp not_removed(site_key, cleanup) do
     """
     The new site #{site_key} could not be removed (#{inspect(cleanup_reason(cleanup))}). What may be left:
     its row in the sites registry, the schemas tenant_#{site_key}_production and
     tenant_#{site_key}_staging, and the directories media/#{site_key} and
-    sites/#{site_key}. Remove them with:
+    sites/#{site_key}. Remove them with the command below, before anyone creates
+    a site with the key #{site_key} again: it removes whatever site has that key.
 
-        mix run -e 'case Brando.Tenant.Registry.get_site_by_key("#{site_key}") do
-            nil -> :ok
-            site ->
-              {:ok, site} = Brando.Tenant.Setup.archive_site(site, actor: :system)
-              {:ok, _} = Brando.Tenant.Setup.delete_site(site, force: true, actor: :system)
-          end
-          :ok = Brando.Environments.Schema.drop("tenant_#{site_key}_production")
-          :ok = Brando.Environments.Schema.drop("tenant_#{site_key}_staging")
-          :ok = Brando.Tenant.Storage.delete(%Brando.Sites.Site{key: "#{site_key}"})'
+        mix run -e ':ok = Brando.Tenant.Setup.remove_leftovers("#{site_key}", actor: :system)'
     """
   end
 
@@ -283,11 +276,10 @@ defmodule Mix.Tasks.Brando.MigrateToTenant do
     its row in the sites registry and the schemas tenant_#{site_key}_production
     and tenant_#{site_key}_staging. The directories media/#{site_key} and
     sites/#{site_key} were there before this run: the command leaves them.
+    Run it before anyone creates a site with the key #{site_key} again: it
+    removes whatever site has that key.
 
-        mix run -e 'with %{} = site <- Brando.Tenant.Registry.get_site_by_key("#{site_key}"),
-            do: {:ok, _} = Brando.Tenant.Registry.delete_site(site)
-          :ok = Brando.Environments.Schema.drop("tenant_#{site_key}_production")
-          :ok = Brando.Environments.Schema.drop("tenant_#{site_key}_staging")'
+        mix run -e ':ok = Brando.Tenant.Setup.remove_leftovers("#{site_key}", actor: :system, keep_storage: true)'
     """
   end
 

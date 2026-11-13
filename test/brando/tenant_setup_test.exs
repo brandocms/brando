@@ -88,6 +88,54 @@ defmodule Brando.Tenant.SetupTest do
     %{creator: creator, root: root}
   end
 
+  describe "a site created suspended" do
+    @bound [
+      %{name: "Production", key: "production", live: true, domain: "bound.example.com"},
+      %{name: "Staging", key: "staging", live: false}
+    ]
+
+    # Its environments are created as the system, which may bind hosts
+    test "refuses a host from a creator who may not bind one", %{creator: creator} do
+      attrs = Map.put(site_attrs("bound-site"), :status, :suspended)
+
+      assert {:error, :forbidden} = Setup.create_site(attrs, creator, environments: @bound)
+      refute Registry.get_site_by_key("bound-site")
+    end
+
+    test "takes a host from a superuser" do
+      owner = Brando.Factory.insert(:random_user, role: :superuser)
+      attrs = Map.put(site_attrs("bound-owner"), :status, :suspended)
+
+      assert {:ok, site} = Setup.create_site(attrs, owner, environments: @bound)
+      assert Enum.find(site.environments, & &1.live).domain == "bound.example.com"
+    end
+  end
+
+  describe "remove_leftovers/2" do
+    test "removes the row, the schemas and the directories of a site", %{creator: creator} do
+      assert {:ok, site} = Setup.create_site(site_attrs("left-whole"), creator)
+
+      assert :ok = Setup.remove_leftovers("left-whole", actor: :system)
+
+      refute Registry.get_site_by_key("left-whole")
+      refute Schema.exists?("tenant_left-whole_production")
+      refute Schema.exists?("tenant_left-whole_staging")
+      refute File.exists?(Storage.media_root(site))
+    end
+
+    test "removes a schema and directories that no row is left for, and keeps the directories when told to" do
+      :ok = Schema.create("tenant_left-parts_production")
+      :ok = Storage.create(%Brando.Sites.Site{key: "left-parts"})
+
+      assert :ok = Setup.remove_leftovers("left-parts", actor: :system, keep_storage: true)
+      refute Schema.exists?("tenant_left-parts_production")
+      assert File.dir?(Storage.media_root(%Brando.Sites.Site{key: "left-parts"}))
+
+      assert :ok = Setup.remove_leftovers("left-parts", actor: :system)
+      refute File.exists?(Storage.media_root(%Brando.Sites.Site{key: "left-parts"}))
+    end
+  end
+
   test "creates, seeds, copies, and assigns a complete site", %{creator: creator} do
     assert {:ok, site} = Setup.create_site(site_attrs("provisioned-site"), creator)
 

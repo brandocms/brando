@@ -145,7 +145,7 @@ defmodule Mix.Tasks.BrandoMigrateToTenantTest do
       assert message =~ "The new site acme could not be removed (:busy)"
       assert message =~ "tenant_acme_"
       assert message =~ "media/acme"
-      assert message =~ ~s|Brando.Tenant.Setup.delete_site(site, force: true, actor: :system)|
+      assert message =~ ~s|Brando.Tenant.Setup.remove_leftovers("acme", actor: :system)|
     end
 
     test "says nothing was created when the site was never made" do
@@ -170,9 +170,7 @@ defmodule Mix.Tasks.BrandoMigrateToTenantTest do
 
       assert message =~ "The new site acme could not be removed (:busy)"
       assert message =~ "were there before this run"
-      assert message =~ "Registry.delete_site(site)"
-      refute message =~ "Storage.delete"
-      refute message =~ "Setup.delete_site"
+      assert message =~ ~s|Brando.Tenant.Setup.remove_leftovers("acme", actor: :system, keep_storage: true)|
     end
   end
 
