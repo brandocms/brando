@@ -332,6 +332,9 @@ defmodule BrandoAdmin.ReadScopesTest do
           image.id
         end
 
+      # The first lookup in a VM also reads which asset columns exist, once
+      Usage.list(:image, [c.image.id])
+
       few = queries(fn -> Usage.list(:image, [c.image.id | Enum.take(images, 2)]) end)
       many = queries(fn -> Usage.list(:image, images) end)
       assert many == few, "#{few} queries for three assets, #{many} for twenty"
