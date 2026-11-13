@@ -23,6 +23,7 @@ defmodule Brando.Assets.SiteAssets do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Assets.DevSite
   alias Brando.Assets.SiteAssets.Capture
   alias Brando.Assets.SiteAssets.Retention
   alias Brando.Assets.SiteAssetSet
@@ -205,6 +206,10 @@ defmodule Brando.Assets.SiteAssets do
   set pinned by an unexpired shared preview for the same scope. Pinned lookups
   only cover the content-addressed files listed in a set's Vite manifest, so an
   old set never shadows un-hashed files such as favicons.
+
+  The development site (`Brando.Assets.DevSite`) skips its active set, so the
+  release's files answer as they do for the Vite dev server's page, and a
+  pinned set answers it only for a path the release lacks.
   """
   @spec serve_path(scope(), String.t()) :: String.t() | nil
   def serve_path(site, relative_path) when is_binary(relative_path) do
@@ -302,7 +307,9 @@ defmodule Brando.Assets.SiteAssets do
 
   @doc """
   Returns the Vite manifest of the process-local override set or, without one,
-  of the current scope's active set.
+  of the current scope's active set. The development site
+  (`Brando.Assets.DevSite`) has no active set here, nor in `current_file/1`
+  and `current_root/0`.
   """
   @spec current_manifest() :: map() | nil
   def current_manifest do
@@ -457,7 +464,7 @@ defmodule Brando.Assets.SiteAssets do
   end
 
   defp active_file(site, relative_path) do
-    case cached(site) do
+    case active_cached(site) do
       %{files: files, path: root} ->
         if MapSet.member?(files, relative_path), do: Path.join(root, relative_path)
 
@@ -466,7 +473,16 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
+  # A build may name a manifest file without a hash: for the development
+  # site, a pinned set (perhaps its active one) must not shadow the release
+  # file its pages get
   defp pinned_file(site, relative_path) do
+    if DevSite.dev_site?(site) and File.regular?(Path.join(Capture.release_root(), relative_path)),
+      do: nil,
+      else: find_pinned_file(site, relative_path)
+  end
+
+  defp find_pinned_file(site, relative_path) do
     site
     |> pinned_sets()
     |> Enum.find_value(fn %{pinned: pinned, path: root} ->
@@ -503,8 +519,12 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
-  defp scope_cached({:ok, site}), do: cached(site)
+  defp scope_cached({:ok, site}), do: active_cached(site)
   defp scope_cached(:error), do: nil
+
+  defp active_cached(site) do
+    if DevSite.dev_site?(site), do: nil, else: cached(site)
+  end
 
   defp read_manifest(root) do
     path = Path.join(root, "manifest.json")

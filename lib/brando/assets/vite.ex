@@ -18,8 +18,7 @@ defmodule Brando.Assets.Vite do
 
       case :persistent_term.get(cache_key, nil) do
         nil ->
-          hmr? = Application.get_env(Brando.otp_app(), :hmr, false)
-          res = do_read(manifest_file, hmr?)
+          res = do_read(manifest_file, hmr?())
           parsed_manifest = Manifest.parse(res)
           :persistent_term.put(cache_key, parsed_manifest)
           parsed_manifest
@@ -31,8 +30,7 @@ defmodule Brando.Assets.Vite do
 
     def read(manifest_file, cache_key, :force) do
       cache_key = Brando.Tenant.cache_key(cache_key)
-      hmr? = Application.get_env(Brando.otp_app(), :hmr, false)
-      res = do_read(manifest_file, hmr?)
+      res = do_read(manifest_file, hmr?())
       parsed_manifest = Manifest.parse(res)
       :persistent_term.put(cache_key, parsed_manifest)
       parsed_manifest
@@ -47,6 +45,10 @@ defmodule Brando.Assets.Vite do
         Logger.debug("(!) Could not read vite manifest #{inspect(manifest_file)}: #{Exception.message(e)}")
         :persistent_term.get(Brando.Tenant.cache_key(cache_key), nil) || Manifest.parse(%{})
     end
+
+    # As the page reads it (`Brando.HTML`): unset, HMR is on in development,
+    # where a missing manifest is a build not yet made rather than an error
+    defp hmr?, do: Application.get_env(Brando.otp_app(), :hmr, Brando.env() == :dev)
 
     @doc """
     # copy from

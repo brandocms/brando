@@ -22,7 +22,8 @@ defmodule Brando.Vite do
   saying what to do and returns. Phoenix does not restart a watcher that
   returns, so the endpoint keeps running without that dev server.
 
-  When Vite for `assets/backend` (the admin) or `assets/frontend` (the site)
+  When Vite for `assets/backend` (the admin) or `assets/frontend` (the site;
+  also a site's own project in `assets/sites/<key>`, see `Brando.Assets.DevSite`)
   fails before it is ready, or exits with an error after it, `watch/1` also
   records why, for `start_failure/1`. `Brando.HTML.include_assets/1` reads
   that record: rather than point the page at a port that another site's Vite
@@ -300,9 +301,12 @@ defmodule Brando.Vite do
   defp server(dir) do
     relative = Path.relative_to_cwd(dir)
 
-    case Path.basename(dir) do
-      "backend" -> %{label: "the admin", dir: relative, role: :admin}
-      "frontend" -> %{label: "the site", dir: relative, role: :site}
+    case {Path.basename(Path.dirname(dir)), Path.basename(dir)} do
+      # A site's own Vite project, run for `dev_site` (Brando.Assets.DevSite),
+      # first: `backend` and `frontend` are valid site keys
+      {"sites", _key} -> %{label: "the site", dir: relative, role: :site}
+      {_, "backend"} -> %{label: "the admin", dir: relative, role: :admin}
+      {_, "frontend"} -> %{label: "the site", dir: relative, role: :site}
       _ -> %{label: "the dev server", dir: relative, role: nil}
     end
   end

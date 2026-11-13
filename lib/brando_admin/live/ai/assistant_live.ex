@@ -2087,6 +2087,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
   defp share_refusal(:no_preview_target),
     do: gettext("Page preview is not configured for this content type. Review the changes in the entry card.")
 
+  # As the entry form's share: the release has no build to pin
+  defp share_refusal(:no_frontend_assets),
+    do:
+      gettext(
+        "The site has no frontend build to share this preview with, so no link was created. Build it into priv/static with pnpm build in assets/frontend, then try again."
+      )
+
   # As the entry form's share: anything but a missing site or a stored
   # preview's failed insert is the site's assets failing to be captured.
   defp share_refusal(reason) do

@@ -1,0 +1,2 @@
+- On a multi-site installation in development, `dev_site` makes the Vite dev server serve one site, which then reads nothing from its active asset set, while every other site renders from its uploaded build or `priv/static`, read afresh on each request and with a notice when it has neither; each site's frontend source can be its own Vite project in `assets/sites/<key>/`.
+  To develop one site with HMR, set `config :my_app, hmr: true, dev_site: "acme"` in `config/dev.exs` and point the `vite_site` watcher at `assets/sites/acme`.

@@ -8,6 +8,7 @@ defmodule Brando.HTML do
 
   import Phoenix.HTML
 
+  alias Brando.Assets.DevSite
   alias Brando.Assets.Vite
   alias Brando.Blueprint.URL
   alias Brando.Utils
@@ -746,6 +747,10 @@ defmodule Brando.HTML do
   for example because another site's Vite holds the port, the admin or the
   site renders its manifest assets instead, with a notice saying why.
 
+  On a multi-site installation, `config :your_app, dev_site: "acme"` limits
+  the site's dev server to that site; every other site renders from its build
+  (see `Brando.Assets.DevSite`).
+
   These values are read at render time, rather than through application config,
   because they only configure development servers and must agree with Vite's
   process environment without recompiling. Disable HMR as before with
@@ -820,6 +825,15 @@ defmodule Brando.HTML do
         {Vite.Render.main_js() |> raw()}
         """
 
+      :other_site ->
+        assigns = other_site_assigns(assigns)
+
+        ~H"""
+        {Vite.Render.main_css() |> raw()}
+        {Vite.Render.main_js() |> raw()}
+        <.assets_notice :if={@unbuilt?} scope={:site} other_site show />
+        """
+
       {:vite_failed, failure} ->
         assigns = vite_failed_assigns(assigns, :site, failure)
 
@@ -845,6 +859,14 @@ defmodule Brando.HTML do
       :manifest ->
         ~H"""
         {Vite.Render.main_css() |> raw()}
+        """
+
+      :other_site ->
+        assigns = other_site_assigns(assigns)
+
+        ~H"""
+        {Vite.Render.main_css() |> raw()}
+        <.assets_notice :if={@unbuilt?} scope={:site} other_site show />
         """
 
       {:vite_failed, failure} ->
@@ -888,10 +910,14 @@ defmodule Brando.HTML do
     end
   end
 
+  # On a multi-site installation with `dev_site` set, only that site loads
+  # from the dev server, and only it gets the notice when Vite did not start:
+  # the others render from their build (`Brando.Assets.DevSite`)
   defp site_assets_source do
     cond do
       Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) -> :manifest
       hmr_disabled?() -> :manifest
+      DevSite.other_site?() -> other_site_build()
       failure = Brando.Vite.start_failure(:site) -> vite_failed(:app, failure)
       true -> :dev_server
     end
@@ -909,6 +935,17 @@ defmodule Brando.HTML do
 
     {:vite_failed, failure}
   end
+
+  # A site other than the dev site renders from its build, which a `pnpm build`
+  # or an activated set may give it while the page runs: read it afresh, as
+  # `vite_failed/2` does. Only in development, where `dev_site` applies.
+  defp other_site_build do
+    Vite.Manifest.refresh(:app, keep_cached: true)
+    Vite.Manifest.refresh_critical_css()
+    :other_site
+  end
+
+  defp other_site_assigns(assigns), do: assign(assigns, :unbuilt?, manifest_empty?(:app))
 
   defp hmr_disabled?, do: Application.get_env(Brando.otp_app(), :hmr) === false
 
@@ -932,7 +969,7 @@ defmodule Brando.HTML do
       assign(assigns,
         vite_origin: vite_dev_server_origin("FRONTEND", 3000),
         notice?: Brando.env() == :dev,
-        critical?: File.exists?("assets/frontend/js/critical.js")
+        critical?: File.exists?(Path.join(DevSite.frontend_dir(), "js/critical.js"))
       )
 
     ~H"""
@@ -979,18 +1016,21 @@ defmodule Brando.HTML do
   attr :origin, :string, default: nil
   attr :failure, :map, default: nil
   attr :unbuilt, :boolean, default: false
+  attr :other_site, :boolean, default: false
   attr :show, :boolean, default: false
 
   defp assets_notice(assigns) do
     {label, name, dir, port_var, manifest} =
       case assigns.scope do
         :admin -> {"Admin", "the admin", "assets/backend", "BRANDO_VITE_ADMIN_PORT", "admin_manifest.json"}
-        :site -> {"Site", "the site", "assets/frontend", "BRANDO_VITE_FRONTEND_PORT", "manifest.json"}
+        :site -> {"Site", "the site", DevSite.frontend_dir(), "BRANDO_VITE_FRONTEND_PORT", "manifest.json"}
       end
 
     assigns =
       assign(assigns,
         otp_app: Brando.otp_app(),
+        site_key: Brando.Tenant.current_site_key(),
+        dev_site: DevSite.key(),
         id: "brando-#{assigns.scope}-assets-notice",
         label: label,
         name: name,
@@ -1021,7 +1061,20 @@ defmodule Brando.HTML do
             in <code>{@failure.dir}</code>, then reload this page.
           </p>
         <% end %>
-        <%= if !@failure && @origin do %>
+        <%= if @other_site do %>
+          <strong>Site assets not built for {@site_key || "this page"}</strong>
+          <p>
+            Only <code>{@dev_site}</code>
+            loads from the Vite dev server (<code>config :{@otp_app}, dev_site: "{@dev_site}"</code>). Every other site renders from its active asset set or, without one, from <code>priv/static/manifest.json</code>, and this one has neither. Give it one:
+            <%= if @site_key do %>
+              upload a build of <code>assets/sites/{@site_key}</code>
+              as its asset set ("Uploading a site's build by hand" in the tenancy guide), or
+            <% end %>
+            run <code>pnpm build</code>
+            in <code>assets/frontend</code>. Then reload this page.
+          </p>
+        <% end %>
+        <%= if !@other_site && !@failure && @origin do %>
           <strong>{@label} assets failed to load from {@origin}</strong>
           <p>
             Either the Vite dev server for <code>{@dir}</code>
@@ -1033,7 +1086,7 @@ defmodule Brando.HTML do
             and set <code>config :{@otp_app}, hmr: false</code>.
           </p>
         <% end %>
-        <%= if !@failure && !@origin do %>
+        <%= if !@other_site && !@failure && !@origin do %>
           <strong>{@label} assets not built</strong>
           <p>
             There is no <code>priv/static/{@manifest}</code>. Build them with <code>pnpm build</code>
@@ -1117,10 +1170,12 @@ defmodule Brando.HTML do
   @doc """
   Include legacy bundles
 
-  Call this right before your closing `</body>` tag.
+  Call this right before your closing `</body>` tag. They come from the build,
+  so they render with HMR off and, with `dev_site` set, for every site but the
+  dev site (`Brando.Assets.DevSite`).
   """
   def include_legacy_assets(assigns) do
-    if Application.get_env(Brando.otp_app(), :hmr) === false do
+    if hmr_disabled?() or DevSite.other_site?() do
       ~H"{Vite.Render.legacy_js() |> raw()}"
     else
       ~H||

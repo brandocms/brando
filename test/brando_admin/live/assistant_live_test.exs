@@ -954,9 +954,11 @@ defmodule BrandoAdmin.AssistantLiveTest do
       Brando.endpoint().subscribe("user:#{user.id}")
       view |> element(~s(button[phx-click="share_page"])) |> render_click()
 
-      # Said in the editor's words, not as the reason's name.
+      # Said in the editor's words, not as the reason's name, with what to do:
+      # the release has no build to pin
       assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
       refute message =~ "no_frontend_assets"
+      assert message =~ "pnpm build"
       assert frame_key(render(view)) == key
       assert has_element?(view, ~s(button[phx-click="share_page"]))
       refute has_element?(view, "#assistant-page-link")
