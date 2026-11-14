@@ -506,7 +506,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
 
   def translate(map) when is_map(map) do
     locale = Gettext.get_locale()
-    fallback = Brando.config(:default_language)
+    fallback = Brando.Languages.default_language()
 
     case map[locale] || map[fallback] || map["en"] do
       nil -> ""
@@ -549,7 +549,7 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
   def sort_namespace({namespace, modules}) do
     sorted_modules = Enum.sort(modules, &(&1.sequence <= &2.sequence))
     current_locale = Gettext.get_locale()
-    fallback_locale = Brando.config(:default_language)
+    fallback_locale = Brando.Languages.default_language()
 
     translated_namespace =
       if is_map(namespace) do

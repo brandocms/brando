@@ -54,9 +54,7 @@ defmodule Brando.Images.AltText do
   @doc "The content languages alt text is written in, the default first."
   @spec languages() :: [String.t()]
   def languages do
-    default = to_string(Brando.config(:default_language))
-    configured = Enum.map(Brando.config(:languages) || [], &to_string(&1[:value]))
-    Enum.uniq([default | configured])
+    Enum.uniq([to_string(Brando.Languages.default_language()) | Brando.Languages.codes()])
   end
 
   @doc "The content languages `image` has no alt text in."

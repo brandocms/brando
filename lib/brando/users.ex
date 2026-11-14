@@ -126,6 +126,30 @@ defmodule Brando.Users do
   end
 
   @doc """
+  Moves `user`'s content language to the default language of the site the
+  process works for (`Brando.Languages`) when it is not one of that site's
+  languages, and saves it. Returns the user, updated or as it was.
+
+  The admin calls it for the site an editor enters, so an editor whose content
+  language another site uses works in this site's default language here.
+  """
+  @spec ensure_content_language(user) :: user
+  def ensure_content_language(%User{config: %{content_language: language}} = user) do
+    if Brando.Languages.member?(language || "") do
+      user
+    else
+      default = to_string(Brando.Languages.default_language())
+
+      case update_user(user, %{config: %{content_language: default}}, :system, show_notification: false) do
+        {:ok, updated} -> updated
+        {:error, _changeset} -> user
+      end
+    end
+  end
+
+  def ensure_content_language(user), do: user
+
+  @doc """
   Bumps `user`'s `last_seen` to current time.
 
   Called from the admin presence tracker when a user's last admin session goes

@@ -301,7 +301,7 @@ defmodule BrandoAdmin.CommandPalette do
   end
 
   defp content_language(%{config: %{content_language: language}}) when is_binary(language), do: language
-  defp content_language(_), do: to_string(Brando.config(:default_language))
+  defp content_language(_), do: to_string(Brando.Languages.default_language())
 
   defp escape_like(term), do: String.replace(term, ["\\", "%", "_"], &("\\" <> &1))
 

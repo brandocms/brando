@@ -1,0 +1,3 @@
+- On a multi-site installation each site uses its own languages and default language, in the admin and on the public side, and `Brando.Languages` reads them; provisioning or editing a site refuses a language `config :brando, :languages` lacks.
+  In a hand-written sitemap module, pipe each language's entries through `Brando.Sitemap.in_site_languages/1` before `url/1`, so a site's sitemap leaves out other languages.
+  Read the content languages in your own code with `Brando.Languages.languages/0` and `Brando.Languages.default_language/0` instead of `Brando.config(:languages)` and `Brando.config(:default_language)`.

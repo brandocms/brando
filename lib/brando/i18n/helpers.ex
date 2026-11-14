@@ -32,7 +32,7 @@ defmodule Brando.I18n.Helpers do
   """
   def localized_path(locale, fun, args) do
     locale = to_string(locale)
-    default_language = to_string(RuntimeConfig.get(:default_language))
+    default_language = to_string(Brando.Languages.default_language())
     helpers_module = RuntimeConfig.router_helpers()
 
     # The locale and the helper can come from stored content (a template's

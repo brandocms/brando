@@ -1015,7 +1015,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery do
   end
 
   defp content_language(%{assigns: %{current_user: %{config: %{content_language: language}}}}), do: language
-  defp content_language(_socket), do: Brando.config(:default_language)
+  defp content_language(_socket), do: Brando.Languages.default_language()
 
   defp text_config_key(object, "caption") do
     cond do

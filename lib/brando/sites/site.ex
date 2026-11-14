@@ -53,6 +53,7 @@ defmodule Brando.Sites.Site do
     |> validate_length(:name, min: 1)
     |> validate_format(:key, @key_format)
     |> validate_languages()
+    |> validate_configured_languages()
     |> validate_default_language()
     |> unique_constraint(:key)
   end
@@ -100,6 +101,37 @@ defmodule Brando.Sites.Site do
         add_error(changeset, :languages, "must not contain duplicates")
 
       true ->
+        changeset
+    end
+  end
+
+  # A site's languages are a subset of the installation's
+  # (`Brando.Languages`). Checked when they change only: a row that already
+  # holds one the installation lacks still takes other changes, and that
+  # language is left out when the site is loaded.
+  defp validate_configured_languages(changeset) do
+    case get_change(changeset, :languages) do
+      languages when is_list(languages) and languages != [] ->
+        configured = Brando.Languages.installation_codes()
+
+        case Enum.reject(languages, &(to_string(&1) in configured)) do
+          [] ->
+            changeset
+
+          missing ->
+            add_error(
+              changeset,
+              :languages,
+              ngettext(
+                "%{languages} is not one of the installation's languages (config :brando, :languages)",
+                "%{languages} are not among the installation's languages (config :brando, :languages)",
+                length(missing),
+                languages: Enum.join(missing, ", ")
+              )
+            )
+        end
+
+      _ ->
         changeset
     end
   end

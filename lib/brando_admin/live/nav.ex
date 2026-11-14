@@ -408,7 +408,7 @@ defmodule BrandoAdmin.Nav do
 
   # The site's own logo (Identity → Branding) in place of Brando's, once set.
   defp identity_logo_url do
-    language = to_string(Brando.config(:default_language))
+    language = to_string(Brando.Languages.default_language())
 
     case Brando.Cache.Identity.get(language) do
       %{logo: %Brando.Images.Image{} = logo} -> Brando.Utils.img_url(logo, :small, prefix: Brando.Utils.media_url())

@@ -412,6 +412,63 @@ log, and compensates a failed schema creation or migration.
 In `single` mode, the site key in the registry must match the configured
 `site_key`.
 
+<!-- usage-rules:start topic="tenancy" -->
+
+### Languages per site
+
+Two lists of content languages have different jobs:
+
+- **The installation's languages**, `config :brando, languages:` and
+  `default_language:`, are what the installation can hold. The `language`
+  field accepts these, a site is checked against them, and every language's
+  label (`text:`) comes from here.
+- **A site's languages**, `languages` and `default_language` on its registry
+  row, are what that site uses: a subset of the installation's, in the site's
+  own order.
+
+Provisioning a site, and changing its languages with
+`Brando.Tenant.Registry.update_site/2`, refuse a language the installation does
+not configure, and name it. `default_language` must be one of the site's
+languages. A row that already holds a language the installation does not
+configure keeps it, but the language is left out of the site's languages, and
+loading the site logs a warning.
+
+In `:multi`, whatever works for one site uses that site's languages and default
+language:
+
+- In the admin, the content-language switch offers the site's languages and is
+  hidden on a site with one. Language choices in forms, the language versions a
+  listing or form offers to create, the language tabs of `languages: :content`
+  inputs, and every fallback to the default language follow the site. An editor
+  whose content language the site does not have works in the site's default
+  language there; entering the site, by switching to it or opening the admin,
+  saves that.
+- On the public side, `Brando.Plug.I18n.put_locale/2` parses the path against
+  the request's site: a first segment that is not one of the site's languages
+  is not a locale, and `/` is in the site's default language. Alternates
+  (`Brando.Plug.HTML.put_hreflang/2`), JSON-LD, generated SEO, absolute URLs
+  and mail list and default to the site's languages. A sitemap leaves out
+  entries in other languages when it pipes them through
+  `Brando.Sitemap.in_site_languages/1`, as the one `mix brando.gen.sitemap`
+  generates does.
+
+Read the two values in your own code with `Brando.Languages.languages/0` (the
+`[value:, text:]` entries) or `Brando.Languages.codes/0`, and
+`Brando.Languages.default_language/0`. They answer for the site the process
+works for, from `Brando.Tenant.Cache`, with no query. Where there is no site (a
+mix task, a job with no tenant, an installation screen) they answer with the
+installation's list. `Brando.Languages.installation_languages/0` always does.
+
+The installation's list stays in force for what the `language` field accepts,
+for mix tasks such as `mix brando.gen.languages`, for the upgrade snapshot, and
+for the check a site moved in with `mix brando.migrate_to_tenant` goes
+through. The admin's interface languages (`admin_languages`) are separate from
+both lists.
+
+In `:none` and `:single`, the installation's list is the site's.
+
+<!-- usage-rules:end -->
+
 ## Router and request context
 
 <!-- usage-rules:start topic="tenancy" -->

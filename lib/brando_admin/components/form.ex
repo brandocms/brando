@@ -199,7 +199,7 @@ defmodule BrandoAdmin.Components.Form do
     language =
       case socket.assigns[:entry] do
         %{language: language} when not is_nil(language) -> to_string(language)
-        _ -> to_string(Brando.config(:default_language))
+        _ -> to_string(Brando.Languages.default_language())
       end
 
     describe = AltTextSuggestion.describe_task(image_id, languages: [language])
@@ -7799,12 +7799,12 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp maybe_offer_permalink_redirect(socket, previous, saved, continue) do
-    case Brando.Trait.Permalink.redirect_for(previous, saved, Brando.config(:default_language)) do
+    case Brando.Trait.Permalink.redirect_for(previous, saved, Brando.Languages.default_language()) do
       nil ->
         continue.(socket)
 
       redirect ->
-        language = to_string(Map.get(saved, :language) || Brando.config(:default_language))
+        language = to_string(Map.get(saved, :language) || Brando.Languages.default_language())
 
         error =
           case Brando.Sites.Redirects.delete_permalink_redirect(redirect.to, language, socket.assigns.current_user) do
@@ -10181,7 +10181,7 @@ defmodule BrandoAdmin.Components.Form do
   end
 
   defp creating_language_label(%{entry_id: nil, schema: schema, form_blueprint: blueprint, current_user: user}) do
-    languages = Brando.config(:languages) || []
+    languages = Brando.Languages.languages()
 
     if schema.has_trait(Brando.Trait.Translatable) and length(languages) > 1 and
          not language_input?(blueprint) do

@@ -70,8 +70,22 @@ defmodule Brando.Plug.I18n do
   end
 
   defp extract_language(conn, _) do
-    {extracted_language, _} = I18n.parse_path(conn.path_info)
+    {extracted_language, _} = I18n.parse_path(conn.path_info, request_site(conn))
     extracted_language
+  end
+
+  # The site of the request, whose languages the path is parsed against
+  # (`Brando.Languages`): from `Brando.Plug.Tenant` when it ran first, else by
+  # host from the tenant cache, so the order of the two plugs does not matter.
+  defp request_site(%{assigns: %{current_site: %Brando.Sites.Site{} = site}}), do: site
+
+  defp request_site(conn) do
+    with :multi <- Brando.Tenant.mode(),
+         {site, _environment} <- Brando.Tenant.Cache.get_env_by_domain(conn.host) do
+      site
+    else
+      _ -> :current
+    end
   end
 
   defp maybe_prefix_language_to_path(%{path_info: ["admin" | _]} = conn, _, %{force_path: _}), do: conn
