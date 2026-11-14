@@ -50,7 +50,9 @@ configuration are blocking issues.
 - Binary files (the templates' `.ico` favicons, the only binaries they ship)
   never enter Rewrite's new-file writer, which normalizes trailing newlines
   even for binaries. The digest-checked `brando.assets.copy` task, whose
-  allowlist is the template manifest's `.ico` entries, runs after acceptance,
+  allowlist is the template manifest's `.ico` entries (the frontend's also
+  under a site's `assets/sites/<key>/`, which `mix brando.gen.site --site`
+  creates in `:multi` from the frontend's templates), runs after acceptance,
   writes exact bytes with atomic no-clobber creation, and refuses changed
   destinations. Dry runs copy nothing. `brando.assets.setup` is a separate
   operational task that installs and builds consumer assets, with BrandoJS

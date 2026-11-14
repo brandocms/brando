@@ -1,0 +1,1 @@
+- On a multi-site installation, `mix brando.gen.site --site KEY` creates the site's own Vite project in `assets/sites/KEY/`, from the same templates as `assets/frontend`, building into its `dist/`; an existing folder is kept.
