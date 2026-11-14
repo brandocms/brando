@@ -659,9 +659,14 @@ run `mix brando.assets.setup --local` (or `--source PATH`) to take BrandoJS
 from a Yalc copy of a checkout, and `mix brando.assets.setup --npm` to go back
 to the npm release of Brando's version. `--npm` also removes the Yalc copy.
 The task checks for Node.js, pnpm and, for a Yalc copy, Yalc before it changes
-anything, and that the pnpm on PATH is 10.5 or later, which runs the pnpm 12
-each `packageManager` names. Use `--no-build` to install only, and `--backend-only` to install
-and build the admin alone.
+anything, and that the pnpm on PATH runs the pnpm 12 each `packageManager`
+names. Put pnpm 12 first on PATH, through the `.tool-versions` pin with asdf
+or mise (see [Toolchain pins](#toolchain-pins)) or with
+`npm install --global pnpm@12`. pnpm 10 cannot switch to pnpm 12: it fails
+with `Failed to switch pnpm to v12.15.0` and `ENOEXEC`, and the task stops
+there with nothing changed. Use
+`--no-build` to install only, and `--backend-only` to install and build the
+admin alone.
 
 `pnpm build` writes `admin_manifest.json`, `manifest.json` and assets to the
 consumer's `priv/static`. Production uses them, and so does development with

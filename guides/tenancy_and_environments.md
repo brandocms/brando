@@ -773,7 +773,20 @@ release's default frontend, which a site without an active set gets.
 prints; it does not create the project. Start one by copying
 `assets/frontend` (without its `node_modules`), so its Vite config reads
 `BRANDO_VITE_FRONTEND_HOST` and `BRANDO_VITE_FRONTEND_PORT` as the default
-frontend's does.
+frontend's does. Then point the copy's build at a folder of its own: the
+copied `outDir: '../../priv/static'` resolves to `assets/priv/static` from
+`assets/sites/acme`. In `assets/sites/acme/vite.config.js`, set
+
+```js
+build: {
+  // ...
+  emptyOutDir: true,
+  outDir: 'dist',
+}
+```
+
+so `pnpm build` there writes the set to `assets/sites/acme/dist`, the folder
+[Uploading a site's build by hand](#uploading-a-sites-build-by-hand) copies.
 
 In development, one Vite dev server runs one site's project. Say which
 with `dev_site`, beside `hmr`, and point the `vite_site` watcher at the same
@@ -1375,17 +1388,28 @@ steps on a development machine give the sites other than `dev_site` their
 last built set. For `acme`:
 
 1. Build the project into a directory of its own, never into `priv/static`,
-   which is the release's default frontend:
+   which is the release's default frontend. With the `outDir` and
+   `emptyOutDir` [above](#each-sites-frontend-source), that is `dist`:
 
    ```sh
    cd assets/sites/acme
-   pnpm exec vite build --outDir dist --emptyOutDir
+   pnpm build
+   ```
+
+   Then delete the source maps. The Vite config builds them hidden (no
+   `sourceMappingURL` comment), and `mix brando.digest` deletes them from a
+   release (see [Source maps](deployment.md#source-maps)), but a set serves
+   every file it holds, so a map left in it is public at its script's path
+   plus `.map`:
+
+   ```sh
+   find dist -name '*.map' -delete
    ```
 
 2. Copy the output into the site's `sets` root, in a directory named for
    the build. The root is `sites/acme/assets/sets/` beside the media
    directory, or under `config :brando, :sites_path` when set
-   (`Brando.Assets.SiteAssets.sets_root/1` gives it). A site that never had
+   (`Brando.Assets.SiteAssets.sets_root("acme")` gives it). A site that never had
    a set has no `sets` directory yet:
 
    ```sh
@@ -1393,7 +1417,10 @@ last built set. For `acme`:
    cp -R dist /srv/my_app/sites/acme/assets/sets/20261113_abc123
    ```
 
-3. Register it, from a remote console (`bin/my_app remote`) or `iex -S mix`:
+3. Register it, from a remote console (`bin/my_app remote`) or `iex -S mix`.
+   Registering writes a database row from the files it finds, and nothing a
+   running server holds in memory, so in development an `iex -S mix` beside
+   a running `mix phx.server` registers a set that server then lists:
 
    ```elixir
    Brando.Assets.SiteAssets.register_set(
@@ -1404,7 +1431,10 @@ last built set. For `acme`:
    ```
 
 4. Activate it at `/admin/config/assets`, with `acme` selected: for the
-   site, or for the environment being edited.
+   site, or for the environment being edited. Activate it there, in the
+   running server, rather than with `activate_set/1` from the second node:
+   that changes the database, but not the caches of a server it is not
+   clustered with, which keeps serving what it served before.
 
 The build directory must contain, at its top level:
 
