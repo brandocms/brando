@@ -8,6 +8,8 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.BrandoJS
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install
+    alias Mix.Brando.Igniter.Install.Deployment
+    alias Mix.Brando.Igniter.Install.Docker
     alias Mix.Brando.Install.Templates
 
     @doc """
@@ -41,7 +43,9 @@ if Code.ensure_loaded?(Igniter) do
     Plans a site's own Vite project in `assets/sites/<key>/` (`mix brando.gen.site
     --site KEY` in `:multi`): the files a new installation's `assets/frontend`
     gets, from the same templates, with the changes `site_contents/4` makes.
-    An existing `assets/sites/<key>/` is left as it is, with a notice.
+    `.gitignore`, and `.dockerignore` when the application has one, get the
+    lines for the projects' dependencies and builds they lack. An existing
+    `assets/sites/<key>/` is left as it is, with a notice.
     """
     def site_project(igniter, project, key) do
       root = "assets/sites/#{key}"
@@ -54,6 +58,8 @@ if Code.ensure_loaded?(Igniter) do
         key
         |> site_files()
         |> Enum.reduce(igniter, &site_file(&1, &2, project, key))
+        |> Deployment.tenancy_gitignore(:multi)
+        |> then(&if(Igniter.exists?(&1, ".dockerignore"), do: Docker.dockerignore(&1, :multi), else: &1))
         |> Igniter.add_notice("""
         #{root}/ is the site's own Vite project, from the templates that give assets/frontend,
         and builds into its dist/ folder. Nothing was installed or built. To install its

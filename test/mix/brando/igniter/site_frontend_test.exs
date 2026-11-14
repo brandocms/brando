@@ -223,6 +223,33 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
     refute notice?(result, "answers 404")
   end
 
+  @site_ignores ["assets/sites/*/node_modules", "assets/sites/*/dist"]
+
+  test "in :multi, an application installed before site projects gets their ignore lines", %{multi: multi} do
+    for path <- [".gitignore", ".dockerignore"],
+        line <- @site_ignores,
+        do: assert(IgniterCase.source(multi, path) =~ line, "#{path}: #{line}")
+
+    strip = fn content -> Regex.replace(~r/^.*assets\/sites\/.*\n/m, content, "") end
+
+    earlier =
+      Enum.reduce([".gitignore", ".dockerignore"], multi, fn path, igniter ->
+        Igniter.update_file(igniter, path, &Rewrite.Source.update(&1, :content, strip))
+      end)
+      |> IgniterCase.apply_and_reload()
+
+    refute IgniterCase.source(earlier, ".dockerignore") =~ "assets/sites"
+
+    result = generate(earlier, ["--site", "acme-travel"])
+    assert result.issues == []
+    assert IgniterCase.source(result, ".gitignore") =~ ~r{^/assets/sites/\*/node_modules/\n/assets/sites/\*/dist/$}m
+    assert IgniterCase.source(result, ".dockerignore") =~ ~r{^assets/sites/\*/node_modules\nassets/sites/\*/dist$}m
+
+    # A project that already exists leaves both files alone.
+    rerun = result |> IgniterCase.apply_and_reload() |> generate(["--site", "acme-travel"])
+    Igniter.Test.assert_unchanged(rerun)
+  end
+
   test "the binary copier writes a site project's favicon from the frontend's template" do
     directory = Path.join(System.tmp_dir!(), "brando-site-favicon-#{System.unique_integer([:positive])}")
     File.mkdir_p!(directory)

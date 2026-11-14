@@ -175,7 +175,8 @@ then, and in each site's folder under `/sites/` with `multi`. With `single` or
 `multi` it adds `/sites/`, which site provisioning creates, and with `multi`
 also each site's frontend project's `/assets/sites/*/node_modules/` and
 `/assets/sites/*/dist/`. `mix brando.setup.tenancy` adds the lines for the
-mode it switches to. `priv/static` holds only
+mode it switches to, and `mix brando.gen.site --site KEY` adds the `multi`
+lines when it creates a site's project. `priv/static` holds only
 build output: the admin and site builds, the files Vite copies from the asset
 projects' `public/` folders (so keep a site's images in
 `assets/frontend/public/images`), and what `mix brando.digest` adds. Lines an
@@ -605,6 +606,10 @@ Florist sends the build context, the project directory, to the Docker daemon
 on every build, and that daemon may be remote. The `.dockerignore` keeps out
 dependencies and build output, `node_modules`, `media/`, Florist's
 `release-archives/` and `sql/` dumps, and the `.envrc*` files with secrets.
+With `multi` it also keeps out each site project's `assets/sites/*/node_modules`
+and `assets/sites/*/dist`: the release does not serve a site's build, which
+is uploaded as the site's asset set. `mix brando.gen.site --site KEY` adds
+those two to an existing `.dockerignore` when it creates a site's project.
 An existing `.dockerignore` gets the exclusions it misses appended, with
 `.envrc*` unless one pattern already covers every `.envrc*` name (exact names
 such as `.envrc.prod` leave a `.envrc.prod.bak` in the context). An appended
