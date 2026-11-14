@@ -15,6 +15,8 @@ defmodule Brando.Languages do
   for in multi-site mode (`Brando.Tenant`), and for the installation otherwise:
   with tenancy off or in single-site mode, and in multi-site mode outside every
   site (a mix task, a job with no tenant, a screen that is not about one site).
+  The functions that take a site follow the same rule: outside multi-site mode
+  they answer with the installation's list whatever the site's row says.
 
   They are read on every request and render, so they never query the database:
   the site comes from `Brando.Tenant.Cache`. This module is a leaf that only
@@ -44,12 +46,14 @@ defmodule Brando.Languages do
   @doc """
   The languages `site` uses, in its own order, labelled from the installation's
   list. A language the installation does not configure is left out. With `nil`,
-  the installation's list.
+  or outside multi-site mode, the installation's list.
   """
   @spec languages(map() | nil) :: [language()]
-  def languages(nil), do: installation_languages()
+  def languages(site), do: site |> multi_site() |> site_languages()
 
-  def languages(%{languages: site_languages}) when is_list(site_languages) do
+  defp site_languages(nil), do: installation_languages()
+
+  defp site_languages(%{languages: site_languages}) when is_list(site_languages) do
     installation = installation_languages()
     by_code = Map.new(installation, &{to_string(&1[:value]), &1})
 
@@ -59,7 +63,7 @@ defmodule Brando.Languages do
     end
   end
 
-  def languages(_site), do: installation_languages()
+  defp site_languages(_site), do: installation_languages()
 
   @doc "The codes of `languages/0`, as strings."
   @spec codes() :: [String.t()]
@@ -78,12 +82,15 @@ defmodule Brando.Languages do
 
   @doc """
   `site`'s default language. When the installation does not configure it, the
-  first of the site's languages that it does. With `nil`, the installation's.
+  first of the site's languages that it does. With `nil`, or outside
+  multi-site mode, the installation's.
   """
   @spec default_language(map() | nil) :: String.t() | nil
-  def default_language(nil), do: installation_default_language()
+  def default_language(site), do: site |> multi_site() |> site_default_language()
 
-  def default_language(%{languages: site_languages} = site) when is_list(site_languages) do
+  defp site_default_language(nil), do: installation_default_language()
+
+  defp site_default_language(%{languages: site_languages} = site) when is_list(site_languages) do
     codes = codes(site)
     default = site |> Map.get(:default_language) |> then(&(&1 && to_string(&1)))
 
@@ -94,7 +101,7 @@ defmodule Brando.Languages do
     end
   end
 
-  def default_language(_site), do: installation_default_language()
+  defp site_default_language(_site), do: installation_default_language()
 
   @doc "Whether `language` is one of `languages/0`."
   @spec member?(term()) :: boolean()
@@ -142,6 +149,12 @@ defmodule Brando.Languages do
             "which `config :brando, :languages` does not configure. Left out of the site's languages."
         )
     end
+  end
+
+  # A site's own languages apply in multi-site mode only: in single-site mode
+  # the installation's list is the site's, whatever its row says.
+  defp multi_site(site) do
+    if RuntimeConfig.get(:tenancy_mode) == :multi, do: site
   end
 
   # The site the process works for, in multi-site mode only: from the tenant
