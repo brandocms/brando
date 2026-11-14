@@ -15,8 +15,9 @@ defmodule Brando.Assets.SiteAssets.Capture do
   The development site of a multi-site installation (`Brando.Assets.DevSite`)
   always captures the release build, as its pages never read its active set.
 
-  When an uploaded set is active and self-contained (every file its manifest
-  lists is present), it is reused directly. An uploaded set that relies on
+  When the set the environment uses (its own, else the scope's active set) is
+  self-contained (every file its manifest lists is present), it is reused
+  directly. An uploaded set that relies on
   release fallback files is merged with the release, uploaded files taking
   precedence, so the pinned copy is complete.
   """
@@ -39,17 +40,19 @@ defmodule Brando.Assets.SiteAssets.Capture do
   def captured?(%SiteAssetSet{metadata: metadata}), do: Map.get(metadata || %{}, "source") == @source
 
   @doc """
-  Returns a registered set that fully covers the scope's effective frontend
-  assets, capturing the release build when necessary.
+  Returns a registered set that fully covers the frontend assets `environment`
+  of the scope renders with (`Brando.Assets.SiteAssets.effective_set/2`),
+  capturing the release build when necessary.
 
   Call under the scope's asset lock; `Brando.Assets.SiteAssets.with_preview_set/2`
   does so.
   """
-  @spec ensure_set(SiteAssets.scope()) :: {:ok, SiteAssetSet.t()} | {:error, term()}
-  def ensure_set(site) do
+  @spec ensure_set(SiteAssets.scope(), Brando.Environments.Environment.t() | nil) ::
+          {:ok, SiteAssetSet.t()} | {:error, term()}
+  def ensure_set(site, environment \\ nil) do
     # The development site renders from the dev server and the release's
-    # build, never from its active set (`Brando.Assets.DevSite`)
-    active = unless DevSite.dev_site?(site), do: SiteAssets.active_set(site)
+    # build, never from its sets (`Brando.Assets.DevSite`)
+    active = unless DevSite.dev_site?(site), do: SiteAssets.effective_set(site, environment)
 
     case active do
       nil -> capture(site, [release_root()])

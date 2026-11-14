@@ -1,7 +1,7 @@
 .frontend-assets-workspace {
   max-width: 1120px;
   .frontend-assets-live { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .frontend-assets-current, .frontend-assets-library { border: 1px solid var(--workspace-line); border-radius: 7px; background: var(--brando-surface); }
+  .frontend-assets-current, .frontend-assets-library, .frontend-assets-environments { border: 1px solid var(--workspace-line); border-radius: 7px; background: var(--brando-surface); }
   .frontend-assets-current { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 24px; padding: 20px; background: var(--brando-surface-hover); }
   .frontend-assets-current.uploaded { background: var(--brando-surface-tint); }
   .frontend-assets-eyebrow { display: block; color: var(--workspace-muted); font-size: var(--brando-text-xs); line-height: 1.5; margin-bottom: 8px; }
@@ -17,10 +17,10 @@
   .frontend-assets-status.active { background: var(--brando-success); color: var(--brando-success-ink); }
   .frontend-assets-status > span { width: 5px; height: 5px; border-radius: 50%; background: var(--brando-faint); }
   .frontend-assets-status.active > span { background: var(--brando-status-published); }
-  .frontend-assets-library > header { display: flex; justify-content: space-between; align-items: start; gap: 24px; padding: 16px; border-bottom: 1px solid var(--workspace-line); }
+  .frontend-assets-library > header, .frontend-assets-environments > header { display: flex; justify-content: space-between; align-items: start; gap: 24px; padding: 16px; border-bottom: 1px solid var(--workspace-line); }
   .frontend-assets-library > header .frontend-assets-eyebrow { display: none; }
-  .frontend-assets-library > header h2 { font-size: var(--brando-text-xl); }
-  .frontend-assets-library > header p { color: var(--workspace-muted); font-size: var(--brando-text-sm); max-width: 650px; margin-top: 8px; }
+  .frontend-assets-library > header h2, .frontend-assets-environments > header h2 { font-size: var(--brando-text-xl); }
+  .frontend-assets-library > header p, .frontend-assets-environments > header p { color: var(--workspace-muted); font-size: var(--brando-text-sm); max-width: 650px; margin-top: 8px; }
   .frontend-assets-empty { padding: 40px 24px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
   .frontend-assets-empty p { max-width: 480px; font-size: var(--brando-text-md); color: var(--workspace-muted); }
   .frontend-assets-current__meta > div:last-child { min-width: 160px; }
@@ -35,10 +35,18 @@
   .frontend-assets-table .frontend-assets-build__bundle { width: 130px; font-size: var(--brando-text-sm); white-space: nowrap; }
   .frontend-assets-table .frontend-assets-build__status { width: 104px; }
   .frontend-assets-table .frontend-assets-build__actions { width: 130px; min-width: 130px; text-align: right; }
+  .frontend-assets-table .frontend-assets-build__actions.environment { width: auto; white-space: nowrap; }
+  .frontend-assets-build__actions .btn + .btn { margin-left: 8px; }
+  .frontend-assets-environments__table { min-width: 600px; }
+  .frontend-assets-environment__identity h3 { font-size: var(--brando-text-md); }
+  .frontend-assets-environment__identity p { margin-top: 4px; color: var(--workspace-muted); font-size: var(--brando-text-xs); overflow-wrap: anywhere; }
+  .frontend-assets-table .frontend-assets-environment__build { font-size: var(--brando-text-sm); overflow-wrap: anywhere; }
+  .frontend-assets-table .frontend-assets-environment__source { width: 104px; }
+  .frontend-assets-table .frontend-assets-environment__actions { width: 180px; text-align: right; }
   @media (max-width: 600px) {
     .frontend-assets-current { grid-template-columns: 1fr; gap: 16px; padding: 16px; }
     .frontend-assets-current__actions { align-items: flex-start; flex-direction: row; flex-wrap: wrap; }
-    .frontend-assets-library > header { padding: 16px; }
+    .frontend-assets-library > header, .frontend-assets-environments > header { padding: 16px; }
     .frontend-assets-current__meta { gap: 16px; }
   }
 }

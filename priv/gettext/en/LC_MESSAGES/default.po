@@ -654,6 +654,21 @@ msgstr ""
 msgid "%{email} was logged out everywhere."
 msgstr ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{environment} uses %{name}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{environment} uses the site's build"
+msgstr ""
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{environment}, the live environment, serves this build of its own."
+msgstr ""
+
 #: lib/brando_admin/components/form/draft_preview.ex
 #, elixir-autogen, elixir-format
 msgid "%{field} · Block %{number}"
@@ -1512,12 +1527,22 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
+msgid "Activate %{name} for %{environment} now? Its requests switch immediately."
+msgstr ""
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
 msgid "Activate %{name} now? Frontend requests will switch immediately."
 msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Activate build"
+msgstr ""
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Activate for %{environment}"
 msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
@@ -2204,6 +2229,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
 msgid "An entry you cannot open"
+msgstr ""
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "An environment with a build of its own serves it on its host, in place of the site's build. The build stays with its environment when it goes live."
 msgstr ""
 
 #: lib/brando_admin/live/images/alt_text_live.ex
@@ -4573,6 +4603,11 @@ msgstr ""
 msgid "Could not change IndexNow"
 msgstr ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not change the environment's frontend assets"
+msgstr ""
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not check whether the recipient may read the entry"
@@ -6603,6 +6638,11 @@ msgstr ""
 msgid "Editing"
 msgstr ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Editing now"
+msgstr ""
+
 #: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-autogen, elixir-format
@@ -6894,6 +6934,7 @@ msgid "Entry re-rendered"
 msgstr ""
 
 #: lib/brando_admin/live/nav.ex
+#: lib/brando_admin/live/sites/asset_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -6930,6 +6971,7 @@ msgstr ""
 msgid "Environment operation failed: %{reason}"
 msgstr ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
@@ -8860,6 +8902,11 @@ msgid_plural "Its %{count} nested blocks are removed too."
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its own"
+msgstr ""
+
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Its schema version differs from the current schema, so some fields may not load correctly."
@@ -9353,6 +9400,7 @@ msgstr ""
 msgid "Listing"
 msgstr ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Live"
@@ -15608,6 +15656,11 @@ msgstr ""
 msgid "Sequence updated"
 msgstr ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Serve the site's build on %{environment} again? Requests switch immediately."
+msgstr ""
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "Served once the entry is published. This is the last saved version."
@@ -16284,6 +16337,7 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #: lib/brando_admin/components/form/translation.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/sites/asset_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Source"
@@ -16447,6 +16501,11 @@ msgstr ""
 #: lib/brando_admin/components/content/list/saved_views.ex
 #, elixir-autogen, elixir-format
 msgid "Stop sharing"
+msgstr ""
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Stop using %{name} as the site's build? Environments without a build of their own switch to the release's assets immediately."
 msgstr ""
 
 #: lib/brando_admin/components/layouts/root.html.heex
@@ -17705,6 +17764,11 @@ msgstr ""
 #: lib/brando_admin/components/form/structured_data.ex
 #, elixir-autogen, elixir-format
 msgid "The site has no identity in this language, so its pages give no structured data."
+msgstr ""
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site's"
 msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex
@@ -19001,6 +19065,11 @@ msgstr ""
 msgid "Unknown browser"
 msgstr ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown build"
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown environment"
@@ -19465,6 +19534,11 @@ msgstr ""
 msgid "Use the saved version"
 msgstr ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use the site's build"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
 #, elixir-autogen, elixir-format
 msgid "Use the video’s defaults or customize playback for this reference."
@@ -19478,6 +19552,11 @@ msgstr "Use this folder"
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "Used a tool"
+msgstr ""
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Used by %{environments}"
 msgstr ""
 
 #: lib/brando_admin/components/usage.ex

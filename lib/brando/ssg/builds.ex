@@ -24,11 +24,15 @@ defmodule Brando.SSG.Builds do
   @public_opts [prefix: "public"]
   @preview_lifetime_days 7
 
-  @doc "Queues a versioned build for one named environment."
+  @doc """
+  Queues a versioned build for one named environment. Its assets are the set
+  the environment uses (`Brando.Assets.SiteAssets.effective_set/2`), unless
+  `:asset_set` names one.
+  """
   @spec request_build(Site.t(), Environment.t(), keyword()) ::
           {:ok, Build.t()} | {:error, Ecto.Changeset.t() | term()}
   def request_build(%Site{} = site, %Environment{} = environment, opts \\ []) do
-    asset_set = Keyword.get_lazy(opts, :asset_set, fn -> SiteAssets.active_set(asset_scope(site)) end)
+    asset_set = Keyword.get_lazy(opts, :asset_set, fn -> SiteAssets.effective_set(asset_scope(site), environment) end)
     opts = Keyword.put(opts, :asset_set, asset_set)
 
     with :ok <-

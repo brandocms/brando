@@ -23,6 +23,18 @@ defmodule E2EFrontendAssetsController do
     json(conn, %{builds: builds})
   end
 
+  # After "create" and the authorization-sites setup, in `:single`: the
+  # current build is the installation's, the previous one Staging's own
+  def run(conn, %{"action" => "environment"}) do
+    allow_sandbox(conn)
+    sets = SiteAssets.list_sets(nil)
+    current = Enum.find(sets, &String.ends_with?(&1.name, "-current"))
+    previous = Enum.find(sets, &String.ends_with?(&1.name, "-previous"))
+    {:ok, _site_set} = SiteAssets.activate_set(current.id)
+    {:ok, _staging} = SiteAssets.activate_environment_set(previous.id, {"auth-alpha", "staging"})
+    json(conn, %{ok: true})
+  end
+
   def run(conn, %{"action" => "cleanup", "names" => names}) when is_list(names) do
     allow_sandbox(conn)
     SiteAssets.deactivate()

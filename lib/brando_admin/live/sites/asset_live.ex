@@ -9,6 +9,7 @@ defmodule BrandoAdmin.Sites.AssetLive do
   alias Brando.Assets.SiteAssets.Capture
   alias Brando.Assets.SiteAssets.Retention
   alias Brando.Tenant
+  alias Brando.Tenant.Registry
   alias BrandoAdmin.Components.Workspace
 
   @impl Phoenix.LiveView
@@ -47,31 +48,27 @@ defmodule BrandoAdmin.Sites.AssetLive do
       </Workspace.header>
 
       <div class="frontend-assets-live">
-        <section class={["frontend-assets-current", @active_set && "uploaded"]}>
+        <section class={["frontend-assets-current", @served_set && "uploaded"]}>
           <div class="frontend-assets-current__content">
             <span class="frontend-assets-eyebrow">
               {gettext("Currently served")} · {scope_name(@scope_site)}
             </span>
-            <h2>{if @active_set, do: @active_set.name, else: gettext("Release assets")}</h2>
-            <p>
-              {if @active_set,
-                do: gettext("This uploaded build is serving frontend requests now."),
-                else: gettext("The CSS and JavaScript packaged with the current application release are being served.")}
-            </p>
+            <h2>{if @served_set, do: @served_set.name, else: gettext("Release assets")}</h2>
+            <p>{served_description(@live_own_set, @live_environment, @active_set)}</p>
 
-            <dl :if={@active_set} class="frontend-assets-current__meta">
+            <dl :if={@served_set} class="frontend-assets-current__meta">
               <div>
                 <dt>{gettext("Revision")}</dt>
-                <dd>{@active_set.metadata["revision"] || gettext("Not provided")}</dd>
+                <dd>{@served_set.metadata["revision"] || gettext("Not provided")}</dd>
               </div>
               <div>
                 <dt>{gettext("Uploaded")}</dt>
-                <dd>{format_datetime(@active_set.uploaded_at)}</dd>
+                <dd>{format_datetime(@served_set.uploaded_at)}</dd>
               </div>
               <div>
                 <dt>{gettext("Bundle")}</dt>
                 <dd>
-                  {ngettext("%{count} file", "%{count} files", @active_set.file_count)} · {format_size(@active_set.size)}
+                  {ngettext("%{count} file", "%{count} files", @served_set.file_count)} · {format_size(@served_set.size)}
                 </dd>
               </div>
             </dl>
@@ -83,7 +80,7 @@ defmodule BrandoAdmin.Sites.AssetLive do
               {gettext("Serving now")}
             </span>
             <button
-              :if={@active_set}
+              :if={@active_set && !@live_own_set}
               type="button"
               class="btn"
               phx-click="deactivate"
@@ -91,6 +88,76 @@ defmodule BrandoAdmin.Sites.AssetLive do
             >
               {gettext("Use release assets")}
             </button>
+          </div>
+        </section>
+
+        <section :if={@environments != []} class="frontend-assets-environments">
+          <header>
+            <div>
+              <h2>{gettext("Environments")}</h2>
+              <p>
+                {gettext(
+                  "An environment with a build of its own serves it on its host, in place of the site's build. The build stays with its environment when it goes live."
+                )}
+              </p>
+            </div>
+          </header>
+
+          <div
+            class="frontend-assets-list workspace-table-scroll"
+            tabindex="0"
+            role="region"
+            aria-label={gettext("Environments")}
+          >
+            <table class="workspace-table frontend-assets-table frontend-assets-environments__table">
+              <thead>
+                <tr>
+                  <th>{gettext("Environment")}</th>
+                  <th>{gettext("Build")}</th>
+                  <th>{gettext("Source")}</th>
+                  <th><span class="workspace-sr-only">{gettext("Actions")}</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  :for={environment <- @environments}
+                  id={"asset-environment-#{environment.id}"}
+                  class="frontend-assets-environment"
+                >
+                  <td class="frontend-assets-environment__identity">
+                    <h3>{environment.name}</h3>
+                    <p>
+                      {environment_state(environment, @current_environment)}
+                    </p>
+                  </td>
+                  <td class="frontend-assets-environment__build">
+                    {environment_build_name(environment, @sets_by_id, @active_set)}
+                  </td>
+                  <td class="frontend-assets-environment__source">
+                    <span class={["frontend-assets-status", environment.asset_set_id && "active"]}>
+                      <span aria-hidden="true"></span>
+                      {if environment.asset_set_id, do: gettext("Its own"), else: gettext("The site's")}
+                    </span>
+                  </td>
+                  <td class="frontend-assets-environment__actions row-actions">
+                    <button
+                      :if={environment.asset_set_id}
+                      type="button"
+                      class="btn"
+                      phx-click="clear_environment"
+                      phx-value-id={environment.id}
+                      phx-confirm={
+                        gettext("Serve the site's build on %{environment} again? Requests switch immediately.",
+                          environment: environment.name
+                        )
+                      }
+                    >
+                      {gettext("Use the site's build")}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </section>
 
@@ -152,10 +219,25 @@ defmodule BrandoAdmin.Sites.AssetLive do
                   <td class="frontend-assets-build__status">
                     <span class={["frontend-assets-status", asset_set.active && "active"]}>
                       <span aria-hidden="true"></span>
-                      {status_label(asset_set, @protected_ids)}
+                      {status_label(asset_set, @protected_ids, @environments)}
                     </span>
                   </td>
-                  <td class="frontend-assets-build__actions row-actions">
+                  <td class={["frontend-assets-build__actions row-actions", @editing_environment && "environment"]}>
+                    <button
+                      :if={@editing_environment && @editing_environment.asset_set_id != asset_set.id}
+                      type="button"
+                      class="btn"
+                      phx-click="activate_environment"
+                      phx-value-id={asset_set.id}
+                      phx-confirm={
+                        gettext("Activate %{name} for %{environment} now? Its requests switch immediately.",
+                          name: asset_set.name,
+                          environment: @editing_environment.name
+                        )
+                      }
+                    >
+                      {gettext("Activate for %{environment}", environment: @editing_environment.name)}
+                    </button>
                     <button
                       :if={!asset_set.active}
                       type="button"
@@ -167,6 +249,20 @@ defmodule BrandoAdmin.Sites.AssetLive do
                       }
                     >
                       {gettext("Activate build")}
+                    </button>
+                    <button
+                      :if={asset_set.active && @live_own_set}
+                      type="button"
+                      class="btn"
+                      phx-click="deactivate"
+                      phx-confirm={
+                        gettext(
+                          "Stop using %{name} as the site's build? Environments without a build of their own switch to the release's assets immediately.",
+                          name: asset_set.name
+                        )
+                      }
+                    >
+                      {gettext("Use release assets")}
                     </button>
                   </td>
                 </tr>
@@ -195,6 +291,39 @@ defmodule BrandoAdmin.Sites.AssetLive do
     end
   end
 
+  def handle_event("activate_environment", %{"id" => id}, socket) do
+    environment = socket.assigns.editing_environment
+
+    with %{} <- environment,
+         {asset_set_id, ""} <- Integer.parse(id),
+         %{} = asset_set <- socket.assigns.sets_by_id[asset_set_id],
+         {:ok, _environment} <- SiteAssets.activate_environment_set(asset_set_id, environment) do
+      send(
+        self(),
+        {:toast, gettext("%{environment} uses %{name}", environment: environment.name, name: asset_set.name)}
+      )
+
+      {:noreply, refresh(socket)}
+    else
+      _error ->
+        send(self(), {:toast, gettext("Could not activate the frontend asset set"), :error})
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("clear_environment", %{"id" => id}, socket) do
+    with {environment_id, ""} <- Integer.parse(id),
+         %{} = environment <- Enum.find(socket.assigns.environments, &(&1.id == environment_id)),
+         {:ok, _environment} <- SiteAssets.clear_environment_set(environment) do
+      send(self(), {:toast, gettext("%{environment} uses the site's build", environment: environment.name)})
+      {:noreply, refresh(socket)}
+    else
+      _error ->
+        send(self(), {:toast, gettext("Could not change the environment's frontend assets"), :error})
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("deactivate", _params, socket) do
     case SiteAssets.deactivate(socket.assigns.scope_site) do
       :ok ->
@@ -211,18 +340,74 @@ defmodule BrandoAdmin.Sites.AssetLive do
     scope_site = socket.assigns.scope_site
     sets = SiteAssets.list_sets(scope_site)
 
+    sets_by_id = Map.new(sets, &{&1.id, &1})
+    active_set = Enum.find(sets, & &1.active)
+    environments = environments(socket)
+    editing_id = socket.assigns[:current_environment] && socket.assigns.current_environment.id
+    live_environment = Enum.find(environments, & &1.live)
+    live_own_set = live_environment && sets_by_id[live_environment.asset_set_id]
+
     socket
     |> assign(:sets, sets)
-    |> assign(:active_set, Enum.find(sets, & &1.active))
+    |> assign(:sets_by_id, sets_by_id)
+    |> assign(:active_set, active_set)
+    |> assign(:live_environment, live_environment)
+    |> assign(:live_own_set, live_own_set)
+    |> assign(:served_set, live_own_set || active_set)
     |> assign(:protected_ids, Retention.protected_set_ids(scope_site))
+    |> assign(:environments, environments)
+    |> assign(:editing_environment, Enum.find(environments, &(&1.id == editing_id)))
   end
 
-  defp status_label(%{active: true}, _protected_ids), do: gettext("Active")
+  # The site's environments, read afresh for the sets they use; none in `:none`
+  defp environments(socket) do
+    case socket.assigns[:current_site] do
+      %Brando.Sites.Site{} = site -> if Tenant.enabled?(), do: Registry.list_environments(site), else: []
+      nil -> []
+    end
+  end
 
-  defp status_label(asset_set, protected_ids) do
-    if MapSet.member?(protected_ids, asset_set.id),
-      do: gettext("In use by shared previews or builds"),
-      else: gettext("Available")
+  defp status_label(%{active: true}, _protected_ids, _environments), do: gettext("Active")
+
+  defp status_label(asset_set, protected_ids, environments) do
+    case Enum.filter(environments, &(&1.asset_set_id == asset_set.id)) do
+      [_ | _] = users ->
+        gettext("Used by %{environments}", environments: Enum.map_join(users, ", ", & &1.name))
+
+      [] ->
+        if MapSet.member?(protected_ids, asset_set.id),
+          do: gettext("In use by shared previews or builds"),
+          else: gettext("Available")
+    end
+  end
+
+  # What the live environment's host serves: its own set, else the site's
+  # active set, else the release
+  defp served_description(%{} = _live_own_set, live_environment, _active_set),
+    do: gettext("%{environment}, the live environment, serves this build of its own.", environment: live_environment.name)
+
+  defp served_description(nil, _live_environment, %{} = _active_set),
+    do: gettext("This uploaded build is serving frontend requests now.")
+
+  defp served_description(nil, _live_environment, nil),
+    do: gettext("The CSS and JavaScript packaged with the current application release are being served.")
+
+  defp environment_build_name(%{asset_set_id: nil}, _sets_by_id, nil), do: gettext("Release assets")
+  defp environment_build_name(%{asset_set_id: nil}, _sets_by_id, active_set), do: active_set.name
+
+  defp environment_build_name(%{asset_set_id: asset_set_id}, sets_by_id, _active_set) do
+    case sets_by_id[asset_set_id] do
+      %{name: name} -> name
+      nil -> gettext("Unknown build")
+    end
+  end
+
+  defp environment_state(environment, current_environment) do
+    editing? = current_environment && current_environment.id == environment.id
+
+    [environment.live && gettext("Live"), editing? && gettext("Editing now"), environment.domain]
+    |> Enum.filter(&is_binary/1)
+    |> Enum.join(" · ")
   end
 
   defp scope_site(socket) do

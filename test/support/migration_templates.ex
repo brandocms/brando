@@ -274,7 +274,8 @@ defmodule Brando.MigrationTemplates do
       "users" => ~w(job_title same_as),
       "users_tokens" => ~w(ip user_agent last_used_at confirmed_at),
       "content_proposals" => ~w(origin client),
-      "sites_previews" => ~w(site_id environment_id)
+      "sites_previews" => ~w(site_id environment_id),
+      "environments" => ~w(asset_set_id)
     }
   end
 

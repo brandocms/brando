@@ -7,9 +7,10 @@ defmodule Brando.Assets.DevSite do
       config :my_app, hmr: true, dev_site: "acme"
 
   With `tenancy_mode: :multi`, HMR on and `dev_site` naming a site, a request
-  for that site loads its frontend from the Vite dev server and reads nothing
-  from its active uploaded asset set: not the Vite manifest, the critical CSS,
-  nor a file `Brando.Plug.SiteAssets` would serve. Every other site renders
+  for any environment of that site loads its frontend from the Vite dev server
+  and reads nothing from the site's active uploaded asset set or an
+  environment's own set: not the Vite manifest, the critical CSS, nor a file
+  `Brando.Plug.SiteAssets` would serve. Every other site renders
   as in production, from its active set or the release's `priv/static`.
 
   The setting is read only in development, outside static builds. Unset,

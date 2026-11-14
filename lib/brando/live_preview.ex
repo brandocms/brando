@@ -602,7 +602,8 @@ defmodule Brando.LivePreview do
   Renders the entry against a pinned frontend asset set, stores the HTML, and
   returns the shareable URL.
 
-  The asset set is resolved and locked before rendering (see
+  The asset set is the one the environment shared from uses (its own set,
+  else its site's active set), resolved and locked before rendering (see
   `Brando.Assets.SiteAssets.with_preview_set/2`), so the stored markup, its
   inline critical CSS, and the digested files it links stay available for the
   preview's whole lifetime even if a deploy or activation replaces the
@@ -616,6 +617,7 @@ defmodule Brando.LivePreview do
          {:ok, result} <-
            SiteAssets.with_preview_set(
              scope,
+             SiteAssets.current_environment(),
              &store_preview(schema_module, changeset, user, updated_entry_assocs, target, &1)
            ) do
       result

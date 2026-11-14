@@ -132,7 +132,9 @@ defmodule Brando.Environments do
 
   On a site with `delivery_mode: :dynamic`, the site's host goes with it: in
   the same transaction, this environment and the outgoing live one swap
-  domains, a missing one included, so switching back restores both. On a
+  domains, a missing one included, so switching back restores both. Each
+  environment keeps its own frontend asset set, so the host then serves the
+  set the incoming environment used. On a
   `:static` site the domains stay where they are: the deployed build decides
   what a host serves.
   """
@@ -180,7 +182,8 @@ defmodule Brando.Environments do
 
   @doc """
   Archives the target schema, replaces it with a complete copy of the source,
-  and restores the archive if copying fails.
+  and restores the archive if copying fails. The target keeps its own
+  frontend asset set, as it keeps its frontend module.
   """
   @spec copy_environment(Environment.t(), Environment.t(), keyword()) ::
           {:ok, %{archive_schema: String.t(), target: Environment.t()}} | {:error, term()}
@@ -709,6 +712,10 @@ defmodule Brando.Environments do
          prefix = Tenant.prefix(site, environment),
          :ok <- Schema.drop(prefix),
          {:ok, deleted_environment} <- delete_registry_and_rows(environment, prefix) do
+      # Its own asset set stays registered; the caches holding it as the
+      # environment's go
+      if environment.asset_set_id, do: Brando.Assets.SiteAssets.forget_environment(environment)
+
       log_operation!(site.id, :delete,
         creator_id: creator_id(opts),
         note: opts[:note] || "Deleted environment #{environment.key}"
