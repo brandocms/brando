@@ -371,7 +371,20 @@ release's default frontend, which a site without an active set gets.
 prints; it does not create the project. Start one by copying
 `assets/frontend` (without its `node_modules`), so its Vite config reads
 `BRANDO_VITE_FRONTEND_HOST` and `BRANDO_VITE_FRONTEND_PORT` as the default
-frontend's does.
+frontend's does. Then point the copy's build at a folder of its own: the
+copied `outDir: '../../priv/static'` resolves to `assets/priv/static` from
+`assets/sites/acme`. In `assets/sites/acme/vite.config.js`, set
+
+```js
+build: {
+  // ...
+  emptyOutDir: true,
+  outDir: 'dist',
+}
+```
+
+so `pnpm build` there writes the set to `assets/sites/acme/dist`, the folder
+[Uploading a site's build by hand](deps/brando/guides/tenancy_and_environments.md#uploading-a-sites-build-by-hand) copies.
 
 In development, one Vite dev server runs one site's project. Say which
 with `dev_site`, beside `hmr`, and point the `vite_site` watcher at the same
