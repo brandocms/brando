@@ -2094,6 +2094,13 @@ defmodule BrandoAdmin.AI.AssistantLive do
         "The site has no frontend build to share this preview with, so no link was created. Build it into priv/static with pnpm build in assets/frontend, then try again."
       )
 
+  # As the entry form's share: the development site has no set to pin
+  defp share_refusal(:dev_site_without_set),
+    do:
+      gettext(
+        "This site loads its frontend from the Vite dev server, which a shared link cannot use, and it has no uploaded asset set, so no link was created. Build the site's frontend and upload the build as its asset set, then try again."
+      )
+
   # As the entry form's share: anything but a missing site or a stored
   # preview's failed insert is the site's assets failing to be captured.
   defp share_refusal(reason) do

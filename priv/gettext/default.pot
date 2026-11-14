@@ -18433,6 +18433,12 @@ msgstr ""
 msgid "This site cannot send email, so no reset link was sent."
 msgstr ""
 
+#: lib/brando_admin/components/form.ex
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site loads its frontend from the Vite dev server, which a shared link cannot use, and it has no uploaded asset set, so no link was created. Build the site's frontend and upload the build as its asset set, then try again."
+msgstr ""
+
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "This site must remain archived for %{days} days before permanent deletion."

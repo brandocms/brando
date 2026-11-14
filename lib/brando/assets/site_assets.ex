@@ -299,14 +299,17 @@ defmodule Brando.Assets.SiteAssets do
   only cover the content-addressed files listed in a set's Vite manifest, so an
   old set never shadows un-hashed files such as favicons.
 
-  The development site (`Brando.Assets.DevSite`) skips its sets, its
-  environments' own included, so the release's files answer as they do for
-  the Vite dev server's page, and a pinned set answers it only for a path the
-  release lacks.
+  The development site (`Brando.Assets.DevSite`) reads the set its
+  environment uses only while a shared preview pins it, and then any of its
+  files, as a shared preview of it renders from that set. A path the
+  release's `priv/static` holds is left to the release for that site, so the
+  Vite dev server's page gets the release's files.
   """
   @spec serve_path(scope(), Environment.t() | nil, String.t()) :: String.t() | nil
   def serve_path(site, environment \\ nil, relative_path) when is_binary(relative_path) do
-    active_file(site, environment, relative_path) || pinned_file(site, relative_path)
+    if DevSite.dev_site?(site),
+      do: dev_site_file(site, environment, relative_path),
+      else: active_file(site, environment, relative_path) || find_pinned_file(site, relative_path)
   end
 
   @doc """
@@ -314,10 +317,11 @@ defmodule Brando.Assets.SiteAssets do
   admin's host, which serves live previews and shared previews.
 
   Per site, the candidate is the file its own host would send: any file of
-  its active set (the development site's excepted, as in `serve_path/3`),
-  else a manifest file of a set an unexpired shared preview pins. Each
-  environment with a set of its own holds a candidate of its own beside its
-  site's: any file of that set. The path answers when one holder has it, or
+  its active set, else a manifest file of a set an unexpired shared preview
+  pins. Each environment with a set of its own holds a candidate of its own
+  beside its site's: any file of that set. The development site's active
+  and environment sets hold candidates only while a shared preview pins
+  them, as in `serve_path/3`. The path answers when one holder has it, or
   when every holder that has it holds the same content; when their contents
   differ it stays unanswered, as nothing tells which site's or environment's
   preview asked. A path the release's `priv/static` holds
@@ -357,9 +361,9 @@ defmodule Brando.Assets.SiteAssets do
 
   The path answers when one other environment's set holds it, or when every
   one that holds it holds the same content, compared as `unscoped_path/1`
-  compares. A path the release's `priv/static` holds is left to it, and the
-  development site (`Brando.Assets.DevSite`) gets nothing here, as its
-  environments read no set.
+  compares. A path the release's `priv/static` holds is left to it. For the
+  development site (`Brando.Assets.DevSite`), only an own set a shared
+  preview pins answers, as in `serve_path/3`.
 
   The paths of every environment's own set are cached together, so a miss is
   rejected without a query or a filesystem lookup. The cache is dropped with
@@ -372,11 +376,29 @@ defmodule Brando.Assets.SiteAssets do
       when is_binary(relative_path) do
     with [_ | _] = candidates <- environment_index() |> Map.get(site_id, %{}) |> Map.get(relative_path, []),
          [_ | _] = others <- Enum.reject(candidates, &match?({^environment_id, _file, _content}, &1)),
-         false <- DevSite.dev_site?(site),
+         [_ | _] = others <- answering_environments(site, others),
          false <- File.regular?(Path.join(Capture.release_root(), relative_path)) do
       agreed_file(others)
     else
       _miss -> nil
+    end
+  end
+
+  # The development site's environments answer only with an own set a
+  # shared preview pins, as `serve_path/3`
+  defp answering_environments(site, candidates) do
+    if DevSite.dev_site?(site) do
+      pinned_ids = MapSet.new(pinned_sets(site), & &1.set.id)
+      Enum.filter(candidates, &pinned_environment_set?(&1, pinned_ids))
+    else
+      candidates
+    end
+  end
+
+  defp pinned_environment_set?({environment_id, _file, _content}, pinned_ids) do
+    case environment_cached(%Environment{id: environment_id}) do
+      %{set: %SiteAssetSet{id: set_id}} -> MapSet.member?(pinned_ids, set_id)
+      nil -> false
     end
   end
 
@@ -668,13 +690,28 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
-  # A build may name a manifest file without a hash: for the development
-  # site, a pinned set (perhaps its active one) must not shadow the release
-  # file its pages get
-  defp pinned_file(site, relative_path) do
-    if DevSite.dev_site?(site) and File.regular?(Path.join(Capture.release_root(), relative_path)),
-      do: nil,
-      else: find_pinned_file(site, relative_path)
+  # A build may name a manifest file without a hash, and its `public/` files
+  # have none: for the development site, a pinned set must not shadow the
+  # release file its pages get. Looked up first, so a miss reads no file.
+  defp dev_site_file(site, environment, relative_path) do
+    with file when is_binary(file) <-
+           pinned_in_use_file(site, environment, relative_path) || find_pinned_file(site, relative_path),
+         false <- File.regular?(Path.join(Capture.release_root(), relative_path)) do
+      file
+    else
+      _miss_or_release_file -> nil
+    end
+  end
+
+  # Any file of the set the environment uses, while a shared preview pins it
+  defp pinned_in_use_file(site, environment, relative_path) do
+    with %{set: %SiteAssetSet{id: set_id}, files: files, path: root} <- set_in_use(site, environment),
+         true <- MapSet.member?(files, relative_path),
+         true <- Enum.any?(pinned_sets(site), &match?(%{set: %SiteAssetSet{id: ^set_id}}, &1)) do
+      Path.join(root, relative_path)
+    else
+      _miss -> nil
+    end
   end
 
   defp find_pinned_file(site, relative_path) do
@@ -749,7 +786,7 @@ defmodule Brando.Assets.SiteAssets do
 
         environment_holders =
           for {^site_key, environment_id, set_id} <- environment_sets,
-              not DevSite.dev_site?(site_key),
+              answers?(site_key, set_id, pinned_ids),
               %{files: paths, path: root} <- [cached_by_id(cached, set_id)],
               do: {{site_key, environment_id}, Map.new(paths, &{&1, Path.join(root, &1)})}
 
@@ -857,14 +894,19 @@ defmodule Brando.Assets.SiteAssets do
           do: {path, Path.join(root, path)}
 
     active =
-      for {%SiteAssetSet{active: true}, %{files: paths, path: root}} <- cached,
-          not DevSite.dev_site?(site_key),
+      for {%SiteAssetSet{active: true, id: set_id}, %{files: paths, path: root}} <- cached,
+          answers?(site_key, set_id, pinned_ids),
           path <- paths,
           into: %{},
           do: {path, Path.join(root, path)}
 
     Map.merge(pinned, active)
   end
+
+  # Whether any file of a site's active or environment's own set answers: the
+  # development site's only while a shared preview pins it, as `serve_path/3`
+  defp answers?(site_key, set_id, pinned_ids),
+    do: not DevSite.dev_site?(site_key) or MapSet.member?(pinned_ids, set_id)
 
   defp with_content([{holder, file}]), do: [{holder, file, nil}]
 
@@ -923,15 +965,14 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
-  # The environment's own set, else the scope's active set. The development
-  # site has neither: every environment of it loads from the Vite dev server.
+  # The set an environment renders from: none for the development site,
+  # every environment of which loads from the Vite dev server
   defp effective_cached(site, environment) do
-    cond do
-      DevSite.dev_site?(site) -> nil
-      cached = environment_cached(environment) -> cached
-      true -> cached(site)
-    end
+    if DevSite.dev_site?(site), do: nil, else: set_in_use(site, environment)
   end
+
+  # The environment's own set, else the scope's active set
+  defp set_in_use(site, environment), do: environment_cached(environment) || cached(site)
 
   # The cached own set of the environment, or nil when it has none or its
   # files cannot be read: it then follows its site's set
