@@ -194,8 +194,9 @@ mix brando.setup.tenancy --mode multi
 ```
 
 Pass `--yes` for a non-interactive run, where a missing option is an error
-rather than a prompt. Igniter also sets that automatically when there is no
-TTY, so piped and CI runs never block on a question.
+rather than a prompt. Igniter also sets it when standard input is a pipe or a
+file. Standard input on `/dev/null`, as some CI jobs and agents run commands,
+counts as a terminal to Igniter, so pass `--yes` there.
 
 The task prints an ordered next-steps notice when it finishes, naming the exact
 commands for each remaining step.

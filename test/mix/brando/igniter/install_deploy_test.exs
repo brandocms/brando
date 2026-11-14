@@ -203,6 +203,80 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
 
   defp check_ignore(dir, args), do: System.cmd("git", ["-C", dir, "check-ignore", "--no-index" | args])
 
+  test "with tenancy, .gitignore covers the sites' uploaded asset sets, and with several sites their frontends" do
+    multi = project() |> install(["--yes", "--tenancy-mode", "multi"]) |> IgniterCase.source(".gitignore")
+
+    for line <- ~w(/sites/ /assets/sites/*/node_modules/ /assets/sites/*/dist/) do
+      assert multi =~ ~r/^#{Regex.escape(line)}$/m, line
+    end
+
+    single =
+      project()
+      |> install(["--yes", "--tenancy-mode", "single", "--site-key", "acme"])
+      |> IgniterCase.source(".gitignore")
+
+    assert single =~ ~r{^/sites/$}m
+    refute single =~ "/assets/sites/"
+
+    refute project() |> install() |> IgniterCase.source(".gitignore") =~ "sites/"
+  end
+
+  # phx.new 1.8's runtime.exs sets the endpoint's port in every environment
+  @phoenix_runtime """
+  import Config
+
+  if System.get_env("PHX_SERVER") do
+    config :studio, StudioWeb.Endpoint, server: true
+  end
+
+  config :studio, StudioWeb.Endpoint,
+    http: [port: String.to_integer(System.get_env("PORT", "4000"))]
+
+  if config_env() == :prod do
+    config :studio, StudioWeb.Endpoint, url: [host: "example.com"]
+  end
+  """
+
+  test "in development, a port in dev.exs holds unless PORT is set; elsewhere runtime.exs sets it as before" do
+    igniter =
+      project(%{
+        "config/dev.exs" => "import Config\nconfig :studio, StudioWeb.Endpoint, http: [ip: {127, 0, 0, 1}, port: 4100]\n",
+        "config/runtime.exs" => @phoenix_runtime
+      })
+      |> install()
+
+    assert igniter.issues == []
+    dir = Path.join(System.tmp_dir!(), "brando-runtime-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(dir)
+    on_exit(fn -> File.rm_rf!(dir) end)
+
+    for path <- ~w(config/dev.exs config/runtime.exs) do
+      File.write!(Path.join(dir, Path.basename(path)), IgniterCase.source(igniter, path))
+    end
+
+    port = fn env, port_env ->
+      previous = System.get_env("PORT")
+      if port_env, do: System.put_env("PORT", port_env), else: System.delete_env("PORT")
+
+      try do
+        base = if env == :dev, do: Config.Reader.read!(Path.join(dir, "dev.exs"), env: env), else: []
+        runtime = Config.Reader.read!(Path.join(dir, "runtime.exs"), env: env)
+        config = Config.Reader.merge(base, runtime)
+        get_in(config, [:studio, StudioWeb.Endpoint, :http, :port])
+      after
+        if previous, do: System.put_env("PORT", previous), else: System.delete_env("PORT")
+      end
+    end
+
+    assert port.(:dev, nil) == 4100
+    assert port.(:dev, "4200") == 4200
+    assert port.(:prod, nil) == 4000
+    assert port.(:prod, "4300") == 4300
+
+    rerun = igniter |> IgniterCase.apply_and_reload() |> install()
+    assert IgniterCase.source(rerun, "config/runtime.exs") == IgniterCase.source(igniter, "config/runtime.exs")
+  end
+
   test "an existing .gitignore gets only the Brando lines it does not cover" do
     phoenix = "/_build/\n/deps/\n*.ez\n"
     igniter = install(project(%{".gitignore" => phoenix}))

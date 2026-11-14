@@ -457,7 +457,29 @@ defmodule Mix.Brando.Igniter.SiteTest do
   end
   """
 
-  defp with_files(files), do: project(~s(get "/", PageController, :home), files)
+  # phx.new's `import_deps: [:phoenix]` brings these, at the default line length
+  @phoenix_locals [embed_templates: 1, attr: 3, slot: 2]
+
+  defp with_files(files) do
+    formatter = "[locals_without_parens: #{inspect(@phoenix_locals)}, inputs: [\"{lib,test}/**/*.{ex,exs}\"]]\n"
+    project(~s(get "/", PageController, :home), Map.put_new(files, ".formatter.exs", formatter))
+  end
+
+  test "the replaced ErrorHTML and its test are formatted as phx.new's formatter would" do
+    result =
+      %{@error_html => @phoenix_error_html, @error_test => @phoenix_error_test}
+      |> with_files()
+      |> generate(["--replace-phoenix-home", "--yes"])
+
+    assert result.issues == []
+
+    for path <- [@error_html, @error_test] do
+      source = IgniterCase.source(result, path)
+
+      assert IO.iodata_to_binary([Code.format_string!(source, locals_without_parens: @phoenix_locals), "\n"]) == source,
+             path
+    end
+  end
 
   test "phx.new's ErrorHTML and its test give way to the site's error pages, once" do
     result =

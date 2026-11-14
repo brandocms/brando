@@ -52,7 +52,7 @@ if Code.ensure_loaded?(Igniter) do
         |> Configuration.configure(project, tenancy)
         |> dependencies(options)
         |> Version.plan()
-        |> Deployment.plan(project, hosts, deployment)
+        |> Deployment.plan(project, hosts, deployment, tenancy.mode)
         |> Docker.plan(project)
         |> Toolchain.plan(fresh?)
         |> Release.plan(project, existing: :keep)

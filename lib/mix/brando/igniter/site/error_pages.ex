@@ -38,6 +38,7 @@ if Code.ensure_loaded?(Igniter) do
             Enum.any?(phoenix_error_html(project), &same_code?(current, &1)) ->
               igniter
               |> Igniter.update_file(path, &Source.update(&1, :content, generated))
+              |> Igniter.format([path])
               |> templates(project, path)
               |> error_test(project)
 
@@ -89,8 +90,14 @@ if Code.ensure_loaded?(Igniter) do
 
     defp replace(igniter, project, path, template) do
       case render(igniter, project, template) do
-        {igniter, nil} -> igniter
-        {igniter, contents} -> Igniter.update_file(igniter, path, &Source.update(&1, :content, contents))
+        {igniter, nil} ->
+          igniter
+
+        # Replacing a file's content skips the formatting a new file gets
+        {igniter, contents} ->
+          igniter
+          |> Igniter.update_file(path, &Source.update(&1, :content, contents))
+          |> Igniter.format([path])
       end
     end
 

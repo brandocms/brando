@@ -482,7 +482,10 @@ For a [Florist deploy](deployment.md), the installer writes:
 - relative `media_path` and `log_dir` in `config/prod.exs` (see
   [Media and log paths](deployment.md#media-and-log-paths));
 - the `.gitignore` lines a Brando application needs (see
-  [Ignored files](deployment.md#ignored-files)).
+  [Ignored files](deployment.md#ignored-files));
+- in `config/runtime.exs`, phx.new's endpoint port from `PORT` applies in
+  development only when `PORT` is set, so a port in `config/dev.exs` holds;
+  in other environments `PORT` sets it, with phx.new's default of 4000.
 
 Those sections also say what an existing file keeps. The release does not copy
 `priv/static`, so phx.new's `favicon.ico` there is removed and its

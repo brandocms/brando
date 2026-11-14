@@ -36,6 +36,11 @@ if Code.ensure_loaded?(Igniter) do
       /release-archives/
       /sql/
     )
+    # With tenancy, provisioning creates sites/<key>/assets, where a site's
+    # uploaded builds live; with several sites, each one's frontend project
+    # sits in assets/sites/<key> and builds to its dist/.
+    @tenancy_ignores ~w(/sites/)
+    @multi_site_ignores ~w(/assets/sites/*/node_modules/ /assets/sites/*/dist/)
 
     @doc """
     Reads what the application already has: the `.envrc.<flavor>` files and the
@@ -83,9 +88,11 @@ if Code.ensure_loaded?(Igniter) do
     given, creates the prod and staging `.envrc` files, ignored by Git, and the
     release script that sources them on the server. Staging runs the prod
     release with its own `.envrc`, so the staging host is a trusted origin of
-    the prod config.
+    the prod config. `.gitignore` gets what Brando's builds, uploads and Florist
+    write in the working folder, with the sites' folders under `:single` and
+    `:multi` tenancy.
     """
-    def plan(igniter, project, hosts, existing) do
+    def plan(igniter, project, hosts, existing, tenancy_mode) do
       created = for {flavor, path} <- @envrc, !existing.envrc[flavor], do: {flavor, path}
 
       igniter
@@ -95,9 +102,13 @@ if Code.ensure_loaded?(Igniter) do
       |> release_env(project, existing.release_env)
       |> kept_envrc_notice(hosts, existing)
       |> release_paths()
+      |> development_port()
       |> gitignore([
         {"Runtime environments with secrets, uploaded by Florist", Enum.map(created, &"/#{elem(&1, 1)}")},
-        {"Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps", @brando_ignores}
+        {"Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps", @brando_ignores},
+        {"Brando sites: uploaded asset sets", if(tenancy_mode in [:single, :multi], do: @tenancy_ignores, else: [])},
+        {"Brando sites: each site's frontend dependencies and builds",
+         if(tenancy_mode == :multi, do: @multi_site_ignores, else: [])}
       ])
       |> placeholder_notice(hosts, existing, created)
     end
@@ -112,6 +123,34 @@ if Code.ensure_loaded?(Igniter) do
           do: igniter,
           else: Config.configure_new(igniter, "prod.exs", :brando, [key], path)
       end)
+    end
+
+    # phx.new's runtime.exs sets the endpoint's port from PORT, with a default,
+    # in every environment, so a port in config/dev.exs never applies. In
+    # development it applies only when PORT is set; a release still gets the
+    # default. Only phx.new's own top-level line is changed, so a rerun finds
+    # nothing to do.
+    @runtime "config/runtime.exs"
+    @phoenix_port ~r/^config (:\w+),\s+([\w.]+),\s+http: \[port: String\.to_integer\(System\.get_env\("PORT", "(\d+)"\)\)\]\n/m
+
+    defp development_port(igniter) do
+      if Igniter.exists?(igniter, @runtime) do
+        Igniter.update_file(igniter, @runtime, fn source ->
+          Source.update(source, :content, fn content ->
+            Regex.replace(@phoenix_port, content, fn _line, app, endpoint, port ->
+              """
+              # In development, a port set in config/dev.exs holds unless PORT is set
+              if config_env() != :dev or System.get_env("PORT") do
+                config #{app}, #{endpoint},
+                  http: [port: String.to_integer(System.get_env("PORT", "#{port}"))]
+              end
+              """
+            end)
+          end)
+        end)
+      else
+        igniter
+      end
     end
 
     # A literal path in the base configuration, or one set at runtime, is the
