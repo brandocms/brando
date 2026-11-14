@@ -184,13 +184,12 @@ defmodule Brando.Assets.SiteAssets do
          :ok <- check_environment_scope(asset_set, environment),
          {:ok, _cached} <- build_cache(asset_set) do
       # Under the set's lock, so `Retention` cannot delete it meanwhile
-      Lock.with(lock_key(asset_set), fn ->
-        case fetch_set(set_id) do
-          {:ok, _still_registered} -> persist_environment_set(environment, set_id)
-          {:error, _reason} = error -> error
-        end
-      end)
+      Lock.with(lock_key(asset_set), fn -> persist_registered_set(environment, set_id) end)
     end
+  end
+
+  defp persist_registered_set(environment, set_id) do
+    with {:ok, _still_registered} <- fetch_set(set_id), do: persist_environment_set(environment, set_id)
   end
 
   @doc """
