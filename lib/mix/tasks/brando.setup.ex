@@ -77,16 +77,23 @@ defmodule Mix.Tasks.Brando.Setup do
     account(opts)
     seeds(opts)
 
-    Mix.shell().info([:green, "\n==> Setup complete.\n\n", next_steps(Brando.Tenant.mode())])
+    Mix.shell().info([:green, "\n==> Setup complete.\n\n", next_steps(Brando.Tenant.mode(), opts)])
   end
 
-  defp next_steps(:single),
-    do: "Start the application with `mix phx.server`, open / for the site's homepage and sign in at /admin.\n"
+  # `--no-seeds` leaves a `:single` installation without its site
+  defp next_steps(:single, opts) do
+    if Keyword.get(opts, :seeds, true) do
+      "Start the application with `mix phx.server`, open / for the site's homepage and sign in at /admin.\n"
+    else
+      "Start the application with `mix phx.server` and sign in at /admin. The site is not created yet: " <>
+        "run `mix brando.setup` without --no-seeds for that.\n"
+    end
+  end
 
-  defp next_steps(:multi),
+  defp next_steps(:multi, _opts),
     do: "Start the application with `mix phx.server`, sign in at /admin and create sites at /admin/sites.\n"
 
-  defp next_steps(_none), do: "Start the application with `mix phx.server` and sign in at /admin.\n"
+  defp next_steps(_none, _opts), do: "Start the application with `mix phx.server` and sign in at /admin.\n"
 
   defp assets(opts) do
     if Keyword.get(opts, :assets, true) do
@@ -165,7 +172,7 @@ defmodule Mix.Tasks.Brando.Setup do
         Mix.shell().info([:yellow, ~s|    = The site "#{site.key}" exists, and is left as it is\n|])
 
       {:error, reason} ->
-        Mix.raise(~s|The site "#{key}" was not created, and nothing of it is left: #{describe(reason)}|)
+        Mix.raise(~s|The site "#{key}" was not created. | <> failure(key, reason))
     end
 
     for {key, flag} <- [base_url: "--base-url", description: "--description"], opts[key] do
@@ -173,7 +180,33 @@ defmodule Mix.Tasks.Brando.Setup do
     end
   end
 
-  defp describe({:site_setup_failed, reason, _compensation}), do: describe(reason)
+  # Why, and what is left of the site: nothing, unless the cleanup failed too
+  defp failure(key, :public_holds_content) do
+    "This installation's content is still in the public schema. Move it into the site with " <>
+      "`mix brando.migrate_to_tenant --site-key=#{key}`, which creates the site itself."
+  end
+
+  defp failure(key, {:incomplete_site, key}) do
+    """
+    A site with this key is registered without a live environment, as a run
+    that failed leaves it. Remove it, then run mix brando.setup again:
+
+        mix run -e ':ok = Brando.Tenant.Setup.remove_leftovers("#{key}", actor: :system)'
+    """
+  end
+
+  defp failure(_key, :forbidden) do
+    "The first account may not create sites. With `authorization_mode: :groups`, run setup before " <>
+      "turning groups on (see the authorization guide)."
+  end
+
+  defp failure(_key, {:site_setup_failed, reason, :ok}),
+    do: "#{describe(reason)}\n\nThe partly created site was removed: nothing of it is left."
+
+  defp failure(key, {:site_setup_failed, _reason, _cleanup_failed} = failed),
+    do: Mix.Tasks.Brando.MigrateToTenant.failure_message(key, failed)
+
+  defp failure(_key, reason), do: "#{describe(reason)}\n\nNothing was created."
 
   defp describe(%Ecto.Changeset{} = changeset) do
     changeset

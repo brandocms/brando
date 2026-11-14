@@ -31,12 +31,14 @@ defmodule Brando.Tenant.Seeder do
   def seed(%Site{} = site, %Environment{}, %User{} = creator) do
     languages = Enum.map(site.languages, &String.to_existing_atom/1)
 
-    # The default identity's name is a placeholder, and in `:multi` the
-    # identity's name is what the site's pages go by (`Brando.Sites.site_name/1`).
+    # The default identity's name and titles are placeholders. The site's name
+    # replaces them, as the application's does in an installation without
+    # tenancy; in `:multi` the identity's name is what the site's pages go by
+    # (`Brando.Sites.site_name/1`).
     Enum.each(languages, fn language ->
       language
       |> Brando.Sites.create_default_identity()
-      |> Ecto.Changeset.change(name: site.name)
+      |> Ecto.Changeset.change(name: site.name, title: site.name, title_prefix: nil)
       |> Brando.Repo.update!()
 
       Brando.Sites.create_default_seo(language)

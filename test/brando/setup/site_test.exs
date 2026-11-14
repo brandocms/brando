@@ -134,6 +134,38 @@ defmodule Brando.Setup.SiteTest do
       assert error.message =~ "default_language"
       refute Registry.get_site_by_key("acme")
     end
+
+    test "refuses while the installation's pages are still in public, and names the task that moves them" do
+      Tenant.with_public(fn -> Brando.Factory.insert(:page, uri: "about", language: :en) end)
+
+      error = assert_raise Mix.Error, fn -> setup!() end
+      assert error.message =~ "mix brando.migrate_to_tenant --site-key=acme"
+      refute Registry.get_site_by_key("acme")
+    end
+
+    test "does not take a site without a live environment for a finished one" do
+      {:ok, _site} = Registry.create_site(Brando.Setup.Site.attrs("acme"))
+
+      error = assert_raise Mix.Error, fn -> setup!() end
+      assert error.message =~ "without a live environment"
+      assert error.message =~ ~s(remove_leftovers("acme")
+    end
+
+    test "says the site is not created when the seeds are skipped" do
+      Mix.Tasks.Brando.Setup.run(~w(--no-assets --no-db --no-account --no-seeds))
+
+      assert shell_output() =~ "The site is not created yet"
+      refute Registry.get_site_by_key("acme")
+    end
+
+    test "names the site's identity after it, with no placeholder title" do
+      setup!()
+
+      in_environment("production", fn ->
+        assert {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
+        assert {identity.name, identity.title, identity.title_prefix} == {"MyApp", "MyApp", nil}
+      end)
+    end
   end
 
   test "with tenancy_mode :multi, setup provisions no site, and says where sites are created" do

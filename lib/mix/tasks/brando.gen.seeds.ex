@@ -58,8 +58,8 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
   defp tenancy_notice(:single) do
     """
     with tenancy_mode :single, mix brando.setup creates the site
-    #{inspect(Brando.config(:site_key))} and gives it this content: the identity and SEO, the modules,
-    a homepage, the footer fragment and a main menu, in each of its languages.
+    #{inspect(Brando.config(:site_key))}, unless it exists, and gives it this content: the identity and SEO,
+    the modules, a homepage, the footer fragment and a main menu, in each of its languages.
     """
   end
 
