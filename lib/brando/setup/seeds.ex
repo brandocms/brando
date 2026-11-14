@@ -1,16 +1,23 @@
 defmodule Brando.Setup.Seeds do
   @moduledoc """
-  Default content for a freshly installed application.
+  Default content for a new installation or a newly provisioned site.
 
-  Creates the content a new site needs before its first request succeeds:
-  identity and SEO per configured language, a set of modules, a published
-  `index` page built from them, a main navigation menu and a footer fragment.
+  Creates the content a site needs before its first request succeeds:
+  identity and SEO per language, a set of modules, a published `index` page
+  built from them, a main navigation menu and a footer fragment.
+
+  Without tenancy, `mix brando.setup` seeds them for every configured
+  language. With `tenancy_mode: :single` or `:multi` they belong to a site's
+  environment: `Brando.Tenant.Seeder` seeds them in each site's Production
+  environment, in the site's languages, when the site is provisioned, and a
+  run outside an environment raises.
 
   Every step is skipped when its content already exists, so the seeds are safe
   to rerun. Nothing here is a migration path: existing content is never
   modified or removed.
 
-  Run through `mix brando.setup` or `mix brando.gen.seeds`.
+  Run through `mix brando.setup` or `mix brando.gen.seeds`, or
+  `Brando.Tenant.Seeder`.
   """
 
   alias Brando.Cache
@@ -29,34 +36,75 @@ defmodule Brando.Setup.Seeds do
   @closing_uid "brando-default-closing"
   @footer_uid "brando-default-footer"
 
+  # The version of the module definitions below. A seeded block is built from
+  # their refs, so it carries this version even when it uses a module an
+  # editor has changed since: the stale-block check then reports it.
+  @definition_version 1
+
+  # What rendering the seeded entries reads through a cache
+  @cached_schemas [Content.Module, Pages.Page, Pages.Fragment, Navigation.Menu, Sites.Identity, Sites.SEO]
+  @site_caches [:identity, :seo, :navigation]
+
   @docs_url "https://hexdocs.pm/brando"
 
   @doc """
-  Seeds default content for every configured language.
+  Seeds default content for every configured language, or for
+  `languages: [...]`.
 
   Returns `{:ok, report}` where report counts what was created and what already
-  existed. Creation failures raise, since a half-seeded site is harder to
-  reason about than a failed setup step.
+  existed. Creation failures raise, and roll back everything this run wrote,
+  since a half-seeded site is harder to reason about than a failed setup step.
+
+  With tenancy it runs in the current environment, and raises without one.
+
+  `user` is the creator of what the seeds create. They write as `user` too,
+  unless given `actor: :system`, as provisioning does: the creator may hold
+  no rights in a site that does not admit anyone yet.
   """
   @spec run(Brando.Users.User.t(), keyword()) :: {:ok, map()}
   def run(user, opts \\ []) do
-    languages = opts[:languages] || languages()
-    modules = modules(user)
+    if Brando.Tenant.enabled?() and is_nil(Brando.Tenant.current_prefix()) do
+      raise ArgumentError, "with tenancy, the seeds run in a site's environment (Brando.Tenant.Seeder)"
+    end
 
-    report =
-      Enum.reduce(languages, %{created: [], skipped: []}, fn language, report ->
-        report
-        |> track(:"identity (#{language})", fn -> identity(language) end)
-        |> track(:"seo (#{language})", fn -> seo(language, opts[:seo] || []) end)
-        |> track(:"menu (#{language})", fn -> menu(language, user) end)
-        |> track(:"page (#{language})", fn -> index_page(language, user, modules) end)
+    seed(user, opts[:languages] || languages(), opts)
+  end
+
+  defp seed(user, languages, opts) do
+    {:ok, report} =
+      Brando.Repo.transaction(fn ->
+        modules = modules(user)
+
+        languages
+        |> Enum.reduce(%{created: [], skipped: []}, &seed_language(&1, &2, user, modules, opts))
+        |> Map.put(:modules, modules)
       end)
 
     Cache.Identity.set()
     Cache.SEO.set()
     Cache.Navigation.set()
 
-    {:ok, Map.put(report, :modules, modules)}
+    {:ok, report}
+  rescue
+    exception ->
+      forget_cached()
+      reraise exception, __STACKTRACE__
+  end
+
+  # Rendering a seeded entry caches what it reads inside the transaction, so
+  # after a rollback the caches hold rows that do not exist, and a rerun's
+  # renders would read them instead of its own
+  defp forget_cached do
+    Enum.each(@cached_schemas, &Brando.Cache.Query.evict_all/1)
+    Enum.each(@site_caches, &Brando.Cache.del/1)
+  end
+
+  defp seed_language(language, report, user, modules, opts) do
+    report
+    |> track(:"identity (#{language})", fn -> identity(language) end)
+    |> track(:"seo (#{language})", fn -> seo(language, opts[:seo] || []) end)
+    |> track(:"menu (#{language})", fn -> menu(language, user, Keyword.get(opts, :actor, user)) end)
+    |> track(:"page (#{language})", fn -> index_page(language, user, modules) end)
   end
 
   defp track(report, label, fun) do
@@ -111,28 +159,26 @@ defmodule Brando.Setup.Seeds do
 
   # Checked against the repo rather than `Navigation.get_menu/2`, which reads
   # the navigation cache and reports not_found before the cache is warmed.
-  defp menu(language, user) do
+  defp menu(language, user, actor) do
     case Brando.Repo.get_by(Navigation.Menu, key: "main", language: language) do
       %Navigation.Menu{} ->
         :exists
 
       nil ->
-        {:ok, menu} =
-          Navigation.create_menu(
-            %{
-              title: "Main menu",
-              key: "main",
-              language: to_string(language),
-              status: :published,
-              sequence: 0,
-              items: [
-                menu_item("home", 0, "Home", "/"),
-                menu_item("admin", 1, "Admin", "/admin")
-              ]
-            },
-            user
-          )
+        attrs = %{
+          title: "Main menu",
+          key: "main",
+          language: to_string(language),
+          status: :published,
+          sequence: 0,
+          items: [
+            menu_item("home", 0, "Home", "/"),
+            menu_item("admin", 1, "Admin", "/admin")
+          ]
+        }
 
+        # Built for `user`, so the menu names them as its creator whoever writes it
+        {:ok, menu} = Navigation.create_menu(Navigation.Menu.changeset(%Navigation.Menu{}, attrs, user), actor)
         menu
     end
   end
@@ -155,7 +201,7 @@ defmodule Brando.Setup.Seeds do
 
   # ── Modules ───────────────────────────────────────────────────────────────
 
-  # Modules are global, so they are seeded once regardless of language. Their
+  # Modules are shared by every language, so they are seeded once. Their
   # uid carries module identity across imports and upgrades, so a stable uid is
   # what makes a rerun a no-op instead of a duplicate.
   defp modules(user) do
@@ -174,7 +220,7 @@ defmodule Brando.Setup.Seeds do
   # content that references them.
   defp upsert_module(uid, _user, build) do
     case Brando.Repo.get_by(Content.Module, uid: uid) do
-      nil -> Brando.Repo.insert!(build.())
+      nil -> Brando.Repo.insert!(%{build.() | version: @definition_version})
       module -> module
     end
   end
@@ -835,6 +881,7 @@ defmodule Brando.Setup.Seeds do
         type: :module,
         uid: Brando.Utils.generate_uid(),
         module_id: module.id,
+        module_version: @definition_version,
         source: Pages.Page.Blocks,
         multi: false,
         sequence: sequence,
@@ -861,6 +908,7 @@ defmodule Brando.Setup.Seeds do
               type: :module,
               uid: Brando.Utils.generate_uid(),
               module_id: modules.footer.id,
+              module_version: @definition_version,
               source: Pages.Fragment.Blocks,
               multi: false,
               sequence: 0,

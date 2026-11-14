@@ -253,7 +253,9 @@ mailer, for the email Brando sends itself, and writes a placeholder sender
 `MyApp.Contact.ContactForm`; build its notifications with
 `MyApp.Emails.contact(changeset, from: ..., to: ...)`.
 Invalid form data raises before constructing an email. Configure the production
-adapter and credentials in `runtime.exs`.
+adapter and credentials in `runtime.exs`. Without a terminal, standard input on
+`/dev/null` included, `brando.gen.mail` applies its changes without asking, as
+with `--yes`; `--dry-run` previews them.
 
 The sitemap selects published pages; review their public URL rules before calling
 `Brando.Sitemap.generate_sitemap/0`. Authorization generation starts from the

@@ -194,8 +194,9 @@ mix brando.setup.tenancy --mode multi
 ```
 
 Pass `--yes` for a non-interactive run, where a missing option is an error
-rather than a prompt. Igniter also sets that automatically when there is no
-TTY, so piped and CI runs never block on a question.
+rather than a prompt. Igniter also sets it when standard input is a pipe or a
+file. Standard input on `/dev/null`, as some CI jobs and agents run commands,
+counts as a terminal to Igniter, so pass `--yes` there.
 
 The task prints an ordered next-steps notice when it finishes, naming the exact
 commands for each remaining step.
@@ -396,13 +397,49 @@ site admin role. A PostgreSQL advisory lock serializes creation for the key. If
 any database, seed, copy, assignment, or filesystem step fails, Brando removes
 the partial schemas, registry rows, and directories.
 
-The default seeder creates identity and SEO records for every site language.
-Applications normally provide a home page and application-specific initial
-content by configuring a module that implements `Brando.Tenant.Seeder`:
+The default seeder, `Brando.Tenant.Seeder`, works in Production and, for each
+of the site's languages, creates an identity named after the site, an SEO
+record, and what `mix brando.setup` seeds for an installation without tenancy
+(see [Seeded content](installation.md#seeded-content)): seven modules, a
+published `index` page built from them, the `partials/footer` fragment and a
+`main` menu. Staging gets them through the copy, so `/` answers in both
+environments as soon as the site exists. It writes as the system, with the
+creating user as the creator of what has one, so it seeds a suspended site
+and needs no rights in the site's content from the user (`authorization_mode:
+:groups`). Seeding is one of provisioning's steps: when it fails,
+the site is removed like any other failed step, and the jobs its content
+queued are cancelled.
+
+An application's own seeder, a module that implements `Brando.Tenant.Seeder`,
+replaces the default:
 
 ```elixir
 config :brando, tenant_seeder: MyApp.TenantSeeder
 ```
+
+It runs in the new site's Production environment, so its queries read and
+write there, and outside the admin scope of the user creating the site. Write
+as `:system`, as the default does, and set `creator` as the creator where a
+schema has one: the user may hold no rights in the new site's content, and a
+suspended site admits no one. To keep the default content and add to it, call
+the default first:
+
+```elixir
+defmodule MyApp.TenantSeeder do
+  @behaviour Brando.Tenant.Seeder
+
+  @impl true
+  def seed(site, environment, creator) do
+    with :ok <- Brando.Tenant.Seeder.seed(site, environment, creator),
+         {:ok, _page} <- MyApp.Seeds.contact_page(site, creator) do
+      :ok
+    end
+  end
+end
+```
+
+A seeder that does not call the default creates the site's identity and SEO
+records itself, one of each per language: the site's pages read them.
 
 Individual working environments can also be created with
 `Brando.Environments.create_environment/2`. It creates
@@ -410,7 +447,9 @@ Individual working environments can also be created with
 log, and compensates a failed schema creation or migration.
 
 In `single` mode, the site key in the registry must match the configured
-`site_key`.
+`site_key`. `mix brando.setup` provisions that site, with the default
+environments and the first account as its creator, when no site has the key
+(see [Run setup](installation.md#run-setup)).
 
 <!-- usage-rules:start topic="tenancy" -->
 
@@ -858,7 +897,20 @@ release's default frontend, which a site without an active set gets.
 prints; it does not create the project. Start one by copying
 `assets/frontend` (without its `node_modules`), so its Vite config reads
 `BRANDO_VITE_FRONTEND_HOST` and `BRANDO_VITE_FRONTEND_PORT` as the default
-frontend's does.
+frontend's does. Then point the copy's build at a folder of its own: the
+copied `outDir: '../../priv/static'` resolves to `assets/priv/static` from
+`assets/sites/acme`. In `assets/sites/acme/vite.config.js`, set
+
+```js
+build: {
+  // ...
+  emptyOutDir: true,
+  outDir: 'dist',
+}
+```
+
+so `pnpm build` there writes the set to `assets/sites/acme/dist`, the folder
+[Uploading a site's build by hand](#uploading-a-sites-build-by-hand) copies.
 
 In development, one Vite dev server runs one site's project. Say which
 with `dev_site`, beside `hmr`, and point the `vite_site` watcher at the same
@@ -1460,17 +1512,28 @@ steps on a development machine give the sites other than `dev_site` their
 last built set. For `acme`:
 
 1. Build the project into a directory of its own, never into `priv/static`,
-   which is the release's default frontend:
+   which is the release's default frontend. With the `outDir` and
+   `emptyOutDir` [above](#each-sites-frontend-source), that is `dist`:
 
    ```sh
    cd assets/sites/acme
-   pnpm exec vite build --outDir dist --emptyOutDir
+   pnpm build
+   ```
+
+   Then delete the source maps. The Vite config builds them hidden (no
+   `sourceMappingURL` comment), and `mix brando.digest` deletes them from a
+   release (see [Source maps](deployment.md#source-maps)), but a set serves
+   every file it holds, so a map left in it is public at its script's path
+   plus `.map`:
+
+   ```sh
+   find dist -name '*.map' -delete
    ```
 
 2. Copy the output into the site's `sets` root, in a directory named for
    the build. The root is `sites/acme/assets/sets/` beside the media
    directory, or under `config :brando, :sites_path` when set
-   (`Brando.Assets.SiteAssets.sets_root/1` gives it). A site that never had
+   (`Brando.Assets.SiteAssets.sets_root("acme")` gives it). A site that never had
    a set has no `sets` directory yet:
 
    ```sh
@@ -1478,7 +1541,10 @@ last built set. For `acme`:
    cp -R dist /srv/my_app/sites/acme/assets/sets/20261113_abc123
    ```
 
-3. Register it, from a remote console (`bin/my_app remote`) or `iex -S mix`:
+3. Register it, from a remote console (`bin/my_app remote`) or `iex -S mix`.
+   Registering writes a database row from the files it finds, and nothing a
+   running server holds in memory, so in development an `iex -S mix` beside
+   a running `mix phx.server` registers a set that server then lists:
 
    ```elixir
    Brando.Assets.SiteAssets.register_set(
@@ -1489,7 +1555,10 @@ last built set. For `acme`:
    ```
 
 4. Activate it at `/admin/config/assets`, with `acme` selected: for the
-   site, or for the environment being edited.
+   site, or for the environment being edited. Activate it there, in the
+   running server, rather than with `activate_set/1` from the second node:
+   that changes the database, but not the caches of a server it is not
+   clustered with, which keeps serving what it served before.
 
 The build directory must contain, at its top level:
 

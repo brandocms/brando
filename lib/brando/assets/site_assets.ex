@@ -550,9 +550,19 @@ defmodule Brando.Assets.SiteAssets do
     Brando.config(:site_assets_path) || Path.join(Storage.media_parent(), "site_assets")
   end
 
-  @doc "Returns the asset-set storage root for a standalone or site scope."
+  @doc """
+  Returns the asset-set storage root for a standalone or site scope: `nil`,
+  a site, or a site's key.
+  """
+  @spec sets_root(Site.t() | String.t() | nil) :: String.t()
   def sets_root(nil), do: Path.join(standalone_root(), "sets")
   def sets_root(%Site{} = site), do: Path.join(Storage.assets_root(site), "sets")
+
+  def sets_root(site_key) when is_binary(site_key) do
+    if Tenant.valid_key?(site_key),
+      do: sets_root(%Site{key: site_key}),
+      else: raise(ArgumentError, "not a site key: #{inspect(site_key)}")
+  end
 
   defp register(site, path, metadata) do
     with {:ok, normalized_path} <- validate_set_path(site, path),

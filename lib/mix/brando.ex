@@ -78,6 +78,25 @@ defmodule Mix.Brando do
   end
 
   @doc """
+  Adds `--yes` to an Igniter task's `argv` when standard input is not a
+  terminal, unless `argv` chooses already or is a `--dry-run`.
+
+  Igniter adds it only when stdin is a pipe or a file. Stdin on `/dev/null`,
+  as an agent's or a CI job's shell often has it, is a device to Igniter, which
+  then asks to apply the diff and raises at the end of input.
+  """
+  @spec yes_without_terminal([String.t()], boolean()) :: [String.t()]
+  def yes_without_terminal(argv, terminal? \\ terminal?()) do
+    if terminal? or Enum.any?(argv, &(&1 in ["--yes", "--no-yes", "--dry-run"])),
+      do: argv,
+      else: argv ++ ["--yes"]
+  end
+
+  # Erlang reads it from the terminal at startup (OTP 26 and later); without
+  # the key, take a terminal, as Igniter does.
+  defp terminal?, do: Keyword.get(:io.getopts(:standard_io), :stdin, true)
+
+  @doc """
   Asks `message` as a `[Yn]` question, or answers yes without asking when
   `opts` has `yes: true` or `force: true`.
 

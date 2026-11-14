@@ -169,7 +169,13 @@ The installer adds to `.gitignore` what a Brando application builds,
 uploads or downloads in its working folder and phx.new does not ignore: the
 asset projects' `node_modules`, Yalc copies (`.yalc/`, `yalc.lock`), all of
 `/priv/static/`, `/media/` (uploads), `/log/`, and Florist's
-`/release-archives/` and `/sql/` (database dumps). `priv/static` holds only
+`/release-archives/` and `/sql/` (database dumps). Uploaded and captured asset
+sets live in `/site_assets/` with `none` or `single` tenancy, which it adds
+then, and in each site's folder under `/sites/` with `multi`. With `single` or
+`multi` it adds `/sites/`, which site provisioning creates, and with `multi`
+also each site's frontend project's `/assets/sites/*/node_modules/` and
+`/assets/sites/*/dist/`. `mix brando.setup.tenancy` adds the lines for the
+mode it switches to. `priv/static` holds only
 build output: the admin and site builds, the files Vite copies from the asset
 projects' `public/` folders (so keep a site's images in
 `assets/frontend/public/images`), and what `mix brando.digest` adds. Lines an
