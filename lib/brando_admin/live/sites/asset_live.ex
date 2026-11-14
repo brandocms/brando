@@ -250,6 +250,20 @@ defmodule BrandoAdmin.Sites.AssetLive do
                     >
                       {gettext("Activate build")}
                     </button>
+                    <button
+                      :if={asset_set.active && @live_own_set}
+                      type="button"
+                      class="btn"
+                      phx-click="deactivate"
+                      phx-confirm={
+                        gettext(
+                          "Stop using %{name} as the site's build? Environments without a build of their own switch to the release's assets immediately.",
+                          name: asset_set.name
+                        )
+                      }
+                    >
+                      {gettext("Use release assets")}
+                    </button>
                   </td>
                 </tr>
               </tbody>

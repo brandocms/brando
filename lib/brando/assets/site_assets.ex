@@ -779,33 +779,42 @@ defmodule Brando.Assets.SiteAssets do
   defp warm_environment_index do
     fence = change_fence()
 
-    case load_environment_index() do
+    case load_environment_index(fence) do
       {:ok, index} -> fill(@environment_index_key, index, fence)
       :error -> %{}
     end
   end
 
-  # Site id => path => [{environment_id, file, content}], from the cached own
-  # set of every environment that has one; `content` as in `load_unscoped/1`
-  defp load_environment_index do
-    index =
-      from(environment in Environment,
-        where: not is_nil(environment.asset_set_id),
-        select: {environment.site_id, environment.id}
+  # Site id => path => [{environment_id, file, content}], from the own set of
+  # every environment that has one; `content` as in `load_unscoped/1`. Read
+  # from the database as that is, so a lookup that fails stores nothing
+  defp load_environment_index(fence) do
+    rows =
+      Repo.all(
+        from(environment in Environment,
+          where: not is_nil(environment.asset_set_id),
+          select: {environment.site_id, environment.id, environment.asset_set_id}
+        ),
+        @public_opts
       )
-      |> Repo.all(@public_opts)
-      |> Enum.flat_map(fn {site_id, environment_id} ->
-        case environment_cached(%Environment{id: environment_id}) do
-          %{files: paths, path: root} ->
-            for path <- paths, do: {{site_id, path}, {environment_id, Path.join(root, path)}}
 
-          nil ->
-            []
-        end
-      end)
+    cached =
+      from(asset_set in SiteAssetSet, where: asset_set.id in ^Enum.map(rows, &elem(&1, 2)))
+      |> Repo.all(@public_opts)
+      |> cache_sets(fence)
+
+    holders =
+      for {site_id, environment_id, set_id} <- rows,
+          %{files: paths, path: root} <- [cached_by_id(cached, set_id)],
+          path <- paths,
+          do: {{site_id, path}, {environment_id, Path.join(root, path)}}
+
+    index =
+      holders
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
       |> Enum.reduce(%{}, fn {{site_id, path}, candidates}, index ->
-        Map.update(index, site_id, %{path => with_content(candidates)}, &Map.put(&1, path, with_content(candidates)))
+        candidates = with_content(candidates)
+        Map.update(index, site_id, %{path => candidates}, &Map.put(&1, path, candidates))
       end)
 
     {:ok, index}

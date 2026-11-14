@@ -16503,6 +16503,11 @@ msgstr ""
 msgid "Stop sharing"
 msgstr ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Stop using %{name} as the site's build? Environments without a build of their own switch to the release's assets immediately."
+msgstr ""
+
 #: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/work.ex
 #, elixir-autogen, elixir-format

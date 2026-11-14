@@ -132,6 +132,9 @@ defmodule BrandoAdmin.Sites.AssetLiveEnvironmentsTest do
         assert has_element?(view, ".frontend-assets-current", "Production, the live environment, serves this build")
         refute has_element?(view, ".frontend-assets-current h2", one.name)
         refute has_element?(view, ".frontend-assets-current button", "Use release assets")
+        # The site's build keeps the control in its own row
+        assert has_element?(view, "#asset-set-#{one.id} button", "Use release assets")
+        refute has_element?(view, "#asset-set-#{next.id} button", "Use release assets")
 
         view
         |> element("#asset-environment-#{production.id} button", "Use the site's build")
@@ -140,6 +143,25 @@ defmodule BrandoAdmin.Sites.AssetLiveEnvironmentsTest do
         assert has_element?(view, ".frontend-assets-current h2", one.name)
         assert has_element?(view, ".frontend-assets-current", "This uploaded build is serving frontend requests now.")
         assert has_element?(view, ".frontend-assets-current button", "Use release assets")
+        refute has_element?(view, "#asset-set-#{one.id} button", "Use release assets")
+      end
+
+      test "the site's build can be dropped for the release while the live environment has its own", %{
+        conn: conn,
+        next: next,
+        one: one
+      } do
+        production = Brando.Tenant.Cache.get_env("acme", "production")
+        {:ok, _production} = SiteAssets.activate_environment_set(next.id, production)
+
+        {:ok, view, _html} = live(conn, "/admin/config/assets?brando_site_key=acme&brando_environment_key=staging")
+
+        view
+        |> element("#asset-set-#{one.id} button", "Use release assets")
+        |> render_click()
+
+        refute has_element?(view, "#asset-set-#{one.id}.active")
+        assert has_element?(view, ".frontend-assets-current.uploaded h2", next.name)
       end
     end
   end
