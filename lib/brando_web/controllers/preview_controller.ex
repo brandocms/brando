@@ -4,24 +4,25 @@ defmodule BrandoWeb.PreviewController do
   `Brando.Router.page_routes/1`): a public link to a snapshot of an entry's
   rendered page, for people without an admin account, until it expires.
   The key is looked up by its hash (`Brando.Sites.Preview.hash_key/1`).
+
+  In multi-site mode a preview opens only under the site it was shared from:
+  on that site's hosts, and on a host with no site, where `Brando.Plug.Tenant`
+  takes the tenant context from the preview. A preview with no site (stored
+  before previews recorded theirs, with no pinned asset set) opens on any
+  site's host.
   """
   use BrandoAdmin, :controller
 
-  alias Brando.Assets.SiteAssetSet
   alias Brando.Sites
   alias Brando.Sites.Preview
   alias Brando.Sites.Site
-  alias Brando.Tenant.Frontend
   alias Brando.Utils
 
   action_fallback BrandoWeb.FallbackController
 
   @doc false
   def show(conn, %{"preview_key" => preview_key}) do
-    preview_opts = %{matches: %{preview_key: Preview.hash_key(preview_key)}}
-
-    with {:ok, preview} <- Sites.get_preview(preview_opts),
-         :gt <- DateTime.compare(preview.expires_at, DateTime.utc_now()),
+    with {:ok, preview} <- Sites.get_shared_preview(preview_key),
          :ok <- same_site(conn, preview) do
       # Sandboxed as a live preview is (`Brando.Plug.LivePreview`): the
       # snapshot holds editor content and is served on the site's origin.
@@ -33,22 +34,16 @@ defmodule BrandoWeb.PreviewController do
       conn
       |> put_resp_header("content-security-policy", policy)
       |> html(Brando.Plug.LivePreview.put_storage_script(Utils.binary_to_term(preview.html)))
-    else
-      {:error, _} = error -> error
-      _ -> {:error, {:preview, :not_found}}
     end
   end
 
-  # The key alone finds a preview, whichever site shared it: a site's host
-  # must not render another site's page under its domain
-  defp same_site(conn, %Preview{asset_set_id: set_id}) when is_integer(set_id) do
-    with :multi <- Brando.Tenant.mode(),
-         {%Site{id: site_id}, _environment} <- Frontend.resolve(conn.host),
-         %SiteAssetSet{site_id: other_id} when other_id != site_id <-
-           Brando.Repo.get(SiteAssetSet, set_id, prefix: "public") do
-      :not_found
-    else
-      _same_site_or_no_site -> :ok
+  # The key alone finds a preview, whichever site shared it: a host must not
+  # render another site's page under its domain
+  defp same_site(conn, %Preview{site_id: site_id}) when is_integer(site_id) do
+    case {Brando.Tenant.mode(), conn.assigns[:current_site]} do
+      {:multi, %Site{id: ^site_id, status: :active}} -> :ok
+      {:multi, _another_site_or_none} -> {:error, {:preview, :not_found}}
+      _one_site -> :ok
     end
   end
 

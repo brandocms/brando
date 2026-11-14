@@ -650,6 +650,8 @@ defmodule Brando.LivePreview do
       asset_set_id: asset_set.id
     }
 
+    preview = Map.merge(preview, shared_from())
+
     with {:ok, preview} <- Brando.Sites.create_preview(preview, :system) do
       SiteAssets.invalidate_pinned(asset_set)
 
@@ -659,6 +661,21 @@ defmodule Brando.LivePreview do
       |> Oban.insert()
 
       {:ok, Brando.Sites.Preview.__absolute_url__(%{preview | preview_key: key}), expiry_days}
+    end
+  end
+
+  # The site and environment the preview is shared from, which its link opens
+  # under (`Brando.Plug.Tenant`, `BrandoWeb.PreviewController`). Empty without
+  # tenancy.
+  defp shared_from do
+    site_key = Brando.Tenant.current_site_key()
+
+    with %Brando.Sites.Site{id: site_id} <- site_key && Brando.Tenant.Cache.get_site(site_key),
+         %Brando.Environments.Environment{id: environment_id} <-
+           Brando.Tenant.Cache.get_env(site_key, Brando.Tenant.current_environment_key()) do
+      %{site_id: site_id, environment_id: environment_id}
+    else
+      _no_tenant -> %{site_id: nil, environment_id: nil}
     end
   end
 

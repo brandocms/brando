@@ -311,6 +311,26 @@ defmodule Brando.Sites do
   mutation :update, Preview
   mutation :delete, Preview
 
+  @doc """
+  The unexpired preview a link's `key` opens, looked up by the key's hash
+  (`Brando.Sites.Preview.hash_key/1`). An expired preview answers as an
+  unknown key does, whether or not its purge has run.
+  """
+  @spec get_shared_preview(String.t()) :: {:ok, Preview.t()} | {:error, {:preview, :not_found}}
+  def get_shared_preview(key) when is_binary(key) do
+    now = DateTime.utc_now()
+
+    query =
+      from p in Preview,
+        where: p.preview_key == ^Preview.hash_key(key) and p.expires_at > ^now,
+        limit: 1
+
+    case Brando.Repo.one(query) do
+      nil -> {:error, {:preview, :not_found}}
+      preview -> {:ok, preview}
+    end
+  end
+
   #
   # Global sets
 
