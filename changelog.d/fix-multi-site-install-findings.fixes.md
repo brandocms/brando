@@ -6,7 +6,7 @@
 
 - `mix brando.gen.mail` applies its changes without asking when there is no terminal, standard input on `/dev/null` included, instead of raising.
 
-- `mix brando.install` adds `/sites/` to `.gitignore` with `single` or `multi` tenancy, and each site's `/assets/sites/*/node_modules/` and `/assets/sites/*/dist/` with `multi`.
+- `mix brando.install` adds `/site_assets/` to `.gitignore` with `none` or `single` tenancy, `/sites/` with `single` or `multi`, and each site's `/assets/sites/*/node_modules/` and `/assets/sites/*/dist/` with `multi`; `mix brando.setup.tenancy` adds the lines for the mode it switches to.
 
 - The `error_html.ex` and its test that `mix brando.install` writes over phx.new's are formatted by the application's formatter.
 

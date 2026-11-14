@@ -36,9 +36,12 @@ if Code.ensure_loaded?(Igniter) do
       /release-archives/
       /sql/
     )
-    # With tenancy, provisioning creates sites/<key>/assets, where a site's
-    # uploaded builds live; with several sites, each one's frontend project
+    # Uploaded and captured asset sets live in site_assets/ without several
+    # sites (`Brando.Assets.SiteAssets.sets_root(nil)`), and in
+    # sites/<key>/assets with them. Provisioning creates sites/<key> with
+    # either tenancy mode. With several sites, each one's frontend project
     # sits in assets/sites/<key> and builds to its dist/.
+    @standalone_ignores ~w(/site_assets/)
     @tenancy_ignores ~w(/sites/)
     @multi_site_ignores ~w(/assets/sites/*/node_modules/ /assets/sites/*/dist/)
 
@@ -89,8 +92,7 @@ if Code.ensure_loaded?(Igniter) do
     release script that sources them on the server. Staging runs the prod
     release with its own `.envrc`, so the staging host is a trusted origin of
     the prod config. `.gitignore` gets what Brando's builds, uploads and Florist
-    write in the working folder, with the sites' folders under `:single` and
-    `:multi` tenancy.
+    write in the working folder, and what `tenancy_gitignore/2` adds.
     """
     def plan(igniter, project, hosts, existing, tenancy_mode) do
       created = for {flavor, path} <- @envrc, !existing.envrc[flavor], do: {flavor, path}
@@ -105,12 +107,27 @@ if Code.ensure_loaded?(Igniter) do
       |> development_port()
       |> gitignore([
         {"Runtime environments with secrets, uploaded by Florist", Enum.map(created, &"/#{elem(&1, 1)}")},
-        {"Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps", @brando_ignores},
-        {"Brando sites: uploaded asset sets", if(tenancy_mode in [:single, :multi], do: @tenancy_ignores, else: [])},
-        {"Brando sites: each site's frontend dependencies and builds",
-         if(tenancy_mode == :multi, do: @multi_site_ignores, else: [])}
+        {"Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps", @brando_ignores}
+        | tenancy_ignores(tenancy_mode)
       ])
       |> placeholder_notice(hosts, existing, created)
+    end
+
+    @doc """
+    Adds to `.gitignore` what the tenancy mode's asset sets and sites leave in
+    the working folder: `/site_assets/` with `:none` and `:single`, `/sites/`
+    with `:single` and `:multi`, and each site's frontend dependencies and
+    build with `:multi`. Lines `.gitignore` already covers are left out.
+    """
+    def tenancy_gitignore(igniter, tenancy_mode), do: gitignore(igniter, tenancy_ignores(tenancy_mode))
+
+    defp tenancy_ignores(mode) do
+      [
+        {"Brando: uploaded and captured asset sets", if(mode in [:none, :single], do: @standalone_ignores, else: [])},
+        {"Brando sites: each site's folder", if(mode in [:single, :multi], do: @tenancy_ignores, else: [])},
+        {"Brando sites: each site's frontend dependencies and builds",
+         if(mode == :multi, do: @multi_site_ignores, else: [])}
+      ]
     end
 
     # A release evaluates config/prod.exs when it is built, in the Docker

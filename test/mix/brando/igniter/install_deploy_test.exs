@@ -203,22 +203,29 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
 
   defp check_ignore(dir, args), do: System.cmd("git", ["-C", dir, "check-ignore", "--no-index" | args])
 
-  test "with tenancy, .gitignore covers the sites' uploaded asset sets, and with several sites their frontends" do
+  test ".gitignore covers each tenancy mode's asset sets and site folders, and with several sites their frontends" do
     multi = project() |> install(["--yes", "--tenancy-mode", "multi"]) |> IgniterCase.source(".gitignore")
 
     for line <- ~w(/sites/ /assets/sites/*/node_modules/ /assets/sites/*/dist/) do
       assert multi =~ ~r/^#{Regex.escape(line)}$/m, line
     end
 
+    refute multi =~ "/site_assets/"
+
     single =
       project()
       |> install(["--yes", "--tenancy-mode", "single", "--site-key", "acme"])
       |> IgniterCase.source(".gitignore")
 
+    # A single site's sets live in site_assets/, as without tenancy
     assert single =~ ~r{^/sites/$}m
+    assert single =~ ~r{^/site_assets/$}m
     refute single =~ "/assets/sites/"
 
-    refute project() |> install() |> IgniterCase.source(".gitignore") =~ "sites/"
+    none = project() |> install() |> IgniterCase.source(".gitignore")
+    assert none =~ ~r{^/site_assets/$}m
+    refute none =~ ~r{^/sites/$}m
+    refute none =~ "/assets/sites/"
   end
 
   # phx.new 1.8's runtime.exs sets the endpoint's port in every environment
@@ -291,7 +298,8 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
 
     assert added ==
              "\n# Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps\n" <>
-               "/assets/backend/yalc.lock\n/assets/frontend/yalc.lock\n/log/\n/release-archives/\n"
+               "/assets/backend/yalc.lock\n/assets/frontend/yalc.lock\n/log/\n/release-archives/\n" <>
+               "\n# Brando: uploaded and captured asset sets\n/site_assets/\n"
 
     # A name without a slash covers a directory too; a later negation re-includes.
     igniter = install(project(%{".gitignore" => skeleton <> "log\n!/media/\n"}))
