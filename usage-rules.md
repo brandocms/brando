@@ -228,7 +228,7 @@ absolute_url false
 `route_i18n(entry, helper, action, args)` builds the localized path for the
 entry's `language`. For `:page_path` with `:show`, both split each argument
 on `/`, and `route_i18n` prefixes the language itself (leaving it out for
-the default language, the site's on a multi-site installation, when
+the site's default language when
 `scope_default_language_routes` is `false`). Use
 `route_i18n` for schemas with a `language` field whose routes are localized,
 and `route` otherwise.
