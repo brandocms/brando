@@ -239,7 +239,7 @@ defmodule Brando.SEO.Generate do
 
   defp language_name(entry), do: entry |> entry_language() |> AI.language_name()
 
-  defp entry_language(entry), do: to_string(Map.get(entry, :language) || Brando.config(:default_language))
+  defp entry_language(entry), do: to_string(Map.get(entry, :language) || Brando.Languages.default_language())
 
   defp to_trimmed(value) when is_binary(value), do: String.trim(value)
   defp to_trimmed(_), do: ""

@@ -4,7 +4,7 @@ defmodule <%= web_module %>.CMS.LockdownHTML do
   def root(assigns) do
     ~H"""
     <!DOCTYPE html>
-    <html class="no-js" lang={assigns[:language] || Brando.config(:default_language)}>
+    <html class="no-js" lang={assigns[:language] || Brando.Languages.default_language()}>
       <.head conn={@conn}>
         <:title>{gettext("Coming soon")}</:title>
         <meta name="robots" content="noindex" />

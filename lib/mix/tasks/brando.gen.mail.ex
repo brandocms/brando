@@ -25,6 +25,9 @@ if Code.ensure_loaded?(Igniter) do
       * `--contact` also scaffolds a contact form,
         `MyApp.Contact.ContactForm`, and `MyApp.Emails.contact/2` to send it.
 
+    Without a terminal it applies the changes without asking, as `--yes`
+    does; `--dry-run` previews them.
+
     Consumer templates under `priv/templates/brando.gen.mail` override the
     defaults. Namespace selection uses the shared --module/--web-module/--repo
     options.
@@ -40,7 +43,8 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @impl Mix.Task
-    def run(argv), do: Mix.Brando.Igniter.Assets.without_hex_listing(fn -> super(argv) end)
+    def run(argv),
+      do: Mix.Brando.Igniter.Assets.without_hex_listing(fn -> super(Mix.Brando.yes_without_terminal(argv)) end)
 
     @impl Igniter.Mix.Task
     def igniter(igniter), do: Mix.Brando.Igniter.Auxiliary.plan(igniter, :mail)

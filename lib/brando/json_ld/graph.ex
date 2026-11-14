@@ -114,7 +114,7 @@ defmodule Brando.JSONLD.Graph do
 
   defp entry_language(entry) do
     case Map.get(entry, :language) do
-      nil -> to_string(Brando.config(:default_language))
+      nil -> to_string(Brando.Languages.default_language())
       language -> to_string(language)
     end
   end

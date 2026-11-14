@@ -709,6 +709,13 @@ msgstr[1] ""
 msgid "%{label} needs %{needed} units — only %{free} free in that row. Narrow another variable, or start a new row."
 msgstr ""
 
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "%{languages} is not one of the installation's languages (config :brando, :languages)"
+msgid_plural "%{languages} are not among the installation's languages (config :brando, :languages)"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "%{missing} of %{total} images have no alt text and %{poor} only a filename or a generic word. Describe them in the image library."

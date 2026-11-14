@@ -12,6 +12,8 @@ defmodule Brando.I18n.Helpers do
       <a href={localized_path(@language, :page_path, [@conn, :about])}>{gettext("About")}</a>
 
   """
+  require Logger
+
   alias Brando.RuntimeConfig
 
   @doc false
@@ -29,10 +31,15 @@ defmodule Brando.I18n.Helpers do
 
   Returns `"/<url cannot be localized>"` when neither helper exists with the
   requested arity.
+
+  On a multi-site installation the unscoped helper is the route of the
+  request's site's default language, so every other language needs its scoped
+  helper. When one is missing, the unscoped path is still returned, and a
+  warning naming the missing scope is logged once per helper.
   """
   def localized_path(locale, fun, args) do
     locale = to_string(locale)
-    default_language = to_string(RuntimeConfig.get(:default_language))
+    default_language = to_string(Brando.Languages.default_language())
     helpers_module = RuntimeConfig.router_helpers()
 
     # The locale and the helper can come from stored content (a template's
@@ -58,11 +65,33 @@ defmodule Brando.I18n.Helpers do
         apply(helpers_module, helper, args)
 
       helper = function_name != fun && exported_helper(helpers_module, fun, arity) ->
+        if locale != default_language, do: warn_missing_scope(locale, function_name, arity)
         apply(helpers_module, helper, args)
 
       true ->
         "/<url cannot be localized>"
     end
+  end
+
+  # On a multi-site installation the unscoped route is another language's on
+  # a site whose default is not the installation's, so falling back to it
+  # gives this language another language's URL.
+  defp warn_missing_scope(locale, function_name, arity) do
+    key = {__MODULE__, :missing_scope, function_name, arity}
+
+    if RuntimeConfig.get(:tenancy_mode) == :multi and not :persistent_term.get(key, false) do
+      :persistent_term.put(key, true)
+
+      Logger.warning(
+        "No #{function_name}/#{arity} router helper: #{inspect(locale)} links to the unprefixed route, " <>
+          "which is the default language's of the request's site. Add a scope " <>
+          ~s|`scope "/#{locale}", as: #{scope_as(locale)}` with this route to the router.|
+      )
+    end
+  end
+
+  defp scope_as(locale) do
+    if Regex.match?(~r/^[a-z_][A-Za-z0-9_]*$/, locale), do: ":" <> locale, else: ":" <> inspect(locale)
   end
 
   # Not `Brando.Utils.existing_atom/1`: templates import this module at

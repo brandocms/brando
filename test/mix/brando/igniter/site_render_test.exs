@@ -72,7 +72,13 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
       end
     end)
 
-    :ok
+    sources =
+      Map.new(
+        ["#{@web}/controllers/error_html.ex", "#{@web}/cms/lockdown_html.ex"],
+        &{&1, IgniterCase.source(planned, &1)}
+      )
+
+    {:ok, sources: sources}
   end
 
   # Compiled in setup_all, so not named literally: the compiler would warn.
@@ -189,6 +195,45 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
       end)
 
     assert log =~ "The error page rendered without the site's layout"
+  end
+
+  test "on a multi-site installation the error and lockdown pages default to the site's language", %{
+    conn: conn,
+    sources: sources
+  } do
+    put_test_env(:tenancy_mode, :multi)
+    Tenant.Cache.clear()
+
+    try do
+      {:ok, site} =
+        Tenant.Registry.create_site(%{
+          name: "Acme",
+          key: "acme",
+          languages: ["en", "no"],
+          default_language: "no",
+          status: :active,
+          delivery_mode: :dynamic
+        })
+
+      {:ok, _} = Tenant.Registry.create_environment(site, %{name: "Production", key: "production", live: true})
+      Tenant.Cache.warm()
+      Tenant.put_prefix("tenant_acme_production")
+
+      # The layout cannot render a map as its lang: the page renders without it
+      conn = Plug.Conn.assign(conn, :language, %{broken: true})
+
+      capture_log(fn ->
+        assert render_to_string(RenderSiteWeb.ErrorHTML, "500", "html", conn: conn) =~ ~s(<html lang="no">)
+      end)
+
+      for {path, source} <- sources do
+        refute source =~ "Brando.config(:default_language)", path
+        assert source =~ "Brando.Languages.default_language()", path
+      end
+    after
+      Tenant.put_prefix(nil)
+      Tenant.Cache.clear()
+    end
   end
 
   test "the lockdown page resolves the site's tenant", %{conn: conn} do

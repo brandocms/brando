@@ -65,19 +65,26 @@ defmodule Brando.Plug.Tenant do
 
   defp shared_preview_tenant(_conn), do: nil
 
+  @doc """
+  The site and environment `conn` is for, or nil: an internal preview
+  render's, then a static build's signed header (`Brando.SSG.Context`), then
+  the host's. A shared preview's link is not resolved here. Also used by
+  `Brando.Plug.I18n.put_locale/2` when it runs before this plug.
+  """
+  @spec resolve(Plug.Conn.t()) :: {Brando.Sites.Site.t(), Brando.Environments.Environment.t()} | nil
   # Internal preview rendering has a server-resolved workspace but no frontend
   # host. This private connection metadata cannot be supplied by an HTTP client.
-  defp resolve(%{
-         private: %{
-           brando_live_preview: true,
-           brando_preview_context:
-             {%Brando.Sites.Site{id: id} = site, %Brando.Environments.Environment{site_id: id} = environment}
-         }
-       }) do
+  def resolve(%{
+        private: %{
+          brando_live_preview: true,
+          brando_preview_context:
+            {%Brando.Sites.Site{id: id} = site, %Brando.Environments.Environment{site_id: id} = environment}
+        }
+      }) do
     {site, environment}
   end
 
-  defp resolve(conn) do
+  def resolve(conn) do
     conn
     |> Plug.Conn.get_req_header(Context.header())
     |> List.first()

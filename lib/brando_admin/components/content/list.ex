@@ -1462,8 +1462,7 @@ defmodule BrandoAdmin.Components.Content.List do
   defp get_duplication_langs(_, false), do: []
 
   defp get_duplication_langs(content_language, true) do
-    :languages
-    |> Brando.config()
+    Brando.Languages.languages()
     |> Enum.map(& &1[:value])
     |> Enum.reject(&(&1 == content_language))
   end

@@ -79,7 +79,7 @@ defmodule Brando.Type.I18nString do
       if is_map(value), do: value |> Map.values() |> Enum.find_value(&present/1)
   end
 
-  defp default_language, do: to_string(Brando.config(:default_language) || "en")
+  defp default_language, do: to_string(Brando.Languages.default_language() || "en")
 
   defp present(value) when is_binary(value), do: if(String.trim(value) == "", do: nil, else: value)
   defp present(_), do: nil

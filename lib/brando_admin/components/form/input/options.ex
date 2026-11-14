@@ -26,11 +26,16 @@ defmodule BrandoAdmin.Components.Form.Input.Options do
   """
   def expand(token) when token in @tokens do
     token
-    |> Brando.config()
+    |> languages()
     |> Enum.map(fn [{:value, value}, {:text, text}] -> %{label: text, value: value} end)
   end
 
   def expand(other), do: other
+
+  # The content languages are the current site's (`Brando.Languages`); the
+  # admin's interface languages are the installation's.
+  defp languages(:languages), do: Brando.Languages.languages()
+  defp languages(:admin_languages), do: Brando.config(:admin_languages)
 
   @doc """
   Translate the labels of options declared in the Blueprint, like

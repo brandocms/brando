@@ -220,7 +220,7 @@ defmodule BrandoAdmin.Components.Form.Input.Gallery.VideoConfig do
   end
 
   defp content_language(%{assigns: %{current_user: %{config: %{content_language: language}}}}), do: language
-  defp content_language(_socket), do: Brando.config(:default_language)
+  defp content_language(_socket), do: Brando.Languages.default_language()
 
   defp maybe_put_config(config, _key, nil), do: config
   defp maybe_put_config(config, _key, ""), do: config

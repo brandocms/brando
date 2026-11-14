@@ -565,7 +565,7 @@ defmodule Brando.Pages do
   it renders nothing and is logged. An unpublished fragment renders nothing.
   """
   def fetch_fragment(key, language \\ nil) when is_binary(key) do
-    language = language || Brando.config(:default_language)
+    language = language || Brando.Languages.default_language()
 
     fragment =
       Brando.Repo.one(

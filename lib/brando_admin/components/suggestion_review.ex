@@ -115,7 +115,7 @@ defmodule BrandoAdmin.Components.SuggestionReview do
 
   # The default language first, then as configured.
   defp language_order({language, _text}) do
-    languages = [Brando.config(:default_language) | Enum.map(Brando.config(:languages) || [], & &1[:value])]
-    Enum.find_index(Enum.map(languages, &to_string/1), &(&1 == language)) || 99
+    languages = Enum.map([Brando.Languages.default_language() | Brando.Languages.codes()], &to_string/1)
+    Enum.find_index(languages, &(&1 == language)) || 99
   end
 end

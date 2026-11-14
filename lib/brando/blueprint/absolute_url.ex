@@ -149,7 +149,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
       end
 
     locale = to_string(entry.language)
-    default_language = to_string(RuntimeConfig.get(:default_language))
+    default_language = to_string(Brando.Languages.default_language())
 
     if RuntimeConfig.get(:scope_default_language_routes) == false && default_language == locale do
       path
@@ -184,7 +184,7 @@ defmodule Brando.Blueprint.AbsoluteURL do
           entry
           |> Villain.plain_context()
           |> Liquex.Context.assign(:config, %{
-            default_language: to_string(Brando.RuntimeConfig.get(:default_language)),
+            default_language: to_string(Brando.Languages.default_language()),
             scope_default_language_routes: Brando.RuntimeConfig.get(:scope_default_language_routes)
           })
 

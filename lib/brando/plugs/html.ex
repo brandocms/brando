@@ -208,7 +208,7 @@ defmodule Brando.Plug.HTML do
       {conn.assigns.language, Brando.Utils.hostname(Path.join(["/" | conn.path_info]))}
 
     full_host_hreflangs =
-      Enum.map(Brando.config(:languages), fn [value: lang_code, text: _] ->
+      Enum.map(Brando.Languages.languages(), fn [value: lang_code, text: _] ->
         {String.to_existing_atom(lang_code), Brando.I18n.Helpers.localized_path(lang_code, fun, args)}
       end)
 
@@ -241,7 +241,7 @@ defmodule Brando.Plug.HTML do
       canonical_url ->
         hreflangs =
           alternate_entries
-          |> Enum.filter(&(Map.get(&1, :status, :published) == :published and URL.has_url?(&1)))
+          |> Enum.filter(&(Map.get(&1, :status, :published) == :published and URL.has_url?(&1) and site_language?(&1)))
           |> Enum.flat_map(&alternate_hreflang/1)
 
         conn
@@ -251,6 +251,9 @@ defmodule Brando.Plug.HTML do
   end
 
   def put_hreflang(conn, _), do: conn
+
+  # An alternate in a language the site does not use (`Brando.Languages`) is not listed
+  defp site_language?(alt), do: Brando.Languages.member?(alt.language)
 
   defp alternate_hreflang(alt) do
     case URL.resolve(alt) do

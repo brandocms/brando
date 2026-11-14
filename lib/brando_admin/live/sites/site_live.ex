@@ -67,11 +67,16 @@ defmodule BrandoAdmin.Sites.SiteLive do
             </label>
             <label>
               <span>{gettext("Languages")}</span>
-              <input name="site[languages]" required value="en" placeholder="en,no" />
+              <input
+                name="site[languages]"
+                required
+                value={Brando.Languages.installation_default_language()}
+                placeholder={Enum.join(Brando.Languages.installation_codes(), ",")}
+              />
             </label>
             <label>
               <span>{gettext("Default language")}</span>
-              <input name="site[default_language]" required value="en" />
+              <input name="site[default_language]" required value={Brando.Languages.installation_default_language()} />
             </label>
             <label>
               <span>{gettext("Delivery")}</span>

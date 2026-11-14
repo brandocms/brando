@@ -193,7 +193,7 @@ defmodule Brando.Search.Indexer do
     identifier = schema.__identifier__(entry)
 
     language =
-      to_string(identifier.language || Map.get(entry, :language) || Brando.config(:default_language) || "")
+      to_string(identifier.language || Map.get(entry, :language) || Brando.Languages.default_language() || "")
 
     %{
       schema: to_string(schema),

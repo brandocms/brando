@@ -42,9 +42,9 @@ defmodule Mix.Tasks.Brando.Assets.Setup do
   A Yalc copy is published to a project-local Yalc store under `_build`.
   Node.js, pnpm and, for a Yalc copy, Yalc must already be installed; the
   task checks them before it changes anything, and checks that the pnpm on
-  PATH runs each consumer: pnpm 10.5 or later runs the version its
-  `packageManager` names, while an older one cannot read the generated
-  `pnpm-workspace.yaml`. pnpm
+  PATH runs each consumer: the pnpm 12 its `packageManager` names, which
+  pnpm 10 cannot switch to ("Failed to switch pnpm", `ENOEXEC`), and a pnpm
+  before 10.5 cannot read the generated `pnpm-workspace.yaml`. pnpm
   installs the native EuropaCSS compiler the admin's CSS, and a generated
   site's, build with from npm.
   After installing the admin, it empties Vite's dependency cache

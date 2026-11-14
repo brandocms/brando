@@ -266,12 +266,10 @@ defmodule BrandoAdmin.UserAuth do
   def check_content_language(conn, user) do
     content_language = user.config.content_language
 
-    # get languages from your application
-    case Enum.find(Brando.config(:languages), &(&1[:value] == content_language)) do
+    case Enum.find(Brando.Languages.languages(), &(&1[:value] == content_language)) do
       nil ->
-        # set content_language to first language
-        first_lang = :languages |> Brando.config() |> List.first()
-        updated_data = %{config: %{content_language: first_lang[:value]}}
+        # set content_language to the default language
+        updated_data = %{config: %{content_language: to_string(Brando.Languages.default_language())}}
 
         {:ok, _updated_current_user} =
           Brando.Users.update_user(

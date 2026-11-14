@@ -12,6 +12,8 @@ defmodule Brando.Tenant.Setup do
   period.
   """
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Environments
   alias Brando.Environments.Schema
   alias Brando.Repo
@@ -226,8 +228,11 @@ defmodule Brando.Tenant.Setup do
     if Keyword.get(opts, :seed, true) do
       prefix = Tenant.prefix(site, environment)
       seeder = Brando.config(:tenant_seeder) || Brando.Tenant.Seeder
+      seed = fn -> seeder.seed(site, environment, creator) end
 
-      Tenant.with_prefix(prefix, fn -> seeder.seed(site, environment, creator) end)
+      # The admin's own scope (an installation scope at `/admin/sites`) does
+      # not decide what the seeder may write in the new site
+      Brando.Authorization.Boundary.with_scope(nil, fn -> Tenant.with_prefix(prefix, seed) end)
     else
       :ok
     end
@@ -316,7 +321,9 @@ defmodule Brando.Tenant.Setup do
 
   # `:ok` only when everything it removes is gone; otherwise the first error
   defp compensate(site, opts \\ []) do
-    drops = Enum.map(site_schema_prefixes(site), &Schema.drop/1)
+    prefixes = site_schema_prefixes(site)
+    cancel_jobs(prefixes)
+    drops = Enum.map(prefixes, &Schema.drop/1)
     storage = if Keyword.get(opts, :delete_storage, true), do: Storage.delete(site), else: :ok
 
     registry =
@@ -326,6 +333,18 @@ defmodule Brando.Tenant.Setup do
       end
 
     Enum.find(drops ++ [storage, registry], :ok, &(&1 != :ok))
+  end
+
+  # What provisioning queued in the site's environments (the seeded menu's
+  # render cascade, say) would otherwise run against the schemas dropped here;
+  # one running now is stopped
+  defp cancel_jobs([]), do: :ok
+
+  defp cancel_jobs(prefixes) do
+    from(job in Oban.Job, where: fragment("?->>'tenant_prefix'", job.args) in ^prefixes)
+    |> Oban.cancel_all_jobs()
+
+    :ok
   end
 
   defp site_schema_prefixes(site) do

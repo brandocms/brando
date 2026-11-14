@@ -26,7 +26,7 @@ defmodule Brando.Mailer.Layout do
   """
   @spec put_body(Email.t(), keyword()) :: Email.t()
   def put_body(%Email{} = email, opts) do
-    language = to_string(opts[:language] || Brando.config(:default_language) || "en")
+    language = to_string(opts[:language] || Brando.Languages.default_language() || "en")
     site = site_name(language, email)
 
     Gettext.with_locale(Brando.Gettext, language, fn ->

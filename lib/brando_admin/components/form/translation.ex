@@ -133,8 +133,11 @@ defmodule BrandoAdmin.Components.Form.Translation do
     languages_except(schema, members ++ alternates)
   end
 
+  # The site's languages (`Brando.Languages`) the schema's language type holds
   defp languages_except(schema, taken) do
-    for value <- Ecto.Enum.values(schema, :language), to_string(value) not in taken do
+    site = Brando.Languages.codes()
+
+    for value <- Ecto.Enum.values(schema, :language), to_string(value) in site, to_string(value) not in taken do
       code = to_string(value)
       %{code: code, label: language_label(code)}
     end

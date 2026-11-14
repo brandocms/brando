@@ -13,6 +13,7 @@ defmodule <%= web_module %>.Sitemap do
       },
       :stream
     )
+    |> in_site_languages()
     |> Stream.map(fn page ->
       page_url = Brando.HTML.absolute_url(page, :with_host)
 

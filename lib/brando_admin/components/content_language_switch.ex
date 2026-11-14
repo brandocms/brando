@@ -5,18 +5,24 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
 
   alias Phoenix.HTML
 
+  @doc "Whether the switch is offered: the site has more than one language (`Brando.Languages`)."
+  def show?, do: length(Brando.Languages.languages()) > 1
+
   def mount(socket) do
     {:ok, assign(socket, :show_language_picker, false)}
   end
 
   def update(%{current_user: %{config: %{content_language: content_language}}} = assigns, socket) do
+    # The site's languages (`Brando.Languages`)
+    languages = Brando.Languages.languages()
+
     language_long =
-      case Enum.find(Brando.config(:languages), &(&1[:value] == content_language)) do
+      case Enum.find(languages, &(to_string(&1[:value]) == to_string(content_language))) do
         nil ->
-          # The language isn't one of the configured languages. Set to first
-          first_lang = :languages |> Brando.config() |> List.first()
-          send(self(), {:set_content_language, first_lang[:value]})
-          first_lang[:text]
+          # Not one of the site's languages: the site's default
+          default = to_string(Brando.Languages.default_language())
+          send(self(), {:set_content_language, default})
+          Enum.find_value(languages, default, &(to_string(&1[:value]) == default && &1[:text]))
 
         lang ->
           lang[:text]
@@ -27,7 +33,7 @@ defmodule BrandoAdmin.Components.ContentLanguageSwitch do
      |> assign(assigns)
      |> assign(:content_language, content_language)
      |> assign(:language_long, language_long)
-     |> assign(:languages, Brando.config(:languages))}
+     |> assign(:languages, languages)}
   end
 
   def render(assigns) do

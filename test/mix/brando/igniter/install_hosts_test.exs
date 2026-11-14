@@ -32,7 +32,7 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
 
   # Covers what the installer ignores for Brando, so these tests see only
   # the environment file rules.
-  @brando_ignores "node_modules/\n.yalc/\nyalc.lock\n/priv/static/\n/media/\n/log/\n/release-archives/\n/sql/\n"
+  @brando_ignores "node_modules/\n.yalc/\nyalc.lock\n/priv/static/\n/media/\n/log/\n/release-archives/\n/sql/\n/site_assets/\n"
 
   defp check_origin(igniter) do
     quoted = igniter.rewrite |> Rewrite.source!("config/prod.exs") |> Rewrite.Source.get(:quoted)

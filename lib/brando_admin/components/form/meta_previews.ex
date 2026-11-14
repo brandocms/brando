@@ -33,7 +33,7 @@ defmodule BrandoAdmin.Components.Form.MetaPreviews do
     entry = Changeset.apply_changes(socket.assigns.form.source)
     {image, socket} = current_meta_image(entry, socket)
     entry = if Map.has_key?(entry, :meta_image), do: %{entry | meta_image: image}, else: entry
-    language = to_string(Map.get(entry, :language) || Brando.config(:default_language))
+    language = to_string(Map.get(entry, :language) || Brando.Languages.default_language())
 
     {:ok, assign(socket, :values, SharePreview.values(socket.assigns.schema, entry, language))}
   end
@@ -248,7 +248,7 @@ defmodule BrandoAdmin.Components.Form.MetaPreviews do
   end
 
   defp fallback_image?(%Brando.Images.Image{id: id}, form) do
-    language = to_string(Changeset.get_field(form.source, :language, nil) || Brando.config(:default_language))
+    language = to_string(Changeset.get_field(form.source, :language, nil) || Brando.Languages.default_language())
 
     case Brando.Cache.SEO.get(language).fallback_meta_image do
       %Brando.Images.Image{id: ^id} -> true

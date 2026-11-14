@@ -212,7 +212,7 @@ defmodule Brando.Mailer do
   defp named(address) when is_binary(address), do: {site_name(), address}
 
   defp site_name do
-    language = to_string(Brando.config(:default_language) || "en")
+    language = to_string(Brando.Languages.default_language() || "en")
 
     case Brando.Cache.Identity.get(language) do
       %{name: name} when is_binary(name) -> name

@@ -91,6 +91,7 @@ defmodule Brando.Tenant.Cache do
   end
 
   defp cache_sites(sites) do
+    Enum.each(sites, &Brando.Languages.warn_unconfigured/1)
     entries = [{{:brando, :sites}, sites} | Enum.flat_map(sites, &site_entries/1)]
     previous_keys = :persistent_term.get(@cache_keys_key, [])
     current_keys = Enum.map(entries, &elem(&1, 0))

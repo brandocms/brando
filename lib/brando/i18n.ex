@@ -80,24 +80,28 @@ defmodule Brando.I18n do
   defdelegate single_language?(form \\ nil), to: Brando.I18n.SingleLanguage
 
   @doc """
-  Extract language from path or fall back to default language
+  Extract language from path or fall back to default language.
+
+  The languages are `site`'s (`Brando.Languages`); by default the site the
+  process works for, else the installation's. A first segment that is not one
+  of them is not a locale.
   """
-  @spec parse_path(list) :: {language :: binary, modified_path :: list} | nil
-  def parse_path([]), do: {to_string(Brando.config(:default_language)), ["index"]}
+  @spec parse_path(list, map() | nil | :current) :: {language :: binary, modified_path :: list} | nil
+  def parse_path(path, site \\ :current)
 
-  def parse_path(path) do
-    [first_path_segment | rest] = path
+  def parse_path([], site), do: {to_string(default_language(site)), ["index"]}
 
-    langs =
-      :languages
-      |> Brando.config()
-      |> List.flatten()
-      |> Keyword.get_values(:value)
-
-    if first_path_segment in langs do
+  def parse_path([first_path_segment | rest] = path, site) do
+    if first_path_segment in codes(site) do
       (Enum.empty?(rest) && {first_path_segment, ["index"]}) || {first_path_segment, rest}
     else
-      {to_string(Brando.config(:default_language)), path}
+      {to_string(default_language(site)), path}
     end
   end
+
+  defp codes(:current), do: Brando.Languages.codes()
+  defp codes(site), do: Brando.Languages.codes(site)
+
+  defp default_language(:current), do: Brando.Languages.default_language()
+  defp default_language(site), do: Brando.Languages.default_language(site)
 end

@@ -2756,7 +2756,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   defp language_label(conversation),
-    do: language_label(to_string((conversation && conversation.language) || Brando.config(:default_language)))
+    do: language_label(to_string((conversation && conversation.language) || Brando.Languages.default_language()))
 
   defp put_toast(socket, level, message) do
     BrandoAdmin.Toast.send_to(socket.assigns.current_user, message, %{

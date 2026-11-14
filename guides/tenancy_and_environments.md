@@ -194,8 +194,9 @@ mix brando.setup.tenancy --mode multi
 ```
 
 Pass `--yes` for a non-interactive run, where a missing option is an error
-rather than a prompt. Igniter also sets that automatically when there is no
-TTY, so piped and CI runs never block on a question.
+rather than a prompt. Igniter also sets it when standard input is a pipe or a
+file. Standard input on `/dev/null`, as some CI jobs and agents run commands,
+counts as a terminal to Igniter, so pass `--yes` there.
 
 The task prints an ordered next-steps notice when it finishes, naming the exact
 commands for each remaining step.
@@ -396,13 +397,49 @@ site admin role. A PostgreSQL advisory lock serializes creation for the key. If
 any database, seed, copy, assignment, or filesystem step fails, Brando removes
 the partial schemas, registry rows, and directories.
 
-The default seeder creates identity and SEO records for every site language.
-Applications normally provide a home page and application-specific initial
-content by configuring a module that implements `Brando.Tenant.Seeder`:
+The default seeder, `Brando.Tenant.Seeder`, works in Production and, for each
+of the site's languages, creates an identity named after the site, an SEO
+record, and what `mix brando.setup` seeds for an installation without tenancy
+(see [Seeded content](installation.md#seeded-content)): seven modules, a
+published `index` page built from them, the `partials/footer` fragment and a
+`main` menu. Staging gets them through the copy, so `/` answers in both
+environments as soon as the site exists. It writes as the system, with the
+creating user as the creator of what has one, so it seeds a suspended site
+and needs no rights in the site's content from the user (`authorization_mode:
+:groups`). Seeding is one of provisioning's steps: when it fails,
+the site is removed like any other failed step, and the jobs its content
+queued are cancelled.
+
+An application's own seeder, a module that implements `Brando.Tenant.Seeder`,
+replaces the default:
 
 ```elixir
 config :brando, tenant_seeder: MyApp.TenantSeeder
 ```
+
+It runs in the new site's Production environment, so its queries read and
+write there, and outside the admin scope of the user creating the site. Write
+as `:system`, as the default does, and set `creator` as the creator where a
+schema has one: the user may hold no rights in the new site's content, and a
+suspended site admits no one. To keep the default content and add to it, call
+the default first:
+
+```elixir
+defmodule MyApp.TenantSeeder do
+  @behaviour Brando.Tenant.Seeder
+
+  @impl true
+  def seed(site, environment, creator) do
+    with :ok <- Brando.Tenant.Seeder.seed(site, environment, creator),
+         {:ok, _page} <- MyApp.Seeds.contact_page(site, creator) do
+      :ok
+    end
+  end
+end
+```
+
+A seeder that does not call the default creates the site's identity and SEO
+records itself, one of each per language: the site's pages read them.
 
 Individual working environments can also be created with
 `Brando.Environments.create_environment/2`. It creates
@@ -410,7 +447,95 @@ Individual working environments can also be created with
 log, and compensates a failed schema creation or migration.
 
 In `single` mode, the site key in the registry must match the configured
-`site_key`.
+`site_key`. `mix brando.setup` provisions that site, with the default
+environments and the first account as its creator, when no site has the key
+(see [Run setup](installation.md#run-setup)).
+
+<!-- usage-rules:start topic="tenancy" -->
+
+### Languages per site
+
+Two lists of content languages have different jobs:
+
+- **The installation's languages**, `config :brando, languages:` and
+  `default_language:`, are what the installation can hold. The `language`
+  field accepts these, a site is checked against them, and every language's
+  label (`text:`) comes from here.
+- **A site's languages**, `languages` and `default_language` on its registry
+  row, are what that site uses: a subset of the installation's, in the site's
+  own order.
+
+Provisioning a site, and changing its languages with
+`Brando.Tenant.Registry.update_site/2`, refuse a language the installation does
+not configure, and name it. `default_language` must be one of the site's
+languages. A row that already holds a language the installation does not
+configure keeps it, but the language is left out of the site's languages, and
+loading the site logs a warning.
+
+In `:multi`, whatever works for one site uses that site's languages and default
+language:
+
+- In the admin, the content-language switch offers the site's languages and is
+  hidden on a site with one. Language choices in forms, the language versions a
+  listing or form offers to create, the language tabs of `languages: :content`
+  inputs, and every fallback to the default language follow the site. An editor
+  whose content language the site does not have works in the site's default
+  language there; entering the site saves that, whether by switching to it,
+  opening the admin, a live navigation or reconnect into it, or a link that
+  names the site.
+- On the public side, `Brando.Plug.I18n.put_locale/2` parses the path against
+  the request's site: a first segment that is not one of the site's languages
+  is not a locale, and `/` is in the site's default language. Alternates
+  (`Brando.Plug.HTML.put_hreflang/2`), JSON-LD, generated SEO, absolute URLs
+  and mail list and default to the site's languages. A sitemap leaves out
+  entries in other languages when it pipes them through
+  `Brando.Sitemap.in_site_languages/1`, as the one `mix brando.gen.sitemap`
+  generates does.
+
+The unprefixed routes belong to the request's site's default language: `/about`
+is English on a site whose default is English, and Norwegian on one whose
+default is Norwegian. So the router needs a prefixed scope for every language
+the installation configures, the installation's default included
+(`scope "/en", as: :en`), for `Brando.I18n.Helpers.localized_path/3`,
+`route_i18n` and absolute URLs to give each language its own URL on every
+site. `mix brando.gen` writes these scopes for a translatable resource on a
+multi-site installation, and [Route the requested language](i18n.md#route-the-requested-language)
+shows them for your own routes. A route's translated path segments in the
+unprefixed scope are the same for every site: a `get "/news"` there is the path
+of each site's default language, English or not. Without the scope of a
+language that is not the site's default, `localized_path/3` returns the
+unprefixed path, which is the default language's, and logs a warning naming the
+missing scope, once per helper. CMS pages need no scopes: their paths are
+parsed against the site's languages.
+
+Changing a site's default language moves its URLs: the new default's entries
+lose their prefix and the old default's gain one, so an English `/about`
+becomes `/en/about` when the default changes from English to Norwegian.
+`Brando.Tenant.Registry.update_site/2` then queues a job for each of the site's
+environments that syncs its identifiers, as `mix brando.identifiers.sync` does,
+so the URLs they store follow, and so do links to those entries made with the
+link picker in rich text. A link typed in as a plain address keeps the old URL:
+check those after changing a site's default language.
+An archive taken before the change holds the old URLs, so run
+`mix brando.identifiers.sync` in an environment restored from one.
+
+Read the two values in your own code with `Brando.Languages.languages/0` (the
+`[value:, text:]` entries) or `Brando.Languages.codes/0`, and
+`Brando.Languages.default_language/0`. They answer for the site the process
+works for, from `Brando.Tenant.Cache`, with no query. Where there is no site (a
+mix task, a job with no tenant, an installation screen) they answer with the
+installation's list. `Brando.Languages.installation_languages/0` always does.
+
+The installation's list stays in force for what the `language` field accepts,
+for mix tasks such as `mix brando.gen.languages`, for the upgrade snapshot, and
+for the check a site moved in with `mix brando.migrate_to_tenant` goes
+through. The admin's interface languages (`admin_languages`) are separate from
+both lists.
+
+In `:none` and `:single`, the installation's list is the site's, whatever the
+site's registry row says.
+
+<!-- usage-rules:end -->
 
 ## Router and request context
 
@@ -1384,10 +1509,20 @@ last built set. For `acme`:
    pnpm build
    ```
 
+   Then delete the source maps. The Vite config builds them hidden (no
+   `sourceMappingURL` comment), and `mix brando.digest` deletes them from a
+   release (see [Source maps](deployment.md#source-maps)), but a set serves
+   every file it holds, so a map left in it is public at its script's path
+   plus `.map`:
+
+   ```sh
+   find dist -name '*.map' -delete
+   ```
+
 2. Copy the output into the site's `sets` root, in a directory named for
    the build. The root is `sites/acme/assets/sets/` beside the media
    directory, or under `config :brando, :sites_path` when set
-   (`Brando.Assets.SiteAssets.sets_root/1` gives it). A site that never had
+   (`Brando.Assets.SiteAssets.sets_root("acme")` gives it). A site that never had
    a set has no `sets` directory yet:
 
    ```sh
@@ -1395,7 +1530,10 @@ last built set. For `acme`:
    cp -R dist /srv/my_app/sites/acme/assets/sets/20261113_abc123
    ```
 
-3. Register it, from a remote console (`bin/my_app remote`) or `iex -S mix`:
+3. Register it, from a remote console (`bin/my_app remote`) or `iex -S mix`.
+   Registering writes a database row from the files it finds, and nothing a
+   running server holds in memory, so in development an `iex -S mix` beside
+   a running `mix phx.server` registers a set that server then lists:
 
    ```elixir
    Brando.Assets.SiteAssets.register_set(
@@ -1406,7 +1544,10 @@ last built set. For `acme`:
    ```
 
 4. Activate it at `/admin/config/assets`, with `acme` selected: for the
-   site, or for the environment being edited.
+   site, or for the environment being edited. Activate it there, in the
+   running server, rather than with `activate_set/1` from the second node:
+   that changes the database, but not the caches of a server it is not
+   clustered with, which keeps serving what it served before.
 
 The build directory must contain, at its top level:
 
