@@ -134,23 +134,21 @@ if Code.ensure_loaded?(Igniter) do
     @phoenix_port ~r/^config (:\w+),\s+([\w.]+),\s+http: \[port: String\.to_integer\(System\.get_env\("PORT", "(\d+)"\)\)\]\n/m
 
     defp development_port(igniter) do
-      if Igniter.exists?(igniter, @runtime) do
-        Igniter.update_file(igniter, @runtime, fn source ->
-          Source.update(source, :content, fn content ->
-            Regex.replace(@phoenix_port, content, fn _line, app, endpoint, port ->
-              """
-              # In development, a port set in config/dev.exs holds unless PORT is set
-              if config_env() != :dev or System.get_env("PORT") do
-                config #{app}, #{endpoint},
-                  http: [port: String.to_integer(System.get_env("PORT", "#{port}"))]
-              end
-              """
-            end)
-          end)
-        end)
-      else
-        igniter
-      end
+      if Igniter.exists?(igniter, @runtime),
+        do: Igniter.update_file(igniter, @runtime, &Source.update(&1, :content, fn content -> dev_port(content) end)),
+        else: igniter
+    end
+
+    defp dev_port(content) do
+      Regex.replace(@phoenix_port, content, fn _line, app, endpoint, port ->
+        """
+        # In development, a port set in config/dev.exs holds unless PORT is set
+        if config_env() != :dev or System.get_env("PORT") do
+          config #{app}, #{endpoint},
+            http: [port: String.to_integer(System.get_env("PORT", "#{port}"))]
+        end
+        """
+      end)
     end
 
     # A literal path in the base configuration, or one set at runtime, is the
