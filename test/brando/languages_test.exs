@@ -394,6 +394,11 @@ defmodule Brando.LanguagesTest do
       end)
     end
 
+    test "a job for an environment deleted since it was queued is cancelled" do
+      job = %Oban.Job{args: %{"tenant_prefix" => "tenant_acme_removed"}}
+      assert Brando.Worker.IdentifierSync.perform(job) == {:cancel, :environment_gone}
+    end
+
     test "gives the stored URLs of the old and new default's entries their prefixes", %{beta: beta} do
       put_app_env(:scope_default_language_routes, false)
       prefix = "tenant_beta_production"

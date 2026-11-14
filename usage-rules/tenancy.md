@@ -139,6 +139,8 @@ environments that syncs its identifiers, as `mix brando.identifiers.sync` does,
 so the URLs they store follow, and so do links to those entries made with the
 link picker in rich text. A link typed in as a plain address keeps the old URL:
 check those after changing a site's default language.
+An archive taken before the change holds the old URLs, so run
+`mix brando.identifiers.sync` in an environment restored from one.
 
 Read the two values in your own code with `Brando.Languages.languages/0` (the
 `[value:, text:]` entries) or `Brando.Languages.codes/0`, and

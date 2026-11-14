@@ -13,8 +13,6 @@ defmodule Brando.Worker.IdentifierSync do
     max_attempts: 3,
     unique: [period: :infinity, keys: [:tenant_prefix], states: [:available, :scheduled, :retryable]]
 
-  require Logger
-
   alias Brando.Tenant.Job, as: TenantJob
 
   @doc "Queues a sync for each of `site`'s environments."
@@ -35,19 +33,25 @@ defmodule Brando.Worker.IdentifierSync do
     # default language, which the URLs are built from
     Brando.Tenant.Cache.warm()
 
-    TenantJob.run(job, fn ->
-      case Brando.Content.Identifier.Sync.sync() do
-        :ok ->
-          :ok
+    if environment?(job.args["tenant_prefix"]) do
+      TenantJob.run(job, &sync/0)
+    else
+      # Deleted since the job was queued: its schema is gone with it
+      {:cancel, :environment_gone}
+    end
+  end
 
-        {:error, failures} ->
-          Logger.warning(
-            "[Brando.Worker.IdentifierSync] #{length(failures)} identifier(s) in " <>
-              "#{job.args["tenant_prefix"]} could not be synced"
-          )
+  # The sync can be run again, so a job that left entries behind is retried
+  defp sync do
+    case Brando.Content.Identifier.Sync.sync() do
+      :ok -> :ok
+      {:error, failures} -> {:error, "#{length(failures)} identifier(s) could not be synced"}
+    end
+  end
 
-          :ok
-      end
+  defp environment?(prefix) do
+    Enum.any?(Brando.Tenant.Cache.list_sites(), fn site ->
+      Enum.any?(site.environments, &(Brando.Tenant.prefix(site, &1) == prefix))
     end)
   end
 

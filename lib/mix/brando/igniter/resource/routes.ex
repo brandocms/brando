@@ -90,7 +90,7 @@ if Code.ensure_loaded?(Igniter) do
       with {:ok, igniter, languages} <- Configuration.read(igniter, :languages),
            {:ok, igniter, default} <- Configuration.read(igniter, :default_language),
            {:ok, igniter, scoped?} <- Configuration.read(igniter, :scope_default_language_routes),
-           {:ok, igniter, mode} <- Configuration.read(igniter, :tenancy_mode),
+           {igniter, mode} = tenancy_mode(igniter),
            values when values != [] <- language_values(languages),
            :ok <- path_segments(values),
            default = to_string(default),
@@ -115,6 +115,15 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     def languages(igniter, _metadata), do: {:ok, igniter, nil}
+
+    # A mode this cannot read (one computed at runtime) is not `:multi` here:
+    # the routes are then the ones any other installation gets
+    defp tenancy_mode(igniter) do
+      case Configuration.read(igniter, :tenancy_mode) do
+        {:ok, igniter, mode} -> {igniter, mode}
+        {:error, _unreadable} -> {igniter, nil}
+      end
+    end
 
     defp language_values(languages) when is_list(languages),
       do: languages |> List.flatten() |> Keyword.get_values(:value) |> Enum.map(&to_string/1)
