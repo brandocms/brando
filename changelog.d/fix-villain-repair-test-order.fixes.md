@@ -1,0 +1,1 @@
+- `mix brando.repair.legacy_media` no longer skips a gallery or block as edited since the conversion when brando_133 and brando_175 ran within the same second.

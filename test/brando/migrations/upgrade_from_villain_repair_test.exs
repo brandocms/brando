@@ -90,6 +90,26 @@ defmodule Brando.Migrations.UpgradeFromVillainRepairTest do
                Map.new(repairs())
     end
 
+    test "rows the conversion wrote in brando_175's second are not edits" do
+      %{page: page_id} = lost_media()
+
+      # brando_175's time is cut to the second; a NOW() brando_133 or
+      # brando_134 took in that second is rounded up to the next one
+      [[converted_at]] = rows("SELECT inserted_at FROM schema_migrations WHERE version = $1", [version() + 175])
+      rounded = NaiveDateTime.add(converted_at, 1)
+      [[gallery_id]] = rows("SELECT gallery_id FROM content_refs WHERE name = 'gallery' AND gallery_id IS NOT NULL")
+      rows("UPDATE galleries SET updated_at = $1 WHERE id = $2", [rounded, gallery_id])
+
+      rows(
+        "UPDATE galleries_gallery_objects SET inserted_at = $1, updated_at = $1, edited_at = $1 WHERE gallery_id = $2",
+        [rounded, gallery_id]
+      )
+
+      rows("UPDATE content_blocks SET edited_at = $1 WHERE id = $2", [rounded, root_block(page_id, 2)])
+
+      assert %{"ref gallery" => {:gallery, _}, "ref content" => {:make_image, _}} = Map.new(repairs())
+    end
+
     test "an image to make is left alone once the trash may have emptied one an editor deleted since" do
       %{page: page_id, images: images, state: state} = lost_media()
 
@@ -169,9 +189,12 @@ defmodule Brando.Migrations.UpgradeFromVillainRepairTest do
       [[ref_id, video_id]] =
         rows("SELECT id, video_id FROM content_refs WHERE block_id = $1 AND name = 'video'", [video_block])
 
-      # The ref lost its video, and an editor put the video in the trash
+      # The ref lost its video, and an editor put the video in the trash a
+      # minute later. The conversion's time is brando_175's whole second in
+      # schema_migrations, and the migrations after it take under a second:
+      # a trash time of now can share that second, which reads as not after
       rows("UPDATE content_refs SET video_id = NULL WHERE id = $1", [ref_id])
-      rows("UPDATE videos SET deleted_at = $1 WHERE id = $2", [utc_in(0), video_id])
+      rows("UPDATE videos SET deleted_at = $1 WHERE id = $2", [utc_in(60), video_id])
       videos = rows("SELECT id, deleted_at FROM videos ORDER BY id")
 
       assert %{"ref video" => {:skip, "its video went to the trash " <> _}} = Map.new(repairs())
