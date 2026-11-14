@@ -1,0 +1,1 @@
+- A multi-site installation's `.dockerignore` keeps each site project's `assets/sites/*/node_modules` and `assets/sites/*/dist` out of the Docker build context.
