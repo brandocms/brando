@@ -165,13 +165,16 @@ defmodule Brando.Migration.LegacyMediaRepair do
 
     # Rows the migrations wrote got the database's local time from `NOW()`;
     # the application writes UTC. Later than this in local time is later
-    # than the conversion whatever wrote it.
+    # than the conversion whatever wrote it. One second more: the
+    # conversion's time is brando_175's row in schema_migrations, cut to the
+    # second, and a `NOW()` from brando_133 or brando_134 in that same second
+    # is rounded up to the next one in a timestamp(0) column.
     [[offset]] = rows("SELECT extract(epoch FROM now()::timestamp - (now() AT TIME ZONE 'utc'))::integer", [])
     columns = columns(schema)
 
     {local_cutoff, entries} =
       case converted_at do
-        {:ok, time} -> {NaiveDateTime.add(time, max(offset, 0)), entry_edits(schema, findings, time, columns)}
+        {:ok, time} -> {NaiveDateTime.add(time, max(offset, 0) + 1), entry_edits(schema, findings, time, columns)}
         {:error, _} -> {nil, %{}}
       end
 
