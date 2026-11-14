@@ -15,7 +15,7 @@ defmodule Brando.Tenant.LiveView do
   access-denied page.
   """
 
-  import Phoenix.Component, only: [assign: 2]
+  import Phoenix.Component, only: [assign: 2, assign: 3]
   import Phoenix.LiveView, only: [attach_hook: 4, redirect: 2]
 
   alias Brando.Authorization.{Engine, Scope}
@@ -35,6 +35,7 @@ defmodule Brando.Tenant.LiveView do
             current_environment: environment,
             tenant_prefix: prefix
           })
+          |> ensure_content_language()
           |> attach_context_hooks()
 
         {:cont, socket}
@@ -45,6 +46,14 @@ defmodule Brando.Tenant.LiveView do
         if Tenant.mode() == :multi, do: without_site(socket, params), else: {:cont, socket}
     end
   end
+
+  # As `Brando.Plug.AdminTenant` does for a page load: a live navigation or a
+  # reconnect into a site whose languages lack the editor's content language
+  # works in the site's default language
+  defp ensure_content_language(%{assigns: %{current_user: %Brando.Users.User{} = user}} = socket),
+    do: assign(socket, :current_user, Brando.Users.ensure_content_language(user))
+
+  defp ensure_content_language(socket), do: socket
 
   defp without_site(socket, params) do
     user = socket.assigns[:current_user]

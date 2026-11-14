@@ -140,8 +140,9 @@ defmodule Brando.Users do
     else
       default = to_string(Brando.Languages.default_language())
 
+      # The struct passed in keeps its preloads (the avatar the admin shows)
       case update_user(user, %{config: %{content_language: default}}, :system, show_notification: false) do
-        {:ok, updated} -> updated
+        {:ok, updated} -> %{user | config: updated.config, updated_at: updated.updated_at}
         {:error, _changeset} -> user
       end
     end
