@@ -53,13 +53,7 @@ if Code.ensure_loaded?(Igniter) do
       else
         key
         |> site_files()
-        |> Enum.reduce(igniter, fn {format, source, target}, igniter ->
-          cond do
-            Path.extname(target) == ".ico" -> binary_asset(igniter, source, target)
-            format == :keep -> Files.create(igniter, Path.join(target, ".keep"), "")
-            true -> Files.create(igniter, target, site_contents(format, source, project, key))
-          end
-        end)
+        |> Enum.reduce(igniter, &site_file(&1, &2, project, key))
         |> Igniter.add_notice("""
         #{root}/ is the site's own Vite project, from the templates that give assets/frontend,
         and builds into its dist/ folder. Nothing was installed or built. To install its
@@ -67,6 +61,14 @@ if Code.ensure_loaded?(Igniter) do
 
             cd #{root} && pnpm install && pnpm build
         """)
+      end
+    end
+
+    defp site_file({format, source, target}, igniter, project, key) do
+      cond do
+        Path.extname(target) == ".ico" -> binary_asset(igniter, source, target)
+        format == :keep -> Files.create(igniter, Path.join(target, ".keep"), "")
+        true -> Files.create(igniter, target, site_contents(format, source, project, key))
       end
     end
 
