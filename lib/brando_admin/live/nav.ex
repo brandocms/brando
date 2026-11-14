@@ -253,7 +253,7 @@ defmodule BrandoAdmin.Nav do
                     value={environment.key}
                     class={["tenant-switcher__option", environment.id == @current_environment.id && "current"]}
                   >
-                    <span class="tenant-switcher__option-name">{environment.name}</span>
+                    <span class="tenant-switcher__option-name" title={environment.name}>{environment.name}</span>
                     <span class="tenant-switcher__state">{environment_state(environment)}</span>
                   </button>
                 </form>
@@ -271,7 +271,7 @@ defmodule BrandoAdmin.Nav do
                     value={site.key}
                     class={["tenant-switcher__option", site.id == @current_site.id && "current"]}
                   >
-                    <span class="tenant-switcher__option-name">{site.name}</span>
+                    <span class="tenant-switcher__option-name" title={site.name}>{site.name}</span>
                   </button>
                 </form>
               </div>

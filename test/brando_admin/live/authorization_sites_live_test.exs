@@ -217,6 +217,12 @@ defmodule BrandoAdmin.AuthorizationSitesLiveTest do
     {conn, _} = switch_to(conn, html, "site_key", "auth-beta")
     {:ok, view, html} = live(conn, "/admin/pages")
     assert switcher_summary(html) == {"Beta Production live", ["Beta"]}
+    # The sheet's rows truncate, so each names its site in full
+    assert html
+           |> Floki.parse_document!()
+           |> Floki.attribute("#tenant-switcher-options button[name=site_key] [title]", "title")
+           |> Enum.sort() == ["Alpha", "Beta"]
+
     await_selector(view, "#list-row-#{data.page.id}")
 
     assert view |> element("#list-row-#{data.page.id}") |> render() =~ "Beta production page"
