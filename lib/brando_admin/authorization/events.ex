@@ -364,7 +364,7 @@ defmodule BrandoAdmin.Authorization.Events do
     ],
     "BrandoAdmin.Sites.AssetLive" => [
       read: ~w(refresh),
-      write: ~w(activate deactivate)
+      write: ~w(activate activate_environment clear_environment deactivate)
     ],
     "BrandoAdmin.Sites.BlockAuditLive" => [
       read: ~w(select_all select_none toggle),
