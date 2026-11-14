@@ -887,6 +887,8 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
+  defp fetch_environment(_unknown), do: {:error, :environment_not_found}
+
   # An environment uses a set of its own site; in `:single`, a standalone set
   defp check_environment_scope(%SiteAssetSet{site_id: set_site_id}, %Environment{site_id: site_id}) do
     expected_site_id =
