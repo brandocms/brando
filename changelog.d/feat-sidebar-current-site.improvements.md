@@ -1,0 +1,1 @@
+- On a multi-site installation, the closed sidebar switcher names the site being edited, with its environment under it, and long site names truncate instead of widening the sidebar.

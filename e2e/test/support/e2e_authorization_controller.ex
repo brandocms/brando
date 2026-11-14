@@ -13,11 +13,12 @@ defmodule E2EAuthorizationController do
     perform(conn, params)
   end
 
-  defp perform(conn, %{"action" => "setup"}) do
+  # `alpha_name` renames the first site, for screenshots of a long name.
+  defp perform(conn, %{"action" => "setup"} = params) do
     Tenant.Cache.clear()
     owner = Repo.get_by!(Brando.Users.User, email: "admin@brandocms.com")
     editor = Repo.get_by!(Brando.Users.User, email: "editor@brandocms.com")
-    alpha = site("Alpha", "auth-alpha")
+    alpha = site(Map.get(params, "alpha_name", "Alpha"), "auth-alpha")
     beta = site("Beta", "auth-beta")
     production = environment(alpha, "production", "Production", true)
     staging = environment(alpha, "staging", "Staging", false)

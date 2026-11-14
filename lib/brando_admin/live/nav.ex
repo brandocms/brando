@@ -225,8 +225,15 @@ defmodule BrandoAdmin.Nav do
               class={["tenant-switcher", !@current_environment.live && "working"]}
             >
               <summary>
-                <span class="tenant-switcher__label">{gettext("Environment")}</span>
-                <span class="tenant-switcher__current">
+                <%!-- With several sites, the site being edited is the main line and its environment sits under it. --%>
+                <span :if={@tenant_mode == :multi} class="tenant-switcher__site">
+                  <span class="tenant-switcher__current" title={@current_site.name}>{@current_site.name}</span>
+                  <span class="tenant-switcher__environment">
+                    {@current_environment.name}<span class="tenant-switcher__state">{environment_state(@current_environment)}</span>
+                  </span>
+                </span>
+                <span :if={@tenant_mode != :multi} class="tenant-switcher__label">{gettext("Environment")}</span>
+                <span :if={@tenant_mode != :multi} class="tenant-switcher__current">
                   {@current_environment.name}<span class="tenant-switcher__state">{environment_state(@current_environment)}</span>
                 </span>
                 <.icon name="chevron-down" />
@@ -246,7 +253,7 @@ defmodule BrandoAdmin.Nav do
                     value={environment.key}
                     class={["tenant-switcher__option", environment.id == @current_environment.id && "current"]}
                   >
-                    <span class="tenant-switcher__option-name">{environment.name}</span>
+                    <span class="tenant-switcher__option-name" title={environment.name}>{environment.name}</span>
                     <span class="tenant-switcher__state">{environment_state(environment)}</span>
                   </button>
                 </form>
@@ -264,7 +271,7 @@ defmodule BrandoAdmin.Nav do
                     value={site.key}
                     class={["tenant-switcher__option", site.id == @current_site.id && "current"]}
                   >
-                    <span class="tenant-switcher__option-name">{site.name}</span>
+                    <span class="tenant-switcher__option-name" title={site.name}>{site.name}</span>
                   </button>
                 </form>
               </div>
