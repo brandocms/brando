@@ -8,6 +8,11 @@ defmodule Brando.Tenant.Seeder do
   seeds for a single-site installation (`Brando.Setup.Seeds`): the modules, a
   published homepage built from them, the footer fragment and a main menu.
 
+  It writes as the system, with the creating user as the creator of what has
+  one: provisioning has already checked that the user may create sites, and
+  the user may hold no rights in the new site's content (`authorization_mode:
+  :groups`), which admits no one while it is suspended.
+
   An application configures its own seeder, a module implementing `c:seed/3`,
   as `config :brando, tenant_seeder: MyApp.TenantSeeder`. It replaces this
   one: call `seed/3` from it to keep this content, or create the identity and
@@ -37,7 +42,7 @@ defmodule Brando.Tenant.Seeder do
       Brando.Sites.create_default_seo(language)
     end)
 
-    {:ok, _report} = Brando.Setup.Seeds.run(creator, languages: languages)
+    {:ok, _report} = Brando.Setup.Seeds.run(creator, languages: languages, actor: :system)
     :ok
   rescue
     exception -> {:error, exception}

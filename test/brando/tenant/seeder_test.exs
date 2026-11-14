@@ -34,6 +34,8 @@ defmodule Brando.Tenant.SeederTest do
 
   import Ecto.Query, only: [from: 2]
 
+  alias Brando.Authorization.Boundary
+  alias Brando.Authorization.Scope
   alias Brando.Content
   alias Brando.Environments.Schema
   alias Brando.Navigation
@@ -42,7 +44,6 @@ defmodule Brando.Tenant.SeederTest do
   alias Brando.Tenant
   alias Brando.Tenant.Registry
   alias Brando.Tenant.Setup
-  alias Brando.Tenant.SharedTables
 
   @seeded_modules ~w(hero steps cards tips terminal closing footer)
 
@@ -53,42 +54,6 @@ defmodule Brando.Tenant.SeederTest do
     def migrate(_site, _environment), do: {:ok, []}
   end
 
-  # Stand in for pg_dump inside the test's transaction: the structure of
-  # public's site tables, and a copy of another schema's tables with their rows
-  defmodule StructureCloner do
-    @behaviour Brando.Environments.StructureCloner
-
-    @impl true
-    def clone_structure(source, target) do
-      for table <- tables(source),
-          do: query!(~s|CREATE TABLE "#{target}"."#{table}" (LIKE "#{source}"."#{table}" INCLUDING ALL)|)
-
-      :ok
-    end
-
-    def tables(prefix) do
-      %{rows: rows} = query!("SELECT tablename FROM pg_tables WHERE schemaname = $1", [prefix])
-      for [table] <- rows, not SharedTables.member?(table), do: table
-    end
-
-    def query!(sql, params \\ []), do: Brando.Repo.repo().query!(sql, params)
-  end
-
-  defmodule SchemaCloner do
-    @behaviour Brando.Environments.SchemaCloner
-
-    @impl true
-    def clone_schema(source, target) do
-      :ok = Schema.create(target)
-      :ok = StructureCloner.clone_structure(source, target)
-
-      for table <- StructureCloner.tables(source),
-          do: StructureCloner.query!(~s|INSERT INTO "#{target}"."#{table}" SELECT * FROM "#{source}"."#{table}"|)
-
-      :ok
-    end
-  end
-
   # A seeder that adds to the default one, and then fails
   defmodule FailingAfterDefault do
     @behaviour Brando.Tenant.Seeder
@@ -97,6 +62,16 @@ defmodule Brando.Tenant.SeederTest do
     def seed(site, environment, creator) do
       :ok = Brando.Tenant.Seeder.seed(site, environment, creator)
       {:error, :seed_failed}
+    end
+  end
+
+  defmodule ScopeReporter do
+    @behaviour Brando.Tenant.Seeder
+
+    @impl true
+    def seed(_site, _environment, _creator) do
+      send(self(), {:seeded_in_scope, Brando.Authorization.Boundary.current_scope()})
+      :ok
     end
   end
 
@@ -115,8 +90,8 @@ defmodule Brando.Tenant.SeederTest do
     put_test_env(:media_path, Path.join(root, "media"))
     put_test_env(:sites_path, Path.join(root, "sites"))
     put_test_env(:tenant_migrator, Migrator)
-    put_test_env(:tenant_structure_cloner, StructureCloner)
-    put_test_env(:environment_schema_cloner, SchemaCloner)
+    put_test_env(:tenant_structure_cloner, Brando.TenantCloners)
+    put_test_env(:environment_schema_cloner, Brando.TenantCloners)
     Tenant.put_prefix(nil)
     Tenant.Cache.clear()
 
@@ -179,6 +154,43 @@ defmodule Brando.Tenant.SeederTest do
     end
   end
 
+  describe "provisioning seeds as the system" do
+    setup do
+      put_test_env(:tenancy_mode, :multi)
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      on_exit(fn -> Boundary.put_scope(nil) end)
+      :ok
+    end
+
+    # `/admin/sites` runs under the installation scope of the user creating the
+    # site, which grants no content in a site
+    test "a site created under the creator's installation scope", %{creator: creator} do
+      Boundary.put_scope(Scope.installation(creator))
+
+      assert {:ok, _site} = Setup.create_site(site_attrs(["en"]), creator, environments: environments())
+      assert_seeded_by(creator)
+    end
+
+    # A suspended site admits no one, its creator included
+    test "a site created suspended", %{creator: creator} do
+      attrs = Map.put(site_attrs(["en"]), :status, :suspended)
+
+      assert {:ok, site} = Setup.create_site(attrs, creator, environments: environments())
+      assert site.status == :suspended
+      assert_seeded_by(creator)
+    end
+
+    test "an application's own seeder runs with no process scope", %{creator: creator} do
+      put_test_env(:tenant_seeder, ScopeReporter)
+      Boundary.put_scope(Scope.installation(creator))
+
+      assert {:ok, _site} = Setup.create_site(site_attrs(["en"]), creator, environments: environments())
+      assert_received {:seeded_in_scope, nil}
+      assert Boundary.current_scope() == Scope.installation(creator)
+    end
+  end
+
   describe "a seeder that fails" do
     setup do
       put_test_env(:tenancy_mode, :multi)
@@ -214,6 +226,13 @@ defmodule Brando.Tenant.SeederTest do
 
       assert_left_nothing()
     end
+  end
+
+  defp assert_seeded_by(creator) do
+    in_environment("production", fn ->
+      assert Brando.Repo.get_by!(Navigation.Menu, key: "main", language: :en).creator_id == creator.id
+      assert Brando.Repo.get_by!(Pages.Page, uri: "index", language: :en).creator_id == creator.id
+    end)
   end
 
   defp assert_left_nothing do

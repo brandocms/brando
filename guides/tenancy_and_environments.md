@@ -403,7 +403,10 @@ record, and what `mix brando.setup` seeds for an installation without tenancy
 (see [Seeded content](installation.md#seeded-content)): seven modules, a
 published `index` page built from them, the `partials/footer` fragment and a
 `main` menu. Staging gets them through the copy, so `/` answers in both
-environments as soon as the site exists. Seeding is one of provisioning's steps: when it fails,
+environments as soon as the site exists. It writes as the system, with the
+creating user as the creator of what has one, so it seeds a suspended site
+and needs no rights in the site's content from the user (`authorization_mode:
+:groups`). Seeding is one of provisioning's steps: when it fails,
 the site is removed like any other failed step, and the jobs its content
 queued are cancelled.
 
@@ -415,8 +418,11 @@ config :brando, tenant_seeder: MyApp.TenantSeeder
 ```
 
 It runs in the new site's Production environment, so its queries read and
-write there. To keep the default content and add to it, call the default
-first:
+write there, and outside the admin scope of the user creating the site. Write
+as `:system`, as the default does, and set `creator` as the creator where a
+schema has one: the user may hold no rights in the new site's content, and a
+suspended site admits no one. To keep the default content and add to it, call
+the default first:
 
 ```elixir
 defmodule MyApp.TenantSeeder do

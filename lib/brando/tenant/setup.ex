@@ -229,7 +229,11 @@ defmodule Brando.Tenant.Setup do
       prefix = Tenant.prefix(site, environment)
       seeder = Brando.config(:tenant_seeder) || Brando.Tenant.Seeder
 
-      Tenant.with_prefix(prefix, fn -> seeder.seed(site, environment, creator) end)
+      # The admin's own scope (an installation scope at `/admin/sites`) does
+      # not decide what the seeder may write in the new site
+      Brando.Authorization.Boundary.with_scope(nil, fn ->
+        Tenant.with_prefix(prefix, fn -> seeder.seed(site, environment, creator) end)
+      end)
     else
       :ok
     end

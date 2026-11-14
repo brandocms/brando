@@ -56,6 +56,10 @@ defmodule Brando.Setup.Seeds do
   since a half-seeded site is harder to reason about than a failed setup step.
 
   With tenancy it runs in the current environment, and raises without one.
+
+  `user` is the creator of what the seeds create. They write as `user` too,
+  unless given `actor: :system`, as provisioning does: the creator may hold
+  no rights in a site that does not admit anyone yet.
   """
   @spec run(Brando.Users.User.t(), keyword()) :: {:ok, map()}
   def run(user, opts \\ []) do
@@ -99,7 +103,7 @@ defmodule Brando.Setup.Seeds do
     report
     |> track(:"identity (#{language})", fn -> identity(language) end)
     |> track(:"seo (#{language})", fn -> seo(language, opts[:seo] || []) end)
-    |> track(:"menu (#{language})", fn -> menu(language, user) end)
+    |> track(:"menu (#{language})", fn -> menu(language, user, Keyword.get(opts, :actor, user)) end)
     |> track(:"page (#{language})", fn -> index_page(language, user, modules) end)
   end
 
@@ -156,28 +160,26 @@ defmodule Brando.Setup.Seeds do
 
   # Checked against the repo rather than `Navigation.get_menu/2`, which reads
   # the navigation cache and reports not_found before the cache is warmed.
-  defp menu(language, user) do
+  defp menu(language, user, actor) do
     case Brando.Repo.get_by(Navigation.Menu, key: "main", language: language) do
       %Navigation.Menu{} ->
         :exists
 
       nil ->
-        {:ok, menu} =
-          Navigation.create_menu(
-            %{
-              title: "Main menu",
-              key: "main",
-              language: to_string(language),
-              status: :published,
-              sequence: 0,
-              items: [
-                menu_item("home", 0, "Home", "/"),
-                menu_item("admin", 1, "Admin", "/admin")
-              ]
-            },
-            user
-          )
+        attrs = %{
+          title: "Main menu",
+          key: "main",
+          language: to_string(language),
+          status: :published,
+          sequence: 0,
+          items: [
+            menu_item("home", 0, "Home", "/"),
+            menu_item("admin", 1, "Admin", "/admin")
+          ]
+        }
 
+        # Built for `user`, so the menu names them as its creator whoever writes it
+        {:ok, menu} = Navigation.create_menu(Navigation.Menu.changeset(%Navigation.Menu{}, attrs, user), actor)
         menu
     end
   end
