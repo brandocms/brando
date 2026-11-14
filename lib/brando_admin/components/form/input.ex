@@ -1574,10 +1574,9 @@ defmodule BrandoAdmin.Components.Form.Input do
   """
   @spec i18n_languages(:admin | :content) :: [{String.t(), String.t()}]
   def i18n_languages(source \\ :admin) do
-    key = if source == :content, do: :languages, else: :admin_languages
+    languages = if source == :content, do: Brando.Languages.languages(), else: Brando.config(:admin_languages)
 
-    key
-    |> Brando.config()
+    languages
     |> List.wrap()
     |> Enum.map(fn language -> {to_string(language[:value]), language[:text] || to_string(language[:value])} end)
   end

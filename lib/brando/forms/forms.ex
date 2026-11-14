@@ -455,7 +455,7 @@ defmodule Brando.Forms do
   def ensure_messages(user) do
     case site_messages() do
       nil ->
-        languages = :languages |> Brando.config() |> List.wrap() |> Enum.map(&to_string(&1[:value]))
+        languages = Brando.Languages.codes()
         create_messages(Messages.prefilled(languages), user)
 
       messages ->

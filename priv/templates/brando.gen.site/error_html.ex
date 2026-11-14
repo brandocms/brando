@@ -47,7 +47,7 @@ defmodule <%= web_module %>.ErrorHTML do
   # Rendered to iodata here rather than when the response is sent, so that an
   # error the layout raises is rescued.
   defp in_layout(assigns, {layout, template}) do
-    layout_assigns = Map.put_new(assigns.conn.assigns, :language, Brando.config(:default_language))
+    layout_assigns = Map.put_new(assigns.conn.assigns, :language, Brando.Languages.default_language())
 
     page =
       layout_assigns
@@ -92,7 +92,7 @@ defmodule <%= web_module %>.ErrorHTML do
   defp bare(assigns) do
     ~H"""
     <!DOCTYPE html>
-    <html lang={Brando.config(:default_language)}>
+    <html lang={Brando.Languages.default_language()}>
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

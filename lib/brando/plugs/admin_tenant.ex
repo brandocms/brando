@@ -23,6 +23,7 @@ defmodule Brando.Plug.AdminTenant do
         )
 
         conn
+        |> ensure_content_language()
         |> assign(:current_site, site)
         |> assign(:current_environment, environment)
         |> assign(:tenant_prefix, prefix)
@@ -34,6 +35,14 @@ defmodule Brando.Plug.AdminTenant do
         if Tenant.mode() == :multi, do: without_site(conn), else: conn
     end
   end
+
+  # An editor whose content language is not one of this site's works in the
+  # site's default language here (`Brando.Languages`). Switching site comes
+  # through this plug, and so does every admin page's first render.
+  defp ensure_content_language(%{assigns: %{current_user: %Brando.Users.User{} = user}} = conn),
+    do: assign(conn, :current_user, Brando.Users.ensure_content_language(user))
+
+  defp ensure_content_language(conn), do: conn
 
   # In multi-site mode a signed-in user with no site to enter reaches only
   # what is not a site's: signing in and out, choosing a site, and the

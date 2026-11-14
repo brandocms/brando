@@ -504,6 +504,30 @@ defmodule Mix.Tasks.Brando.Gen.Test do
     assert controller =~ "matches: %{slug: slug}, language: conn.assigns.language"
   end
 
+  test "on a multi-site installation every language gets a scope, the installation's default included" do
+    config =
+      String.replace(
+        @languages,
+        "scope_default_language_routes: false",
+        "scope_default_language_routes: false,\n  tenancy_mode: :multi"
+      )
+
+    result =
+      %{"config/brando.exs" => config}
+      |> project()
+      |> generate("GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+
+    assert result.issues == []
+
+    # The unprefixed routes are each site's default language's: localized_path("en", …) on a
+    # site whose default is Norwegian calls en_article_path.
+    router = router(result)
+    assert router =~ ~r/scope "\/", assigns: %\{language: "en"\}\s+do\s+pipe_through :browser\s+get "\/articles"/
+    assert router =~ ~r/scope "\/en", as: :en, assigns: %\{language: "en"\}\s+do\s+get "\/articles"/
+    assert router =~ ~r/scope "\/no", as: :no, assigns: %\{language: "no"\}\s+do\s+get "\/articles"/
+    assert notices(result) =~ "/articles for each site's default language, /en/articles for en, /no/articles for no"
+  end
+
   test "a regional language code gets its scope, named as route_i18n looks its helpers up" do
     config = String.replace(@languages, ~s([value: "no", text: "Norsk"]), ~s([value: "pt-br", text: "Português"]))
 

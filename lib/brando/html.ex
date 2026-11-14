@@ -122,11 +122,7 @@ defmodule Brando.HTML do
   end
 
   defp language_codes do
-    :languages
-    |> Brando.config()
-    |> List.flatten()
-    |> Keyword.get_values(:value)
-    |> Enum.map(&to_string/1)
+    Brando.Languages.codes()
   end
 
   # The locale plug's `force_path` puts the language in front of `path_info`,

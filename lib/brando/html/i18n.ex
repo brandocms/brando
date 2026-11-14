@@ -2,13 +2,12 @@ defmodule Brando.HTML.I18n do
   @moduledoc """
   Lightweight rendering for translated string maps.
 
-  Resolution uses the current Gettext locale, then Brando's configured default
-  language, and finally English.
+  Resolution uses the current Gettext locale, then the default language
+  (`Brando.Languages.default_language/0`, the site's in multi-site mode), and
+  finally English.
   """
 
   use Phoenix.Component
-
-  alias Brando.RuntimeConfig
 
   attr :map, :any, required: true
 
@@ -20,7 +19,7 @@ defmodule Brando.HTML.I18n do
 
   def i18n(assigns) do
     current_locale = Gettext.get_locale()
-    fallback_locale = RuntimeConfig.get(:default_language)
+    fallback_locale = Brando.Languages.default_language()
 
     translated_string = assigns.map[current_locale] || assigns.map[fallback_locale] || ""
 

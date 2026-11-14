@@ -284,7 +284,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
 
     duplicate_langs? =
       assigns.schema.has_trait(Brando.Trait.Translatable) && has_duplicate_fn? &&
-        Enum.count(Brando.config(:languages)) > 1 && not synchronized?
+        Enum.count(Brando.Languages.languages()) > 1 && not synchronized?
 
     {translation_source_id, translation_langs} =
       if synchronized? and has_duplicate_fn?, do: translation_targets(assigns.entry), else: {nil, []}
@@ -1090,8 +1090,13 @@ defmodule BrandoAdmin.Components.Content.List.Row do
     source = Enum.find(versions, &(&1.role == :source))
     taken = [to_string(entry.language) | Enum.map(versions, &to_string(&1.language))]
 
+    site = Brando.Languages.codes()
+
     languages =
-      for value <- Ecto.Enum.values(entry.__struct__, :language), to_string(value) not in taken, do: to_string(value)
+      for value <- Ecto.Enum.values(entry.__struct__, :language),
+          to_string(value) in site,
+          to_string(value) not in taken,
+          do: to_string(value)
 
     {(source && source.entry_id) || entry.id, languages}
   end
@@ -1107,8 +1112,7 @@ defmodule BrandoAdmin.Components.Content.List.Row do
   defp get_duplication_langs(_, false), do: []
 
   defp get_duplication_langs(content_language, true) do
-    :languages
-    |> Brando.config()
+    Brando.Languages.languages()
     |> Enum.map(& &1[:value])
     |> Enum.reject(&(&1 == content_language))
   end

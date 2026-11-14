@@ -67,8 +67,7 @@ defmodule Brando.Setup.Seeds do
   end
 
   defp languages do
-    :languages
-    |> Brando.config()
+    Brando.Languages.languages()
     |> Enum.map(&String.to_existing_atom(&1[:value]))
   end
 

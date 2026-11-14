@@ -112,6 +112,27 @@ defmodule Brando.Sitemap do
   end
 
   @doc """
+  Keeps the entries in one of the site's languages (`Brando.Languages`): in
+  multi-site mode the languages of the site the sitemap is generated for,
+  else the installation's. An entry without a `:language` is kept.
+
+      Pages.list_pages(%{status: :published}, :stream)
+      |> in_site_languages()
+      |> Stream.map(&url(%{loc: Brando.HTML.absolute_url(&1, :with_host)}))
+  """
+  @spec in_site_languages(Enumerable.t()) :: Enumerable.t()
+  def in_site_languages(entries) do
+    codes = Brando.Languages.codes()
+
+    Stream.filter(entries, fn entry ->
+      case Map.get(entry, :language) do
+        nil -> true
+        language -> to_string(language) in codes
+      end
+    end)
+  end
+
+  @doc """
   Check if sitemap exists
   """
   def exists?(module \\ Brando.web_module(Sitemap)) do

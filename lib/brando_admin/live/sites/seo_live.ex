@@ -1590,7 +1590,7 @@ defmodule BrandoAdmin.Sites.SEOLive do
   end
 
   defp content_language(%{assigns: %{current_user: %{config: %{content_language: language}}}}), do: to_string(language)
-  defp content_language(_socket), do: to_string(Brando.config(:default_language))
+  defp content_language(_socket), do: to_string(Brando.Languages.default_language())
 
   defp assign_entry_id(%{assigns: %{current_user: %{config: %{content_language: content_language}}}} = socket) do
     case Sites.get_seo(%{matches: %{language: content_language}}) do

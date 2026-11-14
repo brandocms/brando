@@ -332,7 +332,7 @@ defmodule BrandoAdmin.Media.Sweep do
   # translations, else the one with the lowest id. Entries of a schema without
   # translations are their own.
   defp families(entries) do
-    default = to_string(Brando.config(:default_language))
+    default = to_string(Brando.Languages.default_language())
 
     entries
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
