@@ -225,8 +225,15 @@ defmodule BrandoAdmin.Nav do
               class={["tenant-switcher", !@current_environment.live && "working"]}
             >
               <summary>
-                <span class="tenant-switcher__label">{gettext("Environment")}</span>
-                <span class="tenant-switcher__current">
+                <%!-- With several sites, the site being edited is the main line and its environment sits under it. --%>
+                <span :if={@tenant_mode == :multi} class="tenant-switcher__site">
+                  <span class="tenant-switcher__current" title={@current_site.name}>{@current_site.name}</span>
+                  <span class="tenant-switcher__environment">
+                    {@current_environment.name}<span class="tenant-switcher__state">{environment_state(@current_environment)}</span>
+                  </span>
+                </span>
+                <span :if={@tenant_mode != :multi} class="tenant-switcher__label">{gettext("Environment")}</span>
+                <span :if={@tenant_mode != :multi} class="tenant-switcher__current">
                   {@current_environment.name}<span class="tenant-switcher__state">{environment_state(@current_environment)}</span>
                 </span>
                 <.icon name="chevron-down" />

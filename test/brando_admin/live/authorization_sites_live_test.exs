@@ -153,6 +153,12 @@ defmodule BrandoAdmin.AuthorizationSitesLiveTest do
     {recycle(conn), redirected_to(conn)}
   end
 
+  # The closed switcher: its summary's text and the site name's title.
+  defp switcher_summary(html) do
+    summary = html |> Floki.parse_document!() |> Floki.find("#tenant-switcher summary")
+    {summary |> Floki.text(sep: " ") |> String.split() |> Enum.join(" "), Floki.attribute(summary, "[title]", "title")}
+  end
+
   defp title_value(view) do
     view |> render() |> Floki.parse_document!() |> Floki.find("input[name='page[title]']") |> Floki.attribute("value")
   end
@@ -179,6 +185,12 @@ defmodule BrandoAdmin.AuthorizationSitesLiveTest do
     await_selector(view, "#page_form_form input")
     assert title_value(view) == ["Alpha production page"]
 
+    # Only several sites need the site named before the environment.
+    case Tenant.mode() do
+      :multi -> assert switcher_summary(html) == {"Alpha Production live", ["Alpha"]}
+      :single -> assert switcher_summary(html) == {"Environment Production live", []}
+    end
+
     {conn, return_to} = switch_to(conn, html, "environment_key", "staging")
     assert return_to == path
     {view, _html} = live_form(conn, path)
@@ -203,7 +215,8 @@ defmodule BrandoAdmin.AuthorizationSitesLiveTest do
 
     {:ok, _view, html} = live(conn, "/admin/pages")
     {conn, _} = switch_to(conn, html, "site_key", "auth-beta")
-    {:ok, view, _html} = live(conn, "/admin/pages")
+    {:ok, view, html} = live(conn, "/admin/pages")
+    assert switcher_summary(html) == {"Beta Production live", ["Beta"]}
     await_selector(view, "#list-row-#{data.page.id}")
 
     assert view |> element("#list-row-#{data.page.id}") |> render() =~ "Beta production page"
