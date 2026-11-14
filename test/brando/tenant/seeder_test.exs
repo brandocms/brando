@@ -46,6 +46,7 @@ defmodule Brando.Tenant.SeederTest do
   alias Brando.Tenant.Setup
 
   @seeded_modules ~w(hero steps cards tips terminal closing footer)
+  @prefixes ~w(tenant_acme_production tenant_acme_staging)
 
   defmodule Migrator do
     @behaviour Brando.Environments.Migrator
@@ -95,13 +96,15 @@ defmodule Brando.Tenant.SeederTest do
     Tenant.put_prefix(nil)
     Tenant.Cache.clear()
 
-    # The seeds fill the site caches from rows this test's sandbox rolls back
+    # The seeds and rendering fill caches from rows this test's sandbox rolls
+    # back, under the site's prefixes and, outside them, unprefixed
     cached = Map.new(~w(identity seo navigation)a, &{&1, Brando.Cache.get(&1)})
 
     on_exit(fn ->
       File.rm_rf(root)
       Tenant.put_prefix(nil)
       Tenant.Cache.clear()
+      Brando.TenantCaches.clear(@prefixes)
 
       Enum.each(cached, fn
         {key, nil} -> Brando.Cache.del(key)
