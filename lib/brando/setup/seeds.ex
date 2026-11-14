@@ -52,13 +52,7 @@ defmodule Brando.Setup.Seeds do
         modules = modules(user)
 
         languages
-        |> Enum.reduce(%{created: [], skipped: []}, fn language, report ->
-          report
-          |> track(:"identity (#{language})", fn -> identity(language) end)
-          |> track(:"seo (#{language})", fn -> seo(language, opts[:seo] || []) end)
-          |> track(:"menu (#{language})", fn -> menu(language, user) end)
-          |> track(:"page (#{language})", fn -> index_page(language, user, modules) end)
-        end)
+        |> Enum.reduce(%{created: [], skipped: []}, &seed_language(&1, &2, user, modules, opts))
         |> Map.put(:modules, modules)
       end)
 
@@ -69,6 +63,14 @@ defmodule Brando.Setup.Seeds do
     end
 
     {:ok, report}
+  end
+
+  defp seed_language(language, report, user, modules, opts) do
+    report
+    |> track(:"identity (#{language})", fn -> identity(language) end)
+    |> track(:"seo (#{language})", fn -> seo(language, opts[:seo] || []) end)
+    |> track(:"menu (#{language})", fn -> menu(language, user) end)
+    |> track(:"page (#{language})", fn -> index_page(language, user, modules) end)
   end
 
   defp track(report, label, fun) do
