@@ -46,6 +46,9 @@ defmodule Brando.Assets.DevSiteTest do
 
   @moduletag :tmp_dir
 
+  # Files of a site's `public/` that its build copies under stable names
+  @public_files ["fonts/moderat/moderat-regular.woff2", "images/logo.svg", "favicon.ico"]
+
   setup %{tmp_dir: tmp_dir} do
     # Development reads the release's build and the dev site's project from
     # the application's directory
@@ -152,45 +155,30 @@ defmodule Brando.Assets.DevSiteTest do
       refute render_component(&HTML.include_legacy_assets/1) =~ "-legacy.js"
     end
 
-    # A link shared before `dev_site` was set pins the active set. Its
-    # content-hashed files keep the link working; a file at a stable name
-    # (Vite's `public/` files, or build output named without a hash) must
-    # not shadow the release's file the dev server's page gets.
-    test "gets a pinned set's hashed files, never one at a stable name", %{acme: acme, tmp_dir: tmp_dir} do
-      path = create_set(acme, "acme-pinned")
-      File.write!(Path.join(path, "favicon.ico"), "pinned icon")
-      File.mkdir_p!(Path.join(path, "fonts"))
-      File.write!(Path.join(path, "fonts/brand.woff2"), "pinned font")
+    # Only a shared preview reads the set: a page from the dev server must
+    # not start reading the uploaded build because it exists
+    test "gets no public file from its active set while no shared preview pins it", %{acme: acme} do
+      activate_public_set(acme)
 
-      manifest = path |> Path.join("manifest.json") |> File.read!() |> Jason.decode!()
-      manifest = put_in(manifest, ["js/index.js", "assets"], ["fonts/brand.woff2"])
-      File.write!(Path.join(path, "manifest.json"), Jason.encode!(manifest))
+      for path <- @public_files, host <- ["acme.test", "admin.test"] do
+        refute Brando.Plug.SiteAssets.call(conn_for(path, host), []).halted, "#{path} on #{host}"
+      end
+    end
 
-      {:ok, set} = SiteAssets.register_set(acme, path, %{})
-      {:ok, _active} = SiteAssets.activate_set(set.id)
-
-      user = Brando.Factory.insert(:random_user, avatar: nil)
-
-      Brando.Repo.insert!(
-        %Brando.Sites.Preview{
-          creator_id: user.id,
-          preview_key: Ecto.UUID.generate(),
-          html: Brando.Utils.term_to_binary("<main>Pinned</main>"),
-          expires_at: DateTime.utc_now() |> DateTime.add(3_600, :second) |> DateTime.truncate(:second),
-          asset_set_id: set.id
-        },
-        prefix: "public"
-      )
-
-      SiteAssets.invalidate_pinned(acme)
+    # A file at a stable name (Vite's `public/` files, or build output named
+    # without a hash) that the release also holds is the release's, which
+    # the dev server's page gets
+    test "gets a pinned set's files, but the release's at a name both hold", %{acme: acme, tmp_dir: tmp_dir} do
+      set = activate_public_set(acme)
+      pin(set)
 
       release = Path.join(tmp_dir, "priv/static")
       File.write!(Path.join(release, "favicon.ico"), "release icon")
       File.mkdir_p!(Path.join(release, "fonts"))
       File.write!(Path.join(release, "fonts/brand.woff2"), "release font")
 
-      served = Brando.Plug.SiteAssets.call(conn_for("assets/acme-pinned.js", "acme.test"), [])
-      assert served.halted
+      assert Brando.Plug.SiteAssets.call(conn_for("assets/acme-public.js", "acme.test"), []).halted
+      assert served_body("fonts/moderat/moderat-regular.woff2", "acme.test") == "set font"
 
       for stable <- ["favicon.ico", "fonts/brand.woff2"] do
         refute Brando.Plug.SiteAssets.call(conn_for(stable, "acme.test"), []).halted, stable
@@ -277,6 +265,74 @@ defmodule Brando.Assets.DevSiteTest do
       # The link opens on a host that belongs to no site, and on the site's own
       for host <- ["admin.test", "acme.test"] do
         assert Brando.Plug.SiteAssets.call(conn_for("assets/acme-set.js", host), []).halted, host
+      end
+    end
+
+    # Vite copies `public/` (fonts, images, the favicon) to the build's top
+    # level under stable names, outside the manifest, and the set's CSS and
+    # layout ask for them
+    test "gets its pinned active set's public files, but the release's at a name both hold", %{
+      acme: acme,
+      tmp_dir: tmp_dir
+    } do
+      activate_public_set(acme)
+      File.write!(Path.join(tmp_dir, "priv/static/favicon.ico"), "release icon")
+      shared_html()
+
+      # The link opens on a host that belongs to no site, and on the site's own
+      for host <- ["acme.test", "admin.test"] do
+        assert served_body("fonts/moderat/moderat-regular.woff2", host) == "set font", host
+        assert served_body("images/logo.svg", host) == "set logo", host
+        refute Brando.Plug.SiteAssets.call(conn_for("favicon.ico", host), []).halted, host
+      end
+    end
+
+    test "stops getting its set's public files once the preview expires", %{acme: acme} do
+      set = activate_public_set(acme)
+      preview = pin(set)
+      assert served_body("fonts/moderat/moderat-regular.woff2", "acme.test") == "set font"
+
+      preview
+      |> Ecto.Changeset.change(expires_at: DateTime.utc_now() |> DateTime.add(-60, :second) |> DateTime.truncate(:second))
+      |> Brando.Repo.update!(prefix: "public")
+
+      SiteAssets.invalidate_pinned(acme)
+
+      for host <- ["acme.test", "admin.test"] do
+        refute Brando.Plug.SiteAssets.call(conn_for("fonts/moderat/moderat-regular.woff2", host), []).halted, host
+      end
+
+      # Nor once it is purged
+      pin(set)
+      assert served_body("fonts/moderat/moderat-regular.woff2", "admin.test") == "set font"
+      Brando.Repo.delete_all(Preview, prefix: "public")
+      SiteAssets.invalidate_pinned(acme)
+
+      for host <- ["acme.test", "admin.test"] do
+        refute Brando.Plug.SiteAssets.call(conn_for("fonts/moderat/moderat-regular.woff2", host), []).halted, host
+      end
+    end
+
+    test "gets the public files of the environment's own set it pins", %{acme: acme} do
+      {:ok, own} = SiteAssets.register_set(acme, create_public_set(acme, "acme-own"), %{})
+      production = Tenant.Cache.get_env("acme", "production")
+      assert {:ok, _production} = SiteAssets.activate_environment_set(own.id, production)
+      refute Brando.Plug.SiteAssets.call(conn_for("images/logo.svg", "acme.test"), []).halted
+
+      {:ok, _staging} =
+        Brando.Tenant.Registry.create_environment(
+          acme,
+          %{name: "Staging", key: "staging", live: false, domain: "staging.acme.test"},
+          actor: :system
+        )
+
+      refute Brando.Plug.SiteAssets.call(conn_for("images/logo.svg", "staging.acme.test"), []).halted
+
+      pin(own)
+
+      # Another environment's host, where a preview of this one is shown, too
+      for host <- ["acme.test", "admin.test", "staging.acme.test"] do
+        assert served_body("images/logo.svg", host) == "set logo", host
       end
     end
 
@@ -557,6 +613,52 @@ defmodule Brando.Assets.DevSiteTest do
     path = Path.join(SiteAssets.sets_root(site), name)
     write_build(path, name)
     path
+  end
+
+  # A build with the project's `public/` files beside it, as `vite build` writes them
+  defp create_public_set(site, name) do
+    path = create_set(site, name)
+
+    for {file, content} <- [
+          {"fonts/moderat/moderat-regular.woff2", "set font"},
+          {"fonts/brand.woff2", "set brand font"},
+          {"images/logo.svg", "set logo"},
+          {"favicon.ico", "set icon"}
+        ] do
+      File.mkdir_p!(Path.dirname(Path.join(path, file)))
+      File.write!(Path.join(path, file), content)
+    end
+
+    path
+  end
+
+  defp activate_public_set(site) do
+    {:ok, set} = SiteAssets.register_set(site, create_public_set(site, "#{site.key}-public"), %{})
+    {:ok, active} = SiteAssets.activate_set(set.id)
+    active
+  end
+
+  # An unexpired shared preview that pins `set`
+  defp pin(set) do
+    preview =
+      Brando.Repo.insert!(
+        %Preview{
+          creator_id: user().id,
+          preview_key: Ecto.UUID.generate(),
+          html: Brando.Utils.term_to_binary("<main>Pinned</main>"),
+          expires_at: DateTime.utc_now() |> DateTime.add(3_600, :second) |> DateTime.truncate(:second),
+          asset_set_id: set.id
+        },
+        prefix: "public"
+      )
+
+    SiteAssets.invalidate_pinned(set)
+    preview
+  end
+
+  defp served_body(relative_path, host) do
+    conn = Brando.Plug.SiteAssets.call(conn_for(relative_path, host), [])
+    if conn.halted, do: conn.resp_body
   end
 
   defp write_release(path), do: write_build(path, "release")

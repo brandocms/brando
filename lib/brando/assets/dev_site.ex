@@ -10,7 +10,8 @@ defmodule Brando.Assets.DevSite do
   for any environment of that site loads its frontend from the Vite dev server
   and reads nothing from the site's active uploaded asset set or an
   environment's own set: not the Vite manifest, the critical CSS, nor a file
-  `Brando.Plug.SiteAssets` would serve. Every other site renders
+  `Brando.Plug.SiteAssets` would serve while no shared preview pins the set
+  (`Brando.Assets.SiteAssets.serve_path/3`). Every other site renders
   as in production, from its active set or the release's `priv/static`.
 
   A shared preview of the dev site never loads from the dev server: it

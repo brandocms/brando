@@ -478,10 +478,13 @@ With `tenancy_mode: :multi` and HMR on:
   reads nothing from the site's active asset set: not the script and style
   tags, the Vite manifest, the critical CSS (which comes from the release's
   `priv/static`, as in any development setup), nor a file
-  `Brando.Plug.SiteAssets` would serve from the set. A set that a shared
-  preview pins, the active one included, still answers a path the release's
-  `priv/static` lacks, so a link shared earlier keeps its files; the
-  release's file wins otherwise. When the `vite_site`
+  `Brando.Plug.SiteAssets` would serve from the set. While an unexpired
+  shared preview pins the site's active set or an environment's own set,
+  that set answers any of its files, its `public/` fonts and images
+  included, on the site's hosts and the admin's, as the preview renders
+  from it; another pinned set answers the files its Vite manifest lists.
+  At a path the release's `priv/static` also holds, the release's file
+  wins. When the `vite_site`
   watcher could not start Vite, the dev site renders the release's build
   with a notice saying why.
 - A request for any other site renders as in production: from its active
