@@ -17,7 +17,9 @@ defmodule Brando.Assets.SiteAssets.Capture do
   Without one, the release build holds its frontend only when the site has
   no Vite project of its own in `assets/sites/<key>`; with one, sharing is
   refused (`{:error, :dev_site_without_set}`), as a capture would pin another
-  frontend's build.
+  frontend's build. Its capture of a release whose Vite manifest is missing
+  or lists no file is refused with `{:error, :no_frontend_assets}`, as such
+  a `priv/static` holds no frontend build.
 
   When the set the environment uses (its own, else the scope's active set) is
   self-contained (every file its manifest lists is present), it is reused
@@ -61,11 +63,25 @@ defmodule Brando.Assets.SiteAssets.Capture do
   end
 
   # The release's build is `assets/frontend`'s, not the development site's
-  # own project's (`Brando.Assets.DevSite`)
+  # own project's (`Brando.Assets.DevSite`). In development `priv/static` may
+  # hold the admin's build or stray files and no frontend build: a preview
+  # rendered from them would have no script or style tags.
   defp capture_release(site) do
-    if DevSite.dev_site?(site) and DevSite.own_project?(site),
-      do: {:error, :dev_site_without_set},
-      else: capture(site, [release_root()])
+    cond do
+      not DevSite.dev_site?(site) -> capture(site, [release_root()])
+      DevSite.own_project?(site) -> {:error, :dev_site_without_set}
+      true -> capture(site, [release_root()], &built?/1)
+    end
+  end
+
+  defp built?(listing) do
+    with {:ok, {path, _size}} <- Map.fetch(listing, "manifest.json"),
+         {:ok, json} <- File.read(path),
+         {:ok, manifest} when is_map(manifest) <- Jason.decode(json) do
+      SiteAssets.manifest_files(manifest) != []
+    else
+      _no_manifest -> false
+    end
   end
 
   defp ensure_from_active(site, active) do
@@ -95,8 +111,9 @@ defmodule Brando.Assets.SiteAssets.Capture do
     |> Enum.all?(&MapSet.member?(files, &1))
   end
 
-  defp capture(site, sources) do
+  defp capture(site, sources, built? \\ fn _listing -> true end) do
     with {:ok, listing} <- merged_listing(sources),
+         true <- built?.(listing) || {:error, :no_frontend_assets},
          {:ok, identity} <- identity(listing) do
       name = "capture-" <> identity
       reuse_or_publish(site, name, existing(site, name), listing, identity)

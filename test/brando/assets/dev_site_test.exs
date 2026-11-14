@@ -244,6 +244,25 @@ defmodule Brando.Assets.DevSiteTest do
       assert {:error, :no_frontend_assets} = SiteAssets.with_preview_set(acme, & &1)
     end
 
+    # Stray files or the admin's build in priv/static are no frontend build:
+    # a page rendered from them has no script or style tags
+    test "without a set or a Vite project, and a release with no Vite manifest, is refused", %{
+      acme: acme,
+      tmp_dir: tmp_dir
+    } do
+      :ok = SiteAssets.deactivate(acme)
+      File.rm_rf!(Path.join(tmp_dir, "assets/sites/acme"))
+      release = Path.join(tmp_dir, "priv/static")
+      File.rm_rf!(release)
+      File.mkdir_p!(Path.join(release, "admin"))
+      File.write!(Path.join(release, "admin/app.css"), "body{}")
+
+      assert {:error, :no_frontend_assets} = SiteAssets.with_preview_set(acme, & &1)
+      assert {:error, :no_frontend_assets} = LivePreview.share(Page, page_changeset(), user())
+      assert SiteAssets.list_sets(acme) |> Enum.filter(&Capture.captured?/1) == []
+      refute acme |> SiteAssets.sets_root() |> Path.join("capture-*") |> Path.wildcard() |> Enum.any?()
+    end
+
     # The release holds the default frontend, not the site's own project
     test "with a Vite project of its own and no set, is refused", %{acme: acme} do
       :ok = SiteAssets.deactivate(acme)

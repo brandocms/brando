@@ -903,8 +903,8 @@ With `tenancy_mode: :multi` and HMR on:
   the dev site renders from the set it pins, as any site's does. That is
   the environment's own set or the site's active set; without either, a
   capture of the release's `priv/static`, when the site has no Vite project
-  of its own in `assets/sites/<key>/` (with `priv/static` empty the admin
-  says to run `pnpm build` in `assets/frontend`). A dev site with a project
+  of its own in `assets/sites/<key>/` (with no Vite manifest in
+  `priv/static` the admin says to run `pnpm build` in `assets/frontend`). A dev site with a project
   of its own and no set cannot be shared: the admin says to build and
   upload a set first
   ([Uploading a site's build by hand](#uploading-a-sites-build-by-hand)).
