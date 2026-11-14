@@ -38,7 +38,11 @@ if Code.ensure_loaded?(Igniter) do
         mix brando.gen.site --site acme-travel
         mix brando.gen.site --site 2025 --module Anniversary
 
-    It creates no site record, content or frontend assets.
+    With `tenancy_mode :multi` it also creates the site's own Vite project in
+    `assets/sites/KEY/`, from the templates that give a new installation
+    `assets/frontend`, building into its `dist/` folder; an existing folder is
+    left as it is. It installs and builds nothing, and creates no site record
+    or content.
     """
 
     @impl Igniter.Mix.Task

@@ -37,6 +37,82 @@ if Code.ensure_loaded?(Igniter) do
       |> Enum.reduce(igniter, &plan_asset(&1, &2, project))
     end
 
+    @doc """
+    Plans a site's own Vite project in `assets/sites/<key>/` (`mix brando.gen.site
+    --site KEY` in `:multi`): the files a new installation's `assets/frontend`
+    gets, from the same templates, with the changes `site_contents/4` makes.
+    An existing `assets/sites/<key>/` is left as it is, with a notice.
+    """
+    def site_project(igniter, project, key) do
+      root = "assets/sites/#{key}"
+
+      if Igniter.exists?(igniter, root) do
+        Igniter.add_notice(igniter, """
+        #{root}/ already exists, so it was left as it is.
+        """)
+      else
+        key
+        |> site_files()
+        |> Enum.reduce(igniter, &site_file(&1, &2, project, key))
+        |> Igniter.add_notice("""
+        #{root}/ is the site's own Vite project, from the templates that give assets/frontend,
+        and builds into its dist/ folder. Nothing was installed or built. To install its
+        dependencies and build it, run:
+
+            cd #{root} && pnpm install && pnpm build
+        """)
+      end
+    end
+
+    defp site_file({format, source, target}, igniter, project, key) do
+      cond do
+        Path.extname(target) == ".ico" -> binary_asset(igniter, source, target)
+        format == :keep -> Files.create(igniter, Path.join(target, ".keep"), "")
+        true -> Files.create(igniter, target, site_contents(format, source, project, key))
+      end
+    end
+
+    @doc "The frontend templates' manifest entries, with their targets in the site's project."
+    def site_files(key) do
+      for {format, source, "assets/frontend/" <> path} <- Templates.manifest(),
+          do: {format, source, "assets/sites/#{key}/#{path}"}
+    end
+
+    # Where a site's project differs from assets/frontend: it builds into its
+    # own dist/, which is uploaded as the site's asset set, and its package is
+    # named for the site.
+    defp site_contents(format, source, project, key) do
+      contents = Install.render(format, source, project)
+
+      case Path.basename(source) do
+        "vite.config.js" ->
+          site_replace(
+            contents,
+            source,
+            "    emptyOutDir: false,\n    outDir: '../../priv/static', // <- Phoenix expects our files here\n",
+            "    emptyOutDir: true,\n    outDir: 'dist', // <- the site's asset set, uploaded on its own\n"
+          )
+
+        "package.json" ->
+          contents
+          |> site_replace(source, ~s("name": "frontend",), ~s("name": "#{key}",))
+          |> site_replace(
+            source,
+            ~s("description": "#{project.otp_app} Frontend",),
+            ~s("description": "#{project.otp_app} frontend for the site #{key}",)
+          )
+
+        _ ->
+          contents
+      end
+    end
+
+    defp site_replace(contents, source, from, to) do
+      if String.contains?(contents, from),
+        do: String.replace(contents, from, to),
+        else: raise("templates/brando.install/#{source} no longer contains #{inspect(from)}: update site_contents/4")
+    end
+
     # Packages earlier backend templates installed that the current one dropped.
     # The legacy EuropaCSS PostCSS plugin and autoprefixer gave way to the
     # native compiler's Vite plugin and Lightning CSS.

@@ -367,11 +367,13 @@ need not be. In `:multi`, each site's frontend source can be a Vite project
 of its own in `assets/sites/<key>/`, whose build is uploaded as that site's
 [asset set](deps/brando/guides/tenancy_and_environments.md#uploadable-frontend-asset-sets). `assets/frontend` stays the
 release's default frontend, which a site without an active set gets.
-`mix brando.gen.site --site acme` names `assets/sites/acme/` in what it
-prints; it does not create the project. Start one by copying
-`assets/frontend` (without its `node_modules`), so its Vite config reads
-`BRANDO_VITE_FRONTEND_HOST` and `BRANDO_VITE_FRONTEND_PORT` as the default
-frontend's does.
+`mix brando.gen.site --site acme` creates `assets/sites/acme/` from the
+templates that give a new installation `assets/frontend`. Its Vite config
+reads `BRANDO_VITE_FRONTEND_HOST` and `BRANDO_VITE_FRONTEND_PORT` as the
+default frontend's does and builds into the project's `dist/`, and its
+`package.json` is named `acme`. An existing `assets/sites/acme/` is left as
+it is. The task installs and builds nothing: run `pnpm install` and
+`pnpm build` in the project.
 
 In development, one Vite dev server runs one site's project. Say which
 with `dev_site`, beside `hmr`, and point the `vite_site` watcher at the same

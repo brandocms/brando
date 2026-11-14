@@ -768,11 +768,13 @@ need not be. In `:multi`, each site's frontend source can be a Vite project
 of its own in `assets/sites/<key>/`, whose build is uploaded as that site's
 [asset set](#uploadable-frontend-asset-sets). `assets/frontend` stays the
 release's default frontend, which a site without an active set gets.
-`mix brando.gen.site --site acme` names `assets/sites/acme/` in what it
-prints; it does not create the project. Start one by copying
-`assets/frontend` (without its `node_modules`), so its Vite config reads
-`BRANDO_VITE_FRONTEND_HOST` and `BRANDO_VITE_FRONTEND_PORT` as the default
-frontend's does.
+`mix brando.gen.site --site acme` creates `assets/sites/acme/` from the
+templates that give a new installation `assets/frontend`. Its Vite config
+reads `BRANDO_VITE_FRONTEND_HOST` and `BRANDO_VITE_FRONTEND_PORT` as the
+default frontend's does and builds into the project's `dist/`, and its
+`package.json` is named `acme`. An existing `assets/sites/acme/` is left as
+it is. The task installs and builds nothing: run `pnpm install` and
+`pnpm build` in the project.
 
 In development, one Vite dev server runs one site's project. Say which
 with `dev_site`, beside `hmr`, and point the `vite_site` watcher at the same
@@ -1373,12 +1375,13 @@ Until Florist uploads a site's own build, put a build of
 steps on a development machine give the sites other than `dev_site` their
 last built set. For `acme`:
 
-1. Build the project into a directory of its own, never into `priv/static`,
-   which is the release's default frontend:
+1. Build the project. The generated Vite config writes the build to the
+   project's `dist/`, never to `priv/static`, which is the release's
+   default frontend:
 
    ```sh
    cd assets/sites/acme
-   pnpm exec vite build --outDir dist --emptyOutDir
+   pnpm build
    ```
 
 2. Copy the output into the site's `sets` root, in a directory named for

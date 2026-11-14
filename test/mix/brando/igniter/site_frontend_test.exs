@@ -93,7 +93,7 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
     refute config(result, "config/config.exs") =~ "site_frontends"
     Igniter.Test.assert_unchanged(result, @controller)
 
-    assert notice?(result, "No site record, content or frontend assets were created")
+    assert notice?(result, "No site record or content was created")
     assert notice?(result, "takes effect\nwith the next release")
     assert notice?(result, "every other site now\nanswers 404")
     # Where the site's module preview rules go
@@ -129,6 +129,94 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
     assert result.issues == []
     assert config(result) =~ ~s(site_frontends: %{"studio" => StudioWeb.Sites.Studio})
     refute notice?(result, "answers 404")
+    refute Igniter.exists?(result, "assets/sites")
+    refute Enum.any?(result.tasks, fn {_task, args} -> Enum.any?(args, &(&1 =~ "assets/sites")) end)
+    refute notice?(result, "assets/sites/studio/")
+  end
+
+  test "in :multi, --site creates the site's Vite project from the frontend's templates", %{multi: multi} do
+    result = generate(multi, ["--site", "acme-travel"])
+    assert result.issues == []
+
+    installed = for {"assets/frontend/" <> path, contents} <- multi.assigns.test_files, into: %{}, do: {path, contents}
+
+    created =
+      for %{path: "assets/sites/acme-travel/" <> path} = source <- Rewrite.sources(result.rewrite),
+          into: %{},
+          do: {path, Rewrite.Source.get(source, :content)}
+
+    # Every file the installer gave assets/frontend: the favicons as checked
+    # binary copies, the rest from the same templates.
+    favicons = for {"brando.assets.copy", ["assets/sites/acme-travel/" <> path, _digest]} <- result.tasks, do: path
+    assert Enum.sort(favicons) == ["public/favicon.ico", "public/ico/favicon.ico"]
+    assert Map.keys(created) |> Enum.sort() == installed |> Map.keys() |> Enum.reject(&(&1 in favicons)) |> Enum.sort()
+
+    for {path, contents} <- created,
+        path not in ["vite.config.js", "package.json"],
+        do: assert(contents == installed[path], "#{path} differs from assets/frontend/#{path}")
+
+    # It builds into the project, not into the release's priv/static.
+    vite = created["vite.config.js"]
+    assert vite =~ "emptyOutDir: true,"
+    assert vite =~ "outDir: 'dist',"
+    refute vite =~ "priv/static"
+    assert vite =~ "process.env.BRANDO_VITE_FRONTEND_HOST"
+    assert vite =~ "process.env.BRANDO_VITE_FRONTEND_PORT"
+
+    assert String.replace(vite, ~r/\n\s*emptyOutDir: true,\n\s*outDir: 'dist',[^\n]*/, "") ==
+             String.replace(installed["vite.config.js"], ~r/\n\s*emptyOutDir: false,\n\s*outDir: [^\n]*/, "")
+
+    package = Jason.decode!(created["package.json"])
+    assert package["name"] == "acme-travel"
+    assert package["description"] == "studio frontend for the site acme-travel"
+
+    assert Map.drop(package, ~w(name description)) ==
+             installed["package.json"] |> Jason.decode!() |> Map.drop(~w(name description))
+
+    assert notice?(result, "assets/sites/acme-travel/ is the site's own Vite project")
+    assert notice?(result, "cd assets/sites/acme-travel && pnpm install && pnpm build")
+
+    rerun = result |> IgniterCase.apply_and_reload() |> generate(["--site", "acme-travel"])
+    assert rerun.issues == []
+    Igniter.Test.assert_unchanged(rerun)
+    refute Enum.any?(rerun.tasks, fn {task, _args} -> task == "brando.assets.copy" end)
+    assert notice?(rerun, "assets/sites/acme-travel/ already exists, so it was left as it is")
+  end
+
+  test "in :multi, an existing assets/sites/KEY/ is left alone, with a notice", %{multi: multi} do
+    own =
+      multi
+      |> Igniter.create_new_file("assets/sites/acme-travel/vite.config.js", "export default {}\n")
+      |> IgniterCase.apply_and_reload()
+
+    result = generate(own, ["--site", "acme-travel"])
+    assert result.issues == []
+    Igniter.Test.assert_unchanged(result, "assets/sites/acme-travel/vite.config.js")
+    refute Igniter.exists?(result, "assets/sites/acme-travel/package.json")
+    refute Enum.any?(result.tasks, fn {task, _args} -> task == "brando.assets.copy" end)
+    assert notice?(result, "assets/sites/acme-travel/ already exists, so it was left as it is")
+  end
+
+  test "the binary copier writes a site project's favicon from the frontend's template" do
+    directory = Path.join(System.tmp_dir!(), "brando-site-favicon-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(directory)
+    contents = Mix.Brando.Install.Templates.contents(:copy, "assets/frontend/public/favicon.ico")
+    digest = :sha256 |> :crypto.hash(contents) |> Base.encode16(case: :lower)
+
+    try do
+      File.cd!(directory, fn ->
+        Mix.Tasks.Brando.Assets.Copy.run(["assets/sites/acme-travel/public/ico/favicon.ico", digest])
+        assert File.read!("assets/sites/acme-travel/public/ico/favicon.ico") == contents
+
+        for target <- ["assets/sites/Acme/public/favicon.ico", "assets/sites/../frontend/public/favicon.ico"],
+            do:
+              assert_raise(Mix.Error, ~r/Unknown Brando binary asset/, fn ->
+                Mix.Tasks.Brando.Assets.Copy.run([target, digest])
+              end)
+      end)
+    after
+      File.rm_rf!(directory)
+    end
   end
 
   test "the entry goes to config.exs when the application configures tenancy there", %{multi: multi} do

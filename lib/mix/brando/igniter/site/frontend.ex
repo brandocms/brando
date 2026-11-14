@@ -7,6 +7,7 @@ if Code.ensure_loaded?(Igniter) do
 
     alias Igniter.Project.Config
     alias Igniter.Project.Module, as: ProjectModule
+    alias Mix.Brando.Igniter.Assets
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.Site.PageController
@@ -17,8 +18,9 @@ if Code.ensure_loaded?(Igniter) do
     @doc """
     Plans one site's frontend (`mix brando.gen.site --site KEY`): a
     `Brando.Site.Frontend` module under `Web.Sites`, its layouts and its
-    `PageHTML`, its `site_frontends` entry, and a page controller that renders
-    it. `name` is the module's last segment, `nil` for the key camelized.
+    `PageHTML`, its `site_frontends` entry, a page controller that renders
+    it, and in `:multi` its Vite project in `assets/sites/KEY/`. `name` is
+    the module's last segment, `nil` for the key camelized.
     """
     def plan(igniter, project, key, name) do
       with {:ok, igniter, mode} <- tenancy(igniter),
@@ -30,6 +32,7 @@ if Code.ensure_loaded?(Igniter) do
         {igniter, wired?} =
           igniter
           |> files(project, key, module)
+          |> site_project(project, key, mode)
           |> register(key, module, mode)
           |> PageController.ensure_frontend(project)
 
@@ -38,24 +41,36 @@ if Code.ensure_loaded?(Igniter) do
         |> error_html_notice(project)
         |> Igniter.add_notice("""
         #{summary(igniter, project, key, module, wired?)}
-        No site record, content or frontend assets were created. The frontend takes effect
+        No site record or content was created. The frontend takes effect
         with the next release: its modules are compiled into it.
 
         The block editor previews the site's modules inside [data-site="#{key}"]. Put rules
         for this site's modules in assets/backend/css/app.css, in a [data-site="#{key}"] { … }
         block; rules outside one apply to every site.
-
-        In :multi, the site's own frontend source can be a Vite project in
-        assets/sites/#{key}/, whose build is uploaded as the site's asset set; until then
-        it gets assets/frontend. Set config :#{project.otp_app}, dev_site: "#{key}" in
-        config/dev.exs to run its Vite dev server (see the "Each site's frontend source"
-        section of guides/tenancy_and_environments.md).
+        #{dev_site_notice(project, key, mode)}\
         """)
       else
         {:error, %Igniter{} = igniter, message} -> Igniter.add_issue(igniter, message)
         {:error, message} -> Igniter.add_issue(igniter, message)
       end
     end
+
+    # In :multi, each site's scripts and styles come from a Vite project of its own.
+    defp site_project(igniter, project, key, :multi), do: Assets.site_project(igniter, project, key)
+    defp site_project(igniter, _project, _key, _mode), do: igniter
+
+    defp dev_site_notice(project, key, :multi) do
+      """
+
+      The site's own frontend source is the Vite project in
+      assets/sites/#{key}/, whose build is uploaded as the site's asset set; until it has
+      one, the site gets assets/frontend. Set config :#{project.otp_app}, dev_site: "#{key}" in
+      config/dev.exs to run its Vite dev server (see the "Each site's frontend source"
+      section of guides/tenancy_and_environments.md).
+      """
+    end
+
+    defp dev_site_notice(_project, _key, _mode), do: ""
 
     # The registry was left alone when it names another module for the key,
     # or is not a map this task can read.
