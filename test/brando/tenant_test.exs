@@ -69,6 +69,14 @@ defmodule Brando.TenantTest do
     assert_raise ArgumentError, fn -> Tenant.prefix("Acme", "production") end
   end
 
+  test "a key or prefix with a trailing newline is not valid" do
+    assert Tenant.valid_key?("acme")
+    assert Tenant.valid_key?("acme\n") == false
+    assert Tenant.valid_prefix?("tenant_acme_production")
+    assert Tenant.valid_prefix?("tenant_acme_production\n") == false
+    assert_raise ArgumentError, ~r/invalid tenant prefix/, fn -> Tenant.put_prefix("tenant_acme_production\n") end
+  end
+
   test "process prefix context is restored after scoped work, including failures" do
     put_test_env(:tenancy_mode, :multi)
     Tenant.put_prefix("tenant_acme_production")

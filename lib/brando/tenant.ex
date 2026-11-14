@@ -16,8 +16,8 @@ defmodule Brando.Tenant do
   @type mode :: :none | :single | :multi
 
   @modes [:none, :single, :multi]
-  @key_format ~r/^[a-z0-9]+(?:-[a-z0-9]+)*$/
-  @prefix_format ~r/^tenant_[a-z0-9]+(?:-[a-z0-9]+)*_[a-z0-9]+(?:-[a-z0-9]+)*$/
+  @key_format ~r/^[a-z0-9]+(?:-[a-z0-9]+)*\z/
+  @prefix_format ~r/^tenant_[a-z0-9]+(?:-[a-z0-9]+)*_[a-z0-9]+(?:-[a-z0-9]+)*\z/
   @process_prefix_key {__MODULE__, :current_prefix}
   @process_public_key {__MODULE__, :public}
 
