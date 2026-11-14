@@ -35,14 +35,15 @@ defmodule Brando.Setup.Site do
 
   defp provision_single(creator) do
     case Brando.config(:site_key) do
-      key when is_binary(key) and key != "" ->
-        case Registry.get_site_by_key(key) do
-          nil -> with {:ok, site} <- Brando.Tenant.Setup.create_site(attrs(key), creator), do: {:created, site}
-          site -> {:exists, site}
-        end
+      key when is_binary(key) and key != "" -> provision_key(key, creator)
+      _missing -> {:error, :missing_site_key}
+    end
+  end
 
-      _missing ->
-        {:error, :missing_site_key}
+  defp provision_key(key, creator) do
+    case Registry.get_site_by_key(key) do
+      nil -> with {:ok, site} <- Brando.Tenant.Setup.create_site(attrs(key), creator), do: {:created, site}
+      site -> {:exists, site}
     end
   end
 
