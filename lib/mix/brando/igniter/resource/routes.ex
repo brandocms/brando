@@ -81,18 +81,28 @@ if Code.ensure_loaded?(Igniter) do
     from the application's config: the default language's routes have no
     prefix, and every other language's (the default's too with
     `scope_default_language_routes: true`) are in a scope named after it, as
-    `Brando.I18n` routes them and `route_i18n` links to them. Nil for a
-    Blueprint without a language.
+    `Brando.I18n` routes them and `route_i18n` links to them. On a multi-site
+    installation the unprefixed routes are each site's default language's, so
+    every language, the installation's default included, gets a scope too.
+    Nil for a Blueprint without a language.
     """
     def languages(igniter, %{language?: true}) do
       with {:ok, igniter, languages} <- Configuration.read(igniter, :languages),
            {:ok, igniter, default} <- Configuration.read(igniter, :default_language),
            {:ok, igniter, scoped?} <- Configuration.read(igniter, :scope_default_language_routes),
+           {:ok, igniter, mode} <- Configuration.read(igniter, :tenancy_mode),
            values when values != [] <- language_values(languages),
            :ok <- path_segments(values),
            default = to_string(default),
            true <- default in values do
-        {:ok, igniter, %{default: default, prefixed: Enum.reject(values, &(&1 == default and scoped? != true))}}
+        scope_default? = scoped? == true or mode == :multi
+
+        {:ok, igniter,
+         %{
+           default: default,
+           prefixed: Enum.reject(values, &(&1 == default and not scope_default?)),
+           multi_site?: mode == :multi
+         }}
       else
         {:error, message} ->
           {:error, message}

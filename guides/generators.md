@@ -84,7 +84,9 @@ sitemaps and SEO use the page.
 For a Blueprint with a `language` field, each language gets its routes, as the
 [CMS pages](i18n.md) do: the default language's at `/products`, and every other
 language's in a scope under its code, such as `/no/products` (the default
-language's too, at `/en/products`, with `scope_default_language_routes: true`).
+language's too, at `/en/products`, with `scope_default_language_routes: true`
+or on a multi-site installation, where `/products` is each site's default
+language's).
 The languages are read from `config :brando, :languages` and `:default_language`
 when the resource is generated. A regional code such as `pt-br` gets the scope
 `as: :"pt-br"`, whose helpers (`:"pt-br_product_path"`) `route_i18n` calls. For a
