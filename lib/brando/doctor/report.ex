@@ -84,7 +84,8 @@ defmodule Brando.Doctor.Report do
   end
 
   defp check_lines(%Result{} = result, verbose?) do
-    label = String.pad_trailing(result.label || result.id || "", @column - 2)
+    # A label as wide as the column still gets a space before the summary
+    label = String.pad_trailing(result.label || result.id || "", @column - 3) <> " "
     indent = String.duplicate(" ", @column)
 
     fix = if result.fix && result.status != :ok, do: [indent, :faint, result.fix, :reset, "\n"], else: []

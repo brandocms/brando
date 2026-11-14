@@ -198,6 +198,13 @@ msgid_plural "%{count} in sizes"
 msgstr[0] "%{count} i størrelser"
 msgstr[1] "%{count} i størrelser"
 
+#: lib/brando/doctor/checks/json_ld.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} language"
+msgid_plural "%{count} languages"
+msgstr[0] "%{count} språk"
+msgstr[1] "%{count} språk"
+
 #: lib/brando/doctor/checks/image_configs.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} likely matches"
@@ -1233,6 +1240,13 @@ msgid "identity incomplete in %{count} language"
 msgid_plural "identity incomplete in %{count} languages"
 msgstr[0] "identiteten er ufullstendig på %{count} språk"
 msgstr[1] "identiteten er ufullstendig på %{count} språk"
+
+#: lib/brando/doctor/checks/json_ld.ex
+#, elixir-autogen, elixir-format
+msgid "identity incomplete in %{languages}, in %{count} environment"
+msgid_plural "identity incomplete in %{languages}, in %{count} environments"
+msgstr[0] "identiteten er ufullstendig på %{languages}, i %{count} miljø"
+msgstr[1] "identiteten er ufullstendig på %{languages}, i %{count} miljøer"
 
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
