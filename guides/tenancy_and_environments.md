@@ -397,13 +397,43 @@ site admin role. A PostgreSQL advisory lock serializes creation for the key. If
 any database, seed, copy, assignment, or filesystem step fails, Brando removes
 the partial schemas, registry rows, and directories.
 
-The default seeder creates identity and SEO records for every site language.
-Applications normally provide a home page and application-specific initial
-content by configuring a module that implements `Brando.Tenant.Seeder`:
+The default seeder, `Brando.Tenant.Seeder`, works in Production and, for each
+of the site's languages, creates an identity named after the site, an SEO
+record, and what `mix brando.setup` seeds for an installation without tenancy
+(see [Seeded content](installation.md#seeded-content)): seven modules, a
+published `index` page built from them, the `partials/footer` fragment and a
+`main` menu. Staging gets them through the copy, so `/` answers in both
+environments as soon as the site exists. Seeding is one of provisioning's steps: when it fails,
+the site is removed like any other failed step, and the jobs its content
+queued are cancelled.
+
+An application's own seeder, a module that implements `Brando.Tenant.Seeder`,
+replaces the default:
 
 ```elixir
 config :brando, tenant_seeder: MyApp.TenantSeeder
 ```
+
+It runs in the new site's Production environment, so its queries read and
+write there. To keep the default content and add to it, call the default
+first:
+
+```elixir
+defmodule MyApp.TenantSeeder do
+  @behaviour Brando.Tenant.Seeder
+
+  @impl true
+  def seed(site, environment, creator) do
+    with :ok <- Brando.Tenant.Seeder.seed(site, environment, creator),
+         {:ok, _page} <- MyApp.Seeds.contact_page(site, creator) do
+      :ok
+    end
+  end
+end
+```
+
+A seeder that does not call the default creates the site's identity and SEO
+records itself, one of each per language: the site's pages read them.
 
 Individual working environments can also be created with
 `Brando.Environments.create_environment/2`. It creates

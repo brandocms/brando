@@ -23,8 +23,10 @@ defmodule Mix.Tasks.Brando.Setup do
        menu and a footer fragment per configured language. The site's base URL
        and a short description are prompted for (or `--base-url`,
        `--description`) and go into SEO; leave them empty to fill in later.
-       With `tenancy_mode: :single` or `:multi` only the modules are seeded,
-       since no site exists yet
+       With `tenancy_mode: :single` or `:multi` nothing is seeded and nothing
+       is asked: each site gets this content when it is provisioned
+       (`Brando.Tenant.Seeder`), and `--base-url` and `--description` are
+       unused
 
   Each step is skipped when its result already exists, so rerunning after a
   failure resumes rather than duplicates. Nothing is removed or rewritten.
@@ -121,23 +123,36 @@ defmodule Mix.Tasks.Brando.Setup do
   end
 
   defp seeds(opts) do
-    if Keyword.get(opts, :seeds, true) do
-      step("Seeding default content")
+    cond do
+      not Keyword.get(opts, :seeds, true) ->
+        skip("Seeds")
 
-      base_url =
-        Keyword.get_lazy(opts, :base_url, fn -> prompt("Site address (base URL), e.g. https://example.com:", "") end)
+      # Content belongs to a site's environment, and no site exists yet:
+      # brando.gen.seeds says so, and that the SEO flags are unused
+      Brando.Tenant.enabled?() ->
+        step("Seeding default content")
+        Mix.Task.run("brando.gen.seeds", seo_args(opts[:base_url], opts[:description]))
 
-      description = Keyword.get_lazy(opts, :description, fn -> prompt("Short description of the site:", "") end)
-
-      seo_args =
-        [{"--base-url", base_url}, {"--description", description}]
-        |> Enum.reject(fn {_flag, value} -> value in [nil, ""] end)
-        |> Enum.flat_map(fn {flag, value} -> [flag, value] end)
-
-      Mix.Task.run("brando.gen.seeds", seo_args)
-    else
-      skip("Seeds")
+      true ->
+        seed_content(opts)
     end
+  end
+
+  defp seed_content(opts) do
+    step("Seeding default content")
+
+    base_url =
+      Keyword.get_lazy(opts, :base_url, fn -> prompt("Site address (base URL), e.g. https://example.com:", "") end)
+
+    description = Keyword.get_lazy(opts, :description, fn -> prompt("Short description of the site:", "") end)
+
+    Mix.Task.run("brando.gen.seeds", seo_args(base_url, description))
+  end
+
+  defp seo_args(base_url, description) do
+    [{"--base-url", base_url}, {"--description", description}]
+    |> Enum.reject(fn {_flag, value} -> value in [nil, ""] end)
+    |> Enum.flat_map(fn {flag, value} -> [flag, value] end)
   end
 
   defp password! do

@@ -46,22 +46,38 @@ if Code.ensure_loaded?(Igniter) do
         |> lockdown_notice(state.lockdown)
         |> ErrorPages.plan(project)
         |> LivePreview.plan(project)
-        |> Igniter.add_notice("""
-        CMS pages are prepared under #{inspect(project.web_module)}.CMS.
-        The root page and unmatched public paths use published Brando pages.
-        Phoenix controllers, templates and layouts remain available in your application.
-        No content was created by this plan: mix brando.setup seeds a published
-        index page, or create one yourself in /admin/pages with URI index and
-        template index.html. Until then / has no page to render.
-        To lock the site while it is being built, set `lockdown: true` and a
-        `lockdown_password` for :brando; see the lockdown section of the generators guide.
-        """)
+        |> pages_notice(project)
       else
         {:skip, %Igniter{} = igniter} -> igniter
         {:skip, reason, home?} -> skipped_notice(igniter, reason, home?)
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)
       end
+    end
+
+    # Read after the installer configured tenancy, so a new install's mode counts
+    defp pages_notice(igniter, project) do
+      {igniter, seeded_by} =
+        case Configuration.read(igniter, :tenancy_mode) do
+          {:ok, igniter, mode} when mode in [:single, :multi] ->
+            {igniter, "provisioning a site (/admin/sites) seeds a published\nindex page in it"}
+
+          {:ok, igniter, _none} ->
+            {igniter, "mix brando.setup seeds a published\nindex page"}
+
+          {:error, _message} ->
+            {igniter, "mix brando.setup, or provisioning a site with tenancy,\nseeds a published index page"}
+        end
+
+      Igniter.add_notice(igniter, """
+      CMS pages are prepared under #{inspect(project.web_module)}.CMS.
+      The root page and unmatched public paths use published Brando pages.
+      Phoenix controllers, templates and layouts remain available in your application.
+      No content was created by this plan: #{seeded_by}, or create one yourself in /admin/pages with URI index and
+      template index.html. Until then / has no page to render.
+      To lock the site while it is being built, set `lockdown: true` and a
+      `lockdown_password` for :brando; see the lockdown section of the generators guide.
+      """)
     end
 
     defp configured_html(nil, _), do: :ok

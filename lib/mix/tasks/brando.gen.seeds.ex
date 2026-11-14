@@ -13,9 +13,12 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
   Creates identity and SEO defaults per configured language, a small set of
   content modules, a published `index` page built from them, a main navigation
   menu and a footer fragment. Existing content of each kind is left alone, so
-  the task is safe to rerun. With `tenancy_mode: :single` or `:multi` it
-  creates only the modules, in `public`, where the sites share them; each site
-  gets its identity, SEO and content when it is provisioned.
+  the task is safe to rerun.
+
+  With `tenancy_mode: :single` or `:multi` it seeds nothing: this content
+  belongs to a site's environment, and each site gets it when it is
+  provisioned (`Brando.Tenant.Seeder`). `--base-url` and `--description` are
+  unused then, and it says so.
 
   The seeded content is a starting point for editing in the admin, not a
   migration or an upgrade path.
@@ -38,26 +41,45 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
     Application.put_env(:logger, :level, :error)
     Mix.Task.run("app.start")
 
-    user = user!(opts[:user])
+    if Brando.Tenant.enabled?() do
+      banner()
 
+      Mix.shell().info([
+        :yellow,
+        """
+        Nothing seeded: with tenancy_mode #{inspect(Brando.Tenant.mode())} a site gets its content when it is
+        provisioned, at /admin/sites or with Brando.Tenant.Setup.create_site/3: the identity and SEO,
+        the modules, a homepage, the footer fragment and a main menu, in each of its languages.
+        """
+      ])
+
+      for {key, flag} <- [base_url: "--base-url", description: "--description"], opts[key] do
+        Mix.shell().info([:yellow, "#{flag} is unused with tenancy: set it in the site's SEO settings once it exists."])
+      end
+    else
+      seed(opts)
+    end
+  end
+
+  defp seed(opts) do
+    user = user!(opts[:user])
+    banner()
+
+    {:ok, report} = Brando.Setup.Seeds.run(user, seo: Keyword.take(opts, [:base_url, :description]))
+
+    for label <- Enum.reverse(report.created), do: Mix.shell().info([:green, "    + #{label}"])
+    for label <- Enum.reverse(report.skipped), do: Mix.shell().info([:yellow, "    = #{label} (exists)"])
+
+    Mix.shell().info([:green, "\n==> Done.\n"])
+  end
+
+  defp banner do
     Mix.shell().info("""
 
     ---------------------------
     % Brando Seed Content
     ---------------------------
     """)
-
-    # With tenancy the seeds put only the shared modules in `public`: each
-    # site gets its own content when provisioned (`Brando.Tenant.Seeder`)
-    {:ok, report} =
-      Brando.Tenant.with_public(fn ->
-        Brando.Setup.Seeds.run(user, seo: Keyword.take(opts, [:base_url, :description]))
-      end)
-
-    for label <- Enum.reverse(report.created), do: Mix.shell().info([:green, "    + #{label}"])
-    for label <- Enum.reverse(report.skipped), do: Mix.shell().info([:yellow, "    = #{label} (exists)"])
-
-    Mix.shell().info([:green, "\n==> Done.\n"])
   end
 
   defp user!(nil) do

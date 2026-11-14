@@ -120,7 +120,8 @@ Read `git diff`, with `git status` for the new files.
 Once the changes are written, review `config/brando.exs` and the application's
 database and endpoint settings, which setup uses to create the database. The
 default language is English: add other languages to `config/brando.exs`
-before setup, which seeds content for each configured language (see
+before setup, which seeds content for each configured language without
+tenancy (see
 [Languages and translations](i18n.md#configure-content-and-interface-languages)).
 
 <!-- usage-rules:start topic="generators" -->
@@ -147,17 +148,21 @@ after a failure resumes instead of duplicating. Skip steps with `--no-assets`,
 for an unattended run, supply `--email`, `--name` and `--password` for the
 account and `--base-url` and `--description` for the seeded site identity. The
 account logs in with the password given here; it is not asked to change it on
-first login.
+first login. With `single` or `multi` tenancy, setup seeds no content and asks
+for no base URL or description: content belongs to a site's environment, and
+a site gets it when it is provisioned. Setup says so in its output, and that
+`--base-url` and `--description` are unused when they are given.
 `--source PATH` hands a Brando JavaScript source to asset setup. Setup ends
 with `Setup complete.`; [Running the steps separately](#running-the-steps-separately)
 describes each step as its own task.
 
 <!-- usage-rules:end -->
 
-With `single` or `multi`, setup seeds only the shared modules (see
-[Seeded content](#seeded-content)). Provision the site and environment after
-the public migrations and initialize content inside that environment, as
-[Sites and environments](tenancy_and_environments.md) describes.
+With `single` or `multi`, provision the site after setup, at `/admin/sites` or
+with `Brando.Tenant.Setup.create_site/3`, as
+[Sites and environments](tenancy_and_environments.md#provision-sites-and-initial-environments)
+describes. Provisioning gives the site the content setup seeds without
+tenancy (see [Seeded content](#seeded-content)).
 
 ## Sign in
 
@@ -175,7 +180,8 @@ authorization is set up separately, in [Authorization](authorization.md).
 Open `http://localhost:4000/`. Setup seeded a published page with URI `index`,
 marked as the homepage and rendered with the `index.html` template, built from
 the [seeded modules](#seeded-content). Edit it in `/admin/pages`, or replace it
-with your own.
+with your own. With `single` or `multi` tenancy, provisioning seeds that page
+in each site, which answers on its environments' hosts.
 
 Without the seeds, `/` responds 404 until a homepage exists: in
 `/admin/pages`, create a page with URI `index`, mark it as the homepage,
@@ -330,8 +336,8 @@ ownership of a changed homepage. Update
 existing homepage request-test expectations when replacing the homepage
 behavior; phx.new's own test of it is removed with the route.
 
-The site needs a published homepage page, which setup seeds (see
-[Open the homepage](#open-the-homepage)). The scaffold configures
+The site needs a published homepage page, which setup seeds, or with tenancy
+site provisioning (see [Open the homepage](#open-the-homepage)). The scaffold configures
 `:page_html_module` to select its own CMS templates while preserving your
 Phoenix PageHTML and layouts. Templates under `priv/templates/brando.gen.site`
 override packaged defaults. No page or account is created by this source
@@ -608,11 +614,11 @@ admin, not a migration path. Without it, `/` has no published page and
 responds 404. A failed run leaves nothing behind. Your application's own
 `priv/repo/seeds.exs` is preserved and never run for you.
 
-With `single` or `multi` tenancy no site exists when setup runs, so the seeds
-create only the seven modules, in `public`, where the sites share them. Each
-site gets its identity and SEO when it is provisioned, and its pages, menus
-and fragments from the application's `Brando.Tenant.Seeder` (see
-[Sites and environments](tenancy_and_environments.md)).
+With `single` or `multi` tenancy, `brando.gen.seeds` seeds nothing: content
+belongs to a site's environment, and no site exists when setup runs. The
+default `Brando.Tenant.Seeder` creates the same content in each new site's
+Production environment, in the site's languages, when the site is provisioned
+(see [Sites and environments](tenancy_and_environments.md#provision-sites-and-initial-environments)).
 
 The seeded modules (Hero, Steps, Cards, Tips, Toolbox, Closing and Footer)
 double as worked examples of the ref conventions: mono micro-labels and links

@@ -11,18 +11,21 @@ Job.each_active_environment(:live, fn ->
         {"about", "CMS smoke about", :published, "default.html"},
         {"draft", "Unpublished CMS smoke page", :draft, "default.html"}
       ] do
+    attrs = %{
+      title: title,
+      uri: uri,
+      language: "en",
+      template: template,
+      is_homepage: uri == "index",
+      status: status
+    }
+
+    # With tenancy, provisioning seeded the site's homepage: this one takes it over
     {:ok, _page} =
-      Pages.create_page(
-        %{
-          title: title,
-          uri: uri,
-          language: "en",
-          template: template,
-          is_homepage: uri == "index",
-          status: status
-        },
-        user
-      )
+      case Brando.Repo.get_by(Pages.Page, uri: uri, language: :en) do
+        nil -> Pages.create_page(attrs, user)
+        seeded -> Pages.update_page(seeded.id, attrs, user)
+      end
   end
 end)
 

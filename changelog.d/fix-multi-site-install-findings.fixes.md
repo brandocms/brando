@@ -1,6 +1,8 @@
-- `mix brando.setup` finishes on a `:single` or `:multi` installation: its seeds create only the shared modules in `public`, and a failed seed run leaves nothing behind.
+- `mix brando.setup` finishes on a `:single` or `:multi` installation: it seeds no content there, asks for no base URL or description, and says that a site gets its content when it is provisioned and that `--base-url` and `--description` are unused.
 
-- A failed `mix brando.gen.seeds` run leaves nothing behind in the caches its renders filled.
+- A failed `mix brando.gen.seeds` run leaves nothing behind, in the database or in the caches its renders filled.
+
+- A site whose provisioning fails has the jobs queued in its environments cancelled with it.
 
 - Blocks the setup seeds create carry the version of the module definition they were built from, so `mix brando.doctor` reports them as outdated only when their module has changed since.
 

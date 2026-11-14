@@ -32,7 +32,10 @@ after a failure resumes instead of duplicating. Skip steps with `--no-assets`,
 for an unattended run, supply `--email`, `--name` and `--password` for the
 account and `--base-url` and `--description` for the seeded site identity. The
 account logs in with the password given here; it is not asked to change it on
-first login.
+first login. With `single` or `multi` tenancy, setup seeds no content and asks
+for no base URL or description: content belongs to a site's environment, and
+a site gets it when it is provisioned. Setup says so in its output, and that
+`--base-url` and `--description` are unused when they are given.
 `--source PATH` hands a Brando JavaScript source to asset setup. Setup ends
 with `Setup complete.`; [Running the steps separately](deps/brando/guides/installation.md#running-the-steps-separately)
 describes each step as its own task.

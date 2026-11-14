@@ -12,6 +12,25 @@ defmodule Brando.Setup.SeedsTest do
 
   defp count(schema), do: Brando.Repo.aggregate(schema, :count)
 
+  @public_schemas [
+    Content.Module,
+    Pages.Page,
+    Pages.Fragment,
+    Navigation.Menu,
+    Brando.Sites.Identity,
+    Brando.Sites.SEO
+  ]
+
+  defp shell_output(output \\ "") do
+    receive do
+      {:mix_shell, :info, [message]} -> shell_output(output <> message)
+    after
+      0 -> output
+    end
+  end
+
+  defp public_counts, do: Brando.Tenant.with_public(fn -> Enum.map(@public_schemas, &count/1) end)
+
   # Seeds.run/2 refills the identity, SEO and navigation caches from this
   # test's sandboxed rows. The rows roll back; the global caches don't, and
   # later tests (the JSON-LD schema test) would read this test's SEO.
@@ -93,21 +112,6 @@ defmodule Brando.Setup.SeedsTest do
       assert stale == []
     end
 
-    test "a seeded block for a module an editor has changed is reported as outdated" do
-      user = Factory.insert(:random_user)
-      {:ok, %{modules: %{hero: hero}}} = Seeds.run(user, languages: [:en])
-
-      # An editor changes the module before the second language is seeded
-      hero |> Ecto.Changeset.change(version: 2) |> Brando.Repo.update!()
-      {:ok, _report} = Seeds.run(user, languages: [:no])
-
-      stale = Map.new(Content.Blocks.count_stale_blocks_by_module(), fn {module, count} -> {module.id, count} end)
-
-      # Both pages' hero blocks are built from the seed's definition, the
-      # second one too
-      assert stale[hero.id] == 2
-    end
-
     test "is idempotent" do
       user = Factory.insert(:random_user)
 
@@ -123,28 +127,79 @@ defmodule Brando.Setup.SeedsTest do
       assert counts == {count(Pages.Page), count(Content.Module), count(Navigation.Menu), count(Pages.Fragment)}
     end
 
-    # No site exists when setup runs with tenancy: provisioning seeds each one
+    test "a seeded block for a module an editor has changed is reported as outdated" do
+      user = Factory.insert(:random_user)
+      {:ok, %{modules: %{hero: hero}}} = Seeds.run(user, languages: [:en])
+
+      # An editor changes the module before the second language is seeded
+      hero |> Ecto.Changeset.change(version: 2) |> Brando.Repo.update!()
+      {:ok, _report} = Seeds.run(user, languages: [:no])
+
+      stale = Map.new(Content.Blocks.count_stale_blocks_by_module(), fn {module, count} -> {module.id, count} end)
+
+      # Both pages' hero blocks are built from the seed's definition, the
+      # second one too
+      assert stale[hero.id] == 2
+    end
+
+    test "seeds the same records, in the same order, without tenancy" do
+      user = Factory.insert(:random_user)
+
+      {:ok, report} = Seeds.run(user, languages: [:en, :no])
+
+      labels = Enum.reverse(report.created) ++ Enum.reverse(report.skipped)
+
+      assert Enum.sort(labels) ==
+               Enum.sort(for l <- [:en, :no], kind <- ~w(identity seo menu page), do: :"#{kind} (#{l})")
+
+      assert Enum.filter(Enum.reverse(report.created), &(&1 in [:"menu (en)", :"page (en)", :"menu (no)", :"page (no)"])) ==
+               [:"menu (en)", :"page (en)", :"menu (no)", :"page (no)"]
+
+      assert report.modules |> Map.keys() |> Enum.sort() == ~w(cards closing footer hero steps terminal tips)a
+
+      for language <- [:en, :no] do
+        assert Brando.Repo.get_by(Pages.Page, uri: "index", language: language, is_homepage: true)
+        assert Brando.Repo.get_by(Navigation.Menu, key: "main", language: language)
+        assert Brando.Repo.get_by(Pages.Fragment, parent_key: "partials", key: "footer", language: language)
+      end
+    end
+
+    # A site's content belongs to its environment, which `Brando.Tenant.Seeder`
+    # seeds when the site is provisioned
     for mode <- [:single, :multi] do
-      test "with tenancy_mode #{inspect(mode)}, seeds only the shared modules into public" do
+      test "with tenancy_mode #{inspect(mode)}, setup writes nothing to public, and says why" do
+        put_test_env(:tenancy_mode, unquote(mode))
+        put_test_env(:site_key, "acme")
+        Factory.insert(:random_user, role: :superuser)
+        shell = Mix.shell()
+        Mix.shell(Mix.Shell.Process)
+
+        on_exit(fn ->
+          Mix.shell(shell)
+          Mix.Task.reenable("brando.gen.seeds")
+        end)
+
+        counts = public_counts()
+
+        Mix.Task.reenable("brando.gen.seeds")
+        Mix.Tasks.Brando.Setup.run(~w(--no-assets --no-db --no-account --base-url https://acme.test))
+
+        assert public_counts() == counts
+        output = shell_output()
+        assert output =~ "a site gets its content when it is\nprovisioned"
+        assert output =~ "--base-url is unused"
+        refute output =~ "--description"
+        refute_received {:mix_shell, :prompt, _}
+      end
+
+      test "with tenancy_mode #{inspect(mode)}, seeding outside an environment raises" do
         put_test_env(:tenancy_mode, unquote(mode))
         put_test_env(:site_key, "acme")
         user = Factory.insert(:random_user)
+        counts = public_counts()
 
-        public_counts = fn ->
-          Brando.Tenant.with_public(fn -> {count(Pages.Page), count(Navigation.Menu), count(Pages.Fragment)} end)
-        end
-
-        counts = public_counts.()
-
-        {:ok, report} = Brando.Tenant.with_public(fn -> Seeds.run(user, languages: [:en]) end)
-
-        assert report.created == []
-
-        for uid <- ~w(hero steps cards tips terminal closing footer) do
-          assert Brando.Tenant.with_public(fn -> Brando.Repo.get_by(Content.Module, uid: "brando-default-#{uid}") end)
-        end
-
-        assert counts == public_counts.()
+        assert_raise ArgumentError, ~r/site's environment/, fn -> Seeds.run(user, languages: [:en]) end
+        assert public_counts() == counts
       end
     end
 

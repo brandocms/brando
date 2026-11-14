@@ -1,21 +1,23 @@
 defmodule Brando.Setup.Seeds do
   @moduledoc """
-  Default content for a freshly installed application.
+  Default content for a new installation or a newly provisioned site.
 
-  Creates the content a new site needs before its first request succeeds:
-  identity and SEO per configured language, a set of modules, a published
-  `index` page built from them, a main navigation menu and a footer fragment.
+  Creates the content a site needs before its first request succeeds:
+  identity and SEO per language, a set of modules, a published `index` page
+  built from them, a main navigation menu and a footer fragment.
 
-  With `tenancy_mode: :single` or `:multi` no site exists yet when setup runs,
-  so only the modules, which the sites share from `public`, are seeded. Each
-  site gets its own identity, SEO and content when it is provisioned
-  (`Brando.Tenant.Seeder`).
+  Without tenancy, `mix brando.setup` seeds them for every configured
+  language. With `tenancy_mode: :single` or `:multi` they belong to a site's
+  environment: `Brando.Tenant.Seeder` seeds them in each site's Production
+  environment, in the site's languages, when the site is provisioned, and a
+  run outside an environment raises.
 
   Every step is skipped when its content already exists, so the seeds are safe
   to rerun. Nothing here is a migration path: existing content is never
   modified or removed.
 
-  Run through `mix brando.setup` or `mix brando.gen.seeds`.
+  Run through `mix brando.setup` or `mix brando.gen.seeds`, or
+  `Brando.Tenant.Seeder`.
   """
 
   alias Brando.Cache
@@ -46,16 +48,25 @@ defmodule Brando.Setup.Seeds do
   @docs_url "https://hexdocs.pm/brando"
 
   @doc """
-  Seeds default content for every configured language.
+  Seeds default content for every configured language, or for
+  `languages: [...]`.
 
   Returns `{:ok, report}` where report counts what was created and what already
   existed. Creation failures raise, and roll back everything this run wrote,
   since a half-seeded site is harder to reason about than a failed setup step.
+
+  With tenancy it runs in the current environment, and raises without one.
   """
   @spec run(Brando.Users.User.t(), keyword()) :: {:ok, map()}
   def run(user, opts \\ []) do
-    languages = if Brando.Tenant.enabled?(), do: [], else: opts[:languages] || languages()
+    if Brando.Tenant.enabled?() and is_nil(Brando.Tenant.current_prefix()) do
+      raise ArgumentError, "with tenancy, the seeds run in a site's environment (Brando.Tenant.Seeder)"
+    end
 
+    seed(user, opts[:languages] || languages(), opts)
+  end
+
+  defp seed(user, languages, opts) do
     {:ok, report} =
       Brando.Repo.transaction(fn ->
         modules = modules(user)
@@ -65,11 +76,9 @@ defmodule Brando.Setup.Seeds do
         |> Map.put(:modules, modules)
       end)
 
-    if languages != [] do
-      Cache.Identity.set()
-      Cache.SEO.set()
-      Cache.Navigation.set()
-    end
+    Cache.Identity.set()
+    Cache.SEO.set()
+    Cache.Navigation.set()
 
     {:ok, report}
   rescue
@@ -191,7 +200,7 @@ defmodule Brando.Setup.Seeds do
 
   # ── Modules ───────────────────────────────────────────────────────────────
 
-  # Modules are global, so they are seeded once regardless of language. Their
+  # Modules are shared by every language, so they are seeded once. Their
   # uid carries module identity across imports and upgrades, so a stable uid is
   # what makes a rerun a no-op instead of a duplicate.
   defp modules(user) do

@@ -92,6 +92,15 @@ defmodule Mix.Brando.Igniter.SiteTest do
   end
 
   describe "a new install" do
+    test "says what seeds the homepage in its tenancy mode" do
+      none = install(fresh())
+      assert Enum.any?(none.notices, &(&1 =~ "mix brando.setup seeds a published\nindex page"))
+
+      multi = install(fresh(), ["--yes", "--tenancy-mode", "multi"])
+      assert Enum.any?(multi.notices, &(&1 =~ "provisioning a site (/admin/sites) seeds a published\nindex page"))
+      refute Enum.any?(multi.notices, &(&1 =~ "mix brando.setup seeds"))
+    end
+
     test "adds the site, in place of phx.new's unchanged homepage" do
       result = install(fresh())
       assert result.issues == []
