@@ -50,7 +50,9 @@ configuration are blocking issues.
 - Binary files (the templates' `.ico` favicons, the only binaries they ship)
   never enter Rewrite's new-file writer, which normalizes trailing newlines
   even for binaries. The digest-checked `brando.assets.copy` task, whose
-  allowlist is the template manifest's `.ico` entries, runs after acceptance,
+  allowlist is the template manifest's `.ico` entries (the frontend's also
+  under a site's `assets/sites/<key>/`, which `mix brando.gen.site --site`
+  creates in `:multi` from the frontend's templates), runs after acceptance,
   writes exact bytes with atomic no-clobber creation, and refuses changed
   destinations. Dry runs copy nothing. `brando.assets.setup` is a separate
   operational task that installs and builds consumer assets, with BrandoJS
@@ -106,7 +108,10 @@ the application's explicit routes.
   support paths, or no `:browser` pipeline) blocks `mix brando.gen.site`; a new
   install leaves the site out instead, with a notice naming the routes.
 - Custom generated files block the plan. Guidance requires an affirmative
-  ownership answer, independent of diff acceptance.
+  ownership answer, independent of diff acceptance. The exception is
+  `--site KEY`: a site module file that exists is the application's own and
+  is kept, with a notice, so a rerun adds only what is missing, its Vite
+  project included.
 
 ### What planning does not do
 

@@ -37,6 +37,13 @@ if Code.ensure_loaded?(Igniter) do
       {".envrc*", [".envrc", ".envrc.prod", ".envrc.staging", ".envrc.prod.bak", ".envrc~", ".envrc-x9q"]}
     ]
 
+    # In :multi, each site's Vite project in assets/sites/<key>/. The release
+    # does not serve a site's build: it is uploaded as the site's asset set.
+    @site_exclusions [
+      {"assets/sites/*/node_modules", ["assets/sites/acme/node_modules"]},
+      {"assets/sites/*/dist", ["assets/sites/acme/dist"]}
+    ]
+
     @doc """
     Writes Brando's Dockerfile and `.dockerignore` when the application has
     none. Florist builds the release with `docker build -f Dockerfile .` and
@@ -50,10 +57,10 @@ if Code.ensure_loaded?(Igniter) do
     it covers: the exclusions such an exception could touch are named in a
     notice instead.
     """
-    def plan(igniter, project) do
+    def plan(igniter, project, tenancy_mode) do
       igniter
       |> dockerfile(project)
-      |> dockerignore()
+      |> dockerignore(tenancy_mode)
     end
 
     defp dockerfile(igniter, project) do
@@ -83,11 +90,18 @@ if Code.ensure_loaded?(Igniter) do
       """)
     end
 
-    defp dockerignore(igniter) do
+    @doc """
+    Writes Brando's `.dockerignore`, or appends the exclusions an existing one
+    is missing. With `:multi` these include each site project's
+    `node_modules` and `dist` in `assets/sites/`.
+    """
+    def dockerignore(igniter, tenancy_mode) do
+      exclusions = @context_exclusions ++ if(tenancy_mode == :multi, do: @site_exclusions, else: [])
+
       if Igniter.exists?(igniter, ".dockerignore") do
         {igniter, contents} = contents(igniter, ".dockerignore")
         rules = rules(contents)
-        missing = for {line, paths} <- @context_exclusions, not Enum.all?(paths, &excluded?(rules, &1)), do: line
+        missing = for {line, paths} <- exclusions, not Enum.all?(paths, &excluded?(rules, &1)), do: line
         exceptions = for {true, _regex, segments} <- rules, do: segments
         {conflicting, appendable} = Enum.split_with(missing, &conflicts?(exceptions, &1))
 
@@ -95,9 +109,21 @@ if Code.ensure_loaded?(Igniter) do
         |> append(appendable)
         |> dockerignore_notice(conflicting)
       else
-        Files.create(igniter, ".dockerignore", Templates.contents(:copy, "dockerignore"))
+        Files.create(igniter, ".dockerignore", dockerignore_template(tenancy_mode))
       end
     end
+
+    defp dockerignore_template(:multi) do
+      lines = Enum.map_join(@site_exclusions, &"#{elem(&1, 0)}\n")
+      after_line = "assets/frontend/node_modules\n"
+      template = Templates.contents(:copy, "dockerignore")
+
+      if String.contains?(template, after_line),
+        do: String.replace(template, after_line, after_line <> lines),
+        else: String.trim_trailing(template) <> "\n" <> lines
+    end
+
+    defp dockerignore_template(_tenancy_mode), do: Templates.contents(:copy, "dockerignore")
 
     defp append(igniter, []), do: igniter
     defp append(igniter, missing), do: Igniter.update_file(igniter, ".dockerignore", &append_lines(&1, missing))

@@ -9,16 +9,31 @@ defmodule Mix.Tasks.Brando.Assets.Copy do
   # The manifest is the allowlist; argv cannot request an arbitrary source/target.
   @impl Mix.Task
   def run([target, expected_digest]) do
+    template = template_target(target)
+
     case Enum.find(Templates.manifest(), fn
-           {:copy, _source, ^target} -> Path.extname(target) == ".ico"
+           {:copy, _source, ^template} -> Path.extname(template) == ".ico"
            _ -> false
          end) do
-      {:copy, source, ^target} -> copy!(target, Templates.contents(:copy, source), expected_digest)
+      {:copy, source, ^template} -> copy!(target, Templates.contents(:copy, source), expected_digest)
       _ -> Mix.raise("Unknown Brando binary asset: #{target}")
     end
   end
 
   def run(_argv), do: Mix.raise("This internal task requires an asset path and its planned SHA-256 digest.")
+
+  # A site's Vite project in assets/sites/<key>/ has assets/frontend's files
+  # (Mix.Brando.Igniter.Assets.site_project/3).
+  defp template_target("assets/sites/" <> rest = target) do
+    with [key, path] <- String.split(rest, "/", parts: 2),
+         true <- Brando.Tenant.valid_key?(key) do
+      "assets/frontend/" <> path
+    else
+      _ -> target
+    end
+  end
+
+  defp template_target(target), do: target
 
   defp copy!(target, contents, expected_digest) do
     digest = :crypto.hash(:sha256, contents) |> Base.encode16(case: :lower)

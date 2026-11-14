@@ -73,6 +73,35 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     refute notice?(rerun, ".dockerignore has exceptions")
   end
 
+  test "in :multi, the .dockerignore also keeps each site project's dependencies and build out" do
+    igniter = install(project(), ["--yes", "--tenancy-mode", "multi"])
+    assert igniter.issues == []
+
+    assert IgniterCase.source(igniter, ".dockerignore") ==
+             String.replace(
+               Templates.contents(:copy, "dockerignore"),
+               "assets/frontend/node_modules\n",
+               "assets/frontend/node_modules\nassets/sites/*/node_modules\nassets/sites/*/dist\n"
+             )
+
+    single = install(project(), ["--yes", "--tenancy-mode", "single", "--site-key", "studio"])
+    assert IgniterCase.source(single, ".dockerignore") == Templates.contents(:copy, "dockerignore")
+
+    rerun = igniter |> IgniterCase.apply_and_reload() |> install()
+    Igniter.Test.assert_unchanged(rerun, ".dockerignore")
+
+    # An existing .dockerignore gets them appended.
+    existing =
+      install(project(%{".dockerignore" => "_build\ndeps\n**/node_modules\nmedia\nrelease-archives\nsql\n.envrc*\n"}), [
+        "--yes",
+        "--tenancy-mode",
+        "multi"
+      ])
+
+    assert IgniterCase.source(existing, ".dockerignore") =~
+             "\n# Kept out of the Docker build context by Brando\nassets/sites/*/dist\n"
+  end
+
   @phx_dockerfile """
   ARG BUILDER_IMAGE="hexpm/elixir:1.18.4-erlang-28.0.2-debian-bookworm-20250811-slim"
   FROM ${BUILDER_IMAGE} AS builder

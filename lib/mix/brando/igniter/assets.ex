@@ -8,6 +8,8 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.BrandoJS
     alias Mix.Brando.Igniter.Files
     alias Mix.Brando.Igniter.Install
+    alias Mix.Brando.Igniter.Install.Deployment
+    alias Mix.Brando.Igniter.Install.Docker
     alias Mix.Brando.Install.Templates
 
     @doc """
@@ -35,6 +37,102 @@ if Code.ensure_loaded?(Igniter) do
       Templates.manifest()
       |> Enum.filter(fn {_format, _source, target} -> String.starts_with?(target, prefixes) end)
       |> Enum.reduce(igniter, &plan_asset(&1, &2, project))
+    end
+
+    @doc """
+    Plans a site's own Vite project in `assets/sites/<key>/` (`mix brando.gen.site
+    --site KEY` in `:multi`): the files a new installation's `assets/frontend`
+    gets, from the same templates, with the changes `site_contents/4` makes.
+    `.gitignore`, and `.dockerignore` when the application has one, get the
+    lines for the projects' dependencies and builds they lack. An existing
+    `assets/sites/<key>/` is left as it is, with a notice.
+    """
+    def site_project(igniter, project, key) do
+      root = "assets/sites/#{key}"
+
+      if Igniter.exists?(igniter, root) do
+        Igniter.add_notice(igniter, """
+        #{root}/ already exists, so it was left as it is. To complete a project left
+        half-written, or to start it over, delete #{root}/ and run mix brando.gen.site --site #{key} again.
+        """)
+      else
+        key
+        |> site_files()
+        |> Enum.reduce(igniter, &site_file(&1, &2, project, key))
+        |> Deployment.tenancy_gitignore(:multi)
+        |> then(&if(Igniter.exists?(&1, ".dockerignore"), do: Docker.dockerignore(&1, :multi), else: &1))
+        |> Igniter.add_notice("""
+        #{root}/ is the site's own Vite project, from the templates that give assets/frontend,
+        and builds into its dist/ folder. Nothing was installed or built. To install its
+        dependencies and build it, run:
+
+            cd #{root} && pnpm install && pnpm build
+        """)
+      end
+    end
+
+    defp site_file({format, source, target}, igniter, project, key) do
+      cond do
+        Path.extname(target) == ".ico" -> binary_asset(igniter, source, target)
+        format == :keep -> Files.create(igniter, Path.join(target, ".keep"), "")
+        true -> Files.create(igniter, target, site_contents(format, source, project, key))
+      end
+    end
+
+    @doc "The frontend templates' manifest entries, with their targets in the site's project."
+    def site_files(key) do
+      for {format, source, "assets/frontend/" <> path} <- Templates.manifest(),
+          do: {format, source, "assets/sites/#{key}/#{path}"}
+    end
+
+    # Where a site's project differs from assets/frontend: it builds into its
+    # own dist/, which is uploaded as the site's asset set and so keeps its
+    # source maps until they are deleted by hand, and its package is named
+    # for the site.
+    defp site_contents(format, source, project, key) do
+      contents = Install.render(format, source, project)
+
+      case Path.basename(source) do
+        "vite.config.js" ->
+          contents
+          |> site_replace(
+            source,
+            "    emptyOutDir: false,\n    outDir: '../../priv/static', // <- Phoenix expects our files here\n",
+            "    emptyOutDir: true,\n    outDir: 'dist', // <- the site's asset set, uploaded on its own\n"
+          )
+          |> site_replace(
+            source,
+            """
+                // Maps are written without a sourceMappingURL comment, so browsers never
+                // ask for them. `mix brando.digest` deletes them before release; upload
+                // them to Sentry first if you want readable stack traces.
+            """,
+            """
+                // Maps are written without a sourceMappingURL comment, so browsers never
+                // ask for them, but a set serves every file it holds. Upload them to
+                // Sentry first if you want readable stack traces, then delete them
+                // before uploading the set: find dist -name '*.map' -delete
+            """
+          )
+
+        "package.json" ->
+          contents
+          |> site_replace(source, ~s("name": "frontend",), ~s("name": "#{key}",))
+          |> site_replace(
+            source,
+            ~s("description": "#{project.otp_app} Frontend",),
+            ~s("description": "#{project.otp_app} frontend for the site #{key}",)
+          )
+
+        _ ->
+          contents
+      end
+    end
+
+    defp site_replace(contents, source, from, to) do
+      if String.contains?(contents, from),
+        do: String.replace(contents, from, to),
+        else: raise("templates/brando.install/#{source} no longer contains #{inspect(from)}: update site_contents/4")
     end
 
     # Packages earlier backend templates installed that the current one dropped.

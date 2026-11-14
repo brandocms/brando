@@ -449,24 +449,16 @@ need not be. In `:multi`, each site's frontend source can be a Vite project
 of its own in `assets/sites/<key>/`, whose build is uploaded as that site's
 [asset set](deps/brando/guides/tenancy_and_environments.md#uploadable-frontend-asset-sets). `assets/frontend` stays the
 release's default frontend, which a site without an active set gets.
-`mix brando.gen.site --site acme` names `assets/sites/acme/` in what it
-prints; it does not create the project. Start one by copying
-`assets/frontend` (without its `node_modules`), so its Vite config reads
-`BRANDO_VITE_FRONTEND_HOST` and `BRANDO_VITE_FRONTEND_PORT` as the default
-frontend's does. Then point the copy's build at a folder of its own: the
-copied `outDir: '../../priv/static'` resolves to `assets/priv/static` from
-`assets/sites/acme`. In `assets/sites/acme/vite.config.js`, set
-
-```js
-build: {
-  // ...
-  emptyOutDir: true,
-  outDir: 'dist',
-}
-```
-
-so `pnpm build` there writes the set to `assets/sites/acme/dist`, the folder
-[Uploading a site's build by hand](deps/brando/guides/tenancy_and_environments.md#uploading-a-sites-build-by-hand) copies.
+`mix brando.gen.site --site acme` creates `assets/sites/acme/` from the
+templates that give a new installation `assets/frontend`. Its Vite config
+reads `BRANDO_VITE_FRONTEND_HOST` and `BRANDO_VITE_FRONTEND_PORT` as the
+default frontend's does and builds into the project's `dist/`, and its
+`package.json` is named `acme`. `.gitignore`, and `.dockerignore` when the
+application has one, get the lines that keep every site project's
+`node_modules` and `dist` out of Git and out of the Docker build context.
+An existing `assets/sites/acme/` is left as it is: to complete one left
+half-written, or to start it over, delete it and run the task again. The
+task installs and builds nothing: run `pnpm install` and `pnpm build` in the project.
 
 In development, one Vite dev server runs one site's project. Say which
 with `dev_site`, beside `hmr`, and point the `vite_site` watcher at the same

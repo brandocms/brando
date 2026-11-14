@@ -181,6 +181,10 @@ Florist sends the build context, the project directory, to the Docker daemon
 on every build, and that daemon may be remote. The `.dockerignore` keeps out
 dependencies and build output, `node_modules`, `media/`, Florist's
 `release-archives/` and `sql/` dumps, and the `.envrc*` files with secrets.
+With `multi` it also keeps out each site project's `assets/sites/*/node_modules`
+and `assets/sites/*/dist`: the release does not serve a site's build, which
+is uploaded as the site's asset set. `mix brando.gen.site --site KEY` adds
+those two to an existing `.dockerignore` when it creates a site's project.
 An existing `.dockerignore` gets the exclusions it misses appended, with
 `.envrc*` unless one pattern already covers every `.envrc*` name (exact names
 such as `.envrc.prod` leave a `.envrc.prod.bak` in the context). An appended

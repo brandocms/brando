@@ -121,7 +121,13 @@ mix run --no-start -e 'false = Code.ensure_loaded?(ReqLLM); false = Brando.AI.av
 if grep -l '__BRANDO_' .envrc.prod .envrc.staging; then echo "brando.install.secrets left markers in the files above" >&2; exit 1; fi
 # What Florist's release build needs, and the live preview of CMS pages.
 cmp Dockerfile "$brando_dir/priv/templates/brando.install/Dockerfile"
-cmp .dockerignore "$brando_dir/priv/templates/brando.install/dockerignore"
+# With :multi the installer also keeps each site project's dependencies and build out of the context.
+if [ "$smoke_mode" = multi ]; then
+  awk '{ print } $0 == "assets/frontend/node_modules" { print "assets/sites/*/node_modules"; print "assets/sites/*/dist" }' \
+    "$brando_dir/priv/templates/brando.install/dockerignore" | cmp .dockerignore -
+else
+  cmp .dockerignore "$brando_dir/priv/templates/brando.install/dockerignore"
+fi
 grep -q 'steps: \[:assemble, :tar\]' mix.exs
 grep -q 'def migrate do' lib/igniter_smoke/release_tasks.ex
 grep -q 'media_path: "./media"' config/prod.exs
