@@ -17,8 +17,9 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
 
   With `tenancy_mode: :single` or `:multi` it seeds nothing: this content
   belongs to a site's environment, and each site gets it when it is
-  provisioned (`Brando.Tenant.Seeder`). `--base-url` and `--description` are
-  unused then, and it says so.
+  provisioned (`Brando.Tenant.Seeder`). In `:single`, `mix brando.setup`
+  provisions the site; in `:multi`, sites are created at `/admin/sites`.
+  `--base-url` and `--description` are unused then, and it says so.
 
   The seeded content is a starting point for editing in the admin, not a
   migration or an upgrade path.
@@ -44,14 +45,7 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
     if Brando.Tenant.enabled?() do
       banner()
 
-      Mix.shell().info([
-        :yellow,
-        """
-        Nothing seeded: with tenancy_mode #{inspect(Brando.Tenant.mode())} a site gets its content when it is
-        provisioned, at /admin/sites or with Brando.Tenant.Setup.create_site/3: the identity and SEO,
-        the modules, a homepage, the footer fragment and a main menu, in each of its languages.
-        """
-      ])
+      Mix.shell().info([:yellow, "Nothing seeded: ", tenancy_notice(Brando.Tenant.mode())])
 
       for {key, flag} <- [base_url: "--base-url", description: "--description"], opts[key] do
         Mix.shell().info([:yellow, "#{flag} is unused with tenancy: set it in the site's SEO settings once it exists."])
@@ -59,6 +53,22 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
     else
       seed(opts)
     end
+  end
+
+  defp tenancy_notice(:single) do
+    """
+    with tenancy_mode :single, mix brando.setup creates the site
+    #{inspect(Brando.config(:site_key))} and gives it this content: the identity and SEO, the modules,
+    a homepage, the footer fragment and a main menu, in each of its languages.
+    """
+  end
+
+  defp tenancy_notice(:multi) do
+    """
+    with tenancy_mode :multi, sites are created at /admin/sites, and each
+    gets its content when it is created: the identity and SEO, the modules, a homepage,
+    the footer fragment and a main menu, in each of its languages.
+    """
   end
 
   defp seed(opts) do

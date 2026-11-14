@@ -166,32 +166,32 @@ defmodule Brando.Setup.SeedsTest do
 
     # A site's content belongs to its environment, which `Brando.Tenant.Seeder`
     # seeds when the site is provisioned
-    for mode <- [:single, :multi] do
-      test "with tenancy_mode #{inspect(mode)}, setup writes nothing to public, and says why" do
-        put_test_env(:tenancy_mode, unquote(mode))
-        put_test_env(:site_key, "acme")
-        Factory.insert(:random_user, role: :superuser)
-        shell = Mix.shell()
-        Mix.shell(Mix.Shell.Process)
+    # In `:single` setup provisions the site instead (`Brando.Setup.SiteTest`)
+    test "with tenancy_mode :multi, setup writes nothing to public, and says why" do
+      put_test_env(:tenancy_mode, :multi)
+      Factory.insert(:random_user, role: :superuser)
+      shell = Mix.shell()
+      Mix.shell(Mix.Shell.Process)
 
-        on_exit(fn ->
-          Mix.shell(shell)
-          Mix.Task.reenable("brando.gen.seeds")
-        end)
-
-        counts = public_counts()
-
+      on_exit(fn ->
+        Mix.shell(shell)
         Mix.Task.reenable("brando.gen.seeds")
-        Mix.Tasks.Brando.Setup.run(~w(--no-assets --no-db --no-account --base-url https://acme.test))
+      end)
 
-        assert public_counts() == counts
-        output = shell_output()
-        assert output =~ "a site gets its content when it is\nprovisioned"
-        assert output =~ "--base-url is unused"
-        refute output =~ "--description"
-        refute_received {:mix_shell, :prompt, _}
-      end
+      counts = public_counts()
 
+      Mix.Task.reenable("brando.gen.seeds")
+      Mix.Tasks.Brando.Setup.run(~w(--no-assets --no-db --no-account --base-url https://acme.test))
+
+      assert public_counts() == counts
+      output = shell_output()
+      assert output =~ "sites are created at /admin/sites"
+      assert output =~ "--base-url is unused"
+      refute output =~ "--description"
+      refute_received {:mix_shell, :prompt, _}
+    end
+
+    for mode <- [:single, :multi] do
       test "with tenancy_mode #{inspect(mode)}, seeding outside an environment raises" do
         put_test_env(:tenancy_mode, unquote(mode))
         put_test_env(:site_key, "acme")

@@ -447,7 +447,9 @@ Individual working environments can also be created with
 log, and compensates a failed schema creation or migration.
 
 In `single` mode, the site key in the registry must match the configured
-`site_key`.
+`site_key`. `mix brando.setup` provisions that site, with the default
+environments and the first account as its creator, when no site has the key
+(see [Run setup](installation.md#run-setup)).
 
 ## Router and request context
 

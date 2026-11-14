@@ -1,4 +1,4 @@
-- `mix brando.setup` finishes on a `:single` or `:multi` installation: it seeds no content there, asks for no base URL or description, and says that a site gets its content when it is provisioned and that `--base-url` and `--description` are unused.
+- `mix brando.setup` finishes on a `:single` or `:multi` installation: it seeds nothing in `public` there, asks for no base URL or description, and says that `--base-url` and `--description` are unused; with `:multi` it says that sites, and their content, are created at `/admin/sites`.
 
 - A failed `mix brando.gen.seeds` run leaves nothing behind, in the database or in the caches its renders filled.
 

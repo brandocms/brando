@@ -59,14 +59,18 @@ if Code.ensure_loaded?(Igniter) do
     defp pages_notice(igniter, project) do
       {igniter, seeded_by} =
         case Configuration.read(igniter, :tenancy_mode) do
-          {:ok, igniter, mode} when mode in [:single, :multi] ->
-            {igniter, "provisioning a site (/admin/sites) seeds a published\nindex page in it"}
+          {:ok, igniter, :single} ->
+            {igniter, "mix brando.setup creates the site and seeds a\npublished index page in it"}
+
+          {:ok, igniter, :multi} ->
+            {igniter, "sites are created at /admin/sites, and each gets\na published index page"}
 
           {:ok, igniter, _none} ->
             {igniter, "mix brando.setup seeds a published\nindex page"}
 
           {:error, _message} ->
-            {igniter, "mix brando.setup, or provisioning a site with tenancy,\nseeds a published index page"}
+            {igniter,
+             "mix brando.setup, or creating a site at /admin/sites with\nmulti-site tenancy, seeds a published index page"}
         end
 
       Igniter.add_notice(igniter, """

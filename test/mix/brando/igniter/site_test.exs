@@ -96,9 +96,18 @@ defmodule Mix.Brando.Igniter.SiteTest do
       none = install(fresh())
       assert Enum.any?(none.notices, &(&1 =~ "mix brando.setup seeds a published\nindex page"))
 
+      single = install(fresh(), ["--yes", "--tenancy-mode", "single", "--site-key", "acme"])
+
+      assert Enum.any?(
+               single.notices,
+               &(&1 =~ "mix brando.setup creates the site and seeds a\npublished index page in it")
+             )
+
       multi = install(fresh(), ["--yes", "--tenancy-mode", "multi"])
-      assert Enum.any?(multi.notices, &(&1 =~ "provisioning a site (/admin/sites) seeds a published\nindex page"))
+      assert Enum.any?(multi.notices, &(&1 =~ "sites are created at /admin/sites, and each gets\na published index page"))
       refute Enum.any?(multi.notices, &(&1 =~ "mix brando.setup seeds"))
+      assert Enum.any?(multi.notices, &(&1 =~ "seeds no content: sites, with theirs, are created at /admin/sites"))
+      assert Enum.any?(single.notices, &(&1 =~ "prompts\nfor a superuser and creates the site, with its default content"))
     end
 
     test "adds the site, in place of phx.new's unchanged homepage" do
