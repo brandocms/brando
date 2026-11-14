@@ -291,7 +291,7 @@ if Code.ensure_loaded?(Igniter) do
 
     # The unprefixed scope has no language in its assigns: the controller reads
     # the site's after its own Brando.Plug.Tenant.
-    defp site_language_notice(%{site_layouts: nil, languages: %{multi_site?: true}}) do
+    defp site_language_notice(%{site_layouts: nil, template_override: nil, languages: %{multi_site?: true}}) do
       """
 
       Without the CMS site, a prefixed scope's assigns give its pages their language, and the unprefixed
@@ -310,9 +310,22 @@ if Code.ensure_loaded?(Igniter) do
       Igniter.add_notice(igniter, """
       #{metadata.template_override} overrides the default template, so the entry pages keep the :id route
       param. To show entries by slug, update it from Brando's default, which now has the bindings
-      param, site_layouts, language, preloads and blocks, and change the route to :slug.
+      param, site_layouts, language, multi_site, preloads and blocks, and change the route to :slug.#{override_language_notice(metadata)}
       """)
     end
+
+    # The project's template reads the scope's language, so the unprefixed
+    # scope keeps the installation's default
+    defp override_language_notice(%{site_layouts: nil, languages: %{multi_site?: true, default: default}}) do
+      """
+
+
+      With this template the unprefixed routes show #{default}, the installation's default language, on every
+      site. Brando's default template shows each site's own: take its language/1 and the multi_site binding.\
+      """
+    end
+
+    defp override_language_notice(_metadata), do: ""
 
     defp site_notice(%{site_layouts: nil} = metadata, path) do
       """

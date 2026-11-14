@@ -210,7 +210,9 @@ if Code.ensure_loaded?(Igniter) do
 
     # On a multi-site installation the unprefixed routes are each site's
     # default language's: the controller takes it from the request's site.
-    defp unprefixed_assigns(%{languages: %{multi_site?: true}}), do: ""
+    # A project's own controller template reads the scope's language, so its
+    # unprefixed scope keeps one.
+    defp unprefixed_assigns(%{languages: %{multi_site?: true}, template_override: nil}), do: ""
     defp unprefixed_assigns(%{languages: %{default: default}} = m), do: scope_assigns(m, default)
     defp unprefixed_assigns(_m), do: ""
 
@@ -251,7 +253,12 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp added_languages_notice(igniter, %{site_layouts: nil, languages: %{multi_site?: true}}, path, [_ | _] = added) do
+    defp added_languages_notice(
+           igniter,
+           %{site_layouts: nil, template_override: nil, languages: %{multi_site?: true}},
+           path,
+           [_ | _] = added
+         ) do
       Igniter.add_notice(igniter, """
       Added the routes of #{Enum.join(added, ", ")} beside the existing #{path} routes. Without the CMS site, a
       prefixed scope's assigns give its pages their language, and the unprefixed #{path} routes are each site's

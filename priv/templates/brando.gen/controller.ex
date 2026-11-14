@@ -89,9 +89,13 @@
   defp base_path(%{path_info: [language | _], assigns: %{language: language}}), do: "/#{language}<%= public_route %>"
   defp base_path(_conn), do: <%= inspect public_route %>
 <% end %><%= if site_language do %>
-  # A prefixed route's scope assigns its language. The unprefixed routes are the
-  # site's default language's: Brando.Plug.Tenant above has resolved the site.
-  defp language(%{assigns: %{language: language}}), do: language
+  # A prefixed route's scope assigns its language, and a language the site does
+  # not have is a missing page there. The unprefixed routes are the site's
+  # default language's: Brando.Plug.Tenant above has resolved the site.
+  defp language(%{assigns: %{language: language}}) do
+    if Brando.Languages.member?(language), do: language, else: raise(Ecto.NoResultsError, queryable: <%= schema %>)
+  end
+
   defp language(_conn), do: Brando.Languages.default_language()
 <% end %><%= if param == "id" do %>
   # A malformed id is a missing entry, not a query error.

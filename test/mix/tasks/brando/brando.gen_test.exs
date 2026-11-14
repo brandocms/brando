@@ -532,7 +532,8 @@ defmodule Mix.Tasks.Brando.Gen.Test do
     assert controller =~ "plug Brando.Plug.Tenant"
     assert controller =~ "list_articles %{status: :published, language: language conn)})"
     assert controller =~ "matches: %{slug: slug}, language: language conn),"
-    assert controller =~ "defp language %{assigns: %{language: language}}), do: language"
+    assert controller =~ "defp language %{assigns: %{language: language}}) do"
+    assert controller =~ "if Brando.Languages.member? language), do: language, else: raise Ecto.NoResultsError"
     assert controller =~ "defp language _conn), do: Brando.Languages.default_language )"
 
     notices = notices(result)
@@ -693,6 +694,22 @@ defmodule Mix.Tasks.Brando.Gen.Test do
     html = IgniterCase.source(result, "lib/generator_studio_web/catalog/article_html.ex")
     assert html =~ ~s|assigns = Map.put_new(assigns, :base_path, "/articles")|
     assert html =~ ~S(href={"#{@base_path}/#{entry.id}"})
+
+    # On a multi-site installation the overriding controller still reads the
+    # scope's language, so the unprefixed scope keeps one, and the notice says
+    # what that means.
+    multi = String.replace(@languages, "scope_default_language_routes: false", "tenancy_mode: :multi")
+
+    result =
+      %{"priv/templates/brando.gen/controller.ex" => template, "config/brando.exs" => multi}
+      |> project()
+      |> generate("GeneratorStudio.Catalog.Article", ["--public-route", "/articles"])
+
+    assert result.issues == []
+    assert router(result) =~ ~r/scope "\/", assigns: %\{language: "en"\} do/
+    notices = notices(result)
+    assert notices =~ "the unprefixed routes show en, the installation's default language, on every"
+    refute notices =~ "the unprefixed\nroutes' scope gives none"
   end
 
   test "public pages need no language clauses in an existing context's filters and matches" do

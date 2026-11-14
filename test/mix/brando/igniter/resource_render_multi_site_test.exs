@@ -201,4 +201,13 @@ defmodule Mix.Brando.Igniter.ResourceRenderMultiSiteTest do
     index = request("acme.test", "/en/articles")
     assert index.resp_body =~ ~s(href="/en/articles/hei">Hello</a>)
   end
+
+  test "a prefix for a language the site does not have is a missing page" do
+    # The router wraps what an action raises; Phoenix renders this one as a 404
+    for path <- ["/no/articles", "/no/articles/hei"] do
+      error = assert_raise Plug.Conn.WrapperError, fn -> request("beta.test", path) end
+      assert %Ecto.NoResultsError{} = error.reason
+      assert Plug.Exception.status(error.reason) == 404
+    end
+  end
 end
