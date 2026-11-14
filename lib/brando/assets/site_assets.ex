@@ -29,7 +29,10 @@ defmodule Brando.Assets.SiteAssets do
 
   A host that belongs to no site in `:multi` (the admin's, where live and
   shared previews are served) gets what each site's own host would send,
-  for the paths the sites do not disagree on (`unscoped_path/1`).
+  for the paths the sites do not disagree on (`unscoped_path/1`). A host
+  that resolves to an environment gets, for a path its own sets miss, the
+  file of another environment's own set in the same site
+  (`other_environment_path/3`), where previews of that environment are shown.
 
   The caches are per node: activating or deactivating a set, pinning or
   releasing one, and forgetting one refresh this node and tell the others
@@ -58,6 +61,7 @@ defmodule Brando.Assets.SiteAssets do
   @change_fence_key {:brando, :site_assets, :change_fence}
   @fence_key {:brando, :site_assets, :fence}
   @unscoped_key {:brando, :site_assets, :unscoped}
+  @environment_index_key {:brando, :site_assets, :environment_index}
 
   @type scope :: Site.t() | nil
   @type environment_ref :: Environment.t() | pos_integer() | {String.t(), String.t()}
@@ -335,6 +339,42 @@ defmodule Brando.Assets.SiteAssets do
       candidates
       |> Enum.filter(&previewable?/1)
       |> agreed_file()
+    else
+      _miss -> nil
+    end
+  end
+
+  @doc """
+  Resolves a request path that `serve_path/3` left unanswered on a host that
+  resolves to `environment`, from the own sets of the other environments of
+  its scope: in `:multi` its site's, in `:single` the installation's. Never
+  another site's.
+
+  A live preview of an environment with a set of its own, and a shared
+  preview from one, are shown on a host that resolves to another
+  environment of the site (the admin's host in `:single`, a site's own host
+  in `:multi`), and their pages name that set's files host-relative.
+
+  The path answers when one other environment's set holds it, or when every
+  one that holds it holds the same content, compared as `unscoped_path/1`
+  compares. A path the release's `priv/static` holds is left to it, and the
+  development site (`Brando.Assets.DevSite`) gets nothing here, as its
+  environments read no set.
+
+  The paths of every environment's own set are cached together, so a miss is
+  rejected without a query or a filesystem lookup. The cache is dropped with
+  the active, environment, pinned and set caches, on every node.
+  """
+  @spec other_environment_path(scope(), Environment.t() | nil, String.t()) :: String.t() | nil
+  def other_environment_path(_site, nil, _relative_path), do: nil
+
+  def other_environment_path(site, %Environment{id: environment_id, site_id: site_id}, relative_path)
+      when is_binary(relative_path) do
+    with [_ | _] = candidates <- environment_index() |> Map.get(site_id, %{}) |> Map.get(relative_path, []),
+         [_ | _] = others <- Enum.reject(candidates, &match?({^environment_id, _file, _content}, &1)),
+         false <- DevSite.dev_site?(site),
+         false <- File.regular?(Path.join(Capture.release_root(), relative_path)) do
+      agreed_file(others)
     else
       _miss -> nil
     end
@@ -728,6 +768,51 @@ defmodule Brando.Assets.SiteAssets do
     |> Repo.all(@public_opts)
   end
 
+  defp environment_index do
+    case :persistent_term.get(@environment_index_key, :not_cached) do
+      :not_cached -> warm_environment_index()
+      index -> index
+    end
+  end
+
+  # Not stored when it fails to load, as `warm_unscoped/0`
+  defp warm_environment_index do
+    fence = change_fence()
+
+    case load_environment_index() do
+      {:ok, index} -> fill(@environment_index_key, index, fence)
+      :error -> %{}
+    end
+  end
+
+  # Site id => path => [{environment_id, file, content}], from the cached own
+  # set of every environment that has one; `content` as in `load_unscoped/1`
+  defp load_environment_index do
+    index =
+      from(environment in Environment,
+        where: not is_nil(environment.asset_set_id),
+        select: {environment.site_id, environment.id}
+      )
+      |> Repo.all(@public_opts)
+      |> Enum.flat_map(fn {site_id, environment_id} ->
+        case environment_cached(%Environment{id: environment_id}) do
+          %{files: paths, path: root} ->
+            for path <- paths, do: {{site_id, path}, {environment_id, Path.join(root, path)}}
+
+          nil ->
+            []
+        end
+      end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+      |> Enum.reduce(%{}, fn {{site_id, path}, candidates}, index ->
+        Map.update(index, site_id, %{path => with_content(candidates)}, &Map.put(&1, path, with_content(candidates)))
+      end)
+
+    {:ok, index}
+  rescue
+    _unavailable -> :error
+  end
+
   defp cache_sets(sets, fence) do
     Enum.flat_map(sets, fn asset_set ->
       case set_cache_since(asset_set, fence) do
@@ -1001,7 +1086,7 @@ defmodule Brando.Assets.SiteAssets do
 
   defp drop_active(scope_key) do
     drop(cache_key(scope_key))
-    erase(@unscoped_key)
+    erase_indexes()
     invalidate_vite(scope_site_id(scope_key))
   end
 
@@ -1017,7 +1102,7 @@ defmodule Brando.Assets.SiteAssets do
 
   defp drop_environment(environment_id, prefix) do
     drop(environment_cache_key(environment_id))
-    erase(@unscoped_key)
+    erase_indexes()
     invalidate_vite_prefix(prefix)
   end
 
@@ -1030,12 +1115,19 @@ defmodule Brando.Assets.SiteAssets do
 
   defp drop_pinned(scope_key) do
     drop(pinned_cache_key(scope_key))
-    erase(@unscoped_key)
+    erase_indexes()
   end
 
   defp drop_set(set_id) do
     drop(set_cache_key(set_id))
+    erase_indexes()
+  end
+
+  # The listings built from the other caches: `unscoped_path/1`'s and
+  # `other_environment_path/3`'s
+  defp erase_indexes do
     erase(@unscoped_key)
+    erase(@environment_index_key)
   end
 
   # A fill reads the database and the files, then stores `value`. Every change

@@ -244,6 +244,18 @@ preview of the environment being edited, a shared preview (which pins the
 set of the environment it was shared from), and a static build of the
 environment. See [A set per environment](deps/brando/guides/tenancy_and_environments.md#a-set-per-environment).
 
+A path the host's own sets miss (the set its environment uses, and the
+sets its site's shared previews pin) answers from the own set of another
+environment of the same site, sent with `cache-control: no-cache`. A live
+preview of Staging is shown on a host that resolves to another environment
+(the admin's host, which in `:single` resolves to the live environment, or
+in `:multi` the site's own host when the admin is opened there), and so is a
+shared preview from Staging; their pages name Staging's files host-relative,
+those of its build's `public/` directory included. The host's own file wins
+when both hold a path. A path two other environments hold with different
+content stays unanswered, a path the release's `priv/static` holds is left
+to the release, and another site's sets never answer.
+
 To try a new layout on Staging together with its CSS and JavaScript, then
 put both live, on a `:dynamic` site:
 

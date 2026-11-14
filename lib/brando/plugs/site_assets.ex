@@ -19,7 +19,10 @@ defmodule Brando.Plug.SiteAssets do
   that site's sets only, and the set its environment uses
   (`Brando.Assets.SiteAssets.serve_path/3`). In `:single`, the host's
   environment, or the live one for a host no environment names, picks the
-  set the same way.
+  set the same way. A path those miss answers from the own set of another
+  environment of the same site (`Brando.Assets.SiteAssets.other_environment_path/3`),
+  sent with `Cache-Control: no-cache`: a live or shared preview of that
+  environment is shown on this host and names that set's files.
 
   Its files, and those of the plugs after it that answer before the router
   (the release's `Plug.Static`, `Brando.Plug.Media`), are sent with
@@ -82,19 +85,28 @@ defmodule Brando.Plug.SiteAssets do
 
   # A host with no site answers a path for whichever site holds it, and stops
   # when a second site brings other content under that name: a cache must ask
-  # again each time, or it keeps sending the first site's file
+  # again each time, or it keeps sending the first site's file. The same holds
+  # for a file of another environment's set on an environment's host.
   @ask_again "no-cache"
 
   defp serve_path(conn, relative_path) do
     case Brando.Tenant.mode() do
       :multi ->
         case Frontend.resolve(conn.host) do
-          {site, environment} -> {SiteAssets.serve_path(site, environment, relative_path), @immutable}
+          {site, environment} -> environment_path(site, environment, relative_path)
           nil -> {SiteAssets.unscoped_path(relative_path), @ask_again}
         end
 
       _standalone ->
-        {SiteAssets.serve_path(nil, standalone_environment(conn.host), relative_path), @immutable}
+        environment_path(nil, standalone_environment(conn.host), relative_path)
+    end
+  end
+
+  # The host's own sets first; another environment's own set only after a miss
+  defp environment_path(site, environment, relative_path) do
+    case SiteAssets.serve_path(site, environment, relative_path) do
+      nil -> {SiteAssets.other_environment_path(site, environment, relative_path), @ask_again}
+      file -> {file, @immutable}
     end
   end
 

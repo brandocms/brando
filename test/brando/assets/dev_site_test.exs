@@ -114,6 +114,16 @@ defmodule Brando.Assets.DevSiteTest do
       assert SiteAssets.current_file("assets/acme-own.js") == nil
       refute Brando.Plug.SiteAssets.call(conn_for("assets/acme-own.js", "acme.test"), []).halted
       refute Brando.Plug.SiteAssets.call(conn_for("assets/acme-own.js", "admin.test"), []).halted
+
+      # Nor does another environment's host
+      {:ok, _staging} =
+        Brando.Tenant.Registry.create_environment(
+          acme,
+          %{name: "Staging", key: "staging", live: false, domain: "staging.acme.test"},
+          actor: :system
+        )
+
+      refute Brando.Plug.SiteAssets.call(conn_for("assets/acme-own.js", "staging.acme.test"), []).halted
     end
 
     test "gets no legacy bundles" do

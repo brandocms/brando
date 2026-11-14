@@ -65,7 +65,6 @@ defmodule Brando.Assets.EnvironmentSetsTest do
         assert body("assets/acme-next.js", "staging.acme.test") == "js-acme-next"
         refute served?("assets/acme-one.js", "staging.acme.test")
         assert body("assets/acme-one.js", "acme.test") == "js-acme-one"
-        refute served?("assets/acme-next.js", "acme.test")
 
         assert rendered("staging") == ["assets/acme-next.css", "assets/acme-next.js"]
         assert rendered("production") == ["assets/acme-one.css", "assets/acme-one.js"]
@@ -73,6 +72,94 @@ defmodule Brando.Assets.EnvironmentSetsTest do
         assert SiteAssets.environment_set(staging).id == next.id
         assert SiteAssets.effective_set(scope(one), staging).id == next.id
         assert SiteAssets.effective_set(scope(one), Tenant.Cache.get_env("acme", "production")).id == one.id
+      end
+
+      test "a host's own file wins over another environment's; another environment's answers where the host's sets miss",
+           %{staging: staging, next: next, one: one} do
+        {:ok, _staging} = SiteAssets.activate_environment_set(next.id, staging)
+        write_font(one, "production")
+        write_font(next, "staging")
+
+        assert body("fonts/brand.woff2", "acme.test") == "production"
+        assert cache_control("fonts/brand.woff2", "acme.test") == "public, max-age=31536000, immutable"
+        assert body("assets/acme-one.js", "acme.test") == "js-acme-one"
+        assert cache_control("assets/acme-one.js", "acme.test") == "public, max-age=31536000, immutable"
+
+        assert body("assets/acme-next.js", "acme.test") == "js-acme-next"
+        assert cache_control("assets/acme-next.js", "acme.test") == "no-cache"
+
+        # A miss, once the caches are warm, asks the database nothing
+        queries = count_queries()
+        refute served?("assets/nowhere.js", "acme.test")
+        assert queries.() == 0
+      end
+
+      test "a live preview of an environment with its own set loads every asset it links where it is shown",
+           %{staging: staging, next: next} do
+        {:ok, _staging} = SiteAssets.activate_environment_set(next.id, staging)
+
+        paths = rendered("staging")
+        assert paths == ["assets/acme-next.css", "assets/acme-next.js"]
+
+        for path <- paths do
+          assert body(path, preview_host()) == File.read!(Path.join(next.path, path))
+          assert cache_control(path, preview_host()) == "no-cache"
+        end
+      end
+
+      test "a shared preview from an environment with its own set gets that set's files outside its manifest",
+           %{staging: staging, next: next} do
+        {:ok, _staging} = SiteAssets.activate_environment_set(next.id, staging)
+        write_font(next, "staging")
+        user = Brando.Factory.insert(:random_user, avatar: nil)
+
+        Tenant.put_prefix(Tenant.prefix("acme", "staging"))
+        changeset = page() |> Map.put(:key, "about") |> Ecto.Changeset.change()
+        assert {:ok, _url, _days} = LivePreview.share(Page, changeset, user, %{}, :site)
+        Tenant.put_prefix(nil)
+
+        assert body("assets/acme-next.css", preview_host()) == "body{}"
+        assert body("fonts/brand.woff2", preview_host()) == "staging"
+      end
+
+      test "a path two other environments hold with different content stays unanswered",
+           %{acme: acme, staging: staging, next: next} do
+        {:ok, review} =
+          Registry.create_environment(acme, %{name: "Review", key: "review", live: false}, actor: :system)
+
+        review_set = register(scope(next), "acme-review")
+        {:ok, _staging} = SiteAssets.activate_environment_set(next.id, staging)
+        {:ok, _review} = SiteAssets.activate_environment_set(review_set.id, review)
+
+        write_font(next, "staging")
+        write_font(review_set, "review!")
+        refute served?("fonts/brand.woff2", "acme.test")
+
+        write_font(review_set, "staging")
+        assert body("fonts/brand.woff2", "acme.test") == "staging"
+        # Each environment's host sends its own set's file
+        assert body("assets/acme-review.js", "acme.test") == "js-acme-review"
+        assert body("assets/acme-next.js", "staging.acme.test") == "js-acme-next"
+      end
+
+      test "after its set is cleared, another environment's files stop answering", %{staging: staging, next: next} do
+        {:ok, _staging} = SiteAssets.activate_environment_set(next.id, staging)
+        assert body("assets/acme-next.js", preview_host()) == "js-acme-next"
+
+        {:ok, _staging} = SiteAssets.clear_environment_set(staging)
+        refute served?("assets/acme-next.js", preview_host())
+      end
+
+      test "setting and clearing an environment's set tells the other nodes", %{staging: staging, next: next} do
+        Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.CacheSync.topic())
+        staging_id = staging.id
+        prefix = Tenant.prefix("acme", "staging")
+
+        {:ok, _staging} = SiteAssets.activate_environment_set(next.id, staging)
+        assert_received {:brando_cache_sync, _origin, {SiteAssets, {:environment, ^staging_id, ^prefix}}}
+
+        {:ok, _staging} = SiteAssets.clear_environment_set(staging)
+        assert_received {:brando_cache_sync, _origin, {SiteAssets, {:environment, ^staging_id, ^prefix}}}
       end
 
       test "clearing an environment's set makes it follow the site's set again", %{staging: staging, next: next} do
@@ -176,10 +263,18 @@ defmodule Brando.Assets.EnvironmentSetsTest do
 
       test "deleting an environment drops its reference and keeps the set", %{staging: staging, next: next} do
         {:ok, _staging} = SiteAssets.activate_environment_set(next.id, staging)
+        # Fills the environment's cached set and the listings built from it
+        assert body("assets/acme-next.js", "staging.acme.test") == "js-acme-next"
+        assert body("assets/acme-next.js", preview_host()) == "js-acme-next"
+        if Tenant.mode() == :multi, do: assert(body("assets/acme-next.js", @admin_host) == "js-acme-next")
 
         assert {:ok, _deleted} = Environments.delete_environment(staging)
         assert Repo.get(Brando.Assets.SiteAssetSet, next.id, prefix: "public")
         refute MapSet.member?(Retention.environment_set_ids(), next.id)
+
+        assert :persistent_term.get({:brando, :site_assets, :environment, staging.id}, :not_cached) == :not_cached
+        refute served?("assets/acme-next.js", preview_host())
+        if Tenant.mode() == :multi, do: refute(served?("assets/acme-next.js", @admin_host))
       end
 
       test "the environment is named by its keys, for deploy tooling", %{staging: staging, next: next} do
@@ -193,6 +288,7 @@ defmodule Brando.Assets.EnvironmentSetsTest do
       test "two nodes agree after a change", %{staging: staging, next: next} do
         assert body("assets/acme-one.js", "staging.acme.test") == "js-acme-one"
         assert rendered("staging") == ["assets/acme-one.css", "assets/acme-one.js"]
+        refute served?("assets/acme-next.js", "acme.test")
 
         # Another node gives Staging its own set
         Repo.update_all(Ecto.Query.from(e in Environment, where: e.id == ^staging.id), [set: [asset_set_id: next.id]],
@@ -204,6 +300,7 @@ defmodule Brando.Assets.EnvironmentSetsTest do
         SiteAssets.refresh_node_cache({:environment, staging.id, Tenant.prefix("acme", "staging")})
         assert body("assets/acme-next.js", "staging.acme.test") == "js-acme-next"
         assert rendered("staging") == ["assets/acme-next.css", "assets/acme-next.js"]
+        assert body("assets/acme-next.js", "acme.test") == "js-acme-next"
       end
     end
   end
@@ -221,6 +318,24 @@ defmodule Brando.Assets.EnvironmentSetsTest do
       assert {:error, :asset_set_belongs_to_another_site} = SiteAssets.activate_environment_set(beta_set.id, staging)
       assert {:error, :asset_set_belongs_to_another_site} = SiteAssets.activate_environment_set(standalone.id, staging)
       assert Registry.get_environment(staging.id).asset_set_id == nil
+    end
+
+    test "a host never answers from another site's environment sets", %{staging: staging, next: next} do
+      {:ok, beta} = SiteAssetsFixtures.create_site("Beta", "beta", "beta.test")
+
+      {:ok, beta_staging} =
+        Registry.create_environment(beta, %{name: "Staging", key: "staging", live: false, domain: "staging.beta.test"},
+          actor: :system
+        )
+
+      beta_set = register(Registry.get_site(beta.id), "beta-next")
+      {:ok, _beta_staging} = SiteAssets.activate_environment_set(beta_set.id, beta_staging)
+      {:ok, _staging} = SiteAssets.activate_environment_set(next.id, staging)
+
+      assert body("assets/beta-next.js", "beta.test") == "js-beta-next"
+      refute served?("assets/beta-next.js", "acme.test")
+      refute served?("assets/beta-next.js", "staging.acme.test")
+      refute served?("assets/acme-next.js", "beta.test")
     end
 
     test "on the admin's host an environment's set answers, unless the site's holds other content under its path",
@@ -329,6 +444,29 @@ defmodule Brando.Assets.EnvironmentSetsTest do
   end
 
   defp served?(path, host), do: call(path, host).halted
+
+  defp count_queries do
+    test = self()
+    id = "environment-sets-queries-#{System.unique_integer([:positive])}"
+    counter = :counters.new(1, [])
+
+    :telemetry.attach(
+      id,
+      [:brando_integration, :repo, :query],
+      fn _event, _measurements, _meta, _config -> if self() == test, do: :counters.add(counter, 1, 1) end,
+      nil
+    )
+
+    on_exit(fn -> :telemetry.detach(id) end)
+    fn -> :counters.get(counter, 1) end
+  end
+
+  defp cache_control(path, host), do: path |> call(host) |> Plug.Conn.get_resp_header("cache-control") |> List.first()
+
+  # Where the admin shows a preview of Acme's Staging: in `:single` its own
+  # host, which resolves to the live environment; in `:multi` opened on the
+  # site's own host
+  defp preview_host, do: if(Tenant.mode() == :multi, do: "acme.test", else: @admin_host)
 
   defp call(path, host) do
     :get

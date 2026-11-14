@@ -645,6 +645,18 @@ preview of the environment being edited, a shared preview (which pins the
 set of the environment it was shared from), and a static build of the
 environment. See [A set per environment](#a-set-per-environment).
 
+A path the host's own sets miss (the set its environment uses, and the
+sets its site's shared previews pin) answers from the own set of another
+environment of the same site, sent with `cache-control: no-cache`. A live
+preview of Staging is shown on a host that resolves to another environment
+(the admin's host, which in `:single` resolves to the live environment, or
+in `:multi` the site's own host when the admin is opened there), and so is a
+shared preview from Staging; their pages name Staging's files host-relative,
+those of its build's `public/` directory included. The host's own file wins
+when both hold a path. A path two other environments hold with different
+content stays unanswered, a path the release's `priv/static` holds is left
+to the release, and another site's sets never answer.
+
 To try a new layout on Staging together with its CSS and JavaScript, then
 put both live, on a `:dynamic` site:
 
@@ -1482,7 +1494,17 @@ name the site's assets host-relative (`/assets/…`), as the site's own pages
 do, so the admin's host answers them:
 
 - On a host that resolves to a site, `Brando.Plug.SiteAssets` serves the set
-  its environment uses and the site's pinned sets only, as described above.
+  its environment uses and the site's pinned sets, as described above. A
+  path those miss answers from the own set of another environment of the
+  same site, with `cache-control: no-cache`, so a preview of Staging shown on
+  a host that resolves to Production (the admin's host in `:single`, the
+  site's own host in `:multi`) loads Staging's files, those outside its
+  manifest included. Production's own file wins over Staging's; when two
+  other environments hold a path with different content, it stays
+  unanswered; a path the release holds is left to it. Another site's sets
+  never answer there. That listing is cached with the others below, and
+  dropped also when an environment's own set is set or cleared, or the
+  environment is deleted.
 - In `:multi`, on a host that resolves to no site, such as the admin's, it
   answers a path with the file a site's own host would send: any file of the
   site's active set, scripts and styles as well as the fonts and images of
