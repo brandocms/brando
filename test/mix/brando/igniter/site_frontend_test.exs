@@ -163,8 +163,13 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
     assert vite =~ "process.env.BRANDO_VITE_FRONTEND_HOST"
     assert vite =~ "process.env.BRANDO_VITE_FRONTEND_PORT"
 
-    assert String.replace(vite, ~r/\n\s*emptyOutDir: true,\n\s*outDir: 'dist',[^\n]*/, "") ==
-             String.replace(installed["vite.config.js"], ~r/\n\s*emptyOutDir: false,\n\s*outDir: [^\n]*/, "")
+    # Nothing deletes a site's maps for it: it says to before uploading.
+    assert vite =~ "sourcemap: 'hidden',"
+    refute vite =~ "brando.digest"
+    assert vite =~ "find dist -name '*.map' -delete"
+
+    strip = &String.replace(&1, ~r/\n\s*emptyOutDir: \w+,\n\s*outDir: [^\n]*(\n\s*\/\/[^\n]*)*/, "")
+    assert strip.(vite) == strip.(installed["vite.config.js"])
 
     package = Jason.decode!(created["package.json"])
     assert package["name"] == "acme-travel"

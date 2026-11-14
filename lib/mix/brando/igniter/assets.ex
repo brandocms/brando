@@ -85,18 +85,33 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     # Where a site's project differs from assets/frontend: it builds into its
-    # own dist/, which is uploaded as the site's asset set, and its package is
-    # named for the site.
+    # own dist/, which is uploaded as the site's asset set and so keeps its
+    # source maps until they are deleted by hand, and its package is named
+    # for the site.
     defp site_contents(format, source, project, key) do
       contents = Install.render(format, source, project)
 
       case Path.basename(source) do
         "vite.config.js" ->
-          site_replace(
-            contents,
+          contents
+          |> site_replace(
             source,
             "    emptyOutDir: false,\n    outDir: '../../priv/static', // <- Phoenix expects our files here\n",
             "    emptyOutDir: true,\n    outDir: 'dist', // <- the site's asset set, uploaded on its own\n"
+          )
+          |> site_replace(
+            source,
+            """
+                // Maps are written without a sourceMappingURL comment, so browsers never
+                // ask for them. `mix brando.digest` deletes them before release; upload
+                // them to Sentry first if you want readable stack traces.
+            """,
+            """
+                // Maps are written without a sourceMappingURL comment, so browsers never
+                // ask for them, but a set serves every file it holds. Upload them to
+                // Sentry first if you want readable stack traces, then delete them
+                // before uploading the set: find dist -name '*.map' -delete
+            """
           )
 
         "package.json" ->
