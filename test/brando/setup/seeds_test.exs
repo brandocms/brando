@@ -93,6 +93,21 @@ defmodule Brando.Setup.SeedsTest do
       assert stale == []
     end
 
+    test "a seeded block for a module an editor has changed is reported as outdated" do
+      user = Factory.insert(:random_user)
+      {:ok, %{modules: %{hero: hero}}} = Seeds.run(user, languages: [:en])
+
+      # An editor changes the module before the second language is seeded
+      hero |> Ecto.Changeset.change(version: 2) |> Brando.Repo.update!()
+      {:ok, _report} = Seeds.run(user, languages: [:no])
+
+      stale = Map.new(Content.Blocks.count_stale_blocks_by_module(), fn {module, count} -> {module.id, count} end)
+
+      # Both pages' hero blocks are built from the seed's definition, the
+      # second one too
+      assert stale[hero.id] == 2
+    end
+
     test "is idempotent" do
       user = Factory.insert(:random_user)
 
@@ -133,15 +148,25 @@ defmodule Brando.Setup.SeedsTest do
       end
     end
 
-    test "a failing step leaves nothing written" do
+    test "a failing run leaves nothing written, and nothing it rendered cached" do
       user = Factory.insert(:random_user)
       modules = count(Content.Module)
+      Brando.Cache.del(:navigation)
 
-      # A menu whose creator does not exist fails after the modules are in
-      assert_raise MatchError, fn -> Seeds.run(%{user | id: -1}, languages: [:en]) end
+      # English is seeded and rendered before the second language fails
+      assert_raise Ecto.Query.CastError, fn -> Seeds.run(user, languages: [:en, :unsupported]) end
 
       assert count(Content.Module) == modules
       refute Brando.Repo.get_by(Navigation.Menu, key: "main", language: :en)
+      refute Brando.Repo.get_by(Pages.Page, uri: "index", language: :en)
+
+      # The render read the rolled-back menu into the navigation cache
+      refute Brando.Cache.get(:navigation)
+
+      {:ok, _report} = Seeds.run(user, languages: [:en])
+      page = Brando.Repo.get_by!(Pages.Page, uri: "index", language: :en)
+      assert page.rendered_blocks =~ ~s(b-tpl="hero")
+      assert Brando.Cache.Navigation.get("main", "en")
     end
 
     test "existing content of one kind does not block the rest" do

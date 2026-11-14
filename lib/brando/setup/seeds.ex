@@ -34,6 +34,15 @@ defmodule Brando.Setup.Seeds do
   @closing_uid "brando-default-closing"
   @footer_uid "brando-default-footer"
 
+  # The version of the module definitions below. A seeded block is built from
+  # their refs, so it carries this version even when it uses a module an
+  # editor has changed since: the stale-block check then reports it.
+  @definition_version 1
+
+  # What rendering the seeded entries reads through a cache
+  @cached_schemas [Content.Module, Pages.Page, Pages.Fragment, Navigation.Menu, Sites.Identity, Sites.SEO]
+  @site_caches [:identity, :seo, :navigation]
+
   @docs_url "https://hexdocs.pm/brando"
 
   @doc """
@@ -63,6 +72,18 @@ defmodule Brando.Setup.Seeds do
     end
 
     {:ok, report}
+  rescue
+    exception ->
+      forget_cached()
+      reraise exception, __STACKTRACE__
+  end
+
+  # Rendering a seeded entry caches what it reads inside the transaction, so
+  # after a rollback the caches hold rows that do not exist, and a rerun's
+  # renders would read them instead of its own
+  defp forget_cached do
+    Enum.each(@cached_schemas, &Brando.Cache.Query.evict_all/1)
+    Enum.each(@site_caches, &Brando.Cache.del/1)
   end
 
   defp seed_language(language, report, user, modules, opts) do
@@ -189,7 +210,7 @@ defmodule Brando.Setup.Seeds do
   # content that references them.
   defp upsert_module(uid, _user, build) do
     case Brando.Repo.get_by(Content.Module, uid: uid) do
-      nil -> Brando.Repo.insert!(build.())
+      nil -> Brando.Repo.insert!(%{build.() | version: @definition_version})
       module -> module
     end
   end
@@ -850,7 +871,7 @@ defmodule Brando.Setup.Seeds do
         type: :module,
         uid: Brando.Utils.generate_uid(),
         module_id: module.id,
-        module_version: module.version || 1,
+        module_version: @definition_version,
         source: Pages.Page.Blocks,
         multi: false,
         sequence: sequence,
@@ -877,7 +898,7 @@ defmodule Brando.Setup.Seeds do
               type: :module,
               uid: Brando.Utils.generate_uid(),
               module_id: modules.footer.id,
-              module_version: modules.footer.version || 1,
+              module_version: @definition_version,
               source: Pages.Fragment.Blocks,
               multi: false,
               sequence: 0,

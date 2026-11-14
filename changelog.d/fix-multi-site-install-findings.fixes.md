@@ -1,6 +1,8 @@
 - `mix brando.setup` finishes on a `:single` or `:multi` installation: its seeds create only the shared modules in `public`, and a failed seed run leaves nothing behind.
 
-- Blocks the setup seeds create carry their module's version, so `mix brando.doctor` no longer reports them on an outdated module version.
+- A failed `mix brando.gen.seeds` run leaves nothing behind in the caches its renders filled.
+
+- Blocks the setup seeds create carry the version of the module definition they were built from, so `mix brando.doctor` reports them as outdated only when their module has changed since.
 
 - `mix brando.doctor` counts an incomplete identity's languages apart from its environments, and keeps a long check label apart from its summary.
 
