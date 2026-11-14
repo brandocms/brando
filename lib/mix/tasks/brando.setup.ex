@@ -22,7 +22,9 @@ defmodule Mix.Tasks.Brando.Setup do
     4. `brando.gen.seeds` — identity, SEO, modules, an `index` page, a main
        menu and a footer fragment per configured language. The site's base URL
        and a short description are prompted for (or `--base-url`,
-       `--description`) and go into SEO; leave them empty to fill in later
+       `--description`) and go into SEO; leave them empty to fill in later.
+       With `tenancy_mode: :single` or `:multi` only the modules are seeded,
+       since no site exists yet
 
   Each step is skipped when its result already exists, so rerunning after a
   failure resumes rather than duplicates. Nothing is removed or rewritten.

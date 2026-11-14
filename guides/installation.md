@@ -154,8 +154,9 @@ describes each step as its own task.
 
 <!-- usage-rules:end -->
 
-With `single` or `multi`, provision the site and environment after the public
-migrations and initialize content inside that environment, as
+With `single` or `multi`, setup seeds only the shared modules (see
+[Seeded content](#seeded-content)). Provision the site and environment after
+the public migrations and initialize content inside that environment, as
 [Sites and environments](tenancy_and_environments.md) describes.
 
 ## Sign in
@@ -601,8 +602,14 @@ base URL, canonical links, sharing previews and the sitemap cannot build full
 addresses. Existing content of each kind is left untouched, so a rerun adds
 only what is missing; the content is a starting point for editing in the
 admin, not a migration path. Without it, `/` has no published page and
-responds 404. Your application's own `priv/repo/seeds.exs` is preserved and
-never run for you.
+responds 404. A failed run leaves nothing behind. Your application's own
+`priv/repo/seeds.exs` is preserved and never run for you.
+
+With `single` or `multi` tenancy no site exists when setup runs, so the seeds
+create only the seven modules, in `public`, where the sites share them. Each
+site gets its identity and SEO when it is provisioned, and its pages, menus
+and fragments from the application's `Brando.Tenant.Seeder` (see
+[Sites and environments](tenancy_and_environments.md)).
 
 The seeded modules (Hero, Steps, Cards, Tips, Toolbox, Closing and Footer)
 double as worked examples of the ref conventions: mono micro-labels and links

@@ -13,7 +13,9 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
   Creates identity and SEO defaults per configured language, a small set of
   content modules, a published `index` page built from them, a main navigation
   menu and a footer fragment. Existing content of each kind is left alone, so
-  the task is safe to rerun.
+  the task is safe to rerun. With `tenancy_mode: :single` or `:multi` it
+  creates only the modules, in `public`, where the sites share them; each site
+  gets its identity, SEO and content when it is provisioned.
 
   The seeded content is a starting point for editing in the admin, not a
   migration or an upgrade path.
@@ -45,8 +47,8 @@ defmodule Mix.Tasks.Brando.Gen.Seeds do
     ---------------------------
     """)
 
-    # With several sites the task seeds `public`, as it always has: new sites
-    # get their own content from `Brando.Tenant.Seeder`
+    # With tenancy the seeds put only the shared modules in `public`: each
+    # site gets its own content when provisioned (`Brando.Tenant.Seeder`)
     {:ok, report} =
       Brando.Tenant.with_public(fn ->
         Brando.Setup.Seeds.run(user, seo: Keyword.take(opts, [:base_url, :description]))

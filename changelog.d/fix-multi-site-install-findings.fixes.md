@@ -1,0 +1,1 @@
+- `mix brando.setup` finishes on a `:single` or `:multi` installation: its seeds create only the shared modules in `public`, and a failed seed run leaves nothing behind.

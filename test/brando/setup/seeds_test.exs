@@ -8,6 +8,8 @@ defmodule Brando.Setup.SeedsTest do
   alias Brando.Pages
   alias Brando.Setup.Seeds
 
+  import Brando.Test.Support, only: [put_test_env: 2]
+
   defp count(schema), do: Brando.Repo.aggregate(schema, :count)
 
   # Seeds.run/2 refills the identity, SEO and navigation caches from this
@@ -91,6 +93,42 @@ defmodule Brando.Setup.SeedsTest do
       assert length(second.skipped) == 4
       assert :"menu (en)" in second.skipped
       assert counts == {count(Pages.Page), count(Content.Module), count(Navigation.Menu), count(Pages.Fragment)}
+    end
+
+    # No site exists when setup runs with tenancy: provisioning seeds each one
+    for mode <- [:single, :multi] do
+      test "with tenancy_mode #{inspect(mode)}, seeds only the shared modules into public" do
+        put_test_env(:tenancy_mode, unquote(mode))
+        put_test_env(:site_key, "acme")
+        user = Factory.insert(:random_user)
+
+        public_counts = fn ->
+          Brando.Tenant.with_public(fn -> {count(Pages.Page), count(Navigation.Menu), count(Pages.Fragment)} end)
+        end
+
+        counts = public_counts.()
+
+        {:ok, report} = Brando.Tenant.with_public(fn -> Seeds.run(user, languages: [:en]) end)
+
+        assert report.created == []
+
+        for uid <- ~w(hero steps cards tips terminal closing footer) do
+          assert Brando.Tenant.with_public(fn -> Brando.Repo.get_by(Content.Module, uid: "brando-default-#{uid}") end)
+        end
+
+        assert counts == public_counts.()
+      end
+    end
+
+    test "a failing step leaves nothing written" do
+      user = Factory.insert(:random_user)
+      modules = count(Content.Module)
+
+      # A menu whose creator does not exist fails after the modules are in
+      assert_raise MatchError, fn -> Seeds.run(%{user | id: -1}, languages: [:en]) end
+
+      assert count(Content.Module) == modules
+      refute Brando.Repo.get_by(Navigation.Menu, key: "main", language: :en)
     end
 
     test "existing content of one kind does not block the rest" do

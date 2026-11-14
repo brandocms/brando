@@ -6,6 +6,11 @@ defmodule Brando.Setup.Seeds do
   identity and SEO per configured language, a set of modules, a published
   `index` page built from them, a main navigation menu and a footer fragment.
 
+  With `tenancy_mode: :single` or `:multi` no site exists yet when setup runs,
+  so only the modules, which the sites share from `public`, are seeded. Each
+  site gets its own identity, SEO and content when it is provisioned
+  (`Brando.Tenant.Seeder`).
+
   Every step is skipped when its content already exists, so the seeds are safe
   to rerun. Nothing here is a migration path: existing content is never
   modified or removed.
@@ -35,28 +40,35 @@ defmodule Brando.Setup.Seeds do
   Seeds default content for every configured language.
 
   Returns `{:ok, report}` where report counts what was created and what already
-  existed. Creation failures raise, since a half-seeded site is harder to
-  reason about than a failed setup step.
+  existed. Creation failures raise, and roll back everything this run wrote,
+  since a half-seeded site is harder to reason about than a failed setup step.
   """
   @spec run(Brando.Users.User.t(), keyword()) :: {:ok, map()}
   def run(user, opts \\ []) do
-    languages = opts[:languages] || languages()
-    modules = modules(user)
+    languages = if Brando.Tenant.enabled?(), do: [], else: opts[:languages] || languages()
 
-    report =
-      Enum.reduce(languages, %{created: [], skipped: []}, fn language, report ->
-        report
-        |> track(:"identity (#{language})", fn -> identity(language) end)
-        |> track(:"seo (#{language})", fn -> seo(language, opts[:seo] || []) end)
-        |> track(:"menu (#{language})", fn -> menu(language, user) end)
-        |> track(:"page (#{language})", fn -> index_page(language, user, modules) end)
+    {:ok, report} =
+      Brando.Repo.transaction(fn ->
+        modules = modules(user)
+
+        languages
+        |> Enum.reduce(%{created: [], skipped: []}, fn language, report ->
+          report
+          |> track(:"identity (#{language})", fn -> identity(language) end)
+          |> track(:"seo (#{language})", fn -> seo(language, opts[:seo] || []) end)
+          |> track(:"menu (#{language})", fn -> menu(language, user) end)
+          |> track(:"page (#{language})", fn -> index_page(language, user, modules) end)
+        end)
+        |> Map.put(:modules, modules)
       end)
 
-    Cache.Identity.set()
-    Cache.SEO.set()
-    Cache.Navigation.set()
+    if languages != [] do
+      Cache.Identity.set()
+      Cache.SEO.set()
+      Cache.Navigation.set()
+    end
 
-    {:ok, Map.put(report, :modules, modules)}
+    {:ok, report}
   end
 
   defp track(report, label, fun) do
