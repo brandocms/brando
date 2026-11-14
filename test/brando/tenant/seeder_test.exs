@@ -76,6 +76,21 @@ defmodule Brando.Tenant.SeederTest do
     end
   end
 
+  # The default seeder, failing in the seeds' last insert, the footer
+  # fragment: after the modules, the menu and the homepage
+  defmodule FailingInSeeds do
+    @behaviour Brando.Tenant.Seeder
+
+    @impl true
+    def seed(site, environment, creator) do
+      Brando.Repo.repo().query!(
+        ~s|ALTER TABLE "#{Brando.Tenant.current_prefix()}".pages_fragments ADD CONSTRAINT refuse_rows CHECK (false)|
+      )
+
+      Brando.Tenant.Seeder.seed(site, environment, creator)
+    end
+  end
+
   # The default seeder, failing on a language it cannot seed
   defmodule FailingDefault do
     @behaviour Brando.Tenant.Seeder
@@ -221,7 +236,27 @@ defmodule Brando.Tenant.SeederTest do
       assert Enum.all?(jobs, &(&1.state == "cancelled"))
     end
 
-    test "in the default content leaves no site, schema or folder behind", %{creator: creator} do
+    test "inside the seeds leaves no site, schema, folder or job behind", %{creator: creator} do
+      put_test_env(:tenant_seeder, FailingInSeeds)
+
+      jobs =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          assert {:error, {:site_setup_failed, %Ecto.ConstraintError{constraint: "refuse_rows"}, :ok}} =
+                   Setup.create_site(site_attrs(["en"]), creator, environments: environments())
+
+          Brando.Repo.all(
+            from(job in Oban.Job,
+              where: fragment("?->>'tenant_prefix'", job.args) in ^@prefixes and job.state != "cancelled"
+            ),
+            prefix: "public"
+          )
+        end)
+
+      assert_left_nothing()
+      assert jobs == []
+    end
+
+    test "in the seeder's own identity leaves no site, schema or folder behind", %{creator: creator} do
       put_test_env(:tenant_seeder, FailingDefault)
 
       assert {:error, {:site_setup_failed, %Ecto.ChangeError{}, :ok}} =
