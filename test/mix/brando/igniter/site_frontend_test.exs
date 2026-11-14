@@ -197,6 +197,32 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
     assert notice?(result, "assets/sites/acme-travel/ already exists, so it was left as it is")
   end
 
+  test "in :multi, a site whose modules were edited gets its Vite project and its missing modules", %{multi: multi} do
+    generated = generate(multi, ["--site", "acme-travel"])
+    config = config(generated)
+
+    # Generated before the site's Vite project, its layouts edited since, its PageHTML deleted.
+    edited =
+      multi
+      |> Igniter.create_new_file(@frontend, IgniterCase.source(generated, @frontend))
+      |> Igniter.create_new_file(@layouts, IgniterCase.source(generated, @layouts) <> "# Our own layouts.\n")
+      |> Igniter.update_file("config/brando.exs", &Rewrite.Source.update(&1, :content, fn _ -> config end))
+      |> IgniterCase.apply_and_reload()
+
+    result = generate(edited, ["--site", "acme-travel"])
+    assert result.issues == []
+
+    Igniter.Test.assert_unchanged(result, [@frontend, @layouts, "config/brando.exs"])
+    assert IgniterCase.source(result, @page_html) == IgniterCase.source(generated, @page_html)
+    assert IgniterCase.source(result, "assets/sites/acme-travel/vite.config.js") =~ "outDir: 'dist'"
+    assert Enum.any?(result.tasks, fn {task, _args} -> task == "brando.assets.copy" end)
+
+    assert notice?(result, "#{@layouts} already exists, so it was left as it is.")
+    assert notice?(result, "#{@frontend} already exists, so it was left as it is.")
+    refute notice?(result, "#{@page_html} already exists")
+    refute notice?(result, "answers 404")
+  end
+
   test "the binary copier writes a site project's favicon from the frontend's template" do
     directory = Path.join(System.tmp_dir!(), "brando-site-favicon-#{System.unique_integer([:positive])}")
     File.mkdir_p!(directory)

@@ -33,7 +33,9 @@ if Code.ensure_loaded?(Igniter) do
     the site with that key instead, as a `Brando.Site.Frontend` module under
     Web.Sites (`acme-travel` gives `Web.Sites.AcmeTravel`; `--module Name`
     names it), and registers it in `config :brando, site_frontends`. The page
-    controller gets `Brando.Plug.SiteFrontend` while it is as generated.
+    controller gets `Brando.Plug.SiteFrontend` while it is as generated. A
+    module file that already exists is kept as it is, with a notice; a missing
+    one is created.
 
         mix brando.gen.site --site acme-travel
         mix brando.gen.site --site 2025 --module Anniversary

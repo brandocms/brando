@@ -156,7 +156,9 @@ controllers that render in the site's layout need
 ends with where the site's module preview rules go, a `[data-site="acme-travel"]`
 block in `assets/backend/css/app.css` (see
 [Admin and site CSS](installation.md#admin-and-site-css)); the task writes no CSS.
-A second run with the same key changes nothing.
+A module file that already exists is kept as it is, edited or not, with a
+notice naming it, and a missing one is created, so a run on an existing site
+adds only what it lacks. A second run with the same key changes nothing.
 
 The task creates no site record and no content, and installs and builds no
 assets; an existing `assets/sites/acme-travel/` is left as it is, with a

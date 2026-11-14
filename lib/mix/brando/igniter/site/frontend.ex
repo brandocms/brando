@@ -210,11 +210,17 @@ if Code.ensure_loaded?(Igniter) do
         igniter,
         fn {template, module}, igniter ->
           binding = [web_module: inspect(project.web_module), module: inspect(module), key: key]
+          path = "lib/#{Macro.underscore(module)}.ex"
 
-          with {:ok, igniter, source} <- Template.render(igniter, "brando.gen.site", template, binding),
+          with false <- Igniter.exists?(igniter, path),
+               {:ok, igniter, source} <- Template.render(igniter, "brando.gen.site", template, binding),
                true <- defines?(source, module) do
-            Files.create(igniter, "lib/#{Macro.underscore(module)}.ex", source)
+            Files.create(igniter, path, source)
           else
+            # A site's modules are the application's own once generated.
+            true ->
+              Igniter.add_notice(igniter, "#{path} already exists, so it was left as it is.\n")
+
             {:error, message} ->
               Igniter.add_issue(igniter, message)
 
