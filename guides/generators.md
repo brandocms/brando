@@ -95,7 +95,10 @@ whose routes are missing, and leaves the existing ones.
 The pages list and show the request's language with the query's `language:`
 option, so translations can share a slug and the context needs no language
 clause. With the CMS site, `:brando_site` takes the language from the path;
-without it, each scope's `assigns` give it. The notice prints an `absolute_url`
+without it, each scope's `assigns` give it. On a multi-site installation
+without the CMS site, the unprefixed scope has no language: the controller
+reads the request's site's default language, and a prefix for a language the
+site does not have answers 404. The notice prints an `absolute_url`
 that gives each translation its prefixed URL, for hreflang links, admin previews
 and sitemaps: `absolute_url ~H|{route_i18n(@entry, :product_path, :show, [@entry.slug])}|`.
 It also prints one when the Blueprint's `absolute_url` gives every language the
