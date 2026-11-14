@@ -1502,13 +1502,14 @@ Until Florist uploads a site's own build, put a build of
 steps on a development machine give the sites other than `dev_site` their
 last built set. For `acme`:
 
-1. Build the project. The generated Vite config writes the build to the
-   project's `dist/`, never to `priv/static`, which is the release's
-   default frontend:
+1. Build the project into its `dist/`, never into `priv/static`, which is
+   the release's default frontend. A project the generator created already
+   builds there; the options also cover one copied from `assets/frontend`,
+   whose own `outDir` would write to `assets/priv/static`:
 
    ```sh
    cd assets/sites/acme
-   pnpm build
+   pnpm build --outDir dist --emptyOutDir
    ```
 
    Then delete the source maps. The Vite config builds them hidden (no
