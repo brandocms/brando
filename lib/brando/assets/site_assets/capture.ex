@@ -13,7 +13,11 @@ defmodule Brando.Assets.SiteAssets.Capture do
   reader never sees a partial set.
 
   The development site of a multi-site installation (`Brando.Assets.DevSite`)
-  always captures the release build, as its pages never read its active set.
+  pins its sets as any other site does, though its pages read none of them.
+  Without one, the release build holds its frontend only when the site has
+  no Vite project of its own in `assets/sites/<key>`; with one, sharing is
+  refused (`{:error, :dev_site_without_set}`), as a capture would pin another
+  frontend's build.
 
   When the set the environment uses (its own, else the scope's active set) is
   self-contained (every file its manifest lists is present), it is reused
@@ -50,14 +54,18 @@ defmodule Brando.Assets.SiteAssets.Capture do
   @spec ensure_set(SiteAssets.scope(), Brando.Environments.Environment.t() | nil) ::
           {:ok, SiteAssetSet.t()} | {:error, term()}
   def ensure_set(site, environment \\ nil) do
-    # The development site renders from the dev server and the release's
-    # build, never from its sets (`Brando.Assets.DevSite`)
-    active = unless DevSite.dev_site?(site), do: SiteAssets.effective_set(site, environment)
-
-    case active do
-      nil -> capture(site, [release_root()])
+    case SiteAssets.effective_set(site, environment) do
+      nil -> capture_release(site)
       %SiteAssetSet{} = active -> ensure_from_active(site, active)
     end
+  end
+
+  # The release's build is `assets/frontend`'s, not the development site's
+  # own project's (`Brando.Assets.DevSite`)
+  defp capture_release(site) do
+    if DevSite.dev_site?(site) and DevSite.own_project?(site),
+      do: {:error, :dev_site_without_set},
+      else: capture(site, [release_root()])
   end
 
   defp ensure_from_active(site, active) do

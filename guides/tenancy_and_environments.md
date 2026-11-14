@@ -895,11 +895,16 @@ With `tenancy_mode: :multi` and HMR on:
   shows a notice saying so. Give the other sites a build with the steps
   under
   [Uploading a site's build by hand](#uploading-a-sites-build-by-hand).
-- Live preview and shared previews follow the same rule for the site they
-  render: a shared preview of the dev site pins a capture of the release's
-  build, never the site's active set, so sharing one needs a build in
-  `priv/static` (`pnpm build` in `assets/frontend`); with `priv/static`
-  empty the admin says so.
+- Live preview follows the same rule for the site it renders. A shared
+  preview never loads from the dev server, as its link outlives it: one of
+  the dev site renders from the set it pins, as any site's does. That is
+  the environment's own set or the site's active set; without either, a
+  capture of the release's `priv/static`, when the site has no Vite project
+  of its own in `assets/sites/<key>/` (with `priv/static` empty the admin
+  says to run `pnpm build` in `assets/frontend`). A dev site with a project
+  of its own and no set cannot be shared: the admin says to build and
+  upload a set first
+  ([Uploading a site's build by hand](#uploading-a-sites-build-by-hand)).
 
 Without `dev_site`, every site loads from the dev server, as on a
 single-site installation. Set in `:none` or `:single`, or naming a site that
@@ -1450,7 +1455,7 @@ What happens to an environment's set:
   set ([Pruning contract](#pruning-contract)).
 - **In development**, `dev_site` names a site: with HMR on, every
   environment of the dev site loads from the Vite dev server and reads none
-  of its sets.
+  of its sets, except for a shared preview, which pins one.
 
 ### Uploading a site's build by hand
 

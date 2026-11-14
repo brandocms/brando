@@ -18437,6 +18437,12 @@ msgstr "Nettstedet kan ikke sende e-post nå. Be en administrator om å tilbakes
 msgid "This site cannot send email, so no reset link was sent."
 msgstr "Nettstedet kan ikke sende e-post, så ingen lenke for nytt passord ble sendt."
 
+#: lib/brando_admin/components/form.ex
+#: lib/brando_admin/live/ai/assistant_live.ex
+#, elixir-autogen, elixir-format
+msgid "This site loads its frontend from the Vite dev server, which a shared link cannot use, and it has no uploaded asset set, so no link was created. Build the site's frontend and upload the build as its asset set, then try again."
+msgstr "Nettstedet henter frontend fra Vites utviklingsserver, som en delt lenke ikke kan bruke, og det har ikke et opplastet ressurssett, så ingen lenke ble laget. Bygg nettstedets frontend og last opp bygget som ressurssettet, og prøv igjen."
+
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "This site must remain archived for %{days} days before permanent deletion."

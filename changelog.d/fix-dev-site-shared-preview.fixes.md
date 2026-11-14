@@ -1,0 +1,1 @@
+- A shared preview of the `dev_site` loads its pinned asset set instead of the Vite dev server: the environment's own set or the site's active set, else a capture of the release's build when the site has no Vite project of its own in `assets/sites/<key>/`; with a project of its own and no set, the admin asks for a set to be built and uploaded first.

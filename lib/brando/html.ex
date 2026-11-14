@@ -9,6 +9,7 @@ defmodule Brando.HTML do
   import Phoenix.HTML
 
   alias Brando.Assets.DevSite
+  alias Brando.Assets.SiteAssets
   alias Brando.Assets.Vite
   alias Brando.Blueprint.URL
   alias Brando.Utils
@@ -744,8 +745,8 @@ defmodule Brando.HTML do
   site renders its manifest assets instead, with a notice saying why.
 
   On a multi-site installation, `config :your_app, dev_site: "acme"` limits
-  the site's dev server to that site; every other site renders from its build
-  (see `Brando.Assets.DevSite`).
+  the site's dev server to that site; every other site renders from its build,
+  and so does a shared preview of that site (see `Brando.Assets.DevSite`).
 
   These values are read at render time, rather than through application config,
   because they only configure development servers and must agree with Vite's
@@ -914,6 +915,7 @@ defmodule Brando.HTML do
       Brando.env() == :prod or Application.get_env(:brando, :ssg_run, false) -> :manifest
       hmr_disabled?() -> :manifest
       DevSite.other_site?() -> other_site_build()
+      pinned_dev_site?() -> :manifest
       failure = Brando.Vite.start_failure(:site) -> vite_failed(:app, failure)
       true -> :dev_server
     end
@@ -940,6 +942,11 @@ defmodule Brando.HTML do
     Vite.Manifest.refresh_critical_css()
     :other_site
   end
+
+  # A shared preview of the dev site renders from the set it pins
+  # (`Brando.Assets.SiteAssets.with_preview_set/2`): its link outlives the
+  # developer's Vite server
+  defp pinned_dev_site?, do: DevSite.key() != nil and SiteAssets.override() != nil
 
   defp other_site_assigns(assigns), do: assign(assigns, :unbuilt?, manifest_empty?(:app))
 
@@ -1168,10 +1175,10 @@ defmodule Brando.HTML do
 
   Call this right before your closing `</body>` tag. They come from the build,
   so they render with HMR off and, with `dev_site` set, for every site but the
-  dev site (`Brando.Assets.DevSite`).
+  dev site (`Brando.Assets.DevSite`), and for the dev site's shared previews.
   """
   def include_legacy_assets(assigns) do
-    if hmr_disabled?() or DevSite.other_site?() do
+    if hmr_disabled?() or DevSite.other_site?() or pinned_dev_site?() do
       ~H"{Vite.Render.legacy_js() |> raw()}"
     else
       ~H||

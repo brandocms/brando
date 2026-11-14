@@ -12,10 +12,38 @@ defmodule Brando.Assets.DevSiteTest do
   alias Brando.Assets.SiteAssets.Capture
   alias Brando.Assets.Vite.Manifest
   alias Brando.HTML
+  alias Brando.LivePreview
+  alias Brando.Pages.Page
   alias Brando.SiteAssetsFixtures
+  alias Brando.Sites.Preview
   alias Brando.Tenant
 
   @host_app :brando_dev_site_test
+
+  defmodule Layouts do
+    @moduledoc false
+    use Phoenix.Component
+
+    def root(assigns) do
+      ~H|<html>
+  <head><Brando.HTML.inject_critical_css /><Brando.HTML.include_assets /></head>
+  <body>{@inner_content}<Brando.HTML.include_legacy_assets /></body>
+</html>|
+    end
+  end
+
+  defmodule PageHTML do
+    @moduledoc false
+    use Phoenix.Component
+
+    def default(assigns), do: ~H|<main>{@page.title}</main>|
+  end
+
+  defmodule AcmeFrontend do
+    @moduledoc false
+    use Brando.Site.Frontend, root_layout: {Layouts, :root}, page_html: PageHTML
+  end
+
   @moduletag :tmp_dir
 
   setup %{tmp_dir: tmp_dir} do
@@ -98,12 +126,6 @@ defmodule Brando.Assets.DevSiteTest do
       refute Brando.Plug.SiteAssets.call(conn_for("assets/acme-set.js", "acme.test"), []).halted
     end
 
-    test "pins the release's build to a shared preview, not its active set", %{acme: acme} do
-      assert {:ok, set} = SiteAssets.with_preview_set(acme, & &1)
-      assert Capture.captured?(set)
-      refute set.active
-    end
-
     # Every environment of the dev site loads from the Vite dev server
     test "reads nothing from an environment's own set", %{acme: acme} do
       {:ok, own} = SiteAssets.register_set(acme, create_set(acme, "acme-own"), %{})
@@ -175,12 +197,6 @@ defmodule Brando.Assets.DevSiteTest do
       end
     end
 
-    # The admin turns this reason into what to do (pnpm build)
-    test "refuses a shared preview without a release build", %{acme: acme, tmp_dir: tmp_dir} do
-      File.rm_rf!(Path.join(tmp_dir, "priv/static"))
-      assert {:error, :no_frontend_assets} = SiteAssets.with_preview_set(acme, & &1)
-    end
-
     test "names its own Vite project in the notice" do
       html = render_component(&HTML.include_assets/1)
       assert html =~ "<code>assets/sites/acme</code>"
@@ -194,6 +210,94 @@ defmodule Brando.Assets.DevSiteTest do
       refute html =~ "acme-set"
       refute html =~ "localhost:3000"
       assert html =~ "Vite for the site did not start"
+    end
+  end
+
+  # A shared link outlives the developer's Vite server: it pins a build
+  describe "a shared preview of the dev site" do
+    setup do
+      put_test_env(:site_frontends, %{"acme" => AcmeFrontend})
+      as_site("acme")
+    end
+
+    test "pins its active set", %{acme: acme} do
+      assert {:ok, set} = SiteAssets.with_preview_set(acme, & &1)
+      assert set.active
+      assert set.name == "acme-set"
+    end
+
+    test "pins the own set of the environment it is shared from", %{acme: acme} do
+      {:ok, own} = SiteAssets.register_set(acme, create_set(acme, "acme-own"), %{})
+      production = Tenant.Cache.get_env("acme", "production")
+      assert {:ok, _production} = SiteAssets.activate_environment_set(own.id, production)
+
+      assert {:ok, set} = SiteAssets.with_preview_set(acme, production, & &1)
+      assert set.id == own.id
+    end
+
+    test "without a set or a Vite project of its own, pins a capture of the release's build", %{
+      acme: acme,
+      tmp_dir: tmp_dir
+    } do
+      :ok = SiteAssets.deactivate(acme)
+      File.rm_rf!(Path.join(tmp_dir, "assets/sites/acme"))
+
+      assert {:ok, set} = SiteAssets.with_preview_set(acme, & &1)
+      assert Capture.captured?(set)
+      refute set.active
+    end
+
+    # The admin turns this reason into what to do (pnpm build)
+    test "without a set, a Vite project or a release build, is refused", %{acme: acme, tmp_dir: tmp_dir} do
+      :ok = SiteAssets.deactivate(acme)
+      File.rm_rf!(Path.join(tmp_dir, "assets/sites/acme"))
+      File.rm_rf!(Path.join(tmp_dir, "priv/static"))
+
+      assert {:error, :no_frontend_assets} = SiteAssets.with_preview_set(acme, & &1)
+    end
+
+    # The release holds the default frontend, not the site's own project
+    test "with a Vite project of its own and no set, is refused", %{acme: acme} do
+      :ok = SiteAssets.deactivate(acme)
+
+      assert {:error, :dev_site_without_set} = SiteAssets.with_preview_set(acme, & &1)
+      assert {:error, :dev_site_without_set} = LivePreview.share(Page, page_changeset(), user())
+      assert SiteAssets.list_sets(acme) |> Enum.filter(&Capture.captured?/1) == []
+    end
+
+    test "stores HTML that loads its active set, never the dev server" do
+      html = shared_html()
+
+      assert html =~ ~s(src="/assets/acme-set.js")
+      assert html =~ ".acme-set-critical"
+      assert html =~ "/assets/acme-set-legacy.js"
+      refute html =~ "localhost:3000"
+      refute html =~ "assets-notice"
+
+      # The link opens on a host that belongs to no site, and on the site's own
+      for host <- ["admin.test", "acme.test"] do
+        assert Brando.Plug.SiteAssets.call(conn_for("assets/acme-set.js", host), []).halted, host
+      end
+    end
+
+    test "stores HTML that loads the captured release's build, never the dev server", %{
+      acme: acme,
+      tmp_dir: tmp_dir
+    } do
+      :ok = SiteAssets.deactivate(acme)
+      File.rm_rf!(Path.join(tmp_dir, "assets/sites/acme"))
+      html = shared_html()
+
+      assert html =~ ~s(src="/assets/release.js")
+      assert html =~ ".release-critical"
+      refute html =~ "localhost:3000"
+    end
+
+    test "leaves the live preview on the dev server" do
+      html = LivePreview.render(Page, page(), nil, target: :site)
+
+      assert html =~ ~s(src="http://localhost:3000/js/index.js")
+      refute html =~ "acme-set"
     end
   end
 
@@ -423,6 +527,20 @@ defmodule Brando.Assets.DevSiteTest do
   test "a valid setting gives no warning" do
     assert DevSite.key() == "acme"
     assert capture_io(:stderr, fn -> DevSite.warn_misconfigured() end) == ""
+  end
+
+  defp page, do: %Page{title: "About", uri: "about", template: "default.html", language: :en, entry_blocks: []}
+
+  defp page_changeset, do: page() |> Map.put(:key, "about") |> Ecto.Changeset.change()
+
+  defp user, do: Brando.Factory.insert(:random_user, avatar: nil)
+
+  # The stored HTML of a shared preview of the current site
+  defp shared_html do
+    assert {:ok, url, _days} = LivePreview.share(Page, page_changeset(), user(), %{}, :site)
+    %URI{path: "/__p__/" <> key} = URI.parse(url)
+    preview = Brando.Repo.get_by!(Preview, [preview_key: Preview.hash_key(key)], prefix: "public")
+    Brando.Utils.binary_to_term(preview.html)
   end
 
   defp as_site(key) do

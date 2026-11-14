@@ -13,6 +13,13 @@ defmodule Brando.Assets.DevSite do
   `Brando.Plug.SiteAssets` would serve. Every other site renders
   as in production, from its active set or the release's `priv/static`.
 
+  A shared preview of the dev site never loads from the dev server: it
+  renders from the set it pins (`Brando.Assets.SiteAssets.Capture.ensure_set/2`),
+  the environment's own set or the site's active set, else a capture of the
+  release's `priv/static` when the site has no Vite project of its own
+  (`own_project?/1`). With a project of its own and no set, sharing is
+  refused with `{:error, :dev_site_without_set}`.
+
   The setting is read only in development, outside static builds. Unset,
   every site loads from the dev server, as without it. Set in `:none` or
   `:single`, or naming no site, it is ignored, with one warning at boot
@@ -65,14 +72,19 @@ defmodule Brando.Assets.DevSite do
   """
   @spec frontend_dir() :: String.t()
   def frontend_dir do
-    with site_key when is_binary(site_key) <- key(),
-         dir = Path.join("assets/sites", site_key),
-         true <- File.dir?(dir) do
-      dir
-    else
-      _ -> "assets/frontend"
-    end
+    site_key = key()
+    if own_project?(site_key), do: Path.join("assets/sites", site_key), else: "assets/frontend"
   end
+
+  @doc """
+  Whether `site` (a site or its key) has a Vite project of its own in
+  `assets/sites/<key>`, relative to the application. The release's
+  `priv/static` holds `assets/frontend`'s build, not that project's.
+  """
+  @spec own_project?(Site.t() | String.t() | nil) :: boolean()
+  def own_project?(%Site{key: site_key}), do: own_project?(site_key)
+  def own_project?(site_key) when is_binary(site_key), do: File.dir?(Path.join("assets/sites", site_key))
+  def own_project?(_none), do: false
 
   @doc """
   Warns once when `dev_site` is set where it does nothing: outside `:multi`,

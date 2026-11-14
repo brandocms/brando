@@ -4350,6 +4350,16 @@ defmodule BrandoAdmin.Components.Form do
             type: "error"
           })
 
+        {:error, :dev_site_without_set} ->
+          push_event(socket, "b:alert", %{
+            title: gettext("Cannot share preview"),
+            message:
+              gettext(
+                "This site loads its frontend from the Vite dev server, which a shared link cannot use, and it has no uploaded asset set, so no link was created. Build the site's frontend and upload the build as its asset set, then try again."
+              ),
+            type: "error"
+          })
+
         {:error, reason} ->
           Logger.error("Sharing a preview failed: #{inspect(reason)}")
 
