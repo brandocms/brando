@@ -103,8 +103,9 @@ language:
   listing or form offers to create, the language tabs of `languages: :content`
   inputs, and every fallback to the default language follow the site. An editor
   whose content language the site does not have works in the site's default
-  language there; entering the site, by switching to it or opening the admin,
-  saves that.
+  language there; entering the site saves that, whether by switching to it,
+  opening the admin, a live navigation or reconnect into it, or a link that
+  names the site.
 - On the public side, `Brando.Plug.I18n.put_locale/2` parses the path against
   the request's site: a first segment that is not one of the site's languages
   is not a locale, and `/` is in the site's default language. Alternates
@@ -113,6 +114,31 @@ language:
   entries in other languages when it pipes them through
   `Brando.Sitemap.in_site_languages/1`, as the one `mix brando.gen.sitemap`
   generates does.
+
+The unprefixed routes belong to the request's site's default language: `/about`
+is English on a site whose default is English, and Norwegian on one whose
+default is Norwegian. So the router needs a prefixed scope for every language
+the installation configures, the installation's default included
+(`scope "/en", as: :en`), for `Brando.I18n.Helpers.localized_path/3`,
+`route_i18n` and absolute URLs to give each language its own URL on every
+site. `mix brando.gen` writes these scopes for a translatable resource on a
+multi-site installation, and [Route the requested language](deps/brando/guides/i18n.md#route-the-requested-language)
+shows them for your own routes. A route's translated path segments in the
+unprefixed scope are the same for every site: a `get "/news"` there is the path
+of each site's default language, English or not. Without the scope of a
+language that is not the site's default, `localized_path/3` returns the
+unprefixed path, which is the default language's, and logs a warning naming the
+missing scope, once per helper. CMS pages need no scopes: their paths are
+parsed against the site's languages.
+
+Changing a site's default language moves its URLs: the new default's entries
+lose their prefix and the old default's gain one, so an English `/about`
+becomes `/en/about` when the default changes from English to Norwegian.
+`Brando.Tenant.Registry.update_site/2` then queues a job for each of the site's
+environments that syncs its identifiers, as `mix brando.identifiers.sync` does,
+so the URLs they store follow, and so do links to those entries made with the
+link picker in rich text. A link typed in as a plain address keeps the old URL:
+check those after changing a site's default language.
 
 Read the two values in your own code with `Brando.Languages.languages/0` (the
 `[value:, text:]` entries) or `Brando.Languages.codes/0`, and
@@ -127,7 +153,8 @@ for the check a site moved in with `mix brando.migrate_to_tenant` goes
 through. The admin's interface languages (`admin_languages`) are separate from
 both lists.
 
-In `:none` and `:single`, the installation's list is the site's.
+In `:none` and `:single`, the installation's list is the site's, whatever the
+site's registry row says.
 
 Generated routers place `Brando.Plug.Tenant` in the browser pipelines
 before plugs that load content:

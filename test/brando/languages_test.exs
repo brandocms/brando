@@ -1,3 +1,46 @@
+defmodule Brando.LanguagesTest.ArticleController do
+  @moduledoc false
+  def init(opts), do: opts
+  def call(conn, _opts), do: conn
+end
+
+# The routes a multi-site installation writes for a translatable resource:
+# the unprefixed scope is each site's default language's, and every
+# language has a prefixed scope
+defmodule Brando.LanguagesTest.Router do
+  @moduledoc false
+  use Phoenix.Router
+
+  scope "/" do
+    get "/articles/:slug", Brando.LanguagesTest.ArticleController, :show
+
+    scope "/en", as: :en do
+      get "/articles/:slug", Brando.LanguagesTest.ArticleController, :show
+    end
+
+    scope "/no", as: :no do
+      get "/articles/:slug", Brando.LanguagesTest.ArticleController, :show
+    end
+
+    get "/", Brando.LanguagesTest.ArticleController, :index, as: :page
+    get "/*path", Brando.LanguagesTest.ArticleController, :show, as: :page
+  end
+end
+
+# The same routes without a scope for English, the installation's default
+defmodule Brando.LanguagesTest.RouterWithoutEn do
+  @moduledoc false
+  use Phoenix.Router
+
+  scope "/" do
+    get "/articles/:slug", Brando.LanguagesTest.ArticleController, :show
+
+    scope "/no", as: :no do
+      get "/articles/:slug", Brando.LanguagesTest.ArticleController, :show
+    end
+  end
+end
+
 defmodule Brando.LanguagesTest do
   # A site's own languages and default language on a multi-site installation
   # (`Brando.Languages`). The installation configures Norwegian and English,
@@ -7,7 +50,11 @@ defmodule Brando.LanguagesTest do
 
   import ExUnit.CaptureLog
 
+  alias Brando.Blueprint.AbsoluteURL
   alias Brando.Languages
+  alias Brando.LanguagesTest.ArticleController
+  alias Brando.LanguagesTest.Router
+  alias Brando.LanguagesTest.RouterWithoutEn
   alias Brando.Sites.Site
   alias Brando.Tenant
   alias Brando.Tenant.Cache
@@ -15,6 +62,7 @@ defmodule Brando.LanguagesTest do
   alias BrandoAdmin.Components.ContentLanguageSwitch
   alias BrandoAdmin.Components.Form.Input
   alias BrandoAdmin.Components.Form.Input.Options
+  alias BrandoIntegration.Repo
 
   setup do
     put_test_env(:tenancy_mode, :multi)
@@ -102,6 +150,111 @@ defmodule Brando.LanguagesTest do
     end
   end
 
+  describe "single-site mode" do
+    setup do
+      put_app_env(:site_key, "acme")
+      put_test_env(:tenancy_mode, :single)
+      :ok
+    end
+
+    test "the installation's list wins over the site's row everywhere", %{acme: acme} do
+      # Acme's row says Norwegian first and default; the installation, English
+      assert Languages.codes(acme) == ["no", "en"]
+      assert Languages.default_language(acme) == "en"
+      assert Languages.languages(acme) == Languages.installation_languages()
+      assert Brando.I18n.parse_path([], acme) == {"en", ["index"]}
+
+      for {path, language} <- [{"/", "en"}, {"/about", "en"}, {"/no/om", "no"}] do
+        conn =
+          :get
+          |> Plug.Test.conn(path)
+          |> Brando.Plug.Tenant.call([])
+          |> Plug.Test.init_test_session(%{})
+          |> Brando.Plug.I18n.put_locale([])
+
+        assert conn.assigns.current_site.key == "acme"
+        assert conn.assigns.language == language, path
+      end
+    end
+  end
+
+  describe "compiled routes on a site whose default is not the installation's" do
+    setup do
+      put_app_env(:router_module, Router)
+      put_app_env(:scope_default_language_routes, false)
+      :persistent_term.erase({Brando.I18n.Helpers, :missing_scope, "en_article_path", 3})
+      :ok
+    end
+
+    test "an English and a Norwegian entry get different URLs, each resolving to its own language" do
+      enter("acme")
+      english = localized("en", "hello")
+      norwegian = localized("no", "hei")
+
+      assert english == "/en/articles/hello"
+      assert norwegian == "/articles/hei"
+
+      for {path, language} <- [{english, "en"}, {norwegian, "no"}] do
+        assert %{plug: ArticleController} = Phoenix.Router.route_info(Router, "GET", path, "acme.test")
+        assert locale("acme.test", path) == language
+      end
+
+      enter("beta")
+      assert localized("en", "hello") == "/articles/hello"
+      assert locale("beta.test", "/articles/hello") == "en"
+    end
+
+    test "absolute URLs follow the same rule, for compiled routes and CMS pages" do
+      enter("acme")
+      assert AbsoluteURL.route_i18n(%{language: :en}, :article_path, :show, ["hello"]) == "/en/articles/hello"
+      assert AbsoluteURL.route_i18n(%{language: :no}, :article_path, :show, ["hei"]) == "/articles/hei"
+
+      # A CMS page is found by parsing its path against the site's languages
+      english = AbsoluteURL.route_i18n(%{language: :en}, :page_path, :show, ["about"])
+      norwegian = AbsoluteURL.route_i18n(%{language: :no}, :page_path, :show, ["om"])
+      assert english == "/en/about"
+      assert norwegian == "/om"
+      assert Brando.I18n.parse_path(["en", "about"]) == {"en", ["about"]}
+      assert Brando.I18n.parse_path(["om"]) == {"no", ["om"]}
+      assert locale("acme.test", english) == "en"
+      assert locale("acme.test", norwegian) == "no"
+
+      enter("beta")
+      assert AbsoluteURL.route_i18n(%{language: :en}, :page_path, :show, ["about"]) == "/about"
+      assert locale("beta.test", "/about") == "en"
+    end
+
+    test "a missing scope keeps the unprefixed path and warns once, naming the scope" do
+      put_app_env(:router_module, RouterWithoutEn)
+      enter("acme")
+
+      log =
+        with_log_level(:warning, fn ->
+          capture_log(fn ->
+            assert localized("en", "hello") == "/articles/hello"
+            assert localized("en", "again") == "/articles/again"
+          end)
+        end)
+
+      assert log =~ ~s(scope "/en", as: :en)
+      assert log |> String.split("No en_article_path/3 router helper") |> length() == 2
+
+      # The site's default language has the unprefixed route: nothing is missing
+      enter("beta")
+      :persistent_term.erase({Brando.I18n.Helpers, :missing_scope, "en_article_path", 3})
+
+      assert with_log_level(:warning, fn -> capture_log(fn -> localized("en", "hello") end) end) == ""
+    end
+
+    test "alternates through a route's {fun, args} list each site's own languages at their own URLs" do
+      enter("acme")
+      assert hreflang_paths("no") == [{"no", "/articles/hei"}, {:en, "/en/articles/slug"}, {:no, "/articles/slug"}]
+
+      enter("beta")
+      assert hreflang_paths("en") == [{"en", "/articles/hei"}, {:en, "/articles/slug"}]
+    end
+  end
+
   describe "admin" do
     test "the content-language switch is offered on a site with two languages and hidden on one with one" do
       enter("acme")
@@ -169,6 +322,22 @@ defmodule Brando.LanguagesTest do
   end
 
   describe "public side" do
+    test "a static build's request, on a host with no site, is parsed against the site its header names", %{acme: acme} do
+      token = Brando.SSG.Context.sign(acme, hd(acme.environments))
+
+      for {path, language} <- [{"/", "no"}, {"/en/projects", "en"}] do
+        conn =
+          :get
+          |> Plug.Test.conn(path)
+          |> Map.put(:host, "localhost")
+          |> Plug.Conn.put_req_header(Brando.SSG.Context.header(), token)
+          |> Plug.Test.init_test_session(%{})
+          |> Brando.Plug.I18n.put_locale([])
+
+        assert conn.assigns.language == language, path
+      end
+    end
+
     test "on the English-only site's host /no/… is not a locale; on the other it is" do
       assert locale("beta.test", "/no/prosjekter") == "en"
       assert locale("acme.test", "/no/prosjekter") == "no"
@@ -209,6 +378,49 @@ defmodule Brando.LanguagesTest do
 
       enter("beta")
       assert entries |> Brando.Sitemap.in_site_languages() |> Enum.map(& &1.uri) == ["a", "c"]
+    end
+  end
+
+  describe "changing a site's default language" do
+    test "queues an identifier sync for each of the site's environments", %{acme: acme} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _} = Registry.update_site(acme, %{name: "Acme 2"})
+        refute_enqueued(worker: Brando.Worker.IdentifierSync)
+
+        {:ok, _} = Registry.update_site(Registry.get_site(acme.id), %{default_language: "en"})
+
+        assert [%{args: %{"tenant_prefix" => "tenant_acme_production"}}] =
+                 all_enqueued(worker: Brando.Worker.IdentifierSync)
+      end)
+    end
+
+    test "gives the stored URLs of the old and new default's entries their prefixes", %{beta: beta} do
+      put_app_env(:scope_default_language_routes, false)
+      prefix = "tenant_beta_production"
+      creator = Brando.Factory.insert(:random_user)
+
+      page =
+        Tenant.with_prefix(prefix, fn ->
+          clone_public_tables()
+
+          page =
+            Brando.Repo.insert!(
+              Brando.Factory.build(:page, uri: "about", language: :en, creator: nil, creator_id: creator.id)
+            )
+
+          {:ok, identifier} = Brando.Content.create_identifier(Brando.Pages.Page, page)
+          assert identifier.url == "/about"
+          page
+        end)
+
+      ExUnit.CaptureIO.capture_io(fn ->
+        assert {:ok, _} = Registry.update_site(beta, %{languages: ["en", "no"], default_language: "no"})
+      end)
+
+      Tenant.with_prefix(prefix, fn ->
+        assert {:ok, identifier} = Brando.Content.get_identifier(Brando.Pages.Page, page)
+        assert identifier.url == "/en/about"
+      end)
     end
   end
 
@@ -303,6 +515,45 @@ defmodule Brando.LanguagesTest do
 
     conn = Brando.Plug.HTML.put_hreflang(build_conn(), page)
     Enum.map(conn.private.brando_hreflangs, &elem(&1, 0))
+  end
+
+  # The tenant schema the prefix names, with the content tables; rolled back
+  # with the test's transaction
+  defp clone_public_tables do
+    prefix = Tenant.current_prefix()
+    Repo.query!(~s|CREATE SCHEMA "#{prefix}"|)
+    %{rows: rows} = Repo.query!("SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
+
+    for [table] <- rows, not Tenant.SharedTables.member?(table) do
+      Repo.query!(~s|CREATE TABLE "#{prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|)
+    end
+  end
+
+  defp localized(language, slug),
+    do: Brando.I18n.Helpers.localized_path(language, :article_path, [Brando.endpoint(), :show, slug])
+
+  # The canonical, then the alternates, as paths
+  defp hreflang_paths(language) do
+    conn =
+      build_conn()
+      |> Map.put(:path_info, ["articles", "hei"])
+      |> Plug.Conn.assign(:language, language)
+      |> Brando.Plug.HTML.put_hreflang({:article_path, [Brando.endpoint(), :show, "slug"]})
+
+    Enum.map(conn.private.brando_hreflangs, fn {language, url} -> {language, URI.parse(url).path} end)
+  end
+
+  # The application environment for this test; the module is synchronous
+  defp put_app_env(key, value) do
+    previous = Application.fetch_env(:brando, key)
+    Application.put_env(:brando, key, value)
+
+    on_exit(fn ->
+      case previous do
+        {:ok, value} -> Application.put_env(:brando, key, value)
+        :error -> Application.delete_env(:brando, key)
+      end
+    end)
   end
 
   defp with_log_level(level, fun) do
