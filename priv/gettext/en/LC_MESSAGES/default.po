@@ -664,6 +664,11 @@ msgstr ""
 msgid "%{environment} uses the site's build"
 msgstr ""
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{environment}, the live environment, serves this build of its own."
+msgstr ""
+
 #: lib/brando_admin/components/form/draft_preview.ex
 #, elixir-autogen, elixir-format
 msgid "%{field} · Block %{number}"

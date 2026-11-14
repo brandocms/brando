@@ -121,6 +121,26 @@ defmodule BrandoAdmin.Sites.AssetLiveEnvironmentsTest do
         assert Registry.get_environment(staging.id).asset_set_id == nil
         assert has_element?(view, "#asset-environment-#{staging.id}", "The site's")
       end
+
+      test "the current card names the build the live environment serves", %{conn: conn, next: next, one: one} do
+        production = Brando.Tenant.Cache.get_env("acme", "production")
+        {:ok, _production} = SiteAssets.activate_environment_set(next.id, production)
+
+        {:ok, view, _html} = live(conn, "/admin/config/assets?brando_site_key=acme&brando_environment_key=staging")
+
+        assert has_element?(view, ".frontend-assets-current.uploaded h2", next.name)
+        assert has_element?(view, ".frontend-assets-current", "Production, the live environment, serves this build")
+        refute has_element?(view, ".frontend-assets-current h2", one.name)
+        refute has_element?(view, ".frontend-assets-current button", "Use release assets")
+
+        view
+        |> element("#asset-environment-#{production.id} button", "Use the site's build")
+        |> render_click()
+
+        assert has_element?(view, ".frontend-assets-current h2", one.name)
+        assert has_element?(view, ".frontend-assets-current", "This uploaded build is serving frontend requests now.")
+        assert has_element?(view, ".frontend-assets-current button", "Use release assets")
+      end
     end
   end
 

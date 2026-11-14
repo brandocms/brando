@@ -48,31 +48,27 @@ defmodule BrandoAdmin.Sites.AssetLive do
       </Workspace.header>
 
       <div class="frontend-assets-live">
-        <section class={["frontend-assets-current", @active_set && "uploaded"]}>
+        <section class={["frontend-assets-current", @served_set && "uploaded"]}>
           <div class="frontend-assets-current__content">
             <span class="frontend-assets-eyebrow">
               {gettext("Currently served")} · {scope_name(@scope_site)}
             </span>
-            <h2>{if @active_set, do: @active_set.name, else: gettext("Release assets")}</h2>
-            <p>
-              {if @active_set,
-                do: gettext("This uploaded build is serving frontend requests now."),
-                else: gettext("The CSS and JavaScript packaged with the current application release are being served.")}
-            </p>
+            <h2>{if @served_set, do: @served_set.name, else: gettext("Release assets")}</h2>
+            <p>{served_description(@live_own_set, @live_environment, @active_set)}</p>
 
-            <dl :if={@active_set} class="frontend-assets-current__meta">
+            <dl :if={@served_set} class="frontend-assets-current__meta">
               <div>
                 <dt>{gettext("Revision")}</dt>
-                <dd>{@active_set.metadata["revision"] || gettext("Not provided")}</dd>
+                <dd>{@served_set.metadata["revision"] || gettext("Not provided")}</dd>
               </div>
               <div>
                 <dt>{gettext("Uploaded")}</dt>
-                <dd>{format_datetime(@active_set.uploaded_at)}</dd>
+                <dd>{format_datetime(@served_set.uploaded_at)}</dd>
               </div>
               <div>
                 <dt>{gettext("Bundle")}</dt>
                 <dd>
-                  {ngettext("%{count} file", "%{count} files", @active_set.file_count)} · {format_size(@active_set.size)}
+                  {ngettext("%{count} file", "%{count} files", @served_set.file_count)} · {format_size(@served_set.size)}
                 </dd>
               </div>
             </dl>
@@ -84,7 +80,7 @@ defmodule BrandoAdmin.Sites.AssetLive do
               {gettext("Serving now")}
             </span>
             <button
-              :if={@active_set}
+              :if={@active_set && !@live_own_set}
               type="button"
               class="btn"
               phx-click="deactivate"
@@ -330,13 +326,20 @@ defmodule BrandoAdmin.Sites.AssetLive do
     scope_site = socket.assigns.scope_site
     sets = SiteAssets.list_sets(scope_site)
 
+    sets_by_id = Map.new(sets, &{&1.id, &1})
+    active_set = Enum.find(sets, & &1.active)
     environments = environments(socket)
     editing_id = socket.assigns[:current_environment] && socket.assigns.current_environment.id
+    live_environment = Enum.find(environments, & &1.live)
+    live_own_set = live_environment && sets_by_id[live_environment.asset_set_id]
 
     socket
     |> assign(:sets, sets)
-    |> assign(:sets_by_id, Map.new(sets, &{&1.id, &1}))
-    |> assign(:active_set, Enum.find(sets, & &1.active))
+    |> assign(:sets_by_id, sets_by_id)
+    |> assign(:active_set, active_set)
+    |> assign(:live_environment, live_environment)
+    |> assign(:live_own_set, live_own_set)
+    |> assign(:served_set, live_own_set || active_set)
     |> assign(:protected_ids, Retention.protected_set_ids(scope_site))
     |> assign(:environments, environments)
     |> assign(:editing_environment, Enum.find(environments, &(&1.id == editing_id)))
@@ -363,6 +366,17 @@ defmodule BrandoAdmin.Sites.AssetLive do
           else: gettext("Available")
     end
   end
+
+  # What the live environment's host serves: its own set, else the site's
+  # active set, else the release
+  defp served_description(%{} = _live_own_set, live_environment, _active_set),
+    do: gettext("%{environment}, the live environment, serves this build of its own.", environment: live_environment.name)
+
+  defp served_description(nil, _live_environment, %{} = _active_set),
+    do: gettext("This uploaded build is serving frontend requests now.")
+
+  defp served_description(nil, _live_environment, nil),
+    do: gettext("The CSS and JavaScript packaged with the current application release are being served.")
 
   defp environment_build_name(%{asset_set_id: nil}, _sets_by_id, nil), do: gettext("Release assets")
   defp environment_build_name(%{asset_set_id: nil}, _sets_by_id, active_set), do: active_set.name
