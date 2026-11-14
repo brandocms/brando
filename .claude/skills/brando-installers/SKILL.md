@@ -108,7 +108,10 @@ the application's explicit routes.
   support paths, or no `:browser` pipeline) blocks `mix brando.gen.site`; a new
   install leaves the site out instead, with a notice naming the routes.
 - Custom generated files block the plan. Guidance requires an affirmative
-  ownership answer, independent of diff acceptance.
+  ownership answer, independent of diff acceptance. The exception is
+  `--site KEY`: a site module file that exists is the application's own and
+  is kept, with a notice, so a rerun adds only what is missing, its Vite
+  project included.
 
 ### What planning does not do
 
