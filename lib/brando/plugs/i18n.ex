@@ -75,13 +75,14 @@ defmodule Brando.Plug.I18n do
   end
 
   # The site of the request, whose languages the path is parsed against
-  # (`Brando.Languages`): from `Brando.Plug.Tenant` when it ran first, else by
-  # host from the tenant cache, so the order of the two plugs does not matter.
+  # (`Brando.Languages`): from `Brando.Plug.Tenant` when it ran first, else
+  # resolved as that plug resolves it (a static build's signed header before
+  # the host), so the order of the two plugs does not matter.
   defp request_site(%{assigns: %{current_site: %Brando.Sites.Site{} = site}}), do: site
 
   defp request_site(conn) do
     with :multi <- Brando.Tenant.mode(),
-         {site, _environment} <- Brando.Tenant.Cache.get_env_by_domain(conn.host) do
+         {site, _environment} <- Brando.Plug.Tenant.resolve(conn) do
       site
     else
       _ -> :current
