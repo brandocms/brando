@@ -145,8 +145,9 @@ domain moved, an environment created, copied, restored or set live), once its
 transaction has committed, refreshes the node that made it at once and the
 other nodes through `Brando.CacheSync`, over the application's
 `Phoenix.PubSub`. They follow within a fraction of a second, whichever node
-ran the write or the scheduled job. The active and pinned asset sets and each
-site's shared-library allowlist are refreshed the same way.
+ran the write or the scheduled job. The active and pinned asset sets, each
+environment's own set, and each site's shared-library allowlist are
+refreshed the same way.
 
 Each node also keeps its own copy of a site's identity, SEO, globals,
 palettes and menus, and its own query cache. A save through the context
@@ -228,6 +229,39 @@ where no site is selected yet, shows `client_brand`.
 prefix: the `{site_key, environment_key}` entry, then the site key's entry,
 then `default_site_frontend`. With neither configured, rendering uses
 `:page_html_module` and the application's `PageHTML` as before.
+
+The frontend asset set, the compiled CSS and JavaScript the layout links,
+resolves for the environment in the same order:
+
+1. the environment's own set, when it has one;
+2. else the site's active set (in `:single`, the installation's active set);
+3. else the release's `priv/static`.
+
+Whatever reads a set resolves it this way for the environment at hand: the
+files `Brando.Plug.SiteAssets` serves on the environment's host, the script
+and style tags, Vite manifest and critical CSS a page renders with, a live
+preview of the environment being edited, a shared preview (which pins the
+set of the environment it was shared from), and a static build of the
+environment. See [A set per environment](deps/brando/guides/tenancy_and_environments.md#a-set-per-environment).
+
+To try a new layout on Staging together with its CSS and JavaScript, then
+put both live, on a `:dynamic` site:
+
+1. Add `{"acme", "staging"} => MyAppWeb.Sites.AcmeNext` to `site_frontends`
+   and deploy. Production keeps rendering with `MyAppWeb.Sites.Acme`.
+2. Build the new frontend, upload it to the site's `sets` root and register
+   it, as in [Uploading a site's build by hand](deps/brando/guides/tenancy_and_environments.md#uploading-a-sites-build-by-hand).
+3. With Staging selected, open `/admin/config/assets` and choose
+   "Activate for Staging" on the new build. Staging's host now serves it
+   and Staging's pages, previews and builds render with it; Production
+   keeps the site's active set.
+4. When Staging is approved, switch it live
+   (`Brando.Environments.set_live/2`, or the environments screen). The
+   production host moves to Staging, and the layout and set go with it: both
+   belong to the environment, so the host serves the set Staging was tested
+   with. Nothing is copied or swapped.
+5. To make the new build the site's own, activate it for the site, and
+   choose "Use the site's build" on the environment.
 
 The page controller and resource controllers that `mix brando.gen.site` and
 `mix brando.gen` generate already render the site's frontend. For a controller

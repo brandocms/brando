@@ -104,6 +104,18 @@ defmodule Brando.Assets.DevSiteTest do
       refute set.active
     end
 
+    # Every environment of the dev site loads from the Vite dev server
+    test "reads nothing from an environment's own set", %{acme: acme} do
+      {:ok, own} = SiteAssets.register_set(acme, create_set(acme, "acme-own"), %{})
+      production = Tenant.Cache.get_env("acme", "production")
+      assert {:ok, _production} = SiteAssets.activate_environment_set(own.id, production)
+
+      assert SiteAssets.current_manifest() == nil
+      assert SiteAssets.current_file("assets/acme-own.js") == nil
+      refute Brando.Plug.SiteAssets.call(conn_for("assets/acme-own.js", "acme.test"), []).halted
+      refute Brando.Plug.SiteAssets.call(conn_for("assets/acme-own.js", "admin.test"), []).halted
+    end
+
     test "gets no legacy bundles" do
       refute render_component(&HTML.include_legacy_assets/1) =~ "-legacy.js"
     end

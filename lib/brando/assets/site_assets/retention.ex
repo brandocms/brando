@@ -5,6 +5,7 @@ defmodule Brando.Assets.SiteAssets.Retention do
   A set is protected while any of these hold:
 
     * it is the scope's active set;
+    * an environment uses it as its own set (`environments.asset_set_id`);
     * an unexpired shared preview references it. `sites_previews.expires_at`
       is compared directly, so expired rows the purge worker has not removed
       yet never prolong protection;
@@ -23,6 +24,7 @@ defmodule Brando.Assets.SiteAssets.Retention do
   alias Brando.Assets.SiteAssets
   alias Brando.Assets.SiteAssets.Capture
   alias Brando.Assets.SiteAssetSet
+  alias Brando.Environments.Environment
   alias Brando.Repo
   alias Brando.Sites.Preview
   alias Brando.SSG.Build
@@ -59,10 +61,25 @@ defmodule Brando.Assets.SiteAssets.Retention do
     |> MapSet.new()
   end
 
+  @doc "IDs of the sets an environment uses as its own, in every scope."
+  @spec environment_set_ids() :: MapSet.t(pos_integer())
+  def environment_set_ids do
+    from(environment in Environment,
+      where: not is_nil(environment.asset_set_id),
+      select: environment.asset_set_id,
+      distinct: true
+    )
+    |> Repo.all(@public_opts)
+    |> MapSet.new()
+  end
+
   @doc "IDs of every set in the scope that must not be deleted right now."
   @spec protected_set_ids(SiteAssets.scope()) :: MapSet.t(pos_integer())
   def protected_set_ids(site \\ nil) do
-    referenced = MapSet.union(preview_pinned_set_ids(), build_referenced_ids())
+    referenced =
+      preview_pinned_set_ids()
+      |> MapSet.union(build_referenced_ids())
+      |> MapSet.union(environment_set_ids())
 
     site
     |> SiteAssets.list_sets()
@@ -70,7 +87,7 @@ defmodule Brando.Assets.SiteAssets.Retention do
     |> MapSet.new(& &1.id)
   end
 
-  @doc "Returns true when the set is active or still referenced by a preview or build."
+  @doc "Returns true when the set is active, an environment's own, or still referenced by a preview or build."
   @spec protected?(SiteAssetSet.t()) :: boolean()
   def protected?(%SiteAssetSet{id: id} = asset_set) do
     asset_set

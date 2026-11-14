@@ -36,6 +36,9 @@ defmodule Brando.Environments.Environment do
     field :domain, :string
 
     belongs_to :site, Site
+    # Set only through `Brando.Assets.SiteAssets.activate_environment_set/2`
+    # and `clear_environment_set/1`, never cast from a form
+    belongs_to :asset_set, Brando.Assets.SiteAssetSet
 
     timestamps()
   end

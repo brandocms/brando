@@ -541,8 +541,9 @@ domain moved, an environment created, copied, restored or set live), once its
 transaction has committed, refreshes the node that made it at once and the
 other nodes through `Brando.CacheSync`, over the application's
 `Phoenix.PubSub`. They follow within a fraction of a second, whichever node
-ran the write or the scheduled job. The active and pinned asset sets and each
-site's shared-library allowlist are refreshed the same way.
+ran the write or the scheduled job. The active and pinned asset sets, each
+environment's own set, and each site's shared-library allowlist are
+refreshed the same way.
 
 Each node also keeps its own copy of a site's identity, SEO, globals,
 palettes and menus, and its own query cache. A save through the context
@@ -629,6 +630,39 @@ where no site is selected yet, shows `client_brand`.
 prefix: the `{site_key, environment_key}` entry, then the site key's entry,
 then `default_site_frontend`. With neither configured, rendering uses
 `:page_html_module` and the application's `PageHTML` as before.
+
+The frontend asset set, the compiled CSS and JavaScript the layout links,
+resolves for the environment in the same order:
+
+1. the environment's own set, when it has one;
+2. else the site's active set (in `:single`, the installation's active set);
+3. else the release's `priv/static`.
+
+Whatever reads a set resolves it this way for the environment at hand: the
+files `Brando.Plug.SiteAssets` serves on the environment's host, the script
+and style tags, Vite manifest and critical CSS a page renders with, a live
+preview of the environment being edited, a shared preview (which pins the
+set of the environment it was shared from), and a static build of the
+environment. See [A set per environment](#a-set-per-environment).
+
+To try a new layout on Staging together with its CSS and JavaScript, then
+put both live, on a `:dynamic` site:
+
+1. Add `{"acme", "staging"} => MyAppWeb.Sites.AcmeNext` to `site_frontends`
+   and deploy. Production keeps rendering with `MyAppWeb.Sites.Acme`.
+2. Build the new frontend, upload it to the site's `sets` root and register
+   it, as in [Uploading a site's build by hand](#uploading-a-sites-build-by-hand).
+3. With Staging selected, open `/admin/config/assets` and choose
+   "Activate for Staging" on the new build. Staging's host now serves it
+   and Staging's pages, previews and builds render with it; Production
+   keeps the site's active set.
+4. When Staging is approved, switch it live
+   (`Brando.Environments.set_live/2`, or the environments screen). The
+   production host moves to Staging, and the layout and set go with it: both
+   belong to the environment, so the host serves the set Staging was tested
+   with. Nothing is copied or swapped.
+5. To make the new build the site's own, activate it for the site, and
+   choose "Use the site's build" on the environment.
 
 The page controller and resource controllers that `mix brando.gen.site` and
 `mix brando.gen` generate already render the site's frontend. For a controller
@@ -1089,7 +1123,9 @@ domain swaps too, so switching back puts every host where it was. Setting a
 restored archive live moves the host the same way. The hosts were bound by a
 superuser and stay within the site, so a switch binds nothing new. On a
 `:static` site the domains stay where they are: the deployed build, not the
-live environment, decides what a host serves.
+live environment, decides what a host serves. Each environment keeps its own
+frontend asset set and frontend module, so the host serves those of the
+environment that went live ([A set per environment](#a-set-per-environment)).
 
 Inspect and prune archives:
 
@@ -1253,12 +1289,70 @@ immediately restores `priv/static` fallback.
 Activating and reverting reach every node ([Several nodes](#several-nodes)).
 
 Vite manifest and critical CSS resolution follow the same active-set-first,
-release-fallback order. In multi-site mode caches are keyed by the full tenant
+release-fallback order, after an environment's own set
+([A set per environment](#a-set-per-environment)). In multi-site mode caches are keyed by the full tenant
 prefix, so Production, Staging, and another site cannot share rendered content
 or manifests. Every queued static build snapshots the active asset-set record
 and deployment configuration at creation time. A later asset activation or
 target edit therefore affects new builds, never an artifact already being
 reviewed or deployed.
+
+### A set per environment
+
+In `:multi` and `:single`, an environment may use a registered set of its
+own (`environments.asset_set_id`) in place of its site's active set; its
+host, pages, previews and static builds then use that set, and the site's
+other environments keep the site's active set. The set's `active` flag keeps
+meaning the site's set, so an environment without a set of its own follows
+it. In `:none` there are no environments.
+
+At `/admin/config/assets`, the Environments section shows which build each
+environment of the selected site uses, and whether it is its own or the
+site's. "Activate for <environment>" on a build makes it the own set of the
+environment being edited; "Use the site's build" clears it. Activating a set
+for the site works as before. The screen needs the same permission as
+before.
+
+Deploy tooling calls the same by RPC, next to `register_set/3` and
+`activate_set/1`. The environment is a struct, its id or
+`{site_key, environment_key}`:
+
+```elixir
+{:ok, set} =
+  Brando.Assets.SiteAssets.register_set(
+    "acme",
+    "/srv/my_app/sites/acme/assets/sets/20261114_def456",
+    %{revision: "def456"}
+  )
+
+{:ok, _staging} = Brando.Assets.SiteAssets.activate_environment_set(set.id, {"acme", "staging"})
+
+# Follow the site's active set again; the set stays registered
+{:ok, _staging} = Brando.Assets.SiteAssets.clear_environment_set({"acme", "staging"})
+```
+
+`activate_environment_set/2` refuses a set of another site with
+`{:error, :asset_set_belongs_to_another_site}`; in `:single` the set must
+be one of the installation's. Both reach every node
+([Several nodes](#several-nodes)).
+
+What happens to an environment's set:
+
+- **A live switch** leaves each set with its environment. On a `:dynamic`
+  site the host moves to the incoming environment, so it serves the set that
+  environment had.
+- **A new environment** has no set of its own and follows the site's set, as
+  it follows the site's frontend module.
+- **A copy of content into an environment**
+  (`Brando.Environments.copy_environment/3`) replaces its content and keeps
+  its set, as it keeps its frontend module, which is chosen by its key in
+  `site_frontends`.
+- **Deleting an environment** drops its reference; the set stays registered.
+- **Pruning** leaves a set an environment uses alone, as it does the active
+  set ([Pruning contract](#pruning-contract)).
+- **In development**, `dev_site` names a site: with HMR on, every
+  environment of the dev site loads from the Vite dev server and reads none
+  of its sets.
 
 ### Uploading a site's build by hand
 
@@ -1296,7 +1390,8 @@ last built set. For `acme`:
    )
    ```
 
-4. Activate it at `/admin/config/assets`, with `acme` selected.
+4. Activate it at `/admin/config/assets`, with `acme` selected: for the
+   site, or for the environment being edited.
 
 The build directory must contain, at its top level:
 
@@ -1326,18 +1421,19 @@ rendering, records it in `sites_previews.asset_set_id`, and renders manifest,
 inline critical CSS, and asset URLs from that set even if another set is
 activated in the meantime:
 
-- when the active uploaded set is self-contained (every file its Vite manifest
-  lists is present), the preview reuses it;
+- when the set the environment shared from uses (its own, else the site's
+  active set) is self-contained (every file its Vite manifest lists is
+  present), the preview reuses it;
 - otherwise Brando captures the effective build into
-  `sets/capture-<identity>`: the release's `priv/static` overlaid with the
-  active set, if any. Files are copied rather than symlinked, the copy is
+  `sets/capture-<identity>`: the release's `priv/static` overlaid with that
+  set, if any. Files are copied rather than symlinked, the copy is
   published by an atomic rename from `staging/`, and the identity is derived
   from the file listing and manifest, so sharing the same release twice reuses
   one capture. Set `config :brando, :release_static_path` when the release
   assets live outside the endpoint application's `priv/static`.
 
 `Brando.Plug.SiteAssets` serves a pinned set at the original URLs: after the
-active set misses, it looks the path up in every set an unexpired preview of
+set the host's environment uses misses, it looks the path up in every set an unexpired preview of
 that site still references. Only the content-addressed files a set's manifest
 lists (entries, chunks, CSS, imported fonts and images, plus their source
 maps) are served this way, so an old capture never shadows un-hashed files
@@ -1385,16 +1481,20 @@ preview link is built with the endpoint's URL, on the same host. Both pages
 name the site's assets host-relative (`/assets/…`), as the site's own pages
 do, so the admin's host answers them:
 
-- On a host that resolves to a site, `Brando.Plug.SiteAssets` serves that
-  site's active and pinned sets only, as described above.
+- On a host that resolves to a site, `Brando.Plug.SiteAssets` serves the set
+  its environment uses and the site's pinned sets only, as described above.
 - In `:multi`, on a host that resolves to no site, such as the admin's, it
   answers a path with the file a site's own host would send: any file of the
   site's active set, scripts and styles as well as the fonts and images of
   the build's `public/` directory, else a file that a set pinned by an
   unexpired shared preview lists in its Vite manifest. The active set wins
-  over a pinned one. A site with no domain yet previews the same way.
+  over a pinned one. A site with no domain yet previews the same way. An
+  environment with a set of its own answers any file of that set beside its
+  site.
 - When several sites hold a path, it answers only if they all hold the same
-  content. When their contents differ (`favicon.ico`, a font or logo with
+  content. An environment's own set counts as a holder of its own beside its
+  site's active set, so a path two environments of one site hold with
+  different content stays unanswered too. When their contents differ (`favicon.ico`, a font or logo with
   the same name in two sites' builds, a build with unhashed names), the path
   stays unanswered on that host: the request does not say which site's
   preview asked, and one site's file is never sent to another's preview.
@@ -1417,7 +1517,8 @@ activated, deactivated, pinned, released or pruned, on every node
 ### Pruning contract
 
 `Brando.Assets.SiteAssets.Retention` owns the deletion decision. A set is
-protected while it is active, while an unexpired preview references it
+protected while it is active, while an environment uses it as its own set,
+while an unexpired preview references it
 (`expires_at` is compared directly, so expired rows the purge worker has not
 removed yet never prolong protection), or while a queued or running static
 build still needs it as its asset source. Deletion runs under the same
@@ -1440,7 +1541,8 @@ Captured sets never count against `:keep` and are removed by the preview purge
 worker once the last preview that needs them has expired. Deployment tooling
 such as Florist must call this API instead of deleting set directories by age
 or count; protected sets may temporarily exceed the configured count. The
-admin assets screen marks sets that are in use by previews or builds.
+admin assets screen marks sets that are in use by environments, previews or
+builds.
 
 ## Build and publish static sites
 

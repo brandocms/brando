@@ -1,7 +1,8 @@
 defmodule Brando.Plug.SiteAssets do
   @moduledoc """
-  Serves files from the active persistent frontend asset set, or from a set a
-  shared preview has pinned.
+  Serves files from the persistent frontend asset set the host's environment
+  uses (its own set, else its site's active set), or from a set a shared
+  preview has pinned.
 
   Place this plug before the application's release `Plug.Static`. Cached
   `MapSet`s reject misses without touching the filesystem; misses fall through
@@ -15,7 +16,10 @@ defmodule Brando.Plug.SiteAssets do
   content under that path (`Brando.Assets.SiteAssets.unscoped_path/1`): the
   admin serves live and shared previews from its own host, and their pages
   name the site's assets host-relative. A host that belongs to a site gets
-  that site's sets only.
+  that site's sets only, and the set its environment uses
+  (`Brando.Assets.SiteAssets.serve_path/3`). In `:single`, the host's
+  environment, or the live one for a host no environment names, picks the
+  set the same way.
 
   Its files, and those of the plugs after it that answer before the router
   (the release's `Plug.Static`, `Brando.Plug.Media`), are sent with
@@ -85,12 +89,20 @@ defmodule Brando.Plug.SiteAssets do
     case Brando.Tenant.mode() do
       :multi ->
         case Frontend.resolve(conn.host) do
-          {site, _environment} -> {SiteAssets.serve_path(site, relative_path), @immutable}
+          {site, environment} -> {SiteAssets.serve_path(site, environment, relative_path), @immutable}
           nil -> {SiteAssets.unscoped_path(relative_path), @ask_again}
         end
 
       _standalone ->
-        {SiteAssets.serve_path(nil, relative_path), @immutable}
+        {SiteAssets.serve_path(nil, standalone_environment(conn.host), relative_path), @immutable}
+    end
+  end
+
+  # `:single` resolves the host to an environment of its one site; `:none` has none
+  defp standalone_environment(host) do
+    case Frontend.resolve(host) do
+      {_site, environment} -> environment
+      nil -> nil
     end
   end
 

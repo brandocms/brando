@@ -654,6 +654,16 @@ msgstr "%{email} får en e-post med en lenke for å velge nytt passord. Det nåv
 msgid "%{email} was logged out everywhere."
 msgstr "%{email} ble logget ut overalt."
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{environment} uses %{name}"
+msgstr "%{environment} bruker %{name}"
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{environment} uses the site's build"
+msgstr "%{environment} bruker nettstedets bygg"
+
 #: lib/brando_admin/components/form/draft_preview.ex
 #, elixir-autogen, elixir-format
 msgid "%{field} · Block %{number}"
@@ -1512,6 +1522,11 @@ msgstr "Aktivér"
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
+msgid "Activate %{name} for %{environment} now? Its requests switch immediately."
+msgstr "Aktivere %{name} for %{environment} nå? Forespørslene dit bytter med en gang."
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
 msgid "Activate %{name} now? Frontend requests will switch immediately."
 msgstr "Aktiver %{name} nå? Frontend-filene byttes umiddelbart."
 
@@ -1519,6 +1534,11 @@ msgstr "Aktiver %{name} nå? Frontend-filene byttes umiddelbart."
 #, elixir-autogen, elixir-format
 msgid "Activate build"
 msgstr "Aktiver bygg"
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Activate for %{environment}"
+msgstr "Aktiver for %{environment}"
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
@@ -2205,6 +2225,11 @@ msgstr "En oppføring du ikke har tilgang til"
 #, elixir-autogen, elixir-format
 msgid "An entry you cannot open"
 msgstr "En oppføring du ikke kan åpne"
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "An environment with a build of its own serves it on its host, in place of the site's build. The build stays with its environment when it goes live."
+msgstr "Et miljø med eget bygg serverer det på sitt domene, i stedet for nettstedets bygg. Bygget følger miljøet når det settes live."
 
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
@@ -4573,6 +4598,11 @@ msgstr "Kunne ikke lage strukturerte data: %{reason}"
 msgid "Could not change IndexNow"
 msgstr "Kunne ikke endre IndexNow"
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not change the environment's frontend assets"
+msgstr "Kunne ikke endre miljøets frontend-ressurser"
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Could not check whether the recipient may read the entry"
@@ -6603,6 +6633,11 @@ msgstr "Redigert av"
 msgid "Editing"
 msgstr "Redigerer"
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Editing now"
+msgstr "Redigeres nå"
+
 #: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/users/user_list_live.ex
 #, elixir-autogen, elixir-format
@@ -6894,6 +6929,7 @@ msgid "Entry re-rendered"
 msgstr "Oppføring gjengitt på nytt"
 
 #: lib/brando_admin/live/nav.ex
+#: lib/brando_admin/live/sites/asset_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
@@ -6930,6 +6966,7 @@ msgstr "Miljø for overstyringer"
 msgid "Environment operation failed: %{reason}"
 msgstr "Miljøoperasjonen feilet: %{reason}"
 
+#: lib/brando_admin/live/sites/asset_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #: lib/brando_admin/live/sites/site_live.ex
 #: lib/brando_admin/live/users/groups_live.ex
@@ -8860,6 +8897,11 @@ msgid_plural "Its %{count} nested blocks are removed too."
 msgstr[0] "Også %{count} underliggende blokk fjernes."
 msgstr[1] "Også %{count} underliggende blokker fjernes."
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its own"
+msgstr "Eget"
+
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Its schema version differs from the current schema, so some fields may not load correctly."
@@ -9353,6 +9395,7 @@ msgstr "Listet oppføringer"
 msgid "Listing"
 msgstr "Liste"
 
+#: lib/brando_admin/live/sites/asset_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Live"
@@ -15608,6 +15651,11 @@ msgstr "Sendt, men svaret kunne ikke lagres"
 msgid "Sequence updated"
 msgstr "Rekkefølge oppdatert"
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Serve the site's build on %{environment} again? Requests switch immediately."
+msgstr "Servere nettstedets bygg på %{environment} igjen? Forespørslene bytter med en gang."
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "Served once the entry is published. This is the last saved version."
@@ -16284,6 +16332,7 @@ msgstr "Sorterte %{assets} i %{folders}."
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #: lib/brando_admin/components/form/translation.ex
 #: lib/brando_admin/live/ai/assistant_live.ex
+#: lib/brando_admin/live/sites/asset_live.ex
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Source"
@@ -17709,6 +17758,11 @@ msgstr "Nettstedet har ikke et bygg av frontend som forhåndsvisningen kan deles
 msgid "The site has no identity in this language, so its pages give no structured data."
 msgstr "Nettstedet har ingen identitet på dette språket, så sidene gir ingen strukturerte data."
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site's"
+msgstr "Nettstedets"
+
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
 msgid "The site's address must use https before the endpoint can be turned on."
@@ -19003,6 +19057,11 @@ msgstr "Ukjent konto"
 msgid "Unknown browser"
 msgstr "Ukjent nettleser"
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unknown build"
+msgstr "Ukjent bygg"
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Unknown environment"
@@ -19467,6 +19526,11 @@ msgstr "Bruk frontend-filene som følger med gjeldende release?"
 msgid "Use the saved version"
 msgstr "Bruk den lagrede versjonen"
 
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use the site's build"
+msgstr "Bruk nettstedets bygg"
+
 #: lib/brando_admin/components/form/input/blocks/video_block.ex
 #, elixir-autogen, elixir-format
 msgid "Use the video’s defaults or customize playback for this reference."
@@ -19481,6 +19545,11 @@ msgstr "Bruk denne mappen"
 #, elixir-autogen, elixir-format
 msgid "Used a tool"
 msgstr "Brukte et verktøy"
+
+#: lib/brando_admin/live/sites/asset_live.ex
+#, elixir-autogen, elixir-format
+msgid "Used by %{environments}"
+msgstr "Brukes av %{environments}"
 
 #: lib/brando_admin/components/usage.ex
 #, elixir-autogen, elixir-format

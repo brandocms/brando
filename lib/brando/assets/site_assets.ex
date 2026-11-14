@@ -8,6 +8,18 @@ defmodule Brando.Assets.SiteAssets do
   a `MapSet` and its optional Vite manifest in `:persistent_term`, making
   non-matching request rejection a memory lookup with no filesystem access.
 
+  An environment may have a set of its own (`environments.asset_set_id`).
+  Which set an environment uses resolves like its frontend module
+  (`Brando.Site.Frontend.current/0`):
+
+    1. the environment's own set, when it has one;
+    2. else its site's active set (in `:single`, the standalone active set);
+    3. else the release's `priv/static`.
+
+  `activate_environment_set/2` and `clear_environment_set/1` set and clear an
+  environment's own set. The `active` flag on a set keeps meaning the site's
+  set.
+
   Shared previews pin the set they were rendered against (see
   `with_preview_set/2` and `Brando.Assets.SiteAssets.Capture`). A pinned set
   keeps serving its content-addressed build output at the original URLs until
@@ -32,6 +44,7 @@ defmodule Brando.Assets.SiteAssets do
   alias Brando.Assets.SiteAssets.Retention
   alias Brando.Assets.SiteAssetSet
   alias Brando.CacheSync
+  alias Brando.Environments.Environment
   alias Brando.Repo
   alias Brando.Sites.Site
   alias Brando.Tenant
@@ -47,6 +60,7 @@ defmodule Brando.Assets.SiteAssets do
   @unscoped_key {:brando, :site_assets, :unscoped}
 
   @type scope :: Site.t() | nil
+  @type environment_ref :: Environment.t() | pos_integer() | {String.t(), String.t()}
   @type cached_set :: %{
           set: SiteAssetSet.t(),
           path: String.t(),
@@ -130,6 +144,73 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
+  @doc """
+  The set an environment has of its own, or nil when it follows its site's
+  active set.
+  """
+  @spec environment_set(Environment.t() | nil) :: SiteAssetSet.t() | nil
+  def environment_set(nil), do: nil
+
+  def environment_set(%Environment{id: environment_id}) do
+    from(environment in Environment,
+      join: asset_set in SiteAssetSet,
+      on: asset_set.id == environment.asset_set_id,
+      where: environment.id == ^environment_id,
+      select: asset_set
+    )
+    |> Repo.one(@public_opts)
+  end
+
+  @doc """
+  The persisted set an environment of `site` uses: its own set, else the
+  scope's active set, else nil (the release's `priv/static`). Pass a nil
+  environment for the scope's active set alone.
+  """
+  @spec effective_set(scope(), Environment.t() | nil) :: SiteAssetSet.t() | nil
+  def effective_set(site, environment), do: environment_set(environment) || active_set(site)
+
+  @doc """
+  Makes a registered set the environment's own, in place of its site's
+  active set. The set must belong to the environment's site (in `:single`,
+  be a standalone set). Every node's cache follows (`refresh_node_cache/1`).
+
+  `environment` is an environment, its id, or `{site_key, environment_key}`.
+  """
+  @spec activate_environment_set(pos_integer(), environment_ref()) ::
+          {:ok, Environment.t()} | {:error, term()}
+  def activate_environment_set(set_id, environment) do
+    with {:ok, environment} <- fetch_environment(environment),
+         {:ok, asset_set} <- fetch_set(set_id),
+         :ok <- check_environment_scope(asset_set, environment),
+         {:ok, _cached} <- build_cache(asset_set) do
+      # Under the set's lock, so `Retention` cannot delete it meanwhile
+      Lock.with(lock_key(asset_set), fn ->
+        case fetch_set(set_id) do
+          {:ok, _still_registered} -> persist_environment_set(environment, set_id)
+          {:error, _reason} = error -> error
+        end
+      end)
+    end
+  end
+
+  @doc """
+  Clears the environment's own set, so it follows its site's active set
+  again. The set stays registered. Every node's cache follows.
+  """
+  @spec clear_environment_set(environment_ref()) :: {:ok, Environment.t()} | {:error, term()}
+  def clear_environment_set(environment) do
+    with {:ok, environment} <- fetch_environment(environment) do
+      persist_environment_set(environment, nil)
+    end
+  end
+
+  @doc """
+  Drops every node's cached set for an environment whose own set went away
+  without `clear_environment_set/1`: the environment was deleted.
+  """
+  @spec forget_environment(Environment.t()) :: :ok
+  def forget_environment(%Environment{} = environment), do: environment_changed(environment)
+
   @doc "Returns the cached active-set information, warming it on first use."
   @spec cached(scope()) :: cached_set() | nil
   def cached(site \\ nil) do
@@ -178,19 +259,21 @@ defmodule Brando.Assets.SiteAssets do
 
   The scope's advisory lock is held for the whole call, so pruning cannot
   remove the set while the preview is being captured, rendered, or saved. The
-  set is the active uploaded set when it is self-contained; otherwise the
+  set is the one `environment` uses (`effective_set/2`) when it is
+  self-contained; otherwise the
   effective release build is captured into a registered set first. Templates
   rendered inside `fun` read the pinned manifest and critical CSS even if
   another set is activated concurrently.
   """
-  @spec with_preview_set(scope(), (SiteAssetSet.t() -> result)) :: {:ok, result} | {:error, term()}
+  @spec with_preview_set(scope(), Environment.t() | nil, (SiteAssetSet.t() -> result)) ::
+          {:ok, result} | {:error, term()}
         when result: var
-  def with_preview_set(site \\ nil, fun) when is_function(fun, 1) do
-    Lock.with(lock_key(site), fn -> pin_and_run(site, fun) end)
+  def with_preview_set(site \\ nil, environment \\ nil, fun) when is_function(fun, 1) do
+    Lock.with(lock_key(site), fn -> pin_and_run(site, environment, fun) end)
   end
 
-  defp pin_and_run(site, fun) do
-    with {:ok, asset_set} <- Capture.ensure_set(site),
+  defp pin_and_run(site, environment, fun) do
+    with {:ok, asset_set} <- Capture.ensure_set(site, environment),
          {:ok, cached} <- set_cache(asset_set) do
       with_override(cached, fn -> fun.(asset_set) end)
     end
@@ -207,18 +290,20 @@ defmodule Brando.Assets.SiteAssets do
   def override, do: Process.get(@override_key)
 
   @doc """
-  Resolves a request path to a file in the active set or, failing that, in a
-  set pinned by an unexpired shared preview for the same scope. Pinned lookups
+  Resolves a request path to a file in the set `environment` uses (its own,
+  else the scope's active set) or, failing that, in a set pinned by an
+  unexpired shared preview for the same scope. Pinned lookups
   only cover the content-addressed files listed in a set's Vite manifest, so an
   old set never shadows un-hashed files such as favicons.
 
-  The development site (`Brando.Assets.DevSite`) skips its active set, so the
-  release's files answer as they do for the Vite dev server's page, and a
-  pinned set answers it only for a path the release lacks.
+  The development site (`Brando.Assets.DevSite`) skips its sets, its
+  environments' own included, so the release's files answer as they do for
+  the Vite dev server's page, and a pinned set answers it only for a path the
+  release lacks.
   """
-  @spec serve_path(scope(), String.t()) :: String.t() | nil
-  def serve_path(site, relative_path) when is_binary(relative_path) do
-    active_file(site, relative_path) || pinned_file(site, relative_path)
+  @spec serve_path(scope(), Environment.t() | nil, String.t()) :: String.t() | nil
+  def serve_path(site, environment \\ nil, relative_path) when is_binary(relative_path) do
+    active_file(site, environment, relative_path) || pinned_file(site, relative_path)
   end
 
   @doc """
@@ -226,11 +311,13 @@ defmodule Brando.Assets.SiteAssets do
   admin's host, which serves live previews and shared previews.
 
   Per site, the candidate is the file its own host would send: any file of
-  its active set (the development site's excepted, as in `serve_path/2`),
-  else a manifest file of a set an unexpired shared preview pins. The path
-  answers when one site has it, or when every site that has it holds the
-  same content; when their contents differ it stays unanswered, as nothing
-  tells which site's preview asked. A path the release's `priv/static` holds
+  its active set (the development site's excepted, as in `serve_path/3`),
+  else a manifest file of a set an unexpired shared preview pins. Each
+  environment with a set of its own holds a candidate of its own beside its
+  site's: any file of that set. The path answers when one holder has it, or
+  when every holder that has it holds the same content; when their contents
+  differ it stays unanswered, as nothing tells which site's or environment's
+  preview asked. A path the release's `priv/static` holds
   is left to it.
 
   Sites that are suspended or archived neither answer nor count towards
@@ -274,12 +361,18 @@ defmodule Brando.Assets.SiteAssets do
 
   @doc """
   Drops this node's copy of what another node changed (`Brando.CacheSync`):
-  a scope's active set (and its Vite manifest and critical CSS), a scope's
-  pinned sets, or a removed set. Each is read again on its next use.
+  a scope's active set (and its Vite manifest and critical CSS), an
+  environment's own set (and the Vite manifest and critical CSS of its
+  prefix), a scope's pinned sets, or a removed set. Each is read again on its
+  next use.
   """
-  @spec refresh_node_cache({:active | :pinned, :standalone | {:site_id, pos_integer()}} | {:set, pos_integer()}) ::
-          :ok
+  @spec refresh_node_cache(
+          {:active | :pinned, :standalone | {:site_id, pos_integer()}}
+          | {:set, pos_integer()}
+          | {:environment, pos_integer(), String.t() | nil}
+        ) :: :ok
   def refresh_node_cache({:active, scope_key}), do: drop_active(scope_key)
+  def refresh_node_cache({:environment, environment_id, prefix}), do: drop_environment(environment_id, prefix)
 
   def refresh_node_cache({:pinned, scope_key}), do: drop_pinned(scope_key)
   def refresh_node_cache({:set, set_id}), do: drop_set(set_id)
@@ -345,7 +438,7 @@ defmodule Brando.Assets.SiteAssets do
 
   @doc """
   Returns the Vite manifest of the process-local override set or, without one,
-  of the current scope's active set. The development site
+  of the set the current environment uses (`serve_path/3`). The development site
   (`Brando.Assets.DevSite`) has no active set here, nor in `current_file/1`
   and `current_root/0`.
   """
@@ -353,14 +446,14 @@ defmodule Brando.Assets.SiteAssets do
   def current_manifest do
     case override() do
       %{manifest: manifest} -> manifest
-      nil -> current_scope() |> scope_cached() |> cached_value(:manifest)
+      nil -> current_cached() |> cached_value(:manifest)
     end
   end
 
-  @doc "Resolves a regular file within the override set or the current active set."
+  @doc "Resolves a regular file within the override set or the set the current environment uses."
   @spec current_file(String.t()) :: String.t() | nil
   def current_file(relative_path) when is_binary(relative_path) do
-    with %{files: files, path: root} <- override() || scope_cached(current_scope()),
+    with %{files: files, path: root} <- override() || current_cached(),
          normalized when is_binary(normalized) <- normalize_relative_path(relative_path),
          true <- MapSet.member?(files, normalized) do
       Path.join(root, normalized)
@@ -369,12 +462,27 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
-  @doc "Returns the override or active set root for static export tooling."
+  @doc "Returns the root of the override set or the set the current environment uses, for static export tooling."
   @spec current_root() :: String.t() | nil
   def current_root do
     case override() do
       %{path: path} -> path
-      nil -> current_scope() |> scope_cached() |> cached_value(:path)
+      nil -> current_cached() |> cached_value(:path)
+    end
+  end
+
+  @doc """
+  The environment of the current process's tenant prefix, in `:multi` and
+  `:single`; nil without one, and in `:none`.
+  """
+  @spec current_environment() :: Environment.t() | nil
+  def current_environment do
+    with true <- Tenant.enabled?(),
+         site_key when is_binary(site_key) <- Tenant.current_site_key(),
+         environment_key when is_binary(environment_key) <- Tenant.current_environment_key() do
+      Brando.Tenant.Cache.get_env(site_key, environment_key)
+    else
+      _no_environment -> nil
     end
   end
 
@@ -501,8 +609,8 @@ defmodule Brando.Assets.SiteAssets do
     |> MapSet.intersection(files)
   end
 
-  defp active_file(site, relative_path) do
-    case active_cached(site) do
+  defp active_file(site, environment, relative_path) do
+    case effective_cached(site, environment) do
       %{files: files, path: root} ->
         if MapSet.member?(files, relative_path), do: Path.join(root, relative_path)
 
@@ -564,27 +672,43 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
-  # Path => [{site_key, file, content}], one candidate per site, from every
-  # site's active and preview-pinned sets. `content` is nil for a path one
-  # site has, else what tells two candidates' contents apart.
+  # Path => [{holder, file, content}], one candidate per holder: a site
+  # (`{site_key, nil}`) or an environment with a set of its own
+  # (`{site_key, environment_id}`), from every site's active, preview-pinned
+  # and environment sets. `content` is nil for a path one holder has, else
+  # what tells two candidates' contents apart.
   defp load_unscoped(fence) do
     pinned_ids = Retention.preview_pinned_set_ids()
+    environment_sets = environment_set_rows()
+    environment_set_ids = Enum.map(environment_sets, &elem(&1, 2))
 
     index =
       from(asset_set in SiteAssetSet,
         join: site in Site,
         on: site.id == asset_set.site_id,
-        where: asset_set.active or asset_set.id in ^MapSet.to_list(pinned_ids),
+        where:
+          asset_set.active or asset_set.id in ^MapSet.to_list(pinned_ids) or
+            asset_set.id in ^environment_set_ids,
         order_by: [desc: asset_set.uploaded_at, desc: asset_set.id],
         select: {site.key, asset_set}
       )
       |> Repo.all(@public_opts)
       |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-      |> Enum.reduce(%{}, fn {site_key, sets}, index ->
-        site_key
-        |> site_files(sets, pinned_ids, fence)
-        |> Enum.reduce(index, fn {path, file}, index ->
-          Map.update(index, path, [{site_key, file}], &[{site_key, file} | &1])
+      |> Enum.flat_map(fn {site_key, sets} ->
+        cached = cache_sets(sets, fence)
+        site_holder = {{site_key, nil}, site_files(site_key, cached, pinned_ids)}
+
+        environment_holders =
+          for {^site_key, environment_id, set_id} <- environment_sets,
+              not DevSite.dev_site?(site_key),
+              %{files: paths, path: root} <- [cached_by_id(cached, set_id)],
+              do: {{site_key, environment_id}, Map.new(paths, &{&1, Path.join(root, &1)})}
+
+        [site_holder | environment_holders]
+      end)
+      |> Enum.reduce(%{}, fn {holder, files}, index ->
+        Enum.reduce(files, index, fn {path, file}, index ->
+          Map.update(index, path, [{holder, file}], &[{holder, file} | &1])
         end)
       end)
       |> Map.new(fn {path, candidates} -> {path, with_content(candidates)} end)
@@ -594,17 +718,34 @@ defmodule Brando.Assets.SiteAssets do
     _unavailable -> :error
   end
 
-  # Path => file, as `serve_path/2` resolves it for the site's own host: its
-  # active set first, then its pinned sets in `pinned_sets/1` order
-  defp site_files(site_key, sets, pinned_ids, fence) do
-    cached =
-      Enum.flat_map(sets, fn asset_set ->
-        case set_cache_since(asset_set, fence) do
-          {:ok, cached} -> [{asset_set, cached}]
-          {:error, _reason} -> []
-        end
-      end)
+  # {site_key, environment_id, set_id} for every environment with a set of its own
+  defp environment_set_rows do
+    from(environment in Environment,
+      join: site in Site,
+      on: site.id == environment.site_id,
+      where: not is_nil(environment.asset_set_id),
+      select: {site.key, environment.id, environment.asset_set_id}
+    )
+    |> Repo.all(@public_opts)
+  end
 
+  defp cache_sets(sets, fence) do
+    Enum.flat_map(sets, fn asset_set ->
+      case set_cache_since(asset_set, fence) do
+        {:ok, cached} -> [{asset_set, cached}]
+        {:error, _reason} -> []
+      end
+    end)
+  end
+
+  defp cached_by_id(cached, set_id) do
+    Enum.find_value(cached, fn {asset_set, set_cached} -> if asset_set.id == set_id, do: set_cached end)
+  end
+
+  # Path => file, as `serve_path/3` resolves it for the site's own host when
+  # the environment has no set of its own: its active set first, then its
+  # pinned sets in `pinned_sets/1` order
+  defp site_files(site_key, cached, pinned_ids) do
     pinned =
       for {asset_set, %{pinned: paths, path: root}} <- Enum.reverse(cached),
           MapSet.member?(pinned_ids, asset_set.id),
@@ -622,17 +763,17 @@ defmodule Brando.Assets.SiteAssets do
     Map.merge(pinned, active)
   end
 
-  defp with_content([{site_key, file}]), do: [{site_key, file, nil}]
+  defp with_content([{holder, file}]), do: [{holder, file, nil}]
 
   # The size, and a digest only where another candidate has the same size
   defp with_content(candidates) do
-    sized = Enum.map(candidates, fn {site_key, file} -> {site_key, file, file_size(file)} end)
+    sized = Enum.map(candidates, fn {holder, file} -> {holder, file, file_size(file)} end)
     sizes = Enum.frequencies_by(sized, &elem(&1, 2))
 
-    Enum.map(sized, fn {site_key, file, size} ->
+    Enum.map(sized, fn {holder, file, size} ->
       if is_integer(size) and sizes[size] > 1,
-        do: {site_key, file, {size, digest(file)}},
-        else: {site_key, file, {size, nil}}
+        do: {holder, file, {size, digest(file)}},
+        else: {holder, file, {size, nil}}
     end)
   end
 
@@ -652,10 +793,10 @@ defmodule Brando.Assets.SiteAssets do
     File.Error -> {:unreadable, file}
   end
 
-  defp previewable?({site_key, _file, _content}),
+  defp previewable?({{site_key, _environment_id}, _file, _content}),
     do: match?(%Site{status: :active}, Brando.Tenant.Cache.get_site(site_key))
 
-  defp agreed_file([{_site_key, file, content} | others]) do
+  defp agreed_file([{_holder, file, content} | others]) do
     if Enum.all?(others, &(elem(&1, 2) == content)), do: file
   end
 
@@ -672,11 +813,106 @@ defmodule Brando.Assets.SiteAssets do
     end
   end
 
-  defp scope_cached({:ok, site}), do: active_cached(site)
-  defp scope_cached(:error), do: nil
+  defp current_cached do
+    case current_scope() do
+      {:ok, site} -> effective_cached(site, current_environment())
+      :error -> nil
+    end
+  end
 
-  defp active_cached(site) do
-    if DevSite.dev_site?(site), do: nil, else: cached(site)
+  # The environment's own set, else the scope's active set. The development
+  # site has neither: every environment of it loads from the Vite dev server.
+  defp effective_cached(site, environment) do
+    cond do
+      DevSite.dev_site?(site) -> nil
+      cached = environment_cached(environment) -> cached
+      true -> cached(site)
+    end
+  end
+
+  # The cached own set of the environment, or nil when it has none or its
+  # files cannot be read: it then follows its site's set
+  defp environment_cached(nil), do: nil
+
+  defp environment_cached(%Environment{id: environment_id}) do
+    case :persistent_term.get(environment_cache_key(environment_id), :not_cached) do
+      :not_cached -> warm_environment(environment_id)
+      :none -> nil
+      cached -> cached
+    end
+  end
+
+  defp warm_environment(environment_id) do
+    fence = change_fence()
+
+    case fill(environment_cache_key(environment_id), load_environment(environment_id), fence) do
+      :none -> nil
+      cached -> cached
+    end
+  rescue
+    _migration_not_applied_yet -> nil
+  end
+
+  defp load_environment(environment_id) do
+    with %SiteAssetSet{} = asset_set <- environment_set(%Environment{id: environment_id}),
+         {:ok, cached} <- build_cache(asset_set) do
+      cached
+    else
+      _none_or_unreadable -> :none
+    end
+  end
+
+  defp fetch_set(set_id) do
+    case Repo.get(SiteAssetSet, set_id, @public_opts) do
+      %SiteAssetSet{} = asset_set -> {:ok, asset_set}
+      nil -> {:error, :asset_set_not_found}
+    end
+  end
+
+  defp fetch_environment(%Environment{id: environment_id}), do: fetch_environment(environment_id)
+
+  defp fetch_environment({site_key, environment_key}) when is_binary(site_key) and is_binary(environment_key) do
+    with %Site{} = site <- Registry.get_site_by_key(site_key),
+         %Environment{} = environment <- Registry.get_environment_by_key(site, environment_key) do
+      {:ok, environment}
+    else
+      nil -> {:error, :environment_not_found}
+    end
+  end
+
+  defp fetch_environment(environment_id) when is_integer(environment_id) do
+    case Registry.get_environment(environment_id) do
+      %Environment{} = environment -> {:ok, environment}
+      nil -> {:error, :environment_not_found}
+    end
+  end
+
+  # An environment uses a set of its own site; in `:single`, a standalone set
+  defp check_environment_scope(%SiteAssetSet{site_id: set_site_id}, %Environment{site_id: site_id}) do
+    expected_site_id =
+      case Tenant.mode() do
+        :multi -> site_id
+        :single -> nil
+        :none -> :no_environments
+      end
+
+    if set_site_id == expected_site_id, do: :ok, else: {:error, :asset_set_belongs_to_another_site}
+  end
+
+  defp persist_environment_set(%Environment{id: environment_id} = environment, set_id) do
+    Repo.transaction(fn ->
+      from(row in Environment, where: row.id == ^environment_id, select: row)
+      |> Repo.update_all([set: [asset_set_id: set_id, updated_at: DateTime.utc_now()]], @public_opts)
+      |> case do
+        {1, [updated]} ->
+          environment_changed(environment)
+          Tenant.Cache.invalidate()
+          updated
+
+        {0, []} ->
+          Repo.rollback(:environment_not_found)
+      end
+    end)
   end
 
   defp read_manifest(root) do
@@ -751,6 +987,7 @@ defmodule Brando.Assets.SiteAssets do
   defp cache_key(scope_key), do: {:brando, :site_assets, :active, scope_key}
   defp pinned_cache_key(scope_key), do: {:brando, :site_assets, :pinned, scope_key}
   defp set_cache_key(set_id), do: {:brando, :site_assets, :set, set_id}
+  defp environment_cache_key(environment_id), do: {:brando, :site_assets, :environment, environment_id}
 
   # Dropped rather than replaced after a write, as two writes here may finish
   # in either order: the next read loads the one committed last. Inside a
@@ -765,6 +1002,29 @@ defmodule Brando.Assets.SiteAssets do
     drop(cache_key(scope_key))
     erase(@unscoped_key)
     invalidate_vite(scope_site_id(scope_key))
+  end
+
+  defp environment_changed(%Environment{id: environment_id} = environment) do
+    prefix = environment_prefix(environment)
+
+    Repo.after_commit({__MODULE__, :environment, environment_id}, fn ->
+      drop_environment(environment_id, prefix)
+    end)
+
+    CacheSync.broadcast(__MODULE__, {:environment, environment_id, prefix})
+  end
+
+  defp drop_environment(environment_id, prefix) do
+    drop(environment_cache_key(environment_id))
+    erase(@unscoped_key)
+    invalidate_vite_prefix(prefix)
+  end
+
+  defp environment_prefix(%Environment{site_id: site_id, key: environment_key}) do
+    case Registry.get_site(site_id) do
+      %Site{} = site -> Tenant.prefix(site.key, environment_key)
+      nil -> nil
+    end
   end
 
   defp drop_pinned(scope_key) do
@@ -793,6 +1053,16 @@ defmodule Brando.Assets.SiteAssets do
   defp withdraw({:brando, :site_assets, :active, scope_key} = key) do
     erase(key)
     invalidate_vite(scope_site_id(scope_key))
+  end
+
+  defp withdraw({:brando, :site_assets, :environment, environment_id} = key) do
+    erase(key)
+
+    for site <- Tenant.Cache.list_sites(),
+        %Environment{id: ^environment_id} = environment <- site.environments,
+        do: invalidate_vite_prefix(Tenant.prefix(site, environment))
+
+    :ok
   end
 
   defp withdraw(key), do: erase(key)
@@ -874,11 +1144,12 @@ defmodule Brando.Assets.SiteAssets do
   defp scope_site_id({:site_id, site_id}), do: site_id
 
   defp invalidate_vite(site_id) do
-    vite_prefixes(site_id)
-    |> Enum.each(fn prefix ->
-      :persistent_term.erase(Tenant.cache_key({:vite, "cache_manifest"}, prefix))
-      :persistent_term.erase(Tenant.cache_key({:vite, "critical_css"}, prefix))
-    end)
+    site_id |> vite_prefixes() |> Enum.each(&invalidate_vite_prefix/1)
+  end
+
+  defp invalidate_vite_prefix(prefix) do
+    :persistent_term.erase(Tenant.cache_key({:vite, "cache_manifest"}, prefix))
+    :persistent_term.erase(Tenant.cache_key({:vite, "critical_css"}, prefix))
   end
 
   defp vite_prefixes(nil) do

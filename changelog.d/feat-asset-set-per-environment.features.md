@@ -1,0 +1,2 @@
+- In `:multi` and `:single`, an environment can have a frontend asset set of its own, which its host serves and its pages, live and shared previews and static builds render with in place of the site's active set; Frontend assets in the admin activates and clears it, and deploy tooling calls `Brando.Assets.SiteAssets.activate_environment_set/2` and `clear_environment_set/1`.
+  Run `mix brando.gen.migrations` for `brando_228`, then `mix ecto.migrate`.

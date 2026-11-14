@@ -67,8 +67,8 @@ defmodule Mix.Tasks.Brando.Ssg do
 
     asset_set =
       if site && Tenant.mode() == :multi,
-        do: SiteAssets.active_set(site),
-        else: SiteAssets.active_set()
+        do: SiteAssets.effective_set(site, environment),
+        else: SiteAssets.effective_set(nil, environment)
 
     dry_run? = Keyword.get(opts, :dry_run, false)
 
