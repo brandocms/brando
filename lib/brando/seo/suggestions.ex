@@ -193,7 +193,7 @@ defmodule Brando.SEO.Suggestions do
   @spec fill_values(Suggestion.t(), %{String.t() => String.t()}, String.t() | nil) ::
           {:ok, Suggestion.t()} | {:error, Ecto.Changeset.t()}
   def fill_values(%Suggestion{} = suggestion, values, model) do
-    default = to_string(Brando.config(:default_language))
+    default = to_string(Brando.Languages.default_language())
     text = Map.get(values, default) || values |> Map.values() |> List.first()
 
     suggestion
@@ -229,7 +229,7 @@ defmodule Brando.SEO.Suggestions do
          {:ok, _entry} <- write(schema, suggestion, value, user) do
       attrs =
         if is_map(value),
-          do: %{values: value, text: Map.get(value, to_string(Brando.config(:default_language)), suggestion.text)},
+          do: %{values: value, text: Map.get(value, to_string(Brando.Languages.default_language()), suggestion.text)},
           else: %{text: value}
 
       suggestion

@@ -280,9 +280,10 @@ if Code.ensure_loaded?(Igniter) do
 
     defp languages_notice(igniter, %{languages: languages}, path) do
       prefixed = Enum.map_join(languages.prefixed, ", ", &"/#{&1}#{path} for #{&1}")
+      unprefixed = if languages[:multi_site?], do: "each site's default language", else: languages.default
 
       Igniter.add_notice(igniter, """
-      Each language has its own routes, as the CMS pages do: #{path} for #{languages.default}#{if prefixed != "", do: ", " <> prefixed}.
+      Each language has its own routes, as the CMS pages do: #{path} for #{unprefixed}#{if prefixed != "", do: ", " <> prefixed}.
       A language you add later needs its scope in the router.
       """)
     end

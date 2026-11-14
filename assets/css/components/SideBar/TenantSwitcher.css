@@ -47,6 +47,29 @@
     white-space: nowrap;
   }
 
+  /* Multi-site: the site's name over its environment. The column is allowed to
+     shrink below its content so both lines truncate instead of widening the
+     sidebar. */
+  .tenant-switcher__site {
+    display: grid;
+    flex-grow: 1;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+    min-width: 0;
+
+    .tenant-switcher__current {
+      font-weight: 600;
+    }
+  }
+
+  .tenant-switcher__environment {
+    overflow: hidden;
+    color: color-mix(in srgb, var(--brando-ink) 72%, transparent);
+    font-size: var(--brando-text-2xs);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   /* Renders as "Production · live" without needing the separator in markup. */
   .tenant-switcher__state {
     color: color-mix(in srgb, var(--brando-ink) 55%, transparent);
@@ -82,6 +105,7 @@
 
   .tenant-switcher__sheet {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 3px;
     padding: 8px;
     border: 1px solid color-mix(in srgb, var(--brando-ink) 45%, transparent);
@@ -99,8 +123,11 @@
     text-transform: uppercase;
   }
 
+  /* The column may shrink below a long site name, which then truncates
+     instead of pushing the sheet past the sidebar. */
   form {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 3px;
   }
 

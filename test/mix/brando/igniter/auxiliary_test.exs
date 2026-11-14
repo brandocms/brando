@@ -15,6 +15,8 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
     assert IgniterCase.source(result, "lib/acme/shop/mailer.ex") =~ "otp_app: :shop"
     assert IgniterCase.source(result, "config/config.exs") =~ "mailer: Acme.Shop.Mailer"
     assert IgniterCase.source(result, "lib/acme/web/sitemap.ex") =~ "defmodule Acme.Web.Sitemap"
+    # A site's sitemap lists only the site's languages
+    assert IgniterCase.source(result, "lib/acme/web/sitemap.ex") =~ ~r/\|> in_site_languages\(\)/
     assert IgniterCase.source(result, "lib/acme/shop/authorization.ex") =~ "Brando.Images.Image"
     assert IgniterCase.source(result, "mix.exs") =~ "steps: [:assemble, :tar]"
     refute_received {:mix_shell, :prompt, _}

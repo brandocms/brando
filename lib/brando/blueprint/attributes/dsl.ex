@@ -88,6 +88,8 @@ defmodule Brando.Blueprint.Attributes.Dsl do
     transformers: [Brando.Blueprint.Attributes.Transformer, Brando.Blueprint.SemanticValidator]
 
   def transform(%{type: :language} = attr) do
+    # The installation's languages: what the `language` type accepts on every
+    # site (`Brando.Languages`)
     default_languages =
       case Keyword.get(attr.opts, :languages) do
         nil ->

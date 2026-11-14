@@ -40,7 +40,7 @@ defmodule BrandoAdmin.Images.AltTextLive do
     socket
     |> assign_new(:current_user, fn -> Brando.Users.get_user_by_session_token(token) end)
     |> set_admin_locale()
-    |> assign(:language, to_string(Brando.config(:default_language)))
+    |> assign(:language, to_string(Brando.Languages.default_language()))
     |> assign(:ai_available, AI.configured?(AltText.ai_opts()))
     |> assign(:model_spec, AI.model_spec(AltText.ai_opts()))
     |> assign(:folder_id, nil)

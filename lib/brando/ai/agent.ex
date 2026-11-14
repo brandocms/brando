@@ -110,7 +110,7 @@ defmodule Brando.AI.Agent do
         actor_id: user_id(actor),
         title: opts[:title],
         target: target,
-        language: to_string(opts[:language] || (target && target["language"]) || Brando.config(:default_language))
+        language: to_string(opts[:language] || (target && target["language"]) || Brando.Languages.default_language())
       })
     end)
   end

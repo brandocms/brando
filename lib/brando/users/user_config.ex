@@ -16,6 +16,8 @@ defmodule Brando.Users.UserConfig do
   data_layer :embedded
 
   attributes do
+    # Compiled in, so the installation's; the admin moves it to a site's
+    # default when the site lacks it (`Brando.Users.ensure_content_language/1`)
     attribute :content_language, :string, default: Brando.RuntimeConfig.get(:default_language)
     attribute :reset_password_on_first_login, :boolean, default: true
     attribute :show_mutation_notifications, :boolean, default: true

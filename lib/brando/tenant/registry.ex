@@ -64,7 +64,26 @@ defmodule Brando.Tenant.Registry do
     changeset = Site.changeset(site, attrs)
     result = changeset |> Repo.update(@public_opts) |> refresh_cache_on_success()
     if Map.has_key?(changeset.changes, :status), do: access_changed(result)
+    if Map.has_key?(changeset.changes, :default_language), do: default_language_changed(result)
     result
+  end
+
+  # On a multi-site installation the default language's entries have
+  # unprefixed URLs, so the stored ones change with it: once the cache holds
+  # the new default, each environment's identifiers are synced in a job.
+  defp default_language_changed({:ok, %Site{id: id}}) do
+    if Brando.Tenant.mode() == :multi do
+      Repo.after_commit({:identifier_sync, id}, fn -> sync_identifiers(id) end, late: true)
+    end
+  end
+
+  defp default_language_changed(_error), do: :ok
+
+  defp sync_identifiers(site_id) do
+    case get_site(site_id) do
+      nil -> :ok
+      site -> Brando.Worker.IdentifierSync.enqueue(site)
+    end
   end
 
   @doc """

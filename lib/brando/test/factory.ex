@@ -158,7 +158,7 @@ defmodule Brando.Test.Factory do
   defp enum_value(value), do: value
 
   defp humanize(name), do: name |> to_string() |> String.replace("_", " ") |> String.capitalize()
-  defp default_language, do: Brando.config(:default_language) || "en"
+  defp default_language, do: Brando.Languages.default_language() || "en"
 
   ## Relations
 

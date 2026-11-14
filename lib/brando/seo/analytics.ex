@@ -147,7 +147,7 @@ defmodule Brando.SEO.Analytics do
   @doc "The host of the current tenant's SEO base URL, which sources default to."
   @spec site_host() :: String.t() | nil
   def site_host do
-    with language when not is_nil(language) <- Brando.config(:default_language),
+    with language when not is_nil(language) <- Brando.Languages.default_language(),
          %{base_url: base_url} when is_binary(base_url) and base_url != "" <-
            Brando.Cache.SEO.get(to_string(language)),
          %URI{host: host} when is_binary(host) <- URI.parse(base_url) do

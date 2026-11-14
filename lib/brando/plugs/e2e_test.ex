@@ -76,7 +76,7 @@ defmodule Brando.Plug.E2ETest do
   end
 
   post "/db/default_language" do
-    send_resp(conn, 200, Brando.config(:default_language))
+    send_resp(conn, 200, Brando.Languages.default_language())
   end
 
   defp with_oban_testing("manual", fun), do: Oban.Testing.with_testing_mode(:manual, fun)

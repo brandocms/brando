@@ -82,7 +82,7 @@ defmodule BrandoAdmin.Search do
 
   @doc "The site's languages, `{code, name}`."
   def languages do
-    (Brando.config(:languages) || [])
+    Brando.Languages.languages()
     |> Enum.map(fn language -> {to_string(language[:value]), to_string(language[:text] || language[:value])} end)
     |> Enum.reject(fn {code, _} -> code == "" end)
   end

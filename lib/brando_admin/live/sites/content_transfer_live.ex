@@ -25,6 +25,7 @@ defmodule BrandoAdmin.Sites.ContentTransferLive do
            do: get_connect_info(socket, :user_agent)
          ),
        tab: "export",
+       # Labels for every language a transfer may hold: the installation's
        language_labels:
          Map.new(Brando.config(:languages), &{to_string(&1[:value]), Labels.language(to_string(&1[:value]), &1[:text])}),
        search: "",

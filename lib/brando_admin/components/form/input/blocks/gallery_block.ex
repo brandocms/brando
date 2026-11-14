@@ -453,7 +453,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   def handle_event("tiptap_link_dialog", params, socket) do
-    TipTapLinkDialog.open(params, Brando.config(:default_language))
+    TipTapLinkDialog.open(params, Brando.Languages.default_language())
     {:noreply, socket}
   end
 

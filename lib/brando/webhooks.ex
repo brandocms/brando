@@ -167,10 +167,7 @@ defmodule Brando.Webhooks do
 
   @doc "The site's languages, the default first."
   def language_values do
-    default = Brando.config(:default_language)
-    configured = Enum.map(Brando.config(:languages) || [], & &1[:value])
-
-    [default | configured]
+    [Brando.Languages.default_language() | Brando.Languages.codes()]
     |> Enum.reject(&is_nil/1)
     |> Enum.map(&to_string/1)
     |> Enum.uniq()

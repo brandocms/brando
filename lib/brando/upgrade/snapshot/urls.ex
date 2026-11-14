@@ -103,6 +103,7 @@ defmodule Brando.Upgrade.Snapshot.URLs do
     |> Enum.take(@candidates)
   end
 
+  # The installation's languages: the snapshot covers every site
   defp languages do
     (Brando.config(:languages) || [])
     |> Enum.map(&to_string(&1[:value]))
