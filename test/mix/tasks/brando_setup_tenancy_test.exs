@@ -89,6 +89,23 @@ defmodule Mix.Tasks.BrandoSetupTenancyTest do
     assert_has_notice(igniter, &String.contains?(&1, "mix brando.migrate_to_tenant --site-key=my-site"))
   end
 
+  test "adds to .gitignore the site folders mix brando.install ignores for the mode" do
+    multi = ["--mode", "multi"] |> setup_tenancy(%{".gitignore" => "/_build/\n/site_assets/\n"}) |> source(".gitignore")
+
+    for line <- ~w(/sites/ /assets/sites/*/node_modules/ /assets/sites/*/dist/) do
+      assert multi =~ ~r/^#{Regex.escape(line)}$/m, line
+    end
+
+    # What was there stays, once
+    assert count(multi, "/site_assets/") == 1
+
+    single = ["--mode", "single", "--site-key", "legacy-site"] |> setup_tenancy() |> source(".gitignore")
+
+    assert single =~ ~r{^/sites/$}m
+    assert single =~ ~r{^/site_assets/$}m
+    refute single =~ "/assets/sites/"
+  end
+
   test "is idempotent" do
     second_pass =
       ["--mode", "single", "--site-key", "legacy-site"]

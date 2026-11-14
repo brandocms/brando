@@ -13,8 +13,9 @@ if Code.ensure_loaded?(Igniter) do
     #{@shortdoc}.
 
     This opt-in source migration configures tenancy, adds
-    `Brando.Plug.Tenant` to existing browser pipelines, and installs Brando's
-    tenant migration support. It does not infer application-owned tenant
+    `Brando.Plug.Tenant` to existing browser pipelines, installs Brando's
+    tenant migration support, and adds to `.gitignore` the sites' folders, as
+    `mix brando.install` does for the mode. It does not infer application-owned tenant
     tables, run migrations, provision sites, or copy production data.
 
         mix brando.setup.tenancy
@@ -55,6 +56,7 @@ if Code.ensure_loaded?(Igniter) do
           |> Mix.Brando.Igniter.Install.Configuration.configure_tenancy(mode, site_key)
           |> configure_routers()
           |> install_tenant_migration()
+          |> Mix.Brando.Igniter.Install.Deployment.tenancy_gitignore(mode)
           |> add_instructions(mode, site_key)
 
         {:error, message} ->

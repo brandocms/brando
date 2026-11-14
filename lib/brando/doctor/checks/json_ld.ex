@@ -42,20 +42,40 @@ defmodule Brando.Doctor.Checks.JSONLD do
         error(dgettext("doctor", "identity missing"), fix: fix, link: link, items: problems)
 
       problems != [] ->
-        warning(
-          dngettext(
-            "doctor",
-            "identity incomplete in %{count} language",
-            "identity incomplete in %{count} languages",
-            length(problems)
-          ),
-          fix: fix,
-          link: link,
-          items: problems
-        )
+        warning(incomplete_summary(per_environment), fix: fix, link: link, items: problems)
 
       true ->
         ok(dgettext("doctor", "identity complete"), items: [url])
+    end
+  end
+
+  # Each environment has an identity per language, so the languages and the
+  # environments are counted apart: one language missing its logo in four
+  # environments is not four languages
+  defp incomplete_summary(per_environment) do
+    incomplete =
+      for {label, identities} <- per_environment, identity <- identities, missing_fields(identity) != [] do
+        {label, identity.language}
+      end
+
+    languages = incomplete |> Enum.map(&elem(&1, 1)) |> Enum.uniq() |> length()
+    environments = incomplete |> Enum.map(&elem(&1, 0)) |> Enum.uniq() |> length()
+
+    if environments > 1 do
+      dngettext(
+        "doctor",
+        "identity incomplete in %{languages}, in %{count} environment",
+        "identity incomplete in %{languages}, in %{count} environments",
+        environments,
+        languages: dngettext("doctor", "%{count} language", "%{count} languages", languages)
+      )
+    else
+      dngettext(
+        "doctor",
+        "identity incomplete in %{count} language",
+        "identity incomplete in %{count} languages",
+        languages
+      )
     end
   end
 

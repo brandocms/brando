@@ -36,6 +36,14 @@ if Code.ensure_loaded?(Igniter) do
       /release-archives/
       /sql/
     )
+    # Uploaded and captured asset sets live in site_assets/ without several
+    # sites (`Brando.Assets.SiteAssets.sets_root(nil)`), and in
+    # sites/<key>/assets with them. Provisioning creates sites/<key> with
+    # either tenancy mode. With several sites, each one's frontend project
+    # sits in assets/sites/<key> and builds to its dist/.
+    @standalone_ignores ~w(/site_assets/)
+    @tenancy_ignores ~w(/sites/)
+    @multi_site_ignores ~w(/assets/sites/*/node_modules/ /assets/sites/*/dist/)
 
     @doc """
     Reads what the application already has: the `.envrc.<flavor>` files and the
@@ -83,9 +91,10 @@ if Code.ensure_loaded?(Igniter) do
     given, creates the prod and staging `.envrc` files, ignored by Git, and the
     release script that sources them on the server. Staging runs the prod
     release with its own `.envrc`, so the staging host is a trusted origin of
-    the prod config.
+    the prod config. `.gitignore` gets what Brando's builds, uploads and Florist
+    write in the working folder, and what `tenancy_gitignore/2` adds.
     """
-    def plan(igniter, project, hosts, existing) do
+    def plan(igniter, project, hosts, existing, tenancy_mode) do
       created = for {flavor, path} <- @envrc, !existing.envrc[flavor], do: {flavor, path}
 
       igniter
@@ -95,11 +104,30 @@ if Code.ensure_loaded?(Igniter) do
       |> release_env(project, existing.release_env)
       |> kept_envrc_notice(hosts, existing)
       |> release_paths()
+      |> development_port()
       |> gitignore([
         {"Runtime environments with secrets, uploaded by Florist", Enum.map(created, &"/#{elem(&1, 1)}")},
         {"Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps", @brando_ignores}
+        | tenancy_ignores(tenancy_mode)
       ])
       |> placeholder_notice(hosts, existing, created)
+    end
+
+    @doc """
+    Adds to `.gitignore` what the tenancy mode's asset sets and sites leave in
+    the working folder: `/site_assets/` with `:none` and `:single`, `/sites/`
+    with `:single` and `:multi`, and each site's frontend dependencies and
+    build with `:multi`. Lines `.gitignore` already covers are left out.
+    """
+    def tenancy_gitignore(igniter, tenancy_mode), do: gitignore(igniter, tenancy_ignores(tenancy_mode))
+
+    defp tenancy_ignores(mode) do
+      [
+        {"Brando: uploaded and captured asset sets", if(mode in [:none, :single], do: @standalone_ignores, else: [])},
+        {"Brando sites: each site's folder", if(mode in [:single, :multi], do: @tenancy_ignores, else: [])},
+        {"Brando sites: each site's frontend dependencies and builds",
+         if(mode == :multi, do: @multi_site_ignores, else: [])}
+      ]
     end
 
     # A release evaluates config/prod.exs when it is built, in the Docker
@@ -111,6 +139,32 @@ if Code.ensure_loaded?(Igniter) do
         if own_path?(igniter, key),
           do: igniter,
           else: Config.configure_new(igniter, "prod.exs", :brando, [key], path)
+      end)
+    end
+
+    # phx.new's runtime.exs sets the endpoint's port from PORT, with a default,
+    # in every environment, so a port in config/dev.exs never applies. In
+    # development it applies only when PORT is set; a release still gets the
+    # default. Only phx.new's own top-level line is changed, so a rerun finds
+    # nothing to do.
+    @runtime "config/runtime.exs"
+    @phoenix_port ~r/^config (:\w+),\s+([\w.]+),\s+http: \[port: String\.to_integer\(System\.get_env\("PORT", "(\d+)"\)\)\]\n/m
+
+    defp development_port(igniter) do
+      if Igniter.exists?(igniter, @runtime),
+        do: Igniter.update_file(igniter, @runtime, &Source.update(&1, :content, fn content -> dev_port(content) end)),
+        else: igniter
+    end
+
+    defp dev_port(content) do
+      Regex.replace(@phoenix_port, content, fn _line, app, endpoint, port ->
+        """
+        # In development, a port set in config/dev.exs holds unless PORT is set
+        if config_env() != :dev or System.get_env("PORT") do
+          config #{app}, #{endpoint},
+            http: [port: String.to_integer(System.get_env("PORT", "#{port}"))]
+        end
+        """
       end)
     end
 

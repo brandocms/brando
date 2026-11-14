@@ -1280,6 +1280,17 @@ defmodule Brando.Doctor.ChecksTest do
       assert result.items == ["en: no logo", "no: no name"]
     end
 
+    test "counts the languages, and the environments when there are several" do
+      incomplete = [%{language: "en", name: "Acme", logo?: false}]
+      environments = for env <- ~w(live staging dev preview), do: {"acme/#{env}", incomplete}
+
+      assert Checks.JSONLD.evaluate(environments, "https://acme.test").summary ==
+               "identity incomplete in 1 language, in 4 environments"
+
+      assert Checks.JSONLD.evaluate([{"acme/live", incomplete}], "https://acme.test").summary ==
+               "identity incomplete in 1 language"
+    end
+
     test "no identity or no URL is an error" do
       assert %Result{status: :error} = Checks.JSONLD.evaluate([{"acme/live", []}], "https://studio.test")
       assert %Result{status: :error} = Checks.JSONLD.evaluate([{nil, [%{language: "en", name: "U", logo?: true}]}], "")

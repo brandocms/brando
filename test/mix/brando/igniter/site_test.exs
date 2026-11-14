@@ -92,6 +92,24 @@ defmodule Mix.Brando.Igniter.SiteTest do
   end
 
   describe "a new install" do
+    test "says what seeds the homepage in its tenancy mode" do
+      none = install(fresh())
+      assert Enum.any?(none.notices, &(&1 =~ "mix brando.setup seeds a published\nindex page"))
+
+      single = install(fresh(), ["--yes", "--tenancy-mode", "single", "--site-key", "acme"])
+
+      assert Enum.any?(
+               single.notices,
+               &(&1 =~ "mix brando.setup creates the site and seeds a\npublished index page in it")
+             )
+
+      multi = install(fresh(), ["--yes", "--tenancy-mode", "multi"])
+      assert Enum.any?(multi.notices, &(&1 =~ "sites are created at /admin/sites, and each gets\na published index page"))
+      refute Enum.any?(multi.notices, &(&1 =~ "mix brando.setup seeds"))
+      assert Enum.any?(multi.notices, &(&1 =~ "seeds no content: sites, with theirs, are created at /admin/sites"))
+      assert Enum.any?(single.notices, &(&1 =~ "prompts\nfor a superuser and creates the site, with its default content"))
+    end
+
     test "adds the site, in place of phx.new's unchanged homepage" do
       result = install(fresh())
       assert result.issues == []
@@ -457,7 +475,29 @@ defmodule Mix.Brando.Igniter.SiteTest do
   end
   """
 
-  defp with_files(files), do: project(~s(get "/", PageController, :home), files)
+  # phx.new's `import_deps: [:phoenix]` brings these, at the default line length
+  @phoenix_locals [embed_templates: 1, attr: 3, slot: 2]
+
+  defp with_files(files) do
+    formatter = "[locals_without_parens: #{inspect(@phoenix_locals)}, inputs: [\"{lib,test}/**/*.{ex,exs}\"]]\n"
+    project(~s(get "/", PageController, :home), Map.put_new(files, ".formatter.exs", formatter))
+  end
+
+  test "the replaced ErrorHTML and its test are formatted as phx.new's formatter would" do
+    result =
+      %{@error_html => @phoenix_error_html, @error_test => @phoenix_error_test}
+      |> with_files()
+      |> generate(["--replace-phoenix-home", "--yes"])
+
+    assert result.issues == []
+
+    for path <- [@error_html, @error_test] do
+      source = IgniterCase.source(result, path)
+
+      assert IO.iodata_to_binary([Code.format_string!(source, locals_without_parens: @phoenix_locals), "\n"]) == source,
+             path
+    end
+  end
 
   test "phx.new's ErrorHTML and its test give way to the site's error pages, once" do
     result =

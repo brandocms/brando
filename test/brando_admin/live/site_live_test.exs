@@ -120,6 +120,36 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
     refute Access.can_access?(editor, created)
   end
 
+  # The installation scope the screen runs under grants no content in a
+  # site: the default seeder writes as the system
+  test "in groups mode, a site created here gets the default content", %{conn: conn} do
+    prefixes = ~w(tenant_seeded-client_production tenant_seeded-client_staging)
+    on_exit(fn -> Brando.TenantCaches.clear(prefixes) end)
+
+    put_test_env(:authorization_mode, :groups)
+    put_test_env(:tenant_seeder, Brando.Tenant.Seeder)
+    put_test_env(:tenant_structure_cloner, Brando.TenantCloners)
+    put_test_env(:environment_schema_cloner, Brando.TenantCloners)
+    {:ok, _} = Brando.Authorization.Migration.run()
+
+    {:ok, view, _html} = live(conn, "/admin/sites")
+
+    view
+    |> form("#create-site-form",
+      site: %{name: "Seeded Client", key: "seeded-client", languages: "en", default_language: "en"}
+    )
+    |> render_submit()
+
+    assert %{} = site = Registry.get_site_by_key("seeded-client")
+
+    for environment <- site.environments do
+      Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, environment), fn ->
+        assert Brando.Repo.get_by(Brando.Navigation.Menu, key: "main", language: :en)
+        assert Brando.Repo.get_by(Brando.Pages.Page, uri: "index", language: :en)
+      end)
+    end
+  end
+
   test "site lifecycle actions immediately update status", %{conn: conn, site: site} do
     {:ok, view, _html} = live(conn, "/admin/sites")
 

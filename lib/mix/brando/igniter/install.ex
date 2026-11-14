@@ -52,7 +52,7 @@ if Code.ensure_loaded?(Igniter) do
         |> Configuration.configure(project, tenancy)
         |> dependencies(options)
         |> Version.plan()
-        |> Deployment.plan(project, hosts, deployment)
+        |> Deployment.plan(project, hosts, deployment, tenancy.mode)
         |> Docker.plan(project)
         |> Toolchain.plan(fresh?)
         |> Release.plan(project, existing: :keep)
@@ -408,6 +408,10 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    defp setup_content(:single), do: "creates the site, with its default content"
+    defp setup_content(:multi), do: "seeds no content: sites, with theirs, are created at /admin/sites"
+    defp setup_content(_none), do: "seeds default content"
+
     defp instructions(igniter, tenancy) do
       Igniter.add_notice(igniter, """
       Brando source setup prepared (tenancy: #{tenancy.mode}). Review the diff before applying it.
@@ -420,14 +424,12 @@ if Code.ensure_loaded?(Igniter) do
         mix phx.server
 
       mix brando.setup builds assets, creates and migrates the database, prompts
-      for a superuser and seeds default content. Each step is skipped when its
+      for a superuser and #{setup_content(tenancy.mode)}. Each step is skipped when its
       result already exists; run the individual tasks instead to control them.
 
       Review migrations before applying them. Asset setup uses the selected Brando
       checkout's JS via Yalc; pass --source /path/to/matching/brando/assets when
       using an Elixir package without JS sources. No directory layout is assumed.
-      For single/multi tenancy, provision a site/environment after public migrations;
-      see the tenancy guide before initializing tenant content.
       Brando's admin is available at /admin.
 
       For deploying with Florist the plan adds what the release build needs: a Dockerfile
