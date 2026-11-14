@@ -80,6 +80,19 @@ defmodule Brando.Setup.SeedsTest do
       assert {:ok, _seo} = Brando.Sites.get_seo(%{matches: %{language: :en}})
     end
 
+    test "seeded blocks are on their module's current version" do
+      user = Factory.insert(:random_user)
+
+      {:ok, report} = Seeds.run(user, languages: [:en])
+
+      seeded = report.modules |> Map.values() |> MapSet.new(& &1.id)
+
+      stale =
+        for {module, count} <- Content.Blocks.count_stale_blocks_by_module(), module.id in seeded, do: {module.uid, count}
+
+      assert stale == []
+    end
+
     test "is idempotent" do
       user = Factory.insert(:random_user)
 
