@@ -165,7 +165,7 @@ if Code.ensure_loaded?(Igniter) do
 
       # A separate scope preserves existing Phoenix scope aliases and pipelines.
       code = """
-      scope "/"#{if m.languages, do: scope_assigns(m, m.languages.default), else: ""} do
+      scope "/"#{unprefixed_assigns(m)} do
         pipe_through #{pipelines}
         #{routes}
         #{language_scopes(m, routes, prefixes)}
@@ -208,6 +208,12 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
+    # On a multi-site installation the unprefixed routes are each site's
+    # default language's: the controller takes it from the request's site.
+    defp unprefixed_assigns(%{languages: %{multi_site?: true}}), do: ""
+    defp unprefixed_assigns(%{languages: %{default: default}} = m), do: scope_assigns(m, default)
+    defp unprefixed_assigns(_m), do: ""
+
     # :brando_site's put_locale takes the language from the path; without
     # it, the scope's assigns give it.
     defp scope_assigns(m, language) do
@@ -243,6 +249,16 @@ if Code.ensure_loaded?(Igniter) do
       else
         _ -> nil
       end
+    end
+
+    defp added_languages_notice(igniter, %{site_layouts: nil, languages: %{multi_site?: true}}, path, [_ | _] = added) do
+      Igniter.add_notice(igniter, """
+      Added the routes of #{Enum.join(added, ", ")} beside the existing #{path} routes. Without the CMS site, a
+      prefixed scope's assigns give its pages their language, and the unprefixed #{path} routes are each site's
+      default language's: give their scope no language in its assigns, and let the controller take it as
+      mix brando.gen writes it, from conn.assigns[:language] when a plug set it, else from
+      Brando.Languages.default_language() after Brando.Plug.Tenant has resolved the request's site.
+      """)
     end
 
     defp added_languages_notice(igniter, %{site_layouts: nil, languages: %{default: default}}, path, [_ | _] = added) do

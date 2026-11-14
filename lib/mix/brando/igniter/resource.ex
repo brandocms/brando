@@ -259,6 +259,7 @@ if Code.ensure_loaded?(Igniter) do
         id_type: metadata.id_type,
         blocks: metadata.blocks,
         language: metadata.language?,
+        multi_site: match?(%{multi_site?: true}, Map.get(metadata, :languages)),
         alternates: metadata.alternates?,
         preloads: metadata.preloads,
         text_field: metadata.text_field?
@@ -278,15 +279,30 @@ if Code.ensure_loaded?(Igniter) do
 
     defp languages_notice(igniter, %{languages: nil}, _path), do: igniter
 
-    defp languages_notice(igniter, %{languages: languages}, path) do
+    defp languages_notice(igniter, %{languages: languages} = metadata, path) do
       prefixed = Enum.map_join(languages.prefixed, ", ", &"/#{&1}#{path} for #{&1}")
       unprefixed = if languages[:multi_site?], do: "each site's default language", else: languages.default
 
       Igniter.add_notice(igniter, """
       Each language has its own routes, as the CMS pages do: #{path} for #{unprefixed}#{if prefixed != "", do: ", " <> prefixed}.
-      A language you add later needs its scope in the router.
+      A language you add later needs its scope in the router.#{site_language_notice(metadata)}
       """)
     end
+
+    # The unprefixed scope has no language in its assigns: the controller reads
+    # the site's after its own Brando.Plug.Tenant.
+    defp site_language_notice(%{site_layouts: nil, languages: %{multi_site?: true}}) do
+      """
+
+      Without the CMS site, a prefixed scope's assigns give its pages their language, and the unprefixed
+      routes' scope gives none: the controller takes conn.assigns[:language] when a plug in the scope's
+      pipeline set it from the request (Brando.Plug.I18n.put_locale), else the site's default language,
+      which it reads after its own plug Brando.Plug.Tenant has resolved the request's site. Keep that plug,
+      and assign no fixed language to the unprefixed routes.\
+      """
+    end
+
+    defp site_language_notice(_metadata), do: ""
 
     defp override_notice(igniter, %{template_override: nil}), do: igniter
 

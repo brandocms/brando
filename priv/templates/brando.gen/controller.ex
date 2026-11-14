@@ -3,7 +3,15 @@
   schema = inspect(schema_module)
   # Translations may share a slug; the routes give each language its own
   # prefix, and the pages show the request's language.
-  language_opt = if language, do: ["language: conn.assigns.language"], else: []
+  # On a multi-site installation without the CMS site, the unprefixed routes
+  # are each site's default language's, and language/1 reads it.
+  site_language = language && multi_site && !site_layouts
+  language_opt =
+    cond do
+      site_language -> ["language: language(conn)"]
+      language -> ["language: conn.assigns.language"]
+      true -> []
+    end
   status_opt = if status, do: ["status: :published"], else: []
   preload_opt = if preloads != [], do: ["preload: #{inspect(preloads)}"], else: []
   list_opts = Enum.join(status_opt ++ language_opt, ", ")
@@ -80,6 +88,11 @@
   # <%= public_route %> in the request's language, under its prefix when the route has one.
   defp base_path(%{path_info: [language | _], assigns: %{language: language}}), do: "/#{language}<%= public_route %>"
   defp base_path(_conn), do: <%= inspect public_route %>
+<% end %><%= if site_language do %>
+  # A prefixed route's scope assigns its language. The unprefixed routes are the
+  # site's default language's: Brando.Plug.Tenant above has resolved the site.
+  defp language(%{assigns: %{language: language}}), do: language
+  defp language(_conn), do: Brando.Languages.default_language()
 <% end %><%= if param == "id" do %>
   # A malformed id is a missing entry, not a query error.
   defp parse_id(id) do
