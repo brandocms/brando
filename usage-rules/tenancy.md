@@ -456,8 +456,9 @@ default frontend's does and builds into the project's `dist/`, and its
 `package.json` is named `acme`. `.gitignore`, and `.dockerignore` when the
 application has one, get the lines that keep every site project's
 `node_modules` and `dist` out of Git and out of the Docker build context.
-An existing `assets/sites/acme/` is left as it is. The task installs and
-builds nothing: run `pnpm install` and `pnpm build` in the project.
+An existing `assets/sites/acme/` is left as it is: to complete one left
+half-written, or to start it over, delete it and run the task again. The
+task installs and builds nothing: run `pnpm install` and `pnpm build` in the project.
 
 In development, one Vite dev server runs one site's project. Say which
 with `dev_site`, beside `hmr`, and point the `vite_site` watcher at the same

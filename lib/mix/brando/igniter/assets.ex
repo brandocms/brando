@@ -52,7 +52,8 @@ if Code.ensure_loaded?(Igniter) do
 
       if Igniter.exists?(igniter, root) do
         Igniter.add_notice(igniter, """
-        #{root}/ already exists, so it was left as it is.
+        #{root}/ already exists, so it was left as it is. To complete a project left
+        half-written, or to start it over, delete #{root}/ and run mix brando.gen.site --site #{key} again.
         """)
       else
         key

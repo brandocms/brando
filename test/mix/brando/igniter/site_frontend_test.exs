@@ -200,6 +200,8 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
     refute Igniter.exists?(result, "assets/sites/acme-travel/package.json")
     refute Enum.any?(result.tasks, fn {task, _args} -> task == "brando.assets.copy" end)
     assert notice?(result, "assets/sites/acme-travel/ already exists, so it was left as it is")
+    # How to complete one left half-written.
+    assert notice?(result, "delete assets/sites/acme-travel/ and run mix brando.gen.site --site acme-travel again")
   end
 
   test "in :multi, a site whose modules were edited gets its Vite project and its missing modules", %{multi: multi} do
