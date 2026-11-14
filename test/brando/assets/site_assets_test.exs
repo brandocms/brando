@@ -68,6 +68,11 @@ defmodule Brando.Assets.SiteAssetsTest do
     refute Brando.Plug.SiteAssets.call(conn("assets/20260816_abc123.js"), []).halted
   end
 
+  test "sets_root/1 takes a site key as well as a site" do
+    assert SiteAssets.sets_root("acme") == SiteAssets.sets_root(%Brando.Sites.Site{key: "acme"})
+    assert_raise ArgumentError, fn -> SiteAssets.sets_root("../acme") end
+  end
+
   test "activation validates manifests before replacing the current set" do
     first_path = SiteAssetsFixtures.create_set(nil, "first", "first", "first.css")
     assert {:ok, first} = SiteAssets.register_set(first_path)

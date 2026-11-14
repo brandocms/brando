@@ -97,6 +97,14 @@ defmodule Brando.DoctorTest do
       refute text =~ "one thing"
     end
 
+    test "a label as wide as its column is still apart from its summary" do
+      result = %Result{id: "page_templates", label: "Pages without their template", status: :ok, summary: "fine"}
+
+      text = [result] |> Report.text(@versions) |> IO.ANSI.format(false) |> IO.iodata_to_binary()
+
+      assert text =~ "Pages without their template fine"
+    end
+
     test "the summary names every check behind each count" do
       text =
         [Warns, Healthy, Fails, Warns]
