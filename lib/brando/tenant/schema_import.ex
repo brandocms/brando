@@ -96,7 +96,7 @@ defmodule Brando.Tenant.SchemaImport do
   alias Ecto.Adapters.SQL
 
   @template "public"
-  @source_format ~r/^[a-z0-9_]+$/
+  @source_format ~r/\A[a-z0-9_]+\z/
   @reserved_schemas ~w(public information_schema)
 
   @snapshot_columns [{"revisions", "encoded_entry"}, {"translation_pending_versions", "payload"}]

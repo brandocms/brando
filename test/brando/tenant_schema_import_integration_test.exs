@@ -657,6 +657,7 @@ defmodule Brando.TenantSchemaImportIntegrationTest do
     assert {:error, {:reserved_source_schema, "public"}} = SchemaImport.validate_source("public")
     assert {:error, {:reserved_source_schema, _}} = SchemaImport.validate_source("tenant_acme_production")
     assert {:error, {:invalid_source_schema, _}} = SchemaImport.validate_source(~s|bad"name|)
+    assert {:error, {:invalid_source_schema, _}} = SchemaImport.validate_source("legacy\n")
     assert {:error, {:source_schema_not_found, _}} = SchemaImport.validate_source("#{context.source}_missing")
   end
 
