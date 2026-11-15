@@ -239,6 +239,38 @@ defmodule Brando.Tenant.SiteLanguagesTest do
       end)
     end
 
+    test "queued again, runs a job waiting to retry now, and queues one beside a discarded one", %{
+      site: site,
+      creator: creator
+    } do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, site} = Registry.update_site(site, %{languages: ["en", "no"]}, creator: creator)
+        [production, staging] = Enum.sort_by(site.environments, &(not &1.live))
+        later = DateTime.add(DateTime.utc_now(), 3600)
+
+        job = fn environment ->
+          prefix = Tenant.prefix(site, environment)
+          from(j in Oban.Job, where: fragment("?->>'tenant_prefix'", j.args) == ^prefix)
+        end
+
+        Brando.Repo.update_all(job.(production), [set: [state: "retryable", attempt: 1, scheduled_at: later]],
+          prefix: "public"
+        )
+
+        Brando.Repo.update_all(job.(staging), [set: [state: "discarded", attempt: 3]], prefix: "public")
+
+        :ok = SiteLanguageSeed.enqueue(site, "no", creator)
+
+        assert [%Oban.Job{state: "retryable", scheduled_at: scheduled_at}] =
+                 Brando.Repo.all(job.(production), prefix: "public")
+
+        assert DateTime.compare(scheduled_at, later) == :lt
+
+        assert ~w(discarded scheduled) ==
+                 job.(staging) |> Brando.Repo.all(prefix: "public") |> Enum.map(& &1.state) |> Enum.sort()
+      end)
+    end
+
     test "a failing environment does not undo the save, and its job errors", %{site: site, creator: creator} do
       put_test_env(:tenant_seeder, Failing)
 
@@ -446,6 +478,39 @@ defmodule Brando.Tenant.SiteLanguagesTest do
     end
   end
 
+  describe "a job for an environment being provisioned or copied" do
+    setup %{site: site, creator: creator} do
+      {:ok, site} = Registry.update_site(site, %{languages: ["en", "no"]}, creator: creator)
+      args = %{"tenant_prefix" => "tenant_acme_staging", "language" => "no", "user_id" => creator.id}
+      %{site: site, args: args}
+    end
+
+    for operation <- [:copy, :provisioning] do
+      test "waits for the #{operation} to finish", %{site: site, args: args} do
+        key = lock_key(unquote(operation), site)
+        conn = lock_elsewhere(key)
+
+        in_environment("staging", fn -> Brando.Repo.delete_all(Identity) end)
+        assert {:snooze, _seconds} = perform_job(SiteLanguageSeed, args)
+        in_environment("staging", fn -> refute Brando.Repo.get_by(Identity, language: :no) end)
+
+        Postgrex.query!(conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+        assert :ok = perform_job(SiteLanguageSeed, args)
+        in_environment("staging", fn -> assert Brando.Repo.get_by(Identity, language: :no) end)
+      end
+    end
+
+    test "gives up waiting after an hour, and fails the attempt", %{site: site, args: args} do
+      _conn = lock_elsewhere(Brando.Tenant.Lock.environment_operation_key(site.id))
+
+      assert {:snooze, seconds} = perform_job(SiteLanguageSeed, args)
+      snoozes = div(3600, seconds)
+
+      assert {:snooze, _} = perform_job(SiteLanguageSeed, args, meta: %{"snoozed" => snoozes - 1})
+      assert {:error, :environment_busy} = perform_job(SiteLanguageSeed, args, meta: %{"snoozed" => snoozes})
+    end
+  end
+
   describe "a job for an environment or language that is gone" do
     test "is cancelled", %{site: site, creator: creator} do
       assert {:cancel, :language_removed} =
@@ -479,6 +544,18 @@ defmodule Brando.Tenant.SiteLanguagesTest do
         |> Enum.sort()
       end
     end)
+  end
+
+  defp lock_key(:copy, site), do: Brando.Tenant.Lock.environment_operation_key(site.id)
+  defp lock_key(:provisioning, site), do: Brando.Tenant.Lock.lifecycle_key(site.key)
+
+  # A session of its own, outside the sandbox, holds the lock a copy or
+  # provisioning holds while it runs
+  defp lock_elsewhere(key) do
+    config = Keyword.drop(Brando.Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name])
+    {:ok, conn} = Postgrex.start_link(config)
+    Postgrex.query!(conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+    conn
   end
 
   defp pages(language), do: Brando.Repo.all(from(p in Pages.Page, where: p.language == ^language))

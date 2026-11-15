@@ -232,8 +232,9 @@ defmodule BrandoAdmin.Sites.SiteLive do
             <tr :for={row <- seeding(@seeding, site.id)} id={"seeding-#{site.id}-#{row.environment.id}-#{row.language}"}>
               <td>{seeding_status(row)}</td>
               <td>
+                <small :if={row.busy}>{gettext("Waiting for the environment's copy or setup to finish.")}</small>
                 <button
-                  :if={is_nil(row.job)}
+                  :if={seed_again?(row)}
                   type="button"
                   class="btn btn--sm"
                   phx-click="seed_language"
@@ -350,7 +351,8 @@ defmodule BrandoAdmin.Sites.SiteLive do
     with {:ok, site} <- site_from_socket(socket, params["site-id"]),
          {:ok, environment} <- environment_of(site, params["environment-id"]),
          true <- params["language"] in site.languages || {:error, :language_not_on_site},
-         :ok <- authorize_site_update(socket) do
+         :ok <- authorize_site_update(socket),
+         :ok <- ready(site) do
       :ok =
         SiteLanguageSeed.enqueue(site, params["language"], socket.assigns.current_user, environment: environment)
 
@@ -429,18 +431,22 @@ defmodule BrandoAdmin.Sites.SiteLive do
     |> assign_new(:language_drafts, fn -> %{} end)
   end
 
-  # Per site, each environment and language that is being seeded, or has no
-  # identity in that language: a seeding that failed, or one left out by an
-  # application's seeder
+  # Per site, each environment and language whose latest seeding is queued,
+  # running or failed, or that has no identity in that language: a seeding
+  # whose job is gone, or one left out by an application's seeder
   defp seeding_by_site(sites) do
     prefixes = for site <- sites, environment <- site.environments, do: Brando.Tenant.prefix(site, environment)
-    jobs = pending_seed_jobs(prefixes)
+    jobs = latest_seed_jobs(prefixes)
 
     Map.new(sites, fn site ->
       environments = Enum.sort_by(site.environments, &{not &1.live, &1.name})
-      {site.id, Enum.flat_map(environments, &seeding_rows(site, &1, jobs))}
+      rows = Enum.flat_map(environments, &seeding_rows(site, &1, jobs))
+      busy = rows != [] and SiteLanguageSeed.busy?(site)
+      {site.id, Enum.map(rows, &Map.put(&1, :busy, busy))}
     end)
   end
+
+  @finished_states ["completed", "cancelled"]
 
   defp seeding_rows(site, environment, jobs) do
     prefix = Brando.Tenant.prefix(site, environment)
@@ -452,24 +458,29 @@ defmodule BrandoAdmin.Sites.SiteLive do
       seeded ->
         site.languages
         |> Enum.map(&%{environment: environment, language: &1, job: Map.get(jobs, {prefix, &1})})
+        |> Enum.map(fn
+          %{job: %Oban.Job{state: state}} = row when state in @finished_states -> %{row | job: nil}
+          row -> row
+        end)
         |> Enum.filter(&(&1.job || &1.language not in seeded))
     end
   end
 
-  defp pending_seed_jobs([]), do: %{}
+  defp latest_seed_jobs([]), do: %{}
 
-  defp pending_seed_jobs(prefixes) do
+  defp latest_seed_jobs(prefixes) do
     worker = inspect(SiteLanguageSeed)
 
     from(job in Oban.Job,
-      where:
-        job.worker == ^worker and job.state in ["available", "scheduled", "executing", "retryable"] and
-          fragment("?->>'tenant_prefix'", job.args) in ^prefixes,
+      where: job.worker == ^worker and fragment("?->>'tenant_prefix'", job.args) in ^prefixes,
       order_by: [asc: job.id]
     )
     |> Repo.all(prefix: "public")
     |> Map.new(&{{&1.args["tenant_prefix"], &1.args["language"]}, &1})
   end
+
+  # Provisioning or a copy would make the job wait (`SiteLanguageSeed`)
+  defp ready(site), do: if(SiteLanguageSeed.busy?(site), do: {:error, :environment_busy}, else: :ok)
 
   defp identity_languages(prefix) do
     table = Brando.Sites.Identity.__schema__(:source)
@@ -602,6 +613,10 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
   defp seeding(seeding, site_id), do: Map.get(seeding, site_id, [])
 
+  defp seed_again?(%{busy: true}), do: false
+  defp seed_again?(%{job: nil}), do: true
+  defp seed_again?(%{job: %Oban.Job{state: state}}), do: state in ["discarded", "retryable"]
+
   defp seeding_status(%{job: nil} = row),
     do:
       gettext("%{environment} has no starting content in %{language}.",
@@ -616,6 +631,14 @@ defmodule BrandoAdmin.Sites.SiteLive do
         language: row.language,
         attempt: job.attempt,
         max: job.max_attempts,
+        error: last_error(job)
+      )
+
+  defp seeding_status(%{job: %Oban.Job{state: "discarded"} = job} = row),
+    do:
+      gettext("Seeding %{language} in %{environment} failed: %{error}",
+        environment: row.environment.name,
+        language: row.language,
         error: last_error(job)
       )
 

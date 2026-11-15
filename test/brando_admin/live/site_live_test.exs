@@ -326,9 +326,15 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
 
       view |> element("button", "Refresh") |> render_click()
       assert has_element?(view, row, "failed, and is retried (attempt 1 of 3): boom")
+      assert has_element?(view, "#{row} button", "Seed again")
 
       # Its last attempt failed
-      Brando.Repo.update_all(Oban.Job, [set: [state: "discarded"]], prefix: "public")
+      Brando.Repo.update_all(Oban.Job, [set: [state: "discarded", attempt: 3]], prefix: "public")
+      view |> element("button", "Refresh") |> render_click()
+      assert has_element?(view, row, "Seeding no in Production failed: boom")
+
+      # Pruned, it leaves what is missing
+      Brando.Repo.delete_all(Oban.Job, prefix: "public")
       view |> element("button", "Refresh") |> render_click()
       assert has_element?(view, row, "Production has no starting content in no.")
 
@@ -338,6 +344,77 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, production), fn ->
         assert Brando.Repo.get_by(Brando.Pages.Page, uri: "index", language: :no)
       end)
+    end
+
+    test "shows a failed seeding where the identity exists, and seeds it again", %{
+      conn: conn,
+      acme: site,
+      production: production
+    } do
+      row = "#seeding-#{site.id}-#{production.id}-no"
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]})
+      end)
+
+      Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, production), fn ->
+        Brando.Sites.create_default_identity(:no)
+      end)
+
+      Brando.Repo.update_all(
+        Oban.Job,
+        [set: [state: "discarded", attempt: 3, errors: [%{"attempt" => 3, "error" => "no homepage"}]]],
+        prefix: "public"
+      )
+
+      {:ok, view, _html} = live(conn, "/admin/sites")
+      assert has_element?(view, row, "Seeding no in Production failed: no homepage")
+
+      # A new job runs beside the discarded one (inline in tests, which keeps
+      # no row of it)
+      view |> element("#{row} button", "Seed again") |> render_click()
+
+      Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, production), fn ->
+        assert Brando.Repo.get_by(Brando.Pages.Page, uri: "index", language: :no)
+      end)
+    end
+
+    test "offers no seeding while an environment is copied or the site provisioned", %{
+      conn: conn,
+      acme: site,
+      production: production
+    } do
+      row = "#seeding-#{site.id}-#{production.id}-no"
+      {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]})
+
+      Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, production), fn ->
+        Brando.Repo.delete_all(Brando.Sites.Identity)
+      end)
+
+      {:ok, lock_conn} =
+        Postgrex.start_link(Keyword.drop(Brando.Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name]))
+
+      key = Brando.Tenant.Lock.environment_operation_key(site.id)
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+
+      {:ok, view, _html} = live(conn, "/admin/sites")
+      assert has_element?(view, row, "Production has no starting content in no.")
+      refute has_element?(view, "#{row} button")
+      assert has_element?(view, row, "copy or setup")
+
+      render_click(view, "seed_language", %{
+        "site-id" => to_string(site.id),
+        "environment-id" => to_string(production.id),
+        "language" => "no"
+      })
+
+      Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, production), fn ->
+        refute Brando.Repo.get_by(Brando.Sites.Identity, language: :no)
+      end)
+
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+      view |> element("button", "Refresh") |> render_click()
+      assert has_element?(view, "#{row} button", "Seed again")
     end
   end
 

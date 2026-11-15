@@ -13,6 +13,11 @@ defmodule Brando.Worker.SiteLanguageSeed do
   The seeded content names the user who added the language as its creator,
   or the installation's oldest superuser (`Brando.Setup.Account.superuser/0`)
   when it was added with no user or that user is gone.
+
+  It does not write into an environment while the site is being provisioned
+  or one of its environments copied (the locks `Brando.Tenant.Setup` and
+  `Brando.Environments` hold): it snoozes until they finish, and after an
+  hour of waiting fails the attempt, which Oban retries.
   """
 
   use Oban.Worker,
@@ -26,11 +31,18 @@ defmodule Brando.Worker.SiteLanguageSeed do
 
   alias Brando.Sites.Site
   alias Brando.Tenant.Job, as: TenantJob
+  alias Brando.Tenant.Lock
+
+  @snooze_seconds 15
+  # A snooze gives the attempt back, so waiting needs its own bound: an hour
+  @max_snoozes div(3600, @snooze_seconds)
 
   @doc """
   Queues the seeding of `language` in each of `site`'s environments, or in
   the one given as `:environment`, with `creator` (a user or `nil`) as the
-  creator of what it seeds.
+  creator of what it seeds. A job waiting to retry after a failed attempt
+  runs now instead; a discarded one is out of the unique states, so a new job
+  is queued beside it.
   """
   @spec enqueue(Site.t(), String.t(), Brando.Users.User.t() | nil, keyword()) :: :ok
   def enqueue(%Site{environments: environments} = site, language, creator, opts \\ [])
@@ -43,7 +55,7 @@ defmodule Brando.Worker.SiteLanguageSeed do
         "language" => language,
         "user_id" => creator && creator.id
       }
-      |> new()
+      |> new(scheduled_at: DateTime.utc_now(), replace: [retryable: [:scheduled_at]])
       |> Oban.insert()
     end
 
@@ -101,8 +113,36 @@ defmodule Brando.Worker.SiteLanguageSeed do
 
   defp seed_as_creator(_job, _site, _environment, _language, nil), do: {:cancel, :no_creator}
 
-  defp seed_as_creator(job, site, environment, language, creator),
-    do: TenantJob.run(job, fn -> seed(site, environment, language, creator) end)
+  defp seed_as_creator(job, site, environment, language, creator) do
+    seeded =
+      when_ready(site, fn ->
+        TenantJob.run(job, fn -> seed(site, environment, language, creator) end)
+      end)
+
+    if seeded == :busy, do: wait(job), else: seeded
+  end
+
+  defp wait(%Oban.Job{meta: meta}) do
+    if Map.get(meta || %{}, "snoozed", 0) >= @max_snoozes,
+      do: {:error, :environment_busy},
+      else: {:snooze, @snooze_seconds}
+  end
+
+  # Runs `fun` holding the site's lifecycle and environment-operation locks,
+  # or returns `:busy` while provisioning or a copy holds one
+  defp when_ready(site, fun) do
+    Lock.try_with(Lock.lifecycle_key(site.key), fn ->
+      Lock.try_with(Lock.environment_operation_key(site.id), fun)
+    end)
+  end
+
+  @doc """
+  Whether `site` is being provisioned, or one of its environments copied,
+  switched live or deleted, now: a seeding would wait for it.
+  """
+  @spec busy?(Site.t()) :: boolean()
+  def busy?(%Site{} = site),
+    do: Lock.held?(Lock.lifecycle_key(site.key)) or Lock.held?(Lock.environment_operation_key(site.id))
 
   # The admin's scope does not decide what the seeder may write, as when the
   # site was provisioned (`Brando.Tenant.Setup`)
