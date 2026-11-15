@@ -77,6 +77,19 @@ defmodule Brando.Tenant.RedirectHostsTest do
       assert changeset.errors[:redirect_hosts]
     end
 
+    test "the domain cannot also be one of its redirect hosts", %{production: production} do
+      {:ok, production} = put_hosts(production, %{domain: "acme.test", redirect_hosts: ["www.acme.test"]})
+
+      assert {:error, changeset} = put_hosts(production, %{domain: "WWW.acme.test"})
+      assert {message, _opts} = changeset.errors[:domain]
+      assert message =~ "both the domain and one of its redirect hosts"
+      refute changeset.errors[:redirect_hosts]
+
+      assert {:error, changeset} = put_hosts(production, %{redirect_hosts: ["www.acme.test", "acme.test"]})
+      assert {message, _opts} = changeset.errors[:redirect_hosts]
+      assert message =~ "both the domain and one of its redirect hosts"
+    end
+
     test "redirect hosts need a domain, and the domain cannot be cleared while they remain", %{production: production} do
       assert {:error, changeset} = put_hosts(production, %{redirect_hosts: ["www.acme.test"]})
       assert changeset.errors[:redirect_hosts]

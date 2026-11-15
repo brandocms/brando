@@ -126,9 +126,9 @@ defmodule Brando.Environments.Environment do
     domain = get_field(changeset, :domain)
 
     changeset =
-      validate_change(changeset, :redirect_hosts, fn :redirect_hosts, hosts ->
-        Enum.flat_map(hosts, &redirect_host_error(&1, domain))
-      end)
+      changeset
+      |> validate_change(:redirect_hosts, fn :redirect_hosts, hosts -> Enum.flat_map(hosts, &redirect_host_error/1) end)
+      |> validate_domain_not_redirected(domain, hosts)
 
     cond do
       hosts == [] or not is_nil(domain) ->
@@ -150,7 +150,7 @@ defmodule Brando.Environments.Environment do
     end
   end
 
-  defp redirect_host_error(host, domain) do
+  defp redirect_host_error(host) do
     cond do
       not valid_host?(host) ->
         [
@@ -166,11 +166,26 @@ defmodule Brando.Environments.Environment do
             gettext("%{host}: the installation itself uses this host, for its admin, media or CDN.", host: host)
         ]
 
-      host == domain ->
-        [redirect_hosts: gettext("%{host} is this environment's domain.", host: host)]
-
       true ->
         []
+    end
+  end
+
+  # Checked when either field changes: the list is not cast again when only
+  # the domain changes
+  defp validate_domain_not_redirected(changeset, domain, hosts) do
+    changed? = Map.has_key?(changeset.changes, :domain) or Map.has_key?(changeset.changes, :redirect_hosts)
+
+    if changed? and is_binary(domain) and domain in hosts do
+      field = if Map.has_key?(changeset.changes, :redirect_hosts), do: :redirect_hosts, else: :domain
+
+      add_error(
+        changeset,
+        field,
+        gettext("%{host} cannot be both the domain and one of its redirect hosts.", host: domain)
+      )
+    else
+      changeset
     end
   end
 
