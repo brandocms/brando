@@ -373,6 +373,40 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert File.read!(file) == ""
     end
 
+    defmodule ExitingResolver do
+      def lookup(_host), do: exit(:resolver_exited)
+    end
+
+    defmodule ThrowingResolver do
+      def lookup(_host), do: throw(:resolver_threw)
+    end
+
+    defmodule CrashingResolver do
+      # The lookup task dies of a link, which no catch inside it sees
+      def lookup(_host) do
+        spawn_link(fn -> exit(:linked_crash) end)
+        Process.sleep(:infinity)
+      end
+    end
+
+    defmodule HangingResolver do
+      def lookup(_host), do: Process.sleep(:infinity)
+    end
+
+    for resolver <- [ExitingResolver, ThrowingResolver, CrashingResolver, HangingResolver] do
+      @resolver resolver
+      test "a lookup that fails with #{inspect(resolver)} leaves the host unresolved", %{path: file, site: site} do
+        pid = Process.whereis(ServedHosts)
+        bind(site, "production", "www.acme.test", true)
+        # No addresses: the endpoint's host goes through the same resolver
+        put_test_env(ServedHosts, file: file, resolver: @resolver, lookup_timeout: 50)
+
+        assert %{hosts: %{"www.acme.test" => :unresolved}, addresses: [], error: nil} = ServedHosts.check()
+        assert Process.whereis(ServedHosts) == pid
+        assert File.read!(file) == ""
+      end
+    end
+
     test "a check that raises is reported and does not restart the process", %{path: file, site: site} do
       pid = Process.whereis(ServedHosts)
       bind(site, "production", "www.acme.test", true)

@@ -62,7 +62,8 @@ defmodule Brando.Supervisor do
       # writes them
       Brando.CacheSync,
       # Keeps the file of hosts the reverse proxy serves; idle without a file
-      # configured (`Brando.Tenant.ServedHosts`)
+      # configured (`Brando.Tenant.ServedHosts`), and its DNS lookups
+      {Task.Supervisor, name: Brando.Tenant.ServedHosts.TaskSupervisor},
       Brando.Tenant.ServedHosts,
       {Oban, oban_config()}
     ]

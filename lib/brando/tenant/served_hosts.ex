@@ -49,7 +49,9 @@ defmodule Brando.Tenant.ServedHosts do
 
   Lookups go through `:resolver`, a module implementing
   `Brando.Tenant.ServedHosts.Resolver` (default
-  `Brando.Tenant.ServedHosts.DNS`), which tests replace.
+  `Brando.Tenant.ServedHosts.DNS`), which tests replace. A lookup that does
+  not answer within `:lookup_timeout` milliseconds (default ten seconds), or
+  that raises, exits or throws, fails for that host.
   """
 
   use GenServer
@@ -211,7 +213,7 @@ defmodule Brando.Tenant.ServedHosts do
     resolver = Keyword.get(config, :resolver, Brando.Tenant.ServedHosts.DNS)
     own = own_addresses(config, resolver)
 
-    Enum.reduce(lookup_all(candidates, resolver), {[], %{}, own}, fn
+    Enum.reduce(lookup_all(candidates, resolver, config), {[], %{}, own}, fn
       {host, {:ok, [_ | _] = addresses}}, {admitted, waiting, own} ->
         addresses = normalize_addresses(addresses)
 
@@ -226,11 +228,13 @@ defmodule Brando.Tenant.ServedHosts do
     end)
   end
 
-  defp lookup_all(hosts, resolver) do
-    hosts
-    |> Task.async_stream(&lookup(resolver, &1),
+  # Under a task supervisor, unlinked: a lookup that raises, exits, throws,
+  # dies of a link or times out fails for its host and nothing else
+  defp lookup_all(hosts, resolver, config) do
+    Brando.Tenant.ServedHosts.TaskSupervisor
+    |> Task.Supervisor.async_stream_nolink(hosts, &lookup(resolver, &1),
       max_concurrency: 8,
-      timeout: @lookup_timeout,
+      timeout: Keyword.get(config, :lookup_timeout, @lookup_timeout),
       on_timeout: :kill_task,
       ordered: true
     )
@@ -244,25 +248,27 @@ defmodule Brando.Tenant.ServedHosts do
     resolver.lookup(host)
   rescue
     error -> {:error, error}
+  catch
+    kind, reason -> {:error, {kind, reason}}
   end
 
   # The configured addresses, or what the endpoint's host resolves to now
   defp own_addresses(config, resolver) do
     case Keyword.get(config, :addresses) do
       addresses when is_list(addresses) -> addresses |> Enum.flat_map(&parse_address/1) |> normalize_addresses()
-      nil -> endpoint_addresses(endpoint_host(), resolver)
+      nil -> endpoint_addresses(endpoint_host(), resolver, config)
     end
   end
 
-  defp endpoint_addresses(nil, _resolver), do: []
+  defp endpoint_addresses(nil, _resolver, _config), do: []
 
-  defp endpoint_addresses(host, resolver) do
+  defp endpoint_addresses(host, resolver, config) do
     with [] <- parse_address(host),
-         {:ok, addresses} <- lookup(resolver, host) do
+         [{^host, {:ok, addresses}}] <- lookup_all([host], resolver, config) do
       normalize_addresses(addresses)
     else
+      [{^host, _failed}] -> []
       [address] -> [address]
-      {:error, _reason} -> []
     end
   end
 
