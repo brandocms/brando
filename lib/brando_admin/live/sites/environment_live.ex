@@ -30,6 +30,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   alias BrandoAdmin.Components.Content
 
   @manager_roles [:admin, :superuser]
+  @host_fields [{"domain", :domain}, {"redirect_hosts", :redirect_hosts}]
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
@@ -44,6 +45,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         |> assign(:tenancy_enabled?, Tenant.enabled?())
         |> assign(:default_scheduled_at, default_scheduled_at())
         |> assign(:restoring, nil)
+        |> assign(:host_drafts, %{})
         |> assign_served_hosts()
         |> refresh_data()
 
@@ -157,25 +159,41 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     <code>{environment.key}</code>
                   </td>
                   <td>
-                    <%!-- Keyed on the domain shown: when a live switch moves it, the form is
-                    replaced and a half-typed edit goes with the domain it was typed against --%>
+                    <%!-- Keyed on the hosts shown: when a live switch or another superuser moves
+                    them, the form is replaced and a half-typed edit goes with the hosts it was
+                    typed against --%>
                     <form
-                      id={"environment-domain-#{environment.id}-#{:erlang.phash2(environment.domain)}"}
+                      id={"environment-domain-#{environment.id}-#{:erlang.phash2(draft_key(environment))}"}
+                      phx-change="draft_hosts"
                       phx-submit="update_domain"
                       class="environment-inline-form"
                     >
                       <input type="hidden" name="environment_id" value={environment.id} />
                       <input type="hidden" name="shown_domain" value={environment.domain || ""} />
                       <input
+                        type="hidden"
+                        name="shown_redirect_hosts"
+                        value={Enum.join(environment.redirect_hosts || [], ",")}
+                      />
+                      <input
                         type="text"
                         name="domain"
-                        value={environment.domain}
-                        disabled={
-                          !@can_bind_hosts? || !@can_manage? || !BrandoAdmin.Authorization.allowed?(:update, :environments)
-                        }
+                        value={host_draft(@host_drafts, environment).domain}
+                        disabled={!can_edit_hosts?(@can_bind_hosts?, @can_manage?)}
                         placeholder={gettext("No domain")}
                         aria-label={gettext("Domain for %{name}", name: environment.name)}
                       />
+                      <textarea
+                        :if={can_edit_hosts?(@can_bind_hosts?, @can_manage?) || environment.redirect_hosts != []}
+                        name="redirect_hosts"
+                        rows="2"
+                        disabled={!can_edit_hosts?(@can_bind_hosts?, @can_manage?)}
+                        placeholder={gettext("Redirect hosts, one per line")}
+                        aria-label={gettext("Hosts that redirect to the domain of %{name}", name: environment.name)}
+                      >{host_draft(@host_drafts, environment).redirect_hosts}</textarea>
+                      <div :if={can_edit_hosts?(@can_bind_hosts?, @can_manage?)} class="environment-inline-form__actions">
+                        <button type="submit" class="btn btn--sm">{gettext("Save hosts")}</button>
+                      </div>
                     </form>
                     <.served_host
                       :if={@served_hosts_enabled? && environment.domain}
@@ -183,6 +201,20 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       state={served_host_state(@served_hosts.hosts, @bound_hosts, environment.domain)}
                       addresses={@served_hosts.addresses}
                     />
+                    <ul
+                      :if={@served_hosts_enabled? && environment.domain && environment.redirect_hosts not in [nil, []]}
+                      class="environment-redirect-host-statuses"
+                      aria-label={gettext("Redirect hosts")}
+                    >
+                      <li :for={host <- environment.redirect_hosts}>
+                        <.served_host
+                          id={redirect_host_status_id(environment, host)}
+                          host={host}
+                          state={served_host_state(@served_hosts.hosts, @bound_hosts, host)}
+                          addresses={@served_hosts.addresses}
+                        />
+                      </li>
+                    </ul>
                   </td>
                   <td>
                     <span class={["environment-state", environment.live && "live"]}>
@@ -556,11 +588,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   attr :id, :string, required: true
   attr :state, :any, required: true
   attr :addresses, :list, required: true
+  attr :host, :string, default: nil, doc: "the host's name, shown before its state; the domain's line has none"
 
   # Where a bound host stands with the reverse proxy (`Brando.Tenant.ServedHosts`)
   defp served_host(assigns) do
     ~H"""
     <div id={@id} class="environment-host-status">
+      <span :if={@host} class="environment-host-status__host">{@host}</span>
       <%= case @state do %>
         <% :served -> %>
           <span class="badge badge--success">{gettext("Served")}</span>
@@ -611,6 +645,10 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     end
   end
 
+  # Unique per environment and host, whatever characters a stored host holds
+  defp redirect_host_status_id(environment, host),
+    do: "environment-host-status-#{environment.id}-#{Base.url_encode64(host, padding: false)}"
+
   defp server_addresses([]), do: gettext("unknown")
   defp server_addresses(addresses), do: Enum.join(addresses, ", ")
 
@@ -652,15 +690,49 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   @impl Phoenix.LiveView
   def handle_event("refresh", _params, socket), do: {:noreply, refresh_data(socket)}
 
+  # What was typed in the domain and redirect hosts, kept for the hosts the
+  # form was rendered with: a change event re-renders the row, and a field
+  # that is not focused takes the rendered value. LiveView also sends this
+  # event when it recovers the form on rejoin, touched or not: only the fields
+  # the event carries are kept (a disabled field is not sent), nothing from a
+  # form the user may not edit, and nothing from a form rendered with hosts
+  # the row no longer has
+  def handle_event("draft_hosts", %{"environment_id" => id} = params, socket) do
+    with true <- can_edit_hosts?(socket.assigns.can_bind_hosts?, socket.assigns.can_manage?),
+         {:ok, environment} <- environment_for_site(socket, id),
+         true <- shown_hosts?(environment, params["shown_domain"], params["shown_redirect_hosts"]) do
+      draft = for {param, field} <- @host_fields, is_binary(params[param]), into: %{}, do: {field, params[param]}
+
+      {:noreply,
+       update(
+         socket,
+         :host_drafts,
+         &Map.update(&1, draft_key(environment), draft, fn typed -> Map.merge(typed, draft) end)
+       )}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
   def handle_event("update_domain", %{"environment_id" => id} = params, socket) do
     domain = params |> Map.get("domain", "") |> String.trim()
     domain = if domain == "", do: nil, else: domain
 
+    attrs =
+      case params do
+        %{"redirect_hosts" => hosts} -> %{domain: domain, redirect_hosts: Environment.parse_hosts(hosts)}
+        _ -> %{domain: domain}
+      end
+
     with :ok <- authorize(socket),
          {:ok, listed} <- environment_for_site(socket, id),
-         {:ok, _updated} <- update_shown_domain(socket, listed, params["shown_domain"], domain) do
+         {:ok, _updated} <- update_shown_hosts(socket, listed, params, attrs) do
       {:noreply,
        socket
+       |> update(
+         :host_drafts,
+         &Map.reject(&1, fn {{environment_id, _domain, _hosts}, _draft} -> environment_id == listed.id end)
+       )
        |> notify(gettext("Domain updated."))
        |> refresh_data()}
     else
@@ -853,9 +925,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   defp refresh_data(socket) do
     site = current_site(socket)
 
+    environments = for_site(site, &Registry.list_environments/1)
+    shown = MapSet.new(environments, &draft_key/1)
+
     socket
     |> assign(:site, site)
-    |> assign(:environments, for_site(site, &Registry.list_environments/1))
+    |> assign(:environments, environments)
+    |> assign(:host_drafts, Map.filter(socket.assigns[:host_drafts] || %{}, fn {key, _draft} -> key in shown end))
     |> assign(:archives, for_site(site, &Environments.list_archives/1))
     |> assign(:jobs, for_site(site, &Environments.list_scheduled_operations/1))
     |> assign(:operation_logs, for_site(site, &Environments.list_operation_logs/1))
@@ -888,38 +964,66 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     end
   end
 
-  # A live switch moves hosts without a superuser, so the domain the form
-  # showed may be gone from the row; a change made against it would overwrite
-  # or clear a host the screen never showed. The form submits the domain it was
-  # rendered with, since the switch's broadcast may already have refreshed this
-  # screen's assigns, and only the form posts this event, so a submission
-  # without it is refused too. The row is locked from the check to the write,
-  # as a live switch locks it to swap domains (`Brando.Environments`), so no
-  # swap lands in between. A row lock, not the site lock: a switch holds that
-  # while it archives the live schema, which can take minutes.
-  defp update_shown_domain(_socket, _environment, shown, _domain) when not is_binary(shown),
-    do: {:error, :domain_moved}
+  # A live switch moves hosts without a superuser, and another superuser may
+  # have changed them, so the hosts the form showed may be gone from the row;
+  # a change made against them would overwrite or clear hosts the screen never
+  # showed. The form submits the domain and redirect hosts it was rendered
+  # with, since a broadcast may already have refreshed this screen's assigns,
+  # and only the form posts this event, so a submission without them is
+  # refused too. The row is locked from the check to the write, as a live
+  # switch locks it to swap hosts (`Brando.Environments`), so no swap lands in
+  # between. A row lock, not the site lock: a switch holds that while it
+  # archives the live schema, which can take minutes.
+  defp update_shown_hosts(socket, %Environment{id: id, site_id: site_id}, params, attrs) do
+    shown_domain = params["shown_domain"]
+    shown_hosts = params["shown_redirect_hosts"]
 
-  defp update_shown_domain(socket, %Environment{id: id, site_id: site_id}, shown, domain) do
-    shown = if shown == "", do: nil, else: shown
-
-    Repo.transaction(fn ->
-      with {:ok, environment} <- locked_shown(id, site_id, shown),
-           {:ok, updated} <-
-             Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user) do
-        updated
-      else
-        {:error, reason} -> Repo.rollback(reason)
-      end
-    end)
+    if is_binary(shown_domain) and (is_binary(shown_hosts) or not Map.has_key?(attrs, :redirect_hosts)),
+      do: Repo.transaction(fn -> update_locked(socket, id, site_id, {shown_domain, shown_hosts}, attrs) end),
+      else: {:error, :domain_moved}
   end
 
-  defp locked_shown(id, site_id, shown) do
-    case Repo.one(from(e in Environment, where: e.id == ^id, lock: "FOR UPDATE"), prefix: "public") do
-      %Environment{site_id: ^site_id, domain: ^shown} = environment -> {:ok, environment}
-      %Environment{site_id: ^site_id} -> {:error, :domain_moved}
-      _ -> {:error, :environment_not_found}
+  defp update_locked(socket, id, site_id, {shown_domain, shown_hosts}, attrs) do
+    with {:ok, environment} <- locked_shown(id, site_id, shown_domain, shown_hosts),
+         {:ok, updated} <- Registry.update_environment(environment, attrs, actor: socket.assigns.current_user) do
+      updated
+    else
+      {:error, reason} -> Repo.rollback(reason)
     end
+  end
+
+  defp locked_shown(id, site_id, shown_domain, shown_hosts) do
+    case Repo.one(from(e in Environment, where: e.id == ^id, lock: "FOR UPDATE"), prefix: "public") do
+      %Environment{site_id: ^site_id} = environment ->
+        if shown_hosts?(environment, shown_domain, shown_hosts),
+          do: {:ok, environment},
+          else: {:error, :domain_moved}
+
+      _ ->
+        {:error, :environment_not_found}
+    end
+  end
+
+  # The redirect hosts are compared when the form carried them; a submission
+  # without them does not write them
+  defp shown_hosts?(%Environment{} = environment, shown_domain, shown_hosts) do
+    shown_domain == (environment.domain || "") and
+      (is_nil(shown_hosts) or Environment.parse_hosts(shown_hosts) == (environment.redirect_hosts || []))
+  end
+
+  defp draft_key(%Environment{} = environment),
+    do: {environment.id, environment.domain || "", environment.redirect_hosts || []}
+
+  defp can_edit_hosts?(can_bind_hosts?, can_manage?),
+    do: can_bind_hosts? and can_manage? and BrandoAdmin.Authorization.allowed?(:update, :environments)
+
+  # What the hosts form shows: what was typed since the last save against the
+  # hosts shown, else the environment's own hosts
+  defp host_draft(drafts, environment) do
+    Map.merge(
+      %{domain: environment.domain || "", redirect_hosts: Enum.join(environment.redirect_hosts || [], "\n")},
+      Map.get(drafts, draft_key(environment), %{})
+    )
   end
 
   defp parse_future_datetime(value) when is_binary(value) do
@@ -1037,8 +1141,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       end)
     end)
     |> Enum.flat_map(fn
-      # The domain's messages are sentences of their own
-      {:domain, messages} -> messages
+      # The hosts' messages are sentences of their own
+      {field, messages} when field in [:domain, :redirect_hosts] -> messages
       {field, messages} -> Enum.map(messages, &"#{field} #{&1}")
     end)
     |> Enum.join(", ")

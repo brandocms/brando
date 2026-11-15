@@ -13,8 +13,9 @@ defmodule Brando.Plug.Markdown do
     * the page's URL with `text/markdown` preferred in `Accept`.
 
   The request goes through the router and the page's controller as usual,
-  with `.md` taken off the path, so the controller's own rules decide what
-  can be seen: drafts, scheduled entries, other sites and pages behind a
+  with `.md` taken off the path (the path the client asked for stays in
+  `conn.private.brando_original_request_path`), so the controller's own
+  rules decide what can be seen: drafts, scheduled entries, other sites and pages behind a
   login are not found. When the controller has loaded an entry with a
   Markdown version (passed to `put_meta/3`, `put_hreflang/2` or
   `put_json_ld/3`), its HTML is replaced with the Markdown, with
@@ -89,7 +90,9 @@ defmodule Brando.Plug.Markdown do
 
     # `/index.md` is the site's root.
     path_info = if path_info == ["index"], do: [], else: path_info
+
     %{conn | path_info: path_info, request_path: "/" <> Enum.join(path_info, "/")}
+    |> put_private(:brando_original_request_path, conn.request_path)
   end
 
   @doc """
