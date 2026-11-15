@@ -21,7 +21,10 @@ defmodule Brando.Tenant.ServedHosts do
 
   ## Which hosts
 
-  Every host the registry binds (`Brando.Tenant.Cache.bound_hosts/0`). A bound
+  Every host the registry binds (`Brando.Tenant.Cache.bound_hosts/0`) that is a
+  valid host name (`Brando.Environments.Environment.valid_host?/1`) with a dot
+  and not an IP address; a domain stored before Brando checked it may be
+  neither, and is never written. A bound
   host that is not in the file yet is admitted when it resolves, and every
   address it resolves to, IPv4 and IPv6, is one of this server's: a proxy
   asks for a certificate as soon as it gets a host, and a host whose DNS still
@@ -51,6 +54,7 @@ defmodule Brando.Tenant.ServedHosts do
 
   use GenServer
 
+  alias Brando.Environments.Environment
   alias Brando.Tenant.Cache
 
   require Logger
@@ -63,9 +67,10 @@ defmodule Brando.Tenant.ServedHosts do
   @typedoc """
   Where a bound host stands: in the file (`:served`), admitted but the file
   could not be written (`:not_written`), resolving to addresses that are not
-  all this server's (`{:waiting, addresses}`), or not resolving.
+  all this server's (`{:waiting, addresses}`), not resolving, or never written
+  because the stored value is not a valid host name (`:invalid`).
   """
-  @type host_state :: :served | :not_written | {:waiting, [String.t()]} | :unresolved
+  @type host_state :: :served | :not_written | {:waiting, [String.t()]} | :unresolved | :invalid
 
   @type status :: %{
           file: String.t() | nil,
@@ -155,7 +160,7 @@ defmodule Brando.Tenant.ServedHosts do
 
     case read_file(file) do
       {:ok, existing, listed} ->
-        bound = Cache.bound_hosts()
+        {bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
         listed = MapSet.new(listed)
         {kept, candidates} = Enum.split_with(bound, &MapSet.member?(listed, &1))
         {admitted, waiting, addresses} = admit(candidates, config)
@@ -168,6 +173,7 @@ defmodule Brando.Tenant.ServedHosts do
           Map.new(kept, &{&1, :served})
           |> Map.merge(Map.new(admitted, &{&1, if(written?, do: :served, else: :not_written)}))
           |> Map.merge(waiting)
+          |> Map.merge(Map.new(invalid, &{&1, :invalid}))
 
         publish(%{file: file, hosts: statuses, addresses: Enum.map(addresses, &format_address/1), error: error})
         schedule(state, map_size(waiting) > 0 or error != nil)
@@ -178,6 +184,14 @@ defmodule Brando.Tenant.ServedHosts do
         publish(%{status() | file: file, error: error})
         schedule(state, true)
     end
+  end
+
+  # A stored domain is not checked again until it changes, and the file is read
+  # by root: only a host name with a dot that is not an IP address (no
+  # top-level domain is all digits) gets a line
+  defp servable?(host) do
+    Environment.valid_host?(host) and String.contains?(host, ".") and
+      not (host |> String.split(".") |> List.last() |> String.match?(~r/\A[0-9]+\z/))
   end
 
   defp schedule(state, false), do: state
@@ -295,7 +309,8 @@ defmodule Brando.Tenant.ServedHosts do
   # Rewritten only when the content changes: through a temporary file in the
   # same directory, renamed over the old one, so a reader never sees half
   defp write(file, existing, hosts) do
-    content = Enum.map_join(hosts, &[&1, "\n"])
+    # Each line checked on its own, whatever produced the list
+    content = hosts |> Enum.filter(&servable?/1) |> Enum.map_join(&[&1, "\n"])
 
     if content == existing do
       {true, nil}

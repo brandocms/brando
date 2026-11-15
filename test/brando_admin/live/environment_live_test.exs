@@ -754,6 +754,27 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       assert view |> element("#environment-host-status-#{away.id}") |> render() =~ "Served"
     end
 
+    test "a stored value that is no valid host name is not shown as served", %{conn: conn, served: served} do
+      put_test_env(Brando.Tenant.ServedHosts,
+        file: Brando.Tenant.ServedHosts.status().file,
+        admit: :always
+      )
+
+      # Stored before the changeset checked it
+      Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^served.id),
+        set: [domain: "www.acme.test:4000"]
+      )
+
+      Cache.warm()
+      Brando.Tenant.ServedHosts.check()
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      status = view |> element("#environment-host-status-#{served.id}") |> render()
+      assert status =~ "Not a valid host name"
+      refute status =~ "Served"
+    end
+
     test "a file that cannot be written is shown", %{conn: conn, tmp_dir: tmp_dir} do
       file = Path.join([tmp_dir, "missing", "served_hosts"])
       put_test_env(Brando.Tenant.ServedHosts, file: file, admit: :always)

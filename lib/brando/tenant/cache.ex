@@ -110,8 +110,8 @@ defmodule Brando.Tenant.Cache do
     list_sites()
     |> Enum.flat_map(fn %Site{environments: environments} -> Enum.map(environments, & &1.domain) end)
     |> Enum.filter(&routable_domain?/1)
-    |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
-    |> Enum.reject(&(&1 == "" or MapSet.member?(installation_hosts, &1)))
+    |> Enum.map(&Brando.Environments.Environment.normalize_host/1)
+    |> Enum.reject(&(is_nil(&1) or MapSet.member?(installation_hosts, &1)))
     |> Enum.uniq()
     |> Enum.sort()
   end

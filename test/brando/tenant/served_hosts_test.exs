@@ -79,6 +79,21 @@ defmodule Brando.Tenant.ServedHostsTest do
     environment
   end
 
+  # A domain stored before `Environment` checked it, which no changeset sees again
+  defp bind_raw(site, key, domain) do
+    environment = bind(site, key, nil)
+
+    Brando.Repo.update_all(
+      from(e in Brando.Environments.Environment, where: e.id == ^environment.id),
+      [set: [domain: domain]],
+      prefix: "public"
+    )
+
+    Cache.warm()
+    ServedHosts.check()
+    environment
+  end
+
   defp lines(file), do: file |> File.read!() |> String.split("\n", trim: true)
 
   describe "admission" do
@@ -223,6 +238,36 @@ defmodule Brando.Tenant.ServedHostsTest do
       ServedHosts.check()
       assert lines(file) == ["next.acme.test", "www.acme.test"]
       assert File.stat!(file, time: :posix).inode == before.inode
+    end
+
+    test "a stored value that is no valid host name is never written, even with admit: :always",
+         %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, admit: :always)
+      bind(site, "production", "www.acme.test", true)
+
+      invalid = [
+        "example.com:4000",
+        "under_score.acme.test",
+        "back`tick.acme.test",
+        "www.acme.test\nunbound.example.com",
+        "intranet",
+        "203.0.113.10"
+      ]
+
+      for {raw, index} <- Enum.with_index(invalid), do: bind_raw(site, "legacy-#{index}", raw)
+
+      assert %{hosts: hosts} = ServedHosts.check()
+      assert File.read!(file) == "www.acme.test\n"
+      assert hosts["www.acme.test"] == :served
+      for raw <- invalid, do: assert(hosts[raw] == :invalid, "#{inspect(raw)} is #{inspect(hosts[raw])}")
+    end
+
+    test "an IP address is not admitted by the DNS check", %{path: file, site: site} do
+      DNS.answer(@here, [@here])
+      bind_raw(site, "production", @here)
+
+      assert %{hosts: %{@here => :invalid}} = ServedHosts.check()
+      assert File.read!(file) == ""
     end
 
     test "the installation's own hosts are never in the file", %{path: file, site: site} do
