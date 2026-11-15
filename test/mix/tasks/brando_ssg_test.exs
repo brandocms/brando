@@ -108,9 +108,14 @@ defmodule Mix.Tasks.Brando.SsgTest do
     Mix.shell(Mix.Shell.Process)
     on_exit(fn -> Mix.shell(Mix.Shell.IO) end)
 
-    assert_raise Mix.Error, ~r/BrandoIntegrationWeb.Endpoint has no HTTP listener/, fn ->
-      Mix.Tasks.Brando.Ssg.run(["--force", "--no-compile-assets", "--output", Path.join(root, "output")])
-    end
+    error =
+      assert_raise Mix.Error, ~r/BrandoIntegrationWeb.Endpoint has no HTTP listener/, fn ->
+        Mix.Tasks.Brando.Ssg.run(["--force", "--no-compile-assets", "--output", Path.join(root, "output")])
+      end
+
+    # The task has no flag for another origin
+    refute error.message =~ "base_url"
+    assert error.message =~ "server: false"
   end
 
   test "with several sites, writes under the site's own ssg directory by default", %{root: root} do

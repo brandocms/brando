@@ -230,7 +230,7 @@ defmodule Brando.SSG do
   defp listener_host(ip) when tuple_size(ip) == 8, do: "[#{ip |> :inet.ntoa() |> to_string()}]"
   defp listener_host(_local_socket_or_unknown), do: "127.0.0.1"
 
-  @doc "A sentence for a build's error reason, for a log or a terminal."
+  @doc "A sentence for a build's error reason, for the caller of `build/3`, which can pass `:base_url`."
   @spec error_message(term()) :: String.t()
   def error_message({:no_http_listener, endpoint}) do
     "#{inspect(endpoint)} has no HTTP listener to request the pages from. " <>

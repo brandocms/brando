@@ -277,7 +277,9 @@ defmodule Brando.SSGBuildsTest do
 
     failed = Builds.get_build(build.id)
     assert failed.status == :failed
-    assert failed.build_log =~ "Build failed: BrandoIntegrationWeb.Endpoint has no HTTP listener"
+    assert failed.build_log =~ "Build failed: BrandoIntegrationWeb.Endpoint has no HTTP listener on #{node()}"
+    assert failed.build_log =~ "must run on a node that serves the endpoint"
+    refute failed.build_log =~ "base_url"
     refute File.exists?(failed.build_path)
   end
 

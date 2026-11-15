@@ -190,6 +190,14 @@ defmodule Mix.Tasks.Brando.Ssg do
 
   defp report_result!({:error, reason, result}) do
     Enum.each(result.failed_urls, &Mix.shell().error("Failed: #{&1}"))
-    Mix.raise("Static generation failed: #{SSG.error_message(reason)}")
+    Mix.raise("Static generation failed: #{failure_message(reason)}")
   end
+
+  # The task serves the endpoint unless its configuration says otherwise
+  defp failure_message({:no_http_listener, endpoint}) do
+    "#{inspect(endpoint)} has no HTTP listener to request the pages from. " <>
+      "Give it an `:http` port, and no `server: false`, in the configuration the task runs with."
+  end
+
+  defp failure_message(reason), do: SSG.error_message(reason)
 end
