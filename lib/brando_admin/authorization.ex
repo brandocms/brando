@@ -288,13 +288,13 @@ defmodule BrandoAdmin.Authorization do
 
     case check(socket) do
       {:cont, socket} ->
+        # A view that shows what the user may do exports `refresh_authorization/1`.
+        # Asked of the running view, not named here: naming the views makes this
+        # module depend on each of them, and through them on itself.
         socket =
-          case socket.view do
-            BrandoAdmin.Nav -> BrandoAdmin.Nav.refresh_authorization(socket)
-            BrandoAdmin.Chrome -> BrandoAdmin.Chrome.refresh_authorization(socket)
-            BrandoAdmin.Sites.ActivityLive -> BrandoAdmin.Sites.ActivityLive.refresh_authorization(socket)
-            _ -> socket
-          end
+          if function_exported?(socket.view, :refresh_authorization, 1),
+            do: socket.view.refresh_authorization(socket),
+            else: socket
 
         recheck_form_reads(socket)
         {:halt, socket}

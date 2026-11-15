@@ -470,6 +470,14 @@ florist prod traefik:setup
 
 SSL certificates are issued automatically via Let's Encrypt on the first HTTPS request.
 
+On a multi-site installation, the hosts superusers bind to sites in the admin
+need routes too. Brando can keep a file of them, with each host added once its
+DNS points at this server, for the proxy's configuration to be built from:
+set `file` under `config :brando, Brando.Tenant.ServedHosts` in
+`config/runtime.exs`, on a path that survives a deploy (such as one beside
+`media/`). The file's format and when a host enters it are in
+[Hosts and the reverse proxy](tenancy_and_environments.md#hosts-and-the-reverse-proxy).
+
 ## Server directory structure
 
 ### Single deployment

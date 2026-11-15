@@ -137,3 +137,34 @@ defmodule Brando.WebhookTestResolver do
   def resolve(host, :inet), do: resolve(host)
   def resolve(_host, :inet6), do: {:error, :nxdomain}
 end
+
+defmodule Brando.ServedHostsTestResolver do
+  @moduledoc """
+  DNS for `Brando.Tenant.ServedHosts` in tests (config/test.exs): a host
+  answers what `answer/2` set for it, anything else does not resolve. Global,
+  so a test that sets answers is `async: false` and calls `reset/0` on exit.
+  """
+
+  @behaviour Brando.Tenant.ServedHosts.Resolver
+
+  @key {__MODULE__, :answers}
+
+  @impl true
+  def lookup(host), do: Map.get(:persistent_term.get(@key, %{}), host, {:error, :nxdomain})
+
+  @doc "Makes `host` resolve to `addresses` (strings), or fail with `{:error, reason}`."
+  def answer(host, {:error, _reason} = error), do: put(host, error)
+
+  def answer(host, addresses) when is_list(addresses) do
+    put(host, {:ok, Enum.map(addresses, &parse!/1)})
+  end
+
+  def reset, do: :persistent_term.erase(@key)
+
+  defp put(host, answer), do: :persistent_term.put(@key, Map.put(:persistent_term.get(@key, %{}), host, answer))
+
+  defp parse!(address) do
+    {:ok, address} = :inet.parse_strict_address(String.to_charlist(address))
+    address
+  end
+end
