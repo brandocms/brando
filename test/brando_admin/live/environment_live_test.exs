@@ -784,6 +784,36 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       refute status =~ "Checking"
     end
 
+    test "a row reads the bound hosts taken with the status, not the cache when it renders",
+         %{conn: conn, production: production, missing: missing} do
+      file = Brando.Tenant.ServedHosts.status().file
+      # Bound without a check: the status does not know the host yet
+      put_test_env(Brando.Tenant.ServedHosts, [])
+
+      Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^production.id),
+        set: [domain: "late.acme.test"]
+      )
+
+      Cache.warm()
+      put_test_env(Brando.Tenant.ServedHosts, file: file, addresses: ["203.0.113.10"])
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+      assert view |> element("#environment-host-status-#{production.id}") |> render() =~ "Checking"
+
+      # The cache changes with no status yet, and the rows render again
+      Cache.clear()
+
+      Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^missing.id),
+        set: [name: "renamed"]
+      )
+
+      render_click(view, "refresh")
+
+      status = view |> element("#environment-host-status-#{production.id}") |> render()
+      assert status =~ "Checking"
+      refute status =~ "Not served"
+    end
+
     test "a stored value that is no valid host name is not shown as served", %{conn: conn, served: served} do
       put_test_env(Brando.Tenant.ServedHosts,
         file: Brando.Tenant.ServedHosts.status().file,

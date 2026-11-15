@@ -172,7 +172,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     <.served_host
                       :if={@served_hosts_enabled? && environment.domain}
                       id={"environment-host-status-#{environment.id}"}
-                      state={served_host_state(@served_hosts.hosts, environment.domain)}
+                      state={served_host_state(@served_hosts.hosts, @bound_hosts, environment.domain)}
                       addresses={@served_hosts.addresses}
                     />
                   </td>
@@ -592,14 +592,14 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     """
   end
 
-  # A domain the registry does not count as bound (`Cache.bound_hosts/0`) is
-  # never checked, so it would read as "Checking" for good
-  defp served_host_state(hosts, domain) do
+  # A domain the registry does not count as bound (`Cache.bound_hosts/0`, read
+  # with the status) is never checked, so it would read as "Checking" for good
+  defp served_host_state(hosts, bound_hosts, domain) do
     host = Environment.normalize_host(domain)
 
     case Map.fetch(hosts, host) do
       {:ok, state} -> state
-      :error -> if host in Brando.Tenant.Cache.bound_hosts(), do: nil, else: :excluded
+      :error -> if MapSet.member?(bound_hosts, host), do: nil, else: :excluded
     end
   end
 
@@ -608,7 +608,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
   @impl Phoenix.LiveView
   def handle_info({:served_hosts, status}, socket) do
-    {:noreply, assign(socket, :served_hosts, status)}
+    {:noreply, assign_served_hosts_status(socket, status)}
   end
 
   def handle_info({:environments_updated, _site_id}, socket) do
@@ -825,7 +825,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
     socket
     |> assign(:served_hosts_enabled?, enabled?)
-    |> assign(:served_hosts, ServedHosts.status())
+    |> assign_served_hosts_status(ServedHosts.status())
+  end
+
+  defp assign_served_hosts_status(socket, status) do
+    socket
+    |> assign(:served_hosts, status)
+    |> assign(:bound_hosts, MapSet.new(Brando.Tenant.Cache.bound_hosts()))
   end
 
   # Scheduled copies and live switches complete in Oban workers, so the screen
