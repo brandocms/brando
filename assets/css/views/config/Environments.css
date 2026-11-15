@@ -249,6 +249,20 @@
     font-size: var(--brando-text-sm);
   }
 
+  /* One line per redirect host under the domain's, each led by its name */
+  .environment-redirect-host-statuses {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .environment-host-status__host {
+    min-width: 0;
+    font-family: var(--brando-font-mono);
+    font-size: var(--brando-text-sm);
+    overflow-wrap: anywhere;
+  }
+
   .environment-table-wrap {
     margin-top: 26px;
     overflow-x: auto;

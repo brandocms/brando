@@ -201,6 +201,20 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       state={served_host_state(@served_hosts.hosts, @bound_hosts, environment.domain)}
                       addresses={@served_hosts.addresses}
                     />
+                    <ul
+                      :if={@served_hosts_enabled? && environment.domain && environment.redirect_hosts not in [nil, []]}
+                      class="environment-redirect-host-statuses"
+                      aria-label={gettext("Redirect hosts")}
+                    >
+                      <li :for={host <- environment.redirect_hosts}>
+                        <.served_host
+                          id={redirect_host_status_id(environment, host)}
+                          host={host}
+                          state={served_host_state(@served_hosts.hosts, @bound_hosts, host)}
+                          addresses={@served_hosts.addresses}
+                        />
+                      </li>
+                    </ul>
                   </td>
                   <td>
                     <span class={["environment-state", environment.live && "live"]}>
@@ -574,11 +588,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   attr :id, :string, required: true
   attr :state, :any, required: true
   attr :addresses, :list, required: true
+  attr :host, :string, default: nil, doc: "the host's name, shown before its state; the domain's line has none"
 
   # Where a bound host stands with the reverse proxy (`Brando.Tenant.ServedHosts`)
   defp served_host(assigns) do
     ~H"""
     <div id={@id} class="environment-host-status">
+      <span :if={@host} class="environment-host-status__host">{@host}</span>
       <%= case @state do %>
         <% :served -> %>
           <span class="badge badge--success">{gettext("Served")}</span>
@@ -628,6 +644,10 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       :error -> if MapSet.member?(bound_hosts, host), do: nil, else: :excluded
     end
   end
+
+  # Unique per environment and host, whatever characters a stored host holds
+  defp redirect_host_status_id(environment, host),
+    do: "environment-host-status-#{environment.id}-#{Base.url_encode64(host, padding: false)}"
 
   defp server_addresses([]), do: gettext("unknown")
   defp server_addresses(addresses), do: Enum.join(addresses, ", ")

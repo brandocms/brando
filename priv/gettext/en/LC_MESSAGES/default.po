@@ -13670,6 +13670,11 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
+msgid "Redirect hosts"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
 msgid "Redirect hosts, one per line"
 msgstr ""
 

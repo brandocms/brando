@@ -1067,6 +1067,76 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       end
     end
 
+    defp redirect_host_status(view, environment, host) do
+      view |> element("#environment-host-status-#{environment.id}-#{Base.url_encode64(host, padding: false)}")
+    end
+
+    test "each redirect host shows where it stands under the domain, and changes without a reload", %{
+      conn: conn,
+      served: served,
+      away: away
+    } do
+      Brando.ServedHostsTestResolver.answer("www2.acme.test", ["203.0.113.10"])
+      Brando.ServedHostsTestResolver.answer("old-acme.test", ["198.51.100.7"])
+      {:ok, _} = Registry.update_environment(served, %{redirect_hosts: ~w(www2.acme.test old-acme.test)}, actor: :system)
+      {:ok, _} = Registry.update_environment(away, %{redirect_hosts: ~w(gone-acme.test)}, actor: :system)
+      Brando.Tenant.ServedHosts.check()
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      domain_status = view |> element("#environment-host-status-#{served.id}") |> render()
+      assert domain_status =~ "Served"
+      refute domain_status =~ "www2.acme.test"
+
+      # Served: the name and the badge, nothing more
+      served_line = view |> redirect_host_status(served, "www2.acme.test") |> render()
+      assert served_line =~ "www2.acme.test"
+      assert served_line =~ "Served"
+      refute served_line =~ "environment-host-status__detail"
+
+      waiting = view |> redirect_host_status(served, "old-acme.test") |> render()
+      assert waiting =~ "old-acme.test"
+      assert waiting =~ "Waiting for DNS"
+      assert waiting =~ "Resolves to 198.51.100.7; this server is 203.0.113.10."
+
+      unresolved = view |> redirect_host_status(away, "gone-acme.test") |> render()
+      assert unresolved =~ "gone-acme.test"
+      assert unresolved =~ "Does not resolve"
+      assert unresolved =~ "Point it at 203.0.113.10."
+
+      Brando.ServedHostsTestResolver.answer("old-acme.test", ["203.0.113.10"])
+      Brando.Tenant.ServedHosts.check()
+
+      now_served = view |> redirect_host_status(served, "old-acme.test") |> render()
+      assert now_served =~ "Served"
+      refute now_served =~ "Waiting for DNS"
+    end
+
+    test "a redirect host that is no full host name, or the installation's own, says so", %{
+      conn: conn,
+      served: served
+    } do
+      {:ok, _} = Registry.update_environment(served, %{redirect_hosts: ~w(intranet)}, actor: :system)
+
+      # Stored before the changeset refused it
+      Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^served.id),
+        set: [redirect_hosts: ["intranet", "localhost"]]
+      )
+
+      Cache.warm()
+      Brando.Tenant.ServedHosts.check()
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      invalid = view |> redirect_host_status(served, "intranet") |> render()
+      assert invalid =~ "Not a full host name"
+      assert invalid =~ "Brando answers on it"
+
+      excluded = view |> redirect_host_status(served, "localhost") |> render()
+      assert excluded =~ "Not served"
+      refute excluded =~ "Checking"
+    end
+
     test "a file that cannot be written is shown", %{conn: conn, tmp_dir: tmp_dir} do
       file = Path.join([tmp_dir, "missing", "served_hosts"])
       put_test_env(Brando.Tenant.ServedHosts, file: file, admit: :always)
@@ -1129,11 +1199,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     end
 
     test "with the feature off, nothing is shown", %{conn: conn, served: served} do
+      {:ok, _} = Registry.update_environment(served, %{redirect_hosts: ~w(www2.acme.test)}, actor: :system)
       put_test_env(Brando.Tenant.ServedHosts, [])
 
       {:ok, view, _html} = live(conn, "/admin/config/environments")
 
       refute has_element?(view, "#environment-host-status-#{served.id}")
+      refute has_element?(view, ".environment-host-status")
       refute has_element?(view, ".environment-served-hosts-error")
     end
   end
