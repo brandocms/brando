@@ -729,9 +729,10 @@ The file's contract, for anyone writing their own consumer:
 - One host per line, lowercase, sorted, each line ending in a newline. No
   comments, ports or schemes. An empty file means no host is admitted.
 - Replaced whole: written to a temporary file in the same directory (named
-  `.served_hosts.<random>.tmp` beside a file named `served_hosts`) and renamed
-  over the old one, so a reader never sees half a file. Watch the directory,
-  or the file by name rather than by inode, and ignore those temporary files.
+  `.served_hosts.<random>.tmp` beside a file named `served_hosts`), synced to
+  disk and renamed over the old one, so a reader never sees half a file.
+  Watch the directory, or the file by name rather than by inode, and ignore
+  those temporary files.
 - Rewritten only when its content changes. A line that is not a bound host,
   added by hand, is dropped on the next write.
 

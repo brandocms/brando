@@ -49,10 +49,10 @@ defmodule Brando.Tenant.ServedHosts do
   ## The file
 
   Sorted, one host per line, each followed by a newline, empty when no host
-  is admitted. Written to a temporary file in the same directory and renamed
-  over the old one, and only when the content changes. A line that is not a
-  bound host is dropped on the next write. A file that cannot be written is
-  logged once and retried on the next check.
+  is admitted. Written to a temporary file in the same directory, synced to
+  disk and renamed over the old one, and only when the content changes. A
+  line that is not a bound host is dropped on the next write. A file that
+  cannot be written is logged once and retried on the next check.
 
   Lookups go through `:resolver`, a module implementing
   `Brando.Tenant.ServedHosts.Resolver` (default
@@ -394,7 +394,8 @@ defmodule Brando.Tenant.ServedHosts do
 
     case File.open(temporary, [:write, :exclusive, :binary]) do
       {:ok, io} ->
-        written = :file.write(io, content)
+        # On disk before the rename, or a crash could leave the new name empty
+        written = with :ok <- :file.write(io, content), do: :file.sync(io)
         closed = File.close(io)
 
         with :ok <- written,

@@ -125,6 +125,15 @@ defmodule Brando.Tenant.ServedHostsTest do
 
   defp lines(file), do: file |> File.read!() |> String.split("\n", trim: true)
 
+  # The traced `:file` calls `pid` made, in order
+  defp file_calls(pid) do
+    receive do
+      {:trace, ^pid, :call, {:file, function, _args}} -> [function | file_calls(pid)]
+    after
+      0 -> []
+    end
+  end
+
   defp flush_lookups do
     receive do
       {:looked_up, _host} -> flush_lookups()
@@ -422,6 +431,24 @@ defmodule Brando.Tenant.ServedHostsTest do
 
       assert File.read!(file) == "www.acme.test\n"
       assert tmp_dir |> File.ls!() |> Enum.sort() == Enum.sort(["served_hosts" | others])
+    end
+
+    test "the temporary file is synced to disk before it is renamed over the old one", %{site: site} do
+      pid = Process.whereis(ServedHosts)
+      :erlang.trace_pattern({:file, :sync, 1}, true, [:global])
+      :erlang.trace_pattern({:file, :rename, 2}, true, [:global])
+      :erlang.trace(pid, true, [:call])
+
+      on_exit(fn ->
+        :erlang.trace(pid, false, [:call])
+        :erlang.trace_pattern({:file, :sync, 1}, false, [:global])
+        :erlang.trace_pattern({:file, :rename, 2}, false, [:global])
+      end)
+
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+
+      assert file_calls(pid) == [:sync, :rename]
     end
 
     test "a host already in the file is kept without a lookup", %{path: file, site: site} do
