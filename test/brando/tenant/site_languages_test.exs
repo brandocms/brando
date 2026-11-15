@@ -299,7 +299,7 @@ defmodule Brando.Tenant.SiteLanguagesTest do
 
       assert Enum.take(backoffs, 3) == [30, 60, 120]
       assert Enum.max(backoffs) == 6 * 3600
-      assert List.last(backoffs) == 6 * 3600
+      assert SiteLanguageSeed.backoff(%Oban.Job{attempt: 19}) == 6 * 3600
       assert Enum.sum(backoffs) > 2 * 24 * 3600
     end
   end

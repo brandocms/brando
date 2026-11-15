@@ -92,12 +92,14 @@ defmodule Brando.Tenant.Registry do
       language ->
         site.id
         |> Brando.Tenant.Lock.environment_operation_key()
-        |> Brando.Tenant.Lock.try_with(fn ->
-          with {:ok, seeded} <- seed_in_every_environment(site, changeset, language, opts[:creator]),
-               do: write_site(site, changeset, seeded, opts)
-        end)
+        |> Brando.Tenant.Lock.try_with(fn -> seed_and_write(site, changeset, language, opts) end)
         |> busy_to_error(changeset)
     end
+  end
+
+  defp seed_and_write(site, changeset, language, opts) do
+    with {:ok, seeded} <- seed_in_every_environment(site, changeset, language, opts[:creator]),
+         do: write_site(site, changeset, seeded, opts)
   end
 
   defp write_site(site, changeset, seeded, opts) do
