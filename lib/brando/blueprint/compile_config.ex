@@ -40,7 +40,9 @@ defmodule Brando.Blueprint.CompileConfig do
 
     Process.put(@reads, Enum.uniq([path | Process.get(@reads, [])]))
 
-    case fetch(Application.get_all_env(@app), path) do
+    # Through `RuntimeConfig`, as before: an asset's function config also
+    # merges its default while the application runs
+    case fetch([{key, Brando.RuntimeConfig.get(key)}], path) do
       {:ok, value} -> value
       :error -> nil
     end
