@@ -359,6 +359,11 @@ sender first, before the first compile.
 
 **Not found by any task.** Their correct rewrite depends on the application:
 
+- **Languages in `config/runtime.exs`.** `:languages` and `:admin_languages`
+  are compile-time configuration. Move them to `config/brando.exs` or
+  `config/config.exs`: a release whose `config/runtime.exs` sets either to
+  anything other than the compiled value stops at boot (see
+  [Configure content and interface languages](i18n.md#configure-content-and-interface-languages)).
 - **Vars written through a block changeset.** Seeds or scripts that pass a var
   to `Block.block_changeset/3` or `recursive_block_changeset/4` get its type and
   options from the module's definition of its key (the table template's, for a

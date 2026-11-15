@@ -1,85 +1,66 @@
 defmodule Brando.Blueprint.CompileConfig do
   @moduledoc false
 
-  # Configuration a Blueprint compiles in: the installation's languages become
-  # the `language` field's `Ecto.Enum` values, and an asset's literal `cfg`
-  # merges the configured `default_config`. A plain read is invisible to Mix,
-  # so a Brando installed from Hex or Git kept the old values after a config
-  # change (brandocms/brando#3576).
+  # The installation's languages, which a Blueprint compiles into the values of
+  # its `language` fields. A plain read is invisible to Mix, so a Brando
+  # installed from Hex or Git would keep the old values after a config change.
   #
-  # `read/1` reads a value and records its path for the file being compiled
-  # (each file compiles in its own process). `track/1` runs at the end of each
-  # Blueprint and reports the recorded paths through
-  # `Application.compile_env/4`, so Mix stores the values used: it recompiles
-  # the modules that read a changed value, and a dependency whose stored values
-  # no longer match is recompiled before the project boots.
+  # `read/1` reads a list and records the key for the file being compiled (each
+  # file compiles in its own process). `track/1` runs at the end of each
+  # Blueprint and reports the recorded keys through `Application.compile_env/4`,
+  # so Mix stores the values used and recompiles what read a changed one,
+  # dependencies included.
   #
-  # A value changed after compilation, by `config/runtime.exs`, is a different
-  # case: a release refuses to boot with Elixir's own message, and under Mix
-  # `check!/0` (from `Brando.System.initialize/0`) raises with ours.
+  # `config/runtime.exs` is read after compilation. A release whose runtime
+  # value differs from the compiled one refuses to boot with Elixir's message;
+  # Mix does not check a dependency's compile env, so `check!/0` (from
+  # `Brando.System`) compares the language codes.
 
   alias Brando.Exception.ConfigError
 
   @app :brando
+  @keys [:languages, :admin_languages]
   @reads {__MODULE__, :reads}
-  # The asset contexts by name: Blueprints call this module while they compile,
-  # and an alias would make it depend on the contexts (a compile cycle).
-  @keys [:languages, :admin_languages | Enum.map(~w(Images Videos Files), &Module.concat("Brando", &1))]
+  @default_languages [
+    [value: "en", text: "English"],
+    [value: "no", text: "Norsk"]
+  ]
 
-  @typedoc "A key under `:brando`, or a path into one (`[Brando.Images, :default_config]`)."
-  @type path :: atom() | [atom(), ...]
-
-  @doc "Reads `path` under `:brando` and records it for `track/1`."
-  @spec read(path()) :: term()
-  def read(path) do
-    [key | _] = path = List.wrap(path)
-
-    unless key in @keys do
-      raise ArgumentError, "#{inspect(key)} is not configuration Brando checks at boot; add it to @keys"
-    end
-
-    Process.put(@reads, Enum.uniq([path | Process.get(@reads, [])]))
-
-    # Through `RuntimeConfig`, as before: an asset's function config also
-    # merges its default while the application runs
-    case fetch([{key, Brando.RuntimeConfig.get(key)}], path) do
-      {:ok, value} -> value
-      :error -> nil
-    end
+  @doc "Reads `key` under `:brando` and records it for `track/1`."
+  @spec read(:languages | :admin_languages) :: list() | nil
+  def read(key) when key in @keys do
+    Process.put(@reads, Enum.uniq([key | Process.get(@reads, [])]))
+    Brando.RuntimeConfig.get(key)
   end
 
-  @doc "Paths read so far while compiling the current file."
-  @spec paths() :: [[atom(), ...]]
-  def paths, do: Process.get(@reads, []) |> Enum.reverse()
+  @doc "The installation's languages, or Brando's default when none are configured."
+  @spec languages() :: list()
+  def languages, do: read(:languages) || @default_languages
 
-  @doc """
-  Reports every recorded path as compile-time configuration of the module
-  compiling in `env`. Called in a module body.
-  """
+  @doc "Keys read so far while compiling the current file."
+  @spec keys() :: [atom()]
+  def keys, do: Process.get(@reads, []) |> Enum.reverse()
+
+  @doc "Reports every recorded key as compile-time configuration of the module compiling in `env`."
   @spec track(Macro.Env.t()) :: :ok
   def track(%Macro.Env{} = env) do
-    Enum.each(paths(), &Application.compile_env(env, @app, &1, nil))
+    Enum.each(keys(), &Application.compile_env(env, @app, &1, nil))
   end
 
   @doc """
-  Raises when the running configuration differs from a value Brando was
-  compiled with. `compile_env` is what Mix stored in Brando's `.app` file.
+  Raises when the configured language codes differ from those Brando was
+  compiled with. Labels and order are not compared. `compile_env` is what Mix
+  stored in Brando's `.app` file.
   """
-  @spec check!(list()) :: :ok
+  @spec check!(list(), keyword()) :: :ok
   def check!(compile_env \\ compiled_env(), current \\ Application.get_all_env(@app)) do
-    case stale(compile_env, current) do
-      [] -> :ok
-      stale -> raise ConfigError, message: message(stale)
-    end
-  end
+    compiled = for {@app, [key], {:ok, value}} <- compile_env, key in @keys, do: {key, value}
+    checked = for {@app, [key], _return} <- compile_env, key in @keys, uniq: true, do: key
 
-  @doc "The checked paths whose compiled value differs from `current`."
-  @spec stale(list(), keyword()) :: [{[atom(), ...], term(), term()}]
-  def stale(compile_env, current) do
-    for {@app, [key | _] = path, compiled} <- compile_env,
-        key in @keys,
-        (running = fetch(current, path)) != compiled,
-        do: {path, compiled, running}
+    case Enum.reject(Enum.map(checked, &diff(&1, compiled, current)), &is_nil/1) do
+      [] -> :ok
+      diffs -> raise ConfigError, message: message(diffs)
+    end
   end
 
   @doc """
@@ -97,43 +78,58 @@ defmodule Brando.Blueprint.CompileConfig do
     end
   end
 
-  # Access semantics, as `Application.compile_env/4` traverses a path.
-  defp fetch(env, [key | path]) do
-    Enum.reduce_while(path, Keyword.fetch(env, key), fn
-      segment, {:ok, config} when is_list(config) or is_map(config) -> {:cont, Access.fetch(config, segment)}
-      _segment, _result -> {:halt, :error}
-    end)
+  defp diff(key, compiled, current) do
+    compiled_codes = codes(key, compiled)
+    current_codes = codes(key, current)
+
+    if compiled_codes != current_codes do
+      {key, MapSet.difference(compiled_codes, current_codes), MapSet.difference(current_codes, compiled_codes)}
+    end
   end
 
-  defp message(stale) do
+  # The codes a `language` field compiled from `env` accepts: an unset
+  # `admin_languages` falls back to `languages`, an unset `languages` to
+  # Brando's default
+  defp codes(:admin_languages, env) do
+    case env[:admin_languages] do
+      nil -> codes(:languages, env)
+      languages -> codes_of(languages)
+    end
+  end
+
+  defp codes(:languages, env), do: codes_of(env[:languages] || @default_languages)
+
+  defp codes_of(languages), do: MapSet.new(languages, &to_string(&1[:value]))
+
+  defp message(diffs) do
     entries =
-      Enum.map_join(stale, "\n", fn {path, compiled, running} ->
+      Enum.map_join(diffs, "\n", fn {key, compiled_only, configured_only} ->
         """
-            #{config_line(path)}
-              compiled: #{show(compiled)}
-              running:  #{show(running)}
+            config :brando, #{inspect(key)}
+              compiled, not configured: #{list(compiled_only)}
+              configured, not compiled: #{list(configured_only)}
         """
       end)
 
     """
 
 
-    Brando was compiled with different configuration than it runs with:
+    Brando was compiled with other languages than it runs with:
 
     #{entries}
-    Brando reads these while compiling: the installation's languages become the
-    values of every `language` field, and the default asset configs are merged
-    into Blueprint assets. Set them in config/brando.exs (or another file
-    config/config.exs imports), not in config/runtime.exs, then recompile Brando:
+    A `language` field accepts the codes configured when Brando was compiled.
+    Set these keys in compile-time config, config/brando.exs or
+    config/config.exs (not config/runtime.exs, which is read after
+    compilation), then recompile Brando:
 
         mix deps.compile brando --force
     """
   end
 
-  defp config_line([key]), do: "config :brando, #{inspect(key)}"
-  defp config_line([key, option]), do: "config :brando, #{inspect(key)}, #{option}: …"
-  defp config_line([key | rest]), do: "config :brando, #{inspect(key)} at #{inspect(rest)}"
-
-  defp show({:ok, value}), do: inspect(value, limit: 20, printable_limit: 200)
-  defp show(:error), do: "(not set)"
+  defp list(codes) do
+    case Enum.sort(codes) do
+      [] -> "(none)"
+      codes -> Enum.join(codes, ", ")
+    end
+  end
 end

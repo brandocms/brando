@@ -11,6 +11,28 @@ defmodule Brando.SystemTest do
     assert Brando.System.initialize() == :ok
   end
 
+  describe "run_checks/0 with languages changed after compilation" do
+    setup do
+      languages = Application.fetch_env!(:brando, :languages)
+      on_exit(fn -> Application.put_env(:brando, :languages, languages) end)
+    end
+
+    test "passes when only the labels or the order differ" do
+      Application.put_env(:brando, :languages, [[value: "en", text: "Engelsk"], [value: "no", text: "Norwegian"]])
+
+      assert Brando.System.run_checks() == :ok
+    end
+
+    test "raises naming the codes that differ" do
+      Application.put_env(:brando, :languages, [[value: "no", text: "Norsk"], [value: "sv", text: "Svenska"]])
+
+      error = assert_raise Brando.Exception.ConfigError, fn -> Brando.System.run_checks() end
+      assert error.message =~ "config :brando, :languages\n"
+      assert error.message =~ "compiled, not configured: en\n"
+      assert error.message =~ "configured, not compiled: sv\n"
+    end
+  end
+
   describe "check_content/1" do
     setup do
       Brando.repo().delete_all(Identity)

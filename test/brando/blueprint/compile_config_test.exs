@@ -66,53 +66,44 @@ defmodule Brando.Blueprint.CompileConfigTest do
     assert Ecto.Enum.values(module, :language) == Enum.map(languages, &String.to_atom(&1[:value]))
   end
 
-  test "a language field with its own list, and an asset with its own config struct, report nothing" do
-    module = Module.concat(__MODULE__, Untracked)
+  test "a language field with its own list reports nothing" do
+    module = Module.concat(__MODULE__, OwnList)
 
     compile(
       module,
-      quote do
-        attributes do
-          attribute :language, :language, languages: [[value: "sv", text: "Svenska"]]
-        end
-      end
+      quote(do: attributes(do: attribute(:language, :language, languages: [[value: "sv", text: "Svenska"]])))
     )
 
     assert tracked(module) == []
+    assert Ecto.Enum.values(module, :language) == [:sv]
   end
 
-  test "an asset merged over the default config reports that default" do
-    module = Module.concat(__MODULE__, Asset)
-
-    compile(module, quote(do: assets(do: asset(:cover, :image, cfg: %{upload_path: "images/cover"}))))
-
-    default_config = Application.fetch_env!(:brando, Brando.Images)[:default_config]
-    assert tracked(module) == [{[Brando.Images, :default_config], {:ok, default_config}}]
-  end
-
-  test "Brando's own Blueprints record the values in its application file" do
+  test "Brando's own Blueprints record the languages in its application file" do
     paths = for {:brando, path, _return} <- CompileConfig.compiled_env(), do: path
 
-    for path <- [[:languages], [:admin_languages], [Brando.Images, :default_config]] do
-      assert path in paths
-    end
-  end
-
-  test "read/1 refuses a key the boot check does not cover" do
-    assert_raise ArgumentError, ~r/:media_path is not configuration Brando checks at boot/, fn ->
-      CompileConfig.read(:media_path)
-    end
+    assert [:languages] in paths
+    assert [:admin_languages] in paths
   end
 
   describe "check!/2" do
     @english [[value: "en", text: "English"]]
     @norwegian [[value: "en", text: "English"], [value: "no", text: "Norsk"]]
 
-    test "passes when the running values are the compiled ones" do
-      compile_env = [{:brando, [:languages], {:ok, @english}}, {:brando, [Brando.Images, :default_config], :error}]
+    test "passes when the codes are the compiled ones, whatever their labels and order" do
+      compile_env = [{:brando, [:languages], {:ok, @norwegian}}, {:brando, [:admin_languages], {:ok, @english}}]
 
-      assert CompileConfig.check!(compile_env, languages: @english, "Elixir.Brando.Images": [processor_module: X]) ==
-               :ok
+      assert CompileConfig.check!(compile_env,
+               languages: [[value: "no", text: "Norwegian"], [value: "en", text: "Engelsk"]],
+               admin_languages: [[value: "en", text: "Engelsk"]]
+             ) == :ok
+    end
+
+    test "compares an unset list as the list it falls back to" do
+      compile_env = [{:brando, [:languages], :error}, {:brando, [:admin_languages], :error}]
+
+      assert CompileConfig.check!(compile_env, languages: @norwegian) == :ok
+      assert CompileConfig.check!(compile_env, languages: @norwegian, admin_languages: @norwegian) == :ok
+      assert_raise ConfigError, fn -> CompileConfig.check!(compile_env, languages: @english) end
     end
 
     test "ignores compile-time values it does not own" do
@@ -120,30 +111,21 @@ defmodule Brando.Blueprint.CompileConfigTest do
                :ok
     end
 
-    test "names the key, both values and the command when a value changed after compilation" do
-      error =
-        assert_raise ConfigError, fn ->
-          CompileConfig.check!([{:brando, [:languages], {:ok, @english}}], languages: @norwegian)
-        end
-
-      assert error.message =~ "config :brando, :languages\n"
-      assert error.message =~ ~s(compiled: [[value: "en", text: "English"]])
-      assert error.message =~ ~s(running:  [[value: "en", text: "English"], [value: "no", text: "Norsk"]])
-      assert error.message =~ "not in config/runtime.exs"
-      assert error.message =~ "mix deps.compile brando --force"
-    end
-
-    test "reports a nested option, and a value set only at runtime" do
+    test "names the key, the codes that differ and the command" do
       error =
         assert_raise ConfigError, fn ->
           CompileConfig.check!(
-            [{:brando, [Brando.Images, :default_config], :error}],
-            "Elixir.Brando.Images": [default_config: %{sizes: :standard}]
+            [{:brando, [:languages], {:ok, @norwegian}}],
+            languages: [[value: "en", text: "English"], [value: "sv", text: "Svenska"]]
           )
         end
 
-      assert error.message =~ "config :brando, Brando.Images, default_config: …"
-      assert error.message =~ "compiled: (not set)"
+      assert error.message =~ "config :brando, :languages\n"
+      assert error.message =~ "compiled, not configured: no\n"
+      assert error.message =~ "configured, not compiled: sv\n"
+      refute error.message =~ "English"
+      assert error.message =~ "not config/runtime.exs"
+      assert error.message =~ "mix deps.compile brando --force"
     end
   end
 end

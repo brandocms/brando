@@ -93,11 +93,7 @@ defmodule Brando.Blueprint.Attributes.Dsl do
     default_languages =
       case Keyword.get(attr.opts, :languages) do
         nil ->
-          CompileConfig.read(:languages) ||
-            [
-              [value: "en", text: "English"],
-              [value: "no", text: "Norsk"]
-            ]
+          CompileConfig.languages()
 
         supplied_langs ->
           supplied_langs

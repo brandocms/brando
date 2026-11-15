@@ -682,11 +682,8 @@ Unknown options fail the compilation. For rendering and upload recipes, see
 
 The defaults come from `config :brando, Brando.Images, default_config: ...`
 (and `Brando.Files`, `Brando.Videos`), or Brando's built-in defaults. Literal
-configs are merged when the Blueprint compiles. Mix records the default
-configs they read, so after a change it recompiles those Blueprints, and
-Brando, before the application starts. Keep `default_config` out of
-`config/runtime.exs`: a value there that differs from the compiled one stops
-boot, as for [the installation's languages](i18n.md#configure-content-and-interface-languages).
+configs are merged when the Blueprint compiles, so a changed default config
+needs a recompile.
 
 The fields, by type:
 
