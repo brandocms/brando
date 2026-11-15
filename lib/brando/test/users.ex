@@ -107,16 +107,30 @@ defmodule Brando.Test.Users do
   Not the admin's own log-in function: that one ends in a redirect, so
   it returns a sent conn that `live/2` cannot use. The admin reads the
   session, and this writes what logging in writes.
+
+  A conn on Plug's default test host (`www.example.com`) moves to the
+  endpoint's host, where the admin answers with `tenancy_mode: :multi`
+  (`BrandoAdmin.AdminHost`); a host the test chose is kept.
   """
   @spec log_in_user(Plug.Conn.t(), User.t()) :: Plug.Conn.t()
   def log_in_user(conn, %User{} = user) do
     token = Brando.Users.generate_user_session_token(user)
 
     conn
+    |> on_admin_host()
     |> Plug.Test.init_test_session(%{})
     |> Plug.Conn.put_session(:user_token, token)
     |> Plug.Conn.put_session(:live_socket_id, Brando.Users.live_socket_id(token))
   end
+
+  defp on_admin_host(%Plug.Conn{host: "www.example.com"} = conn) do
+    case BrandoAdmin.AdminHost.endpoint_host() do
+      nil -> conn
+      host -> %{conn | host: host}
+    end
+  end
+
+  defp on_admin_host(conn), do: conn
 
   @doc """
   Insert a user with `attrs` (see `insert_user/1`) and log them in. In groups

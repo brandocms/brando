@@ -82,15 +82,15 @@ defmodule Brando.MCP.TenancyTest do
 
     test "each environment has its own endpoint, metadata and issuer", %{tenants: [acme | _]} do
       assert acme.path == "/mcp/acme/production"
-      prm = build_conn() |> get("/.well-known/oauth-protected-resource/mcp/acme/production") |> json_response(200)
+      prm = admin_conn() |> get("/.well-known/oauth-protected-resource/mcp/acme/production") |> json_response(200)
       assert prm["resource"] == MCP.base_url() <> "/mcp/acme/production"
       assert prm["resource_name"] =~ "Acme"
 
-      as = build_conn() |> get("/.well-known/oauth-authorization-server/mcp/acme/production") |> json_response(200)
+      as = admin_conn() |> get("/.well-known/oauth-authorization-server/mcp/acme/production") |> json_response(200)
       assert as["issuer"] == prm["resource"]
 
       # Without tenancy's path, nothing
-      assert_not_found(build_conn() |> get("/.well-known/oauth-protected-resource/mcp"))
+      assert_not_found(admin_conn() |> get("/.well-known/oauth-protected-resource/mcp"))
       assert_not_found(rpc(%{path: "/mcp"}, nil, "ping"))
     end
 
@@ -131,7 +131,7 @@ defmodule Brando.MCP.TenancyTest do
     test "turning one environment off leaves the others on", %{user: user, tenants: [acme, staging, _other]} do
       tokens = connect_directly(user, staging)
       switch!(acme, false)
-      assert_not_found(build_conn() |> get("/.well-known/oauth-protected-resource/mcp/acme/production"))
+      assert_not_found(admin_conn() |> get("/.well-known/oauth-protected-resource/mcp/acme/production"))
       assert rpc(staging, tokens["access_token"], "ping").status == 200
     end
 

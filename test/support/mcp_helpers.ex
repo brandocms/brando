@@ -131,7 +131,7 @@ defmodule Brando.MCPHelpers do
     body = URI.encode_query(params)
 
     conn =
-      Enum.reduce(headers, build_conn(), fn {k, v}, conn -> put_req_header(conn, k, v) end)
+      Enum.reduce(headers, Brando.Test.Support.admin_conn(), fn {k, v}, conn -> put_req_header(conn, k, v) end)
       |> put_req_header("content-type", "application/x-www-form-urlencoded")
       |> put_req_header("content-length", Integer.to_string(byte_size(body)))
 
@@ -168,7 +168,7 @@ defmodule Brando.MCPHelpers do
     message = %{"jsonrpc" => "2.0", "id" => opts[:id] || 1, "method" => method, "params" => params}
     body = Jason.encode!(opts[:body] || message)
 
-    build_conn()
+    Brando.Test.Support.admin_conn()
     |> put_req_header("content-length", Integer.to_string(byte_size(body)))
     |> put_req_header("content-type", "application/json")
     |> put_req_header("accept", "application/json, text/event-stream")

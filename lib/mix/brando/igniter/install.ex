@@ -62,7 +62,7 @@ if Code.ensure_loaded?(Igniter) do
         |> PhoenixStatic.plan()
         |> Mix.Brando.Igniter.Install.Migrations.plan(project)
         |> application(project)
-        |> endpoint(project)
+        |> endpoint(project, tenancy.mode)
         |> router(project)
         |> public_site(project, options, fresh?)
         # Last: Rewrite rereads the formatters when .formatter.exs changes, and
@@ -250,6 +250,42 @@ if Code.ensure_loaded?(Igniter) do
       |> require_supervision()
     end
 
+    # With several sites the admin answers on the endpoint's host only, and its
+    # socket takes connections from there only, whatever the endpoint's own
+    # `check_origin` accepts for the sites' pages.
+    defp admin_socket(:multi) do
+      """
+      socket "/admin/socket", BrandoAdmin.AdminSocket,
+        websocket: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}],
+        longpoll: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]
+      """
+    end
+
+    defp admin_socket(_tenancy_mode) do
+      """
+      socket "/admin/socket", BrandoAdmin.AdminSocket, websocket: true, longpoll: true
+      """
+    end
+
+    # An existing socket line is the application's: a notice says what it lacks
+    defp admin_socket_origin_notice(igniter, endpoint, :multi) do
+      with {:ok, {igniter, _source, zipper}} <- ProjectModule.find_module(igniter, endpoint),
+           {:ok, body} <- Common.move_to_do_block(zipper),
+           {:ok, socket} <- Source.find_call(body, :socket, [2, 3], "/admin/socket"),
+           false <- socket.node |> Macro.to_string() |> String.contains?("BrandoAdmin.AdminHost") do
+        Igniter.add_notice(igniter, """
+        With several sites the admin socket takes connections from the endpoint's host only.
+        Give `socket "/admin/socket"` in #{inspect(endpoint)} this origin check, on both transports:
+            websocket: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}],
+            longpoll: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]
+        """)
+      else
+        _ -> igniter
+      end
+    end
+
+    defp admin_socket_origin_notice(igniter, _endpoint, _tenancy_mode), do: igniter
+
     defp initialize(zipper) do
       with :error <- CodeFunction.move_to_function_call(zipper, {Brando.System, :initialize}, 0),
            {:ok, start} <- CodeFunction.move_to_def(zipper, :start, 2),
@@ -282,21 +318,13 @@ if Code.ensure_loaded?(Igniter) do
       Enum.reduce(missing, %{igniter | warnings: other}, &Igniter.add_issue(&2, &1))
     end
 
-    defp endpoint(igniter, project) do
+    defp endpoint(igniter, project, tenancy_mode) do
       endpoint = project.endpoint
       before_router = [before: {:plug, [1, 2], project.router}]
 
       igniter
-      |> Source.ensure_call(
-        endpoint,
-        :socket,
-        [2, 3],
-        "/admin/socket",
-        """
-        socket "/admin/socket", BrandoAdmin.AdminSocket, websocket: true, longpoll: true
-        """,
-        before_router
-      )
+      |> Source.ensure_call(endpoint, :socket, [2, 3], "/admin/socket", admin_socket(tenancy_mode), before_router)
+      |> admin_socket_origin_notice(endpoint, tenancy_mode)
       |> Source.ensure_call(
         endpoint,
         :socket,

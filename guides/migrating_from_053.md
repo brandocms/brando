@@ -546,6 +546,14 @@ sender first, before the first compile.
   `{site_key}` or moves into a map; `mix brando.doctor` warns about each such
   entry. See
   [Tenancy and environments](tenancy_and_environments.md).
+- **The admin with several sites.** With `tenancy_mode: :multi`, the admin
+  answers on the endpoint's host only (`PHX_HOST`); on a site's host its
+  paths answer as paths that do not exist. Give `socket "/admin/socket"` in
+  the endpoint the admin socket's origin check, on both transports:
+  `websocket: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]` and
+  `longpoll: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]`.
+  Frontend edit mode adds nothing to the sites' pages. See
+  [Where the admin answers](tenancy_and_environments.md#where-the-admin-answers).
 - **Provider video libraries with several sites.** With `tenancy_mode: :multi`,
   the video picker's "Add from …" button shows only on sites an installation
   superuser has put in a provider library group, and lists what that group's

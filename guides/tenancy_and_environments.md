@@ -714,6 +714,34 @@ or suspending or archiving the site, sends that site's open admin views to the
 access-denied page, in both authorization modes. Other users, and screens that
 do not depend on the site, are left as they are.
 
+### Where the admin answers
+
+With `:multi`, the admin answers on the endpoint's host only:
+`Brando.endpoint().host()`, which `PHX_HOST` sets. On any other host, every
+route `Brando.Router.admin_routes/3` and `Brando.Router.mcp_routes/0` mount
+answers as a path that does not exist there. The request goes to the route it
+would match without them, normally the site's catch-all: a site's host
+answers with its own 404 page, or with its own page at `/admin` when it has
+one, and a host bound to no site answers with the plain 404. Nothing
+redirects to the admin's host, and deciding costs no database query. With
+`:none` and `:single` the admin answers on every host.
+
+The admin socket takes connections from the endpoint's host only, whatever
+the endpoint's own `check_origin` accepts for the sites' pages.
+`mix brando.install --tenancy-mode multi` writes the endpoint's socket line
+with its origin check; an existing installation adds it to that line:
+
+```elixir
+socket "/admin/socket", BrandoAdmin.AdminSocket,
+  websocket: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}],
+  longpoll: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]
+```
+
+Live previews (`/__livepreview`) and shared previews' links (`/__p__/:key`)
+are not admin routes, and open on the hosts they opened on before.
+[Frontend edit mode](frontend_edit.md) frames an admin view from the page's
+own host, so with several sites it adds nothing to the sites' pages.
+
 ### Several nodes
 
 <!-- usage-rules:start topic="tenancy" -->
@@ -1009,6 +1037,10 @@ With `tenancy_mode: :multi` and HMR on:
   of its own and no set cannot be shared: the admin says to build and
   upload a set first
   ([Uploading a site's build by hand](#uploading-a-sites-build-by-hand)).
+
+The admin answers on the endpoint's host: with the endpoint on `localhost`,
+`localhost:4000/admin` opens it and `acme.localhost:4000/admin` is a 404
+([Where the admin answers](#where-the-admin-answers)).
 
 Without `dev_site`, every site loads from the dev server, as on a
 single-site installation. Set in `:none` or `:single`, or naming a site that

@@ -10,6 +10,13 @@ defmodule Brando.Test.Support do
   end
 
   @doc """
+  A conn on the endpoint's host, where the admin and MCP answer with
+  `tenancy_mode: :multi` (`BrandoAdmin.AdminHost`). `Phoenix.ConnTest.build_conn/0`
+  is on `www.example.com`, which serves neither there.
+  """
+  def admin_conn, do: %{Phoenix.ConnTest.build_conn() | host: BrandoAdmin.AdminHost.endpoint_host()}
+
+  @doc """
   Sets `key` for one test and restores it properly afterwards.
 
   `:tenancy_mode` and `:authorization_mode` are set for this test and the

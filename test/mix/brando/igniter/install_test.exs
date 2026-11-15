@@ -186,6 +186,32 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert IgniterCase.source(rerun, "config/brando.exs") =~ "tenancy_mode: :single"
   end
 
+  test "with several sites the admin socket checks its origin; otherwise it is as before" do
+    origin = "check_origin: {BrandoAdmin.AdminHost, :check_origin, []}"
+
+    multi = project() |> install(["--tenancy-mode", "multi"])
+    assert multi.issues == []
+    endpoint = IgniterCase.source(multi, "lib/studio_web/endpoint.ex")
+
+    assert endpoint =~
+             ~r{socket\(?\s*"/admin/socket",\s*BrandoAdmin.AdminSocket,\s*websocket: \[#{Regex.escape(origin)}\],\s*longpoll: \[#{Regex.escape(origin)}\]}
+
+    refute Enum.any?(multi.notices, &(&1 =~ "admin socket takes connections"))
+
+    for args <- [[], ["--tenancy-mode", "single", "--site-key", "studio"]] do
+      endpoint = project() |> install(args) |> IgniterCase.source("lib/studio_web/endpoint.ex")
+      assert endpoint =~ ~r{socket\(?\s*"/admin/socket",\s*BrandoAdmin.AdminSocket,\s*websocket: true,\s*longpoll: true}
+      refute endpoint =~ "AdminHost"
+    end
+
+    # An existing socket line is kept, with a notice saying what it lacks
+    applied = project() |> install() |> Igniter.Test.apply_igniter!()
+    reloaded = Enum.reduce(Map.keys(applied.assigns.test_files), applied, &Igniter.include_existing_file(&2, &1))
+    rerun = install(reloaded, ["--tenancy-mode", "multi"])
+    refute IgniterCase.source(rerun, "lib/studio_web/endpoint.ex") =~ "AdminHost"
+    assert Enum.any?(rerun.notices, &(&1 =~ "admin socket takes connections from the endpoint's host only"))
+  end
+
   test "tokens and keys are kept out of the request logs" do
     igniter = project() |> install()
     config = IgniterCase.source(igniter, "config/config.exs")

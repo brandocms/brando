@@ -146,8 +146,19 @@ defmodule Brando.Router do
           []
         end
 
-      upload_ctrl = BrandoAdmin.API.Images.UploadController
-      villain_ctrl = BrandoAdmin.API.Villain.VillainController
+      @doc false
+      def __brando_admin_path__, do: Brando.Router.__path_segments__(unquote(path))
+
+      # With `tenancy_mode: :multi`, the admin's routes (and MCP's) answer on
+      # the endpoint's host only; on another host a request for one goes to
+      # the route it would match without them (`BrandoAdmin.AdminHost`).
+      @doc false
+      def call(conn, opts) do
+        case BrandoAdmin.AdminHost.refused_prefix(conn, __MODULE__) do
+          nil -> super(conn, opts)
+          prefix -> BrandoAdmin.AdminHost.dispatch_without(prepare(conn), __MODULE__, prefix)
+        end
+      end
 
       pipeline :admin do
         plug :accepts, ["html"]
@@ -267,6 +278,10 @@ defmodule Brando.Router do
       end
     end
   end
+
+  @doc false
+  # The decoded path segments of the admin's mount path
+  def __path_segments__(path) when is_binary(path), do: String.split(path, "/", trim: true)
 
   # Brando's own admin screens, kept out of `admin_routes/3`'s quote.
   defp config_routes do

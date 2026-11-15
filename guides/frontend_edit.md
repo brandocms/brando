@@ -34,6 +34,10 @@ commented out.
 
 The plug only acts for someone signed in to the admin with backend access, and
 with the config off it does nothing.
+With `tenancy_mode: :multi` the admin answers on the endpoint's host only
+([Where the admin answers](tenancy_and_environments.md#where-the-admin-answers)),
+and the sidebar is an admin view framed from the page's own host, so the
+plug adds nothing to the sites' pages.
 
 ## What an admin sees
 
