@@ -1,6 +1,6 @@
 defmodule Brando.Blueprint.Attributes.Dsl do
   alias Brando.Blueprint.Attributes
-  alias Brando.RuntimeConfig
+  alias Brando.Blueprint.CompileConfig
 
   @valid_attributes [
     :boolean,
@@ -93,7 +93,7 @@ defmodule Brando.Blueprint.Attributes.Dsl do
     default_languages =
       case Keyword.get(attr.opts, :languages) do
         nil ->
-          RuntimeConfig.get(:languages) ||
+          CompileConfig.read(:languages) ||
             [
               [value: "en", text: "English"],
               [value: "no", text: "Norsk"]

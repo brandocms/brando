@@ -460,7 +460,8 @@ Two lists of content languages have different jobs:
 - **The installation's languages**, `config :brando, languages:` and
   `default_language:`, are what the installation can hold. The `language`
   field accepts these, a site is checked against them, and every language's
-  label (`text:`) comes from here.
+  label (`text:`) comes from here. Adding one recompiles Brando: see
+  [Configure content and interface languages](i18n.md#configure-content-and-interface-languages).
 - **A site's languages**, `languages` and `default_language` on its registry
   row, are what that site uses: a subset of the installation's, in the site's
   own order.

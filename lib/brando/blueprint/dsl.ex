@@ -92,7 +92,8 @@ defmodule Brando.Blueprint.Dsl do
       generated_rich_text_fields(),
       generated_color_fields(),
       generated_changeset(),
-      generated_trait_implementations()
+      generated_trait_implementations(),
+      generated_compile_config()
     ]
     |> Enum.flat_map(&generated_expressions/1)
     |> then(&{:__block__, [], &1})
@@ -100,6 +101,14 @@ defmodule Brando.Blueprint.Dsl do
 
   defp generated_expressions({:__block__, _metadata, expressions}), do: expressions
   defp generated_expressions(expression), do: [expression]
+
+  # Last, after every expression that can read configuration while the
+  # Blueprint compiles: see `Brando.Blueprint.CompileConfig`.
+  defp generated_compile_config do
+    quote location: :keep do
+      Brando.Blueprint.CompileConfig.track(__ENV__)
+    end
+  end
 
   defp generated_state do
     quote location: :keep, unquote: false do

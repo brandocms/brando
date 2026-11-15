@@ -8,6 +8,7 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   """
 
   alias Brando.Blueprint.AssetConfigValidator
+  alias Brando.Blueprint.CompileConfig
   alias Brando.Images.Size
   alias Brando.RuntimeConfig
 
@@ -143,11 +144,7 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
 
   defp default_asset_config(type, config_module) do
     configured =
-      case RuntimeConfig.get(asset_context(type)) do
-        nil -> nil
-        config when is_list(config) -> Keyword.get(config, :default_config)
-        config when is_map(config) -> Map.get(config, :default_config)
-      end
+      CompileConfig.read([asset_context(type), :default_config])
 
     default_config = configured || config_module.default_config()
     default_asset = %{name: :default, type: type}
