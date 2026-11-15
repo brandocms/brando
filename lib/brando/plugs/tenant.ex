@@ -94,10 +94,13 @@ defmodule Brando.Plug.Tenant do
     query = if conn.query_string == "", do: "", else: "?" <> conn.query_string
 
     conn
-    |> put_resp_header("location", "#{scheme()}://#{domain}#{conn.request_path}#{query}")
+    |> put_resp_header("location", "#{scheme()}://#{domain}#{requested_path(conn)}#{query}")
     |> send_resp(status, "")
     |> halt()
   end
+
+  # `Brando.Plug.Markdown` takes `.md` off the path before the router
+  defp requested_path(conn), do: conn.private[:brando_original_request_path] || conn.request_path
 
   defp scheme, do: URI.parse(Brando.endpoint().url()).scheme || "https"
 

@@ -263,6 +263,17 @@ defmodule Brando.Tenant.RedirectHostsTest do
       assert get_resp_header(conn, "location") == ["#{scheme()}://acme.test/contact?sent=1"]
     end
 
+    test "a Markdown request keeps the path the client asked for" do
+      conn =
+        :get
+        |> conn("http://www.acme.test/about.md?lang=en", nil)
+        |> Brando.Plug.Markdown.call(Brando.Plug.Markdown.init([]))
+        |> Brando.Plug.Tenant.call([])
+
+      assert conn.status == 301
+      assert get_resp_header(conn, "location") == ["#{scheme()}://acme.test/about.md?lang=en"]
+    end
+
     test "a static build's signed context keeps precedence over the redirect", %{site: site, production: production} do
       conn =
         :get
