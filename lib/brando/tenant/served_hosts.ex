@@ -128,7 +128,8 @@ defmodule Brando.Tenant.ServedHosts do
   def init(nil) do
     # `admitted`: the hosts this process saw in the file or admitted itself, kept
     # while bound. In memory only: a new process starts from the file alone.
-    state = %{timer: nil, error: nil, admitted: MapSet.new()}
+    # `tick`: the reference the pending timer's message carries
+    state = %{timer: nil, tick: nil, error: nil, admitted: MapSet.new()}
     # A restart after boot finds the cache warmed and hears no warm for it
     if enabled?() and Cache.warmed?(), do: {:ok, state, {:continue, :check}}, else: {:ok, state}
   end
@@ -146,9 +147,10 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   @impl true
-  # A cold cache binds no host, and a check then would empty the file
-  def handle_info(:tick, state) do
-    state = %{state | timer: nil}
+  # A cold cache binds no host, and a check then would empty the file. A tick
+  # of a timer cancelled after it fired is not the current one, and ignored.
+  def handle_info({:tick, tick}, %{tick: tick} = state) do
+    state = %{state | timer: nil, tick: nil}
     if Cache.warmed?(), do: {:noreply, run(state)}, else: {:noreply, state}
   end
 
@@ -156,7 +158,7 @@ defmodule Brando.Tenant.ServedHosts do
 
   defp run(state) do
     if state.timer, do: Process.cancel_timer(state.timer)
-    state = %{state | timer: nil}
+    state = %{state | timer: nil, tick: nil}
     config = config()
 
     if configured_file?(config[:file]) do
@@ -230,7 +232,8 @@ defmodule Brando.Tenant.ServedHosts do
         do: interval(:retry_interval, @retry_interval),
         else: interval(:recheck_interval, @recheck_interval)
 
-    %{state | timer: Process.send_after(self(), :tick, interval)}
+    tick = make_ref()
+    %{state | timer: Process.send_after(self(), {:tick, tick}, interval), tick: tick}
   end
 
   defp interval(key, default) do

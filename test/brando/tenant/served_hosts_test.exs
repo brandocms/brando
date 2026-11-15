@@ -125,6 +125,25 @@ defmodule Brando.Tenant.ServedHostsTest do
 
   defp lines(file), do: file |> File.read!() |> String.split("\n", trim: true)
 
+  defp flush_lookups do
+    receive do
+      {:looked_up, _host} -> flush_lookups()
+    after
+      0 -> :ok
+    end
+  end
+
+  defp wait_for_messages(pid, count) do
+    case Process.info(pid, :message_queue_len) do
+      {:message_queue_len, queued} when queued >= count ->
+        :ok
+
+      _fewer ->
+        Process.sleep(5)
+        wait_for_messages(pid, count)
+    end
+  end
+
   describe "admission" do
     test "a host pointing here is admitted, the others wait", %{path: file, site: site} do
       DNS.answer("www.acme.test", [@here, @here_v6])
@@ -575,7 +594,7 @@ defmodule Brando.Tenant.ServedHostsTest do
       :erlang.trace(pid, true, [:receive])
       on_exit(fn -> :erlang.trace(pid, false, [:receive]) end)
 
-      assert_receive {:trace, ^pid, :receive, :tick}
+      assert_receive {:trace, ^pid, :receive, {:tick, _}}
       :sys.get_state(pid)
 
       assert File.read!(file) == "www.acme.test\n"
@@ -609,12 +628,35 @@ defmodule Brando.Tenant.ServedHostsTest do
       :erlang.trace(pid, true, [:receive])
       on_exit(fn -> :erlang.trace(pid, false, [:receive]) end)
 
-      assert_receive {:trace, ^pid, :receive, :tick}
-      assert_receive {:trace, ^pid, :receive, :tick}
+      assert_receive {:trace, ^pid, :receive, {:tick, _}}
+      assert_receive {:trace, ^pid, :receive, {:tick, _}}
       :sys.get_state(pid)
 
       refute_received {:looked_up, _host}
       assert File.read!(file) == "www.acme.test\n"
+    end
+
+    test "a timer that fired while a check was queued does not run a second check", %{path: file, site: site} do
+      :persistent_term.put({NotifyingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver, retry_interval: 20)
+      # Waits for its DNS, so every check looks it up
+      bind(site, "production", "www.acme.test", true)
+      assert_received {:looked_up, "www.acme.test"}
+
+      pid = Process.whereis(ServedHosts)
+      :sys.suspend(pid)
+      # Lookups of checks the retry timer ran before the suspension
+      flush_lookups()
+      ServedHosts.registry_changed()
+      # The cast, then the tick of the timer the last check set
+      wait_for_messages(pid, 2)
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver)
+      :sys.resume(pid)
+      :sys.get_state(pid)
+
+      assert_received {:looked_up, "www.acme.test"}
+      refute_received {:looked_up, _host}
     end
 
     test "the status is broadcast on this node only: each node has its own file", %{site: site} do
