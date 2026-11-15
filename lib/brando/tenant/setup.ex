@@ -383,5 +383,5 @@ defmodule Brando.Tenant.Setup do
   defp site_key(attrs), do: Map.get(attrs, :key, Map.get(attrs, "key"))
 
   @doc false
-  def lifecycle_lock_key(site_key), do: "brando:site-lifecycle:#{site_key}"
+  def lifecycle_lock_key(site_key), do: Lock.lifecycle_key(site_key)
 end

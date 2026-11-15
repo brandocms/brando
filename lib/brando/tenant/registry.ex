@@ -68,19 +68,78 @@ defmodule Brando.Tenant.Registry do
   user making the change. A language removed deletes nothing: its content
   stays, and is used again when the language is added back. A change of the
   default language syncs each environment's identifiers.
+
+  A new default language that the same change adds is seeded in every
+  environment before the row is written instead, so the site's `/` has its
+  homepage as soon as it moves there. When an environment cannot be seeded
+  the row is left as it was and the changeset names the environment on
+  `:default_language`; what the other environments got stays, unseen until
+  the language is the site's, and the next attempt leaves it alone.
   """
   @spec update_site(Site.t(), map(), keyword()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
   def update_site(%Site{} = site, attrs, opts \\ []) do
     changeset = Site.changeset(site, attrs)
-    result = changeset |> Repo.update(@public_opts) |> refresh_cache_on_success()
-    if Map.has_key?(changeset.changes, :status), do: access_changed(result)
-    if Map.has_key?(changeset.changes, :default_language), do: default_language_changed(result)
-    if Map.has_key?(changeset.changes, :languages), do: languages_added(result, site.languages, opts[:creator])
-    result
+
+    with {:ok, seeded} <- seed_new_default(site, changeset, opts[:creator]) do
+      result = changeset |> Repo.update(@public_opts) |> refresh_cache_on_success()
+      if Map.has_key?(changeset.changes, :status), do: access_changed(result)
+      if Map.has_key?(changeset.changes, :default_language), do: default_language_changed(result)
+
+      if Map.has_key?(changeset.changes, :languages),
+        do: languages_added(result, (site.languages || []) ++ seeded, opts[:creator])
+
+      result
+    end
+  end
+
+  # The new default, when the change adds it, is seeded before the row is
+  # written: until a job seeded it, `/` would answer 404
+  defp seed_new_default(site, %Ecto.Changeset{valid?: true, changes: %{default_language: language}} = changeset, creator) do
+    if Brando.Tenant.mode() == :multi and language not in (site.languages || []) and
+         language in Ecto.Changeset.get_field(changeset, :languages) do
+      seed_in_every_environment(site, changeset, language, creator)
+    else
+      {:ok, []}
+    end
+  end
+
+  defp seed_new_default(_site, _changeset, _creator), do: {:ok, []}
+
+  defp seed_in_every_environment(site, changeset, language, creator) do
+    seed_site = %{Ecto.Changeset.apply_changes(changeset) | environments: list_environments(site.id)}
+
+    case Brando.Worker.SiteLanguageSeed.creator(creator) do
+      nil ->
+        {:error, Ecto.Changeset.add_error(changeset, :default_language, gettext("has no user to seed it as"))}
+
+      creator ->
+        case Brando.Worker.SiteLanguageSeed.seed_environments(seed_site, language, creator) do
+          :ok -> {:ok, [language]}
+          {:error, environment, reason} -> {:error, not_seeded(changeset, environment, reason)}
+        end
+    end
+  end
+
+  defp not_seeded(changeset, environment, reason) do
+    reason =
+      case reason do
+        %{__exception__: true} = exception -> Exception.message(exception)
+        reason when is_atom(reason) -> reason |> Atom.to_string() |> String.replace("_", " ")
+        reason -> inspect(reason)
+      end
+
+    Ecto.Changeset.add_error(
+      changeset,
+      :default_language,
+      gettext("could not be seeded in %{environment}, so nothing was saved: %{reason}",
+        environment: environment.name,
+        reason: reason
+      )
+    )
   end
 
   defp languages_added({:ok, %Site{id: id, languages: languages}}, previous, creator) do
-    added = languages -- (previous || [])
+    added = languages -- previous
 
     if added != [] and Brando.Tenant.mode() == :multi do
       Repo.after_commit({:site_language_seed, id, added}, fn -> seed_languages(id, added, creator) end, late: true)

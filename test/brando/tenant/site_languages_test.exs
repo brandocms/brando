@@ -86,6 +86,19 @@ defmodule Brando.Tenant.SiteLanguagesTest do
     def seed_language(_site, _environment, _language, _creator), do: {:error, :seed_failed}
   end
 
+  defmodule FailingInStaging do
+    @behaviour Brando.Tenant.Seeder
+
+    @impl true
+    def seed(site, environment, creator), do: Brando.Tenant.Seeder.seed(site, environment, creator)
+
+    @impl true
+    def seed_language(_site, %{key: "staging"}, _language, _creator), do: {:error, :seed_failed}
+
+    def seed_language(site, environment, language, creator),
+      do: Brando.Tenant.Seeder.seed_language(site, environment, language, creator)
+  end
+
   setup do
     root = Path.join(System.tmp_dir!(), "brando-site-languages-#{System.unique_integer([:positive])}")
 
@@ -240,6 +253,46 @@ defmodule Brando.Tenant.SiteLanguagesTest do
                    "user_id" => creator.id
                  })
       end)
+    end
+  end
+
+  describe "a language added as the new default" do
+    test "is seeded in every environment before the save, so / answers at once", %{site: site, creator: creator} do
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        assert {:ok, _site} =
+                 Registry.update_site(site, %{languages: ["en", "no"], default_language: "no"}, creator: creator)
+
+        refute_enqueued(worker: SiteLanguageSeed)
+
+        for host <- ["acme.test", "staging.acme.test"] do
+          conn = request("/", host)
+          assert conn.status == 200, host
+          assert conn.resp_body =~ ~s(b-tpl="hero"), host
+        end
+      end)
+    end
+
+    test "fails the save when an environment cannot be seeded, and names it", %{site: site, creator: creator} do
+      put_test_env(:tenant_seeder, FailingInStaging)
+
+      assert {:error, changeset} =
+               Registry.update_site(site, %{languages: ["en", "no"], default_language: "no"}, creator: creator)
+
+      assert [message] = changeset |> Ecto.Changeset.traverse_errors(&elem(&1, 0)) |> Map.fetch!(:default_language)
+      assert message =~ "Staging"
+
+      assert %{languages: ["en"], default_language: "en"} = Registry.get_site(site.id)
+
+      # What the other environment got stays, and the next attempt finishes it
+      in_environment("production", fn -> assert Brando.Repo.get_by(Identity, language: :no) end)
+      put_test_env(:tenant_seeder, Brando.Tenant.Seeder)
+      before = snapshot("tenant_acme_production")
+
+      assert {:ok, _site} =
+               Registry.update_site(site, %{languages: ["en", "no"], default_language: "no"}, creator: creator)
+
+      assert snapshot("tenant_acme_production") == before
+      in_environment("staging", fn -> assert Brando.Repo.get_by(Identity, language: :no) end)
     end
   end
 

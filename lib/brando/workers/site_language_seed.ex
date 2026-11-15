@@ -50,6 +50,36 @@ defmodule Brando.Worker.SiteLanguageSeed do
     :ok
   end
 
+  @doc """
+  Seeds `language` in each of `site`'s environments now, the live one first,
+  holding the site's environment-operation lock so no copy runs between
+  them. Returns the first environment that failed, with the reason; those
+  seeded before it keep their content. `site` is the site as it will be
+  stored, with `language` among its languages.
+  """
+  @spec seed_environments(Site.t(), String.t(), Brando.Users.User.t()) ::
+          :ok | {:error, Brando.Environments.Environment.t(), term()}
+  def seed_environments(%Site{environments: environments} = site, language, creator) when is_list(environments) do
+    Brando.Environments.with_site_lock(site, fn ->
+      environments
+      |> Enum.sort_by(&{not &1.live, &1.name})
+      |> Enum.find_value(:ok, fn environment ->
+        case seed_in(site, environment, language, creator) do
+          :ok -> nil
+          {:error, reason} -> {:error, environment, reason}
+        end
+      end)
+    end)
+  end
+
+  defp seed_in(site, environment, language, creator) do
+    Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, environment), fn ->
+      seed(site, environment, language, creator)
+    end)
+  rescue
+    exception -> {:error, exception}
+  end
+
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"tenant_prefix" => prefix, "language" => language} = args} = job) do
     # Rendering the seeded entries builds their URLs from the site's
@@ -82,9 +112,14 @@ defmodule Brando.Worker.SiteLanguageSeed do
     end)
   end
 
-  defp creator(nil), do: Brando.Setup.Account.superuser()
+  @doc false
+  # The user a seeding names as creator: the one given while active, or the
+  # installation's oldest superuser
+  def creator(nil), do: Brando.Setup.Account.superuser()
 
-  defp creator(user_id) do
+  def creator(%Brando.Users.User{id: user_id}), do: creator(user_id)
+
+  def creator(user_id) do
     case Brando.Repo.get(Brando.Users.User, user_id) do
       %Brando.Users.User{deleted_at: nil, active: true} = user -> user
       _gone -> Brando.Setup.Account.superuser()

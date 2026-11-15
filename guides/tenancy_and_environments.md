@@ -446,7 +446,13 @@ A language added to the site later is seeded with the optional callback
 site's environments, in a job that runs in that environment. It is retried
 when it returns an error or raises, so leave alone what already exists in the
 language. A seeder without it gets the default's
-`Brando.Tenant.Seeder.seed_language/4`; to add to that, call it first:
+`Brando.Tenant.Seeder.seed_language/4`, which checks each piece on its own:
+the identity, SEO record, footer fragment and main menu are created unless the
+language has one, trashed ones included, and the homepage only when the
+language has no page at all, so a language that comes back with pages of its
+own gets no demo homepage. The modules are every language's: it never adds,
+restores or changes one, and the homepage leaves out the blocks of the seed's
+modules that are trashed or deleted. To add to it, call it first:
 
 ```elixir
 @impl true
@@ -500,7 +506,13 @@ A language added to an existing site gets the starting content a new site
 gets, in each of the site's environments: once the change is saved, a job per
 environment (`Brando.Worker.SiteLanguageSeed`) runs the seeder's
 `seed_language/4` (see [Provision sites](#provision-sites-and-initial-environments)).
-What already exists in that language is left alone. The site's card lists an
+What already exists in that language is left alone. A language added as the
+new default in the same save is seeded in every environment before the save
+instead, so the site's `/` has a homepage the moment it moves to that
+language. If an environment cannot be seeded, the save fails with an error
+that names it and the site keeps its languages; what the other environments
+got stays, unseen until the language is the site's, and saving again seeds
+only what is missing. The site's card lists an
 environment that is still being seeded, a failed attempt that is retried with
 its error, and an environment that has no identity in one of the site's
 languages, with a button that seeds it again. Removing a language deletes

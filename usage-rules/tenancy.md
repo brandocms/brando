@@ -102,7 +102,13 @@ A language added to an existing site gets the starting content a new site
 gets, in each of the site's environments: once the change is saved, a job per
 environment (`Brando.Worker.SiteLanguageSeed`) runs the seeder's
 `seed_language/4` (see [Provision sites](deps/brando/guides/tenancy_and_environments.md#provision-sites-and-initial-environments)).
-What already exists in that language is left alone. The site's card lists an
+What already exists in that language is left alone. A language added as the
+new default in the same save is seeded in every environment before the save
+instead, so the site's `/` has a homepage the moment it moves to that
+language. If an environment cannot be seeded, the save fails with an error
+that names it and the site keeps its languages; what the other environments
+got stays, unseen until the language is the site's, and saving again seeds
+only what is missing. The site's card lists an
 environment that is still being seeded, a failed attempt that is retried with
 its error, and an environment that has no identity in one of the site's
 languages, with a button that seeds it again. Removing a language deletes
