@@ -11553,6 +11553,11 @@ msgstr "Ikke lagret: strukturen, mediene og de felles verdiene i denne oversette
 msgid "Not sent"
 msgstr "Ikke sendt"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not served"
+msgstr "Betjenes ikke"
+
 #: lib/brando_admin/components/content/identifier.ex
 #: lib/brando_admin/components/content/list/row.ex
 #: lib/brando_admin/components/content/select_identifier.ex
@@ -17773,6 +17778,11 @@ msgstr "Lenken for nytt passord kunne ikke sendes."
 #, elixir-autogen, elixir-format
 msgid "The reverse proxy is not told about it until the domain is corrected."
 msgstr "Den omvendte proxyen får ikke vite om den før domenet er rettet."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The reverse proxy is not told about it: it is one of the installation's own hosts, or stored in a form no request matches."
+msgstr "Den omvendte proxyen får ikke vite om den: den er en av installasjonens egne verter, eller lagret i en form ingen forespørsel treffer."
 
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format

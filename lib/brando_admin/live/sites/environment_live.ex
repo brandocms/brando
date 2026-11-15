@@ -172,7 +172,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     <.served_host
                       :if={@served_hosts_enabled? && environment.domain}
                       id={"environment-host-status-#{environment.id}"}
-                      state={Map.get(@served_hosts.hosts, Environment.normalize_host(environment.domain))}
+                      state={served_host_state(@served_hosts.hosts, environment.domain)}
                       addresses={@served_hosts.addresses}
                     />
                   </td>
@@ -576,11 +576,29 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
           <span :if={@addresses != []} class="environment-host-status__detail">
             {gettext("Point it at %{addresses}.", addresses: server_addresses(@addresses))}
           </span>
+        <% :excluded -> %>
+          <span class="badge">{gettext("Not served")}</span>
+          <span class="environment-host-status__detail">
+            {gettext(
+              "The reverse proxy is not told about it: it is one of the installation's own hosts, or stored in a form no request matches."
+            )}
+          </span>
         <% nil -> %>
           <span class="badge">{gettext("Checking")}</span>
       <% end %>
     </div>
     """
+  end
+
+  # A domain the registry does not count as bound (`Cache.bound_hosts/0`) is
+  # never checked, so it would read as "Checking" for good
+  defp served_host_state(hosts, domain) do
+    host = Environment.normalize_host(domain)
+
+    case Map.fetch(hosts, host) do
+      {:ok, state} -> state
+      :error -> if host in Brando.Tenant.Cache.bound_hosts(), do: nil, else: :excluded
+    end
   end
 
   defp server_addresses([]), do: gettext("unknown")

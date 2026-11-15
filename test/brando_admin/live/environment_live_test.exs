@@ -767,6 +767,23 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       assert view |> element("#environment-host-status-#{served.id}") |> render() =~ "Served"
     end
 
+    test "a domain the registry does not count as bound says so instead of checking for ever",
+         %{conn: conn, served: served} do
+      # Stored before the changeset dropped the trailing dot: no request matches it
+      Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^served.id),
+        set: [domain: "www.acme.test."]
+      )
+
+      Cache.warm()
+      Brando.Tenant.ServedHosts.check()
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      status = view |> element("#environment-host-status-#{served.id}") |> render()
+      assert status =~ "Not served"
+      refute status =~ "Checking"
+    end
+
     test "a stored value that is no valid host name is not shown as served", %{conn: conn, served: served} do
       put_test_env(Brando.Tenant.ServedHosts,
         file: Brando.Tenant.ServedHosts.status().file,

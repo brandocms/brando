@@ -347,8 +347,12 @@ defmodule Brando.Tenant.ServedHostsTest do
     test "a write removes temporary files an earlier write left behind, and none of its own",
          %{path: file, tmp_dir: tmp_dir, site: site} do
       leftovers = [".served_hosts.12.tmp", ".served_hosts.Zm9vYmFy.tmp"]
-      others = [".other_hosts.12.tmp", "served_hosts.bak"]
+      # Another node sharing the path may be between its write and its rename
+      fresh = ".served_hosts.bm93.tmp"
+      others = [".other_hosts.12.tmp", "served_hosts.bak", fresh]
       for name <- leftovers ++ others, do: File.write!(Path.join(tmp_dir, name), "stale\n")
+      two_minutes_ago = System.os_time(:second) - 120
+      for name <- leftovers, do: File.touch!(Path.join(tmp_dir, name), two_minutes_ago)
 
       DNS.answer("www.acme.test", [@here])
       bind(site, "production", "www.acme.test", true)

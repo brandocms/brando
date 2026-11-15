@@ -11551,6 +11551,11 @@ msgstr ""
 msgid "Not sent"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not served"
+msgstr ""
+
 #: lib/brando_admin/components/content/identifier.ex
 #: lib/brando_admin/components/content/list/row.ex
 #: lib/brando_admin/components/content/select_identifier.ex
@@ -17768,6 +17773,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The reverse proxy is not told about it until the domain is corrected."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The reverse proxy is not told about it: it is one of the installation's own hosts, or stored in a form no request matches."
 msgstr ""
 
 #: lib/brando_admin/components/form/revisions_drawer.ex

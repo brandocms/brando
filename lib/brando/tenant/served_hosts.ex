@@ -70,6 +70,8 @@ defmodule Brando.Tenant.ServedHosts do
   @retry_interval :timer.minutes(1)
   @recheck_interval :timer.minutes(5)
   @lookup_timeout :timer.seconds(10)
+  # Seconds
+  @leftover_age 60
 
   @typedoc """
   Where a bound host stands: in the file (`:served`), admitted but the file
@@ -384,16 +386,27 @@ defmodule Brando.Tenant.ServedHosts do
     end
   end
 
+  # Only ones a minute old: during a blue/green switch another node may share
+  # the path and be between its write and its rename
   defp remove_leftovers(dir, prefix) do
     case File.ls(dir) do
       {:ok, names} ->
         for name <- names,
             String.starts_with?(name, prefix) and String.ends_with?(name, ".tmp") and
               byte_size(name) > byte_size(prefix) + 4,
-            do: File.rm(Path.join(dir, name))
+            path = Path.join(dir, name),
+            stale?(path),
+            do: File.rm(path)
 
       {:error, _reason} ->
         :ok
+    end
+  end
+
+  defp stale?(path) do
+    case File.stat(path, time: :posix) do
+      {:ok, %File.Stat{mtime: mtime}} -> System.os_time(:second) - mtime >= @leftover_age
+      {:error, _reason} -> false
     end
   end
 
