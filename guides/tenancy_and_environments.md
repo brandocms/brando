@@ -709,10 +709,11 @@ Brando checks at boot, after every registry write (on every node, as
 [Several nodes](#several-nodes) describes), once a minute while a bound host
 waits for its DNS, and every five minutes otherwise. The slow check reads the
 file again, so a host another node sharing the path wrote over, during a
-blue/green switch, is admitted again; nothing is looked up while the file
-holds every bound host. Each node keeps its own file, and nothing is stored in
-the database: on a new server the file starts empty, and each host is admitted
-there when its DNS arrives.
+blue/green switch, goes back in: without a lookup when this node saw it in the
+file or admitted it since it started, after admission otherwise. Nothing is
+looked up while the file holds every bound host. Each node keeps its own file,
+and nothing is stored in the database: on a new server the file starts empty,
+and each host is admitted there when its DNS arrives.
 
 The **Environments** screen shows each bound host's state beside its domain:
 **Served** when it is in the file, **Waiting for DNS** with what the host

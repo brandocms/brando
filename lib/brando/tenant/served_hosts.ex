@@ -39,9 +39,12 @@ defmodule Brando.Tenant.ServedHosts do
   node after a registry write, and once a minute (`:retry_interval`, in
   milliseconds) while a bound host waits for its DNS or the file could not be
   written. Otherwise every five minutes (`:recheck_interval`): the file is
-  read again, and a bound host missing from it, which another node sharing
-  the path may have written over, is admitted again. Nothing is looked up
-  while the file holds every bound host. Each node keeps its own file.
+  read again, as another node sharing the path may have written over it. A
+  bound host this process has seen in the file or admitted itself goes back
+  in without a lookup; one it has not is admitted again. That memory is the
+  process's own, so after a restart a lost host is admitted again too.
+  Nothing is looked up while the file holds every bound host. Each node keeps
+  its own file.
 
   ## The file
 
@@ -123,7 +126,9 @@ defmodule Brando.Tenant.ServedHosts do
 
   @impl true
   def init(nil) do
-    state = %{timer: nil, error: nil}
+    # `admitted`: the hosts this process saw in the file or admitted itself, kept
+    # while bound. In memory only: a new process starts from the file alone.
+    state = %{timer: nil, error: nil, admitted: MapSet.new()}
     # A restart after boot finds the cache warmed and hears no warm for it
     if enabled?() and Cache.warmed?(), do: {:ok, state, {:continue, :check}}, else: {:ok, state}
   end
@@ -176,16 +181,18 @@ defmodule Brando.Tenant.ServedHosts do
       {:ok, existing, listed} ->
         {bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
         listed = MapSet.new(listed)
-        {kept, candidates} = Enum.split_with(bound, &MapSet.member?(listed, &1))
+        # Another node sharing the path may have written over a host this one
+        # admitted: it goes back in without a lookup
+        known = MapSet.union(listed, state.admitted)
+        {kept, candidates} = Enum.split_with(bound, &MapSet.member?(known, &1))
         {admitted, waiting, addresses} = admit(candidates, config)
         hosts = Enum.sort(kept ++ admitted)
 
         {written?, error} = write(file, existing, hosts)
-        state = report(state, file, error)
+        state = %{report(state, file, error) | admitted: MapSet.new(hosts)}
 
         statuses =
-          Map.new(kept, &{&1, :served})
-          |> Map.merge(Map.new(admitted, &{&1, if(written?, do: :served, else: :not_written)}))
+          Map.new(hosts, &{&1, if(written? or MapSet.member?(listed, &1), do: :served, else: :not_written)})
           |> Map.merge(waiting)
           |> Map.merge(Map.new(invalid, &{&1, :invalid}))
 

@@ -502,19 +502,43 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert File.read!(file) == "www.acme.test\n"
     end
 
-    test "with nothing waiting, a slow check reads the file again and readmits a host it lost",
+    test "with nothing waiting, a slow check reads the file again and puts back a host it lost, without a lookup",
          %{path: file, site: site} do
-      put_test_env(ServedHosts, file: file, addresses: [@here], recheck_interval: 20)
+      :persistent_term.put({NotifyingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver, recheck_interval: 20)
       DNS.answer("www.acme.test", [@here])
       bind(site, "production", "www.acme.test", true)
       assert %{hosts: %{"www.acme.test" => :served}} = ServedHosts.status()
-      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+      assert_received {:looked_up, "www.acme.test"}
 
-      # Another node sharing the path wrote its stale list
-      DNS.answer("www.acme.test", [@elsewhere])
+      # Another node sharing the path wrote its stale list, and the DNS fails now
+      DNS.answer("www.acme.test", {:error, :timeout})
       File.write!(file, "")
+      pid = Process.whereis(ServedHosts)
+      :erlang.trace(pid, true, [:receive])
+      on_exit(fn -> :erlang.trace(pid, false, [:receive]) end)
 
-      assert_receive {:served_hosts, %{hosts: %{"www.acme.test" => {:waiting, [@elsewhere]}}}}
+      assert_receive {:trace, ^pid, :receive, :tick}
+      :sys.get_state(pid)
+
+      assert File.read!(file) == "www.acme.test\n"
+      assert %{hosts: %{"www.acme.test" => :served}} = ServedHosts.status()
+      refute_received {:looked_up, _host}
+    end
+
+    test "a restarted process starts from the file alone: a host it lost is admitted again",
+         %{path: file, site: site} do
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+      assert lines(file) == ["www.acme.test"]
+
+      File.write!(file, "")
+      DNS.answer("www.acme.test", [@elsewhere])
+      restart()
+
+      assert %{hosts: %{"www.acme.test" => {:waiting, [@elsewhere]}}} = ServedHosts.status()
+      assert File.read!(file) == ""
     end
 
     test "the slow check looks nothing up while the file holds every bound host", %{path: file, site: site} do
