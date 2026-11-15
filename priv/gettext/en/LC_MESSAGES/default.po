@@ -17839,7 +17839,7 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "The served hosts file could not be written, so the reverse proxy has not heard of new hosts: %{error}"
+msgid "The served hosts file could not be updated, so the reverse proxy may not have heard of new hosts: %{error}"
 msgstr ""
 
 #: lib/brando_admin/components/form/video_drawer.ex

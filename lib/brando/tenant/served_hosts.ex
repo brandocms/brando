@@ -140,6 +140,14 @@ defmodule Brando.Tenant.ServedHosts do
     else
       %{state | error: nil}
     end
+  rescue
+    # A bad config or a resolver that raises must not restart this process
+    # until its supervisor, and the application with it, gives up
+    exception ->
+      error = Exception.message(exception)
+      state = report(state, nil, error)
+      publish(%{status() | error: error})
+      schedule(state, true)
   end
 
   defp check(state, config) do
@@ -181,7 +189,7 @@ defmodule Brando.Tenant.ServedHosts do
   defp admit(candidates, config) do
     case Keyword.get(config, :admit, :dns) do
       :always -> {candidates, %{}, []}
-      :dns -> admit_by_dns(candidates, config)
+      _dns -> admit_by_dns(candidates, config)
     end
   end
 
@@ -320,7 +328,10 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   defp report(state, _file, error) do
-    Logger.error("[Brando.Tenant.ServedHosts] Could not write the served hosts file, trying again in a minute: " <> error)
+    Logger.error(
+      "[Brando.Tenant.ServedHosts] Could not update the served hosts file, trying again in a minute: " <> error
+    )
+
     %{state | error: error}
   end
 

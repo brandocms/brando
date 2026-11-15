@@ -17841,8 +17841,8 @@ msgstr "Den valgte teksten ble endret. Prøv igjen med den nye teksten."
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "The served hosts file could not be written, so the reverse proxy has not heard of new hosts: %{error}"
-msgstr "Filen over verter som betjenes kunne ikke skrives, så den omvendte proxyen har ikke fått vite om nye verter: %{error}"
+msgid "The served hosts file could not be updated, so the reverse proxy may not have heard of new hosts: %{error}"
+msgstr "Filen over verter som betjenes kunne ikke oppdateres, så den omvendte proxyen har kanskje ikke fått vite om nye verter: %{error}"
 
 #: lib/brando_admin/components/form/video_drawer.ex
 #, elixir-autogen, elixir-format

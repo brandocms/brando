@@ -122,7 +122,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
             <.icon name="triangle-alert" />
             <span>
               {gettext(
-                "The served hosts file could not be written, so the reverse proxy has not heard of new hosts: %{error}",
+                "The served hosts file could not be updated, so the reverse proxy may not have heard of new hosts: %{error}",
                 error: @served_hosts.error
               )}
             </span>
@@ -564,7 +564,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
           </span>
         <% :unresolved -> %>
           <span class="badge badge--attention">{gettext("Does not resolve")}</span>
-          <span class="environment-host-status__detail">
+          <span :if={@addresses != []} class="environment-host-status__detail">
             {gettext("Point it at %{addresses}.", addresses: server_addresses(@addresses))}
           </span>
         <% nil -> %>

@@ -287,7 +287,7 @@ defmodule Brando.Tenant.ServedHostsTest do
           assert %{error: ^error} = ServedHosts.check()
         end)
 
-      assert [_once] = Regex.scan(~r/Could not write the served hosts file/, log)
+      assert [_once] = Regex.scan(~r/Could not update the served hosts file/, log)
       assert Process.alive?(Process.whereis(ServedHosts))
 
       File.mkdir_p!(Path.dirname(file))
@@ -297,6 +297,34 @@ defmodule Brando.Tenant.ServedHostsTest do
       end)
 
       assert File.read!(file) == "www.acme.test\n"
+    end
+  end
+
+  describe "a broken setup" do
+    defmodule RaisingResolver do
+      def lookup(_host), do: raise("resolver broke")
+    end
+
+    test "a resolver that raises leaves the host waiting", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: RaisingResolver)
+      bind(site, "production", "www.acme.test", true)
+
+      assert %{hosts: %{"www.acme.test" => :unresolved}, error: nil} = ServedHosts.check()
+      assert File.read!(file) == ""
+    end
+
+    test "a check that raises is reported and does not restart the process", %{path: file, site: site} do
+      pid = Process.whereis(ServedHosts)
+      bind(site, "production", "www.acme.test", true)
+      put_test_env(ServedHosts, file: file, addresses: :not_a_list)
+
+      log = capture_log(fn -> assert %{error: "" <> _} = ServedHosts.check() end)
+
+      assert log =~ "Could not update the served hosts file"
+      assert Process.whereis(ServedHosts) == pid
+
+      put_test_env(ServedHosts, file: file, admit: :always)
+      capture_log(fn -> assert %{error: nil, hosts: %{"www.acme.test" => :served}} = ServedHosts.check() end)
     end
   end
 
