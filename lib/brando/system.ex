@@ -30,6 +30,7 @@ defmodule Brando.System do
     Logger.info("==> Brando >> Running system checks...")
     Brando.Cache.put(:warnings, [], :infinite)
     {:ok, {:module_config, :exists}} = check_module_config_exists()
+    :ok = Brando.Blueprint.CompileConfig.check!()
     {:ok, {:tenancy_config, :valid}} = check_tenancy_config()
     {:ok, {:villain_filters, :exists}} = check_villain_filters_exists()
     {:ok, {:media_path, :exists}} = check_media_path_exists()
