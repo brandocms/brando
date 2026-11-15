@@ -120,11 +120,15 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
             role="alert"
           >
             <.icon name="triangle-alert" />
-            <span>
+            <%!-- The error names a server path or a raw exception: superusers only --%>
+            <span :if={@can_bind_hosts?}>
               {gettext(
                 "The served hosts file could not be updated, so the reverse proxy may not have heard of new hosts: %{error}",
                 error: @served_hosts.error
               )}
+            </span>
+            <span :if={!@can_bind_hosts?}>
+              {gettext("The served hosts file could not be written. The reverse proxy may not have heard of new hosts.")}
             </span>
           </div>
 

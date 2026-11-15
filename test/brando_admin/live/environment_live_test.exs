@@ -798,6 +798,23 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       assert view |> element(".environment-served-hosts-error") |> render() =~ file
     end
 
+    test "only a superuser sees why the file could not be written", %{site: site, away: away, tmp_dir: tmp_dir} do
+      file = Path.join([tmp_dir, "missing", "served_hosts"])
+      put_test_env(Brando.Tenant.ServedHosts, file: file, addresses: ["203.0.113.10"])
+      ExUnit.CaptureLog.capture_log(fn -> Brando.Tenant.ServedHosts.check() end)
+
+      {:ok, view, _html} = live(site_admin_conn(site), "/admin/config/environments")
+
+      error = view |> element(".environment-served-hosts-error") |> render()
+      assert error =~ "The served hosts file could not be written."
+      refute error =~ tmp_dir
+      refute error =~ "no such file"
+
+      away_status = view |> element("#environment-host-status-#{away.id}") |> render()
+      assert away_status =~ "198.51.100.7"
+      assert away_status =~ "203.0.113.10"
+    end
+
     test "with the feature off, nothing is shown", %{conn: conn, served: served} do
       put_test_env(Brando.Tenant.ServedHosts, [])
 
