@@ -18,6 +18,15 @@ defmodule Mix.Tasks.Brando.SsgTest do
     Mix.Task.reenable("brando.ssg")
     Mix.Task.reenable("run")
 
+    serve_endpoints = Application.fetch_env(:phoenix, :serve_endpoints)
+
+    on_exit(fn ->
+      case serve_endpoints do
+        {:ok, value} -> Application.put_env(:phoenix, :serve_endpoints, value)
+        :error -> Application.delete_env(:phoenix, :serve_endpoints)
+      end
+    end)
+
     root = Path.join(System.tmp_dir!(), "brando-ssg-task-#{System.unique_integer([:positive])}")
     on_exit(fn -> File.rm_rf(root) end)
     %{root: root}
@@ -59,6 +68,38 @@ defmodule Mix.Tasks.Brando.SsgTest do
     assert File.read!(Path.join(output, "index.html")) =~ "home"
     assert Application.get_env(:brando, SSGEndpoint)[:watchers] == []
     assert Application.get_env(:phoenix, :serve_endpoints)
+  end
+
+  test "keeps the watchers off when Mix loads the project's application after the task starts", %{root: root} do
+    app = :"acme_ssg_#{System.unique_integer([:positive])}"
+    endpoint = AcmeWeb.Endpoint
+    watchers = [vite: {Brando.Vite, :watch, [root]}]
+
+    # Mix's loadconfig stores config/config.exs before the project's application
+    # is loaded, persistent so that loading it keeps the values
+    Application.put_env(app, endpoint, [http: [port: 4000], watchers: watchers], persistent: true)
+
+    on_exit(fn ->
+      :application.unload(app)
+      Application.delete_env(app, endpoint, persistent: true)
+    end)
+
+    put_test_env(:otp_app, app)
+    put_test_env(:endpoint_module, endpoint)
+    Mix.shell(Mix.Shell.Process)
+    on_exit(fn -> Mix.shell(Mix.Shell.IO) end)
+
+    assert :ok = Mix.Tasks.Brando.Ssg.run(["--force", "--dry-run", "--output", Path.join(root, "output")])
+
+    # What compile.all does before the endpoint starts
+    :ok =
+      :application.load(
+        {:application, app,
+         [description: ~c"acme", vsn: ~c"0.1.0", modules: [], registered: [], applications: [:kernel, :stdlib]]}
+      )
+
+    assert Application.get_env(app, endpoint)[:watchers] == []
+    assert Application.get_env(app, endpoint)[:http] == [port: 4000]
   end
 
   test "says what is missing when the endpoint has no HTTP listener", %{root: root} do

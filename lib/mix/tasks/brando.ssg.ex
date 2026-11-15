@@ -60,7 +60,11 @@ defmodule Mix.Tasks.Brando.Ssg do
     # The build requests every page from the running endpoint's listener (see
     # `Brando.SSG.listener_url/1`), so unlike the other tasks this one must
     # listen. It needs no Vite dev servers, which the watchers would start.
-    Application.put_env(:phoenix, :serve_endpoints, true)
+    # Persistent, as Mix stores the project's configuration: loading an
+    # application keeps only persistent values. After app.config, which loads
+    # the project's application and merges config/runtime.exs into its env.
+    Application.put_env(:phoenix, :serve_endpoints, true, persistent: true)
+    Mix.Task.run("app.config")
     without_watchers(Brando.otp_app(), Brando.endpoint())
     Application.put_env(:logger, :level, :error)
 
@@ -96,8 +100,11 @@ defmodule Mix.Tasks.Brando.Ssg do
 
   defp without_watchers(otp_app, endpoint) do
     case Application.get_env(otp_app, endpoint) do
-      config when is_list(config) -> Application.put_env(otp_app, endpoint, Keyword.put(config, :watchers, []))
-      _none -> :ok
+      config when is_list(config) ->
+        Application.put_env(otp_app, endpoint, Keyword.put(config, :watchers, []), persistent: true)
+
+      _none ->
+        :ok
     end
   end
 
