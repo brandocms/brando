@@ -737,8 +737,10 @@ config :brando, Brando.Tenant.ServedHosts,
   admit: :dns
 ```
 
-The file holds every host the registry binds (each environment's domain, on
-every site, suspended and archived ones included) once it is admitted. A host
+The file holds every host the registry binds (each environment's domain and
+its redirect hosts, on every site, suspended and archived ones included) once
+it is admitted. A redirect host needs a route and a certificate as its domain
+does, or a request for it never reaches Brando to be redirected. A host
 is admitted when it resolves and every address it resolves to, IPv4 and IPv6,
 is one of this server's: a proxy asks for a certificate as soon as it gets a
 host, and a request for a host whose DNS still points at the old server fails
@@ -763,10 +765,11 @@ looked up while the file holds every bound host. Each node keeps its own file,
 and nothing is stored in the database: on a new server the file starts empty,
 and each host is admitted there when its DNS arrives.
 
-The **Environments** screen shows each bound host's state beside its domain:
+The **Environments** screen shows each bound host's state under its domain,
+the domain's first and then one line for each redirect host, led by its name:
 **Served** when it is in the file, **Waiting for DNS** with what the host
 resolves to now and this server's addresses, **Does not resolve**, or **Not a
-full host name** for a bound domain the file leaves out. A file that could not
+full host name** for a bound host the file leaves out. A file that could not
 be written is shown above the list (with the reason to superusers only),
 logged once, and tried again every minute; the application keeps running.
 
