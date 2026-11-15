@@ -6,6 +6,7 @@ defmodule Brando.Utils do
   alias Brando.Cache
   alias Brando.CDN
   alias Brando.Files
+  alias Brando.Tenant
 
   @type changeset :: Ecto.Changeset.t()
   @type conn :: Plug.Conn.t()
@@ -573,18 +574,18 @@ defmodule Brando.Utils do
   def hostname(path), do: Path.join(hostname(), path)
 
   defp site_domain do
-    case Brando.Tenant.mode() do
+    case Tenant.mode() do
       :none ->
         nil
 
       mode ->
-        prefix = Brando.Tenant.current_prefix()
-        site_key = Brando.Tenant.site_key_of(prefix) || if(mode == :single, do: Brando.config(:site_key))
-        environment_key = Brando.Tenant.environment_key_of(prefix)
+        prefix = Tenant.current_prefix()
+        site_key = Tenant.site_key_of(prefix) || if(mode == :single, do: Brando.config(:site_key))
+        environment_key = Tenant.environment_key_of(prefix)
 
         site_key &&
-          (domain_of(environment_key && Brando.Tenant.Cache.get_env(site_key, environment_key)) ||
-             domain_of(Brando.Tenant.Cache.get_live_env(site_key)))
+          (domain_of(environment_key && Tenant.Cache.get_env(site_key, environment_key)) ||
+             domain_of(Tenant.Cache.get_live_env(site_key)))
     end
   end
 
