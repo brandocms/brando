@@ -223,8 +223,30 @@
     }
   }
 
-  .environment-overview > .environment-hint {
+  .environment-overview > .environment-hint,
+  .environment-overview > .environment-served-hosts-error {
     margin-top: 16px;
+  }
+
+  .environment-served-hosts-error span {
+    max-width: 72ch;
+    overflow-wrap: anywhere;
+  }
+
+  /* Where a bound host stands with the reverse proxy, under its domain:
+     aligned with the input's text, the detail in the muted ink. */
+  .environment-host-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    margin-top: 4px;
+    padding-left: 9px;
+  }
+
+  .environment-host-status__detail {
+    color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+    font-size: var(--brando-text-sm);
   }
 
   .environment-table-wrap {

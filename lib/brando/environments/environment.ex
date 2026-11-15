@@ -60,7 +60,26 @@ defmodule Brando.Environments.Environment do
     |> unique_constraint(:live, name: :environments_one_live_per_site_index)
   end
 
-  defp valid_host?(host), do: byte_size(host) <= @host_max_length and Regex.match?(@host_format, host)
+  @doc """
+  A host as `domain` stores it: trimmed and lowercased, `nil` when blank or
+  not a string. Compare a stored or typed host with a looked-up one through this.
+  """
+  @spec normalize_host(term()) :: String.t() | nil
+  def normalize_host(host) when is_binary(host) do
+    case host |> String.trim() |> String.downcase() do
+      "" -> nil
+      normalized -> normalized
+    end
+  end
+
+  def normalize_host(_host), do: nil
+
+  @doc "Whether a normalized host is a bare host name, as a new `domain` must be."
+  @spec valid_host?(term()) :: boolean()
+  def valid_host?(host) when is_binary(host),
+    do: byte_size(host) <= @host_max_length and Regex.match?(@host_format, host)
+
+  def valid_host?(_host), do: false
 
   defp validate_domain(changeset) do
     validate_change(changeset, :domain, fn :domain, domain ->
@@ -79,14 +98,8 @@ defmodule Brando.Environments.Environment do
 
   defp normalize_domain(changeset) do
     update_change(changeset, :domain, fn
-      domain when is_binary(domain) ->
-        case domain |> String.trim() |> String.downcase() do
-          "" -> nil
-          normalized -> normalized
-        end
-
-      domain ->
-        domain
+      domain when is_binary(domain) -> normalize_host(domain)
+      domain -> domain
     end)
   end
 end

@@ -39,18 +39,19 @@ defmodule Brando.Test.Support do
   `fetch_env/2` distinguishes "absent" from "present and nil", and `delete_env/2`
   is what restores the former.
 
-  `Brando.Sites.DeployConfig` keeps the test resolver from config/test.exs
-  unless `value` names its own: a deploy host is then never looked up in the
-  machine's DNS, which answers differently from one machine to the next (a
-  development resolver that sends every `.test` name to 127.0.0.1 makes
+  `Brando.Sites.DeployConfig` and `Brando.Tenant.ServedHosts` keep the test
+  resolver from config/test.exs unless `value` names its own: a host is then
+  never looked up in the machine's DNS, which answers differently from one
+  machine to the next (a development resolver that sends every `.test` name to 127.0.0.1 makes
   `example.test` this server).
   """
   def put_test_env(key, value, opts \\ [])
 
-  def put_test_env(Brando.Sites.DeployConfig, value, _opts) when is_list(value) do
-    case Application.get_env(:brando, Brando.Sites.DeployConfig, [])[:resolver] do
-      nil -> put_global_env(Brando.Sites.DeployConfig, value)
-      resolver -> put_global_env(Brando.Sites.DeployConfig, Keyword.put_new(value, :resolver, resolver))
+  def put_test_env(key, value, _opts)
+      when key in [Brando.Sites.DeployConfig, Brando.Tenant.ServedHosts] and is_list(value) do
+    case Application.get_env(:brando, key, [])[:resolver] do
+      nil -> put_global_env(key, value)
+      resolver -> put_global_env(key, Keyword.put_new(value, :resolver, resolver))
     end
   end
 

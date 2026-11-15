@@ -2965,6 +2965,11 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
+msgid "Brando answers on it, but the reverse proxy is only told about full host names such as www.example.com, not single names or addresses."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
 msgid "Brando cannot find the migrations directory %{path}, so it cannot tell whether this archive is up to date. Nothing was restored."
 msgstr ""
 
@@ -3520,6 +3525,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "Checked the module “%{module}”"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Checking"
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
@@ -5957,6 +5967,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Document unchanged"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Does not resolve"
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -11379,6 +11394,11 @@ msgstr ""
 msgid "None. Nothing is written until a crawler is blocked or a training preference is chosen."
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not a full host name"
+msgstr ""
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
@@ -11434,6 +11454,11 @@ msgstr ""
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not in any entry"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not in the file yet"
 msgstr ""
 
 #: lib/brando/seo/checks.ex
@@ -11531,6 +11556,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not sent"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not served"
 msgstr ""
 
 #: lib/brando_admin/components/content/identifier.ex
@@ -12858,6 +12888,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Please wait…"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Point it at %{addresses}."
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
@@ -14292,6 +14327,11 @@ msgstr ""
 #: lib/brando_admin/components/form/notes_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Resolved by %{name}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resolves to %{resolved}; this server is %{addresses}."
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -15731,6 +15771,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Serve the site's build on %{environment} again? Requests switch immediately."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served"
 msgstr ""
 
 #: lib/brando_admin/components/form/meta_previews.ex
@@ -17732,6 +17777,11 @@ msgstr ""
 msgid "The reset link could not be sent."
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The reverse proxy is not told about it: it is one of the installation's own hosts, or stored in a form no request matches."
+msgstr ""
+
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "The revision could not be activated."
@@ -17805,6 +17855,16 @@ msgstr ""
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The selected text changed. Try again with the current text."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The served hosts file could not be updated, so the reverse proxy may not have heard of new hosts: %{error}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The served hosts file could not be written. The reverse proxy may not have heard of new hosts."
 msgstr ""
 
 #: lib/brando_admin/components/form/video_drawer.ex
@@ -20004,6 +20064,11 @@ msgstr ""
 msgid "Visitors per entry, in Content SEO. A developer sets it up in the site's configuration."
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for DNS"
+msgstr ""
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Waiting for a %{language} version of %{entries}. Until then, this block links to the %{source} one. Once it is translated, the link moves over by itself."
@@ -21613,6 +21678,7 @@ msgid "undeleted"
 msgstr ""
 
 #: lib/brando_admin/components/form/notes_drawer.ex
+#: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "unknown"
 msgstr ""
