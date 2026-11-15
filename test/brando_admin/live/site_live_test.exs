@@ -288,6 +288,37 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       assert has_element?(view, "#languages-site-#{site.id} [role=status]", "Removing no deletes nothing")
     end
 
+    test "what was typed in one field stays while the other is edited, and is what gets saved",
+         %{conn: conn, acme: site} do
+      {:ok, view, _html} = live(conn, "/admin/sites")
+      form_id = "#languages-site-#{site.id}"
+
+      view
+      |> form(form_id, site: %{id: site.id, languages: "en,no"})
+      |> render_change()
+
+      # The card re-renders on each change: both fields show the draft, so the
+      # browser does not put the saved value back in the one not being typed in
+      assert view |> element(~s(#{form_id} input[name="site[languages]"])) |> render() =~ ~s(value="en,no")
+
+      view
+      |> form(form_id, site: %{default_language: "no"})
+      |> render_change()
+
+      assert view |> element(~s(#{form_id} input[name="site[languages]"])) |> render() =~ ~s(value="en,no")
+      assert view |> element(~s(#{form_id} input[name="site[default_language]"])) |> render() =~ ~s(value="no")
+
+      # Submitting what the form holds, with nothing typed anew
+      view |> form(form_id) |> render_submit()
+
+      site = Registry.get_site(site.id)
+      assert site.languages == ["en", "no"]
+      assert site.default_language == "no"
+
+      # Saved: the form is back on the site's own values
+      assert view |> element(~s(#{form_id} input[name="site[languages]"])) |> render() =~ ~s(value="en,no")
+    end
+
     test "the default is not removed without a new default", %{conn: conn, acme: site} do
       {:ok, site} = Registry.update_site(site, %{languages: ["en", "no"], default_language: "no"})
       {:ok, view, _html} = live(conn, "/admin/sites")
