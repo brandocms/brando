@@ -14,6 +14,14 @@ defmodule Brando.SEO.RobotsTest do
     assert Robots.render(seo(nil, nil)) == Robots.default_robots()
   end
 
+  test "the default text names the admin's path only where the admin answers" do
+    assert Robots.render(seo(nil, nil), nil, admin?: true) =~ ~r/^Disallow: \/admin\/$/m
+    refute Robots.render(seo(nil, nil), nil, admin?: false) =~ "/admin"
+    assert Robots.render(seo(nil, nil), nil, admin?: false) =~ ~r/^User-agent: \*$/m
+    # The editors' own text is theirs
+    assert Robots.render(seo(nil), nil, admin?: false) == @custom
+  end
+
   test "a blocked crawler gets its own group after the custom lines, which are kept" do
     robots = Robots.render(seo(%{"crawlers" => %{"GPTBot" => "block", "CCBot" => "block"}}))
 

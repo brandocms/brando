@@ -128,6 +128,13 @@ defmodule BrandoAdmin.AdminHostTest do
       assert {conn.status, conn.resp_body} == {404, "Not found on this site"}
     end
 
+    test "the site's default robots.txt does not name the admin's path" do
+      conn = request(:get, "/robots.txt", "beta.test")
+      assert conn.status == 200
+      assert conn.resp_body =~ ~r/^User-agent: \*$/m
+      refute conn.resp_body =~ "/admin"
+    end
+
     test "a host bound to nothing answers the plain 404, without a database query" do
       queries = count_queries()
       missing = request(:get, "/no-such-page", "unbound.test")

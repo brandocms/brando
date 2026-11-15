@@ -33,6 +33,7 @@ defmodule Brando.Test.AdminHostRouter do
 
   scope "/" do
     pipe_through :browser
+    get "/robots.txt", BrandoWeb.SEOController, :robots
     get "/*path", Brando.Test.AdminHostSiteController, :show
   end
 
