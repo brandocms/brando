@@ -16,9 +16,19 @@ defmodule Brando.Setup.Seeds do
   to rerun. Nothing here is a migration path: existing content is never
   modified or removed.
 
+  A language added to an existing site is seeded with `added: true`
+  (`Brando.Tenant.Seeder`). The modules are every language's, so that run
+  never inserts, restores or changes one: the homepage uses the seed's
+  modules that are there and not trashed, and leaves out the blocks of the
+  others. A homepage is created only when the language has no page at all,
+  trashed ones included. Each other piece (identity, SEO, footer fragment,
+  menu) is checked on its own, and a trashed one counts as existing.
+
   Run through `mix brando.setup` or `mix brando.gen.seeds`, or
   `Brando.Tenant.Seeder`.
   """
+
+  import Ecto.Query, only: [from: 2]
 
   alias Brando.Cache
   alias Brando.Content
@@ -35,6 +45,16 @@ defmodule Brando.Setup.Seeds do
   @terminal_uid "brando-default-terminal"
   @closing_uid "brando-default-closing"
   @footer_uid "brando-default-footer"
+
+  @module_uids [
+    hero: @hero_uid,
+    steps: @steps_uid,
+    cards: @cards_uid,
+    tips: @tips_uid,
+    terminal: @terminal_uid,
+    closing: @closing_uid,
+    footer: @footer_uid
+  ]
 
   # The version of the module definitions below. A seeded block is built from
   # their refs, so it carries this version even when it uses a module an
@@ -60,6 +80,9 @@ defmodule Brando.Setup.Seeds do
   `user` is the creator of what the seeds create. They write as `user` too,
   unless given `actor: :system`, as provisioning does: the creator may hold
   no rights in a site that does not admit anyone yet.
+
+  With `added: true` the languages were added to a site that already has
+  content (see the module documentation).
   """
   @spec run(Brando.Users.User.t(), keyword()) :: {:ok, map()}
   def run(user, opts \\ []) do
@@ -73,16 +96,17 @@ defmodule Brando.Setup.Seeds do
   defp seed(user, languages, opts) do
     {:ok, report} =
       Brando.Repo.transaction(fn ->
-        modules = modules(user)
+        modules = if opts[:added], do: existing_modules(), else: modules(user)
 
-        languages
-        |> Enum.reduce(%{created: [], skipped: []}, &seed_language(&1, &2, user, modules, opts))
-        |> Map.put(:modules, modules)
+        report =
+          languages
+          |> Enum.reduce(%{created: [], skipped: []}, &seed_language(&1, &2, user, modules, opts))
+          |> Map.put(:modules, modules)
+
+        # This node's caches and the other nodes', once the seeds commit
+        Enum.each(@site_caches, &Cache.rebuild_after_commit/1)
+        report
       end)
-
-    Cache.Identity.set()
-    Cache.SEO.set()
-    Cache.Navigation.set()
 
     {:ok, report}
   rescue
@@ -104,7 +128,8 @@ defmodule Brando.Setup.Seeds do
     |> track(:"identity (#{language})", fn -> identity(language) end)
     |> track(:"seo (#{language})", fn -> seo(language, opts[:seo] || []) end)
     |> track(:"menu (#{language})", fn -> menu(language, user, Keyword.get(opts, :actor, user)) end)
-    |> track(:"page (#{language})", fn -> index_page(language, user, modules) end)
+    |> track(:"page (#{language})", fn -> index_page(language, user, modules, opts) end)
+    |> track(:"footer (#{language})", fn -> footer_fragment(language, user, modules) end)
   end
 
   defp track(report, label, fun) do
@@ -214,6 +239,18 @@ defmodule Brando.Setup.Seeds do
       closing: upsert_module(@closing_uid, user, &closing_module/0),
       footer: upsert_module(@footer_uid, user, &footer_module/0)
     }
+  end
+
+  # The seed's modules as they are, each nil when it is gone or trashed
+  defp existing_modules do
+    uids = Keyword.values(@module_uids)
+
+    found =
+      from(m in Content.Module, where: m.uid in ^uids and is_nil(m.deleted_at))
+      |> Brando.Repo.all()
+      |> Map.new(&{&1.uid, &1})
+
+    Map.new(@module_uids, fn {key, uid} -> {key, Map.get(found, uid)} end)
   end
 
   # Modules carry no creator, so the seeding account is only needed for the
@@ -689,10 +726,22 @@ defmodule Brando.Setup.Seeds do
 
   # ── The index page ────────────────────────────────────────────────────────
 
-  defp index_page(language, user, modules) do
-    if Brando.Repo.get_by(Pages.Page, uri: "index", language: language) do
+  defp index_page(language, user, modules, opts) do
+    if homepage_exists?(language, opts[:added]) do
       :exists
     else
+      blocks =
+        [
+          {modules.hero, &hero_content/0},
+          {modules.steps, &steps_content/0},
+          {modules.cards, &cards_content/0},
+          {modules.tips, &tips_content/0},
+          {modules.terminal, &terminal_content/0},
+          {modules.closing, &closing_content/0}
+        ]
+        |> Enum.reject(fn {module, _content} -> is_nil(module) end)
+        |> Enum.with_index(fn {module, content}, sequence -> module_block(module, sequence, content.()) end)
+
       page =
         Brando.Repo.insert!(%Pages.Page{
           creator_id: user.id,
@@ -703,17 +752,8 @@ defmodule Brando.Setup.Seeds do
           status: :published,
           is_homepage: true,
           sequence: 0,
-          entry_blocks: [
-            module_block(modules.hero, 0, hero_content()),
-            module_block(modules.steps, 1, steps_content()),
-            module_block(modules.cards, 2, cards_content()),
-            module_block(modules.tips, 3, tips_content()),
-            module_block(modules.terminal, 4, terminal_content()),
-            module_block(modules.closing, 5, closing_content())
-          ]
+          entry_blocks: blocks
         })
-
-      footer_fragment(page, language, user, modules)
 
       # Repo inserts bypass context rendering callbacks. Render here so the page
       # is usable on its first request, before any rendering worker has run.
@@ -721,6 +761,16 @@ defmodule Brando.Setup.Seeds do
       page
     end
   end
+
+  # An added language that has pages has a site already: a demo homepage
+  # would publish next to them, whatever its uri, trashed or not
+  defp homepage_exists?(language, true), do: exists?(from(p in Pages.Page, where: p.language == ^language))
+
+  defp homepage_exists?(language, _added),
+    do: exists?(from(p in Pages.Page, where: p.uri == "index" and p.language == ^language))
+
+  # Trashed rows count: the repo's reads do not leave them out
+  defp exists?(query), do: Brando.Repo.one(from(q in query, limit: 1, select: true)) == true
 
   defp hero_content do
     ledger = [
@@ -891,43 +941,57 @@ defmodule Brando.Setup.Seeds do
     }
   end
 
-  defp footer_fragment(page, language, user, modules) do
-    fragment =
-      Brando.Repo.insert!(%Pages.Fragment{
-        parent_key: "partials",
-        key: "footer",
-        title: "Footer",
-        language: language,
-        status: :published,
-        page_id: page.id,
-        creator_id: user.id,
-        entry_blocks: [
-          %Pages.Fragment.Blocks{
-            sequence: 0,
-            block: %Content.Block{
-              type: :module,
-              uid: Brando.Utils.generate_uid(),
-              module_id: modules.footer.id,
-              module_version: @definition_version,
-              source: Pages.Fragment.Blocks,
-              multi: false,
-              sequence: 0,
-              vars: [],
-              refs: [
-                text_ref(
-                  "text",
-                  "<p>This footer is a page fragment. Edit it under Pages → Fragments, " <>
-                    "or remove it from the layout.</p>",
-                  0
-                )
-              ]
-            }
-          }
-        ]
-      })
+  defp footer_fragment(language, user, modules) do
+    footer = from(f in Pages.Fragment, where: f.parent_key == "partials" and f.key == "footer")
 
-    {:ok, fragment} = Content.Blocks.render_entry(Pages.Fragment, fragment.id)
-    fragment
+    if exists?(from(f in footer, where: f.language == ^language)) do
+      :exists
+    else
+      page = from(p in Pages.Page, where: p.uri == "index" and p.language == ^language, limit: 1) |> Brando.Repo.one()
+
+      fragment =
+        Brando.Repo.insert!(%Pages.Fragment{
+          parent_key: "partials",
+          key: "footer",
+          title: "Footer",
+          language: language,
+          status: :published,
+          page_id: page && page.id,
+          creator_id: user.id,
+          entry_blocks: footer_blocks(modules.footer)
+        })
+
+      {:ok, fragment} = Content.Blocks.render_entry(Pages.Fragment, fragment.id)
+      fragment
+    end
+  end
+
+  defp footer_blocks(nil), do: []
+
+  defp footer_blocks(module) do
+    [
+      %Pages.Fragment.Blocks{
+        sequence: 0,
+        block: %Content.Block{
+          type: :module,
+          uid: Brando.Utils.generate_uid(),
+          module_id: module.id,
+          module_version: @definition_version,
+          source: Pages.Fragment.Blocks,
+          multi: false,
+          sequence: 0,
+          vars: [],
+          refs: [
+            text_ref(
+              "text",
+              "<p>This footer is a page fragment. Edit it under Pages → Fragments, " <>
+                "or remove it from the layout.</p>",
+              0
+            )
+          ]
+        }
+      }
+    ]
   end
 
   defp site_name do

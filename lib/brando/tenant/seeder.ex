@@ -13,7 +13,9 @@ defmodule Brando.Tenant.Seeder do
   installation (`Brando.Setup.Seeds`): the modules, a published homepage built
   from them, the footer fragment and a main menu. Each is skipped when it
   already exists in that language, so seeding a language again, or one that
-  was removed from the site and added back, changes nothing.
+  was removed from the site and added back, changes nothing. A language added
+  later gets no modules: its homepage is built from the ones the site has,
+  and only when it has no page at all (`seed_language/4`).
 
   It writes as the system, with the creating user as the creator of what has
   one: provisioning has already checked that the user may create sites, and
@@ -49,15 +51,18 @@ defmodule Brando.Tenant.Seeder do
   @behaviour __MODULE__
 
   @impl true
-  def seed(%Site{} = site, %Environment{}, %User{} = creator), do: seed_languages(site, site.languages, creator)
+  def seed(%Site{} = site, %Environment{}, %User{} = creator), do: seed_languages(site, site.languages, creator, [])
 
   @doc """
-  The default `c:seed_language/4`: the identity, SEO record, homepage, footer
-  fragment and main menu in `language`, each unless it exists.
+  The default `c:seed_language/4`: the identity, SEO record, footer fragment
+  and main menu in `language`, each unless it exists (a trashed one counts),
+  and the homepage when the language has no page at all. It never inserts,
+  restores or changes a module, which every language shares: the homepage is
+  built from the seed's modules that remain (`Brando.Setup.Seeds`).
   """
   @impl true
   def seed_language(%Site{} = site, %Environment{}, language, %User{} = creator) when is_binary(language),
-    do: seed_languages(site, [language], creator)
+    do: seed_languages(site, [language], creator, added: true)
 
   @doc """
   Seeds `language` in `environment` with the installation's configured seeder:
@@ -78,13 +83,13 @@ defmodule Brando.Tenant.Seeder do
   @spec configured() :: module()
   def configured, do: Brando.config(:tenant_seeder) || __MODULE__
 
-  defp seed_languages(site, languages, creator) do
+  defp seed_languages(site, languages, creator, opts) do
     languages = Enum.map(languages, &String.to_existing_atom/1)
 
     {:ok, :ok} =
       Repo.transaction(fn ->
         Enum.each(languages, &identity_and_seo(site, &1))
-        {:ok, _report} = Brando.Setup.Seeds.run(creator, languages: languages, actor: :system)
+        {:ok, _report} = Brando.Setup.Seeds.run(creator, [languages: languages, actor: :system] ++ opts)
         :ok
       end)
 

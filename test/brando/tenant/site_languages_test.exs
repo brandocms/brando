@@ -270,6 +270,129 @@ defmodule Brando.Tenant.SiteLanguagesTest do
     end
   end
 
+  describe "a language added back" do
+    setup %{site: site, creator: creator} do
+      {:ok, site} = Registry.update_site(site, %{languages: ["en", "no"]}, creator: creator)
+      %{site: site}
+    end
+
+    test "whose homepage and footer were trashed gets neither again", %{site: site, creator: creator} do
+      in_environment("production", fn ->
+        {:ok, _page} = Brando.Repo.soft_delete(Brando.Repo.get_by!(Pages.Page, uri: "index", language: :no))
+        {:ok, _footer} = Brando.Repo.soft_delete(footer(:no))
+      end)
+
+      {:ok, site} = Registry.update_site(site, %{languages: ["en"]}, creator: creator)
+      {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]}, creator: creator)
+
+      in_environment("production", fn ->
+        assert [%{deleted_at: %DateTime{}}] = pages(:no)
+        assert [%{deleted_at: %DateTime{}}] = footers(:no)
+      end)
+    end
+
+    test "whose homepage was renamed gets no second homepage or footer", %{site: site, creator: creator} do
+      in_environment("production", fn ->
+        Pages.Page
+        |> Brando.Repo.get_by!(uri: "index", language: :no)
+        |> Ecto.Changeset.change(uri: "home")
+        |> Brando.Repo.update!()
+      end)
+
+      {:ok, site} = Registry.update_site(site, %{languages: ["en"]}, creator: creator)
+      {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]}, creator: creator)
+
+      in_environment("production", fn ->
+        assert [%{uri: "home"}] = pages(:no)
+        assert [_footer] = footers(:no)
+      end)
+    end
+
+    test "gets each missing piece on its own", %{site: site, creator: creator} do
+      in_environment("production", fn ->
+        Brando.Repo.delete!(footer(:no))
+        Brando.Repo.delete_all(from(m in Navigation.Menu, where: m.language == :no))
+      end)
+
+      {:ok, site} = Registry.update_site(site, %{languages: ["en"]}, creator: creator)
+      {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]}, creator: creator)
+
+      in_environment("production", fn ->
+        [page] = pages(:no)
+        assert [%{page_id: page_id}] = footers(:no)
+        assert page_id == page.id
+        assert Brando.Repo.get_by(Navigation.Menu, key: "main", language: :no)
+      end)
+    end
+  end
+
+  describe "a language added that already has pages" do
+    test "gets its identity, SEO, footer and menu, and no demo homepage", %{site: site, creator: creator} do
+      in_environment("production", fn ->
+        Brando.Repo.insert!(%Pages.Page{
+          creator_id: creator.id,
+          title: "Om oss",
+          uri: "om-oss",
+          language: :no,
+          template: "default.html",
+          status: :draft
+        })
+      end)
+
+      {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]}, creator: creator)
+
+      in_environment("production", fn ->
+        assert [%{uri: "om-oss"}] = pages(:no)
+        assert Brando.Repo.get_by(Identity, language: :no)
+        assert Brando.Repo.get_by(SEO, language: :no)
+        assert [%{page_id: nil}] = footers(:no)
+        assert Brando.Repo.get_by(Navigation.Menu, key: "main", language: :no)
+      end)
+
+      in_environment("staging", fn -> assert [%{uri: "index"}] = pages(:no) end)
+    end
+  end
+
+  describe "seeding an added language" do
+    test "leaves the shared modules alone, and builds its homepage from those that remain", %{
+      site: site,
+      creator: creator
+    } do
+      in_environment("production", fn ->
+        {:ok, _hero} = Brando.Repo.soft_delete(Brando.Repo.get_by!(Brando.Content.Module, uid: "brando-default-hero"))
+        Brando.Repo.delete!(Brando.Repo.get_by!(Brando.Content.Module, uid: "brando-default-steps"))
+      end)
+
+      before = in_environment("production", &modules/0)
+      {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]}, creator: creator)
+
+      in_environment("production", fn ->
+        assert modules() == before
+
+        page =
+          Pages.Page
+          |> Brando.Repo.get_by!(uri: "index", language: :no)
+          |> Brando.Repo.preload(entry_blocks: [block: :module])
+
+        blocks = Enum.sort_by(page.entry_blocks, & &1.sequence)
+
+        assert Enum.map(blocks, & &1.block.module.uid) ==
+                 ~w(brando-default-cards brando-default-tips brando-default-terminal brando-default-closing)
+
+        assert Enum.map(blocks, & &1.sequence) == [0, 1, 2, 3]
+      end)
+    end
+
+    test "tells the other nodes of the identity and SEO it wrote", %{site: site, creator: creator} do
+      Phoenix.PubSub.subscribe(Brando.pubsub(), Brando.CacheSync.topic())
+      {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]}, creator: creator)
+
+      for prefix <- @prefixes, cache <- [:identity, :seo] do
+        assert_received {:brando_cache_sync, _origin, {Brando.Cache, {^cache, ^prefix}}}
+      end
+    end
+  end
+
   describe "a job for an environment or language that is gone" do
     test "is cancelled", %{site: site, creator: creator} do
       assert {:cancel, :language_removed} =
@@ -303,6 +426,23 @@ defmodule Brando.Tenant.SiteLanguagesTest do
         |> Enum.sort()
       end
     end)
+  end
+
+  defp pages(language), do: Brando.Repo.all(from(p in Pages.Page, where: p.language == ^language))
+
+  defp footers(language),
+    do:
+      Brando.Repo.all(
+        from(f in Pages.Fragment, where: f.parent_key == "partials" and f.key == "footer" and f.language == ^language)
+      )
+
+  defp footer(language), do: language |> footers() |> hd()
+
+  defp modules do
+    Brando.Content.Module
+    |> Brando.Repo.all()
+    |> Enum.map(&{&1.id, &1.uid, &1.updated_at, &1.deleted_at})
+    |> Enum.sort()
   end
 
   defp in_environment(key, fun), do: Tenant.with_prefix(Tenant.prefix("acme", key), fun)

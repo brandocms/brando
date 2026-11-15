@@ -122,7 +122,7 @@ defmodule Brando.Setup.SeedsTest do
       {:ok, second} = Seeds.run(user, languages: [:en])
 
       assert second.created == []
-      assert length(second.skipped) == 4
+      assert length(second.skipped) == 5
       assert :"menu (en)" in second.skipped
       assert counts == {count(Pages.Page), count(Content.Module), count(Navigation.Menu), count(Pages.Fragment)}
     end
@@ -150,7 +150,7 @@ defmodule Brando.Setup.SeedsTest do
       labels = Enum.reverse(report.created) ++ Enum.reverse(report.skipped)
 
       assert Enum.sort(labels) ==
-               Enum.sort(for l <- [:en, :no], kind <- ~w(identity seo menu page), do: :"#{kind} (#{l})")
+               Enum.sort(for l <- [:en, :no], kind <- ~w(identity seo menu page footer), do: :"#{kind} (#{l})")
 
       assert Enum.filter(Enum.reverse(report.created), &(&1 in [:"menu (en)", :"page (en)", :"menu (no)", :"page (no)"])) ==
                [:"menu (en)", :"page (en)", :"menu (no)", :"page (no)"]
