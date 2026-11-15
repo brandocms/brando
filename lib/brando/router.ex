@@ -146,13 +146,15 @@ defmodule Brando.Router do
           []
         end
 
-      @doc false
+      @doc "The path segments the admin is mounted under (`BrandoAdmin.AdminHost`)."
       def __brando_admin_path__, do: Brando.Router.__path_segments__(unquote(path))
 
-      # With `tenancy_mode: :multi`, the admin's routes (and MCP's) answer on
-      # the endpoint's host only; on another host a request for one goes to
-      # the route it would match without them (`BrandoAdmin.AdminHost`).
-      @doc false
+      @doc """
+      Dispatches `conn` as `Phoenix.Router` does, but for a request for an
+      admin or MCP path on a host other than the endpoint's with
+      `tenancy_mode: :multi`, which goes to the route it would match without
+      them (`BrandoAdmin.AdminHost`).
+      """
       def call(conn, opts) do
         case BrandoAdmin.AdminHost.refused_prefix(conn, __MODULE__) do
           nil -> super(conn, opts)
@@ -279,8 +281,7 @@ defmodule Brando.Router do
     end
   end
 
-  @doc false
-  # The decoded path segments of the admin's mount path
+  @doc ~s(The path segments of a mount path: `"/admin"` gives `["admin"]`.)
   def __path_segments__(path) when is_binary(path), do: String.split(path, "/", trim: true)
 
   # Brando's own admin screens, kept out of `admin_routes/3`'s quote.

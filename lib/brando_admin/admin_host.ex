@@ -58,9 +58,11 @@ defmodule BrandoAdmin.AdminHost do
   @spec serves_admin?(Plug.Conn.t()) :: boolean()
   def serves_admin?(%Plug.Conn{host: host}), do: Tenant.mode() != :multi or admin_host?(host)
 
-  @doc false
-  # The endpoint's host, normalized. An endpoint that has not started answers
-  # nothing, so its configuration is read instead.
+  @doc """
+  The endpoint's host, in lower case and without a trailing dot, or nil. An
+  endpoint that has not started answers nothing, so its configuration is
+  read instead.
+  """
   @spec endpoint_host() :: String.t() | nil
   def endpoint_host do
     normalize(Brando.endpoint().host())
@@ -79,11 +81,12 @@ defmodule BrandoAdmin.AdminHost do
   defp normalize(host) when is_binary(host), do: host |> String.trim() |> String.downcase() |> String.trim_trailing(".")
   defp normalize(_host), do: nil
 
-  @doc false
-  # Called from the `call/2` that `Brando.Router.admin_routes/3` gives the
-  # router, before it matches a route: the admin or MCP path prefix `conn` is
-  # for when its host does not serve the admin, or nil. Such a request goes to
-  # `dispatch_without/3`.
+  @doc """
+  The admin or MCP path prefix `conn` asks for when its host does not serve
+  the admin, or nil. The `call/2` that `Brando.Router.admin_routes/3` gives
+  the router asks before it matches a route, and sends such a request to
+  `dispatch_without/3`.
+  """
   @spec refused_prefix(Plug.Conn.t(), module()) :: [String.t()] | nil
   def refused_prefix(%Plug.Conn{path_info: path_info, host: host}, router) do
     if Tenant.mode() == :multi do
@@ -105,15 +108,16 @@ defmodule BrandoAdmin.AdminHost do
 
   defp starts_with?([], _prefix), do: false
 
-  @doc false
-  # Sends `conn` to the route it would match if the routes under `prefix` did
-  # not exist, with its pipelines, so it answers as a path that does not exist
-  # on its host: the site's catch-all and its 404 page on a site's host, the
-  # plain 404 on a host bound to nothing, or the router's own
-  # `Phoenix.Router.NoRouteError` when nothing else matches. The prefix's
-  # segments are replaced with values no route's literal segment can match,
-  # so only a route with parameters there matches; its parameters then get
-  # the real segments back.
+  @doc """
+  Sends `conn` to the route of `router` it would match if the routes under
+  `prefix` did not exist, with its pipelines, so it answers as a path that
+  does not exist on its host: the site's catch-all and its 404 page on a
+  site's host, the plain 404 on a host bound to nothing, or the router's own
+  `Phoenix.Router.NoRouteError` when nothing else matches.
+  """
+  # The prefix's segments are replaced with values no route's literal segment
+  # can match, so only a route with parameters there matches; its parameters
+  # then get the real segments back.
   @spec dispatch_without(Plug.Conn.t(), module(), [String.t()]) :: Plug.Conn.t()
   def dispatch_without(conn, router, prefix) do
     decoded = Enum.map(conn.path_info, &URI.decode/1)
