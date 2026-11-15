@@ -701,27 +701,34 @@ step on the server: change the DNS record, and within a minute the host is in
 the file and the proxy can certify it. Once in the file, a host stays until
 no environment binds it; a failed lookup later never removes it. The
 installation's own hosts (the endpoint's, the static, media and CDN hosts) are
-never in it: the deploy tool routes those itself.
+never in it: the deploy tool routes those itself. Nor is a domain stored
+before Brando checked domains that is not a valid host name, has no dot, or is
+an IP address: the file holds host names only, whatever `admit` says.
 
 Brando checks at boot, after every registry write (on every node, as
-[Several nodes](#several-nodes) describes), and once a minute while a bound
-host waits for its DNS. Nothing is looked up while no host waits. Each node
-keeps its own file, and nothing is stored in the database: on a new server the
-file starts empty, and each host is admitted there when its DNS arrives.
+[Several nodes](#several-nodes) describes), once a minute while a bound host
+waits for its DNS, and every five minutes otherwise. The slow check reads the
+file again, so a host another node sharing the path wrote over, during a
+blue/green switch, is admitted again; nothing is looked up while the file
+holds every bound host. Each node keeps its own file, and nothing is stored in
+the database: on a new server the file starts empty, and each host is admitted
+there when its DNS arrives.
 
 The **Environments** screen shows each bound host's state beside its domain:
 **Served** when it is in the file, **Waiting for DNS** with what the host
-resolves to now and this server's addresses, or **Does not resolve**. A file
-that could not be written is shown above the list, logged once, and tried
-again every minute; the application keeps running.
+resolves to now and this server's addresses, **Does not resolve**, or **Not a
+valid host name** for a stored domain the file refuses. A file that could not
+be written is shown above the list (with the reason to superusers only),
+logged once, and tried again every minute; the application keeps running.
 
 The file's contract, for anyone writing their own consumer:
 
 - One host per line, lowercase, sorted, each line ending in a newline. No
   comments, ports or schemes. An empty file means no host is admitted.
-- Replaced whole: written to a temporary file in the same directory and
-  renamed over the old one, so a reader never sees half a file. Watch the
-  directory, or the file by name rather than by inode.
+- Replaced whole: written to a temporary file in the same directory (named
+  `.served_hosts.<random>.tmp` beside a file named `served_hosts`) and renamed
+  over the old one, so a reader never sees half a file. Watch the directory,
+  or the file by name rather than by inode, and ignore those temporary files.
 - Rewritten only when its content changes. A line that is not a bound host,
   added by hand, is dropped on the next write.
 

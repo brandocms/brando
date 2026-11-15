@@ -11395,6 +11395,11 @@ msgstr "Ingen. Ingenting skrives før en robot blokkeres eller en preferanse for
 msgid "Not a valid HTTP response"
 msgstr "Ikke et gyldig HTTP-svar"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not a valid host name"
+msgstr "Ikke et gyldig vertsnavn"
+
 #: lib/brando_web/controllers/error_html/406.html.heex
 #, elixir-autogen, elixir-format
 msgid "Not acceptable"
@@ -17764,6 +17769,11 @@ msgstr "Mottakeren er inaktiv eller kan ikke lese oppføringen"
 msgid "The reset link could not be sent."
 msgstr "Lenken for nytt passord kunne ikke sendes."
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The reverse proxy is not told about it until the domain is corrected."
+msgstr "Den omvendte proxyen får ikke vite om den før domenet er rettet."
+
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "The revision could not be activated."
@@ -17843,6 +17853,11 @@ msgstr "Den valgte teksten ble endret. Prøv igjen med den nye teksten."
 #, elixir-autogen, elixir-format
 msgid "The served hosts file could not be updated, so the reverse proxy may not have heard of new hosts: %{error}"
 msgstr "Filen over verter som betjenes kunne ikke oppdateres, så den omvendte proxyen har kanskje ikke fått vite om nye verter: %{error}"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The served hosts file could not be written. The reverse proxy may not have heard of new hosts."
+msgstr "Filen over verter som betjenes kunne ikke skrives. Den omvendte proxyen har kanskje ikke fått vite om nye verter."
 
 #: lib/brando_admin/components/form/video_drawer.ex
 #, elixir-autogen, elixir-format

@@ -11393,6 +11393,11 @@ msgstr ""
 msgid "Not a valid HTTP response"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not a valid host name"
+msgstr ""
+
 #: lib/brando_web/controllers/error_html/406.html.heex
 #, elixir-autogen, elixir-format
 msgid "Not acceptable"
@@ -17760,6 +17765,11 @@ msgstr ""
 msgid "The reset link could not be sent."
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The reverse proxy is not told about it until the domain is corrected."
+msgstr ""
+
 #: lib/brando_admin/components/form/revisions_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "The revision could not be activated."
@@ -17838,6 +17848,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The served hosts file could not be updated, so the reverse proxy may not have heard of new hosts: %{error}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The served hosts file could not be written. The reverse proxy may not have heard of new hosts."
 msgstr ""
 
 #: lib/brando_admin/components/form/video_drawer.ex
