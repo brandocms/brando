@@ -45,6 +45,21 @@ defmodule Brando.Setup.SeedsTest do
     end)
   end
 
+  # The seeded menu's URLs, the admin links on the homepage, how many the
+  # footer has, and whether a seeded module's markup names /admin
+  defp admin_links do
+    menu = Navigation.Menu |> Brando.Repo.get_by!(key: "main", language: :en) |> Brando.Repo.preload(items: :link)
+    page = Brando.Repo.get_by!(Pages.Page, uri: "index", language: :en)
+    footer = Brando.Repo.get_by!(Pages.Fragment, parent_key: "partials", key: "footer", language: :en)
+
+    %{
+      menu: Enum.map(menu.items, & &1.link.value),
+      page: ~r/href="\/admin[^"]*"/ |> Regex.scan(page.rendered_blocks) |> List.flatten(),
+      footer: ~r/href="\/admin/ |> Regex.scan(footer.rendered_blocks) |> length(),
+      modules: Enum.any?(Brando.Repo.all(Content.Module), &(&1.code =~ "/admin"))
+    }
+  end
+
   describe "run/2" do
     test "a new SEO record gets the base URL and description setup was given" do
       import Ecto.Query
@@ -97,6 +112,39 @@ defmodule Brando.Setup.SeedsTest do
       assert Brando.Repo.get_by(Pages.Fragment, parent_key: "partials", key: "footer")
       assert {:ok, _identity} = Brando.Sites.get_identity(%{matches: %{language: :en}})
       assert {:ok, _seo} = Brando.Sites.get_seo(%{matches: %{language: :en}})
+    end
+
+    test "without several sites, the homepage, menu and footer link to the admin" do
+      user = Factory.insert(:random_user)
+      {:ok, _report} = Seeds.run(user, languages: [:en])
+
+      assert admin_links() == %{
+               menu: ["/", "/admin"],
+               page: [~s(href="/admin"), ~s(href="/admin/pages")],
+               footer: 4,
+               modules: true
+             }
+    end
+
+    test "with several sites, nothing on the site links to the admin, which is not on its host" do
+      put_test_env(:tenancy_mode, :multi)
+      user = Factory.insert(:random_user)
+      {:ok, tables} = Brando.Environments.StructureCloner.Postgres.tenant_tables("public")
+      Brando.MigrationTemplates.create_environment("tenant_acme_production", tables)
+      Brando.Tenant.put_prefix("tenant_acme_production")
+      on_exit(fn -> Brando.Tenant.put_prefix(nil) end)
+
+      {:ok, report} = Seeds.run(user, languages: [:en])
+      assert :"page (en)" in report.created
+
+      assert admin_links() == %{menu: ["/"], page: [], footer: 0, modules: false}
+
+      # What is left around them still renders
+      page = Brando.Repo.get_by!(Pages.Page, uri: "index", language: :en)
+      assert page.rendered_blocks =~ "Read the guides"
+      assert page.rendered_blocks =~ "Pages → Index"
+      footer = Brando.Repo.get_by!(Pages.Fragment, parent_key: "partials", key: "footer", language: :en)
+      assert footer.rendered_blocks =~ "<h5>Guides</h5>"
     end
 
     test "seeded blocks are on their module's current version" do

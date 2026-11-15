@@ -12,6 +12,10 @@ defmodule Brando.Setup.Seeds do
   environment, in the site's languages, when the site is provisioned, and a
   run outside an environment raises.
 
+  With `tenancy_mode: :multi` the admin answers on its own host only
+  (`BrandoAdmin.AdminHost`), so nothing seeded on a site links to it: no
+  admin menu item, button or footer links.
+
   Every step is skipped when its content already exists, so the seeds are safe
   to rerun. Nothing here is a migration path: existing content is never
   modified or removed. The footer fragment is seeded only with a new
@@ -207,10 +211,9 @@ defmodule Brando.Setup.Seeds do
           language: to_string(language),
           status: :published,
           sequence: 0,
-          items: [
-            menu_item("home", 0, "Home", "/"),
-            menu_item("admin", 1, "Admin", "/admin")
-          ]
+          items:
+            [menu_item("home", 0, "Home", "/")] ++
+              if(admin_links?(), do: [menu_item("admin", 1, "Admin", "/admin")], else: [])
         }
 
         # Built for `user`, so the menu names them as its creator whoever writes it
@@ -218,6 +221,9 @@ defmodule Brando.Setup.Seeds do
         menu
     end
   end
+
+  # With several sites the admin is not on a site's host
+  defp admin_links?, do: Brando.Tenant.mode() != :multi
 
   defp menu_item(key, sequence, text, url) do
     %{
@@ -296,8 +302,7 @@ defmodule Brando.Setup.Seeds do
           <div class="lead">{% ref refs.lead %}</div>
 
           <div class="actions">
-            <a class="button" href="/admin">Open the admin</a>
-            <a class="textlink" href="#{@docs_url}" target="_blank" rel="noopener">Read the guides &#8599;</a>
+      #{hero_actions()}
           </div>
 
           <div class="ledger">
@@ -321,6 +326,19 @@ defmodule Brando.Setup.Seeds do
             ]
           end)
     }
+  end
+
+  defp hero_actions do
+    guides = ~s(<a class="textlink" href="#{@docs_url}" target="_blank" rel="noopener">Read the guides &#8599;</a>)
+
+    if admin_links?() do
+      """
+            <a class="button" href="/admin">Open the admin</a>
+            #{guides}\
+      """
+    else
+      "      #{guides}"
+    end
   end
 
   defp ledger_entry(n) do
@@ -646,7 +664,7 @@ defmodule Brando.Setup.Seeds do
               {% ref refs.title %}
               {% ref refs.text %}
             </div>
-            <a class="button" href="/admin/pages">Go to Pages</a>
+      #{closing_action()}
           </div>
         </div>
       </section>
@@ -658,6 +676,12 @@ defmodule Brando.Setup.Seeds do
         text_ref("text", "<p>Closing paragraph</p>", 1)
       ]
     }
+  end
+
+  defp closing_action do
+    if admin_links?(),
+      do: ~s(      <a class="button" href="/admin/pages">Go to Pages</a>),
+      else: ~s(      <a class="button" href="#{@docs_url}" target="_blank" rel="noopener">Read the guides</a>)
   end
 
   defp footer_module do
@@ -679,16 +703,7 @@ defmodule Brando.Setup.Seeds do
               <li><a href="#{@docs_url}/block_editor.html">Block editor</a></li>
               <li><a href="#{@docs_url}/deployment.html">Deployment</a></li>
             </ul>
-          </div>
-          <div>
-            <h5>Content</h5>
-            <ul>
-              <li><a href="/admin/pages">Pages</a></li>
-              <li><a href="/admin/pages/fragments">Fragments</a></li>
-              <li><a href="/admin/navigation">Navigation</a></li>
-              <li><a href="/admin/config/identity">Identity &amp; SEO</a></li>
-            </ul>
-          </div>
+          </div>#{footer_admin_links()}
         </div>
       </div>
       """,
@@ -696,6 +711,25 @@ defmodule Brando.Setup.Seeds do
       vars: [],
       refs: [text_ref("text", "<p>Footer text</p>", 0)]
     }
+  end
+
+  defp footer_admin_links do
+    if admin_links?() do
+      "\n" <>
+        """
+            <div>
+              <h5>Content</h5>
+              <ul>
+                <li><a href="/admin/pages">Pages</a></li>
+                <li><a href="/admin/pages/fragments">Fragments</a></li>
+                <li><a href="/admin/navigation">Navigation</a></li>
+                <li><a href="/admin/config/identity">Identity &amp; SEO</a></li>
+              </ul>
+            </div>\
+        """
+    else
+      ""
+    end
   end
 
   defp brando_version do
@@ -820,7 +854,7 @@ defmodule Brando.Setup.Seeds do
   defp steps_content do
     steps = [
       {"Edit this page", "Pages → Index holds the blocks you're reading. Change a heading, save, reload.",
-       "/admin/pages"},
+       if(admin_links?(), do: "/admin/pages", else: "Pages → Index")},
       {"Write a module", "Your markup, with named refs the editor fills in. You keep the HTML.", "{% ref refs.title %}"},
       {"Model your data", "A blueprint gives you schema, migration, admin forms and listings at once.", "mix brando.gen"}
     ]
