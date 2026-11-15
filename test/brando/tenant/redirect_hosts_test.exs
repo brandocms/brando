@@ -339,5 +339,13 @@ defmodule Brando.Tenant.RedirectHostsTest do
       refute Origins.allowed?(URI.parse("http://admin.example.org:8443"), origins)
       refute Origins.allowed?(URI.parse("https://admin.example.org"), origins)
     end
+
+    test "raises for a further origin with no host, as Phoenix does for its list" do
+      for origin <- ["agency.example", "https:", ""] do
+        assert_raise ArgumentError, ~r/#{Regex.escape(inspect(origin))}.*\/\/example\.com/s, fn ->
+          Origins.allowed?(URI.parse("https://attacker.test"), [origin])
+        end
+      end
+    end
   end
 end

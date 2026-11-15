@@ -16,6 +16,9 @@ defmodule Brando.Tenant.Origins do
   `//*.host`, `https://host:8443`), are passed as the argument:
 
       check_origin: {Brando.Tenant.Origins, :allowed?, [["//*.agency.example"]]}
+
+  An entry with no host, such as `agency.example` without `//`, raises
+  `ArgumentError`, as it does in Phoenix's list.
   """
 
   alias Brando.Tenant.Cache
@@ -24,24 +27,39 @@ defmodule Brando.Tenant.Origins do
   @spec allowed?(URI.t(), [String.t()]) :: boolean()
   def allowed?(uri, origins \\ [])
 
-  def allowed?(%URI{host: host} = uri, origins) when is_binary(host) and host != "" do
-    host = host |> String.trim() |> String.downcase()
+  def allowed?(uri, origins) do
+    origins = Enum.map(origins, &parse_origin/1)
 
-    InstallationHosts.member?(host) or Cache.get_env_by_domain(host) != nil or
-      Enum.any?(origins, &origin_matches?(%{uri | host: host}, &1))
+    case uri do
+      %URI{host: host} when is_binary(host) and host != "" ->
+        host = host |> String.trim() |> String.downcase()
+
+        InstallationHosts.member?(host) or Cache.get_env_by_domain(host) != nil or
+          Enum.any?(origins, &origin_matches?(%{uri | host: host}, &1))
+
+      _uri ->
+        false
+    end
   end
 
-  def allowed?(_uri, _origins), do: false
+  defp parse_origin(origin) do
+    case URI.parse(origin) do
+      %URI{host: host} = parsed when is_binary(host) and host != "" ->
+        %{parsed | host: String.downcase(host)}
+
+      _no_host ->
+        raise ArgumentError,
+              "invalid origin for Brando.Tenant.Origins: #{inspect(origin)}. Expected an origin with a host, " <>
+                "such as \"//example.com\", \"//*.example.com\" or \"https://example.com:8443\""
+    end
+  end
 
   # As Phoenix compares an entry of a `check_origin` list
-  defp origin_matches?(uri, origin) do
-    %URI{scheme: scheme, host: allowed_host, port: port} = URI.parse(origin)
-
+  defp origin_matches?(uri, %URI{scheme: scheme, host: allowed_host, port: port}) do
     (is_nil(scheme) or scheme == uri.scheme) and (is_nil(port) or port == uri.port) and
-      host_matches?(uri.host, allowed_host && String.downcase(allowed_host))
+      host_matches?(uri.host, allowed_host)
   end
 
-  defp host_matches?(_host, nil), do: true
   defp host_matches?(host, "*." <> allowed), do: host == allowed or String.ends_with?(host, "." <> allowed)
   defp host_matches?(host, allowed), do: host == allowed
 end
