@@ -686,7 +686,7 @@ msgstr ""
 
 #: lib/brando/environments/environment.ex
 #, elixir-autogen, elixir-format
-msgid "%{host} is this environment's domain."
+msgid "%{host} cannot be both the domain and one of its redirect hosts."
 msgstr ""
 
 #: lib/brando/environments/environment.ex

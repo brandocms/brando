@@ -633,11 +633,15 @@ that is not live carries `X-Robots-Tag: noindex, nofollow`, in `:single` and
 
 An environment's redirect hosts (`environments.redirect_hosts`) answer
 before any of that: a request on one is redirected permanently to the same
-path and query on the environment's domain, with the endpoint URL's scheme,
-301 for GET and HEAD and 308 for other methods, from the cache and with no
-database query. List `www.example.com` and an old domain there, and give the
-environment `example.com` as its domain. A suspended or archived site's
-redirect hosts answer 404, as its domain does.
+path and query on the environment's domain, with the endpoint URL's scheme
+and its port when that is not the scheme's default, 301 for GET and HEAD and
+308 for other methods, from the cache and with no database query. A Markdown
+request (`/about.md`, see `Brando.Plug.Markdown`) keeps its `.md`. List
+`www.example.com` and an old domain there, and give the environment
+`example.com` as its domain. A suspended or archived site's redirect hosts
+answer 404, as its domain does. A static build's requests carry a signed
+context and are served on a redirect host too, so a build whose base URL is
+now one still renders.
 
 A LiveView on the site's pages runs in its own process, which the plug never
 reaches. Mount it with `Brando.Tenant.FrontendLiveView`, which does the same
@@ -664,7 +668,9 @@ config :my_app, MyAppWeb.Endpoint,
 active site's environments, read from `Brando.Tenant.Cache`. Redirect hosts
 serve nothing, so they are not accepted. Further origins go in the argument,
 in the forms a `check_origin` list takes:
-`{Brando.Tenant.Origins, :allowed?, [["//*.example.com"]]}`. An existing
+`{Brando.Tenant.Origins, :allowed?, [["//*.example.com"]]}`. An entry with
+no host, such as `example.com` without `//`, raises `ArgumentError`, as in
+Phoenix's list. An existing
 multi-site installation switches by replacing its `check_origin` list in
 `config/prod.exs` with the tuple, keeping any entry that is not a site's
 domain or the endpoint's host in the argument.
@@ -697,9 +703,13 @@ per line or comma-separated. A domain is a bare
 host: no scheme, path, port or trailing dot. It may not be a host the
 installation itself uses: the endpoint's, where the admin answers, nor its
 static, media or CDN host. A redirect host follows the same rules, and an
-environment with redirect hosts must have a domain to redirect to. A host is
+environment with redirect hosts must have a domain to redirect to, which
+cannot also be one of them. A host is
 bound once in the whole installation, as one environment's domain or one
-redirect host; the database enforces it, for concurrent writes too. With several sites, a site that needs the admin's
+redirect host; the database enforces it, for concurrent writes too. A save
+from a screen that showed other hosts than the environment has now, after a
+live switch or another superuser's change, is refused, and an open screen
+shows such a change as it is made. With several sites, a site that needs the admin's
 host means moving the admin to a host of its own through `PHX_HOST`. In
 `:single` the admin's host needs no domain: it answers from the live environment
 when no environment holds it. On a `:dynamic` site, setting an environment
