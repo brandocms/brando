@@ -864,8 +864,15 @@ are not admin routes, and open on the hosts they opened on before.
 own host, so with several sites it adds nothing to the sites' pages.
 
 The router leaves the admin's routes out wherever it matches a route, so
-`Phoenix.Router.route_info/4` and a LiveView's websocket join on a site's host
-find the site's own route, as the request did.
+`Phoenix.Router.route_info/4` on a site's host finds the site's own route, as
+the request did. A LiveView's websocket join looks its route up by the host in
+the URL the client sends, not the host the socket connected to, so an admin
+LiveView refuses a connected mount on a host that does not serve the admin,
+as it refuses one without a signed-in user. It can tell only when the
+endpoint's `/live` socket gives the socket's URI: add `:uri` to its
+`connect_info` list (`websocket: [connect_info: [:uri, session: @session_options]]`,
+with whatever else the list holds); without it, the join goes by the host the
+client names.
 
 One known limit: the endpoint answers the admin socket's transport paths
 (`/admin/socket/websocket`, `/admin/socket/longpoll`) before the router, so on

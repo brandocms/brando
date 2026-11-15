@@ -20,4 +20,16 @@ defmodule BrandoAdmin.AdminHostJoinTest do
     assert {:ok, view, _html} = live(conn, "/admin/sites")
     assert view.module == BrandoAdmin.Sites.SiteLive
   end
+
+  test "a socket on a site's host cannot join an admin LiveView by naming the endpoint's host", %{conn: conn} do
+    conn =
+      Plug.Conn.put_private(conn, :live_view_connect_info, %{uri: URI.parse("https://acme.example.com/live/websocket")})
+
+    assert {:error, {:redirect, %{to: "/admin/login"}}} = live(conn, "/admin/sites")
+  end
+
+  test "without the socket's URI, the join goes by the URL the client sends", %{conn: conn} do
+    conn = Plug.Conn.put_private(conn, :live_view_connect_info, %{})
+    assert {:ok, _view, _html} = live(conn, "/admin/sites")
+  end
 end

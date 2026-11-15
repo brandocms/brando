@@ -2,6 +2,7 @@
   Give `socket "/admin/socket"` in the endpoint the admin socket's origin check:
   `websocket: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]` and
   `longpoll: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]`.
+  Add `:uri` to the `connect_info` of `socket "/live"`, so an admin LiveView refuses a join from a socket on a site's host.
   Open the admin on the endpoint's host, `localhost:4000/admin` in development.
 
 - With `tenancy_mode: :multi`, a site's default `robots.txt` no longer names `/admin/`, and a newly provisioned site's seeded homepage, menu and footer have no admin links.

@@ -317,6 +317,11 @@ defmodule BrandoAdmin.UserAuth do
     * `:redirect_if_user_is_authenticated` - Authenticates the user from the session.
       Redirects to signed_in_path if there's a logged user.
 
+  Each redirects a connected mount to the login page when the socket's `:uri`
+  connect info names a host the admin does not answer on
+  (`BrandoAdmin.AdminHost.serves_admin_on?/1`). Without that connect info,
+  the mount goes on.
+
   ## Examples
 
   Use the `on_mount` lifecycle macro in LiveViews to mount or authenticate
@@ -335,11 +340,17 @@ defmodule BrandoAdmin.UserAuth do
         live "/profile", ProfileLive, :index
       end
   """
-  def on_mount(:mount_current_user, _params, session, socket) do
+  def on_mount(name, params, session, socket) do
+    if serves_admin?(socket),
+      do: mount(name, params, session, socket),
+      else: {:halt, Phoenix.LiveView.redirect(socket, to: "/admin/login")}
+  end
+
+  defp mount(:mount_current_user, _params, session, socket) do
     {:cont, mount_current_user(socket, session)}
   end
 
-  def on_mount(:ensure_authenticated, _params, session, socket) do
+  defp mount(:ensure_authenticated, _params, session, socket) do
     socket = mount_current_user(socket, session)
 
     if socket.assigns.current_user do
@@ -355,7 +366,7 @@ defmodule BrandoAdmin.UserAuth do
     end
   end
 
-  def on_mount(:redirect_if_user_is_authenticated, _params, session, socket) do
+  defp mount(:redirect_if_user_is_authenticated, _params, session, socket) do
     socket = mount_current_user(socket, session)
 
     if socket.assigns.current_user do
@@ -363,6 +374,22 @@ defmodule BrandoAdmin.UserAuth do
     else
       {:cont, socket}
     end
+  end
+
+  # A LiveView's join finds its route by the host in the URL the client sends.
+  # The socket's own URI, when the endpoint's `/live` socket gives it
+  # (`connect_info: [:uri]`), is the host the client really connected to.
+  defp serves_admin?(socket) do
+    case connected?(socket) && connect_uri(socket) do
+      %URI{host: host} -> BrandoAdmin.AdminHost.serves_admin_on?(host)
+      _ -> true
+    end
+  end
+
+  defp connect_uri(socket) do
+    Phoenix.LiveView.get_connect_info(socket, :uri)
+  rescue
+    _ -> nil
   end
 
   defp mount_current_user(socket, session) do
