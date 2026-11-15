@@ -1881,20 +1881,36 @@ published entries' `__absolute_url__/1` the same way.
 <!-- usage-rules:end -->
 
 URL callbacks execute under the selected environment's tenant prefix. The
-renderer requests each path from the application's own endpoint, at
-`http://127.0.0.1` and the port its HTTP listener is bound to, read when the
-build starts (a listener bound to one other address is requested there). It
-sends a short-lived signed context header, so a working environment can be
-built without assigning it a temporary domain. A build therefore needs the
+renderer requests each path from the application's own endpoint, over `http`
+on the port its HTTP listener is bound to, read when the build starts. It
+connects to the loopback address of the listener's family when the listener
+is bound to a wildcard (`127.0.0.1` for `{0, 0, 0, 0}`, `::1` for an IPv6
+wildcard such as phx.new's `ip: {0, 0, 0, 0, 0, 0, 0, 0}`), and to the address
+otherwise. Every request says `Host: localhost:<port>`, and
+`x-forwarded-proto: https` when the endpoint's URL is `https`. It also sends a
+short-lived signed context header: the tenant plug takes the site and
+environment from that header, not from the host, so a working environment can
+be built without assigning it a temporary domain. A build therefore needs the
 endpoint running as a server with an `:http` listener, as a release behind a
 proxy does on whatever port it listens: without one, the build fails before it
-requests anything, and its log says so. `Brando.SSG.build/3` takes `:base_url`
-to request another origin instead.
+requests anything, and its log says so. A background build runs on whichever
+node takes its job, so every node that runs jobs must serve the endpoint.
+`Brando.SSG.build/3` takes `:base_url` to request another origin instead, as
+it is.
+
+An endpoint with `force_ssl` lets the build's requests through as phx.new
+writes it (`rewrite_on: [:x_forwarded_proto]`, with `localhost` among the
+excluded hosts), and as `Plug.SSL` does by default, which excludes
+`localhost` in every version. An application with its own `:exclude` list
+needs `localhost` in it, or `rewrite_on: [:x_forwarded_proto]` and an `https`
+endpoint URL. Otherwise `Plug.SSL` redirects every page to `https`, and each
+URL fails naming `force_ssl`.
 Responses outside the 200 range are retained in the build's failed-URL list and
 make the build fail without hiding partial logs or counts.
 
-A build requests only its own origin. A listed path that redirects to another
-path on that origin is stored with the answer the redirect ends at, and the
+A build requests only its own origin: the listener's, or
+`http://localhost:<port>`, which it requests on the listener's address. A
+listed path that redirects to another path on that origin is stored with the answer the redirect ends at, and the
 signed header goes along. A redirect to another scheme, host or port, or to a
 URL carrying credentials, fails that URL: Brando makes no request there, and the
 failed-URL list names the target's origin. That includes an absolute URL to the
