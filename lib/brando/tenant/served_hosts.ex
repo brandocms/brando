@@ -213,7 +213,7 @@ defmodule Brando.Tenant.ServedHosts do
 
     Enum.reduce(lookup_all(candidates, resolver), {[], %{}, own}, fn
       {host, {:ok, [_ | _] = addresses}}, {admitted, waiting, own} ->
-        addresses = addresses |> Enum.map(&unmap/1) |> Enum.uniq()
+        addresses = normalize_addresses(addresses)
 
         if own != [] and Enum.all?(addresses, &(&1 in own)) do
           {[host | admitted], waiting, own}
@@ -249,7 +249,7 @@ defmodule Brando.Tenant.ServedHosts do
   # The configured addresses, or what the endpoint's host resolves to now
   defp own_addresses(config, resolver) do
     case Keyword.get(config, :addresses) do
-      addresses when is_list(addresses) -> addresses |> Enum.flat_map(&parse_address/1) |> Enum.uniq()
+      addresses when is_list(addresses) -> addresses |> Enum.flat_map(&parse_address/1) |> normalize_addresses()
       nil -> endpoint_addresses(endpoint_host(), resolver)
     end
   end
@@ -259,7 +259,7 @@ defmodule Brando.Tenant.ServedHosts do
   defp endpoint_addresses(host, resolver) do
     with [] <- parse_address(host),
          {:ok, addresses} <- lookup(resolver, host) do
-      addresses |> Enum.map(&unmap/1) |> Enum.uniq()
+      normalize_addresses(addresses)
     else
       [address] -> [address]
       {:error, _reason} -> []
@@ -285,6 +285,10 @@ defmodule Brando.Tenant.ServedHosts do
   defp parse_address({_, _, _, _} = address), do: [address]
   defp parse_address({_, _, _, _, _, _, _, _} = address), do: [unmap(address)]
   defp parse_address(_address), do: []
+
+  # Sorted and unique wherever kept or compared: round-robin records answer
+  # in turn, and must not change a status from one check to the next
+  defp normalize_addresses(addresses), do: addresses |> Enum.map(&unmap/1) |> Enum.sort() |> Enum.uniq()
 
   defp unmap({0, 0, 0, 0, 0, 0xFFFF, high, low}), do: {div(high, 256), rem(high, 256), div(low, 256), rem(low, 256)}
   defp unmap(address), do: address

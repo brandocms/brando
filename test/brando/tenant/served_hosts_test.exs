@@ -113,12 +113,27 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert status.hosts == %{
                "www.acme.test" => :served,
                "away.acme.test" => {:waiting, [@elsewhere]},
-               "split.acme.test" => {:waiting, [@here, @elsewhere]},
+               "split.acme.test" => {:waiting, [@elsewhere, @here]},
                "missing.acme.test" => :unresolved
              }
 
       assert status.addresses == [@here, @here_v6]
       assert status.error == nil
+    end
+
+    test "addresses are sorted and unique, so records answered in turn change nothing", %{site: site} do
+      put_test_env(ServedHosts, file: ServedHosts.status().file, addresses: [@here_v6, @here, @here])
+      DNS.answer("away.acme.test", [@here, @elsewhere])
+      bind(site, "away", "away.acme.test")
+
+      assert %{addresses: [@here, @here_v6], hosts: %{"away.acme.test" => {:waiting, [@elsewhere, @here]}}} =
+               ServedHosts.check()
+
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+      DNS.answer("away.acme.test", [@elsewhere, @here, @elsewhere])
+      ServedHosts.check()
+
+      refute_received {:served_hosts, _status}
     end
 
     test "an admitted host stays when its lookup later fails or points elsewhere", %{path: file, site: site} do
