@@ -128,6 +128,26 @@ defmodule BrandoAdmin.AdminHostTest do
       assert {conn.status, conn.resp_body} == {404, "Not found on this site"}
     end
 
+    test "route lookup finds the route the request is sent to" do
+      for path <- ["/admin/pages", "/admin/login", "/mcp"] do
+        assert %{plug: Brando.Test.AdminHostSiteController, route: "/*path"} =
+                 Phoenix.Router.route_info(Router, "GET", path, "beta.test"),
+               path
+      end
+    end
+
+    test "Brando.Plug.Markdown leaves the application's literal .md route under the admin's path alone" do
+      put_test_env(:router_module, PublicRoutesRouter)
+      path = "/admin/reset-password/help.md"
+
+      conn = Brando.Plug.Markdown.call(Plug.Test.conn(:get, "https://beta.test#{path}"), Brando.Plug.Markdown.init([]))
+      refute Map.has_key?(conn.private, :brando_markdown)
+      assert conn.request_path == path
+
+      conn = request(PublicRoutesRouter, :get, path, "beta.test")
+      assert {conn.status, conn.resp_body} == {200, "The application's own #{path}"}
+    end
+
     test "the site's default robots.txt does not name the admin's path" do
       conn = request(:get, "/robots.txt", "beta.test")
       assert conn.status == 200
@@ -188,6 +208,11 @@ defmodule BrandoAdmin.AdminHostTest do
       assert {:ok, _view, _html} = live(conn, "/admin/sites")
     end
 
+    test "route lookup finds the admin's route" do
+      assert %{plug: Phoenix.LiveView.Plug, route: "/admin/pages"} =
+               Phoenix.Router.route_info(Router, "GET", "/admin/pages", @admin_host)
+    end
+
     test "the admin answers on every host with one site or none" do
       put_test_env(:site_key, "beta")
 
@@ -195,6 +220,9 @@ defmodule BrandoAdmin.AdminHostTest do
         put_test_env(:tenancy_mode, mode)
         conn = %{build_conn() | host: host} |> get("/admin/login")
         assert html_response(conn, 200) =~ ~s(name="user[email]"), "#{mode} on #{host}"
+
+        assert %{plug: Phoenix.LiveView.Plug, route: "/admin/pages"} =
+                 Phoenix.Router.route_info(Router, "GET", "/admin/pages", host)
       end
     end
   end

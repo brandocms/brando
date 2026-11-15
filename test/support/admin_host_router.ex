@@ -111,8 +111,52 @@ defmodule Brando.Test.AdminHostPublicRoutesRouter do
   scope "/" do
     pipe_through :browser
     get "/admin/login", Brando.Test.AdminHostPublicRoutesController, :show
+    get "/admin/reset-password/help.md", Brando.Test.AdminHostPublicRoutesController, :show
     get "/*path", Brando.Test.AdminHostSiteController, :show
   end
 
   def assign_language(conn, _opts), do: Plug.Conn.assign(conn, :language, "en")
+end
+
+defmodule Brando.Test.AdminHostSiteLive do
+  @moduledoc false
+  # A site's page as a LiveView, at any path
+  use Phoenix.LiveView
+
+  def mount(_params, _session, socket), do: {:ok, socket}
+  def render(assigns), do: ~H"<p>A live page of the site</p>"
+end
+
+defmodule Brando.Test.AdminHostLiveRouter do
+  @moduledoc false
+  # The admin and MCP, then a site whose catch-all is a LiveView
+  use Phoenix.Router
+
+  import Brando.Router
+  import Phoenix.LiveView.Router
+
+  pipeline :site do
+    plug :accepts, ["html"]
+    plug :fetch_session
+  end
+
+  admin_routes do
+    live "/projects", BrandoIntegrationWeb.Projects.ProjectListLive
+  end
+
+  mcp_routes()
+
+  scope "/" do
+    pipe_through :site
+    live "/*path", Brando.Test.AdminHostSiteLive
+  end
+end
+
+defmodule Brando.Test.AdminHostLiveEndpoint do
+  @moduledoc false
+  # Serves `Brando.Test.AdminHostLiveRouter`, for `Phoenix.LiveViewTest.live/2`
+  use Phoenix.Endpoint, otp_app: :brando
+
+  plug Plug.Session, store: :cookie, key: "_admin_host_live", signing_salt: "adminhostlive"
+  plug Brando.Test.AdminHostLiveRouter
 end

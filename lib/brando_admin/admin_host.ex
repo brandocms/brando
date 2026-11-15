@@ -48,7 +48,19 @@ defmodule BrandoAdmin.AdminHost do
   `:single`, on the endpoint's host only with `:multi`.
   """
   @spec serves_admin?(Plug.Conn.t()) :: boolean()
-  def serves_admin?(%Plug.Conn{host: host}), do: Tenant.mode() != :multi or admin_host?(host)
+  def serves_admin?(%Plug.Conn{host: host}), do: serves_admin_on?(host)
+
+  @doc """
+  Whether the admin answers on `host`, as `serves_admin?/1` decides for a
+  conn. The router matches routes with it (`Brando.Router.admin_routes/3`):
+  on a host where it does not, the routes `admin_routes/3` and
+  `Brando.Router.mcp_routes/0` mount are left out of the match, the
+  application's own routes keeping their order, so an admin or MCP path
+  answers as a path that does not exist there, for a request and for
+  `Phoenix.Router.route_info/4` alike.
+  """
+  @spec serves_admin_on?(String.t() | nil) :: boolean()
+  def serves_admin_on?(host), do: Tenant.mode() != :multi or admin_host?(host)
 
   @doc """
   The endpoint's host, in lower case and without a trailing dot, or nil. An
@@ -72,27 +84,4 @@ defmodule BrandoAdmin.AdminHost do
 
   defp normalize(host) when is_binary(host), do: host |> String.trim() |> String.downcase() |> String.trim_trailing(".")
   defp normalize(_host), do: nil
-
-  @doc """
-  Sends `conn` to the route of `router` it matches when the routes
-  `Brando.Router.admin_routes/3` and `Brando.Router.mcp_routes/0` declare are
-  left out, the application's own routes keeping their order, so an admin or
-  MCP path answers as a path that does not exist on its host: the site's
-  catch-all and its 404 page on a site's host, the plain 404 on a host bound
-  to nothing, or the router's own `Phoenix.Router.NoRouteError` when nothing
-  else matches. The `call/2` that `admin_routes/3` gives the router sends a
-  request here on a host that does not serve the admin.
-  """
-  @spec dispatch_without_admin(Plug.Conn.t(), module()) :: Plug.Conn.t()
-  def dispatch_without_admin(conn, router) do
-    decoded = Enum.map(conn.path_info, &URI.decode/1)
-
-    case router.__match_route_without_admin__(conn.method, decoded, conn.host) do
-      {metadata, prepare, pipeline, plug_opts} ->
-        Phoenix.Router.__call__(conn, metadata, prepare, pipeline, plug_opts)
-
-      :error ->
-        raise Phoenix.Router.NoRouteError, conn: conn, router: router
-    end
-  end
 end

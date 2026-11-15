@@ -749,12 +749,14 @@ are not admin routes, and open on the hosts they opened on before.
 [Frontend edit mode](frontend_edit.md) frames an admin view from the page's
 own host, so with several sites it adds nothing to the sites' pages.
 
-Two known limits. The endpoint answers the admin socket's transport paths
+The router leaves the admin's routes out wherever it matches a route, so
+`Phoenix.Router.route_info/4` and a LiveView's websocket join on a site's host
+find the site's own route, as the request did.
+
+One known limit: the endpoint answers the admin socket's transport paths
 (`/admin/socket/websocket`, `/admin/socket/longpoll`) before the router, so on
 a site's host they answer as a socket refusing the connection, not with the
-site's 404. A router that defines its own `call/2` before `admin_routes/3`
-replaces the one that restricts the admin, which then answers on every host;
-the compiler warns about it.
+site's 404.
 
 ### Several nodes
 

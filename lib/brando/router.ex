@@ -152,20 +152,6 @@ defmodule Brando.Router do
 
       @before_compile Brando.Router
 
-      @doc """
-      Dispatches `conn` as `Phoenix.Router` does, but on a host that does not
-      serve the admin (another host than the endpoint's with `tenancy_mode:
-      :multi`) the routes `admin_routes/3` and `mcp_routes/0` mount are left
-      out of the match (`BrandoAdmin.AdminHost`).
-      """
-      def call(conn, opts) do
-        if BrandoAdmin.AdminHost.serves_admin?(conn) do
-          super(conn, opts)
-        else
-          BrandoAdmin.AdminHost.dispatch_without_admin(prepare(conn), __MODULE__)
-        end
-      end
-
       pipeline :admin do
         plug :accepts, ["html"]
         plug :fetch_session
@@ -309,7 +295,12 @@ defmodule Brando.Router do
 
   # `__match_route_without_admin__/3`: Phoenix's `__match_route__/3` for every
   # route but those `admin_routes/3` and `mcp_routes/0` declare, in the order
-  # they are declared, with pipelines of its own.
+  # they are declared, with pipelines of its own. `__match_route__/3` itself
+  # becomes host-aware, so the router's `call/2`, `Phoenix.Router.route_info/4`
+  # and a LiveView's join all match the same routes. Phoenix defines
+  # `__match_route__/3` in its own `@before_compile`, which `use Phoenix.Router`
+  # registers before `admin_routes/3` registers this one, so it is defined
+  # (and can be overridden) by the time this runs.
   @doc false
   defmacro __before_compile__(env) do
     admin_ranges = Module.get_attribute(env.module, :brando_admin_routes) || []
@@ -333,6 +324,17 @@ defmodule Brando.Router do
       """
       unquote(clauses)
       def __match_route_without_admin__(_verb, _path, _host), do: :error
+
+      defoverridable __match_route__: 3
+
+      # On a host that does not serve the admin, the admin's and MCP's routes
+      # are left out of the match (`BrandoAdmin.AdminHost`)
+      @doc false
+      def __match_route__(verb, path, host) do
+        if BrandoAdmin.AdminHost.serves_admin_on?(host),
+          do: super(verb, path, host),
+          else: __match_route_without_admin__(verb, path, host)
+      end
     end
   end
 

@@ -718,7 +718,8 @@ defmodule BrandoAdmin.Menu do
   defp allowed_url?(user, url) do
     router = Brando.RuntimeConfig.web_module(Router)
 
-    case Phoenix.Router.route_info(router, "GET", URI.parse(url).path, "localhost") do
+    # The admin's own host: with several sites, its routes match there only
+    case Phoenix.Router.route_info(router, "GET", URI.parse(url).path, BrandoAdmin.AdminHost.endpoint_host()) do
       %{phoenix_live_view: {view, action, _, _}, path_params: params} ->
         {operation, resource} = BrandoAdmin.Authorization.requirement(view, params, action)
 
