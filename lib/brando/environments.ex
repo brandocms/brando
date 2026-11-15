@@ -586,9 +586,10 @@ defmodule Brando.Environments do
 
   defp persist_live_switch(site, environment, archive_prefix, opts) do
     Repo.transaction(fn ->
-      carry_host(site, environment)
+      locked_ids = carry_host(site, environment)
 
-      from(candidate in Environment, where: candidate.site_id == ^environment.site_id)
+      environment.site_id
+      |> site_environments(locked_ids)
       |> Repo.update_all([set: [live: false]], @public_opts)
 
       Registry.get_environment(environment.id)
@@ -620,10 +621,14 @@ defmodule Brando.Environments do
   # meanwhile is not undone. On static delivery the deployed
   # build decides what a host serves, and its forms post to the environment it
   # was built from (`Brando.Forms.SubmissionController`), so nothing moves.
+  #
+  # Returns the ids of the rows it locked, which are the only rows the switch
+  # may write after it: a row committed later can be held by a hosts save
+  # waiting for the host lock this transaction holds. Nil when it locks none.
   defp carry_host(%Site{delivery_mode: :dynamic}, %Environment{id: id, site_id: site_id}) do
-    # Every row of the site, in id order, before the host lock the trigger
-    # takes: the switch then writes them all (`live: false`), and a hosts save
-    # holds its row before it takes the host lock
+    # Every row of the site, in id order, before the host lock: the switch
+    # then writes them all (`live: false`), and a hosts save holds its row
+    # before it takes the host lock
     rows =
       from(candidate in Environment,
         where: candidate.site_id == ^site_id,
@@ -635,15 +640,25 @@ defmodule Brando.Environments do
     with %Environment{} = outgoing <- Enum.find(rows, &(&1.live and &1.id != id)),
          %Environment{} = incoming <- Enum.find(rows, &(&1.id == id)),
          false <- is_nil(outgoing.domain) and is_nil(incoming.domain) do
+      # Taken here, as the trigger takes nothing for the release below: a
+      # write binding the released domain would otherwise take the host lock
+      # first and wait for this transaction at the unique index on `domain`
+      Registry.lock_hosts()
+
       # The unique index on `domain` and the trigger binding each host once
       # are not deferred: release the outgoing hosts first
       put_hosts(outgoing, nil, [])
       put_hosts(incoming, outgoing.domain, outgoing.redirect_hosts)
       put_hosts(outgoing, incoming.domain, incoming.redirect_hosts)
     end
+
+    Enum.map(rows, & &1.id)
   end
 
-  defp carry_host(%Site{}, %Environment{}), do: :ok
+  defp carry_host(%Site{}, %Environment{}), do: nil
+
+  defp site_environments(site_id, nil), do: from(candidate in Environment, where: candidate.site_id == ^site_id)
+  defp site_environments(_site_id, ids), do: from(candidate in Environment, where: candidate.id in ^ids)
 
   defp put_hosts(%Environment{id: id}, domain, redirect_hosts) do
     from(environment in Environment, where: environment.id == ^id)

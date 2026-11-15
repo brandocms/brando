@@ -32,11 +32,7 @@ defmodule Brando.Tenant.RedirectHostsConcurrencyTest do
       end)
 
     on_exit(fn ->
-      Sandbox.unboxed_run(Repo, fn ->
-        Repo.delete_all(from(e in Environment, where: e.site_id == ^site.id), prefix: "public")
-        Repo.delete_all(from(s in Site, where: s.id == ^site.id), prefix: "public")
-      end)
-
+      Sandbox.unboxed_run(Repo, fn -> delete_site(site) end)
       Cache.clear()
     end)
 
@@ -76,10 +72,10 @@ defmodule Brando.Tenant.RedirectHostsConcurrencyTest do
     end)
   end
 
-  defp wait_for_lock_waiter(attempts \\ 200)
-  defp wait_for_lock_waiter(0), do: flunk("the second write did not wait for the lock")
+  defp wait_for_lock_waiter(waiters \\ 1, attempts \\ 200)
+  defp wait_for_lock_waiter(_waiters, 0), do: flunk("the writes did not wait for the lock")
 
-  defp wait_for_lock_waiter(attempts) do
+  defp wait_for_lock_waiter(waiters, attempts) do
     waiting =
       Sandbox.unboxed_run(Repo, fn ->
         Repo.one(
@@ -92,11 +88,11 @@ defmodule Brando.Tenant.RedirectHostsConcurrencyTest do
         )
       end)
 
-    if waiting > 0 do
+    if waiting >= waiters do
       :ok
     else
       Process.sleep(10)
-      wait_for_lock_waiter(attempts - 1)
+      wait_for_lock_waiter(waiters, attempts - 1)
     end
   end
 
@@ -112,14 +108,10 @@ defmodule Brando.Tenant.RedirectHostsConcurrencyTest do
   # save on the third row holds that row, then needs the host lock. Neither
   # may wait for the other while holding what the other needs.
   test "a live switch and a hosts save on a third environment both complete", %{first: first, second: second} do
-    put_test_env(:environment_schema_cloner, NoopSchemaCloner, global: true)
+    site = dynamic_with_live(first)
 
     third =
       Sandbox.unboxed_run(Repo, fn ->
-        {:ok, site} = Registry.update_site(Registry.get_site(first.site_id), %{delivery_mode: :dynamic})
-
-        Repo.update_all(from(e in Environment, where: e.id == ^first.id), [set: [live: true]], prefix: "public")
-
         {:ok, third} =
           Registry.create_environment(site, %{name: "Three", key: "three", domain: "three.race.test"}, actor: :system)
 
@@ -146,12 +138,7 @@ defmodule Brando.Tenant.RedirectHostsConcurrencyTest do
 
     assert_receive :row_locked, 5_000
 
-    switcher =
-      Task.async(fn ->
-        Sandbox.unboxed_run(Repo, fn ->
-          Brando.Environments.set_live(Registry.get_environment(second.id), creator: :system)
-        end)
-      end)
+    switcher = set_live_task(second)
 
     wait_for_row_lock_waiter()
     send(saver.pid, :save)
@@ -163,6 +150,123 @@ defmodule Brando.Tenant.RedirectHostsConcurrencyTest do
       assert Registry.get_environment(first.id).domain == "two.race.test"
       assert Registry.get_environment(third.id).redirect_hosts == ["www.three.race.test"]
     end)
+  end
+
+  # The switch takes the host lock before it releases the outgoing domain: a
+  # write binding that domain on another site meanwhile waits for nothing the
+  # switch holds, and is refused, as the domain is still bound
+  test "a live switch and a write binding the outgoing domain both complete", %{first: first, second: second} do
+    dynamic_with_live(first)
+
+    other =
+      Sandbox.unboxed_run(Repo, fn ->
+        {:ok, other} =
+          Registry.create_site(%{name: "Acme Other", key: "acme-race-other", languages: ["en"], default_language: "en"})
+
+        other
+      end)
+
+    on_exit(fn -> Sandbox.unboxed_run(Repo, fn -> delete_site(other) end) end)
+
+    parent = self()
+
+    binder =
+      hold_hosts_lock(parent, fn ->
+        case Registry.create_environment(other, %{name: "Other", key: "other", domain: "one.race.test"}, actor: :system) do
+          {:error, changeset} -> Repo.rollback(changeset)
+          {:ok, environment} -> environment
+        end
+      end)
+
+    assert_receive :hosts_locked, 5_000
+    switcher = set_live_task(second)
+
+    wait_for_lock_waiter()
+    send(binder.pid, :go)
+
+    assert {:error, changeset} = Task.await(binder, 15_000)
+    assert changeset.errors[:domain]
+    assert {:ok, %Environment{live: true, domain: "one.race.test"}} = Task.await(switcher, 15_000)
+  end
+
+  # An environment committed after the switch locked the site's rows is not
+  # locked by it: the switch leaves its row alone, as a hosts save on it holds
+  # the row while it waits for the host lock the switch holds
+  test "a live switch and a hosts save on an environment created after it began both complete", %{
+    first: first,
+    second: second
+  } do
+    site = dynamic_with_live(first)
+    parent = self()
+
+    holder = hold_hosts_lock(parent, fn -> :ok end)
+    assert_receive :hosts_locked, 5_000
+
+    switcher = set_live_task(second)
+    wait_for_lock_waiter()
+
+    # No hosts: its insert does not wait for the host lock
+    third =
+      Sandbox.unboxed_run(Repo, fn ->
+        {:ok, third} = Registry.create_environment(site, %{name: "Three", key: "three"}, actor: :system)
+        third
+      end)
+
+    saver =
+      Task.async(fn ->
+        Sandbox.unboxed_run(Repo, fn ->
+          Repo.transaction(fn ->
+            locked = Repo.one(from(e in Environment, where: e.id == ^third.id, lock: "FOR UPDATE"), prefix: "public")
+            Registry.update_environment(locked, %{domain: "three.race.test"}, actor: :system)
+          end)
+        end)
+      end)
+
+    wait_for_lock_waiter(2)
+    send(holder.pid, :go)
+
+    assert {:ok, :ok} = Task.await(holder, 15_000)
+    assert {:ok, %Environment{live: true, domain: "one.race.test"}} = Task.await(switcher, 15_000)
+    assert {:ok, {:ok, %Environment{domain: "three.race.test"}}} = Task.await(saver, 15_000)
+  end
+
+  defp dynamic_with_live(%Environment{} = live) do
+    put_test_env(:environment_schema_cloner, NoopSchemaCloner, global: true)
+
+    Sandbox.unboxed_run(Repo, fn ->
+      {:ok, site} = Registry.update_site(Registry.get_site(live.site_id), %{delivery_mode: :dynamic})
+      Repo.update_all(from(e in Environment, where: e.id == ^live.id), [set: [live: true]], prefix: "public")
+      site
+    end)
+  end
+
+  # Holds the host lock the trigger takes until told to go on, then runs `fun`
+  defp hold_hosts_lock(parent, fun) do
+    on_own_connection(fn -> Repo.transaction(fn -> locked_hosts(parent, fun) end) end)
+  end
+
+  defp on_own_connection(fun), do: Task.async(fn -> Sandbox.unboxed_run(Repo, fun) end)
+
+  defp locked_hosts(parent, fun) do
+    Registry.lock_hosts()
+    send(parent, :hosts_locked)
+
+    receive do
+      :go -> fun.()
+    after
+      10_000 -> raise "never told to go on"
+    end
+  end
+
+  defp set_live_task(%Environment{id: id}) do
+    Task.async(fn ->
+      Sandbox.unboxed_run(Repo, fn -> Brando.Environments.set_live(Registry.get_environment(id), creator: :system) end)
+    end)
+  end
+
+  defp delete_site(%Site{id: id}) do
+    Repo.delete_all(from(e in Environment, where: e.site_id == ^id), prefix: "public")
+    Repo.delete_all(from(s in Site, where: s.id == ^id), prefix: "public")
   end
 
   defp wait_for_row_lock_waiter(attempts \\ 200)

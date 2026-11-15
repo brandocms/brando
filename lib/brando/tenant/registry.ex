@@ -308,6 +308,19 @@ defmodule Brando.Tenant.Registry do
 
   defp announce_on_success(result), do: result
 
+  # The key the hosts trigger on `public.environments` locks with; the
+  # migrations that define the trigger spell it out as well
+  @hosts_lock_key "brando.environments.hosts"
+
+  @doc false
+  # Takes, for the rest of the caller's transaction, the advisory lock the
+  # hosts trigger takes before it checks a binding
+  @spec lock_hosts() :: :ok
+  def lock_hosts do
+    Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [@hosts_lock_key])
+    :ok
+  end
+
   # Outside `Repo.transaction/2` (a data migration, a task) this runs at once,
   # in the caller's transaction, where a raise would roll the write back
   defp announce(site_id) do
