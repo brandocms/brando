@@ -29,7 +29,8 @@ defmodule Brando.Plug.Markdown do
   last segment is literally `….md` is left alone, as are static files served
   before this plug. Paths under `:except` are left alone too (default
   `["/admin", "/api"]`), for routes that take a `.md` file name as a
-  parameter:
+  parameter; with `tenancy_mode: :multi`, `/admin` only on the host that
+  serves the admin (`BrandoAdmin.AdminHost`):
 
       plug Brando.Plug.Markdown, except: ["/admin", "/api", "/docs"]
   """
@@ -47,7 +48,7 @@ defmodule Brando.Plug.Markdown do
   @impl true
   def call(%Plug.Conn{method: "GET"} = conn, %{except: except}) do
     cond do
-      excluded?(conn.request_path, except) -> conn
+      excluded?(conn, except) -> conn
       md_path?(conn) -> conn |> strip_extension() |> serve(:extension)
       wants_markdown?(conn) -> conn |> put_req_header("accept", "text/html") |> serve(:accept)
       true -> register_before_send(conn, &vary/1)
@@ -64,7 +65,11 @@ defmodule Brando.Plug.Markdown do
 
   # -- Request -----------------------------------------------------------------
 
-  defp excluded?(path, except), do: Enum.any?(except, &(path == &1 or String.starts_with?(path, &1 <> "/")))
+  # On a host that does not serve the admin, `/admin` is a path like any other
+  defp excluded?(%{request_path: path} = conn, except) do
+    except = if BrandoAdmin.AdminHost.serves_admin?(conn), do: except, else: List.delete(except, "/admin")
+    Enum.any?(except, &(path == &1 or String.starts_with?(path, &1 <> "/")))
+  end
 
   defp md_path?(%{path_info: path_info} = conn) when path_info != [] do
     last = List.last(path_info)
