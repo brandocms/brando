@@ -173,7 +173,11 @@ defmodule Brando.Tenant.RedirectHostsConcurrencyTest do
       Sandbox.unboxed_run(Repo, fn ->
         Repo.one(
           from(l in "pg_locks",
-            where: l.locktype in ["transactionid", "tuple"] and not l.granted,
+            join: a in "pg_stat_activity",
+            on: a.pid == l.pid,
+            where:
+              l.locktype in ["transactionid", "tuple"] and not l.granted and
+                a.datname == fragment("current_database()"),
             select: count()
           )
         )
