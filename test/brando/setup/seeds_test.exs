@@ -122,9 +122,21 @@ defmodule Brando.Setup.SeedsTest do
       {:ok, second} = Seeds.run(user, languages: [:en])
 
       assert second.created == []
-      assert length(second.skipped) == 4
+      assert length(second.skipped) == 5
       assert :"menu (en)" in second.skipped
       assert counts == {count(Pages.Page), count(Content.Module), count(Navigation.Menu), count(Pages.Fragment)}
+    end
+
+    test "a rerun does not bring back a footer deleted while the homepage stays" do
+      user = Factory.insert(:random_user)
+      {:ok, _first} = Seeds.run(user, languages: [:en])
+
+      Brando.Repo.delete!(Brando.Repo.get_by!(Pages.Fragment, parent_key: "partials", key: "footer", language: :en))
+
+      {:ok, second} = Seeds.run(user, languages: [:en])
+
+      assert :"footer (en)" in second.skipped
+      refute Brando.Repo.get_by(Pages.Fragment, parent_key: "partials", key: "footer", language: :en)
     end
 
     test "a seeded block for a module an editor has changed is reported as outdated" do
@@ -150,7 +162,7 @@ defmodule Brando.Setup.SeedsTest do
       labels = Enum.reverse(report.created) ++ Enum.reverse(report.skipped)
 
       assert Enum.sort(labels) ==
-               Enum.sort(for l <- [:en, :no], kind <- ~w(identity seo menu page), do: :"#{kind} (#{l})")
+               Enum.sort(for l <- [:en, :no], kind <- ~w(identity seo menu page footer), do: :"#{kind} (#{l})")
 
       assert Enum.filter(Enum.reverse(report.created), &(&1 in [:"menu (en)", :"page (en)", :"menu (no)", :"page (no)"])) ==
                [:"menu (en)", :"page (en)", :"menu (no)", :"page (no)"]

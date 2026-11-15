@@ -59,13 +59,138 @@ defmodule Brando.Tenant.Registry do
     |> refresh_cache_on_success()
   end
 
-  @spec update_site(Site.t(), map()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
-  def update_site(%Site{} = site, attrs) do
+  @doc """
+  Updates `site`'s row.
+
+  When the change adds languages to the site, each of its environments is
+  given its starting content in them once the row is committed
+  (`Brando.Worker.SiteLanguageSeed`), named as created by `:creator`, the
+  user making the change. A language removed deletes nothing: its content
+  stays, and is used again when the language is added back. A change of the
+  default language syncs each environment's identifiers.
+
+  A new default language that the same change adds is seeded in every
+  environment before the row is written instead, so the site's `/` has its
+  homepage as soon as it moves there. When an environment cannot be seeded
+  the row is left as it was and the changeset names the environment on
+  `:default_language`; what the other environments got stays, unseen until
+  the language is the site's, and the next attempt leaves it alone.
+
+  That seeding holds the site's environment-operation lock from reading its
+  environments to writing the row. When a copy, restore or setup holds the
+  lock, the save fails at once with a `:default_language` error instead of
+  waiting for it.
+  """
+  @spec update_site(Site.t(), map(), keyword()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
+  def update_site(%Site{} = site, attrs, opts \\ []) do
     changeset = Site.changeset(site, attrs)
+
+    case new_default_to_seed(site, changeset) do
+      nil ->
+        write_site(site, changeset, [], opts)
+
+      language ->
+        site.id
+        |> Brando.Tenant.Lock.environment_operation_key()
+        |> Brando.Tenant.Lock.try_with(fn -> seed_and_write(site, changeset, language, opts) end)
+        |> busy_to_error(changeset)
+    end
+  end
+
+  defp seed_and_write(site, changeset, language, opts) do
+    with {:ok, seeded} <- seed_in_every_environment(site, changeset, language, opts[:creator]),
+         do: write_site(site, changeset, seeded, opts)
+  end
+
+  defp write_site(site, changeset, seeded, opts) do
     result = changeset |> Repo.update(@public_opts) |> refresh_cache_on_success()
     if Map.has_key?(changeset.changes, :status), do: access_changed(result)
     if Map.has_key?(changeset.changes, :default_language), do: default_language_changed(result)
+
+    if Map.has_key?(changeset.changes, :languages),
+      do: languages_added(result, (site.languages || []) ++ seeded, opts[:creator])
+
     result
+  end
+
+  defp busy_to_error(:busy, changeset) do
+    {:error,
+     Ecto.Changeset.add_error(
+       changeset,
+       :default_language,
+       gettext(
+         "cannot be seeded now: the site is busy with a copy, restore or setup of an environment. Try again when it has finished."
+       )
+     )}
+  end
+
+  defp busy_to_error(result, _changeset), do: result
+
+  # The new default, when the change adds it, is seeded before the row is
+  # written: until a job seeded it, `/` would answer 404
+  defp new_default_to_seed(site, %Ecto.Changeset{valid?: true, changes: %{default_language: language}} = changeset) do
+    if Brando.Tenant.mode() == :multi and language not in (site.languages || []) and
+         language in Ecto.Changeset.get_field(changeset, :languages),
+       do: language
+  end
+
+  defp new_default_to_seed(_site, _changeset), do: nil
+
+  # Runs holding the site's environment-operation lock, so the environments
+  # read here are all there are until the row is written
+  defp seed_in_every_environment(site, changeset, language, creator) do
+    seed_site = %{Ecto.Changeset.apply_changes(changeset) | environments: list_environments(site.id)}
+
+    case Brando.Worker.SiteLanguageSeed.creator(creator) do
+      nil ->
+        {:error,
+         Ecto.Changeset.add_error(
+           changeset,
+           :default_language,
+           gettext("cannot be seeded: the installation has no superuser to create its content as")
+         )}
+
+      creator ->
+        case Brando.Worker.SiteLanguageSeed.seed_environments(seed_site, language, creator) do
+          :ok -> {:ok, [language]}
+          {:error, environment, reason} -> {:error, not_seeded(changeset, environment, reason)}
+        end
+    end
+  end
+
+  defp not_seeded(changeset, environment, reason) do
+    reason =
+      case reason do
+        %{__exception__: true} = exception -> Exception.message(exception)
+        reason when is_atom(reason) -> reason |> Atom.to_string() |> String.replace("_", " ")
+        reason -> inspect(reason)
+      end
+
+    Ecto.Changeset.add_error(
+      changeset,
+      :default_language,
+      gettext("could not be seeded in %{environment}, so nothing was saved: %{reason}",
+        environment: environment.name,
+        reason: reason
+      )
+    )
+  end
+
+  defp languages_added({:ok, %Site{id: id, languages: languages}}, previous, creator) do
+    added = languages -- previous
+
+    if added != [] and Brando.Tenant.mode() == :multi do
+      Repo.after_commit({:site_language_seed, id, added}, fn -> seed_languages(id, added, creator) end, late: true)
+    end
+  end
+
+  defp languages_added(_error, _previous, _creator), do: :ok
+
+  defp seed_languages(site_id, languages, creator) do
+    case get_site(site_id) do
+      nil -> :ok
+      site -> Enum.each(languages, &Brando.Worker.SiteLanguageSeed.enqueue(site, &1, creator))
+    end
   end
 
   # On a multi-site installation the default language's entries have

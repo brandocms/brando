@@ -853,31 +853,7 @@ defmodule Brando.Environments do
   end
 
   @doc false
-  def with_site_lock(site, fun) do
-    repo = Repo.repo()
-    lock_key = "brando:environment-operation:#{site.id}"
-
-    repo.checkout(
-      fn ->
-        Ecto.Adapters.SQL.query!(
-          repo,
-          "SELECT pg_advisory_lock(hashtextextended($1, 0))",
-          [lock_key]
-        )
-
-        try do
-          fun.()
-        after
-          Ecto.Adapters.SQL.query!(
-            repo,
-            "SELECT pg_advisory_unlock(hashtextextended($1, 0))",
-            [lock_key]
-          )
-        end
-      end,
-      timeout: :infinity
-    )
-  end
+  def with_site_lock(site, fun), do: Brando.Tenant.Lock.with(Brando.Tenant.Lock.environment_operation_key(site.id), fun)
 
   defp next_archive_prefix(base_prefix, offset \\ 0) do
     timestamp = DateTime.utc_now() |> DateTime.add(offset, :second) |> Calendar.strftime("%Y%m%d%H%M%S")

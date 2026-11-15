@@ -92,13 +92,13 @@ defmodule Brando.Sites.Site do
 
     cond do
       languages == [] ->
-        add_error(changeset, :languages, "must contain at least one language")
+        add_error(changeset, :languages, gettext("must contain at least one language"))
 
       Enum.any?(languages, &(not is_binary(&1) or not Regex.match?(@language_format, &1))) ->
-        add_error(changeset, :languages, "must contain lowercase language keys")
+        add_error(changeset, :languages, gettext("must contain lowercase language keys"))
 
       Enum.uniq(languages) != languages ->
-        add_error(changeset, :languages, "must not contain duplicates")
+        add_error(changeset, :languages, gettext("must not contain duplicates"))
 
       true ->
         changeset
@@ -141,7 +141,7 @@ defmodule Brando.Sites.Site do
     default_language = get_field(changeset, :default_language)
 
     if is_binary(default_language) and default_language not in languages do
-      add_error(changeset, :default_language, "must be included in languages")
+      add_error(changeset, :default_language, gettext("must be included in languages"))
     else
       changeset
     end

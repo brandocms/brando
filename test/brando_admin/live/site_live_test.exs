@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Sites.SiteLiveTest do
   use Brando.LiveCase
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Environments.Schema
   alias Brando.Tenant.Access
   alias Brando.Tenant.Registry
@@ -228,6 +230,258 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       |> render_submit()
 
       assert Registry.get_site(site.id).provider_library_group == "agency"
+    end
+  end
+
+  describe "a site's languages" do
+    setup %{current_user: user} do
+      prefixes = ~w(tenant_acme_production tenant_acme_staging)
+      on_exit(fn -> Brando.TenantCaches.clear(prefixes) end)
+
+      put_test_env(:tenant_seeder, Brando.Tenant.Seeder)
+      put_test_env(:tenant_structure_cloner, Brando.TenantCloners)
+      put_test_env(:environment_schema_cloner, Brando.TenantCloners)
+
+      {:ok, site} =
+        Brando.Tenant.Setup.create_site(
+          %{name: "Acme", key: "acme", languages: ["en"], default_language: "en", status: :active},
+          user
+        )
+
+      %{acme: site, production: Enum.find(site.environments, & &1.live)}
+    end
+
+    test "are changed here, and a language added is seeded in each environment", %{
+      conn: conn,
+      acme: site,
+      current_user: user
+    } do
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      view
+      |> form("#languages-site-#{site.id}", site: %{id: site.id, languages: "no, en", default_language: "no"})
+      |> render_submit()
+
+      site = Registry.get_site(site.id)
+      assert site.languages == ["no", "en"]
+      assert site.default_language == "no"
+
+      for environment <- site.environments do
+        Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, environment), fn ->
+          assert Brando.Repo.get_by!(Brando.Pages.Page, uri: "index", language: :no).creator_id == user.id
+        end)
+      end
+
+      refute has_element?(view, "#seeding-site-#{site.id}")
+    end
+
+    test "the form says before saving that a language removed keeps its content", %{conn: conn, acme: site} do
+      {:ok, site} = Registry.update_site(site, %{languages: ["en", "no"]})
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      refute has_element?(view, "#languages-site-#{site.id} [role=status]")
+
+      view
+      |> form("#languages-site-#{site.id}", site: %{id: site.id, languages: "en", default_language: "en"})
+      |> render_change()
+
+      assert has_element?(view, "#languages-site-#{site.id} [role=status]", "Removing no deletes nothing")
+    end
+
+    test "the default is not removed without a new default", %{conn: conn, acme: site} do
+      {:ok, site} = Registry.update_site(site, %{languages: ["en", "no"], default_language: "no"})
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      view
+      |> form("#languages-site-#{site.id}", site: %{id: site.id, languages: "en", default_language: "no"})
+      |> render_submit()
+
+      assert Registry.get_site(site.id).languages == ["en", "no"]
+    end
+
+    test "in groups mode, a user who may not update sites cannot change them", %{editor: editor, acme: site} do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+
+      assert {:error, :forbidden} = Brando.Tenant.Setup.update_languages(site, %{languages: ["en", "no"]}, editor)
+      assert Registry.get_site(site.id).languages == ["en"]
+    end
+
+    test "shows the seeding queued, a failed attempt, what is missing, and seeds it again", %{
+      conn: conn,
+      acme: site,
+      production: production
+    } do
+      row = "#seeding-#{site.id}-#{production.id}-no"
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]})
+      end)
+
+      {:ok, view, _html} = live(conn, "/admin/sites")
+      assert has_element?(view, row, "Seeding no in Production")
+      refute has_element?(view, "#{row} button")
+
+      Brando.Repo.update_all(Oban.Job, [set: [state: "retryable", attempt: 1, errors: [%{"error" => "boom\nstack"}]]],
+        prefix: "public"
+      )
+
+      view |> element("button", "Refresh") |> render_click()
+      assert has_element?(view, row, "failed, and is retried (attempt 1 of 20): boom")
+      assert has_element?(view, "#{row} button", "Seed again")
+
+      # Its last attempt failed
+      Brando.Repo.update_all(Oban.Job, [set: [state: "discarded", attempt: 3]], prefix: "public")
+      view |> element("button", "Refresh") |> render_click()
+      assert has_element?(view, row, "Seeding no in Production failed: boom")
+
+      # Pruned, it leaves what is missing
+      Brando.Repo.delete_all(Oban.Job, prefix: "public")
+      view |> element("button", "Refresh") |> render_click()
+      assert has_element?(view, row, "Production has no starting content in no.")
+
+      view |> element("#{row} button", "Seed again") |> render_click()
+      refute has_element?(view, row)
+
+      Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, production), fn ->
+        assert Brando.Repo.get_by(Brando.Pages.Page, uri: "index", language: :no)
+      end)
+    end
+
+    test "shows a failed seeding where the identity exists, and seeds it again", %{
+      conn: conn,
+      acme: site,
+      production: production
+    } do
+      row = "#seeding-#{site.id}-#{production.id}-no"
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]})
+      end)
+
+      Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, production), fn ->
+        Brando.Sites.create_default_identity(:no)
+      end)
+
+      Brando.Repo.update_all(
+        Oban.Job,
+        [set: [state: "discarded", attempt: 3, errors: [%{"attempt" => 3, "error" => "no homepage"}]]],
+        prefix: "public"
+      )
+
+      {:ok, view, _html} = live(conn, "/admin/sites")
+      assert has_element?(view, row, "Seeding no in Production failed: no homepage")
+
+      # A new job runs beside the discarded one (inline in tests, which keeps
+      # no row of it)
+      view |> element("#{row} button", "Seed again") |> render_click()
+
+      Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, production), fn ->
+        assert Brando.Repo.get_by(Brando.Pages.Page, uri: "index", language: :no)
+      end)
+    end
+
+    test "says in words why it cannot seed", %{conn: conn, acme: site, production: production, current_user: user} do
+      Brando.endpoint().subscribe("user:#{user.id}")
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      seed = fn environment_id, language ->
+        render_click(view, "seed_language", %{
+          "site-id" => to_string(site.id),
+          "environment-id" => to_string(environment_id),
+          "language" => language
+        })
+      end
+
+      seed.(production.id, "no")
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
+      assert message == "no is not one of Acme’s languages."
+
+      seed.(0, "en")
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
+      assert message == "That environment is not one of Acme’s."
+    end
+
+    test "while one of its own seedings runs, says so, and seeds a sibling again", %{
+      conn: conn,
+      acme: site,
+      production: production,
+      current_user: user
+    } do
+      staging = Enum.find(site.environments, &(not &1.live))
+      production_row = "#seeding-#{site.id}-#{production.id}-no"
+      staging_row = "#seeding-#{site.id}-#{staging.id}-no"
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]})
+      end)
+
+      job = fn environment ->
+        prefix = Brando.Tenant.prefix(site, environment)
+        from(j in Oban.Job, where: fragment("?->>'tenant_prefix'", j.args) == ^prefix)
+      end
+
+      Brando.Repo.update_all(job.(staging), [set: [state: "executing", attempt: 1]], prefix: "public")
+
+      Brando.Repo.update_all(
+        job.(production),
+        [set: [state: "retryable", attempt: 1, errors: [%{"attempt" => 1, "error" => "boom"}]]],
+        prefix: "public"
+      )
+
+      # The running job holds the locks a copy holds
+      {:ok, lock_conn} =
+        Postgrex.start_link(Keyword.drop(Brando.Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name]))
+
+      key = Brando.Tenant.Lock.environment_operation_key(site.id)
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+
+      Brando.endpoint().subscribe("user:#{user.id}")
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      assert has_element?(view, staging_row, "Seeding no in Staging now")
+      refute has_element?(view, "#seeding-site-#{site.id}", "copy or setup")
+
+      view |> element("#{production_row} button", "Seed again") |> render_click()
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Seeding queued."}}
+    end
+
+    test "offers no seeding while an environment is copied or the site provisioned", %{
+      conn: conn,
+      acme: site,
+      production: production
+    } do
+      row = "#seeding-#{site.id}-#{production.id}-no"
+      {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]})
+
+      Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, production), fn ->
+        Brando.Repo.delete_all(Brando.Sites.Identity)
+      end)
+
+      {:ok, lock_conn} =
+        Postgrex.start_link(Keyword.drop(Brando.Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name]))
+
+      key = Brando.Tenant.Lock.environment_operation_key(site.id)
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+
+      {:ok, view, _html} = live(conn, "/admin/sites")
+      assert has_element?(view, row, "Production has no starting content in no.")
+      refute has_element?(view, "#{row} button")
+      assert has_element?(view, row, "copy or setup")
+
+      render_click(view, "seed_language", %{
+        "site-id" => to_string(site.id),
+        "environment-id" => to_string(production.id),
+        "language" => "no"
+      })
+
+      Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, production), fn ->
+        refute Brando.Repo.get_by(Brando.Sites.Identity, language: :no)
+      end)
+
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+      view |> element("button", "Refresh") |> render_click()
+      assert has_element?(view, "#{row} button", "Seed again")
     end
   end
 

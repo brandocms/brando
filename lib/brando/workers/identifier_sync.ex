@@ -3,7 +3,7 @@ defmodule Brando.Worker.IdentifierSync do
   Syncs one site environment's identifiers (`Brando.Content.Identifier.Sync.sync/1`,
   what `mix brando.identifiers.sync` runs), so their stored URLs follow the
   site's languages. Queued for each environment of a site whose default
-  language changes (`Brando.Tenant.Registry.update_site/2`): the default
+  language changes (`Brando.Tenant.Registry.update_site/3`): the default
   language's entries lose their language prefix and the old default's gain
   one.
   """

@@ -1,0 +1,1 @@
+- A superuser changes a site's languages and default language on its card at `/admin/sites`, and each environment gets the starting content in a language added: identity, SEO, homepage, footer fragment and main menu. Removing a language deletes nothing.

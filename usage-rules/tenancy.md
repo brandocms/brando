@@ -89,12 +89,41 @@ Two lists of content languages have different jobs:
   row, are what that site uses: a subset of the installation's, in the site's
   own order.
 
-Provisioning a site, and changing its languages with
-`Brando.Tenant.Registry.update_site/2`, refuse a language the installation does
-not configure, and name it. `default_language` must be one of the site's
-languages. A row that already holds a language the installation does not
+A superuser changes a site's languages and default language on its card at
+`/admin/sites`, which calls `Brando.Tenant.Setup.update_languages/3` and asks
+for the right to update sites (`:update` on `:sites`), and for the password
+again when the session has not confirmed lately; setup code can call
+`Brando.Tenant.Registry.update_site/3`. Both refuse a language the
+installation does not configure, and name it. `default_language` must be one
+of the site's languages, so removing the default takes a new default in the
+same save. A row that already holds a language the installation does not
 configure keeps it, but the language is left out of the site's languages, and
 loading the site logs a warning.
+
+A language added to an existing site gets the starting content a new site
+gets, in each of the site's environments: once the change is saved, a job per
+environment (`Brando.Worker.SiteLanguageSeed`) runs the seeder's
+`seed_language/4` (see [Provision sites](deps/brando/guides/tenancy_and_environments.md#provision-sites-and-initial-environments)).
+What already exists in that language is left alone. A language added as the
+new default in the same save is seeded in every environment before the save
+instead, so the site's `/` has a homepage the moment it moves to that
+language. If an environment cannot be seeded, the save fails with an error
+that names it and the site keeps its languages; what the other environments
+got stays, unseen until the language is the site's, and saving again seeds
+only what is missing. While one of the site's environments is being copied,
+restored or set up, that save fails at once and asks you to try again. The
+site's card lists an
+environment that is still being seeded; one whose last seeding failed, retried
+or given up, with its error; and one that has no identity in one of the site's
+languages. A failed seeding is retried, with gaps that grow from 30 seconds to
+six hours, for about two and a half days before it is given up. A failed or
+missing one has a button that seeds it again at once. The job
+does not write into an environment while the site is being provisioned or one
+of its environments copied: it waits for that to finish, and the card offers
+no button meanwhile. The site's own seeding does not count: while one runs,
+its row says so, and another environment can be seeded again, its job waiting
+its turn. Removing a language deletes nothing: its entries stay in
+each environment, and are used again when the language is added back.
 
 In `:multi`, whatever works for one site uses that site's languages and default
 language:
@@ -135,7 +164,7 @@ parsed against the site's languages.
 Changing a site's default language moves its URLs: the new default's entries
 lose their prefix and the old default's gain one, so an English `/about`
 becomes `/en/about` when the default changes from English to Norwegian.
-`Brando.Tenant.Registry.update_site/2` then queues a job for each of the site's
+`Brando.Tenant.Registry.update_site/3` then queues a job for each of the site's
 environments that syncs its identifiers, as `mix brando.identifiers.sync` does,
 so the URLs they store follow, and so do links to those entries made with the
 link picker in rich text. A link typed in as a plain address keeps the old URL:

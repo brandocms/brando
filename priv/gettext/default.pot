@@ -652,6 +652,11 @@ msgstr ""
 msgid "%{email} was logged out everywhere."
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{environment} has no starting content in %{language}."
+msgstr ""
+
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{environment} uses %{name}"
@@ -716,6 +721,11 @@ msgid_plural "%{languages} are not among the installation's languages (config :b
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{language} is not one of %{name}’s languages."
+msgstr ""
+
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "%{missing} of %{total} images have no alt text and %{poor} only a filename or a generic word. Describe them in the image library."
@@ -769,6 +779,11 @@ msgstr ""
 #: lib/brando_admin/live/frontend_edit/editor_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{name} is also editing this page on the website"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is being set up, or one of its environments copied. Seed it again when that has finished."
 msgstr ""
 
 #: lib/brando/notifications/email.ex
@@ -1155,6 +1170,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "A heading that starts a new group of fields"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "A language you add gets the same starting content as a new site, in each environment."
 msgstr ""
 
 #: lib/brando_admin/components/form/alternates_drawer.ex
@@ -9048,6 +9068,11 @@ msgstr ""
 msgid "Languages"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Languages for %{name} saved."
+msgstr ""
+
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Last 12 months"
@@ -13890,6 +13915,11 @@ msgstr ""
 msgid "Removed from the trash after %{days} days"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Removing %{languages} deletes nothing: the content stays, and comes back if the language is added again."
+msgstr ""
+
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Rename"
@@ -14860,6 +14890,11 @@ msgstr ""
 msgid "Save guidance"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save languages"
+msgstr ""
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "Save minor text corrections"
@@ -15353,6 +15388,36 @@ msgstr ""
 #: lib/brando_admin/command_palette.ex
 #, elixir-autogen, elixir-format
 msgid "See all results for “%{query}”"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Seed again"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Seeding %{language} in %{environment} failed, and is retried (attempt %{attempt} of %{max}): %{error}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Seeding %{language} in %{environment} failed: %{error}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Seeding %{language} in %{environment} is queued."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Seeding %{language} in %{environment} now…"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Seeding queued."
 msgstr ""
 
 #: lib/brando_admin/components/content/list.ex
@@ -16920,6 +16985,11 @@ msgstr ""
 #: lib/brando_admin/reauth.ex
 #, elixir-autogen, elixir-format
 msgid "That did not work. Reload the page and try again."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "That environment is not one of %{name}’s."
 msgstr ""
 
 #: lib/brando_admin/components/two_factor.ex
@@ -19949,6 +20019,11 @@ msgstr ""
 msgid "Waiting for review"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for the environment's copy or setup to finish."
+msgstr ""
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Waiting for the next email"
@@ -20853,6 +20928,16 @@ msgstr ""
 msgid "can't be blank"
 msgstr ""
 
+#: lib/brando/tenant/registry.ex
+#, elixir-autogen, elixir-format
+msgid "cannot be seeded now: the site is busy with a copy, restore or setup of an environment. Try again when it has finished."
+msgstr ""
+
+#: lib/brando/tenant/registry.ex
+#, elixir-autogen, elixir-format
+msgid "cannot be seeded: the installation has no superuser to create its content as"
+msgstr ""
+
 #: lib/brando_admin/components/content/list/saved_views.ex
 #, elixir-autogen, elixir-format
 msgid "changed"
@@ -20903,6 +20988,11 @@ msgstr ""
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "connected %{date}"
+msgstr ""
+
+#: lib/brando/tenant/registry.ex
+#, elixir-autogen, elixir-format
+msgid "could not be seeded in %{environment}, so nothing was saved: %{reason}"
 msgstr ""
 
 msgid "create a new source to change an imported document's identity"
@@ -21226,12 +21316,32 @@ msgstr ""
 
 #: lib/brando/sites/site.ex
 #, elixir-autogen, elixir-format
+msgid "must be included in languages"
+msgstr ""
+
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
 msgid "must be lowercase letters, digits and single dashes"
 msgstr ""
 
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format
 msgid "must be on another server"
+msgstr ""
+
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "must contain at least one language"
+msgstr ""
+
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "must contain lowercase language keys"
+msgstr ""
+
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "must not contain duplicates"
 msgstr ""
 
 #: lib/brando/sites/deploy_config.ex

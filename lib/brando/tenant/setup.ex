@@ -73,6 +73,29 @@ defmodule Brando.Tenant.Setup do
   @spec activate_site(Site.t()) :: {:ok, Site.t()} | {:error, term()}
   def activate_site(%Site{} = site, opts \\ []), do: lifecycle(:update, opts, fn -> update_status(site, :active) end)
 
+  @doc """
+  Sets `site`'s languages and default language, from `attrs` with
+  `:languages` and `:default_language`, as `user`, who must be allowed to
+  update sites. A language added is seeded in each of the site's
+  environments after the save, with `user` as the creator of its content
+  (`Brando.Tenant.Registry.update_site/3`); one removed keeps its content.
+  """
+  @spec update_languages(Site.t(), map(), User.t()) :: {:ok, Site.t()} | {:error, term()}
+  def update_languages(%Site{} = site, attrs, %User{} = user) do
+    attrs = Map.take(attrs, [:languages, :default_language])
+
+    lifecycle(:update, [actor: Brando.Authorization.Scope.installation(user)], fn ->
+      Lock.with(lifecycle_lock_key(site.key), fn -> update_current(site, attrs, creator: user) end)
+    end)
+  end
+
+  defp update_current(site, attrs, opts) do
+    case Registry.get_site(site.id) do
+      nil -> {:error, :site_not_found}
+      %Site{} = current_site -> Registry.update_site(current_site, attrs, opts)
+    end
+  end
+
   @spec archive_site(Site.t(), keyword()) :: {:ok, Site.t()} | {:error, term()}
   def archive_site(%Site{} = site, opts \\ []) do
     lifecycle(:delete, opts, fn -> do_archive_site(site, opts) end)
@@ -360,5 +383,5 @@ defmodule Brando.Tenant.Setup do
   defp site_key(attrs), do: Map.get(attrs, :key, Map.get(attrs, "key"))
 
   @doc false
-  def lifecycle_lock_key(site_key), do: "brando:site-lifecycle:#{site_key}"
+  def lifecycle_lock_key(site_key), do: Lock.lifecycle_key(site_key)
 end
