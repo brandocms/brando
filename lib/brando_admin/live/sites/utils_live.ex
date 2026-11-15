@@ -380,9 +380,10 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     end
   end
 
+  # The sitemap is the site's, read from its live environment whichever is selected
   def handle_event("generate_sitemap", _, socket) do
     Brando.Sitemap.generate_sitemap()
-    send(self(), {:toast, gettext("Generated sitemap.")})
+    send(self(), {:toast, sitemap_generated(Brando.Sitemap.source_environment())})
 
     {:noreply, assign_sitemap(socket)}
   end
@@ -424,6 +425,14 @@ defmodule BrandoAdmin.Sites.UtilsLive do
     send(self(), {:toast, gettext("The operation could not be completed. Check the application logs and try again.")})
     {:noreply, socket}
   end
+
+  defp sitemap_generated(%{key: key, name: name}) do
+    if key == Brando.Tenant.environment_key_of(Brando.Tenant.current_prefix()),
+      do: gettext("Generated sitemap."),
+      else: gettext("Generated the sitemap from %{environment}, the live environment.", environment: name)
+  end
+
+  defp sitemap_generated(_no_live_environment), do: gettext("Generated sitemap.")
 
   # In a test, the checks' tasks join the page's SQL sandbox (`Brando.Doctor.run/1`).
   defp sandbox_owner(socket) do

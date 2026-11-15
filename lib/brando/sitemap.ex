@@ -38,6 +38,7 @@ defmodule Brando.Sitemap do
 
   require Logger
 
+  alias Brando.Tenant
   alias Brando.Tracing
 
   @doc """
@@ -146,6 +147,12 @@ defmodule Brando.Sitemap do
 
   Gathers all sitemap functions, generates and persists to disk.
 
+  A sitemap describes the public site, so with tenancy it is generated from
+  the site's live environment (`source_environment/0`), whichever of its
+  environments the process works in, and the index links name the site's
+  public base URL (`Brando.Utils.public_hostname/0`). The site's
+  environments share the files.
+
   ## Options
 
   Options are passed on to Sitemapper.
@@ -155,7 +162,25 @@ defmodule Brando.Sitemap do
   """
   # Not decorated directly: its implicit `rescue` would become a second span.
   @decorate span("brando.sitemap.generate")
-  def generate_sitemap(opts \\ []), do: do_generate_sitemap(opts)
+  def generate_sitemap(opts \\ []) do
+    case source_environment() do
+      nil -> do_generate_sitemap(opts)
+      live -> Tenant.with_prefix(Tenant.prefix(Tenant.current_site_key(), live.key), fn -> do_generate_sitemap(opts) end)
+    end
+  end
+
+  @doc """
+  The environment `generate_sitemap/1` reads: the live environment of the
+  site the process's tenant prefix names, or `nil` outside a site (and in
+  `:none`), where it reads the current schema.
+  """
+  @spec source_environment() :: Brando.Environments.Environment.t() | nil
+  def source_environment do
+    case Tenant.current_site_key() do
+      nil -> nil
+      site_key -> Tenant.Cache.get_live_env(site_key)
+    end
+  end
 
   defp do_generate_sitemap(opts) do
     sitemap_module = Brando.web_module(Sitemap)
@@ -170,7 +195,7 @@ defmodule Brando.Sitemap do
     File.mkdir_p!(sitemap_path)
 
     default_opts = [
-      sitemap_url: Brando.Utils.hostname("sitemaps"),
+      sitemap_url: Brando.Utils.public_hostname("sitemaps"),
       store: Sitemapper.FileStore,
       store_config: [
         path: sitemap_path
