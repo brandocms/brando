@@ -3,3 +3,5 @@
   `websocket: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]` and
   `longpoll: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]`.
   Open the admin on the endpoint's host, `localhost:4000/admin` in development.
+
+- With `tenancy_mode: :multi`, a site's default `robots.txt` no longer names `/admin/`, and a newly provisioned site's seeded homepage, menu and footer have no admin links.
