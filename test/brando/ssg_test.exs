@@ -500,8 +500,63 @@ defmodule Brando.SSGTest do
       end
     end
 
+    # Bandit is not among Brando's test dependencies, and Cowboy's :ranch is not
+    # loaded (the test application's endpoint answers {:error, "function
+    # :ranch.get_addr/1 is undefined ..."}). These are the answers the adapters
+    # give for no listener, read from their source.
+    @no_listener_answers [
+      # Phoenix.Endpoint.Cowboy2Adapter.server_info/2 (Phoenix 1.8.16) rescues
+      # :ranch.get_addr/1, whose ETS lookup raises for a listener that was
+      # never started (server: false)
+      {:error, "errors were found at the given arguments"},
+      # :ranch.get_addr/1 (ranch 2.2) for a listener that is not listening yet
+      {:ok, {:undefined, :undefined}},
+      # Bandit.PhoenixAdapter.server_info/2 (Bandit 1.14) with no {endpoint,
+      # :http} child, as with server: false
+      {:error, :no_server_found},
+      # ThousandIsland.listener_info/1 (1.6), which Bandit returns as it is,
+      # with no listener process
+      :error,
+      # Both, for a listener on a Unix socket (`ip: {:local, path}`)
+      {:ok, {:local, "/tmp/acme.sock"}}
+    ]
+
+    test "is no listener for each answer the adapters give without one", context do
+      assert {:error, message} = BrandoIntegrationWeb.Endpoint.server_info(:http)
+      assert is_binary(message)
+
+      for answer <- @no_listener_answers do
+        start_answering(NotStartedEndpoint, answer)
+        assert SSG.listener_url(NotStartedEndpoint) == :error, "#{inspect(answer)} is no listener"
+
+        assert {:error, {:no_http_listener, NotStartedEndpoint}, %{processed_urls: 0}} =
+                 build_root(context, endpoint: NotStartedEndpoint)
+
+        :ok = stop_supervised(NotStartedEndpoint)
+      end
+    end
+
     test "is not needed for a dry run", context do
       assert {:ok, %{url_count: 2}} = build_root(context, endpoint: NotStartedEndpoint, dry_run: true)
+    end
+
+    defmodule AnsweringAdapter do
+      @moduledoc false
+      def child_specs(_endpoint, _config), do: []
+      def server_info(endpoint, _scheme), do: endpoint.config(:server_info_answer)
+    end
+
+    defp start_answering(endpoint, answer) do
+      Application.put_env(:brando, endpoint,
+        adapter: AnsweringAdapter,
+        server_info_answer: answer,
+        http: [port: 4100],
+        server: true,
+        secret_key_base: String.duplicate("x", 64)
+      )
+
+      on_exit(fn -> Application.delete_env(:brando, endpoint) end)
+      start_supervised!(endpoint, restart: :temporary)
     end
 
     # The adapter reports the configured address, so no socket is needed here
