@@ -20,7 +20,7 @@ defmodule Brando.Users.User do
   import Brando.Blueprint.Listings.Components.Core
   import Brando.Blueprint.Listings.Components.Cover, only: [cover: 1]
 
-  alias Brando.RuntimeConfig
+  alias Brando.Blueprint.CompileConfig
   alias Brando.Users.UserConfig
 
   @type t :: %__MODULE__{}
@@ -74,7 +74,7 @@ defmodule Brando.Users.User do
     # which is the only writer that can honestly claim to know it. `last_login`
     # stays what its name says: set once, at sign-in. See brando_165.
     attribute :last_seen, :naive_datetime
-    attribute :language, :language, languages: RuntimeConfig.get(:admin_languages)
+    attribute :language, :language, languages: CompileConfig.read(:admin_languages)
 
     # Public profile, for JSON-LD where a blueprint maps the user as an author
     # (`field :author, :person, & &1.creator`; see `Brando.JSONLD.Author`).
