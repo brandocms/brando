@@ -585,7 +585,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       draft = for {param, field} <- @host_fields, is_binary(params[param]), into: %{}, do: {field, params[param]}
 
       {:noreply,
-       update(socket, :host_drafts, &Map.update(&1, draft_key(environment), draft, fn typed -> Map.merge(typed, draft) end))}
+       update(
+         socket,
+         :host_drafts,
+         &Map.update(&1, draft_key(environment), draft, fn typed -> Map.merge(typed, draft) end)
+       )}
     else
       _ -> {:noreply, socket}
     end
@@ -606,7 +610,10 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
          {:ok, _updated} <- update_shown_hosts(socket, listed, params, attrs) do
       {:noreply,
        socket
-       |> update(:host_drafts, &Map.reject(&1, fn {{environment_id, _domain, _hosts}, _draft} -> environment_id == listed.id end))
+       |> update(
+         :host_drafts,
+         &Map.reject(&1, fn {{environment_id, _domain, _hosts}, _draft} -> environment_id == listed.id end)
+       )
        |> notify(gettext("Domain updated."))
        |> refresh_data()}
     else
@@ -835,17 +842,17 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     shown_domain = params["shown_domain"]
     shown_hosts = params["shown_redirect_hosts"]
 
-    if is_binary(shown_domain) and (is_binary(shown_hosts) or not Map.has_key?(attrs, :redirect_hosts)) do
-      Repo.transaction(fn ->
-        with {:ok, environment} <- locked_shown(id, site_id, shown_domain, shown_hosts),
-             {:ok, updated} <- Registry.update_environment(environment, attrs, actor: socket.assigns.current_user) do
-          updated
-        else
-          {:error, reason} -> Repo.rollback(reason)
-        end
-      end)
+    if is_binary(shown_domain) and (is_binary(shown_hosts) or not Map.has_key?(attrs, :redirect_hosts)),
+      do: Repo.transaction(fn -> update_locked(socket, id, site_id, {shown_domain, shown_hosts}, attrs) end),
+      else: {:error, :domain_moved}
+  end
+
+  defp update_locked(socket, id, site_id, {shown_domain, shown_hosts}, attrs) do
+    with {:ok, environment} <- locked_shown(id, site_id, shown_domain, shown_hosts),
+         {:ok, updated} <- Registry.update_environment(environment, attrs, actor: socket.assigns.current_user) do
+      updated
     else
-      {:error, :domain_moved}
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 
