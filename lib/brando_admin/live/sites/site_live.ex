@@ -5,13 +5,15 @@ defmodule BrandoAdmin.Sites.SiteLive do
   use BrandoAdmin.Toast
   use Gettext, backend: Brando.Gettext
 
-  # Creating, activating, deleting, suspending or archiving a site, and giving
-  # or taking someone's access to it, and choosing which sites share the video
-  # providers' libraries, ask for the password, a code or a passkey when the
-  # session has not confirmed lately. Activating puts the site's hosts back in
-  # public routing; creating one seeds its groups and grants.
+  # Creating, activating, deleting, suspending or archiving a site, giving or
+  # taking someone's access to it, choosing which sites share the video
+  # providers' libraries, and changing its languages ask for the password, a
+  # code or a passkey when the session has not confirmed lately. Activating
+  # puts the site's hosts back in public routing; creating one seeds its
+  # groups and grants; a new default language moves the site's public URLs.
   on_mount(
-    {BrandoAdmin.Reauth, events: ~w(create_site activate_site delete suspend archive grant revoke set_library_group)}
+    {BrandoAdmin.Reauth,
+     events: ~w(create_site activate_site delete suspend archive grant revoke set_library_group save_languages)}
   )
 
   import Ecto.Query, only: [from: 2]
