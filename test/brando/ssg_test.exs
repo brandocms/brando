@@ -5,7 +5,11 @@ defmodule Brando.SSGTest do
   alias Brando.Sites.Site
   alias Brando.SSG
   alias Brando.SSG.Context
+  alias Brando.Test.SSGEndpoint
   alias Brando.WebhookReceiver
+
+  # For a custom fetcher, which answers whatever origin it is asked for
+  @base_url "http://127.0.0.1:4000"
 
   defmodule Fixture do
     import Brando.SSG
@@ -48,6 +52,7 @@ defmodule Brando.SSGTest do
                static_path: context.static_path,
                media_path: context.media_path,
                ssg_module: Fixture,
+               base_url: @base_url,
                fetcher: fetcher
              )
 
@@ -81,6 +86,7 @@ defmodule Brando.SSGTest do
                static_path: context.static_path,
                media_path: context.media_path,
                ssg_module: Fixture,
+               base_url: @base_url,
                fetcher: fetcher
              )
 
@@ -118,6 +124,7 @@ defmodule Brando.SSGTest do
                static_path: context.static_path,
                media_path: context.media_path,
                ssg_module: Fixture,
+               base_url: @base_url,
                fetcher: fn _url, _opts -> {:ok, %{status: 200, body: "ok"}} end
              )
 
@@ -371,11 +378,110 @@ defmodule Brando.SSGTest do
                  static_path: context.static_path,
                  media_path: context.media_path,
                  ssg_module: AboutOnly,
+                 base_url: @base_url,
                  fetcher: fetcher
                )
 
       assert_received {:fetched, "/about", false}
       assert_received {:fetched, "/om-oss", false}
+    end
+  end
+
+  describe "the origin a build requests" do
+    defmodule RootOnly do
+      @moduledoc false
+      import Brando.SSG
+
+      urls :pages do
+        ["/", "/about"]
+      end
+    end
+
+    defmodule NotStartedEndpoint do
+      @moduledoc false
+      use Phoenix.Endpoint, otp_app: :brando
+    end
+
+    defp build_root(context, opts) do
+      SSG.build(
+        [
+          output_path: context.output_path,
+          static_path: context.static_path,
+          media_path: context.media_path,
+          ssg_module: RootOnly
+        ] ++ opts
+      )
+    end
+
+    test "is the endpoint's own HTTP listener, on whatever port it listens", context do
+      receiver = SSGEndpoint.start(fn %{path: path} -> {200, "<main>#{path}</main>"} end)
+      refute receiver.port == 4000
+
+      assert {:ok, %{failed_urls: [], processed_urls: 2}} = build_root(context, endpoint: SSGEndpoint)
+
+      assert_received {:webhook_request, %{path: "/", headers: %{"host" => host}}}
+      assert host == "127.0.0.1:#{receiver.port}"
+      assert_received {:webhook_request, %{path: "/about"}}
+      assert File.read!(Path.join(context.output_path, "index.html")) =~ "<main>/</main>"
+    end
+
+    test "is the application's endpoint unless the build names one", context do
+      receiver = SSGEndpoint.start(fn _request -> {200, "ok"} end)
+      put_test_env(:endpoint_module, SSGEndpoint)
+
+      assert {:ok, %{failed_urls: []}} = build_root(context, [])
+      assert_received {:webhook_request, %{headers: %{"host" => host}}}
+      assert host == "127.0.0.1:#{receiver.port}"
+    end
+
+    test "is the address a listener is bound to when that is not a wildcard", context do
+      assert {:ok, "http://127.0.0.1:4100"} = listener_url_for(context, {127, 0, 0, 1}, 4100)
+      assert {:ok, "http://10.0.0.5:4100"} = listener_url_for(context, {10, 0, 0, 5}, 4100)
+      assert {:ok, "http://[::1]:4100"} = listener_url_for(context, {0, 0, 0, 0, 0, 0, 0, 0}, 4100)
+      assert {:ok, "http://[::1]:4100"} = listener_url_for(context, {0, 0, 0, 0, 0, 0, 0, 1}, 4100)
+    end
+
+    test "is :base_url when the build passes one, with no listener needed", context do
+      site = WebhookReceiver.start(fn _request -> {200, "ok"} end)
+
+      assert {:ok, %{failed_urls: []}} =
+               build_root(context, endpoint: NotStartedEndpoint, base_url: WebhookReceiver.url(site, ""))
+    end
+
+    test "without a listener fails the build before any request, leaving the output as it was", context do
+      File.mkdir_p!(context.output_path)
+      File.write!(Path.join(context.output_path, "index.html"), "the last build")
+      fetcher = fn _url, _opts -> flunk("a build without a listener must not request anything") end
+
+      # Not running; and running with server: false (the test application's)
+      for endpoint <- [NotStartedEndpoint, BrandoIntegrationWeb.Endpoint] do
+        assert {:error, {:no_http_listener, ^endpoint} = reason, %{processed_urls: 0}} =
+                 build_root(context, endpoint: endpoint, fetcher: fetcher)
+
+        assert SSG.error_message(reason) =~ "#{inspect(endpoint)} has no HTTP listener"
+        assert File.read!(Path.join(context.output_path, "index.html")) == "the last build"
+      end
+    end
+
+    test "is not needed for a dry run", context do
+      assert {:ok, %{url_count: 2}} = build_root(context, endpoint: NotStartedEndpoint, dry_run: true)
+    end
+
+    # The adapter reports the configured address, so no socket is needed here
+    defp listener_url_for(_context, ip, port) do
+      Application.put_env(:brando, NotStartedEndpoint,
+        adapter: SSGEndpoint.Adapter,
+        http: [ip: ip, port: port],
+        server: true,
+        secret_key_base: String.duplicate("x", 64)
+      )
+
+      on_exit(fn -> Application.delete_env(:brando, NotStartedEndpoint) end)
+      pid = start_supervised!(NotStartedEndpoint, restart: :temporary)
+      result = SSG.listener_url(NotStartedEndpoint)
+      :ok = stop_supervised(NotStartedEndpoint)
+      refute Process.alive?(pid)
+      result
     end
   end
 end

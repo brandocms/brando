@@ -17,7 +17,6 @@ defmodule Brando.SSG do
   alias Brando.Tenant.Storage
   alias Brando.Tracing
 
-  @default_base_url "http://localhost:4000"
   @default_receive_timeout 60_000
   @redirect_statuses [301, 302, 303, 307, 308]
   @max_redirects 10
@@ -25,21 +24,14 @@ defmodule Brando.SSG do
   @doc """
   Declares a group of paths in the application's web SSG module.
 
-  Create `lib/my_app_web/ssg.ex`:
+  `mix brando.gen.ssg` writes `lib/my_app_web/ssg.ex`, listing each site's
+  published pages from its content; add a block for each other content type
+  with pages:
 
   ```
-      defmodule MyAppWeb.SSG do
-        import Brando.SSG
-
-        urls :pages do
-          ["/", "/projects", "/about"]
-        end
-
-        urls :projects do
-          %{status: :published}
-          |> Projects.list_projects!()
-          |> Enum.map(&Projects.Project.__absolute_url__/1)
-        end
+      urls :projects do
+        {:ok, projects} = MyApp.Projects.list_projects(%{status: :published})
+        Enum.map(projects, &MyApp.Projects.Project.__absolute_url__/1)
       end
   ```
 
@@ -112,8 +104,17 @@ defmodule Brando.SSG do
   Requests carry a short-lived signed SSG header so environments without a
   domain can be rendered through the normal endpoint and tenant plug.
 
+  Pages are requested from the endpoint's own HTTP listener: `http`, the
+  loopback address and the port the endpoint (`:endpoint`, by default the
+  application's) is listening on, read when the build starts. A listener bound
+  to one address other than a wildcard is requested on that address. An
+  explicit `:base_url` wins. Without a listener, and without `:base_url`, the
+  build fails with `{:no_http_listener, endpoint}` before any URL is
+  requested or the output is touched (`error_message/1` describes it). A dry
+  run requests nothing and needs no listener.
+
   A build requests only its own origin. A listed path that redirects within
-  the origin of `:base_url` is stored with the answer it ends at, and the header
+  the build's origin is stored with the answer it ends at, and the header
   goes along. A redirect to any other origin fails that URL without a request.
 
   The injectable `:fetcher` option has arity two (`url`, request options) and
@@ -146,7 +147,8 @@ defmodule Brando.SSG do
     do: {:error, :environment_belongs_to_another_site, empty_result(opts[:output_path], false)}
 
   defp build_under_tenant(site, environment, output_path, opts, dry_run?, progress) do
-    with {:ok, urls} <- get_urls(Keyword.get(opts, :ssg_module, Brando.web_module(SSG))),
+    with {:ok, opts} <- put_base_url(opts, dry_run?),
+         {:ok, urls} <- get_urls(Keyword.get(opts, :ssg_module, Brando.web_module(SSG))),
          {:ok, normalized_urls} <- normalize_urls(urls),
          :ok <- prepare_output(output_path, dry_run?),
          :ok <- copy_assets(site, output_path, opts, dry_run?),
@@ -166,6 +168,56 @@ defmodule Brando.SSG do
       {:error, reason} -> {:error, reason, empty_result(output_path, dry_run?)}
     end
   end
+
+  defp put_base_url(opts, true), do: {:ok, opts}
+
+  defp put_base_url(opts, false) do
+    if Keyword.has_key?(opts, :base_url) do
+      {:ok, opts}
+    else
+      endpoint = Keyword.get_lazy(opts, :endpoint, &Brando.endpoint/0)
+
+      case listener_url(endpoint) do
+        {:ok, base_url} -> {:ok, Keyword.put(opts, :base_url, base_url)}
+        :error -> {:error, {:no_http_listener, endpoint}}
+      end
+    end
+  end
+
+  @doc """
+  The origin a build requests its pages from: `endpoint`'s running HTTP
+  listener, as `http://127.0.0.1:<port>`, or on the address the listener is
+  bound to when that is not a wildcard. `:error` when the endpoint is not
+  running or has no HTTP listener (`server: false`, or HTTPS only).
+  """
+  @spec listener_url(module()) :: {:ok, String.t()} | :error
+  def listener_url(endpoint) do
+    case endpoint.server_info(:http) do
+      {:ok, {ip, port}} when is_integer(port) and port > 0 -> {:ok, "http://#{listener_host(ip)}:#{port}"}
+      _no_listener -> :error
+    end
+  rescue
+    # An endpoint that is not running has no config table to read its adapter
+    # from; a module that is not an endpoint has no server_info/1.
+    _not_running in [ArgumentError, UndefinedFunctionError] -> :error
+  catch
+    :exit, _not_running -> :error
+  end
+
+  defp listener_host({0, 0, 0, 0}), do: "127.0.0.1"
+  defp listener_host({0, 0, 0, 0, 0, 0, 0, 0}), do: "[::1]"
+  defp listener_host(ip) when tuple_size(ip) == 4, do: ip |> :inet.ntoa() |> to_string()
+  defp listener_host(ip) when tuple_size(ip) == 8, do: "[#{ip |> :inet.ntoa() |> to_string()}]"
+  defp listener_host(_local_socket_or_unknown), do: "127.0.0.1"
+
+  @doc "A sentence for a build's error reason, for a log or a terminal."
+  @spec error_message(term()) :: String.t()
+  def error_message({:no_http_listener, endpoint}) do
+    "#{inspect(endpoint)} has no HTTP listener to request the pages from. " <>
+      "Run the endpoint as a server (`server: true`) with an `:http` port, or pass `:base_url`."
+  end
+
+  def error_message(reason), do: inspect(reason)
 
   defp normalize_urls(urls) when is_list(urls) do
     urls
@@ -269,7 +321,7 @@ defmodule Brando.SSG do
   defp render_url(_url, _token, _output_path, _opts, true), do: :ok
 
   defp render_url(url, token, output_path, opts, false) do
-    base_url = Keyword.get(opts, :base_url, @default_base_url)
+    base_url = Keyword.fetch!(opts, :base_url)
     request_url = URI.merge(ensure_trailing_slash(base_url), String.trim_leading(url, "/")) |> to_string()
     fetcher = Keyword.get(opts, :fetcher, &default_fetcher/2)
 

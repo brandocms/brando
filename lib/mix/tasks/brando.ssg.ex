@@ -17,9 +17,17 @@ defmodule Mix.Tasks.Brando.Ssg do
       non-zero
     * `--site` - site key in multi-site mode
     * `--environment` - environment key (defaults to the live environment)
-    * `--output` - output directory (defaults to the application's SSG path)
+    * `--output` - output directory. By default, with several sites, the
+      site's own `sites/<key>/ssg/manual` (beside the background builds in
+      `sites/<key>/ssg/builds`); otherwise the application's SSG path
+      (`./ssg`, or the SSG module's `render_path`)
     * `--dry-run` - resolve URLs without requesting or writing files
     * `--no-compile-assets` - use existing release assets without running Vite
+
+  The task starts the endpoint as a server on the port the project configures
+  for it, without its watchers (no Vite dev servers), and requests every page
+  from that listener. An endpoint with no `:http` configuration cannot be
+  built from: the task says so before it requests anything.
 
   The task remains compatible with non-tenant applications. Tenant builds may
   target any named environment, whether or not it has a public domain.
@@ -34,6 +42,7 @@ defmodule Mix.Tasks.Brando.Ssg do
   alias Brando.Tenant
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
+  alias Brando.Tenant.Storage
 
   @switches [
     yes: :boolean,
@@ -48,9 +57,11 @@ defmodule Mix.Tasks.Brando.Ssg do
   @impl Mix.Task
   def run(args) do
     {opts, _argv} = OptionParser.parse!(args, strict: @switches)
-    # The build requests every page from the running endpoint (see
-    # `Brando.SSG`'s base URL), so unlike the other tasks this one must listen.
+    # The build requests every page from the running endpoint's listener (see
+    # `Brando.SSG.listener_url/1`), so unlike the other tasks this one must
+    # listen. It needs no Vite dev servers, which the watchers would start.
     Application.put_env(:phoenix, :serve_endpoints, true)
+    without_watchers(Brando.otp_app(), Brando.endpoint())
     Application.put_env(:logger, :level, :error)
 
     Mix.shell().info("""
@@ -63,7 +74,7 @@ defmodule Mix.Tasks.Brando.Ssg do
     Mix.Tasks.Run.run([])
 
     {site, environment} = select_context!(opts)
-    output_path = opts[:output] |> Kernel.||(SSG.get_root_path()) |> Path.expand()
+    output_path = opts[:output] |> Kernel.||(default_output(site)) |> Path.expand()
 
     asset_set =
       if site && Tenant.mode() == :multi,
@@ -82,6 +93,23 @@ defmodule Mix.Tasks.Brando.Ssg do
       Mix.shell().info("Static generation cancelled.")
     end
   end
+
+  defp without_watchers(otp_app, endpoint) do
+    case Application.get_env(otp_app, endpoint) do
+      config when is_list(config) -> Application.put_env(otp_app, endpoint, Keyword.put(config, :watchers, []))
+      _none -> :ok
+    end
+  end
+
+  # With several sites, one shared directory would hold whichever site was
+  # built last: each site's own goes beside its background builds.
+  defp default_output(%Site{} = site) do
+    if Tenant.mode() == :multi,
+      do: Path.join([Storage.site_root(site), "ssg", "manual"]),
+      else: SSG.get_root_path()
+  end
+
+  defp default_output(nil), do: SSG.get_root_path()
 
   defp select_context!(opts) do
     case Tenant.mode() do
@@ -155,6 +183,6 @@ defmodule Mix.Tasks.Brando.Ssg do
 
   defp report_result!({:error, reason, result}) do
     Enum.each(result.failed_urls, &Mix.shell().error("Failed: #{&1}"))
-    Mix.raise("Static generation failed: #{inspect(reason)}")
+    Mix.raise("Static generation failed: #{SSG.error_message(reason)}")
   end
 end

@@ -1848,28 +1848,48 @@ builds.
 
 <!-- usage-rules:start topic="tenancy" -->
 
-Declare public paths in your application's web SSG module:
+A static build requests and stores the paths your application's web SSG
+module lists. `mix brando.gen.ssg` writes one that lists each site's published
+pages:
 
 ```elixir
 defmodule MyAppWeb.SSG do
   import Brando.SSG
 
-  urls :pages do
-    ["/", "/about", "/contact"]
-  end
+  alias Brando.Pages
+  alias Brando.Pages.Page
 
-  urls :projects do
-    MyApp.Projects.list_projects!(%{status: :published})
-    |> Enum.map(&MyApp.Projects.Project.__absolute_url__/1)
+  # Published pages with a URL, in the site's languages
+  urls :pages do
+    {:ok, pages} =
+      Pages.list_pages(%{
+        filter: Page.__url_filter__(),
+        status: :published,
+        select: {:struct, [:uri, :language, :has_url]}
+      })
+
+    pages
+    |> Brando.Sitemap.in_site_languages()
+    |> Enum.map(&Page.__absolute_url__/1)
   end
 end
 ```
 
+Add a `urls` block for each other content type with pages, listing its
+published entries' `__absolute_url__/1` the same way.
+
 <!-- usage-rules:end -->
 
 URL callbacks execute under the selected environment's tenant prefix. The
-renderer sends a short-lived signed context header through the normal endpoint,
-so a working environment can be built without assigning it a temporary domain.
+renderer requests each path from the application's own endpoint, at
+`http://127.0.0.1` and the port its HTTP listener is bound to, read when the
+build starts (a listener bound to one other address is requested there). It
+sends a short-lived signed context header, so a working environment can be
+built without assigning it a temporary domain. A build therefore needs the
+endpoint running as a server with an `:http` listener, as a release behind a
+proxy does on whatever port it listens: without one, the build fails before it
+requests anything, and its log says so. `Brando.SSG.build/3` takes `:base_url`
+to request another origin instead.
 Responses outside the 200 range are retained in the build's failed-URL list and
 make the build fail without hiding partial logs or counts.
 
@@ -1878,7 +1898,7 @@ path on that origin is stored with the answer the redirect ends at, and the
 signed header goes along. A redirect to another scheme, host or port, or to a
 URL carrying credentials, fails that URL: Brando makes no request there, and the
 failed-URL list names the target's origin. That includes an absolute URL to the
-site's public domain when the build renders through `http://localhost:4000`, so
+site's public domain, since the build renders through the endpoint's listener, so
 write a redirect on a listed path as a relative path, or take the path off the
 SSG module's list. A custom `:fetcher` gets `redirect: false` and returns a
 redirect with its `:headers`.
@@ -2014,6 +2034,12 @@ mix brando.ssg --site acme --force --output /tmp/acme-static
 ```
 
 <!-- usage-rules:end -->
+
+The task starts the endpoint on the port the project configures for it, without
+its watchers, and builds from that listener. With several sites it writes to
+the site's own `sites/<key>/ssg/manual` unless given `--output`; the Publishing
+screen's builds go to `sites/<key>/ssg/builds/`, which the task leaves alone.
+Otherwise it writes to `./ssg`, or to the SSG module's `render_path`.
 
 Without an uploaded asset set, the task builds the local frontend with Vite and
 copies `priv/static`. Pass `--no-compile-assets` to reuse the current release

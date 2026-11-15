@@ -208,7 +208,7 @@ defmodule Brando.Worker.SSGBuild do
       url_count: Map.get(result, :url_count, current.url_count),
       processed_urls: Map.get(result, :processed_urls, current.processed_urls),
       failed_urls: Map.get(result, :failed_urls, current.failed_urls),
-      build_log: current.build_log <> log_line("Build failed: #{inspect(reason)}")
+      build_log: current.build_log <> log_line("Build failed: #{Brando.SSG.error_message(reason)}")
     }
 
     case Builds.update(current, attrs) do

@@ -51,6 +51,15 @@ if Code.ensure_loaded?(Igniter) do
       |> Igniter.add_notice("Review the sitemap's public URL rules before calling Brando.Sitemap.generate_sitemap/0.")
     end
 
+    defp generate(igniter, project, :ssg) do
+      igniter
+      |> copy(project, "brando.gen.ssg", "lib/application_name_web/ssg.ex", Module.concat(project.web_module, SSG))
+      |> Igniter.add_notice(
+        "#{inspect(Module.concat(project.web_module, SSG))} lists each site's published pages for static builds. " <>
+          "Add a urls block for each other content type with pages."
+      )
+    end
+
     defp generate(igniter, project, :authorization) do
       igniter
       |> copy(

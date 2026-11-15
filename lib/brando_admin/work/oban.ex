@@ -48,7 +48,7 @@ defmodule BrandoAdmin.Work.Oban do
   defp handle([:oban, :engine, :insert_job, :stop], _meta, %Oban.Job{} = job, %{"step" => false} = work) do
     message = work["queued"] || work["running"]
 
-    if (message && not job.conflict?) and job.state == "available" do
+    if message && !job.conflict? && job.state == "available" do
       report(work, :start, %{message: message})
     end
   end
