@@ -652,6 +652,11 @@ msgstr ""
 msgid "%{email} was logged out everywhere."
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{environment} has no starting content in %{language}."
+msgstr ""
+
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{environment} uses %{name}"
@@ -1155,6 +1160,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/form_fields.ex
 #, elixir-autogen, elixir-format
 msgid "A heading that starts a new group of fields"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "A language you add gets the same starting content as a new site, in each environment."
 msgstr ""
 
 #: lib/brando_admin/components/form/alternates_drawer.ex
@@ -9048,6 +9058,11 @@ msgstr ""
 msgid "Languages"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Languages for %{name} saved."
+msgstr ""
+
 #: lib/brando_admin/live/sites/activity_live.ex
 #, elixir-autogen, elixir-format
 msgid "Last 12 months"
@@ -13890,6 +13905,11 @@ msgstr ""
 msgid "Removed from the trash after %{days} days"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Removing %{languages} deletes nothing: the content stays, and comes back if the language is added again."
+msgstr ""
+
 #: lib/brando_admin/components/video_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Rename"
@@ -14860,6 +14880,11 @@ msgstr ""
 msgid "Save guidance"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save languages"
+msgstr ""
+
 #: lib/brando_admin/components/form.ex
 #, elixir-autogen, elixir-format
 msgid "Save minor text corrections"
@@ -15353,6 +15378,26 @@ msgstr ""
 #: lib/brando_admin/command_palette.ex
 #, elixir-autogen, elixir-format
 msgid "See all results for “%{query}”"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Seed again"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Seeding %{language} in %{environment} failed, and is retried (attempt %{attempt} of %{max}): %{error}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Seeding %{language} in %{environment}…"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Seeding queued."
 msgstr ""
 
 #: lib/brando_admin/components/content/list.ex

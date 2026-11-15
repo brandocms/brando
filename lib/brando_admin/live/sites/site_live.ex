@@ -14,12 +14,16 @@ defmodule BrandoAdmin.Sites.SiteLive do
     {BrandoAdmin.Reauth, events: ~w(create_site activate_site delete suspend archive grant revoke set_library_group)}
   )
 
+  import Ecto.Query, only: [from: 2]
+
+  alias Brando.Repo
   alias Brando.Sites.Site
   alias Brando.Tenant.Access
   alias Brando.Tenant.Registry
   alias Brando.Tenant.Setup
   alias Brando.Tenant.Storage
   alias Brando.Users.User
+  alias Brando.Worker.SiteLanguageSeed
   alias BrandoAdmin.Components.Content
 
   @impl Phoenix.LiveView
@@ -189,6 +193,61 @@ defmodule BrandoAdmin.Sites.SiteLive do
           <button type="submit" class="btn">{gettext("Save group")}</button>
         </form>
 
+        <form
+          id={"languages-site-#{site.id}"}
+          class="site-languages"
+          phx-change="check_languages"
+          phx-submit="save_languages"
+        >
+          <input type="hidden" name="site[id]" value={site.id} />
+          <div class="environment-grid">
+            <label>
+              <span>{gettext("Languages")}</span>
+              <input
+                name="site[languages]"
+                required
+                value={Enum.join(site.languages, ",")}
+                placeholder={Enum.join(Brando.Languages.installation_codes(), ",")}
+              />
+              <small>
+                {gettext("A language you add gets the same starting content as a new site, in each environment.")}
+              </small>
+            </label>
+            <label>
+              <span>{gettext("Default language")}</span>
+              <input name="site[default_language]" required value={site.default_language} />
+            </label>
+          </div>
+          <p :if={removed_languages(@language_drafts, site) != []} class="environment-hint" role="status">
+            {gettext(
+              "Removing %{languages} deletes nothing: the content stays, and comes back if the language is added again.",
+              languages: Enum.join(removed_languages(@language_drafts, site), ", ")
+            )}
+          </p>
+          <button type="submit" class="btn">{gettext("Save languages")}</button>
+        </form>
+
+        <table :if={seeding(@seeding, site.id) != []} id={"seeding-site-#{site.id}"}>
+          <tbody>
+            <tr :for={row <- seeding(@seeding, site.id)} id={"seeding-#{site.id}-#{row.environment.id}-#{row.language}"}>
+              <td>{seeding_status(row)}</td>
+              <td>
+                <button
+                  :if={is_nil(row.job)}
+                  type="button"
+                  class="btn btn--sm"
+                  phx-click="seed_language"
+                  phx-value-site-id={site.id}
+                  phx-value-environment-id={row.environment.id}
+                  phx-value-language={row.language}
+                >
+                  {gettext("Seed again")}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
         <p :if={Brando.Authorization.enabled?()}>
           <a href={"/admin/groups?brando_site_key=#{site.key}"}>{gettext("Manage this site’s groups and members →")}</a>
         </p>
@@ -262,6 +321,45 @@ defmodule BrandoAdmin.Sites.SiteLive do
     end
   end
 
+  def handle_event("check_languages", %{"site" => params}, socket) do
+    case site_from_socket(socket, params["id"]) do
+      {:ok, site} ->
+        {:noreply, update(socket, :language_drafts, &Map.put(&1, site.id, parse_languages(params["languages"])))}
+
+      {:error, _reason} ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("save_languages", %{"site" => params}, socket) do
+    attrs = %{languages: parse_languages(params["languages"]), default_language: params["default_language"]}
+
+    with {:ok, site} <- site_from_socket(socket, params["id"]),
+         {:ok, site} <- Setup.update_languages(site, attrs, socket.assigns.current_user) do
+      {:noreply,
+       socket
+       |> update(:language_drafts, &Map.delete(&1, site.id))
+       |> notify(gettext("Languages for %{name} saved.", name: site.name))
+       |> refresh()}
+    else
+      {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
+    end
+  end
+
+  def handle_event("seed_language", params, socket) do
+    with {:ok, site} <- site_from_socket(socket, params["site-id"]),
+         {:ok, environment} <- environment_of(site, params["environment-id"]),
+         true <- params["language"] in site.languages || {:error, :language_not_on_site},
+         :ok <- authorize_site_update(socket) do
+      :ok =
+        SiteLanguageSeed.enqueue(site, params["language"], socket.assigns.current_user, environment: environment)
+
+      {:noreply, socket |> notify(gettext("Seeding queued.")) |> refresh()}
+    else
+      {:error, reason} -> {:noreply, notify_error(socket, lifecycle_error(reason))}
+    end
+  end
+
   def handle_event("set_library_group", %{"site" => params}, socket) do
     with {:ok, site} <- site_from_socket(socket, params["id"]),
          {:ok, site} <-
@@ -327,6 +425,75 @@ defmodule BrandoAdmin.Sites.SiteLive do
     |> assign(:users, users)
     |> assign(:assignments, Map.new(sites, &{&1.id, Access.list_assignments(&1)}))
     |> assign(:stats, Map.new(sites, &{&1.id, site_stats(&1)}))
+    |> assign(:seeding, seeding_by_site(sites))
+    |> assign_new(:language_drafts, fn -> %{} end)
+  end
+
+  # Per site, each environment and language that is being seeded, or has no
+  # identity in that language: a seeding that failed, or one left out by an
+  # application's seeder
+  defp seeding_by_site(sites) do
+    prefixes = for site <- sites, environment <- site.environments, do: Brando.Tenant.prefix(site, environment)
+    jobs = pending_seed_jobs(prefixes)
+
+    Map.new(sites, fn site ->
+      environments = Enum.sort_by(site.environments, &{not &1.live, &1.name})
+      {site.id, Enum.flat_map(environments, &seeding_rows(site, &1, jobs))}
+    end)
+  end
+
+  defp seeding_rows(site, environment, jobs) do
+    prefix = Brando.Tenant.prefix(site, environment)
+
+    case identity_languages(prefix) do
+      :unknown ->
+        []
+
+      seeded ->
+        site.languages
+        |> Enum.map(&%{environment: environment, language: &1, job: Map.get(jobs, {prefix, &1})})
+        |> Enum.filter(&(&1.job || &1.language not in seeded))
+    end
+  end
+
+  defp pending_seed_jobs([]), do: %{}
+
+  defp pending_seed_jobs(prefixes) do
+    worker = inspect(SiteLanguageSeed)
+
+    from(job in Oban.Job,
+      where:
+        job.worker == ^worker and job.state in ["available", "scheduled", "executing", "retryable"] and
+          fragment("?->>'tenant_prefix'", job.args) in ^prefixes,
+      order_by: [asc: job.id]
+    )
+    |> Repo.all(prefix: "public")
+    |> Map.new(&{{&1.args["tenant_prefix"], &1.args["language"]}, &1})
+  end
+
+  defp identity_languages(prefix) do
+    table = Brando.Sites.Identity.__schema__(:source)
+
+    case Ecto.Adapters.SQL.query(Repo.repo(), ~s|SELECT language FROM "#{prefix}"."#{table}"|, []) do
+      {:ok, %{rows: rows}} -> List.flatten(rows)
+      {:error, _reason} -> :unknown
+    end
+  end
+
+  defp environment_of(site, id) do
+    with {environment_id, ""} <- Integer.parse(to_string(id)),
+         %{} = environment <- Enum.find(site.environments, &(&1.id == environment_id)) do
+      {:ok, environment}
+    else
+      _ -> {:error, :environment_not_found}
+    end
+  end
+
+  # What saving a site's languages asks of the user (`Setup.update_languages/3`)
+  defp authorize_site_update(socket) do
+    socket.assigns.current_user
+    |> Brando.Authorization.Scope.installation()
+    |> Brando.Authorization.Boundary.authorize(:update, :sites)
   end
 
   defp site_stats(site) do
@@ -423,6 +590,42 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
       names ->
         gettext("Shares the provider libraries with %{sites}.", sites: Enum.join(names, ", "))
+    end
+  end
+
+  defp removed_languages(drafts, site) do
+    case Map.fetch(drafts, site.id) do
+      {:ok, languages} -> site.languages -- languages
+      :error -> []
+    end
+  end
+
+  defp seeding(seeding, site_id), do: Map.get(seeding, site_id, [])
+
+  defp seeding_status(%{job: nil} = row),
+    do:
+      gettext("%{environment} has no starting content in %{language}.",
+        environment: row.environment.name,
+        language: row.language
+      )
+
+  defp seeding_status(%{job: %Oban.Job{state: "retryable"} = job} = row),
+    do:
+      gettext("Seeding %{language} in %{environment} failed, and is retried (attempt %{attempt} of %{max}): %{error}",
+        environment: row.environment.name,
+        language: row.language,
+        attempt: job.attempt,
+        max: job.max_attempts,
+        error: last_error(job)
+      )
+
+  defp seeding_status(row),
+    do: gettext("Seeding %{language} in %{environment}…", environment: row.environment.name, language: row.language)
+
+  defp last_error(%Oban.Job{errors: errors}) do
+    case Enum.max_by(errors, & &1["attempt"], fn -> nil end) do
+      %{"error" => error} -> error |> String.split("\n") |> hd()
+      _none -> "—"
     end
   end
 

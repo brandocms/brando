@@ -441,6 +441,27 @@ end
 A seeder that does not call the default creates the site's identity and SEO
 records itself, one of each per language: the site's pages read them.
 
+A language added to the site later is seeded with the optional callback
+`seed_language(site, environment, language, creator)`, once in each of the
+site's environments, in a job that runs in that environment. It is retried
+when it returns an error or raises, so leave alone what already exists in the
+language. A seeder without it gets the default's
+`Brando.Tenant.Seeder.seed_language/4`; to add to that, call it first:
+
+```elixir
+@impl true
+def seed_language(site, environment, language, creator) do
+  with :ok <- Brando.Tenant.Seeder.seed_language(site, environment, language, creator),
+       {:ok, _page} <- MyApp.Seeds.contact_page(site, language, creator) do
+    :ok
+  end
+end
+```
+
+The seeded content names the user who added the language as its creator,
+or the installation's oldest superuser when it was added without one, from
+setup code.
+
 Individual working environments can also be created with
 `Brando.Environments.create_environment/2`. It creates
 `tenant_{site}_{environment}`, runs all tenant migrations, writes an operation
@@ -465,12 +486,26 @@ Two lists of content languages have different jobs:
   row, are what that site uses: a subset of the installation's, in the site's
   own order.
 
-Provisioning a site, and changing its languages with
-`Brando.Tenant.Registry.update_site/2`, refuse a language the installation does
-not configure, and name it. `default_language` must be one of the site's
-languages. A row that already holds a language the installation does not
+A superuser changes a site's languages and default language on its card at
+`/admin/sites`, which calls `Brando.Tenant.Setup.update_languages/3` and asks
+for the same right as creating a site; setup code can call
+`Brando.Tenant.Registry.update_site/3`. Both refuse a language the
+installation does not configure, and name it. `default_language` must be one
+of the site's languages, so removing the default takes a new default in the
+same save. A row that already holds a language the installation does not
 configure keeps it, but the language is left out of the site's languages, and
 loading the site logs a warning.
+
+A language added to an existing site gets the starting content a new site
+gets, in each of the site's environments: once the change is saved, a job per
+environment (`Brando.Worker.SiteLanguageSeed`) runs the seeder's
+`seed_language/4` (see [Provision sites](#provision-sites-and-initial-environments)).
+What already exists in that language is left alone. The site's card lists an
+environment that is still being seeded, a failed attempt that is retried with
+its error, and an environment that has no identity in one of the site's
+languages, with a button that seeds it again. Removing a language deletes
+nothing: its entries stay in each environment, and are used again when the
+language is added back.
 
 In `:multi`, whatever works for one site uses that site's languages and default
 language:
@@ -511,7 +546,7 @@ parsed against the site's languages.
 Changing a site's default language moves its URLs: the new default's entries
 lose their prefix and the old default's gain one, so an English `/about`
 becomes `/en/about` when the default changes from English to Norwegian.
-`Brando.Tenant.Registry.update_site/2` then queues a job for each of the site's
+`Brando.Tenant.Registry.update_site/3` then queues a job for each of the site's
 environments that syncs its identifiers, as `mix brando.identifiers.sync` does,
 so the URLs they store follow, and so do links to those entries made with the
 link picker in rich text. A link typed in as a plain address keeps the old URL:

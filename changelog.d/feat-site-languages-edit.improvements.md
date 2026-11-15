@@ -1,0 +1,1 @@
+- An application's tenant seeder can define the optional `seed_language/4` callback, which seeds a language added to an existing site in each of its environments; without it, the default seeder's runs.

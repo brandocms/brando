@@ -59,13 +59,41 @@ defmodule Brando.Tenant.Registry do
     |> refresh_cache_on_success()
   end
 
-  @spec update_site(Site.t(), map()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
-  def update_site(%Site{} = site, attrs) do
+  @doc """
+  Updates `site`'s row.
+
+  When the change adds languages to the site, each of its environments is
+  given its starting content in them once the row is committed
+  (`Brando.Worker.SiteLanguageSeed`), named as created by `:creator`, the
+  user making the change. A language removed deletes nothing: its content
+  stays, and is used again when the language is added back. A change of the
+  default language syncs each environment's identifiers.
+  """
+  @spec update_site(Site.t(), map(), keyword()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
+  def update_site(%Site{} = site, attrs, opts \\ []) do
     changeset = Site.changeset(site, attrs)
     result = changeset |> Repo.update(@public_opts) |> refresh_cache_on_success()
     if Map.has_key?(changeset.changes, :status), do: access_changed(result)
     if Map.has_key?(changeset.changes, :default_language), do: default_language_changed(result)
+    if Map.has_key?(changeset.changes, :languages), do: languages_added(result, site.languages, opts[:creator])
     result
+  end
+
+  defp languages_added({:ok, %Site{id: id, languages: languages}}, previous, creator) do
+    added = languages -- (previous || [])
+
+    if added != [] and Brando.Tenant.mode() == :multi do
+      Repo.after_commit({:site_language_seed, id, added}, fn -> seed_languages(id, added, creator) end, late: true)
+    end
+  end
+
+  defp languages_added(_error, _previous, _creator), do: :ok
+
+  defp seed_languages(site_id, languages, creator) do
+    case get_site(site_id) do
+      nil -> :ok
+      site -> Enum.each(languages, &Brando.Worker.SiteLanguageSeed.enqueue(site, &1, creator))
+    end
   end
 
   # On a multi-site installation the default language's entries have

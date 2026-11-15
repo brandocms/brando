@@ -256,10 +256,10 @@ defmodule Brando.Tenant.SeederTest do
       assert jobs == []
     end
 
-    test "in the seeder's own identity leaves no site, schema or folder behind", %{creator: creator} do
+    test "on a language it cannot seed leaves no site, schema or folder behind", %{creator: creator} do
       put_test_env(:tenant_seeder, FailingDefault)
 
-      assert {:error, {:site_setup_failed, %Ecto.ChangeError{}, :ok}} =
+      assert {:error, {:site_setup_failed, %Ecto.Query.CastError{}, :ok}} =
                Setup.create_site(site_attrs(["en"]), creator, environments: environments())
 
       assert_left_nothing()
