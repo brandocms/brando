@@ -34,7 +34,8 @@ defmodule Brando.Tenant.Frontend do
   def shared_preview_tenant(_preview), do: nil
 
   @doc """
-  Whether `host` is an environment's domain of a site that is not active.
+  Whether `host` is an environment's domain or redirect host of a site that
+  is not active.
 
   Such a host resolves to no site, as the endpoint's does, but it is a site's
   own: it opens no other site's shared preview.
@@ -44,7 +45,8 @@ defmodule Brando.Tenant.Frontend do
     host = normalize_host(host)
 
     Enum.any?(Cache.list_sites(), fn site ->
-      site.status != :active and Enum.any?(site.environments, &(normalize_host(&1.domain) == host))
+      site.status != :active and
+        Enum.any?(site.environments, &(normalize_host(&1.domain) == host or host in (&1.redirect_hosts || [])))
     end)
   end
 

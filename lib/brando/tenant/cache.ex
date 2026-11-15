@@ -82,6 +82,16 @@ defmodule Brando.Tenant.Cache do
 
   def get_env_by_domain(_domain), do: nil
 
+  @doc """
+  The site and environment `host` redirects to, when it is one of an active
+  site's environment's redirect hosts, or nil.
+  """
+  def get_redirect(host) when is_binary(host) do
+    :persistent_term.get({:brando, :redirect_host, host |> String.trim() |> String.downcase()}, nil)
+  end
+
+  def get_redirect(_host), do: nil
+
   def get_env(site_key, environment_key) do
     :persistent_term.get({:brando, :env, site_key, environment_key}, nil)
   end
@@ -128,7 +138,14 @@ defmodule Brando.Tenant.Cache do
             do: [{{:brando, :live_env, site.key}, environment}],
             else: []
 
-        by_key ++ by_domain ++ live
+        # Only to a domain that answers: a suspended or archived site's
+        # redirect hosts answer as its domain does
+        redirects =
+          if by_domain != [],
+            do: Enum.map(environment.redirect_hosts || [], &{{:brando, :redirect_host, &1}, {site, environment}}),
+            else: []
+
+        by_key ++ by_domain ++ redirects ++ live
       end)
 
     site_entry ++ environment_entries

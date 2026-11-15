@@ -43,6 +43,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         |> assign(:tenancy_enabled?, Tenant.enabled?())
         |> assign(:default_scheduled_at, default_scheduled_at())
         |> assign(:restoring, nil)
+        |> assign(:host_drafts, %{})
         |> refresh_data()
 
       subscribe_to_environments(socket.assigns.site)
@@ -133,6 +134,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     replaced and a half-typed edit goes with the domain it was typed against --%>
                     <form
                       id={"environment-domain-#{environment.id}-#{:erlang.phash2(environment.domain)}"}
+                      phx-change="draft_hosts"
                       phx-submit="update_domain"
                       class="environment-inline-form"
                     >
@@ -141,13 +143,22 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       <input
                         type="text"
                         name="domain"
-                        value={environment.domain}
-                        disabled={
-                          !@can_bind_hosts? || !@can_manage? || !BrandoAdmin.Authorization.allowed?(:update, :environments)
-                        }
+                        value={host_draft(@host_drafts, environment).domain}
+                        disabled={!can_edit_hosts?(@can_bind_hosts?, @can_manage?)}
                         placeholder={gettext("No domain")}
                         aria-label={gettext("Domain for %{name}", name: environment.name)}
                       />
+                      <textarea
+                        :if={can_edit_hosts?(@can_bind_hosts?, @can_manage?) || environment.redirect_hosts != []}
+                        name="redirect_hosts"
+                        rows="2"
+                        disabled={!can_edit_hosts?(@can_bind_hosts?, @can_manage?)}
+                        placeholder={gettext("Redirect hosts, one per line")}
+                        aria-label={gettext("Hosts that redirect to the domain of %{name}", name: environment.name)}
+                      >{host_draft(@host_drafts, environment).redirect_hosts}</textarea>
+                      <div :if={can_edit_hosts?(@can_bind_hosts?, @can_manage?)} class="environment-inline-form__actions">
+                        <button type="submit" class="btn btn--sm">{gettext("Save hosts")}</button>
+                      </div>
                     </form>
                   </td>
                   <td>
@@ -553,15 +564,36 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   @impl Phoenix.LiveView
   def handle_event("refresh", _params, socket), do: {:noreply, refresh_data(socket)}
 
+  # What was typed in the domain and redirect hosts, kept for the domain the
+  # form was rendered with: a change event re-renders the row, and a field
+  # that is not focused takes the rendered value
+  def handle_event("draft_hosts", %{"environment_id" => id, "shown_domain" => shown} = params, socket) do
+    case environment_for_site(socket, id) do
+      {:ok, environment} ->
+        draft = %{domain: params["domain"] || "", redirect_hosts: params["redirect_hosts"] || ""}
+        {:noreply, update(socket, :host_drafts, &Map.put(&1, {environment.id, shown}, draft))}
+
+      {:error, _reason} ->
+        {:noreply, socket}
+    end
+  end
+
   def handle_event("update_domain", %{"environment_id" => id} = params, socket) do
     domain = params |> Map.get("domain", "") |> String.trim()
     domain = if domain == "", do: nil, else: domain
 
+    attrs =
+      case params do
+        %{"redirect_hosts" => hosts} -> %{domain: domain, redirect_hosts: Environment.parse_hosts(hosts)}
+        _ -> %{domain: domain}
+      end
+
     with :ok <- authorize(socket),
          {:ok, listed} <- environment_for_site(socket, id),
-         {:ok, _updated} <- update_shown_domain(socket, listed, params["shown_domain"], domain) do
+         {:ok, _updated} <- update_shown_domain(socket, listed, params["shown_domain"], attrs) do
       {:noreply,
        socket
+       |> update(:host_drafts, &Map.reject(&1, fn {{environment_id, _shown}, _draft} -> environment_id == listed.id end))
        |> notify(gettext("Domain updated."))
        |> refresh_data()}
     else
@@ -781,16 +813,15 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   # as a live switch locks it to swap domains (`Brando.Environments`), so no
   # swap lands in between. A row lock, not the site lock: a switch holds that
   # while it archives the live schema, which can take minutes.
-  defp update_shown_domain(_socket, _environment, shown, _domain) when not is_binary(shown),
+  defp update_shown_domain(_socket, _environment, shown, _attrs) when not is_binary(shown),
     do: {:error, :domain_moved}
 
-  defp update_shown_domain(socket, %Environment{id: id, site_id: site_id}, shown, domain) do
+  defp update_shown_domain(socket, %Environment{id: id, site_id: site_id}, shown, attrs) do
     shown = if shown == "", do: nil, else: shown
 
     Repo.transaction(fn ->
       with {:ok, environment} <- locked_shown(id, site_id, shown),
-           {:ok, updated} <-
-             Registry.update_environment(environment, %{domain: domain}, actor: socket.assigns.current_user) do
+           {:ok, updated} <- Registry.update_environment(environment, attrs, actor: socket.assigns.current_user) do
         updated
       else
         {:error, reason} -> Repo.rollback(reason)
@@ -804,6 +835,17 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       %Environment{site_id: ^site_id} -> {:error, :domain_moved}
       _ -> {:error, :environment_not_found}
     end
+  end
+
+  defp can_edit_hosts?(can_bind_hosts?, can_manage?),
+    do: can_bind_hosts? and can_manage? and BrandoAdmin.Authorization.allowed?(:update, :environments)
+
+  # What the hosts form shows: what was typed since the last save against the
+  # domain shown, else the environment's own hosts
+  defp host_draft(drafts, environment) do
+    Map.get_lazy(drafts, {environment.id, environment.domain || ""}, fn ->
+      %{domain: environment.domain || "", redirect_hosts: Enum.join(environment.redirect_hosts || [], "\n")}
+    end)
   end
 
   defp parse_future_datetime(value) when is_binary(value) do
@@ -921,8 +963,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       end)
     end)
     |> Enum.flat_map(fn
-      # The domain's messages are sentences of their own
-      {:domain, messages} -> messages
+      # The hosts' messages are sentences of their own
+      {field, messages} when field in [:domain, :redirect_hosts] -> messages
       {field, messages} -> Enum.map(messages, &"#{field} #{&1}")
     end)
     |> Enum.join(", ")

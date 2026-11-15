@@ -16,6 +16,9 @@ defmodule Brando.Tenant.Registry do
   refused too. `Brando.Environments.set_live/2` moves a dynamically delivered
   site's host between its own environments without one: the host is already
   the site's.
+
+  An environment's `redirect_hosts` bind hosts as `domain` does, and the same
+  check guards them; a live switch moves them with the domain.
   """
 
   use Gettext, backend: Brando.Gettext
@@ -300,18 +303,24 @@ defmodule Brando.Tenant.Registry do
     |> refresh_cache_on_success()
   end
 
-  defp authorize_domain(%{changes: %{domain: _domain}} = changeset, actor) do
-    if binds_hosts?(actor),
-      do: changeset,
-      else:
-        Ecto.Changeset.add_error(
-          changeset,
-          :domain,
-          gettext("Only a superuser can change the host an environment answers on.")
-        )
+  defp authorize_domain(changeset, actor) do
+    if binds_hosts?(actor) do
+      changeset
+    else
+      changeset
+      |> refuse_host_change(:domain, gettext("Only a superuser can change the host an environment answers on."))
+      |> refuse_host_change(
+        :redirect_hosts,
+        gettext("Only a superuser can change the hosts that redirect to an environment.")
+      )
+    end
   end
 
-  defp authorize_domain(changeset, _actor), do: changeset
+  defp refuse_host_change(changeset, field, message) do
+    if Map.has_key?(changeset.changes, field),
+      do: Ecto.Changeset.add_error(changeset, field, message),
+      else: changeset
+  end
 
   defp binds_hosts?(nil), do: false
   defp binds_hosts?(actor), do: Boundary.superuser?(actor)

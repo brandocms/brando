@@ -626,7 +626,18 @@ prefix in process context without a database query. In `:multi` it answers
 404 on a host that resolves to no site, except for a shared preview's link
 (`/__p__/:preview_key`), which opens under the site and environment the
 preview was shared from ([Where a shared preview link
-opens](#where-a-shared-preview-link-opens)).
+opens](#where-a-shared-preview-link-opens)). A response for an environment
+that is not live carries `X-Robots-Tag: noindex, nofollow`, in `:single` and
+`:multi`, so a working environment on a public host such as
+`staging.example.com` stays out of search results.
+
+An environment's redirect hosts (`environments.redirect_hosts`) answer
+before any of that: a request on one is redirected permanently to the same
+path and query on the environment's domain, with the endpoint URL's scheme,
+301 for GET and HEAD and 308 for other methods, from the cache and with no
+database query. List `www.example.com` and an old domain there, and give the
+environment `example.com` as its domain. A suspended or archived site's
+redirect hosts answer 404, as its domain does.
 
 A LiveView on the site's pages runs in its own process, which the plug never
 reaches. Mount it with `Brando.Tenant.FrontendLiveView`, which does the same
@@ -637,6 +648,26 @@ live_session :site, on_mount: [Brando.Tenant.FrontendLiveView] do
   live "/contact", MyAppWeb.ContactLive
 end
 ```
+
+Its socket connects from the site's host, so the endpoint's `check_origin`
+must accept every site's domain, including those added in the admin later.
+`mix brando.install --tenancy-mode multi` writes a function for it in
+`config/prod.exs`:
+
+```elixir
+config :my_app, MyAppWeb.Endpoint,
+  check_origin: {Brando.Tenant.Origins, :allowed?, []}
+```
+
+`Brando.Tenant.Origins.allowed?/2` accepts the installation's own hosts
+(the endpoint's, its static, media and CDN hosts) and the domain of every
+active site's environments, read from `Brando.Tenant.Cache`. Redirect hosts
+serve nothing, so they are not accepted. Further origins go in the argument,
+in the forms a `check_origin` list takes:
+`{Brando.Tenant.Origins, :allowed?, [["//*.example.com"]]}`. An existing
+multi-site installation switches by replacing its `check_origin` list in
+`config/prod.exs` with the tuple, keeping any entry that is not a site's
+domain or the endpoint's host in the argument.
 
 <!-- usage-rules:end -->
 
@@ -660,10 +691,15 @@ Which site answers on a host is the installation's decision, so only a superuser
 (the Superuser group with group authorization) changes an environment's domain,
 on that screen or through `Brando.Tenant.Registry`, whose `create_environment/3`
 and `update_environment/3` take the acting user as `actor:` (`:system` for
-trusted maintenance code) and refuse a change without one. A domain is a bare
+trusted maintenance code) and refuse a change without one. The same goes for
+an environment's redirect hosts, which the screen edits under the domain, one
+per line or comma-separated. A domain is a bare
 host: no scheme, path, port or trailing dot. It may not be a host the
 installation itself uses: the endpoint's, where the admin answers, nor its
-static, media or CDN host. With several sites, a site that needs the admin's
+static, media or CDN host. A redirect host follows the same rules, and an
+environment with redirect hosts must have a domain to redirect to. A host is
+bound once in the whole installation, as one environment's domain or one
+redirect host; the database enforces it, for concurrent writes too. With several sites, a site that needs the admin's
 host means moving the admin to a host of its own through `PHX_HOST`. In
 `:single` the admin's host needs no domain: it answers from the live environment
 when no environment holds it. On a `:dynamic` site, setting an environment
@@ -719,7 +755,7 @@ do not depend on the site, are left as they are.
 <!-- usage-rules:start topic="tenancy" -->
 `Brando.Tenant.Cache` keeps the site and environment registry in memory on
 each node. A registry write (a site created, changed, suspended or deleted, a
-domain moved, an environment created, copied, restored or set live), once its
+domain or redirect host moved, an environment created, copied, restored or set live), once its
 transaction has committed, refreshes the node that made it at once and the
 other nodes through `Brando.CacheSync`, over the application's
 `Phoenix.PubSub`. They follow within a fraction of a second, whichever node
@@ -1326,8 +1362,10 @@ node once the switch has committed ([Several nodes](#several-nodes)). On a `:dyn
 pointer, in the same transaction: the environment going live and the previous
 live environment swap domains, so `www.example.com` answers from the new live
 environment and `staging.example.com` from the one it replaced. A missing
-domain swaps too, so switching back puts every host where it was. Setting a
-restored archive live moves the host the same way. The hosts were bound by a
+domain swaps too, so switching back puts every host where it was. Each
+environment's redirect hosts move with its domain, so `www.example.com` keeps
+redirecting to `example.com` wherever that host now answers. Setting a
+restored archive live moves the hosts the same way. The hosts were bound by a
 superuser and stay within the site, so a switch binds nothing new. On a
 `:static` site the domains stay where they are: the deployed build, not the
 live environment, decides what a host serves. Each environment keeps its own
@@ -2273,11 +2311,12 @@ Before enabling `:single` or `:multi`:
 6. Verify `pg_dump` and `psql` availability from the release environment.
 7. Run tenant migrations for every environment.
 8. Exercise copy and recovery on representative production-sized data.
-9. Verify each domain resolves to the intended environment and unknown hosts
-   return `404`, and that each domain serving LiveView pages or the admin is in
-   the endpoint's `check_origin` (`mix brando.install --domain` lists the
+9. Verify each domain resolves to the intended environment, each redirect
+   host redirects to its domain, and unknown hosts return `404`, and that each
+   domain serving LiveView pages or the admin is accepted by the endpoint's
+   `check_origin` (with `:single`, `mix brando.install --domain` lists the
    production domain, its `www.` host and the staging host, no other
-   subdomain).
+   subdomain; with `:multi` it writes `Brando.Tenant.Origins`).
 10. Verify an editor cannot switch to or query an unassigned site.
 11. Verify uploaded assets and media return different bytes for two site hosts.
 12. Back up the database, `media/`, `sites/`, and `site_assets/` together.

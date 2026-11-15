@@ -132,7 +132,8 @@ defmodule Brando.Environments do
 
   On a site with `delivery_mode: :dynamic`, the site's host goes with it: in
   the same transaction, this environment and the outgoing live one swap
-  domains, a missing one included, so switching back restores both. Each
+  domains, each with its redirect hosts, a missing one included, so switching
+  back restores both. Each
   environment keeps its own frontend asset set, so the host then serves the
   set the incoming environment used. On a
   `:static` site the domains stay where they are: the deployed build decides
@@ -606,11 +607,12 @@ defmodule Brando.Environments do
   end
 
   # On dynamic delivery the site's host follows the live pointer: the
-  # environment going live and the outgoing live one swap domains, a missing
-  # one included, so a switch back restores both. Both hosts are already this
-  # site's, bound by a superuser, so this binds nothing new and needs no
-  # authority to bind a host (`Brando.Tenant.Registry`). The rows are locked so
-  # a domain changed meanwhile is not undone. On static delivery the deployed
+  # environment going live and the outgoing live one swap domains, each with
+  # its redirect hosts, a missing one included, so a switch back restores
+  # both. The hosts are already this site's, bound by a superuser, so this
+  # binds nothing new and needs no authority to bind a host
+  # (`Brando.Tenant.Registry`). The rows are locked so a domain changed
+  # meanwhile is not undone. On static delivery the deployed
   # build decides what a host serves, and its forms post to the environment it
   # was built from (`Brando.Forms.SubmissionController`), so nothing moves.
   defp carry_host(%Site{delivery_mode: :dynamic}, %Environment{id: id, site_id: site_id}) do
@@ -624,18 +626,22 @@ defmodule Brando.Environments do
     with %Environment{} = outgoing <- Enum.find(rows, &(&1.live and &1.id != id)),
          %Environment{} = incoming <- Enum.find(rows, &(&1.id == id)),
          false <- is_nil(outgoing.domain) and is_nil(incoming.domain) do
-      # The unique index on `domain` is not deferred: release both hosts first
-      put_domain(outgoing, nil)
-      put_domain(incoming, outgoing.domain)
-      put_domain(outgoing, incoming.domain)
+      # The unique index on `domain` and the trigger binding each host once
+      # are not deferred: release the outgoing hosts first
+      put_hosts(outgoing, nil, [])
+      put_hosts(incoming, outgoing.domain, outgoing.redirect_hosts)
+      put_hosts(outgoing, incoming.domain, incoming.redirect_hosts)
     end
   end
 
   defp carry_host(%Site{}, %Environment{}), do: :ok
 
-  defp put_domain(%Environment{id: id}, domain) do
+  defp put_hosts(%Environment{id: id}, domain, redirect_hosts) do
     from(environment in Environment, where: environment.id == ^id)
-    |> Repo.update_all([set: [domain: domain, updated_at: DateTime.utc_now()]], @public_opts)
+    |> Repo.update_all(
+      [set: [domain: domain, redirect_hosts: redirect_hosts, updated_at: DateTime.utc_now()]],
+      @public_opts
+    )
   end
 
   defp archive_live_environment(site, next_live_environment_id) do

@@ -10,12 +10,19 @@ defmodule Brando.Plug.Tenant do
   accidentally serve unscoped or another tenant's content, with one exception:
   a shared preview's link (`/__p__/:preview_key`) takes its context from the
   preview, which costs one query on that path only.
+
+  A request on one of an environment's redirect hosts is redirected
+  permanently, from the cache, to the same path and query on the
+  environment's domain, with the endpoint URL's scheme: 301 for GET and HEAD,
+  308 for other methods. A response for an environment that is not live
+  carries `X-Robots-Tag: noindex, nofollow`.
   """
 
-  import Plug.Conn, only: [assign: 3, halt: 1, send_resp: 3]
+  import Plug.Conn, only: [assign: 3, halt: 1, put_resp_header: 3, send_resp: 3]
 
   alias Brando.SSG.Context
   alias Brando.Tenant
+  alias Brando.Tenant.Cache
   alias Brando.Tenant.Frontend
 
   @behaviour Plug
@@ -25,6 +32,13 @@ defmodule Brando.Plug.Tenant do
 
   @impl Plug
   def call(conn, _opts) do
+    case redirect_target(conn) do
+      nil -> resolve_tenant(conn)
+      {_site, environment} -> redirect(conn, environment.domain)
+    end
+  end
+
+  defp resolve_tenant(conn) do
     case resolve(conn) do
       {site, environment} ->
         put_tenant(conn, site, environment)
@@ -47,7 +61,36 @@ defmodule Brando.Plug.Tenant do
     |> assign(:current_site, site)
     |> assign(:current_environment, environment)
     |> assign(:tenant_prefix, prefix)
+    |> no_index(environment)
   end
+
+  # An environment that is not live answers on a public host too
+  # (`staging.example.com`); crawlers are told to leave it alone
+  defp no_index(conn, %{live: true}), do: conn
+  defp no_index(conn, _environment), do: put_resp_header(conn, "x-robots-tag", "noindex, nofollow")
+
+  # A redirect host answers from the cache, before any other resolution: it
+  # is no environment's domain and no installation host, so nothing else
+  # answers on it
+  defp redirect_target(%{private: %{brando_live_preview: true}}), do: nil
+
+  defp redirect_target(conn) do
+    if Tenant.enabled?(), do: Cache.get_redirect(conn.host)
+  end
+
+  # Permanent: 301 for GET and HEAD, 308 for the rest, which keeps the method
+  # and body
+  defp redirect(conn, domain) do
+    status = if conn.method in ["GET", "HEAD"], do: 301, else: 308
+    query = if conn.query_string == "", do: "", else: "?" <> conn.query_string
+
+    conn
+    |> put_resp_header("location", "#{scheme()}://#{domain}#{conn.request_path}#{query}")
+    |> send_resp(status, "")
+    |> halt()
+  end
+
+  defp scheme, do: URI.parse(Brando.endpoint().url()).scheme || "https"
 
   # A shared preview's link is on the endpoint's host, which belongs to no
   # site: it opens there under the site and environment it was shared from.
