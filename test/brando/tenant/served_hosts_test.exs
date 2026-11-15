@@ -54,7 +54,7 @@ defmodule Brando.Tenant.ServedHostsTest do
     end)
 
     {:ok, site} = create_site("acme")
-    # Lets the check that registry write asked for finish first
+    # Waits for the check the site's creation asked for, so it cannot land mid-test
     ServedHosts.check()
     %{path: file, site: site}
   end

@@ -235,26 +235,20 @@ defmodule Brando.Tenant.ServedHosts do
   # The configured addresses, or what the endpoint's host resolves to now
   defp own_addresses(config, resolver) do
     case Keyword.get(config, :addresses) do
-      addresses when is_list(addresses) ->
-        addresses |> Enum.flat_map(&parse_address/1) |> Enum.uniq()
+      addresses when is_list(addresses) -> addresses |> Enum.flat_map(&parse_address/1) |> Enum.uniq()
+      nil -> endpoint_addresses(endpoint_host(), resolver)
+    end
+  end
 
-      nil ->
-        case endpoint_host() do
-          nil ->
-            []
+  defp endpoint_addresses(nil, _resolver), do: []
 
-          host ->
-            case parse_address(host) do
-              [address] ->
-                [address]
-
-              [] ->
-                case lookup(resolver, host) do
-                  {:ok, addresses} -> addresses |> Enum.map(&unmap/1) |> Enum.uniq()
-                  {:error, _reason} -> []
-                end
-            end
-        end
+  defp endpoint_addresses(host, resolver) do
+    with [] <- parse_address(host),
+         {:ok, addresses} <- lookup(resolver, host) do
+      addresses |> Enum.map(&unmap/1) |> Enum.uniq()
+    else
+      [address] -> [address]
+      {:error, _reason} -> []
     end
   end
 
