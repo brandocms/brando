@@ -22,6 +22,10 @@ smoke_root="$(mktemp -d "${smoke_tmp%/}/brando-igniter-smoke.XXXXXX")"
 smoke_app="$smoke_root/consumer"
 smoke_database="brando_igniter_smoke_$(basename "$smoke_root" | tr '[:upper:].-' '[:lower:]__')"
 smoke_port="${BRANDO_SMOKE_PORT:-4482}"
+# With multi the admin answers on the endpoint's host only (localhost, what
+# the generated dev config sets) and the site on the domain seed.exs gives it.
+smoke_site_url="http://127.0.0.1:$smoke_port"
+if [[ "$smoke_mode" == multi ]]; then smoke_admin_url="http://localhost:$smoke_port"; else smoke_admin_url="$smoke_site_url"; fi
 smoke_server_pid=''
 # The consumer's endpoint watchers start its two Vite dev servers on these
 # ports, which Brando.HTML reads too. Off the defaults, so other sites' Vite
@@ -178,14 +182,14 @@ if [[ "$smoke_bootstrap" == precompiled ]]; then
   mix run "$framework_dir/scripts/igniter_smoke/check_customized.exs" > "$smoke_root/logs/check-customized.log" 2>&1
 fi
 
-# Starts the consumer and waits for /admin/login, and with "vite" for both
+# Starts the consumer and waits for the admin's /admin/login, and with "vite" for both
 # Vite dev servers too.
 start_server() {
   local log="$1" wait_for_vite="${2:-}" attempt
   PORT="$smoke_port" mix phx.server > "$smoke_root/logs/$log" 2>&1 &
   smoke_server_pid=$!
   for attempt in $(seq 1 90); do
-    if curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login" > /dev/null &&
+    if curl --silent --fail "$smoke_admin_url/admin/login" > /dev/null &&
       { [[ "$wait_for_vite" != vite ]] || {
         curl --silent --fail "http://localhost:$BRANDO_VITE_ADMIN_PORT/@vite/client" > /dev/null &&
           curl --silent --fail "http://localhost:$BRANDO_VITE_FRONTEND_PORT/@vite/client" > /dev/null
@@ -200,7 +204,8 @@ start_server() {
 }
 
 run_browser() {
-  BRANDO_SMOKE_BASE_URL="http://127.0.0.1:$smoke_port" BRANDO_SMOKE_ARTIFACTS="$smoke_root/browser-$1" \
+  BRANDO_SMOKE_BASE_URL="$smoke_site_url" BRANDO_SMOKE_ADMIN_URL="$smoke_admin_url" \
+    BRANDO_SMOKE_TENANCY_MODE="$smoke_mode" BRANDO_SMOKE_ARTIFACTS="$smoke_root/browser-$1" \
     pnpm --dir "$framework_dir/scripts/igniter_smoke" exec playwright test --config playwright.config.js > "$smoke_root/logs/browser-$1.log" 2>&1
 }
 
@@ -211,7 +216,7 @@ for port in "${smoke_vite_ports[@]}"; do
 done
 mix run --no-start "$framework_dir/scripts/igniter_smoke/database.exs" snapshot > "$smoke_root/logs/database-snapshot.log" 2>&1
 start_server server.log vite
-admin_login="$(curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login")"
+admin_login="$(curl --silent --fail "$smoke_admin_url/admin/login")"
 if [[ "$admin_login" != *"http://localhost:$BRANDO_VITE_ADMIN_PORT/@vite/client"* ]]; then
   echo "With hmr: true the admin did not load Vite's client; inspect $smoke_root/logs/server.log" >&2
   exit 1
@@ -225,7 +230,7 @@ stop_server
 mix run --no-start "$framework_dir/scripts/igniter_smoke/database.exs" restore > "$smoke_root/logs/database-restore.log" 2>&1
 printf '\nconfig :igniter_smoke, hmr: false\n' >> config/dev.exs
 start_server server-built.log
-admin_login="$(curl --silent --fail "http://127.0.0.1:$smoke_port/admin/login")"
+admin_login="$(curl --silent --fail "$smoke_admin_url/admin/login")"
 if [[ "$admin_login" == *"@vite/client"* || "$admin_login" != *"/assets/admin/admin-"* ]]; then
   echo "With hmr: false the admin did not load its built assets; inspect $smoke_root/logs/server-built.log" >&2
   exit 1

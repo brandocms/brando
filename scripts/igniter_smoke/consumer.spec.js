@@ -1,13 +1,17 @@
 import { test, expect } from '@playwright/test'
 
+// The admin's origin. With multi it answers on the endpoint's host only, and
+// the site (the base URL) on another; otherwise the two are the same.
+const admin = process.env.BRANDO_SMOKE_ADMIN_URL || ''
+
 test('sign in, create and edit generated content, then render it publicly', async ({ page }) => {
-  await page.goto('/admin/login')
+  await page.goto(`${admin}/admin/login`)
   await page.getByRole('textbox', { name: 'Email', exact: true }).fill('installer@example.test')
   await page.getByLabel('Password', { exact: true }).fill('installer-smoke-test')
   await page.getByRole('button', { name: 'Log in', exact: true }).click()
   await expect(page).toHaveURL(/\/admin\/?$/)
 
-  await page.goto('/admin/catalog/products/create')
+  await page.goto(`${admin}/admin/catalog/products/create`)
   await page.getByRole('textbox', { name: 'Title', exact: true }).fill('Igniter smoke product')
   await page.getByRole('textbox', { name: 'Slug', exact: true }).fill('igniter-smoke-product')
   // The status is a control beside the entry's heading: open it, pick by value
