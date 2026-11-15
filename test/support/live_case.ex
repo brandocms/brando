@@ -72,7 +72,10 @@ defmodule Brando.LiveCase do
         config: %Brando.Users.UserConfig{}
       )
 
-    {:ok, conn: Brando.Test.log_in_user(Phoenix.ConnTest.build_conn(), user), current_user: user}
+    # On the endpoint's host, as an admin's browser is: with `tenancy_mode:
+    # :multi` the admin answers there only, and a test may switch the mode
+    # after this login (`BrandoAdmin.AdminHost`)
+    {:ok, conn: Brando.Test.log_in_user(Brando.Test.Support.admin_conn(), user), current_user: user}
   end
 
   @doc """
