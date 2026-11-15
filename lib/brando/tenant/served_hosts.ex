@@ -36,8 +36,12 @@ defmodule Brando.Tenant.ServedHosts do
   ## When
 
   After every warm of `Brando.Tenant.Cache`, which runs at boot and on every
-  node after a registry write, and once a minute while a bound host waits for
-  its DNS or the file could not be written. Each node keeps its own file.
+  node after a registry write, and once a minute (`:retry_interval`, in
+  milliseconds) while a bound host waits for its DNS or the file could not be
+  written. Otherwise every five minutes (`:recheck_interval`): the file is
+  read again, and a bound host missing from it, which another node sharing
+  the path may have written over, is admitted again. Nothing is looked up
+  while the file holds every bound host. Each node keeps its own file.
 
   ## The file
 
@@ -63,7 +67,8 @@ defmodule Brando.Tenant.ServedHosts do
 
   @topic "brando:served_hosts"
   @status_key {__MODULE__, :status}
-  @retry_after :timer.minutes(1)
+  @retry_interval :timer.minutes(1)
+  @recheck_interval :timer.minutes(5)
   @lookup_timeout :timer.seconds(10)
 
   @typedoc """
@@ -134,7 +139,12 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   @impl true
-  def handle_info(:retry, state), do: {:noreply, run(%{state | timer: nil})}
+  # A cold cache binds no host, and a check then would empty the file
+  def handle_info(:tick, state) do
+    state = %{state | timer: nil}
+    if Cache.warmed?(), do: {:noreply, run(state)}, else: {:noreply, state}
+  end
+
   def handle_info(_message, state), do: {:noreply, state}
 
   defp run(state) do
@@ -196,8 +206,25 @@ defmodule Brando.Tenant.ServedHosts do
       not (host |> String.split(".") |> List.last() |> String.match?(~r/\A[0-9]+\z/))
   end
 
-  defp schedule(state, false), do: state
-  defp schedule(state, true), do: %{state | timer: Process.send_after(self(), :retry, @retry_after)}
+  # Soon while a host waits or something failed. Otherwise slowly, all the
+  # same: another node sharing the path may have written over the file.
+  defp schedule(state, retry?) do
+    interval =
+      if retry?,
+        do: interval(:retry_interval, @retry_interval),
+        else: interval(:recheck_interval, @recheck_interval)
+
+    %{state | timer: Process.send_after(self(), :tick, interval)}
+  end
+
+  defp interval(key, default) do
+    config = config()
+
+    case Keyword.keyword?(config) && Keyword.get(config, key) do
+      milliseconds when is_integer(milliseconds) and milliseconds > 0 -> milliseconds
+      _unset -> default
+    end
+  end
 
   # Hosts not yet in the file. No lookups at all when there are none.
   defp admit([], _config), do: {[], %{}, []}
