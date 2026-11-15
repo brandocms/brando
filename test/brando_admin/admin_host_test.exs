@@ -9,7 +9,9 @@ defmodule BrandoAdmin.AdminHostTest do
   alias Brando.SiteAssetsFixtures
   alias Brando.Tenant
   alias Brando.Tenant.Cache
+  alias Brando.Test.AdminHostPublicRoutesRouter, as: PublicRoutesRouter
   alias Brando.Test.AdminHostRouter, as: Router
+  alias Brando.Test.AdminHostScopedRouter, as: ScopedRouter
   alias BrandoAdmin.AdminHost
 
   # `BrandoIntegrationWeb.Endpoint` has no `url`, so its host is Phoenix's default
@@ -96,6 +98,36 @@ defmodule BrandoAdmin.AdminHostTest do
       assert {conn.status, conn.resp_body} == {200, "The site's own page at /admin"}
     end
 
+    test "inside an enclosing scope, the admin's and MCP's complete paths answer as a missing path does" do
+      missing = request(ScopedRouter, :get, "/no-such-page", "beta.test")
+      assert {missing.status, missing.resp_body} == {404, "Not found on this site"}
+
+      for path <- [
+            "/cms/admin/login",
+            "/cms/admin/pages",
+            "/cms/admin/projects",
+            "/cms/mcp",
+            "/cms/mcp/beta/production",
+            "/cms/.well-known/oauth-protected-resource/mcp",
+            "/cms/admin/mcp/authorize"
+          ] do
+        conn = request(ScopedRouter, :get, path, "beta.test")
+        assert {conn.status, conn.resp_body} == {missing.status, missing.resp_body}, path
+      end
+
+      assert {:no_route, _conn} = request(ScopedRouter, :post, "/cms/admin/login", "beta.test")
+    end
+
+    test "the application's own routes under the admin's path still answer, in their declared order" do
+      for path <- ["/admin", "/admin/about/team", "/admin/login"] do
+        conn = request(PublicRoutesRouter, :get, path, "beta.test")
+        assert {conn.status, conn.resp_body} == {200, "The application's own #{path}"}, path
+      end
+
+      conn = request(PublicRoutesRouter, :get, "/admin/pages", "beta.test")
+      assert {conn.status, conn.resp_body} == {404, "Not found on this site"}
+    end
+
     test "a host bound to nothing answers the plain 404, without a database query" do
       queries = count_queries()
       missing = request(:get, "/no-such-page", "unbound.test")
@@ -161,12 +193,12 @@ defmodule BrandoAdmin.AdminHostTest do
     Brando.MigrationTemplates.create_environment("tenant_beta_production", tables)
   end
 
-  defp request(method, path, host) do
+  defp request(router \\ Router, method, path, host) do
     Tenant.put_prefix(nil)
 
     method
     |> Plug.Test.conn("https://#{host}#{path}")
-    |> Router.call(Router.init([]))
+    |> router.call(router.init([]))
   rescue
     error in Phoenix.Router.NoRouteError -> {:no_route, error.conn}
   after

@@ -14,14 +14,6 @@ defmodule BrandoAdmin.AdminHost do
 
   alias Brando.Tenant
 
-  # The paths `Brando.Router.mcp_routes/0` mounts, as decoded path segments
-  @mcp_prefixes [
-    ["mcp"],
-    [".well-known", "oauth-protected-resource", "mcp"],
-    [".well-known", "oauth-authorization-server", "mcp"],
-    ["admin", "mcp"]
-  ]
-
   @doc """
   For the admin socket's `check_origin`, so that it takes connections from
   the endpoint's host only, whatever the endpoint's own `check_origin`
@@ -82,63 +74,25 @@ defmodule BrandoAdmin.AdminHost do
   defp normalize(_host), do: nil
 
   @doc """
-  The admin or MCP path prefix `conn` asks for when its host does not serve
-  the admin, or nil. The `call/2` that `Brando.Router.admin_routes/3` gives
-  the router asks before it matches a route, and sends such a request to
-  `dispatch_without/3`.
+  Sends `conn` to the route of `router` it matches when the routes
+  `Brando.Router.admin_routes/3` and `Brando.Router.mcp_routes/0` declare are
+  left out, the application's own routes keeping their order, so an admin or
+  MCP path answers as a path that does not exist on its host: the site's
+  catch-all and its 404 page on a site's host, the plain 404 on a host bound
+  to nothing, or the router's own `Phoenix.Router.NoRouteError` when nothing
+  else matches. The `call/2` that `admin_routes/3` gives the router sends a
+  request here on a host that does not serve the admin.
   """
-  @spec refused_prefix(Plug.Conn.t(), module()) :: [String.t()] | nil
-  def refused_prefix(%Plug.Conn{path_info: path_info, host: host}, router) do
-    if Tenant.mode() == :multi do
-      prefixes = [router.__brando_admin_path__() | mcp_prefixes(router)]
-      prefix = Enum.find(prefixes, &(&1 != [] and starts_with?(path_info, &1)))
-      if prefix && not admin_host?(host), do: prefix
-    end
-  end
-
-  defp mcp_prefixes(router) do
-    if function_exported?(router, :__brando_mcp_routes__, 0), do: @mcp_prefixes, else: []
-  end
-
-  # The router matches decoded segments, so `/%61dmin` is `/admin` to it
-  defp starts_with?(_path_info, []), do: true
-
-  defp starts_with?([segment | path_info], [expected | prefix]),
-    do: URI.decode(segment) == expected and starts_with?(path_info, prefix)
-
-  defp starts_with?([], _prefix), do: false
-
-  @doc """
-  Sends `conn` to the route of `router` it would match if the routes under
-  `prefix` did not exist, with its pipelines, so it answers as a path that
-  does not exist on its host: the site's catch-all and its 404 page on a
-  site's host, the plain 404 on a host bound to nothing, or the router's own
-  `Phoenix.Router.NoRouteError` when nothing else matches.
-  """
-  # The prefix's segments are replaced with values no route's literal segment
-  # can match, so only a route with parameters there matches; its parameters
-  # then get the real segments back.
-  @spec dispatch_without(Plug.Conn.t(), module(), [String.t()]) :: Plug.Conn.t()
-  def dispatch_without(conn, router, prefix) do
+  @spec dispatch_without_admin(Plug.Conn.t(), module()) :: Plug.Conn.t()
+  def dispatch_without_admin(conn, router) do
     decoded = Enum.map(conn.path_info, &URI.decode/1)
-    placeholders = Enum.map(1..length(prefix)//1, &"\0brando-admin-host-#{&1}")
-    probe = placeholders ++ Enum.drop(decoded, length(prefix))
-    restore = placeholders |> Enum.zip(Enum.take(decoded, length(prefix))) |> Map.new()
 
-    case router.__match_route__(conn.method, probe, conn.host) do
+    case router.__match_route_without_admin__(conn.method, decoded, conn.host) do
       {metadata, prepare, pipeline, plug_opts} ->
-        metadata = Map.update!(metadata, :path_params, &restore_params(&1, restore))
         Phoenix.Router.__call__(conn, metadata, prepare, pipeline, plug_opts)
 
       :error ->
         raise Phoenix.Router.NoRouteError, conn: conn, router: router
     end
-  end
-
-  defp restore_params(params, restore) do
-    Map.new(params, fn
-      {key, value} when is_list(value) -> {key, Enum.map(value, &Map.get(restore, &1, &1))}
-      {key, value} -> {key, Map.get(restore, value, value)}
-    end)
   end
 end

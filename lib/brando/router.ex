@@ -106,6 +106,8 @@ defmodule Brando.Router do
         plug Brando.MCP.ConsentPlug, :guard
       end
 
+      Brando.Router.__admin_routes_start__(__MODULE__)
+
       scope "/" do
         match :*, "/.well-known/oauth-protected-resource/mcp", Brando.MCP.HTTP, :resource_metadata
         match :*, "/.well-known/oauth-protected-resource/mcp/*tenant", Brando.MCP.HTTP, :resource_metadata
@@ -129,6 +131,8 @@ defmodule Brando.Router do
           live "/authorize", BrandoAdmin.MCP.ConsentLive
         end
       end
+
+      Brando.Router.__admin_routes_end__(__MODULE__)
     end
   end
 
@@ -146,19 +150,19 @@ defmodule Brando.Router do
           []
         end
 
-      @doc "The path segments the admin is mounted under (`BrandoAdmin.AdminHost`)."
-      def __brando_admin_path__, do: Brando.Router.__path_segments__(unquote(path))
+      @before_compile Brando.Router
 
       @doc """
-      Dispatches `conn` as `Phoenix.Router` does, but for a request for an
-      admin or MCP path on a host other than the endpoint's with
-      `tenancy_mode: :multi`, which goes to the route it would match without
-      them (`BrandoAdmin.AdminHost`).
+      Dispatches `conn` as `Phoenix.Router` does, but on a host that does not
+      serve the admin (another host than the endpoint's with `tenancy_mode:
+      :multi`) the routes `admin_routes/3` and `mcp_routes/0` mount are left
+      out of the match (`BrandoAdmin.AdminHost`).
       """
       def call(conn, opts) do
-        case BrandoAdmin.AdminHost.refused_prefix(conn, __MODULE__) do
-          nil -> super(conn, opts)
-          prefix -> BrandoAdmin.AdminHost.dispatch_without(prepare(conn), __MODULE__, prefix)
+        if BrandoAdmin.AdminHost.serves_admin?(conn) do
+          super(conn, opts)
+        else
+          BrandoAdmin.AdminHost.dispatch_without_admin(prepare(conn), __MODULE__)
         end
       end
 
@@ -187,6 +191,8 @@ defmodule Brando.Router do
       # The icon stylesheet (`Brando.Icons.stylesheet_path/0`). Outside the admin path
       # and its pipelines: the login page and front-end edit mode use icons too.
       forward "/__brando/icons", Brando.Plug.Icons
+
+      Brando.Router.__admin_routes_start__(__MODULE__)
 
       scope unquote(path), as: :admin do
         scope "/", BrandoAdmin do
@@ -278,11 +284,116 @@ defmodule Brando.Router do
           unquote(block)
         end
       end
+
+      Brando.Router.__admin_routes_end__(__MODULE__)
     end
   end
 
-  @doc ~s(The path segments of a mount path: `"/admin"` gives `["admin"]`.)
-  def __path_segments__(path) when is_binary(path), do: String.split(path, "/", trim: true)
+  @doc false
+  # The routes declared between these two calls are the admin's or MCP's, left
+  # out of the match on a host that does not serve the admin. Counting the
+  # routes Phoenix has recorded so far keeps the complete paths of any
+  # enclosing scope.
+  def __admin_routes_start__(module) do
+    Module.put_attribute(module, :brando_admin_routes_start, route_count(module))
+  end
+
+  @doc false
+  def __admin_routes_end__(module) do
+    range = Module.get_attribute(module, :brando_admin_routes_start)..(route_count(module) - 1)//1
+    Module.put_attribute(module, :brando_admin_routes, [range | Module.get_attribute(module, :brando_admin_routes) || []])
+  end
+
+  defp route_count(module), do: module |> Module.get_attribute(:phoenix_routes) |> length()
+
+  # `__match_route_without_admin__/3`: Phoenix's `__match_route__/3` for every
+  # route but those `admin_routes/3` and `mcp_routes/0` declare, in the order
+  # they are declared, with pipelines of its own.
+  @doc false
+  defmacro __before_compile__(env) do
+    admin_ranges = Module.get_attribute(env.module, :brando_admin_routes) || []
+
+    routes =
+      env.module
+      |> Module.get_attribute(:phoenix_routes)
+      |> Enum.reverse()
+      |> Enum.with_index()
+      |> Enum.reject(fn {_route, index} -> Enum.any?(admin_ranges, &(index in &1)) end)
+      |> Enum.map(&elem(&1, 0))
+
+    {clauses, {pipes, _known}} = Enum.map_reduce(routes, {[], %{}}, &build_match_without_admin(&1, &2, env))
+
+    quote do
+      unquote(pipes)
+      unquote(clauses)
+
+      @doc false
+      def __match_route_without_admin__(_verb, _path, _host), do: :error
+    end
+  end
+
+  defp build_match_without_admin(route, {pipes, known}, env) do
+    {pipe_name, pipes, known} =
+      case Map.fetch(known, route.pipe_through) do
+        {:ok, name} ->
+          {name, pipes, known}
+
+        :error ->
+          name = :"__brando_site_pipe_through#{map_size(known)}__"
+          {name, [build_pipe(name, route.pipe_through, env) | pipes], Map.put(known, route.pipe_through, name)}
+      end
+
+    %{prepare: prepare, dispatch: dispatch, path_params: path_params, hosts: hosts, path: path} =
+      Phoenix.Router.Route.exprs(route)
+
+    verb =
+      case route.verb do
+        :* -> Macro.var(:_verb, nil)
+        verb -> verb |> to_string() |> String.upcase()
+      end
+
+    clauses =
+      for host <- hosts do
+        quote line: route.line do
+          def __match_route_without_admin__(unquote(verb), unquote(path), unquote(host)) do
+            {unquote(route_metadata(route, path_params)),
+             fn var!(conn, :conn), %{path_params: var!(path_params, :conn)} -> unquote(prepare) end,
+             &(unquote(Macro.var(pipe_name, __MODULE__)) / 1), unquote(dispatch)}
+          end
+        end
+      end
+
+    {clauses, {pipes, known}}
+  end
+
+  defp route_metadata(route, path_params) do
+    pairs = [
+      conn: nil,
+      route: route.path,
+      plug: route.plug,
+      plug_opts: Macro.escape(route.plug_opts),
+      path_params: path_params,
+      pipe_through: route.pipe_through
+    ]
+
+    {:%{}, [], pairs ++ Macro.escape(Map.to_list(route.metadata))}
+  end
+
+  defp build_pipe(name, pipe_through, env) do
+    plugs =
+      pipe_through
+      |> Enum.reverse()
+      |> Enum.map(fn
+        {plug, opts} -> {plug, opts, true}
+        plug -> {plug, [], true}
+      end)
+
+    {conn, body} = Plug.Builder.compile(env, plugs, init_mode: Phoenix.plug_init_mode(), log_on_halt: :debug)
+
+    quote do
+      defp unquote(name)(unquote(conn)), do: unquote(body)
+    end
+  end
 
   # Brando's own admin screens, kept out of `admin_routes/3`'s quote.
   defp config_routes do
