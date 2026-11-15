@@ -55,6 +55,14 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     end
   end
 
+  # After an authorization change (`BrandoAdmin.Authorization`): who may bind
+  # hosts also decides who sees the served hosts file's error in detail
+  def refresh_authorization(%{assigns: %{socket_connected: true}} = socket) do
+    assign(socket, :can_bind_hosts?, Brando.Authorization.Boundary.superuser?(socket.assigns.current_user))
+  end
+
+  def refresh_authorization(socket), do: socket
+
   defp can_manage?(current_user, current_site) do
     if Brando.Authorization.enabled?() do
       scope = Brando.Authorization.Scope.current(current_user)

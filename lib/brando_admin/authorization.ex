@@ -293,6 +293,7 @@ defmodule BrandoAdmin.Authorization do
             BrandoAdmin.Nav -> BrandoAdmin.Nav.refresh_authorization(socket)
             BrandoAdmin.Chrome -> BrandoAdmin.Chrome.refresh_authorization(socket)
             BrandoAdmin.Sites.ActivityLive -> BrandoAdmin.Sites.ActivityLive.refresh_authorization(socket)
+            BrandoAdmin.Sites.EnvironmentLive -> BrandoAdmin.Sites.EnvironmentLive.refresh_authorization(socket)
             _ -> socket
           end
 

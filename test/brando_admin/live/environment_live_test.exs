@@ -879,6 +879,40 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       assert away_status =~ "203.0.113.10"
     end
 
+    test "a superuser who stops being one while the screen is open no longer sees why the file failed", %{
+      site: site,
+      production: production,
+      tmp_dir: tmp_dir,
+      current_user: owner
+    } do
+      file = Path.join([tmp_dir, "missing", "served_hosts"])
+      put_test_env(Brando.Tenant.ServedHosts, file: file, addresses: ["203.0.113.10"])
+      ExUnit.CaptureLog.capture_log(fn -> Brando.Tenant.ServedHosts.check() end)
+      put_test_env(:authorization_mode, :groups)
+      superuser = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      {:ok, _} = Migration.run()
+
+      # Keeps the screen after the Superuser group is gone
+      owner_scope = Scope.site(owner, site, production)
+
+      {:ok, group} =
+        Groups.create(owner_scope, %{name: "Site readers"}, ["brando.admin.access", "brando.environments.read"])
+
+      {:ok, :ok} = Groups.add_member(owner_scope, group.id, superuser.id)
+
+      {:ok, view, _html} = live(log_in_user(build_conn(), superuser), "/admin/config/environments")
+      assert view |> element(".environment-served-hosts-error") |> render() =~ file
+
+      installation = Scope.installation(owner)
+      {:ok, installation_groups} = Groups.list(installation)
+      for %{id: id} <- installation_groups, id != group.id, do: Groups.remove_member(installation, id, superuser.id)
+      send(view.pid, {:authorization_changed, :all})
+
+      error = view |> element(".environment-served-hosts-error") |> render()
+      assert error =~ "The served hosts file could not be written."
+      refute error =~ tmp_dir
+    end
+
     test "with the feature off, nothing is shown", %{conn: conn, served: served} do
       put_test_env(Brando.Tenant.ServedHosts, [])
 
