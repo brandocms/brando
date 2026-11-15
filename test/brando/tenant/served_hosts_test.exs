@@ -384,6 +384,24 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert File.read!(file) == "www.acme.test\n"
     end
 
+    test "the status is broadcast on this node only: each node has its own file", %{site: site} do
+      # Calls the process makes into Phoenix.PubSub; a cluster cannot be started here
+      pid = Process.whereis(ServedHosts)
+      :erlang.trace_pattern({Phoenix.PubSub, :_, :_}, true, [:global])
+      :erlang.trace(pid, true, [:call])
+
+      on_exit(fn ->
+        :erlang.trace(pid, false, [:call])
+        :erlang.trace_pattern({Phoenix.PubSub, :_, :_}, false, [:global])
+      end)
+
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+
+      assert_receive {:trace, ^pid, :call, {Phoenix.PubSub, :local_broadcast, [_, _, {:served_hosts, _}]}}
+      refute_received {:trace, ^pid, :call, {Phoenix.PubSub, :broadcast, _}}
+    end
+
     test "with no file configured, nothing is written or broadcast", %{tmp_dir: tmp_dir, site: site} do
       put_test_env(ServedHosts, [])
       File.rm_rf!(Path.join(tmp_dir, "served_hosts"))

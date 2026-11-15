@@ -93,7 +93,7 @@ defmodule Brando.Tenant.ServedHosts do
   @spec status() :: status()
   def status, do: :persistent_term.get(@status_key, empty_status())
 
-  @doc "The PubSub topic a changed `status/0` is broadcast on, as `{:served_hosts, status}`."
+  @doc "The PubSub topic a changed `status/0` is broadcast on, on this node only, as `{:served_hosts, status}`."
   @spec topic() :: String.t()
   def topic, do: @topic
 
@@ -352,7 +352,8 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   defp broadcast(status) do
-    Phoenix.PubSub.broadcast(Brando.pubsub(), @topic, {:served_hosts, status})
+    # Each node keeps its own file, so its status is its own
+    Phoenix.PubSub.local_broadcast(Brando.pubsub(), @topic, {:served_hosts, status})
   rescue
     # No PubSub registry under that name
     ArgumentError -> :ok
