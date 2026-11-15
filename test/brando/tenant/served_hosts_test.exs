@@ -324,7 +324,10 @@ defmodule Brando.Tenant.ServedHostsTest do
         "back`tick.acme.test",
         "www.acme.test\nunbound.example.com",
         "intranet",
-        "203.0.113.10"
+        "203.0.113.10",
+        # IPv4 literals the resolver reads, in hexadecimal and short forms
+        "203.0.113.0x0a",
+        "0xcb.0x00.0x71.0x0a"
       ]
 
       for {raw, index} <- Enum.with_index(invalid), do: bind_raw(site, "legacy-#{index}", raw)

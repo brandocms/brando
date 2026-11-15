@@ -212,11 +212,14 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   # A stored domain is not checked again until it changes, and the file is read
-  # by root: only a host name with a dot that is not an IP address (no
-  # top-level domain is all digits) gets a line
+  # by root: only a host name with a dot that is not an IP address gets a line.
+  # Every top-level domain begins with a letter. A last label that does not
+  # makes the name an IPv4 literal to some resolver: `203.0.113.10`, and the
+  # relaxed forms `203.0.113.0x0a` or `0xcb.0x00.0x71.0x0a`, which
+  # `:inet.parse_address/1` reads only in part.
   defp servable?(host) do
     Environment.valid_host?(host) and String.contains?(host, ".") and
-      not (host |> String.split(".") |> List.last() |> String.match?(~r/\A[0-9]+\z/))
+      host |> String.split(".") |> List.last() |> String.match?(~r/\A[a-z]/i)
   end
 
   # Soon while a host waits or something failed. Otherwise slowly, all the
