@@ -754,6 +754,19 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       assert view |> element("#environment-host-status-#{away.id}") |> render() =~ "Served"
     end
 
+    test "a host stored with capitals or spaces shows its state", %{conn: conn, served: served} do
+      Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^served.id),
+        set: [domain: " WWW.Acme.TEST "]
+      )
+
+      Cache.warm()
+      Brando.Tenant.ServedHosts.check()
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      assert view |> element("#environment-host-status-#{served.id}") |> render() =~ "Served"
+    end
+
     test "a stored value that is no valid host name is not shown as served", %{conn: conn, served: served} do
       put_test_env(Brando.Tenant.ServedHosts,
         file: Brando.Tenant.ServedHosts.status().file,

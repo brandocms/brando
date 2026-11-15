@@ -168,7 +168,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     <.served_host
                       :if={@served_hosts_enabled? && environment.domain}
                       id={"environment-host-status-#{environment.id}"}
-                      state={Map.get(@served_hosts.hosts, environment.domain)}
+                      state={Map.get(@served_hosts.hosts, Environment.normalize_host(environment.domain))}
                       addresses={@served_hosts.addresses}
                     />
                   </td>
