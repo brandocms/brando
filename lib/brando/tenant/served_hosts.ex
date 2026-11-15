@@ -179,14 +179,18 @@ defmodule Brando.Tenant.ServedHosts do
 
     case read_file(file) do
       {:ok, existing, listed} ->
-        {bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
+        bound = Enum.filter(Cache.bound_hosts(), &servable?/1)
         listed = MapSet.new(listed)
         # Another node sharing the path may have written over a host this one
         # admitted: it goes back in without a lookup
         known = MapSet.union(listed, state.admitted)
         {kept, candidates} = Enum.split_with(bound, &MapSet.member?(known, &1))
         {admitted, waiting, addresses} = admit(candidates, config)
-        hosts = Enum.sort(kept ++ admitted)
+        # The registry may have changed while the lookups ran
+        {still_bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
+        still_bound = MapSet.new(still_bound)
+        hosts = (kept ++ admitted) |> Enum.filter(&MapSet.member?(still_bound, &1)) |> Enum.sort()
+        waiting = Map.filter(waiting, fn {host, _state} -> MapSet.member?(still_bound, host) end)
 
         {written?, error} = write(file, existing, hosts)
         state = %{report(state, file, error) | admitted: MapSet.new(hosts)}

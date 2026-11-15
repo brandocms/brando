@@ -45,6 +45,18 @@ defmodule Brando.Tenant.ServedHostsTest do
     end
   end
 
+  defmodule BlockingResolver do
+    @moduledoc false
+    # Answers once the test says so
+    def lookup(host) do
+      send(:persistent_term.get({__MODULE__, :pid}), {:looking_up, host, self()})
+
+      receive do
+        :answer -> Brando.ServedHostsTestResolver.lookup(host)
+      end
+    end
+  end
+
   @moduletag :tmp_dir
 
   setup %{tmp_dir: tmp_dir} do
@@ -136,6 +148,35 @@ defmodule Brando.Tenant.ServedHostsTest do
 
       assert status.addresses == [@here, @here_v6]
       assert status.error == nil
+    end
+
+    test "a host unbound while its lookup runs is not written", %{path: file, site: site} do
+      :persistent_term.put({BlockingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({BlockingResolver, :pid}) end)
+      # Bound while its DNS does not resolve yet
+      environment = bind(site, "late", "late.acme.test")
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: BlockingResolver)
+      DNS.answer("late.acme.test", [@here])
+
+      pid = Process.whereis(ServedHosts)
+      :erlang.trace_pattern({:file, :write, 2}, true, [:global])
+      :erlang.trace(pid, true, [:call])
+
+      on_exit(fn ->
+        :erlang.trace(pid, false, [:call])
+        :erlang.trace_pattern({:file, :write, 2}, false, [:global])
+      end)
+
+      check = Task.async(fn -> ServedHosts.check() end)
+      assert_receive {:looking_up, "late.acme.test", lookup}
+      {:ok, _} = Registry.update_environment(Registry.get_environment(environment.id), %{domain: nil}, actor: :system)
+      send(lookup, :answer)
+
+      assert %{hosts: hosts} = Task.await(check)
+      refute Map.has_key?(hosts, "late.acme.test")
+      :sys.get_state(pid)
+      refute_received {:trace, ^pid, :call, {:file, :write, [_io, "late.acme.test\n"]}}
+      assert File.read!(file) == ""
     end
 
     test "addresses are sorted and unique, so records answered in turn change nothing", %{site: site} do
