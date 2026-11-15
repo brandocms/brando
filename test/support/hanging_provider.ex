@@ -16,16 +16,21 @@ defmodule Brando.Test.HangingProvider do
   SYN, so the connect hangs, as one to a host behind a firewall that drops
   its packets does. The sockets are the calling process's, and close when
   it exits.
+
+  The backlog is 1, not 0: macOS reads a backlog of 0 as its maximum
+  (`kern.ipc.somaxconn`, 128) and Linux as one connection, while 1 holds
+  one connection on macOS and two on Linux, so a few connects fill it on
+  either.
   """
   @spec unanswered_connect() :: :inet.port_number()
   def unanswered_connect do
-    {:ok, listen} = :gen_tcp.listen(0, ip: {127, 0, 0, 1}, backlog: 0, active: false)
+    {:ok, listen} = :gen_tcp.listen(0, ip: {127, 0, 0, 1}, backlog: 1, active: false)
     {:ok, port} = :inet.port(listen)
     fill_accept_queue(port, 10)
     port
   end
 
-  defp fill_accept_queue(_port, 0), do: raise("could not fill the accept queue of a local port")
+  defp fill_accept_queue(_port, 0), do: raise("could not fill the accept queue of a local port in 10 connects")
 
   defp fill_accept_queue(port, tries) do
     case :gen_tcp.connect({127, 0, 0, 1}, port, [active: false], 300) do
