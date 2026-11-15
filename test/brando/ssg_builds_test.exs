@@ -19,9 +19,9 @@ defmodule Brando.SSGBuildsTest do
   alias Brando.Sites.DeployConfig
   alias Brando.SSG.Builds
   alias Brando.SSG.Deploy
+  alias Brando.SSGBuildsTest.TenantRouter
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
-  alias Brando.SSGBuildsTest.TenantRouter
   alias Brando.Worker.SSGBuild
 
   defmodule SuccessfulBuilder do
