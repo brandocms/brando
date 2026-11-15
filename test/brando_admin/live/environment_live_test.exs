@@ -483,13 +483,19 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
 
       assert has_element?(view, ~s(#environment-#{staging.id} textarea[name="redirect_hosts"][disabled]))
 
+      Brando.endpoint().subscribe("user:#{admin.id}")
+
+      # The form as shown, so the save reaches the Registry's check
       render_submit(view, "update_domain", %{
         "environment_id" => staging.id,
         "domain" => "staging.acme.test",
         "redirect_hosts" => "",
-        "shown_domain" => "staging.acme.test"
+        "shown_domain" => "staging.acme.test",
+        "shown_redirect_hosts" => "www.staging.acme.test"
       })
 
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error} = toast}
+      assert inspect(toast) =~ "Only a superuser can change the hosts that redirect to an environment."
       assert Registry.get_environment(staging.id).redirect_hosts == ["www.staging.acme.test"]
     end
 
