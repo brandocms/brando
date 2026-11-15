@@ -327,6 +327,19 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert File.read!(file) == "www.acme.test\n"
     end
 
+    test "a write removes temporary files an earlier write left behind, and none of its own",
+         %{path: file, tmp_dir: tmp_dir, site: site} do
+      leftovers = [".served_hosts.12.tmp", ".served_hosts.Zm9vYmFy.tmp"]
+      others = [".other_hosts.12.tmp", "served_hosts.bak"]
+      for name <- leftovers ++ others, do: File.write!(Path.join(tmp_dir, name), "stale\n")
+
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+
+      assert File.read!(file) == "www.acme.test\n"
+      assert tmp_dir |> File.ls!() |> Enum.sort() == Enum.sort(["served_hosts" | others])
+    end
+
     test "a host already in the file is kept without a lookup", %{path: file, site: site} do
       bind(site, "production", "www.acme.test", true)
       File.write!(file, "www.acme.test\n")

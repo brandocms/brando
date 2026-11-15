@@ -325,16 +325,48 @@ defmodule Brando.Tenant.ServedHosts do
     if content == existing do
       {true, nil}
     else
-      temporary = Path.join(Path.dirname(file), ".#{Path.basename(file)}.#{System.unique_integer([:positive])}.tmp")
+      replace(file, content)
+    end
+  end
 
-      with :ok <- File.write(temporary, content),
-           :ok <- File.rename(temporary, file) do
-        {true, nil}
-      else
-        {:error, reason} ->
-          File.rm(temporary)
-          {false, "#{file}: #{:file.format_error(reason)}"}
-      end
+  # A random name created exclusively, removed when the write or the rename
+  # fails. Temporary files a crash left behind are removed first.
+  defp replace(file, content) do
+    dir = Path.dirname(file)
+    prefix = ".#{Path.basename(file)}."
+    remove_leftovers(dir, prefix)
+    temporary = Path.join(dir, prefix <> Base.encode16(:crypto.strong_rand_bytes(12), case: :lower) <> ".tmp")
+
+    case File.open(temporary, [:write, :exclusive, :binary]) do
+      {:ok, io} ->
+        written = :file.write(io, content)
+        closed = File.close(io)
+
+        with :ok <- written,
+             :ok <- closed,
+             :ok <- File.rename(temporary, file) do
+          {true, nil}
+        else
+          {:error, reason} ->
+            File.rm(temporary)
+            {false, "#{file}: #{:file.format_error(reason)}"}
+        end
+
+      {:error, reason} ->
+        {false, "#{file}: #{:file.format_error(reason)}"}
+    end
+  end
+
+  defp remove_leftovers(dir, prefix) do
+    case File.ls(dir) do
+      {:ok, names} ->
+        for name <- names,
+            String.starts_with?(name, prefix) and String.ends_with?(name, ".tmp") and
+              byte_size(name) > byte_size(prefix) + 4,
+            do: File.rm(Path.join(dir, name))
+
+      {:error, _reason} ->
+        :ok
     end
   end
 
