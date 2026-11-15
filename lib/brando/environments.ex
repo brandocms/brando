@@ -621,9 +621,13 @@ defmodule Brando.Environments do
   # build decides what a host serves, and its forms post to the environment it
   # was built from (`Brando.Forms.SubmissionController`), so nothing moves.
   defp carry_host(%Site{delivery_mode: :dynamic}, %Environment{id: id, site_id: site_id}) do
+    # Every row of the site, in id order, before the host lock the trigger
+    # takes: the switch then writes them all (`live: false`), and a hosts save
+    # holds its row before it takes the host lock
     rows =
       from(candidate in Environment,
-        where: candidate.site_id == ^site_id and (candidate.live or candidate.id == ^id),
+        where: candidate.site_id == ^site_id,
+        order_by: candidate.id,
         lock: "FOR UPDATE"
       )
       |> Repo.all(@public_opts)

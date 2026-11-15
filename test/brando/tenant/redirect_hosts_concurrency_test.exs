@@ -100,6 +100,93 @@ defmodule Brando.Tenant.RedirectHostsConcurrencyTest do
     end
   end
 
+  defmodule NoopSchemaCloner do
+    @behaviour Brando.Environments.SchemaCloner
+
+    @impl true
+    def clone_schema(_source_prefix, _target_prefix), do: :ok
+  end
+
+  # A live switch on a dynamic site with three environments takes the host
+  # lock (through the trigger) and then writes every row of the site; a hosts
+  # save on the third row holds that row, then needs the host lock. Neither
+  # may wait for the other while holding what the other needs.
+  test "a live switch and a hosts save on a third environment both complete", %{first: first, second: second} do
+    put_test_env(:environment_schema_cloner, NoopSchemaCloner, global: true)
+
+    third =
+      Sandbox.unboxed_run(Repo, fn ->
+        {:ok, site} = Registry.update_site(Registry.get_site(first.site_id), %{delivery_mode: :dynamic})
+
+        Repo.update_all(from(e in Environment, where: e.id == ^first.id), [set: [live: true]], prefix: "public")
+
+        {:ok, third} =
+          Registry.create_environment(site, %{name: "Three", key: "three", domain: "three.race.test"}, actor: :system)
+
+        third
+      end)
+
+    parent = self()
+
+    saver =
+      Task.async(fn ->
+        Sandbox.unboxed_run(Repo, fn ->
+          Repo.transaction(fn ->
+            locked = Repo.one(from(e in Environment, where: e.id == ^third.id, lock: "FOR UPDATE"), prefix: "public")
+            send(parent, :row_locked)
+
+            receive do
+              :save -> Registry.update_environment(locked, %{redirect_hosts: ["www.three.race.test"]}, actor: :system)
+            after
+              10_000 -> raise "never told to save"
+            end
+          end)
+        end)
+      end)
+
+    assert_receive :row_locked, 5_000
+
+    switcher =
+      Task.async(fn ->
+        Sandbox.unboxed_run(Repo, fn ->
+          Brando.Environments.set_live(Registry.get_environment(second.id), creator: :system)
+        end)
+      end)
+
+    wait_for_row_lock_waiter()
+    send(saver.pid, :save)
+
+    assert {:ok, {:ok, %Environment{redirect_hosts: ["www.three.race.test"]}}} = Task.await(saver, 15_000)
+    assert {:ok, %Environment{live: true, domain: "one.race.test"}} = Task.await(switcher, 15_000)
+
+    Sandbox.unboxed_run(Repo, fn ->
+      assert Registry.get_environment(first.id).domain == "two.race.test"
+      assert Registry.get_environment(third.id).redirect_hosts == ["www.three.race.test"]
+    end)
+  end
+
+  defp wait_for_row_lock_waiter(attempts \\ 200)
+  defp wait_for_row_lock_waiter(0), do: flunk("the live switch did not wait for the locked row")
+
+  defp wait_for_row_lock_waiter(attempts) do
+    waiting =
+      Sandbox.unboxed_run(Repo, fn ->
+        Repo.one(
+          from(l in "pg_locks",
+            where: l.locktype in ["transactionid", "tuple"] and not l.granted,
+            select: count()
+          )
+        )
+      end)
+
+    if waiting > 0 do
+      :ok
+    else
+      Process.sleep(10)
+      wait_for_row_lock_waiter(attempts - 1)
+    end
+  end
+
   test "the same redirect host from two concurrent writes is bound once", %{first: first, second: second} do
     attrs = %{redirect_hosts: ["www.race.test"]}
 
