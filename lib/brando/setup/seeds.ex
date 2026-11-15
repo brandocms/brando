@@ -14,7 +14,9 @@ defmodule Brando.Setup.Seeds do
 
   Every step is skipped when its content already exists, so the seeds are safe
   to rerun. Nothing here is a migration path: existing content is never
-  modified or removed.
+  modified or removed. The footer fragment is seeded only with a new
+  homepage, so a rerun does not bring back a footer deleted from a site in
+  use.
 
   A language added to an existing site is seeded with `added: true`
   (`Brando.Tenant.Seeder`). The modules are every language's, so that run
@@ -124,12 +126,21 @@ defmodule Brando.Setup.Seeds do
   end
 
   defp seed_language(language, report, user, modules, opts) do
-    report
-    |> track(:"identity (#{language})", fn -> identity(language) end)
-    |> track(:"seo (#{language})", fn -> seo(language, opts[:seo] || []) end)
-    |> track(:"menu (#{language})", fn -> menu(language, user, Keyword.get(opts, :actor, user)) end)
-    |> track(:"page (#{language})", fn -> index_page(language, user, modules, opts) end)
-    |> track(:"footer (#{language})", fn -> footer_fragment(language, user, modules) end)
+    report =
+      report
+      |> track(:"identity (#{language})", fn -> identity(language) end)
+      |> track(:"seo (#{language})", fn -> seo(language, opts[:seo] || []) end)
+      |> track(:"menu (#{language})", fn -> menu(language, user, Keyword.get(opts, :actor, user)) end)
+      |> track(:"page (#{language})", fn -> index_page(language, user, modules, opts) end)
+
+    # Outside an added language the footer comes only with a new homepage: an
+    # existing homepage means the site is in use, and its footer may have
+    # been deleted on purpose
+    seed_footer? = opts[:added] || :"page (#{language})" in report.created
+
+    track(report, :"footer (#{language})", fn ->
+      if seed_footer?, do: footer_fragment(language, user, modules), else: :exists
+    end)
   end
 
   defp track(report, label, fun) do
