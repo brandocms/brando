@@ -187,6 +187,23 @@ defmodule Brando.SiteURLTest do
     end
   end
 
+  describe "after a live switch" do
+    test "a service URL the identity cache holds names the live host", context do
+      in_environment("staging", fn ->
+        {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}, preload: [services: :identifier]})
+        user = Brando.Factory.insert(:random_user)
+        {:ok, _} = Brando.Sites.update_identity(identity, %{services: [%{name: "Strategi", url: "/strategi"}]}, user)
+        assert [%{name: "Strategi"}] = Brando.Cache.Identity.get("en").services
+      end)
+
+      set_live(context.site, "staging")
+
+      html = request("acme.test").resp_body
+      assert_head_names(html, "http://acme.test")
+      assert "http://acme.test/strategi" in head_urls(html)
+    end
+  end
+
   describe "with no domain to use" do
     test "outside every site it is the endpoint's URL" do
       assert Brando.Utils.hostname() == Brando.endpoint().url()
@@ -238,6 +255,17 @@ defmodule Brando.SiteURLTest do
     for url <- [og_url, canonical, markdown | urls] do
       assert url == base_url or String.starts_with?(url, base_url <> "/"), "#{url} is not on #{base_url}"
     end
+  end
+
+  defp head_urls(html) do
+    {:ok, document} = Floki.parse_document(html)
+    [json] = document |> Floki.find(~s(script[type="application/ld+json"])) |> Enum.map(&Floki.children/1)
+    json |> Enum.join() |> Jason.decode!() |> Map.fetch!("@graph") |> collect_urls()
+  end
+
+  defp set_live(site, key) do
+    environment = Registry.get_environment_by_key(site, key)
+    assert {:ok, %{live: true}} = Brando.Environments.set_live(environment, creator: :system)
   end
 
   defp collect_urls(map) when is_map(map), do: Enum.flat_map(map, fn {_key, value} -> collect_urls(value) end)

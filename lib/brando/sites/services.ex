@@ -25,6 +25,10 @@ defmodule Brando.Sites.Services do
   page publishes: the blueprint's `meta_schema` `"description"` (which may
   itself fall back to another field, such as an intro), else the entry's
   `meta_description`, else the rendered block text.
+
+  The URL is kept as the editor wrote it, or as the entry's path: the
+  resolved service is cached for the site, and the host it is served on may
+  change (`to_json_ld/1` adds it).
   """
   @spec resolve(Service.t()) :: Service.t()
   def resolve(%Service{} = service) do
@@ -33,7 +37,7 @@ defmodule Brando.Sites.Services do
 
     %{
       service
-      | resolved_url: absolute(safe_url(service.url) || identifier_url(identifier)),
+      | resolved_url: safe_url(service.url) || identifier_url(identifier),
         resolved_description: presence(service.description) || entry_description(entry)
     }
   end
@@ -65,7 +69,7 @@ defmodule Brando.Sites.Services do
         service_type: presence(service.service_type),
         provider: "#{hostname}/#identity",
         area_served: list_or_nil(service.area_served) || inherited,
-        url: presence(service.resolved_url) || absolute(safe_url(service.url))
+        url: absolute(presence(service.resolved_url) || safe_url(service.url))
       })
     end)
   end
