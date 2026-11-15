@@ -212,6 +212,35 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert Enum.any?(rerun.notices, &(&1 =~ "admin socket takes connections from the endpoint's host only"))
   end
 
+  test "an existing admin socket line gets the notice unless every transport it opens checks the origin" do
+    check = "[check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]"
+
+    notice? = fn options ->
+      endpoint = """
+      defmodule StudioWeb.Endpoint do
+        use Phoenix.Endpoint, otp_app: :studio
+        @session_options [store: :cookie, key: "_studio_key", signing_salt: "preserve-this-salt"]
+        socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [session: @session_options]]
+        socket "/admin/socket", BrandoAdmin.AdminSocket#{options}
+        plug Plug.Static, at: "/", from: :studio, only: ~w(assets)
+        plug Plug.Session, @session_options
+        plug StudioWeb.Router
+      end
+      """
+
+      igniter = %{"lib/studio_web/endpoint.ex" => endpoint} |> project() |> install(["--tenancy-mode", "multi"])
+      Enum.any?(igniter.notices, &(&1 =~ "admin socket takes connections from the endpoint's host only"))
+    end
+
+    assert notice?.(", websocket: #{check}, longpoll: true")
+    assert notice?.(", websocket: true, longpoll: #{check}")
+    assert notice?.(", longpoll: #{check}")
+    assert notice?.("")
+    refute notice?.(", websocket: #{check}, longpoll: #{check}")
+    refute notice?.(", websocket: #{check}")
+    refute notice?.(", websocket: #{check}, longpoll: false")
+  end
+
   test "tokens and keys are kept out of the request logs" do
     igniter = project() |> install()
     config = IgniterCase.source(igniter, "config/config.exs")

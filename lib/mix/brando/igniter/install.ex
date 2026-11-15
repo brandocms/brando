@@ -272,7 +272,7 @@ if Code.ensure_loaded?(Igniter) do
       with {:ok, {igniter, _source, zipper}} <- ProjectModule.find_module(igniter, endpoint),
            {:ok, body} <- Common.move_to_do_block(zipper),
            {:ok, socket} <- Source.find_call(body, :socket, [2, 3], "/admin/socket"),
-           false <- socket.node |> Macro.to_string() |> String.contains?("BrandoAdmin.AdminHost") do
+           false <- admin_host_origin_check?(socket.node) do
         Igniter.add_notice(igniter, """
         With several sites the admin socket takes connections from the endpoint's host only.
         Give `socket "/admin/socket"` in #{inspect(endpoint)} this origin check, on both transports:
@@ -285,6 +285,31 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp admin_socket_origin_notice(igniter, _endpoint, _tenancy_mode), do: igniter
+
+    # Whether every transport the socket opens (Phoenix's defaults: websocket
+    # on, longpoll off) checks the origin with BrandoAdmin.AdminHost. Options
+    # that are not a literal keyword list cannot be read, so they do not.
+    defp admin_host_origin_check?(socket) do
+      options =
+        case socket do
+          {_call, _meta, [_path, _module, options]} -> options |> Sourceror.to_string() |> Code.string_to_quoted!()
+          _no_options -> []
+        end
+
+      Keyword.keyword?(options) and
+        Enum.all?([websocket: true, longpoll: false], fn {transport, default} ->
+          case Keyword.get(options, transport, default) do
+            false ->
+              true
+
+            config when is_list(config) ->
+              config |> Keyword.get(:check_origin) |> Macro.to_string() =~ "BrandoAdmin.AdminHost"
+
+            _open ->
+              false
+          end
+        end)
+    end
 
     defp initialize(zipper) do
       with :error <- CodeFunction.move_to_function_call(zipper, {Brando.System, :initialize}, 0),
