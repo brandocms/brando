@@ -29,8 +29,9 @@ defmodule Brando.Plug.Markdown do
   last segment is literally `….md` is left alone, as are static files served
   before this plug. Paths under `:except` are left alone too (default
   `["/admin", "/api"]`), for routes that take a `.md` file name as a
-  parameter; with `tenancy_mode: :multi`, `/admin` only on the host that
-  serves the admin (`BrandoAdmin.AdminHost`):
+  parameter. With `tenancy_mode: :multi`, the entry for the path
+  `admin_routes/3` mounts the admin on (`/admin` unless it says otherwise)
+  counts only on the host that serves the admin (`BrandoAdmin.AdminHost`):
 
       plug Brando.Plug.Markdown, except: ["/admin", "/api", "/docs"]
   """
@@ -65,10 +66,18 @@ defmodule Brando.Plug.Markdown do
 
   # -- Request -----------------------------------------------------------------
 
-  # On a host that does not serve the admin, `/admin` is a path like any other
+  # On a host that does not serve the admin, the admin's path is a path like any other
   defp excluded?(%{request_path: path} = conn, except) do
-    except = if BrandoAdmin.AdminHost.serves_admin?(conn), do: except, else: List.delete(except, "/admin")
+    except = if BrandoAdmin.AdminHost.serves_admin?(conn), do: except, else: List.delete(except, admin_path())
     Enum.any?(except, &(path == &1 or String.starts_with?(path, &1 <> "/")))
+  end
+
+  defp admin_path do
+    router = Brando.router()
+
+    if Code.ensure_loaded?(router) and function_exported?(router, :__brando_admin_path__, 0),
+      do: router.__brando_admin_path__(),
+      else: "/admin"
   end
 
   defp md_path?(%{path_info: path_info} = conn) when path_info != [] do

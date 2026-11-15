@@ -152,6 +152,12 @@ defmodule Brando.Router do
 
       @before_compile Brando.Router
 
+      @brando_admin_path Phoenix.Router.scoped_path(__MODULE__, unquote(path))
+
+      @doc false
+      # The admin's complete path, with that of any enclosing scope
+      def __brando_admin_path__, do: @brando_admin_path
+
       pipeline :admin do
         plug :accepts, ["html"]
         plug :fetch_session
