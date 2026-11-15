@@ -208,7 +208,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
               <input
                 name="site[languages]"
                 required
-                value={Enum.join(site.languages, ",")}
+                value={language_draft(@language_drafts, site).languages}
                 placeholder={Enum.join(Brando.Languages.installation_codes(), ",")}
               />
               <small>
@@ -217,7 +217,11 @@ defmodule BrandoAdmin.Sites.SiteLive do
             </label>
             <label>
               <span>{gettext("Default language")}</span>
-              <input name="site[default_language]" required value={site.default_language} />
+              <input
+                name="site[default_language]"
+                required
+                value={language_draft(@language_drafts, site).default_language}
+              />
             </label>
           </div>
           <p :if={removed_languages(@language_drafts, site) != []} class="environment-hint" role="status">
@@ -327,7 +331,8 @@ defmodule BrandoAdmin.Sites.SiteLive do
   def handle_event("check_languages", %{"site" => params}, socket) do
     case site_from_socket(socket, params["id"]) do
       {:ok, site} ->
-        {:noreply, update(socket, :language_drafts, &Map.put(&1, site.id, parse_languages(params["languages"])))}
+        draft = %{languages: params["languages"] || "", default_language: params["default_language"] || ""}
+        {:noreply, update(socket, :language_drafts, &Map.put(&1, site.id, draft))}
 
       {:error, _reason} ->
         {:noreply, socket}
@@ -606,9 +611,19 @@ defmodule BrandoAdmin.Sites.SiteLive do
     end
   end
 
+  # What the form shows: the fields as typed since the last save, else the
+  # site's own. A change event re-renders the card, and an input that is not
+  # focused takes the rendered value, so rendering the saved one would undo
+  # what was typed in the other field.
+  defp language_draft(drafts, site) do
+    Map.get_lazy(drafts, site.id, fn ->
+      %{languages: Enum.join(site.languages, ","), default_language: site.default_language}
+    end)
+  end
+
   defp removed_languages(drafts, site) do
     case Map.fetch(drafts, site.id) do
-      {:ok, languages} -> site.languages -- languages
+      {:ok, %{languages: languages}} -> site.languages -- parse_languages(languages)
       :error -> []
     end
   end
