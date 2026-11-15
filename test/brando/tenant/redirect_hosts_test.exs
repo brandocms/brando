@@ -192,6 +192,15 @@ defmodule Brando.Tenant.RedirectHostsTest do
       assert {:ok, %{redirect_hosts: ["www.acme.test"]}} =
                Registry.update_environment(production, %{redirect_hosts: ["www.acme.test"]}, actor: superuser)
     end
+
+    # A data migration or a task: `Brando.pubsub/0` names no running PubSub,
+    # and the write runs outside `Brando.Repo.transaction/2`
+    test "a write without a PubSub running is not undone by the announce", %{production: production} do
+      put_test_env(:app_module, Brando.Tenant.RedirectHostsTest.NoApp)
+
+      assert {:ok, %{domain: "acme.test"}} = put_hosts(production, %{domain: "acme.test"})
+      assert Registry.get_environment(production.id).domain == "acme.test"
+    end
   end
 
   describe "the hosts follow the live environment" do

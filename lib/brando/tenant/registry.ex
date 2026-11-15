@@ -302,11 +302,20 @@ defmodule Brando.Tenant.Registry do
   end
 
   defp announce_on_success({:ok, %Environment{site_id: site_id}} = result) do
-    Repo.after_commit({:environments_updated, site_id}, fn -> Brando.Environments.announce(site_id) end)
+    Repo.after_commit({:environments_updated, site_id}, fn -> announce(site_id) end)
     result
   end
 
   defp announce_on_success(result), do: result
+
+  # Outside `Repo.transaction/2` (a data migration, a task) this runs at once,
+  # in the caller's transaction, where a raise would roll the write back
+  defp announce(site_id) do
+    Brando.Environments.announce(site_id)
+  rescue
+    # No PubSub registry under that name
+    ArgumentError -> :ok
+  end
 
   @spec delete_environment(Environment.t()) ::
           {:ok, Environment.t()} | {:error, Ecto.Changeset.t()}
