@@ -417,6 +417,17 @@ defmodule Brando.SSGBuildsTest do
       refute_received {:command, _, _}
     end
 
+    # The deploy host goes through the test resolver even with the
+    # operator's rsync targets overridden, never the machine's DNS:
+    # `pinned.test` is loopback there, so this server
+    test "rsync to a listed host that resolves to this server runs nothing", context do
+      put_test_env(DeployConfig, rsync_targets: ["deploy@pinned.test:/srv/sites/{site_key}"])
+      build = with_target(context.build, "rsync", "deploy@pinned.test:/srv/sites/#{context.site.key}")
+
+      assert {:error, :invalid_deploy_target} = Deploy.deploy(build, runner: &recording_runner/3)
+      refute_received {:command, _, _}
+    end
+
     test "rsync into its own directory deploys", context do
       target = "deploy@static.example.test:/srv/sites/#{context.site.key}"
       build = with_target(context.build, "rsync", target)
