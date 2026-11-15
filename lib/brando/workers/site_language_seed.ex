@@ -75,21 +75,20 @@ defmodule Brando.Worker.SiteLanguageSeed do
     Brando.Environments.with_site_lock(site, fn ->
       environments
       |> Enum.sort_by(&{not &1.live, &1.name})
-      |> Enum.find_value(:ok, fn environment ->
-        case seed_in(site, environment, language, creator) do
-          :ok -> nil
-          {:error, reason} -> {:error, environment, reason}
-        end
-      end)
+      |> Enum.find_value(:ok, &seed_in(site, &1, language, creator))
     end)
   end
 
+  # nil when seeded, for `Enum.find_value/3`
   defp seed_in(site, environment, language, creator) do
-    Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, environment), fn ->
-      seed(site, environment, language, creator)
-    end)
+    case Brando.Tenant.with_prefix(Brando.Tenant.prefix(site, environment), fn ->
+           seed(site, environment, language, creator)
+         end) do
+      :ok -> nil
+      {:error, reason} -> {:error, environment, reason}
+    end
   rescue
-    exception -> {:error, exception}
+    exception -> {:error, environment, exception}
   end
 
   @impl Oban.Worker
