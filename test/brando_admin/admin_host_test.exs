@@ -142,6 +142,24 @@ defmodule BrandoAdmin.AdminHostTest do
     end
   end
 
+  describe "Brando.MCP.BodyLimit with several sites" do
+    setup do
+      put_test_env(:tenancy_mode, :multi)
+      :ok
+    end
+
+    test "passes an unsized POST through on a host that does not serve the admin" do
+      for url <- ["https://acme.example.com/mcp/acme/production", "https://acme.example.com/mcp"] do
+        assert %{halted: false, status: nil} = Brando.MCP.BodyLimit.call(Plug.Test.conn(:post, url, "{}"), [])
+      end
+    end
+
+    test "refuses it on the endpoint's host" do
+      conn = Plug.Test.conn(:post, "https://#{@admin_host}/mcp/acme/production", "{}")
+      assert %{halted: true, status: 411} = Brando.MCP.BodyLimit.call(conn, [])
+    end
+  end
+
   describe "on the endpoint's host" do
     setup do
       put_test_env(:tenancy_mode, :multi)
