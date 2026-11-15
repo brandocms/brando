@@ -31,6 +31,11 @@ The output is a single `<script type="application/ld+json">` tag:
 }
 ```
 
+Every `@id` and URL Brando builds starts with the site's base URL
+(`Brando.Utils.hostname/0`): the domain of the environment being rendered,
+not the endpoint's host (see [A site's absolute
+URLs](tenancy_and_environments.md#a-sites-absolute-urls)).
+
 <!-- usage-rules:start topic="seo" -->
 
 ### Blueprint DSL

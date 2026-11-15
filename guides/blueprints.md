@@ -292,7 +292,8 @@ A static path such as `/articles/{@entry.slug}` needs none.
 With a HEEx template, `__absolute_url__/1` returns `nil` when building the
 URL fails because a route does not exist or an argument is missing, rather
 than raising. `Brando.Blueprint.URL.resolve/1` calls it for any entry, and
-`resolve(entry, :with_host)` adds the endpoint's host.
+`resolve(entry, :with_host)` adds the current site's base URL
+(`Brando.Utils.hostname/0`).
 
 The tuple form `absolute_url {:i18n, :article_path, :detail, [:slug]}` is
 deprecated and compiles with a warning; use HEEx with `route_i18n`.

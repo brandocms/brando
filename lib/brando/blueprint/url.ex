@@ -6,8 +6,6 @@ defmodule Brando.Blueprint.URL do
   `Brando.HTML` component module.
   """
 
-  alias Brando.RuntimeConfig
-
   @doc """
   Resolves an entry's Blueprint URL, returning an empty string for values that
   are not Blueprint structs.
@@ -17,7 +15,8 @@ defmodule Brando.Blueprint.URL do
   def resolve(_entry), do: ""
 
   @doc """
-  Resolves an entry's Blueprint URL and prefixes the configured endpoint host.
+  Resolves an entry's Blueprint URL and prefixes the current site's base URL
+  (`Brando.Utils.hostname/0`).
 
   An entry without a URL on this site (`absolute_url ..., only: ...`, or a
   blueprint without one) gives `nil`, not the bare host, so a missing page
@@ -44,10 +43,5 @@ defmodule Brando.Blueprint.URL do
   def has_url?(_entry), do: false
 
   defp with_hostname(path) when path in [nil, ""], do: nil
-  defp with_hostname(path), do: Path.join(hostname(), path)
-
-  defp hostname do
-    endpoint = RuntimeConfig.web_module(Endpoint)
-    "#{endpoint.url()}"
-  end
+  defp with_hostname(path), do: Brando.Utils.hostname(path)
 end

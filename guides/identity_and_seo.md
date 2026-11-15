@@ -170,8 +170,11 @@ language's configured robots text, or a default that disallows `/admin/`, then
 the AI crawler policy below, then a `Sitemap:` line once a sitemap has been
 generated (unless the robots text names one). It does not add an environment-specific crawl block
 for you; inspect the intended deployment and configure its policy explicitly.
-The base URL field does not set Phoenix's endpoint URL. Set that too, for
-canonical URLs, metadata, and [sitemap generation](sitemaps.md).
+The base URL field is the identity's and the website's `url` in JSON-LD; it does
+not decide the host of canonical URLs, metadata and [sitemaps](sitemaps.md).
+Those start with the site's base URL (`Brando.Utils.hostname/0`): with tenancy,
+the domain of the environment being rendered, else the endpoint's URL, so set
+that too.
 
 <!-- usage-rules:end -->
 

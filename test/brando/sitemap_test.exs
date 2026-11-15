@@ -8,7 +8,7 @@ defmodule BrandoIntegrationWeb.Sitemap do
       :stream
     )
     |> Stream.map(fn _entry ->
-      page_url = "http://localhost/index"
+      page_url = Brando.Utils.hostname("index")
 
       lastmod = ~N[2023-08-10 10:00:00]
 
@@ -88,6 +88,54 @@ defmodule Brando.SitemapTest do
 
     assert sitemap =~
              "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\" xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n<url>\n  <loc>http://localhost/index</loc>\n  <lastmod>2023-08-10T12:00:00+02:00</lastmod>\n  <changefreq>weekly</changefreq>\n  <priority>0.7</priority>\n</url>\n</urlset>\n"
+  end
+
+  describe "in multi-site mode" do
+    defmodule Migrator do
+      @behaviour Brando.Environments.Migrator
+
+      @impl true
+      def migrate(_site, _environment), do: {:ok, []}
+    end
+
+    @tag :tmp_dir
+    test "the index and the entries name the site's host, not the endpoint's", %{tmp_dir: dir} do
+      put_test_env(:media_path, Path.join(dir, "media"))
+      put_test_env(:sites_path, Path.join(dir, "sites"))
+      put_test_env(:tenant_migrator, Migrator)
+      put_test_env(:tenant_structure_cloner, Brando.TenantCloners)
+      put_test_env(:environment_schema_cloner, Brando.TenantCloners)
+      put_test_env(:tenancy_mode, :multi)
+      Brando.Tenant.put_prefix(nil)
+      Brando.Tenant.Cache.clear()
+      cached = for key <- ~w(identity seo navigation)a, do: {key, Brando.Cache.get(key)}
+
+      on_exit(fn ->
+        Brando.Tenant.put_prefix(nil)
+        Brando.Tenant.Cache.clear()
+        Brando.TenantCaches.clear(["tenant_acme_production"])
+
+        for {key, value} <- cached,
+            do: if(value, do: Brando.Cache.put(key, value, :infinite), else: Brando.Cache.del(key))
+      end)
+
+      creator = Factory.insert(:random_user, role: :superuser, avatar: nil)
+
+      {:ok, _site} =
+        Brando.Tenant.Setup.create_site(
+          %{name: "Acme", key: "acme", languages: ["en"], default_language: "en", status: :active},
+          creator,
+          environments: [%{name: "Production", key: "production", live: true, domain: "acme.test"}]
+        )
+
+      Brando.Tenant.with_prefix("tenant_acme_production", fn ->
+        assert {:ok, _} = Sitemap.generate_sitemap(gzip: false)
+      end)
+
+      sitemaps = Path.join([dir, "media", "acme", "sitemaps"])
+      assert File.read!(Path.join(sitemaps, "sitemap.xml")) =~ "<loc>http://acme.test/sitemaps/sitemap-00001.xml</loc>"
+      assert File.read!(Path.join(sitemaps, "sitemap-00001.xml")) =~ "<loc>http://acme.test/index</loc>"
+    end
   end
 
   @tag :tmp_dir

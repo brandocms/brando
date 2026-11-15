@@ -640,6 +640,38 @@ end
 
 <!-- usage-rules:end -->
 
+### A site's absolute URLs
+
+<!-- usage-rules:start topic="tenancy" -->
+
+Every absolute URL Brando writes for a site's content starts with the site's
+base URL, `Brando.Utils.hostname/0`: the canonical and alternate links,
+`og:url`, the `.md` alternate, JSON-LD `@id`s and URLs, sitemap entries and the
+sitemap index, IndexNow submissions, relative meta images, and
+`Brando.Blueprint.URL.resolve(entry, :with_host)`. Its host is the domain of the
+environment the process works in:
+
+- a request: the environment `Brando.Plug.Tenant` resolved, so Staging's pages
+  name Staging's host;
+- a static build: the environment being built, whatever origin the build
+  requested its pages from;
+- a job or other work outside a request: the environment its tenant prefix
+  names (`Brando.Tenant.Job`).
+
+An environment without a domain takes its site's live environment's. In
+`:single`, a process with no prefix uses the live environment. Scheme and port
+are the endpoint URL's. With no domain to use (`:none`, a site with no domain,
+a `:multi` process outside every site) it is the endpoint's URL. It reads
+`Brando.Tenant.Cache`, not the database.
+
+Build a site's own absolute URLs with `Brando.Utils.hostname/1` too. Phoenix's
+`url/1` and `*_url` route helpers name the endpoint's host, which in `:multi`
+is the admin's. The installation's own addresses (admin links, account and
+notification emails, the MCP server, the static forms' `submit_url`, the
+endpoint's `static_url` and CDN hosts) stay on the endpoint's URL.
+
+<!-- usage-rules:end -->
+
 The Brando admin routes also restore the environment selected in the signed
 session:
 
@@ -1870,6 +1902,9 @@ end
 URL callbacks execute under the selected environment's tenant prefix. The
 renderer sends a short-lived signed context header through the normal endpoint,
 so a working environment can be built without assigning it a temporary domain.
+The pages' absolute URLs name the built environment's domain, or the live
+environment's when it has none, never the origin the build requested
+([A site's absolute URLs](#a-sites-absolute-urls)).
 Responses outside the 200 range are retained in the build's failed-URL list and
 make the build fail without hiding partial logs or counts.
 
