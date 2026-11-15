@@ -288,6 +288,22 @@ defmodule Brando.Tenant.SiteLanguagesTest do
     end
   end
 
+  describe "a failing seeding job" do
+    # A discarded job is pruned minutes later, and the sites screen loses its
+    # error with it: a retryable one stays
+    test "is retried for days, with growing gaps, before it is discarded" do
+      job = SiteLanguageSeed.new(%{"tenant_prefix" => "tenant_acme_production", "language" => "no"})
+      assert Ecto.Changeset.get_field(job, :max_attempts) == 20
+
+      backoffs = for attempt <- 1..19, do: SiteLanguageSeed.backoff(%Oban.Job{attempt: attempt})
+
+      assert Enum.take(backoffs, 3) == [30, 60, 120]
+      assert Enum.max(backoffs) == 6 * 3600
+      assert List.last(backoffs) == 6 * 3600
+      assert Enum.sum(backoffs) > 2 * 24 * 3600
+    end
+  end
+
   describe "a language added as the new default" do
     test "is seeded in every environment before the save, so / answers at once", %{site: site, creator: creator} do
       Oban.Testing.with_testing_mode(:manual, fn ->

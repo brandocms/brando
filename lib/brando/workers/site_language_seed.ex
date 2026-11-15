@@ -6,9 +6,14 @@ defmodule Brando.Worker.SiteLanguageSeed do
   (`Brando.Tenant.Registry.update_site/3`), so a slow or failing environment
   neither holds up the save nor the other environments.
 
-  Content already in that language is left alone, so the job can run again:
-  a failed attempt is retried, and the sites screen offers to queue it again
-  for an environment that still has no identity in the language.
+  Content already in that language is left alone, so the job can run again.
+  A failed attempt is retried after 30 seconds, then after twice as long
+  each time, up to six hours between attempts: 20 attempts over about two
+  and a half days, after which the job is discarded. Until then the job
+  stays retryable, which Oban does not prune, so the sites screen keeps
+  showing its last error, and its "Seed again" runs it at once. Once it is
+  discarded and pruned, the screen still offers to queue it again for an
+  environment that has no identity in the language.
 
   The seeded content names the user who added the language as its creator,
   or the installation's oldest superuser (`Brando.Setup.Account.superuser/0`)
@@ -16,13 +21,16 @@ defmodule Brando.Worker.SiteLanguageSeed do
 
   It does not write into an environment while the site is being provisioned
   or one of its environments copied (the locks `Brando.Tenant.Setup` and
-  `Brando.Environments` hold): it snoozes until they finish, and after an
-  hour of waiting fails the attempt, which Oban retries.
+  `Brando.Environments` hold): it snoozes every 15 seconds until they
+  finish. The snoozes are counted per job, not per attempt, and allowed for
+  an hour in all: after that, each attempt that finds the site busy fails at
+  once and waits for its retry, so the job goes on checking with the gaps
+  above.
   """
 
   use Oban.Worker,
     queue: :default,
-    max_attempts: 3,
+    max_attempts: 20,
     unique: [
       period: :infinity,
       keys: [:tenant_prefix, :language],
@@ -176,4 +184,11 @@ defmodule Brando.Worker.SiteLanguageSeed do
 
   @impl Oban.Worker
   def timeout(_job), do: :timer.minutes(30)
+
+  @first_backoff 30
+  @max_backoff 6 * 3600
+
+  @impl Oban.Worker
+  def backoff(%Oban.Job{attempt: attempt}),
+    do: min(@first_backoff * Integer.pow(2, max(attempt, 1) - 1), @max_backoff)
 end

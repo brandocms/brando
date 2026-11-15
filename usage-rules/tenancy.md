@@ -114,7 +114,9 @@ restored or set up, that save fails at once and asks you to try again. The
 site's card lists an
 environment that is still being seeded; one whose last seeding failed, retried
 or given up, with its error; and one that has no identity in one of the site's
-languages. A failed or missing one has a button that seeds it again. The job
+languages. A failed seeding is retried, with gaps that grow from 30 seconds to
+six hours, for about two and a half days before it is given up. A failed or
+missing one has a button that seeds it again at once. The job
 does not write into an environment while the site is being provisioned or one
 of its environments copied: it waits for that to finish, and the card offers
 no button meanwhile. Removing a language deletes nothing: its entries stay in

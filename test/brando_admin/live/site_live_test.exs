@@ -325,7 +325,7 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       )
 
       view |> element("button", "Refresh") |> render_click()
-      assert has_element?(view, row, "failed, and is retried (attempt 1 of 3): boom")
+      assert has_element?(view, row, "failed, and is retried (attempt 1 of 20): boom")
       assert has_element?(view, "#{row} button", "Seed again")
 
       # Its last attempt failed
