@@ -73,6 +73,30 @@ defmodule Brando.SiteURLTest do
     def migrate(_site, _environment), do: {:ok, []}
   end
 
+  # A datasource whose block shows the entry chosen for it
+  defmodule Chosen do
+    use Brando.Blueprint,
+      application: "BrandoIntegration",
+      domain: "Tests",
+      schema: "Chosen",
+      singular: "chosen",
+      plural: "chosens",
+      gettext_module: Brando.Gettext
+
+    datasources do
+      datasource :chosen do
+        type :single
+        list(fn _module, _language, _vars -> {:ok, []} end)
+        get(fn identifier -> {:ok, Brando.Repo.get(identifier.schema, identifier.entry_id)} end)
+      end
+
+      datasource :work do
+        type :list
+        list(fn _module, _language, _vars -> {:ok, Brando.Repo.all(Ecto.Query.where(Brando.Pages.Page, uri: "work"))} end)
+      end
+    end
+  end
+
   defmodule RootOnly do
     import Brando.SSG
 
@@ -147,6 +171,14 @@ defmodule Brando.SiteURLTest do
       end)
     end
 
+    test "the public base URL is the live environment's domain in every environment" do
+      for key <- ~w(production staging lab) do
+        in_environment(key, fn -> assert Brando.Utils.public_hostname("/about") == "http://acme.test/about" end)
+      end
+
+      assert Brando.Utils.public_hostname() == Brando.endpoint().url()
+    end
+
     test "alternate links given as paths get the environment's host" do
       in_environment("staging", fn ->
         conn =
@@ -201,6 +233,46 @@ defmodule Brando.SiteURLTest do
       html = request("acme.test").resp_body
       assert_head_names(html, "http://acme.test")
       assert "http://acme.test/strategi" in head_urls(html)
+    end
+
+    test "block JSON-LD stored on Staging names the live host Staging now has", context do
+      in_environment("staging", &store_block_json_ld/0)
+      set_live(context.site, "staging")
+      in_environment("staging", fn -> assert_stored_json_ld_names("http://acme.test") end)
+    end
+  end
+
+  describe "when the live environment's domain changes" do
+    test "the block JSON-LD every environment stored is rendered again on the new domain", context do
+      user = Brando.Factory.insert(:random_user)
+      pages = for key <- ~w(production staging), into: %{}, do: {key, in_environment(key, fn -> json_ld_page!(user) end)}
+
+      for {key, page} <- pages do
+        in_environment(key, fn -> assert rendered_blocks(page) =~ ~S(http:\/\/acme.test\/en\/work) end)
+      end
+
+      production = Registry.get_environment_by_key(context.site, "production")
+      assert {:ok, _} = Registry.update_environment(production, %{domain: "www.acme.test"}, actor: :system)
+
+      for {key, page} <- pages do
+        in_environment(key, fn ->
+          html = rendered_blocks(page)
+          assert html =~ ~S(http:\/\/www.acme.test\/en\/work)
+          refute html =~ ~S(http:\/\/acme.test)
+        end)
+      end
+    end
+  end
+
+  describe "after a copy" do
+    test "block JSON-LD stored on Staging and copied to Production names Production's host", context do
+      in_environment("staging", &store_block_json_ld/0)
+
+      source = Registry.get_environment_by_key(context.site, "staging")
+      target = Registry.get_environment_by_key(context.site, "production")
+      assert {:ok, _} = Brando.Environments.copy_environment(source, target, creator: :system)
+
+      in_environment("production", fn -> assert_stored_json_ld_names("http://acme.test") end)
     end
   end
 
@@ -261,6 +333,119 @@ defmodule Brando.SiteURLTest do
     {:ok, document} = Floki.parse_document(html)
     [json] = document |> Floki.find(~s(script[type="application/ld+json"])) |> Enum.map(&Floki.children/1)
     json |> Enum.join() |> Jason.decode!() |> Map.fetch!("@graph") |> collect_urls()
+  end
+
+  # What a page's render stores for a datasource block whose template emits
+  # JSON-LD for its entries, through the Liquid filter and the HEEx component
+  defp store_block_json_ld do
+    page = Brando.Repo.get_by!(Page, uri: "index", language: :en)
+    user = Brando.Factory.insert(:random_user)
+
+    {:ok, work} =
+      Brando.Pages.create_page(
+        %{title: "Work", uri: "work", language: "en", template: "default.html", status: :published},
+        user
+      )
+
+    {:ok, identifier} = Brando.Content.get_identifier(Page, work)
+
+    block = %{
+      module_id: 1,
+      uid: "json-ld-block",
+      vars: [],
+      refs: [],
+      table_rows: [],
+      block_identifiers: [%{identifier_id: identifier.id, sequence: 0}]
+    }
+
+    module = %Brando.Content.Module{
+      id: 1,
+      datasource: true,
+      datasource_type: :single,
+      datasource_module: to_string(Chosen),
+      datasource_query: "chosen"
+    }
+
+    liquid = %{module | type: :liquid, code: ~s({{ entries | json_ld: "CreativeWork", "page" }})}
+    heex = %{module | type: :heex, code: ~S(<.json_ld entries={@entries} type="CreativeWork" />)}
+
+    context =
+      Brando.Villain.get_base_context()
+      |> Liquex.Context.assign("url", Brando.Blueprint.URL.resolve(page))
+      |> Liquex.Context.assign("language", "en")
+
+    opts = %{context: context, parser_module: Brando.Villain.Parser}
+
+    html =
+      Brando.Villain.TemplateAdapter.Liquex.render_module(liquid, block, %{}, %{}, opts) <>
+        Brando.Villain.TemplateAdapter.Heex.render_module(heex, block, %{}, %{}, opts)
+
+    {1, _} =
+      Brando.Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [rendered_blocks: html])
+  end
+
+  # A published "work" page with a block of a module that lists it, and its
+  # JSON-LD, through a datasource; rendered and stored
+  defp json_ld_page!(user) do
+    {:ok, module} =
+      Brando.Content.create_module(
+        Brando.Factory.params_for(:module,
+          name: %{"en" => "Work list"},
+          namespace: %{"en" => "Content"},
+          help_text: %{"en" => "Help"},
+          code: ~s({{ entries | json_ld: "CreativeWork" }}),
+          datasource: true,
+          datasource_module: to_string(Chosen),
+          datasource_type: :list,
+          datasource_query: "work"
+        ),
+        user
+      )
+
+    {:ok, page} =
+      Brando.Pages.create_page(
+        %{title: "Work", uri: "work", language: "en", template: "default.html", status: :published},
+        user
+      )
+
+    block =
+      %Brando.Content.Block{}
+      |> Brando.Content.Block.recursive_block_changeset(
+        %{
+          "uid" => Brando.Utils.generate_uid(),
+          "type" => "module",
+          "module_id" => module.id,
+          "creator_id" => user.id,
+          "source" => to_string(Page.Blocks)
+        },
+        user
+      )
+      |> Brando.Repo.insert!()
+
+    Brando.Repo.insert!(%Page.Blocks{entry_id: page.id, block_id: block.id, sequence: 0})
+    {:ok, _} = Brando.Content.Blocks.render_entry(Page, page.id)
+    page
+  end
+
+  defp rendered_blocks(page), do: Brando.Repo.get!(Page, page.id).rendered_blocks
+
+  defp assert_stored_json_ld_names(base_url) do
+    page = Brando.Repo.get_by!(Page, uri: "index", language: :en)
+    {:ok, document} = Floki.parse_fragment(page.rendered_blocks)
+    scripts = Floki.find(document, ~s(script[type="application/ld+json"]))
+    assert length(scripts) == 2
+
+    urls =
+      Enum.flat_map(scripts, fn script ->
+        script |> Floki.children() |> Enum.join() |> Jason.decode!() |> Map.delete("@context") |> collect_urls()
+      end)
+
+    assert "#{base_url}/en/work" in urls
+    assert "#{base_url}/#website" in urls
+
+    for url <- urls do
+      assert url == base_url or String.starts_with?(url, base_url <> "/"), "#{url} is not on #{base_url}"
+    end
   end
 
   defp set_live(site, key) do

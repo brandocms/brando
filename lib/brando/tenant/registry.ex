@@ -285,11 +285,15 @@ defmodule Brando.Tenant.Registry do
   @spec update_environment(Environment.t(), map(), keyword()) ::
           {:ok, Environment.t()} | {:error, Ecto.Changeset.t()}
   def update_environment(%Environment{} = environment, attrs, opts \\ []) do
-    environment
-    |> Environment.changeset(attrs)
-    |> authorize_domain(opts[:actor])
+    changeset =
+      environment
+      |> Environment.changeset(attrs)
+      |> authorize_domain(opts[:actor])
+
+    changeset
     |> Repo.update(@public_opts)
     |> refresh_cache_on_success()
+    |> rerender_on_public_domain_change(changeset)
   end
 
   @spec delete_environment(Environment.t()) ::
@@ -299,6 +303,18 @@ defmodule Brando.Tenant.Registry do
     |> Repo.delete(@public_opts)
     |> refresh_cache_on_success()
   end
+
+  # Stored block HTML names the site's public base URL, the live
+  # environment's domain (`Brando.Utils.public_hostname/0`)
+  defp rerender_on_public_domain_change({:ok, %Environment{live: true} = environment} = result, %{
+         changes: %{domain: _domain}
+       }) do
+    site = get_site(environment.site_id)
+    Brando.Content.Blocks.rerender_public_urls(site.key, site.environments)
+    result
+  end
+
+  defp rerender_on_public_domain_change(result, _changeset), do: result
 
   defp authorize_domain(%{changes: %{domain: _domain}} = changeset, actor) do
     if binds_hosts?(actor),

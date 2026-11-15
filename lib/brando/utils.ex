@@ -557,15 +557,15 @@ defmodule Brando.Utils do
   """
   @spec hostname() :: binary
   def hostname do
-    endpoint = Brando.endpoint()
-
-    case site_domain() do
+    case current_site() do
       nil ->
-        endpoint.url()
+        base_url(nil)
 
-      domain ->
-        %URI{} = url = endpoint.struct_url()
-        URI.to_string(%{url | host: domain, path: nil, query: nil, fragment: nil})
+      {site_key, environment_key} ->
+        base_url(
+          domain_of(environment_key && Tenant.Cache.get_env(site_key, environment_key)) ||
+            domain_of(Tenant.Cache.get_live_env(site_key))
+        )
     end
   end
 
@@ -573,7 +573,40 @@ defmodule Brando.Utils do
   def hostname(nil), do: hostname()
   def hostname(path), do: Path.join(hostname(), path)
 
-  defp site_domain do
+  @doc """
+  The public base URL of the current site: its live environment's domain,
+  with the endpoint URL's scheme and port, whichever environment the process
+  works in. With no domain to use, the endpoint's URL, as `hostname/0`.
+
+  Use it for a URL that is stored or cached rather than rendered for one
+  request: block HTML in a `rendered_*` field, a sitemap file. An
+  environment's own host moves (a live switch swaps two environments'
+  domains on dynamic delivery, a copy moves content to another environment)
+  and nothing stored is rendered again then; the live environment's domain
+  moves with the live flag, so a URL on it stays right.
+  """
+  @spec public_hostname() :: binary
+  def public_hostname do
+    case current_site() do
+      nil -> base_url(nil)
+      {site_key, _environment_key} -> base_url(domain_of(Tenant.Cache.get_live_env(site_key)))
+    end
+  end
+
+  @spec public_hostname(path :: binary | nil) :: binary
+  def public_hostname(nil), do: public_hostname()
+  def public_hostname(path), do: Path.join(public_hostname(), path)
+
+  defp base_url(nil), do: Brando.endpoint().url()
+
+  defp base_url(domain) do
+    %URI{} = url = Brando.endpoint().struct_url()
+    URI.to_string(%{url | host: domain, path: nil, query: nil, fragment: nil})
+  end
+
+  # The site and environment keys of the process's tenant prefix; in
+  # `:single`, a process with no prefix is in the configured site
+  defp current_site do
     case Tenant.mode() do
       :none ->
         nil
@@ -581,11 +614,7 @@ defmodule Brando.Utils do
       mode ->
         prefix = Tenant.current_prefix()
         site_key = Tenant.site_key_of(prefix) || if(mode == :single, do: Brando.config(:site_key))
-        environment_key = Tenant.environment_key_of(prefix)
-
-        site_key &&
-          (domain_of(environment_key && Tenant.Cache.get_env(site_key, environment_key)) ||
-             domain_of(Tenant.Cache.get_live_env(site_key)))
+        if site_key, do: {site_key, Tenant.environment_key_of(prefix)}
     end
   end
 

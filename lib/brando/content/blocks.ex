@@ -689,6 +689,29 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
+  Renders again, in each of `environments` of the site `site_key`, the entries
+  whose blocks emit JSON-LD (`json_ld` in a module's code or a block's refs):
+  what they store names the site's public base URL, its live environment's
+  domain (`Brando.Utils.public_hostname/0`). The renders are queued. An
+  environment without its tables yet (being provisioned) has nothing stored.
+  """
+  @spec rerender_public_urls(String.t(), [Brando.Environments.Environment.t()]) :: :ok
+  def rerender_public_urls(site_key, environments) do
+    search_terms = Villain.RenderInvalidation.patterns([:json_ld])
+
+    for environment <- environments,
+        prefix = Brando.Tenant.prefix(site_key, environment.key),
+        Brando.Migration.Introspect.table_exists?("content_blocks", prefix: prefix, repo: Repo.repo()) do
+      Brando.Tenant.with_prefix(prefix, fn ->
+        render_entries_matching_regex(search_terms)
+        rerender_matching_modules(search_terms)
+      end)
+    end
+
+    :ok
+  end
+
+  @doc """
   Look through all modules for `search_terms` and rerender all villains that
   use this module
   """

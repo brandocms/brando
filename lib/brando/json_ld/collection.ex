@@ -23,6 +23,11 @@ defmodule Brando.JSONLD.Collection do
   Entries without a page of their own — no `absolute_url` on the blueprint, a
   resolver that returns `nil` or raises, a bare map from a `select:` query — are
   skipped rather than given a fabricated URL. An empty result builds nothing.
+
+  Its URLs start with the site's public base URL
+  (`Brando.Utils.public_hostname/0`), its live environment's domain, not the
+  host of the environment rendering: the output is stored, and served on
+  whatever host that environment has later.
   """
 
   require Logger
@@ -85,7 +90,7 @@ defmodule Brando.JSONLD.Collection do
   defp wrap(list, nil), do: list
 
   defp wrap(list, page) when is_map(page) do
-    hostname = Utils.hostname()
+    hostname = Utils.public_hostname()
 
     CollectionPage.build(%{
       id: page |> Map.get(:url) |> absolute() |> then(&(&1 && "#{&1}/#collectionpage")),
@@ -139,7 +144,7 @@ defmodule Brando.JSONLD.Collection do
   defp absolute(nil), do: nil
   defp absolute("http://" <> _ = url), do: url
   defp absolute("https://" <> _ = url), do: url
-  defp absolute(path), do: Utils.hostname(path)
+  defp absolute(path), do: Utils.public_hostname(path)
 
   defp presence(nil), do: nil
   defp presence(""), do: nil
