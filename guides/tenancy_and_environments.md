@@ -513,7 +513,9 @@ instead, so the site's `/` has a homepage the moment it moves to that
 language. If an environment cannot be seeded, the save fails with an error
 that names it and the site keeps its languages; what the other environments
 got stays, unseen until the language is the site's, and saving again seeds
-only what is missing. The site's card lists an
+only what is missing. While one of the site's environments is being copied,
+restored or set up, that save fails at once and asks you to try again. The
+site's card lists an
 environment that is still being seeded; one whose last seeding failed, retried
 or given up, with its error; and one that has no identity in one of the site's
 languages. A failed or missing one has a button that seeds it again. The job

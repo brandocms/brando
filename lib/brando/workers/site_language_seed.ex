@@ -63,20 +63,19 @@ defmodule Brando.Worker.SiteLanguageSeed do
   end
 
   @doc """
-  Seeds `language` in each of `site`'s environments now, the live one first,
-  holding the site's environment-operation lock so no copy runs between
-  them. Returns the first environment that failed, with the reason; those
-  seeded before it keep their content. `site` is the site as it will be
-  stored, with `language` among its languages.
+  Seeds `language` in each of `site`'s environments now, the live one first.
+  The caller holds the site's environment-operation lock, so no copy runs
+  between them (`Brando.Tenant.Registry.update_site/3`). Returns the first
+  environment that failed, with the reason; those seeded before it keep
+  their content. `site` is the site as it will be stored, with `language`
+  among its languages.
   """
   @spec seed_environments(Site.t(), String.t(), Brando.Users.User.t()) ::
           :ok | {:error, Brando.Environments.Environment.t(), term()}
   def seed_environments(%Site{environments: environments} = site, language, creator) when is_list(environments) do
-    Brando.Environments.with_site_lock(site, fn ->
-      environments
-      |> Enum.sort_by(&{not &1.live, &1.name})
-      |> Enum.find_value(:ok, &seed_in(site, &1, language, creator))
-    end)
+    environments
+    |> Enum.sort_by(&{not &1.live, &1.name})
+    |> Enum.find_value(:ok, &seed_in(site, &1, language, creator))
   end
 
   # nil when seeded, for `Enum.find_value/3`

@@ -326,6 +326,27 @@ defmodule Brando.Tenant.SiteLanguagesTest do
       assert snapshot("tenant_acme_production") == before
       in_environment("staging", fn -> assert Brando.Repo.get_by(Identity, language: :no) end)
     end
+
+    test "fails the save at once while an environment is copied, restored or set up", %{site: site, creator: creator} do
+      key = Brando.Tenant.Lock.environment_operation_key(site.id)
+      conn = lock_elsewhere(key)
+
+      # Released later, so a save that waits for the lock ends, and succeeds
+      spawn(fn ->
+        Process.sleep(1000)
+        Postgrex.query!(conn, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+      end)
+
+      assert {:error, changeset} =
+               Registry.update_site(site, %{languages: ["en", "no"], default_language: "no"}, creator: creator)
+
+      assert [message] = changeset |> Ecto.Changeset.traverse_errors(&elem(&1, 0)) |> Map.fetch!(:default_language)
+      assert message =~ "busy with a copy, restore or setup"
+      assert message =~ "Try again"
+
+      assert %{languages: ["en"], default_language: "en"} = Registry.get_site(site.id)
+      in_environment("production", fn -> refute Brando.Repo.get_by(Identity, language: :no) end)
+    end
   end
 
   describe "a language removed from a site" do
