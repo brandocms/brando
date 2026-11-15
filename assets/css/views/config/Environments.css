@@ -223,8 +223,44 @@
     }
   }
 
-  .environment-overview > .environment-hint {
+  .environment-overview > .environment-hint,
+  .environment-overview > .environment-served-hosts-error {
     margin-top: 16px;
+  }
+
+  .environment-served-hosts-error span {
+    max-width: 72ch;
+    overflow-wrap: anywhere;
+  }
+
+  /* Where a bound host stands with the reverse proxy, under its domain:
+     aligned with the input's text, the detail in the muted ink. */
+  .environment-host-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    margin-top: 4px;
+    padding-left: 9px;
+  }
+
+  .environment-host-status__detail {
+    color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+    font-size: var(--brando-text-sm);
+  }
+
+  /* One line per redirect host under the domain's, each led by its name */
+  .environment-redirect-host-statuses {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .environment-host-status__host {
+    min-width: 0;
+    font-family: var(--brando-font-mono);
+    font-size: var(--brando-text-sm);
+    overflow-wrap: anywhere;
   }
 
   .environment-table-wrap {
@@ -240,17 +276,23 @@
   /* The overview lists environments, whose names are short and whose remaining
      columns are narrow, so fixed proportions keep it from sprawling. Other
      tables size to their own content instead. */
+  /* Narrower than this the columns crowd each other: the wrap scrolls */
   .environment-overview table {
+    min-width: 640px;
     table-layout: fixed;
   }
 
   .environment-overview th:nth-child(1),
   .environment-overview td:nth-child(1) {
-    width: 46%;
+    width: 34%;
   }
 
+  /* Room for a domain and its redirect hosts */
   .environment-overview th:nth-child(2),
-  .environment-overview td:nth-child(2),
+  .environment-overview td:nth-child(2) {
+    width: 28%;
+  }
+
   .environment-overview th:nth-child(3),
   .environment-overview td:nth-child(3) {
     width: 16%;
@@ -379,9 +421,36 @@
     line-height: 1.4;
   }
 
-  /* The domain reads as plain text until hovered or focused, so the row stays
-     calm while still being obviously editable. */
+  /* The domain and its redirect hosts stack in the cell, the save action
+     under them. */
+  .environment-inline-form {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
   .environment-inline-form input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .environment-inline-form__actions {
+    display: flex;
+    padding-top: 4px;
+  }
+
+  .environment-inline-form textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    resize: vertical;
+  }
+
+  /* The domain and its redirect hosts read as plain text until hovered or
+     focused, so the row stays calm while still being obviously editable. */
+  .environment-inline-form input,
+  .environment-inline-form textarea {
     min-height: 30px;
     padding: 4px 8px;
     border-color: transparent;

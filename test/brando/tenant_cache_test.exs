@@ -142,6 +142,37 @@ defmodule Brando.TenantCacheTest do
     assert {_site, %Environment{key: "capital"}} = Cache.get_env_by_domain("www.acme.test")
   end
 
+  test "bound_hosts lists every environment's domain and redirect hosts, normalised, once and sorted" do
+    site = insert_site!("acme")
+    production = insert_environment!(site, "production", true, "acme.test")
+    staging = insert_environment!(site, "staging", false, "next.acme.test")
+
+    production
+    |> Environment.changeset(%{redirect_hosts: ["www.acme.test", "old-acme.test"]})
+    |> Repo.update!()
+
+    # Stored before the changeset checked them: capitals and spaces, a trailing
+    # dot no lookup answers, one of the installation's own hosts, and another
+    # environment's domain in other letters
+    Brando.Repo.update_all(
+      from(e in Environment, where: e.id == ^staging.id),
+      [set: [redirect_hosts: [" WWW.Next.ACME.test ", "dotted.acme.test.", "localhost", "Acme.Test"]]],
+      prefix: "public"
+    )
+
+    # A domain no lookup answers, whose redirect host has nowhere to redirect to
+    dotted = insert_environment!(site, "dotted", false, "b.test")
+    dotted |> Environment.changeset(%{redirect_hosts: ["www.b.test"]}) |> Repo.update!()
+
+    Brando.Repo.update_all(from(e in Environment, where: e.id == ^dotted.id), [set: [domain: "b.test."]],
+      prefix: "public"
+    )
+
+    Cache.warm()
+
+    assert Cache.bound_hosts() == ~w(acme.test next.acme.test old-acme.test www.acme.test www.next.acme.test)
+  end
+
   defp insert_environment!(site, key, live, domain) do
     %Environment{}
     |> Environment.changeset(%{

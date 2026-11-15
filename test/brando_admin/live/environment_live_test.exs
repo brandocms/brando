@@ -388,6 +388,221 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     end
   end
 
+  describe "redirect hosts" do
+    setup %{site: site} do
+      {:ok, staging} =
+        Environments.create_environment(site, %{name: "Staging", key: "staging", domain: "staging.acme.test"},
+          creator: :system
+        )
+
+      %{staging: staging}
+    end
+
+    defp hosts_form(view, environment), do: element(view, "#environment-#{environment.id} form[phx-submit=update_domain]")
+
+    defp typed(view, environment, params) do
+      view
+      |> hosts_form(environment)
+      |> render_change(Map.merge(%{"environment_id" => environment.id, "shown_domain" => environment.domain}, params))
+    end
+
+    defp field_value(view, environment, selector) do
+      view
+      |> element(~s(#environment-#{environment.id} #{selector}))
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> then(&(LazyHTML.attribute(&1, "value") |> List.first() || LazyHTML.text(&1)))
+      |> String.trim()
+    end
+
+    test "a superuser adds and removes them, one per line or comma-separated", %{conn: conn, staging: staging} do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      view
+      |> hosts_form(staging)
+      |> render_submit(%{"domain" => "staging.acme.test", "redirect_hosts" => "www.staging.acme.test\nold.acme.test, "})
+
+      assert Registry.get_environment(staging.id).redirect_hosts == ["www.staging.acme.test", "old.acme.test"]
+      assert {_site, %{key: "staging"}} = Cache.get_redirect("old.acme.test")
+      assert field_value(view, staging, "textarea") == "www.staging.acme.test\nold.acme.test"
+
+      view
+      |> hosts_form(staging)
+      |> render_submit(%{"domain" => "staging.acme.test", "redirect_hosts" => "old.acme.test"})
+
+      assert Registry.get_environment(staging.id).redirect_hosts == ["old.acme.test"]
+      refute Cache.get_redirect("www.staging.acme.test")
+    end
+
+    test "what was typed in one field stays while the other is edited, and is what gets saved", %{
+      conn: conn,
+      staging: staging
+    } do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      typed(view, staging, %{"domain" => "staging.acme.test", "redirect_hosts" => "www.staging.acme.test"})
+      typed(view, staging, %{"domain" => "new.acme.test", "redirect_hosts" => "www.staging.acme.test"})
+
+      # Re-rendered by something else meanwhile
+      render_click(view, "refresh", %{})
+
+      assert field_value(view, staging, ~s(input[name="domain"])) == "new.acme.test"
+      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+
+      view
+      |> hosts_form(staging)
+      |> render_submit(%{"domain" => "new.acme.test", "redirect_hosts" => "www.staging.acme.test"})
+
+      assert %{domain: "new.acme.test", redirect_hosts: ["www.staging.acme.test"]} = Registry.get_environment(staging.id)
+    end
+
+    test "a host another environment holds is refused, and nothing is saved", %{
+      conn: conn,
+      production: production,
+      staging: staging
+    } do
+      {:ok, _production} =
+        Registry.update_environment(production, %{domain: "acme.test", redirect_hosts: ["www.acme.test"]}, actor: :system)
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      view
+      |> hosts_form(staging)
+      |> render_submit(%{"domain" => "staging.acme.test", "redirect_hosts" => "www.acme.test"})
+
+      assert Registry.get_environment(staging.id).redirect_hosts == []
+    end
+
+    test "a per-site admin sees them and cannot change them", %{site: site, staging: staging} do
+      {:ok, staging} =
+        Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: :system)
+
+      admin = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      {:ok, _assignment} = Access.grant(admin, site, :admin)
+      {:ok, view, _html} = live(log_in_user(build_conn(), admin), "/admin/config/environments")
+
+      assert has_element?(view, ~s(#environment-#{staging.id} textarea[name="redirect_hosts"][disabled]))
+
+      Brando.endpoint().subscribe("user:#{admin.id}")
+
+      # The form as shown, so the save reaches the Registry's check
+      render_submit(view, "update_domain", %{
+        "environment_id" => staging.id,
+        "domain" => "staging.acme.test",
+        "redirect_hosts" => "",
+        "shown_domain" => "staging.acme.test",
+        "shown_redirect_hosts" => "www.staging.acme.test"
+      })
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error} = toast}
+      assert inspect(toast) =~ "Only a superuser can change the hosts that redirect to an environment."
+      assert Registry.get_environment(staging.id).redirect_hosts == ["www.staging.acme.test"]
+    end
+
+    # A form with phx-change is recovered on rejoin, touched or not; a site
+    # admin's fields are disabled, so only the hidden inputs come back
+    test "a recovered form a site admin cannot edit leaves the hosts shown", %{site: site, staging: staging} do
+      {:ok, staging} =
+        Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: :system)
+
+      admin = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      {:ok, _assignment} = Access.grant(admin, site, :admin)
+      {:ok, view, _html} = live(log_in_user(build_conn(), admin), "/admin/config/environments")
+
+      render_change(view, "draft_hosts", %{
+        "environment_id" => staging.id,
+        "shown_domain" => "staging.acme.test",
+        "shown_redirect_hosts" => "www.staging.acme.test"
+      })
+
+      assert field_value(view, staging, ~s(input[name="domain"])) == "staging.acme.test"
+      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+    end
+
+    test "a change that carries one field keeps the other one's saved value", %{conn: conn, staging: staging} do
+      {:ok, staging} =
+        Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: :system)
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      render_change(view, "draft_hosts", %{
+        "environment_id" => staging.id,
+        "shown_domain" => "staging.acme.test",
+        "shown_redirect_hosts" => "www.staging.acme.test",
+        "domain" => "new.acme.test"
+      })
+
+      assert field_value(view, staging, ~s(input[name="domain"])) == "new.acme.test"
+      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+    end
+
+    test "a draft is dropped when the row's hosts change elsewhere, and the screen shows them", %{
+      conn: conn,
+      staging: staging
+    } do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+      typed(view, staging, %{"domain" => "staging.acme.test", "redirect_hosts" => "typed.acme.test"})
+      assert field_value(view, staging, "textarea") == "typed.acme.test"
+
+      superuser = Factory.insert(:random_user, role: :superuser)
+
+      {:ok, _staging} =
+        Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: superuser)
+
+      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+
+      # A recovered form rendered before the change does not bring the old values back
+      render_change(view, "draft_hosts", %{
+        "environment_id" => staging.id,
+        "shown_domain" => "staging.acme.test",
+        "shown_redirect_hosts" => "",
+        "domain" => "staging.acme.test",
+        "redirect_hosts" => ""
+      })
+
+      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+    end
+
+    test "a save from a form that showed other redirect hosts is refused", %{
+      conn: conn,
+      staging: staging,
+      current_user: user
+    } do
+      Brando.endpoint().subscribe("user:#{user.id}")
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      # Another superuser adds a redirect host after this form was rendered
+      Brando.Repo.update_all(
+        from(e in Brando.Environments.Environment, where: e.id == ^staging.id),
+        [set: [redirect_hosts: ["www.staging.acme.test"]]],
+        prefix: "public"
+      )
+
+      render_submit(view, "update_domain", %{
+        "environment_id" => staging.id,
+        "shown_domain" => "staging.acme.test",
+        "shown_redirect_hosts" => "",
+        "domain" => "new.acme.test",
+        "redirect_hosts" => ""
+      })
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error} = toast}
+      assert inspect(toast) =~ "Reload the page and try again"
+
+      assert %{domain: "staging.acme.test", redirect_hosts: ["www.staging.acme.test"]} =
+               Registry.get_environment(staging.id)
+
+      render_submit(view, "update_domain", %{
+        "environment_id" => staging.id,
+        "shown_domain" => "staging.acme.test",
+        "domain" => "new.acme.test",
+        "redirect_hosts" => ""
+      })
+
+      assert Registry.get_environment(staging.id).redirect_hosts == ["www.staging.acme.test"]
+    end
+  end
+
   defp shown_domain(view, environment) do
     view
     |> element(~s(#environment-#{environment.id} input[name="shown_domain"]))
@@ -703,6 +918,295 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     defp groups_mode(:groups) do
       put_test_env(:authorization_mode, :groups)
       {:ok, _} = Migration.run()
+    end
+  end
+
+  describe "served hosts" do
+    @describetag :tmp_dir
+
+    setup %{site: site, tmp_dir: tmp_dir} do
+      on_exit(&Brando.ServedHostsTestResolver.reset/0)
+      put_test_env(Brando.Tenant.ServedHosts, file: Path.join(tmp_dir, "served_hosts"), addresses: ["203.0.113.10"])
+
+      envs =
+        for {key, host} <- [served: "www.acme.test", away: "away.acme.test", missing: "missing.acme.test"], into: %{} do
+          {:ok, environment} =
+            Environments.create_environment(site, %{name: to_string(key), key: to_string(key), domain: host},
+              creator: :system
+            )
+
+          {key, environment}
+        end
+
+      Brando.ServedHostsTestResolver.answer("www.acme.test", ["203.0.113.10"])
+      Brando.ServedHostsTestResolver.answer("away.acme.test", ["198.51.100.7"])
+      Brando.Tenant.ServedHosts.check()
+      envs
+    end
+
+    test "each bound host shows where it stands, and changes without a reload", %{
+      conn: conn,
+      served: served,
+      away: away,
+      missing: missing,
+      production: production
+    } do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      assert view |> element("#environment-host-status-#{served.id}") |> render() =~ "Served"
+
+      away_status = view |> element("#environment-host-status-#{away.id}") |> render()
+      assert away_status =~ "Waiting for DNS"
+      assert away_status =~ "198.51.100.7"
+      assert away_status =~ "203.0.113.10"
+
+      assert view |> element("#environment-host-status-#{missing.id}") |> render() =~ "Does not resolve"
+      refute has_element?(view, "#environment-host-status-#{production.id}")
+
+      Brando.ServedHostsTestResolver.answer("away.acme.test", ["203.0.113.10"])
+      Brando.Tenant.ServedHosts.check()
+
+      assert view |> element("#environment-host-status-#{away.id}") |> render() =~ "Served"
+    end
+
+    test "a host stored with capitals or spaces shows its state", %{conn: conn, served: served} do
+      Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^served.id),
+        set: [domain: " WWW.Acme.TEST "]
+      )
+
+      Cache.warm()
+      Brando.Tenant.ServedHosts.check()
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      assert view |> element("#environment-host-status-#{served.id}") |> render() =~ "Served"
+    end
+
+    test "a domain the registry does not count as bound says so instead of checking for ever",
+         %{conn: conn, served: served} do
+      # Stored before the changeset dropped the trailing dot: no request matches it
+      Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^served.id),
+        set: [domain: "www.acme.test."]
+      )
+
+      Cache.warm()
+      Brando.Tenant.ServedHosts.check()
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      status = view |> element("#environment-host-status-#{served.id}") |> render()
+      assert status =~ "Not served"
+      refute status =~ "Checking"
+    end
+
+    test "a row reads the bound hosts taken with the status, not the cache when it renders",
+         %{conn: conn, production: production, missing: missing} do
+      file = Brando.Tenant.ServedHosts.status().file
+      # Bound without a check: the status does not know the host yet
+      put_test_env(Brando.Tenant.ServedHosts, [])
+
+      Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^production.id),
+        set: [domain: "late.acme.test"]
+      )
+
+      Cache.warm()
+      put_test_env(Brando.Tenant.ServedHosts, file: file, addresses: ["203.0.113.10"])
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+      assert view |> element("#environment-host-status-#{production.id}") |> render() =~ "Checking"
+
+      # The cache changes with no status yet, and the rows render again
+      Cache.clear()
+
+      Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^missing.id),
+        set: [name: "renamed"]
+      )
+
+      render_click(view, "refresh")
+
+      status = view |> element("#environment-host-status-#{production.id}") |> render()
+      assert status =~ "Checking"
+      refute status =~ "Not served"
+    end
+
+    test "a stored value that is no valid host name is not shown as served", %{conn: conn, served: served} do
+      put_test_env(Brando.Tenant.ServedHosts,
+        file: Brando.Tenant.ServedHosts.status().file,
+        admit: :always
+      )
+
+      # Stored before the changeset checked it
+      Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^served.id),
+        set: [domain: "www.acme.test:4000"]
+      )
+
+      Cache.warm()
+      Brando.Tenant.ServedHosts.check()
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      status = view |> element("#environment-host-status-#{served.id}") |> render()
+      assert status =~ "Not a full host name"
+      refute status =~ "Served"
+    end
+
+    test "a single-label host or an address says Brando answers on it but the reverse proxy is not told",
+         %{conn: conn, served: served, away: away} do
+      {:ok, _} = Registry.update_environment(served, %{domain: "intranet"}, actor: :system)
+      {:ok, _} = Registry.update_environment(away, %{domain: "203.0.113.20"}, actor: :system)
+      Brando.Tenant.ServedHosts.check()
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      for environment <- [served, away] do
+        status = view |> element("#environment-host-status-#{environment.id}") |> render()
+        assert status =~ "Not a full host name"
+        assert status =~ "Brando answers on it"
+        assert status =~ "www.example.com"
+        refute status =~ "corrected"
+      end
+    end
+
+    defp redirect_host_status(view, environment, host) do
+      view |> element("#environment-host-status-#{environment.id}-#{Base.url_encode64(host, padding: false)}")
+    end
+
+    test "each redirect host shows where it stands under the domain, and changes without a reload", %{
+      conn: conn,
+      served: served,
+      away: away
+    } do
+      Brando.ServedHostsTestResolver.answer("www2.acme.test", ["203.0.113.10"])
+      Brando.ServedHostsTestResolver.answer("old-acme.test", ["198.51.100.7"])
+      {:ok, _} = Registry.update_environment(served, %{redirect_hosts: ~w(www2.acme.test old-acme.test)}, actor: :system)
+      {:ok, _} = Registry.update_environment(away, %{redirect_hosts: ~w(gone-acme.test)}, actor: :system)
+      Brando.Tenant.ServedHosts.check()
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      domain_status = view |> element("#environment-host-status-#{served.id}") |> render()
+      assert domain_status =~ "Served"
+      refute domain_status =~ "www2.acme.test"
+
+      # Served: the name and the badge, nothing more
+      served_line = view |> redirect_host_status(served, "www2.acme.test") |> render()
+      assert served_line =~ "www2.acme.test"
+      assert served_line =~ "Served"
+      refute served_line =~ "environment-host-status__detail"
+
+      waiting = view |> redirect_host_status(served, "old-acme.test") |> render()
+      assert waiting =~ "old-acme.test"
+      assert waiting =~ "Waiting for DNS"
+      assert waiting =~ "Resolves to 198.51.100.7; this server is 203.0.113.10."
+
+      unresolved = view |> redirect_host_status(away, "gone-acme.test") |> render()
+      assert unresolved =~ "gone-acme.test"
+      assert unresolved =~ "Does not resolve"
+      assert unresolved =~ "Point it at 203.0.113.10."
+
+      Brando.ServedHostsTestResolver.answer("old-acme.test", ["203.0.113.10"])
+      Brando.Tenant.ServedHosts.check()
+
+      now_served = view |> redirect_host_status(served, "old-acme.test") |> render()
+      assert now_served =~ "Served"
+      refute now_served =~ "Waiting for DNS"
+    end
+
+    test "a redirect host that is no full host name, or the installation's own, says so", %{
+      conn: conn,
+      served: served
+    } do
+      {:ok, _} = Registry.update_environment(served, %{redirect_hosts: ~w(intranet)}, actor: :system)
+
+      # Stored before the changeset refused it
+      Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^served.id),
+        set: [redirect_hosts: ["intranet", "localhost"]]
+      )
+
+      Cache.warm()
+      Brando.Tenant.ServedHosts.check()
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      invalid = view |> redirect_host_status(served, "intranet") |> render()
+      assert invalid =~ "Not a full host name"
+      assert invalid =~ "Brando answers on it"
+
+      excluded = view |> redirect_host_status(served, "localhost") |> render()
+      assert excluded =~ "Not served"
+      refute excluded =~ "Checking"
+    end
+
+    test "a file that cannot be written is shown", %{conn: conn, tmp_dir: tmp_dir} do
+      file = Path.join([tmp_dir, "missing", "served_hosts"])
+      put_test_env(Brando.Tenant.ServedHosts, file: file, admit: :always)
+      ExUnit.CaptureLog.capture_log(fn -> Brando.Tenant.ServedHosts.check() end)
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      assert view |> element(".environment-served-hosts-error") |> render() =~ file
+    end
+
+    test "only a superuser sees why the file could not be written", %{site: site, away: away, tmp_dir: tmp_dir} do
+      file = Path.join([tmp_dir, "missing", "served_hosts"])
+      put_test_env(Brando.Tenant.ServedHosts, file: file, addresses: ["203.0.113.10"])
+      ExUnit.CaptureLog.capture_log(fn -> Brando.Tenant.ServedHosts.check() end)
+
+      {:ok, view, _html} = live(site_admin_conn(site), "/admin/config/environments")
+
+      error = view |> element(".environment-served-hosts-error") |> render()
+      assert error =~ "The served hosts file could not be written."
+      refute error =~ tmp_dir
+      refute error =~ "no such file"
+
+      away_status = view |> element("#environment-host-status-#{away.id}") |> render()
+      assert away_status =~ "198.51.100.7"
+      assert away_status =~ "203.0.113.10"
+    end
+
+    test "a superuser who stops being one while the screen is open no longer sees why the file failed", %{
+      site: site,
+      production: production,
+      tmp_dir: tmp_dir,
+      current_user: owner
+    } do
+      file = Path.join([tmp_dir, "missing", "served_hosts"])
+      put_test_env(Brando.Tenant.ServedHosts, file: file, addresses: ["203.0.113.10"])
+      ExUnit.CaptureLog.capture_log(fn -> Brando.Tenant.ServedHosts.check() end)
+      put_test_env(:authorization_mode, :groups)
+      superuser = Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+      {:ok, _} = Migration.run()
+
+      # Keeps the screen after the Superuser group is gone
+      owner_scope = Scope.site(owner, site, production)
+
+      {:ok, group} =
+        Groups.create(owner_scope, %{name: "Site readers"}, ["brando.admin.access", "brando.environments.read"])
+
+      {:ok, :ok} = Groups.add_member(owner_scope, group.id, superuser.id)
+
+      {:ok, view, _html} = live(log_in_user(build_conn(), superuser), "/admin/config/environments")
+      assert view |> element(".environment-served-hosts-error") |> render() =~ file
+
+      installation = Scope.installation(owner)
+      {:ok, installation_groups} = Groups.list(installation)
+      for %{id: id} <- installation_groups, id != group.id, do: Groups.remove_member(installation, id, superuser.id)
+      send(view.pid, {:authorization_changed, :all})
+
+      error = view |> element(".environment-served-hosts-error") |> render()
+      assert error =~ "The served hosts file could not be written."
+      refute error =~ tmp_dir
+    end
+
+    test "with the feature off, nothing is shown", %{conn: conn, served: served} do
+      {:ok, _} = Registry.update_environment(served, %{redirect_hosts: ~w(www2.acme.test)}, actor: :system)
+      put_test_env(Brando.Tenant.ServedHosts, [])
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      refute has_element?(view, "#environment-host-status-#{served.id}")
+      refute has_element?(view, ".environment-host-status")
+      refute has_element?(view, ".environment-served-hosts-error")
     end
   end
 end

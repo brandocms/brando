@@ -379,7 +379,7 @@ defmodule BrandoAdmin.Authorization.Events do
       write: ~w(apply_import install_definitions restore retry_refresh)
     ],
     "BrandoAdmin.Sites.EnvironmentLive" => [
-      read: ~w(refresh),
+      read: ~w(draft_hosts refresh),
       write:
         ~w(cancel_operation create_environment delete_environment prune_archives queue_copy queue_set_live rollback schedule_copy schedule_set_live update_domain)
     ],
