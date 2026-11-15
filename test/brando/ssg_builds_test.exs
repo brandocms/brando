@@ -261,7 +261,7 @@ defmodule Brando.SSGBuildsTest do
     assert :ok = perform_job(SSGBuild, %{"build_id" => build.id})
 
     assert_received {:webhook_request, %{path: "/", headers: %{"host" => host}}}
-    assert host == "127.0.0.1:#{receiver.port}"
+    assert host == "localhost:#{receiver.port}"
     ready = Builds.get_build(build.id)
     assert ready.status == :ready
     assert File.read!(Path.join(ready.build_path, "index.html")) =~ "home"
