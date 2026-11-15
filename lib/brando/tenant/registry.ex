@@ -110,7 +110,12 @@ defmodule Brando.Tenant.Registry do
 
     case Brando.Worker.SiteLanguageSeed.creator(creator) do
       nil ->
-        {:error, Ecto.Changeset.add_error(changeset, :default_language, gettext("has no user to seed it as"))}
+        {:error,
+         Ecto.Changeset.add_error(
+           changeset,
+           :default_language,
+           gettext("cannot be seeded: the installation has no superuser to create its content as")
+         )}
 
       creator ->
         case Brando.Worker.SiteLanguageSeed.seed_environments(seed_site, language, creator) do

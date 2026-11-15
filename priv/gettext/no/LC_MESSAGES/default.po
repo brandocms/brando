@@ -723,6 +723,11 @@ msgid_plural "%{languages} are not among the installation's languages (config :b
 msgstr[0] "%{languages} er ikke ett av installasjonens språk (config :brando, :languages)"
 msgstr[1] "%{languages} er ikke blant installasjonens språk (config :brando, :languages)"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{language} is not one of %{name}’s languages."
+msgstr "%{language} er ikke ett av språkene til %{name}."
+
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "%{missing} of %{total} images have no alt text and %{poor} only a filename or a generic word. Describe them in the image library."
@@ -777,6 +782,11 @@ msgstr "%{name} i %{place}"
 #, elixir-autogen, elixir-format
 msgid "%{name} is also editing this page on the website"
 msgstr "%{name} redigerer også denne siden på nettsiden"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{name} is being set up, or one of its environments copied. Seed it again when that has finished."
+msgstr "%{name} settes opp, eller ett av miljøene kopieres. Opprett startinnholdet på nytt når det er ferdig."
 
 #: lib/brando/notifications/email.ex
 #, elixir-autogen, elixir-format
@@ -15394,6 +15404,11 @@ msgstr "Oppretting av startinnhold på %{language} i %{environment} feilet, og p
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
+msgid "Seeding %{language} in %{environment} failed: %{error}"
+msgstr "Oppretting av startinnhold på %{language} i %{environment} feilet: %{error}"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
 msgid "Seeding %{language} in %{environment}…"
 msgstr "Oppretter startinnhold på %{language} i %{environment}…"
 
@@ -16968,6 +16983,11 @@ msgstr "Den tilkoblingen er allerede borte."
 #, elixir-autogen, elixir-format
 msgid "That did not work. Reload the page and try again."
 msgstr "Det virket ikke. Last inn siden på nytt og prøv igjen."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "That environment is not one of %{name}’s."
+msgstr "Det miljøet hører ikke til %{name}."
 
 #: lib/brando_admin/components/two_factor.ex
 #: lib/brando_admin/live/users/user_security_live.ex
@@ -19998,6 +20018,11 @@ msgstr "Venter på en koblet oversettelse"
 msgid "Waiting for review"
 msgstr "Venter på gjennomgang"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for the environment's copy or setup to finish."
+msgstr "Venter på at kopieringen eller oppsettet av miljøet blir ferdig."
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
 msgid "Waiting for the next email"
@@ -20902,6 +20927,11 @@ msgstr "kan fjernes"
 msgid "can't be blank"
 msgstr "må fylles ut"
 
+#: lib/brando/tenant/registry.ex
+#, elixir-autogen, elixir-format
+msgid "cannot be seeded: the installation has no superuser to create its content as"
+msgstr "kan ikke få startinnhold: installasjonen har ingen superbruker å opprette innholdet som"
+
 #: lib/brando_admin/components/content/list/saved_views.ex
 #, elixir-autogen, elixir-format
 msgid "changed"
@@ -20953,6 +20983,11 @@ msgstr "bekreft"
 #, elixir-autogen, elixir-format
 msgid "connected %{date}"
 msgstr "tilkoblet %{date}"
+
+#: lib/brando/tenant/registry.ex
+#, elixir-autogen, elixir-format
+msgid "could not be seeded in %{environment}, so nothing was saved: %{reason}"
+msgstr "fikk ikke startinnhold i %{environment}, så ingenting ble lagret: %{reason}"
 
 msgid "create a new source to change an imported document's identity"
 msgstr "opprett en ny kilde for å endre tilkobling, gren eller fil for et importert dokument"
@@ -21275,6 +21310,11 @@ msgstr "kan ha høyst %{count} tegn"
 
 #: lib/brando/sites/site.ex
 #, elixir-autogen, elixir-format
+msgid "must be included in languages"
+msgstr "må være ett av språkene"
+
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
 msgid "must be lowercase letters, digits and single dashes"
 msgstr "må bestå av små bokstaver, sifre og enkle bindestreker"
 
@@ -21282,6 +21322,21 @@ msgstr "må bestå av små bokstaver, sifre og enkle bindestreker"
 #, elixir-autogen, elixir-format
 msgid "must be on another server"
 msgstr "må være på en annen server"
+
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "must contain at least one language"
+msgstr "må ha minst ett språk"
+
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "must contain lowercase language keys"
+msgstr "må bestå av språkkoder med små bokstaver"
+
+#: lib/brando/sites/site.ex
+#, elixir-autogen, elixir-format
+msgid "must not contain duplicates"
+msgstr "kan ikke inneholde duplikater"
 
 #: lib/brando/sites/deploy_config.ex
 #, elixir-autogen, elixir-format

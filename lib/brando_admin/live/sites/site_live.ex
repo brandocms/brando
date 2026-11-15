@@ -352,7 +352,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
   def handle_event("seed_language", params, socket) do
     with {:ok, site} <- site_from_socket(socket, params["site-id"]),
          {:ok, environment} <- environment_of(site, params["environment-id"]),
-         true <- params["language"] in site.languages || {:error, :language_not_on_site},
+         true <- params["language"] in site.languages || {:error, {:language_not_on_site, site, params["language"]}},
          :ok <- authorize_site_update(socket),
          :ok <- ready(site) do
       :ok =
@@ -482,7 +482,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
   end
 
   # Provisioning or a copy would make the job wait (`SiteLanguageSeed`)
-  defp ready(site), do: if(SiteLanguageSeed.busy?(site), do: {:error, :environment_busy}, else: :ok)
+  defp ready(site), do: if(SiteLanguageSeed.busy?(site), do: {:error, {:environment_busy, site}}, else: :ok)
 
   defp identity_languages(prefix) do
     table = Brando.Sites.Identity.__schema__(:source)
@@ -498,7 +498,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
          %{} = environment <- Enum.find(site.environments, &(&1.id == environment_id)) do
       {:ok, environment}
     else
-      _ -> {:error, :environment_not_found}
+      _ -> {:error, {:environment_not_found, site}}
     end
   end
 
@@ -684,6 +684,19 @@ defmodule BrandoAdmin.Sites.SiteLive do
   end
 
   defp lifecycle_error({:site_setup_failed, reason, _compensation}), do: lifecycle_error(reason)
+
+  defp lifecycle_error({:language_not_on_site, site, language}),
+    do: gettext("%{language} is not one of %{name}’s languages.", language: language, name: site.name)
+
+  defp lifecycle_error({:environment_not_found, site}),
+    do: gettext("That environment is not one of %{name}’s.", name: site.name)
+
+  defp lifecycle_error({:environment_busy, site}),
+    do:
+      gettext("%{name} is being set up, or one of its environments copied. Seed it again when that has finished.",
+        name: site.name
+      )
+
   defp lifecycle_error(reason) when is_atom(reason), do: reason |> Atom.to_string() |> String.replace("_", " ")
   defp lifecycle_error(reason), do: inspect(reason)
 

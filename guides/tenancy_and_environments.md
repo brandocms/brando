@@ -494,7 +494,8 @@ Two lists of content languages have different jobs:
 
 A superuser changes a site's languages and default language on its card at
 `/admin/sites`, which calls `Brando.Tenant.Setup.update_languages/3` and asks
-for the same right as creating a site; setup code can call
+for the right to update sites (`:update` on `:sites`), and for the password
+again when the session has not confirmed lately; setup code can call
 `Brando.Tenant.Registry.update_site/3`. Both refuse a language the
 installation does not configure, and name it. `default_language` must be one
 of the site's languages, so removing the default takes a new default in the
@@ -513,11 +514,13 @@ language. If an environment cannot be seeded, the save fails with an error
 that names it and the site keeps its languages; what the other environments
 got stays, unseen until the language is the site's, and saving again seeds
 only what is missing. The site's card lists an
-environment that is still being seeded, a failed attempt that is retried with
-its error, and an environment that has no identity in one of the site's
-languages, with a button that seeds it again. Removing a language deletes
-nothing: its entries stay in each environment, and are used again when the
-language is added back.
+environment that is still being seeded; one whose last seeding failed, retried
+or given up, with its error; and one that has no identity in one of the site's
+languages. A failed or missing one has a button that seeds it again. The job
+does not write into an environment while the site is being provisioned or one
+of its environments copied: it waits for that to finish, and the card offers
+no button meanwhile. Removing a language deletes nothing: its entries stay in
+each environment, and are used again when the language is added back.
 
 In `:multi`, whatever works for one site uses that site's languages and default
 language:

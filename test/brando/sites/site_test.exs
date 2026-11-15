@@ -41,6 +41,19 @@ defmodule Brando.Sites.SiteTest do
     assert {"must be included in languages", _} = changeset.errors[:default_language]
   end
 
+  test "says what is wrong with the languages in the admin's language" do
+    Gettext.with_locale(Brando.Gettext, "no", fn ->
+      changeset = Site.changeset(%{@valid_attrs | default_language: "de"})
+      assert {message, _} = changeset.errors[:default_language]
+      refute message == "must be included in languages"
+
+      for languages <- [[], ["en", "en"], ["EN"]] do
+        assert {message, _} = Site.changeset(%{@valid_attrs | languages: languages}).errors[:languages]
+        refute message =~ "must"
+      end
+    end)
+  end
+
   test "rejects empty, duplicate, and malformed language sets" do
     for languages <- [[], ["en", "en"], ["EN"]] do
       changeset = Site.changeset(%{@valid_attrs | languages: languages})

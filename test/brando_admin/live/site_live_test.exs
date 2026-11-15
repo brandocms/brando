@@ -379,6 +379,27 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       end)
     end
 
+    test "says in words why it cannot seed", %{conn: conn, acme: site, production: production, current_user: user} do
+      Brando.endpoint().subscribe("user:#{user.id}")
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      seed = fn environment_id, language ->
+        render_click(view, "seed_language", %{
+          "site-id" => to_string(site.id),
+          "environment-id" => to_string(environment_id),
+          "language" => language
+        })
+      end
+
+      seed.(production.id, "no")
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
+      assert message == "no is not one of Acme’s languages."
+
+      seed.(0, "en")
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
+      assert message == "That environment is not one of Acme’s."
+    end
+
     test "offers no seeding while an environment is copied or the site provisioned", %{
       conn: conn,
       acme: site,
