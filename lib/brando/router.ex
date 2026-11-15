@@ -289,16 +289,17 @@ defmodule Brando.Router do
     end
   end
 
-  @doc false
-  # The routes declared between these two calls are the admin's or MCP's, left
-  # out of the match on a host that does not serve the admin. Counting the
-  # routes Phoenix has recorded so far keeps the complete paths of any
-  # enclosing scope.
+  @doc """
+  Marks where the routes of `admin_routes/3` or `mcp_routes/0` start in
+  `module`. The routes declared until `__admin_routes_end__/1` are left out of
+  the match on a host that does not serve the admin
+  (`BrandoAdmin.AdminHost`), with the complete paths of any enclosing scope.
+  """
   def __admin_routes_start__(module) do
     Module.put_attribute(module, :brando_admin_routes_start, route_count(module))
   end
 
-  @doc false
+  @doc "Marks where the routes `__admin_routes_start__/1` started end in `module`."
   def __admin_routes_end__(module) do
     range = Module.get_attribute(module, :brando_admin_routes_start)..(route_count(module) - 1)//1
     Module.put_attribute(module, :brando_admin_routes, [range | Module.get_attribute(module, :brando_admin_routes) || []])
@@ -325,9 +326,12 @@ defmodule Brando.Router do
 
     quote do
       unquote(pipes)
-      unquote(clauses)
 
-      @doc false
+      @doc """
+      Matches a route as `__match_route__/3` does, leaving out those
+      `admin_routes/3` and `mcp_routes/0` declare (`BrandoAdmin.AdminHost`).
+      """
+      unquote(clauses)
       def __match_route_without_admin__(_verb, _path, _host), do: :error
     end
   end

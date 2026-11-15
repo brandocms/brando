@@ -6,6 +6,7 @@ defmodule Brando.Setup.SeedsTest do
   alias Brando.Factory
   alias Brando.Navigation
   alias Brando.Pages
+  alias Brando.Repo
   alias Brando.Setup.Seeds
 
   import Brando.Test.Support, only: [put_test_env: 2]
@@ -48,15 +49,15 @@ defmodule Brando.Setup.SeedsTest do
   # The seeded menu's URLs, the admin links on the homepage, how many the
   # footer has, and whether a seeded module's markup names /admin
   defp admin_links do
-    menu = Navigation.Menu |> Brando.Repo.get_by!(key: "main", language: :en) |> Brando.Repo.preload(items: :link)
-    page = Brando.Repo.get_by!(Pages.Page, uri: "index", language: :en)
-    footer = Brando.Repo.get_by!(Pages.Fragment, parent_key: "partials", key: "footer", language: :en)
+    menu = Navigation.Menu |> Repo.get_by!(key: "main", language: :en) |> Repo.preload(items: :link)
+    page = Repo.get_by!(Pages.Page, uri: "index", language: :en)
+    footer = Repo.get_by!(Pages.Fragment, parent_key: "partials", key: "footer", language: :en)
 
     %{
       menu: Enum.map(menu.items, & &1.link.value),
       page: ~r/href="\/admin[^"]*"/ |> Regex.scan(page.rendered_blocks) |> List.flatten(),
       footer: ~r/href="\/admin/ |> Regex.scan(footer.rendered_blocks) |> length(),
-      modules: Enum.any?(Brando.Repo.all(Content.Module), &(&1.code =~ "/admin"))
+      modules: Enum.any?(Repo.all(Content.Module), &(&1.code =~ "/admin"))
     }
   end
 
