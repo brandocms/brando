@@ -719,12 +719,19 @@ do not depend on the site, are left as they are.
 With `:multi`, the admin answers on the endpoint's host only:
 `Brando.endpoint().host()`, which `PHX_HOST` sets. On any other host, every
 route `Brando.Router.admin_routes/3` and `Brando.Router.mcp_routes/0` mount
-answers as a path that does not exist there. The request goes to the route it
-would match without them, normally the site's catch-all: a site's host
-answers with its own 404 page, or with its own page at `/admin` when it has
-one, and a host bound to no site answers with the plain 404. Nothing
-redirects to the admin's host, and deciding costs no database query. With
-`:none` and `:single` the admin answers on every host.
+answers as a path that does not exist there, wherever they are mounted, an
+enclosing scope included. The request goes to the route it would match
+without them, the application's own routes keeping their order, normally the
+site's catch-all: a site's host answers with its own 404 page, or with its
+own page at `/admin` when it has one, and a host bound to no site answers
+with the plain 404. Nothing redirects to the admin's host, and deciding costs
+no database query. With `:none` and `:single` the admin answers on every
+host.
+
+Nothing else on a site's host names the admin either: its default
+`robots.txt` has no `Disallow: /admin/`, `Brando.MCP.BodyLimit` and
+`Brando.Plug.Markdown` treat `/mcp` and `/admin` as any other path, and a new
+site's seeded homepage, menu and footer have no admin links.
 
 The admin socket takes connections from the endpoint's host only, whatever
 the endpoint's own `check_origin` accepts for the sites' pages.
@@ -741,6 +748,13 @@ Live previews (`/__livepreview`) and shared previews' links (`/__p__/:key`)
 are not admin routes, and open on the hosts they opened on before.
 [Frontend edit mode](frontend_edit.md) frames an admin view from the page's
 own host, so with several sites it adds nothing to the sites' pages.
+
+Two known limits. The endpoint answers the admin socket's transport paths
+(`/admin/socket/websocket`, `/admin/socket/longpoll`) before the router, so on
+a site's host they answer as a socket refusing the connection, not with the
+site's 404. A router that defines its own `call/2` before `admin_routes/3`
+replaces the one that restricts the admin, which then answers on every host;
+the compiler warns about it.
 
 ### Several nodes
 
