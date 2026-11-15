@@ -13,7 +13,7 @@ defmodule Brando.Plug.Tenant do
 
   A request on one of an environment's redirect hosts is redirected
   permanently, from the cache, to the same path and query on the
-  environment's domain, with the endpoint URL's scheme: 301 for GET and HEAD,
+  environment's domain, with the endpoint URL's scheme and port: 301 for GET and HEAD,
   308 for other methods. One that carries a static build's valid signed
   context (`Brando.SSG.Context`) is served under that context instead. A response for an environment that is not live
   carries `X-Robots-Tag: noindex, nofollow`.
@@ -94,7 +94,7 @@ defmodule Brando.Plug.Tenant do
     query = if conn.query_string == "", do: "", else: "?" <> conn.query_string
 
     conn
-    |> put_resp_header("location", "#{scheme()}://#{domain}#{requested_path(conn)}#{query}")
+    |> put_resp_header("location", "#{origin(domain)}#{requested_path(conn)}#{query}")
     |> send_resp(status, "")
     |> halt()
   end
@@ -102,7 +102,14 @@ defmodule Brando.Plug.Tenant do
   # `Brando.Plug.Markdown` takes `.md` off the path before the router
   defp requested_path(conn), do: conn.private[:brando_original_request_path] || conn.request_path
 
-  defp scheme, do: URI.parse(Brando.endpoint().url()).scheme || "https"
+  # The endpoint URL's scheme, and its port when that is not the scheme's
+  # default, as Phoenix's URL helpers write it
+  defp origin(domain) do
+    %URI{scheme: scheme, port: port} = URI.parse(Brando.endpoint().url())
+    scheme = scheme || "https"
+    port = if port && port != URI.default_port(scheme), do: ":#{port}", else: ""
+    "#{scheme}://#{domain}#{port}"
+  end
 
   # A shared preview's link is on the endpoint's host, which belongs to no
   # site: it opens there under the site and environment it was shared from.

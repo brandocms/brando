@@ -28,6 +28,10 @@ defmodule Brando.Tenant.RedirectHostsTest do
     def clone_schema(_source_prefix, target_prefix), do: Brando.Environments.Schema.create(target_prefix)
   end
 
+  defmodule DevEndpoint do
+    def url, do: "http://localhost:4000"
+  end
+
   setup do
     put_test_env(:tenancy_mode, :multi)
     put_test_env(:tenant_migrator, Migrator)
@@ -274,6 +278,14 @@ defmodule Brando.Tenant.RedirectHostsTest do
       assert conn.halted
       assert conn.status == 308
       assert get_resp_header(conn, "location") == ["#{scheme()}://acme.test/contact?sent=1"]
+    end
+
+    test "the endpoint URL's port is kept when it is not the scheme's default" do
+      put_test_env(:endpoint_module, DevEndpoint)
+
+      conn = request(:get, "http://www.acme.test/about?lang=en")
+      assert conn.status == 301
+      assert get_resp_header(conn, "location") == ["http://acme.test:4000/about?lang=en"]
     end
 
     test "a Markdown request keeps the path the client asked for" do
