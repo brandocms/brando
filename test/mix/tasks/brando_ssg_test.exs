@@ -55,7 +55,7 @@ defmodule Mix.Tasks.Brando.SsgTest do
     assert :ok = Mix.Tasks.Brando.Ssg.run(["--force", "--no-compile-assets", "--output", output])
 
     assert_received {:webhook_request, %{path: "/", headers: %{"host" => host}}}
-    assert host == "127.0.0.1:#{receiver.port}"
+    assert host == "localhost:#{receiver.port}"
     assert File.read!(Path.join(output, "index.html")) =~ "home"
     assert Application.get_env(:brando, SSGEndpoint)[:watchers] == []
     assert Application.get_env(:phoenix, :serve_endpoints)

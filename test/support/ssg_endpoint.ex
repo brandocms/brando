@@ -10,15 +10,16 @@ defmodule Brando.Test.SSGEndpoint do
 
   `start/2` starts the endpoint under the test's supervisor, so it stops with
   the test. Pass `listen_ip:` for the address the listener says it is bound
-  to (default `{0, 0, 0, 0}`, a wildcard) and `config:` for more of the
-  endpoint's configuration.
+  to (default `{0, 0, 0, 0}`, a wildcard), `receiver_ip:` for the loopback
+  address the receiver really listens on (default `{127, 0, 0, 1}`) and
+  `config:` for more of the endpoint's configuration.
   """
 
   use Phoenix.Endpoint, otp_app: :brando
 
   @doc "Starts the endpoint, listening where a new `Brando.WebhookReceiver` answers with `respond`."
   def start(respond, opts \\ []) do
-    receiver = Brando.WebhookReceiver.start(respond)
+    receiver = Brando.WebhookReceiver.start(respond, Keyword.get(opts, :receiver_ip, {127, 0, 0, 1}))
     listen_ip = Keyword.get(opts, :listen_ip, {0, 0, 0, 0})
 
     config =

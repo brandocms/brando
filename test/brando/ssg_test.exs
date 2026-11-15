@@ -419,8 +419,9 @@ defmodule Brando.SSGTest do
 
       assert {:ok, %{failed_urls: [], processed_urls: 2}} = build_root(context, endpoint: SSGEndpoint)
 
-      assert_received {:webhook_request, %{path: "/", headers: %{"host" => host}}}
-      assert host == "127.0.0.1:#{receiver.port}"
+      assert_received {:webhook_request, %{path: "/", headers: %{"host" => host} = headers}}
+      assert host == "localhost:#{receiver.port}"
+      refute Map.has_key?(headers, "x-forwarded-proto")
       assert_received {:webhook_request, %{path: "/about"}}
       assert File.read!(Path.join(context.output_path, "index.html")) =~ "<main>/</main>"
     end
@@ -431,7 +432,43 @@ defmodule Brando.SSGTest do
 
       assert {:ok, %{failed_urls: []}} = build_root(context, [])
       assert_received {:webhook_request, %{headers: %{"host" => host}}}
-      assert host == "127.0.0.1:#{receiver.port}"
+      assert host == "localhost:#{receiver.port}"
+    end
+
+    test "follows a redirect to the listener under the host it sends, on the listener's address", context do
+      put_test_env(:tenancy_mode, :multi)
+      site = %Site{id: 1, key: "default", delivery_mode: :static}
+      environment = %Environment{id: 2, site_id: 1, key: "staging", live: false}
+
+      # Absolute, from the request's Host, as `Plug.Conn.request_url/1` writes
+      # it. On IPv6 only, where `localhost` itself may not reach the listener.
+      receiver =
+        SSGEndpoint.start(
+          fn
+            %{path: "/about", headers: %{"host" => host}} -> {302, [{"location", "http://#{host}/om-oss"}], ""}
+            %{path: path} -> {200, "<main>#{path}</main>"}
+          end,
+          listen_ip: {0, 0, 0, 0, 0, 0, 0, 0},
+          receiver_ip: {0, 0, 0, 0, 0, 0, 0, 1}
+        )
+
+      assert {:ok, %{failed_urls: []}} =
+               SSG.build(site, environment,
+                 endpoint: SSGEndpoint,
+                 output_path: context.output_path,
+                 static_path: context.static_path,
+                 media_path: context.media_path,
+                 ssg_module: RootOnly
+               )
+
+      assert File.read!(Path.join([context.output_path, "about", "index.html"])) =~ "<main>/om-oss</main>"
+
+      header = Context.header()
+
+      for path <- ["/", "/about", "/om-oss"] do
+        assert_received {:webhook_request, %{path: ^path, headers: %{^header => _token, "host" => host}}}
+        assert host == "localhost:#{receiver.port}"
+      end
     end
 
     test "is the address a listener is bound to when that is not a wildcard", context do
@@ -482,6 +519,108 @@ defmodule Brando.SSGTest do
       :ok = stop_supervised(NotStartedEndpoint)
       refute Process.alive?(pid)
       result
+    end
+  end
+
+  describe "an endpoint with force_ssl" do
+    defmodule PagesOnly do
+      @moduledoc false
+      import Brando.SSG
+
+      urls :pages do
+        ["/", "/about"]
+      end
+    end
+
+    # As phx.new 1.8 writes it in config/prod.exs
+    @phx_new_force_ssl [rewrite_on: [:x_forwarded_proto], exclude: [hosts: ["localhost", "127.0.0.1"]]]
+    @https_url [url: [host: "example.com", port: 443, scheme: "https"]]
+
+    # The request the build made, as Phoenix's adapters hand it to the endpoint
+    # (the host from its Host header), through `Plug.SSL` as `force_ssl`
+    # configures it: Phoenix adds the endpoint's host to redirect to.
+    defp through_force_ssl(force_ssl, %{path: path, headers: headers}) do
+      ssl = Plug.SSL.init(Keyword.put_new(force_ssl, :host, "example.com"))
+
+      conn =
+        headers
+        |> Map.delete("host")
+        |> Enum.reduce(Plug.Test.conn(:get, "http://" <> headers["host"] <> path), fn {name, value}, conn ->
+          Plug.Conn.put_req_header(conn, name, value)
+        end)
+        |> Plug.SSL.call(ssl)
+
+      if conn.halted,
+        do: {conn.status, [{"location", hd(Plug.Conn.get_resp_header(conn, "location"))}], ""},
+        else: {200, [], "<main>#{path}</main>"}
+    end
+
+    defp build_pages(context, opts) do
+      SSG.build(
+        [
+          endpoint: SSGEndpoint,
+          output_path: context.output_path,
+          static_path: context.static_path,
+          media_path: context.media_path,
+          ssg_module: PagesOnly
+        ] ++ opts
+      )
+    end
+
+    test "as phx.new writes it lets the build's requests through on a wildcard listener", context do
+      for {listen_ip, receiver_ip} <- [
+            {{0, 0, 0, 0}, {127, 0, 0, 1}},
+            {{0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 1}}
+          ] do
+        SSGEndpoint.start(&through_force_ssl(@phx_new_force_ssl, &1),
+          listen_ip: listen_ip,
+          receiver_ip: receiver_ip,
+          config: [force_ssl: @phx_new_force_ssl]
+        )
+
+        assert {:ok, %{failed_urls: [], processed_urls: 2}} = build_pages(context, [])
+        assert File.read!(Path.join([context.output_path, "about", "index.html"])) =~ "<main>/about</main>"
+        stop_supervised!(SSGEndpoint)
+      end
+    end
+
+    test "as phx.new writes it lets the build's requests through on a listener bound to one address", context do
+      test = self()
+      SSGEndpoint.start(fn _request -> {500, "not this way"} end, listen_ip: {10, 0, 0, 5})
+
+      fetcher = fn url, opts ->
+        %URI{host: host, path: path} = URI.parse(url)
+        send(test, {:fetched, host})
+
+        {status, headers, body} = through_force_ssl(@phx_new_force_ssl, %{path: path, headers: Map.new(opts[:headers])})
+        {:ok, %{status: status, headers: headers, body: body}}
+      end
+
+      assert {:ok, %{failed_urls: [], processed_urls: 2}} = build_pages(context, fetcher: fetcher)
+      assert_received {:fetched, "10.0.0.5"}
+    end
+
+    test "with its own exclude and rewrite_on lets the build through when the endpoint's URL is https", context do
+      force_ssl = [rewrite_on: [:x_forwarded_proto], exclude: [hosts: ["internal.example.com"]]]
+
+      SSGEndpoint.start(&through_force_ssl(force_ssl, &1), config: [force_ssl: force_ssl] ++ @https_url)
+
+      assert {:ok, %{failed_urls: []}} = build_pages(context, [])
+      assert_received {:webhook_request, %{headers: %{"x-forwarded-proto" => "https"}}}
+    end
+
+    test "with its own exclude and no rewrite_on fails each URL naming force_ssl", context do
+      force_ssl = [exclude: [hosts: ["internal.example.com"]]]
+
+      SSGEndpoint.start(&through_force_ssl(force_ssl, &1), config: [force_ssl: force_ssl] ++ @https_url)
+
+      assert {:error, :url_failures, %{failed_urls: [root, about]}} = build_pages(context, [])
+      assert root =~ "/ (HTTP 301"
+      assert about =~ "/about (HTTP 301"
+      assert about =~ "force_ssl"
+      assert about =~ "localhost"
+      assert about =~ "rewrite_on"
+      refute about =~ "redirect_off_origin"
     end
   end
 end

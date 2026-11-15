@@ -107,15 +107,22 @@ defmodule Brando.SSG do
   Pages are requested from the endpoint's own HTTP listener: `http`, the
   loopback address and the port the endpoint (`:endpoint`, by default the
   application's) is listening on, read when the build starts. A listener bound
-  to one address other than a wildcard is requested on that address. An
-  explicit `:base_url` wins. Without a listener, and without `:base_url`, the
-  build fails with `{:no_http_listener, endpoint}` before any URL is
-  requested or the output is touched (`error_message/1` describes it). A dry
-  run requests nothing and needs no listener.
+  to one address other than a wildcard is requested on that address. Each
+  request says `Host: localhost:<port>`, a host `Plug.SSL` (`force_ssl`)
+  excludes by default, and `x-forwarded-proto: https` when the endpoint's URL
+  is `https`, which its `rewrite_on: [:x_forwarded_proto]` reads. The site
+  comes from the signed header, not from the host. An explicit `:base_url`
+  wins, and is requested as it is. Without a listener, and without
+  `:base_url`, the build fails with `{:no_http_listener, endpoint}` before any
+  URL is requested or the output is touched (`error_message/1` describes it).
+  A dry run requests nothing and needs no listener.
 
-  A build requests only its own origin. A listed path that redirects within
-  the build's origin is stored with the answer it ends at, and the header
-  goes along. A redirect to any other origin fails that URL without a request.
+  A build requests only its own origin: the listener's, or
+  `http://localhost:<port>`, which is requested on the listener's address. A
+  listed path that redirects within the build's origin is stored with the
+  answer it ends at, and the header goes along. A redirect to any other origin
+  fails that URL without a request; one to the same path on `https` fails it
+  naming `force_ssl`.
 
   The injectable `:fetcher` option has arity two (`url`, request options) and
   is intended for tests or custom transports. The request options include
@@ -178,10 +185,23 @@ defmodule Brando.SSG do
       endpoint = Keyword.get_lazy(opts, :endpoint, &Brando.endpoint/0)
 
       case listener_url(endpoint) do
-        {:ok, base_url} -> {:ok, Keyword.put(opts, :base_url, base_url)}
+        {:ok, base_url} -> {:ok, Keyword.merge(opts, base_url: base_url, listener: listener(endpoint, base_url))}
         :error -> {:error, {:no_http_listener, endpoint}}
       end
     end
+  end
+
+  # A build requests the listener as `localhost`, which `Plug.SSL` excludes by
+  # default whatever the listener's address, and says when the endpoint's own
+  # scheme is https, for an application that excludes other hosts.
+  defp listener(endpoint, base_url) do
+    %URI{port: port} = URI.parse(base_url)
+    forwarded = if endpoint.struct_url().scheme == "https", do: [{"x-forwarded-proto", "https"}], else: []
+
+    %{
+      headers: [{"host", "localhost:#{port}"} | forwarded],
+      origin: URI.parse("http://localhost:#{port}")
+    }
   end
 
   @doc """
@@ -323,18 +343,22 @@ defmodule Brando.SSG do
   defp render_url(url, token, output_path, opts, false) do
     base_url = Keyword.fetch!(opts, :base_url)
     request_url = URI.merge(ensure_trailing_slash(base_url), String.trim_leading(url, "/")) |> to_string()
-    fetcher = Keyword.get(opts, :fetcher, &default_fetcher/2)
+    listener = Keyword.get(opts, :listener)
+    listener_headers = if listener, do: listener.headers, else: []
+    headers = if token, do: [{Context.header(), token} | listener_headers], else: listener_headers
 
-    headers = if token, do: [{Context.header(), token}], else: []
+    request = %{
+      fetcher: Keyword.get(opts, :fetcher, &default_fetcher/2),
+      listener_origin: listener && listener.origin,
+      opts: [
+        headers: headers,
+        receive_timeout: Keyword.get(opts, :receive_timeout, @default_receive_timeout),
+        retry: false,
+        redirect: false
+      ]
+    }
 
-    request_opts = [
-      headers: headers,
-      receive_timeout: Keyword.get(opts, :receive_timeout, @default_receive_timeout),
-      retry: false,
-      redirect: false
-    ]
-
-    case fetch(fetcher, request_url, request_opts, @max_redirects) do
+    case fetch(request, request_url, @max_redirects) do
       {:ok, %{status: status, body: body}} when status in 200..299 ->
         write_response(output_path, url, body)
 
@@ -358,12 +382,12 @@ defmodule Brando.SSG do
 
   # Req would follow a redirect to any host with the signed header still on the
   # request, and the caller could not tell. So a build follows redirects itself.
-  defp fetch(fetcher, url, request_opts, redirects_left) do
-    case fetcher.(url, request_opts) do
+  defp fetch(request, url, redirects_left) do
+    case request.fetcher.(url, request.opts) do
       {:ok, %{status: status} = response} when status in @redirect_statuses ->
         case redirect_location(response) do
           nil -> {:ok, response}
-          location -> follow_redirect(fetcher, url, URI.merge(url, location), status, request_opts, redirects_left)
+          location -> follow_redirect(request, URI.parse(url), URI.merge(url, location), status, redirects_left)
         end
 
       result ->
@@ -371,17 +395,35 @@ defmodule Brando.SSG do
     end
   end
 
-  defp follow_redirect(fetcher, url, %URI{} = target, status, request_opts, redirects_left) do
+  defp follow_redirect(request, %URI{} = source, %URI{} = target, status, redirects_left) do
+    target = on_listener(target, source, request.listener_origin)
+
     cond do
-      origin(target) != origin(URI.parse(url)) ->
+      https_redirect?(source, target) ->
+        {:refused_redirect, {:https_redirect, status, target}}
+
+      origin(target) != origin(source) ->
         {:refused_redirect, {:redirect_off_origin, status, target}}
 
       redirects_left == 0 ->
         {:refused_redirect, :too_many_redirects}
 
       true ->
-        fetch(fetcher, to_string(target), request_opts, redirects_left - 1)
+        fetch(request, to_string(target), redirects_left - 1)
     end
+  end
+
+  # The host the build sends names the listener too: `localhost` may not
+  # resolve to the address it listens on, so the request goes there.
+  defp on_listener(target, _source, nil), do: target
+
+  defp on_listener(target, source, listener_origin) do
+    if origin(target) == origin(listener_origin), do: %URI{target | host: source.host}, else: target
+  end
+
+  # What `Plug.SSL` answers: the same path on https, on the endpoint's host
+  defp https_redirect?(source, target) do
+    source.scheme == "http" and target.scheme == "https" and target.path == source.path
   end
 
   # Userinfo counts: a target naming the origin's host as userinfo has another
@@ -527,6 +569,14 @@ defmodule Brando.SSG do
   defp format_failure(url, {:redirect_off_origin, status, %URI{} = target}) do
     target_origin = to_string(%URI{scheme: target.scheme, host: target.host, port: target.port})
     "#{url} (HTTP #{status} redirect to another origin: #{inspect(target_origin)})"
+  end
+
+  defp format_failure(url, {:https_redirect, status, %URI{} = target}) do
+    target_origin = to_string(%URI{scheme: target.scheme, host: target.host, port: target.port})
+
+    "#{url} (HTTP #{status} redirect to #{inspect(target_origin)}: the endpoint's `force_ssl` " <>
+      "redirects the build's requests. Exclude the host `localhost` (its `:exclude`), or add " <>
+      "`rewrite_on: [:x_forwarded_proto]` with an `https` endpoint URL)"
   end
 
   defp format_failure(url, reason), do: "#{url} (#{inspect(reason)})"
