@@ -90,7 +90,7 @@ defmodule Brando.Router do
   """
   defmacro mcp_routes do
     quote do
-      @doc false
+      @doc "Whether this router mounts `Brando.Router.mcp_routes/0`."
       def __brando_mcp_routes__, do: true
 
       mcp_sandbox_hooks =
@@ -154,8 +154,10 @@ defmodule Brando.Router do
 
       @brando_admin_path Phoenix.Router.scoped_path(__MODULE__, unquote(path))
 
-      @doc false
-      # The admin's complete path, with that of any enclosing scope
+      @doc """
+      The path `Brando.Router.admin_routes/3` mounts the admin on, with that
+      of any enclosing scope.
+      """
       def __brando_admin_path__, do: @brando_admin_path
 
       pipeline :admin do
@@ -325,24 +327,23 @@ defmodule Brando.Router do
     # matches every path makes it unreachable
     match_catch_all =
       quote generated: true do
-        def __match_route_without_admin__(_verb, _path, _host), do: :error
+        defp __match_route_without_admin__(_verb, _path, _host), do: :error
       end
 
     quote do
       unquote(pipes)
 
-      @doc """
-      Matches a route as `__match_route__/3` does, leaving out those
-      `admin_routes/3` and `mcp_routes/0` declare (`BrandoAdmin.AdminHost`).
-      """
       unquote(clauses)
       unquote(match_catch_all)
 
       defoverridable __match_route__: 3
 
-      # On a host that does not serve the admin, the admin's and MCP's routes
-      # are left out of the match (`BrandoAdmin.AdminHost`)
-      @doc false
+      @doc """
+      Matches a route as `Phoenix.Router` does, but on a host that does not
+      serve the admin the routes `Brando.Router.admin_routes/3` and
+      `Brando.Router.mcp_routes/0` declare are left out
+      (`BrandoAdmin.AdminHost.serves_admin_on?/1`).
+      """
       def __match_route__(verb, path, host) do
         if BrandoAdmin.AdminHost.serves_admin_on?(host),
           do: super(verb, path, host),
@@ -374,7 +375,7 @@ defmodule Brando.Router do
     clauses =
       for host <- hosts do
         quote line: route.line do
-          def __match_route_without_admin__(unquote(verb), unquote(path), unquote(host)) do
+          defp __match_route_without_admin__(unquote(verb), unquote(path), unquote(host)) do
             {unquote(route_metadata(route, path_params)),
              fn var!(conn, :conn), %{path_params: var!(path_params, :conn)} -> unquote(prepare) end,
              &(unquote(Macro.var(pipe_name, __MODULE__)) / 1), unquote(dispatch)}

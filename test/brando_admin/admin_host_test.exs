@@ -151,7 +151,10 @@ defmodule BrandoAdmin.AdminHostTest do
     test "Brando.Plug.Markdown sets the admin's path apart on the admin's host only, wherever it is mounted" do
       put_test_env(:router_module, ScopedRouter)
       opts = Brando.Plug.Markdown.init(except: ["/cms/admin", "/api"])
-      markdown = fn host -> Brando.Plug.Markdown.call(Plug.Test.conn(:get, "https://#{host}/cms/admin/notes.md"), opts) end
+
+      markdown = fn host ->
+        Brando.Plug.Markdown.call(Plug.Test.conn(:get, "https://#{host}/cms/admin/notes.md"), opts)
+      end
 
       assert markdown.("beta.test").private[:brando_markdown] == :extension
       refute Map.has_key?(markdown.(@admin_host).private, :brando_markdown)
