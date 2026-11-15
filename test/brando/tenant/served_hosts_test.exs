@@ -37,6 +37,14 @@ defmodule Brando.Tenant.ServedHostsTest do
     def clone_structure(_source_prefix, _target_prefix), do: :ok
   end
 
+  defmodule NotifyingResolver do
+    @moduledoc false
+    def lookup(host) do
+      send(:persistent_term.get({__MODULE__, :pid}), {:looked_up, host})
+      Brando.ServedHostsTestResolver.lookup(host)
+    end
+  end
+
   @moduletag :tmp_dir
 
   setup %{tmp_dir: tmp_dir} do
@@ -82,16 +90,25 @@ defmodule Brando.Tenant.ServedHostsTest do
   # A domain stored before `Environment` checked it, which no changeset sees again
   defp bind_raw(site, key, domain) do
     environment = bind(site, key, nil)
+    set_domain(environment, domain)
+    Cache.warm()
+    ServedHosts.check()
+    environment
+  end
 
+  defp set_domain(environment, domain) do
     Brando.Repo.update_all(
       from(e in Brando.Environments.Environment, where: e.id == ^environment.id),
       [set: [domain: domain]],
       prefix: "public"
     )
+  end
 
-    Cache.warm()
-    ServedHosts.check()
-    environment
+  # As the supervisor restarts it; returns once `init/1` and its continue ran
+  defp restart do
+    :ok = Supervisor.terminate_child(Brando.Supervisor, ServedHosts)
+    {:ok, _pid} = Supervisor.restart_child(Brando.Supervisor, ServedHosts)
+    :sys.get_state(ServedHosts)
   end
 
   defp lines(file), do: file |> File.read!() |> String.split("\n", trim: true)
@@ -436,13 +453,83 @@ defmodule Brando.Tenant.ServedHostsTest do
   end
 
   describe "when it runs" do
-    test "a registry write checks again, and the status is broadcast", %{path: file, site: site} do
-      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+    test "a warm of the tenant cache checks again, and the status is broadcast", %{path: file, site: site} do
       DNS.answer("www.acme.test", [@here])
+      environment = bind(site, "production", nil, true)
+      # Stored without a registry write, so only the warm below can make a check
+      set_domain(environment, "www.acme.test")
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
 
-      bind(site, "production", "www.acme.test", true)
+      Cache.warm()
 
       assert_receive {:served_hosts, %{hosts: %{"www.acme.test" => :served}}}
+      assert File.read!(file) == "www.acme.test\n"
+    end
+
+    test "a restarted process checks when the cache is warm", %{path: file, site: site} do
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+      File.write!(file, "")
+
+      restart()
+
+      assert File.read!(file) == "www.acme.test\n"
+    end
+
+    test "a restarted process with a cold cache leaves the file alone", %{path: file, site: site} do
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+      Cache.clear()
+
+      restart()
+
+      assert File.read!(file) == "www.acme.test\n"
+    end
+
+    test "a waiting host is checked again on the retry timer", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here], retry_interval: 20)
+      bind(site, "production", "www.acme.test", true)
+      assert %{hosts: %{"www.acme.test" => :unresolved}} = ServedHosts.status()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+
+      DNS.answer("www.acme.test", [@here])
+
+      assert_receive {:served_hosts, %{hosts: %{"www.acme.test" => :served}}}
+      assert File.read!(file) == "www.acme.test\n"
+    end
+
+    test "with nothing waiting, a slow check reads the file again and readmits a host it lost",
+         %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here], recheck_interval: 20)
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+      assert %{hosts: %{"www.acme.test" => :served}} = ServedHosts.status()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+
+      # Another node sharing the path wrote its stale list
+      DNS.answer("www.acme.test", [@elsewhere])
+      File.write!(file, "")
+
+      assert_receive {:served_hosts, %{hosts: %{"www.acme.test" => {:waiting, [@elsewhere]}}}}
+    end
+
+    test "the slow check looks nothing up while the file holds every bound host", %{path: file, site: site} do
+      :persistent_term.put({NotifyingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver, recheck_interval: 20)
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+      assert_received {:looked_up, "www.acme.test"}
+
+      pid = Process.whereis(ServedHosts)
+      :erlang.trace(pid, true, [:receive])
+      on_exit(fn -> :erlang.trace(pid, false, [:receive]) end)
+
+      assert_receive {:trace, ^pid, :receive, :tick}
+      assert_receive {:trace, ^pid, :receive, :tick}
+      :sys.get_state(pid)
+
+      refute_received {:looked_up, _host}
       assert File.read!(file) == "www.acme.test\n"
     end
 
