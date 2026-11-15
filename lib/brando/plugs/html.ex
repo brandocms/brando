@@ -194,6 +194,9 @@ defmodule Brando.Plug.HTML do
 
       put_hreflang(conn, {:post_path, [conn, :list]})
 
+  This form keeps the alternates as paths, so `Brando.HTML.alternate_url/1`
+  links stay on the host the visitor is on; `Brando.HTML.render_hreflangs/1`
+  gives the `<link rel="alternate">` tags the site's base URL.
   """
   def put_hreflang(conn, hreflangs) when is_list(hreflangs) do
     full_host_canonical =
@@ -209,7 +212,7 @@ defmodule Brando.Plug.HTML do
 
     full_host_hreflangs =
       Enum.map(Brando.Languages.languages(), fn [value: lang_code, text: _] ->
-        {String.to_existing_atom(lang_code), with_host(Brando.I18n.Helpers.localized_path(lang_code, fun, args))}
+        {String.to_existing_atom(lang_code), Brando.I18n.Helpers.localized_path(lang_code, fun, args)}
       end)
 
     put_private(conn, :brando_hreflangs, [full_host_canonical] ++ full_host_hreflangs)

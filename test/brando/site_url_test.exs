@@ -59,6 +59,8 @@ defmodule Brando.SiteURLTest do
   # rendered, not the endpoint's (the admin's)
   use Brando.ConnCase, async: false
 
+  import Phoenix.LiveViewTest, only: [render_component: 2]
+
   alias Brando.Pages.Page
   alias Brando.Tenant
   alias Brando.Tenant.Registry
@@ -191,6 +193,31 @@ defmodule Brando.SiteURLTest do
                  {:en, "http://staging.acme.test/en/about"},
                  {:no, "http://staging.acme.test/no/om"}
                ]
+      end)
+    end
+
+    test "alternates from a route helper stay paths for a language switcher; the head's alternates get the host" do
+      in_environment("staging", fn ->
+        path = Brando.I18n.Helpers.localized_path("en", :article_path, [Brando.endpoint(), :show, "slug"])
+        assert "/" <> _ = path
+
+        conn =
+          Phoenix.ConnTest.build_conn(:get, path)
+          |> Plug.Conn.assign(:language, "en")
+          |> Brando.Plug.HTML.put_hreflang({:article_path, [Brando.endpoint(), :show, "slug"]})
+
+        assert List.keyfind(conn.private.brando_hreflangs, :en, 0) == {:en, path}
+
+        switcher = render_component(&Brando.HTML.alternate_url/1, conn: conn, language: :en)
+        {:ok, link} = Floki.parse_fragment(switcher)
+        assert Floki.attribute(link, "a", "href") == [path]
+
+        {:ok, head} =
+          render_component(&Brando.HTML.render_hreflangs/1, conn: conn) |> Floki.parse_fragment()
+
+        hrefs = Floki.attribute(head, ~s(link[rel="alternate"][hreflang]), "href")
+        assert hrefs != []
+        assert Enum.all?(hrefs, &(&1 == "http://staging.acme.test" <> path))
       end)
     end
 
