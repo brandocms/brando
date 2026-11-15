@@ -315,6 +315,13 @@ defmodule Brando.Router do
 
     {clauses, {pipes, _known}} = Enum.map_reduce(routes, {[], %{}}, &build_match_without_admin(&1, &2, env))
 
+    # Generated, as Phoenix's own catch-all is: a router ending in a route that
+    # matches every path makes it unreachable
+    match_catch_all =
+      quote generated: true do
+        def __match_route_without_admin__(_verb, _path, _host), do: :error
+      end
+
     quote do
       unquote(pipes)
 
@@ -323,7 +330,7 @@ defmodule Brando.Router do
       `admin_routes/3` and `mcp_routes/0` declare (`BrandoAdmin.AdminHost`).
       """
       unquote(clauses)
-      def __match_route_without_admin__(_verb, _path, _host), do: :error
+      unquote(match_catch_all)
 
       defoverridable __match_route__: 3
 

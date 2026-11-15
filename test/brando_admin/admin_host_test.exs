@@ -227,6 +227,35 @@ defmodule BrandoAdmin.AdminHostTest do
     end
   end
 
+  describe "a router that ends in a route matching every path" do
+    test "compiles without warnings" do
+      for last_route <- [~s(match :*, "/*path", Brando.Test.AdminHostSiteController, :show), ~s(forward "/", Plug.Logger)] do
+        module = "Brando.Test.MatchAllRouter#{System.unique_integer([:positive])}"
+
+        {_modules, diagnostics} =
+          Code.with_diagnostics(fn ->
+            Code.compile_string("""
+            defmodule #{module} do
+              use Phoenix.Router
+              import Brando.Router
+              import Phoenix.LiveView.Router
+
+              admin_routes do
+              end
+
+              mcp_routes()
+
+              #{last_route}
+            end
+            """)
+          end)
+
+        assert {last_route, for(%{severity: :warning, message: message} <- diagnostics, do: message)} ==
+                 {last_route, []}
+      end
+    end
+  end
+
   defmodule ErrorHTML do
     @moduledoc false
     def render("404.html", _assigns), do: "Not found on this site"
