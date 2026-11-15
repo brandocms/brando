@@ -738,19 +738,21 @@ defmodule Brando.Tenant.ServedHostsTest do
     test "a timer that fired while a check was queued does not run a second check", %{path: file, site: site} do
       :persistent_term.put({NotifyingResolver, :pid}, self())
       on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
-      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver, retry_interval: 20)
+      # The default retry interval: no real timer fires during the test
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver)
       # Waits for its DNS, so every check looks it up
       bind(site, "production", "www.acme.test", true)
       assert_received {:looked_up, "www.acme.test"}
 
       pid = Process.whereis(ServedHosts)
-      :sys.suspend(pid)
-      # Lookups of checks the retry timer ran before the suspension
+      %{tick: tick} = :sys.get_state(pid)
+      # Lookups of the check the warm in `bind` asked for, done by now
       flush_lookups()
+      :sys.suspend(pid)
       ServedHosts.registry_changed()
-      # The cast, then the tick of the timer the last check set
-      wait_for_messages(pid, 2)
-      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver)
+      wait_for_messages(pid, 1)
+      # The current timer's tick, queued after the cast
+      send(pid, {:tick, tick})
       :sys.resume(pid)
       :sys.get_state(pid)
 
