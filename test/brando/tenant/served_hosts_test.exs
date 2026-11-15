@@ -416,6 +416,61 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert File.read!(file) == "www.acme.test\n"
     end
 
+    test "a host another node wrote while the lookups ran is kept, and remembered", %{path: file, site: site} do
+      :persistent_term.put({BlockingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({BlockingResolver, :pid}) end)
+      # Bound while their DNS does not resolve yet
+      bind(site, "h", "h.acme.test")
+      bind(site, "k", "k.acme.test")
+      assert File.read!(file) == ""
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: BlockingResolver)
+      DNS.answer("h.acme.test", {:error, :timeout})
+      DNS.answer("k.acme.test", [@here])
+
+      check = Task.async(fn -> ServedHosts.check() end)
+      assert_receive {:looking_up, "h.acme.test", h_lookup}
+      assert_receive {:looking_up, "k.acme.test", k_lookup}
+      # Another node sharing the path admitted it meanwhile
+      File.write!(file, "h.acme.test\n")
+      send(h_lookup, :answer)
+      send(k_lookup, :answer)
+
+      assert %{hosts: %{"h.acme.test" => :served, "k.acme.test" => :served}} = Task.await(check)
+      assert lines(file) == ["h.acme.test", "k.acme.test"]
+
+      # Lost again, while its DNS still fails: it goes back in without a lookup
+      put_test_env(ServedHosts, file: file, addresses: [@here])
+      File.write!(file, "k.acme.test\n")
+      assert %{hosts: %{"h.acme.test" => :served}} = ServedHosts.check()
+      assert lines(file) == ["h.acme.test", "k.acme.test"]
+    end
+
+    test "a file that cannot be read again before the write is left alone and reported",
+         %{path: file, site: site} do
+      :persistent_term.put({BlockingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({BlockingResolver, :pid}) end)
+      bind(site, "k", "k.acme.test")
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: BlockingResolver)
+      DNS.answer("k.acme.test", [@here])
+
+      check = Task.async(fn -> ServedHosts.check() end)
+      assert_receive {:looking_up, "k.acme.test", lookup}
+      File.write!(file, "h.acme.test\n")
+      File.chmod!(file, 0o000)
+      on_exit(fn -> File.chmod(file, 0o644) end)
+
+      log =
+        capture_log(fn ->
+          send(lookup, :answer)
+          assert %{error: error} = Task.await(check)
+          assert error =~ file
+        end)
+
+      assert log =~ "Could not update the served hosts file"
+      File.chmod!(file, 0o644)
+      assert File.read!(file) == "h.acme.test\n"
+    end
+
     test "a write removes temporary files an earlier write left behind, and none of its own",
          %{path: file, tmp_dir: tmp_dir, site: site} do
       leftovers = [".served_hosts.12.tmp", ".served_hosts.Zm9vYmFy.tmp"]

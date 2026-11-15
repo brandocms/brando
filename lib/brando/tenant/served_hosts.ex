@@ -41,7 +41,9 @@ defmodule Brando.Tenant.ServedHosts do
   written. Otherwise every five minutes (`:recheck_interval`): the file is
   read again, as another node sharing the path may have written over it. A
   bound host this process has seen in the file or admitted itself goes back
-  in without a lookup; one it has not is admitted again. That memory is the
+  in without a lookup; one it has not is admitted again. The file is read
+  once more just before it is replaced, and every bound host another node
+  wrote meanwhile stays; when that read fails, the file is left as it is. That memory is the
   process's own, so after a restart a lost host is admitted again too.
   Nothing is looked up while the file holds every bound host. Each node keeps
   its own file.
@@ -179,32 +181,41 @@ defmodule Brando.Tenant.ServedHosts do
   defp check(state, config) do
     file = config[:file]
 
-    case read_file(file) do
-      {:ok, existing, listed} ->
-        bound = Enum.filter(Cache.bound_hosts(), &servable?/1)
-        listed = MapSet.new(listed)
-        # Another node sharing the path may have written over a host this one
-        # admitted: it goes back in without a lookup
-        known = MapSet.union(listed, state.admitted)
-        {kept, candidates} = Enum.split_with(bound, &MapSet.member?(known, &1))
-        {admitted, waiting, addresses} = admit(candidates, config)
-        # The registry may have changed while the lookups ran
-        {still_bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
-        still_bound = MapSet.new(still_bound)
-        hosts = (kept ++ admitted) |> Enum.filter(&MapSet.member?(still_bound, &1)) |> Enum.sort()
-        waiting = Map.filter(waiting, fn {host, _state} -> MapSet.member?(still_bound, host) end)
+    with {:ok, _existing, listed} <- read_file(file),
+         bound = Enum.filter(Cache.bound_hosts(), &servable?/1),
+         # Another node sharing the path may have written over a host this one
+         # admitted: it goes back in without a lookup
+         known = MapSet.union(MapSet.new(listed), state.admitted),
+         {kept, candidates} = Enum.split_with(bound, &MapSet.member?(known, &1)),
+         {admitted, waiting, addresses} = admit(candidates, config),
+         # Read again: another node sharing the path may have written while the
+         # lookups ran, and what it admitted stays
+         {:ok, existing, listed} <- read_file(file) do
+      # The registry may have changed while the lookups ran
+      {still_bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
+      still_bound = MapSet.new(still_bound)
+      listed = MapSet.new(listed)
 
-        {written?, error} = write(file, existing, hosts)
-        state = %{report(state, file, error) | admitted: MapSet.new(hosts)}
+      hosts =
+        (kept ++ admitted ++ Enum.to_list(listed))
+        |> Enum.filter(&MapSet.member?(still_bound, &1))
+        |> Enum.uniq()
+        |> Enum.sort()
 
-        statuses =
-          Map.new(hosts, &{&1, if(written? or MapSet.member?(listed, &1), do: :served, else: :not_written)})
-          |> Map.merge(waiting)
-          |> Map.merge(Map.new(invalid, &{&1, :invalid}))
+      waiting = Map.filter(waiting, fn {host, _state} -> MapSet.member?(still_bound, host) end)
+      waiting = Map.drop(waiting, hosts)
 
-        publish(%{file: file, hosts: statuses, addresses: Enum.map(addresses, &format_address/1), error: error})
-        schedule(state, map_size(waiting) > 0 or error != nil)
+      {written?, error} = write(file, existing, hosts)
+      state = %{report(state, file, error) | admitted: MapSet.new(hosts)}
 
+      statuses =
+        Map.new(hosts, &{&1, if(written? or MapSet.member?(listed, &1), do: :served, else: :not_written)})
+        |> Map.merge(waiting)
+        |> Map.merge(Map.new(invalid, &{&1, :invalid}))
+
+      publish(%{file: file, hosts: statuses, addresses: Enum.map(addresses, &format_address/1), error: error})
+      schedule(state, map_size(waiting) > 0 or error != nil)
+    else
       {:error, reason} ->
         error = "#{file}: #{:file.format_error(reason)}"
         state = report(state, file, error)
