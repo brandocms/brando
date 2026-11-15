@@ -61,6 +61,9 @@ defmodule Brando.Supervisor do
       # Refreshes this node's site and environment caches when another node
       # writes them
       Brando.CacheSync,
+      # Keeps the file of hosts the reverse proxy serves; idle without a file
+      # configured (`Brando.Tenant.ServedHosts`)
+      Brando.Tenant.ServedHosts,
       {Oban, oban_config()}
     ]
 

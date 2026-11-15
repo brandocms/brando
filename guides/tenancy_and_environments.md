@@ -671,6 +671,60 @@ live moves the site's host to it (see
 [Switch live, rollback, and delete](#switch-live-rollback-and-delete)), which
 anyone who may switch live does: the host stays within the site.
 
+### Hosts and the reverse proxy
+
+Binding a host makes Brando answer on it, but the reverse proxy in front of
+the installation (Traefik, nginx) needs a route and a certificate for it too.
+Brando does not write proxy configuration. It keeps a plain file of the hosts
+the installation serves, and whatever deploys the installation turns that file
+into routes:
+
+```elixir
+# config/runtime.exs
+config :brando, Brando.Tenant.ServedHosts,
+  # Unset: nothing is written, and the admin shows nothing about it
+  file: "/srv/my_app/shared/served_hosts",
+  # Optional. Default: the addresses the endpoint's host resolves to
+  addresses: ["203.0.113.10", "2001:db8::10"],
+  # Optional. :always admits every bound host without the DNS check,
+  # for an installation behind a CDN or another proxy
+  admit: :dns
+```
+
+The file holds every host the registry binds (each environment's domain, on
+every site, suspended and archived ones included) once it is admitted. A host
+is admitted when it resolves and every address it resolves to, IPv4 and IPv6,
+is one of this server's: a proxy asks for a certificate as soon as it gets a
+host, and a request for a host whose DNS still points at the old server fails
+and counts against the certificate authority's limits. So a launch needs no
+step on the server: change the DNS record, and within a minute the host is in
+the file and the proxy can certify it. Once in the file, a host stays until
+no environment binds it; a failed lookup later never removes it. The
+installation's own hosts (the endpoint's, the static, media and CDN hosts) are
+never in it: the deploy tool routes those itself.
+
+Brando checks at boot, after every registry write (on every node, as
+[Several nodes](#several-nodes) describes), and once a minute while a bound
+host waits for its DNS. Nothing is looked up while no host waits. Each node
+keeps its own file, and nothing is stored in the database: on a new server the
+file starts empty, and each host is admitted there when its DNS arrives.
+
+The **Environments** screen shows each bound host's state beside its domain:
+**Served** when it is in the file, **Waiting for DNS** with what the host
+resolves to now and this server's addresses, or **Does not resolve**. A file
+that could not be written is shown above the list, logged once, and tried
+again every minute; the application keeps running.
+
+The file's contract, for anyone writing their own consumer:
+
+- One host per line, lowercase, sorted, each line ending in a newline. No
+  comments, ports or schemes. An empty file means no host is admitted.
+- Replaced whole: written to a temporary file in the same directory and
+  renamed over the old one, so a reader never sees half a file. Watch the
+  directory, or the file by name rather than by inode.
+- Rewritten only when its content changes. A line that is not a bound host,
+  added by hand, is dropped on the next write.
+
 <!-- usage-rules:start topic="tenancy" -->
 
 `Brando.Repo` applies the current prefix to reads, writes, preloads, bulk

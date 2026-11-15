@@ -24,6 +24,8 @@ defmodule Brando.Tenant.Cache do
     # One at a time on this node, read and publication together: a warm that
     # read the registry before another must not publish after it
     :global.trans({{__MODULE__, :warm}, self()}, &do_warm/0, [node()], :infinity)
+    # Every warm, on every node, is a registry refresh the served hosts file follows
+    Brando.Tenant.ServedHosts.registry_changed()
   end
 
   defp do_warm do
@@ -89,6 +91,34 @@ defmodule Brando.Tenant.Cache do
   def get_live_env(site_key) do
     :persistent_term.get({:brando, :live_env, site_key}, nil)
   end
+
+  @doc """
+  Every host the registry binds, sorted: each environment's `domain`, for
+  every site in the registry, suspended and archived ones included, since
+  Brando still answers for them. The installation's own hosts
+  (`Brando.Tenant.InstallationHosts`) are left out, and so is a stored
+  spelling with a trailing dot, which no lookup answers.
+
+  This is the one list of bound hosts: a host an environment answers on
+  belongs here, and `Brando.Tenant.ServedHosts` hands it to the reverse proxy.
+  Read from this node's cache, so call it after `warm/0`.
+  """
+  @spec bound_hosts() :: [String.t()]
+  def bound_hosts do
+    installation_hosts = MapSet.new(Brando.Tenant.InstallationHosts.list())
+
+    list_sites()
+    |> Enum.flat_map(fn %Site{environments: environments} -> Enum.map(environments, & &1.domain) end)
+    |> Enum.filter(&routable_domain?/1)
+    |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
+    |> Enum.reject(&(&1 == "" or MapSet.member?(installation_hosts, &1)))
+    |> Enum.uniq()
+    |> Enum.sort()
+  end
+
+  @doc "Whether this node's cache holds the registry: `warm/0` has run since the last `clear/0` with tenancy on."
+  @spec warmed?() :: boolean()
+  def warmed?, do: :persistent_term.get(@cache_keys_key, nil) != nil
 
   defp cache_sites(sites) do
     Enum.each(sites, &Brando.Languages.warn_unconfigured/1)

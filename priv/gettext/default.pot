@@ -3520,6 +3520,11 @@ msgstr ""
 msgid "Checked the module “%{module}”"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Checking"
+msgstr ""
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Checking copy…"
@@ -5955,6 +5960,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Document unchanged"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Does not resolve"
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
@@ -11434,6 +11444,11 @@ msgstr ""
 msgid "Not in any entry"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not in the file yet"
+msgstr ""
+
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "Not in the generated sitemap. Check the sitemap module, or regenerate it."
@@ -12856,6 +12871,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "Please wait…"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Point it at %{addresses}."
 msgstr ""
 
 #: lib/brando_admin/components/form/draft_recovery.ex
@@ -14290,6 +14310,11 @@ msgstr ""
 #: lib/brando_admin/components/form/notes_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "Resolved by %{name}"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resolves to %{resolved}; this server is %{addresses}."
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -15729,6 +15754,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Serve the site's build on %{environment} again? Requests switch immediately."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served"
 msgstr ""
 
 #: lib/brando_admin/components/form/meta_previews.ex
@@ -17803,6 +17833,11 @@ msgstr ""
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "The selected text changed. Try again with the current text."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The served hosts file could not be written, so the reverse proxy has not heard of new hosts: %{error}"
 msgstr ""
 
 #: lib/brando_admin/components/form/video_drawer.ex
@@ -20002,6 +20037,11 @@ msgstr ""
 msgid "Visitors per entry, in Content SEO. A developer sets it up in the site's configuration."
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for DNS"
+msgstr ""
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Waiting for a %{language} version of %{entries}. Until then, this block links to the %{source} one. Once it is translated, the link moves over by itself."
@@ -21611,6 +21651,7 @@ msgid "undeleted"
 msgstr ""
 
 #: lib/brando_admin/components/form/notes_drawer.ex
+#: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "unknown"
 msgstr ""

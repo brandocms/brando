@@ -133,10 +133,11 @@ config :brando, Oban,
   repo: BrandoIntegration.Repo,
   testing: :inline
 
-# Webhook URLs and deploy hosts are looked up in a stub, not real DNS
+# Webhook URLs, deploy hosts and served hosts are looked up in a stub, not real DNS
 # (test/support): a made-up host took seconds to fail on some resolvers.
 config :brando, Brando.Webhooks, resolver: {Brando.WebhookTestResolver, :resolve}
 config :brando, Brando.Sites.DeployConfig, resolver: &Brando.WebhookTestResolver.resolve/2
+config :brando, Brando.Tenant.ServedHosts, resolver: Brando.ServedHostsTestResolver
 
 # Jobs that tests give up on are not notified as failed jobs, unless a
 # notification test turns it on.

@@ -705,4 +705,72 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       {:ok, _} = Migration.run()
     end
   end
+
+  describe "served hosts" do
+    @describetag :tmp_dir
+
+    setup %{site: site, tmp_dir: tmp_dir} do
+      on_exit(&Brando.ServedHostsTestResolver.reset/0)
+      put_test_env(Brando.Tenant.ServedHosts, file: Path.join(tmp_dir, "served_hosts"), addresses: ["203.0.113.10"])
+
+      envs =
+        for {key, host} <- [served: "www.acme.test", away: "away.acme.test", missing: "missing.acme.test"], into: %{} do
+          {:ok, environment} =
+            Environments.create_environment(site, %{name: to_string(key), key: to_string(key), domain: host},
+              creator: :system
+            )
+
+          {key, environment}
+        end
+
+      Brando.ServedHostsTestResolver.answer("www.acme.test", ["203.0.113.10"])
+      Brando.ServedHostsTestResolver.answer("away.acme.test", ["198.51.100.7"])
+      Brando.Tenant.ServedHosts.check()
+      envs
+    end
+
+    test "each bound host shows where it stands, and changes without a reload", %{
+      conn: conn,
+      served: served,
+      away: away,
+      missing: missing,
+      production: production
+    } do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      assert view |> element("#environment-host-status-#{served.id}") |> render() =~ "Served"
+
+      away_status = view |> element("#environment-host-status-#{away.id}") |> render()
+      assert away_status =~ "Waiting for DNS"
+      assert away_status =~ "198.51.100.7"
+      assert away_status =~ "203.0.113.10"
+
+      assert view |> element("#environment-host-status-#{missing.id}") |> render() =~ "Does not resolve"
+      refute has_element?(view, "#environment-host-status-#{production.id}")
+
+      Brando.ServedHostsTestResolver.answer("away.acme.test", ["203.0.113.10"])
+      Brando.Tenant.ServedHosts.check()
+
+      assert view |> element("#environment-host-status-#{away.id}") |> render() =~ "Served"
+    end
+
+    test "a file that cannot be written is shown", %{conn: conn, tmp_dir: tmp_dir} do
+      file = Path.join([tmp_dir, "missing", "served_hosts"])
+      put_test_env(Brando.Tenant.ServedHosts, file: file, admit: :always)
+      ExUnit.CaptureLog.capture_log(fn -> Brando.Tenant.ServedHosts.check() end)
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      assert view |> element(".environment-served-hosts-error") |> render() =~ file
+    end
+
+    test "with the feature off, nothing is shown", %{conn: conn, served: served} do
+      put_test_env(Brando.Tenant.ServedHosts, [])
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      refute has_element?(view, "#environment-host-status-#{served.id}")
+      refute has_element?(view, ".environment-served-hosts-error")
+    end
+  end
 end

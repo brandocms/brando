@@ -24,6 +24,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   alias Brando.Tenant
   alias Brando.Tenant.Access
   alias Brando.Tenant.Registry
+  alias Brando.Tenant.ServedHosts
   alias Brando.Worker.EnvironmentCopy
   alias Brando.Worker.EnvironmentSetLive
   alias BrandoAdmin.Components.Content
@@ -43,6 +44,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         |> assign(:tenancy_enabled?, Tenant.enabled?())
         |> assign(:default_scheduled_at, default_scheduled_at())
         |> assign(:restoring, nil)
+        |> assign_served_hosts()
         |> refresh_data()
 
       subscribe_to_environments(socket.assigns.site)
@@ -112,6 +114,20 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
             <span>{gettext("Only a superuser can change the host an environment answers on.")}</span>
           </div>
 
+          <div
+            :if={@served_hosts_enabled? && @served_hosts.error}
+            class="alert danger environment-served-hosts-error"
+            role="alert"
+          >
+            <.icon name="triangle-alert" />
+            <span>
+              {gettext(
+                "The served hosts file could not be written, so the reverse proxy has not heard of new hosts: %{error}",
+                error: @served_hosts.error
+              )}
+            </span>
+          </div>
+
           <div class="environment-table-wrap">
             <table>
               <thead>
@@ -149,6 +165,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                         aria-label={gettext("Domain for %{name}", name: environment.name)}
                       />
                     </form>
+                    <.served_host
+                      :if={@served_hosts_enabled? && environment.domain}
+                      id={"environment-host-status-#{environment.id}"}
+                      state={Map.get(@served_hosts.hosts, environment.domain)}
+                      addresses={@served_hosts.addresses}
+                    />
                   </td>
                   <td>
                     <span class={["environment-state", environment.live && "live"]}>
@@ -519,7 +541,47 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     """
   end
 
+  attr :id, :string, required: true
+  attr :state, :any, required: true
+  attr :addresses, :list, required: true
+
+  # Where a bound host stands with the reverse proxy (`Brando.Tenant.ServedHosts`)
+  defp served_host(assigns) do
+    ~H"""
+    <div id={@id} class="environment-host-status">
+      <%= case @state do %>
+        <% :served -> %>
+          <span class="badge badge--success">{gettext("Served")}</span>
+        <% :not_written -> %>
+          <span class="badge badge--error">{gettext("Not in the file yet")}</span>
+        <% {:waiting, resolved} -> %>
+          <span class="badge badge--attention">{gettext("Waiting for DNS")}</span>
+          <span class="environment-host-status__detail">
+            {gettext("Resolves to %{resolved}; this server is %{addresses}.",
+              resolved: Enum.join(resolved, ", "),
+              addresses: server_addresses(@addresses)
+            )}
+          </span>
+        <% :unresolved -> %>
+          <span class="badge badge--attention">{gettext("Does not resolve")}</span>
+          <span class="environment-host-status__detail">
+            {gettext("Point it at %{addresses}.", addresses: server_addresses(@addresses))}
+          </span>
+        <% nil -> %>
+          <span class="badge">{gettext("Checking")}</span>
+      <% end %>
+    </div>
+    """
+  end
+
+  defp server_addresses([]), do: gettext("unknown")
+  defp server_addresses(addresses), do: Enum.join(addresses, ", ")
+
   @impl Phoenix.LiveView
+  def handle_info({:served_hosts, status}, socket) do
+    {:noreply, assign(socket, :served_hosts, status)}
+  end
+
   def handle_info({:environments_updated, _site_id}, socket) do
     {:noreply, refresh_data(socket)}
   end
@@ -724,6 +786,17 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       :error -> {:noreply, notify_error(socket, gettext("Invalid archive retention count."))}
       {:error, reason} -> {:noreply, notify_error(socket, operation_error(reason))}
     end
+  end
+
+  # The process that keeps the file says when a host's state changes; the
+  # screen never looks a host up itself
+  defp assign_served_hosts(socket) do
+    enabled? = Tenant.mode() == :multi and ServedHosts.enabled?()
+    if enabled?, do: Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+
+    socket
+    |> assign(:served_hosts_enabled?, enabled?)
+    |> assign(:served_hosts, ServedHosts.status())
   end
 
   # Scheduled copies and live switches complete in Oban workers, so the screen

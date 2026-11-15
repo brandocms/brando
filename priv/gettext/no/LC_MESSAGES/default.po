@@ -3522,6 +3522,11 @@ msgstr "Sjekket feltene for %{type}"
 msgid "Checked the module “%{module}”"
 msgstr "Sjekket modulen «%{module}»"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Checking"
+msgstr "Sjekker"
+
 #: lib/brando_admin/components/form/draft_recovery.ex
 #, elixir-autogen, elixir-format
 msgid "Checking copy…"
@@ -5958,6 +5963,11 @@ msgstr "Henting av dokument feilet"
 #, elixir-autogen, elixir-format
 msgid "Document unchanged"
 msgstr "Dokument uendret"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Does not resolve"
+msgstr "Finnes ikke i DNS"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
@@ -11436,6 +11446,11 @@ msgstr "Ikke importert"
 msgid "Not in any entry"
 msgstr "Ikke i noen oppføring"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not in the file yet"
+msgstr "Ikke i filen ennå"
+
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "Not in the generated sitemap. Check the sitemap module, or regenerate it."
@@ -12859,6 +12874,11 @@ msgstr "Prøv igjen om litt, eller gå tilbake <a href=\"/\">til hovedsiden</a>"
 #, elixir-autogen, elixir-format
 msgid "Please wait…"
 msgstr "Vennligst vent…"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Point it at %{addresses}."
+msgstr "Pek den til %{addresses}."
 
 #: lib/brando_admin/components/form/draft_recovery.ex
 #: lib/brando_admin/live/sites/seo_live.ex
@@ -14293,6 +14313,11 @@ msgstr "Løste et notat"
 #, elixir-autogen, elixir-format
 msgid "Resolved by %{name}"
 msgstr "Løst av %{name}"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Resolves to %{resolved}; this server is %{addresses}."
+msgstr "Peker til %{resolved}; denne serveren er %{addresses}."
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
@@ -15732,6 +15757,11 @@ msgstr "Rekkefølge oppdatert"
 #, elixir-autogen, elixir-format
 msgid "Serve the site's build on %{environment} again? Requests switch immediately."
 msgstr "Servere nettstedets bygg på %{environment} igjen? Forespørslene bytter med en gang."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served"
+msgstr "Betjenes"
 
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
@@ -17808,6 +17838,11 @@ msgstr "Den valgte oppføringen er ikke tilgjengelig."
 #, elixir-autogen, elixir-format
 msgid "The selected text changed. Try again with the current text."
 msgstr "Den valgte teksten ble endret. Prøv igjen med den nye teksten."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The served hosts file could not be written, so the reverse proxy has not heard of new hosts: %{error}"
+msgstr "Filen over verter som betjenes kunne ikke skrives, så den omvendte proxyen har ikke fått vite om nye verter: %{error}"
 
 #: lib/brando_admin/components/form/video_drawer.ex
 #, elixir-autogen, elixir-format
@@ -20006,6 +20041,11 @@ msgstr "Besøkende per oppføring, i innholds-SEO."
 msgid "Visitors per entry, in Content SEO. A developer sets it up in the site's configuration."
 msgstr "Besøkende per oppføring, i innholds-SEO. En utvikler setter det opp i nettstedets konfigurasjon."
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Waiting for DNS"
+msgstr "Venter på DNS"
+
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Waiting for a %{language} version of %{entries}. Until then, this block links to the %{source} one. Once it is translated, the link moves over by itself."
@@ -21615,6 +21655,7 @@ msgid "undeleted"
 msgstr "gjenopprettet"
 
 #: lib/brando_admin/components/form/notes_drawer.ex
+#: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "unknown"
 msgstr "ukjent"
