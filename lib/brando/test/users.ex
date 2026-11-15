@@ -108,9 +108,10 @@ defmodule Brando.Test.Users do
   it returns a sent conn that `live/2` cannot use. The admin reads the
   session, and this writes what logging in writes.
 
-  A conn on Plug's default test host (`www.example.com`) moves to the
-  endpoint's host, where the admin answers with `tenancy_mode: :multi`
-  (`BrandoAdmin.AdminHost`); a host the test chose is kept.
+  With `tenancy_mode: :multi`, a conn on Plug's default test host
+  (`www.example.com`) moves to the endpoint's host, where the admin answers
+  (`BrandoAdmin.AdminHost`); a host the test chose is kept, and so is every
+  host in the other modes.
   """
   @spec log_in_user(Plug.Conn.t(), User.t()) :: Plug.Conn.t()
   def log_in_user(conn, %User{} = user) do
@@ -124,9 +125,9 @@ defmodule Brando.Test.Users do
   end
 
   defp on_admin_host(%Plug.Conn{host: "www.example.com"} = conn) do
-    case BrandoAdmin.AdminHost.endpoint_host() do
-      nil -> conn
-      host -> %{conn | host: host}
+    case Brando.Tenant.mode() == :multi && BrandoAdmin.AdminHost.endpoint_host() do
+      host when is_binary(host) -> %{conn | host: host}
+      _none -> conn
     end
   end
 
