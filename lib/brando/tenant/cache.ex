@@ -103,11 +103,14 @@ defmodule Brando.Tenant.Cache do
   end
 
   @doc """
-  Every host the registry binds, sorted: each environment's `domain`, for
-  every site in the registry, suspended and archived ones included, since
-  Brando still answers for them. The installation's own hosts
+  Every host the registry binds, sorted and listed once: each environment's
+  `domain` and its `redirect_hosts`, for every site in the registry,
+  suspended and archived ones included, since Brando still answers for them.
+  A redirect host answers with a redirect to its domain, and needs a route
+  and a certificate as the domain does. The installation's own hosts
   (`Brando.Tenant.InstallationHosts`) are left out, and so is a stored
-  spelling with a trailing dot, which no lookup answers.
+  spelling with a trailing dot, which no lookup answers, along with the
+  redirect hosts of such a domain.
 
   This is the one list of bound hosts: a host an environment answers on
   belongs here, and `Brando.Tenant.ServedHosts` hands it to the reverse proxy.
@@ -118,12 +121,17 @@ defmodule Brando.Tenant.Cache do
     installation_hosts = MapSet.new(Brando.Tenant.InstallationHosts.list())
 
     list_sites()
-    |> Enum.flat_map(fn %Site{environments: environments} -> Enum.map(environments, & &1.domain) end)
+    |> Enum.flat_map(fn %Site{environments: environments} -> Enum.flat_map(environments, &environment_hosts/1) end)
     |> Enum.filter(&routable_domain?/1)
     |> Enum.map(&Brando.Environments.Environment.normalize_host/1)
     |> Enum.reject(&(is_nil(&1) or MapSet.member?(installation_hosts, &1)))
     |> Enum.uniq()
     |> Enum.sort()
+  end
+
+  # Redirect hosts redirect only to a domain that answers
+  defp environment_hosts(%{domain: domain, redirect_hosts: redirect_hosts}) do
+    if routable_domain?(domain), do: [domain | redirect_hosts || []], else: [domain]
   end
 
   @doc "Whether this node's cache holds the registry: `warm/0` has run since the last `clear/0` with tenancy on."
