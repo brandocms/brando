@@ -565,6 +565,23 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert File.read!(file) == "www.acme.test\n"
     end
 
+    test "a timer that fires while the cache is cold leaves the file alone", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here], recheck_interval: 20)
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+      assert lines(file) == ["www.acme.test"]
+
+      pid = Process.whereis(ServedHosts)
+      Cache.clear()
+      :erlang.trace(pid, true, [:receive])
+      on_exit(fn -> :erlang.trace(pid, false, [:receive]) end)
+
+      assert_receive {:trace, ^pid, :receive, {:tick, _}}
+      :sys.get_state(pid)
+
+      assert File.read!(file) == "www.acme.test\n"
+    end
+
     test "a waiting host is checked again on the retry timer", %{path: file, site: site} do
       put_test_env(ServedHosts, file: file, addresses: [@here], retry_interval: 20)
       bind(site, "production", "www.acme.test", true)
