@@ -701,9 +701,11 @@ step on the server: change the DNS record, and within a minute the host is in
 the file and the proxy can certify it. Once in the file, a host stays until
 no environment binds it; a failed lookup later never removes it. The
 installation's own hosts (the endpoint's, the static, media and CDN hosts) are
-never in it: the deploy tool routes those itself. Nor is a domain stored
-before Brando checked domains that is not a valid host name, has no dot, or is
-an IP address: the file holds host names only, whatever `admit` says.
+never in it: the deploy tool routes those itself. Nor is a bound domain that
+is not a full host name such as `www.example.com`: one without a dot
+(`intranet`), an IP address, or a value stored before Brando checked domains.
+Brando answers on such a host, but the file holds full host names only,
+whatever `admit` says.
 
 Brando checks at boot, after every registry write (on every node, as
 [Several nodes](#several-nodes) describes), once a minute while a bound host
@@ -718,7 +720,7 @@ and each host is admitted there when its DNS arrives.
 The **Environments** screen shows each bound host's state beside its domain:
 **Served** when it is in the file, **Waiting for DNS** with what the host
 resolves to now and this server's addresses, **Does not resolve**, or **Not a
-valid host name** for a stored domain the file refuses. A file that could not
+full host name** for a bound domain the file leaves out. A file that could not
 be written is shown above the list (with the reason to superusers only),
 logged once, and tried again every minute; the application keeps running.
 

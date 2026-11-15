@@ -559,9 +559,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         <% :not_written -> %>
           <span class="badge badge--error">{gettext("Not in the file yet")}</span>
         <% :invalid -> %>
-          <span class="badge badge--error">{gettext("Not a valid host name")}</span>
+          <span class="badge badge--error">{gettext("Not a full host name")}</span>
           <span class="environment-host-status__detail">
-            {gettext("The reverse proxy is not told about it until the domain is corrected.")}
+            {gettext(
+              "Brando answers on it, but the reverse proxy is only told about full host names such as www.example.com, not single names or addresses."
+            )}
           </span>
         <% {:waiting, resolved} -> %>
           <span class="badge badge--attention">{gettext("Waiting for DNS")}</span>

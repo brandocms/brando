@@ -22,13 +22,13 @@ defmodule Brando.Tenant.ServedHosts do
   ## Which hosts
 
   Every host the registry binds (`Brando.Tenant.Cache.bound_hosts/0`) that is a
-  valid host name (`Brando.Environments.Environment.valid_host?/1`) with a dot
-  and not an IP address; a domain stored before Brando checked it may be
-  neither, and is never written. A bound
-  host that is not in the file yet is admitted when it resolves, and every
-  address it resolves to, IPv4 and IPv6, is one of this server's: a proxy
-  asks for a certificate as soon as it gets a host, and a host whose DNS still
-  points elsewhere fails that request. Once in the file, a host stays until no
+  full host name: valid (`Brando.Environments.Environment.valid_host?/1`), with
+  a dot, and not an IP address. A bound domain without a dot (`intranet`), an
+  address, or a domain stored before Brando checked it is still answered on,
+  but never written. A bound host that is not in the file yet is admitted
+  when it resolves, and every address it resolves to, IPv4 and IPv6, is one
+  of this server's: a proxy asks for a certificate as soon as it gets a host,
+  and a host whose DNS still points elsewhere fails that request. Once in the file, a host stays until no
   environment binds it; a failed lookup never removes one. The file is the
   state: nothing is stored in the database, and on a new server each host is
   admitted again when its DNS arrives there.
@@ -80,7 +80,7 @@ defmodule Brando.Tenant.ServedHosts do
   Where a bound host stands: in the file (`:served`), admitted but the file
   could not be written (`:not_written`), resolving to addresses that are not
   all this server's (`{:waiting, addresses}`), not resolving, or never written
-  because the stored value is not a valid host name (`:invalid`).
+  because it is not a full host name (`:invalid`).
   """
   @type host_state :: :served | :not_written | {:waiting, [String.t()]} | :unresolved | :invalid
 

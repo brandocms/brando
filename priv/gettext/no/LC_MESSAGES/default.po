@@ -2965,6 +2965,11 @@ msgstr "Grenreferanse"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
+msgid "Brando answers on it, but the reverse proxy is only told about full host names such as www.example.com, not single names or addresses."
+msgstr "Brando svarer på den, men den omvendte proxyen får bare vite om fulle vertsnavn som www.example.com, ikke enkeltnavn eller adresser."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
 msgid "Brando cannot find the migrations directory %{path}, so it cannot tell whether this archive is up to date. Nothing was restored."
 msgstr "Brando finner ikke migreringsmappen %{path}, og kan derfor ikke se om dette arkivet er oppdatert. Ingenting ble gjenopprettet."
 
@@ -11389,16 +11394,16 @@ msgstr "Ingen å vise akkurat nå."
 msgid "None. Nothing is written until a crawler is blocked or a training preference is chosen."
 msgstr "Ingen. Ingenting skrives før en robot blokkeres eller en preferanse for trening er valgt."
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not a full host name"
+msgstr "Ikke et fullt vertsnavn"
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not a valid HTTP response"
 msgstr "Ikke et gyldig HTTP-svar"
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
-msgid "Not a valid host name"
-msgstr "Ikke et gyldig vertsnavn"
 
 #: lib/brando_web/controllers/error_html/406.html.heex
 #, elixir-autogen, elixir-format
@@ -17773,11 +17778,6 @@ msgstr "Mottakeren er inaktiv eller kan ikke lese oppføringen"
 #, elixir-autogen, elixir-format
 msgid "The reset link could not be sent."
 msgstr "Lenken for nytt passord kunne ikke sendes."
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
-msgid "The reverse proxy is not told about it until the domain is corrected."
-msgstr "Den omvendte proxyen får ikke vite om den før domenet er rettet."
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format

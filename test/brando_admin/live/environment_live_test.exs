@@ -801,8 +801,25 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       {:ok, view, _html} = live(conn, "/admin/config/environments")
 
       status = view |> element("#environment-host-status-#{served.id}") |> render()
-      assert status =~ "Not a valid host name"
+      assert status =~ "Not a full host name"
       refute status =~ "Served"
+    end
+
+    test "a single-label host or an address says Brando answers on it but the reverse proxy is not told",
+         %{conn: conn, served: served, away: away} do
+      {:ok, _} = Registry.update_environment(served, %{domain: "intranet"}, actor: :system)
+      {:ok, _} = Registry.update_environment(away, %{domain: "203.0.113.20"}, actor: :system)
+      Brando.Tenant.ServedHosts.check()
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      for environment <- [served, away] do
+        status = view |> element("#environment-host-status-#{environment.id}") |> render()
+        assert status =~ "Not a full host name"
+        assert status =~ "Brando answers on it"
+        assert status =~ "www.example.com"
+        refute status =~ "corrected"
+      end
     end
 
     test "a file that cannot be written is shown", %{conn: conn, tmp_dir: tmp_dir} do

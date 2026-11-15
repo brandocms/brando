@@ -2963,6 +2963,11 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
+msgid "Brando answers on it, but the reverse proxy is only told about full host names such as www.example.com, not single names or addresses."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
 msgid "Brando cannot find the migrations directory %{path}, so it cannot tell whether this archive is up to date. Nothing was restored."
 msgstr ""
 
@@ -11387,15 +11392,15 @@ msgstr ""
 msgid "None. Nothing is written until a crawler is blocked or a training preference is chosen."
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Not a full host name"
+msgstr ""
+
 #: lib/brando_admin/live/sites/notifications_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-autogen, elixir-format
 msgid "Not a valid HTTP response"
-msgstr ""
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
-msgid "Not a valid host name"
 msgstr ""
 
 #: lib/brando_web/controllers/error_html/406.html.heex
@@ -17768,11 +17773,6 @@ msgstr ""
 #: lib/brando_admin/live/users/user_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "The reset link could not be sent."
-msgstr ""
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
-msgid "The reverse proxy is not told about it until the domain is corrected."
 msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
