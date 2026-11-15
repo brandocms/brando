@@ -37,6 +37,8 @@ defmodule Brando.Worker.SiteLanguageSeed do
       states: [:available, :scheduled, :executing, :retryable]
     ]
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Sites.Site
   alias Brando.Tenant.Job, as: TenantJob
   alias Brando.Tenant.Lock
@@ -144,11 +146,33 @@ defmodule Brando.Worker.SiteLanguageSeed do
 
   @doc """
   Whether `site` is being provisioned, or one of its environments copied,
-  switched live or deleted, now: a seeding would wait for it.
+  switched live or deleted, now: a seeding would wait for it. A seeding of
+  the site's own holds the same locks while it runs, and does not count: a
+  job queued meanwhile waits its turn by snoozing.
   """
   @spec busy?(Site.t()) :: boolean()
-  def busy?(%Site{} = site),
-    do: Lock.held?(Lock.lifecycle_key(site.key)) or Lock.held?(Lock.environment_operation_key(site.id))
+  def busy?(%Site{} = site) do
+    (Lock.held?(Lock.lifecycle_key(site.key)) or Lock.held?(Lock.environment_operation_key(site.id))) and
+      not seeding?(site)
+  end
+
+  defp seeding?(%Site{environments: environments} = site) when is_list(environments) do
+    prefixes = Enum.map(environments, &Brando.Tenant.prefix(site, &1))
+    worker = inspect(__MODULE__)
+
+    query =
+      from(job in Oban.Job,
+        where:
+          job.worker == ^worker and job.state == "executing" and
+            fragment("?->>'tenant_prefix'", job.args) in ^prefixes,
+        select: true,
+        limit: 1
+      )
+
+    Brando.Repo.one(query, prefix: "public") == true
+  end
+
+  defp seeding?(_site), do: false
 
   # The admin's scope does not decide what the seeder may write, as when the
   # site was provisioned (`Brando.Tenant.Setup`)

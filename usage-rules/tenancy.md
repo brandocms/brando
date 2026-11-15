@@ -119,7 +119,9 @@ six hours, for about two and a half days before it is given up. A failed or
 missing one has a button that seeds it again at once. The job
 does not write into an environment while the site is being provisioned or one
 of its environments copied: it waits for that to finish, and the card offers
-no button meanwhile. Removing a language deletes nothing: its entries stay in
+no button meanwhile. The site's own seeding does not count: while one runs,
+its row says so, and another environment can be seeded again, its job waiting
+its turn. Removing a language deletes nothing: its entries stay in
 each environment, and are used again when the language is added back.
 
 In `:multi`, whatever works for one site uses that site's languages and default

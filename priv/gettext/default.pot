@@ -15407,7 +15407,12 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
-msgid "Seeding %{language} in %{environment}…"
+msgid "Seeding %{language} in %{environment} is queued."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Seeding %{language} in %{environment} now…"
 msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex

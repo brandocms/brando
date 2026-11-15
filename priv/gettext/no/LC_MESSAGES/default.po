@@ -15409,8 +15409,13 @@ msgstr "Oppretting av startinnhold på %{language} i %{environment} feilet: %{er
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
-msgid "Seeding %{language} in %{environment}…"
-msgstr "Oppretter startinnhold på %{language} i %{environment}…"
+msgid "Seeding %{language} in %{environment} is queued."
+msgstr "Oppretting av startinnhold på %{language} i %{environment} står i kø."
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Seeding %{language} in %{environment} now…"
+msgstr "Oppretter startinnhold på %{language} i %{environment} nå…"
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format

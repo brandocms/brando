@@ -644,8 +644,15 @@ defmodule BrandoAdmin.Sites.SiteLive do
         error: last_error(job)
       )
 
+  defp seeding_status(%{job: %Oban.Job{state: "executing"}} = row),
+    do: gettext("Seeding %{language} in %{environment} now…", environment: row.environment.name, language: row.language)
+
   defp seeding_status(row),
-    do: gettext("Seeding %{language} in %{environment}…", environment: row.environment.name, language: row.language)
+    do:
+      gettext("Seeding %{language} in %{environment} is queued.",
+        environment: row.environment.name,
+        language: row.language
+      )
 
   defp last_error(%Oban.Job{errors: errors}) do
     case Enum.max_by(errors, & &1["attempt"], fn -> nil end) do

@@ -1,6 +1,8 @@
 defmodule BrandoAdmin.Sites.SiteLiveTest do
   use Brando.LiveCase
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Environments.Schema
   alias Brando.Tenant.Access
   alias Brando.Tenant.Registry
@@ -398,6 +400,50 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       seed.(0, "en")
       assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error, payload: message}}
       assert message == "That environment is not one of Acme’s."
+    end
+
+    test "while one of its own seedings runs, says so, and seeds a sibling again", %{
+      conn: conn,
+      acme: site,
+      production: production,
+      current_user: user
+    } do
+      staging = Enum.find(site.environments, &(not &1.live))
+      production_row = "#seeding-#{site.id}-#{production.id}-no"
+      staging_row = "#seeding-#{site.id}-#{staging.id}-no"
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _site} = Registry.update_site(site, %{languages: ["en", "no"]})
+      end)
+
+      job = fn environment ->
+        prefix = Brando.Tenant.prefix(site, environment)
+        from(j in Oban.Job, where: fragment("?->>'tenant_prefix'", j.args) == ^prefix)
+      end
+
+      Brando.Repo.update_all(job.(staging), [set: [state: "executing", attempt: 1]], prefix: "public")
+
+      Brando.Repo.update_all(
+        job.(production),
+        [set: [state: "retryable", attempt: 1, errors: [%{"attempt" => 1, "error" => "boom"}]]],
+        prefix: "public"
+      )
+
+      # The running job holds the locks a copy holds
+      {:ok, lock_conn} =
+        Postgrex.start_link(Keyword.drop(Brando.Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name]))
+
+      key = Brando.Tenant.Lock.environment_operation_key(site.id)
+      Postgrex.query!(lock_conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+
+      Brando.endpoint().subscribe("user:#{user.id}")
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      assert has_element?(view, staging_row, "Seeding no in Staging now")
+      refute has_element?(view, "#seeding-site-#{site.id}", "copy or setup")
+
+      view |> element("#{production_row} button", "Seed again") |> render_click()
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: "Seeding queued."}}
     end
 
     test "offers no seeding while an environment is copied or the site provisioned", %{
