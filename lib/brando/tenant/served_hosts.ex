@@ -272,9 +272,18 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   # Under a task supervisor, unlinked: a lookup that raises, exits, throws,
-  # dies of a link or times out fails for its host and nothing else
+  # dies of a link or times out fails for its host and nothing else. Without
+  # the supervisor every lookup fails: the stream would exit through a process
+  # linked to this one, which no `catch` here sees.
   defp lookup_all(hosts, resolver, config) do
-    Brando.Tenant.ServedHosts.TaskSupervisor
+    case Process.whereis(Brando.Tenant.ServedHosts.TaskSupervisor) do
+      nil -> Enum.map(hosts, &{&1, {:error, :noproc}})
+      supervisor -> lookup_all(supervisor, hosts, resolver, config)
+    end
+  end
+
+  defp lookup_all(supervisor, hosts, resolver, config) do
+    supervisor
     |> Task.Supervisor.async_stream_nolink(hosts, &lookup(resolver, &1),
       max_concurrency: 8,
       timeout: Keyword.get(config, :lookup_timeout, @lookup_timeout),

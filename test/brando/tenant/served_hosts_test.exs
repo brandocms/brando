@@ -485,6 +485,18 @@ defmodule Brando.Tenant.ServedHostsTest do
       end
     end
 
+    test "a dead lookup supervisor leaves the host unresolved and the process running", %{path: file, site: site} do
+      pid = Process.whereis(ServedHosts)
+      bind(site, "production", "www.acme.test", true)
+      DNS.answer("www.acme.test", [@here])
+      :ok = Supervisor.terminate_child(Brando.Supervisor, Brando.Tenant.ServedHosts.TaskSupervisor)
+      on_exit(fn -> Supervisor.restart_child(Brando.Supervisor, Brando.Tenant.ServedHosts.TaskSupervisor) end)
+
+      assert %{hosts: %{"www.acme.test" => :unresolved}, error: nil} = ServedHosts.check()
+      assert Process.whereis(ServedHosts) == pid
+      assert File.read!(file) == ""
+    end
+
     test "a check that raises is reported and does not restart the process", %{path: file, site: site} do
       pid = Process.whereis(ServedHosts)
       bind(site, "production", "www.acme.test", true)
