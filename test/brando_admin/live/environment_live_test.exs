@@ -492,6 +492,109 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
 
       assert Registry.get_environment(staging.id).redirect_hosts == ["www.staging.acme.test"]
     end
+
+    # A form with phx-change is recovered on rejoin, touched or not; a site
+    # admin's fields are disabled, so only the hidden inputs come back
+    test "a recovered form a site admin cannot edit leaves the hosts shown", %{site: site, staging: staging} do
+      {:ok, staging} =
+        Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: :system)
+
+      admin = Factory.insert(:random_user, role: :editor, config: %Brando.Users.UserConfig{})
+      {:ok, _assignment} = Access.grant(admin, site, :admin)
+      {:ok, view, _html} = live(log_in_user(build_conn(), admin), "/admin/config/environments")
+
+      render_change(view, "draft_hosts", %{
+        "environment_id" => staging.id,
+        "shown_domain" => "staging.acme.test",
+        "shown_redirect_hosts" => "www.staging.acme.test"
+      })
+
+      assert field_value(view, staging, ~s(input[name="domain"])) == "staging.acme.test"
+      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+    end
+
+    test "a change that carries one field keeps the other one's saved value", %{conn: conn, staging: staging} do
+      {:ok, staging} =
+        Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: :system)
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      render_change(view, "draft_hosts", %{
+        "environment_id" => staging.id,
+        "shown_domain" => "staging.acme.test",
+        "shown_redirect_hosts" => "www.staging.acme.test",
+        "domain" => "new.acme.test"
+      })
+
+      assert field_value(view, staging, ~s(input[name="domain"])) == "new.acme.test"
+      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+    end
+
+    test "a draft is dropped when the row's hosts change elsewhere, and the screen shows them", %{
+      conn: conn,
+      staging: staging
+    } do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+      typed(view, staging, %{"domain" => "staging.acme.test", "redirect_hosts" => "typed.acme.test"})
+      assert field_value(view, staging, "textarea") == "typed.acme.test"
+
+      superuser = Factory.insert(:random_user, role: :superuser)
+
+      {:ok, _staging} =
+        Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: superuser)
+
+      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+
+      # A recovered form rendered before the change does not bring the old values back
+      render_change(view, "draft_hosts", %{
+        "environment_id" => staging.id,
+        "shown_domain" => "staging.acme.test",
+        "shown_redirect_hosts" => "",
+        "domain" => "staging.acme.test",
+        "redirect_hosts" => ""
+      })
+
+      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+    end
+
+    test "a save from a form that showed other redirect hosts is refused", %{
+      conn: conn,
+      staging: staging,
+      current_user: user
+    } do
+      Brando.endpoint().subscribe("user:#{user.id}")
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      # Another superuser adds a redirect host after this form was rendered
+      Brando.Repo.update_all(
+        from(e in Brando.Environments.Environment, where: e.id == ^staging.id),
+        [set: [redirect_hosts: ["www.staging.acme.test"]]],
+        prefix: "public"
+      )
+
+      render_submit(view, "update_domain", %{
+        "environment_id" => staging.id,
+        "shown_domain" => "staging.acme.test",
+        "shown_redirect_hosts" => "",
+        "domain" => "new.acme.test",
+        "redirect_hosts" => ""
+      })
+
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{level: :error} = toast}
+      assert inspect(toast) =~ "Reload the page and try again"
+
+      assert %{domain: "staging.acme.test", redirect_hosts: ["www.staging.acme.test"]} =
+               Registry.get_environment(staging.id)
+
+      render_submit(view, "update_domain", %{
+        "environment_id" => staging.id,
+        "shown_domain" => "staging.acme.test",
+        "domain" => "new.acme.test",
+        "redirect_hosts" => ""
+      })
+
+      assert Registry.get_environment(staging.id).redirect_hosts == ["www.staging.acme.test"]
+    end
   end
 
   defp shown_domain(view, environment) do

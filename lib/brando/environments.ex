@@ -73,7 +73,12 @@ defmodule Brando.Environments do
   @spec topic(pos_integer()) :: String.t()
   def topic(site_id), do: "brando:environments:#{site_id}"
 
-  defp announce(site_id) do
+  @doc """
+  Tells the site's environment screens, on `topic/1`, that its environments
+  changed. Called after the change is committed: a screen re-reads them.
+  """
+  @spec announce(pos_integer()) :: :ok | {:error, term()}
+  def announce(site_id) do
     Phoenix.PubSub.broadcast(Brando.pubsub(), topic(site_id), {:environments_updated, site_id})
   end
 

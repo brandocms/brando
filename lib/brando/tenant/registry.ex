@@ -285,6 +285,11 @@ defmodule Brando.Tenant.Registry do
     |> refresh_cache_on_success()
   end
 
+  @doc """
+  Updates an environment, checking `opts[:actor]`'s authority to bind its
+  hosts. Once the change is committed, the site's open environments screens
+  are told (`Brando.Environments.announce/1`).
+  """
   @spec update_environment(Environment.t(), map(), keyword()) ::
           {:ok, Environment.t()} | {:error, Ecto.Changeset.t()}
   def update_environment(%Environment{} = environment, attrs, opts \\ []) do
@@ -293,7 +298,15 @@ defmodule Brando.Tenant.Registry do
     |> authorize_domain(opts[:actor])
     |> Repo.update(@public_opts)
     |> refresh_cache_on_success()
+    |> announce_on_success()
   end
+
+  defp announce_on_success({:ok, %Environment{site_id: site_id}} = result) do
+    Repo.after_commit({:environments_updated, site_id}, fn -> Brando.Environments.announce(site_id) end)
+    result
+  end
+
+  defp announce_on_success(result), do: result
 
   @spec delete_environment(Environment.t()) ::
           {:ok, Environment.t()} | {:error, Ecto.Changeset.t()}
