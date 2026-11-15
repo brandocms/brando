@@ -263,6 +263,25 @@ defmodule Brando.Tenant.RedirectHostsTest do
       assert get_resp_header(conn, "location") == ["#{scheme()}://acme.test/contact?sent=1"]
     end
 
+    test "a static build's signed context keeps precedence over the redirect", %{site: site, production: production} do
+      conn =
+        :get
+        |> conn("http://www.acme.test/about", nil)
+        |> put_req_header(Brando.SSG.Context.header(), Brando.SSG.Context.sign(site, production))
+        |> Brando.Plug.Tenant.call([])
+
+      refute conn.halted
+      assert conn.assigns.current_environment.id == production.id
+
+      conn =
+        :get
+        |> conn("http://www.acme.test/about", nil)
+        |> put_req_header(Brando.SSG.Context.header(), "forged")
+        |> Brando.Plug.Tenant.call([])
+
+      assert conn.status == 301
+    end
+
     test "the domain answers, and a host no environment holds is still 404" do
       conn = request(:get, "http://acme.test/about")
       refute conn.halted

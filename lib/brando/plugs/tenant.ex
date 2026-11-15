@@ -14,7 +14,8 @@ defmodule Brando.Plug.Tenant do
   A request on one of an environment's redirect hosts is redirected
   permanently, from the cache, to the same path and query on the
   environment's domain, with the endpoint URL's scheme: 301 for GET and HEAD,
-  308 for other methods. A response for an environment that is not live
+  308 for other methods. One that carries a static build's valid signed
+  context (`Brando.SSG.Context`) is served under that context instead. A response for an environment that is not live
   carries `X-Robots-Tag: noindex, nofollow`.
   """
 
@@ -33,8 +34,16 @@ defmodule Brando.Plug.Tenant do
   @impl Plug
   def call(conn, _opts) do
     case redirect_target(conn) do
-      nil -> resolve_tenant(conn)
-      {_site, environment} -> redirect(conn, environment.domain)
+      nil ->
+        resolve_tenant(conn)
+
+      {_site, environment} ->
+        # A static build of a site whose base URL is now a redirect host
+        # fetches every page on that host, with its signed context
+        case build_context(conn) do
+          {site, built_environment} -> put_tenant(conn, site, built_environment)
+          nil -> redirect(conn, environment.domain)
+        end
     end
   end
 
@@ -69,9 +78,9 @@ defmodule Brando.Plug.Tenant do
   defp no_index(conn, %{live: true}), do: conn
   defp no_index(conn, _environment), do: put_resp_header(conn, "x-robots-tag", "noindex, nofollow")
 
-  # A redirect host answers from the cache, before any other resolution: it
-  # is no environment's domain and no installation host, so nothing else
-  # answers on it
+  # A redirect host answers from the cache, before any other resolution but a
+  # static build's: it is no environment's domain and no installation host, so
+  # nothing else answers on it
   defp redirect_target(%{private: %{brando_live_preview: true}}), do: nil
 
   defp redirect_target(conn) do
@@ -127,12 +136,13 @@ defmodule Brando.Plug.Tenant do
     {site, environment}
   end
 
-  def resolve(conn) do
+  def resolve(conn), do: build_context(conn) || Frontend.resolve(conn.host)
+
+  defp build_context(conn) do
     conn
     |> Plug.Conn.get_req_header(Context.header())
     |> List.first()
     |> Context.resolve()
-    |> Kernel.||(Frontend.resolve(conn.host))
   end
 
   defp reject_missing_multi_site(conn) do
