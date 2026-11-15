@@ -272,7 +272,9 @@ defmodule Mix.Brando.Igniter.SiteRenderTest do
       # querying it shows the page renders in the site's context.
       error = assert_raise Plug.Conn.WrapperError, fn -> lockdown(%{conn | host: "www.acme.test"}, :index, %{}) end
       assert error.conn.assigns.current_site.id == site.id
-      assert Exception.message(error) =~ ~s("tenant_acme_production"."content_palettes")
+      # Postgres names the relation unquoted; the query, which the message
+      # only sometimes carries, quotes schema and table apart
+      assert Exception.message(error) =~ ~r/tenant_acme_production"?\."?content_palettes/
     after
       Tenant.put_prefix(nil)
       Tenant.Cache.clear()
