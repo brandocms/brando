@@ -53,11 +53,15 @@ defmodule Brando.SSG.Deploy do
   history rows. The build the installation serves itself (`:published_build`)
   is never pruned: the builds are chosen and removed holding the lock a deploy
   or rollback holds, so one that publishes an archived build waits, or finds
-  it pruned and is refused.
+  it pruned and is refused. While a deploy or rollback holds it, on any node,
+  nothing is pruned and this returns `:skipped`: the next build prunes.
   """
-  @spec prune(Site.t(), pos_integer()) :: {:ok, [Build.t()]} | {:error, term()}
+  @spec prune(Site.t(), pos_integer()) :: {:ok, [Build.t()]} | :skipped | {:error, term()}
   def prune(%Site{} = site, keep) when is_integer(keep) and keep > 0 do
-    Lock.with(deploy_lock(site.id), fn -> prune_locked(site, keep) end)
+    case Lock.try_with(deploy_lock(site.id), fn -> prune_locked(site, keep) end) do
+      :busy -> :skipped
+      result -> result
+    end
   end
 
   def prune(%Site{}, keep), do: {:error, {:invalid_retention_count, keep}}

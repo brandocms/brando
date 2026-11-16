@@ -912,24 +912,34 @@ defmodule Brando.SSG.LocalDeliveryTest do
 
   describe "pruning" do
     # Chosen under the lock, so a rollback on another node that publishes an
-    # archived build finishes first, or finds it pruned and is refused. The
-    # sandbox's one connection waits with the task, so the rollback itself
-    # cannot run meanwhile here.
-    test "waits for the lock a deploy or rollback holds", context do
+    # archived build finishes first, or finds it pruned and is refused. A build
+    # job does not wait behind another node's deploy: the next build prunes.
+    test "is skipped while a deploy or rollback holds the lock, and the build's log says so", context do
+      put_test_env(:ssg_builder, PagesBuilder)
       first = context |> ready_build() |> deploy!()
       _second = context |> ready_build() |> deploy!()
       _third = context |> ready_build() |> deploy!()
 
       key = "ssg-deploy:#{context.site.id}"
       lock = lock_elsewhere(key)
-      pruning = Task.async(fn -> Deploy.prune(Registry.get_site(context.site.id), 1) end)
 
-      refute Task.yield(pruning, 300)
+      assert Deploy.prune(Registry.get_site(context.site.id), 1) == :skipped
+      assert File.dir?(first.build_path)
+
+      build =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          {:ok, build} = Builds.request_build(context.site, context.live, [])
+          build
+        end)
+
+      assert :ok = perform_job(SSGBuild, %{"build_id" => build.id})
+      assert Builds.get_build(build.id).build_log =~ "Artifact pruning skipped"
       assert File.dir?(first.build_path)
 
       Postgrex.query!(lock, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
-      assert {:ok, [%{id: pruned_id}]} = Task.await(pruning)
-      assert pruned_id == first.id
+      assert {:ok, pruned} = Deploy.prune(Registry.get_site(context.site.id), 1)
+      assert first.id in Enum.map(pruned, & &1.id)
+      refute File.dir?(first.build_path)
     end
 
     test "a rollback that waited for it finds the build pruned, and the published build keeps answering", context do

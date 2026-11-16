@@ -2257,7 +2257,9 @@ refuses it when the settings are saved and when a build deploys.
 Generated output is persistent at
 `sites/{site_key}/ssg/builds/{version}`. Old ready, archived, and failed artifact
 directories are pruned after the retention window, while their database history
-and logs remain; the build the installation serves for a site is never pruned. Preview tokens expire after seven days and stop working as soon
+and logs remain; the build the installation serves for a site is never pruned.
+A build finished while a deploy or rollback of the site is running prunes
+nothing and says so in its log; the next build prunes. Preview tokens expire after seven days and stop working as soon
 as their artifact is pruned. A preview opens only on a host that resolves to
 the build's own site (another site's host, or with several sites one of the
 installation's own hosts such as the admin's, answers `404`); with several sites
