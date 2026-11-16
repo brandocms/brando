@@ -407,6 +407,7 @@ defmodule Brando.Revisions do
 
         with :ok <- Brando.Authorization.Boundary.change(user, :update, changeset),
              {:ok, updated_entry} <- Query.update(changeset),
+             {:ok, updated_entry} <- recompute_derived(updated_entry),
              {:ok, identifier_result} <- Content.update_identifier(entry_schema, updated_entry),
              {:ok, _} <- Brando.Publisher.schedule_publishing(updated_entry, changeset, user) do
           replaced = active_revision_number(to_string(entry_schema), entry_id)
@@ -444,6 +445,13 @@ defmodule Brando.Revisions do
         {:error, reason}
     end
   end
+
+  # A page's trail is computed from its parents, not content of the revision:
+  # the one the revision holds may name a parent's old title. Matched by name:
+  # a struct pattern would make this module depend on the page blueprint at
+  # compile time.
+  defp recompute_derived(%{__struct__: Brando.Pages.Page} = page), do: Brando.Pages.restored(page)
+  defp recompute_derived(entry), do: {:ok, entry}
 
   # A colour stored before values were checked would refuse the restore: it
   # comes back empty instead (`Brando.Color.clear_invalid/1`), and the

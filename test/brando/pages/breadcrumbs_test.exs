@@ -74,6 +74,20 @@ defmodule Brando.Pages.BreadcrumbsTest do
     end
   end
 
+  test "restoring a revision of a page does not bring back its old trail" do
+    put_test_env(:tenancy_mode, :none)
+    user = Factory.insert(:random_user, role: :superuser)
+    about = page!(user, %{title: "About", uri: "about"})
+    team = page!(user, %{title: "Team", uri: "about/team", parent_id: about.id})
+    {:ok, revision} = Brando.Revisions.create_revision(Repo.get!(Page, team.id), user)
+
+    {:ok, _} = Pages.update_page(about.id, %{title: "About us"}, user)
+    assert trail(team) == [Brando.config(:app_name), "About us", "Team"]
+
+    {:ok, _} = Brando.Revisions.set_entry_to_revision(Page, team.id, revision.revision, user)
+    assert trail(team) == [Brando.config(:app_name), "About us", "Team"]
+  end
+
   test "with groups authorization, in the trash's and the restore's transaction" do
     put_test_env(:authorization_mode, :groups)
     put_test_env(:tenancy_mode, :none)

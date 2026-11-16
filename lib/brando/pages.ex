@@ -693,7 +693,9 @@ defmodule Brando.Pages do
   @doc """
   Bring the trails of a restored page and its live descendants up to date:
   each of them takes the page back in. `Brando.Authorization.Boundary.restore/2`
-  calls this in the restore's transaction.
+  calls this in the restore's transaction, and
+  `Brando.Revisions.set_entry_to_revision/5` in a revision restore's, which
+  would otherwise bring back the trail the revision holds.
   """
   def restored(%Page{} = page) do
     with {:ok, page} <- update_breadcrumbs(page) do

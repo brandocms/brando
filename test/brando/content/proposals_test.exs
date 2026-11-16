@@ -1457,6 +1457,8 @@ defmodule Brando.Content.ProposalsTest do
       assert %{"title" => "About them"} = Enum.at(Repo.get!(Page, c.work.id).breadcrumbs, 1)
       assert {:ok, _} = Proposals.undo(proposal.id, c.user)
       assert Repo.get!(Page, c.work.id).title == "Work"
+      # The restored revision's older trail does not come back
+      assert %{"title" => "About them"} = Enum.at(Repo.get!(Page, c.work.id).breadcrumbs, 1)
     end
 
     test "a digest stored with the trail in it is still accepted", c do

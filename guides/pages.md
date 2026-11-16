@@ -138,7 +138,9 @@ content SEO audit leaves it out. Filter the flag in your controllers, and use
 Page context creates and updates recompute `breadcrumbs` for the page and its
 non-deleted descendants, those under a trashed page included. Trashing a page (`Pages.delete_page/2`) recomputes its
 descendants' trails, and restoring it (`Brando.Authorization.Boundary.restore/2`)
-recomputes its own and its descendants'. Each element has string keys `"title"` and `"uri"`.
+recomputes its own and its descendants'. So does restoring one of its revisions
+(`Brando.Revisions.set_entry_to_revision/5`, which the revisions drawer and a
+proposal's undo use): the trail a revision holds never comes back. Each element has string keys `"title"` and `"uri"`.
 The stored trail starts with the configured app name at `/`, followed by the
 ancestors and current page; a deleted ancestor is left out. It stores
 `"/" <> page.uri`; it does **not** add a
