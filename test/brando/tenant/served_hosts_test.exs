@@ -350,6 +350,21 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert %{addresses: [@here]} = ServedHosts.check()
       assert lines(file) == ["www.acme.test"]
     end
+
+    test "after a start, this server's addresses are looked up though no host needs a lookup",
+         %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file)
+      DNS.answer("localhost", [@here])
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+      assert lines(file) == ["www.acme.test"]
+
+      # Every host is in the file, so the new process looks none up
+      :persistent_term.erase({ServedHosts, :status})
+      restart()
+
+      assert %{addresses: [@here], hosts: %{"www.acme.test" => :served}} = ServedHosts.status()
+    end
   end
 
   # `{:incomplete, addresses, families, reasons}`: what

@@ -881,8 +881,9 @@ lookup timed out counts as one with no records, and a host is then admitted on
 the other family alone. Any module implementing
 `Brando.Tenant.ServedHosts.Resolver` can take its place. A host's result shows as soon as it answers; the answers
 of many hosts looked up together, as on a new server, are written to the file
-in one go. Without `addresses`, this server's are looked up once per check,
-and a lookup of them that fails keeps the ones found before, for an hour
+in one go. Without `addresses`, this server's are looked up once per check
+that looks a host up, and at the first check after a start, so the
+**Environments** screen names them before any host needs a lookup; a lookup of them that fails keeps the ones found before, for an hour
 after they were found: a server whose own lookup keeps failing, or cannot read
 one of the families, then admits no host until it answers again.
 

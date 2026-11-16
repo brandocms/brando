@@ -103,7 +103,9 @@ defmodule Brando.Tenant.ServedHosts do
   registry and their lookups.
 
   Without `:addresses`, this server's addresses are what the endpoint's host
-  resolves to, looked up on their own once per check that looks a host up.
+  resolves to, looked up on their own once per check that looks a host up,
+  and by a check that looks no host up while none are known, as the first
+  one after a start: the status names them before any host needs a lookup.
   A lookup of them that fails, or that could not read one of the families,
   leaves them unknown for that check and keeps the last ones found, which count for an hour
   after they were found (`:addresses_max_age`, in milliseconds); after that
@@ -854,7 +856,7 @@ defmodule Brando.Tenant.ServedHosts do
 
     case Enum.reject(candidates, &MapSet.member?(pending, &1)) do
       [] ->
-        state
+        look_up_own(state)
 
       hosts ->
         batch = state.batch + 1
@@ -873,6 +875,20 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   defp queue_own(state, _batch), do: state
+
+  # This server's addresses on their own, for a check that looks no host up
+  # while none are known, as after a start: the status names them from the
+  # first check, and the lookup runs in a task like every other
+  defp look_up_own(%{settings: %{own_source: {:lookup, _name}}} = state) do
+    if is_nil(looked_up_own(state)) and not own_pending?(state) do
+      batch = state.batch + 1
+      pump(queue_own(%{state | batch: batch}, batch))
+    else
+      state
+    end
+  end
+
+  defp look_up_own(state), do: state
 
   defp own_pending?(state) do
     Enum.any?(state.lookups, &match?({_ref, {{:own, _name}, _batch, _deadline}}, &1)) or
