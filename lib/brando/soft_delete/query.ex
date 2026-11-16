@@ -67,9 +67,40 @@ defmodule Brando.SoftDelete.Query do
   @unreachable_key {__MODULE__, :unreachable}
 
   @doc """
-  Clean up and delete all expired soft deleted entries
+  Clean up and delete all expired soft deleted entries, one schema at a time.
+
+  A schema whose purge fails is logged and returns `{:error, schema}`, and
+  the others are still purged. Before a schema's expired rows are deleted, its
+  context's optional `before_purge(schema, ids)` runs in the same transaction,
+  to clear what still refers to them (`Brando.Pages.before_purge/2`).
   """
-  def clean_up_soft_deletions, do: Enum.map(list_soft_delete_schemas(), &clean_up_schema/1)
+  def clean_up_soft_deletions, do: Enum.map(list_soft_delete_schemas(), &try_clean_up_schema/1)
+
+  defp try_clean_up_schema(schema) do
+    clean_up_schema(schema)
+  rescue
+    error ->
+      Logger.error("[Brando.SoftDelete] Purging #{inspect(schema)}#{environment()} failed: #{describe_error(error)}")
+      {:error, schema}
+  end
+
+  @doc false
+  # Where a purge runs, for its log lines
+  def environment do
+    case {Brando.Tenant.current_site_key(), Brando.Tenant.current_environment_key()} do
+      {nil, nil} -> ""
+      {site, environment} -> " in site #{site}, environment #{environment}"
+    end
+  end
+
+  @doc false
+  # The error's kind, and a database error's code, table and constraint: its
+  # message may quote a row's values
+  def describe_error(%Postgrex.Error{postgres: %{code: code} = postgres}) do
+    [code, postgres[:table], postgres[:constraint]] |> Enum.reject(&is_nil/1) |> Enum.join(" ")
+  end
+
+  def describe_error(%{__struct__: struct}), do: inspect(struct)
 
   @doc """
   Runs `fun`, one purge of several environments, each calling
@@ -160,11 +191,21 @@ defmodule Brando.SoftDelete.Query do
       end
 
       Brando.Notes.entries_purged(schema, ids)
+      before_purge(schema, ids)
 
       result = Repo.delete_all(query)
       Enum.each(purged, &Brando.Activity.deleted(&1, :system, false, %{"purged" => true}))
       result
     end)
+  end
+
+  defp before_purge(_schema, []), do: :ok
+
+  defp before_purge(schema, ids) do
+    context = schema.__modules__().context
+
+    if Code.ensure_loaded?(context) and function_exported?(context, :before_purge, 2),
+      do: context.before_purge(schema, ids)
   end
 
   # `kept` counts, by provider, the videos left without asking it once it

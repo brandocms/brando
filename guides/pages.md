@@ -142,7 +142,10 @@ recomputes its own and its descendants'. So does restoring one of its revisions
 (`Brando.Revisions.set_entry_to_revision/5`, which the revisions drawer and a
 proposal's undo use): the trail a revision holds never comes back. Each element has string keys `"title"` and `"uri"`.
 The stored trail starts with the configured app name at `/`, followed by the
-ancestors and current page; a deleted ancestor is left out. It stores
+ancestors and current page; a deleted ancestor is left out. When the trash
+purge deletes a page for good, its remaining children move to the top
+(`parent_id` is cleared) and their trails are recomputed, and its fragments
+lose their `page_id`. It stores
 `"/" <> page.uri`; it does **not** add a
 language prefix. Localize those URLs in a multilingual breadcrumb component,
 and verify both languages. Raw `Repo` writes bypass this recomputation; after a

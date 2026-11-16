@@ -159,13 +159,17 @@ defmodule Brando.Videos.ProviderVideoReaddTest do
 
   # A purge killed during the provider call is not tested: the SQL sandbox
   # shuts the test's connection down when a process holding it exits. A
-  # raise rolls the row's delete back the same way.
+  # raise rolls the row's delete back the same way. The purge logs it and
+  # goes on with the next schema.
   test "a purge whose provider client raises keeps the row, and the next purge deletes the video" do
     uploaded = "asset-1" |> mux_uploaded() |> expire()
 
     # Missing credentials raise in the Mux client, once the row's delete ran.
     put_test_env(Mux, delete_remote_on: :on_purge, req_options: [plug: {Req.Test, Mux}])
-    assert_raise RuntimeError, ~r/Mux credentials not configured/, &purge_videos/0
+
+    assert ExUnit.CaptureLog.capture_log(fn -> assert purge_videos() == :error end) =~
+             "Purging Brando.Videos.Video failed: RuntimeError"
+
     assert Repo.get!(Video, uploaded.id).deleted_at
 
     mux(:on_purge)
@@ -322,7 +326,8 @@ defmodule Brando.Videos.ProviderVideoReaddTest do
     )
   end
 
-  # Purges the expired records, and returns how many videos it purged.
+  # Purges the expired records, and returns how many videos it purged, or
+  # :error when the purge of videos failed.
   defp purge_videos do
     Brando.SoftDelete.Query.list_soft_delete_schemas()
     |> Enum.zip(Brando.SoftDelete.Query.clean_up_soft_deletions())

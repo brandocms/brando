@@ -768,11 +768,33 @@ defmodule Brando.Pages do
     Page
     |> where([p], p.parent_id == ^page.id)
     |> Brando.Repo.all()
-    |> Enum.each(fn
-      %Page{deleted_at: nil} = child -> update_breadcrumbs(%{child | parent: page})
-      child -> update_descendant_breadcrumbs(child)
-    end)
+    |> Enum.each(&update_trail/1)
   end
+
+  defp update_trail(%Page{deleted_at: nil} = page), do: update_breadcrumbs(page)
+  defp update_trail(page), do: update_descendant_breadcrumbs(page)
+
+  @doc """
+  Called by the trash purge (`Brando.SoftDelete.Query.clean_up_soft_deletions/0`)
+  in its transaction, before it deletes the expired rows `ids` of `schema`.
+  For pages, the child pages and fragments that remain lose the reference,
+  which would block the delete, and the children's trails are recomputed.
+  """
+  def before_purge(Page, ids) do
+    Fragment |> where([f], f.page_id in ^ids) |> Brando.Repo.update_all(set: [page_id: nil])
+
+    {_, children} =
+      Page
+      |> where([p], p.parent_id in ^ids and p.id not in ^ids)
+      |> select([p], p)
+      |> Brando.Repo.update_all(set: [parent_id: nil])
+
+    Enum.each(children, &update_trail/1)
+    Brando.Cache.Query.evict_all(Page)
+    Brando.Cache.Query.evict_all(Fragment)
+  end
+
+  def before_purge(_schema, _ids), do: :ok
 
   defp build_fragments_query do
     from f in Fragment,

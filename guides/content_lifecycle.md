@@ -96,8 +96,8 @@ collision rules may still return an error or raise a constraint exception.
 Restoration clears deletion, recreates the identifier where applicable, and
 evicts query caches. It is not a replacement for all domain-specific update
 callbacks. Trashing a page with `Pages.delete_page/2` and restoring it through
-the restore boundary recompute the breadcrumbs of the page's live descendants
-(and, on restore, the page's own). After a low-level `Brando.Repo.restore/1`
+the restore boundary recompute the breadcrumbs of the page's live descendants,
+those under a trashed page included (and, on restore, the page's own). After a low-level `Brando.Repo.restore/1`
 or an import, recompute them with `Brando.Pages.update_breadcrumbs(restored)`,
 and verify dependent block/static output. Deleted rows should not leak into custom `Repo` queries: add an explicit
 `is_nil(entry.deleted_at)` condition or use `Brando.SoftDelete.Query.exclude_deleted/1`.
@@ -108,6 +108,16 @@ The default soft-delete purger runs at **03:00 UTC** and permanently removes row
 whose deletion timestamp is older than **30 days**, across active sites'
 environments. Revisioned entries lose their revision history on permanent purge.
 Restore before that window closes; soft deletion is not a substitute for backups.
+
+What still refers to a purged page is kept: in the purge's transaction, its
+remaining child pages lose their `parent_id` and move to the top, with their
+breadcrumbs recomputed, and its fragments lose their `page_id`. A schema's
+context can do the same for its own rows with an optional
+`before_purge(schema, ids)`, which the purge calls with the expired ids before
+it deletes them (`Brando.Pages.before_purge/2`). A schema whose purge fails
+does not stop the others, nor an environment the next ones: each failure is
+logged with the schema, site and environment, and the job then fails so the
+failure shows in Oban.
 Custom Oban configuration must preserve the purger if this policy is desired.
 
 A bulk `soft_delete_all` sets deletion timestamps but does not run each entry's

@@ -3,3 +3,5 @@
 - Trashing or restoring a page brings the breadcrumbs of the pages under it up to date at once, instead of on their next save.
 
 - `mix brando.repair.legacy_media` takes the database time zone's UTC offset at the conversion, not at the repair, and the larger one when the clocks changed during the conversion, so a daylight-saving change no longer has it skip every gallery.
+
+- The nightly trash purge no longer fails, and stops purging, when an expired page still has child pages or fragments: they lose the reference and stay, and a schema or environment whose purge fails is logged and no longer stops the others.
