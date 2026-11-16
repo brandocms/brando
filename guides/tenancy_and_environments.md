@@ -712,8 +712,9 @@ What is stored or cached names the site's public base URL instead,
 `Brando.Utils.public_hostname/0`: the live environment's domain, whichever
 environment the process works in, and whatever the site's status, so what a
 suspended site stores is right when it is reactivated. An environment's own
-host moves (on dynamic delivery a live switch swaps two environments' domains,
-a copy moves content to another environment) and nothing stored is rendered
+host moves (on dynamic delivery, and on static delivery the installation
+serves itself, a live switch swaps two environments' domains, a copy moves
+content to another environment) and nothing stored is rendered
 again then; the live domain moves with the live flag. So JSON-LD a block
 renders into `rendered_<field>` (the `json_ld` filter and `<.json_ld>`) and the
 sitemap files name the public base URL, the identity cache keeps a service's
@@ -725,9 +726,10 @@ When the public base URL changes, every environment of the site renders again
 the entries whose blocks emit JSON-LD, in their modules' code (shared modules
 and the environment's overrides of them included) or in their refs. That is a
 change of the live environment's domain through `Brando.Tenant.Registry`, and a
-live switch on a `:static` site, where the domains stay put and the incoming
-environment's becomes the public one (on `:dynamic` delivery the domains swap
-and the public base URL stays). The renders are queued once the change has
+live switch on a `:static` site delivered elsewhere, where the domains stay
+put and the incoming environment's becomes the public one (on `:dynamic`
+delivery, and on a `:static` site the installation serves itself, the domains
+swap and the public base URL stays). The renders are queued once the change has
 committed, each environment searched as the system; a search that fails is
 logged and leaves the change saved. A render job run on a node that has not
 heard of the change yet refreshes its registry cache first
@@ -1576,9 +1578,13 @@ domain swaps too, so switching back puts every host where it was. Each
 environment's redirect hosts move with its domain, so `www.example.com` keeps
 redirecting to `example.com` wherever that host now answers. Setting a
 restored archive live moves the hosts the same way. The hosts were bound by a
-superuser and stay within the site, so a switch binds nothing new. On a
-`:static` site the domains stay where they are: the deployed build, not the
-live environment, decides what a host serves. Each environment keeps its own
+superuser and stay within the site, so a switch binds nothing new. A
+`:static` site the installation serves itself (strategy `:local`, see
+[Served by this installation](#served-by-this-installation)) swaps its hosts
+the same way, since the installation answers its public host: the domain goes
+to the incoming environment and keeps answering from the published build until
+the next deploy. On any other `:static` site the domains stay where they are:
+the deployed build, not the live environment, decides what a host serves. Each environment keeps its own
 frontend asset set and frontend module, so the host serves those of the
 environment that went live ([A set per environment](#a-set-per-environment)).
 
@@ -1794,8 +1800,8 @@ be one of the installation's. Both reach every node
 What happens to an environment's set:
 
 - **A live switch** leaves each set with its environment. On a `:dynamic`
-  site the host moves to the incoming environment, so it serves the set that
-  environment had.
+  site, and a `:static` one the installation serves itself, the host moves to
+  the incoming environment, so it serves the set that environment had.
 - **A new environment** has no set of its own and follows the site's set, as
   it follows the site's frontend module.
 - **A copy of content into an environment**
@@ -2431,7 +2437,11 @@ config :brando, Brando.SSG.LocalDelivery, dynamic_paths: ["/api", "/coming-soon"
 ```
 
 Environments that are not live answer from Phoenix on their own domains, as
-working copies, with `X-Robots-Tag: noindex, nofollow`. Switching the site to
+working copies, with `X-Robots-Tag: noindex, nofollow`. Setting another
+environment live takes the live domain and its redirect hosts with it, as on a
+`:dynamic` site ([Switch live, rollback, and delete](#switch-live-rollback-and-delete)), so the public domain keeps
+answering from the published build until the next deploy, which builds from
+the environment now live. Switching the site to
 `:dynamic`, to another strategy, suspending, archiving or deleting it stops
 serving at once; switching back serves nothing until the next deploy. The
 strategy needs a site in the registry, so it applies with `:single` and

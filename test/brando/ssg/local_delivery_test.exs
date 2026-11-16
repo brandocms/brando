@@ -171,6 +171,20 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert Builds.get_build(second.id).status == :archived
     end
 
+    test "keeps answering on the public domain after another environment is set live", context do
+      put_test_env(:tenant_migrator, Brando.TenantEnvironmentDomainTest.Migrator)
+      put_test_env(:environment_schema_cloner, Brando.TenantEnvironmentDomainTest.SchemaCloner)
+      Brando.Environments.Schema.create(Brando.Tenant.prefix(context.site, context.live))
+      context |> ready_build() |> deploy!()
+
+      assert {:ok, %{live: true}} = Brando.Environments.set_live(context.staging, creator: :system)
+
+      conn = request(context.host, "/about")
+      assert conn.status == 200
+      assert sent_body(conn) == "about v1"
+      assert get_resp_header(conn, "x-robots-tag") == []
+    end
+
     test "answers a page the build lacks with its 404 page, though the environment has the page", context do
       context |> ready_build() |> deploy!()
 
