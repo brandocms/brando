@@ -77,8 +77,11 @@ A size takes `"size"` (a geometry such as `"700"`, `"x400"` or `"400x400>"`),
 size gives only a width or a height). Atom keys and `%Brando.Images.Size{}` work
 too. A Blueprint's literal config is checked when it compiles: a mistyped key
 such as `"crp"`, an unreadable geometry, or a `srcset` naming a size that isn't
-in `sizes` fails the build with the field and the size it is about. Configs
-from a function or `config_target` are checked when they are first read.
+in `sizes` fails the build with the field and the size it is about. It is
+merged over `default_config` when it is read, and checked again there, so a
+`default_config` that drops a size a Blueprint's `srcset` names fails on the
+first read of that field. Configs from a function or `config_target` are
+checked when they are first read.
 
 An image keeps the `config_target` of the field it was uploaded for. When
 that field is removed or renamed, the image renders with the default image

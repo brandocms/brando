@@ -64,7 +64,8 @@ defmodule Brando.Blueprints.GalleryConfigTest do
       opts: [cfg: %{upload_path: "images/legacy-gallery"}]
     }
 
-    assert {:ok, %{opts: %{cfg: cfg}}} = Brando.Blueprint.Assets.Dsl.transform(asset)
+    assert {:ok, asset} = Brando.Blueprint.Assets.Dsl.transform(asset)
+    assert %{opts: %{cfg: cfg}} = Brando.Blueprint.AssetConfigNormalizer.normalize(asset)
     assert %Brando.Type.ImageConfig{upload_path: "images/legacy-gallery"} = cfg.image
     assert %Brando.Type.VideoConfig{} = cfg.video
   end
@@ -76,7 +77,8 @@ defmodule Brando.Blueprints.GalleryConfigTest do
       opts: [cfg: %Brando.Type.ImageConfig{upload_path: "images/legacy-struct"}]
     }
 
-    assert {:ok, %{opts: %{cfg: cfg}}} = Brando.Blueprint.Assets.Dsl.transform(asset)
+    assert {:ok, asset} = Brando.Blueprint.Assets.Dsl.transform(asset)
+    assert %{opts: %{cfg: cfg}} = Brando.Blueprint.AssetConfigNormalizer.normalize(asset)
     assert %Brando.Type.ImageConfig{upload_path: "images/legacy-struct"} = cfg.image
     assert %Brando.Type.VideoConfig{} = cfg.video
   end

@@ -45,7 +45,7 @@ defmodule Brando.Test.Users do
               password: Bcrypt.hash_pwd_salt(@password),
               role: if(permissions, do: :user, else: :superuser),
               language: :en,
-              config: %UserConfig{}
+              config: %UserConfig{content_language: Brando.Languages.installation_default_language()}
             },
             attrs
           )

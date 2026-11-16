@@ -1,10 +1,11 @@
 defmodule Brando.Blueprint.AssetConfigNormalizer do
   @moduledoc """
-  Materializes deferred Blueprint asset configuration at runtime.
+  Materializes Blueprint asset configuration at runtime.
 
-  Asset DSL compilation may retain a zero-arity configuration function. This
-  module evaluates and normalizes it without making runtime Blueprint metadata
-  reads depend on the compile-time Spark DSL extension.
+  A compiled asset keeps its `cfg:` as declared (a value or a zero-arity
+  function). This module merges it over the configured `default_config` when it
+  is read, without making runtime Blueprint metadata reads depend on the
+  compile-time Spark DSL extension.
   """
 
   alias Brando.Blueprint.AssetConfigValidator
@@ -21,19 +22,47 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   @type asset_type :: :file | :gallery | :image | :video
 
   @doc """
-  Evaluates and normalizes a deferred asset config, leaving materialized assets unchanged.
+  Resolves a compiled asset's `cfg:` against the current configuration.
+
+  A Blueprint keeps its `cfg:` as declared. Here a zero-arity function is
+  called, and `:default`, a map or a keyword list is merged over the
+  `default_config` configured now, so a changed `default_config` reaches every
+  Blueprint without recompiling it.
   """
   @spec normalize(struct()) :: struct()
-  def normalize(%{opts: %{cfg: config}} = asset) when is_function(config, 0) do
-    normalized = normalize_declared_value!(asset.type, asset.name, config.())
-    %{asset | opts: Map.put(asset.opts, :cfg, inherit_video_strategy(asset.type, normalized))}
-  end
+  def normalize(%{type: type, name: name, opts: %{cfg: config}} = asset) when type in [:file, :gallery, :image, :video] do
+    normalized =
+      if is_function(config, 0),
+        do: normalize_declared_value!(type, name, config.()),
+        else: cached_declared_value!(type, name, config)
 
-  def normalize(%{type: type, opts: %{cfg: config}} = asset) when type in [:video, :gallery] do
-    %{asset | opts: Map.put(asset.opts, :cfg, inherit_video_strategy(type, config))}
+    %{asset | opts: Map.put(asset.opts, :cfg, inherit_video_strategy(type, normalized))}
   end
 
   def normalize(asset), do: asset
+
+  # Merging and validating a config takes tens of microseconds, and callers
+  # that only want the assets' names read them often, so the result is kept
+  # per declared value and the `default_config`s it was merged with. A changed
+  # `default_config` is a new key; the old entries stay, so nothing is updated
+  # in place (which would make `:persistent_term` collect every process).
+  # A function's result is not kept: it may differ on every call.
+  defp cached_declared_value!(type, name, config) do
+    key = {__MODULE__, type, name, config, configured_defaults(type)}
+
+    case :persistent_term.get(key, :none) do
+      :none ->
+        normalized = normalize_declared_value!(type, name, config)
+        :persistent_term.put(key, normalized)
+        normalized
+
+      normalized ->
+        normalized
+    end
+  end
+
+  defp configured_defaults(:gallery), do: {configured_default(:image), configured_default(:video)}
+  defp configured_defaults(type), do: configured_default(type)
 
   @doc """
   Normalizes a value declared by a Blueprint asset.
@@ -58,9 +87,8 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   end
 
   # A video config without its own `upload_strategy` follows the site's
-  # `default_video_upload_strategy`. Resolved here, on every runtime read,
-  # because a Blueprint's literal config is normalized at compile time, before
-  # the site's runtime configuration can be trusted.
+  # `default_video_upload_strategy`, resolved on every read like
+  # `default_config`.
   defp inherit_video_strategy(:video, %{upload_strategy: nil} = config),
     do: %{config | upload_strategy: RuntimeConfig.default_video_upload_strategy()}
 
@@ -141,15 +169,16 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
     build_struct!(asset, type, config_module, merged)
   end
 
-  defp default_asset_config(type, config_module) do
-    configured =
-      case RuntimeConfig.get(asset_context(type)) do
-        nil -> nil
-        config when is_list(config) -> Keyword.get(config, :default_config)
-        config when is_map(config) -> Map.get(config, :default_config)
-      end
+  defp configured_default(type) do
+    case RuntimeConfig.get(asset_context(type)) do
+      nil -> nil
+      config when is_list(config) -> Keyword.get(config, :default_config)
+      config when is_map(config) -> Map.get(config, :default_config)
+    end
+  end
 
-    default_config = configured || config_module.default_config()
+  defp default_asset_config(type, config_module) do
+    default_config = configured_default(type) || config_module.default_config()
     default_asset = %{name: :default, type: type}
 
     default_asset

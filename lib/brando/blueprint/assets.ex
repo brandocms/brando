@@ -119,6 +119,16 @@ defmodule Brando.Blueprint.Assets do
   end
 
   @doc """
+  Returns the compiled and normalized assets of `type` for `module`.
+  """
+  def __assets__(module, type) do
+    module
+    |> Extension.get_entities([:assets])
+    |> Enum.filter(&(&1.type == type))
+    |> Enum.map(&AssetConfigNormalizer.normalize/1)
+  end
+
+  @doc """
   Returns the compiled and normalized asset named `name` for `module`.
   """
   def __asset__(module, name) do

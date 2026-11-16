@@ -316,25 +316,11 @@ defmodule Brando.Blueprint.Dsl do
 
   defp generated_asset_fields do
     quote location: :keep, unquote: false do
-      @file_fields Enum.filter(@assets, &(&1.type == :file))
-      def __file_fields__ do
-        @file_fields
-      end
-
-      @image_fields Enum.filter(@assets, &(&1.type == :image))
-      def __image_fields__ do
-        @image_fields
-      end
-
-      @video_fields Enum.filter(@assets, &(&1.type == :video))
-      def __video_fields__ do
-        @video_fields
-      end
-
-      @gallery_fields Enum.filter(@assets, &(&1.type == :gallery))
-      def __gallery_fields__ do
-        @gallery_fields
-      end
+      # Through `__assets__/1`, which resolves each `cfg:` when it is read.
+      def __file_fields__, do: Brando.Blueprint.Assets.__assets__(__MODULE__, :file)
+      def __image_fields__, do: Brando.Blueprint.Assets.__assets__(__MODULE__, :image)
+      def __video_fields__, do: Brando.Blueprint.Assets.__assets__(__MODULE__, :video)
+      def __gallery_fields__, do: Brando.Blueprint.Assets.__assets__(__MODULE__, :gallery)
     end
   end
 
