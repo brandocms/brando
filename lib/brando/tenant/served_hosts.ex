@@ -65,8 +65,9 @@ defmodule Brando.Tenant.ServedHosts do
   node after a registry write, and once a minute (`:retry_interval`, in
   milliseconds) while a bound host waits for its DNS, does not resolve, or
   could not be looked up, or the file could not be written. A host whose
-  lookup timed out is looked up again once sooner, five seconds after its
-  answer was written (`:timeout_retry_interval`, in milliseconds): a local
+  lookup timed out is looked up again once sooner, five to ten seconds after
+  its answer was written (`:timeout_retry_interval`, in milliseconds, after
+  any quick retry already waiting): a local
   caching resolver can take longer than a family's budget to answer its first
   query for a name, so a name that does not exist would otherwise read as a
   failed lookup for a minute. A timeout again waits for the minute; an
@@ -284,8 +285,9 @@ defmodule Brando.Tenant.ServedHosts do
     # `results`: what host lookups answered, by host, until admitted or
     # looked up again. `fresh`: the hosts whose answer no write has decided
     # on yet, which no check looks up again. `timeout_retries`: the hosts
-    # whose lookup timed out, `:pending` until their quick retry looks them up
-    # again, then `:done` until an answer that is no timeout.
+    # whose lookup timed out, `:pending` until a quick retry timer is armed
+    # for them, `:armed` until it looks them up again, then `:done` until an
+    # answer that is no timeout.
     # `own`: this server's addresses as last looked up, with the name and
     # when (monotonic milliseconds).
     # `writing`: the reference of the write under way, `write_job` what it was
@@ -840,8 +842,8 @@ defmodule Brando.Tenant.ServedHosts do
     schedule(state, retry?(state, decided) or result.error != nil)
   end
 
-  # A host whose lookup timed out gets one quick retry: `:pending` until its
-  # retry looks it up again. An answer that is no timeout ends it; a host
+  # A host whose lookup timed out gets one quick retry: `:pending`, then
+  # `:armed`, until its retry looks it up again. An answer that is no timeout ends it; a host
   # looked up again, with no answer yet, keeps its entry.
   defp track_timeouts(state) do
     kept = Map.take(state.timeout_retries, Map.keys(state.results) ++ MapSet.to_list(pending_hosts(state)))
@@ -855,11 +857,17 @@ defmodule Brando.Tenant.ServedHosts do
   defp timed_out?({:lookup_failed, failures}), do: :timeout in Map.values(failures)
   defp timed_out?(_result), do: false
 
+  # The timer retries the hosts pending when it is armed; a host that times
+  # out meanwhile waits for the next one
   defp retry_timeouts_soon(%{timeout_timer: nil} = state) do
     if Enum.any?(state.timeout_retries, &match?({_host, :pending}, &1)) do
       ref = make_ref()
       timer = Process.send_after(self(), {:retry_timeouts, ref}, state.settings.timeout_retry_interval)
-      %{state | timeout_timer: timer, timeout_tick: ref}
+
+      retries =
+        Map.new(state.timeout_retries, fn {host, mark} -> {host, if(mark == :pending, do: :armed, else: mark)} end)
+
+      %{state | timeout_timer: timer, timeout_tick: ref, timeout_retries: retries}
     else
       state
     end
@@ -880,13 +888,13 @@ defmodule Brando.Tenant.ServedHosts do
     bound = MapSet.new(servable_bound_hosts())
 
     hosts =
-      for {host, :pending} <- state.timeout_retries,
+      for {host, :armed} <- state.timeout_retries,
           MapSet.member?(bound, host) and not MapSet.member?(state.admitted, host) and
             not MapSet.member?(state.fresh, host),
           do: host
 
-    retries = Map.new(state.timeout_retries, fn {host, _pending} -> {host, :done} end)
-    look_up(%{state | timeout_retries: retries}, hosts)
+    retries = Map.new(state.timeout_retries, fn {host, mark} -> {host, if(mark == :armed, do: :done, else: mark)} end)
+    %{state | timeout_retries: retries} |> look_up(hosts) |> retry_timeouts_soon()
   end
 
   # What each bound host not in the file gets from its last answer

@@ -524,6 +524,25 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert %{hosts: %{"slow.acme.test" => {:lookup_failed, %{inet: :timeout}}}} = ServedHosts.status()
     end
 
+    test "a host that times out while another's quick retry waits gets its own", %{path: file, site: site} do
+      :persistent_term.put({NotifyingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver, timeout_retry_interval: 300)
+      DNS.answer("first.acme.test", {:error, :timeout})
+      DNS.answer("second.acme.test", {:error, :timeout})
+      bind(site, "first", "first.acme.test")
+      bind(site, "second", "second.acme.test")
+      flush_lookups()
+
+      # The first host's retry, armed before the second timed out, retries it
+      # alone; the second waits its own interval
+      assert_receive {:looked_up, "first.acme.test"}, 1_000
+      refute_receive {:looked_up, "second.acme.test"}, 150
+      assert_receive {:looked_up, "second.acme.test"}, 1_000
+      ServedHosts.settled()
+      refute_receive {:looked_up, _host}, 600
+    end
+
     test "the quick retry leaves alone an answer that came in before it, while a write runs",
          %{path: file, site: site} do
       :persistent_term.put({NotifyingResolver, :pid}, self())

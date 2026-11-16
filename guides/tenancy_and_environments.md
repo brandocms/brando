@@ -833,7 +833,7 @@ whatever `admit` says.
 Brando checks at boot, after every registry write (on every node, as
 [Several nodes](#several-nodes) describes), once a minute while a bound host
 waits for its DNS, and every five minutes otherwise. A host whose lookup
-timed out is looked up again once after five seconds
+timed out is looked up again once after five to ten seconds
 (`:timeout_retry_interval` in milliseconds), before the minute: a local
 caching resolver can take longer than a lookup allows to answer its first
 query for a name, and a name that does not exist then shows **Does not
