@@ -9,8 +9,8 @@ defmodule Brando.SSG.PreviewRewrite do
   each HTML and CSS response, to the same path under the preview: in the
   `href`, `src`, `action`, `formaction`, `poster`, `data-src`, `srcset` and
   `data-srcset` attributes, and in CSS `url()`. The artifact's files are not
-  changed. A `srcset` is read as a browser reads it, so a `data:` candidate
-  stays whole. URLs a script builds as it runs are not rewritten.
+  changed. A `srcset` is read as a browser reads it, its character
+  references decoded, so a `data:` candidate stays whole. URLs a script builds as it runs are not rewritten.
   """
 
   @url_attribute ~r/(\s(?:href|src|action|formaction|poster|data-src)\s*=\s*)(["'])([^"']*)\2/i
@@ -49,7 +49,22 @@ defmodule Brando.SSG.PreviewRewrite do
   # As browsers read a srcset: a candidate's URL runs to the next whitespace,
   # commas included (a `data:` URL has one), less the commas it ends with;
   # its descriptors run to the next comma
-  defp rewrite_srcset(srcset, prefix, site_bases), do: srcset_candidates(srcset, prefix, site_bases, [])
+  defp rewrite_srcset(srcset, prefix, site_bases) do
+    srcset
+    |> decode_attribute()
+    |> srcset_candidates(prefix, site_bases, [])
+    |> Phoenix.HTML.html_escape()
+    |> Phoenix.HTML.safe_to_string()
+  end
+
+  # The value a browser reads from the attribute, its character references
+  # decoded (`&#32;` is a space that separates candidates)
+  defp decode_attribute(value) do
+    case Floki.parse_fragment(~s(<img a=") <> value <> ~s(">)) do
+      {:ok, [{"img", [{"a", decoded}], []}]} -> decoded
+      _other -> value
+    end
+  end
 
   defp srcset_candidates("", _prefix, _site_bases, acc), do: acc |> Enum.reverse() |> IO.iodata_to_binary()
 
