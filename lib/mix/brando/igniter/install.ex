@@ -8,6 +8,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Common
     alias Igniter.Code.Function, as: CodeFunction
     alias Igniter.Code.Keyword, as: CodeKeyword
+    alias Igniter.Code.List, as: IgniterList
     alias Igniter.Project.Application, as: ProjectApplication
     alias Igniter.Project.Module, as: ProjectModule
     alias Mix.Brando.Igniter.AgentFiles
@@ -62,7 +63,7 @@ if Code.ensure_loaded?(Igniter) do
         |> PhoenixStatic.plan()
         |> Mix.Brando.Igniter.Install.Migrations.plan(project)
         |> application(project)
-        |> endpoint(project)
+        |> endpoint(project, tenancy.mode)
         |> router(project)
         |> public_site(project, options, fresh?)
         # Last: Rewrite rereads the formatters when .formatter.exs changes, and
@@ -250,6 +251,146 @@ if Code.ensure_loaded?(Igniter) do
       |> require_supervision()
     end
 
+    # With several sites the admin answers on the endpoint's host only, and its
+    # socket takes connections from there only, whatever the endpoint's own
+    # `check_origin` accepts for the sites' pages.
+    defp admin_socket(:multi) do
+      """
+      socket "/admin/socket", BrandoAdmin.AdminSocket,
+        websocket: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}],
+        longpoll: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]
+      """
+    end
+
+    defp admin_socket(_tenancy_mode) do
+      """
+      socket "/admin/socket", BrandoAdmin.AdminSocket, websocket: true, longpoll: true
+      """
+    end
+
+    # An existing socket line is the application's: a notice says what it lacks
+    defp admin_socket_origin_notice(igniter, endpoint, :multi) do
+      with {:ok, {igniter, _source, zipper}} <- ProjectModule.find_module(igniter, endpoint),
+           {:ok, body} <- Common.move_to_do_block(zipper),
+           {:ok, socket} <- Source.find_call(body, :socket, [2, 3], "/admin/socket"),
+           false <- admin_host_origin_check?(socket.node) do
+        Igniter.add_notice(igniter, """
+        With several sites the admin socket takes connections from the endpoint's host only.
+        Give `socket "/admin/socket"` in #{inspect(endpoint)} this origin check, on both transports:
+            websocket: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}],
+            longpoll: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]
+        """)
+      else
+        _ -> igniter
+      end
+    end
+
+    defp admin_socket_origin_notice(igniter, _endpoint, _tenancy_mode), do: igniter
+
+    # Whether every transport the socket opens (Phoenix's defaults: websocket
+    # on, longpoll off) checks the origin with BrandoAdmin.AdminHost. Options
+    # that are not a literal keyword list cannot be read, so they do not.
+    defp admin_host_origin_check?(socket) do
+      options =
+        case socket do
+          {_call, _meta, [_path, _module, options]} -> options |> Sourceror.to_string() |> Code.string_to_quoted!()
+          _no_options -> []
+        end
+
+      Keyword.keyword?(options) and
+        Enum.all?([websocket: true, longpoll: false], fn {transport, default} ->
+          case Keyword.get(options, transport, default) do
+            false ->
+              true
+
+            config when is_list(config) ->
+              config |> Keyword.get(:check_origin) |> Macro.to_string() =~ "BrandoAdmin.AdminHost"
+
+            _open ->
+              false
+          end
+        end)
+    end
+
+    # With several sites an admin LiveView's join and a site's LiveView read
+    # the host from the `/live` socket's `:uri` connect info. Each transport's
+    # literal `connect_info` list gets it; options the installer cannot read
+    # as literals stay as they are, with a notice.
+    defp live_socket_uri(igniter, endpoint, :multi) do
+      with {:ok, {igniter, _source, zipper}} <- ProjectModule.find_module(igniter, endpoint),
+           {:ok, body} <- Common.move_to_do_block(zipper),
+           {:ok, socket} <- Source.find_call(body, :socket, [2, 3], "/live"),
+           {:ok, transports} <- transports_without_uri(socket.node) do
+        if transports == [],
+          do: igniter,
+          else: ProjectModule.find_and_update_module!(igniter, endpoint, &add_uri(&1, transports))
+      else
+        _ ->
+          Igniter.add_notice(igniter, """
+          With several sites the `/live` socket must give its URI, so an admin LiveView refuses a join
+          from a socket on a site's host and a site's LiveView finds its site by the real host.
+          Add `:uri` to the `connect_info` list of each transport of `socket "/live"` in #{inspect(endpoint)}:
+              websocket: [connect_info: [:uri, session: @session_options]],
+              longpoll: [connect_info: [:uri, session: @session_options]]
+          """)
+      end
+    end
+
+    defp live_socket_uri(igniter, _endpoint, _tenancy_mode), do: igniter
+
+    # The transports the socket opens whose literal options lack `:uri`, or
+    # :error when an open transport's options are not literal lists.
+    defp transports_without_uri({_call, _meta, [_path, _module, options]}) do
+      options = options |> Sourceror.to_string() |> Code.string_to_quoted!()
+
+      if Keyword.keyword?(options) do
+        transports = Keyword.take(options, [:websocket, :longpoll])
+        states = Enum.map(transports, fn {_transport, config} -> transport_uri(config) end)
+
+        if :error in states,
+          do: :error,
+          else: {:ok, for({{transport, _}, :missing} <- Enum.zip(transports, states), do: transport)}
+      else
+        :error
+      end
+    end
+
+    defp transports_without_uri(_socket), do: :error
+
+    defp transport_uri(false), do: :ok
+
+    defp transport_uri(config) when is_list(config) do
+      with true <- Keyword.keyword?(config),
+           {:ok, info} when is_list(info) <- Keyword.fetch(config, :connect_info) do
+        if :uri in info, do: :ok, else: :missing
+      else
+        :error -> :missing
+        _ -> :error
+      end
+    end
+
+    defp transport_uri(_config), do: :error
+
+    defp add_uri(zipper, transports) do
+      with {:ok, socket} <- Source.find_call(zipper, :socket, [2, 3], "/live"),
+           {:ok, options} <- CodeFunction.move_to_nth_argument(socket, 2) do
+        Enum.reduce_while(transports, {:ok, options}, &add_transport_uri/2)
+      else
+        _ -> {:error, "Could not locate the options of socket \"/live\" to add :uri."}
+      end
+    end
+
+    defp add_transport_uri(transport, {:ok, options}) do
+      case CodeKeyword.set_keyword_key(options, transport, nil, &prepend_uri/1) do
+        {:ok, options} -> {:cont, {:ok, options}}
+        _ -> {:halt, {:error, "Could not add :uri to the #{transport} connect_info of socket \"/live\"."}}
+      end
+    end
+
+    defp prepend_uri(config) do
+      CodeKeyword.set_keyword_key(config, :connect_info, [:uri], &IgniterList.prepend_new_to_list(&1, :uri))
+    end
+
     defp initialize(zipper) do
       with :error <- CodeFunction.move_to_function_call(zipper, {Brando.System, :initialize}, 0),
            {:ok, start} <- CodeFunction.move_to_def(zipper, :start, 2),
@@ -282,21 +423,14 @@ if Code.ensure_loaded?(Igniter) do
       Enum.reduce(missing, %{igniter | warnings: other}, &Igniter.add_issue(&2, &1))
     end
 
-    defp endpoint(igniter, project) do
+    defp endpoint(igniter, project, tenancy_mode) do
       endpoint = project.endpoint
       before_router = [before: {:plug, [1, 2], project.router}]
 
       igniter
-      |> Source.ensure_call(
-        endpoint,
-        :socket,
-        [2, 3],
-        "/admin/socket",
-        """
-        socket "/admin/socket", BrandoAdmin.AdminSocket, websocket: true, longpoll: true
-        """,
-        before_router
-      )
+      |> Source.ensure_call(endpoint, :socket, [2, 3], "/admin/socket", admin_socket(tenancy_mode), before_router)
+      |> admin_socket_origin_notice(endpoint, tenancy_mode)
+      |> live_socket_uri(endpoint, tenancy_mode)
       |> Source.ensure_call(
         endpoint,
         :socket,

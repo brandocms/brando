@@ -32,6 +32,12 @@ defmodule Brando.SEO.Robots do
   Disallow: /admin/
   """
 
+  # On a host that does not serve the admin, the path is not named
+  @default_site_robots """
+  User-agent: *
+  Disallow:
+  """
+
   @content_signals_policy """
   # As a condition of accessing this website, you agree to
   # abide by the following content signals:
@@ -65,17 +71,26 @@ defmodule Brando.SEO.Robots do
 
   @type policy :: %{blocked: [String.t()], ai_train: nil | String.t()}
 
-  @doc "The robots text served when the editors have written none."
-  @spec default_robots() :: String.t()
-  def default_robots, do: @default_robots
+  @doc """
+  The robots text served when the editors have written none. It names the
+  admin's path only when `admin?`, on a host where the admin answers
+  (`BrandoAdmin.AdminHost.serves_admin?/1`).
+  """
+  @spec default_robots(boolean()) :: String.t()
+  def default_robots(admin? \\ true)
+  def default_robots(true), do: @default_robots
+  def default_robots(false), do: @default_site_robots
 
   @doc """
   The robots text for `seo`: its custom lines, the generated policy block and
   a `Sitemap:` line for `sitemap_url` unless the custom lines name one.
+
+  `admin?: false` (default `true`) leaves the admin's path out of the default
+  text, for a host where the admin does not answer.
   """
-  @spec render(map(), String.t() | nil) :: String.t()
-  def render(seo, sitemap_url \\ nil) do
-    custom = seo |> Map.get(:robots) |> custom_lines()
+  @spec render(map(), String.t() | nil, keyword()) :: String.t()
+  def render(seo, sitemap_url \\ nil, opts \\ []) do
+    custom = seo |> Map.get(:robots) |> custom_lines(Keyword.get(opts, :admin?, true))
 
     case policy_block(policy(seo)) do
       nil -> custom
@@ -100,18 +115,19 @@ defmodule Brando.SEO.Robots do
   end
 
   @doc """
-  The editors' robots text, or the default when there is none, without a
-  generated block pasted into it.
+  The editors' robots text, or the default (`default_robots/1`) when there is
+  none, without a generated block pasted into it.
   """
-  @spec custom_lines(String.t() | nil) :: String.t()
-  def custom_lines(robots) when robots in [nil, ""], do: @default_robots
+  @spec custom_lines(String.t() | nil, boolean()) :: String.t()
+  def custom_lines(robots, admin? \\ true)
+  def custom_lines(robots, admin?) when robots in [nil, ""], do: default_robots(admin?)
 
-  def custom_lines(robots) when is_binary(robots) do
+  def custom_lines(robots, admin?) when is_binary(robots) do
     if String.contains?(robots, @begin_marker) do
       pattern = ~r/^#{Regex.escape(@begin_marker)}.*?^#{Regex.escape(@end_marker)}[^\n]*\n?/ms
 
       case String.trim(Regex.replace(pattern, robots, "")) do
-        "" -> @default_robots
+        "" -> default_robots(admin?)
         text -> text <> "\n"
       end
     else

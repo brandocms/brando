@@ -576,6 +576,10 @@ With `tenancy_mode: :multi` and HMR on:
   upload a set first
   ([Uploading a site's build by hand](deps/brando/guides/tenancy_and_environments.md#uploading-a-sites-build-by-hand)).
 
+The admin answers on the endpoint's host: with the endpoint on `localhost`,
+`localhost:4000/admin` opens it and `acme.localhost:4000/admin` is a 404
+([Where the admin answers](deps/brando/guides/tenancy_and_environments.md#where-the-admin-answers)).
+
 Without `dev_site`, every site loads from the dev server, as on a
 single-site installation. Set in `:none` or `:single`, or naming a site that
 does not exist, `dev_site` is ignored, with a warning at boot. Production,

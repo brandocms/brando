@@ -16,7 +16,7 @@ defmodule BrandoWeb.SEOController do
     robots =
       language
       |> Cache.SEO.get()
-      |> Robots.render(sitemap_url())
+      |> Robots.render(sitemap_url(), admin?: BrandoAdmin.AdminHost.serves_admin?(conn))
 
     conn
     |> Conn.put_resp_content_type("text/plain")

@@ -72,7 +72,10 @@ defmodule Brando.LiveCase do
         config: %Brando.Users.UserConfig{}
       )
 
-    {:ok, conn: Brando.Test.log_in_user(Phoenix.ConnTest.build_conn(), user), current_user: user}
+    # On the endpoint's host, as an admin's browser is: with `tenancy_mode:
+    # :multi` the admin answers there only, and a test may switch the mode
+    # after this login (`BrandoAdmin.AdminHost`)
+    {:ok, conn: Brando.Test.log_in_user(Brando.Test.Support.admin_conn(), user), current_user: user}
   end
 
   @doc """
@@ -175,6 +178,12 @@ defmodule Brando.LiveCase do
     prior_trap? = Process.flag(:trap_exit, true)
 
     try do
+      # Suspended first, so the kill lands between two callbacks and never in
+      # the middle of a query. The view runs its queries on the test's sandbox
+      # connection: killed while it holds that connection, the connection is
+      # dropped, and the test's own next query exits with "client … exited"
+      # (seen in CI on "preview recovery keeps unsaved input").
+      suspend(pid, within)
       Process.exit(pid, :kill)
 
       receive do
@@ -188,6 +197,13 @@ defmodule Brando.LiveCase do
     after
       Process.flag(:trap_exit, prior_trap?)
     end
+  end
+
+  # A view that is already gone, or dies before it answers, needs no suspending
+  defp suspend(pid, within) do
+    :sys.suspend(pid, within)
+  catch
+    :exit, _reason -> :ok
   end
 
   # Receives the exit of the one process `live/2` linked us to, and nothing

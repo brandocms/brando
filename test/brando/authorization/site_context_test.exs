@@ -151,7 +151,7 @@ defmodule Brando.Authorization.SiteContextTest do
     token = Brando.Users.generate_user_session_token(c.owner)
 
     {:ok, view, _} =
-      live_isolated(build_conn(), BrandoAdmin.Chrome,
+      live_isolated(admin_conn(), BrandoAdmin.Chrome,
         session: %{
           "user_token" => token,
           "brando_site_key" => c.alpha.key,

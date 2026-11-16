@@ -204,6 +204,22 @@ defmodule BrandoAdmin.MenuTest do
     assert Enum.count(queried([]), &(&1 == "authorization_groups")) in 1..2
   end
 
+  defmodule AdminHostEndpoint do
+    @moduledoc false
+    def host, do: "admin.example.com"
+  end
+
+  test "with several sites and groups, the menu finds the admin's routes on the endpoint's host" do
+    put_test_env(:authorization_mode, :groups)
+    put_test_env(:tenancy_mode, :multi)
+    put_test_env(:endpoint_module, AdminHostEndpoint)
+    user = Brando.Factory.insert(:random_user, role: :superuser, config: %Brando.Users.UserConfig{})
+    {:ok, _} = Brando.Authorization.Migration.run()
+
+    urls = for menu <- BrandoAdmin.Menu.get_menu(user), item <- menu.items, do: item[:url]
+    assert "/admin/sites" in urls
+  end
+
   defp queried(sources) do
     receive do
       {:query, source} -> queried([source | sources])

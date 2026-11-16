@@ -373,12 +373,15 @@ setting every visitor shares the proxy's limits, and a burst of bad logins
 from anyone locks everyone out.
 
 LiveView screens (the reset request, the security page) read the address from
-the socket, so its `connect_info` must give the peer and the forwarded
-headers; `mix brando.install` writes this:
+the socket, so the endpoint's `/live` socket must give the peer and the
+forwarded headers in its `connect_info`. `mix brando.install` does not write
+them (with `--tenancy-mode multi` it adds only `:uri`); add them to each
+transport the socket opens:
 
 ```elixir
 socket "/live", Phoenix.LiveView.Socket,
-  websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]
+  websocket: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]],
+  longpoll: [connect_info: [:peer_data, :x_headers, :user_agent, session: @session_options]]
 ```
 
 Two-factor codes, confirmation fields, tokens and keys are kept out of the

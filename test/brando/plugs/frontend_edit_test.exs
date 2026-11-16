@@ -62,6 +62,18 @@ defmodule Brando.Plug.FrontendEditTest do
     assert Plug.Conn.get_resp_header(conn, "cache-control") != ["private, no-store"]
   end
 
+  test "with several sites, a site's host gets no editor: its admin view answers on the endpoint's host only",
+       %{user: user} do
+    %{page: page} = page_with_blocks(user)
+    put_test_env(:tenancy_mode, :multi)
+
+    conn =
+      request(build_conn(:get, "https://beta.test/about") |> signed_in(user) |> edit_mode(), fn -> page_body(page) end)
+
+    refute conn.resp_body =~ "brando-frontend-edit"
+    refute FrontendEdit.active?()
+  end
+
   test "nothing is added when frontend edit is switched off", %{user: user} do
     Application.put_env(:brando, FrontendEdit, enabled: false)
     %{page: page} = page_with_blocks(user)

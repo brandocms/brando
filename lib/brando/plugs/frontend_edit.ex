@@ -55,6 +55,8 @@ defmodule Brando.Plug.FrontendEdit do
          true <- conn.method == "GET",
          false <- Map.get(conn.private, :brando_live_preview, false),
          false <- internal_route?(conn),
+         # The editor is the admin's page, framed from the page's own origin
+         true <- BrandoAdmin.AdminHost.serves_admin?(conn),
          {:ok, conn} <- with_session(conn),
          %{} = user <- admin_user(conn) do
       conn = fetch_cookies(conn)

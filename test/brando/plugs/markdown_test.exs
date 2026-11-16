@@ -171,6 +171,28 @@ defmodule Brando.Plug.MarkdownTest do
     assert post.resp_body == "Not found page"
   end
 
+  test "with several sites, the admin's path is set apart on the admin's host only" do
+    put_test_env(:tenancy_mode, :multi)
+    opts = Brando.Plug.Markdown.init([])
+
+    accept = fn host ->
+      :get
+      |> Plug.Test.conn("https://#{host}/admin/login")
+      |> Plug.Conn.put_req_header("accept", "text/markdown")
+      |> Brando.Plug.Markdown.call(opts)
+    end
+
+    # On a site's host, as any other path
+    site = accept.("acme.example.com")
+    assert site.private[:brando_markdown] == :accept
+    assert Plug.Conn.get_req_header(site, "accept") == ["text/html"]
+
+    # On the endpoint's host, left alone
+    admin = accept.("localhost")
+    refute Map.has_key?(admin.private, :brando_markdown)
+    assert Plug.Conn.get_req_header(admin, "accept") == ["text/markdown"]
+  end
+
   test "the page head names the Markdown version", %{module: module, user: user} do
     page = page!(%{}, module, user)
     {:ok, page} = Pages.get_page(%{matches: %{id: page.id}, preload: [:alternate_entries]})

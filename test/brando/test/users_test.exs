@@ -8,6 +8,21 @@ defmodule Brando.Test.UsersTest do
 
   alias Brando.Pages.Page
 
+  describe "log_in_user/2" do
+    test "moves a conn on the default test host to the endpoint's host with several sites only" do
+      user = insert_user()
+
+      for mode <- [:none, :single] do
+        put_test_env(:tenancy_mode, mode)
+        assert log_in_user(build_conn(), user).host == "www.example.com", "#{mode}"
+      end
+
+      put_test_env(:tenancy_mode, :multi)
+      assert log_in_user(build_conn(), user).host == BrandoAdmin.AdminHost.endpoint_host()
+      assert log_in_user(%{build_conn() | host: "acme.example.com"}, user).host == "acme.example.com"
+    end
+  end
+
   describe "legacy roles" do
     test "a user has the role given, a superuser by default" do
       assert %{role: :superuser} = insert_user()

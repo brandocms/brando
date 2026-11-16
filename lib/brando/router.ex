@@ -90,7 +90,7 @@ defmodule Brando.Router do
   """
   defmacro mcp_routes do
     quote do
-      @doc false
+      @doc "Whether this router mounts `Brando.Router.mcp_routes/0`."
       def __brando_mcp_routes__, do: true
 
       mcp_sandbox_hooks =
@@ -105,6 +105,8 @@ defmodule Brando.Router do
       pipeline :brando_mcp_consent do
         plug Brando.MCP.ConsentPlug, :guard
       end
+
+      Brando.Router.__admin_routes_start__(__MODULE__)
 
       scope "/" do
         match :*, "/.well-known/oauth-protected-resource/mcp", Brando.MCP.HTTP, :resource_metadata
@@ -129,6 +131,8 @@ defmodule Brando.Router do
           live "/authorize", BrandoAdmin.MCP.ConsentLive
         end
       end
+
+      Brando.Router.__admin_routes_end__(__MODULE__)
     end
   end
 
@@ -146,8 +150,15 @@ defmodule Brando.Router do
           []
         end
 
-      upload_ctrl = BrandoAdmin.API.Images.UploadController
-      villain_ctrl = BrandoAdmin.API.Villain.VillainController
+      @before_compile Brando.Router
+
+      @brando_admin_path Phoenix.Router.scoped_path(__MODULE__, unquote(path))
+
+      @doc """
+      The path `Brando.Router.admin_routes/3` mounts the admin on, with that
+      of any enclosing scope.
+      """
+      def __brando_admin_path__, do: @brando_admin_path
 
       pipeline :admin do
         plug :accepts, ["html"]
@@ -174,6 +185,8 @@ defmodule Brando.Router do
       # The icon stylesheet (`Brando.Icons.stylesheet_path/0`). Outside the admin path
       # and its pipelines: the login page and front-end edit mode use icons too.
       forward "/__brando/icons", Brando.Plug.Icons
+
+      Brando.Router.__admin_routes_start__(__MODULE__)
 
       scope unquote(path), as: :admin do
         scope "/", BrandoAdmin do
@@ -265,6 +278,140 @@ defmodule Brando.Router do
           unquote(block)
         end
       end
+
+      Brando.Router.__admin_routes_end__(__MODULE__)
+    end
+  end
+
+  @doc """
+  Marks where the routes of `admin_routes/3` or `mcp_routes/0` start in
+  `module`. The routes declared until `__admin_routes_end__/1` are left out of
+  the match on a host that does not serve the admin
+  (`BrandoAdmin.AdminHost`), with the complete paths of any enclosing scope.
+  """
+  def __admin_routes_start__(module) do
+    Module.put_attribute(module, :brando_admin_routes_start, route_count(module))
+  end
+
+  @doc "Marks where the routes `__admin_routes_start__/1` started end in `module`."
+  def __admin_routes_end__(module) do
+    range = Module.get_attribute(module, :brando_admin_routes_start)..(route_count(module) - 1)//1
+    Module.put_attribute(module, :brando_admin_routes, [range | Module.get_attribute(module, :brando_admin_routes) || []])
+  end
+
+  defp route_count(module), do: module |> Module.get_attribute(:phoenix_routes) |> length()
+
+  # `__match_route_without_admin__/3`: Phoenix's `__match_route__/3` for every
+  # route but those `admin_routes/3` and `mcp_routes/0` declare, in the order
+  # they are declared, with pipelines of its own. `__match_route__/3` itself
+  # becomes host-aware, so the router's `call/2`, `Phoenix.Router.route_info/4`
+  # and a LiveView's join all match the same routes. Phoenix defines
+  # `__match_route__/3` in its own `@before_compile`, which `use Phoenix.Router`
+  # registers before `admin_routes/3` registers this one, so it is defined
+  # (and can be overridden) by the time this runs.
+  @doc false
+  defmacro __before_compile__(env) do
+    admin_ranges = Module.get_attribute(env.module, :brando_admin_routes) || []
+
+    routes =
+      env.module
+      |> Module.get_attribute(:phoenix_routes)
+      |> Enum.reverse()
+      |> Enum.with_index()
+      |> Enum.reject(fn {_route, index} -> Enum.any?(admin_ranges, &(index in &1)) end)
+      |> Enum.map(&elem(&1, 0))
+
+    {clauses, {pipes, _known}} = Enum.map_reduce(routes, {[], %{}}, &build_match_without_admin(&1, &2, env))
+
+    # Generated, as Phoenix's own catch-all is: a router ending in a route that
+    # matches every path makes it unreachable
+    match_catch_all =
+      quote generated: true do
+        defp __match_route_without_admin__(_verb, _path, _host), do: :error
+      end
+
+    quote do
+      unquote(pipes)
+
+      unquote(clauses)
+      unquote(match_catch_all)
+
+      defoverridable __match_route__: 3
+
+      @doc """
+      Matches a route as `Phoenix.Router` does, but on a host that does not
+      serve the admin the routes `Brando.Router.admin_routes/3` and
+      `Brando.Router.mcp_routes/0` declare are left out
+      (`BrandoAdmin.AdminHost.serves_admin_on?/1`).
+      """
+      def __match_route__(verb, path, host) do
+        if BrandoAdmin.AdminHost.serves_admin_on?(host),
+          do: super(verb, path, host),
+          else: __match_route_without_admin__(verb, path, host)
+      end
+    end
+  end
+
+  defp build_match_without_admin(route, {pipes, known}, env) do
+    {pipe_name, pipes, known} =
+      case Map.fetch(known, route.pipe_through) do
+        {:ok, name} ->
+          {name, pipes, known}
+
+        :error ->
+          name = :"__brando_site_pipe_through#{map_size(known)}__"
+          {name, [build_pipe(name, route.pipe_through, env) | pipes], Map.put(known, route.pipe_through, name)}
+      end
+
+    %{prepare: prepare, dispatch: dispatch, path_params: path_params, hosts: hosts, path: path} =
+      Phoenix.Router.Route.exprs(route)
+
+    verb =
+      case route.verb do
+        :* -> Macro.var(:_verb, nil)
+        verb -> verb |> to_string() |> String.upcase()
+      end
+
+    clauses =
+      for host <- hosts do
+        quote line: route.line do
+          defp __match_route_without_admin__(unquote(verb), unquote(path), unquote(host)) do
+            {unquote(route_metadata(route, path_params)),
+             fn var!(conn, :conn), %{path_params: var!(path_params, :conn)} -> unquote(prepare) end,
+             &(unquote(Macro.var(pipe_name, __MODULE__)) / 1), unquote(dispatch)}
+          end
+        end
+      end
+
+    {clauses, {pipes, known}}
+  end
+
+  defp route_metadata(route, path_params) do
+    pairs = [
+      conn: nil,
+      route: route.path,
+      plug: route.plug,
+      plug_opts: Macro.escape(route.plug_opts),
+      path_params: path_params,
+      pipe_through: route.pipe_through
+    ]
+
+    {:%{}, [], pairs ++ Macro.escape(Map.to_list(route.metadata))}
+  end
+
+  defp build_pipe(name, pipe_through, env) do
+    plugs =
+      pipe_through
+      |> Enum.reverse()
+      |> Enum.map(fn
+        {plug, opts} -> {plug, opts, true}
+        plug -> {plug, [], true}
+      end)
+
+    {conn, body} = Plug.Builder.compile(env, plugs, init_mode: Phoenix.plug_init_mode(), log_on_halt: :debug)
+
+    quote do
+      defp unquote(name)(unquote(conn)), do: unquote(body)
     end
   end
 

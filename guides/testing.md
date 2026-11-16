@@ -200,6 +200,11 @@ With `permissions:`, the user joins a group of their own with exactly those
 permissions. `log_in_as/2` adds `brando.admin.access`, which every admin user
 needs. A key the permission catalogue does not have raises.
 `log_in_user/2` logs in a user you already have.
+With `tenancy_mode: :multi`, both put a conn on Plug's default test host
+(`www.example.com`) on the endpoint's host, where the admin answers; a host
+the test chose is kept, and the other modes keep every host. A request to the
+admin without logging in takes a conn on that host too:
+`%{build_conn() | host: MyAppWeb.Endpoint.host()}`.
 
 ## Tenants
 

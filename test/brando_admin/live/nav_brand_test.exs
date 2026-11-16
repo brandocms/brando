@@ -91,7 +91,7 @@ defmodule BrandoAdmin.NavBrandTest do
   end
 
   defp login_screen do
-    build_conn() |> get("/admin/login") |> html_response(200)
+    admin_conn() |> get("/admin/login") |> html_response(200)
   end
 
   test "a site whose frontend defines admin_brand/0 shows it", %{conn: conn} do
