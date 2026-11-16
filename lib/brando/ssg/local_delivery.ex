@@ -34,8 +34,9 @@ defmodule Brando.SSG.LocalDelivery do
 
   HTML and the other files are sent with an `ETag` and
   `Cache-Control: no-cache`; the files the build's Vite manifest lists, and a
-  request for a file other than a page (HTML or Markdown) with a `vsn` query
-  as `Plug.Static` reads it, with a year's immutable caching.
+  request with a `vsn` query, as `Plug.Static` reads it, for a file other
+  than a page (HTML or Markdown) under `assets/` or a directory the web
+  module's `static_paths/0` names, with a year's immutable caching.
 
   Pages (HTML, the 404 page included) are sent with the headers
   `Phoenix.Controller.put_secure_browser_headers/2` sets by default, as the
@@ -483,15 +484,34 @@ defmodule Brando.SSG.LocalDelivery do
   end
 
   # Content-addressed files the build's Vite manifest lists, or a request
-  # versioned with `?vsn=`, as `Plug.Static` reads one; never a page, HTML or
-  # its Markdown, which the next deploy changes under the same URL
+  # versioned with `?vsn=`, as `Plug.Static` reads one, for a file under a
+  # directory the asset pipeline fingerprints; never a page, HTML or its
+  # Markdown, nor a file the next deploy changes under the same URL, such as
+  # `robots.txt`, the sitemaps and feeds
   defp immutable?(conn, build, relative),
-    do: not page?(relative) and (versioned?(conn) or MapSet.member?(build.immutable, relative))
+    do: not page?(relative) and (MapSet.member?(build.immutable, relative) or (versioned?(conn) and asset?(relative)))
 
   defp page?(relative), do: html?(relative) or MIME.from_path(relative) == "text/markdown"
 
   defp versioned?(%Plug.Conn{query_string: "vsn=" <> _}), do: true
   defp versioned?(_conn), do: false
+
+  # Under `assets/`, the build's asset set, or a directory the web module's
+  # `static_paths/0` names
+  defp asset?(relative) do
+    case Path.split(relative) do
+      [dir, _name | _rest] -> dir == "assets" or dir in static_paths()
+      _root_file -> false
+    end
+  end
+
+  defp static_paths do
+    web_module = Brando.config(:web_module)
+
+    if is_atom(web_module) and Code.ensure_loaded?(web_module) and function_exported?(web_module, :static_paths, 0),
+      do: web_module.static_paths(),
+      else: []
+  end
 
   # -- The published build in memory ----------------------------------------------
 

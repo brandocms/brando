@@ -592,6 +592,24 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert [_etag] = get_resp_header(page, "etag")
     end
 
+    test "caches a vsn request for a year only under the asset directories", context do
+      context |> ready_build(%{"feed.json" => "{}", "fonts/body.woff2" => "font"}) |> deploy!()
+      put_test_env(:web_module, Brando.Test.LocalDeliveryWeb)
+      put_test_env(Brando.Test.LocalDeliveryWeb, ~w(fonts robots.txt))
+
+      for path <- ["/assets/logo.svg?vsn=d", "/fonts/body.woff2?vsn=d"] do
+        assert get_resp_header(request(context.host, path), "cache-control") == ["public, max-age=31536000, immutable"],
+               path
+      end
+
+      # Rewritten by the next deploy under the same URL
+      for path <- ["/robots.txt?vsn=d", "/sitemaps/sitemap.xml.gz?vsn=d", "/feed.json?vsn=d", "/manifest.json?vsn=d"] do
+        conn = request(context.host, path)
+        assert get_resp_header(conn, "cache-control") == ["no-cache"], path
+        assert [_etag] = get_resp_header(conn, "etag"), path
+      end
+    end
+
     test "sends its pages with the browser's security headers, and the application's own", context do
       context |> ready_build() |> deploy!()
 
