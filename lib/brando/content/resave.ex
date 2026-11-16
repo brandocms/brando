@@ -86,6 +86,26 @@ defmodule Brando.Content.Resave do
   are re-saved first, each after the fragments its blocks embed, and each is
   evicted from the query cache once stored, so the entries that embed it
   render its new HTML.
+
+  ## Started by `eval`
+
+  When the application is not running, it starts it in this VM, beside a
+  server that may be running: with the endpoint's `server: false`, so it
+  serves nothing, and Oban in `testing: :manual` (Brando's instance, and an
+  `Oban` configured under the application's own name), so it runs no queues
+  and no cron or other plugins: jobs it inserts wait for the server's
+  queues. `Brando.Tenant.ServedHosts` starts with its `file` unset, so it
+  writes no hosts file for the reverse proxy, and GitHub's webhook
+  addresses are not fetched. A release's `eval` VM runs without
+  distribution, so it joins no cluster and its `Phoenix.PubSub` broadcasts
+  (`Brando.CacheSync`) stay in it, unless the application uses an adapter
+  such as `phoenix_pubsub_redis`: then the serving nodes hear that each
+  re-saved fragment changed, which is true.
+
+  Everything else in the application's supervision tree starts as it does
+  at boot: its repos, caches and PubSub, and any process of its own that
+  acts by itself once started (scheduled work outside Oban, say), which the
+  application has to keep from running in a second VM itself.
   """
   @spec run([option]) :: {:ok, non_neg_integer() | :declined} | {:error, String.t()}
   def run(opts \\ []) do
@@ -150,9 +170,7 @@ defmodule Brando.Content.Resave do
     end
   end
 
-  # Whether it started the application. Without its web server and Oban's
-  # queues, so a node started for this serves nothing and runs no jobs beside
-  # the server's: jobs it inserts wait for the server's queues.
+  # Whether it started the application (see "Started by `eval`" in `run/1`)
   defp start(app) do
     if is_nil(app) or List.keymember?(Application.started_applications(), app, 0) do
       false
@@ -162,10 +180,20 @@ defmodule Brando.Content.Resave do
       oban = Application.get_env(:brando, Oban) || Brando.Supervisor.oban_config()
       Application.put_env(:brando, Oban, Keyword.put(oban, :testing, :manual))
 
+      with app_oban when is_list(app_oban) <- Application.get_env(app, Oban),
+           do: Application.put_env(app, Oban, Keyword.put(app_oban, :testing, :manual))
+
       with endpoint when not is_nil(endpoint) <- Brando.endpoint(),
            config when is_list(config) <- Application.get_env(app, endpoint) do
         Application.put_env(app, endpoint, Keyword.put(config, :server, false))
       end
+
+      # The serving node's: the hosts file the reverse proxy reads, and the
+      # addresses its GitHub webhooks come from
+      served_hosts = Application.get_env(:brando, Brando.Tenant.ServedHosts, [])
+      Application.put_env(:brando, Brando.Tenant.ServedHosts, Keyword.delete(served_hosts, :file))
+      markdown_sources = Application.get_env(:brando, :markdown_sources, [])
+      Application.put_env(:brando, :markdown_sources, Keyword.put(markdown_sources, :github_meta_url, nil))
 
       # Its boot log (and SQL, in development) would run through the report
       Logger.configure(level: :error)

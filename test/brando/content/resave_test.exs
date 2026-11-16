@@ -190,4 +190,51 @@ defmodule Brando.Content.ResaveTest do
 
     assert {:ok, nil} = Cachex.get(:query, {:resave_test, :failed})
   end
+
+  describe "started by eval" do
+    setup do
+      saved =
+        for {app, key} <- [
+              {:brando, Brando.Tenant.ServedHosts},
+              {:brando, :markdown_sources},
+              {:brando, Oban},
+              {:resave_eval_app, Oban}
+            ],
+            do: {app, key, Application.fetch_env(app, key)}
+
+      level = Logger.level()
+
+      on_exit(fn ->
+        for {app, key, value} <- saved do
+          case value do
+            {:ok, value} -> Application.put_env(app, key, value)
+            :error -> Application.delete_env(app, key)
+          end
+        end
+
+        Logger.configure(level: level)
+        Application.stop(:resave_eval_app)
+        Application.unload(:resave_eval_app)
+      end)
+
+      spec = [description: ~c"eval", vsn: ~c"1.0.0", modules: [], registered: [], applications: [:kernel, :stdlib]]
+      :ok = :application.load({:application, :resave_eval_app, spec})
+      Application.put_env(:resave_eval_app, Oban, repo: Brando.Repo.repo(), queues: [default: 1])
+      Application.put_env(:brando, Brando.Tenant.ServedHosts, file: "/srv/my_app/shared/served_hosts")
+      :ok
+    end
+
+    test "it starts the application without what must not run beside the serving VM" do
+      output =
+        capture_io(fn -> assert {:ok, 1} = Resave.run(otp_app: :resave_eval_app, blueprint: "Brando.Pages.Fragment") end)
+
+      assert List.keymember?(Application.started_applications(), :resave_eval_app, 0)
+      assert Application.get_env(:brando, Oban)[:testing] == :manual
+      assert Application.get_env(:resave_eval_app, Oban)[:testing] == :manual
+      assert Application.get_env(:brando, Brando.Tenant.ServedHosts)[:file] == nil
+      assert Keyword.fetch!(Application.get_env(:brando, :markdown_sources), :github_meta_url) == nil
+      assert output =~ "bin/"
+      assert output =~ ~s{rpc "Brando.Cache.reload_all()"}
+    end
+  end
 end
