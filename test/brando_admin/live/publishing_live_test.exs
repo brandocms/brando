@@ -240,6 +240,116 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     assert Registry.get_site(context.site.id).deploy_config.target == "web@static.example.test:/srv/site"
   end
 
+  describe "the rsync target's host is looked up on save, not while typing" do
+    # Each test's resolver is its own: answers are kept per resolver and host
+    defp resolve_with(answers) do
+      test = self()
+
+      fn host, family ->
+        send(test, {:looked_up, to_string(host), family})
+
+        case Map.get(answers, {to_string(host), family}, {:error, :nxdomain}) do
+          :block -> Process.sleep(:infinity)
+          answer -> answer
+        end
+      end
+    end
+
+    defp put_resolver(answers, opts \\ []) do
+      put_test_env(
+        Brando.Sites.DeployConfig,
+        [
+          resolver: resolve_with(answers),
+          rsync_targets: ["deploy@example.test:/srv/www", "web@static.example.test:/srv/site"]
+        ] ++ opts
+      )
+    end
+
+    defp save_target(view, target),
+      do: render_submit(form(view, "#static-deploy-config"), %{"deploy" => %{"strategy" => "rsync", "target" => target}})
+
+    defp assert_toast(text) do
+      assert_receive %Phoenix.Socket.Broadcast{event: "toast", payload: %{payload: message}}
+      assert message =~ text
+    end
+
+    setup context do
+      Brando.endpoint().subscribe("user:#{context.current_user.id}")
+      :ok
+    end
+
+    test "a change to the form never waits on DNS", context do
+      put_resolver(%{{"static.example.test", :inet} => :block, {"static.example.test", :inet6} => :block})
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      {elapsed, _html} =
+        :timer.tc(fn ->
+          render_change(form(view, "#static-deploy-config"), %{
+            "deploy" => %{"strategy" => "rsync", "target" => "web@static.example.test:/srv/site"}
+          })
+        end)
+
+      assert elapsed < 1_000_000
+      refute_received {:looked_up, _host, _family}
+      refute_received %Phoenix.Socket.Broadcast{event: "toast"}
+    end
+
+    test "a target whose host is this server is refused", context do
+      put_resolver(%{{"static.example.test", :inet} => {:ok, [{127, 0, 1, 1}]}})
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      save_target(view, "web@static.example.test:/srv/site")
+
+      assert_toast("must be on another server")
+      assert Registry.get_site(context.site.id).deploy_config.target == "deploy@example.test:/srv/www"
+    end
+
+    test "a host that cannot be looked up is refused, and is not kept", context do
+      put_resolver(%{{"static.example.test", :inet} => {:error, :timeout}})
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      save_target(view, "web@static.example.test:/srv/site")
+
+      assert_toast("could not be looked up")
+      assert Registry.get_site(context.site.id).deploy_config.target == "deploy@example.test:/srv/www"
+
+      # Asked again on the next save
+      flush_lookups()
+      save_target(view, "web@static.example.test:/srv/site")
+      assert_received {:looked_up, "static.example.test", :inet}
+    end
+
+    test "a lookup that runs out of time is refused", context do
+      put_resolver(%{{"static.example.test", :inet6} => :block}, lookup_timeout: 50)
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      save_target(view, "web@static.example.test:/srv/site")
+
+      assert_toast("could not be looked up")
+      assert Registry.get_site(context.site.id).deploy_config.target == "deploy@example.test:/srv/www"
+    end
+
+    test "saves within a minute reuse the host's answer", context do
+      put_resolver(%{{"static.example.test", :inet} => {:ok, [{93, 184, 216, 34}]}})
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      save_target(view, "web@static.example.test:/srv/site")
+      save_target(view, "web@static.example.test:/srv/site")
+
+      assert Registry.get_site(context.site.id).deploy_config.target == "web@static.example.test:/srv/site"
+      assert_received {:looked_up, "static.example.test", :inet}
+      refute_received {:looked_up, "static.example.test", :inet}
+    end
+
+    defp flush_lookups do
+      receive do
+        {:looked_up, _host, _family} -> flush_lookups()
+      after
+        0 -> :ok
+      end
+    end
+  end
+
   test "renders nested deployment validation errors without crashing", context do
     {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
 

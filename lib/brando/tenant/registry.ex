@@ -57,7 +57,7 @@ defmodule Brando.Tenant.Registry do
   @spec create_site(map()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
   def create_site(attrs) do
     %Site{}
-    |> Site.changeset(attrs)
+    |> Site.changeset(attrs, lookup_host: true)
     |> Repo.insert(@public_opts)
     |> refresh_cache_on_success()
   end
@@ -86,7 +86,7 @@ defmodule Brando.Tenant.Registry do
   """
   @spec update_site(Site.t(), map(), keyword()) :: {:ok, Site.t()} | {:error, Ecto.Changeset.t()}
   def update_site(%Site{} = site, attrs, opts \\ []) do
-    changeset = Site.changeset(site, attrs)
+    changeset = Site.changeset(site, attrs, lookup_host: true)
 
     case new_default_to_seed(site, changeset) do
       nil ->

@@ -40,6 +40,12 @@ defmodule Brando.Worker.SSGDeploy do
     {:cancel, :invalid_deploy_target}
   end
 
+  # DNS may answer on the next attempt
+  defp outcome({:error, :deploy_target_lookup_failed} = error, build) do
+    Builds.append_log(build, "Deployment failed: the target's host could not be looked up. It is tried again.")
+    error
+  end
+
   # The site's settings decide: retrying cannot help either
   defp outcome({:error, reason}, build)
        when reason in [:local_delivery_not_configured, :local_delivery_disabled, :build_made_for_another_delivery] do

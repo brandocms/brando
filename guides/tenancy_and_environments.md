@@ -1839,10 +1839,13 @@ Vite manifest and critical CSS resolution follow the same active-set-first,
 release-fallback order, after an environment's own set
 ([A set per environment](#a-set-per-environment)). In multi-site mode caches are keyed by the full tenant
 prefix, so Production, Staging, and another site cannot share rendered content
-or manifests. Every queued static build snapshots the active asset-set record
-and deployment configuration at creation time. A later asset activation or
-target edit therefore affects new builds, never an artifact already being
-reviewed or deployed.
+or manifests. Every queued static build snapshots the asset set its
+environment uses and the deployment configuration at creation time. A later
+asset activation or target edit therefore affects new builds, never an
+artifact already being reviewed or deployed, nor a build still waiting to
+run: it copies the set it recorded and renders every page with it (with the
+release's `priv/static` when it recorded none). A build whose recorded set
+was deleted before it ran fails, saying so in its log, and publishes nothing.
 
 ### A set per environment
 
@@ -2233,6 +2236,17 @@ name can still reach this server in ways a check cannot see (DNS that
 changes after the check, an SSH config alias, a public address behind NAT),
 so to limit the destinations anyone who may deploy can choose, list them in
 config (below).
+
+The host is looked up when the settings are saved, not while the form is
+filled in, with one limit of 3 seconds for its IPv4 and IPv6 addresses
+together (`config :brando, Brando.Sites.DeployConfig, lookup_timeout:` in
+milliseconds). A lookup that fails or runs out of time refuses the save: the
+target says its host could not be looked up, and to try again. The answer is
+kept on that node for a minute, so saving again does not ask again; a failed
+lookup is not kept. A name with no address at all passes, as an SSH config
+alias may name it. Each deploy looks the host up again; when that lookup
+fails, the deploy fails and says so in the build's log, and a deploy or
+rollback started from the publishing screen is tried again.
 
 An S3 deploy deletes every key under its target before it uploads the build,
 with the application's one set of ExAws credentials. Its prefix may not hold

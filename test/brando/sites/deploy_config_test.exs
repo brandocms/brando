@@ -12,8 +12,9 @@ defmodule Brando.Sites.DeployConfigTest do
 
   @site_key "alpha"
 
+  # As a save checks it: the host is looked up too
   defp rsync(target, site_key \\ @site_key),
-    do: DeployConfig.changeset(%DeployConfig{}, %{strategy: :rsync, target: target}, site_key)
+    do: DeployConfig.changeset(%DeployConfig{}, %{strategy: :rsync, target: target}, site_key, lookup_host: true)
 
   defp s3(target, site_key \\ @site_key),
     do: DeployConfig.changeset(%DeployConfig{}, %{strategy: :s3, target: target}, site_key)
@@ -41,6 +42,42 @@ defmodule Brando.Sites.DeployConfigTest do
     {a, b, c, d} = own_address()
     refute rsync("deploy@#{a}.#{b}.#{c}.#{d}:/srv/other-site").valid?
     refute rsync("deploy@[::ffff:#{a}.#{b}.#{c}.#{d}]:/srv/other-site").valid?
+  end
+
+  test "a validation that is not a save looks nothing up" do
+    test = self()
+
+    put_test_env(DeployConfig,
+      resolver: fn _host, _family ->
+        send(test, :looked_up)
+        Process.sleep(:infinity)
+      end
+    )
+
+    changeset =
+      DeployConfig.changeset(%DeployConfig{}, %{strategy: :rsync, target: "deploy@loop.example.com:/srv"}, @site_key)
+
+    assert changeset.valid?
+    refute_received :looked_up
+    # What needs no lookup is still refused
+    refute DeployConfig.changeset(%DeployConfig{}, %{strategy: :rsync, target: "deploy@localhost:/srv"}, @site_key).valid?
+  end
+
+  test "a deploy looks the host up afresh, and refuses one that cannot be looked up" do
+    test = self()
+
+    put_test_env(DeployConfig,
+      resolver: fn host, family ->
+        send(test, {:looked_up, family})
+        if host == ~c"down.example.com", do: {:error, :timeout}, else: {:ok, [{93, 184, 216, 34}]}
+      end
+    )
+
+    assert DeployConfig.valid_rsync_target?("deploy@up.example.com:/srv/www", @site_key)
+    assert DeployConfig.valid_rsync_target?("deploy@up.example.com:/srv/www", @site_key)
+    assert_received {:looked_up, :inet}
+    assert_received {:looked_up, :inet}
+    refute DeployConfig.valid_rsync_target?("deploy@down.example.com:/srv/www", @site_key)
   end
 
   test "a remote destination is a valid rsync target" do

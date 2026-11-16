@@ -1,0 +1,2 @@
+- A static build renders its pages with the asset set it recorded when it was queued (or the release's own files when it recorded none), so a set activated before it runs no longer leaves its HTML linking files the artifact does not hold; a build whose recorded set was deleted fails and publishes nothing.
+- Saving a site's rsync deploy target no longer waits on DNS while the form is used: the host is looked up on save, with one 3-second limit and the answer kept for a minute, and a lookup that fails or runs out of time refuses the save instead of passing it.

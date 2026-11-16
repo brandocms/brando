@@ -95,7 +95,7 @@ defmodule Brando.Plug.TenantTest do
         live: false
       })
 
-    token = Context.sign(context.site, staging)
+    token = Context.sign(context.site, staging, nil)
 
     conn =
       :get
@@ -112,7 +112,7 @@ defmodule Brando.Plug.TenantTest do
   end
 
   test "a standalone build's signed context marks the request only with tenancy_mode: :none" do
-    token = Context.sign(%Brando.Sites.Site{id: nil}, %Brando.Environments.Environment{site_id: nil})
+    token = Context.sign(%Brando.Sites.Site{id: nil}, %Brando.Environments.Environment{site_id: nil}, nil)
 
     conn = fn ->
       :get
@@ -163,7 +163,7 @@ defmodule Brando.Plug.TenantTest do
     defp build_conn_on(host), do: :get |> Plug.Test.conn("http://#{host}/robots.txt") |> Map.put(:host, host)
 
     test "answers as the site's public host, naming the sitemap the build says it has", context do
-      token = Context.sign(context.site, context.staging)
+      token = Context.sign(context.site, context.staging, nil)
 
       body = robots(build_conn_on("localhost"), [{Context.header(), token}, {Context.sitemap_header(), "1"}])
 
@@ -184,7 +184,7 @@ defmodule Brando.Plug.TenantTest do
   end
 
   test "a tampered SSG header cannot bypass unknown-host rejection", context do
-    token = Context.sign(context.site, context.environment) <> "tampered"
+    token = Context.sign(context.site, context.environment, nil) <> "tampered"
 
     conn =
       :get

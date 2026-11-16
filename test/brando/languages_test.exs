@@ -323,7 +323,7 @@ defmodule Brando.LanguagesTest do
 
   describe "public side" do
     test "a static build's request, on a host with no site, is parsed against the site its header names", %{acme: acme} do
-      token = Brando.SSG.Context.sign(acme, hd(acme.environments))
+      token = Brando.SSG.Context.sign(acme, hd(acme.environments), nil)
 
       for {path, language} <- [{"/", "no"}, {"/en/projects", "en"}] do
         conn =

@@ -51,6 +51,55 @@ defmodule Brando.Assets.EnvironmentSetsTest do
     def clone_schema(_source_prefix, target_prefix), do: Brando.Environments.Schema.create(target_prefix)
   end
 
+  defmodule BuildPages do
+    @moduledoc false
+    import Brando.SSG
+
+    urls :pages do
+      ["/about"]
+    end
+  end
+
+  # `Brando.SSG` with each page answered in the build's process as the
+  # endpoint would: through `Brando.Plug.Tenant`, then the page rendered and
+  # the response sent
+  defmodule RenderingBuilder do
+    @moduledoc false
+    alias Brando.Pages.Page
+
+    def build(site, environment, opts) do
+      Brando.SSG.build(
+        site,
+        environment,
+        opts ++
+          [
+            ssg_module: BuildPages,
+            base_url: "http://127.0.0.1:4000",
+            site_files: false,
+            static_path: Brando.config(:release_static_path),
+            fetcher: &fetch/2
+          ]
+      )
+    end
+
+    defp fetch(url, opts) do
+      conn =
+        Enum.reduce(opts[:headers], Plug.Test.conn(:get, url), fn {name, value}, conn ->
+          Plug.Conn.put_req_header(conn, name, value)
+        end)
+        |> Brando.Plug.Tenant.call([])
+
+      if conn.halted do
+        {:ok, %{status: conn.status, body: conn.resp_body, headers: %{}}}
+      else
+        page = %Page{title: "About", uri: "about", template: "default.html", language: :en, entry_blocks: []}
+        html = Brando.LivePreview.render(Page, page, nil, target: :site)
+        Plug.Conn.send_resp(conn, 200, html)
+        {:ok, %{status: 200, body: html, headers: %{}}}
+      end
+    end
+  end
+
   for mode <- [:multi, :single] do
     describe "in #{mode}" do
       setup do
@@ -310,6 +359,89 @@ defmodule Brando.Assets.EnvironmentSetsTest do
       setup_installation(:multi)
     end
 
+    test "a build renders with the set it recorded, when another is activated before it runs", %{
+      acme: acme,
+      one: one,
+      next: next
+    } do
+      production = static_production(acme)
+      build = queue_build(acme, production)
+      assert build.asset_set_id == one.id
+
+      {:ok, _next} = SiteAssets.activate_set(next.id)
+      assert {:ok, ready} = run_build(build)
+
+      assert linked_files(ready) == ["assets/acme-one.css", "assets/acme-one.js"]
+      assert_linked_files_in_artifact(ready)
+      assert SiteAssets.override() == nil
+    end
+
+    test "a build that recorded no set renders with the release's files", %{acme: acme, one: one, next: next} do
+      :ok = SiteAssets.deactivate(acme)
+      production = static_production(acme)
+      build = queue_build(acme, production)
+      assert build.asset_set_id == nil
+
+      {:ok, _one} = SiteAssets.activate_set(one.id)
+      {:ok, _next} = SiteAssets.activate_environment_set(next.id, production)
+      # After the activations, which drop the cached manifest
+      release_manifest()
+      assert {:ok, ready} = run_build(build)
+
+      assert linked_files(ready) == ["assets/release.css", "assets/release.js"]
+      assert_linked_files_in_artifact(ready)
+    end
+
+    test "a build whose recorded set was deleted fails, saying so, and publishes nothing", %{acme: acme, one: one} do
+      production = static_production(acme)
+      build = queue_build(acme, production)
+
+      # Past Retention, which refuses a set a queued build needs
+      {:ok, _deleted} = Brando.Repo.delete(one, prefix: "public")
+      assert Builds.get_build(build.id).asset_set_id == nil
+
+      assert {:cancel, {:asset_set_deleted, id}} = run_job(build)
+      assert id == one.id
+
+      failed = Builds.get_build(build.id)
+      assert failed.status == :failed
+      assert failed.build_log =~ "was deleted before the build ran"
+      refute File.exists?(Path.join(failed.build_path, "about/index.html"))
+    end
+
+    test "a build request names its set in its signed context, and only a valid one picks a set", %{
+      acme: acme,
+      one: one,
+      next: next
+    } do
+      production = static_production(acme)
+      token = Brando.SSG.Context.sign(acme, production, next)
+
+      conn = build_request(token)
+      refute conn.halted
+      assert SiteAssets.override().set.id == next.id
+      Plug.Conn.send_resp(conn, 200, "")
+      assert SiteAssets.override() == nil
+
+      # Tampered, or signed without a set: not a build's request
+      for token <- [
+            token <> "x",
+            Phoenix.Token.sign(Brando.endpoint(), "brando-ssg-context", %{site_id: acme.id, environment_id: production.id})
+          ] do
+        conn = build_request(token)
+        refute conn.private[:brando_ssg_build]
+        assert SiteAssets.override() == nil
+      end
+
+      # A set gone since the build was signed answers 503
+      {:ok, _deleted} = Brando.Repo.delete(one, prefix: "public")
+      SiteAssets.forget_set(one)
+      conn = build_request(Brando.SSG.Context.sign(acme, production, one))
+      assert conn.halted
+      assert conn.status == 503
+      assert SiteAssets.override() == nil
+    end
+
     test "a set of another site is refused", %{staging: staging} do
       {:ok, beta} = SiteAssetsFixtures.create_site("Beta", "beta", "beta.test")
       beta_set = register(beta, "beta-one")
@@ -401,6 +533,57 @@ defmodule Brando.Assets.EnvironmentSetsTest do
     next = register(scope, "acme-next")
 
     %{acme: acme, staging: staging, one: one, next: next}
+  end
+
+  defp static_production(acme) do
+    {:ok, _acme} = Registry.update_site(acme, %{delivery_mode: :static})
+    Tenant.Cache.get_env("acme", "production")
+  end
+
+  defp queue_build(acme, environment) do
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      {:ok, build} = Builds.request_build(Registry.get_site(acme.id), environment, creator: :system)
+      build
+    end)
+  end
+
+  defp run_build(build) do
+    assert :ok = run_job(build)
+    {:ok, Builds.get_build(build.id)}
+  end
+
+  # The job as it was queued: its args hold the set the build recorded
+  defp run_job(build) do
+    put_test_env(:ssg_builder, RenderingBuilder)
+    [job] = all_enqueued(worker: Brando.Worker.SSGBuild, args: %{"build_id" => build.id})
+    perform_job(Brando.Worker.SSGBuild, job.args)
+  end
+
+  defp linked_files(build), do: build.build_path |> Path.join("about/index.html") |> File.read!() |> asset_paths()
+
+  defp assert_linked_files_in_artifact(build) do
+    for path <- linked_files(build), do: assert(File.regular?(Path.join(build.build_path, path)), path)
+  end
+
+  # The release's own build, in `priv/static` as the release ships it
+  defp release_manifest do
+    release = Brando.config(:release_static_path)
+    File.write!(Path.join(release, "assets/release.js"), "js-release")
+    File.write!(Path.join(release, "assets/release.css"), "body{}")
+
+    manifest =
+      Brando.Assets.Vite.Manifest.parse(%{
+        "src/main.js" => %{"isEntry" => true, "file" => "assets/release.js", "css" => ["assets/release.css"]}
+      })
+
+    :persistent_term.put(Tenant.cache_key({:vite, "cache_manifest"}, "tenant_acme_production"), manifest)
+  end
+
+  defp build_request(token) do
+    :get
+    |> Plug.Test.conn("http://127.0.0.1:4000/about")
+    |> Plug.Conn.put_req_header(Brando.SSG.Context.header(), token)
+    |> Brando.Plug.Tenant.call([])
   end
 
   # The scope sets belong to: the site in `:multi`, none in `:single`
