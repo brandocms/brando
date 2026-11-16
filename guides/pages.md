@@ -141,8 +141,10 @@ descendants' trails, and restoring it (`Brando.Authorization.Boundary.restore/2`
 recomputes its own and its descendants'. So does restoring one of its revisions
 (`Brando.Revisions.set_entry_to_revision/5`, which the revisions drawer and a
 proposal's undo use): the trail a revision holds never comes back. A page's
-changeset refuses a `parent_id` that is the page itself or a page under it, so a
-revision restore that would close such a loop returns `{:error, changeset}`; a
+changeset refuses a `parent_id` that is the page itself or a page under it, and
+its save checks again against the tree as it is then, so a revision restore or a
+changeset built before another save that would close such a loop returns
+`{:error, changeset}`; a
 loop already stored ends the trail where it closes. Each element has string keys `"title"` and `"uri"`.
 The stored trail starts with the configured app name at `/`, followed by the
 ancestors and current page; a deleted ancestor is left out. When the trash

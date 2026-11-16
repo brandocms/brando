@@ -14,6 +14,10 @@ defmodule Brando.Pages.BreadcrumbsTest do
     page
   end
 
+  def send_query(_event, _measurements, metadata, test_pid) do
+    if self() == test_pid, do: send(test_pid, {:query, metadata.query, metadata.params})
+  end
+
   defp trail(page), do: Enum.map(Repo.get!(Page, page.id).breadcrumbs, & &1["title"])
 
   defp trash_and_restore(user) do
@@ -101,6 +105,41 @@ defmodule Brando.Pages.BreadcrumbsTest do
       assert {:error, %Ecto.Changeset{errors: [parent_id: _]}} = Pages.update_page(a.id, %{parent_id: a.id}, user)
       assert {:error, %Ecto.Changeset{errors: [parent_id: _]}} = Pages.update_page(a.id, %{parent_id: b.id}, user)
       assert %{parent_id: nil} = Repo.get!(Page, a.id)
+    end
+
+    test "closed by a changeset built before another save is refused when it is saved", %{user: user, b: b} do
+      c = page!(user, %{title: "C", uri: "c"})
+      to_c = Page.changeset(Repo.get!(Page, b.id), %{parent_id: c.id}, user)
+      to_b = Page.changeset(Repo.get!(Page, c.id), %{parent_id: b.id}, user)
+      assert to_c.valid? and to_b.valid?
+
+      assert {:ok, _} = Pages.update_page(to_c, user)
+
+      assert {:error, %Ecto.Changeset{errors: [parent_id: {_, _}]}} = Pages.update_page(to_b, user)
+      assert %{parent_id: nil} = Repo.get!(Page, c.id)
+    end
+
+    test "is looked for under the page tree's lock only in a save that changes the parent", %{user: user, b: b} do
+      handler = "page-tree-lock-#{System.unique_integer([:positive])}"
+      event = Brando.Repo.repo().config()[:telemetry_prefix] ++ [:query]
+      :ok = :telemetry.attach(handler, event, &__MODULE__.send_query/4, self())
+
+      try do
+        changeset = Page.changeset(Repo.get!(Page, b.id), %{title: "Bee"}, user)
+        assert {:ok, _} = Pages.update_page(changeset, user)
+        refute_received {:query, "SELECT pg_advisory_xact_lock" <> _, ["brando-page-tree:" <> _]}
+
+        changeset = Page.changeset(Repo.get!(Page, b.id), %{parent_id: nil}, user)
+        assert {:ok, _} = Pages.update_page(changeset, user)
+        refute_received {:query, "SELECT pg_advisory_xact_lock" <> _, ["brando-page-tree:" <> _]}
+
+        c = page!(user, %{title: "C", uri: "c"})
+        changeset = Page.changeset(Repo.get!(Page, b.id), %{parent_id: c.id}, user)
+        assert {:ok, _} = Pages.update_page(changeset, user)
+        assert_received {:query, "SELECT pg_advisory_xact_lock" <> _, ["brando-page-tree:" <> _]}
+      after
+        :telemetry.detach(handler)
+      end
     end
 
     @tag timeout: 15_000
