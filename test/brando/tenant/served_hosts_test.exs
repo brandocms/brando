@@ -181,6 +181,30 @@ defmodule Brando.Tenant.ServedHostsTest do
 
   defp release_write(writer), do: send(writer, :write)
 
+  # Holds the next write once its temporary file is synced, before its
+  # rename, until the writer is sent `:rename`
+  defp hold_renames(file) do
+    test = self()
+
+    put_test_env(ServedHosts,
+      file: file,
+      addresses: [@here, @here_v6],
+      before_rename: fn ->
+        send(test, {:renaming, self()})
+
+        receive do
+          :rename -> :ok
+        end
+      end
+    )
+  end
+
+  defp release_rename(writer) do
+    ref = Process.monitor(writer)
+    send(writer, :rename)
+    assert_receive {:DOWN, ^ref, :process, ^writer, _reason}
+  end
+
   # The process's state once `fun` holds for it, polled for up to two seconds
   defp await_state(fun, tries \\ 200) do
     state = :sys.get_state(ServedHosts)
@@ -594,6 +618,28 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert log =~ "Could not update the served hosts file"
       File.chmod!(file, 0o644)
       assert File.read!(file) == "h.acme.test\n"
+    end
+
+    test "a write of a process that restarted does not replace the file its successor wrote",
+         %{path: file, tmp_dir: tmp_dir, site: site} do
+      DNS.answer("a.acme.test", [@here])
+      bind(site, "a", "a.acme.test")
+      # Another node sharing the path wrote over it, so the next write renames
+      File.write!(file, "")
+      hold_renames(file)
+      ServedHosts.registry_changed()
+      assert_receive {:renaming, writer}
+
+      put_test_env(ServedHosts, file: file, addresses: [@here, @here_v6])
+      DNS.answer("b.acme.test", [@here])
+      {:ok, _} = Registry.create_environment(site, %{name: "b", key: "b", domain: "b.acme.test"}, actor: :system)
+      restart()
+      assert lines(file) == ["a.acme.test", "b.acme.test"]
+
+      release_rename(writer)
+
+      assert lines(file) == ["a.acme.test", "b.acme.test"]
+      assert File.ls!(tmp_dir) == ["served_hosts"]
     end
 
     test "a write removes temporary files an earlier write left behind, and none of its own",

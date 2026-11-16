@@ -484,6 +484,7 @@ defmodule Brando.Tenant.ServedHosts do
     admit = for {host, :admit} <- decided, do: host
 
     job = %{
+      owner: self(),
       file: state.settings.file,
       keep: MapSet.union(state.admitted, MapSet.new(admit)),
       check?: state.check_requested
@@ -498,37 +499,53 @@ defmodule Brando.Tenant.ServedHosts do
         written(%{state | writing: make_ref()}, write_failed(job, "no task supervisor to write it"))
 
       supervisor ->
+        # Not linked: a write that crashes would take this process down with
+        # it, and an exit does not reach a writer stalled in a file call until
+        # that call returns. The writer checks its owner before the rename.
         task = Task.Supervisor.async_nolink(supervisor, fn -> write_hosts(job) end)
         %{state | writing: task.ref}
     end
   end
 
-  # In the task: the file read just before the write, and every bound host it
-  # lists kept
-  defp write_hosts(%{file: file, keep: keep}) do
-    run_before_write_hook()
-    if Keyword.get(config(), :file) == file, do: read_and_write(file, keep), else: :cancelled
+  # In the task, and in this order: read the file, read the bindings, work out
+  # the hosts, write the temporary file and sync it, check that the owner and
+  # the configuration still stand, rename. The bindings come after the file,
+  # so a host bound and admitted by another node while the write waited is in
+  # both and stays; the check comes last, so a write whose process stopped, or
+  # whose file was unset or changed, never replaces the file.
+  defp write_hosts(job) do
+    run_test_hook(:before_write)
+    if Keyword.get(config(), :file) == job.file and may_write?(job), do: read_and_write(job), else: :cancelled
   end
 
-  # The bindings are read after the file: a host bound and admitted by another
-  # node while the write waited is then in both, and stays
-  defp read_and_write(file, keep) do
+  defp read_and_write(%{file: file, keep: keep} = job) do
     read = read_file(file)
     listed = MapSet.new(listed(read))
     hosts = Enum.filter(servable_bound_hosts(), &(MapSet.member?(listed, &1) or MapSet.member?(keep, &1)))
 
-    {written?, error} =
+    written =
       case read do
-        {:ok, existing, _listed} -> write(file, existing, hosts)
+        {:ok, existing, _listed} -> write(job, existing, hosts)
         {:error, reason} -> {false, "#{file}: #{:file.format_error(reason)}"}
       end
 
-    %{read?: match?({:ok, _, _}, read), listed: listed, hosts: hosts, written?: written?, error: error}
+    case written do
+      :cancelled ->
+        :cancelled
+
+      {written?, error} ->
+        %{read?: match?({:ok, _, _}, read), listed: listed, hosts: hosts, written?: written?, error: error}
+    end
   end
 
-  # Tests hold a write here
-  defp run_before_write_hook do
-    case Keyword.get(config(), :before_write) do
+  # A restarted process's writer is not its successor's: only the registered
+  # process's writes land
+  defp may_write?(%{owner: owner}), do: Process.whereis(__MODULE__) == owner and Process.alive?(owner)
+
+  # Tests hold a write at `:before_write`, before it reads the file, and at
+  # `:before_rename`, once its temporary file is synced
+  defp run_test_hook(key) do
+    case Keyword.get(config(), key) do
       hook when is_function(hook, 0) -> hook.()
       _none -> :ok
     end
@@ -922,20 +939,20 @@ defmodule Brando.Tenant.ServedHosts do
 
   # Rewritten only when the content changes: through a temporary file in the
   # same directory, renamed over the old one, so a reader never sees half
-  defp write(file, existing, hosts) do
+  defp write(job, existing, hosts) do
     # Each line checked on its own, whatever produced the list
     content = hosts |> Enum.filter(&servable?/1) |> Enum.map_join(&[&1, "\n"])
 
     if content == existing do
       {true, nil}
     else
-      replace(file, content)
+      replace(job, content)
     end
   end
 
   # A random name created exclusively, removed when the write or the rename
   # fails. Temporary files a crash left behind are removed first.
-  defp replace(file, content) do
+  defp replace(%{file: file} = job, content) do
     dir = Path.dirname(file)
     prefix = ".#{Path.basename(file)}."
     remove_leftovers(dir, prefix)
@@ -949,9 +966,15 @@ defmodule Brando.Tenant.ServedHosts do
 
         with :ok <- written,
              :ok <- closed,
+             :ok <- run_test_hook(:before_rename),
+             {:may_write, true} <- {:may_write, may_write?(job)},
              :ok <- File.rename(temporary, file) do
           {true, nil}
         else
+          {:may_write, false} ->
+            File.rm(temporary)
+            :cancelled
+
           {:error, reason} ->
             File.rm(temporary)
             {false, "#{file}: #{:file.format_error(reason)}"}
