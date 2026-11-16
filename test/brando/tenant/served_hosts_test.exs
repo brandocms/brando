@@ -653,6 +653,33 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert File.ls!(tmp_dir) == ["served_hosts"]
     end
 
+    test "a write whose work was dropped while the file changed away and back does not replace the file",
+         %{path: file, tmp_dir: tmp_dir, site: site} do
+      DNS.answer("a.acme.test", [@here])
+      bind(site, "a", "a.acme.test")
+      # Another node sharing the path wrote over it, so the next write renames
+      File.write!(file, "")
+      hold_renames(file)
+      ServedHosts.registry_changed()
+      assert_receive {:renaming, writer}
+
+      pid = Process.whereis(ServedHosts)
+      put_test_env(ServedHosts, file: Path.join(tmp_dir, "other_hosts"), addresses: [@here, @here_v6])
+      ServedHosts.registry_changed()
+      :sys.get_state(pid)
+      put_test_env(ServedHosts, file: file, addresses: [@here, @here_v6])
+      ServedHosts.registry_changed()
+      :sys.get_state(pid)
+      # Written by another node since the old write read the file
+      File.write!(file, "a.acme.test\nbeta.example.com\n")
+
+      :sys.suspend(pid)
+      release_rename(writer)
+      assert File.read!(file) == "a.acme.test\nbeta.example.com\n"
+      :sys.resume(pid)
+      ServedHosts.settled()
+    end
+
     test "a write under way when the file is unset leaves the file alone", %{path: file, tmp_dir: tmp_dir, site: site} do
       DNS.answer("a.acme.test", [@here])
       bind(site, "a", "a.acme.test")

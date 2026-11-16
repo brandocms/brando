@@ -217,7 +217,9 @@ defmodule Brando.Tenant.ServedHosts do
     # when (monotonic milliseconds).
     # `writing`: the reference of the write under way, `write_job` what it was
     # given. `generation`: counts the drops of the work under way; a write's
-    # result counts only for the file and generation it started with. `write_requested`, `check_requested`: a write, or a check (a write
+    # result counts only for the file and generation it started with, and
+    # `generation_ref` holds it for the write task, which checks it before its
+    # rename. `write_requested`, `check_requested`: a write, or a check (a write
     # whose result queues lookups), asked for and not started yet.
     # `waiters`: callers of `check/0` and `settled/0` waiting for the lookups.
     state = %{
@@ -238,6 +240,7 @@ defmodule Brando.Tenant.ServedHosts do
       writing: nil,
       write_job: nil,
       generation: 0,
+      generation_ref: :atomics.new(1, []),
       write_requested: false,
       check_requested: false,
       waiters: []
@@ -369,6 +372,8 @@ defmodule Brando.Tenant.ServedHosts do
       Process.demonitor(ref, [:flush])
       Process.cancel_timer(deadline)
     end
+
+    :atomics.put(state.generation_ref, 1, state.generation + 1)
 
     %{
       cancel_flush(state)
@@ -503,6 +508,7 @@ defmodule Brando.Tenant.ServedHosts do
       owner: self(),
       file: state.settings.file,
       generation: state.generation,
+      generation_ref: state.generation_ref,
       keep: MapSet.union(state.admitted, MapSet.new(admit)),
       check?: state.check_requested
     }
@@ -525,11 +531,12 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   # In the task, and in this order: read the file, read the bindings, work out
-  # the hosts, write the temporary file and sync it, check that the owner and
-  # the configuration still stand, rename. The bindings come after the file,
-  # so a host bound and admitted by another node while the write waited is in
-  # both and stays; the check comes last, so a write whose process stopped, or
-  # whose file was unset or changed, never replaces the file.
+  # the hosts, write the temporary file and sync it, check that the owner, the
+  # configuration and the generation still stand, rename. The bindings come
+  # after the file, so a host bound and admitted by another node while the
+  # write waited is in both and stays; the check comes last, so a write whose
+  # process stopped, whose file was unset or changed, or whose work was
+  # dropped, never replaces the file.
   defp write_hosts(job) do
     run_test_hook(:before_write)
     if may_write?(job), do: read_and_write(job), else: :cancelled
@@ -556,9 +563,12 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   # Only the registered process's writes land, a restarted one's writer not
-  # being its successor's, and only to the file configured now
-  defp may_write?(%{owner: owner, file: file}) do
-    Process.whereis(__MODULE__) == owner and Process.alive?(owner) and configured_file() == file
+  # being its successor's, only to the file configured now, and only while
+  # the process has not dropped the work since: a file changed away and back
+  # leaves the path as it was, but not the generation
+  defp may_write?(%{owner: owner, file: file, generation: generation, generation_ref: generation_ref}) do
+    Process.whereis(__MODULE__) == owner and Process.alive?(owner) and configured_file() == file and
+      :atomics.get(generation_ref, 1) == generation
   end
 
   defp configured_file do
