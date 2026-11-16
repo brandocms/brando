@@ -166,15 +166,14 @@ defmodule Brando.Sitemap do
   @decorate span("brando.sitemap.generate")
   def generate_sitemap(opts \\ []) do
     # Unscoped: an admin's scope keeps naming the environment it was taken in
-    Boundary.with_scope(nil, fn ->
-      case source_environment() do
-        nil ->
-          do_generate_sitemap(opts)
+    Boundary.with_scope(nil, fn -> in_source_environment(fn -> do_generate_sitemap(opts) end) end)
+  end
 
-        live ->
-          Tenant.with_prefix(Tenant.prefix(Tenant.current_site_key(), live.key), fn -> do_generate_sitemap(opts) end)
-      end
-    end)
+  defp in_source_environment(fun) do
+    case source_environment() do
+      nil -> fun.()
+      live -> Tenant.with_prefix(Tenant.prefix(Tenant.current_site_key(), live.key), fun)
+    end
   end
 
   @doc """

@@ -711,12 +711,7 @@ defmodule Brando.Content.Blocks do
 
   defp rerender_public_urls_in(prefix, search_terms) do
     Brando.Tenant.with_prefix(prefix, fn ->
-      Repo.transaction(fn ->
-        if Brando.Migration.Introspect.table_exists?("content_blocks", prefix: prefix, repo: Repo.repo()) do
-          render_entries_matching_regex(search_terms)
-          rerender_matching_modules(search_terms)
-        end
-      end)
+      Repo.transaction(fn -> rerender_stored(prefix, search_terms) end)
     end)
   rescue
     error ->
@@ -726,6 +721,13 @@ defmodule Brando.Content.Blocks do
         "Could not queue the renders of #{prefix}'s stored JSON-LD for its site's public base URL: " <>
           Exception.format(:error, error, __STACKTRACE__)
       )
+  end
+
+  defp rerender_stored(prefix, search_terms) do
+    if Brando.Migration.Introspect.table_exists?("content_blocks", prefix: prefix, repo: Repo.repo()) do
+      render_entries_matching_regex(search_terms)
+      rerender_matching_modules(search_terms)
+    end
   end
 
   @doc """

@@ -699,21 +699,22 @@ defmodule Brando.SiteURLTest do
   # As the Environments screen saves it: in a transaction, with Production
   # selected and the admin's scope naming it
   defp change_domain_as(admin, site, domain) do
-    in_environment("production", fn ->
-      scope = Brando.Authorization.Scope.current(admin)
-      assert scope.prefix == "tenant_acme_production"
+    scope = in_environment("production", fn -> Brando.Authorization.Scope.current(admin) end)
+    assert scope.prefix == "tenant_acme_production"
 
-      Brando.Authorization.Boundary.with_scope(scope, fn ->
-        Brando.Repo.transaction(fn ->
-          production = Registry.get_environment_by_key(site, "production")
+    in_environment("production", fn -> in_scoped_transaction(scope, fn -> change_domain(admin, site, domain) end) end)
+  end
 
-          case Registry.update_environment(production, %{domain: domain}, actor: admin) do
-            {:ok, updated} -> updated
-            {:error, reason} -> Brando.Repo.rollback(reason)
-          end
-        end)
-      end)
-    end)
+  defp in_scoped_transaction(scope, fun),
+    do: Brando.Authorization.Boundary.with_scope(scope, fn -> Brando.Repo.transaction(fun) end)
+
+  defp change_domain(admin, site, domain) do
+    production = Registry.get_environment_by_key(site, "production")
+
+    case Registry.update_environment(production, %{domain: domain}, actor: admin) do
+      {:ok, updated} -> updated
+      {:error, reason} -> Brando.Repo.rollback(reason)
+    end
   end
 
   # This node's registry cache with `cached` as the environment's domain, the
