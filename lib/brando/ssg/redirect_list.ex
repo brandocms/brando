@@ -20,9 +20,9 @@ defmodule Brando.SSG.RedirectList do
   null), with the path the redirect ended at and the first redirect's status;
   the build stores the page it ended at under the listed path too, for a host
   that serves files before its redirect rules. Then the site's redirect
-  rules (Configuration → SEO), in the order Brando checks them, language by
-  language: the rules `Brando.Sites.Redirects.test_redirect/2` checks for a
-  path no page answers. A rule applies only to a request in its `language`.
+  rules (Configuration → SEO), language by language, in the order Brando
+  checks them for a path no page answers. A rule applies only to a request in
+  its `language`.
 
   `source` is the path a host matches: a plain path, or one with `:name`
   segments that match one segment each (`[a-z0-9_-]+`) and stand for the
