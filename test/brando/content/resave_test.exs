@@ -236,5 +236,29 @@ defmodule Brando.Content.ResaveTest do
       assert output =~ "bin/"
       assert output =~ ~s{rpc "Brando.Cache.reload_all()"}
     end
+
+    test "an application it cannot load is an error, before any application env is changed" do
+      env = for {app, key} <- [{:brando, Oban}, {:brando, Brando.Tenant.ServedHosts}], do: Application.get_env(app, key)
+
+      capture_io(fn ->
+        assert {:error, "cannot load the application :resave_no_such_app" <> _} =
+                 Resave.run(otp_app: :resave_no_such_app, blueprint: "Brando.Pages.Fragment")
+      end)
+
+      assert env ==
+               for(
+                 {app, key} <- [{:brando, Oban}, {:brando, Brando.Tenant.ServedHosts}],
+                 do: Application.get_env(app, key)
+               )
+    end
+  end
+
+  # `Node.alive?()` and whether the application is started: a distributed node
+  # whose application is not started is an `rpc` to a release still booting
+  test "it starts the application only on a node that is not distributed" do
+    assert Resave.start_mode(false, true) == :running
+    assert Resave.start_mode(true, true) == :running
+    assert Resave.start_mode(false, false) == :eval
+    assert Resave.start_mode(true, false) == :not_started
   end
 end

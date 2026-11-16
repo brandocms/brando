@@ -103,7 +103,8 @@ defmodule Brando.Content.Resave do
 
   ## Started by `eval`
 
-  When the application is not running, it starts it in this VM, beside a
+  When the application is not running and this node is not distributed, as
+  in a release's `eval`, it starts it in this VM, beside a
   server that may be running: with the endpoint's `server: false`, so it
   serves nothing, and Oban in `testing: :manual` (Brando's instance, and an
   `Oban` configured under the application's own name), so it runs no queues
@@ -120,6 +121,11 @@ defmodule Brando.Content.Resave do
   at boot: its repos, caches and PubSub, and any process of its own that
   acts by itself once started (scheduled work outside Oban, say), which the
   application has to keep from running in a second VM itself.
+
+  On a distributed node whose application is not started (an `rpc` to a
+  release still booting, or an `otp_app:` naming another application), it
+  changes nothing and returns `{:error, message}`, as it does for an
+  application it cannot load.
   """
   @spec run([option]) :: {:ok, non_neg_integer() | :declined} | {:error, String.t()}
   def run(opts \\ []) do
@@ -129,7 +135,7 @@ defmodule Brando.Content.Resave do
 
   defp resave(opts, info) do
     with :ok <- check_options(opts),
-         started_here? = start(opts[:otp_app] || Brando.otp_app()),
+         {:ok, started_here?} <- start(opts[:otp_app] || Brando.otp_app()),
          {:ok, environments} <- environments(opts),
          {:ok, blueprints, listed?} <- blueprints(opts[:blueprint]) do
       plan = %{blueprints: blueprints, environments: environments}
@@ -184,37 +190,70 @@ defmodule Brando.Content.Resave do
     end
   end
 
-  # Whether it started the application (see "Started by `eval`" in `run/1`)
+  @doc false
+  # How `run/1` treats the application, from whether this node is distributed
+  # and whether the application is started: running (`rpc`), to start here
+  # (`eval`, whose VM is not distributed), or `:not_started` on a node that
+  # is (a release still booting, or another application's node), which it
+  # must leave alone
+  @spec start_mode(boolean(), boolean()) :: :running | :eval | :not_started
+  def start_mode(_distributed?, true), do: :running
+  def start_mode(false, false), do: :eval
+  def start_mode(true, false), do: :not_started
+
+  # `{:ok, started_here?}` (see "Started by `eval`" in `run/1`)
+  defp start(nil), do: {:ok, false}
+
   defp start(app) do
-    if is_nil(app) or List.keymember?(Application.started_applications(), app, 0) do
-      false
-    else
-      _ = Application.load(app)
-      _ = Application.load(:brando)
-      oban = Application.get_env(:brando, Oban) || Brando.Supervisor.oban_config()
-      Application.put_env(:brando, Oban, Keyword.put(oban, :testing, :manual))
+    case start_mode(Node.alive?(), List.keymember?(Application.started_applications(), app, 0)) do
+      :running ->
+        {:ok, false}
 
-      with app_oban when is_list(app_oban) <- Application.get_env(app, Oban),
-           do: Application.put_env(app, Oban, Keyword.put(app_oban, :testing, :manual))
+      :not_started ->
+        {:error,
+         "#{inspect(app)} is not started on this node: it is still starting, or it is not this node's " <>
+           "application (otp_app:). Try again once it has started."}
 
-      with endpoint when not is_nil(endpoint) <- Brando.endpoint(),
-           config when is_list(config) <- Application.get_env(app, endpoint) do
-        Application.put_env(app, endpoint, Keyword.put(config, :server, false))
-      end
-
-      # The serving node's: the hosts file the reverse proxy reads, and the
-      # addresses its GitHub webhooks come from
-      served_hosts = Application.get_env(:brando, Brando.Tenant.ServedHosts, [])
-      Application.put_env(:brando, Brando.Tenant.ServedHosts, Keyword.delete(served_hosts, :file))
-      markdown_sources = Application.get_env(:brando, :markdown_sources, [])
-      Application.put_env(:brando, :markdown_sources, Keyword.put(markdown_sources, :github_meta_url, nil))
-
-      # Its boot log (and SQL, in development) would run through the report
-      Logger.configure(level: :error)
-      {:ok, _} = Application.ensure_all_started(app)
-      Logger.configure(level: :error)
-      true
+      :eval ->
+        with :ok <- load(app) do
+          start_here(app)
+          {:ok, true}
+        end
     end
+  end
+
+  defp load(app) do
+    case Application.load(app) do
+      :ok -> :ok
+      {:error, {:already_loaded, ^app}} -> :ok
+      {:error, reason} -> {:error, "cannot load the application #{inspect(app)}: #{inspect(reason)}"}
+    end
+  end
+
+  defp start_here(app) do
+    _ = Application.load(:brando)
+    oban = Application.get_env(:brando, Oban) || Brando.Supervisor.oban_config()
+    Application.put_env(:brando, Oban, Keyword.put(oban, :testing, :manual))
+
+    with app_oban when is_list(app_oban) <- Application.get_env(app, Oban),
+         do: Application.put_env(app, Oban, Keyword.put(app_oban, :testing, :manual))
+
+    with endpoint when not is_nil(endpoint) <- Brando.endpoint(),
+         config when is_list(config) <- Application.get_env(app, endpoint) do
+      Application.put_env(app, endpoint, Keyword.put(config, :server, false))
+    end
+
+    # The serving node's: the hosts file the reverse proxy reads, and the
+    # addresses its GitHub webhooks come from
+    served_hosts = Application.get_env(:brando, Brando.Tenant.ServedHosts, [])
+    Application.put_env(:brando, Brando.Tenant.ServedHosts, Keyword.delete(served_hosts, :file))
+    markdown_sources = Application.get_env(:brando, :markdown_sources, [])
+    Application.put_env(:brando, :markdown_sources, Keyword.put(markdown_sources, :github_meta_url, nil))
+
+    # Its boot log (and SQL, in development) would run through the report
+    Logger.configure(level: :error)
+    {:ok, _} = Application.ensure_all_started(app)
+    Logger.configure(level: :error)
   end
 
   # `[nil]` without tenancy: the application's own tables. With tenancy, every
