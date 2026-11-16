@@ -340,6 +340,33 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert get_resp_header(conn, "cache-control") == ["no-cache"]
     end
 
+    test "reports each request it answers as a telemetry event", context do
+      context |> ready_build() |> deploy!()
+      test_pid = self()
+      handler = "local-delivery-#{System.unique_integer([:positive])}"
+
+      :telemetry.attach(
+        handler,
+        [:brando, :ssg, :local_delivery, :stop],
+        fn _event, measurements, metadata, _config -> send(test_pid, {:served, measurements, metadata}) end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler) end)
+
+      request(context.host, "/about")
+      request(context.host, "/missing")
+
+      assert_received {:served, %{duration: duration}, %{site_key: site_key, path: "/about", status: 200}}
+      assert is_integer(duration) and duration >= 0
+      assert site_key == context.site.key
+      assert_received {:served, _measurements, %{path: "/missing", status: 404}}
+
+      # Not for a request that passes on to Phoenix
+      request(:post, context.host, "/contact")
+      refute_received {:served, _measurements, %{path: "/contact"}}
+    end
+
     test "answers a plain 404 when the build has no 404 page", context do
       context |> ready_build(%{"404.html" => nil}) |> deploy!()
 

@@ -43,7 +43,13 @@ defmodule Brando.SSG.LocalDelivery do
         headers: %{"content-security-policy" => "default-src 'self'"}
 
   Other files are sent with `Access-Control-Allow-Origin: *`, as
-  `Brando.Plug.SiteAssets` sends its own. A gzipped file (the sitemap) is sent as the application's
+  `Brando.Plug.SiteAssets` sends its own.
+
+  A request answered here never reaches `Plug.Telemetry` or the request log.
+  Each one emits `[:brando, :ssg, :local_delivery, :stop]` instead, with the
+  measurement `:duration` (native time units) and the metadata `:site_key`,
+  `:path` (the request path) and `:status`. A request that passes on to
+  Phoenix emits nothing here. A gzipped file (the sitemap) is sent as the application's
   sitemap controller sends it. `_redirects.json` itself is not served.
 
   The build's file list and compiled redirects are read once per published
@@ -152,7 +158,24 @@ defmodule Brando.SSG.LocalDelivery do
   # The IndexNow key file (`/<key>.txt`) is the application's while IndexNow
   # is on, as submissions name it there
   defp answer_unless_halted(%Plug.Conn{halted: true} = conn, _site), do: conn
-  defp answer_unless_halted(conn, site), do: answer(conn, site)
+
+  defp answer_unless_halted(conn, site) do
+    started = System.monotonic_time()
+
+    case answer(conn, site) do
+      %Plug.Conn{halted: true} = answered ->
+        :telemetry.execute(
+          [:brando, :ssg, :local_delivery, :stop],
+          %{duration: System.monotonic_time() - started},
+          %{site_key: site.key, path: answered.request_path, status: answered.status}
+        )
+
+        answered
+
+      passed ->
+        passed
+    end
+  end
 
   defp dynamic_path?(%Plug.Conn{path_info: path_info} = conn) do
     Enum.any?(dynamic_paths(conn), fn prefix ->
