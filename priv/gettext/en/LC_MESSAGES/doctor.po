@@ -359,12 +359,12 @@ msgstr ""
 
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format
-msgid "%{entry}: only in only:, its files answer the build's 404 page"
+msgid "%{entry}: in static_paths/0 but not in the endpoint's only:"
 msgstr ""
 
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format
-msgid "%{entry}: only in static_paths/0"
+msgid "%{entry}: in the endpoint's only: but not in static_paths/0, its files answer the build's 404 page"
 msgstr ""
 
 #: lib/brando/doctor/checks/migrations.ex

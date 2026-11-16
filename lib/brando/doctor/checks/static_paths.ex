@@ -10,7 +10,8 @@ defmodule Brando.Doctor.Checks.StaticPaths do
   answered with the build's 404 page; one only `static_paths/0` names gets the
   404 page too, after a trip through the endpoint. The check reads the
   endpoint's source as `Brando.Doctor.Checks.Robots` does; without it, in a
-  release, it can't tell and says so.
+  release, it can't compare the lists and says so, but still warns when the
+  web module has no `static_paths/0`.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
@@ -40,9 +41,6 @@ defmodule Brando.Doctor.Checks.StaticPaths do
   """
   def evaluate(only, static_paths)
 
-  def evaluate(:unknown, _static_paths),
-    do: skipped(dgettext("doctor", "the endpoint's Plug.Static only: could not be read"))
-
   def evaluate(_only, nil) do
     warning(dgettext("doctor", "the web module has no static_paths/0"),
       fix:
@@ -52,6 +50,9 @@ defmodule Brando.Doctor.Checks.StaticPaths do
         )
     )
   end
+
+  def evaluate(:unknown, _static_paths),
+    do: skipped(dgettext("doctor", "the endpoint's Plug.Static only: could not be read"))
 
   def evaluate({:call, _module, entries}, static_paths), do: compare(entries, static_paths)
   def evaluate({:literal, entries}, static_paths), do: compare(entries, static_paths)
@@ -74,9 +75,16 @@ defmodule Brando.Doctor.Checks.StaticPaths do
         items:
           Enum.map(
             only_endpoint,
-            &dgettext("doctor", "%{entry}: only in only:, its files answer the build's 404 page", entry: &1)
+            &dgettext(
+              "doctor",
+              "%{entry}: in the endpoint's only: but not in static_paths/0, its files answer the build's 404 page",
+              entry: &1
+            )
           ) ++
-            Enum.map(only_web, &dgettext("doctor", "%{entry}: only in static_paths/0", entry: &1))
+            Enum.map(
+              only_web,
+              &dgettext("doctor", "%{entry}: in static_paths/0 but not in the endpoint's only:", entry: &1)
+            )
       )
     end
   end

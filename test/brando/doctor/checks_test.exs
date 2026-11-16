@@ -1297,14 +1297,20 @@ defmodule Brando.Doctor.ChecksTest do
       assert result.status == :warning
 
       assert result.items == [
-               "js: only in only:, its files answer the build's 404 page",
-               "ico: only in only:, its files answer the build's 404 page",
-               "robots.txt: only in static_paths/0"
+               "js: in the endpoint's only: but not in static_paths/0, its files answer the build's 404 page",
+               "ico: in the endpoint's only: but not in static_paths/0, its files answer the build's 404 page",
+               "robots.txt: in static_paths/0 but not in the endpoint's only:"
              ]
 
       assert %Result{status: :warning} = Checks.StaticPaths.evaluate({:literal, ~w(assets)}, nil)
       assert %Result{status: :warning} = Checks.StaticPaths.evaluate(:none, ~w(assets))
       assert %Result{status: :skipped} = Checks.StaticPaths.evaluate(:unknown, ~w(assets))
+    end
+
+    # A release has no source to read; the missing function shows at runtime
+    test "no static_paths/0 is a warning when the endpoint's source can't be read" do
+      assert %Result{status: :warning, summary: "the web module has no static_paths/0"} =
+               Checks.StaticPaths.evaluate(:unknown, nil)
     end
 
     test "is skipped without a site served by the installation" do

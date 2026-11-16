@@ -359,13 +359,13 @@ msgstr "%{database}, ikke utviklingsdatabasen"
 
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format
-msgid "%{entry}: only in only:, its files answer the build's 404 page"
-msgstr "%{entry}: bare i only:, filene der svarer med byggets 404-side"
+msgid "%{entry}: in static_paths/0 but not in the endpoint's only:"
+msgstr "%{entry}: i static_paths/0, men ikke i endepunktets only:"
 
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format
-msgid "%{entry}: only in static_paths/0"
-msgstr "%{entry}: bare i static_paths/0"
+msgid "%{entry}: in the endpoint's only: but not in static_paths/0, its files answer the build's 404 page"
+msgstr "%{entry}: i endepunktets only:, men ikke i static_paths/0, filene der svarer med byggets 404-side"
 
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
