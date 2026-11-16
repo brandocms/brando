@@ -27,13 +27,19 @@ defmodule Brando.Worker.SoftDeletePurger do
   # How many schemas failed in the current environment, or 1 when it failed
   # before or between them
   defp purge_environment do
-    Enum.count(Query.clean_up_soft_deletions(), &match?({:error, schema} when is_atom(schema), &1))
+    Enum.count(Query.clean_up_soft_deletions(), &(not purged?(&1)))
   rescue
     error ->
       Logger.error("[Brando.SoftDelete] Purging the trash#{Query.environment()} failed: #{Query.describe_error(error)}")
 
       1
   end
+
+  # A schema's result: `{:ok, {count, nil}}`, or `{count, nil}` for videos.
+  # Anything else failed, and `Query.clean_up_soft_deletions/0` logged it.
+  defp purged?({:ok, _result}), do: true
+  defp purged?({count, _}) when is_integer(count), do: true
+  defp purged?(_result), do: false
 
   @impl Oban.Worker
   def timeout(_job), do: :timer.seconds(30)

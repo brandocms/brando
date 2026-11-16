@@ -147,6 +147,24 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
     refute log =~ "failed"
   end
 
+  test "a schema whose hook rolls back fails the job, and is logged" do
+    old = DateTime.add(DateTime.truncate(DateTime.utc_now(), :second), -31 * 86_400)
+    profile_id = insert_profile!(old)
+
+    Process.put({Brando.Persons, :before_purge}, fn
+      Brando.MigrationTest.Profile, _ids -> Repo.rollback(Ecto.Changeset.change(%Brando.MigrationTest.Profile{}))
+      _schema, _ids -> :ok
+    end)
+
+    log =
+      capture_log(fn ->
+        assert {:error, _} = Brando.Worker.SoftDeletePurger.perform(%Oban.Job{args: %{}})
+      end)
+
+    assert log =~ "Purging Brando.MigrationTest.Profile failed"
+    assert profile_id in profile_ids()
+  end
+
   test "a schema whose purge fails is logged, and the schemas after it are still purged", %{user: user} do
     # `persons_profile` is purged before `pages` and `users`, and its hook
     # fails in the database

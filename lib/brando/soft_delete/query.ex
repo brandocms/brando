@@ -79,12 +79,27 @@ defmodule Brando.SoftDelete.Query do
   def clean_up_soft_deletions, do: Enum.map(list_soft_delete_schemas(), &try_clean_up_schema/1)
 
   defp try_clean_up_schema(schema) do
-    clean_up_schema(schema)
+    case clean_up_schema(schema) do
+      {:error, reason} ->
+        Logger.error(
+          "[Brando.SoftDelete] Purging #{inspect(schema)}#{environment()} failed: #{describe_rollback(reason)}"
+        )
+
+        {:error, schema}
+
+      result ->
+        result
+    end
   rescue
     error ->
       Logger.error("[Brando.SoftDelete] Purging #{inspect(schema)}#{environment()} failed: #{describe_error(error)}")
       {:error, schema}
   end
+
+  # A hook's rollback, by its kind only: it may hold a row's values
+  defp describe_rollback(%Ecto.Changeset{data: %struct{}}), do: "rolled back with an invalid #{inspect(struct)}"
+  defp describe_rollback(reason) when is_atom(reason), do: "rolled back with #{inspect(reason)}"
+  defp describe_rollback(_reason), do: "rolled back"
 
   @doc false
   # Where a purge runs, for its log lines
