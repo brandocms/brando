@@ -210,6 +210,15 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert bundle.resp_body == "admin bundle"
     end
 
+    # What a blue/green deploy polls from the server before it switches
+    test "leaves /health to the health plug", context do
+      for host <- [context.host, "localhost"] do
+        conn = dispatch(host, "/health")
+        assert conn.status == 200, host
+        assert %{"status" => "ok"} = Jason.decode!(conn.resp_body)
+      end
+    end
+
     test "redirects a redirect host to the domain first", context do
       {:ok, _live} =
         Registry.update_environment(context.live, %{redirect_hosts: ["www.#{context.host}"]}, actor: :system)

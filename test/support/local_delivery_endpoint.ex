@@ -45,7 +45,7 @@ defmodule Brando.Test.LocalDeliveryEndpoint do
   An installation's endpoint, in the order its plugs run there: the site's
   asset sets and the release's static files (the release root,
   `config :brando, :release_static_path`), the session, the preview,
-  Markdown and IndexNow plugs, and a router with `Brando.Plug.Tenant`.
+  Markdown, IndexNow and health plugs, and a router with `Brando.Plug.Tenant`.
 
   `start/0` starts it under the test's supervisor.
   """
@@ -88,5 +88,6 @@ defmodule Brando.Test.LocalDeliveryEndpoint do
   plug Brando.Plug.LivePreview
   plug Brando.Plug.Markdown
   plug Brando.Plug.IndexNow
+  plug Brando.Plug.Health
   plug Brando.Test.LocalDeliveryRouter
 end

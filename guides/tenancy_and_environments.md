@@ -2499,7 +2499,9 @@ What still reaches Phoenix on that host:
 - other methods than `GET` and `HEAD`, such as a contact form's `POST`;
 - the media path, shared previews (`/__p__/`), build previews
   (`/__ssg_preview__/`), live preview (`/__livepreview`) and Brando's
-  `/__brando/` paths, and the endpoint's sockets, which answer before any plug;
+  `/__brando/` paths, `/health` for `Brando.Plug.Health` (which a blue/green
+  deploy polls from the server before it switches), and the endpoint's
+  sockets, which answer before any plug;
 - with `:single`, where the admin answers on every host, the admin's and MCP's
   paths;
 - the IndexNow key file (`/<key>.txt`) while IndexNow is on

@@ -88,8 +88,34 @@ defmodule Brando.SSG.LocalDelivery do
   @immutable "public, max-age=31536000, immutable"
   @revalidate "no-cache"
 
-  # Brando's own paths that answer on a site's host whatever it serves
-  @dynamic_paths ["/__brando", "/__p__", "/__ssg_preview__", "/__livepreview"]
+  # What a generated endpoint answers after `Brando.Plug.SiteAssets`, and what
+  # Brando's router macros mount outside the page catch-all, on a host
+  # serving its build. Kept reaching Phoenix, by path prefix:
+  #
+  #   /__brando          the forms' CSRF token (static forms post, which passes anyway) and the icon stylesheet
+  #   /__p__             a shared preview: unpublished content behind its key, for people without an account
+  #   /__ssg_preview__   a build's preview before it is published, behind its token
+  #   /__livepreview     the admin's live preview and its client files (`Brando.Plug.LivePreview`)
+  #   /health            `Brando.Plug.Health`, which a blue/green deploy polls from the server before switching
+  #   the media path     `Brando.Plug.Media`: the build's copy of media is not listed (`skipped_dirs/0`)
+  #   the admin, /mcp, /.well-known/oauth-protected-resource, /.well-known/oauth-authorization-server
+  #                      the admin and MCP with its OAuth metadata, only where the admin answers
+  #   :dynamic_paths     the application's own
+  #
+  # Left to the build:
+  #
+  #   /robots.txt, /sitemaps/*   the build writes both for the content it holds
+  #   `….md` and `Accept: text/markdown` (`Brando.Plug.Markdown`)
+  #                              the build's Markdown files; the plug renders entries, published or not
+  #   the lockdown page          an application route; the browser pipeline that locks never runs for a
+  #                              built page, so nothing redirects there (`:dynamic_paths` if pages link it)
+  #   `Plug.Static`'s `only:`    files, decided per file (`Brando.Plug.SiteAssets.static_file?/1`), not by path
+  #   /phoenix/live_reload, /tidewave   development only
+  #   the IndexNow key file      decided here, while IndexNow is on (`Brando.Plug.IndexNow`)
+  #
+  # The sandbox and the webhook plugs (GitHub Markdown, Mux, Bunny, Cloudflare
+  # Stream) take POSTs, which always pass; the sockets answer before any plug.
+  @dynamic_paths ["/__brando", "/__p__", "/__ssg_preview__", "/__livepreview", "/health"]
   # Only where the admin answers (`BrandoAdmin.AdminHost.serves_admin?/1`)
   @admin_paths ["/mcp", "/.well-known/oauth-protected-resource", "/.well-known/oauth-authorization-server"]
 
@@ -136,7 +162,7 @@ defmodule Brando.SSG.LocalDelivery do
   @doc """
   The path prefixes that keep reaching Phoenix on a host serving its build:
   Brando's own (shared and build previews, live preview, the forms' and
-  icons' `/__brando`), the media path, the admin's and MCP's paths where the
+  icons' `/__brando`, `/health` for `Brando.Plug.Health`), the media path, the admin's and MCP's paths where the
   admin answers on the host, and an application's own:
 
       config :brando, Brando.SSG.LocalDelivery, dynamic_paths: ["/api", "/coming-soon"]
