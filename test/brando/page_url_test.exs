@@ -194,7 +194,6 @@ defmodule Brando.PageURLTest do
   # The page's URL in every place that names the page; a node's `@id` is that
   # URL and a fragment (`#webpage` after a bare origin's `/`)
   defp assert_one_url(head, url, fragment) do
-    id = if URI.parse(url).path in [nil, ""], do: url <> "/" <> fragment, else: url <> fragment
     language = if head.webpage, do: head.webpage["inLanguage"], else: head.language
 
     assert head.canonical == url
@@ -202,14 +201,22 @@ defmodule Brando.PageURLTest do
     assert {language, url} in head.alternates or head.alternates == []
     # The test database has an identity in English only, and no graph without one
     if language == "en" or head.graph != [] do
-      assert head.webpage["@id"] == id
+      assert head.webpage["@id"] == node_id(url, fragment)
       assert head.webpage["url"] == url
     end
 
     for node <- head.graph, node["@type"] not in ["WebSite", "Organization", "BreadcrumbList"], node != head.webpage do
-      for key <- ["url", "mainEntityOfPage"], Map.has_key?(node, key), do: assert(node[key] == url)
-      if is_binary(node["@id"]), do: assert(String.starts_with?(node["@id"], url <> "#") or node["@id"] == id)
+      assert_node_url(node, url)
     end
+  end
+
+  defp assert_node_url(node, url) do
+    for key <- ["url", "mainEntityOfPage"], Map.has_key?(node, key), do: assert(node[key] == url)
+    if is_binary(node["@id"]), do: assert(String.starts_with?(node["@id"], node_id(url, "")))
+  end
+
+  defp node_id(url, fragment) do
+    if URI.parse(url).path in [nil, ""], do: url <> "/" <> fragment, else: url <> fragment
   end
 
   defp page!(user, title, uri, language, attrs \\ []) do
