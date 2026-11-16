@@ -1136,10 +1136,13 @@
     line-height: 1.55;
   }
 
+  /* The column's percentage max-width would shrink this auto track to
+     nothing and leave Refresh short of the panels' right edge */
   > .actions {
     grid-column: 2;
     grid-row: 1;
     width: auto;
+    max-width: none;
     margin: 0;
   }
 
@@ -1155,9 +1158,11 @@
   }
 }
 
-/* Settings width: the site cards' parts stay near their labels on a wide screen */
-.site-screen > .environment-management-live {
-  max-width: 1120px;
+/* Settings width: the site cards' parts stay near their labels on a wide
+   screen, and the heading's Refresh over the cards' right edge. 1120px of
+   content, and the 24px padding that keeps clear of the avatars */
+.site-screen {
+  max-width: calc(1120px + 24px);
 }
 
 /* A field's label, input and note stay together when its neighbour in the
