@@ -17,6 +17,7 @@ defmodule Brando.Tenant.Setup do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Environments
+  alias Brando.Environments.Environment
   alias Brando.Environments.Schema
   alias Brando.Repo
   alias Brando.Sites.Site
@@ -223,16 +224,27 @@ defmodule Brando.Tenant.Setup do
   defp without_hosts(attrs), do: attrs |> Environments.split_hosts() |> elem(1)
 
   # In one write: a host bound meanwhile by another write leaves none bound,
-  # and the site is compensated
+  # and the site is compensated. Every row is locked, in id order, before the
+  # first bind takes the host lock: a hosts save holds its row before it takes
+  # that lock, so a bind holding it while it waits for a row would deadlock
   defp bind_hosts(site, environments_and_attrs, creator) do
     actor = host_actor(site, creator)
+    ids = Enum.map(environments_and_attrs, fn {environment, _attrs} -> environment.id end)
 
-    fn -> Enum.each(environments_and_attrs, &bind_or_rollback(&1, actor)) end
+    fn ->
+      lock_rows(ids)
+      Enum.each(environments_and_attrs, &bind_or_rollback(&1, actor))
+    end
     |> Repo.transaction()
     |> case do
       {:ok, :ok} -> :ok
       {:error, _changeset} = error -> error
     end
+  end
+
+  defp lock_rows(ids) do
+    from(environment in Environment, where: environment.id in ^ids, order_by: environment.id, lock: "FOR UPDATE")
+    |> Repo.all(prefix: "public")
   end
 
   defp bind_or_rollback({environment, attrs}, actor) do

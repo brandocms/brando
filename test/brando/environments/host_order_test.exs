@@ -39,6 +39,7 @@ defmodule Brando.Environments.HostOrderTest do
   alias Brando.Tenant
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
+  alias Brando.Users.User
   alias BrandoIntegration.Repo
   alias Ecto.Adapters.SQL.Sandbox
 
@@ -143,6 +144,147 @@ defmodule Brando.Environments.HostOrderTest do
 
     refute schema_exists?(prefix)
     assert request(@domain).status == 404
+  end
+
+  describe "a new site's hosts" do
+    setup do
+      put_test_env(:environment_schema_cloner, Brando.TenantCloners)
+      put_test_env(:cache_sync_settle_ms, 0)
+
+      root = Path.join(System.tmp_dir!(), "brando-host-order-#{System.unique_integer([:positive])}")
+      put_test_env(:media_path, Path.join(root, "media"))
+      put_test_env(:sites_path, Path.join(root, "sites"))
+
+      remove_site("acme-bind")
+
+      on_exit(fn ->
+        remove_site("acme-bind")
+        File.rm_rf(root)
+      end)
+
+      creator = Sandbox.unboxed_run(Repo, fn -> Brando.Factory.insert(:random_user, role: :superuser) end)
+      on_exit(fn -> Sandbox.unboxed_run(Repo, fn -> Repo.delete_all(from(u in User, where: u.id == ^creator.id)) end) end)
+
+      %{creator: creator}
+    end
+
+    # A hosts save holds its row, then the host lock: the bind takes them in
+    # the same order, so it never holds the host lock while it waits for a row
+    test "are bound with every row locked before the host lock", %{creator: creator} do
+      provisioner = Task.async(fn -> Sandbox.unboxed_run(Repo, fn -> provision_bind_site(creator) end) end)
+
+      assert_receive {:migrating, migrator}, 5_000
+      send(migrator, :migrate)
+
+      # Staging's row is written: a save holds it until the bind waits
+      assert_receive {:migrating, migrator}, 5_000
+
+      staging =
+        Sandbox.unboxed_run(Repo, fn ->
+          Registry.get_environment_by_key(Registry.get_site_by_key("acme-bind"), "staging")
+        end)
+
+      holder = hold_row(staging)
+      send(migrator, :migrate)
+
+      wait_for_row_waiter()
+      assert host_lock_free?()
+
+      send(holder.pid, :commit)
+      Task.await(holder, 10_000)
+      assert {:ok, site} = Task.await(provisioner, 10_000)
+      assert Enum.find(site.environments, &(&1.key == "staging")).domain == "staging.bind.hold.test"
+    end
+  end
+
+  defp provision_bind_site(creator) do
+    Brando.Tenant.Setup.create_site(
+      %{
+        name: "Acme",
+        key: "acme-bind",
+        languages: ["en"],
+        default_language: "en",
+        status: :active,
+        delivery_mode: :dynamic
+      },
+      creator,
+      seed: false,
+      environments: [
+        %{name: "Production", key: "production", live: true, domain: "bind.hold.test"},
+        %{name: "Staging", key: "staging", live: false, domain: "staging.bind.hold.test"}
+      ]
+    )
+  end
+
+  defp hold_row(environment) do
+    test = self()
+
+    holder =
+      Task.async(fn ->
+        Sandbox.unboxed_run(Repo, fn ->
+          Repo.transaction(fn ->
+            Repo.query!("SELECT id FROM public.environments WHERE id = $1 FOR NO KEY UPDATE", [environment.id])
+            send(test, :holding)
+
+            receive do
+              :commit -> :ok
+            after
+              10_000 -> raise "never told to commit"
+            end
+          end)
+        end)
+      end)
+
+    assert_receive :holding, 5_000
+    holder
+  end
+
+  # Until a connection waits for a row another holds
+  defp wait_for_row_waiter(attempts \\ 500)
+  defp wait_for_row_waiter(0), do: flunk("nothing waited for the row")
+
+  defp wait_for_row_waiter(attempts) do
+    waiting =
+      Sandbox.unboxed_run(Repo, fn ->
+        Repo.one(
+          from(l in "pg_locks", where: l.locktype in ["transactionid", "tuple"] and not l.granted, select: count())
+        )
+      end)
+
+    if waiting > 0 do
+      :ok
+    else
+      Process.sleep(10)
+      wait_for_row_waiter(attempts - 1)
+    end
+  end
+
+  defp host_lock_free? do
+    Sandbox.unboxed_run(Repo, fn ->
+      {:ok, free?} =
+        Repo.transaction(fn ->
+          %{rows: [[free?]]} =
+            Repo.query!("SELECT pg_try_advisory_xact_lock(hashtextextended('brando.environments.hosts', 0))")
+
+          free?
+        end)
+
+      free?
+    end)
+  end
+
+  # A site's rows (the rest go with them) and schemas, by key, as a killed
+  # run left them
+  defp remove_site(key) do
+    Sandbox.unboxed_run(Repo, fn ->
+      %{rows: schemas} =
+        Repo.query!("SELECT nspname FROM pg_namespace WHERE starts_with(nspname, $1)", ["tenant_#{key}_"])
+
+      for [schema] <- schemas, do: Schema.drop(schema)
+      Repo.delete_all(from(s in Site, where: s.key == ^key), prefix: "public")
+    end)
+
+    Cache.clear()
   end
 
   defp create_task(site) do
