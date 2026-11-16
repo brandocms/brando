@@ -191,20 +191,25 @@ defmodule Brando.SSG.LocalDelivery do
   # files, not content, so nothing unpublished answers
   defp answer(conn, site) do
     case published(site) do
-      {:ok, build} ->
-        file = requested_file(conn, build)
-
-        case redirect(conn, site, build) do
-          {true, status, target} -> conn |> send_redirect(status, target) |> halt()
-          {false, _status, _target} when is_binary(file) -> conn |> send_build_file(build, file) |> halt()
-          {false, status, target} -> conn |> send_redirect(status, target) |> halt()
-          nil when is_binary(file) -> conn |> send_build_file(build, file) |> halt()
-          nil -> if SiteAssetsPlug.static_file?(conn), do: conn, else: conn |> send_not_found(build) |> halt()
-        end
-
-      :error ->
-        conn |> send_unavailable() |> halt()
+      {:ok, build} -> answer_from(conn, site, build, requested_file(conn, build))
+      :error -> conn |> send_unavailable() |> halt()
     end
+  end
+
+  defp answer_from(conn, site, build, file) do
+    case redirect(conn, site, build) do
+      {true, status, target} -> conn |> send_redirect(status, target) |> halt()
+      {false, _status, _target} when is_binary(file) -> conn |> send_build_file(build, file) |> halt()
+      {false, status, target} -> conn |> send_redirect(status, target) |> halt()
+      nil when is_binary(file) -> conn |> send_build_file(build, file) |> halt()
+      nil -> answer_missing(conn, build)
+    end
+  end
+
+  defp answer_missing(conn, build) do
+    if SiteAssetsPlug.static_file?(conn),
+      do: conn,
+      else: conn |> send_not_found(build) |> halt()
   end
 
   defp send_unavailable(conn) do
@@ -398,27 +403,24 @@ defmodule Brando.SSG.LocalDelivery do
 
   # -- The published build in memory ----------------------------------------------
 
-  defp published(%Site{id: site_id, published_build: version} = site) do
-    case :persistent_term.get({__MODULE__, site_id}, nil) do
-      %{version: ^version} = build -> {:ok, build}
-      _other -> if missing?(site), do: :error, else: load(site)
-    end
-  end
+  defp published(site), do: in_memory_or(site, fn -> load(site) end)
 
   # One load of a build at a time on this node, other sites' and versions'
   # loads beside it; a request that waited finds it loaded, or missing
   defp load(%Site{id: site_id, published_build: version} = site) do
     :global.trans(
       {{__MODULE__, :load, site_id, version}, self()},
-      fn ->
-        case :persistent_term.get({__MODULE__, site_id}, nil) do
-          %{version: ^version} = build -> {:ok, build}
-          _other -> if missing?(site), do: :error, else: read_build(site)
-        end
-      end,
+      fn -> in_memory_or(site, fn -> read_build(site) end) end,
       [node()],
       :infinity
     )
+  end
+
+  defp in_memory_or(%Site{id: site_id, published_build: version} = site, read) do
+    case :persistent_term.get({__MODULE__, site_id}, nil) do
+      %{version: ^version} = build -> {:ok, build}
+      _other -> if missing?(site), do: :error, else: read.()
+    end
   end
 
   # A directory found missing is looked for again after a few seconds, not
