@@ -149,11 +149,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     end
 
     test "a per-site admin in legacy mode cannot bind, move or clear one", %{site: site, staging: staging} do
-      {:ok, view, html} = live(site_admin_conn(site), "/admin/config/environments")
+      {:ok, view, _html} = live(site_admin_conn(site), "/admin/config/environments")
 
       assert_refused(view, site, staging)
-      assert html =~ ~s(aria-label="Domain for Staging")
-      assert has_element?(view, ~s(#environment-#{staging.id} input[name="domain"][disabled]))
+      # The hosts as text, with no field to change them in
+      assert has_element?(view, "#environment-#{staging.id} .environment-hosts dd", "staging.acme.test")
+      refute has_element?(view, ~s(#environment-#{staging.id} input[name="domain"]))
       refute has_element?(view, ~s(#create-environment-form input[name="environment[domain]"]))
     end
 
@@ -167,7 +168,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       {:ok, view, _html} = live(group_admin_conn(site, production, owner), "/admin/config/environments")
 
       assert_refused(view, site, staging)
-      assert has_element?(view, ~s(#environment-#{staging.id} input[name="domain"][disabled]))
+      assert has_element?(view, "#environment-#{staging.id} .environment-hosts dd", "staging.acme.test")
+      refute has_element?(view, ~s(#environment-#{staging.id} input[name="domain"]))
     end
 
     test "an admin in single-site mode cannot either", %{conn: _conn, site: site, staging: staging} do
@@ -481,7 +483,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       {:ok, _assignment} = Access.grant(admin, site, :admin)
       {:ok, view, _html} = live(log_in_user(build_conn(), admin), "/admin/config/environments")
 
-      assert has_element?(view, ~s(#environment-#{staging.id} textarea[name="redirect_hosts"][disabled]))
+      assert has_element?(view, "#environment-#{staging.id} .environment-hosts", "www.staging.acme.test")
+      refute has_element?(view, ~s(#environment-#{staging.id} textarea[name="redirect_hosts"]))
 
       Brando.endpoint().subscribe("user:#{admin.id}")
 
@@ -500,7 +503,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     end
 
     # A form with phx-change is recovered on rejoin, touched or not; a site
-    # admin's fields are disabled, so only the hidden inputs come back
+    # admin has no hosts form, so an event like a recovered one changes nothing
     test "a recovered form a site admin cannot edit leaves the hosts shown", %{site: site, staging: staging} do
       {:ok, staging} =
         Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: :system)
@@ -515,8 +518,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
         "shown_redirect_hosts" => "www.staging.acme.test"
       })
 
-      assert field_value(view, staging, ~s(input[name="domain"])) == "staging.acme.test"
-      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+      assert has_element?(view, "#environment-#{staging.id} .environment-hosts dd", "staging.acme.test")
+      assert has_element?(view, "#environment-#{staging.id} .environment-hosts", "www.staging.acme.test")
     end
 
     test "a change that carries one field keeps the other one's saved value", %{conn: conn, staging: staging} do
@@ -603,13 +606,25 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     end
   end
 
+  # The hosts form's own, or for someone who reads the hosts as text, the
+  # domain the text shows
   defp shown_domain(view, environment) do
-    view
-    |> element(~s(#environment-#{environment.id} input[name="shown_domain"]))
-    |> render()
-    |> LazyHTML.from_fragment()
-    |> LazyHTML.attribute("value")
-    |> List.first()
+    if has_element?(view, ~s(#environment-#{environment.id} input[name="shown_domain"])) do
+      view
+      |> element(~s(#environment-#{environment.id} input[name="shown_domain"]))
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.attribute("value")
+      |> List.first()
+    else
+      view
+      |> element("#environment-#{environment.id} .environment-hosts > div:first-child dd")
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.text()
+      |> String.trim()
+      |> then(&if(&1 == "No domain", do: "", else: &1))
+    end
   end
 
   defp domain_form_id(view, environment) do

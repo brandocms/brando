@@ -1,0 +1,1 @@
+- The Environments screen labels the domain and redirect-host fields, shows each host's served state beside the host, shows the hosts as text to those who may not change them, and stacks each environment and operation-log entry on narrow screens instead of clipping the tables.

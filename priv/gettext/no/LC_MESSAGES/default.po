@@ -8340,6 +8340,11 @@ msgstr "Opplastet eller ekstern video"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
+msgid "Hosts"
+msgstr "Verter"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
 msgid "Hosts that redirect to the domain of %{name}"
 msgstr "Verter som omdirigerer til domenet til %{name}"
 
@@ -12021,6 +12026,11 @@ msgstr "Ett valg fra en liste"
 msgid "One option, all shown at once"
 msgstr "Ett valg, med alle alternativene synlige"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "One per line. Each one redirects to the domain."
+msgstr "Én per linje. Hver av dem omdirigerer til domenet."
+
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "One source is created per selected file. Existing sources are skipped. New files added to the folder later must be selected here again."
@@ -13677,11 +13687,6 @@ msgstr "Omdirigering opprettet"
 #, elixir-autogen, elixir-format
 msgid "Redirect hosts"
 msgstr "Omdirigeringsverter"
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
-msgid "Redirect hosts, one per line"
-msgstr "Omdirigeringsverter, én per linje"
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format

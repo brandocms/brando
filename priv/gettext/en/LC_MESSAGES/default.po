@@ -8340,6 +8340,11 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
+msgid "Hosts"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
 msgid "Hosts that redirect to the domain of %{name}"
 msgstr ""
 
@@ -12021,6 +12026,11 @@ msgstr ""
 msgid "One option, all shown at once"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "One per line. Each one redirects to the domain."
+msgstr ""
+
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "One source is created per selected file. Existing sources are skipped. New files added to the folder later must be selected here again."
@@ -13676,11 +13686,6 @@ msgstr ""
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Redirect hosts"
-msgstr ""
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
-msgid "Redirect hosts, one per line"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex

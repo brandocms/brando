@@ -50,6 +50,22 @@ rows a screen needs in the spec's `setup`, never in SQL:
 - `{"post": "/e2e/admin-workspace-fixtures"}` calls the other E2E endpoints in
   `e2e/lib/e2e_project_web/router.ex`.
 
+**Multi-site screens.** The E2E server is single-site. To render the
+environments screen (`/admin/config/environments`) or the sites screen
+(`/admin/sites`) with several sites and the served hosts file:
+
+1. Start a server of its own with the switch:
+   `BRANDO_E2E_INSTANCE=multi_shots BRANDO_E2E_MULTI_SITE=1 scripts/server.sh start`.
+   Set the switch again on `restart`; never for the E2E suite.
+2. Start each spec's `setup` with the fixture `multi-site-hosts`: Acme and
+   Beta, two or three environments each, hosts in every served-hosts state.
+   `multi-site-hosts-site-admin` signs in as Acme's site administrator, who
+   may not change hosts; `multi-site-hosts-unwritable` adds a host the file
+   cannot take, with the file's error.
+3. Shoot as usual (`--locales en,no` works for all three). Lookups come from
+   `E2E.MultiSiteHosts`, so nothing queries DNS.
+4. Stop it with `scripts/server.sh stop`.
+
 The seeds (`e2e/priv/repo/e2e_seeds.exs`) already provide the Index page
 (`/admin/pages/update/1`), the example modules and a few projects.
 

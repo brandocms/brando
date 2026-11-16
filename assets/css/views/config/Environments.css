@@ -233,36 +233,6 @@
     overflow-wrap: anywhere;
   }
 
-  /* Where a bound host stands with the reverse proxy, under its domain:
-     aligned with the input's text, the detail in the muted ink. */
-  .environment-host-status {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 8px;
-    margin-top: 4px;
-    padding-left: 9px;
-  }
-
-  .environment-host-status__detail {
-    color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
-    font-size: var(--brando-text-sm);
-  }
-
-  /* One line per redirect host under the domain's, each led by its name */
-  .environment-redirect-host-statuses {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .environment-host-status__host {
-    min-width: 0;
-    font-family: var(--brando-font-mono);
-    font-size: var(--brando-text-sm);
-    overflow-wrap: anywhere;
-  }
-
   .environment-table-wrap {
     margin-top: 26px;
     overflow-x: auto;
@@ -271,36 +241,6 @@
   table {
     width: 100%;
     border-collapse: collapse;
-  }
-
-  /* The overview lists environments, whose names are short and whose remaining
-     columns are narrow, so fixed proportions keep it from sprawling. Other
-     tables size to their own content instead. */
-  /* Narrower than this the columns crowd each other: the wrap scrolls */
-  .environment-overview table {
-    min-width: 640px;
-    table-layout: fixed;
-  }
-
-  .environment-overview th:nth-child(1),
-  .environment-overview td:nth-child(1) {
-    width: 34%;
-  }
-
-  /* Room for a domain and its redirect hosts */
-  .environment-overview th:nth-child(2),
-  .environment-overview td:nth-child(2) {
-    width: 28%;
-  }
-
-  .environment-overview th:nth-child(3),
-  .environment-overview td:nth-child(3) {
-    width: 16%;
-  }
-
-  .environment-overview th:nth-child(4),
-  .environment-overview td:nth-child(4) {
-    width: 22%;
   }
 
   th.environment-actions,
@@ -419,61 +359,6 @@
     color: color-mix(in srgb, var(--brando-ink) 70%, transparent);
     font-size: var(--brando-text-2xs);
     line-height: 1.4;
-  }
-
-  /* The domain and its redirect hosts stack in the cell, the save action
-     under them. */
-  .environment-inline-form {
-    display: grid;
-    gap: 4px;
-    min-width: 0;
-  }
-
-  .environment-inline-form input {
-    box-sizing: border-box;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .environment-inline-form__actions {
-    display: flex;
-    padding-top: 4px;
-  }
-
-  .environment-inline-form textarea {
-    box-sizing: border-box;
-    width: 100%;
-    min-width: 0;
-    resize: vertical;
-  }
-
-  /* The domain and its redirect hosts read as plain text until hovered or
-     focused, so the row stays calm while still being obviously editable. */
-  .environment-inline-form input,
-  .environment-inline-form textarea {
-    min-height: 30px;
-    padding: 4px 8px;
-    border-color: transparent;
-    background: transparent;
-    font-size: var(--brando-text-md);
-    transition: border-color 150ms ease, background-color 150ms ease;
-
-    &:hover:not(:disabled) {
-      border-color: color-mix(in srgb, var(--brando-ink) 18%, transparent);
-    }
-
-    &:focus {
-      border-color: color-mix(in srgb, var(--brando-ink) 45%, transparent);
-      background: var(--brando-surface);
-    }
-
-    &:disabled {
-      cursor: not-allowed;
-    }
-
-    &::placeholder {
-      color: color-mix(in srgb, var(--brando-ink) 35%, transparent);
-    }
   }
 
   .environment-state,
@@ -617,6 +502,364 @@
     white-space: normal;
   }
 
+  /* Environments: a table where its columns fit, else one block per
+     environment (below). The hosts column holds the hosts form. */
+  .environment-list {
+    container: environment-list / inline-size;
+    overflow-x: visible;
+  }
+
+  .environment-list table {
+    table-layout: fixed;
+  }
+
+  .environment-list th:nth-child(1) {
+    width: 24%;
+  }
+
+  .environment-list th:nth-child(2) {
+    width: 46%;
+  }
+
+  .environment-list th:nth-child(3) {
+    width: 12%;
+  }
+
+  .environment-list th:nth-child(4) {
+    width: 18%;
+  }
+
+  .environment-list td {
+    vertical-align: top;
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+
+  /* Name, state and actions line up with the first field's label */
+  .environment-identity,
+  .environment-state-cell,
+  .environment-list td.environment-actions {
+    padding-top: 22px;
+  }
+
+  .environment-identity strong {
+    font-weight: 500;
+  }
+
+  /* Labels above values, as in the other forms on the page */
+  .environment-host-field > label,
+  .environment-hosts dt {
+    @font mono;
+    color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+    font-size: var(--brando-text-2xs);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  .environment-hosts-form {
+    gap: 16px;
+    max-width: 480px;
+  }
+
+  .environment-host-field {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  /* Hosts are technical values: the same mono in the fields, in the lines
+     under them and in the read-only list */
+  .environment-hosts-form input[type="text"],
+  .environment-hosts-form textarea {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid var(--brando-line-strong);
+    border-radius: var(--brando-input-radius);
+    background: var(--brando-surface);
+    color: inherit;
+    font-family: var(--brando-font-mono);
+    font-size: var(--brando-text-md);
+    line-height: 1.6;
+    box-shadow: var(--brando-shadow-inset);
+
+    &:focus {
+      border-color: var(--brando-accent);
+      outline: none;
+    }
+
+    &::placeholder {
+      color: var(--brando-faint);
+    }
+  }
+
+  .environment-hosts-form textarea {
+    max-width: 320px;
+    resize: vertical;
+  }
+
+  .environment-host-help {
+    color: var(--brando-muted);
+    font-size: var(--brando-text-xs);
+    line-height: 1.4;
+  }
+
+  .environment-hosts-form__actions {
+    display: flex;
+  }
+
+  /* The domain's state beside the domain field, its explanation under both */
+  /* The fields share one width from row to row, whatever the state's length */
+  .environment-domain-line {
+    display: grid;
+    grid-template-columns: minmax(0, 320px) auto;
+    justify-content: start;
+    align-items: center;
+    gap: 6px 10px;
+
+    > .environment-host-status {
+      display: contents;
+    }
+
+    .environment-host-status__detail {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* A host and where it stands with the reverse proxy: its name, the state,
+     and the explanation on the next line */
+  .environment-host-status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    min-width: 0;
+  }
+
+  .environment-host-status__host,
+  .environment-host-name {
+    min-width: 0;
+    font-family: var(--brando-font-mono);
+    font-size: var(--brando-text-sm);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .environment-host-status .badge {
+    flex: none;
+  }
+
+  .environment-host-status__detail {
+    flex-basis: 100%;
+    color: var(--brando-muted);
+    font-size: var(--brando-text-xs);
+    line-height: 1.45;
+  }
+
+  .environment-redirect-host-statuses {
+    display: grid;
+    gap: 8px;
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* What someone who may not change the hosts sees */
+  .environment-hosts {
+    display: grid;
+    gap: 14px;
+    margin: 0;
+
+    > div {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    dd {
+      margin: 0;
+    }
+
+    .environment-redirect-host-statuses {
+      margin-top: 0;
+    }
+  }
+
+  .environment-hosts__none {
+    color: var(--brando-muted);
+    font-size: var(--brando-text-sm);
+  }
+
+  /* Narrower than the table's columns need: each environment is a block,
+     its name and key with the state beside them, then its hosts and its
+     actions */
+  @container environment-list (max-width: 680px) {
+    table,
+    tbody,
+    tr,
+    td {
+      display: block;
+    }
+
+    thead {
+      display: none;
+    }
+
+    tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px 12px;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--brando-line-soft);
+    }
+
+    tr:first-child {
+      padding-top: 4px;
+    }
+
+    tr:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    td,
+    th:nth-child(n) {
+      width: auto;
+    }
+
+    .environment-list td,
+    .environment-identity,
+    .environment-state-cell,
+    .environment-list td.environment-actions {
+      padding: 0;
+      border: none;
+    }
+
+    .environment-identity {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 8px;
+      min-width: 0;
+
+      code {
+        margin-left: 0;
+      }
+    }
+
+    .environment-state-cell {
+      grid-column: 2;
+      grid-row: 1;
+      align-self: center;
+    }
+
+    /* The domain's state goes under the field, which keeps its full width */
+    .environment-domain-line {
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: start;
+
+      input {
+        justify-self: stretch;
+      }
+    }
+
+    .environment-hosts-form textarea {
+      max-width: none;
+    }
+
+    .environment-hosts-cell,
+    .environment-list td.environment-actions {
+      grid-column: 1 / -1;
+    }
+
+    .environment-hosts-form {
+      max-width: none;
+    }
+
+    .environment-list td.environment-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      text-align: left;
+
+      .btn {
+        margin: 0;
+      }
+    }
+
+    .environment-list td.environment-actions--none {
+      display: none;
+    }
+  }
+
+  /* The operation log and the pending operations stack the same way */
+  .environment-stacking {
+    container: environment-stacking / inline-size;
+  }
+
+  @container environment-stacking (max-width: 600px) {
+    table,
+    tbody,
+    tr,
+    td {
+      display: block;
+      width: auto !important;
+    }
+
+    thead {
+      display: none;
+    }
+
+    tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--brando-line-soft);
+    }
+
+    tr:last-child {
+      border-bottom: none;
+    }
+
+    td,
+    .environment-log td {
+      padding: 0;
+      border: none;
+    }
+
+    /* The first two columns share the first line; the rest follow */
+    td:nth-child(n + 3) {
+      grid-column: 1 / -1;
+    }
+
+    td:nth-child(2) {
+      justify-self: end;
+    }
+
+    td.environment-actions {
+      display: block;
+      text-align: left;
+
+      .btn {
+        margin: 0;
+      }
+    }
+
+    td code {
+      margin-left: 0;
+    }
+
+    .environment-log__note--empty {
+      display: none;
+    }
+  }
+
   @media (max-width: 900px) {
     .environment-grid {
       grid-template-columns: 1fr;
@@ -624,6 +867,50 @@
 
     .environment-panel > header {
       display: grid;
+      justify-items: start;
+    }
+  }
+}
+
+/* The page heading: the title and Refresh on one line, the subtitle under
+   both, as on workspace screens; on a phone Refresh goes under the subtitle */
+.environment-screen > #content-header > .content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0 24px;
+
+  > .main {
+    display: contents;
+  }
+
+  > .main > h1 {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  > .main > h3 {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: auto;
+  }
+
+  > .actions {
+    grid-column: 2;
+    grid-row: 1;
+    width: auto;
+    margin: 0;
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: minmax(0, 1fr);
+
+    > .actions {
+      grid-column: 1;
+      grid-row: 3;
+      justify-content: flex-start;
+      margin-top: 16px;
     }
   }
 }
