@@ -9,6 +9,26 @@ defmodule Brando.Tenant.ServedHosts.DNSTest do
   @v4_other {198, 51, 100, 7}
   @v6 {0x2001, 0xDB8, 0, 0, 0, 0, 0, 0x10}
 
+  # The one test that asks the machine's name servers: a name under the
+  # reserved `.invalid` domain never resolves, and without a network its
+  # queries fail. Either answer is one of the documented shapes; an option
+  # `:inet_res` rejects raises instead.
+  test "the real lookup answers one of the documented shapes" do
+    lookup = Task.async(fn -> DNS.lookup("acme.invalid") end)
+
+    case Task.yield(lookup, 10_000) || Task.shutdown(lookup) do
+      {:ok, {:error, :nxdomain}} ->
+        :ok
+
+      {:ok, {:incomplete, [], families, reasons}} ->
+        assert families != [] and Enum.all?(families, &(&1 in [:inet, :inet6]))
+        assert Enum.all?(families, &(reasons[&1] in Brando.Tenant.ServedHosts.Resolver.reasons()))
+
+      other ->
+        flunk("unexpected answer: #{inspect(other)}")
+    end
+  end
+
   # A NOERROR message whose answer section holds `records`, each
   # `{domain, type, data}`, with the truncation flag as `:inet_res` decodes it
   defp noerror(records, truncated? \\ false) do
