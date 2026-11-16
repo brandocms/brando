@@ -3,7 +3,7 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
 
   alias Brando.IgniterCase
 
-  @tasks ~w(mail sitemap authorization release)
+  @tasks ~w(mail sitemap ssg authorization release)
 
   test "auxiliary generators compose, use configured namespaces and preserve reruns" do
     project = IgniterCase.phoenix_project(app: :shop, module: "Acme.Shop", web: "Acme.Web")
@@ -17,6 +17,10 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
     assert IgniterCase.source(result, "lib/acme/web/sitemap.ex") =~ "defmodule Acme.Web.Sitemap"
     # A site's sitemap lists only the site's languages
     assert IgniterCase.source(result, "lib/acme/web/sitemap.ex") =~ ~r/\|> in_site_languages\(\)/
+    # A static build lists each site's published pages from its content
+    ssg = IgniterCase.source(result, "lib/acme/web/ssg.ex")
+    assert ssg =~ "defmodule Acme.Web.SSG"
+    assert ssg =~ "Pages.list_pages("
     assert IgniterCase.source(result, "lib/acme/shop/authorization.ex") =~ "Brando.Images.Image"
     assert IgniterCase.source(result, "mix.exs") =~ "steps: [:assemble, :tar]"
     refute_received {:mix_shell, :prompt, _}
@@ -68,6 +72,7 @@ defmodule Mix.Brando.Igniter.AuxiliaryTest do
     for {task, path, module} <- [
           {"mail", "lib/studio/emails.ex", "Studio.Emails"},
           {"sitemap", "lib/studio_web/sitemap.ex", "StudioWeb.Sitemap"},
+          {"ssg", "lib/studio_web/ssg.ex", "StudioWeb.SSG"},
           {"authorization", "lib/studio/authorization.ex", "Studio.Authorization"},
           {"release", "lib/studio/release_tasks.ex", "Studio.ReleaseTasks"}
         ] do

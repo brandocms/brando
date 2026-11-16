@@ -633,22 +633,35 @@ single-site installation. Set in `:none` or `:single`, or naming a site that
 does not exist, `dev_site` is ignored, with a warning at boot. Production,
 `:e2e`, `:test` and static builds never read it.
 
-Declare public paths in your application's web SSG module:
+A static build requests and stores the paths your application's web SSG
+module lists. `mix brando.gen.ssg` writes one that lists each site's published
+pages:
 
 ```elixir
 defmodule MyAppWeb.SSG do
   import Brando.SSG
 
-  urls :pages do
-    ["/", "/about", "/contact"]
-  end
+  alias Brando.Pages
+  alias Brando.Pages.Page
 
-  urls :projects do
-    MyApp.Projects.list_projects!(%{status: :published})
-    |> Enum.map(&MyApp.Projects.Project.__absolute_url__/1)
+  # Published pages with a URL, in the site's languages
+  urls :pages do
+    {:ok, pages} =
+      Pages.list_pages(%{
+        filter: Page.__url_filter__(),
+        status: :published,
+        select: {:struct, [:uri, :language, :has_url]}
+      })
+
+    pages
+    |> Brando.Sitemap.in_site_languages()
+    |> Enum.map(&Page.__absolute_url__/1)
   end
 end
 ```
+
+Add a `urls` block for each other content type with pages, listing its
+published entries' `__absolute_url__/1` the same way.
 
 The command-line task uses the same renderer and is interactive by default:
 

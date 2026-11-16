@@ -193,6 +193,29 @@ defmodule BrandoAdmin.WorkTest do
       end)
     end
 
+    test "a job queued with no message for its work is inserted without an error and starts nothing",
+         %{user_id: user_id} do
+      # The handler logs, below the suite's level, when it cannot report
+      level = Logger.level()
+      Logger.configure(level: :warning)
+      on_exit(fn -> Logger.configure(level: level) end)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        log =
+          ExUnit.CaptureLog.capture_log([level: :warning], fn ->
+            %{"result" => "ok"}
+            |> DoneWorker.new()
+            |> Work.track(user_id, "silent-job", finish: false, failed: "Gave up")
+            |> Oban.insert!()
+          end)
+
+        refute log =~ "Could not report a job"
+        refute_receive {:work, "silent-job", _, _}, 100
+
+        Brando.Repo.delete_all(Oban.Job)
+      end)
+    end
+
     test "step jobs count towards their work", %{user_id: user_id} do
       Work.start(user_id, "steps", "Writing", total: 2, done: "Written", failed: "Some failed")
 

@@ -124,6 +124,19 @@ defmodule Mix.Brando.Igniter.SiteFrontendTest do
     assert config(result) =~ ~s(%{"2025" => StudioWeb.Sites.Anniversary})
   end
 
+  test "--site says how to add the SSG module a static build needs, until the application has one",
+       %{multi: multi} do
+    assert notice?(generate(multi, ["--site", "acme-travel"]), "mix brando.gen.ssg writes one")
+
+    with_ssg =
+      multi
+      |> Igniter.compose_task("brando.gen.ssg", [])
+      |> IgniterCase.apply_and_reload()
+      |> generate(["--site", "acme-travel"])
+
+    refute notice?(with_ssg, "mix brando.gen.ssg writes one")
+  end
+
   test "in :single, the registry has the entry and no 404 notice", %{single: single} do
     result = generate(single, ["--site", "studio"])
     assert result.issues == []

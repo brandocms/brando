@@ -244,6 +244,16 @@ defmodule Mix.Brando.Igniter.SiteTest do
     end
   end
 
+  test "says how to add the SSG module a static build needs, until the application has one" do
+    ssg_notice = "mix brando.gen.ssg writes one that lists each site's published pages"
+    result = install(fresh())
+    assert Enum.any?(result.notices, &(&1 =~ ssg_notice))
+    assert Enum.any?(result.notices, &(&1 =~ "requests the paths StudioWeb.SSG lists"))
+
+    with_ssg = install(fresh(%{"lib/studio_web/ssg.ex" => "defmodule StudioWeb.SSG do\nend\n"}))
+    refute Enum.any?(with_ssg.notices, &(&1 =~ ssg_notice))
+  end
+
   test "homepage replacement is explicit and preserves Phoenix source files and nested routes" do
     result =
       project("""

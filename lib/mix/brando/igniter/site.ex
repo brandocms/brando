@@ -47,11 +47,32 @@ if Code.ensure_loaded?(Igniter) do
         |> ErrorPages.plan(project)
         |> LivePreview.plan(project)
         |> pages_notice(project)
+        |> ssg_notice(project)
       else
         {:skip, %Igniter{} = igniter} -> igniter
         {:skip, reason, home?} -> skipped_notice(igniter, reason, home?)
         {:error, %Igniter{} = igniter} -> igniter
         {:error, message} -> Igniter.add_issue(igniter, message)
+      end
+    end
+
+    @doc """
+    Says how to add the application's SSG module when it has none: a static
+    build reads the paths to request from it, and fails without it.
+    """
+    def ssg_notice(igniter, project) do
+      module = Module.concat(project.web_module, SSG)
+
+      case ProjectModule.module_exists(igniter, module) do
+        {true, igniter} ->
+          igniter
+
+        {false, igniter} ->
+          Igniter.add_notice(igniter, """
+          A static build of a site (delivery mode static, from /admin/config/publishing or
+          mix brando.ssg) requests the paths #{inspect(module)} lists, and there is no such
+          module yet. mix brando.gen.ssg writes one that lists each site's published pages.
+          """)
       end
     end
 

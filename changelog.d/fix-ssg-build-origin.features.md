@@ -1,0 +1,1 @@
+- `mix brando.gen.ssg` writes the application's SSG module, listing each site's published pages for static builds, and `mix brando.gen.site` says to run it when the module is missing.

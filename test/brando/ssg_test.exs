@@ -5,7 +5,11 @@ defmodule Brando.SSGTest do
   alias Brando.Sites.Site
   alias Brando.SSG
   alias Brando.SSG.Context
+  alias Brando.Test.SSGEndpoint
   alias Brando.WebhookReceiver
+
+  # For a custom fetcher, which answers whatever origin it is asked for
+  @base_url "http://127.0.0.1:4000"
 
   defmodule Fixture do
     import Brando.SSG
@@ -48,6 +52,7 @@ defmodule Brando.SSGTest do
                static_path: context.static_path,
                media_path: context.media_path,
                ssg_module: Fixture,
+               base_url: @base_url,
                fetcher: fetcher
              )
 
@@ -81,6 +86,7 @@ defmodule Brando.SSGTest do
                static_path: context.static_path,
                media_path: context.media_path,
                ssg_module: Fixture,
+               base_url: @base_url,
                fetcher: fetcher
              )
 
@@ -118,6 +124,7 @@ defmodule Brando.SSGTest do
                static_path: context.static_path,
                media_path: context.media_path,
                ssg_module: Fixture,
+               base_url: @base_url,
                fetcher: fn _url, _opts -> {:ok, %{status: 200, body: "ok"}} end
              )
 
@@ -371,11 +378,436 @@ defmodule Brando.SSGTest do
                  static_path: context.static_path,
                  media_path: context.media_path,
                  ssg_module: AboutOnly,
+                 base_url: @base_url,
                  fetcher: fetcher
                )
 
       assert_received {:fetched, "/about", false}
       assert_received {:fetched, "/om-oss", false}
+    end
+  end
+
+  describe "the origin a build requests" do
+    defmodule RootOnly do
+      @moduledoc false
+      import Brando.SSG
+
+      urls :pages do
+        ["/", "/about"]
+      end
+    end
+
+    defmodule NotStartedEndpoint do
+      @moduledoc false
+      use Phoenix.Endpoint, otp_app: :brando
+    end
+
+    defp build_root(context, opts) do
+      SSG.build(
+        [
+          output_path: context.output_path,
+          static_path: context.static_path,
+          media_path: context.media_path,
+          ssg_module: RootOnly
+        ] ++ opts
+      )
+    end
+
+    test "is the endpoint's own HTTP listener, on whatever port it listens", context do
+      receiver = SSGEndpoint.start(fn %{path: path} -> {200, "<main>#{path}</main>"} end)
+      refute receiver.port == 4000
+
+      assert {:ok, %{failed_urls: [], processed_urls: 2}} = build_root(context, endpoint: SSGEndpoint)
+
+      assert_received {:webhook_request, %{path: "/", headers: %{"host" => host} = headers}}
+      assert host == "localhost:#{receiver.port}"
+      refute Map.has_key?(headers, "x-forwarded-proto")
+      assert_received {:webhook_request, %{path: "/about"}}
+      assert File.read!(Path.join(context.output_path, "index.html")) =~ "<main>/</main>"
+    end
+
+    test "is the application's endpoint unless the build names one", context do
+      receiver = SSGEndpoint.start(fn _request -> {200, "ok"} end)
+      put_test_env(:endpoint_module, SSGEndpoint)
+
+      assert {:ok, %{failed_urls: []}} = build_root(context, [])
+      assert_received {:webhook_request, %{headers: %{"host" => host}}}
+      assert host == "localhost:#{receiver.port}"
+    end
+
+    test "follows a redirect to the listener under the host it sends, on the listener's address", context do
+      put_test_env(:tenancy_mode, :multi)
+      site = %Site{id: 1, key: "default", delivery_mode: :static}
+      environment = %Environment{id: 2, site_id: 1, key: "staging", live: false}
+
+      # Absolute, from the request's Host, as `Plug.Conn.request_url/1` writes
+      # it. On IPv6 only, where `localhost` itself may not reach the listener.
+      receiver =
+        SSGEndpoint.start(
+          fn
+            %{path: "/about", headers: %{"host" => host}} -> {302, [{"location", "http://#{host}/om-oss"}], ""}
+            %{path: path} -> {200, "<main>#{path}</main>"}
+          end,
+          listen_ip: {0, 0, 0, 0, 0, 0, 0, 0},
+          receiver_ip: {0, 0, 0, 0, 0, 0, 0, 1}
+        )
+
+      assert {:ok, %{failed_urls: []}} =
+               SSG.build(site, environment,
+                 endpoint: SSGEndpoint,
+                 output_path: context.output_path,
+                 static_path: context.static_path,
+                 media_path: context.media_path,
+                 ssg_module: RootOnly
+               )
+
+      assert File.read!(Path.join([context.output_path, "about", "index.html"])) =~ "<main>/om-oss</main>"
+
+      header = Context.header()
+
+      for path <- ["/", "/about", "/om-oss"] do
+        assert_received {:webhook_request, %{path: ^path, headers: %{^header => _token, "host" => host}}}
+        assert host == "localhost:#{receiver.port}"
+      end
+    end
+
+    test "is the address a listener is bound to when that is not a wildcard", context do
+      assert {:ok, "http://127.0.0.1:4100"} = listener_url_for(context, {127, 0, 0, 1}, 4100)
+      assert {:ok, "http://10.0.0.5:4100"} = listener_url_for(context, {10, 0, 0, 5}, 4100)
+      assert {:ok, "http://[::1]:4100"} = listener_url_for(context, {0, 0, 0, 0, 0, 0, 0, 0}, 4100)
+      assert {:ok, "http://[::1]:4100"} = listener_url_for(context, {0, 0, 0, 0, 0, 0, 0, 1}, 4100)
+    end
+
+    test "is :base_url when the build passes one, with no listener needed", context do
+      site = WebhookReceiver.start(fn _request -> {200, "ok"} end)
+
+      assert {:ok, %{failed_urls: []}} =
+               build_root(context, endpoint: NotStartedEndpoint, base_url: WebhookReceiver.url(site, ""))
+    end
+
+    test "without a listener fails the build before any request, leaving the output as it was", context do
+      File.mkdir_p!(context.output_path)
+      File.write!(Path.join(context.output_path, "index.html"), "the last build")
+      fetcher = fn _url, _opts -> flunk("a build without a listener must not request anything") end
+
+      # Not running; and running with server: false (the test application's)
+      for endpoint <- [NotStartedEndpoint, BrandoIntegrationWeb.Endpoint] do
+        assert {:error, {:no_http_listener, ^endpoint} = reason, %{processed_urls: 0}} =
+                 build_root(context, endpoint: endpoint, fetcher: fetcher)
+
+        assert SSG.error_message(reason) =~ "#{inspect(endpoint)} has no HTTP listener"
+        assert File.read!(Path.join(context.output_path, "index.html")) == "the last build"
+      end
+    end
+
+    # Bandit is not among Brando's test dependencies, and Cowboy's :ranch is not
+    # loaded (the test application's endpoint answers {:error, "function
+    # :ranch.get_addr/1 is undefined ..."}). These are the answers the adapters
+    # give for no listener, read from their source.
+    @no_listener_answers [
+      # Phoenix.Endpoint.Cowboy2Adapter.server_info/2 (Phoenix 1.8.16) rescues
+      # :ranch.get_addr/1, whose ETS lookup raises for a listener that was
+      # never started (server: false)
+      {:error, "errors were found at the given arguments"},
+      # :ranch.get_addr/1 (ranch 2.2) for a listener that is not listening yet
+      {:ok, {:undefined, :undefined}},
+      # Bandit.PhoenixAdapter.server_info/2 (Bandit 1.14) with no {endpoint,
+      # :http} child, as with server: false
+      {:error, :no_server_found},
+      # ThousandIsland.listener_info/1 (1.6), which Bandit returns as it is,
+      # with no listener process
+      :error,
+      # Both, for a listener on a Unix socket (`ip: {:local, path}`)
+      {:ok, {:local, "/tmp/acme.sock"}}
+    ]
+
+    test "is no listener for each answer the adapters give without one", context do
+      assert {:error, message} = BrandoIntegrationWeb.Endpoint.server_info(:http)
+      assert is_binary(message)
+
+      for answer <- @no_listener_answers do
+        start_answering(NotStartedEndpoint, answer)
+        assert SSG.listener_url(NotStartedEndpoint) == :error, "#{inspect(answer)} is no listener"
+
+        assert {:error, {:no_http_listener, NotStartedEndpoint}, %{processed_urls: 0}} =
+                 build_root(context, endpoint: NotStartedEndpoint)
+
+        :ok = stop_supervised(NotStartedEndpoint)
+      end
+    end
+
+    test "is not needed for a dry run", context do
+      assert {:ok, %{url_count: 2}} = build_root(context, endpoint: NotStartedEndpoint, dry_run: true)
+    end
+
+    defmodule AnsweringAdapter do
+      @moduledoc false
+      def child_specs(_endpoint, _config), do: []
+      def server_info(endpoint, _scheme), do: endpoint.config(:server_info_answer)
+    end
+
+    defp start_answering(endpoint, answer) do
+      Application.put_env(:brando, endpoint,
+        adapter: AnsweringAdapter,
+        server_info_answer: answer,
+        http: [port: 4100],
+        server: true,
+        secret_key_base: String.duplicate("x", 64)
+      )
+
+      on_exit(fn -> Application.delete_env(:brando, endpoint) end)
+      start_supervised!(endpoint, restart: :temporary)
+    end
+
+    # The adapter reports the configured address, so no socket is needed here
+    defp listener_url_for(_context, ip, port) do
+      Application.put_env(:brando, NotStartedEndpoint,
+        adapter: SSGEndpoint.Adapter,
+        http: [ip: ip, port: port],
+        server: true,
+        secret_key_base: String.duplicate("x", 64)
+      )
+
+      on_exit(fn -> Application.delete_env(:brando, NotStartedEndpoint) end)
+      pid = start_supervised!(NotStartedEndpoint, restart: :temporary)
+      result = SSG.listener_url(NotStartedEndpoint)
+      :ok = stop_supervised(NotStartedEndpoint)
+      refute Process.alive?(pid)
+      result
+    end
+  end
+
+  describe "an endpoint with force_ssl" do
+    defmodule PagesOnly do
+      @moduledoc false
+      import Brando.SSG
+
+      urls :pages do
+        ["/", "/about"]
+      end
+    end
+
+    # As phx.new 1.8 writes it in config/prod.exs
+    @phx_new_force_ssl [rewrite_on: [:x_forwarded_proto], exclude: [hosts: ["localhost", "127.0.0.1"]]]
+    @https_url [url: [host: "example.com", port: 443, scheme: "https"]]
+
+    # The request the build made, as Phoenix's adapters hand it to the endpoint
+    # (the host from its Host header), through `Plug.SSL` as `force_ssl`
+    # configures it: Phoenix adds the endpoint's host to redirect to.
+    # `app` answers the requests `Plug.SSL` lets through.
+    defp through_force_ssl(force_ssl, %{path: path, headers: headers}, app \\ &page/1) do
+      ssl = Plug.SSL.init(Keyword.put_new(force_ssl, :host, "example.com"))
+
+      conn =
+        headers
+        |> Map.delete("host")
+        |> Enum.reduce(Plug.Test.conn(:get, "http://" <> headers["host"] <> path), fn {name, value}, conn ->
+          Plug.Conn.put_req_header(conn, name, value)
+        end)
+        |> Plug.SSL.call(ssl)
+
+      if conn.halted,
+        do: {conn.status, [{"location", hd(Plug.Conn.get_resp_header(conn, "location"))}], ""},
+        else: app.(conn)
+    end
+
+    defp page(conn), do: {200, [], "<main>#{conn.request_path}</main>"}
+
+    defp build_pages(context, opts) do
+      SSG.build(
+        [
+          endpoint: SSGEndpoint,
+          output_path: context.output_path,
+          static_path: context.static_path,
+          media_path: context.media_path,
+          ssg_module: PagesOnly
+        ] ++ opts
+      )
+    end
+
+    test "as phx.new writes it lets the build's requests through on a wildcard listener", context do
+      for {listen_ip, receiver_ip} <- [
+            {{0, 0, 0, 0}, {127, 0, 0, 1}},
+            {{0, 0, 0, 0, 0, 0, 0, 0}, {0, 0, 0, 0, 0, 0, 0, 1}}
+          ] do
+        SSGEndpoint.start(&through_force_ssl(@phx_new_force_ssl, &1),
+          listen_ip: listen_ip,
+          receiver_ip: receiver_ip,
+          config: [force_ssl: @phx_new_force_ssl]
+        )
+
+        assert {:ok, %{failed_urls: [], processed_urls: 2}} = build_pages(context, [])
+        assert File.read!(Path.join([context.output_path, "about", "index.html"])) =~ "<main>/about</main>"
+        stop_supervised!(SSGEndpoint)
+      end
+    end
+
+    test "as phx.new writes it lets the build's requests through on a listener bound to one address", context do
+      test = self()
+      SSGEndpoint.start(fn _request -> {500, "not this way"} end, listen_ip: {10, 0, 0, 5})
+
+      fetcher = fn url, opts ->
+        %URI{host: host, path: path} = URI.parse(url)
+        send(test, {:fetched, host})
+
+        {status, headers, body} = through_force_ssl(@phx_new_force_ssl, %{path: path, headers: Map.new(opts[:headers])})
+        {:ok, %{status: status, headers: headers, body: body}}
+      end
+
+      assert {:ok, %{failed_urls: [], processed_urls: 2}} = build_pages(context, fetcher: fetcher)
+      assert_received {:fetched, "10.0.0.5"}
+    end
+
+    test "with its own exclude and rewrite_on lets the build through when the endpoint's URL is https", context do
+      force_ssl = [rewrite_on: [:x_forwarded_proto], exclude: [hosts: ["internal.example.com"]]]
+
+      SSGEndpoint.start(&through_force_ssl(force_ssl, &1), config: [force_ssl: force_ssl] ++ @https_url)
+
+      assert {:ok, %{failed_urls: []}} = build_pages(context, [])
+      assert_received {:webhook_request, %{headers: %{"x-forwarded-proto" => "https"}}}
+    end
+
+    test "with its own exclude and no rewrite_on fails each URL naming force_ssl", context do
+      force_ssl = [exclude: [hosts: ["internal.example.com"]]]
+
+      SSGEndpoint.start(&through_force_ssl(force_ssl, &1), config: [force_ssl: force_ssl] ++ @https_url)
+
+      assert {:error, :url_failures, %{failed_urls: [root, about]}} = build_pages(context, [])
+      assert root =~ "/ (HTTP 301"
+      assert about =~ "/about (HTTP 301"
+      assert about =~ "force_ssl"
+      assert about =~ "localhost"
+      assert about =~ "rewrite_on"
+      refute about =~ "redirect_off_origin"
+    end
+
+    test "with rewrite_on follows a redirect the application builds from the request, on the listener", context do
+      force_ssl = [rewrite_on: [:x_forwarded_proto], exclude: [hosts: ["internal.example.com"]]]
+
+      # The scheme is https after rewrite_on, so `Plug.Conn.request_url/1`
+      # names https and the Host the build sent
+      app = fn
+        %{request_path: "/about"} = conn ->
+          {302, [{"location", String.replace(Plug.Conn.request_url(conn), "/about", "/om-oss")}], ""}
+
+        conn ->
+          page(conn)
+      end
+
+      receiver =
+        SSGEndpoint.start(&through_force_ssl(force_ssl, &1, app), config: [force_ssl: force_ssl] ++ @https_url)
+
+      assert {:ok, %{failed_urls: []}} = build_pages(context, [])
+      assert File.read!(Path.join([context.output_path, "about", "index.html"])) =~ "<main>/om-oss</main>"
+      assert_received {:webhook_request, %{path: "/om-oss", headers: %{"host" => host}}}
+      assert host == "localhost:#{receiver.port}"
+    end
+
+    test "redirecting to the same path on https under the host the build sent fails the URL naming force_ssl",
+         context do
+      # Redirects to the request's own host, and does not read x-forwarded-proto
+      force_ssl = [host: nil, exclude: [hosts: ["internal.example.com"]]]
+
+      SSGEndpoint.start(&through_force_ssl(force_ssl, &1), config: [force_ssl: force_ssl] ++ @https_url)
+
+      assert {:error, :url_failures, %{failed_urls: [root, about]}} = build_pages(context, [])
+      assert root =~ "force_ssl"
+      assert about =~ "/about (HTTP 301"
+      assert about =~ "force_ssl"
+    end
+
+    test "redirecting to the same path on the listener's https origin again and again fails the URL naming force_ssl",
+         context do
+      test = self()
+
+      SSGEndpoint.start(
+        fn %{path: path, headers: %{"host" => host}} ->
+          send(test, {:answered, path})
+          {301, [{"location", "https://#{host}#{path}"}], ""}
+        end,
+        config: @https_url
+      )
+
+      assert {:error, :url_failures, %{failed_urls: [root, about]}} = build_pages(context, [])
+      assert root =~ "force_ssl"
+      assert about =~ "/about (HTTP 301"
+      assert about =~ "force_ssl"
+
+      # The listed path, and the redirect followed once on the listener
+      for path <- ["/", "/", "/about", "/about"], do: assert_received({:answered, ^path})
+      refute_received {:answered, _third_request}
+    end
+
+    test "redirecting to the same path on https on another host fails the URL without naming force_ssl", context do
+      # A canonical-host plug, not the endpoint's host that force_ssl names
+      SSGEndpoint.start(
+        fn %{path: path} -> {301, [{"location", "https://www.example.com" <> path}], ""} end,
+        config: @https_url
+      )
+
+      assert {:error, :url_failures, %{failed_urls: [_root, about]}} = build_pages(context, [])
+      assert about =~ "another origin"
+      refute about =~ "force_ssl"
+    end
+
+    test "with :base_url, redirecting to the same path on https fails the URL without naming force_ssl", context do
+      fetcher = fn _url, _opts -> {:ok, %{status: 301, headers: [{"location", "https://site.test:4000/about"}]}} end
+
+      assert {:error, :url_failures, %{failed_urls: [_root, about]}} =
+               build_pages(context, base_url: "http://site.test:4000", fetcher: fetcher)
+
+      assert about =~ "another origin"
+      refute about =~ "force_ssl"
+      refute about =~ "localhost"
+    end
+  end
+
+  describe "a redirect on a listener build" do
+    defmodule ListedAbout do
+      @moduledoc false
+      import Brando.SSG
+
+      urls :pages do
+        ["/about"]
+      end
+    end
+
+    test "to another origin fails the URL with no request there, so the signed header stays", context do
+      put_test_env(:tenancy_mode, :multi)
+      site = %Site{id: 1, key: "default", delivery_mode: :static}
+      environment = %Environment{id: 2, site_id: 1, key: "staging", live: false}
+      test = self()
+      receiver = SSGEndpoint.start(fn _request -> {500, "not this way"} end)
+      elsewhere = WebhookReceiver.start()
+      port = receiver.port
+      header = Context.header()
+
+      for location <- [
+            "http://localhost:#{elsewhere.port}/internal",
+            "http://localhost:#{port}@evil.example/internal",
+            "http://localhost.evil.example:#{port}/internal",
+            "//evil.example/internal"
+          ] do
+        fetcher = fn url, opts ->
+          send(test, {:fetched, url, Map.new(opts[:headers])})
+          {:ok, %{status: 302, headers: [{"location", location}], body: ""}}
+        end
+
+        assert {:error, :url_failures, %{failed_urls: [failure]}} =
+                 SSG.build(site, environment,
+                   endpoint: SSGEndpoint,
+                   fetcher: fetcher,
+                   output_path: context.output_path,
+                   static_path: context.static_path,
+                   media_path: context.media_path,
+                   ssg_module: ListedAbout
+                 )
+
+        assert failure =~ "another origin", location
+        url = "http://127.0.0.1:#{port}/about"
+        assert_received {:fetched, ^url, %{^header => _token}}
+        refute_received {:fetched, _second_request, _headers}
+      end
     end
   end
 end

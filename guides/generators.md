@@ -238,6 +238,7 @@ mix brando.gen.mail
 mix brando.gen.sitemap
 mix brando.gen.authorization
 mix brando.gen.release
+mix brando.gen.ssg
 mix brando.gen.tenant_migration add_projects
 mix brando.gen.agents
 ```
@@ -265,7 +266,10 @@ adapter and credentials in `runtime.exs`. Without a terminal, standard input on
 with `--yes`; `--dry-run` previews them.
 
 The sitemap selects published pages; review their public URL rules before calling
-`Brando.Sitemap.generate_sitemap/0`. Authorization generation starts from the
+`Brando.Sitemap.generate_sitemap/0`. `brando.gen.ssg` writes the web `SSG`
+module a static build reads its paths from, listing each site's published
+pages; see [Build and publish static sites](tenancy_and_environments.md#build-and-publish-static-sites).
+Authorization generation starts from the
 maintained default policy; review permissions for your application content types.
 
 Release generation creates `MyApp.ReleaseTasks` and adds a missing Mix release
@@ -321,7 +325,7 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.migrate` | Runs public or tenant migrations |
 | `brando.modules` | Export, plan and import module-definition DSL files |
 | `brando.gen.site` | Plans CMS page rendering (a new install composes it) with explicit homepage ownership; `--site KEY` (and `--module Name`) plans [one site's frontend](#site-frontends) |
-| `brando.gen.sitemap` / `brando.gen.mail` / `brando.gen.authorization` | Reviewed auxiliary modules with conflict checks |
+| `brando.gen.sitemap` / `brando.gen.ssg` / `brando.gen.mail` / `brando.gen.authorization` | Reviewed auxiliary modules with conflict checks |
 | `brando.gen.release` | Reviewed release helpers and missing Mix configuration |
 | `brando.install.fabfile` | Retired; use release generation and Florist |
 | `brando.gen.otel` | Reviewed application-scoped telemetry setup |

@@ -208,7 +208,7 @@ defmodule Brando.Worker.SSGBuild do
       url_count: Map.get(result, :url_count, current.url_count),
       processed_urls: Map.get(result, :processed_urls, current.processed_urls),
       failed_urls: Map.get(result, :failed_urls, current.failed_urls),
-      build_log: current.build_log <> log_line("Build failed: #{inspect(reason)}")
+      build_log: current.build_log <> log_line("Build failed: #{failure_message(reason)}")
     }
 
     case Builds.update(current, attrs) do
@@ -220,6 +220,14 @@ defmodule Brando.Worker.SSGBuild do
         {:error, {:persist_build_failure_failed, reason, changeset}}
     end
   end
+
+  # A job runs on whichever node takes it, and passes no other origin
+  defp failure_message({:no_http_listener, endpoint}) do
+    "#{inspect(endpoint)} has no HTTP listener on #{node()}, the node that ran the build. " <>
+      "Static builds must run on a node that serves the endpoint."
+  end
+
+  defp failure_message(reason), do: Brando.SSG.error_message(reason)
 
   defp ready_message(%Build{status: :deployed, version: version}),
     do: gettext("Static build %{version} is deployed", version: version)
