@@ -152,6 +152,24 @@ tmp_root="${TMPDIR:-/tmp}"
 logs="$(mktemp -d "${tmp_root%/}/brando-partitions.XXXXXX")"
 trap 'rm -rf "$logs"' EXIT
 
+# A run that is cancelled or runs into its job's time limit (CI stops the job
+# with SIGINT, then SIGTERM) would otherwise say nothing: a partition's output
+# is printed when all have finished. Print the end of what each has written,
+# which shows whether it was migrating, running tests or done, then stop them.
+interrupted() {
+  echo "test-partitions: interrupted; the end of each partition's output so far:"
+  for file in "$logs"/test[0-9]*; do
+    [ -e "$file" ] || continue
+    echo "== Partition ${file##*/test} (last 100 lines)"
+    tail -n 100 "$file"
+    echo
+  done
+  # shellcheck disable=SC2086 # one argument per process id
+  kill ${pids[@]+"${pids[@]}"} 2>/dev/null
+  exit 130
+}
+trap interrupted INT TERM
+
 # Every test file mix test runs (`test/**/*_test.exs`; the wildcard skips
 # hidden directories), with its partition among N×M: longest first, each to
 # the partition with the least time so far, ties to the lower number. Each
