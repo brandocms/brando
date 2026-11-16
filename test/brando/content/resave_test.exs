@@ -177,6 +177,14 @@ defmodule Brando.Content.ResaveTest do
         assert {:error, "unknown option enviroment:" <> _} = Resave.run(enviroment: "staging")
         assert {:error, "site: must be a key, as a string, got: :acme"} = Resave.run(site: :acme)
         assert {:error, "the options must be a keyword list" <> _} = Resave.run(%{site: "acme"})
+        assert {:error, ~s(the options must be a keyword list, got: "staging")} = Resave.run("staging")
+        assert {:error, "the options must be a keyword list, got: :all"} = Resave.run(:all)
+        assert {:error, "reload_caches: must be true or false, got: nil"} = Resave.run(reload_caches: nil)
+
+        assert {:error, "otp_app: must be an application's name, an atom, got: \"my_app\""} =
+                 Resave.run(otp_app: "my_app")
+
+        assert {:error, "info: must be a function of one argument, got: :stdout"} = Resave.run(info: :stdout)
       end)
 
     assert output =~ "Nothing was done: unknown option enviroment:. It takes: blueprint:, site:, environment:"

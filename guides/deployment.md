@@ -881,7 +881,7 @@ existed can add it next to `migrate/0`; the upgrade hook's notice
 
 ```elixir
 def resave_entries(opts \\ []) do
-  Brando.Content.Resave.run([otp_app: @app] ++ opts)
+  Brando.Content.Resave.run(opts)
 end
 ```
 
