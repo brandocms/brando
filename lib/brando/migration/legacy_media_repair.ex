@@ -157,10 +157,11 @@ defmodule Brando.Migration.LegacyMediaRepair do
   ## Context
 
   defp context(schema, findings, opts) do
-    converted_at =
-      case Keyword.get(opts, :converted_at) do
-        %NaiveDateTime{} = time -> {:ok, time}
-        nil -> conversion_time()
+    {converted_at, started_at} =
+      case Keyword.get(opts, :converted_at) || conversion_time() do
+        %NaiveDateTime{} = time -> {{:ok, time}, time}
+        {:ok, time, started_at} -> {{:ok, time}, started_at}
+        error -> {error, nil}
       end
 
     # Rows the migrations wrote got the database's local time from `NOW()`;
@@ -168,14 +169,21 @@ defmodule Brando.Migration.LegacyMediaRepair do
     # than the conversion whatever wrote it. One second more: the
     # conversion's time is brando_175's row in schema_migrations, cut to the
     # second, and a `NOW()` from brando_133 or brando_134 in that same second
-    # is rounded up to the next one in a timestamp(0) column.
-    [[offset]] = rows("SELECT extract(epoch FROM now()::timestamp - (now() AT TIME ZONE 'utc'))::integer", [])
+    # is rounded up to the next one in a timestamp(0) column. The offset is
+    # the session time zone's at the conversion, not now: a daylight-saving
+    # change in between would move the cutoff by an hour. Of the offsets at
+    # the conversion's start (brando_133) and its end, the larger: a change
+    # between them has the earlier rows an hour later in local time.
     columns = columns(schema)
 
     {local_cutoff, entries} =
       case converted_at do
-        {:ok, time} -> {NaiveDateTime.add(time, max(offset, 0) + 1), entry_edits(schema, findings, time, columns)}
-        {:error, _} -> {nil, %{}}
+        {:ok, time} ->
+          offset = max(utc_offset_at(started_at), utc_offset_at(time))
+          {NaiveDateTime.add(time, max(offset, 0) + 1), entry_edits(schema, findings, time, columns)}
+
+        {:error, _} ->
+          {nil, %{}}
       end
 
     %{
@@ -190,8 +198,17 @@ defmodule Brando.Migration.LegacyMediaRepair do
     }
   end
 
+  # The session time zone's offset from UTC, in seconds, at `time` (UTC)
+  defp utc_offset_at(time) do
+    [[offset]] =
+      rows("SELECT extract(epoch FROM ($1::timestamp AT TIME ZONE 'utc')::timestamp - $1::timestamp)::integer", [time])
+
+    offset
+  end
+
   # When brando_133, and brando_175 after it, ran, from the copies of them in
-  # the migrations directory and their rows in `schema_migrations`
+  # the migrations directory and their rows in `schema_migrations`: the
+  # conversion's time, and when it started
   defp conversion_time do
     times =
       Map.new(["brando_133_transfer_ref_media_data", "brando_175_add_updated_by"], fn name ->
@@ -209,7 +226,7 @@ defmodule Brando.Migration.LegacyMediaRepair do
       {t133, t175} ->
         cond do
           NaiveDateTime.compare(t175, t133) == :lt ->
-            {:ok, t133}
+            {:ok, t133, t133}
 
           NaiveDateTime.diff(t175, t133) > @window ->
             {:error,
@@ -217,7 +234,7 @@ defmodule Brando.Migration.LegacyMediaRepair do
                "edits between them can't be told. Give the time after which changes are editors' with --converted-at"}
 
           true ->
-            {:ok, t175}
+            {:ok, t175, t133}
         end
     end
   end

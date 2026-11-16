@@ -354,4 +354,95 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
     assert Enum.any?(result.issues, &String.contains?(&1, "brando.upgrade.prepare"))
     Igniter.Test.assert_unchanged(result)
   end
+
+  describe "on a version change, what brando.install writes today" do
+    @release_tasks """
+    defmodule Studio.ReleaseTasks do
+      @app :studio
+      def migrate, do: :ok
+    end
+    """
+
+    defp version_change(files) do
+      IgniterCase.phoenix_project(files: files)
+      |> Igniter.compose_task(Mix.Tasks.Brando.Upgrade, ["0.54.0", installed_version()])
+    end
+
+    test "a repo without Brando's soft-delete functions gets them, and one with them is left alone" do
+      result = version_change(%{})
+      repo = IgniterCase.source(result, "lib/studio/repo.ex")
+      assert repo =~ ~r/use Ecto.Repo[^\n]*\n\s*use Brando.SoftDelete.Repo\n/
+
+      rerun =
+        result
+        |> IgniterCase.apply_and_reload()
+        |> Igniter.compose_task(Mix.Tasks.Brando.Upgrade, ["0.54.0", installed_version()])
+
+      Igniter.Test.assert_unchanged(rerun, "lib/studio/repo.ex")
+    end
+
+    test "a ReleaseTasks without resave_entries/1 gets a notice giving the function" do
+      result = version_change(%{"lib/studio/release_tasks.ex" => @release_tasks})
+
+      Igniter.Test.assert_unchanged(result, "lib/studio/release_tasks.ex")
+      assert Enum.any?(result.notices, &(&1 =~ "Studio.ReleaseTasks has no resave_entries/1"))
+    end
+
+    test "mix brando.migrate55 adds the soft-delete functions too" do
+      result = IgniterCase.phoenix_project() |> Igniter.compose_task("brando.migrate55", [])
+
+      assert IgniterCase.source(result, "lib/studio/repo.ex") =~ "use Brando.SoftDelete.Repo"
+    end
+
+    @analytics_repo """
+    defmodule Studio.AnalyticsRepo do
+      use Ecto.Repo, otp_app: :studio, adapter: Ecto.Adapters.Postgres
+    end
+    """
+
+    @brando_config """
+    import Config
+    config :brando, repo_module: Studio.Repo
+    """
+
+    defp migrate55(files), do: IgniterCase.phoenix_project(files: files) |> Igniter.compose_task("brando.migrate55", [])
+
+    test "with a second repo, Brando's configured one gets the functions and the other is left alone" do
+      files = %{"lib/studio/analytics_repo.ex" => @analytics_repo, "config/brando.exs" => @brando_config}
+
+      for result <- [migrate55(files), version_change(files)] do
+        assert IgniterCase.source(result, "lib/studio/repo.ex") =~ "use Brando.SoftDelete.Repo"
+        Igniter.Test.assert_unchanged(result, "lib/studio/analytics_repo.ex")
+      end
+    end
+
+    test "with several repos and none configured, --repo names Brando's" do
+      result =
+        IgniterCase.phoenix_project(files: %{"lib/studio/analytics_repo.ex" => @analytics_repo})
+        |> Igniter.compose_task("brando.migrate55", ["--repo", "Studio.Repo"])
+
+      assert IgniterCase.source(result, "lib/studio/repo.ex") =~ "use Brando.SoftDelete.Repo"
+      Igniter.Test.assert_unchanged(result, "lib/studio/analytics_repo.ex")
+      refute Enum.any?(result.notices, &(&1 =~ "Could not tell which repo is Brando's"))
+    end
+
+    test "a repo under test/ does not count as a second one" do
+      result = migrate55(%{"test/support/analytics_repo.ex" => @analytics_repo})
+
+      assert IgniterCase.source(result, "lib/studio/repo.ex") =~ "use Brando.SoftDelete.Repo"
+      Igniter.Test.assert_unchanged(result, "test/support/analytics_repo.ex")
+    end
+
+    test "with several repos and none configured, a notice names the line to add and where" do
+      files = %{"lib/studio/analytics_repo.ex" => @analytics_repo}
+
+      for result <- [migrate55(files), version_change(files)] do
+        Igniter.Test.assert_unchanged(result, ["lib/studio/repo.ex", "lib/studio/analytics_repo.ex"])
+        assert notice = Enum.find(result.notices, &(&1 =~ "Could not tell which repo is Brando's"))
+        assert notice =~ "Studio.AnalyticsRepo, Studio.Repo"
+        assert notice =~ "config :brando, repo_module:"
+        assert notice =~ "use Brando.SoftDelete.Repo"
+      end
+    end
+  end
 end

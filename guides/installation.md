@@ -510,6 +510,12 @@ site, its `robots.txt` is removed too, so Brando answers `/robots.txt`, and
 without it `robots.txt` moves to `assets/frontend/public`. Florist's own
 configuration, like sample content, remains separate.
 
+The installer adds `use Brando.SoftDelete.Repo` to the application's Repo,
+after its `use Ecto.Repo`: every delete and restore calls the functions it
+adds, and the application refuses to boot without them. A Repo that has the
+line is left as it is. A versioned upgrade (`mix igniter.upgrade brando`) adds
+it to an application installed earlier.
+
 The installer also adds `:brando` to `import_deps` in `.formatter.exs`, so
 `mix format` keeps Blueprint DSL calls without parentheses, and moves the
 application's version to a `VERSION` file that `mix.exs` reads

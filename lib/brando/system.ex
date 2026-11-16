@@ -30,6 +30,7 @@ defmodule Brando.System do
     Logger.info("==> Brando >> Running system checks...")
     Brando.Cache.put(:warnings, [], :infinite)
     {:ok, {:module_config, :exists}} = check_module_config_exists()
+    {:ok, {:soft_delete_repo, :exists}} = check_soft_delete_repo()
     :ok = Brando.Blueprint.CompileConfig.check!()
     {:ok, {:tenancy_config, :valid}} = check_tenancy_config()
     {:ok, {:villain_filters, :exists}} = check_villain_filters_exists()
@@ -49,6 +50,12 @@ defmodule Brando.System do
   # and AI settings without the optional dependency they need.
   defp warn_deprecated_config do
     Enum.each(Brando.AI.deprecations() ++ Brando.AI.dependency_warnings(), &Brando.System.Log.warn/1)
+  end
+
+  # Every delete and restore calls them: a site without them is broken
+  defp check_soft_delete_repo do
+    Brando.SoftDelete.Repo.ensure_used!(Brando.repo())
+    {:ok, {:soft_delete_repo, :exists}}
   end
 
   defp check_tenancy_config do

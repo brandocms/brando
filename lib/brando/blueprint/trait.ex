@@ -2,8 +2,8 @@ defmodule Brando.Blueprint.Trait do
   @moduledoc false
 
   defmacro trait(name, opts \\ []) do
-    trait = expand_trait(name, __CALLER__)
     {requested_compiler, trait_opts} = Keyword.pop(opts, :compile_with)
+    trait = expand_trait(name, trait_env(requested_compiler, __CALLER__))
     compiler = expand_compiler(requested_compiler, trait, __CALLER__)
     warn_deprecated_opts(trait, trait_opts, __CALLER__)
 
@@ -72,6 +72,14 @@ defmodule Brando.Blueprint.Trait do
   defp expand_trait(:villain, _caller), do: built_in_trait("Villain")
   defp expand_trait(:watch_language, _caller), do: built_in_trait("WatchLanguage")
   defp expand_trait(name, caller), do: Macro.expand(name, caller)
+
+  # A trait compiled by another module (`compile_with:`) generates no code
+  # itself, so the Blueprint needs it at runtime only. Its alias is expanded as
+  # inside a function: expanded in the module body it is a compile-time
+  # dependency, and a trait that reaches `Brando.Repo` then puts the Blueprint
+  # in a compile-connected cycle with itself.
+  defp trait_env(nil, caller), do: caller
+  defp trait_env(_compiler, caller), do: %{caller | function: {:__trait__, 0}}
 
   defp expand_compiler(nil, trait, _caller) do
     cond do

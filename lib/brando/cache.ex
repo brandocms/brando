@@ -221,6 +221,20 @@ defmodule Brando.Cache do
     :ok
   end
 
+  @doc """
+  Refreshes this node's render inputs for the caller's site and environment,
+  whatever it has heard, as a render job does for a write it has not heard
+  of (`ensure_fresh/1`): rebuilds the site caches entries render with and
+  evicts the cached lists of modules, containers, palettes and fragments.
+  With `registry: true`, warms the site and environment registry too. For a
+  run that renders many entries after writes no node may have heard of.
+  """
+  @spec refresh_render_inputs(keyword()) :: :ok
+  def refresh_render_inputs(opts \\ []) do
+    args = Freshness.attach_any(%{})
+    ensure_fresh(if opts[:registry], do: args, else: Map.delete(args, "registry"))
+  end
+
   defp refresh({:site_cache, cache}), do: rebuild(cache)
   defp refresh(:registry), do: Tenant.Cache.warm()
   defp refresh({:query_source, source}), do: Brando.Cache.Query.refresh_node_cache({Tenant.current_prefix(), source})

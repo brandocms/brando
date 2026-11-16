@@ -9,7 +9,8 @@
   `__absolute_url__/1`, `__has_url__/1` and `__url_filter__/0` are unchanged,
   so sitemaps, the SEO audit and structured data still leave the entries
   out. `brando_220` adds `content_identifiers.external_url` in every
-  environment; run `mix brando.gen.migrations` and `mix brando.migrate`.
+  environment; run `mix brando.gen.migrations` and `mix brando.migrate`
+  (in a release, `bin/my_app eval "MyApp.ReleaseTasks.migrate()"`).
   Existing entries get their destination when saved, or with **Sync
   identifiers** in Utilities. `Brando.Content.Identifier.link_url/1` gives an
   identifier's link destination.

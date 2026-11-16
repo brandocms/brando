@@ -247,25 +247,26 @@ defmodule Brando.SSG.Builds do
   end
 
   defp enqueue(build, nil) do
-    build.id
-    |> then(&SSGBuild.new(%{"build_id" => &1}, tags: ["ssg-build", "site:#{build.site_id}"]))
+    build
+    |> job_args()
+    |> SSGBuild.new(tags: ["ssg-build", "site:#{build.site_id}"])
     |> SSGBuild.track(build)
     |> Oban.insert()
   end
 
   defp enqueue(build, %DateTime{} = scheduled_at) do
-    build.id
-    |> then(
-      &SSGBuild.new(%{"build_id" => &1},
-        scheduled_at: scheduled_at,
-        tags: ["ssg-build", "site:#{build.site_id}"]
-      )
-    )
+    build
+    |> job_args()
+    |> SSGBuild.new(scheduled_at: scheduled_at, tags: ["ssg-build", "site:#{build.site_id}"])
     |> SSGBuild.track(build)
     |> Oban.insert()
   end
 
   defp enqueue(_build, scheduled_at), do: {:error, {:invalid_scheduled_at, scheduled_at}}
+
+  # The recorded set goes with the job too: deleting a set clears the build's
+  # `asset_set_id`, and the job then tells a deleted set from none
+  defp job_args(build), do: %{"build_id" => build.id, "asset_set_id" => build.asset_set_id}
 
   defp next_build_number(site_id) do
     from(build in Build, where: build.site_id == ^site_id, select: max(build.build_number))

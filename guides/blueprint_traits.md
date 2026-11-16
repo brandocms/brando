@@ -358,6 +358,7 @@ trait MyApp.Trait.Searchable,
 ```
 
 The compiler must export `generate_code/2`; the trait's own is then not
-called. `compile_with:` is not part of the trait's options. A trait that adds
+called, and the Blueprint depends on the trait at runtime only. `compile_with:`
+is not part of the trait's options. A trait that adds
 no fields can use `compile_with: Brando.Trait.NoopCompiler`. Brando's built-in
 traits choose their compilers themselves.

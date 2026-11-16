@@ -407,6 +407,7 @@ defmodule Brando.Revisions do
 
         with :ok <- Brando.Authorization.Boundary.change(user, :update, changeset),
              {:ok, updated_entry} <- Query.update(changeset),
+             {:ok, updated_entry} <- recompute_derived(updated_entry),
              {:ok, identifier_result} <- Content.update_identifier(entry_schema, updated_entry),
              {:ok, _} <- Brando.Publisher.schedule_publishing(updated_entry, changeset, user) do
           replaced = active_revision_number(to_string(entry_schema), entry_id)
@@ -444,6 +445,13 @@ defmodule Brando.Revisions do
         {:error, reason}
     end
   end
+
+  # A page's trail is computed from its parents, not content of the revision:
+  # the one the revision holds may name a parent's old title. Matched by name:
+  # a struct pattern would make this module depend on the page blueprint at
+  # compile time.
+  defp recompute_derived(%{__struct__: Brando.Pages.Page} = page), do: Brando.Pages.restored(page)
+  defp recompute_derived(entry), do: {:ok, entry}
 
   # A colour stored before values were checked would refuse the restore: it
   # comes back empty instead (`Brando.Color.clear_invalid/1`), and the
@@ -522,6 +530,7 @@ defmodule Brando.Revisions do
       |> drop_obfuscated_if_trashed(current_entry)
       |> drop_superuser_fields(current_entry, user)
       |> drop_locked_fields(current_entry, user, form)
+      |> keep_missing_belongs_to(current_entry)
 
     if publish? do
       params
@@ -530,6 +539,31 @@ defmodule Brando.Revisions do
     else
       params
     end
+  end
+
+  # A row the revision refers to that is gone since (a parent page the trash
+  # purge deleted) would refuse the restore: the entry keeps the reference it
+  # has now instead
+  defp keep_missing_belongs_to(params, %schema{} = current_entry) do
+    opts =
+      case Ecto.get_meta(current_entry, :prefix) do
+        prefix when is_binary(prefix) -> [prefix: prefix]
+        _ -> []
+      end
+
+    :associations
+    |> schema.__schema__()
+    |> Enum.map(&schema.__schema__(:association, &1))
+    |> Enum.filter(&match?(%Ecto.Association.BelongsTo{}, &1))
+    |> Enum.reduce(params, fn %{owner_key: key, related: related, related_key: related_key}, params ->
+      value = Map.get(params, key)
+      current = Map.get(current_entry, key)
+
+      if is_nil(value) or value == current or
+           Repo.one(from(r in related, where: field(r, ^related_key) == ^value, select: true), opts),
+         do: params,
+         else: Map.put(params, key, current)
+    end)
   end
 
   defp drop_superuser_fields(params, entry, user) do

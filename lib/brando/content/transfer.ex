@@ -19,7 +19,7 @@ defmodule Brando.Content.Transfer do
   alias Brando.Authorization.Boundary
   alias Brando.Content.Block
   alias Brando.Content.Definition.{References, Snapshot, Value}
-  alias Brando.Content.Transfer.{Archive, Catalog, Contracts, Dependencies, Error, Media, Portable, Receipt}
+  alias Brando.Content.Transfer.{Archive, Catalog, Contracts, Dependencies, EntryCodec, Error, Media, Portable, Receipt}
   alias Brando.Drafts.Params
   alias Brando.Repo
   alias Ecto.Changeset
@@ -983,7 +983,20 @@ defmodule Brando.Content.Transfer do
     end)
   end
 
-  def entry_fingerprint(entry), do: entry |> Params.snapshot() |> Value.digest()
+  @doc """
+  A digest of `entry` as saved, for telling whether someone changed it since.
+  A page's `breadcrumbs` are left out: a recompute of the trail is no edit.
+  """
+  def entry_fingerprint(entry), do: entry |> Params.snapshot() |> EntryCodec.without_derived(entry) |> Value.digest()
+
+  @doc """
+  Whether `entry` still has `fingerprint`, which `entry_fingerprint/1` may have
+  taken before it left a page's `breadcrumbs` out.
+  """
+  def entry_fingerprint?(entry, fingerprint) do
+    snapshot = Params.snapshot(entry)
+    fingerprint in [Value.digest(EntryCodec.without_derived(snapshot, entry)), Value.digest(snapshot)]
+  end
 
   defp recovery_bindings!(blocks, contracts, actor) do
     blocks

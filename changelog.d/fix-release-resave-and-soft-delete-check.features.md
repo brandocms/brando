@@ -1,0 +1,2 @@
+- `Brando.Content.Resave.run/1` re-saves entries in a release, as `mix brando.entries.resave` does, with its options (`blueprint:`, `site:`, `environment:`) and its report: on any running release, `bin/my_app rpc "Brando.Content.Resave.run()"`, and with a `ReleaseTasks` generated now, `bin/my_app rpc "MyApp.ReleaseTasks.resave_entries()"`. Over `rpc` it empties the running node's query cache and reloads its caches when done.
+  In a `ReleaseTasks` generated earlier, `resave_entries/1` can be added from the template next to `migrate/0`; `mix igniter.upgrade brando` prints it.

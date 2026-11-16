@@ -24,6 +24,22 @@ ls priv/repo/migrations | grep -o 'brando_[0-9]*' | sort -t_ -k2 -n | tail -1
 The `@version` in `deps/brando/mix.exs` is a weaker signal: a development
 checkout reported `0.53.0-dev` from mid-2022 to the 0.53.0 release in 2024.
 
+An application installed with a 0.55 development build's `mix brando.install`
+may have no `use Brando.SoftDelete.Repo` in its Repo, and Brando stops it at
+boot until the line is there. Moving its Git pin from one `0.55.0-dev` commit
+to another crosses no version, so `mix igniter.upgrade brando` changes
+nothing for it. Before deploying, add the line after `use Ecto.Repo` in
+Brando's Repo (the one `config :brando, repo_module:` names) by hand:
+
+```elixir
+defmodule MyApp.Repo do
+  use Ecto.Repo, otp_app: :my_app, adapter: Ecto.Adapters.Postgres
+  use Brando.SoftDelete.Repo
+end
+```
+
+or rerun `mix brando.install`, which adds it (as does `mix brando.migrate55`).
+
 - On 0.52 (`brando_87` or lower), first make the changes in the 0.53.0
   section of `CHANGELOG.md`. No task covers the 0.52 to 0.53 source changes.
 - With Villain content, `mix brando.migrate` converts it to blocks
@@ -847,6 +863,17 @@ An application on a 0.55 development build starts here, after rerunning
 answer yes to "Resave every entry, sync identifiers and rebuild the search
 index". Publish the fragments first.
 
+The tasks here run against the database they change, from a checkout. On a
+server, a release has no Mix: `mix brando.entries.resave` runs there as
+`bin/my_app rpc "Brando.Content.Resave.run()"` (or
+`bin/my_app rpc "MyApp.ReleaseTasks.resave_entries()"` with a `ReleaseTasks`
+that has it),
+`mix brando.identifiers.sync` is Sync identifiers under Configuration →
+Utilities (in each environment, with tenancy) and `mix brando.doctor` is the
+System check there; the other tasks in this section have no release form, so run them from a checkout against the
+server's database, or against a copy you then restore to the server
+([Data tasks in a release](deployment.md#data-tasks-in-a-release)).
+
 1. **Publish the fragments the site shows.** Public pages render only
    published fragments: a draft, pending or disabled `partials/footer` renders
    empty. An entry that embeds a fragment through `{% fragment %}` or a block
@@ -892,6 +919,14 @@ index". Publish the fragments first.
    run them against staging first and inspect counts and representative
    entries. All accept `--yes`, for a script.
 
+   In a release, the resave is `bin/my_app rpc "Brando.Content.Resave.run()"`,
+   which also empties the running node's query cache when done (what it
+   reloads is under
+   [Data tasks in a release](deployment.md#data-tasks-in-a-release)), and the
+   identifiers sync is Sync
+   identifiers under Configuration → Utilities; `images.adopt` has no release
+   form.
+
    `mix brando.images.adopt` records the config of each image whose files
    already match it, so Utilities → Recreate changed images recreates only the
    ones that differ. It reads the image files, so run it where the media is (a
@@ -902,8 +937,10 @@ index". Publish the fragments first.
    ([Media](media.md#images-made-before-fingerprints)).
 
 3. **Restart the server**, or use Configuration → Cache → Empty all caches in
-   its admin. The tasks write to the database, and a server that ran meanwhile
-   keeps serving the pages it cached before (pages are cached without expiry).
+   its admin (with Florist, `florist prod cache:clear`). The tasks write to the
+   database, and a server that ran meanwhile keeps serving the pages it cached
+   before (pages are cached without expiry). A site with static delivery keeps
+   serving its published build until it is built and deployed again.
 
 4. **Fix templates that print image texts raw.** Image alt text, title and
    credits are translated maps, and a template that prints them without the
@@ -914,6 +951,9 @@ index". Publish the fragments first.
    ```shell
    mix brando.check.image_texts
    ```
+
+   It has no release form: run it from a checkout against the server's
+   database.
 
 5. **Rebuild the admin search index** once in each environment, from
    Configuration → Utilities → Search index. `brando_212` creates the table
@@ -1890,6 +1930,13 @@ has the fixes.
   `UPGRADE.md`). An alias in braces the new name cannot share is reported
   instead; the old names keep working, with a warning, until 0.57;
 - adds the narrow listing component imports used by custom row functions;
+- adds `use Brando.SoftDelete.Repo` after `use Ecto.Repo` in Brando's Repo
+  when it has no such line: every delete and restore calls the functions it
+  adds, and the application does not boot without them. Brando's Repo is the
+  one `config :brando, repo_module:` names, or the application's only Repo
+  under `lib/`; other Repos are left alone, and when it cannot tell which is
+  Brando's it says so and names the line to add (`--repo MyApp.Repo` names
+  it);
 - defaults an unconfigured Swoosh API client to `Swoosh.ApiClient.Req` and
   pins declared `phoenix_live_view` dependencies in `assets/**/package.json`
   to the loaded server version;

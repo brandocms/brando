@@ -11,6 +11,8 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Install.Configuration
     alias Mix.Brando.Igniter.Install.Migrations
     alias Mix.Brando.Igniter.Project
+    alias Mix.Brando.Igniter.Release
+    alias Mix.Brando.Igniter.SoftDeleteRepo
 
     @legacy_definition ~r/^\s*defmodule\s+Mix\.Tasks\.Brando\.Upgrade\s+do\b/m
     @archive "priv/brando/legacy_tasks/brando.upgrade.ex.disabled"
@@ -181,7 +183,25 @@ if Code.ensure_loaded?(Igniter) do
         |> compose_recipes(from, to)
         |> AIDependency.plan()
         |> AgentFiles.plan()
+        |> installed_files()
         |> migrations()
+      end
+    end
+
+    # What `mix brando.install` writes today and an application installed
+    # earlier may lack: Brando's soft-delete functions in the repo, which
+    # every delete calls, and a notice for each function the ReleaseTasks
+    # template has gained. Brando's repo is found without the rest of
+    # discovery, which a second router or endpoint can stop; when discovery
+    # fails, `migrations/1` reports it.
+    defp installed_files(igniter) do
+      igniter = SoftDeleteRepo.plan(igniter, igniter.args.options[:repo])
+
+      with {:ok, igniter, options} <- Configuration.namespace_options(igniter, igniter.args.options),
+           {:ok, igniter, project} <- Project.discover(igniter, options) do
+        Release.resave_notice(igniter, project)
+      else
+        _ -> igniter
       end
     end
 

@@ -312,7 +312,7 @@ defmodule Brando.Tenant.RedirectHostsTest do
       conn =
         :get
         |> conn("http://www.acme.test/about", nil)
-        |> put_req_header(Brando.SSG.Context.header(), Brando.SSG.Context.sign(site, production))
+        |> put_req_header(Brando.SSG.Context.header(), Brando.SSG.Context.sign(site, production, nil))
         |> Brando.Plug.Tenant.call([])
 
       refute conn.halted

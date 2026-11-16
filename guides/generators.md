@@ -220,7 +220,12 @@ brando.gen.agents` adds them without an upgrade), and adds `{:req_llm, "~> 1.29"
 `mix.exs` when the application's config sets AI up (`config :brando, Brando.AI`
 models, providers, keys or prompts, an Assistant model, or keys under
 `config :req_llm`) and it has no `req_llm` of its own: Brando's AI features
-need it, and Brando does not bring it in. It generates no Blueprint migrations
+need it, and Brando does not bring it in. It adds `use Brando.SoftDelete.Repo`
+to Brando's Repo (the one `config :brando, repo_module:` names, or the only
+one) when it lacks it, which every delete needs, or says which line to add
+when it cannot tell which Repo is Brando's, and when the application's
+`ReleaseTasks` has no `resave_entries/1` a notice gives the function to add
+([Data tasks in a release](deployment.md#data-tasks-in-a-release)). It generates no Blueprint migrations
 and runs nothing against the database. A `-dev` version counts as older than
 every prerelease and the release of the same version, so a Git or path installation
 at `0.55.0-dev` moves onto `0.55.0-beta.0` or `0.55.0` as an upgrade, without a

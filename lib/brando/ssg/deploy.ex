@@ -164,13 +164,18 @@ defmodule Brando.SSG.Deploy do
 
     # The build carries the config it was made with, which may predate the
     # check on save
-    if DeployConfig.valid_rsync_target?(target, build.site.key) do
-      case runner.("rsync", args, stderr_to_stdout: true) do
-        {_output, 0} -> :ok
-        {output, exit_status} -> {:error, {:rsync_failed, exit_status, output}}
-      end
-    else
-      {:error, :invalid_deploy_target}
+    case DeployConfig.check_rsync_target(target, build.site.key) do
+      :ok ->
+        case runner.("rsync", args, stderr_to_stdout: true) do
+          {_output, 0} -> :ok
+          {output, exit_status} -> {:error, {:rsync_failed, exit_status, output}}
+        end
+
+      {:error, :lookup_failed} ->
+        {:error, :deploy_target_lookup_failed}
+
+      {:error, :invalid} ->
+        {:error, :invalid_deploy_target}
     end
   rescue
     exception -> {:error, {:rsync_failed, Exception.message(exception)}}

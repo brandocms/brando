@@ -455,6 +455,16 @@ msgstr "%{package} er ikke en avhengighet"
 msgid "%{package} not installed"
 msgstr "%{package} er ikke installert"
 
+#: lib/brando/doctor/checks/soft_delete_repo.ex
+#, elixir-autogen, elixir-format
+msgid "%{repo} has Brando's soft-delete functions"
+msgstr "%{repo} har Brandos funksjoner for myk sletting"
+
+#: lib/brando/doctor/checks/soft_delete_repo.ex
+#, elixir-autogen, elixir-format
+msgid "%{repo} lacks Brando's soft-delete functions, so nothing can be deleted"
+msgstr "%{repo} mangler Brandos funksjoner for myk sletting, så ingenting kan slettes"
+
 #: lib/brando/doctor/checks/admin_routes.ex
 #, elixir-autogen, elixir-format
 msgid "%{schema}: %{helpers}"
@@ -860,6 +870,11 @@ msgstr "Nettsteder uten frontend"
 msgid "Skipped"
 msgstr "Hoppet over"
 
+#: lib/brando/doctor/checks/soft_delete_repo.ex
+#, elixir-autogen, elixir-format
+msgid "Soft delete"
+msgstr "Myk sletting"
+
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format
 msgid "Static paths of served builds"
@@ -964,6 +979,11 @@ msgstr "legg til %{dependency} i deps i mix.exs og kjør mix deps.get, eller fje
 #, elixir-autogen, elixir-format
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
 msgstr "legg %{queues} til køene i config :brando, Oban (se Brando.Supervisor)"
+
+#: lib/brando/doctor/checks/soft_delete_repo.ex
+#, elixir-autogen, elixir-format
+msgid "add use Brando.SoftDelete.Repo to %{repo}, after use Ecto.Repo"
+msgstr "legg til use Brando.SoftDelete.Repo i %{repo}, etter use Ecto.Repo"
 
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
