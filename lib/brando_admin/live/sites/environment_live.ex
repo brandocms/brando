@@ -1105,7 +1105,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   defp refresh_data(socket) do
     site = current_site(socket)
 
-    environments = for_site(site, &Registry.list_environments/1)
+    # The live environment first, then the others by name, as listed
+    environments = site |> for_site(&Registry.list_environments/1) |> Enum.sort_by(&(!&1.live))
     shown = MapSet.new(environments, &draft_key/1)
     listed = MapSet.new(environments, & &1.id)
 

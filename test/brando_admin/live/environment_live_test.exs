@@ -68,6 +68,21 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     %{site: site, production: production}
   end
 
+  test "lists the live environment first, then the others by name", %{conn: conn, site: site, production: production} do
+    {:ok, staging} = Environments.create_environment(site, %{name: "Staging", key: "staging"}, creator: :system)
+    {:ok, preview} = Environments.create_environment(site, %{name: "Preview", key: "preview"}, creator: :system)
+
+    {:ok, _view, html} = live(conn, "/admin/config/environments")
+
+    rows =
+      html
+      |> LazyHTML.from_document()
+      |> LazyHTML.query(".environment-list tbody tr")
+      |> LazyHTML.attribute("id")
+
+    assert rows == Enum.map([production, preview, staging], &"environment-#{&1.id}")
+  end
+
   # Audit F02: which site answers on a host is the installation's decision.
   describe "binding a host" do
     setup %{site: site} do
