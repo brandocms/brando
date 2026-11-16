@@ -1088,6 +1088,38 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert %{addresses: [], hosts: %{"away.acme.test" => {:waiting, [@elsewhere]}}} = ServedHosts.check()
     end
 
+    test "this server's addresses past :addresses_max_age admit no host while their refresh runs",
+         %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file)
+      DNS.answer("localhost", [@here])
+      DNS.answer("away.acme.test", [@elsewhere])
+      # Waits for its DNS, so every check looks this server's addresses up
+      bind(site, "away", "away.acme.test")
+      assert %{addresses: [@here]} = ServedHosts.status()
+
+      put_test_env(ServedHosts, file: file, addresses_max_age: 1)
+      Process.sleep(5)
+      DNS.hold("localhost", self())
+      DNS.answer("new.acme.test", [@here])
+      {:ok, _} = Registry.create_environment(site, %{name: "new", key: "new", domain: "new.acme.test"}, actor: :system)
+      assert_receive {:looking_up, "localhost", lookup}
+
+      # The new host's answer has been written while the refresh runs
+      await_state(fn state ->
+        MapSet.member?(state.admitted, "new.acme.test") or
+          (Map.has_key?(state.results, "new.acme.test") and is_nil(state.flush_timer) and is_nil(state.writing))
+      end)
+
+      assert File.read!(file) == ""
+      assert %{hosts: %{"new.acme.test" => :checking}} = ServedHosts.status()
+
+      DNS.answer("localhost", {:error, :timeout})
+      send(lookup, :answer)
+
+      assert %{addresses: [], hosts: %{"new.acme.test" => {:waiting, [@here]}}} = ServedHosts.settled()
+      assert File.read!(file) == ""
+    end
+
     test "a lookup that times out does not erase this server's addresses", %{path: file, site: site} do
       put_test_env(ServedHosts, file: file, lookup_timeout: 100)
       DNS.answer("localhost", [@here])

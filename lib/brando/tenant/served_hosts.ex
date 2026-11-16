@@ -78,9 +78,10 @@ defmodule Brando.Tenant.ServedHosts do
 
   Without `:addresses`, this server's addresses are what the endpoint's host
   resolves to, looked up on their own once per check that looks a host up.
-  A failed lookup of them keeps the last ones found, for an hour after they
-  were found (`:addresses_max_age`, in milliseconds); after that it forgets
-  them, and no host is admitted until a lookup of them answers again.
+  A failed lookup of them keeps the last ones found, which count for an hour
+  after they were found (`:addresses_max_age`, in milliseconds); after that
+  no host is admitted, not even while a new lookup of them runs, until one
+  answers.
 
   ## The file
 
@@ -391,13 +392,7 @@ defmodule Brando.Tenant.ServedHosts do
     do: %{state | own: {name, normalize_addresses(addresses), System.monotonic_time(:millisecond)}}
 
   # A failed lookup of this server's addresses keeps the last ones it found,
-  # for `:addresses_max_age` after they were found
-  defp record(%{own: {_own_name, _addresses, found}} = state, {:own, _name}, _failed) do
-    if System.monotonic_time(:millisecond) - found >= state.settings.addresses_max_age,
-      do: %{state | own: nil},
-      else: state
-  end
-
+  # which count for `:addresses_max_age` after they were found
   defp record(state, {:own, _name}, _failed), do: state
 
   defp put_result(state, host, result),
@@ -801,23 +796,22 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   defp own_addresses(%{settings: nil}), do: []
+  defp own_addresses(%{settings: %{own_source: {:fixed, addresses}}}), do: addresses
+  defp own_addresses(state), do: looked_up_own(state) || []
 
-  defp own_addresses(state) do
-    case {state.settings.own_source, state.own} do
-      {{:fixed, addresses}, _own} -> addresses
-      {{:lookup, name}, {name, addresses, _found}} -> addresses
-      {{:lookup, _name}, _none} -> []
-    end
+  # Known when configured, looked up within `:addresses_max_age`, or when no
+  # lookup of them runs
+  defp own_known?(%{settings: %{own_source: {:fixed, _addresses}}}), do: true
+  defp own_known?(state), do: looked_up_own(state) != nil or not own_pending?(state)
+
+  # This server's looked-up addresses, nil once older than `:addresses_max_age`:
+  # the age is applied where they are read, so an expired value admits nothing
+  # while its refresh runs
+  defp looked_up_own(%{settings: %{own_source: {:lookup, name}} = settings, own: {name, addresses, found}}) do
+    if System.monotonic_time(:millisecond) - found < settings.addresses_max_age, do: addresses
   end
 
-  # Known when configured, looked up before, or when no lookup of them runs
-  defp own_known?(state) do
-    case {state.settings.own_source, state.own} do
-      {{:fixed, _addresses}, _own} -> true
-      {{:lookup, name}, {name, _addresses, _found}} -> true
-      {{:lookup, _name}, _none} -> not own_pending?(state)
-    end
-  end
+  defp looked_up_own(_state), do: nil
 
   # A host looked up again keeps the state its last lookup gave it meanwhile;
   # a host never looked up is checking
