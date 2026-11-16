@@ -262,6 +262,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                   </td>
                   <td>{build.environment_name}</td>
                   <td class="publishing-progress">
+                    <span class="publishing-progress__label">{gettext("Progress")}</span>
                     <span :if={!failed_urls?(build)}>{build.processed_urls}/{build.url_count}</span>
                     <span :if={failed_urls?(build)}>
                       {gettext("%{built}/%{total} built", built: build.processed_urls, total: build.url_count)}

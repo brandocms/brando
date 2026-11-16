@@ -101,6 +101,8 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     assert has_element?(view, "#ssg-build-#{failed.id} .publishing-progress", "1/3 built")
     assert has_element?(view, "#ssg-build-#{failed.id} .publishing-progress__failed", "2 failed")
     assert view |> element("#ssg-build-#{ready.id} .publishing-progress") |> render() =~ "3/3"
+    # Labelled for the stacked layout, where the table's headings are hidden
+    assert has_element?(view, "#ssg-build-#{ready.id} .publishing-progress__label", "Progress")
   end
 
   test "a deploy reports on the build's row", context do

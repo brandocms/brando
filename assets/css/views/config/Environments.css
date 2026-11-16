@@ -372,6 +372,11 @@
     color: var(--brando-error-ink);
   }
 
+  /* The column heading, for the stacked layout, which hides the headings */
+  .publishing-progress__label {
+    display: none;
+  }
+
   /* The log opens under the row's buttons, at the size of the rest of it */
   .publishing-builds td.environment-actions details {
     display: inline-block;
@@ -975,6 +980,16 @@
     .publishing-progress__failed {
       display: inline;
       margin-left: 8px;
+    }
+
+    .publishing-progress__label {
+      display: inline;
+      margin-right: 8px;
+      color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+      font-size: var(--brando-text-2xs);
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     .environment-log__note--empty {
