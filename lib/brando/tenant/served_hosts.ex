@@ -65,7 +65,7 @@ defmodule Brando.Tenant.ServedHosts do
   its answer; the file is written and the status published once no lookup
   of its check is left, or within a fifth of a second while some are, so
   many answers cost one write and a single host's result comes as soon as it
-  answers. A host is `:served` once the write that put it in the file has
+  answers (`:flush_interval`, in milliseconds, which tests change). A host is `:served` once the write that put it in the file has
   succeeded. The file is read just before each write, and every bound host
   another node wrote there stays. When that read fails, the file is left as
   it is and the error reported, while the hosts' states still follow the
@@ -90,8 +90,8 @@ defmodule Brando.Tenant.ServedHosts do
   that raises, exits or throws, fails for that host; so does one whose task
   cannot be stopped at its timeout (a resolver blocking in a NIF), half a
   second later, and that task is left to its supervisor. A `:lookup_timeout`,
-  `:retry_interval` or `:recheck_interval` that is not a positive integer
-  counts as unset.
+  `:retry_interval`, `:recheck_interval` or `:flush_interval` that is not a
+  positive integer counts as unset.
   """
 
   use GenServer
@@ -382,7 +382,7 @@ defmodule Brando.Tenant.ServedHosts do
 
   defp flush_soon(%{flush_timer: nil} = state) do
     flush = make_ref()
-    %{state | flush_timer: Process.send_after(self(), {:flush, flush}, @flush_interval), flush: flush}
+    %{state | flush_timer: Process.send_after(self(), {:flush, flush}, state.settings.flush_interval), flush: flush}
   end
 
   defp flush_soon(state), do: state
@@ -819,7 +819,8 @@ defmodule Brando.Tenant.ServedHosts do
       resolver: Keyword.get(config, :resolver, Brando.Tenant.ServedHosts.DNS),
       lookup_timeout: milliseconds(config, :lookup_timeout, @lookup_timeout),
       retry_interval: milliseconds(config, :retry_interval, @retry_interval),
-      recheck_interval: milliseconds(config, :recheck_interval, @recheck_interval)
+      recheck_interval: milliseconds(config, :recheck_interval, @recheck_interval),
+      flush_interval: milliseconds(config, :flush_interval, @flush_interval)
     }
   end
 

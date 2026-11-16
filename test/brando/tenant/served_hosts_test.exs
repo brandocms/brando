@@ -733,7 +733,8 @@ defmodule Brando.Tenant.ServedHostsTest do
 
   describe "after a registry write" do
     test "a newly bound host is checking at once, and a slow lookup of another host does not hold its result back",
-         %{site: site} do
+         %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here, @here_v6], flush_interval: 20)
       DNS.answer("acme.test", [@here])
       production = bind(site, "production", "acme.test", true)
       # Waits for its DNS, so every check looks it up again
@@ -912,8 +913,15 @@ defmodule Brando.Tenant.ServedHostsTest do
                ServedHosts.settled()
     end
 
-    test "at most eight run at a time, each host's timeout counted from its own start", %{path: file, site: site} do
-      put_test_env(ServedHosts, file: file, addresses: [@here], lookup_timeout: 300)
+    # Every host bound by one warm, so one check queues them all at once
+    defp bind_at_once(site, hosts) do
+      environments = for index <- 1..length(hosts), do: bind(site, "e#{index}", nil)
+      for {host, environment} <- Enum.zip(hosts, environments), do: set_domain(environment, host)
+      Cache.warm()
+    end
+
+    test "at most eight run at a time, and a queued one starts when one answers", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here])
       hosts = for index <- 1..10, do: "h#{index}.acme.test"
 
       for host <- hosts do
@@ -921,17 +929,43 @@ defmodule Brando.Tenant.ServedHostsTest do
         DNS.hold(host, self())
       end
 
+      bind_at_once(site, hosts)
+
+      [first | running] = for _ <- 1..8, do: assert_receive({:looking_up, _host, _lookup})
+      refute_receive {:looking_up, _host, _lookup}, 100
+
+      {:looking_up, _host, lookup} = first
+      send(lookup, :answer)
+      ninth = assert_receive {:looking_up, _host, _lookup}
+      refute_receive {:looking_up, _host, _lookup}, 100
+
+      [{:looking_up, _host, lookup} | running] = running
+      send(lookup, :answer)
+      tenth = assert_receive {:looking_up, _host, _lookup}
+
+      for {:looking_up, _host, lookup} <- [ninth, tenth | running], do: send(lookup, :answer)
+
+      %{hosts: states} = ServedHosts.settled()
+      assert Map.take(states, hosts) == Map.new(hosts, &{&1, :served})
+    end
+
+    test "a queued lookup's timeout counts from its own start", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here], lookup_timeout: 1_000)
+      hosts = for index <- 1..10, do: "h#{index}.acme.test"
+
       for host <- hosts do
-        key = host |> String.split(".") |> hd()
-        {:ok, _} = Registry.create_environment(site, %{name: key, key: key, domain: host}, actor: :system)
+        DNS.answer(host, [@here])
+        DNS.hold(host, self())
       end
 
+      bind_at_once(site, hosts)
+
+      # The first eight never answer and time out; the last two start then,
+      # with a timeout of their own, and answer at once
       first = for _ <- 1..8, do: assert_receive({:looking_up, _host, _lookup})
-      refute_receive {:looking_up, _host, _lookup}, 100
-      # The first eight never answer and time out; the last two start then
-      # and answer at once
+
       for _ <- 1..2 do
-        assert_receive {:looking_up, _host, lookup}, 1_000
+        assert_receive {:looking_up, _host, lookup}, 5_000
         send(lookup, :answer)
       end
 
@@ -942,12 +976,11 @@ defmodule Brando.Tenant.ServedHostsTest do
     end
 
     test "answers of one check are written and broadcast once", %{path: file, site: site} do
+      # However long the answers take to come in
+      put_test_env(ServedHosts, file: file, addresses: [@here], flush_interval: :timer.minutes(10))
       hosts = for index <- 1..5, do: "h#{index}.acme.test"
 
-      environments = for index <- 1..5, do: bind(site, "e#{index}", nil)
-
-      for {host, environment} <- Enum.zip(hosts, environments) do
-        set_domain(environment, host)
+      for host <- hosts do
         DNS.answer(host, [@here])
         DNS.hold(host, self())
       end
@@ -956,10 +989,11 @@ defmodule Brando.Tenant.ServedHostsTest do
       trace_writes([:rename])
 
       # One warm binds all five: one check looks them up
-      Cache.warm()
+      bind_at_once(site, hosts)
       messages = for _ <- hosts, do: assert_receive({:looking_up, _host, _lookup})
       # The check has published by now
       :sys.get_state(pid)
+      file_calls()
       Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
       for {:looking_up, _host, lookup} <- messages, do: send(lookup, :answer)
 
