@@ -250,6 +250,21 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert dispatch(context.host, "/#{Brando.IndexNow.generate_key()}.txt").resp_body == "missing v1"
     end
 
+    test "a live switch leaves the public domain on the published build", context do
+      put_test_env(:environment_schema_cloner, SchemaCloner)
+      Brando.Environments.Schema.create(Brando.Tenant.prefix(context.site, context.live))
+
+      assert {:ok, %{live: true}} = Brando.Environments.set_live(context.staging, creator: :system)
+
+      conn = dispatch(context.host, "/about")
+      assert conn.status == 200
+      assert conn.resp_body == "about v1"
+      assert get_resp_header(conn, "x-robots-tag") == []
+
+      # The outgoing environment answers dynamically on the domain it took
+      assert dispatch("staging-#{context.site.key}.test", "/about").resp_body == "dynamic /about in production"
+    end
+
     test "a POST reaches the router", context do
       conn = dispatch(:post, context.host, "/contact")
       assert conn.resp_body == "posted /contact in production"
@@ -317,20 +332,7 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert Builds.get_build(second.id).status == :archived
     end
 
-    test "keeps answering on the public domain after another environment is set live", context do
-      put_test_env(:environment_schema_cloner, SchemaCloner)
-      Brando.Environments.Schema.create(Brando.Tenant.prefix(context.site, context.live))
-      context |> ready_build() |> deploy!()
-
-      assert {:ok, %{live: true}} = Brando.Environments.set_live(context.staging, creator: :system)
-
-      conn = request(context.host, "/about")
-      assert conn.status == 200
-      assert sent_body(conn) == "about v1"
-      assert get_resp_header(conn, "x-robots-tag") == []
-    end
-
-    test "answers a page the build lacks with its 404 page, though the environment has the page", context do
+    test "answers a path the build lacks with its 404 page", context do
       context |> ready_build() |> deploy!()
 
       conn = request(context.host, "/unpublished-page")
@@ -617,6 +619,8 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert request(context.host, "/admin").status == 404
 
       put_test_env(:tenancy_mode, :single)
+      put_test_env(:site_key, context.site.key)
+      Cache.warm()
       refute request(context.host, "/admin").halted
     end
 
