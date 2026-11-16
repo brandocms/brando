@@ -533,8 +533,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     end
 
     # A form with phx-change is recovered on rejoin, touched or not; a site
-    # admin has no hosts form, so an event like a recovered one changes nothing
-    test "a recovered form a site admin cannot edit leaves the hosts shown", %{site: site, staging: staging} do
+    # admin has no hosts form, so a draft event, recovered or forged, keeps nothing
+    test "a draft from someone who may not edit the hosts is not kept", %{site: site, staging: staging} do
       {:ok, staging} =
         Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: :system)
 
@@ -545,9 +545,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       render_change(view, "draft_hosts", %{
         "environment_id" => staging.id,
         "shown_domain" => "staging.acme.test",
-        "shown_redirect_hosts" => "www.staging.acme.test"
+        "shown_redirect_hosts" => "www.staging.acme.test",
+        "domain" => "forged.acme.test",
+        "redirect_hosts" => "forged-redirect.acme.test"
       })
 
+      assert :sys.get_state(view.pid).socket.assigns.host_drafts == %{}
+      refute render(view) =~ "forged"
       assert has_element?(view, "#environment-#{staging.id} .environment-hosts dd", "staging.acme.test")
       assert has_element?(view, "#environment-#{staging.id} .environment-hosts", "www.staging.acme.test")
     end
@@ -637,23 +641,30 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
   end
 
   # The hosts form's own, or for someone who reads the hosts as text, the
-  # domain the text shows
+  # domain the text shows: the element holding only the host, without the
+  # served-hosts state beside it
   defp shown_domain(view, environment) do
-    if has_element?(view, ~s(#environment-#{environment.id} input[name="shown_domain"])) do
-      view
-      |> element(~s(#environment-#{environment.id} input[name="shown_domain"]))
-      |> render()
-      |> LazyHTML.from_fragment()
-      |> LazyHTML.attribute("value")
-      |> List.first()
-    else
-      view
-      |> element("#environment-#{environment.id} .environment-hosts > div:first-child dd")
-      |> render()
-      |> LazyHTML.from_fragment()
-      |> LazyHTML.text()
-      |> String.trim()
-      |> then(&if(&1 == "No domain", do: "", else: &1))
+    domain = "#environment-#{environment.id} .environment-hosts > div:first-child dd"
+
+    cond do
+      has_element?(view, ~s(#environment-#{environment.id} input[name="shown_domain"])) ->
+        view
+        |> element(~s(#environment-#{environment.id} input[name="shown_domain"]))
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.attribute("value")
+        |> List.first()
+
+      has_element?(view, "#{domain}.environment-hosts__none") ->
+        ""
+
+      true ->
+        view
+        |> element("#{domain} .environment-host-status__host, #{domain} .environment-host-name")
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.text()
+        |> String.trim()
     end
   end
 
