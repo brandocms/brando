@@ -346,6 +346,20 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert dispatch("staging-#{context.site.key}.test", "/about").resp_body == "dynamic /about in production"
     end
 
+    test "a path under Brando's own prefixes that no route answers is the build's 404, not the application's",
+         context do
+      for path <- ["/__brando/x", "/__p__/a/b", "/__p__/unknown-key", "/__ssg_preview__"] do
+        conn = dispatch(context.host, path)
+        assert conn.status == 404, path
+        assert conn.resp_body == "missing v1", path
+      end
+
+      # A route that answers is untouched
+      token = dispatch(context.host, "/__brando/forms/csrf-token")
+      assert token.status == 200
+      assert %{"token" => _token} = Jason.decode!(token.resp_body)
+    end
+
     test "a POST reaches the router", context do
       conn = dispatch(:post, context.host, "/contact")
       assert conn.resp_body == "posted /contact in production"

@@ -11,11 +11,36 @@ defmodule BrandoWeb.FallbackController do
   alias Brando.Site.Frontend
   alias Brando.Sites.FourOhFour
   alias Brando.Sites.Redirects
+  alias Brando.SSG.LocalDelivery
 
   @doc """
-  Handle errors
+  Handle errors. A missing page on a host serving a published build is that
+  build's 404 (`Brando.SSG.LocalDelivery.answer_not_found/1`).
   """
-  def call(%{assigns: %{language: language}} = conn, {:error, {_, :not_found}}) do
+  def call(conn, {:error, {_, :not_found}}) do
+    case LocalDelivery.answer_not_found(conn) do
+      %Plug.Conn{halted: true} = answered -> answered
+      conn -> not_found(conn)
+    end
+  end
+
+  def call(conn, {:error, :unauthorized}) do
+    conn
+    |> put_status(:unauthorized)
+    |> put_layout(false)
+    |> put_view(Brando.endpoint().config(:render_errors)[:formats])
+    |> render(:"401")
+  end
+
+  def call(conn, {:error, :bad_request}) do
+    conn
+    |> put_status(:bad_request)
+    |> put_layout(false)
+    |> put_view(Brando.endpoint().config(:render_errors)[:formats])
+    |> render(:"400")
+  end
+
+  defp not_found(%{assigns: %{language: language}} = conn) do
     case test_redirect(conn, language) do
       {:error, {:redirects, :no_match}} ->
         # 404
@@ -40,22 +65,6 @@ defmodule BrandoWeb.FallbackController do
         |> resp(code, "You are being redirected.")
         |> halt()
     end
-  end
-
-  def call(conn, {:error, :unauthorized}) do
-    conn
-    |> put_status(:unauthorized)
-    |> put_layout(false)
-    |> put_view(Brando.endpoint().config(:render_errors)[:formats])
-    |> render(:"401")
-  end
-
-  def call(conn, {:error, :bad_request}) do
-    conn
-    |> put_status(:bad_request)
-    |> put_layout(false)
-    |> put_view(Brando.endpoint().config(:render_errors)[:formats])
-    |> render(:"400")
   end
 
   # A static build requests the site's error page on a path no page has

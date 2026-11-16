@@ -1,9 +1,14 @@
 defmodule Brando.Test.LocalDeliveryController do
   @moduledoc false
   # A site's dynamic pages: every path answers, naming the environment that
-  # answered it, so a test sees when a request reached Phoenix
+  # answered it, so a test sees when a request reached Phoenix, but a path
+  # under one of Brando's own prefixes (`/__…`), which no page has: that one
+  # goes to the fallback controller, as a generated page controller's would
   use Phoenix.Controller, formats: [:html]
 
+  action_fallback BrandoWeb.FallbackController
+
+  def show(%Plug.Conn{path_info: ["__" <> _prefix | _rest]}, _params), do: {:error, {:page, :not_found}}
   def show(conn, _params), do: Plug.Conn.send_resp(conn, 200, "dynamic #{conn.request_path} in #{environment(conn)}")
   def create(conn, _params), do: Plug.Conn.send_resp(conn, 200, "posted #{conn.request_path} in #{environment(conn)}")
 

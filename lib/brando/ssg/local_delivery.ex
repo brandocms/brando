@@ -294,14 +294,37 @@ defmodule Brando.SSG.LocalDelivery do
     end
   end
 
-  def answer_unanswered(%Plug.Conn{private: %{@before_router => %Site{} = site}} = conn) do
+  def answer_unanswered(%Plug.Conn{private: %{@before_router => %Site{}}} = conn), do: answer_not_found(conn)
+  def answer_unanswered(conn), do: conn
+
+  @doc """
+  Answers a request on a host serving its build as the build answers a path
+  it has no file for, and halts: with its 404 page, or a plain 404, or 503
+  when the build is missing. Whatever answers a missing page in Phoenix calls
+  it first (`BrandoWeb.FallbackController`, `answer_unanswered/1`), so a path
+  that reached Phoenix there and that no route answers (`/__brando/x`, a
+  shared preview's unknown key, an application's own path) gets the build's
+  404 page, never the application's. A request on another host, or one
+  carrying a build's signed context, is returned untouched.
+  """
+  @spec answer_not_found(Plug.Conn.t()) :: Plug.Conn.t()
+  def answer_not_found(%Plug.Conn{private: %{@before_router => %Site{} = site}} = conn), do: not_found(conn, site)
+
+  def answer_not_found(%Plug.Conn{} = conn) do
+    with %Site{} = site <- served_site(conn.host),
+         false <- Context.signed?(conn) do
+      not_found(conn, site)
+    else
+      _not_served -> conn
+    end
+  end
+
+  defp not_found(conn, site) do
     case published(site) do
       {:ok, build} -> send_not_found(conn, build)
       :error -> unavailable(conn)
     end
   end
-
-  def answer_unanswered(conn), do: conn
 
   defp unavailable(conn), do: conn |> send_unavailable() |> halt()
 
