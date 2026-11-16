@@ -41,13 +41,15 @@ rendered by datasource blocks](#collections-rendered-by-datasource-blocks)).
 A node that describes the page, or the entry the page is about, has the
 page's URL (`Brando.Plug.HTML.page_url/1`, chosen as [Canonical
 URL](meta.md#canonical-url) describes, the same in every order a controller
-calls `put_meta/3`, `put_json_ld/3` and `put_hreflang/2`) as its `url`, and
-that URL and a fragment as its `@id` (`Brando.JSONLD.node_id/2`): no slash
-before the `#`, except after a bare origin, whose path is `/`
-(`https://example.com/#webpage`); a URL with a fragment of its own
-(`/team#ada`) gets the node's after a dash (`/team#ada-person`). An entity
-from `put_json_ld/3` is built when the head is rendered, so an entry without
-a URL of its own still names the URL of the page it is on.
+calls `put_meta/3`, `put_json_ld/3`, `put_hreflang/2` and `put_page_url/2`)
+as its `url`, and that URL and a fragment as its `@id`
+(`Brando.JSONLD.node_id/2`): no slash before the `#`, except after a bare
+origin, whose path is `/` (`https://example.com/#webpage`); a URL with a
+fragment of its own (`/team#ada`) gets the node's after a dash
+(`/team#ada-person`). `put_json_ld/3` builds an entry's entity at the page's
+URL when it is called, into `conn.assigns.json_ld_entities`, and the head
+builds it again when `put_hreflang/2` or `put_page_url/2` changed that URL
+afterwards (`Brando.Plug.HTML.json_ld_entities/1`).
 
 <!-- usage-rules:start topic="seo" -->
 
@@ -122,7 +124,7 @@ JSON-LD and the [sitemap](sitemaps.md) agree:
 | `:date` | Converts to `YYYY-MM-DD` string |
 | `:duration` | Converts whole minutes, a `Duration` or `"HH:MM:SS"` to ISO 8601 (`90` is `"PT1H30M"`); an ISO 8601 duration is kept |
 | `:image` | Builds an `ImageObject` with url, width, height |
-| `:current_url` | The page's URL, `Brando.Plug.HTML.page_url/1`: the entry's own, without a trailing slash (see [Canonical URL](meta.md#canonical-url)) |
+| `:current_url` | The page's URL, `Brando.Plug.HTML.page_url/1`, without a trailing slash (see [Canonical URL](meta.md#canonical-url)) |
 | `:language` | Extracts the language from the entry or meta |
 | `:string` | Direct string value via `value_fn` |
 | `:integer` | Direct integer value via `value_fn` |
@@ -211,9 +213,10 @@ read, so a person's email or other columns stay out.
 
 #### ProfilePage
 
-When `put_json_ld/4` is given an entry whose schema is a `Person` — a People
+When `put_json_ld/4` is given an entry whose entity is a `Person` — a People
 entry on its own page — the page becomes a `ProfilePage` with that Person as
-its `mainEntity`:
+its `mainEntity`. An entry whose mapping or extra fields give the entity
+another `@type` (an `Organization`) leaves the page a `WebPage`:
 
 ```json
 {"@type": "ProfilePage", "@id": "https://example.com/people/ada#webpage",

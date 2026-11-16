@@ -161,19 +161,15 @@ controller calls these functions in does not matter. The first of these that
 gives a URL is the page's:
 
 1. the URL given to `put_page_url/2`;
-2. the URL of the entry given to `put_hreflang/2`;
-3. the URL of the entry given to `put_json_ld/3`;
-4. the URL of the entry given to `put_meta/3`;
-5. the request URL, without its query string.
+2. the URL of the entry given to `put_hreflang/2`, its blueprint's
+   `absolute_url`, whatever path the request used (`/about/`, `/about?ref=x`,
+   or another route to the same page);
+3. the request URL, without a trailing slash or its query string.
 
-An entry's URL is its blueprint's `absolute_url`, whatever path the request
-used (`/about/`, `/about?ref=x`, or another route to the same page). An
-entry without one (`absolute_url false`, or a page with **Has URL** off),
-or whose URL cannot be resolved (its template reads an association that is
-not preloaded, which is logged as a warning), gives none, and the next one
-is used. A detail controller that describes a section page with `put_meta/3`
-and the project with `put_json_ld/3` and `put_hreflang/2` has the project's
-URL. When the page's URL is none of these, set it:
+The entries given to `put_meta/3` and `put_json_ld/3` do not decide it. A
+controller often describes several routes with one section page
+(`/projects/:slug`, `/news/page/2`): each route keeps its own URL. When the
+page's URL is none of these, set it:
 
 ```elixir
 conn
