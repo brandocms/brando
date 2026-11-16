@@ -660,9 +660,23 @@ environment the process works in:
 
 An environment without a domain takes its site's live environment's. In
 `:single`, a process with no prefix uses the live environment. Scheme and port
-are the endpoint URL's. With no domain to use (`:none`, a site with no domain,
-a `:multi` process outside every site) it is the endpoint's URL. It reads
-`Brando.Tenant.Cache`, not the database.
+are the endpoint URL's, so development hosts work; an installation whose admin
+endpoint is on a non-default port gives every site that port. With no domain to
+use (`:none`, a site with no domain, a `:multi` process outside every site) it
+is the endpoint's URL. It reads `Brando.Tenant.Cache`, not the database.
+
+What is stored or cached names the site's public base URL instead,
+`Brando.Utils.public_hostname/0`: the live environment's domain, whichever
+environment the process works in. An environment's own host moves (on dynamic
+delivery a live switch swaps two environments' domains, a copy moves content to
+another environment) and nothing stored is rendered again then; the live
+domain moves with the live flag. So JSON-LD a block renders into
+`rendered_<field>` (the `json_ld` filter and `<.json_ld>`) and the sitemap files
+name the public base URL, the identity cache keeps a service's URL as a path,
+and a sitemap is always generated from the live environment. When the live
+environment's domain changes through `Brando.Tenant.Registry`, every
+environment of the site renders again the entries whose blocks emit JSON-LD; the
+sitemap follows at its next generation.
 
 Build a site's own absolute URLs with `Brando.Utils.hostname/1` too. Phoenix's
 `url/1` and `*_url` route helpers name the endpoint's host, which in `:multi`

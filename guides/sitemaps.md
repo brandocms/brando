@@ -122,13 +122,15 @@ want it to remain scheduled.
 
 <!-- usage-rules:end -->
 
-Generation writes under the tenant-aware media root. Named environments of a
-site share media storage, so manually generating from Staging can replace that
-site's sitemap files. Generate public files from the intended live environment.
-`Brando.Blueprint.URL.resolve(entry, :with_host)`, `Brando.Utils.hostname/1` and
-the index's links name the domain of the environment generating (see [A site's
-absolute URLs](tenancy_and_environments.md#a-sites-absolute-urls)); a
-`*_url` route helper or Phoenix's `url/1` names the endpoint's host instead.
+Generation writes under the tenant-aware media root, which a site's
+environments share, and the files describe the public site. So
+`Brando.Sitemap.generate_sitemap/1` always reads the site's live environment,
+whichever one is selected or named by the process's tenant prefix, and the
+utilities screen says so when another is selected. The entries' URLs
+(`Brando.Blueprint.URL.resolve(entry, :with_host)`, `Brando.Utils.hostname/1`)
+and the index's links name the live environment's domain (see [A site's
+absolute URLs](tenancy_and_environments.md#a-sites-absolute-urls)); a `*_url`
+route helper or Phoenix's `url/1` names the endpoint's host instead.
 
 A content save does not synchronously regenerate the sitemap. Regenerate after a
 large import, URL migration, or launch when waiting for the nightly cron is

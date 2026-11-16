@@ -99,6 +99,12 @@ defmodule Brando.SiteURLTest do
     end
   end
 
+  # An endpoint on a non-default port, as in development
+  defmodule PortEndpoint do
+    def url, do: "http://localhost:4000"
+    def struct_url, do: URI.parse(url())
+  end
+
   defmodule RootOnly do
     import Brando.SSG
 
@@ -179,6 +185,15 @@ defmodule Brando.SiteURLTest do
       end
 
       assert Brando.Utils.public_hostname() == Brando.endpoint().url()
+    end
+
+    test "the port is the endpoint URL's" do
+      put_test_env(:endpoint_module, PortEndpoint)
+
+      in_environment("staging", fn ->
+        assert Brando.Utils.hostname("/about") == "http://staging.acme.test:4000/about"
+        assert Brando.Utils.public_hostname("/about") == "http://acme.test:4000/about"
+      end)
     end
 
     test "alternate links given as paths get the environment's host" do
