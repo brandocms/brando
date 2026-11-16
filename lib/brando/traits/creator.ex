@@ -21,6 +21,11 @@ defmodule Brando.Trait.Creator do
     * `:required` - whether every entry needs a creator (default `true`). The
       media schemas set it to `false`: what a site's visitors upload through
       `Brando.Uploads.Direct` is created as `:system`, by no admin user.
+
+  A save as `:system` sets no creator. Setup and maintenance code that
+  creates an entry as `:system` names its creator separately, with
+  `creator:` (a user or a user id) among the create function's options:
+  `Brando.Pages.create_page(params, :system, creator: user)`.
   """
   use Brando.Trait
 
@@ -38,7 +43,12 @@ defmodule Brando.Trait.Creator do
   """
   @changeset_phase :before_validate_required
   @impl true
-  def changeset_mutator(_, _cfg, changeset, :system, _), do: changeset
+  def changeset_mutator(_, _cfg, changeset, :system, opts) do
+    case opts[:creator] do
+      nil -> changeset
+      creator -> put_creator(changeset, user_id(creator))
+    end
+  end
 
   # Skip setting creator for existing records that already have a creator and no changes.
   # Matches on %Ecto.Changeset{}.changes directly — this is stable Ecto struct layout.
