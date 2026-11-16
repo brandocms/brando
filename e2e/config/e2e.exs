@@ -130,7 +130,8 @@ config :brando,
 if System.get_env("BRANDO_E2E_MULTI_SITE") == "1" do
   instance = String.replace(System.get_env("BRANDO_E2E_INSTANCE", "default"), ~r/[^a-zA-Z0-9_]/, "_")
 
-  # Outside the checkout, so the file's path in an error on screen names no home folder
+  # Outside the checkout, so the file's path in an error on screen names no
+  # home folder; `scripts/server.sh stop` removes the folder
   served_hosts_file = "/tmp/brando_e2e_#{instance}/served_hosts/hosts"
   # The file's directory has to exist for the check at boot
   File.mkdir_p!(Path.dirname(served_hosts_file))

@@ -17,6 +17,9 @@ defmodule E2EFixtureController do
         Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
     end
 
+    # The multi-site-hosts-unwritable fixture leaves the served hosts file's folder read-only
+    E2E.MultiSiteHosts.restore_file_dir()
+
     # Build the scenario
     scenario =
       case scenario_name do

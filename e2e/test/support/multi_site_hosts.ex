@@ -134,14 +134,30 @@ defmodule E2E.MultiSiteHosts do
     end
   end
 
+  @doc """
+  Makes the served hosts file's folder writable again after the
+  `:unwritable` fixture, so the next fixture of any kind finds it as the
+  server left it. `scripts/server.sh stop` does the same and removes the
+  folder. Does nothing on a server started without `BRANDO_E2E_MULTI_SITE=1`.
+  """
+  def restore_file_dir do
+    with config when is_list(config) <- Application.get_env(:brando, ServedHosts),
+         file when is_binary(file) <- config[:file],
+         true <- File.dir?(Path.dirname(file)) do
+      File.chmod!(Path.dirname(file), 0o755)
+    end
+
+    :ok
+  end
+
   defp file, do: Application.fetch_env!(:brando, ServedHosts)[:file]
 
   defp reset_file do
-    dir = Path.dirname(file())
-    File.mkdir_p!(dir)
-    File.chmod!(dir, 0o755)
+    File.mkdir_p!(Path.dirname(file()))
+    restore_file_dir()
     File.rm_rf!(file())
   end
+
 
   defp site(name, key) do
     {:ok, site} =
