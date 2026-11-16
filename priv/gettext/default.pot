@@ -7883,6 +7883,11 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
+msgid "Generated the sitemap from %{environment}, the live environment."
+msgstr ""
+
+#: lib/brando_admin/live/sites/utils_live.ex
+#, elixir-autogen, elixir-format
 msgid "Generating…"
 msgstr ""
 
