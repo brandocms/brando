@@ -40,7 +40,7 @@ defmodule Brando.Tenant.Registry do
 
     query
     |> Repo.all(@public_opts)
-    |> Repo.preload(:environments, @public_opts)
+    |> Repo.preload([environments: from(environment in Environment, order_by: [asc: environment.id])], @public_opts)
   end
 
   @spec get_site(pos_integer()) :: Site.t() | nil

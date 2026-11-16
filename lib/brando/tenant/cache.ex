@@ -12,8 +12,11 @@ defmodule Brando.Tenant.Cache do
   to publish read the registry last.
   """
 
+  import Ecto.Query, only: [from: 2]
+
   alias Brando.Cache.Freshness
   alias Brando.CacheSync
+  alias Brando.Environments.Environment
   alias Brando.Sites.Site
   alias Brando.Tenant
 
@@ -31,9 +34,13 @@ defmodule Brando.Tenant.Cache do
 
   defp do_warm do
     if Tenant.enabled?() do
-      Site
+      # In the order they were created, as `Brando.Tenant.Registry.list_sites/0` lists them
+      from(site in Site, order_by: [asc: site.id])
       |> Brando.Repo.all(@public_opts)
-      |> Brando.Repo.preload(:environments, @public_opts)
+      |> Brando.Repo.preload(
+        [environments: from(environment in Environment, order_by: [asc: environment.id])],
+        @public_opts
+      )
       |> cache_sites()
     else
       clear()
