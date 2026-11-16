@@ -136,9 +136,21 @@ content SEO audit leaves it out. Filter the flag in your controllers, and use
 <!-- usage-rules:end -->
 
 Page context creates and updates recompute `breadcrumbs` for the page and its
-non-deleted descendants. Each element has string keys `"title"` and `"uri"`.
+non-deleted descendants, those under a trashed page included. Trashing a page (`Pages.delete_page/2`) recomputes its
+descendants' trails, and restoring it (`Brando.Authorization.Boundary.restore/2`)
+recomputes its own and its descendants'. So does restoring one of its revisions
+(`Brando.Revisions.set_entry_to_revision/5`, which the revisions drawer and a
+proposal's undo use): the trail a revision holds never comes back. A page's
+changeset refuses a `parent_id` that is the page itself or a page under it, and
+its save checks again against the tree as it is then, so a revision restore or a
+changeset built before another save that would close such a loop returns
+`{:error, changeset}`; a
+loop already stored ends the trail where it closes. Each element has string keys `"title"` and `"uri"`.
 The stored trail starts with the configured app name at `/`, followed by the
-ancestors and current page; a deleted ancestor is left out. It stores
+ancestors and current page; a deleted ancestor is left out. When the trash
+purge deletes a page for good, its remaining children move to the top
+(`parent_id` is cleared) and their trails are recomputed, and its fragments
+lose their `page_id`. It stores
 `"/" <> page.uri`; it does **not** add a
 language prefix. Localize those URLs in a multilingual breadcrumb component,
 and verify both languages. Raw `Repo` writes bypass this recomputation; after a

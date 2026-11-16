@@ -1439,6 +1439,51 @@ defmodule Brando.Content.ProposalsTest do
       assert Repo.get!(Page, c.work.id).title == "Edited by hand"
     end
 
+    test "a recomputed trail is no change: it blocks neither applying nor undoing", c do
+      parent = Factory.insert(:page, creator: c.user, title: "About", uri: "about")
+      {1, _} = Repo.update_all(from(p in Page, where: p.id == ^c.work.id), set: [parent_id: parent.id])
+      {:ok, _} = Brando.Pages.update_breadcrumbs(Repo.get!(Page, c.work.id))
+      {:ok, _} = Brando.Revisions.create_revision(load(c.work, c.user), c.user)
+      ops = [%SetFields{target: {Page, c.work.id}, fields: %{title: "Work, renamed"}}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+
+      # Pending: the parent's new title is in the child's trail
+      {:ok, _} = Brando.Pages.update_page(parent.id, %{title: "About us"}, c.user)
+      assert %{"title" => "About us"} = Enum.at(Repo.get!(Page, c.work.id).breadcrumbs, 1)
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+      # Applied: again
+      {:ok, _} = Brando.Pages.update_page(parent.id, %{title: "About them"}, c.user)
+      assert %{"title" => "About them"} = Enum.at(Repo.get!(Page, c.work.id).breadcrumbs, 1)
+      assert {:ok, _} = Proposals.undo(proposal.id, c.user)
+      assert Repo.get!(Page, c.work.id).title == "Work"
+      # The restored revision's older trail does not come back
+      assert %{"title" => "About them"} = Enum.at(Repo.get!(Page, c.work.id).breadcrumbs, 1)
+    end
+
+    test "a digest stored with the trail in it is still accepted", c do
+      alias Brando.Content.Definition.Value
+      alias Brando.Content.Proposals.{Receipt, Record}
+      alias Brando.Drafts.Params
+
+      # As `Transfer.entry_fingerprint/1` digested a page before it left the trail out
+      legacy = fn page -> page |> load(c.user) |> Params.snapshot() |> Value.digest() end
+      key = Brando.Content.Proposals.Proposal.key({Page, c.work.id})
+
+      {:ok, _} = Brando.Revisions.create_revision(load(c.work, c.user), c.user)
+      ops = [%SetFields{target: {Page, c.work.id}, fields: %{title: "Work, renamed"}}]
+      assert {:ok, proposal} = Proposals.propose(ops, c.user)
+      record = Repo.get!(Record, proposal.id)
+      assert record.fingerprints[key] != legacy.(c.work)
+      Repo.update!(Changeset.change(record, fingerprints: %{key => legacy.(c.work)}))
+      assert {:ok, _} = approve_and_apply(proposal, c.user)
+
+      receipt = Repo.get!(Receipt, proposal.id)
+      Repo.update!(Changeset.change(receipt, after: put_in(receipt.after, [key, "fingerprint"], legacy.(c.work))))
+      assert {:ok, _} = Proposals.undo(proposal.id, c.user)
+      assert Repo.get!(Page, c.work.id).title == "Work"
+    end
+
     test "a colleague reviews a shared proposal and previews its pages", c do
       ops = [%SetBlockValues{target: {Page, c.work.id}, block_uid: hd(c.child_uids), values: %{size: "50"}}]
       assert {:ok, proposal} = Proposals.propose(ops, c.user)
