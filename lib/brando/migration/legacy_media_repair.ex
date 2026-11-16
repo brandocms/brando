@@ -168,14 +168,18 @@ defmodule Brando.Migration.LegacyMediaRepair do
     # than the conversion whatever wrote it. One second more: the
     # conversion's time is brando_175's row in schema_migrations, cut to the
     # second, and a `NOW()` from brando_133 or brando_134 in that same second
-    # is rounded up to the next one in a timestamp(0) column.
-    [[offset]] = rows("SELECT extract(epoch FROM now()::timestamp - (now() AT TIME ZONE 'utc'))::integer", [])
+    # is rounded up to the next one in a timestamp(0) column. The offset is
+    # the session time zone's at the conversion, not now: a daylight-saving
+    # change in between would move the cutoff by an hour.
     columns = columns(schema)
 
     {local_cutoff, entries} =
       case converted_at do
-        {:ok, time} -> {NaiveDateTime.add(time, max(offset, 0) + 1), entry_edits(schema, findings, time, columns)}
-        {:error, _} -> {nil, %{}}
+        {:ok, time} ->
+          {NaiveDateTime.add(time, max(utc_offset_at(time), 0) + 1), entry_edits(schema, findings, time, columns)}
+
+        {:error, _} ->
+          {nil, %{}}
       end
 
     %{
@@ -188,6 +192,14 @@ defmodule Brando.Migration.LegacyMediaRepair do
       images: image_index(schema),
       converted_images: converted_index(schema, converted_at, local_cutoff)
     }
+  end
+
+  # The session time zone's offset from UTC, in seconds, at `time` (UTC)
+  defp utc_offset_at(time) do
+    [[offset]] =
+      rows("SELECT extract(epoch FROM ($1::timestamp AT TIME ZONE 'utc')::timestamp - $1::timestamp)::integer", [time])
+
+    offset
   end
 
   # When brando_133, and brando_175 after it, ran, from the copies of them in
