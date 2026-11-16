@@ -251,16 +251,28 @@ is the endpoint's URL. It reads `Brando.Tenant.Cache`, not the database.
 
 What is stored or cached names the site's public base URL instead,
 `Brando.Utils.public_hostname/0`: the live environment's domain, whichever
-environment the process works in. An environment's own host moves (on dynamic
-delivery a live switch swaps two environments' domains, a copy moves content to
-another environment) and nothing stored is rendered again then; the live
-domain moves with the live flag. So JSON-LD a block renders into
-`rendered_<field>` (the `json_ld` filter and `<.json_ld>`) and the sitemap files
-name the public base URL, the identity cache keeps a service's URL as a path,
-and a sitemap is always generated from the live environment. When the live
-environment's domain changes through `Brando.Tenant.Registry`, every
-environment of the site renders again the entries whose blocks emit JSON-LD; the
-sitemap follows at its next generation.
+environment the process works in, and whatever the site's status, so what a
+suspended site stores is right when it is reactivated. An environment's own
+host moves (on dynamic delivery a live switch swaps two environments' domains,
+a copy moves content to another environment) and nothing stored is rendered
+again then; the live domain moves with the live flag. So JSON-LD a block
+renders into `rendered_<field>` (the `json_ld` filter and `<.json_ld>`) and the
+sitemap files name the public base URL, the identity cache keeps a service's
+URL as a path, and a sitemap is always generated from the live environment, as
+the system, whoever starts it: it lists what visitors see, not what the
+caller's admin scope may read.
+
+When the public base URL changes, every environment of the site renders again
+the entries whose blocks emit JSON-LD, in their modules' code (shared modules
+and the environment's overrides of them included) or in their refs. That is a
+change of the live environment's domain through `Brando.Tenant.Registry`, and a
+live switch on a `:static` site, where the domains stay put and the incoming
+environment's becomes the public one (on `:dynamic` delivery the domains swap
+and the public base URL stays). The renders are queued once the change has
+committed, each environment searched as the system; a search that fails is
+logged and leaves the change saved. A render job run on a node that has not
+heard of the change yet refreshes its registry cache first
+([Several nodes](deps/brando/guides/tenancy_and_environments.md#several-nodes)). The sitemap follows at its next generation.
 
 Build a site's own absolute URLs with `Brando.Utils.hostname/1` too. Phoenix's
 `url/1` and `*_url` route helpers name the endpoint's host, which in `:multi`
@@ -310,8 +322,8 @@ rows, so that one message covers a whole import. A node sends its evictions
 together, a tenth of a second at a time. An entry is rendered on whichever
 node runs its render job; a node that runs one before it has heard of a
 change made on the node that queued it (to identity, globals or menus, or
-to the modules, containers, palettes or fragments entries render with)
-refreshes its copy first. **Empty all caches** on the **Cache** screen
+to the modules, containers, palettes or fragments entries render with, or
+to the site and environment registry) refreshes its copy first. **Empty all caches** on the **Cache** screen
 empties the node that served it; for a change no node heard of (SQL, a
 seed, a mix task), empty each node or restart them.
 
