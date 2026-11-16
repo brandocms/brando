@@ -1,7 +1,8 @@
 defmodule Brando.Tenant.ServedHosts.DNS do
   @moduledoc """
   The system resolver for `Brando.Tenant.ServedHosts`: the host's IPv4 and
-  IPv6 addresses, one family after the other, through `:inet.getaddrs/3`.
+  IPv6 addresses, one family after the other, through the `getaddrs`
+  function of Erlang's `:inet` module, with a timeout.
   Each is asked to answer within three seconds, which the operating system's
   resolver (the default lookup method on Unix) does not heed: the
   `:lookup_timeout` of `Brando.Tenant.ServedHosts` is what bounds a lookup.
