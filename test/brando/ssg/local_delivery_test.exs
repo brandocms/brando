@@ -615,6 +615,37 @@ defmodule Brando.SSG.LocalDeliveryTest do
     end
   end
 
+  describe "pruning" do
+    # Chosen under the lock, so a rollback on another node that publishes an
+    # archived build finishes first, or finds it pruned and is refused. The
+    # sandbox's one connection waits with the task, so the rollback itself
+    # cannot run meanwhile here.
+    test "waits for the lock a deploy or rollback holds", context do
+      first = context |> ready_build() |> deploy!()
+      _second = context |> ready_build() |> deploy!()
+      _third = context |> ready_build() |> deploy!()
+
+      key = "ssg-deploy:#{context.site.id}"
+      lock = lock_elsewhere(key)
+      pruning = Task.async(fn -> Deploy.prune(Registry.get_site(context.site.id), 1) end)
+
+      refute Task.yield(pruning, 300)
+      assert File.dir?(first.build_path)
+
+      Postgrex.query!(lock, "SELECT pg_advisory_unlock(hashtextextended($1, 0))", [key])
+      assert {:ok, [%{id: pruned_id}]} = Task.await(pruning)
+      assert pruned_id == first.id
+    end
+  end
+
+  # A session of its own, outside the sandbox, as another node's
+  defp lock_elsewhere(key) do
+    config = Keyword.drop(Brando.Repo.repo().config(), [:pool, :ownership_pool, :pool_size, :name])
+    {:ok, conn} = Postgrex.start_link(config)
+    Postgrex.query!(conn, "SELECT pg_advisory_lock(hashtextextended($1, 0))", [key])
+    conn
+  end
+
   describe "the deploy settings" do
     test "need no target or operator's list for local delivery with several sites", context do
       put_test_env(DeployConfig, [])

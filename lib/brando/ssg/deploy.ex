@@ -33,7 +33,7 @@ defmodule Brando.SSG.Deploy do
   @spec deploy(Build.t(), keyword()) :: {:ok, Build.t()} | {:error, term()}
   def deploy(%Build{} = build, opts \\ []) do
     Brando.Authorization.Operations.run(:deploy, :publishing, build.site_id, opts, fn ->
-      Lock.with("ssg-deploy:#{build.site_id}", fn -> deploy_locked(build.id, opts) end)
+      Lock.with(deploy_lock(build.site_id), fn -> deploy_locked(build.id, opts) end)
       |> notify_webhook(opts)
     end)
   end
@@ -51,10 +51,21 @@ defmodule Brando.SSG.Deploy do
   @doc """
   Prunes old ready, archived, and failed artifact directories while retaining
   history rows. The build the installation serves itself (`:published_build`)
-  is never pruned.
+  is never pruned: the builds are chosen and removed holding the lock a deploy
+  or rollback holds, so one that publishes an archived build waits, or finds
+  it pruned and is refused.
   """
   @spec prune(Site.t(), pos_integer()) :: {:ok, [Build.t()]} | {:error, term()}
   def prune(%Site{} = site, keep) when is_integer(keep) and keep > 0 do
+    Lock.with(deploy_lock(site.id), fn -> prune_locked(site, keep) end)
+  end
+
+  def prune(%Site{}, keep), do: {:error, {:invalid_retention_count, keep}}
+
+  defp deploy_lock(site_id), do: "ssg-deploy:#{site_id}"
+
+  # The published version is read under the lock, in the query that chooses
+  defp prune_locked(site, keep) do
     published =
       from(s in Site, where: s.id == ^site.id and not is_nil(s.published_build), select: s.published_build)
 
@@ -83,8 +94,6 @@ defmodule Brando.SSG.Deploy do
       error -> error
     end
   end
-
-  def prune(%Site{}, keep), do: {:error, {:invalid_retention_count, keep}}
 
   defp deploy_locked(build_id, opts) do
     build = Builds.get_build(build_id)
