@@ -161,6 +161,19 @@ defmodule Brando.Forms.StaticDeliveryTest do
              |> json_response(403)
     end
 
+    test "refuses every origin once the site is suspended", %{conn: conn} do
+      put_test_env(:tenancy_mode, :single)
+      put_test_env(:site_key, "beta")
+      {:ok, _site} = Registry.update_site(Registry.get_site_by_key("beta"), %{status: :suspended})
+      Cache.warm()
+      host = URI.parse(Brando.endpoint().url()).host
+
+      for origin <- ["https://#{host}", "https://www.beta.test", "https://old.beta.test"] do
+        assert conn |> post_static("/__brando/forms/static/beta/production/contact", origin) |> json_response(403),
+               origin
+      end
+    end
+
     test "refuses another site's origin and an unknown one", %{conn: conn} do
       assert conn
              |> post_static("/__brando/forms/static/beta/production/contact", "https://www.acme.test")

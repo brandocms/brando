@@ -17,7 +17,8 @@ defmodule Brando.Forms.SubmissionController do
   installation serves itself (deploy strategy `:local`) answers the public
   domain whichever environment holds it, after a live switch or a rollback
   too, so there any domain of the site's environments is its own, and with
-  `:single` the endpoint's host.
+  `:single` the endpoint's host. The static route accepts nothing for a site
+  that is not active.
   """
   use Phoenix.Controller, formats: [:html, :json]
 
@@ -47,7 +48,7 @@ defmodule Brando.Forms.SubmissionController do
 
   @doc "A submission from a statically delivered site, without a session."
   def create_static(conn, %{"site" => site_key, "environment" => environment_key, "key" => key} = params) do
-    with %{delivery_mode: :static} = site <- Tenant.Cache.get_site(site_key),
+    with %{delivery_mode: :static, status: :active} = site <- Tenant.Cache.get_site(site_key),
          %{} = environment <- Tenant.Cache.get_env(site_key, environment_key),
          true <- static_origin?(conn, site, environment) do
       Tenant.put_prefix(Tenant.prefix(site, environment))
