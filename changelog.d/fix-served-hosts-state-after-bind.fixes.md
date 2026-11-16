@@ -1,3 +1,5 @@
 - A host bound on a multi-site installation shows **Checking** on the Environments screen as soon as it is saved, and its result within the lookup timeout, instead of nothing (or **Not served**) for up to a minute while the served hosts check waited on other hosts' lookups.
 
 - A registry write on a multi-site installation no longer waits for the served hosts file to be read and written, its own or an earlier write's, so a stalled disk no longer slows every registry write on the node, and a server with many hosts waiting for DNS looks them up eight at a time, each with its full lookup timeout, instead of reporting hosts at the back as **Does not resolve**.
+
+- A host another installation sharing the served hosts file wrote over, as during a blue/green switch, goes back in a few seconds later instead of at the next five-minute check, while the node that admitted it runs.

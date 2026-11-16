@@ -23,8 +23,8 @@ defmodule Brando.Tenant.ServedHosts do
   another file, it is dropped, with every host remembered as admitted, and a
   check of the new file starts, so a host goes into the new file only once
   it is listed there or admitted again. A write under way then leaves the
-  file alone: it checks the configuration again just before it renames its
-  temporary file over it.
+  file alone: it checks the configuration, and that its work was not dropped,
+  again just before it renames its temporary file over it.
 
   ## Which hosts
 
@@ -37,10 +37,11 @@ defmodule Brando.Tenant.ServedHosts do
   but never written. A bound host that is not in the file yet is admitted
   when it resolves, and every address it resolves to, IPv4 and IPv6, is one
   of this server's: a proxy asks for a certificate as soon as it gets a host,
-  and a host whose DNS still points elsewhere fails that request. Once in the file, a host stays until no
-  environment binds it; a failed lookup never removes one. The file is the
-  state: nothing is stored in the database, and on a new server each host is
-  admitted again when its DNS arrives there.
+  and a host whose DNS still points elsewhere fails that request. Brando
+  removes a host from the file only once no environment binds it; a failed
+  lookup never removes one. The file is the state: nothing is stored in the
+  database, and on a new server each host is admitted again when its DNS
+  arrives there.
 
   ## When
 
@@ -54,6 +55,13 @@ defmodule Brando.Tenant.ServedHosts do
   process's own, so after a restart a lost host is admitted again too.
   Nothing is looked up while the file holds every bound host. Each node keeps
   its own file.
+
+  A few seconds after each write that succeeded (`:verify_interval`, in
+  milliseconds, default five seconds) the file is read again, by the same
+  task as a write. A host this process admitted that is still bound and
+  missing from the file goes back in without a lookup, and that write is
+  verified in turn; with none missing, nothing is written or looked up. A
+  later write replaces a verification still pending.
 
   The process never waits for DNS or the file. A registry write returns once
   every host it bound has a state, `:checking` for one never looked up; the
@@ -85,6 +93,16 @@ defmodule Brando.Tenant.ServedHosts do
   no host is admitted, not even while a new lookup of them runs, until one
   answers.
 
+  ## Two installations sharing the file
+
+  Each write reads the file, merges and replaces it, and nothing locks the
+  file between two installations. Two installations that share one file path
+  at the same moment, as during a blue/green switch, can overwrite each
+  other's newest admission. The host is put back by the verification a few
+  seconds later when the node that admitted it is still running, and
+  otherwise is admitted again at the next check, since its DNS still points
+  at the server.
+
   ## The file
 
   Sorted, one host per line, each followed by a newline, empty when no host
@@ -100,8 +118,9 @@ defmodule Brando.Tenant.ServedHosts do
   that raises, exits or throws, fails for that host; so does one whose task
   cannot be stopped at its timeout (a resolver blocking in a NIF), half a
   second later, and that task is left to its supervisor. A `:lookup_timeout`,
-  `:retry_interval`, `:recheck_interval`, `:flush_interval` or
-  `:addresses_max_age` that is not a positive integer counts as unset.
+  `:retry_interval`, `:recheck_interval`, `:flush_interval`,
+  `:verify_interval` or `:addresses_max_age` that is not a positive integer
+  counts as unset.
   """
 
   use GenServer

@@ -805,8 +805,8 @@ is one of this server's: a proxy asks for a certificate as soon as it gets a
 host, and a request for a host whose DNS still points at the old server fails
 and counts against the certificate authority's limits. So a launch needs no
 step on the server: change the DNS record, and within a minute the host is in
-the file and the proxy can certify it. Once in the file, a host stays until
-no environment binds it; a failed lookup later never removes it. The
+the file and the proxy can certify it. Brando removes a host from the file
+only once no environment binds it; a failed lookup later never removes it. The
 installation's own hosts (the endpoint's, the static, media and CDN hosts) are
 never in it: the deploy tool routes those itself. Nor is a bound domain that
 is not a full host name such as `www.example.com`: one without a dot
@@ -823,6 +823,16 @@ file or admitted it since it started, after admission otherwise. Nothing is
 looked up while the file holds every bound host. Each node keeps its own file,
 and nothing is stored in the database: on a new server the file starts empty,
 and each host is admitted there when its DNS arrives.
+
+A few seconds after each write (five by default, `:verify_interval` in
+milliseconds), the file is read again, and a host this node admitted that is
+still bound but missing goes back in without a lookup. Nothing locks the file
+between installations, each of which reads, merges and replaces it, so two
+installations that share one file path at the same moment, as during a
+blue/green switch, can overwrite each other's newest admission. The host is
+put back by that verification a few seconds later when the node that admitted
+it is still running, and otherwise is admitted again at the next check, since
+its DNS still points at the server.
 
 A host a write binds has a state as soon as the write returns; reading and
 writing the file and the lookups happen after it, in tasks of their own, so a
