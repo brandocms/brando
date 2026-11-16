@@ -1424,6 +1424,68 @@ defmodule Brando.Tenant.ServedHostsTest do
       refute_received {:looked_up, _host}
     end
 
+    test "a host lost from the file right after a write is put back by the verification, without a lookup",
+         %{path: file, site: site} do
+      :persistent_term.put({NotifyingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver, verify_interval: 50)
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+      assert_received {:looked_up, "www.acme.test"}
+      flush_lookups()
+
+      # Another installation sharing the path renames its older list over it
+      pid = Process.whereis(ServedHosts)
+      :sys.suspend(pid)
+      assert %{verify: verify} = :sys.get_state(pid)
+      assert verify
+      File.write!(file, "")
+      :sys.resume(pid)
+
+      await_state(fn _state -> File.read!(file) == "www.acme.test\n" end)
+      ServedHosts.settled()
+      assert %{hosts: %{"www.acme.test" => :served}} = ServedHosts.status()
+      refute_received {:looked_up, _host}
+    end
+
+    test "a verification that finds every admitted host in the file writes nothing", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here], verify_interval: 50)
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+
+      pid = Process.whereis(ServedHosts)
+      :sys.suspend(pid)
+      assert %{verify: verify} = :sys.get_state(pid)
+      assert verify
+      trace_writes([:read_file, :open, :rename])
+      :sys.resume(pid)
+
+      assert_receive {:trace, _writer, :call, {:file, :read_file, _args}}
+      await_state(&(is_nil(&1.verify) and is_nil(&1.writing)))
+      ServedHosts.settled()
+
+      assert file_functions() == []
+      assert File.read!(file) == "www.acme.test\n"
+    end
+
+    test "writes in quick succession leave one verification pending", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here], verify_interval: :timer.minutes(10))
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+
+      timers =
+        for _ <- 1..3 do
+          ServedHosts.check()
+          %{verify_timer: timer} = :sys.get_state(ServedHosts)
+          timer
+        end
+
+      [current | earlier] = Enum.reverse(timers)
+      assert Enum.uniq(timers) == timers
+      assert is_integer(Process.read_timer(current))
+      assert Enum.all?(earlier, &(Process.read_timer(&1) == false))
+    end
+
     test "a restarted process starts from the file alone: a host it lost is admitted again",
          %{path: file, site: site} do
       DNS.answer("www.acme.test", [@here])

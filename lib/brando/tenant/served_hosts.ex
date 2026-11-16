@@ -115,6 +115,9 @@ defmodule Brando.Tenant.ServedHosts do
   @status_key {__MODULE__, :status}
   @retry_interval :timer.minutes(1)
   @recheck_interval :timer.minutes(5)
+  # How long after a write the file is read again for a host another
+  # installation sharing the path wrote over
+  @verify_interval :timer.seconds(5)
   @lookup_timeout :timer.seconds(10)
   # How long after its timeout a lookup's task may still answer before it
   # counts as failed here
@@ -205,7 +208,8 @@ defmodule Brando.Tenant.ServedHosts do
     # while bound. In memory only: a new process starts from the file alone.
     # `settings`: the configuration the last check read, nil when off.
     # `file`: the file what is remembered here belongs to.
-    # `tick`, `flush`: the references the pending timers' messages carry.
+    # `tick`, `flush`, `verify`: the references the pending timers' messages
+    # carry.
     # `lookups`: each lookup under way, by its task's reference, with its batch
     # and the timer of its deadline.
     # `queue`: lookups waiting for one of the `@max_lookups` slots.
@@ -219,14 +223,18 @@ defmodule Brando.Tenant.ServedHosts do
     # given. `generation`: counts the drops of the work under way; a write's
     # result counts only for the file and generation it started with, and
     # `generation_ref` holds it for the write task, which checks it before its
-    # rename. `write_requested`, `check_requested`: a write, or a check (a write
-    # whose result queues lookups), asked for and not started yet.
+    # rename. `write_requested`, `check_requested`, `verify_requested`: a
+    # write, a check (a write whose result queues lookups), or a verification
+    # (a write only when an admitted host is missing), asked for and not
+    # started yet.
     # `waiters`: callers of `check/0` and `settled/0` waiting for the lookups.
     state = %{
       timer: nil,
       tick: nil,
       flush_timer: nil,
       flush: nil,
+      verify_timer: nil,
+      verify: nil,
       error: nil,
       settings: nil,
       file: nil,
@@ -243,6 +251,7 @@ defmodule Brando.Tenant.ServedHosts do
       generation_ref: :atomics.new(1, []),
       write_requested: false,
       check_requested: false,
+      verify_requested: false,
       waiters: []
     }
 
@@ -283,6 +292,20 @@ defmodule Brando.Tenant.ServedHosts do
     case current(state) do
       {:ok, state} -> {:noreply, state |> flush() |> settle()}
       {:stopped, state} -> {:noreply, settle(state)}
+    end
+  end
+
+  # The file read again a while after a write. A write under way or asked for
+  # is verified once it ends.
+  def handle_info({:verify, verify}, %{verify: verify} = state) do
+    state = %{state | verify_timer: nil, verify: nil}
+
+    case current(state) do
+      {:ok, %{writing: nil, write_requested: false, check_requested: false} = state} ->
+        {:noreply, state |> Map.put(:verify_requested, true) |> maybe_start_write() |> settle()}
+
+      {_ok_or_stopped, state} ->
+        {:noreply, settle(state)}
     end
   end
 
@@ -374,9 +397,10 @@ defmodule Brando.Tenant.ServedHosts do
     end
 
     :atomics.put(state.generation_ref, 1, state.generation + 1)
+    state = state |> cancel_flush() |> cancel_verify()
 
     %{
-      cancel_flush(state)
+      state
       | settings: nil,
         file: nil,
         generation: state.generation + 1,
@@ -386,7 +410,8 @@ defmodule Brando.Tenant.ServedHosts do
         fresh: MapSet.new(),
         admitted: MapSet.new(),
         write_requested: false,
-        check_requested: false
+        check_requested: false,
+        verify_requested: false
     }
   end
 
@@ -424,6 +449,22 @@ defmodule Brando.Tenant.ServedHosts do
     %{state | flush_timer: nil, flush: nil}
   end
 
+  # One verification pending at a time: a later write's replaces it
+  defp verify_soon(state, %{written?: true}) do
+    state = cancel_verify(state)
+    verify = make_ref()
+    %{state | verify_timer: Process.send_after(self(), {:verify, verify}, state.settings.verify_interval), verify: verify}
+  end
+
+  defp verify_soon(state, _result), do: state
+
+  defp cancel_verify(%{verify_timer: nil} = state), do: state
+
+  defp cancel_verify(state) do
+    Process.cancel_timer(state.verify_timer)
+    %{state | verify_timer: nil, verify: nil}
+  end
+
   defp wait(state, from), do: settle(%{state | waiters: [from | state.waiters]})
 
   # Replies to the waiters once no lookup runs or waits and no write is under
@@ -444,7 +485,8 @@ defmodule Brando.Tenant.ServedHosts do
 
   defp idle_lookups?(state), do: map_size(state.lookups) == 0 and :queue.is_empty(state.queue)
 
-  defp idle_writer?(state), do: is_nil(state.writing) and not state.write_requested and not state.check_requested
+  defp idle_writer?(state),
+    do: is_nil(state.writing) and not state.write_requested and not state.check_requested and not state.verify_requested
 
   defp run(state) do
     state = cancel_tick(state)
@@ -487,11 +529,18 @@ defmodule Brando.Tenant.ServedHosts do
 
   # One write at a time, in a task: a write asked for while one runs starts
   # when it ends, once, with what is known then
-  defp maybe_start_write(%{writing: nil, settings: %{}, write_requested: write?, check_requested: check?} = state)
-       when write? or check? do
+  defp maybe_start_write(
+         %{writing: nil, settings: %{}, write_requested: write?, check_requested: check?, verify_requested: verify?} =
+           state
+       )
+       when write? or check? or verify? do
     start_write(state)
   rescue
-    exception -> failed(%{state | write_requested: false, check_requested: false}, Exception.message(exception))
+    exception ->
+      failed(
+        %{state | write_requested: false, check_requested: false, verify_requested: false},
+        Exception.message(exception)
+      )
   end
 
   defp maybe_start_write(state), do: state
@@ -510,12 +559,22 @@ defmodule Brando.Tenant.ServedHosts do
       generation: state.generation,
       generation_ref: state.generation_ref,
       keep: MapSet.union(state.admitted, MapSet.new(admit)),
-      check?: state.check_requested
+      check?: state.check_requested,
+      # Any other write asked for is a write all the same
+      verify?: not state.write_requested and not state.check_requested
     }
 
     # An answer still waiting for this server's addresses stays fresh
     fresh = MapSet.filter(state.fresh, &(decided[&1] == :pending))
-    state = %{state | write_requested: false, check_requested: false, write_job: job, fresh: fresh}
+
+    state = %{
+      state
+      | write_requested: false,
+        check_requested: false,
+        verify_requested: false,
+        write_job: job,
+        fresh: fresh
+    }
 
     case Process.whereis(Brando.Tenant.ServedHosts.TaskSupervisor) do
       nil ->
@@ -549,18 +608,25 @@ defmodule Brando.Tenant.ServedHosts do
 
     written =
       case read do
-        {:ok, existing, _listed} -> write(job, existing, hosts)
+        {:ok, existing, _listed} -> verify_or_write(job, existing, hosts, listed)
         {:error, reason} -> {false, "#{file}: #{:file.format_error(reason)}"}
       end
 
     case written do
-      :cancelled ->
-        :cancelled
+      cancelled_or_verified when cancelled_or_verified in [:cancelled, :verified] ->
+        cancelled_or_verified
 
       {written?, error} ->
         %{read?: match?({:ok, _, _}, read), listed: listed, hosts: hosts, written?: written?, error: error}
     end
   end
+
+  # A verification writes only when a host this process keeps is missing
+  defp verify_or_write(%{verify?: true} = job, existing, hosts, listed) do
+    if Enum.all?(hosts, &MapSet.member?(listed, &1)), do: :verified, else: write(job, existing, hosts)
+  end
+
+  defp verify_or_write(job, existing, hosts, _listed), do: write(job, existing, hosts)
 
   # Only the registered process's writes land, a restarted one's writer not
   # being its successor's, only to the file configured now, and only while
@@ -607,7 +673,8 @@ defmodule Brando.Tenant.ServedHosts do
           # found is not this file's, and the write asked for since follows
           not same_work?(state, job) -> state |> maybe_start_write() |> settle()
           result == :cancelled -> state |> request_write() |> settle()
-          true -> state |> apply_write(job, result) |> maybe_start_write() |> settle()
+          result == :verified -> state |> maybe_start_write() |> settle()
+          true -> state |> apply_write(job, result) |> verify_soon(result) |> maybe_start_write() |> settle()
         end
 
       {:stopped, state} ->
@@ -901,6 +968,7 @@ defmodule Brando.Tenant.ServedHosts do
       retry_interval: milliseconds(config, :retry_interval, @retry_interval),
       recheck_interval: milliseconds(config, :recheck_interval, @recheck_interval),
       flush_interval: milliseconds(config, :flush_interval, @flush_interval),
+      verify_interval: milliseconds(config, :verify_interval, @verify_interval),
       addresses_max_age: milliseconds(config, :addresses_max_age, @addresses_max_age)
     }
   end
