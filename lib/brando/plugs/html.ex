@@ -315,8 +315,9 @@ defmodule Brando.Plug.HTML do
   The page's alternates, as `{language, url}`, for its `<link rel="alternate">`
   tags: its own language's is the page's URL (`page_url/1`), whatever
   `put_hreflang/2` was given for that language, and comes first; the other
-  languages' follow as given. A page without a URL (an error page) lists
-  only the other languages'.
+  languages' follow as given, one per language. A page without a URL (an
+  error page) or without a language of its own lists only the other
+  languages'.
   """
   @spec hreflangs(conn) :: [{atom() | String.t(), String.t()}]
   def hreflangs(%{private: %{brando_hreflangs: [{own, _} | alternates]}} = conn) do
@@ -325,12 +326,14 @@ defmodule Brando.Plug.HTML do
     others =
       alternates
       |> Enum.map(fn {language, url} -> {language_key(language), url} end)
-      |> Enum.reject(fn {language, _} -> language == own end)
+      |> Enum.reject(fn {language, _} -> language in [own, nil, ""] end)
       |> Enum.uniq_by(&elem(&1, 0))
 
-    case page_url(conn) do
-      nil -> others
-      url -> [{own, url} | others]
+    # An alternate without a language would be a link with no `hreflang`
+    case {own, page_url(conn)} do
+      {_own, nil} -> others
+      {own, _url} when own in [nil, ""] -> others
+      {own, url} -> [{own, url} | others]
     end
   end
 

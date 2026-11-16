@@ -206,6 +206,25 @@ defmodule Brando.PageURLTest do
       assert head.webpage["url"] == "http://localhost/news"
     end
 
+    test "an entry whose language is a string has one alternate in it", %{user: user} do
+      page = %{page!(user, "Solo", "solo", :en) | language: "en", alternate_entries: []}
+      conn = "/en/solo" |> request() |> HTML.put_hreflang(page)
+
+      assert HTML.hreflangs(conn) == [{:en, "http://localhost/en/solo"}]
+      assert render_head(conn).alternates == []
+    end
+
+    test "a page without a language of its own lists the other languages only" do
+      conn =
+        "/news"
+        |> request()
+        |> Plug.Conn.assign(:language, nil)
+        |> HTML.put_hreflang(en: "/en/news", no: "/no/nyheter")
+
+      assert HTML.hreflangs(conn) == [{:en, "http://localhost/en/news"}, {:no, "http://localhost/no/nyheter"}]
+      refute Enum.any?(render_head(conn).alternates, fn {language, _} -> language in [nil, ""] end)
+    end
+
     test "has one alternate in its own language, whatever the alternates' keys" do
       for alternates <- [[en: "/en/news", no: "/no/nyheter"], [{"en", "/en/news"}, {"no", "/no/nyheter"}]] do
         head = "/news/" |> request() |> HTML.put_hreflang(alternates) |> render_head()
