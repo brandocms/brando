@@ -545,8 +545,18 @@ defmodule Brando.Tenant.ServedHosts do
     if reason in Brando.Tenant.ServedHosts.Resolver.reasons(), do: reason, else: :other
   end
 
-  defp put_result(state, host, result),
-    do: %{state | results: Map.put(state.results, host, result), fresh: MapSet.put(state.fresh, host)}
+  # An answer that is no timeout ends the host's quick retry at once, not at
+  # the next write
+  defp put_result(state, host, result) do
+    retries = if timed_out?(result), do: state.timeout_retries, else: Map.delete(state.timeout_retries, host)
+
+    %{
+      state
+      | results: Map.put(state.results, host, result),
+        fresh: MapSet.put(state.fresh, host),
+        timeout_retries: retries
+    }
+  end
 
   defp batch_done?(state, batch) do
     not Enum.any?(state.lookups, &match?({_ref, {_target, ^batch, _deadline}}, &1)) and
@@ -865,13 +875,14 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   # The quick retry: the timed-out hosts still outside the file, looked up
-  # again, and only once
+  # again, and only once. A host with an answer no write has used yet keeps it.
   defp retry_timeouts(state) do
     bound = MapSet.new(servable_bound_hosts())
 
     hosts =
       for {host, :pending} <- state.timeout_retries,
-          MapSet.member?(bound, host) and not MapSet.member?(state.admitted, host),
+          MapSet.member?(bound, host) and not MapSet.member?(state.admitted, host) and
+            not MapSet.member?(state.fresh, host),
           do: host
 
     retries = Map.new(state.timeout_retries, fn {host, _pending} -> {host, :done} end)

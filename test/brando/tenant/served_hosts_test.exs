@@ -524,6 +524,50 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert %{hosts: %{"slow.acme.test" => {:lookup_failed, %{inet: :timeout}}}} = ServedHosts.status()
     end
 
+    test "the quick retry leaves alone an answer that came in before it, while a write runs",
+         %{path: file, site: site} do
+      :persistent_term.put({NotifyingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
+      test = self()
+      config = [file: file, addresses: [@here], resolver: NotifyingResolver, timeout_retry_interval: 300]
+      put_test_env(ServedHosts, config)
+      DNS.answer("slow.acme.test", {:error, :timeout})
+      bind(site, "slow", "slow.acme.test")
+      flush_lookups()
+
+      # A refresh looks the host up again before its quick retry, and the
+      # answer waits for a write that is held past the retry's time
+      DNS.answer("slow.acme.test", [@here])
+
+      put_test_env(
+        ServedHosts,
+        config ++
+          [
+            flush_interval: 20,
+            before_write: fn ->
+              send(test, {:writing, self()})
+
+              receive do
+                :write -> :ok
+              end
+            end
+          ]
+      )
+
+      refresh = Task.async(fn -> ServedHosts.registry_changed() end)
+      assert_receive {:writing, check}
+      release_write(check)
+      assert_receive {:looked_up, "slow.acme.test"}
+      assert_receive {:writing, flush}
+      refute_receive {:looked_up, "slow.acme.test"}, 600
+
+      put_test_env(ServedHosts, config)
+      release_write(flush)
+      Task.await(refresh)
+      assert %{hosts: %{"slow.acme.test" => :served}} = ServedHosts.settled()
+      assert lines(file) == ["slow.acme.test"]
+    end
+
     test "of this server's addresses leaves them unknown: the last ones found count", %{path: file, site: site} do
       put_test_env(ServedHosts, file: file)
       DNS.answer("localhost", [@here])
