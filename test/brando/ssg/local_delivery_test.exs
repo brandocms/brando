@@ -574,6 +574,18 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert get_resp_header(conn, "referrer-policy") == ["strict-origin-when-cross-origin"]
     end
 
+    test "treats every HTML file as a page, whatever its extension's spelling", context do
+      context |> ready_build(%{"landing.htm" => "landing", "promo/OFFER.HTML" => "offer"}) |> deploy!()
+
+      for path <- ["/landing.htm?vsn=d", "/promo/OFFER.HTML?vsn=d"] do
+        conn = request(context.host, path)
+        assert get_resp_header(conn, "content-type") == ["text/html; charset=utf-8"], path
+        assert get_resp_header(conn, "cache-control") == ["no-cache"], path
+        assert get_resp_header(conn, "content-security-policy") == ["base-uri 'self'; frame-ancestors 'self';"], path
+        assert get_resp_header(conn, "access-control-allow-origin") == [], path
+      end
+    end
+
     test "answers Accept: text/markdown with a page's Markdown file when the build has one", context do
       context |> ready_build() |> deploy!()
 

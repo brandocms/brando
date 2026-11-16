@@ -408,7 +408,8 @@ defmodule Brando.SSG.LocalDelivery do
     end
   end
 
-  defp html?(relative), do: Path.extname(relative) == ".html"
+  # By the content type the file is sent with: `.htm`, `.HTML` and the rest
+  defp html?(relative), do: MIME.from_path(relative) == "text/html"
 
   defp send_not_found(conn, build) do
     conn = put_resp_header(conn, "cache-control", @revalidate)
