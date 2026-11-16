@@ -8,10 +8,12 @@ defmodule E2E.MultiSiteHosts do
 
   Acme, which the admin opens on, has a served domain and redirect hosts
   that are served, waiting for DNS and not resolving; a staging domain
-  waiting for DNS with a redirect host that is not a full host name; and an
-  environment with no domain, and three entries in its operation log. Beta has a redirect host stored with a
-  trailing dot, which is never served, and a long staging domain that does
-  not resolve.
+  waiting for DNS with a redirect host that is not a full host name; an
+  environment with no domain; an environment with a key of 30 characters
+  and no hyphen, a domain of 60 characters and a longer redirect host, none
+  of them resolving; and three entries in its operation log. Beta has a
+  redirect host stored with a trailing dot, which is never served, and a
+  long staging domain that does not resolve.
 
   Options: `:site_admin` makes the E2E admin a site administrator of Acme
   instead of a superuser, who sees the hosts but may not change them;
@@ -66,6 +68,16 @@ defmodule E2E.MultiSiteHosts do
       ])
 
     acme_spring = environment(acme, admin, "spring", "Spring redesign", false, nil, [])
+
+    environment(
+      acme,
+      admin,
+      "autumncampaignlandingpages2026",
+      "Autumn campaign",
+      false,
+      "autumn-campaign-landing-pages-for-the-north.acme.example.com",
+      ["www.autumn-campaign-landing-pages-for-the-north.acme.example.com"]
+    )
 
     beta_live =
       environment(beta, admin, "production", "Production", true, "beta.example.com", [
@@ -157,7 +169,6 @@ defmodule E2E.MultiSiteHosts do
     restore_file_dir()
     File.rm_rf!(file())
   end
-
 
   defp site(name, key) do
     {:ok, site} =

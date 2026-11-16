@@ -544,6 +544,13 @@
 
   .environment-identity strong {
     font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  /* A key has no spaces to break at */
+  .environment-identity code {
+    max-width: 100%;
+    overflow-wrap: anywhere;
   }
 
   /* Labels above values, as in the other forms on the page */
@@ -597,9 +604,13 @@
     }
   }
 
+  /* Grows with its hosts, a long one wrapped included: two lines to eight */
   .environment-hosts-form textarea {
     max-width: 320px;
     resize: vertical;
+    field-sizing: content;
+    min-height: calc(2lh + 18px);
+    max-height: calc(8lh + 18px);
   }
 
   .environment-host-help {
@@ -780,10 +791,13 @@
       max-width: none;
     }
 
+    /* The row's own actions, ruled off from the hosts form's button above */
     .environment-list td.environment-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
+      padding-top: 16px;
+      border-top: 1px solid var(--brando-line-soft);
       text-align: left;
 
       .btn {
@@ -890,10 +904,16 @@
     min-width: 0;
   }
 
+  /* The subtitle as on workspace screens */
   > .main > h3 {
     grid-column: 1 / -1;
     grid-row: 2;
     width: auto;
+    margin: 8px 0 0;
+    color: var(--brando-muted);
+    font-size: var(--brando-text-md);
+    font-weight: 400;
+    line-height: 1.55;
   }
 
   > .actions {
