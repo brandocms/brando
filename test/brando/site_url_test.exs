@@ -147,6 +147,12 @@ defmodule Brando.SiteURLTest do
     end
   end
 
+  # Route helpers in two languages, for `put_hreflang(conn, {helper, args})`
+  defmodule HelperRouter.Helpers do
+    def en_article_path(_endpoint, :show, slug), do: "/en/articles/#{slug}"
+    def no_article_path(_endpoint, :show, slug), do: "/no/artikler/#{slug}"
+  end
+
   defmodule AboutPage do
     import Brando.SSG
 
@@ -272,28 +278,59 @@ defmodule Brando.SiteURLTest do
       end)
     end
 
-    test "alternates from a route helper stay paths for a language switcher; the head's alternates get the host" do
+    test "alternates from a route helper stay paths for a language switcher; the head's alternates get the host",
+         context do
+      helper = {:article_path, [Brando.endpoint(), :show, "slug"]}
+      {en, no} = {"/en/articles/slug", "/no/artikler/slug"}
+      put_test_env(:router_module, HelperRouter)
+
+      Oban.Testing.with_testing_mode(:manual, fn ->
+        {:ok, _site} = Registry.update_site(context.site, %{languages: ["en", "no"]})
+      end)
+
       in_environment("staging", fn ->
-        path = Brando.I18n.Helpers.localized_path("en", :article_path, [Brando.endpoint(), :show, "slug"])
-        assert "/" <> _ = path
+
+        conn =
+          Phoenix.ConnTest.build_conn(:get, en)
+          |> Plug.Conn.assign(:language, "en")
+          |> Brando.Plug.HTML.put_hreflang(helper)
+
+        assert List.keyfind(conn.private.brando_hreflangs, :no, 0) == {:no, no}
+
+        switcher = render_component(&Brando.HTML.alternate_url/1, conn: conn, language: :no)
+        {:ok, link} = Floki.parse_fragment(switcher)
+        assert Floki.attribute(link, "a", "href") == [no]
+
+        {:ok, head} = render_component(&Brando.HTML.render_hreflangs/1, conn: conn) |> Floki.parse_fragment()
+
+        assert Floki.attribute(head, ~s(link[rel="canonical"]), "href") == ["http://staging.acme.test" <> en]
+
+        assert for(
+                 link <- Floki.find(head, ~s(link[rel="alternate"][hreflang])),
+                 do: {Floki.attribute(link, "hreflang"), Floki.attribute(link, "href")}
+               ) == [
+                 {["en"], ["http://staging.acme.test" <> en]},
+                 {["no"], ["http://staging.acme.test" <> no]}
+               ]
+      end)
+    end
+
+    test "a one-language site's head has no alternates" do
+      put_test_env(:router_module, HelperRouter)
+
+      in_environment("staging", fn ->
+        path = "/en/articles/slug"
 
         conn =
           Phoenix.ConnTest.build_conn(:get, path)
           |> Plug.Conn.assign(:language, "en")
           |> Brando.Plug.HTML.put_hreflang({:article_path, [Brando.endpoint(), :show, "slug"]})
 
-        assert List.keyfind(conn.private.brando_hreflangs, :en, 0) == {:en, path}
+        {:ok, head} = render_component(&Brando.HTML.render_hreflangs/1, conn: conn) |> Floki.parse_fragment()
 
-        switcher = render_component(&Brando.HTML.alternate_url/1, conn: conn, language: :en)
-        {:ok, link} = Floki.parse_fragment(switcher)
-        assert Floki.attribute(link, "a", "href") == [path]
-
-        {:ok, head} =
-          render_component(&Brando.HTML.render_hreflangs/1, conn: conn) |> Floki.parse_fragment()
-
-        # One language: its alternate is the page's URL, and a single language lists none
         assert Brando.Plug.HTML.hreflangs(conn) == [{:en, "http://staging.acme.test" <> path}]
-        assert Floki.attribute(head, ~s(link[rel="alternate"][hreflang]), "href") == []
+        assert Floki.find(head, ~s(link[rel="alternate"][hreflang])) == []
+        assert Floki.attribute(head, ~s(link[rel="canonical"]), "href") == ["http://staging.acme.test" <> path]
       end)
     end
 
