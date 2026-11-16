@@ -124,7 +124,9 @@ defmodule Brando.Tenant.Setup do
   Removes what a failed `create_site/3` or migration left of the site `key`
   when its own cleanup failed: the registry row with its environments'
   schemas, the schemas `tenant_<key>_production` and `tenant_<key>_staging`,
-  and the site's directories unless `keep_storage: true`.
+  and the site's directories unless `keep_storage: true`. The site's hosts
+  are released first (`Brando.Environments.release_hosts/1`); while they
+  cannot be, nothing is removed and the error is returned.
 
   The site's lifecycle lock is held throughout, so a site created with the
   key while this runs is not touched. One created before it runs is removed:
@@ -135,23 +137,24 @@ defmodule Brando.Tenant.Setup do
     lifecycle(:delete, opts, fn -> Lock.with(lifecycle_lock_key(key), fn -> remove_under_lock(key, opts) end) end)
   end
 
+  # While a host cannot be released, every schema stays
   defp remove_under_lock(key, opts) do
-    registered =
-      case Registry.get_site_by_key(key) do
-        nil ->
-          :ok
+    site = Registry.get_site_by_key(key)
 
-        site ->
-          with :ok <- Environments.release_hosts(site.environments),
-               {:ok, _deleted} <- delete_registry_and_schemas(site),
-               do: :ok
-      end
+    with :ok <- release_registered_hosts(site) do
+      registered = delete_registered(site)
+      drops = Enum.map(["production", "staging"], &Schema.drop(Tenant.prefix(key, &1)))
+      storage = if Keyword.get(opts, :keep_storage, false), do: :ok, else: Storage.delete(%Site{key: key})
 
-    drops = Enum.map(["production", "staging"], &Schema.drop(Tenant.prefix(key, &1)))
-    storage = if Keyword.get(opts, :keep_storage, false), do: :ok, else: Storage.delete(%Site{key: key})
-
-    Enum.find([registered | drops] ++ [storage], :ok, &(&1 != :ok))
+      Enum.find([registered | drops] ++ [storage], :ok, &(&1 != :ok))
+    end
   end
+
+  defp release_registered_hosts(nil), do: :ok
+  defp release_registered_hosts(site), do: Environments.release_hosts(site.environments)
+
+  defp delete_registered(nil), do: :ok
+  defp delete_registered(site), do: with({:ok, _deleted} <- delete_registry_and_schemas(site), do: :ok)
 
   defp lifecycle(action, opts, fun) do
     actor = opts[:actor] || Brando.Authorization.Boundary.current_scope()

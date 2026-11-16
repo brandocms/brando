@@ -225,6 +225,23 @@ defmodule Brando.Tenant.SetupTest do
       assert Cache.bound_hosts() == []
     end
 
+    test "remove_leftovers/2 leaves the schemas while a host cannot be released", %{owner: owner} do
+      assert {:ok, _site} = Setup.create_site(site_attrs("hosted"), owner, environments: @hosted)
+
+      # An entry this node's cache refresh does not clear
+      key = {:brando, :redirect_host, "www.acme.example.com"}
+      on_exit(fn -> :persistent_term.erase(key) end)
+      cache_keys = :persistent_term.get({:brando, :tenant_cache_keys})
+      :persistent_term.put({:brando, :tenant_cache_keys}, List.delete(cache_keys, key))
+
+      assert {:error, {:hosts_still_resolve, ["www.acme.example.com"]}} =
+               Setup.remove_leftovers("hosted", actor: :system)
+
+      assert Schema.exists?("tenant_hosted_production")
+      assert Schema.exists?("tenant_hosted_staging")
+      assert Registry.get_site_by_key("hosted")
+    end
+
     test "remove_leftovers/2 releases them before the schemas go", %{owner: owner} do
       assert {:ok, _site} = Setup.create_site(site_attrs("hosted"), owner, environments: @hosted)
 
