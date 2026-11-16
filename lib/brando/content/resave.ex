@@ -26,6 +26,10 @@ defmodule Brando.Content.Resave do
   own prefix and outside any admin scope, and names each environment as it
   goes. Without tenancy it re-saves the entries in the application's own
   tables.
+
+  Fragments whose module code embeds another fragment with `{% fragment … %}`
+  or `<.fragment …>` are re-saved again after the others, until none of them
+  changes (at most five rounds; the report names any that still did).
   """
 
   alias Brando.Authorization.Boundary
@@ -39,6 +43,10 @@ defmodule Brando.Content.Resave do
   # What other entries embed: re-saved first, each evicted from the query
   # cache once stored, so what embeds it renders its new HTML
   @embedded Brando.Pages.Fragment
+
+  # How many times the fragments that embed a fragment by tag are re-saved
+  # at most
+  @settle_rounds 5
 
   @typedoc """
   Options for `run/1`:
@@ -441,9 +449,13 @@ defmodule Brando.Content.Resave do
     info.([:green, "\n==> Resaving #{singular} entries\n"])
     write = printer(&IO.write(ANSI.format(&1)))
 
-    entries
-    |> in_render_order(blueprint)
-    |> Enum.count(&resave_entry(blueprint, &1, singular, write))
+    count =
+      entries
+      |> in_render_order(blueprint)
+      |> Enum.count(&resave_entry(blueprint, &1, singular, write))
+
+    if blueprint == @embedded, do: settle_tag_embeds(MapSet.new(entries, & &1.id), info)
+    count
   end
 
   defp resave_entry(blueprint, entry, singular, write) do
@@ -468,9 +480,7 @@ defmodule Brando.Content.Resave do
 
     # Loaded again as it is now, and stored only over that: an editor may
     # have saved it since the list was read, or save it while it renders
-    keep_updated_at = &Ecto.Changeset.force_change(&1, :updated_at, &1.data.updated_at)
-
-    case Blocks.render_and_store(blueprint, entry.id, prepare: keep_updated_at, force: true) do
+    case Blocks.render_and_store(blueprint, entry.id, prepare: &keep_updated_at/1, force: true) do
       {:ok, stored} ->
         if blueprint == @embedded, do: Brando.Cache.Query.evict({:ok, stored})
         write.([:green, "done!\n"])
@@ -481,6 +491,91 @@ defmodule Brando.Content.Resave do
         false
     end
   end
+
+  defp keep_updated_at(changeset), do: Ecto.Changeset.force_change(changeset, :updated_at, changeset.data.updated_at)
+
+  # A fragment whose module code embeds another by its key (the Liquid tag,
+  # or the HEEx component) reads that one's stored HTML, in an order the
+  # blocks do not tell: those fragments are re-saved again until none of
+  # them changes
+  defp settle_tag_embeds(ids, info) do
+    case fragments_embedding_by_tag(ids) do
+      [] -> :ok
+      tag_ids -> settle(tag_ids, stored_html(tag_ids), 1, info)
+    end
+  end
+
+  defp settle(ids, before, round, info) do
+    now = Map.new(ids, &{&1, resave_quietly(&1, before[&1])})
+
+    case Enum.filter(ids, &(now[&1] != before[&1])) do
+      [] ->
+        :ok
+
+      _changed when round < @settle_rounds ->
+        settle(ids, now, round + 1, info)
+
+      changed ->
+        names =
+          from(f in @embedded, where: f.id in ^changed, order_by: f.id, select: {f.id, f.parent_key, f.key, f.language})
+          |> Brando.Repo.all()
+          |> Enum.map_join(", ", fn {id, parent_key, key, language} -> "#{parent_key}/#{key} (#{language}, #{id})" end)
+
+        info.([
+          :yellow,
+          "Fragments that embed fragments with a tag still changed after #{@settle_rounds} rounds " <>
+            "(do they embed each other?): " <> names
+        ])
+    end
+  end
+
+  defp resave_quietly(id, html) do
+    case Blocks.render_and_store(@embedded, id, prepare: &keep_updated_at/1, force: true) do
+      {:ok, stored} ->
+        Brando.Cache.Query.evict({:ok, stored})
+        stored.rendered_blocks
+
+      {:error, _} ->
+        html
+    end
+  end
+
+  defp stored_html(ids) do
+    from(f in @embedded, where: f.id in ^ids, select: {f.id, f.rendered_blocks})
+    |> Brando.Repo.all()
+    |> Map.new()
+  end
+
+  # Of `ids`, the fragments with a block whose module code embeds a fragment
+  # by its key
+  defp fragments_embedding_by_tag(ids) do
+    from(b in Brando.Content.Block,
+      where: not is_nil(b.module_id),
+      distinct: true,
+      select: {b.module_id, b.module_origin}
+    )
+    |> Brando.Repo.all()
+    |> Enum.filter(fn {id, origin} -> embeds_by_tag?(Brando.Content.fetch_module(id, origin)) end)
+    |> Enum.flat_map(fn {id, origin} -> Blocks.list_block_ids_using_module(id, origin) end)
+    |> case do
+      [] ->
+        []
+
+      block_ids ->
+        block_ids
+        |> Blocks.list_root_block_ids_by_source()
+        |> Blocks.list_entry_ids_for_root_blocks_by_source()
+        |> Map.get(@embedded, [])
+        |> Enum.filter(&MapSet.member?(ids, &1))
+        |> Enum.uniq()
+        |> Enum.sort()
+    end
+  end
+
+  defp embeds_by_tag?(%{code: code, markdown_code: markdown_code}),
+    do: Enum.any?([code, markdown_code], &(is_binary(&1) and Regex.match?(~r/\{%-?\s*fragment\s|<\.fragment[\s>\/]/, &1)))
+
+  defp embeds_by_tag?(_module), do: false
 
   # Fragments after the fragments their blocks embed, in id order otherwise
   # (and for those in a cycle)

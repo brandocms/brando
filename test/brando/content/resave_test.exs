@@ -127,6 +127,31 @@ defmodule Brando.Content.ResaveTest do
       assert rendered(Brando.Pages.Fragment, outer.id) == "<p>Inner, re-rendered</p>"
     end
 
+    test "a fragment whose module code embeds another with the tag renders it as just re-saved", %{user: user} do
+      # Re-saved first, by id: the tag names the other by its key
+      tag_outer = module_fragment(user, "tag_outer", "<div>{% fragment cached tag_inner en %}</div>")
+      tag_inner = module_fragment(user, "tag_inner", "<p>Tag inner, re-rendered</p>")
+      make_stale(Brando.Pages.Fragment, [tag_outer.id, tag_inner.id])
+
+      capture_io(fn -> assert {:ok, _} = Resave.run(blueprint: Brando.Pages.Fragment, reload_caches: false) end)
+
+      assert rendered(Brando.Pages.Fragment, tag_inner.id) == "<p>Tag inner, re-rendered</p>"
+      assert rendered(Brando.Pages.Fragment, tag_outer.id) =~ "Tag inner, re-rendered"
+    end
+
+    test "a fragment that still changes after five rounds is named in the report", %{user: user} do
+      # Two fragments that embed each other by tag change on every round
+      a = module_fragment(user, "loop_a", "<i>A</i>{% fragment cached loop_b en %}")
+      _b = module_fragment(user, "loop_b", "<b>B</b>{% fragment cached loop_a en %}")
+
+      output =
+        capture_io(fn -> assert {:ok, _} = Resave.run(blueprint: Brando.Pages.Fragment, reload_caches: false) end)
+
+      assert output =~ "still changed after 5 rounds"
+      assert output =~ "cached/loop_a"
+      assert rendered(Brando.Pages.Fragment, a.id) =~ "<i>A</i>"
+    end
+
     test "an entry renders the fragments as stored, not as this node cached them before", %{outer: outer, page: page} do
       # Rewritten where this node did not hear of it
       Brando.Repo.update_all(Ecto.Query.from(f in Brando.Pages.Fragment, where: f.id == ^outer.id),

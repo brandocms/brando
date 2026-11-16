@@ -852,7 +852,10 @@ serves the site, and says what it reloads. Each pass (with tenancy, one per
 environment) begins by refreshing its render inputs on that node (the
 identity, globals and menus, and the cached modules, containers, palettes and
 fragments), and fragments are re-saved first, so pages render the fragments'
-new HTML. When done it empties the node's whole query cache (every site's
+new HTML. Fragments whose module code embeds another fragment with
+`{% fragment … %}` or `<.fragment …>` are re-saved again after the rest, until
+their HTML stops changing (at most five rounds; the report names any that
+still changed). When done it empties the node's whole query cache (every site's
 and environment's pages and fragments) and rebuilds the site caches of the
 context it runs in, which with tenancy is none: each environment's identity,
 globals and menus were rebuilt as its pass began, and its SEO and palettes
