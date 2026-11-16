@@ -63,11 +63,12 @@ defmodule Brando.Tenant.ServedHosts do
   queued, keeps its last state meanwhile. Each answer is kept as it arrives,
   and a host that answered is not looked up again before a write has used
   its answer; the file is written and the status published once no lookup
-  of its check is left, or within a fifth of a second while some are, so
-  many answers cost one write and a single host's result comes as soon as it
-  answers (`:flush_interval`, in milliseconds, which tests change). A host is `:served` once the write that put it in the file has
-  succeeded. The file is read just before each write, and every bound host
-  another node wrote there stays. When that read fails, the file is left as
+  of its check is left, or within a fifth of a second while some are
+  (`:flush_interval`, in milliseconds, which tests change), so many answers
+  cost one write and a single host's result comes as soon as it answers. A
+  host is `:served` once the write that put it in the file has succeeded.
+  The file is read just before each write, and every bound host another node
+  wrote there stays. When that read fails, the file is left as
   it is and the error reported, while the hosts' states still follow the
   registry and their lookups.
 
