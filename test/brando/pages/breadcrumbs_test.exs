@@ -46,6 +46,34 @@ defmodule Brando.Pages.BreadcrumbsTest do
     trash_and_restore(Factory.insert(:random_user, role: :superuser))
   end
 
+  describe "a live page under a trashed page" do
+    setup do
+      put_test_env(:tenancy_mode, :none)
+      user = Factory.insert(:random_user, role: :superuser)
+      a = page!(user, %{title: "A", uri: "a"})
+      b = page!(user, %{title: "B", uri: "a/b", parent_id: a.id})
+      c = page!(user, %{title: "C", uri: "a/b/c", parent_id: b.id})
+      %{user: user, a: a, b: b, c: c, app_name: Brando.config(:app_name)}
+    end
+
+    test "loses a page trashed above the trashed one", %{user: user, a: a, b: b, c: c, app_name: app_name} do
+      {:ok, _} = Pages.delete_page(b.id, user)
+      assert trail(c) == [app_name, "A", "C"]
+
+      {:ok, _} = Pages.delete_page(a.id, user)
+      assert trail(c) == [app_name, "C"]
+    end
+
+    test "takes back a page restored above the trashed one", %{user: user, a: a, b: b, c: c, app_name: app_name} do
+      {:ok, _} = Pages.delete_page(a.id, user)
+      {:ok, _} = Pages.delete_page(b.id, user)
+      assert trail(c) == [app_name, "C"]
+
+      {:ok, _} = Boundary.restore(user, Repo.get!(Page, a.id))
+      assert trail(c) == [app_name, "A", "C"]
+    end
+  end
+
   test "with groups authorization, in the trash's and the restore's transaction" do
     put_test_env(:authorization_mode, :groups)
     put_test_env(:tenancy_mode, :none)

@@ -760,16 +760,15 @@ defmodule Brando.Pages do
     collect_ancestors(parent, if(parent.deleted_at, do: acc, else: [parent | acc]))
   end
 
+  # A deleted child keeps its stored trail, but the walk goes through it: the
+  # live pages under it have trails too
   defp update_descendant_breadcrumbs(%Page{} = page) do
-    children =
-      Page
-      |> where([p], p.parent_id == ^page.id)
-      |> where([p], is_nil(p.deleted_at))
-      |> Brando.Repo.all()
-
-    Enum.each(children, fn child ->
-      child = %{child | parent: page}
-      update_breadcrumbs(child)
+    Page
+    |> where([p], p.parent_id == ^page.id)
+    |> Brando.Repo.all()
+    |> Enum.each(fn
+      %Page{deleted_at: nil} = child -> update_breadcrumbs(%{child | parent: page})
+      child -> update_descendant_breadcrumbs(child)
     end)
   end
 
