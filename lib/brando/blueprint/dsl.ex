@@ -316,11 +316,11 @@ defmodule Brando.Blueprint.Dsl do
 
   defp generated_asset_fields do
     quote location: :keep, unquote: false do
-      # Through `__assets__/1`, which resolves each `cfg:` when it is read.
-      def __file_fields__, do: Brando.Blueprint.Assets.__assets__(__MODULE__, :file)
-      def __image_fields__, do: Brando.Blueprint.Assets.__assets__(__MODULE__, :image)
-      def __video_fields__, do: Brando.Blueprint.Assets.__assets__(__MODULE__, :video)
-      def __gallery_fields__, do: Brando.Blueprint.Assets.__assets__(__MODULE__, :gallery)
+      # `__file_fields__/0` and the like, through `__assets__/2`, which
+      # resolves each `cfg:` when it is read.
+      for type <- [:file, :image, :video, :gallery] do
+        def unquote(:"__#{type}_fields__")(), do: Brando.Blueprint.Assets.__assets__(__MODULE__, unquote(type))
+      end
     end
   end
 
