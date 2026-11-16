@@ -95,9 +95,11 @@ collision rules may still return an error or raise a constraint exception.
 
 Restoration clears deletion, recreates the identifier where applicable, and
 evicts query caches. It is not a replacement for all domain-specific update
-callbacks. For imported/restored pages, recompute breadcrumbs when needed with
-`Brando.Pages.update_breadcrumbs(restored)` and verify dependent block/static
-output. Deleted rows should not leak into custom `Repo` queries: add an explicit
+callbacks. Trashing a page with `Pages.delete_page/2` and restoring it through
+the restore boundary recompute the breadcrumbs of the page's live descendants
+(and, on restore, the page's own). After a low-level `Brando.Repo.restore/1`
+or an import, recompute them with `Brando.Pages.update_breadcrumbs(restored)`,
+and verify dependent block/static output. Deleted rows should not leak into custom `Repo` queries: add an explicit
 `is_nil(entry.deleted_at)` condition or use `Brando.SoftDelete.Query.exclude_deleted/1`.
 
 ## Retention and media

@@ -100,7 +100,15 @@ defmodule Brando.Pages do
     end
   end
 
-  mutation :delete, Page
+  # A trail leaves out a deleted parent: the live descendants' trails drop
+  # the trashed page
+  mutation :delete, Page do
+    fn entry ->
+      update_descendant_breadcrumbs(entry)
+      Brando.Cache.Query.evict_all(Page)
+      {:ok, entry}
+    end
+  end
 
   mutation :duplicate,
            {Page,
@@ -679,6 +687,18 @@ defmodule Brando.Pages do
 
       error ->
         error
+    end
+  end
+
+  @doc """
+  Bring the trails of a restored page and its live descendants up to date:
+  each of them takes the page back in. `Brando.Authorization.Boundary.restore/2`
+  calls this in the restore's transaction.
+  """
+  def restored(%Page{} = page) do
+    with {:ok, page} <- update_breadcrumbs(page) do
+      Brando.Cache.Query.evict_all(Page)
+      {:ok, page}
     end
   end
 

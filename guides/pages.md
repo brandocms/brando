@@ -136,7 +136,9 @@ content SEO audit leaves it out. Filter the flag in your controllers, and use
 <!-- usage-rules:end -->
 
 Page context creates and updates recompute `breadcrumbs` for the page and its
-non-deleted descendants. Each element has string keys `"title"` and `"uri"`.
+non-deleted descendants. Trashing a page (`Pages.delete_page/2`) recomputes its
+descendants' trails, and restoring it (`Brando.Authorization.Boundary.restore/2`)
+recomputes its own and its descendants'. Each element has string keys `"title"` and `"uri"`.
 The stored trail starts with the configured app name at `/`, followed by the
 ancestors and current page; a deleted ancestor is left out. It stores
 `"/" <> page.uri`; it does **not** add a

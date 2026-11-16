@@ -236,13 +236,18 @@ defmodule Brando.Authorization.Boundary do
   defp restore_entry(user, %{__struct__: schema} = entry) do
     with changeset <- Ecto.Changeset.change(entry, deleted_at: nil),
          :ok <- change(user, :update, changeset),
-         {:ok, restored} <- Repo.restore(entry) do
+         {:ok, restored} <- Repo.restore(entry),
+         {:ok, restored} <- after_restore(restored) do
       Brando.Activity.restored(restored, user)
       Brando.Notes.entry_restored(schema, entry)
       Brando.Cache.entry_changed(restored)
       {:ok, restored}
     end
   end
+
+  # Matched by name: a struct pattern would make this module depend on the page blueprint at compile time
+  defp after_restore(%{__struct__: Brando.Pages.Page} = page), do: Brando.Pages.restored(page)
+  defp after_restore(entry), do: {:ok, entry}
 
   def change(:system, _, _), do: :ok
 
