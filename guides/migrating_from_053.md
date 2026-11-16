@@ -1935,7 +1935,8 @@ has the fixes.
   adds, and the application does not boot without them. Brando's Repo is the
   one `config :brando, repo_module:` names, or the application's only Repo
   under `lib/`; other Repos are left alone, and when it cannot tell which is
-  Brando's it says so and names the line to add;
+  Brando's it says so and names the line to add (`--repo MyApp.Repo` names
+  it);
 - defaults an unconfigured Swoosh API client to `Swoosh.ApiClient.Req` and
   pins declared `phoenix_live_view` dependencies in `assets/**/package.json`
   to the loaded server version;
