@@ -208,7 +208,8 @@ defmodule Brando.Tenant.ServedHosts do
     # `own`: this server's addresses as last looked up, with the name and
     # when (monotonic milliseconds).
     # `writing`: the reference of the write under way, `write_job` what it was
-    # given. `write_requested`, `check_requested`: a write, or a check (a write
+    # given. `generation`: counts the drops of the work under way; a write's
+    # result counts only for the file and generation it started with. `write_requested`, `check_requested`: a write, or a check (a write
     # whose result queues lookups), asked for and not started yet.
     # `waiters`: callers of `check/0` and `settled/0` waiting for the lookups.
     state = %{
@@ -227,6 +228,7 @@ defmodule Brando.Tenant.ServedHosts do
       own: nil,
       writing: nil,
       write_job: nil,
+      generation: 0,
       write_requested: false,
       check_requested: false,
       waiters: []
@@ -351,7 +353,8 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   # Lookups under way are left to their tasks, which stop at their timeout,
-  # and a write under way to its own check of the configuration
+  # and a write under way to its own check of the configuration; a new
+  # generation keeps either's result out of what follows
   defp drop(state) do
     for {ref, {_target, _batch, deadline}} <- state.lookups do
       Process.demonitor(ref, [:flush])
@@ -361,6 +364,7 @@ defmodule Brando.Tenant.ServedHosts do
     %{
       cancel_flush(state)
       | settings: nil,
+        generation: state.generation + 1,
         lookups: %{},
         queue: :queue.new(),
         results: %{},
@@ -486,6 +490,7 @@ defmodule Brando.Tenant.ServedHosts do
     job = %{
       owner: self(),
       file: state.settings.file,
+      generation: state.generation,
       keep: MapSet.union(state.admitted, MapSet.new(admit)),
       check?: state.check_requested
     }
@@ -574,11 +579,21 @@ defmodule Brando.Tenant.ServedHosts do
     state = %{state | writing: nil, write_job: nil}
 
     case current(state) do
-      {:ok, state} when result == :cancelled -> state |> request_write() |> settle()
-      {:ok, state} -> state |> apply_write(job, result) |> maybe_start_write() |> settle()
-      {:stopped, state} -> settle(state)
+      {:ok, state} ->
+        cond do
+          # Work dropped since it started, for another file or not: what it
+          # found is not this file's, and the write asked for since follows
+          not same_work?(state, job) -> state |> maybe_start_write() |> settle()
+          result == :cancelled -> state |> request_write() |> settle()
+          true -> state |> apply_write(job, result) |> maybe_start_write() |> settle()
+        end
+
+      {:stopped, state} ->
+        settle(state)
     end
   end
+
+  defp same_work?(state, job), do: job.file == state.settings.file and job.generation == state.generation
 
   # What a write found, in the state and the status: the hosts in the file
   # now, the others' last answers, and lookups for any host a check found

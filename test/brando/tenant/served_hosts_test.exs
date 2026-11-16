@@ -216,6 +216,17 @@ defmodule Brando.Tenant.ServedHostsTest do
     end
   end
 
+  # Polls until the process has `count` messages waiting, for up to two seconds
+  defp await_mailbox(pid, count, tries \\ 200) do
+    {:message_queue_len, waiting} = Process.info(pid, :message_queue_len)
+
+    cond do
+      waiting >= count -> :ok
+      tries == 0 -> flunk("#{waiting} messages waiting, not #{count}")
+      true -> Process.sleep(10) && await_mailbox(pid, count, tries - 1)
+    end
+  end
+
   defp flush_lookups do
     receive do
       {:looked_up, _host} -> flush_lookups()
@@ -962,6 +973,40 @@ defmodule Brando.Tenant.ServedHostsTest do
       release_write(writer)
       assert %{hosts: %{"old-acme.test" => :served}} = ServedHosts.settled()
       assert lines(file) == ["acme.test", "old-acme.test"]
+    end
+
+    test "a write of the old file that ends after the file changed admits nothing to the new one",
+         %{path: file, tmp_dir: tmp_dir, site: site} do
+      DNS.answer("a.acme.test", [@here])
+      bind(site, "a", "a.acme.test")
+      # A lookup under way, whose answer comes once the file has changed
+      DNS.hold("h.acme.test", self())
+      {:ok, _} = Registry.create_environment(site, %{name: "h", key: "h", domain: "h.acme.test"}, actor: :system)
+      assert_receive {:looking_up, "h.acme.test", lookup}
+      # Another node sharing the path wrote over it, so the next write renames
+      File.write!(file, "")
+      hold_renames(file)
+      ServedHosts.registry_changed()
+      assert_receive {:renaming, writer}
+
+      # The answer arrives first; the write to the old file then passes its
+      # checks and ends; then the file changes, to a server whose addresses differ
+      pid = Process.whereis(ServedHosts)
+      :sys.suspend(pid)
+      send(lookup, :answer)
+      await_mailbox(pid, 1)
+      release_rename(writer)
+      new_file = Path.join(tmp_dir, "other_hosts")
+      put_test_env(ServedHosts, file: new_file, addresses: [@elsewhere])
+      :sys.resume(pid)
+
+      # The new file's check looks every host up
+      assert_receive {:looking_up, "h.acme.test", lookup}
+      send(lookup, :answer)
+
+      assert %{file: ^new_file, hosts: %{"a.acme.test" => {:waiting, [@here]}}} = ServedHosts.settled()
+      assert File.read!(new_file) == ""
+      assert lines(file) == ["a.acme.test"]
     end
 
     test "a file that cannot be read still gives a newly bound host its state and its result",
