@@ -237,4 +237,42 @@ defmodule BrandoWeb.FallbackControllerTest do
     assert conn.resp_body == "Page not found"
     refute Map.has_key?(conn.assigns, :partials)
   end
+
+  test "a static build's request for the error page's path is answered by no redirect rule" do
+    put_test_env(:use_default_errors, true)
+    put_test_env(:endpoint_module, ErrorEndpoint)
+
+    # Rules match as prefixes: each of these matches the error page's path
+    seo = %Brando.Sites.SEO{
+      redirects: [
+        %Brando.Sites.Redirect{from: "/:slug", to: "/", code: 301},
+        %Brando.Sites.Redirect{from: "/.*", to: "https://example.com/", code: 301}
+      ]
+    }
+
+    cached = Cachex.get!(:cache, :seo)
+    Cachex.put(:cache, :seo, %{"en" => seo})
+    on_exit(fn -> if cached, do: Cachex.put(:cache, :seo, cached), else: Cachex.del(:cache, :seo) end)
+
+    request = fn path, build? ->
+      conn = build_conn(:get, path)
+      conn = if build?, do: Plug.Conn.put_private(conn, :brando_ssg_build, true), else: conn
+
+      conn
+      |> Plug.Test.init_test_session(%{})
+      |> assign(:language, "en")
+      |> Controller.put_view(html: ResourceHTML)
+      |> Controller.put_format("html")
+      |> Controller.put_layout(false)
+      |> FallbackController.call({:error, {:page, :not_found}})
+    end
+
+    for path <- [Brando.SSG.not_found_path(), "/en" <> Brando.SSG.not_found_path()] do
+      assert %{status: 404, resp_body: "Page not found"} = request.(path, true)
+      assert %{status: 301} = request.(path, false)
+    end
+
+    # Only that path: a build's other requests are answered as any other
+    assert %{status: 301} = request.("/old-page", true)
+  end
 end

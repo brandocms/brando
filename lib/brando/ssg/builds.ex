@@ -27,7 +27,9 @@ defmodule Brando.SSG.Builds do
   @doc """
   Queues a versioned build for one named environment. Its assets are the set
   the environment uses (`Brando.Assets.SiteAssets.effective_set/2`), unless
-  `:asset_set` names one.
+  `:asset_set` names one. It deploys when it is ready if `:auto_deploy` (by
+  default the site's setting) says so and the site has a deployment target
+  (`deploy_target?/1`).
   """
   @spec request_build(Site.t(), Environment.t(), keyword()) ::
           {:ok, Build.t()} | {:error, Ecto.Changeset.t() | term()}
@@ -55,7 +57,7 @@ defmodule Brando.SSG.Builds do
       [:schedule, :deploy]
       |> Enum.filter(fn
         :schedule -> not is_nil(opts[:scheduled_at])
-        :deploy -> Keyword.get(opts, :auto_deploy, deploy_config(site)["auto_deploy"] || false)
+        :deploy -> auto_deploy?(site, opts)
       end)
 
     Enum.reduce_while(actions, :ok, fn action, :ok ->
@@ -200,7 +202,7 @@ defmodule Brando.SSG.Builds do
       status: :queued,
       build_path: Path.join(build_root(site), version),
       note: Keyword.get(opts, :note),
-      auto_deploy: Keyword.get(opts, :auto_deploy, deploy_config["auto_deploy"] || false),
+      auto_deploy: auto_deploy?(site, opts),
       deploy_config: deploy_config,
       markdown_context: Keyword.get(opts, :markdown_context, %{}),
       preview_token: preview_token(),
@@ -271,6 +273,20 @@ defmodule Brando.SSG.Builds do
     |> Kernel.||(0)
     |> Kernel.+(1)
   end
+
+  # Only with a target to deploy to: without one a deploy can only fail
+  defp auto_deploy?(%Site{} = site, opts) do
+    deploy_target?(site) and Keyword.get(opts, :auto_deploy, site_auto_deploy?(site)) == true
+  end
+
+  # From the struct: `deploy_config/1` serializes booleans as strings
+  defp site_auto_deploy?(%Site{deploy_config: %DeployConfig{auto_deploy: auto_deploy}}), do: auto_deploy == true
+  defp site_auto_deploy?(%Site{}), do: false
+
+  @doc "Whether a site's deployment settings name a strategy and a target to deploy builds to."
+  @spec deploy_target?(Site.t() | map()) :: boolean()
+  def deploy_target?(%Site{} = site), do: deploy_target?(deploy_config(site))
+  def deploy_target?(config), do: config["strategy"] not in [nil, ""] and config["target"] not in [nil, ""]
 
   defp deploy_config(%Site{deploy_config: %DeployConfig{} = config}) do
     config

@@ -17,9 +17,15 @@ defmodule Brando.Plug.Tenant do
   308 for other methods. One that carries a static build's valid signed
   context (`Brando.SSG.Context`) is served under that context instead. A response for an environment that is not live
   carries `X-Robots-Tag: noindex, nofollow`.
+
+  A request resolved from a static build's signed context is marked
+  `conn.private.brando_ssg_build`, so what answers it can answer as the
+  site's public host would (`BrandoWeb.SEOController`). With
+  `tenancy_mode: :none` one that carries a valid signed context is marked
+  (`Brando.SSG.Context.build_request?/1`).
   """
 
-  import Plug.Conn, only: [assign: 3, halt: 1, put_resp_header: 3, send_resp: 3]
+  import Plug.Conn, only: [assign: 3, halt: 1, put_private: 3, put_resp_header: 3, send_resp: 3]
 
   alias Brando.SSG.Context
   alias Brando.Tenant
@@ -41,15 +47,18 @@ defmodule Brando.Plug.Tenant do
         # A static build of a site whose base URL is now a redirect host
         # fetches every page on that host, with its signed context
         case build_context(conn) do
-          {site, built_environment} -> put_tenant(conn, site, built_environment)
+          {site, built_environment} -> conn |> mark_build() |> put_tenant(site, built_environment)
           nil -> redirect(conn, environment.domain)
         end
     end
   end
 
   defp resolve_tenant(conn) do
-    case resolve(conn) do
-      {site, environment} ->
+    case resolve_with_source(conn) do
+      {:build, site, environment} ->
+        conn |> mark_build() |> put_tenant(site, environment)
+
+      {_source, site, environment} ->
         put_tenant(conn, site, environment)
 
       nil ->
@@ -57,10 +66,15 @@ defmodule Brando.Plug.Tenant do
 
         case shared_preview_tenant(conn) do
           {site, environment} -> put_tenant(conn, site, environment)
-          nil -> reject_missing_multi_site(conn)
+          nil -> conn |> mark_standalone_build() |> reject_missing_multi_site()
         end
     end
   end
+
+  defp mark_build(conn), do: put_private(conn, :brando_ssg_build, true)
+
+  # With `tenancy_mode: :none` a build's signed context names no site
+  defp mark_standalone_build(conn), do: if(Context.build_request?(conn), do: mark_build(conn), else: conn)
 
   defp put_tenant(conn, site, environment) do
     prefix = Tenant.prefix(site, environment)
@@ -134,19 +148,37 @@ defmodule Brando.Plug.Tenant do
   `Brando.Plug.I18n.put_locale/2` when it runs before this plug.
   """
   @spec resolve(Plug.Conn.t()) :: {Brando.Sites.Site.t(), Brando.Environments.Environment.t()} | nil
-  # Internal preview rendering has a server-resolved workspace but no frontend
-  # host. This private connection metadata cannot be supplied by an HTTP client.
-  def resolve(%{
-        private: %{
-          brando_live_preview: true,
-          brando_preview_context:
-            {%Brando.Sites.Site{id: id} = site, %Brando.Environments.Environment{site_id: id} = environment}
-        }
-      }) do
-    {site, environment}
+  def resolve(conn) do
+    case resolve_with_source(conn) do
+      {_source, site, environment} -> {site, environment}
+      nil -> nil
+    end
   end
 
-  def resolve(conn), do: build_context(conn) || Frontend.resolve(conn.host)
+  # Internal preview rendering has a server-resolved workspace but no frontend
+  # host. This private connection metadata cannot be supplied by an HTTP client.
+  defp resolve_with_source(%{
+         private: %{
+           brando_live_preview: true,
+           brando_preview_context:
+             {%Brando.Sites.Site{id: id} = site, %Brando.Environments.Environment{site_id: id} = environment}
+         }
+       }) do
+    {:preview, site, environment}
+  end
+
+  defp resolve_with_source(conn) do
+    case build_context(conn) do
+      {site, environment} ->
+        {:build, site, environment}
+
+      nil ->
+        case Frontend.resolve(conn.host) do
+          {site, environment} -> {:host, site, environment}
+          nil -> nil
+        end
+    end
+  end
 
   defp build_context(conn) do
     conn

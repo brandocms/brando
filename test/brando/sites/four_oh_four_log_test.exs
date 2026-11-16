@@ -30,6 +30,19 @@ defmodule Brando.Sites.FourOhFourLogTest do
 
   defp rows, do: Brando.Repo.all(from h in NotFoundHit, order_by: [asc: h.url, asc: h.referrer])
 
+  test "a static build's request is not counted, under a language prefix too" do
+    for path <- [Brando.SSG.not_found_path(), "/en" <> Brando.SSG.not_found_path(), "/about.md"] do
+      FourOhFour.add_404(
+        Plug.Conn.put_private(%Plug.Conn{path_info: String.split(path, "/", trim: true)}, :brando_ssg_build, true)
+      )
+    end
+
+    miss("/old/page")
+
+    assert FourOhFour.flush() == 1
+    assert [%{url: "/old/page"}] = rows()
+  end
+
   test "hits are buffered, then stored as daily totals per URL and referrer" do
     miss("/old/page", "https://example.com/blog?utm_source=x#top")
     miss("/old/page", "https://example.com/blog")

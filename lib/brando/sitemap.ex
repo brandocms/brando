@@ -41,6 +41,7 @@ defmodule Brando.Sitemap do
   alias Brando.Authorization.Boundary
   alias Brando.Tenant
   alias Brando.Tracing
+  alias Brando.Utils
 
   @doc """
   Convenience macro for creating a sitemap function
@@ -190,19 +191,59 @@ defmodule Brando.Sitemap do
   end
 
   defp do_generate_sitemap(opts) do
-    sitemap_module = Brando.web_module(Sitemap)
+    sitemap_path = Path.join([Brando.Tenant.Storage.current_media_root(), "sitemaps"])
+    persist(Brando.web_module(Sitemap), sitemap_path, opts)
+  rescue
+    UndefinedFunctionError ->
+      :ok
+  end
+
+  @doc """
+  Writes the sitemap of the environment the process works in to `path`, for
+  a static build (`Brando.SSG.build/3`): the files `generate_sitemap/1`
+  writes, from `:module` (by default the application's `Sitemap`), with the
+  index naming them under the site's public base URL
+  (`Brando.Utils.public_hostname/0`) and entries on the site's own host moved
+  to that base URL too. Unlike `generate_sitemap/1` it reads the environment
+  the process works in, not the live one, and it reads as the system.
+
+  `{:ok, file_names}`, `{:ok, []}` without a sitemap module (`module: nil` for none) or entries, or
+  `{:error, message}` when generating raised. Other options go to Sitemapper.
+  """
+  @spec write_static(String.t(), keyword()) :: {:ok, [String.t()]} | {:error, String.t()}
+  def write_static(path, opts \\ []) do
+    {module, opts} = Keyword.pop_lazy(opts, :module, &Brando.sitemap/0)
+
+    if is_atom(module) and not is_nil(module) and exists?(module) do
+      Boundary.with_scope(nil, fn ->
+        File.mkdir_p!(path)
+        {:ok, files} = persist(module, path, opts)
+        {:ok, Enum.map(files, fn {file_name, _body} -> file_name end)}
+      end)
+    else
+      {:ok, []}
+    end
+  rescue
+    exception -> {:error, Exception.message(exception)}
+  end
+
+  defp persist(sitemap_module, sitemap_path, opts) do
     sitemap_functions = sitemap_module.__info__(:functions)
+    site_base = Utils.hostname()
+    public_base = Utils.public_hostname()
 
     entries =
       Stream.flat_map(sitemap_functions, fn {fun, _arity} ->
-        sitemap_module |> apply(fun, []) |> reject_without_loc(fun)
+        sitemap_module
+        |> apply(fun, [])
+        |> reject_without_loc(fun)
+        |> Stream.map(&on_public_base(&1, site_base, public_base))
       end)
 
-    sitemap_path = Path.join([Brando.Tenant.Storage.current_media_root(), "sitemaps"])
     File.mkdir_p!(sitemap_path)
 
     default_opts = [
-      sitemap_url: Brando.Utils.public_hostname("sitemaps"),
+      sitemap_url: Utils.public_hostname("sitemaps"),
       store: Sitemapper.FileStore,
       store_config: [
         path: sitemap_path
@@ -218,8 +259,24 @@ defmodule Brando.Sitemap do
       |> Enum.to_list()
       |> tap(&Tracing.set_attributes(%{"brando.file_count": length(&1)}))
     end)
-  rescue
-    UndefinedFunctionError ->
-      :ok
+  end
+
+  # An entry on the host of the environment the process works in names the
+  # public base URL instead, as a stored sitemap must. The same URL when the
+  # environment is the live one.
+  defp on_public_base(url, base, base), do: url
+
+  defp on_public_base(%Sitemapper.URL{loc: loc} = url, site_base, public_base) when is_binary(loc) do
+    %{url | loc: rebase(loc, site_base, public_base)}
+  end
+
+  defp on_public_base(url, _site_base, _public_base), do: url
+
+  defp rebase(loc, site_base, public_base) do
+    cond do
+      loc == site_base -> public_base
+      String.starts_with?(loc, site_base <> "/") -> public_base <> String.replace_prefix(loc, site_base, "")
+      true -> loc
+    end
   end
 end
