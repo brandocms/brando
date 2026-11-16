@@ -46,6 +46,17 @@ reasoning.
   `ai_actions: [generate: [prompt: "…", from: [:title]]]`.
 ```
 
+A change that adds a Brando migration names the same commands every time:
+
+```markdown
+  Run `mix brando.gen.migrations` for `brando_230`, then `mix brando.migrate` before the new release starts.
+```
+
+with `mix brando.migrate --tenants` after it for a tenant migration. When the
+migration changes a table a release reads at boot (`sites`, `environments`),
+add that the release stops at boot until it has run; the deployment guide's
+"Running migrations" has the steps with a release.
+
 Changes a Brando project cannot see (tests, CI, refactors, agent docs) have
 no entry. An entry is a list item starting `- `, with no headings.
 

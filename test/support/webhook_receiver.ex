@@ -148,9 +148,30 @@ defmodule Brando.ServedHostsTestResolver do
   @behaviour Brando.Tenant.ServedHosts.Resolver
 
   @key {__MODULE__, :answers}
+  @held_key {__MODULE__, :held}
 
   @impl true
-  def lookup(host), do: Map.get(:persistent_term.get(@key, %{}), host, {:error, :nxdomain})
+  def lookup(host) do
+    case Map.fetch(:persistent_term.get(@held_key, %{}), host) do
+      {:ok, pid} ->
+        send(pid, {:looking_up, host, self()})
+
+        receive do
+          :answer -> answer(host)
+        end
+
+      :error ->
+        answer(host)
+    end
+  end
+
+  defp answer(host), do: Map.get(:persistent_term.get(@key, %{}), host, {:error, :nxdomain})
+
+  @doc """
+  Holds every lookup of `host`: each sends `{:looking_up, host, lookup}` to
+  `pid` and answers once `lookup` is sent `:answer`.
+  """
+  def hold(host, pid), do: :persistent_term.put(@held_key, Map.put(:persistent_term.get(@held_key, %{}), host, pid))
 
   @doc "Makes `host` resolve to `addresses` (strings), or fail with `{:error, reason}`."
   def answer(host, {:error, _reason} = error), do: put(host, error)
@@ -159,7 +180,10 @@ defmodule Brando.ServedHostsTestResolver do
     put(host, {:ok, Enum.map(addresses, &parse!/1)})
   end
 
-  def reset, do: :persistent_term.erase(@key)
+  def reset do
+    :persistent_term.erase(@key)
+    :persistent_term.erase(@held_key)
+  end
 
   defp put(host, answer), do: :persistent_term.put(@key, Map.put(:persistent_term.get(@key, %{}), host, answer))
 

@@ -1086,6 +1086,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     setup %{site: site, tmp_dir: tmp_dir} do
       on_exit(&Brando.ServedHostsTestResolver.reset/0)
       put_test_env(Brando.Tenant.ServedHosts, file: Path.join(tmp_dir, "served_hosts"), addresses: ["203.0.113.10"])
+      # Before the creates: each starts lookups, and a later answer could miss them
+      Brando.ServedHostsTestResolver.answer("www.acme.test", ["203.0.113.10"])
+      Brando.ServedHostsTestResolver.answer("away.acme.test", ["198.51.100.7"])
 
       envs =
         for {key, host} <- [served: "www.acme.test", away: "away.acme.test", missing: "missing.acme.test"], into: %{} do
@@ -1097,8 +1100,6 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
           {key, environment}
         end
 
-      Brando.ServedHostsTestResolver.answer("www.acme.test", ["203.0.113.10"])
-      Brando.ServedHostsTestResolver.answer("away.acme.test", ["198.51.100.7"])
       Brando.Tenant.ServedHosts.check()
       envs
     end
@@ -1287,6 +1288,26 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       now_served = view |> redirect_host_status(served, "old-acme.test") |> render()
       assert now_served =~ "Served"
       refute now_served =~ "Waiting for DNS"
+    end
+
+    test "a redirect host saved on the screen reads Checking at once, then where it stands", %{
+      conn: conn,
+      served: served
+    } do
+      Brando.ServedHostsTestResolver.hold("new-acme.test", self())
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      view
+      |> element("#environment-#{served.id} form[phx-submit=update_domain]")
+      |> render_submit(%{"domain" => "www.acme.test", "redirect_hosts" => "new-acme.test"})
+
+      assert_receive {:looking_up, "new-acme.test", lookup}
+      assert view |> redirect_host_status(served, "new-acme.test") |> render() =~ "Checking"
+
+      send(lookup, :answer)
+      Brando.Tenant.ServedHosts.settled()
+
+      assert view |> redirect_host_status(served, "new-acme.test") |> render() =~ "Does not resolve"
     end
 
     test "a redirect host that is no full host name, or the installation's own, says so", %{
