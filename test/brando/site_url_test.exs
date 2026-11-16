@@ -306,6 +306,39 @@ defmodule Brando.SiteURLTest do
     end
   end
 
+  describe "a live switch" do
+    test "on a :static site, renders the stored block JSON-LD again on the new live environment's domain", context do
+      {:ok, _} = Registry.update_site(Registry.get_site(context.site.id), %{delivery_mode: :static})
+      user = Brando.Factory.insert(:random_user)
+      pages = for key <- ~w(production staging), into: %{}, do: {key, in_environment(key, fn -> json_ld_page!(user) end)}
+
+      set_live(context.site, "staging")
+      assert Registry.get_environment_by_key(context.site, "staging").domain == "staging.acme.test"
+
+      for {key, page} <- pages do
+        in_environment(key, fn ->
+          html = rendered_blocks(page)
+          assert html =~ ~S(http:\/\/staging.acme.test\/en\/work)
+          refute html =~ ~S(http:\/\/acme.test)
+        end)
+      end
+    end
+
+    test "on a :dynamic site, where the public base URL stays, renders nothing again", context do
+      user = Brando.Factory.insert(:random_user)
+      page = in_environment("production", fn -> json_ld_page!(user) end)
+
+      jobs =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          set_live(context.site, "staging")
+          all_enqueued(worker: Brando.Worker.EntryRenderer)
+        end)
+
+      refute Enum.any?(jobs, &(&1.args["entry_id"] == page.id))
+      in_environment("production", fn -> assert rendered_blocks(page) =~ ~S(http:\/\/acme.test\/en\/work) end)
+    end
+  end
+
   describe "when the live environment's domain changes on another node" do
     # This node's record of the registry writes its cache has caught up with
     @registry_tokens {Brando.Cache.Freshness, :registry}

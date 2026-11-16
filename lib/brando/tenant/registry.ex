@@ -304,18 +304,26 @@ defmodule Brando.Tenant.Registry do
     |> refresh_cache_on_success()
   end
 
-  # Stored block HTML names the site's public base URL, the live
-  # environment's domain (`Brando.Utils.public_hostname/0`). Searched once
-  # the domain is committed and this node's cache holds it; what fails there
-  # is logged and leaves the domain saved.
   defp rerender_on_public_domain_change({:ok, %Environment{live: true, site_id: site_id}} = result, %{
          changes: %{domain: _domain}
        }) do
-    Repo.after_commit({:public_url_rerender, site_id}, fn -> rerender_public_urls(site_id) end, late: true)
+    rerender_public_urls_after_commit(site_id)
     result
   end
 
   defp rerender_on_public_domain_change(result, _changeset), do: result
+
+  @doc """
+  Renders again, in every environment of the site `site_id`, the entries
+  whose stored HTML names the site's public base URL, its live environment's
+  domain (`Brando.Content.Blocks.rerender_public_urls/2`): for a write that
+  changes that domain. Queued once the transaction around the caller has
+  committed and this node's cache holds the write; what fails there is
+  logged and leaves the write as it is.
+  """
+  @spec rerender_public_urls_after_commit(pos_integer()) :: :ok
+  def rerender_public_urls_after_commit(site_id),
+    do: Repo.after_commit({:public_url_rerender, site_id}, fn -> rerender_public_urls(site_id) end, late: true)
 
   defp rerender_public_urls(site_id) do
     case get_site(site_id) do
