@@ -996,6 +996,33 @@
       grid-template-columns: repeat(2, minmax(0, 348px));
     }
 
+    /* The seeding of a language added: a state line per environment and
+       language, with Seed again at its end */
+    .site-seeding table {
+      table-layout: auto;
+    }
+
+    .site-seeding td:nth-child(n) {
+      width: auto;
+      padding: 8px 12px 8px 0;
+      font-family: inherit;
+      font-size: var(--brando-text-md);
+      line-height: 1.5;
+    }
+
+    .site-seeding td:last-child {
+      padding-right: 0;
+      text-align: right;
+    }
+
+    .site-seeding tr:first-child td {
+      padding-top: 0;
+    }
+
+    .site-seeding tr:last-child td {
+      padding-bottom: 0;
+    }
+
     /* A user's name and email take the row, the role and Revoke go under:
        the column is too narrow for the operation tables' fixed proportions */
     .site-card__users :is(table, tbody) {
