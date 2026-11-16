@@ -241,6 +241,85 @@ defmodule Mix.Brando.Igniter.InstallTest do
     refute notice?.(", websocket: #{check}, longpoll: false")
   end
 
+  test "with several sites the /live socket gives its URI; otherwise it is as before" do
+    path = "lib/studio_web/endpoint.ex"
+
+    multi = project() |> install(["--tenancy-mode", "multi"])
+    assert multi.issues == []
+    assert IgniterCase.source(multi, path) =~ ~r{websocket: \[connect_info: \[:uri, session: @session_options\]\]}
+    refute Enum.any?(multi.notices, &(&1 =~ "socket \"/live\""))
+
+    applied = Igniter.Test.apply_igniter!(multi)
+    reloaded = Enum.reduce(Map.keys(applied.assigns.test_files), applied, &Igniter.include_existing_file(&2, &1))
+    rerun = install(reloaded)
+    Igniter.Test.assert_unchanged(rerun, path)
+    refute Enum.any?(rerun.notices, &(&1 =~ "socket \"/live\""))
+
+    for args <- [[], ["--tenancy-mode", "single", "--site-key", "studio"]] do
+      refute project() |> install(args) |> IgniterCase.source(path) =~ ":uri"
+    end
+  end
+
+  test "the /live socket's transports get :uri when their options are literal, and a notice otherwise" do
+    plan = fn options ->
+      endpoint = """
+      defmodule StudioWeb.Endpoint do
+        use Phoenix.Endpoint, otp_app: :studio
+        @session_options [store: :cookie, key: "_studio_key", signing_salt: "preserve-this-salt"]
+        @live_options [connect_info: [session: @session_options]]
+        socket "/live", Phoenix.LiveView.Socket#{options}
+        plug Plug.Static, at: "/", from: :studio, only: ~w(assets)
+        plug Plug.Session, @session_options
+        plug StudioWeb.Router
+      end
+      """
+
+      igniter = %{"lib/studio_web/endpoint.ex" => endpoint} |> project() |> install(["--tenancy-mode", "multi"])
+      assert igniter.issues == []
+      live = igniter |> IgniterCase.source("lib/studio_web/endpoint.ex") |> live_socket_line()
+      {live, Enum.any?(igniter.notices, &(&1 =~ "socket \"/live\""))}
+    end
+
+    session = "connect_info: [session: @session_options]"
+    uri_session = "connect_info: [:uri, session: @session_options]"
+
+    assert plan.(", websocket: [#{session}], longpoll: [#{session}]") ==
+             {~s(socket "/live", Phoenix.LiveView.Socket, websocket: [#{uri_session}], longpoll: [#{uri_session}]), false}
+
+    assert plan.(", websocket: [connect_info: [:peer_data, :x_headers, session: @session_options]]") ==
+             {~s(socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [:uri, :peer_data, :x_headers, session: @session_options]]),
+              false}
+
+    assert plan.(", websocket: [timeout: 45_000], longpoll: false") ==
+             {~s(socket "/live", Phoenix.LiveView.Socket, websocket: [timeout: 45_000, connect_info: [:uri]], longpoll: false),
+              false}
+
+    already = ~s(socket "/live", Phoenix.LiveView.Socket, websocket: [connect_info: [:peer_data, :uri]])
+    assert plan.(", websocket: [connect_info: [:peer_data, :uri]]") == {already, false}
+
+    for options <- [
+          "",
+          ", websocket: [#{session}], longpoll: true",
+          ", websocket: true",
+          ", websocket: @live_options",
+          ", websocket: [connect_info: @live_options]",
+          ", @live_options"
+        ] do
+      assert plan.(options) == {~s(socket "/live", Phoenix.LiveView.Socket#{options}), true}, options
+    end
+  end
+
+  defp live_socket_line(endpoint) do
+    endpoint
+    |> String.split("\n")
+    |> Enum.drop_while(&(not (&1 =~ ~r{socket[ (]"/live"})))
+    |> Enum.take_while(&(not (&1 =~ ~r/^\s*(plug\b|socket\("\/[^l]|$)/)))
+    |> Enum.map_join(" ", &String.trim/1)
+    |> String.replace(~r/([\[(])\s+/, "\\1")
+    |> String.replace(~r/,?\s+([\])])/, "\\1")
+    |> String.replace(~r/^socket\("(.*)\)$/, ~s(socket "\\1))
+  end
+
   test "tokens and keys are kept out of the request logs" do
     igniter = project() |> install()
     config = IgniterCase.source(igniter, "config/config.exs")

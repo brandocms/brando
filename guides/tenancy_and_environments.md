@@ -869,10 +869,18 @@ the request did. A LiveView's websocket join looks its route up by the host in
 the URL the client sends, not the host the socket connected to, so an admin
 LiveView refuses a connected mount on a host that does not serve the admin,
 as it refuses one without a signed-in user. It can tell only when the
-endpoint's `/live` socket gives the socket's URI: add `:uri` to its
-`connect_info` list (`websocket: [connect_info: [:uri, session: @session_options]]`,
-with whatever else the list holds); without it, the join goes by the host the
-client names.
+endpoint's `/live` socket gives the socket's URI, with `:uri` in each
+transport's `connect_info` list; without it, the join goes by the host the
+client names. `mix brando.install --tenancy-mode multi` adds `:uri` to the
+lists it can read as literals, and prints a notice for a socket line it
+cannot edit (a transport set to `true`, options from a module attribute). An
+existing installation adds it by hand, keeping whatever else the lists hold:
+
+```elixir
+socket "/live", Phoenix.LiveView.Socket,
+  websocket: [connect_info: [:uri, session: @session_options]],
+  longpoll: [connect_info: [:uri, session: @session_options]]
+```
 
 One known limit: the endpoint answers the admin socket's transport paths
 (`/admin/socket/websocket`, `/admin/socket/longpoll`) before the router, so on

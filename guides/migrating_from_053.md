@@ -552,8 +552,10 @@ sender first, before the first compile.
   the endpoint the admin socket's origin check, on both transports:
   `websocket: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]` and
   `longpoll: [check_origin: {BrandoAdmin.AdminHost, :check_origin, []}]`.
-  Add `:uri` to the `connect_info` of `socket "/live"`, so an admin LiveView
-  refuses a join from a socket on a site's host. Frontend edit mode adds nothing to the sites' pages. See
+  Add `:uri` to the `connect_info` list of each transport of `socket "/live"`
+  (`websocket: [connect_info: [:uri, session: @session_options]]`, and the
+  same for `longpoll`), so an admin LiveView refuses a join from a socket on a
+  site's host; a new installation gets it from `mix brando.install`. Frontend edit mode adds nothing to the sites' pages. See
   [Where the admin answers](tenancy_and_environments.md#where-the-admin-answers).
 - **Provider video libraries with several sites.** With `tenancy_mode: :multi`,
   the video picker's "Add from …" button shows only on sites an installation
