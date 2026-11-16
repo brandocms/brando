@@ -196,9 +196,9 @@ defmodule Brando.SSG.LocalDelivery do
 
   defp serve(conn, site) do
     cond do
-      conn.path_info == ["health"] -> let_through(conn, site)
       dynamic_path?(conn) -> conn
       Context.signed?(conn) -> conn
+      conn.path_info == ["health"] -> let_through(conn, site)
       true -> conn |> IndexNow.call([]) |> answer_unless_halted(site)
     end
   end
@@ -280,12 +280,20 @@ defmodule Brando.SSG.LocalDelivery do
   @doc """
   Answers a request this let through for a plug before the router
   (`/health`, or a file the asset pipeline has) that reached the router
-  unanswered: with the build's 404 page, or a plain 404, or 503 when the
-  build is missing, and halts. Any other request is returned untouched.
-  `Brando.Plug.Tenant` calls it first, so no page Phoenix renders answers
-  on a host serving its build.
+  unanswered, and halts: `/health` as the build answers any page path (its
+  `health/index.html`, else its 404 page), a file with the build's 404 page,
+  or a plain 404, and either with 503 when the build is missing. Any other
+  request is returned untouched. `Brando.Plug.Tenant` calls it first, so no
+  page Phoenix renders answers on a host serving its build.
   """
   @spec answer_unanswered(Plug.Conn.t()) :: Plug.Conn.t()
+  def answer_unanswered(%Plug.Conn{path_info: ["health"], private: %{@before_router => %Site{} = site}} = conn) do
+    case published(site) do
+      {:ok, build} -> answer_from(conn, site, build, &send_not_found(&1, build), &unavailable/1)
+      :error -> unavailable(conn)
+    end
+  end
+
   def answer_unanswered(%Plug.Conn{private: %{@before_router => %Site{} = site}} = conn) do
     case published(site) do
       {:ok, build} -> send_not_found(conn, build)

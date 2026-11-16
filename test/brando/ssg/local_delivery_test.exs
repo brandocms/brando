@@ -452,6 +452,21 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert conn.resp_body == "missing v1"
     end
 
+    test "/health without the health plug is the build's page there when it has one", context do
+      context |> ready_build(%{"health/index.html" => "health page"}) |> deploy!()
+
+      conn = dispatch_to(Brando.Test.LocalDeliveryNarrowEndpoint, :get, context.host, "/health")
+      assert conn.status == 200
+      assert conn.resp_body == "health page"
+    end
+
+    test "/health in the application's own paths reaches the router", context do
+      put_test_env(Brando.SSG.LocalDelivery, dynamic_paths: ["/health"])
+
+      conn = dispatch_to(Brando.Test.LocalDeliveryNarrowEndpoint, :get, context.host, "/health")
+      assert conn.resp_body == "dynamic /health in production"
+    end
+
     test "a request local delivery never saw passes the tenant plug as before", context do
       assert dispatch("staging-#{context.site.key}.test", "/js/missing.js").resp_body ==
                "dynamic /js/missing.js in staging"
