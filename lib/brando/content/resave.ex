@@ -30,6 +30,8 @@ defmodule Brando.Content.Resave do
 
   import Ecto.Query, only: [from: 2]
 
+  @options ~w(blueprint site environment otp_app reload_caches confirm info)a
+
   # What other entries embed: re-saved first, each evicted from the query
   # cache once stored, so what embeds it renders its new HTML
   @embedded Brando.Pages.Fragment
@@ -67,8 +69,10 @@ defmodule Brando.Content.Resave do
   @doc """
   Re-saves the entries (see the moduledoc), printing what it does, and
   returns `{:ok, count}` with the number re-saved, `{:ok, :declined}` when
-  `:confirm` said no, or `{:error, message}` for an option that names
-  nothing, before anything is done.
+  `:confirm` said no, or `{:error, message}` before anything is done: for an
+  option it does not take, or a Blueprint, site or environment that does not
+  exist. It prints the message too, unless the caller passed `:info` (the
+  Mix task reports it itself).
 
   Each environment's pass first refreshes that environment's render inputs
   on this node, whatever the node has heard: the identity, globals and menus
@@ -80,10 +84,14 @@ defmodule Brando.Content.Resave do
   """
   @spec run([option]) :: {:ok, non_neg_integer() | :declined} | {:error, String.t()}
   def run(opts \\ []) do
-    started_here? = start(opts[:otp_app] || Brando.otp_app())
     info = opts[:info] || (&IO.puts(ANSI.format(&1)))
+    opts |> resave(info) |> report_error(opts, info)
+  end
 
-    with {:ok, environments} <- environments(opts),
+  defp resave(opts, info) do
+    with :ok <- check_options(opts),
+         started_here? = start(opts[:otp_app] || Brando.otp_app()),
+         {:ok, environments} <- environments(opts),
          {:ok, blueprints, listed?} <- blueprints(opts[:blueprint]) do
       plan = %{blueprints: blueprints, environments: environments}
 
@@ -95,6 +103,31 @@ defmodule Brando.Content.Resave do
         info.("Nothing was done.")
         {:ok, :declined}
       end
+    end
+  end
+
+  defp report_error({:error, message} = error, opts, info) do
+    if is_nil(opts[:info]), do: info.([:red, "Nothing was done: " <> message])
+    error
+  end
+
+  defp report_error(result, _opts, _info), do: result
+
+  defp check_options(opts) do
+    cond do
+      not Keyword.keyword?(opts) ->
+        {:error, "the options must be a keyword list, got: #{inspect(opts)}"}
+
+      (unknown = Keyword.keys(opts) -- @options) != [] ->
+        {:error,
+         "unknown option #{Enum.map_join(Enum.uniq(unknown), ", ", &"#{&1}:")}. " <>
+           "It takes: #{Enum.map_join(@options, ", ", &"#{&1}:")}"}
+
+      key = Enum.find([:site, :environment], &(not (is_nil(opts[&1]) or is_binary(opts[&1])))) ->
+        {:error, "#{key}: must be a key, as a string, got: #{inspect(opts[key])}"}
+
+      true ->
+        :ok
     end
   end
 

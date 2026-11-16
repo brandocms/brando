@@ -140,7 +140,24 @@ defmodule Brando.Content.ResaveTest do
   end
 
   test "an option that names nothing is an error, before anything is done" do
-    assert {:error, "--site and --environment need tenancy, which is off"} = Resave.run(site: "acme")
-    assert {:error, "Brando.Nothing is not a Blueprint"} = Resave.run(blueprint: "Brando.Nothing")
+    capture_io(fn ->
+      assert {:error, "--site and --environment need tenancy, which is off"} = Resave.run(site: "acme")
+      assert {:error, "Brando.Nothing is not a Blueprint"} = Resave.run(blueprint: "Brando.Nothing")
+    end)
+  end
+
+  test "an option it does not take is an error, printed, before anything is done", %{fragment: fragment} do
+    output =
+      capture_io(fn ->
+        assert {:error, "unknown option enviroment:" <> _} = Resave.run(enviroment: "staging")
+        assert {:error, "site: must be a key, as a string, got: :acme"} = Resave.run(site: :acme)
+        assert {:error, "the options must be a keyword list" <> _} = Resave.run(%{site: "acme"})
+      end)
+
+    assert output =~ "Nothing was done: unknown option enviroment:. It takes: blueprint:, site:, environment:"
+    assert Brando.Repo.get!(Brando.Pages.Fragment, fragment.id).rendered_blocks == "stale"
+
+    # The Mix task reports it itself
+    assert capture_io(fn -> Resave.run(enviroment: "staging", info: fn _ -> :ok end) end) == ""
   end
 end
