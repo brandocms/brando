@@ -54,7 +54,7 @@ defmodule Brando.Blueprint.ChangesetRunner do
 
   defp run_validations(changeset, changeset_params) do
     changeset
-    |> Relations.run_cast_relations(changeset_params.relations, changeset_params.user)
+    |> Relations.run_cast_relations(changeset_params.relations, changeset_params.user, changeset_params.opts)
     |> Assets.run_cast_assets(changeset_params.assets, changeset_params.user)
     |> Villain.maybe_cast_blocks(changeset_params.module, changeset_params.user, changeset_params.opts)
     |> Trait.run_changeset_mutators(
