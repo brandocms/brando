@@ -38,6 +38,7 @@ defmodule Brando.Sitemap do
 
   require Logger
 
+  alias Brando.Authorization.Boundary
   alias Brando.Tenant
   alias Brando.Tracing
 
@@ -151,7 +152,8 @@ defmodule Brando.Sitemap do
   the site's live environment (`source_environment/0`), whichever of its
   environments the process works in, and the index links name the site's
   public base URL (`Brando.Utils.public_hostname/0`). The site's
-  environments share the files.
+  environments share the files. It reads as the system, whoever calls it: the
+  sitemap lists what visitors see, not what the caller's admin scope may read.
 
   ## Options
 
@@ -163,10 +165,13 @@ defmodule Brando.Sitemap do
   # Not decorated directly: its implicit `rescue` would become a second span.
   @decorate span("brando.sitemap.generate")
   def generate_sitemap(opts \\ []) do
-    case source_environment() do
-      nil -> do_generate_sitemap(opts)
-      live -> Tenant.with_prefix(Tenant.prefix(Tenant.current_site_key(), live.key), fn -> do_generate_sitemap(opts) end)
-    end
+    # Unscoped: an admin's scope keeps naming the environment it was taken in
+    Boundary.with_scope(nil, fn ->
+      case source_environment() do
+        nil -> do_generate_sitemap(opts)
+        live -> Tenant.with_prefix(Tenant.prefix(Tenant.current_site_key(), live.key), fn -> do_generate_sitemap(opts) end)
+      end
+    end)
   end
 
   @doc """

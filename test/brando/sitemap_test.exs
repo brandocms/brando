@@ -170,6 +170,39 @@ defmodule Brando.SitemapTest do
       assert length(Regex.scan(~r/<loc>http:\/\/acme\.test\/index<\/loc>/, sitemap)) == live_count
     end
 
+    test "with group authorization and Staging selected, it lists the live environment's pages", %{
+      sitemaps: sitemaps,
+      creator: creator
+    } do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+
+      live_count =
+        Brando.Tenant.with_prefix("tenant_acme_production", fn ->
+          {:ok, _} = Pages.create_page(Factory.params_for(:page, title: "Live", uri: "live"), creator)
+          published_pages()
+        end)
+
+      Brando.Tenant.with_prefix("tenant_acme_staging", fn ->
+        for uri <- ~w(draft-a draft-b),
+            do: {:ok, _} = Pages.create_page(Factory.params_for(:page, title: uri, uri: uri), creator)
+
+        assert published_pages() != live_count
+
+        # The admin's scope names Staging
+        scope = Brando.Authorization.Scope.current(creator)
+        assert scope.prefix == "tenant_acme_staging"
+
+        Brando.Authorization.Boundary.with_scope(scope, fn ->
+          assert {:ok, _} = Sitemap.generate_sitemap(gzip: false)
+          assert Brando.Authorization.Boundary.current_scope() == scope
+        end)
+      end)
+
+      sitemap = File.read!(Path.join(sitemaps, "sitemap-00001.xml"))
+      assert length(Regex.scan(~r/<loc>http:\/\/acme\.test\/index<\/loc>/, sitemap)) == live_count
+    end
+
     defp published_pages do
       {:ok, pages} = Pages.list_pages(%{filter: %{has_url: true}, status: :published})
       length(pages)
