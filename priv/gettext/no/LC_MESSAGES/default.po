@@ -684,6 +684,21 @@ msgstr "%{field} · blokk %{number}"
 msgid "%{first}–%{last} of %{total}"
 msgstr "%{first}–%{last} av %{total}"
 
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} cannot be both the domain and one of its redirect hosts."
+msgstr "%{host} kan ikke være både domenet og en av omdirigeringsvertene."
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "%{host}: enter a host only, such as www.example.com, with no scheme, path, port or trailing dot."
+msgstr "%{host}: skriv bare inn en vert, for eksempel www.example.com, uten protokoll, sti, port eller punktum til slutt."
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "%{host}: the installation itself uses this host, for its admin, media or CDN."
+msgstr "%{host}: installasjonen bruker selv denne verten, til admin, media eller CDN."
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "%{key} holds content of another type; drop that first"
@@ -2263,6 +2278,11 @@ msgstr "En oppføring du ikke kan åpne"
 msgid "An environment with a build of its own serves it on its host, in place of the site's build. The build stays with its environment when it goes live."
 msgstr "Et miljø med eget bygg serverer det på sitt domene, i stedet for nettstedets bygg. Bygget følger miljøet når det settes live."
 
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "An environment with redirect hosts needs a domain to redirect to."
+msgstr "Et miljø med omdirigeringsverter trenger et domene å omdirigere til."
+
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
 msgid "An estimate from the model's published prices and each image's size; your provider bills what is actually used. The images are sent to the provider."
@@ -2342,6 +2362,11 @@ msgstr "En annen redaktør beholdt sin versjon av en ny blokk du også hadde end
 #, elixir-autogen, elixir-format
 msgid "Another editor removed the block you were changing."
 msgstr "En annen redaktør fjernet blokken du endret."
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "Another environment already uses one of these hosts, as its domain or a redirect host."
+msgstr "Et annet miljø bruker allerede en av disse vertene, som domene eller omdirigeringsvert."
 
 #: lib/brando/environments/environment.ex
 #, elixir-autogen, elixir-format
@@ -8313,6 +8338,11 @@ msgstr "Horisontal linje"
 msgid "Hosted or remote video"
 msgstr "Opplastet eller ekstern video"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Hosts that redirect to the domain of %{name}"
+msgstr "Verter som omdirigerer til domenet til %{name}"
+
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "How the template refers to it"
@@ -12036,6 +12066,11 @@ msgstr "Bare en oppføring med status Venter publiseres på dette tidspunktet. S
 msgid "Only a superuser can change the host an environment answers on."
 msgstr "Bare en superbruker kan endre hvilken vert et miljø svarer på."
 
+#: lib/brando/tenant/registry.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can change the hosts that redirect to an environment."
+msgstr "Bare en superbruker kan endre hvilke verter som omdirigerer til et miljø."
+
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Only a superuser can change the sign-in policy."
@@ -13638,6 +13673,16 @@ msgstr "Omdiriger"
 msgid "Redirect created"
 msgstr "Omdirigering opprettet"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect hosts"
+msgstr "Omdirigeringsverter"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect hosts, one per line"
+msgstr "Omdirigeringsverter, én per linje"
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Redo"
@@ -13929,6 +13974,11 @@ msgstr "Fjern tekstformatering"
 #, elixir-autogen, elixir-format
 msgid "Remove the passkey %{name}?"
 msgstr "Fjerne passnøkkelen %{name}?"
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "Remove the redirect hosts first, or keep a domain: they redirect to it."
+msgstr "Fjern omdirigeringsvertene først, eller behold et domene: de omdirigerer til det."
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
 #, elixir-autogen, elixir-format
@@ -14936,6 +14986,11 @@ msgstr "Lagre gruppe"
 #, elixir-autogen, elixir-format
 msgid "Save guidance"
 msgstr "Lagre veiledningen"
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save hosts"
+msgstr "Lagre verter"
 
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format

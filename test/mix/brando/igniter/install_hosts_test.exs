@@ -142,6 +142,46 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     assert Enum.any?(igniter.notices, &(&1 =~ "check_origin was not written"))
   end
 
+  describe "a multi-site installation" do
+    test "checks origins with Brando.Tenant.Origins, which knows the sites added later" do
+      igniter = install(project(), ["--yes", "--tenancy-mode", "multi", "--domain", "example.com"])
+
+      assert igniter.issues == []
+      assert check_origin(igniter) == {Brando.Tenant.Origins, :allowed?, []}
+      assert Enum.any?(igniter.notices, &(&1 =~ "is Brando.Tenant.Origins"))
+    end
+
+    test "passes --origin on as its argument, and needs no --domain" do
+      igniter = install(project(), ["--yes", "--tenancy-mode", "multi", "--origin", "//*.agency.example"])
+
+      assert igniter.issues == []
+      assert check_origin(igniter) == {Brando.Tenant.Origins, :allowed?, [["//*.agency.example"]]}
+      refute Enum.any?(igniter.notices, &(&1 =~ "check_origin was not written"))
+    end
+
+    test "an application's own check_origin is kept, with a notice naming the function" do
+      files = %{
+        "config/prod.exs" => """
+        import Config
+        config :studio, StudioWeb.Endpoint, check_origin: ["//live.example.com"]
+        config :brando, media_path: "./media", log_dir: "./log"
+        """
+      }
+
+      igniter = install(project(files), ["--yes", "--tenancy-mode", "multi", "--domain", "example.com"])
+
+      assert check_origin(igniter) == ["//live.example.com"]
+      assert Enum.any?(igniter.notices, &(&1 =~ "{Brando.Tenant.Origins, :allowed?, []}"))
+    end
+
+    test ":single keeps the fixed list" do
+      igniter =
+        install(project(), ["--yes", "--tenancy-mode", "single", "--site-key", "studio", "--domain", "example.com"])
+
+      assert check_origin(igniter) == ["//example.com", "//www.example.com", "//staging.example.com"]
+    end
+  end
+
   test "--origin or --staging-domain without --domain writes no check_origin" do
     igniter = install(project(), ["--yes", "--origin", "//cms.example.net", "--staging-domain", "qa.example.net"])
 

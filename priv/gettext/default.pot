@@ -682,6 +682,21 @@ msgstr ""
 msgid "%{first}–%{last} of %{total}"
 msgstr ""
 
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "%{host} cannot be both the domain and one of its redirect hosts."
+msgstr ""
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "%{host}: enter a host only, such as www.example.com, with no scheme, path, port or trailing dot."
+msgstr ""
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "%{host}: the installation itself uses this host, for its admin, media or CDN."
+msgstr ""
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "%{key} holds content of another type; drop that first"
@@ -2261,6 +2276,11 @@ msgstr ""
 msgid "An environment with a build of its own serves it on its host, in place of the site's build. The build stays with its environment when it goes live."
 msgstr ""
 
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "An environment with redirect hosts needs a domain to redirect to."
+msgstr ""
+
 #: lib/brando_admin/live/images/alt_text_live.ex
 #, elixir-autogen, elixir-format
 msgid "An estimate from the model's published prices and each image's size; your provider bills what is actually used. The images are sent to the provider."
@@ -2339,6 +2359,11 @@ msgstr ""
 #: lib/brando_admin/components/form/block_field.ex
 #, elixir-autogen, elixir-format
 msgid "Another editor removed the block you were changing."
+msgstr ""
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "Another environment already uses one of these hosts, as its domain or a redirect host."
 msgstr ""
 
 #: lib/brando/environments/environment.ex
@@ -8311,6 +8336,11 @@ msgstr ""
 msgid "Hosted or remote video"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Hosts that redirect to the domain of %{name}"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
 msgid "How the template refers to it"
@@ -12034,6 +12064,11 @@ msgstr ""
 msgid "Only a superuser can change the host an environment answers on."
 msgstr ""
 
+#: lib/brando/tenant/registry.ex
+#, elixir-autogen, elixir-format
+msgid "Only a superuser can change the hosts that redirect to an environment."
+msgstr ""
+
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Only a superuser can change the sign-in policy."
@@ -13636,6 +13671,16 @@ msgstr ""
 msgid "Redirect created"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect hosts"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Redirect hosts, one per line"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
 msgid "Redo"
@@ -13926,6 +13971,11 @@ msgstr ""
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Remove the passkey %{name}?"
+msgstr ""
+
+#: lib/brando/environments/environment.ex
+#, elixir-autogen, elixir-format
+msgid "Remove the redirect hosts first, or keep a domain: they redirect to it."
 msgstr ""
 
 #: lib/brando_admin/live/sites/block_audit_live.ex
@@ -14933,6 +14983,11 @@ msgstr ""
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
 msgid "Save guidance"
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Save hosts"
 msgstr ""
 
 #: lib/brando_admin/live/sites/site_live.ex

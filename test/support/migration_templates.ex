@@ -275,7 +275,7 @@ defmodule Brando.MigrationTemplates do
       "users_tokens" => ~w(ip user_agent last_used_at confirmed_at),
       "content_proposals" => ~w(origin client),
       "sites_previews" => ~w(site_id environment_id),
-      "environments" => ~w(asset_set_id)
+      "environments" => ~w(asset_set_id redirect_hosts)
     }
   end
 
@@ -284,7 +284,7 @@ defmodule Brando.MigrationTemplates do
     query!("DROP TABLE #{Enum.join(environment_tables() ++ public_tables(), ", ")}")
 
     for {table, names} <- Map.merge(environment_columns(), public_columns()) do
-      query!(~s(ALTER TABLE "#{table}" ) <> Enum.map_join(names, ", ", &"DROP COLUMN #{&1}"))
+      query!(~s(ALTER TABLE "#{table}" ) <> Enum.map_join(names, ", ", &"DROP COLUMN #{&1} CASCADE"))
     end
   end
 

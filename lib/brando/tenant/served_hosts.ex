@@ -21,10 +21,12 @@ defmodule Brando.Tenant.ServedHosts do
 
   ## Which hosts
 
-  Every host the registry binds (`Brando.Tenant.Cache.bound_hosts/0`) that is a
-  full host name: valid (`Brando.Environments.Environment.valid_host?/1`), with
-  a dot, and not an IP address. A bound domain without a dot (`intranet`), an
-  address, or a domain stored before Brando checked it is still answered on,
+  Every host the registry binds (`Brando.Tenant.Cache.bound_hosts/0`): each
+  environment's domain and its redirect hosts, which need a route and a
+  certificate for their redirect to be reached. Only a full host name is
+  written: valid (`Brando.Environments.Environment.valid_host?/1`), with a
+  dot, and not an IP address. A bound host without a dot (`intranet`), an
+  address, or a host stored before Brando checked it is still answered on,
   but never written. A bound host that is not in the file yet is admitted
   when it resolves, and every address it resolves to, IPv4 and IPv6, is one
   of this server's: a proxy asks for a certificate as soon as it gets a host,

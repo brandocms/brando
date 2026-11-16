@@ -216,7 +216,22 @@ prefix in process context without a database query. In `:multi` it answers
 404 on a host that resolves to no site, except for a shared preview's link
 (`/__p__/:preview_key`), which opens under the site and environment the
 preview was shared from ([Where a shared preview link
-opens](deps/brando/guides/tenancy_and_environments.md#where-a-shared-preview-link-opens)).
+opens](deps/brando/guides/tenancy_and_environments.md#where-a-shared-preview-link-opens)). A response for an environment
+that is not live carries `X-Robots-Tag: noindex, nofollow`, in `:single` and
+`:multi`, so a working environment on a public host such as
+`staging.example.com` stays out of search results.
+
+An environment's redirect hosts (`environments.redirect_hosts`) answer
+before any of that: a request on one is redirected permanently to the same
+path and query on the environment's domain, with the endpoint URL's scheme
+and its port when that is not the scheme's default, 301 for GET and HEAD and
+308 for other methods, from the cache and with no database query. A Markdown
+request (`/about.md`, see `Brando.Plug.Markdown`) keeps its `.md`. List
+`www.example.com` and an old domain there, and give the environment
+`example.com` as its domain. A suspended or archived site's redirect hosts
+answer 404, as its domain does. A static build's requests carry a signed
+context and are served on a redirect host too, so a build whose base URL is
+now one still renders.
 
 A LiveView on the site's pages runs in its own process, which the plug never
 reaches. Mount it with `Brando.Tenant.FrontendLiveView`, which does the same
@@ -227,6 +242,28 @@ live_session :site, on_mount: [Brando.Tenant.FrontendLiveView] do
   live "/contact", MyAppWeb.ContactLive
 end
 ```
+
+Its socket connects from the site's host, so the endpoint's `check_origin`
+must accept every site's domain, including those added in the admin later.
+`mix brando.install --tenancy-mode multi` writes a function for it in
+`config/prod.exs`:
+
+```elixir
+config :my_app, MyAppWeb.Endpoint,
+  check_origin: {Brando.Tenant.Origins, :allowed?, []}
+```
+
+`Brando.Tenant.Origins.allowed?/2` accepts the installation's own hosts
+(the endpoint's, its static, media and CDN hosts) and the domain of every
+active site's environments, read from `Brando.Tenant.Cache`. Redirect hosts
+serve nothing, so they are not accepted. Further origins go in the argument,
+in the forms a `check_origin` list takes:
+`{Brando.Tenant.Origins, :allowed?, [["//*.example.com"]]}`. An entry with
+no host, such as `example.com` without `//`, raises `ArgumentError`, as in
+Phoenix's list. An existing
+multi-site installation switches by replacing its `check_origin` list in
+`config/prod.exs` with the tuple, keeping any entry that is not a site's
+domain or the endpoint's host in the argument.
 
 Every absolute URL Brando writes for a site's content starts with the site's
 base URL, `Brando.Utils.hostname/0`: the canonical and alternate links,
@@ -305,7 +342,7 @@ their own `@schema_prefix`, are not refused.
 
 `Brando.Tenant.Cache` keeps the site and environment registry in memory on
 each node. A registry write (a site created, changed, suspended or deleted, a
-domain moved, an environment created, copied, restored or set live), once its
+domain or redirect host moved, an environment created, copied, restored or set live), once its
 transaction has committed, refreshes the node that made it at once and the
 other nodes through `Brando.CacheSync`, over the application's
 `Phoenix.PubSub`. They follow within a fraction of a second, whichever node

@@ -552,6 +552,17 @@ sender first, before the first compile.
   sites hold. Sites that should keep sharing the provider accounts need the
   same group key, set under Sites (`/admin/sites`), after `brando_226` has
   run. See [Video provider libraries](tenancy_and_environments.md#video-provider-libraries).
+- **Redirect hosts and LiveView origins with several sites.** `brando_229`
+  adds `environments.redirect_hosts`: hosts such as `www.example.com` that
+  redirect permanently to the environment's domain, set by a superuser under
+  Environments (`/admin/config/environments`). Run `mix brando.gen.migrations`
+  for it, then `mix ecto.migrate`. With `tenancy_mode: :multi`, replace the
+  production endpoint's `check_origin` list in `config/prod.exs` with
+  `{Brando.Tenant.Origins, :allowed?, []}`, so a LiveView on a site added in
+  the admin connects; keep an entry that is neither a site's domain nor the
+  endpoint's host in its argument, as in
+  `{Brando.Tenant.Origins, :allowed?, [["//*.example.com"]]}`. See
+  [Router and request context](tenancy_and_environments.md#router-and-request-context).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

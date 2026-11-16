@@ -10,12 +10,20 @@ defmodule Brando.Plug.Tenant do
   accidentally serve unscoped or another tenant's content, with one exception:
   a shared preview's link (`/__p__/:preview_key`) takes its context from the
   preview, which costs one query on that path only.
+
+  A request on one of an environment's redirect hosts is redirected
+  permanently, from the cache, to the same path and query on the
+  environment's domain, with the endpoint URL's scheme and port: 301 for GET and HEAD,
+  308 for other methods. One that carries a static build's valid signed
+  context (`Brando.SSG.Context`) is served under that context instead. A response for an environment that is not live
+  carries `X-Robots-Tag: noindex, nofollow`.
   """
 
-  import Plug.Conn, only: [assign: 3, halt: 1, send_resp: 3]
+  import Plug.Conn, only: [assign: 3, halt: 1, put_resp_header: 3, send_resp: 3]
 
   alias Brando.SSG.Context
   alias Brando.Tenant
+  alias Brando.Tenant.Cache
   alias Brando.Tenant.Frontend
 
   @behaviour Plug
@@ -25,6 +33,21 @@ defmodule Brando.Plug.Tenant do
 
   @impl Plug
   def call(conn, _opts) do
+    case redirect_target(conn) do
+      nil ->
+        resolve_tenant(conn)
+
+      {_site, environment} ->
+        # A static build of a site whose base URL is now a redirect host
+        # fetches every page on that host, with its signed context
+        case build_context(conn) do
+          {site, built_environment} -> put_tenant(conn, site, built_environment)
+          nil -> redirect(conn, environment.domain)
+        end
+    end
+  end
+
+  defp resolve_tenant(conn) do
     case resolve(conn) do
       {site, environment} ->
         put_tenant(conn, site, environment)
@@ -47,6 +70,45 @@ defmodule Brando.Plug.Tenant do
     |> assign(:current_site, site)
     |> assign(:current_environment, environment)
     |> assign(:tenant_prefix, prefix)
+    |> no_index(environment)
+  end
+
+  # An environment that is not live answers on a public host too
+  # (`staging.example.com`); crawlers are told to leave it alone
+  defp no_index(conn, %{live: true}), do: conn
+  defp no_index(conn, _environment), do: put_resp_header(conn, "x-robots-tag", "noindex, nofollow")
+
+  # A redirect host answers from the cache, before any other resolution but a
+  # static build's: it is no environment's domain and no installation host, so
+  # nothing else answers on it
+  defp redirect_target(%{private: %{brando_live_preview: true}}), do: nil
+
+  defp redirect_target(conn) do
+    if Tenant.enabled?(), do: Cache.get_redirect(conn.host)
+  end
+
+  # Permanent: 301 for GET and HEAD, 308 for the rest, which keeps the method
+  # and body
+  defp redirect(conn, domain) do
+    status = if conn.method in ["GET", "HEAD"], do: 301, else: 308
+    query = if conn.query_string == "", do: "", else: "?" <> conn.query_string
+
+    conn
+    |> put_resp_header("location", "#{origin(domain)}#{requested_path(conn)}#{query}")
+    |> send_resp(status, "")
+    |> halt()
+  end
+
+  # `Brando.Plug.Markdown` takes `.md` off the path before the router
+  defp requested_path(conn), do: conn.private[:brando_original_request_path] || conn.request_path
+
+  # The endpoint URL's scheme, and its port when that is not the scheme's
+  # default, as Phoenix's URL helpers write it
+  defp origin(domain) do
+    %URI{scheme: scheme, port: port} = URI.parse(Brando.endpoint().url())
+    scheme = scheme || "https"
+    port = if port && port != URI.default_port(scheme), do: ":#{port}", else: ""
+    "#{scheme}://#{domain}#{port}"
   end
 
   # A shared preview's link is on the endpoint's host, which belongs to no
@@ -84,12 +146,13 @@ defmodule Brando.Plug.Tenant do
     {site, environment}
   end
 
-  def resolve(conn) do
+  def resolve(conn), do: build_context(conn) || Frontend.resolve(conn.host)
+
+  defp build_context(conn) do
     conn
     |> Plug.Conn.get_req_header(Context.header())
     |> List.first()
     |> Context.resolve()
-    |> Kernel.||(Frontend.resolve(conn.host))
   end
 
   defp reject_missing_multi_site(conn) do

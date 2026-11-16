@@ -392,6 +392,72 @@ defmodule Brando.Tenant.ServedHostsTest do
     end
   end
 
+  describe "redirect hosts" do
+    defp put_redirect_hosts(environment, hosts) do
+      {:ok, environment} =
+        Registry.update_environment(Registry.get_environment(environment.id), %{redirect_hosts: hosts}, actor: :system)
+
+      environment
+    end
+
+    test "one pointing here is admitted and written, one pointing elsewhere waits", %{path: file, site: site} do
+      DNS.answer("acme.test", [@here])
+      DNS.answer("www.acme.test", [@here, @here_v6])
+      DNS.answer("old-acme.test", [@elsewhere])
+      production = bind(site, "production", "acme.test", true)
+      put_redirect_hosts(production, ["www.acme.test", "old-acme.test", "gone-acme.test"])
+
+      status = ServedHosts.check()
+
+      assert lines(file) == ["acme.test", "www.acme.test"]
+
+      assert status.hosts == %{
+               "acme.test" => :served,
+               "www.acme.test" => :served,
+               "old-acme.test" => {:waiting, [@elsewhere]},
+               "gone-acme.test" => :unresolved
+             }
+    end
+
+    test "one removed from the environment is removed from the file", %{path: file, site: site} do
+      DNS.answer("acme.test", [@here])
+      DNS.answer("www.acme.test", [@here])
+      DNS.answer("old-acme.test", [@here])
+      production = bind(site, "production", "acme.test", true)
+      production = put_redirect_hosts(production, ["www.acme.test", "old-acme.test"])
+      ServedHosts.check()
+      assert lines(file) == ["acme.test", "old-acme.test", "www.acme.test"]
+
+      put_redirect_hosts(production, ["www.acme.test"])
+      %{hosts: hosts} = ServedHosts.check()
+
+      assert lines(file) == ["acme.test", "www.acme.test"]
+      refute Map.has_key?(hosts, "old-acme.test")
+    end
+
+    test "set_live on a dynamic site moves them with the domain and leaves the file alone",
+         %{path: file, site: site} do
+      for host <- ~w(acme.test www.acme.test next.acme.test www.next.acme.test), do: DNS.answer(host, [@here])
+      production = bind(site, "production", "acme.test", true)
+      put_redirect_hosts(production, ["www.acme.test"])
+      staging = bind(site, "staging", "next.acme.test")
+      put_redirect_hosts(staging, ["www.next.acme.test"])
+      ServedHosts.check()
+      assert lines(file) == ~w(acme.test next.acme.test www.acme.test www.next.acme.test)
+      before = File.stat!(file, time: :posix)
+      # Every host is in the file: none is looked up again
+      for host <- ~w(acme.test www.acme.test next.acme.test www.next.acme.test), do: DNS.answer(host, [@elsewhere])
+
+      assert {:ok, %{live: true, domain: "acme.test", redirect_hosts: ["www.acme.test"]}} =
+               Environments.set_live(Registry.get_environment(staging.id))
+
+      %{hosts: hosts} = ServedHosts.check()
+      assert lines(file) == ~w(acme.test next.acme.test www.acme.test www.next.acme.test)
+      assert File.stat!(file, time: :posix).inode == before.inode
+      assert Enum.all?(hosts, fn {_host, state} -> state == :served end)
+    end
+  end
+
   describe "the file" do
     test "is not rewritten when nothing changed", %{path: file, site: site} do
       DNS.answer("www.acme.test", [@here])
