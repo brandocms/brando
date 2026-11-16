@@ -52,10 +52,17 @@ defmodule Brando.Sites.FourOhFour do
   @doc "How many URL, referrer and day counts the buffer holds between flushes."
   def buffer_limit, do: @buffer_limit
 
-  @doc "Counts a 404 for `conn`'s path, with its referrer."
+  @doc """
+  Counts a 404 for `conn`'s path, with its referrer. Not the path a static
+  build requests for the site's error page (`Brando.SSG.not_found_path/0`).
+  """
   @spec add_404(Plug.Conn.t()) :: Plug.Conn.t()
   def add_404(conn) do
     path = Path.join(["/" | conn.path_info])
+    if path == Brando.SSG.not_found_path(), do: conn, else: log_404(conn, path)
+  end
+
+  defp log_404(conn, path) do
     url = path |> String.slice(0, @max_url_length) |> cut_bytes(@max_url_length)
     key = Brando.Tenant.cache_key({url, referrer(conn, path, url), Date.utc_today()})
     Cachex.incr(@cache, key, 1)

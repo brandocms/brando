@@ -30,6 +30,14 @@ defmodule Brando.Sites.FourOhFourLogTest do
 
   defp rows, do: Brando.Repo.all(from h in NotFoundHit, order_by: [asc: h.url, asc: h.referrer])
 
+  test "the path a static build requests for the site's error page is not counted" do
+    miss(Brando.SSG.not_found_path())
+    miss("/old/page")
+
+    assert FourOhFour.flush() == 1
+    assert [%{url: "/old/page"}] = rows()
+  end
+
   test "hits are buffered, then stored as daily totals per URL and referrer" do
     miss("/old/page", "https://example.com/blog?utm_source=x#top")
     miss("/old/page", "https://example.com/blog")

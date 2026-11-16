@@ -49,6 +49,7 @@ defmodule Brando.SSGTest do
     assert {:ok, result} =
              SSG.build(
                output_path: context.output_path,
+               site_files: false,
                static_path: context.static_path,
                media_path: context.media_path,
                ssg_module: Fixture,
@@ -83,6 +84,7 @@ defmodule Brando.SSGTest do
     assert {:error, :url_failures, result} =
              SSG.build(
                output_path: context.output_path,
+               site_files: false,
                static_path: context.static_path,
                media_path: context.media_path,
                ssg_module: Fixture,
@@ -100,6 +102,7 @@ defmodule Brando.SSGTest do
     assert {:ok, result} =
              SSG.build(
                output_path: context.output_path,
+               site_files: false,
                static_path: context.static_path,
                media_path: context.media_path,
                ssg_module: Fixture,
@@ -121,6 +124,7 @@ defmodule Brando.SSGTest do
     assert {:error, {:unsupported_source_file, linked_path}, _result} =
              SSG.build(
                output_path: context.output_path,
+               site_files: false,
                static_path: context.static_path,
                media_path: context.media_path,
                ssg_module: Fixture,
@@ -154,6 +158,7 @@ defmodule Brando.SSGTest do
         SSG.build(site, environment,
           base_url: base_url,
           output_path: context.output_path,
+          site_files: false,
           static_path: context.static_path,
           media_path: context.media_path,
           ssg_module: AboutOnly
@@ -229,6 +234,7 @@ defmodule Brando.SSGTest do
                  SSG.build(
                    base_url: "http://site.test:4000",
                    output_path: context.output_path,
+                   site_files: false,
                    static_path: context.static_path,
                    media_path: context.media_path,
                    ssg_module: AboutOnly,
@@ -254,6 +260,7 @@ defmodule Brando.SSGTest do
                  SSG.build(
                    base_url: "http://site.test:4000",
                    output_path: context.output_path,
+                   site_files: false,
                    static_path: context.static_path,
                    media_path: context.media_path,
                    ssg_module: AboutOnly,
@@ -289,6 +296,7 @@ defmodule Brando.SSGTest do
                  SSG.build(
                    base_url: base_url,
                    output_path: context.output_path,
+                   site_files: false,
                    static_path: context.static_path,
                    media_path: context.media_path,
                    ssg_module: AboutOnly,
@@ -375,6 +383,7 @@ defmodule Brando.SSGTest do
       assert {:ok, %{failed_urls: []}} =
                SSG.build(
                  output_path: context.output_path,
+                 site_files: false,
                  static_path: context.static_path,
                  media_path: context.media_path,
                  ssg_module: AboutOnly,
@@ -406,6 +415,7 @@ defmodule Brando.SSGTest do
       SSG.build(
         [
           output_path: context.output_path,
+          site_files: false,
           static_path: context.static_path,
           media_path: context.media_path,
           ssg_module: RootOnly
@@ -456,6 +466,7 @@ defmodule Brando.SSGTest do
                SSG.build(site, environment,
                  endpoint: SSGEndpoint,
                  output_path: context.output_path,
+                 site_files: false,
                  static_path: context.static_path,
                  media_path: context.media_path,
                  ssg_module: RootOnly
@@ -618,6 +629,7 @@ defmodule Brando.SSGTest do
         [
           endpoint: SSGEndpoint,
           output_path: context.output_path,
+          site_files: false,
           static_path: context.static_path,
           media_path: context.media_path,
           ssg_module: PagesOnly
@@ -798,6 +810,7 @@ defmodule Brando.SSGTest do
                    endpoint: SSGEndpoint,
                    fetcher: fetcher,
                    output_path: context.output_path,
+                   site_files: false,
                    static_path: context.static_path,
                    media_path: context.media_path,
                    ssg_module: ListedAbout
@@ -807,6 +820,251 @@ defmodule Brando.SSGTest do
         url = "http://127.0.0.1:#{port}/about"
         assert_received {:fetched, ^url, %{^header => _token}}
         refute_received {:fetched, _second_request, _headers}
+      end
+    end
+  end
+
+  describe "a build's site files" do
+    defmodule SitePages do
+      @moduledoc false
+      import Brando.SSG
+
+      urls :pages do
+        ["/", "/about", "/old"]
+      end
+    end
+
+    defmodule SiteSitemap do
+      @moduledoc false
+      import Brando.Sitemap
+
+      sitemap "pages" do
+        [url(%{loc: Brando.Utils.hostname("about")})]
+      end
+    end
+
+    @page ~s(<!DOCTYPE html>\n<html><head>) <>
+            ~s(<link rel="stylesheet" href="/assets/app.css">) <>
+            ~s(</head><body><p>Every word stays as it was.</p></body></html>)
+
+    setup context do
+      cached = Cachex.get!(:cache, :seo)
+
+      on_exit(fn ->
+        if cached, do: Cachex.put(:cache, :seo, cached), else: Cachex.del(:cache, :seo)
+      end)
+
+      put_seo = fn redirects_by_language ->
+        Cachex.put(
+          :cache,
+          :seo,
+          Map.new(redirects_by_language, fn {language, redirects} ->
+            {language, %Brando.Sites.SEO{redirects: redirects}}
+          end)
+        )
+      end
+
+      put_seo.([])
+      site = Brando.Utils.hostname()
+      test = self()
+
+      answer = fn
+        %{path: "/", headers: headers} ->
+          send(test, {:headers, "/", headers})
+          {200, @page <> ~s(<link type="text/markdown" rel="alternate" href="#{site}/index.md">)}
+
+        %{path: "/about"} ->
+          links =
+            ~s(<link rel="alternate" type="text/markdown" href="/about.md">) <>
+              ~s(<link rel="alternate" type="text/markdown" href="https://elsewhere.example.com/x.md">) <>
+              ~s(<link rel="alternate" hreflang="nb" href="#{site}/nb/om-oss">)
+
+          {200, @page <> links}
+
+        %{path: "/old"} ->
+          {301, [{"location", "/about"}], ""}
+
+        %{path: "/index.md"} ->
+          {200, "# Home\n"}
+
+        %{path: "/about.md"} ->
+          {200, "# About\n"}
+
+        %{path: "/__brando_ssg__/not-found"} ->
+          {404, "<h1>This page is not here</h1>"}
+
+        %{path: "/robots.txt", headers: headers} ->
+          {200, "User-agent: *\nDisallow:\nSitemap-header: #{headers["x-brando-ssg-sitemap"]}\n"}
+
+        %{path: path} ->
+          {500, "unexpected #{path}"}
+      end
+
+      build = fn opts ->
+        SSG.build(
+          Keyword.merge(
+            [
+              endpoint: SSGEndpoint,
+              output_path: context.output_path,
+              static_path: context.static_path,
+              media_path: context.media_path,
+              ssg_module: SitePages,
+              sitemap_module: SiteSitemap
+            ],
+            opts
+          )
+        )
+      end
+
+      %{answer: answer, build: build, put_seo: put_seo, site: site}
+    end
+
+    defp read_output(context, path), do: File.read!(Path.join(context.output_path, path))
+
+    test "holds the bytes the application answered, its 404, robots.txt, sitemap and Markdown alternates",
+         context do
+      SSGEndpoint.start(context.answer)
+
+      assert {:ok, result} = context.build.([])
+      assert result.failed_urls == []
+      assert result.url_count == 3
+      refute Map.has_key?(result, :page_redirects)
+
+      assert read_output(context, "about/index.html") ==
+               @page <>
+                 ~s(<link rel="alternate" type="text/markdown" href="/about.md">) <>
+                 ~s(<link rel="alternate" type="text/markdown" href="https://elsewhere.example.com/x.md">) <>
+                 ~s(<link rel="alternate" hreflang="nb" href="#{context.site}/nb/om-oss">)
+
+      assert read_output(context, "index.md") == "# Home\n"
+      assert read_output(context, "about.md") == "# About\n"
+      refute File.exists?(Path.join(context.output_path, "x.md"))
+      assert read_output(context, "404.html") == "<h1>This page is not here</h1>"
+      assert read_output(context, "robots.txt") =~ "Sitemap-header: 1"
+
+      index = context.output_path |> Path.join("sitemaps/sitemap.xml.gz") |> File.read!() |> :zlib.gunzip()
+      assert index =~ Brando.Utils.public_hostname("sitemaps/sitemap-00001.xml.gz")
+      sitemap = context.output_path |> Path.join("sitemaps/sitemap-00001.xml.gz") |> File.read!() |> :zlib.gunzip()
+      assert sitemap =~ "<loc>#{Brando.Utils.public_hostname("about")}</loc>"
+
+      # The listed path that redirects keeps the page it ends at, and is listed
+      assert read_output(context, "old/index.html") =~ "Every word stays as it was."
+
+      assert %{"version" => 1, "redirects" => [old]} = Jason.decode!(read_output(context, "_redirects.json"))
+
+      assert old == %{
+               "source" => "/old",
+               "target" => "/about",
+               "status" => 301,
+               "exact" => true,
+               "pattern" => "/old$",
+               "language" => nil
+             }
+    end
+
+    test "without a sitemap tells robots.txt there is none", context do
+      SSGEndpoint.start(context.answer)
+
+      assert {:ok, %{failed_urls: []}} = context.build.(sitemap_module: nil)
+      assert read_output(context, "robots.txt") =~ "Sitemap-header: 0"
+      refute File.exists?(Path.join(context.output_path, "sitemaps"))
+    end
+
+    test "lists the redirect rules the application answers, in order, for a static host", context do
+      SSGEndpoint.start(context.answer)
+      alias Brando.Sites.Redirect
+
+      context.put_seo.([
+        {"no",
+         [
+           %Redirect{from: Brando.Sites.Redirects.exact_source("/gammel-side"), to: "/ny-side", code: 301},
+           %Redirect{from: "/nyheter/:slug", to: "/artikler/:slug", code: 302}
+         ]},
+        {"en",
+         [
+           # A page the build has: Brando never answers this rule
+           %Redirect{from: "/about$", to: "/elsewhere", code: 301},
+           %Redirect{from: "/old-.*", to: "https://example.com/", code: 301},
+           %Redirect{from: "/gone$", to: "/", code: 410},
+           %Redirect{from: "/broken(", to: "/", code: 301}
+         ]}
+      ])
+
+      assert {:ok, %{failed_urls: []}} = context.build.([])
+      assert %{"redirects" => redirects} = Jason.decode!(read_output(context, "_redirects.json"))
+
+      assert Enum.map(redirects, &Map.take(&1, ["source", "target", "status", "exact", "language"])) == [
+               %{"source" => "/old", "target" => "/about", "status" => 301, "exact" => true, "language" => nil},
+               %{
+                 "source" => "/gammel-side",
+                 "target" => "/ny-side",
+                 "status" => 301,
+                 "exact" => true,
+                 "language" => "no"
+               },
+               %{
+                 "source" => "/nyheter/:slug",
+                 "target" => "/artikler/:slug",
+                 "status" => 302,
+                 "exact" => false,
+                 "language" => "no"
+               },
+               %{
+                 "source" => nil,
+                 "target" => "https://example.com/",
+                 "status" => 301,
+                 "exact" => false,
+                 "language" => "en"
+               },
+               %{"source" => "/gone", "target" => nil, "status" => 410, "exact" => true, "language" => "en"}
+             ]
+
+      assert Enum.at(redirects, 3)["pattern"] == "/old-.*"
+    end
+
+    test "fails the error page's path when the application answers it with anything but 404", context do
+      SSGEndpoint.start(fn
+        %{path: "/__brando_ssg__/not-found"} -> {200, "a page for every path"}
+        request -> context.answer.(request)
+      end)
+
+      assert {:error, :url_failures, %{failed_urls: [failure]}} = context.build.([])
+      assert failure =~ "/__brando_ssg__/not-found (HTTP 200"
+      refute File.exists?(Path.join(context.output_path, "404.html"))
+    end
+
+    test "fails the robots.txt and Markdown paths the application cannot answer", context do
+      SSGEndpoint.start(fn
+        %{path: path} when path in ["/robots.txt", "/about.md"] -> {500, "down"}
+        request -> context.answer.(request)
+      end)
+
+      assert {:error, :url_failures, %{failed_urls: failures}} = context.build.([])
+      assert failures == ["/about.md (HTTP 500)", "/robots.txt (HTTP 500)"]
+    end
+
+    test "with HEEx debug output configured fails before requesting anything", context do
+      for option <- [:debug_heex_annotations, :debug_attributes] do
+        previous = Application.fetch_env(:phoenix_live_view, option)
+        Application.put_env(:phoenix_live_view, option, true)
+
+        try do
+          File.mkdir_p!(context.output_path)
+          File.write!(Path.join(context.output_path, "previous.html"), "previous build")
+
+          fetcher = fn _url, _opts -> flunk("a build with debug output must not request anything") end
+
+          assert {:error, {:heex_debug_output, [^option]} = reason, _result} =
+                   context.build.(base_url: "http://site.test", fetcher: fetcher)
+
+          assert SSG.error_message(reason) =~ "#{option}: true"
+          assert read_output(context, "previous.html") == "previous build"
+        after
+          case previous do
+            {:ok, value} -> Application.put_env(:phoenix_live_view, option, value)
+            :error -> Application.delete_env(:phoenix_live_view, option)
+          end
+        end
       end
     end
   end

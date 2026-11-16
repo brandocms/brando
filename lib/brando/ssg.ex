@@ -21,6 +21,31 @@ defmodule Brando.SSG do
   @redirect_statuses [301, 302, 303, 307, 308]
   @max_redirects 10
 
+  # A path no site has a page on, requested for the site's error page
+  @not_found_path "/__brando_ssg__/not-found"
+  @redirects_file "_redirects.json"
+  @sitemap_index "sitemaps/sitemap.xml.gz"
+  @link_tag ~r/<link\b[^>]*>/i
+  @tag_attributes %{
+    "rel" => ~r/\srel\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i,
+    "type" => ~r/\stype\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i,
+    "href" => ~r/\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i
+  }
+  @heex_debug_options [:debug_heex_annotations, :debug_attributes]
+
+  @doc """
+  The path a build requests for the site's error page, which it stores as
+  `404.html`. No route answers it, so the application answers it as any
+  missing path, with status 404, and logs no 404 for it
+  (`Brando.Sites.FourOhFour`).
+  """
+  @spec not_found_path() :: String.t()
+  def not_found_path, do: @not_found_path
+
+  @doc "The name of the redirect list at the root of a build (`Brando.SSG.RedirectList`)."
+  @spec redirects_file() :: String.t()
+  def redirects_file, do: @redirects_file
+
   @doc """
   Declares a group of paths in the application's web SSG module.
 
@@ -131,6 +156,31 @@ defmodule Brando.SSG do
   is intended for tests or custom transports. The request options include
   `redirect: false`: a fetcher returns a redirect with its `:headers` rather
   than following it, so that the build can check the target.
+
+  Each file holds the bytes the application answered, unchanged. A build
+  fails with `{:heex_debug_output, options}` before it requests anything when
+  the application is configured to write HEEx debug comments or
+  `data-phx-loc` attributes into its pages
+  (`config :phoenix_live_view, debug_heex_annotations: true` or
+  `debug_attributes: true`), which development configs usually do.
+
+  Besides the listed URLs, the build writes what a static host needs to
+  serve the site on its own, requested the same way with the same header:
+
+    * the Markdown alternate (`about.md`) each page names with
+      `<link rel="alternate" type="text/markdown">`, on the site's own host;
+    * `404.html`, the site's error page: the answer to `not_found_path/0`,
+      which must be a 404;
+    * `sitemaps/`, the sitemap of the environment being built
+      (`Brando.Sitemap.write_static/2`, from `:sitemap_module`, by default the
+      application's), with entries on the site's public base URL;
+    * `robots.txt`, as the application answers it for the site on its public
+      host, naming that sitemap when the build has one;
+    * `_redirects.json`, the site's redirects (`Brando.SSG.RedirectList`):
+      the listed paths that answered a redirect, then the redirect rules.
+
+  A failure there is a failed URL, under its path. `site_files: false` builds
+  the listed URLs, assets and media only.
   """
   @spec build(keyword()) :: {:ok, map()} | {:error, term(), map()}
   def build(opts) when is_list(opts) do
@@ -157,13 +207,15 @@ defmodule Brando.SSG do
     do: {:error, :environment_belongs_to_another_site, empty_result(opts[:output_path], false)}
 
   defp build_under_tenant(site, environment, output_path, opts, dry_run?, progress) do
-    with {:ok, opts} <- put_base_url(opts, dry_run?),
+    with :ok <- check_heex_debug_output(dry_run?),
+         {:ok, opts} <- put_base_url(opts, dry_run?),
          {:ok, urls} <- get_urls(Keyword.get(opts, :ssg_module, Brando.web_module(SSG))),
          {:ok, normalized_urls} <- normalize_urls(urls),
          :ok <- prepare_output(output_path, dry_run?),
          :ok <- copy_assets(site, output_path, opts, dry_run?),
-         {:ok, render_result} <-
-           render_urls(site, environment, normalized_urls, output_path, opts, dry_run?, progress),
+         request = if(not dry_run?, do: build_request(site, environment, opts)),
+         {:ok, render_result} <- render_urls(request, normalized_urls, output_path, dry_run?, progress),
+         {:ok, render_result} <- write_site_files(request, normalized_urls, output_path, opts, render_result),
          :ok <- copy_media(site, output_path, opts, dry_run?),
          {:ok, stats} <- output_stats(output_path, dry_run?) do
       result =
@@ -176,6 +228,17 @@ defmodule Brando.SSG do
     else
       {:error, reason, result} -> {:error, reason, result}
       {:error, reason} -> {:error, reason, empty_result(output_path, dry_run?)}
+    end
+  end
+
+  # HEEx writes them at compile time from this configuration; a build stores
+  # pages as answered, so it does not start rather than strip them
+  defp check_heex_debug_output(true), do: :ok
+
+  defp check_heex_debug_output(false) do
+    case Enum.filter(@heex_debug_options, &Application.get_env(:phoenix_live_view, &1, false)) do
+      [] -> :ok
+      options -> {:error, {:heex_debug_output, options}}
     end
   end
 
@@ -243,6 +306,14 @@ defmodule Brando.SSG do
   def error_message({:no_http_listener, endpoint}) do
     "#{inspect(endpoint)} has no HTTP listener to request the pages from. " <>
       "Run the endpoint as a server (`server: true`) with an `:http` port, or pass `:base_url`."
+  end
+
+  def error_message({:heex_debug_output, options}) do
+    settings = Enum.map_join(options, ", ", &"#{&1}: true")
+
+    "The application writes HEEx debug output into its pages (`config :phoenix_live_view, #{settings}`), " <>
+      "which a static build must not contain. Turn it off where the build runs (development configs " <>
+      "usually turn it on in config/dev.exs), recompile and build again."
   end
 
   def error_message(reason), do: inspect(reason)
@@ -318,46 +389,22 @@ defmodule Brando.SSG do
     end
   end
 
-  @decorate span("brando.ssg.render_urls")
-  defp render_urls(site, environment, urls, output_path, opts, dry_run?, progress) do
+  # What every request of a build carries: its origin, the signed context and
+  # the listener's headers, and the site's own origins, which a page's links
+  # may name
+  defp build_request(site, environment, opts) do
     token = if Tenant.enabled?(), do: Context.sign(site, environment)
-    total = length(urls)
-    Tracing.set_attributes(%{"brando.url_count": total})
-
-    urls
-    |> Enum.with_index(1)
-    |> Enum.reduce({[], 0}, fn {url, index}, {failures, processed} ->
-      progress.({:rendering, index, total, url})
-
-      case render_url(url, token, output_path, opts, dry_run?) do
-        :ok -> {failures, processed + 1}
-        {:error, reason} -> {[format_failure(url, reason) | failures], processed + 1}
-      end
-    end)
-    |> then(fn {failures, processed} ->
-      Tracing.set_attributes(%{"brando.failed_url_count": length(failures)})
-
-      {:ok,
-       %{
-         url_count: total,
-         processed_urls: processed,
-         failed_urls: Enum.reverse(failures)
-       }}
-    end)
-  end
-
-  defp render_url(_url, _token, _output_path, _opts, true), do: :ok
-
-  defp render_url(url, token, output_path, opts, false) do
     base_url = Keyword.fetch!(opts, :base_url)
-    request_url = URI.merge(ensure_trailing_slash(base_url), String.trim_leading(url, "/")) |> to_string()
     listener = Keyword.get(opts, :listener)
     listener_headers = if listener, do: listener.headers, else: []
     headers = if token, do: [{Context.header(), token} | listener_headers], else: listener_headers
 
-    request = %{
+    %{
+      base_url: base_url,
       fetcher: Keyword.get(opts, :fetcher, &default_fetcher/2),
       listener: listener,
+      site_origins:
+        Enum.uniq(Enum.map([base_url, Brando.Utils.hostname(), Brando.Utils.public_hostname()], &origin(URI.parse(&1)))),
       opts: [
         headers: headers,
         receive_timeout: Keyword.get(opts, :receive_timeout, @default_receive_timeout),
@@ -365,25 +412,221 @@ defmodule Brando.SSG do
         redirect: false
       ]
     }
+  end
 
-    case fetch(request, request_url, @max_redirects) do
-      {:ok, %{status: status, body: body}} when status in 200..299 ->
-        write_response(output_path, url, body)
+  @decorate span("brando.ssg.render_urls")
+  defp render_urls(request, urls, output_path, dry_run?, progress) do
+    total = length(urls)
+    Tracing.set_attributes(%{"brando.url_count": total})
 
-      {:ok, %{status: status}} ->
+    urls
+    |> Enum.with_index(1)
+    |> Enum.reduce({[], [], [], 0}, fn {url, index}, acc ->
+      progress.({:rendering, index, total, url})
+      add_rendered(acc, url, render_url(url, request, output_path, dry_run?))
+    end)
+    |> then(fn {failures, redirects, markdown, processed} ->
+      Tracing.set_attributes(%{"brando.failed_url_count": length(failures)})
+
+      {:ok,
+       %{
+         url_count: total,
+         processed_urls: processed,
+         failed_urls: Enum.reverse(failures),
+         page_redirects: Enum.reverse(redirects),
+         markdown_paths: markdown |> Enum.reverse() |> Enum.uniq()
+       }}
+    end)
+  end
+
+  defp add_rendered({failures, redirects, markdown, processed}, _url, {:ok, page}) do
+    redirects = if page.redirect, do: [page.redirect | redirects], else: redirects
+    {failures, redirects, Enum.reverse(page.markdown, markdown), processed + 1}
+  end
+
+  defp add_rendered({failures, redirects, markdown, processed}, url, {:error, reason}),
+    do: {[format_failure(url, reason) | failures], redirects, markdown, processed + 1}
+
+  defp render_url(_url, _request, _output_path, true), do: {:ok, %{redirect: nil, markdown: []}}
+
+  defp render_url(url, request, output_path, false) do
+    case fetch_path(request, url) do
+      {:ok, %{status: status, body: body}, redirect} when status in 200..299 ->
+        body = IO.iodata_to_binary(body)
+
+        with :ok <- write_file(output_file(output_path, url), body) do
+          {:ok, %{redirect: page_redirect(url, redirect), markdown: markdown_paths(body, url, request)}}
+        end
+
+      {:ok, %{status: status}, _redirect} ->
         {:error, {:http_status, status}}
 
-      {:refused_redirect, reason} ->
-        {:error, reason}
-
-      {:error, reason} ->
-        {:error, {:request_failed, reason}}
-
-      response ->
-        {:error, {:invalid_fetcher_response, response}}
+      other ->
+        fetch_error(other)
     end
   rescue
     exception -> {:error, {:request_exception, Exception.message(exception)}}
+  end
+
+  defp fetch_path(request, path, extra_headers \\ []) do
+    request_url = URI.merge(ensure_trailing_slash(request.base_url), String.trim_leading(path, "/")) |> to_string()
+    request = update_in(request, [:opts, :headers], &(&1 ++ extra_headers))
+    fetch(request, request_url, @max_redirects)
+  end
+
+  defp fetch_error({:refused_redirect, reason}), do: {:error, reason}
+  defp fetch_error({:error, reason}), do: {:error, {:request_failed, reason}}
+  defp fetch_error(response), do: {:error, {:invalid_fetcher_response, response}}
+
+  # A listed path that answered a redirect: the path it ended at, on the
+  # build's origin, with the first redirect's status. The same page in
+  # another form (a trailing slash, the host in capitals) is no redirect.
+  defp page_redirect(_url, nil), do: nil
+
+  defp page_redirect(url, {status, final_url}) do
+    %URI{path: path, query: query} = URI.parse(final_url)
+    path = if path in [nil, ""], do: "/", else: path
+
+    cond do
+      is_nil(query) and normalize_url(path) == {:ok, url} -> nil
+      is_nil(query) -> %{source: url, target: path, status: status}
+      true -> %{source: url, target: path <> "?" <> query, status: status}
+    end
+  end
+
+  # The paths of the Markdown alternates an HTML page names on the site's own
+  # origins (`Brando.SEO.Markdown`), written next to the page
+  defp markdown_paths(body, url, request) do
+    if Path.extname(url) in ["", ".html", ".htm"] do
+      @link_tag
+      |> Regex.scan(body)
+      |> Enum.flat_map(fn [tag] -> markdown_href(tag, request) end)
+    else
+      []
+    end
+  end
+
+  defp markdown_href(tag, request) do
+    with "text/markdown" <- tag |> tag_attribute("type") |> String.downcase(),
+         true <- "alternate" in String.split(String.downcase(tag_attribute(tag, "rel"))),
+         {:ok, path} <- site_path(tag_attribute(tag, "href"), request),
+         ".md" <- Path.extname(path) do
+      [path]
+    else
+      _not_a_markdown_alternate -> []
+    end
+  end
+
+  defp tag_attribute(tag, name) do
+    case Regex.run(Map.fetch!(@tag_attributes, name), tag, capture: :all_but_first) do
+      nil -> ""
+      values -> values |> Enum.find("", &(&1 != "")) |> String.replace("&amp;", "&")
+    end
+  end
+
+  defp site_path(href, request) do
+    uri = URI.parse(href)
+
+    cond do
+      is_nil(uri.scheme) and is_nil(uri.host) and String.starts_with?(href, "/") and
+          not String.starts_with?(href, "//") ->
+        normalize_url(href)
+
+      uri.scheme in ["http", "https"] and origin(uri) in request.site_origins ->
+        normalize_url(uri.path || "/")
+
+      true ->
+        :error
+    end
+  rescue
+    _invalid -> :error
+  end
+
+  defp write_site_files(nil, _urls, _output_path, _opts, result), do: {:ok, without_page_data(result)}
+
+  @decorate span("brando.ssg.write_site_files")
+  defp write_site_files(request, urls, output_path, opts, result) do
+    if Keyword.get(opts, :site_files, true) do
+      markdown_failures =
+        Enum.flat_map(result.markdown_paths -- urls, &fetch_file(request, &1, output_file(output_path, &1)))
+
+      {sitemap?, sitemap_failures} = write_sitemap(output_path, opts)
+      sitemap_header = [{Context.sitemap_header(), if(sitemap?, do: "1", else: "0")}]
+
+      failures =
+        markdown_failures ++
+          fetch_not_found_page(request, output_path) ++
+          sitemap_failures ++
+          fetch_file(request, "/robots.txt", Path.join(output_path, "robots.txt"), sitemap_header)
+
+      built_paths = urls ++ result.markdown_paths
+
+      with :ok <- write_redirects(output_path, built_paths, result.page_redirects) do
+        {:ok, %{without_page_data(result) | failed_urls: result.failed_urls ++ failures}}
+      end
+    else
+      {:ok, without_page_data(result)}
+    end
+  end
+
+  defp without_page_data(result), do: Map.drop(result, [:page_redirects, :markdown_paths])
+
+  # A file the application answers with 2xx: [] when written, else its failure
+  defp fetch_file(request, path, target, extra_headers \\ []) do
+    case fetch_path(request, path, extra_headers) do
+      {:ok, %{status: status, body: body}, _redirect} when status in 200..299 ->
+        write_result(path, write_file(target, IO.iodata_to_binary(body)))
+
+      {:ok, %{status: status}, _redirect} ->
+        [format_failure(path, {:http_status, status})]
+
+      other ->
+        {:error, reason} = fetch_error(other)
+        [format_failure(path, reason)]
+    end
+  rescue
+    exception -> [format_failure(path, {:request_exception, Exception.message(exception)})]
+  end
+
+  # The application answers a missing path with the site's error page and 404,
+  # which is the answer wanted here
+  defp fetch_not_found_page(request, output_path) do
+    case fetch_path(request, @not_found_path) do
+      {:ok, %{status: 404, body: body}, _redirect} ->
+        write_result(@not_found_path, write_file(Path.join(output_path, "404.html"), IO.iodata_to_binary(body)))
+
+      {:ok, %{status: status}, _redirect} ->
+        [format_failure(@not_found_path, {:not_found_status, status})]
+
+      other ->
+        {:error, reason} = fetch_error(other)
+        [format_failure(@not_found_path, reason)]
+    end
+  rescue
+    exception -> [format_failure(@not_found_path, {:request_exception, Exception.message(exception)})]
+  end
+
+  defp write_result(_path, :ok), do: []
+  defp write_result(path, {:error, reason}), do: [format_failure(path, reason)]
+
+  # {whether the build has a sitemap index, failures}
+  defp write_sitemap(output_path, opts) do
+    module = Keyword.get_lazy(opts, :sitemap_module, &Brando.sitemap/0)
+
+    case Brando.Sitemap.write_static(Path.join(output_path, "sitemaps"), module: module) do
+      {:ok, _files} -> {File.regular?(Path.join(output_path, @sitemap_index)), []}
+      {:error, reason} -> {false, [format_failure("/" <> @sitemap_index, {:sitemap_failed, reason})]}
+    end
+  end
+
+  defp write_redirects(output_path, built_paths, page_redirects) do
+    target = Path.join(output_path, @redirects_file)
+    json = Jason.encode_to_iodata!(Brando.SSG.RedirectList.build(page_redirects, built_paths), pretty: true)
+
+    case File.write(target, json) do
+      :ok -> :ok
+      {:error, reason} -> {:error, {:write_failed, target, reason}}
+    end
   end
 
   defp default_fetcher(url, opts), do: Req.get(url, opts)
@@ -391,23 +634,29 @@ defmodule Brando.SSG do
   # Req would follow a redirect to any host with the signed header still on the
   # request, and the caller could not tell. So a build follows redirects itself.
   # `repeating?`: the request answered a redirect to itself, followed once.
-  defp fetch(request, url, redirects_left, repeating? \\ false) do
+  # `{:ok, response, redirect}`: `redirect` is nil, or the first redirect's
+  # status and the URL the answer came from when the request was redirected
+  defp fetch(request, url, redirects_left, repeating? \\ false, first_status \\ nil) do
     case request.fetcher.(url, request.opts) do
       {:ok, %{status: status} = response} when status in @redirect_statuses ->
         case redirect_location(response) do
           nil ->
-            {:ok, response}
+            {:ok, response, nil}
 
           location ->
-            follow_redirect(request, URI.parse(url), URI.merge(url, location), status, redirects_left, repeating?)
+            target = URI.merge(url, location)
+            follow_redirect(request, URI.parse(url), target, status, redirects_left, repeating?, first_status || status)
         end
+
+      {:ok, %{status: _status} = response} ->
+        {:ok, response, if(first_status, do: {first_status, url})}
 
       result ->
         result
     end
   end
 
-  defp follow_redirect(request, %URI{} = source, %URI{} = target, status, redirects_left, repeating?) do
+  defp follow_redirect(request, %URI{} = source, %URI{} = target, status, redirects_left, repeating?, first_status) do
     next = on_listener(target, source, request.listener)
     to_itself? = to_string(next) == to_string(source)
 
@@ -422,7 +671,7 @@ defmodule Brando.SSG do
         {:refused_redirect, :too_many_redirects}
 
       true ->
-        fetch(request, to_string(next), redirects_left - 1, to_itself?)
+        fetch(request, to_string(next), redirects_left - 1, to_itself?, first_status)
     end
   end
 
@@ -468,11 +717,9 @@ defmodule Brando.SSG do
 
   defp redirect_location(_response), do: nil
 
-  defp write_response(output_path, url, body) do
-    target = output_file(output_path, url)
-
+  defp write_file(target, body) do
     with :ok <- File.mkdir_p(Path.dirname(target)),
-         :ok <- File.write(target, format_body(body, url)) do
+         :ok <- File.write(target, body) do
       :ok
     else
       {:error, reason} -> {:error, {:write_failed, target, reason}}
@@ -488,20 +735,6 @@ defmodule Brando.SSG do
       Path.join([output_path, relative, "index.html"])
     else
       Path.join(output_path, relative)
-    end
-  end
-
-  defp format_body(body, url) do
-    body = IO.iodata_to_binary(body)
-
-    if Path.extname(url) in ["", ".html", ".htm"] do
-      try do
-        Phoenix.LiveView.HTMLFormatter.format(body, [])
-      rescue
-        _not_html -> body
-      end
-    else
-      body
     end
   end
 
@@ -604,6 +837,12 @@ defmodule Brando.SSG do
       "redirecting the build's requests. Exclude the host `localhost` (its `:exclude`), or add " <>
       "`rewrite_on: [:x_forwarded_proto]` with an `https` endpoint URL)"
   end
+
+  defp format_failure(url, {:not_found_status, status}),
+    do: "#{url} (HTTP #{status} where the site's error page answers 404: no 404.html written)"
+
+  defp format_failure(url, {:sitemap_failed, message}) when is_binary(message),
+    do: "#{url} (the sitemap failed: #{message})"
 
   defp format_failure(url, reason), do: "#{url} (#{inspect(reason)})"
 

@@ -14,9 +14,19 @@ defmodule Brando.SSG.Context do
   @salt "brando-ssg-context"
   @max_age 3_600
   @header "x-brando-ssg-token"
+  @sitemap_header "x-brando-ssg-sitemap"
 
   @spec header() :: String.t()
   def header, do: @header
+
+  @doc """
+  The header a build sends with its `robots.txt` request: `1` when the build
+  has a sitemap for robots.txt to name, `0` when it has none. Only a request
+  with a valid signed context (`Brando.Plug.Tenant` marks it
+  `conn.private.brando_ssg_build`) is answered by it.
+  """
+  @spec sitemap_header() :: String.t()
+  def sitemap_header, do: @sitemap_header
 
   @spec sign(Site.t(), Environment.t()) :: String.t()
   def sign(%Site{id: site_id}, %Environment{id: environment_id, site_id: site_id}) do

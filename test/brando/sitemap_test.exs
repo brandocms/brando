@@ -203,6 +203,41 @@ defmodule Brando.SitemapTest do
       assert length(Regex.scan(~r/<loc>http:\/\/acme\.test\/index<\/loc>/, sitemap)) == live_count
     end
 
+    test "write_static/2 writes the selected environment's sitemap, with entries on the public base URL", %{
+      sitemaps: sitemaps,
+      creator: creator,
+      tmp_dir: dir
+    } do
+      Brando.Tenant.with_prefix("tenant_acme_production", fn ->
+        {:ok, _} = Pages.create_page(Factory.params_for(:page, title: "Live", uri: "live"), creator)
+      end)
+
+      output = Path.join(dir, "build/sitemaps")
+
+      staging_count =
+        Brando.Tenant.with_prefix("tenant_acme_staging", fn ->
+          for uri <- ~w(draft-a draft-b),
+              do: {:ok, _} = Pages.create_page(Factory.params_for(:page, title: uri, uri: uri), creator)
+
+          assert {:ok, ["sitemap-00001.xml", "sitemap.xml"]} = Sitemap.write_static(output, gzip: false)
+          published_pages()
+        end)
+
+      assert File.read!(Path.join(output, "sitemap.xml")) =~ "<loc>http://acme.test/sitemaps/sitemap-00001.xml</loc>"
+
+      sitemap = File.read!(Path.join(output, "sitemap-00001.xml"))
+      refute sitemap =~ "staging.acme.test"
+      assert length(Regex.scan(~r/<loc>http:\/\/acme\.test\/index<\/loc>/, sitemap)) == staging_count
+
+      # The sitemap the site serves is not touched
+      refute File.exists?(sitemaps)
+    end
+
+    test "write_static/2 writes nothing without a sitemap module", %{tmp_dir: dir} do
+      assert {:ok, []} = Sitemap.write_static(Path.join(dir, "build/sitemaps"), module: nil)
+      refute File.exists?(Path.join(dir, "build/sitemaps"))
+    end
+
     defp published_pages do
       {:ok, pages} = Pages.list_pages(%{filter: %{has_url: true}, status: :published})
       length(pages)

@@ -1,0 +1,1 @@
+- A static build holds what a static host needs to serve the site on its own: `404.html`, `robots.txt`, the built environment's sitemap, each page's Markdown alternate and `_redirects.json`, the site's redirects in a host-neutral list.
