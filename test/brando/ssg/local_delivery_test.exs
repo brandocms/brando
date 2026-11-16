@@ -467,6 +467,37 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert get_resp_header(conn, "referrer-policy") == ["strict-origin-when-cross-origin"]
     end
 
+    test "answers Accept: text/markdown with a page's Markdown file when the build has one", context do
+      context |> ready_build() |> deploy!()
+
+      markdown =
+        :get
+        |> build_conn("/about")
+        |> Map.put(:host, context.host)
+        |> put_req_header("accept", "text/markdown, text/html;q=0.9")
+        |> SiteAssets.call([])
+
+      assert markdown.status == 200
+      assert sent_body(markdown) == "# About"
+      assert get_resp_header(markdown, "content-type") == ["text/markdown; charset=utf-8"]
+      assert get_resp_header(markdown, "vary") == ["Accept"]
+
+      html = request(context.host, "/about")
+      assert sent_body(html) == "about v1"
+      assert get_resp_header(html, "vary") == ["Accept"]
+
+      # The root has no Markdown file in this build: HTML, whatever is asked
+      root =
+        :get
+        |> build_conn("/")
+        |> Map.put(:host, context.host)
+        |> put_req_header("accept", "text/markdown")
+        |> SiteAssets.call([])
+
+      assert sent_body(root) == "home v1"
+      assert get_resp_header(root, "vary") == []
+    end
+
     test "sends the gzipped sitemap as the sitemap controller does", context do
       context |> ready_build() |> deploy!()
 

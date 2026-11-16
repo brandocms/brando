@@ -15,7 +15,10 @@ defmodule Brando.SSG.LocalDelivery do
   On such a host, a `GET` or `HEAD`:
 
     * for a path the build has a file for answers that file: `/about` and
-      `/about/` answer `about/index.html`, `/` the root's `index.html`;
+      `/about/` answer `about/index.html`, `/` the root's `index.html`; a
+      page asked for with `Accept: text/markdown` (`Brando.Plug.Markdown.prefers_markdown?/1`)
+      answers the build's Markdown file for it (`about.md`, `index.md`) when
+      it has one, and both answers then carry `Vary: Accept`;
     * for a path its redirect list (`_redirects.json`) answers, a redirect or
       `410 Gone`, as `Brando.SSG.RedirectList` describes: the first entry that
       matches the decoded path wins, a rule applies only to a request in its
@@ -273,7 +276,38 @@ defmodule Brando.SSG.LocalDelivery do
 
   # -- Files ----------------------------------------------------------------------
 
+  # A page with a Markdown file in the build answers `Accept: text/markdown`
+  # with it, as `Brando.Plug.Markdown` answers for the application
   defp send_build_file(conn, build, relative) do
+    case markdown_file(build, relative) do
+      nil ->
+        send_file_of(conn, build, relative)
+
+      markdown ->
+        conn = put_resp_header(conn, "vary", "Accept")
+        send_file_of(conn, build, if(prefers_markdown?(conn), do: markdown, else: relative))
+    end
+  end
+
+  # `about/index.html` has `about.md`, the root's `index.html` `index.md`
+  defp markdown_file(build, relative) do
+    markdown =
+      case relative do
+        "index.html" -> "index.md"
+        _page -> if Path.basename(relative) == "index.html", do: Path.dirname(relative) <> ".md"
+      end
+
+    if markdown && Map.has_key?(build.files, markdown), do: markdown
+  end
+
+  defp prefers_markdown?(conn) do
+    case get_req_header(conn, "accept") do
+      [accept | _] -> Brando.Plug.Markdown.prefers_markdown?(accept)
+      [] -> false
+    end
+  end
+
+  defp send_file_of(conn, build, relative) do
     etag = Map.fetch!(build.files, relative)
     conn = put_file_headers(conn, relative)
 
