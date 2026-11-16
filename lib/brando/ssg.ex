@@ -177,7 +177,9 @@ defmodule Brando.SSG do
       gets none, and a note says so; any other status fails it;
     * `sitemaps/`, the sitemap of the environment being built
       (`Brando.Sitemap.write_static/2`, from `:sitemap_module`, by default the
-      application's), with entries on the site's public base URL;
+      application's), with entries on the site's public base URL; a note
+      says when the application has no sitemap module or it produced no
+      entries;
     * `robots.txt`, as the application answers it for the site on its public
       host, naming that sitemap when the build has one;
     * `_redirects.json`, the site's redirects (`Brando.SSG.RedirectList`):
@@ -558,7 +560,7 @@ defmodule Brando.SSG do
         fetch_alternates(request, result.markdown_paths -- urls, output_path)
 
       {not_found_failures, not_found_notes} = fetch_not_found_page(request, output_path)
-      {sitemap?, sitemap_failures} = write_sitemap(output_path, opts)
+      {sitemap?, sitemap_failures, sitemap_notes} = write_sitemap(output_path, opts)
       sitemap_header = [{Context.sitemap_header(), if(sitemap?, do: "1", else: "0")}]
 
       failures =
@@ -571,7 +573,7 @@ defmodule Brando.SSG do
 
       notes =
         Enum.map(skipped_markdown, &"#{&1}: not written, the application answers 404 for this Markdown alternate") ++
-          not_found_notes
+          not_found_notes ++ sitemap_notes
 
       with {:ok, redirect_notes} <- write_redirects(output_path, built_paths, result.page_redirects) do
         {:ok,
@@ -649,13 +651,28 @@ defmodule Brando.SSG do
   defp write_result(_path, :ok), do: []
   defp write_result(path, {:error, reason}), do: [format_failure(path, reason)]
 
-  # {whether the build has a sitemap index, failures}
+  # {whether the build has a sitemap index, failures, notes}: a build without
+  # a sitemap says why, since only robots.txt would show it
   defp write_sitemap(output_path, opts) do
     module = Keyword.get_lazy(opts, :sitemap_module, &Brando.sitemap/0)
 
     case Brando.Sitemap.write_static(Path.join(output_path, "sitemaps"), module: module) do
-      {:ok, _files} -> {File.regular?(Path.join(output_path, @sitemap_index)), []}
-      {:error, reason} -> {false, [format_failure("/" <> @sitemap_index, {:sitemap_failed, reason})]}
+      {:ok, _files} ->
+        if File.regular?(Path.join(output_path, @sitemap_index)),
+          do: {true, [], []},
+          else: {false, [], [no_sitemap_note(module)]}
+
+      {:error, reason} ->
+        {false, [format_failure("/" <> @sitemap_index, {:sitemap_failed, reason})], []}
+    end
+  end
+
+  defp no_sitemap_note(module) do
+    if is_atom(module) and not is_nil(module) and Brando.Sitemap.exists?(module) do
+      "sitemaps/: not written, #{inspect(module)} produced no entries, so robots.txt names no sitemap"
+    else
+      "sitemaps/: not written, the application has no sitemap module (mix brando.gen.sitemap adds one), " <>
+        "so robots.txt names no sitemap"
     end
   end
 

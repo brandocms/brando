@@ -2400,7 +2400,9 @@ as the application answered it, byte for byte:
   (`Brando.Utils.public_hostname/0`), naming the build's sitemap when it has one.
 - `sitemaps/sitemap.xml.gz` and the files it lists: the sitemap of the
   environment built, not the live one's, with its entries on the site's public
-  base URL, at the paths `robots.txt` names.
+  base URL, at the paths `robots.txt` names. A build without one (the
+  application has no sitemap module, or it produced no entries) says so in
+  its log.
 - `_redirects.json`: the site's redirects (below).
 - `assets/` and `media/`: the build's asset set and the site's media.
 

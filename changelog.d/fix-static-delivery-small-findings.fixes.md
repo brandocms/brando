@@ -1,0 +1,1 @@
+- A static build of a site without a sitemap says so in its log and in `mix brando.ssg`'s output: the application has no sitemap module, or it produced no entries.

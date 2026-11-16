@@ -844,6 +844,15 @@ defmodule Brando.SSGTest do
       end
     end
 
+    defmodule EmptySitemap do
+      @moduledoc false
+      import Brando.Sitemap
+
+      sitemap "pages" do
+        []
+      end
+    end
+
     @page ~s(<!DOCTYPE html>\n<html><head>) <>
             ~s(<link rel="stylesheet" href="/assets/app.css">) <>
             ~s(</head><body><p>Every word stays as it was.</p></body></html>)
@@ -997,9 +1006,18 @@ defmodule Brando.SSGTest do
     test "without a sitemap tells robots.txt there is none", context do
       SSGEndpoint.start(context.answer)
 
-      assert {:ok, %{failed_urls: []}} = context.build.(sitemap_module: nil)
+      assert {:ok, %{failed_urls: [], notes: [note]}} = context.build.(sitemap_module: nil)
+      assert note =~ "sitemaps/: not written, the application has no sitemap module"
       assert read_output(context, "robots.txt") =~ "Sitemap-header: 0"
       refute File.exists?(Path.join(context.output_path, "sitemaps"))
+    end
+
+    test "notes a sitemap module that produced no entries", context do
+      SSGEndpoint.start(context.answer)
+
+      assert {:ok, %{failed_urls: [], notes: [note]}} = context.build.(sitemap_module: EmptySitemap)
+      assert note =~ "sitemaps/: not written, #{inspect(EmptySitemap)} produced no entries"
+      assert read_output(context, "robots.txt") =~ "Sitemap-header: 0"
     end
 
     test "lists the redirect rules the application answers, in order, for a static host", context do
