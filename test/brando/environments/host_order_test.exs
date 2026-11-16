@@ -78,6 +78,11 @@ defmodule Brando.Environments.HostOrderTest do
     put_test_env(:tenant_migrator, HoldingMigrator)
     put_test_env(HoldingMigrator, self())
 
+    # Committed: what a killed run left goes first, and on exit whatever this
+    # run leaves
+    remove_site("acme-hold")
+    on_exit(fn -> remove_site("acme-hold") end)
+
     site =
       Sandbox.unboxed_run(Repo, fn ->
         {:ok, site} =
@@ -92,17 +97,6 @@ defmodule Brando.Environments.HostOrderTest do
 
         site
       end)
-
-    on_exit(fn ->
-      Sandbox.unboxed_run(Repo, fn ->
-        Schema.drop(Tenant.prefix(site.key, "preview"))
-        Repo.delete_all(from(l in "environment_operation_logs", where: l.site_id == ^site.id), prefix: "public")
-        Repo.delete_all(from(e in Environment, where: e.site_id == ^site.id), prefix: "public")
-        Repo.delete_all(from(s in Site, where: s.id == ^site.id), prefix: "public")
-      end)
-
-      Cache.clear()
-    end)
 
     %{site: site}
   end
