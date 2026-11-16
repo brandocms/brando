@@ -174,6 +174,16 @@ defmodule Brando.Forms.StaticDeliveryTest do
       end
     end
 
+    test "accepts the endpoint's host in any case", %{conn: conn} do
+      Brando.Test.LocalDeliveryEndpoint.start(Brando.Test.LocalDeliveryEndpoint, "WWW.EXAMPLE.COM")
+      put_test_env(:endpoint_module, Brando.Test.LocalDeliveryEndpoint)
+      put_test_env(:tenancy_mode, :single)
+      put_test_env(:site_key, "beta")
+      Cache.warm()
+
+      assert accepted?(post_static(conn, "/__brando/forms/static/beta/production/contact", "https://www.example.com"))
+    end
+
     test "refuses another site's origin and an unknown one", %{conn: conn} do
       assert conn
              |> post_static("/__brando/forms/static/beta/production/contact", "https://www.acme.test")

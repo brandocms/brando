@@ -55,12 +55,12 @@ defmodule Brando.Test.LocalDeliveryEndpoint do
   @doc "Starts the endpoint under the test's supervisor."
   def start, do: start(__MODULE__)
 
-  @doc "Starts `endpoint` under the test's supervisor."
-  def start(endpoint) do
+  @doc "Starts `endpoint` under the test's supervisor, with `host` in its URL."
+  def start(endpoint, host \\ "endpoint.test") do
     previous = Application.fetch_env(:brando, endpoint)
 
     Application.put_env(:brando, endpoint,
-      url: [host: "endpoint.test"],
+      url: [host: host],
       server: false,
       secret_key_base: String.duplicate("local-delivery", 6),
       live_view: [signing_salt: "localdeliverysalt"],

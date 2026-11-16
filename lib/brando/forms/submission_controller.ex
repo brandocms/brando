@@ -197,8 +197,12 @@ defmodule Brando.Forms.SubmissionController do
   # With one site, the endpoint's host answers for its live environment
   defp public_host?(site, host) do
     Tenant.mode() == :single and Brando.config(:site_key) == site.key and
-      String.downcase(host) == URI.parse(Brando.endpoint().url()).host
+      normalize_host(host) == normalize_host(URI.parse(Brando.endpoint().url()).host)
   end
+
+  # As `Brando.Plug.Tenant` reads a host
+  defp normalize_host(host) when is_binary(host), do: host |> String.trim() |> String.downcase()
+  defp normalize_host(_host), do: nil
 
   # The static site's enhancement script reads the JSON reply cross-origin.
   defp allow_origin(conn) do
