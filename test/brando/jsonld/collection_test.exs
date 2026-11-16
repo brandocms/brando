@@ -17,7 +17,7 @@ defmodule Brando.JSONLD.Schema.CollectionTest do
 
       assert [%{item: item, position: 1}] = list.itemListElement
       assert item[:"@type"] == "CreativeWork"
-      assert item[:"@id"] == "https://x.test/example-hotel/#creativework"
+      assert item[:"@id"] == "https://x.test/example-hotel#creativework"
       assert item.url == "https://x.test/example-hotel"
     end
 
@@ -33,7 +33,7 @@ defmodule Brando.JSONLD.Schema.CollectionTest do
     test "joins the graph by reference rather than duplicating nodes" do
       page =
         CollectionPage.build(%{
-          id: "https://x.test/work/#collectionpage",
+          id: "https://x.test/work#collectionpage",
           name: "Work",
           url: "https://x.test/work",
           language: "no",
@@ -142,8 +142,8 @@ defmodule Brando.JSONLD.Schema.CollectionTest do
         )
 
       assert %CollectionPage{name: "Things", inLanguage: "no"} = page
-      assert String.ends_with?(page.url, "/things")
-      assert String.ends_with?(Map.get(page, :"@id"), "/things/#collectionpage")
+      assert page.url == Brando.Utils.public_hostname() <> "/things"
+      assert Map.get(page, :"@id") == Brando.Utils.public_hostname() <> "/things#collectionpage"
       assert %{"@id": website} = page.isPartOf
       assert String.ends_with?(website, "/#website")
       assert %{"@id": identity} = page.publisher
