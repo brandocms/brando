@@ -398,7 +398,7 @@ defmodule BrandoAdmin.Authorization.Events do
       write: ~w(delete pause redeliver resume save send_test)
     ],
     "BrandoAdmin.Sites.PublishingLive" => [
-      read: ~w(refresh),
+      read: ~w(change_deploy_config refresh),
       write: ~w(deploy request_build rollback save_deploy_config schedule_build)
     ],
     "BrandoAdmin.Sites.SEOLive" => [
