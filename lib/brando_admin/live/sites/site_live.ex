@@ -292,7 +292,12 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
             <section>
               <h3>{gettext("Grant access")}</h3>
-              <form phx-submit="grant" id={"grant-site-#{site.id}"}>
+              <p :if={@users == []}>
+                {gettext(
+                  "Every user here is a superuser, who already has access to every site. Access is granted to users with another role."
+                )}
+              </p>
+              <form :if={@users != []} phx-submit="grant" id={"grant-site-#{site.id}"}>
                 <input type="hidden" name="assignment[site_id]" value={site.id} />
                 <label>
                   <span>{gettext("User")}</span>

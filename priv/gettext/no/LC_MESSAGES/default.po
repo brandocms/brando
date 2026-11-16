@@ -7207,6 +7207,11 @@ msgstr "Alle moduler har en skisse."
 msgid "Every other browser where you are logged in is logged out, and your connected apps are disconnected. This one stays logged in."
 msgstr "Alle andre nettlesere der du er logget inn, blir logget ut, og de tilkoblede appene dine kobles fra. Denne forblir innlogget."
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every user here is a superuser, who already has access to every site. Access is granted to users with another role."
+msgstr "Alle brukerne her er superbrukere, som allerede har tilgang til alle nettsteder. Tilgang gis til brukere med en annen rolle."
+
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
 #, elixir-autogen, elixir-format
 msgid "Every user must use it."
