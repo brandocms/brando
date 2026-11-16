@@ -127,6 +127,155 @@ defmodule Mix.Tasks.Brando.Entries.ResaveTest do
     end
   end
 
+  test "--site and --environment need tenancy" do
+    assert_raise Mix.Error, ~r/--site and --environment need tenancy/, fn ->
+      Resave.run(["--yes", "--site", "acme", "Brando.Pages.Page"])
+    end
+  end
+
+  describe "with tenancy" do
+    @prefixes ~w(tenant_acme_production tenant_acme_staging tenant_beta_production tenant_beta_staging)
+
+    defmodule Migrator do
+      @moduledoc false
+      @behaviour Brando.Environments.Migrator
+
+      @impl true
+      def migrate(_site, _environment), do: {:ok, []}
+    end
+
+    setup do
+      creator = Brando.Factory.insert(:random_user, role: :superuser, avatar: nil)
+      # public's own tables, which a site with tenancy leaves behind
+      public = stale_page!(nil, creator)
+
+      root = Path.join(System.tmp_dir!(), "brando-resave-#{System.unique_integer([:positive])}")
+
+      put_test_env(:media_path, Path.join(root, "media"))
+      put_test_env(:sites_path, Path.join(root, "sites"))
+      put_test_env(:tenant_migrator, Migrator)
+      put_test_env(:tenant_structure_cloner, Brando.TenantCloners)
+      put_test_env(:environment_schema_cloner, Brando.TenantCloners)
+      put_test_env(:tenancy_mode, :multi)
+      Brando.Tenant.put_prefix(nil)
+      Brando.Tenant.Cache.clear()
+
+      on_exit(fn ->
+        File.rm_rf(root)
+        Brando.Tenant.put_prefix(nil)
+        Brando.Tenant.Cache.clear()
+        Brando.TenantCaches.clear(@prefixes)
+      end)
+
+      for key <- ~w(acme beta) do
+        {:ok, _site} =
+          Brando.Tenant.Setup.create_site(
+            %{name: String.capitalize(key), key: key, languages: ["en"], default_language: "en", status: :active},
+            creator,
+            environments: [
+              %{name: "Production", key: "production", live: true},
+              %{name: "Staging", key: "staging", live: false}
+            ]
+          )
+      end
+
+      pages = for prefix <- @prefixes, into: %{}, do: {prefix, stale_page!(prefix, creator)}
+
+      %{pages: pages, public: public}
+    end
+
+    test "re-saves the entries of every environment of every site, each under its own prefix", context do
+      output = ExUnit.CaptureIO.capture_io(fn -> Resave.run(["--yes", "Brando.Pages.Page"]) end)
+
+      assert stale(context) == ["public"]
+      assert output =~ "done!"
+      refute output =~ "failed!"
+
+      for {site, environment} <- [
+            {"Acme (acme)", "Production"},
+            {"Acme (acme)", "Staging"},
+            {"Beta (beta)", "Production"},
+            {"Beta (beta)", "Staging"}
+          ] do
+        assert_received {:mix_shell, :info, ["\n==> " <> ^site <> " → " <> rest]}
+        assert rest =~ environment
+      end
+
+      assert_received {:mix_shell, :info, ["\nResaved " <> count]}
+      assert count =~ ~r/^\d+ entries in 4 environments\.$/
+      assert_received {:mix_shell, :info, ["\n==> Done.\n"]}
+    end
+
+    test "--site and --environment narrow it", context do
+      run = fn args -> ExUnit.CaptureIO.capture_io(fn -> Resave.run(["--yes" | args] ++ ["Brando.Pages.Page"]) end) end
+
+      run.(["--site", "beta", "--environment", "staging"])
+      assert stale(context) == ~w(public tenant_acme_production tenant_acme_staging tenant_beta_production)
+
+      run.(["--environment", "production"])
+      assert stale(context) == ~w(public tenant_acme_staging)
+
+      run.(["--site", "acme"])
+      assert stale(context) == ["public"]
+    end
+
+    test "an unknown site or environment stops it before anything is done", context do
+      assert_raise Mix.Error, ~r/no site has the key "gamma"/, fn -> Resave.run(["--yes", "--site", "gamma"]) end
+
+      assert_raise Mix.Error, ~r/no environment matches --site acme and --environment lab/, fn ->
+        Resave.run(["--yes", "--site", "acme", "--environment", "lab"])
+      end
+
+      assert length(stale(context)) == 5
+    end
+
+    test "in :single mode, re-saves the environments' entries, not public's", context do
+      put_test_env(:tenancy_mode, :single)
+      put_test_env(:site_key, "acme")
+
+      ExUnit.CaptureIO.capture_io(fn -> Resave.run(["--yes", "--site", "acme", "Brando.Pages.Page"]) end)
+
+      assert stale(context) == ~w(public tenant_beta_production tenant_beta_staging)
+    end
+  end
+
+  # A published page whose stored render is out of date, in `prefix`
+  defp stale_page!(prefix, user) do
+    Brando.Tenant.with_prefix(prefix, fn ->
+      {:ok, page} =
+        Brando.Pages.create_page(
+          %{
+            title: "About",
+            uri: "about-#{System.unique_integer([:positive])}",
+            language: "en",
+            template: "default.html",
+            status: :published
+          },
+          user
+        )
+
+      {1, _} =
+        Brando.Repo.update_all(Ecto.Query.from(p in Brando.Pages.Page, where: p.id == ^page.id),
+          set: [rendered_blocks: "stale"]
+        )
+
+      page.id
+    end)
+  end
+
+  # Where the stale pages still are
+  defp stale(%{pages: pages, public: public}) do
+    [{"public", public} | Enum.sort(pages)]
+    |> Enum.filter(fn
+      {"public", id} ->
+        Brando.Repo.get!(Brando.Pages.Page, id, prefix: "public").rendered_blocks == "stale"
+
+      {prefix, id} ->
+        Brando.Tenant.with_prefix(prefix, fn -> Brando.Repo.get!(Brando.Pages.Page, id).rendered_blocks == "stale" end)
+    end)
+    |> Enum.map(&elem(&1, 0))
+  end
+
   describe "Mix.Brando.confirm?/2" do
     test "--yes and --force answer without asking" do
       assert Mix.Brando.confirm?("Proceed?", yes: true)

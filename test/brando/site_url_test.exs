@@ -289,7 +289,6 @@ defmodule Brando.SiteURLTest do
       end)
 
       in_environment("staging", fn ->
-
         conn =
           Phoenix.ConnTest.build_conn(:get, en)
           |> Plug.Conn.assign(:language, "en")
@@ -458,15 +457,24 @@ defmodule Brando.SiteURLTest do
     test "has the page's form once `mix brando.entries.resave` renders it again" do
       user = Brando.Factory.insert(:random_user)
 
+      page =
+        in_environment("production", fn ->
+          page = json_ld_page!(user)
+          assert rendered_blocks(page) =~ ~S(http:\/\/acme.test\/en\/work#creativework")
+
+          old = String.replace(rendered_blocks(page), "#creativework", "/#creativework")
+          {1, _} = Brando.Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [rendered_blocks: old])
+          page
+        end)
+
+      shell = Mix.shell()
+      Mix.shell(Mix.Shell.Process)
+      on_exit(fn -> Mix.shell(shell) end)
+      Enum.each(["brando.entries.resave", "run"], &Mix.Task.reenable/1)
+
+      ExUnit.CaptureIO.capture_io(fn -> Mix.Tasks.Brando.Entries.Resave.run(["--yes", "Brando.Pages.Page"]) end)
+
       in_environment("production", fn ->
-        page = json_ld_page!(user)
-        assert rendered_blocks(page) =~ ~S(http:\/\/acme.test\/en\/work#creativework")
-
-        old = String.replace(rendered_blocks(page), "#creativework", "/#creativework")
-        {1, _} = Brando.Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [rendered_blocks: old])
-
-        # What the task does for each entry
-        assert {:ok, _} = Brando.Content.Blocks.render_and_store(Page, page.id, force: true)
         assert rendered_blocks(page) =~ ~S(http:\/\/acme.test\/en\/work#creativework")
         refute rendered_blocks(page) =~ "/#creativework"
       end)

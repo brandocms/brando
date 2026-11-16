@@ -1,0 +1,1 @@
+- `mix brando.entries.resave` re-saves the entries of every environment of every site when tenancy is on, each in its own schema, and prints each environment and how many entries it re-saved; it raised `Brando.Exception.MissingTenantError` in `:multi` mode and re-saved only the public schema's leftover tables in `:single`. `--site <key>` and `--environment <key>` narrow it.
