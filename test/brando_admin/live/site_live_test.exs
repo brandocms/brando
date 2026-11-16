@@ -114,12 +114,36 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
 
     assert Access.role_for(editor, created) == :admin
     assert has_element?(view, "#site-#{created.id}", editor.email)
+    assert has_element?(view, "#site-#{created.id} tr[id^=assignment-] .badge", "Administrator")
 
     view
     |> element("#site-#{created.id} button[phx-click=revoke][phx-value-user-id=\"#{editor.id}\"]")
     |> render_click()
 
     refute Access.can_access?(editor, created)
+  end
+
+  describe "granting access" do
+    test "offers the users who are not superusers", %{conn: conn, editor: editor, site: site} do
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      assert has_element?(view, "#grant-site-#{site.id} option[value=\"#{editor.id}\"]", editor.email)
+      refute has_element?(view, "#site-#{site.id}", "Every user here is a superuser")
+    end
+
+    test "says why there is nobody to grant access to when every user is a superuser",
+         %{conn: conn, editor: editor, site: site} do
+      editor |> Ecto.Changeset.change(role: :superuser) |> Brando.Repo.update!()
+      {:ok, view, _html} = live(conn, "/admin/sites")
+
+      refute has_element?(view, "#grant-site-#{site.id}")
+
+      assert has_element?(
+               view,
+               "#site-#{site.id} .site-card__users p",
+               "Every user here is a superuser, who already has access to every site."
+             )
+    end
   end
 
   # The installation scope the screen runs under grants no content in a
@@ -160,7 +184,7 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
     |> render_click()
 
     assert Registry.get_site(site.id).status == :suspended
-    assert has_element?(view, "#site-#{site.id}", "suspended")
+    assert has_element?(view, "#site-#{site.id} .badge", "Suspended")
 
     view
     |> element("#site-#{site.id} button", "Archive")
@@ -352,6 +376,8 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       {:ok, view, _html} = live(conn, "/admin/sites")
       assert has_element?(view, row, "Seeding no in Production")
       refute has_element?(view, "#{row} button")
+      # Under the languages form it reports on, not under the library group
+      assert has_element?(view, "#languages-site-#{site.id} + .site-seeding #seeding-site-#{site.id} #{row}")
 
       Brando.Repo.update_all(Oban.Job, [set: [state: "retryable", attempt: 1, errors: [%{"error" => "boom\nstack"}]]],
         prefix: "public"

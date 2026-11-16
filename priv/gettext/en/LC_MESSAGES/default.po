@@ -1622,6 +1622,12 @@ msgstr ""
 msgid "Active"
 msgstr ""
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "site status"
+msgid "Active"
+msgstr ""
+
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex
 #, elixir-autogen, elixir-format
 msgid "Active commit"
@@ -2501,6 +2507,12 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
+msgid "Archived"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "site status"
 msgid "Archived"
 msgstr ""
 
@@ -7195,6 +7207,11 @@ msgstr "Every module has a sketch."
 #: lib/brando_admin/live/users/user_security_live.ex
 #, elixir-autogen, elixir-format
 msgid "Every other browser where you are logged in is logged out, and your connected apps are disconnected. This one stays logged in."
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgid "Every user here is a superuser, who already has access to every site. Access is granted to users with another role."
 msgstr ""
 
 #: lib/brando_admin/live/users/sign_in_policy_live.ex
@@ -16907,6 +16924,12 @@ msgstr ""
 #: lib/brando_admin/live/sites/site_live.ex
 #, elixir-autogen, elixir-format
 msgid "Suspend"
+msgstr ""
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "site status"
+msgid "Suspended"
 msgstr ""
 
 #: lib/brando_admin/components/authorization_tools.ex

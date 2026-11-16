@@ -145,6 +145,9 @@ defmodule E2EFixtureController do
 
         "multi-site-static-published" ->
           MultiSiteHosts.setup(get_admin_user(), published: true)
+
+        "multi-site-queued" ->
+          MultiSiteHosts.setup(get_admin_user(), queued: true)
       end
 
     # Log the user in

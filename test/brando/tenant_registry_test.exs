@@ -108,6 +108,30 @@ defmodule Brando.TenantRegistryTest do
     assert %Environment{id: ^environment_id} = Registry.get_environment_by_key(site, "staging")
   end
 
+  # An update writes a new row version, which Postgres returns after the rows
+  # not updated when nothing orders the query
+  test "sites and their environments are listed in the order they were created, in the cache too" do
+    {:ok, first} = Registry.create_site(@site_attrs)
+    {:ok, second} = Registry.create_site(%{@site_attrs | name: "Beta", key: "beta"})
+
+    environments =
+      for key <- ~w(production staging) do
+        {:ok, environment} = Registry.create_environment(first, %{name: key, key: key, live: false})
+        environment
+      end
+
+    {:ok, _first} = Registry.update_site(first, %{name: "Acme Updated"})
+    {:ok, _environment} = Registry.update_environment(hd(environments), %{name: "Production"})
+
+    site_ids = [first.id, second.id]
+    environment_ids = Enum.map(environments, & &1.id)
+
+    for sites <- [Registry.list_sites(), Cache.list_sites()] do
+      assert Enum.map(sites, & &1.id) == site_ids
+      assert Enum.map(hd(sites).environments, & &1.id) == environment_ids
+    end
+  end
+
   test "failed mutations leave the warmed cache intact" do
     {:ok, site} = Registry.create_site(@site_attrs)
     cached_site = Cache.get_site("acme")

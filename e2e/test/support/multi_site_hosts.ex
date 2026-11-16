@@ -22,7 +22,10 @@ defmodule E2E.MultiSiteHosts do
   site the installation serves itself (the deploy strategy `:local`), for the
   publishing screen; `:published` adds three builds to it, the newest
   deployed and so published, with a ready one before it and one whose three
-  URLs failed.
+  URLs failed. `:queued` adds Norwegian to Acme and schedules a copy from
+  its production to its staging environment for tomorrow, with Oban in
+  manual mode, so the sites screen shows the seeding queued and the
+  environments screen the pending copy.
   """
 
   @behaviour Brando.Tenant.ServedHosts.Resolver
@@ -144,6 +147,8 @@ defmodule E2E.MultiSiteHosts do
 
     if opts[:static] || opts[:published], do: serve_statically(acme, acme_live, admin, opts[:published])
 
+    if opts[:queued], do: queue(acme, acme_live, acme_staging, admin)
+
     if opts[:site_admin] do
       admin = admin |> Ecto.Changeset.change(role: :admin) |> Repo.update!()
       {:ok, _} = Access.grant(admin, acme, :admin)
@@ -193,6 +198,18 @@ defmodule E2E.MultiSiteHosts do
       {:ok, _deployed} = Brando.SSG.Deploy.deploy(build(site, live, admin), creator: admin)
       ready
     end
+
+    Cache.warm()
+  end
+
+  # Jobs the inline Oban of the E2E server would run at once
+  defp queue(site, live, staging, admin) do
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      {:ok, _site} = Registry.update_site(Registry.get_site(site.id), %{languages: ["en", "no"]})
+
+      {:ok, _job} =
+        Brando.Environments.schedule_copy(live, staging, DateTime.add(DateTime.utc_now(), 1, :day), creator: admin)
+    end)
 
     Cache.warm()
   end

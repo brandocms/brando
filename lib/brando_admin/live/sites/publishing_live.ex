@@ -81,7 +81,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
               <h2>{@site.name}</h2>
               <p>{deploy_summary(@site)}</p>
             </div>
-            <span class="environment-state live">{gettext("Static delivery")}</span>
+            <span class="badge badge--success"><span class="badge-dot"></span>{gettext("Static delivery")}</span>
           </header>
 
           <form id="build-static-site" phx-submit="request_build">
@@ -233,7 +233,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
               <h2>{gettext("Build history")}</h2>
               <p>{gettext("Artifacts are stored outside the OTP release and survive blue/green switches.")}</p>
             </div>
-            <span class="environment-count">
+            <span class="badge">
               {ngettext("%{count} build", "%{count} builds", length(@builds))}
             </span>
           </header>
@@ -272,7 +272,8 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                     </span>
                   </td>
                   <td>
-                    <span class={["environment-state", build.status == :deployed && "live"]}>
+                    <span class={["badge", build_tone(build.status)]}>
+                      <span :if={build.status == :deployed} class="badge-dot"></span>
                       {human_status(build.status)}
                     </span>
                     <small :if={published?(build, @site)} class="publishing-served">{gettext("served by this installation")}</small>
@@ -630,6 +631,10 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   end
 
   defp published?(build, site), do: Site.local_delivery?(site) and site.published_build == build.version
+
+  defp build_tone(:deployed), do: "badge--success"
+  defp build_tone(:failed), do: "badge--error"
+  defp build_tone(_status), do: nil
 
   defp human_status(:queued), do: gettext("Queued")
   defp human_status(:building), do: gettext("Building")

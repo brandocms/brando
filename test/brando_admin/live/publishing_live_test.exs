@@ -413,6 +413,7 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
     assert has_element?(view, "#static-deploy-config .environment-hint", "answers from v1, the published build")
     assert has_element?(view, "#ssg-build-#{ready.id}", "served by this installation")
+    assert has_element?(view, "#ssg-build-#{ready.id} .badge.badge--success .badge-dot")
   end
 
   test "does not offer serving the build when the installation turns it off", context do
