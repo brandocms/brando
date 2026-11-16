@@ -1,6 +1,8 @@
 defmodule E2EFixtureController do
   use E2eProjectWeb, :controller
 
+  alias E2E.MultiSiteHosts
+
   def login(conn, %{"email" => email}) do
     user = Brando.Users.get_user!(%{matches: %{email: email}})
 
@@ -16,6 +18,9 @@ defmodule E2EFixtureController do
         # Allow this process to use the associated transaction
         Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
     end
+
+    # The multi-site-hosts-unwritable fixture leaves the served hosts file's folder read-only
+    MultiSiteHosts.restore_file_dir()
 
     # Build the scenario
     scenario =
@@ -123,6 +128,17 @@ defmodule E2EFixtureController do
 
         "video-library-folders" ->
           create_video_library_folders()
+
+        # Two sites with hosts in every served-hosts state, on a server
+        # started with BRANDO_E2E_MULTI_SITE=1 (MultiSiteHosts)
+        "multi-site-hosts" ->
+          MultiSiteHosts.setup(get_admin_user())
+
+        "multi-site-hosts-site-admin" ->
+          MultiSiteHosts.setup(get_admin_user(), site_admin: true)
+
+        "multi-site-hosts-unwritable" ->
+          MultiSiteHosts.setup(get_admin_user(), unwritable: true)
       end
 
     # Log the user in

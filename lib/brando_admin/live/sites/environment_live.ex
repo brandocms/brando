@@ -31,6 +31,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
   @manager_roles [:admin, :superuser]
   @host_fields [{"domain", :domain}, {"redirect_hosts", :redirect_hosts}]
+  # The hosts form's `focused_field` values, and the id suffixes of their controls
+  @focusable_controls %{"domain" => "domain", "redirect_hosts" => "redirect-hosts", "save" => "save"}
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
@@ -46,6 +48,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         |> assign(:default_scheduled_at, default_scheduled_at())
         |> assign(:restoring, nil)
         |> assign(:host_drafts, %{})
+        |> assign(:hosts_changed_elsewhere, MapSet.new())
         |> assign_served_hosts()
         |> refresh_data()
 
@@ -85,449 +88,522 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
-      title={gettext("Environments")}
-      subtitle={gettext("Create, copy, promote, schedule, and recover isolated content environments")}
-    >
-      <button type="button" class="btn" phx-click="refresh">
-        {gettext("Refresh")}
-      </button>
-    </Content.header>
+    <div class="environment-screen">
+      <Content.header
+        title={gettext("Environments")}
+        subtitle={gettext("Create, copy, promote, schedule, and recover isolated content environments")}
+      >
+        <button type="button" class="btn" phx-click="refresh">
+          {gettext("Refresh")}
+        </button>
+      </Content.header>
 
-    <div class="environment-management-live">
-      <div :if={!@tenancy_enabled?} class="environment-notice warning">
-        {gettext("Tenancy is disabled. Set tenancy_mode to single or multi before managing environments.")}
-      </div>
-
-      <div :if={@tenancy_enabled? && is_nil(@site)} class="environment-notice warning">
-        {gettext("No site and live environment could be resolved for this admin session.")}
-      </div>
-
-      <div :if={@site && !@can_manage?} class="environment-notice warning">
-        {gettext("Only administrators and superusers can change environment lifecycle state.")}
-      </div>
-
-      <%= if @site do %>
-        <section class="environment-panel environment-overview">
-          <header>
-            <div>
-              <h2>{@site.name}</h2>
-              <p>{gettext("Schema prefix: tenant_%{site}_<environment>", site: @site.key)}</p>
-            </div>
-            <span class="environment-count">
-              {ngettext("%{count} environment", "%{count} environments", length(@environments))}
-            </span>
-          </header>
-
-          <div :if={@can_manage? && !@can_bind_hosts?} class="alert environment-hint">
-            <.icon name="info" />
-            <span>{gettext("Only a superuser can change the host an environment answers on.")}</span>
-          </div>
-
-          <div
-            :if={@served_hosts_enabled? && @served_hosts.error}
-            class="alert danger environment-served-hosts-error"
-            role="alert"
-          >
-            <.icon name="triangle-alert" />
-            <%!-- The error names a server path or a raw exception: superusers only --%>
-            <span :if={@can_bind_hosts?}>
-              {gettext(
-                "The served hosts file could not be updated, so the reverse proxy may not have heard of new hosts: %{error}",
-                error: @served_hosts.error
-              )}
-            </span>
-            <span :if={!@can_bind_hosts?}>
-              {gettext("The served hosts file could not be written. The reverse proxy may not have heard of new hosts.")}
-            </span>
-          </div>
-
-          <div class="environment-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{gettext("Environment")}</th>
-                  <th>{gettext("Domain")}</th>
-                  <th>{gettext("State")}</th>
-                  <th class="environment-actions">{gettext("Actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr :for={environment <- @environments} id={"environment-#{environment.id}"}>
-                  <td>
-                    <strong>{environment.name}</strong>
-                    <code>{environment.key}</code>
-                  </td>
-                  <td>
-                    <%!-- Keyed on the hosts shown: when a live switch or another superuser moves
-                    them, the form is replaced and a half-typed edit goes with the hosts it was
-                    typed against --%>
-                    <form
-                      id={"environment-domain-#{environment.id}-#{:erlang.phash2(draft_key(environment))}"}
-                      phx-change="draft_hosts"
-                      phx-submit="update_domain"
-                      class="environment-inline-form"
-                    >
-                      <input type="hidden" name="environment_id" value={environment.id} />
-                      <input type="hidden" name="shown_domain" value={environment.domain || ""} />
-                      <input
-                        type="hidden"
-                        name="shown_redirect_hosts"
-                        value={Enum.join(environment.redirect_hosts || [], ",")}
-                      />
-                      <input
-                        type="text"
-                        name="domain"
-                        value={host_draft(@host_drafts, environment).domain}
-                        disabled={!can_edit_hosts?(@can_bind_hosts?, @can_manage?)}
-                        placeholder={gettext("No domain")}
-                        aria-label={gettext("Domain for %{name}", name: environment.name)}
-                      />
-                      <textarea
-                        :if={can_edit_hosts?(@can_bind_hosts?, @can_manage?) || environment.redirect_hosts != []}
-                        name="redirect_hosts"
-                        rows="2"
-                        disabled={!can_edit_hosts?(@can_bind_hosts?, @can_manage?)}
-                        placeholder={gettext("Redirect hosts, one per line")}
-                        aria-label={gettext("Hosts that redirect to the domain of %{name}", name: environment.name)}
-                      >{host_draft(@host_drafts, environment).redirect_hosts}</textarea>
-                      <div :if={can_edit_hosts?(@can_bind_hosts?, @can_manage?)} class="environment-inline-form__actions">
-                        <button type="submit" class="btn btn--sm">{gettext("Save hosts")}</button>
-                      </div>
-                    </form>
-                    <.served_host
-                      :if={@served_hosts_enabled? && environment.domain}
-                      id={"environment-host-status-#{environment.id}"}
-                      state={served_host_state(@served_hosts.hosts, @bound_hosts, environment.domain)}
-                      addresses={@served_hosts.addresses}
-                    />
-                    <ul
-                      :if={@served_hosts_enabled? && environment.domain && environment.redirect_hosts not in [nil, []]}
-                      class="environment-redirect-host-statuses"
-                      aria-label={gettext("Redirect hosts")}
-                    >
-                      <li :for={host <- environment.redirect_hosts}>
-                        <.served_host
-                          id={redirect_host_status_id(environment, host)}
-                          host={host}
-                          state={served_host_state(@served_hosts.hosts, @bound_hosts, host)}
-                          addresses={@served_hosts.addresses}
-                        />
-                      </li>
-                    </ul>
-                  </td>
-                  <td>
-                    <span class={["environment-state", environment.live && "live"]}>
-                      {if environment.live, do: gettext("Live"), else: gettext("Working")}
-                    </span>
-                  </td>
-                  <td class="environment-actions">
-                    <button
-                      :if={!environment.live}
-                      type="button"
-                      class="btn btn--sm"
-                      disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments)}
-                      phx-click="queue_set_live"
-                      phx-value-id={environment.id}
-                      phx-confirm={
-                        gettext("Archive the current live environment and promote %{name}?", name: environment.name)
-                      }
-                    >
-                      {gettext("Set live")}
-                    </button>
-                    <button
-                      :if={!environment.live}
-                      type="button"
-                      class="btn btn--sm btn--danger"
-                      disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:delete, :environments)}
-                      phx-click="delete_environment"
-                      phx-value-id={environment.id}
-                      phx-confirm={
-                        gettext(
-                          "Delete %{name}, its complete PostgreSQL schema, and its form submissions and drafts? This cannot be undone.",
-                          name: environment.name
-                        )
-                      }
-                    >
-                      {gettext("Delete")}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <div class="environment-grid">
-          <section class="environment-panel">
-            <span class="environment-eyebrow">{gettext("Provision")}</span>
-            <h2>{gettext("Create environment")}</h2>
-            <div class="alert environment-hint">
-              <.icon name="info" />
-              <span>{gettext("Creates an empty schema and runs all application tenant migrations.")}</span>
-            </div>
-            <form id="create-environment-form" phx-submit="create_environment">
-              <label>
-                <span>{gettext("Name")}</span>
-                <input name="environment[name]" required placeholder={gettext("Spring redesign")} />
-              </label>
-              <label>
-                <span>{gettext("Key")}</span>
-                <input name="environment[key]" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="spring-redesign" />
-              </label>
-              <label :if={@can_bind_hosts?}>
-                <span>{gettext("Domain (optional)")}</span>
-                <input name="environment[domain]" placeholder="spring.example.com" />
-              </label>
-              <button
-                type="submit"
-                class="btn btn--primary"
-                disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:create, :environments)}
-                phx-disable-with={gettext("Creating…")}
-              >
-                {gettext("Create environment")}
-              </button>
-            </form>
-          </section>
-
-          <section class="environment-panel">
-            <span class="environment-eyebrow">{gettext("Replace content")}</span>
-            <h2>{gettext("Copy now")}</h2>
-            <div class="alert environment-hint">
-              <.icon name="info" />
-              <span>{gettext("Archives the target, then replaces all of its database content from the source.")}</span>
-            </div>
-            <form id="copy-environment-form" phx-submit="queue_copy">
-              <.environment_pair_fields environments={@environments} />
-              <label>
-                <span>{gettext("Note (optional)")}</span>
-                <input name="operation[note]" />
-              </label>
-              <button
-                type="submit"
-                class="btn btn--primary"
-                disabled={
-                  !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || length(@environments) < 2
-                }
-              >
-                {gettext("Queue copy now")}
-              </button>
-            </form>
-          </section>
-
-          <section class="environment-panel">
-            <span class="environment-eyebrow">{gettext("Scheduled")}</span>
-            <h2>{gettext("Schedule copy")}</h2>
-            <form id="schedule-environment-copy-form" phx-submit="schedule_copy">
-              <.environment_pair_fields environments={@environments} />
-              <.schedule_fields default_scheduled_at={@default_scheduled_at} />
-              <button
-                type="submit"
-                class="btn btn--primary"
-                disabled={
-                  !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || length(@environments) < 2
-                }
-              >
-                {gettext("Schedule copy")}
-              </button>
-            </form>
-          </section>
-
-          <section class="environment-panel">
-            <span class="environment-eyebrow">{gettext("Scheduled")}</span>
-            <h2>{gettext("Schedule live switch")}</h2>
-            <form id="schedule-live-switch-form" phx-submit="schedule_set_live">
-              <label>
-                <span>{gettext("Environment")}</span>
-                <select name="operation[environment_id]" required>
-                  <option :for={environment <- @environments} :if={!environment.live} value={environment.id}>
-                    {environment.name}
-                  </option>
-                </select>
-              </label>
-              <.schedule_fields default_scheduled_at={@default_scheduled_at} />
-              <button
-                type="submit"
-                class="btn btn--primary"
-                disabled={
-                  !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) ||
-                    Enum.all?(@environments, & &1.live)
-                }
-              >
-                {gettext("Schedule live switch")}
-              </button>
-            </form>
-          </section>
+      <div class="environment-management-live">
+        <div :if={!@tenancy_enabled?} class="environment-notice warning">
+          {gettext("Tenancy is disabled. Set tenancy_mode to single or multi before managing environments.")}
         </div>
 
-        <section class="environment-panel">
-          <span class="environment-eyebrow">{gettext("Queue")}</span>
-          <h2>{gettext("Pending operations")}</h2>
-          <div :if={@jobs == []} class="environment-empty">
-            <span class="environment-empty__icon"><.icon name="clock" /></span>
-            <p>{gettext("No copy or live-switch operations are pending.")}</p>
-          </div>
-          <div :if={@jobs != []} class="environment-table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{gettext("Operation")}</th>
-                  <th>{gettext("Scheduled")}</th>
-                  <th>{gettext("State")}</th>
-                  <th class="environment-actions">{gettext("Actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr :for={job <- @jobs} id={"environment-job-#{job.id}"}>
-                  <td>{job_description(job, @environments)}</td>
-                  <td>{format_scheduled_at(job.scheduled_at)}</td>
-                  <td><span class="environment-state">{job_state_label(job.state)}</span></td>
-                  <td class="environment-actions">
-                    <button
-                      type="button"
-                      class="btn btn--sm btn--danger"
-                      disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments)}
-                      phx-click="cancel_operation"
-                      phx-value-id={job.id}
-                      phx-confirm={gettext("Cancel this pending environment operation?")}
-                    >
-                      {gettext("Cancel")}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <div :if={@tenancy_enabled? && is_nil(@site)} class="environment-notice warning">
+          {gettext("No site and live environment could be resolved for this admin session.")}
+        </div>
 
-        <section class="environment-panel">
-          <span class="environment-eyebrow">{gettext("History")}</span>
-          <h2>{gettext("Operation log")}</h2>
-          <div class="alert environment-hint">
-            <.icon name="info" />
-            <span>
-              {gettext("Immutable record of every lifecycle operation. Notes added when scheduling are recorded here.")}
-            </span>
-          </div>
+        <div :if={@site && !@can_manage?} class="environment-notice warning">
+          {gettext("Only administrators and superusers can change environment lifecycle state.")}
+        </div>
 
-          <div :if={@operation_logs == []} class="environment-empty">
-            <span class="environment-empty__icon"><.icon name="list" /></span>
-            <p>{gettext("No operations have been recorded for this site.")}</p>
-          </div>
+        <%= if @site do %>
+          <section class="environment-panel environment-overview">
+            <header>
+              <div>
+                <h2>{@site.name}</h2>
+                <p>{gettext("Schema prefix: tenant_%{site}_<environment>", site: @site.key)}</p>
+              </div>
+              <span class="environment-count">
+                {ngettext("%{count} environment", "%{count} environments", length(@environments))}
+              </span>
+            </header>
 
-          <div :if={@operation_logs != []} class="environment-table-wrap">
-            <table class="environment-log">
-              <thead>
-                <tr>
-                  <th>{gettext("Operation")}</th>
-                  <th>{gettext("Environment")}</th>
-                  <th>{gettext("Note")}</th>
-                  <th>{gettext("By")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr :for={log <- @operation_logs} id={"environment-log-#{log.id}"}>
-                  <td>
-                    <%!-- Scheduled, then cancelled when it was due instead of run --%>
-                    <span class="environment-log__heading">
-                      <span class="environment-log__operation">{operation_label(log.operation)}</span>
-                      <span :if={log.cancelled_reason} class="badge badge--error">{gettext("Cancelled")}</span>
-                    </span>
-                    <span :if={log.cancelled_reason} class="environment-log__reason">{cancel_reason(log)}</span>
-                  </td>
-                  <td>
-                    <code :if={log.target_environment}>{log.target_environment.key}</code>
-                    <span :if={is_nil(log.target_environment)}>—</span>
-                  </td>
-                  <td class="environment-log__note">{log.note || "—"}</td>
-                  <td>
-                    <%!-- Same item-meta shape listings use for their creator column.
-                          `creator/1` itself assumes a listing grid cell and an
-                          `updated_at`, which the log has neither of. --%>
-                    <article :if={log.creator} class="item-meta">
-                      <section :if={log.creator.avatar} class="avatar-wrapper">
-                        <div class="avatar">
-                          <Content.image image={log.creator.avatar} size={:thumb} />
+            <div :if={@can_manage? && !@can_bind_hosts?} class="alert environment-hint">
+              <.icon name="info" />
+              <span>{gettext("Only a superuser can change the host an environment answers on.")}</span>
+            </div>
+
+            <div
+              :if={@served_hosts_enabled? && @served_hosts.error}
+              class="alert danger environment-served-hosts-error"
+              role="alert"
+            >
+              <.icon name="triangle-alert" />
+              <%!-- The error names a server path or a raw exception: superusers only --%>
+              <span :if={@can_bind_hosts?}>
+                {gettext(
+                  "The served hosts file could not be updated, so the reverse proxy may not have heard of new hosts: %{error}",
+                  error: @served_hosts.error
+                )}
+              </span>
+              <span :if={!@can_bind_hosts?}>
+                {gettext("The served hosts file could not be written. The reverse proxy may not have heard of new hosts.")}
+              </span>
+            </div>
+
+            <%!-- A table where it fits; narrower, each environment is a block of
+          its own (the container query in Environments.css) --%>
+            <div class="environment-table-wrap environment-list">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{gettext("Environment")}</th>
+                    <th>{gettext("State")}</th>
+                    <th>{gettext("Hosts")}</th>
+                    <th class="environment-actions">{gettext("Actions")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr :for={environment <- @environments} id={"environment-#{environment.id}"}>
+                    <td class="environment-identity">
+                      <strong id={environment_name_id(environment)}>{environment.name}</strong>
+                      <code>{environment.key}</code>
+                    </td>
+                    <td class="environment-state-cell">
+                      <span class={["environment-state", environment.live && "live"]}>
+                        {if environment.live, do: gettext("Live"), else: gettext("Working")}
+                      </span>
+                    </td>
+                    <td class="environment-hosts-cell">
+                      <%!-- The form and its fields are keyed on the hosts shown: when a live switch
+                    or another superuser moves them, they are replaced, and a half-typed edit, a
+                    focused field's too, goes with the hosts it was typed against --%>
+                      <div
+                        :if={MapSet.member?(@hosts_changed_elsewhere, environment.id)}
+                        class="alert warning environment-hosts-notice"
+                        role="alert"
+                      >
+                        <.icon name="triangle-alert" />
+                        <span>{gettext("These hosts were changed elsewhere, so what you typed here was not saved.")}</span>
+                      </div>
+                      <form
+                        :if={can_edit_hosts?(@can_bind_hosts?, @can_manage?)}
+                        id={"environment-domain-#{environment.id}-#{hosts_key(environment)}"}
+                        phx-change="draft_hosts"
+                        phx-submit="update_domain"
+                        class="environment-hosts-form"
+                      >
+                        <input type="hidden" name="environment_id" value={environment.id} />
+                        <input type="hidden" name="shown_domain" value={environment.domain || ""} />
+                        <input
+                          type="hidden"
+                          name="shown_redirect_hosts"
+                          value={Enum.join(environment.redirect_hosts || [], ",")}
+                        />
+                        <%!-- Which control had the focus last, so a save that replaces them gives it back --%>
+                        <input type="hidden" id={host_field_id(environment, "focused")} name="focused_field" value="" />
+                        <div class="environment-host-field">
+                          <label id={host_field_id(environment, "domain-label")} for={host_field_id(environment, "domain")}>
+                            {gettext("Domain")}
+                          </label>
+                          <input
+                            id={host_field_id(environment, "domain")}
+                            type="text"
+                            name="domain"
+                            value={host_draft(@host_drafts, environment).domain}
+                            placeholder="www.example.com"
+                            autocomplete="off"
+                            spellcheck="false"
+                            aria-labelledby={host_field_labelled_by(environment, "domain-label")}
+                            {focus_tracking(environment, "domain")}
+                            aria-describedby={@served_hosts_enabled? && environment.domain && domain_status_id(environment)}
+                          />
+                          <%!-- Led by the saved domain, which a one-line field may clip, as each
+                          redirect host's line is led by its host --%>
+                          <.served_host
+                            :if={@served_hosts_enabled? && environment.domain}
+                            id={domain_status_id(environment)}
+                            host={environment.domain}
+                            state={served_host_state(@served_hosts.hosts, @bound_hosts, environment.domain)}
+                            addresses={@served_hosts.addresses}
+                          />
                         </div>
-                      </section>
-                      <section class="content">
-                        <div class="info">
-                          <div class="name">{log.creator.name}</div>
-                          <div class="time">{format_log_time(log.inserted_at)}</div>
+                        <div class="environment-host-field">
+                          <label
+                            id={host_field_id(environment, "redirect-hosts-label")}
+                            for={host_field_id(environment, "redirect-hosts")}
+                          >
+                            {gettext("Redirect hosts")}
+                          </label>
+                          <textarea
+                            id={host_field_id(environment, "redirect-hosts")}
+                            name="redirect_hosts"
+                            rows={host_rows(environment)}
+                            autocomplete="off"
+                            spellcheck="false"
+                            aria-labelledby={host_field_labelled_by(environment, "redirect-hosts-label")}
+                            {focus_tracking(environment, "redirect_hosts")}
+                            aria-describedby={redirect_hosts_described_by(environment, @served_hosts_enabled?)}
+                          >{host_draft(@host_drafts, environment).redirect_hosts}</textarea>
+                          <span id={redirect_hosts_help_id(environment)} class="environment-host-help">
+                            {gettext("One per line. Each one redirects to the domain.")}
+                          </span>
+                          <.redirect_host_statuses
+                            :if={@served_hosts_enabled?}
+                            environment={environment}
+                            served_hosts={@served_hosts}
+                            bound_hosts={@bound_hosts}
+                          />
                         </div>
-                      </section>
-                    </article>
-                    <span :if={is_nil(log.creator)}>—</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+                        <div class="environment-hosts-form__actions">
+                          <button
+                            id={host_field_id(environment, "save")}
+                            type="submit"
+                            class="btn btn--sm"
+                            {focus_tracking(environment, "save")}
+                          >
+                            {gettext("Save hosts")}
+                          </button>
+                        </div>
+                      </form>
 
-        <section class="environment-panel">
-          <header>
-            <div>
-              <h2>{gettext("Recovery archives")}</h2>
+                      <%!-- Who may not change the hosts reads them --%>
+                      <dl :if={!can_edit_hosts?(@can_bind_hosts?, @can_manage?)} class="environment-hosts">
+                        <div>
+                          <dt>{gettext("Domain")}</dt>
+                          <dd :if={is_nil(environment.domain)} class="environment-hosts__none">{gettext("No domain")}</dd>
+                          <dd :if={environment.domain}>
+                            <.served_host
+                              :if={@served_hosts_enabled?}
+                              id={domain_status_id(environment)}
+                              host={environment.domain}
+                              state={served_host_state(@served_hosts.hosts, @bound_hosts, environment.domain)}
+                              addresses={@served_hosts.addresses}
+                            />
+                            <span :if={!@served_hosts_enabled?} class="environment-host-name">{environment.domain}</span>
+                          </dd>
+                        </div>
+                        <div :if={environment.redirect_hosts not in [nil, []]}>
+                          <dt>{gettext("Redirect hosts")}</dt>
+                          <dd>
+                            <.redirect_host_statuses
+                              :if={@served_hosts_enabled?}
+                              environment={environment}
+                              served_hosts={@served_hosts}
+                              bound_hosts={@bound_hosts}
+                            />
+                            <ul :if={!@served_hosts_enabled?} class="environment-redirect-host-statuses">
+                              <li :for={host <- environment.redirect_hosts} class="environment-host-name">{host}</li>
+                            </ul>
+                          </dd>
+                        </div>
+                      </dl>
+                    </td>
+                    <td class={["environment-actions", environment.live && "environment-actions--none"]}>
+                      <button
+                        :if={!environment.live}
+                        type="button"
+                        class="btn btn--sm"
+                        disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments)}
+                        phx-click="queue_set_live"
+                        phx-value-id={environment.id}
+                        phx-confirm={
+                          gettext("Archive the current live environment and promote %{name}?", name: environment.name)
+                        }
+                      >
+                        {gettext("Set live")}
+                      </button>
+                      <button
+                        :if={!environment.live}
+                        type="button"
+                        class="btn btn--sm btn--danger"
+                        disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:delete, :environments)}
+                        phx-click="delete_environment"
+                        phx-value-id={environment.id}
+                        phx-confirm={
+                          gettext(
+                            "Delete %{name}, its complete PostgreSQL schema, and its form submissions and drafts? This cannot be undone.",
+                            name: environment.name
+                          )
+                        }
+                      >
+                        {gettext("Delete")}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <div class="environment-grid">
+            <section class="environment-panel">
+              <span class="environment-eyebrow">{gettext("Provision")}</span>
+              <h2>{gettext("Create environment")}</h2>
               <div class="alert environment-hint">
                 <.icon name="info" />
-                <span>{gettext("Archives live in the same database and do not replace external backups.")}</span>
+                <span>{gettext("Creates an empty schema and runs all application tenant migrations.")}</span>
               </div>
-            </div>
-            <div class="environment-actions">
-              <button
-                type="button"
-                class="btn"
-                disabled={
-                  !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || @archives == [] ||
-                    !!@restoring
-                }
-                phx-click="rollback"
-                phx-confirm={gettext("Restore the newest archive as a new non-live environment?")}
-              >
-                {gettext("Restore newest")}
-              </button>
-              <button
-                type="button"
-                class="btn btn--danger"
-                disabled={
-                  !@can_manage? || !BrandoAdmin.Authorization.allowed?(:delete, :environments) || length(@archives) <= 3
-                }
-                phx-click="prune_archives"
-                phx-value-keep="3"
-                phx-confirm={gettext("Permanently drop all but the three newest archives?")}
-              >
-                {gettext("Prune to three")}
-              </button>
-            </div>
-          </header>
-          <div :if={@archives == []} class="environment-empty">
-            <span class="environment-empty__icon"><.icon name="archive" /></span>
-            <p>{gettext("No recovery archives exist for this site.")}</p>
+              <form id="create-environment-form" phx-submit="create_environment">
+                <label>
+                  <span>{gettext("Name")}</span>
+                  <input name="environment[name]" required placeholder={gettext("Spring redesign")} />
+                </label>
+                <label>
+                  <span>{gettext("Key")}</span>
+                  <input name="environment[key]" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="spring-redesign" />
+                </label>
+                <label :if={@can_bind_hosts?}>
+                  <span>{gettext("Domain (optional)")}</span>
+                  <input name="environment[domain]" placeholder="spring.example.com" />
+                </label>
+                <button
+                  type="submit"
+                  class="btn btn--primary"
+                  disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:create, :environments)}
+                  phx-disable-with={gettext("Creating…")}
+                >
+                  {gettext("Create environment")}
+                </button>
+              </form>
+            </section>
+
+            <section class="environment-panel">
+              <span class="environment-eyebrow">{gettext("Replace content")}</span>
+              <h2>{gettext("Copy now")}</h2>
+              <div class="alert environment-hint">
+                <.icon name="info" />
+                <span>{gettext("Archives the target, then replaces all of its database content from the source.")}</span>
+              </div>
+              <form id="copy-environment-form" phx-submit="queue_copy">
+                <.environment_pair_fields environments={@environments} />
+                <label>
+                  <span>{gettext("Note (optional)")}</span>
+                  <input name="operation[note]" />
+                </label>
+                <button
+                  type="submit"
+                  class="btn btn--primary"
+                  disabled={
+                    !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || length(@environments) < 2
+                  }
+                >
+                  {gettext("Queue copy now")}
+                </button>
+              </form>
+            </section>
+
+            <section class="environment-panel">
+              <span class="environment-eyebrow">{gettext("Scheduled")}</span>
+              <h2>{gettext("Schedule copy")}</h2>
+              <form id="schedule-environment-copy-form" phx-submit="schedule_copy">
+                <.environment_pair_fields environments={@environments} />
+                <.schedule_fields default_scheduled_at={@default_scheduled_at} />
+                <button
+                  type="submit"
+                  class="btn btn--primary"
+                  disabled={
+                    !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || length(@environments) < 2
+                  }
+                >
+                  {gettext("Schedule copy")}
+                </button>
+              </form>
+            </section>
+
+            <section class="environment-panel">
+              <span class="environment-eyebrow">{gettext("Scheduled")}</span>
+              <h2>{gettext("Schedule live switch")}</h2>
+              <form id="schedule-live-switch-form" phx-submit="schedule_set_live">
+                <label>
+                  <span>{gettext("Environment")}</span>
+                  <select name="operation[environment_id]" required>
+                    <option :for={environment <- @environments} :if={!environment.live} value={environment.id}>
+                      {environment.name}
+                    </option>
+                  </select>
+                </label>
+                <.schedule_fields default_scheduled_at={@default_scheduled_at} />
+                <button
+                  type="submit"
+                  class="btn btn--primary"
+                  disabled={
+                    !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) ||
+                      Enum.all?(@environments, & &1.live)
+                  }
+                >
+                  {gettext("Schedule live switch")}
+                </button>
+              </form>
+            </section>
           </div>
-          <ul :if={@archives != []} class="environment-archives">
-            <li :for={archive <- @archives}>
-              <div class="environment-archive__identity">
-                <code>{archive.schema}</code>
-                <span :if={archive.note} class="environment-archive__note">{archive.note}</span>
+
+          <section class="environment-panel">
+            <span class="environment-eyebrow">{gettext("Queue")}</span>
+            <h2>{gettext("Pending operations")}</h2>
+            <div :if={@jobs == []} class="environment-empty">
+              <span class="environment-empty__icon"><.icon name="clock" /></span>
+              <p>{gettext("No copy or live-switch operations are pending.")}</p>
+            </div>
+            <div :if={@jobs != []} class="environment-table-wrap environment-stacking">
+              <table class="environment-jobs">
+                <thead>
+                  <tr>
+                    <th>{gettext("Operation")}</th>
+                    <th>{gettext("Scheduled")}</th>
+                    <th>{gettext("State")}</th>
+                    <th class="environment-actions">{gettext("Actions")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr :for={job <- @jobs} id={"environment-job-#{job.id}"}>
+                    <td>{job_description(job, @environments)}</td>
+                    <td>{format_scheduled_at(job.scheduled_at)}</td>
+                    <td><span class="environment-state">{job_state_label(job.state)}</span></td>
+                    <td class="environment-actions">
+                      <button
+                        type="button"
+                        class="btn btn--sm btn--danger"
+                        disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments)}
+                        phx-click="cancel_operation"
+                        phx-value-id={job.id}
+                        phx-confirm={gettext("Cancel this pending environment operation?")}
+                      >
+                        {gettext("Cancel")}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="environment-panel">
+            <span class="environment-eyebrow">{gettext("History")}</span>
+            <h2>{gettext("Operation log")}</h2>
+            <div class="alert environment-hint">
+              <.icon name="info" />
+              <span>
+                {gettext("Immutable record of every lifecycle operation. Notes added when scheduling are recorded here.")}
+              </span>
+            </div>
+
+            <div :if={@operation_logs == []} class="environment-empty">
+              <span class="environment-empty__icon"><.icon name="list" /></span>
+              <p>{gettext("No operations have been recorded for this site.")}</p>
+            </div>
+
+            <div :if={@operation_logs != []} class="environment-table-wrap environment-stacking">
+              <table class="environment-log">
+                <thead>
+                  <tr>
+                    <th>{gettext("Operation")}</th>
+                    <th>{gettext("Environment")}</th>
+                    <th>{gettext("Note")}</th>
+                    <th>{gettext("By")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr :for={log <- @operation_logs} id={"environment-log-#{log.id}"}>
+                    <td>
+                      <%!-- Scheduled, then cancelled when it was due instead of run --%>
+                      <span class="environment-log__heading">
+                        <span class="environment-log__operation">{operation_label(log.operation)}</span>
+                        <span :if={log.cancelled_reason} class="badge badge--error">{gettext("Cancelled")}</span>
+                      </span>
+                      <span :if={log.cancelled_reason} class="environment-log__reason">{cancel_reason(log)}</span>
+                    </td>
+                    <td>
+                      <code :if={log.target_environment}>{log.target_environment.key}</code>
+                      <span :if={is_nil(log.target_environment)}>—</span>
+                    </td>
+                    <td class={["environment-log__note", is_nil(log.note) && "environment-log__note--empty"]}>
+                      {log.note || "—"}
+                    </td>
+                    <td>
+                      <%!-- Same item-meta shape listings use for their creator column.
+                          `creator/1` itself assumes a listing grid cell and an
+                          `updated_at`, which the log has neither of. --%>
+                      <article :if={log.creator} class="item-meta">
+                        <section :if={log.creator.avatar} class="avatar-wrapper">
+                          <div class="avatar">
+                            <Content.image image={log.creator.avatar} size={:thumb} />
+                          </div>
+                        </section>
+                        <section class="content">
+                          <div class="info">
+                            <div class="name">{log.creator.name}</div>
+                            <div class="time">{format_log_time(log.inserted_at)}</div>
+                          </div>
+                        </section>
+                      </article>
+                      <span :if={is_nil(log.creator)}>—</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="environment-panel">
+            <header>
+              <div>
+                <h2>{gettext("Recovery archives")}</h2>
+                <div class="alert environment-hint">
+                  <.icon name="info" />
+                  <span>{gettext("Archives live in the same database and do not replace external backups.")}</span>
+                </div>
               </div>
-              <div class="environment-archive__meta">
-                <span>{archive_label(archive.operation)}</span>
+              <div class="environment-actions">
                 <button
                   type="button"
-                  class="btn btn--sm"
-                  disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || !!@restoring}
+                  class="btn"
+                  disabled={
+                    !@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || @archives == [] ||
+                      !!@restoring
+                  }
                   phx-click="rollback"
-                  phx-value-schema={archive.schema}
-                  phx-confirm={gettext("Restore this archive as a new, non-live environment?")}
+                  phx-confirm={gettext("Restore the newest archive as a new non-live environment?")}
                 >
-                  {gettext("Restore")}
+                  {gettext("Restore newest")}
+                </button>
+                <button
+                  type="button"
+                  class="btn btn--danger"
+                  disabled={
+                    !@can_manage? || !BrandoAdmin.Authorization.allowed?(:delete, :environments) || length(@archives) <= 3
+                  }
+                  phx-click="prune_archives"
+                  phx-value-keep="3"
+                  phx-confirm={gettext("Permanently drop all but the three newest archives?")}
+                >
+                  {gettext("Prune to three")}
                 </button>
               </div>
-            </li>
-          </ul>
-        </section>
-      <% end %>
+            </header>
+            <div :if={@archives == []} class="environment-empty">
+              <span class="environment-empty__icon"><.icon name="archive" /></span>
+              <p>{gettext("No recovery archives exist for this site.")}</p>
+            </div>
+            <ul :if={@archives != []} class="environment-archives">
+              <li :for={archive <- @archives}>
+                <div class="environment-archive__identity">
+                  <code>{archive.schema}</code>
+                  <span :if={archive.note} class="environment-archive__note">{archive.note}</span>
+                </div>
+                <div class="environment-archive__meta">
+                  <span>{archive_label(archive.operation)}</span>
+                  <button
+                    type="button"
+                    class="btn btn--sm"
+                    disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:promote, :environments) || !!@restoring}
+                    phx-click="rollback"
+                    phx-value-schema={archive.schema}
+                    phx-confirm={gettext("Restore this archive as a new, non-live environment?")}
+                  >
+                    {gettext("Restore")}
+                  </button>
+                </div>
+              </li>
+            </ul>
+          </section>
+        <% end %>
+      </div>
     </div>
     """
   end
@@ -585,16 +661,67 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
     """
   end
 
+  attr :environment, :any, required: true
+  attr :served_hosts, :map, required: true
+  attr :bound_hosts, :any, required: true
+
+  # One line per redirect host, each led by its name; only a domain's redirect
+  # hosts are bound
+  defp redirect_host_statuses(assigns) do
+    ~H"""
+    <ul
+      :if={redirect_host_statuses?(@environment)}
+      id={redirect_host_statuses_id(@environment)}
+      class="environment-redirect-host-statuses"
+      aria-label={gettext("Redirect hosts")}
+    >
+      <li :for={host <- @environment.redirect_hosts}>
+        <.served_host
+          id={redirect_host_status_id(@environment, host)}
+          host={host}
+          state={served_host_state(@served_hosts.hosts, @bound_hosts, host)}
+          addresses={@served_hosts.addresses}
+        />
+      </li>
+    </ul>
+    """
+  end
+
+  defp redirect_host_statuses?(environment), do: !!environment.domain and environment.redirect_hosts not in [nil, []]
+
+  defp redirect_host_statuses_id(environment), do: "environment-redirect-host-statuses-#{environment.id}"
+
+  defp environment_name_id(environment), do: "environment-name-#{environment.id}"
+
+  # Each row has the same two fields: their names say whose they are
+  defp host_field_labelled_by(environment, label),
+    do: "#{host_field_id(environment, label)} #{environment_name_id(environment)}"
+
+  defp domain_status_id(environment), do: "environment-host-status-#{environment.id}"
+
+  defp redirect_hosts_help_id(environment), do: host_field_id(environment, "redirect-hosts-help")
+
+  # The help line, and the hosts' states when they are shown
+  defp redirect_hosts_described_by(environment, served_hosts_enabled?) do
+    if served_hosts_enabled? and redirect_host_statuses?(environment),
+      do: "#{redirect_hosts_help_id(environment)} #{redirect_host_statuses_id(environment)}",
+      else: redirect_hosts_help_id(environment)
+  end
+
+  # Where the browser has no `field-sizing` (Environments.css): every saved
+  # host and a spare line, up to nine; a drag makes it taller
+  defp host_rows(environment), do: (environment.redirect_hosts || []) |> length() |> Kernel.+(1) |> max(2) |> min(9)
+
   attr :id, :string, required: true
   attr :state, :any, required: true
   attr :addresses, :list, required: true
-  attr :host, :string, default: nil, doc: "the host's name, shown before its state; the domain's line has none"
+  attr :host, :string, required: true, doc: "the host's name, shown before its state"
 
   # Where a bound host stands with the reverse proxy (`Brando.Tenant.ServedHosts`)
   defp served_host(assigns) do
     ~H"""
     <div id={@id} class="environment-host-status">
-      <span :if={@host} class="environment-host-status__host">{@host}</span>
+      <span class="environment-host-status__host">{@host}</span>
       <%= case @state do %>
         <% :served -> %>
           <span class="badge badge--success">{gettext("Served")}</span>
@@ -704,11 +831,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       draft = for {param, field} <- @host_fields, is_binary(params[param]), into: %{}, do: {field, params[param]}
 
       {:noreply,
-       update(
-         socket,
-         :host_drafts,
-         &Map.update(&1, draft_key(environment), draft, fn typed -> Map.merge(typed, draft) end)
-       )}
+       socket
+       |> update(:host_drafts, &Map.update(&1, draft_key(environment), draft, fn typed -> Map.merge(typed, draft) end))
+       |> update(:hosts_changed_elsewhere, &MapSet.delete(&1, environment.id))}
     else
       _ -> {:noreply, socket}
     end
@@ -733,8 +858,10 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
          :host_drafts,
          &Map.reject(&1, fn {{environment_id, _domain, _hosts}, _draft} -> environment_id == listed.id end)
        )
+       |> update(:hosts_changed_elsewhere, &MapSet.delete(&1, listed.id))
        |> notify(gettext("Domain updated."))
-       |> refresh_data()}
+       |> refresh_data()
+       |> focus_saved_control(listed.id, params["focused_field"])}
     else
       {:error, :domain_moved} ->
         {:noreply,
@@ -927,11 +1054,23 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
     environments = for_site(site, &Registry.list_environments/1)
     shown = MapSet.new(environments, &draft_key/1)
+    listed = MapSet.new(environments, & &1.id)
+
+    {drafts, replaced} =
+      Map.split_with(socket.assigns[:host_drafts] || %{}, fn {key, _draft} -> key in shown end)
+
+    lost = for {{id, _domain, _hosts} = key, draft} <- replaced, typed?(draft, key), into: MapSet.new(), do: id
+
+    changed_elsewhere =
+      (socket.assigns[:hosts_changed_elsewhere] || MapSet.new())
+      |> MapSet.union(lost)
+      |> MapSet.filter(&(&1 in listed))
 
     socket
     |> assign(:site, site)
     |> assign(:environments, environments)
-    |> assign(:host_drafts, Map.filter(socket.assigns[:host_drafts] || %{}, fn {key, _draft} -> key in shown end))
+    |> assign(:host_drafts, drafts)
+    |> assign(:hosts_changed_elsewhere, changed_elsewhere)
     |> assign(:archives, for_site(site, &Environments.list_archives/1))
     |> assign(:jobs, for_site(site, &Environments.list_scheduled_operations/1))
     |> assign(:operation_logs, for_site(site, &Environments.list_operation_logs/1))
@@ -1013,6 +1152,43 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
   defp draft_key(%Environment{} = environment),
     do: {environment.id, environment.domain || "", environment.redirect_hosts || []}
+
+  # The hosts form and its fields are keyed on the saved hosts they show. A
+  # field keeping its id would be moved into the replacement form, and a
+  # focused one keeps its value through a patch, so it would go on showing,
+  # and saving, the hosts the old form showed
+  defp hosts_key(environment), do: :erlang.phash2(draft_key(environment))
+
+  defp host_field_id(environment, field), do: "environment-#{environment.id}-#{hosts_key(environment)}-#{field}"
+
+  # A draft holding only the hosts it was rendered with (a form recovered on
+  # rejoin sends its values untouched) lost nothing when it was replaced
+  defp typed?(draft, {_id, domain, hosts}) do
+    String.trim(Map.get(draft, :domain, domain)) != domain or
+      (Map.has_key?(draft, :redirect_hosts) and Environment.parse_hosts(draft.redirect_hosts) != hosts)
+  end
+
+  # Each control records itself in the form's `focused_field` when it takes
+  # the focus, client side only. Not cleared on blur: a click on the save
+  # button does not focus it in Safari, and the field typed in last is the
+  # one saved from
+  defp focus_tracking(environment, control) do
+    %{
+      "phx-focus" => JS.set_attribute({"value", control}, to: "#" <> host_field_id(environment, "focused")),
+      "data-focus" => JS.focus()
+    }
+  end
+
+  # A save that changes the hosts replaces the form and its controls, the
+  # focused one included: focus its replacement
+  defp focus_saved_control(socket, environment_id, focused) do
+    with {:ok, control} <- Map.fetch(@focusable_controls, focused),
+         %Environment{} = environment <- Enum.find(socket.assigns.environments, &(&1.id == environment_id)) do
+      push_event(socket, "js-exec", %{to: "#" <> host_field_id(environment, control), attr: "data-focus"})
+    else
+      _ -> socket
+    end
+  end
 
   defp can_edit_hosts?(can_bind_hosts?, can_manage?),
     do: can_bind_hosts? and can_manage? and BrandoAdmin.Authorization.allowed?(:update, :environments)

@@ -17,6 +17,10 @@
 #          first; --assets rebuilds e2e/assets/backend first (the server caches
 #          the asset manifest, so JS/CSS changes need a rebuild and a restart).
 # stop     sends TERM to the recorded process group, then KILL after 15s.
+#          Once it has stopped that server, it removes the served hosts folder
+#          a BRANDO_E2E_MULTI_SITE=1 server keeps under /tmp (making it
+#          writable first: a fixture may have left it read-only); a server it
+#          did not stop keeps its folder.
 # status   prints the URL, pid and whether the server answers.
 # log      tails the server log.
 #
@@ -35,6 +39,8 @@ instance_dir="$e2e_dir/tmp/instances/$(printf '%s' "$BRANDO_E2E_INSTANCE" | LC_C
 pidfile="$instance_dir/server.pid"
 logfile="$instance_dir/server.log"
 login_url="$BRANDO_E2E_BASE_URL/admin/login"
+# config/e2e.exs puts a multi-site server's served hosts file here
+served_hosts_dir="/tmp/brando_e2e_$(printf '%s' "$BRANDO_E2E_INSTANCE" | LC_CTYPE=C tr -c 'a-zA-Z0-9_' '_')"
 timeout="${BRANDO_E2E_START_TIMEOUT:-300}"
 
 # mix is not on PATH in non-interactive shells when Elixir comes from mise.
@@ -155,6 +161,12 @@ start() {
   echo "Running (pid $pid) at $BRANDO_E2E_BASE_URL"
 }
 
+remove_served_hosts_dir() {
+  [ -d "$served_hosts_dir" ] || return 0
+  chmod -R u+rwx "$served_hosts_dir"
+  rm -rf "$served_hosts_dir"
+}
+
 stop() {
   local pid waited=0
   if ! pid="$(own_pid)"; then
@@ -177,6 +189,7 @@ stop() {
     waited=$((waited + 1))
   done
   rm -f "$pidfile"
+  remove_served_hosts_dir
   echo "Stopped (pid $pid)"
 }
 

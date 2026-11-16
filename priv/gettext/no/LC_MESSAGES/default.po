@@ -6011,11 +6011,6 @@ msgstr "Domene (valgfritt)"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "Domain for %{name}"
-msgstr "Domene for %{name}"
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
 msgid "Domain updated."
 msgstr "Domenet ble oppdatert."
 
@@ -8340,8 +8335,8 @@ msgstr "Opplastet eller ekstern video"
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "Hosts that redirect to the domain of %{name}"
-msgstr "Verter som omdirigerer til domenet til %{name}"
+msgid "Hosts"
+msgstr "Verter"
 
 #: lib/brando_admin/components/form/input/render_var.ex
 #, elixir-autogen, elixir-format
@@ -12021,6 +12016,11 @@ msgstr "Ett valg fra en liste"
 msgid "One option, all shown at once"
 msgstr "Ett valg, med alle alternativene synlige"
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "One per line. Each one redirects to the domain."
+msgstr "Én per linje. Hver av dem omdirigerer til domenet."
+
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "One source is created per selected file. Existing sources are skipped. New files added to the folder later must be selected here again."
@@ -13677,11 +13677,6 @@ msgstr "Omdirigering opprettet"
 #, elixir-autogen, elixir-format
 msgid "Redirect hosts"
 msgstr "Omdirigeringsverter"
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
-msgid "Redirect hosts, one per line"
-msgstr "Omdirigeringsverter, én per linje"
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #, elixir-autogen, elixir-format
@@ -18184,6 +18179,11 @@ msgstr "Disse kontoene er ikke knyttet til noe nettsted og får ingen nettstedst
 #, elixir-autogen, elixir-format
 msgid "These crops are set by the image configuration. Position and zoom apply to all previews."
 msgstr "Beskjæringene styres av bildeoppsettet. Plassering og zoom gjelder alle forhåndsvisningene."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "These hosts were changed elsewhere, so what you typed here was not saved."
+msgstr "Vertene ble endret et annet sted, så det du skrev her, ble ikke lagret."
 
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
