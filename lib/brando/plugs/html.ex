@@ -159,7 +159,7 @@ defmodule Brando.Plug.HTML do
     conn
     |> assign(:json_ld_entities, existing ++ built)
     |> put_private(:brando_json_ld_entries, (conn.private[:brando_json_ld_entries] || []) ++ [entry])
-    |> put_json_ld_page(data, JSONLD.entity_type(module, data), List.first(built))
+    |> put_json_ld_page(data, List.first(built))
     |> put_page_entry(data)
   end
 
@@ -214,13 +214,13 @@ defmodule Brando.Plug.HTML do
 
   # A person's own page is their profile: a `ProfilePage` about the Person.
   # (An entry with its own `json_ld_type` gives the entity that type instead.)
-  defp put_json_ld_page(conn, _data, "Person", %{"@id": id}) do
+  defp put_json_ld_page(conn, _data, %{"@type": "Person", "@id": id}) when is_binary(id) do
     conn
     |> assign(:json_ld_page_type, "ProfilePage")
     |> assign(:json_ld_main_entity, id)
   end
 
-  defp put_json_ld_page(conn, data, _type, _entity),
+  defp put_json_ld_page(conn, data, _entity),
     do: assign(conn, :json_ld_page_type, Map.get(data, :json_ld_type, "WebPage"))
 
   @doc """

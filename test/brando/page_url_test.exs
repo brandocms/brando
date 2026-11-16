@@ -264,6 +264,43 @@ defmodule Brando.PageURLTest do
     end
   end
 
+  describe "a page about a person" do
+    test "is their ProfilePage, about their #person node at the page's URL, whenever that is set" do
+      person = %Brando.JSONLDTest.Person{id: 1, name: "Ada", slug: "ada"}
+
+      calls = [&HTML.put_json_ld(&1, Brando.JSONLDTest.Person, person), &HTML.put_page_url(&1, "/team/ada")]
+
+      for order <- permutations(calls) do
+        head = "/people/ada/" |> request() |> apply_calls(order) |> render_head()
+        profile = Enum.find(head.graph, &(&1["@type"] == "ProfilePage"))
+
+        assert profile["@id"] == "http://localhost/team/ada#webpage"
+        assert profile["mainEntity"] == %{"@id" => "http://localhost/team/ada#person"}
+        assert Enum.find(head.graph, &(&1["@type"] == "Person"))["@id"] == "http://localhost/team/ada#person"
+      end
+    end
+
+    test "whose schema makes the entity another type is a WebPage, not a ProfilePage" do
+      company = %Brando.PageURLTest.Company{id: 1, name: "Acme", slug: "acme"}
+      org_type = [%{name: :"@type", type: :string, value_fn: fn _ -> "Organization" end}]
+      person = %Brando.JSONLDTest.Person{id: 1, name: "Ada", slug: "ada"}
+
+      for conn <- [
+            "/companies/acme" |> request() |> HTML.put_json_ld(Brando.PageURLTest.Company, company),
+            "/people/ada" |> request() |> HTML.put_json_ld(Brando.JSONLDTest.Person, person, org_type)
+          ] do
+        head = render_head(conn)
+        organization = Enum.find(head.graph, &(&1["@id"] == conn |> HTML.page_url() |> Kernel.<>("#organization")))
+
+        assert organization["@type"] == "Organization"
+        assert conn.assigns.json_ld_page_type == "WebPage"
+        assert head.webpage["@type"] == "WebPage"
+        refute Map.has_key?(head.webpage, "mainEntity")
+        refute Enum.any?(head.graph, &(&1["@type"] == "ProfilePage"))
+      end
+    end
+  end
+
   describe "a 404 page" do
     test "has no URL: no canonical, og:url or WebPage node", %{user: user} do
       not_found = page!(user, "Not found", "404", :en, has_url: false)

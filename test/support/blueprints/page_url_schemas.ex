@@ -28,3 +28,31 @@ defmodule Brando.PageURLTest.Unloaded do
     field :url, :current_url
   end
 end
+
+defmodule Brando.PageURLTest.Company do
+  @moduledoc false
+  # A people-style blueprint whose Person mapping makes its entity an Organization
+  use Brando.Blueprint,
+    application: "Brando",
+    domain: "PageURLTest",
+    schema: "Company",
+    singular: "company",
+    plural: "companies",
+    gettext_module: Brando.Gettext
+
+  alias Brando.JSONLD
+
+  identifier ~H"{@entry.name}"
+  absolute_url ~H"/companies/{@entry.slug}"
+
+  attributes do
+    attribute :name, :string, required: true
+    attribute :slug, :slug, required: true
+  end
+
+  json_ld_schema JSONLD.Schema.Person do
+    field :"@type", :string, fn _ -> "Organization" end
+    field :name, :string, & &1.name
+    field :url, :current_url
+  end
+end
