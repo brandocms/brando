@@ -1,0 +1,1 @@
+- A host bound on a multi-site installation shows **Checking** on the Environments screen as soon as it is saved, and its result within the lookup timeout, instead of nothing (or **Not served**) for up to a minute while the served hosts check waited on other hosts' lookups.

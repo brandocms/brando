@@ -823,11 +823,17 @@ looked up while the file holds every bound host. Each node keeps its own file,
 and nothing is stored in the database: on a new server the file starts empty,
 and each host is admitted there when its DNS arrives.
 
+A host a write binds has a state as soon as the write returns, and its result
+within the lookup timeout (ten seconds by default, `:lookup_timeout` in
+milliseconds): each host is looked up on its own, and no other lookup or check
+holds its result back.
+
 The **Environments** screen shows each bound host's state under its domain,
 the domain's first and then one line for each redirect host, led by its name:
-**Served** when it is in the file, **Waiting for DNS** with what the host
-resolves to now and this server's addresses, **Does not resolve**, or **Not a
-full host name** for a bound host the file leaves out. A file that could not
+**Served** when it is in the file, **Checking** while its first lookup runs,
+**Waiting for DNS** with what the host resolves to now and this server's
+addresses, **Does not resolve**, or **Not a full host name** for a bound host
+the file leaves out. A file that could not
 be written is shown above the list (with the reason to superusers only),
 logged once, and tried again every minute; the application keeps running.
 

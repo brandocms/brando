@@ -1112,6 +1112,26 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       refute now_served =~ "Waiting for DNS"
     end
 
+    test "a redirect host saved on the screen reads Checking at once, then where it stands", %{
+      conn: conn,
+      served: served
+    } do
+      Brando.ServedHostsTestResolver.hold("new-acme.test", self())
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      view
+      |> element("#environment-#{served.id} form[phx-submit=update_domain]")
+      |> render_submit(%{"domain" => "www.acme.test", "redirect_hosts" => "new-acme.test"})
+
+      assert_receive {:looking_up, "new-acme.test", lookup}
+      assert view |> redirect_host_status(served, "new-acme.test") |> render() =~ "Checking"
+
+      send(lookup, :answer)
+      Brando.Tenant.ServedHosts.settled()
+
+      assert view |> redirect_host_status(served, "new-acme.test") |> render() =~ "Does not resolve"
+    end
+
     test "a redirect host that is no full host name, or the installation's own, says so", %{
       conn: conn,
       served: served

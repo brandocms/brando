@@ -744,9 +744,54 @@ florist prod release:unpack
 
 ### Running migrations
 
-After deploying, run migrations if there are schema changes:
+Public migrations run before the new release starts. Its code expects them,
+and with tenancy it reads the site registry (`public.sites` and
+`public.environments`) at boot: a release deployed before a migration that
+changes those tables stops there, with
+`ERROR 42703 (undefined_column) column e0.redirect_hosts does not exist` and
+`application_start_failure`, and starts once the migration has run. Brando
+refuses to serve with half a registry rather than guess.
+
+With a release, run the new release's migrator before starting it.
+`eval` does not start the application, so it works while the release cannot
+boot:
 
 ```bash
+bin/my_app eval "MyApp.ReleaseTasks.migrate()"
+# With named environments, after the public migrations:
+bin/my_app eval "MyApp.ReleaseTasks.migrate_tenants()"
+```
+
+`ReleaseTasks.migrate/0` runs what `mix brando.migrate` runs locally (the
+same as `mix ecto.migrate`), and `migrate_tenants/0` what
+`mix brando.migrate --tenants` runs.
+
+`florist prod db:migrate` runs `ReleaseTasks.migrate` in the release
+`current` points at. `release:deploy --migrate` does so only after it has
+started the new release, so for a deploy across such a migration use the
+steps that migrate first. On a single deployment, unpack the new release
+(which points `current` at it without restarting), migrate, then restart:
+
+```bash
+florist prod release:build
+florist prod release:copy_from_docker
+florist prod release:upload
+florist prod release:unpack
+florist prod db:migrate
+florist prod service:restart
+```
+
+With blue/green, `florist prod release:deploy --migrate` runs the migrations
+from the new environment before its health check, while the old environment
+keeps serving. If the new environment failed to boot before they ran and the
+health check aborts the deploy, the migration has run by then: run
+`florist prod release:deploy` again.
+
+A deploy whose migrations change nothing the release reads at boot can
+migrate after it, as before:
+
+```bash
+florist prod release:deploy
 florist prod db:migrate
 ```
 
@@ -993,6 +1038,9 @@ florist prod logs:tail
 florist prod release:deploy
 florist prod db:migrate       # only if schema changed
 ```
+
+When the deploy brings a public migration a release reads at boot, migrate
+first instead (see [Running migrations](#running-migrations)).
 
 ### Emergency rollback
 

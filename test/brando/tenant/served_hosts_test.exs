@@ -116,11 +116,12 @@ defmodule Brando.Tenant.ServedHostsTest do
     )
   end
 
-  # As the supervisor restarts it; returns once `init/1` and its continue ran
+  # As the supervisor restarts it; returns once `init/1` and its continue ran,
+  # and the lookups that check started have answered
   defp restart do
     :ok = Supervisor.terminate_child(Brando.Supervisor, ServedHosts)
     {:ok, _pid} = Supervisor.restart_child(Brando.Supervisor, ServedHosts)
-    :sys.get_state(ServedHosts)
+    ServedHosts.settled()
   end
 
   defp lines(file), do: file |> File.read!() |> String.split("\n", trim: true)
@@ -679,6 +680,67 @@ defmodule Brando.Tenant.ServedHostsTest do
     end
   end
 
+  describe "after a registry write" do
+    test "a newly bound host is checking at once, and a slow lookup of another host does not hold its result back",
+         %{site: site} do
+      DNS.answer("acme.test", [@here])
+      production = bind(site, "production", "acme.test", true)
+      # Waits for its DNS, so every check looks it up again
+      bind(site, "away", "away.acme.test")
+      assert %{hosts: %{"away.acme.test" => :unresolved}} = ServedHosts.status()
+      DNS.hold("away.acme.test", self())
+      DNS.hold("no-record.acme.test", self())
+      # A check under way, its lookup of the waiting host slow to answer
+      check = Task.async(fn -> ServedHosts.check() end)
+      assert_receive {:looking_up, "away.acme.test", away_lookup}
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+
+      {:ok, _} =
+        Registry.update_environment(Registry.get_environment(production.id), %{redirect_hosts: ["no-record.acme.test"]},
+          actor: :system
+        )
+
+      assert %{hosts: %{"no-record.acme.test" => :checking, "away.acme.test" => :unresolved}} = ServedHosts.status()
+      # Answered while the other lookup still runs
+      assert_receive {:looking_up, "no-record.acme.test", lookup}
+      send(lookup, :answer)
+      assert_receive {:served_hosts, %{hosts: %{"no-record.acme.test" => :unresolved}}}
+
+      send(away_lookup, :answer)
+      assert %{hosts: %{"away.acme.test" => :unresolved, "no-record.acme.test" => :unresolved}} = Task.await(check)
+    end
+
+    test "a lookup that does not answer fails at the lookup timeout", %{path: file, site: site} do
+      DNS.answer("acme.test", [@here])
+      production = bind(site, "production", "acme.test", true)
+      put_test_env(ServedHosts, file: file, addresses: [@here], lookup_timeout: 100)
+      DNS.hold("slow.acme.test", self())
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+
+      {:ok, _} =
+        Registry.update_environment(Registry.get_environment(production.id), %{redirect_hosts: ["slow.acme.test"]},
+          actor: :system
+        )
+
+      assert %{hosts: %{"slow.acme.test" => :checking}} = ServedHosts.status()
+      # Never answered
+      assert_receive {:looking_up, "slow.acme.test", _lookup}
+      assert_receive {:served_hosts, %{hosts: %{"slow.acme.test" => :unresolved}}}, 2_000
+    end
+
+    test "a newly bound host that is no full host name is invalid at once", %{site: site} do
+      DNS.answer("acme.test", [@here])
+      production = bind(site, "production", "acme.test", true)
+
+      {:ok, _} =
+        Registry.update_environment(Registry.get_environment(production.id), %{redirect_hosts: ["intranet"]},
+          actor: :system
+        )
+
+      assert %{hosts: %{"intranet" => :invalid}} = ServedHosts.status()
+    end
+  end
+
   describe "when it runs" do
     test "a warm of the tenant cache checks again, and the status is broadcast", %{path: file, site: site} do
       DNS.answer("www.acme.test", [@here])
@@ -815,12 +877,14 @@ defmodule Brando.Tenant.ServedHostsTest do
       # Lookups of the check the warm in `bind` asked for, done by now
       flush_lookups()
       :sys.suspend(pid)
-      ServedHosts.registry_changed()
+      registry_changed = Task.async(fn -> ServedHosts.registry_changed() end)
       wait_for_messages(pid, 1)
-      # The current timer's tick, queued after the cast
+      # The current timer's tick, queued after the registry's message
       send(pid, {:tick, tick})
       :sys.resume(pid)
+      Task.await(registry_changed)
       :sys.get_state(pid)
+      ServedHosts.settled()
 
       assert_received {:looked_up, "www.acme.test"}
       refute_received {:looked_up, _host}

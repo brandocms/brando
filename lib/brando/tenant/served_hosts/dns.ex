@@ -1,7 +1,10 @@
 defmodule Brando.Tenant.ServedHosts.DNS do
   @moduledoc """
   The system resolver for `Brando.Tenant.ServedHosts`: the host's IPv4 and
-  IPv6 addresses, each family looked up with a three-second timeout.
+  IPv6 addresses, one family after the other. Each is asked to answer within
+  three seconds, which the operating system's resolver (the default lookup
+  method on Unix) does not heed: the `:lookup_timeout` of
+  `Brando.Tenant.ServedHosts` is what bounds a lookup.
 
   A family with no records counts as none. A family whose lookup fails any
   other way (a timeout, a refused query) fails the whole lookup: a record
