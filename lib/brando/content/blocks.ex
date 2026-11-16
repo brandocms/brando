@@ -755,7 +755,9 @@ defmodule Brando.Content.Blocks do
 
     active = from(m in Content.Module, where: is_nil(m.deleted_at))
     matching = Repo.all(from(m in active, where: ^matches, select: {m.id, m.source_module_id}))
-    overridden = MapSet.new(Repo.all(from(m in active, where: not is_nil(m.source_module_id), select: m.source_module_id)))
+
+    overridden =
+      MapSet.new(Repo.all(from(m in active, where: not is_nil(m.source_module_id), select: m.source_module_id)))
 
     own = for {id, nil} <- matching, do: {:local, id}
     overrides = for {_id, source_id} <- matching, source_id, do: {:shared, source_id}

@@ -12,6 +12,7 @@ defmodule Brando.Tenant.Cache do
   to publish read the registry last.
   """
 
+  alias Brando.Cache.Freshness
   alias Brando.CacheSync
   alias Brando.Sites.Site
   alias Brando.Tenant
@@ -50,7 +51,12 @@ defmodule Brando.Tenant.Cache do
   @spec invalidate() :: :ok
   def invalidate do
     Brando.Repo.after_commit(:tenant_cache, fn ->
+      # Render jobs queued from here on carry the token, so a node that has
+      # not warmed for this write warms before it renders
+      # (`Brando.Cache.ensure_fresh/1`)
+      token = Freshness.make(:registry)
       warm()
+      Freshness.known(:registry, token)
       CacheSync.broadcast(__MODULE__, :registry)
     end)
   end

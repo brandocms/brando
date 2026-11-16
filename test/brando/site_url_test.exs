@@ -306,6 +306,47 @@ defmodule Brando.SiteURLTest do
     end
   end
 
+  describe "when the live environment's domain changes on another node" do
+    # This node's record of the registry writes its cache has caught up with
+    @registry_tokens {Brando.Cache.Freshness, :registry}
+
+    setup do
+      tokens = Cachex.get!(:cache, @registry_tokens)
+
+      on_exit(fn ->
+        if tokens, do: Cachex.put(:cache, @registry_tokens, tokens), else: Cachex.del(:cache, @registry_tokens)
+      end)
+    end
+
+    test "a render job run before this node's registry cache has the domain refreshes it first", context do
+      user = Brando.Factory.insert(:random_user)
+      page = in_environment("staging", fn -> json_ld_page!(user) end)
+      production = Registry.get_environment_by_key(context.site, "production")
+
+      jobs =
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          assert {:ok, _} = Registry.update_environment(production, %{domain: "www.acme.test"}, actor: :system)
+          all_enqueued(worker: Brando.Worker.EntryRenderer)
+        end)
+
+      job = Enum.find(jobs, &(&1.args["entry_id"] == page.id and &1.args["tenant_prefix"] == "tenant_acme_staging"))
+      assert job
+
+      # As on a node that has not heard of the write: its cache holds the old domain
+      stale_registry_cache(production, "acme.test", "www.acme.test")
+      Cachex.del(:cache, @registry_tokens)
+
+      assert {:ok, _} = Brando.Worker.EntryRenderer.perform(job)
+      in_environment("staging", fn -> assert rendered_blocks(page) =~ ~S(http:\/\/www.acme.test\/en\/work) end)
+      assert Tenant.Cache.get_live_env("acme").domain == "www.acme.test"
+
+      # Known now: the next job for the write leaves the cache as it is
+      stale_registry_cache(production, "acme.test", "www.acme.test")
+      assert {:ok, _} = Brando.Worker.EntryRenderer.perform(job)
+      assert Tenant.Cache.get_live_env("acme").domain == "acme.test"
+    end
+  end
+
   describe "when the live environment's domain changes, an entry using a shared module" do
     test "is rendered again when the module emits JSON-LD, or the environment's override of it does", context do
       user = Brando.Factory.insert(:random_user)
@@ -321,7 +362,9 @@ defmodule Brando.SiteURLTest do
           {:ok, override} =
             Brando.Content.SharedLibrary.customize(:module, plain.id, site, Tenant.current_prefix(), :system)
 
-          {:ok, _} = Brando.Content.update_module(override.id, %{code: ~s({{ entries | json_ld: "CreativeWork" }})}, :system)
+          {:ok, _} =
+            Brando.Content.update_module(override.id, %{code: ~s({{ entries | json_ld: "CreativeWork" }})}, :system)
+
           module_page!(user, plain.id, :shared)
         end)
 
@@ -345,7 +388,10 @@ defmodule Brando.SiteURLTest do
     test "is rendered again", context do
       user = Brando.Factory.insert(:random_user)
       site = Registry.get_site(context.site.id)
-      {:ok, shared} = Brando.Content.SharedLibrary.create_shared(:module, work_list_module("<p>{{ identity.name }}</p>"), :system)
+
+      {:ok, shared} =
+        Brando.Content.SharedLibrary.create_shared(:module, work_list_module("<p>{{ identity.name }}</p>"), :system)
+
       :ok = Brando.Content.SharedLibrary.set_enabled(site, :module, [shared.id])
 
       in_environment("production", fn ->
@@ -394,7 +440,10 @@ defmodule Brando.SiteURLTest do
       page = in_environment("production", fn -> json_ld_page!(context.admin) end)
 
       # Staging's modules cannot be read
-      Ecto.Adapters.SQL.query!(Brando.Repo.repo(), "ALTER TABLE tenant_acme_staging.content_modules RENAME TO content_modules_gone")
+      Ecto.Adapters.SQL.query!(
+        Brando.Repo.repo(),
+        "ALTER TABLE tenant_acme_staging.content_modules RENAME TO content_modules_gone"
+      )
 
       log =
         ExUnit.CaptureLog.capture_log(fn ->
@@ -615,6 +664,15 @@ defmodule Brando.SiteURLTest do
         end)
       end)
     end)
+  end
+
+  # This node's registry cache with `cached` as the environment's domain, the
+  # database with `stored`
+  defp stale_registry_cache(environment, cached, stored) do
+    query = from(e in Brando.Environments.Environment, where: e.id == ^environment.id)
+    Brando.Repo.update_all(query, [set: [domain: cached]], prefix: "public")
+    Tenant.Cache.warm()
+    Brando.Repo.update_all(query, [set: [domain: stored]], prefix: "public")
   end
 
   defp set_live(site, key) do
