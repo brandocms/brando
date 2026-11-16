@@ -35,7 +35,10 @@ defmodule Brando.Tenant.Registry do
 
   @spec list_sites() :: [Site.t()]
   def list_sites do
-    Site
+    # In the order they were created, not Postgres' physical order, which moves
+    query = from(site in Site, order_by: [asc: site.id])
+
+    query
     |> Repo.all(@public_opts)
     |> Repo.preload(:environments, @public_opts)
   end
