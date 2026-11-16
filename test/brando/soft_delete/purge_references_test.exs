@@ -13,8 +13,6 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
 
   import ExUnit.CaptureLog
 
-  require Logger
-
   alias Brando.Factory
   alias Brando.Pages
   alias Brando.Pages.Fragment
