@@ -852,6 +852,22 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert {:ok, [%{id: pruned_id}]} = Task.await(pruning)
       assert pruned_id == first.id
     end
+
+    test "a rollback that waited for it finds the build pruned, and the published build keeps answering", context do
+      first = context |> ready_build() |> deploy!()
+      _second = context |> ready_build() |> deploy!()
+      third = context |> ready_build() |> deploy!()
+
+      assert {:ok, [%{id: pruned_id}]} = Deploy.prune(Registry.get_site(context.site.id), 1)
+      assert pruned_id == first.id
+
+      # The rollback was asked for with the build as it was before pruning
+      assert {:error, :build_not_deployable} = Deploy.rollback(context.site, first)
+
+      assert Registry.get_site(context.site.id).published_build == third.version
+      assert Builds.get_build(third.id).status == :deployed
+      assert sent_body(request(context.host, "/about")) == "about v3"
+    end
   end
 
   # A session of its own, outside the sandbox, as another node's
