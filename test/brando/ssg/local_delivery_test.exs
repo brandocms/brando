@@ -615,6 +615,32 @@ defmodule Brando.SSG.LocalDeliveryTest do
     end
   end
 
+  describe "a build directory that goes missing" do
+    test "answers 503 once the files are gone, though memory still lists them", context do
+      build = context |> ready_build() |> deploy!()
+      assert sent_body(request(context.host, "/about")) == "about v1"
+
+      File.rm_rf!(build.build_path)
+
+      conn = request(context.host, "/about")
+      assert conn.status == 503
+      assert get_resp_header(conn, "retry-after") == ["60"]
+      assert request(context.host, "/").status == 503
+    end
+
+    test "is looked for and logged once per interval, not on every request", context do
+      build = context |> ready_build() |> deploy!()
+      File.rm_rf!(build.build_path)
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          for _ <- 1..5, do: assert(request(context.host, "/about").status == 503)
+        end)
+
+      assert length(String.split(log, "has no published build to serve")) == 2
+    end
+  end
+
   describe "pruning" do
     # Chosen under the lock, so a rollback on another node that publishes an
     # archived build finishes first, or finds it pruned and is refused. The

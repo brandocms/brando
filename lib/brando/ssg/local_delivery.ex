@@ -159,12 +159,15 @@ defmodule Brando.SSG.LocalDelivery do
         end
 
       :error ->
-        conn
-        |> put_resp_header("cache-control", @revalidate)
-        |> put_resp_header("retry-after", "60")
-        |> send_resp(503, "Service unavailable")
-        |> halt()
+        conn |> send_unavailable() |> halt()
     end
+  end
+
+  defp send_unavailable(conn) do
+    conn
+    |> put_resp_header("cache-control", @revalidate)
+    |> put_resp_header("retry-after", "60")
+    |> send_resp(503, "Service unavailable")
   end
 
   defp requested_file(conn, build) do
@@ -223,20 +226,19 @@ defmodule Brando.SSG.LocalDelivery do
   # -- Files ----------------------------------------------------------------------
 
   defp send_build_file(conn, build, relative) do
-    path = Path.join(build.root, relative)
     etag = Map.fetch!(build.files, relative)
     conn = allow_any_origin(conn, relative)
 
     if immutable?(conn, build, relative) do
       conn
       |> put_resp_header("cache-control", @immutable)
-      |> send_file_as(200, path, relative)
+      |> send_file_as(200, build, relative)
     else
       conn = conn |> put_resp_header("cache-control", @revalidate) |> put_resp_header("etag", etag)
 
       if etag in get_req_header(conn, "if-none-match"),
         do: send_resp(conn, 304, ""),
-        else: send_file_as(conn, 200, path, relative)
+        else: send_file_as(conn, 200, build, relative)
     end
   end
 
@@ -252,24 +254,35 @@ defmodule Brando.SSG.LocalDelivery do
     conn = put_resp_header(conn, "cache-control", @revalidate)
 
     if Map.has_key?(build.files, @not_found),
-      do: send_file_as(conn, 404, Path.join(build.root, @not_found), @not_found),
+      do: send_file_as(conn, 404, build, @not_found),
       else: conn |> put_resp_header("content-type", "text/plain; charset=utf-8") |> send_resp(404, "Not found")
   end
 
   # The sitemap is stored gzipped and sent as `BrandoWeb.SitemapController`
   # sends it, a download
-  defp send_file_as(conn, status, path, relative) do
+  defp send_file_as(conn, status, build, relative) do
     conn =
       conn
       |> put_resp_header("content-type", content_type(relative))
       |> put_resp_header("x-content-type-options", "nosniff")
 
-    if Path.extname(relative) == ".gz",
-      do:
-        conn
-        |> put_resp_header("content-disposition", ~s[attachment; filename="#{URI.encode(Path.basename(relative))}"])
-        |> send_file(status, path),
-      else: send_file(conn, status, path)
+    conn =
+      if Path.extname(relative) == ".gz",
+        do:
+          put_resp_header(conn, "content-disposition", ~s[attachment; filename="#{URI.encode(Path.basename(relative))}"]),
+        else: conn
+
+    send_build_path(conn, status, build, relative)
+  end
+
+  # A file gone since the build was listed: memory forgets the build, so the
+  # next request looks for its directory again (`published/1`)
+  defp send_build_path(conn, status, build, relative) do
+    send_file(conn, status, Path.join(build.root, relative))
+  rescue
+    File.Error ->
+      :persistent_term.erase({__MODULE__, build.site_id})
+      send_unavailable(conn)
   end
 
   defp content_type(relative) do
@@ -290,24 +303,35 @@ defmodule Brando.SSG.LocalDelivery do
   defp published(%Site{id: site_id, published_build: version} = site) do
     case :persistent_term.get({__MODULE__, site_id}, nil) do
       %{version: ^version} = build -> {:ok, build}
-      _other -> load(site)
+      _other -> if missing?(site), do: :error, else: load(site)
     end
   end
 
-  # One load at a time on this node; a request that waited finds it loaded
+  # One load of a build at a time on this node, other sites' and versions'
+  # loads beside it; a request that waited finds it loaded, or missing
   defp load(%Site{id: site_id, published_build: version} = site) do
     :global.trans(
-      {{__MODULE__, :load}, self()},
+      {{__MODULE__, :load, site_id, version}, self()},
       fn ->
         case :persistent_term.get({__MODULE__, site_id}, nil) do
           %{version: ^version} = build -> {:ok, build}
-          _other -> read_build(site)
+          _other -> if missing?(site), do: :error, else: read_build(site)
         end
       end,
       [node()],
       :infinity
     )
   end
+
+  # A directory found missing is looked for again after a few seconds, not
+  # on every request
+  @missing_for :timer.seconds(5)
+
+  defp missing?(%Site{id: site_id, published_build: version}),
+    do: match?({:ok, true}, Cachex.get(:cache, {__MODULE__, :missing, site_id, version}))
+
+  defp remember_missing(%Site{id: site_id, published_build: version}),
+    do: Cachex.put(:cache, {__MODULE__, :missing, site_id, version}, true, expire: @missing_for)
 
   defp read_build(%Site{id: site_id, published_build: version} = site) do
     root = Path.join(Builds.build_root(site), version)
@@ -317,6 +341,7 @@ defmodule Brando.SSG.LocalDelivery do
       manifest = read_json(root, "manifest.json")
 
       build = %{
+        site_id: site_id,
         version: version,
         root: root,
         files: Map.delete(files, @redirect_list),
@@ -328,6 +353,7 @@ defmodule Brando.SSG.LocalDelivery do
       :persistent_term.put(@sites_key, MapSet.put(:persistent_term.get(@sites_key, MapSet.new()), site_id))
       {:ok, build}
     else
+      remember_missing(site)
       Logger.error("Site #{site.key} has no published build to serve at #{root}: is sites/ shared by every node?")
       :error
     end
