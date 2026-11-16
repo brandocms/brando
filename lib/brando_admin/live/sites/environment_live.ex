@@ -195,7 +195,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                           name="shown_redirect_hosts"
                           value={Enum.join(environment.redirect_hosts || [], ",")}
                         />
-                        <%!-- Which control has the focus, so a save that replaces them gives it back --%>
+                        <%!-- Which control had the focus last, so a save that replaces them gives it back --%>
                         <input type="hidden" id={host_field_id(environment, "focused")} name="focused_field" value="" />
                         <div class="environment-host-field">
                           <label id={host_field_id(environment, "domain-label")} for={host_field_id(environment, "domain")}>
@@ -1168,14 +1168,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       (Map.has_key?(draft, :redirect_hosts) and Environment.parse_hosts(draft.redirect_hosts) != hosts)
   end
 
-  # Each control records itself as focused, and clears that when it loses the
-  # focus, in the form's `focused_field`; client side only, so no round trip
+  # Each control records itself in the form's `focused_field` when it takes
+  # the focus, client side only. Not cleared on blur: a click on the save
+  # button does not focus it in Safari, and the field typed in last is the
+  # one saved from
   defp focus_tracking(environment, control) do
-    to = "#" <> host_field_id(environment, "focused")
-
     %{
-      "phx-focus" => JS.set_attribute({"value", control}, to: to),
-      "phx-blur" => JS.set_attribute({"value", ""}, to: to),
+      "phx-focus" => JS.set_attribute({"value", control}, to: "#" <> host_field_id(environment, "focused")),
       "data-focus" => JS.focus()
     }
   end

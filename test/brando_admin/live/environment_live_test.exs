@@ -654,7 +654,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
         assert has_element?(view, ~s(##{id}[data-focus]))
       end
 
-      # Nothing in the form had the focus (a click on the button that did not focus it)
+      # None of the form's controls had the focus yet
       view
       |> hosts_form(staging)
       |> render_submit(%{"domain" => "other.acme.test", "redirect_hosts" => "", "focused_field" => ""})
