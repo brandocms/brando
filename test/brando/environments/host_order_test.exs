@@ -293,22 +293,24 @@ defmodule Brando.Environments.HostOrderTest do
 
     holder =
       Task.async(fn ->
-        Sandbox.unboxed_run(Repo, fn ->
-          Repo.transaction(fn ->
-            Repo.query!("SELECT id FROM public.environments WHERE id = $1 FOR NO KEY UPDATE", [environment.id])
-            send(test, :holding)
-
-            receive do
-              :commit -> :ok
-            after
-              10_000 -> raise "never told to commit"
-            end
-          end)
-        end)
+        Sandbox.unboxed_run(Repo, fn -> hold_row_until_commit(environment, test) end)
       end)
 
     assert_receive :holding, 5_000
     holder
+  end
+
+  defp hold_row_until_commit(environment, test) do
+    Repo.transaction(fn ->
+      Repo.query!("SELECT id FROM public.environments WHERE id = $1 FOR NO KEY UPDATE", [environment.id])
+      send(test, :holding)
+
+      receive do
+        :commit -> :ok
+      after
+        10_000 -> raise "never told to commit"
+      end
+    end)
   end
 
   # Until a connection waits for a row another holds
