@@ -452,8 +452,10 @@ defmodule Brando.SSG.LocalDelivery do
   # or finds its directory gone and looks for it again only after an interval
   # (`published/1`), and `gone` answers, as for a build that is not there.
   # Checked right before `send` sends it, every component of its path, as
-  # servers' adapters raise different errors for a file they cannot open; the
-  # rescue covers one removed between the check and the send.
+  # servers' adapters raise different errors for a file they cannot open. The
+  # rescue covers one removed between the check and the send, which an adapter
+  # finds reading the file's information, before it writes anything; an error
+  # with the file still there is not that, and is raised again.
   defp send_present(conn, build, relative, send, gone) do
     if BuildPath.regular_file?(build.root, relative) do
       conn |> send.() |> halt()
@@ -462,7 +464,9 @@ defmodule Brando.SSG.LocalDelivery do
     end
   rescue
     error in [File.Error, MatchError] ->
-      if conn.state == :unset, do: forget(conn, build, gone), else: reraise(error, __STACKTRACE__)
+      if BuildPath.regular_file?(build.root, relative),
+        do: reraise(error, __STACKTRACE__),
+        else: forget(conn, build, gone)
   end
 
   defp forget(conn, build, gone) do

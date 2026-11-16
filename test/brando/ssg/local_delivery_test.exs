@@ -27,30 +27,52 @@ defmodule Brando.SSG.LocalDeliveryTest do
     def clone_schema(_source_prefix, target_prefix), do: Brando.Environments.Schema.create(target_prefix)
   end
 
-  defmodule StatFirstAdapter do
+  defmodule TestAdapter do
     @moduledoc false
-    # The test adapter, but `send_file/6` reads the file's info first and
-    # matches `{:ok, _}`, as Bandit does: a missing file raises `MatchError`
-    @behaviour Plug.Conn.Adapter
+    # The test adapter's callbacks but `send_file/6`, which the module using
+    # it defines
 
     alias Plug.Adapters.Test.Conn, as: Test
 
-    def send_file(payload, status, headers, path, offset, length) do
-      {:ok, _info} = :file.read_file_info(path)
-      Test.send_file(payload, status, headers, path, offset, length)
-    end
+    defmacro __using__(_opts) do
+      quote do
+        @behaviour Plug.Conn.Adapter
 
-    defdelegate send_resp(payload, status, headers, body), to: Test
-    defdelegate send_chunked(payload, status, headers), to: Test
-    defdelegate chunk(payload, body), to: Test
-    defdelegate read_req_body(payload, opts), to: Test
-    defdelegate push(payload, path, headers), to: Test
-    defdelegate inform(payload, status, headers), to: Test
-    defdelegate upgrade(payload, protocol, opts), to: Test
-    defdelegate get_peer_data(payload), to: Test
-    defdelegate get_sock_data(payload), to: Test
-    defdelegate get_ssl_data(payload), to: Test
-    defdelegate get_http_protocol(payload), to: Test
+        defdelegate send_resp(payload, status, headers, body), to: Test
+        defdelegate send_chunked(payload, status, headers), to: Test
+        defdelegate chunk(payload, body), to: Test
+        defdelegate read_req_body(payload, opts), to: Test
+        defdelegate push(payload, path, headers), to: Test
+        defdelegate inform(payload, status, headers), to: Test
+        defdelegate upgrade(payload, protocol, opts), to: Test
+        defdelegate get_peer_data(payload), to: Test
+        defdelegate get_sock_data(payload), to: Test
+        defdelegate get_ssl_data(payload), to: Test
+        defdelegate get_http_protocol(payload), to: Test
+      end
+    end
+  end
+
+  defmodule VanishingAdapter do
+    @moduledoc false
+    # The file is removed after the check, and the adapter reads its
+    # information first and matches `{:ok, _}`, as Bandit does: `MatchError`
+    use TestAdapter
+
+    def send_file(payload, status, headers, path, offset, length) do
+      File.rm!(path)
+      {:ok, _info} = :file.read_file_info(path)
+      Plug.Adapters.Test.Conn.send_file(payload, status, headers, path, offset, length)
+    end
+  end
+
+  defmodule FailingAdapter do
+    @moduledoc false
+    # Fails sending a file that is there
+    use TestAdapter
+
+    def send_file(_payload, _status, _headers, path, _offset, _length),
+      do: raise(File.Error, reason: :eio, action: "send", path: path)
   end
 
   setup do
@@ -386,7 +408,22 @@ defmodule Brando.SSG.LocalDeliveryTest do
       fonts = dispatch(context.host, "/fonts/body.woff2")
       assert fonts.status == 404
       assert fonts.resp_body == "missing v1"
+      # Answered in front of the router: it was never let through
+      refute Map.has_key?(fonts.private, :phoenix_router)
       assert dispatch(context.host, "/js/app-abc123.js").resp_body == "release js"
+    end
+
+    test "a release file let through with no static_paths/0, which Plug.Static does not serve, is the build's 404",
+         context do
+      # A web module without static_paths/0 leaves the release's directory to decide
+      put_test_env(:web_module, Brando.Test.LocalDeliveryController)
+      write_release_file("docs/guide.txt", "release docs")
+
+      conn = dispatch(context.host, "/docs/guide.txt")
+      assert conn.status == 404
+      assert conn.resp_body == "missing v1"
+      # The tenant plug answered it, in the router
+      assert Map.has_key?(conn.private, :phoenix_router)
     end
 
     test "an encoded prefix the router decodes is the build's 404, not the page Phoenix renders", context do
@@ -1031,22 +1068,21 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert dispatch(context.host, "/about").status == 503
     end
 
-    test "answers 503 whichever error the server's adapter raises for a missing file", context do
-      build = context |> ready_build() |> deploy!()
+    test "answers 503 for a file removed between its check and the send", context do
+      context |> ready_build() |> deploy!()
       assert sent_body(request(context.host, "/about")) == "about v1"
 
-      File.rm_rf!(build.build_path)
+      conn = request_with(VanishingAdapter, context.host, "/about")
+      assert conn.status == 503
 
-      for _ <- 1..2 do
-        conn =
-          :get
-          |> build_conn("/about")
-          |> Map.put(:host, context.host)
-          |> Map.update!(:adapter, fn {_test, payload} -> {StatFirstAdapter, payload} end)
-          |> SiteAssets.call([])
+      # Listed again, without it
+      assert sent_body(request(context.host, "/about")) == "missing v1"
+    end
 
-        assert conn.status == 503
-      end
+    test "raises an error sending a file that is there", context do
+      context |> ready_build() |> deploy!()
+
+      assert_raise File.Error, fn -> request_with(FailingAdapter, context.host, "/about") end
     end
 
     test "is looked for and logged once per interval, not on every request", context do
@@ -1135,6 +1171,14 @@ defmodule Brando.SSG.LocalDeliveryTest do
       refute changeset.valid?
       assert changeset.errors[:strategy]
     end
+  end
+
+  defp request_with(adapter, host, path) do
+    :get
+    |> build_conn(path)
+    |> Map.put(:host, host)
+    |> Map.update!(:adapter, fn {_test, payload} -> {adapter, payload} end)
+    |> SiteAssets.call([])
   end
 
   # Plug.Test reads what `send_file/3` sends into the body
