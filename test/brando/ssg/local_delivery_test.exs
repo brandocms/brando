@@ -855,6 +855,25 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert sent_body(request(context.host, "/linked.html")) == "missing v2"
       assert sent_body(request(context.host, "/outside/secret.html")) == "missing v2"
     end
+
+    test "through a directory swapped for a symbolic link after the build was listed answer no file outside it",
+         context do
+      assert sent_body(request(context.host, "/about")) == "about v1"
+
+      outside = Path.join(context.root, "outside")
+      File.mkdir_p!(outside)
+      File.write!(Path.join(outside, "index.html"), "secret")
+      about = Path.join(context.build.build_path, "about")
+      File.rm_rf!(about)
+      File.ln_s!(outside, about)
+
+      conn = request(context.host, "/about")
+      refute sent_body(conn) == "secret"
+      assert conn.status == 503
+
+      # Listed again, the link is no file of the build
+      assert sent_body(request(context.host, "/about")) == "missing v1"
+    end
   end
 
   describe "no build to serve" do

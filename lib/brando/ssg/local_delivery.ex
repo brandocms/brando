@@ -437,7 +437,7 @@ defmodule Brando.SSG.LocalDelivery do
   defp send_build_path(conn, status, build, relative) do
     path = Path.join(build.root, relative)
 
-    if match?({:ok, %{type: :regular}}, File.lstat(path)),
+    if BuildPath.regular_file?(build.root, relative),
       do: send_file(conn, status, path),
       else: send_build_gone(conn, build)
   rescue
