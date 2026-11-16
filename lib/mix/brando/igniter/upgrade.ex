@@ -191,13 +191,15 @@ if Code.ensure_loaded?(Igniter) do
     # What `mix brando.install` writes today and an application installed
     # earlier may lack: Brando's soft-delete functions in the repo, which
     # every delete calls, and a notice for each function the ReleaseTasks
-    # template has gained. When discovery fails, `migrations/1` reports it.
+    # template has gained. Brando's repo is found without the rest of
+    # discovery, which a second router or endpoint can stop; when discovery
+    # fails, `migrations/1` reports it.
     defp installed_files(igniter) do
+      igniter = SoftDeleteRepo.plan(igniter, igniter.args.options[:repo])
+
       with {:ok, igniter, options} <- Configuration.namespace_options(igniter, igniter.args.options),
            {:ok, igniter, project} <- Project.discover(igniter, options) do
-        igniter
-        |> SoftDeleteRepo.plan(project.repo)
-        |> Release.resave_notice(project)
+        Release.resave_notice(igniter, project)
       else
         _ -> igniter
       end

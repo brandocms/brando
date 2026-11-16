@@ -33,7 +33,8 @@ if Code.ensure_loaded?(Igniter) do
 
     The task points references to the modules renamed in 0.55 at their new
     names, adds the explicit listing component imports, adds
-    `use Brando.SoftDelete.Repo` to a Repo without it, gives Villain parsers
+    `use Brando.SoftDelete.Repo` to Brando's Repo (`config :brando,
+    repo_module:`, or the application's only one) without it, gives Villain parsers
     back the `use Phoenix.Component`, imports and aliases they relied on from
     `use Brando.Villain.Parser`, configures Req as
     Swoosh's API client, points Brando at the application's mailer (creating

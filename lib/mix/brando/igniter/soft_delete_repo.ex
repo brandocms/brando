@@ -8,23 +8,30 @@ if Code.ensure_loaded?(Igniter) do
     alias Igniter.Code.Common
     alias Igniter.Code.Module, as: CodeModule
     alias Igniter.Project.Module, as: ProjectModule
+    alias Mix.Brando.Igniter.Install.Configuration
+    alias Mix.Brando.Igniter.Project
 
     @doc """
-    `plan/2` for the application's one Ecto repo. With none, or several, it
-    changes nothing: `mix brando.install` and the upgrade hook name the repo.
+    Adds `use Brando.SoftDelete.Repo` after `use Ecto.Repo` in Brando's repo
+    when it has none: every soft delete and restore calls it.
+
+    Brando's repo is `repo` when given (a module, or a `--repo` option's
+    name), else the one `config :brando, repo_module:` names, else the
+    application's one repo outside `test/`; other repos are left alone. When
+    none of these names one, or the repo has no literal `use Ecto.Repo`, a
+    notice gives the line to add and where.
     """
-    def plan(igniter) do
-      case Igniter.Libs.Ecto.list_repos(igniter) do
-        {igniter, [repo]} -> plan(igniter, repo)
-        {igniter, _none_or_several} -> igniter
+    def plan(igniter, repo \\ nil)
+
+    def plan(igniter, nil) do
+      case brando_repo(igniter) do
+        {:ok, igniter, repo} -> plan(igniter, repo)
+        {:error, igniter, why} -> Igniter.add_notice(igniter, unresolved_text(why))
       end
     end
 
-    @doc """
-    Adds `use Brando.SoftDelete.Repo` after `use Ecto.Repo` in `repo`, which
-    has none: every soft delete and restore calls it. A repo without a
-    literal `use Ecto.Repo` is left alone, with a notice naming the line.
-    """
+    def plan(igniter, repo) when is_binary(repo), do: plan(igniter, Module.concat([repo]))
+
     def plan(igniter, repo) do
       case ProjectModule.find_module(igniter, repo) do
         {:ok, {igniter, _source, zipper}} ->
@@ -35,6 +42,40 @@ if Code.ensure_loaded?(Igniter) do
         {:error, igniter} ->
           notice(igniter, repo)
       end
+    end
+
+    defp brando_repo(igniter) do
+      case Configuration.read(igniter, :repo_module) do
+        {:ok, igniter, repo} when is_atom(repo) and repo not in [nil, true, false] -> {:ok, igniter, repo}
+        {:ok, igniter, nil} -> only_repo(igniter)
+        {:ok, igniter, value} -> {:error, igniter, "config :brando, repo_module: is #{inspect(value)}, not a module"}
+        {:error, message} -> {:error, igniter, message}
+      end
+    end
+
+    defp only_repo(igniter) do
+      {igniter, repos} = Igniter.Libs.Ecto.list_repos(igniter)
+
+      case repos |> Project.source_modules(igniter) |> Enum.sort() do
+        [repo] ->
+          {:ok, igniter, repo}
+
+        [] ->
+          {:error, igniter, "no Ecto repo was found under lib/"}
+
+        repos ->
+          {:error, igniter,
+           "config :brando, repo_module: is not set, and there are several repos (#{Enum.map_join(repos, ", ", &inspect/1)})"}
+      end
+    end
+
+    defp unresolved_text(why) do
+      """
+      Could not tell which repo is Brando's: #{why}. Brando's repo needs Brando's soft-delete
+      functions, and the application stops at boot without them. In that repo (the one
+      config :brando, repo_module: names), add after its use Ecto.Repo:
+          use Brando.SoftDelete.Repo
+      """
     end
 
     defp uses_soft_delete?(zipper) do
@@ -57,7 +98,8 @@ if Code.ensure_loaded?(Igniter) do
 
     defp notice_text(repo) do
       """
-      #{inspect(repo)} needs Brando's soft-delete functions, or every delete fails. Add, after its use Ecto.Repo:
+      #{inspect(repo)} needs Brando's soft-delete functions, and the application stops at boot
+      without them. Add, after its use Ecto.Repo:
           use Brando.SoftDelete.Repo
       """
     end

@@ -167,8 +167,12 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # Igniter also scans test files. A test-only Repo/router is not an install target.
-    defp source_modules(modules, igniter) do
+    @doc """
+    The modules of `modules` defined in the application's source folders,
+    outside `test/`: Igniter also scans test files, and a test-only repo or
+    router is not an install target.
+    """
+    def source_modules(modules, igniter) do
       folders = Igniter.Project.IgniterConfig.get(igniter, :source_folders)
 
       Enum.filter(modules, fn module ->

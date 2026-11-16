@@ -393,5 +393,46 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
 
       assert IgniterCase.source(result, "lib/studio/repo.ex") =~ "use Brando.SoftDelete.Repo"
     end
+
+    @analytics_repo """
+    defmodule Studio.AnalyticsRepo do
+      use Ecto.Repo, otp_app: :studio, adapter: Ecto.Adapters.Postgres
+    end
+    """
+
+    @brando_config """
+    import Config
+    config :brando, repo_module: Studio.Repo
+    """
+
+    defp migrate55(files), do: IgniterCase.phoenix_project(files: files) |> Igniter.compose_task("brando.migrate55", [])
+
+    test "with a second repo, Brando's configured one gets the functions and the other is left alone" do
+      files = %{"lib/studio/analytics_repo.ex" => @analytics_repo, "config/brando.exs" => @brando_config}
+
+      for result <- [migrate55(files), version_change(files)] do
+        assert IgniterCase.source(result, "lib/studio/repo.ex") =~ "use Brando.SoftDelete.Repo"
+        Igniter.Test.assert_unchanged(result, "lib/studio/analytics_repo.ex")
+      end
+    end
+
+    test "a repo under test/ does not count as a second one" do
+      result = migrate55(%{"test/support/analytics_repo.ex" => @analytics_repo})
+
+      assert IgniterCase.source(result, "lib/studio/repo.ex") =~ "use Brando.SoftDelete.Repo"
+      Igniter.Test.assert_unchanged(result, "test/support/analytics_repo.ex")
+    end
+
+    test "with several repos and none configured, a notice names the line to add and where" do
+      files = %{"lib/studio/analytics_repo.ex" => @analytics_repo}
+
+      for result <- [migrate55(files), version_change(files)] do
+        Igniter.Test.assert_unchanged(result, ["lib/studio/repo.ex", "lib/studio/analytics_repo.ex"])
+        assert notice = Enum.find(result.notices, &(&1 =~ "Could not tell which repo is Brando's"))
+        assert notice =~ "Studio.AnalyticsRepo, Studio.Repo"
+        assert notice =~ "config :brando, repo_module:"
+        assert notice =~ "use Brando.SoftDelete.Repo"
+      end
+    end
   end
 end

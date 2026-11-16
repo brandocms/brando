@@ -1910,9 +1910,12 @@ has the fixes.
   `UPGRADE.md`). An alias in braces the new name cannot share is reported
   instead; the old names keep working, with a warning, until 0.57;
 - adds the narrow listing component imports used by custom row functions;
-- adds `use Brando.SoftDelete.Repo` after `use Ecto.Repo` in the
-  application's Repo when it has no such line: every delete and restore calls
-  the functions it adds, and the application does not boot without them;
+- adds `use Brando.SoftDelete.Repo` after `use Ecto.Repo` in Brando's Repo
+  when it has no such line: every delete and restore calls the functions it
+  adds, and the application does not boot without them. Brando's Repo is the
+  one `config :brando, repo_module:` names, or the application's only Repo
+  under `lib/`; other Repos are left alone, and when it cannot tell which is
+  Brando's it says so and names the line to add;
 - defaults an unconfigured Swoosh API client to `Swoosh.ApiClient.Req` and
   pins declared `phoenix_live_view` dependencies in `assets/**/package.json`
   to the loaded server version;
