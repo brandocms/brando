@@ -290,8 +290,9 @@ What is stored or cached names the site's public base URL instead,
 `Brando.Utils.public_hostname/0`: the live environment's domain, whichever
 environment the process works in, and whatever the site's status, so what a
 suspended site stores is right when it is reactivated. An environment's own
-host moves (on dynamic delivery a live switch swaps two environments' domains,
-a copy moves content to another environment) and nothing stored is rendered
+host moves (on dynamic delivery, and on static delivery the installation
+serves itself, a live switch swaps two environments' domains, a copy moves
+content to another environment) and nothing stored is rendered
 again then; the live domain moves with the live flag. So JSON-LD a block
 renders into `rendered_<field>` (the `json_ld` filter and `<.json_ld>`) and the
 sitemap files name the public base URL, the identity cache keeps a service's
@@ -303,9 +304,10 @@ When the public base URL changes, every environment of the site renders again
 the entries whose blocks emit JSON-LD, in their modules' code (shared modules
 and the environment's overrides of them included) or in their refs. That is a
 change of the live environment's domain through `Brando.Tenant.Registry`, and a
-live switch on a `:static` site, where the domains stay put and the incoming
-environment's becomes the public one (on `:dynamic` delivery the domains swap
-and the public base URL stays). The renders are queued once the change has
+live switch on a `:static` site delivered elsewhere, where the domains stay
+put and the incoming environment's becomes the public one (on `:dynamic`
+delivery, and on a `:static` site the installation serves itself, the domains
+swap and the public base URL stays). The renders are queued once the change has
 committed, each environment searched as the system; a search that fails is
 logged and leaves the change saved. A render job run on a node that has not
 heard of the change yet refreshes its registry cache first

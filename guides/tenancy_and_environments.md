@@ -2173,6 +2173,10 @@ in the build's log. If the target is of the right form, fix the list and the
 build deploys; change a site's target and it takes a new build. An older build
 whose target no longer fits cannot be rolled back until its target is listed
 again, and one with a target of the wrong form cannot be deployed at all.
+A build made for another delivery than the site uses now is refused too, in
+both directions: one made for a static host on a site the installation serves
+itself, and one made to be served by the installation on a site that is not.
+Its log says it must be built again.
 
 **An entry without `{site_key}` grants every site.** That holds for an exact
 destination such as `s3://acme-www` as much as for a parent such as
@@ -2399,15 +2403,29 @@ build on the next request, without a restart. Until the first deploy, the host
 answers from Phoenix as before.
 
 `Brando.Plug.SiteAssets` answers first (`Brando.SSG.LocalDelivery`), in the
-endpoint before the router, on the domain of the live environment of an active
-`:static` site with this strategy and a published build. A redirect host still
-redirects to that domain first. There, a `GET` or `HEAD`:
+endpoint before the router, for a request that `Brando.Plug.Tenant` would
+resolve to the live environment of an active `:static` site with this strategy
+and a published build: with `:multi`, on that environment's domain; with
+`:single`, on every host but another environment's domain, so the endpoint's
+own host, a bare IP and a host no environment names answer from the build too,
+as they would resolve to the live environment. A redirect host still redirects
+to the domain first. There, a `GET` or `HEAD`:
 
 - for a path the build has a file for answers that file: `/about` and
   `/about/` answer `about/index.html`, and `/about.md`, `robots.txt` and the
-  sitemap answer the build's own;
+  sitemap answer the build's own. A page asked for with
+  `Accept: text/markdown` answers the build's Markdown file for it
+  (`about.md`, `index.md` for the root), as `Brando.Plug.Markdown` answers for
+  the application, when the build has one; both answers then carry
+  `Vary: Accept`;
 - for a path `_redirects.json` answers, as the facts above say, answers the
   redirect, or `410 Gone` for an entry without a target;
+- for a file the build lacks that the endpoint's asset pipeline has, leaves
+  it to the pipeline: the asset sets `Brando.Plug.SiteAssets` serves, and the
+  release's static files under the web module's `static_paths/0`
+  (`Brando.Plug.SiteAssets.static_file?/1`). That covers the admin's bundles
+  with `:single`, a preview's newer assets and those of a page Phoenix renders
+  there. These are files, not content;
 - for any other path answers the build's `404.html` with status 404, or a
   plain 404 for a build without one. A page the environment has but the
   published build does not is never reached, so unpublished content stays
@@ -2417,13 +2435,37 @@ Paths resolve inside the build's directory only: a path with `..`, an encoded
 slash or a NUL, or a file reached through a symbolic link, is a path the build
 does not have. `_redirects.json` itself is not served.
 
-HTML and the other files are sent with an `ETag` and `Cache-Control: no-cache`,
-so a browser or CDN asks again and gets `304 Not Modified` while the build is
-unchanged. The files the build's Vite manifest lists, which are named by their
-content, and a request with a `vsn` query, as `Plug.Static` reads it, are sent
-with `Cache-Control: public, max-age=31536000, immutable`. Markdown is
+HTML and the other files are sent with an `ETag`, which names the build's
+version, and `Cache-Control: no-cache`, so a browser or CDN asks again and gets
+`304 Not Modified` while the build is unchanged, and the new file after a
+deploy. The files the build's Vite manifest lists, which are named by their
+content, and a request for a file other than HTML with a `vsn` query, as
+`Plug.Static` reads it, are sent with
+`Cache-Control: public, max-age=31536000, immutable`. Markdown is
 `text/markdown`, and the gzipped sitemap is sent as `/sitemaps/` sends it from
 Phoenix, a download.
+
+The router's browser pipeline never runs for a file sent from the build, so
+pages (HTML, the 404 page included) get the headers
+`Phoenix.Controller.put_secure_browser_headers/2` sets by default, among them
+a Content-Security-Policy of `base-uri 'self'; frame-ancestors 'self';`. An
+application with a policy of its own, such as the one its router sets with
+`Brando.Router.put_extra_secure_browser_headers/2`, sets it here, as headers
+applied to every page after the defaults:
+
+```elixir
+config :brando, Brando.SSG.LocalDelivery,
+  headers: %{"content-security-policy" => "default-src 'self'; img-src * data:"}
+```
+
+Other files of the build are sent with `Access-Control-Allow-Origin: *`, as
+`Brando.Plug.SiteAssets` sends its own, for sandboxed live and shared previews.
+
+A request answered from the build never reaches `Plug.Telemetry` or the
+request log. It emits the telemetry event
+`[:brando, :ssg, :local_delivery, :stop]` instead, with the measurement
+`:duration` (native time units) and the metadata `:site_key`, `:path` and
+`:status`, for an application's metrics.
 
 What still reaches Phoenix on that host:
 
@@ -2433,6 +2475,8 @@ What still reaches Phoenix on that host:
   `/__brando/` paths, and the endpoint's sockets, which answer before any plug;
 - with `:single`, where the admin answers on every host, the admin's and MCP's
   paths;
+- the IndexNow key file (`/<key>.txt`) while IndexNow is on
+  (`Brando.Plug.IndexNow`);
 - a request carrying a build's signed context (`Brando.SSG.Context`), so a new
   build is rendered by Phoenix, never copied from the published one;
 - an application's own paths, listed in config:
@@ -2454,9 +2498,19 @@ strategy needs a site in the registry, so it applies with `:single` and
 
 Each node reads a published build's file list and redirects once and keeps
 them in memory until another build is published. A node that cannot find the
-build's directory answers `503` and logs it: with several nodes, `sites/` must
-be on storage they all share ([Several nodes](#several-nodes)). The reverse
-proxy needs nothing new: the site's domain already reaches the application.
+build's directory, or one of its files, answers `503`, looks for the directory
+again every few seconds and logs it each time it does not find it: with
+several nodes, `sites/` must be on storage they all share
+([Several nodes](#several-nodes)). The reverse proxy needs nothing new: the
+site's domain already reaches the application.
+
+Two limits. A file sent from the build ignores a `Range` header and is sent
+whole, so a video to be streamed belongs in media, which the build does not
+answer. And
+`config :brando, Brando.Sites.DeployConfig, local_delivery: false` refuses
+the strategy on save and refuses each deploy, but a site already published
+keeps answering from its build until its strategy is changed (a save that
+keeps `:local` is refused) or it is suspended, archived or deleted.
 
 ### A CDN in front
 
