@@ -168,7 +168,7 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @doc """
-    The modules of `modules` defined in the application's source folders,
+    Keeps the modules defined in the application's source folders and
     outside `test/`: Igniter also scans test files, and a test-only repo or
     router is not an install target.
     """

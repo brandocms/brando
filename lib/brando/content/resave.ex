@@ -404,41 +404,43 @@ defmodule Brando.Content.Resave do
 
     entries
     |> in_render_order(blueprint)
-    |> Enum.count(fn entry ->
-      title = blueprint.__identifier__(entry, skip_cover: true).title
+    |> Enum.count(&resave_entry(blueprint, &1, singular, write))
+  end
 
-      # IO.ANSI.format/1 drops the colours when stdout is not a terminal.
-      write.([
-        "* [",
-        :blue,
-        "#{singular}",
-        :reset,
-        ":",
-        :blue,
-        "#{entry.id}",
-        :reset,
-        "] → ",
-        :blue,
-        title,
-        :reset,
-        " ... "
-      ])
+  defp resave_entry(blueprint, entry, singular, write) do
+    title = blueprint.__identifier__(entry, skip_cover: true).title
 
-      # Loaded again as it is now, and stored only over that: an editor may
-      # have saved it since the list was read, or save it while it renders
-      keep_updated_at = &Ecto.Changeset.force_change(&1, :updated_at, &1.data.updated_at)
+    # IO.ANSI.format/1 drops the colours when stdout is not a terminal.
+    write.([
+      "* [",
+      :blue,
+      "#{singular}",
+      :reset,
+      ":",
+      :blue,
+      "#{entry.id}",
+      :reset,
+      "] → ",
+      :blue,
+      title,
+      :reset,
+      " ... "
+    ])
 
-      case Blocks.render_and_store(blueprint, entry.id, prepare: keep_updated_at, force: true) do
-        {:ok, stored} ->
-          if blueprint == @embedded, do: Brando.Cache.Query.evict({:ok, stored})
-          write.([:green, "done!\n"])
-          true
+    # Loaded again as it is now, and stored only over that: an editor may
+    # have saved it since the list was read, or save it while it renders
+    keep_updated_at = &Ecto.Changeset.force_change(&1, :updated_at, &1.data.updated_at)
 
-        {:error, _} ->
-          write.([:red, "failed!\n"])
-          false
-      end
-    end)
+    case Blocks.render_and_store(blueprint, entry.id, prepare: keep_updated_at, force: true) do
+      {:ok, stored} ->
+        if blueprint == @embedded, do: Brando.Cache.Query.evict({:ok, stored})
+        write.([:green, "done!\n"])
+        true
+
+      {:error, _} ->
+        write.([:red, "failed!\n"])
+        false
+    end
   end
 
   # Fragments after the fragments their blocks embed, in id order otherwise
@@ -461,11 +463,8 @@ defmodule Brando.Content.Resave do
       |> Blocks.list_root_block_ids_by_source()
       |> Blocks.list_entry_ids_for_root_blocks_by_source()
       |> Map.get(@embedded, [])
-      |> Enum.reduce(embeds, fn embedder, embeds ->
-        if embedder != embedded_id and MapSet.member?(ids, embedder),
-          do: Map.update(embeds, embedder, [embedded_id], &[embedded_id | &1]),
-          else: embeds
-      end)
+      |> Enum.filter(&(&1 != embedded_id and MapSet.member?(ids, &1)))
+      |> Enum.reduce(embeds, &Map.update(&2, &1, [embedded_id], fn embedded -> [embedded_id | embedded] end))
     end)
   end
 
