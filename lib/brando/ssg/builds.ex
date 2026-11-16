@@ -276,10 +276,12 @@ defmodule Brando.SSG.Builds do
 
   # Only with a target to deploy to: without one a deploy can only fail
   defp auto_deploy?(%Site{} = site, opts) do
-    config = deploy_config(site)
-
-    deploy_target?(config) and Keyword.get(opts, :auto_deploy, config["auto_deploy"] || false) == true
+    deploy_target?(site) and Keyword.get(opts, :auto_deploy, site_auto_deploy?(site)) == true
   end
+
+  # From the struct: `deploy_config/1` serializes booleans as strings
+  defp site_auto_deploy?(%Site{deploy_config: %DeployConfig{auto_deploy: auto_deploy}}), do: auto_deploy == true
+  defp site_auto_deploy?(%Site{}), do: false
 
   @doc "Whether a site's deployment settings name a strategy and a target to deploy builds to."
   @spec deploy_target?(Site.t() | map()) :: boolean()

@@ -309,6 +309,24 @@ defmodule Brando.SSGBuildsTest do
     assert ready.build_log =~ "Automatic deployment failed"
   end
 
+  test "deploys automatically by the site's setting when the request does not say", context do
+    {:ok, site} = Registry.update_site(context.site, %{deploy_config: %{auto_deploy: true}})
+    test_pid = self()
+    put_test_env(:ssg_builder, SuccessfulBuilder)
+
+    put_test_env(:ssg_deploy_runner, fn command, _args, _opts ->
+      send(test_pid, {:deployed, command})
+      {"deployed", 0}
+    end)
+
+    build = request_build(site, context.environment)
+    assert build.auto_deploy
+
+    assert :ok = perform_job(SSGBuild, %{"build_id" => build.id})
+    assert_received {:deployed, "rsync"}
+    assert Builds.get_build(build.id).status == :deployed
+  end
+
   test "does not deploy automatically without a deployment target, whatever the request says", context do
     {:ok, site} =
       Registry.update_site(context.site, %{deploy_config: %{strategy: nil, target: nil, auto_deploy: true}})
