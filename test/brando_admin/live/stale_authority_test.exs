@@ -485,7 +485,7 @@ defmodule BrandoAdmin.StaleAuthorityTest do
       {:ok, _} = Setup.suspend_site(c.site, actor: c.current_user)
 
       assert :sys.get_state(view.pid).socket.assigns.current_site.id == c.site.id
-      assert render_click(view, "refresh") =~ "suspended"
+      assert render_click(view, "refresh") =~ "Suspended"
     end
 
     defp on_site(c) do

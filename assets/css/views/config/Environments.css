@@ -471,33 +471,10 @@
     line-height: 1.4;
   }
 
-  .environment-state,
-  .environment-count {
-    @font mono;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 5px 10px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--brando-ink) 8%, transparent);
-    color: color-mix(in srgb, var(--brando-ink) 70%, transparent);
-    font-size: var(--brando-text-2xs);
-    letter-spacing: 0.06em;
-    line-height: 1;
-    text-transform: uppercase;
-  }
-
-  .environment-state.live {
-    background: color-mix(in srgb, var(--brando-accent) 12%, transparent);
-    color: var(--brando-accent);
-
-    &::before {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentcolor;
-      content: "";
-    }
+  /* States and counts are the shared .badge; in a table's data column they
+     keep the badge's own face rather than the column's mono */
+  .badge {
+    font-family: var(--brando-font-sans);
   }
 
   .environment-log__reason {
@@ -997,8 +974,125 @@
     }
   }
 
+  /* Sites: each site is a card of parts (heading and actions, figures,
+     languages, library group, users), ruled off from each other */
+  .site-card {
+    display: grid;
+    gap: 24px;
+
+    > * + * {
+      padding-top: 24px;
+      border-top: 1px solid var(--brando-line-soft);
+    }
+
+    /* The rules run the card's width; what they divide stays at a
+       settings width, so a label stays near its value */
+    > form > :not(.btn) {
+      max-width: 720px;
+    }
+
+    .site-card__users {
+      grid-template-columns: repeat(2, minmax(0, 348px));
+    }
+
+    label {
+      gap: 8px;
+    }
+
+    form {
+      gap: 16px;
+    }
+
+    form > .btn[type="submit"] {
+      margin-top: 0;
+    }
+
+    h3 {
+      margin-bottom: 12px;
+      font-size: var(--brando-text-xl);
+      font-weight: 500;
+    }
+
+    .site-card__users p {
+      margin: 0;
+      color: var(--brando-muted);
+      font-size: var(--brando-text-md);
+    }
+  }
+
+  .site-card__header {
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .site-card__identity {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 0;
+
+    h2 {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+
+    code {
+      @font mono;
+      padding: 2px 7px;
+      border-radius: var(--brando-radius-sm);
+      background: color-mix(in srgb, var(--brando-ink) 7%, transparent);
+      color: color-mix(in srgb, var(--brando-ink) 70%, transparent);
+      font-size: var(--brando-text-xs);
+      line-height: 1.4;
+    }
+  }
+
+  .site-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Labels above values, four to a row, two on a phone */
+  .site-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 156px));
+    gap: 16px 24px;
+    margin: 0;
+
+    > div {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    dt {
+      @font mono;
+      color: color-mix(in srgb, var(--brando-ink) 62%, transparent);
+      font-size: var(--brando-text-2xs);
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      line-height: 1.3;
+      text-transform: uppercase;
+    }
+
+    dd {
+      margin: 0;
+      font-size: var(--brando-text-lg);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .site-stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
   @media (max-width: 900px) {
-    .environment-grid {
+    .environment-grid,
+    .site-card .site-card__users {
       grid-template-columns: 1fr;
     }
 
@@ -1065,4 +1159,26 @@
       margin-top: 16px;
     }
   }
+}
+
+/* Settings width: the site cards' parts stay near their labels on a wide screen */
+.site-screen > .environment-management-live {
+  max-width: 1120px;
+}
+
+/* A field's label, input and note stay together when its neighbour in the
+   row is taller, in the create form as in the cards */
+.site-screen .environment-grid {
+  align-items: start;
+}
+
+.site-screen label {
+  align-content: start;
+}
+
+.site-screen label > small,
+.site-screen .site-card__users small {
+  color: var(--brando-muted);
+  font-size: var(--brando-text-sm);
+  line-height: 1.5;
 }

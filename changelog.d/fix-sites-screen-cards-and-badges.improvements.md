@@ -1,0 +1,1 @@
+- The Sites screen groups each site card into a heading with its status and actions, its figures as labels over values, and its languages, library group and users, and the Sites, Environments and Publishing screens show states and counts as the shared badge.

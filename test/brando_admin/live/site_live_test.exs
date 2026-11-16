@@ -160,7 +160,7 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
     |> render_click()
 
     assert Registry.get_site(site.id).status == :suspended
-    assert has_element?(view, "#site-#{site.id}", "suspended")
+    assert has_element?(view, "#site-#{site.id} .badge", "Suspended")
 
     view
     |> element("#site-#{site.id} button", "Archive")

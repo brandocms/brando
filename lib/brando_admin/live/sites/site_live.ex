@@ -50,261 +50,267 @@ defmodule BrandoAdmin.Sites.SiteLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
-      title={gettext("Sites")}
-      subtitle={gettext("Provision isolated sites, control lifecycle, and assign users")}
-    >
-      <button type="button" class="btn" phx-click="refresh">{gettext("Refresh")}</button>
-    </Content.header>
+    <div class="environment-screen site-screen">
+      <Content.header
+        title={gettext("Sites")}
+        subtitle={gettext("Provision isolated sites, control lifecycle, and assign users")}
+      >
+        <button type="button" class="btn" phx-click="refresh">{gettext("Refresh")}</button>
+      </Content.header>
 
-    <div class="environment-management-live">
-      <section class="environment-panel">
-        <h2>{gettext("Create site")}</h2>
-        <p>{gettext("Creates Production and Staging schemas, seeds initial content, and grants you site admin access.")}</p>
-        <form id="create-site-form" phx-submit="create_site">
-          <div class="environment-grid">
+      <div class="environment-management-live">
+        <section class="environment-panel">
+          <h2>{gettext("Create site")}</h2>
+          <p>{gettext("Creates Production and Staging schemas, seeds initial content, and grants you site admin access.")}</p>
+          <form id="create-site-form" phx-submit="create_site">
+            <div class="environment-grid">
+              <label>
+                <span>{gettext("Name")}</span>
+                <input name="site[name]" required placeholder={gettext("Acme Corporation")} />
+              </label>
+              <label>
+                <span>{gettext("Key")}</span>
+                <input name="site[key]" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="acme" />
+              </label>
+              <label>
+                <span>{gettext("Languages")}</span>
+                <input
+                  name="site[languages]"
+                  required
+                  value={Brando.Languages.installation_default_language()}
+                  placeholder={Enum.join(Brando.Languages.installation_codes(), ",")}
+                />
+              </label>
+              <label>
+                <span>{gettext("Default language")}</span>
+                <input name="site[default_language]" required value={Brando.Languages.installation_default_language()} />
+              </label>
+              <label>
+                <span>{gettext("Delivery")}</span>
+                <select name="site[delivery_mode]">
+                  <option value="dynamic">{gettext("Dynamic")}</option>
+                  <option value="static">{gettext("Static")}</option>
+                </select>
+                <small>
+                  {gettext(
+                    "Dynamic is served directly by Phoenix. Static requires a configured SSG build and deploy pipeline."
+                  )}
+                </small>
+              </label>
+            </div>
+            <button type="submit" class="btn btn--primary" phx-disable-with={gettext("Provisioning…")}>
+              {gettext("Create site")}
+            </button>
+          </form>
+        </section>
+
+        <section :for={site <- @sites} class="environment-panel site-card" id={"site-#{site.id}"}>
+          <header class="site-card__header">
+            <div class="site-card__identity">
+              <h2>{site.name}</h2>
+              <code>{site.key}</code>
+              <span class={["badge", status_tone(site.status)]}>
+                <span :if={site.status == :active} class="badge-dot"></span>
+                {status_label(site.status)}
+              </span>
+            </div>
+            <div class="site-card__actions">
+              <button
+                :if={site.status == :active}
+                type="button"
+                class="btn"
+                phx-click="suspend"
+                phx-value-id={site.id}
+              >
+                {gettext("Suspend")}
+              </button>
+              <button
+                :if={site.status == :suspended}
+                type="button"
+                class="btn btn--primary"
+                phx-click="activate_site"
+                phx-value-id={site.id}
+              >
+                {gettext("Activate")}
+              </button>
+              <button
+                :if={site.status != :archived}
+                type="button"
+                class="btn btn--danger"
+                phx-click="archive"
+                phx-value-id={site.id}
+                phx-confirm={gettext("Archive %{name}? Its domains will stop serving immediately.", name: site.name)}
+              >
+                {gettext("Archive")}
+              </button>
+              <button
+                :if={site.status == :archived}
+                type="button"
+                class="btn"
+                phx-click="activate_site"
+                phx-value-id={site.id}
+              >
+                {gettext("Restore")}
+              </button>
+              <button
+                :if={site.status == :archived}
+                type="button"
+                class="btn btn--danger"
+                phx-click="delete"
+                phx-value-id={site.id}
+                phx-confirm={gettext("Permanently delete %{name}, all schemas, media, and uploaded assets?", name: site.name)}
+              >
+                {gettext("Permanently delete")}
+              </button>
+            </div>
+          </header>
+
+          <dl class="site-stats">
+            <div>
+              <dt>{gettext("Environments")}</dt><dd>{length(site.environments)}</dd>
+            </div>
+            <div>
+              <dt>{gettext("Pages")}</dt><dd>{stat(@stats, site.id, :page_count)}</dd>
+            </div>
+            <div>
+              <dt>{gettext("Media")}</dt><dd>{format_size(stat(@stats, site.id, :media_size))}</dd>
+            </div>
+            <div>
+              <dt>{gettext("Last page edit")}</dt><dd>{format_last_edit(stat(@stats, site.id, :last_edit))}</dd>
+            </div>
+          </dl>
+
+          <form
+            id={"languages-site-#{site.id}"}
+            class="site-languages"
+            phx-change="check_languages"
+            phx-submit="save_languages"
+          >
+            <input type="hidden" name="site[id]" value={site.id} />
+            <div class="environment-grid">
+              <label>
+                <span>{gettext("Languages")}</span>
+                <input
+                  name="site[languages]"
+                  required
+                  value={language_draft(@language_drafts, site).languages}
+                  placeholder={Enum.join(Brando.Languages.installation_codes(), ",")}
+                />
+                <small>
+                  {gettext("A language you add gets the same starting content as a new site, in each environment.")}
+                </small>
+              </label>
+              <label>
+                <span>{gettext("Default language")}</span>
+                <input
+                  name="site[default_language]"
+                  required
+                  value={language_draft(@language_drafts, site).default_language}
+                />
+              </label>
+            </div>
+            <p :if={removed_languages(@language_drafts, site) != []} class="environment-hint" role="status">
+              {gettext(
+                "Removing %{languages} deletes nothing: the content stays, and comes back if the language is added again.",
+                languages: Enum.join(removed_languages(@language_drafts, site), ", ")
+              )}
+            </p>
+            <button type="submit" class="btn">{gettext("Save languages")}</button>
+          </form>
+
+          <form
+            id={"library-group-site-#{site.id}"}
+            class="site-library-group"
+            phx-submit="set_library_group"
+          >
+            <input type="hidden" name="site[id]" value={site.id} />
             <label>
-              <span>{gettext("Name")}</span>
-              <input name="site[name]" required placeholder={gettext("Acme Corporation")} />
-            </label>
-            <label>
-              <span>{gettext("Key")}</span>
-              <input name="site[key]" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="acme" />
-            </label>
-            <label>
-              <span>{gettext("Languages")}</span>
+              <span>{gettext("Provider library group")}</span>
               <input
-                name="site[languages]"
-                required
-                value={Brando.Languages.installation_default_language()}
-                placeholder={Enum.join(Brando.Languages.installation_codes(), ",")}
+                name="site[provider_library_group]"
+                value={site.provider_library_group}
+                pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                maxlength="40"
+                placeholder={gettext("Not shared")}
               />
+              <small>{library_group_note(@sites, site)}</small>
             </label>
-            <label>
-              <span>{gettext("Default language")}</span>
-              <input name="site[default_language]" required value={Brando.Languages.installation_default_language()} />
-            </label>
-            <label>
-              <span>{gettext("Delivery")}</span>
-              <select name="site[delivery_mode]">
-                <option value="dynamic">{gettext("Dynamic")}</option>
-                <option value="static">{gettext("Static")}</option>
-              </select>
-              <small>
-                {gettext("Dynamic is served directly by Phoenix. Static requires a configured SSG build and deploy pipeline.")}
-              </small>
-            </label>
-          </div>
-          <button type="submit" class="btn btn--primary" phx-disable-with={gettext("Provisioning…")}>
-            {gettext("Create site")}
-          </button>
-        </form>
-      </section>
+            <button type="submit" class="btn">{gettext("Save group")}</button>
+          </form>
 
-      <section :for={site <- @sites} class="environment-panel" id={"site-#{site.id}"}>
-        <header>
-          <div>
-            <h2>{site.name}</h2>
-            <p><code>{site.key}</code></p>
-          </div>
-          <span class={["environment-state", site.status == :active && "live"]}>{site.status}</span>
-        </header>
+          <table :if={seeding(@seeding, site.id) != []} id={"seeding-site-#{site.id}"}>
+            <tbody>
+              <tr :for={row <- seeding(@seeding, site.id)} id={"seeding-#{site.id}-#{row.environment.id}-#{row.language}"}>
+                <td>{seeding_status(row)}</td>
+                <td>
+                  <small :if={row.busy}>{gettext("Waiting for the environment's copy or setup to finish.")}</small>
+                  <button
+                    :if={seed_again?(row)}
+                    type="button"
+                    class="btn btn--sm"
+                    phx-click="seed_language"
+                    phx-value-site-id={site.id}
+                    phx-value-environment-id={row.environment.id}
+                    phx-value-language={row.language}
+                  >
+                    {gettext("Seed again")}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-        <dl class="site-stats">
-          <div>
-            <dt>{gettext("Environments")}</dt><dd>{length(site.environments)}</dd>
-          </div>
-          <div>
-            <dt>{gettext("Pages")}</dt><dd>{stat(@stats, site.id, :page_count)}</dd>
-          </div>
-          <div>
-            <dt>{gettext("Media")}</dt><dd>{format_size(stat(@stats, site.id, :media_size))}</dd>
-          </div>
-          <div>
-            <dt>{gettext("Last page edit")}</dt><dd>{format_last_edit(stat(@stats, site.id, :last_edit))}</dd>
-          </div>
-        </dl>
-
-        <div class="environment-actions">
-          <button
-            :if={site.status == :active}
-            type="button"
-            class="btn"
-            phx-click="suspend"
-            phx-value-id={site.id}
-          >
-            {gettext("Suspend")}
-          </button>
-          <button
-            :if={site.status == :suspended}
-            type="button"
-            class="btn btn--primary"
-            phx-click="activate_site"
-            phx-value-id={site.id}
-          >
-            {gettext("Activate")}
-          </button>
-          <button
-            :if={site.status != :archived}
-            type="button"
-            class="btn btn--danger"
-            phx-click="archive"
-            phx-value-id={site.id}
-            phx-confirm={gettext("Archive %{name}? Its domains will stop serving immediately.", name: site.name)}
-          >
-            {gettext("Archive")}
-          </button>
-          <button
-            :if={site.status == :archived}
-            type="button"
-            class="btn"
-            phx-click="activate_site"
-            phx-value-id={site.id}
-          >
-            {gettext("Restore")}
-          </button>
-          <button
-            :if={site.status == :archived}
-            type="button"
-            class="btn btn--danger"
-            phx-click="delete"
-            phx-value-id={site.id}
-            phx-confirm={gettext("Permanently delete %{name}, all schemas, media, and uploaded assets?", name: site.name)}
-          >
-            {gettext("Permanently delete")}
-          </button>
-        </div>
-
-        <form
-          id={"library-group-site-#{site.id}"}
-          class="site-library-group"
-          phx-submit="set_library_group"
-        >
-          <input type="hidden" name="site[id]" value={site.id} />
-          <label>
-            <span>{gettext("Provider library group")}</span>
-            <input
-              name="site[provider_library_group]"
-              value={site.provider_library_group}
-              pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-              maxlength="40"
-              placeholder={gettext("Not shared")}
-            />
-            <small>{library_group_note(@sites, site)}</small>
-          </label>
-          <button type="submit" class="btn">{gettext("Save group")}</button>
-        </form>
-
-        <form
-          id={"languages-site-#{site.id}"}
-          class="site-languages"
-          phx-change="check_languages"
-          phx-submit="save_languages"
-        >
-          <input type="hidden" name="site[id]" value={site.id} />
-          <div class="environment-grid">
-            <label>
-              <span>{gettext("Languages")}</span>
-              <input
-                name="site[languages]"
-                required
-                value={language_draft(@language_drafts, site).languages}
-                placeholder={Enum.join(Brando.Languages.installation_codes(), ",")}
-              />
-              <small>
-                {gettext("A language you add gets the same starting content as a new site, in each environment.")}
-              </small>
-            </label>
-            <label>
-              <span>{gettext("Default language")}</span>
-              <input
-                name="site[default_language]"
-                required
-                value={language_draft(@language_drafts, site).default_language}
-              />
-            </label>
-          </div>
-          <p :if={removed_languages(@language_drafts, site) != []} class="environment-hint" role="status">
-            {gettext(
-              "Removing %{languages} deletes nothing: the content stays, and comes back if the language is added again.",
-              languages: Enum.join(removed_languages(@language_drafts, site), ", ")
-            )}
+          <p :if={Brando.Authorization.enabled?()}>
+            <a href={"/admin/groups?brando_site_key=#{site.key}"}>{gettext("Manage this site’s groups and members →")}</a>
           </p>
-          <button type="submit" class="btn">{gettext("Save languages")}</button>
-        </form>
+          <div :if={!Brando.Authorization.enabled?()} class="environment-grid site-card__users">
+            <section>
+              <h3>{gettext("Site users")}</h3>
+              <p :if={assignments(@assignments, site.id) == []}>{gettext("No explicit user assignments.")}</p>
+              <table :if={assignments(@assignments, site.id) != []}>
+                <tbody>
+                  <tr :for={assignment <- assignments(@assignments, site.id)} id={"assignment-#{assignment.id}"}>
+                    <td>{assignment.user.name}<small>{assignment.user.email}</small></td>
+                    <td><span class="badge">{assignment.role}</span></td>
+                    <td>
+                      <button
+                        type="button"
+                        class="btn btn--sm btn--danger"
+                        phx-click="revoke"
+                        phx-value-site-id={site.id}
+                        phx-value-user-id={assignment.user_id}
+                      >
+                        {gettext("Revoke")}
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
 
-        <table :if={seeding(@seeding, site.id) != []} id={"seeding-site-#{site.id}"}>
-          <tbody>
-            <tr :for={row <- seeding(@seeding, site.id)} id={"seeding-#{site.id}-#{row.environment.id}-#{row.language}"}>
-              <td>{seeding_status(row)}</td>
-              <td>
-                <small :if={row.busy}>{gettext("Waiting for the environment's copy or setup to finish.")}</small>
-                <button
-                  :if={seed_again?(row)}
-                  type="button"
-                  class="btn btn--sm"
-                  phx-click="seed_language"
-                  phx-value-site-id={site.id}
-                  phx-value-environment-id={row.environment.id}
-                  phx-value-language={row.language}
-                >
-                  {gettext("Seed again")}
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <p :if={Brando.Authorization.enabled?()}>
-          <a href={"/admin/groups?brando_site_key=#{site.key}"}>{gettext("Manage this site’s groups and members →")}</a>
-        </p>
-        <div :if={!Brando.Authorization.enabled?()} class="environment-grid">
-          <section>
-            <h3>{gettext("Site users")}</h3>
-            <p :if={assignments(@assignments, site.id) == []}>{gettext("No explicit user assignments.")}</p>
-            <table :if={assignments(@assignments, site.id) != []}>
-              <tbody>
-                <tr :for={assignment <- assignments(@assignments, site.id)} id={"assignment-#{assignment.id}"}>
-                  <td>{assignment.user.name}<small>{assignment.user.email}</small></td>
-                  <td><span class="badge">{assignment.role}</span></td>
-                  <td>
-                    <button
-                      type="button"
-                      class="btn btn--sm btn--danger"
-                      phx-click="revoke"
-                      phx-value-site-id={site.id}
-                      phx-value-user-id={assignment.user_id}
-                    >
-                      {gettext("Revoke")}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
-
-          <section>
-            <h3>{gettext("Grant access")}</h3>
-            <form phx-submit="grant" id={"grant-site-#{site.id}"}>
-              <input type="hidden" name="assignment[site_id]" value={site.id} />
-              <label>
-                <span>{gettext("User")}</span>
-                <select name="assignment[user_id]" required>
-                  <option :for={user <- @users} value={user.id}>{user.name} · {user.email}</option>
-                </select>
-              </label>
-              <label>
-                <span>{gettext("Role")}</span>
-                <select name="assignment[role]">
-                  <option value="editor">{gettext("Editor")}</option>
-                  <option value="admin">{gettext("Administrator")}</option>
-                </select>
-              </label>
-              <button type="submit" class="btn btn--primary">{gettext("Grant access")}</button>
-            </form>
-          </section>
-        </div>
-      </section>
+            <section>
+              <h3>{gettext("Grant access")}</h3>
+              <form phx-submit="grant" id={"grant-site-#{site.id}"}>
+                <input type="hidden" name="assignment[site_id]" value={site.id} />
+                <label>
+                  <span>{gettext("User")}</span>
+                  <select name="assignment[user_id]" required>
+                    <option :for={user <- @users} value={user.id}>{user.name} · {user.email}</option>
+                  </select>
+                </label>
+                <label>
+                  <span>{gettext("Role")}</span>
+                  <select name="assignment[role]">
+                    <option value="editor">{gettext("Editor")}</option>
+                    <option value="admin">{gettext("Administrator")}</option>
+                  </select>
+                </label>
+                <button type="submit" class="btn btn--primary">{gettext("Grant access")}</button>
+              </form>
+            </section>
+          </div>
+        </section>
+      </div>
     </div>
     """
   end
@@ -675,6 +681,14 @@ defmodule BrandoAdmin.Sites.SiteLive do
       _none -> "—"
     end
   end
+
+  defp status_label(:active), do: pgettext("site status", "Active")
+  defp status_label(:suspended), do: pgettext("site status", "Suspended")
+  defp status_label(:archived), do: pgettext("site status", "Archived")
+
+  defp status_tone(:active), do: "badge--success"
+  defp status_tone(:suspended), do: "badge--attention"
+  defp status_tone(:archived), do: nil
 
   defp assignments(assignments, site_id), do: Map.get(assignments, site_id, [])
   defp stat(stats, site_id, key), do: stats |> Map.get(site_id, %{}) |> Map.get(key, "—")

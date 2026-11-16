@@ -1622,6 +1622,12 @@ msgstr "Aktiverte versjon #%{revision}, som planlagt"
 msgid "Active"
 msgstr "Aktiv"
 
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "site status"
+msgid "Active"
+msgstr "Aktiv"
+
 #: lib/brando_admin/components/form/input/blocks/markdown_source_block.ex
 #, elixir-autogen, elixir-format
 msgid "Active commit"
@@ -2499,6 +2505,12 @@ msgstr "Arkivere gjeldende live-miljø og forfremme %{name}?"
 
 #: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
+msgid "Archived"
+msgstr "Arkivert"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "site status"
 msgid "Archived"
 msgstr "Arkivert"
 
@@ -16906,6 +16918,12 @@ msgstr "Superbrukere kan administrere alle aktive nettsteder og alle installasjo
 #, elixir-autogen, elixir-format
 msgid "Suspend"
 msgstr "Suspender"
+
+#: lib/brando_admin/live/sites/site_live.ex
+#, elixir-autogen, elixir-format
+msgctxt "site status"
+msgid "Suspended"
+msgstr "Suspendert"
 
 #: lib/brando_admin/components/authorization_tools.ex
 #, elixir-autogen, elixir-format

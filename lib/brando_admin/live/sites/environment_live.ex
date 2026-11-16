@@ -118,7 +118,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <h2>{@site.name}</h2>
                 <p>{gettext("Schema prefix: tenant_%{site}_<environment>", site: @site.key)}</p>
               </div>
-              <span class="environment-count">
+              <span class="badge">
                 {ngettext("%{count} environment", "%{count} environments", length(@environments))}
               </span>
             </header>
@@ -165,7 +165,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       <code>{environment.key}</code>
                     </td>
                     <td class="environment-state-cell">
-                      <span class={["environment-state", environment.live && "live"]}>
+                      <span class={["badge", environment.live && "badge--success"]}>
+                        <span :if={environment.live} class="badge-dot"></span>
                         {if environment.live, do: gettext("Live"), else: gettext("Working")}
                       </span>
                     </td>
@@ -458,7 +459,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                   <tr :for={job <- @jobs} id={"environment-job-#{job.id}"}>
                     <td>{job_description(job, @environments)}</td>
                     <td>{format_scheduled_at(job.scheduled_at)}</td>
-                    <td><span class="environment-state">{job_state_label(job.state)}</span></td>
+                    <td><span class="badge">{job_state_label(job.state)}</span></td>
                     <td class="environment-actions">
                       <button
                         type="button"
