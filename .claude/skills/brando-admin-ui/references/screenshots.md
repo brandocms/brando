@@ -64,8 +64,9 @@ environments screen (`/admin/config/environments`) or the sites screen
    cannot take, with the file's error.
 3. Shoot as usual (`--locales en,no` works for all three). Lookups come from
    `E2E.MultiSiteHosts`, so nothing queries DNS.
-4. Stop it with `scripts/server.sh stop`, which also removes the served
-   hosts file's folder under `/tmp`.
+4. Stop it with `scripts/server.sh stop`, which then removes the served
+   hosts file's folder under `/tmp`. Without a pidfile it stops nothing and
+   leaves the folder alone.
 
 The seeds (`e2e/priv/repo/e2e_seeds.exs`) already provide the Index page
 (`/admin/pages/update/1`), the example modules and a few projects.

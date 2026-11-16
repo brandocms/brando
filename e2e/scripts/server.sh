@@ -16,10 +16,11 @@
 #          admin login page answers. --reset drops and reseeds the database
 #          first; --assets rebuilds e2e/assets/backend first (the server caches
 #          the asset manifest, so JS/CSS changes need a rebuild and a restart).
-# stop     sends TERM to the recorded process group, then KILL after 15s, and
-#          removes the served hosts folder a BRANDO_E2E_MULTI_SITE=1 server
-#          keeps under /tmp (making it writable first: a fixture may have left
-#          it read-only).
+# stop     sends TERM to the recorded process group, then KILL after 15s.
+#          Once it has stopped that server, it removes the served hosts folder
+#          a BRANDO_E2E_MULTI_SITE=1 server keeps under /tmp (making it
+#          writable first: a fixture may have left it read-only); a server it
+#          did not stop keeps its folder.
 # status   prints the URL, pid and whether the server answers.
 # log      tails the server log.
 #
@@ -173,7 +174,6 @@ stop() {
     if answers; then
       echo "A server answers at $BRANDO_E2E_BASE_URL, but this script did not start it: leaving it alone."
     else
-      remove_served_hosts_dir
       echo "Not running."
     fi
     return 0
