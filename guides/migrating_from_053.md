@@ -865,7 +865,9 @@ index". Publish the fragments first.
 
 The tasks here run against the database they change, from a checkout. On a
 server, a release has no Mix: `mix brando.entries.resave` runs there as
-`bin/my_app rpc "MyApp.ReleaseTasks.resave_entries()"`,
+`bin/my_app rpc "Brando.Content.Resave.run()"` (or
+`bin/my_app rpc "MyApp.ReleaseTasks.resave_entries()"` with a `ReleaseTasks`
+that has it),
 `mix brando.identifiers.sync` is Sync identifiers under Configuration →
 Utilities (in each environment, with tenancy) and `mix brando.doctor` is the
 System check there; the other tasks in this section have no release form, so run them from a checkout against the
@@ -917,9 +919,11 @@ server's database, or against a copy you then restore to the server
    run them against staging first and inspect counts and representative
    entries. All accept `--yes`, for a script.
 
-   In a release, the resave is
-   `bin/my_app rpc "MyApp.ReleaseTasks.resave_entries()"`, which also empties
-   and reloads the running node's caches, and the identifiers sync is Sync
+   In a release, the resave is `bin/my_app rpc "Brando.Content.Resave.run()"`,
+   which also empties the running node's query cache when done (what it
+   reloads is under
+   [Data tasks in a release](deployment.md#data-tasks-in-a-release)), and the
+   identifiers sync is Sync
    identifiers under Configuration → Utilities; `images.adopt` has no release
    form.
 

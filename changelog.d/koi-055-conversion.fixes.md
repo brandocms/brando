@@ -10,4 +10,4 @@
 - Multi module code that reads its entries' vars the 0.53 way (`link.data.vars.url`) renders again
   ([#3170](https://github.com/brandocms/brando/pull/3170)).
   Run `mix brando.gen.migrations` for `brando_219`, then `mix brando.migrate` and `mix brando.entries.resave` (in a release,
-  `bin/my_app eval "MyApp.ReleaseTasks.migrate()"`, then `bin/my_app rpc "MyApp.ReleaseTasks.resave_entries()"`).
+  `bin/my_app eval "MyApp.ReleaseTasks.migrate()"`, then `bin/my_app rpc "Brando.Content.Resave.run()"`).

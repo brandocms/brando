@@ -1,5 +1,5 @@
 - Liquid in text and Markdown refs, vars, globals and captions prints as text, also in HEEx modules.
-  Run `mix brando.doctor` (in a release, the System check under Configuration → Utilities), move what should run (listed under Liquid in editor text) into the module's code, and run `mix brando.entries.resave` (in a release, `bin/my_app rpc "MyApp.ReleaseTasks.resave_entries()"`).
+  Run `mix brando.doctor` (in a release, the System check under Configuration → Utilities), move what should run (listed under Liquid in editor text) into the module's code, and run `mix brando.entries.resave` (in a release, `bin/my_app rpc "Brando.Content.Resave.run()"`).
 
 - Liquid templates print `entry`, `identity`, `navigation`, ref data and datasource `entries` as escaped text; rich-text fields print sanitized.
   Add `| raw` where a template prints a plain field that holds markup on purpose: `{{ entry.embed | raw }}`.

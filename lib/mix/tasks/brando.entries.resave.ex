@@ -32,9 +32,10 @@ defmodule Mix.Tasks.Brando.Entries.Resave do
   (pages are cached without expiry): restart it, or use Configuration → Cache
   → Empty all caches in its admin. The task says so when it is done.
 
-  A release has no Mix: there, `MyApp.ReleaseTasks.resave_entries/1` does the
-  same (`Brando.Content.Resave.run/1`), and over `rpc` it reloads the running
-  node's caches itself. See "Data tasks in a release" in the deployment guide.
+  A release has no Mix: there, `bin/my_app rpc "Brando.Content.Resave.run()"`
+  does the same on the running node (as does `MyApp.ReleaseTasks.resave_entries/1`
+  where `ReleaseTasks` has it), and empties that node's query cache itself.
+  See "Data tasks in a release" in the deployment guide.
   """
 
   @spec run(any) :: no_return

@@ -3,14 +3,18 @@ defmodule Brando.Content.Resave do
   Renders every entry's blocks again and stores the result, as an editor's
   save would: what `mix brando.entries.resave` runs, callable from a release.
 
-  On a server, with the release running, run it on the running node:
+  On a server, with the release running, run it on the running node. Any
+  release can, whatever its `ReleaseTasks` holds:
 
-      bin/my_app rpc "MyApp.ReleaseTasks.resave_entries()"
+      bin/my_app rpc "Brando.Content.Resave.run()"
 
-  It then empties and reloads that node's caches itself, as Configuration →
-  Cache → Empty all caches does. With the release stopped, `eval` starts the
-  application without its web server and without Oban's queues, re-saves,
-  and says how to empty the caches of a server started meanwhile:
+  or, from a `ReleaseTasks` generated with `resave_entries/1`,
+  `bin/my_app rpc "MyApp.ReleaseTasks.resave_entries()"`. It then empties
+  that node's query cache and reloads its caches itself (see `run/1` for
+  what that covers with tenancy). With the release stopped, `eval` starts the
+  application in a VM of its own, without its web server and without Oban's
+  queues (see `run/1`), re-saves, and says how to empty the caches of a
+  server started meanwhile:
 
       bin/my_app eval "MyApp.ReleaseTasks.resave_entries()"
 
@@ -86,6 +90,16 @@ defmodule Brando.Content.Resave do
   are re-saved first, each after the fragments its blocks embed, and each is
   evicted from the query cache once stored, so the entries that embed it
   render its new HTML.
+
+  When done, with `:reload_caches` it empties this
+  node's whole query cache (every site's and environment's pages,
+  fragments, …) and rebuilds the site caches (identity, SEO, globals,
+  palettes, menus) of the context it runs in, as Configuration → Cache →
+  Empty all caches does. With tenancy that context is outside every site,
+  so no environment's site caches are rebuilt then: each environment's
+  identity, globals and menus were rebuilt as its pass began, and its SEO
+  and palettes are left as they were (re-saving does not change them).
+  Other nodes keep their caches.
 
   ## Started by `eval`
 
@@ -319,7 +333,7 @@ defmodule Brando.Content.Resave do
     :ok = Brando.Cache.reload_all()
 
     info.(
-      "Emptied and reloaded this node's caches, as Configuration → Cache → Empty all caches does. " <>
+      "Emptied this node's query cache and reloaded its site caches. " <>
         "Other nodes keep theirs: empty them in their admin, or restart them."
     )
   end

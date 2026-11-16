@@ -28,7 +28,7 @@ defmodule Brando.Content.ResaveTest do
     assert output =~ "==> Resaving fragment entries"
     assert output =~ "done!"
     assert output =~ ~r/Resaved \d+ entr(y|ies)\./
-    assert output =~ "Emptied and reloaded this node's caches"
+    assert output =~ "Emptied this node's query cache and reloaded its site caches"
     assert {:ok, nil} = Cachex.get(:query, {:resave_test, :cached})
   end
 
