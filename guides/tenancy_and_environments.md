@@ -2333,6 +2333,8 @@ where the build runs.
 ```json
 {
   "version": 1,
+  "languages": ["en", "no"],
+  "default_language": "en",
   "redirects": [
     {"kind": "listed", "source": "/old", "target": "/about", "status": 301, "exact": true,
      "pattern": "/old$", "language": null},
@@ -2356,7 +2358,10 @@ For whoever serves the file:
   language, which Brando checks for a path no page answers in that language.
 - Rules are matched against the decoded request path, which carries the
   language prefix when the site forces one: `/en/old` is English, `/old` the
-  default language's.
+  default language's. `languages` and `default_language` are the site's when
+  the build was made: a path is in the language its first segment names when
+  that is one of `languages`, else in `default_language`. A list from a build
+  made before they were added has neither; read the site's languages then.
 - A page the build has wins over a rule that is not exact, as in the
   application; an exact rule for such a page is left out, since Brando never
   answers it.

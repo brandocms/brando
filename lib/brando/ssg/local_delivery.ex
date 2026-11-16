@@ -181,18 +181,25 @@ defmodule Brando.SSG.LocalDelivery do
 
   # -- Redirects ----------------------------------------------------------------
 
-  # The first entry that matches the decoded path, in the request's language
+  # The first entry that matches the decoded path, in the request's language:
+  # read with the languages the build was made with, the site's current ones
+  # for a list that predates them, as `Brando.I18n.parse_path/2` reads it
   defp redirect(conn, site, build) do
     case decode(conn.path_info) do
       {:ok, segments} ->
         path = "/" <> Enum.join(segments, "/")
-        {language, _rest} = Brando.I18n.parse_path(segments, site)
+        language = path_language(segments, build.languages || site_languages(site))
         Enum.find_value(build.redirects, &match_entry(&1, path, language))
 
       :error ->
         nil
     end
   end
+
+  defp path_language([first | _rest], {codes, default}), do: if(first in codes, do: first, else: default)
+  defp path_language([], {_codes, default}), do: default
+
+  defp site_languages(site), do: {Brando.Languages.codes(site), to_string(Brando.Languages.default_language(site))}
 
   defp match_entry(%{language: entry_language} = entry, path, language) when entry_language in [nil, language] do
     case Redirects.target(path, entry.pattern, entry.target) do
@@ -341,6 +348,7 @@ defmodule Brando.SSG.LocalDelivery do
     root = Path.join(Builds.build_root(site), version)
 
     if Regex.match?(~r/\Av[0-9]+\z/, version) and BuildPath.managed?(root, site) and dir?(root) do
+      redirect_list = read_json(root, @redirect_list)
       files = root |> list_files(skipped_dirs()) |> Map.new(fn {relative, stat} -> {relative, etag(version, stat)} end)
       manifest = read_json(root, "manifest.json")
 
@@ -350,7 +358,8 @@ defmodule Brando.SSG.LocalDelivery do
         root: root,
         files: Map.delete(files, @redirect_list),
         immutable: immutable_files(manifest, files),
-        redirects: read_redirects(root)
+        redirects: read_redirects(redirect_list),
+        languages: redirect_languages(redirect_list)
       }
 
       :persistent_term.put({__MODULE__, site_id}, build)
@@ -438,12 +447,14 @@ defmodule Brando.SSG.LocalDelivery do
   end
 
   # Each entry's `pattern` compiled as the application compiles a rule
-  defp read_redirects(root) do
-    case read_json(root, @redirect_list) do
-      %{"redirects" => entries} when is_list(entries) -> Enum.flat_map(entries, &redirect_entry/1)
-      _none -> []
-    end
+  defp read_redirects(%{"redirects" => entries}) when is_list(entries), do: Enum.flat_map(entries, &redirect_entry/1)
+  defp read_redirects(_none), do: []
+
+  defp redirect_languages(%{"languages" => [_ | _] = codes, "default_language" => default}) when is_binary(default) do
+    if Enum.all?(codes, &is_binary/1), do: {codes, default}
   end
+
+  defp redirect_languages(_none), do: nil
 
   defp redirect_entry(%{"pattern" => pattern, "status" => status} = entry) when is_integer(status) do
     case ValidSource.compile(pattern) do

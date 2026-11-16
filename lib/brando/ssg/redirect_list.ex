@@ -5,6 +5,8 @@ defmodule Brando.SSG.RedirectList do
 
       {
         "version": 1,
+        "languages": ["en", "no"],
+        "default_language": "en",
         "redirects": [
           {"kind": "listed", "source": "/old-about", "target": "/about", "status": 301, "exact": true,
            "pattern": "/old\\\\-about$", "language": null},
@@ -25,6 +27,11 @@ defmodule Brando.SSG.RedirectList do
   Then the site's redirect rules (`kind` `"rule"`, Configuration → SEO),
   language by language, in the order Brando checks them for a path no page
   answers. A rule applies only to a request in its `language`.
+
+  `languages` and `default_language` are the site's when the build was made,
+  and say which language a path is in: its first segment when that is one of
+  `languages`, else `default_language`. A list written before they were added
+  has neither, and the site's languages decide.
 
   `source` is the path a host matches: a plain path, or one with `:name`
   segments that match one segment each (`[a-z0-9_-]+`) and stand for the
@@ -68,7 +75,15 @@ defmodule Brando.SSG.RedirectList do
          Enum.flat_map(rules, fn {language, rule} -> rule_entry(rule, language, built) end))
       |> Enum.split_with(&match?(%Jason.OrderedObject{}, &1))
 
-    {Jason.OrderedObject.new(version: @version, redirects: entries), Enum.map(notes, fn {:note, note} -> note end)}
+    list =
+      Jason.OrderedObject.new(
+        version: @version,
+        languages: Brando.Languages.codes(),
+        default_language: to_string(Brando.Languages.default_language()),
+        redirects: entries
+      )
+
+    {list, Enum.map(notes, fn {:note, note} -> note end)}
   end
 
   @doc "The site's redirect rules, `{language, redirect}`, in the order Brando checks them in each language."

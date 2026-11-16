@@ -451,9 +451,51 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert get_resp_header(conn, "location") == []
     end
 
+    test "a build made before languages were listed reads the site's current ones", context do
+      set_default_language(context.site, "no")
+
+      # `/news/launch` is now a Norwegian path, which the English rule does not answer
+      assert request(context.host, "/news/launch").status == 404
+    end
+
     test "matches the decoded path", context do
       assert get_resp_header(request(context.host, "/%6Fld"), "location") == ["/about"]
     end
+  end
+
+  describe "the languages a build was made with" do
+    test "decide which rules apply, whatever the site's languages are now", context do
+      redirects =
+        Jason.encode!(%{
+          "version" => 1,
+          "languages" => ["en", "no"],
+          "default_language" => "en",
+          "redirects" => [
+            %{
+              "kind" => "rule",
+              "source" => "/news/:slug",
+              "target" => "/articles/:slug",
+              "status" => 302,
+              "exact" => false,
+              "pattern" => "/news/:slug",
+              "language" => "en"
+            }
+          ]
+        })
+
+      context |> ready_build(%{"_redirects.json" => redirects}) |> deploy!()
+      set_default_language(context.site, "no")
+
+      conn = request(context.host, "/news/launch")
+      assert conn.status == 302
+      assert get_resp_header(conn, "location") == ["/articles/launch"]
+    end
+  end
+
+  # Without a deploy, and without the seeding a save runs
+  defp set_default_language(site, language) do
+    Repo.update_all(from(s in Brando.Sites.Site, where: s.id == ^site.id), set: [default_language: language])
+    Cache.warm()
   end
 
   describe "what keeps reaching Phoenix" do
