@@ -927,6 +927,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     setup %{site: site, tmp_dir: tmp_dir} do
       on_exit(&Brando.ServedHostsTestResolver.reset/0)
       put_test_env(Brando.Tenant.ServedHosts, file: Path.join(tmp_dir, "served_hosts"), addresses: ["203.0.113.10"])
+      # Before the creates: each starts lookups, and a later answer could miss them
+      Brando.ServedHostsTestResolver.answer("www.acme.test", ["203.0.113.10"])
+      Brando.ServedHostsTestResolver.answer("away.acme.test", ["198.51.100.7"])
 
       envs =
         for {key, host} <- [served: "www.acme.test", away: "away.acme.test", missing: "missing.acme.test"], into: %{} do
@@ -938,8 +941,6 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
           {key, environment}
         end
 
-      Brando.ServedHostsTestResolver.answer("www.acme.test", ["203.0.113.10"])
-      Brando.ServedHostsTestResolver.answer("away.acme.test", ["198.51.100.7"])
       Brando.Tenant.ServedHosts.check()
       envs
     end
