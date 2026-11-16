@@ -541,7 +541,7 @@ defmodule Brando.LanguagesTest do
   defp hreflang_paths(language) do
     conn =
       build_conn()
-      |> Map.put(:path_info, ["articles", "hei"])
+      |> Map.merge(%{path_info: ["articles", "hei"], request_path: "/articles/hei"})
       |> Plug.Conn.assign(:language, language)
       |> Brando.Plug.HTML.put_hreflang({:article_path, [Brando.endpoint(), :show, "slug"]})
 
