@@ -1037,16 +1037,6 @@
       margin: 0;
       overflow-wrap: anywhere;
     }
-
-    code {
-      @font mono;
-      padding: 2px 7px;
-      border-radius: var(--brando-radius-sm);
-      background: color-mix(in srgb, var(--brando-ink) 7%, transparent);
-      color: color-mix(in srgb, var(--brando-ink) 70%, transparent);
-      font-size: var(--brando-text-xs);
-      line-height: 1.4;
-    }
   }
 
   .site-card__actions {

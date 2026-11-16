@@ -108,7 +108,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
           <header class="site-card__header">
             <div class="site-card__identity">
               <h2>{site.name}</h2>
-              <code>{site.key}</code>
+              <code class="badge badge--outline">{site.key}</code>
               <span class={["badge", status_tone(site.status)]}>
                 <span :if={site.status == :active} class="badge-dot"></span>
                 {status_label(site.status)}
