@@ -27,6 +27,32 @@ defmodule Brando.SSG.LocalDeliveryTest do
     def clone_schema(_source_prefix, target_prefix), do: Brando.Environments.Schema.create(target_prefix)
   end
 
+  defmodule StatFirstAdapter do
+    @moduledoc false
+    # The test adapter, but `send_file/6` reads the file's info first and
+    # matches `{:ok, _}`, as Bandit does: a missing file raises `MatchError`
+    @behaviour Plug.Conn.Adapter
+
+    alias Plug.Adapters.Test.Conn, as: Test
+
+    def send_file(payload, status, headers, path, offset, length) do
+      {:ok, _info} = :file.read_file_info(path)
+      Test.send_file(payload, status, headers, path, offset, length)
+    end
+
+    defdelegate send_resp(payload, status, headers, body), to: Test
+    defdelegate send_chunked(payload, status, headers), to: Test
+    defdelegate chunk(payload, body), to: Test
+    defdelegate read_req_body(payload, opts), to: Test
+    defdelegate push(payload, path, headers), to: Test
+    defdelegate inform(payload, status, headers), to: Test
+    defdelegate upgrade(payload, protocol, opts), to: Test
+    defdelegate get_peer_data(payload), to: Test
+    defdelegate get_sock_data(payload), to: Test
+    defdelegate get_ssl_data(payload), to: Test
+    defdelegate get_http_protocol(payload), to: Test
+  end
+
   setup do
     root = Path.join(System.tmp_dir!(), "brando-local-delivery-#{System.unique_integer([:positive])}")
     put_test_env(:tenancy_mode, :multi)
@@ -895,6 +921,24 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert conn.status == 503
       assert get_resp_header(conn, "retry-after") == ["60"]
       assert request(context.host, "/").status == 503
+    end
+
+    test "answers 503 whichever error the server's adapter raises for a missing file", context do
+      build = context |> ready_build() |> deploy!()
+      assert sent_body(request(context.host, "/about")) == "about v1"
+
+      File.rm_rf!(build.build_path)
+
+      for _ <- 1..2 do
+        conn =
+          :get
+          |> build_conn("/about")
+          |> Map.put(:host, context.host)
+          |> Map.update!(:adapter, fn {_test, payload} -> {StatFirstAdapter, payload} end)
+          |> SiteAssets.call([])
+
+        assert conn.status == 503
+      end
     end
 
     test "is looked for and logged once per interval, not on every request", context do

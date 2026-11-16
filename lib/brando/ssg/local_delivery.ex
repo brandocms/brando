@@ -436,13 +436,24 @@ defmodule Brando.SSG.LocalDelivery do
   end
 
   # A file gone since the build was listed: memory forgets the build, so the
-  # next request looks for its directory again (`published/1`)
+  # next request lists it again, or finds its directory gone and looks for it
+  # again only after an interval (`published/1`). Checked here, as
+  # servers' adapters raise different errors for a file they cannot open;
+  # the rescue covers one removed between the check and the send.
   defp send_build_path(conn, status, build, relative) do
-    send_file(conn, status, Path.join(build.root, relative))
+    path = Path.join(build.root, relative)
+
+    if match?({:ok, %{type: :regular}}, File.lstat(path)),
+      do: send_file(conn, status, path),
+      else: send_build_gone(conn, build)
   rescue
-    File.Error ->
-      :persistent_term.erase({__MODULE__, build.site_id})
-      send_unavailable(conn)
+    error in [File.Error, MatchError] ->
+      if conn.state == :unset, do: send_build_gone(conn, build), else: reraise(error, __STACKTRACE__)
+  end
+
+  defp send_build_gone(conn, build) do
+    :persistent_term.erase({__MODULE__, build.site_id})
+    send_unavailable(conn)
   end
 
   defp content_type(relative) do
