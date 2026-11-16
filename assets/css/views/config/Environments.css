@@ -616,13 +616,21 @@
     max-width: 320px;
   }
 
-  /* Grows with its hosts, a long one wrapped included: two lines to eight */
+  /* Every host it holds and a spare line to type the next one into. Where
+     field-sizing applies, rows is ignored: the field fits its text, a long host
+     wrapped included, and the spare line is padding under it. Elsewhere rows
+     (`host_rows/1`) gives the hosts and the spare line. No max-height, which
+     would also stop a drag to make it taller. */
   .environment-hosts-form textarea {
     max-width: 320px;
     resize: vertical;
-    field-sizing: content;
-    min-height: calc(2lh + 18px);
-    max-height: calc(8lh + 18px);
+  }
+
+  @supports (field-sizing: content) {
+    .environment-hosts-form textarea {
+      field-sizing: content;
+      padding-bottom: calc(8px + 1lh);
+    }
   }
 
   .environment-host-help {

@@ -708,9 +708,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       else: redirect_hosts_help_id(environment)
   end
 
-  # The redirect hosts' field shows every host it holds, and a line to type
-  # the next one into
-  defp host_rows(environment), do: (environment.redirect_hosts || []) |> length() |> Kernel.+(1) |> max(2) |> min(8)
+  # Where the browser has no `field-sizing` (Environments.css): every saved
+  # host and a spare line, up to nine; a drag makes it taller
+  defp host_rows(environment), do: (environment.redirect_hosts || []) |> length() |> Kernel.+(1) |> max(2) |> min(9)
 
   attr :id, :string, required: true
   attr :state, :any, required: true
