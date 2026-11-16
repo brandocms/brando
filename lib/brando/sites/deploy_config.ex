@@ -54,12 +54,17 @@ defmodule Brando.Sites.DeployConfig do
 
   An rsync target's host is looked up to refuse one that reaches this
   server, when the site is saved (`changeset/4` with `lookup_host: true`,
-  as `Brando.Tenant.Registry` saves it), not while a form validates. Both
-  address families get one time limit together, `:lookup_timeout` (3
-  seconds); a lookup that fails or runs out of time refuses the save, as the
-  host could not be checked. An answer is kept on the node for 60 seconds,
-  so saving again reuses it; a failed one is not kept. Each deploy looks the
-  host up afresh (`valid_rsync_target?/2`).
+  as `Brando.Tenant.Registry` saves it), not while a form validates. Each
+  address family is looked up in the hosts file, and when it has no entry
+  there, asked of the name servers through `:inet_res`. A name the name
+  servers say does not exist, or that has no address records, passes, as
+  an SSH config alias may name it. A name server that fails (SERVFAIL) or
+  refuses, a query that times out, or no name server to ask, is a lookup
+  that failed, and refuses the save, as the host could not be checked. Both
+  families get one time limit together, `:lookup_timeout` (3 seconds), and a
+  lookup it cuts short failed too. An answer is kept on the node for 60
+  seconds, so saving again reuses it; a failed one is not kept. Each deploy
+  looks the host up afresh (`valid_rsync_target?/2`).
   """
 
   use Ecto.Schema
@@ -67,6 +72,7 @@ defmodule Brando.Sites.DeployConfig do
 
   import Ecto.Changeset
 
+  alias Brando.Tenant.ServedHosts.DNS
   alias Brando.Webhooks.URLGuard
   alias Brando.Webhooks.Webhook
 
@@ -357,7 +363,24 @@ defmodule Brando.Sites.DeployConfig do
   end
 
   defp resolver do
-    Application.get_env(:brando, __MODULE__, [])[:resolver] || (&:inet.getaddrs(&1, &2, @lookup_timeout))
+    Application.get_env(:brando, __MODULE__, [])[:resolver] || (&lookup_family/2)
+  end
+
+  @doc false
+  # One family of `host`: its entries in the hosts file, or else its DNS
+  # records, asked through `:inet_res` (`Brando.Tenant.ServedHosts.DNS`),
+  # which tells a name with no records (`{:ok, []}`) from a lookup that
+  # failed. The operating system's resolver reports both as `:nxdomain`.
+  # Tests replace `:hosts` (as `:inet_hosts.gethostbyname/2`) and `:dns` (as
+  # `:inet_res.resolve/5`).
+  def lookup_family(host, family, opts \\ []) do
+    hosts = Keyword.get(opts, :hosts, &:inet_hosts.gethostbyname/2)
+    dns = Keyword.get(opts, :dns, &:inet_res.resolve/5)
+
+    case hosts.(host, family) do
+      {:ok, {:hostent, _name, _aliases, _type, _length, [_ | _] = addresses}} -> {:ok, addresses}
+      _not_listed -> DNS.lookup_family(to_string(host), family, dns)
+    end
   end
 
   # Loopback, unspecified, or one of this server's interfaces (an IPv4
@@ -377,8 +400,7 @@ defmodule Brando.Sites.DeployConfig do
 
   # A name with no records here may still be one ssh knows (a `Host` alias in
   # its config): the operator's to answer for. Any other error is a lookup
-  # that failed. The operating system's resolver reports most failures as
-  # `:nxdomain`; the time limit catches one that does not answer.
+  # that failed, as is one the time limit cuts short.
   defp resolved(resolver, host, family) do
     case resolver.(host, family) do
       {:ok, addresses} when is_list(addresses) -> {:ok, addresses}

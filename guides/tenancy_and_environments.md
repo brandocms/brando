@@ -2238,15 +2238,22 @@ so to limit the destinations anyone who may deploy can choose, list them in
 config (below).
 
 The host is looked up when the settings are saved, not while the form is
-filled in, with one limit of 3 seconds for its IPv4 and IPv6 addresses
-together (`config :brando, Brando.Sites.DeployConfig, lookup_timeout:` in
-milliseconds). A lookup that fails or runs out of time refuses the save: the
-target says its host could not be looked up, and to try again. The answer is
-kept on that node for a minute, so saving again does not ask again; a failed
-lookup is not kept. A name with no address at all passes, as an SSH config
-alias may name it. Each deploy looks the host up again; when that lookup
-fails, the deploy fails and says so in the build's log, and a deploy or
-rollback started from the publishing screen is tried again.
+filled in. Its IPv4 and IPv6 addresses are taken from the hosts file
+(`/etc/hosts`), and for a family the hosts file does not list, asked of the
+name servers in the system's resolver configuration through Erlang's
+`:inet_res`, with one limit of 3 seconds for both families together
+(`config :brando, Brando.Sites.DeployConfig, lookup_timeout:` in
+milliseconds). A name the name servers say does not exist, or that has no
+address records, passes, as an SSH config alias may name it; so does a
+name only the operating system's own resolver knows (mDNS, per-domain
+resolvers). A name server that fails or refuses the query, a query that
+times out, no name server to ask, or a lookup the limit cuts short refuses
+the save: the target says its host could not be looked up, and to try
+again. The answer is kept on that node for a minute, so saving again does
+not ask again; a failed lookup is not kept. Each deploy looks the host up
+again; when that lookup fails, the deploy fails and says so in the build's
+log, and a deploy or rollback started from the publishing screen is tried
+again.
 
 An S3 deploy deletes every key under its target before it uploads the build,
 with the application's one set of ExAws credentials. Its prefix may not hold

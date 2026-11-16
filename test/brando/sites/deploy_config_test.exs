@@ -80,6 +80,65 @@ defmodule Brando.Sites.DeployConfigTest do
     refute DeployConfig.valid_rsync_target?("deploy@down.example.com:/srv/www", @site_key)
   end
 
+  describe "the default lookup, with the hosts file and name servers stubbed" do
+    defp no_hosts(_host, _family), do: {:error, :nxdomain}
+
+    defp dns_answer(answer) do
+      stub = [hosts: &no_hosts/2, dns: fn _name, :in, _type, _opts, _timeout -> answer end]
+      put_test_env(DeployConfig, resolver: &DeployConfig.lookup_family(&1, &2, stub))
+    end
+
+    defp a_records(name, addresses) do
+      answers =
+        for address <- addresses, do: :inet_dns.make_rr(domain: name, class: :in, type: :a, data: address, ttl: 300)
+
+      {:ok, :inet_dns.make_msg(header: :inet_dns.make_header(qr: true), anlist: answers)}
+    end
+
+    test "a name the name servers say does not exist passes" do
+      dns_answer({:error, {:nxdomain, :inet_dns.make_msg([])}})
+      assert rsync("deploy@alias.example.com:/srv/www").valid?
+      assert DeployConfig.valid_rsync_target?("deploy@alias.example.com:/srv/www", @site_key)
+    end
+
+    test "a name server that fails or refuses is a lookup that failed" do
+      for code <- [:servfail, :refused] do
+        dns_answer({:error, {code, :inet_dns.make_msg([])}})
+        changeset = rsync("deploy@#{code}.example.com:/srv/www")
+        assert {"has a host that could not be looked up. Try again in a moment", _} = changeset.errors[:target]
+
+        assert DeployConfig.check_rsync_target("deploy@#{code}.example.com:/srv/www", @site_key) ==
+                 {:error, :lookup_failed}
+      end
+
+      # No name server to ask, which `:inet_res` answers with a bare `:nxdomain`
+      dns_answer({:error, :nxdomain})
+      assert DeployConfig.check_rsync_target("deploy@none.example.com:/srv/www", @site_key) == {:error, :lookup_failed}
+    end
+
+    test "records pointing at this server are refused" do
+      dns_answer(a_records(~c"self-dns.example.com", [own_address()]))
+      assert {"must be on another server", _} = rsync("deploy@self-dns.example.com:/srv/www").errors[:target]
+      assert DeployConfig.check_rsync_target("deploy@self-dns.example.com:/srv/www", @site_key) == {:error, :invalid}
+    end
+
+    test "a hosts file entry pointing at this server is refused, whatever DNS says" do
+      hosts = fn
+        ~c"self-hosts.example.com", :inet ->
+          {:ok, {:hostent, ~c"self-hosts.example.com", [], :inet, 4, [own_address()]}}
+
+        _host, _family ->
+          {:error, :nxdomain}
+      end
+
+      nxdomain = fn _name, :in, _type, _opts, _timeout -> {:error, {:nxdomain, :inet_dns.make_msg([])}} end
+      put_test_env(DeployConfig, resolver: &DeployConfig.lookup_family(&1, &2, hosts: hosts, dns: nxdomain))
+
+      assert {"must be on another server", _} = rsync("deploy@self-hosts.example.com:/srv/www").errors[:target]
+      refute DeployConfig.valid_rsync_target?("deploy@self-hosts.example.com:/srv/www", @site_key)
+    end
+  end
+
   test "a remote destination is a valid rsync target" do
     for target <- [
           "deploy@example.com:/srv/www",
