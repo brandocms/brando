@@ -21,7 +21,8 @@ defmodule E2E.MultiSiteHosts do
   yet" and the screen shows the file's error. `:static` makes Acme a static
   site the installation serves itself (the deploy strategy `:local`), for the
   publishing screen; `:published` adds three builds to it, the newest
-  deployed and so published, with a ready one before it and a failed one.
+  deployed and so published, with a ready one before it and one whose three
+  URLs failed.
   """
 
   @behaviour Brando.Tenant.ServedHosts.Resolver
@@ -177,7 +178,18 @@ defmodule E2E.MultiSiteHosts do
 
     if published? do
       ready = build(site, live, admin)
-      {:ok, _failed} = Brando.SSG.Builds.update(build(site, live, admin, false), %{status: :failed})
+
+      {:ok, _failed} =
+        Brando.SSG.Builds.update(build(site, live, admin, false), %{
+          status: :failed,
+          built_at: DateTime.utc_now(),
+          url_count: 3,
+          # A failed build stores the URLs it wrote
+          processed_urls: 0,
+          failed_urls: ["/ (HTTP 500)", "/about (HTTP 500)", "/contact (HTTP 500)"],
+          build_log: "Build failed: 3 URLs failed\n"
+        })
+
       {:ok, _deployed} = Brando.SSG.Deploy.deploy(build(site, live, admin), creator: admin)
       ready
     end

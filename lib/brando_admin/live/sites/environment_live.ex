@@ -213,12 +213,16 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                             {focus_tracking(environment, "domain")}
                             aria-describedby={@served_hosts_enabled? && environment.domain && domain_status_id(environment)}
                           />
-                          <%!-- Led by the saved domain, which a one-line field may clip, as each
-                          redirect host's line is led by its host --%>
+                          <%!-- The field shows the domain; the line names it only when the
+                          one-line field clips it, or shows an unsaved draft instead --%>
                           <.served_host
                             :if={@served_hosts_enabled? && environment.domain}
                             id={domain_status_id(environment)}
                             host={environment.domain}
+                            named={
+                              clipped_in_field?(environment.domain) or
+                                host_draft(@host_drafts, environment).domain != environment.domain
+                            }
                             state={served_host_state(@served_hosts.hosts, @bound_hosts, environment.domain)}
                             addresses={@served_hosts.addresses}
                           />
@@ -708,6 +712,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       else: redirect_hosts_help_id(environment)
   end
 
+  # The domain field (Environments.css) holds about 36 characters of its mono
+  # text, at its desktop width and at a phone's: a longer domain is clipped,
+  # so its state line names it
+  @domain_field_chars 32
+  defp clipped_in_field?(domain), do: String.length(domain) > @domain_field_chars
+
   # Where the browser has no `field-sizing` (Environments.css): every saved
   # host and a spare line, up to nine; a drag makes it taller
   defp host_rows(environment), do: (environment.redirect_hosts || []) |> length() |> Kernel.+(1) |> max(2) |> min(9)
@@ -716,12 +726,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   attr :state, :any, required: true
   attr :addresses, :list, required: true
   attr :host, :string, required: true, doc: "the host's name, shown before its state"
+  attr :named, :boolean, default: true, doc: "whether the line shows the host's name"
 
   # Where a bound host stands with the reverse proxy (`Brando.Tenant.ServedHosts`)
   defp served_host(assigns) do
     ~H"""
     <div id={@id} class="environment-host-status">
-      <span class="environment-host-status__host">{@host}</span>
+      <span :if={@named} class="environment-host-status__host">{@host}</span>
       <%= case @state do %>
         <% :served -> %>
           <span class="badge badge--success">{gettext("Served")}</span>
@@ -1097,7 +1108,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   defp refresh_data(socket) do
     site = current_site(socket)
 
-    environments = for_site(site, &Registry.list_environments/1)
+    # The live environment first, then the others by name, as listed
+    environments = site |> for_site(&Registry.list_environments/1) |> Enum.sort_by(&(!&1.live))
     shown = MapSet.new(environments, &draft_key/1)
     listed = MapSet.new(environments, & &1.id)
 

@@ -832,7 +832,12 @@ whatever `admit` says.
 
 Brando checks at boot, after every registry write (on every node, as
 [Several nodes](#several-nodes) describes), once a minute while a bound host
-waits for its DNS, and every five minutes otherwise. The slow check reads the
+waits for its DNS, and every five minutes otherwise. A host whose lookup
+timed out is looked up again once after five to ten seconds
+(`:timeout_retry_interval` in milliseconds), before the minute: a local
+caching resolver can take longer than a lookup allows to answer its first
+query for a name, and a name that does not exist then shows **Does not
+resolve** within seconds rather than a minute later. The slow check reads the
 file again, so a host another node sharing the path wrote over, during a
 blue/green switch, goes back in: without a lookup when this node saw it in the
 file or admitted it since it started, after admission otherwise. Nothing is
@@ -881,14 +886,16 @@ lookup timed out counts as one with no records, and a host is then admitted on
 the other family alone. Any module implementing
 `Brando.Tenant.ServedHosts.Resolver` can take its place. A host's result shows as soon as it answers; the answers
 of many hosts looked up together, as on a new server, are written to the file
-in one go. Without `addresses`, this server's are looked up once per check,
-and a lookup of them that fails keeps the ones found before, for an hour
+in one go. Without `addresses`, this server's are looked up once per check
+that looks a host up, and at the first check after a start, so the
+**Environments** screen names them before any host needs a lookup; a lookup of them that fails keeps the ones found before, for an hour
 after they were found: a server whose own lookup keeps failing, or cannot read
 one of the families, then admits no host until it answers again.
 
 The **Environments** screen shows each bound host's state beside the host:
-the domain's on the domain's line, then one line for each redirect host, led
-by its name:
+the domain's under its field, naming the saved domain only when it is too
+long for the field to show whole or the field holds a domain not saved yet, then one line for each redirect host, led by its
+name:
 **Served** when it is in the file, **Checking** while its first lookup runs,
 **Waiting for DNS** with what the host resolves to now and this server's
 addresses, **Does not resolve** when it has no address records, **Could not
@@ -2400,7 +2407,9 @@ as the application answered it, byte for byte:
   (`Brando.Utils.public_hostname/0`), naming the build's sitemap when it has one.
 - `sitemaps/sitemap.xml.gz` and the files it lists: the sitemap of the
   environment built, not the live one's, with its entries on the site's public
-  base URL, at the paths `robots.txt` names.
+  base URL, at the paths `robots.txt` names. A build without one (the
+  application has no sitemap module, or it produced no entries) says so in
+  its log.
 - `_redirects.json`: the site's redirects (below).
 - `assets/` and `media/`: the build's asset set and the site's media.
 

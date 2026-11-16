@@ -83,6 +83,34 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     assert has_element?(view, "#ssg-build-#{build.id} .work-status[data-status=finished]", "Static build v1 is ready")
   end
 
+  test "a failed build's progress says what was built and how many failed", context do
+    {:ok, ready} = Builds.request_build(context.site, context.environment, [])
+    {:ok, ready} = Builds.update(ready, %{status: :ready, url_count: 3, processed_urls: 3})
+    {:ok, failed} = Builds.request_build(context.site, context.environment, [])
+
+    {:ok, failed} =
+      Builds.update(failed, %{
+        status: :failed,
+        url_count: 3,
+        processed_urls: 1,
+        failed_urls: ["/about (HTTP 500)", "/contact (HTTP 500)"]
+      })
+
+    # Stopped by an error partway, with no URL failing: nothing is counted as failed
+    {:ok, raised} = Builds.request_build(context.site, context.environment, [])
+    {:ok, raised} = Builds.update(raised, %{status: :failed, url_count: 100, processed_urls: 39, failed_urls: []})
+
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+    assert has_element?(view, "#ssg-build-#{failed.id} .publishing-progress", "1/3 built")
+    assert has_element?(view, "#ssg-build-#{failed.id} .publishing-progress__failed", "2 failed")
+    assert view |> element("#ssg-build-#{raised.id} .publishing-progress") |> render() =~ "39/100"
+    refute has_element?(view, "#ssg-build-#{raised.id} .publishing-progress__failed")
+    assert view |> element("#ssg-build-#{ready.id} .publishing-progress") |> render() =~ "3/3"
+    # Labelled for the stacked layout, where the table's headings are hidden
+    assert has_element?(view, "#ssg-build-#{ready.id} .publishing-progress__label", "Progress")
+  end
+
   test "a deploy reports on the build's row", context do
     {:ok, build} = Builds.request_build(context.site, context.environment, [])
     {:ok, ready} = Builds.update(build, %{status: :ready, built_at: DateTime.utc_now()})

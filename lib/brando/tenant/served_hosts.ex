@@ -64,7 +64,15 @@ defmodule Brando.Tenant.ServedHosts do
   After every warm of `Brando.Tenant.Cache`, which runs at boot and on every
   node after a registry write, and once a minute (`:retry_interval`, in
   milliseconds) while a bound host waits for its DNS, does not resolve, or
-  could not be looked up, or the file could not be written. Otherwise every five minutes (`:recheck_interval`): the file is
+  could not be looked up, or the file could not be written. A host whose
+  lookup timed out is looked up again once sooner, five to ten seconds after
+  its answer was written (`:timeout_retry_interval`, in milliseconds, after
+  any quick retry already waiting): a local
+  caching resolver can take longer than a family's budget to answer its first
+  query for a name, so a name that does not exist would otherwise read as a
+  failed lookup for a minute. A timeout again waits for the minute; an
+  answer that is no timeout ends it, and a later timeout gets its own quick
+  retry. Otherwise every five minutes (`:recheck_interval`): the file is
   read again, as another node sharing the path may have written over it. A
   bound host this process has seen in the file or admitted itself goes back
   in without a lookup; one it has not is admitted again. That memory is the
@@ -103,7 +111,9 @@ defmodule Brando.Tenant.ServedHosts do
   registry and their lookups.
 
   Without `:addresses`, this server's addresses are what the endpoint's host
-  resolves to, looked up on their own once per check that looks a host up.
+  resolves to, looked up on their own once per check that looks a host up,
+  and by a check that looks no host up while none are known, as the first
+  one after a start: the status names them before any host needs a lookup.
   A lookup of them that fails, or that could not read one of the families,
   leaves them unknown for that check and keeps the last ones found, which count for an hour
   after they were found (`:addresses_max_age`, in milliseconds); after that
@@ -142,7 +152,7 @@ defmodule Brando.Tenant.ServedHosts do
   for that host, which counts as not looked up; so does one whose task
   cannot be stopped at its timeout (a resolver blocking in a NIF), half a
   second later, and that task is left to its supervisor. A `:lookup_timeout`,
-  `:retry_interval`, `:recheck_interval`, `:flush_interval`,
+  `:retry_interval`, `:timeout_retry_interval`, `:recheck_interval`, `:flush_interval`,
   `:verify_interval` or `:addresses_max_age` that is not a positive integer
   counts as unset.
   """
@@ -157,6 +167,10 @@ defmodule Brando.Tenant.ServedHosts do
   @topic "brando:served_hosts"
   @status_key {__MODULE__, :status}
   @retry_interval :timer.minutes(1)
+  # How soon a host whose lookup timed out is looked up again, once, before
+  # the retry above: a caching resolver's first answer for a name can take
+  # longer than a family's budget
+  @timeout_retry_interval :timer.seconds(5)
   @recheck_interval :timer.minutes(5)
   # How long after a write the file is read again for a host another
   # installation sharing the path wrote over
@@ -262,15 +276,18 @@ defmodule Brando.Tenant.ServedHosts do
     # while bound. In memory only: a new process starts from the file alone.
     # `settings`: the configuration the last check read, nil when off.
     # `file`: the file what is remembered here belongs to.
-    # `tick`, `flush`, `verify`: the references the pending timers' messages
-    # carry.
+    # `tick`, `flush`, `verify`, `timeout_tick`: the references the pending
+    # timers' messages carry.
     # `lookups`: each lookup under way, by its task's reference, with its batch
     # and the timer of its deadline.
     # `queue`: lookups waiting for one of the `@max_lookups` slots.
     # `batch`: the number of the last check that queued lookups.
     # `results`: what host lookups answered, by host, until admitted or
     # looked up again. `fresh`: the hosts whose answer no write has decided
-    # on yet, which no check looks up again.
+    # on yet, which no check looks up again. `timeout_retries`: the hosts
+    # whose lookup timed out, `:pending` until a quick retry timer is armed
+    # for them, `:armed` until it looks them up again, then `:done` until an
+    # answer that is no timeout.
     # `own`: this server's addresses as last looked up, with the name and
     # when (monotonic milliseconds).
     # `writing`: the reference of the write under way, `write_job` what it was
@@ -289,6 +306,8 @@ defmodule Brando.Tenant.ServedHosts do
       flush: nil,
       verify_timer: nil,
       verify: nil,
+      timeout_timer: nil,
+      timeout_tick: nil,
       error: nil,
       settings: nil,
       file: nil,
@@ -298,6 +317,7 @@ defmodule Brando.Tenant.ServedHosts do
       batch: 0,
       results: %{},
       fresh: MapSet.new(),
+      timeout_retries: %{},
       own: nil,
       writing: nil,
       write_job: nil,
@@ -360,6 +380,15 @@ defmodule Brando.Tenant.ServedHosts do
 
       {_ok_or_stopped, state} ->
         {:noreply, settle(state)}
+    end
+  end
+
+  def handle_info({:retry_timeouts, ref}, %{timeout_tick: ref} = state) do
+    state = %{state | timeout_timer: nil, timeout_tick: nil}
+
+    case current(state) do
+      {:ok, state} -> {:noreply, state |> retry_timeouts() |> settle()}
+      {:stopped, state} -> {:noreply, settle(state)}
     end
   end
 
@@ -451,7 +480,7 @@ defmodule Brando.Tenant.ServedHosts do
     end
 
     :atomics.put(state.generation_ref, 1, state.generation + 1)
-    state = state |> cancel_flush() |> cancel_verify()
+    state = state |> cancel_flush() |> cancel_verify() |> cancel_timeout_retry()
 
     %{
       state
@@ -462,6 +491,7 @@ defmodule Brando.Tenant.ServedHosts do
         queue: :queue.new(),
         results: %{},
         fresh: MapSet.new(),
+        timeout_retries: %{},
         admitted: MapSet.new(),
         write_requested: false,
         check_requested: false,
@@ -517,8 +547,18 @@ defmodule Brando.Tenant.ServedHosts do
     if reason in Brando.Tenant.ServedHosts.Resolver.reasons(), do: reason, else: :other
   end
 
-  defp put_result(state, host, result),
-    do: %{state | results: Map.put(state.results, host, result), fresh: MapSet.put(state.fresh, host)}
+  # An answer that is no timeout ends the host's quick retry at once, not at
+  # the next write
+  defp put_result(state, host, result) do
+    retries = if timed_out?(result), do: state.timeout_retries, else: Map.delete(state.timeout_retries, host)
+
+    %{
+      state
+      | results: Map.put(state.results, host, result),
+        fresh: MapSet.put(state.fresh, host),
+        timeout_retries: retries
+    }
+  end
 
   defp batch_done?(state, batch) do
     not Enum.any?(state.lookups, &match?({_ref, {_target, ^batch, _deadline}}, &1)) and
@@ -798,7 +838,63 @@ defmodule Brando.Tenant.ServedHosts do
     log_lookup_failures(hosts, status().hosts)
     publish(%{file: file, hosts: hosts, addresses: format_addresses(own_addresses(state)), error: result.error})
     state = if Enum.any?(decided, &match?({_host, :admit}, &1)), do: %{state | write_requested: true}, else: state
+    state = state |> track_timeouts() |> retry_timeouts_soon()
     schedule(state, retry?(state, decided) or result.error != nil)
+  end
+
+  # A host whose lookup timed out gets one quick retry: `:pending`, then
+  # `:armed`, until its retry looks it up again. An answer that is no timeout ends it; a host
+  # looked up again, with no answer yet, keeps its entry.
+  defp track_timeouts(state) do
+    kept = Map.take(state.timeout_retries, Map.keys(state.results) ++ MapSet.to_list(pending_hosts(state)))
+    %{state | timeout_retries: Enum.reduce(state.results, kept, &track_timeout/2)}
+  end
+
+  defp track_timeout({host, result}, retries) do
+    if timed_out?(result), do: Map.put_new(retries, host, :pending), else: Map.delete(retries, host)
+  end
+
+  defp timed_out?({:lookup_failed, failures}), do: :timeout in Map.values(failures)
+  defp timed_out?(_result), do: false
+
+  # The timer retries the hosts pending when it is armed; a host that times
+  # out meanwhile waits for the next one
+  defp retry_timeouts_soon(%{timeout_timer: nil} = state) do
+    if Enum.any?(state.timeout_retries, &match?({_host, :pending}, &1)) do
+      ref = make_ref()
+      timer = Process.send_after(self(), {:retry_timeouts, ref}, state.settings.timeout_retry_interval)
+
+      retries =
+        Map.new(state.timeout_retries, fn {host, mark} -> {host, if(mark == :pending, do: :armed, else: mark)} end)
+
+      %{state | timeout_timer: timer, timeout_tick: ref, timeout_retries: retries}
+    else
+      state
+    end
+  end
+
+  defp retry_timeouts_soon(state), do: state
+
+  defp cancel_timeout_retry(%{timeout_timer: nil} = state), do: state
+
+  defp cancel_timeout_retry(state) do
+    Process.cancel_timer(state.timeout_timer)
+    %{state | timeout_timer: nil, timeout_tick: nil}
+  end
+
+  # The quick retry: the timed-out hosts still outside the file, looked up
+  # again, and only once. A host with an answer no write has used yet keeps it.
+  defp retry_timeouts(state) do
+    bound = MapSet.new(servable_bound_hosts())
+
+    hosts =
+      for {host, :armed} <- state.timeout_retries,
+          MapSet.member?(bound, host) and not MapSet.member?(state.admitted, host) and
+            not MapSet.member?(state.fresh, host),
+          do: host
+
+    retries = Map.new(state.timeout_retries, fn {host, mark} -> {host, if(mark == :armed, do: :done, else: mark)} end)
+    %{state | timeout_retries: retries} |> look_up(hosts) |> retry_timeouts_soon()
   end
 
   # What each bound host not in the file gets from its last answer
@@ -854,7 +950,7 @@ defmodule Brando.Tenant.ServedHosts do
 
     case Enum.reject(candidates, &MapSet.member?(pending, &1)) do
       [] ->
-        state
+        look_up_own(state)
 
       hosts ->
         batch = state.batch + 1
@@ -873,6 +969,20 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   defp queue_own(state, _batch), do: state
+
+  # This server's addresses on their own, for a check that looks no host up
+  # while none are known, as after a start: the status names them from the
+  # first check, and the lookup runs in a task like every other
+  defp look_up_own(%{settings: %{own_source: {:lookup, _name}}} = state) do
+    if is_nil(looked_up_own(state)) and not own_pending?(state) do
+      batch = state.batch + 1
+      pump(queue_own(%{state | batch: batch}, batch))
+    else
+      state
+    end
+  end
+
+  defp look_up_own(state), do: state
 
   defp own_pending?(state) do
     Enum.any?(state.lookups, &match?({_ref, {{:own, _name}, _batch, _deadline}}, &1)) or
@@ -1032,8 +1142,10 @@ defmodule Brando.Tenant.ServedHosts do
   # same: another node sharing the path may have written over the file.
   defp schedule(state, retry?) do
     state = cancel_tick(state)
+
     settings = state.settings || %{retry_interval: @retry_interval, recheck_interval: @recheck_interval}
     interval = if retry?, do: settings.retry_interval, else: settings.recheck_interval
+
     tick = make_ref()
     %{state | timer: Process.send_after(self(), {:tick, tick}, interval), tick: tick}
   end
@@ -1079,6 +1191,7 @@ defmodule Brando.Tenant.ServedHosts do
       resolver: Keyword.get(config, :resolver, Brando.Tenant.ServedHosts.DNS),
       lookup_timeout: milliseconds(config, :lookup_timeout, @lookup_timeout),
       retry_interval: milliseconds(config, :retry_interval, @retry_interval),
+      timeout_retry_interval: milliseconds(config, :timeout_retry_interval, @timeout_retry_interval),
       recheck_interval: milliseconds(config, :recheck_interval, @recheck_interval),
       flush_interval: milliseconds(config, :flush_interval, @flush_interval),
       verify_interval: milliseconds(config, :verify_interval, @verify_interval),

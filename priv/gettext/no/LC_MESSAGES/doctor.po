@@ -1636,6 +1636,11 @@ msgstr "kjør mix brando.migrations.check --update og gå gjennom endringene"
 msgid "run pnpm install in assets/backend"
 msgstr "kjør pnpm install i assets/backend"
 
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "runs where the endpoint's source can be read, as in development: a release has no source to read Plug.Static's only: from"
+msgstr "kjøres der endepunktets kildekode kan leses, som i utvikling: en release har ingen kildekode å lese Plug.Static sin only: fra"
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "see the guides for email, CDN delivery and the content assistant"
