@@ -268,7 +268,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                       {gettext("%{built}/%{total} built", built: build.processed_urls, total: build.url_count)}
                     </span>
                     <span :if={failed_urls?(build)} class="publishing-progress__failed">
-                      {gettext("%{count} failed", count: build.url_count - build.processed_urls)}
+                      {gettext("%{count} failed", count: length(build.failed_urls))}
                     </span>
                   </td>
                   <td>
@@ -638,8 +638,8 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp human_status(:failed), do: gettext("Failed")
   defp human_status(:archived), do: gettext("Archived")
 
-  # A failed build stores the URLs it wrote, so the rest are the ones that failed
-  defp failed_urls?(build), do: build.status == :failed and build.processed_urls < build.url_count
+  # A build stopped by an error partway has URLs it never got to, which did not fail
+  defp failed_urls?(build), do: build.status == :failed and build.failed_urls != []
 
   defp format_datetime(nil), do: "—"
   defp format_datetime(datetime), do: BrandoAdmin.Dates.short(datetime)
