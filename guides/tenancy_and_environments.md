@@ -1904,12 +1904,17 @@ excluded hosts), and as `Plug.SSL` does by default, which excludes
 `localhost` in every version. An application with its own `:exclude` list
 needs `localhost` in it, or `rewrite_on: [:x_forwarded_proto]` and an `https`
 endpoint URL. Otherwise `Plug.SSL` redirects every page to `https`, and each
-URL fails naming `force_ssl`.
+URL fails naming `force_ssl` as the likely cause: a redirect to the same path
+on `https`, under `localhost` or the endpoint's host, on a build that requests
+the listener.
 Responses outside the 200 range are retained in the build's failed-URL list and
 make the build fail without hiding partial logs or counts.
 
 A build requests only its own origin: the listener's, or
-`http://localhost:<port>`, which it requests on the listener's address. A
+`http://localhost:<port>`, which it requests on the listener's address. When
+the build sends `x-forwarded-proto: https`, `https://localhost:<port>` is its
+origin too, as `Plug.Conn.request_url/1` writes it after `rewrite_on`, and it
+is requested the same way, over `http`. A
 listed path that redirects to another path on that origin is stored with the answer the redirect ends at, and the
 signed header goes along. A redirect to another scheme, host or port, or to a
 URL carrying credentials, fails that URL: Brando makes no request there, and the

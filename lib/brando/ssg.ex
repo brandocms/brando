@@ -118,11 +118,14 @@ defmodule Brando.SSG do
   A dry run requests nothing and needs no listener.
 
   A build requests only its own origin: the listener's, or
-  `http://localhost:<port>`, which is requested on the listener's address. A
-  listed path that redirects within the build's origin is stored with the
-  answer it ends at, and the header goes along. A redirect to any other origin
-  fails that URL without a request; one to the same path on `https` fails it
-  naming `force_ssl`.
+  `http://localhost:<port>` (and `https://localhost:<port>` when it sends
+  `x-forwarded-proto: https`), which is requested over `http` on the
+  listener's address. A listed path that redirects within the build's origin
+  is stored with the answer it ends at, and the header goes along. A redirect
+  to any other origin fails that URL without a request. On a build that
+  requests the listener, one to the same path on `https` under `localhost` or
+  the endpoint's host, or one that keeps answering a redirect to itself there,
+  fails it naming `force_ssl` as the likely cause.
 
   The injectable `:fetcher` option has arity two (`url`, request options) and
   is intended for tests or custom transports. The request options include
@@ -193,14 +196,19 @@ defmodule Brando.SSG do
 
   # A build requests the listener as `localhost`, which `Plug.SSL` excludes by
   # default whatever the listener's address, and says when the endpoint's own
-  # scheme is https, for an application that excludes other hosts.
+  # scheme is https, for an application that excludes other hosts. With that
+  # header honoured, a URL built from the request names https.
   defp listener(endpoint, base_url) do
     %URI{port: port} = URI.parse(base_url)
-    forwarded = if endpoint.struct_url().scheme == "https", do: [{"x-forwarded-proto", "https"}], else: []
+    forwarded? = endpoint.struct_url().scheme == "https"
+    forwarded = if forwarded?, do: [{"x-forwarded-proto", "https"}], else: []
+    schemes = if forwarded?, do: ["http", "https"], else: ["http"]
 
     %{
       headers: [{"host", "localhost:#{port}"} | forwarded],
-      origin: URI.parse("http://localhost:#{port}")
+      origins: Enum.map(schemes, &origin(URI.parse("#{&1}://localhost:#{port}"))),
+      # Where `force_ssl` sends a request: the host it came with, or the endpoint's
+      force_ssl_hosts: ["localhost", String.downcase(endpoint.host(), :ascii)]
     }
   end
 
@@ -349,7 +357,7 @@ defmodule Brando.SSG do
 
     request = %{
       fetcher: Keyword.get(opts, :fetcher, &default_fetcher/2),
-      listener_origin: listener && listener.origin,
+      listener: listener,
       opts: [
         headers: headers,
         receive_timeout: Keyword.get(opts, :receive_timeout, @default_receive_timeout),
@@ -382,12 +390,16 @@ defmodule Brando.SSG do
 
   # Req would follow a redirect to any host with the signed header still on the
   # request, and the caller could not tell. So a build follows redirects itself.
-  defp fetch(request, url, redirects_left) do
+  # `repeating?`: the request answered a redirect to itself, followed once.
+  defp fetch(request, url, redirects_left, repeating? \\ false) do
     case request.fetcher.(url, request.opts) do
       {:ok, %{status: status} = response} when status in @redirect_statuses ->
         case redirect_location(response) do
-          nil -> {:ok, response}
-          location -> follow_redirect(request, URI.parse(url), URI.merge(url, location), status, redirects_left)
+          nil ->
+            {:ok, response}
+
+          location ->
+            follow_redirect(request, URI.parse(url), URI.merge(url, location), status, redirects_left, repeating?)
         end
 
       result ->
@@ -395,35 +407,49 @@ defmodule Brando.SSG do
     end
   end
 
-  defp follow_redirect(request, %URI{} = source, %URI{} = target, status, redirects_left) do
-    target = on_listener(target, source, request.listener_origin)
+  defp follow_redirect(request, %URI{} = source, %URI{} = target, status, redirects_left, repeating?) do
+    next = on_listener(target, source, request.listener)
+    to_itself? = to_string(next) == to_string(source)
 
     cond do
-      https_redirect?(source, target) ->
-        {:refused_redirect, {:https_redirect, status, target}}
+      origin(next) != origin(source) ->
+        {:refused_redirect, refusal(request.listener, source, target, status)}
 
-      origin(target) != origin(source) ->
-        {:refused_redirect, {:redirect_off_origin, status, target}}
+      to_itself? and repeating? and force_ssl_redirect?(request.listener, source, target) ->
+        {:refused_redirect, {:https_redirect, status, target}}
 
       redirects_left == 0 ->
         {:refused_redirect, :too_many_redirects}
 
       true ->
-        fetch(request, to_string(target), redirects_left - 1)
+        fetch(request, to_string(next), redirects_left - 1, to_itself?)
     end
   end
 
-  # The host the build sends names the listener too: `localhost` may not
-  # resolve to the address it listens on, so the request goes there.
+  # The host the build sends names the listener too, on https when the build
+  # says so: `localhost` may not resolve to the address it listens on, so the
+  # request goes there, over the listener's plain http.
   defp on_listener(target, _source, nil), do: target
 
-  defp on_listener(target, source, listener_origin) do
-    if origin(target) == origin(listener_origin), do: %URI{target | host: source.host}, else: target
+  defp on_listener(target, source, listener) do
+    if origin(target) in listener.origins,
+      do: %URI{target | scheme: source.scheme, host: source.host, port: source.port},
+      else: target
   end
 
-  # What `Plug.SSL` answers: the same path on https, on the endpoint's host
-  defp https_redirect?(source, target) do
-    source.scheme == "http" and target.scheme == "https" and target.path == source.path
+  defp refusal(listener, source, target, status) do
+    if force_ssl_redirect?(listener, source, target),
+      do: {:https_redirect, status, target},
+      else: {:redirect_off_origin, status, target}
+  end
+
+  # What `Plug.SSL` answers on a build that chose the listener itself: the same
+  # path on https, under the host the build sent or the endpoint's own
+  defp force_ssl_redirect?(nil, _source, _target), do: false
+
+  defp force_ssl_redirect?(listener, source, target) do
+    target.scheme == "https" and target.path == source.path and
+      is_binary(target.host) and String.downcase(target.host, :ascii) in listener.force_ssl_hosts
   end
 
   # Userinfo counts: a target naming the origin's host as userinfo has another
@@ -574,8 +600,8 @@ defmodule Brando.SSG do
   defp format_failure(url, {:https_redirect, status, %URI{} = target}) do
     target_origin = to_string(%URI{scheme: target.scheme, host: target.host, port: target.port})
 
-    "#{url} (HTTP #{status} redirect to #{inspect(target_origin)}: the endpoint's `force_ssl` " <>
-      "redirects the build's requests. Exclude the host `localhost` (its `:exclude`), or add " <>
+    "#{url} (HTTP #{status} redirect to #{inspect(target_origin)}: likely the endpoint's `force_ssl` " <>
+      "redirecting the build's requests. Exclude the host `localhost` (its `:exclude`), or add " <>
       "`rewrite_on: [:x_forwarded_proto]` with an `https` endpoint URL)"
   end
 
