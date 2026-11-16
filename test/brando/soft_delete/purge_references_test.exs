@@ -56,6 +56,23 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
     assert trail(team) == [app_name, "Team"]
   end
 
+  test "a revision taken before the purge restores, keeping the reference the purge cleared", %{user: user} do
+    about = page!(user, %{title: "About", uri: "about"})
+    team = page!(user, %{title: "Team", uri: "about/team", parent_id: about.id})
+    fragment = Factory.insert(:fragment, creator: user, page_id: about.id, parent_key: "about", key: "intro")
+    {:ok, team_revision} = Brando.Revisions.create_revision(Repo.get!(Page, team.id), user)
+    {:ok, fragment_revision} = Brando.Revisions.create_revision(Repo.get!(Fragment, fragment.id), user)
+
+    {:ok, _} = Pages.delete_page(about.id, user)
+    expire(Page, [about.id])
+    refute Enum.any?(Query.clean_up_soft_deletions(), &match?({:error, _}, &1))
+
+    assert {:ok, %{parent_id: nil}} = Brando.Revisions.set_entry_to_revision(Page, team.id, team_revision.revision, user)
+
+    assert {:ok, %{page_id: nil}} =
+             Brando.Revisions.set_entry_to_revision(Fragment, fragment.id, fragment_revision.revision, user)
+  end
+
   test "a schema whose purge fails is logged, and the schemas after it are still purged", %{user: user} do
     # A live person still refers to an expired profile: `persons_profile` is
     # purged before `pages` and `users`, and its delete raises

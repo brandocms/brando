@@ -114,7 +114,9 @@ remaining child pages lose their `parent_id` and move to the top, with their
 breadcrumbs recomputed, and its fragments lose their `page_id`. A schema's
 context can do the same for its own rows with an optional
 `before_purge(schema, ids)`, which the purge calls with the expired ids before
-it deletes them (`Brando.Pages.before_purge/2`). A schema whose purge fails
+it deletes them (`Brando.Pages.before_purge/2`). A revision taken before the
+purge still restores: a `belongs_to` reference in it to a row that is gone
+keeps the value the entry has now, for every revisioned schema. A schema whose purge fails
 does not stop the others, nor an environment the next ones: each failure is
 logged with the schema, site and environment, and the job then fails so the
 failure shows in Oban.
