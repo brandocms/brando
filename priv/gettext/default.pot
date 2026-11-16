@@ -2362,11 +2362,13 @@ msgid "Another editor removed the block you were changing."
 msgstr ""
 
 #: lib/brando/environments/environment.ex
+#: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format
 msgid "Another environment already uses one of these hosts, as its domain or a redirect host."
 msgstr ""
 
 #: lib/brando/environments/environment.ex
+#: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format
 msgid "Another environment already uses this host."
 msgstr ""

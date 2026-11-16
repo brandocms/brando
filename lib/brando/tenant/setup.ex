@@ -7,7 +7,9 @@ defmodule Brando.Tenant.Setup do
   exist. Any provisioning failure removes the partial site. A site created
   with `status: :suspended` admits no one, so its environments are
   provisioned as the system once the creator is authorized to create sites.
-  Permanent deletion
+  The environments' hosts are checked before any schema work and bound last,
+  once the site is provisioned; compensation releases them, on every node,
+  before it drops the schemas. Permanent deletion
   is intentionally a second step after archival and a configurable retention
   period.
   """
@@ -135,8 +137,13 @@ defmodule Brando.Tenant.Setup do
   defp remove_under_lock(key, opts) do
     registered =
       case Registry.get_site_by_key(key) do
-        nil -> :ok
-        site -> with {:ok, _deleted} <- delete_registry_and_schemas(site), do: :ok
+        nil ->
+          :ok
+
+        site ->
+          with :ok <- Environments.release_hosts(site.environments),
+               {:ok, _deleted} <- delete_registry_and_schemas(site),
+               do: :ok
       end
 
     drops = Enum.map(["production", "staging"], &Schema.drop(Tenant.prefix(key, &1)))
@@ -185,17 +192,56 @@ defmodule Brando.Tenant.Setup do
 
     with :ok <- create_storage(site),
          :ok <- validate_environments(environments),
-         [live_attrs | remaining_attrs] <- order_live_first(environments),
+         [live_attrs | remaining_attrs] = ordered <- order_live_first(environments),
+         :ok <- check_environments(site, ordered, creator),
          {:ok, _assignment} <- assign_creator(creator, site),
-         {:ok, live_environment} <- Environments.create_environment(site, live_attrs, actor_opts(site, creator)),
+         {:ok, live_environment} <-
+           Environments.create_environment(site, without_hosts(live_attrs), actor_opts(site, creator)),
          :ok <- seed(site, live_environment, creator, opts),
-         {:ok, _environments} <- create_copies(site, live_environment, remaining_attrs, creator) do
+         {:ok, created} <- create_copies(site, live_environment, Enum.map(remaining_attrs, &without_hosts/1), creator),
+         :ok <- bind_hosts(site, Enum.zip(created, ordered), creator) do
       {:ok, Registry.get_site(site.id)}
     else
       [] -> {:error, :missing_live_environment}
       {:error, _reason} = error -> error
     end
   end
+
+  # The hosts are bound last, once every environment is seeded and copied, so
+  # a request on them is the unknown host's 404 until the site is ready. One
+  # that is taken, or that the creator may not bind, is refused before any
+  # schema work starts.
+  defp check_environments(site, environments, creator) do
+    Enum.find_value(environments, :ok, fn attrs ->
+      case Registry.check_new_environment(site, attrs, actor: host_actor(site, creator)) do
+        :ok -> nil
+        {:error, _changeset} = error -> error
+      end
+    end)
+  end
+
+  defp without_hosts(attrs), do: attrs |> Environments.split_hosts() |> elem(1)
+
+  # In one write: a host bound meanwhile by another write leaves none bound,
+  # and the site is compensated
+  defp bind_hosts(site, environments_and_attrs, creator) do
+    fn ->
+      Enum.each(environments_and_attrs, fn {environment, attrs} ->
+        case Registry.bind_hosts(environment, attrs, actor: host_actor(site, creator)) do
+          {:ok, _environment} -> :ok
+          {:error, changeset} -> Repo.rollback(changeset)
+        end
+      end)
+    end
+    |> Repo.transaction()
+    |> case do
+      {:ok, :ok} -> :ok
+      {:error, _changeset} = error -> error
+    end
+  end
+
+  defp host_actor(%Site{status: :active}, creator), do: creator
+  defp host_actor(%Site{}, _creator), do: :system
 
   defp assign_creator(creator, site) do
     if Brando.Authorization.enabled?() do
@@ -342,8 +388,14 @@ defmodule Brando.Tenant.Setup do
     end
   end
 
-  # `:ok` only when everything it removes is gone; otherwise the first error
+  # `:ok` only when everything it removes is gone; otherwise the first error.
+  # The hosts go first, on every node; while they cannot, the schemas stay.
   defp compensate(site, opts \\ []) do
+    with :ok <- Environments.release_hosts(Registry.list_environments(site)),
+         do: remove_compensated(site, opts)
+  end
+
+  defp remove_compensated(site, opts) do
     prefixes = site_schema_prefixes(site)
     cancel_jobs(prefixes)
     drops = Enum.map(prefixes, &Schema.drop/1)

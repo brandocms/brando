@@ -85,6 +85,49 @@ defmodule Brando.EnvironmentsTest do
     end
   end
 
+  # What resolves the new environment's hosts while its migrations run
+  defmodule HostWatchingMigrator do
+    @behaviour Brando.Environments.Migrator
+
+    @impl true
+    def migrate(site, environment) do
+      row = Registry.get_environment(environment.id)
+
+      send(
+        self(),
+        {:hosts_while_migrating, Cache.get_env_by_domain("preview.acme.test"),
+         Cache.get_redirect("www.preview.acme.test"), row.domain, row.redirect_hosts, Brando.Tenant.Cache.bound_hosts(),
+         site.key}
+      )
+
+      {:ok, []}
+    end
+  end
+
+  # Another environment binds the host while the migrations run
+  defmodule RivalMigrator do
+    @behaviour Brando.Environments.Migrator
+
+    @impl true
+    def migrate(_site, _environment) do
+      {:ok, _rival} = Registry.update_environment(Process.get(:rival), Process.get(:rival_hosts), actor: :system)
+      {:ok, []}
+    end
+  end
+
+  defmodule OptionsMigrator do
+    @behaviour Brando.Environments.Migrator
+
+    @impl true
+    def migrate(_site, _environment), do: {:error, :called_without_options}
+
+    @impl true
+    def migrate(_site, _environment, opts) do
+      send(self(), {:migrate_options, opts})
+      {:ok, []}
+    end
+  end
+
   @site_attrs %{
     name: "Acme",
     key: "acme",
@@ -584,6 +627,125 @@ defmodule Brando.EnvironmentsTest do
       assert Environments.scheduler_authorized?(admin.id, site.id)
       refute Environments.scheduler_authorized?(demoted.id, site.id)
       assert Environments.scheduler_authorized?(nil, site.id)
+    end
+  end
+
+  describe "an environment's hosts" do
+    @hosts %{domain: "preview.acme.test", redirect_hosts: ["www.preview.acme.test"]}
+
+    defp create_preview(site, attrs \\ %{}),
+      do: Environments.create_environment(site, Map.merge(%{name: "Preview", key: "preview"}, attrs), actor: :system)
+
+    defp other_environment(site, hosts) do
+      {:ok, other} =
+        Registry.create_environment(site, Map.merge(%{name: "Other", key: "other"}, hosts), actor: :system)
+
+      other
+    end
+
+    test "are bound once its schema is migrated", %{site: site} do
+      put_test_env(:tenant_migrator, HostWatchingMigrator)
+
+      assert {:ok, %Environment{domain: "preview.acme.test", redirect_hosts: ["www.preview.acme.test"]} = preview} =
+               create_preview(site, @hosts)
+
+      assert_received {:hosts_while_migrating, nil, nil, nil, [], bound, "acme"}
+      refute "preview.acme.test" in bound
+
+      assert {_site, %Environment{id: id}} = Cache.get_env_by_domain("preview.acme.test")
+      assert id == preview.id
+      assert {_site, %Environment{id: ^id}} = Cache.get_redirect("www.preview.acme.test")
+      assert Registry.get_environment(id).domain == "preview.acme.test"
+    end
+
+    test "that another environment binds are refused before any schema work", %{site: site} do
+      other_environment(site, %{domain: "taken.acme.test", redirect_hosts: ["www.taken.acme.test"]})
+
+      for {attrs, field} <- [
+            {%{domain: "taken.acme.test"}, :domain},
+            {%{domain: "www.taken.acme.test"}, :domain},
+            {%{domain: "fresh.acme.test", redirect_hosts: ["taken.acme.test"]}, :redirect_hosts},
+            {%{domain: "fresh.acme.test", redirect_hosts: ["www.taken.acme.test"]}, :redirect_hosts}
+          ] do
+        assert {:error, %Ecto.Changeset{action: :insert} = changeset} = create_preview(site, attrs)
+        assert changeset.errors[field], inspect(attrs)
+        refute_received {:structure_cloned, _source, _target}
+        refute_received {:tenant_migrated, _site, _environment}
+        refute Schema.exists?(Tenant.prefix(site.key, "preview"))
+        refute Registry.get_environment_by_key(site, "preview")
+      end
+    end
+
+    test "a refusal of who may bind them comes before any schema work", %{site: site} do
+      editor = Brando.Factory.insert(:random_user, role: :editor)
+      {:ok, _} = Brando.Tenant.Access.grant(editor, site, :admin)
+
+      assert {:error, changeset} =
+               Environments.create_environment(site, Map.merge(%{name: "Preview", key: "preview"}, @hosts),
+                 creator: editor
+               )
+
+      assert changeset.errors[:domain]
+      refute_received {:structure_cloned, _source, _target}
+      refute Registry.get_environment_by_key(site, "preview")
+    end
+
+    test "bound by another write while the migrations ran undo the create", %{site: site} do
+      Process.put(:rival, other_environment(site, %{domain: "other.acme.test"}))
+      Process.put(:rival_hosts, %{domain: "preview.acme.test"})
+      put_test_env(:tenant_migrator, RivalMigrator)
+
+      assert {:error, %Ecto.Changeset{} = changeset} = create_preview(site, @hosts)
+      assert changeset.errors[:domain]
+
+      refute Schema.exists?(Tenant.prefix(site.key, "preview"))
+      refute Registry.get_environment_by_key(site, "preview")
+      refute Cache.get_env("acme", "preview")
+      assert {_site, %Environment{key: "other"}} = Cache.get_env_by_domain("preview.acme.test")
+      refute Cache.get_redirect("www.preview.acme.test")
+    end
+
+    test "a redirect host bound by another write while the migrations ran undoes the create", %{site: site} do
+      Process.put(:rival, other_environment(site, %{domain: "other.acme.test"}))
+      Process.put(:rival_hosts, %{redirect_hosts: ["www.preview.acme.test"]})
+      put_test_env(:tenant_migrator, RivalMigrator)
+
+      assert {:error, %Ecto.Changeset{} = changeset} = create_preview(site, @hosts)
+      assert changeset.errors[:redirect_hosts]
+      refute Registry.get_environment_by_key(site, "preview")
+      refute Cache.get_env_by_domain("preview.acme.test")
+    end
+
+    test "a failed migration leaves none bound and nothing in the cache", %{site: site} do
+      put_test_env(:tenant_migrator, FailingMigrator)
+
+      assert {:error, {:migration_failed, :migration_broke}} = create_preview(site, @hosts)
+
+      refute Registry.get_environment_by_key(site, "preview")
+      refute Cache.get_env("acme", "preview")
+      refute Cache.get_env_by_domain("preview.acme.test")
+      refute Cache.get_redirect("www.preview.acme.test")
+      assert Cache.bound_hosts() == []
+    end
+
+    test "a delete releases them before the schema goes", %{site: site} do
+      put_test_env(:cache_sync_settle_ms, 0)
+      {:ok, preview} = create_preview(site, @hosts)
+
+      assert {:ok, _deleted} = Environments.delete_environment(preview)
+
+      refute Cache.get_env_by_domain("preview.acme.test")
+      refute Cache.get_redirect("www.preview.acme.test")
+      refute Schema.exists?(Tenant.prefix(site, preview))
+      # Free for another environment
+      assert %Environment{} = other_environment(site, @hosts)
+    end
+
+    test "the migrations run at debug level", %{site: site} do
+      put_test_env(:tenant_migrator, OptionsMigrator)
+
+      assert {:ok, _preview} = create_preview(site)
+      assert_received {:migrate_options, [log: :debug]}
     end
   end
 

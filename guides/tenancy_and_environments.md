@@ -403,6 +403,13 @@ site admin role. A PostgreSQL advisory lock serializes creation for the key. If
 any database, seed, copy, assignment, or filesystem step fails, Brando removes
 the partial schemas, registry rows, and directories.
 
+The environments' domains and redirect hosts are bound last, once Staging is
+copied, so a request on them is the unknown host's 404 until the site is
+ready. A host that another environment already binds, or that the creator may
+not bind, is refused before any schema is created. One that another write
+binds while the site is provisioned is refused at the end, with none of the
+site's hosts bound, and the site is removed as after any other failed step.
+
 The default seeder, `Brando.Tenant.Seeder`, works in Production and, for each
 of the site's languages, creates an identity named after the site, an SEO
 record, and what `mix brando.setup` seeds for an installation without tenancy
@@ -477,7 +484,14 @@ setup code.
 Individual working environments can also be created with
 `Brando.Environments.create_environment/2`. It creates
 `tenant_{site}_{environment}`, runs all tenant migrations, writes an operation
-log, and compensates a failed schema creation or migration.
+log, and compensates a failed schema creation or migration. The migrations
+log their instructions at debug level here; `mix brando.migrate --tenants`
+prints them as before. The environment's domain and redirect hosts are bound
+as the last step, once its schema is migrated: until then a request on them
+is the unknown host's 404, and a create that fails leaves none of them bound.
+A host that another environment binds is refused before the schema is
+created, and one bound by another write while the migrations ran is refused
+at the end and the create undone.
 
 In `single` mode, the site key in the registry must match the configured
 `site_key`. `mix brando.setup` provisions that site, with the default
@@ -1071,6 +1085,12 @@ Nodes that do not share it keep what they read at boot until they restart. A
 node cut off when a write happens keeps its copy until the next write or a
 restart.
 <!-- usage-rules:end -->
+
+Nodes do not answer a refresh. Where a step must wait for every node, as
+dropping the schema of an environment whose hosts were just released does,
+Brando waits for the time the other nodes take to hear and run it:
+`config :brando, :cache_sync_settle_ms`, 500 milliseconds by default. Raise it
+when a busy node takes longer to refresh.
 
 ## Per-site layouts and templates
 
@@ -1736,6 +1756,12 @@ Only non-live environments can be deleted:
 ```elixir
 {:ok, _deleted} = Brando.Environments.delete_environment(staging)
 ```
+
+The environment's domain and redirect hosts are released first. Brando waits
+for every node to refresh its registry cache (see [Several nodes](#several-nodes))
+before it drops the schema, so a request on them from then on is the unknown
+host's 404. When the schema cannot be dropped, the hosts are bound to the
+environment again.
 
 Deleting an environment deletes its rows in the shared tables too: form
 submissions, entry drafts, assistant conversations, guidance versions, content

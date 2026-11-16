@@ -75,6 +75,23 @@ defmodule Brando.CacheSync do
     Brando.Repo.after_commit({__MODULE__, cache, refresh}, fn -> GenServer.cast(__MODULE__, {:send, {cache, refresh}}) end)
   end
 
+  @doc """
+  Waits until the other nodes have run the refreshes broadcast before the
+  call, before a step that must come after them: dropping the schema of an
+  environment whose host was just released, say. Nodes do not answer a
+  broadcast, so this waits for their gathering window (100 ms) and a margin:
+  `config :brando, :cache_sync_settle_ms` milliseconds in all, 500 by
+  default. Call it once the write has committed. Without a running
+  `Brando.CacheSync` (a mix task) there are no other nodes to wait for. A
+  node cut off from the others, or whose refresh failed and waits for its
+  retry, is not waited for.
+  """
+  @spec settle() :: :ok
+  def settle do
+    if Process.whereis(__MODULE__), do: Process.sleep(Application.get_env(:brando, :cache_sync_settle_ms, 500))
+    :ok
+  end
+
   # Rescued here, as it may run after the commit, in the repo's held work
   defp publish(refresh) do
     Phoenix.PubSub.broadcast(Brando.pubsub(), @topic, {:brando_cache_sync, origin(), refresh})

@@ -286,6 +286,103 @@ defmodule Brando.Tenant.Registry do
   end
 
   @doc """
+  Checks, before anything is written, what `create_environment/3` with
+  `attrs` checks, and that no other environment binds its domain or any of
+  its redirect hosts: `:ok`, or `{:error, changeset}` with the errors an
+  insert would have.
+
+  For a create that writes the row without its hosts and binds them with
+  `bind_hosts/3` once the environment is ready: a host that is taken is
+  refused before any work starts. A host bound by another write after this
+  check is refused by `bind_hosts/3`.
+  """
+  @spec check_new_environment(Site.t() | pos_integer(), map(), keyword()) :: :ok | {:error, Ecto.Changeset.t()}
+  def check_new_environment(site, attrs, opts \\ [])
+
+  def check_new_environment(%Site{id: site_id}, attrs, opts), do: check_new_environment(site_id, attrs, opts)
+
+  def check_new_environment(site_id, attrs, opts) do
+    %Environment{}
+    |> Environment.changeset(put_site_id(attrs, site_id))
+    |> authorize_domain(opts[:actor])
+    |> refuse_bound_hosts()
+    |> Ecto.Changeset.apply_action(:insert)
+    |> case do
+      {:ok, _environment} -> :ok
+      {:error, _changeset} = error -> error
+    end
+  end
+
+  defp refuse_bound_hosts(%Ecto.Changeset{valid?: true} = changeset) do
+    domain = Ecto.Changeset.get_field(changeset, :domain)
+    redirect_hosts = Ecto.Changeset.get_field(changeset, :redirect_hosts) || []
+
+    changeset
+    |> refuse_bound(:domain, List.wrap(domain), gettext("Another environment already uses this host."))
+    |> refuse_bound(
+      :redirect_hosts,
+      redirect_hosts,
+      gettext("Another environment already uses one of these hosts, as its domain or a redirect host.")
+    )
+  end
+
+  defp refuse_bound_hosts(changeset), do: changeset
+
+  defp refuse_bound(changeset, _field, [], _message), do: changeset
+
+  defp refuse_bound(changeset, field, hosts, message) do
+    bound? =
+      from(environment in Environment,
+        where: environment.domain in ^hosts or fragment("? && ?::varchar[]", environment.redirect_hosts, ^hosts),
+        select: true,
+        limit: 1
+      )
+      |> Repo.one(@public_opts)
+
+    if bound? == true, do: Ecto.Changeset.add_error(changeset, field, message), else: changeset
+  end
+
+  @doc """
+  Binds `attrs`' `domain` and `redirect_hosts` to an environment written
+  without them, checking `opts[:actor]`'s authority to bind them as
+  `create_environment/3` does: the last step of a create, once the
+  environment's schema is ready, so its hosts resolve only from then on. A
+  host another write bound meanwhile is refused with `{:error, changeset}`.
+  With no host in `attrs`, nothing is written.
+  """
+  @spec bind_hosts(Environment.t(), map(), keyword()) :: {:ok, Environment.t()} | {:error, Ecto.Changeset.t()}
+  def bind_hosts(%Environment{} = environment, attrs, opts \\ []) do
+    attrs = Map.take(attrs, [:domain, :redirect_hosts, "domain", "redirect_hosts"])
+
+    case environment |> Environment.changeset(attrs) |> authorize_domain(opts[:actor]) do
+      %Ecto.Changeset{valid?: true, changes: changes} when changes == %{} ->
+        {:ok, environment}
+
+      changeset ->
+        changeset
+        |> Repo.update(@public_opts)
+        |> refresh_cache_on_success()
+    end
+  end
+
+  @doc """
+  Releases an environment's domain and redirect hosts, so they resolve to no
+  environment once the write is committed and the cache refreshed: the first
+  step of removing the environment. Releasing a host needs no authority to
+  bind one. With no host bound, nothing is written.
+  """
+  @spec unbind_hosts(Environment.t()) :: {:ok, Environment.t()} | {:error, Ecto.Changeset.t()}
+  def unbind_hosts(%Environment{domain: nil, redirect_hosts: hosts} = environment) when hosts in [nil, []],
+    do: {:ok, environment}
+
+  def unbind_hosts(%Environment{} = environment) do
+    environment
+    |> Ecto.Changeset.change(domain: nil, redirect_hosts: [])
+    |> Repo.update(@public_opts)
+    |> refresh_cache_on_success()
+  end
+
+  @doc """
   Updates an environment, checking `opts[:actor]`'s authority to bind its
   hosts. Once the change is committed, the site's open environments screens
   are told (`Brando.Environments.announce/1`).
