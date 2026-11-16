@@ -67,7 +67,7 @@ defmodule Brando.Worker.SSGBuild do
   end
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"build_id" => build_id}}) do
+  def perform(%Oban.Job{args: %{"build_id" => build_id} = args}) do
     case Builds.get_build(build_id) do
       %Build{site: %{status: status}} = build when status != :active ->
         cancel_unbuildable(build, :site_not_active)
@@ -76,7 +76,7 @@ defmodule Brando.Worker.SSGBuild do
         cancel_unbuildable(build, :environment_not_found)
 
       %Build{status: status} = build when status in [:queued, :building] ->
-        authorize_and_run(build)
+        run_with_recorded_set(build, args)
 
       %Build{status: status} when status in [:ready, :deployed, :archived] ->
         :ok
@@ -94,6 +94,23 @@ defmodule Brando.Worker.SSGBuild do
 
   @impl Oban.Worker
   def timeout(_job), do: :timer.minutes(30)
+
+  defp run_with_recorded_set(build, args) do
+    case deleted_asset_set(build, args) do
+      nil -> authorize_and_run(build)
+      asset_set_id -> cancel_failed(build, {:asset_set_deleted, asset_set_id})
+    end
+  end
+
+  # The set the build recorded, when it is gone: deleting a set clears the
+  # build's `asset_set_id`, but not the job's. A job queued without the key
+  # has only the build's row to go by.
+  defp deleted_asset_set(%Build{asset_set_id: id, asset_set: %{id: id}}, _args) when is_integer(id), do: nil
+
+  defp deleted_asset_set(%Build{asset_set_id: id}, _args) when is_integer(id), do: id
+
+  defp deleted_asset_set(%Build{}, %{"asset_set_id" => id}) when is_integer(id), do: id
+  defp deleted_asset_set(%Build{}, _args), do: nil
 
   defp authorize_and_run(build) do
     case Brando.Authorization.Operations.authorize(%{id: build.creator_id}, :build, :publishing, build.site_id) do
@@ -213,7 +230,8 @@ defmodule Brando.Worker.SSGBuild do
       file_count: Map.get(result, :file_count, current.file_count),
       total_size: Map.get(result, :total_size, current.total_size),
       url_count: Map.get(result, :url_count, current.url_count),
-      processed_urls: Map.get(result, :processed_urls, current.processed_urls),
+      # What was written, so the build history says how many failed
+      processed_urls: Map.get(result, :built_urls, Map.get(result, :processed_urls, current.processed_urls)),
       failed_urls: Map.get(result, :failed_urls, current.failed_urls),
       build_log: current.build_log <> notes_log(result) <> log_line("Build failed: #{failure_message(reason)}")
     }
@@ -226,6 +244,19 @@ defmodule Brando.Worker.SSGBuild do
       {:error, changeset} ->
         {:error, {:persist_build_failure_failed, reason, changeset}}
     end
+  end
+
+  # Failed for good: another attempt would find the same
+  defp cancel_failed(build, reason) do
+    case fail_build(build, reason, %{}) do
+      {:error, ^reason} -> {:cancel, reason}
+      error -> error
+    end
+  end
+
+  defp failure_message({:asset_set_deleted, asset_set_id}) do
+    "The asset set this build was queued with (##{asset_set_id}) was deleted before the build ran. " <>
+      "Nothing was built or published; queue a new build."
   end
 
   # A job runs on whichever node takes it, and passes no other origin

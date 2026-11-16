@@ -1,0 +1,3 @@
+- An application whose Repo lacks `use Brando.SoftDelete.Repo` no longer boots, since it cannot delete or restore anything: boot stops with an error naming the line to add.
+  An application installed with a 0.55 development build lacks it, and moving its Git pin to another `0.55.0-dev` commit runs no upgrade step: before deploying, add `use Brando.SoftDelete.Repo` on the line after `use Ecto.Repo` in Brando's Repo (the one `config :brando, repo_module:` names) by hand, or rerun `mix brando.install`. The application stops at boot until the line is there.
+  From an earlier version, `mix igniter.upgrade brando` and `mix brando.migrate55` add it, and print the line to add when they cannot tell which Repo is Brando's.

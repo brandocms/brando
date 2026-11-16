@@ -5,8 +5,16 @@ defmodule Brando.SSG.Context do
   A build may render any named environment, including one without a public
   domain. The signed header lets `Brando.Plug.Tenant` select that environment
   without changing DNS or temporarily mutating the tenant registry.
+
+  It also names the asset set the build recorded when it was queued
+  (`ssg_builds.asset_set_id`), or nil for the release's own files, and
+  `Brando.Plug.Tenant` renders every page of the build with that set
+  (`Brando.Assets.SiteAssets.put_build_set/1`), whichever set is current
+  meanwhile. Only a signed context picks a set, and one signed without a set
+  is not accepted: a build signs its context when it runs, from its row.
   """
 
+  alias Brando.Assets.SiteAssetSet
   alias Brando.Environments.Environment
   alias Brando.Sites.Site
   alias Brando.Tenant.Registry
@@ -48,19 +56,40 @@ defmodule Brando.SSG.Context do
   @spec signed?(Plug.Conn.t()) :: boolean()
   def signed?(conn) do
     case Plug.Conn.get_req_header(conn, @header) do
-      [token | _] -> match?({:ok, %{site_id: _, environment_id: _}}, verify(token))
+      [token | _] -> match?({:ok, _context}, verify(token))
       [] -> false
+    end
+  end
+
+  @doc """
+  The asset set `conn`'s signed build context names: `{:ok, id}`, `{:ok,
+  nil}` for the release's own files, or `:error` when `conn` carries no valid
+  signed context.
+  """
+  @spec asset_set_id(Plug.Conn.t()) :: {:ok, pos_integer() | nil} | :error
+  def asset_set_id(conn) do
+    with [token | _] <- Plug.Conn.get_req_header(conn, @header),
+         {:ok, %{asset_set_id: asset_set_id}} <- verify(token) do
+      {:ok, asset_set_id}
+    else
+      _invalid -> :error
     end
   end
 
   @doc """
   Signs a build's context: the site and environment it builds, or with
   `tenancy_mode: :none` the standalone site (`Brando.SSG.build/1`), whose ids
-  are nil.
+  are nil, and the asset set it renders with, nil for the release's files.
   """
-  @spec sign(Site.t(), Environment.t()) :: String.t()
-  def sign(%Site{id: site_id}, %Environment{id: environment_id, site_id: site_id}) do
-    Phoenix.Token.sign(Brando.endpoint(), @salt, %{site_id: site_id, environment_id: environment_id})
+  @spec sign(Site.t(), Environment.t(), SiteAssetSet.t() | nil) :: String.t()
+  def sign(%Site{id: site_id}, %Environment{id: environment_id, site_id: site_id}, asset_set) do
+    asset_set_id = if match?(%SiteAssetSet{}, asset_set), do: asset_set.id
+
+    Phoenix.Token.sign(Brando.endpoint(), @salt, %{
+      site_id: site_id,
+      environment_id: environment_id,
+      asset_set_id: asset_set_id
+    })
   end
 
   @spec resolve(String.t()) :: {Site.t(), Environment.t()} | nil
@@ -78,5 +107,13 @@ defmodule Brando.SSG.Context do
 
   def resolve(_token), do: nil
 
-  defp verify(token), do: Phoenix.Token.verify(Brando.endpoint(), @salt, token, max_age: @max_age)
+  # A context signed without its asset set is refused, not rendered with
+  # whichever set is current
+  defp verify(token) do
+    case Phoenix.Token.verify(Brando.endpoint(), @salt, token, max_age: @max_age) do
+      {:ok, %{site_id: _, environment_id: _, asset_set_id: _} = context} -> {:ok, context}
+      {:ok, _without_asset_set} -> {:error, :invalid}
+      {:error, reason} -> {:error, reason}
+    end
+  end
 end

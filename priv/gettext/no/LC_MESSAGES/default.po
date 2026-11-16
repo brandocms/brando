@@ -38,6 +38,11 @@ msgstr "%{blocks} blokker · %{entries} oppføringer berørt"
 msgid "%{browser} on %{system}"
 msgstr "%{browser} på %{system}"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{built}/%{total} built"
+msgstr "%{built}/%{total} bygget"
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "%{client} via MCP"
@@ -238,6 +243,7 @@ msgid "%{count} existing members affected"
 msgstr "%{count} eksisterende medlemmer berøres"
 
 #: lib/brando_admin/components/suggestion_review.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} failed"
 msgstr "%{count} mislyktes"
@@ -2364,11 +2370,13 @@ msgid "Another editor removed the block you were changing."
 msgstr "En annen redaktør fjernet blokken du endret."
 
 #: lib/brando/environments/environment.ex
+#: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format
 msgid "Another environment already uses one of these hosts, as its domain or a redirect host."
 msgstr "Et annet miljø bruker allerede en av disse vertene, som domene eller omdirigeringsvert."
 
 #: lib/brando/environments/environment.ex
+#: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format
 msgid "Another environment already uses this host."
 msgstr "Et annet miljø bruker allerede denne verten."
@@ -21166,6 +21174,11 @@ msgstr "kan fjernes"
 msgid "can't be blank"
 msgstr "må fylles ut"
 
+#: lib/brando/pages/page/prevent_parent_cycles.ex
+#, elixir-autogen, elixir-format
+msgid "can't be the page itself or a page under it"
+msgstr "kan ikke være siden selv eller en side under den"
+
 #: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format
 msgid "cannot be seeded now: the site is busy with a copy, restore or setup of an environment. Try again when it has finished."
@@ -21348,6 +21361,11 @@ msgstr "fra oppføringen"
 #, elixir-autogen, elixir-format
 msgid "gallery"
 msgstr "galleri"
+
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "has a host that could not be looked up. Try again in a moment"
+msgstr "har en vert som ikke kunne slås opp. Prøv igjen om litt"
 
 msgid "has already been taken"
 msgstr "er allerede i bruk"

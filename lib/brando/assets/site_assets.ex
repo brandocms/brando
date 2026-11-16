@@ -58,6 +58,10 @@ defmodule Brando.Assets.SiteAssets do
   @public_opts [prefix: "public"]
   @cache_keys_key {:brando, :site_assets, :cache_keys}
   @override_key {:brando, :site_assets, :override}
+  @request_override_key {:brando, :site_assets, :request_override}
+  # The release's own files as an override: no manifest or file of a set, so
+  # the page reads `priv/static`
+  @release_override %{set: nil, path: nil, files: MapSet.new(), pinned: MapSet.new(), manifest: nil}
   @change_fence_key {:brando, :site_assets, :change_fence}
   @fence_key {:brando, :site_assets, :fence}
   @unscoped_key {:brando, :site_assets, :unscoped}
@@ -66,8 +70,8 @@ defmodule Brando.Assets.SiteAssets do
   @type scope :: Site.t() | nil
   @type environment_ref :: Environment.t() | pos_integer() | {String.t(), String.t()}
   @type cached_set :: %{
-          set: SiteAssetSet.t(),
-          path: String.t(),
+          set: SiteAssetSet.t() | nil,
+          path: String.t() | nil,
           files: MapSet.t(String.t()),
           pinned: MapSet.t(String.t()),
           manifest: map() | nil
@@ -286,6 +290,52 @@ defmodule Brando.Assets.SiteAssets do
   @spec with_set(SiteAssetSet.t(), (-> result)) :: {:ok, result} | {:error, term()} when result: var
   def with_set(%SiteAssetSet{} = asset_set, fun) when is_function(fun, 0) do
     with {:ok, cached} <- set_cache(asset_set), do: with_override(cached, fun)
+  end
+
+  @doc """
+  Installs, for the rest of the current request, the set a static build
+  recorded (`Brando.SSG.Context.asset_set_id/1`): the set with `set_id`, or
+  with nil the release's own files, whichever set is current meanwhile.
+  `Brando.Plug.Tenant` calls it for a build's request and `drop_build_set/0`
+  before every request, since one process can serve several requests.
+  `{:error, :asset_set_not_found}` when the set is gone.
+  """
+  @spec put_build_set(pos_integer() | nil) :: :ok | {:error, term()}
+  def put_build_set(nil), do: put_request_override(@release_override)
+
+  def put_build_set(set_id) when is_integer(set_id) do
+    with {:ok, cached} <- cached_set(set_id), do: put_request_override(cached)
+  end
+
+  @doc "Removes the set `put_build_set/1` installed, leaving any other override in place."
+  @spec drop_build_set() :: :ok
+  def drop_build_set do
+    if Process.delete(@request_override_key) do
+      Process.delete(@override_key)
+    end
+
+    :ok
+  end
+
+  defp put_request_override(cached) do
+    Process.put(@override_key, cached)
+    Process.put(@request_override_key, true)
+    :ok
+  end
+
+  defp cached_set(set_id) do
+    case :persistent_term.get(set_cache_key(set_id), :not_cached) do
+      :not_cached ->
+        fence = change_fence()
+
+        case Repo.get(SiteAssetSet, set_id, @public_opts) do
+          nil -> {:error, :asset_set_not_found}
+          asset_set -> set_cache_since(asset_set, fence)
+        end
+
+      cached ->
+        {:ok, cached}
+    end
   end
 
   @doc "Returns the process-local set installed by `with_set/2`, if any."

@@ -72,6 +72,23 @@ defmodule Brando.Tenant.ServedHosts.DNS do
     |> combine()
   end
 
+  @doc """
+  One address family of `host` (`:inet` or `:inet6`), asked with `resolve`
+  (as `:inet_res.resolve/5`): `{:ok, []}` for a name with none of that
+  family or that does not exist, `{:error, reason}` for a lookup that failed,
+  with the reasons of `lookup/1`. `Brando.Sites.DeployConfig` checks deploy
+  targets with it.
+  """
+  @spec lookup_family(String.t(), :inet | :inet6, function()) :: {:ok, [:inet.ip_address()]} | {:error, atom()}
+  def lookup_family(host, family, resolve) when is_binary(host) and is_function(resolve, 5) do
+    name = host |> String.trim_trailing(".") |> String.downcase()
+
+    case read_family(name, Keyword.fetch!(@families, family), resolve) do
+      {:ok, addresses} -> {:ok, addresses}
+      {:error, reason} -> {:error, reason(reason)}
+    end
+  end
+
   defp combine(read) do
     addresses = for {_family, {:ok, addresses}} <- read, address <- addresses, do: address
     unread = for {family, {:error, reason}} <- read, do: {family, reason(reason)}

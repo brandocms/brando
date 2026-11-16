@@ -9,9 +9,11 @@ defmodule Brando.Doctor.Checks.StaticPaths do
   (`Brando.Plug.SiteAssets.static_file?/1`). A prefix only `only:` names is
   answered with the build's 404 page; one only `static_paths/0` names gets the
   404 page too, after a trip through the endpoint. The check reads the
-  endpoint's source as `Brando.Doctor.Checks.Robots` does; without it, in a
-  release, it can't compare the lists and says so, but still warns when the
-  web module has no `static_paths/0`.
+  endpoint's source as `Brando.Doctor.Checks.Robots` does, so it compares the
+  lists where that source is, as in development. A release has no source and
+  keeps no record of the options a plug was compiled with (its beams are
+  stripped of debug info), so there the check is skipped, saying it runs in
+  development, but still warns when the web module has no `static_paths/0`.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
@@ -29,15 +31,17 @@ defmodule Brando.Doctor.Checks.StaticPaths do
   def run(_context) do
     if Brando.Tenant.enabled?() and Enum.any?(Brando.Tenant.Registry.list_sites(), &Site.local_delivery?/1) do
       {source, _file} = Robots.endpoint_source()
-      evaluate(Robots.static_only(source), static_paths())
+      only = if source, do: Robots.static_only(source), else: :no_source
+      evaluate(only, static_paths())
     else
       skipped(dgettext("doctor", "no site is served by this installation"))
     end
   end
 
   @doc """
-  Turns the endpoint's `only:` (`Brando.Doctor.Checks.Robots.static_only/1`)
-  and the web module's `static_paths/0` (nil without one) into a result.
+  Turns the endpoint's `only:` (`Brando.Doctor.Checks.Robots.static_only/1`,
+  or `:no_source` without the endpoint's source) and the web module's
+  `static_paths/0` (nil without one) into a result.
   """
   def evaluate(only, static_paths)
 
@@ -48,6 +52,15 @@ defmodule Brando.Doctor.Checks.StaticPaths do
           "doctor",
           "define static_paths/0 in the web module with the endpoint's Plug.Static only: list, and pass it as only:"
         )
+    )
+  end
+
+  def evaluate(:no_source, _static_paths) do
+    skipped(
+      dgettext(
+        "doctor",
+        "runs where the endpoint's source can be read, as in development: a release has no source to read Plug.Static's only: from"
+      )
     )
   end
 

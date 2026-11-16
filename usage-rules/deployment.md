@@ -29,10 +29,10 @@ check never passes and the deploy stalls on the new colour.
 Florist builds a standard Mix release in Docker, copies
 `/opt/app/_build/prod/<app>-<version>.tar.gz` out of the image and migrates
 with `bin/<app> eval "MyApp.ReleaseTasks.migrate"`. `mix brando.install`
-creates `MyApp.ReleaseTasks` (`migrate/0`, `rollback/2`, `migrate_tenants/0`)
-and adds a release for the app to `mix.exs` with
-`steps: [:assemble, :tar]`, which writes that tarball. Its tasks lift the
-console logger's burst limit, so migrating an empty database logs every
+creates `MyApp.ReleaseTasks` (`migrate/0`, `rollback/2`, `migrate_tenants/0`,
+`resave_entries/1`) and adds a release for the app to `mix.exs` with
+`steps: [:assemble, :tar]`, which writes that tarball. Its migration tasks
+lift the console logger's burst limit, so migrating an empty database logs every
 migration rather than stopping partway through. An existing
 ReleaseTasks module and release definition are kept, with a notice when the
 module has no `migrate/0` or the release does not write the tarball.

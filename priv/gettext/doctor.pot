@@ -461,6 +461,16 @@ msgstr ""
 msgid "%{package} not installed"
 msgstr ""
 
+#: lib/brando/doctor/checks/soft_delete_repo.ex
+#, elixir-autogen, elixir-format
+msgid "%{repo} has Brando's soft-delete functions"
+msgstr ""
+
+#: lib/brando/doctor/checks/soft_delete_repo.ex
+#, elixir-autogen, elixir-format
+msgid "%{repo} lacks Brando's soft-delete functions, so nothing can be deleted"
+msgstr ""
+
 #: lib/brando/doctor/checks/admin_routes.ex
 #, elixir-autogen, elixir-format
 msgid "%{schema}: %{helpers}"
@@ -871,6 +881,11 @@ msgstr ""
 msgid "Skipped"
 msgstr ""
 
+#: lib/brando/doctor/checks/soft_delete_repo.ex
+#, elixir-autogen, elixir-format
+msgid "Soft delete"
+msgstr ""
+
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format
 msgid "Static paths of served builds"
@@ -979,6 +994,11 @@ msgstr ""
 #: lib/brando/doctor/checks/image_srcsets.ex
 #, elixir-autogen, elixir-format
 msgid "add each size to default_config, or to the field's own sizes; until then its srcset is rendered without it"
+msgstr ""
+
+#: lib/brando/doctor/checks/soft_delete_repo.ex
+#, elixir-autogen, elixir-format
+msgid "add use Brando.SoftDelete.Repo to %{repo}, after use Ecto.Repo"
 msgstr ""
 
 #: lib/brando/doctor/checks/oban.ex
@@ -1655,6 +1675,11 @@ msgstr ""
 #: lib/brando/doctor/checks/admin_css.ex
 #, elixir-autogen, elixir-format
 msgid "run pnpm install in assets/backend"
+msgstr ""
+
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "runs where the endpoint's source can be read, as in development: a release has no source to read Plug.Static's only: from"
 msgstr ""
 
 #: lib/brando/doctor/checks/configuration.ex

@@ -67,9 +67,61 @@ defmodule Brando.SoftDelete.Query do
   @unreachable_key {__MODULE__, :unreachable}
 
   @doc """
-  Clean up and delete all expired soft deleted entries
+  Clean up and delete all expired soft deleted entries, one schema at a time.
+
+  A schema whose purge fails is logged and returns `{:error, schema}`, and
+  the others are still purged. Before a schema's expired rows are deleted, its
+  context's optional `before_purge(schema, ids)` runs in the same transaction,
+  to clear what still refers to them (`Brando.Pages.before_purge/2`). A row
+  that something else still refers to is kept for the next run, and is not a
+  failure.
   """
-  def clean_up_soft_deletions, do: Enum.map(list_soft_delete_schemas(), &clean_up_schema/1)
+  def clean_up_soft_deletions, do: Enum.map(list_soft_delete_schemas(), &try_clean_up_schema/1)
+
+  defp try_clean_up_schema(schema) do
+    case clean_up_schema(schema) do
+      {:error, reason} ->
+        Logger.error(
+          "[Brando.SoftDelete] Purging #{inspect(schema)}#{environment()} failed: #{describe_rollback(reason)}"
+        )
+
+        {:error, schema}
+
+      result ->
+        result
+    end
+  rescue
+    error ->
+      Logger.error(
+        "[Brando.SoftDelete] Purging #{inspect(schema)}#{environment()} failed: #{describe_error(error, __STACKTRACE__)}"
+      )
+
+      {:error, schema}
+  end
+
+  # A hook's rollback, by its kind only: it may hold a row's values
+  defp describe_rollback(%Ecto.Changeset{data: %struct{}}), do: "rolled back with an invalid #{inspect(struct)}"
+  defp describe_rollback(reason) when is_atom(reason), do: "rolled back with #{inspect(reason)}"
+  defp describe_rollback(_reason), do: "rolled back"
+
+  @doc "Where a purge runs, for its log lines: the site and environment, if any."
+  def environment do
+    case {Brando.Tenant.current_site_key(), Brando.Tenant.current_environment_key()} do
+      {nil, nil} -> ""
+      {site, environment} -> " in site #{site}, environment #{environment}"
+    end
+  end
+
+  @doc """
+  An error of a purge, for its log line: a database error's code, table and
+  constraint, without its message, which may quote a row's values; any other
+  error's message and `stacktrace`.
+  """
+  def describe_error(%Postgrex.Error{postgres: %{code: code} = postgres}, _stacktrace) do
+    [code, postgres[:table], postgres[:constraint]] |> Enum.reject(&is_nil/1) |> Enum.join(" ")
+  end
+
+  def describe_error(error, stacktrace), do: Exception.format(:error, error, stacktrace)
 
   @doc """
   Runs `fun`, one purge of several environments, each calling
@@ -151,20 +203,89 @@ defmodule Brando.SoftDelete.Query do
         where: fragment("? < current_timestamp - interval '30 day'", t.deleted_at)
 
     Repo.transaction(fn ->
-      purged = if Brando.Activity.logged?(schema), do: Repo.all(query), else: []
+      # Locked, so a restore waits for the purge, and deleted by id, so the
+      # rows deleted are the rows the hook was given
+      ids = query |> select([t], t.id) |> lock("FOR UPDATE") |> Repo.all()
+      purged = if Brando.Activity.logged?(schema), do: Repo.all(from t in schema, where: t.id in ^ids), else: []
 
-      ids = query |> select([t], t.id) |> Repo.all()
+      deleted = purge_ids(schema, ids)
 
-      if schema.__trait__(Brando.Trait.Revisioned) do
-        Enum.each(ids, &Brando.Revisions.delete_entry_revisions(schema, &1))
+      for entry <- purged, entry.id in deleted do
+        Brando.Activity.deleted(entry, :system, false, %{"purged" => true})
       end
 
-      Brando.Notes.entries_purged(schema, ids)
-
-      result = Repo.delete_all(query)
-      Enum.each(purged, &Brando.Activity.deleted(&1, :system, false, %{"purged" => true}))
-      result
+      {length(deleted), nil}
     end)
+  end
+
+  # The ids of the rows deleted
+  defp purge_ids(schema, ids) do
+    case in_savepoint(fn -> purge_rows(schema, ids) end) do
+      :ok -> ids
+      {:referenced, _constraint} -> purge_one_by_one(schema, ids)
+    end
+  end
+
+  defp purge_rows(schema, ids) do
+    if schema.__trait__(Brando.Trait.Revisioned) do
+      Enum.each(ids, &Brando.Revisions.delete_entry_revisions(schema, &1))
+    end
+
+    Brando.Notes.entries_purged(schema, ids)
+    before_purge(schema, ids)
+    Repo.delete_all(from t in schema, where: t.id in ^ids)
+  end
+
+  # A row something still refers to (a user who created a page) is kept: each
+  # row is tried on its own, and one whose delete hits a foreign key is rolled
+  # back, hook and all. Its next purge tries it again.
+  defp purge_one_by_one(schema, ids) do
+    {deleted, constraints} = Enum.reduce(ids, {[], []}, &purge_one(schema, &1, &2))
+
+    if constraints != [] do
+      Logger.info(
+        "[Brando.SoftDelete] Kept #{length(constraints)} expired #{inspect(schema)}#{environment()}, " <>
+          "still referred to: #{constraints |> Enum.uniq() |> Enum.sort() |> Enum.join(", ")}"
+      )
+    end
+
+    deleted
+  end
+
+  defp purge_one(schema, id, {deleted, constraints}) do
+    case in_savepoint(fn -> purge_rows(schema, [id]) end) do
+      :ok -> {[id | deleted], constraints}
+      {:referenced, constraint} -> {deleted, [constraint | constraints]}
+    end
+  end
+
+  # A foreign-key violation rolls back to the savepoint, and the transaction
+  # goes on. Any other error is raised, and fails the schema's purge.
+  defp in_savepoint(fun) do
+    Repo.repo().query!("SAVEPOINT brando_soft_delete_purge")
+    fun.()
+    Repo.repo().query!("RELEASE SAVEPOINT brando_soft_delete_purge")
+    :ok
+  rescue
+    error in Postgrex.Error ->
+      case error do
+        %{postgres: %{code: :foreign_key_violation} = postgres} ->
+          Repo.repo().query!("ROLLBACK TO SAVEPOINT brando_soft_delete_purge")
+          Repo.repo().query!("RELEASE SAVEPOINT brando_soft_delete_purge")
+          {:referenced, postgres[:constraint]}
+
+        error ->
+          reraise error, __STACKTRACE__
+      end
+  end
+
+  defp before_purge(_schema, []), do: :ok
+
+  defp before_purge(schema, ids) do
+    context = schema.__modules__().context
+
+    if Code.ensure_loaded?(context) and function_exported?(context, :before_purge, 2),
+      do: context.before_purge(schema, ids)
   end
 
   # `kept` counts, by provider, the videos left without asking it once it

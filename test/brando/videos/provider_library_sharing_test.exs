@@ -515,6 +515,24 @@ defmodule Brando.Videos.ProviderLibrarySharingTest do
   end
 
   describe "purging soft-deleted videos" do
+    test "an environment whose purge fails does not stop the others, and the job fails", %{sites: sites} do
+      old = DateTime.add(DateTime.utc_now(:second), -31, :day)
+
+      # In every environment the images table is gone, which fails that
+      # schema's purge, and an expired page, a later schema, waits
+      for {_name, site} <- sites do
+        SQL.query!(Repo.repo(), ~s(DROP TABLE "#{site_prefix(site)}"."images" CASCADE))
+        as_site(site, fn -> Factory.insert(:page, deleted_at: old) end)
+      end
+
+      log = capture_log(fn -> assert {:error, _} = perform_job(Brando.Worker.SoftDeletePurger, %{}) end)
+
+      for {_name, site} <- sites do
+        assert log =~ "Purging Brando.Images.Image in site #{site.key}, environment production failed: undefined_table"
+        as_site(site, fn -> assert Repo.aggregate(Brando.Pages.Page, :count) == 0 end)
+      end
+    end
+
     test "keeps a video whose holders cannot be told, for the next run", %{sites: sites, held: held} do
       broken = site("Broken", "nv-broken", nil, tables: :unreadable)
       as_site(sites.alpha, fn -> expire(held.alpha) end)

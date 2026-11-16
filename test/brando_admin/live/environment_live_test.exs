@@ -68,6 +68,21 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     %{site: site, production: production}
   end
 
+  test "lists the live environment first, then the others by name", %{conn: conn, site: site, production: production} do
+    {:ok, staging} = Environments.create_environment(site, %{name: "Staging", key: "staging"}, creator: :system)
+    {:ok, preview} = Environments.create_environment(site, %{name: "Preview", key: "preview"}, creator: :system)
+
+    {:ok, _view, html} = live(conn, "/admin/config/environments")
+
+    rows =
+      html
+      |> LazyHTML.from_document()
+      |> LazyHTML.query(".environment-list tbody tr")
+      |> LazyHTML.attribute("id")
+
+    assert rows == Enum.map([production, preview, staging], &"environment-#{&1.id}")
+  end
+
   # Audit F02: which site answers on a host is the installation's decision.
   describe "binding a host" do
     setup %{site: site} do
@@ -1157,21 +1172,42 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     end
 
     # A long domain is clipped in its one-line field: its state line shows it
-    # whole, as each redirect host's line does
-    test "the domain's state line names the domain, as a redirect host's does", %{conn: conn, served: served} do
+    # whole. Several redirect hosts share one field, so each line names its own.
+    test "the domain's state line names the domain only when its field clips it; a redirect host's always",
+         %{conn: conn, served: served} do
+      long = "autumn-campaign-landing-pages.acme.test"
+
       {:ok, served} =
         Registry.update_environment(served, %{redirect_hosts: ["old.acme.test"]}, actor: :system)
 
       {:ok, view, _html} = live(conn, "/admin/config/environments")
+      domain_line = "#environment-#{served.id} form #environment-host-status-#{served.id}"
+      redirect_line = "#environment-host-status-#{served.id}-#{Base.url_encode64("old.acme.test", padding: false)}"
 
-      for {id, host} <- [
-            {"environment-host-status-#{served.id}", "www.acme.test"},
-            {"environment-host-status-#{served.id}-#{Base.url_encode64("old.acme.test", padding: false)}",
-             "old.acme.test"}
-          ] do
-        assert view |> element("#environment-#{served.id} form ##{id} .environment-host-status__host") |> render() =~
-                 host
-      end
+      # The field shows the domain: the line under it is the state alone
+      assert has_element?(view, domain_line, "Served")
+      refute has_element?(view, "#{domain_line} .environment-host-status__host")
+
+      assert has_element?(
+               view,
+               "#environment-#{served.id} form #{redirect_line} .environment-host-status__host",
+               "old.acme.test"
+             )
+
+      # A typed domain not saved yet: the line describes the saved one, so names it
+      typed(view, served, %{
+        "shown_redirect_hosts" => "old.acme.test",
+        "domain" => "new.acme.test",
+        "redirect_hosts" => "old.acme.test"
+      })
+
+      assert field_value(view, served, ~s(input[name="domain"])) == "new.acme.test"
+      assert has_element?(view, "#{domain_line} .environment-host-status__host", "www.acme.test")
+
+      {:ok, _served} = Registry.update_environment(served, %{domain: long}, actor: :system)
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      assert has_element?(view, "#{domain_line} .environment-host-status__host", long)
     end
 
     test "a host stored with capitals or spaces shows its state", %{conn: conn, served: served} do

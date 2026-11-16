@@ -371,6 +371,47 @@ defmodule Brando.PagesTest do
     assert rendered_to_string(~H'<Brando.HTML.fragment fragment={@partials["footer"]} />') == ""
   end
 
+  describe "as :system" do
+    test "creates a page and a fragment with the creator named separately" do
+      user = Factory.insert(:random_user)
+      params = %{title: "Setup", uri: "setup", language: "en", template: "default.html", status: :published}
+
+      assert {:ok, page} = Pages.create_page(params, :system, creator: user)
+      assert page.creator_id == user.id
+      # Written as the system, so nobody edited it
+      assert is_nil(page.updated_by_id)
+
+      assert {:ok, fragment} =
+               Pages.create_fragment(
+                 %{title: "Footer", key: "footer", parent_key: "setup", language: "en", status: :published},
+                 :system,
+                 creator: user.id
+               )
+
+      assert fragment.creator_id == user.id
+    end
+
+    test "without a creator, a page is refused on its creator" do
+      params = %{title: "Setup", uri: "setup", language: "en", template: "default.html", status: :published}
+
+      assert {:error, changeset} = Pages.create_page(params, :system)
+      assert {"can't be blank", _} = changeset.errors[:creator_id]
+    end
+
+    test "updates and duplicates a page, keeping its creator" do
+      user = Factory.insert(:random_user)
+      params = %{title: "Setup", uri: "setup", language: "en", template: "default.html", status: :published}
+      {:ok, page} = Pages.create_page(params, :system, creator: user)
+
+      assert {:ok, updated} = Pages.update_page(page.id, %{title: "Set up"}, :system)
+      assert {updated.title, updated.creator_id, updated.updated_by_id} == {"Set up", user.id, nil}
+
+      assert {:ok, copy} = Pages.duplicate_page(page.id, :system)
+      refute copy.id == page.id
+      assert copy.creator_id == user.id
+    end
+  end
+
   test "breadcrumbs are computed on create and update" do
     user = Factory.insert(:random_user)
 

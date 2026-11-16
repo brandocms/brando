@@ -78,7 +78,11 @@ validated more loosely; see [Drafts](blueprints.md#drafts). See
 `:system`, and saves that only change `rendered_*` columns, leave them alone.
 
 * `required:`: whether every entry needs a creator. Default `true`. An
-  insert made as `:system` must then set `creator_id` itself.
+  insert made as `:system` then names its creator separately, with
+  `creator:` (a user or a user id) among the create function's options, as
+  in `Brando.Pages.create_page(params, :system, creator: user)`, or on a
+  changeset it builds for that user. Rows cast with the entry, such as its
+  vars or a menu's items, get the same creator.
 * `derived:`: fields a pipeline writes on the user's behalf, such as image
   sizes. A save changing only those is not an edit, and the admin form takes
   no value for one it has no input for.
@@ -354,6 +358,7 @@ trait MyApp.Trait.Searchable,
 ```
 
 The compiler must export `generate_code/2`; the trait's own is then not
-called. `compile_with:` is not part of the trait's options. A trait that adds
+called, and the Blueprint depends on the trait at runtime only. `compile_with:`
+is not part of the trait's options. A trait that adds
 no fields can use `compile_with: Brando.Trait.NoopCompiler`. Brando's built-in
 traits choose their compilers themselves.

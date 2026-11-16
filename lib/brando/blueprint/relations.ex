@@ -128,9 +128,10 @@ defmodule Brando.Blueprint.Relations do
   @doc """
   Casts every relation declaration into `changeset` in declaration order.
   """
-  @spec run_cast_relations(Changeset.t(), [Relation.t()], term()) :: Changeset.t()
-  def run_cast_relations(changeset, relations, user) do
-    Enum.reduce(relations, changeset, fn rel, cs -> run_cast_relation(rel, cs, user) end)
+  @spec run_cast_relations(Changeset.t(), [Relation.t()], term(), keyword()) :: Changeset.t()
+  def run_cast_relations(changeset, relations, user, opts \\ []) do
+    nested_opts = Keyword.take(opts, [:creator])
+    Enum.reduce(relations, changeset, fn rel, cs -> run_cast_relation(rel, cs, user, nested_opts) end)
   end
 
   @doc """
@@ -139,14 +140,22 @@ defmodule Brando.Blueprint.Relations do
   Relations without casting enabled leave the changeset unchanged. Empty
   `has_many`, `many_to_many`, and `entries` values clear optional associations
   and add a required error for associations declared with `required: true`.
+  `nested_opts` are passed to the changesets of cast `has_one`, `has_many` and
+  `entries` rows.
   """
-  @spec run_cast_relation(Relation.t() | map(), Changeset.t(), term()) :: Changeset.t()
+  @spec run_cast_relation(Relation.t() | map(), Changeset.t(), term(), keyword()) :: Changeset.t()
+  def run_cast_relation(relation, changeset, user, nested_opts \\ [])
 
   ##
   ## has_one
 
-  def run_cast_relation(%{type: :has_one, name: name, opts: %{cast: true, module: module} = opts}, changeset, user) do
-    with_opts = [with: &module.changeset(&1, &2, user)]
+  def run_cast_relation(
+        %{type: :has_one, name: name, opts: %{cast: true, module: module} = opts},
+        changeset,
+        user,
+        nested_opts
+      ) do
+    with_opts = [with: &module.changeset(&1, &2, user, nil, nested_opts)]
     merged_opts = Keyword.merge(to_changeset_opts(:has_one, opts), with_opts)
 
     cast_assoc(changeset, name, merged_opts)
@@ -155,14 +164,20 @@ defmodule Brando.Blueprint.Relations do
   ##
   ## belongs_to
 
-  def run_cast_relation(%{type: :belongs_to, name: name, opts: %{cast: true, module: _module} = opts}, changeset, _user) do
+  def run_cast_relation(
+        %{type: :belongs_to, name: name, opts: %{cast: true, module: _module} = opts},
+        changeset,
+        _user,
+        _nested_opts
+      ) do
     cast_assoc(changeset, name, to_changeset_opts(:belongs_to, opts))
   end
 
   def run_cast_relation(
         %{type: :belongs_to, name: name, opts: %{cast: :with_user, module: module} = opts},
         changeset,
-        user
+        user,
+        _nested_opts
       ) do
     with_opts = [with: &module.changeset(&1, &2, user)]
     merged_opts = Keyword.merge(to_changeset_opts(:belongs_to, opts), with_opts)
@@ -170,7 +185,7 @@ defmodule Brando.Blueprint.Relations do
     cast_assoc(changeset, name, merged_opts)
   end
 
-  def run_cast_relation(%{type: :belongs_to, name: name, opts: %{cast: cast_opts} = opts}, changeset, user) do
+  def run_cast_relation(%{type: :belongs_to, name: name, opts: %{cast: cast_opts} = opts}, changeset, user, _nested_opts) do
     with_opts =
       case Keyword.get(cast_opts, :with) do
         {with_mod, with_fun, with_user: true} ->
@@ -186,7 +201,12 @@ defmodule Brando.Blueprint.Relations do
 
   ##
   ## many_to_many
-  def run_cast_relation(%{type: :many_to_many, name: name, opts: %{cast: true, module: module} = opts}, changeset, _user) do
+  def run_cast_relation(
+        %{type: :many_to_many, name: name, opts: %{cast: true, module: module} = opts},
+        changeset,
+        _user,
+        _nested_opts
+      ) do
     if empty_collection_param?(relation_param(changeset, name)) do
       clear_or_require_assoc(changeset, name, opts)
     else
@@ -204,14 +224,19 @@ defmodule Brando.Blueprint.Relations do
 
   ##
   ## has_many
-  def run_cast_relation(%{type: :has_many, name: name, opts: %{cast: true, module: module} = opts}, changeset, user) do
+  def run_cast_relation(
+        %{type: :has_many, name: name, opts: %{cast: true, module: module} = opts},
+        changeset,
+        user,
+        nested_opts
+      ) do
     required = Map.get(opts, :required, false)
     opts = Map.put(opts, :required, required)
 
     if empty_collection_param?(relation_param(changeset, name)) do
       clear_or_require_assoc(changeset, name, opts)
     else
-      opts = Map.put(opts, :with, &module.changeset(&1, &2, user, &3, []))
+      opts = Map.put(opts, :with, &module.changeset(&1, &2, user, &3, nested_opts))
 
       cast_assoc(
         changeset,
@@ -223,7 +248,7 @@ defmodule Brando.Blueprint.Relations do
 
   ##
   ## embeds_one
-  def run_cast_relation(%{type: :embeds_one, name: name, opts: opts}, changeset, _user) do
+  def run_cast_relation(%{type: :embeds_one, name: name, opts: opts}, changeset, _user, _nested_opts) do
     # A hack to remove an embeds_one, specifically an image
     case relation_param(changeset, name) do
       {:ok, ""} ->
@@ -245,7 +270,7 @@ defmodule Brando.Blueprint.Relations do
 
   ##
   ## embeds_many
-  def run_cast_relation(%{type: :embeds_many, name: name, opts: opts}, changeset, _user) do
+  def run_cast_relation(%{type: :embeds_many, name: name, opts: opts}, changeset, _user, _nested_opts) do
     case relation_param(changeset, name) do
       {:ok, ""} ->
         if Map.get(opts, :required) do
@@ -261,7 +286,7 @@ defmodule Brando.Blueprint.Relations do
 
   ##
   ## entries
-  def run_cast_relation(%{type: :entries, name: name, opts: %{module: module} = opts}, changeset, user) do
+  def run_cast_relation(%{type: :entries, name: name, opts: %{module: module} = opts}, changeset, user, nested_opts) do
     required = Map.get(opts, :required, false)
     opts = Map.put(opts, :required, required)
 
@@ -273,7 +298,7 @@ defmodule Brando.Blueprint.Relations do
         name,
         to_changeset_opts(:has_many, opts) ++
           [
-            with: &module.changeset(&1, &2, user, &3, []),
+            with: &module.changeset(&1, &2, user, &3, nested_opts),
             sort_param: :"sort_#{to_string(name)}_ids",
             drop_param: :"drop_#{to_string(name)}_ids"
           ]
@@ -283,7 +308,7 @@ defmodule Brando.Blueprint.Relations do
 
   ##
   ## catch all for non casted relations
-  def run_cast_relation(_, changeset, _user), do: changeset
+  def run_cast_relation(_, changeset, _user, _nested_opts), do: changeset
 
   defp relation_param(%{params: params}, name) when is_map(params) do
     string_name = to_string(name)

@@ -350,6 +350,21 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert %{addresses: [@here]} = ServedHosts.check()
       assert lines(file) == ["www.acme.test"]
     end
+
+    test "after a start, this server's addresses are looked up though no host needs a lookup",
+         %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file)
+      DNS.answer("localhost", [@here])
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+      assert lines(file) == ["www.acme.test"]
+
+      # Every host is in the file, so the new process looks none up
+      :persistent_term.erase({ServedHosts, :status})
+      restart()
+
+      assert %{addresses: [@here], hosts: %{"www.acme.test" => :served}} = ServedHosts.status()
+    end
   end
 
   # `{:incomplete, addresses, families, reasons}`: what
@@ -476,6 +491,102 @@ defmodule Brando.Tenant.ServedHostsTest do
 
       assert_receive {:served_hosts, %{hosts: %{"www.acme.test" => :served}}}
       assert File.read!(file) == "www.acme.test\n"
+    end
+
+    test "a timed-out lookup is retried once soon, then on the retry timer", %{path: file, site: site} do
+      # Long enough that the retry, armed in `bind/3`'s check, cannot fire
+      # before the answer below changes
+      put_test_env(ServedHosts, file: file, addresses: [@here], timeout_retry_interval: 300)
+      # As a caching resolver answers a name's first query too slowly
+      DNS.answer("new.acme.test", {:incomplete, [], [:inet], %{inet: :timeout}})
+      bind(site, "new", "new.acme.test")
+      assert %{hosts: %{"new.acme.test" => {:lookup_failed, %{inet: :timeout}}}} = ServedHosts.status()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+
+      DNS.answer("new.acme.test", {:error, :nxdomain})
+
+      assert_receive {:served_hosts, %{hosts: %{"new.acme.test" => :unresolved}}}, 1_000
+    end
+
+    test "the quick retry after a timeout runs once, and not for another failure", %{path: file, site: site} do
+      :persistent_term.put({NotifyingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver, timeout_retry_interval: 300)
+      DNS.answer("slow.acme.test", {:error, :timeout})
+      DNS.answer("broken.acme.test", {:incomplete, [], [:inet6], %{inet6: :server_failure}})
+      bind(site, "broken", "broken.acme.test")
+      bind(site, "slow", "slow.acme.test")
+      flush_lookups()
+
+      # The quick retry looks up the timed-out host alone, which times out
+      # again and so waits for the minute
+      assert_receive {:looked_up, "slow.acme.test"}, 1_000
+      ServedHosts.settled()
+      refute_receive {:looked_up, _host}, 600
+      assert %{hosts: %{"slow.acme.test" => {:lookup_failed, %{inet: :timeout}}}} = ServedHosts.status()
+    end
+
+    test "a host that times out while another's quick retry waits gets its own", %{path: file, site: site} do
+      :persistent_term.put({NotifyingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver, timeout_retry_interval: 300)
+      DNS.answer("first.acme.test", {:error, :timeout})
+      DNS.answer("second.acme.test", {:error, :timeout})
+      bind(site, "first", "first.acme.test")
+      bind(site, "second", "second.acme.test")
+      flush_lookups()
+
+      # The first host's retry, armed before the second timed out, retries it
+      # alone; the second waits its own interval
+      assert_receive {:looked_up, "first.acme.test"}, 1_000
+      refute_receive {:looked_up, "second.acme.test"}, 150
+      assert_receive {:looked_up, "second.acme.test"}, 1_000
+      ServedHosts.settled()
+      refute_receive {:looked_up, _host}, 600
+    end
+
+    test "the quick retry leaves alone an answer that came in before it, while a write runs",
+         %{path: file, site: site} do
+      :persistent_term.put({NotifyingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
+      test = self()
+      config = [file: file, addresses: [@here], resolver: NotifyingResolver, timeout_retry_interval: 300]
+      put_test_env(ServedHosts, config)
+      DNS.answer("slow.acme.test", {:error, :timeout})
+      bind(site, "slow", "slow.acme.test")
+      flush_lookups()
+
+      # A refresh looks the host up again before its quick retry, and the
+      # answer waits for a write that is held past the retry's time
+      DNS.answer("slow.acme.test", [@here])
+
+      put_test_env(
+        ServedHosts,
+        config ++
+          [
+            flush_interval: 20,
+            before_write: fn ->
+              send(test, {:writing, self()})
+
+              receive do
+                :write -> :ok
+              end
+            end
+          ]
+      )
+
+      refresh = Task.async(fn -> ServedHosts.registry_changed() end)
+      assert_receive {:writing, check}
+      release_write(check)
+      assert_receive {:looked_up, "slow.acme.test"}
+      assert_receive {:writing, flush}
+      refute_receive {:looked_up, "slow.acme.test"}, 600
+
+      put_test_env(ServedHosts, config)
+      release_write(flush)
+      Task.await(refresh)
+      assert %{hosts: %{"slow.acme.test" => :served}} = ServedHosts.settled()
+      assert lines(file) == ["slow.acme.test"]
     end
 
     test "of this server's addresses leaves them unknown: the last ones found count", %{path: file, site: site} do

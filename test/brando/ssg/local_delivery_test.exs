@@ -907,7 +907,7 @@ defmodule Brando.SSG.LocalDeliveryTest do
     end
 
     test "a request with a build's signed context, so a build is not made from the published one", context do
-      token = Context.sign(context.site, context.live)
+      token = Context.sign(context.site, context.live, nil)
 
       conn =
         :get

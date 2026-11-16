@@ -83,6 +83,7 @@ defmodule Brando.SSGBuildsTest do
          total_size: 5,
          url_count: 2,
          processed_urls: 2,
+         built_urls: 1,
          failed_urls: ["/broken (HTTP 500)"]
        }}
     end
@@ -268,6 +269,8 @@ defmodule Brando.SSGBuildsTest do
     assert failed.status == :failed
     assert failed.failed_urls == ["/broken (HTTP 500)"]
     assert failed.build_log =~ "Build failed"
+    # Of the two URLs requested, the one written
+    assert {failed.processed_urls, failed.url_count} == {1, 2}
   end
 
   test "requests the pages from the endpoint's listener, on whatever port it listens", context do
@@ -533,6 +536,31 @@ defmodule Brando.SSGBuildsTest do
 
       assert {:error, :invalid_deploy_target} = Deploy.deploy(build, runner: &recording_runner/3)
       refute_received {:command, _, _}
+    end
+
+    test "rsync to a host that cannot be looked up runs nothing, and the job is tried again", context do
+      put_test_env(DeployConfig,
+        resolver: fn _host, _family -> {:error, :timeout} end,
+        rsync_targets: ["deploy@static.example.test:/srv/sites/{site_key}"]
+      )
+
+      build = with_target(context.build, "rsync", "deploy@static.example.test:/srv/sites/#{context.site.key}")
+
+      assert {:error, :deploy_target_lookup_failed} = Deploy.deploy(build, runner: &recording_runner/3)
+      refute_received {:command, _, _}
+
+      assert {:error, :deploy_target_lookup_failed} =
+               perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
+
+      log = Builds.get_build(build.id).build_log
+      assert log =~ "host could not be looked up. It is tried again."
+
+      assert {:error, :deploy_target_lookup_failed} =
+               perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => "deploy"}, attempt: 3)
+
+      last = String.replace_prefix(Builds.get_build(build.id).build_log, log, "")
+      assert last =~ "host could not be looked up. That was the last attempt."
+      refute last =~ "tried again"
     end
 
     test "rsync into its own directory deploys", context do

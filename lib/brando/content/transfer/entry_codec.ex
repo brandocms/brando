@@ -449,10 +449,11 @@ defmodule Brando.Content.Transfer.EntryCodec do
     )
   end
 
+  @doc false
   # A page's trail is computed from its parents and the site's name
   # (`Brando.Pages.update_breadcrumbs/1`): a recompute is no edit.
-  defp without_derived(snapshot, %Brando.Pages.Page{}), do: Map.delete(snapshot, "breadcrumbs")
-  defp without_derived(snapshot, _entry), do: snapshot
+  def without_derived(snapshot, %Brando.Pages.Page{}), do: Map.delete(snapshot, "breadcrumbs")
+  def without_derived(snapshot, _entry), do: snapshot
 
   def records(%Brando.Content.Block{} = block) do
     [

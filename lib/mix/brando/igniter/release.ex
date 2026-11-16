@@ -55,14 +55,48 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp migrate_notice(igniter, project, zipper) do
-      case Igniter.Code.Function.move_to_def(zipper, :migrate, 0) do
+      igniter =
+        case Igniter.Code.Function.move_to_def(zipper, :migrate, 0) do
+          {:ok, _} ->
+            igniter
+
+          :error ->
+            Igniter.add_notice(igniter, """
+            #{inspect(project.app_module)}.ReleaseTasks has no migrate/0. Florist migrates the database with
+              bin/#{project.otp_app} eval "#{inspect(project.app_module)}.ReleaseTasks.migrate"
+            """)
+        end
+
+      resave_notice(igniter, project, zipper)
+    end
+
+    @doc """
+    A notice for an existing `<App>.ReleaseTasks` without `resave_entries/1`,
+    which the template has had since 0.55: an earlier application has no
+    release form of `mix brando.entries.resave` until it adds it. Nothing
+    when the module is missing (`plan/3` creates it) or has the function.
+    """
+    def resave_notice(igniter, project) do
+      case ProjectModule.find_module(igniter, Module.concat(project.app_module, ReleaseTasks)) do
+        {:ok, {igniter, _source, zipper}} -> resave_notice(igniter, project, zipper)
+        {:error, igniter} -> igniter
+      end
+    end
+
+    defp resave_notice(igniter, project, zipper) do
+      case Igniter.Code.Function.move_to_def(zipper, :resave_entries, 1) do
         {:ok, _} ->
           igniter
 
         :error ->
           Igniter.add_notice(igniter, """
-          #{inspect(project.app_module)}.ReleaseTasks has no migrate/0. Florist migrates the database with
-            bin/#{project.otp_app} eval "#{inspect(project.app_module)}.ReleaseTasks.migrate"
+          #{inspect(project.app_module)}.ReleaseTasks has no resave_entries/1, the release form of
+          mix brando.entries.resave. Add it next to migrate/0:
+            def resave_entries(opts \\\\ []) do
+              Brando.Content.Resave.run(opts)
+            end
+          A running release without it re-saves with
+            bin/#{project.otp_app} rpc "Brando.Content.Resave.run()"
           """)
       end
     end

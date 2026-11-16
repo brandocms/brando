@@ -48,10 +48,16 @@ defmodule Brando.Sites.Site do
   @required_fields [:name, :key, :languages, :default_language, :status, :delivery_mode]
   @optional_fields [:archived_at]
 
-  def changeset(site \\ %__MODULE__{}, attrs) do
+  def changeset(site \\ %__MODULE__{}, attrs), do: changeset(site, attrs, [])
+
+  @doc """
+  The site's changeset. `lookup_host: true`, for a save, also looks up an
+  rsync deploy target's host (`Brando.Sites.DeployConfig.changeset/4`).
+  """
+  def changeset(site, attrs, opts) do
     site
     |> cast(attrs, @required_fields ++ @optional_fields)
-    |> cast_deploy_config()
+    |> cast_deploy_config(opts)
     |> clear_published_build()
     |> validate_required(@required_fields)
     |> validate_length(:name, min: 1)
@@ -86,9 +92,9 @@ defmodule Brando.Sites.Site do
   def delivery_modes, do: @delivery_modes
 
   # After the key is cast: the site's destinations are bound to it
-  defp cast_deploy_config(changeset) do
+  defp cast_deploy_config(changeset, opts) do
     site_key = get_field(changeset, :key)
-    cast_embed(changeset, :deploy_config, with: &DeployConfig.changeset(&1, &2, site_key))
+    cast_embed(changeset, :deploy_config, with: &DeployConfig.changeset(&1, &2, site_key, opts))
   end
 
   # A site that no longer serves its build itself forgets it: turning local

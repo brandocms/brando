@@ -221,4 +221,62 @@ defmodule Brando.Trait.CreatorTest do
       refute Map.has_key?(cs.changes, :updated_by_id)
     end
   end
+
+  describe "creator: on nested rows" do
+    defp menu_params do
+      %{
+        title: "Main",
+        key: "creator-nested-#{System.unique_integer([:positive])}",
+        language: "en",
+        status: :published,
+        items: [
+          %{
+            key: "home",
+            status: :published,
+            sequence: 0,
+            link: %{type: :link, key: "link", label: "Home", link_type: :url, value: "/"}
+          }
+        ]
+      }
+    end
+
+    defp var_params, do: [%{type: :text, label: "Title", key: "title", value: "Hello"}]
+
+    defp global_set_params do
+      %{label: "System", key: "creator-nested-#{System.unique_integer([:positive])}", language: "en", vars: var_params()}
+    end
+
+    test "a :system create gives a menu's items and their links the named creator" do
+      user = Factory.insert(:random_user)
+
+      assert {:ok, menu} = Brando.Navigation.create_menu(menu_params(), :system, creator: user)
+      assert [item] = menu.items
+      assert {menu.creator_id, item.creator_id, item.link.creator_id} == {user.id, user.id, user.id}
+    end
+
+    test "a :system create gives a page's and a global set's vars the named creator" do
+      user = Factory.insert(:random_user)
+
+      assert {:ok, page} = Pages.create_page(page_params(%{vars: var_params()}), :system, creator: user)
+      assert [%{creator_id: page_var_creator}] = page.vars
+      assert {page.creator_id, page_var_creator} == {user.id, user.id}
+
+      assert {:ok, set} = Brando.Sites.create_global_set(global_set_params(), :system, creator: user.id)
+      assert [%{creator_id: set_var_creator}] = set.vars
+      assert {set.creator_id, set_var_creator} == {user.id, user.id}
+    end
+
+    test "a user actor stays the creator at every level, whatever creator: names" do
+      user = Factory.insert(:random_user)
+      other = Factory.insert(:random_user)
+
+      assert {:ok, menu} = Brando.Navigation.create_menu(menu_params(), user, creator: other)
+      assert [item] = menu.items
+      assert {menu.creator_id, item.creator_id, item.link.creator_id} == {user.id, user.id, user.id}
+
+      assert {:ok, page} = Pages.create_page(page_params(%{vars: var_params()}), user, creator: other)
+      assert [%{creator_id: page_var_creator}] = page.vars
+      assert {page.creator_id, page_var_creator} == {user.id, user.id}
+    end
+  end
 end

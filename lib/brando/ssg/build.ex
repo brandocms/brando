@@ -34,6 +34,8 @@ defmodule Brando.SSG.Build do
     field :file_count, :integer, default: 0
     field :total_size, :integer, default: 0
     field :url_count, :integer, default: 0
+    # The listed URLs requested while the build runs; once it has failed, the
+    # ones it wrote
     field :processed_urls, :integer, default: 0
     field :failed_urls, {:array, :string}, default: []
     field :auto_deploy, :boolean, default: false

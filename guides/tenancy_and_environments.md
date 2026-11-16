@@ -403,6 +403,13 @@ site admin role. A PostgreSQL advisory lock serializes creation for the key. If
 any database, seed, copy, assignment, or filesystem step fails, Brando removes
 the partial schemas, registry rows, and directories.
 
+The environments' domains and redirect hosts are bound last, once Staging is
+copied, so a request on them is the unknown host's 404 until the site is
+ready. A host that another environment already binds, or that the creator may
+not bind, is refused before any schema is created. One that another write
+binds while the site is provisioned is refused at the end, with none of the
+site's hosts bound, and the site is removed as after any other failed step.
+
 The default seeder, `Brando.Tenant.Seeder`, works in Production and, for each
 of the site's languages, creates an identity named after the site, an SEO
 record, and what `mix brando.setup` seeds for an installation without tenancy
@@ -477,7 +484,14 @@ setup code.
 Individual working environments can also be created with
 `Brando.Environments.create_environment/2`. It creates
 `tenant_{site}_{environment}`, runs all tenant migrations, writes an operation
-log, and compensates a failed schema creation or migration.
+log, and compensates a failed schema creation or migration. The migrations
+log their instructions at debug level here; `mix brando.migrate --tenants`
+prints them as before. The environment's domain and redirect hosts are bound
+as the last step, once its schema is migrated: until then a request on them
+is the unknown host's 404, and a create that fails leaves none of them bound.
+A host that another environment binds is refused before the schema is
+created, and one bound by another write while the migrations ran is refused
+at the end and the create undone.
 
 In `single` mode, the site key in the registry must match the configured
 `site_key`. `mix brando.setup` provisions that site, with the default
@@ -832,7 +846,12 @@ whatever `admit` says.
 
 Brando checks at boot, after every registry write (on every node, as
 [Several nodes](#several-nodes) describes), once a minute while a bound host
-waits for its DNS, and every five minutes otherwise. The slow check reads the
+waits for its DNS, and every five minutes otherwise. A host whose lookup
+timed out is looked up again once after five to ten seconds
+(`:timeout_retry_interval` in milliseconds), before the minute: a local
+caching resolver can take longer than a lookup allows to answer its first
+query for a name, and a name that does not exist then shows **Does not
+resolve** within seconds rather than a minute later. The slow check reads the
 file again, so a host another node sharing the path wrote over, during a
 blue/green switch, goes back in: without a lookup when this node saw it in the
 file or admitted it since it started, after admission otherwise. Nothing is
@@ -881,14 +900,16 @@ lookup timed out counts as one with no records, and a host is then admitted on
 the other family alone. Any module implementing
 `Brando.Tenant.ServedHosts.Resolver` can take its place. A host's result shows as soon as it answers; the answers
 of many hosts looked up together, as on a new server, are written to the file
-in one go. Without `addresses`, this server's are looked up once per check,
-and a lookup of them that fails keeps the ones found before, for an hour
+in one go. Without `addresses`, this server's are looked up once per check
+that looks a host up, and at the first check after a start, so the
+**Environments** screen names them before any host needs a lookup; a lookup of them that fails keeps the ones found before, for an hour
 after they were found: a server whose own lookup keeps failing, or cannot read
 one of the families, then admits no host until it answers again.
 
 The **Environments** screen shows each bound host's state beside the host:
-the domain's on the domain's line, then one line for each redirect host, led
-by its name:
+the domain's under its field, naming the saved domain only when it is too
+long for the field to show whole or the field holds a domain not saved yet, then one line for each redirect host, led by its
+name:
 **Served** when it is in the file, **Checking** while its first lookup runs,
 **Waiting for DNS** with what the host resolves to now and this server's
 addresses, **Does not resolve** when it has no address records, **Could not
@@ -1071,6 +1092,12 @@ Nodes that do not share it keep what they read at boot until they restart. A
 node cut off when a write happens keeps its copy until the next write or a
 restart.
 <!-- usage-rules:end -->
+
+Nodes do not answer a refresh. Where a step must wait for every node, as
+dropping the schema of an environment whose hosts were just released does,
+Brando waits for the time the other nodes take to hear and run it:
+`config :brando, :cache_sync_settle_ms`, 500 milliseconds by default. Raise it
+when a busy node takes longer to refresh.
 
 ## Per-site layouts and templates
 
@@ -1737,6 +1764,20 @@ Only non-live environments can be deleted:
 {:ok, _deleted} = Brando.Environments.delete_environment(staging)
 ```
 
+The environment's domain and redirect hosts are released first. Brando waits
+for every node to refresh its registry cache (see [Several nodes](#several-nodes))
+before it drops the schema, so a request on them from then on is the unknown
+host's 404. In `multi` mode it waits also for an environment that binds no
+host, as one released just before may still be routed by another node. When
+this node's cache still resolves one of the environment's hosts, Brando
+refreshes it once more; if the host still resolves, the delete returns
+`{:error, {:hosts_still_resolve, hosts}}` and the schema stays. When the
+schema cannot be dropped, the hosts are bound to the environment again. When
+one of them cannot be, because another environment took it meanwhile, the
+delete returns
+`{:error, {:schema_not_dropped, reason, {:hosts_released, domain, redirect_hosts}}}`:
+the schema is still there and those hosts are bound to no environment.
+
 Deleting an environment deletes its rows in the shared tables too: form
 submissions, entry drafts, assistant conversations, guidance versions, content
 proposals and transfer receipts. Those of an environment that was once live go
@@ -1832,10 +1873,13 @@ Vite manifest and critical CSS resolution follow the same active-set-first,
 release-fallback order, after an environment's own set
 ([A set per environment](#a-set-per-environment)). In multi-site mode caches are keyed by the full tenant
 prefix, so Production, Staging, and another site cannot share rendered content
-or manifests. Every queued static build snapshots the active asset-set record
-and deployment configuration at creation time. A later asset activation or
-target edit therefore affects new builds, never an artifact already being
-reviewed or deployed.
+or manifests. Every queued static build snapshots the asset set its
+environment uses and the deployment configuration at creation time. A later
+asset activation or target edit therefore affects new builds, never an
+artifact already being reviewed or deployed, nor a build still waiting to
+run: it copies the set it recorded and renders every page with it (with the
+release's `priv/static` when it recorded none). A build whose recorded set
+was deleted before it ran fails, saying so in its log, and publishes nothing.
 
 ### A set per environment
 
@@ -2227,6 +2271,25 @@ changes after the check, an SSH config alias, a public address behind NAT),
 so to limit the destinations anyone who may deploy can choose, list them in
 config (below).
 
+The host is looked up when a save sets the strategy or the target, not
+while the form is filled in, nor for a save that changes only other
+settings. Its IPv4 and IPv6 addresses are taken from the hosts file
+(`/etc/hosts`), and for a family the hosts file does not list, asked of the
+name servers in the system's resolver configuration through Erlang's
+`:inet_res`, with one limit of 3 seconds for both families together
+(`config :brando, Brando.Sites.DeployConfig, lookup_timeout:` in
+milliseconds). A name the name servers say does not exist, or that has no
+address records, passes, as an SSH config alias may name it; so does a
+name only the operating system's own resolver knows (mDNS, per-domain
+resolvers). A name server that fails or refuses the query, a query that
+times out, no name server to ask, or a lookup the limit cuts short refuses
+the save: the target says its host could not be looked up, and to try
+again. The answer is kept on that node for a minute, so saving again does
+not ask again; a failed lookup is not kept. Each deploy looks the host up
+again; when that lookup fails, the deploy fails and says so in the build's
+log, and a deploy or rollback started from the publishing screen is tried
+again.
+
 An S3 deploy deletes every key under its target before it uploads the build,
 with the application's one set of ExAws credentials. Its prefix may not hold
 `.`, `..` or empty segments, or `?`, `#`, `%`, `{`, `}`, `\` or spaces, and
@@ -2400,7 +2463,9 @@ as the application answered it, byte for byte:
   (`Brando.Utils.public_hostname/0`), naming the build's sitemap when it has one.
 - `sitemaps/sitemap.xml.gz` and the files it lists: the sitemap of the
   environment built, not the live one's, with its entries on the site's public
-  base URL, at the paths `robots.txt` names.
+  base URL, at the paths `robots.txt` names. A build without one (the
+  application has no sitemap module, or it produced no entries) says so in
+  its log.
 - `_redirects.json`: the site's redirects (below).
 - `assets/` and `media/`: the build's asset set and the site's media.
 

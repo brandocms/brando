@@ -24,6 +24,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Project
     alias Mix.Brando.Igniter.Release
     alias Mix.Brando.Igniter.RouteInventory
+    alias Mix.Brando.Igniter.SoftDeleteRepo
     alias Mix.Brando.Igniter.Source
     alias Mix.Brando.Install.Hosts
     alias Mix.Brando.Install.Options
@@ -57,6 +58,7 @@ if Code.ensure_loaded?(Igniter) do
         |> Docker.plan(project, tenancy.mode)
         |> Toolchain.plan(fresh?)
         |> Release.plan(project, existing: :keep)
+        |> SoftDeleteRepo.plan(project.repo)
         |> support_files(project)
         |> AgentFiles.plan()
         |> Assets.plan(project)

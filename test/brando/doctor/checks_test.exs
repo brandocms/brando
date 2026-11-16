@@ -1313,6 +1313,12 @@ defmodule Brando.Doctor.ChecksTest do
                Checks.StaticPaths.evaluate(:unknown, nil)
     end
 
+    test "without the endpoint's source, as in a release, is skipped saying it runs in development" do
+      assert %Result{status: :skipped, summary: summary} = Checks.StaticPaths.evaluate(:no_source, ~w(assets))
+      assert summary =~ "as in development"
+      assert %Result{status: :warning} = Checks.StaticPaths.evaluate(:no_source, nil)
+    end
+
     test "is skipped without a site served by the installation" do
       put_test_env(:tenancy_mode, :none)
       assert %Result{status: :skipped} = Checks.StaticPaths.run(Context.new([]))

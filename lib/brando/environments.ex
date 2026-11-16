@@ -26,6 +26,7 @@ defmodule Brando.Environments do
   alias Brando.Users.User
   alias Brando.Worker.EnvironmentCopy
   alias Brando.Worker.EnvironmentSetLive
+  alias Ecto.Changeset
 
   @public_prefix "public"
   @public_opts [prefix: @public_prefix]
@@ -33,8 +34,15 @@ defmodule Brando.Environments do
 
   @doc """
   Creates the public environment record and its PostgreSQL schema, clones the
-  content structure from `public`, then applies all tenant migrations. A failed
-  schema creation, structure clone, or migration is compensated.
+  content structure from `public`, then applies all tenant migrations, at
+  debug level. A failed schema creation, structure clone, or migration is
+  compensated.
+
+  The environment's `domain` and `redirect_hosts` are bound last, once its
+  schema is migrated, so a request on them is the unknown host's 404 until
+  the environment is ready. A host another environment binds is refused
+  before any schema work starts; one bound by another write while the
+  migrations ran is refused at the end, and the create is compensated.
   """
   @spec create_environment(Site.t(), map(), keyword()) ::
           {:ok, Environment.t()} | {:error, Ecto.Changeset.t() | term()}
@@ -47,11 +55,16 @@ defmodule Brando.Environments do
   end
 
   defp do_create_environment(%Site{} = site, attrs, opts) do
-    with {:ok, environment} <- Registry.create_environment(site, attrs, actor: opts[:creator] || opts[:actor]),
+    actor = opts[:creator] || opts[:actor]
+    {host_attrs, row_attrs} = split_hosts(attrs)
+
+    with :ok <- Registry.check_new_environment(site, attrs, actor: actor),
+         {:ok, environment} <- Registry.create_environment(site, row_attrs, actor: actor),
          prefix = Tenant.prefix(site, environment),
          :ok <- create_schema_or_compensate(environment, prefix),
          :ok <- clone_structure_or_compensate(environment, prefix, opts),
-         {:ok, _versions} <- migrate_or_compensate(site, environment, prefix) do
+         {:ok, _versions} <- migrate_or_compensate(site, environment, prefix),
+         {:ok, environment} <- bind_or_compensate(environment, host_attrs, prefix, actor) do
       log_operation!(site.id, :create,
         target_environment_id: environment.id,
         creator_id: creator_id(opts),
@@ -61,6 +74,96 @@ defmodule Brando.Environments do
       Cache.invalidate()
       announce(site.id)
       {:ok, environment}
+    end
+  end
+
+  @host_fields [:domain, :redirect_hosts, "domain", "redirect_hosts"]
+
+  @doc """
+  An environment's attributes as `{hosts, the rest}`: `domain` and
+  `redirect_hosts`, and everything else. A create writes the row without its
+  hosts and binds them last (`Brando.Tenant.Registry.bind_hosts/3`).
+  """
+  @spec split_hosts(map()) :: {map(), map()}
+  def split_hosts(attrs), do: {Map.take(attrs, @host_fields), Map.drop(attrs, @host_fields)}
+
+  @doc """
+  Releases the environments' domains and redirect hosts in one write, and
+  returns once every node has had time to refresh its registry cache for it
+  (`Brando.CacheSync.settle/0`): from then on a request on one of them is the
+  unknown host's 404, so their schemas can be dropped. Call it outside a
+  transaction. `{:error, {:hosts_not_released, reason}}` releases none.
+
+  In `:multi` it waits also when none is bound now: another node may still
+  route a host released just before. A host this node's cache still resolves
+  to one of the environments is refreshed once more, and one it still
+  resolves then returns `{:error, {:hosts_still_resolve, hosts}}`.
+  """
+  @spec release_hosts([Environment.t()]) :: :ok | {:error, term()}
+  def release_hosts(environments) do
+    bound = Enum.filter(environments, &hosts_bound?/1)
+
+    with :ok <- unbind(bound),
+         :ok <- ensure_unresolved(environments) do
+      if bound != [] or Tenant.mode() == :multi, do: Brando.CacheSync.settle(), else: :ok
+    end
+  end
+
+  defp unbind([]), do: :ok
+
+  defp unbind(bound) do
+    fn -> Enum.each(bound, &unbind_or_rollback/1) end
+    |> Repo.transaction()
+    |> case do
+      {:ok, :ok} -> :ok
+      {:error, reason} -> {:error, {:hosts_not_released, reason}}
+    end
+  end
+
+  # The cache refresh after the release runs after its commit, where a raise is
+  # logged and leaves this node's cache, and no other's, refreshed
+  defp ensure_unresolved(environments) do
+    with [_ | _] <- resolved_hosts(environments),
+         :ok <- refresh_registry_cache(),
+         [_ | _] = hosts <- resolved_hosts(environments) do
+      {:error, {:hosts_still_resolve, hosts}}
+    else
+      _released -> :ok
+    end
+  end
+
+  defp resolved_hosts(environments) do
+    ids = MapSet.new(environments, & &1.id)
+    cached = for %Site{environments: cached} <- Cache.list_sites(), environment <- cached, do: environment
+
+    (environments ++ Enum.filter(cached, &MapSet.member?(ids, &1.id)))
+    |> Enum.flat_map(&[&1.domain | &1.redirect_hosts || []])
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.filter(&resolves_to?(&1, ids))
+  end
+
+  defp resolves_to?(host, ids) do
+    Enum.any?([Cache.get_env_by_domain(host), Cache.get_redirect(host)], fn
+      {_site, %Environment{id: id}} -> MapSet.member?(ids, id)
+      nil -> false
+    end)
+  end
+
+  defp refresh_registry_cache do
+    Cache.invalidate()
+  rescue
+    error ->
+      Logger.error("[Brando.Environments] Could not refresh the registry cache: " <> Exception.message(error))
+      :ok
+  end
+
+  defp hosts_bound?(%Environment{domain: domain, redirect_hosts: hosts}), do: domain != nil or hosts not in [nil, []]
+
+  defp unbind_or_rollback(environment) do
+    case Registry.unbind_hosts(environment) do
+      {:ok, _environment} -> :ok
+      {:error, reason} -> Repo.rollback(reason)
     end
   end
 
@@ -109,7 +212,17 @@ defmodule Brando.Environments do
     |> migrate_environments()
   end
 
-  @doc "Deletes a non-live environment and its content schema."
+  @doc """
+  Deletes a non-live environment and its content schema.
+
+  Its domain and redirect hosts are released first, and every node given
+  time to refresh its registry cache (`Brando.CacheSync.settle/0`), before the
+  schema is dropped: a request on them from then on is the unknown host's
+  404. In `:multi` it waits also when the environment binds no host now
+  (`release_hosts/1`). When the drop fails, the hosts are bound again; when
+  they cannot be (another environment took one meanwhile), the error is
+  `{:schema_not_dropped, reason, {:hosts_released, domain, redirect_hosts}}`.
+  """
   @spec delete_environment(Environment.t(), keyword()) ::
           {:ok, Environment.t()} | {:error, term()}
   def delete_environment(environment, opts \\ [])
@@ -754,10 +867,13 @@ defmodule Brando.Environments do
     end
   end
 
+  # The hosts go first, on every node: a request that resolved one to the
+  # environment once its schema is gone would fail on a missing table
   defp delete_under_lock(site, environment_id, opts) do
     with %Environment{live: false} = environment <- Registry.get_environment(environment_id),
          prefix = Tenant.prefix(site, environment),
-         :ok <- Schema.drop(prefix),
+         :ok <- release_hosts([environment]),
+         :ok <- drop_or_rebind(environment, prefix),
          {:ok, deleted_environment} <- delete_registry_and_rows(environment, prefix) do
       # Its own asset set stays registered; the caches holding it as the
       # environment's go
@@ -774,6 +890,57 @@ defmodule Brando.Environments do
       nil -> {:error, :site_or_environment_not_found}
       {:error, _reason} = error -> error
     end
+  end
+
+  # The schema is still there, whole: the environment answers on its hosts
+  # again. When they cannot be bound again, the error says so with the drop's.
+  defp drop_or_rebind(environment, prefix) do
+    case Schema.drop(prefix) do
+      :ok ->
+        :ok
+
+      {:error, drop_reason} = error ->
+        case rebind_hosts(environment) do
+          :ok ->
+            error
+
+          {:error, reason} ->
+            Logger.error("[Brando.Environments] Could not bind the hosts of #{environment.key} again: #{inspect(reason)}")
+
+            {:error,
+             {:schema_not_dropped, drop_reason, {:hosts_released, environment.domain, environment.redirect_hosts || []}}}
+        end
+    end
+  end
+
+  # As they were stored: without today's validation of a host, and with the
+  # constraints that refuse one another environment took meanwhile
+  defp rebind_hosts(%Environment{domain: nil, redirect_hosts: hosts}) when hosts in [nil, []], do: :ok
+
+  defp rebind_hosts(environment) do
+    %{environment | domain: nil, redirect_hosts: []}
+    |> Changeset.change(domain: environment.domain, redirect_hosts: environment.redirect_hosts || [])
+    |> Changeset.unique_constraint(:domain)
+    |> Changeset.unique_constraint(:domain, name: :environments_domain_bound_once)
+    |> Changeset.unique_constraint(:redirect_hosts, name: :environments_redirect_hosts_bound_once)
+    |> Changeset.check_constraint(:redirect_hosts, name: :environments_redirect_hosts_need_domain)
+    |> update_rescued()
+    |> case do
+      {:ok, _environment} ->
+        refresh_registry_cache()
+
+      {:error, %Changeset{errors: errors}} ->
+        {:error, errors}
+
+      {:error, _exception} = error ->
+        error
+    end
+  end
+
+  defp update_rescued(changeset) do
+    Repo.update(changeset, @public_opts)
+  rescue
+    exception -> {:error, exception}
   end
 
   # Only this deletion takes the rows: the rollback and failure paths that remove
@@ -1009,8 +1176,33 @@ defmodule Brando.Environments do
     end
   end
 
+  # Last, once the schema is ready. A host bound meanwhile by another write
+  # (the trigger on `environments` holds it once) undoes the create, and so
+  # does a row deleted meanwhile.
+  defp bind_or_compensate(environment, host_attrs, prefix, actor) do
+    case bind_unless_deleted(environment, host_attrs, actor) do
+      {:ok, environment} ->
+        {:ok, environment}
+
+      :deleted ->
+        Schema.drop(prefix)
+        {:error, :environment_not_found}
+
+      {:error, changeset} ->
+        Schema.drop(prefix)
+        Registry.delete_environment(environment)
+        {:error, changeset}
+    end
+  end
+
+  defp bind_unless_deleted(environment, host_attrs, actor) do
+    Registry.bind_hosts(environment, host_attrs, actor: actor)
+  rescue
+    Ecto.StaleEntryError -> :deleted
+  end
+
   defp migrate_or_compensate(site, environment, prefix) do
-    case migrator().migrate(site, environment) do
+    case migrate_quietly(site, environment) do
       {:ok, versions} ->
         {:ok, versions}
 
@@ -1032,6 +1224,16 @@ defmodule Brando.Environments do
       {:ok, migrated} -> {:ok, Enum.reverse(migrated)}
       error -> error
     end
+  end
+
+  # A create from the admin would otherwise log every statement of every
+  # tenant migration at info. `mix brando.migrate --tenants` keeps its output.
+  defp migrate_quietly(site, environment) do
+    migrator = migrator()
+
+    if Code.ensure_loaded?(migrator) and function_exported?(migrator, :migrate, 3),
+      do: migrator.migrate(site, environment, log: :debug),
+      else: migrator.migrate(site, environment)
   end
 
   defp migrator do

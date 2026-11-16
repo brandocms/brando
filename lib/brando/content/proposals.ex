@@ -2529,7 +2529,7 @@ defmodule Brando.Content.Proposals do
     changed =
       for {_key, schema, entry_id, fingerprint} <- saved,
           entry = load!({schema, entry_id}, actor),
-          Transfer.entry_fingerprint(entry) != fingerprint,
+          not Transfer.entry_fingerprint?(entry, fingerprint),
           do: Catalog.describe(entry).title
 
     if changed != [],
@@ -3105,7 +3105,7 @@ defmodule Brando.Content.Proposals do
   def current!(proposal, actor, action \\ :update) do
     entries = Map.new(proposal.fingerprints, fn {target, _} -> {target, load!(target, actor, action: action)} end)
 
-    unless Enum.all?(entries, fn {target, entry} -> Transfer.entry_fingerprint(entry) == proposal.fingerprints[target] end),
+    unless Enum.all?(entries, fn {target, entry} -> Transfer.entry_fingerprint?(entry, proposal.fingerprints[target]) end),
            do:
              Error.fail!(
                dgettext("content_proposals", "Content changed after this proposal was prepared. Review it again.")

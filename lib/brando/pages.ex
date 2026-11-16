@@ -100,7 +100,15 @@ defmodule Brando.Pages do
     end
   end
 
-  mutation :delete, Page
+  # A trail leaves out a deleted parent: the live descendants' trails drop
+  # the trashed page
+  mutation :delete, Page do
+    fn entry ->
+      update_descendant_breadcrumbs(entry)
+      Brando.Cache.Query.evict_all(Page)
+      {:ok, entry}
+    end
+  end
 
   mutation :duplicate,
            {Page,
@@ -665,7 +673,9 @@ defmodule Brando.Pages do
   Breadcrumbs are stored as a list of `%{"title" => ..., "uri" => ...}` maps
   representing the path from the root page down to the current page.
   """
-  def update_breadcrumbs(%Page{} = page) do
+  def update_breadcrumbs(%Page{} = page), do: update_breadcrumbs(page, MapSet.new())
+
+  defp update_breadcrumbs(page, seen) do
     page = Brando.Repo.preload(page, [:parent], force: true)
     breadcrumbs = build_breadcrumbs(page)
 
@@ -674,11 +684,25 @@ defmodule Brando.Pages do
     |> Brando.Repo.update()
     |> case do
       {:ok, updated_page} ->
-        update_descendant_breadcrumbs(updated_page)
+        update_descendant_breadcrumbs(updated_page, seen)
         {:ok, updated_page}
 
       error ->
         error
+    end
+  end
+
+  @doc """
+  Bring the trails of a restored page and its live descendants up to date:
+  each of them takes the page back in. `Brando.Authorization.Boundary.restore/2`
+  calls this in the restore's transaction, and
+  `Brando.Revisions.set_entry_to_revision/5` in a revision restore's, which
+  would otherwise bring back the trail the revision holds.
+  """
+  def restored(%Page{} = page) do
+    with {:ok, page} <- update_breadcrumbs(page) do
+      Brando.Cache.Query.evict_all(Page)
+      {:ok, page}
     end
   end
 
@@ -714,7 +738,7 @@ defmodule Brando.Pages do
 
   defp build_breadcrumbs(%Page{} = page) do
     home_entry = %{"title" => Brando.Sites.site_name(page.language), "uri" => "/"}
-    ancestors = collect_ancestors(page, [])
+    ancestors = collect_ancestors(page, [], MapSet.new([page.id]))
 
     trail =
       Enum.map(ancestors ++ [page], fn
@@ -724,34 +748,69 @@ defmodule Brando.Pages do
     [home_entry | trail]
   end
 
-  defp collect_ancestors(%Page{parent_id: nil}, acc), do: acc
+  # `seen` holds the pages already on the trail: a parent cycle stored
+  # before cycles were refused ends the trail where it closes
+  defp collect_ancestors(%Page{parent_id: nil}, acc, _seen), do: acc
 
-  defp collect_ancestors(%Page{parent: %Ecto.Association.NotLoaded{}} = page, acc) do
+  defp collect_ancestors(%Page{parent: %Ecto.Association.NotLoaded{}} = page, acc, seen) do
     page = Brando.Repo.preload(page, [:parent])
-    collect_ancestors(page, acc)
+    collect_ancestors(page, acc, seen)
   end
 
-  defp collect_ancestors(%Page{parent: nil}, acc), do: acc
+  defp collect_ancestors(%Page{parent: nil}, acc, _seen), do: acc
 
   # A deleted parent has no address (its uri is obfuscated until it is
   # restored), so the trail goes past it
-  defp collect_ancestors(%Page{parent: parent}, acc) do
-    parent = Brando.Repo.preload(parent, [:parent])
-    collect_ancestors(parent, if(parent.deleted_at, do: acc, else: [parent | acc]))
+  defp collect_ancestors(%Page{parent: parent}, acc, seen) do
+    if MapSet.member?(seen, parent.id) do
+      acc
+    else
+      parent = Brando.Repo.preload(parent, [:parent])
+      collect_ancestors(parent, if(parent.deleted_at, do: acc, else: [parent | acc]), MapSet.put(seen, parent.id))
+    end
   end
 
-  defp update_descendant_breadcrumbs(%Page{} = page) do
-    children =
+  # A deleted child keeps its stored trail, but the walk goes through it: the
+  # live pages under it have trails too. `seen` holds the pages the walk came
+  # down through, so a parent cycle ends it.
+  defp update_descendant_breadcrumbs(%Page{} = page, seen \\ MapSet.new()) do
+    if MapSet.member?(seen, page.id) do
+      :ok
+    else
+      seen = MapSet.put(seen, page.id)
+
       Page
       |> where([p], p.parent_id == ^page.id)
-      |> where([p], is_nil(p.deleted_at))
       |> Brando.Repo.all()
-
-    Enum.each(children, fn child ->
-      child = %{child | parent: page}
-      update_breadcrumbs(child)
-    end)
+      |> Enum.each(&update_trail(&1, seen))
+    end
   end
+
+  defp update_trail(page, seen \\ MapSet.new())
+  defp update_trail(%Page{deleted_at: nil} = page, seen), do: update_breadcrumbs(page, seen)
+  defp update_trail(page, seen), do: update_descendant_breadcrumbs(page, seen)
+
+  @doc """
+  Called by the trash purge (`Brando.SoftDelete.Query.clean_up_soft_deletions/0`)
+  in its transaction, before it deletes the expired rows `ids` of `schema`.
+  For pages, the child pages and fragments that remain lose the reference,
+  which would block the delete, and the children's trails are recomputed.
+  """
+  def before_purge(Page, ids) do
+    Fragment |> where([f], f.page_id in ^ids) |> Brando.Repo.update_all(set: [page_id: nil])
+
+    {_, children} =
+      Page
+      |> where([p], p.parent_id in ^ids and p.id not in ^ids)
+      |> select([p], p)
+      |> Brando.Repo.update_all(set: [parent_id: nil])
+
+    Enum.each(children, &update_trail/1)
+    Brando.Cache.Query.evict_all(Page)
+    Brando.Cache.Query.evict_all(Fragment)
+  end
+
+  def before_purge(_schema, _ids), do: :ok
 
   defp build_fragments_query do
     from f in Fragment,
