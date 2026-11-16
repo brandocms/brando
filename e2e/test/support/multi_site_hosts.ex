@@ -29,6 +29,7 @@ defmodule E2E.MultiSiteHosts do
   alias Brando.Repo
   alias Brando.Tenant
   alias Brando.Tenant.{Access, Cache, Registry, ServedHosts}
+  alias Ecto.Adapters.SQL
 
   @server {203, 0, 113, 10}
   @elsewhere {198, 51, 100, 24}
@@ -199,10 +200,10 @@ defmodule E2E.MultiSiteHosts do
   # application's tables: a copy of the seeded ones
   defp create_schema(environment) do
     prefix = Tenant.prefix(Registry.get_site(environment.site_id), environment)
-    Ecto.Adapters.SQL.query!(E2eProject.Repo, ~s(CREATE SCHEMA "#{prefix}"))
+    SQL.query!(E2eProject.Repo, ~s(CREATE SCHEMA "#{prefix}"))
 
     %{rows: rows} =
-      Ecto.Adapters.SQL.query!(
+      SQL.query!(
         E2eProject.Repo,
         "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
       )
@@ -213,12 +214,12 @@ defmodule E2E.MultiSiteHosts do
     |> Enum.each(fn table ->
       escaped = String.replace(table, "\"", "\"\"")
 
-      Ecto.Adapters.SQL.query!(
+      SQL.query!(
         E2eProject.Repo,
         ~s|CREATE TABLE "#{prefix}"."#{escaped}" (LIKE public."#{escaped}" INCLUDING ALL)|
       )
 
-      Ecto.Adapters.SQL.query!(
+      SQL.query!(
         E2eProject.Repo,
         ~s(INSERT INTO "#{prefix}"."#{escaped}" SELECT * FROM public."#{escaped}")
       )

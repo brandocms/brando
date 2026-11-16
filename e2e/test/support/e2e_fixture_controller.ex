@@ -1,6 +1,8 @@
 defmodule E2EFixtureController do
   use E2eProjectWeb, :controller
 
+  alias E2E.MultiSiteHosts
+
   def login(conn, %{"email" => email}) do
     user = Brando.Users.get_user!(%{matches: %{email: email}})
 
@@ -18,7 +20,7 @@ defmodule E2EFixtureController do
     end
 
     # The multi-site-hosts-unwritable fixture leaves the served hosts file's folder read-only
-    E2E.MultiSiteHosts.restore_file_dir()
+    MultiSiteHosts.restore_file_dir()
 
     # Build the scenario
     scenario =
@@ -128,15 +130,15 @@ defmodule E2EFixtureController do
           create_video_library_folders()
 
         # Two sites with hosts in every served-hosts state, on a server
-        # started with BRANDO_E2E_MULTI_SITE=1 (E2E.MultiSiteHosts)
+        # started with BRANDO_E2E_MULTI_SITE=1 (MultiSiteHosts)
         "multi-site-hosts" ->
-          E2E.MultiSiteHosts.setup(get_admin_user())
+          MultiSiteHosts.setup(get_admin_user())
 
         "multi-site-hosts-site-admin" ->
-          E2E.MultiSiteHosts.setup(get_admin_user(), site_admin: true)
+          MultiSiteHosts.setup(get_admin_user(), site_admin: true)
 
         "multi-site-hosts-unwritable" ->
-          E2E.MultiSiteHosts.setup(get_admin_user(), unwritable: true)
+          MultiSiteHosts.setup(get_admin_user(), unwritable: true)
       end
 
     # Log the user in
