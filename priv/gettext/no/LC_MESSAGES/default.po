@@ -2491,6 +2491,11 @@ msgstr "Arkivet ble gjenopprettet som %{name}."
 msgid "Archive the current live environment and promote %{name}?"
 msgstr "Arkivere gjeldende live-miljø og forfremme %{name}?"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Archived"
+msgstr "Arkivert"
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Archives live in the same database and do not replace external backups."
@@ -3104,6 +3109,7 @@ msgid "Build, preview, deploy, and roll back versioned static artifacts"
 msgstr "Bygg, forhåndsvis, publiser og rull tilbake versjonerte statiske artefakter"
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Building"
 msgstr "Bygger"
@@ -5763,6 +5769,7 @@ msgid "Deploy via %{strategy} to %{target}"
 msgstr "Publiser via %{strategy} til %{target}"
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Deployed"
 msgstr "Publisert"
@@ -7350,6 +7357,7 @@ msgstr "Facebook, LinkedIn"
 #: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -13379,6 +13387,7 @@ msgstr "Legg kopiering i kø nå"
 
 #: lib/brando_admin/live/forms/submissions_live.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-format, elixir-autogen
@@ -13463,6 +13472,11 @@ msgstr "Leser strukturerte data …"
 #, elixir-autogen, elixir-format
 msgid "Reading the entry…"
 msgstr "Leser oppføringen …"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Ready"
+msgstr "Klar"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -15843,6 +15857,21 @@ msgstr "Servere nettstedets bygg på %{environment} igjen? Forespørslene bytter
 msgid "Served"
 msgstr "Betjenes"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served by this installation"
+msgstr "Levert av denne installasjonen"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served by this installation on %{domain}."
+msgstr "Levert av denne installasjonen på %{domain}."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served by this installation once the live environment has a domain."
+msgstr "Levert av denne installasjonen når live-miljøet har et domene."
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "Served once the entry is published. This is the last saved version."
@@ -17708,6 +17737,16 @@ msgstr "Listen blir som den er."
 #, elixir-autogen, elixir-format
 msgid "The live environment cannot be deleted."
 msgstr "Live-miljøet kan ikke slettes."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The live environment's domain answers from %{version}, the published build."
+msgstr "Live-miljøets domene svarer fra %{version}, det publiserte bygget."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The live environment's domain answers from the published build. Until a build is deployed, it answers as it does now."
+msgstr "Live-miljøets domene svarer fra det publiserte bygget. Til et bygg er publisert, svarer det som nå."
 
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
@@ -21378,6 +21417,11 @@ msgstr "er ikke aktivert for dette miljøet"
 msgid "is not your current password"
 msgstr "er ikke ditt nåværende passord"
 
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "is turned off on this installation"
+msgstr "er slått av på denne installasjonen"
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "it already has that name"
@@ -21755,6 +21799,11 @@ msgstr "påkr."
 #, elixir-autogen, elixir-format
 msgid "retrying"
 msgstr "prøver igjen"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "served by this installation"
+msgstr "levert av denne installasjonen"
 
 #: lib/brando_admin/components/form/block_field/module_picker.ex
 #, elixir-autogen, elixir-format

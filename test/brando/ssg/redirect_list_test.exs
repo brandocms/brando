@@ -4,6 +4,16 @@ defmodule Brando.SSG.RedirectListTest do
   alias Brando.Sites.Redirect
   alias Brando.SSG.RedirectList
 
+  test "names the languages and the default language it was made with" do
+    assert {list, []} = RedirectList.build([], [], [])
+
+    assert %{"version" => 1, "languages" => languages, "default_language" => default} =
+             list |> Jason.encode!() |> Jason.decode!()
+
+    assert languages == Brando.Languages.codes()
+    assert default == to_string(Brando.Languages.default_language())
+  end
+
   test "a relative target is resolved against its source before the query-only check" do
     rules = [{"en", %Redirect{from: "/docs/start$", to: "docs/start?ref=old", code: 301}}]
 

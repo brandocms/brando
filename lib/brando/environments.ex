@@ -140,9 +140,11 @@ defmodule Brando.Environments do
   domains, each with its redirect hosts, a missing one included, so switching
   back restores both. Each
   environment keeps its own frontend asset set, so the host then serves the
-  set the incoming environment used. On a
-  `:static` site the domains stay where they are: the deployed build decides
-  what a host serves.
+  set the incoming environment used. A `:static` site the installation serves
+  itself (the deploy strategy `:local`) swaps them the same way, and its host
+  keeps answering from the published build until the next deploy. On any
+  other `:static` site the domains stay where they are: the deployed build
+  decides what a host serves.
   """
   @spec set_live(Environment.t(), keyword()) :: {:ok, Environment.t()} | {:error, term()}
   def set_live(environment, opts \\ [])
@@ -188,8 +190,8 @@ defmodule Brando.Environments do
   defp set_live_for_site(nil, _environment, _opts), do: {:error, :site_not_found}
 
   # The site's public base URL is its live environment's domain
-  # (`Brando.Utils.public_hostname/0`). On dynamic delivery the domains swap
-  # and it stays; on static delivery it is the incoming environment's.
+  # (`Brando.Utils.public_hostname/0`). Where the domains swap (`carry_host/2`)
+  # it stays; on other static delivery it is the incoming environment's.
   defp public_domain_moved?(%Site{environments: environments}, live_environment) do
     previous = Enum.find(environments, & &1.live)
     Environment.normalize_host(previous && previous.domain) != Environment.normalize_host(live_environment.domain)
@@ -621,20 +623,28 @@ defmodule Brando.Environments do
     end)
   end
 
-  # On dynamic delivery the site's host follows the live pointer: the
-  # environment going live and the outgoing live one swap domains, each with
-  # its redirect hosts, a missing one included, so a switch back restores
-  # both. The hosts are already this site's, bound by a superuser, so this
-  # binds nothing new and needs no authority to bind a host
-  # (`Brando.Tenant.Registry`). The rows are locked so a domain changed
-  # meanwhile is not undone. On static delivery the deployed
+  # On dynamic delivery, and on static delivery the installation serves
+  # itself (`Brando.SSG.LocalDelivery`, which answers the live environment's
+  # domain from the published build), the site's host follows the live
+  # pointer: the environment going live and the outgoing live one swap
+  # domains, each with its redirect hosts, a missing one included, so a
+  # switch back restores both. The hosts are already this site's, bound by a
+  # superuser, so this binds nothing new and needs no authority to bind a
+  # host (`Brando.Tenant.Registry`). The rows are locked so a domain changed
+  # meanwhile is not undone. On static delivery to another host the deployed
   # build decides what a host serves, and its forms post to the environment it
   # was built from (`Brando.Forms.SubmissionController`), so nothing moves.
   #
   # Returns the ids of the rows it locked, which are the only rows the switch
   # may write after it: a row committed later can be held by a hosts save
   # waiting for the host lock this transaction holds. Nil when it locks none.
-  defp carry_host(%Site{delivery_mode: :dynamic}, %Environment{id: id, site_id: site_id}) do
+  defp carry_host(%Site{} = site, %Environment{} = environment) do
+    if site.delivery_mode == :dynamic or Site.local_delivery?(site),
+      do: swap_hosts(environment),
+      else: nil
+  end
+
+  defp swap_hosts(%Environment{id: id, site_id: site_id}) do
     # Every row of the site, in id order, before the host lock: the switch
     # then writes them all (`live: false`), and a hosts save holds its row
     # before it takes the host lock
@@ -663,8 +673,6 @@ defmodule Brando.Environments do
 
     Enum.map(rows, & &1.id)
   end
-
-  defp carry_host(%Site{}, %Environment{}), do: nil
 
   defp site_environments(site_id, nil), do: from(candidate in Environment, where: candidate.site_id == ^site_id)
   defp site_environments(_site_id, ids), do: from(candidate in Environment, where: candidate.id in ^ids)

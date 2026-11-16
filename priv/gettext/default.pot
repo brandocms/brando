@@ -2489,6 +2489,11 @@ msgstr ""
 msgid "Archive the current live environment and promote %{name}?"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Archived"
+msgstr ""
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Archives live in the same database and do not replace external backups."
@@ -3102,6 +3107,7 @@ msgid "Build, preview, deploy, and roll back versioned static artifacts"
 msgstr ""
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Building"
 msgstr ""
@@ -5761,6 +5767,7 @@ msgid "Deploy via %{strategy} to %{target}"
 msgstr ""
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Deployed"
 msgstr ""
@@ -7348,6 +7355,7 @@ msgstr ""
 #: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -13377,6 +13385,7 @@ msgstr ""
 
 #: lib/brando_admin/live/forms/submissions_live.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-format, elixir-autogen
@@ -13460,6 +13469,11 @@ msgstr ""
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "Reading the entry…"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Ready"
 msgstr ""
 
 #: lib/brando_admin/live/ai/assistant_live.ex
@@ -15841,6 +15855,21 @@ msgstr ""
 msgid "Served"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served by this installation"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served by this installation on %{domain}."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served by this installation once the live environment has a domain."
+msgstr ""
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "Served once the entry is published. This is the last saved version."
@@ -17703,6 +17732,16 @@ msgstr ""
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "The live environment cannot be deleted."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The live environment's domain answers from %{version}, the published build."
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The live environment's domain answers from the published build. Until a build is deployed, it answers as it does now."
 msgstr ""
 
 #: lib/brando_admin/live/sites/notifications_live.ex
@@ -21374,6 +21413,11 @@ msgstr ""
 msgid "is not your current password"
 msgstr ""
 
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "is turned off on this installation"
+msgstr ""
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "it already has that name"
@@ -21750,6 +21794,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/integrations_live.ex
 #, elixir-autogen, elixir-format
 msgid "retrying"
+msgstr ""
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "served by this installation"
 msgstr ""
 
 #: lib/brando_admin/components/form/block_field/module_picker.ex

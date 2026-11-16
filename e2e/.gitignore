@@ -38,3 +38,6 @@ assets/frontend/.yalc
 
 # test_e2e_parallel.sh shard logs and media
 /tmp/
+
+# Static builds the publishing fixtures write
+/sites/

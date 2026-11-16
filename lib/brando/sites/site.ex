@@ -34,6 +34,9 @@ defmodule Brando.Sites.Site do
     field :archived_at, :utc_datetime_usec
     field :delivery_mode, Ecto.Enum, values: @delivery_modes, default: :dynamic
     field :provider_library_group, :string
+    # The version the installation serves itself (`Brando.SSG.LocalDelivery`),
+    # set by a deploy, never cast
+    field :published_build, :string
 
     embeds_one :deploy_config, DeployConfig, on_replace: :update
 
@@ -49,6 +52,7 @@ defmodule Brando.Sites.Site do
     site
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> cast_deploy_config()
+    |> clear_published_build()
     |> validate_required(@required_fields)
     |> validate_length(:name, min: 1)
     |> validate_format(:key, @key_format)
@@ -86,6 +90,24 @@ defmodule Brando.Sites.Site do
     site_key = get_field(changeset, :key)
     cast_embed(changeset, :deploy_config, with: &DeployConfig.changeset(&1, &2, site_key))
   end
+
+  # A site that no longer serves its build itself forgets it: turning local
+  # delivery on again serves nothing until the next deploy. Forced, so a
+  # struct read before that deploy still clears it.
+  defp clear_published_build(changeset) do
+    if local_delivery?(apply_changes(changeset)),
+      do: changeset,
+      else: force_change(changeset, :published_build, nil)
+  end
+
+  @doc """
+  Whether `site` is set to be served by the installation itself: static
+  delivery with the deploy strategy `:local`. It serves a build once one is
+  published (`:published_build`), and only while the site is active.
+  """
+  @spec local_delivery?(t()) :: boolean()
+  def local_delivery?(%__MODULE__{delivery_mode: :static, deploy_config: %DeployConfig{strategy: :local}}), do: true
+  def local_delivery?(%__MODULE__{}), do: false
 
   defp validate_languages(changeset) do
     languages = get_field(changeset, :languages, [])

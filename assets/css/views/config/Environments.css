@@ -176,8 +176,10 @@
     gap: 12px;
   }
 
-  /* Copying into the live environment has to be ticked */
-  .environment-replace-live {
+  /* Copying into the live environment has to be ticked; a checkbox and its
+     label elsewhere sit on one line the same way */
+  .environment-replace-live,
+  .environment-check {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -315,6 +317,103 @@
   .environment-panel:not(.environment-overview) th:nth-child(4),
   .environment-panel:not(.environment-overview) td:nth-child(4) {
     width: 18%;
+  }
+
+  /* The build history has six columns: the version, its source, its
+     progress, its state, its time and the actions, which wrap */
+  .environment-panel.publishing-builds th:nth-child(1),
+  .environment-panel.publishing-builds td:nth-child(1) {
+    width: 20%;
+  }
+
+  .environment-panel.publishing-builds th:nth-child(2),
+  .environment-panel.publishing-builds td:nth-child(2) {
+    width: 13%;
+  }
+
+  .environment-panel.publishing-builds th:nth-child(3),
+  .environment-panel.publishing-builds td:nth-child(3) {
+    width: 9%;
+  }
+
+  .environment-panel.publishing-builds th:nth-child(4),
+  .environment-panel.publishing-builds td:nth-child(4) {
+    width: 18%;
+  }
+
+  .environment-panel.publishing-builds th:nth-child(5),
+  .environment-panel.publishing-builds td:nth-child(5) {
+    width: 14%;
+  }
+
+  .environment-panel.publishing-builds th:nth-child(6),
+  .environment-panel.publishing-builds td:nth-child(6) {
+    width: 26%;
+  }
+
+  .publishing-builds td.environment-actions {
+    white-space: normal;
+
+    .btn {
+      margin: 4px 0 4px 8px;
+    }
+  }
+
+  .publishing-builds td:nth-child(3),
+  .publishing-builds td:nth-child(5) {
+    @font mono;
+    color: color-mix(in srgb, var(--brando-ink) 72%, transparent);
+    font-size: var(--brando-text-xs);
+  }
+
+  /* The log opens under the row's buttons, at the size of the rest of it */
+  .publishing-builds td.environment-actions details {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: var(--brando-text-sm);
+    text-align: left;
+    vertical-align: middle;
+
+    summary {
+      cursor: pointer;
+      color: color-mix(in srgb, var(--brando-ink) 72%, transparent);
+    }
+
+    pre {
+      max-width: 40ch;
+      margin: 8px 0 0;
+      overflow-x: auto;
+      font-size: var(--brando-text-xs);
+      white-space: pre-wrap;
+    }
+  }
+
+  /* A description, as under the deployment target's heading */
+  .publishing-builds > header p {
+    max-width: 62ch;
+    margin: 0;
+    color: color-mix(in srgb, var(--brando-ink) 55%, transparent);
+    font-size: var(--brando-text-md);
+    line-height: 1.55;
+  }
+
+  .publishing-served {
+    display: block;
+    margin-top: 6px;
+    color: var(--brando-muted);
+    font-size: var(--brando-text-xs);
+  }
+
+  /* The building and the scheduling forms, apart from the summary and each
+     other */
+  .publishing-overview > header + form {
+    margin-top: 24px;
+  }
+
+  .publishing-overview > form + form {
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--brando-line-soft);
   }
 
   /* Timestamps and states are data, not prose. */
@@ -861,6 +960,10 @@
 
     td code {
       margin-left: 0;
+    }
+
+    .publishing-builds td.environment-actions .btn {
+      margin: 4px 8px 4px 0;
     }
 
     .environment-log__note--empty {

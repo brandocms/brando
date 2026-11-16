@@ -7,8 +7,10 @@ defmodule Brando.Forms.Delivery do
   and its `protect_from_forgery`. A static site (`delivery_mode: :static`) has
   no backend serving the page and no session to tie a token to, so its forms
   post to the backend's `/__brando/forms/static/<site>/<environment>/<key>`
-  (`Brando.Router.form_routes/0`), where the request's origin must be one of
-  the site's own domains instead.
+  (`Brando.Router.form_routes/0`), where the request's origin must be the
+  domain of the environment the build was made from instead, or, for a site
+  the installation serves itself, any of the site's
+  (`Brando.Forms.SubmissionController`).
 
   Block HTML is rendered when an entry is saved, so `{% form %}` cannot know the
   visitor's token. It stores the dynamic action and a `$csrftoken` placeholder

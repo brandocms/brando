@@ -46,6 +46,7 @@ defmodule Brando.Doctor do
     Checks.Colors,
     Checks.Sitemap,
     Checks.Robots,
+    Checks.StaticPaths,
     Checks.JSONLD,
     Checks.AltText,
     Checks.MediaPaths,

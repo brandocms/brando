@@ -4,6 +4,11 @@ defmodule Brando.Plug.SiteAssets do
   uses (its own set, else its site's active set), or from a set a shared
   preview has pinned.
 
+  On the host of a site the installation serves a static build for, the
+  build answers first (`Brando.SSG.LocalDelivery`), and only the paths that
+  keep reaching Phoenix, and the files the build lacks that this plug or the
+  release's `Plug.Static` has (`static_file?/1`), get this far.
+
   Place this plug before the application's release `Plug.Static`. Cached
   `MapSet`s reject misses without touching the filesystem; misses fall through
   unchanged so release assets remain the fallback. Pinned sets only serve the
@@ -38,6 +43,8 @@ defmodule Brando.Plug.SiteAssets do
   import Plug.Conn, only: [get_resp_header: 2, halt: 1, put_resp_header: 3, register_before_send: 2, send_file: 3]
 
   alias Brando.Assets.SiteAssets
+  alias Brando.Assets.SiteAssets.Capture
+  alias Brando.SSG.LocalDelivery
   alias Brando.Tenant.Frontend
 
   @behaviour Plug
@@ -47,7 +54,55 @@ defmodule Brando.Plug.SiteAssets do
   def init(opts), do: opts
 
   @impl Plug
-  def call(%Plug.Conn{method: method} = conn, _opts) when method in @allowed_methods do
+  def call(%Plug.Conn{method: method} = conn, opts) when method in @allowed_methods do
+    case LocalDelivery.call(conn, opts) do
+      %Plug.Conn{halted: true} = served -> served
+      conn -> serve_asset(conn)
+    end
+  end
+
+  def call(conn, _opts), do: conn
+
+  @doc """
+  Whether the endpoint's asset pipeline would answer `conn` with a file: this
+  plug, from the asset set the host uses or another environment's, or the
+  release's `Plug.Static`, from the release's compiled static directory
+  (`Brando.Assets.SiteAssets.Capture.release_root/0`) under one of the web
+  module's `static_paths/0`, which a generated endpoint passes as its `only:`.
+  A web module without `static_paths/0` leaves the release's directory alone
+  to decide. The two lists should be the same (the System check's "Static
+  paths of served builds" compares them): a request this lets through that
+  `Plug.Static` does not serve gets the build's 404 page from
+  `Brando.Plug.Tenant`.
+
+  On a host that serves a published build (`Brando.SSG.LocalDelivery`), a file
+  the build lacks reaches the pipeline when this says it has one: the admin's
+  bundles, a preview's newer assets and those of pages Phoenix renders there.
+  """
+  @spec static_file?(Plug.Conn.t()) :: boolean()
+  def static_file?(%Plug.Conn{} = conn) do
+    case relative_path(conn.path_info) do
+      nil ->
+        false
+
+      relative_path ->
+        release_file?(relative_path) or match?({file, _cache} when is_binary(file), serve_path(conn, relative_path))
+    end
+  end
+
+  defp release_file?(relative_path) do
+    static_path?(relative_path) and File.regular?(Path.join(Capture.release_root(), relative_path))
+  end
+
+  defp static_path?(relative_path) do
+    web_module = Brando.config(:web_module)
+
+    if is_atom(web_module) and Code.ensure_loaded?(web_module) and function_exported?(web_module, :static_paths, 0),
+      do: hd(Path.split(relative_path)) in web_module.static_paths(),
+      else: true
+  end
+
+  defp serve_asset(conn) do
     conn = allow_any_origin(conn)
 
     with relative_path when is_binary(relative_path) <- relative_path(conn.path_info),
@@ -61,8 +116,6 @@ defmodule Brando.Plug.SiteAssets do
       _miss -> conn
     end
   end
-
-  def call(conn, _opts), do: conn
 
   @no_cors_roots ["admin", "__livepreview"]
   @static_statuses [200, 206, 304]

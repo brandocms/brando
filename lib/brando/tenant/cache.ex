@@ -72,6 +72,7 @@ defmodule Brando.Tenant.Cache do
     |> Enum.each(&:persistent_term.erase/1)
 
     :persistent_term.erase(@cache_keys_key)
+    Brando.SSG.LocalDelivery.forget_except([])
     :ok
   end
 
@@ -160,6 +161,11 @@ defmodule Brando.Tenant.Cache do
     |> Enum.each(&:persistent_term.erase/1)
 
     :persistent_term.put(@cache_keys_key, current_keys)
+
+    # What a build no longer served kept in memory goes with it
+    Brando.SSG.LocalDelivery.forget_except(
+      for site <- sites, Brando.SSG.LocalDelivery.serving?(site), do: {site.id, site.published_build}
+    )
   end
 
   defp site_entries(%Site{} = site) do

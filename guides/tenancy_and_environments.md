@@ -65,7 +65,7 @@ not need to set `delivery_mode`; Phoenix serves them dynamically.
 | Mode | Public delivery | Content publication |
 | --- | --- | --- |
 | `:dynamic` | Phoenix serves each request from the site's current live environment | A live switch takes the site's host to the new live environment, so the change is visible on the next request, on every node (see [Several nodes](#several-nodes)); no static build or deploy is required |
-| `:static` | A generated HTML build is intended to be served by a static host or CDN | Content becomes public only after an SSG build is generated and deployed |
+| `:static` | A generated HTML build, served by the installation itself (strategy `:local`) or by a static host or CDN (`rsync`, `s3`) | Content becomes public only after an SSG build is generated and deployed; a deploy or rollback served by the installation takes effect on the next request, on every node |
 
 For `:dynamic`, the request host resolves the site and live environment,
 `Brando.Plug.Tenant` installs that environment's database prefix, and the
@@ -82,11 +82,16 @@ preview a completed artifact, deploy it, or roll back by redeploying an older
 artifact. Builds receive monotonic versions (`v1`, `v2`, …) per site and run on
 the serial `ssg_builds` Oban queue.
 
-Setting the flag still does not move public traffic by itself. The public host
-continues to reach Phoenix until its web server or CDN is pointed at the
-configured static target. This separation makes a first static build safe to
-preview before the infrastructure cutover and keeps changing delivery mode
-independent from changing content environments.
+Setting the flag still does not move public traffic by itself. With the
+`rsync` or `s3` strategy, the public host continues to reach Phoenix until its
+web server or CDN is pointed at the configured static target. With the
+strategy **Served by this installation** (`:local`), the live environment's
+domain keeps answering from Phoenix until the first build is deployed, and
+from the published build after that
+([Served by this installation](#served-by-this-installation)). Either way a
+first static build is safe to preview before anything changes for visitors,
+and changing delivery mode stays independent from changing content
+environments.
 
 An asset set and a delivery mode answer different questions:
 
@@ -96,8 +101,9 @@ An asset set and a delivery mode answer different questions:
   snapshot are intended to be the public site.
 
 Choose `:dynamic` when editors should publish directly through Phoenix. Choose
-`:static` when publication should create a reviewable, immutable artifact and
-the public site can be served by rsync- or S3-backed static infrastructure.
+`:static` when publication should create a reviewable, immutable artifact,
+served by the installation itself or by rsync- or S3-backed static
+infrastructure.
 Changing the field later does not move traffic or activate an asset set; treat
 that change and the corresponding infrastructure cutover as separate
 operations.
@@ -706,8 +712,9 @@ What is stored or cached names the site's public base URL instead,
 `Brando.Utils.public_hostname/0`: the live environment's domain, whichever
 environment the process works in, and whatever the site's status, so what a
 suspended site stores is right when it is reactivated. An environment's own
-host moves (on dynamic delivery a live switch swaps two environments' domains,
-a copy moves content to another environment) and nothing stored is rendered
+host moves (on dynamic delivery, and on static delivery the installation
+serves itself, a live switch swaps two environments' domains, a copy moves
+content to another environment) and nothing stored is rendered
 again then; the live domain moves with the live flag. So JSON-LD a block
 renders into `rendered_<field>` (the `json_ld` filter and `<.json_ld>`) and the
 sitemap files name the public base URL, the identity cache keeps a service's
@@ -719,9 +726,10 @@ When the public base URL changes, every environment of the site renders again
 the entries whose blocks emit JSON-LD, in their modules' code (shared modules
 and the environment's overrides of them included) or in their refs. That is a
 change of the live environment's domain through `Brando.Tenant.Registry`, and a
-live switch on a `:static` site, where the domains stay put and the incoming
-environment's becomes the public one (on `:dynamic` delivery the domains swap
-and the public base URL stays). The renders are queued once the change has
+live switch on a `:static` site delivered elsewhere, where the domains stay
+put and the incoming environment's becomes the public one (on `:dynamic`
+delivery, and on a `:static` site the installation serves itself, the domains
+swap and the public base URL stays). The renders are queued once the change has
 committed, each environment searched as the system; a search that fails is
 logged and leaves the change saved. A render job run on a node that has not
 heard of the change yet refreshes its registry cache first
@@ -1035,7 +1043,10 @@ domain or redirect host moved, an environment created, copied, restored or set l
 transaction has committed, refreshes the node that made it at once and the
 other nodes through `Brando.CacheSync`, over the application's
 `Phoenix.PubSub`. They follow within a fraction of a second, whichever node
-ran the write or the scheduled job. The active and pinned asset sets, each
+ran the write or the scheduled job. A static build's deploy or rollback served
+by the installation is such a write: every node answers from the newly
+published build once it has heard of it, so every node needs the same
+`sites/` directory, on shared storage as media is. The active and pinned asset sets, each
 environment's own set, and each site's shared-library allowlist are
 refreshed the same way.
 
@@ -1646,9 +1657,13 @@ domain swaps too, so switching back puts every host where it was. Each
 environment's redirect hosts move with its domain, so `www.example.com` keeps
 redirecting to `example.com` wherever that host now answers. Setting a
 restored archive live moves the hosts the same way. The hosts were bound by a
-superuser and stay within the site, so a switch binds nothing new. On a
-`:static` site the domains stay where they are: the deployed build, not the
-live environment, decides what a host serves. Each environment keeps its own
+superuser and stay within the site, so a switch binds nothing new. A
+`:static` site the installation serves itself (strategy `:local`, see
+[Served by this installation](#served-by-this-installation)) swaps its hosts
+the same way, since the installation answers its public host: the domain goes
+to the incoming environment and keeps answering from the published build until
+the next deploy. On any other `:static` site the domains stay where they are:
+the deployed build, not the live environment, decides what a host serves. Each environment keeps its own
 frontend asset set and frontend module, so the host serves those of the
 environment that went live ([A set per environment](#a-set-per-environment)).
 
@@ -1864,8 +1879,8 @@ be one of the installation's. Both reach every node
 What happens to an environment's set:
 
 - **A live switch** leaves each set with its environment. On a `:dynamic`
-  site the host moves to the incoming environment, so it serves the set that
-  environment had.
+  site, and a `:static` one the installation serves itself, the host moves to
+  the incoming environment, so it serves the set that environment had.
 - **A new environment** has no set of its own and follows the site's set, as
   it follows the site's frontend module.
 - **A copy of content into an environment**
@@ -2185,6 +2200,9 @@ redirect with its `:headers`.
 Open `/admin/config/publishing` while a static site is selected. The deployment
 form supports:
 
+- **Served by this installation** (`local`), with no target: the live
+  environment's domain answers from the published build
+  ([Served by this installation](#served-by-this-installation));
 - `rsync`, with a target such as `deploy@example.com:/srv/www`;
 - `s3`, with `s3://bucket/prefix` or, for a bucket of its own, `s3://bucket`;
 - an optional public CDN URL;
@@ -2234,6 +2252,10 @@ in the build's log. If the target is of the right form, fix the list and the
 build deploys; change a site's target and it takes a new build. An older build
 whose target no longer fits cannot be rolled back until its target is listed
 again, and one with a target of the wrong form cannot be deployed at all.
+A build made for another delivery than the site uses now is refused too, in
+both directions: one made for a static host on a site the installation serves
+itself, and one made to be served by the installation on a site that is not.
+Its log says it must be built again.
 
 **An entry without `{site_key}` grants every site.** That holds for an exact
 destination such as `s3://acme-www` as much as for a parent such as
@@ -2275,15 +2297,21 @@ target can pass (see
 one entry per site layout, or separate them with a character keys cannot hold,
 such as the `/` in `s3://b/{site_key}/www` and `s3://b/{site_key}/staging`.
 
-With `tenancy_mode: :multi` the list or map of a strategy the sites use is
-required: until it is set, no target of that strategy can be saved or deployed. With one
+With `tenancy_mode: :multi` the list or map of `rsync` or `s3`, when the sites
+use it, is required: until it is set, no target of that strategy can be saved or deployed. With one
 site, an unset list allows any target of the right form, including a whole
-bucket; a list set there applies the same way.
+bucket; a list set there applies the same way. Serving a build from the
+installation writes nowhere outside the site's own directory, so it needs no
+list and is allowed for every site; an operator turns it off for all of them
+with `config :brando, Brando.Sites.DeployConfig, local_delivery: false`, which
+refuses it when the settings are saved and when a build deploys.
 
 Generated output is persistent at
 `sites/{site_key}/ssg/builds/{version}`. Old ready, archived, and failed artifact
 directories are pruned after the retention window, while their database history
-and logs remain. Preview tokens expire after seven days and stop working as soon
+and logs remain; the build the installation serves for a site is never pruned.
+A build finished while a deploy or rollback of the site is running prunes
+nothing and says so in its log; the next build prunes. Preview tokens expire after seven days and stop working as soon
 as their artifact is pruned. A preview opens only on a host that resolves to
 the build's own site (another site's host, or with several sites one of the
 installation's own hosts such as the admin's, answers `404`); with several sites
@@ -2390,6 +2418,8 @@ where the build runs.
 ```json
 {
   "version": 1,
+  "languages": ["en", "no"],
+  "default_language": "en",
   "redirects": [
     {"kind": "listed", "source": "/old", "target": "/about", "status": 301, "exact": true,
      "pattern": "/old$", "language": null},
@@ -2413,7 +2443,10 @@ For whoever serves the file:
   language, which Brando checks for a path no page answers in that language.
 - Rules are matched against the decoded request path, which carries the
   language prefix when the site forces one: `/en/old` is English, `/old` the
-  default language's.
+  default language's. `languages` and `default_language` are the site's when
+  the build was made: a path is in the language its first segment names when
+  that is one of `languages`, else in `default_language`. A list from a build
+  made before they were added has neither; read the site's languages then.
 - A page the build has wins over a rule that is not exact, as in the
   application; an exact rule for such a page is left out, since Brando never
   answers it.
@@ -2429,7 +2462,9 @@ For whoever serves the file:
 - A redirect whose target differs from its source only by the query
   (`/about` to `/about?lang=en`) is left out, since a host matching on the
   path would answer it in a loop; the build's log names it.
-Feed the list to the host as its redirect rules. For a host that reads
+Brando follows these facts itself when it serves the build
+([Served by this installation](#served-by-this-installation)). Feed the list
+to any other host as its redirect rules. For a host that reads
 Netlify's `_redirects` format, write one line per entry with a `source`, as
 `source target status`; an entry that is not exact also gets a line for
 `source/*`, and on a host that serves a file before its rules, an entry from a
@@ -2437,6 +2472,174 @@ listed path gets `!` after its status so it wins over the page the build kept.
 On S3 behind CloudFront, a viewer-request function that reads the list does
 the same. An entry without a `source` needs a server that runs regular
 expressions, such as the application itself.
+
+### Served by this installation
+
+With the strategy **Served by this installation** (`:local`), a deploy copies
+nothing: it records the build as the site's published build
+(`sites.published_build`), in the transaction that marks it deployed, and a
+rollback records an older one. Every node's registry cache hears of it once it
+commits ([Several nodes](#several-nodes)), so the site's host answers from that
+build on the next request, without a restart. Until the first deploy, the host
+answers from Phoenix as before.
+
+`Brando.Plug.SiteAssets` answers first (`Brando.SSG.LocalDelivery`), in the
+endpoint before the router, for a request that `Brando.Plug.Tenant` would
+resolve to the live environment of an active `:static` site with this strategy
+and a published build: with `:multi`, on that environment's domain; with
+`:single`, on every host but another environment's domain, so the endpoint's
+own host, a bare IP and a host no environment names answer from the build too,
+as they would resolve to the live environment. A redirect host still redirects
+to the domain first. There, a `GET` or `HEAD`:
+
+- for a path the build has a file for answers that file: `/about` and
+  `/about/` answer `about/index.html`, and `/about.md`, `robots.txt` and the
+  sitemap answer the build's own. A page asked for with
+  `Accept: text/markdown` answers the build's Markdown file for it
+  (`about.md`, `index.md` for the root, `contact.html.md` for
+  `/contact.html`), as `Brando.Plug.Markdown` answers for
+  the application, when the build has one; both answers then carry
+  `Vary: Accept`;
+- for a path `_redirects.json` answers, as the facts above say, answers the
+  redirect, or `410 Gone` for an entry without a target;
+- for a file the build lacks that the endpoint's asset pipeline has, leaves
+  it to the pipeline: the asset sets `Brando.Plug.SiteAssets` serves, and the
+  release's static files under the web module's `static_paths/0`
+  (`Brando.Plug.SiteAssets.static_file?/1`). That covers the admin's bundles
+  with `:single`, a preview's newer assets and those of a page Phoenix renders
+  there. These are files, not content: a request let through this way that
+  no plug before the router answers gets the build's 404 page from
+  `Brando.Plug.Tenant`, never a page Phoenix renders. Keep the web module's
+  `static_paths/0` the same as the `only:` of the endpoint's `Plug.Static`
+  (the System check warns when they differ): a release file under a prefix
+  `static_paths/0` leaves out is answered with the build's 404 page;
+- for any other path answers the build's `404.html` with status 404, or a
+  plain 404 for a build without one. A page the environment has but the
+  published build does not is never reached, so unpublished content stays
+  unpublished.
+
+Paths resolve inside the build's directory only: a path with `..`, an encoded
+slash or a NUL, or a file reached through a symbolic link, is a path the build
+does not have. `_redirects.json` itself is not served.
+
+HTML and the other files are sent with an `ETag`, which names the build's
+version, and `Cache-Control: no-cache`, so a browser or CDN asks again and gets
+`304 Not Modified` while the build is unchanged, and the new file after a
+deploy. The files the build's Vite manifest lists, which are named by their
+content, and a request with a `vsn` query, as `Plug.Static` reads it, for a
+file other than a page (HTML, or a page's Markdown) under `assets/` or a
+directory the web module's `static_paths/0` names, are sent with
+`Cache-Control: public, max-age=31536000, immutable`. Every other file, such
+as `robots.txt`, the sitemaps, feeds and JSON at the build's root, which the
+next deploy rewrites under the same URL, is sent with `no-cache` and its
+`ETag` whatever the query. Markdown is
+`text/markdown`, and the gzipped sitemap is sent as `/sitemaps/` sends it from
+Phoenix, a download.
+
+The router's browser pipeline never runs for a file sent from the build, so
+pages (HTML, the 404 page included) get the headers
+`Phoenix.Controller.put_secure_browser_headers/2` sets by default, among them
+a Content-Security-Policy of `base-uri 'self'; frame-ancestors 'self';`. An
+application with a policy of its own, such as the one its router sets with
+`Brando.Router.put_extra_secure_browser_headers/2`, sets it here, as headers
+applied to every page after the defaults:
+
+```elixir
+config :brando, Brando.SSG.LocalDelivery,
+  headers: %{"content-security-policy" => "default-src 'self'; img-src * data:"}
+```
+
+Other files of the build are sent with `Access-Control-Allow-Origin: *`, as
+`Brando.Plug.SiteAssets` sends its own, for sandboxed live and shared previews.
+
+A request answered from the build never reaches `Plug.Telemetry` or the
+request log. It emits the telemetry event
+`[:brando, :ssg, :local_delivery, :stop]` instead, with the measurement
+`:duration` (native time units) and the metadata `:site_key`, `:path` and
+`:status`, for an application's metrics.
+
+What still reaches Phoenix on that host:
+
+- other methods than `GET` and `HEAD`, such as a contact form's `POST`;
+- the paths below the media path, shared previews (`/__p__/`), build previews
+  (`/__ssg_preview__/`) and Brando's `/__brando/` paths, live preview
+  (`/__livepreview`), and the endpoint's sockets, which answer before any
+  plug. The media path itself, `/__p__`, `/__ssg_preview__` and `/__brando`
+  answer from the build as any other path: no route answers them;
+- `/health`, for `Brando.Plug.Health`, which a blue/green deploy polls from
+  the server before it switches; without that plug in the endpoint it is the
+  build's `health/index.html` when the build has that page, else its 404
+  page. A path in the application's own list below comes first, `/health`
+  included;
+- with `:single`, where the admin answers on every host, the admin's paths,
+  and MCP's when the router mounts them (`Brando.Router.mcp_routes/0`);
+- the IndexNow key file (`/<key>.txt`) while IndexNow is on
+  (`Brando.Plug.IndexNow`);
+- a request carrying a build's signed context (`Brando.SSG.Context`), so a new
+  build is rendered by Phoenix, never copied from the published one;
+- an application's own paths, listed in config:
+
+```elixir
+config :brando, Brando.SSG.LocalDelivery, dynamic_paths: ["/api", "/coming-soon"]
+```
+
+On that host every 404 is the build's: a request that reaches Phoenix and that
+no route answers, such as `/__brando/x` or a shared preview's unknown key,
+falls to the page catch-all, and where Brando answers a page that is missing
+(`BrandoWeb.FallbackController`) it answers the build's `404.html`, or a plain
+404 for a build without one (`Brando.SSG.LocalDelivery.answer_not_found/1`).
+A route that answers is untouched, such as a valid shared preview or the
+forms' token. That safety net, and the one for a file let through to the
+asset pipeline that no plug before the router answers, is Brando's code in
+the router: `Brando.Plug.Tenant` and the fallback controller. A route in a
+pipeline without `Brando.Plug.Tenant`, a page controller without
+`BrandoWeb.FallbackController`, or a router with no catch-all answers such a
+request itself, with the application's own error page. The routers and page
+controllers Brando generates are covered.
+
+Environments that are not live answer from Phoenix on their own domains, as
+working copies, with `X-Robots-Tag: noindex, nofollow`. Setting another
+environment live takes the live domain and its redirect hosts with it, as on a
+`:dynamic` site ([Switch live, rollback, and delete](#switch-live-rollback-and-delete)), so the public domain keeps
+answering from the published build until the next deploy, which builds from
+the environment now live. Switching the site to
+`:dynamic`, to another strategy, suspending, archiving or deleting it stops
+serving at once; switching back serves nothing until the next deploy. The
+strategy needs a site in the registry, so it applies with `:single` and
+`:multi`, not `:none`.
+
+Each node reads a published build's file list and redirects once and keeps
+them in memory until another build is published. A node that cannot find the
+build's directory, or one of its files, answers `503` (a file the asset
+pipeline has, such as the admin's bundles, still loads, though the build
+listed it too, so the Publishing screen can deploy again), looks for the
+directory
+again every few seconds and logs it each time it does not find it: with
+several nodes, `sites/` must be on storage they all share
+([Several nodes](#several-nodes)). The reverse proxy needs nothing new: the
+site's domain already reaches the application.
+
+Two limits. A file sent from the build ignores a `Range` header and is sent
+whole, so a video to be streamed belongs in media, which the build does not
+answer. And
+`config :brando, Brando.Sites.DeployConfig, local_delivery: false` refuses
+the strategy on save and refuses each deploy, but a site already published
+keeps answering from its build until its strategy is changed (a save that
+keeps `:local` is refused) or it is suspended, archived or deleted.
+
+### A CDN in front
+
+A CDN in front of the installation caches the build as it would any origin.
+Point the site's domain at the CDN and the CDN at the installation, keeping
+the `Host` header (or sending the site's domain as the origin's host), since
+the domain selects the site. HTML, `robots.txt`, the sitemap and other files
+not named by their content carry `Cache-Control: no-cache` and an `ETag`, so
+the CDN revalidates them with the installation on each request and a deploy or
+rollback shows at once; content-addressed assets are cached for a year. To let
+the CDN keep pages longer, purge its cache from the deployment webhook, which
+is posted after each deploy and rollback. Let `POST` and the paths that still
+reach Phoenix through uncached. Set the CDN's URL as the public CDN URL, so the
+Publishing screen's **Open site** links to it.
 
 ## Copy an existing installation into tenancy
 

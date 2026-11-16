@@ -17,6 +17,8 @@ defmodule Brando.Worker.SSGBuild do
   alias Brando.SSG.Deploy
   alias BrandoAdmin.Work
 
+  require Logger
+
   # A build waits behind the one before it on the serial queue
   @queued_timeout to_timeout(hour: 1)
 
@@ -177,6 +179,11 @@ defmodule Brando.Worker.SSGBuild do
   defp prune_and_log(%Build{site: site, deploy_config: config} = build) do
     case Deploy.prune(site, config["retention_count"] || 10) do
       {:ok, _pruned} ->
+        :ok
+
+      :skipped ->
+        Logger.info("Skipped pruning the builds of site #{site.key}: a deploy or rollback holds its lock")
+        Builds.append_log(build, "Artifact pruning skipped: a deploy or rollback was running; the next build prunes")
         :ok
 
       {:error, reason} ->

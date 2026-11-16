@@ -38,7 +38,15 @@ defmodule Brando.SSG.Context do
   def build_request?(%Plug.Conn{private: %{brando_ssg_build: true}}), do: true
   def build_request?(%Plug.Conn{} = conn), do: not Brando.Tenant.enabled?() and signed?(conn)
 
-  defp signed?(conn) do
+  @doc """
+  Whether `conn` carries a valid signed build context, in any tenancy mode
+  and before `Brando.Plug.Tenant` has run: what answers in front of the
+  router (`Brando.SSG.LocalDelivery`) leaves such a request to Phoenix, or a
+  build would be made from the build already published. It checks the
+  signature only, without a query.
+  """
+  @spec signed?(Plug.Conn.t()) :: boolean()
+  def signed?(conn) do
     case Plug.Conn.get_req_header(conn, @header) do
       [token | _] -> match?({:ok, %{site_id: _, environment_id: _}}, verify(token))
       [] -> false

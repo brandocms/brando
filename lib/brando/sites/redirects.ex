@@ -164,12 +164,26 @@ defmodule Brando.Sites.Redirects do
   end
 
   defp match_redirect_pattern(test_url, from_regex, to) do
-    case Regex.named_captures(from_regex, test_url) do
+    case target(test_url, from_regex, to) do
+      nil -> {:error, {:redirects, :no_match}}
+      url -> url
+    end
+  end
+
+  @doc """
+  The target a redirect answers `path` with, when its pattern (`compile/1`)
+  matches it: `to` with each `:name` segment replaced by the segment the
+  pattern captured under that name. Nil when it does not match. A redirect
+  with no target (410) answers `""`.
+  """
+  @spec target(String.t(), Regex.t(), String.t() | nil) :: String.t() | nil
+  def target(path, %Regex{} = pattern, to) do
+    case Regex.named_captures(pattern, path) do
       nil ->
-        {:error, {:redirects, :no_match}}
+        nil
 
       captured_segments ->
-        to
+        (to || "")
         |> String.split("/")
         |> Enum.map_join("/", fn
           ":" <> segment -> Map.get(captured_segments, segment, ":#{segment}")
