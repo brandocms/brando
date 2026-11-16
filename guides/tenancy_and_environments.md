@@ -2452,7 +2452,12 @@ to the domain first. There, a `GET` or `HEAD`:
   release's static files under the web module's `static_paths/0`
   (`Brando.Plug.SiteAssets.static_file?/1`). That covers the admin's bundles
   with `:single`, a preview's newer assets and those of a page Phoenix renders
-  there. These are files, not content;
+  there. These are files, not content: a request let through this way that
+  no plug before the router answers gets the build's 404 page from
+  `Brando.Plug.Tenant`, never a page Phoenix renders. Keep the web module's
+  `static_paths/0` the same as the `only:` of the endpoint's `Plug.Static`
+  (the System check warns when they differ): a release file under a prefix
+  `static_paths/0` leaves out is answered with the build's 404 page;
 - for any other path answers the build's `404.html` with status 404, or a
   plain 404 for a build without one. A page the environment has but the
   published build does not is never reached, so unpublished content stays
@@ -2499,9 +2504,11 @@ What still reaches Phoenix on that host:
 - other methods than `GET` and `HEAD`, such as a contact form's `POST`;
 - the media path, shared previews (`/__p__/`), build previews
   (`/__ssg_preview__/`), live preview (`/__livepreview`) and Brando's
-  `/__brando/` paths, `/health` for `Brando.Plug.Health` (which a blue/green
-  deploy polls from the server before it switches), and the endpoint's
-  sockets, which answer before any plug;
+  `/__brando/` paths, and the endpoint's sockets, which answer before any
+  plug;
+- `/health`, for `Brando.Plug.Health`, which a blue/green deploy polls from
+  the server before it switches; without that plug in the endpoint it is the
+  build's 404 page;
 - with `:single`, where the admin answers on every host, the admin's and MCP's
   paths;
 - the IndexNow key file (`/<key>.txt`) while IndexNow is on

@@ -23,11 +23,16 @@ defmodule Brando.Plug.Tenant do
   site's public host would (`BrandoWeb.SEOController`). With
   `tenancy_mode: :none` one that carries a valid signed context is marked
   (`Brando.SSG.Context.build_request?/1`).
+
+  A request a host serving its build let through for a plug before the
+  router, which none answered, gets the build's 404 page here and goes no
+  further (`Brando.SSG.LocalDelivery.answer_unanswered/1`).
   """
 
   import Plug.Conn, only: [assign: 3, halt: 1, put_private: 3, put_resp_header: 3, send_resp: 3]
 
   alias Brando.SSG.Context
+  alias Brando.SSG.LocalDelivery
   alias Brando.Tenant
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Frontend
@@ -38,6 +43,9 @@ defmodule Brando.Plug.Tenant do
   def init(opts), do: opts
 
   @impl Plug
+  def call(%Plug.Conn{private: %{brando_ssg_before_router: _site}} = conn, _opts),
+    do: LocalDelivery.answer_unanswered(conn)
+
   def call(conn, _opts) do
     case redirect_target(conn) do
       nil ->

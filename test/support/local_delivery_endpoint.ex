@@ -53,10 +53,13 @@ defmodule Brando.Test.LocalDeliveryEndpoint do
   use Phoenix.Endpoint, otp_app: :brando
 
   @doc "Starts the endpoint under the test's supervisor."
-  def start do
-    previous = Application.fetch_env(:brando, __MODULE__)
+  def start, do: start(__MODULE__)
 
-    Application.put_env(:brando, __MODULE__,
+  @doc "Starts `endpoint` under the test's supervisor."
+  def start(endpoint) do
+    previous = Application.fetch_env(:brando, endpoint)
+
+    Application.put_env(:brando, endpoint,
       url: [host: "endpoint.test"],
       server: false,
       secret_key_base: String.duplicate("local-delivery", 6),
@@ -66,12 +69,12 @@ defmodule Brando.Test.LocalDeliveryEndpoint do
 
     ExUnit.Callbacks.on_exit(fn ->
       case previous do
-        {:ok, value} -> Application.put_env(:brando, __MODULE__, value)
-        :error -> Application.delete_env(:brando, __MODULE__)
+        {:ok, value} -> Application.put_env(:brando, endpoint, value)
+        :error -> Application.delete_env(:brando, endpoint)
       end
     end)
 
-    ExUnit.Callbacks.start_supervised!(__MODULE__)
+    ExUnit.Callbacks.start_supervised!(endpoint)
     :ok
   end
 
@@ -90,4 +93,34 @@ defmodule Brando.Test.LocalDeliveryEndpoint do
   plug Brando.Plug.IndexNow
   plug Brando.Plug.Health
   plug Brando.Test.LocalDeliveryRouter
+end
+
+defmodule Brando.Test.LocalDeliveryNarrowEndpoint do
+  @moduledoc """
+  `Brando.Test.LocalDeliveryEndpoint` with a `Plug.Static` that serves only
+  `css/`, narrower than the web module's `static_paths/0` may say, and
+  without `Brando.Plug.Health`.
+  """
+
+  use Phoenix.Endpoint, otp_app: :brando
+
+  @doc "Starts the endpoint under the test's supervisor."
+  def start, do: Brando.Test.LocalDeliveryEndpoint.start(__MODULE__)
+
+  plug Brando.Plug.SiteAssets
+
+  plug Plug.Static,
+    at: "/",
+    from: {Brando.Assets.SiteAssets.Capture, :release_root, []},
+    gzip: false,
+    only: ~w(css)
+
+  plug Plug.Session, store: :cookie, key: "_local_delivery", signing_salt: "localdelivery"
+  plug Brando.Test.LocalDeliveryRouter
+end
+
+defmodule Brando.Test.LocalDeliveryWeb do
+  @moduledoc false
+  # A web module whose `static_paths/0` the tests set
+  def static_paths, do: Application.get_env(:brando, __MODULE__, ~w(assets css js))
 end

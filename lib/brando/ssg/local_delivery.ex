@@ -96,7 +96,6 @@ defmodule Brando.SSG.LocalDelivery do
   #   /__p__             a shared preview: unpublished content behind its key, for people without an account
   #   /__ssg_preview__   a build's preview before it is published, behind its token
   #   /__livepreview     the admin's live preview and its client files (`Brando.Plug.LivePreview`)
-  #   /health            `Brando.Plug.Health`, which a blue/green deploy polls from the server before switching
   #   the media path     `Brando.Plug.Media`: the build's copy of media is not listed (`skipped_dirs/0`)
   #   the admin, /mcp, /.well-known/oauth-protected-resource, /.well-known/oauth-authorization-server
   #                      the admin and MCP with its OAuth metadata, only where the admin answers
@@ -115,7 +114,13 @@ defmodule Brando.SSG.LocalDelivery do
   #
   # The sandbox and the webhook plugs (GitHub Markdown, Mux, Bunny, Cloudflare
   # Stream) take POSTs, which always pass; the sockets answer before any plug.
-  @dynamic_paths ["/__brando", "/__p__", "/__ssg_preview__", "/__livepreview", "/health"]
+  #
+  # Let through for a plug before the router, and marked (`@before_router`):
+  #
+  #   /health            `Brando.Plug.Health`, which a blue/green deploy polls from the server before switching
+  #   a file the build lacks that the asset pipeline has (`Brando.Plug.SiteAssets.static_file?/1`)
+  @dynamic_paths ["/__brando", "/__p__", "/__ssg_preview__", "/__livepreview"]
+  @before_router :brando_ssg_before_router
   # Only where the admin answers (`BrandoAdmin.AdminHost.serves_admin?/1`)
   @admin_paths ["/mcp", "/.well-known/oauth-protected-resource", "/.well-known/oauth-authorization-server"]
 
@@ -162,12 +167,14 @@ defmodule Brando.SSG.LocalDelivery do
   @doc """
   The path prefixes that keep reaching Phoenix on a host serving its build:
   Brando's own (shared and build previews, live preview, the forms' and
-  icons' `/__brando`, `/health` for `Brando.Plug.Health`), the media path, the admin's and MCP's paths where the
+  icons' `/__brando`), the media path, the admin's and MCP's paths where the
   admin answers on the host, and an application's own:
 
       config :brando, Brando.SSG.LocalDelivery, dynamic_paths: ["/api", "/coming-soon"]
 
   The endpoint's sockets answer before any plug, so they need no entry.
+  `/health` and the files the asset pipeline has are let through too, for a
+  plug before the router (`answer_unanswered/1`).
   """
   @spec dynamic_paths(Plug.Conn.t()) :: [String.t()]
   def dynamic_paths(conn) do
@@ -178,6 +185,7 @@ defmodule Brando.SSG.LocalDelivery do
 
   defp serve(conn, site) do
     cond do
+      conn.path_info == ["health"] -> let_through(conn, site)
       dynamic_path?(conn) -> conn
       Context.signed?(conn) -> conn
       true -> conn |> IndexNow.call([]) |> answer_unless_halted(site)
@@ -218,8 +226,11 @@ defmodule Brando.SSG.LocalDelivery do
   # so the admin's bundles load and the operator can deploy again.
   defp answer(conn, site) do
     case published(site) do
-      {:ok, build} -> answer_from(conn, site, build, requested_file(conn, build))
-      :error -> if SiteAssetsPlug.static_file?(conn), do: conn, else: conn |> send_unavailable() |> halt()
+      {:ok, build} ->
+        answer_from(conn, site, build, requested_file(conn, build))
+
+      :error ->
+        if SiteAssetsPlug.static_file?(conn), do: let_through(conn, site), else: conn |> send_unavailable() |> halt()
     end
   end
 
@@ -229,15 +240,38 @@ defmodule Brando.SSG.LocalDelivery do
       {false, _status, _target} when is_binary(file) -> conn |> send_build_file(build, file) |> halt()
       {false, status, target} -> conn |> send_redirect(status, target) |> halt()
       nil when is_binary(file) -> conn |> send_build_file(build, file) |> halt()
-      nil -> answer_missing(conn, build)
+      nil -> answer_missing(conn, site, build)
     end
   end
 
-  defp answer_missing(conn, build) do
+  defp answer_missing(conn, site, build) do
     if SiteAssetsPlug.static_file?(conn),
-      do: conn,
+      do: let_through(conn, site),
       else: conn |> send_not_found(build) |> halt()
   end
+
+  # Only a plug before the router may answer it: which file `Plug.Static`
+  # serves is its own `only:` and its own reading of the path, which
+  # `static_file?/1` cannot match exactly
+  defp let_through(conn, site), do: Plug.Conn.put_private(conn, @before_router, site)
+
+  @doc """
+  Answers a request this let through for a plug before the router
+  (`/health`, or a file the asset pipeline has) that reached the router
+  unanswered: with the build's 404 page, or a plain 404, or 503 when the
+  build is missing, and halts. Any other request is returned untouched.
+  `Brando.Plug.Tenant` calls it first, so no page Phoenix renders answers
+  on a host serving its build.
+  """
+  @spec answer_unanswered(Plug.Conn.t()) :: Plug.Conn.t()
+  def answer_unanswered(%Plug.Conn{private: %{@before_router => %Site{} = site}} = conn) do
+    case published(site) do
+      {:ok, build} -> conn |> send_not_found(build) |> halt()
+      :error -> conn |> send_unavailable() |> halt()
+    end
+  end
+
+  def answer_unanswered(conn), do: conn
 
   defp send_unavailable(conn) do
     conn

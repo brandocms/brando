@@ -163,10 +163,13 @@ defmodule Brando.SSG.LocalDeliveryTest do
 
   # Through an installation's endpoint: asset sets, static files, the tenant
   # plug and the router
-  defp dispatch(method \\ :get, host, path, headers \\ []) do
+  defp dispatch(method \\ :get, host, path, headers \\ []),
+    do: dispatch_to(Brando.Test.LocalDeliveryEndpoint, method, host, path, headers)
+
+  defp dispatch_to(endpoint, method, host, path, headers \\ []) do
     headers
     |> Enum.reduce(Map.put(build_conn(), :host, host), fn {name, value}, conn -> put_req_header(conn, name, value) end)
-    |> Phoenix.ConnTest.dispatch(Brando.Test.LocalDeliveryEndpoint, method, path, nil)
+    |> Phoenix.ConnTest.dispatch(endpoint, method, path, nil)
   end
 
   describe "with one site" do
@@ -323,6 +326,62 @@ defmodule Brando.SSG.LocalDeliveryTest do
       missing = dispatch(context.host, "/js/missing.js")
       assert missing.status == 404
       assert missing.resp_body == "missing v1"
+    end
+  end
+
+  describe "a request let through for a plug before the router" do
+    setup context do
+      Brando.Test.LocalDeliveryEndpoint.start()
+      Brando.Test.LocalDeliveryNarrowEndpoint.start()
+      context |> ready_build() |> deploy!()
+      :ok
+    end
+
+    test "a file the release has, but the endpoint's Plug.Static does not serve, is the build's 404", context do
+      put_test_env(:web_module, Brando.Test.LocalDeliveryWeb)
+      write_release_file("js/app-abc123.js", "release js")
+      write_release_file("css/app-abc123.css", "release css")
+
+      # static_paths/0 says js/, the endpoint's only: does not
+      missing = dispatch_to(Brando.Test.LocalDeliveryNarrowEndpoint, :get, context.host, "/js/app-abc123.js")
+      assert missing.status == 404
+      assert missing.resp_body == "missing v1"
+
+      assert dispatch_to(Brando.Test.LocalDeliveryNarrowEndpoint, :get, context.host, "/css/app-abc123.css").resp_body ==
+               "release css"
+    end
+
+    test "a file under a prefix static_paths/0 leaves out is the build's 404", context do
+      put_test_env(:web_module, Brando.Test.LocalDeliveryWeb)
+      put_test_env(Brando.Test.LocalDeliveryWeb, ~w(css js))
+      write_release_file("fonts/body.woff2", "font")
+      write_release_file("js/app-abc123.js", "release js")
+
+      fonts = dispatch(context.host, "/fonts/body.woff2")
+      assert fonts.status == 404
+      assert fonts.resp_body == "missing v1"
+      assert dispatch(context.host, "/js/app-abc123.js").resp_body == "release js"
+    end
+
+    test "an encoded prefix the router decodes is the build's 404, not the page Phoenix renders", context do
+      write_release_file("assets/new.html", "release page")
+
+      for path <- ["/%61ssets/new.html", "/%61ssets/new.html?vsn=d"] do
+        conn = dispatch(context.host, path)
+        assert conn.status == 404, path
+        assert conn.resp_body == "missing v1", path
+      end
+    end
+
+    test "/health without the health plug is the build's 404", context do
+      conn = dispatch_to(Brando.Test.LocalDeliveryNarrowEndpoint, :get, context.host, "/health")
+      assert conn.status == 404
+      assert conn.resp_body == "missing v1"
+    end
+
+    test "a request local delivery never saw passes the tenant plug as before", context do
+      assert dispatch("staging-#{context.site.key}.test", "/js/missing.js").resp_body ==
+               "dynamic /js/missing.js in staging"
     end
   end
 
