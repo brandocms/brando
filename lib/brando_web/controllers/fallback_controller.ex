@@ -16,7 +16,7 @@ defmodule BrandoWeb.FallbackController do
   Handle errors
   """
   def call(%{assigns: %{language: language}} = conn, {:error, {_, :not_found}}) do
-    case Redirects.test_redirect(conn.path_info, language) do
+    case test_redirect(conn, language) do
       {:error, {:redirects, :no_match}} ->
         # 404
         if Brando.config(:use_default_errors) == false do
@@ -56,6 +56,21 @@ defmodule BrandoWeb.FallbackController do
     |> put_layout(false)
     |> put_view(Brando.endpoint().config(:render_errors)[:formats])
     |> render(:"400")
+  end
+
+  # A static build requests the site's error page on a path no page has
+  # (`Brando.SSG.not_found_path/0`), which a rule matching as a prefix would
+  # otherwise redirect
+  defp test_redirect(conn, language) do
+    if Brando.SSG.Context.build_request?(conn) and not_found_probe?(conn.path_info),
+      do: {:error, {:redirects, :no_match}},
+      else: Redirects.test_redirect(conn.path_info, language)
+  end
+
+  # With or without the language prefix `put_locale` adds
+  defp not_found_probe?(path_info) do
+    probe = String.split(Brando.SSG.not_found_path(), "/", trim: true)
+    path_info == probe or match?([_language | ^probe], path_info)
   end
 
   # A pipeline plug may answer itself, a 404 for a site without a frontend

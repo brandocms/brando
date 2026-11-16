@@ -149,11 +149,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     end
 
     test "a per-site admin in legacy mode cannot bind, move or clear one", %{site: site, staging: staging} do
-      {:ok, view, html} = live(site_admin_conn(site), "/admin/config/environments")
+      {:ok, view, _html} = live(site_admin_conn(site), "/admin/config/environments")
 
       assert_refused(view, site, staging)
-      assert html =~ ~s(aria-label="Domain for Staging")
-      assert has_element?(view, ~s(#environment-#{staging.id} input[name="domain"][disabled]))
+      # The hosts as text, with no field to change them in
+      assert has_element?(view, "#environment-#{staging.id} .environment-hosts dd", "staging.acme.test")
+      refute has_element?(view, ~s(#environment-#{staging.id} input[name="domain"]))
       refute has_element?(view, ~s(#create-environment-form input[name="environment[domain]"]))
     end
 
@@ -167,7 +168,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       {:ok, view, _html} = live(group_admin_conn(site, production, owner), "/admin/config/environments")
 
       assert_refused(view, site, staging)
-      assert has_element?(view, ~s(#environment-#{staging.id} input[name="domain"][disabled]))
+      assert has_element?(view, "#environment-#{staging.id} .environment-hosts dd", "staging.acme.test")
+      refute has_element?(view, ~s(#environment-#{staging.id} input[name="domain"]))
     end
 
     test "an admin in single-site mode cannot either", %{conn: _conn, site: site, staging: staging} do
@@ -415,6 +417,67 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       |> String.trim()
     end
 
+    # LiveView keeps a focused field's value when it patches the field, and
+    # morphdom moves a field into the replacement form when the ids match: a
+    # focused field would keep showing the hosts the old form was typed against
+    defp host_field_ids(view, environment) do
+      html = view |> hosts_form(environment) |> render() |> LazyHTML.from_fragment()
+
+      for selector <- [~s(input[name="domain"]), ~s(textarea[name="redirect_hosts"])] do
+        [id] = html |> LazyHTML.query(selector) |> LazyHTML.attribute("id")
+        assert html |> LazyHTML.query(~s(label[for="#{id}"])) |> Enum.count() == 1
+        id
+      end
+    end
+
+    defp host_control_ids(view, environment) do
+      html = view |> hosts_form(environment) |> render() |> LazyHTML.from_fragment()
+
+      for selector <- [~s(input[name="domain"]), ~s(textarea[name="redirect_hosts"]), ~s(button[type="submit"])] do
+        [id] = html |> LazyHTML.query(selector) |> LazyHTML.attribute("id")
+        id
+      end
+    end
+
+    test "the host fields are keyed on the saved hosts, like their form", %{conn: conn, staging: staging} do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+      before = host_field_ids(view, staging)
+
+      typed(view, staging, %{"domain" => "typed.acme.test", "redirect_hosts" => "typed.acme.test"})
+      assert host_field_ids(view, staging) == before
+
+      superuser = Factory.insert(:random_user, role: :superuser)
+
+      {:ok, _staging} =
+        Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: superuser)
+
+      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+
+      for {now, then} <- Enum.zip(host_field_ids(view, staging), before), do: refute(now == then)
+    end
+
+    # Four rows would otherwise give a screen reader four fields named "Domain"
+    test "each host field is named by its label and its row", %{conn: conn, production: production, staging: staging} do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+      doc = view |> render() |> LazyHTML.from_fragment()
+
+      names =
+        for environment <- [production, staging], id <- host_field_ids(view, environment) do
+          [labelled_by] = doc |> LazyHTML.query("##{id}") |> LazyHTML.attribute("aria-labelledby")
+
+          labelled_by
+          |> String.split()
+          |> Enum.map_join(" ", fn ref -> doc |> LazyHTML.query("##{ref}") |> LazyHTML.text() |> String.trim() end)
+        end
+
+      assert names == [
+               "Domain Production",
+               "Redirect hosts Production",
+               "Domain Staging",
+               "Redirect hosts Staging"
+             ]
+    end
+
     test "a superuser adds and removes them, one per line or comma-separated", %{conn: conn, staging: staging} do
       {:ok, view, _html} = live(conn, "/admin/config/environments")
 
@@ -481,7 +544,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       {:ok, _assignment} = Access.grant(admin, site, :admin)
       {:ok, view, _html} = live(log_in_user(build_conn(), admin), "/admin/config/environments")
 
-      assert has_element?(view, ~s(#environment-#{staging.id} textarea[name="redirect_hosts"][disabled]))
+      assert has_element?(view, "#environment-#{staging.id} .environment-hosts", "www.staging.acme.test")
+      refute has_element?(view, ~s(#environment-#{staging.id} textarea[name="redirect_hosts"]))
 
       Brando.endpoint().subscribe("user:#{admin.id}")
 
@@ -500,8 +564,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     end
 
     # A form with phx-change is recovered on rejoin, touched or not; a site
-    # admin's fields are disabled, so only the hidden inputs come back
-    test "a recovered form a site admin cannot edit leaves the hosts shown", %{site: site, staging: staging} do
+    # admin has no hosts form, so a draft event, recovered or forged, keeps nothing
+    test "a draft from someone who may not edit the hosts is not kept", %{site: site, staging: staging} do
       {:ok, staging} =
         Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: :system)
 
@@ -512,11 +576,15 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       render_change(view, "draft_hosts", %{
         "environment_id" => staging.id,
         "shown_domain" => "staging.acme.test",
-        "shown_redirect_hosts" => "www.staging.acme.test"
+        "shown_redirect_hosts" => "www.staging.acme.test",
+        "domain" => "forged.acme.test",
+        "redirect_hosts" => "forged-redirect.acme.test"
       })
 
-      assert field_value(view, staging, ~s(input[name="domain"])) == "staging.acme.test"
-      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+      assert :sys.get_state(view.pid).socket.assigns.host_drafts == %{}
+      refute render(view) =~ "forged"
+      assert has_element?(view, "#environment-#{staging.id} .environment-hosts dd", "staging.acme.test")
+      assert has_element?(view, "#environment-#{staging.id} .environment-hosts", "www.staging.acme.test")
     end
 
     test "a change that carries one field keeps the other one's saved value", %{conn: conn, staging: staging} do
@@ -563,6 +631,78 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       assert field_value(view, staging, "textarea") == "www.staging.acme.test"
     end
 
+    # The save gives the fields new ids, so the focused one is replaced; the
+    # form says which of its controls had the focus
+    test "after a save, the control saved from has the focus again", %{conn: conn, staging: staging} do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      for {focused, {domain, hosts}, index} <- [
+            {"domain", {"new.acme.test", ""}, 0},
+            {"redirect_hosts", {"new.acme.test", "www.new.acme.test"}, 1},
+            {"save", {"staging.acme.test", ""}, 2}
+          ] do
+        view
+        |> hosts_form(staging)
+        |> render_submit(%{"domain" => domain, "redirect_hosts" => hosts, "focused_field" => focused})
+
+        saved = Registry.get_environment(staging.id)
+        assert %{domain: ^domain} = saved
+        id = view |> host_control_ids(staging) |> Enum.at(index)
+
+        assert_push_event(view, "js-exec", %{to: to, attr: "data-focus"})
+        assert to == "##{id}"
+        assert has_element?(view, ~s(##{id}[data-focus]))
+      end
+
+      # None of the form's controls had the focus yet
+      view
+      |> hosts_form(staging)
+      |> render_submit(%{"domain" => "other.acme.test", "redirect_hosts" => "", "focused_field" => ""})
+
+      assert Registry.get_environment(staging.id).domain == "other.acme.test"
+      refute_push_event(view, "js-exec", %{attr: "data-focus"})
+    end
+
+    test "a draft replaced by a save elsewhere is said to be lost, on its row only", %{
+      conn: conn,
+      production: production,
+      staging: staging
+    } do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+      notice = ".environment-hosts-notice"
+      superuser = Factory.insert(:random_user, role: :superuser)
+
+      typed(view, staging, %{"domain" => "staging.acme.test", "redirect_hosts" => "typed.acme.test"})
+
+      {:ok, staging} =
+        Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: superuser)
+
+      assert has_element?(view, "#environment-#{staging.id} #{notice}", "what you typed here was not saved")
+      refute has_element?(view, "#environment-#{production.id} #{notice}")
+
+      # Typing again puts it away
+      typed(view, staging, %{
+        "domain" => "staging.acme.test",
+        "shown_redirect_hosts" => "www.staging.acme.test",
+        "redirect_hosts" => "www.staging.acme.test\nmore.acme.test"
+      })
+
+      refute has_element?(view, "#environment-#{staging.id} #{notice}")
+
+      # Nothing typed, or only what was saved already (a form recovered on
+      # rejoin sends its values unchanged): no notice
+      render_change(view, "draft_hosts", %{
+        "environment_id" => production.id,
+        "shown_domain" => "",
+        "shown_redirect_hosts" => "",
+        "domain" => " ",
+        "redirect_hosts" => ""
+      })
+
+      {:ok, _production} = Registry.update_environment(production, %{domain: "acme.test"}, actor: superuser)
+      refute has_element?(view, "#environment-#{production.id} #{notice}")
+    end
+
     test "a save from a form that showed other redirect hosts is refused", %{
       conn: conn,
       staging: staging,
@@ -603,13 +743,32 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
     end
   end
 
+  # The hosts form's own, or for someone who reads the hosts as text, the
+  # domain the text shows: the element holding only the host, without the
+  # served-hosts state beside it
   defp shown_domain(view, environment) do
-    view
-    |> element(~s(#environment-#{environment.id} input[name="shown_domain"]))
-    |> render()
-    |> LazyHTML.from_fragment()
-    |> LazyHTML.attribute("value")
-    |> List.first()
+    domain = "#environment-#{environment.id} .environment-hosts > div:first-child dd"
+
+    cond do
+      has_element?(view, ~s(#environment-#{environment.id} input[name="shown_domain"])) ->
+        view
+        |> element(~s(#environment-#{environment.id} input[name="shown_domain"]))
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.attribute("value")
+        |> List.first()
+
+      has_element?(view, "#{domain}.environment-hosts__none") ->
+        ""
+
+      true ->
+        view
+        |> element("#{domain} .environment-host-status__host, #{domain} .environment-host-name")
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.text()
+        |> String.trim()
+    end
   end
 
   defp domain_form_id(view, environment) do
@@ -968,6 +1127,24 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       Brando.Tenant.ServedHosts.check()
 
       assert view |> element("#environment-host-status-#{away.id}") |> render() =~ "Served"
+    end
+
+    # A long domain is clipped in its one-line field: its state line shows it
+    # whole, as each redirect host's line does
+    test "the domain's state line names the domain, as a redirect host's does", %{conn: conn, served: served} do
+      {:ok, served} =
+        Registry.update_environment(served, %{redirect_hosts: ["old.acme.test"]}, actor: :system)
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      for {id, host} <- [
+            {"environment-host-status-#{served.id}", "www.acme.test"},
+            {"environment-host-status-#{served.id}-#{Base.url_encode64("old.acme.test", padding: false)}",
+             "old.acme.test"}
+          ] do
+        assert view |> element("#environment-#{served.id} form ##{id} .environment-host-status__host") |> render() =~
+                 host
+      end
     end
 
     test "a host stored with capitals or spaces shows its state", %{conn: conn, served: served} do

@@ -6011,11 +6011,6 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "Domain for %{name}"
-msgstr ""
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
 msgid "Domain updated."
 msgstr ""
 
@@ -8340,7 +8335,7 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "Hosts that redirect to the domain of %{name}"
+msgid "Hosts"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/render_var.ex
@@ -12021,6 +12016,11 @@ msgstr ""
 msgid "One option, all shown at once"
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "One per line. Each one redirects to the domain."
+msgstr ""
+
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
 #, elixir-autogen, elixir-format
 msgid "One source is created per selected file. Existing sources are skipped. New files added to the folder later must be selected here again."
@@ -13676,11 +13676,6 @@ msgstr ""
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Redirect hosts"
-msgstr ""
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
-msgid "Redirect hosts, one per line"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
@@ -18156,6 +18151,11 @@ msgstr ""
 #: lib/brando_admin/components/form/image_drawer.ex
 #, elixir-autogen, elixir-format
 msgid "These crops are set by the image configuration. Position and zoom apply to all previews."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "These hosts were changed elsewhere, so what you typed here was not saved."
 msgstr ""
 
 #: lib/brando_admin/live/users/groups_live.ex

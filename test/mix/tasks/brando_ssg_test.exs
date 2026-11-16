@@ -45,7 +45,13 @@ defmodule Mix.Tasks.Brando.SsgTest do
   test "builds from the endpoint's listener on the port it is configured with, without its watchers",
        %{root: root} do
     restore_env_on_exit(:brando, SSGEndpoint)
-    receiver = SSGEndpoint.start(fn _request -> {200, "<main>home</main>"} end)
+
+    receiver =
+      SSGEndpoint.start(fn
+        %{path: "/__brando_ssg__/not-found"} -> {404, "<main>not here</main>"}
+        _request -> {200, "<main>home</main>"}
+      end)
+
     refute receiver.port == 4000
     # The configuration the task starts the endpoint from, in a project
     config = Application.get_env(:brando, SSGEndpoint)
@@ -62,6 +68,9 @@ defmodule Mix.Tasks.Brando.SsgTest do
     assert_received {:webhook_request, %{path: "/", headers: %{"host" => host}}}
     assert host == "localhost:#{receiver.port}"
     assert File.read!(Path.join(output, "index.html")) =~ "home"
+    assert File.read!(Path.join(output, "404.html")) =~ "not here"
+    assert File.exists?(Path.join(output, "robots.txt"))
+    assert File.exists?(Path.join(output, "_redirects.json"))
     assert Application.get_env(:brando, SSGEndpoint)[:watchers] == []
     assert Application.get_env(:phoenix, :serve_endpoints)
   end

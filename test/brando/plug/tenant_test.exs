@@ -54,6 +54,7 @@ defmodule Brando.Plug.TenantTest do
     assert conn.assigns.current_environment.id == context.environment.id
     assert conn.assigns.tenant_prefix == "tenant_acme_production"
     assert Tenant.current_prefix() == "tenant_acme_production"
+    refute conn.private[:brando_ssg_build]
   end
 
   test "single-site mode falls back to the configured live environment", context do
@@ -106,7 +107,80 @@ defmodule Brando.Plug.TenantTest do
     assert conn.assigns.current_site.id == context.site.id
     assert conn.assigns.current_environment.id == staging.id
     assert conn.assigns.tenant_prefix == "tenant_acme_staging"
+    assert conn.private.brando_ssg_build
     refute conn.halted
+  end
+
+  test "a standalone build's signed context marks the request only with tenancy_mode: :none" do
+    token = Context.sign(%Brando.Sites.Site{id: nil}, %Brando.Environments.Environment{site_id: nil})
+
+    conn = fn ->
+      :get
+      |> Plug.Test.conn("https://www.example.com/")
+      |> Plug.Conn.put_req_header(Context.header(), token)
+      |> Map.put(:host, "www.example.com")
+      |> Brando.Plug.Tenant.call([])
+    end
+
+    assert %{halted: true, private: private} = conn.()
+    refute private[:brando_ssg_build]
+
+    put_test_env(:tenancy_mode, :none)
+    assert conn.().private.brando_ssg_build
+  end
+
+  describe "robots.txt for a static build's request" do
+    setup context do
+      {:ok, staging} =
+        Registry.create_environment(
+          context.site,
+          %{name: "Staging", key: "staging", live: false, domain: "staging.acme.test"},
+          actor: :system
+        )
+
+      prefix = "tenant_acme_staging"
+      key = {:tenant, prefix, :seo}
+      cached = Cachex.get!(:cache, key)
+      Cachex.put(:cache, key, %{"en" => %Brando.Sites.SEO{robots: nil}})
+
+      on_exit(fn ->
+        if cached, do: Cachex.put(:cache, key, cached), else: Cachex.del(:cache, key)
+      end)
+
+      %{staging: staging}
+    end
+
+    defp robots(conn, headers) do
+      conn =
+        Enum.reduce(headers, conn, fn {name, value}, conn -> Plug.Conn.put_req_header(conn, name, value) end)
+        |> Brando.Plug.Tenant.call([])
+        |> Plug.Conn.assign(:language, "en")
+        |> BrandoWeb.SEOController.robots(%{})
+
+      conn.resp_body
+    end
+
+    defp build_conn_on(host), do: :get |> Plug.Test.conn("http://#{host}/robots.txt") |> Map.put(:host, host)
+
+    test "answers as the site's public host, naming the sitemap the build says it has", context do
+      token = Context.sign(context.site, context.staging)
+
+      body = robots(build_conn_on("localhost"), [{Context.header(), token}, {Context.sitemap_header(), "1"}])
+
+      # The admin answers on the endpoint's host, not on the site's
+      assert body =~ "Disallow:\n"
+      refute body =~ "/admin/"
+      assert body =~ ~r{Sitemap: https?://www\.acme\.test(:\d+)?/sitemaps/sitemap\.xml\.gz}
+      refute body =~ "staging.acme.test"
+
+      body = robots(build_conn_on("localhost"), [{Context.header(), token}, {Context.sitemap_header(), "0"}])
+      refute body =~ "Sitemap:"
+    end
+
+    test "ignores the sitemap header on a request that is not a build's", _context do
+      body = robots(build_conn_on("staging.acme.test"), [{Context.sitemap_header(), "1"}])
+      refute body =~ "Sitemap:"
+    end
   end
 
   test "a tampered SSG header cannot bypass unknown-host rejection", context do
