@@ -112,8 +112,7 @@ config :phoenix, :stacktrace_depth, 60
 config :e2e_project, show_breakpoint_debug: false
 
 config :brando,
-  authorization_mode:
-    if(System.get_env("BRANDO_AUTHORIZATION_MODE") == "groups", do: :groups, else: :legacy)
+  authorization_mode: if(System.get_env("BRANDO_AUTHORIZATION_MODE") == "groups", do: :groups, else: :legacy)
 
 config :brando,
   tenancy_mode:
@@ -129,8 +128,7 @@ config :brando,
 # served hosts file whose lookups `E2E.MultiSiteHosts` answers, so no DNS
 # query leaves the machine. Never set for the E2E suite, which is single-site.
 if System.get_env("BRANDO_E2E_MULTI_SITE") == "1" do
-  instance =
-    String.replace(System.get_env("BRANDO_E2E_INSTANCE", "default"), ~r/[^a-zA-Z0-9_]/, "_")
+  instance = String.replace(System.get_env("BRANDO_E2E_INSTANCE", "default"), ~r/[^a-zA-Z0-9_]/, "_")
 
   # Outside the checkout, so the file's path in an error on screen names no home folder
   served_hosts_file = "/tmp/brando_e2e_#{instance}/served_hosts/hosts"
@@ -151,10 +149,7 @@ end
 # Test-only public GitHub provider; requests still traverse the real signed endpoint.
 # Every spec signs in from 127.0.0.1, so the per-address limits would add up
 # over a run; the per-account limits and the lockout stay as in production.
-config :brando, Brando.Users.Throttle,
-  login_per_ip: 10_000,
-  two_factor_per_ip: 10_000,
-  reset_per_ip: 10_000
+config :brando, Brando.Users.Throttle, login_per_ip: 10_000, two_factor_per_ip: 10_000, reset_per_ip: 10_000
 
 # No fetch of GitHub's webhook addresses from its API
 config :brando, :markdown_sources,

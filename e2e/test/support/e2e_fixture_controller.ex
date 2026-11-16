@@ -75,9 +75,7 @@ defmodule E2EFixtureController do
         # a spec has made one.
         "image-file" ->
           create_directory_avatar()
-
-          Brando.Repo.get_by(Brando.Users.User, email: "norwegian-admin@brandocms.com") ||
-            get_admin_user()
+          Brando.Repo.get_by(Brando.Users.User, email: "norwegian-admin@brandocms.com") || get_admin_user()
 
         "site-form" ->
           create_site_form()
@@ -176,8 +174,7 @@ defmodule E2EFixtureController do
     for {type, label, code} <- [
           {:liquid, "Liquid",
            "<div class=\"single-project\">{% for entry in entries %}{{ entry.title }}{% endfor %}</div>"},
-          {:heex, "HEEx",
-           "<div class=\"single-project\"><span :for={entry <- @entries}>{entry.title}</span></div>"}
+          {:heex, "HEEx", "<div class=\"single-project\"><span :for={entry <- @entries}>{entry.title}</span></div>"}
         ] do
       Brando.Repo.insert!(%Brando.Content.Module{
         uid: Brando.Utils.generate_uid(),
@@ -200,21 +197,12 @@ defmodule E2EFixtureController do
   # last message failed for good, with that message in its delivery log.
   defp create_paused_notification_route do
     user = get_admin_user()
-
-    url =
-      String.trim_trailing(E2eProjectWeb.Endpoint.url(), "/") <>
-        "/e2e/webhook-receiver/notification-route-paused"
-
+    url = String.trim_trailing(E2eProjectWeb.Endpoint.url(), "/") <> "/e2e/webhook-receiver/notification-route-paused"
     routing = Brando.Notifications.Routing
 
     {:ok, route} =
       routing.create_route(
-        %{
-          "name" => "Editors' channel",
-          "kind" => "slack",
-          "url" => url,
-          "events" => ["scheduled_publish", "failed_job"]
-        },
+        %{"name" => "Editors' channel", "kind" => "slack", "url" => url, "events" => ["scheduled_publish", "failed_job"]},
         user
       )
 
@@ -224,12 +212,7 @@ defmodule E2EFixtureController do
       notification: %{
         "event" => "failed_job",
         "site" => "e2e",
-        "job" => %{
-          "worker" => "E2eProject.Worker.Sync",
-          "attempt" => 10,
-          "max_attempts" => 10,
-          "error" => "timeout"
-        }
+        "job" => %{"worker" => "E2eProject.Worker.Sync", "attempt" => 10, "max_attempts" => 10, "error" => "timeout"}
       },
       state: "failed",
       response_status: 500,
@@ -328,9 +311,7 @@ defmodule E2EFixtureController do
       |> Brando.Content.Block.recursive_block_changeset(params, user)
       |> Brando.Repo.insert!()
 
-    Brando.Repo.insert!(
-      struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0})
-    )
+    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
 
     Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
     user
@@ -351,8 +332,7 @@ defmodule E2EFixtureController do
         class: "frontend-edit-headline",
         namespace: %{"en" => "Content"},
         help_text: %{},
-        code:
-          ~s(<div class="fe-block"><h2 class="fe-headline">{{ headline }}</h2>{% ref refs.body %}</div>),
+        code: ~s(<div class="fe-block"><h2 class="fe-headline">{{ headline }}</h2>{% ref refs.body %}</div>),
         refs: [
           %Brando.Content.Ref{
             name: "body",
@@ -522,9 +502,7 @@ defmodule E2EFixtureController do
     [intro, container, embed, picture, title_block, featured]
     |> Enum.with_index()
     |> Enum.each(fn {root, sequence} ->
-      Brando.Repo.insert!(
-        struct(source, %{entry_id: page.id, block_id: root.id, sequence: sequence})
-      )
+      Brando.Repo.insert!(struct(source, %{entry_id: page.id, block_id: root.id, sequence: sequence}))
     end)
 
     {:ok, _} = Brando.Content.Blocks.render_entry(Brando.Pages.Page, page.id)
@@ -601,12 +579,7 @@ defmodule E2EFixtureController do
 
     params = %{
       "refs" => [
-        %{
-          "id" => ref.id,
-          "uid" => ref.uid,
-          "name" => ref.name,
-          "data" => %{"type" => "text", "data" => %{"text" => text}}
-        }
+        %{"id" => ref.id, "uid" => ref.uid, "name" => ref.name, "data" => %{"type" => "text", "data" => %{"text" => text}}}
       ]
     }
 
@@ -649,11 +622,7 @@ defmodule E2EFixtureController do
       context = %Tools.Context{actor: user, origin: origin, client: client}
 
       {:ok, %{proposal_id: id, version: version}} =
-        Tools.call(
-          "prepare_proposal",
-          %{"summary" => "Retitle #{page.title}", "operations" => [op]},
-          context
-        )
+        Tools.call("prepare_proposal", %{"summary" => "Retitle #{page.title}", "operations" => [op]}, context)
 
       {:ok, _} = Proposals.approve(id, version, user)
       {:ok, _} = Proposals.apply(id, version, user)
@@ -662,19 +631,8 @@ defmodule E2EFixtureController do
     hotel = page.("Example Hotel", "activity-example-hotel")
     {:ok, _} = Brando.Pages.update_page(hotel.id, %{meta_description: "By the sea"}, user)
 
-    apply_proposal.(
-      page.("Villa Tide", "activity-villa-tide"),
-      "Villa Tide, by the fjord",
-      :assistant,
-      nil
-    )
-
-    apply_proposal.(
-      page.("Aker brygge", "activity-aker-brygge"),
-      "Aker brygge, the wharf",
-      :mcp,
-      "Claude Code"
-    )
+    apply_proposal.(page.("Villa Tide", "activity-villa-tide"), "Villa Tide, by the fjord", :assistant, nil)
+    apply_proposal.(page.("Aker brygge", "activity-aker-brygge"), "Aker brygge, the wharf", :mcp, "Claude Code")
 
     Brando.Activity.with_source(:scheduler, fn ->
       {:ok, _} = Brando.Pages.update_page(hotel.id, %{status: :published}, user)
@@ -697,10 +655,8 @@ defmodule E2EFixtureController do
     context = %Tools.Context{actor: user, origin: :mcp, client: "Claude Code"}
 
     for {title, uri, new_title, summary} <- [
-          {"MCP review", "mcp-review", "MCP review, from Claude Code",
-           "Retitle the MCP review page"},
-          {"MCP rejected", "mcp-rejected", "Should not be applied",
-           "Retitle the MCP rejected page"}
+          {"MCP review", "mcp-review", "MCP review, from Claude Code", "Retitle the MCP review page"},
+          {"MCP rejected", "mcp-rejected", "Should not be applied", "Retitle the MCP rejected page"}
         ] do
       {:ok, page} =
         Brando.Pages.create_page(
@@ -746,19 +702,14 @@ defmodule E2EFixtureController do
         "uid" => "swap",
         "texts" => %{
           "h1" => "Why work with us?",
-          "p" =>
-            "We work with students, designers, companies and schools that want to shape design practice."
+          "p" => "We work with students, designers, companies and schools that want to shape design practice."
         }
       },
       %{"op" => "delete_block", "target" => target, "block_uid" => old}
     ]
 
     {:ok, %{applicable: true}} =
-      Tools.call(
-        "prepare_proposal",
-        %{"summary" => "Swap the first block", "operations" => ops},
-        context
-      )
+      Tools.call("prepare_proposal", %{"summary" => "Swap the first block", "operations" => ops}, context)
 
     user
   end
@@ -780,20 +731,14 @@ defmodule E2EFixtureController do
     }
 
     {:ok, %{proposal_id: id}} =
-      Tools.call(
-        "prepare_proposal",
-        %{"summary" => "Add a global set", "operations" => [op]},
-        context
-      )
+      Tools.call("prepare_proposal", %{"summary" => "Add a global set", "operations" => [op]}, context)
 
     record = Brando.Repo.get!(Record, id)
     [stored] = record.operations
     fields = %{"label" => "Planted", "key" => "planted", "language" => "en"}
 
     record
-    |> Ecto.Changeset.change(
-      operations: [%{stored | "content_type" => "Brando.Sites.GlobalSet", "fields" => fields}]
-    )
+    |> Ecto.Changeset.change(operations: [%{stored | "content_type" => "Brando.Sites.GlobalSet", "fields" => fields}])
     |> Brando.Repo.update!()
 
     user
@@ -809,14 +754,10 @@ defmodule E2EFixtureController do
     user = get_admin_user()
 
     section =
-      Brando.Repo.one!(
-        from(m in Brando.Content.Module, where: m.class == "team-section", limit: 1)
-      )
+      Brando.Repo.one!(from(m in Brando.Content.Module, where: m.class == "team-section", limit: 1))
 
     member =
-      Brando.Repo.one!(
-        from(m in Brando.Content.Module, where: m.parent_id == ^section.id, limit: 1)
-      )
+      Brando.Repo.one!(from(m in Brando.Content.Module, where: m.parent_id == ^section.id, limit: 1))
 
     {identity, [video | _]} =
       team_page!(
@@ -832,10 +773,9 @@ defmodule E2EFixtureController do
 
     targets =
       for {page, members} <- [
-            {{"Strategy", "projects/category/strategy-and-positioning-for-growing-companies",
-              "en", :published}, ["Example Hotel", "Aker"]},
-            {{"Strategi", "prosjekter/kategori/strategi", "no", :published},
+            {{"Strategy", "projects/category/strategy-and-positioning-for-growing-companies", "en", :published},
              ["Example Hotel", "Aker"]},
+            {{"Strategi", "prosjekter/kategori/strategi", "no", :published}, ["Example Hotel", "Aker"]},
             {{"Branding", "projects/category/branding", "en", :draft}, ["Example Hotel"]}
           ] do
         team_page!(user, section, member, page, members)
@@ -898,9 +838,7 @@ defmodule E2EFixtureController do
         ]).uid
       end
 
-    Brando.Repo.insert!(
-      struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: team.id, sequence: 0})
-    )
+    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: team.id, sequence: 0}))
 
     # The revision an undo goes back to holds the blocks too.
     {:ok, _} =
@@ -959,15 +897,7 @@ defmodule E2EFixtureController do
     page = Brando.Repo.get!(Brando.Pages.Page, 1)
     {:ok, _active} = Brando.Revisions.create_revision(page, author)
     {:ok, protected} = Brando.Revisions.create_revision(page, author, false)
-
-    Brando.Revisions.protect_revision(
-      Brando.Pages.Page,
-      page.id,
-      protected.revision,
-      true,
-      :system
-    )
-
+    Brando.Revisions.protect_revision(Brando.Pages.Page, page.id, protected.revision, true, :system)
     {:ok, scheduled} = Brando.Revisions.create_revision(page, user, false)
     Brando.Revisions.mark_revision_scheduled(Brando.Pages.Page, page.id, scheduled.revision, true)
     {:ok, _inactive} = Brando.Revisions.create_revision(page, :system, false)
@@ -1004,8 +934,7 @@ defmodule E2EFixtureController do
         [
           {"Campaign launch", "campaign-launch", :published},
           {"Destination page", "destination-page", :published},
-          {"Autumn collection: the people, places and stories behind it", "autumn-collection",
-           :draft}
+          {"Autumn collection: the people, places and stories behind it", "autumn-collection", :draft}
         ],
         fn {title, uri, status} ->
           page =
@@ -1052,9 +981,7 @@ defmodule E2EFixtureController do
       |> Brando.Content.Block.recursive_block_changeset(params, user)
       |> Brando.Repo.insert!()
 
-    Brando.Repo.insert!(
-      struct(Brando.Pages.Page.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 0})
-    )
+    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: source.id, block_id: block.id, sequence: 0}))
 
     previous =
       params
@@ -1145,9 +1072,7 @@ defmodule E2EFixtureController do
           refs: [picture.("detail", "Detail", detail_below, 0)]
         })
 
-      Repo.insert!(
-        struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: story.id, sequence: 1})
-      )
+      Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: story.id, sequence: 1}))
     end
 
     # A placement-only alt text change should appear next to its image.
@@ -1214,10 +1139,7 @@ defmodule E2EFixtureController do
         uid: Ecto.UUID.generate(),
         name: %{"en" => "Check-in widget", "no" => "Innsjekkingswidget"},
         namespace: %{"en" => "05 LIVE PREVIEW TEST", "no" => "05 LIVE PREVIEW TEST"},
-        help_text: %{
-          "en" => "HTML ref with a parameter",
-          "no" => "HTML-referanse med en parameter"
-        },
+        help_text: %{"en" => "HTML ref with a parameter", "no" => "HTML-referanse med en parameter"},
         class: "checkin-widget",
         multi: false,
         datasource: false,
@@ -1231,13 +1153,7 @@ defmodule E2EFixtureController do
               type: "html",
               data: %Brando.Villain.Blocks.HtmlBlock.Data{
                 text: ~s(<div class="checkin" data-checkin="{{ checkin_id }}">Check in</div>),
-                params: [
-                  %Brando.Villain.Blocks.HtmlBlock.Param{
-                    key: "checkin_id",
-                    label: "Check-in ID",
-                    type: :id
-                  }
-                ],
+                params: [%Brando.Villain.Blocks.HtmlBlock.Param{key: "checkin_id", label: "Check-in ID", type: :id}],
                 values: %{}
               }
             }
@@ -1309,15 +1225,8 @@ defmodule E2EFixtureController do
       for group <- groups, do: Groups.remove_member(scope, group.id, user.id)
     end
 
-    keys =
-      ~w(brando.admin.access brando.profile.read brando.profile.update brando.images.read brando.files.read)
-
-    keys =
-      keys ++
-        for action <- [:read, :update, :publish],
-            schema <- [Project, Client],
-            do: Catalog.get(action, schema).key
-
+    keys = ~w(brando.admin.access brando.profile.read brando.profile.update brando.images.read brando.files.read)
+    keys = keys ++ for action <- [:read, :update, :publish], schema <- [Project, Client], do: Catalog.get(action, schema).key
     {:ok, group} = Groups.create(Scope.standalone(owner), %{name: "Project editors"}, keys)
     {:ok, :ok} = Groups.add_member(Scope.standalone(owner), group.id, user.id)
 
@@ -1333,50 +1242,23 @@ defmodule E2EFixtureController do
 
     attrs = %{status: :published, language: :en, creator_id: owner.id}
     slug = &"#{&1}-#{System.unique_integer([:positive])}"
-
-    client =
-      Brando.Repo.insert!(
-        struct(Client, Map.merge(attrs, %{name: "Havglimt", slug: slug.("havglimt")}))
-      )
-
+    client = Brando.Repo.insert!(struct(Client, Map.merge(attrs, %{name: "Havglimt", slug: slug.("havglimt")})))
     # What a save of the project requires
     attrs = Map.merge(attrs, %{client_id: client.id, introduction: "<p>By the sea.</p>"})
-
-    related =
-      Brando.Repo.insert!(
-        struct(Project, Map.merge(attrs, %{title: "The garden rooms", slug: slug.("garden")}))
-      )
-
-    project =
-      Brando.Repo.insert!(
-        struct(Project, Map.merge(attrs, %{title: "Havglimt retreat", slug: slug.("havglimt")}))
-      )
-
+    related = Brando.Repo.insert!(struct(Project, Map.merge(attrs, %{title: "The garden rooms", slug: slug.("garden")})))
+    project = Brando.Repo.insert!(struct(Project, Map.merge(attrs, %{title: "Havglimt retreat", slug: slug.("havglimt")})))
     {:ok, page_identifier} = Brando.Content.create_identifier(Brando.Pages.Page, page)
     {:ok, related_identifier} = Brando.Content.create_identifier(Project, related)
     join = Project.__schema__(:association, :related_entries).related
 
     for {identifier, sequence} <- Enum.with_index([page_identifier, related_identifier]),
-        do:
-          Brando.Repo.insert!(
-            struct(join, parent_id: project.id, identifier_id: identifier.id, sequence: sequence)
-          )
+        do: Brando.Repo.insert!(struct(join, parent_id: project.id, identifier_id: identifier.id, sequence: sequence))
 
-    row =
-      Brando.Repo.insert!(%InlineRow{
-        client_id: client.id,
-        title: "Rooms",
-        status: :published,
-        sequence: 0
-      })
-
+    row = Brando.Repo.insert!(%InlineRow{client_id: client.id, title: "Rooms", status: :published, sequence: 0})
     row_join = InlineRow.__schema__(:association, :related_entries).related
 
     for {identifier, sequence} <- Enum.with_index([page_identifier, related_identifier]),
-        do:
-          Brando.Repo.insert!(
-            struct(row_join, parent_id: row.id, identifier_id: identifier.id, sequence: sequence)
-          )
+        do: Brando.Repo.insert!(struct(row_join, parent_id: row.id, identifier_id: identifier.id, sequence: sequence))
 
     # The entry a row picks
     {:ok, _} = Brando.Content.create_identifier(Project, project)
@@ -1486,9 +1368,7 @@ defmodule E2EFixtureController do
       secret = Brando.Users.TwoFactor.new_secret()
 
       {:ok, codes} =
-        Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret),
-          proof: password
-        )
+        Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret), proof: password)
 
       # The code that turned it on is used up; the spec signs in with the current one.
       import Ecto.Query, only: [from: 2]
@@ -1510,8 +1390,7 @@ defmodule E2EFixtureController do
   end
 
   # Changes an account's role, as a superuser saving the user form does.
-  def two_factor(conn, %{"action" => "set-role", "id" => id, "role" => role})
-      when role in ~w(user editor admin superuser) do
+  def two_factor(conn, %{"action" => "set-role", "id" => id, "role" => role}) when role in ~w(user editor admin superuser) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
     {:ok, user} = Brando.Users.update_user(id, %{role: role}, :system)
@@ -1564,9 +1443,7 @@ defmodule E2EFixtureController do
     secret = Brando.Users.TwoFactor.new_secret()
 
     {:ok, _codes} =
-      Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret),
-        proof: password
-      )
+      Brando.Users.TwoFactor.enable(user, secret, Brando.Users.TwoFactor.current_code(secret), proof: password)
 
     import Ecto.Query, only: [from: 2]
 
@@ -1638,23 +1515,11 @@ defmodule E2EFixtureController do
     message = params["message"]
 
     case action do
-      "start" ->
-        BrandoAdmin.Work.start(user, key, message,
-          total: params["total"],
-          percent: params["percent"]
-        )
-
-      "update" ->
-        BrandoAdmin.Work.update(user, key, message, percent: params["percent"])
-
-      "advance" ->
-        BrandoAdmin.Work.advance(user, key)
-
-      "finish" ->
-        BrandoAdmin.Work.finish(user, key, message)
-
-      "fail" ->
-        BrandoAdmin.Work.fail(user, key, message)
+      "start" -> BrandoAdmin.Work.start(user, key, message, total: params["total"], percent: params["percent"])
+      "update" -> BrandoAdmin.Work.update(user, key, message, percent: params["percent"])
+      "advance" -> BrandoAdmin.Work.advance(user, key)
+      "finish" -> BrandoAdmin.Work.finish(user, key, message)
+      "fail" -> BrandoAdmin.Work.fail(user, key, message)
     end
 
     BrandoAdmin.Work.Registry.sync()
@@ -1713,10 +1578,7 @@ defmodule E2EFixtureController do
 
     image =
       image
-      |> Ecto.Changeset.change(
-        config_target: "default",
-        title: %{"en" => "Ferries", "no" => "Ferjer"}
-      )
+      |> Ecto.Changeset.change(config_target: "default", title: %{"en" => "Ferries", "no" => "Ferjer"})
       |> Brando.Repo.update!()
 
     json(conn, %{id: image.id})
@@ -1865,9 +1727,7 @@ defmodule E2EFixtureController do
         )
         |> Brando.Repo.insert!()
 
-      Brando.Repo.insert!(
-        struct(Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: sequence})
-      )
+      Brando.Repo.insert!(struct(Article.Blocks, %{entry_id: article.id, block_id: block.id, sequence: sequence}))
     end
 
     add_sync_block.(source, "Første avsnitt", 0)
@@ -1882,9 +1742,7 @@ defmodule E2EFixtureController do
 
     for join <- loaded.entry_blocks, ref <- Brando.Repo.preload(join.block, :refs).refs do
       ref
-      |> Ecto.Changeset.change(
-        data: %{ref.data | data: %{ref.data.data | text: "<p>First paragraph</p>"}}
-      )
+      |> Ecto.Changeset.change(data: %{ref.data | data: %{ref.data.data | text: "<p>First paragraph</p>"}})
       |> Brando.Repo.update!()
     end
 
@@ -1974,21 +1832,11 @@ defmodule E2EFixtureController do
 
     {:ok, video_cfg} = Brando.Videos.get_config_for(%{config_target: "default"})
     {:ok, file_cfg} = Brando.Files.get_config_for(%{config_target: "default"})
-
-    video_folder =
-      FolderBrowser.folder_id_for("Sweep", FolderBrowser.scope_for(video_cfg.upload_path))
-
-    file_folder =
-      FolderBrowser.folder_id_for("Sweep", FolderBrowser.scope_for(file_cfg.upload_path))
+    video_folder = FolderBrowser.folder_id_for("Sweep", FolderBrowser.scope_for(video_cfg.upload_path))
+    file_folder = FolderBrowser.folder_id_for("Sweep", FolderBrowser.scope_for(file_cfg.upload_path))
 
     [teaser, film, walkthrough, _reel] =
-      for {title, n} <-
-            Enum.with_index([
-              "Spring teaser",
-              "Spring film",
-              "Studio walkthrough",
-              "Old showreel"
-            ]) do
+      for {title, n} <- Enum.with_index(["Spring teaser", "Spring film", "Studio walkthrough", "Old showreel"]) do
         Brando.Repo.insert!(%Brando.Videos.Video{
           title: title,
           type: :external_file,
@@ -2005,8 +1853,7 @@ defmodule E2EFixtureController do
 
     [price_list, brochure, floor_plan, _old] =
       for {filename, mime} <- [
-            {"price-list.xlsx",
-             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+            {"price-list.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
             {"spring-brochure.pdf", "application/pdf"},
             {"floor-plan.zip", "application/zip"},
             {"old-terms.pdf", "application/pdf"}
@@ -2021,19 +1868,11 @@ defmodule E2EFixtureController do
         })
       end
 
-    spring =
-      sweep_page(owner, "Spring campaign", :en,
-        videos: [teaser, film],
-        files: [price_list, brochure]
-      )
-
+    spring = sweep_page(owner, "Spring campaign", :en, videos: [teaser, film], files: [price_list, brochure])
     norwegian = sweep_page(owner, "Vårkampanje", :no, videos: [film], files: [])
 
     Brando.Repo.insert!(
-      struct(Module.concat([Brando.Pages.Page, Alternate]),
-        entry_id: norwegian.id,
-        linked_entry_id: spring.id
-      )
+      struct(Module.concat([Brando.Pages.Page, Alternate]), entry_id: norwegian.id, linked_entry_id: spring.id)
     )
 
     sweep_page(owner, "Studio visits", :en, videos: [walkthrough], files: [floor_plan])
@@ -2060,12 +1899,9 @@ defmodule E2EFixtureController do
         uid: Brando.Utils.generate_uid()
       })
 
-    Brando.Repo.insert!(
-      struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0})
-    )
+    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
 
-    refs =
-      Enum.map(media[:videos], &{:video_id, &1.id}) ++ Enum.map(media[:files], &{:file_id, &1.id})
+    refs = Enum.map(media[:videos], &{:video_id, &1.id}) ++ Enum.map(media[:files], &{:file_id, &1.id})
 
     for {{key, id}, n} <- Enum.with_index(refs) do
       Brando.Repo.insert!(
@@ -2075,10 +1911,7 @@ defmodule E2EFixtureController do
           uid: Brando.Utils.generate_uid(),
           block_id: block.id,
           sequence: n,
-          data: %Brando.Villain.Blocks.TextBlock{
-            type: "text",
-            data: %Brando.Villain.Blocks.TextBlock.Data{text: ""}
-          }
+          data: %Brando.Villain.Blocks.TextBlock{type: "text", data: %Brando.Villain.Blocks.TextBlock.Data{text: ""}}
         ])
       )
     end
@@ -2104,11 +1937,7 @@ defmodule E2EFixtureController do
         config_target: "default",
         creator_id: owner.id,
         meta: %{
-          "bunny" => %{
-            "video_guid" => "e2e-quality",
-            "has_mp4_fallback" => true,
-            "available_resolutions" => "360p,720p"
-          }
+          "bunny" => %{"video_guid" => "e2e-quality", "has_mp4_fallback" => true, "available_resolutions" => "360p,720p"}
         }
       })
 
@@ -2151,11 +1980,7 @@ defmodule E2EFixtureController do
       })
 
     Brando.Content.create_identifier(Brando.Pages.Page, page)
-
-    module =
-      Brando.Content.Module
-      |> Brando.Repo.get_by!(class: "video-player")
-      |> Brando.Repo.preload(:refs)
+    module = Brando.Content.Module |> Brando.Repo.get_by!(class: "video-player") |> Brando.Repo.preload(:refs)
 
     block =
       Brando.Repo.insert!(%Brando.Content.Block{
@@ -2166,10 +1991,7 @@ defmodule E2EFixtureController do
         creator_id: owner.id
       })
 
-    Brando.Repo.insert!(
-      struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0})
-    )
-
+    Brando.Repo.insert!(struct(Brando.Pages.Page.Blocks, %{entry_id: page.id, block_id: block.id, sequence: 0}))
     [template] = module.refs
 
     Brando.Repo.insert!(%Brando.Content.Ref{
@@ -2376,9 +2198,7 @@ defmodule E2EFixtureController do
             )
 
           copy
-          |> Ecto.Changeset.change(
-            updated_at: DateTime.add(draft.updated_at, -index * 60, :second)
-          )
+          |> Ecto.Changeset.change(updated_at: DateTime.add(draft.updated_at, -index * 60, :second))
           |> Brando.Repo.update!()
         end)
 
