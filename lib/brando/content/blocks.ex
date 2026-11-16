@@ -734,9 +734,44 @@ defmodule Brando.Content.Blocks do
   """
   @spec rerender_matching_modules({atom, binary} | [{atom, binary}]) :: any
   def rerender_matching_modules(search_terms) do
-    case search_modules_for_regex(search_terms) |> Enum.map(& &1["id"]) do
-      [] -> nil
-      ids -> for id <- ids, do: render_entries_with_module_id(id)
+    for {origin, id} <- list_modules_matching_regex(search_terms), do: render_entries_with_module_id(id, origin)
+  end
+
+  @doc """
+  The modules the current environment renders with whose `code` matches one
+  of `search_terms`, as `{origin, id}`, as block rendering resolves them
+  (`Brando.Content.SharedLibrary`): its own modules, and the shared ones,
+  where its override of a shared module is matched in the shared module's
+  place. Soft-deleted modules are left out.
+  """
+  @spec list_modules_matching_regex({atom, binary} | [{atom, binary}]) :: [{:local | :shared, integer}]
+  def list_modules_matching_regex(search_terms) do
+    matches =
+      search_terms
+      |> List.wrap()
+      |> Enum.reduce(dynamic(false), fn {_name, term}, matches ->
+        dynamic([m], ^matches or fragment("CAST(? AS TEXT) ~ ?", m.code, ^term))
+      end)
+
+    active = from(m in Content.Module, where: is_nil(m.deleted_at))
+    matching = Repo.all(from(m in active, where: ^matches, select: {m.id, m.source_module_id}))
+    overridden = MapSet.new(Repo.all(from(m in active, where: not is_nil(m.source_module_id), select: m.source_module_id)))
+
+    own = for {id, nil} <- matching, do: {:local, id}
+    overrides = for {_id, source_id} <- matching, source_id, do: {:shared, source_id}
+
+    shared =
+      for id <- list_shared_modules_matching(matches), not MapSet.member?(overridden, id), do: {:shared, id}
+
+    own ++ overrides ++ shared
+  end
+
+  # Shared modules live in `public`, used by an environment of a site
+  defp list_shared_modules_matching(matches) do
+    if is_binary(Brando.Tenant.current_prefix()) and Brando.Tenant.current_site_key() do
+      Repo.all(from(m in Content.Module, where: is_nil(m.deleted_at), where: ^matches, select: m.id), prefix: "public")
+    else
+      []
     end
   end
 

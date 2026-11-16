@@ -306,6 +306,59 @@ defmodule Brando.SiteURLTest do
     end
   end
 
+  describe "when the live environment's domain changes, an entry using a shared module" do
+    test "is rendered again when the module emits JSON-LD, or the environment's override of it does", context do
+      user = Brando.Factory.insert(:random_user)
+      site = Registry.get_site(context.site.id)
+      {:ok, shared} = Brando.Content.SharedLibrary.create_shared(:module, work_list_module(), :system)
+      {:ok, plain} = Brando.Content.SharedLibrary.create_shared(:module, work_list_module("<p>Work</p>"), :system)
+      :ok = Brando.Content.SharedLibrary.set_enabled(site, :module, [shared.id, plain.id])
+
+      production_page = in_environment("production", fn -> module_page!(user, shared.id, :shared) end)
+
+      staging_page =
+        in_environment("staging", fn ->
+          {:ok, override} =
+            Brando.Content.SharedLibrary.customize(:module, plain.id, site, Tenant.current_prefix(), :system)
+
+          {:ok, _} = Brando.Content.update_module(override.id, %{code: ~s({{ entries | json_ld: "CreativeWork" }})}, :system)
+          module_page!(user, plain.id, :shared)
+        end)
+
+      in_environment("production", fn -> assert rendered_blocks(production_page) =~ ~S(http:\/\/acme.test\/en\/work) end)
+      in_environment("staging", fn -> assert rendered_blocks(staging_page) =~ ~S(http:\/\/acme.test\/en\/work) end)
+
+      production = Registry.get_environment_by_key(context.site, "production")
+      assert {:ok, _} = Registry.update_environment(production, %{domain: "www.acme.test"}, actor: :system)
+
+      in_environment("production", fn ->
+        assert rendered_blocks(production_page) =~ ~S(http:\/\/www.acme.test\/en\/work)
+      end)
+
+      in_environment("staging", fn ->
+        assert rendered_blocks(staging_page) =~ ~S(http:\/\/www.acme.test\/en\/work)
+      end)
+    end
+  end
+
+  describe "when the identity changes, an entry using a shared module that shows it" do
+    test "is rendered again", context do
+      user = Brando.Factory.insert(:random_user)
+      site = Registry.get_site(context.site.id)
+      {:ok, shared} = Brando.Content.SharedLibrary.create_shared(:module, work_list_module("<p>{{ identity.name }}</p>"), :system)
+      :ok = Brando.Content.SharedLibrary.set_enabled(site, :module, [shared.id])
+
+      in_environment("production", fn ->
+        page = module_page!(user, shared.id, :shared)
+        {:ok, identity} = Brando.Sites.get_identity(%{matches: %{language: "en"}})
+        refute rendered_blocks(page) =~ "Acme Renamed"
+
+        {:ok, _} = Brando.Sites.update_identity(identity, %{name: "Acme Renamed"}, user)
+        assert rendered_blocks(page) =~ "Acme Renamed"
+      end)
+    end
+  end
+
   describe "with group authorization, when the live environment's domain changes" do
     setup do
       put_test_env(:authorization_mode, :groups)
@@ -479,21 +532,24 @@ defmodule Brando.SiteURLTest do
   # A published "work" page with a block of a module that lists it, and its
   # JSON-LD, through a datasource; rendered and stored
   defp json_ld_page!(user) do
-    {:ok, module} =
-      Brando.Content.create_module(
-        Brando.Factory.params_for(:module,
-          name: %{"en" => "Work list"},
-          namespace: %{"en" => "Content"},
-          help_text: %{"en" => "Help"},
-          code: ~s({{ entries | json_ld: "CreativeWork" }}),
-          datasource: true,
-          datasource_module: to_string(Chosen),
-          datasource_type: :list,
-          datasource_query: "work"
-        ),
-        user
-      )
+    {:ok, module} = Brando.Content.create_module(work_list_module(), user)
+    module_page!(user, module.id, :local)
+  end
 
+  defp work_list_module(code \\ ~s({{ entries | json_ld: "CreativeWork" }})) do
+    Brando.Factory.params_for(:module,
+      name: %{"en" => "Work list"},
+      namespace: %{"en" => "Content"},
+      help_text: %{"en" => "Help"},
+      code: code,
+      datasource: true,
+      datasource_module: to_string(Chosen),
+      datasource_type: :list,
+      datasource_query: "work"
+    )
+  end
+
+  defp module_page!(user, module_id, origin) do
     {:ok, page} =
       Brando.Pages.create_page(
         %{title: "Work", uri: "work", language: "en", template: "default.html", status: :published},
@@ -506,7 +562,8 @@ defmodule Brando.SiteURLTest do
         %{
           "uid" => Brando.Utils.generate_uid(),
           "type" => "module",
-          "module_id" => module.id,
+          "module_id" => module_id,
+          "module_origin" => to_string(origin),
           "creator_id" => user.id,
           "source" => to_string(Page.Blocks)
         },
