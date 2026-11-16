@@ -19,6 +19,14 @@ defmodule Brando.SSG.LocalDeliveryTest do
     end
   end
 
+  defmodule SchemaCloner do
+    @moduledoc false
+    @behaviour Brando.Environments.SchemaCloner
+
+    @impl true
+    def clone_schema(_source_prefix, target_prefix), do: Brando.Environments.Schema.create(target_prefix)
+  end
+
   setup do
     root = Path.join(System.tmp_dir!(), "brando-local-delivery-#{System.unique_integer([:positive])}")
     put_test_env(:tenancy_mode, :multi)
@@ -151,6 +159,53 @@ defmodule Brando.SSG.LocalDeliveryTest do
     |> SiteAssets.call([])
   end
 
+  # Through an installation's endpoint: asset sets, static files, the tenant
+  # plug and the router
+  defp dispatch(method \\ :get, host, path, headers \\ []) do
+    headers
+    |> Enum.reduce(Map.put(build_conn(), :host, host), fn {name, value}, conn -> put_req_header(conn, name, value) end)
+    |> Phoenix.ConnTest.dispatch(Brando.Test.LocalDeliveryEndpoint, method, path, nil)
+  end
+
+  describe "with one site" do
+    setup context do
+      Brando.Test.LocalDeliveryEndpoint.start()
+      put_test_env(:tenancy_mode, :single)
+      put_test_env(:site_key, context.site.key)
+      Cache.warm()
+      context |> ready_build() |> deploy!()
+      :ok
+    end
+
+    test "answers from the build on the live domain, the endpoint's host and any other host", context do
+      for host <- [context.host, "endpoint.test", "10.0.0.1", context.host <> ".", String.upcase(context.host)] do
+        conn = dispatch(host, "/about")
+        assert conn.status == 200, host
+        assert conn.resp_body == "about v1", host
+        assert dispatch(host, "/unpublished").resp_body == "missing v1", host
+      end
+    end
+
+    test "answers from the build on the endpoint's host when the live environment has no domain", context do
+      {:ok, _live} = Registry.update_environment(context.live, %{domain: nil}, actor: :system)
+
+      assert dispatch("endpoint.test", "/about").resp_body == "about v1"
+    end
+
+    test "leaves a host to Phoenix that resolves to an environment that is not live", context do
+      assert dispatch("staging-#{context.site.key}.test", "/about").resp_body == "dynamic /about in staging"
+    end
+
+    test "redirects a redirect host to the domain first", context do
+      {:ok, _live} =
+        Registry.update_environment(context.live, %{redirect_hosts: ["www.#{context.host}"]}, actor: :system)
+
+      conn = dispatch("www.#{context.host}", "/about")
+      assert conn.status == 301
+      assert get_resp_header(conn, "location") == ["http://#{context.host}/about"]
+    end
+  end
+
   describe "a published build" do
     test "answers its files on the live host, and a deploy or rollback switches it without a restart", context do
       first = context |> ready_build() |> deploy!()
@@ -172,8 +227,7 @@ defmodule Brando.SSG.LocalDeliveryTest do
     end
 
     test "keeps answering on the public domain after another environment is set live", context do
-      put_test_env(:tenant_migrator, Brando.TenantEnvironmentDomainTest.Migrator)
-      put_test_env(:environment_schema_cloner, Brando.TenantEnvironmentDomainTest.SchemaCloner)
+      put_test_env(:environment_schema_cloner, SchemaCloner)
       Brando.Environments.Schema.create(Brando.Tenant.prefix(context.site, context.live))
       context |> ready_build() |> deploy!()
 

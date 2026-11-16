@@ -4,11 +4,13 @@ defmodule Brando.SSG.LocalDelivery do
   deploy strategy `:local` (`Brando.Sites.DeployConfig`).
 
   `Brando.Plug.SiteAssets` calls it first, in the endpoint before the router.
-  It answers on the domain of the live environment of an active `:static`
-  site whose strategy is `:local` and which has a published build
-  (`Brando.Sites.Site`'s `:published_build`, set by a deploy or rollback),
-  read from `Brando.Tenant.Cache`. Every other request costs that one cache
-  read and passes on untouched.
+  It answers a request that `Brando.Plug.Tenant` would resolve to the live
+  environment of an active `:static` site whose strategy is `:local` and
+  which has a published build (`Brando.Sites.Site`'s `:published_build`, set
+  by a deploy or rollback; `serving?/1`), read from `Brando.Tenant.Cache`:
+  in `:multi` the live environment's domain, in `:single` every host but
+  another environment's domain and a redirect host. Every other request costs
+  those cache reads and passes on untouched.
 
   On such a host, a `GET` or `HEAD`:
 
@@ -52,6 +54,7 @@ defmodule Brando.SSG.LocalDelivery do
   alias Brando.SSG.Builds
   alias Brando.SSG.Context
   alias Brando.Tenant.Cache
+  alias Brando.Tenant.Frontend
 
   require Logger
 
@@ -71,14 +74,41 @@ defmodule Brando.SSG.LocalDelivery do
   def init(opts), do: opts
 
   @impl Plug
-  def call(%Plug.Conn{method: method, host: host} = conn, _opts) when method in @methods do
-    case Cache.get_local_build(String.downcase(host)) do
+  def call(%Plug.Conn{method: method} = conn, _opts) when method in @methods do
+    case served_site(conn.host) do
       nil -> conn
-      {site, _environment} -> serve(conn, site)
+      site -> serve(conn, site)
     end
   end
 
   def call(conn, _opts), do: conn
+
+  # The site whose build answers `host`: what `Brando.Plug.Tenant` resolves
+  # the host to, with the same lookups and normalisation, when that is the
+  # live environment of a site serving a published build. In `:single` every
+  # host no environment names resolves to the live environment, the
+  # endpoint's own and a bare IP included. A redirect host redirects first.
+  defp served_site(host) do
+    with true <- Brando.Tenant.enabled?(),
+         nil <- Cache.get_redirect(host),
+         {site, %{live: true}} <- Frontend.resolve(host),
+         true <- serving?(site) do
+      site
+    else
+      _not_served -> nil
+    end
+  end
+
+  @doc """
+  Whether `site` is served from its published build: an active `:static`
+  site with the deploy strategy `:local` (`Brando.Sites.Site.local_delivery?/1`)
+  and a published build.
+  """
+  @spec serving?(Site.t()) :: boolean()
+  def serving?(%Site{status: :active, published_build: version} = site) when is_binary(version),
+    do: Site.local_delivery?(site)
+
+  def serving?(%Site{}), do: false
 
   @doc """
   The path prefixes that keep reaching Phoenix on a host serving its build:
