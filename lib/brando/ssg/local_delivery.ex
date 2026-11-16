@@ -34,8 +34,8 @@ defmodule Brando.SSG.LocalDelivery do
 
   HTML and the other files are sent with an `ETag` and
   `Cache-Control: no-cache`; the files the build's Vite manifest lists, and a
-  non-HTML request with a `vsn` query as `Plug.Static` reads it, with a
-  year's immutable caching.
+  request for a file other than a page (HTML or Markdown) with a `vsn` query
+  as `Plug.Static` reads it, with a year's immutable caching.
 
   Pages (HTML, the 404 page included) are sent with the headers
   `Phoenix.Controller.put_secure_browser_headers/2` sets by default, as the
@@ -466,10 +466,12 @@ defmodule Brando.SSG.LocalDelivery do
   end
 
   # Content-addressed files the build's Vite manifest lists, or a request
-  # versioned with `?vsn=`, as `Plug.Static` reads one; never HTML, which
-  # the next deploy changes under the same URL
+  # versioned with `?vsn=`, as `Plug.Static` reads one; never a page, HTML or
+  # its Markdown, which the next deploy changes under the same URL
   defp immutable?(conn, build, relative),
-    do: not html?(relative) and (versioned?(conn) or MapSet.member?(build.immutable, relative))
+    do: not page?(relative) and (versioned?(conn) or MapSet.member?(build.immutable, relative))
+
+  defp page?(relative), do: html?(relative) or MIME.from_path(relative) == "text/markdown"
 
   defp versioned?(%Plug.Conn{query_string: "vsn=" <> _}), do: true
   defp versioned?(_conn), do: false
@@ -511,7 +513,12 @@ defmodule Brando.SSG.LocalDelivery do
 
     if Regex.match?(~r/\Av[0-9]+\z/, version) and BuildPath.managed?(root, site) and dir?(root) do
       redirect_list = read_json(root, @redirect_list)
-      files = root |> list_files(skipped_dirs()) |> Map.new(fn {relative, stat} -> {relative, etag(version, stat)} end)
+
+      files =
+        root
+        |> list_files(skipped_dirs())
+        |> Map.new(fn {relative, stat} -> {relative, etag(version, relative, stat)} end)
+
       manifest = read_json(root, "manifest.json")
 
       build = %{
@@ -587,10 +594,10 @@ defmodule Brando.SSG.LocalDelivery do
     end
   end
 
-  # The version too: two builds can hold a file of the same size written in
-  # the same second
-  defp etag(version, {size, mtime}),
-    do: <<?", version::binary, ?-, {size, mtime} |> :erlang.phash2() |> Integer.to_string(16)::binary, ?">>
+  # The version and the path too: two builds, or a page's HTML and Markdown
+  # under one URL, can hold files of the same size written in the same second
+  defp etag(version, relative, {size, mtime}),
+    do: <<?", version::binary, ?-, {relative, size, mtime} |> :erlang.phash2() |> Integer.to_string(16)::binary, ?">>
 
   defp skipped_dirs do
     case String.split(media_path(), "/", trim: true) do

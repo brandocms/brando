@@ -2473,7 +2473,8 @@ HTML and the other files are sent with an `ETag`, which names the build's
 version, and `Cache-Control: no-cache`, so a browser or CDN asks again and gets
 `304 Not Modified` while the build is unchanged, and the new file after a
 deploy. The files the build's Vite manifest lists, which are named by their
-content, and a request for a file other than HTML with a `vsn` query, as
+content, and a request for a file other than a page (HTML, or a page's
+Markdown) with a `vsn` query, as
 `Plug.Static` reads it, are sent with
 `Cache-Control: public, max-age=31536000, immutable`. Markdown is
 `text/markdown`, and the gzipped sitemap is sent as `/sitemaps/` sends it from

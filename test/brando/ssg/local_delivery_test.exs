@@ -574,6 +574,29 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert get_resp_header(conn, "referrer-policy") == ["strict-origin-when-cross-origin"]
     end
 
+    test "never caches a page's Markdown for a year, and gives it an ETag of its own", context do
+      build = ready_build(context, %{"about/index.html" => "12345678", "about.md" => "abcdefgh"})
+      time = {{2026, 1, 1}, {0, 0, 0}}
+      for file <- ["about/index.html", "about.md"], do: File.touch!(Path.join(build.build_path, file), time)
+      deploy!(build)
+
+      markdown =
+        :get
+        |> build_conn("/about?vsn=d")
+        |> Map.put(:host, context.host)
+        |> put_req_header("accept", "text/markdown")
+        |> SiteAssets.call([])
+
+      assert sent_body(markdown) == "abcdefgh"
+      assert get_resp_header(markdown, "cache-control") == ["no-cache"]
+      assert get_resp_header(request(context.host, "/about.md?vsn=d"), "cache-control") == ["no-cache"]
+
+      html = request(context.host, "/about?vsn=d")
+      assert [markdown_etag] = get_resp_header(markdown, "etag")
+      assert [html_etag] = get_resp_header(html, "etag")
+      refute markdown_etag == html_etag
+    end
+
     test "treats every HTML file as a page, whatever its extension's spelling", context do
       context |> ready_build(%{"landing.htm" => "landing", "promo/OFFER.HTML" => "offer"}) |> deploy!()
 
