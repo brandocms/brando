@@ -11,6 +11,7 @@ defmodule BrandoAdmin.Hooks do
       |> assign_current_user(token)
       |> attach_hook(:params, :handle_params, &handle_params/3)
       |> attach_hook(:form_presence, :handle_info, &handle_info/2)
+      |> attach_hook(:content_language, :handle_info, &handle_content_language/2)
 
     {:cont, socket}
   end
@@ -122,6 +123,23 @@ defmodule BrandoAdmin.Hooks do
 
   defp url_path(nil), do: nil
   defp url_path(url), do: url |> URI.parse() |> Map.get(:path)
+
+  @doc """
+  Saves the content language picked in the top bar
+  (`BrandoAdmin.Components.ContentLanguageSwitch`) for the signed-in user, in
+  every admin view. Attached ahead of a view's own hooks; a form detaches it,
+  as its own hook tells the form too.
+  """
+  def handle_content_language({:set_content_language, language}, %{assigns: %{current_user: user}} = socket)
+      when not is_nil(user) do
+    {:ok, user} =
+      Brando.Users.update_user(user, %{config: %{content_language: language}}, :system, show_notification: false)
+
+    BrandoAdmin.Toast.send_to(user, gettext("Content language is now %{language}", language: String.upcase(language)))
+    {:halt, assign(socket, :current_user, user)}
+  end
+
+  def handle_content_language(_message, socket), do: {:cont, socket}
 
   def handle_info({_, {:uri_presence, %{user_joined: presence}}}, socket) do
     {:halt, assign_uri_presence(socket, presence)}
