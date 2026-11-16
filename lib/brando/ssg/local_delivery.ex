@@ -47,6 +47,7 @@ defmodule Brando.SSG.LocalDelivery do
     only: [get_req_header: 2, halt: 1, put_resp_header: 3, send_file: 3, send_resp: 3]
 
   alias Brando.Assets.SiteAssets
+  alias Brando.Plug.SiteAssets, as: SiteAssetsPlug
   alias Brando.Sites.Redirect.ValidSource
   alias Brando.Sites.Redirects
   alias Brando.Sites.Site
@@ -131,7 +132,7 @@ defmodule Brando.SSG.LocalDelivery do
     cond do
       dynamic_path?(conn) -> conn
       Context.signed?(conn) -> conn
-      true -> conn |> answer(site) |> halt()
+      true -> answer(conn, site)
     end
   end
 
@@ -142,17 +143,19 @@ defmodule Brando.SSG.LocalDelivery do
     end)
   end
 
+  # A file the build lacks is left to the asset pipeline when it has one:
+  # files, not content, so nothing unpublished answers
   defp answer(conn, site) do
     case published(site) do
       {:ok, build} ->
         file = requested_file(conn, build)
 
         case redirect(conn, site, build) do
-          {true, status, target} -> send_redirect(conn, status, target)
-          {false, _status, _target} when is_binary(file) -> send_build_file(conn, build, file)
-          {false, status, target} -> send_redirect(conn, status, target)
-          nil when is_binary(file) -> send_build_file(conn, build, file)
-          nil -> send_not_found(conn, build)
+          {true, status, target} -> conn |> send_redirect(status, target) |> halt()
+          {false, _status, _target} when is_binary(file) -> conn |> send_build_file(build, file) |> halt()
+          {false, status, target} -> conn |> send_redirect(status, target) |> halt()
+          nil when is_binary(file) -> conn |> send_build_file(build, file) |> halt()
+          nil -> if SiteAssetsPlug.static_file?(conn), do: conn, else: conn |> send_not_found(build) |> halt()
         end
 
       :error ->
@@ -160,6 +163,7 @@ defmodule Brando.SSG.LocalDelivery do
         |> put_resp_header("cache-control", @revalidate)
         |> put_resp_header("retry-after", "60")
         |> send_resp(503, "Service unavailable")
+        |> halt()
     end
   end
 
@@ -221,6 +225,7 @@ defmodule Brando.SSG.LocalDelivery do
   defp send_build_file(conn, build, relative) do
     path = Path.join(build.root, relative)
     etag = Map.fetch!(build.files, relative)
+    conn = allow_any_origin(conn, relative)
 
     if immutable?(conn, build, relative) do
       conn
@@ -234,6 +239,14 @@ defmodule Brando.SSG.LocalDelivery do
         else: send_file_as(conn, 200, path, relative)
     end
   end
+
+  # As `Brando.Plug.SiteAssets` sends its files: sandboxed live and shared
+  # previews load them from an opaque origin
+  defp allow_any_origin(conn, relative) do
+    if html?(relative), do: conn, else: put_resp_header(conn, "access-control-allow-origin", "*")
+  end
+
+  defp html?(relative), do: Path.extname(relative) == ".html"
 
   defp send_not_found(conn, build) do
     conn = put_resp_header(conn, "cache-control", @revalidate)

@@ -32,6 +32,8 @@ defmodule Brando.SSG.LocalDeliveryTest do
     put_test_env(:tenancy_mode, :multi)
     put_test_env(:sites_path, Path.join(root, "sites"))
     put_test_env(:media_path, Path.join(root, "media"))
+    put_test_env(:site_assets_path, Path.join(root, "site_assets"))
+    put_test_env(:release_static_path, Path.join(root, "release"))
     Cache.clear()
 
     on_exit(fn ->
@@ -196,6 +198,18 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert dispatch("staging-#{context.site.key}.test", "/about").resp_body == "dynamic /about in staging"
     end
 
+    test "leaves the admin's page and its bundles to Phoenix", context do
+      write_release_file("assets/admin/admin-abc123.js", "admin bundle")
+
+      admin = dispatch(context.host, "/admin")
+      refute admin.resp_body == "missing v1"
+      assert admin.status in [200, 302]
+
+      bundle = dispatch(context.host, "/assets/admin/admin-abc123.js")
+      assert bundle.status == 200
+      assert bundle.resp_body == "admin bundle"
+    end
+
     test "redirects a redirect host to the domain first", context do
       {:ok, _live} =
         Registry.update_environment(context.live, %{redirect_hosts: ["www.#{context.host}"]}, actor: :system)
@@ -204,6 +218,69 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert conn.status == 301
       assert get_resp_header(conn, "location") == ["http://#{context.host}/about"]
     end
+  end
+
+  describe "through the endpoint, with several sites" do
+    setup context do
+      Brando.Test.LocalDeliveryEndpoint.start()
+      context |> ready_build() |> deploy!()
+      :ok
+    end
+
+    test "a page the environment has but the build lacks is the build's 404 page", context do
+      # The staging host answers it dynamically
+      assert dispatch("staging-#{context.site.key}.test", "/unpublished").resp_body == "dynamic /unpublished in staging"
+
+      conn = dispatch(context.host, "/unpublished")
+      assert conn.status == 404
+      assert conn.resp_body == "missing v1"
+    end
+
+    test "a POST reaches the router", context do
+      conn = dispatch(:post, context.host, "/contact")
+      assert conn.resp_body == "posted /contact in production"
+    end
+
+    test "the build's assets carry the cross-origin header previews need, its pages do not", context do
+      asset = dispatch(context.host, "/assets/main-abc123.js")
+      assert asset.resp_body == "console.log(1)"
+      assert get_resp_header(asset, "access-control-allow-origin") == ["*"]
+
+      assert get_resp_header(dispatch(context.host, "/about"), "access-control-allow-origin") == []
+    end
+
+    test "a preview and the newer assets it names reach Phoenix and the asset sets", context do
+      path = Brando.SiteAssetsFixtures.create_set(context.site, "acme-next", "js-acme-next", "acme-next.css")
+      {:ok, set} = Brando.Assets.SiteAssets.register_set(context.site, path, %{})
+      {:ok, _staging} = Brando.Assets.SiteAssets.activate_environment_set(set.id, context.staging)
+
+      refute dispatch(context.host, "/__livepreview").resp_body == "missing v1"
+
+      # A newer build's preview, on the public host
+      preview = ready_build(context, %{"about/index.html" => "about next"})
+      assert dispatch(context.host, "/__ssg_preview__/#{preview.preview_token}/about").resp_body =~ "about next"
+
+      asset = dispatch(context.host, "/assets/acme-next.js")
+      assert asset.status == 200
+      assert asset.resp_body == "js-acme-next"
+      assert get_resp_header(asset, "access-control-allow-origin") == ["*"]
+    end
+
+    test "a release file the build lacks answers from the release, a file no one has is the build's 404", context do
+      write_release_file("js/app-abc123.js", "release")
+
+      assert dispatch(context.host, "/js/app-abc123.js").resp_body == "release"
+
+      missing = dispatch(context.host, "/js/missing.js")
+      assert missing.status == 404
+      assert missing.resp_body == "missing v1"
+    end
+  end
+
+  defp write_release_file(relative, content) do
+    path = Path.join(Brando.Assets.SiteAssets.Capture.release_root(), relative)
+    File.mkdir_p!(Path.dirname(path))
+    File.write!(path, content)
   end
 
   describe "a published build" do
