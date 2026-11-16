@@ -1129,6 +1129,33 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       assert view |> element("#environment-host-status-#{away.id}") |> render() =~ "Served"
     end
 
+    test "a host whose lookup could not read a family names the family and the reason, not that it does not resolve",
+         %{conn: conn, site: site} do
+      Brando.ServedHostsTestResolver.answer(
+        "slow.acme.test",
+        {:incomplete, ["203.0.113.10"], [:inet6], %{inet6: :server_failure}}
+      )
+
+      Brando.ServedHostsTestResolver.answer("dead.acme.test", {:error, :timeout})
+
+      {:ok, slow} =
+        Environments.create_environment(site, %{name: "slow", key: "slow", domain: "slow.acme.test"}, creator: :system)
+
+      {:ok, dead} =
+        Environments.create_environment(site, %{name: "dead", key: "dead", domain: "dead.acme.test"}, creator: :system)
+
+      Brando.Tenant.ServedHosts.check()
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      status = view |> element("#environment-host-status-#{slow.id}") |> render()
+      assert status =~ "Could not look it up"
+      assert status =~ "The IPv6 lookup failed: the name server reported a failure. It will be tried again."
+      refute status =~ "Does not resolve"
+
+      assert view |> element("#environment-host-status-#{dead.id}") |> render() =~
+               "The IPv4 and IPv6 lookups timed out. It will be tried again."
+    end
+
     # A long domain is clipped in its one-line field: its state line shows it
     # whole, as each redirect host's line does
     test "the domain's state line names the domain, as a redirect host's does", %{conn: conn, served: served} do
