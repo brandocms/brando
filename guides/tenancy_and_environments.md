@@ -2093,7 +2093,7 @@ the build sends `x-forwarded-proto: https`, `https://localhost:<port>` is its
 origin too, as `Plug.Conn.request_url/1` writes it after `rewrite_on`, and it
 is requested the same way, over `http`. A
 listed path that redirects to another path on that origin is stored with the answer the redirect ends at, and the
-signed header goes along. A redirect to another scheme, host or port, or to a
+signed header goes along; the build's redirect list names it too (below). A redirect to another scheme, host or port, or to a
 URL carrying credentials, fails that URL: Brando makes no request there, and the
 failed-URL list names the target's origin. That includes an absolute URL to the
 site's public domain, since the build renders through the endpoint's listener, so
@@ -2112,7 +2112,8 @@ form supports:
   addresses; Brando checks it when it is set or changed, and again before each
   post, and does not follow redirects. The build log says when the post failed, not the
   answer;
-- automatic deployment after successful builds; and
+- automatic deployment after successful builds, offered once the site has a
+  strategy and a target (a build never deploys without one); and
 - artifact retention from 1 through 100 builds (10 by default).
 
 An rsync target is a remote destination, `[user@]host:/absolute/path`. The
@@ -2207,7 +2208,11 @@ the build's own site (another site's host, or with several sites one of the
 installation's own hosts such as the admin's, answers `404`); with several sites
 the Publishing screen links it on the build environment's domain, or the live
 environment's, so that domain must reach the application, not only the static
-host, and with neither it shows no link. Previews are served with a Content-Security-Policy that keeps forms from
+host, and with neither it shows no link. A preview shows the build as it was
+built: its pages' root-relative URLs, and absolute ones on the site's own
+hosts, load the build's assets and media and link to its pages under the
+preview's path, and a path the build has no file for answers its `404.html`.
+URLs a script builds as it runs are not rewritten. Previews are served with a Content-Security-Policy that keeps forms from
 posting and the page from being framed elsewhere. The Publishing screen links
 to each build's preview every time it opens, so a build keeps its token itself,
 where a shared entry preview keeps only its key's hash: anyone who can read the
@@ -2263,6 +2268,94 @@ Brando owns asset registration/activation and the versioned static artifact
 lifecycle. If the application overrides `config :brando, Oban`, re-declare a
 serial `ssg_builds` queue because an application-level Oban configuration
 replaces, rather than merges with, Brando's defaults.
+
+### What a build holds
+
+A build holds what a static host needs to serve the site on its own, each file
+as the application answered it, byte for byte:
+
+- `index.html` and `<path>/index.html`: the listed pages; a listed path with
+  an extension (`feed.xml`) keeps its name.
+- `<path>.md` and `index.md`: the Markdown alternate each page names with
+  `<link rel="alternate" type="text/markdown">` on the site's own host. A page
+  names it whenever its entry has a Markdown version, whether or not the
+  application serves Markdown there (`Brando.Plug.Markdown`), so an alternate
+  the application answers with 404 is left out and the build's log says so.
+- `404.html`: the site's error page, as the application answers a path no page
+  has (`Brando.SSG.not_found_path/0`; no redirect rule answers it on a build's
+  request, and the 404 log leaves a build's requests out). A site whose
+  catch-all answers that path with a page has no `404.html`, and the build's
+  log says the site answers a missing path with 200. Any other status but 404
+  there fails the build.
+- `robots.txt`: what the application answers for the site on its public host
+  (`Brando.Utils.public_hostname/0`), naming the build's sitemap when it has one.
+- `sitemaps/sitemap.xml.gz` and the files it lists: the sitemap of the
+  environment built, not the live one's, with its entries on the site's public
+  base URL, at the paths `robots.txt` names.
+- `_redirects.json`: the site's redirects (below).
+- `assets/` and `media/`: the build's asset set and the site's media.
+
+The build requests every one of these from the application the way it
+requests the pages, with the same signed header, which it sends in every
+tenancy mode. A file the application cannot answer is a failed URL under its
+path. A build fails before it requests
+anything when the application writes HEEx debug comments or `data-phx-loc`
+attributes into its pages (`debug_heex_annotations` or `debug_attributes` in
+`config :phoenix_live_view`, which development configs turn on): turn them off
+where the build runs.
+
+`_redirects.json` lists what the application answers with a redirect:
+
+```json
+{
+  "version": 1,
+  "redirects": [
+    {"kind": "listed", "source": "/old", "target": "/about", "status": 301, "exact": true,
+     "pattern": "/old$", "language": null},
+    {"kind": "rule", "source": "/news/:slug", "target": "/articles/:slug", "status": 302, "exact": false,
+     "pattern": "/news/:slug", "language": "en"},
+    {"kind": "rule", "source": "/gone", "target": null, "status": 410, "exact": true,
+     "pattern": "/gone$", "language": "en"}
+  ]
+}
+```
+
+For whoever serves the file:
+
+- The entries are in the order Brando checks them, and the first entry that
+  matches a path wins.
+- `kind` `"listed"`: a listed path that answered a redirect, to a page the
+  build has (`language` null). The build keeps that page under the listed
+  path as well, for a host that serves files before it checks redirects. A
+  listed path whose redirect ends anywhere else keeps only the stored page.
+- `kind` `"rule"`: the redirect rules from Configuration → SEO, language by
+  language, which Brando checks for a path no page answers in that language.
+- Rules are matched against the decoded request path, which carries the
+  language prefix when the site forces one: `/en/old` is English, `/old` the
+  default language's.
+- A page the build has wins over a rule that is not exact, as in the
+  application; an exact rule for such a page is left out, since Brando never
+  answers it.
+- `source` is a path a host can match: `:name` segments match one segment and
+  stand for it in `target`, and `exact: false` matches every longer path that
+  begins with `source` as well. A `.` in a rule with no other
+  regular-expression character stands for itself. A rule written as a regular
+  expression, or one whose segment begins with an escaped `:` (a redirect made
+  from a logged 404 for `/:id`), has `source` null and only `pattern`, Brando's
+  own rule, which a host without regular expressions cannot follow.
+- Status 410 has a null target, and the build has no page of its own for it.
+- `$timestamp` in a rule's target is replaced with the build's time.
+- A redirect whose target differs from its source only by the query
+  (`/about` to `/about?lang=en`) is left out, since a host matching on the
+  path would answer it in a loop; the build's log names it.
+Feed the list to the host as its redirect rules. For a host that reads
+Netlify's `_redirects` format, write one line per entry with a `source`, as
+`source target status`; an entry that is not exact also gets a line for
+`source/*`, and on a host that serves a file before its rules, an entry from a
+listed path gets `!` after its status so it wins over the page the build kept.
+On S3 behind CloudFront, a viewer-request function that reads the list does
+the same. An entry without a `source` needs a server that runs regular
+expressions, such as the application itself.
 
 ## Copy an existing installation into tenancy
 

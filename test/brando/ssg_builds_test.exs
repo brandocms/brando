@@ -40,6 +40,13 @@ defmodule Brando.SSGBuildsTest do
     end
   end
 
+  defmodule NotingBuilder do
+    def build(site, environment, opts) do
+      {:ok, result} = SuccessfulBuilder.build(site, environment, opts)
+      {:ok, Map.put(result, :notes, ["/about.md: not written"])}
+    end
+  end
+
   defmodule HomeOnly do
     @moduledoc false
     import Brando.SSG
@@ -57,7 +64,11 @@ defmodule Brando.SSGBuildsTest do
       File.mkdir_p!(empty)
 
       try do
-        Brando.SSG.build(site, environment, opts ++ [ssg_module: HomeOnly, static_path: empty, media_path: empty])
+        Brando.SSG.build(
+          site,
+          environment,
+          opts ++ [ssg_module: HomeOnly, static_path: empty, media_path: empty, site_files: false]
+        )
       after
         File.rm_rf(empty)
       end
@@ -144,6 +155,14 @@ defmodule Brando.SSGBuildsTest do
     assert ready.built_at
     assert ready.build_log =~ "Build completed"
     assert File.read!(Path.join(ready.build_path, "index.html")) == "built"
+  end
+
+  test "writes what the build skipped without failing into its log", context do
+    build = request_build(context.site, context.environment)
+    put_test_env(:ssg_builder, NotingBuilder)
+
+    assert :ok = perform_job(SSGBuild, %{"build_id" => build.id})
+    assert Builds.get_build(build.id).build_log =~ ~r/\] \/about\.md: not written\n.*Build completed/s
   end
 
   test "reports the build to its creator as it is queued, built and ready", context do
@@ -293,16 +312,48 @@ defmodule Brando.SSGBuildsTest do
   end
 
   test "keeps a successful artifact ready when automatic deployment fails", context do
-    {:ok, site} = Registry.update_site(context.site, %{deploy_config: %{strategy: nil, target: nil}})
-    build = request_build(site, context.environment, auto_deploy: true)
+    build = request_build(context.site, context.environment, auto_deploy: true)
     put_test_env(:ssg_builder, SuccessfulBuilder)
+    put_test_env(:ssg_deploy_runner, fn "rsync", _args, _opts -> {"connection refused", 255} end)
 
-    assert {:error, {:deploy_failed, :deploy_strategy_not_configured}} =
+    assert {:error, {:deploy_failed, {:rsync_failed, 255, "connection refused"}}} =
              perform_job(SSGBuild, %{"build_id" => build.id})
 
     ready = Builds.get_build(build.id)
     assert ready.status == :ready
     assert ready.build_log =~ "Automatic deployment failed"
+  end
+
+  test "deploys automatically by the site's setting when the request does not say", context do
+    {:ok, site} = Registry.update_site(context.site, %{deploy_config: %{auto_deploy: true}})
+    test_pid = self()
+    put_test_env(:ssg_builder, SuccessfulBuilder)
+
+    put_test_env(:ssg_deploy_runner, fn command, _args, _opts ->
+      send(test_pid, {:deployed, command})
+      {"deployed", 0}
+    end)
+
+    build = request_build(site, context.environment)
+    assert build.auto_deploy
+
+    assert :ok = perform_job(SSGBuild, %{"build_id" => build.id})
+    assert_received {:deployed, "rsync"}
+    assert Builds.get_build(build.id).status == :deployed
+  end
+
+  test "does not deploy automatically without a deployment target, whatever the request says", context do
+    {:ok, site} =
+      Registry.update_site(context.site, %{deploy_config: %{strategy: nil, target: nil, auto_deploy: true}})
+
+    for opts <- [[auto_deploy: true], []] do
+      build = request_build(site, context.environment, opts)
+      refute build.auto_deploy
+      put_test_env(:ssg_builder, SuccessfulBuilder)
+
+      assert :ok = perform_job(SSGBuild, %{"build_id" => build.id})
+      assert Builds.get_build(build.id).status == :ready
+    end
   end
 
   test "deploys a build, archives its predecessor, and rolls back safely", context do
@@ -716,10 +767,66 @@ defmodule Brando.SSGBuildsTest do
     assert response(conn, 404) == "Static preview not found"
   end
 
-  defp preview(build, host) do
-    Phoenix.ConnTest.build_conn(:get, "/__ssg_preview__/#{build.preview_token}/")
+  defp preview(build, host, path \\ "") do
+    Phoenix.ConnTest.build_conn(:get, "/__ssg_preview__/#{build.preview_token}/#{path}")
     |> Map.put(:host, host)
     |> TenantRouter.call(TenantRouter.init([]))
+  end
+
+  test "a preview serves the build's Markdown alternates through an endpoint with the Markdown plug", context do
+    build = ready_build(context.site, context.environment)
+    File.write!(Path.join(build.build_path, "about.md"), "# About\n")
+    markdown = Brando.Plug.Markdown.init([])
+
+    conn =
+      Phoenix.ConnTest.build_conn(:get, "/__ssg_preview__/#{build.preview_token}/about.md")
+      |> Map.put(:host, "#{context.site.key}.test")
+      |> Brando.Plug.Markdown.call(markdown)
+      |> TenantRouter.call(TenantRouter.init([]))
+
+    assert response(conn, 200) == "# About\n"
+    assert response_content_type(conn, :markdown) =~ "text/markdown"
+  end
+
+  test "a preview loads the build's own files and its links stay inside it", context do
+    build = ready_build(context.site, context.environment)
+    host = "#{context.site.key}.test"
+    prefix = "/__ssg_preview__/#{build.preview_token}"
+
+    site_url =
+      Brando.Tenant.with_prefix(Brando.Tenant.prefix(context.site, context.environment), &Brando.Utils.public_hostname/0)
+
+    page =
+      ~s(<link rel="stylesheet" href="/assets/app.css"><script type="module" src="/assets/app.js"></script>) <>
+        ~s(<a href="/about">About</a><a href='#{site_url}/contact?x=1'>Contact</a><a href="#{site_url}">Home</a>) <>
+        ~s(<a href="https://elsewhere.example.com/">Away</a><a href="//cdn.example.com/x.js">CDN</a>) <>
+        ~s(<img data-srcset="/media/a.jpg 400w, /media/b.jpg 800w" src="data:image/gif;base64,R0lGOD">) <>
+        ~s|<div style="background-image: url('/media/bg.jpg')"></div>|
+
+    File.write!(Path.join(build.build_path, "index.html"), page)
+    File.mkdir_p!(Path.join(build.build_path, "assets"))
+    File.write!(Path.join([build.build_path, "assets", "app.css"]), "body{background:url(/media/bg.jpg)}")
+    File.write!(Path.join(build.build_path, "404.html"), ~s(<a href="/">Back</a>))
+
+    html = response(preview(build, host), 200)
+
+    assert html ==
+             ~s(<link rel="stylesheet" href="#{prefix}/assets/app.css"><script type="module" src="#{prefix}/assets/app.js"></script>) <>
+               ~s(<a href="#{prefix}/about">About</a><a href='#{prefix}/contact?x=1'>Contact</a><a href="#{prefix}/">Home</a>) <>
+               ~s(<a href="https://elsewhere.example.com/">Away</a><a href="//cdn.example.com/x.js">CDN</a>) <>
+               ~s(<img data-srcset="#{prefix}/media/a.jpg 400w, #{prefix}/media/b.jpg 800w" src="data:image/gif;base64,R0lGOD">) <>
+               ~s|<div style="background-image: url('#{prefix}/media/bg.jpg')"></div>|
+
+    css = preview(build, host, "assets/app.css")
+    assert response(css, 200) == "body{background:url(#{prefix}/media/bg.jpg)}"
+    assert [content_type] = get_resp_header(css, "content-type")
+    assert content_type =~ "text/css"
+
+    # The artifact keeps the bytes it was built with
+    assert File.read!(Path.join(build.build_path, "index.html")) == page
+
+    # A path the build has no file for answers the build's own error page
+    assert response(preview(build, host, "missing"), 404) == ~s(<a href="#{prefix}/">Back</a>)
   end
 
   test "retains environment history after the source environment is deleted", context do

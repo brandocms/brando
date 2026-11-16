@@ -93,7 +93,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             <span>{gettext("Note (optional)")}</span>
             <input name="build[note]" placeholder={gettext("Homepage campaign update")} />
           </label>
-          <label>
+          <label :if={deploy_configured?(@site)}>
             <input
               type="checkbox"
               name="build[auto_deploy]"
@@ -128,7 +128,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
               </option>
             </select>
           </label>
-          <label>
+          <label :if={deploy_configured?(@site)}>
             <input
               type="checkbox"
               name="build[auto_deploy]"
@@ -197,7 +197,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
               value={deploy_value(@site, :retention_count) || 10}
             />
           </label>
-          <label>
+          <label :if={deploy_configured?(@site)}>
             <input
               type="checkbox"
               name="deploy[auto_deploy]"

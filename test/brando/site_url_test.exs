@@ -777,6 +777,8 @@ defmodule Brando.SiteURLTest do
                static_path: static_path,
                media_path: Path.join(root, "no-media"),
                ssg_module: RootOnly,
+               # Its router answers the pages only
+               site_files: false,
                fetcher: fetcher
              )
 

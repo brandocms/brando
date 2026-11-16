@@ -188,15 +188,20 @@ defmodule Mix.Tasks.Brando.Ssg do
   end
 
   defp report_result!({:ok, result}) do
+    report_notes(result)
+
     Mix.shell().info(
       "Generated #{result.url_count} URLs and #{result.file_count} files (#{result.total_size} bytes) in #{result.output_path}"
     )
   end
 
   defp report_result!({:error, reason, result}) do
+    report_notes(result)
     Enum.each(result.failed_urls, &Mix.shell().error("Failed: #{&1}"))
     Mix.raise("Static generation failed: #{failure_message(reason)}")
   end
+
+  defp report_notes(result), do: Enum.each(Map.get(result, :notes, []), &Mix.shell().info("Note: #{&1}"))
 
   # The task serves the endpoint unless its configuration says otherwise
   defp failure_message({:no_http_listener, endpoint}) do

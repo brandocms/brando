@@ -153,6 +153,20 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
            )
   end
 
+  test "offers automatic deployment only with a deployment target", context do
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+    assert has_element?(view, ~s(#build-static-site input[name="build[auto_deploy]"]))
+    assert has_element?(view, ~s(#schedule-static-site input[name="build[auto_deploy]"]))
+    assert has_element?(view, ~s(#static-deploy-config input[name="deploy[auto_deploy]"]))
+
+    {:ok, _site} = Registry.update_site(context.site, %{deploy_config: %{strategy: nil, target: nil}})
+    {:ok, view, html} = live(context.conn, "/admin/config/publishing")
+
+    assert html =~ "No deployment target configured"
+    refute has_element?(view, ~s(input[name="build[auto_deploy]"]))
+    refute has_element?(view, ~s(input[name="deploy[auto_deploy]"]))
+  end
+
   test "hides publishing from dynamically delivered sites", context do
     {:ok, _dynamic_site} = Registry.update_site(context.site, %{delivery_mode: :dynamic})
 
