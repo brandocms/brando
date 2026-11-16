@@ -154,7 +154,6 @@ defmodule Brando.Plug.HTML do
     existing = Map.get(conn.assigns, :json_ld_entities, [])
 
     conn
-    |> put_entry_url(:json_ld, data)
     |> assign(:json_ld_entities, existing ++ [{:entry, module, data, language, extra_fields}])
     |> put_json_ld_page(data, JSONLD.entity_type(module, data))
     |> put_page_entry(data)
@@ -260,15 +259,21 @@ defmodule Brando.Plug.HTML do
           |> Enum.flat_map(&alternate_hreflang/1)
 
         conn
-        |> put_entry_url(:hreflang, entry)
-        |> put_alternates(entry.language, [{entry.language, canonical_url} | hreflangs])
+        |> put_private(:brando_hreflang_url, canonical_url)
+        |> put_entry_alternates(entry.language, [{entry.language, canonical_url} | hreflangs])
         |> put_entry_page(entry)
     end
   end
 
   def put_hreflang(conn, _), do: conn
 
+  # Given as paths or URLs, the alternates name no entry to give the page its URL
   defp put_alternates(conn, language, alternates) do
+    %{conn | private: Map.delete(conn.private, :brando_hreflang_url)}
+    |> put_entry_alternates(language, alternates)
+  end
+
+  defp put_entry_alternates(conn, language, alternates) do
     conn
     |> put_private(:brando_hreflangs, alternates)
     |> put_private(:brando_hreflang_language, language_key(language))
@@ -386,15 +391,12 @@ defmodule Brando.Plug.HTML do
 
     1. the URL given to `put_page_url/2`;
     2. the URL of the entry given to `put_hreflang/2`;
-    3. the URL of the entry given to `put_json_ld/3`;
-    4. the URL of the entry given to `put_meta/3`;
-    5. the request URL, without its query string.
+    3. the request URL, without a trailing slash or its query string.
 
-  An entry without a URL of its own (`absolute_url false`, or `only:` leaving
-  it out), or whose URL cannot be resolved (a preload its template needs is
-  missing, which is logged), gives none, and the next one is used. An error
-  response (a status outside 200–299, such as the 404 and 410 pages) has no
-  URL: `nil`.
+  The entries given to `put_meta/3` and `put_json_ld/3` do not decide it: a
+  section page that describes several routes (`/projects/:slug`,
+  `/news/page/2`) leaves each route its own URL. An error response (a status
+  outside 200–299, such as the 404 and 410 pages) has no URL: `nil`.
 
   Like the entry's URL and the sitemap's, it has no trailing slash: a page
   requested at `/about/` has the URL `https://example.com/about`. The front
@@ -402,64 +404,13 @@ defmodule Brando.Plug.HTML do
   """
   @spec page_url(conn) :: String.t() | nil
   def page_url(conn) do
-    if error_status?(conn.status) do
-      nil
-    else
-      entries = conn.private[:brando_page_url_entries] || %{}
-
-      conn.private[:brando_page_url] || entries[:hreflang] || entries[:json_ld] || entries[:meta] ||
-        Utils.current_url(conn)
-    end
+    if error_status?(conn.status),
+      do: nil,
+      else: conn.private[:brando_page_url] || conn.private[:brando_hreflang_url] || Utils.current_url(conn)
   end
 
   defp error_status?(nil), do: false
   defp error_status?(status), do: status not in 200..299
-
-  # The URL of the first entry with one given to `source` (`:hreflang`,
-  # `:json_ld` or `:meta`), for `page_url/1`
-  defp put_entry_url(conn, source, entry) do
-    entries = conn.private[:brando_page_url_entries] || %{}
-
-    with false <- Map.has_key?(entries, source),
-         {url, conn} when is_binary(url) <- entry_url(conn, entry) do
-      put_private(conn, :brando_page_url_entries, Map.put(entries, source, url))
-    else
-      {_no_url, conn} -> conn
-      true -> conn
-    end
-  end
-
-  # An entry's URL is resolved once per request: one that raises is logged once
-  defp entry_url(conn, %{__struct__: module, id: id} = entry) when not is_nil(id) do
-    key = {module, id}
-    resolved = conn.private[:brando_entry_urls] || %{}
-
-    case resolved do
-      %{^key => url} ->
-        {url, conn}
-
-      _ ->
-        url = resolve_entry_url(module, entry)
-        {url, put_private(conn, :brando_entry_urls, Map.put(resolved, key, url))}
-    end
-  end
-
-  defp entry_url(conn, %{__struct__: module} = entry), do: {resolve_entry_url(module, entry), conn}
-
-  defp entry_url(conn, _entry), do: {nil, conn}
-
-  defp resolve_entry_url(module, entry) do
-    if function_exported?(module, :__has_absolute_url__, 0) and module.__has_absolute_url__() and URL.has_url?(entry),
-      do: URL.resolve(entry, :with_host)
-  rescue
-    error ->
-      Logger.warning(
-        "The page's URL could not be resolved from #{inspect(module)} ##{inspect(Map.get(entry, :id))}, " <>
-          "so the next source is used: #{Exception.format_banner(:error, error)}"
-      )
-
-      nil
-  end
 
   defp maybe_put_entry_canonical(conn, %{meta_canonical_url: url}), do: put_canonical(conn, url)
   defp maybe_put_entry_canonical(conn, _entry), do: conn
@@ -509,7 +460,6 @@ defmodule Brando.Plug.HTML do
 
   @spec put_meta(conn, module :: atom, data :: any) :: conn
   def put_meta(conn, module, data, _opts) when is_atom(module) do
-    conn = put_entry_url(conn, :meta, data)
     meta_meta = %{__meta__: %{current_url: page_url(conn)}}
     data_with_meta = Map.merge(data, meta_meta)
     extracted_meta = Brando.Blueprint.Meta.extract_meta(module, data_with_meta)

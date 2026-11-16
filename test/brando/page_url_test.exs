@@ -47,20 +47,6 @@ defmodule Brando.PageURLTest do
       assert_one_url(head, "http://localhost/en/about", "#webpage")
     end
 
-    test "has the entry's URL with put_meta/3 only, as a generated controller without alternates", %{about: about} do
-      head =
-        "/en/about/"
-        |> request()
-        |> HTML.put_meta(Page, about)
-        |> HTML.put_json_ld(Page, about)
-        |> render_head()
-
-      assert head.canonical == "http://localhost/en/about"
-      assert head.og_url == "http://localhost/en/about"
-      assert head.webpage["@id"] == "http://localhost/en/about#webpage"
-      assert head.webpage["url"] == "http://localhost/en/about"
-    end
-
     test "the entry's own node has the page's URL", %{about: about} do
       head = "/en/about/" |> request() |> page_controller(about) |> render_head()
       article = Enum.find(head.graph, &(&1["@type"] == "Article"))
@@ -99,16 +85,21 @@ defmodule Brando.PageURLTest do
   end
 
   # The page's URL is chosen when the head is rendered, in this order:
-  # put_page_url/2, put_hreflang/2's entry, put_json_ld/3's, put_meta/3's,
-  # the request URL
-  describe "the entry that gives the page its URL" do
+  # put_page_url/2, put_hreflang/2's entry, the request URL. The entries given
+  # to put_meta/3 and put_json_ld/3 do not decide it: a section page often
+  # describes several routes.
+  describe "the page's URL" do
     setup %{user: user} do
       projects = page!(user, "Projects", "projects", :en)
       post = %Post{id: 1, title: "A", slug: "a"}
       %{projects: projects, post: post}
     end
 
-    test "is the URL given to put_page_url/2, before any entry's", %{about: about, post: post, projects: projects} do
+    test "is the URL given to put_page_url/2, before put_hreflang/2's entry", %{
+      about: about,
+      post: post,
+      projects: projects
+    } do
       calls = [
         &HTML.put_meta(&1, Page, projects),
         &HTML.put_json_ld(&1, Post, post),
@@ -122,7 +113,7 @@ defmodule Brando.PageURLTest do
       end
     end
 
-    test "is put_hreflang/2's entry, before put_json_ld/3's and put_meta/3's", %{
+    test "is put_hreflang/2's entry's, whatever put_meta/3 and put_json_ld/3 are given", %{
       about: about,
       post: post,
       projects: projects
@@ -135,26 +126,27 @@ defmodule Brando.PageURLTest do
       end
     end
 
-    test "is put_json_ld/3's entry, before put_meta/3's", %{post: post, projects: projects} do
+    test "is the request URL when put_meta/3 and put_json_ld/3 are given a section page", %{projects: projects} do
       calls = [
         &HTML.put_meta(&1, Page, projects),
-        &HTML.put_json_ld(&1, Post, post),
-        &HTML.put_hreflang(&1, en: "/en/projects", no: "/no/prosjekter")
+        &HTML.put_json_ld(&1, Page, projects),
+        &HTML.put_hreflang(&1, en: "/en/projects/acme", no: "/no/prosjekter/acme")
       ]
 
-      for order <- permutations(calls) do
-        head = "/elsewhere/" |> request() |> apply_calls(order) |> render_head()
-        assert_one_url(head, "http://localhost/posts/a", "#webpage")
-        assert head.alternates == [{"en", "http://localhost/posts/a"}, {"no", "http://localhost/no/prosjekter"}]
+      for path <- ["/en/projects/acme", "/en/projects/acme/?page=2"], order <- permutations(calls) do
+        head = path |> request() |> apply_calls(order) |> render_head()
+        assert_one_url(head, "http://localhost/en/projects/acme", "#webpage")
+
+        assert head.alternates == [
+                 {"en", "http://localhost/en/projects/acme"},
+                 {"no", "http://localhost/no/prosjekter/acme"}
+               ]
       end
     end
 
-    test "is put_meta/3's entry without the others", %{projects: projects} do
-      for order <- permutations([&HTML.put_meta(&1, Page, projects), &HTML.put_hreflang(&1, en: "/en/x", no: "/no/x")]) do
-        head = "/elsewhere/" |> request() |> apply_calls(order) |> render_head()
-        assert_one_url(head, "http://localhost/en/projects", "#webpage")
-        assert head.alternates == [{"en", "http://localhost/en/projects"}, {"no", "http://localhost/no/x"}]
-      end
+    test "is the request URL with an entry with a URL given to put_json_ld/3 only", %{post: post} do
+      head = "/news/page/2/" |> request() |> HTML.put_json_ld(Post, post) |> render_head()
+      assert_one_url(head, "http://localhost/news/page/2", "#webpage")
     end
 
     test "is the request URL without an entry with a URL" do
@@ -162,14 +154,7 @@ defmodule Brando.PageURLTest do
       assert_one_url(head, "http://localhost/elsewhere", "#webpage")
     end
 
-    test "an entry the blueprint gives no URL falls through to the request URL on a 200", %{user: user} do
-      section = page!(user, "Projects", "projects-section", :en, has_url: false)
-      head = "/projects" |> request() |> HTML.put_meta(Page, section) |> HTML.put_json_ld(Page, section) |> render_head()
-
-      assert_one_url(head, "http://localhost/projects", "#webpage")
-    end
-
-    test "an entry whose URL cannot be resolved falls through, with one warning" do
+    test "put_meta/3 and put_json_ld/3 do not resolve their entry's URL" do
       entry = %Unloaded{id: 1, title: "U"}
 
       log =
@@ -186,21 +171,7 @@ defmodule Brando.PageURLTest do
           end)
         end)
 
-      assert [_] = Regex.scan(~r/Brando.PageURLTest.Unloaded/, log)
-      assert log =~ "Protocol.UndefinedError"
-    end
-  end
-
-  describe "JSON-LD from an entry without a URL" do
-    test "names the URL of the page's entry, whichever was given first", %{about: about} do
-      quiet = %QuietPost{title: "Q"}
-
-      for order <- permutations([&HTML.put_json_ld(&1, QuietPost, quiet), &HTML.put_meta(&1, Page, about)]) do
-        head = "/about/" |> request() |> apply_calls(order) |> render_head()
-
-        assert_one_url(head, "http://localhost/en/about", "#webpage")
-        assert Enum.find(head.graph, &(&1["@type"] == "Article"))["@id"] == "http://localhost/en/about#article"
-      end
+      refute log =~ "Unloaded"
     end
   end
 
