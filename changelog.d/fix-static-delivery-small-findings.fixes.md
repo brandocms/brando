@@ -13,3 +13,5 @@
 - The Environments screen no longer repeats a domain on the state line under its field, unless the domain is too long for the field to show whole.
 
 - The Environments screen lists the live environment first, then the others by name.
+
+- The presence avatars in the bottom right corner no longer cover a row's Delete button on the Environments and Publishing screens.

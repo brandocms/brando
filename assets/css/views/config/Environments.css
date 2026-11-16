@@ -1011,6 +1011,15 @@
 
 /* The page heading: the title and Refresh on one line, the subtitle under
    both, as on workspace screens; on a phone Refresh goes under the subtitle */
+/* The presence avatars are fixed in the bottom right corner (chrome.css)
+   wherever they show: the screen keeps clear of them, so a row's buttons on
+   the right never scroll under them */
+@media (min-width: 601px) {
+  .environment-screen {
+    padding-right: 24px;
+  }
+}
+
 .environment-screen > #content-header > .content {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
