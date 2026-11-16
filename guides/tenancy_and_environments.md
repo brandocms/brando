@@ -832,7 +832,12 @@ whatever `admit` says.
 
 Brando checks at boot, after every registry write (on every node, as
 [Several nodes](#several-nodes) describes), once a minute while a bound host
-waits for its DNS, and every five minutes otherwise. The slow check reads the
+waits for its DNS, and every five minutes otherwise. A host whose lookup
+timed out is looked up again once after five seconds
+(`:timeout_retry_interval` in milliseconds), before the minute: a local
+caching resolver can take longer than a lookup allows to answer its first
+query for a name, and a name that does not exist then shows **Does not
+resolve** within seconds rather than a minute later. The slow check reads the
 file again, so a host another node sharing the path wrote over, during a
 blue/green switch, goes back in: without a lookup when this node saw it in the
 file or admitted it since it started, after admission otherwise. Nothing is

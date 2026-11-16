@@ -493,6 +493,37 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert File.read!(file) == "www.acme.test\n"
     end
 
+    test "a timed-out lookup is retried once soon, then on the retry timer", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here], timeout_retry_interval: 20)
+      # As a caching resolver answers a name's first query too slowly
+      DNS.answer("new.acme.test", {:incomplete, [], [:inet], %{inet: :timeout}})
+      bind(site, "new", "new.acme.test")
+      assert %{hosts: %{"new.acme.test" => {:lookup_failed, %{inet: :timeout}}}} = ServedHosts.status()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+
+      DNS.answer("new.acme.test", {:error, :nxdomain})
+
+      assert_receive {:served_hosts, %{hosts: %{"new.acme.test" => :unresolved}}}
+    end
+
+    test "the quick retry after a timeout runs once, and not for another failure", %{path: file, site: site} do
+      :persistent_term.put({NotifyingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: NotifyingResolver, timeout_retry_interval: 300)
+      DNS.answer("slow.acme.test", {:error, :timeout})
+      DNS.answer("broken.acme.test", {:incomplete, [], [:inet6], %{inet6: :server_failure}})
+      bind(site, "broken", "broken.acme.test")
+      bind(site, "slow", "slow.acme.test")
+      flush_lookups()
+
+      # The quick retry looks up the timed-out host alone, which times out
+      # again and so waits for the minute
+      assert_receive {:looked_up, "slow.acme.test"}, 1_000
+      ServedHosts.settled()
+      refute_receive {:looked_up, _host}, 600
+      assert %{hosts: %{"slow.acme.test" => {:lookup_failed, %{inet: :timeout}}}} = ServedHosts.status()
+    end
+
     test "of this server's addresses leaves them unknown: the last ones found count", %{path: file, site: site} do
       put_test_env(ServedHosts, file: file)
       DNS.answer("localhost", [@here])

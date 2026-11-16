@@ -7,3 +7,5 @@
 - Setup and maintenance code can create a page, a fragment or any entry with a creator as `:system`, naming the creator with `creator:`: `Brando.Pages.create_page(params, :system, creator: user)`.
 
 - After a restart the Environments screen names this server's addresses at once, instead of only once a host needs a lookup: the served hosts check looks them up at its first check.
+
+- A served host whose lookup timed out is looked up again once after five seconds, before the one-minute retry, so a new host with no DNS record shows **Does not resolve** within seconds instead of **Could not look it up** for a minute behind a slow caching resolver. `:timeout_retry_interval` in `config :brando, Brando.Tenant.ServedHosts` changes the delay.
