@@ -19,9 +19,9 @@ defmodule Brando.SSGBuildsTest do
   alias Brando.Sites.DeployConfig
   alias Brando.SSG.Builds
   alias Brando.SSG.Deploy
+  alias Brando.SSGBuildsTest.TenantRouter
   alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
-  alias Brando.SSGBuildsTest.TenantRouter
   alias Brando.Worker.SSGBuild
 
   defmodule SuccessfulBuilder do
@@ -37,6 +37,30 @@ defmodule Brando.SSGBuildsTest do
          processed_urls: 2,
          failed_urls: []
        }}
+    end
+  end
+
+  defmodule HomeOnly do
+    @moduledoc false
+    import Brando.SSG
+
+    urls :pages do
+      ["/"]
+    end
+  end
+
+  # Brando.SSG with this module's URLs, and no assets or media to copy. It
+  # adds neither :base_url nor :endpoint: the origin is the build's own.
+  defmodule RenderingBuilder do
+    def build(site, environment, opts) do
+      empty = Path.join(System.tmp_dir!(), "brando-ssg-empty-#{System.unique_integer([:positive])}")
+      File.mkdir_p!(empty)
+
+      try do
+        Brando.SSG.build(site, environment, opts ++ [ssg_module: HomeOnly, static_path: empty, media_path: empty])
+      after
+        File.rm_rf(empty)
+      end
     end
   end
 
@@ -225,6 +249,38 @@ defmodule Brando.SSGBuildsTest do
     assert failed.status == :failed
     assert failed.failed_urls == ["/broken (HTTP 500)"]
     assert failed.build_log =~ "Build failed"
+  end
+
+  test "requests the pages from the endpoint's listener, on whatever port it listens", context do
+    receiver = Brando.Test.SSGEndpoint.start(fn _request -> {200, "<main>home</main>"} end)
+    refute receiver.port == 4000
+    put_test_env(:endpoint_module, Brando.Test.SSGEndpoint)
+    put_test_env(:ssg_builder, RenderingBuilder)
+    build = request_build(context.site, context.environment)
+
+    assert :ok = perform_job(SSGBuild, %{"build_id" => build.id})
+
+    assert_received {:webhook_request, %{path: "/", headers: %{"host" => host}}}
+    assert host == "localhost:#{receiver.port}"
+    ready = Builds.get_build(build.id)
+    assert ready.status == :ready
+    assert File.read!(Path.join(ready.build_path, "index.html")) =~ "home"
+  end
+
+  test "fails a build, saying why, when the endpoint has no HTTP listener", context do
+    # The test application's endpoint runs with server: false
+    put_test_env(:ssg_builder, RenderingBuilder)
+    build = request_build(context.site, context.environment)
+
+    assert {:error, {:no_http_listener, BrandoIntegrationWeb.Endpoint}} =
+             perform_job(SSGBuild, %{"build_id" => build.id})
+
+    failed = Builds.get_build(build.id)
+    assert failed.status == :failed
+    assert failed.build_log =~ "Build failed: BrandoIntegrationWeb.Endpoint has no HTTP listener on #{node()}"
+    assert failed.build_log =~ "must run on a node that serves the endpoint"
+    refute failed.build_log =~ "base_url"
+    refute File.exists?(failed.build_path)
   end
 
   test "schedules the Oban job for a future build", context do

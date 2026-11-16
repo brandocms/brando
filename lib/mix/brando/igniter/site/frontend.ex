@@ -39,6 +39,7 @@ if Code.ensure_loaded?(Igniter) do
         igniter
         |> live_preview_notice(project)
         |> error_html_notice(project)
+        |> Mix.Brando.Igniter.Site.ssg_notice(project)
         |> Igniter.add_notice("""
         #{summary(igniter, project, key, module, wired?)}
         No site record or content was created. The frontend takes effect

@@ -1899,37 +1899,78 @@ builds.
 
 <!-- usage-rules:start topic="tenancy" -->
 
-Declare public paths in your application's web SSG module:
+A static build requests and stores the paths your application's web SSG
+module lists. `mix brando.gen.ssg` writes one that lists each site's published
+pages:
 
 ```elixir
 defmodule MyAppWeb.SSG do
   import Brando.SSG
 
-  urls :pages do
-    ["/", "/about", "/contact"]
-  end
+  alias Brando.Pages
+  alias Brando.Pages.Page
 
-  urls :projects do
-    MyApp.Projects.list_projects!(%{status: :published})
-    |> Enum.map(&MyApp.Projects.Project.__absolute_url__/1)
+  # Published pages with a URL, in the site's languages
+  urls :pages do
+    {:ok, pages} =
+      Pages.list_pages(%{
+        filter: Page.__url_filter__(),
+        status: :published,
+        select: {:struct, [:uri, :language, :has_url]}
+      })
+
+    pages
+    |> Brando.Sitemap.in_site_languages()
+    |> Enum.map(&Page.__absolute_url__/1)
   end
 end
 ```
 
+Add a `urls` block for each other content type with pages, listing its
+published entries' `__absolute_url__/1` the same way.
+
 <!-- usage-rules:end -->
 
 URL callbacks execute under the selected environment's tenant prefix. The
-renderer sends a short-lived signed context header through the normal endpoint,
-so a working environment can be built without assigning it a temporary domain.
+renderer requests each path from the application's own endpoint, over `http`
+on the port its HTTP listener is bound to, read when the build starts. It
+connects to the loopback address of the listener's family when the listener
+is bound to a wildcard (`127.0.0.1` for `{0, 0, 0, 0}`, `::1` for an IPv6
+wildcard such as phx.new's `ip: {0, 0, 0, 0, 0, 0, 0, 0}`), and to the address
+otherwise. Every request says `Host: localhost:<port>`, and
+`x-forwarded-proto: https` when the endpoint's URL is `https`. It also sends a
+short-lived signed context header: the tenant plug takes the site and
+environment from that header, not from the host, so a working environment can
+be built without assigning it a temporary domain. A build therefore needs the
+endpoint running as a server with an `:http` listener, as a release behind a
+proxy does on whatever port it listens: without one, the build fails before it
+requests anything, and its log says so. A background build runs on whichever
+node takes its job, so every node that runs jobs must serve the endpoint.
+`Brando.SSG.build/3` takes `:base_url` to request another origin instead, as
+it is.
+
+An endpoint with `force_ssl` lets the build's requests through as phx.new
+writes it (`rewrite_on: [:x_forwarded_proto]`, with `localhost` among the
+excluded hosts), and as `Plug.SSL` does by default, which excludes
+`localhost` in every version. An application with its own `:exclude` list
+needs `localhost` in it, or `rewrite_on: [:x_forwarded_proto]` and an `https`
+endpoint URL. Otherwise `Plug.SSL` redirects every page to `https`, and each
+URL fails naming `force_ssl` as the likely cause: a redirect to the same path
+on `https`, under `localhost` or the endpoint's host, on a build that requests
+the listener.
 Responses outside the 200 range are retained in the build's failed-URL list and
 make the build fail without hiding partial logs or counts.
 
-A build requests only its own origin. A listed path that redirects to another
-path on that origin is stored with the answer the redirect ends at, and the
+A build requests only its own origin: the listener's, or
+`http://localhost:<port>`, which it requests on the listener's address. When
+the build sends `x-forwarded-proto: https`, `https://localhost:<port>` is its
+origin too, as `Plug.Conn.request_url/1` writes it after `rewrite_on`, and it
+is requested the same way, over `http`. A
+listed path that redirects to another path on that origin is stored with the answer the redirect ends at, and the
 signed header goes along. A redirect to another scheme, host or port, or to a
 URL carrying credentials, fails that URL: Brando makes no request there, and the
 failed-URL list names the target's origin. That includes an absolute URL to the
-site's public domain when the build renders through `http://localhost:4000`, so
+site's public domain, since the build renders through the endpoint's listener, so
 write a redirect on a listed path as a relative path, or take the path off the
 SSG module's list. A custom `:fetcher` gets `redirect: false` and returns a
 redirect with its `:headers`.
@@ -2065,6 +2106,12 @@ mix brando.ssg --site acme --force --output /tmp/acme-static
 ```
 
 <!-- usage-rules:end -->
+
+The task starts the endpoint on the port the project configures for it, without
+its watchers, and builds from that listener. With several sites it writes to
+the site's own `sites/<key>/ssg/manual` unless given `--output`; the Publishing
+screen's builds go to `sites/<key>/ssg/builds/`, which the task leaves alone.
+Otherwise it writes to `./ssg`, or to the SSG module's `render_path`.
 
 Without an uploaded asset set, the task builds the local frontend with Vite and
 copies `priv/static`. Pass `--no-compile-assets` to reuse the current release
