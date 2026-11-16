@@ -94,6 +94,7 @@ defmodule Brando.SSGTest do
              )
 
     assert result.processed_urls == 4
+    assert result.built_urls == 3
     assert result.failed_urls == ["/about (HTTP 503)"]
     refute File.exists?(Path.join([context.output_path, "about", "index.html"]))
     assert File.exists?(Path.join(context.output_path, "index.html"))

@@ -83,6 +83,7 @@ defmodule Brando.SSGBuildsTest do
          total_size: 5,
          url_count: 2,
          processed_urls: 2,
+         built_urls: 1,
          failed_urls: ["/broken (HTTP 500)"]
        }}
     end
@@ -268,6 +269,8 @@ defmodule Brando.SSGBuildsTest do
     assert failed.status == :failed
     assert failed.failed_urls == ["/broken (HTTP 500)"]
     assert failed.build_log =~ "Build failed"
+    # Of the two URLs requested, the one written
+    assert {failed.processed_urls, failed.url_count} == {1, 2}
   end
 
   test "requests the pages from the endpoint's listener, on whatever port it listens", context do

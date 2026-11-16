@@ -333,7 +333,7 @@
 
   .environment-panel.publishing-builds th:nth-child(3),
   .environment-panel.publishing-builds td:nth-child(3) {
-    width: 9%;
+    width: 10%;
   }
 
   .environment-panel.publishing-builds th:nth-child(4),
@@ -348,7 +348,7 @@
 
   .environment-panel.publishing-builds th:nth-child(6),
   .environment-panel.publishing-builds td:nth-child(6) {
-    width: 26%;
+    width: 25%;
   }
 
   .publishing-builds td.environment-actions {
@@ -364,6 +364,12 @@
     @font mono;
     color: color-mix(in srgb, var(--brando-ink) 72%, transparent);
     font-size: var(--brando-text-xs);
+  }
+
+  /* The URLs of a failed build that were not written */
+  .publishing-progress__failed {
+    display: block;
+    color: var(--brando-error-ink);
   }
 
   /* The log opens under the row's buttons, at the size of the rest of it */
@@ -964,6 +970,11 @@
 
     .publishing-builds td.environment-actions .btn {
       margin: 4px 8px 4px 0;
+    }
+
+    .publishing-progress__failed {
+      display: inline;
+      margin-left: 8px;
     }
 
     .environment-log__note--empty {

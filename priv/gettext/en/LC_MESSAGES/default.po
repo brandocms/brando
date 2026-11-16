@@ -38,6 +38,11 @@ msgstr ""
 msgid "%{browser} on %{system}"
 msgstr ""
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{built}/%{total} built"
+msgstr ""
+
 #: lib/brando_admin/components/activity.ex
 #, elixir-autogen, elixir-format
 msgid "%{client} via MCP"
@@ -238,6 +243,7 @@ msgid "%{count} existing members affected"
 msgstr ""
 
 #: lib/brando_admin/components/suggestion_review.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} failed"
 msgstr ""

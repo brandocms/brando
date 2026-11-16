@@ -213,7 +213,8 @@ defmodule Brando.Worker.SSGBuild do
       file_count: Map.get(result, :file_count, current.file_count),
       total_size: Map.get(result, :total_size, current.total_size),
       url_count: Map.get(result, :url_count, current.url_count),
-      processed_urls: Map.get(result, :processed_urls, current.processed_urls),
+      # What was written, so the build history says how many failed
+      processed_urls: Map.get(result, :built_urls, Map.get(result, :processed_urls, current.processed_urls)),
       failed_urls: Map.get(result, :failed_urls, current.failed_urls),
       build_log: current.build_log <> notes_log(result) <> log_line("Build failed: #{failure_message(reason)}")
     }

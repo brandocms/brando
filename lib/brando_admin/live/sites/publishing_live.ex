@@ -261,7 +261,15 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                     <code>{build.note || asset_name(build)}</code>
                   </td>
                   <td>{build.environment_name}</td>
-                  <td>{build.processed_urls}/{build.url_count}</td>
+                  <td class="publishing-progress">
+                    <span :if={!failed_urls?(build)}>{build.processed_urls}/{build.url_count}</span>
+                    <span :if={failed_urls?(build)}>
+                      {gettext("%{built}/%{total} built", built: build.processed_urls, total: build.url_count)}
+                    </span>
+                    <span :if={failed_urls?(build)} class="publishing-progress__failed">
+                      {gettext("%{count} failed", count: build.url_count - build.processed_urls)}
+                    </span>
+                  </td>
                   <td>
                     <span class={["environment-state", build.status == :deployed && "live"]}>
                       {human_status(build.status)}
@@ -628,6 +636,9 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp human_status(:deployed), do: gettext("Deployed")
   defp human_status(:failed), do: gettext("Failed")
   defp human_status(:archived), do: gettext("Archived")
+
+  # A failed build stores the URLs it wrote, so the rest are the ones that failed
+  defp failed_urls?(build), do: build.status == :failed and build.processed_urls < build.url_count
 
   defp format_datetime(nil), do: "—"
   defp format_datetime(datetime), do: BrandoAdmin.Dates.short(datetime)

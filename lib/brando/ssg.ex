@@ -185,7 +185,9 @@ defmodule Brando.SSG do
     * `_redirects.json`, the site's redirects (`Brando.SSG.RedirectList`):
       the listed paths that answered a redirect, then the redirect rules.
 
-  A failure there is a failed URL, under its path. What the build skips
+  A failure there is a failed URL, under its path. The result counts the
+  listed URLs (`:url_count`), those requested (`:processed_urls`) and those
+  written (`:built_urls`). What the build skips
   without failing is listed in the result's `:notes`, which a background
   build writes into its log. `site_files: false` builds the listed URLs,
   assets and media only.
@@ -440,6 +442,7 @@ defmodule Brando.SSG do
        %{
          url_count: total,
          processed_urls: processed,
+         built_urls: processed - length(failures),
          failed_urls: Enum.reverse(failures),
          notes: [],
          page_redirects: Enum.reverse(redirects),
@@ -911,6 +914,7 @@ defmodule Brando.SSG do
       total_size: 0,
       url_count: 0,
       processed_urls: 0,
+      built_urls: 0,
       failed_urls: [],
       notes: []
     }
