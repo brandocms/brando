@@ -25,7 +25,14 @@ defmodule Brando.Content.Resave do
   """
 
   alias Brando.Authorization.Boundary
+  alias Brando.Content.Blocks
   alias IO.ANSI
+
+  import Ecto.Query, only: [from: 2]
+
+  # What other entries embed: re-saved first, each evicted from the query
+  # cache once stored, so what embeds it renders its new HTML
+  @embedded Brando.Pages.Fragment
 
   @typedoc """
   Options for `run/1`:
@@ -62,6 +69,14 @@ defmodule Brando.Content.Resave do
   returns `{:ok, count}` with the number re-saved, `{:ok, :declined}` when
   `:confirm` said no, or `{:error, message}` for an option that names
   nothing, before anything is done.
+
+  Each environment's pass first refreshes that environment's render inputs
+  on this node, whatever the node has heard: the identity, globals and menus
+  entries render with, and the cached lists of modules, containers,
+  palettes and fragments (`Brando.Cache.refresh_render_inputs/1`). Fragments
+  are re-saved first, each after the fragments its blocks embed, and each is
+  evicted from the query cache once stored, so the entries that embed it
+  render its new HTML.
   """
   @spec run([option]) :: {:ok, non_neg_integer() | :declined} | {:error, String.t()}
   def run(opts \\ []) do
@@ -155,7 +170,7 @@ defmodule Brando.Content.Resave do
   # of them are, one named Blueprint is not.
   defp blueprints(nil) do
     blueprints =
-      ([Brando.Pages.Fragment] ++ Brando.Blueprint.list_blueprints() ++ [Brando.Pages.Page])
+      ([@embedded] ++ Brando.Blueprint.list_blueprints() ++ [Brando.Pages.Page])
       |> Enum.reject(&Brando.Blueprint.embedded?/1)
 
     {:ok, blueprints, true}
@@ -205,6 +220,9 @@ defmodule Brando.Content.Resave do
   defp resave_in(%{blueprints: blueprints, environments: environments}, info) do
     blueprints = Enum.filter(blueprints, & &1.__has_identifier__())
 
+    # The hosts the entries' URLs start with
+    if environments != [nil], do: Brando.Cache.refresh_render_inputs(registry: true)
+
     count =
       environments
       |> Enum.map(fn target -> in_environment(target, info, fn -> resave_here(blueprints, info) end) end)
@@ -241,8 +259,10 @@ defmodule Brando.Content.Resave do
     end
   end
 
-  # The entries and images of the environment it is in
+  # The entries and images of the environment it is in, from its render
+  # inputs as they are now: this node may not have heard of what changed them
   defp resave_here(blueprints, info) do
+    :ok = Brando.Cache.refresh_render_inputs()
     count = Enum.sum_by(blueprints, &resave_entries(&1, info))
     report_stale_config_targets(info)
     count
@@ -286,42 +306,82 @@ defmodule Brando.Content.Resave do
     {:ok, entries} = apply(context, :"list_#{plural}", [%{order: "asc id", preload: preloads}])
 
     info.([:green, "\n==> Resaving #{singular} entries\n"])
+    write = &IO.write(ANSI.format(&1))
 
-    Enum.count(entries, fn entry ->
+    entries
+    |> in_render_order(blueprint)
+    |> Enum.count(fn entry ->
       title = blueprint.__identifier__(entry, skip_cover: true).title
 
       # IO.ANSI.format/1 drops the colours when stdout is not a terminal.
-      IO.write(
-        ANSI.format([
-          "* [",
-          :blue,
-          "#{singular}",
-          :reset,
-          ":",
-          :blue,
-          "#{entry.id}",
-          :reset,
-          "] → ",
-          :blue,
-          title,
-          :reset,
-          " ... "
-        ])
-      )
+      write.([
+        "* [",
+        :blue,
+        "#{singular}",
+        :reset,
+        ":",
+        :blue,
+        "#{entry.id}",
+        :reset,
+        "] → ",
+        :blue,
+        title,
+        :reset,
+        " ... "
+      ])
 
       # Loaded again as it is now, and stored only over that: an editor may
       # have saved it since the list was read, or save it while it renders
       keep_updated_at = &Ecto.Changeset.force_change(&1, :updated_at, &1.data.updated_at)
 
-      case Brando.Content.Blocks.render_and_store(blueprint, entry.id, prepare: keep_updated_at, force: true) do
-        {:ok, _} ->
-          IO.write(ANSI.format([:green, "done!\n"]))
+      case Blocks.render_and_store(blueprint, entry.id, prepare: keep_updated_at, force: true) do
+        {:ok, stored} ->
+          if blueprint == @embedded, do: Brando.Cache.Query.evict({:ok, stored})
+          write.([:green, "done!\n"])
           true
 
         {:error, _} ->
-          IO.write(ANSI.format([:red, "failed!\n"]))
+          write.([:red, "failed!\n"])
           false
       end
     end)
+  end
+
+  # Fragments after the fragments their blocks embed, in id order otherwise
+  # (and for those in a cycle)
+  defp in_render_order(entries, @embedded) do
+    ids = MapSet.new(entries, & &1.id)
+    embeds = fragment_embeds(ids)
+    order(entries, embeds, MapSet.new(), [])
+  end
+
+  defp in_render_order(entries, _blueprint), do: entries
+
+  # %{fragment id => ids of the fragments it embeds}
+  defp fragment_embeds(ids) do
+    from(b in Brando.Content.Block, where: b.fragment_id in ^MapSet.to_list(ids), distinct: true, select: b.fragment_id)
+    |> Brando.Repo.all()
+    |> Enum.reduce(%{}, fn embedded_id, embeds ->
+      embedded_id
+      |> Blocks.list_block_ids_using_fragment()
+      |> Blocks.list_root_block_ids_by_source()
+      |> Blocks.list_entry_ids_for_root_blocks_by_source()
+      |> Map.get(@embedded, [])
+      |> Enum.reduce(embeds, fn embedder, embeds ->
+        if embedder != embedded_id and MapSet.member?(ids, embedder),
+          do: Map.update(embeds, embedder, [embedded_id], &[embedded_id | &1]),
+          else: embeds
+      end)
+    end)
+  end
+
+  defp order([], _embeds, _done, ordered), do: Enum.reverse(ordered)
+
+  defp order(pending, embeds, done, ordered) do
+    case Enum.split_with(pending, fn entry -> Enum.all?(Map.get(embeds, entry.id, []), &MapSet.member?(done, &1)) end) do
+      # A cycle: the rest in id order
+      {[], rest} -> Enum.reverse(ordered, rest)
+      {ready, rest} -> order(rest, embeds, Enum.into(ready, done, & &1.id), Enum.reverse(ready, ordered))
+    end
   end
 end

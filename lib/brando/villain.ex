@@ -23,34 +23,20 @@ defmodule Brando.Villain do
   alias Liquex.Context
 
   @brando_env Application.compile_env(:brando, :env)
-  @module_cache_ttl (@brando_env in [:e2e, :test] &&
-                       %{
-                         preload: [
-                           :vars,
-                           refs: [
-                             :image,
-                             :file,
-                             video: [:thumbnail, :file],
-                             gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]
-                           ]
-                         ]
-                       }) ||
-                      %{
-                        cache: {:ttl, :infinite},
-                        preload: [
-                          :vars,
-                          refs: [
-                            :image,
-                            :file,
-                            video: [:thumbnail, :file],
-                            gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]
-                          ]
-                        ]
-                      }
-  @container_cache_ttl (@brando_env in [:e2e, :test] && %{preload: [:palette]}) ||
-                         %{cache: {:ttl, :infinite}, preload: [:palette]}
-  @palette_cache_ttl (@brando_env in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
-  @fragment_cache_ttl (@brando_env in [:e2e, :test] && %{}) || %{cache: {:ttl, :infinite}}
+  @module_preloads [
+    :vars,
+    refs: [
+      :image,
+      :file,
+      video: [:thumbnail, :file],
+      gallery: [gallery_objects: [:image, video: [:thumbnail, :file]]]
+    ]
+  ]
+
+  # The lists renders read are cached without expiry, except in test and e2e
+  # runs; `config :brando, :villain_query_cache` overrides it, for a test that
+  # needs them cached.
+  @query_cache_default @brando_env not in [:e2e, :test]
   @block_module Module.concat(["Brando", "Content", "Block"])
 
   # Data no template wrote: what Liquid reads of it prints as text
@@ -91,10 +77,10 @@ defmodule Brando.Villain do
     opts_map = Enum.into(opts, %{})
     parser = RuntimeConfig.get(Brando.Villain)[:parser]
 
-    {:ok, modules} = RenderSourceQuery.list_modules(@module_cache_ttl)
-    {:ok, containers} = RenderSourceQuery.list_containers(@container_cache_ttl)
-    {:ok, palettes} = RenderSourceQuery.list_palettes(@palette_cache_ttl)
-    {:ok, fragments} = FragmentQuery.list_for_rendering(@fragment_cache_ttl)
+    {:ok, modules} = RenderSourceQuery.list_modules(cached(%{preload: @module_preloads}))
+    {:ok, containers} = RenderSourceQuery.list_containers(cached(%{preload: [:palette]}))
+    {:ok, palettes} = RenderSourceQuery.list_palettes(cached(%{}))
+    {:ok, fragments} = FragmentQuery.list_for_rendering(cached(%{}))
 
     entry = maybe_put_timestamps(entry)
 
@@ -196,6 +182,12 @@ defmodule Brando.Villain do
     |> parse_and_render(context)
   end
 
+  defp cached(opts) do
+    if Application.get_env(:brando, :villain_query_cache, @query_cache_default),
+      do: Map.put(opts, :cache, {:ttl, :infinite}),
+      else: opts
+  end
+
   # Cachex gets deep-copy each cached list (modules with full var/ref preloads,
   # fragments with rendered HTML) into the calling process — only copy the
   # lists this block type's parser callbacks actually read. The parser only
@@ -203,22 +195,22 @@ defmodule Brando.Villain do
   # palettes for container blocks, fragments for fragment blocks. The
   # `{% fragment %}` liquid tag fetches its own fragment and does not use opts.
   defp put_render_sources(opts_map, %{type: type}) when type in [:module, :module_entry] do
-    {:ok, modules} = RenderSourceQuery.list_modules(@module_cache_ttl)
+    {:ok, modules} = RenderSourceQuery.list_modules(cached(%{preload: @module_preloads}))
 
     Map.merge(opts_map, %{modules: modules, containers: [], palettes: [], fragments: []})
   end
 
   defp put_render_sources(opts_map, %{type: :fragment}) do
-    {:ok, fragments} = FragmentQuery.list_for_rendering(@fragment_cache_ttl)
+    {:ok, fragments} = FragmentQuery.list_for_rendering(cached(%{}))
 
     Map.merge(opts_map, %{modules: [], containers: [], palettes: [], fragments: fragments})
   end
 
   defp put_render_sources(opts_map, _block) do
-    {:ok, modules} = RenderSourceQuery.list_modules(@module_cache_ttl)
-    {:ok, containers} = RenderSourceQuery.list_containers(@container_cache_ttl)
-    {:ok, palettes} = RenderSourceQuery.list_palettes(@palette_cache_ttl)
-    {:ok, fragments} = FragmentQuery.list_for_rendering(@fragment_cache_ttl)
+    {:ok, modules} = RenderSourceQuery.list_modules(cached(%{preload: @module_preloads}))
+    {:ok, containers} = RenderSourceQuery.list_containers(cached(%{preload: [:palette]}))
+    {:ok, palettes} = RenderSourceQuery.list_palettes(cached(%{}))
+    {:ok, fragments} = FragmentQuery.list_for_rendering(cached(%{}))
 
     Map.merge(opts_map, %{
       modules: modules,
