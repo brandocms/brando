@@ -642,6 +642,25 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert File.ls!(tmp_dir) == ["served_hosts"]
     end
 
+    test "a write under way when the file is unset leaves the file alone", %{path: file, tmp_dir: tmp_dir, site: site} do
+      DNS.answer("a.acme.test", [@here])
+      bind(site, "a", "a.acme.test")
+      # Another node sharing the path wrote over it, so the next write renames
+      File.write!(file, "")
+      hold_renames(file)
+      ServedHosts.registry_changed()
+      assert_receive {:renaming, writer}
+
+      put_test_env(ServedHosts, [])
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+      release_rename(writer)
+      ServedHosts.settled()
+
+      assert File.read!(file) == ""
+      assert File.ls!(tmp_dir) == ["served_hosts"]
+      refute_received {:served_hosts, _status}
+    end
+
     test "a write removes temporary files an earlier write left behind, and none of its own",
          %{path: file, tmp_dir: tmp_dir, site: site} do
       leftovers = [".served_hosts.12.tmp", ".served_hosts.Zm9vYmFy.tmp"]

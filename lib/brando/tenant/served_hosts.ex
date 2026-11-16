@@ -515,7 +515,7 @@ defmodule Brando.Tenant.ServedHosts do
   # whose file was unset or changed, never replaces the file.
   defp write_hosts(job) do
     run_test_hook(:before_write)
-    if Keyword.get(config(), :file) == job.file and may_write?(job), do: read_and_write(job), else: :cancelled
+    if may_write?(job), do: read_and_write(job), else: :cancelled
   end
 
   defp read_and_write(%{file: file, keep: keep} = job) do
@@ -538,9 +538,16 @@ defmodule Brando.Tenant.ServedHosts do
     end
   end
 
-  # A restarted process's writer is not its successor's: only the registered
-  # process's writes land
-  defp may_write?(%{owner: owner}), do: Process.whereis(__MODULE__) == owner and Process.alive?(owner)
+  # Only the registered process's writes land, a restarted one's writer not
+  # being its successor's, and only to the file configured now
+  defp may_write?(%{owner: owner, file: file}) do
+    Process.whereis(__MODULE__) == owner and Process.alive?(owner) and configured_file() == file
+  end
+
+  defp configured_file do
+    config = config()
+    if Keyword.keyword?(config), do: Keyword.get(config, :file)
+  end
 
   # Tests hold a write at `:before_write`, before it reads the file, and at
   # `:before_rename`, once its temporary file is synced
