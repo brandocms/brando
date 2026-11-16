@@ -348,7 +348,9 @@ defmodule Brando.Tenant.Registry do
   `create_environment/3` does: the last step of a create, once the
   environment's schema is ready, so its hosts resolve only from then on. A
   host another write bound meanwhile is refused with `{:error, changeset}`.
-  With no host in `attrs`, nothing is written.
+  With no host in `attrs`, nothing is written. Binding a live environment's
+  domain renders the site's stored public URLs again, as
+  `update_environment/3` does.
   """
   @spec bind_hosts(Environment.t(), map(), keyword()) :: {:ok, Environment.t()} | {:error, Ecto.Changeset.t()}
   def bind_hosts(%Environment{} = environment, attrs, opts \\ []) do
@@ -362,6 +364,7 @@ defmodule Brando.Tenant.Registry do
         changeset
         |> Repo.update(@public_opts)
         |> refresh_cache_on_success()
+        |> rerender_on_public_domain_change(changeset)
     end
   end
 

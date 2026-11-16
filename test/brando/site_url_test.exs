@@ -133,6 +133,18 @@ defmodule Brando.SiteURLTest do
     end
   end
 
+  # The default seed, then what the test puts under this module's key
+  defmodule ExtraSeeder do
+    @behaviour Brando.Tenant.Seeder
+
+    @impl true
+    def seed(site, environment, creator) do
+      :ok = Brando.Tenant.Seeder.seed(site, environment, creator)
+      Application.fetch_env!(:brando, __MODULE__).(creator)
+      :ok
+    end
+  end
+
   # An endpoint on a non-default port, as in development
   defmodule PortEndpoint do
     def url, do: "http://localhost:4000"
@@ -398,6 +410,32 @@ defmodule Brando.SiteURLTest do
           html = rendered_blocks(page)
           assert html =~ ~S(http:\/\/www.acme.test\/en\/work)
           refute html =~ ~S(http:\/\/acme.test)
+        end)
+      end
+    end
+  end
+
+  describe "a new site whose seed emits JSON-LD" do
+    test "names its live domain in every environment once the hosts are bound" do
+      put_test_env(:tenant_seeder, ExtraSeeder)
+      put_test_env(ExtraSeeder, &json_ld_page!/1)
+      on_exit(fn -> Brando.TenantCaches.clear(~w(tenant_seeded_production tenant_seeded_staging)) end)
+
+      creator = Brando.Factory.insert(:random_user, role: :superuser, avatar: nil)
+
+      environments = [
+        %{name: "Production", key: "production", live: true, domain: "seeded.acme.test"},
+        %{name: "Staging", key: "staging", live: false, domain: "staging.seeded.acme.test"}
+      ]
+
+      assert {:ok, _site} =
+               Setup.create_site(%{site_attrs() | name: "Seeded", key: "seeded"}, creator, environments: environments)
+
+      for key <- ~w(production staging) do
+        Tenant.with_prefix(Tenant.prefix("seeded", key), fn ->
+          html = Brando.Repo.get_by!(Page, uri: "work", language: :en).rendered_blocks
+          assert html =~ ~S(http:\/\/seeded.acme.test\/en\/work), key
+          refute html =~ String.replace(Brando.endpoint().url(), "/", "\\/"), key
         end)
       end
     end
