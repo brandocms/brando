@@ -98,7 +98,7 @@ if Code.ensure_loaded?(Igniter) do
       created = for {flavor, path} <- @envrc, !existing.envrc[flavor], do: {flavor, path}
 
       igniter
-      |> check_origin(project, hosts, existing)
+      |> check_origin(project, hosts, existing, tenancy_mode)
       |> envrc(project, hosts, created)
       |> fill_secrets(existing.unfilled_envrc)
       |> release_env(project, existing.release_env)
@@ -110,7 +110,7 @@ if Code.ensure_loaded?(Igniter) do
         {"Brando: asset dependencies and builds, uploads, logs, Florist's archives and dumps", @brando_ignores}
         | tenancy_ignores(tenancy_mode)
       ])
-      |> placeholder_notice(hosts, existing, created)
+      |> placeholder_notice(hosts, %{existing | check_origin?: existing.check_origin? or tenancy_mode == :multi}, created)
     end
 
     @doc """
@@ -177,6 +177,44 @@ if Code.ensure_loaded?(Igniter) do
 
     defp host(hosts, :prod), do: hosts.domain
     defp host(hosts, :staging), do: hosts.staging
+
+    # A multi-site installation's sites are added in the admin later, so no
+    # list written now can name their hosts: the endpoint asks
+    # `Brando.Tenant.Origins`, which accepts the installation's own hosts and
+    # every site's domain. The endpoint's host is PHX_HOST, so the staging
+    # release, with its own, trusts the staging host. Extra origins go in its
+    # argument.
+    defp check_origin(igniter, _project, hosts, %{check_origin?: true}, :multi) do
+      if hosts.explicit? do
+        Igniter.add_notice(igniter, """
+        The application already configures check_origin; it was left unchanged. A
+        multi-site installation trusts each site's domain with:
+          check_origin: #{multi_site_origins(hosts)}
+        """)
+      else
+        igniter
+      end
+    end
+
+    defp check_origin(igniter, project, hosts, _existing, :multi) do
+      igniter
+      |> Config.configure_new(
+        "prod.exs",
+        project.otp_app,
+        [project.endpoint, :check_origin],
+        {:code, Sourceror.parse_string!(multi_site_origins(hosts))}
+      )
+      |> Igniter.add_notice("""
+      check_origin for #{inspect(project.endpoint)} in config/prod.exs is Brando.Tenant.Origins: it
+      accepts the endpoint's host (PHX_HOST), the installation's media and CDN hosts and the
+      domain of every site's environments, as they are added in the admin.
+      """)
+    end
+
+    defp check_origin(igniter, project, hosts, existing, _mode), do: check_origin(igniter, project, hosts, existing)
+
+    defp multi_site_origins(%{origins: []}), do: "{Brando.Tenant.Origins, :allowed?, []}"
+    defp multi_site_origins(%{origins: origins}), do: "{Brando.Tenant.Origins, :allowed?, [#{inspect(origins)}]}"
 
     defp check_origin(igniter, project, hosts, %{check_origin?: true}) do
       if hosts.explicit? and not hosts.placeholder? do

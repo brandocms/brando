@@ -16,6 +16,9 @@ defmodule Brando.Tenant.Registry do
   refused too. `Brando.Environments.set_live/2` moves a dynamically delivered
   site's host between its own environments without one: the host is already
   the site's.
+
+  An environment's `redirect_hosts` bind hosts as `domain` does, and the same
+  check guards them; a live switch moves them with the domain.
   """
 
   use Gettext, backend: Brando.Gettext
@@ -282,6 +285,11 @@ defmodule Brando.Tenant.Registry do
     |> refresh_cache_on_success()
   end
 
+  @doc """
+  Updates an environment, checking `opts[:actor]`'s authority to bind its
+  hosts. Once the change is committed, the site's open environments screens
+  are told (`Brando.Environments.announce/1`).
+  """
   @spec update_environment(Environment.t(), map(), keyword()) ::
           {:ok, Environment.t()} | {:error, Ecto.Changeset.t()}
   def update_environment(%Environment{} = environment, attrs, opts \\ []) do
@@ -290,6 +298,36 @@ defmodule Brando.Tenant.Registry do
     |> authorize_domain(opts[:actor])
     |> Repo.update(@public_opts)
     |> refresh_cache_on_success()
+    |> announce_on_success()
+  end
+
+  defp announce_on_success({:ok, %Environment{site_id: site_id}} = result) do
+    Repo.after_commit({:environments_updated, site_id}, fn -> announce(site_id) end)
+    result
+  end
+
+  defp announce_on_success(result), do: result
+
+  # The key the hosts trigger on `public.environments` locks with; the
+  # migrations that define the trigger spell it out as well
+  @hosts_lock_key "brando.environments.hosts"
+
+  @doc false
+  # Takes, for the rest of the caller's transaction, the advisory lock the
+  # hosts trigger takes before it checks a binding
+  @spec lock_hosts() :: :ok
+  def lock_hosts do
+    Ecto.Adapters.SQL.query!(Repo.repo(), "SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [@hosts_lock_key])
+    :ok
+  end
+
+  # Outside `Repo.transaction/2` (a data migration, a task) this runs at once,
+  # in the caller's transaction, where a raise would roll the write back
+  defp announce(site_id) do
+    Brando.Environments.announce(site_id)
+  rescue
+    # No PubSub registry under that name
+    ArgumentError -> :ok
   end
 
   @spec delete_environment(Environment.t()) ::
@@ -300,18 +338,24 @@ defmodule Brando.Tenant.Registry do
     |> refresh_cache_on_success()
   end
 
-  defp authorize_domain(%{changes: %{domain: _domain}} = changeset, actor) do
-    if binds_hosts?(actor),
-      do: changeset,
-      else:
-        Ecto.Changeset.add_error(
-          changeset,
-          :domain,
-          gettext("Only a superuser can change the host an environment answers on.")
-        )
+  defp authorize_domain(changeset, actor) do
+    if binds_hosts?(actor) do
+      changeset
+    else
+      changeset
+      |> refuse_host_change(:domain, gettext("Only a superuser can change the host an environment answers on."))
+      |> refuse_host_change(
+        :redirect_hosts,
+        gettext("Only a superuser can change the hosts that redirect to an environment.")
+      )
+    end
   end
 
-  defp authorize_domain(changeset, _actor), do: changeset
+  defp refuse_host_change(changeset, field, message) do
+    if Map.has_key?(changeset.changes, field),
+      do: Ecto.Changeset.add_error(changeset, field, message),
+      else: changeset
+  end
 
   defp binds_hosts?(nil), do: false
   defp binds_hosts?(actor), do: Boundary.superuser?(actor)

@@ -11,6 +11,14 @@ defmodule Brando.Environments.Environment do
   installation itself uses (`Brando.Tenant.InstallationHosts`); who may set it
   is `Brando.Tenant.Registry`'s check. A stored value is not checked again
   until it changes.
+
+  `redirect_hosts` are hosts that redirect permanently to `domain`, such as
+  `www.example.com` to `example.com`. Each follows the rules for `domain`,
+  and an environment with any must have a domain. A host is bound once in the
+  whole installation, as one environment's domain or one redirect host: the
+  database refuses a second binding, also from concurrent writes (a trigger
+  on `environments` under an advisory lock, besides the unique index on
+  `domain`).
   """
 
   use Ecto.Schema
@@ -34,6 +42,7 @@ defmodule Brando.Environments.Environment do
     field :key, :string
     field :live, :boolean, default: false
     field :domain, :string
+    field :redirect_hosts, {:array, :string}, default: []
 
     belongs_to :site, Site
     # Set only through `Brando.Assets.SiteAssets.activate_environment_set/2`
@@ -44,21 +53,43 @@ defmodule Brando.Environments.Environment do
   end
 
   @required_fields [:site_id, :name, :key, :live]
-  @optional_fields [:domain]
+  @optional_fields [:domain, :redirect_hosts]
 
   def changeset(environment \\ %__MODULE__{}, attrs) do
     environment
     |> cast(attrs, @required_fields ++ @optional_fields)
     |> normalize_domain()
     |> validate_domain()
+    |> normalize_redirect_hosts()
+    |> validate_redirect_hosts()
     |> validate_required(@required_fields)
     |> validate_length(:name, min: 1)
     |> validate_format(:key, @key_format)
     |> foreign_key_constraint(:site_id)
     |> unique_constraint([:site_id, :key])
     |> unique_constraint(:domain, message: gettext("Another environment already uses this host."))
+    |> unique_constraint(:domain,
+      name: :environments_domain_bound_once,
+      message: gettext("Another environment already uses this host.")
+    )
+    |> unique_constraint(:redirect_hosts,
+      name: :environments_redirect_hosts_bound_once,
+      message: gettext("Another environment already uses one of these hosts, as its domain or a redirect host.")
+    )
+    |> check_constraint(:redirect_hosts,
+      name: :environments_redirect_hosts_need_domain,
+      message: gettext("An environment with redirect hosts needs a domain to redirect to.")
+    )
     |> unique_constraint(:live, name: :environments_one_live_per_site_index)
   end
+
+  @doc """
+  The hosts in `text`, one per line or separated by commas or spaces, as the
+  admin form takes them.
+  """
+  @spec parse_hosts(String.t() | nil) :: [String.t()]
+  def parse_hosts(text) when is_binary(text), do: String.split(text, ~r/[\s,]+/, trim: true)
+  def parse_hosts(_text), do: []
 
   @doc """
   A host as `domain` stores it: trimmed and lowercased, `nil` when blank or
@@ -94,6 +125,87 @@ defmodule Brando.Environments.Environment do
           []
       end
     end)
+  end
+
+  defp normalize_redirect_hosts(changeset) do
+    update_change(changeset, :redirect_hosts, fn
+      hosts when is_list(hosts) ->
+        hosts
+        |> Enum.map(&(&1 |> String.trim() |> String.downcase()))
+        |> Enum.reject(&(&1 == ""))
+        |> Enum.uniq()
+
+      hosts ->
+        hosts
+    end)
+  end
+
+  defp validate_redirect_hosts(changeset) do
+    hosts = get_field(changeset, :redirect_hosts) || []
+    domain = get_field(changeset, :domain)
+
+    changeset =
+      changeset
+      |> validate_change(:redirect_hosts, fn :redirect_hosts, hosts -> Enum.flat_map(hosts, &redirect_host_error/1) end)
+      |> validate_domain_not_redirected(domain, hosts)
+
+    cond do
+      hosts == [] or not is_nil(domain) ->
+        changeset
+
+      Map.has_key?(changeset.changes, :domain) ->
+        add_error(
+          changeset,
+          :domain,
+          gettext("Remove the redirect hosts first, or keep a domain: they redirect to it.")
+        )
+
+      true ->
+        add_error(
+          changeset,
+          :redirect_hosts,
+          gettext("An environment with redirect hosts needs a domain to redirect to.")
+        )
+    end
+  end
+
+  defp redirect_host_error(host) do
+    cond do
+      not valid_host?(host) ->
+        [
+          redirect_hosts:
+            gettext("%{host}: enter a host only, such as www.example.com, with no scheme, path, port or trailing dot.",
+              host: host
+            )
+        ]
+
+      InstallationHosts.member?(host) ->
+        [
+          redirect_hosts:
+            gettext("%{host}: the installation itself uses this host, for its admin, media or CDN.", host: host)
+        ]
+
+      true ->
+        []
+    end
+  end
+
+  # Checked when either field changes: the list is not cast again when only
+  # the domain changes
+  defp validate_domain_not_redirected(changeset, domain, hosts) do
+    changed? = Map.has_key?(changeset.changes, :domain) or Map.has_key?(changeset.changes, :redirect_hosts)
+
+    if changed? and is_binary(domain) and domain in hosts do
+      field = if Map.has_key?(changeset.changes, :redirect_hosts), do: :redirect_hosts, else: :domain
+
+      add_error(
+        changeset,
+        field,
+        gettext("%{host} cannot be both the domain and one of its redirect hosts.", host: domain)
+      )
+    else
+      changeset
+    end
   end
 
   defp normalize_domain(changeset) do
