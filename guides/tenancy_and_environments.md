@@ -2444,7 +2444,8 @@ to the domain first. There, a `GET` or `HEAD`:
   `/about/` answer `about/index.html`, and `/about.md`, `robots.txt` and the
   sitemap answer the build's own. A page asked for with
   `Accept: text/markdown` answers the build's Markdown file for it
-  (`about.md`, `index.md` for the root), as `Brando.Plug.Markdown` answers for
+  (`about.md`, `index.md` for the root, `contact.html.md` for
+  `/contact.html`), as `Brando.Plug.Markdown` answers for
   the application, when the build has one; both answers then carry
   `Vary: Accept`;
 - for a path `_redirects.json` answers, as the facts above say, answers the

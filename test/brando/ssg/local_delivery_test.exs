@@ -597,6 +597,37 @@ defmodule Brando.SSG.LocalDeliveryTest do
       refute markdown_etag == html_etag
     end
 
+    # Named as `Brando.SEO.Markdown.markdown_url/1` names them: the URL and `.md`
+    test "answers Accept: text/markdown for a page with an extension from its alternate", context do
+      context
+      |> ready_build(%{
+        "contact.html" => "contact page",
+        "contact.html.md" => "# Contact",
+        "landing.htm" => "landing page",
+        "landing.htm.md" => "# Landing"
+      })
+      |> deploy!()
+
+      for {path, html, markdown} <- [
+            {"/contact.html", "contact page", "# Contact"},
+            {"/landing.htm", "landing page", "# Landing"}
+          ] do
+        asked =
+          :get
+          |> build_conn(path)
+          |> Map.put(:host, context.host)
+          |> put_req_header("accept", "text/markdown")
+          |> SiteAssets.call([])
+
+        assert sent_body(asked) == markdown, path
+        assert get_resp_header(asked, "vary") == ["Accept"], path
+
+        plain = request(context.host, path)
+        assert sent_body(plain) == html, path
+        assert get_resp_header(plain, "vary") == ["Accept"], path
+      end
+    end
+
     test "treats every HTML file as a page, whatever its extension's spelling", context do
       context |> ready_build(%{"landing.htm" => "landing", "promo/OFFER.HTML" => "offer"}) |> deploy!()
 

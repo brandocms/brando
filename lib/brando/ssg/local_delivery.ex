@@ -17,8 +17,8 @@ defmodule Brando.SSG.LocalDelivery do
     * for a path the build has a file for answers that file: `/about` and
       `/about/` answer `about/index.html`, `/` the root's `index.html`; a
       page asked for with `Accept: text/markdown` (`Brando.Plug.Markdown.prefers_markdown?/1`)
-      answers the build's Markdown file for it (`about.md`, `index.md`) when
-      it has one, and both answers then carry `Vary: Accept`;
+      answers the build's Markdown file for it (`about.md`, `index.md`,
+      `contact.html.md` for `/contact.html`) when it has one, and both answers then carry `Vary: Accept`;
     * for a path its redirect list (`_redirects.json`) answers, a redirect or
       `410 Gone`, as `Brando.SSG.RedirectList` describes: the first entry that
       matches the decoded path wins, a rule applies only to a request in its
@@ -355,15 +355,19 @@ defmodule Brando.SSG.LocalDelivery do
     end
   end
 
+  # Named as the build writes them, from `Brando.SEO.Markdown.markdown_url/1`:
+  # a page with an extension has its URL and `.md` (`contact.html.md`),
   # `about/index.html` has `about.md`, the root's `index.html` `index.md`
   defp markdown_file(build, relative) do
-    markdown =
-      case relative do
-        "index.html" -> "index.md"
-        _page -> if Path.basename(relative) == "index.html", do: Path.dirname(relative) <> ".md"
+    candidates =
+      cond do
+        not html?(relative) -> []
+        relative == "index.html" -> ["index.html.md", "index.md"]
+        Path.basename(relative) == "index.html" -> [relative <> ".md", Path.dirname(relative) <> ".md"]
+        true -> [relative <> ".md"]
       end
 
-    if markdown && Map.has_key?(build.files, markdown), do: markdown
+    Enum.find(candidates, &Map.has_key?(build.files, &1))
   end
 
   defp prefers_markdown?(conn) do
