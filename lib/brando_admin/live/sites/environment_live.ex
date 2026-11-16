@@ -158,7 +158,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <tbody>
                   <tr :for={environment <- @environments} id={"environment-#{environment.id}"}>
                     <td class="environment-identity">
-                      <strong>{environment.name}</strong>
+                      <strong id={environment_name_id(environment)}>{environment.name}</strong>
                       <code>{environment.key}</code>
                     </td>
                     <td class="environment-state-cell">
@@ -185,7 +185,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                           value={Enum.join(environment.redirect_hosts || [], ",")}
                         />
                         <div class="environment-host-field">
-                          <label for={host_field_id(environment, "domain")}>{gettext("Domain")}</label>
+                          <label id={host_field_id(environment, "domain-label")} for={host_field_id(environment, "domain")}>
+                            {gettext("Domain")}
+                          </label>
                           <%!-- The domain's state on the domain's line --%>
                           <div class="environment-domain-line">
                             <input
@@ -196,6 +198,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                               placeholder="www.example.com"
                               autocomplete="off"
                               spellcheck="false"
+                              aria-labelledby={host_field_labelled_by(environment, "domain-label")}
                               aria-describedby={@served_hosts_enabled? && environment.domain && domain_status_id(environment)}
                             />
                             <.served_host
@@ -207,13 +210,19 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                           </div>
                         </div>
                         <div class="environment-host-field">
-                          <label for={host_field_id(environment, "redirect-hosts")}>{gettext("Redirect hosts")}</label>
+                          <label
+                            id={host_field_id(environment, "redirect-hosts-label")}
+                            for={host_field_id(environment, "redirect-hosts")}
+                          >
+                            {gettext("Redirect hosts")}
+                          </label>
                           <textarea
                             id={host_field_id(environment, "redirect-hosts")}
                             name="redirect_hosts"
                             rows={host_rows(environment)}
                             autocomplete="off"
                             spellcheck="false"
+                            aria-labelledby={host_field_labelled_by(environment, "redirect-hosts-label")}
                             aria-describedby={redirect_hosts_described_by(environment, @served_hosts_enabled?)}
                           >{host_draft(@host_drafts, environment).redirect_hosts}</textarea>
                           <span id={redirect_hosts_help_id(environment)} class="environment-host-help">
@@ -659,6 +668,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   defp redirect_host_statuses?(environment), do: !!environment.domain and environment.redirect_hosts not in [nil, []]
 
   defp redirect_host_statuses_id(environment), do: "environment-redirect-host-statuses-#{environment.id}"
+
+  defp environment_name_id(environment), do: "environment-name-#{environment.id}"
+
+  # Each row has the same two fields: their names say whose they are
+  defp host_field_labelled_by(environment, label),
+    do: "#{host_field_id(environment, label)} #{environment_name_id(environment)}"
 
   defp domain_status_id(environment), do: "environment-host-status-#{environment.id}"
 

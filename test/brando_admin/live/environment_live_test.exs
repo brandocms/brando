@@ -447,6 +447,28 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       for {now, then} <- Enum.zip(host_field_ids(view, staging), before), do: refute(now == then)
     end
 
+    # Four rows would otherwise give a screen reader four fields named "Domain"
+    test "each host field is named by its label and its row", %{conn: conn, production: production, staging: staging} do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+      doc = view |> render() |> LazyHTML.from_fragment()
+
+      names =
+        for environment <- [production, staging], id <- host_field_ids(view, environment) do
+          [labelled_by] = doc |> LazyHTML.query("##{id}") |> LazyHTML.attribute("aria-labelledby")
+
+          labelled_by
+          |> String.split()
+          |> Enum.map_join(" ", fn ref -> doc |> LazyHTML.query("##{ref}") |> LazyHTML.text() |> String.trim() end)
+        end
+
+      assert names == [
+               "Domain Production",
+               "Redirect hosts Production",
+               "Domain Staging",
+               "Redirect hosts Staging"
+             ]
+    end
+
     test "a superuser adds and removes them, one per line or comma-separated", %{conn: conn, staging: staging} do
       {:ok, view, _html} = live(conn, "/admin/config/environments")
 
