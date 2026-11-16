@@ -857,7 +857,13 @@ Brando asks the name servers in the system's resolver configuration
 (`/etc/resolv.conf`) itself, through Erlang's `:inet_res`: each family's query
 waits a second and then two for each name server, and takes at most four
 seconds, a `CNAME`'s target included, so a host takes at most eight. That is
-how it tells a family with no records from one whose query timed out. It does
+how it tells a family with no records from one whose query timed out. Name
+servers that do not answer use up those four seconds: each query gives a dead
+one a second before asking the next, so with the first two of three dead, a
+host behind a `CNAME` with no record of a family, which needs two queries for
+it, times out on the second, and is not admitted while those name servers stay
+dead. The admin then says the lookup timed out; remove or fix the dead name
+servers in `/etc/resolv.conf`. It does
 not read `/etc/hosts`, nor platform-specific resolver configuration
 (`nsswitch.conf`, the per-domain resolvers of macOS). An installation whose
 hosts resolve only through those sets

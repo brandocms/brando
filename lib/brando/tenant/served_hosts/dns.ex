@@ -26,6 +26,16 @@ defmodule Brando.Tenant.ServedHosts.DNS do
   `:lookup_timeout` of `Brando.Tenant.ServedHosts`. A `:lookup_timeout` below
   that cuts the lookup short, and the host counts as not looked up.
 
+  Name servers that do not answer use up that budget. Each query asks the
+  name servers in their configured order and gives a dead one a second
+  before moving on, so with the first two of three dead each query spends two
+  seconds before the third answers. A host behind a `CNAME` with no record of
+  a family needs two queries for that family, and the second one reaches the
+  four-second limit: the family times out, and the host is not admitted
+  while those name servers stay dead. The admin shows such a family's lookup
+  as timed out; remove or fix the dead name servers in the resolver
+  configuration.
+
   `:inet_res` asks the name servers of the system's resolver configuration
   (`/etc/resolv.conf` on Unix) itself. It does not read `/etc/hosts`, nor
   platform-specific resolver configuration (`nsswitch.conf`, the per-domain
