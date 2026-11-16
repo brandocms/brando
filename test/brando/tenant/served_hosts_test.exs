@@ -67,6 +67,10 @@ defmodule Brando.Tenant.ServedHostsTest do
     file = Path.join(tmp_dir, "served_hosts")
     put_test_env(ServedHosts, file: file, addresses: [@here, @here_v6])
     Cache.clear()
+    # Nothing of one test's process or status is seen in the next: a cold
+    # cache, so the new process checks nothing until the site below
+    restart()
+    :persistent_term.erase({ServedHosts, :status})
 
     on_exit(fn ->
       DNS.reset()
@@ -672,7 +676,7 @@ defmodule Brando.Tenant.ServedHostsTest do
         # No addresses: the endpoint's host goes through the same resolver
         put_test_env(ServedHosts, file: file, resolver: @resolver, lookup_timeout: 50)
 
-        assert %{hosts: %{"www.acme.test" => :unresolved}, error: nil} = ServedHosts.check()
+        assert %{hosts: %{"www.acme.test" => :unresolved}, addresses: [], error: nil} = ServedHosts.check()
         assert Process.whereis(ServedHosts) == pid
         assert File.read!(file) == ""
       end
@@ -936,6 +940,22 @@ defmodule Brando.Tenant.ServedHostsTest do
 
       assert %{addresses: [@here], hosts: %{"a.acme.test" => :unresolved}} = ServedHosts.check()
       assert_received {:looked_up, "localhost"}
+    end
+
+    test "this server's addresses are forgotten once they have failed to refresh for :addresses_max_age",
+         %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file)
+      DNS.answer("localhost", [@here])
+      DNS.answer("away.acme.test", [@elsewhere])
+      # Waits for its DNS, so every check looks this server's addresses up
+      bind(site, "away", "away.acme.test")
+      assert %{addresses: [@here]} = ServedHosts.check()
+
+      DNS.answer("localhost", {:error, :timeout})
+      put_test_env(ServedHosts, file: file, addresses_max_age: 1)
+      Process.sleep(5)
+
+      assert %{addresses: [], hosts: %{"away.acme.test" => {:waiting, [@elsewhere]}}} = ServedHosts.check()
     end
 
     test "a lookup that times out does not erase this server's addresses", %{path: file, site: site} do

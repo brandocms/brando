@@ -73,7 +73,9 @@ defmodule Brando.Tenant.ServedHosts do
 
   Without `:addresses`, this server's addresses are what the endpoint's host
   resolves to, looked up on their own once per check that looks a host up.
-  A failed lookup of them keeps the last ones found.
+  A failed lookup of them keeps the last ones found, for an hour after they
+  were found (`:addresses_max_age`, in milliseconds); after that it forgets
+  them, and no host is admitted until a lookup of them answers again.
 
   ## The file
 
@@ -90,8 +92,8 @@ defmodule Brando.Tenant.ServedHosts do
   that raises, exits or throws, fails for that host; so does one whose task
   cannot be stopped at its timeout (a resolver blocking in a NIF), half a
   second later, and that task is left to its supervisor. A `:lookup_timeout`,
-  `:retry_interval`, `:recheck_interval` or `:flush_interval` that is not a
-  positive integer counts as unset.
+  `:retry_interval`, `:recheck_interval`, `:flush_interval` or
+  `:addresses_max_age` that is not a positive integer counts as unset.
   """
 
   use GenServer
@@ -114,6 +116,9 @@ defmodule Brando.Tenant.ServedHosts do
   @max_lookups 8
   # How long answers of a check still running gather before they are written
   @flush_interval 200
+  # How long this server's looked-up addresses are trusted while their
+  # lookup keeps failing
+  @addresses_max_age :timer.hours(1)
   # Seconds
   @leftover_age 60
 
@@ -199,7 +204,8 @@ defmodule Brando.Tenant.ServedHosts do
     # `results`: what host lookups answered, by host, until admitted or
     # looked up again. `fresh`: the hosts whose answer no write has decided
     # on yet, which no check looks up again.
-    # `own`: this server's addresses as last looked up, with the name.
+    # `own`: this server's addresses as last looked up, with the name and
+    # when (monotonic milliseconds).
     # `writing`: the reference of the write under way, `write_job` what it was
     # given. `write_requested`, `check_requested`: a write, or a check (a write
     # whose result queues lookups), asked for and not started yet.
@@ -368,8 +374,18 @@ defmodule Brando.Tenant.ServedHosts do
     do: put_result(state, host, {:ok, normalize_addresses(addresses)})
 
   defp record(state, {:host, host}, _failed), do: put_result(state, host, :unresolved)
-  defp record(state, {:own, name}, {:ok, [_ | _] = addresses}), do: %{state | own: {name, normalize_addresses(addresses)}}
-  # A failed lookup of this server's addresses keeps the last ones it found
+
+  defp record(state, {:own, name}, {:ok, [_ | _] = addresses}),
+    do: %{state | own: {name, normalize_addresses(addresses), System.monotonic_time(:millisecond)}}
+
+  # A failed lookup of this server's addresses keeps the last ones it found,
+  # for `:addresses_max_age` after they were found
+  defp record(%{own: {_own_name, _addresses, found}} = state, {:own, _name}, _failed) do
+    if System.monotonic_time(:millisecond) - found >= state.settings.addresses_max_age,
+      do: %{state | own: nil},
+      else: state
+  end
+
   defp record(state, {:own, _name}, _failed), do: state
 
   defp put_result(state, host, result),
@@ -733,7 +749,7 @@ defmodule Brando.Tenant.ServedHosts do
   defp own_addresses(state) do
     case {state.settings.own_source, state.own} do
       {{:fixed, addresses}, _own} -> addresses
-      {{:lookup, name}, {name, addresses}} -> addresses
+      {{:lookup, name}, {name, addresses, _found}} -> addresses
       {{:lookup, _name}, _none} -> []
     end
   end
@@ -742,7 +758,7 @@ defmodule Brando.Tenant.ServedHosts do
   defp own_known?(state) do
     case {state.settings.own_source, state.own} do
       {{:fixed, _addresses}, _own} -> true
-      {{:lookup, name}, {name, _addresses}} -> true
+      {{:lookup, name}, {name, _addresses, _found}} -> true
       {{:lookup, _name}, _none} -> not own_pending?(state)
     end
   end
@@ -820,7 +836,8 @@ defmodule Brando.Tenant.ServedHosts do
       lookup_timeout: milliseconds(config, :lookup_timeout, @lookup_timeout),
       retry_interval: milliseconds(config, :retry_interval, @retry_interval),
       recheck_interval: milliseconds(config, :recheck_interval, @recheck_interval),
-      flush_interval: milliseconds(config, :flush_interval, @flush_interval)
+      flush_interval: milliseconds(config, :flush_interval, @flush_interval),
+      addresses_max_age: milliseconds(config, :addresses_max_age, @addresses_max_age)
     }
   end
 

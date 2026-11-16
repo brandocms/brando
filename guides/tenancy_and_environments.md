@@ -835,7 +835,9 @@ timeout (ten seconds by default, `:lookup_timeout` in milliseconds), counted
 from when it starts. A host's result shows as soon as it answers; the answers
 of many hosts looked up together, as on a new server, are written to the file
 in one go. Without `addresses`, this server's are looked up once per check,
-and a lookup of them that fails keeps the ones found before.
+and a lookup of them that fails keeps the ones found before, for an hour
+after they were found: a server whose own lookup keeps failing then admits no
+host until it answers again.
 
 The **Environments** screen shows each bound host's state under its domain,
 the domain's first and then one line for each redirect host, led by its name:
