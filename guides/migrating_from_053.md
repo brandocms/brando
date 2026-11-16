@@ -820,10 +820,13 @@ An application on a 0.55 development build starts here, after rerunning
    bin/my_app eval "MyApp.ReleaseTasks.migrate_tenants()"
    ```
 
-   With Florist, `release:deploy` starts the new release before
-   `db:migrate` can run, so a deploy that brings such a migration is down (or,
-   with blue/green, aborted) until it has run;
-   [Running migrations](deployment.md#running-migrations) has the commands.
+   With Florist, deploy with `florist prod release:deploy --migrate`, which
+   migrates from the new release after starting it: on a single deployment
+   the site is down from the restart until the migration has run, and with
+   blue/green the migration runs before the new environment's health check
+   while the old one keeps serving.
+   [Running migrations](deployment.md#running-migrations) has what each
+   layout does.
 
    Restoring an environment archive taken before such a migration runs the
    migration on the restore. The restore is refused, with nothing restored,
