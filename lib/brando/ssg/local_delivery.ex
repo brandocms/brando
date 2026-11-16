@@ -31,8 +31,19 @@ defmodule Brando.SSG.LocalDelivery do
 
   HTML and the other files are sent with an `ETag` and
   `Cache-Control: no-cache`; the files the build's Vite manifest lists, and a
-  request with a `vsn` query as `Plug.Static` reads it, with a year's
-  immutable caching. A gzipped file (the sitemap) is sent as the application's
+  non-HTML request with a `vsn` query as `Plug.Static` reads it, with a
+  year's immutable caching.
+
+  Pages (HTML, the 404 page included) are sent with the headers
+  `Phoenix.Controller.put_secure_browser_headers/2` sets by default, as the
+  router's browser pipeline would set them, and then the application's own,
+  such as its Content-Security-Policy:
+
+      config :brando, Brando.SSG.LocalDelivery,
+        headers: %{"content-security-policy" => "default-src 'self'"}
+
+  Other files are sent with `Access-Control-Allow-Origin: *`, as
+  `Brando.Plug.SiteAssets` sends its own. A gzipped file (the sitemap) is sent as the application's
   sitemap controller sends it. `_redirects.json` itself is not served.
 
   The build's file list and compiled redirects are read once per published
@@ -241,7 +252,7 @@ defmodule Brando.SSG.LocalDelivery do
 
   defp send_build_file(conn, build, relative) do
     etag = Map.fetch!(build.files, relative)
-    conn = allow_any_origin(conn, relative)
+    conn = put_file_headers(conn, relative)
 
     if immutable?(conn, build, relative) do
       conn
@@ -256,10 +267,22 @@ defmodule Brando.SSG.LocalDelivery do
     end
   end
 
-  # As `Brando.Plug.SiteAssets` sends its files: sandboxed live and shared
-  # previews load them from an opaque origin
-  defp allow_any_origin(conn, relative) do
-    if html?(relative), do: conn, else: put_resp_header(conn, "access-control-allow-origin", "*")
+  # A page gets the headers the router's browser pipeline would set, which
+  # never runs for it: `Phoenix.Controller.put_secure_browser_headers/2`'s
+  # defaults, then the application's own (`:headers`). Other files get the
+  # header `Brando.Plug.SiteAssets` sends its files with: sandboxed live and
+  # shared previews load them from an opaque origin.
+  defp put_file_headers(conn, relative) do
+    if html?(relative),
+      do: Phoenix.Controller.put_secure_browser_headers(conn, page_headers()),
+      else: put_resp_header(conn, "access-control-allow-origin", "*")
+  end
+
+  defp page_headers do
+    case Application.get_env(:brando, __MODULE__, [])[:headers] do
+      headers when is_map(headers) and map_size(headers) > 0 -> headers
+      _none -> []
+    end
   end
 
   defp html?(relative), do: Path.extname(relative) == ".html"
@@ -268,7 +291,7 @@ defmodule Brando.SSG.LocalDelivery do
     conn = put_resp_header(conn, "cache-control", @revalidate)
 
     if Map.has_key?(build.files, @not_found),
-      do: send_file_as(conn, 404, build, @not_found),
+      do: conn |> put_file_headers(@not_found) |> send_file_as(404, build, @not_found),
       else: conn |> put_resp_header("content-type", "text/plain; charset=utf-8") |> send_resp(404, "Not found")
   end
 

@@ -421,6 +421,25 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert [_etag] = get_resp_header(page, "etag")
     end
 
+    test "sends its pages with the browser's security headers, and the application's own", context do
+      context |> ready_build() |> deploy!()
+
+      for path <- ["/about", "/unpublished"] do
+        conn = request(context.host, path)
+        assert get_resp_header(conn, "referrer-policy") == ["strict-origin-when-cross-origin"], path
+        assert get_resp_header(conn, "content-security-policy") == ["base-uri 'self'; frame-ancestors 'self';"], path
+        assert get_resp_header(conn, "x-content-type-options") == ["nosniff"], path
+        assert get_resp_header(conn, "x-permitted-cross-domain-policies") == ["none"], path
+      end
+
+      assert get_resp_header(request(context.host, "/assets/logo.svg"), "referrer-policy") == []
+
+      put_test_env(Brando.SSG.LocalDelivery, headers: %{"content-security-policy" => "default-src 'self'"})
+      conn = request(context.host, "/about")
+      assert get_resp_header(conn, "content-security-policy") == ["default-src 'self'"]
+      assert get_resp_header(conn, "referrer-policy") == ["strict-origin-when-cross-origin"]
+    end
+
     test "sends the gzipped sitemap as the sitemap controller does", context do
       context |> ready_build() |> deploy!()
 
