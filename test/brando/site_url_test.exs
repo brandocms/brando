@@ -306,6 +306,56 @@ defmodule Brando.SiteURLTest do
     end
   end
 
+  describe "with group authorization, when the live environment's domain changes" do
+    setup do
+      put_test_env(:authorization_mode, :groups)
+      admin = Brando.Factory.insert(:random_user, role: :superuser, avatar: nil)
+      {:ok, _} = Brando.Authorization.Migration.run()
+      %{admin: admin}
+    end
+
+    test "another environment's entries are found and rendered there, whichever is selected", context do
+      staging_page =
+        in_environment("staging", fn ->
+          page = json_ld_page!(context.admin)
+          [block] = Brando.Repo.all(from(b in Page.Blocks, where: b.entry_id == ^page.id))
+          module_id = Brando.Repo.get!(Brando.Content.Block, block.block_id).module_id
+          {:ok, module_id: module_id, page: page}
+        end)
+
+      {:ok, module_id: module_id, page: page} = staging_page
+
+      # Production has no module with that id
+      in_environment("production", fn ->
+        Brando.Repo.delete_all(from(m in Brando.Content.Module, where: m.id == ^module_id))
+      end)
+
+      assert {:ok, %{domain: "www.acme.test"}} = change_domain_as(context.admin, context.site, "www.acme.test")
+
+      in_environment("staging", fn ->
+        assert rendered_blocks(page) =~ ~S(http:\/\/www.acme.test\/en\/work)
+      end)
+    end
+
+    test "a failure to queue the renders is logged and leaves the domain saved", context do
+      page = in_environment("production", fn -> json_ld_page!(context.admin) end)
+
+      # Staging's modules cannot be read
+      Ecto.Adapters.SQL.query!(Brando.Repo.repo(), "ALTER TABLE tenant_acme_staging.content_modules RENAME TO content_modules_gone")
+
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          assert {:ok, %{domain: "www.acme.test"}} = change_domain_as(context.admin, context.site, "www.acme.test")
+        end)
+
+      assert log =~ "tenant_acme_staging"
+      assert Registry.get_environment_by_key(context.site, "production").domain == "www.acme.test"
+
+      # The other environments are rendered all the same
+      in_environment("production", fn -> assert rendered_blocks(page) =~ ~S(http:\/\/www.acme.test\/en\/work) end)
+    end
+  end
+
   describe "after a copy" do
     test "block JSON-LD stored on Staging and copied to Production names Production's host", context do
       in_environment("staging", &store_block_json_ld/0)
@@ -488,6 +538,26 @@ defmodule Brando.SiteURLTest do
     for url <- urls do
       assert url == base_url or String.starts_with?(url, base_url <> "/"), "#{url} is not on #{base_url}"
     end
+  end
+
+  # As the Environments screen saves it: in a transaction, with Production
+  # selected and the admin's scope naming it
+  defp change_domain_as(admin, site, domain) do
+    in_environment("production", fn ->
+      scope = Brando.Authorization.Scope.current(admin)
+      assert scope.prefix == "tenant_acme_production"
+
+      Brando.Authorization.Boundary.with_scope(scope, fn ->
+        Brando.Repo.transaction(fn ->
+          production = Registry.get_environment_by_key(site, "production")
+
+          case Registry.update_environment(production, %{domain: domain}, actor: admin) do
+            {:ok, updated} -> updated
+            {:error, reason} -> Brando.Repo.rollback(reason)
+          end
+        end)
+      end)
+    end)
   end
 
   defp set_live(site, key) do

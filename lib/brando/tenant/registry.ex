@@ -305,16 +305,24 @@ defmodule Brando.Tenant.Registry do
   end
 
   # Stored block HTML names the site's public base URL, the live
-  # environment's domain (`Brando.Utils.public_hostname/0`)
-  defp rerender_on_public_domain_change({:ok, %Environment{live: true} = environment} = result, %{
+  # environment's domain (`Brando.Utils.public_hostname/0`). Searched once
+  # the domain is committed and this node's cache holds it; what fails there
+  # is logged and leaves the domain saved.
+  defp rerender_on_public_domain_change({:ok, %Environment{live: true, site_id: site_id}} = result, %{
          changes: %{domain: _domain}
        }) do
-    site = get_site(environment.site_id)
-    Brando.Content.Blocks.rerender_public_urls(site.key, site.environments)
+    Repo.after_commit({:public_url_rerender, site_id}, fn -> rerender_public_urls(site_id) end, late: true)
     result
   end
 
   defp rerender_on_public_domain_change(result, _changeset), do: result
+
+  defp rerender_public_urls(site_id) do
+    case get_site(site_id) do
+      nil -> :ok
+      site -> Brando.Content.Blocks.rerender_public_urls(site.key, site.environments)
+    end
+  end
 
   defp authorize_domain(%{changes: %{domain: _domain}} = changeset, actor) do
     if binds_hosts?(actor),
