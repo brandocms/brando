@@ -21162,6 +21162,11 @@ msgstr ""
 msgid "can't be blank"
 msgstr ""
 
+#: lib/brando/pages/page/prevent_parent_cycles.ex
+#, elixir-autogen, elixir-format
+msgid "can't be the page itself or a page under it"
+msgstr ""
+
 #: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format
 msgid "cannot be seeded now: the site is busy with a copy, restore or setup of an environment. Try again when it has finished."

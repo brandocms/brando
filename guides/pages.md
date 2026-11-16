@@ -140,7 +140,10 @@ non-deleted descendants, those under a trashed page included. Trashing a page (`
 descendants' trails, and restoring it (`Brando.Authorization.Boundary.restore/2`)
 recomputes its own and its descendants'. So does restoring one of its revisions
 (`Brando.Revisions.set_entry_to_revision/5`, which the revisions drawer and a
-proposal's undo use): the trail a revision holds never comes back. Each element has string keys `"title"` and `"uri"`.
+proposal's undo use): the trail a revision holds never comes back. A page's
+changeset refuses a `parent_id` that is the page itself or a page under it, so a
+revision restore that would close such a loop returns `{:error, changeset}`; a
+loop already stored ends the trail where it closes. Each element has string keys `"title"` and `"uri"`.
 The stored trail starts with the configured app name at `/`, followed by the
 ancestors and current page; a deleted ancestor is left out. When the trash
 purge deletes a page for good, its remaining children move to the top

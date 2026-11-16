@@ -59,6 +59,7 @@ defmodule Brando.Pages.Page do
   # (see Brando.Trait.Translatable.RuntimeConfig and the i18n guide).
   trait :translatable, runtime_config: true
   trait :blocks
+  trait Brando.Pages.Page.PreventParentCycles
 
   # --
 

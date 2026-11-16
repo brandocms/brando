@@ -88,6 +88,43 @@ defmodule Brando.Pages.BreadcrumbsTest do
     assert trail(team) == [Brando.config(:app_name), "About us", "Team"]
   end
 
+  describe "a parent cycle" do
+    setup do
+      put_test_env(:tenancy_mode, :none)
+      user = Factory.insert(:random_user, role: :superuser)
+      a = page!(user, %{title: "A", uri: "a"})
+      b = page!(user, %{title: "B", uri: "a/b", parent_id: a.id})
+      %{user: user, a: a, b: b}
+    end
+
+    test "is refused as a page's parent: the page itself or a page under it", %{user: user, a: a, b: b} do
+      assert {:error, %Ecto.Changeset{errors: [parent_id: _]}} = Pages.update_page(a.id, %{parent_id: a.id}, user)
+      assert {:error, %Ecto.Changeset{errors: [parent_id: _]}} = Pages.update_page(a.id, %{parent_id: b.id}, user)
+      assert %{parent_id: nil} = Repo.get!(Page, a.id)
+    end
+
+    @tag timeout: 15_000
+    test "a revision restore that would close one is refused", %{user: user, a: a, b: b} do
+      {:ok, revision} = Brando.Revisions.create_revision(Repo.get!(Page, b.id), user)
+      {:ok, _} = Pages.update_page(b.id, %{parent_id: nil}, user)
+      {:ok, _} = Pages.update_page(a.id, %{parent_id: b.id}, user)
+
+      assert {:error, %Ecto.Changeset{errors: [parent_id: _]}} =
+               Brando.Revisions.set_entry_to_revision(Page, b.id, revision.revision, user)
+
+      assert %{parent_id: nil} = Repo.get!(Page, b.id)
+    end
+
+    @tag timeout: 15_000
+    test "already stored ends the trail and the descendants' walk", %{a: a, b: b} do
+      Repo.update_all(from(p in Page, where: p.id == ^a.id), set: [parent_id: b.id])
+
+      assert {:ok, _} = Pages.update_breadcrumbs(Repo.get!(Page, a.id))
+      assert trail(a) == [Brando.config(:app_name), "B", "A"]
+      assert trail(b) == [Brando.config(:app_name), "A", "B"]
+    end
+  end
+
   test "with groups authorization, in the trash's and the restore's transaction" do
     put_test_env(:authorization_mode, :groups)
     put_test_env(:tenancy_mode, :none)
