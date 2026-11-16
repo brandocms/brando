@@ -12,6 +12,8 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   alias Brando.Images.Size
   alias Brando.RuntimeConfig
 
+  require Logger
+
   @image_config Module.concat(["Brando", "Type", "ImageConfig"])
   @video_config Module.concat(["Brando", "Type", "VideoConfig"])
   @file_config Module.concat(["Brando", "Type", "FileConfig"])
@@ -28,37 +30,92 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   called, and `:default`, a map or a keyword list is merged over the
   `default_config` configured now, so a changed `default_config` reaches every
   Blueprint without recompiling it.
+
+  A `srcset` entry naming a size the merged config does not have (the
+  `default_config` no longer gives it) is left out, and a warning naming
+  `schema`, the field and the sizes is logged once; `missing_srcset_sizes/1`
+  lists them.
   """
-  @spec normalize(struct()) :: struct()
-  def normalize(%{type: type, name: name, opts: %{cfg: config}} = asset) when type in [:file, :gallery, :image, :video] do
+  @spec normalize(struct(), module() | nil) :: struct()
+  def normalize(asset, schema \\ nil)
+
+  def normalize(%{type: type, name: name, opts: %{cfg: config}} = asset, schema)
+      when type in [:file, :gallery, :image, :video] do
     normalized =
       if is_function(config, 0),
-        do: normalize_declared_value!(type, name, config.()),
-        else: cached_declared_value!(type, name, config)
+        do: read_function_value!(schema, type, name, config.()),
+        else: cached_read_value!(schema, type, name, config)
 
     %{asset | opts: Map.put(asset.opts, :cfg, inherit_video_strategy(type, normalized))}
   end
 
-  def normalize(asset), do: asset
+  def normalize(asset, _schema), do: asset
+
+  @doc """
+  The sizes a compiled asset's `srcset` names that its config, merged over the
+  `default_config` configured now, does not have. `normalize/2` leaves them
+  out of the srcset.
+  """
+  @spec missing_srcset_sizes(struct()) :: [String.t()]
+  def missing_srcset_sizes(%{type: type, name: name, opts: %{cfg: config}}) when type in [:gallery, :image] do
+    config = if is_function(config, 0), do: config.(), else: config
+    {_normalized, missing} = read_value!(type, name, config)
+    missing
+  end
+
+  def missing_srcset_sizes(_asset), do: []
 
   # Merging and validating a config takes tens of microseconds, and callers
   # that only want the assets' names read them often, so the result is kept
-  # per declared value and the `default_config`s it was merged with. A changed
-  # `default_config` is a new key; the old entries stay, so nothing is updated
-  # in place (which would make `:persistent_term` collect every process).
-  # A function's result is not kept: it may differ on every call.
-  defp cached_declared_value!(type, name, config) do
-    key = {__MODULE__, type, name, config, configured_defaults(type)}
+  # per field, declared value and the `default_config`s it was merged with. A
+  # changed `default_config` is a new key; the old entries stay, so nothing is
+  # updated in place (which would make `:persistent_term` collect every
+  # process).
+  defp cached_read_value!(schema, type, name, config) do
+    key = {__MODULE__, schema, type, name, config, configured_defaults(type)}
 
     case :persistent_term.get(key, :none) do
       :none ->
-        normalized = normalize_declared_value!(type, name, config)
+        {normalized, missing} = read_value!(type, name, config)
+        warn_missing_srcset_sizes(schema, type, name, missing)
         :persistent_term.put(key, normalized)
         normalized
 
       normalized ->
         normalized
     end
+  end
+
+  # A function's result is not kept: it may differ on every call. Its warning
+  # is logged once per field and set of missing sizes.
+  defp read_function_value!(schema, type, name, config) do
+    {normalized, missing} = read_value!(type, name, config)
+
+    if missing != [] do
+      key = {__MODULE__, :warned, schema, type, name, missing}
+
+      if !:persistent_term.get(key, false) do
+        :persistent_term.put(key, true)
+        warn_missing_srcset_sizes(schema, type, name, missing)
+      end
+    end
+
+    normalized
+  end
+
+  defp read_value!(type, name, config),
+    do: normalize_value!(type, name, config, declared_passthrough(type), :drop_missing_sizes)
+
+  defp warn_missing_srcset_sizes(_schema, _type, _name, []), do: :ok
+
+  defp warn_missing_srcset_sizes(schema, type, name, missing) do
+    field = if schema, do: "#{inspect(schema)}.#{name}", else: "The #{type} asset #{inspect(name)}"
+
+    Logger.warning(
+      "#{field}: its srcset names #{Enum.map_join(missing, ", ", &inspect/1)}, which its config does not have " <>
+        "with the default_config in effect, so they are left out of its srcset. Add them to default_config or " <>
+        "to the field's own sizes; mix brando.doctor lists every such field."
+    )
   end
 
   defp configured_defaults(:gallery), do: {configured_default(:image), configured_default(:video)}
@@ -72,7 +129,8 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   """
   @spec normalize_declared_value!(asset_type(), atom() | String.t(), term()) :: term()
   def normalize_declared_value!(type, name, config) do
-    normalize_value!(type, name, config, declared_passthrough(type))
+    {normalized, []} = normalize_value!(type, name, config, declared_passthrough(type), :strict)
+    normalized
   end
 
   @doc """
@@ -83,7 +141,8 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
   """
   @spec normalize_resolved_value!(asset_type(), atom() | String.t(), term()) :: struct() | map()
   def normalize_resolved_value!(type, name, config) do
-    inherit_video_strategy(type, normalize_value!(type, name, config, []))
+    {normalized, []} = normalize_value!(type, name, config, [], :strict)
+    inherit_video_strategy(type, normalized)
   end
 
   # A video config without its own `upload_strategy` follows the site's
@@ -97,18 +156,22 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
 
   defp inherit_video_strategy(_type, config), do: config
 
-  defp normalize_value!(type, name, config, passthrough_values) when type in [:file, :image, :video] do
+  # With `:strict`, a srcset naming a size the config does not have raises, as
+  # a Blueprint's `cfg:` does when it compiles; with `:drop_missing_sizes`, as
+  # when it is read, those entries are left out and their sizes returned.
+  defp normalize_value!(type, name, config, passthrough_values, srcset_mode) when type in [:file, :image, :video] do
     asset = %{name: name, type: type}
 
-    normalized =
+    {normalized, missing} =
       asset
       |> normalize_config(config_module(type), config, passthrough_values)
       |> normalize_image_sizes(asset)
+      |> drop_missing_srcset_sizes(srcset_mode)
 
-    AssetConfigValidator.validate!(asset, normalized)
+    {AssetConfigValidator.validate!(asset, normalized), missing}
   end
 
-  defp normalize_value!(:gallery, name, config, _passthrough_values) do
+  defp normalize_value!(:gallery, name, config, _passthrough_values, srcset_mode) do
     asset = %{name: name, type: :gallery}
     defaults = gallery_default_config()
 
@@ -121,8 +184,44 @@ defmodule Brando.Blueprint.AssetConfigNormalizer do
         true -> invalid_config!(asset, "expected :default, an image config struct, a map, or a keyword list")
       end
 
-    AssetConfigValidator.validate!(asset, %{normalized | image: normalize_image_sizes(normalized.image, asset)})
+    {image, missing} = normalized.image |> normalize_image_sizes(asset) |> drop_missing_srcset_sizes(srcset_mode)
+    {AssetConfigValidator.validate!(asset, %{normalized | image: image}), missing}
   end
+
+  defp drop_missing_srcset_sizes(%{srcset: srcset, sizes: sizes} = config, :drop_missing_sizes)
+       when is_struct(config, @image_config) and is_map(sizes) do
+    with {:ok, names} <- AssetConfigValidator.srcset_size_names(srcset),
+         [_ | _] = missing <- names |> Enum.reject(&Map.has_key?(sizes, &1)) |> Enum.uniq() |> Enum.sort() do
+      {%{config | srcset: available_srcset(srcset, sizes)}, missing}
+    else
+      _complete -> {config, []}
+    end
+  end
+
+  defp drop_missing_srcset_sizes(config, _srcset_mode), do: {config, []}
+
+  # Keyed (`%{default: [{"small", "700w"}]}`), a flat map or a list of pairs;
+  # a key or a srcset left empty goes too.
+  defp available_srcset(srcset, sizes) when is_map(srcset) do
+    if Enum.all?(Map.values(srcset), &is_list/1) do
+      srcset
+      |> Enum.map(fn {key, pairs} -> {key, available_pairs(pairs, sizes)} end)
+      |> Enum.reject(&match?({_key, []}, &1))
+      |> Map.new()
+      |> nil_if_empty()
+    else
+      srcset |> available_pairs(sizes) |> Map.new() |> nil_if_empty()
+    end
+  end
+
+  defp available_srcset(srcset, sizes), do: srcset |> available_pairs(sizes) |> nil_if_empty()
+
+  defp available_pairs(pairs, sizes),
+    do: Enum.filter(pairs, fn {name, _width} -> Map.has_key?(sizes, to_string(name)) end)
+
+  defp nil_if_empty([]), do: nil
+  defp nil_if_empty(srcset) when srcset == %{}, do: nil
+  defp nil_if_empty(srcset), do: srcset
 
   defp declared_passthrough(:image), do: [:db]
   defp declared_passthrough(:file), do: [:config_target]

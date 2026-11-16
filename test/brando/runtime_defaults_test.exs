@@ -9,6 +9,8 @@ defmodule Brando.RuntimeDefaultsTest do
   use ExUnit.Case, async: false
   use Brando.ConnCase
 
+  import ExUnit.CaptureLog
+
   alias Brando.Blueprint.Assets
   alias Brando.Type.FileConfig
   alias Brando.Type.ImageConfig
@@ -34,6 +36,33 @@ defmodule Brando.RuntimeDefaultsTest do
       asset :default_gallery, :gallery, cfg: :default
     end
   end
+
+  # A srcset of its own and no sizes: its sizes come from default_config.
+  defmodule OwnSrcset do
+    use Brando.Blueprint,
+      application: "Brando",
+      domain: "RuntimeDefaultsTest",
+      schema: "OwnSrcset",
+      singular: "own_srcset",
+      plural: "own_srcsets",
+      gettext_module: Brando.Gettext
+
+    data_layer :embedded
+
+    assets do
+      asset :cover, :image,
+        cfg: [upload_path: "images/own-srcset", srcset: %{default: [{"small", "700w"}, {"xlarge", "2100w"}]}]
+
+      asset :slides, :gallery, cfg: [upload_path: "images/own-srcset-slides", srcset: [{"xlarge", "2100w"}]]
+      asset :plain, :image, cfg: :default
+    end
+  end
+
+  # default_config with fewer sizes than the one OwnSrcset compiled against
+  @narrowed %{
+    sizes: %{"micro" => %{"size" => "25", "quality" => 10}, "small" => %{"size" => "700", "quality" => 70}},
+    srcset: %{default: [{"small", "700w"}]}
+  }
 
   @config_modules %{Brando.Images => ImageConfig, Brando.Videos => VideoConfig, Brando.Files => FileConfig}
 
@@ -126,6 +155,69 @@ defmodule Brando.RuntimeDefaultsTest do
                formats: [:webp],
                random_filename: true
              } = cfg(Declared, :keyword_image)
+    end
+  end
+
+  describe "a default_config without a size a srcset names" do
+    setup do
+      previous = Logger.level()
+      Logger.configure(level: :warning)
+      on_exit(fn -> Logger.configure(level: previous) end)
+      put_default_config(Brando.Images, @narrowed)
+      :ok
+    end
+
+    test "the field is read without the entries naming it, with one warning" do
+      log =
+        capture_log(fn ->
+          assert %ImageConfig{srcset: %{default: [{"small", "700w"}]}} = cfg(OwnSrcset, :cover)
+          assert %{image: %ImageConfig{srcset: nil}} = cfg(OwnSrcset, :slides)
+          assert %ImageConfig{srcset: %{default: [{"small", "700w"}]}} = cfg(OwnSrcset, :plain)
+          assert [_cover, _plain] = OwnSrcset.__image_fields__()
+          assert length(Assets.__assets__(OwnSrcset)) == 3
+          assert %{cfg: %ImageConfig{}} = Assets.__asset_opts__(OwnSrcset, :cover)
+
+          assert {:ok, %ImageConfig{srcset: %{default: [{"small", "700w"}]}}} =
+                   Brando.Images.ConfigResolver.get("image:#{inspect(OwnSrcset)}:cover")
+        end)
+
+      assert [_once] = Regex.scan(~r/RuntimeDefaultsTest.OwnSrcset.cover: its srcset names "xlarge"/, log)
+      assert [_once] = Regex.scan(~r/RuntimeDefaultsTest.OwnSrcset.slides: its srcset names "xlarge"/, log)
+      refute log =~ "OwnSrcset.plain"
+    end
+
+    test "a cfg: naming a size missing from its own sizes still fails the Blueprint" do
+      assert_raise Brando.Exception.BlueprintError, ~r/names the size "xlarge"/, fn ->
+        Brando.Blueprint.AssetConfigNormalizer.normalize_declared_value!(:image, :cover,
+          sizes: %{"small" => %{"size" => "700", "quality" => 70}},
+          srcset: [{"xlarge", "2100w"}]
+        )
+      end
+    end
+
+    test "every Blueprint can still be walked" do
+      capture_log(fn -> assert is_list(Brando.Images.AltText.missing()) end)
+      capture_log(fn -> assert is_list(Brando.Images.AltText.entry_alt_targets()) end)
+    end
+
+    test "the system check lists the fields" do
+      assert [
+               {OwnSrcset, :cover, ["xlarge"]},
+               {OwnSrcset, :slides, ["xlarge"]}
+             ] = Brando.Doctor.Checks.ImageSrcsets.missing_sizes([OwnSrcset, Brando.Users.User])
+
+      assert %Brando.Doctor.Result{status: :warning, items: items, fix: fix} =
+               Brando.Doctor.Checks.ImageSrcsets.evaluate([{OwnSrcset, :cover, ["xlarge"]}])
+
+      assert items == ["Brando.RuntimeDefaultsTest.OwnSrcset.cover: xlarge"]
+      assert fix =~ "default_config"
+    end
+  end
+
+  describe "the srcset sizes system check" do
+    test "is silent when every srcset names sizes its field has" do
+      assert [] = Brando.Doctor.Checks.ImageSrcsets.missing_sizes([OwnSrcset])
+      assert %Brando.Doctor.Result{status: :ok} = Brando.Doctor.Checks.ImageSrcsets.run(Brando.Doctor.Context.new([]))
     end
   end
 
