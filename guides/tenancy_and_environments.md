@@ -2237,8 +2237,9 @@ changes after the check, an SSH config alias, a public address behind NAT),
 so to limit the destinations anyone who may deploy can choose, list them in
 config (below).
 
-The host is looked up when the settings are saved, not while the form is
-filled in. Its IPv4 and IPv6 addresses are taken from the hosts file
+The host is looked up when a save sets the strategy or the target, not
+while the form is filled in, nor for a save that changes only other
+settings. Its IPv4 and IPv6 addresses are taken from the hosts file
 (`/etc/hosts`), and for a family the hosts file does not list, asked of the
 name servers in the system's resolver configuration through Erlang's
 `:inet_res`, with one limit of 3 seconds for both families together

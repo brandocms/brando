@@ -333,12 +333,29 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
       put_resolver(%{{"static.example.test", :inet} => {:ok, [{93, 184, 216, 34}]}})
       {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
 
-      save_target(view, "web@static.example.test:/srv/site")
+      # Refused for another field, so the next save sets the target again
+      render_submit(form(view, "#static-deploy-config"), %{
+        "deploy" => %{"strategy" => "rsync", "target" => "web@static.example.test:/srv/site", "cdn_url" => "nope"}
+      })
+
+      assert Registry.get_site(context.site.id).deploy_config.target == "deploy@example.test:/srv/www"
       save_target(view, "web@static.example.test:/srv/site")
 
       assert Registry.get_site(context.site.id).deploy_config.target == "web@static.example.test:/srv/site"
       assert_received {:looked_up, "static.example.test", :inet}
       refute_received {:looked_up, "static.example.test", :inet}
+    end
+
+    test "a save that keeps the strategy and target does not wait on their host", context do
+      put_resolver(%{{"example.test", :inet} => :block, {"example.test", :inet6} => :block})
+      {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+      render_submit(form(view, "#static-deploy-config"), %{
+        "deploy" => %{"strategy" => "rsync", "target" => "deploy@example.test:/srv/www", "auto_deploy" => "true"}
+      })
+
+      assert Registry.get_site(context.site.id).deploy_config.auto_deploy
+      refute_received {:looked_up, _host, _family}
     end
 
     defp flush_lookups do

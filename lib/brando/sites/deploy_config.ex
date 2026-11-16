@@ -53,8 +53,9 @@ defmodule Brando.Sites.DeployConfig do
   the right form.
 
   An rsync target's host is looked up to refuse one that reaches this
-  server, when the site is saved (`changeset/4` with `lookup_host: true`,
-  as `Brando.Tenant.Registry` saves it), not while a form validates. Each
+  server, when a save sets the strategy or the target (`changeset/4` with
+  `lookup_host: true`, as `Brando.Tenant.Registry` saves it), not while a
+  form validates or when a save leaves both as they were. Each
   address family is looked up in the hosts file, and when it has no entry
   there, asked of the name servers through `:inet_res`. A name the name
   servers say does not exist, or that has no address records, passes, as
@@ -96,14 +97,22 @@ defmodule Brando.Sites.DeployConfig do
 
   @doc """
   Changeset for the deployment settings of the site with key `site_key`.
-  With `lookup_host: true`, for a save, an rsync target's host is looked up
-  too (see the moduledoc); without it, as while a form validates, it is not.
+  With `lookup_host: true`, for a save that changes the strategy or the
+  target, an rsync target's host is looked up too (see the moduledoc);
+  without it, as while a form validates, it is not.
   """
   def changeset(config, attrs, site_key, opts \\ []) do
-    lookup = if Keyword.get(opts, :lookup_host, false), do: :kept, else: :none
+    changeset = cast(config, attrs, @fields)
 
-    config
-    |> cast(attrs, @fields)
+    # A save that leaves the strategy and target as they were does not wait
+    # on their host: each deploy looks it up anyway
+    lookup =
+      if Keyword.get(opts, :lookup_host, false) and
+           (changed?(changeset, :strategy) or changed?(changeset, :target)),
+         do: :kept,
+         else: :none
+
+    changeset
     |> require_target_for_strategy()
     |> validate_local_delivery()
     |> validate_strategy_target(site_key, lookup)
