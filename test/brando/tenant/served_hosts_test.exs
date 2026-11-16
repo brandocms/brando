@@ -550,6 +550,26 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert lines(file) == ["h.acme.test", "k.acme.test"]
     end
 
+    test "a host bound and admitted by another node while a write waits to read the file stays in it",
+         %{path: file, site: site} do
+      DNS.answer("a.acme.test", [@here])
+      bind(site, "a", "a.acme.test")
+      hold_writes(file)
+      ServedHosts.registry_changed()
+      assert_receive {:writing, writer}
+
+      # Bound while the write waits, failing its lookup here, and admitted by
+      # another node sharing the path
+      DNS.answer("b.acme.test", {:error, :timeout})
+      {:ok, _} = Registry.create_environment(site, %{name: "b", key: "b", domain: "b.acme.test"}, actor: :system)
+      File.write!(file, "a.acme.test\nb.acme.test\n")
+      put_test_env(ServedHosts, file: file, addresses: [@here, @here_v6])
+      release_write(writer)
+
+      assert %{hosts: %{"b.acme.test" => :served}} = ServedHosts.settled()
+      assert lines(file) == ["a.acme.test", "b.acme.test"]
+    end
+
     test "a file that cannot be read again before the write is left alone and reported",
          %{path: file, site: site} do
       :persistent_term.put({BlockingResolver, :pid}, self())

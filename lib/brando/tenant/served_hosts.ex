@@ -67,8 +67,8 @@ defmodule Brando.Tenant.ServedHosts do
   (`:flush_interval`, in milliseconds, which tests change), so many answers
   cost one write and a single host's result comes as soon as it answers. A
   host is `:served` once the write that put it in the file has succeeded.
-  The file is read just before each write, and every bound host another node
-  wrote there stays. When that read fails, the file is left as
+  The file is read just before each write, then the bindings, and every
+  bound host another node wrote there stays. When that read fails, the file is left as
   it is and the error reported, while the hosts' states still follow the
   registry and their lookups.
 
@@ -475,17 +475,16 @@ defmodule Brando.Tenant.ServedHosts do
 
   defp maybe_start_write(state), do: state
 
-  # The hosts to write are worked out here; the task reads the file, keeps
-  # every bound host it lists, and replaces it if that changed
+  # The hosts to keep are worked out here; the task reads the file, keeps
+  # every bound host it lists or this process keeps, and replaces it if that
+  # changed
   defp start_write(state) do
     state = cancel_flush(state)
-    {bound, _invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
-    decided = decide_outside(state, bound)
+    decided = decide_outside(state, servable_bound_hosts())
     admit = for {host, :admit} <- decided, do: host
 
     job = %{
       file: state.settings.file,
-      bound: bound,
       keep: MapSet.union(state.admitted, MapSet.new(admit)),
       check?: state.check_requested
     }
@@ -506,15 +505,17 @@ defmodule Brando.Tenant.ServedHosts do
 
   # In the task: the file read just before the write, and every bound host it
   # lists kept
-  defp write_hosts(%{file: file, bound: bound, keep: keep}) do
+  defp write_hosts(%{file: file, keep: keep}) do
     run_before_write_hook()
-    if Keyword.get(config(), :file) == file, do: read_and_write(file, bound, keep), else: :cancelled
+    if Keyword.get(config(), :file) == file, do: read_and_write(file, keep), else: :cancelled
   end
 
-  defp read_and_write(file, bound, keep) do
+  # The bindings are read after the file: a host bound and admitted by another
+  # node while the write waited is then in both, and stays
+  defp read_and_write(file, keep) do
     read = read_file(file)
     listed = MapSet.new(listed(read))
-    hosts = Enum.filter(bound, &(MapSet.member?(listed, &1) or MapSet.member?(keep, &1)))
+    hosts = Enum.filter(servable_bound_hosts(), &(MapSet.member?(listed, &1) or MapSet.member?(keep, &1)))
 
     {written?, error} =
       case read do
@@ -534,11 +535,11 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   # The file left as it is: what was meant to be in it is still admitted
-  defp write_failed(%{file: file, bound: bound, keep: keep}, reason) do
+  defp write_failed(%{file: file, keep: keep}, reason) do
     %{
       read?: false,
       listed: MapSet.new(),
-      hosts: Enum.filter(bound, &MapSet.member?(keep, &1)),
+      hosts: Enum.filter(servable_bound_hosts(), &MapSet.member?(keep, &1)),
       written?: false,
       error: "#{file}: #{reason}"
     }
@@ -773,6 +774,8 @@ defmodule Brando.Tenant.ServedHosts do
       _none -> :checking
     end
   end
+
+  defp servable_bound_hosts, do: Enum.filter(Cache.bound_hosts(), &servable?/1)
 
   # A stored domain is not checked again until it changes, and the file is read
   # by root: only a host name with a dot that is not an IP address gets a line.
