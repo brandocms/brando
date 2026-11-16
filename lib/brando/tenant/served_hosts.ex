@@ -87,7 +87,9 @@ defmodule Brando.Tenant.ServedHosts do
   `Brando.Tenant.ServedHosts.Resolver` (default
   `Brando.Tenant.ServedHosts.DNS`), which tests replace. A lookup that does
   not answer within `:lookup_timeout` milliseconds (default ten seconds), or
-  that raises, exits or throws, fails for that host. A `:lookup_timeout`,
+  that raises, exits or throws, fails for that host; so does one whose task
+  cannot be stopped at its timeout (a resolver blocking in a NIF), half a
+  second later, and that task is left to its supervisor. A `:lookup_timeout`,
   `:retry_interval` or `:recheck_interval` that is not a positive integer
   counts as unset.
   """
@@ -104,6 +106,9 @@ defmodule Brando.Tenant.ServedHosts do
   @retry_interval :timer.minutes(1)
   @recheck_interval :timer.minutes(5)
   @lookup_timeout :timer.seconds(10)
+  # How long after its timeout a lookup's task may still answer before it
+  # counts as failed here
+  @lookup_grace 500
   @call_timeout :timer.seconds(5)
   # Lookups running at once; OTP's native resolver has four workers
   @max_lookups 8
@@ -187,7 +192,8 @@ defmodule Brando.Tenant.ServedHosts do
     # while bound. In memory only: a new process starts from the file alone.
     # `settings`: the configuration the last check read, nil when off.
     # `tick`, `flush`: the references the pending timers' messages carry.
-    # `lookups`: each lookup under way, by its task's reference, with its batch.
+    # `lookups`: each lookup under way, by its task's reference, with its batch
+    # and the timer of its deadline.
     # `queue`: lookups waiting for one of the `@max_lookups` slots.
     # `batch`: the number of the last check that queued lookups.
     # `results`: what host lookups answered, by host, until admitted or
@@ -273,6 +279,13 @@ defmodule Brando.Tenant.ServedHosts do
     {:noreply, answered(state, ref, result)}
   end
 
+  # The task did not answer by its own timeout, as when the lookup cannot be
+  # killed: the host's lookup fails, and the task is left to its supervisor
+  def handle_info({:lookup_deadline, ref}, %{lookups: lookups} = state) when is_map_key(lookups, ref) do
+    Process.demonitor(ref, [:flush])
+    {:noreply, answered(state, ref, {:error, :timeout})}
+  end
+
   # The task died: of a link, say, which no `catch` inside it sees
   def handle_info({:DOWN, ref, :process, _pid, reason}, %{lookups: lookups} = state)
       when is_map_key(lookups, ref),
@@ -300,7 +313,8 @@ defmodule Brando.Tenant.ServedHosts do
   # file, the status and the broadcast follow when no lookup of its check is
   # left, or shortly while some are, so that many answers cost one write.
   defp answered(state, ref, result) do
-    {{target, batch}, lookups} = Map.pop!(state.lookups, ref)
+    {{target, batch, deadline}, lookups} = Map.pop!(state.lookups, ref)
+    Process.cancel_timer(deadline)
 
     case current(%{state | lookups: lookups}) do
       {:ok, state} ->
@@ -332,7 +346,10 @@ defmodule Brando.Tenant.ServedHosts do
   # Lookups under way are left to their tasks, which stop at their timeout,
   # and a write under way to its own check of the configuration
   defp drop(state) do
-    for {ref, _lookup} <- state.lookups, do: Process.demonitor(ref, [:flush])
+    for {ref, {_target, _batch, deadline}} <- state.lookups do
+      Process.demonitor(ref, [:flush])
+      Process.cancel_timer(deadline)
+    end
 
     %{
       cancel_flush(state)
@@ -359,7 +376,7 @@ defmodule Brando.Tenant.ServedHosts do
     do: %{state | results: Map.put(state.results, host, result), fresh: MapSet.put(state.fresh, host)}
 
   defp batch_done?(state, batch) do
-    not Enum.any?(state.lookups, &match?({_ref, {_target, ^batch}}, &1)) and
+    not Enum.any?(state.lookups, &match?({_ref, {_target, ^batch, _deadline}}, &1)) and
       not :queue.any(&match?({_target, ^batch}, &1), state.queue)
   end
 
@@ -621,12 +638,12 @@ defmodule Brando.Tenant.ServedHosts do
   defp queue_own(state, _batch), do: state
 
   defp own_pending?(state) do
-    Enum.any?(state.lookups, &match?({_ref, {{:own, _name}, _batch}}, &1)) or
+    Enum.any?(state.lookups, &match?({_ref, {{:own, _name}, _batch, _deadline}}, &1)) or
       :queue.any(&match?({{:own, _name}, _batch}, &1), state.queue)
   end
 
   defp pending_hosts(state) do
-    running = for {_ref, {{:host, host}, _batch}} <- state.lookups, do: host
+    running = for {_ref, {{:host, host}, _batch, _deadline}} <- state.lookups, do: host
     queued = for {{:host, host}, _batch} <- :queue.to_list(state.queue), do: host
     MapSet.new(running ++ queued)
   end
@@ -646,9 +663,10 @@ defmodule Brando.Tenant.ServedHosts do
 
   # One task per lookup, under a task supervisor, unlinked: a lookup that
   # raises, exits, throws, dies of a link or times out fails for its host and
-  # nothing else. The task stops itself at the timeout, so none outlives it,
-  # whatever happens to this process's state. Without the supervisor every
-  # lookup fails at once.
+  # nothing else. The task stops itself at the timeout; when it has not
+  # answered shortly after, the lookup fails here all the same, so a task that
+  # never answers holds no slot. Without the supervisor every lookup fails at
+  # once.
   defp start_lookup(state, {target, batch}) do
     case Process.whereis(Brando.Tenant.ServedHosts.TaskSupervisor) do
       nil ->
@@ -658,7 +676,8 @@ defmodule Brando.Tenant.ServedHosts do
         %{resolver: resolver, lookup_timeout: timeout} = state.settings
         name = target_name(target)
         task = Task.Supervisor.async_nolink(supervisor, fn -> timed_lookup(resolver, name, timeout) end)
-        %{state | lookups: Map.put(state.lookups, task.ref, {target, batch})}
+        deadline = Process.send_after(self(), {:lookup_deadline, task.ref}, timeout + @lookup_grace)
+        %{state | lookups: Map.put(state.lookups, task.ref, {target, batch, deadline})}
     end
   end
 

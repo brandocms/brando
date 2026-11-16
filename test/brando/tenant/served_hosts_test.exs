@@ -667,6 +667,36 @@ defmodule Brando.Tenant.ServedHostsTest do
       end
     end
 
+    defmodule StuckResolver do
+      # The task that times the lookup never answers, as when a lookup in a
+      # NIF cannot be killed: it is suspended
+      def lookup(_host) do
+        [timer | _callers] = Process.get(:"$callers")
+        send(:persistent_term.get({__MODULE__, :pid}), {:stuck, timer})
+        :erlang.suspend_process(timer)
+        Process.sleep(:infinity)
+      end
+    end
+
+    test "a lookup whose task never answers fails at its deadline and frees its slot", %{path: file, site: site} do
+      :persistent_term.put({StuckResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({StuckResolver, :pid}) end)
+      put_test_env(ServedHosts, file: file, addresses: [@here], resolver: StuckResolver, lookup_timeout: 50)
+      hosts = for index <- 1..9, do: "h#{index}.acme.test"
+      environments = for index <- 1..9, do: bind(site, "e#{index}", nil)
+      for {host, environment} <- Enum.zip(hosts, environments), do: set_domain(environment, host)
+      Cache.warm()
+
+      check = Task.async(fn -> ServedHosts.check() end)
+      assert {:ok, %{hosts: states}} = Task.yield(check, 5_000)
+      timers = for {:stuck, timer} <- Enum.map(hosts, fn _host -> assert_receive({:stuck, _timer}) end), do: timer
+      on_exit(fn -> Enum.each(timers, &Process.exit(&1, :kill)) end)
+
+      assert Map.take(states, hosts) == Map.new(hosts, &{&1, :unresolved})
+      assert %{lookups: lookups} = :sys.get_state(ServedHosts)
+      assert lookups == %{}
+    end
+
     test "a dead task supervisor leaves the host unresolved, the file alone and the process running",
          %{path: file, site: site} do
       pid = Process.whereis(ServedHosts)
