@@ -173,8 +173,19 @@ defmodule Brando.ServedHostsTestResolver do
   """
   def hold(host, pid), do: :persistent_term.put(@held_key, Map.put(:persistent_term.get(@held_key, %{}), host, pid))
 
-  @doc "Makes `host` resolve to `addresses` (strings), or fail with `{:error, reason}`."
+  @doc """
+  Makes `host` resolve to `addresses` (strings), fail with `{:error, reason}`,
+  or answer `{:incomplete, addresses, families}` or
+  `{:incomplete, addresses, families, reasons}`: `addresses` (strings) for
+  the families read, `families` unread, and `reasons` why.
+  """
   def answer(host, {:error, _reason} = error), do: put(host, error)
+
+  def answer(host, {:incomplete, addresses, families}),
+    do: put(host, {:incomplete, Enum.map(addresses, &parse!/1), families})
+
+  def answer(host, {:incomplete, addresses, families, reasons}),
+    do: put(host, {:incomplete, Enum.map(addresses, &parse!/1), families, reasons})
 
   def answer(host, addresses) when is_list(addresses) do
     put(host, {:ok, Enum.map(addresses, &parse!/1)})

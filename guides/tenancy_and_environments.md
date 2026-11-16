@@ -801,7 +801,10 @@ config :brando, Brando.Tenant.ServedHosts,
   addresses: ["203.0.113.10", "2001:db8::10"],
   # Optional. :always admits every bound host without the DNS check,
   # for an installation behind a CDN or another proxy
-  admit: :dns
+  admit: :dns,
+  # Optional. Brando.Tenant.ServedHosts.SystemResolver for hosts that
+  # resolve only through /etc/hosts or the platform's resolver configuration
+  resolver: Brando.Tenant.ServedHosts.DNS
 ```
 
 The file holds every host the registry binds (each environment's domain and
@@ -813,8 +816,13 @@ is one of this server's: a proxy asks for a certificate as soon as it gets a
 host, and a request for a host whose DNS still points at the old server fails
 and counts against the certificate authority's limits. So a launch needs no
 step on the server: change the DNS record, and within a minute the host is in
-the file and the proxy can certify it. Brando removes a host from the file
-only once no environment binds it; a failed lookup later never removes it. The
+the file and the proxy can certify it. Both families must be read: when the
+query of one times out, or its name server fails, the host is not admitted on
+the other family's addresses, since the unread one may point at another
+server, where a certificate authority that prefers IPv6 would fail the
+request. It is looked up again a minute later. Brando removes a host from the
+file only once no environment binds it; a failed lookup later never removes
+it. The
 installation's own hosts (the endpoint's, the static, media and CDN hosts) are
 never in it: the deploy tool routes those itself. Nor is a bound domain that
 is not a full host name such as `www.example.com`: one without a dot
@@ -851,22 +859,66 @@ hosts' states wait for it, and later writes follow it as one. A host shows
 host is looked up on its own, at most eight at a time while the rest wait
 their turn, and its lookup fails when it does not answer within the lookup
 timeout (ten seconds by default, `:lookup_timeout` in milliseconds), counted
-from when it starts. A host's result shows as soon as it answers; the answers
+from when it starts.
+
+Brando asks the name servers in the system's resolver configuration
+(`/etc/resolv.conf`) itself, through Erlang's `:inet_res`: each family's query
+waits a second and then two for each name server, and takes at most four
+seconds, a `CNAME`'s target included, so a host takes at most eight. That is
+how it tells a family with no records from one whose query timed out. Name
+servers that do not answer use up those four seconds: each query gives a dead
+one a second before asking the next, so with the first two of three dead, a
+host behind a `CNAME` with no record of a family, which needs two queries for
+it, times out on the second, and is not admitted while those name servers stay
+dead. The admin then says the lookup timed out; remove or fix the dead name
+servers in `/etc/resolv.conf`. It does
+not read `/etc/hosts`, nor platform-specific resolver configuration
+(`nsswitch.conf`, the per-domain resolvers of macOS). An installation whose
+hosts resolve only through those sets
+`resolver: Brando.Tenant.ServedHosts.SystemResolver`, which asks the operating
+system as other programs do, but cannot tell the two apart: a family whose
+lookup timed out counts as one with no records, and a host is then admitted on
+the other family alone. Any module implementing
+`Brando.Tenant.ServedHosts.Resolver` can take its place. A host's result shows as soon as it answers; the answers
 of many hosts looked up together, as on a new server, are written to the file
 in one go. Without `addresses`, this server's are looked up once per check,
 and a lookup of them that fails keeps the ones found before, for an hour
-after they were found: a server whose own lookup keeps failing then admits no
-host until it answers again.
+after they were found: a server whose own lookup keeps failing, or cannot read
+one of the families, then admits no host until it answers again.
 
 The **Environments** screen shows each bound host's state beside the host:
 the domain's on the domain's line, then one line for each redirect host, led
 by its name:
 **Served** when it is in the file, **Checking** while its first lookup runs,
 **Waiting for DNS** with what the host resolves to now and this server's
-addresses, **Does not resolve**, or **Not a full host name** for a bound host
-the file leaves out. A file that could not
-be written is shown above the list (with the reason to superusers only),
-logged once, and tried again every minute; the application keeps running.
+addresses, **Does not resolve** when it has no address records, **Could not
+look it up** when its latest lookup could not read one family or both, or
+**Not a full host name** for a bound host the file leaves out. **Could not
+look it up** names the family and why, for example "The IPv6 lookup failed:
+the name server reported a failure. It will be tried again." The reasons are:
+the query timed out, the name server reported a failure, the name server
+refused the query, the answer was cut short, no name server is configured, or
+another error. A host in the file stays **Served** whatever a later lookup
+finds. A warning is logged, with the host, the family and the reason, when a
+host starts failing and when its reason changes, not at each retry. A file
+that could not be written is shown above the list (with the reason to
+superusers only), logged once, and tried again every minute; the application
+keeps running.
+
+A host that shows **Could not look it up** check after check will not be
+admitted until the cause is fixed:
+
+- A domain whose name servers fail one family's query every time (an `AAAA`
+  query answered with a server failure, say): fix the domain's name servers. A
+  certificate authority that looks up both families fails on such a domain
+  too, so admitting it on the other family would not get it a certificate.
+- No name server is configured on the server (an empty or missing
+  `/etc/resolv.conf`): every host ends here. Configure one, or choose
+  `SystemResolver`.
+- Hosts that resolve only through `/etc/hosts` or the platform's resolver
+  configuration: choose `resolver: Brando.Tenant.ServedHosts.SystemResolver`.
+- An installation whose proxy need not wait for DNS, behind a CDN or another
+  proxy: `admit: :always`.
 
 The file's contract, for anyone writing their own consumer:
 
