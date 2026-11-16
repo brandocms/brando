@@ -91,15 +91,17 @@ defmodule Brando.SSG.LocalDelivery do
 
   # What a generated endpoint answers after `Brando.Plug.SiteAssets`, and what
   # Brando's router macros mount outside the page catch-all, on a host
-  # serving its build. Kept reaching Phoenix, by path prefix:
+  # serving its build. Kept reaching Phoenix, by path prefix, with the bare
+  # prefix only where a route or plug answers it (the page catch-all would):
   #
-  #   /__brando          the forms' CSRF token (static forms post, which passes anyway) and the icon stylesheet
-  #   /__p__             a shared preview: unpublished content behind its key, for people without an account
-  #   /__ssg_preview__   a build's preview before it is published, behind its token
+  #   /__brando/…        the forms' CSRF token (static forms post, which passes anyway) and the icon stylesheet
+  #   /__p__/…           a shared preview: unpublished content behind its key, for people without an account
+  #   /__ssg_preview__/… a build's preview before it is published, behind its token
   #   /__livepreview     the admin's live preview and its client files (`Brando.Plug.LivePreview`)
-  #   the media path     `Brando.Plug.Media`: the build's copy of media is not listed (`skipped_dirs/0`)
-  #   the admin, /mcp, /.well-known/oauth-protected-resource, /.well-known/oauth-authorization-server
-  #                      the admin and MCP with its OAuth metadata, only where the admin answers
+  #   the media path/…   `Brando.Plug.Media`: the build's copy of media is not listed but for its page (`skipped_dirs/0`)
+  #   the admin          only where the admin answers
+  #   /mcp, /.well-known/oauth-protected-resource/mcp, /.well-known/oauth-authorization-server/mcp
+  #                      MCP with its OAuth metadata, where the admin answers and the router mounts it
   #   :dynamic_paths     the application's own
   #
   # Left to the build:
@@ -121,9 +123,12 @@ defmodule Brando.SSG.LocalDelivery do
   #   /health            `Brando.Plug.Health`, which a blue/green deploy polls from the server before switching
   #   a file the build lacks that the asset pipeline has (`Brando.Plug.SiteAssets.static_file?/1`)
   @dynamic_paths ["/__brando", "/__p__", "/__ssg_preview__", "/__livepreview"]
+  # Below the prefix only
+  @routes_below ["/__brando", "/__p__", "/__ssg_preview__"]
   @before_router :brando_ssg_before_router
   # Only where the admin answers (`BrandoAdmin.AdminHost.serves_admin?/1`)
-  @admin_paths ["/mcp", "/.well-known/oauth-protected-resource", "/.well-known/oauth-authorization-server"]
+  # and the router mounts them (`Brando.MCP.mounted?/0`)
+  @mcp_paths ["/mcp", "/.well-known/oauth-protected-resource/mcp", "/.well-known/oauth-authorization-server/mcp"]
 
   @impl Plug
   def init(opts), do: opts
@@ -168,10 +173,15 @@ defmodule Brando.SSG.LocalDelivery do
   @doc """
   The path prefixes that keep reaching Phoenix on a host serving its build:
   Brando's own (shared and build previews, live preview, the forms' and
-  icons' `/__brando`), the media path, the admin's and MCP's paths where the
-  admin answers on the host, and an application's own:
+  icons' `/__brando`), the media path, the admin's path where the admin
+  answers on the host, MCP's where the router mounts them too
+  (`Brando.Router.mcp_routes/0`), and an application's own:
 
       config :brando, Brando.SSG.LocalDelivery, dynamic_paths: ["/api", "/coming-soon"]
+
+  The media path, `/__brando`, `/__p__` and `/__ssg_preview__` reach Phoenix
+  only below them: nothing but the page catch-all answers the bare path, which
+  the build answers as any other page path.
 
   The endpoint's sockets answer before any plug, so they need no entry.
   `/health` and the files the asset pipeline has are let through too, for a
@@ -179,7 +189,7 @@ defmodule Brando.SSG.LocalDelivery do
   """
   @spec dynamic_paths(Plug.Conn.t()) :: [String.t()]
   def dynamic_paths(conn) do
-    admin = if BrandoAdmin.AdminHost.serves_admin?(conn), do: [admin_path() | @admin_paths], else: []
+    admin = if BrandoAdmin.AdminHost.serves_admin?(conn), do: [admin_path() | mcp_paths()], else: []
     own = Application.get_env(:brando, __MODULE__, [])[:dynamic_paths] || []
     [media_path() | @dynamic_paths] ++ admin ++ own
   end
@@ -215,10 +225,16 @@ defmodule Brando.SSG.LocalDelivery do
     end
   end
 
+  defp mcp_paths, do: if(Brando.MCP.mounted?(), do: @mcp_paths, else: [])
+
   defp dynamic_path?(%Plug.Conn{path_info: path_info} = conn) do
+    below = [media_path() | @routes_below]
+
     Enum.any?(dynamic_paths(conn), fn prefix ->
       segments = String.split(prefix, "/", trim: true)
-      segments != [] and List.starts_with?(path_info, segments)
+
+      segments != [] and List.starts_with?(path_info, segments) and
+        (prefix not in below or length(path_info) > length(segments))
     end)
   end
 
@@ -607,7 +623,8 @@ defmodule Brando.SSG.LocalDelivery do
   end
 
   # Regular files only: a symbolic link, to a file or a directory, is no file
-  # of the build. Media keeps reaching Phoenix, so its copy is not listed.
+  # of the build. Media keeps reaching Phoenix, so its copy is not listed, but
+  # for the page at the media path itself.
   defp list_files(root, skipped_dirs) do
     root
     |> walk("", skipped_dirs)
@@ -625,9 +642,23 @@ defmodule Brando.SSG.LocalDelivery do
     child = if relative == "", do: name, else: Path.join(relative, name)
 
     case File.lstat(Path.join(root, child), time: :posix) do
-      {:ok, %{type: :directory}} -> if relative == "" and name in skipped_dirs, do: [], else: walk(root, child, [])
+      {:ok, %{type: :directory}} ->
+        if relative == "" and name in skipped_dirs, do: index(root, child), else: walk(root, child, [])
+
+      {:ok, %{type: :regular, size: size, mtime: mtime}} ->
+        [{child, {size, mtime}}]
+
+      _symlink_or_other ->
+        []
+    end
+  end
+
+  defp index(root, dir) do
+    child = Path.join(dir, "index.html")
+
+    case File.lstat(Path.join(root, child), time: :posix) do
       {:ok, %{type: :regular, size: size, mtime: mtime}} -> [{child, {size, mtime}}]
-      _symlink_or_other -> []
+      _missing_or_other -> []
     end
   end
 

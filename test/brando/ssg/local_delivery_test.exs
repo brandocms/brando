@@ -281,6 +281,16 @@ defmodule Brando.SSG.LocalDeliveryTest do
       end
     end
 
+    test "answers MCP's paths from the build when the router mounts no MCP routes", context do
+      put_test_env(:router_module, Brando.Test.LocalDeliveryRouter)
+
+      for path <- ["/mcp", "/mcp/x", "/.well-known/oauth-protected-resource/mcp"] do
+        conn = dispatch(context.host, path)
+        assert conn.status == 404, path
+        assert conn.resp_body == "missing v1", path
+      end
+    end
+
     test "redirects a redirect host to the domain first", context do
       {:ok, _live} =
         Registry.update_environment(context.live, %{redirect_hosts: ["www.#{context.host}"]}, actor: :system)
@@ -834,6 +844,20 @@ defmodule Brando.SSG.LocalDeliveryTest do
       end
     end
 
+    # Only the page catch-all answers them in Phoenix
+    test "but not the bare media path or prefix of Brando's own, which answer as any page path", context do
+      for path <- ~w(/media /media/ /__brando /__p__ /__ssg_preview__) do
+        conn = request(context.host, path)
+        assert conn.status == 404, path
+        assert sent_body(conn) == "missing v1", path
+      end
+
+      context |> ready_build(%{"media/index.html" => "media page"}) |> deploy!()
+      assert sent_body(request(context.host, "/media")) == "media page"
+      # The rest of the build's media is still not listed
+      refute request(context.host, "/media/image.jpg").halted
+    end
+
     test "an application's own paths", context do
       assert request(context.host, "/api/things").status == 404
       put_test_env(Brando.SSG.LocalDelivery, dynamic_paths: ["/api"])
@@ -848,6 +872,9 @@ defmodule Brando.SSG.LocalDeliveryTest do
       put_test_env(:site_key, context.site.key)
       Cache.warm()
       refute request(context.host, "/admin").halted
+      # The router mounts MCP's routes
+      assert Brando.MCP.mounted?()
+      refute request(context.host, "/mcp").halted
     end
 
     test "a request with a build's signed context, so a build is not made from the published one", context do
