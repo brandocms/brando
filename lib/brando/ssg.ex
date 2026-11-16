@@ -36,8 +36,9 @@ defmodule Brando.SSG do
   @doc """
   The path a build requests for the site's error page, which it stores as
   `404.html`. No route answers it, so the application answers it as any
-  missing path, with status 404, and logs no 404 for it
-  (`Brando.Sites.FourOhFour`).
+  missing path, with status 404. On a build's request no redirect rule
+  answers it (`BrandoWeb.FallbackController`), under a language prefix too,
+  and no 404 is logged for it (`Brando.Sites.FourOhFour`).
   """
   @spec not_found_path() :: String.t()
   def not_found_path, do: @not_found_path
@@ -171,8 +172,9 @@ defmodule Brando.SSG do
       `<link rel="alternate" type="text/markdown">`, on the site's own host,
       unless the application answers it with 404 (it names the alternate
       whether or not `Brando.Plug.Markdown` serves it): that one is skipped;
-    * `404.html`, the site's error page: the answer to `not_found_path/0`,
-      which must be a 404;
+    * `404.html`, the site's error page: the answer to `not_found_path/0`
+      when it is a 404. A site whose catch-all answers it with a page (2xx)
+      gets none, and a note says so; any other status fails it;
     * `sitemaps/`, the sitemap of the environment being built
       (`Brando.Sitemap.write_static/2`, from `:sitemap_module`, by default the
       application's), with entries on the site's public base URL;
@@ -555,17 +557,21 @@ defmodule Brando.SSG do
       {markdown_failures, skipped_markdown} =
         fetch_alternates(request, result.markdown_paths -- urls, output_path)
 
+      {not_found_failures, not_found_notes} = fetch_not_found_page(request, output_path)
       {sitemap?, sitemap_failures} = write_sitemap(output_path, opts)
       sitemap_header = [{Context.sitemap_header(), if(sitemap?, do: "1", else: "0")}]
 
       failures =
         markdown_failures ++
-          fetch_not_found_page(request, output_path) ++
+          not_found_failures ++
           sitemap_failures ++
           fetch_file(request, "/robots.txt", Path.join(output_path, "robots.txt"), sitemap_header)
 
       built_paths = urls ++ (result.markdown_paths -- skipped_markdown)
-      notes = Enum.map(skipped_markdown, &"#{&1}: not written, the application answers 404 for this Markdown alternate")
+
+      notes =
+        Enum.map(skipped_markdown, &"#{&1}: not written, the application answers 404 for this Markdown alternate") ++
+          not_found_notes
 
       with :ok <- write_redirects(output_path, built_paths, result.page_redirects) do
         {:ok, %{without_page_data(result) | failed_urls: result.failed_urls ++ failures, notes: result.notes ++ notes}}
@@ -613,22 +619,26 @@ defmodule Brando.SSG do
     exception -> {:error, {:request_exception, Exception.message(exception)}}
   end
 
-  # The application answers a missing path with the site's error page and 404,
-  # which is the answer wanted here
+  # {failures, notes}: the application answers a missing path with the site's
+  # error page and 404, which is the answer wanted here. A site whose catch-all
+  # answers every path with a page has no error page to store.
   defp fetch_not_found_page(request, output_path) do
     case fetch_path(request, @not_found_path) do
       {:ok, %{status: 404, body: body}, _redirect} ->
-        write_result(@not_found_path, write_file(Path.join(output_path, "404.html"), IO.iodata_to_binary(body)))
+        {write_result(@not_found_path, write_file(Path.join(output_path, "404.html"), IO.iodata_to_binary(body))), []}
+
+      {:ok, %{status: status}, _redirect} when status in 200..299 ->
+        {[], ["#{@not_found_path}: no 404.html written, the site answers a missing path with HTTP #{status}"]}
 
       {:ok, %{status: status}, _redirect} ->
-        [format_failure(@not_found_path, {:not_found_status, status})]
+        {[format_failure(@not_found_path, {:not_found_status, status})], []}
 
       other ->
         {:error, reason} = fetch_error(other)
-        [format_failure(@not_found_path, reason)]
+        {[format_failure(@not_found_path, reason)], []}
     end
   rescue
-    exception -> [format_failure(@not_found_path, {:request_exception, Exception.message(exception)})]
+    exception -> {[format_failure(@not_found_path, {:request_exception, Exception.message(exception)})], []}
   end
 
   defp write_result(_path, :ok), do: []

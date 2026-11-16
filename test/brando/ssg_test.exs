@@ -1053,14 +1053,25 @@ defmodule Brando.SSGTest do
       assert Enum.at(redirects, 3)["pattern"] == "/old-.*"
     end
 
-    test "fails the error page's path when the application answers it with anything but 404", context do
+    test "writes no 404.html, and notes why, when the application answers a missing path with a page", context do
       SSGEndpoint.start(fn
         %{path: "/__brando_ssg__/not-found"} -> {200, "a page for every path"}
         request -> context.answer.(request)
       end)
 
+      assert {:ok, %{failed_urls: [], notes: [note]}} = context.build.([])
+      assert note =~ "/__brando_ssg__/not-found: no 404.html written, the site answers a missing path with HTTP 200"
+      refute File.exists?(Path.join(context.output_path, "404.html"))
+    end
+
+    test "fails the error page's path when the application answers it with an error", context do
+      SSGEndpoint.start(fn
+        %{path: "/__brando_ssg__/not-found"} -> {500, "down"}
+        request -> context.answer.(request)
+      end)
+
       assert {:error, :url_failures, %{failed_urls: [failure]}} = context.build.([])
-      assert failure =~ "/__brando_ssg__/not-found (HTTP 200"
+      assert failure =~ "/__brando_ssg__/not-found (HTTP 500"
       refute File.exists?(Path.join(context.output_path, "404.html"))
     end
 
