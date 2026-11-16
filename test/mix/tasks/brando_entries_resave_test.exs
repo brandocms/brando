@@ -206,6 +206,46 @@ defmodule Mix.Tasks.Brando.Entries.ResaveTest do
       assert_received {:mix_shell, :info, ["\n==> Done.\n"]}
     end
 
+    test "with Villain's query cache on, each environment's pages render its fragments as stored, not as cached" do
+      Application.put_env(:brando, :villain_query_cache, true)
+      Cachex.clear(:query)
+
+      on_exit(fn ->
+        Application.delete_env(:brando, :villain_query_cache)
+        Cachex.clear(:query)
+      end)
+
+      user = Brando.Factory.insert(:random_user, role: :superuser, avatar: nil)
+      prefixes = ~w(tenant_acme_production tenant_beta_production)
+
+      pages =
+        for prefix <- prefixes, into: %{} do
+          Brando.Tenant.with_prefix(prefix, fn ->
+            fragment = cached_fragment!(user)
+            page = page_embedding!(user, fragment)
+
+            # What this node cached before the fragment was rewritten where
+            # it did not hear of it
+            {:ok, [_ | _]} = Brando.Pages.FragmentQuery.list_for_rendering(%{cache: {:ttl, :infinite}})
+
+            {1, _} =
+              Brando.Repo.update_all(Ecto.Query.from(f in Brando.Pages.Fragment, where: f.id == ^fragment.id),
+                set: [rendered_blocks: "<p>Stored in #{prefix}</p>"]
+              )
+
+            {prefix, page.id}
+          end)
+        end
+
+      ExUnit.CaptureIO.capture_io(fn -> Resave.run(["--yes", "--environment", "production", "Brando.Pages.Page"]) end)
+
+      for {prefix, page_id} <- pages do
+        Brando.Tenant.with_prefix(prefix, fn ->
+          assert Brando.Repo.get!(Brando.Pages.Page, page_id).rendered_blocks == "<p>Stored in #{prefix}</p>"
+        end)
+      end
+    end
+
     test "--site and --environment narrow it", context do
       run = fn args -> ExUnit.CaptureIO.capture_io(fn -> Resave.run(["--yes" | args] ++ ["Brando.Pages.Page"]) end) end
 
@@ -261,6 +301,25 @@ defmodule Mix.Tasks.Brando.Entries.ResaveTest do
 
       page.id
     end)
+  end
+
+  defp cached_fragment!(user) do
+    params = Brando.Factory.params_for(:fragment, %{parent_key: "cached", key: "embedded"})
+    {:ok, fragment} = Brando.Pages.create_fragment(Ecto.Changeset.change(%Brando.Pages.Fragment{}, params), user)
+    fragment
+  end
+
+  defp page_embedding!(user, fragment) do
+    {:ok, page} =
+      %Brando.Pages.Page{}
+      |> Brando.Pages.Page.changeset(Brando.Factory.params_for(:page, %{creator_id: user.id}), user)
+      |> Ecto.Changeset.put_assoc(:entry_blocks, [
+        %{block: %{type: :fragment, source: "Elixir.Brando.Pages.Page.Blocks", fragment_id: fragment.id, sequence: 0}}
+      ])
+      |> Map.put(:action, :insert)
+      |> Brando.Pages.create_page(user)
+
+    page
   end
 
   # Where the stale pages still are

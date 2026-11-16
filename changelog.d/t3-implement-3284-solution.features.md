@@ -9,7 +9,8 @@
   `{% video entry.video { quality: "mp4_720" } %}`, which an editor's choice
   overrides, and `config :brando, Brando.Videos, default_mp4_resolution: 720`
   sets what Automatic plays. `brando_221` adds `videos.quality` in every
-  environment; run `mix brando.gen.migrations` and `mix brando.migrate`.
+  environment; run `mix brando.gen.migrations` and `mix brando.migrate`
+  (in a release, `bin/my_app eval "MyApp.ReleaseTasks.migrate()"`).
   Existing Bunny videos stream until **Fetch details** in the video library
   looks up their MP4s.
 
