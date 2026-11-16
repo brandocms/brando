@@ -146,22 +146,25 @@ defmodule Brando.SSG.LocalDelivery do
 
   # The first entry that matches the decoded path, in the request's language
   defp redirect(conn, site, build) do
-    with {:ok, segments} <- decode(conn.path_info) do
-      path = "/" <> Enum.join(segments, "/")
-      {language, _rest} = Brando.I18n.parse_path(segments, site)
+    case decode(conn.path_info) do
+      {:ok, segments} ->
+        path = "/" <> Enum.join(segments, "/")
+        {language, _rest} = Brando.I18n.parse_path(segments, site)
+        Enum.find_value(build.redirects, &match_entry(&1, path, language))
 
-      Enum.find_value(build.redirects, fn entry ->
-        if entry.language in [nil, language] do
-          case Redirects.target(path, entry.pattern, entry.target) do
-            nil -> nil
-            target -> {entry.exact, entry.status, target}
-          end
-        end
-      end)
-    else
-      _undecodable -> nil
+      :error ->
+        nil
     end
   end
+
+  defp match_entry(%{language: entry_language} = entry, path, language) when entry_language in [nil, language] do
+    case Redirects.target(path, entry.pattern, entry.target) do
+      nil -> nil
+      target -> {entry.exact, entry.status, target}
+    end
+  end
+
+  defp match_entry(_entry, _path, _language), do: nil
 
   defp decode(segments) do
     {:ok, Enum.map(segments, &URI.decode/1)}
@@ -325,24 +328,18 @@ defmodule Brando.SSG.LocalDelivery do
 
   defp walk(root, relative, skipped_dirs) do
     case File.ls(Path.join(root, relative)) do
-      {:ok, names} ->
-        Enum.flat_map(names, fn name ->
-          child = if relative == "", do: name, else: Path.join(relative, name)
+      {:ok, names} -> Enum.flat_map(names, &walk_entry(root, relative, &1, skipped_dirs))
+      {:error, _reason} -> []
+    end
+  end
 
-          case File.lstat(Path.join(root, child), time: :posix) do
-            {:ok, %{type: :directory}} ->
-              if relative == "" and name in skipped_dirs, do: [], else: walk(root, child, [])
+  defp walk_entry(root, relative, name, skipped_dirs) do
+    child = if relative == "", do: name, else: Path.join(relative, name)
 
-            {:ok, %{type: :regular, size: size, mtime: mtime}} ->
-              [{child, etag(size, mtime)}]
-
-            _symlink_or_other ->
-              []
-          end
-        end)
-
-      {:error, _reason} ->
-        []
+    case File.lstat(Path.join(root, child), time: :posix) do
+      {:ok, %{type: :directory}} -> if relative == "" and name in skipped_dirs, do: [], else: walk(root, child, [])
+      {:ok, %{type: :regular, size: size, mtime: mtime}} -> [{child, etag(size, mtime)}]
+      _symlink_or_other -> []
     end
   end
 
