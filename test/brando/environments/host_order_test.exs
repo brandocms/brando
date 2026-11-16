@@ -174,6 +174,56 @@ defmodule Brando.Environments.HostOrderTest do
     assert {:ok, %Environment{}} = Task.await(deleter, 10_000)
   end
 
+  describe "a delete whose drop fails" do
+    setup %{site: site} do
+      creator = create_task(site)
+      assert_receive {:migrating, migrator}, 5_000
+      send(migrator, :migrate)
+      assert {:ok, environment} = Task.await(creator, 10_000)
+
+      prefix = Tenant.prefix(site, environment)
+      reader = hold_table(prefix)
+      deleter = Task.async(fn -> Sandbox.unboxed_run(Repo, fn -> Environments.delete_environment(environment) end) end)
+
+      %{environment: environment, prefix: prefix, reader: reader, deleter: deleter, drop: wait_for_drop(prefix)}
+    end
+
+    test "binds the hosts again", context do
+      cancel(context.drop)
+      assert {:error, %Postgrex.Error{postgres: %{code: :query_canceled}}} = Task.await(context.deleter, 10_000)
+      send(context.reader.pid, :commit)
+      Task.await(context.reader, 10_000)
+
+      assert %Environment{domain: @domain, redirect_hosts: [@redirect]} =
+               Sandbox.unboxed_run(Repo, fn -> Registry.get_environment(context.environment.id) end)
+
+      assert schema_exists?(context.prefix)
+      assert request(@domain).status == 200
+      assert request(@redirect).status == 301
+    end
+
+    test "says which hosts it could not bind again", %{site: site} = context do
+      # Another environment takes the domain while the drop waits
+      Sandbox.unboxed_run(Repo, fn ->
+        {:ok, _rival} =
+          Registry.create_environment(site, %{name: "Rival", key: "rival", domain: @domain}, actor: :system)
+      end)
+
+      cancel(context.drop)
+
+      assert {:error, {:schema_not_dropped, %Postgrex.Error{}, {:hosts_released, @domain, [@redirect]}}} =
+               Task.await(context.deleter, 10_000)
+
+      send(context.reader.pid, :commit)
+      Task.await(context.reader, 10_000)
+
+      assert %Environment{domain: nil, redirect_hosts: []} =
+               Sandbox.unboxed_run(Repo, fn -> Registry.get_environment(context.environment.id) end)
+
+      assert schema_exists?(context.prefix)
+    end
+  end
+
   describe "a new site's hosts" do
     setup do
       put_test_env(:environment_schema_cloner, Brando.TenantCloners)
@@ -366,21 +416,26 @@ defmodule Brando.Environments.HostOrderTest do
   defp wait_for_drop(prefix, attempts) do
     waiting =
       Sandbox.unboxed_run(Repo, fn ->
-        Repo.one(
+        Repo.all(
           from(l in "pg_locks",
             where:
               l.locktype == "relation" and not l.granted and
                 l.relation == fragment("to_regclass(?)::oid", ^~s|"#{prefix}".pages|),
-            select: count()
+            select: l.pid
           )
         )
       end)
 
-    if waiting > 0 do
-      :ok
-    else
-      Process.sleep(10)
-      wait_for_drop(prefix, attempts - 1)
+    case waiting do
+      [pid | _] ->
+        pid
+
+      [] ->
+        Process.sleep(10)
+        wait_for_drop(prefix, attempts - 1)
     end
   end
+
+  # Fails the drop waiting at `pid`
+  defp cancel(pid), do: Sandbox.unboxed_run(Repo, fn -> Repo.query!("SELECT pg_cancel_backend($1)", [pid]) end)
 end

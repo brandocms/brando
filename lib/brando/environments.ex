@@ -26,6 +26,7 @@ defmodule Brando.Environments do
   alias Brando.Users.User
   alias Brando.Worker.EnvironmentCopy
   alias Brando.Worker.EnvironmentSetLive
+  alias Ecto.Changeset
 
   @public_prefix "public"
   @public_opts [prefix: @public_prefix]
@@ -218,7 +219,9 @@ defmodule Brando.Environments do
   time to refresh its registry cache (`Brando.CacheSync.settle/0`), before the
   schema is dropped: a request on them from then on is the unknown host's
   404. In `:multi` it waits also when the environment binds no host now
-  (`release_hosts/1`). When the drop fails, the hosts are bound again.
+  (`release_hosts/1`). When the drop fails, the hosts are bound again; when
+  they cannot be (another environment took one meanwhile), the error is
+  `{:schema_not_dropped, reason, {:hosts_released, domain, redirect_hosts}}`.
   """
   @spec delete_environment(Environment.t(), keyword()) ::
           {:ok, Environment.t()} | {:error, term()}
@@ -890,24 +893,54 @@ defmodule Brando.Environments do
   end
 
   # The schema is still there, whole: the environment answers on its hosts
-  # again
+  # again. When they cannot be bound again, the error says so with the drop's.
   defp drop_or_rebind(environment, prefix) do
     case Schema.drop(prefix) do
       :ok ->
         :ok
 
-      {:error, _reason} = error ->
-        released = %{environment | domain: nil, redirect_hosts: []}
-        hosts = %{domain: environment.domain, redirect_hosts: environment.redirect_hosts || []}
+      {:error, drop_reason} = error ->
+        case rebind_hosts(environment) do
+          :ok ->
+            error
 
-        with {:error, reason} <- Registry.bind_hosts(released, hosts, actor: :system),
-             do:
-               Logger.error(
-                 "[Brando.Environments] Could not bind the hosts of #{environment.key} again: #{inspect(reason.errors)}"
-               )
+          {:error, reason} ->
+            Logger.error("[Brando.Environments] Could not bind the hosts of #{environment.key} again: #{inspect(reason)}")
 
+            {:error,
+             {:schema_not_dropped, drop_reason, {:hosts_released, environment.domain, environment.redirect_hosts || []}}}
+        end
+    end
+  end
+
+  # As they were stored: without today's validation of a host, and with the
+  # constraints that refuse one another environment took meanwhile
+  defp rebind_hosts(%Environment{domain: nil, redirect_hosts: hosts}) when hosts in [nil, []], do: :ok
+
+  defp rebind_hosts(environment) do
+    %{environment | domain: nil, redirect_hosts: []}
+    |> Changeset.change(domain: environment.domain, redirect_hosts: environment.redirect_hosts || [])
+    |> Changeset.unique_constraint(:domain)
+    |> Changeset.unique_constraint(:domain, name: :environments_domain_bound_once)
+    |> Changeset.unique_constraint(:redirect_hosts, name: :environments_redirect_hosts_bound_once)
+    |> Changeset.check_constraint(:redirect_hosts, name: :environments_redirect_hosts_need_domain)
+    |> update_rescued()
+    |> case do
+      {:ok, _environment} ->
+        refresh_registry_cache()
+
+      {:error, %Changeset{errors: errors}} ->
+        {:error, errors}
+
+      {:error, _exception} = error ->
         error
     end
+  end
+
+  defp update_rescued(changeset) do
+    Repo.update(changeset, @public_opts)
+  rescue
+    exception -> {:error, exception}
   end
 
   # Only this deletion takes the rows: the rollback and failure paths that remove

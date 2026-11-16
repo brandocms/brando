@@ -1765,7 +1765,11 @@ host, as one released just before may still be routed by another node. When
 this node's cache still resolves one of the environment's hosts, Brando
 refreshes it once more; if the host still resolves, the delete returns
 `{:error, {:hosts_still_resolve, hosts}}` and the schema stays. When the
-schema cannot be dropped, the hosts are bound to the environment again.
+schema cannot be dropped, the hosts are bound to the environment again. When
+one of them cannot be, because another environment took it meanwhile, the
+delete returns
+`{:error, {:schema_not_dropped, reason, {:hosts_released, domain, redirect_hosts}}}`:
+the schema is still there and those hosts are bound to no environment.
 
 Deleting an environment deletes its rows in the shared tables too: form
 submissions, entry drafts, assistant conversations, guidance versions, content
