@@ -74,6 +74,11 @@ defmodule Brando.Content.Resave do
   exist. It prints the message too, unless the caller passed `:info` (the
   Mix task reports it itself).
 
+  The report is written to the caller's standard output, which over `rpc` is
+  the operator's session. A line that cannot be written (the session was
+  closed) is dropped, and the run goes on. The caches are reloaded
+  (`:reload_caches`) after a failure too.
+
   Each environment's pass first refreshes that environment's render inputs
   on this node, whatever the node has heard: the identity, globals and menus
   entries render with, and the cached lists of modules, containers,
@@ -84,7 +89,7 @@ defmodule Brando.Content.Resave do
   """
   @spec run([option]) :: {:ok, non_neg_integer() | :declined} | {:error, String.t()}
   def run(opts \\ []) do
-    info = opts[:info] || (&IO.puts(ANSI.format(&1)))
+    info = printer(opts[:info] || (&IO.puts(ANSI.format(&1))))
     opts |> resave(info) |> report_error(opts, info)
   end
 
@@ -96,9 +101,11 @@ defmodule Brando.Content.Resave do
       plan = %{blueprints: blueprints, environments: environments}
 
       if go_ahead?(plan, listed?, opts[:confirm], info) do
-        count = resave_in(plan, info)
-        caches(Keyword.get(opts, :reload_caches, not started_here?), started_here?, info)
-        {:ok, count}
+        try do
+          {:ok, resave_in(plan, info)}
+        after
+          caches(Keyword.get(opts, :reload_caches, not started_here?), started_here?, info)
+        end
       else
         info.("Nothing was done.")
         {:ok, :declined}
@@ -128,6 +135,18 @@ defmodule Brando.Content.Resave do
 
       true ->
         :ok
+    end
+  end
+
+  # A line the caller's output cannot take (an `rpc` session that closed:
+  # its group leader is gone) is dropped rather than stopping the run
+  defp printer(fun) do
+    fn line ->
+      try do
+        fun.(line)
+      catch
+        _kind, _reason -> :ok
+      end
     end
   end
 
@@ -339,7 +358,7 @@ defmodule Brando.Content.Resave do
     {:ok, entries} = apply(context, :"list_#{plural}", [%{order: "asc id", preload: preloads}])
 
     info.([:green, "\n==> Resaving #{singular} entries\n"])
-    write = &IO.write(ANSI.format(&1))
+    write = printer(&IO.write(ANSI.format(&1)))
 
     entries
     |> in_render_order(blueprint)

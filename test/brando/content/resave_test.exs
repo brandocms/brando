@@ -160,4 +160,34 @@ defmodule Brando.Content.ResaveTest do
     # The Mix task reports it itself
     assert capture_io(fn -> Resave.run(enviroment: "staging", info: fn _ -> :ok end) end) == ""
   end
+
+  # An `rpc` session that closed: its group leader is gone
+  test "a report the caller's output cannot take does not stop the run", %{fragment: fragment} do
+    Cachex.put(:query, {:resave_test, :closed}, :cached)
+    closed = spawn(fn -> :ok end)
+    ref = Process.monitor(closed)
+    assert_receive {:DOWN, ^ref, :process, ^closed, _}
+
+    task =
+      Task.async(fn ->
+        Process.group_leader(self(), closed)
+        Resave.run(blueprint: Brando.Pages.Fragment)
+      end)
+
+    assert {:ok, 1} = Task.await(task)
+    assert Brando.Repo.get!(Brando.Pages.Fragment, fragment.id).rendered_blocks != "stale"
+    assert {:ok, nil} = Cachex.get(:query, {:resave_test, :closed})
+  end
+
+  test "the caches are reloaded when a re-save fails" do
+    Cachex.put(:query, {:resave_test, :failed}, :cached)
+
+    capture_io(fn ->
+      assert_raise UndefinedFunctionError, fn ->
+        Resave.run(blueprint: Brando.Blueprint.Identifier.HEExTest.HEExAbsoluteURLSchema)
+      end
+    end)
+
+    assert {:ok, nil} = Cachex.get(:query, {:resave_test, :failed})
+  end
 end
