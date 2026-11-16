@@ -1052,8 +1052,11 @@
     gap: 16px 24px;
     margin: 0;
 
+    /* A label that wraps to two lines leaves its neighbours' values where
+       they are */
     > div {
       display: grid;
+      align-content: start;
       gap: 4px;
       min-width: 0;
     }
