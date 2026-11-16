@@ -442,6 +442,29 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert capture_log(fn -> ServedHosts.check() end) =~ ~r/Could not look up www\.acme\.test.*IPv6: timeout/
     end
 
+    # A host in the file is not looked up again, so the one way an unread
+    # answer meets it: the host goes in the file while its lookup runs
+    test "a host another node puts in the file while its lookup runs stays served", %{path: file, site: site} do
+      DNS.hold("www.acme.test", self())
+      DNS.answer("www.acme.test", {:incomplete, [@elsewhere], [:inet6], %{inet6: :timeout}})
+
+      {:ok, _environment} =
+        Registry.create_environment(site, %{name: "production", key: "production", domain: "www.acme.test"},
+          actor: :system
+        )
+
+      assert_receive {:looking_up, "www.acme.test", lookup}
+      File.write!(file, "www.acme.test\n")
+      send(lookup, :answer)
+
+      assert %{hosts: %{"www.acme.test" => :served}} = ServedHosts.settled()
+      assert lines(file) == ["www.acme.test"]
+
+      # The next check, as the five-minute recheck runs it
+      assert %{hosts: %{"www.acme.test" => :served}} = ServedHosts.check()
+      assert lines(file) == ["www.acme.test"]
+    end
+
     test "a host not looked up is looked up again on the retry timer", %{path: file, site: site} do
       put_test_env(ServedHosts, file: file, addresses: [@here], retry_interval: 20)
       DNS.answer("www.acme.test", {:incomplete, [@here], [:inet6]})
