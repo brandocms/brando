@@ -28,7 +28,9 @@ defmodule Brando.Plug.Markdown do
 
   `.md` never shadows a route of its own: a path that matches a route whose
   last segment is literally `….md` is left alone, as are static files served
-  before this plug. Paths under `:except` are left alone too (default
+  before this plug, and a static build's preview (`/__ssg_preview__/…`),
+  which serves the build's own `.md` files. Paths under `:except` are left
+  alone too (default
   `["/admin", "/api"]`), for routes that take a `.md` file name as a
   parameter. With `tenancy_mode: :multi`, the entry for the path
   `admin_routes/3` mounts the admin on (`/admin` unless it says otherwise)
@@ -43,6 +45,7 @@ defmodule Brando.Plug.Markdown do
   alias Brando.SEO.Markdown
 
   @default_except ["/admin", "/api"]
+  @ssg_preview_path "/__ssg_preview__"
 
   @impl true
   def init(opts), do: %{except: Keyword.get(opts, :except, @default_except)}
@@ -67,10 +70,11 @@ defmodule Brando.Plug.Markdown do
 
   # -- Request -----------------------------------------------------------------
 
-  # On a host that does not serve the admin, the admin's path is a path like any other
+  # On a host that does not serve the admin, the admin's path is a path like any other.
+  # A static build's preview serves the build's own `.md` files.
   defp excluded?(%{request_path: path} = conn, except) do
     except = if BrandoAdmin.AdminHost.serves_admin?(conn), do: except, else: List.delete(except, admin_path())
-    Enum.any?(except, &(path == &1 or String.starts_with?(path, &1 <> "/")))
+    Enum.any?([@ssg_preview_path | except], &(path == &1 or String.starts_with?(path, &1 <> "/")))
   end
 
   defp admin_path do

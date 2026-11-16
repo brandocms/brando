@@ -773,6 +773,21 @@ defmodule Brando.SSGBuildsTest do
     |> TenantRouter.call(TenantRouter.init([]))
   end
 
+  test "a preview serves the build's Markdown alternates through an endpoint with the Markdown plug", context do
+    build = ready_build(context.site, context.environment)
+    File.write!(Path.join(build.build_path, "about.md"), "# About\n")
+    markdown = Brando.Plug.Markdown.init([])
+
+    conn =
+      Phoenix.ConnTest.build_conn(:get, "/__ssg_preview__/#{build.preview_token}/about.md")
+      |> Map.put(:host, "#{context.site.key}.test")
+      |> Brando.Plug.Markdown.call(markdown)
+      |> TenantRouter.call(TenantRouter.init([]))
+
+    assert response(conn, 200) == "# About\n"
+    assert response_content_type(conn, :markdown) =~ "text/markdown"
+  end
+
   test "a preview loads the build's own files and its links stay inside it", context do
     build = ready_build(context.site, context.environment)
     host = "#{context.site.key}.test"
