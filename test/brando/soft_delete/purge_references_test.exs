@@ -13,6 +13,8 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
 
   import ExUnit.CaptureLog
 
+  require Logger
+
   alias Brando.Factory
   alias Brando.Pages
   alias Brando.Pages.Fragment
@@ -120,21 +122,41 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
     assert Enum.filter(profile_ids(), &(&1 in ids)) == []
   end
 
+  test "an expired row something still refers to is kept, quietly, and the others are purged", %{user: user} do
+    creator = Factory.insert(:random_user)
+    stale_user = Factory.insert(:random_user)
+    live_page = page!(creator, %{title: "Live", uri: "live"})
+    stale_page = page!(user, %{title: "Old", uri: "old"})
+    expire(User, [creator.id, stale_user.id])
+    expire(Page, [stale_page.id])
+
+    Logger.put_module_level(Query, :info)
+    on_exit(fn -> Logger.delete_module_level(Query) end)
+
+    log =
+      capture_log([level: :info], fn ->
+        assert :ok = Brando.Worker.SoftDeletePurger.perform(%Oban.Job{args: %{}})
+      end)
+
+    assert Repo.get(User, creator.id)
+    refute Repo.get(User, stale_user.id)
+    assert Repo.get(Page, live_page.id)
+    refute Repo.get(Page, stale_page.id)
+    assert log =~ "Kept 1 expired Brando.Users.User"
+    assert log =~ "pages_creator_id_fkey"
+    refute log =~ "failed"
+  end
+
   test "a schema whose purge fails is logged, and the schemas after it are still purged", %{user: user} do
-    # A live person still refers to an expired profile: `persons_profile` is
-    # purged before `pages` and `users`, and its delete raises
-    profile_id = Ecto.UUID.generate()
+    # `persons_profile` is purged before `pages` and `users`, and its hook
+    # fails in the database
     old = DateTime.add(DateTime.truncate(DateTime.utc_now(), :second), -31 * 86_400)
+    profile_id = insert_profile!(old)
 
-    Repo.query!(
-      "INSERT INTO persons_profile (id, deleted_at, inserted_at, updated_at) VALUES ($1, $2, now(), now())",
-      [Ecto.UUID.dump!(profile_id), old]
-    )
-
-    Repo.query!(
-      "INSERT INTO persons (id, email, profile_id, inserted_at, updated_at) VALUES ($1, 'a@example.com', $2, now(), now())",
-      [Ecto.UUID.dump!(Ecto.UUID.generate()), Ecto.UUID.dump!(profile_id)]
-    )
+    Process.put({Brando.Persons, :before_purge}, fn
+      Brando.MigrationTest.Profile, _ids -> Repo.query!("SELECT 1 / 0")
+      _schema, _ids -> :ok
+    end)
 
     stale_page = page!(user, %{title: "Old", uri: "old"})
     stale_user = Factory.insert(:random_user)
@@ -146,7 +168,8 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
         assert {:error, Brando.MigrationTest.Profile} in Query.clean_up_soft_deletions()
       end)
 
-    assert log =~ "Purging Brando.MigrationTest.Profile failed: foreign_key_violation persons persons_profile_id_fkey"
+    assert log =~ "Purging Brando.MigrationTest.Profile failed: division_by_zero"
+    assert profile_id in profile_ids()
     refute Repo.get(Page, stale_page.id)
     refute Repo.get(User, stale_user.id)
 

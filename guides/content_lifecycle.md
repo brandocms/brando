@@ -116,7 +116,11 @@ context can do the same for its own rows with an optional
 `before_purge(schema, ids)`, which the purge calls with the expired ids before
 it deletes them (`Brando.Pages.before_purge/2`). A revision taken before the
 purge still restores: a `belongs_to` reference in it to a row that is gone
-keeps the value the entry has now, for every revisioned schema. A schema whose purge fails
+keeps the value the entry has now, for every revisioned schema. An expired row
+that something else still refers to, such as a user who created a page that
+remains, is kept, with its hook's changes undone, and tried again on the next
+run; the purge logs, at info level, how many rows of the schema it kept and the
+foreign keys that held them, and does not count it as a failure. A schema whose purge fails
 does not stop the others, nor an environment the next ones: each failure is
 logged with the schema, site and environment, and the job then fails so the
 failure shows in Oban.
