@@ -165,6 +165,21 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
     assert profile_id in profile_ids()
   end
 
+  test "an error that is not the database's is logged with its message and stacktrace" do
+    old = DateTime.add(DateTime.truncate(DateTime.utc_now(), :second), -31 * 86_400)
+    insert_profile!(old)
+
+    Process.put({Brando.Persons, :before_purge}, fn
+      Brando.MigrationTest.Profile, _ids -> raise "the hook gave up"
+      _schema, _ids -> :ok
+    end)
+
+    log = capture_log(fn -> Query.clean_up_soft_deletions() end)
+
+    assert log =~ "Purging Brando.MigrationTest.Profile failed: ** (RuntimeError) the hook gave up"
+    assert log =~ "purge_references_test.exs"
+  end
+
   test "a schema whose purge fails is logged, and the schemas after it are still purged", %{user: user} do
     # `persons_profile` is purged before `pages` and `users`, and its hook
     # fails in the database

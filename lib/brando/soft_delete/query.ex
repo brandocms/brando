@@ -92,7 +92,10 @@ defmodule Brando.SoftDelete.Query do
     end
   rescue
     error ->
-      Logger.error("[Brando.SoftDelete] Purging #{inspect(schema)}#{environment()} failed: #{describe_error(error)}")
+      Logger.error(
+        "[Brando.SoftDelete] Purging #{inspect(schema)}#{environment()} failed: #{describe_error(error, __STACKTRACE__)}"
+      )
+
       {:error, schema}
   end
 
@@ -101,8 +104,7 @@ defmodule Brando.SoftDelete.Query do
   defp describe_rollback(reason) when is_atom(reason), do: "rolled back with #{inspect(reason)}"
   defp describe_rollback(_reason), do: "rolled back"
 
-  @doc false
-  # Where a purge runs, for its log lines
+  @doc "Where a purge runs, for its log lines: the site and environment, if any."
   def environment do
     case {Brando.Tenant.current_site_key(), Brando.Tenant.current_environment_key()} do
       {nil, nil} -> ""
@@ -110,14 +112,16 @@ defmodule Brando.SoftDelete.Query do
     end
   end
 
-  @doc false
-  # The error's kind, and a database error's code, table and constraint: its
-  # message may quote a row's values
-  def describe_error(%Postgrex.Error{postgres: %{code: code} = postgres}) do
+  @doc """
+  An error of a purge, for its log line: a database error's code, table and
+  constraint, without its message, which may quote a row's values; any other
+  error's message and `stacktrace`.
+  """
+  def describe_error(%Postgrex.Error{postgres: %{code: code} = postgres}, _stacktrace) do
     [code, postgres[:table], postgres[:constraint]] |> Enum.reject(&is_nil/1) |> Enum.join(" ")
   end
 
-  def describe_error(%{__struct__: struct}), do: inspect(struct)
+  def describe_error(error, stacktrace), do: Exception.format(:error, error, stacktrace)
 
   @doc """
   Runs `fun`, one purge of several environments, each calling

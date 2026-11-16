@@ -114,7 +114,10 @@ remaining child pages lose their `parent_id` and move to the top, with their
 breadcrumbs recomputed, and its fragments lose their `page_id`. A schema's
 context can do the same for its own rows with an optional
 `before_purge(schema, ids)`, which the purge calls with the expired ids before
-it deletes them (`Brando.Pages.before_purge/2`). A revision taken before the
+it deletes them (`Brando.Pages.before_purge/2`). The purge calls it for every
+soft-deleted schema of the context, so a context with several needs a fallback
+clause, `def before_purge(_schema, _ids), do: :ok`; without one, the other
+schemas' purges fail with a `FunctionClauseError`. A revision taken before the
 purge still restores: a `belongs_to` reference in it to a row that is gone
 keeps the value the entry has now, for every revisioned schema. An expired row
 that something else still refers to, such as a user who created a page that

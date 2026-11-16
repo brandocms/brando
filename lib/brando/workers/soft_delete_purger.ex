@@ -30,7 +30,9 @@ defmodule Brando.Worker.SoftDeletePurger do
     Enum.count(Query.clean_up_soft_deletions(), &(not purged?(&1)))
   rescue
     error ->
-      Logger.error("[Brando.SoftDelete] Purging the trash#{Query.environment()} failed: #{Query.describe_error(error)}")
+      Logger.error(
+        "[Brando.SoftDelete] Purging the trash#{Query.environment()} failed: #{Query.describe_error(error, __STACKTRACE__)}"
+      )
 
       1
   end
