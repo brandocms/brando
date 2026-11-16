@@ -2527,7 +2527,9 @@ strategy needs a site in the registry, so it applies with `:single` and
 
 Each node reads a published build's file list and redirects once and keeps
 them in memory until another build is published. A node that cannot find the
-build's directory, or one of its files, answers `503`, looks for the directory
+build's directory, or one of its files, answers `503` (a file the asset
+pipeline has, such as the admin's bundles, still loads, so the Publishing
+screen can deploy again), looks for the directory
 again every few seconds and logs it each time it does not find it: with
 several nodes, `sites/` must be on storage they all share
 ([Several nodes](#several-nodes)). The reverse proxy needs nothing new: the

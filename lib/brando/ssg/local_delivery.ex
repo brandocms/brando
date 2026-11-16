@@ -214,11 +214,12 @@ defmodule Brando.SSG.LocalDelivery do
   end
 
   # A file the build lacks is left to the asset pipeline when it has one:
-  # files, not content, so nothing unpublished answers
+  # files, not content, so nothing unpublished answers. Without the build too,
+  # so the admin's bundles load and the operator can deploy again.
   defp answer(conn, site) do
     case published(site) do
       {:ok, build} -> answer_from(conn, site, build, requested_file(conn, build))
-      :error -> conn |> send_unavailable() |> halt()
+      :error -> if SiteAssetsPlug.static_file?(conn), do: conn, else: conn |> send_unavailable() |> halt()
     end
   end
 

@@ -175,8 +175,7 @@ defmodule Brando.SSG.LocalDeliveryTest do
       put_test_env(:tenancy_mode, :single)
       put_test_env(:site_key, context.site.key)
       Cache.warm()
-      context |> ready_build() |> deploy!()
-      :ok
+      %{build: context |> ready_build() |> deploy!()}
     end
 
     test "answers from the build on the live domain, the endpoint's host and any other host", context do
@@ -204,6 +203,18 @@ defmodule Brando.SSG.LocalDeliveryTest do
       admin = dispatch(context.host, "/admin")
       refute admin.resp_body == "missing v1"
       assert admin.status in [200, 302]
+
+      bundle = dispatch(context.host, "/assets/admin/admin-abc123.js")
+      assert bundle.status == 200
+      assert bundle.resp_body == "admin bundle"
+    end
+
+    # So the operator can open the Publishing screen and deploy again
+    test "with the build's directory gone, the admin's bundles still load", context do
+      write_release_file("assets/admin/admin-abc123.js", "admin bundle")
+      File.rm_rf!(context.build.build_path)
+
+      assert dispatch(context.host, "/about").status == 503
 
       bundle = dispatch(context.host, "/assets/admin/admin-abc123.js")
       assert bundle.status == 200
