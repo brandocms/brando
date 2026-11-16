@@ -830,20 +830,16 @@ defmodule Brando.Tenant.ServedHosts do
     schedule(state, retry?(state, decided) or result.error != nil)
   end
 
-  # A host whose lookup timed out gets one quick retry: `:pending` until the
-  # next check, which looks it up again. An answer that is no timeout ends
-  # it; a host looked up again, with no answer yet, keeps its entry.
+  # A host whose lookup timed out gets one quick retry: `:pending` until its
+  # retry looks it up again. An answer that is no timeout ends it; a host
+  # looked up again, with no answer yet, keeps its entry.
   defp track_timeouts(state) do
-    retries =
-      state.timeout_retries
-      |> Map.take(Map.keys(state.results) ++ MapSet.to_list(pending_hosts(state)))
-      |> then(fn retries ->
-        Enum.reduce(state.results, retries, fn {host, result}, retries ->
-          if timed_out?(result), do: Map.put_new(retries, host, :pending), else: Map.delete(retries, host)
-        end)
-      end)
+    kept = Map.take(state.timeout_retries, Map.keys(state.results) ++ MapSet.to_list(pending_hosts(state)))
+    %{state | timeout_retries: Enum.reduce(state.results, kept, &track_timeout/2)}
+  end
 
-    %{state | timeout_retries: retries}
+  defp track_timeout({host, result}, retries) do
+    if timed_out?(result), do: Map.put_new(retries, host, :pending), else: Map.delete(retries, host)
   end
 
   defp timed_out?({:lookup_failed, failures}), do: :timeout in Map.values(failures)
