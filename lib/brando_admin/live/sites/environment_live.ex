@@ -214,12 +214,15 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                             aria-describedby={@served_hosts_enabled? && environment.domain && domain_status_id(environment)}
                           />
                           <%!-- The field shows the domain; the line names it only when the
-                          one-line field clips it --%>
+                          one-line field clips it, or shows an unsaved draft instead --%>
                           <.served_host
                             :if={@served_hosts_enabled? && environment.domain}
                             id={domain_status_id(environment)}
                             host={environment.domain}
-                            named={clipped_in_field?(environment.domain)}
+                            named={
+                              clipped_in_field?(environment.domain) or
+                                host_draft(@host_drafts, environment).domain != environment.domain
+                            }
                             state={served_host_state(@served_hosts.hosts, @bound_hosts, environment.domain)}
                             addresses={@served_hosts.addresses}
                           />

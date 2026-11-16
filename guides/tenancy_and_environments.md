@@ -893,8 +893,8 @@ after they were found: a server whose own lookup keeps failing, or cannot read
 one of the families, then admits no host until it answers again.
 
 The **Environments** screen shows each bound host's state beside the host:
-the domain's under its field, naming the domain only when it is too long for
-the field to show whole, then one line for each redirect host, led by its
+the domain's under its field, naming the saved domain only when it is too
+long for the field to show whole or the field holds a domain not saved yet, then one line for each redirect host, led by its
 name:
 **Served** when it is in the file, **Checking** while its first lookup runs,
 **Waiting for DNS** with what the host resolves to now and this server's

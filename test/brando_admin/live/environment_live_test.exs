@@ -1194,6 +1194,16 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
                "old.acme.test"
              )
 
+      # A typed domain not saved yet: the line describes the saved one, so names it
+      typed(view, served, %{
+        "shown_redirect_hosts" => "old.acme.test",
+        "domain" => "new.acme.test",
+        "redirect_hosts" => "old.acme.test"
+      })
+
+      assert field_value(view, served, ~s(input[name="domain"])) == "new.acme.test"
+      assert has_element?(view, "#{domain_line} .environment-host-status__host", "www.acme.test")
+
       {:ok, _served} = Registry.update_environment(served, %{domain: long}, actor: :system)
       {:ok, view, _html} = live(conn, "/admin/config/environments")
 
