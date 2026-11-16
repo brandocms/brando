@@ -24,6 +24,22 @@ ls priv/repo/migrations | grep -o 'brando_[0-9]*' | sort -t_ -k2 -n | tail -1
 The `@version` in `deps/brando/mix.exs` is a weaker signal: a development
 checkout reported `0.53.0-dev` from mid-2022 to the 0.53.0 release in 2024.
 
+An application installed with a 0.55 development build's `mix brando.install`
+may have no `use Brando.SoftDelete.Repo` in its Repo, and Brando stops it at
+boot until the line is there. Moving its Git pin from one `0.55.0-dev` commit
+to another crosses no version, so `mix igniter.upgrade brando` changes
+nothing for it. Before deploying, add the line after `use Ecto.Repo` in
+Brando's Repo (the one `config :brando, repo_module:` names) by hand:
+
+```elixir
+defmodule MyApp.Repo do
+  use Ecto.Repo, otp_app: :my_app, adapter: Ecto.Adapters.Postgres
+  use Brando.SoftDelete.Repo
+end
+```
+
+or rerun `mix brando.install`, which adds it (as does `mix brando.migrate55`).
+
 - On 0.52 (`brando_87` or lower), first make the changes in the 0.53.0
   section of `CHANGELOG.md`. No task covers the 0.52 to 0.53 source changes.
 - With Villain content, `mix brando.migrate` converts it to blocks
