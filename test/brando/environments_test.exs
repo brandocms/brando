@@ -115,6 +115,17 @@ defmodule Brando.EnvironmentsTest do
     end
   end
 
+  # The row is deleted while the migrations run
+  defmodule DeletingMigrator do
+    @behaviour Brando.Environments.Migrator
+
+    @impl true
+    def migrate(_site, environment) do
+      {:ok, _deleted} = Registry.delete_environment(environment)
+      {:ok, []}
+    end
+  end
+
   defmodule OptionsMigrator do
     @behaviour Brando.Environments.Migrator
 
@@ -712,6 +723,16 @@ defmodule Brando.EnvironmentsTest do
 
       assert {:error, %Ecto.Changeset{} = changeset} = create_preview(site, @hosts)
       assert changeset.errors[:redirect_hosts]
+      refute Registry.get_environment_by_key(site, "preview")
+      refute Cache.get_env_by_domain("preview.acme.test")
+    end
+
+    test "whose row was deleted while the migrations ran fail the create and drop its schema", %{site: site} do
+      put_test_env(:tenant_migrator, DeletingMigrator)
+
+      assert {:error, :environment_not_found} = create_preview(site, @hosts)
+
+      refute Schema.exists?(Tenant.prefix(site.key, "preview"))
       refute Registry.get_environment_by_key(site, "preview")
       refute Cache.get_env_by_domain("preview.acme.test")
     end

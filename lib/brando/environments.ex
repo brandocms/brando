@@ -1177,17 +1177,28 @@ defmodule Brando.Environments do
   end
 
   # Last, once the schema is ready. A host bound meanwhile by another write
-  # (the trigger on `environments` holds it once) undoes the create.
+  # (the trigger on `environments` holds it once) undoes the create, and so
+  # does a row deleted meanwhile.
   defp bind_or_compensate(environment, host_attrs, prefix, actor) do
-    case Registry.bind_hosts(environment, host_attrs, actor: actor) do
+    case bind_unless_deleted(environment, host_attrs, actor) do
       {:ok, environment} ->
         {:ok, environment}
+
+      :deleted ->
+        Schema.drop(prefix)
+        {:error, :environment_not_found}
 
       {:error, changeset} ->
         Schema.drop(prefix)
         Registry.delete_environment(environment)
         {:error, changeset}
     end
+  end
+
+  defp bind_unless_deleted(environment, host_attrs, actor) do
+    Registry.bind_hosts(environment, host_attrs, actor: actor)
+  rescue
+    Ecto.StaleEntryError -> :deleted
   end
 
   defp migrate_or_compensate(site, environment, prefix) do
