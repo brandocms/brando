@@ -576,7 +576,8 @@ defmodule Brando.Utils do
   @doc """
   The public base URL of the current site: its live environment's domain,
   with the endpoint URL's scheme and port, whichever environment the process
-  works in. With no domain to use, the endpoint's URL, as `hostname/0`.
+  works in, and whatever the site's status (suspended or archived too). With
+  no domain to use, the endpoint's URL, as `hostname/0`.
 
   Use it for a URL that is stored or cached rather than rendered for one
   request: block HTML in a `rendered_*` field, a sitemap file. An
@@ -589,7 +590,17 @@ defmodule Brando.Utils do
   def public_hostname do
     case current_site() do
       nil -> base_url(nil)
-      {site_key, _environment_key} -> base_url(domain_of(Tenant.Cache.get_live_env(site_key)))
+      {site_key, _environment_key} -> base_url(domain_of(live_environment(site_key)))
+    end
+  end
+
+  # Whatever the site's status: what a suspended site stores is served again
+  # when it is reactivated (`Brando.Tenant.Cache.get_live_env/1` holds only
+  # active sites, as routing needs)
+  defp live_environment(site_key) do
+    case Tenant.Cache.get_site(site_key) do
+      %{environments: environments} when is_list(environments) -> Enum.find(environments, & &1.live)
+      _ -> nil
     end
   end
 

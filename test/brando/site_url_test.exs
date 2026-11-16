@@ -306,6 +306,23 @@ defmodule Brando.SiteURLTest do
     end
   end
 
+  describe "a suspended site" do
+    test "keeps its public base URL, and its stored JSON-LD follows a change of its live domain", context do
+      user = Brando.Factory.insert(:random_user)
+      page = in_environment("staging", fn -> json_ld_page!(user) end)
+      {:ok, _} = Registry.update_site(Registry.get_site(context.site.id), %{status: :suspended})
+
+      in_environment("staging", fn -> assert Brando.Utils.public_hostname("/about") == "http://acme.test/about" end)
+
+      production = Registry.get_environment_by_key(context.site, "production")
+      assert {:ok, _} = Registry.update_environment(production, %{domain: "www.acme.test"}, actor: :system)
+
+      in_environment("staging", fn ->
+        assert rendered_blocks(page) =~ ~S(http:\/\/www.acme.test\/en\/work)
+      end)
+    end
+  end
+
   describe "a live switch" do
     test "on a :static site, renders the stored block JSON-LD again on the new live environment's domain", context do
       {:ok, _} = Registry.update_site(Registry.get_site(context.site.id), %{delivery_mode: :static})
