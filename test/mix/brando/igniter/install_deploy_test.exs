@@ -52,6 +52,9 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     assert release_tasks =~ "burst_limit_enable: false"
     assert release_tasks =~ "def resave_entries(opts \\\\ []) do"
     assert release_tasks =~ "Brando.Content.Resave.run([otp_app: @app] ++ opts)"
+    # Over rpc it runs on the serving node, whose logger it leaves alone
+    [resave_entries] = Regex.run(~r/def resave_entries.*?\n  end\n/s, release_tasks)
+    refute resave_entries =~ "load_app()"
 
     mix = IgniterCase.source(igniter, "mix.exs")
     assert mix =~ "releases: [studio: [include_executables_for: [:unix], steps: [:assemble, :tar]]]"
@@ -101,6 +104,7 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
 
     assert [notice] = Enum.filter(igniter.notices, &(&1 =~ "no resave_entries/1"))
     assert notice =~ "Brando.Content.Resave.run([otp_app: @app] ++ opts)"
+    refute notice =~ "load_app"
   end
 
   test "in :multi, the .dockerignore also keeps each site project's dependencies and build out" do

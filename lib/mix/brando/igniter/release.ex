@@ -91,11 +91,12 @@ if Code.ensure_loaded?(Igniter) do
         :error ->
           Igniter.add_notice(igniter, """
           #{inspect(project.app_module)}.ReleaseTasks has no resave_entries/1, the release form of
-          mix brando.entries.resave. Add it next to migrate/0 (load_app/0 is the template's):
+          mix brando.entries.resave. Add it next to migrate/0:
             def resave_entries(opts \\\\ []) do
-              load_app()
-              {:ok, _count} = Brando.Content.Resave.run([otp_app: @app] ++ opts)
+              Brando.Content.Resave.run([otp_app: @app] ++ opts)
             end
+          A running release without it re-saves with
+            bin/#{project.otp_app} rpc "Brando.Content.Resave.run()"
           """)
       end
     end

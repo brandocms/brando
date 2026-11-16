@@ -27,9 +27,10 @@ defmodule <%= application_module %>.ReleaseTasks do
 
   # What mix brando.entries.resave does, with its options: blueprint:,
   # site: and environment:. Over rpc it also reloads the running node's caches.
+  # Not load_app/0: over rpc this runs on the serving node, whose logger stays
+  # as it is. Returns {:error, message}, printed, for an option it does not take.
   def resave_entries(opts \\ []) do
-    load_app()
-    {:ok, _count} = Brando.Content.Resave.run([otp_app: @app] ++ opts)
+    Brando.Content.Resave.run([otp_app: @app] ++ opts)
   end
 
   defp repos do
