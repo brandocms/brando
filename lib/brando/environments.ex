@@ -174,8 +174,9 @@ defmodule Brando.Environments do
 
   defp set_live_for_site(%Site{} = site, environment, opts) do
     case with_site_lock(site, fn -> set_current_environment_live(site, environment, opts) end) do
-      {:ok, _live_environment} = result ->
+      {:ok, live_environment} = result ->
         Cache.invalidate()
+        if public_domain_moved?(site, live_environment), do: Registry.rerender_public_urls_after_commit(site.id)
         announce(site.id)
         result
 
@@ -185,6 +186,14 @@ defmodule Brando.Environments do
   end
 
   defp set_live_for_site(nil, _environment, _opts), do: {:error, :site_not_found}
+
+  # The site's public base URL is its live environment's domain
+  # (`Brando.Utils.public_hostname/0`). On dynamic delivery the domains swap
+  # and it stays; on static delivery it is the incoming environment's.
+  defp public_domain_moved?(%Site{environments: environments}, live_environment) do
+    previous = Enum.find(environments, & &1.live)
+    Environment.normalize_host(previous && previous.domain) != Environment.normalize_host(live_environment.domain)
+  end
 
   @doc """
   Archives the target schema, replaces it with a complete copy of the source,

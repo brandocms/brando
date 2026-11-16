@@ -3,8 +3,9 @@ defmodule Brando.Cache.Freshness do
   # Which writes this node's render inputs have caught up with, for the entry
   # render jobs, which any node may run (`Brando.Cache.ensure_fresh/1`).
   #
-  # The render inputs are the site caches the renders read and the query
-  # cache sources they list. A node that refreshes one for a write makes a
+  # The render inputs are the site caches the renders read, the query cache
+  # sources they list, and the site and environment registry
+  # (`Brando.Tenant.Cache`), which names the hosts their URLs start with. A node that refreshes one for a write makes a
   # token: its latest for the input, known once the refresh has run. Every
   # render job it queues carries its latest tokens, and a node that does not
   # know one refreshes the input before it renders, and then knows it. A
@@ -18,7 +19,8 @@ defmodule Brando.Cache.Freshness do
   # then skip the refresh the commit sends. Rolled back, it is gone. One
   # transaction makes one token per input, however often it writes it.
   #
-  # Kept per site, for each input, as `%{latest: token, known: [token]}`;
+  # Kept per site, for each input, as `%{latest: token, known: [token]}`,
+  # the registry's once for the node, as it is cached;
   # a transaction's as `%{site_key => %{input => token}}`.
   #
   # A job carries one token per input, or a list once renders queued for the
@@ -32,6 +34,7 @@ defmodule Brando.Cache.Freshness do
 
   @cache_module Application.compile_env(:brando, :cache_module, Cachex)
   @key {__MODULE__, :tokens}
+  @registry_key {__MODULE__, :registry}
   @pending {__MODULE__, :pending}
   @known 32
   @carried 16
@@ -44,7 +47,7 @@ defmodule Brando.Cache.Freshness do
     Module.concat(["Brando", "Pages", "Fragment"])
   ]
 
-  @type input :: {:site_cache, atom()} | {:query_source, String.t()}
+  @type input :: {:site_cache, atom()} | {:query_source, String.t()} | :registry
 
   @doc "The render input a site cache or query cache source is, or nil."
   @spec input(:site_cache, atom()) :: input() | nil
@@ -58,7 +61,7 @@ defmodule Brando.Cache.Freshness do
   """
   @spec make(input()) :: String.t()
   def make(input) do
-    site = Tenant.cache_key(@key)
+    site = store_key(input)
     pending = Repo.transaction_value(@pending) || %{}
 
     case pending do
@@ -87,7 +90,7 @@ defmodule Brando.Cache.Freshness do
   def known(_input, @any), do: :ok
 
   def known(input, token) do
-    update(Tenant.cache_key(@key), fn tokens ->
+    update(store_key(input), fn tokens ->
       Map.update(tokens, input, %{latest: nil, known: [token]}, fn record ->
         %{record | known: Enum.take([token | List.delete(record.known, token)], @known)}
       end)
@@ -103,13 +106,22 @@ defmodule Brando.Cache.Freshness do
   @spec attach(map()) :: map()
   def attach(args) do
     latest = for {input, %{latest: token}} <- tokens(), token, into: %{}, do: {input, token}
-    pending = Map.get(Repo.transaction_value(@pending) || %{}, Tenant.cache_key(@key), %{})
-    tokens = latest |> Map.merge(pending) |> Map.to_list()
+    pending = Repo.transaction_value(@pending) || %{}
+
+    tokens =
+      latest
+      |> Map.merge(Map.get(pending, Tenant.cache_key(@key), %{}))
+      |> Map.merge(Map.get(pending, @registry_key, %{}))
+      |> Map.to_list()
 
     args
     |> put_latest("site_caches", for({{:site_cache, cache}, t} <- tokens, do: {to_string(cache), t}))
     |> put_latest("query_sources", for({{:query_source, source}, t} <- tokens, do: {source, t}))
+    |> put_registry(for({:registry, t} <- tokens, do: t))
   end
+
+  defp put_registry(args, [token]), do: Map.put(args, "registry", token)
+  defp put_registry(args, []), do: args
 
   @doc """
   Marks every render input in a render job's arguments with `@any`, which
@@ -122,6 +134,7 @@ defmodule Brando.Cache.Freshness do
     args
     |> Map.put("site_caches", Map.new(@site_caches, &{to_string(&1), @any}))
     |> Map.put("query_sources", Map.new(sources(), &{&1, @any}))
+    |> Map.put("registry", @any)
   end
 
   defp put_latest(args, _field, []), do: args
@@ -134,10 +147,17 @@ defmodule Brando.Cache.Freshness do
   """
   @spec merge(map(), map()) :: map()
   def merge(args, more) do
-    Enum.reduce(~w(site_caches query_sources), args, fn field, args ->
-      tokens = Map.merge(Map.get(args, field) || %{}, Map.get(more, field) || %{}, fn _, a, b -> union(a, b) end)
-      if tokens == %{}, do: args, else: Map.put(args, field, tokens)
-    end)
+    args =
+      Enum.reduce(~w(site_caches query_sources), args, fn field, args ->
+        tokens = Map.merge(Map.get(args, field) || %{}, Map.get(more, field) || %{}, fn _, a, b -> union(a, b) end)
+        if tokens == %{}, do: args, else: Map.put(args, field, tokens)
+      end)
+
+    case {Map.get(args, "registry"), Map.get(more, "registry")} do
+      {_tokens, nil} -> args
+      {nil, tokens} -> Map.put(args, "registry", tokens)
+      {tokens, more_tokens} -> Map.put(args, "registry", union(tokens, more_tokens))
+    end
   end
 
   defp union(a, b) do
@@ -168,19 +188,27 @@ defmodule Brando.Cache.Freshness do
           token <- List.wrap(tokens),
           do: {input(:query_source, source), token}
 
-    site_caches ++ sources
+    registry = for token <- List.wrap(Map.get(args, "registry")), do: {:registry, token}
+
+    site_caches ++ sources ++ registry
   end
 
   defp site_cache(name), do: Enum.find_value(@site_caches, &(to_string(&1) == name && {:site_cache, &1}))
 
   defp sources, do: Enum.map(@render_schemas, & &1.__schema__(:source))
 
-  defp tokens do
-    case @cache_module.get(:cache, Tenant.cache_key(@key)) do
+  defp tokens, do: Map.merge(read(Tenant.cache_key(@key)), read(@registry_key))
+
+  defp read(key) do
+    case @cache_module.get(:cache, key) do
       {:ok, tokens} when is_map(tokens) -> tokens
       _ -> %{}
     end
   end
+
+  # The registry is cached once for the node, the other inputs per site
+  defp store_key(:registry), do: @registry_key
+  defp store_key(_input), do: Tenant.cache_key(@key)
 
   defp update(site, fun), do: @cache_module.get_and_update(:cache, site, &fun.(&1 || %{}))
 end

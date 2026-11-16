@@ -5,7 +5,8 @@ files through `page_routes()`. Your callbacks decide which entries belong in
 search results; the generator does not infer publication or language rules.
 
 This guide assumes a migrated consumer, a writable media directory, an accurate
-public endpoint URL, and published pages with working URL definitions.
+public endpoint URL (with tenancy, a domain on each site's live environment),
+and published pages with working URL definitions.
 
 <!-- usage-rules:start topic="seo" -->
 
@@ -121,11 +122,15 @@ want it to remain scheduled.
 
 <!-- usage-rules:end -->
 
-Generation writes under the tenant-aware media root. Named environments of a
-site share media storage, so manually generating from Staging can replace that
-site's sitemap files. Generate public files from the intended live environment,
-and verify the endpoint/public host used by the URL callbacks. A tenant prefix
-alone does not change a globally configured endpoint hostname.
+Generation writes under the tenant-aware media root, which a site's
+environments share, and the files describe the public site. So
+`Brando.Sitemap.generate_sitemap/1` always reads the site's live environment,
+whichever one is selected or named by the process's tenant prefix, and the
+utilities screen says so when another is selected. The entries' URLs
+(`Brando.Blueprint.URL.resolve(entry, :with_host)`, `Brando.Utils.hostname/1`)
+and the index's links name the live environment's domain (see [A site's
+absolute URLs](tenancy_and_environments.md#a-sites-absolute-urls)); a `*_url`
+route helper or Phoenix's `url/1` names the endpoint's host instead.
 
 A content save does not synchronously regenerate the sitemap. Regenerate after a
 large import, URL migration, or launch when waiting for the nightly cron is

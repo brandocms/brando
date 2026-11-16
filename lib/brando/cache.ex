@@ -203,7 +203,8 @@ defmodule Brando.Cache do
   @doc """
   Refreshes each render input in an entry render job's arguments that this
   node has not refreshed for since the job was queued: a site cache the
-  renders read, or a query cache source they list. The job may run on a
+  renders read, a query cache source they list, or the site and environment
+  registry (`Brando.Tenant.Cache`), which names the hosts their URLs start with. The job may run on a
   node that has not heard of the write that queued it yet, and would render
   from what its caches held before. The job carries a token for each write
   the queuing node had refreshed for (`Brando.Content.RenderQueue.enqueue/2`),
@@ -221,6 +222,7 @@ defmodule Brando.Cache do
   end
 
   defp refresh({:site_cache, cache}), do: rebuild(cache)
+  defp refresh(:registry), do: Tenant.Cache.warm()
   defp refresh({:query_source, source}), do: Brando.Cache.Query.refresh_node_cache({Tenant.current_prefix(), source})
 
   # Where the caller's site caches are: its site, `public` on purpose, or neither

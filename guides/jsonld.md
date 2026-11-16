@@ -31,6 +31,13 @@ The output is a single `<script type="application/ld+json">` tag:
 }
 ```
 
+Every `@id` and URL Brando builds for the graph starts with the site's base URL
+(`Brando.Utils.hostname/0`): the domain of the environment being rendered,
+not the endpoint's host (see [A site's absolute
+URLs](tenancy_and_environments.md#a-sites-absolute-urls)). JSON-LD stored with
+a block's HTML names the live environment's domain instead (see [Collections
+rendered by datasource blocks](#collections-rendered-by-datasource-blocks)).
+
 <!-- usage-rules:start topic="seo" -->
 
 ### Blueprint DSL
@@ -397,7 +404,10 @@ Both go through `Brando.JSONLD.Collection.from_entries/2`, which builds an
 `ItemList` (or a `CollectionPage` with the `page` flag) from every entry whose
 Blueprint resolves an `absolute_url`, and renders it as an inline
 `<script type="application/ld+json">`. Inline JSON-LD is valid anywhere in the
-document; consumers merge it with the `@graph` in `<head>` by `@id`.
+document; consumers merge it with the `@graph` in `<head>` by `@id`. Its URLs
+start with the site's public base URL (`Brando.Utils.public_hostname/0`), the
+live environment's domain, since the output is stored and served on whatever
+host the environment has later.
 
 Because the markup is produced by the same render as the HTML, it is refreshed
 when the entry is re-rendered and never fresher or staler than the listing it

@@ -8,13 +8,14 @@ defmodule Brando.Villain.RenderInvalidation do
   # `{% for link in links %}`.
   @liquid_reference_suffix ~S"([\.\[]|[[:space:]]*[%}|=!<>])"
 
-  @reference_patterns Map.new(
-                        ~w(configs globals identity links navigation)a,
-                        fn name ->
-                          source = Atom.to_string(name)
-                          {name, "(@#{source}|#{source}#{@liquid_reference_suffix})"}
-                        end
-                      )
+  # The `json_ld` filter and `<.json_ld>` component write the site's public
+  # base URL (`Brando.Utils.public_hostname/0`) into what they render
+  @reference_patterns ~w(configs globals identity links navigation)a
+                      |> Map.new(fn name ->
+                        source = Atom.to_string(name)
+                        {name, "(@#{source}|#{source}#{@liquid_reference_suffix})"}
+                      end)
+                      |> Map.put(:json_ld, "json_ld")
 
   @doc false
   def patterns(names) when is_list(names) do

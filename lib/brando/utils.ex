@@ -6,6 +6,7 @@ defmodule Brando.Utils do
   alias Brando.Cache
   alias Brando.CDN
   alias Brando.Files
+  alias Brando.Tenant
 
   @type changeset :: Ecto.Changeset.t()
   @type conn :: Plug.Conn.t()
@@ -534,13 +535,109 @@ defmodule Brando.Utils do
   end
 
   @doc """
-  Returns scheme, host and port (if non-standard)
+  The base URL of the current site: scheme, host and port (when not the
+  scheme's default), with no trailing slash. Every absolute URL for a site's
+  content (canonical, Open Graph, JSON-LD, alternates, sitemap, IndexNow)
+  starts with it.
+
+  The host is the domain of the environment the process works in: the one
+  the tenant prefix names (`Brando.Tenant.current_prefix/0`), which
+  `Brando.Plug.Tenant` sets for a request, a static build's render and a
+  preview, and a tenant job (`Brando.Tenant.Job`) for its work. An
+  environment without a domain takes its site's live environment's. In
+  `:single`, a process with no prefix uses the configured site's live
+  environment. Scheme and port are the endpoint URL's.
+
+  With no domain to use (`:none`, a `:multi` process outside every site, a
+  site with no domain), it is the endpoint's URL. Read from
+  `Brando.Tenant.Cache`, without a query.
+
+  The installation's own addresses (the admin, account emails, the MCP
+  server) are the endpoint's: use `Brando.endpoint().url()` for those.
   """
   @spec hostname() :: binary
-  def hostname, do: "#{Brando.endpoint().url()}"
+  def hostname do
+    case current_site() do
+      nil ->
+        base_url(nil)
+
+      {site_key, environment_key} ->
+        base_url(
+          domain_of(environment_key && Tenant.Cache.get_env(site_key, environment_key)) ||
+            domain_of(Tenant.Cache.get_live_env(site_key))
+        )
+    end
+  end
+
   @spec hostname(path :: binary | nil) :: binary
   def hostname(nil), do: hostname()
   def hostname(path), do: Path.join(hostname(), path)
+
+  @doc """
+  The public base URL of the current site: its live environment's domain,
+  with the endpoint URL's scheme and port, whichever environment the process
+  works in, and whatever the site's status (suspended or archived too). With
+  no domain to use, the endpoint's URL, as `hostname/0`.
+
+  Use it for a URL that is stored or cached rather than rendered for one
+  request: block HTML in a `rendered_*` field, a sitemap file. An
+  environment's own host moves (a live switch swaps two environments'
+  domains on dynamic delivery, a copy moves content to another environment)
+  and nothing stored is rendered again then; the live environment's domain
+  moves with the live flag, so a URL on it stays right.
+  """
+  @spec public_hostname() :: binary
+  def public_hostname do
+    case current_site() do
+      nil -> base_url(nil)
+      {site_key, _environment_key} -> base_url(domain_of(live_environment(site_key)))
+    end
+  end
+
+  # Whatever the site's status: what a suspended site stores is served again
+  # when it is reactivated (`Brando.Tenant.Cache.get_live_env/1` holds only
+  # active sites, as routing needs)
+  defp live_environment(site_key) do
+    case Tenant.Cache.get_site(site_key) do
+      %{environments: environments} when is_list(environments) -> Enum.find(environments, & &1.live)
+      _ -> nil
+    end
+  end
+
+  @spec public_hostname(path :: binary | nil) :: binary
+  def public_hostname(nil), do: public_hostname()
+  def public_hostname(path), do: Path.join(public_hostname(), path)
+
+  defp base_url(nil), do: Brando.endpoint().url()
+
+  defp base_url(domain) do
+    %URI{} = url = Brando.endpoint().struct_url()
+    URI.to_string(%{url | host: domain, path: nil, query: nil, fragment: nil})
+  end
+
+  # The site and environment keys of the process's tenant prefix; in
+  # `:single`, a process with no prefix is in the configured site
+  defp current_site do
+    case Tenant.mode() do
+      :none ->
+        nil
+
+      mode ->
+        prefix = Tenant.current_prefix()
+        site_key = Tenant.site_key_of(prefix) || if(mode == :single, do: Brando.config(:site_key))
+        if site_key, do: {site_key, Tenant.environment_key_of(prefix)}
+    end
+  end
+
+  # A stored domain with a trailing dot answers no lookup (`Brando.Tenant.Cache`)
+  defp domain_of(%{domain: domain}) do
+    case Brando.Environments.Environment.normalize_host(domain) do
+      nil -> nil
+      host -> if String.ends_with?(host, "."), do: nil, else: host
+    end
+  end
+
+  defp domain_of(_environment), do: nil
 
   @doc """
   Returns full url path with scheme and host.

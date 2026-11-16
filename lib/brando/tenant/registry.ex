@@ -293,11 +293,15 @@ defmodule Brando.Tenant.Registry do
   @spec update_environment(Environment.t(), map(), keyword()) ::
           {:ok, Environment.t()} | {:error, Ecto.Changeset.t()}
   def update_environment(%Environment{} = environment, attrs, opts \\ []) do
-    environment
-    |> Environment.changeset(attrs)
-    |> authorize_domain(opts[:actor])
+    changeset =
+      environment
+      |> Environment.changeset(attrs)
+      |> authorize_domain(opts[:actor])
+
+    changeset
     |> Repo.update(@public_opts)
     |> refresh_cache_on_success()
+    |> rerender_on_public_domain_change(changeset)
     |> announce_on_success()
   end
 
@@ -336,6 +340,34 @@ defmodule Brando.Tenant.Registry do
     environment
     |> Repo.delete(@public_opts)
     |> refresh_cache_on_success()
+  end
+
+  defp rerender_on_public_domain_change({:ok, %Environment{live: true, site_id: site_id}} = result, %{
+         changes: %{domain: _domain}
+       }) do
+    rerender_public_urls_after_commit(site_id)
+    result
+  end
+
+  defp rerender_on_public_domain_change(result, _changeset), do: result
+
+  @doc """
+  Renders again, in every environment of the site `site_id`, the entries
+  whose stored HTML names the site's public base URL, its live environment's
+  domain (`Brando.Content.Blocks.rerender_public_urls/2`): for a write that
+  changes that domain. Queued once the transaction around the caller has
+  committed and this node's cache holds the write; what fails there is
+  logged and leaves the write as it is.
+  """
+  @spec rerender_public_urls_after_commit(pos_integer()) :: :ok
+  def rerender_public_urls_after_commit(site_id),
+    do: Repo.after_commit({:public_url_rerender, site_id}, fn -> rerender_public_urls(site_id) end, late: true)
+
+  defp rerender_public_urls(site_id) do
+    case get_site(site_id) do
+      nil -> :ok
+      site -> Brando.Content.Blocks.rerender_public_urls(site.key, site.environments)
+    end
   end
 
   defp authorize_domain(changeset, actor) do

@@ -8,7 +8,7 @@ defmodule BrandoIntegrationWeb.Sitemap do
       :stream
     )
     |> Stream.map(fn _entry ->
-      page_url = "http://localhost/index"
+      page_url = Brando.Utils.hostname("index")
 
       lastmod = ~N[2023-08-10 10:00:00]
 
@@ -88,6 +88,125 @@ defmodule Brando.SitemapTest do
 
     assert sitemap =~
              "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<urlset xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd\" xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n<url>\n  <loc>http://localhost/index</loc>\n  <lastmod>2023-08-10T12:00:00+02:00</lastmod>\n  <changefreq>weekly</changefreq>\n  <priority>0.7</priority>\n</url>\n</urlset>\n"
+  end
+
+  describe "in multi-site mode" do
+    defmodule Migrator do
+      @behaviour Brando.Environments.Migrator
+
+      @impl true
+      def migrate(_site, _environment), do: {:ok, []}
+    end
+
+    @describetag :tmp_dir
+
+    setup %{tmp_dir: dir} do
+      put_test_env(:media_path, Path.join(dir, "media"))
+      put_test_env(:sites_path, Path.join(dir, "sites"))
+      put_test_env(:tenant_migrator, Migrator)
+      put_test_env(:tenant_structure_cloner, Brando.TenantCloners)
+      put_test_env(:environment_schema_cloner, Brando.TenantCloners)
+      put_test_env(:tenancy_mode, :multi)
+      Brando.Tenant.put_prefix(nil)
+      Brando.Tenant.Cache.clear()
+      cached = for key <- ~w(identity seo navigation)a, do: {key, Brando.Cache.get(key)}
+
+      on_exit(fn ->
+        Brando.Tenant.put_prefix(nil)
+        Brando.Tenant.Cache.clear()
+        Brando.TenantCaches.clear(["tenant_acme_production", "tenant_acme_staging"])
+
+        for {key, value} <- cached,
+            do: if(value, do: Brando.Cache.put(key, value, :infinite), else: Brando.Cache.del(key))
+      end)
+
+      creator = Factory.insert(:random_user, role: :superuser, avatar: nil)
+
+      {:ok, _site} =
+        Brando.Tenant.Setup.create_site(
+          %{name: "Acme", key: "acme", languages: ["en"], default_language: "en", status: :active},
+          creator,
+          environments: [
+            %{name: "Production", key: "production", live: true, domain: "acme.test"},
+            %{name: "Staging", key: "staging", live: false, domain: "staging.acme.test"}
+          ]
+        )
+
+      %{sitemaps: Path.join([dir, "media", "acme", "sitemaps"]), creator: creator}
+    end
+
+    test "the index and the entries name the site's host, not the endpoint's", %{sitemaps: sitemaps} do
+      Brando.Tenant.with_prefix("tenant_acme_production", fn ->
+        assert {:ok, _} = Sitemap.generate_sitemap(gzip: false)
+      end)
+
+      assert File.read!(Path.join(sitemaps, "sitemap.xml")) =~ "<loc>http://acme.test/sitemaps/sitemap-00001.xml</loc>"
+      assert File.read!(Path.join(sitemaps, "sitemap-00001.xml")) =~ "<loc>http://acme.test/index</loc>"
+    end
+
+    test "generated while Staging is selected, it lists the live environment's pages on its host", %{
+      sitemaps: sitemaps,
+      creator: creator
+    } do
+      live_count =
+        Brando.Tenant.with_prefix("tenant_acme_production", fn ->
+          {:ok, _} = Pages.create_page(Factory.params_for(:page, title: "Live", uri: "live"), creator)
+          published_pages()
+        end)
+
+      Brando.Tenant.with_prefix("tenant_acme_staging", fn ->
+        for uri <- ~w(draft-a draft-b),
+            do: {:ok, _} = Pages.create_page(Factory.params_for(:page, title: uri, uri: uri), creator)
+
+        assert published_pages() != live_count
+        assert {:ok, _} = Sitemap.generate_sitemap(gzip: false)
+        assert Brando.Tenant.current_prefix() == "tenant_acme_staging"
+      end)
+
+      assert File.read!(Path.join(sitemaps, "sitemap.xml")) =~ "<loc>http://acme.test/sitemaps/sitemap-00001.xml</loc>"
+
+      sitemap = File.read!(Path.join(sitemaps, "sitemap-00001.xml"))
+      refute sitemap =~ "staging.acme.test"
+      assert length(Regex.scan(~r/<loc>http:\/\/acme\.test\/index<\/loc>/, sitemap)) == live_count
+    end
+
+    test "with group authorization and Staging selected, it lists the live environment's pages", %{
+      sitemaps: sitemaps,
+      creator: creator
+    } do
+      put_test_env(:authorization_mode, :groups)
+      {:ok, _} = Brando.Authorization.Migration.run()
+
+      live_count =
+        Brando.Tenant.with_prefix("tenant_acme_production", fn ->
+          {:ok, _} = Pages.create_page(Factory.params_for(:page, title: "Live", uri: "live"), creator)
+          published_pages()
+        end)
+
+      Brando.Tenant.with_prefix("tenant_acme_staging", fn ->
+        for uri <- ~w(draft-a draft-b),
+            do: {:ok, _} = Pages.create_page(Factory.params_for(:page, title: uri, uri: uri), creator)
+
+        assert published_pages() != live_count
+
+        # The admin's scope names Staging
+        scope = Brando.Authorization.Scope.current(creator)
+        assert scope.prefix == "tenant_acme_staging"
+
+        Brando.Authorization.Boundary.with_scope(scope, fn ->
+          assert {:ok, _} = Sitemap.generate_sitemap(gzip: false)
+          assert Brando.Authorization.Boundary.current_scope() == scope
+        end)
+      end)
+
+      sitemap = File.read!(Path.join(sitemaps, "sitemap-00001.xml"))
+      assert length(Regex.scan(~r/<loc>http:\/\/acme\.test\/index<\/loc>/, sitemap)) == live_count
+    end
+
+    defp published_pages do
+      {:ok, pages} = Pages.list_pages(%{filter: %{has_url: true}, status: :published})
+      length(pages)
+    end
   end
 
   @tag :tmp_dir

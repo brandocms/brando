@@ -332,7 +332,7 @@ defmodule Brando.HTML do
     assigns =
       assigns
       |> assign(:canonical, canonical)
-      |> assign(:hreflangs, hreflangs)
+      |> assign(:hreflangs, Enum.map(hreflangs, fn {lang, url} -> {lang, absolute_alternate(url)} end))
       |> assign(:multilang, Enum.count(hreflangs) > 1)
 
     assigns = assign(assigns, :markdown_url, markdown_alternate(assigns.conn))
@@ -365,6 +365,10 @@ defmodule Brando.HTML do
     <link :if={@markdown_url} rel="alternate" type="text/markdown" href={@markdown_url} />
     """
   end
+
+  # `put_hreflang(conn, {helper, args})` keeps paths, for `alternate_url/1`
+  defp absolute_alternate("/" <> _ = path), do: Brando.Utils.hostname(path)
+  defp absolute_alternate(url), do: url
 
   # The page's Markdown version (`Brando.SEO.Markdown`), when its entry has one.
   defp markdown_alternate(conn) do

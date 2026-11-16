@@ -129,7 +129,7 @@ defmodule Brando.Content.RenderEntryStoreTest do
       for schema <- [Brando.Content.Module, Brando.Content.Container, Brando.Content.Palette, Brando.Pages.Fragment],
           do: Freshness.input(:query_source, schema.__schema__(:source))
 
-    site_caches ++ sources
+    [:registry | site_caches ++ sources]
   end
 
   # A module save queues the entry's render, which renders something new

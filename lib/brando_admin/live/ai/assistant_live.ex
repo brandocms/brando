@@ -2178,7 +2178,7 @@ defmodule BrandoAdmin.AI.AssistantLive do
   end
 
   defp frame_url(nil), do: nil
-  defp frame_url(%{url: "/" <> _ = path}), do: String.replace(Brando.endpoint().url(), ~r{^https?://}, "") <> path
+  defp frame_url(%{url: "/" <> _ = path}), do: String.replace(Brando.Utils.hostname(path), ~r{^https?://}, "")
   defp frame_url(%{url: url}) when is_binary(url), do: String.replace(url, ~r{^https?://}, "")
   defp frame_url(%{title: title}), do: gettext("%{title} (no address yet)", title: title)
 

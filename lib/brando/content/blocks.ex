@@ -689,14 +689,93 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
+  Renders again, in each of `environments` of the site `site_key`, the entries
+  whose blocks emit JSON-LD (`json_ld` in a module's code or a block's refs):
+  what they store names the site's public base URL, its live environment's
+  domain (`Brando.Utils.public_hostname/0`). The renders are queued. An
+  environment without its tables yet (being provisioned) has nothing stored.
+
+  Each environment is searched under its own prefix, unscoped (an admin's
+  scope names the environment it was taken in), and in a transaction of its
+  own: one that fails is logged and queues nothing, and the others still
+  queue theirs.
+  """
+  @spec rerender_public_urls(String.t(), [Brando.Environments.Environment.t()]) :: :ok
+  def rerender_public_urls(site_key, environments) do
+    search_terms = Villain.RenderInvalidation.patterns([:json_ld])
+
+    Brando.Authorization.Boundary.with_scope(nil, fn ->
+      Enum.each(environments, &rerender_public_urls_in(Brando.Tenant.prefix(site_key, &1.key), search_terms))
+    end)
+  end
+
+  defp rerender_public_urls_in(prefix, search_terms) do
+    Brando.Tenant.with_prefix(prefix, fn ->
+      Repo.transaction(fn -> rerender_stored(prefix, search_terms) end)
+    end)
+  rescue
+    error ->
+      require Logger
+
+      Logger.error(
+        "Could not queue the renders of #{prefix}'s stored JSON-LD for its site's public base URL: " <>
+          Exception.format(:error, error, __STACKTRACE__)
+      )
+  end
+
+  defp rerender_stored(prefix, search_terms) do
+    if Brando.Migration.Introspect.table_exists?("content_blocks", prefix: prefix, repo: Repo.repo()) do
+      render_entries_matching_regex(search_terms)
+      rerender_matching_modules(search_terms)
+    end
+  end
+
+  @doc """
   Look through all modules for `search_terms` and rerender all villains that
   use this module
   """
   @spec rerender_matching_modules({atom, binary} | [{atom, binary}]) :: any
   def rerender_matching_modules(search_terms) do
-    case search_modules_for_regex(search_terms) |> Enum.map(& &1["id"]) do
-      [] -> nil
-      ids -> for id <- ids, do: render_entries_with_module_id(id)
+    for {origin, id} <- list_modules_matching_regex(search_terms), do: render_entries_with_module_id(id, origin)
+  end
+
+  @doc """
+  The modules the current environment renders with whose `code` matches one
+  of `search_terms`, as `{origin, id}`, as block rendering resolves them
+  (`Brando.Content.SharedLibrary`): its own modules, and the shared ones,
+  where its override of a shared module is matched in the shared module's
+  place. Soft-deleted modules are left out.
+  """
+  @spec list_modules_matching_regex({atom, binary} | [{atom, binary}]) :: [{:local | :shared, integer}]
+  def list_modules_matching_regex(search_terms) do
+    matches =
+      search_terms
+      |> List.wrap()
+      |> Enum.reduce(dynamic(false), fn {_name, term}, matches ->
+        dynamic([m], ^matches or fragment("CAST(? AS TEXT) ~ ?", m.code, ^term))
+      end)
+
+    active = from(m in Content.Module, where: is_nil(m.deleted_at))
+    matching = Repo.all(from(m in active, where: ^matches, select: {m.id, m.source_module_id}))
+
+    overridden =
+      MapSet.new(Repo.all(from(m in active, where: not is_nil(m.source_module_id), select: m.source_module_id)))
+
+    own = for {id, nil} <- matching, do: {:local, id}
+    overrides = for {_id, source_id} <- matching, source_id, do: {:shared, source_id}
+
+    shared =
+      for id <- list_shared_modules_matching(matches), not MapSet.member?(overridden, id), do: {:shared, id}
+
+    own ++ overrides ++ shared
+  end
+
+  # Shared modules live in `public`, used by an environment of a site
+  defp list_shared_modules_matching(matches) do
+    if is_binary(Brando.Tenant.current_prefix()) and Brando.Tenant.current_site_key() do
+      Repo.all(from(m in Content.Module, where: is_nil(m.deleted_at), where: ^matches, select: m.id), prefix: "public")
+    else
+      []
     end
   end
 

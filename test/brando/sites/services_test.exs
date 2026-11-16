@@ -61,7 +61,8 @@ defmodule Brando.Sites.ServicesTest do
     [service] = Brando.Cache.Identity.get("en").services
 
     assert service.resolved_description == "Vi utvikler visuelle identiteter."
-    assert String.starts_with?(service.resolved_url, "http")
+    # The cache keeps the page's path; the JSON-LD adds the host it is served on
+    assert String.starts_with?(service.resolved_url, "/")
     assert String.ends_with?(service.resolved_url, "/identitetsdesign")
     assert service.alternate_names == ["Brand identity"]
   end
