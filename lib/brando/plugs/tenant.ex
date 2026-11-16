@@ -22,15 +22,19 @@ defmodule Brando.Plug.Tenant do
   `conn.private.brando_ssg_build`, so what answers it can answer as the
   site's public host would (`BrandoWeb.SEOController`). With
   `tenancy_mode: :none` one that carries a valid signed context is marked
-  (`Brando.SSG.Context.build_request?/1`).
+  (`Brando.SSG.Context.build_request?/1`). Such a request renders with the
+  asset set the build recorded (`Brando.SSG.Context.asset_set_id/1`), and
+  answers 503 when that set is gone, so the build fails rather than link
+  files its artifact does not hold.
 
   A request a host serving its build let through for a plug before the
   router, which none answered, gets the build's 404 page here and goes no
   further (`Brando.SSG.LocalDelivery.answer_unanswered/1`).
   """
 
-  import Plug.Conn, only: [assign: 3, halt: 1, put_private: 3, put_resp_header: 3, send_resp: 3]
+  import Plug.Conn, only: [assign: 3, halt: 1, put_private: 3, put_resp_header: 3, register_before_send: 2, send_resp: 3]
 
+  alias Brando.Assets.SiteAssets
   alias Brando.SSG.Context
   alias Brando.SSG.LocalDelivery
   alias Brando.Tenant
@@ -47,6 +51,9 @@ defmodule Brando.Plug.Tenant do
     do: LocalDelivery.answer_unanswered(conn)
 
   def call(conn, _opts) do
+    # One process serves each request of a kept-alive connection
+    SiteAssets.drop_build_set()
+
     case redirect_target(conn) do
       nil ->
         resolve_tenant(conn)
@@ -55,7 +62,7 @@ defmodule Brando.Plug.Tenant do
         # A static build of a site whose base URL is now a redirect host
         # fetches every page on that host, with its signed context
         case build_context(conn) do
-          {site, built_environment} -> conn |> mark_build() |> put_tenant(site, built_environment)
+          {site, built_environment} -> put_build(conn, site, built_environment)
           nil -> redirect(conn, environment.domain)
         end
     end
@@ -64,7 +71,7 @@ defmodule Brando.Plug.Tenant do
   defp resolve_tenant(conn) do
     case resolve_with_source(conn) do
       {:build, site, environment} ->
-        conn |> mark_build() |> put_tenant(site, environment)
+        put_build(conn, site, environment)
 
       {_source, site, environment} ->
         put_tenant(conn, site, environment)
@@ -79,7 +86,30 @@ defmodule Brando.Plug.Tenant do
     end
   end
 
-  defp mark_build(conn), do: put_private(conn, :brando_ssg_build, true)
+  defp put_build(conn, site, environment) do
+    case mark_build(conn) do
+      %Plug.Conn{halted: true} = conn -> conn
+      conn -> put_tenant(conn, site, environment)
+    end
+  end
+
+  # Rendered with the build's recorded set until the response is sent
+  defp mark_build(conn) do
+    with {:ok, asset_set_id} <- Context.asset_set_id(conn),
+         :ok <- SiteAssets.put_build_set(asset_set_id) do
+      conn
+      |> put_private(:brando_ssg_build, true)
+      |> register_before_send(fn conn ->
+        SiteAssets.drop_build_set()
+        conn
+      end)
+    else
+      _set_gone ->
+        conn
+        |> send_resp(503, "The asset set this build recorded is no longer available")
+        |> halt()
+    end
+  end
 
   # With `tenancy_mode: :none` a build's signed context names no site
   defp mark_standalone_build(conn), do: if(Context.build_request?(conn), do: mark_build(conn), else: conn)

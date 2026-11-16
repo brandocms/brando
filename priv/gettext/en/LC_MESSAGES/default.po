@@ -21355,6 +21355,11 @@ msgstr ""
 msgid "gallery"
 msgstr ""
 
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "has a host that could not be looked up. Try again in a moment"
+msgstr ""
+
 msgid "has already been taken"
 msgstr ""
 

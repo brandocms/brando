@@ -1873,10 +1873,13 @@ Vite manifest and critical CSS resolution follow the same active-set-first,
 release-fallback order, after an environment's own set
 ([A set per environment](#a-set-per-environment)). In multi-site mode caches are keyed by the full tenant
 prefix, so Production, Staging, and another site cannot share rendered content
-or manifests. Every queued static build snapshots the active asset-set record
-and deployment configuration at creation time. A later asset activation or
-target edit therefore affects new builds, never an artifact already being
-reviewed or deployed.
+or manifests. Every queued static build snapshots the asset set its
+environment uses and the deployment configuration at creation time. A later
+asset activation or target edit therefore affects new builds, never an
+artifact already being reviewed or deployed, nor a build still waiting to
+run: it copies the set it recorded and renders every page with it (with the
+release's `priv/static` when it recorded none). A build whose recorded set
+was deleted before it ran fails, saying so in its log, and publishes nothing.
 
 ### A set per environment
 
@@ -2267,6 +2270,25 @@ name can still reach this server in ways a check cannot see (DNS that
 changes after the check, an SSH config alias, a public address behind NAT),
 so to limit the destinations anyone who may deploy can choose, list them in
 config (below).
+
+The host is looked up when a save sets the strategy or the target, not
+while the form is filled in, nor for a save that changes only other
+settings. Its IPv4 and IPv6 addresses are taken from the hosts file
+(`/etc/hosts`), and for a family the hosts file does not list, asked of the
+name servers in the system's resolver configuration through Erlang's
+`:inet_res`, with one limit of 3 seconds for both families together
+(`config :brando, Brando.Sites.DeployConfig, lookup_timeout:` in
+milliseconds). A name the name servers say does not exist, or that has no
+address records, passes, as an SSH config alias may name it; so does a
+name only the operating system's own resolver knows (mDNS, per-domain
+resolvers). A name server that fails or refuses the query, a query that
+times out, no name server to ask, or a lookup the limit cuts short refuses
+the save: the target says its host could not be looked up, and to try
+again. The answer is kept on that node for a minute, so saving again does
+not ask again; a failed lookup is not kept. Each deploy looks the host up
+again; when that lookup fails, the deploy fails and says so in the build's
+log, and a deploy or rollback started from the publishing screen is tried
+again.
 
 An S3 deploy deletes every key under its target before it uploads the build,
 with the application's one set of ExAws credentials. Its prefix may not hold

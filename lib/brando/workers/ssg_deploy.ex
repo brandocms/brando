@@ -14,10 +14,10 @@ defmodule Brando.Worker.SSGDeploy do
   alias Brando.SSG.Deploy
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"build_id" => build_id, "action" => action} = args})
+  def perform(%Oban.Job{args: %{"build_id" => build_id, "action" => action} = args} = job)
       when action in ["deploy", "rollback"] do
     case Builds.get_build(build_id) do
-      %Build{} = build -> action |> run(build, args["creator_id"]) |> outcome(build)
+      %Build{} = build -> action |> run(build, args["creator_id"]) |> outcome(build, job)
       nil -> {:cancel, :build_not_found}
     end
   end
@@ -28,10 +28,10 @@ defmodule Brando.Worker.SSGDeploy do
   defp run("deploy", build, creator_id), do: Deploy.deploy(build, creator_id: creator_id)
   defp run("rollback", build, creator_id), do: Deploy.rollback(build.site, build, creator_id: creator_id)
 
-  defp outcome({:ok, _deployed}, _build), do: :ok
+  defp outcome({:ok, _deployed}, _build, _job), do: :ok
 
   # The build's target stays what it was: retrying cannot help
-  defp outcome({:error, :invalid_deploy_target}, build) do
+  defp outcome({:error, :invalid_deploy_target}, build, _job) do
     Builds.append_log(
       build,
       "Deployment refused: its target has the wrong form or is not one this installation allows. Check rsync_targets or s3_targets in the config."
@@ -40,14 +40,25 @@ defmodule Brando.Worker.SSGDeploy do
     {:cancel, :invalid_deploy_target}
   end
 
+  # DNS may answer on the next attempt
+  defp outcome({:error, :deploy_target_lookup_failed} = error, build, job) do
+    next =
+      if job.attempt < job.max_attempts,
+        do: "It is tried again.",
+        else: "That was the last attempt."
+
+    Builds.append_log(build, "Deployment failed: the target's host could not be looked up. #{next}")
+    error
+  end
+
   # The site's settings decide: retrying cannot help either
-  defp outcome({:error, reason}, build)
+  defp outcome({:error, reason}, build, _job)
        when reason in [:local_delivery_not_configured, :local_delivery_disabled, :build_made_for_another_delivery] do
     Builds.append_log(build, "Deployment refused: #{local_refusal(reason)}")
     {:cancel, reason}
   end
 
-  defp outcome({:error, reason}, _build), do: {:error, reason}
+  defp outcome({:error, reason}, _build, _job), do: {:error, reason}
 
   defp local_refusal(:local_delivery_not_configured),
     do: "the site is no longer served by this installation. Make a build with its current settings."

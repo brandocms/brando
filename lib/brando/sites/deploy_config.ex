@@ -51,6 +51,21 @@ defmodule Brando.Sites.DeployConfig do
   With `tenancy_mode: :multi` the list or map of `:rsync` and `:s3` is
   required, and no target of theirs passes without it. With one site, an unset list allows any target of
   the right form.
+
+  An rsync target's host is looked up to refuse one that reaches this
+  server, when a save sets the strategy or the target (`changeset/4` with
+  `lookup_host: true`, as `Brando.Tenant.Registry` saves it), not while a
+  form validates or when a save leaves both as they were. Each
+  address family is looked up in the hosts file, and when it has no entry
+  there, asked of the name servers through `:inet_res`. A name the name
+  servers say does not exist, or that has no address records, passes, as
+  an SSH config alias may name it. A name server that fails (SERVFAIL) or
+  refuses, a query that times out, or no name server to ask, is a lookup
+  that failed, and refuses the save, as the host could not be checked. Both
+  families get one time limit together, `:lookup_timeout` (3 seconds), and a
+  lookup it cuts short failed too. An answer is kept on the node for 60
+  seconds, so saving again reuses it; a failed one is not kept. Each deploy
+  looks the host up afresh (`valid_rsync_target?/2`).
   """
 
   use Ecto.Schema
@@ -58,6 +73,7 @@ defmodule Brando.Sites.DeployConfig do
 
   import Ecto.Changeset
 
+  alias Brando.Tenant.ServedHosts.DNS
   alias Brando.Webhooks.URLGuard
   alias Brando.Webhooks.Webhook
 
@@ -76,13 +92,30 @@ defmodule Brando.Sites.DeployConfig do
 
   @fields [:strategy, :target, :cdn_url, :webhook_url, :auto_deploy, :retention_count]
 
-  @doc "Changeset for the deployment settings of the site with key `site_key`."
-  def changeset(config, attrs, site_key) do
-    config
-    |> cast(attrs, @fields)
+  @lookup_timeout :timer.seconds(3)
+  @lookup_kept :timer.seconds(60)
+
+  @doc """
+  Changeset for the deployment settings of the site with key `site_key`.
+  With `lookup_host: true`, for a save that changes the strategy or the
+  target, an rsync target's host is looked up too (see the moduledoc);
+  without it, as while a form validates, it is not.
+  """
+  def changeset(config, attrs, site_key, opts \\ []) do
+    changeset = cast(config, attrs, @fields)
+
+    # A save that leaves the strategy and target as they were does not wait
+    # on their host: each deploy looks it up anyway
+    lookup =
+      if Keyword.get(opts, :lookup_host, false) and
+           (changed?(changeset, :strategy) or changed?(changeset, :target)),
+         do: :kept,
+         else: :none
+
+    changeset
     |> require_target_for_strategy()
     |> validate_local_delivery()
-    |> validate_strategy_target(site_key)
+    |> validate_strategy_target(site_key, lookup)
     |> validate_number(:retention_count, greater_than_or_equal_to: 1, less_than_or_equal_to: 100)
     |> validate_http_url(:cdn_url)
     |> validate_webhook_url()
@@ -111,7 +144,7 @@ defmodule Brando.Sites.DeployConfig do
   @spec local_delivery_allowed?() :: boolean()
   def local_delivery_allowed?, do: Application.get_env(:brando, __MODULE__, [])[:local_delivery] != false
 
-  defp validate_strategy_target(changeset, site_key) do
+  defp validate_strategy_target(changeset, site_key, lookup) do
     case {get_field(changeset, :strategy), get_field(changeset, :target)} do
       {:s3, target} when is_binary(target) ->
         case s3_target_error(target, site_key) do
@@ -120,7 +153,7 @@ defmodule Brando.Sites.DeployConfig do
         end
 
       {:rsync, target} when is_binary(target) ->
-        case rsync_target_error(target, site_key) do
+        case rsync_target_error(target, site_key, lookup) do
           nil -> changeset
           message -> add_error(changeset, :target, message)
         end
@@ -139,10 +172,32 @@ defmodule Brando.Sites.DeployConfig do
   Whether `target` is an rsync target the site with key `site_key` may deploy
   to: the remote `[user@]host:/absolute/path` form, on a host other than this
   one, and allowed by the operator's `rsync_targets`. Checked when the config
-  is saved and again before each deploy, since builds snapshot the config.
+  is saved and again before each deploy, since builds snapshot the config:
+  here with a fresh lookup of the host, which refuses a host that cannot be
+  looked up.
   """
   @spec valid_rsync_target?(term(), String.t()) :: boolean()
-  def valid_rsync_target?(target, site_key), do: is_binary(target) and is_nil(rsync_target_error(target, site_key))
+  def valid_rsync_target?(target, site_key), do: check_rsync_target(target, site_key) == :ok
+
+  @doc """
+  As `valid_rsync_target?/2`, telling a target refused from one whose host
+  could not be looked up, which may pass on another try.
+  """
+  @spec check_rsync_target(term(), String.t()) :: :ok | {:error, :invalid | :lookup_failed}
+  def check_rsync_target(target, site_key) when is_binary(target) do
+    with nil <- rsync_target_error(target, site_key, :none),
+         %{"host" => host} <- Regex.named_captures(@rsync_target, target) do
+      case local_host(host, :fresh) do
+        :remote -> :ok
+        :local -> {:error, :invalid}
+        :lookup_failed -> {:error, :lookup_failed}
+      end
+    else
+      _refused -> {:error, :invalid}
+    end
+  end
+
+  def check_rsync_target(_target, _site_key), do: {:error, :invalid}
 
   # A bucket of plain characters, and a prefix that reaches S3 as written: no
   # query or fragment for a parser to drop, no escapes, no unexpanded `{...}`.
@@ -204,13 +259,15 @@ defmodule Brando.Sites.DeployConfig do
 
   defp s3_within?(_bucket, _prefix, _listed), do: false
 
-  defp rsync_target_error(target, site_key) do
+  defp rsync_target_error(target, site_key, lookup) do
     case Regex.named_captures(@rsync_target, target) do
       %{"host" => host, "path" => path} = parts ->
         cond do
           not plain_path?(path) -> gettext("must be an absolute path without . or ..")
-          local_host?(host) -> gettext("must be on another server")
-          true -> destination_error(:rsync_targets, site_key, &within?(parts, &1))
+          local_host(host, :none) == :local -> gettext("must be on another server")
+          error = destination_error(:rsync_targets, site_key, &within?(parts, &1)) -> error
+          lookup == :none -> nil
+          true -> resolved_host_error(host, lookup)
         end
 
       nil ->
@@ -227,9 +284,10 @@ defmodule Brando.Sites.DeployConfig do
 
   # This server under another name. Names are only the start: the server's
   # own hostname or a wildcard DNS name reaches it too, so the host is also
-  # resolved and refused if any address it has is this server's. Only an
-  # operator's `rsync_targets` rules out every such name.
-  defp local_host?(host) do
+  # resolved (with `lookup` other than `:none`) and refused if any address it
+  # has is this server's. Only an operator's `rsync_targets` rules out every
+  # such name.
+  defp local_host(host, lookup) do
     host =
       host
       |> String.trim_leading("[")
@@ -240,13 +298,17 @@ defmodule Brando.Sites.DeployConfig do
     first_label = host |> String.split(".") |> hd()
 
     cond do
-      host == "" -> true
-      first_label in ["localhost", "localhost4", "localhost6", "ip6-localhost", "ip6-loopback"] -> true
-      String.ends_with?(host, ".localhost") -> true
-      numeric_host?(host) -> local_literal?(:inet.parse_strict_address(String.to_charlist(host)))
-      true -> resolves_locally?(host)
+      host == "" -> :local
+      first_label in ["localhost", "localhost4", "localhost6", "ip6-localhost", "ip6-loopback"] -> :local
+      String.ends_with?(host, ".localhost") -> :local
+      numeric_host?(host) -> local_or_remote(local_literal?(:inet.parse_strict_address(String.to_charlist(host))))
+      lookup == :none -> :remote
+      true -> resolved_host(host, lookup)
     end
   end
+
+  defp local_or_remote(true), do: :local
+  defp local_or_remote(false), do: :remote
 
   # An address however written (`127.1`, `0177.0.0.1`, `0x0`, an IPv6
   # literal): ssh's resolver reads all of them, so only the plain dotted or
@@ -259,9 +321,75 @@ defmodule Brando.Sites.DeployConfig do
   defp local_literal?({:ok, address}), do: local_addresses?([address])
   defp local_literal?({:error, _reason}), do: true
 
-  defp resolves_locally?(host) do
-    resolver = Application.get_env(:brando, __MODULE__, [])[:resolver] || (&:inet.getaddrs(&1, &2, :timer.seconds(3)))
-    [:inet, :inet6] |> Enum.flat_map(&resolved(resolver, host, &1)) |> local_addresses?()
+  defp resolved_host_error(host, lookup) do
+    case local_host(host, lookup) do
+      :remote -> nil
+      :local -> gettext("must be on another server")
+      :lookup_failed -> gettext("has a host that could not be looked up. Try again in a moment")
+    end
+  end
+
+  defp resolved_host(host, lookup) do
+    case lookup_addresses(host, lookup) do
+      {:ok, addresses} -> local_or_remote(local_addresses?(addresses))
+      :error -> :lookup_failed
+    end
+  end
+
+  # A save reuses an answer for a minute; a deploy asks again
+  defp lookup_addresses(host, :fresh), do: lookup_addresses(host)
+
+  defp lookup_addresses(host, :kept) do
+    key = {__MODULE__, :addresses, resolver(), host}
+
+    case Cachex.get(:cache, key) do
+      {:ok, addresses} when is_list(addresses) ->
+        {:ok, addresses}
+
+      _not_kept ->
+        with {:ok, addresses} <- lookup_addresses(host) do
+          Cachex.put(:cache, key, addresses, expire: @lookup_kept)
+          {:ok, addresses}
+        end
+    end
+  end
+
+  # Both families at once, under one time limit. The resolver's own timeout
+  # is not enough: the operating system's resolver does not heed it.
+  defp lookup_addresses(host) do
+    resolver = resolver()
+    name = String.to_charlist(host)
+    timeout = Application.get_env(:brando, __MODULE__, [])[:lookup_timeout] || @lookup_timeout
+    tasks = for family <- [:inet, :inet6], do: Task.async(fn -> resolved(resolver, name, family) end)
+
+    tasks
+    |> Task.yield_many(timeout)
+    |> Enum.map(fn {task, result} -> result || Task.shutdown(task, :brutal_kill) end)
+    |> Enum.reduce_while({:ok, []}, fn
+      {:ok, {:ok, addresses}}, {:ok, found} -> {:cont, {:ok, found ++ addresses}}
+      _failed_or_late, _found -> {:halt, :error}
+    end)
+  end
+
+  defp resolver do
+    Application.get_env(:brando, __MODULE__, [])[:resolver] || (&lookup_family/2)
+  end
+
+  @doc false
+  # One family of `host`: its entries in the hosts file, or else its DNS
+  # records, asked through `:inet_res` (`Brando.Tenant.ServedHosts.DNS`),
+  # which tells a name with no records (`{:ok, []}`) from a lookup that
+  # failed. The operating system's resolver reports both as `:nxdomain`.
+  # Tests replace `:hosts` (as `:inet_hosts.gethostbyname/2`) and `:dns` (as
+  # `:inet_res.resolve/5`).
+  def lookup_family(host, family, opts \\ []) do
+    hosts = Keyword.get(opts, :hosts, &:inet_hosts.gethostbyname/2)
+    dns = Keyword.get(opts, :dns, &:inet_res.resolve/5)
+
+    case hosts.(host, family) do
+      {:ok, {:hostent, _name, _aliases, _type, _length, [_ | _] = addresses}} -> {:ok, addresses}
+      _not_listed -> DNS.lookup_family(to_string(host), family, dns)
+    end
   end
 
   # Loopback, unspecified, or one of this server's interfaces (an IPv4
@@ -279,12 +407,14 @@ defmodule Brando.Sites.DeployConfig do
   defp unmap({0, 0, 0, 0, 0, 0xFFFF, high, low}), do: {div(high, 256), rem(high, 256), div(low, 256), rem(low, 256)}
   defp unmap(address), do: address
 
-  # A name that does not resolve here may still be one ssh knows (a `Host`
-  # alias in its config): the operator's to answer for
+  # A name with no records here may still be one ssh knows (a `Host` alias in
+  # its config): the operator's to answer for. Any other error is a lookup
+  # that failed, as is one the time limit cuts short.
   defp resolved(resolver, host, family) do
-    case resolver.(String.to_charlist(host), family) do
-      {:ok, addresses} -> addresses
-      {:error, _reason} -> []
+    case resolver.(host, family) do
+      {:ok, addresses} when is_list(addresses) -> {:ok, addresses}
+      {:error, :nxdomain} -> {:ok, []}
+      _failed -> :error
     end
   end
 
