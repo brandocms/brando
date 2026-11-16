@@ -30,7 +30,8 @@ defmodule Brando.SSG.LocalDelivery do
   Other methods (a form's `POST`), a request carrying a build's valid signed
   context (`Brando.SSG.Context.signed?/1`), the paths `dynamic_paths/1`
   lists, and the IndexNow key file while IndexNow is on (`Brando.Plug.IndexNow`
-  answers it here) keep reaching Phoenix.
+  answers it here) keep reaching Phoenix. A missing page there is the build's
+  404 too (`answer_not_found/1`).
 
   HTML and the other files are sent with an `ETag` and
   `Cache-Control: no-cache`; the files the build's Vite manifest lists, and a
@@ -285,6 +286,11 @@ defmodule Brando.SSG.LocalDelivery do
   or a plain 404, and either with 503 when the build is missing. Any other
   request is returned untouched. `Brando.Plug.Tenant` calls it first, so no
   page Phoenix renders answers on a host serving its build.
+
+  That holds only where the tenant plug runs: a route in a pipeline without
+  `Brando.Plug.Tenant`, or a router with no catch-all, answers such a request
+  itself, with the application's error page. The routers Brando generates
+  are covered.
   """
   @spec answer_unanswered(Plug.Conn.t()) :: Plug.Conn.t()
   def answer_unanswered(%Plug.Conn{path_info: ["health"], private: %{@before_router => %Site{} = site}} = conn) do

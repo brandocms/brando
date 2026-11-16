@@ -2474,10 +2474,13 @@ HTML and the other files are sent with an `ETag`, which names the build's
 version, and `Cache-Control: no-cache`, so a browser or CDN asks again and gets
 `304 Not Modified` while the build is unchanged, and the new file after a
 deploy. The files the build's Vite manifest lists, which are named by their
-content, and a request for a file other than a page (HTML, or a page's
-Markdown) with a `vsn` query, as
-`Plug.Static` reads it, are sent with
-`Cache-Control: public, max-age=31536000, immutable`. Markdown is
+content, and a request with a `vsn` query, as `Plug.Static` reads it, for a
+file other than a page (HTML, or a page's Markdown) under `assets/` or a
+directory the web module's `static_paths/0` names, are sent with
+`Cache-Control: public, max-age=31536000, immutable`. Every other file, such
+as `robots.txt`, the sitemaps, feeds and JSON at the build's root, which the
+next deploy rewrites under the same URL, is sent with `no-cache` and its
+`ETag` whatever the query. Markdown is
 `text/markdown`, and the gzipped sitemap is sent as `/sitemaps/` sends it from
 Phoenix, a download.
 
@@ -2506,15 +2509,18 @@ request log. It emits the telemetry event
 What still reaches Phoenix on that host:
 
 - other methods than `GET` and `HEAD`, such as a contact form's `POST`;
-- the media path, shared previews (`/__p__/`), build previews
-  (`/__ssg_preview__/`), live preview (`/__livepreview`) and Brando's
-  `/__brando/` paths, and the endpoint's sockets, which answer before any
-  plug;
+- the paths below the media path, shared previews (`/__p__/`), build previews
+  (`/__ssg_preview__/`) and Brando's `/__brando/` paths, live preview
+  (`/__livepreview`), and the endpoint's sockets, which answer before any
+  plug. The media path itself, `/__p__`, `/__ssg_preview__` and `/__brando`
+  answer from the build as any other path: no route answers them;
 - `/health`, for `Brando.Plug.Health`, which a blue/green deploy polls from
   the server before it switches; without that plug in the endpoint it is the
-  build's 404 page;
-- with `:single`, where the admin answers on every host, the admin's and MCP's
-  paths;
+  build's `health/index.html` when the build has that page, else its 404
+  page. A path in the application's own list below comes first, `/health`
+  included;
+- with `:single`, where the admin answers on every host, the admin's paths,
+  and MCP's when the router mounts them (`Brando.Router.mcp_routes/0`);
 - the IndexNow key file (`/<key>.txt`) while IndexNow is on
   (`Brando.Plug.IndexNow`);
 - a request carrying a build's signed context (`Brando.SSG.Context`), so a new
@@ -2524,6 +2530,20 @@ What still reaches Phoenix on that host:
 ```elixir
 config :brando, Brando.SSG.LocalDelivery, dynamic_paths: ["/api", "/coming-soon"]
 ```
+
+On that host every 404 is the build's: a request that reaches Phoenix and that
+no route answers, such as `/__brando/x` or a shared preview's unknown key,
+falls to the page catch-all, and where Brando answers a page that is missing
+(`BrandoWeb.FallbackController`) it answers the build's `404.html`, or a plain
+404 for a build without one (`Brando.SSG.LocalDelivery.answer_not_found/1`).
+A route that answers is untouched, such as a valid shared preview or the
+forms' token. That safety net, and the one for a file let through to the
+asset pipeline that no plug before the router answers, is Brando's code in
+the router: `Brando.Plug.Tenant` and the fallback controller. A route in a
+pipeline without `Brando.Plug.Tenant`, a page controller without
+`BrandoWeb.FallbackController`, or a router with no catch-all answers such a
+request itself, with the application's own error page. The routers and page
+controllers Brando generates are covered.
 
 Environments that are not live answer from Phoenix on their own domains, as
 working copies, with `X-Robots-Tag: noindex, nofollow`. Setting another
@@ -2539,8 +2559,9 @@ strategy needs a site in the registry, so it applies with `:single` and
 Each node reads a published build's file list and redirects once and keeps
 them in memory until another build is published. A node that cannot find the
 build's directory, or one of its files, answers `503` (a file the asset
-pipeline has, such as the admin's bundles, still loads, so the Publishing
-screen can deploy again), looks for the directory
+pipeline has, such as the admin's bundles, still loads, though the build
+listed it too, so the Publishing screen can deploy again), looks for the
+directory
 again every few seconds and logs it each time it does not find it: with
 several nodes, `sites/` must be on storage they all share
 ([Several nodes](#several-nodes)). The reverse proxy needs nothing new: the
