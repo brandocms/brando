@@ -162,12 +162,12 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       <code>{environment.key}</code>
                     </td>
                     <td class="environment-hosts-cell">
-                      <%!-- Keyed on the hosts shown: when a live switch or another superuser moves
-                    them, the form is replaced and a half-typed edit goes with the hosts it was
-                    typed against --%>
+                      <%!-- The form and its fields are keyed on the hosts shown: when a live switch
+                    or another superuser moves them, they are replaced, and a half-typed edit, a
+                    focused field's too, goes with the hosts it was typed against --%>
                       <form
                         :if={can_edit_hosts?(@can_bind_hosts?, @can_manage?)}
-                        id={"environment-domain-#{environment.id}-#{:erlang.phash2(draft_key(environment))}"}
+                        id={"environment-domain-#{environment.id}-#{hosts_key(environment)}"}
                         phx-change="draft_hosts"
                         phx-submit="update_domain"
                         class="environment-hosts-form"
@@ -180,11 +180,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                           value={Enum.join(environment.redirect_hosts || [], ",")}
                         />
                         <div class="environment-host-field">
-                          <label for={"environment-#{environment.id}-domain"}>{gettext("Domain")}</label>
+                          <label for={host_field_id(environment, "domain")}>{gettext("Domain")}</label>
                           <%!-- The domain's state on the domain's line --%>
                           <div class="environment-domain-line">
                             <input
-                              id={"environment-#{environment.id}-domain"}
+                              id={host_field_id(environment, "domain")}
                               type="text"
                               name="domain"
                               value={host_draft(@host_drafts, environment).domain}
@@ -202,9 +202,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                           </div>
                         </div>
                         <div class="environment-host-field">
-                          <label for={"environment-#{environment.id}-redirect-hosts"}>{gettext("Redirect hosts")}</label>
+                          <label for={host_field_id(environment, "redirect-hosts")}>{gettext("Redirect hosts")}</label>
                           <textarea
-                            id={"environment-#{environment.id}-redirect-hosts"}
+                            id={host_field_id(environment, "redirect-hosts")}
                             name="redirect_hosts"
                             rows={host_rows(environment)}
                             autocomplete="off"
@@ -1088,6 +1088,14 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
   defp draft_key(%Environment{} = environment),
     do: {environment.id, environment.domain || "", environment.redirect_hosts || []}
+
+  # The hosts form and its fields are keyed on the saved hosts they show. A
+  # field keeping its id would be moved into the replacement form, and a
+  # focused one keeps its value through a patch, so it would go on showing,
+  # and saving, the hosts the old form showed
+  defp hosts_key(environment), do: :erlang.phash2(draft_key(environment))
+
+  defp host_field_id(environment, field), do: "environment-#{environment.id}-#{hosts_key(environment)}-#{field}"
 
   defp can_edit_hosts?(can_bind_hosts?, can_manage?),
     do: can_bind_hosts? and can_manage? and BrandoAdmin.Authorization.allowed?(:update, :environments)

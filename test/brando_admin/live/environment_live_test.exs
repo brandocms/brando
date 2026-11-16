@@ -417,6 +417,36 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       |> String.trim()
     end
 
+    # LiveView keeps a focused field's value when it patches the field, and
+    # morphdom moves a field into the replacement form when the ids match: a
+    # focused field would keep showing the hosts the old form was typed against
+    defp host_field_ids(view, environment) do
+      html = view |> hosts_form(environment) |> render() |> LazyHTML.from_fragment()
+
+      for selector <- [~s(input[name="domain"]), ~s(textarea[name="redirect_hosts"])] do
+        [id] = html |> LazyHTML.query(selector) |> LazyHTML.attribute("id")
+        assert html |> LazyHTML.query(~s(label[for="#{id}"])) |> Enum.count() == 1
+        id
+      end
+    end
+
+    test "the host fields are keyed on the saved hosts, like their form", %{conn: conn, staging: staging} do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+      before = host_field_ids(view, staging)
+
+      typed(view, staging, %{"domain" => "typed.acme.test", "redirect_hosts" => "typed.acme.test"})
+      assert host_field_ids(view, staging) == before
+
+      superuser = Factory.insert(:random_user, role: :superuser)
+
+      {:ok, _staging} =
+        Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: superuser)
+
+      assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+
+      for {now, then} <- Enum.zip(host_field_ids(view, staging), before), do: refute(now == then)
+    end
+
     test "a superuser adds and removes them, one per line or comma-separated", %{conn: conn, staging: staging} do
       {:ok, view, _html} = live(conn, "/admin/config/environments")
 
