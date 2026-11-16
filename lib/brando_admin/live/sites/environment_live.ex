@@ -150,8 +150,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                 <thead>
                   <tr>
                     <th>{gettext("Environment")}</th>
-                    <th>{gettext("Hosts")}</th>
                     <th>{gettext("State")}</th>
+                    <th>{gettext("Hosts")}</th>
                     <th class="environment-actions">{gettext("Actions")}</th>
                   </tr>
                 </thead>
@@ -160,6 +160,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                     <td class="environment-identity">
                       <strong>{environment.name}</strong>
                       <code>{environment.key}</code>
+                    </td>
+                    <td class="environment-state-cell">
+                      <span class={["environment-state", environment.live && "live"]}>
+                        {if environment.live, do: gettext("Live"), else: gettext("Working")}
+                      </span>
                     </td>
                     <td class="environment-hosts-cell">
                       <%!-- The form and its fields are keyed on the hosts shown: when a live switch
@@ -191,11 +196,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                               placeholder="www.example.com"
                               autocomplete="off"
                               spellcheck="false"
-                              aria-label={gettext("Domain for %{name}", name: environment.name)}
+                              aria-describedby={@served_hosts_enabled? && environment.domain && domain_status_id(environment)}
                             />
                             <.served_host
                               :if={@served_hosts_enabled? && environment.domain}
-                              id={"environment-host-status-#{environment.id}"}
+                              id={domain_status_id(environment)}
                               state={served_host_state(@served_hosts.hosts, @bound_hosts, environment.domain)}
                               addresses={@served_hosts.addresses}
                             />
@@ -209,10 +214,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                             rows={host_rows(environment)}
                             autocomplete="off"
                             spellcheck="false"
-                            aria-label={gettext("Hosts that redirect to the domain of %{name}", name: environment.name)}
-                            aria-describedby={"environment-#{environment.id}-redirect-hosts-help"}
+                            aria-describedby={redirect_hosts_described_by(environment, @served_hosts_enabled?)}
                           >{host_draft(@host_drafts, environment).redirect_hosts}</textarea>
-                          <span id={"environment-#{environment.id}-redirect-hosts-help"} class="environment-host-help">
+                          <span id={redirect_hosts_help_id(environment)} class="environment-host-help">
                             {gettext("One per line. Each one redirects to the domain.")}
                           </span>
                           <.redirect_host_statuses
@@ -235,7 +239,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                           <dd :if={environment.domain}>
                             <.served_host
                               :if={@served_hosts_enabled?}
-                              id={"environment-host-status-#{environment.id}"}
+                              id={domain_status_id(environment)}
                               host={environment.domain}
                               state={served_host_state(@served_hosts.hosts, @bound_hosts, environment.domain)}
                               addresses={@served_hosts.addresses}
@@ -258,11 +262,6 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                           </dd>
                         </div>
                       </dl>
-                    </td>
-                    <td class="environment-state-cell">
-                      <span class={["environment-state", environment.live && "live"]}>
-                        {if environment.live, do: gettext("Live"), else: gettext("Working")}
-                      </span>
                     </td>
                     <td class={["environment-actions", environment.live && "environment-actions--none"]}>
                       <button
@@ -640,7 +639,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   defp redirect_host_statuses(assigns) do
     ~H"""
     <ul
-      :if={@environment.domain && @environment.redirect_hosts not in [nil, []]}
+      :if={redirect_host_statuses?(@environment)}
+      id={redirect_host_statuses_id(@environment)}
       class="environment-redirect-host-statuses"
       aria-label={gettext("Redirect hosts")}
     >
@@ -654,6 +654,21 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       </li>
     </ul>
     """
+  end
+
+  defp redirect_host_statuses?(environment), do: !!environment.domain and environment.redirect_hosts not in [nil, []]
+
+  defp redirect_host_statuses_id(environment), do: "environment-redirect-host-statuses-#{environment.id}"
+
+  defp domain_status_id(environment), do: "environment-host-status-#{environment.id}"
+
+  defp redirect_hosts_help_id(environment), do: host_field_id(environment, "redirect-hosts-help")
+
+  # The help line, and the hosts' states when they are shown
+  defp redirect_hosts_described_by(environment, served_hosts_enabled?) do
+    if served_hosts_enabled? and redirect_host_statuses?(environment),
+      do: "#{redirect_hosts_help_id(environment)} #{redirect_host_statuses_id(environment)}",
+      else: redirect_hosts_help_id(environment)
   end
 
   # The redirect hosts' field shows every host it holds, and a line to type

@@ -518,11 +518,11 @@
   }
 
   .environment-list th:nth-child(2) {
-    width: 46%;
+    width: 12%;
   }
 
   .environment-list th:nth-child(3) {
-    width: 12%;
+    width: 46%;
   }
 
   .environment-list th:nth-child(4) {

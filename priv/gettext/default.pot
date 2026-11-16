@@ -6009,11 +6009,6 @@ msgstr ""
 
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
-msgid "Domain for %{name}"
-msgstr ""
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
 msgid "Domain updated."
 msgstr ""
 
@@ -8339,11 +8334,6 @@ msgstr ""
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Hosts"
-msgstr ""
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
-msgid "Hosts that redirect to the domain of %{name}"
 msgstr ""
 
 #: lib/brando_admin/components/form/input/render_var.ex
