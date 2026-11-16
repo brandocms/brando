@@ -12,14 +12,19 @@ defmodule Brando.Forms.SubmissionController do
   and the JSON reply carries it as `redirect`.
 
   Both routes refuse a request whose `Origin` (or, without one, `Referer`) is
-  not the site's own: the current host on a dynamic site, one of the site's
-  domains on a static one.
+  not the site's own: the current host on a dynamic site, the domain of the
+  environment the build was made from on a static one. A build the
+  installation serves itself (deploy strategy `:local`) answers the public
+  domain whichever environment holds it, after a live switch or a rollback
+  too, so there any domain of the site's environments is its own, and with
+  `:single` the endpoint's host.
   """
   use Phoenix.Controller, formats: [:html, :json]
 
   import Plug.Conn
 
   alias Brando.Forms
+  alias Brando.Sites.Site
   alias Brando.Tenant
 
   @doc "A submission to a dynamic site, through its browser pipeline."
@@ -167,13 +172,31 @@ defmodule Brando.Forms.SubmissionController do
     end
   end
 
+  # The build posts to the environment it was built from, so a page on another
+  # environment's domain, or another site's, cannot post into it. A build the
+  # installation serves itself (`Brando.SSG.LocalDelivery`) answers whichever
+  # of the site's hosts is live, after a live switch or a rollback too: any
+  # host of the site is its own.
   defp static_origin?(conn, site, environment) do
-    with host when is_binary(host) <- origin_host(conn),
-         {%{id: site_id}, %{id: environment_id}} <- Tenant.Cache.get_env_by_domain(host) do
-      site_id == site.id and environment_id == environment.id
-    else
-      _ -> false
+    case origin_host(conn) do
+      host when is_binary(host) ->
+        case Tenant.Cache.get_env_by_domain(host) do
+          {%{id: site_id}, %{id: environment_id}} ->
+            site_id == site.id and (environment_id == environment.id or Site.local_delivery?(site))
+
+          nil ->
+            Site.local_delivery?(site) and public_host?(site, host)
+        end
+
+      _none_or_opaque ->
+        false
     end
+  end
+
+  # With one site, the endpoint's host answers for its live environment
+  defp public_host?(site, host) do
+    Tenant.mode() == :single and Brando.config(:site_key) == site.key and
+      String.downcase(host) == URI.parse(Brando.endpoint().url()).host
   end
 
   # The static site's enhancement script reads the JSON reply cross-origin.

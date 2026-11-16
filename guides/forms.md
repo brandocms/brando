@@ -385,8 +385,12 @@ removes has its submissions back when a form with that key returns.
 A statically delivered site (`delivery_mode: :static`) has no backend serving
 its pages, and no session for a CSRF token. Its forms post to your Brando
 backend instead, at `/__brando/forms/static/<site>/<environment>/<key>`, and the
-request must come from one of the site's own domains. Add the route at the top
-level of your router, outside the browser pipeline:
+request must come from the domain of the environment the build was made from.
+A site the installation serves itself (deploy strategy `:local`) answers its
+public domain from the published build whichever environment holds that
+domain now, so there any domain of the site's environments is accepted, and
+with `:single` the endpoint's host too. Add the route at the top level of your
+router, outside the browser pipeline:
 
 ```elixir
 form_routes()

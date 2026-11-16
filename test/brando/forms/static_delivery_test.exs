@@ -6,6 +6,7 @@ defmodule Brando.Forms.StaticDeliveryTest do
   alias Brando.Sites.Site
   alias Brando.Tenant
   alias Brando.Tenant.Cache
+  alias Brando.Tenant.Registry
 
   setup do
     put_test_env(:tenancy_mode, :multi)
@@ -98,6 +99,75 @@ defmodule Brando.Forms.StaticDeliveryTest do
 
       assert build_conn()
              |> post_static("/__brando/forms/static/acme/staging/contact", "https://www.acme.test")
+             |> json_response(403)
+    end
+  end
+
+  # The published build answers the public domain whichever environment holds
+  # it: after a live switch, and after a rollback to a build made before one,
+  # its forms post to the environment it was built from
+  describe "the static route, for a site the installation serves itself" do
+    setup do
+      {:ok, site} =
+        Registry.create_site(%{
+          name: "Beta",
+          key: "beta",
+          languages: ["en"],
+          default_language: "en",
+          status: :active,
+          delivery_mode: :static,
+          deploy_config: %{strategy: :local}
+        })
+
+      {:ok, production} =
+        Registry.create_environment(site, %{name: "Production", key: "production", domain: "old.beta.test"},
+          actor: :system
+        )
+
+      {:ok, _staging} =
+        Registry.create_environment(site, %{name: "Staging", key: "staging", domain: "www.beta.test", live: true},
+          actor: :system
+        )
+
+      prefix = Tenant.prefix(site, production)
+      :ok = Brando.Environments.Schema.create(prefix)
+      Repo.query!(~s|CREATE TABLE "#{prefix}".forms (LIKE public.forms INCLUDING ALL)|)
+      Cache.warm()
+      :ok
+    end
+
+    # No form under the key: the post got past the origin check
+    defp accepted?(conn), do: conn.status == 404 and get_resp_header(conn, "access-control-allow-origin") != []
+
+    test "accepts a post from the public domain after a live switch", %{conn: conn} do
+      assert accepted?(post_static(conn, "/__brando/forms/static/beta/production/contact", "https://www.beta.test"))
+
+      assert accepted?(
+               post_static(build_conn(), "/__brando/forms/static/beta/production/contact", "https://old.beta.test")
+             )
+    end
+
+    test "accepts a post from the endpoint's host, the public host with one site", %{conn: conn} do
+      put_test_env(:tenancy_mode, :single)
+      put_test_env(:site_key, "beta")
+      Cache.warm()
+      host = URI.parse(Brando.endpoint().url()).host
+
+      assert accepted?(post_static(conn, "/__brando/forms/static/beta/production/contact", "https://#{host}"))
+
+      # Every other host resolves to the site too, and is still refused
+      assert build_conn()
+             |> post_static("/__brando/forms/static/beta/production/contact", "https://unknown.example.com")
+             |> json_response(403)
+    end
+
+    test "refuses another site's origin and an unknown one", %{conn: conn} do
+      assert conn
+             |> post_static("/__brando/forms/static/beta/production/contact", "https://www.acme.test")
+             |> json_response(403)
+
+      assert build_conn()
+             |> post_static("/__brando/forms/static/beta/production/contact", "https://unknown.example.com")
              |> json_response(403)
     end
   end
