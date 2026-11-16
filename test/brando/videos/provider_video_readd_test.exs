@@ -168,7 +168,7 @@ defmodule Brando.Videos.ProviderVideoReaddTest do
     put_test_env(Mux, delete_remote_on: :on_purge, req_options: [plug: {Req.Test, Mux}])
 
     assert ExUnit.CaptureLog.capture_log(fn -> assert purge_videos() == :error end) =~
-             "Purging Brando.Videos.Video failed: RuntimeError"
+             "Purging Brando.Videos.Video failed: ** (RuntimeError) Mux credentials not configured"
 
     assert Repo.get!(Video, uploaded.id).deleted_at
 
