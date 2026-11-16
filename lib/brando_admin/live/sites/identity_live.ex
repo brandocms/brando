@@ -53,11 +53,16 @@ defmodule BrandoAdmin.Sites.IdentityLive do
         first_identity = List.first(Sites.list_identities!())
 
         {:ok, identity} =
-          Sites.duplicate_identity(first_identity.id, :system, merge_fields: %{language: content_language})
+          Sites.duplicate_identity(first_identity.id, :system, merge_fields: %{language: language_atom(content_language)})
 
         assign(socket, :entry_id, identity.id)
     end
   end
+
+  # The user's content language is stored as a string; the entry's language is
+  # an enum of the configured languages
+  defp language_atom(language) when is_binary(language), do: String.to_existing_atom(language)
+  defp language_atom(language), do: language
 
   def handle_info({:content_language, _language}, socket) do
     send_update_after(

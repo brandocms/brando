@@ -71,6 +71,25 @@ defmodule BrandoAdmin.ContentLanguageSwitchViewsTest do
     assert :sys.get_state(view.pid).socket.assigns.entry_id == norwegian.id
   end
 
+  for {path, form_id, schema} <- [
+        {"/admin/config/identity", "identity_form", Brando.Sites.Identity},
+        {"/admin/config/seo", "seo_form", Brando.Sites.SEO}
+      ] do
+    test "#{path} makes the entry for a language that has none yet", %{conn: conn, current_user: user} do
+      {:ok, _user} =
+        Brando.Users.update_user(user, %{config: %{content_language: "en"}}, :system, show_notification: false)
+
+      refute Brando.Repo.get_by(unquote(schema), language: :no)
+      {view, _html} = live_form(conn, unquote(path), unquote(form_id))
+
+      "no" = switch(view, user)
+      assert_switched(view, user, "no")
+
+      norwegian = Brando.Repo.get_by!(unquote(schema), language: :no)
+      assert :sys.get_state(view.pid).socket.assigns.entry_id == norwegian.id
+    end
+  end
+
   test "a listing shows its entries in the new language", %{conn: conn, current_user: user} do
     {:ok, user} = Brando.Users.update_user(user, %{config: %{content_language: "en"}}, :system, show_notification: false)
     Factory.insert(:page, title: "An English page", language: :en, creator: user)
