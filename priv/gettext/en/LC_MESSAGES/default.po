@@ -8960,6 +8960,11 @@ msgstr ""
 msgid "It was changed since the calendar was loaded. The calendar now shows what is planned."
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "It will be tried again."
+msgstr ""
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #: lib/brando_admin/components/shortcut_sheet.ex
@@ -8978,11 +8983,6 @@ msgid "Its %{count} nested block is removed too."
 msgid_plural "Its %{count} nested blocks are removed too."
 msgstr[0] ""
 msgstr[1] ""
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
-msgid "Its name servers did not give a full answer. It will be tried again."
-msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
@@ -17131,6 +17131,36 @@ msgstr ""
 msgid "That webhook does not exist in this environment."
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed: no name server is configured."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed: the answer was cut short."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed: the name server refused it."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed: the name server reported a failure."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup timed out."
+msgstr ""
+
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "The %{language} version was edited %{days} days after this one."
@@ -17144,6 +17174,36 @@ msgstr ""
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "The CSS and JavaScript packaged with the current application release are being served."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed: no name server is configured."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed: the answers were cut short."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed: the name server refused them."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed: the name server reported a failure."
+msgstr ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups timed out."
 msgstr ""
 
 #: lib/brando_admin/live/sites/mcp_live.ex

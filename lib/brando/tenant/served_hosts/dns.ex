@@ -14,10 +14,11 @@ defmodule Brando.Tenant.ServedHosts.DNS do
       set (records may have been cut off), a `CNAME` chain longer than eight
       queries, or no name server to ask, leaves the family unread.
 
-  A host with an unread family answers `{:incomplete, addresses, families}`
-  (see `Brando.Tenant.ServedHosts.Resolver`), and is not admitted on the
-  strength of the other family; with both unread, the lookup fails. A host
-  with no records of either family does not resolve.
+  A host with an unread family answers
+  `{:incomplete, addresses, families, reasons}` (see
+  `Brando.Tenant.ServedHosts.Resolver`), with both families unread too, and
+  is not admitted on the strength of the other family. A host with no
+  records of either family does not resolve.
 
   Each query gives each name server a second to answer, then two on a
   second try. One family, the queries for a `CNAME`'s target included, takes
@@ -63,15 +64,22 @@ defmodule Brando.Tenant.ServedHosts.DNS do
 
   defp combine(read) do
     addresses = for {_family, {:ok, addresses}} <- read, address <- addresses, do: address
-    unread = for {family, {:error, _reason}} <- read, do: family
+    unread = for {family, {:error, reason}} <- read, do: {family, reason(reason)}
 
     cond do
       unread == [] and addresses == [] -> {:error, :nxdomain}
       unread == [] -> {:ok, addresses}
-      length(unread) == length(read) -> Enum.find_value(read, fn {_family, error} -> error end)
-      true -> {:incomplete, addresses, unread}
+      true -> {:incomplete, addresses, Keyword.keys(unread), Map.new(unread)}
     end
   end
+
+  # What the admin and the log say of an unread family
+  defp reason(:timeout), do: :timeout
+  defp reason(:servfail), do: :server_failure
+  defp reason(:refused), do: :refused
+  defp reason(:truncated), do: :truncated
+  defp reason(:no_name_servers), do: :no_name_servers
+  defp reason(_other), do: :other
 
   defp read_family(name, type, resolve) do
     deadline = System.monotonic_time(:millisecond) + @family_timeout

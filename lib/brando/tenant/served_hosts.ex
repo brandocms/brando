@@ -40,12 +40,24 @@ defmodule Brando.Tenant.ServedHosts do
   and a host whose DNS still points elsewhere fails that request. A lookup
   that failed, or that could not read one of the two families (its query
   timed out, or the name server failed), admits nothing, whatever the
-  family it did read holds: the host keeps the state an earlier lookup gave
-  it, or is `:lookup_failed` when it had none, and is looked up again at the
-  next check. Brando removes a host from the file only once no environment
-  binds it; a failed lookup never removes one. The file is the state: nothing is stored in the
+  family it did read holds: the host is `{:lookup_failed, failures}`, with
+  each unread family and why, whatever an earlier lookup found, and is
+  looked up again at the next check. A warning is logged when a host enters
+  that state and when what failed changes, not at each retry. Brando
+  removes a host from the file only once no environment binds it; a failed
+  lookup never removes one. The file is the state: nothing is stored in the
   database, and on a new server each host is admitted again when its DNS
   arrives there.
+
+  A lookup that fails the same way at every check is not passing trouble. A
+  domain whose name servers fail one family's query every time (an `AAAA`
+  query answered with a server failure, say) is never admitted, and a
+  certificate authority that looks up both families fails on it too: fix
+  the domain's name servers. A server with no name server configured, or
+  hosts that resolve only through `/etc/hosts` or the platform's resolver
+  configuration, fail every lookup of the default resolver, so every host
+  ends there: choose `Brando.Tenant.ServedHosts.SystemResolver` (below), or
+  `admit: :always` when the proxy need not wait for DNS.
 
   ## When
 
@@ -154,6 +166,7 @@ defmodule Brando.Tenant.ServedHosts do
   # counts as failed here
   @lookup_grace 500
   @call_timeout :timer.seconds(5)
+  @families [:inet, :inet6]
   # Lookups running at once; OTP's native resolver has four workers
   @max_lookups 8
   # How long answers of a check still running gather before they are written
@@ -168,9 +181,11 @@ defmodule Brando.Tenant.ServedHosts do
   Where a bound host stands: in the file (`:served`), admitted but the file
   could not be written (`:not_written`), its first lookup under way
   (`:checking`), resolving to addresses that are not all this server's
-  (`{:waiting, addresses}`), not resolving (`:unresolved`), its first
-  lookup failed or left an address family unread (`:lookup_failed`), or
-  never written because it is not a full host name (`:invalid`).
+  (`{:waiting, addresses}`), not resolving (`:unresolved`), its latest
+  lookup failed or left an address family unread
+  (`{:lookup_failed, failures}`, each unread family and why, see
+  `t:Brando.Tenant.ServedHosts.Resolver.reason/0`), or never written
+  because it is not a full host name (`:invalid`).
   """
   @type host_state ::
           :served
@@ -178,7 +193,8 @@ defmodule Brando.Tenant.ServedHosts do
           | :checking
           | {:waiting, [String.t()]}
           | :unresolved
-          | :lookup_failed
+          | {:lookup_failed,
+             %{Brando.Tenant.ServedHosts.Resolver.family() => Brando.Tenant.ServedHosts.Resolver.reason()}}
           | :invalid
 
   @type status :: %{
@@ -454,13 +470,14 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   # A host with addresses, with none, or whose lookup failed or left a family
-  # unread (`:lookup_failed`), which is not admitted on the families read
+  # unread (`{:lookup_failed, failures}`), which is not admitted on the
+  # families read
   defp record(state, {:host, host}, result) do
     case complete(result) do
       {:ok, [_ | _] = addresses} -> put_result(state, host, {:ok, normalize_addresses(addresses)})
       {:ok, []} -> put_result(state, host, :unresolved)
       {:error, :nxdomain} -> put_result(state, host, :unresolved)
-      _failed_or_incomplete -> put_result(state, host, :lookup_failed)
+      failed_or_incomplete -> put_result(state, host, {:lookup_failed, failures(failed_or_incomplete)})
     end
   end
 
@@ -478,7 +495,27 @@ defmodule Brando.Tenant.ServedHosts do
 
   # An incomplete answer with no family unread is a complete one
   defp complete({:incomplete, addresses, []}) when is_list(addresses), do: {:ok, addresses}
+  defp complete({:incomplete, addresses, [], _reasons}) when is_list(addresses), do: {:ok, addresses}
   defp complete(result), do: result
+
+  # Each unread family and why, from the resolver's answer; a whole lookup
+  # that failed failed for both families
+  defp failures({:incomplete, _addresses, families, reasons}) when is_map(reasons),
+    do: family_failures(families, &Map.get(reasons, &1))
+
+  defp failures({:incomplete, _addresses, families}), do: family_failures(families, fn _family -> :other end)
+  defp failures({:error, reason}), do: family_failures(@families, fn _family -> reason end)
+  defp failures(_other), do: family_failures(@families, fn _family -> :other end)
+
+  defp family_failures(families, reason_of) do
+    families = if is_list(families), do: Enum.filter(@families, &(&1 in families)), else: []
+    families = if families == [], do: @families, else: families
+    Map.new(families, &{&1, failure_reason(reason_of.(&1))})
+  end
+
+  defp failure_reason(reason) do
+    if reason in Brando.Tenant.ServedHosts.Resolver.reasons(), do: reason, else: :other
+  end
 
   defp put_result(state, host, result),
     do: %{state | results: Map.put(state.results, host, result), fresh: MapSet.put(state.fresh, host)}
@@ -758,6 +795,7 @@ defmodule Brando.Tenant.ServedHosts do
     state = if job.check?, do: look_up_missing(state), else: state
     decided = decide_outside(state, bound)
     hosts = host_statuses(state, result, bound, decided) |> Map.merge(Map.new(invalid, &{&1, :invalid}))
+    log_lookup_failures(hosts, status().hosts)
     publish(%{file: file, hosts: hosts, addresses: format_addresses(own_addresses(state)), error: result.error})
     state = if Enum.any?(decided, &match?({_host, :admit}, &1)), do: %{state | write_requested: true}, else: state
     schedule(state, retry?(state, decided) or result.error != nil)
@@ -781,7 +819,6 @@ defmodule Brando.Tenant.ServedHosts do
       in_file,
       Map.new(decided, fn
         {host, decision} when decision in [:admit, :pending] -> {host, pending_state(host, previous)}
-        {host, :lookup_failed} -> {host, failed_state(host, previous)}
         {host, host_state} -> {host, host_state}
       end)
     )
@@ -922,7 +959,8 @@ defmodule Brando.Tenant.ServedHosts do
     cond do
       MapSet.member?(pending, host) -> :pending
       not Map.has_key?(state.results, host) -> :pending
-      state.results[host] in [:unresolved, :lookup_failed] -> state.results[host]
+      state.results[host] == :unresolved -> :unresolved
+      match?({:lookup_failed, _failures}, state.results[host]) -> state.results[host]
       own_known?(state) -> classify(elem(state.results[host], 1), own_addresses(state))
       true -> :pending
     end
@@ -951,21 +989,31 @@ defmodule Brando.Tenant.ServedHosts do
   defp pending_state(host, previous) do
     case Map.get(previous, host) do
       {:waiting, _addresses} = waiting -> waiting
-      state when state in [:unresolved, :lookup_failed] -> state
+      {:lookup_failed, _failures} = failed -> failed
+      :unresolved -> :unresolved
       _none -> :checking
     end
   end
 
-  # A host whose lookup failed, or could not read a family, keeps the state
-  # an earlier lookup gave it: what was known of its DNS still is. One never
-  # looked up before could not be looked up.
-  defp failed_state(host, previous) do
-    case Map.get(previous, host) do
-      {:waiting, _addresses} = waiting -> waiting
-      :unresolved -> :unresolved
-      _none -> :lookup_failed
+  # Once per host as its lookups start failing, and again when what failed
+  # changes; a retry that fails the same way says nothing
+  defp log_lookup_failures(hosts, previous) do
+    for {host, {:lookup_failed, failures} = failed} <- hosts, previous[host] != failed do
+      Logger.warning(
+        "[Brando.Tenant.ServedHosts] Could not look up #{host} (#{describe_failures(failures)}); " <>
+          "it is not admitted, and is looked up again at each check"
+      )
     end
   end
+
+  defp describe_failures(failures) do
+    @families
+    |> Enum.filter(&Map.has_key?(failures, &1))
+    |> Enum.map_join(", ", &"#{family_name(&1)}: #{failures[&1]}")
+  end
+
+  defp family_name(:inet), do: "IPv4"
+  defp family_name(:inet6), do: "IPv6"
 
   defp servable_bound_hosts, do: Enum.filter(Cache.bound_hosts(), &servable?/1)
 

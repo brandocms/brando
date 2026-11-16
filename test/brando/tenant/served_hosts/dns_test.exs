@@ -65,9 +65,11 @@ defmodule Brando.Tenant.ServedHosts.DNSTest do
       assert DNS.lookup("empty.example.com", resolve) == {:error, :nxdomain}
     end
 
-    test "both timing out fail the lookup, never as no records" do
+    test "both timing out leave both unread, never as no records" do
       resolve = fn _name, _class, _type, _options, _timeout -> {:error, :timeout} end
-      assert DNS.lookup("slow.example.com", resolve) == {:error, :timeout}
+
+      assert DNS.lookup("slow.example.com", resolve) ==
+               {:incomplete, [], [:inet, :inet6], %{inet: :timeout, inet6: :timeout}}
     end
   end
 
@@ -92,18 +94,18 @@ defmodule Brando.Tenant.ServedHosts.DNSTest do
       assert DNS.lookup("acme.example.com", resolve) == {:ok, [@v4]}
     end
 
-    for {name, answer} <- [
-          timeout: {:error, :timeout},
-          servfail: {:error, {:servfail, :msg}},
-          refused: {:error, {:refused, :msg}},
-          notimp: {:error, {:notimp, :msg}},
-          qfmterror: {:error, {:qfmterror, :msg}},
-          unknown_code: {:error, {:unknown, :msg}},
-          undecodable_answer: {:error, :formerr},
-          connection_refused: {:error, :econnrefused},
-          network_unreachable: {:error, :enetunreach},
-          no_name_server_to_ask: {:error, :nxdomain},
-          unexpected_answer: :something_else
+    for {name, answer, reason} <- [
+          {:timeout, {:error, :timeout}, :timeout},
+          {:servfail, {:error, {:servfail, :msg}}, :server_failure},
+          {:refused, {:error, {:refused, :msg}}, :refused},
+          {:notimp, {:error, {:notimp, :msg}}, :other},
+          {:qfmterror, {:error, {:qfmterror, :msg}}, :other},
+          {:unknown_code, {:error, {:unknown, :msg}}, :other},
+          {:undecodable_answer, {:error, :formerr}, :other},
+          {:connection_refused, {:error, :econnrefused}, :other},
+          {:network_unreachable, {:error, :enetunreach}, :other},
+          {:no_name_server_to_ask, {:error, :nxdomain}, :no_name_servers},
+          {:unexpected_answer, :something_else, :other}
         ] do
       test "unread after #{name}: the lookup is incomplete, whatever the other family holds" do
         answer = unquote(Macro.escape(answer))
@@ -114,7 +116,7 @@ defmodule Brando.Tenant.ServedHosts.DNSTest do
             {"acme.example.com", :aaaa} => answer
           })
 
-        assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [@v4], [:inet6]}
+        assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [@v4], [:inet6], %{inet6: unquote(reason)}}
       end
     end
 
@@ -127,7 +129,7 @@ defmodule Brando.Tenant.ServedHosts.DNSTest do
           {"acme.example.com", :aaaa} => noerror([], true)
         })
 
-      assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [@v4], [:inet6]}
+      assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [@v4], [:inet6], %{inet6: :truncated}}
     end
 
     test "answered with the truncation flag and some records: unread, as more may be cut off" do
@@ -137,7 +139,7 @@ defmodule Brando.Tenant.ServedHosts.DNSTest do
           {"acme.example.com", :aaaa} => noerror([{"acme.example.com", :aaaa, @v6}])
         })
 
-      assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [@v6], [:inet]}
+      assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [@v6], [:inet], %{inet: :truncated}}
     end
 
     test "unread while the other has no records: incomplete with no addresses" do
@@ -147,7 +149,7 @@ defmodule Brando.Tenant.ServedHosts.DNSTest do
           {"acme.example.com", :aaaa} => noerror([])
         })
 
-      assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [], [:inet]}
+      assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [], [:inet], %{inet: :timeout}}
     end
   end
 
@@ -189,7 +191,7 @@ defmodule Brando.Tenant.ServedHosts.DNSTest do
           {"edge.cdn.example.net", :aaaa} => {:error, :timeout}
         })
 
-      assert DNS.lookup("www.acme.example.com", resolve) == {:incomplete, [@v4], [:inet6]}
+      assert DNS.lookup("www.acme.example.com", resolve) == {:incomplete, [@v4], [:inet6], %{inet6: :timeout}}
     end
 
     test "a target that does not exist has no records" do
@@ -229,7 +231,7 @@ defmodule Brando.Tenant.ServedHosts.DNSTest do
         end
       end
 
-      assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [], [:inet]}
+      assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [], [:inet], %{inet: :other}}
     end
 
     test "several CNAMEs for one name leave the family unread" do
@@ -243,7 +245,7 @@ defmodule Brando.Tenant.ServedHosts.DNSTest do
           {"www.acme.example.com", :aaaa} => noerror([{"www.acme.example.com", :aaaa, @v6}])
         })
 
-      assert DNS.lookup("www.acme.example.com", resolve) == {:incomplete, [@v6], [:inet]}
+      assert DNS.lookup("www.acme.example.com", resolve) == {:incomplete, [@v6], [:inet], %{inet: :other}}
     end
   end
 end

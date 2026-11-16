@@ -878,11 +878,33 @@ by its name:
 **Served** when it is in the file, **Checking** while its first lookup runs,
 **Waiting for DNS** with what the host resolves to now and this server's
 addresses, **Does not resolve** when it has no address records, **Could not
-look it up** when its first lookup timed out or a name server failed, or **Not
-a full host name** for a bound host the file leaves out. A host whose later
-lookup could not be completed keeps the state the one before gave it. A file that could not
-be written is shown above the list (with the reason to superusers only),
-logged once, and tried again every minute; the application keeps running.
+look it up** when its latest lookup could not read one family or both, or
+**Not a full host name** for a bound host the file leaves out. **Could not
+look it up** names the family and why, for example "The IPv6 lookup failed:
+the name server reported a failure. It will be tried again." The reasons are:
+the query timed out, the name server reported a failure, the name server
+refused the query, the answer was cut short, no name server is configured, or
+another error. A host in the file stays **Served** whatever a later lookup
+finds. A warning is logged, with the host, the family and the reason, when a
+host starts failing and when its reason changes, not at each retry. A file
+that could not be written is shown above the list (with the reason to
+superusers only), logged once, and tried again every minute; the application
+keeps running.
+
+A host that shows **Could not look it up** check after check will not be
+admitted until the cause is fixed:
+
+- A domain whose name servers fail one family's query every time (an `AAAA`
+  query answered with a server failure, say): fix the domain's name servers. A
+  certificate authority that looks up both families fails on such a domain
+  too, so admitting it on the other family would not get it a certificate.
+- No name server is configured on the server (an empty or missing
+  `/etc/resolv.conf`): every host ends here. Configure one, or choose
+  `SystemResolver`.
+- Hosts that resolve only through `/etc/hosts` or the platform's resolver
+  configuration: choose `resolver: Brando.Tenant.ServedHosts.SystemResolver`.
+- An installation whose proxy need not wait for DNS, behind a CDN or another
+  proxy: `admit: :always`.
 
 The file's contract, for anyone writing their own consumer:
 

@@ -747,10 +747,10 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
           <span :if={@addresses != []} class="environment-host-status__detail">
             {gettext("Point it at %{addresses}.", addresses: server_addresses(@addresses))}
           </span>
-        <% :lookup_failed -> %>
+        <% {:lookup_failed, failures} -> %>
           <span class="badge badge--attention">{gettext("Could not look it up")}</span>
           <span class="environment-host-status__detail">
-            {gettext("Its name servers did not give a full answer. It will be tried again.")}
+            {Enum.join(lookup_failure_sentences(failures) ++ [gettext("It will be tried again.")], " ")}
           </span>
         <% :excluded -> %>
           <span class="badge">{gettext("Not served")}</span>
@@ -782,6 +782,44 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   # Unique per environment and host, whatever characters a stored host holds
   defp redirect_host_status_id(environment, host),
     do: "environment-host-status-#{environment.id}-#{Base.url_encode64(host, padding: false)}"
+
+  # One sentence for both families when they failed alike, else one per family
+  defp lookup_failure_sentences(%{inet: reason, inet6: reason}), do: [both_families_failed(reason)]
+
+  defp lookup_failure_sentences(failures) do
+    for {family, name} <- [inet: "IPv4", inet6: "IPv6"],
+        Map.has_key?(failures, family),
+        do: family_failed(failures[family], name)
+  end
+
+  defp family_failed(:timeout, family), do: gettext("The %{family} lookup timed out.", family: family)
+
+  defp family_failed(:server_failure, family),
+    do: gettext("The %{family} lookup failed: the name server reported a failure.", family: family)
+
+  defp family_failed(:refused, family),
+    do: gettext("The %{family} lookup failed: the name server refused it.", family: family)
+
+  defp family_failed(:truncated, family),
+    do: gettext("The %{family} lookup failed: the answer was cut short.", family: family)
+
+  defp family_failed(:no_name_servers, family),
+    do: gettext("The %{family} lookup failed: no name server is configured.", family: family)
+
+  defp family_failed(_other, family), do: gettext("The %{family} lookup failed.", family: family)
+
+  defp both_families_failed(:timeout), do: gettext("The IPv4 and IPv6 lookups timed out.")
+
+  defp both_families_failed(:server_failure),
+    do: gettext("The IPv4 and IPv6 lookups failed: the name server reported a failure.")
+
+  defp both_families_failed(:refused), do: gettext("The IPv4 and IPv6 lookups failed: the name server refused them.")
+  defp both_families_failed(:truncated), do: gettext("The IPv4 and IPv6 lookups failed: the answers were cut short.")
+
+  defp both_families_failed(:no_name_servers),
+    do: gettext("The IPv4 and IPv6 lookups failed: no name server is configured.")
+
+  defp both_families_failed(_other), do: gettext("The IPv4 and IPv6 lookups failed.")
 
   defp server_addresses([]), do: gettext("unknown")
   defp server_addresses(addresses), do: Enum.join(addresses, ", ")

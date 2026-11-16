@@ -8960,6 +8960,11 @@ msgstr "Det slutter å virke med en gang. Du kan koble det til igjen fra appen."
 msgid "It was changed since the calendar was loaded. The calendar now shows what is planned."
 msgstr "Den ble endret etter at kalenderen ble lastet inn. Kalenderen viser nå det som er planlagt."
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "It will be tried again."
+msgstr "Den blir prøvd igjen."
+
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #: lib/brando_admin/components/shortcut_sheet.ex
@@ -8978,11 +8983,6 @@ msgid "Its %{count} nested block is removed too."
 msgid_plural "Its %{count} nested blocks are removed too."
 msgstr[0] "Også %{count} underliggende blokk fjernes."
 msgstr[1] "Også %{count} underliggende blokker fjernes."
-
-#: lib/brando_admin/live/sites/environment_live.ex
-#, elixir-autogen, elixir-format
-msgid "Its name servers did not give a full answer. It will be tried again."
-msgstr "Navnetjenerne ga ikke et fullstendig svar. Den blir prøvd igjen."
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
@@ -17131,6 +17131,36 @@ msgstr "Passnøkkelen virket ikke. Prøv igjen, eller logg inn på en annen måt
 msgid "That webhook does not exist in this environment."
 msgstr "Den webhooken finnes ikke i dette miljøet."
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed."
+msgstr "%{family}-oppslaget feilet."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed: no name server is configured."
+msgstr "%{family}-oppslaget feilet: ingen navnetjener er satt opp."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed: the answer was cut short."
+msgstr "%{family}-oppslaget feilet: svaret ble kuttet av."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed: the name server refused it."
+msgstr "%{family}-oppslaget feilet: navnetjeneren avviste det."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed: the name server reported a failure."
+msgstr "%{family}-oppslaget feilet: navnetjeneren meldte om en feil."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup timed out."
+msgstr "%{family}-oppslaget fikk ikke svar i tide."
+
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "The %{language} version was edited %{days} days after this one."
@@ -17145,6 +17175,36 @@ msgstr "Klarte ikke lese KI-svaret"
 #, elixir-autogen, elixir-format
 msgid "The CSS and JavaScript packaged with the current application release are being served."
 msgstr "CSS og JavaScript fra gjeldende applikasjonsrelease er i bruk."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed."
+msgstr "IPv4- og IPv6-oppslagene feilet."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed: no name server is configured."
+msgstr "IPv4- og IPv6-oppslagene feilet: ingen navnetjener er satt opp."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed: the answers were cut short."
+msgstr "IPv4- og IPv6-oppslagene feilet: svarene ble kuttet av."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed: the name server refused them."
+msgstr "IPv4- og IPv6-oppslagene feilet: navnetjeneren avviste dem."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed: the name server reported a failure."
+msgstr "IPv4- og IPv6-oppslagene feilet: navnetjeneren meldte om en feil."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups timed out."
+msgstr "IPv4- og IPv6-oppslagene fikk ikke svar i tide."
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
