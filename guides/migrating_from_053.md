@@ -936,6 +936,14 @@ server's database, or against a copy you then restore to the server
    `mix brando.images.adopt --dry-run --verbose` with the real media instead
    ([Media](media.md#images-made-before-fingerprints)).
 
+   A project that sets `default_config` under `Brando.Images` in
+   `config/runtime.exs` now gets it on every field with `cfg: :default` or a
+   partial `cfg:`, as Brando merges it when a field is read. Before adopting,
+   run `mix brando.doctor`, and for each field Image srcset sizes lists, add
+   the size to `default_config` or to the field's own `sizes`. Then
+   Configuration → Utilities → Recreate changed images recreates the images
+   of fields whose sizes or formats changed (Image configs counts them).
+
 3. **Restart the server**, or use Configuration → Cache → Empty all caches in
    its admin (with Florist, `florist prod cache:clear`). The tasks write to the
    database, and a server that ran meanwhile keeps serving the pages it cached

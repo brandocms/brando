@@ -135,6 +135,13 @@ msgid_plural "%{count} errors"
 msgstr[0] "%{count} feil"
 msgstr[1] "%{count} feil"
 
+#: lib/brando/doctor/checks/image_srcsets.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} field's srcset names sizes default_config no longer gives it"
+msgid_plural "%{count} fields' srcsets name sizes default_config no longer gives them"
+msgstr[0] "srcset i %{count} felt nevner størrelser default_config ikke lenger gir det"
+msgstr[1] "srcset i %{count} felt nevner størrelser default_config ikke lenger gir dem"
+
 #: lib/brando/doctor/checks/deprecations.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} file"
@@ -688,6 +695,11 @@ msgstr "Hex"
 msgid "Image configs"
 msgstr "Bildeoppsett"
 
+#: lib/brando/doctor/checks/image_srcsets.ex
+#, elixir-autogen, elixir-format
+msgid "Image srcset sizes"
+msgstr "Størrelser i bilde-srcset"
+
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "Images → Alt text drafts it with AI, for review before saving"
@@ -980,6 +992,11 @@ msgstr "legg til %{dependency} i deps i mix.exs og kjør mix deps.get, eller fje
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
 msgstr "legg %{queues} til køene i config :brando, Oban (se Brando.Supervisor)"
 
+#: lib/brando/doctor/checks/image_srcsets.ex
+#, elixir-autogen, elixir-format
+msgid "add each size to default_config, or to the field's own sizes; until then its srcset is rendered without it"
+msgstr "legg hver størrelse til i default_config, eller i feltets egne sizes; til da vises srcset uten den"
+
 #: lib/brando/doctor/checks/soft_delete_repo.ex
 #, elixir-autogen, elixir-format
 msgid "add use Brando.SoftDelete.Repo to %{repo}, after use Ecto.Repo"
@@ -1193,6 +1210,11 @@ msgstr "alle bilder har alt-tekst"
 #, elixir-autogen, elixir-format
 msgid "every page's template is in its site's PageHTML"
 msgstr "malen til hver side finnes i nettstedets PageHTML"
+
+#: lib/brando/doctor/checks/image_srcsets.ex
+#, elixir-autogen, elixir-format
+msgid "every srcset names sizes its field has"
+msgstr "hver srcset nevner bare størrelser feltet har"
 
 #: lib/brando/doctor/checks/colors.ex
 #, elixir-autogen, elixir-format

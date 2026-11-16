@@ -331,7 +331,7 @@ defmodule Brando.Users do
           end_session(token)
           nil
         else
-          Repo.preload(user, :avatar)
+          user |> Repo.preload(:avatar) |> Brando.Users.DefaultContentLanguage.fill()
         end
     end
   end

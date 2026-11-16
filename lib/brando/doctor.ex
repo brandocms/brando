@@ -39,6 +39,7 @@ defmodule Brando.Doctor do
     Checks.AdminAssets,
     Checks.AdminCss,
     Checks.ImageConfigs,
+    Checks.ImageSrcsets,
     Checks.Modules,
     Checks.ModuleEntryPaths,
     Checks.HeexLinkGlobals,

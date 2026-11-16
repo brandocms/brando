@@ -135,6 +135,13 @@ msgid_plural "%{count} errors"
 msgstr[0] ""
 msgstr[1] ""
 
+#: lib/brando/doctor/checks/image_srcsets.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} field's srcset names sizes default_config no longer gives it"
+msgid_plural "%{count} fields' srcsets name sizes default_config no longer gives them"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/brando/doctor/checks/deprecations.ex
 #, elixir-autogen, elixir-format
 msgid "%{count} file"
@@ -688,6 +695,11 @@ msgstr ""
 msgid "Image configs"
 msgstr ""
 
+#: lib/brando/doctor/checks/image_srcsets.ex
+#, elixir-autogen, elixir-format
+msgid "Image srcset sizes"
+msgstr ""
+
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "Images → Alt text drafts it with AI, for review before saving"
@@ -980,6 +992,11 @@ msgstr ""
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
 msgstr ""
 
+#: lib/brando/doctor/checks/image_srcsets.ex
+#, elixir-autogen, elixir-format
+msgid "add each size to default_config, or to the field's own sizes; until then its srcset is rendered without it"
+msgstr ""
+
 #: lib/brando/doctor/checks/soft_delete_repo.ex
 #, elixir-autogen, elixir-format
 msgid "add use Brando.SoftDelete.Repo to %{repo}, after use Ecto.Repo"
@@ -1192,6 +1209,11 @@ msgstr ""
 #: lib/brando/doctor/checks/page_templates.ex
 #, elixir-autogen, elixir-format
 msgid "every page's template is in its site's PageHTML"
+msgstr ""
+
+#: lib/brando/doctor/checks/image_srcsets.ex
+#, elixir-autogen, elixir-format
+msgid "every srcset names sizes its field has"
 msgstr ""
 
 #: lib/brando/doctor/checks/colors.ex

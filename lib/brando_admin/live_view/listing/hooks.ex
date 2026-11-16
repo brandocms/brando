@@ -465,22 +465,6 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
         BrandoAdmin.Toast.send_to(current_user, message)
         {:halt, socket}
 
-      {:set_content_language, language}, %{assigns: %{current_user: current_user}} = socket ->
-        {:ok, updated_current_user} =
-          Brando.Users.update_user(
-            current_user,
-            %{config: %{content_language: language}},
-            :system,
-            show_notification: false
-          )
-
-        send(
-          self(),
-          {:toast, gettext("Content language is now %{language}", language: String.upcase(language))}
-        )
-
-        {:halt, assign(socket, :current_user, updated_current_user)}
-
       {:set_content_language_and_navigate, language, url}, %{assigns: %{current_user: current_user}} = socket ->
         {:ok, updated_current_user} =
           Brando.Users.update_user(
@@ -534,22 +518,6 @@ defmodule BrandoAdmin.LiveView.Listing.Hooks do
       {:toast, message}, %{assigns: %{current_user: current_user}} = socket ->
         BrandoAdmin.Toast.send_to(current_user, message)
         {:halt, socket}
-
-      {:set_content_language, language}, %{assigns: %{current_user: current_user}} = socket ->
-        {:ok, updated_current_user} =
-          Brando.Users.update_user(
-            current_user,
-            %{config: %{content_language: language}},
-            :system,
-            show_notification: false
-          )
-
-        send(
-          self(),
-          {:toast, gettext("Content language is now %{language}", language: String.upcase(language))}
-        )
-
-        {:halt, assign(socket, :current_user, updated_current_user)}
 
       {:set_content_language_and_navigate, language, url}, %{assigns: %{current_user: current_user}} = socket ->
         {:ok, updated_current_user} =

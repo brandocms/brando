@@ -681,9 +681,9 @@ Unknown options fail the compilation. For rendering and upload recipes, see
 <!-- usage-rules:end -->
 
 The defaults come from `config :brando, Brando.Images, default_config: ...`
-(and `Brando.Files`, `Brando.Videos`), or Brando's built-in defaults. Literal
-configs are merged when the Blueprint compiles, so a changed default config
-needs a recompile.
+(and `Brando.Files`, `Brando.Videos`), or Brando's built-in defaults. A config
+is merged over the default when it is read, for Brando's own Blueprints and the
+application's alike, so `default_config` may be set in `config/runtime.exs`.
 
 The fields, by type:
 

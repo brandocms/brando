@@ -131,10 +131,13 @@ defmodule BrandoAdmin.LiveView.Form.Hooks do
     {:cont, attach_hook(socket, :b_form_alert, :handle_info, &handle_hooks_alert_info/2)}
   end
 
+  # In place of `BrandoAdmin.Hooks.handle_content_language/2`, which would
+  # take the message first.
   def on_mount({:hooks_content_language, _schema}, _params, _session, socket) do
     {:cont,
-     attach_hook(
-       socket,
+     socket
+     |> detach_hook(:content_language, :handle_info)
+     |> attach_hook(
        :b_form_content_language,
        :handle_info,
        &handle_hooks_content_language_info/2

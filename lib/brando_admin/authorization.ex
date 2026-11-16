@@ -343,7 +343,7 @@ defmodule BrandoAdmin.Authorization do
           loaded -> loaded
         end
 
-      user = %{snapshot.user | avatar: avatar}
+      user = Brando.Users.DefaultContentLanguage.fill(%{snapshot.user | avatar: avatar})
       socket = socket |> assign(:authorization, snapshot) |> assign(:current_user, user)
       {:cont, socket}
     else

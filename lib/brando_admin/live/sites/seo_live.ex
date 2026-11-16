@@ -1601,11 +1601,16 @@ defmodule BrandoAdmin.Sites.SEOLive do
         first_seo = List.first(Sites.list_seos!())
 
         {:ok, seo} =
-          Sites.duplicate_seo(first_seo.id, :system, merge_fields: %{language: content_language})
+          Sites.duplicate_seo(first_seo.id, :system, merge_fields: %{language: language_atom(content_language)})
 
         assign(socket, :entry_id, seo.id)
     end
   end
+
+  # The user's content language is stored as a string; the entry's language is
+  # an enum of the configured languages
+  defp language_atom(language) when is_binary(language), do: String.to_existing_atom(language)
+  defp language_atom(language), do: language
 
   # Appends to the embedded redirects through a changeset so the existing
   # rows keep their identity instead of being re-cast from params. The URL

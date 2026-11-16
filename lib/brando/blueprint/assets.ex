@@ -115,7 +115,17 @@ defmodule Brando.Blueprint.Assets do
   def __assets__(module) do
     module
     |> Extension.get_entities([:assets])
-    |> Enum.map(&AssetConfigNormalizer.normalize/1)
+    |> Enum.map(&AssetConfigNormalizer.normalize(&1, module))
+  end
+
+  @doc """
+  Returns the compiled and normalized assets of `type` for `module`.
+  """
+  def __assets__(module, type) do
+    module
+    |> Extension.get_entities([:assets])
+    |> Enum.filter(&(&1.type == type))
+    |> Enum.map(&AssetConfigNormalizer.normalize(&1, module))
   end
 
   @doc """
@@ -124,7 +134,7 @@ defmodule Brando.Blueprint.Assets do
   def __asset__(module, name) do
     module
     |> Extension.get_persisted({:asset, name})
-    |> AssetConfigNormalizer.normalize()
+    |> AssetConfigNormalizer.normalize(module)
   end
 
   @doc """

@@ -4480,8 +4480,8 @@ msgstr "Innholdet beholdes."
 msgid "Content language"
 msgstr "Innholdsspråk"
 
+#: lib/brando_admin/hooks.ex
 #: lib/brando_admin/live_view/form/hooks.ex
-#: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "Content language is now %{language}"
 msgstr "Innholdsspråket er %{language}"

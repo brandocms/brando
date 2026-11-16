@@ -54,6 +54,7 @@ defmodule Brando.Users.User do
   trait :protect_role
   trait :protect_password
   trait :watch_language
+  trait Brando.Users.DefaultContentLanguage
 
   identifier false
   persist_identifier false

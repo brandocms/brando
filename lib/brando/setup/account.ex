@@ -30,7 +30,10 @@ defmodule Brando.Setup.Account do
       avatar: nil,
       role: :superuser,
       language: default_admin_language(),
-      config: %UserConfig{reset_password_on_first_login: false}
+      config: %UserConfig{
+        reset_password_on_first_login: false,
+        content_language: Brando.Languages.installation_default_language()
+      }
     })
   end
 

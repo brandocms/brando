@@ -241,7 +241,11 @@ defmodule Brando.Uploads.DirectImageTest do
     end
 
     test "files the image in a non-library folder the library queries leave out" do
-      put_image_config(%{cdn: @cdn, hidden_folder: "visitors"})
+      # `AltText.missing/0` below reads every Blueprint's assets, merged over
+      # this default: the test Blueprints' galleries name these sizes in their
+      # srcsets, as Brando's default config does
+      sizes = Map.new(~w(thumb small medium large), &{&1, %{"size" => "150x150", "quality" => 70}})
+      put_image_config(%{cdn: @cdn, hidden_folder: "visitors", sizes: sizes})
       body = File.read!(@fixture)
       {:ok, upload} = Direct.presign(:image, "default", meta())
 

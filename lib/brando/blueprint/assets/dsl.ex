@@ -66,14 +66,15 @@ defmodule Brando.Blueprint.Assets.Dsl do
       raise_missing_config!(asset)
     end
 
-    normalized_config =
-      if is_function(config, 0) do
-        config
-      else
-        AssetConfigNormalizer.normalize_declared_value!(type, asset.name, config)
-      end
+    # Checked now, so a malformed `cfg:` fails the Blueprint, but kept as
+    # written: `default_config` is merged in when the config is read
+    # (`Brando.Blueprint.Assets.__assets__/1`), so the Blueprint compiled into
+    # an installed Brando follows the application's configuration.
+    if not is_function(config, 0) do
+      AssetConfigNormalizer.normalize_declared_value!(type, asset.name, config)
+    end
 
-    {:ok, %{asset | opts: Map.put(opts, :cfg, normalized_config)}}
+    {:ok, %{asset | opts: opts}}
   end
 
   def transform(asset) do

@@ -4480,8 +4480,8 @@ msgstr ""
 msgid "Content language"
 msgstr ""
 
+#: lib/brando_admin/hooks.ex
 #: lib/brando_admin/live_view/form/hooks.ex
-#: lib/brando_admin/live_view/listing/hooks.ex
 #, elixir-autogen, elixir-format
 msgid "Content language is now %{language}"
 msgstr ""

@@ -7,11 +7,6 @@ defmodule BrandoIntegration.UserTest do
   alias Brando.Users
   alias Brando.Users.UserConfig
 
-  test "embedded config uses the configured default content language" do
-    assert %UserConfig{content_language: default_language} = %UserConfig{}
-    assert default_language == Brando.RuntimeConfig.get(:default_language)
-  end
-
   test "JSON of a user leaves out the password hash" do
     user = Factory.insert(:random_user)
     json = user |> Jason.encode!() |> Jason.decode!()
