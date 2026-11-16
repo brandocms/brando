@@ -15,3 +15,5 @@
 - The Environments screen lists the live environment first, then the others by name.
 
 - The presence avatars in the bottom right corner no longer cover a row's Delete button on the Environments and Publishing screens.
+
+- The System check for a served build's static paths says, when skipped in a release, that it runs in development, where the endpoint's source can be read.
