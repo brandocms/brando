@@ -357,6 +357,16 @@ msgstr[1] ""
 msgid "%{database}, not the development database"
 msgstr ""
 
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry}: only in only:, its files answer the build's 404 page"
+msgstr ""
+
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "%{entry}: only in static_paths/0"
+msgstr ""
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{file} differs from %{template}"
@@ -850,6 +860,11 @@ msgstr ""
 msgid "Skipped"
 msgstr ""
 
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "Static paths of served builds"
+msgstr ""
+
 #: lib/brando/doctor/checks/colors.ex
 #, elixir-autogen, elixir-format
 msgid "Stored colours"
@@ -1087,6 +1102,11 @@ msgstr ""
 #: lib/brando/doctor.ex
 #, elixir-autogen, elixir-format
 msgid "could not run"
+msgstr ""
+
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "define static_paths/0 in the web module with the endpoint's Plug.Static only: list, and pass it as only:"
 msgstr ""
 
 #: lib/brando/doctor/checks/robots.ex
@@ -1435,6 +1455,11 @@ msgstr ""
 msgid "no site URL"
 msgstr ""
 
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "no site is served by this installation"
+msgstr ""
+
 #: lib/brando/doctor/checks/sitemap.ex
 #, elixir-autogen, elixir-format
 msgid "no sitemap module"
@@ -1489,6 +1514,11 @@ msgstr ""
 #: lib/brando/doctor/checks/alt_text.ex
 #, elixir-autogen, elixir-format
 msgid "open each image marked “No alt text” under Images and write its Alt. text (no AI provider is configured to draft it)"
+msgstr ""
+
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "pass the web module's static_paths/0 as the endpoint's Plug.Static only:"
 msgstr ""
 
 #: lib/brando/doctor/source.ex
@@ -1631,6 +1661,16 @@ msgstr ""
 msgid "skipped in a release: needs the project's source files"
 msgstr ""
 
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "static_paths/0 and the endpoint's Plug.Static only: differ"
+msgstr ""
+
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "static_paths/0 matches the endpoint's Plug.Static only:"
+msgstr ""
+
 #: lib/brando/doctor/checks/test_database.ex
 #, elixir-autogen, elixir-format
 msgid "test and development both connect to %{database}"
@@ -1656,6 +1696,16 @@ msgstr ""
 msgid "the default branch"
 msgstr ""
 
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "the endpoint's Plug.Static has no only:"
+msgstr ""
+
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "the endpoint's Plug.Static only: could not be read"
+msgstr ""
+
 #: lib/brando/doctor/checks/versions.ex
 #, elixir-autogen, elixir-format
 msgid "the locked commit is not the latest on %{branch} (%{commit}): mix deps.update brando"
@@ -1664,6 +1714,11 @@ msgstr ""
 #: lib/brando/doctor/checks/release_dependencies.ex
 #, elixir-autogen, elixir-format
 msgid "the release ships %{apps}"
+msgstr ""
+
+#: lib/brando/doctor/checks/static_paths.ex
+#, elixir-autogen, elixir-format
+msgid "the web module has no static_paths/0"
 msgstr ""
 
 #: lib/brando/doctor/checks/page_templates.ex

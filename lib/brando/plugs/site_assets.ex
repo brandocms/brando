@@ -70,7 +70,10 @@ defmodule Brando.Plug.SiteAssets do
   (`Brando.Assets.SiteAssets.Capture.release_root/0`) under one of the web
   module's `static_paths/0`, which a generated endpoint passes as its `only:`.
   A web module without `static_paths/0` leaves the release's directory alone
-  to decide.
+  to decide. The two lists should be the same (the System check's "Static
+  paths of served builds" compares them): a request this lets through that
+  `Plug.Static` does not serve gets the build's 404 page from
+  `Brando.Plug.Tenant`.
 
   On a host that serves a published build (`Brando.SSG.LocalDelivery`), a file
   the build lacks reaches the pipeline when this says it has one: the admin's
