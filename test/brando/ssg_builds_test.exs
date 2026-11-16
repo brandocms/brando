@@ -552,7 +552,15 @@ defmodule Brando.SSGBuildsTest do
       assert {:error, :deploy_target_lookup_failed} =
                perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => "deploy"})
 
-      assert Builds.get_build(build.id).build_log =~ "host could not be looked up"
+      log = Builds.get_build(build.id).build_log
+      assert log =~ "host could not be looked up. It is tried again."
+
+      assert {:error, :deploy_target_lookup_failed} =
+               perform_job(Brando.Worker.SSGDeploy, %{"build_id" => build.id, "action" => "deploy"}, attempt: 3)
+
+      last = String.replace_prefix(Builds.get_build(build.id).build_log, log, "")
+      assert last =~ "host could not be looked up. That was the last attempt."
+      refute last =~ "tried again"
     end
 
     test "rsync into its own directory deploys", context do
