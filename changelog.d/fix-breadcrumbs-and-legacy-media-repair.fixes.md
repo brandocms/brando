@@ -2,4 +2,4 @@
 
 - Trashing or restoring a page brings the breadcrumbs of the pages under it up to date at once, instead of on their next save.
 
-- `mix brando.repair.legacy_media` takes the database time zone's UTC offset at the conversion, not at the repair, so a daylight-saving change in between no longer has it skip every gallery.
+- `mix brando.repair.legacy_media` takes the database time zone's UTC offset at the conversion, not at the repair, and the larger one when the clocks changed during the conversion, so a daylight-saving change no longer has it skip every gallery.

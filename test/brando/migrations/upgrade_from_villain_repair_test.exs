@@ -157,6 +157,53 @@ defmodule Brando.Migrations.UpgradeFromVillainRepairTest do
       end)
     end
 
+    test "the cutoff takes the larger offset when daylight-saving time ended between brando_133 and brando_175" do
+      %{page: page_id} = lost_media()
+
+      # Daylight-saving time (+2) ends at local midnight starting today - 5,
+      # 22:00 UTC the day before: brando_133 ran 20 minutes before, and
+      # brando_175 20 minutes after, in standard time (+1)
+      today = Date.utc_today()
+      day = fn date -> Date.day_of_year(date) - 1 end
+      zone = "AAA-1BBB,#{day.(Date.add(today, -20))}/0,#{day.(Date.add(today, -5))}/0"
+      change = NaiveDateTime.new!(Date.add(today, -6), ~T[22:00:00])
+      t133 = NaiveDateTime.add(change, -20 * 60)
+      t175 = NaiveDateTime.add(change, 20 * 60)
+
+      [[migrated_at]] = rows("SELECT inserted_at FROM schema_migrations WHERE version = $1", [version() + 175])
+      seconds = NaiveDateTime.diff(migrated_at, t175)
+      [[gallery_id]] = rows("SELECT gallery_id FROM content_refs WHERE name = 'gallery' AND gallery_id IS NOT NULL")
+
+      # The site as it was then
+      for [table, column] <-
+            rows("""
+            SELECT table_name, column_name FROM information_schema.columns
+            WHERE table_schema = 'public' AND data_type = 'timestamp without time zone'
+              AND column_name IN ('inserted_at', 'updated_at', 'edited_at')
+            """),
+          do: rows(~s|UPDATE "#{table}" SET "#{column}" = "#{column}" - interval '#{seconds} seconds'|)
+
+      rows("UPDATE schema_migrations SET inserted_at = $1 WHERE version = $2", [t133, version() + 133])
+      rows("UPDATE schema_migrations SET inserted_at = $1 WHERE version = $2", [t175, version() + 175])
+
+      BrandoIntegration.Repo.transaction(fn ->
+        rows("SET LOCAL TIME ZONE '#{zone}'")
+        # What `NOW()` gave brando_133's rows in that zone
+        [[local]] = rows("SELECT ($1::timestamp AT TIME ZONE 'utc')::timestamp", [t133])
+        assert NaiveDateTime.diff(local, t133) == 7200
+        rows("UPDATE galleries SET updated_at = $1 WHERE id = $2", [local, gallery_id])
+
+        rows(
+          "UPDATE galleries_gallery_objects SET inserted_at = $1, updated_at = $1, edited_at = $1 WHERE gallery_id = $2",
+          [local, gallery_id]
+        )
+
+        rows("UPDATE content_blocks SET edited_at = $1 WHERE id = $2", [local, root_block(page_id, 2)])
+
+        assert %{"ref gallery" => {:gallery, _}} = Map.new(repairs())
+      end)
+    end
+
     test "an image to make is left alone once the trash may have emptied one an editor deleted since" do
       %{page: page_id, images: images, state: state} = lost_media()
 
