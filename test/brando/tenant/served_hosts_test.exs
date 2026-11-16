@@ -494,7 +494,9 @@ defmodule Brando.Tenant.ServedHostsTest do
     end
 
     test "a timed-out lookup is retried once soon, then on the retry timer", %{path: file, site: site} do
-      put_test_env(ServedHosts, file: file, addresses: [@here], timeout_retry_interval: 20)
+      # Long enough that the retry, armed in `bind/3`'s check, cannot fire
+      # before the answer below changes
+      put_test_env(ServedHosts, file: file, addresses: [@here], timeout_retry_interval: 300)
       # As a caching resolver answers a name's first query too slowly
       DNS.answer("new.acme.test", {:incomplete, [], [:inet], %{inet: :timeout}})
       bind(site, "new", "new.acme.test")
@@ -503,7 +505,7 @@ defmodule Brando.Tenant.ServedHostsTest do
 
       DNS.answer("new.acme.test", {:error, :nxdomain})
 
-      assert_receive {:served_hosts, %{hosts: %{"new.acme.test" => :unresolved}}}
+      assert_receive {:served_hosts, %{hosts: %{"new.acme.test" => :unresolved}}}, 1_000
     end
 
     test "the quick retry after a timeout runs once, and not for another failure", %{path: file, site: site} do
