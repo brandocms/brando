@@ -100,6 +100,19 @@ defmodule Brando.JSONLD do
     |> maybe_add_id(data)
   end
 
+  @doc """
+  The `@type` of the entity `extract_json_ld/3` builds for `data`, without
+  building it: its schema's, or the entry's own `json_ld_type` when that is
+  not a page type. `nil` when the Blueprint has no JSON-LD schema.
+  """
+  @spec entity_type(module(), term()) :: String.t() | nil
+  def entity_type(module, data) do
+    case module |> Spark.Dsl.Extension.get_entities(:json_ld_schemas) |> List.first() do
+      nil -> nil
+      %{schema: schema} -> schema |> struct() |> maybe_override_type(data) |> Map.get(:"@type") |> to_string()
+    end
+  end
+
   # The videos the entry shows, on schemas with a `video` property, unless the
   # blueprint maps `video` itself or opts out with `videos: false`.
   defp maybe_put_videos(struct, module, json_ld_data, fields, data) do

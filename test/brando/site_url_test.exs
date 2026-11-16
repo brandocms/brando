@@ -265,8 +265,7 @@ defmodule Brando.SiteURLTest do
           |> Plug.Conn.assign(:language, "en")
           |> Brando.Plug.HTML.put_hreflang(en: "/en/about", no: "/no/om")
 
-        assert conn.private.brando_hreflangs == [
-                 {"en", "http://staging.acme.test/en/about"},
+        assert Brando.Plug.HTML.hreflangs(conn) == [
                  {:en, "http://staging.acme.test/en/about"},
                  {:no, "http://staging.acme.test/no/om"}
                ]
@@ -292,9 +291,9 @@ defmodule Brando.SiteURLTest do
         {:ok, head} =
           render_component(&Brando.HTML.render_hreflangs/1, conn: conn) |> Floki.parse_fragment()
 
-        hrefs = Floki.attribute(head, ~s(link[rel="alternate"][hreflang]), "href")
-        assert hrefs != []
-        assert Enum.all?(hrefs, &(&1 == "http://staging.acme.test" <> path))
+        # One language: its alternate is the page's URL, and a single language lists none
+        assert Brando.Plug.HTML.hreflangs(conn) == [{:en, "http://staging.acme.test" <> path}]
+        assert Floki.attribute(head, ~s(link[rel="alternate"][hreflang]), "href") == []
       end)
     end
 

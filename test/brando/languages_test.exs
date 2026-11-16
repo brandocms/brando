@@ -248,10 +248,10 @@ defmodule Brando.LanguagesTest do
 
     test "alternates through a route's {fun, args} list each site's own languages at their own URLs" do
       enter("acme")
-      assert hreflang_paths("no") == [{"no", "/articles/hei"}, {:en, "/en/articles/slug"}, {:no, "/articles/slug"}]
+      assert hreflang_paths("no") == [{:no, "/articles/hei"}, {:en, "/en/articles/slug"}]
 
       enter("beta")
-      assert hreflang_paths("en") == [{"en", "/articles/hei"}, {:en, "/articles/slug"}]
+      assert hreflang_paths("en") == [{:en, "/articles/hei"}]
     end
   end
 
@@ -537,7 +537,7 @@ defmodule Brando.LanguagesTest do
   defp localized(language, slug),
     do: Brando.I18n.Helpers.localized_path(language, :article_path, [Brando.endpoint(), :show, slug])
 
-  # The canonical, then the alternates, as paths
+  # The page's own alternate, then the other languages', as paths
   defp hreflang_paths(language) do
     conn =
       build_conn()
@@ -545,7 +545,7 @@ defmodule Brando.LanguagesTest do
       |> Plug.Conn.assign(:language, language)
       |> Brando.Plug.HTML.put_hreflang({:article_path, [Brando.endpoint(), :show, "slug"]})
 
-    Enum.map(conn.private.brando_hreflangs, fn {language, url} -> {language, URI.parse(url).path} end)
+    Enum.map(Brando.Plug.HTML.hreflangs(conn), fn {language, url} -> {language, URI.parse(url).path} end)
   end
 
   # The application environment for this test; the module is synchronous

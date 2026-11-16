@@ -258,8 +258,13 @@ defmodule Brando.HTML do
     """
   end
 
-  defp get_alternate_url(%{fallback: fallback, language: language, conn: %{private: %{brando_hreflangs: hreflangs}}}) do
-    Keyword.get(hreflangs, language, fallback)
+  # The alternate as `put_hreflang/2` was given it (a route helper's path
+  # stays on the visitor's host), else the head's (`Brando.Plug.HTML.hreflangs/1`)
+  defp get_alternate_url(%{fallback: fallback, language: language, conn: %{private: %{brando_hreflangs: given}} = conn}) do
+    case List.keyfind(given, language, 0) || List.keyfind(Brando.Plug.HTML.hreflangs(conn), language, 0) do
+      {_, url} -> url
+      nil -> fallback
+    end
   end
 
   defp get_alternate_url(assigns), do: assigns.fallback
@@ -325,7 +330,7 @@ defmodule Brando.HTML do
   # The canonical is the page's URL (`Brando.Plug.HTML.page_url/1`) unless the
   # page set another; a page without a URL (the 404 page) has none.
   def render_hreflangs(%{conn: conn} = assigns) do
-    hreflangs = conn.private[:brando_hreflangs] || []
+    hreflangs = Brando.Plug.HTML.hreflangs(conn)
 
     assigns =
       assigns

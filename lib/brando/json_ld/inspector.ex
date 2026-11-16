@@ -330,8 +330,12 @@ defmodule Brando.JSONLD.Inspector do
 
   defp count(nodes, level), do: nodes |> Enum.flat_map(& &1.issues) |> Enum.count(&(&1.level == level))
 
-  defp main_id(%{assigns: %{json_ld_entities: [%{"@id": id} | _]}}), do: id
-  defp main_id(_conn), do: nil
+  defp main_id(conn) do
+    case Brando.Plug.HTML.json_ld_entities(conn) do
+      [%{"@id": id} | _] -> id
+      _ -> nil
+    end
+  end
 
   ## Sources
 

@@ -150,35 +150,48 @@ defmodule Brando.Plug.HTML do
   end
 
   def put_json_ld(conn, module, data, extra_fields \\ []) do
-    conn = put_entry_url(conn, data)
-
-    meta_meta = %{
-      __meta__: %{
-        current_url: page_url(conn),
-        language: Map.get(data, :language, conn.assigns.language)
-      }
-    }
-
-    data_with_meta = Map.merge(data, meta_meta)
-
-    entity = JSONLD.extract_json_ld(module, data_with_meta, extra_fields)
+    language = Map.get(data, :language, conn.assigns.language)
     existing = Map.get(conn.assigns, :json_ld_entities, [])
 
     conn
-    |> assign(:json_ld_entities, existing ++ List.wrap(entity))
-    |> put_json_ld_page(data, entity)
+    |> put_entry_url(:json_ld, data)
+    |> assign(:json_ld_entities, existing ++ [{:entry, module, data, language, extra_fields}])
+    |> put_json_ld_page(data, JSONLD.entity_type(module, data))
     |> put_page_entry(data)
   end
 
-  # A person's own page is their profile: a `ProfilePage` about the Person.
-  # (An entry with its own `json_ld_type` gives the entity that type instead.)
-  defp put_json_ld_page(conn, _data, %{"@type": "Person", "@id": id}) when is_binary(id) do
-    conn
-    |> assign(:json_ld_page_type, "ProfilePage")
-    |> assign(:json_ld_main_entity, id)
+  @doc """
+  The JSON-LD entities added with `put_json_ld/3` and `put_json_ld/4`, in the
+  order they were added. An entry's entity is built here, at the page's URL
+  (`page_url/1`), so its `@id` and its fields of type `:current_url` name the
+  URL the page has once the controller is done, whichever entry gives it.
+  """
+  @spec json_ld_entities(conn) :: [struct()]
+  def json_ld_entities(conn) do
+    url = page_url(conn)
+
+    conn.assigns
+    |> Map.get(:json_ld_entities, [])
+    |> Enum.flat_map(fn
+      {:entry, module, data, language, extra_fields} ->
+        data = Map.merge(data, %{__meta__: %{current_url: url, language: language}})
+        module |> JSONLD.extract_json_ld(data, extra_fields) |> List.wrap()
+
+      entity ->
+        List.wrap(entity)
+    end)
   end
 
-  defp put_json_ld_page(conn, data, _entity),
+  # A person's own page is their profile: a `ProfilePage` about the Person,
+  # whose node is the page's `#person`. (An entry with its own `json_ld_type`
+  # gives the entity that type instead.)
+  defp put_json_ld_page(conn, _data, "Person") do
+    conn
+    |> assign(:json_ld_page_type, "ProfilePage")
+    |> assign(:json_ld_main_entity, {:page_node, "person"})
+  end
+
+  defp put_json_ld_page(conn, data, _type),
     do: assign(conn, :json_ld_page_type, Map.get(data, :json_ld_type, "WebPage"))
 
   @doc """
@@ -201,20 +214,17 @@ defmodule Brando.Plug.HTML do
   gives the `<link rel="alternate">` tags the site's base URL.
   """
   def put_hreflang(conn, hreflangs) when is_list(hreflangs) do
-    full_host_canonical = {conn.assigns.language, page_url(conn) || Utils.current_url(conn)}
-    full_host_hreflangs = Enum.map(hreflangs, fn {language, path} -> {language, with_host(path)} end)
-    put_private(conn, :brando_hreflangs, [full_host_canonical] ++ full_host_hreflangs)
+    alternates = Enum.map(hreflangs, fn {language, path} -> {language_key(language), with_host(path)} end)
+    put_alternates(conn, conn.assigns.language, alternates)
   end
 
   def put_hreflang(conn, {fun, args}) do
-    full_host_canonical = {conn.assigns.language, page_url(conn) || Utils.current_url(conn)}
-
-    full_host_hreflangs =
+    alternates =
       Enum.map(Brando.Languages.languages(), fn [value: lang_code, text: _] ->
         {String.to_existing_atom(lang_code), Brando.I18n.Helpers.localized_path(lang_code, fun, args)}
       end)
 
-    put_private(conn, :brando_hreflangs, [full_host_canonical] ++ full_host_hreflangs)
+    put_alternates(conn, conn.assigns.language, alternates)
   end
 
   def put_hreflang(conn, %{alternate_entries: %Ecto.Association.NotLoaded{}} = entry) do
@@ -238,7 +248,7 @@ defmodule Brando.Plug.HTML do
   def put_hreflang(conn, %{alternate_entries: alternate_entries} = entry) when is_list(alternate_entries) do
     case URL.resolve(entry, :with_host) do
       nil ->
-        put_entry_url(conn, entry)
+        conn
 
       canonical_url ->
         hreflangs =
@@ -247,13 +257,48 @@ defmodule Brando.Plug.HTML do
           |> Enum.flat_map(&alternate_hreflang/1)
 
         conn
-        |> put_entry_url(entry)
-        |> put_private(:brando_hreflangs, [{entry.language, canonical_url} | hreflangs])
+        |> put_entry_url(:hreflang, entry)
+        |> put_alternates(entry.language, [{entry.language, canonical_url} | hreflangs])
         |> put_entry_page(entry)
     end
   end
 
   def put_hreflang(conn, _), do: conn
+
+  defp put_alternates(conn, language, alternates) do
+    conn
+    |> put_private(:brando_hreflangs, alternates)
+    |> put_private(:brando_hreflang_language, language_key(language))
+  end
+
+  @doc """
+  The page's alternates, as `{language, url}`, for its `<link rel="alternate">`
+  tags: its own language's is the page's URL (`page_url/1`), whatever
+  `put_hreflang/2` was given for that language, and comes first; the other
+  languages' follow as given. A page without a URL (an error page) lists
+  only the other languages'.
+  """
+  @spec hreflangs(conn) :: [{atom() | String.t(), String.t()}]
+  def hreflangs(%{private: %{brando_hreflangs: alternates}} = conn) do
+    own = conn.private[:brando_hreflang_language]
+    others = Enum.reject(alternates, fn {language, _} -> language == own end)
+
+    case page_url(conn) do
+      nil -> others
+      url -> [{own, url} | others]
+    end
+  end
+
+  def hreflangs(_conn), do: []
+
+  # Languages as atoms, however the caller gave them, so one language is one key
+  defp language_key(language) when is_binary(language) do
+    String.to_existing_atom(language)
+  rescue
+    ArgumentError -> language
+  end
+
+  defp language_key(language), do: language
 
   # A path gets the current site's base URL; a URL stays as it is
   defp with_host("/" <> _ = path), do: Brando.Utils.hostname(path)
@@ -318,16 +363,35 @@ defmodule Brando.Plug.HTML do
   def get_canonical(conn), do: conn.private[:brando_canonical_url]
 
   @doc """
-  The page's URL, which its canonical link, `og:url`, its own language's
-  alternate and its JSON-LD `@id`s and `url`s all name:
+  Sets the page's URL (`page_url/1`), for a controller that knows it better
+  than the entries it describes the page with. Takes a URL or a path, which
+  gets the site's base URL:
 
-    * the URL of the page's entry, the first one passed to `put_meta/3`,
-      `put_hreflang/2` or `put_json_ld/3` whose blueprint has an
-      `absolute_url`, whatever path the request used;
-    * for a page without an entry, the request URL, without its query string;
-    * `nil` on an error page (a status of 400 or over) and for an entry
-      without a URL of its own, such as the 404 page: neither is a page at
-      the URL it was requested at.
+      put_page_url(conn, "/projects")
+
+  """
+  @spec put_page_url(conn, String.t() | nil) :: conn
+  def put_page_url(conn, "/" <> _ = path), do: put_private(conn, :brando_page_url, Utils.hostname(path))
+  def put_page_url(conn, url) when is_binary(url) and url != "", do: put_private(conn, :brando_page_url, url)
+  def put_page_url(conn, _url), do: conn
+
+  @doc """
+  The page's URL, which its canonical link, `og:url`, its own language's
+  alternate and its JSON-LD `@id`s and `url`s all name. It is chosen when the
+  head is rendered, so the order the controller calls these in does not
+  matter. The first of these that gives one:
+
+    1. the URL given to `put_page_url/2`;
+    2. the URL of the entry given to `put_hreflang/2`;
+    3. the URL of the entry given to `put_json_ld/3`;
+    4. the URL of the entry given to `put_meta/3`;
+    5. the request URL, without its query string.
+
+  An entry without a URL of its own (`absolute_url false`, or `only:` leaving
+  it out), or whose URL cannot be resolved (a preload its template needs is
+  missing, which is logged), gives none, and the next one is used. An error
+  response (a status outside 200–299, such as the 404 and 410 pages) has no
+  URL: `nil`.
 
   Like the entry's URL and the sitemap's, it has no trailing slash: a page
   requested at `/about/` has the URL `https://example.com/about`. The front
@@ -335,30 +399,64 @@ defmodule Brando.Plug.HTML do
   """
   @spec page_url(conn) :: String.t() | nil
   def page_url(conn) do
-    cond do
-      is_integer(conn.status) and conn.status >= 400 -> nil
-      is_binary(conn.private[:brando_page_url]) -> conn.private[:brando_page_url]
-      conn.private[:brando_page_url] == false -> nil
-      true -> Utils.current_url(conn)
+    if error_status?(conn.status) do
+      nil
+    else
+      entries = conn.private[:brando_page_url_entries] || %{}
+
+      conn.private[:brando_page_url] || entries[:hreflang] || entries[:json_ld] || entries[:meta] ||
+        Utils.current_url(conn)
     end
   end
 
-  # The page's URL from the first entry with a blueprint `absolute_url`. An
-  # entry the blueprint gives no URL (`only: %{has_url: true}`) leaves the
-  # page without one; a URL that does not resolve (a preload the template
-  # needs is missing) leaves the request's.
-  defp put_entry_url(%{private: %{brando_page_url: _}} = conn, _entry), do: conn
+  defp error_status?(nil), do: false
+  defp error_status?(status), do: status not in 200..299
 
-  defp put_entry_url(conn, %{__struct__: module} = entry) do
-    cond do
-      not (function_exported?(module, :__has_absolute_url__, 0) and module.__has_absolute_url__()) -> conn
-      not URL.has_url?(entry) -> put_private(conn, :brando_page_url, false)
-      url = URL.resolve(entry, :with_host) -> put_private(conn, :brando_page_url, url)
+  # The URL of the first entry with one given to `source` (`:hreflang`,
+  # `:json_ld` or `:meta`), for `page_url/1`
+  defp put_entry_url(conn, source, entry) do
+    entries = conn.private[:brando_page_url_entries] || %{}
+
+    with false <- Map.has_key?(entries, source),
+         {url, conn} when is_binary(url) <- entry_url(conn, entry) do
+      put_private(conn, :brando_page_url_entries, Map.put(entries, source, url))
+    else
+      {_no_url, conn} -> conn
       true -> conn
     end
   end
 
-  defp put_entry_url(conn, _entry), do: conn
+  # An entry's URL is resolved once per request: one that raises is logged once
+  defp entry_url(conn, %{__struct__: module, id: id} = entry) when not is_nil(id) do
+    key = {module, id}
+    resolved = conn.private[:brando_entry_urls] || %{}
+
+    case resolved do
+      %{^key => url} ->
+        {url, conn}
+
+      _ ->
+        url = resolve_entry_url(module, entry)
+        {url, put_private(conn, :brando_entry_urls, Map.put(resolved, key, url))}
+    end
+  end
+
+  defp entry_url(conn, %{__struct__: module} = entry), do: {resolve_entry_url(module, entry), conn}
+
+  defp entry_url(conn, _entry), do: {nil, conn}
+
+  defp resolve_entry_url(module, entry) do
+    if function_exported?(module, :__has_absolute_url__, 0) and module.__has_absolute_url__() and URL.has_url?(entry),
+      do: URL.resolve(entry, :with_host)
+  rescue
+    error ->
+      Logger.warning(
+        "The page's URL could not be resolved from #{inspect(module)} ##{inspect(Map.get(entry, :id))}, " <>
+          "so the next source is used: #{Exception.format_banner(:error, error)}"
+      )
+
+      nil
+  end
 
   defp maybe_put_entry_canonical(conn, %{meta_canonical_url: url}), do: put_canonical(conn, url)
   defp maybe_put_entry_canonical(conn, _entry), do: conn
@@ -367,7 +465,6 @@ defmodule Brando.Plug.HTML do
   # canonical override and the snippet limits for the robots meta tag.
   defp put_entry_page(conn, entry) do
     conn
-    |> put_entry_url(entry)
     |> maybe_put_entry_canonical(entry)
     |> put_robots(Brando.Trait.Meta.robots_directives(entry))
     |> put_page_entry(entry)
@@ -409,7 +506,7 @@ defmodule Brando.Plug.HTML do
 
   @spec put_meta(conn, module :: atom, data :: any) :: conn
   def put_meta(conn, module, data, _opts) when is_atom(module) do
-    conn = put_entry_url(conn, data)
+    conn = put_entry_url(conn, :meta, data)
     meta_meta = %{__meta__: %{current_url: page_url(conn)}}
     data_with_meta = Map.merge(data, meta_meta)
     extracted_meta = Brando.Blueprint.Meta.extract_meta(module, data_with_meta)

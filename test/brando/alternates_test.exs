@@ -53,7 +53,7 @@ defmodule Brando.AlternatesTest do
     assert p2.alternate_entries == []
   end
 
-  test "a page without a URL gets no canonical or alternates of its own" do
+  test "a page without a URL, rendered as an error page, gets no canonical or alternates of its own" do
     usr = Factory.insert(:random_user)
 
     {:ok, en} =
@@ -65,7 +65,7 @@ defmodule Brando.AlternatesTest do
     Page.Alternate.add(en.id, no.id)
     {:ok, en} = Pages.get_page(%{matches: %{id: en.id}, preload: [:alternate_entries]})
 
-    conn = Brando.Plug.HTML.put_hreflang(%Plug.Conn{assigns: %{}, request_path: "en/missing"}, en)
+    conn = Brando.Plug.HTML.put_hreflang(%Plug.Conn{assigns: %{}, request_path: "en/missing", status: 404}, en)
     refute Map.has_key?(conn.private, :brando_hreflangs)
 
     assigns = %{conn: conn}
