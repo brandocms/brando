@@ -273,6 +273,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                   </td>
                   <td>
                     <span class={["badge", build_tone(build.status)]}>
+                      <span :if={build.status == :deployed} class="badge-dot"></span>
                       {human_status(build.status)}
                     </span>
                     <small :if={published?(build, @site)} class="publishing-served">{gettext("served by this installation")}</small>
