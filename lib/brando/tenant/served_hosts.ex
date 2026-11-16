@@ -48,19 +48,25 @@ defmodule Brando.Tenant.ServedHosts do
   Nothing is looked up while the file holds every bound host. Each node keeps
   its own file.
 
-  A check never waits for DNS. Each host it looks up gets a task of its own,
-  at most eight at a time while the rest queue, and its lookup timeout
-  starts when its lookup does. A registry write returns once every host it
-  bound has a state, `:checking` for one never looked up; the check itself
-  (the file, the lookups) runs after that. A host looked up again, or
-  queued, keeps its last state meanwhile. Each answer is kept as it arrives;
-  the file is written and the status published once no lookup of its check
-  is left, or within a fifth of a second while some are, so many answers
-  cost one write and a single host's result comes as soon as it answers.
-  The file is read just before each write, and every bound host another
-  node wrote there stays. When that read fails, the file is left as it is
-  and the error reported, while the hosts' states still follow the registry
-  and their lookups.
+  The process never waits for DNS or the file. A registry write returns once
+  every host it bound has a state, `:checking` for one never looked up; the
+  check runs after that, and neither it nor a slow disk holds up the next
+  registry write. The file is read, merged and written by a task of its own,
+  one at a time: a write asked for while one runs follows it once, with what
+  is known then. A check's lookups start when its write has read the file,
+  for the bound hosts neither in it nor admitted. Each host looked up gets a
+  task of its own, at most eight at a time while the rest queue, and its
+  lookup timeout starts when its lookup does. A host looked up again, or
+  queued, keeps its last state meanwhile. Each answer is kept as it arrives,
+  and a host that answered is not looked up again before a write has used
+  its answer; the file is written and the status published once no lookup
+  of its check is left, or within a fifth of a second while some are, so
+  many answers cost one write and a single host's result comes as soon as it
+  answers. A host is `:served` once the write that put it in the file has
+  succeeded. The file is read just before each write, and every bound host
+  another node wrote there stays. When that read fails, the file is left as
+  it is and the error reported, while the hosts' states still follow the
+  registry and their lookups.
 
   Without `:addresses`, this server's addresses are what the endpoint's host
   resolves to, looked up on their own once per check that looks a host up.
@@ -182,8 +188,12 @@ defmodule Brando.Tenant.ServedHosts do
     # `queue`: lookups waiting for one of the `@max_lookups` slots.
     # `batch`: the number of the last check that queued lookups.
     # `results`: what host lookups answered, by host, until admitted or
-    # looked up again.
+    # looked up again. `fresh`: the hosts whose answer no write has decided
+    # on yet, which no check looks up again.
     # `own`: this server's addresses as last looked up, with the name.
+    # `writing`: the reference of the write under way, `write_job` what it was
+    # given. `write_requested`, `check_requested`: a write, or a check (a write
+    # whose result queues lookups), asked for and not started yet.
     # `waiters`: callers of `check/0` and `settled/0` waiting for the lookups.
     state = %{
       timer: nil,
@@ -197,7 +207,12 @@ defmodule Brando.Tenant.ServedHosts do
       queue: :queue.new(),
       batch: 0,
       results: %{},
+      fresh: MapSet.new(),
       own: nil,
+      writing: nil,
+      write_job: nil,
+      write_requested: false,
+      check_requested: false,
       waiters: []
     }
 
@@ -210,7 +225,7 @@ defmodule Brando.Tenant.ServedHosts do
 
   @impl true
   # Quick, and nothing the file or DNS does can slow it: every write to the
-  # registry waits for this reply
+  # registry waits for this reply, and the check after it only starts tasks
   def handle_call(:registry_changed, _from, state) do
     if enabled?() do
       mark_bound()
@@ -233,7 +248,16 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   def handle_info({:flush, flush}, %{flush: flush} = state) do
-    {:noreply, flush(%{state | flush_timer: nil, flush: nil})}
+    {:noreply, state |> flush() |> settle()}
+  end
+
+  def handle_info({ref, result}, %{writing: ref} = state) do
+    Process.demonitor(ref, [:flush])
+    {:noreply, written(state, result)}
+  end
+
+  def handle_info({:DOWN, ref, :process, _pid, reason}, %{writing: ref} = state) do
+    {:noreply, written(state, write_failed(state.write_job, "the write stopped: #{inspect(reason)}"))}
   end
 
   def handle_info({ref, result}, %{lookups: lookups} = state) when is_map_key(lookups, ref) do
@@ -275,12 +299,15 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   defp record(state, {:host, host}, {:ok, [_ | _] = addresses}),
-    do: %{state | results: Map.put(state.results, host, {:ok, normalize_addresses(addresses)})}
+    do: put_result(state, host, {:ok, normalize_addresses(addresses)})
 
-  defp record(state, {:host, host}, _failed), do: %{state | results: Map.put(state.results, host, :unresolved)}
+  defp record(state, {:host, host}, _failed), do: put_result(state, host, :unresolved)
   defp record(state, {:own, name}, {:ok, [_ | _] = addresses}), do: %{state | own: {name, normalize_addresses(addresses)}}
   # A failed lookup of this server's addresses keeps the last ones it found
   defp record(state, {:own, _name}, _failed), do: state
+
+  defp put_result(state, host, result),
+    do: %{state | results: Map.put(state.results, host, result), fresh: MapSet.put(state.fresh, host)}
 
   defp batch_done?(state, batch) do
     not Enum.any?(state.lookups, &match?({_ref, {_target, ^batch}}, &1)) and
@@ -303,9 +330,12 @@ defmodule Brando.Tenant.ServedHosts do
 
   defp wait(state, from), do: settle(%{state | waiters: [from | state.waiters]})
 
+  # Replies to the waiters once no lookup runs or waits and no write is under
+  # way or asked for
   defp settle(%{waiters: [_ | _] = waiters} = state) do
-    if map_size(state.lookups) == 0 and :queue.is_empty(state.queue) do
-      state = if state.flush_timer, do: flush(state), else: state
+    state = if state.flush_timer && idle_lookups?(state), do: flush(state), else: state
+
+    if idle_lookups?(state) and idle_writer?(state) do
       status = status()
       Enum.each(waiters, &GenServer.reply(&1, status))
       %{state | waiters: []}
@@ -315,6 +345,10 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   defp settle(state), do: state
+
+  defp idle_lookups?(state), do: map_size(state.lookups) == 0 and :queue.is_empty(state.queue)
+
+  defp idle_writer?(state), do: is_nil(state.writing) and not state.write_requested and not state.check_requested
 
   defp run(state) do
     state = cancel_tick(state)
@@ -327,7 +361,7 @@ defmodule Brando.Tenant.ServedHosts do
         failed(%{state | settings: nil}, error)
 
       {:ok, settings} ->
-        check(%{state | settings: settings})
+        request_write(%{state | settings: settings, check_requested: true})
     end
   rescue
     # A bad config or a broken cache must not restart this process until its
@@ -337,38 +371,176 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   defp failed(state, error) do
-    state = report(%{state | results: %{}}, nil, error)
+    state = report(%{state | results: %{}, fresh: MapSet.new()}, nil, error)
     publish(%{status() | error: error})
     schedule(state, true)
   end
 
-  # Reads the file, queues a lookup for each bound host not in it and not
-  # already being looked up, and writes what it knows now. A host looked up
-  # again keeps the state its last lookup gave it meanwhile.
-  defp check(state) do
-    %{file: file, admit: admit} = state.settings
-    read = read_file(file)
-    known = MapSet.union(MapSet.new(listed(read)), state.admitted)
+  # The answers so far go to the file now
+  defp flush(state), do: state |> cancel_flush() |> request_write()
 
+  defp request_write(state), do: maybe_start_write(%{state | write_requested: true})
+
+  # One write at a time, in a task: a write asked for while one runs starts
+  # when it ends, once, with what is known then
+  defp maybe_start_write(%{writing: nil, settings: %{}, write_requested: write?, check_requested: check?} = state)
+       when write? or check? do
+    start_write(state)
+  rescue
+    exception -> failed(%{state | write_requested: false, check_requested: false}, Exception.message(exception))
+  end
+
+  defp maybe_start_write(state), do: state
+
+  # The hosts to write are worked out here; the task reads the file, keeps
+  # every bound host it lists, and replaces it if that changed
+  defp start_write(state) do
+    state = cancel_flush(state)
+    {bound, _invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
+    decided = decide_outside(state, bound)
+    admit = for {host, :admit} <- decided, do: host
+
+    job = %{
+      file: state.settings.file,
+      bound: bound,
+      keep: MapSet.union(state.admitted, MapSet.new(admit)),
+      check?: state.check_requested
+    }
+
+    # An answer still waiting for this server's addresses stays fresh
+    fresh = MapSet.filter(state.fresh, &(decided[&1] == :pending))
+    state = %{state | write_requested: false, check_requested: false, write_job: job, fresh: fresh}
+
+    case Process.whereis(Brando.Tenant.ServedHosts.TaskSupervisor) do
+      nil ->
+        written(%{state | writing: make_ref()}, write_failed(job, "no task supervisor to write it"))
+
+      supervisor ->
+        task = Task.Supervisor.async_nolink(supervisor, fn -> write_hosts(job) end)
+        %{state | writing: task.ref}
+    end
+  end
+
+  # In the task: the file read just before the write, and every bound host it
+  # lists kept
+  defp write_hosts(%{file: file, bound: bound, keep: keep}) do
+    run_before_write_hook()
+    read = read_file(file)
+    listed = MapSet.new(listed(read))
+    hosts = Enum.filter(bound, &(MapSet.member?(listed, &1) or MapSet.member?(keep, &1)))
+
+    {written?, error} =
+      case read do
+        {:ok, existing, _listed} -> write(file, existing, hosts)
+        {:error, reason} -> {false, "#{file}: #{:file.format_error(reason)}"}
+      end
+
+    %{read?: match?({:ok, _, _}, read), listed: listed, hosts: hosts, written?: written?, error: error}
+  end
+
+  # Tests hold a write here
+  defp run_before_write_hook do
+    case Keyword.get(config(), :before_write) do
+      hook when is_function(hook, 0) -> hook.()
+      _none -> :ok
+    end
+  end
+
+  # The file left as it is: what was meant to be in it is still admitted
+  defp write_failed(%{file: file, bound: bound, keep: keep}, reason) do
+    %{
+      read?: false,
+      listed: MapSet.new(),
+      hosts: Enum.filter(bound, &MapSet.member?(keep, &1)),
+      written?: false,
+      error: "#{file}: #{reason}"
+    }
+  end
+
+  defp written(state, result) do
+    job = state.write_job
+    state = %{state | writing: nil, write_job: nil}
+
+    case state.settings do
+      # Turned off meanwhile
+      nil -> settle(state)
+      _settings -> state |> apply_write(job, result) |> maybe_start_write() |> settle()
+    end
+  end
+
+  # What a write found, in the state and the status: the hosts in the file
+  # now, the others' last answers, and lookups for any host a check found
+  # neither in the file nor admitted. A host admitted since the write started
+  # waits for the next one, which follows at once.
+  defp apply_write(state, job, result) do
+    %{file: file} = state.settings
+    {bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
+    admitted = MapSet.new(result.hosts)
+    # Answers are kept for bound hosts not in the file only
+    outside = bound |> MapSet.new() |> MapSet.difference(admitted)
+
+    state = %{
+      report(state, file, result.error)
+      | admitted: admitted,
+        results: Map.take(state.results, MapSet.to_list(outside)),
+        fresh: MapSet.intersection(state.fresh, outside)
+    }
+
+    state = if job.check?, do: look_up_missing(state), else: state
+    decided = decide_outside(state, bound)
+    hosts = host_statuses(state, result, bound, decided) |> Map.merge(Map.new(invalid, &{&1, :invalid}))
+    publish(%{file: file, hosts: hosts, addresses: format_addresses(own_addresses(state)), error: result.error})
+    state = if Enum.any?(decided, &match?({_host, :admit}, &1)), do: %{state | write_requested: true}, else: state
+    schedule(state, retry?(state, decided) or result.error != nil)
+  end
+
+  # What each bound host not in the file gets from its last answer
+  defp decide_outside(state, bound) do
+    pending = pending_hosts(state)
+    for host <- bound, not MapSet.member?(state.admitted, host), into: %{}, do: {host, decide(state, host, pending)}
+  end
+
+  # A host admitted but not written yet, or with no answer yet, keeps its
+  # last state
+  defp host_statuses(state, result, bound, decided) do
+    previous = status().hosts
+
+    in_file =
+      for host <- bound, MapSet.member?(state.admitted, host), into: %{}, do: {host, file_state(host, result, previous)}
+
+    Map.merge(
+      in_file,
+      Map.new(decided, fn
+        {host, decision} when decision in [:admit, :pending] -> {host, pending_state(host, previous)}
+        {host, host_state} -> {host, host_state}
+      end)
+    )
+  end
+
+  # Soon while a host waits for its DNS, or no lookup runs for a host that
+  # has no answer yet: it waits for the next check
+  defp retry?(state, decided) do
+    pending = pending_hosts(state)
+
+    Enum.any?(decided, fn
+      {_host, :admit} -> false
+      {host, :pending} -> not MapSet.member?(pending, host)
+      {_host, _waiting_or_unresolved} -> true
+    end)
+  end
+
+  # Every bound host neither in the file nor admitted, unless a lookup of it
+  # runs or waits already, or answered and no write has decided on it yet
+  defp look_up_missing(%{settings: %{admit: :dns}} = state) do
     candidates =
       Cache.bound_hosts()
       |> Enum.filter(&servable?/1)
-      |> Enum.reject(&MapSet.member?(known, &1))
+      |> Enum.reject(&(MapSet.member?(state.admitted, &1) or MapSet.member?(state.fresh, &1)))
 
-    state = if admit == :dns, do: look_up(state, candidates), else: state
-    apply_results(state, read)
+    look_up(state, candidates)
   end
 
-  defp flush(state) do
-    state = cancel_flush(state)
-
-    case state.settings do
-      nil -> state
-      %{file: file} -> apply_results(state, read_file(file))
-    end
-  rescue
-    exception -> failed(state, Exception.message(exception))
-  end
+  defp look_up_missing(state), do: state
 
   defp look_up(state, candidates) do
     pending = pending_hosts(state)
@@ -457,59 +629,14 @@ defmodule Brando.Tenant.ServedHosts do
     kind, reason -> {:error, {kind, reason}}
   end
 
-  # The expensive part, once per check or batch of answers: the file read
-  # again, merged and replaced if it changed, the status published. A file
-  # that cannot be read is left as it is, and the hosts' states still follow
-  # the registry.
-  defp apply_results(state, read) do
-    %{file: file} = state.settings
-    {bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
-    listed = MapSet.new(listed(read))
-    # Another node sharing the path may have written over a host this one
-    # admitted: it goes back in without a lookup
-    known = MapSet.union(listed, state.admitted)
-    {kept, candidates} = Enum.split_with(bound, &MapSet.member?(known, &1))
-    pending = pending_hosts(state)
-    decided = Map.new(candidates, &{&1, decide(state, &1, pending)})
-    admitted = for {host, :admit} <- decided, do: host
-    waiting = for {host, host_state} <- decided, host_state not in [:admit, :pending], into: %{}, do: {host, host_state}
-    undecided = for {host, :pending} <- decided, do: host
-    hosts = (kept ++ admitted) |> Enum.uniq() |> Enum.sort()
-
-    {written?, error} =
-      case read do
-        {:ok, existing, _listed} -> write(file, existing, hosts)
-        {:error, reason} -> {false, "#{file}: #{:file.format_error(reason)}"}
-      end
-
-    previous = status().hosts
-
-    state = %{
-      report(state, file, error)
-      | admitted: MapSet.new(hosts),
-        results: Map.take(state.results, Map.keys(waiting) ++ undecided)
-    }
-
-    statuses =
-      Map.new(hosts, &{&1, file_state(&1, written?, listed, read, previous)})
-      |> Map.merge(waiting)
-      |> Map.merge(pending_states(undecided, previous))
-      |> Map.merge(Map.new(invalid, &{&1, :invalid}))
-
-    publish(%{file: file, hosts: statuses, addresses: format_addresses(own_addresses(state)), error: error})
-    # A host no lookup runs for waits for the next check
-    unlooked? = Enum.any?(undecided, &(not MapSet.member?(pending, &1)))
-    schedule(state, map_size(waiting) > 0 or unlooked? or error != nil)
-  end
-
   defp listed({:ok, _existing, listed}), do: listed
   defp listed({:error, _reason}), do: []
 
   # In the file now, or in it before a read failed
-  defp file_state(host, written?, listed, read, previous) do
+  defp file_state(host, result, previous) do
     cond do
-      written? or MapSet.member?(listed, host) -> :served
-      match?({:error, _}, read) and previous[host] == :served -> :served
+      result.written? or MapSet.member?(result.listed, host) -> :served
+      not result.read? and previous[host] == :served -> :served
       true -> :not_written
     end
   end
@@ -550,14 +677,12 @@ defmodule Brando.Tenant.ServedHosts do
 
   # A host looked up again keeps the state its last lookup gave it meanwhile;
   # a host never looked up is checking
-  defp pending_states(pending, previous) do
-    Map.new(pending, fn host ->
-      case Map.get(previous, host) do
-        {:waiting, _addresses} = waiting -> {host, waiting}
-        :unresolved -> {host, :unresolved}
-        _none -> {host, :checking}
-      end
-    end)
+  defp pending_state(host, previous) do
+    case Map.get(previous, host) do
+      {:waiting, _addresses} = waiting -> waiting
+      :unresolved -> :unresolved
+      _none -> :checking
+    end
   end
 
   # A stored domain is not checked again until it changes, and the file is read

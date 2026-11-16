@@ -126,27 +126,56 @@ defmodule Brando.Tenant.ServedHostsTest do
 
   defp lines(file), do: file |> File.read!() |> String.split("\n", trim: true)
 
-  # The traced `:file` calls `pid` made, in order
-  defp file_calls(pid) do
+  # Traces calls to these `:file` functions in every task the process starts
+  # from now on: the writes run in tasks of their own
+  defp trace_writes(functions) do
+    supervisor = Process.whereis(Brando.Tenant.ServedHosts.TaskSupervisor)
+    for function <- functions, do: :erlang.trace_pattern({:file, function, :_}, true, [:global])
+    :erlang.trace(supervisor, true, [:call, :set_on_spawn])
+
+    on_exit(fn ->
+      if Process.alive?(supervisor), do: :erlang.trace(supervisor, false, [:call, :set_on_spawn])
+      for function <- functions, do: :erlang.trace_pattern({:file, function, :_}, false, [:global])
+    end)
+  end
+
+  # The traced `:file` calls made so far, in order, with their arguments
+  defp file_calls do
     receive do
-      {:trace, ^pid, :call, {:file, function, _args}} -> [function | file_calls(pid)]
+      {:trace, _pid, :call, {:file, function, args}} -> [{function, args} | file_calls()]
     after
       0 -> []
     end
   end
 
-  # What `pid` did, in order: each `:file` function it called, and `:reply` for
-  # each `:ok` it sent in reply to a call
-  defp trace_events(pid) do
+  defp file_functions, do: Enum.map(file_calls(), &elem(&1, 0))
+
+  defp callers_of_file_functions do
     receive do
-      {:trace, ^pid, :call, {:file, function, _args}} -> [function | trace_events(pid)]
-      {:trace, ^pid, :send, {_tag, :ok}, _alias} -> [:reply | trace_events(pid)]
-      {:trace, ^pid, _kind, _message, _to} -> trace_events(pid)
-      {:trace, ^pid, _kind, _message} -> trace_events(pid)
+      {:trace, caller, :call, {:file, function, _args}} -> [{caller, function} | callers_of_file_functions()]
     after
       0 -> []
     end
   end
+
+  # Holds the next write before it reads the file, until `release_write/1`
+  defp hold_writes(file) do
+    test = self()
+
+    put_test_env(ServedHosts,
+      file: file,
+      addresses: [@here, @here_v6],
+      before_write: fn ->
+        send(test, {:writing, self()})
+
+        receive do
+          :write -> :ok
+        end
+      end
+    )
+  end
+
+  defp release_write(writer), do: send(writer, :write)
 
   defp flush_lookups do
     receive do
@@ -189,14 +218,7 @@ defmodule Brando.Tenant.ServedHostsTest do
       put_test_env(ServedHosts, file: file, addresses: [@here], resolver: BlockingResolver)
       DNS.answer("late.acme.test", [@here])
 
-      pid = Process.whereis(ServedHosts)
-      :erlang.trace_pattern({:file, :write, 2}, true, [:global])
-      :erlang.trace(pid, true, [:call])
-
-      on_exit(fn ->
-        :erlang.trace(pid, false, [:call])
-        :erlang.trace_pattern({:file, :write, 2}, false, [:global])
-      end)
+      trace_writes([:write])
 
       check = Task.async(fn -> ServedHosts.check() end)
       assert_receive {:looking_up, "late.acme.test", lookup}
@@ -205,8 +227,7 @@ defmodule Brando.Tenant.ServedHostsTest do
 
       assert %{hosts: hosts} = Task.await(check)
       refute Map.has_key?(hosts, "late.acme.test")
-      :sys.get_state(pid)
-      refute_received {:trace, ^pid, :call, {:file, :write, [_io, "late.acme.test\n"]}}
+      refute Enum.any?(file_calls(), &match?({:write, [_io, "late.acme.test\n"]}, &1))
       assert File.read!(file) == ""
     end
 
@@ -558,21 +579,12 @@ defmodule Brando.Tenant.ServedHostsTest do
     end
 
     test "the temporary file is synced to disk before it is renamed over the old one", %{site: site} do
-      pid = Process.whereis(ServedHosts)
-      :erlang.trace_pattern({:file, :sync, 1}, true, [:global])
-      :erlang.trace_pattern({:file, :rename, 2}, true, [:global])
-      :erlang.trace(pid, true, [:call])
-
-      on_exit(fn ->
-        :erlang.trace(pid, false, [:call])
-        :erlang.trace_pattern({:file, :sync, 1}, false, [:global])
-        :erlang.trace_pattern({:file, :rename, 2}, false, [:global])
-      end)
+      trace_writes([:sync, :rename])
 
       DNS.answer("www.acme.test", [@here])
       bind(site, "production", "www.acme.test", true)
 
-      assert file_calls(pid) == [:sync, :rename]
+      assert file_functions() == [:sync, :rename]
     end
 
     test "a host already in the file is kept without a lookup", %{path: file, site: site} do
@@ -655,14 +667,21 @@ defmodule Brando.Tenant.ServedHostsTest do
       end
     end
 
-    test "a dead lookup supervisor leaves the host unresolved and the process running", %{path: file, site: site} do
+    test "a dead task supervisor leaves the host unresolved, the file alone and the process running",
+         %{path: file, site: site} do
       pid = Process.whereis(ServedHosts)
       bind(site, "production", "www.acme.test", true)
       DNS.answer("www.acme.test", [@here])
       :ok = Supervisor.terminate_child(Brando.Supervisor, Brando.Tenant.ServedHosts.TaskSupervisor)
       on_exit(fn -> Supervisor.restart_child(Brando.Supervisor, Brando.Tenant.ServedHosts.TaskSupervisor) end)
 
-      assert %{hosts: %{"www.acme.test" => :unresolved}, error: nil} = ServedHosts.check()
+      log =
+        capture_log(fn ->
+          assert %{hosts: %{"www.acme.test" => :unresolved}, error: error} = ServedHosts.check()
+          assert error =~ "no task supervisor"
+        end)
+
+      assert log =~ "Could not update the served hosts file"
       assert Process.whereis(ServedHosts) == pid
       assert File.read!(file) == ""
     end
@@ -730,29 +749,58 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert_receive {:served_hosts, %{hosts: %{"slow.acme.test" => :unresolved}}}, 2_000
     end
 
-    test "the registry's call is answered before any file work", %{site: site} do
+    test "the process does no file work itself: a task reads and writes the file", %{path: file, site: site} do
       DNS.answer("www.acme.test", [@here])
       environment = bind(site, "production", nil, true)
       # Stored without a registry write: only the warm below asks for a check
       set_domain(environment, "www.acme.test")
       pid = Process.whereis(ServedHosts)
-      :erlang.trace_pattern({:file, :_, :_}, true, [:global])
-      :erlang.trace(pid, true, [:call, :send])
-
-      on_exit(fn ->
-        :erlang.trace(pid, false, [:call, :send])
-        :erlang.trace_pattern({:file, :_, :_}, false, [:global])
-      end)
+      :erlang.trace(pid, true, [:call])
+      on_exit(fn -> :erlang.trace(pid, false, [:call]) end)
+      trace_writes([:_])
 
       Cache.warm()
       ServedHosts.settled()
-      :erlang.trace(pid, false, [:call, :send])
+      :erlang.trace(pid, false, [:call])
 
-      events = trace_events(pid)
-      assert {before_reply, [:reply | after_reply]} = Enum.split_while(events, &(&1 != :reply))
-      assert before_reply == []
-      assert :read_file in after_reply
-      assert :rename in after_reply
+      calls = callers_of_file_functions()
+      refute Enum.any?(calls, &match?({^pid, _function}, &1))
+      assert Enum.any?(calls, &match?({_task, :read_file}, &1))
+      assert Enum.any?(calls, &match?({_task, :rename}, &1))
+      assert File.read!(file) == "www.acme.test\n"
+    end
+
+    test "a registry write returns at once while a write of the file is held, and its new host has a state",
+         %{path: file, site: site} do
+      DNS.answer("acme.test", [@here])
+      production = bind(site, "production", "acme.test", true)
+      hold_writes(file)
+
+      # The first write holds, as on a stalled mount
+      {:ok, _} =
+        Registry.update_environment(Registry.get_environment(production.id), %{redirect_hosts: ["www.acme.test"]},
+          actor: :system
+        )
+
+      assert_receive {:writing, writer}
+
+      {elapsed, {:ok, _}} =
+        :timer.tc(fn ->
+          Registry.update_environment(
+            Registry.get_environment(production.id),
+            %{redirect_hosts: ["www.acme.test", "old-acme.test"]},
+            actor: :system
+          )
+        end)
+
+      assert elapsed < 1_000_000
+      assert %{hosts: %{"old-acme.test" => :checking}} = ServedHosts.status()
+
+      DNS.answer("old-acme.test", [@here])
+      put_test_env(ServedHosts, file: file, addresses: [@here, @here_v6])
+      release_write(writer)
+      assert %{hosts: %{"old-acme.test" => :served}} = ServedHosts.settled()
+      assert lines(file) == ["acme.test", "old-acme.test"]
     end
 
     test "a file that cannot be read still gives a newly bound host its state and its result",
@@ -875,13 +923,7 @@ defmodule Brando.Tenant.ServedHostsTest do
       end
 
       pid = Process.whereis(ServedHosts)
-      :erlang.trace_pattern({:file, :rename, 2}, true, [:global])
-      :erlang.trace(pid, true, [:call])
-
-      on_exit(fn ->
-        :erlang.trace(pid, false, [:call])
-        :erlang.trace_pattern({:file, :rename, 2}, false, [:global])
-      end)
+      trace_writes([:rename])
 
       # One warm binds all five: one check looks them up
       Cache.warm()
@@ -894,9 +936,80 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert %{hosts: states} = ServedHosts.settled()
       assert Map.take(states, hosts) == Map.new(hosts, &{&1, :served})
       assert lines(file) == hosts
-      assert file_calls(pid) == [:rename]
+      assert file_functions() == [:rename]
       assert_received {:served_hosts, _status}
       refute_received {:served_hosts, _status}
+    end
+
+    test "an answer waiting for its batch's write is not looked up again when another check starts",
+         %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here])
+      DNS.answer("acme.test", [@here])
+      production = bind(site, "production", "acme.test", true)
+      hosts = ~w(a.acme.test b.acme.test)
+      environments = for key <- ~w(a b), do: bind(site, key, nil)
+
+      for {host, environment} <- Enum.zip(hosts, environments) do
+        set_domain(environment, host)
+        DNS.answer(host, [@here])
+        DNS.hold(host, self())
+      end
+
+      # One warm binds both: one batch
+      Cache.warm()
+      assert_receive {:looking_up, "a.acme.test", a_lookup}
+      assert_receive {:looking_up, "b.acme.test", b_lookup}
+      send(a_lookup, :answer)
+
+      # An unrelated registry write checks again before the batch is written
+      {:ok, _} =
+        Registry.update_environment(Registry.get_environment(production.id), %{redirect_hosts: ["www.acme.test"]},
+          actor: :system
+        )
+
+      refute_receive {:looking_up, "a.acme.test", _lookup}, 200
+      send(b_lookup, :answer)
+
+      assert %{hosts: %{"a.acme.test" => :served, "b.acme.test" => :served}} = ServedHosts.settled()
+      assert lines(file) == ["a.acme.test", "acme.test", "b.acme.test"]
+    end
+
+    test "an answer that arrives while a check's write runs is not looked up again after it",
+         %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here])
+      DNS.answer("acme.test", [@here])
+      production = bind(site, "production", "acme.test", true)
+      hosts = ~w(a.acme.test b.acme.test)
+      environments = for key <- ~w(a b), do: bind(site, key, nil)
+
+      for {host, environment} <- Enum.zip(hosts, environments) do
+        set_domain(environment, host)
+        DNS.answer(host, [@here])
+        DNS.hold(host, self())
+      end
+
+      Cache.warm()
+      assert_receive {:looking_up, "a.acme.test", a_lookup}
+      assert_receive {:looking_up, "b.acme.test", b_lookup}
+      hold_writes(file)
+
+      # Another check's write starts before the answer and ends after it
+      {:ok, _} =
+        Registry.update_environment(Registry.get_environment(production.id), %{redirect_hosts: ["www.acme.test"]},
+          actor: :system
+        )
+
+      assert_receive {:writing, writer}
+      send(a_lookup, :answer)
+      :sys.get_state(ServedHosts)
+      put_test_env(ServedHosts, file: file, addresses: [@here])
+      release_write(writer)
+
+      refute_receive {:looking_up, "a.acme.test", _lookup}, 200
+      send(b_lookup, :answer)
+
+      assert %{hosts: %{"a.acme.test" => :served, "b.acme.test" => :served}} = ServedHosts.settled()
+      assert lines(file) == ["a.acme.test", "acme.test", "b.acme.test"]
     end
 
     test "a lookup timeout that is not a number of milliseconds falls back to the default", %{path: file, site: site} do
@@ -990,7 +1103,7 @@ defmodule Brando.Tenant.ServedHostsTest do
       on_exit(fn -> :erlang.trace(pid, false, [:receive]) end)
 
       assert_receive {:trace, ^pid, :receive, {:tick, _}}
-      :sys.get_state(pid)
+      ServedHosts.settled()
 
       assert File.read!(file) == "www.acme.test\n"
       assert %{hosts: %{"www.acme.test" => :served}} = ServedHosts.status()
@@ -1025,7 +1138,7 @@ defmodule Brando.Tenant.ServedHostsTest do
 
       assert_receive {:trace, ^pid, :receive, {:tick, _}}
       assert_receive {:trace, ^pid, :receive, {:tick, _}}
-      :sys.get_state(pid)
+      ServedHosts.settled()
 
       refute_received {:looked_up, _host}
       assert File.read!(file) == "www.acme.test\n"

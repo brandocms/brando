@@ -824,15 +824,18 @@ and nothing is stored in the database: on a new server the file starts empty,
 and each host is admitted there when its DNS arrives.
 
 A host a write binds has a state as soon as the write returns; reading and
-writing the file and the lookups happen after it, so a slow disk or DNS never
-holds a registry write back. Each host is looked up on its own, at most eight
-at a time while the rest wait their turn, and its lookup fails when it does
-not answer within the lookup timeout (ten seconds by default,
-`:lookup_timeout` in milliseconds), counted from when it starts. A host's
-result shows as soon as it answers; the answers of many hosts looked up
-together, as on a new server, are written to the file in one go. Without
-`addresses`, this server's are looked up once per check, and a lookup of them
-that fails keeps the ones found before.
+writing the file and the lookups happen after it, in tasks of their own, so a
+slow disk or DNS never holds a registry write back, the next one included. The
+file is written by one task at a time: on a disk that stalls, the file and the
+hosts' states wait for it, and later writes follow it as one. A host shows
+**Served** only once the write that put it in the file has succeeded. Each
+host is looked up on its own, at most eight at a time while the rest wait
+their turn, and its lookup fails when it does not answer within the lookup
+timeout (ten seconds by default, `:lookup_timeout` in milliseconds), counted
+from when it starts. A host's result shows as soon as it answers; the answers
+of many hosts looked up together, as on a new server, are written to the file
+in one go. Without `addresses`, this server's are looked up once per check,
+and a lookup of them that fails keeps the ones found before.
 
 The **Environments** screen shows each bound host's state under its domain,
 the domain's first and then one line for each redirect host, led by its name:
