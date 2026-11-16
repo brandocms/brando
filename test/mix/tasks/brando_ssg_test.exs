@@ -18,14 +18,9 @@ defmodule Mix.Tasks.Brando.SsgTest do
     Mix.Task.reenable("brando.ssg")
     Mix.Task.reenable("run")
 
-    serve_endpoints = Application.fetch_env(:phoenix, :serve_endpoints)
-
-    on_exit(fn ->
-      case serve_endpoints do
-        {:ok, value} -> Application.put_env(:phoenix, :serve_endpoints, value)
-        :error -> Application.delete_env(:phoenix, :serve_endpoints)
-      end
-    end)
+    # The task writes these persistent, as Mix's configuration is
+    restore_env_on_exit(:phoenix, :serve_endpoints)
+    restore_env_on_exit(Brando.otp_app(), Brando.endpoint())
 
     root = Path.join(System.tmp_dir!(), "brando-ssg-task-#{System.unique_integer([:positive])}")
     on_exit(fn -> File.rm_rf(root) end)
@@ -49,6 +44,7 @@ defmodule Mix.Tasks.Brando.SsgTest do
 
   test "builds from the endpoint's listener on the port it is configured with, without its watchers",
        %{root: root} do
+    restore_env_on_exit(:brando, SSGEndpoint)
     receiver = SSGEndpoint.start(fn _request -> {200, "<main>home</main>"} end)
     refute receiver.port == 4000
     # The configuration the task starts the endpoint from, in a project
@@ -102,6 +98,31 @@ defmodule Mix.Tasks.Brando.SsgTest do
     assert Application.get_env(app, endpoint)[:http] == [port: 4000]
   end
 
+  test "keeps the endpoint serving, without watchers, when the configuration step sets them", %{root: root} do
+    app = :"acme_ssg_#{System.unique_integer([:positive])}"
+    endpoint = AcmeWeb.Endpoint
+    on_exit(fn -> Application.delete_env(app, endpoint, persistent: true) end)
+    put_test_env(:otp_app, app)
+    put_test_env(:endpoint_module, endpoint)
+
+    # What config/runtime.exs may write while app.config runs
+    run_task = fn "app.config" = task ->
+      send(self(), {:ran, task})
+      Application.put_env(:phoenix, :serve_endpoints, false, persistent: true)
+
+      Application.put_env(app, endpoint, [http: [port: 4000], watchers: [vite: {Brando.Vite, :watch, [root]}]],
+        persistent: true
+      )
+    end
+
+    Mix.Tasks.Brando.Ssg.configure(run_task)
+
+    assert_received {:ran, "app.config"}
+    assert Application.get_env(:phoenix, :serve_endpoints) == true
+    assert Application.get_env(app, endpoint)[:watchers] == []
+    assert Application.get_env(app, endpoint)[:http] == [port: 4000]
+  end
+
   test "says what is missing when the endpoint has no HTTP listener", %{root: root} do
     # The test application's endpoint runs with server: false
     put_test_env(:media_path, Path.join(root, "media"))
@@ -145,5 +166,17 @@ defmodule Mix.Tasks.Brando.SsgTest do
 
     expected = Path.join([root, "sites", site.key, "ssg", "manual"])
     assert_received {:mix_shell, :info, ["Output: " <> ^expected]}
+  end
+
+  # As it was, persistent: a value from the project's configuration is
+  defp restore_env_on_exit(app, key) do
+    previous = Application.fetch_env(app, key)
+
+    on_exit(fn ->
+      case previous do
+        {:ok, value} -> Application.put_env(app, key, value, persistent: true)
+        :error -> Application.delete_env(app, key, persistent: true)
+      end
+    end)
   end
 end

@@ -57,15 +57,7 @@ defmodule Mix.Tasks.Brando.Ssg do
   @impl Mix.Task
   def run(args) do
     {opts, _argv} = OptionParser.parse!(args, strict: @switches)
-    # The build requests every page from the running endpoint's listener (see
-    # `Brando.SSG.listener_url/1`), so unlike the other tasks this one must
-    # listen. It needs no Vite dev servers, which the watchers would start.
-    # Persistent, as Mix stores the project's configuration: loading an
-    # application keeps only persistent values. After app.config, which loads
-    # the project's application and merges config/runtime.exs into its env.
-    Application.put_env(:phoenix, :serve_endpoints, true, persistent: true)
-    Mix.Task.run("app.config")
-    without_watchers(Brando.otp_app(), Brando.endpoint())
+    configure()
     Application.put_env(:logger, :level, :error)
 
     Mix.shell().info("""
@@ -96,6 +88,19 @@ defmodule Mix.Tasks.Brando.Ssg do
     else
       Mix.shell().info("Static generation cancelled.")
     end
+  end
+
+  # The build requests every page from the running endpoint's listener (see
+  # `Brando.SSG.listener_url/1`), so unlike the other tasks this one must
+  # listen. It needs no Vite dev servers, which the watchers would start. Both
+  # after app.config, which loads the project's application and merges
+  # config/runtime.exs into the env, and persistent, as Mix stores the
+  # project's configuration: loading an application keeps only persistent values.
+  @doc false
+  def configure(run_task \\ &Mix.Task.run/1) do
+    run_task.("app.config")
+    Application.put_env(:phoenix, :serve_endpoints, true, persistent: true)
+    without_watchers(Brando.otp_app(), Brando.endpoint())
   end
 
   defp without_watchers(otp_app, endpoint) do
