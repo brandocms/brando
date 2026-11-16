@@ -762,11 +762,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   end
 
   # A domain the registry does not count as bound (`Cache.bound_hosts/0`, read
-  # with the status) is never checked, so it would read as "Checking" for good
+  # with the status) is never checked, so it would read as "Checking" for good.
+  # A bound host whose first lookup runs reads as one with no state yet.
   defp served_host_state(hosts, bound_hosts, domain) do
     host = Environment.normalize_host(domain)
 
     case Map.fetch(hosts, host) do
+      {:ok, :checking} -> nil
       {:ok, state} -> state
       :error -> if MapSet.member?(bound_hosts, host), do: nil, else: :excluded
     end

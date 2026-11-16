@@ -111,8 +111,13 @@ if Code.ensure_loaded?(Igniter) do
         |> Migrations.plan(project, upgrade: true, refresh: refresh?)
         |> Igniter.add_notice("""
         Review and accept missing framework migrations, then run mix compile.
-        Apply public migrations explicitly with mix brando.migrate.
+        Apply public migrations with mix brando.migrate (mix ecto.migrate does the same).
         For named environments, follow with mix brando.migrate --tenants.
+        On a server, public migrations run before the new release starts: its code expects
+        them, and with tenancy it reads the site registry at boot and stops until they have
+        run. From the new release, run
+          bin/#{project.otp_app} eval '#{inspect(project.app_module)}.ReleaseTasks.migrate()'
+        before starting it (see the deployment guide).
         Historical migration file names and timestamps are preserved; no database operations were scheduled.
         #{existing_copies_notice(refresh?)}
         """)

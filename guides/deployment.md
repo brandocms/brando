@@ -744,11 +744,84 @@ florist prod release:unpack
 
 ### Running migrations
 
-After deploying, run migrations if there are schema changes:
+Public migrations run before the new release starts. Its code expects them,
+and with tenancy it reads the site registry (`public.sites` and
+`public.environments`) at boot: a release deployed before a migration that
+changes those tables stops there, with
+`ERROR 42703 (undefined_column) column e0.redirect_hosts does not exist` and
+`application_start_failure`, and starts once the migration has run. Brando
+refuses to serve with half a registry rather than guess.
+
+With a release, run the new release's migrator before starting it.
+`eval` does not start the application, so it works while the release cannot
+boot:
 
 ```bash
+bin/my_app eval "MyApp.ReleaseTasks.migrate()"
+# With named environments, after the public migrations:
+bin/my_app eval "MyApp.ReleaseTasks.migrate_tenants()"
+```
+
+`ReleaseTasks.migrate/0` runs what `mix brando.migrate` runs locally (the
+same as `mix ecto.migrate`), and `migrate_tenants/0` what
+`mix brando.migrate --tenants` runs.
+
+With Florist, a deploy that brings a public migration runs it as part of the
+deploy:
+
+```bash
+florist prod release:deploy --migrate
+```
+
+`--migrate` (or `--run-migrations`) runs `ReleaseTasks.migrate()` from the
+release the deploy just installed, after starting it: neither layout migrates
+before the new release starts (tracked in
+[brandocms/florist#5](https://github.com/brandocms/florist/issues/5)). A
+migration that fails is reported, and the deploy goes on. Do not assemble a
+deploy from `release:unpack` and the other steps to migrate in between:
+`release:deploy` also links the release's shared media folder, takes the
+pre-deploy database backup and records the deploy that `rollback` reads.
+
+- On a single deployment, the deploy points `current` at the new release,
+  restarts the service, and then migrates. From the restart until the
+  migration has run, the new release runs against the old schema; when the
+  migration changes a table it reads at boot, it stops at boot, and the site
+  is down until the migration has run. Florist's service restarts on failure,
+  but whether it is running again when the migration ends depends on whether
+  systemd's start limit stopped the restarts meanwhile. Check, and restart it
+  if it is not:
+
+  ```bash
+  florist prod status
+  florist prod service:restart
+  ```
+
+- With blue/green, the new release goes to the inactive environment, which
+  is started and then migrated from its own release, before its health
+  check, while the active environment keeps serving. From the migration
+  until the traffic switch, and through the drain before it is stopped (for
+  as long as it runs, with `--keep-old-env`), the old release runs against
+  the new schema. Whether a new environment that
+  stopped at boot before the migration passes the health check after it (ten
+  tries, three seconds apart) is uncertain: it depends on systemd having
+  restarted it. When the health check fails, the deploy is aborted and the
+  old environment keeps serving, on the migrated schema.
+
+`florist prod db:migrate` on its own runs `ReleaseTasks.migrate()` from the
+release that is current: `current` on a single deployment, the active
+environment's release with blue/green. After a blue/green deploy that was
+aborted, that is still the old release, which does not have the new
+migration files, so it migrates nothing; deploy again with `--migrate`.
+After a deploy whose migrations change nothing the release reads at boot,
+it can run on its own:
+
+```bash
+florist prod release:deploy
 florist prod db:migrate
 ```
+
+Neither runs `migrate_tenants/0`: with named environments, run it with
+`bin/my_app eval` on the server after the public migrations.
 
 ## Rollback
 
@@ -820,7 +893,7 @@ florist prod env:health
 # Create database and user (done during bootstrap)
 florist prod db:create
 
-# Run migrations
+# Run migrations from the current release (see Running migrations)
 florist prod db:migrate
 
 # Backup remote database
@@ -977,9 +1050,8 @@ florist local config:generate
 florist prod traefik:setup    # if using Traefik
 florist prod bootstrap
 
-# 4. First deploy
-florist prod release:deploy
-florist prod db:migrate
+# 4. First deploy, migrating from the new release
+florist prod release:deploy --migrate
 
 # 5. Verify
 florist prod status
@@ -991,8 +1063,14 @@ florist prod logs:tail
 ```bash
 # Make your changes, commit, then:
 florist prod release:deploy
-florist prod db:migrate       # only if schema changed
+# Or, when the release brings migrations:
+florist prod release:deploy --migrate
 ```
+
+When the deploy brings a public migration, deploy with
+`florist prod release:deploy --migrate`. On a single deployment the site is
+down from the restart until a migration of a table the release reads at boot
+has run; [Running migrations](#running-migrations) has what each layout does.
 
 ### Emergency rollback
 

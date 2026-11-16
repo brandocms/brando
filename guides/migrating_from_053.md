@@ -567,7 +567,9 @@ sender first, before the first compile.
   adds `environments.redirect_hosts`: hosts such as `www.example.com` that
   redirect permanently to the environment's domain, set by a superuser under
   Environments (`/admin/config/environments`). Run `mix brando.gen.migrations`
-  for it, then `mix ecto.migrate`. With `tenancy_mode: :multi`, replace the
+  for it, then `mix brando.migrate`, and on the server before the new release
+  starts: with tenancy, a release stops at boot until it has run (see
+  [Run them](#3-generate-and-review-database-migrations), step 6). With `tenancy_mode: :multi`, replace the
   production endpoint's `check_origin` list in `config/prod.exs` with
   `{Brando.Tenant.Origins, :allowed?, []}`, so a LiveView on a site added in
   the admin connects; keep an entry that is neither a site's domain nor the
@@ -711,7 +713,14 @@ An application on a 0.55 development build starts here, after rerunning
 
    ```shell
    mix brando.gen.migrations
+   # In a script, or anywhere without a terminal:
+   mix brando.gen.migrations --yes
    ```
+
+   With no input to read (a CI job, `ssh` without a terminal, stdin from
+   `/dev/null`) and no `--yes`, it stops with "No input detected when asking
+   for confirmation". `--yes` accepts the files without showing them: review
+   the result with `git diff`.
 
    There are no `brando_206` or `brando_208` migrations: both numbers were
    never used. `mix brando.migrations.check`, run against the database you
@@ -803,7 +812,28 @@ An application on a 0.55 development build starts here, after rerunning
    change `public` and every environment schema in that run. `--tenants` then
    runs the tenant migrations in each environment, including the Blueprint
    migrations of content stored there; tenant discovery needs the public
-   migrations first.
+   migrations first. `mix ecto.migrate` runs the same public migrations as
+   `mix brando.migrate`, and neither runs the tenant ones.
+
+   On the server, public migrations run before the new release starts. With
+   tenancy a release reads `public.sites` and `public.environments` at boot,
+   and one deployed before a migration that changes them stops with
+   `undefined_column` until it has run. From the new release, before starting
+   it:
+
+   ```shell
+   bin/my_app eval "MyApp.ReleaseTasks.migrate()"
+   # With named environments:
+   bin/my_app eval "MyApp.ReleaseTasks.migrate_tenants()"
+   ```
+
+   With Florist, deploy with `florist prod release:deploy --migrate`, which
+   migrates from the new release after starting it: on a single deployment
+   the site is down from the restart until the migration has run, and with
+   blue/green the migration runs before the new environment's health check
+   while the old one keeps serving.
+   [Running migrations](deployment.md#running-migrations) has what each
+   layout does.
 
    Restoring an environment archive taken before such a migration runs the
    migration on the restore. The restore is refused, with nothing restored,

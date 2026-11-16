@@ -13,8 +13,18 @@ if Code.ensure_loaded?(Igniter) do
 
         mix brando.gen.migrations
 
-    Apply public migrations with mix brando.migrate, then named environments with
-    mix brando.migrate --tenants. For initial installation use brando.install.
+    Apply public migrations with `mix brando.migrate` (`mix ecto.migrate` does the
+    same), then named environments with `mix brando.migrate --tenants`. On a
+    server, public migrations run before the new release starts: its code expects
+    them, and with tenancy it reads the site registry at boot and stops until
+    they have run. Run the new
+    release's `bin/my_app eval "MyApp.ReleaseTasks.migrate()"` before starting
+    it (the deployment guide has the steps). For initial installation use
+    brando.install.
+
+    In a script, pass `--yes`: with no input to read (a CI job, `ssh` without a
+    terminal, stdin from `/dev/null`) the task otherwise stops when it asks for
+    confirmation. `--yes` accepts the files without showing them.
 
     Existing copies are matched by name and left as they are, even when the
     template has changed since. `mix brando.migrations.check` lists the ones
