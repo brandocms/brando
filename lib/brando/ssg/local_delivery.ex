@@ -25,8 +25,9 @@ defmodule Brando.SSG.LocalDelivery do
       build does not is never reached.
 
   Other methods (a form's `POST`), a request carrying a build's valid signed
-  context (`Brando.SSG.Context.signed?/1`), and the paths `dynamic_paths/1`
-  lists keep reaching Phoenix.
+  context (`Brando.SSG.Context.signed?/1`), the paths `dynamic_paths/1`
+  lists, and the IndexNow key file while IndexNow is on (`Brando.Plug.IndexNow`
+  answers it here) keep reaching Phoenix.
 
   HTML and the other files are sent with an `ETag` and
   `Cache-Control: no-cache`; the files the build's Vite manifest lists, and a
@@ -47,6 +48,7 @@ defmodule Brando.SSG.LocalDelivery do
     only: [get_req_header: 2, halt: 1, put_resp_header: 3, send_file: 3, send_resp: 3]
 
   alias Brando.Assets.SiteAssets
+  alias Brando.Plug.IndexNow
   alias Brando.Plug.SiteAssets, as: SiteAssetsPlug
   alias Brando.Sites.Redirect.ValidSource
   alias Brando.Sites.Redirects
@@ -132,9 +134,14 @@ defmodule Brando.SSG.LocalDelivery do
     cond do
       dynamic_path?(conn) -> conn
       Context.signed?(conn) -> conn
-      true -> answer(conn, site)
+      true -> conn |> IndexNow.call([]) |> answer_unless_halted(site)
     end
   end
+
+  # The IndexNow key file (`/<key>.txt`) is the application's while IndexNow
+  # is on, as submissions name it there
+  defp answer_unless_halted(%Plug.Conn{halted: true} = conn, _site), do: conn
+  defp answer_unless_halted(conn, site), do: answer(conn, site)
 
   defp dynamic_path?(%Plug.Conn{path_info: path_info} = conn) do
     Enum.any?(dynamic_paths(conn), fn prefix ->

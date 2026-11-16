@@ -236,6 +236,20 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert conn.resp_body == "missing v1"
     end
 
+    test "the IndexNow key file reaches Phoenix while IndexNow is on", context do
+      prefix = Brando.Tenant.prefix(context.site, context.live)
+      Brando.Environments.Schema.create(prefix)
+      Repo.query!(~s|CREATE TABLE "#{prefix}".sites_indexnow (LIKE public.sites_indexnow INCLUDING ALL)|)
+      {:ok, settings} = Brando.Tenant.with_prefix(prefix, &Brando.IndexNow.enable/0)
+
+      conn = dispatch(context.host, "/#{settings.key}.txt")
+      assert conn.status == 200
+      assert conn.resp_body == settings.key
+
+      # Any other key is a path the build lacks
+      assert dispatch(context.host, "/#{Brando.IndexNow.generate_key()}.txt").resp_body == "missing v1"
+    end
+
     test "a POST reaches the router", context do
       conn = dispatch(:post, context.host, "/contact")
       assert conn.resp_body == "posted /contact in production"
