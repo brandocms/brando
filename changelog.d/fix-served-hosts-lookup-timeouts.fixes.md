@@ -1,0 +1,1 @@
+- A host whose IPv4 or IPv6 lookup timed out, or whose name server failed, is no longer admitted to the served hosts file on the other family's addresses alone, and shows **Could not look it up** on the Environments screen (or keeps its last state) until a later check reads both, instead of **Does not resolve** for a lookup that was only slow.

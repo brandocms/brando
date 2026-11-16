@@ -1129,6 +1129,22 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       assert view |> element("#environment-host-status-#{away.id}") |> render() =~ "Served"
     end
 
+    test "a host whose lookup could not read a family says so, not that it does not resolve",
+         %{conn: conn, site: site} do
+      Brando.ServedHostsTestResolver.answer("slow.acme.test", {:incomplete, ["203.0.113.10"], [:inet6]})
+
+      {:ok, slow} =
+        Environments.create_environment(site, %{name: "slow", key: "slow", domain: "slow.acme.test"}, creator: :system)
+
+      Brando.Tenant.ServedHosts.check()
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      status = view |> element("#environment-host-status-#{slow.id}") |> render()
+      assert status =~ "Could not look it up"
+      assert status =~ "It will be tried again."
+      refute status =~ "Does not resolve"
+    end
+
     # A long domain is clipped in its one-line field: its state line shows it
     # whole, as each redirect host's line does
     test "the domain's state line names the domain, as a redirect host's does", %{conn: conn, served: served} do

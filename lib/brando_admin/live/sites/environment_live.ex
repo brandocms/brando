@@ -747,6 +747,11 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
           <span :if={@addresses != []} class="environment-host-status__detail">
             {gettext("Point it at %{addresses}.", addresses: server_addresses(@addresses))}
           </span>
+        <% :lookup_failed -> %>
+          <span class="badge badge--attention">{gettext("Could not look it up")}</span>
+          <span class="environment-host-status__detail">
+            {gettext("Its name servers did not give a full answer. It will be tried again.")}
+          </span>
         <% :excluded -> %>
           <span class="badge">{gettext("Not served")}</span>
           <span class="environment-host-status__detail">

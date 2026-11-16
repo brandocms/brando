@@ -4711,6 +4711,11 @@ msgstr ""
 msgid "Could not generate a suggestion. Try again."
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not look it up"
+msgstr ""
+
 #: lib/brando/workers/video_metadata_sweep.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
@@ -8973,6 +8978,11 @@ msgid "Its %{count} nested block is removed too."
 msgid_plural "Its %{count} nested blocks are removed too."
 msgstr[0] ""
 msgstr[1] ""
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its name servers did not give a full answer. It will be tried again."
+msgstr ""
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format

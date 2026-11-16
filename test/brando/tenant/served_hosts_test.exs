@@ -352,6 +352,106 @@ defmodule Brando.Tenant.ServedHostsTest do
     end
   end
 
+  # `{:incomplete, addresses, families}`: what `Brando.Tenant.ServedHosts.DNS`
+  # answers when the query of a family timed out or its name server failed
+  describe "a lookup that could not read a family" do
+    test "admits nothing on the other family's addresses, and the host is admitted once both are read",
+         %{path: file, site: site} do
+      DNS.answer("www.acme.test", {:incomplete, [@here], [:inet6]})
+      bind(site, "production", "www.acme.test", true)
+
+      assert %{hosts: %{"www.acme.test" => :lookup_failed}, error: nil} = ServedHosts.check()
+      assert File.read!(file) == ""
+
+      # No AAAA record: the IPv4 address is all there is
+      DNS.answer("www.acme.test", [@here])
+      assert %{hosts: %{"www.acme.test" => :served}} = ServedHosts.check()
+      assert lines(file) == ["www.acme.test"]
+    end
+
+    test "with no addresses read, does not count as not resolving", %{path: file, site: site} do
+      DNS.answer("www.acme.test", {:incomplete, [], [:inet]})
+      bind(site, "production", "www.acme.test", true)
+
+      assert %{hosts: %{"www.acme.test" => :lookup_failed}} = ServedHosts.check()
+      assert File.read!(file) == ""
+    end
+
+    test "both families timing out leave the host not looked up, not unresolved", %{path: file, site: site} do
+      DNS.answer("www.acme.test", {:error, :timeout})
+      bind(site, "production", "www.acme.test", true)
+
+      assert %{hosts: %{"www.acme.test" => :lookup_failed}} = ServedHosts.check()
+      assert File.read!(file) == ""
+    end
+
+    test "a host keeps the state its last full lookup gave it", %{path: file, site: site} do
+      DNS.answer("away.acme.test", [@elsewhere])
+      bind(site, "away", "away.acme.test")
+      bind(site, "missing", "missing.acme.test")
+
+      assert %{hosts: %{"away.acme.test" => {:waiting, [@elsewhere]}, "missing.acme.test" => :unresolved}} =
+               ServedHosts.check()
+
+      DNS.answer("away.acme.test", {:incomplete, [@here], [:inet6]})
+      DNS.answer("missing.acme.test", {:incomplete, [], [:inet6]})
+
+      assert %{hosts: %{"away.acme.test" => {:waiting, [@elsewhere]}, "missing.acme.test" => :unresolved}} =
+               ServedHosts.check()
+
+      assert File.read!(file) == ""
+    end
+
+    test "a host in the file stays", %{path: file, site: site} do
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+      assert lines(file) == ["www.acme.test"]
+
+      DNS.answer("www.acme.test", {:incomplete, [@elsewhere], [:inet6]})
+      assert %{hosts: %{"www.acme.test" => :served}} = ServedHosts.check()
+      assert lines(file) == ["www.acme.test"]
+    end
+
+    test "a host not looked up is looked up again on the retry timer", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here], retry_interval: 20)
+      DNS.answer("www.acme.test", {:incomplete, [@here], [:inet6]})
+      bind(site, "production", "www.acme.test", true)
+      assert %{hosts: %{"www.acme.test" => :lookup_failed}} = ServedHosts.status()
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+
+      DNS.answer("www.acme.test", [@here])
+
+      assert_receive {:served_hosts, %{hosts: %{"www.acme.test" => :served}}}
+      assert File.read!(file) == "www.acme.test\n"
+    end
+
+    test "of this server's addresses leaves them unknown: the last ones found count", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file)
+      DNS.answer("localhost", [@here])
+      DNS.answer("away.acme.test", [@elsewhere])
+      # Waits for its DNS, so every check looks this server's addresses up
+      bind(site, "away", "away.acme.test")
+      assert %{addresses: [@here]} = ServedHosts.check()
+
+      # Only the IPv6 family read: the IPv4 address found before still counts
+      DNS.answer("localhost", {:incomplete, [@here_v6], [:inet]})
+      assert %{addresses: [@here]} = ServedHosts.check()
+    end
+
+    test "of this server's addresses, with none found before, admits no host", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file)
+      DNS.answer("localhost", {:incomplete, [@here], [:inet6]})
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+
+      assert %{addresses: [], hosts: %{"www.acme.test" => {:waiting, [@here]}}} = ServedHosts.check()
+      assert File.read!(file) == ""
+
+      DNS.answer("localhost", [@here])
+      assert %{addresses: [@here], hosts: %{"www.acme.test" => :served}} = ServedHosts.check()
+    end
+  end
+
   describe "the set" do
     test "unbinding, deleting the environment and deleting the site each remove a host", %{path: file, site: site} do
       {:ok, beta} = create_site("beta")
@@ -763,11 +863,11 @@ defmodule Brando.Tenant.ServedHostsTest do
       def lookup(_host), do: raise("resolver broke")
     end
 
-    test "a resolver that raises leaves the host waiting", %{path: file, site: site} do
+    test "a resolver that raises leaves the host not looked up", %{path: file, site: site} do
       put_test_env(ServedHosts, file: file, addresses: [@here], resolver: RaisingResolver)
       bind(site, "production", "www.acme.test", true)
 
-      assert %{hosts: %{"www.acme.test" => :unresolved}, error: nil} = ServedHosts.check()
+      assert %{hosts: %{"www.acme.test" => :lookup_failed}, error: nil} = ServedHosts.check()
       assert File.read!(file) == ""
     end
 
@@ -793,13 +893,13 @@ defmodule Brando.Tenant.ServedHostsTest do
 
     for resolver <- [ExitingResolver, ThrowingResolver, CrashingResolver, HangingResolver] do
       @resolver resolver
-      test "a lookup that fails with #{inspect(resolver)} leaves the host unresolved", %{path: file, site: site} do
+      test "a lookup that fails with #{inspect(resolver)} leaves the host not looked up", %{path: file, site: site} do
         pid = Process.whereis(ServedHosts)
-        bind(site, "production", "www.acme.test", true)
         # No addresses: the endpoint's host goes through the same resolver
         put_test_env(ServedHosts, file: file, resolver: @resolver, lookup_timeout: 50)
+        bind(site, "production", "www.acme.test", true)
 
-        assert %{hosts: %{"www.acme.test" => :unresolved}, addresses: [], error: nil} = ServedHosts.check()
+        assert %{hosts: %{"www.acme.test" => :lookup_failed}, addresses: [], error: nil} = ServedHosts.check()
         assert Process.whereis(ServedHosts) == pid
         assert File.read!(file) == ""
       end
@@ -830,7 +930,7 @@ defmodule Brando.Tenant.ServedHostsTest do
       timers = for {:stuck, timer} <- Enum.map(hosts, fn _host -> assert_receive({:stuck, _timer}) end), do: timer
       on_exit(fn -> Enum.each(timers, &Process.exit(&1, :kill)) end)
 
-      assert Map.take(states, hosts) == Map.new(hosts, &{&1, :unresolved})
+      assert Map.take(states, hosts) == Map.new(hosts, &{&1, :lookup_failed})
       assert %{lookups: lookups} = :sys.get_state(ServedHosts)
       assert lookups == %{}
     end
@@ -945,7 +1045,7 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert %{hosts: %{"slow.acme.test" => :checking}} = ServedHosts.status()
       # Never answered
       assert_receive {:looking_up, "slow.acme.test", _lookup}
-      assert_receive {:served_hosts, %{hosts: %{"slow.acme.test" => :unresolved}}}, 2_000
+      assert_receive {:served_hosts, %{hosts: %{"slow.acme.test" => :lookup_failed}}}, 2_000
     end
 
     test "the process does no file work itself: a task reads and writes the file", %{path: file, site: site} do
@@ -1158,7 +1258,7 @@ defmodule Brando.Tenant.ServedHostsTest do
 
       assert %{
                addresses: [@here],
-               hosts: %{"away.acme.test" => {:waiting, [@elsewhere]}, "slow.acme.test" => :unresolved}
+               hosts: %{"away.acme.test" => {:waiting, [@elsewhere]}, "slow.acme.test" => :lookup_failed}
              } =
                ServedHosts.settled()
     end
@@ -1222,7 +1322,7 @@ defmodule Brando.Tenant.ServedHostsTest do
       %{hosts: states} = ServedHosts.settled()
       timed_out = for {:looking_up, host, _lookup} <- first, do: host
       assert Enum.count(states, fn {_host, state} -> state == :served end) == 2
-      for host <- timed_out, do: assert(states[host] == :unresolved)
+      for host <- timed_out, do: assert(states[host] == :lookup_failed)
     end
 
     test "answers of one check are written and broadcast once", %{path: file, site: site} do

@@ -4711,6 +4711,11 @@ msgstr "Klarte ikke å publisere %{version}"
 msgid "Could not generate a suggestion. Try again."
 msgstr "Klarte ikke lage et forslag. Prøv igjen."
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not look it up"
+msgstr "Klarte ikke å slå den opp"
+
 #: lib/brando/workers/video_metadata_sweep.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
@@ -8973,6 +8978,11 @@ msgid "Its %{count} nested block is removed too."
 msgid_plural "Its %{count} nested blocks are removed too."
 msgstr[0] "Også %{count} underliggende blokk fjernes."
 msgstr[1] "Også %{count} underliggende blokker fjernes."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Its name servers did not give a full answer. It will be tried again."
+msgstr "Navnetjenerne ga ikke et fullstendig svar. Den blir prøvd igjen."
 
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
