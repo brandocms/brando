@@ -212,6 +212,9 @@ defmodule Brando.Plug.HTML do
   This form keeps the alternates as paths, so `Brando.HTML.alternate_url/1`
   links stay on the host the visitor is on; `Brando.HTML.render_hreflangs/1`
   gives the `<link rel="alternate">` tags the site's base URL.
+
+  The head's alternate in the page's own language is the page's URL
+  (`page_url/1`), in place of any given for that language: see `hreflangs/1`.
   """
   def put_hreflang(conn, hreflangs) when is_list(hreflangs) do
     alternates = Enum.map(hreflangs, fn {language, path} -> {language_key(language), with_host(path)} end)

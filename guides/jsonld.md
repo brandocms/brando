@@ -38,6 +38,17 @@ URLs](tenancy_and_environments.md#a-sites-absolute-urls)). JSON-LD stored with
 a block's HTML names the live environment's domain instead (see [Collections
 rendered by datasource blocks](#collections-rendered-by-datasource-blocks)).
 
+A node that describes the page, or the entry the page is about, has the
+page's URL (`Brando.Plug.HTML.page_url/1`, chosen as [Canonical
+URL](meta.md#canonical-url) describes, the same in every order a controller
+calls `put_meta/3`, `put_json_ld/3` and `put_hreflang/2`) as its `url`, and
+that URL and a fragment as its `@id` (`Brando.JSONLD.node_id/2`): no slash
+before the `#`, except after a bare origin, whose path is `/`
+(`https://example.com/#webpage`); a URL with a fragment of its own
+(`/team#ada`) gets the node's after a dash (`/team#ada-person`). An entity
+from `put_json_ld/3` is built when the head is rendered, so an entry without
+a URL of its own still names the URL of the page it is on.
+
 <!-- usage-rules:start topic="seo" -->
 
 ### Blueprint DSL
@@ -408,6 +419,9 @@ document; consumers merge it with the `@graph` in `<head>` by `@id`. Its URLs
 start with the site's public base URL (`Brando.Utils.public_hostname/0`), the
 live environment's domain, since the output is stored and served on whatever
 host the environment has later.
+An item's `@id` is its entry's URL and the type's fragment
+(`https://example.com/news/a#article`), the `@id` that entry's own page gives
+it, and a `CollectionPage`'s is the page's URL and `#collectionpage`.
 
 Because the markup is produced by the same render as the HTML, it is refreshed
 when the entry is re-rendered and never fresher or staler than the listing it

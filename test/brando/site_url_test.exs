@@ -417,6 +417,25 @@ defmodule Brando.SiteURLTest do
     end
   end
 
+  describe "an entry whose stored JSON-LD has the @id form with a slash before the fragment" do
+    test "has the page's form once `mix brando.entries.resave` renders it again" do
+      user = Brando.Factory.insert(:random_user)
+
+      in_environment("production", fn ->
+        page = json_ld_page!(user)
+        assert rendered_blocks(page) =~ ~S(http:\/\/acme.test\/en\/work#creativework")
+
+        old = String.replace(rendered_blocks(page), "#creativework", "/#creativework")
+        {1, _} = Brando.Repo.update_all(from(p in Page, where: p.id == ^page.id), set: [rendered_blocks: old])
+
+        # What the task does for each entry
+        assert {:ok, _} = Brando.Content.Blocks.render_and_store(Page, page.id, force: true)
+        assert rendered_blocks(page) =~ ~S(http:\/\/acme.test\/en\/work#creativework")
+        refute rendered_blocks(page) =~ "/#creativework"
+      end)
+    end
+  end
+
   describe "when the live environment's domain changes on another node" do
     # This node's record of the registry writes its cache has caught up with
     @registry_tokens {Brando.Cache.Freshness, :registry}

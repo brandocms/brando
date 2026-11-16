@@ -156,17 +156,39 @@ image. Blueprints do not need `twitter:*` fields in their `meta_schema`.
 
 A page has one URL, `Brando.Plug.HTML.page_url/1`, and its canonical link,
 `og:url`, its own language's alternate and the `@id`s and `url`s of its
-JSON-LD all name it:
+JSON-LD all name it. It is chosen when the head is rendered, so the order a
+controller calls these functions in does not matter. The first of these that
+gives a URL is the page's:
 
-- a page about an entry has the entry's URL, from the first entry passed to
-  `put_meta/3`, `put_hreflang/2` or `put_json_ld/3` whose blueprint has an
-  `absolute_url`, whatever path the request used (`/about/`, `/about?ref=x`,
-  or another route to the same page);
-- a page without an entry has the request URL, without its query string;
-- an error page (the 404 and 410 pages, any response of 400 or over) and an
-  entry without a URL of its own have none, and get no canonical link,
-  `og:url` or `WebPage` node: a static build serves its 404 page at every
-  missing path, so a URL there would name the wrong page.
+1. the URL given to `put_page_url/2`;
+2. the URL of the entry given to `put_hreflang/2`;
+3. the URL of the entry given to `put_json_ld/3`;
+4. the URL of the entry given to `put_meta/3`;
+5. the request URL, without its query string.
+
+An entry's URL is its blueprint's `absolute_url`, whatever path the request
+used (`/about/`, `/about?ref=x`, or another route to the same page). An
+entry without one (`absolute_url false`, or a page with **Has URL** off),
+or whose URL cannot be resolved (its template reads an association that is
+not preloaded, which is logged as a warning), gives none, and the next one
+is used. A detail controller that describes a section page with `put_meta/3`
+and the project with `put_json_ld/3` and `put_hreflang/2` has the project's
+URL. When the page's URL is none of these, set it:
+
+```elixir
+conn
+|> put_meta(Page, section_page)
+|> put_page_url("/projects")
+```
+
+An error response (the 404 and 410 pages, any status outside 200–299) has
+no URL, and gets no canonical link, `og:url`, own-language alternate or
+`WebPage` node: a static build serves its 404 page at every missing path,
+so a URL there would name the wrong page.
+
+The page's own-language alternate is always the page's URL: an alternate
+given to `put_hreflang/2` for the page's language is replaced by it, so the
+head lists one link per language.
 
 A page's URL has no trailing slash, as the entry's URL and the sitemap's
 entries have none: `/about/` is `https://example.com/about`, and its nodes
