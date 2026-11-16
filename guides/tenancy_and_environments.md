@@ -1760,8 +1760,12 @@ Only non-live environments can be deleted:
 The environment's domain and redirect hosts are released first. Brando waits
 for every node to refresh its registry cache (see [Several nodes](#several-nodes))
 before it drops the schema, so a request on them from then on is the unknown
-host's 404. When the schema cannot be dropped, the hosts are bound to the
-environment again.
+host's 404. In `multi` mode it waits also for an environment that binds no
+host, as one released just before may still be routed by another node. When
+this node's cache still resolves one of the environment's hosts, Brando
+refreshes it once more; if the host still resolves, the delete returns
+`{:error, {:hosts_still_resolve, hosts}}` and the schema stays. When the
+schema cannot be dropped, the hosts are bound to the environment again.
 
 Deleting an environment deletes its rows in the shared tables too: form
 submissions, entry drafts, assistant conversations, guidance versions, content

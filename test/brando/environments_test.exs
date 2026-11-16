@@ -741,6 +741,25 @@ defmodule Brando.EnvironmentsTest do
       assert %Environment{} = other_environment(site, @hosts)
     end
 
+    test "a delete waits for the other nodes also when the environment binds none now", %{site: site} do
+      assert Process.whereis(Brando.CacheSync)
+      put_test_env(:cache_sync_settle_ms, 200)
+      {:ok, preview} = create_preview(site)
+
+      {elapsed, {:ok, _deleted}} = :timer.tc(fn -> Environments.delete_environment(preview) end, :millisecond)
+      assert elapsed >= 200
+    end
+
+    test "release_hosts/1 is refused while this node's cache resolves a host after a refresh", %{site: site} do
+      {:ok, preview} = create_preview(site, @hosts)
+
+      # As a node whose copy is behind the row: its struct binds nothing
+      assert {:error, {:hosts_still_resolve, hosts}} =
+               Environments.release_hosts([%{preview | domain: nil, redirect_hosts: []}])
+
+      assert Enum.sort(hosts) == ["preview.acme.test", "www.preview.acme.test"]
+    end
+
     test "the migrations run at debug level", %{site: site} do
       put_test_env(:tenant_migrator, OptionsMigrator)
 

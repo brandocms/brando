@@ -92,21 +92,69 @@ defmodule Brando.Environments do
   (`Brando.CacheSync.settle/0`): from then on a request on one of them is the
   unknown host's 404, so their schemas can be dropped. Call it outside a
   transaction. `{:error, {:hosts_not_released, reason}}` releases none.
+
+  In `:multi` it waits also when none is bound now: another node may still
+  route a host released just before. A host this node's cache still resolves
+  to one of the environments is refreshed once more, and one it still
+  resolves then returns `{:error, {:hosts_still_resolve, hosts}}`.
   """
   @spec release_hosts([Environment.t()]) :: :ok | {:error, term()}
   def release_hosts(environments) do
-    case Enum.filter(environments, &hosts_bound?/1) do
-      [] ->
-        :ok
+    bound = Enum.filter(environments, &hosts_bound?/1)
 
-      bound ->
-        fn -> Enum.each(bound, &unbind_or_rollback/1) end
-        |> Repo.transaction()
-        |> case do
-          {:ok, :ok} -> Brando.CacheSync.settle()
-          {:error, reason} -> {:error, {:hosts_not_released, reason}}
-        end
+    with :ok <- unbind(bound),
+         :ok <- ensure_unresolved(environments) do
+      if bound != [] or Tenant.mode() == :multi, do: Brando.CacheSync.settle(), else: :ok
     end
+  end
+
+  defp unbind([]), do: :ok
+
+  defp unbind(bound) do
+    fn -> Enum.each(bound, &unbind_or_rollback/1) end
+    |> Repo.transaction()
+    |> case do
+      {:ok, :ok} -> :ok
+      {:error, reason} -> {:error, {:hosts_not_released, reason}}
+    end
+  end
+
+  # The cache refresh after the release runs after its commit, where a raise is
+  # logged and leaves this node's cache, and no other's, refreshed
+  defp ensure_unresolved(environments) do
+    with [_ | _] <- resolved_hosts(environments),
+         :ok <- refresh_registry_cache(),
+         [_ | _] = hosts <- resolved_hosts(environments) do
+      {:error, {:hosts_still_resolve, hosts}}
+    else
+      _released -> :ok
+    end
+  end
+
+  defp resolved_hosts(environments) do
+    ids = MapSet.new(environments, & &1.id)
+    cached = for %Site{environments: cached} <- Cache.list_sites(), environment <- cached, do: environment
+
+    (environments ++ Enum.filter(cached, &MapSet.member?(ids, &1.id)))
+    |> Enum.flat_map(&[&1.domain | &1.redirect_hosts || []])
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.filter(&resolves_to?(&1, ids))
+  end
+
+  defp resolves_to?(host, ids) do
+    Enum.any?([Cache.get_env_by_domain(host), Cache.get_redirect(host)], fn
+      {_site, %Environment{id: id}} -> MapSet.member?(ids, id)
+      nil -> false
+    end)
+  end
+
+  defp refresh_registry_cache do
+    Cache.invalidate()
+  rescue
+    error ->
+      Logger.error("[Brando.Environments] Could not refresh the registry cache: " <> Exception.message(error))
+      :ok
   end
 
   defp hosts_bound?(%Environment{domain: domain, redirect_hosts: hosts}), do: domain != nil or hosts not in [nil, []]
@@ -169,7 +217,8 @@ defmodule Brando.Environments do
   Its domain and redirect hosts are released first, and every node given
   time to refresh its registry cache (`Brando.CacheSync.settle/0`), before the
   schema is dropped: a request on them from then on is the unknown host's
-  404. When the drop fails, the hosts are bound again.
+  404. In `:multi` it waits also when the environment binds no host now
+  (`release_hosts/1`). When the drop fails, the hosts are bound again.
   """
   @spec delete_environment(Environment.t(), keyword()) ::
           {:ok, Environment.t()} | {:error, term()}

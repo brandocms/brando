@@ -146,6 +146,34 @@ defmodule Brando.Environments.HostOrderTest do
     assert request(@domain).status == 404
   end
 
+  test "a delete of an environment whose hosts a cache still holds refreshes it before the drop", %{site: site} do
+    creator = create_task(site)
+    assert_receive {:migrating, migrator}, 5_000
+    send(migrator, :migrate)
+    assert {:ok, environment} = Task.await(creator, 10_000)
+
+    # Released by a write whose cache refresh failed
+    Sandbox.unboxed_run(Repo, fn ->
+      Repo.update_all(from(e in Environment, where: e.id == ^environment.id), [set: [domain: nil, redirect_hosts: []]],
+        prefix: "public"
+      )
+    end)
+
+    assert {_site, %Environment{}} = Cache.get_env_by_domain(@domain)
+
+    prefix = Tenant.prefix(site, environment)
+    reader = hold_table(prefix)
+    deleter = Task.async(fn -> Sandbox.unboxed_run(Repo, fn -> Environments.delete_environment(environment) end) end)
+    wait_for_drop(prefix)
+
+    refute Cache.get_env_by_domain(@domain)
+    refute Cache.get_redirect(@redirect)
+
+    send(reader.pid, :commit)
+    Task.await(reader, 10_000)
+    assert {:ok, %Environment{}} = Task.await(deleter, 10_000)
+  end
+
   describe "a new site's hosts" do
     setup do
       put_test_env(:environment_schema_cloner, Brando.TenantCloners)
