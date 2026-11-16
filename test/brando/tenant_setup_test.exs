@@ -7,6 +7,7 @@ defmodule Brando.Tenant.SetupTest do
   alias Brando.Environments.Schema
   alias Brando.Tenant
   alias Brando.Tenant.Access
+  alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
   alias Brando.Tenant.Setup
   alias Brando.Tenant.Storage
@@ -66,9 +67,8 @@ defmodule Brando.Tenant.SetupTest do
     def seed(_site, _environment, _creator) do
       send(
         self(),
-        {:hosts_while_seeding, Brando.Tenant.Cache.get_env_by_domain("acme.example.com"),
-         Brando.Tenant.Cache.get_redirect("www.acme.example.com"),
-         Brando.Tenant.Cache.get_env_by_domain("staging.acme.example.com")}
+        {:hosts_while_seeding, Cache.get_env_by_domain("acme.example.com"), Cache.get_redirect("www.acme.example.com"),
+         Cache.get_env_by_domain("staging.acme.example.com")}
       )
 
       :ok
@@ -111,7 +111,7 @@ defmodule Brando.Tenant.SetupTest do
     on_exit(fn ->
       File.rm_rf(root)
       Tenant.put_prefix(nil)
-      Brando.Tenant.Cache.clear()
+      Cache.clear()
     end)
 
     creator = Brando.Factory.insert(:random_user, role: :admin)
@@ -170,10 +170,10 @@ defmodule Brando.Tenant.SetupTest do
       assert {:ok, site} = Setup.create_site(site_attrs("hosted"), owner, environments: @hosted)
 
       assert_received {:hosts_while_seeding, nil, nil, nil}
-      assert {%{id: site_id}, %{key: "production"}} = Brando.Tenant.Cache.get_env_by_domain("acme.example.com")
+      assert {%{id: site_id}, %{key: "production"}} = Cache.get_env_by_domain("acme.example.com")
       assert site_id == site.id
-      assert {_site, %{key: "production"}} = Brando.Tenant.Cache.get_redirect("www.acme.example.com")
-      assert {_site, %{key: "staging"}} = Brando.Tenant.Cache.get_env_by_domain("staging.acme.example.com")
+      assert {_site, %{key: "production"}} = Cache.get_redirect("www.acme.example.com")
+      assert {_site, %{key: "staging"}} = Cache.get_env_by_domain("staging.acme.example.com")
       assert Enum.find(site.environments, &(&1.key == "staging")).domain == "staging.acme.example.com"
     end
 
@@ -187,8 +187,8 @@ defmodule Brando.Tenant.SetupTest do
       refute_received {:structure_cloned, _source, _target}
       refute_received {:migrated, _site, _environment}
       refute Registry.get_site_by_key("hosted")
-      refute Brando.Tenant.Cache.get_env_by_domain("acme.example.com")
-      assert {_site, %{key: "rival"}} = Brando.Tenant.Cache.get_env_by_domain("staging.acme.example.com")
+      refute Cache.get_env_by_domain("acme.example.com")
+      assert {_site, %{key: "rival"}} = Cache.get_env_by_domain("staging.acme.example.com")
     end
 
     test "that a creator may not bind are refused before any schema work", %{creator: creator} do
@@ -210,9 +210,9 @@ defmodule Brando.Tenant.SetupTest do
       assert changeset.errors[:domain]
       refute Registry.get_site_by_key("hosted")
       refute Schema.exists?("tenant_hosted_production")
-      refute Brando.Tenant.Cache.get_env_by_domain("acme.example.com")
-      refute Brando.Tenant.Cache.get_redirect("www.acme.example.com")
-      assert {_site, %{key: "rival"}} = Brando.Tenant.Cache.get_env_by_domain("staging.acme.example.com")
+      refute Cache.get_env_by_domain("acme.example.com")
+      refute Cache.get_redirect("www.acme.example.com")
+      assert {_site, %{key: "rival"}} = Cache.get_env_by_domain("staging.acme.example.com")
     end
 
     test "a failed provisioning leaves none bound", %{owner: owner} do
@@ -222,7 +222,7 @@ defmodule Brando.Tenant.SetupTest do
                Setup.create_site(site_attrs("hosted"), owner, environments: @hosted)
 
       refute Registry.get_site_by_key("hosted")
-      assert Brando.Tenant.Cache.bound_hosts() == []
+      assert Cache.bound_hosts() == []
     end
 
     test "remove_leftovers/2 releases them before the schemas go", %{owner: owner} do
@@ -231,7 +231,7 @@ defmodule Brando.Tenant.SetupTest do
       assert :ok = Setup.remove_leftovers("hosted", actor: :system)
 
       refute Schema.exists?("tenant_hosted_production")
-      assert Brando.Tenant.Cache.bound_hosts() == []
+      assert Cache.bound_hosts() == []
     end
   end
 
@@ -345,7 +345,7 @@ defmodule Brando.Tenant.SetupTest do
     assert {:ok, site} = Setup.create_site(site_attrs("retained-site"), creator)
     assert {:ok, suspended} = Setup.suspend_site(site)
     assert suspended.status == :suspended
-    refute Brando.Tenant.Cache.get_live_env(site.key)
+    refute Cache.get_live_env(site.key)
 
     archived_at = DateTime.utc_now()
     assert {:ok, archived} = Setup.archive_site(suspended, now: archived_at)

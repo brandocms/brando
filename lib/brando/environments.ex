@@ -78,17 +78,21 @@ defmodule Brando.Environments do
 
   @host_fields [:domain, :redirect_hosts, "domain", "redirect_hosts"]
 
-  @doc false
-  # An environment's attributes as `{hosts, the rest}`: a create writes the
-  # row without its hosts and binds them last (`Registry.bind_hosts/3`)
+  @doc """
+  An environment's attributes as `{hosts, the rest}`: `domain` and
+  `redirect_hosts`, and everything else. A create writes the row without its
+  hosts and binds them last (`Brando.Tenant.Registry.bind_hosts/3`).
+  """
   @spec split_hosts(map()) :: {map(), map()}
   def split_hosts(attrs), do: {Map.take(attrs, @host_fields), Map.drop(attrs, @host_fields)}
 
-  @doc false
-  # Releases the environments' hosts in one write and returns once every node
-  # has had time to refresh for it (`Brando.CacheSync.settle/0`): from then on
-  # a request on one of them is the unknown host's 404, so their schemas can
-  # be dropped. Call it outside a transaction.
+  @doc """
+  Releases the environments' domains and redirect hosts in one write, and
+  returns once every node has had time to refresh its registry cache for it
+  (`Brando.CacheSync.settle/0`): from then on a request on one of them is the
+  unknown host's 404, so their schemas can be dropped. Call it outside a
+  transaction. `{:error, {:hosts_not_released, reason}}` releases none.
+  """
   @spec release_hosts([Environment.t()]) :: :ok | {:error, term()}
   def release_hosts(environments) do
     case Enum.filter(environments, &hosts_bound?/1) do

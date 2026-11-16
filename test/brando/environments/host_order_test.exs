@@ -33,8 +33,8 @@ defmodule Brando.Environments.HostOrderTest do
 
   alias Brando.Environments
   alias Brando.Environments.Environment
-  alias Brando.Environments.Schema
   alias Brando.Environments.HostOrderTest.Router
+  alias Brando.Environments.Schema
   alias Brando.Sites.Site
   alias Brando.Tenant
   alias Brando.Tenant.Cache
@@ -170,24 +170,23 @@ defmodule Brando.Environments.HostOrderTest do
   defp hold_table(prefix) do
     test = self()
 
-    reader =
-      Task.async(fn ->
-        Sandbox.unboxed_run(Repo, fn ->
-          Repo.transaction(fn ->
-            Repo.query!(~s|SELECT count(*) FROM "#{prefix}".pages|)
-            send(test, :reading)
-
-            receive do
-              :commit -> :ok
-            after
-              10_000 -> raise "never told to commit"
-            end
-          end)
-        end)
-      end)
+    reader = Task.async(fn -> Sandbox.unboxed_run(Repo, fn -> read_and_hold(test, prefix) end) end)
 
     assert_receive :reading, 5_000
     reader
+  end
+
+  defp read_and_hold(test, prefix), do: Repo.transaction(fn -> hold_read(test, prefix) end)
+
+  defp hold_read(test, prefix) do
+    Repo.query!(~s|SELECT count(*) FROM "#{prefix}".pages|)
+    send(test, :reading)
+
+    receive do
+      :commit -> :ok
+    after
+      10_000 -> raise "never told to commit"
+    end
   end
 
   # Until the drop waits for the reader's lock on the table

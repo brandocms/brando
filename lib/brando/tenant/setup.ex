@@ -225,18 +225,20 @@ defmodule Brando.Tenant.Setup do
   # In one write: a host bound meanwhile by another write leaves none bound,
   # and the site is compensated
   defp bind_hosts(site, environments_and_attrs, creator) do
-    fn ->
-      Enum.each(environments_and_attrs, fn {environment, attrs} ->
-        case Registry.bind_hosts(environment, attrs, actor: host_actor(site, creator)) do
-          {:ok, _environment} -> :ok
-          {:error, changeset} -> Repo.rollback(changeset)
-        end
-      end)
-    end
+    actor = host_actor(site, creator)
+
+    fn -> Enum.each(environments_and_attrs, &bind_or_rollback(&1, actor)) end
     |> Repo.transaction()
     |> case do
       {:ok, :ok} -> :ok
       {:error, _changeset} = error -> error
+    end
+  end
+
+  defp bind_or_rollback({environment, attrs}, actor) do
+    case Registry.bind_hosts(environment, attrs, actor: actor) do
+      {:ok, _environment} -> :ok
+      {:error, changeset} -> Repo.rollback(changeset)
     end
   end
 
