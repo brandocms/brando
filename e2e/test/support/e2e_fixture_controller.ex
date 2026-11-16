@@ -139,6 +139,12 @@ defmodule E2EFixtureController do
 
         "multi-site-hosts-unwritable" ->
           MultiSiteHosts.setup(get_admin_user(), unwritable: true)
+
+        "multi-site-static" ->
+          MultiSiteHosts.setup(get_admin_user(), static: true)
+
+        "multi-site-static-published" ->
+          MultiSiteHosts.setup(get_admin_user(), published: true)
       end
 
     # Log the user in
@@ -584,7 +590,12 @@ defmodule E2EFixtureController do
 
     params = %{
       "refs" => [
-        %{"id" => ref.id, "uid" => ref.uid, "name" => ref.name, "data" => %{"type" => "text", "data" => %{"text" => text}}}
+        %{
+          "id" => ref.id,
+          "uid" => ref.uid,
+          "name" => ref.name,
+          "data" => %{"type" => "text", "data" => %{"text" => text}}
+        }
       ]
     }
 
@@ -1231,7 +1242,10 @@ defmodule E2EFixtureController do
     end
 
     keys = ~w(brando.admin.access brando.profile.read brando.profile.update brando.images.read brando.files.read)
-    keys = keys ++ for action <- [:read, :update, :publish], schema <- [Project, Client], do: Catalog.get(action, schema).key
+
+    keys =
+      keys ++ for action <- [:read, :update, :publish], schema <- [Project, Client], do: Catalog.get(action, schema).key
+
     {:ok, group} = Groups.create(Scope.standalone(owner), %{name: "Project editors"}, keys)
     {:ok, :ok} = Groups.add_member(Scope.standalone(owner), group.id, user.id)
 
@@ -1251,7 +1265,10 @@ defmodule E2EFixtureController do
     # What a save of the project requires
     attrs = Map.merge(attrs, %{client_id: client.id, introduction: "<p>By the sea.</p>"})
     related = Brando.Repo.insert!(struct(Project, Map.merge(attrs, %{title: "The garden rooms", slug: slug.("garden")})))
-    project = Brando.Repo.insert!(struct(Project, Map.merge(attrs, %{title: "Havglimt retreat", slug: slug.("havglimt")})))
+
+    project =
+      Brando.Repo.insert!(struct(Project, Map.merge(attrs, %{title: "Havglimt retreat", slug: slug.("havglimt")})))
+
     {:ok, page_identifier} = Brando.Content.create_identifier(Brando.Pages.Page, page)
     {:ok, related_identifier} = Brando.Content.create_identifier(Project, related)
     join = Project.__schema__(:association, :related_entries).related
@@ -1395,7 +1412,8 @@ defmodule E2EFixtureController do
   end
 
   # Changes an account's role, as a superuser saving the user form does.
-  def two_factor(conn, %{"action" => "set-role", "id" => id, "role" => role}) when role in ~w(user editor admin superuser) do
+  def two_factor(conn, %{"action" => "set-role", "id" => id, "role" => role})
+      when role in ~w(user editor admin superuser) do
     [beam | _] = Plug.Conn.get_req_header(conn, "user-agent")
     Phoenix.Ecto.SQL.Sandbox.allow(beam, Ecto.Adapters.SQL.Sandbox)
     {:ok, user} = Brando.Users.update_user(id, %{role: role}, :system)

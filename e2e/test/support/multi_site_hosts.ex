@@ -18,7 +18,10 @@ defmodule E2E.MultiSiteHosts do
   Options: `:site_admin` makes the E2E admin a site administrator of Acme
   instead of a superuser, who sees the hosts but may not change them;
   `:unwritable` adds a host the file cannot take, so it is "not in the file
-  yet" and the screen shows the file's error.
+  yet" and the screen shows the file's error. `:static` makes Acme a static
+  site the installation serves itself (the deploy strategy `:local`), for the
+  publishing screen; `:published` adds three builds to it, the newest
+  deployed and so published, with a ready one before it and a failed one.
   """
 
   @behaviour Brando.Tenant.ServedHosts.Resolver
@@ -138,6 +141,8 @@ defmodule E2E.MultiSiteHosts do
       ServedHosts.check()
     end
 
+    if opts[:static] || opts[:published], do: serve_statically(acme, acme_live, admin, opts[:published])
+
     if opts[:site_admin] do
       admin = admin |> Ecto.Changeset.change(role: :admin) |> Repo.update!()
       {:ok, _} = Access.grant(admin, acme, :admin)
@@ -161,6 +166,46 @@ defmodule E2E.MultiSiteHosts do
     end
 
     :ok
+  end
+
+  defp serve_statically(site, live, admin, published?) do
+    {:ok, site} =
+      Registry.update_site(site, %{
+        delivery_mode: :static,
+        deploy_config: %{strategy: :local, retention_count: 10}
+      })
+
+    if published? do
+      ready = build(site, live, admin)
+      {:ok, _failed} = Brando.SSG.Builds.update(build(site, live, admin, false), %{status: :failed})
+      {:ok, _deployed} = Brando.SSG.Deploy.deploy(build(site, live, admin), creator: admin)
+      ready
+    end
+
+    Cache.warm()
+  end
+
+  # A build with a page, ready to deploy
+  defp build(site, environment, admin, ready? \\ true) do
+    {:ok, build} = Brando.SSG.Builds.request_build(Registry.get_site(site.id), environment, creator: admin)
+    File.mkdir_p!(build.build_path)
+    File.write!(Path.join(build.build_path, "index.html"), "<h1>Acme</h1>")
+
+    if ready? do
+      {:ok, ready} =
+        Brando.SSG.Builds.update(build, %{
+          status: :ready,
+          built_at: DateTime.utc_now(),
+          file_count: 24,
+          total_size: 182_000,
+          url_count: 12,
+          processed_urls: 12
+        })
+
+      ready
+    else
+      build
+    end
   end
 
   defp file, do: Application.fetch_env!(:brando, ServedHosts)[:file]

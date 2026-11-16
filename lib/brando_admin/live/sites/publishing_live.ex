@@ -62,277 +62,281 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
   def render(assigns) do
     ~H"""
-    <Content.header
-      title={gettext("Publishing")}
-      subtitle={gettext("Build, preview, deploy, and roll back versioned static artifacts")}
-    >
-      <button type="button" class="btn" phx-click="refresh">{gettext("Refresh")}</button>
-    </Content.header>
+    <div class="environment-screen">
+      <Content.header
+        title={gettext("Publishing")}
+        subtitle={gettext("Build, preview, deploy, and roll back versioned static artifacts")}
+      >
+        <button type="button" class="btn" phx-click="refresh">{gettext("Refresh")}</button>
+      </Content.header>
 
-    <div class="environment-management-live">
-      <div :if={!@can_manage?} class="environment-notice warning">
-        {gettext("Only site administrators and superusers can publish static builds.")}
-      </div>
+      <div class="environment-management-live">
+        <div :if={!@can_manage?} class="environment-notice warning">
+          {gettext("Only site administrators and superusers can publish static builds.")}
+        </div>
 
-      <section class="environment-panel environment-overview">
-        <header>
-          <div>
-            <h2>{@site.name}</h2>
-            <p>{deploy_summary(@site)}</p>
-          </div>
-          <span class="environment-state live">{gettext("Static delivery")}</span>
-        </header>
+        <section class="environment-panel environment-overview publishing-overview">
+          <header>
+            <div>
+              <h2>{@site.name}</h2>
+              <p>{deploy_summary(@site)}</p>
+            </div>
+            <span class="environment-state live">{gettext("Static delivery")}</span>
+          </header>
 
-        <form id="build-static-site" phx-submit="request_build">
-          <label>
-            <span>{gettext("Content environment")}</span>
-            <select name="build[environment_id]" required>
-              <option :for={environment <- @environments} value={environment.id}>
-                {environment.name}{if environment.live, do: " • live", else: ""}
-              </option>
-            </select>
-          </label>
-          <label>
-            <span>{gettext("Note (optional)")}</span>
-            <input name="build[note]" placeholder={gettext("Homepage campaign update")} />
-          </label>
-          <label :if={deploy_configured?(@site)}>
-            <input
-              type="checkbox"
-              name="build[auto_deploy]"
-              value="true"
-              checked={auto_deploy?(@site) && BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
-              disabled={!BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
-            />
-            <span>{gettext("Deploy automatically after a successful build")}</span>
-          </label>
-          <div class="environment-actions">
+          <form id="build-static-site" phx-submit="request_build">
+            <label>
+              <span>{gettext("Content environment")}</span>
+              <select name="build[environment_id]" required>
+                <option :for={environment <- @environments} value={environment.id}>
+                  {environment.name}{if environment.live, do: " • live", else: ""}
+                </option>
+              </select>
+            </label>
+            <label>
+              <span>{gettext("Note (optional)")}</span>
+              <input name="build[note]" placeholder={gettext("Homepage campaign update")} />
+            </label>
+            <label :if={deploy_configured?(@site)} class="environment-check">
+              <input
+                type="checkbox"
+                name="build[auto_deploy]"
+                value="true"
+                checked={auto_deploy?(@site) && BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
+                disabled={!BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
+              />
+              <span>{gettext("Deploy automatically after a successful build")}</span>
+            </label>
+            <div class="environment-actions">
+              <button
+                type="submit"
+                class="btn btn--primary"
+                disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:build, :publishing)}
+                phx-disable-with={gettext("Queueing…")}
+              >
+                {gettext("Build now")}
+              </button>
+            </div>
+          </form>
+
+          <form id="schedule-static-site" phx-submit="schedule_build">
+            <label>
+              <span>{gettext("Schedule a build")}</span>
+              <input type="datetime-local" name="build[scheduled_at]" value={@default_scheduled_at} required />
+            </label>
+            <label>
+              <span>{gettext("Content environment")}</span>
+              <select name="build[environment_id]" required>
+                <option :for={environment <- @environments} value={environment.id}>
+                  {environment.name}{if environment.live, do: " • live", else: ""}
+                </option>
+              </select>
+            </label>
+            <label :if={deploy_configured?(@site)} class="environment-check">
+              <input
+                type="checkbox"
+                name="build[auto_deploy]"
+                value="true"
+                checked={auto_deploy?(@site) && BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
+                disabled={!BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
+              />
+              <span>{gettext("Deploy automatically")}</span>
+            </label>
             <button
               type="submit"
-              class="btn btn--primary"
-              disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:build, :publishing)}
-              phx-disable-with={gettext("Queueing…")}
+              class="btn"
+              disabled={
+                !@can_manage? || !BrandoAdmin.Authorization.allowed?(:build, :publishing) ||
+                  !BrandoAdmin.Authorization.allowed?(:schedule, :publishing)
+              }
             >
-              {gettext("Build now")}
+              {gettext("Schedule")}
             </button>
+          </form>
+        </section>
+
+        <section class="environment-panel">
+          <h2>{gettext("Deployment target")}</h2>
+          <p>
+            {gettext(
+              "This publishes static artifacts only. Florist continues to deploy and roll back the Phoenix application release."
+            )}
+          </p>
+          <form id="static-deploy-config" phx-change="change_deploy_config" phx-submit="save_deploy_config">
+            <label>
+              <span>{gettext("Strategy")}</span>
+              <select name="deploy[strategy]">
+                <option value="">{gettext("Build and preview only")}</option>
+                <option :if={local_delivery_offered?(@site)} value="local" selected={@strategy == "local"}>
+                  {gettext("Served by this installation")}
+                </option>
+                <option value="rsync" selected={@strategy == "rsync"}>Rsync</option>
+                <option value="s3" selected={@strategy == "s3"}>Amazon S3</option>
+              </select>
+            </label>
+            <div :if={@strategy == "local"} class="alert environment-hint">
+              <.icon name="info" />
+              <span>{local_delivery_note(@site)}</span>
+            </div>
+            <label :if={@strategy != "local"}>
+              <span>{gettext("Target")}</span>
+              <input
+                name="deploy[target]"
+                value={deploy_value(@site, :target)}
+                placeholder="deploy@example.com:/srv/www or s3://bucket/prefix"
+              />
+            </label>
+            <label>
+              <span>{gettext("Public CDN URL (optional)")}</span>
+              <input name="deploy[cdn_url]" value={deploy_value(@site, :cdn_url)} placeholder="https://www.example.com" />
+            </label>
+            <label>
+              <span>{gettext("Completion webhook (optional)")}</span>
+              <input
+                name="deploy[webhook_url]"
+                value={deploy_value(@site, :webhook_url)}
+                placeholder="https://hooks.example.com/static-published"
+              />
+            </label>
+            <label>
+              <span>{gettext("Artifact retention")}</span>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                name="deploy[retention_count]"
+                value={deploy_value(@site, :retention_count) || 10}
+              />
+            </label>
+            <label :if={deploy_configured?(@site)} class="environment-check">
+              <input
+                type="checkbox"
+                name="deploy[auto_deploy]"
+                value="true"
+                checked={auto_deploy?(@site)}
+              />
+              <span>{gettext("Default new builds to automatic deployment")}</span>
+            </label>
+            <button
+              type="submit"
+              class="btn"
+              disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
+            >
+              {gettext("Save deployment settings")}
+            </button>
+          </form>
+        </section>
+
+        <section class="environment-panel publishing-builds">
+          <header>
+            <div>
+              <h2>{gettext("Build history")}</h2>
+              <p>{gettext("Artifacts are stored outside the OTP release and survive blue/green switches.")}</p>
+            </div>
+            <span class="environment-count">
+              {ngettext("%{count} build", "%{count} builds", length(@builds))}
+            </span>
+          </header>
+
+          <div :if={@builds == []} class="environment-notice">
+            {gettext("No static builds have been requested yet.")}
           </div>
-        </form>
 
-        <form id="schedule-static-site" phx-submit="schedule_build">
-          <label>
-            <span>{gettext("Schedule a build")}</span>
-            <input type="datetime-local" name="build[scheduled_at]" value={@default_scheduled_at} required />
-          </label>
-          <label>
-            <span>{gettext("Content environment")}</span>
-            <select name="build[environment_id]" required>
-              <option :for={environment <- @environments} value={environment.id}>
-                {environment.name}{if environment.live, do: " • live", else: ""}
-              </option>
-            </select>
-          </label>
-          <label :if={deploy_configured?(@site)}>
-            <input
-              type="checkbox"
-              name="build[auto_deploy]"
-              value="true"
-              checked={auto_deploy?(@site) && BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
-              disabled={!BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
-            />
-            <span>{gettext("Deploy automatically")}</span>
-          </label>
-          <button
-            type="submit"
-            class="btn"
-            disabled={
-              !@can_manage? || !BrandoAdmin.Authorization.allowed?(:build, :publishing) ||
-                !BrandoAdmin.Authorization.allowed?(:schedule, :publishing)
-            }
-          >
-            {gettext("Schedule")}
-          </button>
-        </form>
-      </section>
-
-      <section class="environment-panel">
-        <h2>{gettext("Deployment target")}</h2>
-        <p>
-          {gettext(
-            "This publishes static artifacts only. Florist continues to deploy and roll back the Phoenix application release."
-          )}
-        </p>
-        <form id="static-deploy-config" phx-change="change_deploy_config" phx-submit="save_deploy_config">
-          <label>
-            <span>{gettext("Strategy")}</span>
-            <select name="deploy[strategy]">
-              <option value="">{gettext("Build and preview only")}</option>
-              <option :if={local_delivery_offered?(@site)} value="local" selected={@strategy == "local"}>
-                {gettext("Served by this installation")}
-              </option>
-              <option value="rsync" selected={@strategy == "rsync"}>Rsync</option>
-              <option value="s3" selected={@strategy == "s3"}>Amazon S3</option>
-            </select>
-          </label>
-          <div :if={@strategy == "local"} class="alert environment-hint">
-            <.icon name="info" />
-            <span>{local_delivery_note(@site)}</span>
+          <div :if={@builds != []} class="environment-table-wrap environment-stacking">
+            <table>
+              <thead>
+                <tr>
+                  <th>{gettext("Version")}</th>
+                  <th>{gettext("Environment")}</th>
+                  <th>{gettext("Progress")}</th>
+                  <th>{gettext("State")}</th>
+                  <th>{gettext("Created")}</th>
+                  <th class="environment-actions">{gettext("Actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr :for={build <- @builds} id={"ssg-build-#{build.id}"}>
+                  <td>
+                    <strong>{build.version}</strong>
+                    <code>{build.note || asset_name(build)}</code>
+                  </td>
+                  <td>{build.environment_name}</td>
+                  <td>{build.processed_urls}/{build.url_count}</td>
+                  <td>
+                    <span class={["environment-state", build.status == :deployed && "live"]}>
+                      {human_status(build.status)}
+                    </span>
+                    <small :if={published?(build, @site)} class="publishing-served">{gettext("served by this installation")}</small>
+                    <small :if={build.pruned_at}>{gettext("artifact pruned")}</small>
+                    <WorkComponent.status
+                      key={SSGBuild.work_key(build.id)}
+                      work={@work[SSGBuild.work_key(build.id)]}
+                      global
+                      class="publishing-build-work"
+                    />
+                  </td>
+                  <td>{format_datetime(build.scheduled_at || build.inserted_at)}</td>
+                  <td class="environment-actions">
+                    <a
+                      :if={previewable?(build) && preview_url(build, @site, @admin_uri)}
+                      class="btn btn--sm"
+                      href={preview_url(build, @site, @admin_uri)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {gettext("Preview")}
+                    </a>
+                    <a
+                      :if={build.status == :deployed && public_url(build, @site, @admin_uri)}
+                      class="btn btn--sm"
+                      href={public_url(build, @site, @admin_uri)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {gettext("Open site")}
+                    </a>
+                    <button
+                      :if={build.status == :ready && is_nil(build.pruned_at)}
+                      type="button"
+                      class="btn btn--sm btn--primary"
+                      disabled={
+                        !@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing) ||
+                          !deploy_configured?(@site)
+                      }
+                      phx-click="deploy"
+                      phx-value-id={build.id}
+                      phx-confirm={gettext("Deploy %{version}?", version: build.version)}
+                    >
+                      {gettext("Deploy")}
+                    </button>
+                    <button
+                      :if={build.status == :archived && is_nil(build.pruned_at)}
+                      type="button"
+                      class="btn btn--sm"
+                      disabled={
+                        !@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing) ||
+                          !deploy_configured?(@site)
+                      }
+                      phx-click="rollback"
+                      phx-value-id={build.id}
+                      phx-confirm={gettext("Roll back to %{version}?", version: build.version)}
+                    >
+                      {gettext("Roll back")}
+                    </button>
+                    <details :if={build.build_log != "" || build.failed_urls != []}>
+                      <summary>{gettext("Log")}</summary>
+                      <pre>{build.build_log}</pre>
+                      <ul :if={build.failed_urls != []}>
+                        <li :for={failed_url <- build.failed_urls}>{failed_url}</li>
+                      </ul>
+                    </details>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <label :if={@strategy != "local"}>
-            <span>{gettext("Target")}</span>
-            <input
-              name="deploy[target]"
-              value={deploy_value(@site, :target)}
-              placeholder="deploy@example.com:/srv/www or s3://bucket/prefix"
-            />
-          </label>
-          <label>
-            <span>{gettext("Public CDN URL (optional)")}</span>
-            <input name="deploy[cdn_url]" value={deploy_value(@site, :cdn_url)} placeholder="https://www.example.com" />
-          </label>
-          <label>
-            <span>{gettext("Completion webhook (optional)")}</span>
-            <input
-              name="deploy[webhook_url]"
-              value={deploy_value(@site, :webhook_url)}
-              placeholder="https://hooks.example.com/static-published"
-            />
-          </label>
-          <label>
-            <span>{gettext("Artifact retention")}</span>
-            <input
-              type="number"
-              min="1"
-              max="100"
-              name="deploy[retention_count]"
-              value={deploy_value(@site, :retention_count) || 10}
-            />
-          </label>
-          <label :if={deploy_configured?(@site)}>
-            <input
-              type="checkbox"
-              name="deploy[auto_deploy]"
-              value="true"
-              checked={auto_deploy?(@site)}
-            />
-            <span>{gettext("Default new builds to automatic deployment")}</span>
-          </label>
-          <button
-            type="submit"
-            class="btn"
-            disabled={!@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing)}
-          >
-            {gettext("Save deployment settings")}
-          </button>
-        </form>
-      </section>
-
-      <section class="environment-panel">
-        <header>
-          <div>
-            <h2>{gettext("Build history")}</h2>
-            <p>{gettext("Artifacts are stored outside the OTP release and survive blue/green switches.")}</p>
-          </div>
-          <span class="environment-count">
-            {ngettext("%{count} build", "%{count} builds", length(@builds))}
-          </span>
-        </header>
-
-        <div :if={@builds == []} class="environment-notice">
-          {gettext("No static builds have been requested yet.")}
-        </div>
-
-        <div :if={@builds != []} class="environment-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>{gettext("Version")}</th>
-                <th>{gettext("Environment")}</th>
-                <th>{gettext("Progress")}</th>
-                <th>{gettext("State")}</th>
-                <th>{gettext("Created")}</th>
-                <th>{gettext("Actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr :for={build <- @builds} id={"ssg-build-#{build.id}"}>
-                <td>
-                  <strong>{build.version}</strong>
-                  <code>{build.note || asset_name(build)}</code>
-                </td>
-                <td>{build.environment_name}</td>
-                <td>{build.processed_urls}/{build.url_count}</td>
-                <td>
-                  <span class={["environment-state", build.status == :deployed && "live"]}>
-                    {human_status(build.status)}
-                  </span>
-                  <small :if={published?(build, @site)}>{gettext("served by this installation")}</small>
-                  <small :if={build.pruned_at}>{gettext("artifact pruned")}</small>
-                  <WorkComponent.status
-                    key={SSGBuild.work_key(build.id)}
-                    work={@work[SSGBuild.work_key(build.id)]}
-                    global
-                    class="publishing-build-work"
-                  />
-                </td>
-                <td>{format_datetime(build.scheduled_at || build.inserted_at)}</td>
-                <td class="environment-actions">
-                  <a
-                    :if={previewable?(build) && preview_url(build, @site, @admin_uri)}
-                    class="btn btn--sm"
-                    href={preview_url(build, @site, @admin_uri)}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {gettext("Preview")}
-                  </a>
-                  <a
-                    :if={build.status == :deployed && public_url(build, @site, @admin_uri)}
-                    class="btn btn--sm"
-                    href={public_url(build, @site, @admin_uri)}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {gettext("Open site")}
-                  </a>
-                  <button
-                    :if={build.status == :ready && is_nil(build.pruned_at)}
-                    type="button"
-                    class="btn btn--sm btn--primary"
-                    disabled={
-                      !@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing) || !deploy_configured?(@site)
-                    }
-                    phx-click="deploy"
-                    phx-value-id={build.id}
-                    phx-confirm={gettext("Deploy %{version}?", version: build.version)}
-                  >
-                    {gettext("Deploy")}
-                  </button>
-                  <button
-                    :if={build.status == :archived && is_nil(build.pruned_at)}
-                    type="button"
-                    class="btn btn--sm"
-                    disabled={
-                      !@can_manage? || !BrandoAdmin.Authorization.allowed?(:deploy, :publishing) || !deploy_configured?(@site)
-                    }
-                    phx-click="rollback"
-                    phx-value-id={build.id}
-                    phx-confirm={gettext("Roll back to %{version}?", version: build.version)}
-                  >
-                    {gettext("Roll back")}
-                  </button>
-                  <details :if={build.build_log != "" || build.failed_urls != []}>
-                    <summary>{gettext("Log")}</summary>
-                    <pre>{build.build_log}</pre>
-                    <ul :if={build.failed_urls != []}>
-                      <li :for={failed_url <- build.failed_urls}>{failed_url}</li>
-                    </ul>
-                  </details>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
     """
   end
@@ -618,7 +622,12 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
   defp published?(build, site), do: Site.local_delivery?(site) and site.published_build == build.version
 
-  defp human_status(status), do: status |> Atom.to_string() |> String.capitalize()
+  defp human_status(:queued), do: gettext("Queued")
+  defp human_status(:building), do: gettext("Building")
+  defp human_status(:ready), do: gettext("Ready")
+  defp human_status(:deployed), do: gettext("Deployed")
+  defp human_status(:failed), do: gettext("Failed")
+  defp human_status(:archived), do: gettext("Archived")
 
   defp format_datetime(nil), do: "—"
   defp format_datetime(datetime), do: BrandoAdmin.Dates.short(datetime)
