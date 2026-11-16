@@ -573,8 +573,13 @@ defmodule Brando.SSG do
         Enum.map(skipped_markdown, &"#{&1}: not written, the application answers 404 for this Markdown alternate") ++
           not_found_notes
 
-      with :ok <- write_redirects(output_path, built_paths, result.page_redirects) do
-        {:ok, %{without_page_data(result) | failed_urls: result.failed_urls ++ failures, notes: result.notes ++ notes}}
+      with {:ok, redirect_notes} <- write_redirects(output_path, built_paths, result.page_redirects) do
+        {:ok,
+         %{
+           without_page_data(result)
+           | failed_urls: result.failed_urls ++ failures,
+             notes: result.notes ++ notes ++ redirect_notes
+         }}
       end
     else
       {:ok, without_page_data(result)}
@@ -656,10 +661,10 @@ defmodule Brando.SSG do
 
   defp write_redirects(output_path, built_paths, page_redirects) do
     target = Path.join(output_path, @redirects_file)
-    json = Jason.encode_to_iodata!(Brando.SSG.RedirectList.build(page_redirects, built_paths), pretty: true)
+    {list, notes} = Brando.SSG.RedirectList.build(page_redirects, built_paths)
 
-    case File.write(target, json) do
-      :ok -> :ok
+    case File.write(target, Jason.encode_to_iodata!(list, pretty: true)) do
+      :ok -> {:ok, notes}
       {:error, reason} -> {:error, {:write_failed, target, reason}}
     end
   end

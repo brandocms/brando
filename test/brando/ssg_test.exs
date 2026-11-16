@@ -968,6 +968,7 @@ defmodule Brando.SSGTest do
       assert %{"version" => 1, "redirects" => [old]} = Jason.decode!(read_output(context, "_redirects.json"))
 
       assert old == %{
+               "kind" => "listed",
                "source" => "/old",
                "target" => "/about",
                "status" => 301,
@@ -1051,6 +1052,48 @@ defmodule Brando.SSGTest do
              ]
 
       assert Enum.at(redirects, 3)["pattern"] == "/old-.*"
+    end
+
+    test "lists only redirects a host can follow without a loop or a missing page", context do
+      alias Brando.Sites.Redirect
+
+      SSGEndpoint.start(fn
+        # Ends at a page the build does not list
+        %{path: "/old"} -> {301, [{"location", "/unlisted"}], ""}
+        %{path: "/unlisted"} -> {200, "<p>unlisted</p>"}
+        # Ends at the same path with a query
+        %{path: "/"} -> {302, [{"location", "/?lang=en"}], ""}
+        %{path: "/?lang=en"} -> {200, "<p>home</p>"}
+        request -> context.answer.(request)
+      end)
+
+      context.put_seo.([
+        {"en",
+         [
+           %Redirect{from: "/about-us$", to: "/about-us?lang=en", code: 301},
+           # A redirect made from a logged 404 for /:id
+           %Redirect{from: Brando.Sites.Redirects.exact_source("/:id"), to: "/", code: 301},
+           %Redirect{from: "/old-page.html", to: "/about", code: 301},
+           %Redirect{from: "/older.page.html$", to: "/about", code: 301}
+         ]}
+      ])
+
+      assert {:ok, result} = context.build.([])
+      assert result.failed_urls == []
+
+      assert result.notes == [
+               "_redirects.json: left out / → /?lang=en, which differs from its source only by the query",
+               "_redirects.json: left out /about-us$ → /about-us?lang=en, which differs from its source only by the query"
+             ]
+
+      assert read_output(context, "old/index.html") == "<p>unlisted</p>"
+      assert %{"redirects" => redirects} = Jason.decode!(read_output(context, "_redirects.json"))
+
+      assert Enum.map(redirects, &Map.take(&1, ["kind", "source", "exact", "pattern"])) == [
+               %{"kind" => "rule", "source" => nil, "exact" => false, "pattern" => "/\\x3Aid$"},
+               %{"kind" => "rule", "source" => "/old-page.html", "exact" => false, "pattern" => "/old-page.html"},
+               %{"kind" => "rule", "source" => "/older.page.html", "exact" => true, "pattern" => "/older.page.html$"}
+             ]
     end
 
     test "writes no 404.html, and notes why, when the application answers a missing path with a page", context do

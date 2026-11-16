@@ -6,60 +6,69 @@ defmodule Brando.SSG.RedirectList do
       {
         "version": 1,
         "redirects": [
-          {"source": "/old-about", "target": "/about", "status": 301, "exact": true,
+          {"kind": "listed", "source": "/old-about", "target": "/about", "status": 301, "exact": true,
            "pattern": "/old\\\\-about$", "language": null},
-          {"source": "/news/:slug", "target": "/articles/:slug", "status": 301, "exact": false,
+          {"kind": "rule", "source": "/news/:slug", "target": "/articles/:slug", "status": 301, "exact": false,
            "pattern": "/news/:slug", "language": "en"},
-          {"source": "/gone", "target": null, "status": 410, "exact": true,
+          {"kind": "rule", "source": "/gone", "target": null, "status": 410, "exact": true,
            "pattern": "/gone$", "language": "en"}
         ]
       }
 
-  The first entry that matches a path answers it. First come the listed
-  paths that answered a redirect when the build requested them (`language`
-  null), with the path the redirect ended at and the first redirect's status;
-  the build stores the page it ended at under the listed path too, for a host
-  that serves files before its redirect rules. Then the site's redirect
-  rules (Configuration → SEO), language by language, in the order Brando
-  checks them for a path no page answers. A rule applies only to a request in
-  its `language`.
+  The entries are in the order Brando checks them, and the first entry that
+  matches a path answers it. First come the listed paths that answered a
+  redirect when the build requested them (`kind` `"listed"`, `language`
+  null), with the path the redirect ended at and the first redirect's status,
+  when that path is a page in the build; the build stores the page it ended
+  at under the listed path too, for a host that serves files before its
+  redirect rules, and that page alone when the redirect ends anywhere else.
+  Then the site's redirect rules (`kind` `"rule"`, Configuration → SEO),
+  language by language, in the order Brando checks them for a path no page
+  answers. A rule applies only to a request in its `language`.
 
   `source` is the path a host matches: a plain path, or one with `:name`
   segments that match one segment each (`[a-z0-9_-]+`) and stand for the
   same segment in `target`. `exact: false` matches every longer path that
   begins with `source` too, as Brando's rules do without a `$` at their end.
-  A rule written as a regular expression that is no such path has `source`
-  null: only `pattern` (the rule's `from`, compiled by
+  A `.` in a rule with no other regular-expression character stands for
+  itself in `source`. A rule written as a regular expression that is no such
+  path, or whose segment would begin with an escaped `:`, has `source` null:
+  only `pattern` (the rule's `from`, compiled by
   `Brando.Sites.Redirect.ValidSource.compile/1`) says what it matches.
   `status` 410 has no `target`: the path is gone. A rule that does not
   compile is left out, as is an exact rule for a path the build has a page
-  for, which Brando never answers.
+  for, which Brando never answers, and a redirect whose target differs from
+  its source only by the query, which a host matching on the path would
+  answer in a loop (`build/3` notes it).
   """
 
   alias Brando.Sites.Redirect.ValidSource
   alias Brando.Sites.Redirects
 
   @version 1
-  @metacharacters ~c".^$|?*+()[]{}"
+  # `.` alone is read as itself: `/old-page.html` is the page an editor means
+  @metacharacters ~c"^$|?*+()[]{}"
   @whitespace_escapes %{?t => "\t", ?n => "\n", ?r => "\r", ?f => "\f", ?v => "\v"}
 
   @type page_redirect :: %{source: String.t(), target: String.t(), status: pos_integer()}
 
   @doc """
   The redirect list for `page_redirects` and the site's rules, for the
-  site and environment the process works in. `built_paths` are the paths
-  the build has a file for.
+  site and environment the process works in, and notes on the redirects it
+  leaves out. `built_paths` are the paths the build has a file for.
   """
-  @spec build([page_redirect()], [String.t()], [{String.t(), map()}] | nil) :: Jason.OrderedObject.t()
+  @spec build([page_redirect()], [String.t()], [{String.t(), map()}] | nil) ::
+          {Jason.OrderedObject.t(), [String.t()]}
   def build(page_redirects, built_paths, rules \\ nil) do
     rules = rules || rules()
     built = MapSet.new(built_paths)
 
-    entries =
-      Enum.map(page_redirects, &page_entry/1) ++
-        Enum.flat_map(rules, fn {language, rule} -> rule_entry(rule, language, built) end)
+    {entries, notes} =
+      (Enum.flat_map(page_redirects, &page_entry(&1, built)) ++
+         Enum.flat_map(rules, fn {language, rule} -> rule_entry(rule, language, built) end))
+      |> Enum.split_with(&match?(%Jason.OrderedObject{}, &1))
 
-    Jason.OrderedObject.new(version: @version, redirects: entries)
+    {Jason.OrderedObject.new(version: @version, redirects: entries), Enum.map(notes, fn {:note, note} -> note end)}
   end
 
   @doc "The site's redirect rules, `{language, redirect}`, in the order Brando checks them in each language."
@@ -70,8 +79,14 @@ defmodule Brando.SSG.RedirectList do
         do: {language, redirect}
   end
 
-  defp page_entry(%{source: source, target: target, status: status}) do
-    entry(source, target, status, true, Redirects.exact_source(source), nil)
+  # Only to a page the build has: on a host the listed path would otherwise
+  # lead to a 404 where the build keeps the page it ended at
+  defp page_entry(%{source: source, target: target, status: status}, built) do
+    cond do
+      query_only?(source, target) -> [query_only_note(source, target)]
+      to_page?(target, built) -> [entry("listed", source, target, status, true, Redirects.exact_source(source), nil)]
+      true -> []
+    end
   end
 
   defp rule_entry(%{from: from, to: to, code: code}, language, built) when is_binary(from) and is_integer(code) do
@@ -87,18 +102,20 @@ defmodule Brando.SSG.RedirectList do
 
   defp rule_entry(_rule, _language, _built), do: []
 
-  defp source_entry({path, true}, from, target, status, language, built) do
-    if MapSet.member?(built, path), do: [], else: [entry(path, target, status, true, from, language)]
+  defp source_entry({path, exact?}, from, target, status, language, built) do
+    cond do
+      query_only?(path, target) -> [query_only_note(from, target)]
+      exact? and MapSet.member?(built, path) -> []
+      true -> [entry("rule", path, target, status, exact?, from, language)]
+    end
   end
 
-  defp source_entry({path, false}, from, target, status, language, _built),
-    do: [entry(path, target, status, false, from, language)]
-
   defp source_entry(nil, from, target, status, language, _built),
-    do: [entry(nil, target, status, false, from, language)]
+    do: [entry("rule", nil, target, status, false, from, language)]
 
-  defp entry(source, target, status, exact?, pattern, language) do
+  defp entry(kind, source, target, status, exact?, pattern, language) do
     Jason.OrderedObject.new(
+      kind: kind,
       source: source,
       target: target,
       status: status,
@@ -107,6 +124,29 @@ defmodule Brando.SSG.RedirectList do
       language: language
     )
   end
+
+  # A host that matches on the path would answer the target with the same
+  # redirect again
+  defp query_only?(_source, nil), do: false
+
+  defp query_only?(source, target) do
+    case URI.parse(target) do
+      %URI{host: nil, path: path, query: query} when is_binary(query) -> trim_slash(path || "/") == trim_slash(source)
+      _other -> false
+    end
+  end
+
+  defp query_only_note(source, target),
+    do: {:note, "_redirects.json: left out #{source} → #{target}, which differs from its source only by the query"}
+
+  defp to_page?(target, built) do
+    case URI.parse(target) do
+      %URI{host: host} when is_binary(host) -> true
+      %URI{path: path} -> MapSet.member?(built, trim_slash(URI.decode(path || "/")))
+    end
+  end
+
+  defp trim_slash(path), do: "/" <> Enum.join(String.split(path, "/", trim: true), "/")
 
   # `{path, exact?}` when `from` is a path: plain characters, characters
   # escaped as `Regex.escape/1` and `Redirects.exact_source/1` escape them, and
@@ -127,15 +167,18 @@ defmodule Brando.SSG.RedirectList do
 
   defp unescape(<<>>, acc), do: {:ok, acc |> Enum.reverse() |> IO.iodata_to_binary()}
 
+  # An escaped `:` that starts a segment would read as a `:name` segment
   defp unescape(<<"\\x", hex::binary-size(2), rest::binary>>, acc) do
-    case Integer.parse(hex, 16) do
-      {char, ""} -> unescape(rest, [<<char::utf8>> | acc])
+    case {Integer.parse(hex, 16), acc} do
+      {{?:, ""}, ["/" | _]} -> :error
+      {{char, ""}, _acc} -> unescape(rest, [<<char::utf8>> | acc])
       _invalid -> :error
     end
   end
 
   defp unescape(<<"\\", escaped::utf8, rest::binary>>, acc) do
     cond do
+      escaped == ?: and match?(["/" | _], acc) -> :error
       Map.has_key?(@whitespace_escapes, escaped) -> unescape(rest, [Map.fetch!(@whitespace_escapes, escaped) | acc])
       # A letter or digit after a backslash is a class or a reference
       escaped in ?a..?z or escaped in ?A..?Z or escaped in ?0..?9 -> :error
