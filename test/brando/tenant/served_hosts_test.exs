@@ -1487,6 +1487,19 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert File.read!(new_file) == "www.acme.test\n"
     end
 
+    test "a check of a new file admits a host the old file held again", %{path: file, tmp_dir: tmp_dir, site: site} do
+      DNS.answer("a.acme.test", [@here])
+      bind(site, "a", "a.acme.test")
+      assert lines(file) == ["a.acme.test"]
+
+      # A new server, whose addresses differ
+      new_file = Path.join(tmp_dir, "other_hosts")
+      put_test_env(ServedHosts, file: new_file, addresses: [@elsewhere])
+
+      assert %{file: ^new_file, hosts: %{"a.acme.test" => {:waiting, [@here]}}} = ServedHosts.check()
+      assert File.read!(new_file) == ""
+    end
+
     test "with no file configured, nothing is written or broadcast", %{tmp_dir: tmp_dir, site: site} do
       put_test_env(ServedHosts, [])
       File.rm_rf!(Path.join(tmp_dir, "served_hosts"))

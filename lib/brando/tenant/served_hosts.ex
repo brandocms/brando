@@ -20,7 +20,11 @@ defmodule Brando.Tenant.ServedHosts do
   Read when each check runs, so a release sets it in `config/runtime.exs`,
   and again as each answer or write comes back: with the file unset, the
   work under way is dropped and nothing more is written or broadcast; with
-  another file, it is dropped and a check of the new file starts.
+  another file, it is dropped, with every host remembered as admitted, and a
+  check of the new file starts, so a host goes into the new file only once
+  it is listed there or admitted again. A write under way then leaves the
+  file alone: it checks the configuration again just before it renames its
+  temporary file over it.
 
   ## Which hosts
 
@@ -197,6 +201,7 @@ defmodule Brando.Tenant.ServedHosts do
     # `admitted`: the hosts this process saw in the file or admitted itself, kept
     # while bound. In memory only: a new process starts from the file alone.
     # `settings`: the configuration the last check read, nil when off.
+    # `file`: the file what is remembered here belongs to.
     # `tick`, `flush`: the references the pending timers' messages carry.
     # `lookups`: each lookup under way, by its task's reference, with its batch
     # and the timer of its deadline.
@@ -219,6 +224,7 @@ defmodule Brando.Tenant.ServedHosts do
       flush: nil,
       error: nil,
       settings: nil,
+      file: nil,
       admitted: MapSet.new(),
       lookups: %{},
       queue: :queue.new(),
@@ -343,7 +349,7 @@ defmodule Brando.Tenant.ServedHosts do
 
   defp current(%{settings: %{file: file}} = state) do
     case settings() do
-      {:ok, %{file: ^file} = settings} -> {:ok, %{state | settings: settings}}
+      {:ok, %{file: ^file} = settings} -> {:ok, put_settings(state, settings)}
       {:ok, _new_file} -> {:stopped, state |> drop() |> run()}
       :off -> {:stopped, %{drop(state) | error: nil}}
       {:error, error} -> {:stopped, state |> drop() |> failed(error)}
@@ -364,6 +370,7 @@ defmodule Brando.Tenant.ServedHosts do
     %{
       cancel_flush(state)
       | settings: nil,
+        file: nil,
         generation: state.generation + 1,
         lookups: %{},
         queue: :queue.new(),
@@ -448,13 +455,21 @@ defmodule Brando.Tenant.ServedHosts do
         failed(%{state | settings: nil}, error)
 
       {:ok, settings} ->
-        request_write(%{state | settings: settings, check_requested: true})
+        request_write(%{put_settings(state, settings) | check_requested: true})
     end
   rescue
     # A bad config or a broken cache must not restart this process until its
     # supervisor, and the application with it, gives up. A lookup started
     # before the failure stops at its own timeout.
     exception -> failed(state, Exception.message(exception))
+  end
+
+  # Every replacement of the settings goes through here: what is remembered
+  # about one file, its admitted hosts among it, never carries over to another,
+  # where a new server's addresses may differ
+  defp put_settings(%{file: file} = state, settings) do
+    state = if file in [nil, settings.file], do: state, else: drop(state)
+    %{state | settings: settings, file: settings.file}
   end
 
   defp failed(state, error) do
