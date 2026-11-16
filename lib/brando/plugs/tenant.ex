@@ -20,7 +20,9 @@ defmodule Brando.Plug.Tenant do
 
   A request resolved from a static build's signed context is marked
   `conn.private.brando_ssg_build`, so what answers it can answer as the
-  site's public host would (`BrandoWeb.SEOController`).
+  site's public host would (`BrandoWeb.SEOController`). With
+  `tenancy_mode: :none` one that carries a valid signed context is marked
+  (`Brando.SSG.Context.build_request?/1`).
   """
 
   import Plug.Conn, only: [assign: 3, halt: 1, put_private: 3, put_resp_header: 3, send_resp: 3]
@@ -64,12 +66,15 @@ defmodule Brando.Plug.Tenant do
 
         case shared_preview_tenant(conn) do
           {site, environment} -> put_tenant(conn, site, environment)
-          nil -> reject_missing_multi_site(conn)
+          nil -> conn |> mark_standalone_build() |> reject_missing_multi_site()
         end
     end
   end
 
   defp mark_build(conn), do: put_private(conn, :brando_ssg_build, true)
+
+  # With `tenancy_mode: :none` a build's signed context names no site
+  defp mark_standalone_build(conn), do: if(Context.build_request?(conn), do: mark_build(conn), else: conn)
 
   defp put_tenant(conn, site, environment) do
     prefix = Tenant.prefix(site, environment)

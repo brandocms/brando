@@ -111,6 +111,24 @@ defmodule Brando.Plug.TenantTest do
     refute conn.halted
   end
 
+  test "a standalone build's signed context marks the request only with tenancy_mode: :none" do
+    token = Context.sign(%Brando.Sites.Site{id: nil}, %Brando.Environments.Environment{site_id: nil})
+
+    conn = fn ->
+      :get
+      |> Plug.Test.conn("https://www.example.com/")
+      |> Plug.Conn.put_req_header(Context.header(), token)
+      |> Map.put(:host, "www.example.com")
+      |> Brando.Plug.Tenant.call([])
+    end
+
+    assert %{halted: true, private: private} = conn.()
+    refute private[:brando_ssg_build]
+
+    put_test_env(:tenancy_mode, :none)
+    assert conn.().private.brando_ssg_build
+  end
+
   describe "robots.txt for a static build's request" do
     setup context do
       {:ok, staging} =

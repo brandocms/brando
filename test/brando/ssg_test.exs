@@ -70,8 +70,9 @@ defmodule Brando.SSGTest do
     assert File.read!(Path.join([context.output_path, "assets", "app.css"])) == "body{}"
     assert File.read!(Path.join([context.output_path, "media", "images", "logo.txt"])) == "logo"
 
-    assert_receive {:fetched, "/", []}
-    assert_receive {:fetched, "/about", []}
+    # Signed with tenancy_mode: :none too, so the application knows a build's request
+    assert_receive {:fetched, "/", [{"x-brando-ssg-token", token}]}
+    assert_receive {:fetched, "/about", [{"x-brando-ssg-token", ^token}]}
   end
 
   test "returns failed URLs with partial build statistics", context do
@@ -921,6 +922,20 @@ defmodule Brando.SSGTest do
 
     defp read_output(context, path), do: File.read!(Path.join(context.output_path, path))
 
+    # The build's request, as Phoenix hands it to the endpoint, through a
+    # frontend router in the plug order an installation generates
+    defp through_router(%{path: path, headers: headers}) do
+      conn =
+        headers
+        |> Map.delete("host")
+        |> Enum.reduce(Plug.Test.conn(:get, "http://" <> headers["host"] <> path), fn {name, value}, conn ->
+          Plug.Conn.put_req_header(conn, name, value)
+        end)
+        |> Brando.Test.SiteRouter.call(Brando.Test.SiteRouter.init([]))
+
+      {conn.status, [], conn.resp_body}
+    end
+
     test "holds the bytes the application answered, its 404, robots.txt, sitemap and Markdown alternates",
          context do
       SSGEndpoint.start(context.answer)
@@ -960,6 +975,22 @@ defmodule Brando.SSGTest do
                "pattern" => "/old$",
                "language" => nil
              }
+    end
+
+    test "with tenancy_mode: :none robots.txt through Brando's controller names the build's sitemap", context do
+      SSGEndpoint.start(fn
+        %{path: "/robots.txt"} = request -> through_router(request)
+        request -> context.answer.(request)
+      end)
+
+      assert {:ok, %{failed_urls: []}} = context.build.([])
+      assert read_output(context, "robots.txt") =~ "Sitemap: #{Brando.Utils.public_hostname("sitemaps/sitemap.xml.gz")}"
+
+      # Unsigned, the header is not believed
+      assert {200, _headers, body} =
+               through_router(%{path: "/robots.txt", headers: %{"host" => "example.com", "x-brando-ssg-sitemap" => "1"}})
+
+      refute body =~ "sitemaps/sitemap.xml.gz"
     end
 
     test "without a sitemap tells robots.txt there is none", context do

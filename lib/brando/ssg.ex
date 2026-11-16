@@ -397,11 +397,11 @@ defmodule Brando.SSG do
   # the listener's headers, and the site's own origins, which a page's links
   # may name
   defp build_request(site, environment, opts) do
-    token = if Tenant.enabled?(), do: Context.sign(site, environment)
+    token = Context.sign(site, environment)
     base_url = Keyword.fetch!(opts, :base_url)
     listener = Keyword.get(opts, :listener)
     listener_headers = if listener, do: listener.headers, else: []
-    headers = if token, do: [{Context.header(), token} | listener_headers], else: listener_headers
+    headers = [{Context.header(), token} | listener_headers]
 
     %{
       base_url: base_url,
