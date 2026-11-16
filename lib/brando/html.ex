@@ -12,6 +12,7 @@ defmodule Brando.HTML do
   alias Brando.Assets.SiteAssets
   alias Brando.Assets.Vite
   alias Brando.Blueprint.URL
+  alias Brando.Plug.HTML, as: PlugHTML
   alias Brando.Utils
 
   @zero_pad_limit 64
@@ -258,8 +259,13 @@ defmodule Brando.HTML do
     """
   end
 
-  defp get_alternate_url(%{fallback: fallback, language: language, conn: %{private: %{brando_hreflangs: hreflangs}}}) do
-    Keyword.get(hreflangs, language, fallback)
+  # The alternate as `put_hreflang/2` was given it (a route helper's path
+  # stays on the visitor's host), else the head's (`Brando.Plug.HTML.hreflangs/1`)
+  defp get_alternate_url(%{fallback: fallback, language: language, conn: %{private: %{brando_hreflangs: given}} = conn}) do
+    case List.keyfind(given, language, 0) || List.keyfind(PlugHTML.hreflangs(conn), language, 0) do
+      {_, url} -> url
+      nil -> fallback
+    end
   end
 
   defp get_alternate_url(assigns), do: assigns.fallback
@@ -322,23 +328,20 @@ defmodule Brando.HTML do
     """
   end
 
-  def render_hreflangs(%{conn: %{private: %{brando_hreflangs: hreflangs}}} = assigns) do
-    canonical =
-      Brando.Plug.HTML.get_canonical(assigns.conn) ||
-        hreflangs
-        |> List.first()
-        |> elem(1)
+  # The canonical is the page's URL (`Brando.Plug.HTML.page_url/1`) unless the
+  # page set another; a page without a URL (the 404 page) has none.
+  def render_hreflangs(%{conn: conn} = assigns) do
+    hreflangs = PlugHTML.hreflangs(conn)
 
     assigns =
       assigns
-      |> assign(:canonical, canonical)
+      |> assign(:canonical, PlugHTML.get_canonical(conn) || PlugHTML.page_url(conn))
       |> assign(:hreflangs, Enum.map(hreflangs, fn {lang, url} -> {lang, absolute_alternate(url)} end))
       |> assign(:multilang, Enum.count(hreflangs) > 1)
-
-    assigns = assign(assigns, :markdown_url, markdown_alternate(assigns.conn))
+      |> assign(:markdown_url, markdown_alternate(conn))
 
     ~H"""
-    <link rel="canonical" href={@canonical} />
+    <link :if={@canonical} rel="canonical" href={@canonical} />
     <link
       :for={{lang, url} <- @hreflangs}
       :if={@multilang}
@@ -352,27 +355,13 @@ defmodule Brando.HTML do
     """
   end
 
-  def render_hreflangs(assigns) do
-    canonical = Brando.Plug.HTML.get_canonical(assigns.conn) || Brando.Utils.current_url(assigns.conn)
-
-    assigns =
-      assigns
-      |> assign(:canonical, canonical)
-      |> assign(:markdown_url, markdown_alternate(assigns.conn))
-
-    ~H"""
-    <link rel="canonical" href={@canonical} />
-    <link :if={@markdown_url} rel="alternate" type="text/markdown" href={@markdown_url} />
-    """
-  end
-
   # `put_hreflang(conn, {helper, args})` keeps paths, for `alternate_url/1`
   defp absolute_alternate("/" <> _ = path), do: Brando.Utils.hostname(path)
   defp absolute_alternate(url), do: url
 
   # The page's Markdown version (`Brando.SEO.Markdown`), when its entry has one.
   defp markdown_alternate(conn) do
-    entry = Brando.Plug.HTML.get_page_entry(conn)
+    entry = PlugHTML.get_page_entry(conn)
     if Brando.SEO.Markdown.available?(entry), do: Brando.SEO.Markdown.url(entry)
   end
 

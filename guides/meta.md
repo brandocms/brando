@@ -154,8 +154,47 @@ image. Blueprints do not need `twitter:*` fields in their `meta_schema`.
 
 ## Canonical URL
 
-The canonical link is the entry's own URL, from `put_hreflang/2`, or the
-request URL when there is none. For content first published elsewhere, or
+A page has one URL, `Brando.Plug.HTML.page_url/1`, and its canonical link,
+`og:url`, its own language's alternate and the `@id`s and `url`s of its
+JSON-LD all name it. It is chosen when the head is rendered, so the order a
+controller calls these functions in does not matter. The first of these that
+gives a URL is the page's:
+
+1. the URL given to `put_page_url/2`;
+2. the URL of the entry given to `put_hreflang/2`, its blueprint's
+   `absolute_url`, whatever path the request used (`/about/`, `/about?ref=x`,
+   or another route to the same page);
+3. the request URL, without a trailing slash or its query string.
+
+The entries given to `put_meta/3` and `put_json_ld/3` do not decide it. A
+controller often describes several routes with one section page
+(`/projects/:slug`, `/news/page/2`): each route keeps its own URL. When the
+page's URL is none of these, set it:
+
+```elixir
+conn
+|> put_meta(Page, section_page)
+|> put_page_url("/projects")
+```
+
+An error response (the 404 and 410 pages, any status outside 200–299) has
+no URL, and gets no canonical link, `og:url`, own-language alternate or
+`WebPage` node: a static build serves its 404 page at every missing path,
+so a URL there would name the wrong page.
+
+The page's own-language alternate is always the page's URL: an alternate
+given to `put_hreflang/2` for the page's language is replaced by it, so the
+head lists one link per language.
+
+A page's URL has no trailing slash, as the entry's URL and the sitemap's
+entries have none: `/about/` is `https://example.com/about`, and its nodes
+are `https://example.com/about#webpage` and `…/about#article`. The front
+page's URL is the bare origin, `https://example.com`, and its nodes take the
+`/` that is its path: `https://example.com/#webpage`. A listing paginated on
+a query string (`/news?page=2`) has the URL without it, the first page's;
+paginate on the path (`/news/page/2`) to give each page its own.
+
+For content first published elsewhere, or
 duplicated across entries, an editor can override it: `trait :meta` adds a
 **Canonical URL** field to the entry's meta drawer (`meta_canonical_url`). It
 takes a full `https://` or `http://` address; left empty, nothing changes.

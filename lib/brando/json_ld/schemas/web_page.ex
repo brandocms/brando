@@ -22,21 +22,29 @@ defmodule Brando.JSONLD.Schema.WebPage do
             mainEntity: nil
 
   @doc """
-  Builds a WebPage entity from conn data.
+  Builds a WebPage entity from conn data, at the page's URL
+  (`Brando.Plug.HTML.page_url/1`). A page without one (the 404 page) is no
+  page at the URL it was requested at, and gets no WebPage node: `nil`.
   """
   def build(conn, _cached_identity, _cached_seo) do
-    url = Brando.Utils.current_url(conn)
+    case Brando.Plug.HTML.page_url(conn) do
+      nil -> nil
+      url -> page(conn, url)
+    end
+  end
+
+  defp page(conn, url) do
     type = Map.get(conn.assigns, :json_ld_page_type, "WebPage")
 
     %__MODULE__{
       "@type": type,
-      "@id": Path.join(url, "#webpage"),
+      "@id": Brando.JSONLD.node_id(url, "webpage"),
       url: url,
       name: conn.assigns[:page_title],
       inLanguage: conn.assigns[:language],
       isPartOf: %{"@id": Path.join(Brando.Utils.hostname(), "#website")},
       breadcrumb: build_breadcrumb_ref(conn),
-      mainEntity: main_entity(type, conn.assigns[:json_ld_main_entity])
+      mainEntity: main_entity(type, Brando.Plug.HTML.json_ld_main_entity(conn, url))
     }
   end
 

@@ -256,7 +256,7 @@ defmodule Brando.Blueprint.SecondaryVerifierTest do
 
     assert Brando.JSONLD.extract_json_ld(module, data) == %JSONLDRoot{
              "@type": "Thing",
-             "@id": "https://example.com/entry/#thing",
+             "@id": "https://example.com/entry#thing",
              name: "Root",
              nested: %JSONLDNested{name: "One"},
              nested_items: [%JSONLDNested{name: "Two"}],

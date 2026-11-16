@@ -49,7 +49,7 @@ defmodule Brando.JSONLD.Schema.ItemList do
       position: position,
       item: %{
         "@type": type,
-        "@id": "#{url}/#" <> String.downcase(type),
+        "@id": Brando.JSONLD.node_id(url, String.downcase(type)),
         name: name,
         url: url
       }

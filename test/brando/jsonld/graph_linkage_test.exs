@@ -114,17 +114,17 @@ defmodule Brando.JSONLD.GraphLinkageTest do
     {json, graph} = "/posts/on-engines" |> conn() |> Brando.Plug.HTML.put_json_ld(Post, post()) |> render_graph()
 
     [article] = nodes(graph, "Article")
-    assert article["@id"] == "http://localhost/posts/on-engines/#article"
+    assert article["@id"] == "http://localhost/posts/on-engines#article"
 
     # author → Person nodes
-    assert [%{"@id" => user_id}, %{"@id" => "http://localhost/people/ada/#person"} = writer_ref] = article["author"]
+    assert [%{"@id" => user_id}, %{"@id" => "http://localhost/people/ada#person"} = writer_ref] = article["author"]
     assert map_size(writer_ref) == 1
 
     assert %{"@type" => "Person", "name" => "Grace Editor", "jobTitle" => "Editor"} = node(graph, user_id)
     assert node(graph, user_id)["sameAs"] == ["https://www.linkedin.com/in/grace"]
 
     assert %{"@type" => "Person", "name" => "Ada Lovelace", "url" => "http://localhost/people/ada"} =
-             node(graph, "http://localhost/people/ada/#person")
+             node(graph, "http://localhost/people/ada#person")
 
     assert length(nodes(graph, "Person")) == 2
 
@@ -170,9 +170,9 @@ defmodule Brando.JSONLD.GraphLinkageTest do
     {_json, graph} = "/people/ada" |> conn() |> Brando.Plug.HTML.put_json_ld(PeopleEntry, writer()) |> render_graph()
 
     [profile] = nodes(graph, "ProfilePage")
-    assert profile["mainEntity"] == %{"@id" => "http://localhost/people/ada/#person"}
+    assert profile["mainEntity"] == %{"@id" => "http://localhost/people/ada#person"}
 
-    assert [%{"@id" => "http://localhost/people/ada/#person", "name" => "Ada Lovelace", "jobTitle" => "Analyst"}] =
+    assert [%{"@id" => "http://localhost/people/ada#person", "name" => "Ada Lovelace", "jobTitle" => "Analyst"}] =
              nodes(graph, "Person")
 
     assert nodes(graph, "WebPage") == []

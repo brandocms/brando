@@ -248,7 +248,7 @@ rather than `updated_at`, which moves on every save, block re-render and
 | `:date` | Converts to `YYYY-MM-DD` string |
 | `:duration` | Converts whole minutes, a `Duration` or `"HH:MM:SS"` to ISO 8601 (`90` is `"PT1H30M"`); an ISO 8601 duration is kept |
 | `:image` | Builds an `ImageObject` with url, width, height |
-| `:current_url` | Uses the page's current absolute URL |
+| `:current_url` | The page's URL, `Brando.Plug.HTML.page_url/1`, without a trailing slash (see [Canonical URL](deps/brando/guides/meta.md#canonical-url)) |
 | `:language` | Extracts the language from the entry or meta |
 | `:string` | Direct string value via `value_fn` |
 | `:integer` | Direct integer value via `value_fn` |
@@ -275,8 +275,8 @@ skipped (it never queries). Each author becomes its own `Person` node in the
 `@graph`, and the field holds a reference to it:
 
 ```json
-{"@type": "Article", "author": {"@id": "https://example.com/people/ada/#person"}, ...},
-{"@type": "Person", "@id": "https://example.com/people/ada/#person", "name": "Ada Lovelace", ...}
+{"@type": "Article", "author": {"@id": "https://example.com/people/ada#person"}, ...},
+{"@type": "Person", "@id": "https://example.com/people/ada#person", "name": "Ada Lovelace", ...}
 ```
 
 #### Adding a content entity

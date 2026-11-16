@@ -149,7 +149,7 @@ defmodule Brando.JSONLD.Graph do
 
   defp build_breadcrumbs(_), do: nil
 
-  defp build_content_entity(%{assigns: %{json_ld_entities: entities}}), do: entities
+  defp build_content_entity(%{assigns: %{json_ld_entities: _}} = conn), do: PlugHTML.json_ld_entities(conn)
   defp build_content_entity(%{assigns: %{json_ld_entity: entity}}), do: entity
   defp build_content_entity(_), do: nil
 end

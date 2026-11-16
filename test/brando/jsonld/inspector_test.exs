@@ -93,8 +93,8 @@ defmodule Brando.JSONLD.InspectorTest do
 
     article = node(inspection, "Article")
     assert inspection.main == article.key
-    assert article.ref == "http://localhost/posts/on-engines/#article"
-    assert Inspector.short_id(article.ref) == "/posts/on-engines/#article"
+    assert article.ref == "http://localhost/posts/on-engines#article"
+    assert Inspector.short_id(article.ref) == "/posts/on-engines#article"
     assert Inspector.short_id(node(inspection, "Organization").ref) == "#identity"
   end
 

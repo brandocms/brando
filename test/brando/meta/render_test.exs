@@ -152,6 +152,7 @@ defmodule Brando.MetaRenderTest do
              private: %{
                brando_skip_title_prefix: false,
                brando_skip_title_postfix: false,
+               brando_meta_urls: ["http://localhost"],
                brando_meta: [
                  {"title", "Our title"},
                  {"mutated_title", "@ Our title"},
@@ -234,16 +235,45 @@ defmodule Brando.MetaRenderTest do
     end
 
     test "an empty override keeps the entry's own URL" do
+      page = %Brando.Pages.Page{
+        title: "Own",
+        uri: "own",
+        language: :en,
+        has_url: true,
+        meta_canonical_url: nil,
+        meta_image: nil,
+        alternate_entries: []
+      }
+
       conn =
-        %Plug.Conn{assigns: %{language: "en"}}
-        |> Brando.Plug.HTML.put_meta(Brando.Pages.Page, %{title: "Own", meta_canonical_url: nil})
-        |> Plug.Conn.put_private(:brando_hreflangs, [{"en", "http://localhost/en/own"}])
+        %Plug.Conn{assigns: %{language: "en"}, request_path: "/own/"}
+        |> Brando.Plug.HTML.put_meta(Brando.Pages.Page, page)
+        |> Brando.Plug.HTML.put_hreflang(page)
 
       assigns = %{conn: conn}
       html = rendered_to_string(~H"<Brando.HTML.render_hreflangs conn={@conn} />")
 
       assert html =~ ~s(<link rel="canonical" href="http://localhost/en/own">)
-      assert metas(conn)["og:url"] == "http://localhost"
+      assert metas(conn)["og:url"] == "http://localhost/en/own"
+    end
+
+    test "an og:url a blueprint takes from the current URL follows a URL set after put_meta/3" do
+      conn =
+        %Plug.Conn{assigns: %{language: "en"}, request_path: "/about/"}
+        |> Brando.Plug.HTML.put_meta(Page, %{title: "Our title", description: "Our description"})
+        |> Brando.Plug.HTML.put_page_url("/en/about")
+
+      assert metas(conn)["og:url"] == "http://localhost/en/about"
+    end
+
+    test "an og:url a blueprint sets to something else is left alone" do
+      conn =
+        %Plug.Conn{assigns: %{language: "en"}, request_path: "/about/"}
+        |> Brando.Plug.HTML.put_meta(Page, %{title: "Our title", description: "Our description"})
+        |> Brando.Plug.HTML.put_meta("og:url", "https://example.com/elsewhere", replace: true)
+        |> Brando.Plug.HTML.put_page_url("/en/about")
+
+      assert metas(conn)["og:url"] == "https://example.com/elsewhere"
     end
 
     test "must be an absolute http(s) URL" do

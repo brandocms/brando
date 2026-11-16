@@ -38,6 +38,19 @@ URLs](tenancy_and_environments.md#a-sites-absolute-urls)). JSON-LD stored with
 a block's HTML names the live environment's domain instead (see [Collections
 rendered by datasource blocks](#collections-rendered-by-datasource-blocks)).
 
+A node that describes the page, or the entry the page is about, has the
+page's URL (`Brando.Plug.HTML.page_url/1`, chosen as [Canonical
+URL](meta.md#canonical-url) describes, the same in every order a controller
+calls `put_meta/3`, `put_json_ld/3`, `put_hreflang/2` and `put_page_url/2`)
+as its `url`, and that URL and a fragment as its `@id`
+(`Brando.JSONLD.node_id/2`): no slash before the `#`, except after a bare
+origin, whose path is `/` (`https://example.com/#webpage`); a URL with a
+fragment of its own (`/team#ada`) gets the node's after a dash
+(`/team#ada-person`). `put_json_ld/3` builds an entry's entity at the page's
+URL when it is called, into `conn.assigns.json_ld_entities`, and the head
+builds it again when `put_hreflang/2` or `put_page_url/2` changed that URL
+afterwards (`Brando.Plug.HTML.json_ld_entities/1`).
+
 <!-- usage-rules:start topic="seo" -->
 
 ### Blueprint DSL
@@ -111,7 +124,7 @@ JSON-LD and the [sitemap](sitemaps.md) agree:
 | `:date` | Converts to `YYYY-MM-DD` string |
 | `:duration` | Converts whole minutes, a `Duration` or `"HH:MM:SS"` to ISO 8601 (`90` is `"PT1H30M"`); an ISO 8601 duration is kept |
 | `:image` | Builds an `ImageObject` with url, width, height |
-| `:current_url` | Uses the page's current absolute URL |
+| `:current_url` | The page's URL, `Brando.Plug.HTML.page_url/1`, without a trailing slash (see [Canonical URL](meta.md#canonical-url)) |
 | `:language` | Extracts the language from the entry or meta |
 | `:string` | Direct string value via `value_fn` |
 | `:integer` | Direct integer value via `value_fn` |
@@ -164,8 +177,8 @@ skipped (it never queries). Each author becomes its own `Person` node in the
 `@graph`, and the field holds a reference to it:
 
 ```json
-{"@type": "Article", "author": {"@id": "https://example.com/people/ada/#person"}, ...},
-{"@type": "Person", "@id": "https://example.com/people/ada/#person", "name": "Ada Lovelace", ...}
+{"@type": "Article", "author": {"@id": "https://example.com/people/ada#person"}, ...},
+{"@type": "Person", "@id": "https://example.com/people/ada#person", "name": "Ada Lovelace", ...}
 ```
 
 <!-- usage-rules:end -->
@@ -180,7 +193,7 @@ that stays the same across pages.
 
 **People entries** use the People blueprint's own `json_ld_schema` when it is
 a `Person`, so the author on an article and the person on their own page are
-one node with one `@id`, `<the entry's absolute URL>/#person`:
+one node with one `@id`, `<the entry's absolute URL>#person`:
 
 ```elixir
 # MyApp.People.Person
@@ -200,14 +213,15 @@ read, so a person's email or other columns stay out.
 
 #### ProfilePage
 
-When `put_json_ld/4` is given an entry whose schema is a `Person` — a People
+When `put_json_ld/4` is given an entry whose entity is a `Person` — a People
 entry on its own page — the page becomes a `ProfilePage` with that Person as
-its `mainEntity`:
+its `mainEntity`. An entry whose mapping or extra fields give the entity
+another `@type` (an `Organization`) leaves the page a `WebPage`:
 
 ```json
-{"@type": "ProfilePage", "@id": "https://example.com/people/ada/#webpage",
- "mainEntity": {"@id": "https://example.com/people/ada/#person"}, ...},
-{"@type": "Person", "@id": "https://example.com/people/ada/#person", ...}
+{"@type": "ProfilePage", "@id": "https://example.com/people/ada#webpage",
+ "mainEntity": {"@id": "https://example.com/people/ada#person"}, ...},
+{"@type": "Person", "@id": "https://example.com/people/ada#person", ...}
 ```
 
 Google's [profile page](https://developers.google.com/search/docs/appearance/structured-data/profile-page)
@@ -408,6 +422,9 @@ document; consumers merge it with the `@graph` in `<head>` by `@id`. Its URLs
 start with the site's public base URL (`Brando.Utils.public_hostname/0`), the
 live environment's domain, since the output is stored and served on whatever
 host the environment has later.
+An item's `@id` is its entry's URL and the type's fragment
+(`https://example.com/news/a#article`), the `@id` that entry's own page gives
+it, and a `CollectionPage`'s is the page's URL and `#collectionpage`.
 
 Because the markup is produced by the same render as the HTML, it is refreshed
 when the entry is re-rendered and never fresher or staler than the listing it

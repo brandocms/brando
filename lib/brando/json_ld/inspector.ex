@@ -296,7 +296,7 @@ defmodule Brando.JSONLD.Inspector do
 
         %__MODULE__{
           json: json,
-          url: Brando.Utils.current_url(conn),
+          url: Brando.Plug.HTML.page_url(conn),
           nodes: nodes,
           edges: edges,
           main: Enum.find_value(nodes, &(&1.role == :main && &1.key)),
@@ -330,8 +330,12 @@ defmodule Brando.JSONLD.Inspector do
 
   defp count(nodes, level), do: nodes |> Enum.flat_map(& &1.issues) |> Enum.count(&(&1.level == level))
 
-  defp main_id(%{assigns: %{json_ld_entities: [%{"@id": id} | _]}}), do: id
-  defp main_id(_conn), do: nil
+  defp main_id(conn) do
+    case Brando.Plug.HTML.json_ld_entities(conn) do
+      [%{"@id": id} | _] -> id
+      _ -> nil
+    end
+  end
 
   ## Sources
 
@@ -565,7 +569,7 @@ defmodule Brando.JSONLD.Inspector do
   def icon(type), do: Map.get(@icons, type, "braces")
 
   @doc """
-  A node's `@id` without the site's host: `#identity`, `/news/a/#article`.
+  A node's `@id` without the site's host: `#identity`, `/news/a#article`.
   """
   @spec short_id(String.t() | nil) :: String.t() | nil
   def short_id(nil), do: nil

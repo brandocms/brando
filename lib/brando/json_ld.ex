@@ -123,10 +123,63 @@ defmodule Brando.JSONLD do
       |> to_string()
       |> String.downcase()
 
-    Map.put(struct, :"@id", Path.join(url, "##{type}"))
+    Map.put(struct, :"@id", node_id(url, type))
   end
 
   defp maybe_add_id(struct, _), do: struct
+
+  @doc """
+  The `@id` of a node on the page at `url`: the URL and a fragment, so it
+  names the same URL as the page's canonical link and the node's `url`.
+
+      iex> Brando.JSONLD.node_id("https://example.com/about", "webpage")
+      "https://example.com/about#webpage"
+
+  A bare origin gets the `/` that is its path:
+
+      iex> Brando.JSONLD.node_id("https://example.com", "webpage")
+      "https://example.com/#webpage"
+
+  A URL that has a fragment already, such as a person's entry at
+  `/team#ada`, gets the node's after it and a dash, as a URL has one
+  fragment; a query string stays before the fragment; `nil` gives `nil`:
+
+      iex> Brando.JSONLD.node_id("https://example.com/team#ada", "person")
+      "https://example.com/team#ada-person"
+
+      iex> Brando.JSONLD.node_id("https://example.com/search?q=acme", "webpage")
+      "https://example.com/search?q=acme#webpage"
+
+      iex> Brando.JSONLD.node_id(nil, "webpage")
+      nil
+
+  """
+  @spec node_id(String.t() | nil, String.t()) :: String.t() | nil
+  def node_id(nil, _fragment), do: nil
+
+  def node_id(url, fragment) do
+    {base, existing} =
+      case String.split(url, "#", parts: 2) do
+        [base, existing] when existing != "" -> {base, existing <> "-"}
+        [base | _] -> {base, ""}
+      end
+
+    bare_origin_path(base) <> "#" <> existing <> fragment
+  end
+
+  # `https://example.com` and `https://example.com?q=1` take the `/` that is their path
+  defp bare_origin_path(url) do
+    case URI.parse(url) do
+      %URI{host: host, path: path} when is_binary(host) and path in [nil, ""] ->
+        case String.split(url, "?", parts: 2) do
+          [origin, query] -> origin <> "/?" <> query
+          [origin] -> origin <> "/"
+        end
+
+      _ ->
+        url
+    end
+  end
 
   # A page type (`WebPage`, `AboutPage`, …) describes the page, and
   # `Brando.Plug.HTML.put_json_ld/3` gives it to the graph's `WebPage` node.

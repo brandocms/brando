@@ -93,7 +93,7 @@ defmodule Brando.JSONLD.Collection do
     hostname = Utils.public_hostname()
 
     CollectionPage.build(%{
-      id: page |> Map.get(:url) |> absolute() |> then(&(&1 && "#{&1}/#collectionpage")),
+      id: page |> Map.get(:url) |> absolute() |> then(&(&1 && JSONLD.node_id(&1, "collectionpage"))),
       name: Map.get(page, :name),
       url: page |> Map.get(:url) |> absolute(),
       language: page |> Map.get(:language) |> presence(),
