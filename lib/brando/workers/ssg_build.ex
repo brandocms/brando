@@ -157,7 +157,7 @@ defmodule Brando.Worker.SSGBuild do
       url_count: result.url_count,
       processed_urls: result.processed_urls,
       failed_urls: result.failed_urls,
-      build_log: build.build_log <> log_line("Build completed with #{result.file_count} files")
+      build_log: build.build_log <> notes_log(result) <> log_line("Build completed with #{result.file_count} files")
     })
   end
 
@@ -208,7 +208,7 @@ defmodule Brando.Worker.SSGBuild do
       url_count: Map.get(result, :url_count, current.url_count),
       processed_urls: Map.get(result, :processed_urls, current.processed_urls),
       failed_urls: Map.get(result, :failed_urls, current.failed_urls),
-      build_log: current.build_log <> log_line("Build failed: #{failure_message(reason)}")
+      build_log: current.build_log <> notes_log(result) <> log_line("Build failed: #{failure_message(reason)}")
     }
 
     case Builds.update(current, attrs) do
@@ -256,6 +256,9 @@ defmodule Brando.Worker.SSGBuild do
 
     {:cancel, reason}
   end
+
+  # What the build skipped without failing (`Brando.SSG.build/3`'s `:notes`)
+  defp notes_log(result), do: result |> Map.get(:notes, []) |> Enum.map_join(&log_line/1)
 
   defp log_line(message) do
     timestamp = Calendar.strftime(DateTime.utc_now(), "%Y-%m-%d %H:%M:%S UTC")

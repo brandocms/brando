@@ -1033,6 +1033,19 @@ defmodule Brando.SSGTest do
       refute File.exists?(Path.join(context.output_path, "404.html"))
     end
 
+    test "skips a Markdown alternate the application answers 404 for, and notes it", context do
+      SSGEndpoint.start(fn
+        %{path: "/about.md"} -> {404, "Not found\n"}
+        request -> context.answer.(request)
+      end)
+
+      assert {:ok, result} = context.build.([])
+      assert result.failed_urls == []
+      assert result.notes == ["/about.md: not written, the application answers 404 for this Markdown alternate"]
+      refute File.exists?(Path.join(context.output_path, "about.md"))
+      assert read_output(context, "index.md") == "# Home\n"
+    end
+
     test "fails the robots.txt and Markdown paths the application cannot answer", context do
       SSGEndpoint.start(fn
         %{path: path} when path in ["/robots.txt", "/about.md"] -> {500, "down"}

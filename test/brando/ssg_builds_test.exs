@@ -40,6 +40,13 @@ defmodule Brando.SSGBuildsTest do
     end
   end
 
+  defmodule NotingBuilder do
+    def build(site, environment, opts) do
+      {:ok, result} = SuccessfulBuilder.build(site, environment, opts)
+      {:ok, Map.put(result, :notes, ["/about.md: not written"])}
+    end
+  end
+
   defmodule HomeOnly do
     @moduledoc false
     import Brando.SSG
@@ -148,6 +155,14 @@ defmodule Brando.SSGBuildsTest do
     assert ready.built_at
     assert ready.build_log =~ "Build completed"
     assert File.read!(Path.join(ready.build_path, "index.html")) == "built"
+  end
+
+  test "writes what the build skipped without failing into its log", context do
+    build = request_build(context.site, context.environment)
+    put_test_env(:ssg_builder, NotingBuilder)
+
+    assert :ok = perform_job(SSGBuild, %{"build_id" => build.id})
+    assert Builds.get_build(build.id).build_log =~ ~r/\] \/about\.md: not written\n.*Build completed/s
   end
 
   test "reports the build to its creator as it is queued, built and ready", context do

@@ -168,7 +168,9 @@ defmodule Brando.SSG do
   serve the site on its own, requested the same way with the same header:
 
     * the Markdown alternate (`about.md`) each page names with
-      `<link rel="alternate" type="text/markdown">`, on the site's own host;
+      `<link rel="alternate" type="text/markdown">`, on the site's own host,
+      unless the application answers it with 404 (it names the alternate
+      whether or not `Brando.Plug.Markdown` serves it): that one is skipped;
     * `404.html`, the site's error page: the answer to `not_found_path/0`,
       which must be a 404;
     * `sitemaps/`, the sitemap of the environment being built
@@ -179,8 +181,10 @@ defmodule Brando.SSG do
     * `_redirects.json`, the site's redirects (`Brando.SSG.RedirectList`):
       the listed paths that answered a redirect, then the redirect rules.
 
-  A failure there is a failed URL, under its path. `site_files: false` builds
-  the listed URLs, assets and media only.
+  A failure there is a failed URL, under its path. What the build skips
+  without failing is listed in the result's `:notes`, which a background
+  build writes into its log. `site_files: false` builds the listed URLs,
+  assets and media only.
   """
   @spec build(keyword()) :: {:ok, map()} | {:error, term(), map()}
   def build(opts) when is_list(opts) do
@@ -433,6 +437,7 @@ defmodule Brando.SSG do
          url_count: total,
          processed_urls: processed,
          failed_urls: Enum.reverse(failures),
+         notes: [],
          page_redirects: Enum.reverse(redirects),
          markdown_paths: markdown |> Enum.reverse() |> Enum.uniq()
        }}
@@ -547,8 +552,8 @@ defmodule Brando.SSG do
   @decorate span("brando.ssg.write_site_files")
   defp write_site_files(request, urls, output_path, opts, result) do
     if Keyword.get(opts, :site_files, true) do
-      markdown_failures =
-        Enum.flat_map(result.markdown_paths -- urls, &fetch_file(request, &1, output_file(output_path, &1)))
+      {markdown_failures, skipped_markdown} =
+        fetch_alternates(request, result.markdown_paths -- urls, output_path)
 
       {sitemap?, sitemap_failures} = write_sitemap(output_path, opts)
       sitemap_header = [{Context.sitemap_header(), if(sitemap?, do: "1", else: "0")}]
@@ -559,10 +564,11 @@ defmodule Brando.SSG do
           sitemap_failures ++
           fetch_file(request, "/robots.txt", Path.join(output_path, "robots.txt"), sitemap_header)
 
-      built_paths = urls ++ result.markdown_paths
+      built_paths = urls ++ (result.markdown_paths -- skipped_markdown)
+      notes = Enum.map(skipped_markdown, &"#{&1}: not written, the application answers 404 for this Markdown alternate")
 
       with :ok <- write_redirects(output_path, built_paths, result.page_redirects) do
-        {:ok, %{without_page_data(result) | failed_urls: result.failed_urls ++ failures}}
+        {:ok, %{without_page_data(result) | failed_urls: result.failed_urls ++ failures, notes: result.notes ++ notes}}
       end
     else
       {:ok, without_page_data(result)}
@@ -571,21 +577,40 @@ defmodule Brando.SSG do
 
   defp without_page_data(result), do: Map.drop(result, [:page_redirects, :markdown_paths])
 
+  # {failures, paths skipped}: a page names its Markdown alternate whether or
+  # not the application serves Markdown there (`Brando.Plug.Markdown`), so a
+  # 404 for one is no failure
+  defp fetch_alternates(request, paths, output_path) do
+    Enum.reduce(paths, {[], []}, fn path, {failures, skipped} ->
+      case fetch_to(request, path, output_file(output_path, path)) do
+        :ok -> {failures, skipped}
+        {:error, {:http_status, 404}} -> {failures, skipped ++ [path]}
+        {:error, reason} -> {failures ++ [format_failure(path, reason)], skipped}
+      end
+    end)
+  end
+
   # A file the application answers with 2xx: [] when written, else its failure
-  defp fetch_file(request, path, target, extra_headers \\ []) do
+  defp fetch_file(request, path, target, extra_headers) do
+    case fetch_to(request, path, target, extra_headers) do
+      :ok -> []
+      {:error, reason} -> [format_failure(path, reason)]
+    end
+  end
+
+  defp fetch_to(request, path, target, extra_headers \\ []) do
     case fetch_path(request, path, extra_headers) do
       {:ok, %{status: status, body: body}, _redirect} when status in 200..299 ->
-        write_result(path, write_file(target, IO.iodata_to_binary(body)))
+        write_file(target, IO.iodata_to_binary(body))
 
       {:ok, %{status: status}, _redirect} ->
-        [format_failure(path, {:http_status, status})]
+        {:error, {:http_status, status}}
 
       other ->
-        {:error, reason} = fetch_error(other)
-        [format_failure(path, reason)]
+        fetch_error(other)
     end
   rescue
-    exception -> [format_failure(path, {:request_exception, Exception.message(exception)})]
+    exception -> {:error, {:request_exception, Exception.message(exception)}}
   end
 
   # The application answers a missing path with the site's error page and 404,
@@ -854,7 +879,8 @@ defmodule Brando.SSG do
       total_size: 0,
       url_count: 0,
       processed_urls: 0,
-      failed_urls: []
+      failed_urls: [],
+      notes: []
     }
   end
 end
