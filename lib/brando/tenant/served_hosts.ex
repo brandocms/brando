@@ -60,7 +60,9 @@ defmodule Brando.Tenant.ServedHosts do
   check runs after that, and neither it nor a slow disk holds up the next
   registry write. The file is read, merged and written by a task of its own,
   one at a time: a write asked for while one runs follows it once, with what
-  is known then. A check's lookups start when its write has read the file,
+  is known then. Its rename lands only while the process that started it is
+  still the running one, so a write left over from before a restart never
+  replaces its successor's file. A check's lookups start when its write has read the file,
   for the bound hosts neither in it nor admitted. Each host looked up gets a
   task of its own, at most eight at a time while the rest queue, and its
   lookup timeout starts when its lookup does. A host looked up again, or
