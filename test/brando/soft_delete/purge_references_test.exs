@@ -1,3 +1,12 @@
+defmodule Brando.Persons do
+  # The context of the test schemas `Brando.MigrationTest.Profile` and
+  # `Brando.Persons.Person`: a purge hook a test sets for its own process
+  def before_purge(schema, ids) do
+    if hook = Process.get({__MODULE__, :before_purge}), do: hook.(schema, ids)
+    :ok
+  end
+end
+
 defmodule Brando.SoftDelete.PurgeReferencesTest do
   # The trash purge, for an expired row that rows not expired still refer to
   use Brando.ConnCase, async: true
@@ -71,6 +80,44 @@ defmodule Brando.SoftDelete.PurgeReferencesTest do
 
     assert {:ok, %{page_id: nil}} =
              Brando.Revisions.set_entry_to_revision(Fragment, fragment.id, fragment_revision.revision, user)
+  end
+
+  defp insert_profile!(deleted_at) do
+    id = Ecto.UUID.generate()
+
+    Repo.query!(
+      "INSERT INTO persons_profile (id, deleted_at, inserted_at, updated_at) VALUES ($1, $2, now(), now())",
+      [Ecto.UUID.dump!(id), deleted_at]
+    )
+
+    id
+  end
+
+  defp profile_ids, do: Repo.all(from(p in "persons_profile", select: type(p.id, Ecto.UUID)))
+
+  test "the rows the hook is given are the rows deleted, though one is restored after they are read" do
+    old = DateTime.add(DateTime.truncate(DateTime.utc_now(), :second), -31 * 86_400)
+    first = insert_profile!(old)
+    second = insert_profile!(old)
+    test = self()
+
+    Process.put({Brando.Persons, :before_purge}, fn
+      Brando.MigrationTest.Profile, ids ->
+        send(test, {:hook, Enum.sort(ids)})
+        # Restored after the purge read the ids: the purge holds the rows
+        Repo.update_all(from(p in "persons_profile", where: p.id == type(^second, Ecto.UUID)),
+          set: [deleted_at: nil]
+        )
+
+      _schema, _ids ->
+        :ok
+    end)
+
+    Query.clean_up_soft_deletions()
+
+    assert_received {:hook, ids}
+    assert ids == Enum.sort([first, second])
+    assert Enum.filter(profile_ids(), &(&1 in ids)) == []
   end
 
   test "a schema whose purge fails is logged, and the schemas after it are still purged", %{user: user} do

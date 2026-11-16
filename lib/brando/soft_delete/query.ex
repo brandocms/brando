@@ -182,9 +182,11 @@ defmodule Brando.SoftDelete.Query do
         where: fragment("? < current_timestamp - interval '30 day'", t.deleted_at)
 
     Repo.transaction(fn ->
-      purged = if Brando.Activity.logged?(schema), do: Repo.all(query), else: []
-
-      ids = query |> select([t], t.id) |> Repo.all()
+      # Locked, so a restore waits for the purge, and deleted by id, so the
+      # rows deleted are the rows the hook was given
+      ids = query |> select([t], t.id) |> lock("FOR UPDATE") |> Repo.all()
+      by_id = from t in schema, where: t.id in ^ids
+      purged = if Brando.Activity.logged?(schema), do: Repo.all(by_id), else: []
 
       if schema.__trait__(Brando.Trait.Revisioned) do
         Enum.each(ids, &Brando.Revisions.delete_entry_revisions(schema, &1))
@@ -193,7 +195,7 @@ defmodule Brando.SoftDelete.Query do
       Brando.Notes.entries_purged(schema, ids)
       before_purge(schema, ids)
 
-      result = Repo.delete_all(query)
+      result = Repo.delete_all(by_id)
       Enum.each(purged, &Brando.Activity.deleted(&1, :system, false, %{"purged" => true}))
       result
     end)
