@@ -2370,11 +2370,13 @@ msgid "Another editor removed the block you were changing."
 msgstr "En annen redaktør fjernet blokken du endret."
 
 #: lib/brando/environments/environment.ex
+#: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format
 msgid "Another environment already uses one of these hosts, as its domain or a redirect host."
 msgstr "Et annet miljø bruker allerede en av disse vertene, som domene eller omdirigeringsvert."
 
 #: lib/brando/environments/environment.ex
+#: lib/brando/tenant/registry.ex
 #, elixir-autogen, elixir-format
 msgid "Another environment already uses this host."
 msgstr "Et annet miljø bruker allerede denne verten."

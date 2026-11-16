@@ -7,6 +7,7 @@ defmodule Brando.Tenant.SetupTest do
   alias Brando.Environments.Schema
   alias Brando.Tenant
   alias Brando.Tenant.Access
+  alias Brando.Tenant.Cache
   alias Brando.Tenant.Registry
   alias Brando.Tenant.Setup
   alias Brando.Tenant.Storage
@@ -58,6 +59,35 @@ defmodule Brando.Tenant.SetupTest do
     end
   end
 
+  # What resolves the new site's hosts while Production is seeded
+  defmodule HostWatchingSeeder do
+    @behaviour Brando.Tenant.Seeder
+
+    @impl true
+    def seed(_site, _environment, _creator) do
+      send(
+        self(),
+        {:hosts_while_seeding, Cache.get_env_by_domain("acme.example.com"), Cache.get_redirect("www.acme.example.com"),
+         Cache.get_env_by_domain("staging.acme.example.com")}
+      )
+
+      :ok
+    end
+  end
+
+  # Another environment binds Staging's host while Production is seeded
+  defmodule RivalSeeder do
+    @behaviour Brando.Tenant.Seeder
+
+    @impl true
+    def seed(_site, _environment, _creator) do
+      {:ok, _rival} =
+        Registry.update_environment(Process.get(:rival), %{domain: "staging.acme.example.com"}, actor: :system)
+
+      :ok
+    end
+  end
+
   defmodule FailingSeeder do
     @behaviour Brando.Tenant.Seeder
 
@@ -81,7 +111,7 @@ defmodule Brando.Tenant.SetupTest do
     on_exit(fn ->
       File.rm_rf(root)
       Tenant.put_prefix(nil)
-      Brando.Tenant.Cache.clear()
+      Cache.clear()
     end)
 
     creator = Brando.Factory.insert(:random_user, role: :admin)
@@ -108,6 +138,117 @@ defmodule Brando.Tenant.SetupTest do
 
       assert {:ok, site} = Setup.create_site(attrs, owner, environments: @bound)
       assert Enum.find(site.environments, & &1.live).domain == "bound.example.com"
+    end
+  end
+
+  describe "the sites' hosts" do
+    @hosted [
+      %{
+        name: "Production",
+        key: "production",
+        live: true,
+        domain: "acme.example.com",
+        redirect_hosts: ["www.acme.example.com"]
+      },
+      %{name: "Staging", key: "staging", live: false, domain: "staging.acme.example.com"}
+    ]
+
+    setup do
+      put_test_env(:cache_sync_settle_ms, 0)
+      %{owner: Brando.Factory.insert(:random_user, role: :superuser)}
+    end
+
+    defp rival(domain) do
+      {:ok, site} = Registry.create_site(site_attrs("rival"))
+      {:ok, rival} = Registry.create_environment(site, %{name: "Rival", key: "rival", domain: domain}, actor: :system)
+      rival
+    end
+
+    test "are bound once the site is provisioned", %{owner: owner} do
+      put_test_env(:tenant_seeder, HostWatchingSeeder)
+
+      assert {:ok, site} = Setup.create_site(site_attrs("hosted"), owner, environments: @hosted)
+
+      assert_received {:hosts_while_seeding, nil, nil, nil}
+      assert {%{id: site_id}, %{key: "production"}} = Cache.get_env_by_domain("acme.example.com")
+      assert site_id == site.id
+      assert {_site, %{key: "production"}} = Cache.get_redirect("www.acme.example.com")
+      assert {_site, %{key: "staging"}} = Cache.get_env_by_domain("staging.acme.example.com")
+      assert Enum.find(site.environments, &(&1.key == "staging")).domain == "staging.acme.example.com"
+    end
+
+    test "that another environment binds are refused before any schema work", %{owner: owner} do
+      rival("staging.acme.example.com")
+
+      assert {:error, {:site_setup_failed, %Ecto.Changeset{} = changeset, :ok}} =
+               Setup.create_site(site_attrs("hosted"), owner, environments: @hosted)
+
+      assert changeset.errors[:domain]
+      refute_received {:structure_cloned, _source, _target}
+      refute_received {:migrated, _site, _environment}
+      refute Registry.get_site_by_key("hosted")
+      refute Cache.get_env_by_domain("acme.example.com")
+      assert {_site, %{key: "rival"}} = Cache.get_env_by_domain("staging.acme.example.com")
+    end
+
+    test "that a creator may not bind are refused before any schema work", %{creator: creator} do
+      assert {:error, {:site_setup_failed, %Ecto.Changeset{} = changeset, :ok}} =
+               Setup.create_site(site_attrs("hosted"), creator, environments: @hosted)
+
+      assert changeset.errors[:domain]
+      refute_received {:structure_cloned, _source, _target}
+      refute Registry.get_site_by_key("hosted")
+    end
+
+    test "bound by another write during provisioning leave none bound", %{owner: owner} do
+      Process.put(:rival, rival("rival.example.com"))
+      put_test_env(:tenant_seeder, RivalSeeder)
+
+      assert {:error, {:site_setup_failed, %Ecto.Changeset{} = changeset, :ok}} =
+               Setup.create_site(site_attrs("hosted"), owner, environments: @hosted)
+
+      assert changeset.errors[:domain]
+      refute Registry.get_site_by_key("hosted")
+      refute Schema.exists?("tenant_hosted_production")
+      refute Cache.get_env_by_domain("acme.example.com")
+      refute Cache.get_redirect("www.acme.example.com")
+      assert {_site, %{key: "rival"}} = Cache.get_env_by_domain("staging.acme.example.com")
+    end
+
+    test "a failed provisioning leaves none bound", %{owner: owner} do
+      put_test_env(:tenant_seeder, FailingSeeder)
+
+      assert {:error, {:site_setup_failed, :seed_failed, :ok}} =
+               Setup.create_site(site_attrs("hosted"), owner, environments: @hosted)
+
+      refute Registry.get_site_by_key("hosted")
+      assert Cache.bound_hosts() == []
+    end
+
+    test "remove_leftovers/2 leaves the schemas while a host cannot be released", %{owner: owner} do
+      assert {:ok, _site} = Setup.create_site(site_attrs("hosted"), owner, environments: @hosted)
+
+      # An entry this node's cache refresh does not clear
+      key = {:brando, :redirect_host, "www.acme.example.com"}
+      on_exit(fn -> :persistent_term.erase(key) end)
+      cache_keys = :persistent_term.get({:brando, :tenant_cache_keys})
+      :persistent_term.put({:brando, :tenant_cache_keys}, List.delete(cache_keys, key))
+
+      assert {:error, {:hosts_still_resolve, ["www.acme.example.com"]}} =
+               Setup.remove_leftovers("hosted", actor: :system)
+
+      assert Schema.exists?("tenant_hosted_production")
+      assert Schema.exists?("tenant_hosted_staging")
+      assert Registry.get_site_by_key("hosted")
+    end
+
+    test "remove_leftovers/2 releases them before the schemas go", %{owner: owner} do
+      assert {:ok, _site} = Setup.create_site(site_attrs("hosted"), owner, environments: @hosted)
+
+      assert :ok = Setup.remove_leftovers("hosted", actor: :system)
+
+      refute Schema.exists?("tenant_hosted_production")
+      assert Cache.bound_hosts() == []
     end
   end
 
@@ -221,7 +362,7 @@ defmodule Brando.Tenant.SetupTest do
     assert {:ok, site} = Setup.create_site(site_attrs("retained-site"), creator)
     assert {:ok, suspended} = Setup.suspend_site(site)
     assert suspended.status == :suspended
-    refute Brando.Tenant.Cache.get_live_env(site.key)
+    refute Cache.get_live_env(site.key)
 
     archived_at = DateTime.utc_now()
     assert {:ok, archived} = Setup.archive_site(suspended, now: archived_at)

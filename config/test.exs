@@ -59,6 +59,8 @@ config :brando, :form_load_gate?, true
 config :brando, form_block_map_ms: 200
 config :brando, remote_refresh_ms: 20
 config :brando, active_field_write_ms: 100
+# One node: an environment delete need not wait for others to refresh
+config :brando, cache_sync_settle_ms: 0
 config :brando, Brando.Static, cdn: [enabled: false]
 config :brando, Brando.Type.Role, roles: %{staff: 1, admin: 2, superuser: 4}
 config :brando, Brando.Villain, extra_blocks: []
