@@ -226,28 +226,33 @@ defmodule Brando.SSG.LocalDelivery do
   # so the admin's bundles load and the operator can deploy again.
   defp answer(conn, site) do
     case published(site) do
-      {:ok, build} ->
-        answer_from(conn, site, build, requested_file(conn, build))
-
-      :error ->
-        if SiteAssetsPlug.static_file?(conn), do: let_through(conn, site), else: conn |> send_unavailable() |> halt()
+      {:ok, build} -> answer_from(conn, site, build, &answer_missing(&1, site, build), &answer_without_build(&1, site))
+      :error -> answer_without_build(conn, site)
     end
   end
 
-  defp answer_from(conn, site, build, file) do
+  defp answer_without_build(conn, site) do
+    if SiteAssetsPlug.static_file?(conn), do: let_through(conn, site), else: unavailable(conn)
+  end
+
+  # `missing` answers a path the build has no file for, and `gone` one whose
+  # file is no longer there (`send_present/5`)
+  defp answer_from(conn, site, build, missing, gone) do
+    file = requested_file(conn, build)
+
     case redirect(conn, site, build) do
       {true, status, target} -> conn |> send_redirect(status, target) |> halt()
-      {false, _status, _target} when is_binary(file) -> conn |> send_build_file(build, file) |> halt()
+      {false, _status, _target} when is_binary(file) -> send_build_file(conn, build, file, gone)
       {false, status, target} -> conn |> send_redirect(status, target) |> halt()
-      nil when is_binary(file) -> conn |> send_build_file(build, file) |> halt()
-      nil -> answer_missing(conn, site, build)
+      nil when is_binary(file) -> send_build_file(conn, build, file, gone)
+      nil -> missing.(conn)
     end
   end
 
   defp answer_missing(conn, site, build) do
     if SiteAssetsPlug.static_file?(conn),
       do: let_through(conn, site),
-      else: conn |> send_not_found(build) |> halt()
+      else: send_not_found(conn, build)
   end
 
   # Only a plug before the router may answer it: which file `Plug.Static`
@@ -266,12 +271,14 @@ defmodule Brando.SSG.LocalDelivery do
   @spec answer_unanswered(Plug.Conn.t()) :: Plug.Conn.t()
   def answer_unanswered(%Plug.Conn{private: %{@before_router => %Site{} = site}} = conn) do
     case published(site) do
-      {:ok, build} -> conn |> send_not_found(build) |> halt()
-      :error -> conn |> send_unavailable() |> halt()
+      {:ok, build} -> send_not_found(conn, build)
+      :error -> unavailable(conn)
     end
   end
 
   def answer_unanswered(conn), do: conn
+
+  defp unavailable(conn), do: conn |> send_unavailable() |> halt()
 
   defp send_unavailable(conn) do
     conn
@@ -333,14 +340,14 @@ defmodule Brando.SSG.LocalDelivery do
 
   # A page with a Markdown file in the build answers `Accept: text/markdown`
   # with it, as `Brando.Plug.Markdown` answers for the application
-  defp send_build_file(conn, build, relative) do
+  defp send_build_file(conn, build, relative, gone) do
     case markdown_file(build, relative) do
       nil ->
-        send_file_of(conn, build, relative)
+        send_present(conn, build, relative, &send_file_of(&1, build, relative), gone)
 
       markdown ->
-        conn = put_resp_header(conn, "vary", "Accept")
-        send_file_of(conn, build, if(prefers_markdown?(conn), do: markdown, else: relative))
+        file = if prefers_markdown?(conn), do: markdown, else: relative
+        send_present(conn, build, file, &(&1 |> put_resp_header("vary", "Accept") |> send_file_of(build, file)), gone)
     end
   end
 
@@ -405,11 +412,22 @@ defmodule Brando.SSG.LocalDelivery do
   defp html?(relative), do: MIME.from_path(relative) == "text/html"
 
   defp send_not_found(conn, build) do
-    conn = put_resp_header(conn, "cache-control", @revalidate)
+    if Map.has_key?(build.files, @not_found) do
+      send_present(conn, build, @not_found, &send_not_found_page(&1, build), &unavailable/1)
+    else
+      conn
+      |> put_resp_header("cache-control", @revalidate)
+      |> put_resp_header("content-type", "text/plain; charset=utf-8")
+      |> send_resp(404, "Not found")
+      |> halt()
+    end
+  end
 
-    if Map.has_key?(build.files, @not_found),
-      do: conn |> put_file_headers(@not_found) |> send_file_as(404, build, @not_found),
-      else: conn |> put_resp_header("content-type", "text/plain; charset=utf-8") |> send_resp(404, "Not found")
+  defp send_not_found_page(conn, build) do
+    conn
+    |> put_resp_header("cache-control", @revalidate)
+    |> put_file_headers(@not_found)
+    |> send_file_as(404, build, @not_found)
   end
 
   # The sitemap is stored gzipped and sent as `BrandoWeb.SitemapController`
@@ -426,28 +444,30 @@ defmodule Brando.SSG.LocalDelivery do
           put_resp_header(conn, "content-disposition", ~s[attachment; filename="#{URI.encode(Path.basename(relative))}"]),
         else: conn
 
-    send_build_path(conn, status, build, relative)
+    send_file(conn, status, Path.join(build.root, relative))
   end
 
-  # A file gone since the build was listed: memory forgets the build, so the
-  # next request lists it again, or finds its directory gone and looks for it
-  # again only after an interval (`published/1`). Checked here, as
-  # servers' adapters raise different errors for a file they cannot open;
-  # the rescue covers one removed between the check and the send.
-  defp send_build_path(conn, status, build, relative) do
-    path = Path.join(build.root, relative)
-
-    if BuildPath.regular_file?(build.root, relative),
-      do: send_file(conn, status, path),
-      else: send_build_gone(conn, build)
+  # A file gone since the build was listed, or one reached through a symbolic
+  # link since: memory forgets the build, so the next request lists it again,
+  # or finds its directory gone and looks for it again only after an interval
+  # (`published/1`), and `gone` answers, as for a build that is not there.
+  # Checked right before `send` sends it, every component of its path, as
+  # servers' adapters raise different errors for a file they cannot open; the
+  # rescue covers one removed between the check and the send.
+  defp send_present(conn, build, relative, send, gone) do
+    if BuildPath.regular_file?(build.root, relative) do
+      conn |> send.() |> halt()
+    else
+      forget(conn, build, gone)
+    end
   rescue
     error in [File.Error, MatchError] ->
-      if conn.state == :unset, do: send_build_gone(conn, build), else: reraise(error, __STACKTRACE__)
+      if conn.state == :unset, do: forget(conn, build, gone), else: reraise(error, __STACKTRACE__)
   end
 
-  defp send_build_gone(conn, build) do
+  defp forget(conn, build, gone) do
     :persistent_term.erase({__MODULE__, build.site_id})
-    send_unavailable(conn)
+    gone.(conn)
   end
 
   defp content_type(relative) do

@@ -1016,6 +1016,21 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert request(context.host, "/").status == 503
     end
 
+    test "leaves a file it still lists to the asset pipeline once the files are gone, as without the build",
+         context do
+      Brando.Test.LocalDeliveryEndpoint.start()
+      write_release_file("assets/main-abc123.js", "release bundle")
+      build = context |> ready_build() |> deploy!()
+      assert sent_body(request(context.host, "/about")) == "about v1"
+
+      File.rm_rf!(build.build_path)
+
+      bundle = dispatch(context.host, "/assets/main-abc123.js")
+      assert bundle.status == 200
+      assert bundle.resp_body == "release bundle"
+      assert dispatch(context.host, "/about").status == 503
+    end
+
     test "answers 503 whichever error the server's adapter raises for a missing file", context do
       build = context |> ready_build() |> deploy!()
       assert sent_body(request(context.host, "/about")) == "about v1"
