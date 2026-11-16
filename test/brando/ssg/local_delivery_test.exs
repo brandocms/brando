@@ -659,6 +659,31 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert {:error, :local_delivery_not_configured} = Deploy.deploy(build)
     end
 
+    test "a rollback to a build made for another delivery is refused, and copies nothing", context do
+      served = context |> ready_build() |> deploy!()
+      older = ready_build(context)
+
+      {:ok, older} =
+        Builds.update(older, %{
+          status: :archived,
+          deploy_config: %{"strategy" => "rsync", "target" => "deploy@example.com:/srv/www"}
+        })
+
+      runner = fn _cmd, _args, _opts -> flunk("rsync ran") end
+
+      assert {:error, :build_made_for_another_delivery} =
+               Deploy.rollback(context.site, Builds.get_build(older.id), runner: runner)
+
+      assert Builds.get_build(older.id).status == :archived
+      assert Builds.get_build(served.id).status == :deployed
+      assert Registry.get_site(context.site.id).published_build == served.version
+
+      assert {:cancel, :build_made_for_another_delivery} =
+               perform_job(Brando.Worker.SSGDeploy, %{"build_id" => older.id, "action" => "rollback"})
+
+      assert Builds.get_build(older.id).build_log =~ "made for another delivery"
+    end
+
     test "is refused when the installation turns local delivery off", context do
       build = ready_build(context)
       put_test_env(DeployConfig, local_delivery: false)

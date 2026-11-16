@@ -114,7 +114,18 @@ defmodule Brando.SSG.Deploy do
   end
 
   defp deploy_and_mark(build, opts) do
-    with :ok <- run_strategy(build, opts), do: mark_deployed(build)
+    with :ok <- made_for_current_delivery(build),
+         :ok <- run_strategy(build, opts),
+         do: mark_deployed(build)
+  end
+
+  # A build carries the config it was made with: one made for a static host
+  # would copy there, and archive the build the installation serves, while
+  # the site's host kept answering from it. The reverse is `deploy_local/1`'s.
+  defp made_for_current_delivery(%Build{deploy_config: config, site: site}) do
+    if config["strategy"] not in [nil, "local"] and Site.local_delivery?(site),
+      do: {:error, :build_made_for_another_delivery},
+      else: :ok
   end
 
   defp run_strategy(%Build{deploy_config: config} = build, opts) do
