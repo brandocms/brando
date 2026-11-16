@@ -31,6 +31,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
   @manager_roles [:admin, :superuser]
   @host_fields [{"domain", :domain}, {"redirect_hosts", :redirect_hosts}]
+  # The hosts form's `focused_field` values, and the id suffixes of their controls
+  @focusable_controls %{"domain" => "domain", "redirect_hosts" => "redirect-hosts", "save" => "save"}
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
@@ -46,6 +48,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
         |> assign(:default_scheduled_at, default_scheduled_at())
         |> assign(:restoring, nil)
         |> assign(:host_drafts, %{})
+        |> assign(:hosts_changed_elsewhere, MapSet.new())
         |> assign_served_hosts()
         |> refresh_data()
 
@@ -170,6 +173,14 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                       <%!-- The form and its fields are keyed on the hosts shown: when a live switch
                     or another superuser moves them, they are replaced, and a half-typed edit, a
                     focused field's too, goes with the hosts it was typed against --%>
+                      <div
+                        :if={MapSet.member?(@hosts_changed_elsewhere, environment.id)}
+                        class="alert warning environment-hosts-notice"
+                        role="alert"
+                      >
+                        <.icon name="triangle-alert" />
+                        <span>{gettext("These hosts were changed elsewhere, so what you typed here was not saved.")}</span>
+                      </div>
                       <form
                         :if={can_edit_hosts?(@can_bind_hosts?, @can_manage?)}
                         id={"environment-domain-#{environment.id}-#{hosts_key(environment)}"}
@@ -184,6 +195,8 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                           name="shown_redirect_hosts"
                           value={Enum.join(environment.redirect_hosts || [], ",")}
                         />
+                        <%!-- Which control has the focus, so a save that replaces them gives it back --%>
+                        <input type="hidden" id={host_field_id(environment, "focused")} name="focused_field" value="" />
                         <div class="environment-host-field">
                           <label id={host_field_id(environment, "domain-label")} for={host_field_id(environment, "domain")}>
                             {gettext("Domain")}
@@ -199,6 +212,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                               autocomplete="off"
                               spellcheck="false"
                               aria-labelledby={host_field_labelled_by(environment, "domain-label")}
+                              {focus_tracking(environment, "domain")}
                               aria-describedby={@served_hosts_enabled? && environment.domain && domain_status_id(environment)}
                             />
                             <.served_host
@@ -223,6 +237,7 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                             autocomplete="off"
                             spellcheck="false"
                             aria-labelledby={host_field_labelled_by(environment, "redirect-hosts-label")}
+                            {focus_tracking(environment, "redirect_hosts")}
                             aria-describedby={redirect_hosts_described_by(environment, @served_hosts_enabled?)}
                           >{host_draft(@host_drafts, environment).redirect_hosts}</textarea>
                           <span id={redirect_hosts_help_id(environment)} class="environment-host-help">
@@ -236,7 +251,14 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                           />
                         </div>
                         <div class="environment-hosts-form__actions">
-                          <button type="submit" class="btn btn--sm">{gettext("Save hosts")}</button>
+                          <button
+                            id={host_field_id(environment, "save")}
+                            type="submit"
+                            class="btn btn--sm"
+                            {focus_tracking(environment, "save")}
+                          >
+                            {gettext("Save hosts")}
+                          </button>
                         </div>
                       </form>
 
@@ -809,11 +831,9 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
       draft = for {param, field} <- @host_fields, is_binary(params[param]), into: %{}, do: {field, params[param]}
 
       {:noreply,
-       update(
-         socket,
-         :host_drafts,
-         &Map.update(&1, draft_key(environment), draft, fn typed -> Map.merge(typed, draft) end)
-       )}
+       socket
+       |> update(:host_drafts, &Map.update(&1, draft_key(environment), draft, fn typed -> Map.merge(typed, draft) end))
+       |> update(:hosts_changed_elsewhere, &MapSet.delete(&1, environment.id))}
     else
       _ -> {:noreply, socket}
     end
@@ -838,8 +858,10 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
          :host_drafts,
          &Map.reject(&1, fn {{environment_id, _domain, _hosts}, _draft} -> environment_id == listed.id end)
        )
+       |> update(:hosts_changed_elsewhere, &MapSet.delete(&1, listed.id))
        |> notify(gettext("Domain updated."))
-       |> refresh_data()}
+       |> refresh_data()
+       |> focus_saved_control(listed.id, params["focused_field"])}
     else
       {:error, :domain_moved} ->
         {:noreply,
@@ -1032,11 +1054,23 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
 
     environments = for_site(site, &Registry.list_environments/1)
     shown = MapSet.new(environments, &draft_key/1)
+    listed = MapSet.new(environments, & &1.id)
+
+    {drafts, replaced} =
+      Map.split_with(socket.assigns[:host_drafts] || %{}, fn {key, _draft} -> key in shown end)
+
+    lost = for {{id, _domain, _hosts} = key, draft} <- replaced, typed?(draft, key), into: MapSet.new(), do: id
+
+    changed_elsewhere =
+      (socket.assigns[:hosts_changed_elsewhere] || MapSet.new())
+      |> MapSet.union(lost)
+      |> MapSet.filter(&(&1 in listed))
 
     socket
     |> assign(:site, site)
     |> assign(:environments, environments)
-    |> assign(:host_drafts, Map.filter(socket.assigns[:host_drafts] || %{}, fn {key, _draft} -> key in shown end))
+    |> assign(:host_drafts, drafts)
+    |> assign(:hosts_changed_elsewhere, changed_elsewhere)
     |> assign(:archives, for_site(site, &Environments.list_archives/1))
     |> assign(:jobs, for_site(site, &Environments.list_scheduled_operations/1))
     |> assign(:operation_logs, for_site(site, &Environments.list_operation_logs/1))
@@ -1126,6 +1160,36 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   defp hosts_key(environment), do: :erlang.phash2(draft_key(environment))
 
   defp host_field_id(environment, field), do: "environment-#{environment.id}-#{hosts_key(environment)}-#{field}"
+
+  # A draft holding only the hosts it was rendered with (a form recovered on
+  # rejoin sends its values untouched) lost nothing when it was replaced
+  defp typed?(draft, {_id, domain, hosts}) do
+    String.trim(Map.get(draft, :domain, domain)) != domain or
+      (Map.has_key?(draft, :redirect_hosts) and Environment.parse_hosts(draft.redirect_hosts) != hosts)
+  end
+
+  # Each control records itself as focused, and clears that when it loses the
+  # focus, in the form's `focused_field`; client side only, so no round trip
+  defp focus_tracking(environment, control) do
+    to = "#" <> host_field_id(environment, "focused")
+
+    %{
+      "phx-focus" => JS.set_attribute({"value", control}, to: to),
+      "phx-blur" => JS.set_attribute({"value", ""}, to: to),
+      "data-focus" => JS.focus()
+    }
+  end
+
+  # A save that changes the hosts replaces the form and its controls, the
+  # focused one included: focus its replacement
+  defp focus_saved_control(socket, environment_id, focused) do
+    with {:ok, control} <- Map.fetch(@focusable_controls, focused),
+         %Environment{} = environment <- Enum.find(socket.assigns.environments, &(&1.id == environment_id)) do
+      push_event(socket, "js-exec", %{to: "#" <> host_field_id(environment, control), attr: "data-focus"})
+    else
+      _ -> socket
+    end
+  end
 
   defp can_edit_hosts?(can_bind_hosts?, can_manage?),
     do: can_bind_hosts? and can_manage? and BrandoAdmin.Authorization.allowed?(:update, :environments)

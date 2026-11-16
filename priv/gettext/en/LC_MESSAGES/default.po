@@ -18153,6 +18153,11 @@ msgstr ""
 msgid "These crops are set by the image configuration. Position and zoom apply to all previews."
 msgstr ""
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "These hosts were changed elsewhere, so what you typed here was not saved."
+msgstr ""
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "These permissions are no longer registered and grant no access."

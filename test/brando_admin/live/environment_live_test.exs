@@ -430,6 +430,15 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       end
     end
 
+    defp host_control_ids(view, environment) do
+      html = view |> hosts_form(environment) |> render() |> LazyHTML.from_fragment()
+
+      for selector <- [~s(input[name="domain"]), ~s(textarea[name="redirect_hosts"]), ~s(button[type="submit"])] do
+        [id] = html |> LazyHTML.query(selector) |> LazyHTML.attribute("id")
+        id
+      end
+    end
+
     test "the host fields are keyed on the saved hosts, like their form", %{conn: conn, staging: staging} do
       {:ok, view, _html} = live(conn, "/admin/config/environments")
       before = host_field_ids(view, staging)
@@ -620,6 +629,78 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       })
 
       assert field_value(view, staging, "textarea") == "www.staging.acme.test"
+    end
+
+    # The save gives the fields new ids, so the focused one is replaced; the
+    # form says which of its controls had the focus
+    test "after a save, the control saved from has the focus again", %{conn: conn, staging: staging} do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      for {focused, {domain, hosts}, index} <- [
+            {"domain", {"new.acme.test", ""}, 0},
+            {"redirect_hosts", {"new.acme.test", "www.new.acme.test"}, 1},
+            {"save", {"staging.acme.test", ""}, 2}
+          ] do
+        view
+        |> hosts_form(staging)
+        |> render_submit(%{"domain" => domain, "redirect_hosts" => hosts, "focused_field" => focused})
+
+        saved = Registry.get_environment(staging.id)
+        assert %{domain: ^domain} = saved
+        id = view |> host_control_ids(staging) |> Enum.at(index)
+
+        assert_push_event(view, "js-exec", %{to: to, attr: "data-focus"})
+        assert to == "##{id}"
+        assert has_element?(view, ~s(##{id}[data-focus]))
+      end
+
+      # Nothing in the form had the focus (a click on the button that did not focus it)
+      view
+      |> hosts_form(staging)
+      |> render_submit(%{"domain" => "other.acme.test", "redirect_hosts" => "", "focused_field" => ""})
+
+      assert Registry.get_environment(staging.id).domain == "other.acme.test"
+      refute_push_event(view, "js-exec", %{attr: "data-focus"})
+    end
+
+    test "a draft replaced by a save elsewhere is said to be lost, on its row only", %{
+      conn: conn,
+      production: production,
+      staging: staging
+    } do
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+      notice = ".environment-hosts-notice"
+      superuser = Factory.insert(:random_user, role: :superuser)
+
+      typed(view, staging, %{"domain" => "staging.acme.test", "redirect_hosts" => "typed.acme.test"})
+
+      {:ok, staging} =
+        Registry.update_environment(staging, %{redirect_hosts: ["www.staging.acme.test"]}, actor: superuser)
+
+      assert has_element?(view, "#environment-#{staging.id} #{notice}", "what you typed here was not saved")
+      refute has_element?(view, "#environment-#{production.id} #{notice}")
+
+      # Typing again puts it away
+      typed(view, staging, %{
+        "domain" => "staging.acme.test",
+        "shown_redirect_hosts" => "www.staging.acme.test",
+        "redirect_hosts" => "www.staging.acme.test\nmore.acme.test"
+      })
+
+      refute has_element?(view, "#environment-#{staging.id} #{notice}")
+
+      # Nothing typed, or only what was saved already (a form recovered on
+      # rejoin sends its values unchanged): no notice
+      render_change(view, "draft_hosts", %{
+        "environment_id" => production.id,
+        "shown_domain" => "",
+        "shown_redirect_hosts" => "",
+        "domain" => " ",
+        "redirect_hosts" => ""
+      })
+
+      {:ok, _production} = Registry.update_environment(production, %{domain: "acme.test"}, actor: superuser)
+      refute has_element?(view, "#environment-#{production.id} #{notice}")
     end
 
     test "a save from a form that showed other redirect hosts is refused", %{

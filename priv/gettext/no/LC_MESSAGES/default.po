@@ -18155,6 +18155,11 @@ msgstr "Disse kontoene er ikke knyttet til noe nettsted og får ingen nettstedst
 msgid "These crops are set by the image configuration. Position and zoom apply to all previews."
 msgstr "Beskjæringene styres av bildeoppsettet. Plassering og zoom gjelder alle forhåndsvisningene."
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "These hosts were changed elsewhere, so what you typed here was not saved."
+msgstr "Vertene ble endret et annet sted, så det du skrev her, ble ikke lagret."
+
 #: lib/brando_admin/live/users/groups_live.ex
 #, elixir-autogen, elixir-format
 msgid "These permissions are no longer registered and grant no access."

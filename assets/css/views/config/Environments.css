@@ -570,6 +570,13 @@
     max-width: 480px;
   }
 
+  /* What was typed in the row went with hosts saved elsewhere */
+  .environment-hosts-notice {
+    max-width: 480px;
+    margin-bottom: 16px;
+    font-size: var(--brando-text-sm);
+  }
+
   .environment-host-field {
     display: grid;
     gap: 8px;
