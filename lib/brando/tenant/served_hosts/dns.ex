@@ -10,7 +10,8 @@ defmodule Brando.Tenant.ServedHosts.DNS do
     * a name the name server says does not exist, or that has no record of
       the family, has none of that family;
     * a query that times out, a name server that fails or refuses it, an
-      answer that cannot be decoded, a `CNAME` chain longer than eight
+      answer that cannot be decoded or that comes with its truncation flag
+      set (records may have been cut off), a `CNAME` chain longer than eight
       queries, or no name server to ask, leaves the family unread.
 
   A host with an unread family answers `{:incomplete, addresses, families}`
@@ -92,20 +93,12 @@ defmodule Brando.Tenant.ServedHosts.DNS do
     end
   end
 
-  # NOERROR: the records of the type, for the name or the end of its CNAME
-  # chain; none at all is a name with no record of the type
+  # NOERROR with the truncation flag still set, which `:inet_res` returns as
+  # an answer when the reply over TCP carries it too: records may be missing
   defp answer({:ok, message}, name, type, query_target, seen) do
-    records =
-      for record <- :inet_dns.msg(message, :anlist),
-          :inet_dns.rr(record, :class) == :in,
-          record_type = :inet_dns.rr(record, :type),
-          record_type in [type, :cname],
-          do: {domain(:inet_dns.rr(record, :domain)), record_type, :inet_dns.rr(record, :data)}
-
-    case follow(records, name, type, name, seen) do
-      {:target, target, seen} -> query_target.(target, seen)
-      found -> found
-    end
+    if truncated?(message),
+      do: {:error, :truncated},
+      else: records(message, name, type, query_target, seen)
   end
 
   # NXDOMAIN, which `nxdomain_reply: true` returns with the name server's
@@ -123,6 +116,24 @@ defmodule Brando.Tenant.ServedHosts.DNS do
   defp answer({:error, reason}, _name, _type, _query_target, _seen), do: {:error, reason}
 
   defp answer(other, _name, _type, _query_target, _seen), do: {:error, {:unexpected, other}}
+
+  defp truncated?(message), do: :inet_dns.header(:inet_dns.msg(message, :header), :tc) == true
+
+  # NOERROR: the records of the type, for the name or the end of its CNAME
+  # chain; none at all is a name with no record of the type
+  defp records(message, name, type, query_target, seen) do
+    records =
+      for record <- :inet_dns.msg(message, :anlist),
+          :inet_dns.rr(record, :class) == :in,
+          record_type = :inet_dns.rr(record, :type),
+          record_type in [type, :cname],
+          do: {domain(:inet_dns.rr(record, :domain)), record_type, :inet_dns.rr(record, :data)}
+
+    case follow(records, name, type, name, seen) do
+      {:target, target, seen} -> query_target.(target, seen)
+      found -> found
+    end
+  end
 
   # The type's records of `name`, or of the name its CNAME points at. A target
   # the answer holds nothing for is asked about on its own; a chain that

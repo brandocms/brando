@@ -10,13 +10,13 @@ defmodule Brando.Tenant.ServedHosts.DNSTest do
   @v6 {0x2001, 0xDB8, 0, 0, 0, 0, 0, 0x10}
 
   # A NOERROR message whose answer section holds `records`, each
-  # `{domain, type, data}`
-  defp noerror(records) do
+  # `{domain, type, data}`, with the truncation flag as `:inet_res` decodes it
+  defp noerror(records, truncated? \\ false) do
     answers =
       for {domain, type, data} <- records,
           do: :inet_dns.make_rr(domain: String.to_charlist(domain), class: :in, type: type, data: data, ttl: 300)
 
-    {:ok, :inet_dns.make_msg(anlist: answers)}
+    {:ok, :inet_dns.make_msg(header: :inet_dns.make_header(qr: true, tc: truncated?), anlist: answers)}
   end
 
   defp failure(code), do: {:error, {code, :inet_dns.make_msg([])}}
@@ -116,6 +116,28 @@ defmodule Brando.Tenant.ServedHosts.DNSTest do
 
         assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [@v4], [:inet6]}
       end
+    end
+
+    # The final reply, over TCP after a truncated UDP one, can still carry the
+    # flag, and `:inet_res` returns it as an answer like any other
+    test "answered with the truncation flag and no records: unread, not empty" do
+      resolve =
+        resolver(%{
+          {"acme.example.com", :a} => noerror([{"acme.example.com", :a, @v4}]),
+          {"acme.example.com", :aaaa} => noerror([], true)
+        })
+
+      assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [@v4], [:inet6]}
+    end
+
+    test "answered with the truncation flag and some records: unread, as more may be cut off" do
+      resolve =
+        resolver(%{
+          {"acme.example.com", :a} => noerror([{"acme.example.com", :a, @v4}], true),
+          {"acme.example.com", :aaaa} => noerror([{"acme.example.com", :aaaa, @v6}])
+        })
+
+      assert DNS.lookup("acme.example.com", resolve) == {:incomplete, [@v6], [:inet]}
     end
 
     test "unread while the other has no records: incomplete with no addresses" do
