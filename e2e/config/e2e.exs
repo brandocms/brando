@@ -123,6 +123,30 @@ config :brando,
      end),
   site_key: "auth-alpha"
 
+# Screenshots of multi-site screens: `BRANDO_E2E_MULTI_SITE=1 scripts/server.sh
+# start` serves two sites (with the `multi-site-hosts` fixture) and keeps a
+# served hosts file whose lookups `E2E.MultiSiteHosts` answers, so no DNS
+# query leaves the machine. Never set for the E2E suite, which is single-site.
+if System.get_env("BRANDO_E2E_MULTI_SITE") == "1" do
+  instance = String.replace(System.get_env("BRANDO_E2E_INSTANCE", "default"), ~r/[^a-zA-Z0-9_]/, "_")
+
+  # Outside the checkout, so the file's path in an error on screen names no
+  # home folder; `scripts/server.sh stop` removes the folder
+  served_hosts_file = "/tmp/brando_e2e_#{instance}/served_hosts/hosts"
+  # The file's directory has to exist for the check at boot
+  File.mkdir_p!(Path.dirname(served_hosts_file))
+
+  config :brando, tenancy_mode: :multi
+
+  config :brando, Brando.Tenant.ServedHosts,
+    file: served_hosts_file,
+    addresses: ["203.0.113.10"],
+    resolver: E2E.MultiSiteHosts,
+    # The fixture checks when it runs; no timer changes a state mid-shot
+    retry_interval: :timer.hours(24),
+    recheck_interval: :timer.hours(24)
+end
+
 # Test-only public GitHub provider; requests still traverse the real signed endpoint.
 # Every spec signs in from 127.0.0.1, so the per-address limits would add up
 # over a run; the per-account limits and the lockout stay as in production.

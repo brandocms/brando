@@ -756,8 +756,9 @@ Which site answers on a host is the installation's decision, so only a superuser
 on that screen or through `Brando.Tenant.Registry`, whose `create_environment/3`
 and `update_environment/3` take the acting user as `actor:` (`:system` for
 trusted maintenance code) and refuse a change without one. The same goes for
-an environment's redirect hosts, which the screen edits under the domain, one
-per line or comma-separated. A domain is a bare
+an environment's redirect hosts, which the screen edits in a field under the
+domain's, one per line or comma-separated; anyone else sees the hosts as
+text. A domain is a bare
 host: no scheme, path, port or trailing dot. It may not be a host the
 installation itself uses: the endpoint's, where the admin answers, nor its
 static, media or CDN host. A redirect host follows the same rules, and an
@@ -823,8 +824,9 @@ looked up while the file holds every bound host. Each node keeps its own file,
 and nothing is stored in the database: on a new server the file starts empty,
 and each host is admitted there when its DNS arrives.
 
-The **Environments** screen shows each bound host's state under its domain,
-the domain's first and then one line for each redirect host, led by its name:
+The **Environments** screen shows each bound host's state beside the host:
+the domain's on the domain's line, then one line for each redirect host, led
+by its name:
 **Served** when it is in the file, **Waiting for DNS** with what the host
 resolves to now and this server's addresses, **Does not resolve**, or **Not a
 full host name** for a bound host the file leaves out. A file that could not
