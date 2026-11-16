@@ -42,7 +42,7 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
   end
 
   test "the legacy task is found by its content wherever it lives under lib/" do
-    path = "lib/studio/tasks/upgrade.ex"
+    path = "lib/legacy_app/tasks/upgrade.ex"
 
     result =
       IgniterCase.phoenix_project(files: %{path => legacy("0.54")})
