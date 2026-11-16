@@ -410,19 +410,18 @@ defmodule Brando.Tenant.ServedHosts do
         {%{state | own: own(source, nil)}, Map.new(hosts, &{&1, :unresolved})}
 
       supervisor ->
-        resolver = Keyword.get(config, :resolver, Brando.Tenant.ServedHosts.DNS)
-        timeout = Keyword.get(config, :lookup_timeout, @lookup_timeout)
-        endpoint = endpoint_to_look_up(source)
-
-        lookups =
-          Enum.reduce(hosts, state.lookups, fn host, lookups ->
-            task = Task.Supervisor.async_nolink(supervisor, fn -> lookup_with_endpoint(resolver, host, endpoint) end)
-            timer = Process.send_after(self(), {:lookup_timeout, task.ref}, timeout)
-            Map.put(lookups, task.ref, {host, task.pid, timer, source})
-          end)
-
+        lookups = Enum.reduce(hosts, state.lookups, &start_lookup(supervisor, &1, &2, source, config))
         {%{state | lookups: lookups}, %{}}
     end
+  end
+
+  defp start_lookup(supervisor, host, lookups, source, config) do
+    resolver = Keyword.get(config, :resolver, Brando.Tenant.ServedHosts.DNS)
+    timeout = Keyword.get(config, :lookup_timeout, @lookup_timeout)
+    endpoint = endpoint_to_look_up(source)
+    task = Task.Supervisor.async_nolink(supervisor, fn -> lookup_with_endpoint(resolver, host, endpoint) end)
+    timer = Process.send_after(self(), {:lookup_timeout, task.ref}, timeout)
+    Map.put(lookups, task.ref, {host, task.pid, timer, source})
   end
 
   defp endpoint_to_look_up({:lookup, host}), do: host
@@ -454,16 +453,16 @@ defmodule Brando.Tenant.ServedHosts do
         {:fixed, normalize_own(addresses)}
 
       nil ->
-        case endpoint_host() do
-          nil ->
-            {:fixed, []}
+        endpoint_source(endpoint_host())
+    end
+  end
 
-          host ->
-            case parse_address(host) do
-              [] -> {:lookup, host}
-              address -> {:fixed, address}
-            end
-        end
+  defp endpoint_source(nil), do: {:fixed, []}
+
+  defp endpoint_source(host) do
+    case parse_address(host) do
+      [] -> {:lookup, host}
+      address -> {:fixed, address}
     end
   end
 
