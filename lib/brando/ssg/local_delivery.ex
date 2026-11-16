@@ -295,15 +295,10 @@ defmodule Brando.SSG.LocalDelivery do
   # read with the languages the build was made with, the site's current ones
   # for a list that predates them, as `Brando.I18n.parse_path/2` reads it
   defp redirect(conn, site, build) do
-    case decode(conn.path_info) do
-      {:ok, segments} ->
-        path = "/" <> Enum.join(segments, "/")
-        language = path_language(segments, build.languages || site_languages(site))
-        Enum.find_value(build.redirects, &match_entry(&1, path, language))
-
-      :error ->
-        nil
-    end
+    segments = Enum.map(conn.path_info, &URI.decode/1)
+    path = "/" <> Enum.join(segments, "/")
+    language = path_language(segments, build.languages || site_languages(site))
+    Enum.find_value(build.redirects, &match_entry(&1, path, language))
   end
 
   defp path_language([first | _rest], {codes, default}), do: if(first in codes, do: first, else: default)
@@ -319,12 +314,6 @@ defmodule Brando.SSG.LocalDelivery do
   end
 
   defp match_entry(_entry, _path, _language), do: nil
-
-  defp decode(segments) do
-    {:ok, Enum.map(segments, &URI.decode/1)}
-  rescue
-    ArgumentError -> :error
-  end
 
   defp send_redirect(conn, 410, _target) do
     conn

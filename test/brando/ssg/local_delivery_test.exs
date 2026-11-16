@@ -837,6 +837,14 @@ defmodule Brando.SSG.LocalDeliveryTest do
       end
     end
 
+    test "with a malformed escape answer the 404 page", context do
+      for path <- ["/%zz", "/assets/%zz.js"] do
+        conn = request(context.host, path)
+        assert conn.status == 404, path
+        assert sent_body(conn) == "missing v1", path
+      end
+    end
+
     test "through a symbolic link answer the 404 page", context do
       # A new version, so its files are listed after the links exist
       build = ready_build(context)

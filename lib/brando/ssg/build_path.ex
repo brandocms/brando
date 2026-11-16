@@ -43,14 +43,11 @@ defmodule Brando.SSG.BuildPath do
 
   @doc """
   `relative/1` for a path's segments as they arrive, percent-encoded
-  (`conn.path_info`). A segment that does not decode refuses the path.
+  (`conn.path_info`). A malformed escape (`%zz`) is kept as it is, as
+  `URI.decode/1` keeps it.
   """
   @spec relative_encoded([String.t()]) :: {:ok, String.t()} | :error
-  def relative_encoded(segments) when is_list(segments) do
-    segments |> Enum.map(&URI.decode/1) |> relative()
-  rescue
-    ArgumentError -> :error
-  end
+  def relative_encoded(segments) when is_list(segments), do: segments |> Enum.map(&URI.decode/1) |> relative()
 
   defp plain_segment?(segment) when is_binary(segment),
     do: segment not in ["", ".", ".."] and not String.contains?(segment, ["/", "\\", <<0>>])
