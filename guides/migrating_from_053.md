@@ -820,9 +820,10 @@ An application on a 0.55 development build starts here, after rerunning
    bin/my_app eval "MyApp.ReleaseTasks.migrate_tenants()"
    ```
 
-   With Florist, use the steps in
-   [Running migrations](deployment.md#running-migrations), which migrate
-   before the restart.
+   With Florist, `release:deploy` starts the new release before
+   `db:migrate` can run, so a deploy that brings such a migration is down (or,
+   with blue/green, aborted) until it has run;
+   [Running migrations](deployment.md#running-migrations) has the commands.
 
    Restoring an environment archive taken before such a migration runs the
    migration on the restore. The restore is refused, with nothing restored,

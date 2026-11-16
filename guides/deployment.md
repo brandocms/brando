@@ -766,29 +766,33 @@ bin/my_app eval "MyApp.ReleaseTasks.migrate_tenants()"
 same as `mix ecto.migrate`), and `migrate_tenants/0` what
 `mix brando.migrate --tenants` runs.
 
-`florist prod db:migrate` runs `ReleaseTasks.migrate` in the release
-`current` points at. `release:deploy --migrate` does so only after it has
-started the new release, so for a deploy across such a migration use the
-steps that migrate first. On a single deployment, unpack the new release
-(which points `current` at it without restarting), migrate, then restart:
+With Florist, `florist prod db:migrate` runs `ReleaseTasks.migrate()` on the
+server, and `release:deploy` is the step that starts the new release: it
+links the release's shared media folder, takes the pre-deploy database backup
+and records the deploy that `rollback` reads. Do not assemble a deploy from
+`release:unpack` and the other steps to migrate in between. Florist has no
+step today that migrates from the new release before `release:deploy` starts
+it (tracked in
+[brandocms/florist#5](https://github.com/brandocms/florist/issues/5)), so a
+deploy that brings such a migration cannot start on it before the migration has run:
 
-```bash
-florist prod release:build
-florist prod release:copy_from_docker
-florist prod release:upload
-florist prod release:unpack
-florist prod db:migrate
-florist prod service:restart
-```
+- On a single deployment, `release:deploy` restarts on the new release, which
+  stops at boot. The site is down from that restart until `db:migrate` and
+  `service:restart` have run:
 
-With blue/green, `florist prod release:deploy --migrate` runs the migrations
-from the new environment before its health check, while the old environment
-keeps serving. If the new environment failed to boot before they ran and the
-health check aborts the deploy, the migration has run by then: run
-`florist prod release:deploy` again.
+  ```bash
+  florist prod release:deploy
+  florist prod db:migrate
+  florist prod service:restart
+  ```
 
-A deploy whose migrations change nothing the release reads at boot can
-migrate after it, as before:
+- With blue/green, the new environment stops at boot, fails its health check,
+  and the deploy is aborted while the old environment keeps serving. The new
+  release cannot go live until the migration has run, and Florist has no step
+  that runs it from the new release first.
+
+A deploy whose migrations change nothing the release reads at boot migrates
+after it:
 
 ```bash
 florist prod release:deploy
@@ -1039,8 +1043,9 @@ florist prod release:deploy
 florist prod db:migrate       # only if schema changed
 ```
 
-When the deploy brings a public migration a release reads at boot, migrate
-first instead (see [Running migrations](#running-migrations)).
+When the deploy brings a public migration a release reads at boot, the site
+is down until it has run; [Running migrations](#running-migrations) has what
+to run and why.
 
 ### Emergency rollback
 
