@@ -218,6 +218,30 @@ defmodule BrandoAdmin.Sites.SiteLive do
             <button type="submit" class="btn">{gettext("Save languages")}</button>
           </form>
 
+          <div :if={seeding(@seeding, site.id) != []} class="site-seeding">
+            <table id={"seeding-site-#{site.id}"}>
+              <tbody>
+                <tr :for={row <- seeding(@seeding, site.id)} id={"seeding-#{site.id}-#{row.environment.id}-#{row.language}"}>
+                  <td>{seeding_status(row)}</td>
+                  <td>
+                    <small :if={row.busy}>{gettext("Waiting for the environment's copy or setup to finish.")}</small>
+                    <button
+                      :if={seed_again?(row)}
+                      type="button"
+                      class="btn btn--sm"
+                      phx-click="seed_language"
+                      phx-value-site-id={site.id}
+                      phx-value-environment-id={row.environment.id}
+                      phx-value-language={row.language}
+                    >
+                      {gettext("Seed again")}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
           <form
             id={"library-group-site-#{site.id}"}
             class="site-library-group"
@@ -237,28 +261,6 @@ defmodule BrandoAdmin.Sites.SiteLive do
             </label>
             <button type="submit" class="btn">{gettext("Save group")}</button>
           </form>
-
-          <table :if={seeding(@seeding, site.id) != []} id={"seeding-site-#{site.id}"}>
-            <tbody>
-              <tr :for={row <- seeding(@seeding, site.id)} id={"seeding-#{site.id}-#{row.environment.id}-#{row.language}"}>
-                <td>{seeding_status(row)}</td>
-                <td>
-                  <small :if={row.busy}>{gettext("Waiting for the environment's copy or setup to finish.")}</small>
-                  <button
-                    :if={seed_again?(row)}
-                    type="button"
-                    class="btn btn--sm"
-                    phx-click="seed_language"
-                    phx-value-site-id={site.id}
-                    phx-value-environment-id={row.environment.id}
-                    phx-value-language={row.language}
-                  >
-                    {gettext("Seed again")}
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
 
           <p :if={Brando.Authorization.enabled?()}>
             <a href={"/admin/groups?brando_site_key=#{site.key}"}>{gettext("Manage this site’s groups and members →")}</a>

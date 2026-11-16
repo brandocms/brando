@@ -987,7 +987,8 @@
 
     /* The rules run the card's width; what they divide stays at a
        settings width, so a label stays near its value */
-    > form > :not(.btn) {
+    > form > :not(.btn),
+    .site-seeding table {
       max-width: 720px;
     }
 

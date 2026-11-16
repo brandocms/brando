@@ -352,6 +352,8 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
       {:ok, view, _html} = live(conn, "/admin/sites")
       assert has_element?(view, row, "Seeding no in Production")
       refute has_element?(view, "#{row} button")
+      # Under the languages form it reports on, not under the library group
+      assert has_element?(view, "#languages-site-#{site.id} + .site-seeding #seeding-site-#{site.id} #{row}")
 
       Brando.Repo.update_all(Oban.Job, [set: [state: "retryable", attempt: 1, errors: [%{"error" => "boom\nstack"}]]],
         prefix: "public"
