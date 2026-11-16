@@ -30,7 +30,11 @@ defmodule Brando.TestTimingsFormatter do
 
     path = System.get_env("BRANDO_TEST_TIMINGS", "tmp/test-timings.json")
     File.mkdir_p!(Path.dirname(path))
-    File.write!(path, Jason.encode!(%{timing: timing, modules: modules}, pretty: true))
+    # The standard library's JSON: this file is loaded before Mix starts, when
+    # no dependency is on the code path, and a call to one is reported as
+    # undefined, which fails a run with --warnings-as-errors when the report
+    # lands after the test task has started counting warnings.
+    File.write!(path, JSON.encode!(%{timing: timing, modules: modules}))
     {:noreply, tests}
   end
 
