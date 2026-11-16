@@ -5,6 +5,12 @@ defmodule Brando.SSG.Deploy do
   This is deliberately separate from Florist's OTP release deployment. A
   rollback here republishes an older static artifact; it does not switch the
   running Phoenix release or mutate its ephemeral `priv/static` directory.
+
+  With the strategy `local` nothing is copied: a deploy or rollback records
+  the build as the site's published build (`Brando.Sites.Site`'s
+  `:published_build`) in the transaction that marks it deployed, and every
+  node's registry cache learns of it once that commits, so the site's host
+  answers from it on the next request (`Brando.SSG.LocalDelivery`).
   """
 
   import Ecto.Query, only: [from: 2]
@@ -27,7 +33,7 @@ defmodule Brando.SSG.Deploy do
   @spec deploy(Build.t(), keyword()) :: {:ok, Build.t()} | {:error, term()}
   def deploy(%Build{} = build, opts \\ []) do
     Brando.Authorization.Operations.run(:deploy, :publishing, build.site_id, opts, fn ->
-      Lock.with("ssg-deploy:#{build.site_id}", fn -> deploy_locked(build.id, opts) end)
+      Lock.with(deploy_lock(build.site_id), fn -> deploy_locked(build.id, opts) end)
       |> notify_webhook(opts)
     end)
   end
@@ -42,14 +48,37 @@ defmodule Brando.SSG.Deploy do
 
   def rollback(%Site{}, %Build{}, _opts), do: {:error, :build_belongs_to_another_site}
 
-  @doc "Prunes old ready, archived, and failed artifact directories while retaining history rows."
-  @spec prune(Site.t(), pos_integer()) :: {:ok, [Build.t()]} | {:error, term()}
+  @doc """
+  Prunes old ready, archived, and failed artifact directories while retaining
+  history rows. The build the installation serves itself (`:published_build`)
+  is never pruned: the builds are chosen and removed holding the lock a deploy
+  or rollback holds, so one that publishes an archived build waits, or finds
+  it pruned and is refused. While a deploy or rollback holds it, on any node,
+  nothing is pruned and this returns `:skipped`: the next build prunes.
+  """
+  @spec prune(Site.t(), pos_integer()) :: {:ok, [Build.t()]} | :skipped | {:error, term()}
   def prune(%Site{} = site, keep) when is_integer(keep) and keep > 0 do
+    case Lock.try_with(deploy_lock(site.id), fn -> prune_locked(site, keep) end) do
+      :busy -> :skipped
+      result -> result
+    end
+  end
+
+  def prune(%Site{}, keep), do: {:error, {:invalid_retention_count, keep}}
+
+  defp deploy_lock(site_id), do: "ssg-deploy:#{site_id}"
+
+  # The published version is read under the lock, in the query that chooses
+  defp prune_locked(site, keep) do
+    published =
+      from(s in Site, where: s.id == ^site.id and not is_nil(s.published_build), select: s.published_build)
+
     candidates =
       from(build in Build,
         where:
           build.site_id == ^site.id and build.status in [:ready, :archived, :failed] and
-            is_nil(build.pruned_at),
+            is_nil(build.pruned_at) and
+            build.version not in subquery(published),
         order_by: [desc: build.build_number],
         offset: ^keep
       )
@@ -70,8 +99,6 @@ defmodule Brando.SSG.Deploy do
     end
   end
 
-  def prune(%Site{}, keep), do: {:error, {:invalid_retention_count, keep}}
-
   defp deploy_locked(build_id, opts) do
     build = Builds.get_build(build_id)
 
@@ -91,16 +118,39 @@ defmodule Brando.SSG.Deploy do
   end
 
   defp deploy_and_mark(build, opts) do
-    with :ok <- run_strategy(build, opts), do: mark_deployed(build)
+    with :ok <- made_for_current_delivery(build),
+         :ok <- run_strategy(build, opts),
+         do: mark_deployed(build)
+  end
+
+  # A build carries the config it was made with: one made for a static host
+  # would copy there, and archive the build the installation serves, while
+  # the site's host kept answering from it. The reverse is `deploy_local/1`'s.
+  defp made_for_current_delivery(%Build{deploy_config: config, site: site}) do
+    if config["strategy"] not in [nil, "local"] and Site.local_delivery?(site),
+      do: {:error, :build_made_for_another_delivery},
+      else: :ok
   end
 
   defp run_strategy(%Build{deploy_config: config} = build, opts) do
     case config["strategy"] do
       "rsync" -> deploy_rsync(build, config["target"], opts)
       "s3" -> deploy_s3(build, config["target"], opts)
+      "local" -> deploy_local(build)
       "cloudflare_pages" -> {:error, :cloudflare_pages_not_implemented}
       nil -> {:error, :deploy_strategy_not_configured}
       strategy -> {:error, {:unsupported_deploy_strategy, strategy}}
+    end
+  end
+
+  # Nothing to copy: `mark_deployed/1` records the build as published. Only
+  # while the site is still served by the installation, as a build carries
+  # the config it was made with.
+  defp deploy_local(%Build{site: site}) do
+    cond do
+      not DeployConfig.local_delivery_allowed?() -> {:error, :local_delivery_disabled}
+      not Site.local_delivery?(site) -> {:error, :local_delivery_not_configured}
+      true -> :ok
     end
   end
 
@@ -234,6 +284,8 @@ defmodule Brando.SSG.Deploy do
       )
       |> Repo.update_all([set: [status: :archived, updated_at: now]], @public_opts)
 
+      publish_locally(build, now)
+
       case Builds.update(build, %{
              status: :deployed,
              deployed_at: now,
@@ -252,6 +304,17 @@ defmodule Brando.SSG.Deploy do
         {:error, reason}
     end
   end
+
+  # In the transaction that marks the build deployed; every node's registry
+  # cache refreshes once it has committed
+  defp publish_locally(%Build{deploy_config: %{"strategy" => "local"}} = build, now) do
+    from(site in Site, where: site.id == ^build.site_id)
+    |> Repo.update_all([set: [published_build: build.version, updated_at: now]], @public_opts)
+
+    Brando.Tenant.Cache.invalidate()
+  end
+
+  defp publish_locally(_build, _now), do: :ok
 
   defp notify_webhook({:ok, build} = result, opts) do
     case build.deploy_config["webhook_url"] do

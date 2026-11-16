@@ -283,9 +283,14 @@ defmodule Brando.SSG.Builds do
   defp site_auto_deploy?(%Site{deploy_config: %DeployConfig{auto_deploy: auto_deploy}}), do: auto_deploy == true
   defp site_auto_deploy?(%Site{}), do: false
 
-  @doc "Whether a site's deployment settings name a strategy and a target to deploy builds to."
+  @doc """
+  Whether a site's deployment settings say where builds deploy to: a strategy
+  and a target, or `local`, which the installation serves itself and has no
+  target.
+  """
   @spec deploy_target?(Site.t() | map()) :: boolean()
   def deploy_target?(%Site{} = site), do: deploy_target?(deploy_config(site))
+  def deploy_target?(%{"strategy" => "local"}), do: true
   def deploy_target?(config), do: config["strategy"] not in [nil, ""] and config["target"] not in [nil, ""]
 
   defp deploy_config(%Site{deploy_config: %DeployConfig{} = config}) do

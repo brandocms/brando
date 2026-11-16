@@ -126,6 +126,31 @@ defmodule Brando.Doctor.Checks.Robots do
 
   def static_serving(_source, _file), do: {:unknown, nil}
 
+  @doc """
+  The `only:` of the endpoint's `Plug.Static` at `"/"` in `source`:
+  `{:literal, entries}` for a literal list, `{:call, module, entries}` for
+  `only: module.fun()`, `:none` when it has no `only:` (or an empty one), and
+  `:unknown` when the source isn't there, has no such plug, or the list is
+  neither.
+  """
+  @spec static_only(String.t() | nil) :: {:literal, [String.t()]} | {:call, module(), [String.t()]} | :none | :unknown
+  def static_only(source) when is_binary(source) do
+    with {:ok, ast} <- Code.string_to_quoted(source),
+         opts when is_list(opts) <- static_opts(ast) do
+      case list(Keyword.get(opts, :only)) do
+        nil -> :none
+        {[], _where} -> :none
+        {entries, :literal} -> {:literal, entries}
+        {entries, {:call, module}} -> {:call, module, entries}
+        :unknown -> :unknown
+      end
+    else
+      _ -> :unknown
+    end
+  end
+
+  def static_only(_source), do: :unknown
+
   defp decide(opts, file) do
     only = Keyword.get(opts, :only)
     only_matching = Keyword.get(opts, :only_matching)
@@ -201,7 +226,12 @@ defmodule Brando.Doctor.Checks.Robots do
     found
   end
 
-  defp endpoint_source do
+  @doc """
+  The endpoint's source and its path relative to the working directory, or
+  `{nil, nil}` when it can't be read, as in a release.
+  """
+  @spec endpoint_source() :: {String.t() | nil, String.t() | nil}
+  def endpoint_source do
     with endpoint when not is_nil(endpoint) <- Brando.endpoint(),
          true <- Code.ensure_loaded?(endpoint),
          path when is_list(path) <- endpoint.module_info(:compile)[:source],

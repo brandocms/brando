@@ -2491,6 +2491,11 @@ msgstr "Arkivet ble gjenopprettet som %{name}."
 msgid "Archive the current live environment and promote %{name}?"
 msgstr "Arkivere gjeldende live-miljø og forfremme %{name}?"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Archived"
+msgstr "Arkivert"
+
 #: lib/brando_admin/live/sites/environment_live.ex
 #, elixir-autogen, elixir-format
 msgid "Archives live in the same database and do not replace external backups."
@@ -3104,6 +3109,7 @@ msgid "Build, preview, deploy, and roll back versioned static artifacts"
 msgstr "Bygg, forhåndsvis, publiser og rull tilbake versjonerte statiske artefakter"
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Building"
 msgstr "Bygger"
@@ -4711,6 +4717,11 @@ msgstr "Klarte ikke å publisere %{version}"
 msgid "Could not generate a suggestion. Try again."
 msgstr "Klarte ikke lage et forslag. Prøv igjen."
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not look it up"
+msgstr "Klarte ikke å slå den opp"
+
 #: lib/brando/workers/video_metadata_sweep.ex
 #: lib/brando_admin/live/videos/video_list_live.ex
 #, elixir-autogen, elixir-format
@@ -5758,6 +5769,7 @@ msgid "Deploy via %{strategy} to %{target}"
 msgstr "Publiser via %{strategy} til %{target}"
 
 #: lib/brando_admin/live/sites/markdown_sources_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #, elixir-autogen, elixir-format
 msgid "Deployed"
 msgstr "Publisert"
@@ -7345,6 +7357,7 @@ msgstr "Facebook, LinkedIn"
 #: lib/brando_admin/components/layouts/root.html.heex
 #: lib/brando_admin/components/video_picker.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/seo_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
@@ -8954,6 +8967,11 @@ msgstr "Det slutter å virke med en gang. Du kan koble det til igjen fra appen."
 #, elixir-autogen, elixir-format
 msgid "It was changed since the calendar was loaded. The calendar now shows what is planned."
 msgstr "Den ble endret etter at kalenderen ble lastet inn. Kalenderen viser nå det som er planlagt."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "It will be tried again."
+msgstr "Den blir prøvd igjen."
 
 #: lib/brando_admin/components/form/input/rich_text_labels.ex
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
@@ -13369,6 +13387,7 @@ msgstr "Legg kopiering i kø nå"
 
 #: lib/brando_admin/live/forms/submissions_live.ex
 #: lib/brando_admin/live/sites/notifications_live.ex
+#: lib/brando_admin/live/sites/publishing_live.ex
 #: lib/brando_admin/live/sites/scheduled_publishing_live.ex
 #: lib/brando_admin/live/sites/webhooks_live.ex
 #, elixir-format, elixir-autogen
@@ -13453,6 +13472,11 @@ msgstr "Leser strukturerte data …"
 #, elixir-autogen, elixir-format
 msgid "Reading the entry…"
 msgstr "Leser oppføringen …"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Ready"
+msgstr "Klar"
 
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
@@ -15833,6 +15857,21 @@ msgstr "Servere nettstedets bygg på %{environment} igjen? Forespørslene bytter
 msgid "Served"
 msgstr "Betjenes"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served by this installation"
+msgstr "Levert av denne installasjonen"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served by this installation on %{domain}."
+msgstr "Levert av denne installasjonen på %{domain}."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served by this installation once the live environment has a domain."
+msgstr "Levert av denne installasjonen når live-miljøet har et domene."
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "Served once the entry is published. This is the last saved version."
@@ -17121,6 +17160,36 @@ msgstr "Passnøkkelen virket ikke. Prøv igjen, eller logg inn på en annen måt
 msgid "That webhook does not exist in this environment."
 msgstr "Den webhooken finnes ikke i dette miljøet."
 
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed."
+msgstr "%{family}-oppslaget feilet."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed: no name server is configured."
+msgstr "%{family}-oppslaget feilet: ingen navnetjener er satt opp."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed: the answer was cut short."
+msgstr "%{family}-oppslaget feilet: svaret ble kuttet av."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed: the name server refused it."
+msgstr "%{family}-oppslaget feilet: navnetjeneren avviste det."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup failed: the name server reported a failure."
+msgstr "%{family}-oppslaget feilet: navnetjeneren meldte om en feil."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The %{family} lookup timed out."
+msgstr "%{family}-oppslaget fikk ikke svar i tide."
+
 #: lib/brando/seo/checks.ex
 #, elixir-autogen, elixir-format
 msgid "The %{language} version was edited %{days} days after this one."
@@ -17135,6 +17204,36 @@ msgstr "Klarte ikke lese KI-svaret"
 #, elixir-autogen, elixir-format
 msgid "The CSS and JavaScript packaged with the current application release are being served."
 msgstr "CSS og JavaScript fra gjeldende applikasjonsrelease er i bruk."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed."
+msgstr "IPv4- og IPv6-oppslagene feilet."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed: no name server is configured."
+msgstr "IPv4- og IPv6-oppslagene feilet: ingen navnetjener er satt opp."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed: the answers were cut short."
+msgstr "IPv4- og IPv6-oppslagene feilet: svarene ble kuttet av."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed: the name server refused them."
+msgstr "IPv4- og IPv6-oppslagene feilet: navnetjeneren avviste dem."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups failed: the name server reported a failure."
+msgstr "IPv4- og IPv6-oppslagene feilet: navnetjeneren meldte om en feil."
+
+#: lib/brando_admin/live/sites/environment_live.ex
+#, elixir-autogen, elixir-format
+msgid "The IPv4 and IPv6 lookups timed out."
+msgstr "IPv4- og IPv6-oppslagene fikk ikke svar i tide."
 
 #: lib/brando_admin/live/sites/mcp_live.ex
 #, elixir-autogen, elixir-format
@@ -17638,6 +17737,16 @@ msgstr "Listen blir som den er."
 #, elixir-autogen, elixir-format
 msgid "The live environment cannot be deleted."
 msgstr "Live-miljøet kan ikke slettes."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The live environment's domain answers from %{version}, the published build."
+msgstr "Live-miljøets domene svarer fra %{version}, det publiserte bygget."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The live environment's domain answers from the published build. Until a build is deployed, it answers as it does now."
+msgstr "Live-miljøets domene svarer fra det publiserte bygget. Til et bygg er publisert, svarer det som nå."
 
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
@@ -21308,6 +21417,11 @@ msgstr "er ikke aktivert for dette miljøet"
 msgid "is not your current password"
 msgstr "er ikke ditt nåværende passord"
 
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "is turned off on this installation"
+msgstr "er slått av på denne installasjonen"
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "it already has that name"
@@ -21685,6 +21799,11 @@ msgstr "påkr."
 #, elixir-autogen, elixir-format
 msgid "retrying"
 msgstr "prøver igjen"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "served by this installation"
+msgstr "levert av denne installasjonen"
 
 #: lib/brando_admin/components/form/block_field/module_picker.ex
 #, elixir-autogen, elixir-format

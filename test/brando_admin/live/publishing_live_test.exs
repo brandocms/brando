@@ -228,4 +228,42 @@ defmodule BrandoAdmin.Sites.PublishingLiveTest do
     assert unchanged.deploy_config.strategy == :rsync
     assert unchanged.deploy_config.target == "deploy@example.test:/srv/www"
   end
+
+  test "offers serving the build from this installation, without a target, and shows the build it serves", context do
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+    assert has_element?(view, ~s(#static-deploy-config option[value="local"]), "Served by this installation")
+    assert has_element?(view, ~s(#static-deploy-config input[name="deploy[target]"]))
+
+    # Choosing it hides the target before it is saved
+    render_change(form(view, "#static-deploy-config"), %{"deploy" => %{"strategy" => "local"}})
+    refute has_element?(view, ~s(#static-deploy-config input[name="deploy[target]"]))
+    assert has_element?(view, "#static-deploy-config .environment-hint", "Until a build is deployed")
+
+    render_submit(form(view, "#static-deploy-config"), %{"deploy" => %{"strategy" => "local", "retention_count" => "10"}})
+
+    site = Registry.get_site(context.site.id)
+    assert site.deploy_config.strategy == :local
+    assert site.deploy_config.target == nil
+    refute has_element?(view, ~s(#static-deploy-config input[name="deploy[target]"]))
+
+    {:ok, build} = Builds.request_build(site, context.environment, [])
+    File.mkdir_p!(build.build_path)
+    {:ok, ready} = Builds.update(build, %{status: :ready, built_at: DateTime.utc_now()})
+
+    # Deploying needs no target
+    assert has_element?(view, "#ssg-build-#{ready.id} button[phx-click=deploy]:not([disabled])")
+    {:ok, _deployed} = Brando.SSG.Deploy.deploy(ready)
+
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+    assert has_element?(view, "#static-deploy-config .environment-hint", "answers from v1, the published build")
+    assert has_element?(view, "#ssg-build-#{ready.id}", "served by this installation")
+  end
+
+  test "does not offer serving the build when the installation turns it off", context do
+    put_test_env(Brando.Sites.DeployConfig, local_delivery: false, rsync_targets: ["deploy@example.test:/srv/www"])
+    {:ok, view, _html} = live(context.conn, "/admin/config/publishing")
+
+    refute has_element?(view, ~s(#static-deploy-config option[value="local"]))
+  end
 end

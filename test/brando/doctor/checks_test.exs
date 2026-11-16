@@ -1267,6 +1267,58 @@ defmodule Brando.Doctor.ChecksTest do
     end
   end
 
+  describe "StaticPaths" do
+    @narrow_endpoint """
+    defmodule MyAppWeb.Endpoint do
+      use Phoenix.Endpoint, otp_app: :my_app
+
+      plug Plug.Static, at: "/", from: :my_app, only: ~w(assets js fonts images ico favicon.ico)
+      plug MyAppWeb.Router
+    end
+    """
+
+    test "the endpoint's only: read from its source" do
+      assert Checks.Robots.static_only(@narrow_endpoint) == {:literal, ~w(assets js fonts images ico favicon.ico)}
+
+      assert Checks.Robots.static_only(
+               String.replace(@narrow_endpoint, ", only: ~w(assets js fonts images ico favicon.ico)", "")
+             ) == :none
+
+      assert Checks.Robots.static_only(nil) == :unknown
+    end
+
+    test "the same list is no warning" do
+      assert %Result{status: :ok} = Checks.StaticPaths.evaluate({:literal, ~w(assets fonts)}, ~w(fonts assets))
+      assert %Result{status: :ok} = Checks.StaticPaths.evaluate({:call, MyAppWeb, ~w(assets)}, ~w(assets))
+    end
+
+    test "lists that differ, or no static_paths/0, are a warning naming the difference" do
+      result = Checks.StaticPaths.evaluate({:literal, ~w(assets js ico)}, ~w(assets robots.txt))
+      assert result.status == :warning
+
+      assert result.items == [
+               "js: in the endpoint's only: but not in static_paths/0, its files answer the build's 404 page",
+               "ico: in the endpoint's only: but not in static_paths/0, its files answer the build's 404 page",
+               "robots.txt: in static_paths/0 but not in the endpoint's only:"
+             ]
+
+      assert %Result{status: :warning} = Checks.StaticPaths.evaluate({:literal, ~w(assets)}, nil)
+      assert %Result{status: :warning} = Checks.StaticPaths.evaluate(:none, ~w(assets))
+      assert %Result{status: :skipped} = Checks.StaticPaths.evaluate(:unknown, ~w(assets))
+    end
+
+    # A release has no source to read; the missing function shows at runtime
+    test "no static_paths/0 is a warning when the endpoint's source can't be read" do
+      assert %Result{status: :warning, summary: "the web module has no static_paths/0"} =
+               Checks.StaticPaths.evaluate(:unknown, nil)
+    end
+
+    test "is skipped without a site served by the installation" do
+      put_test_env(:tenancy_mode, :none)
+      assert %Result{status: :skipped} = Checks.StaticPaths.run(Context.new([]))
+    end
+  end
+
   describe "JSONLD" do
     test "a complete identity passes" do
       identities = [{nil, [%{language: "en", name: "Studio", logo?: true}]}]

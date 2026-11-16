@@ -370,6 +370,25 @@ defmodule Brando.TenantEnvironmentDomainTest do
       assert Cache.get_live_env(site.key).key == "staging"
     end
 
+    # The installation serves the public host itself, from the published build
+    test "on a static site the installation serves, the hosts swap as on a dynamic one", %{
+      site: site,
+      environment: production,
+      staging: staging
+    } do
+      {:ok, _site} =
+        Registry.update_site(site, %{delivery_mode: :static, deploy_config: %{strategy: :local}})
+
+      {:ok, _production} = put_domain(production, "www.acme.test")
+      {:ok, staging} = put_domain(staging, "staging.acme.test")
+
+      assert {:ok, %Environment{live: true, domain: "www.acme.test"}} =
+               Environments.set_live(staging, creator: :system)
+
+      assert domains(site) == %{"production" => "staging.acme.test", "staging" => "www.acme.test"}
+      assert answering("www.acme.test") == "staging"
+    end
+
     test "another site's host stays where it is", %{site: site, environment: production, staging: staging} do
       {:ok, _production} = put_domain(production, "www.acme.test")
 
