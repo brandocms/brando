@@ -90,8 +90,8 @@ both reads `etc/traefik/traefik.yml` and installs the Traefik binary, which
 Florist builds a standard Mix release in Docker, copies
 `/opt/app/_build/prod/<app>-<version>.tar.gz` out of the image and migrates
 with `bin/<app> eval "MyApp.ReleaseTasks.migrate"`. `mix brando.install`
-creates `MyApp.ReleaseTasks` (`migrate/0`, `rollback/2`, `migrate_tenants/0`)
-and adds a release for the app to `mix.exs` with
+creates `MyApp.ReleaseTasks` (`migrate/0`, `rollback/2`, `migrate_tenants/0`,
+`resave_entries/1`) and adds a release for the app to `mix.exs` with
 `steps: [:assemble, :tar]`, which writes that tarball. Its tasks lift the
 console logger's burst limit, so migrating an empty database logs every
 migration rather than stopping partway through. An existing
@@ -822,6 +822,57 @@ florist prod db:migrate
 
 Neither runs `migrate_tenants/0`: with named environments, run it with
 `bin/my_app eval` on the server after the public migrations.
+
+### Data tasks in a release
+
+A release has no Mix, so an upgrade step that names a Mix task to run against
+the database (such as `mix brando.entries.resave`) runs differently on a
+server. These have a release form:
+
+| In development | In a release |
+| --- | --- |
+| `mix brando.migrate` | `bin/my_app eval "MyApp.ReleaseTasks.migrate()"` ([Running migrations](#running-migrations)) |
+| `mix brando.migrate --tenants` | `bin/my_app eval "MyApp.ReleaseTasks.migrate_tenants()"` |
+| `mix brando.entries.resave` | `bin/my_app rpc "MyApp.ReleaseTasks.resave_entries()"` |
+| `mix brando.identifiers.sync` | Configuration → Utilities → Sync identifiers, in each environment with tenancy |
+| `mix brando.doctor` | Configuration → Utilities, the System check card |
+
+`resave_entries/1` re-renders and stores every entry's blocks, as the Mix
+task does, with the task's options as keywords:
+`resave_entries(blueprint: "MyApp.Projects.Project")`, and with tenancy
+`site: "acme"` and `environment: "production"`. It calls
+`Brando.Content.Resave.run/1` and prints the same report.
+
+Run it with `rpc` on the running release: it re-saves on the node that
+serves the site, then empties and reloads that node's caches, as
+Configuration → Cache → Empty all caches does, and says so. With
+blue/green, run it from the active environment's release. With the release
+stopped, `bin/my_app eval "MyApp.ReleaseTasks.resave_entries()"` starts the
+application without its web server and without Oban's queues, re-saves, and
+stops; a server started meanwhile keeps what it cached, so empty its caches
+afterwards with `florist prod cache:clear` or in its admin.
+
+An application whose `ReleaseTasks` was generated before `resave_entries/1`
+existed adds it next to `migrate/0`; the upgrade hook's notice
+(`mix igniter.upgrade brando`) gives it:
+
+```elixir
+def resave_entries(opts \\ []) do
+  load_app()
+  {:ok, _count} = Brando.Content.Resave.run([otp_app: @app] ++ opts)
+end
+```
+
+A site with static delivery (`:static`) keeps serving its published build,
+whether the installation serves it (strategy `:local`) or a static host does
+(`rsync`, `s3`): re-saving changes what the next build renders, so build and
+deploy the site again for the change to show.
+
+The other data tasks (`mix brando.images.adopt`,
+`mix brando.repair.legacy_media`, `mix brando.check.legacy_conversion`,
+`mix brando.check.image_texts`) have no release form. Run them from a
+checkout against the server's database, or against a copy that is then
+restored to the server; `images.adopt` also needs the server's media.
 
 ## Rollback
 

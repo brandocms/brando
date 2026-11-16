@@ -50,12 +50,18 @@ A change that adds a Brando migration names the same commands every time:
 
 ```markdown
   Run `mix brando.gen.migrations` for `brando_230`, then `mix brando.migrate` before the new release starts.
+  In a release, run `bin/my_app eval "MyApp.ReleaseTasks.migrate()"` from the new release.
 ```
 
 with `mix brando.migrate --tenants` after it for a tenant migration. When the
 migration changes a table a release reads at boot (`sites`, `environments`),
 add that the release stops at boot until it has run; the deployment guide's
 "Running migrations" has the steps with a release.
+
+A step that names another Mix task an installation runs against its data
+after deploying (`mix brando.entries.resave`, `mix brando.doctor`) gives its
+release form beside it, or says there is none; the deployment guide's "Data
+tasks in a release" lists them.
 
 Changes a Brando project cannot see (tests, CI, refactors, agent docs) have
 no entry. An entry is a list item starting `- `, with no headings.

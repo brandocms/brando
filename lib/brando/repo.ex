@@ -82,25 +82,30 @@ defmodule Brando.Repo do
     repo().delete_all(queryable, put_prefix(opts, queryable))
   end
 
+  # A repo without `use Brando.SoftDelete.Repo` raises here, naming the line
+  # to add, rather than with an UndefinedFunctionError that calls the module
+  # "not available"
   def soft_delete(entry) do
-    repo().soft_delete(entry)
+    soft_delete_repo().soft_delete(entry)
   end
 
   def soft_delete!(entry) do
-    repo().soft_delete!(entry)
+    soft_delete_repo().soft_delete!(entry)
   end
 
   def soft_delete_all(entry, opts \\ []) do
-    repo().soft_delete_all(entry, put_prefix(opts, entry))
+    soft_delete_repo().soft_delete_all(entry, put_prefix(opts, entry))
   end
 
   def restore(entry) do
-    repo().restore(entry)
+    soft_delete_repo().restore(entry)
   end
 
   def restore!(entry) do
-    repo().restore!(entry)
+    soft_delete_repo().restore!(entry)
   end
+
+  defp soft_delete_repo, do: Brando.SoftDelete.Repo.ensure_used!(repo())
 
   def insert(struct_or_cs, opts \\ []) do
     repo().insert(struct_or_cs, put_prefix(opts, struct_or_cs))

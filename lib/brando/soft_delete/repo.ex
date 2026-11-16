@@ -107,6 +107,44 @@ defmodule Brando.SoftDelete.Repo do
     end
   end
 
+  @functions [soft_delete: 1, soft_delete!: 1, soft_delete_all: 2, restore: 1, restore!: 1]
+
+  @doc """
+  Whether `repo` has the functions `use Brando.SoftDelete.Repo` adds, which
+  every soft delete and restore calls (`Brando.Repo.soft_delete/1` and the
+  rest).
+  """
+  @spec used_by?(module()) :: boolean()
+  def used_by?(repo) do
+    is_atom(repo) and Code.ensure_loaded?(repo) and
+      Enum.all?(@functions, fn {function, arity} -> function_exported?(repo, function, arity) end)
+  end
+
+  @doc """
+  What is wrong with a `repo` without Brando's soft-delete functions, and
+  the line that adds them.
+  """
+  @spec missing_message(module()) :: String.t()
+  def missing_message(repo) do
+    """
+    #{inspect(repo)} lacks Brando's soft-delete functions (soft_delete/1, restore/1 and the rest), \
+    so nothing can be deleted or restored.
+
+    Add this line to #{inspect(repo)}, after `use Ecto.Repo`:
+
+        use Brando.SoftDelete.Repo
+    """
+  end
+
+  @doc """
+  Returns `repo` when it has Brando's soft-delete functions, and raises
+  `Brando.Exception.ConfigError` with `missing_message/1` when it does not.
+  """
+  @spec ensure_used!(module()) :: module()
+  def ensure_used!(repo) do
+    if used_by?(repo), do: repo, else: raise(Brando.Exception.ConfigError, message: missing_message(repo))
+  end
+
   # The changesets are built here rather than in the `__using__` quote, so the
   # Repo only carries the database calls.
 

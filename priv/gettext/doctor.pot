@@ -454,6 +454,16 @@ msgstr ""
 msgid "%{package} not installed"
 msgstr ""
 
+#: lib/brando/doctor/checks/soft_delete_repo.ex
+#, elixir-autogen, elixir-format
+msgid "%{repo} has Brando's soft-delete functions"
+msgstr ""
+
+#: lib/brando/doctor/checks/soft_delete_repo.ex
+#, elixir-autogen, elixir-format
+msgid "%{repo} lacks Brando's soft-delete functions, so nothing can be deleted"
+msgstr ""
+
 #: lib/brando/doctor/checks/admin_routes.ex
 #, elixir-autogen, elixir-format
 msgid "%{schema}: %{helpers}"
@@ -859,6 +869,11 @@ msgstr ""
 msgid "Skipped"
 msgstr ""
 
+#: lib/brando/doctor/checks/soft_delete_repo.ex
+#, elixir-autogen, elixir-format
+msgid "Soft delete"
+msgstr ""
+
 #: lib/brando/doctor/checks/static_paths.ex
 #, elixir-autogen, elixir-format
 msgid "Static paths of served builds"
@@ -962,6 +977,11 @@ msgstr ""
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "add %{queues} to the queues in config :brando, Oban (see Brando.Supervisor)"
+msgstr ""
+
+#: lib/brando/doctor/checks/soft_delete_repo.ex
+#, elixir-autogen, elixir-format
+msgid "add use Brando.SoftDelete.Repo to %{repo}, after use Ecto.Repo"
 msgstr ""
 
 #: lib/brando/doctor/checks/oban.ex

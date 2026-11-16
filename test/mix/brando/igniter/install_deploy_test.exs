@@ -50,6 +50,8 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     assert release_tasks =~ "defmodule Studio.ReleaseTasks"
     assert release_tasks =~ "def migrate do"
     assert release_tasks =~ "burst_limit_enable: false"
+    assert release_tasks =~ "def resave_entries(opts \\\\ []) do"
+    assert release_tasks =~ "Brando.Content.Resave.run([otp_app: @app] ++ opts)"
 
     mix = IgniterCase.source(igniter, "mix.exs")
     assert mix =~ "releases: [studio: [include_executables_for: [:unix], steps: [:assemble, :tar]]]"
@@ -71,6 +73,34 @@ defmodule Mix.Brando.Igniter.InstallDeployTest do
     Igniter.Test.assert_unchanged(rerun, @deploy_files)
     refute notice?(rerun, "existing Dockerfile")
     refute notice?(rerun, ".dockerignore has exceptions")
+    refute notice?(rerun, "no resave_entries/1")
+  end
+
+  test "the repo gets Brando's soft-delete functions, once, after its use Ecto.Repo" do
+    igniter = install(project())
+    assert igniter.issues == []
+
+    repo = IgniterCase.source(igniter, "lib/studio/repo.ex")
+    assert repo =~ ~r/use Ecto.Repo, otp_app: :studio, adapter: Ecto.Adapters.Postgres\n\s*use Brando.SoftDelete.Repo\n/
+
+    rerun = igniter |> IgniterCase.apply_and_reload() |> install()
+    Igniter.Test.assert_unchanged(rerun, "lib/studio/repo.ex")
+  end
+
+  test "an existing ReleaseTasks without resave_entries/1 is kept, with a notice giving the function" do
+    release_tasks = """
+    defmodule Studio.ReleaseTasks do
+      @app :studio
+      def migrate, do: :ok
+    end
+    """
+
+    igniter = install(project(%{"lib/studio/release_tasks.ex" => release_tasks}))
+    assert igniter.issues == []
+    Igniter.Test.assert_unchanged(igniter, "lib/studio/release_tasks.ex")
+
+    assert [notice] = Enum.filter(igniter.notices, &(&1 =~ "no resave_entries/1"))
+    assert notice =~ "Brando.Content.Resave.run([otp_app: @app] ++ opts)"
   end
 
   test "in :multi, the .dockerignore also keeps each site project's dependencies and build out" do

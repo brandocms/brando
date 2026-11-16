@@ -8,6 +8,7 @@ if Code.ensure_loaded?(Igniter) do
     alias Mix.Brando.Igniter.Assets
     alias Mix.Brando.Igniter.Mailer
     alias Mix.Brando.Igniter.PersistIdentifiers
+    alias Mix.Brando.Igniter.SoftDeleteRepo
     alias Mix.Brando.Igniter.SourceUpgrade
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintCompileFixes
     alias Mix.Brando.Igniter.SourceUpgrade.BlueprintGettext
@@ -31,7 +32,8 @@ if Code.ensure_loaded?(Igniter) do
     `mix brando.migrate54` first.
 
     The task points references to the modules renamed in 0.55 at their new
-    names, adds the explicit listing component imports, gives Villain parsers
+    names, adds the explicit listing component imports, adds
+    `use Brando.SoftDelete.Repo` to a Repo without it, gives Villain parsers
     back the `use Phoenix.Component`, imports and aliases they relied on from
     `use Brando.Villain.Parser`, configures Req as
     Swoosh's API client, points Brando at the application's mailer (creating
@@ -137,6 +139,7 @@ if Code.ensure_loaded?(Igniter) do
       |> RedundantComponentUse.remove()
       |> EntriesFromIdentifiers.rewrite()
       |> SourceUpgrade.start_endpoint_last()
+      |> SoftDeleteRepo.plan()
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()
       |> Assets.notice_native_europa()

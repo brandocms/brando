@@ -1,5 +1,5 @@
 - The `html` var type is called `rich_text`, and its value is sanitized like a text ref's: unsafe markup is refused on save, and a value saved before with unsafe markup renders as its text.
-  Run `mix brando.gen.migrations` and `mix brando.migrate` for `brando_225`, before the new release starts. Match `:rich_text` where code matched `type: :html` on a var; `:html` is still read on the way in (definition files, exports, transfers).
+  Run `mix brando.gen.migrations` and `mix brando.migrate` for `brando_225`, before the new release starts (in a release, `bin/my_app eval "MyApp.ReleaseTasks.migrate()"` from the new release). Match `:rich_text` where code matched `type: :html` on a var; `:html` is still read on the way in (definition files, exports, transfers).
 - Liquid modules print `string` and `text` vars, globals and identity links HTML-escaped and with their braces encoded, so markup or Liquid in them shows as text.
   Make a var that is meant to hold HTML a `rich_text` var (the migration guide has the steps); `{{ var | escape }}` keeps printing it once. A comparison, `truncate` or `replace` on such a var sees the escaped text.
 - A heading (header ref) is plain text: HTML in it shows as text, braces included, while line breaks still become `<br>` and a character reference such as `&shy;` its character.

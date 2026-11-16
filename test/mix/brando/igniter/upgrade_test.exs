@@ -42,7 +42,7 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
   end
 
   test "the legacy task is found by its content wherever it lives under lib/" do
-    path = "lib/legacy_app/tasks/upgrade.ex"
+    path = "lib/studio/tasks/upgrade.ex"
 
     result =
       IgniterCase.phoenix_project(files: %{path => legacy("0.54")})
@@ -353,5 +353,45 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
 
     assert Enum.any?(result.issues, &String.contains?(&1, "brando.upgrade.prepare"))
     Igniter.Test.assert_unchanged(result)
+  end
+
+  describe "on a version change, what brando.install writes today" do
+    @release_tasks """
+    defmodule Studio.ReleaseTasks do
+      @app :studio
+      def migrate, do: :ok
+    end
+    """
+
+    defp version_change(files) do
+      IgniterCase.phoenix_project(files: files)
+      |> Igniter.compose_task(Mix.Tasks.Brando.Upgrade, ["0.54.0", installed_version()])
+    end
+
+    test "a repo without Brando's soft-delete functions gets them, and one with them is left alone" do
+      result = version_change(%{})
+      repo = IgniterCase.source(result, "lib/studio/repo.ex")
+      assert repo =~ ~r/use Ecto.Repo[^\n]*\n\s*use Brando.SoftDelete.Repo\n/
+
+      rerun =
+        result
+        |> IgniterCase.apply_and_reload()
+        |> Igniter.compose_task(Mix.Tasks.Brando.Upgrade, ["0.54.0", installed_version()])
+
+      Igniter.Test.assert_unchanged(rerun, "lib/studio/repo.ex")
+    end
+
+    test "a ReleaseTasks without resave_entries/1 gets a notice giving the function" do
+      result = version_change(%{"lib/studio/release_tasks.ex" => @release_tasks})
+
+      Igniter.Test.assert_unchanged(result, "lib/studio/release_tasks.ex")
+      assert Enum.any?(result.notices, &(&1 =~ "Studio.ReleaseTasks has no resave_entries/1"))
+    end
+
+    test "mix brando.migrate55 adds the soft-delete functions too" do
+      result = IgniterCase.phoenix_project() |> Igniter.compose_task("brando.migrate55", [])
+
+      assert IgniterCase.source(result, "lib/studio/repo.ex") =~ "use Brando.SoftDelete.Repo"
+    end
   end
 end
