@@ -337,7 +337,7 @@ defmodule Brando.SSG.LocalDelivery do
     root = Path.join(Builds.build_root(site), version)
 
     if Regex.match?(~r/\Av[0-9]+\z/, version) and BuildPath.managed?(root, site) and dir?(root) do
-      files = list_files(root, skipped_dirs())
+      files = root |> list_files(skipped_dirs()) |> Map.new(fn {relative, stat} -> {relative, etag(version, stat)} end)
       manifest = read_json(root, "manifest.json")
 
       build = %{
@@ -407,12 +407,15 @@ defmodule Brando.SSG.LocalDelivery do
 
     case File.lstat(Path.join(root, child), time: :posix) do
       {:ok, %{type: :directory}} -> if relative == "" and name in skipped_dirs, do: [], else: walk(root, child, [])
-      {:ok, %{type: :regular, size: size, mtime: mtime}} -> [{child, etag(size, mtime)}]
+      {:ok, %{type: :regular, size: size, mtime: mtime}} -> [{child, {size, mtime}}]
       _symlink_or_other -> []
     end
   end
 
-  defp etag(size, mtime), do: <<?", {size, mtime} |> :erlang.phash2() |> Integer.to_string(16)::binary, ?">>
+  # The version too: two builds can hold a file of the same size written in
+  # the same second
+  defp etag(version, {size, mtime}),
+    do: <<?", version::binary, ?-, {size, mtime} |> :erlang.phash2() |> Integer.to_string(16)::binary, ?">>
 
   defp skipped_dirs do
     case String.split(media_path(), "/", trim: true) do

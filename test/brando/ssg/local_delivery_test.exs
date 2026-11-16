@@ -365,6 +365,29 @@ defmodule Brando.SSG.LocalDeliveryTest do
       assert get_resp_header(request(context.host, "/manifest.json"), "cache-control") == ["no-cache"]
     end
 
+    test "gives the same file of two builds different ETags, though size and time agree", context do
+      first = ready_build(context)
+      second = ready_build(context)
+      same_time = {{2026, 11, 16}, {12, 0, 0}}
+      File.touch!(Path.join(first.build_path, "index.html"), same_time)
+      File.touch!(Path.join(second.build_path, "index.html"), same_time)
+
+      deploy!(first)
+      [old_etag] = get_resp_header(request(context.host, "/"), "etag")
+
+      deploy!(second)
+
+      conn =
+        :get
+        |> build_conn("/")
+        |> Map.put(:host, context.host)
+        |> put_req_header("if-none-match", old_etag)
+        |> SiteAssets.call([])
+
+      assert conn.status == 200
+      assert sent_body(conn) == "home v2"
+    end
+
     test "caches what the Vite manifest lists, and a vsn request, for a year", context do
       context |> ready_build() |> deploy!()
 
