@@ -177,6 +177,17 @@ defmodule Brando.Tenant.ServedHostsTest do
 
   defp release_write(writer), do: send(writer, :write)
 
+  # The process's state once `fun` holds for it, polled for up to two seconds
+  defp await_state(fun, tries \\ 200) do
+    state = :sys.get_state(ServedHosts)
+
+    cond do
+      fun.(state) -> state
+      tries == 0 -> flunk("the state never matched: #{inspect(state)}")
+      true -> Process.sleep(10) && await_state(fun, tries - 1)
+    end
+  end
+
   defp flush_lookups do
     receive do
       {:looked_up, _host} -> flush_lookups()
@@ -695,6 +706,36 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert Map.take(states, hosts) == Map.new(hosts, &{&1, :unresolved})
       assert %{lookups: lookups} = :sys.get_state(ServedHosts)
       assert lookups == %{}
+    end
+
+    test "a flush that raises leaves no flush timer behind", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here], flush_interval: :timer.minutes(10))
+      hosts = ~w(a.acme.test b.acme.test)
+
+      for host <- hosts do
+        DNS.answer(host, [@here])
+        DNS.hold(host, self())
+      end
+
+      bind_at_once(site, hosts)
+      assert_receive {:looking_up, "a.acme.test", a_lookup}
+      assert_receive {:looking_up, "b.acme.test", b_lookup}
+      # Answered while the other runs: a flush is due in ten minutes
+      send(a_lookup, :answer)
+      assert await_state(&is_reference(&1.flush_timer))
+
+      # The batch's flush raises: the cache is broken
+      sites = :persistent_term.get({:brando, :sites})
+      :persistent_term.put({:brando, :sites}, :broken)
+
+      log =
+        capture_log(fn ->
+          send(b_lookup, :answer)
+          assert %{flush_timer: nil, flush: nil} = await_state(&(&1.error != nil))
+        end)
+
+      assert log =~ "Could not update the served hosts file"
+      :persistent_term.put({:brando, :sites}, sites)
     end
 
     test "a dead task supervisor leaves the host unresolved, the file alone and the process running",
