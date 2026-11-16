@@ -15838,6 +15838,21 @@ msgstr "Servere nettstedets bygg på %{environment} igjen? Forespørslene bytter
 msgid "Served"
 msgstr "Betjenes"
 
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served by this installation"
+msgstr "Levert av denne installasjonen"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served by this installation on %{domain}."
+msgstr "Levert av denne installasjonen på %{domain}."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "Served by this installation once the live environment has a domain."
+msgstr "Levert av denne installasjonen når live-miljøet har et domene."
+
 #: lib/brando_admin/components/form/meta_previews.ex
 #, elixir-autogen, elixir-format
 msgid "Served once the entry is published. This is the last saved version."
@@ -17643,6 +17658,16 @@ msgstr "Listen blir som den er."
 #, elixir-autogen, elixir-format
 msgid "The live environment cannot be deleted."
 msgstr "Live-miljøet kan ikke slettes."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The live environment's domain answers from %{version}, the published build."
+msgstr "Live-miljøets domene svarer fra %{version}, det publiserte bygget."
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "The live environment's domain answers from the published build. Until a build is deployed, it answers as it does now."
+msgstr "Live-miljøets domene svarer fra det publiserte bygget. Til et bygg er publisert, svarer det som nå."
 
 #: lib/brando_admin/live/sites/notifications_live.ex
 #, elixir-autogen, elixir-format
@@ -21308,6 +21333,11 @@ msgstr "er ikke aktivert for dette miljøet"
 msgid "is not your current password"
 msgstr "er ikke ditt nåværende passord"
 
+#: lib/brando/sites/deploy_config.ex
+#, elixir-autogen, elixir-format
+msgid "is turned off on this installation"
+msgstr "er slått av på denne installasjonen"
+
 #: lib/brando/content/stale_blocks.ex
 #, elixir-autogen, elixir-format
 msgid "it already has that name"
@@ -21685,6 +21715,11 @@ msgstr "påkr."
 #, elixir-autogen, elixir-format
 msgid "retrying"
 msgstr "prøver igjen"
+
+#: lib/brando_admin/live/sites/publishing_live.ex
+#, elixir-autogen, elixir-format
+msgid "served by this installation"
+msgstr "levert av denne installasjonen"
 
 #: lib/brando_admin/components/form/block_field/module_picker.ex
 #, elixir-autogen, elixir-format

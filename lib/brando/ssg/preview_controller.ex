@@ -17,6 +17,7 @@ defmodule Brando.SSG.PreviewController do
 
   use BrandoAdmin, :controller
 
+  alias Brando.SSG.BuildPath
   alias Brando.SSG.Builds
   alias Brando.SSG.PreviewRewrite
   alias Brando.Tenant
@@ -33,22 +34,20 @@ defmodule Brando.SSG.PreviewController do
     with {:ok, site_scope} <- request_site(conn),
          build when not is_nil(build) <- Builds.get_preview(token, site_scope),
          true <- is_nil(build.pruned_at) and File.dir?(build.build_path),
-         true <- managed_build_path?(build),
-         {:ok, relative_path} <- preview_path(Map.get(params, "path", [])) do
-      case File.lstat(Path.join(build.build_path, relative_path)) do
-        {:ok, %{type: :regular}} -> send_preview(conn, build, token, relative_path, 200)
-        _missing -> send_not_found(conn, build, token)
-      end
+         true <- BuildPath.managed?(build.build_path, build.site),
+         {:ok, relative_path} <- BuildPath.relative(Map.get(params, "path", [])) do
+      if BuildPath.regular_file?(build.build_path, relative_path),
+        do: send_preview(conn, build, token, relative_path, 200),
+        else: send_not_found(conn, build, token)
     else
       _missing_or_unsafe -> not_found(conn)
     end
   end
 
   defp send_not_found(conn, build, token) do
-    case File.lstat(Path.join(build.build_path, "404.html")) do
-      {:ok, %{type: :regular}} -> send_preview(conn, build, token, "404.html", 404)
-      _none -> not_found(conn)
-    end
+    if BuildPath.regular_file?(build.build_path, "404.html"),
+      do: send_preview(conn, build, token, "404.html", 404),
+      else: not_found(conn)
   end
 
   defp not_found(conn) do
@@ -94,21 +93,5 @@ defmodule Brando.SSG.PreviewController do
       match?(%Brando.Sites.Site{}, conn.assigns[:current_site]) -> {:ok, conn.assigns.current_site}
       true -> :error
     end
-  end
-
-  defp preview_path([]), do: {:ok, "index.html"}
-
-  defp preview_path(segments) when is_list(segments) do
-    with {:ok, safe_path} <- segments |> Enum.join("/") |> Path.safe_relative() do
-      if Path.extname(safe_path) == "" do
-        {:ok, Path.join(safe_path, "index.html")}
-      else
-        {:ok, safe_path}
-      end
-    end
-  end
-
-  defp managed_build_path?(build) do
-    Path.dirname(Path.expand(build.build_path)) == Path.expand(Builds.build_root(build.site))
   end
 end

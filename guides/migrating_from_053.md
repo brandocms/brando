@@ -574,6 +574,13 @@ sender first, before the first compile.
   endpoint's host in its argument, as in
   `{Brando.Tenant.Origins, :allowed?, [["//*.example.com"]]}`. See
   [Router and request context](tenancy_and_environments.md#router-and-request-context).
+- **Static sites served by the installation.** `brando_230` adds
+  `sites.published_build`, the build a site with the deploy strategy
+  **Served by this installation** answers from. Run `mix brando.gen.migrations`
+  for it, then `mix ecto.migrate`: the site registry reads the column, so a
+  release with tenancy enabled does not start until it has run. With several
+  nodes, a site served this way needs `sites/` on storage every node shares.
+  See [Served by this installation](tenancy_and_environments.md#served-by-this-installation).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

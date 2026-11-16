@@ -4,6 +4,10 @@ defmodule Brando.Plug.SiteAssets do
   uses (its own set, else its site's active set), or from a set a shared
   preview has pinned.
 
+  On the host of a site the installation serves a static build for, the
+  build answers first (`Brando.SSG.LocalDelivery`), and only the paths that
+  keep reaching Phoenix get this far.
+
   Place this plug before the application's release `Plug.Static`. Cached
   `MapSet`s reject misses without touching the filesystem; misses fall through
   unchanged so release assets remain the fallback. Pinned sets only serve the
@@ -38,6 +42,7 @@ defmodule Brando.Plug.SiteAssets do
   import Plug.Conn, only: [get_resp_header: 2, halt: 1, put_resp_header: 3, register_before_send: 2, send_file: 3]
 
   alias Brando.Assets.SiteAssets
+  alias Brando.SSG.LocalDelivery
   alias Brando.Tenant.Frontend
 
   @behaviour Plug
@@ -47,7 +52,16 @@ defmodule Brando.Plug.SiteAssets do
   def init(opts), do: opts
 
   @impl Plug
-  def call(%Plug.Conn{method: method} = conn, _opts) when method in @allowed_methods do
+  def call(%Plug.Conn{method: method} = conn, opts) when method in @allowed_methods do
+    case LocalDelivery.call(conn, opts) do
+      %Plug.Conn{halted: true} = served -> served
+      conn -> serve_asset(conn)
+    end
+  end
+
+  def call(conn, _opts), do: conn
+
+  defp serve_asset(conn) do
     conn = allow_any_origin(conn)
 
     with relative_path when is_binary(relative_path) <- relative_path(conn.path_info),
@@ -61,8 +75,6 @@ defmodule Brando.Plug.SiteAssets do
       _miss -> conn
     end
   end
-
-  def call(conn, _opts), do: conn
 
   @no_cors_roots ["admin", "__livepreview"]
   @static_statuses [200, 206, 304]

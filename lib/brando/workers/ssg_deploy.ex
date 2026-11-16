@@ -40,5 +40,17 @@ defmodule Brando.Worker.SSGDeploy do
     {:cancel, :invalid_deploy_target}
   end
 
+  # The site's settings decide: retrying cannot help either
+  defp outcome({:error, reason}, build) when reason in [:local_delivery_not_configured, :local_delivery_disabled] do
+    Builds.append_log(build, "Deployment refused: #{local_refusal(reason)}")
+    {:cancel, reason}
+  end
+
   defp outcome({:error, reason}, _build), do: {:error, reason}
+
+  defp local_refusal(:local_delivery_not_configured),
+    do: "the site is no longer served by this installation. Make a build with its current settings."
+
+  defp local_refusal(:local_delivery_disabled),
+    do: "this installation turns off serving builds itself (local_delivery: false in the config)."
 end

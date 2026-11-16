@@ -72,6 +72,7 @@ defmodule Brando.Tenant.Cache do
     |> Enum.each(&:persistent_term.erase/1)
 
     :persistent_term.erase(@cache_keys_key)
+    Brando.SSG.LocalDelivery.forget_except([])
     :ok
   end
 
@@ -103,6 +104,17 @@ defmodule Brando.Tenant.Cache do
   def get_env(site_key, environment_key) do
     :persistent_term.get({:brando, :env, site_key, environment_key}, nil)
   end
+
+  @doc """
+  The site and live environment whose published build the installation
+  serves on `host` (`Brando.SSG.LocalDelivery`), or nil: `host` is the live
+  environment's domain of an active `:static` site with the deploy strategy
+  `:local` and a published build. `host` is compared as given: pass it in
+  lower case.
+  """
+  @spec get_local_build(String.t()) :: {Site.t(), Brando.Environments.Environment.t()} | nil
+  def get_local_build(host) when is_binary(host), do: :persistent_term.get({:brando, :local_build, host}, nil)
+  def get_local_build(_host), do: nil
 
   def get_live_env(site_key) do
     :persistent_term.get({:brando, :live_env, site_key}, nil)
@@ -160,6 +172,9 @@ defmodule Brando.Tenant.Cache do
     |> Enum.each(&:persistent_term.erase/1)
 
     :persistent_term.put(@cache_keys_key, current_keys)
+
+    # What a build no longer served kept in memory goes with it
+    Brando.SSG.LocalDelivery.forget_except(for site <- sites, serves_build?(site), do: {site.id, site.published_build})
   end
 
   defp site_entries(%Site{} = site) do
@@ -182,6 +197,11 @@ defmodule Brando.Tenant.Cache do
             do: [{{:brando, :live_env, site.key}, environment}],
             else: []
 
+        local_build =
+          if by_domain != [] and environment.live and serves_build?(site),
+            do: [{{:brando, :local_build, environment.domain |> String.trim() |> String.downcase()}, {site, environment}}],
+            else: []
+
         # Only to a domain that answers: a suspended or archived site's
         # redirect hosts answer as its domain does
         redirects =
@@ -189,11 +209,13 @@ defmodule Brando.Tenant.Cache do
             do: Enum.map(environment.redirect_hosts || [], &{{:brando, :redirect_host, &1}, {site, environment}}),
             else: []
 
-        by_key ++ by_domain ++ redirects ++ live
+        by_key ++ by_domain ++ redirects ++ live ++ local_build
       end)
 
     site_entry ++ environment_entries
   end
+
+  defp serves_build?(site), do: Site.local_delivery?(site) and is_binary(site.published_build)
 
   # A trailing dot stored before `Environment` refused it names the same host
   # as the spelling without one, and must not answer beside it.

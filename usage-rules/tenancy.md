@@ -346,7 +346,10 @@ domain or redirect host moved, an environment created, copied, restored or set l
 transaction has committed, refreshes the node that made it at once and the
 other nodes through `Brando.CacheSync`, over the application's
 `Phoenix.PubSub`. They follow within a fraction of a second, whichever node
-ran the write or the scheduled job. The active and pinned asset sets, each
+ran the write or the scheduled job. A static build's deploy or rollback served
+by the installation is such a write: every node answers from the newly
+published build once it has heard of it, so every node needs the same
+`sites/` directory, on shared storage as media is. The active and pinned asset sets, each
 environment's own set, and each site's shared-library allowlist are
 refreshed the same way.
 

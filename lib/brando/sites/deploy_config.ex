@@ -6,6 +6,14 @@ defmodule Brando.Sites.DeployConfig do
   dynamically delivered sites. Static builds snapshot this configuration so a
   later site edit cannot silently change how an already-built artifact deploys.
 
+  `:local` is served by the installation itself (`Brando.SSG.LocalDelivery`)
+  and has no target: a deploy records the build as the site's published
+  build, and copies nothing. It writes nowhere outside the site's own
+  directory, so it needs no list of destinations; an operator turns it off
+  for every site with
+
+      config :brando, Brando.Sites.DeployConfig, local_delivery: false
+
   `:rsync` targets are remote rsync destinations, `[user@]host:/absolute/path`
   such as `deploy@example.com:/srv/www`; `:s3` targets use
   `s3://bucket/optional-prefix`. Florist application releases are configured
@@ -40,8 +48,8 @@ defmodule Brando.Sites.DeployConfig do
   A parent in one site's entries grants that site everything under it, other
   sites' directories included, so keep the sites' entries apart.
 
-  With `tenancy_mode: :multi` a strategy's list or map is required, and no
-  target passes without it. With one site, an unset list allows any target of
+  With `tenancy_mode: :multi` the list or map of `:rsync` and `:s3` is
+  required, and no target of theirs passes without it. With one site, an unset list allows any target of
   the right form.
   """
 
@@ -58,7 +66,7 @@ defmodule Brando.Sites.DeployConfig do
   @type t :: %__MODULE__{}
 
   embedded_schema do
-    field :strategy, Ecto.Enum, values: [:s3, :rsync, :cloudflare_pages]
+    field :strategy, Ecto.Enum, values: [:local, :s3, :rsync, :cloudflare_pages]
     field :target, :string
     field :cdn_url, :string
     field :webhook_url, :string
@@ -73,15 +81,35 @@ defmodule Brando.Sites.DeployConfig do
     config
     |> cast(attrs, @fields)
     |> require_target_for_strategy()
+    |> validate_local_delivery()
     |> validate_strategy_target(site_key)
     |> validate_number(:retention_count, greater_than_or_equal_to: 1, less_than_or_equal_to: 100)
     |> validate_http_url(:cdn_url)
     |> validate_webhook_url()
   end
 
+  # Served from the site's own directory: there is nothing to name
   defp require_target_for_strategy(changeset) do
-    if get_field(changeset, :strategy), do: validate_required(changeset, [:target]), else: changeset
+    case get_field(changeset, :strategy) do
+      nil -> changeset
+      :local -> put_change(changeset, :target, nil)
+      _strategy -> validate_required(changeset, [:target])
+    end
   end
+
+  defp validate_local_delivery(changeset) do
+    if get_field(changeset, :strategy) == :local and not local_delivery_allowed?(),
+      do: add_error(changeset, :strategy, gettext("is turned off on this installation")),
+      else: changeset
+  end
+
+  @doc """
+  Whether this installation lets a site be served by the installation
+  itself (`:local`): unless the operator's config sets `local_delivery:
+  false`. Checked when the config is saved and again before each deploy.
+  """
+  @spec local_delivery_allowed?() :: boolean()
+  def local_delivery_allowed?, do: Application.get_env(:brando, __MODULE__, [])[:local_delivery] != false
 
   defp validate_strategy_target(changeset, site_key) do
     case {get_field(changeset, :strategy), get_field(changeset, :target)} do

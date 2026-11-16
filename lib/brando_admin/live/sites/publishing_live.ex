@@ -13,6 +13,8 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   on_mount BrandoAdmin.Work
 
   alias Brando.Environments.Environment
+  alias Brando.Sites.DeployConfig
+  alias Brando.Sites.Site
   alias Brando.SSG.Build
   alias Brando.SSG.Builds
   alias Brando.Tenant
@@ -44,7 +46,8 @@ defmodule BrandoAdmin.Sites.PublishingLive do
          |> assign(:admin_uri, socket.host_uri)
          |> assign(:can_manage?, can_manage?(socket.assigns.current_user, site))
          |> assign(:default_scheduled_at, default_scheduled_at())
-         |> refresh()}
+         |> refresh()
+         |> assign_strategy()}
 
       true ->
         {:ok, assign(socket, :socket_connected, false)}
@@ -75,7 +78,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
         <header>
           <div>
             <h2>{@site.name}</h2>
-            <p>{deploy_summary(@site.deploy_config)}</p>
+            <p>{deploy_summary(@site)}</p>
           </div>
           <span class="environment-state live">{gettext("Static delivery")}</span>
         </header>
@@ -158,16 +161,23 @@ defmodule BrandoAdmin.Sites.PublishingLive do
             "This publishes static artifacts only. Florist continues to deploy and roll back the Phoenix application release."
           )}
         </p>
-        <form id="static-deploy-config" phx-submit="save_deploy_config">
+        <form id="static-deploy-config" phx-change="change_deploy_config" phx-submit="save_deploy_config">
           <label>
             <span>{gettext("Strategy")}</span>
             <select name="deploy[strategy]">
               <option value="">{gettext("Build and preview only")}</option>
-              <option value="rsync" selected={deploy_value(@site, :strategy) == :rsync}>Rsync</option>
-              <option value="s3" selected={deploy_value(@site, :strategy) == :s3}>Amazon S3</option>
+              <option :if={local_delivery_offered?(@site)} value="local" selected={@strategy == "local"}>
+                {gettext("Served by this installation")}
+              </option>
+              <option value="rsync" selected={@strategy == "rsync"}>Rsync</option>
+              <option value="s3" selected={@strategy == "s3"}>Amazon S3</option>
             </select>
           </label>
-          <label>
+          <div :if={@strategy == "local"} class="alert environment-hint">
+            <.icon name="info" />
+            <span>{local_delivery_note(@site)}</span>
+          </div>
+          <label :if={@strategy != "local"}>
             <span>{gettext("Target")}</span>
             <input
               name="deploy[target]"
@@ -255,6 +265,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                   <span class={["environment-state", build.status == :deployed && "live"]}>
                     {human_status(build.status)}
                   </span>
+                  <small :if={published?(build, @site)}>{gettext("served by this installation")}</small>
                   <small :if={build.pruned_at}>{gettext("artifact pruned")}</small>
                   <WorkComponent.status
                     key={SSGBuild.work_key(build.id)}
@@ -275,9 +286,9 @@ defmodule BrandoAdmin.Sites.PublishingLive do
                     {gettext("Preview")}
                   </a>
                   <a
-                    :if={build.status == :deployed && public_url(build)}
+                    :if={build.status == :deployed && public_url(build, @site, @admin_uri)}
                     class="btn btn--sm"
-                    href={public_url(build)}
+                    href={public_url(build, @site, @admin_uri)}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -340,6 +351,10 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     end
   end
 
+  # The target field shows for the strategy chosen, before it is saved
+  def handle_event("change_deploy_config", %{"deploy" => params}, socket),
+    do: {:noreply, assign(socket, :strategy, params["strategy"] || "")}
+
   def handle_event("save_deploy_config", %{"deploy" => params}, socket) do
     attrs = %{
       strategy: deploy_strategy(params["strategy"]),
@@ -353,7 +368,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
     with true <- can_manage?(socket.assigns.current_user, socket.assigns.site),
          {:ok, _site} <- Registry.update_site(socket.assigns.site, %{deploy_config: attrs}) do
       send(self(), {:toast, gettext("Static deployment settings saved")})
-      {:noreply, refresh(socket)}
+      {:noreply, socket |> refresh() |> assign_strategy()}
     else
       {:error, %Ecto.Changeset{} = changeset} ->
         toast_error(socket, BrandoAdmin.Utils.format_changeset_errors(changeset))
@@ -487,6 +502,7 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp blank_to_nil(value) when value in [nil, ""], do: nil
   defp blank_to_nil(value), do: value
 
+  defp deploy_strategy("local"), do: :local
   defp deploy_strategy("rsync"), do: :rsync
   defp deploy_strategy("s3"), do: :s3
   defp deploy_strategy(_none), do: nil
@@ -503,17 +519,46 @@ defmodule BrandoAdmin.Sites.PublishingLive do
   defp deploy_value(%{deploy_config: nil}, _field), do: nil
   defp deploy_value(%{deploy_config: config}, field), do: Map.get(config, field)
 
-  defp deploy_configured?(site) do
-    site.deploy_config && site.deploy_config.strategy && site.deploy_config.target not in [nil, ""]
+  defp deploy_configured?(site), do: Builds.deploy_target?(site)
+
+  defp assign_strategy(socket) do
+    strategy = deploy_value(socket.assigns.site, :strategy)
+    assign(socket, :strategy, if(strategy, do: Atom.to_string(strategy), else: ""))
   end
 
-  defp deploy_summary(nil), do: gettext("No deployment target configured; builds and previews remain available.")
+  # Offered while the installation allows it, and kept for a site that has it
+  defp local_delivery_offered?(site),
+    do: DeployConfig.local_delivery_allowed?() or deploy_value(site, :strategy) == :local
 
-  defp deploy_summary(config) do
-    if config.strategy && config.target not in [nil, ""] do
-      gettext("Deploy via %{strategy} to %{target}", strategy: config.strategy, target: config.target)
-    else
-      gettext("No deployment target configured; builds and previews remain available.")
+  defp deploy_summary(%{deploy_config: %{strategy: :local}} = site) do
+    case live_domain(site) do
+      nil -> gettext("Served by this installation once the live environment has a domain.")
+      domain -> gettext("Served by this installation on %{domain}.", domain: domain)
+    end
+  end
+
+  defp deploy_summary(%{deploy_config: %{strategy: strategy, target: target}})
+       when strategy != nil and target not in [nil, ""],
+       do: gettext("Deploy via %{strategy} to %{target}", strategy: strategy, target: target)
+
+  defp deploy_summary(_site), do: gettext("No deployment target configured; builds and previews remain available.")
+
+  defp local_delivery_note(%{published_build: version} = site) when is_binary(version) do
+    if Site.local_delivery?(site),
+      do: gettext("The live environment's domain answers from %{version}, the published build.", version: version),
+      else: local_delivery_note(%{site | published_build: nil})
+  end
+
+  defp local_delivery_note(_site),
+    do:
+      gettext(
+        "The live environment's domain answers from the published build. Until a build is deployed, it answers as it does now."
+      )
+
+  defp live_domain(site) do
+    case Enum.find(site.environments, & &1.live) do
+      %{domain: domain} when is_binary(domain) and domain != "" -> domain
+      _none -> nil
     end
   end
 
@@ -555,7 +600,23 @@ defmodule BrandoAdmin.Sites.PublishingLive do
 
   defp environment_domain(_environment), do: nil
 
-  defp public_url(build), do: build.deploy_config["cdn_url"]
+  # The CDN in front, or the live domain the installation serves the build on
+  defp public_url(build, site, admin_uri) do
+    cond do
+      build.deploy_config["cdn_url"] not in [nil, ""] ->
+        build.deploy_config["cdn_url"]
+
+      build.deploy_config["strategy"] == "local" and site.published_build == build.version ->
+        with %URI{} = uri <- admin_uri, domain when is_binary(domain) <- live_domain(site) do
+          URI.to_string(%{uri | host: domain, path: "/", query: nil, fragment: nil})
+        end
+
+      true ->
+        nil
+    end
+  end
+
+  defp published?(build, site), do: Site.local_delivery?(site) and site.published_build == build.version
 
   defp human_status(status), do: status |> Atom.to_string() |> String.capitalize()
 
