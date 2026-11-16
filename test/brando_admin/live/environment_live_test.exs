@@ -1128,6 +1128,24 @@ defmodule BrandoAdmin.Sites.EnvironmentLiveTest do
       assert view |> element("#environment-host-status-#{away.id}") |> render() =~ "Served"
     end
 
+    # A long domain is clipped in its one-line field: its state line shows it
+    # whole, as each redirect host's line does
+    test "the domain's state line names the domain, as a redirect host's does", %{conn: conn, served: served} do
+      {:ok, served} =
+        Registry.update_environment(served, %{redirect_hosts: ["old.acme.test"]}, actor: :system)
+
+      {:ok, view, _html} = live(conn, "/admin/config/environments")
+
+      for {id, host} <- [
+            {"environment-host-status-#{served.id}", "www.acme.test"},
+            {"environment-host-status-#{served.id}-#{Base.url_encode64("old.acme.test", padding: false)}",
+             "old.acme.test"}
+          ] do
+        assert view |> element("#environment-#{served.id} form ##{id} .environment-host-status__host") |> render() =~
+                 host
+      end
+    end
+
     test "a host stored with capitals or spaces shows its state", %{conn: conn, served: served} do
       Repo.update_all(from(e in Brando.Environments.Environment, where: e.id == ^served.id),
         set: [domain: " WWW.Acme.TEST "]

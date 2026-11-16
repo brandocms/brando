@@ -201,27 +201,27 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
                           <label id={host_field_id(environment, "domain-label")} for={host_field_id(environment, "domain")}>
                             {gettext("Domain")}
                           </label>
-                          <%!-- The domain's state on the domain's line --%>
-                          <div class="environment-domain-line">
-                            <input
-                              id={host_field_id(environment, "domain")}
-                              type="text"
-                              name="domain"
-                              value={host_draft(@host_drafts, environment).domain}
-                              placeholder="www.example.com"
-                              autocomplete="off"
-                              spellcheck="false"
-                              aria-labelledby={host_field_labelled_by(environment, "domain-label")}
-                              {focus_tracking(environment, "domain")}
-                              aria-describedby={@served_hosts_enabled? && environment.domain && domain_status_id(environment)}
-                            />
-                            <.served_host
-                              :if={@served_hosts_enabled? && environment.domain}
-                              id={domain_status_id(environment)}
-                              state={served_host_state(@served_hosts.hosts, @bound_hosts, environment.domain)}
-                              addresses={@served_hosts.addresses}
-                            />
-                          </div>
+                          <input
+                            id={host_field_id(environment, "domain")}
+                            type="text"
+                            name="domain"
+                            value={host_draft(@host_drafts, environment).domain}
+                            placeholder="www.example.com"
+                            autocomplete="off"
+                            spellcheck="false"
+                            aria-labelledby={host_field_labelled_by(environment, "domain-label")}
+                            {focus_tracking(environment, "domain")}
+                            aria-describedby={@served_hosts_enabled? && environment.domain && domain_status_id(environment)}
+                          />
+                          <%!-- Led by the saved domain, which a one-line field may clip, as each
+                          redirect host's line is led by its host --%>
+                          <.served_host
+                            :if={@served_hosts_enabled? && environment.domain}
+                            id={domain_status_id(environment)}
+                            host={environment.domain}
+                            state={served_host_state(@served_hosts.hosts, @bound_hosts, environment.domain)}
+                            addresses={@served_hosts.addresses}
+                          />
                         </div>
                         <div class="environment-host-field">
                           <label
@@ -715,13 +715,13 @@ defmodule BrandoAdmin.Sites.EnvironmentLive do
   attr :id, :string, required: true
   attr :state, :any, required: true
   attr :addresses, :list, required: true
-  attr :host, :string, default: nil, doc: "the host's name, shown before its state; the domain's line has none"
+  attr :host, :string, required: true, doc: "the host's name, shown before its state"
 
   # Where a bound host stands with the reverse proxy (`Brando.Tenant.ServedHosts`)
   defp served_host(assigns) do
     ~H"""
     <div id={@id} class="environment-host-status">
-      <span :if={@host} class="environment-host-status__host">{@host}</span>
+      <span class="environment-host-status__host">{@host}</span>
       <%= case @state do %>
         <% :served -> %>
           <span class="badge badge--success">{gettext("Served")}</span>
