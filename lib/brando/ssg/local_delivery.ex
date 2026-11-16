@@ -294,9 +294,13 @@ defmodule Brando.SSG.LocalDelivery do
   end
 
   # Content-addressed files the build's Vite manifest lists, or a request
-  # versioned with `?vsn=`, as `Plug.Static` reads one
-  defp immutable?(%Plug.Conn{query_string: "vsn=" <> _}, _build, _relative), do: true
-  defp immutable?(_conn, build, relative), do: MapSet.member?(build.immutable, relative)
+  # versioned with `?vsn=`, as `Plug.Static` reads one; never HTML, which
+  # the next deploy changes under the same URL
+  defp immutable?(conn, build, relative),
+    do: not html?(relative) and (versioned?(conn) or MapSet.member?(build.immutable, relative))
+
+  defp versioned?(%Plug.Conn{query_string: "vsn=" <> _}), do: true
+  defp versioned?(_conn), do: false
 
   # -- The published build in memory ----------------------------------------------
 

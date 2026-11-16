@@ -400,6 +400,11 @@ defmodule Brando.SSG.LocalDeliveryTest do
 
       versioned = request(context.host, "/assets/logo.svg?vsn=d")
       assert get_resp_header(versioned, "cache-control") == ["public, max-age=31536000, immutable"]
+
+      # A page changes with the next deploy, whatever its query
+      page = request(context.host, "/about?vsn=d")
+      assert get_resp_header(page, "cache-control") == ["no-cache"]
+      assert [_etag] = get_resp_header(page, "etag")
     end
 
     test "sends the gzipped sitemap as the sitemap controller does", context do
