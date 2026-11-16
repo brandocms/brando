@@ -273,7 +273,7 @@ defmodule BrandoAdmin.Sites.SiteLive do
                 <tbody>
                   <tr :for={assignment <- assignments(@assignments, site.id)} id={"assignment-#{assignment.id}"}>
                     <td>{assignment.user.name}<small>{assignment.user.email}</small></td>
-                    <td><span class="badge">{assignment.role}</span></td>
+                    <td><span class="badge">{role_label(assignment.role)}</span></td>
                     <td>
                       <button
                         type="button"
@@ -608,6 +608,10 @@ defmodule BrandoAdmin.Sites.SiteLive do
   defp parse_role("editor"), do: {:ok, :editor}
   defp parse_role("admin"), do: {:ok, :admin}
   defp parse_role(_role), do: {:error, :invalid_role}
+
+  # As the Role select under Grant access names them
+  defp role_label(:editor), do: gettext("Editor")
+  defp role_label(:admin), do: gettext("Administrator")
 
   # Who sees this site's provider videos in "Add from …", in the copy under
   # the group field.

@@ -114,6 +114,7 @@ defmodule BrandoAdmin.Sites.SiteLiveTest do
 
     assert Access.role_for(editor, created) == :admin
     assert has_element?(view, "#site-#{created.id}", editor.email)
+    assert has_element?(view, "#site-#{created.id} tr[id^=assignment-] .badge", "Administrator")
 
     view
     |> element("#site-#{created.id} button[phx-click=revoke][phx-value-user-id=\"#{editor.id}\"]")

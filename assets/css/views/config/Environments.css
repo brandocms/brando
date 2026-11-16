@@ -996,6 +996,40 @@
       grid-template-columns: repeat(2, minmax(0, 348px));
     }
 
+    /* A user's name and email take the row, the role and Revoke go under:
+       the column is too narrow for the operation tables' fixed proportions */
+    .site-card__users :is(table, tbody) {
+      display: block;
+    }
+
+    .site-card__users tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--brando-line-soft);
+    }
+
+    .site-card__users tr:last-child {
+      border-bottom: none;
+    }
+
+    .site-card__users td:nth-child(n) {
+      width: auto;
+      padding: 0;
+      border: none;
+    }
+
+    .site-card__users td:first-child {
+      grid-column: 1 / -1;
+      overflow-wrap: anywhere;
+
+      small {
+        display: block;
+      }
+    }
+
     label {
       gap: 8px;
     }
