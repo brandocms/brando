@@ -33,8 +33,9 @@ if Code.ensure_loaded?(Igniter) do
 
     The task points references to the modules renamed in 0.55 at their new
     names, adds the explicit listing component imports, adds
-    `use Brando.SoftDelete.Repo` to Brando's Repo (`config :brando,
-    repo_module:`, or the application's only one) without it, gives Villain parsers
+    `use Brando.SoftDelete.Repo` to Brando's Repo (`--repo MyApp.Repo`, else
+    `config :brando, repo_module:`, else the application's only one) without
+    it, gives Villain parsers
     back the `use Phoenix.Component`, imports and aliases they relied on from
     `use Brando.Villain.Parser`, configures Req as
     Swoosh's API client, points Brando at the application's mailer (creating
@@ -100,7 +101,7 @@ if Code.ensure_loaded?(Igniter) do
     """
 
     def info(_argv, _source) do
-      %Igniter.Mix.Task.Info{group: :brando}
+      %Igniter.Mix.Task.Info{group: :brando, schema: [repo: :string]}
     end
 
     # Loads dependencies and configuration only; the application's source is
@@ -140,7 +141,7 @@ if Code.ensure_loaded?(Igniter) do
       |> RedundantComponentUse.remove()
       |> EntriesFromIdentifiers.rewrite()
       |> SourceUpgrade.start_endpoint_last()
-      |> SoftDeleteRepo.plan()
+      |> SoftDeleteRepo.plan(igniter.args.options[:repo])
       |> Mix.Brando.Igniter.Upgrade.prepare()
       |> add_notices()
       |> Assets.notice_native_europa()

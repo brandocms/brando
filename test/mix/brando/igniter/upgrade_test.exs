@@ -416,6 +416,16 @@ defmodule Mix.Brando.Igniter.UpgradeTest do
       end
     end
 
+    test "with several repos and none configured, --repo names Brando's" do
+      result =
+        IgniterCase.phoenix_project(files: %{"lib/studio/analytics_repo.ex" => @analytics_repo})
+        |> Igniter.compose_task("brando.migrate55", ["--repo", "Studio.Repo"])
+
+      assert IgniterCase.source(result, "lib/studio/repo.ex") =~ "use Brando.SoftDelete.Repo"
+      Igniter.Test.assert_unchanged(result, "lib/studio/analytics_repo.ex")
+      refute Enum.any?(result.notices, &(&1 =~ "Could not tell which repo is Brando's"))
+    end
+
     test "a repo under test/ does not count as a second one" do
       result = migrate55(%{"test/support/analytics_repo.ex" => @analytics_repo})
 
