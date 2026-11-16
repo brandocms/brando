@@ -135,22 +135,24 @@ defmodule Brando.Tenant.ServedHostsTest do
     end
   end
 
+  # What `pid` did, in order: each `:file` function it called, and `:reply` for
+  # each `:ok` it sent in reply to a call
+  defp trace_events(pid) do
+    receive do
+      {:trace, ^pid, :call, {:file, function, _args}} -> [function | trace_events(pid)]
+      {:trace, ^pid, :send, {_tag, :ok}, _alias} -> [:reply | trace_events(pid)]
+      {:trace, ^pid, _kind, _message, _to} -> trace_events(pid)
+      {:trace, ^pid, _kind, _message} -> trace_events(pid)
+    after
+      0 -> []
+    end
+  end
+
   defp flush_lookups do
     receive do
       {:looked_up, _host} -> flush_lookups()
     after
       0 -> :ok
-    end
-  end
-
-  defp wait_for_messages(pid, count) do
-    case Process.info(pid, :message_queue_len) do
-      {:message_queue_len, queued} when queued >= count ->
-        :ok
-
-      _fewer ->
-        Process.sleep(5)
-        wait_for_messages(pid, count)
     end
   end
 
@@ -647,7 +649,7 @@ defmodule Brando.Tenant.ServedHostsTest do
         # No addresses: the endpoint's host goes through the same resolver
         put_test_env(ServedHosts, file: file, resolver: @resolver, lookup_timeout: 50)
 
-        assert %{hosts: %{"www.acme.test" => :unresolved}, addresses: [], error: nil} = ServedHosts.check()
+        assert %{hosts: %{"www.acme.test" => :unresolved}, error: nil} = ServedHosts.check()
         assert Process.whereis(ServedHosts) == pid
         assert File.read!(file) == ""
       end
@@ -728,6 +730,61 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert_receive {:served_hosts, %{hosts: %{"slow.acme.test" => :unresolved}}}, 2_000
     end
 
+    test "the registry's call is answered before any file work", %{site: site} do
+      DNS.answer("www.acme.test", [@here])
+      environment = bind(site, "production", nil, true)
+      # Stored without a registry write: only the warm below asks for a check
+      set_domain(environment, "www.acme.test")
+      pid = Process.whereis(ServedHosts)
+      :erlang.trace_pattern({:file, :_, :_}, true, [:global])
+      :erlang.trace(pid, true, [:call, :send])
+
+      on_exit(fn ->
+        :erlang.trace(pid, false, [:call, :send])
+        :erlang.trace_pattern({:file, :_, :_}, false, [:global])
+      end)
+
+      Cache.warm()
+      ServedHosts.settled()
+      :erlang.trace(pid, false, [:call, :send])
+
+      events = trace_events(pid)
+      assert {before_reply, [:reply | after_reply]} = Enum.split_while(events, &(&1 != :reply))
+      assert before_reply == []
+      assert :read_file in after_reply
+      assert :rename in after_reply
+    end
+
+    test "a file that cannot be read still gives a newly bound host its state and its result",
+         %{path: file, site: site} do
+      DNS.answer("acme.test", [@here])
+      production = bind(site, "production", "acme.test", true)
+      File.write!(file, "acme.test\nother.example.com\n")
+      File.chmod!(file, 0o000)
+      on_exit(fn -> File.chmod(file, 0o644) end)
+      DNS.hold("away.acme.test", self())
+      DNS.answer("away.acme.test", [@elsewhere])
+
+      capture_log(fn ->
+        {:ok, _} =
+          Registry.update_environment(Registry.get_environment(production.id), %{redirect_hosts: ["away.acme.test"]},
+            actor: :system
+          )
+
+        assert %{hosts: %{"away.acme.test" => :checking}} = ServedHosts.status()
+        assert_receive {:looking_up, "away.acme.test", lookup}
+        send(lookup, :answer)
+
+        assert %{hosts: %{"acme.test" => :served, "away.acme.test" => {:waiting, [@elsewhere]}}, error: error} =
+                 ServedHosts.settled()
+
+        assert error =~ file
+      end)
+
+      File.chmod!(file, 0o644)
+      assert File.read!(file) == "acme.test\nother.example.com\n"
+    end
+
     test "a newly bound host that is no full host name is invalid at once", %{site: site} do
       DNS.answer("acme.test", [@here])
       production = bind(site, "production", "acme.test", true)
@@ -738,6 +795,117 @@ defmodule Brando.Tenant.ServedHostsTest do
         )
 
       assert %{hosts: %{"intranet" => :invalid}} = ServedHosts.status()
+    end
+  end
+
+  describe "lookups" do
+    test "this server's addresses are looked up once per check, and a failed lookup keeps the last ones",
+         %{path: file, site: site} do
+      :persistent_term.put({NotifyingResolver, :pid}, self())
+      on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
+      put_test_env(ServedHosts, file: file, resolver: NotifyingResolver)
+      DNS.answer("localhost", [@here])
+      for key <- ~w(a b c), do: bind(site, key, "#{key}.acme.test")
+      flush_lookups()
+
+      assert %{addresses: [@here], hosts: %{"a.acme.test" => :unresolved}} = ServedHosts.check()
+      assert_received {:looked_up, "localhost"}
+      refute_received {:looked_up, "localhost"}
+
+      DNS.answer("localhost", {:error, :timeout})
+
+      assert %{addresses: [@here], hosts: %{"a.acme.test" => :unresolved}} = ServedHosts.check()
+      assert_received {:looked_up, "localhost"}
+    end
+
+    test "a lookup that times out does not erase this server's addresses", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, lookup_timeout: 100)
+      DNS.answer("localhost", [@here])
+      DNS.answer("away.acme.test", [@elsewhere])
+      bind(site, "away", "away.acme.test")
+      assert %{addresses: [@here]} = ServedHosts.status()
+      DNS.hold("slow.acme.test", self())
+      bind(site, "slow", "slow.acme.test")
+
+      assert %{
+               addresses: [@here],
+               hosts: %{"away.acme.test" => {:waiting, [@elsewhere]}, "slow.acme.test" => :unresolved}
+             } =
+               ServedHosts.settled()
+    end
+
+    test "at most eight run at a time, each host's timeout counted from its own start", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here], lookup_timeout: 300)
+      hosts = for index <- 1..10, do: "h#{index}.acme.test"
+
+      for host <- hosts do
+        DNS.answer(host, [@here])
+        DNS.hold(host, self())
+      end
+
+      for host <- hosts do
+        key = host |> String.split(".") |> hd()
+        {:ok, _} = Registry.create_environment(site, %{name: key, key: key, domain: host}, actor: :system)
+      end
+
+      first = for _ <- 1..8, do: assert_receive({:looking_up, _host, _lookup})
+      refute_receive {:looking_up, _host, _lookup}, 100
+      # The first eight never answer and time out; the last two start then
+      # and answer at once
+      for _ <- 1..2 do
+        assert_receive {:looking_up, _host, lookup}, 1_000
+        send(lookup, :answer)
+      end
+
+      %{hosts: states} = ServedHosts.settled()
+      timed_out = for {:looking_up, host, _lookup} <- first, do: host
+      assert Enum.count(states, fn {_host, state} -> state == :served end) == 2
+      for host <- timed_out, do: assert(states[host] == :unresolved)
+    end
+
+    test "answers of one check are written and broadcast once", %{path: file, site: site} do
+      hosts = for index <- 1..5, do: "h#{index}.acme.test"
+
+      environments = for index <- 1..5, do: bind(site, "e#{index}", nil)
+
+      for {host, environment} <- Enum.zip(hosts, environments) do
+        set_domain(environment, host)
+        DNS.answer(host, [@here])
+        DNS.hold(host, self())
+      end
+
+      pid = Process.whereis(ServedHosts)
+      :erlang.trace_pattern({:file, :rename, 2}, true, [:global])
+      :erlang.trace(pid, true, [:call])
+
+      on_exit(fn ->
+        :erlang.trace(pid, false, [:call])
+        :erlang.trace_pattern({:file, :rename, 2}, false, [:global])
+      end)
+
+      # One warm binds all five: one check looks them up
+      Cache.warm()
+      messages = for _ <- hosts, do: assert_receive({:looking_up, _host, _lookup})
+      # The check has published by now
+      :sys.get_state(pid)
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+      for {:looking_up, _host, lookup} <- messages, do: send(lookup, :answer)
+
+      assert %{hosts: states} = ServedHosts.settled()
+      assert Map.take(states, hosts) == Map.new(hosts, &{&1, :served})
+      assert lines(file) == hosts
+      assert file_calls(pid) == [:rename]
+      assert_received {:served_hosts, _status}
+      refute_received {:served_hosts, _status}
+    end
+
+    test "a lookup timeout that is not a number of milliseconds falls back to the default", %{path: file, site: site} do
+      put_test_env(ServedHosts, file: file, addresses: [@here], lookup_timeout: "soon")
+      DNS.answer("www.acme.test", [@here])
+      bind(site, "production", "www.acme.test", true)
+
+      assert %{hosts: %{"www.acme.test" => :served}, error: nil} = ServedHosts.check()
+      assert lines(file) == ["www.acme.test"]
     end
   end
 
@@ -863,7 +1031,7 @@ defmodule Brando.Tenant.ServedHostsTest do
       assert File.read!(file) == "www.acme.test\n"
     end
 
-    test "a timer that fired while a check was queued does not run a second check", %{path: file, site: site} do
+    test "a tick of a timer a later check replaced runs no check", %{path: file, site: site} do
       :persistent_term.put({NotifyingResolver, :pid}, self())
       on_exit(fn -> :persistent_term.erase({NotifyingResolver, :pid}) end)
       # The default retry interval: no real timer fires during the test
@@ -871,22 +1039,22 @@ defmodule Brando.Tenant.ServedHostsTest do
       # Waits for its DNS, so every check looks it up
       bind(site, "production", "www.acme.test", true)
       assert_received {:looked_up, "www.acme.test"}
+      flush_lookups()
 
       pid = Process.whereis(ServedHosts)
-      %{tick: tick} = :sys.get_state(pid)
-      # Lookups of the check the warm in `bind` asked for, done by now
-      flush_lookups()
-      :sys.suspend(pid)
-      registry_changed = Task.async(fn -> ServedHosts.registry_changed() end)
-      wait_for_messages(pid, 1)
-      # The current timer's tick, queued after the registry's message
-      send(pid, {:tick, tick})
-      :sys.resume(pid)
-      Task.await(registry_changed)
+      %{tick: stale} = :sys.get_state(pid)
+      # A later check replaces the timer, and its lookup answers
+      ServedHosts.registry_changed()
+      ServedHosts.settled()
+      assert_received {:looked_up, "www.acme.test"}
+      assert %{tick: current} = :sys.get_state(pid)
+      assert current != stale
+
+      # The replaced timer's tick, fired before it was cancelled
+      send(pid, {:tick, stale})
       :sys.get_state(pid)
       ServedHosts.settled()
 
-      assert_received {:looked_up, "www.acme.test"}
       refute_received {:looked_up, _host}
     end
 

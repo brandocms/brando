@@ -49,13 +49,22 @@ defmodule Brando.Tenant.ServedHosts do
   its own file.
 
   A check never waits for DNS. Each host it looks up gets a task of its own,
-  and a host never looked up before is `:checking` from the moment the check
-  begins: a registry write returns once every host it bound has a state. A
-  host looked up again keeps its last state meanwhile. Each answer is checked
-  in on its own as it arrives, so a host's result comes within the lookup
-  timeout, whatever other lookups or checks are under way. The file is read
-  just before it is replaced, and every bound host another node wrote there
-  stays; when that read fails, the file is left as it is.
+  at most eight at a time while the rest queue, and its lookup timeout
+  starts when its lookup does. A registry write returns once every host it
+  bound has a state, `:checking` for one never looked up; the check itself
+  (the file, the lookups) runs after that. A host looked up again, or
+  queued, keeps its last state meanwhile. Each answer is kept as it arrives;
+  the file is written and the status published once no lookup of its check
+  is left, or within a fifth of a second while some are, so many answers
+  cost one write and a single host's result comes as soon as it answers.
+  The file is read just before each write, and every bound host another
+  node wrote there stays. When that read fails, the file is left as it is
+  and the error reported, while the hosts' states still follow the registry
+  and their lookups.
+
+  Without `:addresses`, this server's addresses are what the endpoint's host
+  resolves to, looked up on their own once per check that looks a host up.
+  A failed lookup of them keeps the last ones found.
 
   ## The file
 
@@ -69,7 +78,9 @@ defmodule Brando.Tenant.ServedHosts do
   `Brando.Tenant.ServedHosts.Resolver` (default
   `Brando.Tenant.ServedHosts.DNS`), which tests replace. A lookup that does
   not answer within `:lookup_timeout` milliseconds (default ten seconds), or
-  that raises, exits or throws, fails for that host.
+  that raises, exits or throws, fails for that host. A `:lookup_timeout`,
+  `:retry_interval` or `:recheck_interval` that is not a positive integer
+  counts as unset.
   """
 
   use GenServer
@@ -85,6 +96,10 @@ defmodule Brando.Tenant.ServedHosts do
   @recheck_interval :timer.minutes(5)
   @lookup_timeout :timer.seconds(10)
   @call_timeout :timer.seconds(5)
+  # Lookups running at once; OTP's native resolver has four workers
+  @max_lookups 8
+  # How long answers of a check still running gather before they are written
+  @flush_interval 200
   # Seconds
   @leftover_age 60
 
@@ -125,9 +140,10 @@ defmodule Brando.Tenant.ServedHosts do
 
   @doc """
   Asks this node's process to check, after a registry refresh, and returns
-  once the check has begun: every host the refresh bound has a state in
-  `status/0` by then, `:checking` while its lookup runs. Does nothing when no
-  file is configured, nor when the process is not running.
+  once every host the refresh bound has a state in `status/0`: `:checking`
+  until its lookup answers. The check itself (the file, the lookups) runs
+  after the reply. Does nothing when no file is configured, nor when the
+  process is not running.
   """
   @spec registry_changed() :: :ok
   def registry_changed do
@@ -135,8 +151,8 @@ defmodule Brando.Tenant.ServedHosts do
       try do
         GenServer.call(__MODULE__, :registry_changed, @call_timeout)
       catch
-        # Not started yet (a warm at boot), or busy writing: the check runs
-        # when the process gets to the message, or on its own when it starts
+        # Not started yet (a warm at boot), or busy: the check runs when the
+        # process gets to the message, or on its own when it starts
         :exit, _reason -> :ok
       end
     end
@@ -148,7 +164,7 @@ defmodule Brando.Tenant.ServedHosts do
   @spec check() :: status()
   def check, do: GenServer.call(__MODULE__, :check, :timer.minutes(1))
 
-  @doc "Returns the status once every lookup under way has answered, without checking. For tests."
+  @doc "Returns the status once every lookup under way or queued has answered, without checking. For tests."
   @spec settled() :: status()
   def settled, do: GenServer.call(__MODULE__, :settled, :timer.minutes(1))
 
@@ -160,19 +176,28 @@ defmodule Brando.Tenant.ServedHosts do
   def init(nil) do
     # `admitted`: the hosts this process saw in the file or admitted itself, kept
     # while bound. In memory only: a new process starts from the file alone.
-    # `tick`: the reference the pending timer's message carries.
-    # `lookups`: each lookup under way, by its task's reference.
-    # `results`: what lookups answered since the last check, by host.
-    # `own`: this server's addresses as last looked up.
+    # `settings`: the configuration the last check read, nil when off.
+    # `tick`, `flush`: the references the pending timers' messages carry.
+    # `lookups`: each lookup under way, by its task's reference, with its batch.
+    # `queue`: lookups waiting for one of the `@max_lookups` slots.
+    # `batch`: the number of the last check that queued lookups.
+    # `results`: what host lookups answered, by host, until admitted or
+    # looked up again.
+    # `own`: this server's addresses as last looked up, with the name.
     # `waiters`: callers of `check/0` and `settled/0` waiting for the lookups.
     state = %{
       timer: nil,
       tick: nil,
+      flush_timer: nil,
+      flush: nil,
       error: nil,
+      settings: nil,
       admitted: MapSet.new(),
       lookups: %{},
+      queue: :queue.new(),
+      batch: 0,
       results: %{},
-      own: [],
+      own: nil,
       waiters: []
     }
 
@@ -184,7 +209,16 @@ defmodule Brando.Tenant.ServedHosts do
   def handle_continue(:check, state), do: {:noreply, run(state)}
 
   @impl true
-  def handle_call(:registry_changed, _from, state), do: {:reply, :ok, run(state)}
+  # Quick, and nothing the file or DNS does can slow it: every write to the
+  # registry waits for this reply
+  def handle_call(:registry_changed, _from, state) do
+    if enabled?() do
+      mark_bound()
+      {:reply, :ok, state, {:continue, :check}}
+    else
+      {:reply, :ok, state}
+    end
+  end
 
   def handle_call(:check, from, state), do: {:noreply, state |> run() |> wait(from)}
 
@@ -198,153 +232,325 @@ defmodule Brando.Tenant.ServedHosts do
     if Cache.warmed?(), do: {:noreply, run(state)}, else: {:noreply, state}
   end
 
-  def handle_info({ref, {result, endpoint}}, %{lookups: lookups} = state) when is_map_key(lookups, ref) do
+  def handle_info({:flush, flush}, %{flush: flush} = state) do
+    {:noreply, flush(%{state | flush_timer: nil, flush: nil})}
+  end
+
+  def handle_info({ref, result}, %{lookups: lookups} = state) when is_map_key(lookups, ref) do
     Process.demonitor(ref, [:flush])
-    {:noreply, answered(state, ref, result, endpoint)}
+    {:noreply, answered(state, ref, result)}
   end
 
   # The task died: of a link, say, which no `catch` inside it sees
   def handle_info({:DOWN, ref, :process, _pid, reason}, %{lookups: lookups} = state)
       when is_map_key(lookups, ref),
-      do: {:noreply, answered(state, ref, {:error, reason}, nil)}
-
-  def handle_info({:lookup_timeout, ref}, %{lookups: lookups} = state) when is_map_key(lookups, ref) do
-    {_host, pid, _timer, _source} = Map.fetch!(lookups, ref)
-    Process.exit(pid, :kill)
-    Process.demonitor(ref, [:flush])
-    {:noreply, answered(state, ref, {:error, :timeout}, nil)}
-  end
+      do: {:noreply, answered(state, ref, {:error, reason})}
 
   def handle_info(_message, state), do: {:noreply, state}
 
-  # A lookup answered, failed or timed out: its host's result goes into a
-  # check at once, so it never waits for another host's lookup
-  defp answered(state, ref, result, endpoint) do
-    {{host, _pid, timer, source}, lookups} = Map.pop!(state.lookups, ref)
-    Process.cancel_timer(timer)
-    own = own(source, endpoint)
+  # Every bound host gets a state at once: the one it has, or `:checking`
+  defp mark_bound do
+    {bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
+    previous = status()
 
-    %{state | lookups: lookups, results: Map.put(state.results, host, classify(result, own)), own: own}
-    |> run(false)
-    |> settle()
+    hosts =
+      bound
+      |> Map.new(&{&1, Map.get(previous.hosts, &1, :checking)})
+      |> Map.merge(Map.new(invalid, &{&1, :invalid}))
+
+    publish(%{previous | file: config()[:file], hosts: hosts})
+  rescue
+    # The check after the reply reports what is wrong
+    _exception -> :ok
+  end
+
+  # A lookup answered, failed or timed out. Its answer is kept at once; the
+  # file, the status and the broadcast follow when no lookup of its check is
+  # left, or shortly while some are, so that many answers cost one write.
+  defp answered(state, ref, result) do
+    {{target, batch}, lookups} = Map.pop!(state.lookups, ref)
+    state = %{state | lookups: lookups} |> record(target, result) |> pump()
+    state = if batch_done?(state, batch), do: flush(state), else: flush_soon(state)
+    settle(state)
+  end
+
+  defp record(state, {:host, host}, {:ok, [_ | _] = addresses}),
+    do: %{state | results: Map.put(state.results, host, {:ok, normalize_addresses(addresses)})}
+
+  defp record(state, {:host, host}, _failed), do: %{state | results: Map.put(state.results, host, :unresolved)}
+  defp record(state, {:own, name}, {:ok, [_ | _] = addresses}), do: %{state | own: {name, normalize_addresses(addresses)}}
+  # A failed lookup of this server's addresses keeps the last ones it found
+  defp record(state, {:own, _name}, _failed), do: state
+
+  defp batch_done?(state, batch) do
+    not Enum.any?(state.lookups, &match?({_ref, {_target, ^batch}}, &1)) and
+      not :queue.any(&match?({_target, ^batch}, &1), state.queue)
+  end
+
+  defp flush_soon(%{flush_timer: nil} = state) do
+    flush = make_ref()
+    %{state | flush_timer: Process.send_after(self(), {:flush, flush}, @flush_interval), flush: flush}
+  end
+
+  defp flush_soon(state), do: state
+
+  defp cancel_flush(%{flush_timer: nil} = state), do: state
+
+  defp cancel_flush(state) do
+    Process.cancel_timer(state.flush_timer)
+    %{state | flush_timer: nil, flush: nil}
   end
 
   defp wait(state, from), do: settle(%{state | waiters: [from | state.waiters]})
 
-  defp settle(%{lookups: lookups, waiters: [_ | _] = waiters} = state) when map_size(lookups) == 0 do
-    status = status()
-    Enum.each(waiters, &GenServer.reply(&1, status))
-    %{state | waiters: []}
+  defp settle(%{waiters: [_ | _] = waiters} = state) do
+    if map_size(state.lookups) == 0 and :queue.is_empty(state.queue) do
+      state = if state.flush_timer, do: flush(state), else: state
+      status = status()
+      Enum.each(waiters, &GenServer.reply(&1, status))
+      %{state | waiters: []}
+    else
+      state
+    end
   end
 
   defp settle(state), do: state
 
-  # `look_up?`: whether hosts without an answer are looked up. Not in the
-  # check an answer runs, which would look the other waiting hosts up again
-  # for every answer.
-  defp run(state, look_up? \\ true) do
-    if state.timer, do: Process.cancel_timer(state.timer)
-    state = %{state | timer: nil, tick: nil}
-    config = config()
+  defp run(state) do
+    state = cancel_tick(state)
 
-    if configured_file?(config[:file]) do
-      check(state, config, look_up?)
-    else
-      %{state | error: nil, results: %{}}
+    case settings() do
+      :off ->
+        %{state | error: nil, results: %{}, settings: nil}
+
+      {:error, error} ->
+        failed(%{state | settings: nil}, error)
+
+      {:ok, settings} ->
+        check(%{state | settings: settings})
     end
   rescue
-    # A bad config or a resolver that raises must not restart this process
-    # until its supervisor, and the application with it, gives up
-    exception ->
-      error = Exception.message(exception)
-      state = report(%{state | results: %{}}, nil, error)
-      publish(%{status() | error: error})
-      schedule(state, true)
+    # A bad config or a broken cache must not restart this process until its
+    # supervisor, and the application with it, gives up. A lookup started
+    # before the failure stops at its own timeout.
+    exception -> failed(state, Exception.message(exception))
   end
 
-  # Quick: the lookups it needs run in tasks, and their answers come back as
-  # messages, each running a check of its own
-  defp check(state, config, look_up?) do
-    file = config[:file]
+  defp failed(state, error) do
+    state = report(%{state | results: %{}}, nil, error)
+    publish(%{status() | error: error})
+    schedule(state, true)
+  end
 
-    case read_file(file) do
-      {:ok, existing, listed} ->
-        {bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
-        listed = MapSet.new(listed)
-        # Another node sharing the path may have written over a host this one
-        # admitted: it goes back in without a lookup
-        known = MapSet.union(listed, state.admitted)
-        {kept, candidates} = Enum.split_with(bound, &MapSet.member?(known, &1))
-        {state, decided, pending} = decide(state, candidates, config, look_up?)
-        admitted = for {host, :admit} <- decided, do: host
-        waiting = for {host, host_state} <- decided, host_state != :admit, into: %{}, do: {host, host_state}
-        bound_set = MapSet.new(bound)
+  # Reads the file, queues a lookup for each bound host not in it and not
+  # already being looked up, and writes what it knows now. A host looked up
+  # again keeps the state its last lookup gave it meanwhile.
+  defp check(state) do
+    %{file: file, admit: admit} = state.settings
+    read = read_file(file)
+    known = MapSet.union(MapSet.new(listed(read)), state.admitted)
 
-        hosts =
-          (kept ++ admitted ++ Enum.filter(listed, &MapSet.member?(bound_set, &1)))
-          |> Enum.uniq()
-          |> Enum.sort()
+    candidates =
+      Cache.bound_hosts()
+      |> Enum.filter(&servable?/1)
+      |> Enum.reject(&MapSet.member?(known, &1))
 
-        {written?, error} = write(file, existing, hosts)
-        state = %{report(state, file, error) | admitted: MapSet.new(hosts)}
+    state = if admit == :dns, do: look_up(state, candidates), else: state
+    apply_results(state, read)
+  end
 
-        statuses =
-          Map.new(hosts, &{&1, if(written? or MapSet.member?(listed, &1), do: :served, else: :not_written)})
-          |> Map.merge(waiting)
-          |> Map.merge(pending_states(pending))
-          |> Map.merge(Map.new(invalid, &{&1, :invalid}))
+  defp flush(state) do
+    state = cancel_flush(state)
 
-        publish(%{file: file, hosts: statuses, addresses: format_addresses(state.own), error: error})
-        # A host no lookup runs for waits for the next check
-        unlooked? = Enum.any?(pending, &(not looking_up?(state, &1)))
-        schedule(state, map_size(waiting) > 0 or unlooked? or error != nil)
+    case state.settings do
+      nil -> state
+      %{file: file} -> apply_results(state, read_file(file))
+    end
+  rescue
+    exception -> failed(state, Exception.message(exception))
+  end
 
-      {:error, reason} ->
-        error = "#{file}: #{:file.format_error(reason)}"
-        state = report(%{state | results: %{}}, file, error)
-        publish(%{status() | file: file, error: error})
-        schedule(state, true)
+  defp look_up(state, candidates) do
+    pending = pending_hosts(state)
+
+    case Enum.reject(candidates, &MapSet.member?(pending, &1)) do
+      [] ->
+        state
+
+      hosts ->
+        batch = state.batch + 1
+        state = queue_own(%{state | batch: batch, results: Map.drop(state.results, hosts)}, batch)
+        queue = Enum.reduce(hosts, state.queue, &:queue.in({{:host, &1}, batch}, &2))
+        pump(%{state | queue: queue})
     end
   end
 
-  # What each host not yet in the file gets: admitted or waiting by a lookup
-  # that answered since the last check, or pending while one runs, started
-  # here for each host without one. Each answer is used once: a host still
-  # waiting is looked up again on the next check.
-  defp decide(state, [], config, _look_up?),
-    do: {%{state | results: %{}, own: own_without_lookups(state, config)}, [], []}
+  # This server's addresses, when they are a name to look up: once per check
+  # that looks a host up, ahead of the hosts
+  defp queue_own(%{settings: %{own_source: {:lookup, name}}} = state, batch) do
+    if own_pending?(state),
+      do: state,
+      else: %{state | queue: :queue.in_r({{:own, name}, batch}, state.queue)}
+  end
 
-  defp decide(state, candidates, config, look_up?) do
-    case Keyword.get(config, :admit, :dns) do
-      :always ->
-        {%{state | results: %{}, own: []}, Enum.map(candidates, &{&1, :admit}), []}
+  defp queue_own(state, _batch), do: state
 
-      _dns ->
-        {answered, unanswered} = Enum.split_with(candidates, &Map.has_key?(state.results, &1))
-        decided = Enum.map(answered, &{&1, Map.fetch!(state.results, &1)})
-        to_look_up = if look_up?, do: Enum.reject(unanswered, &looking_up?(state, &1)), else: []
-        {state, failed} = start_lookups(state, to_look_up, config)
-        pending = Enum.reject(unanswered, &Map.has_key?(failed, &1))
-        {%{state | results: %{}}, decided ++ Enum.to_list(failed), pending}
+  defp own_pending?(state) do
+    Enum.any?(state.lookups, &match?({_ref, {{:own, _name}, _batch}}, &1)) or
+      :queue.any(&match?({{:own, _name}, _batch}, &1), state.queue)
+  end
+
+  defp pending_hosts(state) do
+    running = for {_ref, {{:host, host}, _batch}} <- state.lookups, do: host
+    queued = for {{:host, host}, _batch} <- :queue.to_list(state.queue), do: host
+    MapSet.new(running ++ queued)
+  end
+
+  # Starts queued lookups while fewer than `@max_lookups` run: the system
+  # resolver answers a few at a time, and a lookup's timeout starts with it
+  defp pump(%{settings: nil} = state), do: %{state | queue: :queue.new()}
+
+  defp pump(state) do
+    with true <- map_size(state.lookups) < @max_lookups,
+         {{:value, item}, queue} <- :queue.out(state.queue) do
+      pump(start_lookup(%{state | queue: queue}, item))
+    else
+      _full_or_empty -> state
     end
   end
 
-  defp looking_up?(state, host), do: Enum.any?(state.lookups, fn {_ref, lookup} -> elem(lookup, 0) == host end)
+  # One task per lookup, under a task supervisor, unlinked: a lookup that
+  # raises, exits, throws, dies of a link or times out fails for its host and
+  # nothing else. The task stops itself at the timeout, so none outlives it,
+  # whatever happens to this process's state. Without the supervisor every
+  # lookup fails at once.
+  defp start_lookup(state, {target, batch}) do
+    case Process.whereis(Brando.Tenant.ServedHosts.TaskSupervisor) do
+      nil ->
+        record(state, target, {:error, :no_supervisor})
 
-  # With configured addresses there is nothing to look up for them
-  defp own_without_lookups(state, config) do
-    case {Keyword.get(config, :admit, :dns), Keyword.get(config, :addresses)} do
-      {:always, _addresses} -> []
-      {_dns, addresses} when is_list(addresses) -> normalize_own(addresses)
-      {_dns, _endpoint} -> state.own
+      supervisor ->
+        %{resolver: resolver, lookup_timeout: timeout} = state.settings
+        name = target_name(target)
+        task = Task.Supervisor.async_nolink(supervisor, fn -> timed_lookup(resolver, name, timeout) end)
+        %{state | lookups: Map.put(state.lookups, task.ref, {target, batch})}
+    end
+  end
+
+  defp target_name({_kind, name}), do: name
+
+  defp timed_lookup(resolver, name, timeout) do
+    lookup = Task.async(fn -> lookup(resolver, name) end)
+
+    case Task.yield(lookup, timeout) || Task.shutdown(lookup, :brutal_kill) do
+      {:ok, result} -> result
+      {:exit, reason} -> {:error, reason}
+      nil -> {:error, :timeout}
+    end
+  end
+
+  defp lookup(resolver, host) do
+    resolver.lookup(host)
+  rescue
+    error -> {:error, error}
+  catch
+    kind, reason -> {:error, {kind, reason}}
+  end
+
+  # The expensive part, once per check or batch of answers: the file read
+  # again, merged and replaced if it changed, the status published. A file
+  # that cannot be read is left as it is, and the hosts' states still follow
+  # the registry.
+  defp apply_results(state, read) do
+    %{file: file} = state.settings
+    {bound, invalid} = Enum.split_with(Cache.bound_hosts(), &servable?/1)
+    listed = MapSet.new(listed(read))
+    # Another node sharing the path may have written over a host this one
+    # admitted: it goes back in without a lookup
+    known = MapSet.union(listed, state.admitted)
+    {kept, candidates} = Enum.split_with(bound, &MapSet.member?(known, &1))
+    pending = pending_hosts(state)
+    decided = Map.new(candidates, &{&1, decide(state, &1, pending)})
+    admitted = for {host, :admit} <- decided, do: host
+    waiting = for {host, host_state} <- decided, host_state not in [:admit, :pending], into: %{}, do: {host, host_state}
+    undecided = for {host, :pending} <- decided, do: host
+    hosts = (kept ++ admitted) |> Enum.uniq() |> Enum.sort()
+
+    {written?, error} =
+      case read do
+        {:ok, existing, _listed} -> write(file, existing, hosts)
+        {:error, reason} -> {false, "#{file}: #{:file.format_error(reason)}"}
+      end
+
+    previous = status().hosts
+
+    state = %{
+      report(state, file, error)
+      | admitted: MapSet.new(hosts),
+        results: Map.take(state.results, Map.keys(waiting) ++ undecided)
+    }
+
+    statuses =
+      Map.new(hosts, &{&1, file_state(&1, written?, listed, read, previous)})
+      |> Map.merge(waiting)
+      |> Map.merge(pending_states(undecided, previous))
+      |> Map.merge(Map.new(invalid, &{&1, :invalid}))
+
+    publish(%{file: file, hosts: statuses, addresses: format_addresses(own_addresses(state)), error: error})
+    # A host no lookup runs for waits for the next check
+    unlooked? = Enum.any?(undecided, &(not MapSet.member?(pending, &1)))
+    schedule(state, map_size(waiting) > 0 or unlooked? or error != nil)
+  end
+
+  defp listed({:ok, _existing, listed}), do: listed
+  defp listed({:error, _reason}), do: []
+
+  # In the file now, or in it before a read failed
+  defp file_state(host, written?, listed, read, previous) do
+    cond do
+      written? or MapSet.member?(listed, host) -> :served
+      match?({:error, _}, read) and previous[host] == :served -> :served
+      true -> :not_written
+    end
+  end
+
+  # What a host not in the file gets from its last answer: admitted, waiting,
+  # unresolved, or `:pending` while its lookup runs or this server's
+  # addresses are not known yet
+  defp decide(%{settings: %{admit: :always}}, _host, _pending), do: :admit
+
+  defp decide(state, host, pending) do
+    cond do
+      MapSet.member?(pending, host) -> :pending
+      not Map.has_key?(state.results, host) -> :pending
+      state.results[host] == :unresolved -> :unresolved
+      own_known?(state) -> classify(elem(state.results[host], 1), own_addresses(state))
+      true -> :pending
+    end
+  end
+
+  defp own_addresses(%{settings: nil}), do: []
+
+  defp own_addresses(state) do
+    case {state.settings.own_source, state.own} do
+      {{:fixed, addresses}, _own} -> addresses
+      {{:lookup, name}, {name, addresses}} -> addresses
+      {{:lookup, _name}, _none} -> []
+    end
+  end
+
+  # Known when configured, looked up before, or when no lookup of them runs
+  defp own_known?(state) do
+    case {state.settings.own_source, state.own} do
+      {{:fixed, _addresses}, _own} -> true
+      {{:lookup, name}, {name, _addresses}} -> true
+      {{:lookup, _name}, _none} -> not own_pending?(state)
     end
   end
 
   # A host looked up again keeps the state its last lookup gave it meanwhile;
   # a host never looked up is checking
-  defp pending_states(pending) do
-    previous = status().hosts
-
+  defp pending_states(pending, previous) do
     Map.new(pending, fn host ->
       case Map.get(previous, host) do
         {:waiting, _addresses} = waiting -> {host, waiting}
@@ -368,92 +574,73 @@ defmodule Brando.Tenant.ServedHosts do
   # Soon while a host waits or something failed. Otherwise slowly, all the
   # same: another node sharing the path may have written over the file.
   defp schedule(state, retry?) do
-    interval =
-      if retry?,
-        do: interval(:retry_interval, @retry_interval),
-        else: interval(:recheck_interval, @recheck_interval)
-
+    state = cancel_tick(state)
+    settings = state.settings || %{retry_interval: @retry_interval, recheck_interval: @recheck_interval}
+    interval = if retry?, do: settings.retry_interval, else: settings.recheck_interval
     tick = make_ref()
     %{state | timer: Process.send_after(self(), {:tick, tick}, interval), tick: tick}
   end
 
-  defp interval(key, default) do
-    config = config()
+  defp cancel_tick(%{timer: nil} = state), do: state
 
-    case Keyword.keyword?(config) && Keyword.get(config, key) do
-      milliseconds when is_integer(milliseconds) and milliseconds > 0 -> milliseconds
-      _unset -> default
-    end
+  defp cancel_tick(state) do
+    Process.cancel_timer(state.timer)
+    %{state | timer: nil, tick: nil}
   end
 
-  defp classify({:ok, [_ | _] = addresses}, own) do
-    addresses = normalize_addresses(addresses)
-
+  defp classify(addresses, own) do
     if own != [] and Enum.all?(addresses, &(&1 in own)),
       do: :admit,
       else: {:waiting, format_addresses(addresses)}
   end
 
-  defp classify(_not_found, _own), do: :unresolved
+  # The configuration, read and checked once per check, before anything
+  # starts: `:off` without a file, an error for addresses that are not a list
+  defp settings do
+    config = config()
+    config = if Keyword.keyword?(config), do: config, else: []
+    file = Keyword.get(config, :file)
+    admit = if Keyword.get(config, :admit) == :always, do: :always, else: :dns
 
-  # One task per host, under a task supervisor, unlinked: a lookup that
-  # raises, exits, throws, dies of a link or times out fails for its host and
-  # nothing else. Without the supervisor every lookup fails at once, returned
-  # as answered.
-  defp start_lookups(state, [], _config), do: {state, %{}}
+    cond do
+      not configured_file?(file) ->
+        :off
 
-  defp start_lookups(state, hosts, config) do
-    source = own_source(config)
+      admit == :always ->
+        {:ok, settings(config, file, admit, {:fixed, []})}
 
-    case Process.whereis(Brando.Tenant.ServedHosts.TaskSupervisor) do
-      nil ->
-        {%{state | own: own(source, nil)}, Map.new(hosts, &{&1, :unresolved})}
-
-      supervisor ->
-        lookups = Enum.reduce(hosts, state.lookups, &start_lookup(supervisor, &1, &2, source, config))
-        {%{state | lookups: lookups}, %{}}
+      true ->
+        with {:ok, own_source} <- own_source(config), do: {:ok, settings(config, file, admit, own_source)}
     end
   end
 
-  defp start_lookup(supervisor, host, lookups, source, config) do
-    resolver = Keyword.get(config, :resolver, Brando.Tenant.ServedHosts.DNS)
-    timeout = Keyword.get(config, :lookup_timeout, @lookup_timeout)
-    endpoint = endpoint_to_look_up(source)
-    task = Task.Supervisor.async_nolink(supervisor, fn -> lookup_with_endpoint(resolver, host, endpoint) end)
-    timer = Process.send_after(self(), {:lookup_timeout, task.ref}, timeout)
-    Map.put(lookups, task.ref, {host, task.pid, timer, source})
+  defp settings(config, file, admit, own_source) do
+    %{
+      file: file,
+      admit: admit,
+      own_source: own_source,
+      resolver: Keyword.get(config, :resolver, Brando.Tenant.ServedHosts.DNS),
+      lookup_timeout: milliseconds(config, :lookup_timeout, @lookup_timeout),
+      retry_interval: milliseconds(config, :retry_interval, @retry_interval),
+      recheck_interval: milliseconds(config, :recheck_interval, @recheck_interval)
+    }
   end
 
-  defp endpoint_to_look_up({:lookup, host}), do: host
-  defp endpoint_to_look_up({:fixed, _addresses}), do: nil
-
-  # The endpoint's host alongside, when this server's addresses are what it
-  # resolves to: both within the one timeout. Linked, so it dies with the task.
-  defp lookup_with_endpoint(resolver, host, nil), do: {lookup(resolver, host), nil}
-
-  defp lookup_with_endpoint(resolver, host, endpoint) do
-    endpoint_lookup = Task.async(fn -> lookup(resolver, endpoint) end)
-    result = lookup(resolver, host)
-    {result, Task.await(endpoint_lookup, :infinity)}
-  end
-
-  defp lookup(resolver, host) do
-    resolver.lookup(host)
-  rescue
-    error -> {:error, error}
-  catch
-    kind, reason -> {:error, {kind, reason}}
+  # Anything but a positive number of milliseconds falls back to the default
+  defp milliseconds(config, key, default) do
+    case Keyword.get(config, key) do
+      milliseconds when is_integer(milliseconds) and milliseconds > 0 -> milliseconds
+      _unset -> default
+    end
   end
 
   # The configured addresses, or the endpoint's host: an address itself, or a
-  # name looked up with each host
+  # name looked up once per check
   defp own_source(config) do
     case Keyword.get(config, :addresses) do
-      addresses when is_list(addresses) ->
-        {:fixed, normalize_own(addresses)}
-
-      nil ->
-        endpoint_source(endpoint_host())
+      addresses when is_list(addresses) -> {:ok, {:fixed, normalize_own(addresses)}}
+      nil -> {:ok, endpoint_source(endpoint_host())}
+      other -> {:error, ":addresses must be a list of IP addresses, not #{inspect(other)}"}
     end
   end
 
@@ -465,10 +652,6 @@ defmodule Brando.Tenant.ServedHosts do
       address -> {:fixed, address}
     end
   end
-
-  defp own({:fixed, addresses}, _endpoint), do: addresses
-  defp own({:lookup, _host}, {:ok, addresses}) when is_list(addresses), do: normalize_addresses(addresses)
-  defp own({:lookup, _host}, _failed), do: []
 
   defp normalize_own(addresses), do: addresses |> Enum.flat_map(&parse_address/1) |> normalize_addresses()
 
