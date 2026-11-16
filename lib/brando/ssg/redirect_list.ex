@@ -83,9 +83,14 @@ defmodule Brando.SSG.RedirectList do
   # lead to a 404 where the build keeps the page it ended at
   defp page_entry(%{source: source, target: target, status: status}, built) do
     cond do
-      query_only?(source, target) -> [query_only_note(source, target)]
-      to_page?(target, built) -> [entry("listed", source, target, status, true, Redirects.exact_source(source), nil)]
-      true -> []
+      query_only?(source, target) ->
+        [query_only_note(source, target)]
+
+      to_page?(source, target, built) ->
+        [entry("listed", source, target, status, true, Redirects.exact_source(source), nil)]
+
+      true ->
+        []
     end
   end
 
@@ -130,8 +135,8 @@ defmodule Brando.SSG.RedirectList do
   defp query_only?(_source, nil), do: false
 
   defp query_only?(source, target) do
-    case URI.parse(target) do
-      %URI{host: nil, path: path, query: query} when is_binary(query) -> trim_slash(path || "/") == trim_slash(source)
+    case resolve(source, target) do
+      {:ok, path, query} when is_binary(query) -> trim_slash(path) == trim_slash(decode(source))
       _other -> false
     end
   end
@@ -139,11 +144,31 @@ defmodule Brando.SSG.RedirectList do
   defp query_only_note(source, target),
     do: {:note, "_redirects.json: left out #{source} → #{target}, which differs from its source only by the query"}
 
-  defp to_page?(target, built) do
-    case URI.parse(target) do
-      %URI{host: host} when is_binary(host) -> true
-      %URI{path: path} -> MapSet.member?(built, trim_slash(URI.decode(path || "/")))
+  defp to_page?(source, target, built) do
+    case {URI.parse(target), resolve(source, target)} do
+      {%URI{host: host}, _resolved} when is_binary(host) -> true
+      {_uri, {:ok, path, _query}} -> MapSet.member?(built, trim_slash(path))
+      {_uri, :elsewhere} -> false
     end
+  end
+
+  # The decoded path and the query a browser requests for `target` in a
+  # `Location` header answering `source`
+  defp resolve(source, target) do
+    case URI.parse(target) do
+      %URI{scheme: nil, host: nil} = uri ->
+        %URI{path: path, query: query} = URI.merge(%URI{scheme: "http", host: "localhost", path: source}, uri)
+        {:ok, decode(path || "/"), query}
+
+      _elsewhere ->
+        :elsewhere
+    end
+  end
+
+  defp decode(path) do
+    URI.decode(path)
+  rescue
+    ArgumentError -> path
   end
 
   defp trim_slash(path), do: "/" <> Enum.join(String.split(path, "/", trim: true), "/")
