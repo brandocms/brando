@@ -17,7 +17,10 @@ defmodule Brando.Tenant.ServedHosts do
         # for an installation behind a CDN or another proxy
         admit: :dns
 
-  Read when each check runs, so a release sets it in `config/runtime.exs`.
+  Read when each check runs, so a release sets it in `config/runtime.exs`,
+  and again as each answer or write comes back: with the file unset, the
+  work under way is dropped and nothing more is written or broadcast; with
+  another file, it is dropped and a check of the new file starts.
 
   ## Which hosts
 
@@ -248,7 +251,12 @@ defmodule Brando.Tenant.ServedHosts do
   end
 
   def handle_info({:flush, flush}, %{flush: flush} = state) do
-    {:noreply, state |> flush() |> settle()}
+    state = %{state | flush_timer: nil, flush: nil}
+
+    case current(state) do
+      {:ok, state} -> {:noreply, state |> flush() |> settle()}
+      {:stopped, state} -> {:noreply, settle(state)}
+    end
   end
 
   def handle_info({ref, result}, %{writing: ref} = state) do
@@ -293,9 +301,50 @@ defmodule Brando.Tenant.ServedHosts do
   # left, or shortly while some are, so that many answers cost one write.
   defp answered(state, ref, result) do
     {{target, batch}, lookups} = Map.pop!(state.lookups, ref)
-    state = %{state | lookups: lookups} |> record(target, result) |> pump()
-    state = if batch_done?(state, batch), do: flush(state), else: flush_soon(state)
-    settle(state)
+
+    case current(%{state | lookups: lookups}) do
+      {:ok, state} ->
+        state = state |> record(target, result) |> pump()
+        state = if batch_done?(state, batch), do: flush(state), else: flush_soon(state)
+        settle(state)
+
+      {:stopped, state} ->
+        settle(state)
+    end
+  end
+
+  # The configuration as it is now, before anything goes on with the work
+  # under way: turned off, or a new file, drops it all, and a new file gets a
+  # check of its own
+  defp current(%{settings: nil} = state), do: {:stopped, drop(state)}
+
+  defp current(%{settings: %{file: file}} = state) do
+    case settings() do
+      {:ok, %{file: ^file} = settings} -> {:ok, %{state | settings: settings}}
+      {:ok, _new_file} -> {:stopped, state |> drop() |> run()}
+      :off -> {:stopped, %{drop(state) | error: nil}}
+      {:error, error} -> {:stopped, state |> drop() |> failed(error)}
+    end
+  rescue
+    exception -> {:stopped, state |> drop() |> failed(Exception.message(exception))}
+  end
+
+  # Lookups under way are left to their tasks, which stop at their timeout,
+  # and a write under way to its own check of the configuration
+  defp drop(state) do
+    for {ref, _lookup} <- state.lookups, do: Process.demonitor(ref, [:flush])
+
+    %{
+      cancel_flush(state)
+      | settings: nil,
+        lookups: %{},
+        queue: :queue.new(),
+        results: %{},
+        fresh: MapSet.new(),
+        admitted: MapSet.new(),
+        write_requested: false,
+        check_requested: false
+    }
   end
 
   defp record(state, {:host, host}, {:ok, [_ | _] = addresses}),
@@ -355,7 +404,7 @@ defmodule Brando.Tenant.ServedHosts do
 
     case settings() do
       :off ->
-        %{state | error: nil, results: %{}, settings: nil}
+        %{drop(state) | error: nil}
 
       {:error, error} ->
         failed(%{state | settings: nil}, error)
@@ -425,6 +474,10 @@ defmodule Brando.Tenant.ServedHosts do
   # lists kept
   defp write_hosts(%{file: file, bound: bound, keep: keep}) do
     run_before_write_hook()
+    if Keyword.get(config(), :file) == file, do: read_and_write(file, bound, keep), else: :cancelled
+  end
+
+  defp read_and_write(file, bound, keep) do
     read = read_file(file)
     listed = MapSet.new(listed(read))
     hosts = Enum.filter(bound, &(MapSet.member?(listed, &1) or MapSet.member?(keep, &1)))
@@ -461,10 +514,10 @@ defmodule Brando.Tenant.ServedHosts do
     job = state.write_job
     state = %{state | writing: nil, write_job: nil}
 
-    case state.settings do
-      # Turned off meanwhile
-      nil -> settle(state)
-      _settings -> state |> apply_write(job, result) |> maybe_start_write() |> settle()
+    case current(state) do
+      {:ok, state} when result == :cancelled -> state |> request_write() |> settle()
+      {:ok, state} -> state |> apply_write(job, result) |> maybe_start_write() |> settle()
+      {:stopped, state} -> settle(state)
     end
   end
 

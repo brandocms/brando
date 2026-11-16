@@ -1189,6 +1189,49 @@ defmodule Brando.Tenant.ServedHostsTest do
       refute_received {:trace, ^pid, :call, {Phoenix.PubSub, :broadcast, _}}
     end
 
+    test "turning the feature off stops the lookups under way: nothing is written or broadcast",
+         %{path: file, site: site} do
+      DNS.answer("www.acme.test", [@here])
+      DNS.hold("www.acme.test", self())
+
+      {:ok, _} =
+        Registry.create_environment(site, %{name: "production", key: "production", domain: "www.acme.test"},
+          actor: :system
+        )
+
+      assert_receive {:looking_up, "www.acme.test", lookup}
+      put_test_env(ServedHosts, [])
+      Phoenix.PubSub.subscribe(Brando.pubsub(), ServedHosts.topic())
+      send(lookup, :answer)
+      ServedHosts.settled()
+
+      refute_received {:served_hosts, _status}
+      assert File.read!(file) == ""
+    end
+
+    test "a new file path drops the lookups under way, and the old file is left alone",
+         %{path: file, tmp_dir: tmp_dir, site: site} do
+      DNS.answer("www.acme.test", [@here])
+      DNS.hold("www.acme.test", self())
+
+      {:ok, _} =
+        Registry.create_environment(site, %{name: "production", key: "production", domain: "www.acme.test"},
+          actor: :system
+        )
+
+      assert_receive {:looking_up, "www.acme.test", lookup}
+      new_file = Path.join(tmp_dir, "other_hosts")
+      put_test_env(ServedHosts, file: new_file, addresses: [@here, @here_v6])
+      send(lookup, :answer)
+
+      # A check of the new file looks the host up again
+      assert_receive {:looking_up, "www.acme.test", lookup}
+      send(lookup, :answer)
+      assert %{file: ^new_file, hosts: %{"www.acme.test" => :served}} = ServedHosts.settled()
+      assert File.read!(file) == ""
+      assert File.read!(new_file) == "www.acme.test\n"
+    end
+
     test "with no file configured, nothing is written or broadcast", %{tmp_dir: tmp_dir, site: site} do
       put_test_env(ServedHosts, [])
       File.rm_rf!(Path.join(tmp_dir, "served_hosts"))
