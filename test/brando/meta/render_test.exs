@@ -240,12 +240,14 @@ defmodule Brando.MetaRenderTest do
         language: :en,
         has_url: true,
         meta_canonical_url: nil,
-        meta_image: nil
+        meta_image: nil,
+        alternate_entries: []
       }
 
       conn =
         %Plug.Conn{assigns: %{language: "en"}, request_path: "/own/"}
         |> Brando.Plug.HTML.put_meta(Brando.Pages.Page, page)
+        |> Brando.Plug.HTML.put_hreflang(page)
 
       assigns = %{conn: conn}
       html = rendered_to_string(~H"<Brando.HTML.render_hreflangs conn={@conn} />")

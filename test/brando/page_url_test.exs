@@ -214,6 +214,56 @@ defmodule Brando.PageURLTest do
     end
   end
 
+  # Read the way an application's own layout or controller reads them
+  describe "what an application reads from the conn" do
+    test "brando_hreflangs has main's shape and order, its first entry the page's URL", %{about: about} do
+      conn = "/news/" |> request() |> HTML.put_hreflang(en: "/en/news", no: "/no/nyheter")
+
+      assert conn.private.brando_hreflangs == [
+               {"en", "http://localhost/news"},
+               {:en, "http://localhost/en/news"},
+               {:no, "http://localhost/no/nyheter"}
+             ]
+
+      conn = "/about/" |> request() |> HTML.put_hreflang(about)
+      assert conn.private.brando_hreflangs == [{:en, "http://localhost/en/about"}, {:no, "http://localhost/no/about"}]
+
+      for conn <- [
+            "/about/" |> request() |> HTML.put_hreflang(about) |> HTML.put_page_url("/acme"),
+            "/about/" |> request() |> HTML.put_page_url("/acme") |> HTML.put_hreflang(about)
+          ] do
+        assert conn.private.brando_hreflangs == [{:en, "http://localhost/acme"}, {:no, "http://localhost/no/about"}]
+      end
+    end
+
+    test "json_ld_entities is a list of entities to_graph_json/1 takes", %{about: about} do
+      post = %Post{id: 1, title: "A", slug: "a"}
+
+      conn =
+        "/about/"
+        |> request()
+        |> HTML.put_hreflang(about)
+        |> HTML.put_json_ld(Post, post)
+        |> HTML.put_json_ld(:entities, [%Brando.JSONLD.Schema.Thing{name: "Acme"}])
+
+      assert [%Brando.JSONLD.Schema.Article{}, %Brando.JSONLD.Schema.Thing{}] = conn.assigns.json_ld_entities
+
+      assert %{"@graph" => [article, %{"name" => "Acme"}]} =
+               conn.assigns.json_ld_entities |> Brando.JSONLD.to_graph_json() |> Jason.decode!()
+
+      assert article["@id"] == "http://localhost/en/about#article"
+      assert article["url"] == "http://localhost/en/about"
+    end
+
+    test "json_ld_main_entity is the person's @id on their profile page" do
+      person = %Brando.JSONLDTest.Person{id: 1, name: "Ada", slug: "ada"}
+      conn = "/people/ada/" |> request() |> HTML.put_json_ld(Brando.JSONLDTest.Person, person)
+
+      assert conn.assigns.json_ld_page_type == "ProfilePage"
+      assert conn.assigns.json_ld_main_entity == "http://localhost/people/ada#person"
+    end
+  end
+
   describe "a 404 page" do
     test "has no URL: no canonical, og:url or WebPage node", %{user: user} do
       not_found = page!(user, "Not found", "404", :en, has_url: false)

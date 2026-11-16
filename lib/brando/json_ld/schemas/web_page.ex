@@ -44,13 +44,9 @@ defmodule Brando.JSONLD.Schema.WebPage do
       inLanguage: conn.assigns[:language],
       isPartOf: %{"@id": Path.join(Brando.Utils.hostname(), "#website")},
       breadcrumb: build_breadcrumb_ref(conn),
-      mainEntity: main_entity(type, main_entity_id(conn.assigns[:json_ld_main_entity], url))
+      mainEntity: main_entity(type, Brando.Plug.HTML.json_ld_main_entity(conn, url))
     }
   end
-
-  # `Brando.Plug.HTML.put_json_ld/4` names a node of the page by its fragment
-  defp main_entity_id({:page_node, fragment}, url), do: Brando.JSONLD.node_id(url, fragment)
-  defp main_entity_id(id, _url), do: id
 
   # A profile page about a person entry (see `Brando.Plug.HTML.put_json_ld/4`)
   # is about that Person; any other profile or about page is about the site's

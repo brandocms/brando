@@ -151,46 +151,76 @@ defmodule Brando.Plug.HTML do
 
   def put_json_ld(conn, module, data, extra_fields \\ []) do
     language = Map.get(data, :language, conn.assigns.language)
+    url = page_url(conn)
+    built = module |> build_json_ld(data, language, extra_fields, url) |> List.wrap()
     existing = Map.get(conn.assigns, :json_ld_entities, [])
+    entry = %{at: length(existing), built: built, url: url, build: {module, data, language, extra_fields}}
 
     conn
-    |> assign(:json_ld_entities, existing ++ [{:entry, module, data, language, extra_fields}])
-    |> put_json_ld_page(data, JSONLD.entity_type(module, data))
+    |> assign(:json_ld_entities, existing ++ built)
+    |> put_private(:brando_json_ld_entries, (conn.private[:brando_json_ld_entries] || []) ++ [entry])
+    |> put_json_ld_page(data, JSONLD.entity_type(module, data), List.first(built))
     |> put_page_entry(data)
+  end
+
+  defp build_json_ld(module, data, language, extra_fields, url) do
+    data = Map.merge(data, %{__meta__: %{current_url: url, language: language}})
+    JSONLD.extract_json_ld(module, data, extra_fields)
   end
 
   @doc """
   The JSON-LD entities added with `put_json_ld/3` and `put_json_ld/4`, in the
-  order they were added. An entry's entity is built here, at the page's URL
-  (`page_url/1`), so its `@id` and its fields of type `:current_url` name the
-  URL the page has once the controller is done, whichever entry gives it.
+  order they were added, at the page's URL (`page_url/1`).
+
+  `conn.assigns.json_ld_entities` holds them as they were built when
+  `put_json_ld/3` was called, at the page's URL then. An entry's entity is
+  built again here when the page's URL changed after that (`put_hreflang/2`
+  or `put_page_url/2` called later), so its `@id` and its fields of type
+  `:current_url` name the URL the page has once the controller is done.
   """
   @spec json_ld_entities(conn) :: [struct()]
   def json_ld_entities(conn) do
     url = page_url(conn)
+    entities = Map.get(conn.assigns, :json_ld_entities, [])
 
-    conn.assigns
-    |> Map.get(:json_ld_entities, [])
-    |> Enum.flat_map(fn
-      {:entry, module, data, language, extra_fields} ->
-        data = Map.merge(data, %{__meta__: %{current_url: url, language: language}})
-        module |> JSONLD.extract_json_ld(data, extra_fields) |> List.wrap()
-
-      entity ->
-        List.wrap(entity)
+    # From the last, so a rebuilt entry's place stays where the earlier ones are
+    (conn.private[:brando_json_ld_entries] || [])
+    |> Enum.reverse()
+    |> Enum.reduce(entities, fn %{at: at, built: built, url: built_url, build: build}, entities ->
+      if built_url != url and Enum.slice(entities, at, length(built)) == built do
+        {module, data, language, extra_fields} = build
+        rebuilt = module |> build_json_ld(data, language, extra_fields, url) |> List.wrap()
+        Enum.take(entities, at) ++ rebuilt ++ Enum.drop(entities, at + length(built))
+      else
+        entities
+      end
     end)
   end
 
-  # A person's own page is their profile: a `ProfilePage` about the Person,
-  # whose node is the page's `#person`. (An entry with its own `json_ld_type`
-  # gives the entity that type instead.)
-  defp put_json_ld_page(conn, _data, "Person") do
-    conn
-    |> assign(:json_ld_page_type, "ProfilePage")
-    |> assign(:json_ld_main_entity, {:page_node, "person"})
+  @doc false
+  # The profile page's main entity (`json_ld_main_entity`) at the page's URL
+  # `url`, as `json_ld_entities/1` builds the entry again when that changed
+  def json_ld_main_entity(conn, url) do
+    id = conn.assigns[:json_ld_main_entity]
+
+    Enum.find_value(conn.private[:brando_json_ld_entries] || [], id, fn
+      %{built: [%{"@id": ^id, "@type": type} | _], url: built_url} when is_binary(id) and built_url != url ->
+        JSONLD.node_id(url, type |> to_string() |> String.downcase())
+
+      _entry ->
+        nil
+    end)
   end
 
-  defp put_json_ld_page(conn, data, _type),
+  # A person's own page is their profile: a `ProfilePage` about the Person.
+  # (An entry with its own `json_ld_type` gives the entity that type instead.)
+  defp put_json_ld_page(conn, _data, "Person", %{"@id": id}) do
+    conn
+    |> assign(:json_ld_page_type, "ProfilePage")
+    |> assign(:json_ld_main_entity, id)
+  end
+
+  defp put_json_ld_page(conn, data, _type, _entity),
     do: assign(conn, :json_ld_page_type, Map.get(data, :json_ld_type, "WebPage"))
 
   @doc """
@@ -216,8 +246,8 @@ defmodule Brando.Plug.HTML do
   (`page_url/1`), in place of any given for that language: see `hreflangs/1`.
   """
   def put_hreflang(conn, hreflangs) when is_list(hreflangs) do
-    alternates = Enum.map(hreflangs, fn {language, path} -> {language_key(language), with_host(path)} end)
-    put_alternates(conn, conn.assigns.language, alternates)
+    alternates = Enum.map(hreflangs, fn {language, path} -> {language, with_host(path)} end)
+    put_alternates(conn, alternates)
   end
 
   def put_hreflang(conn, {fun, args}) do
@@ -226,7 +256,7 @@ defmodule Brando.Plug.HTML do
         {String.to_existing_atom(lang_code), Brando.I18n.Helpers.localized_path(lang_code, fun, args)}
       end)
 
-    put_alternates(conn, conn.assigns.language, alternates)
+    put_alternates(conn, alternates)
   end
 
   def put_hreflang(conn, %{alternate_entries: %Ecto.Association.NotLoaded{}} = entry) do
@@ -260,23 +290,25 @@ defmodule Brando.Plug.HTML do
 
         conn
         |> put_private(:brando_hreflang_url, canonical_url)
-        |> put_entry_alternates(entry.language, [{entry.language, canonical_url} | hreflangs])
+        |> put_entry_alternates(entry.language, hreflangs)
         |> put_entry_page(entry)
     end
   end
 
   def put_hreflang(conn, _), do: conn
 
-  # Given as paths or URLs, the alternates name no entry to give the page its URL
-  defp put_alternates(conn, language, alternates) do
+  # Given as paths or URLs, the alternates name no entry to give the page its
+  # URL; the page's own language is the request's
+  defp put_alternates(conn, alternates) do
     %{conn | private: Map.delete(conn.private, :brando_hreflang_url)}
-    |> put_entry_alternates(language, alternates)
+    |> put_entry_alternates(conn.assigns.language, alternates)
   end
 
+  # `brando_hreflangs` starts with the page's own language at the page's URL,
+  # and an application's layout may read it: `put_page_url/2` keeps that first
+  # entry the page's URL
   defp put_entry_alternates(conn, language, alternates) do
-    conn
-    |> put_private(:brando_hreflangs, alternates)
-    |> put_private(:brando_hreflang_language, language_key(language))
+    put_private(conn, :brando_hreflangs, [{language, page_url(conn) || Utils.current_url(conn)} | alternates])
   end
 
   @doc """
@@ -287,9 +319,14 @@ defmodule Brando.Plug.HTML do
   only the other languages'.
   """
   @spec hreflangs(conn) :: [{atom() | String.t(), String.t()}]
-  def hreflangs(%{private: %{brando_hreflangs: alternates}} = conn) do
-    own = conn.private[:brando_hreflang_language]
-    others = Enum.reject(alternates, fn {language, _} -> language == own end)
+  def hreflangs(%{private: %{brando_hreflangs: [{own, _} | alternates]}} = conn) do
+    own = language_key(own)
+
+    others =
+      alternates
+      |> Enum.map(fn {language, url} -> {language_key(language), url} end)
+      |> Enum.reject(fn {language, _} -> language == own end)
+      |> Enum.uniq_by(&elem(&1, 0))
 
     case page_url(conn) do
       nil -> others
@@ -299,7 +336,8 @@ defmodule Brando.Plug.HTML do
 
   def hreflangs(_conn), do: []
 
-  # Languages as atoms, however the caller gave them, so one language is one key
+  # Languages as atoms, however the caller gave them (`conn.assigns.language`
+  # is a string, an entry's an atom), so one language is one alternate
   defp language_key(language) when is_binary(language) do
     String.to_existing_atom(language)
   rescue
@@ -379,8 +417,17 @@ defmodule Brando.Plug.HTML do
 
   """
   @spec put_page_url(conn, String.t() | nil) :: conn
-  def put_page_url(conn, "/" <> _ = path), do: put_private(conn, :brando_page_url, Utils.hostname(path))
-  def put_page_url(conn, url) when is_binary(url) and url != "", do: put_private(conn, :brando_page_url, url)
+  def put_page_url(conn, "/" <> _ = path), do: put_page_url(conn, Utils.hostname(path))
+
+  def put_page_url(conn, url) when is_binary(url) and url != "" do
+    conn = put_private(conn, :brando_page_url, url)
+
+    case conn.private[:brando_hreflangs] do
+      [{language, _} | alternates] -> put_private(conn, :brando_hreflangs, [{language, url} | alternates])
+      _ -> conn
+    end
+  end
+
   def put_page_url(conn, _url), do: conn
 
   @doc """
