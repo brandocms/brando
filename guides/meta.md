@@ -154,8 +154,29 @@ image. Blueprints do not need `twitter:*` fields in their `meta_schema`.
 
 ## Canonical URL
 
-The canonical link is the entry's own URL, from `put_hreflang/2`, or the
-request URL when there is none. For content first published elsewhere, or
+A page has one URL, `Brando.Plug.HTML.page_url/1`, and its canonical link,
+`og:url`, its own language's alternate and the `@id`s and `url`s of its
+JSON-LD all name it:
+
+- a page about an entry has the entry's URL, from the first entry passed to
+  `put_meta/3`, `put_hreflang/2` or `put_json_ld/3` whose blueprint has an
+  `absolute_url`, whatever path the request used (`/about/`, `/about?ref=x`,
+  or another route to the same page);
+- a page without an entry has the request URL, without its query string;
+- an error page (the 404 and 410 pages, any response of 400 or over) and an
+  entry without a URL of its own have none, and get no canonical link,
+  `og:url` or `WebPage` node: a static build serves its 404 page at every
+  missing path, so a URL there would name the wrong page.
+
+A page's URL has no trailing slash, as the entry's URL and the sitemap's
+entries have none: `/about/` is `https://example.com/about`, and its nodes
+are `https://example.com/about#webpage` and `…/about#article`. The front
+page's URL is the bare origin, `https://example.com`, and its nodes take the
+`/` that is its path: `https://example.com/#webpage`. A listing paginated on
+a query string (`/news?page=2`) has the URL without it, the first page's;
+paginate on the path (`/news/page/2`) to give each page its own.
+
+For content first published elsewhere, or
 duplicated across entries, an editor can override it: `trait :meta` adds a
 **Canonical URL** field to the entry's meta drawer (`meta_canonical_url`). It
 takes a full `https://` or `http://` address; left empty, nothing changes.

@@ -70,8 +70,9 @@ defmodule Brando.AlternatesTest do
 
     assigns = %{conn: conn}
 
-    assert rendered_to_string(~H"<Brando.HTML.render_hreflangs conn={@conn} />") =~
-             ~s(<link rel="canonical" href="http://localhost/en/missing">)
+    # A static build serves the 404 page at every missing path: a canonical
+    # would name whichever path the build requested it at
+    refute rendered_to_string(~H"<Brando.HTML.render_hreflangs conn={@conn} />") =~ "canonical"
   end
 
   test "an alternate without a URL is skipped without an error" do

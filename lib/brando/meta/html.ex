@@ -41,7 +41,7 @@ defmodule Brando.Meta.HTML do
       |> put_meta_if_missing("og:title", seo.fallback_meta_title)
       |> put_meta_if_missing("og:site_name", Brando.Sites.site_name(language))
       |> put_meta_if_missing("og:type", "website")
-      |> put_meta_if_missing("og:url", get_canonical(conn) || Utils.current_url(conn))
+      |> maybe_put_og_url()
       |> maybe_put_meta_description(seo.fallback_meta_description)
       |> maybe_put_meta_image(seo.fallback_meta_image)
       |> maybe_add_see_also()
@@ -142,6 +142,15 @@ defmodule Brando.Meta.HTML do
 
       _ ->
         conn
+    end
+  end
+
+  # The canonical URL, or the page's own; a page without a URL (the 404
+  # page) has none
+  defp maybe_put_og_url(conn) do
+    case get_canonical(conn) || page_url(conn) do
+      nil -> conn
+      url -> put_meta_if_missing(conn, "og:url", url)
     end
   end
 

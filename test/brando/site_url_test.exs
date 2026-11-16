@@ -35,6 +35,39 @@ defmodule Brando.SiteURLTest.PageController do
 
     send_resp(conn, 200, "<html><head>#{head}</head><body></body></html>")
   end
+
+  # A CMS page at its path, as the generated page controller shows it
+  def show(conn, %{"path" => path}) do
+    {language, parsed_path} = Brando.I18n.parse_path(path)
+
+    {:ok, page} =
+      Brando.Pages.get_page(%{
+        matches: %{path: parsed_path, language: language, has_url: true},
+        status: :published,
+        preload: [:alternate_entries]
+      })
+
+    conn =
+      conn
+      |> HTML.put_meta(Brando.Pages.Page, page)
+      |> HTML.put_json_ld_type(page.json_ld_type)
+      |> HTML.put_hreflang(page)
+      |> HTML.put_json_ld(Brando.Pages.Page, page)
+
+    send_resp(conn, 200, "<html><head>#{head(conn)}</head><body></body></html>")
+  end
+
+  defp head(conn) do
+    assigns = %{conn: conn}
+
+    ~H"""
+    <.render_meta conn={@conn} />
+    <.render_json_ld conn={@conn} />
+    <.render_hreflangs conn={@conn} />
+    """
+    |> Phoenix.HTML.Safe.to_iodata()
+    |> IO.iodata_to_binary()
+  end
 end
 
 defmodule Brando.SiteURLTest.Router do
@@ -49,6 +82,7 @@ defmodule Brando.SiteURLTest.Router do
   scope "/" do
     pipe_through :browser
     get "/", Brando.SiteURLTest.PageController, :index
+    get "/*path", Brando.SiteURLTest.PageController, :show
   end
 
   def assign_language(conn, _opts), do: Plug.Conn.assign(conn, :language, "en")
@@ -113,6 +147,14 @@ defmodule Brando.SiteURLTest do
     end
   end
 
+  defmodule AboutPage do
+    import Brando.SSG
+
+    urls :pages do
+      ["/en/about/"]
+    end
+  end
+
   setup do
     root = Path.join(System.tmp_dir!(), "brando-site-url-#{System.unique_integer([:positive])}")
 
@@ -146,6 +188,26 @@ defmodule Brando.SiteURLTest do
     test "names the site's host on Production and Staging's host on Staging" do
       assert_head_names(request("acme.test").resp_body, "http://acme.test")
       assert_head_names(request("staging.acme.test").resp_body, "http://staging.acme.test")
+    end
+  end
+
+  describe "a page's URL" do
+    # The canonical, og:url and every JSON-LD @id and url name the page's
+    # entry URL, without a trailing slash, however the page was requested
+    test "is the same requested with or without a trailing slash and in a static build", context do
+      for key <- ["production", "staging"], do: in_environment(key, fn -> about_page!() end)
+
+      # The test config scopes the default language's routes: the entry's URL
+      # is /en/about, and /about reaches the same page
+      for path <- ["/en/about", "/en/about/", "/about/", "/en/about?ref=x"] do
+        assert_one_page_url(request("acme.test", path).resp_body, "http://acme.test/en/about")
+      end
+
+      site = Registry.get_site(context.site.id)
+      staging = Enum.find(site.environments, &(&1.key == "staging"))
+      html = build(site, staging, context.root, AboutPage, "en/about/index.html")
+
+      assert_one_page_url(html, "http://staging.acme.test/en/about")
     end
   end
 
@@ -573,6 +635,33 @@ defmodule Brando.SiteURLTest do
     end
   end
 
+  defp assert_one_page_url(html, url) do
+    {:ok, document} = Floki.parse_document(html)
+
+    assert Floki.attribute(document, ~s(meta[property="og:url"]), "content") == [url]
+    assert Floki.attribute(document, ~s(link[rel="canonical"]), "href") == [url]
+
+    graph = head_urls(html)
+    page_urls = graph |> Enum.map(&(&1 |> URI.parse() |> Map.put(:fragment, nil) |> URI.to_string())) |> Enum.uniq()
+
+    # The site's own nodes (#identity, #website) are on the origin
+    assert page_urls -- [URI.parse(url) |> Map.put(:path, nil) |> URI.to_string() |> Kernel.<>("/")] == [url]
+    assert (url <> "#webpage") in graph
+    assert (url <> "#article") in graph
+  end
+
+  defp about_page! do
+    user = Brando.Factory.insert(:random_user)
+
+    {:ok, page} =
+      Brando.Pages.create_page(
+        %{title: "About", uri: "about", language: "en", template: "default.html", status: :published},
+        user
+      )
+
+    page
+  end
+
   defp head_urls(html) do
     {:ok, document} = Floki.parse_document(html)
     [json] = document |> Floki.find(~s(script[type="application/ld+json"])) |> Enum.map(&Floki.children/1)
@@ -736,12 +825,12 @@ defmodule Brando.SiteURLTest do
   defp collect_urls("http" <> _ = url), do: [url]
   defp collect_urls(_value), do: []
 
-  defp request(host) do
+  defp request(host, path \\ "/") do
     Tenant.put_prefix(nil)
 
     conn =
       :get
-      |> Plug.Test.conn("https://#{host}/")
+      |> Plug.Test.conn("https://#{host}#{path}")
       |> Map.put(:host, host)
       |> Brando.SiteURLTest.Router.call(Brando.SiteURLTest.Router.init([]))
 
@@ -752,7 +841,7 @@ defmodule Brando.SiteURLTest do
   end
 
   # The build requests its own origin (127.0.0.1 here), with the signed context header
-  defp build(site, environment, root) do
+  defp build(site, environment, root, ssg_module \\ RootOnly, file \\ "index.html") do
     output_path = Path.join(root, "output-#{environment.key}")
     static_path = Path.join(root, "static")
     File.mkdir_p!(static_path)
@@ -776,14 +865,14 @@ defmodule Brando.SiteURLTest do
                output_path: output_path,
                static_path: static_path,
                media_path: Path.join(root, "no-media"),
-               ssg_module: RootOnly,
+               ssg_module: ssg_module,
                # Its router answers the pages only
                site_files: false,
                fetcher: fetcher
              )
 
     Tenant.put_prefix(nil)
-    File.read!(Path.join(output_path, "index.html"))
+    File.read!(Path.join(output_path, file))
   end
 
   defp in_environment(key, fun), do: Tenant.with_prefix(Tenant.prefix("acme", key), fun)

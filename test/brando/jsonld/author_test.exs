@@ -86,7 +86,7 @@ defmodule Brando.JSONLD.AuthorTest do
     test "use the blueprint's own Person mapping, with the profile page as @id" do
       person = Author.build(ada())
 
-      assert person."@id" == "http://localhost/people/ada/#person"
+      assert person."@id" == "http://localhost/people/ada#person"
       assert person.url == "http://localhost/people/ada"
       assert person.name == "Ada Lovelace"
       assert person.jobTitle == "Analyst"

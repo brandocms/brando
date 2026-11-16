@@ -111,7 +111,7 @@ JSON-LD and the [sitemap](sitemaps.md) agree:
 | `:date` | Converts to `YYYY-MM-DD` string |
 | `:duration` | Converts whole minutes, a `Duration` or `"HH:MM:SS"` to ISO 8601 (`90` is `"PT1H30M"`); an ISO 8601 duration is kept |
 | `:image` | Builds an `ImageObject` with url, width, height |
-| `:current_url` | Uses the page's current absolute URL |
+| `:current_url` | The page's URL, `Brando.Plug.HTML.page_url/1`: the entry's own, without a trailing slash (see [Canonical URL](meta.md#canonical-url)) |
 | `:language` | Extracts the language from the entry or meta |
 | `:string` | Direct string value via `value_fn` |
 | `:integer` | Direct integer value via `value_fn` |
@@ -164,8 +164,8 @@ skipped (it never queries). Each author becomes its own `Person` node in the
 `@graph`, and the field holds a reference to it:
 
 ```json
-{"@type": "Article", "author": {"@id": "https://example.com/people/ada/#person"}, ...},
-{"@type": "Person", "@id": "https://example.com/people/ada/#person", "name": "Ada Lovelace", ...}
+{"@type": "Article", "author": {"@id": "https://example.com/people/ada#person"}, ...},
+{"@type": "Person", "@id": "https://example.com/people/ada#person", "name": "Ada Lovelace", ...}
 ```
 
 <!-- usage-rules:end -->
@@ -180,7 +180,7 @@ that stays the same across pages.
 
 **People entries** use the People blueprint's own `json_ld_schema` when it is
 a `Person`, so the author on an article and the person on their own page are
-one node with one `@id`, `<the entry's absolute URL>/#person`:
+one node with one `@id`, `<the entry's absolute URL>#person`:
 
 ```elixir
 # MyApp.People.Person
@@ -205,9 +205,9 @@ entry on its own page — the page becomes a `ProfilePage` with that Person as
 its `mainEntity`:
 
 ```json
-{"@type": "ProfilePage", "@id": "https://example.com/people/ada/#webpage",
- "mainEntity": {"@id": "https://example.com/people/ada/#person"}, ...},
-{"@type": "Person", "@id": "https://example.com/people/ada/#person", ...}
+{"@type": "ProfilePage", "@id": "https://example.com/people/ada#webpage",
+ "mainEntity": {"@id": "https://example.com/people/ada#person"}, ...},
+{"@type": "Person", "@id": "https://example.com/people/ada#person", ...}
 ```
 
 Google's [profile page](https://developers.google.com/search/docs/appearance/structured-data/profile-page)

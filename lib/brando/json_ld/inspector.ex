@@ -296,7 +296,7 @@ defmodule Brando.JSONLD.Inspector do
 
         %__MODULE__{
           json: json,
-          url: Brando.Utils.current_url(conn),
+          url: Brando.Plug.HTML.page_url(conn),
           nodes: nodes,
           edges: edges,
           main: Enum.find_value(nodes, &(&1.role == :main && &1.key)),
@@ -565,7 +565,7 @@ defmodule Brando.JSONLD.Inspector do
   def icon(type), do: Map.get(@icons, type, "braces")
 
   @doc """
-  A node's `@id` without the site's host: `#identity`, `/news/a/#article`.
+  A node's `@id` without the site's host: `#identity`, `/news/a#article`.
   """
   @spec short_id(String.t() | nil) :: String.t() | nil
   def short_id(nil), do: nil

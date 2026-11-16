@@ -25,7 +25,7 @@ defmodule Brando.JSONLD.Author do
   An entry whose blueprint declares a `json_ld_schema` of `@type` Person is
   built through that mapping, so the author on an article and the person on
   their own profile page are the same node: both get the `@id`
-  `<the entry's absolute URL>/#person`. Without such a mapping the entry is
+  `<the entry's absolute URL>#person`. Without such a mapping the entry is
   read by convention: `name` (or the identifier's title), `job_title`,
   `same_as`, and the first preloaded image of `avatar`, `portrait`, `image`
   or `photo`.
@@ -129,7 +129,7 @@ defmodule Brando.JSONLD.Author do
     end
   end
 
-  defp node_id(_module, _entry, url) when is_binary(url), do: Path.join(url, "#person")
+  defp node_id(_module, _entry, url) when is_binary(url), do: JSONLD.node_id(url, "person")
 
   defp node_id(module, %{id: id}, nil) when not is_nil(id) do
     hash = :sha256 |> :crypto.hash("#{inspect(module)}:#{id}") |> Base.encode16(case: :lower) |> binary_part(0, 16)

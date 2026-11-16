@@ -123,10 +123,31 @@ defmodule Brando.JSONLD do
       |> to_string()
       |> String.downcase()
 
-    Map.put(struct, :"@id", Path.join(url, "##{type}"))
+    Map.put(struct, :"@id", node_id(url, type))
   end
 
   defp maybe_add_id(struct, _), do: struct
+
+  @doc """
+  The `@id` of a node on the page at `url`: the URL and a fragment, so it
+  names the same URL as the page's canonical link and the node's `url`.
+
+      iex> Brando.JSONLD.node_id("https://example.com/about", "webpage")
+      "https://example.com/about#webpage"
+
+  A bare origin gets the `/` that is its path:
+
+      iex> Brando.JSONLD.node_id("https://example.com", "webpage")
+      "https://example.com/#webpage"
+
+  """
+  @spec node_id(String.t(), String.t()) :: String.t()
+  def node_id(url, fragment) do
+    case URI.parse(url) do
+      %URI{host: host, path: path} when is_binary(host) and path in [nil, ""] -> url <> "/#" <> fragment
+      _ -> url <> "#" <> fragment
+    end
+  end
 
   # A page type (`WebPage`, `AboutPage`, …) describes the page, and
   # `Brando.Plug.HTML.put_json_ld/3` gives it to the graph's `WebPage` node.

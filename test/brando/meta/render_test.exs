@@ -234,16 +234,24 @@ defmodule Brando.MetaRenderTest do
     end
 
     test "an empty override keeps the entry's own URL" do
+      page = %Brando.Pages.Page{
+        title: "Own",
+        uri: "own",
+        language: :en,
+        has_url: true,
+        meta_canonical_url: nil,
+        meta_image: nil
+      }
+
       conn =
-        %Plug.Conn{assigns: %{language: "en"}}
-        |> Brando.Plug.HTML.put_meta(Brando.Pages.Page, %{title: "Own", meta_canonical_url: nil})
-        |> Plug.Conn.put_private(:brando_hreflangs, [{"en", "http://localhost/en/own"}])
+        %Plug.Conn{assigns: %{language: "en"}, request_path: "/own/"}
+        |> Brando.Plug.HTML.put_meta(Brando.Pages.Page, page)
 
       assigns = %{conn: conn}
       html = rendered_to_string(~H"<Brando.HTML.render_hreflangs conn={@conn} />")
 
       assert html =~ ~s(<link rel="canonical" href="http://localhost/en/own">)
-      assert metas(conn)["og:url"] == "http://localhost"
+      assert metas(conn)["og:url"] == "http://localhost/en/own"
     end
 
     test "must be an absolute http(s) URL" do

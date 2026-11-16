@@ -322,23 +322,20 @@ defmodule Brando.HTML do
     """
   end
 
-  def render_hreflangs(%{conn: %{private: %{brando_hreflangs: hreflangs}}} = assigns) do
-    canonical =
-      Brando.Plug.HTML.get_canonical(assigns.conn) ||
-        hreflangs
-        |> List.first()
-        |> elem(1)
+  # The canonical is the page's URL (`Brando.Plug.HTML.page_url/1`) unless the
+  # page set another; a page without a URL (the 404 page) has none.
+  def render_hreflangs(%{conn: conn} = assigns) do
+    hreflangs = conn.private[:brando_hreflangs] || []
 
     assigns =
       assigns
-      |> assign(:canonical, canonical)
+      |> assign(:canonical, Brando.Plug.HTML.get_canonical(conn) || Brando.Plug.HTML.page_url(conn))
       |> assign(:hreflangs, Enum.map(hreflangs, fn {lang, url} -> {lang, absolute_alternate(url)} end))
       |> assign(:multilang, Enum.count(hreflangs) > 1)
-
-    assigns = assign(assigns, :markdown_url, markdown_alternate(assigns.conn))
+      |> assign(:markdown_url, markdown_alternate(conn))
 
     ~H"""
-    <link rel="canonical" href={@canonical} />
+    <link :if={@canonical} rel="canonical" href={@canonical} />
     <link
       :for={{lang, url} <- @hreflangs}
       :if={@multilang}
@@ -348,20 +345,6 @@ defmodule Brando.HTML do
       type="text/html"
       hreflang={lang}
     />
-    <link :if={@markdown_url} rel="alternate" type="text/markdown" href={@markdown_url} />
-    """
-  end
-
-  def render_hreflangs(assigns) do
-    canonical = Brando.Plug.HTML.get_canonical(assigns.conn) || Brando.Utils.current_url(assigns.conn)
-
-    assigns =
-      assigns
-      |> assign(:canonical, canonical)
-      |> assign(:markdown_url, markdown_alternate(assigns.conn))
-
-    ~H"""
-    <link rel="canonical" href={@canonical} />
     <link :if={@markdown_url} rel="alternate" type="text/markdown" href={@markdown_url} />
     """
   end

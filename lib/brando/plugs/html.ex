@@ -150,9 +150,11 @@ defmodule Brando.Plug.HTML do
   end
 
   def put_json_ld(conn, module, data, extra_fields \\ []) do
+    conn = put_entry_url(conn, data)
+
     meta_meta = %{
       __meta__: %{
-        current_url: Utils.current_url(conn),
+        current_url: page_url(conn),
         language: Map.get(data, :language, conn.assigns.language)
       }
     }
@@ -199,16 +201,13 @@ defmodule Brando.Plug.HTML do
   gives the `<link rel="alternate">` tags the site's base URL.
   """
   def put_hreflang(conn, hreflangs) when is_list(hreflangs) do
-    full_host_canonical =
-      {conn.assigns.language, Brando.Utils.hostname(Path.join(["/" | conn.path_info]))}
-
+    full_host_canonical = {conn.assigns.language, page_url(conn) || Utils.current_url(conn)}
     full_host_hreflangs = Enum.map(hreflangs, fn {language, path} -> {language, with_host(path)} end)
     put_private(conn, :brando_hreflangs, [full_host_canonical] ++ full_host_hreflangs)
   end
 
   def put_hreflang(conn, {fun, args}) do
-    full_host_canonical =
-      {conn.assigns.language, Brando.Utils.hostname(Path.join(["/" | conn.path_info]))}
+    full_host_canonical = {conn.assigns.language, page_url(conn) || Utils.current_url(conn)}
 
     full_host_hreflangs =
       Enum.map(Brando.Languages.languages(), fn [value: lang_code, text: _] ->
@@ -233,13 +232,13 @@ defmodule Brando.Plug.HTML do
 
   # An entry without a URL of its own (the 404 and 410 pages) gets neither a
   # canonical nor alternates: pointing them at a URL would claim the page is
-  # that URL. `render_hreflangs/1` then falls back to the request URL.
+  # that URL, and a static build serves its 404 page at every missing path.
   # Alternates without a URL of their own are skipped quietly; one that should
   # have a URL but resolves to none is logged, as that is a missing preload.
   def put_hreflang(conn, %{alternate_entries: alternate_entries} = entry) when is_list(alternate_entries) do
     case URL.resolve(entry, :with_host) do
       nil ->
-        conn
+        put_entry_url(conn, entry)
 
       canonical_url ->
         hreflangs =
@@ -248,6 +247,7 @@ defmodule Brando.Plug.HTML do
           |> Enum.flat_map(&alternate_hreflang/1)
 
         conn
+        |> put_entry_url(entry)
         |> put_private(:brando_hreflangs, [{entry.language, canonical_url} | hreflangs])
         |> put_entry_page(entry)
     end
@@ -300,8 +300,9 @@ defmodule Brando.Plug.HTML do
   @doc """
   Sets the URL of the page's `<link rel="canonical">` and `og:url`.
 
-  Without it, the canonical URL is the entry's own URL from `put_hreflang/2`,
-  or the request URL. `put_meta/3` and `put_hreflang/2` call this for an entry
+  Without it, the canonical URL is the page's own URL, `page_url/1`. The
+  page's JSON-LD keeps that URL: it describes this page, wherever the
+  canonical points. `put_meta/3` and `put_hreflang/2` call this for an entry
   with a `meta_canonical_url` (`Brando.Trait.Meta`), so controllers only need
   it for pages that are not entries:
 
@@ -316,6 +317,49 @@ defmodule Brando.Plug.HTML do
   @spec get_canonical(conn) :: String.t() | nil
   def get_canonical(conn), do: conn.private[:brando_canonical_url]
 
+  @doc """
+  The page's URL, which its canonical link, `og:url`, its own language's
+  alternate and its JSON-LD `@id`s and `url`s all name:
+
+    * the URL of the page's entry, the first one passed to `put_meta/3`,
+      `put_hreflang/2` or `put_json_ld/3` whose blueprint has an
+      `absolute_url`, whatever path the request used;
+    * for a page without an entry, the request URL, without its query string;
+    * `nil` on an error page (a status of 400 or over) and for an entry
+      without a URL of its own, such as the 404 page: neither is a page at
+      the URL it was requested at.
+
+  Like the entry's URL and the sitemap's, it has no trailing slash: a page
+  requested at `/about/` has the URL `https://example.com/about`. The front
+  page's is the bare origin, `https://example.com`, whose path is `/`.
+  """
+  @spec page_url(conn) :: String.t() | nil
+  def page_url(conn) do
+    cond do
+      is_integer(conn.status) and conn.status >= 400 -> nil
+      is_binary(conn.private[:brando_page_url]) -> conn.private[:brando_page_url]
+      conn.private[:brando_page_url] == false -> nil
+      true -> Utils.current_url(conn)
+    end
+  end
+
+  # The page's URL from the first entry with a blueprint `absolute_url`. An
+  # entry the blueprint gives no URL (`only: %{has_url: true}`) leaves the
+  # page without one; a URL that does not resolve (a preload the template
+  # needs is missing) leaves the request's.
+  defp put_entry_url(%{private: %{brando_page_url: _}} = conn, _entry), do: conn
+
+  defp put_entry_url(conn, %{__struct__: module} = entry) do
+    cond do
+      not (function_exported?(module, :__has_absolute_url__, 0) and module.__has_absolute_url__()) -> conn
+      not URL.has_url?(entry) -> put_private(conn, :brando_page_url, false)
+      url = URL.resolve(entry, :with_host) -> put_private(conn, :brando_page_url, url)
+      true -> conn
+    end
+  end
+
+  defp put_entry_url(conn, _entry), do: conn
+
   defp maybe_put_entry_canonical(conn, %{meta_canonical_url: url}), do: put_canonical(conn, url)
   defp maybe_put_entry_canonical(conn, _entry), do: conn
 
@@ -323,6 +367,7 @@ defmodule Brando.Plug.HTML do
   # canonical override and the snippet limits for the robots meta tag.
   defp put_entry_page(conn, entry) do
     conn
+    |> put_entry_url(entry)
     |> maybe_put_entry_canonical(entry)
     |> put_robots(Brando.Trait.Meta.robots_directives(entry))
     |> put_page_entry(entry)
@@ -364,7 +409,8 @@ defmodule Brando.Plug.HTML do
 
   @spec put_meta(conn, module :: atom, data :: any) :: conn
   def put_meta(conn, module, data, _opts) when is_atom(module) do
-    meta_meta = %{__meta__: %{current_url: Utils.current_url(conn)}}
+    conn = put_entry_url(conn, data)
+    meta_meta = %{__meta__: %{current_url: page_url(conn)}}
     data_with_meta = Map.merge(data, meta_meta)
     extracted_meta = Brando.Blueprint.Meta.extract_meta(module, data_with_meta)
     merged_meta = (conn.private[:brando_meta] || []) ++ extracted_meta
