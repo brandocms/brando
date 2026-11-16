@@ -510,13 +510,16 @@ defmodule Brando.Plug.HTML do
 
   @spec put_meta(conn, module :: atom, data :: any) :: conn
   def put_meta(conn, module, data, _opts) when is_atom(module) do
-    meta_meta = %{__meta__: %{current_url: page_url(conn)}}
+    current_url = page_url(conn)
+    meta_meta = %{__meta__: %{current_url: current_url}}
     data_with_meta = Map.merge(data, meta_meta)
     extracted_meta = Brando.Blueprint.Meta.extract_meta(module, data_with_meta)
     merged_meta = (conn.private[:brando_meta] || []) ++ extracted_meta
 
     conn
     |> put_private(:brando_meta, merged_meta)
+    # Kept so an `og:url` taken from it can follow a URL set afterwards
+    |> put_private(:brando_meta_urls, [current_url | conn.private[:brando_meta_urls] || []])
     |> put_entry_page(data)
   end
 

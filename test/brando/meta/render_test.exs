@@ -152,6 +152,7 @@ defmodule Brando.MetaRenderTest do
              private: %{
                brando_skip_title_prefix: false,
                brando_skip_title_postfix: false,
+               brando_meta_urls: ["http://localhost"],
                brando_meta: [
                  {"title", "Our title"},
                  {"mutated_title", "@ Our title"},
@@ -254,6 +255,25 @@ defmodule Brando.MetaRenderTest do
 
       assert html =~ ~s(<link rel="canonical" href="http://localhost/en/own">)
       assert metas(conn)["og:url"] == "http://localhost/en/own"
+    end
+
+    test "an og:url a blueprint takes from the current URL follows a URL set after put_meta/3" do
+      conn =
+        %Plug.Conn{assigns: %{language: "en"}, request_path: "/about/"}
+        |> Brando.Plug.HTML.put_meta(Page, %{title: "Our title", description: "Our description"})
+        |> Brando.Plug.HTML.put_page_url("/en/about")
+
+      assert metas(conn)["og:url"] == "http://localhost/en/about"
+    end
+
+    test "an og:url a blueprint sets to something else is left alone" do
+      conn =
+        %Plug.Conn{assigns: %{language: "en"}, request_path: "/about/"}
+        |> Brando.Plug.HTML.put_meta(Page, %{title: "Our title", description: "Our description"})
+        |> Brando.Plug.HTML.put_meta("og:url", "https://example.com/elsewhere", replace: true)
+        |> Brando.Plug.HTML.put_page_url("/en/about")
+
+      assert metas(conn)["og:url"] == "https://example.com/elsewhere"
     end
 
     test "must be an absolute http(s) URL" do

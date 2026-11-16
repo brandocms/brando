@@ -150,8 +150,23 @@ defmodule Brando.Meta.HTML do
   defp maybe_put_og_url(conn) do
     case get_canonical(conn) || page_url(conn) do
       nil -> conn
-      url -> put_meta_if_missing(conn, "og:url", url)
+      url -> conn |> refresh_og_url(url) |> put_meta_if_missing("og:url", url)
     end
+  end
+
+  # An `og:url` a blueprint takes from `__meta__.current_url` holds the page's
+  # URL as it was when `put_meta/3` ran. A helper called later may have set
+  # another, so it is brought up to date, in its place
+  defp refresh_og_url(conn, url) do
+    earlier = conn.private[:brando_meta_urls] || []
+
+    meta =
+      Enum.map(conn.private[:brando_meta] || [], fn
+        {"og:url", value} -> {"og:url", if(value in earlier, do: url, else: value)}
+        other -> other
+      end)
+
+    Plug.Conn.put_private(conn, :brando_meta, meta)
   end
 
   defp maybe_put_meta_description(conn, fallback_meta_description) do
