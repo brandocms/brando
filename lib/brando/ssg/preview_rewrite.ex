@@ -9,7 +9,8 @@ defmodule Brando.SSG.PreviewRewrite do
   each HTML and CSS response, to the same path under the preview: in the
   `href`, `src`, `action`, `formaction`, `poster`, `data-src`, `srcset` and
   `data-srcset` attributes, and in CSS `url()`. The artifact's files are not
-  changed. URLs a script builds as it runs are not rewritten.
+  changed. A `srcset` is read as a browser reads it, so a `data:` candidate
+  stays whole. URLs a script builds as it runs are not rewritten.
   """
 
   @url_attribute ~r/(\s(?:href|src|action|formaction|poster|data-src)\s*=\s*)(["'])([^"']*)\2/i
@@ -45,16 +46,29 @@ defmodule Brando.SSG.PreviewRewrite do
     end)
   end
 
-  defp rewrite_srcset(srcset, prefix, site_bases) do
-    srcset
-    |> String.split(",")
-    |> Enum.map_join(",", fn candidate ->
-      case Regex.run(~r/\A(\s*)(\S+)(.*)\z/s, candidate, capture: :all_but_first) do
-        [space, url, descriptor] -> space <> rewrite(url, prefix, site_bases) <> descriptor
-        nil -> candidate
-      end
-    end)
+  # As browsers read a srcset: a candidate's URL runs to the next whitespace,
+  # commas included (a `data:` URL has one), less the commas it ends with;
+  # its descriptors run to the next comma
+  defp rewrite_srcset(srcset, prefix, site_bases), do: srcset_candidates(srcset, prefix, site_bases, [])
+
+  defp srcset_candidates("", _prefix, _site_bases, acc), do: acc |> Enum.reverse() |> IO.iodata_to_binary()
+
+  defp srcset_candidates(srcset, prefix, site_bases, acc) do
+    [separator, rest] = Regex.run(~r/\A([\s,]*)(.*)\z/s, srcset, capture: :all_but_first)
+    [url, rest] = Regex.run(~r/\A(\S*)(.*)\z/s, rest, capture: :all_but_first)
+    [url, trailing_commas] = Regex.run(~r/\A(.*?)(,*)\z/s, url, capture: :all_but_first)
+
+    {descriptors, rest} =
+      if trailing_commas == "",
+        do: ~r/\A([^,]*)(.*)\z/s |> Regex.run(rest, capture: :all_but_first) |> List.to_tuple(),
+        else: {trailing_commas, rest}
+
+    acc = [descriptors, rewrite_candidate(url, prefix, site_bases), separator | acc]
+    srcset_candidates(rest, prefix, site_bases, acc)
   end
+
+  defp rewrite_candidate("data:" <> _ = url, _prefix, _site_bases), do: url
+  defp rewrite_candidate(url, prefix, site_bases), do: rewrite(url, prefix, site_bases)
 
   defp rewrite(url, prefix, site_bases) do
     cond do
