@@ -152,6 +152,7 @@ defmodule Brando.Query.Mutations do
 
     with {:ok, entry} <- apply(context, :"get_#{name}", [get_opts]),
          changeset <- changeset_fun.(entry, params, user, nil, []),
+         rendered_status = status(changeset),
          changeset <- Publisher.maybe_override_status(changeset),
          changeset <- ContentModified.stamp(changeset, user),
          changeset <- set_action(changeset, :update),
@@ -162,7 +163,10 @@ defmodule Brando.Query.Mutations do
       if has_changes(changeset) do
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        enqueue_entry_cascade(module, entry, identifier_id, render_entry: render_entry?(module, changeset, nil))
+
+        enqueue_entry_cascade(module, entry, identifier_id,
+          render_entry: render_entry?(module, changeset, rendered_status)
+        )
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -852,14 +856,16 @@ defmodule Brando.Query.Mutations do
   end
 
   # A status change shows or hides the entry where its own blocks load it
-  # (`get_entry`). A save that rendered all of them, the form's, did so with
-  # the status it saves (`rendered_status`), unless the dates changed it since
-  # (a `publish_at` that passed while it rendered); after any other save, and
-  # then, the cascade renders the entry. A named form may hold only some of
-  # the block fields.
+  # (`get_entry`), and the cascade renders the entry after a save that changed
+  # it without rendering all its block fields (a named form may hold only
+  # some). A save that rendered them all, the form's, did so with the status
+  # it had before the dates adjusted it here (`rendered_status`): a
+  # `publish_at` that passed while it rendered may have moved the status since,
+  # back to the stored one too.
   defp render_entry?(module, changeset, rendered_status) do
-    Map.has_key?(changeset.changes, :status) and
-      (not rendered?(module, changeset) or status(changeset) != rendered_status)
+    if rendered?(module, changeset),
+      do: status(changeset) != rendered_status,
+      else: Map.has_key?(changeset.changes, :status)
   end
 
   defp rendered?(module, changeset),

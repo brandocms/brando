@@ -363,6 +363,22 @@ defmodule Brando.Villain.GetEntryStatusTest do
       assert stored(target) =~ ~s(<div class="card" data-status="published">Launch</div>)
     end
 
+    test "a publish_at set ahead on a published entry that passes while the form renders keeps the card", c do
+      target = create_self_linking_page(c.user, c.module, %{status: :published})
+      assert stored(target) =~ ~s(class="card")
+      {:ok, entry} = Brando.Query.get_entry(Page, target.id)
+
+      # Rendered as pending while the date is ahead, saved published once it has passed
+      entry
+      |> Page.changeset(%{publish_at: at(3600)}, c.user)
+      |> then(&BrandoAdmin.Components.Form.render_blocks_for_save([{:blocks, Page.Blocks, nil, []}], &1))
+      |> Ecto.Changeset.put_change(:publish_at, at(-1))
+      |> Pages.update_page(c.user)
+
+      assert Brando.Repo.get(Page, target.id).status == :published
+      assert stored(target) =~ ~s(<div class="card" data-status="published">Launch</div>)
+    end
+
     test "a save from a form opened before a publish elsewhere keeps the card", c do
       {:ok, module} =
         Brando.Content.create_module(
