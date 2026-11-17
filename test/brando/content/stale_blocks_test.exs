@@ -149,6 +149,149 @@ defmodule Brando.Content.StaleBlocksTest do
     end
   end
 
+  describe "the Legacy Content Wrapper" do
+    alias Brando.Villain.Blocks.CommentBlock
+    alias Brando.Villain.Blocks.HtmlBlock
+    alias Brando.Villain.Blocks.PictureBlock
+
+    # The module brando_108 wraps free-standing Villain blocks in: one
+    # `content` text ref, which holds each wrapped block's own type. A site
+    # may have renamed it, so it is found by its class. On version 2: a save
+    # of it before the wrapper was exempt left its blocks behind.
+    setup c do
+      wrapper =
+        ProposalFixtures.module!(c.user, "Gammelt innhold", "{% ref refs.content %}",
+          refs: [ProposalFixtures.ref("content", %{type: "text", data: %{text: ""}})]
+        )
+
+      wrapper =
+        wrapper
+        |> Ecto.Changeset.change(class: "legacy-content", namespace: %{"en" => "migration"}, version: 2)
+        |> Repo.update!()
+
+      %{wrapper: wrapper}
+    end
+
+    # A wrapper block on version 1 whose `content` ref holds `data`, and the
+    # `vars` given. The ref row is written directly: a block save holds a
+    # new ref to its module's type (`Brando.Content.RefGuard`).
+    defp wrapper_block!(c, data, vars \\ []) do
+      page = Factory.insert(:page, creator: c.user, uri: "w#{System.unique_integer([:positive])}")
+
+      block =
+        %Block{}
+        |> Block.recursive_block_changeset(
+          %{
+            "uid" => Brando.Utils.generate_uid(),
+            "type" => "module",
+            "module_id" => c.wrapper.id,
+            "creator_id" => c.user.id,
+            "source" => to_string(join_schema(page)),
+            "refs" => [Map.put(text_ref("content", ""), "sequence", 0)]
+          },
+          c.user
+        )
+        |> Repo.insert!()
+        |> Ecto.Changeset.change(module_version: 1)
+        |> Repo.update!()
+
+      block |> refs() |> hd() |> Ecto.Changeset.change(data: data) |> Repo.update!()
+
+      vars
+      |> Enum.with_index()
+      |> Enum.each(fn {var, sequence} ->
+        %Var{block_id: block.id}
+        |> Var.changeset(Map.put(var, "sequence", sequence), c.user, nil, validate_var_values: false)
+        |> Repo.insert!()
+      end)
+
+      struct(join_schema(page), %{entry_id: page.id, block_id: block.id, sequence: 0}) |> Repo.insert!()
+      block
+    end
+
+    defp html, do: %HtmlBlock{type: "html", data: %HtmlBlock.Data{text: "<iframe src=\"https://by.no\"></iframe>"}}
+    defp picture, do: %PictureBlock{type: "picture", data: %PictureBlock.Data{alt: "Fasaden"}}
+    defp comment, do: %CommentBlock{type: "comment", data: %CommentBlock.Data{text: "Bytt bilde i mai"}}
+
+    test "is found by its class, not its name", c do
+      assert Module.legacy_wrapper?(c.wrapper)
+      refute Module.legacy_wrapper?(c.module)
+    end
+
+    test "a wrapped ref of any type keeps no block stale, and is never offered for dropping", c do
+      blocks = Enum.map([html(), picture(), comment()], &wrapper_block!(c, &1))
+
+      assert Blocks.list_stale_block_ids(c.wrapper) == []
+      assert Blocks.list_stale_block_ids(c.wrapper.id) == []
+      assert Blocks.count_stale_blocks(c.wrapper) == 0
+      refute Enum.any?(Blocks.count_stale_blocks_by_module(), fn {module, _} -> module.id == c.wrapper.id end)
+      refute Enum.any?(StaleBlocks.modules(), &(&1.module.id == c.wrapper.id))
+      assert %{status: :ok} = Brando.Doctor.Checks.Modules.run(Brando.Doctor.Context.new())
+
+      {:ok, report} = StaleBlocks.report(c.wrapper, c.user)
+      assert report.blocks == []
+      assert report.groups == []
+
+      # A refresh brings them onto the module's version and leaves what
+      # they hold alone, so a later save of the module keeps them current
+      Blocks.refresh_module_in_blocks(c.wrapper.id)
+
+      for {block, data} <- Enum.zip(blocks, [html(), picture(), comment()]) do
+        assert version(block) == 2
+        assert [%{name: "content", data: stored}] = refs(block)
+        assert stored.type == data.type
+        assert stored.data == data.data
+      end
+    end
+
+    test "other drift on it is still found, and only that is offered", c do
+      drifted = wrapper_block!(c, picture(), [link_var()])
+      wrapper_block!(c, html())
+
+      assert Blocks.list_stale_block_ids(c.wrapper) == [drifted.id]
+      assert [{%{id: id}, 1}] = Enum.filter(Blocks.count_stale_blocks_by_module(), &(elem(&1, 0).id == c.wrapper.id))
+      assert id == c.wrapper.id
+
+      {:ok, report} = StaleBlocks.report(c.wrapper, c.user)
+      assert [%{id: block_id, leftovers: [%{kind: :var, key: "link"}]}] = report.blocks
+      assert block_id == drifted.id
+      assert [%{kind: :var, key: "link"}] = report.groups
+
+      # A drop of `content` is no resolution: it is not a leftover
+      plan = StaleBlocks.plan(report, %{{:ref, "content"} => :drop, {:var, "link"} => :drop})
+      assert [%{kind: :var, key: "link", action: :drop}] = plan.changes
+
+      assert {:ok, %{stamped: [^block_id]}} =
+               StaleBlocks.apply(c.wrapper, %{{:ref, "content"} => :drop, {:var, "link"} => :drop}, c.user)
+
+      assert [%{name: "content", data: %PictureBlock{data: %{alt: "Fasaden"}}}] = refs(drifted)
+      assert version(drifted) == 2
+    end
+
+    test "a leftover ref of any type can be moved into `content`", c do
+      block = wrapper_block!(c, comment())
+      # A ref the wrapper never defined, as a renamed one would leave it
+      %{name: "content"} = ref = hd(refs(block))
+      ref |> Ecto.Changeset.change(name: "old") |> Repo.update!()
+
+      {:ok, report} = StaleBlocks.report(c.wrapper, c.user)
+      assert [%{kind: :ref, key: "old", targets: [%{key: "content", ok?: true}]}] = report.groups
+
+      assert {:ok, %{stamped: [_]}} = StaleBlocks.apply(c.wrapper, %{{:ref, "old"} => {:map, "content"}}, c.user)
+      assert [%{name: "content", data: %CommentBlock{}}] = refs(block)
+    end
+
+    test "a stale block of another module is still found", c do
+      wrapper_block!(c, html())
+      {_page, block} = page_with_block(c, [link_var()], [])
+
+      assert Blocks.list_stale_block_ids(c.module) == [block.id]
+      assert [{module, 1}] = Blocks.count_stale_blocks_by_module()
+      assert module.id == c.module.id
+      assert %{status: :warning} = Brando.Doctor.Checks.Modules.run(Brando.Doctor.Context.new())
+    end
+  end
+
   describe "report/2" do
     test "lists each block's entry, versions and leftovers with their values", c do
       {page, block} = page_with_block(c, [link_var()], [text_ref("title", "<p>Kultur i <b>by</b></p>")])

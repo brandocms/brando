@@ -235,7 +235,7 @@ defmodule Brando.Migration.LegacyConversion do
         |> Map.new(fn [id, name] -> {id, I18nString.localized(name)} end),
       # The "Legacy Content Wrapper" brando_108 puts free-standing blocks in
       wrappers:
-        "SELECT id FROM #{name(schema, "content_modules")} WHERE class = 'legacy-content'"
+        "SELECT id FROM #{name(schema, "content_modules")} WHERE class = '#{Brando.Content.Module.legacy_wrapper_class()}'"
         |> rows()
         |> MapSet.new(&hd/1)
     }

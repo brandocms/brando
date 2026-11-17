@@ -12,6 +12,10 @@ defmodule Brando.Content.StaleBlocks do
   each leftover: **drop** it, or **map** it onto a ref or var the module
   defines now (a rename), moving its value when the types allow it.
 
+  The Legacy Content Wrapper's `content` ref holds a ref of any type
+  (`Brando.Content.Module.any_ref_type?/2`): a wrapped picture or comment
+  in it is never a leftover, and a leftover of any type may map onto it.
+
   Resolving is a change to entries' content made outside their editors, so
   `apply/4`:
 
@@ -316,7 +320,9 @@ defmodule Brando.Content.StaleBlocks do
   defp build_report(module, blocks) do
     defined = %{
       ref: Map.new(module.refs, &{&1.name, &1}),
-      var: Map.new(module.vars, &{&1.key, &1})
+      var: Map.new(module.vars, &{&1.key, &1}),
+      # Refs that hold a ref of any type (`Module.any_ref_type?/2`)
+      any_type: for(ref <- module.refs, Module.any_ref_type?(module, ref.name), into: MapSet.new(), do: ref.name)
     }
 
     entries_by_block = entries_for(Enum.map(blocks, & &1.id))
@@ -350,7 +356,7 @@ defmodule Brando.Content.StaleBlocks do
   # refs whose type the module changed.
   defp leftovers(block, defined) do
     refs =
-      for ref <- block.refs, leftover = ref_leftover(ref, defined.ref), do: leftover
+      for ref <- block.refs, leftover = ref_leftover(ref, defined), do: leftover
 
     vars =
       for var <- block.vars, not Map.has_key?(defined.var, var.key) do
@@ -368,10 +374,10 @@ defmodule Brando.Content.StaleBlocks do
     refs ++ vars
   end
 
-  defp ref_leftover(ref, defined_refs) do
+  defp ref_leftover(ref, defined) do
     type = ref_type(ref)
 
-    case Map.get(defined_refs, ref.name) do
+    case Map.get(defined.ref, ref.name) do
       nil ->
         %{
           kind: :ref,
@@ -384,7 +390,8 @@ defmodule Brando.Content.StaleBlocks do
         }
 
       source ->
-        unless RefTypes.ref_types_compatible?(data_struct(source), data_struct(ref)) do
+        unless MapSet.member?(defined.any_type, ref.name) or
+                 RefTypes.ref_types_compatible?(data_struct(source), data_struct(ref)) do
           %{
             kind: :ref,
             key: ref.name,
@@ -452,7 +459,7 @@ defmodule Brando.Content.StaleBlocks do
     |> Enum.reject(&(target_key(&1) == key))
     |> Enum.sort_by(&{&1.sequence || 0, target_key(&1)})
     |> Enum.map(fn target ->
-      reason = Enum.find_value(types, &type_refusal(kind, &1, target))
+      reason = Enum.find_value(types, &type_refusal(kind, &1, target, defined))
       %{key: target_key(target), type: defined_type(target), ok?: is_nil(reason), reason: reason}
     end)
   end
@@ -463,12 +470,14 @@ defmodule Brando.Content.StaleBlocks do
   defp defined_type(%Ref{} = ref), do: ref_type(ref)
   defp defined_type(%Var{type: type}), do: type
 
-  defp type_refusal(:ref, type, target) do
-    unless RefTypes.ref_types_compatible?(data_struct(target), ref_struct(type)),
-      do: gettext("a %{from} reference cannot hold the content of a %{to} reference", from: ref_type(target), to: type)
+  defp type_refusal(:ref, type, target, defined) do
+    unless MapSet.member?(Map.get(defined, :any_type, MapSet.new()), target.name) or
+             RefTypes.ref_types_compatible?(data_struct(target), ref_struct(type)),
+           do:
+             gettext("a %{from} reference cannot hold the content of a %{to} reference", from: ref_type(target), to: type)
   end
 
-  defp type_refusal(:var, type, target) do
+  defp type_refusal(:var, type, target, _defined) do
     case var_conversion(type, target.type) do
       :error -> gettext("a %{from} variable cannot become a %{to} variable", from: type, to: target.type)
       _ -> nil
@@ -543,7 +552,7 @@ defmodule Brando.Content.StaleBlocks do
     existing = existing_row(report.rows, leftover.kind, target)
     in_the_way? = existing && retyped?(report, leftover.kind, target)
 
-    with :ok <- check_target(leftover, target, source, claimed),
+    with :ok <- check_target(leftover, target, source, defined, claimed),
          :ok <- check_in_the_way(in_the_way?, report, leftover.kind, target, resolutions),
          {:ok, convert} <- convert(leftover, source) do
       replaced = existing && preview(existing)
@@ -559,7 +568,7 @@ defmodule Brando.Content.StaleBlocks do
     end
   end
 
-  defp check_target(leftover, target, source, claimed) do
+  defp check_target(leftover, target, source, defined, claimed) do
     cond do
       is_nil(source) ->
         {:error,
@@ -571,7 +580,7 @@ defmodule Brando.Content.StaleBlocks do
       MapSet.member?(claimed, {leftover.kind, target}) ->
         {:error, gettext("another leftover in this block is moved into %{key}", key: target)}
 
-      reason = type_refusal(leftover.kind, leftover.type, source) ->
+      reason = type_refusal(leftover.kind, leftover.type, source, defined) ->
         {:error, reason}
 
       true ->

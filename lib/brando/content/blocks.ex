@@ -13,6 +13,7 @@ defmodule Brando.Content.Blocks do
   alias Brando.Content
   alias Brando.Content.Block
   alias Brando.Content.BlockPreloads
+  alias Brando.Content.Module, as: ContentModule
   alias Brando.Content.Ref
   alias Brando.Content.Var
   alias Brando.Content.Var.FollowLinkDefault
@@ -1065,22 +1066,27 @@ defmodule Brando.Content.Blocks do
   module no longer defines, or whose type it changed — that no definition backs
   any more. It renders through the module's current code regardless; the version
   gap is what makes the mismatch findable.
+
+  The Legacy Content Wrapper's `content` ref holds a ref of any type
+  (`Brando.Content.Module.any_ref_type?/2`). A save of the wrapper before
+  that was so left its blocks behind with nothing else to resolve: those
+  are not stale.
   """
-  @spec list_stale_block_ids(Brando.Content.Module.t() | integer(), atom()) :: [integer()]
+  @spec list_stale_block_ids(ContentModule.t() | integer(), atom()) :: [integer()]
   def list_stale_block_ids(module_or_id, origin \\ :local)
 
-  def list_stale_block_ids(%{id: module_id, version: version}, origin),
-    do: query_stale_block_ids(module_id, version || 1, origin)
+  def list_stale_block_ids(%{id: module_id, version: version} = module, origin),
+    do: module_id |> query_stale_block_ids(version || 1, origin) |> reject_current_wrapper_blocks(module)
 
   def list_stale_block_ids(module_id, origin) when is_integer(module_id) do
-    case Repo.get(Brando.Content.Module, module_id) do
+    case Repo.get(ContentModule, module_id) do
       nil -> []
-      module -> query_stale_block_ids(module_id, module.version || 1, origin)
+      module -> list_stale_block_ids(module, origin)
     end
   end
 
   @doc "How many blocks are behind `module`'s current revision. See `list_stale_block_ids/2`."
-  @spec count_stale_blocks(Brando.Content.Module.t() | integer(), atom()) :: non_neg_integer()
+  @spec count_stale_blocks(ContentModule.t() | integer(), atom()) :: non_neg_integer()
   def count_stale_blocks(module_or_id, origin \\ :local),
     do: module_or_id |> list_stale_block_ids(origin) |> length()
 
@@ -1088,10 +1094,10 @@ defmodule Brando.Content.Blocks do
   Stale blocks per module, for every module that has any: `[{module, count}]`,
   most first. The same test as `list_stale_block_ids/2`, in one query.
   """
-  @spec count_stale_blocks_by_module(atom()) :: [{Brando.Content.Module.t(), pos_integer()}]
+  @spec count_stale_blocks_by_module(atom()) :: [{ContentModule.t(), pos_integer()}]
   def count_stale_blocks_by_module(origin \\ :local) do
     from(b in Block,
-      join: m in Brando.Content.Module,
+      join: m in ContentModule,
       on: m.id == b.module_id,
       where: is_nil(b.module_version) or b.module_version < coalesce(m.version, 1),
       group_by: m.id,
@@ -1100,6 +1106,17 @@ defmodule Brando.Content.Blocks do
     )
     |> maybe_filter_library_origin(:module_origin, origin)
     |> Repo.all()
+    |> Enum.flat_map(fn {module, count} ->
+      if ContentModule.legacy_wrapper?(module) do
+        case length(list_stale_block_ids(module, origin)) do
+          0 -> []
+          stale -> [{module, stale}]
+        end
+      else
+        [{module, count}]
+      end
+    end)
+    |> Enum.sort_by(fn {module, count} -> {-count, module.id} end)
   end
 
   defp query_stale_block_ids(module_id, version, origin) do
@@ -1110,6 +1127,34 @@ defmodule Brando.Content.Blocks do
     )
     |> maybe_filter_library_origin(:module_origin, origin)
     |> Repo.all()
+  end
+
+  # Behind the wrapper's version, a block whose refs and vars the wrapper all
+  # backs (any type in `content`) is current: only a save of the wrapper
+  # from before `content` held any type left it there. The same test as
+  # `sync_module/2` stamps with. Only the wrapper's blocks are loaded.
+  defp reject_current_wrapper_blocks([], _module), do: []
+
+  defp reject_current_wrapper_blocks(ids, module) do
+    if ContentModule.legacy_wrapper?(module) do
+      module = Repo.preload(module, [:refs, :vars])
+      refs_by_name = Map.new(module.refs, &{&1.name, &1})
+      var_keys = Enum.map(module.vars, & &1.key)
+
+      current =
+        from(b in Block, where: b.id in ^ids, preload: [:refs, :vars])
+        |> Repo.all()
+        |> Enum.filter(fn block ->
+          refs = Enum.map(block.refs, &Changeset.change/1)
+          vars = Enum.map(block.vars, &Changeset.change/1)
+          fully_migrated?(module, refs, vars, refs_by_name, var_keys)
+        end)
+        |> MapSet.new(& &1.id)
+
+      Enum.reject(ids, &MapSet.member?(current, &1))
+    else
+      ids
+    end
   end
 
   @doc """
@@ -1211,16 +1256,27 @@ defmodule Brando.Content.Blocks do
   # it; anything else is data awaiting review, and claiming it current would make
   # the stale count useless.
   defp stamp_module_version(changeset, module, refs, vars, module_refs_by_name, module_var_keys) do
-    if fully_migrated?(refs, vars, module_refs_by_name, module_var_keys) do
+    if fully_migrated?(module, refs, vars, module_refs_by_name, module_var_keys) do
       Changeset.put_change(changeset, :module_version, module.version || 1)
     else
       changeset
     end
   end
 
-  defp fully_migrated?(refs, vars, module_refs_by_name, module_var_keys) do
-    Enum.all?(refs, &migratable_ref?(&1, module_refs_by_name)) and
+  defp fully_migrated?(module, refs, vars, module_refs_by_name, module_var_keys) do
+    Enum.all?(refs, &backed_ref?(&1, module, module_refs_by_name)) and
       Enum.all?(vars, &(Changeset.get_field(&1, :key) in module_var_keys))
+  end
+
+  # The module defines this ref and can hold its type. The Legacy Content
+  # Wrapper's `content` holds any type (`ContentModule.any_ref_type?/2`); unlike
+  # `migratable_ref?/2`, which decides whether the module's definition is
+  # applied over the ref, it is not applied there.
+  defp backed_ref?(ref_changeset, module, module_refs_by_name) do
+    name = Changeset.get_field(ref_changeset, :name)
+
+    migratable_ref?(ref_changeset, module_refs_by_name) or
+      (Map.has_key?(module_refs_by_name, name) and ContentModule.any_ref_type?(module, name))
   end
 
   @doc """
