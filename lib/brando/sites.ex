@@ -190,20 +190,69 @@ defmodule Brando.Sites do
   defp present(value) when is_binary(value), do: if(String.trim(value) == "", do: nil, else: value)
   defp present(_value), do: nil
 
+  @doc deprecated: """
+       Use `get_link/2` with the page's language, or `@identity.links` from
+       `Brando.Plug.Identity` in a template
+       """
   @doc """
-  Try to get `name` from list of `links` in `identity`.
+  The URL of the identity link called `name` in the default language
+  (`Brando.Languages.default_language/0`). See `get_link/2`.
   """
-  def get_link(name) do
-    identity = Brando.Cache.get(:identity)
-    Enum.find(identity.links, &(String.downcase(&1.name) == String.downcase(name))) || ""
+  @spec get_link(String.t()) :: String.t()
+  def get_link(name), do: get_link(Brando.Languages.default_language(), name)
+
+  @doc """
+  The URL of the link called `name`, matched without regard to case, in the
+  current site's identity for `language`, or `""` when there is none. A URL
+  with a script or unknown scheme gives `""` as well, as the link prints in a
+  template.
+
+      <a href={Brando.Sites.get_link(@language, "instagram")}>Instagram</a>
+  """
+  @spec get_link(String.t() | atom() | nil, String.t() | atom()) :: String.t()
+  def get_link(language, name) do
+    links = identity_list(language, :links)
+    name = name |> to_string() |> String.downcase()
+
+    case Enum.find(links, &link_named?(&1, name)) do
+      nil -> ""
+      link -> Brando.Villain.Parser.safe_url(Map.get(link, :url)) || ""
+    end
   end
 
-  def get_language(id) do
-    identity = Brando.Cache.get(:identity)
+  @doc deprecated: "Use `get_language/2` with the page's language"
+  @doc """
+  The name of the entry with `id` in the default language's identity
+  `languages`. See `get_language/2`.
+  """
+  @spec get_language(term()) :: String.t() | nil
+  def get_language(id), do: get_language(Brando.Languages.default_language(), id)
 
-    case Enum.find(identity.languages, &(&1.id == id)) do
+  @doc """
+  The `name` of the entry with `id` in the `languages` of the current site's
+  identity for `language`, or `nil`. `languages` is a virtual field, which
+  Brando does not fill, so this finds a name only in an identity the
+  application gave one.
+  """
+  @spec get_language(String.t() | atom() | nil, term()) :: String.t() | nil
+  def get_language(language, id) do
+    languages = identity_list(language, :languages)
+
+    case Enum.find(languages, &(is_map(&1) and Map.get(&1, :id) == id)) do
       nil -> nil
-      lang -> lang.name
+      lang -> Map.get(lang, :name)
+    end
+  end
+
+  defp link_named?(%{name: link_name}, name) when is_binary(link_name), do: String.downcase(link_name) == name
+  defp link_named?(_link, _name), do: false
+
+  defp identity_list(nil, _key), do: []
+
+  defp identity_list(language, key) do
+    case language |> to_string() |> Cache.Identity.get() |> Map.get(key) do
+      list when is_list(list) -> list
+      _ -> []
     end
   end
 
