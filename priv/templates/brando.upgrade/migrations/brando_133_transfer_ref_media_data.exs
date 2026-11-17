@@ -21,7 +21,9 @@ defmodule Brando.Migrations.TransferRefMediaData do
     # First, create video entries using the new video schema
     # IMPORTANT: Do this BEFORE cleaning up the ref data
     # One video per source (video_source/1), with the first block's settings;
-    # the link below matches on the same expression
+    # the link below matches on the same expression. The videos brando_95 made
+    # of video fields have a source too (brando_131), but a block does not
+    # share one: it would play with that field's settings.
     execute """
     INSERT INTO videos (
       source_url, type, title, caption, aspect_ratio,
@@ -58,7 +60,8 @@ defmodule Brando.Migrations.TransferRefMediaData do
     AND COALESCE(r.data->'data'->>'url', r.data->'data'->>'remote_id') IS NOT NULL
     AND NOT EXISTS (
       SELECT 1 FROM videos v
-      WHERE v.source_url = #{video_source("r.data->'data'")}
+      WHERE v.config_target = 'default'
+      AND v.source_url = #{video_source("r.data->'data'")}
     )
     ORDER BY #{video_source("r.data->'data'")}, r.id
     """
@@ -70,6 +73,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
     SET video_id = v.id
     FROM videos v
     WHERE r.data->>'type' = 'video'
+    AND v.config_target = 'default'
     AND v.source_url = #{video_source("r.data->'data'")}
     """
 
@@ -114,7 +118,8 @@ defmodule Brando.Migrations.TransferRefMediaData do
     AND COALESCE(r.data->'data'->'template_video'->>'url', r.data->'data'->'template_video'->>'remote_id') IS NOT NULL
     AND NOT EXISTS (
       SELECT 1 FROM videos v
-      WHERE v.source_url = #{video_source("r.data->'data'->'template_video'")}
+      WHERE v.config_target = 'default'
+      AND v.source_url = #{video_source("r.data->'data'->'template_video'")}
     )
     ORDER BY #{video_source("r.data->'data'->'template_video'")}, r.id
     """
@@ -125,6 +130,7 @@ defmodule Brando.Migrations.TransferRefMediaData do
     SET video_id = v.id
     FROM videos v
     WHERE r.data->>'type' = 'media'
+    AND v.config_target = 'default'
     AND v.source_url = #{video_source("r.data->'data'->'template_video'")}
     """
 

@@ -199,7 +199,7 @@ defmodule Brando.Repo.Migrations.MigrateOldModules do
 
           _ ->
             Map.merge(base_var, %{
-              value: get_in(var, ["value"])
+              value: text_value(get_in(var, ["value"]))
             })
         end
 
@@ -212,6 +212,11 @@ defmodule Brando.Repo.Migrations.MigrateOldModules do
       Brando.Repo.insert_all("content_vars", [new_var])
     end
   end
+
+  # brando_89 kept a datasource's limit as a number until it stored it as
+  # text, and `content_vars.value` is text
+  defp text_value(value) when is_integer(value) or is_float(value), do: to_string(value)
+  defp text_value(value), do: value
 
   def build_var(var, fk_name, fk_value, creator_id) do
     %{

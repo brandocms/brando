@@ -77,9 +77,12 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneVideoFields do
         config_target = "video:#{inspect(blueprint)}:#{field_name}"
 
         for video_field <- video_fields do
+          # 0.51 generated video fields as jsonb, which comes back decoded
           video_struct =
-            video_field.video
-            |> Jason.decode!()
+            case video_field.video do
+              %{} = video -> video
+              json when is_binary(json) -> Jason.decode!(json)
+            end
 
           new_video = %{
             url: video_struct["url"],

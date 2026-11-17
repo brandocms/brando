@@ -5,6 +5,7 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
   use Brando.UpgradeFromVillainCase
 
   alias Brando.Migration.LegacyConversion
+  alias Brando.Utils
   alias Mix.Tasks.Brando.Repair.LegacyMedia, as: RepairTask
 
   test "a pre-blocks site's Villain content comes through brando_103 onwards" do
@@ -284,5 +285,286 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
              {{ content | renderless }}
              """
     end
+  end
+
+  # Content a 0.51 production dump had, replayed through the chain
+  describe "0.51 content" do
+    test "brando_108 keeps html, svg, map and comment blocks as refs of their own type" do
+      load_schema()
+      insert_villain_site()
+
+      blocks = [
+        %{
+          "type" => "html",
+          "uid" => Utils.generate_uid(),
+          "hidden" => false,
+          "data" => %{"text" => ~s(<ul><li><a href="{{ links.facebook.url }}">Facebook</a></li></ul>)}
+        },
+        %{
+          "type" => "svg",
+          "uid" => Utils.generate_uid(),
+          "hidden" => false,
+          "data" => %{"code" => ~s(<svg viewBox="0 0 1 1"></svg>), "class" => "logo"}
+        },
+        %{
+          "type" => "map",
+          "uid" => Utils.generate_uid(),
+          "hidden" => false,
+          "data" => %{
+            "embed_url" => "//www.google.com/maps/embed?pb=!1m18",
+            "source" => "gmaps",
+            "class" => "map"
+          }
+        },
+        # An editor's note, which never rendered
+        %{
+          "type" => "comment",
+          "uid" => Utils.generate_uid(),
+          "hidden" => false,
+          "data" => %{"text" => "Kommentar..."}
+        }
+      ]
+
+      [[page_id]] =
+        insert!(
+          """
+          INSERT INTO pages (uri, language, title, template, status, data, inserted_at, updated_at)
+          VALUES ('legacy', 'en', 'Legacy', 'default.html', 1, $1, now(), now())
+          """,
+          [blocks]
+        )
+
+      Enum.each(templates(103..1000), &migrate/1)
+
+      # brando_147 gives every ref of the wrapper its text editor's
+      # extensions, which refs of other types do not read
+      refs =
+        rows(
+          """
+          SELECT r.data->>'type', (r.data->'data') - 'extensions' FROM content_refs r
+          JOIN content_blocks b ON b.id = r.block_id
+          JOIN pages_blocks pb ON pb.block_id = b.id
+          WHERE pb.entry_id = $1 ORDER BY pb.sequence
+          """,
+          [page_id]
+        )
+
+      assert [
+               ["html", html],
+               ["svg", svg],
+               ["map", map],
+               ["comment", comment]
+             ] = refs
+
+      assert html == %{
+               "text" => ~s(<ul><li><a href="{{ links.facebook.url }}">Facebook</a></li></ul>),
+               "params" => [],
+               "values" => %{}
+             }
+
+      assert svg == %{"code" => ~s(<svg viewBox="0 0 1 1"></svg>), "class" => "logo"}
+      assert map == %{"embed_url" => "//www.google.com/maps/embed?pb=!1m18", "source" => "gmaps"}
+      assert comment == %{"text" => "Kommentar..."}
+
+      # The check knows the comment block is wrapped as well
+      assert findings() == []
+    end
+
+    test "brando_108 keeps refs deleted on 0.51 inactive" do
+      load_schema()
+      insert_villain_site()
+
+      [[module_id]] =
+        insert!(
+          """
+          INSERT INTO content_modules (name, namespace, class, code, refs, vars, wrapper, inserted_at, updated_at)
+          VALUES ('Heading', 'pages', 'heading', '{% ref refs.h2 %}{% ref refs.p %}{% ref refs.items %}{% ref refs.hours %}', $1, '[]', false, now(), now())
+          """,
+          [[text_ref("h2", "Overskrift"), text_ref("p", "Text")]]
+        )
+
+      deleted = &Map.merge(&1, %{"deleted" => true, "description" => ""})
+      deleted_heading = deleted.(text_ref("h2", "Overskrift"))
+
+      deleted_list =
+        deleted.(%{
+          "name" => "items",
+          "data" => %{
+            "type" => "list",
+            "uid" => Utils.generate_uid(),
+            "hidden" => false,
+            "data" => %{"rows" => [%{"value" => "<p>One</p>"}, %{"value" => "<p>Two</p>"}]}
+          }
+        })
+
+      deleted_table = deleted.(table_ref("hours", ["Mon", "Tue"]))
+
+      blocks = [
+        %{
+          "type" => "module",
+          "uid" => Utils.generate_uid(),
+          "hidden" => false,
+          "data" => %{
+            "module_id" => module_id,
+            "multi" => false,
+            "refs" => [deleted_heading, text_ref("p", "Kept"), deleted_list, deleted_table],
+            "vars" => []
+          }
+        }
+      ]
+
+      [[page_id]] =
+        insert!(
+          """
+          INSERT INTO pages (uri, language, title, template, status, data, inserted_at, updated_at)
+          VALUES ('deleted-refs', 'en', 'Deleted refs', 'default.html', 1, $1, now(), now())
+          """,
+          [blocks]
+        )
+
+      Enum.each(templates(103..1000), &migrate/1)
+
+      assert rows(
+               """
+               SELECT r.name, r.active FROM content_refs r
+               JOIN pages_blocks pb ON pb.block_id = r.block_id
+               WHERE pb.entry_id = $1 ORDER BY r.name
+               """,
+               [page_id]
+             ) == [["h2", false], ["p", true]]
+
+      # A deleted list or table rendered nothing either: its rows are not kept
+      assert rows(
+               """
+               SELECT count(*) FROM content_table_rows t
+               JOIN pages_blocks pb ON pb.block_id = t.block_id
+               WHERE pb.entry_id = $1
+               """,
+               [page_id]
+             ) == [[0]]
+
+      assert findings() == []
+    end
+
+    test "brando_131 gives the videos brando_95 made their type and source URL" do
+      load_schema()
+      insert_villain_site()
+
+      insert_video = fn source, url, remote_id ->
+        insert!(
+          """
+          INSERT INTO videos (source, url, remote_id, width, height, config_target, creator_id, inserted_at, updated_at)
+          VALUES ($1, $2, $3, 640, 360, 'video:MyApp.Projects.Project:video', 1, now(), now())
+          """,
+          [source, url, remote_id]
+        )
+      end
+
+      [[vimeo]] = insert_video.("vimeo", "https://vimeo.com/76979871", "76979871")
+      [[vimeo_id_only]] = insert_video.("vimeo", nil, "76979872")
+      [[youtube]] = insert_video.("youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "dQw4w9WgXcQ")
+      [[file]] = insert_video.("file", "https://cdn.example.com/film.mp4", "https://cdn.example.com/film.mp4")
+      # A start time in the id, which the player's own query would follow
+      [[youtube_at]] = insert_video.("youtube", nil, "abc123?start=30")
+      # A field video with the file the site's video blocks play
+      [[field_video]] = insert_video.("file", "https://cdn.example.com/video.mp4", nil)
+
+      Enum.each(templates(103..1000), &migrate/1)
+
+      # The blocks get videos of their own, without the field video's settings
+      assert rows("SELECT count(*) FROM content_refs WHERE video_id = $1", [field_video]) == [[0]]
+      assert [[count]] = rows("SELECT count(*) FROM content_refs WHERE video_id IS NOT NULL")
+      assert count > 0
+
+      assert rows("SELECT id, type, source_url, remote_id FROM videos WHERE id = ANY($1) ORDER BY id", [
+               [vimeo, vimeo_id_only, youtube, file, youtube_at]
+             ]) == [
+               [vimeo, "vimeo", "https://vimeo.com/76979871", "76979871"],
+               [vimeo_id_only, "vimeo", "https://vimeo.com/76979872", "76979872"],
+               [youtube, "youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "dQw4w9WgXcQ"],
+               [file, "external_file", "https://cdn.example.com/film.mp4", "https://cdn.example.com/film.mp4"],
+               [youtube_at, "youtube", "https://www.youtube.com/watch?v=abc123", "abc123"]
+             ]
+    end
+
+    test "brando_89 stores a datasource's integer limit as text" do
+      load_schema()
+      [[module_id]] = datasource_page(5)
+
+      migrate(hd(templates(89..89)))
+
+      assert rows(
+               "SELECT v->>'key', v->'value' FROM content_modules, jsonb_array_elements(vars) v WHERE id = $1",
+               [module_id]
+             ) == [["limit", "5"]]
+    end
+
+    test "a limit an earlier brando_89 stored as a number still goes through brando_107 and brando_108" do
+      load_schema()
+      [[module_id]] = datasource_page(5)
+
+      # brando_89 as it shipped, which kept the number
+      migrate(hd(templates(89..89)), &String.replace(&1, ~s|"value" => to_string(limit)|, ~s|"value" => limit|))
+
+      assert rows(
+               "SELECT v->'value' FROM content_modules, jsonb_array_elements(vars) v WHERE id = $1",
+               [module_id]
+             ) == [[5]]
+
+      Enum.each(templates(103..1000), &migrate/1)
+
+      assert rows("SELECT module_id, block_id, value FROM content_vars WHERE key = 'limit' ORDER BY module_id NULLS LAST") ==
+               [[module_id, nil, "5"], [nil, root_block_id(), "5"]]
+    end
+  end
+
+  # A 0.51 page whose only block is a datasource of a module listing pages,
+  # without the columns brando_89 adds
+  defp datasource_page(limit) do
+    insert_villain_site()
+
+    rows(
+      "ALTER TABLE content_modules DROP COLUMN datasource, DROP COLUMN datasource_module, " <>
+        "DROP COLUMN datasource_type, DROP COLUMN datasource_query"
+    )
+
+    [[module_id]] =
+      module =
+      insert!(
+        """
+        INSERT INTO content_modules (name, namespace, class, code, refs, vars, wrapper, inserted_at, updated_at)
+        VALUES ('Latest', 'pages', 'latest', '{% for entry in entries %}{{ entry.title }}{% endfor %}', '[]', '[]', false, now(), now())
+        """,
+        []
+      )
+
+    block = %{
+      "type" => "datasource",
+      "uid" => Utils.generate_uid(),
+      "data" => %{
+        "module_id" => module_id,
+        "module" => "Elixir.Brando.Pages.Page",
+        "type" => "list",
+        "query" => "latest",
+        "limit" => limit,
+        "arg" => nil,
+        "ids" => []
+      }
+    }
+
+    insert!(
+      """
+      INSERT INTO pages (uri, language, title, template, status, data, inserted_at, updated_at)
+      VALUES ('latest', 'en', 'Latest', 'default.html', 1, $1, now(), now())
+      """,
+      [[block]]
+    )
+
+    module
+  end
+
+  defp root_block_id do
+    [[id]] = rows("SELECT pb.block_id FROM pages_blocks pb JOIN pages p ON p.id = pb.entry_id WHERE p.uri = 'latest'")
+    id
   end
 end

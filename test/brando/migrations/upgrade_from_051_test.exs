@@ -67,6 +67,50 @@ defmodule Brando.Migrations.UpgradeFrom051Test do
     end
   end
 
+  describe "brando_92" do
+    test "reads a jsonb file column, as 0.51 generated them" do
+      {blueprint, field} = legacy_asset_table(:file)
+      table = blueprint.__schema__(:source)
+      user = Brando.Factory.insert(:random_user)
+      file = %{"path" => "files/site/cv.pdf", "size" => 1024, "mimetype" => "application/pdf"}
+
+      [[entry_id]] =
+        rows(
+          ~s[INSERT INTO "#{table}" ("#{field}", creator_id, inserted_at, updated_at) VALUES ($1, $2, now(), now()) RETURNING id],
+          [file, user.id]
+        )
+
+      run_template("brando_92_extract_files_embeds_one.exs")
+
+      assert [[file_id]] = rows(~s[SELECT "#{field}_id" FROM "#{table}" WHERE id = $1], [entry_id])
+
+      assert rows("SELECT filename, filesize, mime_type FROM files WHERE id = $1", [file_id]) ==
+               [["cv.pdf", 1024, "application/pdf"]]
+    end
+  end
+
+  # The first Blueprint with an asset of `type`, its table a bare one in the
+  # 0.51 shape, with the real one moved aside: the asset a jsonb column
+  defp legacy_asset_table(type) do
+    {blueprint, field} =
+      Enum.find_value(Brando.Blueprint.list_blueprints(), fn blueprint ->
+        Enum.find_value(Brando.Blueprint.Assets.__assets__(blueprint), fn
+          %{type: ^type, name: name} -> {blueprint, name}
+          _ -> nil
+        end)
+      end)
+
+    table = blueprint.__schema__(:source)
+    if table_exists?(table), do: query!(~s[ALTER TABLE "#{table}" RENAME TO "#{table}_saved"])
+
+    query!(~s[CREATE TABLE "#{table}" (
+      id bigserial PRIMARY KEY, "#{field}" jsonb, creator_id bigint,
+      inserted_at timestamp(0) NOT NULL, updated_at timestamp(0) NOT NULL
+    )])
+
+    {blueprint, field}
+  end
+
   describe "brando_95" do
     test "stops with a clear message when the site has its own videos table" do
       # The test database already has Brando's videos table, standing in for
@@ -76,6 +120,35 @@ defmodule Brando.Migrations.UpgradeFrom051Test do
       assert_raise RuntimeError, ~r/already has one.*rename table\(:videos\)/s, fn ->
         run_template("brando_95_extract_videos_embeds_one.exs")
       end
+    end
+
+    test "reads a jsonb video column, as 0.51 generated them" do
+      query!("DROP TABLE videos CASCADE")
+      {blueprint, field} = legacy_asset_table(:video)
+      table = blueprint.__schema__(:source)
+
+      video = %{
+        "source" => "vimeo",
+        "url" => "https://vimeo.com/76979871",
+        "remote_id" => "76979871",
+        "width" => 640,
+        "height" => 360
+      }
+
+      user = Brando.Factory.insert(:random_user)
+
+      [[entry_id]] =
+        rows(
+          ~s[INSERT INTO "#{table}" ("#{field}", creator_id, inserted_at, updated_at) VALUES ($1, $2, now(), now()) RETURNING id],
+          [video, user.id]
+        )
+
+      run_template("brando_95_extract_videos_embeds_one.exs")
+
+      assert [[video_id]] = rows(~s[SELECT "#{field}_id" FROM "#{table}" WHERE id = $1], [entry_id])
+
+      assert rows("SELECT source, url, remote_id, width, height FROM videos WHERE id = $1", [video_id]) ==
+               [["vimeo", "https://vimeo.com/76979871", "76979871", 640, 360]]
     end
   end
 

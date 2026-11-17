@@ -285,6 +285,14 @@ afterwards:
   `<div class="paragraph">`. CSS such as `.inner > p` stops matching. To keep
   0.51's markup, override `text/2` in the site's Villain parser
   ([Villain parser](villain_parser.md)).
+- **Free-standing blocks.** `brando_108` puts each block that sat outside a
+  module in a "Legacy Content Wrapper" module block, its content in a ref
+  named `content`. Text, picture, video, header, HTML, SVG, map and comment
+  blocks keep their type; markdown, divider and blockquote blocks become text.
+  A comment stays an editor's note and renders nothing.
+- **Deleted refs.** A ref an editor deleted from a block on 0.51 stayed in its
+  data and rendered nothing. It comes over inactive, so it still renders
+  nothing, and the editor shows it as inactive.
 - **Blocks for fields you have since changed.** `brando_108` converts every
   villain column, including ones the new Blueprint turns into plain text; those
   blocks stay behind, joined to nothing.

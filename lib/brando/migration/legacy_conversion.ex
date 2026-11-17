@@ -20,7 +20,7 @@ defmodule Brando.Migration.LegacyConversion do
 
   # brando_108 puts each of these free-standing Villain blocks in a "Legacy
   # Content Wrapper" module block, its content in one ref named `content`
-  @wrapped_types ~w(text markdown image picture video divider header blockquote datasource map svg html)
+  @wrapped_types ~w(text markdown image picture video divider header blockquote datasource map svg html comment)
 
   # Tables with a json `*data` column that brando_103 and brando_108 pass over
   @not_villain ~w(revisions content_modules sites_globals pages_properties)
@@ -640,6 +640,8 @@ defmodule Brando.Migration.LegacyConversion do
   defp ref_type(%{"data" => %{"type" => type}}), do: type
   defp ref_type(_ref), do: nil
 
+  # brando_108 keeps no rows of a ref deleted on 0.51, which rendered nothing
+  defp row_count(%{"deleted" => true}), do: 0
   defp row_count(%{"data" => %{"data" => %{"rows" => rows}}}) when is_list(rows), do: length(rows)
   defp row_count(_ref), do: 0
 
