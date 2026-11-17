@@ -268,6 +268,25 @@ defmodule Brando.Villain.GetEntryStatusTest do
     end
   end
 
+  describe "the Markdown export" do
+    # Served from the site, like the stored render, also to an admin in
+    # frontend edit mode
+    test "shows only a published entry, in frontend edit mode too", c do
+      target = create_target(c.user, %{status: :draft})
+      page = create_linking_page(c.user, c.module, target)
+
+      markdown = fn ->
+        {:ok, entry} = Brando.Query.get_entry(Page, page.id)
+        Brando.FrontendEdit.with_active(fn -> Brando.Villain.Markdown.render(entry.entry_blocks, entry) end)
+      end
+
+      refute markdown.() =~ "Launch"
+
+      {:ok, _} = update_target(target, %{status: :published}, c.user)
+      assert markdown.() =~ "Launch"
+    end
+  end
+
   describe "live preview" do
     test "a full render and a block patch show the draft, with its status for the template", c do
       target = create_target(c.user, %{status: :draft})

@@ -63,7 +63,14 @@ defmodule Brando.Villain.Markdown do
   def render(entry_blocks, entry \\ nil, opts \\ [])
   def render(entry_blocks, _entry, _opts) when entry_blocks in [nil, []], do: ""
 
+  # Served from the site as it is to visitors, also to an admin in frontend
+  # edit mode: no editor's render (`Brando.FrontendEdit.annotating?/0`), so
+  # `get_entry` gives only a published entry.
   def render(entry_blocks, entry, opts) do
+    Brando.FrontendEdit.annotation_scope(false, fn -> do_render(entry_blocks, entry, opts) end)
+  end
+
+  defp do_render(entry_blocks, entry, opts) do
     RenderScope.run(fn ->
       {:ok, modules} = RenderSourceQuery.list_modules(Map.put(@cache, :preload, @module_preloads))
       {:ok, containers} = RenderSourceQuery.list_containers(Map.put(@cache, :preload, [:palette]))
