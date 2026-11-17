@@ -1395,8 +1395,8 @@ defmodule Brando.Villain.Filters do
     nil
   end
 
-  # The list query leaves out an entry in the trash. Brando keeps `status` in
-  # step with `publish_at` (a future one makes the entry pending, and
+  # The list query leaves out an entry in the trash. Brando keeps `status`
+  # matching `publish_at` (a future one makes the entry pending, and
   # `Brando.Worker.EntryPublisher` publishes it when it comes), so a published
   # entry is one whose status says so.
   defp status_filter(schema) do

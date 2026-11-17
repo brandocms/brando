@@ -94,6 +94,58 @@ defmodule Brando.Villain.GetEntryStatusTest do
     page
   end
 
+  # A page whose one module block links to `target` from a table row
+  defp create_page_linking_from_row(user, target) do
+    {:ok, module} =
+      Brando.Content.create_module(
+        Factory.params_for(:module, %{
+          code: ~S"""
+          {% for row in block.table_rows %}{% assign e = row.card.identifier | get_entry %}{% if e %}<div class="card">{{ e.title }}</div>{% else %}<div class="no-card"></div>{% endif %}{% endfor %}
+          """
+        }),
+        :system
+      )
+
+    row = %Brando.Content.TableRow{
+      sequence: 0,
+      vars: [
+        %Brando.Content.Var{
+          type: :link,
+          key: "card",
+          label: "Card",
+          link_type: :identifier,
+          identifier_id: identifier(target).id,
+          creator_id: user.id
+        }
+      ]
+    }
+
+    block =
+      %Page.Blocks{
+        block: %Brando.Content.Block{
+          type: :module,
+          source: "Elixir.Brando.Pages.Page.Blocks",
+          module_id: module.id,
+          uid: Brando.Utils.generate_uid(),
+          refs: [],
+          vars: [],
+          table_rows: [row]
+        }
+      }
+      |> Ecto.Changeset.change()
+      |> Map.put(:action, :insert)
+
+    changeset =
+      %Page{}
+      |> Page.changeset(Factory.params_for(:page, %{title: "Rows", uri: "rows-#{System.unique_integer()}"}), user)
+      |> Ecto.Changeset.put_assoc(:entry_blocks, [block])
+      |> Map.put(:action, :insert)
+
+    {:ok, page} = Pages.create_page(changeset, user)
+    {:ok, _} = Brando.Content.Blocks.render_entry(Page, page.id)
+    page
+  end
+
   defp stored(page), do: Brando.Repo.get(Page, page.id).rendered_blocks
 
   defp update_target(target, params, user), do: Pages.update_page(target.id, params, user)
@@ -189,6 +241,29 @@ defmodule Brando.Villain.GetEntryStatusTest do
       {:ok, _} = Pages.delete_page(target.id, c.user)
       assert Brando.Repo.get(Page, target.id).deleted_at
 
+      assert stored(page) =~ ~s(class="no-card")
+    end
+  end
+
+  describe "a link in a table row" do
+    test "shows the card once the entry is published, and hides it when unpublished", c do
+      target = create_target(c.user, %{status: :draft})
+      page = create_page_linking_from_row(c.user, target)
+      assert stored(page) =~ ~s(class="no-card")
+
+      {:ok, _} = update_target(target, %{status: :published}, c.user)
+      assert stored(page) =~ ~s(<div class="card">Launch</div>)
+
+      {:ok, _} = update_target(target, %{status: :disabled}, c.user)
+      assert stored(page) =~ ~s(class="no-card")
+    end
+
+    test "hides the card when the entry is deleted", c do
+      target = create_target(c.user, %{status: :published})
+      page = create_page_linking_from_row(c.user, target)
+      assert stored(page) =~ ~s(class="card")
+
+      {:ok, _} = Pages.delete_page(target.id, c.user)
       assert stored(page) =~ ~s(class="no-card")
     end
   end
