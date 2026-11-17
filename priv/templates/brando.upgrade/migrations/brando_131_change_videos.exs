@@ -31,6 +31,11 @@ defmodule Brando.Migrations.Videos.ChangeVideos do
         WHEN source = 'youtube' AND url IS NULL AND remote_id IS NOT NULL
         THEN 'https://www.youtube.com/watch?v=' || SPLIT_PART(remote_id, '?', 1)
         ELSE COALESCE(url, remote_id)
+      END,
+      -- The provider's id alone: the players add their own query to it
+      remote_id = CASE
+        WHEN source IN ('vimeo', 'youtube') THEN SPLIT_PART(remote_id, '?', 1)
+        ELSE remote_id
       END
     WHERE type IS NULL AND COALESCE(url, remote_id) IS NOT NULL
     """

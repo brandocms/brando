@@ -378,15 +378,26 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
         insert!(
           """
           INSERT INTO content_modules (name, namespace, class, code, refs, vars, wrapper, inserted_at, updated_at)
-          VALUES ('Heading', 'pages', 'heading', '{% ref refs.h2 %}{% ref refs.p %}', $1, '[]', false, now(), now())
+          VALUES ('Heading', 'pages', 'heading', '{% ref refs.h2 %}{% ref refs.p %}{% ref refs.items %}{% ref refs.hours %}', $1, '[]', false, now(), now())
           """,
           [[text_ref("h2", "Overskrift"), text_ref("p", "Text")]]
         )
 
-      deleted_heading =
-        "h2"
-        |> text_ref("Overskrift")
-        |> Map.merge(%{"deleted" => true, "description" => ""})
+      deleted = &Map.merge(&1, %{"deleted" => true, "description" => ""})
+      deleted_heading = deleted.(text_ref("h2", "Overskrift"))
+
+      deleted_list =
+        deleted.(%{
+          "name" => "items",
+          "data" => %{
+            "type" => "list",
+            "uid" => Utils.generate_uid(),
+            "hidden" => false,
+            "data" => %{"rows" => [%{"value" => "<p>One</p>"}, %{"value" => "<p>Two</p>"}]}
+          }
+        })
+
+      deleted_table = deleted.(table_ref("hours", ["Mon", "Tue"]))
 
       blocks = [
         %{
@@ -396,7 +407,7 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
           "data" => %{
             "module_id" => module_id,
             "multi" => false,
-            "refs" => [deleted_heading, text_ref("p", "Kept")],
+            "refs" => [deleted_heading, text_ref("p", "Kept"), deleted_list, deleted_table],
             "vars" => []
           }
         }
@@ -421,6 +432,18 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
                """,
                [page_id]
              ) == [["h2", false], ["p", true]]
+
+      # A deleted list or table rendered nothing either: its rows are not kept
+      assert rows(
+               """
+               SELECT count(*) FROM content_table_rows t
+               JOIN pages_blocks pb ON pb.block_id = t.block_id
+               WHERE pb.entry_id = $1
+               """,
+               [page_id]
+             ) == [[0]]
+
+      assert findings() == []
     end
 
     test "brando_131 gives the videos brando_95 made their type and source URL" do
@@ -441,16 +464,26 @@ defmodule Brando.Migrations.UpgradeFromVillainTest do
       [[vimeo_id_only]] = insert_video.("vimeo", nil, "76979872")
       [[youtube]] = insert_video.("youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "dQw4w9WgXcQ")
       [[file]] = insert_video.("file", "https://cdn.example.com/film.mp4", "https://cdn.example.com/film.mp4")
+      # A start time in the id, which the player's own query would follow
+      [[youtube_at]] = insert_video.("youtube", nil, "abc123?start=30")
+      # A field video with the file the site's video blocks play
+      [[field_video]] = insert_video.("file", "https://cdn.example.com/video.mp4", nil)
 
       Enum.each(templates(103..1000), &migrate/1)
 
-      assert rows("SELECT id, type, source_url FROM videos WHERE id = ANY($1) ORDER BY id", [
-               [vimeo, vimeo_id_only, youtube, file]
+      # The blocks get videos of their own, without the field video's settings
+      assert rows("SELECT count(*) FROM content_refs WHERE video_id = $1", [field_video]) == [[0]]
+      assert [[count]] = rows("SELECT count(*) FROM content_refs WHERE video_id IS NOT NULL")
+      assert count > 0
+
+      assert rows("SELECT id, type, source_url, remote_id FROM videos WHERE id = ANY($1) ORDER BY id", [
+               [vimeo, vimeo_id_only, youtube, file, youtube_at]
              ]) == [
-               [vimeo, "vimeo", "https://vimeo.com/76979871"],
-               [vimeo_id_only, "vimeo", "https://vimeo.com/76979872"],
-               [youtube, "youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"],
-               [file, "external_file", "https://cdn.example.com/film.mp4"]
+               [vimeo, "vimeo", "https://vimeo.com/76979871", "76979871"],
+               [vimeo_id_only, "vimeo", "https://vimeo.com/76979872", "76979872"],
+               [youtube, "youtube", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "dQw4w9WgXcQ"],
+               [file, "external_file", "https://cdn.example.com/film.mp4", "https://cdn.example.com/film.mp4"],
+               [youtube_at, "youtube", "https://www.youtube.com/watch?v=abc123", "abc123"]
              ]
     end
 

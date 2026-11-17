@@ -45,7 +45,12 @@ defmodule Brando.Repo.Migrations.ExtractEmbedsOneFileFields do
         config_target = "file:#{inspect(blueprint)}:#{field_name}"
 
         for file_field <- file_fields do
-          file_struct = Jason.decode!(file_field.file)
+          # 0.51 generated file fields as jsonb, which comes back decoded
+          file_struct =
+            case file_field.file do
+              %{} = file -> file
+              json when is_binary(json) -> Jason.decode!(json)
+            end
 
           new_file = %{
             filesize: file_struct["size"],

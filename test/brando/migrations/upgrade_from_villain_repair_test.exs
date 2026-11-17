@@ -297,6 +297,25 @@ defmodule Brando.Migrations.UpgradeFromVillainRepairTest do
       assert rows("SELECT id, deleted_at FROM videos ORDER BY id") == videos
     end
 
+    test "a ref's video is not one of a field, though it plays the same file" do
+      %{about: about} = lost_media()
+
+      video_block = root_block(about, 3)
+
+      [[ref_id, video_id]] =
+        rows("SELECT id, video_id FROM content_refs WHERE block_id = $1 AND name = 'video'", [video_block])
+
+      # The ref lost its video, and the only video with its file is an
+      # entry's video field's, with that field's playback settings
+      rows("UPDATE content_refs SET video_id = NULL WHERE block_id = $1 AND name = 'video'", [video_block])
+      rows("UPDATE videos SET config_target = 'video:MyApp.Projects.Project:cover' WHERE id = $1", [video_id])
+
+      assert %{"ref video" => {:make_video, _url}} = Map.new(repairs())
+      run_task(RepairTask, [])
+      assert [[new_id]] = rows("SELECT video_id FROM content_refs WHERE id = $1", [ref_id])
+      assert new_id not in [nil, video_id]
+    end
+
     test "an image picked while the repair runs stays" do
       %{page: page_id, images: images} = lost_media()
 

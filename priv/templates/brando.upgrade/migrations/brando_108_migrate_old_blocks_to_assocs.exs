@@ -45,7 +45,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
       new_refs =
         Enum.reduce(entry.refs, [], fn
           %{"data" => %{"type" => "table"}} = ref, acc ->
-            rows = get_in(ref, ["data", "data", "rows"])
+            rows = kept_rows(ref, get_in(ref, ["data", "data", "rows"]))
 
             Enum.map(rows || [], fn row ->
               table_row = %{
@@ -511,7 +511,6 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
         |> put_in([Access.key("data"), Access.key("active")], active_ref?(ref))
         |> pop_in([Access.key("data"), Access.key("hidden")])
         |> elem(1)
-        |> Map.delete("deleted")
       end)
 
     {fixed_regular, list_refs}
@@ -521,6 +520,11 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
   # rendered nothing; it stays, inactive
   defp active_ref?(ref), do: !ref["data"]["hidden"] and ref["deleted"] != true
 
+  # The rows of a table or list ref, which become the block's table rows. A
+  # deleted one rendered nothing, so its rows are not kept.
+  defp kept_rows(%{"deleted" => true}, _rows), do: []
+  defp kept_rows(_ref, rows), do: rows
+
   # Create table rows from list refs after block insertion
   defp process_list_refs(_block_id, []), do: :ok
 
@@ -529,7 +533,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
 
     for list_ref <- list_refs do
       list_data = get_in(list_ref, ["data", "data"]) || %{}
-      rows = (is_map(list_data) && list_data["rows"]) || []
+      rows = kept_rows(list_ref, (is_map(list_data) && list_data["rows"]) || [])
 
       for {row, idx} <- Enum.with_index(rows) do
         {_, [%{id: row_id}]} =

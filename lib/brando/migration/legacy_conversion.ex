@@ -640,6 +640,8 @@ defmodule Brando.Migration.LegacyConversion do
   defp ref_type(%{"data" => %{"type" => type}}), do: type
   defp ref_type(_ref), do: nil
 
+  # brando_108 keeps no rows of a ref deleted on 0.51, which rendered nothing
+  defp row_count(%{"deleted" => true}), do: 0
   defp row_count(%{"data" => %{"data" => %{"rows" => rows}}}) when is_list(rows), do: length(rows)
   defp row_count(_ref), do: 0
 

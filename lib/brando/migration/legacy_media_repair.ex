@@ -850,9 +850,16 @@ defmodule Brando.Migration.LegacyMediaRepair do
 
   ## Matching
 
+  # A video of a video field (`video:<schema>:<field>`) plays with that
+  # field's settings, so a ref gets one of its own
   defp find_video(schema, url) do
     case rows(
-           "SELECT id FROM #{name(schema, "videos")} WHERE source_url = $1 AND deleted_at IS NULL ORDER BY id LIMIT 1",
+           """
+           SELECT id FROM #{name(schema, "videos")}
+           WHERE source_url = $1 AND deleted_at IS NULL
+             AND (config_target IS NULL OR config_target NOT LIKE 'video:%')
+           ORDER BY id LIMIT 1
+           """,
            [url]
          ) do
       [[id]] -> id
