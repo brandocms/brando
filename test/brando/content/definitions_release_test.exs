@@ -314,6 +314,20 @@ defmodule Brando.Content.DefinitionsReleaseTest do
       Task.async(fn -> drain() end)
     end
 
+    defp drain_broken do
+      Repo.update_all(from(j in Oban.Job, where: j.state == "available"),
+        set: [args: %{"schema" => "Brando.Pages.Page", "entry_id" => -1}]
+      )
+
+      Oban.drain_queue(queue: :default)
+
+      receive do
+        :stop -> :ok
+      after
+        10 -> drain_broken()
+      end
+    end
+
     defp drain do
       Oban.Testing.with_testing_mode(:manual, fn -> Oban.drain_queue(queue: :default) end)
 
@@ -350,8 +364,34 @@ defmodule Brando.Content.DefinitionsReleaseTest do
           end)
         end)
 
-      assert text =~ ~r/\d+ render jobs are queued for the running server/
+      assert text =~ ~r/\d+ entry renders are queued for the running server/
       assert Repo.aggregate(from(j in Oban.Job, where: j.state == "available"), :count) > 0
+    end
+
+    test "a render that fails makes apply! raise, after saying what was applied", c do
+      # Points the run's renders at an entry that is gone, and runs them
+      task =
+        Task.async(fn ->
+          Oban.Testing.with_testing_mode(:manual, fn -> drain_broken() end)
+        end)
+
+      {:ok, agent} = Agent.start_link(fn -> [] end)
+
+      assert_raise RuntimeError, ~r/entries failed to render/, fn ->
+        Oban.Testing.with_testing_mode(:manual, fn ->
+          Release.apply!(:all,
+            path: c.dir,
+            user: c.user.id,
+            info: &Agent.update(agent, fn lines -> [&1 | lines] end)
+          )
+        end)
+      end
+
+      send(task.pid, :stop)
+      Task.await(task)
+      text = agent |> Agent.get(& &1) |> Enum.reverse() |> Enum.join("\n")
+      assert text =~ "Applied 1 definition changes"
+      assert text =~ "failed"
     end
 
     test "renders that outlast the timeout make apply! raise", c do

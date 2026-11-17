@@ -204,6 +204,8 @@ defmodule Brando.Content.Definitions.Release do
   again, on whichever node runs the jobs (`Brando.Content.Definitions.await_refresh/2`):
   `:timeout` in milliseconds (10 minutes) and `:on_progress` are passed on.
   `wait: false` leaves the renders queued and only reports them.
+  `:on_applied` is called with `%{report: report, result: result}` once the
+  definitions are committed, before the wait.
 
   Returns `{:ok, %{report: report, result: result, renders: renders, waited?: boolean}}`
   with the plan's report, the apply's result (`Brando.Content.Definitions.apply/3`)
@@ -219,6 +221,7 @@ defmodule Brando.Content.Definitions.Release do
          {:ok, user} <- user(opts[:user]),
          {{:ok, result}, run} <- track(report, user) do
       wait? = Keyword.get(opts, :wait, true)
+      if on_applied = opts[:on_applied], do: on_applied.(%{report: report, result: result})
 
       renders =
         if wait?,
@@ -227,10 +230,16 @@ defmodule Brando.Content.Definitions.Release do
 
       {:ok, %{report: report, result: result, renders: renders, waited?: wait?}}
     else
-      {{:error, message}, _run} -> {:error, message}
+      {{:error, reason}, _run} -> {:error, error_message(reason)}
       error -> error
     end
   end
+
+  # A definition's save that failed in the transaction names the definition
+  defp error_message(message) when is_binary(message), do: message
+  defp error_message(%{uid: uid, error: %Ecto.Changeset{} = changeset}), do: "#{uid}: #{inspect(changeset.errors)}"
+  defp error_message(%{uid: uid, error: error}), do: "#{uid}: #{inspect(error)}"
+  defp error_message(other), do: inspect(other)
 
   defp track(report, user),
     do:
@@ -299,19 +308,21 @@ defmodule Brando.Content.Definitions.Release do
   outlast `:timeout`, so `rpc` exits with a non-zero status.
   """
   def apply!(selection, opts \\ []) do
-    info = Keyword.get(opts, :info, &IO.puts/1)
-    opts = Keyword.put_new(opts, :on_progress, &progress(&1, info))
+    # A closed rpc session must not stop the wait: lines it can't print are
+    # dropped
+    info = printer(Keyword.get(opts, :info, &IO.puts/1))
+
+    opts =
+      opts
+      |> Keyword.put_new(:on_progress, &progress(&1, info))
+      |> Keyword.put(:on_applied, &print_applied(&1, info))
 
     if Tenant.enabled?() and not (opts[:site] && opts[:environment]),
       do: raise("Module definitions: site: and environment: select the environment to apply to")
 
     each_target!(opts, fn label ->
       case apply(selection, opts) do
-        {:ok, %{report: report} = applied} ->
-          report.items
-          |> Enum.filter(&(Plan.selected?(report.plan, &1) and &1.action != :noop))
-          |> Enum.each(&info.(item_line(&1)))
-
+        {:ok, applied} ->
           print_result(applied, info)
 
         {:error, message} ->
@@ -320,10 +331,28 @@ defmodule Brando.Content.Definitions.Release do
     end)
   end
 
-  defp print_result(%{result: result, report: report, renders: renders, waited?: waited?}, info) do
+  defp printer(fun) do
+    fn line ->
+      try do
+        fun.(line)
+      catch
+        _kind, _reason -> :ok
+      end
+    end
+  end
+
+  # Before the wait: what is committed, whatever becomes of the renders
+  defp print_applied(%{report: report, result: result}, info) do
+    report.items
+    |> Enum.filter(&(Plan.selected?(report.plan, &1) and &1.action != :noop))
+    |> Enum.each(&info.(item_line(&1)))
+
     info.("Applied #{length(result.changes)} definition changes from release #{report.version}")
+    Enum.each(result.refresh, &(&1.status == :failed && info.("  Refresh failed for #{&1.uid}: #{&1.error}")))
+  end
+
+  defp print_result(%{result: result, renders: renders, waited?: waited?}, info) do
     failed = Enum.filter(result.refresh, &(&1.status == :failed))
-    Enum.each(failed, &info.("  Refresh failed for #{&1.uid}: #{&1.error}"))
     print_renders(renders, waited?, info)
 
     if failed != [],
@@ -346,8 +375,11 @@ defmodule Brando.Content.Definitions.Release do
     Enum.each(renders.pending, &info.("  Still #{&1.state}: #{job_label(&1)}"))
   end
 
-  defp print_renders(%{pending: pending}, false, info) do
-    if pending != [], do: info.("  #{length(pending)} render jobs are queued for the running server")
+  defp print_renders(%{pending: pending, failed: failed}, false, info) do
+    {renders, cascades} = Enum.split_with(pending, &(&1.worker == :render))
+    more = if cascades == [], do: "", else: ", and #{length(cascades)} cascade jobs that may queue more"
+    if pending != [], do: info.("  #{length(renders)} entry renders are queued for the running server#{more}")
+    Enum.each(failed, &info.("  #{job_label(&1)} failed: #{first_line(&1.error)}"))
   end
 
   defp render_problem(%{timed_out: true, pending: pending}),
