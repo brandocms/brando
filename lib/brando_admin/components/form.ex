@@ -5915,17 +5915,11 @@ defmodule BrandoAdmin.Components.Form do
       |> then(&assoc_all_transformer_fields(&1, socket.assigns.transformer_changesets))
       |> Brando.Trait.Creator.stamp_if_edited(schema, current_user)
 
-    entry_for_blocks = build_entry_for_blocks(new_changeset, block_map)
     fence = Blocks.render_fence(new_changeset)
 
     send(self(), {:progress_popup, "Rendering blocks for entry..."})
 
-    rendered_changeset =
-      render_blocks_for_entry(
-        block_map,
-        new_changeset,
-        entry_for_blocks
-      )
+    rendered_changeset = render_blocks_for_save(block_map, new_changeset)
 
     send(self(), {:progress_popup, "Saving entry..."})
 
@@ -8750,6 +8744,34 @@ defmodule BrandoAdmin.Components.Form do
     |> apply_changes()
     |> Map.drop(blocks_field_names)
   end
+
+  @doc """
+  Renders the block fields of `changeset`, which the form is about to save,
+  with the entry as the save stores it.
+  """
+  def render_blocks_for_save(block_map, changeset) do
+    # The save sets the status the dates call for (a cleared `publish_at`
+    # publishes a pending entry); blocks that load the entry itself
+    # (`get_entry`) show it with that status
+    changeset = Brando.Publisher.maybe_override_status(changeset)
+    entry = changeset |> build_entry_for_blocks(block_map) |> with_stored_status(changeset)
+    render_blocks_for_entry(block_map, changeset, entry)
+  end
+
+  # A save that leaves the status as it is keeps the row's, which may have
+  # changed since the form loaded the entry (a publish at its `publish_at`,
+  # a status toggled in the listing)
+  defp with_stored_status(%{status: _} = entry, %Changeset{changes: changes, data: %schema{id: id}})
+       when not is_map_key(changes, :status) and not is_nil(id) do
+    import Ecto.Query, only: [from: 2]
+
+    stored =
+      :status in schema.__schema__(:fields) && Brando.Repo.one(from(e in schema, where: e.id == ^id, select: e.status))
+
+    if stored, do: %{entry | status: stored}, else: entry
+  end
+
+  defp with_stored_status(entry, _changeset), do: entry
 
   @decorate span("brando.form.render_blocks", entry_id: [:entry, :id])
   def render_blocks_for_entry(block_map, changeset, entry) do

@@ -786,10 +786,18 @@ defmodule Brando.Content.Blocks do
   @doc """
   Enqueue an async cascade job that merges datasource + identifier cascade
   discovery and enqueues EntryRenderer jobs in the background.
+
+  The cascade leaves out `entry` itself, which its save rendered, unless
+  `render_entry: true` says the save changed what its own blocks show and did
+  not render them: a status change outside the form, for blocks that link to
+  the entry itself (`get_entry`).
   """
-  def enqueue_entry_cascade(module, entry, identifier_id) do
+  def enqueue_entry_cascade(module, entry, identifier_id, opts \\ []) do
+    render_entry? = Keyword.get(opts, :render_entry, false)
+
     changeset =
       %{schema: to_string(module), entry_id: entry.id, identifier_id: identifier_id}
+      |> then(&if(render_entry?, do: Map.put(&1, :render_entry, true), else: &1))
       |> Brando.Tenant.Job.attach()
       |> Brando.Worker.EntryCascade.new()
 
@@ -797,7 +805,9 @@ defmodule Brando.Content.Blocks do
     changeset
     |> Oban.insert()
     |> Brando.Content.RenderQueue.coalesce(changeset, fn args, _ ->
-      Map.update(args, "identifier_id", identifier_id, &(&1 || identifier_id))
+      args
+      |> Map.update("identifier_id", identifier_id, &(&1 || identifier_id))
+      |> then(&if(render_entry?, do: Map.put(&1, "render_entry", true), else: &1))
     end)
   end
 

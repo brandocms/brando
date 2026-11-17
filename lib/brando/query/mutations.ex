@@ -152,6 +152,7 @@ defmodule Brando.Query.Mutations do
 
     with {:ok, entry} <- apply(context, :"get_#{name}", [get_opts]),
          changeset <- changeset_fun.(entry, params, user, nil, []),
+         rendered_status = status(changeset),
          changeset <- Publisher.maybe_override_status(changeset),
          changeset <- ContentModified.stamp(changeset, user),
          changeset <- set_action(changeset, :update),
@@ -162,7 +163,10 @@ defmodule Brando.Query.Mutations do
       if has_changes(changeset) do
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        enqueue_entry_cascade(module, entry, identifier_id)
+
+        enqueue_entry_cascade(module, entry, identifier_id,
+          render_entry: render_entry?(module, changeset, rendered_status)
+        )
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -197,6 +201,8 @@ defmodule Brando.Query.Mutations do
   defp do_update_with_changeset(module, changeset, user, preloads, callback_block, opts) do
     notify? = Keyword.get(opts, :show_notification, true)
     pubsub? = Keyword.get(opts, :pubsub, true)
+    # The status a changeset rendered by its caller was rendered with
+    rendered_status = status(changeset)
 
     with changeset <- Publisher.maybe_override_status(changeset),
          changeset <- ContentModified.stamp(changeset, user),
@@ -209,7 +215,8 @@ defmodule Brando.Query.Mutations do
       if has_changes(changeset) do
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        enqueue_entry_cascade(module, entry, identifier_id)
+        render_entry? = render_entry?(module, changeset, rendered_status)
+        enqueue_entry_cascade(module, entry, identifier_id, render_entry: render_entry?)
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -848,16 +855,37 @@ defmodule Brando.Query.Mutations do
     Repo.after_commit(fn -> Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:mutation, module, entry, action}) end)
   end
 
-  # A shared preview is a snapshot no content references: no identifier, no datasource
-  defp enqueue_entry_cascade(Brando.Sites.Preview, _entry, _identifier_id), do: :ok
+  # A status change shows or hides the entry where its own blocks load it
+  # (`get_entry`), and the cascade renders the entry after a save that changed
+  # it without rendering all its block fields (a named form may hold only
+  # some). A save that rendered them all, the form's, did so with the status
+  # it had before the dates adjusted it here (`rendered_status`): a
+  # `publish_at` that passed while it rendered may have moved the status since,
+  # back to the stored one too.
+  defp render_entry?(module, changeset, rendered_status) do
+    if rendered?(module, changeset),
+      do: status(changeset) != rendered_status,
+      else: Map.has_key?(changeset.changes, :status)
+  end
 
-  defp enqueue_entry_cascade(module, entry, identifier_id) do
+  defp rendered?(module, changeset),
+    do: Enum.all?(module.__blocks_fields__(), &Map.has_key?(changeset.changes, :"rendered_#{&1.name}_at"))
+
+  defp status(changeset), do: Map.get(changeset.changes, :status, Map.get(changeset.data, :status))
+
+  # A shared preview is a snapshot no content references: no identifier, no datasource
+  defp enqueue_entry_cascade(module, entry, identifier_id, opts \\ [])
+  defp enqueue_entry_cascade(Brando.Sites.Preview, _entry, _identifier_id, _opts), do: :ok
+
+  defp enqueue_entry_cascade(module, entry, identifier_id, opts) do
     # Shared records can be referenced by content in any environment. At initial
     # account setup there may be no environments yet, so there is nothing to render.
     if Tenant.enabled?() && module.__schema__(:prefix) == "public" do
-      Job.each_active_environment(:all, fn -> ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id) end)
+      Job.each_active_environment(:all, fn ->
+        ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id, opts)
+      end)
     else
-      ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
+      ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id, opts)
     end
   end
 

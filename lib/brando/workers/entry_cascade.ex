@@ -50,13 +50,17 @@ defmodule Brando.Worker.EntryCascade do
         []
       end
 
+    # The entry's own save rendered it, unless it says it did not
+    # (`Brando.Content.Blocks.enqueue_entry_cascade/4`)
+    rendered = if args["render_entry"], do: nil, else: entry
+
     # Merge, deduplicate, then run through shared pipeline once.
     # reject_blocks_belonging_to_entry internally calls
     # list_root_block_ids_by_source and list_entry_ids_for_root_blocks_by_source,
     # returning a %{schema => [entry_ids]} map ready for enqueue_entry_map_for_render.
     (datasource_block_ids ++ identifier_block_ids)
     |> Enum.uniq()
-    |> BlockReferences.reject_blocks_belonging_to_entry(entry)
+    |> BlockReferences.reject_blocks_belonging_to_entry(rendered)
     |> RenderQueue.enqueue_map()
 
     :ok

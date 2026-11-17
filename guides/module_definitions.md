@@ -350,7 +350,8 @@ HEEx's reserved assign names cannot be used as var keys.
 A `:link` var can point at an entry of any status. A template that loads that
 entry (`{% assign e = card.identifier | get_entry %}`) gets it on the site only
 while it is published, and in live preview whatever its status; publishing,
-unpublishing or deleting the entry renders the pages that link to it again
+unpublishing or deleting the entry renders the pages that link to it again,
+its own included
 ([Liquid tags and context](block_editor.md#liquid-tags-and-context)).
 
 <!-- usage-rules:end -->
