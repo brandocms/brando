@@ -173,8 +173,7 @@ defmodule Brando.Content.StaleBlocksTest do
     end
 
     # A wrapper block on version 1 whose `content` ref holds `data`, and the
-    # `vars` given. The ref row is written directly: a block save holds a
-    # new ref to its module's type (`Brando.Content.RefGuard`).
+    # `vars` given. The ref row is written directly, as brando_108 writes it.
     defp wrapper_block!(c, data, vars \\ []) do
       page = Factory.insert(:page, creator: c.user, uri: "w#{System.unique_integer([:positive])}")
 
@@ -279,6 +278,29 @@ defmodule Brando.Content.StaleBlocksTest do
 
       assert {:ok, %{stamped: [_]}} = StaleBlocks.apply(c.wrapper, %{{:ref, "old"} => {:map, "content"}}, c.user)
       assert [%{name: "content", data: %CommentBlock{}}] = refs(block)
+    end
+
+    # Moving a leftover into `content` deletes the wrapped ref it replaces, so
+    # the revision taken before brings that ref back as a new one
+    test "restoring the revision from before a leftover moved into `content` gives the wrapped ref back", c do
+      block = wrapper_block!(c, picture())
+
+      %Brando.Content.Ref{block_id: block.id, name: "old", uid: Brando.Utils.generate_uid(), sequence: 1}
+      |> Ecto.Changeset.change(data: comment())
+      |> Repo.insert!()
+
+      assert {:ok, %{stamped: [_]}} = StaleBlocks.apply(c.wrapper, %{{:ref, "old"} => {:map, "content"}}, c.user)
+      assert [%{name: "content", data: %CommentBlock{}}] = refs(block)
+
+      [%{entry_id: page_id}] = Repo.all(from(j in Page.Blocks, where: j.block_id == ^block.id))
+      page = Repo.get!(Page, page_id)
+      assert [before | _] = revisions(page)
+      assert before.description =~ "Before resolving blocks"
+
+      assert {:ok, _} = Brando.Revisions.set_entry_to_revision(Page, page.id, before.revision, c.user)
+
+      assert %{"content" => %PictureBlock{data: %{alt: "Fasaden"}}, "old" => %CommentBlock{}} =
+               Map.new(refs(block), &{&1.name, &1.data})
     end
 
     test "moving a leftover into `content` lists the wrapped ref it replaces, though it shows nothing", c do

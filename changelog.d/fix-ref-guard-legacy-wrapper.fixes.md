@@ -1,0 +1,1 @@
+- Duplicating, pasting, transferring or recovering a Legacy Content Wrapper block keeps its picture, video, HTML, comment or other content, and restoring the revision from before **Resolve blocks** gives it back; such a block no longer turns into an empty text block. HTML and SVG markup in it still follows the superuser rule.

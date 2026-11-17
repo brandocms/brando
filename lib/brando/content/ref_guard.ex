@@ -16,6 +16,13 @@ defmodule Brando.Content.RefGuard do
     * a saved ref keeps its name when the module defines a ref of the new
       name with a type it does not allow.
 
+  The Legacy Content Wrapper's `content` ref allows any type
+  (`Brando.Content.Module.any_ref_type?/2`). The 0.51 upgrade put each
+  free-standing block of a Villain site into it as the type it was (picture,
+  video, header, html, svg, map, comment and so on), so a duplicate, a paste,
+  a recovered block or a transfer of one keeps it. The markup rules below
+  still hold it.
+
   A saved block's module changes for a superuser only: the editor never
   offers it, and it would change what the block's refs and vars have to
   satisfy under them (`hold_module/2`). When it does change, every saved ref
@@ -25,10 +32,13 @@ defmodule Brando.Content.RefGuard do
   For anyone but a superuser (`Brando.Authorization.Boundary.superuser?/1`),
   the markup of an HTML ref (`text` and `params`), an SVG ref (`code` and
   `class`) and a media slot's SVG template (`template_svg`) stays what it
-  was: a saved ref's own, or for a new ref the module definition's. A new ref
-  may also carry markup a ref of the same name holds in a saved block of the
-  same module, as a copied or pasted block does. Anything else is put back,
-  and the editor's other changes, an HTML ref's `values` included, are kept.
+  was: a saved ref's own, or the module definition's for a new ref and for
+  a saved ref whose type changes (a media slot that becomes an SVG takes its
+  own SVG template). A definition of another type holds none, as the
+  wrapper's text `content` holds none for an HTML ref. A new ref may also
+  carry markup a ref of the same name holds in a saved block of the same
+  module, as a copied or pasted block does. Anything else is put back, and
+  the editor's other changes, an HTML ref's `values` included, are kept.
 
   Changes are put back rather than refused. The editor never offers them, so
   only a crafted request or a stale view sends them; and a refused change
@@ -41,6 +51,7 @@ defmodule Brando.Content.RefGuard do
 
   alias Brando.Authorization.Boundary
   alias Brando.Content.Block
+  alias Brando.Content.Module, as: ContentModule
   alias Brando.Content.Ref
   alias Brando.Villain.Blocks
   alias Brando.Villain.Blocks.HtmlBlock
@@ -134,7 +145,7 @@ defmodule Brando.Content.RefGuard do
   defp guard_name(%Changeset{data: %{id: id}, changes: %{name: name}} = ref, new, state) when not is_nil(id) do
     {definition, state} = definition(state, name)
 
-    if definition && not type_allowed?(definition, type(new)),
+    if definition && not allows?(state, definition, type(new)),
       do: {Changeset.delete_change(ref, :name), state},
       else: {ref, state}
   end
@@ -146,7 +157,7 @@ defmodule Brando.Content.RefGuard do
     {definition, state} = definition(state, Changeset.get_field(ref, :name))
 
     cond do
-      definition && type_allowed?(definition, type(new)) ->
+      definition && allows?(state, definition, type(new)) ->
         guard_markup(ref, old, new, markup_source(old, new, definition), state)
 
       definition && state.moved? ->
@@ -177,6 +188,12 @@ defmodule Brando.Content.RefGuard do
       {ref, state}
     end
   end
+
+  # Whether the module's definition of a ref allows `type`. The Legacy
+  # Content Wrapper's `content` allows any (`ContentModule.any_ref_type?/2`):
+  # it holds each wrapped block as the type it was.
+  defp allows?(state, definition, type),
+    do: type_allowed?(definition, type) or ContentModule.any_ref_type?(state.module, definition.name)
 
   defp type_allowed?(%{data: %{type: type}}, type), do: true
 
