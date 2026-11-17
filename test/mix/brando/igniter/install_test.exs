@@ -41,6 +41,10 @@ defmodule Mix.Brando.Igniter.InstallTest do
     assert IgniterCase.source(igniter, "config/brando.exs") =~ "tenancy_mode: :none"
     assert IgniterCase.source(igniter, "lib/studio_web/endpoint.ex") =~ "preserve-this-salt"
 
+    # The release's own module definitions, planned after boot
+    assert IgniterCase.source(igniter, "config/brando.exs") =~
+             ~r/config :brando, Brando.Content.Definitions,\s+release_path: "priv\/modules"\n/
+
     # Live previews are sandboxed and connect from origin null, to a socket of their own
     assert IgniterCase.source(igniter, "lib/studio_web/endpoint.ex") =~
              ~r{socket\(?\s*"/__livepreview/socket",\s*BrandoAdmin.LivePreviewSocket,\s*websocket: \[check_origin: false\],\s*longpoll: false}
@@ -191,6 +195,8 @@ defmodule Mix.Brando.Igniter.InstallTest do
 
     multi = project() |> install(["--tenancy-mode", "multi"])
     assert multi.issues == []
+    # Each site's module definitions in a directory of its own
+    assert IgniterCase.source(multi, "config/brando.exs") =~ ~s(release_path: "priv/modules/{site_key}")
     endpoint = IgniterCase.source(multi, "lib/studio_web/endpoint.ex")
 
     assert endpoint =~
@@ -246,6 +252,8 @@ defmodule Mix.Brando.Igniter.InstallTest do
 
     multi = project() |> install(["--tenancy-mode", "multi"])
     assert multi.issues == []
+    # Each site's module definitions in a directory of its own
+    assert IgniterCase.source(multi, "config/brando.exs") =~ ~s(release_path: "priv/modules/{site_key}")
     assert IgniterCase.source(multi, path) =~ ~r{websocket: \[connect_info: \[:uri, session: @session_options\]\]}
     refute Enum.any?(multi.notices, &(&1 =~ "socket \"/live\""))
 

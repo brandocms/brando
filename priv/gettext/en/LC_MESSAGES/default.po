@@ -3414,12 +3414,27 @@ msgstr ""
 
 #: lib/brando_admin/components/definition_file.ex
 #, elixir-autogen, elixir-format
+msgid "Changed here and in this release"
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
 msgid "Changed here since the file"
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Changed here since the release was applied"
 msgstr ""
 
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Changed in the source — review the translation"
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Changed in this release"
 msgstr ""
 
 #: lib/brando_admin/live/content/module_form_live.ex
@@ -5893,6 +5908,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/seo_live.ex
 #, elixir-autogen, elixir-format
 msgid "Details"
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Differs from this release"
 msgstr ""
 
 #: lib/brando_admin/live/content/shared_library_live.ex
@@ -13874,6 +13894,11 @@ msgstr ""
 msgid "Related entry"
 msgstr ""
 
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Release %{version} brings module definitions that differ from this site's. Block modules marks each one. A developer reviews and applies them on the server:"
+msgstr ""
+
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Release assets"
@@ -14650,6 +14675,11 @@ msgstr ""
 #: lib/brando_admin/live/sites/utils_live.ex
 #, elixir-autogen, elixir-format
 msgid "Review loose blocks"
+msgstr ""
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Review modules"
 msgstr ""
 
 #: lib/brando_admin/components/dashboard.ex
@@ -17797,6 +17827,16 @@ msgstr ""
 msgid "The meta title and description are identical."
 msgstr ""
 
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "The module changed here after it was last applied, and this release changes it too. Applying the release's version replaces the change made here."
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "The module changed here after the release's version was applied. The release doesn't change it, so the change here stays."
+msgstr ""
+
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "The module preview is unavailable because its Liquid tags are incomplete or mismatched. Check the module template. You can still edit the fields below."
@@ -17805,6 +17845,11 @@ msgstr ""
 #: lib/brando_admin/components/form/module_props/ref_block_form.ex
 #, elixir-autogen, elixir-format
 msgid "The module set available in this region. Use all for all suitable modules."
+msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "The module was never applied from the release's files, and differs from them. It is applied only when named explicitly."
 msgstr ""
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
@@ -18712,6 +18757,18 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "This publishes static artifacts only. Florist continues to deploy and roll back the Phoenix application release."
 msgstr ""
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "This release changes the module, and nobody has changed it here since it was last applied."
+msgstr ""
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "This release has 1 module change that isn't applied yet"
+msgid_plural "This release has %{count} module changes that aren't applied yet"
+msgstr[0] ""
+msgstr[1] ""
 
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format

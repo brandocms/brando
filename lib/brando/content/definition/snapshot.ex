@@ -85,6 +85,9 @@ defmodule Brando.Content.Definition.Snapshot do
     |> Map.put("version", @baseline_version)
   end
 
+  @doc "`definition`'s digest as a current (version 2) baseline records it."
+  def digest(definition), do: version_2_digest(definition)
+
   @doc "`definition`'s digest as `bundle`'s baseline records them."
   def baseline_digest(bundle, definition) do
     if get_in(bundle, ["baseline", "version"]) == @baseline_version,

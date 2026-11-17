@@ -22,6 +22,51 @@ defmodule BrandoAdmin.Components.DefinitionFile do
     """
   end
 
+  attr :state, :atom, required: true
+
+  @doc """
+  A marker for a listing row: how the module relates to the release's
+  definition (`Brando.Content.Definitions.ReleaseStatus.state/1`). Nothing
+  when they agree.
+  """
+  def release_marker(%{state: state} = assigns)
+      when state in [:changed_in_release, :changed_in_admin, :changed_in_both, :never_applied] do
+    ~H"""
+    <span class="definition-file-marker" data-state={@state} data-source="release" title={release_explanation(@state)}>
+      <.icon name="package" />
+      <span>{release_headline(@state)}</span>
+    </span>
+    """
+  end
+
+  def release_marker(assigns), do: ~H""
+
+  defp release_headline(:changed_in_release), do: gettext("Changed in this release")
+  defp release_headline(:changed_in_admin), do: gettext("Changed here since the release was applied")
+  defp release_headline(:changed_in_both), do: gettext("Changed here and in this release")
+  defp release_headline(:never_applied), do: gettext("Differs from this release")
+
+  defp release_explanation(:changed_in_release),
+    do: gettext("This release changes the module, and nobody has changed it here since it was last applied.")
+
+  defp release_explanation(:changed_in_admin),
+    do:
+      gettext(
+        "The module changed here after the release's version was applied. The release doesn't change it, so the change here stays."
+      )
+
+  defp release_explanation(:changed_in_both),
+    do:
+      gettext(
+        "The module changed here after it was last applied, and this release changes it too. Applying the release's version replaces the change made here."
+      )
+
+  defp release_explanation(:never_applied),
+    do:
+      gettext(
+        "The module was never applied from the release's files, and differs from them. It is applied only when named explicitly."
+      )
+
   attr :file, :map, required: true
 
   @doc "A notice at the top of the module editor"

@@ -45,6 +45,32 @@ queued for the running server and says how many: the command then runs no
 queue of its own, and without a server they wait until one starts. `refresh`
 and `resolve --apply` take the same options.
 
+```elixir
+# config/config.exs (a new installation has it in config/brando.exs)
+config :brando, Brando.Content.Definitions, release_path: "priv/modules"
+```
+
+In a release, without Mix, `rpc` runs on the running node:
+
+```sh
+# What waits in each environment: counts by action and kind of change,
+# the entries affected, and conflicts with who and when
+bin/my_app rpc 'Brando.Content.Definitions.Release.status()'
+
+# Apply module trees by UID (children and table templates go with them),
+# or :all; --replace's counterpart is replace:
+bin/my_app rpc 'Brando.Content.Definitions.Release.apply!(["acme-hero"], user: 1)'
+bin/my_app rpc 'Brando.Content.Definitions.Release.apply!(:all, user: 1)'
+```
+
+In development, against the development database:
+
+```sh
+mix brando.modules plan --release --user 1
+mix brando.modules apply --release --uid acme-hero --user 1
+mix brando.modules apply --release --all --replace acme-card --user 1
+```
+
 ### Authoring a definition
 
 ```elixir

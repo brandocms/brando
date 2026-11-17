@@ -191,6 +191,9 @@ defmodule Brando.Content.Module do
         <br />
         <small><.i18n map={@entry.help_text} /></small>
         <BrandoAdmin.Components.DefinitionFile.marker file={Brando.Content.Definition.Watcher.file(@entry.uid)} />
+        <BrandoAdmin.Components.DefinitionFile.release_marker state={
+          Brando.Content.Definitions.ReleaseStatus.state(@entry.uid)
+        } />
       </:outside>
     </.update_link>
     <.children_button entry={@entry} fields={[:children]} />
@@ -212,6 +215,9 @@ defmodule Brando.Content.Module do
         <br />
         <small><.i18n map={@entry.help_text} /></small>
         <BrandoAdmin.Components.DefinitionFile.marker file={Brando.Content.Definition.Watcher.file(@entry.uid)} />
+        <BrandoAdmin.Components.DefinitionFile.release_marker state={
+          Brando.Content.Definitions.ReleaseStatus.state(@entry.uid)
+        } />
       </:outside>
     </.update_link>
     """

@@ -599,6 +599,16 @@ sender first, before the first compile.
   release with tenancy enabled does not start until it has run. With several
   nodes, a site served this way needs `sites/` on storage every node shares.
   See [Served by this installation](tenancy_and_environments.md#served-by-this-installation).
+- **Module definitions from the release.** `brando_231` adds
+  `content_definition_applies`, each environment's record of the module
+  definitions applied to it from files. Run `mix brando.gen.migrations` for it,
+  then `mix brando.migrate` and, with named environments,
+  `mix brando.migrate --tenants`. To plan the definitions a release ships in
+  `priv/modules` against the database after boot, and show superusers what
+  waits, add `config :brando, Brando.Content.Definitions, release_path: "priv/modules"`
+  to `config/config.exs` (with several sites, `"priv/modules/{site_key}"`); a
+  new install has it. See
+  [Applying a release's definitions](module_definitions.md#applying-a-release-s-definitions).
 - **Markup in option labels.** A select, multi-select or radio shows its
   option labels as text, so a label written as HTML (a swatch, an icon) shows
   its tags. Pass such a label built in code as `Phoenix.HTML.raw(html)`, with

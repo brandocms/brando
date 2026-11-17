@@ -3,7 +3,7 @@ defmodule Brando.Content.Definition.Importer do
 
   alias Brando.Authorization.Boundary
   alias Brando.Content.{Blocks, Module, ModuleDiff, TableTemplate}
-  alias Brando.Content.Definition.{Error, Model, Params, Plan, References, Snapshot, Value}
+  alias Brando.Content.Definition.{Baselines, Error, Model, Params, Plan, References, Snapshot, Value}
   alias Brando.Content.Definitions
   alias Brando.Query.Mutations
   alias Brando.Repo
@@ -30,16 +30,74 @@ defmodule Brando.Content.Definition.Importer do
     Definitions.protect(fn ->
       Snapshot.ensure_scope!()
       ensure_actor_scope!(actor)
-      creator = creator!(actor, opts)
+      read_only? = actor == :system and Keyword.get(opts, :creator) == :none
+      creator = if read_only?, do: %Brando.Users.User{id: 0}, else: creator!(actor, opts)
       bundle = References.upgrade(bundle)
-      bindings = References.bind!(bundle, Keyword.get(opts, :references, %{}), actor)
-      {plan, _records} = plan!(bundle, actor, creator, bindings)
-      plan
+      settings = settings!(bundle, opts)
+      bindings = References.bind!(bundle, supplied_references(bundle, settings, opts), actor)
+      {plan, _records} = plan!(bundle, actor, creator, bindings, settings)
+      if read_only?, do: %{plan | creator_id: nil}, else: plan
     end)
   end
 
-  def apply(%Plan{} = plan, actor) do
-    with {:ok, result} <- Definitions.protect(fn -> apply!(plan, actor) end) do
+  # Which baseline a plan compares with, which definitions it applies and
+  # which never-applied ones it may replace
+  defp settings!(bundle, opts) do
+    mode =
+      case Keyword.get(opts, :baseline, :auto) do
+        :auto -> if bundle["source"] == References.scope(), do: :lockfile, else: :database
+        mode when mode in [:lockfile, :database] -> mode
+      end
+
+    uids = Enum.map(bundle["modules"] ++ bundle["table_templates"], & &1["uid"])
+    replace = Keyword.get(opts, :replace, [])
+    Enum.each(replace, &(&1 in uids || Error.raise!(&1, "is not among the definitions")))
+
+    selection =
+      case Keyword.get(opts, :select) do
+        nil -> nil
+        selected -> select_trees!(bundle, Enum.uniq(selected ++ replace))
+      end
+
+    %{mode: mode, replace: MapSet.new(replace), selection: selection}
+  end
+
+  # A selected module brings its whole tree (root, siblings and descendants)
+  # and the table templates the tree uses: what the export selects too.
+  defp select_trees!(bundle, uids) do
+    modules = Map.new(bundle["modules"], &{&1["uid"], &1})
+    tables = MapSet.new(bundle["table_templates"], & &1["uid"])
+    parents = parents(bundle["modules"])
+
+    uids |> Enum.flat_map(&select_tree!(&1, modules, tables, parents)) |> MapSet.new()
+  end
+
+  defp select_tree!(uid, modules, tables, parents) do
+    cond do
+      Map.has_key?(modules, uid) ->
+        tree = uid |> root(parents) |> descendants(modules)
+        tree ++ for(tree_uid <- tree, table = modules[tree_uid]["table_template"], do: table)
+
+      MapSet.member?(tables, uid) ->
+        [uid]
+
+      true ->
+        Error.raise!(uid, "is not among the definitions")
+    end
+  end
+
+  defp root(uid, parents), do: if(parent = parents[uid], do: root(parent, parents), else: uid)
+  defp descendants(uid, modules), do: [uid | Enum.flat_map(modules[uid]["children"], &descendants(&1, modules))]
+
+  # Against the database's baseline, earlier applies' bindings of the bundle's
+  # tokens are this environment's; a mapping passed in names new ones.
+  defp supplied_references(bundle, %{mode: :database}, opts),
+    do: Map.merge(Baselines.bindings(Baselines.latest(), bundle), Keyword.get(opts, :references, %{}))
+
+  defp supplied_references(_bundle, _settings, opts), do: Keyword.get(opts, :references, %{})
+
+  def apply(%Plan{} = plan, actor, opts \\ []) do
+    with {:ok, result} <- Definitions.protect(fn -> apply!(plan, actor, opts) end) do
       result
     end
   rescue
@@ -47,21 +105,25 @@ defmodule Brando.Content.Definition.Importer do
     Ecto.ConstraintError -> {:error, "a database constraint rejected the import; no definitions were committed"}
   end
 
-  defp apply!(plan, actor) do
+  defp apply!(plan, actor, opts) do
     if plan.scope != References.scope(), do: Error.raise!("scope", "plan belongs to another installation or environment")
     unless Plan.applicable?(plan), do: Error.raise!("plan", "resolve conflicts and migrations before applying")
     creator = creator!(actor, creator: plan.creator_id)
+    settings = %{mode: plan.mode, replace: plan.replace, selection: plan.selection}
+    opts = Keyword.put_new_lazy(opts, :batch_id, &Ecto.UUID.generate/0)
 
     result =
       Repo.transaction(fn ->
         lock!()
         References.bind!(Map.merge(plan.bundle, %{"source" => plan.scope, "references" => plan.references}), %{}, actor)
-        {current, records} = plan!(plan.bundle, actor, creator, plan.references)
+        {current, records} = plan!(plan.bundle, actor, creator, plan.references, settings)
 
         unless current.fingerprint == plan.fingerprint and Plan.applicable?(current),
           do: Repo.rollback("target changed after planning; create a new plan")
 
-        persist!(current, records, actor, creator)
+        changes = Brando.Activity.with_batch(opts[:batch_id], fn -> persist!(current, records, actor, creator) end)
+        Baselines.record!(current, changes, records.snapshots, actor, opts)
+        changes
       end)
 
     case result do
@@ -74,16 +136,24 @@ defmodule Brando.Content.Definition.Importer do
             "baseline" => Snapshot.baselines(plan.bundle)
           })
 
-        {:ok, %{changes: changes, refresh: refresh(changes), bundle: bundle}}
+        Phoenix.PubSub.broadcast(
+          Brando.pubsub(),
+          Definitions.topic(),
+          {:definitions_applied, Brando.Tenant.current_prefix()}
+        )
+
+        {:ok, %{changes: changes, refresh: refresh(changes), bundle: bundle, batch_id: opts[:batch_id]}}
 
       {:error, reason} ->
         {:error, reason}
     end
   end
 
-  defp plan!(bundle, actor, creator, bindings) do
+  defp plan!(bundle, actor, creator, bindings, settings) do
     Model.validate_graph!(bundle)
     ensure_actor_scope!(actor)
+
+    latest = Baselines.latest()
 
     snapshot_bindings =
       if bundle["source"] == References.scope(),
@@ -98,6 +168,10 @@ defmodule Brando.Content.Definition.Importer do
       creator: creator,
       bindings: bindings,
       records: records,
+      mode: settings.mode,
+      replace: settings.replace,
+      latest: latest,
+      snapshot_references: snapshot["references"],
       parents: parents(bundle["modules"]),
       current_parents: parents(snapshot["modules"]),
       table_ids: Map.new(records.tables, fn {uid, table} -> {uid, table.id} end),
@@ -120,8 +194,13 @@ defmodule Brando.Content.Definition.Importer do
        references: bindings,
        creator_id: creator.id,
        scope: scope,
-       fingerprint: fingerprint
-     }, records}
+       fingerprint: fingerprint,
+       mode: settings.mode,
+       replace: settings.replace,
+       selection: settings.selection,
+       # How the target's records were written as tokens, generated ones too
+       snapshot_bindings: snapshot["references"]
+     }, Map.put(records, :snapshots, ctx.snapshots)}
   end
 
   defp plan_item!(definition, ctx) do
@@ -132,33 +211,72 @@ defmodule Brando.Content.Definition.Importer do
     old = ctx.snapshots[uid]
     action = if record, do: :update, else: :create
     authorize!(ctx.actor, action, schema, record)
-    validate_plan_target!(uid, kind, schema, record, old)
+
+    if validate_plan_target!(uid, kind, schema, record, old, ctx.mode),
+      do: trashed_item(definition, ctx),
+      else: plan_target_item!(definition, ctx, record, old)
+  end
+
+  # In the trash: nothing about the files can be checked against it until it
+  # is restored, and the rest of the plan goes on
+  defp trashed_item(definition, ctx) do
+    %{
+      kind: definition["kind"],
+      uid: definition["uid"],
+      action: :conflict,
+      reason: "in the trash here; restore it to apply the files' version",
+      state: :deleted,
+      baseline: nil,
+      class: nil,
+      applied: applied(ctx.latest[{definition["kind"], definition["uid"]}]),
+      edited: nil,
+      before: nil,
+      after: Baselines.digest(definition, ctx.bindings),
+      fields: [],
+      diff: [],
+      block_count: 0,
+      entry_count: 0
+    }
+  end
+
+  defp plan_target_item!(definition, ctx, record, old) do
+    uid = definition["uid"]
+    kind = definition["kind"]
     parent_id = parent_record_id(ctx.parents[uid], ctx.records)
     changeset = Params.changeset(definition, record, ctx.bindings, ctx.creator, ctx.table_ids, parent_id)
     Model.apply_valid!(changeset, uid)
     validate_ref_placements!(kind, changeset, uid, ctx.actor)
     validate_ref_uids!(definition, record)
     validate_template!(definition, ctx.actor)
-    digest = Value.digest(definition)
-    old_digest = if old, do: Value.digest(old)
-    baseline = plan_baseline(ctx.bundle, kind, uid, record, old, old_digest)
+    {digest, old_digest} = digests(ctx, definition, old)
+    row = ctx.latest[{kind, uid}]
+    {base, source, matches} = plan_baseline(ctx, definition, record, old, row)
+    state = state(record, digest, old_digest, base, matches)
+    baseline = if matches.target, do: old_digest, else: base
     block_ids = module_block_ids(kind, record)
 
     {action, reason} =
-      classify(
-        definition,
-        old,
-        record,
-        changeset,
-        {baseline, digest, old_digest},
-        {ctx.parents[uid], ctx.current_parents[uid]}
-      )
+      action(ctx, {state, source}, fn ->
+        classify(
+          definition,
+          old,
+          record,
+          changeset,
+          {baseline, digest, old_digest},
+          {ctx.parents[uid], ctx.current_parents[uid]}
+        )
+      end)
 
     %{
       kind: kind,
       uid: uid,
       action: action,
       reason: reason,
+      state: state,
+      baseline: source,
+      class: diff_class(kind, record, old, changeset),
+      applied: applied(row),
+      edited: if(state in [:changed_in_admin, :changed_in_both], do: last_edit(kind, record, row)),
       before: old_digest,
       after: digest,
       fields: changed_fields(old, definition),
@@ -168,12 +286,101 @@ defmodule Brando.Content.Definition.Importer do
     }
   end
 
-  defp validate_plan_target!(uid, kind, schema, record, old) do
+  defp action(%{mode: :database}, {:deleted, _source}, _classify),
+    do: {:conflict, "deleted here after it was applied; a release apply that names it in replace: creates it again"}
+
+  # The files bring what was last applied here; the admin's edit since stays,
+  # and nothing is applied
+  defp action(%{mode: :database}, {:changed_in_admin, :applied}, _classify), do: {:noop, nil}
+
+  defp action(ctx, {:never_applied, _source}, classify) do
+    case classify.() do
+      {:conflict, _reason} -> {:conflict, never_applied_reason(ctx.mode)}
+      result -> result
+    end
+  end
+
+  defp action(_ctx, _state, classify), do: classify.()
+
+  # Against the database's baseline, the files and the target are compared by
+  # the records their tokens name, as apply rows record them: the target
+  # names them in its own way. Against the lockfile, exactly.
+  defp digests(%{mode: :database} = ctx, definition, old),
+    do: {Baselines.digest(definition, ctx.bindings), old && Baselines.digest(old, ctx.snapshot_references)}
+
+  defp digests(_ctx, definition, old), do: {Value.digest(definition), old && Value.digest(old)}
+
+  # How the definition in the files, the one in the database and the baseline
+  # relate (`Brando.Content.Definition.Watcher` shows the same states)
+  defp state(nil, _digest, _old_digest, nil, _matches), do: :new
+  defp state(nil, _digest, _old_digest, _base, _matches), do: :deleted
+  defp state(_record, same, same, _base, _matches), do: :in_sync
+  defp state(_record, _digest, _old_digest, nil, _matches), do: :never_applied
+  defp state(_record, _digest, _old_digest, _base, %{target: true}), do: :changed_in_release
+  defp state(_record, _digest, _old_digest, _base, %{file: true}), do: :changed_in_admin
+  defp state(_record, _digest, _old_digest, _base, _matches), do: :changed_in_both
+
+  defp never_applied_reason(:database),
+    do: "never applied from files, and the database copy differs; name it to replace it with the files' version"
+
+  defp never_applied_reason(:lockfile), do: "missing baseline; export the target before editing it"
+
+  defp diff_class("module", record, old, changeset) when not is_nil(record) and not is_nil(old),
+    do: ModuleDiff.classify(ModuleDiff.diff(record, changeset))
+
+  defp diff_class(_kind, _record, _old, _changeset), do: nil
+
+  defp applied(nil), do: nil
+
+  defp applied(row),
+    do: %{
+      at: row.applied_at,
+      by: row.applied_by,
+      action: row.action,
+      source: row.source,
+      release: row.release
+    }
+
+  # Who changed the module in the admin last, after the last apply: the
+  # activity log knows, and without an event there, when the row changed
+  defp last_edit("module", %{id: id} = record, row) do
+    import Ecto.Query, only: [from: 2]
+    since = row && row.applied_at
+
+    query =
+      from(e in Brando.Activity.Event,
+        where: e.schema == ^to_string(Module) and e.entry_id == ^id,
+        order_by: [desc: e.inserted_at, desc: e.id],
+        limit: 1,
+        preload: [:user]
+      )
+
+    query = if since, do: from(e in query, where: e.inserted_at > ^since), else: query
+
+    case Repo.one(query) do
+      nil -> %{at: record.updated_at, by: nil}
+      event -> %{at: event.inserted_at, by: event.user}
+    end
+  end
+
+  defp last_edit(_kind, _record, _row), do: nil
+
+  # Whether the definition was deleted in the target. Against the
+  # database's baseline that is a conflict of its own, so one module in the
+  # trash doesn't keep a release's other definitions from being planned.
+  defp validate_plan_target!(uid, kind, schema, record, old, mode) do
+    validate_local!(uid, kind, record, old)
+
+    cond do
+      not is_nil(record) or is_nil(Repo.get_by(schema, uid: uid)) -> false
+      mode == :database -> true
+      true -> Error.raise!(uid, "UID belongs to a deleted or unavailable definition")
+    end
+  end
+
+  defp validate_local!(uid, kind, record, old) do
     if record && Map.get(record, :source_module_id), do: Error.raise!(uid, "shared-library overrides are unsupported")
     if record && kind == "module" && is_nil(old), do: Error.raise!(uid, "shared-library descendants are unsupported")
-
-    if is_nil(record) and Repo.get_by(schema, uid: uid),
-      do: Error.raise!(uid, "UID belongs to a deleted or unavailable definition")
   end
 
   defp parent_record_id(parent, records) do
@@ -190,13 +397,67 @@ defmodule Brando.Content.Definition.Importer do
     end
   end
 
-  defp plan_baseline(bundle, kind, uid, record, old, old_digest) do
-    baseline_kind = if kind == "module", do: "modules", else: "table_templates"
-    baseline = get_in(bundle, ["baseline", baseline_kind, uid])
-    baseline = if is_nil(record) and bundle["source"] != References.scope(), do: nil, else: baseline
-    # The baseline is recorded in its own digest version; one that matches
-    # the target stands for the target's exact digest from here on.
-    if old && baseline && baseline == Snapshot.baseline_digest(bundle, old), do: old_digest, else: baseline
+  # The baseline a definition is compared with, where it came from, and
+  # whether it equals the target and the file. Each baseline is recorded in
+  # its own digest version; one that matches the target stands for the
+  # target's exact digest from then on.
+  #
+  #   * named in `replace:` — the target as it is: the files replace it
+  #   * against the database (`:database`) — the latest apply recorded here;
+  #     without one, the lockfile's, but only when the target equals it
+  #   * against the lockfile — the lockfile's, as recorded in development
+  # The target and the files are each digested with their own bindings: a
+  # recorded apply is compared by the records its tokens name
+  defp plan_baseline(ctx, definition, record, old, row) do
+    {base, source, {target_digest, file_digest}} = baseline_source(ctx, definition, record, old, row)
+
+    matches = %{
+      target: not is_nil(base) and not is_nil(old) and base == target_digest.(old),
+      file: not is_nil(base) and base == file_digest.(definition)
+    }
+
+    {base, source, matches}
+  end
+
+  defp baseline_source(ctx, definition, record, old, row) do
+    resolved = {&Baselines.digest(&1, ctx.snapshot_references), &Baselines.digest(&1, ctx.bindings)}
+
+    cond do
+      replace?(ctx, definition, old, row) ->
+        {old && elem(resolved, 0).(old), :replaced, resolved}
+
+      ctx.mode == :database and row ->
+        {row.digest, :applied, resolved}
+
+      ctx.mode == :database ->
+        database_fallback(ctx, lockfile_baseline(ctx, definition, record), old)
+
+      true ->
+        base = lockfile_baseline(ctx, definition, record)
+        lockfile = &Snapshot.baseline_digest(ctx.bundle, &1)
+        {base, base && :lockfile, {lockfile, lockfile}}
+    end
+  end
+
+  # Named to replace, and never applied here or deleted here since: a
+  # conflict on a definition applied here stays one
+  defp replace?(ctx, definition, old, row),
+    do: MapSet.member?(ctx.replace, definition["uid"]) and (is_nil(old) or is_nil(row))
+
+  # Without a record here, the lockfile's baseline counts only when the
+  # target equals it
+  defp database_fallback(ctx, base, old) do
+    digest_fun = &Snapshot.baseline_digest(ctx.bundle, &1)
+
+    if old && base && base == digest_fun.(old),
+      do: {base, :lockfile, {digest_fun, digest_fun}},
+      else: {nil, nil, {digest_fun, digest_fun}}
+  end
+
+  defp lockfile_baseline(ctx, definition, record) do
+    baseline_kind = if definition["kind"] == "module", do: "modules", else: "table_templates"
+    baseline = get_in(ctx.bundle, ["baseline", baseline_kind, definition["uid"]])
+    if is_nil(record) and ctx.bundle["source"] != References.scope(), do: nil, else: baseline
   end
 
   defp module_block_ids(kind, record) do
@@ -303,7 +564,7 @@ defmodule Brando.Content.Definition.Importer do
     ctx = %{definitions: definitions, parents: parents, references: plan.references, actor: actor, creator: creator}
 
     Enum.reduce(ordered, initial, fn item, state ->
-      if item.action == :noop, do: state, else: persist_item!(item, state, ctx)
+      if item.action == :noop or not Plan.selected?(plan, item), do: state, else: persist_item!(item, state, ctx)
     end).changes
   end
 

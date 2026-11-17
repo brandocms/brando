@@ -537,8 +537,13 @@ defmodule Brando.Content.DefinitionsTest do
   test "missing baselines, deleted definitions, wrong scopes and shared overrides are rejected", c do
     apply_bundle!(c.bundle, c.user)
     before = snapshot()
+    # Without a lockfile, the apply this database recorded is the baseline
     assert {:ok, plan} = Definitions.plan(edit(c.bundle, &Map.put(&1, "class", "changed")), c.user)
-    assert [%{action: :conflict}] = plan.items
+    assert [%{action: :update, baseline: :applied}] = plan.items
+    # Without that either, there is none
+    Repo.delete_all(Brando.Content.DefinitionApply)
+    assert {:ok, plan} = Definitions.plan(edit(c.bundle, &Map.put(&1, "class", "changed")), c.user)
+    assert [%{action: :conflict, state: :never_applied}] = plan.items
     assert {:ok, plan} = Definitions.plan(before, c.user)
     put_test_env(:tenancy_mode, :multi)
 
@@ -655,7 +660,8 @@ defmodule Brando.Content.DefinitionsTest do
     for prefix <- ["tenant_dsl_staging", "tenant_dsl_production"] do
       Ecto.Adapters.SQL.query!(Repo.repo(), ~s(CREATE SCHEMA "#{prefix}"))
 
-      for table <- ~w(content_modules content_table_templates content_refs content_vars content_blocks) do
+      for table <-
+            ~w(content_modules content_table_templates content_refs content_vars content_blocks content_definition_applies) do
         Ecto.Adapters.SQL.query!(
           Repo.repo(),
           ~s|CREATE TABLE "#{prefix}"."#{table}" (LIKE public."#{table}" INCLUDING ALL)|

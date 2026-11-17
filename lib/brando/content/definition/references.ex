@@ -95,6 +95,47 @@ defmodule Brando.Content.Definition.References do
 
   def upgrade(bundle), do: bundle
 
+  @doc """
+  `definition` with each token it uses written as the record `bindings` bind
+  it to (`"image:42"`), so two spellings of the same reference compare equal.
+  A token `bindings` doesn't know stays as it is.
+  """
+  def canonical(%{"type" => "markdown_source", "data" => data} = ref, bindings) when is_map(data) do
+    data =
+      Enum.reduce(Map.keys(@markdown_fields), data, &Map.update(&2, &1, nil, fn token -> resolved(token, bindings) end))
+
+    %{ref | "data" => data}
+  end
+
+  def canonical(%{"object_id" => token} = override, bindings) when not is_nil(token) do
+    override |> Map.delete("object_id") |> canonical(bindings) |> Map.put("object_id", resolved(token, bindings))
+  end
+
+  def canonical(value, bindings) when is_map(value) do
+    Map.new(value, fn
+      {"assets", assets} when is_map(assets) ->
+        {"assets", Map.new(assets, fn {kind, token} -> {kind, resolved(token, bindings)} end)}
+
+      {key, nested} ->
+        {key, canonical(nested, bindings)}
+    end)
+  end
+
+  def canonical(value, bindings) when is_list(value), do: Enum.map(value, &canonical(&1, bindings))
+  def canonical(value, _bindings), do: value
+
+  defp resolved(nil, _bindings), do: nil
+
+  defp resolved(token, bindings) do
+    case bindings[token] do
+      %{"kind" => kind, "id" => id} -> "#{kind}:#{id}"
+      _ -> token
+    end
+  end
+
+  @doc "The tokens `bundle`'s definitions use, `%{token => kind}`."
+  def declared(bundle), do: declared!(bundle)
+
   defp declared!(bundle),
     do: collect!(bundle["modules"] || [], %{}) |> then(&collect!(bundle["table_templates"] || [], &1))
 

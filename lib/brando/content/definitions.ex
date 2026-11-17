@@ -95,11 +95,47 @@ defmodule Brando.Content.Definitions do
       do: Error.raise!("authorization", "forbidden")
   end
 
-  @doc "Builds a change plan in the current tenant. `:references` maps external tokens to destination IDs."
+  @doc """
+  Builds a change plan in the current tenant. Options:
+
+    * `:references` - maps external tokens to destination IDs
+    * `:baseline` - what each definition is compared with: `:lockfile` (the
+      bundle's own baseline), `:database` (the definitions last applied in
+      this environment, `Brando.Content.DefinitionApply`) or `:auto`, the
+      default: the lockfile when it was written for this database, the
+      database's own otherwise
+    * `:select` - UIDs whose module trees an apply writes; without it, every
+      definition
+    * `:replace` - UIDs that were never applied from files and differ from
+      them, to replace with the bundle's version anyway
+    * `:creator` - a user or user ID for new records when the actor is
+      `:system`; `:none` makes a plan that can't be applied
+
+  See `Brando.Content.Definition.Plan` for what each item says.
+  """
   def plan(bundle, actor, opts \\ []), do: Brando.Content.Definition.Importer.plan(bundle, actor, opts)
 
-  @doc "Applies a plan after locking and checking its target and baseline again."
-  def apply(plan, actor), do: Brando.Content.Definition.Importer.apply(plan, actor)
+  @doc """
+  Applies a plan after locking and checking its target and baseline again,
+  and records each definition it wrote, or found equal, as applied
+  (`Brando.Content.DefinitionApply`) in the same transaction. Options:
+  `:source` (`:release` or `:import`, the default), `:release` (the release
+  version) and `:batch_id`.
+  """
+  def apply(plan, actor, opts \\ []), do: Brando.Content.Definition.Importer.apply(plan, actor, opts)
+
+  @doc """
+  The PubSub topic that hears `{:definitions_applied, prefix}` after each
+  apply, and `{:definitions_changed, prefix}` after a module is deleted or a
+  table template saved or deleted (module saves are on `"brando:modules"`).
+  """
+  def topic, do: "brando:definitions"
+
+  @doc "Announces, once the current transaction commits, that definitions changed in the current environment."
+  def changed do
+    prefix = Brando.Tenant.current_prefix()
+    Brando.Repo.after_commit(fn -> Phoenix.PubSub.broadcast(Brando.pubsub(), topic(), {:definitions_changed, prefix}) end)
+  end
 
   @doc "Writes the baseline returned by a successful apply, leaving authored DSL and templates intact."
   def write_baseline(directory, %{bundle: bundle}) do
