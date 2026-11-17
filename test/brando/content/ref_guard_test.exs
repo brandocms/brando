@@ -411,6 +411,31 @@ defmodule Brando.Content.RefGuardTest do
       assert copy(c, "logo", svg("<svg><a/></svg>", nil), c.editor).code == @svg
     end
 
+    test "a copy of a shared module's block keeps the markup its saved blocks hold", c do
+      insert_saved_refs!(c, "logo", [svg("<svg><a/></svg>", nil)], "shared")
+
+      params = %{
+        "uid" => Utils.generate_uid(),
+        "type" => "module",
+        "module_id" => c.module.id,
+        "module_origin" => "shared",
+        "refs" => %{"0" => %{"uid" => Utils.generate_uid(), "name" => "logo", "data" => svg("<svg><a/></svg>", nil)}}
+      }
+
+      changeset = Block.recursive_block_changeset(%Block{}, params, c.editor.id)
+
+      assert saved_ref(changeset, "logo").data.data.code == "<svg><a/></svg>"
+    end
+
+    # A database string holds no NUL, so no saved ref holds such markup
+    test "puts back markup with a NUL in it", c do
+      insert_saved_refs!(c, "embed", [html(@custom, [param("Checkin ID")])])
+
+      saved = copy(c, "embed", html(@custom, indexed([param("Checkin\u0000 ID")])), c.editor)
+
+      assert saved.text == @template
+    end
+
     # A shared library module and a site's own module may have the same id
     test "takes no markup from a block of a shared module of the same id", c do
       insert_saved_refs!(c, "logo", [svg("<svg><a/></svg>", nil)], "shared")

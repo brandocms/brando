@@ -316,7 +316,7 @@ defmodule Brando.Content.RefGuard do
     origin = Changeset.get_field(state.block, :module_origin) || :local
     name = Changeset.get_field(ref, :name)
     markup = comparable(type, markup(type, data))
-    query = module_id && name && stored_query(type, markup)
+    query = module_id && name && not holds_nul?(markup) && stored_query(type, markup)
 
     if query do
       query =
@@ -335,6 +335,13 @@ defmodule Brando.Content.RefGuard do
       false
     end
   end
+
+  # Postgres stores no NUL in text or jsonb, so no saved ref holds such
+  # markup, and a query for it would raise
+  defp holds_nul?(value) when is_binary(value), do: String.contains?(value, <<0>>)
+  defp holds_nul?(value) when is_tuple(value), do: value |> Tuple.to_list() |> holds_nul?()
+  defp holds_nul?(value) when is_list(value), do: Enum.any?(value, &holds_nul?/1)
+  defp holds_nul?(_value), do: false
 
   defp stored_query("html", {text, _params}) when is_nil(text), do: nil
 
