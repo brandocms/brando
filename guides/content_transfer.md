@@ -146,6 +146,11 @@ are not portable authored values. The current actor owns the destination changes
 Imported blocks are saved as that actor's own edits: unless the actor is a
 superuser, an HTML or SVG ref takes the destination module's markup, keeping
 an HTML ref's parameter values ([HTML refs](block_editor.md#html-refs)).
+A Legacy Content Wrapper block (the module the 0.51 upgrade puts free-standing
+blocks in) keeps its `content` ref's type: a picture, comment or HTML ref stays
+one. The wrapper's definition holds no markup, so for anyone but a superuser an
+HTML or SVG `content` keeps its markup only when a wrapper block at the
+destination holds the same.
 
 Shared-library definitions and overrides must be made local before transfer.
 Unsupported reference types and missing application dependencies are actionable

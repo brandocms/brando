@@ -339,6 +339,221 @@ defmodule Brando.Content.RefGuardTest do
     end
   end
 
+  describe "the Legacy Content Wrapper" do
+    alias Brando.Villain.Blocks.CommentBlock
+    alias Brando.Villain.Blocks.PictureBlock
+
+    # The module brando_108 wraps free-standing Villain blocks in: one
+    # `content` text ref, which holds each wrapped block as the type it was
+    # (`Brando.Content.Module.any_ref_type?/2`). Found by its class.
+    setup c do
+      wrapper =
+        ProposalFixtures.module!(c.superuser, "Gammelt innhold", "{% ref refs.content %}",
+          refs: [ProposalFixtures.ref("content", %{type: "text", data: %{text: ""}})]
+        )
+
+      wrapper =
+        wrapper
+        |> Changeset.change(class: Brando.Content.Module.legacy_wrapper_class())
+        |> Repo.update!()
+
+      %{wrapper: wrapper}
+    end
+
+    @wrapped_html ~s(<iframe src="https://by.no/kart"></iframe>)
+
+    defp wrapped(:comment), do: %CommentBlock{type: "comment", data: %CommentBlock.Data{text: "Bytt bilde i mai"}}
+    defp wrapped(:picture), do: %PictureBlock{type: "picture", data: %PictureBlock.Data{alt: "Fasaden"}}
+    defp wrapped(:html), do: %HtmlBlock{type: "html", data: %HtmlBlock.Data{text: @wrapped_html}}
+
+    defp wrapped_params(kind), do: data_params(wrapped(kind))
+
+    # A saved wrapper block whose `content` holds `kind`, as brando_108 left
+    # it. The ref row is written directly, as the migration does.
+    defp wrapper_block!(c, kind) do
+      block =
+        %Block{}
+        |> Block.recursive_block_changeset(
+          %{
+            "uid" => Utils.generate_uid(),
+            "type" => "module",
+            "module_id" => c.wrapper.id,
+            "refs" => module_ref_params(c.wrapper)
+          },
+          c.superuser
+        )
+        |> Repo.insert!()
+        |> Repo.preload(:refs)
+
+      block |> ref("content") |> Changeset.change(data: wrapped(kind)) |> Repo.update!()
+
+      Repo.preload(block, [:refs, :vars, :table_rows, :block_identifiers, :children], force: true)
+    end
+
+    # A new wrapper block whose `content` is `data`, as the editor sends one
+    defp new_wrapper_block(c, data) do
+      %{
+        "uid" => Utils.generate_uid(),
+        "type" => "module",
+        "module_id" => c.wrapper.id,
+        "refs" => %{"0" => %{"uid" => Utils.generate_uid(), "name" => "content", "data" => data}}
+      }
+    end
+
+    defp content(changeset), do: saved_ref(changeset, "content").data
+
+    defp assert_wrapped(kind, data) do
+      case kind do
+        :comment -> assert %CommentBlock{data: %{text: "Bytt bilde i mai"}} = data
+        :picture -> assert %PictureBlock{data: %{alt: "Fasaden"}} = data
+        :html -> assert %HtmlBlock{data: %{text: @wrapped_html}} = data
+      end
+    end
+
+    for kind <- [:comment, :picture, :html] do
+      test "a duplicate keeps its #{kind} content for an editor", c do
+        block = wrapper_block!(c, unquote(kind))
+
+        copy = block |> Changeset.change() |> Brando.Content.Blocks.duplicate_block(user_id: c.editor.id)
+        params = Brando.Drafts.Params.snapshot(Changeset.apply_changes(copy))
+        changeset = Block.block_changeset(%Block{}, Map.put(params, "uid", Utils.generate_uid()), c.editor.id)
+
+        assert changeset.valid?
+        assert_wrapped(unquote(kind), content(changeset))
+        assert_wrapped(unquote(kind), changeset |> Repo.insert!() |> Map.get(:refs) |> hd() |> Map.get(:data))
+      end
+
+      # A paste is a duplicate re-sourced to the field it lands in
+      test "a paste into another schema keeps its #{kind} content for an editor", c do
+        block = wrapper_block!(c, unquote(kind))
+
+        copy =
+          block
+          |> Changeset.change()
+          |> Brando.Content.Blocks.duplicate_block(user_id: c.editor.id, source: Brando.Pages.Fragment.Blocks)
+
+        params = Brando.Drafts.Params.snapshot(Changeset.apply_changes(copy))
+        changeset = Block.recursive_block_changeset(%Block{}, Map.put(params, "uid", Utils.generate_uid()), c.editor.id)
+
+        assert changeset.valid?
+        assert_wrapped(unquote(kind), content(changeset))
+      end
+    end
+
+    # A block the LiveView never saved comes back from the browser's copy
+    # (`recover_blocks`), as new refs
+    test "a recovered new block keeps its comment and picture content", c do
+      for kind <- [:comment, :picture] do
+        changeset = Block.recursive_block_changeset(%Block{}, new_wrapper_block(c, wrapped_params(kind)), c.editor.id)
+        assert_wrapped(kind, content(changeset))
+      end
+    end
+
+    test "an editor's new HTML markup no saved wrapper block holds is put back", c do
+      wrapper_block!(c, :html)
+      data = %{"type" => "html", "data" => %{"text" => "<script>alert(1)</script>"}}
+
+      changeset = Block.recursive_block_changeset(%Block{}, new_wrapper_block(c, data), c.editor.id)
+
+      assert %HtmlBlock{data: %{text: nil, params: []}} = content(changeset)
+    end
+
+    test "an editor's new SVG code or media template is put back", c do
+      svg = %{"type" => "svg", "data" => %{"code" => "<svg><script/></svg>", "class" => "x"}}
+      changeset = Block.recursive_block_changeset(%Block{}, new_wrapper_block(c, svg), c.editor.id)
+      assert %SvgBlock{data: %{code: nil, class: nil}} = content(changeset)
+
+      media = %{"type" => "media", "data" => %{"template_svg" => %{"code" => "<svg><script/></svg>"}}}
+      changeset = Block.recursive_block_changeset(%Block{}, new_wrapper_block(c, media), c.editor.id)
+      assert %MediaBlock{data: %{template_svg: nil}} = content(changeset)
+    end
+
+    test "a superuser's new HTML markup is kept", c do
+      data = %{"type" => "html", "data" => %{"text" => "<b>new</b>"}}
+
+      changeset = Block.recursive_block_changeset(%Block{}, new_wrapper_block(c, data), c.superuser.id)
+
+      assert %HtmlBlock{data: %{text: "<b>new</b>"}} = content(changeset)
+    end
+
+    test "an editor's change to a saved wrapper ref's markup is put back", c do
+      block = wrapper_block!(c, :html)
+
+      changeset = save(block, "content", %{"data" => %{"text" => "<script>alert(1)</script>"}}, c.editor)
+
+      assert %HtmlBlock{data: %{text: @wrapped_html}} = content(changeset)
+    end
+
+    test "an editor's saved comment sent as HTML takes no markup", c do
+      block = wrapper_block!(c, :comment)
+
+      changeset = save(block, "content", %{"type" => "html", "data" => %{"text" => @wrapped_html}}, c.editor)
+
+      refute match?(%HtmlBlock{data: %{text: text}} when not is_nil(text), content(changeset))
+    end
+
+    test "a `content` ref of a module that is not the wrapper keeps its module's type", c do
+      module =
+        ProposalFixtures.module!(c.superuser, "Content", "{% ref refs.content %}",
+          refs: [ProposalFixtures.ref("content", %{type: "text", data: %{text: "<p>Default</p>"}})]
+        )
+
+      params = %{new_wrapper_block(c, wrapped_params(:comment)) | "module_id" => module.id}
+
+      for user <- [c.editor, c.superuser] do
+        changeset = Block.recursive_block_changeset(%Block{}, params, user.id)
+        assert %TextBlock{data: %{text: "<p>Default</p>"}} = content(changeset)
+      end
+    end
+
+    test "content transfer keeps the wrapped content", c do
+      # A copy of the saved wrapper block's markup, as an export of this site holds it
+      wrapper_block!(c, :html)
+      page = Factory.insert(:page, creator: c.superuser) |> Repo.preload(entry_blocks: :block)
+
+      entry_blocks =
+        [:comment, :picture, :html]
+        |> Enum.with_index()
+        |> Enum.map(fn {kind, index} ->
+          %{"sequence" => index, "block" => new_wrapper_block(c, wrapped_params(kind))}
+        end)
+
+      changeset = Brando.Content.Transfer.field_changeset(page, %{"entry_blocks" => entry_blocks}, c.editor)
+
+      assert [comment, picture, html] =
+               changeset
+               |> Changeset.apply_changes()
+               |> Map.get(:entry_blocks)
+               |> Enum.map(&(&1.block.refs |> hd() |> Map.get(:data)))
+
+      assert_wrapped(:comment, comment)
+      assert_wrapped(:picture, picture)
+      assert_wrapped(:html, html)
+    end
+  end
+
+  describe "an ordinary module's text ref sent as HTML" do
+    test "is put back on a new block, for an editor and a superuser", c do
+      params = %{
+        "uid" => Utils.generate_uid(),
+        "type" => "module",
+        "module_id" => c.module.id,
+        "refs" => %{
+          "0" => %{
+            "uid" => Utils.generate_uid(),
+            "name" => "body",
+            "data" => %{"type" => "html", "data" => %{"text" => "<i>raw</i>"}}
+          }
+        }
+      }
+
+      for user <- [c.editor, c.superuser] do
+        changeset = Block.recursive_block_changeset(%Block{}, params, user.id)
+        assert %TextBlock{data: %{text: "<p>Body</p>"}} = saved_ref(changeset, "body").data
+      end
+    end
+  end
+
   describe "an SVG ref" do
     test "an editor's code is put back", c do
       block = insert_block!(c)
