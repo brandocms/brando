@@ -499,6 +499,19 @@ defmodule Brando.Villain.GetEntryStatusTest do
       assert stored(target) =~ ~s(<div class="card">no image</div>)
     end
 
+    test "a save from a form opened before the entry was trashed renders it as the form has it", c do
+      module = create_module(c.user, ~S(<h1>{{ entry.uri }}</h1>))
+      target = create_self_linking_page(c.user, module, %{status: :published, uri: "launch"})
+      {:ok, opened} = Brando.Query.get_entry(Page, target.id)
+
+      # The trash gives the row a uri of its own
+      {:ok, _} = Pages.delete_page(target.id, c.user)
+      refute Brando.Repo.get(Page, target.id).uri == "launch"
+
+      {:ok, _} = save_from_form_opened_as(opened, %{title: "Relaunch"}, c.user)
+      assert stored(target) =~ "<h1>launch</h1>"
+    end
+
     test "a save from the form leaves a card of another entry as it is stored", c do
       module =
         create_module(c.user, ~S({% assign e = card.identifier | get_entry %}<div class="card">{{ e.title }}</div>))

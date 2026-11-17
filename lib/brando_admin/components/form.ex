@@ -8762,15 +8762,22 @@ defmodule BrandoAdmin.Components.Form do
   # as it is keeps the row's value, which may have changed since the form
   # loaded the entry (a publish at its `publish_at`, a status toggled in the
   # listing, a title changed elsewhere). A relation the save changes (an asset
-  # field's `put_assoc`) sets its key in the entry, not in the changes.
+  # field's `put_assoc`) sets its key in the entry, not in the changes. A row
+  # in the trash has the trash's values (an obfuscated `uri`), and is
+  # rendered as the form has it, to be right once it is restored.
   defp with_stored_fields(entry, %Changeset{changes: changes, data: %schema{id: id}}) when not is_nil(id) do
-    import Ecto.Query, only: [from: 2]
+    import Ecto.Query, only: [from: 2, where: 3]
 
     changed = Map.keys(changes) ++ changed_relation_keys(schema, changes)
 
-    case Enum.filter(schema.__schema__(:fields), &(is_map_key(entry, &1) and &1 not in changed)) do
-      [] -> entry
-      fields -> Map.merge(entry, Brando.Repo.one(from(e in schema, where: e.id == ^id, select: map(e, ^fields))) || %{})
+    case Enum.filter(schema.__schema__(:query_fields), &(is_map_key(entry, &1) and &1 not in changed)) do
+      [] ->
+        entry
+
+      fields ->
+        query = from(e in schema, where: e.id == ^id, select: map(e, ^fields))
+        query = if :deleted_at in schema.__schema__(:fields), do: where(query, [e], is_nil(e.deleted_at)), else: query
+        Map.merge(entry, Brando.Repo.one(query) || %{})
     end
   end
 
