@@ -307,31 +307,75 @@ defmodule Brando.Content.RefGuard do
   defp valid?(_), do: true
 
   # A ref in a saved block of the same module, with the same name and this
-  # markup: a copy of a saved block brings its refs' markup along.
+  # markup: a copy of a saved block brings its refs' markup along. The query
+  # compares every markup field, so any number of saved refs that share some
+  # of them cannot hide the one that holds them all. The row it finds is
+  # compared again here, so the query is never the only check.
   defp stored?(state, ref, type, data) do
     module_id = Changeset.get_field(state.block, :module_id)
+    origin = Changeset.get_field(state.block, :module_origin) || :local
     name = Changeset.get_field(ref, :name)
     markup = comparable(type, markup(type, data))
+    query = module_id && name && stored_query(type, markup)
 
-    if module_id && name && type != "media" do
-      {field, value} = if type == "html", do: {"text", data.text}, else: {"code", data.code}
-
+    if query do
       query =
-        from r in Ref,
+        from r in query,
           join: b in Block,
           on: b.id == r.block_id,
-          where:
-            b.module_id == ^module_id and r.name == ^name and fragment("?->>'type'", r.data) == ^type and
-              fragment("?->'data'->>?", r.data, ^field) == ^value,
+          where: b.module_origin == ^origin and b.module_id == ^module_id and r.name == ^name,
           select: r.data,
-          limit: 50
+          limit: 1
 
-      not is_nil(value) and
-        Enum.any?(Brando.Repo.all(query), &(comparable(type, markup(type, &1.data)) == markup))
+      case Brando.Repo.one(query) do
+        %{data: stored} -> comparable(type, markup(type, stored)) == markup
+        nil -> false
+      end
     else
       false
     end
   end
+
+  defp stored_query("html", {text, _params}) when is_nil(text), do: nil
+
+  # `params` as `comparable/2` reads them: missing or null is none, and a
+  # parameter without a type is a text parameter (the embed's default)
+  defp stored_query("html", {text, params}) do
+    params = Enum.map(params, &Tuple.to_list/1)
+
+    from r in Ref,
+      where:
+        fragment("?->>'type'", r.data) == "html" and fragment("?->'data'->>'text'", r.data) == ^text and
+          fragment(
+            """
+            CASE jsonb_typeof(?->'data'->'params')
+              WHEN 'array' THEN (
+                SELECT coalesce(jsonb_agg(jsonb_build_array(
+                  p->>'key',
+                  p->>'label',
+                  CASE WHEN jsonb_exists(p, 'type') THEN coalesce(p->>'type', '') ELSE 'text' END
+                ) ORDER BY ordinality), '[]'::jsonb)
+                FROM jsonb_array_elements(?->'data'->'params') WITH ORDINALITY AS params(p, ordinality)
+              )
+              ELSE '[]'::jsonb
+            END = ?::jsonb
+            """,
+            r.data,
+            r.data,
+            ^params
+          )
+  end
+
+  defp stored_query("svg", {code, _class}) when is_nil(code), do: nil
+
+  defp stored_query("svg", {code, class}) do
+    from r in Ref,
+      where:
+        fragment("?->>'type'", r.data) == "svg" and fragment("?->'data'->>'code'", r.data) == ^code and
+          fragment("?->'data'->>'class' IS NOT DISTINCT FROM ?::text", r.data, ^class)
+  end
+
+  defp stored_query(_type, _markup), do: nil
 
   defp definition(%{module: :unloaded, block: block} = state, name) do
     module =

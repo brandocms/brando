@@ -17,6 +17,8 @@ defmodule Brando.Content.RefGuardTest do
   alias Brando.Villain.Blocks.TextBlock
   alias Ecto.Changeset
 
+  import Ecto.Query, only: [from: 2]
+
   @template ~s(<div data-checkin="{{ checkin_id }}"></div>)
   @svg ~s(<svg viewBox="0 0 1 1"><rect width="1" height="1"/></svg>)
 
@@ -290,6 +292,130 @@ defmodule Brando.Content.RefGuardTest do
       changeset = Block.recursive_block_changeset(%Block{}, params, c.editor.id)
 
       assert saved_ref(changeset, "embed").data.data.text == custom
+    end
+  end
+
+  describe "a copy of a saved block" do
+    # A new ref may carry the markup a ref of the same name holds in a saved
+    # block of the same module, as a copied or pasted block does. Other saved
+    # refs may share any one markup field with it.
+    @custom "<span>{{ checkin_id }}</span>"
+
+    # Saved refs `name` holding each of `datas` (stored as written), in a
+    # block of `c.module`
+    defp insert_saved_refs!(c, name, datas, origin \\ "local") do
+      block = insert_block!(c)
+
+      if origin != "local" do
+        Repo.update_all(from(b in Block, where: b.id == ^block.id), set: [module_origin: origin])
+      end
+
+      now = NaiveDateTime.utc_now(:second)
+
+      rows =
+        Enum.map(datas, fn data ->
+          %{name: name, data: data, uid: Utils.generate_uid(), block_id: block.id, inserted_at: now, updated_at: now}
+        end)
+
+      Repo.insert_all("content_refs", rows)
+    end
+
+    defp html(text, params), do: %{"type" => "html", "data" => %{"text" => text, "params" => params}}
+    defp svg(code, class), do: %{"type" => "svg", "data" => %{"code" => code, "class" => class}}
+
+    defp param(label), do: %{"key" => "checkin_id", "label" => label, "type" => "id"}
+
+    # A new block of `c.module` with one ref `name` holding `data`
+    defp copy(c, name, data, user) do
+      params = %{
+        "uid" => Utils.generate_uid(),
+        "type" => "module",
+        "module_id" => c.module.id,
+        "refs" => %{"0" => %{"uid" => Utils.generate_uid(), "name" => name, "data" => data}}
+      }
+
+      changeset = Block.recursive_block_changeset(%Block{}, params, user.id)
+      saved_ref(changeset, name).data.data
+    end
+
+    defp indexed(list), do: list |> Enum.with_index() |> Map.new(fn {item, index} -> {to_string(index), item} end)
+
+    test "keeps an HTML ref's markup past many saved refs of the same text", c do
+      others = for n <- 1..60, do: html(@custom, [param("Label #{n}")])
+      insert_saved_refs!(c, "embed", others ++ [html(@custom, [param("Checkin ID")])])
+
+      saved = copy(c, "embed", html(@custom, indexed([param("Checkin ID")])), c.editor)
+
+      assert saved.text == @custom
+      assert [%{label: "Checkin ID"}] = saved.params
+    end
+
+    test "puts an HTML ref's markup back when no saved ref holds its parameters", c do
+      insert_saved_refs!(c, "embed", for(n <- 1..60, do: html(@custom, [param("Label #{n}")])))
+
+      saved = copy(c, "embed", html(@custom, indexed([param("Checkin ID")])), c.editor)
+
+      assert saved.text == @template
+    end
+
+    test "puts an HTML ref's markup back when its parameters are in another order", c do
+      other = %{"key" => "other", "label" => "Other", "type" => "text"}
+      insert_saved_refs!(c, "embed", [html(@custom, [param("Checkin ID"), other])])
+
+      saved = copy(c, "embed", html(@custom, indexed([other, param("Checkin ID")])), c.editor)
+
+      assert saved.text == @template
+    end
+
+    test "matches a saved HTML ref stored without parameters or a parameter type", c do
+      insert_saved_refs!(c, "embed", [
+        %{"type" => "html", "data" => %{"text" => "<b>plain</b>"}},
+        html(@custom, [%{"key" => "checkin_id", "label" => "Checkin ID"}])
+      ])
+
+      assert copy(c, "embed", html("<b>plain</b>", %{}), c.editor).text == "<b>plain</b>"
+
+      typed = %{"key" => "checkin_id", "label" => "Checkin ID", "type" => "text"}
+      assert copy(c, "embed", html(@custom, indexed([typed])), c.editor).text == @custom
+    end
+
+    test "keeps an SVG ref's markup past many saved refs of the same code", c do
+      others = for n <- 1..60, do: svg("<svg><a/></svg>", "class-#{n}")
+      insert_saved_refs!(c, "logo", others ++ [svg("<svg><a/></svg>", "exact")])
+
+      saved = copy(c, "logo", svg("<svg><a/></svg>", "exact"), c.editor)
+
+      assert %{code: "<svg><a/></svg>", class: "exact"} = saved
+    end
+
+    test "matches a saved SVG ref stored without a class", c do
+      insert_saved_refs!(c, "logo", [
+        svg("<svg><a/></svg>", "x"),
+        %{"type" => "svg", "data" => %{"code" => "<svg><a/></svg>"}}
+      ])
+
+      assert %{code: "<svg><a/></svg>", class: nil} = copy(c, "logo", svg("<svg><a/></svg>", nil), c.editor)
+    end
+
+    test "puts an SVG ref's markup back when no saved ref holds its class", c do
+      insert_saved_refs!(c, "logo", for(n <- 1..60, do: svg("<svg><a/></svg>", "class-#{n}")))
+
+      saved = copy(c, "logo", svg("<svg><a/></svg>", "exact"), c.editor)
+
+      assert %{code: @svg, class: nil} = saved
+    end
+
+    test "takes no markup from a ref of another name", c do
+      insert_saved_refs!(c, "other", [svg("<svg><a/></svg>", nil)])
+
+      assert copy(c, "logo", svg("<svg><a/></svg>", nil), c.editor).code == @svg
+    end
+
+    # A shared library module and a site's own module may have the same id
+    test "takes no markup from a block of a shared module of the same id", c do
+      insert_saved_refs!(c, "logo", [svg("<svg><a/></svg>", nil)], "shared")
+
+      assert copy(c, "logo", svg("<svg><a/></svg>", nil), c.editor).code == @svg
     end
   end
 
