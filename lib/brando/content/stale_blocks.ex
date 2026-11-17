@@ -555,12 +555,10 @@ defmodule Brando.Content.StaleBlocks do
     with :ok <- check_target(leftover, target, source, defined, claimed),
          :ok <- check_in_the_way(in_the_way?, report, leftover.kind, target, resolutions),
          {:ok, convert} <- convert(leftover, source) do
-      replaced = existing && preview(existing)
-
       {:ok,
        %{
          change(report, leftover, {:map, target})
-         | replaces: if(replaced not in [nil, "", preview(source)], do: replaced),
+         | replaces: existing && replaced_value(existing, source),
            replaced_row: if(existing && !in_the_way?, do: existing),
            target_type: defined_type(source),
            convert: convert
@@ -597,6 +595,25 @@ defmodule Brando.Content.StaleBlocks do
     if action(resolutions, report.id, %{kind: kind, key: target}) == :drop,
       do: :ok,
       else: {:error, gettext("%{key} holds content of another type; drop that first", key: target)}
+  end
+
+  # What the block's own copy of the target loses: its value, unless empty
+  # or the definition's. A ref of another type than the definition's, as
+  # the Legacy Content Wrapper's `content` holds, is named by its type when
+  # it shows nothing (a picture that lost its image).
+  defp replaced_value(existing, source) do
+    value = preview(existing)
+
+    cond do
+      value not in ["", preview(source)] ->
+        value
+
+      match?(%Ref{}, existing) and ref_type(existing) != ref_type(source) ->
+        gettext("a %{type} reference", type: ref_type(existing))
+
+      true ->
+        nil
+    end
   end
 
   defp existing_row(block, :ref, name), do: Enum.find(block.refs, &(&1.name == name))

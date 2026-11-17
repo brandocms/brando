@@ -1092,7 +1092,8 @@ defmodule Brando.Content.Blocks do
 
   @doc """
   Stale blocks per module, for every module that has any: `[{module, count}]`,
-  most first. The same test as `list_stale_block_ids/2`, in one query.
+  most first. The same test as `list_stale_block_ids/2`: one query, and for
+  the Legacy Content Wrapper a look at its blocks behind its version.
   """
   @spec count_stale_blocks_by_module(atom()) :: [{ContentModule.t(), pos_integer()}]
   def count_stale_blocks_by_module(origin \\ :local) do
@@ -1106,17 +1107,15 @@ defmodule Brando.Content.Blocks do
     )
     |> maybe_filter_library_origin(:module_origin, origin)
     |> Repo.all()
-    |> Enum.flat_map(fn {module, count} ->
-      if ContentModule.legacy_wrapper?(module) do
-        case length(list_stale_block_ids(module, origin)) do
-          0 -> []
-          stale -> [{module, stale}]
-        end
-      else
-        [{module, count}]
-      end
-    end)
+    |> Enum.map(&recount_wrapper(&1, origin))
+    |> Enum.reject(&match?({_module, 0}, &1))
     |> Enum.sort_by(fn {module, count} -> {-count, module.id} end)
+  end
+
+  defp recount_wrapper({module, count}, origin) do
+    if ContentModule.legacy_wrapper?(module),
+      do: {module, length(list_stale_block_ids(module, origin))},
+      else: {module, count}
   end
 
   defp query_stale_block_ids(module_id, version, origin) do

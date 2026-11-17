@@ -21082,6 +21082,11 @@ msgstr "en %{from}-referanse kan ikke holde innholdet i en %{to}-referanse"
 msgid "a %{from} variable cannot become a %{to} variable"
 msgstr "en %{from}-variabel kan ikke bli en %{to}-variabel"
 
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "a %{type} reference"
+msgstr "en %{type}-referanse"
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "a change"

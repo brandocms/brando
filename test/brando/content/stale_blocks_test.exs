@@ -281,6 +281,21 @@ defmodule Brando.Content.StaleBlocksTest do
       assert [%{name: "content", data: %CommentBlock{}}] = refs(block)
     end
 
+    test "moving a leftover into `content` lists the wrapped ref it replaces, though it shows nothing", c do
+      # A picture that lost its image, as the conversion left some: no
+      # preview to show
+      block = wrapper_block!(c, %PictureBlock{type: "picture", data: %PictureBlock.Data{}}, [])
+
+      %Brando.Content.Ref{block_id: block.id, name: "old", uid: Brando.Utils.generate_uid(), sequence: 1}
+      |> Ecto.Changeset.change(data: comment())
+      |> Repo.insert!()
+
+      {:ok, report} = StaleBlocks.report(c.wrapper, c.user)
+      plan = StaleBlocks.plan(report, %{{:ref, "old"} => {:map, "content"}})
+      assert [%{key: "old", replaces: replaces}] = plan.lost
+      assert replaces =~ "picture"
+    end
+
     test "a stale block of another module is still found", c do
       wrapper_block!(c, html())
       {_page, block} = page_with_block(c, [link_var()], [])
