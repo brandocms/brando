@@ -531,6 +531,12 @@ removed one) stays in the block, and so does a ref whose type changed. Such a
 block keeps its old `module_version` and stays stale, which `mix brando.doctor`
 counts. A refresh re-renders it; it cannot bring it up to date.
 
+The Legacy Content Wrapper, the module the 0.51 upgrade puts free-standing
+blocks in (class `legacy-content`), is the exception for one ref: its `content`
+ref holds a ref of any type, so a wrapped picture, video, HTML or comment is
+never a leftover. Anything else its blocks hold that the wrapper does not
+define is.
+
 Resolve the leftovers in the admin, from the module's screen (Block modules →
 the module → **Resolve blocks**, or the system check's link), or with the
 `resolve` command. Each leftover is dropped or mapped onto a ref or var the

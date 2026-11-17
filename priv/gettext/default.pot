@@ -21078,6 +21078,11 @@ msgstr ""
 msgid "a %{from} variable cannot become a %{to} variable"
 msgstr ""
 
+#: lib/brando/content/stale_blocks.ex
+#, elixir-autogen, elixir-format
+msgid "a %{type} reference"
+msgstr ""
+
 #: lib/brando_admin/live/ai/assistant_live.ex
 #, elixir-autogen, elixir-format
 msgid "a change"

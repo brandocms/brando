@@ -289,7 +289,10 @@ afterwards:
   module in a "Legacy Content Wrapper" module block, its content in a ref
   named `content`. Text, picture, video, header, HTML, SVG, map and comment
   blocks keep their type; markdown, divider and blockquote blocks become text.
-  A comment stays an editor's note and renders nothing.
+  A comment stays an editor's note and renders nothing. The wrapper declares
+  `content` as a text ref, but it holds any type, so these blocks never count
+  as stale (`mix brando.doctor`, **Resolve blocks**). Find the wrapper by its
+  class, `legacy-content`, if you rename it.
 - **Deleted refs.** A ref an editor deleted from a block on 0.51 stayed in its
   data and rendered nothing. It comes over inactive, so it still renders
   nothing, and the editor shows it as inactive.

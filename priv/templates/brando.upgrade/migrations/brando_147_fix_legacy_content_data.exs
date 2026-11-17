@@ -8,7 +8,7 @@ defmodule Brando.Repo.Migrations.FixLegacyContentData do
   1. Fixes double-encoded jsonb strings in content_refs
   2. Converts markdown content in text refs to HTML
   3. Fixes modules that iterate refs (must use {% ref refs.name %})
-  4. Sets tiptap extensions on Legacy Content Wrapper refs
+  4. Sets tiptap extensions on Legacy Content Wrapper text refs
   5. Backfills nil focal points on images
   """
 
@@ -84,6 +84,8 @@ defmodule Brando.Repo.Migrations.FixLegacyContentData do
   end
 
   # -- Set tiptap extensions on Legacy Content Wrapper text refs --
+  # Only text refs: the wrapper's `content` ref also holds pictures, videos,
+  # html and the other block types brando_108 wrapped, which have no editor
 
   defp set_legacy_wrapper_extensions do
     extensions = ["p", "h4", "list", "link", "bold", "italic"]
@@ -103,6 +105,7 @@ defmodule Brando.Repo.Migrations.FixLegacyContentData do
               join: b in "content_blocks",
               on: r.block_id == b.id,
               where: b.module_id == ^module_id,
+              where: fragment("?->>'type' = 'text'", r.data),
               select: %{id: r.id, data: r.data}
             )
           )
@@ -116,6 +119,7 @@ defmodule Brando.Repo.Migrations.FixLegacyContentData do
           Brando.repo().all(
             from(r in "content_refs",
               where: r.module_id == ^module_id,
+              where: fragment("?->>'type' = 'text'", r.data),
               select: %{id: r.id, data: r.data}
             )
           )

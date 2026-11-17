@@ -259,6 +259,37 @@ defmodule Brando.Content.Module do
     multi: false
   }
 
+  # The "Legacy Content Wrapper" that the brando_108 upgrade migration makes
+  # to hold the free-standing blocks of a Villain site, one per block in its
+  # `content` ref. brando_108 finds it by this class and its "migration"
+  # namespace, and brando_188 by the class alone. The class is what stays:
+  # brando_125 keeps the namespace only under "en", and an admin may rename
+  # either the module or its namespace.
+  @legacy_wrapper_class "legacy-content"
+  @legacy_wrapper_ref "content"
+
+  @doc "The class of the Legacy Content Wrapper (see `legacy_wrapper?/1`)."
+  def legacy_wrapper_class, do: @legacy_wrapper_class
+
+  @doc """
+  Whether `module` is the Legacy Content Wrapper, the module the brando_108
+  upgrade migration wraps a Villain site's free-standing blocks in. Its
+  blocks keep the content they were converted with, and nothing new is
+  written with it.
+  """
+  @spec legacy_wrapper?(term()) :: boolean()
+  def legacy_wrapper?(%{class: @legacy_wrapper_class}), do: true
+  def legacy_wrapper?(_module), do: false
+
+  @doc """
+  Whether `module`'s ref `name` holds a ref of any type in a block. Only the
+  Legacy Content Wrapper's `content` does: it is declared as a text ref, but
+  holds each wrapped block as the type it was (picture, video, html, comment
+  and so on), so that ref is never stale for its type.
+  """
+  @spec any_ref_type?(term(), String.t() | nil) :: boolean()
+  def any_ref_type?(module, name), do: name == @legacy_wrapper_ref and legacy_wrapper?(module)
+
   @doc """
   Returns the list of reserved HEEx assign names that cannot be used as var keys.
   """

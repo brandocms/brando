@@ -20,7 +20,8 @@ defmodule Brando.Migration.LegacyMediaRepair do
     * a gallery ref gets the images its gallery lacks, in their legacy
       places, found or made the same way, and a gallery when it has none;
     * a video ref without a video is linked to the video with its legacy
-      source URL, or to a video made from the legacy data.
+      source URL among those brando_133 links refs to (a `default` target,
+      never a video field's), or to a video made from the legacy data.
 
   It runs weeks after the conversion, against content editors have worked
   on since, so it writes only where it can tell the media was lost in the
@@ -433,9 +434,12 @@ defmodule Brando.Migration.LegacyMediaRepair do
     end || deleted_since(context)
   end
 
-  # A video of a video field (`video:<schema>:<field>`) plays with that
-  # field's settings, so a ref neither links to one nor counts one in the trash
-  @ref_video "(config_target IS NULL OR config_target NOT LIKE 'video:%')"
+  # The videos brando_133 links a ref to, and the ones the repair makes: a
+  # `default` target. A video of a video field (`video:<schema>:<field>`)
+  # plays with that field's settings, and one with no target or another is
+  # not a ref's either, so a ref neither links to one nor counts one in the
+  # trash
+  @ref_video "config_target = 'default'"
 
   # A video with this source that went to the trash since the conversion:
   # making another would bring back what an editor deleted

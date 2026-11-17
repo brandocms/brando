@@ -586,14 +586,9 @@ defmodule BrandoAdmin.Components.Form.BlockField.ModulePicker do
           modules
       end
 
-    Enum.reject(modules, &legacy_wrapper?/1)
+    # Blocks that hold legacy content keep it; nothing new is written with it
+    Enum.reject(modules, &Brando.Content.Module.legacy_wrapper?/1)
   end
-
-  # The "Legacy Content Wrapper" (namespace "migration") that the
-  # brando_108 upgrade migration makes to hold converted Villain blocks.
-  # Blocks that hold legacy content keep it; nothing new is written with it.
-  defp legacy_wrapper?(%{class: "legacy-content"}), do: true
-  defp legacy_wrapper?(_module), do: false
 
   defp filter_modules(modules, filter) do
     Enum.filter(modules, fn module ->
