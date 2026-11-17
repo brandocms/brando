@@ -29,6 +29,11 @@ defmodule Brando.Supervisor do
 
     load_native_code!()
 
+    Supervisor.init(children(), strategy: :one_for_one)
+  end
+
+  @doc "The supervisor's children, in the order they start."
+  def children do
     children = [
       Brando.MarkdownSources.RateLimiter,
       Brando.MarkdownSources.SignatureCheck,
@@ -64,8 +69,7 @@ defmodule Brando.Supervisor do
       # Keeps the file of hosts the reverse proxy serves; idle without a file
       # configured (`Brando.Tenant.ServedHosts`), and its DNS lookups
       {Task.Supervisor, name: Brando.Tenant.ServedHosts.TaskSupervisor},
-      Brando.Tenant.ServedHosts,
-      {Oban, oban_config()}
+      Brando.Tenant.ServedHosts
     ]
 
     # Starts after the cache it reads from, so it stops (flushing once more)
@@ -78,7 +82,9 @@ defmodule Brando.Supervisor do
     # Dev only, and only when configured: see its moduledoc
     children = children ++ Brando.Content.Definition.Watcher.children()
 
-    Supervisor.init(children, strategy: :one_for_one)
+    # Last, so it stops first: the node serves with the rest while Oban lets
+    # the jobs it is running finish (its `shutdown_grace_period`)
+    children ++ [{Oban, oban_config()}]
   end
 
   # NOTE: an app-level `config :brando, Oban` REPLACES this entire default —
