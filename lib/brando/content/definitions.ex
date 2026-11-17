@@ -15,6 +15,24 @@ defmodule Brando.Content.Definitions do
   alias Brando.Content.Definition
   alias Brando.Content.Definition.{Error, Model, Reader, Snapshot, Writer}
 
+  @typedoc "A render or cascade job of a run, in `t:refresh_result/0`."
+  @type refresh_job :: %{
+          worker: :render | :cascade,
+          schema: String.t() | nil,
+          entry_id: term,
+          tenant_prefix: String.t() | nil,
+          state: String.t(),
+          error: String.t() | nil
+        }
+
+  @typedoc "What `await_refresh/2` and `refresh_status/1` return."
+  @type refresh_result :: %{
+          rendered: non_neg_integer,
+          failed: [refresh_job],
+          pending: [refresh_job],
+          timed_out: boolean
+        }
+
   @doc "Loads a directory of literal `.exs` definitions and an optional baseline lockfile."
   def read(directory) do
     protect(fn ->
@@ -119,11 +137,11 @@ defmodule Brando.Content.Definitions do
   Call it right after `track_refresh/1`: it knows the jobs by their rows, and
   Oban's Pruner deletes a finished job a few minutes after it finished.
   """
-  @spec await_refresh(String.t(), keyword) :: Brando.Content.RenderRun.result()
+  @spec await_refresh(String.t(), keyword) :: refresh_result
   defdelegate await_refresh(run, opts \\ []), to: Brando.Content.RenderRun, as: :await
 
   @doc "What `await_refresh/2` would return now for `run`, without waiting."
-  @spec refresh_status(String.t()) :: Brando.Content.RenderRun.result()
+  @spec refresh_status(String.t()) :: refresh_result
   defdelegate refresh_status(run), to: Brando.Content.RenderRun, as: :status
 
   @doc """

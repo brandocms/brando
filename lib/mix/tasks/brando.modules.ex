@@ -30,9 +30,11 @@ defmodule Mix.Tasks.Brando.Modules do
   They exit non-zero, naming the entries, when a render fails or when
   `--timeout SECONDS` (default #{div(@default_timeout, 1000)}) passes first.
   `--no-wait` leaves the renders queued for a running server: the task then
-  runs no Oban queues, and says how many it queued. The task stops the
-  application before it returns, so a job its queue is running finishes, and
-  it never starts the module definition watcher.
+  runs no Oban queues, and says how many it queued. While it waits, it runs
+  only Oban's queue for entry renders (`default`), and may take other jobs of
+  that queue too. It stops the application before it returns, giving a job
+  its queue is running as long as a render may take to finish, and it never
+  starts the module definition watcher.
 
   `resolve` lists the blocks still on an older version of the module and the
   refs and vars they hold that the module no longer defines (a dry run).
@@ -80,10 +82,20 @@ defmodule Mix.Tasks.Brando.Modules do
       prefix = context!(opts)
       Tenant.with_prefix(prefix, fn -> execute(command, opts, user) end)
     after
-      # Oban's shutdown grace period lets a job this node's queue is running finish
-      if started, do: Application.stop(started)
+      stop(started)
     end
   end
+
+  # Oban's shutdown grace period lets a job this node's queue is running
+  # finish. A task after this one in the same `mix do` starts the
+  # application again, as it is configured.
+  defp stop({app, previous}) do
+    Application.stop(app)
+    restore_start(previous)
+    Mix.Task.reenable("app.start")
+  end
+
+  defp stop(nil), do: :ok
 
   defp parse!(args) do
     {opts, command} = OptionParser.parse!(args, strict: @switches)
@@ -102,25 +114,30 @@ defmodule Mix.Tasks.Brando.Modules do
   defp renders?("resolve", opts), do: !!opts[:apply]
   defp renders?(_command, _opts), do: false
 
-  # Starts the application, unless it runs already (a test, another task),
-  # and returns it when this started it
+  # Starts the application, unless it runs already (a test, another task).
+  # Returns it, with the configuration to put back, when this started it.
   defp start!(run_queues?) do
     Mix.Task.run("app.config")
     app = Brando.otp_app()
 
     if is_nil(app) or not List.keymember?(Application.started_applications(), app, 0) do
-      configure_start(run_queues?)
+      previous = configure_start(run_queues?)
       Mix.Task.run("app.start")
-      app
+      if app, do: {app, previous}
     end
   end
 
-  @doc false
-  # The application this task starts runs no module definition watcher, and
-  # of Oban's queues only the one entry renders run in, when it waits for
-  # them: it fetches no job it would not finish.
-  # Stopping, it gives a job it is running as long as a render may take.
+  @doc """
+  Configures the application this task starts: no module definition watcher,
+  and of Oban's queues only the one entry renders run in when
+  `run_queues?`, none otherwise. Stopping, Oban gives a job it is running as
+  long as a render may take. Returns the configuration it changed, for
+  `restore_start/1`.
+  """
   def configure_start(run_queues?) do
+    previous =
+      for key <- [Oban, Brando.Content.Definition.Watcher], into: %{}, do: {key, Application.fetch_env(:brando, key)}
+
     Application.delete_env(:brando, Brando.Content.Definition.Watcher)
     oban = Application.get_env(:brando, Oban) || Brando.Supervisor.oban_config()
 
@@ -136,6 +153,15 @@ defmodule Mix.Tasks.Brando.Modules do
       end
 
     Application.put_env(:brando, Oban, oban)
+    previous
+  end
+
+  @doc "Puts back the configuration `configure_start/1` changed."
+  def restore_start(previous) do
+    Enum.each(previous, fn
+      {key, {:ok, value}} -> Application.put_env(:brando, key, value)
+      {key, :error} -> Application.delete_env(:brando, key)
+    end)
   end
 
   defp render_queues(queues) when is_list(queues) do

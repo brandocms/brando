@@ -132,6 +132,17 @@ defmodule Mix.Tasks.Brando.ModulesTest do
       assert is_integer(grace) and grace > :timer.seconds(30)
     end
 
+    # A task run after it in the same `mix do` starts the application again,
+    # as it is configured
+    test "puts the configuration back once it has stopped" do
+      oban = Application.get_env(:brando, Oban)
+      watcher = Application.get_env(:brando, Watcher)
+      previous = Modules.configure_start(true)
+      Modules.restore_start(previous)
+      assert Application.get_env(:brando, Oban) == oban
+      assert Application.get_env(:brando, Watcher) == watcher
+    end
+
     test "fetches no jobs with --no-wait" do
       Modules.configure_start(false)
       assert Application.get_env(:brando, Oban)[:queues] == false

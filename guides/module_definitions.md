@@ -551,9 +551,10 @@ entries still waiting and exits non-zero; their renders stay queued. Either
 way, it stops the application before it returns, so a render its own queue
 has started finishes.
 
-While it waits, the command runs only the queue entry renders run in, so it
-takes no other job it would leave unfinished. It never starts the definition
-watcher. Use `--no-wait` in a deploy script that runs beside a server, when the
+While it waits, the command runs only Oban's `default` queue, where entry
+renders run, and may take other jobs of that queue too; stopping, it gives a
+job it is running 35 seconds, as long as a render may take. It never starts
+the definition watcher. Use `--no-wait` in a deploy script that runs beside a server, when the
 server should do the rendering.
 
 If saving the new lockfile fails after commit, export into a new directory before

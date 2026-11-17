@@ -27,16 +27,7 @@ defmodule Brando.Content.RenderRun do
   @settled ~w(completed discarded cancelled retryable)
   @failed ~w(discarded cancelled retryable)
 
-  @type entry :: %{
-          worker: :render | :cascade,
-          schema: String.t() | nil,
-          entry_id: term,
-          tenant_prefix: String.t() | nil,
-          state: String.t(),
-          error: String.t() | nil
-        }
-
-  @type result :: %{rendered: non_neg_integer, failed: [entry], pending: [entry], timed_out: boolean}
+  @type result :: Brando.Content.Definitions.refresh_result()
 
   @doc "Runs `fun` as a new run. Returns `{fun's result, run id}`."
   @spec track((-> term)) :: {term, String.t()}
