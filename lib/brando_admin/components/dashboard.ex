@@ -18,7 +18,53 @@ defmodule BrandoAdmin.Components.Dashboard do
      |> assign(:overview, BrandoAdmin.Dashboard.load(assigns.current_user))
      |> assign(:paused_webhooks, paused_webhooks(assigns.current_user))
      |> assign(:paused_routes, paused_routes(assigns.current_user))
-     |> assign(:notifications_queue_missing?, Brando.Notifications.Routing.queue_warning?(assigns.current_user))}
+     |> assign(:notifications_queue_missing?, Brando.Notifications.Routing.queue_warning?(assigns.current_user))
+     |> assign(:release_changes, release_changes(assigns.current_user))}
+  end
+
+  # The release's module definitions that aren't applied yet
+  # (`Brando.Content.Definitions.ReleaseStatus`): superusers apply them
+  defp release_changes(user) do
+    with true <- Brando.Authorization.Boundary.superuser?(user),
+         %{pending: pending} = changes when pending > 0 <- Brando.Content.Definitions.ReleaseStatus.summary() do
+      changes
+    else
+      _ -> nil
+    end
+  end
+
+  @doc """
+  The notice that the release brings module definitions that aren't applied
+  yet. Until the admin can apply them, it points to the marked modules and
+  the command that applies them on the server.
+  """
+  attr :changes, :map, required: true
+
+  def release_changes_notice(assigns) do
+    ~H"""
+    <div class="dashboard-alert" role="alert" data-testid="dashboard-release-modules">
+      <.icon name="package" />
+      <div>
+        <h2>
+          {ngettext(
+            "This release has 1 module change that isn't applied yet",
+            "This release has %{count} module changes that aren't applied yet",
+            @changes.pending
+          )}
+        </h2>
+        <p>
+          {gettext(
+            "Release %{version} brings module definitions that differ from this site's. Block modules marks each one. A developer reviews and applies them on the server:",
+            version: @changes.version
+          )}
+        </p>
+        <code class="dashboard-alert-command">bin/{Brando.otp_app()} rpc 'Brando.Content.Definitions.Release.status()'</code>
+      </div>
+      <.link navigate="/admin/config/content/modules" class="btn" data-testid="dashboard-release-modules-review">
+        {gettext("Review modules")}
+      </.link>
+    </div>
+    """
   end
 
   # Shown to the people who can do something about it.
@@ -113,6 +159,7 @@ defmodule BrandoAdmin.Components.Dashboard do
         </.link>
       </div>
       <.notifications_queue_notice :if={@notifications_queue_missing?} />
+      <.release_changes_notice :if={@release_changes} changes={@release_changes} />
       <div class="dashboard-layout">
         <section class="dashboard-recent" aria-labelledby="dashboard-recent-heading">
           <h2 id="dashboard-recent-heading" class="dashboard-heading">{gettext("Recently updated")}</h2>

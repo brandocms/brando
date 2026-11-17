@@ -3414,13 +3414,28 @@ msgstr "Endret både her og i filen"
 
 #: lib/brando_admin/components/definition_file.ex
 #, elixir-autogen, elixir-format
+msgid "Changed here and in this release"
+msgstr "Endret både her og i denne releasen"
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
 msgid "Changed here since the file"
 msgstr "Endret her etter filen"
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Changed here since the release was applied"
+msgstr "Endret her etter at releasen ble tatt i bruk"
 
 #: lib/brando_admin/components/form/translation.ex
 #, elixir-autogen, elixir-format
 msgid "Changed in the source — review the translation"
 msgstr "Endret i kilden – gå gjennom oversettelsen"
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Changed in this release"
+msgstr "Endret i denne releasen"
 
 #: lib/brando_admin/live/content/module_form_live.ex
 #: lib/brando_admin/live/content/shared_library_live.ex
@@ -5894,6 +5909,11 @@ msgstr "Frakoblet"
 #, elixir-autogen, elixir-format
 msgid "Details"
 msgstr "Detaljer"
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "Differs from this release"
+msgstr "Avviker fra denne releasen"
 
 #: lib/brando_admin/live/content/shared_library_live.ex
 #, elixir-autogen, elixir-format
@@ -13874,6 +13894,11 @@ msgstr "Relaterte innlegg"
 msgid "Related entry"
 msgstr "Relatert innlegg"
 
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Release %{version} brings module definitions that differ from this site's. Block modules marks each one. A developer reviews and applies them on the server:"
+msgstr "Release %{version} har moduldefinisjoner som avviker fra nettstedets. Blokkmoduler markerer hver av dem. En utvikler går gjennom og tar dem i bruk på serveren:"
+
 #: lib/brando_admin/live/sites/asset_live.ex
 #, elixir-autogen, elixir-format
 msgid "Release assets"
@@ -14651,6 +14676,11 @@ msgstr "Gjennomgå tillatelsene og medlemmene, eller opprett en gruppe for teame
 #, elixir-autogen, elixir-format
 msgid "Review loose blocks"
 msgstr "Gå gjennom løse blokker"
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "Review modules"
+msgstr "Gå gjennom moduler"
 
 #: lib/brando_admin/components/dashboard.ex
 #, elixir-autogen, elixir-format
@@ -17799,6 +17829,16 @@ msgstr "Metabildet, slik det deles."
 msgid "The meta title and description are identical."
 msgstr "Metatittelen og -beskrivelsen er like."
 
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "The module changed here after it was last applied, and this release changes it too. Applying the release's version replaces the change made here."
+msgstr "Modulen er endret her etter at den sist ble tatt i bruk, og denne releasen endrer den også. Tas releasens versjon i bruk, erstatter den endringen som er gjort her."
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "The module changed here after the release's version was applied. The release doesn't change it, so the change here stays."
+msgstr "Modulen er endret her etter at releasens versjon ble tatt i bruk. Releasen endrer den ikke, så endringen her blir stående."
+
 #: lib/brando_admin/components/form/block/render.ex
 #, elixir-autogen, elixir-format
 msgid "The module preview is unavailable because its Liquid tags are incomplete or mismatched. Check the module template. You can still edit the fields below."
@@ -17808,6 +17848,11 @@ msgstr "Forhåndsvisningen av modulen er ikke tilgjengelig fordi Liquid-taggene 
 #, elixir-autogen, elixir-format
 msgid "The module set available in this region. Use all for all suitable modules."
 msgstr "Modulsettet som er tilgjengelig i denne regionen. Bruk all for alle egnede moduler."
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "The module was never applied from the release's files, and differs from them. It is applied only when named explicitly."
+msgstr "Modulen er aldri tatt i bruk fra releasens filer, og avviker fra dem. Den tas bare i bruk når den nevnes uttrykkelig."
 
 #: lib/brando_admin/live/content/stale_blocks_live.ex
 #, elixir-autogen, elixir-format
@@ -18714,6 +18759,18 @@ msgstr "Dette forslaget kan ikke utføres ennå. Be assistenten justere det."
 #, elixir-autogen, elixir-format
 msgid "This publishes static artifacts only. Florist continues to deploy and roll back the Phoenix application release."
 msgstr "Dette publiserer kun statiske artefakter. Florist fortsetter å publisere og rulle tilbake Phoenix-applikasjonsutgivelsen."
+
+#: lib/brando_admin/components/definition_file.ex
+#, elixir-autogen, elixir-format
+msgid "This release changes the module, and nobody has changed it here since it was last applied."
+msgstr "Denne releasen endrer modulen, og ingen har endret den her siden den sist ble tatt i bruk."
+
+#: lib/brando_admin/components/dashboard.ex
+#, elixir-autogen, elixir-format
+msgid "This release has 1 module change that isn't applied yet"
+msgid_plural "This release has %{count} module changes that aren't applied yet"
+msgstr[0] "Denne releasen har 1 modulendring som ikke er tatt i bruk ennå"
+msgstr[1] "Denne releasen har %{count} modulendringer som ikke er tatt i bruk ennå"
 
 #: lib/brando_admin/live/mcp/consent_live.ex
 #, elixir-autogen, elixir-format

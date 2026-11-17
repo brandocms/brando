@@ -157,11 +157,25 @@ if Code.ensure_loaded?(Igniter) do
         Module.concat(project.app_module, Villain.Parser)
       )
       |> configure_tenancy(tenancy.mode, tenancy.site_key)
+      |> release_definitions(tenancy.mode)
       |> filter_parameters()
       # Brando depends on Swoosh, which will not start without an API client;
       # Req is already one of Brando's dependencies.
       |> Mix.Brando.Igniter.SourceUpgrade.configure_swoosh_client()
       |> Mix.Brando.Igniter.SourceUpgrade.configure_brando_mailer(Module.concat(project.app_module, Mailer))
+    end
+
+    # The module definitions the release ships, planned against each
+    # environment's database after boot (`Brando.Content.Definitions.Release`).
+    # With several sites, each site's are in a directory of its own.
+    defp release_definitions(igniter, mode) do
+      path = if mode == :multi, do: "priv/modules/{site_key}", else: "priv/modules"
+
+      if Config.configures_key?(igniter, "config.exs", :brando, [Brando.Content.Definitions]) do
+        igniter
+      else
+        Config.configure_new(igniter, "brando.exs", :brando, [Brando.Content.Definitions, :release_path], path)
+      end
     end
 
     # Kept out of the request logs: passwords, the admin login's two-factor

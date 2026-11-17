@@ -109,6 +109,13 @@ defmodule E2EFixtureController do
         "notification-route-paused" ->
           create_paused_notification_route()
 
+        # Screenshots only: a release whose definitions differ from the
+        # seeded modules, planned into this node's release status. That is
+        # kept per node, not per sandbox, so other tests on the server see it
+        # until a fixture plans again; the suite doesn't use it.
+        "release-module-changes" ->
+          create_release_module_changes()
+
         # Write with AI in the text blocks of the Index page's module
         # (Example module), which a module turns on in the module editor
         "write-with-ai-module" ->
@@ -154,6 +161,48 @@ defmodule E2EFixtureController do
     conn = login_user(conn, scenario)
 
     send_resp(conn, 200, "")
+  end
+
+  # Three seeded modules: one the release changes, one changed here since the
+  # release's version was applied, one changed on both sides
+  defp create_release_module_changes do
+    import Ecto.Query, only: [from: 2]
+
+    user = get_admin_user()
+    dir = Path.join(System.tmp_dir!(), "brando-e2e-release-#{System.unique_integer([:positive])}")
+    {:ok, _} = Brando.Content.Definitions.export(dir, user)
+    opts = [path: dir, version: "2026.11.17-1"]
+    # Records every module as applied: the database equals the files
+    {:ok, _} = Brando.Content.Definitions.Release.plan(opts)
+
+    [release, admin, both] =
+      from(m in Brando.Content.Module,
+        where: is_nil(m.parent_id) and is_nil(m.deleted_at) and is_nil(m.source_module_id),
+        order_by: [asc: m.sequence, asc: m.id],
+        limit: 3
+      )
+      |> Brando.Repo.all()
+
+    edit_release_class!(dir, release)
+    for module <- [admin, both], do: module |> Ecto.Changeset.change(class: "edited-here") |> Brando.Repo.update!()
+    edit_release_class!(dir, both)
+
+    # :unchanged when an earlier shot planned the same state
+    status = Brando.Content.Definitions.ReleaseStatus.refresh(nil, opts)
+    true = status in [:planned, :unchanged]
+    File.rm_rf!(dir)
+    user
+  end
+
+  defp edit_release_class!(dir, module) do
+    [file] =
+      dir
+      |> Path.join("**/*.exs")
+      |> Path.wildcard()
+      |> Enum.filter(&(File.read!(&1) =~ ~s(uid "#{module.uid}")))
+
+    source = File.read!(file)
+    File.write!(file, String.replace(source, ~r/^  class .*$/m, ~s(  class "from-the-release"), global: false))
   end
 
   # Videos added without a field of their own (`config_target: "default"`),

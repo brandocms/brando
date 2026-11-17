@@ -1,0 +1,1 @@
+- The admin's ZIP import and `mix brando.modules import` plan a bundle whose lockfile was written for another database against what this database last applied, so an update already imported in development is no longer a conflict.

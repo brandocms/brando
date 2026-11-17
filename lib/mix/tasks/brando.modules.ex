@@ -13,6 +13,9 @@ defmodule Mix.Tasks.Brando.Modules do
       mix brando.modules refresh --uid hero-uid --user 1
       mix brando.modules resolve --uid hero-uid --user 1
       mix brando.modules resolve --uid hero-uid --user 1 --drop link --map title=heading --apply
+      mix brando.modules plan --release --user 1
+      mix brando.modules apply --release --uid hero-uid --user 1
+      mix brando.modules apply --release --all --user 1
 
   Tenant applications must select `--site KEY --environment KEY`. Standalone
   applications omit both. Every command requires an active `--user ID` and uses
@@ -24,7 +27,18 @@ defmodule Mix.Tasks.Brando.Modules do
   and structural migrations, and updates only the baseline lockfile after a
   successful apply. `--dry-run` performs no database or file writes.
 
-  `import`, `refresh` and `resolve --apply` queue the entries that use the
+  `plan --release` plans the definitions the release ships
+  (`config :brando, Brando.Content.Definitions, release_path: "priv/modules"`)
+  against this database's own record of what was applied to it, and prints
+  the changes waiting. `apply --release` applies them: `--all`, or the module
+  trees named by repeatable `--uid UID`. A definition that was never applied
+  from files and differs from them, or was deleted here after it was applied,
+  is a conflict until it is named with repeatable `--replace UID`, which
+  replaces the database copy with the release's. `--references FILE` maps
+  tokens no earlier apply has bound. See `Brando.Content.Definitions.Release`,
+  which `bin/my_app rpc` can call in a release.
+
+  `import`, `refresh`, `resolve --apply` and `apply --release` queue the entries that use the
   changed modules for rendering, then wait until each has rendered, on
   whichever node runs the jobs: this task's own queue, or a running server's.
   They exit non-zero, naming the entries, when a render fails or when
@@ -51,6 +65,7 @@ defmodule Mix.Tasks.Brando.Modules do
 
   alias Brando.Content.Definition.Plan
   alias Brando.Content.Definitions
+  alias Brando.Content.Definitions.Release
   alias Brando.Content.StaleBlocks
   alias Brando.Tenant
   alias Brando.Tenant.Registry
@@ -68,7 +83,10 @@ defmodule Mix.Tasks.Brando.Modules do
     map: :keep,
     apply: :boolean,
     wait: :boolean,
-    timeout: :integer
+    timeout: :integer,
+    release: :boolean,
+    all: :boolean,
+    replace: :keep
   ]
 
   @impl Mix.Task
@@ -100,8 +118,10 @@ defmodule Mix.Tasks.Brando.Modules do
   defp parse!(args) do
     {opts, command} = OptionParser.parse!(args, strict: @switches)
 
-    unless command in [["export"], ["import"], ["refresh"], ["resolve"]],
-      do: Mix.raise("Expected export, import, refresh or resolve")
+    unless command in [["export"], ["import"], ["refresh"], ["resolve"], ["plan"], ["apply"]],
+      do: Mix.raise("Expected export, import, refresh, resolve, plan or apply")
+
+    if command in [["plan"], ["apply"]], do: release_options!(opts)
 
     user_id = opts[:user] || Mix.raise("--user ID is required")
     if (opts[:timeout] || 0) < 0, do: Mix.raise("--timeout takes a number of seconds")
@@ -112,6 +132,7 @@ defmodule Mix.Tasks.Brando.Modules do
   defp renders?("import", opts), do: !opts[:dry_run]
   defp renders?("refresh", _opts), do: true
   defp renders?("resolve", opts), do: !!opts[:apply]
+  defp renders?("apply", _opts), do: true
   defp renders?(_command, _opts), do: false
 
   # Starts the application, unless it runs already (a test, another task).
@@ -205,6 +226,26 @@ defmodule Mix.Tasks.Brando.Modules do
     if opts[:dry_run],
       do: Mix.shell().info("Dry run: no definitions or files changed"),
       else: apply_import!(plan, directory, opts, user)
+  end
+
+  defp execute("plan", opts, user) do
+    Release.status(release_options(opts, user))
+  rescue
+    error in RuntimeError -> Mix.raise(error.message)
+  end
+
+  defp execute("apply", opts, user) do
+    selection =
+      case {opts[:all], Keyword.get_values(opts, :uid)} do
+        {true, []} -> :all
+        {nil, [_ | _] = uids} -> uids
+        _ -> Mix.raise("apply --release takes --all or --uid UID (repeatable)")
+      end
+
+    opts = release_options(opts, user) ++ wait_options(opts)
+    Release.apply!(selection, opts)
+  rescue
+    error in RuntimeError -> Mix.raise(error.message)
   end
 
   defp execute("refresh", opts, user) do
@@ -483,6 +524,33 @@ defmodule Mix.Tasks.Brando.Modules do
       {:error, _} ->
         :ok
     end
+  end
+
+  defp release_options!(opts) do
+    if !opts[:release],
+      do: Mix.raise("plan and apply take --release; use import --dry-run and import for a directory")
+
+    if opts[:dry_run],
+      do: Mix.raise("--dry-run is for import; plan --release shows what apply --release would change")
+  end
+
+  defp release_options(opts, user) do
+    references = if opts[:references], do: opts[:references] |> File.read!() |> Jason.decode!(), else: %{}
+    unless is_map(references), do: Mix.raise("--references must contain a JSON object")
+
+    [
+      user: user,
+      references: references,
+      replace: Keyword.get_values(opts, :replace),
+      site: opts[:site],
+      environment: opts[:environment],
+      info: fn line -> Mix.shell().info(line) end
+    ]
+  end
+
+  defp wait_options(opts) do
+    [wait: Keyword.get(opts, :wait, true)] ++
+      if opts[:timeout], do: [timeout: :timer.seconds(opts[:timeout])], else: [timeout: @default_timeout]
   end
 
   defp context!(opts) do

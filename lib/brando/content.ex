@@ -156,7 +156,12 @@ defmodule Brando.Content do
     end
   end
 
-  mutation :delete, Module
+  mutation :delete, Module do
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      {:ok, entry}
+    end
+  end
 
   @doc """
   Duplicates the module `id` as a new module: a new lineage at v1, as an
@@ -594,9 +599,29 @@ defmodule Brando.Content do
     end
   end
 
-  mutation :create, TableTemplate
-  mutation :update, TableTemplate
-  mutation :delete, TableTemplate
+  # Table templates are definitions too: what a release would change is
+  # worked out again (`Brando.Content.Definitions.ReleaseStatus`)
+  mutation :create, TableTemplate do
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      {:ok, entry}
+    end
+  end
+
+  mutation :update, TableTemplate do
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      {:ok, entry}
+    end
+  end
+
+  mutation :delete, TableTemplate do
+    fn entry ->
+      Brando.Content.Definitions.changed()
+      {:ok, entry}
+    end
+  end
+
   mutation :duplicate, {TableTemplate, change_fields: [:name]}
 
   ## Containers

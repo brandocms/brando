@@ -18,6 +18,7 @@ defmodule Brando.Supervisor do
     Calendar.put_time_zone_database(Tz.TimeZoneDatabase)
     Brando.Villain.HeexRenderer.init_cache()
     Brando.Villain.init_parse_cache()
+    Brando.Content.Definitions.ReleaseStatus.init_cache()
 
     # A misconfigured video provider says so here, at boot, rather than to the
     # first editor who picks a file. Logs by default and never blocks boot —
@@ -81,6 +82,10 @@ defmodule Brando.Supervisor do
 
     # Dev only, and only when configured: see its moduledoc
     children = children ++ Brando.Content.Definition.Watcher.children()
+
+    # Plans the release's module definitions after boot, in the background,
+    # when `release_path` is configured and this node serves
+    children = children ++ Brando.Content.Definitions.ReleaseStatus.children()
 
     # Last, so it stops first: the node serves with the rest while Oban lets
     # the jobs it is running finish (its `shutdown_grace_period`)

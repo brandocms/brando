@@ -153,6 +153,129 @@ save would be refused), when both sides changed, or when the file has changes
 that are not imported. Set `PLUG_EDITOR` (as for Phoenix's error pages, e.g.
 `vscode://file/__FILE__:__LINE__`) to link the path to your editor.
 
+## Applying a release's definitions
+
+A site's release ships its `priv/modules`, the same files the watcher imports
+in development. Production applies them from there, after someone has
+reviewed what they change, without moving a database or retyping a template
+into the admin.
+
+<!-- usage-rules:start topic="module-definitions" -->
+
+```elixir
+# config/config.exs (a new installation has it in config/brando.exs)
+config :brando, Brando.Content.Definitions, release_path: "priv/modules"
+```
+
+<!-- usage-rules:end -->
+
+A relative path is in the application's `priv` as the release has it
+(`Application.app_dir/2`). Without `release_path`, none of this runs. With
+`tenancy_mode: :multi`, write `{site_key}` where the site's key goes
+(`"priv/modules/{site_key}"`); a site without that directory has no release
+definitions. Without it, every site's environments are planned against the
+same directory. With `:single`, every environment of the site is.
+
+### Each database's own baseline
+
+The lockfile describes the database the files were last imported into, which
+is the developer's. Each database instead records, in
+`content_definition_applies`, every definition applied to it from files: by a
+release, `mix brando.modules import`, the admin's ZIP import or the watcher.
+A release's definitions are planned against the latest record:
+
+| Action | When |
+| --- | --- |
+| `update` | The files changed, and the database still equals what was last applied here. |
+| `create` | The module doesn't exist here. |
+| `noop` | The database already equals the files, or only the admin changed it since the last apply: that change stays. |
+| `conflict` | The files changed, and the module was also changed in the admin since the last apply. The plan names who changed it and when, and the release and account of the last apply. |
+| `migration_required` | As for any import. |
+
+A definition with no record whose database copy equals the files is recorded
+as applied (an adoption), when the release is planned. One that differs is a
+conflict, "never applied from files", and nothing applies it until the
+operator names it with `--replace UID` (`replace: ["uid"]`): its database copy
+is then replaced with the release's, and the record says so. `replace` never
+overrides a conflict on a definition applied here. A definition deleted here
+after it was applied is a conflict too, which `replace` creates again; one in
+the trash stays a conflict until it is restored. The record of each apply
+keeps the definition it replaced.
+
+The admin's ZIP import and `mix brando.modules import` use the same records
+when the bundle's lockfile was written for another database, or the bundle
+has none: an update development already imported is an update here, not a
+conflict. Without a record, the lockfile's baseline counts when the database
+equals it.
+
+### Superusers see what waits
+
+On a node that serves, a few seconds after boot, Brando plans the release's
+definitions against every environment in the background. Nothing is applied
+at boot. With blue/green deploys the old release keeps serving while the new
+one boots, and someone reviews the changes first. The result is kept with the
+release's and the database's digests, and planned again when a module or
+table template changes or definitions are applied.
+
+When anything isn't a `noop`, the dashboard tells superusers how many module
+changes the release has that aren't applied yet. Block modules marks each
+module that differs: changed in this release, changed here since the
+release's version was applied, both, or never applied from the release.
+
+### Review and apply on the server
+
+<!-- usage-rules:start topic="module-definitions" -->
+
+In a release, without Mix, `rpc` runs on the running node:
+
+```sh
+# What waits in each environment: counts by action and kind of change,
+# the entries affected, and conflicts with who and when
+bin/my_app rpc 'Brando.Content.Definitions.Release.status()'
+
+# Apply module trees by UID (children and table templates go with them),
+# or :all; --replace's counterpart is replace:
+bin/my_app rpc 'Brando.Content.Definitions.Release.apply!(["acme-hero"], user: 1)'
+bin/my_app rpc 'Brando.Content.Definitions.Release.apply!(:all, user: 1)'
+```
+
+In development, against the development database:
+
+```sh
+mix brando.modules plan --release --user 1
+mix brando.modules apply --release --uid acme-hero --user 1
+mix brando.modules apply --release --all --replace acme-card --user 1
+```
+
+<!-- usage-rules:end -->
+
+Tenant applications pass `site: "acme", environment: "production"` (or
+`--site` and `--environment`); `status/1` without them reports every
+environment, and `apply!/2` needs them. `user:` is an active account whose
+normal permissions apply. Its ID is the record's `applied_by`. Apply refuses,
+writing nothing, while a selected definition is a conflict or needs a
+migration; `:all` names them, so they can be left out or resolved. Media and
+content tokens an earlier apply bound here are reused; map new ones with
+`references:` (`--references FILE`), as for an import. After applying, `apply!/2` waits until every entry that uses a changed
+module has rendered again, on whichever node runs the jobs, printing its
+progress (`timeout:` in milliseconds, 10 minutes by default; `wait: false`, or
+`--no-wait`, leaves the renders queued for the running server). `status/1` and
+`apply!/2` raise when they fail, a render fails or the timeout passes, so
+`rpc` exits with a non-zero status; changes waiting are not a failure.
+
+A deploy can say what waits, one line per environment:
+
+```sh
+bin/my_app rpc 'Brando.Content.Definitions.Release.status(format: :line)'
+# 3 module changes waiting in release 1.4.0: https://example.com/admin/config/content/modules
+```
+
+`Brando.Content.Definitions.Release.plan/1` and `apply/2` return the same data
+without printing: the plan with each definition's action, state, diff,
+`ModuleDiff` class and affected blocks and entries, the counts, and the last
+apply and admin edit. The apply's record and its definition writes share a
+transaction.
+
 <!-- usage-rules:start topic="module-definitions" -->
 
 ## Authoring a definition
@@ -490,6 +613,10 @@ and affected entry count:
 | `noop` | The target already has this complete definition. |
 | `update` | The baseline matches and the change can use existing synchronization. |
 | `conflict` | The target changed since export, or an update has no baseline. |
+
+The baseline is the lockfile's when it was written for the target's
+database, and otherwise what was last applied to the target (see
+[Each database's own baseline](#each-database-s-own-baseline)).
 | `migration_required` | The proposed change needs an explicit content migration. |
 
 Changes to template source, metadata, ref configuration/defaults, var settings,
