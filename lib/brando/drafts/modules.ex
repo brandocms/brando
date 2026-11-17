@@ -69,7 +69,8 @@ defmodule Brando.Drafts.Modules do
     fields = compare_definition_fields(old["refs"], old["vars"], latest)
 
     # A block may already have been stale when the copy was made.
-    instance = compare_definition_fields(instance_ref_types(block, current), var_types(block["vars"] || []), latest)
+    instance =
+      compare_definition_fields(instance_ref_types(block, current, latest), var_types(block["vars"] || []), latest)
 
     Enum.uniq(identity ++ tables ++ fields ++ instance ++ Enum.map(contract, &"Module setting #{&1} changed."))
   end
@@ -162,11 +163,14 @@ defmodule Brando.Drafts.Modules do
 
   defp ref_types(refs), do: Map.new(refs, &{&1["name"], get_in(&1, ["data", "type"])})
 
-  # The block's refs, but for one that holds a ref of any type: the Legacy
-  # Content Wrapper's `content` (`Brando.Content.Module.any_ref_type?/2`)
-  defp instance_ref_types(block, module) do
+  # The block's refs, but for one the module defines to hold a ref of any
+  # type: the Legacy Content Wrapper's `content`
+  # (`Brando.Content.Module.any_ref_type?/2`)
+  defp instance_ref_types(block, module, latest) do
     (block["refs"] || [])
-    |> Enum.reject(&Brando.Content.Module.any_ref_type?(module, &1["name"]))
+    |> Enum.reject(
+      &(Map.has_key?(latest["refs"], &1["name"]) and Brando.Content.Module.any_ref_type?(module, &1["name"]))
+    )
     |> ref_types()
   end
 

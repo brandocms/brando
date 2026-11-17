@@ -154,6 +154,47 @@ defmodule Brando.Drafts.RestoreTest do
              ref |> Changeset.apply_changes() |> Map.get(:data)
   end
 
+  test "a Legacy Content Wrapper block whose `content` the wrapper no longer defines requires review", ctx do
+    {:ok, wrapper} =
+      Brando.Content.create_module(
+        Factory.params_for(:module,
+          class: Brando.Content.Module.legacy_wrapper_class(),
+          code: "{% ref refs.body %}",
+          refs: [%{name: "body", uid: Brando.Utils.generate_uid(), data: %{type: "text", data: %{text: ""}}}]
+        ),
+        ctx.user
+      )
+
+    blocks = %{
+      "blocks" => [
+        %{
+          "block" => %{
+            "type" => "module",
+            "uid" => Brando.Utils.generate_uid(),
+            "module_id" => wrapper.id,
+            "module_origin" => "local",
+            "refs" => [
+              %{
+                "uid" => Brando.Utils.generate_uid(),
+                "name" => "content",
+                "data" => %{"type" => "html", "data" => %{"text" => "<b>x</b>"}}
+              }
+            ],
+            "vars" => [],
+            "children" => []
+          }
+        }
+      ]
+    }
+
+    draft = %{ctx.draft | payload: %{"main" => %{}, "blocks" => blocks, "modules" => Modules.manifest(blocks)}}
+
+    assert {:review, :modules_changed, [%{reasons: [reason]}]} =
+             Restore.prepare(draft, ctx.page, Brando.Pages.Page, ctx.user)
+
+    assert reason =~ "content"
+  end
+
   test "a changed saved entry requires explicit confirmation", ctx do
     changed = %{ctx.page | updated_at: NaiveDateTime.add(ctx.page.updated_at, 10, :second)}
     assert {:review, :entry_changed, []} = Restore.prepare(ctx.draft, changed, Brando.Pages.Page, ctx.user)
