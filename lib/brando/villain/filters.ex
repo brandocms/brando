@@ -1376,16 +1376,17 @@ defmodule Brando.Villain.Filters do
   An editor's render (live preview, frontend edit mode) gives the entry
   whatever its status; the template can read `e.status`.
 
-  An entry whose own blocks link to it is shown by the status of the entry
-  being rendered: the form renders the blocks before it saves, so the stored
-  row still has the status the save replaces.
+  An entry whose own blocks link to it is the entry being rendered: the form
+  renders the blocks before it saves, so the stored row still has the values
+  the save replaces. Its fields, status included, come from the render, and
+  its associations are loaded from the database as for any other entry.
   """
   def get_entry(%Brando.Content.Identifier{} = identifier, ctx) do
     schema = identifier.schema
 
     case rendered_entry(identifier, ctx) do
-      %{status: status} = own -> if shown?(schema, status), do: own_entry(identifier, own), else: nil
-      _ -> load_entry(identifier, status_filter(schema))
+      nil -> load_entry(identifier, preloads(schema), status_filter(schema))
+      own -> if shown?(schema, Map.get(own, :status)), do: own_entry(identifier, own), else: nil
     end
   rescue
     _ -> nil
@@ -1395,9 +1396,9 @@ defmodule Brando.Villain.Filters do
     nil
   end
 
-  defp load_entry(identifier, filter) do
-    preloads = Brando.Blueprint.preloads_for(identifier.schema, skip_blocks: true)
+  defp preloads(schema), do: Brando.Blueprint.preloads_for(schema, skip_blocks: true)
 
+  defp load_entry(identifier, preloads, filter) do
     {:ok, [entry]} =
       Brando.Content.get_entries_from_identifiers(
         [identifier],
@@ -1407,8 +1408,31 @@ defmodule Brando.Villain.Filters do
     entry
   end
 
-  # The row, with the status it is being rendered with
-  defp own_entry(identifier, %{status: status}), do: %{load_entry(identifier, %{}) | status: status}
+  # The row with the fields the render has, which a form's render takes from
+  # the save to come. Its associations are the row's, loaded as for any other
+  # entry (the render's may be missing or hold unsaved changes); one whose key
+  # the render changes (a new `parent_id`) is loaded again for that key.
+  defp own_entry(%{schema: schema} = identifier, own) do
+    preloads = preloads(schema)
+    stored = load_entry(identifier, preloads, %{})
+    entry = Map.merge(stored, Map.take(own, schema.__schema__(:fields)))
+
+    case Enum.filter(preloads, &key_changed?(schema, &1, stored, entry)) do
+      [] -> entry
+      changed -> Brando.Repo.preload(entry, changed, force: true)
+    end
+  end
+
+  defp key_changed?(schema, {name, _nested}, stored, entry), do: key_changed?(schema, name, stored, entry)
+
+  defp key_changed?(schema, name, stored, entry) when is_atom(name) do
+    case schema.__schema__(:association, name) do
+      %Ecto.Association.BelongsTo{owner_key: key} -> Map.get(stored, key) != Map.get(entry, key)
+      _ -> false
+    end
+  end
+
+  defp key_changed?(_schema, _preload, _stored, _entry), do: false
 
   # The entry the render is for, when the identifier is its own
   defp rendered_entry(%{schema: schema, entry_id: id}, %Liquex.Context{} = ctx) when not is_nil(id) do

@@ -8754,24 +8754,41 @@ defmodule BrandoAdmin.Components.Form do
     # publishes a pending entry); blocks that load the entry itself
     # (`get_entry`) show it with that status
     changeset = Brando.Publisher.maybe_override_status(changeset)
-    entry = changeset |> build_entry_for_blocks(block_map) |> with_stored_status(changeset)
+    entry = changeset |> build_entry_for_blocks(block_map) |> with_stored_fields(changeset)
     render_blocks_for_entry(block_map, changeset, entry)
   end
 
-  # A save that leaves the status as it is keeps the row's, which may have
-  # changed since the form loaded the entry (a publish at its `publish_at`,
-  # a status toggled in the listing)
-  defp with_stored_status(%{status: _} = entry, %Changeset{changes: changes, data: %schema{id: id}})
-       when not is_map_key(changes, :status) and not is_nil(id) do
-    import Ecto.Query, only: [from: 2]
+  # The save writes its changes over the row as it is then. A field it leaves
+  # as it is keeps the row's value, which may have changed since the form
+  # loaded the entry (a publish at its `publish_at`, a status toggled in the
+  # listing, a title changed elsewhere). A relation the save changes (an asset
+  # field's `put_assoc`) sets its key in the entry, not in the changes. A row
+  # in the trash has the trash's values (an obfuscated `uri`), and is
+  # rendered as the form has it, to be right once it is restored.
+  defp with_stored_fields(entry, %Changeset{changes: changes, data: %schema{id: id}}) when not is_nil(id) do
+    import Ecto.Query, only: [from: 2, where: 3]
 
-    stored =
-      :status in schema.__schema__(:fields) && Brando.Repo.one(from(e in schema, where: e.id == ^id, select: e.status))
+    changed = Map.keys(changes) ++ changed_relation_keys(schema, changes)
 
-    if stored, do: %{entry | status: stored}, else: entry
+    case Enum.filter(schema.__schema__(:query_fields), &(is_map_key(entry, &1) and &1 not in changed)) do
+      [] ->
+        entry
+
+      fields ->
+        query = from(e in schema, where: e.id == ^id, select: map(e, ^fields))
+        query = if :deleted_at in schema.__schema__(:fields), do: where(query, [e], is_nil(e.deleted_at)), else: query
+        Map.merge(entry, Brando.Repo.one(query) || %{})
+    end
   end
 
-  defp with_stored_status(entry, _changeset), do: entry
+  defp with_stored_fields(entry, _changeset), do: entry
+
+  defp changed_relation_keys(schema, changes) do
+    for name <- schema.__schema__(:associations),
+        is_map_key(changes, name),
+        %Ecto.Association.BelongsTo{owner_key: key} <- [schema.__schema__(:association, name)],
+        do: key
+  end
 
   @decorate span("brando.form.render_blocks", entry_id: [:entry, :id])
   def render_blocks_for_entry(block_map, changeset, entry) do

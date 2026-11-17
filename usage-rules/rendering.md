@@ -25,7 +25,9 @@ renders the pages that link to it again, its own included, and the card
 appears; unpublishing or deleting it takes the card away the same way. Live
 preview and frontend edit mode give the entry whatever its status, so editors
 see the card before launch; `<article class="card status-{{ e.status }}">`
-lets your CSS mark one that is not out yet.
+lets your CSS mark one that is not out yet. A card in an entry's own blocks
+that loads the entry itself shows it as the form saves it, or in live preview
+as the form has it.
 
 ## Villain parser
 
