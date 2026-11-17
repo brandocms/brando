@@ -474,6 +474,31 @@ defmodule Brando.Villain.GetEntryStatusTest do
       assert stored(target) =~ ~s(<div class="card">Renamed relaunch</div><h1>Renamed</h1>)
     end
 
+    test "a save from the form that removes a related asset shows the card without it", c do
+      module =
+        create_module(
+          c.user,
+          ~S({% assign e = card.identifier | get_entry %}<div class="card">{% if e.meta_image %}image{% else %}no image{% endif %}</div>)
+        )
+
+      image = Factory.insert(:image)
+      target = create_self_linking_page(c.user, module, %{status: :published, meta_image_id: image.id})
+      assert stored(target) =~ ~s(<div class="card">image</div>)
+
+      # The form removes it from the relation, as an asset field's clear does
+      {:ok, entry} = Brando.Query.get_entry(Page, target.id)
+
+      {:ok, _} =
+        entry
+        |> Page.changeset(%{}, c.user)
+        |> Ecto.Changeset.put_assoc(:meta_image, nil)
+        |> then(&BrandoAdmin.Components.Form.render_blocks_for_save([{:blocks, Page.Blocks, nil, []}], &1))
+        |> Pages.update_page(c.user)
+
+      assert Brando.Repo.get(Page, target.id).meta_image_id == nil
+      assert stored(target) =~ ~s(<div class="card">no image</div>)
+    end
+
     test "a save from the form leaves a card of another entry as it is stored", c do
       module =
         create_module(c.user, ~S({% assign e = card.identifier | get_entry %}<div class="card">{{ e.title }}</div>))

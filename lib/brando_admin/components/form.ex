@@ -8761,17 +8761,27 @@ defmodule BrandoAdmin.Components.Form do
   # The save writes its changes over the row as it is then. A field it leaves
   # as it is keeps the row's value, which may have changed since the form
   # loaded the entry (a publish at its `publish_at`, a status toggled in the
-  # listing, a title changed elsewhere)
+  # listing, a title changed elsewhere). A relation the save changes (an asset
+  # field's `put_assoc`) sets its key in the entry, not in the changes.
   defp with_stored_fields(entry, %Changeset{changes: changes, data: %schema{id: id}}) when not is_nil(id) do
     import Ecto.Query, only: [from: 2]
 
-    case Enum.filter(schema.__schema__(:fields), &(is_map_key(entry, &1) and not is_map_key(changes, &1))) do
+    changed = Map.keys(changes) ++ changed_relation_keys(schema, changes)
+
+    case Enum.filter(schema.__schema__(:fields), &(is_map_key(entry, &1) and &1 not in changed)) do
       [] -> entry
       fields -> Map.merge(entry, Brando.Repo.one(from(e in schema, where: e.id == ^id, select: map(e, ^fields))) || %{})
     end
   end
 
   defp with_stored_fields(entry, _changeset), do: entry
+
+  defp changed_relation_keys(schema, changes) do
+    for name <- schema.__schema__(:associations),
+        is_map_key(changes, name),
+        %Ecto.Association.BelongsTo{owner_key: key} <- [schema.__schema__(:association, name)],
+        do: key
+  end
 
   @decorate span("brando.form.render_blocks", entry_id: [:entry, :id])
   def render_blocks_for_entry(block_map, changeset, entry) do
