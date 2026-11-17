@@ -800,6 +800,7 @@ defmodule Brando.Content.Blocks do
       |> then(&if(render_entry?, do: Map.put(&1, :render_entry, true), else: &1))
       |> Brando.Tenant.Job.attach()
       |> Brando.Worker.EntryCascade.new()
+      |> Brando.Content.RenderRun.tag()
 
     # One queued and not started yet runs for this write too
     changeset

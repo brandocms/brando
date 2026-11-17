@@ -18,11 +18,13 @@ defmodule Brando.Worker.EntryCascade do
   alias Brando.Content.BlockReferences
   alias Brando.Content.Blocks
   alias Brando.Content.RenderQueue
+  alias Brando.Content.RenderRun
   alias Brando.Datasource.Registry
   alias Brando.Tenant.Job, as: TenantJob
 
   @impl Oban.Worker
-  def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
+  # The renders it queues belong to the runs this one does (`Brando.Content.RenderRun`)
+  def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> RenderRun.within(job, fn -> perform_tenant(job) end) end)
 
   defp perform_tenant(%Oban.Job{args: args}) do
     schema = Module.concat([args["schema"]])

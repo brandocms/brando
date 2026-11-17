@@ -92,6 +92,38 @@ defmodule Brando.Content.Definitions do
   def refresh(uids, actor), do: Brando.Content.Definition.Importer.retry_refresh(uids, actor)
 
   @doc """
+  Runs `fun`, which applies a plan (`apply/2`) or refreshes modules
+  (`refresh/2`), and returns `{fun's result, run}`. `run` names the render
+  and cascade jobs it queued, for `await_refresh/2` and `refresh_status/1`.
+  """
+  @spec track_refresh((-> result)) :: {result, String.t()} when result: term
+  defdelegate track_refresh(fun), to: Brando.Content.RenderRun, as: :track
+
+  @doc """
+  Follows the jobs of `run` (`track_refresh/1`) until each entry has rendered
+  or failed, on whichever node runs them, and returns:
+
+    * `:rendered`: the number of entries rendered.
+    * `:failed`: a map for each entry whose render failed, and each cascade
+      that failed, with `:worker` (`:render` or `:cascade`), `:schema`,
+      `:entry_id`, `:tenant_prefix`, the job's `:state` and its last `:error`.
+      A render that failed an attempt counts as failed at once: Oban retries
+      it later, on a node that runs its queue.
+    * `:pending`: the same maps for those still queued or running.
+    * `:timed_out`: whether `:timeout` passed first.
+
+  Options: `:timeout` in milliseconds (10 minutes), `:interval` between looks
+  at the jobs table in milliseconds (500), and `:on_progress`, called with
+  `%{done: n, total: n, failed: n}` for the entries whenever that changes.
+  """
+  @spec await_refresh(String.t(), keyword) :: Brando.Content.RenderRun.result()
+  defdelegate await_refresh(run, opts \\ []), to: Brando.Content.RenderRun, as: :await
+
+  @doc "What `await_refresh/2` would return now for `run`, without waiting."
+  @spec refresh_status(String.t()) :: Brando.Content.RenderRun.result()
+  defdelegate refresh_status(run), to: Brando.Content.RenderRun, as: :status
+
+  @doc """
   Returns `:ok` for `:system` or an active, undeleted account whose authorization
   scope matches the current tenant prefix. Raises a definition error otherwise.
   """
