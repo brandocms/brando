@@ -74,6 +74,26 @@ defmodule Brando.Content.RenderRunTest do
     end)
   end
 
+  # The Pruner deletes a cancelled or discarded job, as a completed one,
+  # minutes after it finished
+  test "a failed render pruned while others run stays failed", c do
+    manual(fn ->
+      run = refresh!(c)
+      [first, second] = jobs()
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^first.id), set: [state: "cancelled"])
+
+      prune = fn _progress ->
+        Repo.delete_all(from(j in Oban.Job, where: j.id == ^first.id))
+        Repo.update_all(from(j in Oban.Job, where: j.id == ^second.id), set: [state: "completed"])
+      end
+
+      assert %{rendered: 1, failed: [%{state: "cancelled", entry_id: id}], pending: [], timed_out: false} =
+               Definitions.await_refresh(run, timeout: 1_000, interval: 10, on_progress: prune)
+
+      assert id == first.args["entry_id"]
+    end)
+  end
+
   test "leaves jobs another run or a save queued out of it", c do
     manual(fn ->
       other = Factory.insert(:page, creator: c.user)

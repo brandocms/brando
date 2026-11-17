@@ -147,9 +147,10 @@ defmodule Brando.Content.RenderRun do
     end
   end
 
-  # Every job of the run seen so far, by id. The Pruner deletes completed
-  # jobs a few minutes after they were scheduled, and only finished ones: a
-  # job seen before that has gone finished, and counts as completed.
+  # Every job of the run seen so far, by id. The Pruner deletes finished
+  # jobs a few minutes after they finished (completed ones after they were
+  # scheduled), and no others: a job that has gone keeps the outcome it was
+  # last seen with, and one last seen unfinished counts as completed.
   defp poll(run, seen) do
     query =
       from(j in Oban.Job,
@@ -159,7 +160,12 @@ defmodule Brando.Content.RenderRun do
       )
 
     found = Map.new(Repo.all(query, prefix: "public"), &{&1.id, entry(&1)})
-    gone = for {id, job} <- seen, not Map.has_key?(found, id), into: %{}, do: {id, %{job | state: "completed"}}
+
+    gone =
+      for {id, job} <- seen, not Map.has_key?(found, id), into: %{} do
+        if job.state in @settled, do: {id, job}, else: {id, %{job | state: "completed"}}
+      end
+
     Map.merge(gone, found)
   end
 

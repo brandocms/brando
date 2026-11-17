@@ -627,7 +627,8 @@ queued. `await_refresh/2` follows those jobs on whichever node runs them, by
 polling the jobs table, until each entry has rendered or failed or the timeout
 passes. `failed` and `pending` hold the schema, entry ID, tenant prefix, job
 state and last error of each. `refresh_status/1` returns the same without
-waiting. The node that calls them needs no Oban queues of its own, but some
+waiting. Call them right after the apply: they know the jobs by their rows,
+which Oban's Pruner deletes a few minutes after they finish. The node that calls them needs no Oban queues of its own, but some
 node must run the `default` queue for the renders to finish.
 
 For compiled Spark definitions, call

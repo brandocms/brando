@@ -1,6 +1,7 @@
 defmodule Mix.Tasks.Brando.Modules do
   @shortdoc "Export, plan and import module-definition DSL files"
   @default_timeout :timer.minutes(10)
+  @render_workers [Brando.Worker.EntryRenderer, Brando.Worker.EntryCascade]
   @moduledoc """
   Exports and imports complete module definitions, including refs, vars, children,
   table templates and adjacent HEEx/Liquid source.
@@ -118,17 +119,27 @@ defmodule Mix.Tasks.Brando.Modules do
   # The application this task starts runs no module definition watcher, and
   # of Oban's queues only the one entry renders run in, when it waits for
   # them: it fetches no job it would not finish.
+  # Stopping, it gives a job it is running as long as a render may take.
   def configure_start(run_queues?) do
     Application.delete_env(:brando, Brando.Content.Definition.Watcher)
     oban = Application.get_env(:brando, Oban) || Brando.Supervisor.oban_config()
-    queues = if run_queues?, do: render_queues(oban[:queues]), else: false
-    Application.put_env(:brando, Oban, Keyword.put(oban, :queues, queues))
+
+    oban =
+      if run_queues? do
+        grace = Enum.max(for worker <- @render_workers, do: worker.timeout(%Oban.Job{})) + :timer.seconds(5)
+
+        oban
+        |> Keyword.put(:queues, render_queues(oban[:queues]))
+        |> Keyword.update(:shutdown_grace_period, grace, &max(&1, grace))
+      else
+        Keyword.put(oban, :queues, false)
+      end
+
+    Application.put_env(:brando, Oban, oban)
   end
 
   defp render_queues(queues) when is_list(queues) do
-    names =
-      Enum.uniq(for worker <- [Brando.Worker.EntryRenderer, Brando.Worker.EntryCascade], do: worker.__opts__()[:queue])
-
+    names = Enum.uniq(for worker <- @render_workers, do: worker.__opts__()[:queue])
     Keyword.take(queues, names)
   end
 
@@ -168,26 +179,6 @@ defmodule Mix.Tasks.Brando.Modules do
     if opts[:dry_run],
       do: Mix.shell().info("Dry run: no definitions or files changed"),
       else: apply_import!(plan, directory, opts, user)
-  end
-
-  defp apply_import!(plan, directory, opts, user) do
-    {result, run} = Definitions.track_refresh(fn -> Definitions.apply(plan, user) end)
-    result = unwrap!(result)
-
-    case Definitions.write_baseline(directory, result) do
-      {:ok, :ok} ->
-        :ok
-
-      {:error, reason} ->
-        Mix.raise(
-          "Definitions committed, but the baseline could not be saved: #{inspect(reason)}. Export the target to a new directory before the next edit."
-        )
-    end
-
-    Mix.shell().info("Applied #{length(result.changes)} definition changes; baseline saved")
-    refreshed? = report_refresh(result.refresh)
-    follow_renders!(run, opts)
-    unless refreshed?, do: Mix.raise("Definitions are committed. Retry refresh for the reported UIDs.")
   end
 
   defp execute("refresh", opts, user) do
@@ -242,6 +233,26 @@ defmodule Mix.Tasks.Brando.Modules do
 
         follow_renders!(run, opts)
     end
+  end
+
+  defp apply_import!(plan, directory, opts, user) do
+    {result, run} = Definitions.track_refresh(fn -> Definitions.apply(plan, user) end)
+    result = unwrap!(result)
+
+    case Definitions.write_baseline(directory, result) do
+      {:ok, :ok} ->
+        :ok
+
+      {:error, reason} ->
+        Mix.raise(
+          "Definitions committed, but the baseline could not be saved: #{inspect(reason)}. Export the target to a new directory before the next edit."
+        )
+    end
+
+    Mix.shell().info("Applied #{length(result.changes)} definition changes; baseline saved")
+    refreshed? = report_refresh(result.refresh)
+    follow_renders!(run, opts)
+    unless refreshed?, do: Mix.raise("Definitions are committed. Retry refresh for the reported UIDs.")
   end
 
   defp resolutions!(report, opts) do

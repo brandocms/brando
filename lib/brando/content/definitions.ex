@@ -115,6 +115,9 @@ defmodule Brando.Content.Definitions do
   Options: `:timeout` in milliseconds (10 minutes), `:interval` between looks
   at the jobs table in milliseconds (500), and `:on_progress`, called with
   `%{done: n, total: n, failed: n}` for the entries whenever that changes.
+
+  Call it right after `track_refresh/1`: it knows the jobs by their rows, and
+  Oban's Pruner deletes a finished job a few minutes after it finished.
   """
   @spec await_refresh(String.t(), keyword) :: Brando.Content.RenderRun.result()
   defdelegate await_refresh(run, opts \\ []), to: Brando.Content.RenderRun, as: :await

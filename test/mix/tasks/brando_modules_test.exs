@@ -125,6 +125,13 @@ defmodule Mix.Tasks.Brando.ModulesTest do
       assert Application.get_env(:brando, Oban)[:queues] == [default: 4]
     end
 
+    # Stopping, it lets a render it has started run to its timeout
+    test "gives a render it runs the time to finish when it stops" do
+      Modules.configure_start(true)
+      grace = Application.get_env(:brando, Oban)[:shutdown_grace_period]
+      assert is_integer(grace) and grace > :timer.seconds(30)
+    end
+
     test "fetches no jobs with --no-wait" do
       Modules.configure_start(false)
       assert Application.get_env(:brando, Oban)[:queues] == false
