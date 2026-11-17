@@ -291,6 +291,11 @@ afterwards:
 - **Globals.** `Brando.Globals.get_global_value!/1` is gone; use
   `Brando.Sites.render_global/3` for the value, or `Brando.Sites.global/3` for
   the var.
+- **Identity links.** The identity is per language, so
+  `Brando.Sites.get_link("instagram")` reads the default language's. Pass the
+  page's language, `Brando.Sites.get_link(@language, "instagram")`, or loop
+  over `@identity.links` from `Brando.Plug.Identity`. Both return the URL, as
+  0.51's printed.
 - **Queries.** `status: :published` in the generic query API filters the
   top-level entry, not its preloads. A `has_many … through:` preload ignores the
   preload query's `order_by`, because Ecto returns join-table order.
