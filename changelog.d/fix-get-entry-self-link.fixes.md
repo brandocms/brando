@@ -1,0 +1,1 @@
+- An entry whose own blocks link to it with `get_entry`, such as a "this project" card, shows the card once it is published (from the form, the listing, or at its `publish_at`) and hides it again when unpublished.

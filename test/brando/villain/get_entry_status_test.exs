@@ -148,6 +148,58 @@ defmodule Brando.Villain.GetEntryStatusTest do
 
   defp stored(page), do: Brando.Repo.get(Page, page.id).rendered_blocks
 
+  # A page whose one module block links to the page itself, such as a "this
+  # project" card
+  defp create_self_linking_page(user, module, attrs) do
+    page = create_target(user, attrs)
+
+    block =
+      Brando.Repo.insert!(%Brando.Content.Block{
+        type: :module,
+        source: "Elixir.Brando.Pages.Page.Blocks",
+        module_id: module.id,
+        uid: Brando.Utils.generate_uid(),
+        creator_id: user.id,
+        vars: [
+          %Brando.Content.Var{
+            type: :link,
+            key: "card",
+            label: "Card",
+            link_type: :identifier,
+            identifier_id: identifier(page).id,
+            creator_id: user.id
+          }
+        ]
+      })
+
+    Brando.Repo.insert!(%Page.Blocks{entry_id: page.id, block_id: block.id, sequence: 0})
+    {:ok, _} = Brando.Content.Blocks.render_entry(Page, page.id)
+    page
+  end
+
+  # What the form's save does: render the blocks with the entry as the form
+  # has it, before the save, and save the rendered changeset
+  defp save_from_form(page, params, user) do
+    {:ok, entry} = Brando.Query.get_entry(Page, page.id)
+
+    entry
+    |> Page.changeset(params, user)
+    |> then(&BrandoAdmin.Components.Form.render_blocks_for_save([{:blocks, Page.Blocks, nil, []}], &1))
+    |> Pages.update_page(user)
+  end
+
+  # The entries the cascades `fun` queues render, run by hand
+  defp rendered_by_cascade(fun) do
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      fun.()
+
+      for %{args: args} <- all_enqueued(worker: Brando.Worker.EntryCascade),
+          do: :ok = perform_job(Brando.Worker.EntryCascade, args)
+
+      for %{args: %{"entry_id" => id}} <- all_enqueued(worker: Brando.Worker.EntryRenderer), do: id
+    end)
+  end
+
   defp update_target(target, params, user), do: Pages.update_page(target.id, params, user)
 
   describe "the stored render" do
@@ -265,6 +317,109 @@ defmodule Brando.Villain.GetEntryStatusTest do
 
       {:ok, _} = Pages.delete_page(target.id, c.user)
       assert stored(page) =~ ~s(class="no-card")
+    end
+  end
+
+  describe "an entry whose own blocks link to it" do
+    test "a publish from the form shows the card, rendered once, and an unpublish hides it", c do
+      target = create_self_linking_page(c.user, c.module, %{status: :draft})
+      assert stored(target) =~ ~s(class="no-card")
+
+      # The form renders the blocks before it saves, with the status it saves
+      rendered = rendered_by_cascade(fn -> {:ok, _} = save_from_form(target, %{status: :published}, c.user) end)
+      assert stored(target) =~ ~s(<div class="card" data-status="published">Launch</div>)
+      refute target.id in rendered
+
+      {:ok, _} = save_from_form(target, %{status: :disabled}, c.user)
+      assert stored(target) =~ ~s(class="no-card")
+    end
+
+    test "clearing the publish_at of a pending entry in the form publishes it and shows the card", c do
+      target = create_self_linking_page(c.user, c.module, %{status: :published, publish_at: at(3600)})
+      assert Brando.Repo.get(Page, target.id).status == :pending
+
+      {:ok, _} = save_from_form(target, %{publish_at: nil}, c.user)
+
+      assert Brando.Repo.get(Page, target.id).status == :published
+      assert stored(target) =~ ~s(<div class="card" data-status="published">Launch</div>)
+    end
+
+    test "a cascade queued and not started yet renders the entry for a status change it takes in", c do
+      target = create_self_linking_page(c.user, c.module, %{status: :draft})
+
+      rendered =
+        rendered_by_cascade(fn ->
+          {:ok, _} = update_target(target, %{title: "Renamed"}, c.user)
+          {:ok, _} = Brando.Trait.Status.update_status(Page, target.id, :published, c.user)
+          {:ok, _} = update_target(target, %{title: "Launch"}, c.user)
+        end)
+
+      assert rendered == [target.id]
+    end
+
+    test "a status change from the listing shows and hides the card", c do
+      target = create_self_linking_page(c.user, c.module, %{status: :draft})
+
+      {:ok, _} = Brando.Trait.Status.update_status(Page, target.id, :published, c.user)
+      assert stored(target) =~ ~s(<div class="card" data-status="published">Launch</div>)
+
+      {:ok, _} = Brando.Trait.Status.update_status(Page, target.id, :draft, c.user)
+      assert stored(target) =~ ~s(class="no-card")
+    end
+
+    test "a status change from the listing with group authorization shows and hides the card", c do
+      target = create_self_linking_page(c.user, c.module, %{status: :draft})
+
+      Brando.Test.Support.put_test_env(:authorization_mode, :groups)
+      Brando.Test.Support.put_test_env(:tenancy_mode, :none)
+      Brando.Authorization.Boundary.put_scope(nil)
+      {:ok, _} = Brando.Authorization.Migration.run()
+
+      {:ok, _} = Brando.Trait.Status.update_status(Page, target.id, :published, c.user)
+      assert stored(target) =~ ~s(class="card")
+
+      {:ok, _} = Brando.Trait.Status.update_status(Page, target.id, :disabled, c.user)
+      assert stored(target) =~ ~s(class="no-card")
+    end
+
+    test "the publish_at job shows the card and the unpublish_at job hides it", c do
+      target = create_self_linking_page(c.user, c.module, %{status: :published, publish_at: at(3600)})
+      assert Brando.Repo.get(Page, target.id).status == :pending
+      assert stored(target) =~ ~s(class="no-card")
+
+      BrandoIntegration.Repo.update_all(from(p in Page, where: p.id == ^target.id), set: [publish_at: at(-1)])
+
+      assert :ok =
+               perform_job(EntryPublisher, %{
+                 "schema" => to_string(Page),
+                 "id" => target.id,
+                 "status" => "published",
+                 "user_id" => c.user.id
+               })
+
+      assert stored(target) =~ ~s(<div class="card" data-status="published">Launch</div>)
+
+      BrandoIntegration.Repo.update_all(from(p in Page, where: p.id == ^target.id), set: [unpublish_at: at(-1)])
+
+      assert :ok =
+               perform_job(EntryPublisher, %{
+                 "schema" => to_string(Page),
+                 "id" => target.id,
+                 "status" => "disabled",
+                 "user_id" => c.user.id
+               })
+
+      assert stored(target) =~ ~s(class="no-card")
+    end
+
+    test "a publish_at the sweep finds passed shows the card", c do
+      target = create_self_linking_page(c.user, c.module, %{status: :published, publish_at: at(3600)})
+      assert stored(target) =~ ~s(class="no-card")
+
+      BrandoIntegration.Repo.update_all(from(p in Page, where: p.id == ^target.id), set: [publish_at: at(-600)])
+      Brando.Publisher.sweep()
+
+      assert stored(target) =~ ~s(class="card")
     end
   end
 

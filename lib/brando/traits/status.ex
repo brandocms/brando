@@ -38,7 +38,7 @@ defmodule Brando.Trait.Status do
            :ok <- Boundary.change(user, :update, changeset),
            {:ok, updated_entry} <- Brando.Repo.update(changeset) do
         Brando.Activity.saved(changeset, updated_entry, actor)
-        update_status_side_effects(schema, id, updated_entry)
+        update_status_side_effects(schema, id, updated_entry, Map.has_key?(changeset.changes, :status))
       else
         nil -> {:error, :not_found}
         error -> error
@@ -46,7 +46,7 @@ defmodule Brando.Trait.Status do
     end)
   end
 
-  defp update_status_side_effects(schema, id, updated_entry) do
+  defp update_status_side_effects(schema, id, updated_entry, changed?) do
     {:ok, identifier_result} = Brando.Content.update_identifier(schema, updated_entry)
 
     identifier_id =
@@ -55,7 +55,8 @@ defmodule Brando.Trait.Status do
         _ -> nil
       end
 
-    Brando.Content.Blocks.enqueue_entry_cascade(schema, updated_entry, identifier_id)
+    # Nothing rendered the entry's own blocks, which may load the entry itself
+    Brando.Content.Blocks.enqueue_entry_cascade(schema, updated_entry, identifier_id, render_entry: changed?)
     # The context's update callbacks, which refresh a site cache, do not run here
     Brando.Cache.entry_changed(updated_entry)
     Brando.Cache.Query.evict({:ok, %{__struct__: schema, id: id}})

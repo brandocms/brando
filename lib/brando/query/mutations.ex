@@ -162,7 +162,7 @@ defmodule Brando.Query.Mutations do
       if has_changes(changeset) do
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        enqueue_entry_cascade(module, entry, identifier_id)
+        enqueue_entry_cascade(module, entry, identifier_id, render_entry: render_entry?(module, changeset))
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -209,7 +209,7 @@ defmodule Brando.Query.Mutations do
       if has_changes(changeset) do
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        enqueue_entry_cascade(module, entry, identifier_id)
+        enqueue_entry_cascade(module, entry, identifier_id, render_entry: render_entry?(module, changeset))
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -848,16 +848,27 @@ defmodule Brando.Query.Mutations do
     Repo.after_commit(fn -> Phoenix.PubSub.broadcast(Brando.pubsub(), topic, {:mutation, module, entry, action}) end)
   end
 
-  # A shared preview is a snapshot no content references: no identifier, no datasource
-  defp enqueue_entry_cascade(Brando.Sites.Preview, _entry, _identifier_id), do: :ok
+  # A status change shows or hides the entry where its own blocks load it
+  # (`get_entry`). A save that rendered them, the form's, did so with the
+  # status it saves; after any other the cascade renders the entry.
+  defp render_entry?(module, changeset) do
+    Map.has_key?(changeset.changes, :status) and
+      not Enum.any?(module.__blocks_fields__(), &Map.has_key?(changeset.changes, :"rendered_#{&1.name}_at"))
+  end
 
-  defp enqueue_entry_cascade(module, entry, identifier_id) do
+  # A shared preview is a snapshot no content references: no identifier, no datasource
+  defp enqueue_entry_cascade(module, entry, identifier_id, opts \\ [])
+  defp enqueue_entry_cascade(Brando.Sites.Preview, _entry, _identifier_id, _opts), do: :ok
+
+  defp enqueue_entry_cascade(module, entry, identifier_id, opts) do
     # Shared records can be referenced by content in any environment. At initial
     # account setup there may be no environments yet, so there is nothing to render.
     if Tenant.enabled?() && module.__schema__(:prefix) == "public" do
-      Job.each_active_environment(:all, fn -> ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id) end)
+      Job.each_active_environment(:all, fn ->
+        ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id, opts)
+      end)
     else
-      ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id)
+      ContentBlocks.enqueue_entry_cascade(module, entry, identifier_id, opts)
     end
   end
 

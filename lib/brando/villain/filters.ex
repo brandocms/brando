@@ -1375,18 +1375,18 @@ defmodule Brando.Villain.Filters do
   unpublishing or deleting the entry renders the pages that link to it again.
   An editor's render (live preview, frontend edit mode) gives the entry
   whatever its status; the template can read `e.status`.
+
+  An entry whose own blocks link to it is shown by the status of the entry
+  being rendered: the form renders the blocks before it saves, so the stored
+  row still has the status the save replaces.
   """
-  def get_entry(%Brando.Content.Identifier{} = identifier, _ctx) do
+  def get_entry(%Brando.Content.Identifier{} = identifier, ctx) do
     schema = identifier.schema
-    preloads = Brando.Blueprint.preloads_for(schema, skip_blocks: true)
 
-    {:ok, [entry]} =
-      Brando.Content.get_entries_from_identifiers(
-        [identifier],
-        Map.merge(%{preload: preloads}, status_filter(schema))
-      )
-
-    entry
+    case rendered_entry(identifier, ctx) do
+      %{status: status} = own -> if shown?(schema, status), do: own_entry(identifier, own), else: nil
+      _ -> load_entry(identifier, status_filter(schema))
+    end
   rescue
     _ -> nil
   end
@@ -1395,15 +1395,43 @@ defmodule Brando.Villain.Filters do
     nil
   end
 
+  defp load_entry(identifier, filter) do
+    preloads = Brando.Blueprint.preloads_for(identifier.schema, skip_blocks: true)
+
+    {:ok, [entry]} =
+      Brando.Content.get_entries_from_identifiers(
+        [identifier],
+        Map.merge(%{preload: preloads}, filter)
+      )
+
+    entry
+  end
+
+  # The row, with the status it is being rendered with
+  defp own_entry(identifier, %{status: status}), do: %{load_entry(identifier, %{}) | status: status}
+
+  # The entry the render is for, when the identifier is its own
+  defp rendered_entry(%{schema: schema, entry_id: id}, %Liquex.Context{} = ctx) when not is_nil(id) do
+    case Brando.Villain.raw_context(ctx, "entry") do
+      %{__struct__: ^schema, id: ^id} = entry -> entry
+      _ -> nil
+    end
+  end
+
+  defp rendered_entry(_identifier, _ctx), do: nil
+
   # The list query leaves out an entry in the trash. Brando keeps `status`
   # matching `publish_at` (a future one makes the entry pending, and
   # `Brando.Worker.EntryPublisher` publishes it when it comes), so a published
   # entry is one whose status says so.
   defp status_filter(schema) do
-    if Brando.FrontendEdit.annotating?() or not schema.has_trait(Brando.Trait.Status),
-      do: %{},
-      else: %{status: :published}
+    if filter_status?(schema), do: %{status: :published}, else: %{}
   end
+
+  defp shown?(schema, status), do: status == :published or not filter_status?(schema)
+
+  defp filter_status?(schema),
+    do: not Brando.FrontendEdit.annotating?() and schema.has_trait(Brando.Trait.Status)
 
   defp get_link_url(%{link_type: :url, value: url}), do: url
   defp get_link_url(%{link_type: :identifier, identifier: %{} = identifier}), do: Identifier.link_url(identifier)
