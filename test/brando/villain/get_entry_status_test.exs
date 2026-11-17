@@ -181,7 +181,11 @@ defmodule Brando.Villain.GetEntryStatusTest do
   # has it, before the save, and save the rendered changeset
   defp save_from_form(page, params, user) do
     {:ok, entry} = Brando.Query.get_entry(Page, page.id)
+    save_from_form_opened_as(entry, params, user)
+  end
 
+  # The form keeps the entry it loaded when it opened
+  defp save_from_form_opened_as(entry, params, user) do
     entry
     |> Page.changeset(params, user)
     |> then(&BrandoAdmin.Components.Form.render_blocks_for_save([{:blocks, Page.Blocks, nil, []}], &1))
@@ -342,6 +346,43 @@ defmodule Brando.Villain.GetEntryStatusTest do
 
       assert Brando.Repo.get(Page, target.id).status == :published
       assert stored(target) =~ ~s(<div class="card" data-status="published">Launch</div>)
+    end
+
+    test "a publish_at that passes while the form renders publishes the entry and shows the card", c do
+      target = create_self_linking_page(c.user, c.module, %{status: :draft})
+      {:ok, entry} = Brando.Query.get_entry(Page, target.id)
+
+      # Rendered while the date is ahead, saved once it has passed
+      entry
+      |> Page.changeset(%{status: :published, publish_at: at(3600)}, c.user)
+      |> then(&BrandoAdmin.Components.Form.render_blocks_for_save([{:blocks, Page.Blocks, nil, []}], &1))
+      |> Ecto.Changeset.put_change(:publish_at, at(-1))
+      |> Pages.update_page(c.user)
+
+      assert Brando.Repo.get(Page, target.id).status == :published
+      assert stored(target) =~ ~s(<div class="card" data-status="published">Launch</div>)
+    end
+
+    test "a save from a form opened before a publish elsewhere keeps the card", c do
+      {:ok, module} =
+        Brando.Content.create_module(
+          Factory.params_for(:module, %{
+            code: @card <> "<h1>{{ entry.title }}</h1>",
+            vars: [%{type: :link, key: "card", label: "Card", link_type: :identifier, creator_id: c.user.id}]
+          }),
+          :system
+        )
+
+      target = create_self_linking_page(c.user, module, %{status: :draft})
+      {:ok, opened} = Brando.Query.get_entry(Page, target.id)
+
+      {:ok, _} = Brando.Trait.Status.update_status(Page, target.id, :published, c.user)
+      assert stored(target) =~ ~s(class="card")
+
+      {:ok, _} = save_from_form_opened_as(opened, %{title: "Relaunch"}, c.user)
+      assert Brando.Repo.get(Page, target.id).status == :published
+      assert stored(target) =~ "<h1>Relaunch</h1>"
+      assert stored(target) =~ ~s(<div class="card" data-status="published">)
     end
 
     test "a cascade queued and not started yet renders the entry for a status change it takes in", c do

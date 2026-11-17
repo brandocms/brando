@@ -162,7 +162,7 @@ defmodule Brando.Query.Mutations do
       if has_changes(changeset) do
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        enqueue_entry_cascade(module, entry, identifier_id, render_entry: render_entry?(module, changeset))
+        enqueue_entry_cascade(module, entry, identifier_id, render_entry: render_entry?(module, changeset, nil))
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -197,6 +197,8 @@ defmodule Brando.Query.Mutations do
   defp do_update_with_changeset(module, changeset, user, preloads, callback_block, opts) do
     notify? = Keyword.get(opts, :show_notification, true)
     pubsub? = Keyword.get(opts, :pubsub, true)
+    # The status a changeset rendered by its caller was rendered with
+    rendered_status = status(changeset)
 
     with changeset <- Publisher.maybe_override_status(changeset),
          changeset <- ContentModified.stamp(changeset, user),
@@ -209,7 +211,8 @@ defmodule Brando.Query.Mutations do
       if has_changes(changeset) do
         # Enqueue async cascade (merged datasource + identifier)
         identifier_id = get_identifier_id(identifier_result)
-        enqueue_entry_cascade(module, entry, identifier_id, render_entry: render_entry?(module, changeset))
+        render_entry? = render_entry?(module, changeset, rendered_status)
+        enqueue_entry_cascade(module, entry, identifier_id, render_entry: render_entry?)
 
         # Capture the exact state from this mutation synchronously.
         revisioned? = module.__trait__(Trait.Revisioned)
@@ -849,12 +852,20 @@ defmodule Brando.Query.Mutations do
   end
 
   # A status change shows or hides the entry where its own blocks load it
-  # (`get_entry`). A save that rendered them, the form's, did so with the
-  # status it saves; after any other the cascade renders the entry.
-  defp render_entry?(module, changeset) do
+  # (`get_entry`). A save that rendered all of them, the form's, did so with
+  # the status it saves (`rendered_status`), unless the dates changed it since
+  # (a `publish_at` that passed while it rendered); after any other save, and
+  # then, the cascade renders the entry. A named form may hold only some of
+  # the block fields.
+  defp render_entry?(module, changeset, rendered_status) do
     Map.has_key?(changeset.changes, :status) and
-      not Enum.any?(module.__blocks_fields__(), &Map.has_key?(changeset.changes, :"rendered_#{&1.name}_at"))
+      (not rendered?(module, changeset) or status(changeset) != rendered_status)
   end
+
+  defp rendered?(module, changeset),
+    do: Enum.all?(module.__blocks_fields__(), &Map.has_key?(changeset.changes, :"rendered_#{&1.name}_at"))
+
+  defp status(changeset), do: Map.get(changeset.changes, :status, Map.get(changeset.data, :status))
 
   # A shared preview is a snapshot no content references: no identifier, no datasource
   defp enqueue_entry_cascade(module, entry, identifier_id, opts \\ [])
