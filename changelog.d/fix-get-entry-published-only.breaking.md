@@ -1,0 +1,2 @@
+- On the site, the `get_entry` Liquid filter gives a linked entry only while it is published: a module no longer shows a draft, pending, disabled or deleted entry, and publishing, unpublishing or deleting the entry renders the pages that link to it again. Live preview and frontend edit mode still show the entry whatever its status.
+  Publish the linked entries the site should keep showing. Pages rendered before the upgrade keep their cards until they render again: `mix brando.entries.resave`, which the 0.55 upgrade runs, renders them all.

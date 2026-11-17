@@ -826,14 +826,24 @@ defmodule Brando.Content do
   def delete_identifier(identifier) do
     # The delete clears `identifier_id` on vars that link to it, so ask first
     linked_from_globals? = Brando.Sites.globals_link_to?(identifier.id)
+    linking_block_ids = ContentBlocks.list_block_ids_using_identifier(identifier.id)
 
     result =
       identifier
       |> Brando.Repo.delete()
       |> Brando.Cache.Query.evict()
 
-    # Cached link globals hold the identifier
-    if linked_from_globals? and match?({:ok, _}, result), do: Brando.Sites.refresh_globals()
+    if match?({:ok, _}, result) do
+      # Cached link globals hold the identifier
+      if linked_from_globals?, do: Brando.Sites.refresh_globals()
+
+      # Entries whose blocks linked to it render again without the link (a
+      # card loaded with `get_entry` goes); no cascade finds them once the
+      # link is cleared
+      linking_block_ids
+      |> ContentBlocks.reject_blocks_belonging_to_entry(nil)
+      |> ContentBlocks.enqueue_entry_map_for_render()
+    end
 
     result
   end

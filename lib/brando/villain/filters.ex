@@ -1365,13 +1365,25 @@ defmodule Brando.Villain.Filters do
 
   def i18n(_, _), do: ""
 
+  @doc """
+  The entry behind an identifier, such as a link var's (`card.identifier |
+  get_entry`), or `nil`.
+
+  An editor may link to an entry of any status, but the site shows only a
+  published one: in the stored render an entry that is not published, or is
+  in the trash, gives `nil`, so `{% if e %}` leaves it out. Publishing,
+  unpublishing or deleting the entry renders the pages that link to it again.
+  An editor's render (live preview, frontend edit mode) gives the entry
+  whatever its status; the template can read `e.status`.
+  """
   def get_entry(%Brando.Content.Identifier{} = identifier, _ctx) do
-    preloads = Brando.Blueprint.preloads_for(identifier.schema, skip_blocks: true)
+    schema = identifier.schema
+    preloads = Brando.Blueprint.preloads_for(schema, skip_blocks: true)
 
     {:ok, [entry]} =
       Brando.Content.get_entries_from_identifiers(
         [identifier],
-        %{preload: preloads}
+        Map.merge(%{preload: preloads}, status_filter(schema))
       )
 
     entry
@@ -1381,6 +1393,16 @@ defmodule Brando.Villain.Filters do
 
   def get_entry(_, _) do
     nil
+  end
+
+  # The list query leaves out an entry in the trash. Brando keeps `status` in
+  # step with `publish_at` (a future one makes the entry pending, and
+  # `Brando.Worker.EntryPublisher` publishes it when it comes), so a published
+  # entry is one whose status says so.
+  defp status_filter(schema) do
+    if Brando.FrontendEdit.annotating?() or not schema.has_trait(Brando.Trait.Status),
+      do: %{},
+      else: %{status: :published}
   end
 
   defp get_link_url(%{link_type: :url, value: url}), do: url

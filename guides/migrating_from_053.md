@@ -905,6 +905,10 @@ server's database, or against a copy you then restore to the server
 
    `get_fragments/1` with `status: :published` can keep or drop the option.
 
+   The same goes for an entry a module template loads with `get_entry` (a
+   card for a linked project, say): the resave renders it only while it is
+   published, so publish the linked entries the site should keep showing.
+
 2. **Rebuild persisted block rendering and identifiers**, and record which
    images already match their config:
 
