@@ -16,6 +16,17 @@ around an empty text var, and `{% when blank %}` matches any of those values.
 A string of only spaces matches neither, and nor does a struct such as a link
 var: test its `value`. In standard Liquid, `nil` is not `empty`.
 
+`{% assign e = card.identifier | get_entry %}` loads the entry a link var
+points to, for a card with its title, cover and other fields. An editor can
+link to an entry of any status, but on the site `e` is only a published entry:
+one that is a draft, pending, disabled or in the trash gives `nil`, so put the
+card inside `{% if e %}`. Publishing the entry, by hand or at its `publish_at`,
+renders the pages that link to it again and the card appears; unpublishing or
+deleting it takes the card away the same way. Live preview and frontend edit
+mode give the entry whatever its status, so editors see the card before
+launch; `<article class="card status-{{ e.status }}">` lets your CSS mark one
+that is not out yet.
+
 ## Villain parser
 
 Guide: `deps/brando/guides/villain_parser.md`

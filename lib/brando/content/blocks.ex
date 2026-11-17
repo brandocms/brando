@@ -286,14 +286,17 @@ defmodule Brando.Content.Blocks do
   end
 
   @doc """
-  Return list of all blocks using `identifier_id` through vars
+  Return list of all blocks using `identifier_id` through a var: one of the
+  block's own, or a cell of one of its table rows.
   """
   def list_block_ids_using_identifier(identifier_id) do
     query =
-      from b in Block,
-        select: b.id,
-        left_join: v in assoc(b, :vars),
-        where: v.identifier_id == ^identifier_id
+      from v in Var,
+        left_join: row in assoc(v, :table_row),
+        where: v.identifier_id == ^identifier_id,
+        where: not is_nil(v.block_id) or not is_nil(row.block_id),
+        select: coalesce(v.block_id, row.block_id),
+        distinct: true
 
     Repo.all(query)
   end
