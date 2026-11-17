@@ -310,6 +310,10 @@ defmodule Brando.Migrations.UpgradeFromVillainRepairTest do
       rows("UPDATE content_refs SET video_id = NULL WHERE block_id = $1 AND name = 'video'", [video_block])
       rows("UPDATE videos SET config_target = 'video:MyApp.Projects.Project:cover' WHERE id = $1", [video_id])
 
+      # The field's video went to the trash since, which is no reason to
+      # leave the ref without one of its own
+      rows("UPDATE videos SET deleted_at = $1 WHERE id = $2", [utc_in(60), video_id])
+
       assert %{"ref video" => {:make_video, _url}} = Map.new(repairs())
       run_task(RepairTask, [])
       assert [[new_id]] = rows("SELECT video_id FROM content_refs WHERE id = $1", [ref_id])

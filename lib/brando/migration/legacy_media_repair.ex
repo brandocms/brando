@@ -433,11 +433,18 @@ defmodule Brando.Migration.LegacyMediaRepair do
     end || deleted_since(context)
   end
 
+  # A video of a video field (`video:<schema>:<field>`) plays with that
+  # field's settings, so a ref neither links to one nor counts one in the trash
+  @ref_video "(config_target IS NULL OR config_target NOT LIKE 'video:%')"
+
   # A video with this source that went to the trash since the conversion:
   # making another would bring back what an editor deleted
   defp video_trashed(context, url) do
     case rows(
-           "SELECT max(deleted_at) FROM #{name(context.schema, "videos")} WHERE source_url = $1 AND deleted_at IS NOT NULL",
+           """
+           SELECT max(deleted_at) FROM #{name(context.schema, "videos")}
+           WHERE source_url = $1 AND deleted_at IS NOT NULL AND #{@ref_video}
+           """,
            [url]
          ) do
       [[%NaiveDateTime{} = at]] ->
@@ -850,14 +857,12 @@ defmodule Brando.Migration.LegacyMediaRepair do
 
   ## Matching
 
-  # A video of a video field (`video:<schema>:<field>`) plays with that
-  # field's settings, so a ref gets one of its own
   defp find_video(schema, url) do
     case rows(
            """
            SELECT id FROM #{name(schema, "videos")}
            WHERE source_url = $1 AND deleted_at IS NULL
-             AND (config_target IS NULL OR config_target NOT LIKE 'video:%')
+             AND #{@ref_video}
            ORDER BY id LIMIT 1
            """,
            [url]
