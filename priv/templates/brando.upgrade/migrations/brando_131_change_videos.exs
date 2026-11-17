@@ -8,7 +8,34 @@ defmodule Brando.Migrations.Videos.ChangeVideos do
       add :title, :text
       add :caption, :text
       add :aspect_ratio, :string
-      
+      # Add source_url for external videos
+      add :source_url, :text
+    end
+
+    flush()
+
+    # The videos brando_95 made of embedded video fields, as brando_133 types
+    # and addresses the videos of video refs: the provider's own type, or an
+    # external file, and the url, or for an embed with only a remote id the
+    # provider's URL built from it
+    execute """
+    UPDATE videos SET
+      type = CASE source
+        WHEN 'vimeo' THEN 'vimeo'
+        WHEN 'youtube' THEN 'youtube'
+        ELSE 'external_file'
+      END,
+      source_url = CASE
+        WHEN source = 'vimeo' AND url IS NULL AND remote_id IS NOT NULL
+        THEN 'https://vimeo.com/' || SPLIT_PART(remote_id, '?', 1)
+        WHEN source = 'youtube' AND url IS NULL AND remote_id IS NOT NULL
+        THEN 'https://www.youtube.com/watch?v=' || SPLIT_PART(remote_id, '?', 1)
+        ELSE COALESCE(url, remote_id)
+      END
+    WHERE type IS NULL AND COALESCE(url, remote_id) IS NOT NULL
+    """
+
+    alter table(:videos) do
       # Remove old fields that are being replaced
       remove :url
       remove :source
@@ -21,9 +48,6 @@ defmodule Brando.Migrations.Videos.ChangeVideos do
       
       # Add new file reference
       add :file_id, references(:files, on_delete: :nilify_all)
-      
-      # Add source_url for external videos
-      add :source_url, :text
     end
     
     # Add index for type field for better query performance

@@ -249,7 +249,8 @@ defmodule Brando.Migrations.MoveDatasourceToModule do
       "instructions" => nil,
       "placeholder" => nil,
       "key" => "limit",
-      "value" => limit,
+      # A string var's value is text: 0.51 stored the limit as a number
+      "value" => to_string(limit),
       "type" => "string",
       "label" => "Limit"
     }

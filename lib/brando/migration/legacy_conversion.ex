@@ -20,7 +20,7 @@ defmodule Brando.Migration.LegacyConversion do
 
   # brando_108 puts each of these free-standing Villain blocks in a "Legacy
   # Content Wrapper" module block, its content in one ref named `content`
-  @wrapped_types ~w(text markdown image picture video divider header blockquote datasource map svg html)
+  @wrapped_types ~w(text markdown image picture video divider header blockquote datasource map svg html comment)
 
   # Tables with a json `*data` column that brando_103 and brando_108 pass over
   @not_villain ~w(revisions content_modules sites_globals pages_properties)

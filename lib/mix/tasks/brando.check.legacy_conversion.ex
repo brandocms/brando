@@ -57,7 +57,7 @@ defmodule Mix.Tasks.Brando.Check.LegacyConversion do
   What the migrations change on purpose, and what an editor or a module save
   may have changed since:
 
-    * Free-standing Villain blocks (text, picture, header, …) become a
+    * Free-standing Villain blocks (text, picture, header, comment, …) become a
       "Legacy Content Wrapper" module block holding their content in a ref
       named `content`; that block and ref are what is checked.
     * Table and list refs become table rows, so they are counted as rows,

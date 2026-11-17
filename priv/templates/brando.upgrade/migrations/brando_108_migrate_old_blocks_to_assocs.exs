@@ -2,7 +2,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
   use Ecto.Migration
   import Ecto.Query
 
-  @legacy_block_types ~w(text markdown image picture video divider header blockquote datasource map svg html)
+  @legacy_block_types ~w(text markdown image picture video divider header blockquote datasource map svg html comment)
 
   def up do
     # Fragment blocks below are written with their fragment_id, a column
@@ -346,7 +346,8 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
         #{inspect(unknown_block, pretty: true)}
 
         Make sure you convert old style free standing blocks to modules
-        before migrating.
+        before migrating. Free-standing blocks of these types are wrapped
+        in a module here: #{Enum.join(@legacy_block_types, ", ")}.
 
         """
     end
@@ -417,6 +418,22 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
 
   defp build_legacy_ref_data(%{"type" => "divider", "data" => _data}),
     do: %{"type" => "text", "data" => %{"text" => "---", "type" => "paragraph"}}
+
+  # Markup with Liquid in it, which the page's Liquid pass renders. An HTML
+  # ref without params renders its text as it is.
+  defp build_legacy_ref_data(%{"type" => "html", "data" => data}),
+    do: %{"type" => "html", "data" => %{"text" => Map.get(data, "text") || "", "params" => [], "values" => %{}}}
+
+  defp build_legacy_ref_data(%{"type" => "svg", "data" => data}),
+    do: %{"type" => "svg", "data" => Map.take(data, ["code", "class"])}
+
+  # The map ref has no class
+  defp build_legacy_ref_data(%{"type" => "map", "data" => data}),
+    do: %{"type" => "map", "data" => Map.take(data, ["embed_url", "source"])}
+
+  # An editor's note, which renders nothing
+  defp build_legacy_ref_data(%{"type" => "comment", "data" => data}),
+    do: %{"type" => "comment", "data" => %{"text" => Map.get(data, "text") || ""}}
 
   defp build_legacy_ref_data(%{"type" => "blockquote", "data" => data}),
     do: %{
@@ -491,13 +508,18 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
         ref
         |> put_in([Access.key("id")], Ecto.UUID.generate())
         |> put_in([Access.key("data"), Access.key("uid")], Brando.Utils.generate_uid())
-        |> put_in([Access.key("data"), Access.key("active")], !ref["data"]["hidden"])
+        |> put_in([Access.key("data"), Access.key("active")], active_ref?(ref))
         |> pop_in([Access.key("data"), Access.key("hidden")])
         |> elem(1)
+        |> Map.delete("deleted")
       end)
 
     {fixed_regular, list_refs}
   end
+
+  # A ref deleted from a block on 0.51 stayed in its data as `deleted` and
+  # rendered nothing; it stays, inactive
+  defp active_ref?(ref), do: !ref["data"]["hidden"] and ref["deleted"] != true
 
   # Create table rows from list refs after block insertion
   defp process_list_refs(_block_id, []), do: :ok
@@ -659,7 +681,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
             })
 
           _ ->
-            Map.merge(base_var, %{value: get_in(var, ["value"])})
+            Map.merge(base_var, %{value: text_value(get_in(var, ["value"]))})
         end
 
       new_var =
@@ -671,6 +693,11 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
       Brando.repo().insert_all("content_vars", [new_var])
     end
   end
+
+  # brando_89 kept a datasource's limit as a number until it stored it as
+  # text, and `content_vars.value` is text
+  defp text_value(value) when is_integer(value) or is_float(value), do: to_string(value)
+  defp text_value(value), do: value
 
   def build_var(var, block_id) do
     %{
@@ -717,7 +744,7 @@ defmodule Brando.Repo.Migrations.MigrateOldBlocksToAssocs do
             })
 
           _ ->
-            Map.merge(base_var, %{value: get_in(var, ["value"])})
+            Map.merge(base_var, %{value: text_value(get_in(var, ["value"]))})
         end
 
       new_var =
