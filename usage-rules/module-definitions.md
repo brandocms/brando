@@ -36,6 +36,15 @@ mix brando.modules import --from priv/modules --dry-run \
 There is no implicit live-environment default. The command restores the previous
 tenant context on success or failure.
 
+An import re-renders the entries that use the changed modules, and the command
+waits until they have rendered before it returns, printing its progress. With
+no server running, its own Oban queue renders them; with one running, either
+can. It exits non-zero, naming the entries, when a render fails or when
+`--timeout SECONDS` (default 600) passes first. `--no-wait` leaves the renders
+queued for the running server and says how many: the command then runs no
+queue of its own, and without a server they wait until one starts. `refresh`
+and `resolve --apply` take the same options.
+
 ### Authoring a definition
 
 ```elixir

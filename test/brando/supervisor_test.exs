@@ -17,6 +17,23 @@ defmodule Brando.SupervisorTest do
     end
   end
 
+  # Stopping, Oban lets a job it is running finish within its
+  # `shutdown_grace_period`. A worker's default shutdown of five seconds
+  # would kill the tree first, and leave the job executing until Lifeline
+  # rescues it (brandocms/brando#3611).
+  test "the application waits for Brando's tree to stop" do
+    spec = Supervisor.child_spec(Brando, [])
+    assert spec.type == :supervisor
+    assert Map.get(spec, :shutdown, :infinity) == :infinity
+  end
+
+  # Children stop last first. Oban, waiting out its grace period, stops
+  # before the edit sessions and the 404 flusher the node still serves with
+  test "Oban is the last child, so it stops first" do
+    [last | _] = Enum.reverse(Brando.Supervisor.children())
+    assert %{id: Oban} = Supervisor.child_spec(last, [])
+  end
+
   describe "oban_config/0" do
     setup do
       # The default only appears when no app-level config overrides it.

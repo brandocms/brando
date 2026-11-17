@@ -91,6 +91,15 @@ mix brando.modules import --from priv/modules --dry-run \
 There is no implicit live-environment default. The command restores the previous
 tenant context on success or failure.
 
+An import re-renders the entries that use the changed modules, and the command
+waits until they have rendered before it returns, printing its progress. With
+no server running, its own Oban queue renders them; with one running, either
+can. It exits non-zero, naming the entries, when a render fails or when
+`--timeout SECONDS` (default 600) passes first. `--no-wait` leaves the renders
+queued for the running server and says how many: the command then runs no
+queue of its own, and without a server they wait until one starts. `refresh`
+and `resolve --apply` take the same options.
+
 <!-- usage-rules:end -->
 
 Export requires a **new directory**. It writes:
@@ -513,13 +522,40 @@ checked again at apply time.
 
 After commit, imports use the existing module synchronization, cache eviction,
 render enqueueing and module notifications. The result reports refresh as
-`requested`, including any remaining stale block IDs; it does not claim queued
-renders have completed. If refresh raises an error, definitions remain committed.
-Retry it explicitly without changing their versions:
+`requested`, including any remaining stale block IDs. If refresh raises an
+error, definitions remain committed. Retry it explicitly without changing their
+versions:
 
 ```sh
 mix brando.modules refresh --uid acme-hero --user 1
 ```
+
+The CLI then follows the jobs that import or refresh queued, and no others:
+the render of each affected entry, the renders those queue (the entries that
+embed a fragment that was rendered) and any cascade. It prints how many entries
+are done as they finish:
+
+```
+Applied 1 definition changes; baseline saved
+Refresh requested for acme-hero; 0 stale blocks remain
+Rendering entries: 0 of 12 done
+Rendering entries: 7 of 12 done
+Rendering entries: 12 of 12 done
+Rendered 12 entries
+```
+
+A render that fails an attempt counts as failed at once: the command names the
+entry and its error and exits non-zero, and Oban retries the render later on a
+node that runs its queue. When the timeout passes, the command names the
+entries still waiting and exits non-zero; their renders stay queued. Either
+way, it stops the application before it returns, so a render its own queue
+has started finishes.
+
+While it waits, the command runs only Oban's `default` queue, where entry
+renders run, and may take other jobs of that queue too; stopping, it gives a
+job it is running 35 seconds, as long as a render may take. It never starts
+the definition watcher. Use `--no-wait` in a deploy script that runs beside a server, when the
+server should do the rendering.
 
 If saving the new lockfile fails after commit, export into a new directory before
 the next edit. The CLI reports this separately from an import rollback.
@@ -577,11 +613,24 @@ alias Brando.Content.Definitions
 {:ok, plan} = Definitions.plan(bundle, user)
 
 if Brando.Content.Definition.Plan.applicable?(plan) do
-  {:ok, result} = Definitions.apply(plan, user)
+  {{:ok, result}, run} = Definitions.track_refresh(fn -> Definitions.apply(plan, user) end)
   {:ok, :ok} = Definitions.write_baseline(exported.directory, result)
   result.refresh
+
+  %{rendered: rendered, failed: failed, pending: pending, timed_out: timed_out} =
+    Definitions.await_refresh(run, timeout: :timer.minutes(10))
 end
 ```
+
+`track_refresh/1` runs an apply or a refresh (`Definitions.refresh/2`) and
+returns its result with a run id that names the render and cascade jobs it
+queued. `await_refresh/2` follows those jobs on whichever node runs them, by
+polling the jobs table, until each entry has rendered or failed or the timeout
+passes. `failed` and `pending` hold the schema, entry ID, tenant prefix, job
+state and last error of each. `refresh_status/1` returns the same without
+waiting. Call them right after the apply: they know the jobs by their rows,
+which Oban's Pruner deletes a few minutes after they finish. The node that calls them needs no Oban queues of its own, but some
+node must run the `default` queue for the renders to finish.
 
 For compiled Spark definitions, call
 `Definitions.from_modules([MySite.Definitions.Hero], root: "priv/modules")`.

@@ -8,11 +8,13 @@ defmodule Brando do
   """
   def start_link(opts), do: Brando.Supervisor.start_link(opts)
 
+  # A supervisor's: the application waits for it to stop, as long as Oban
+  # takes to let the jobs it is running finish (its `shutdown_grace_period`)
   def child_spec(opts) do
     %{
       id: __MODULE__,
       start: {__MODULE__, :start_link, [opts]},
-      type: :worker,
+      type: :supervisor,
       restart: :permanent
     }
   end

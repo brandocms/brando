@@ -12,12 +12,14 @@ defmodule Brando.Worker.EntryRenderer do
 
   require Logger
 
+  alias Brando.Content.RenderRun
   alias Brando.Tenant.Job, as: TenantJob
 
   @timeout :timer.seconds(30)
 
   @impl Oban.Worker
-  def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> perform_tenant(job) end)
+  # The renders it queues belong to the runs this one does (`Brando.Content.RenderRun`)
+  def perform(%Oban.Job{} = job), do: TenantJob.run(job, fn -> RenderRun.within(job, fn -> perform_tenant(job) end) end)
 
   defp perform_tenant(%Oban.Job{args: %{"entry_id" => entry_id, "schema" => schema} = args} = job) do
     case rendering_before(job) do

@@ -1,5 +1,7 @@
 defmodule Mix.Tasks.Brando.Modules do
   @shortdoc "Export, plan and import module-definition DSL files"
+  @default_timeout :timer.minutes(10)
+  @render_workers [Brando.Worker.EntryRenderer, Brando.Worker.EntryCascade]
   @moduledoc """
   Exports and imports complete module definitions, including refs, vars, children,
   table templates and adjacent HEEx/Liquid source.
@@ -7,6 +9,7 @@ defmodule Mix.Tasks.Brando.Modules do
       mix brando.modules export --out priv/modules --user 1
       mix brando.modules import --from priv/modules --user 1 --dry-run
       mix brando.modules import --from priv/modules --user 1
+      mix brando.modules import --from priv/modules --user 1 --no-wait
       mix brando.modules refresh --uid hero-uid --user 1
       mix brando.modules resolve --uid hero-uid --user 1
       mix brando.modules resolve --uid hero-uid --user 1 --drop link --map title=heading --apply
@@ -20,6 +23,18 @@ defmodule Mix.Tasks.Brando.Modules do
   Export requires a new output directory. Import prints a plan, refuses conflicts
   and structural migrations, and updates only the baseline lockfile after a
   successful apply. `--dry-run` performs no database or file writes.
+
+  `import`, `refresh` and `resolve --apply` queue the entries that use the
+  changed modules for rendering, then wait until each has rendered, on
+  whichever node runs the jobs: this task's own queue, or a running server's.
+  They exit non-zero, naming the entries, when a render fails or when
+  `--timeout SECONDS` (default #{div(@default_timeout, 1000)}) passes first.
+  `--no-wait` leaves the renders queued for a running server: the task then
+  runs no Oban queues, and says how many it queued. While it waits, it runs
+  only Oban's queue for entry renders (`default`), and may take other jobs of
+  that queue too. It stops the application before it returns, giving a job
+  its queue is running as long as a render may take to finish, and it never
+  starts the module definition watcher.
 
   `resolve` lists the blocks still on an older version of the module and the
   refs and vars they hold that the module no longer defines (a dry run).
@@ -51,23 +66,110 @@ defmodule Mix.Tasks.Brando.Modules do
     dry_run: :boolean,
     drop: :keep,
     map: :keep,
-    apply: :boolean
+    apply: :boolean,
+    wait: :boolean,
+    timeout: :integer
   ]
 
   @impl Mix.Task
   def run(args) do
+    {opts, command, user_id} = parse!(args)
+    started = start!(Keyword.get(opts, :wait, true) and renders?(command, opts))
+
+    try do
+      user = Brando.Repo.get(Brando.Users.User, user_id)
+      unless user && user.active && is_nil(user.deleted_at), do: Mix.raise("--user must identify an active account")
+      prefix = context!(opts)
+      Tenant.with_prefix(prefix, fn -> execute(command, opts, user) end)
+    after
+      stop(started)
+    end
+  end
+
+  # Oban's shutdown grace period lets a job this node's queue is running
+  # finish. A task after this one in the same `mix do` starts the
+  # application again, as it is configured.
+  defp stop({app, previous}) do
+    Application.stop(app)
+    restore_start(previous)
+    Mix.Task.reenable("app.start")
+  end
+
+  defp stop(nil), do: :ok
+
+  defp parse!(args) do
     {opts, command} = OptionParser.parse!(args, strict: @switches)
 
     unless command in [["export"], ["import"], ["refresh"], ["resolve"]],
       do: Mix.raise("Expected export, import, refresh or resolve")
 
     user_id = opts[:user] || Mix.raise("--user ID is required")
-    Mix.Task.run("app.start")
-    user = Brando.Repo.get(Brando.Users.User, user_id)
-    unless user && user.active && is_nil(user.deleted_at), do: Mix.raise("--user must identify an active account")
-    prefix = context!(opts)
-    Tenant.with_prefix(prefix, fn -> execute(hd(command), opts, user) end)
+    if (opts[:timeout] || 0) < 0, do: Mix.raise("--timeout takes a number of seconds")
+    {opts, hd(command), user_id}
   end
+
+  # Whether the command queues entry renders
+  defp renders?("import", opts), do: !opts[:dry_run]
+  defp renders?("refresh", _opts), do: true
+  defp renders?("resolve", opts), do: !!opts[:apply]
+  defp renders?(_command, _opts), do: false
+
+  # Starts the application, unless it runs already (a test, another task).
+  # Returns it, with the configuration to put back, when this started it.
+  defp start!(run_queues?) do
+    Mix.Task.run("app.config")
+    app = Brando.otp_app()
+
+    if is_nil(app) or not List.keymember?(Application.started_applications(), app, 0) do
+      previous = configure_start(run_queues?)
+      Mix.Task.run("app.start")
+      if app, do: {app, previous}
+    end
+  end
+
+  @doc """
+  Configures the application this task starts: no module definition watcher,
+  and of Oban's queues only the one entry renders run in when
+  `run_queues?`, none otherwise. Stopping, Oban gives a job it is running as
+  long as a render may take. Returns the configuration it changed, for
+  `restore_start/1`.
+  """
+  def configure_start(run_queues?) do
+    previous =
+      for key <- [Oban, Brando.Content.Definition.Watcher], into: %{}, do: {key, Application.fetch_env(:brando, key)}
+
+    Application.delete_env(:brando, Brando.Content.Definition.Watcher)
+    oban = Application.get_env(:brando, Oban) || Brando.Supervisor.oban_config()
+
+    oban =
+      if run_queues? do
+        grace = Enum.max(for worker <- @render_workers, do: worker.timeout(%Oban.Job{})) + :timer.seconds(5)
+
+        oban
+        |> Keyword.put(:queues, render_queues(oban[:queues]))
+        |> Keyword.update(:shutdown_grace_period, grace, &max(&1, grace))
+      else
+        Keyword.put(oban, :queues, false)
+      end
+
+    Application.put_env(:brando, Oban, oban)
+    previous
+  end
+
+  @doc "Puts back the configuration `configure_start/1` changed."
+  def restore_start(previous) do
+    Enum.each(previous, fn
+      {key, {:ok, value}} -> Application.put_env(:brando, key, value)
+      {key, :error} -> Application.delete_env(:brando, key)
+    end)
+  end
+
+  defp render_queues(queues) when is_list(queues) do
+    names = Enum.uniq(for worker <- @render_workers, do: worker.__opts__()[:queue])
+    Keyword.take(queues, names)
+  end
+
+  defp render_queues(queues), do: queues
 
   defp execute("export", opts, user) do
     directory = opts[:out] || Mix.raise("--out DIRECTORY is required")
@@ -100,31 +202,19 @@ defmodule Mix.Tasks.Brando.Modules do
 
     unless Plan.applicable?(plan), do: Mix.raise("Resolve the conflicts or required migrations before importing")
 
-    if opts[:dry_run] do
-      Mix.shell().info("Dry run: no definitions or files changed")
-    else
-      result = unwrap!(Definitions.apply(plan, user))
-
-      case Definitions.write_baseline(directory, result) do
-        {:ok, :ok} ->
-          :ok
-
-        {:error, reason} ->
-          Mix.raise(
-            "Definitions committed, but the baseline could not be saved: #{inspect(reason)}. Export the target to a new directory before the next edit."
-          )
-      end
-
-      Mix.shell().info("Applied #{length(result.changes)} definition changes; baseline saved")
-      report_refresh!(result.refresh)
-    end
+    if opts[:dry_run],
+      do: Mix.shell().info("Dry run: no definitions or files changed"),
+      else: apply_import!(plan, directory, opts, user)
   end
 
   defp execute("refresh", opts, user) do
     uids = Keyword.get_values(opts, :uid)
     if uids == [], do: Mix.raise("refresh requires --uid UID")
     if opts[:dry_run], do: Mix.raise("--dry-run is supported by import")
-    Definitions.refresh(uids, user) |> unwrap!() |> report_refresh!()
+    {result, run} = Definitions.track_refresh(fn -> Definitions.refresh(uids, user) end)
+    refreshed? = result |> unwrap!() |> report_refresh()
+    follow_renders!(run, opts)
+    unless refreshed?, do: Mix.raise("Retry refresh for the reported UIDs.")
   end
 
   defp execute("resolve", opts, user) do
@@ -152,10 +242,12 @@ defmodule Mix.Tasks.Brando.Modules do
         Mix.shell().info("Dry run: nothing changed. Add --apply to write.")
 
       true ->
-        result =
-          report.module
-          |> StaleBlocks.apply(resolutions, user, expect: plan.fingerprint)
-          |> unwrap_resolve!()
+        {result, run} =
+          Definitions.track_refresh(fn ->
+            StaleBlocks.apply(report.module, resolutions, user, expect: plan.fingerprint)
+          end)
+
+        result = unwrap_resolve!(result)
 
         {revisioned, unrevisioned} = Enum.split_with(result.entries, & &1.revisioned?)
 
@@ -164,7 +256,29 @@ defmodule Mix.Tasks.Brando.Modules do
             "#{length(result.remaining)} remain. A revision of #{length(revisioned)} of the #{length(result.entries)} " <>
             "changed entries was stored first." <> no_revisions(unrevisioned)
         )
+
+        follow_renders!(run, opts)
     end
+  end
+
+  defp apply_import!(plan, directory, opts, user) do
+    {result, run} = Definitions.track_refresh(fn -> Definitions.apply(plan, user) end)
+    result = unwrap!(result)
+
+    case Definitions.write_baseline(directory, result) do
+      {:ok, :ok} ->
+        :ok
+
+      {:error, reason} ->
+        Mix.raise(
+          "Definitions committed, but the baseline could not be saved: #{inspect(reason)}. Export the target to a new directory before the next edit."
+        )
+    end
+
+    Mix.shell().info("Applied #{length(result.changes)} definition changes; baseline saved")
+    refreshed? = report_refresh(result.refresh)
+    follow_renders!(run, opts)
+    unless refreshed?, do: Mix.raise("Definitions are committed. Retry refresh for the reported UIDs.")
   end
 
   defp resolutions!(report, opts) do
@@ -273,7 +387,8 @@ defmodule Mix.Tasks.Brando.Modules do
   defp unwrap_resolve!({:ok, value}), do: value
   defp unwrap_resolve!({:error, reason}), do: Mix.raise("Resolve: #{reason}")
 
-  defp report_refresh!(results) do
+  # Whether every module was refreshed
+  defp report_refresh(results) do
     Enum.each(results, fn result ->
       if result.status == :failed do
         Mix.shell().error("Refresh failed for #{result.uid}: #{result.error}")
@@ -283,9 +398,70 @@ defmodule Mix.Tasks.Brando.Modules do
       end
     end)
 
-    if Enum.any?(results, &(&1.status == :failed)),
-      do: Mix.raise("Definitions are committed. Retry refresh for the reported UIDs.")
+    not Enum.any?(results, &(&1.status == :failed))
   end
+
+  # Waits for the renders `run` queued (`Brando.Content.Definitions.await_refresh/2`),
+  # or, with `--no-wait`, says how many it left queued
+  defp follow_renders!(run, opts) do
+    if Keyword.get(opts, :wait, true) do
+      timeout = if opts[:timeout], do: :timer.seconds(opts[:timeout]), else: @default_timeout
+      run |> Definitions.await_refresh(timeout: timeout, on_progress: &progress/1) |> report_renders!(timeout)
+    else
+      report_queued(Definitions.refresh_status(run))
+    end
+  end
+
+  defp progress(%{total: 0}), do: :ok
+
+  defp progress(%{done: done, total: total, failed: failed}) do
+    failed = if failed > 0, do: " (#{failed} failed)", else: ""
+    Mix.shell().info("Rendering entries: #{done} of #{total} done#{failed}")
+  end
+
+  defp report_renders!(%{failed: [], pending: [], rendered: rendered}, _timeout) do
+    if rendered > 0, do: Mix.shell().info("Rendered #{rendered} entries")
+  end
+
+  defp report_renders!(%{failed: failed, pending: pending, rendered: rendered, timed_out: timed_out}, timeout) do
+    if rendered > 0, do: Mix.shell().info("Rendered #{rendered} entries")
+    Enum.each(failed, &Mix.shell().error("#{failure(&1)} failed for #{entry_name(&1)}: #{first_line(&1.error)}"))
+    Enum.each(pending, &Mix.shell().error("Still #{&1.state}: #{job_name(&1)}"))
+
+    if timed_out do
+      Mix.raise(
+        "Timed out after #{div(timeout, 1000)} seconds with #{length(pending)} jobs left. They stay queued for a " <>
+          "node that runs Oban's queues; a render that failed is retried there."
+      )
+    else
+      Mix.raise(
+        "#{length(failed)} entries failed to render. Oban retries a failed render on a node that runs its " <>
+          "queue; fix the cause, then run refresh for the module."
+      )
+    end
+  end
+
+  defp report_queued(%{pending: pending}) do
+    {renders, cascades} = Enum.split_with(pending, &(&1.worker == :render))
+    more = if cascades == [], do: "", else: ", and #{length(cascades)} cascade jobs that may queue more"
+
+    Mix.shell().info(
+      "#{length(renders)} entry renders are queued for the running server#{more}. " <>
+        "Without a server running Oban's queues they wait until one starts."
+    )
+  end
+
+  defp failure(%{worker: :cascade}), do: "Cascade"
+  defp failure(_job), do: "Render"
+
+  defp job_name(%{worker: :cascade} = job), do: "cascade for #{entry_name(job)}"
+  defp job_name(job), do: "render of #{entry_name(job)}"
+
+  defp entry_name(%{schema: schema, entry_id: id, tenant_prefix: nil}), do: "#{schema} ##{id}"
+  defp entry_name(%{schema: schema, entry_id: id, tenant_prefix: prefix}), do: "#{schema} ##{id} in #{prefix}"
+
+  defp first_line(nil), do: "no error recorded"
+  defp first_line(error), do: error |> String.split("\n", parts: 2) |> hd()
 
   # A refresh re-renders; it cannot bring a block holding content the module
   # no longer defines up to date. Say what holds them back and where to go.

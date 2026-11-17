@@ -9,6 +9,7 @@ defmodule Brando.Content.RenderQueue do
   import Ecto.Query, only: [from: 2]
 
   alias Brando.Cache.Freshness
+  alias Brando.Content.RenderRun
 
   @entry_renderer Module.concat(["Brando", "Worker", "EntryRenderer"])
   # The unique states of the render and cascade workers: a job that has not
@@ -57,6 +58,7 @@ defmodule Brando.Content.RenderQueue do
       |> attach.()
       |> Brando.Tenant.Job.attach()
       |> worker.new(tags: [:render_entry])
+      |> RenderRun.tag()
 
     changeset
     |> Oban.insert()
@@ -81,11 +83,12 @@ defmodule Brando.Content.RenderQueue do
   def coalesce({:ok, %Oban.Job{conflict?: true} = job}, changeset, merge) do
     args = merge.(job.args, Ecto.Changeset.get_field(changeset, :args))
 
+    # It renders for the runs this one would have too (`RenderRun`)
     query =
-      from j in Oban.Job,
-        where: j.id == ^job.id and j.state in @waiting and j.args == type(^job.args, :map)
+      from(j in Oban.Job, where: j.id == ^job.id and j.state in @waiting and j.args == type(^job.args, :map))
+      |> RenderRun.tag_update(args: args)
 
-    case Brando.Repo.update_all(query, set: [args: args]) do
+    case Brando.Repo.update_all(query, []) do
       {1, _} -> {:ok, %{job | args: args}}
       {0, _} -> insert_anyway(changeset)
     end
