@@ -50,10 +50,10 @@ missing configuration without showing placeholder content:
 For code outside a request, `Brando.Cache.Identity.get("en")` returns that
 language's record, or `%{}` if absent. It does not fall back to another language.
 `Brando.Sites.render_identity("en", :name)` is the scalar convenience API.
-`Brando.Sites.get_link/1` does not take a language; for multilingual output,
-look links up in the cached record's `links` collection. Links also become
-`og:see_also` tags, and a link to an X profile (`https://x.com/example`) gives
-pages their `twitter:site` handle; see [Page metadata](deps/brando/guides/meta.md#x-cards).
+`Brando.Sites.get_link("en", "instagram")` returns the URL of the link named
+`Instagram` (any case) in that language's identity, or `""` when there is none.
+Links also become `og:see_also` tags, and a link to an X profile
+(`https://x.com/example`) gives pages their `twitter:site` handle; see [Page metadata](deps/brando/guides/meta.md#x-cards).
 
 Creating, copying and updating an identity through the context refresh the
 cache and enqueue block content referencing identity, configs, or links for

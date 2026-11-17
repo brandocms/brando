@@ -293,9 +293,11 @@ afterwards:
   the var.
 - **Identity links.** The identity is per language, so
   `Brando.Sites.get_link("instagram")` reads the default language's. Pass the
-  page's language, `Brando.Sites.get_link(@language, "instagram")`, or loop
-  over `@identity.links` from `Brando.Plug.Identity`. Both return the URL, as
-  0.51's printed.
+  page's language, `Brando.Sites.get_link(@language, "instagram")`, which
+  returns the URL string that 0.51's link printed, so a template reading
+  `.url` or `.name` on it breaks. Or loop over `@identity.links` from
+  `Brando.Plug.Identity`; `href={link}` prints the URL with script and unknown
+  schemes left out, `link.url` as the editor typed it.
 - **Queries.** `status: :published` in the generic query API filters the
   top-level entry, not its preloads. A `has_many … through:` preload ignores the
   preload query's `order_by`, because Ecto returns join-table order.
