@@ -457,6 +457,23 @@ defmodule Brando.Villain.GetEntryStatusTest do
       assert stored(target) =~ ~s(<div class="card">Relaunch in Archive</div>)
     end
 
+    test "a save from a form opened before a rename elsewhere shows the new title, where it does not change it", c do
+      module =
+        create_module(
+          c.user,
+          ~S({% assign e = card.identifier | get_entry %}<div class="card">{{ e.title }} {{ e.uri }}</div><h1>{{ entry.title }}</h1>)
+        )
+
+      target = create_self_linking_page(c.user, module, %{status: :published, uri: "launch"})
+      {:ok, opened} = Brando.Query.get_entry(Page, target.id)
+
+      {:ok, _} = update_target(target, %{title: "Renamed"}, c.user)
+
+      {:ok, _} = save_from_form_opened_as(opened, %{uri: "relaunch"}, c.user)
+      assert Brando.Repo.get(Page, target.id).title == "Renamed"
+      assert stored(target) =~ ~s(<div class="card">Renamed relaunch</div><h1>Renamed</h1>)
+    end
+
     test "a save from the form leaves a card of another entry as it is stored", c do
       module =
         create_module(c.user, ~S({% assign e = card.identifier | get_entry %}<div class="card">{{ e.title }}</div>))

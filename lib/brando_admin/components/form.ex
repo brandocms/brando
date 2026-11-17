@@ -8754,24 +8754,24 @@ defmodule BrandoAdmin.Components.Form do
     # publishes a pending entry); blocks that load the entry itself
     # (`get_entry`) show it with that status
     changeset = Brando.Publisher.maybe_override_status(changeset)
-    entry = changeset |> build_entry_for_blocks(block_map) |> with_stored_status(changeset)
+    entry = changeset |> build_entry_for_blocks(block_map) |> with_stored_fields(changeset)
     render_blocks_for_entry(block_map, changeset, entry)
   end
 
-  # A save that leaves the status as it is keeps the row's, which may have
-  # changed since the form loaded the entry (a publish at its `publish_at`,
-  # a status toggled in the listing)
-  defp with_stored_status(%{status: _} = entry, %Changeset{changes: changes, data: %schema{id: id}})
-       when not is_map_key(changes, :status) and not is_nil(id) do
+  # The save writes its changes over the row as it is then. A field it leaves
+  # as it is keeps the row's value, which may have changed since the form
+  # loaded the entry (a publish at its `publish_at`, a status toggled in the
+  # listing, a title changed elsewhere)
+  defp with_stored_fields(entry, %Changeset{changes: changes, data: %schema{id: id}}) when not is_nil(id) do
     import Ecto.Query, only: [from: 2]
 
-    stored =
-      :status in schema.__schema__(:fields) && Brando.Repo.one(from(e in schema, where: e.id == ^id, select: e.status))
-
-    if stored, do: %{entry | status: stored}, else: entry
+    case Enum.filter(schema.__schema__(:fields), &(is_map_key(entry, &1) and not is_map_key(changes, &1))) do
+      [] -> entry
+      fields -> Map.merge(entry, Brando.Repo.one(from(e in schema, where: e.id == ^id, select: map(e, ^fields))) || %{})
+    end
   end
 
-  defp with_stored_status(entry, _changeset), do: entry
+  defp with_stored_fields(entry, _changeset), do: entry
 
   @decorate span("brando.form.render_blocks", entry_id: [:entry, :id])
   def render_blocks_for_entry(block_map, changeset, entry) do
