@@ -22,17 +22,20 @@ defmodule Brando.Villain.GetEntryStatusTest do
 
   setup do
     user = Factory.insert(:random_user)
+    {:ok, user: user, module: create_module(user, @card)}
+  end
 
+  defp create_module(user, code) do
     {:ok, module} =
       Brando.Content.create_module(
         Factory.params_for(:module, %{
-          code: @card,
+          code: code,
           vars: [%{type: :link, key: "card", label: "Card", link_type: :identifier, creator_id: user.id}]
         }),
         :system
       )
 
-    {:ok, user: user, module: module}
+    module
   end
 
   defp at(seconds), do: DateTime.utc_now() |> DateTime.add(seconds) |> DateTime.truncate(:second)
@@ -412,6 +415,77 @@ defmodule Brando.Villain.GetEntryStatusTest do
         end)
 
       assert rendered == [target.id]
+    end
+
+    test "a save from the form that renames the entry shows the new title and uri in its card", c do
+      module =
+        create_module(
+          c.user,
+          ~S({% assign e = card.identifier | get_entry %}<div class="card">{{ e.title }} {{ e.uri }}</div>)
+        )
+
+      target = create_self_linking_page(c.user, module, %{status: :published, uri: "launch"})
+      assert stored(target) =~ ~s(<div class="card">Launch launch</div>)
+
+      rendered =
+        rendered_by_cascade(fn -> {:ok, _} = save_from_form(target, %{title: "Relaunch", uri: "relaunch"}, c.user) end)
+
+      assert stored(target) =~ ~s(<div class="card">Relaunch relaunch</div>)
+      refute target.id in rendered
+    end
+
+    test "a save from the form keeps the card's associations loaded, and loads one whose key it changes", c do
+      module =
+        create_module(
+          c.user,
+          ~S({% assign e = card.identifier | get_entry %}<div class="card">{{ e.title }} in {{ e.parent.title }}</div>)
+        )
+
+      work = create_target(c.user, %{title: "Work", status: :published})
+      archive = create_target(c.user, %{title: "Archive", status: :published})
+      target = create_self_linking_page(c.user, module, %{status: :published, parent_id: work.id})
+      assert stored(target) =~ ~s(<div class="card">Launch in Work</div>)
+
+      # A form whose entry has only its blocks loaded
+      opened = Page |> Brando.Repo.get!(target.id) |> Brando.Repo.preload(Brando.Content.BlockPreloads.for_schema(Page))
+      refute Ecto.assoc_loaded?(opened.parent)
+      {:ok, _} = save_from_form_opened_as(opened, %{title: "Relaunch"}, c.user)
+      assert stored(target) =~ ~s(<div class="card">Relaunch in Work</div>)
+
+      # A form whose entry has the old parent loaded
+      {:ok, _} = save_from_form(target, %{parent_id: archive.id}, c.user)
+      assert stored(target) =~ ~s(<div class="card">Relaunch in Archive</div>)
+    end
+
+    test "a save from the form leaves a card of another entry as it is stored", c do
+      module =
+        create_module(c.user, ~S({% assign e = card.identifier | get_entry %}<div class="card">{{ e.title }}</div>))
+
+      target = create_target(c.user, %{status: :published})
+      page = create_linking_page(c.user, module, target)
+      assert stored(page) =~ ~s(<div class="card">Launch</div>)
+
+      {:ok, _} = save_from_form(page, %{title: "Relaunch"}, c.user)
+      assert stored(page) =~ ~s(<div class="card">Launch</div>)
+    end
+
+    test "live preview shows the card with the entry as the form has it", c do
+      module =
+        create_module(
+          c.user,
+          ~S({% assign e = card.identifier | get_entry %}<div class="card">{{ e.title }} in {{ e.parent.title }}</div>)
+        )
+
+      work = create_target(c.user, %{title: "Work", status: :published})
+      target = create_self_linking_page(c.user, module, %{status: :draft, parent_id: work.id})
+
+      {:ok, entry} = Brando.Query.get_entry(Page, target.id)
+      in_form = entry |> Page.changeset(%{title: "Relaunch"}, c.user) |> Ecto.Changeset.apply_changes()
+      cache_key = "get-entry-#{System.unique_integer([:positive])}"
+      on_exit(fn -> Brando.LivePreview.cleanup_cache(cache_key) end)
+
+      assert Brando.LivePreview.render(Page, in_form, cache_key, target: :blocks) =~
+               ~s(<div class="card">Relaunch in Work</div>)
     end
 
     test "a status change from the listing shows and hides the card", c do
