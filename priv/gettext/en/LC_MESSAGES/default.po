@@ -4361,6 +4361,7 @@ msgstr ""
 msgid "Clear the cache if saved changes are not appearing on the website. Content is rebuilt on the next request."
 msgstr ""
 
+#: lib/brando_admin/components/activity.ex
 #: lib/brando_admin/live/ai/guidance_live.ex
 #, elixir-autogen, elixir-format
 msgid "Cleared"

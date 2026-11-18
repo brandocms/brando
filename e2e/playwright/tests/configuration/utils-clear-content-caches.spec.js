@@ -23,5 +23,6 @@ test('a superuser clears the content caches, sees what went, and Activity record
 
   await page.goto('/admin/config/activity')
   await syncLV(page)
-  await expect(page.locator('.activity-action', { hasText: 'Tømte hurtigbuffere' }).first()).toBeVisible()
+  await expect(page.locator('.activity-action', { hasText: /^Tømt$/ }).first()).toBeVisible()
+  await expect(page.locator('.activity-entry', { hasText: 'Innholdsbuffere' }).first()).toBeVisible()
 })

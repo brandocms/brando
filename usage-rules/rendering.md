@@ -206,13 +206,16 @@ running. For request-dependent data, use the dynamic rendering recipe in
 Content written outside `Brando.Query` (a seed or `mix run` script, a data
 migration, `Repo.update_all`) neither renders the entries again nor evicts
 the cached pages and fragments, which are read with no expiry. After such a
-write, render what changed with `Brando.Content.Blocks.render_entry/2` and
-then call `Brando.Cache.clear_content/1`, which empties the current site's
-cached pages, fragments and modules and rebuilds its identity, SEO, globals,
-palettes and menus. Clearing the caches renders nothing: an entry shows its
-stored HTML until it is rendered. A script in its own VM reaches only the
-nodes its PubSub reaches; for a running server it cannot reach, a superuser
-uses **Configuration → Utilities → Clear content caches**.
+write, call `Brando.Cache.clear_content/1` first, which empties the current
+site's cached pages, fragments and modules and rebuilds its identity, SEO,
+globals, palettes and menus, and then render what changed with
+`Brando.Content.Blocks.render_entry/2`: a render reads those caches, and
+before the clear it would store what they held. Clearing the caches renders
+nothing: an entry shows its stored HTML until it is rendered. A script in its
+own VM reaches only the nodes its PubSub reaches, and a data migration runs
+without the caches, so it clears nothing; for a running server, a superuser
+uses **Configuration → Utilities → Clear content caches** once the script or
+migration has run.
 
 The template selector discovers functions in `MyAppWeb.PageHTML` (or legacy
 `PageView` templates). Add a HEEx template and expose it through the usual

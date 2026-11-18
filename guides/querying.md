@@ -508,11 +508,13 @@ MyApp.Repo.update_all(
 
 It does not render anything again: entries keep the HTML stored when they
 were last rendered. When the write changed blocks, or what blocks render,
-render the entries with `Brando.Content.Blocks.render_entry/2`. A script
-that runs in its own VM clears only that VM's caches, and those of the
-nodes its PubSub reaches. For a server it cannot reach, a superuser clears
-the server's caches under **Configuration → Utilities → Clear content
-caches**.
+render the entries with `Brando.Content.Blocks.render_entry/2` after the
+clear, so the renders read the new content. A script that runs in its own
+VM clears only that VM's caches, and those of the nodes its PubSub reaches.
+A data migration runs without the caches (`Ecto.Migrator` starts the repo
+alone), and there the call clears nothing. For a server neither reaches, a
+superuser clears the server's caches under **Configuration → Utilities →
+Clear content caches** once the script or migration has run.
 
 Do not combine cached list queries with pagination or streaming. Cached list
 results are materialized as a plain list.

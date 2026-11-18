@@ -101,6 +101,7 @@ defmodule Brando.Cache.ClearContentTest do
       ]
 
       for key <- keys, do: Cachex.put(:query, key, :cached)
+      on_exit(fn -> Brando.TenantCaches.clear([here]) end)
 
       # The query cache alone: the site caches would read tables this test
       # database has no schema for
@@ -122,6 +123,15 @@ defmodule Brando.Cache.ClearContentTest do
       assert Enum.sort(caches) == Enum.sort(@site_caches)
       assert cached([key]) == [false]
       assert Brando.Sites.global("en", "system", "text").value == "New"
+    end
+
+    test "where the caches are not running (a data migration's VM), clears nothing and says so" do
+      # `Ecto.Migrator` starts the repo alone: neither cache is there
+      stop_child(:query_cache)
+      stop_child(:main_cache)
+
+      assert {:ok, %{query_entries: 0, site_caches: [], scope: :site}} = Cache.clear_content()
+      assert {:ok, %{query_entries: 0, site_caches: [], scope: :all}} = Cache.clear_content(all_sites: true)
     end
 
     test "refuses an option it does not know" do
@@ -278,6 +288,13 @@ defmodule Brando.Cache.ClearContentTest do
       assert {:ok, %{scope: :site, site_caches: []}} = Cache.clear_content()
       assert cached([key]) == [false]
     end
+  end
+
+  # Started again before `preserve_cache/1` puts the site caches back: on_exit
+  # callbacks run last-first
+  defp stop_child(id) do
+    :ok = Supervisor.terminate_child(Brando.Supervisor, id)
+    on_exit(fn -> {:ok, _} = Supervisor.restart_child(Brando.Supervisor, id) end)
   end
 
   defp clear_all_sites, do: Cache.clear_content(all_sites: true)

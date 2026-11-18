@@ -166,7 +166,7 @@ defmodule BrandoAdmin.Components.Activity do
   def action_label(%{action: :note_resolved}), do: gettext("Resolved a note")
   def action_label(%{action: :note_reopened}), do: gettext("Reopened a note")
   def action_label(%{action: :tool_called}), do: gettext("Used a tool")
-  def action_label(%{action: :caches_cleared}), do: gettext("Cleared caches")
+  def action_label(%{action: :caches_cleared}), do: gettext("Cleared")
 
   @doc "The filter options for actions: `[{label, value}]`."
   def action_options do

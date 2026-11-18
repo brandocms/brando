@@ -33,7 +33,7 @@ Media (images, files, videos, galleries) and Brando's internal records (blocks,
 variables, revisions, identifiers, previews) are not logged.
 
 A superuser clearing the content caches under **Configuration → Utilities**
-records **Cleared caches**, with how many cached entries went and which site
+records **Cleared** on **Content caches**, with how many cached entries went and which site
 caches were rebuilt. With group authorization it shows to those who may use
 Utilities.
 

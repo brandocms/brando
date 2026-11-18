@@ -83,13 +83,17 @@ defmodule Brando.Cache do
 
   It does not render anything again: entries keep the HTML stored when they
   were last rendered. After changing blocks, or what they render (modules,
-  globals, fragments), render the entries with
-  `Brando.Content.Blocks.render_entry/2`.
+  globals, fragments), clear the caches first and then render the entries
+  with `Brando.Content.Blocks.render_entry/2`, which reads them.
 
   A script run in its own VM (`mix run`) clears that VM's caches, and those
   of the nodes its PubSub reaches. A server it cannot reach keeps its own:
   clear them from Configuration → Utilities → Clear content caches, which
-  runs this on that server.
+  runs this on that server, or with `bin/my_app rpc
+  "Brando.Cache.clear_content()"` on a release. A data migration runs where
+  neither cache is running (`Ecto.Migrator` starts the repo alone), and
+  there it clears nothing: clear the server's caches once the migration has
+  run.
 
   Returns `{:ok, summary}`: how many query cache entries this node held
   (`:query_entries`), the site caches it rebuilt (`:site_caches`) and
@@ -100,16 +104,29 @@ defmodule Brando.Cache do
   @decorate span("brando.cache.clear_content")
   def clear_content(opts \\ []) do
     opts = Keyword.validate!(opts, all_sites: false)
+    scope = if opts[:all_sites], do: :all, else: :site
 
-    if opts[:all_sites] do
-      entries = Enum.sum(for context <- contexts(), do: in_site(context, &clear_site_content/0))
-      {:ok, %{query_entries: entries + Brando.Cache.Query.clear_all(), site_caches: site_cache_names(), scope: :all}}
-    else
-      rebuilt? = not Tenant.outside_site?()
-      entries = clear_site_content()
-      {:ok, %{query_entries: entries, site_caches: if(rebuilt?, do: site_cache_names(), else: []), scope: :site}}
+    cond do
+      not caches_running?() -> {:ok, %{query_entries: 0, site_caches: [], scope: scope}}
+      scope == :all -> clear_all_content()
+      true -> clear_current_content()
     end
   end
+
+  defp clear_all_content do
+    entries = Enum.sum(for context <- contexts(), do: in_site(context, &clear_site_content/0))
+    {:ok, %{query_entries: entries + Brando.Cache.Query.clear_all(), site_caches: site_cache_names(), scope: :all}}
+  end
+
+  defp clear_current_content do
+    rebuilt? = not Tenant.outside_site?()
+    entries = clear_site_content()
+    {:ok, %{query_entries: entries, site_caches: if(rebuilt?, do: site_cache_names(), else: []), scope: :site}}
+  end
+
+  # A data migration's VM (`Ecto.Migrator`), or a mix task that does not
+  # start the application, runs neither cache: nothing is cached to clear
+  defp caches_running?, do: Process.whereis(:cache) != nil and Process.whereis(:query) != nil
 
   defp clear_site_content do
     entries = Brando.Cache.Query.clear()

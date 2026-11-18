@@ -46,9 +46,10 @@ defmodule BrandoAdmin.UtilsClearContentLiveTest do
     assert Enum.sort(details["caches"]) == ~w(globals identity navigation palettes seo)
 
     # The log says what happened
-    {:ok, _activity, activity_html} = live(c.conn, "/admin/config/activity")
-    assert activity_html =~ "Cleared caches"
-    assert activity_html =~ "Content caches"
+    {:ok, activity, _html} = live(c.conn, "/admin/config/activity")
+    assert has_element?(activity, ".activity-action", "Cleared")
+    assert has_element?(activity, ".activity-entry", "Content caches")
+    assert has_element?(activity, ".activity-detail", "Rebuilt identity, SEO, globals, palettes and menus")
   end
 
   test "an administrator who is no superuser has no such action, and the event is refused" do
