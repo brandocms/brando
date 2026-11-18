@@ -3609,6 +3609,11 @@ defmodule BrandoAdmin.Components.Form.Block do
       block_changeset
     else
       new_override = %{
+        uid:
+          GalleryObjectOverride.unique_uid(
+            %{media_id_field(media_type) => media_id},
+            MapSet.new(current_overrides, &GalleryObjectOverride.uid/1)
+          ),
         object_id: object_id_str,
         object_type: media_type,
         title: nil,

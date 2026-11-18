@@ -29,6 +29,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
       <Input.input type={:hidden} field={@form[:object_id]} />
       <Input.input type={:hidden} field={@form[:object_type]} />
       <Input.input type={:hidden} field={@form[:placement]} />
+      <Input.input type={:hidden} field={@form[:uid]} />
 
       <%= if @override_info.object_type == :image do %>
         <Input.rich_text
@@ -92,6 +93,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.OverrideForm do
       <Input.input type={:hidden} field={@form[:object_id]} />
       <Input.input type={:hidden} field={@form[:object_type]} />
       <Input.input type={:hidden} field={@form[:placement]} />
+      <Input.input type={:hidden} field={@form[:uid]} />
 
       <%= if @override_info.object_type == :image do %>
         <Input.rich_text

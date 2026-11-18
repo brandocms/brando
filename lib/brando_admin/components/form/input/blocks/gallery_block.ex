@@ -156,7 +156,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
 
     # Recompute overrides from current gallery objects + current form state.
     # This keeps overrides in sync when objects are added/removed after mount.
-    initialized_overrides = initialize_gallery_overrides(placements, block_data_cs)
+    initialized_overrides = initialize_gallery_overrides(gallery_objects, placements, block_data_cs)
 
     updated_block = update_block_with_overrides(assigns.block, initialized_overrides)
     updated_block_data_cs = Block.get_block_data_changeset(updated_block)
@@ -624,7 +624,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   end
 
   # Writes to this placement's override only: the block's overrides were
-  # initialized with one for each placement (`initialize_gallery_overrides/2`).
+  # initialized with one for each placement (`initialize_gallery_overrides/3`).
   defp put_override_text(block, {type, id, placement}, field, text) do
     data = Block.current_block_data_map(block)
     overrides = data.gallery_object_overrides || []
@@ -701,18 +701,69 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock do
   # placements; one stored for every placement (as before placements existed)
   # is copied into each, so each placement keeps its caption and can change it
   # alone. Saving the block stores them that way.
-  defp initialize_gallery_overrides(placements, block_data_cs) do
-    existing_overrides =
-      block_data_cs
-      |> Changeset.get_field(:gallery_object_overrides, [])
-      |> GalleryObjectOverride.index()
+  #
+  # Each override has a `uid` of its own, which names it in the edit session:
+  # one stored without (or a copy of one shared by the placements) gets its
+  # object's (`GalleryObjectOverride.object_uid/1`).
+  defp initialize_gallery_overrides(gallery_objects, placements, block_data_cs) do
+    stored = Changeset.get_field(block_data_cs, :gallery_object_overrides, [])
+    existing_overrides = GalleryObjectOverride.index(stored)
+    placed = gallery_objects |> Enum.zip(placements) |> Enum.with_index()
 
-    for {object_type, object_id_str, placement} <- placements do
-      existing_overrides
-      |> GalleryObjectOverride.lookup(object_type, object_id_str, placement)
-      |> placed_override(object_type, object_id_str, placement)
-    end
+    # The object each uid names, when one object gives it (`settle/1` moves
+    # an override to the placement of the object its uid names)
+    object_uids =
+      placed
+      |> Enum.map(fn {{obj, _key}, index} -> {GalleryObjectOverride.object_uid(obj), index} end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    found =
+      for {{obj, {object_type, object_id_str, placement}}, index} <- placed do
+        found = GalleryObjectOverride.lookup(existing_overrides, object_type, object_id_str, placement)
+        {obj, index, found, placed_override(found, object_type, object_id_str, placement)}
+      end
+
+    # Uids kept: the override's own, unless an earlier object kept it or it
+    # names another object
+    {kept, _claimed} =
+      Enum.map_reduce(found, MapSet.new(), fn {_obj, index, _found, override}, claimed ->
+        uid = GalleryObjectOverride.uid(override)
+
+        if uid in [nil, ""] or MapSet.member?(claimed, uid) or Map.get(object_uids, uid, [index]) != [index],
+          do: {nil, claimed},
+          else: {uid, MapSet.put(claimed, uid)}
+      end)
+
+    # Only the kept uids are taken: an override no object kept is dropped
+    taken = kept |> Enum.reject(&is_nil/1) |> MapSet.new()
+
+    found
+    |> Enum.zip(kept)
+    |> Enum.map_reduce(taken, fn {{obj, _index, found, override}, uid}, taken ->
+      uid = uid || GalleryObjectOverride.unique_uid(obj, taken)
+      {{put_uid(override, uid), found && Enum.find_index(stored, &(&1 == found))}, MapSet.put(taken, uid)}
+    end)
+    |> elem(0)
+    |> in_stored_order()
   end
+
+  # The overrides in the block's order (each where the one it was made from
+  # is), new ones after. A reorder renumbers placements and leaves the list as
+  # it is; sent in the objects' order, the list would look reordered to the
+  # edit session (`Ops.field_op/5`), which then sends whole overrides instead
+  # of the fields that changed.
+  defp in_stored_order(overrides) do
+    overrides
+    |> Enum.with_index()
+    |> Enum.sort_by(fn
+      {{_override, nil}, index} -> {1, index}
+      {{_override, position}, index} -> {0, position, index}
+    end)
+    |> Enum.map(fn {{override, _position}, _index} -> override end)
+  end
+
+  defp put_uid(%Changeset{} = override, uid), do: Changeset.put_change(override, :uid, uid)
+  defp put_uid(override, uid), do: Map.put(override, :uid, uid)
 
   # An override stored without a type takes the type of the media it is found
   # for, so image N and video N never end up sharing one override entry.

@@ -553,6 +553,7 @@ defmodule Brando.Content.Block do
       attrs
       |> drop_vanished_gallery_objects(ref)
       |> Brando.Villain.Blocks.GalleryObjectOverride.follow_order()
+      |> Brando.Villain.Blocks.GalleryObjectOverride.settle()
 
     ref
     |> cast(attrs, [

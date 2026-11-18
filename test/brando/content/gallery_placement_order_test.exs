@@ -116,4 +116,36 @@ defmodule Brando.Content.GalleryPlacementOrderTest do
 
     assert captions(changeset) == Enum.sort([{to_string(ctx.other.id), nil, "Other"}, {id, nil, "Third"}])
   end
+
+  describe "settle/1" do
+    defp settled(objects, overrides) do
+      %{"gallery" => %{"gallery_objects" => objects}, "data" => %{"data" => %{"gallery_object_overrides" => overrides}}}
+      |> GalleryObjectOverride.settle()
+      |> get_in(["data", "data", "gallery_object_overrides"])
+    end
+
+    # Two copies of an image not saved yet give the same uid: it names
+    # neither, and neither override moves
+    test "a uid that two objects give moves no override" do
+      objects = [%{"image_id" => "5"}, %{"image_id" => "5"}]
+
+      overrides = [
+        %{"uid" => "image-5", "object_id" => "5", "object_type" => "image", "placement" => 0},
+        %{"uid" => "image-5-2", "object_id" => "5", "object_type" => "image", "placement" => 1}
+      ]
+
+      assert settled(objects, overrides) == overrides
+    end
+
+    # An editor's change to an override another editor removed meanwhile
+    # arrives as the fields it changed. A legacy override, stored without a
+    # type (and without a uid), is not one of them.
+    test "drops a partial override, and keeps one stored without a type" do
+      objects = [%{"id" => 1, "image_id" => "5"}]
+      legacy = %{"object_id" => "5", "title" => "Legacy"}
+
+      assert settled(objects, [legacy, %{"uid" => "g9", "object_id" => "7"}, %{"uid" => "g8", "title" => "x"}]) ==
+               [legacy]
+    end
+  end
 end
