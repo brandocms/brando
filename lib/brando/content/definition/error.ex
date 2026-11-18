@@ -15,22 +15,31 @@ defmodule Brando.Content.Definition.Error do
 
   @max_value 40
 
-  @doc false
+  @doc "Raises `message`; within `in_file/2`, the file is put before it."
+  @spec raise!(String.t()) :: no_return()
   def raise!(message), do: raise(__MODULE__, message: message)
 
-  @doc false
+  @doc "Raises `message` after `path`, what it is about: `path: message`."
+  @spec raise!(term(), String.t()) :: no_return()
   def raise!(path, message), do: raise(__MODULE__, message: "#{path}: #{message}")
 
-  @doc false
-  # Raises the errors of an invalid changeset, one line each, after `subject`
-  # (`var "label"`, `module "uid"`, or nil within a file)
+  @doc """
+  Raises the errors of an invalid changeset, one line each
+  (`changeset_lines/2`), after `subject`: `module "uid"`, or nil within a
+  file.
+  """
+  @spec changeset!(Changeset.t(), String.t() | nil) :: no_return()
   def changeset!(changeset, subject) do
     raise(__MODULE__, message: Enum.join(changeset_lines(changeset, subject), "\n"))
   end
 
-  @doc false
-  # Runs `fun`, prefixing each line of a definition error it raises with the
-  # file it was reading, unless the error already names one
+  @doc """
+  Runs `fun`, putting `file` before each line of a definition error it
+  raises, unless the error already names a file.
+  """
+  @spec in_file(String.t() | nil, (-> result)) :: result when result: term()
+  def in_file(nil, fun), do: fun.()
+
   def in_file(file, fun) do
     fun.()
   rescue
@@ -42,10 +51,12 @@ defmodule Brando.Content.Definition.Error do
 
   defp prefix(message, file), do: message |> String.split("\n") |> Enum.map_join("\n", &"#{file}: #{&1}")
 
-  @doc false
-  # How errors name a definition file: relative to the application (the
-  # working directory, or a release's application directory), else to the
-  # definition directory `root`
+  @doc """
+  How errors name a definition file: relative to the application (the
+  working directory, or a release's application directory), else to the
+  definition directory `root`.
+  """
+  @spec file_label(Path.t() | nil, Path.t()) :: String.t() | nil
   def file_label(nil, _root), do: nil
 
   def file_label(file, root) do
@@ -197,17 +208,18 @@ defmodule Brando.Content.Definition.Error do
 
   defp field_type(%Changeset{types: types}, field), do: Map.get(types || %{}, field)
 
-  defp interpolate(message, opts) when is_binary(message) do
-    Regex.replace(~r/%{(\w+)}/, message, fn whole, key ->
-      case Enum.find(opts, fn {name, _} -> to_string(name) == key end) do
-        {_, value} when is_binary(value) -> value
-        {_, value} -> inspect(value)
-        nil -> whole
-      end
-    end)
-  end
+  defp interpolate(message, opts) when is_binary(message),
+    do: Regex.replace(~r/%{(\w+)}/, message, &option(opts, &1, &2))
 
   defp interpolate(message, _opts), do: inspect(message)
+
+  defp option(opts, whole, key) do
+    case Enum.find(opts, fn {name, _} -> to_string(name) == key end) do
+      {_, value} when is_binary(value) -> value
+      {_, value} -> inspect(value)
+      nil -> whole
+    end
+  end
 
   defp got(nil, _), do: ""
   defp got(value, :type) when is_map(value) and not is_struct(value), do: " (got a map)"
@@ -236,8 +248,8 @@ defmodule Brando.Content.Definition.Error do
   defp values(nil), do: "the values allowed"
   defp values(enum), do: Enum.map_join(enum, ", ", &to_string/1)
 
-  @doc false
-  # What a field of `type` takes, in words
+  @doc "What a field of the Ecto `type` takes, in words: `\"a string\"`."
+  @spec expected(term()) :: String.t()
   def expected(type) when type in [:string, :binary], do: "a string"
   def expected(type) when type in [:integer, :id], do: "an integer"
   def expected(type) when type in [:float, :decimal], do: "a number"
