@@ -58,6 +58,7 @@ export default (app) => ({
       if (e.target.closest('button')) e.target.closest('details')?.removeAttribute('open')
       if (e.target.closest('.upload-trigger')) {
         e.stopPropagation()
+        if (this.sourceLocked()) return
         const input = this.el.querySelector('input[type="file"]')
         if (input) {
           // Arm the current input itself. Nested LiveComponents can replace or
@@ -70,6 +71,7 @@ export default (app) => ({
       }
       if (e.target.closest('button') || e.target.closest('a')) return
       if (this.el.dataset.clickMode === 'trigger') return
+      if (this.sourceLocked()) return
       e.stopPropagation()
       const input = this.el.querySelector('input[type="file"]')
       if (input) input.click()
@@ -77,6 +79,7 @@ export default (app) => ({
 
     this.el.addEventListener('dragenter', (e) => {
       if (!Array.from(e.dataTransfer?.types || []).includes('Files')) return
+      if (this.refuseDrag(e)) return
       e.preventDefault()
       e.stopPropagation()
       this.el.classList.add('dragging')
@@ -84,6 +87,7 @@ export default (app) => ({
 
     this.el.addEventListener('dragover', (e) => {
       if (!Array.from(e.dataTransfer?.types || []).includes('Files')) return
+      if (this.refuseDrag(e)) return
       e.preventDefault()
       e.stopPropagation()
       this.el.classList.add('dragging')
@@ -102,6 +106,7 @@ export default (app) => ({
       e.preventDefault()
       e.stopPropagation()
       this.el.classList.remove('dragging')
+      if (this.sourceLocked()) return
       if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
         this.intake(Array.from(e.dataTransfer.files))
       }
@@ -123,6 +128,21 @@ export default (app) => ({
         if (files.length) this.enqueue(files, { folder, folder_id })
       })
     }
+  },
+
+  // In a synchronized translation media in blocks follows the source
+  // (`.is-source-locked`, Blocks.css): nothing uploads, and a file dragged
+  // over the field shows it cannot be dropped.
+  sourceLocked() {
+    return !!this.el.closest('.is-source-locked')
+  },
+
+  refuseDrag(e) {
+    if (!this.sourceLocked()) return false
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'none'
+    return true
   },
 
   destroyed() {

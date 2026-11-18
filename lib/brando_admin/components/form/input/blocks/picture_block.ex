@@ -265,7 +265,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
               <:actions :if={@image}>
                 <%!-- In a narrow card it keeps only its icon (MediaField.css) --%>
                 <button
-                  class="media-button edit-image-btn media-button--collapsible-block"
+                  class="media-button edit-image-btn media-button--collapsible-block media-source-control"
                   type="button"
                   title={gettext("Edit/Crop")}
                   phx-click={JS.push("open_image_editor", target: @myself) |> open_image_editor_drawer()}
@@ -333,7 +333,9 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                 <:section id="image" label={gettext("Image")} icon="image">
                   <div class="media-section-heading">
                     <h3 class="modal-section-title">{gettext("Selected image")}</h3>
-                    <p class="modal-muted">{gettext("Replace the image while keeping this reference’s settings.")}</p>
+                    <p class="modal-muted media-source-control">
+                      {gettext("Replace the image while keeping this reference’s settings.")}
+                    </p>
                   </div>
                   <MediaField.field
                     id={"block-#{@uid}-modal-upload"}
@@ -350,7 +352,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.PictureBlock do
                       <button
                         :if={@image}
                         type="button"
-                        class="media-button"
+                        class="media-button media-source-control"
                         phx-click={
                           JS.push("close_block_config", target: @target)
                           |> JS.push("open_image_editor", target: @myself)

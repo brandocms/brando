@@ -390,6 +390,87 @@ defmodule Brando.TranslationsTest do
                Translations.check_target_save(Article, source.id, Article.changeset(source, %{year: 1}, c.user))
     end
 
+    # The admin hides these controls in a translation (`.is-source-locked`);
+    # whatever sends a change anyway, the save refuses it.
+    test "a save cannot change the media of picture, file and gallery refs or media variables", c do
+      image = Factory.insert(:image, creator_id: c.user.id)
+      other_image = Factory.insert(:image, creator_id: c.user.id)
+
+      gallery = fn ->
+        Factory.insert(:gallery, gallery_objects: [Factory.build(:gallery_object, image: image, creator: c.user)])
+      end
+
+      file = fn -> Repo.insert!(%Brando.Files.File{filename: "guide.pdf", filesize: 1, config_target: "default"}) end
+
+      ref =
+        &Map.merge(%{"uid" => Brando.Utils.generate_uid(), "name" => &1, "data" => %{"type" => &2, "data" => %{}}}, &3)
+
+      var = &Map.merge(%{"type" => &2, "key" => &1, "label" => %{"en" => &1}}, &3)
+
+      add_raw_block(
+        c.source,
+        c,
+        %{
+          "refs" => [
+            ref.("photo", "picture", %{"image_id" => image.id}),
+            ref.("attachment", "file", %{"file_id" => file.().id}),
+            ref.("slides", "gallery", %{"gallery_id" => gallery.().id})
+          ],
+          "vars" => [
+            var.("hero", "image", %{"image_id" => image.id}),
+            var.("brochure", "file", %{"file_id" => file.().id}),
+            var.("album", "gallery", %{"gallery_id" => gallery.().id})
+          ]
+        },
+        2
+      )
+
+      {:ok, target} = Translations.create_target(Article, c.source.id, :en, c.user)
+      target = load(target.id)
+      check = &Translations.check_target_save(Article, target.id, Ecto.Changeset.change(&1))
+
+      media_block = fn entry -> Enum.find(entry.entry_blocks, &(&1.block.refs != [] and length(&1.block.refs) == 3)) end
+
+      edit_block = fn fun ->
+        joins =
+          Enum.map(target.entry_blocks, &if(&1 == media_block.(target), do: %{&1 | block: fun.(&1.block)}, else: &1))
+
+        %{target | entry_blocks: joins}
+      end
+
+      edit_ref = fn name, fun ->
+        edit_block.(fn block -> %{block | refs: Enum.map(block.refs, &if(&1.name == name, do: fun.(&1), else: &1))} end)
+      end
+
+      edit_var = fn key, fun ->
+        edit_block.(fn block -> %{block | vars: Enum.map(block.vars, &if(&1.key == key, do: fun.(&1), else: &1))} end)
+      end
+
+      new_file = file.()
+      reordered_gallery = fn %{gallery: gallery} = owner -> %{owner | gallery: %{gallery | gallery_objects: []}} end
+
+      for {label, changed} <- [
+            {"picture ref", edit_ref.("photo", &%{&1 | image_id: other_image.id})},
+            {"picture ref removed", edit_ref.("photo", &%{&1 | image_id: nil})},
+            {"file ref", edit_ref.("attachment", &%{&1 | file_id: new_file.id})},
+            {"gallery ref", edit_ref.("slides", reordered_gallery)},
+            {"image variable", edit_var.("hero", &%{&1 | image_id: other_image.id})},
+            {"file variable", edit_var.("brochure", &%{&1 | file_id: new_file.id})},
+            {"gallery variable", edit_var.("album", &%{&1 | gallery_id: nil})}
+          ] do
+        assert {:error, {:source_controlled, [path | _]}} = check.(changed), label
+        assert path =~ ~r"^entry_blocks/", label
+      end
+
+      # A picture's alt text and caption are the translation's own
+      own_text =
+        edit_ref.("photo", fn ref ->
+          %{ref | data: %{ref.data | data: %{ref.data.data | alt: "Harbour at dawn", title: "Dawn"}}}
+        end)
+
+      assert {:ok, _} = check.(own_text)
+    end
+
     test "the editor state names the source and the pending version", c do
       %{target: target, version: version} = reviewed_change(c)
 

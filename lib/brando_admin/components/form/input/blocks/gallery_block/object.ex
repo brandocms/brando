@@ -434,7 +434,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
     <div class="gallery-object-actions" data-sortable-filter>
       <button
         :if={@gallery_object_form[:image_id].value}
-        class="edit-image-btn"
+        class="edit-image-btn media-source-control"
         type="button"
         aria-label={gettext("Edit image")}
         phx-click={
@@ -460,7 +460,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.GalleryBlock.Object do
         <.icon name="settings" />
       </button>
       <button
-        class="delete-x"
+        class="delete-x media-source-control"
         type="button"
         aria-label={gettext("Delete")}
         name={"#{@gallery_form.name}[drop_gallery_object_ids][]"}

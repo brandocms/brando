@@ -38,18 +38,11 @@
         margin-top: 10px;
       }
     }
-
-    .media-block-source-note {
-      display: none;
-      max-width: 280px;
-      margin: 0;
-      font-size: var(--brando-text-md);
-    }
   }
 }
 
 /* A synchronized translation: media follows the source, so an empty ref
-   says so instead of offering media types (Blocks.css hides the buttons) */
+   says so (its note, Blocks.css) instead of offering media types */
 .blocks-wrapper.is-source-locked .media-block .empty {
   padding: 24px;
 
@@ -68,6 +61,9 @@
   }
 
   .media-block-source-note {
-    display: block;
+    max-width: 280px;
+    color: var(--brando-ink);
+    font-size: var(--brando-text-md);
+    line-height: normal;
   }
 }

@@ -122,7 +122,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           <% end %>
         </div>
         <div class="media-field-copy">
-          <span class="media-field-name">{@name || @drop_label}</span>
+          <span class={["media-field-name", !@name && "media-source-control"]}>{@name || @drop_label}</span>
           <span :if={@details} class="media-field-meta">{@details}</span>
           <%= case @alt do %>
             <% :missing -> %>
@@ -149,14 +149,16 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           <span :if={@video_status == :failed} class="media-field-processing is-failed" role="status" aria-live="polite">
             {gettext("Video processing failed")}
           </span>
-          <span :if={!@asset && @upload_enabled?} class="media-field-meta">
+          <span :if={!@asset && @upload_enabled?} class="media-field-meta media-source-control">
             {gettext("Up to %{size}", size: @limit)}
           </span>
+          <.source_note empty={!@asset} />
         </div>
       </div>
       <.action_menu
         :if={@editable && @presentation == :line}
         id={"#{@id}-actions"}
+        class="media-source-control"
         label={if @asset, do: gettext("Change"), else: gettext("Add")}
       >
         <button :if={@upload_enabled?} type="button" class="menu-item upload-trigger">
@@ -187,7 +189,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
               group last. --%>
         <div
           :if={!@asset && (@upload_enabled? || @browse || @link || @configure)}
-          class="media-field-split"
+          class="media-field-split media-source-control"
         >
           <button :if={@upload_enabled?} type="button" class="media-button primary upload-trigger">
             <.icon name="upload" />{gettext("Upload")}
@@ -206,9 +208,20 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           <button :if={@configure} type="button" class="media-button" phx-click={@configure}>
             {gettext("Configure")}
           </button>
-          <.icon_button :if={@upload_enabled?} class="upload-trigger" icon="upload" label={gettext("Upload replacement")} />
-          <.icon_button :if={@browse} icon="folder" label={@browse_label} phx-click={@browse} />
-          <.icon_button :if={@link} icon="link" label={gettext("Add from URL")} phx-click={@link} />
+          <.icon_button
+            :if={@upload_enabled?}
+            class="upload-trigger media-source-control"
+            icon="upload"
+            label={gettext("Upload replacement")}
+          />
+          <.icon_button :if={@browse} class="media-source-control" icon="folder" label={@browse_label} phx-click={@browse} />
+          <.icon_button
+            :if={@link}
+            class="media-source-control"
+            icon="link"
+            label={gettext("Add from URL")}
+            phx-click={@link}
+          />
         </div>
         <%!-- On a block the asset's own controls — configure, whatever the caller
               adds, and replace — read as one segmented control. Remove stays
@@ -221,7 +234,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
           <div
             :if={@asset && !@compact? && (@upload_enabled? || @browse || @link)}
             id={"#{@id}-replace"}
-            class="media-field-replace"
+            class="media-field-replace media-source-control"
             phx-hook="Brando.FloatingDropdown"
             data-placement={if @type == :image && @actions != [], do: "bottom-end", else: "bottom-start"}
           >
@@ -243,7 +256,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         <button
           :if={@asset && @remove && (!@compact? || !@configure)}
           type="button"
-          class="media-button quiet destructive"
+          class="media-button quiet destructive media-source-control"
           phx-click={@remove}
         >
           {gettext("Remove")}
@@ -253,7 +266,7 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
             thing to do. A filled block keeps it in its Replace menu instead. --%>
       <div
         :if={@choose_folder? && (@presentation == :field || (@presentation == :block && !@asset))}
-        class="media-field-destination"
+        class="media-field-destination media-source-control"
       >
         <.icon name="folder" />
         <span>{gettext("Saved in")}</span>
@@ -271,6 +284,26 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
         </div>
       </div>
     </div>
+    """
+  end
+
+  @doc """
+  Says that media follows the source, in a synchronized translation. Media in
+  blocks (refs and variables) is the source's there: the controls that change
+  it carry `media-source-control`, and under the block field's
+  `.is-source-locked` (`Blocks.css`) those are hidden and this note shown in
+  their place. Anywhere else the note is hidden. `empty` says the source has
+  chosen none.
+  """
+  attr :empty, :boolean, default: false
+  attr :class, :any, default: nil
+
+  def source_note(assigns) do
+    ~H"""
+    <p class={["media-source-note", @class]}>
+      <span :if={@empty}>{gettext("No media chosen in the source.")}</span>
+      {gettext("Media follows the source; choose it there.")}
+    </p>
     """
   end
 
@@ -341,11 +374,17 @@ defmodule BrandoAdmin.Components.Assets.MediaField do
   attr :id, :string, required: true
   attr :label, :string, required: true
   attr :placement, :string, default: "bottom-start"
+  attr :class, :any, default: nil
   slot :inner_block, required: true
 
   def action_menu(assigns) do
     ~H"""
-    <div id={@id} class="media-field-replace media-action-menu" phx-hook="Brando.FloatingDropdown" data-placement={@placement}>
+    <div
+      id={@id}
+      class={["media-field-replace media-action-menu", @class]}
+      phx-hook="Brando.FloatingDropdown"
+      data-placement={@placement}
+    >
       <button type="button" class="media-button" popovertarget={"#{@id}-menu"} aria-expanded="false">
         {@label}<.icon name="chevron-down" />
       </button>
