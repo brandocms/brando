@@ -73,6 +73,7 @@ defmodule Brando.Environments do
 
       Cache.invalidate()
       announce(site.id)
+      Brando.Content.Definitions.changed(prefix)
       {:ok, environment}
     end
   end
@@ -840,6 +841,8 @@ defmodule Brando.Environments do
 
       Cache.invalidate()
       announce(site.id)
+      # Its definitions and what was applied there are the source's now
+      Brando.Content.Definitions.changed(target_prefix)
       prune_archives_under_lock(site, opts[:keep_archives] || @default_archive_keep)
 
       {:ok, %{archive_schema: archive_prefix, operation_log: log, target: target}}
@@ -983,9 +986,10 @@ defmodule Brando.Environments do
     end
   end
 
-  defp restored({:ok, environment}, site, _environment, _prefix) do
+  defp restored({:ok, environment}, site, _environment, prefix) do
     Cache.invalidate()
     announce(site.id)
+    Brando.Content.Definitions.changed(prefix)
     {:ok, environment}
   end
 

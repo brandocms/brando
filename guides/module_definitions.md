@@ -214,8 +214,16 @@ On a node that serves, a few seconds after boot, Brando plans the release's
 definitions against every environment in the background. Nothing is applied
 at boot. With blue/green deploys the old release keeps serving while the new
 one boots, and someone reviews the changes first. The result is kept with the
-release's and the database's digests, and planned again when a module or
-table template changes or definitions are applied.
+release's and the database's digests.
+
+Only the environment that changed is planned again: when a module or table
+template is saved or deleted, definitions are applied or imported, or the
+environment is created, copied over or restored from an archive. A burst of
+changes, such as a ZIP import or several saves in a row, is planned once,
+half a second after the last (five seconds at most). The node that made the
+change plans and sends the result to the other nodes, which keep it without
+planning (`Brando.CacheSync`); a node running another release plans for
+itself.
 
 When anything isn't a `noop`, the dashboard tells superusers how many module
 changes the release has that aren't applied yet. Block modules marks each

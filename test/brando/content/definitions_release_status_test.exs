@@ -105,11 +105,11 @@ defmodule Brando.Content.DefinitionsReleaseStatusTest do
       eventually(fn -> ReleaseStatus.state("hero-test") == :changed_in_admin end)
     end
 
-    test "only starts where it serves, with release_path configured" do
+    test "only starts with release_path configured, outside the sandbox" do
       put_test_env(Definitions, [])
       assert ReleaseStatus.children() == []
 
-      # The test endpoint doesn't serve, and the repo is the sandbox
+      # The repo is the sandbox
       put_test_env(Definitions, release_path: "priv/modules")
       assert ReleaseStatus.children() == []
     end
@@ -129,6 +129,26 @@ defmodule Brando.Content.DefinitionsReleaseStatusTest do
       admin = Factory.insert(:random_user, role: :admin)
       html = render_component(BrandoAdmin.Components.Dashboard, id: "dashboard", current_user: admin)
       refute html =~ "dashboard-release-modules"
+    end
+
+    test "the notice follows what the server plans after each change", c do
+      notice? = fn ->
+        BrandoAdmin.Components.Dashboard
+        |> render_component(id: "dashboard", current_user: c.user)
+        |> String.contains?("dashboard-release-modules")
+      end
+
+      pid = start_supervised!({ReleaseStatus, delay: 10, debounce: 20})
+      Ecto.Adapters.SQL.Sandbox.allow(Repo.repo(), self(), pid)
+
+      eventually(notice?)
+
+      {:ok, _} = Release.apply(:all, user: c.user.id)
+      eventually(fn -> not notice?.() end)
+
+      # A module deleted here is new in the release again
+      {:ok, _} = Brando.Content.delete_module(hero().id, c.user)
+      eventually(notice?)
     end
 
     test "no notice when nothing waits", c do

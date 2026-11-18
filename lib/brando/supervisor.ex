@@ -83,8 +83,9 @@ defmodule Brando.Supervisor do
     # Dev only, and only when configured: see its moduledoc
     children = children ++ Brando.Content.Definition.Watcher.children()
 
-    # Plans the release's module definitions after boot, in the background,
-    # when `release_path` is configured and this node serves
+    # Plans the release's module definitions when `release_path` is
+    # configured: after boot where this node serves, and after a change made
+    # on this node
     children = children ++ Brando.Content.Definitions.ReleaseStatus.children()
 
     # Last, so it stops first: the node serves with the rest while Oban lets

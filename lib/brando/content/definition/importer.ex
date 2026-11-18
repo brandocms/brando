@@ -136,11 +136,9 @@ defmodule Brando.Content.Definition.Importer do
             "baseline" => Snapshot.baselines(plan.bundle)
           })
 
-        Phoenix.PubSub.broadcast(
-          Brando.pubsub(),
-          Definitions.topic(),
-          {:definitions_applied, Brando.Tenant.current_prefix()}
-        )
+        prefix = Brando.Tenant.current_prefix()
+        Phoenix.PubSub.broadcast(Brando.pubsub(), Definitions.topic(), {:definitions_applied, prefix})
+        Brando.Repo.after_commit(fn -> Brando.Content.Definitions.ReleaseStatus.changed(prefix) end)
 
         {:ok, %{changes: changes, refresh: refresh(changes), bundle: bundle, batch_id: opts[:batch_id]}}
 

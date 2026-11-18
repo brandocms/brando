@@ -1,19 +1,27 @@
 defmodule Brando.Content.Definitions.ReleaseStatus do
   @moduledoc """
   What the release's module definitions would change, planned in the
-  background after boot and kept per environment, for the admin to show:
-  superusers see how many changes wait, and Block modules marks each module
-  that differs (`Brando.Content.Definitions.Release`).
+  background and kept per environment, for the admin to show: superusers see
+  how many changes wait, and Block modules marks each module that differs
+  (`Brando.Content.Definitions.Release`).
 
-  It starts with Brando when `release_path` is configured and the endpoint
-  serves (a running server, not a Mix task or a release's `eval`). A few
-  seconds after boot it plans every environment, one after another, without
-  holding up anything else; planning also records the definitions that equal
-  the files as applied. It applies nothing.
+  It starts with Brando when `release_path` is configured, on every node but
+  a sandboxed test's. On a node whose endpoint serves (not a Mix task or a
+  release's `eval`), a few seconds after boot it plans every environment, one
+  after another, without holding up anything else; planning also records the
+  definitions that equal the files as applied. It applies nothing.
 
-  The result is kept with the release's and the database's digests. When a
-  module is saved or definitions are applied, on any node, it works the
-  digests out again and plans only the environments whose digest changed.
+  The result is kept with the release's and the database's digests. A change
+  to an environment's definitions (`changed/1`: a module saved or deleted, a
+  table template saved, definitions applied or imported, the environment
+  copied over, restored from an archive or created) plans that environment
+  again, on the node that made the change, once the burst has settled (half a
+  second after the last change, five at most). That node keeps the result
+  and sends it to the others through `Brando.CacheSync`, which keep it
+  without planning. A node running another release (during a rolling deploy)
+  plans that environment itself instead, and keeps the result to itself.
+  Results are ordered by when their database digest was taken, by the
+  database's clock: an older one never replaces a newer.
   """
   use GenServer
 
@@ -27,10 +35,15 @@ defmodule Brando.Content.Definitions.ReleaseStatus do
   @table __MODULE__
   @boot_delay 3_000
   @debounce 500
+  @max_wait 5_000
+  @server_opts [:boot, :delay, :debounce, :max_wait]
 
-  @doc "Its child spec when release definitions are configured and this node serves, otherwise none."
+  @doc """
+  Its child spec when release definitions are configured, outside a sandboxed
+  test, otherwise none. It plans at boot only where the endpoint serves.
+  """
   def children do
-    if Release.enabled?() and serving?() and not sandbox?(), do: [__MODULE__], else: []
+    if Release.enabled?() and not sandbox?(), do: [{__MODULE__, boot: serving?()}], else: []
   end
 
   defp serving? do
@@ -44,27 +57,96 @@ defmodule Brando.Content.Definitions.ReleaseStatus do
 
   def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
 
+  @doc """
+  Plans `prefix` (nil without tenancy) again on this node once the burst of
+  changes has settled, and sends the result to the other nodes. Call it once
+  the change has committed (`Brando.Content.Definitions.changed/1` does).
+  Without a running server here (a Mix task, a test) it does nothing.
+  """
+  def changed(prefix), do: GenServer.cast(__MODULE__, {:changed, prefix, true})
+
   @impl GenServer
   def init(opts) do
     ensure_table()
-    Phoenix.PubSub.subscribe(Brando.pubsub(), Definitions.topic())
-    Phoenix.PubSub.subscribe(Brando.pubsub(), "brando:modules")
-    timer = Process.send_after(self(), :refresh, Keyword.get(opts, :delay, @boot_delay))
-    {:ok, %{timer: timer, opts: opts}}
+
+    if Keyword.get(opts, :boot, true),
+      do: Process.send_after(self(), :boot, Keyword.get(opts, :delay, @boot_delay))
+
+    {:ok, %{opts: opts, pending: %{}, timer: nil, first_at: nil}}
   end
 
   @impl GenServer
-  def handle_info(:refresh, state) do
-    Enum.each(Release.prefixes(), &refresh(&1, state.opts))
-    {:noreply, %{state | timer: nil}}
+  def handle_cast({:changed, prefix, broadcast?}, state) do
+    if state.timer, do: Process.cancel_timer(state.timer)
+    now = System.monotonic_time(:millisecond)
+    first_at = state.first_at || now
+
+    wait =
+      min(Keyword.get(state.opts, :debounce, @debounce), first_at + Keyword.get(state.opts, :max_wait, @max_wait) - now)
+
+    pending = Map.update(state.pending, prefix, broadcast?, &(&1 or broadcast?))
+    {:noreply, %{state | pending: pending, first_at: first_at, timer: Process.send_after(self(), :run, max(wait, 0))}}
   end
 
-  # A module saved in the admin, or definitions applied: check again, once
-  # the burst has settled
-  def handle_info(_changed, state) do
-    if state.timer, do: Process.cancel_timer(state.timer)
-    {:noreply, %{state | timer: Process.send_after(self(), :refresh, @debounce)}}
+  # Another node's result, kept here (in this process, as this node's own
+  # are) when it is for this node's release. For an environment this node
+  # has none for yet (a new one), the release is read first.
+  def handle_cast({:received, prefix, %{release: release} = value}, state) do
+    known =
+      case lookup(prefix) do
+        nil -> release_digest(prefix, plan_opts(state))
+        %{release: known} -> known
+      end
+
+    if known == release do
+      store_newer(prefix, value)
+      {:noreply, state}
+    else
+      handle_cast({:changed, prefix, false}, state)
+    end
   end
+
+  @impl GenServer
+  def handle_info(:boot, state) do
+    Enum.each(Release.prefixes(), &refresh(&1, plan_opts(state)))
+    {:noreply, state}
+  end
+
+  # What a change found is sent even when this node had planned it already
+  # (its boot plan ran after the change): the other nodes haven't
+  def handle_info(:run, state) do
+    Enum.each(state.pending, fn {prefix, broadcast?} ->
+      if refresh(prefix, plan_opts(state)) in [:planned, :unchanged] and broadcast?, do: broadcast(prefix)
+    end)
+
+    {:noreply, %{state | pending: %{}, timer: nil, first_at: nil}}
+  end
+
+  def handle_info(_message, state), do: {:noreply, state}
+
+  defp plan_opts(state), do: Keyword.drop(state.opts, @server_opts)
+
+  defp broadcast(prefix) do
+    case lookup(prefix) do
+      %{release: release} = value when is_binary(release) ->
+        Brando.CacheSync.broadcast(__MODULE__, {:planned, prefix, value})
+
+      _off ->
+        :ok
+    end
+  end
+
+  @doc """
+  Keeps a result another node planned (`Brando.CacheSync`), unless this node
+  has a newer one. One planned for another release than this node's is
+  planned again here instead. The server does both; without one here there
+  is nothing to keep it for.
+  """
+  def refresh_node_cache({:planned, prefix, %{release: _release} = value}) do
+    GenServer.cast(__MODULE__, {:received, prefix, value})
+  end
+
+  def refresh_node_cache(_refresh), do: :ok
 
   @doc """
   Plans `prefix` (nil without tenancy) again unless the release and the
@@ -84,60 +166,85 @@ defmodule Brando.Content.Definitions.ReleaseStatus do
     with true <- is_binary(path) and File.dir?(path),
          {:ok, bundle} <- Definitions.read(path) do
       release_digest = Value.digest(bundle)
-      if cached?(prefix, release_digest), do: :unchanged, else: plan!(prefix, release_digest, opts)
+      # Taken before planning: a change committed while it plans makes the
+      # next check plan again rather than keep this result
+      taken_at = database_clock()
+      database = database_digest()
+
+      if cached?(prefix, release_digest, database),
+        do: :unchanged,
+        else: plan!(prefix, %{release: release_digest, database: database, taken_at: taken_at}, opts)
     else
       false -> off(prefix, nil)
       {:error, message} -> off(prefix, message)
     end
   end
 
-  defp cached?(prefix, release_digest) do
-    case lookup(prefix) do
-      %{release: ^release_digest, database: database} when not is_nil(database) -> database == database_digest()
-      _ -> false
-    end
+  defp release_digest(prefix, opts) do
+    Tenant.with_prefix(prefix, fn ->
+      path = Release.path(opts)
+
+      with true <- is_binary(path) and File.dir?(path),
+           {:ok, bundle} <- Definitions.read(path),
+           do: Value.digest(bundle),
+           else: (_ -> nil)
+    end)
+  rescue
+    _ -> nil
+  end
+
+  defp cached?(prefix, release_digest, database) do
+    match?(%{release: ^release_digest, database: ^database}, lookup(prefix))
   end
 
   defp off(prefix, nil) do
-    store(prefix, nil)
+    store(prefix, off())
     :off
   end
 
   defp off(prefix, message) do
     Logger.warning("==> Brando >> Could not plan the release's module definitions: #{message}")
-    store(prefix, nil)
+    store(prefix, off())
     :off
   end
 
-  # The database's digest is taken before planning: a change committed while
-  # it plans makes the next check plan again rather than keep this result
-  defp plan!(prefix, release_digest, opts) do
-    database = database_digest()
+  # Nothing to show, and no release to compare another node's result with
+  defp off, do: %{release: nil, error: :off}
 
+  defp plan!(prefix, digests, opts) do
     case Release.plan(opts) do
       {:ok, %{} = report} ->
         states = for item <- report.items, item.state != :in_sync, into: %{}, do: {item.uid, item.state}
 
-        store(prefix, %{
-          release: release_digest,
-          database: database,
-          version: report.version,
-          pending: report.pending,
-          states: states,
-          error: nil
-        })
+        store_newer(
+          prefix,
+          Map.merge(digests, %{version: report.version, pending: report.pending, states: states, error: nil})
+        )
 
         :planned
 
       {:ok, :off} ->
-        store(prefix, nil)
+        store(prefix, off())
         :off
 
       {:error, message} ->
         Logger.warning("==> Brando >> Could not plan the release's module definitions: #{message}")
-        store(prefix, %{release: release_digest, database: database, error: message, pending: 0, states: %{}})
+        store_newer(prefix, Map.merge(digests, %{error: message, pending: 0, states: %{}}))
         :planned
     end
+  end
+
+  # When the database digest was taken, by the database's clock, which every
+  # node shares: the order of two nodes' results doesn't depend on theirs
+  defp database_clock do
+    %{rows: [[microseconds]]} =
+      Ecto.Adapters.SQL.query!(
+        Brando.Repo.repo(),
+        "SELECT (extract(epoch FROM clock_timestamp()) * 1000000)::bigint",
+        []
+      )
+
+    microseconds
   end
 
   # Everything planning compares: the stored definitions and what was last
@@ -185,6 +292,16 @@ defmodule Brando.Content.Definitions.ReleaseStatus do
   defp store(prefix, value) do
     ensure_table()
     :ets.insert(@table, {prefix || :public, value})
+  end
+
+  # A result whose database digest was taken before the one kept is older
+  defp store_newer(prefix, value) do
+    taken_at = Map.get(value, :taken_at, 0)
+
+    case lookup(prefix) do
+      %{taken_at: kept} when is_integer(kept) and kept > taken_at -> false
+      _ -> store(prefix, value)
+    end
   end
 
   @doc """

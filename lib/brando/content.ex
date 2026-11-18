@@ -133,12 +133,15 @@ defmodule Brando.Content do
   end
 
   # Open forms are told once the module is committed: one rolled back with
-  # the caller's transaction is never announced.
+  # the caller's transaction is never announced. What a release would change
+  # is worked out again (`Brando.Content.Definitions.ReleaseStatus`).
   mutation :create, Module do
     fn entry ->
       Brando.Repo.after_commit(fn ->
         Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:modules", {entry, [:module, :created]})
       end)
+
+      Brando.Content.Definitions.changed()
 
       {:ok, entry}
     end
@@ -151,6 +154,8 @@ defmodule Brando.Content do
       Brando.Repo.after_commit(fn ->
         Phoenix.PubSub.broadcast(Brando.pubsub(), "brando:modules", {entry, [:module, :updated]})
       end)
+
+      Brando.Content.Definitions.changed()
 
       {:ok, entry}
     end
