@@ -34,7 +34,7 @@ defmodule BrandoAdmin.Components.Form.Input.Blocks.MediaBlockTest do
     )
   end
 
-  test "an empty media ref explains, for a translation, why it offers no media types" do
+  test "an empty media ref renders the translation note beside its media type buttons" do
     html = render_media_ref()
     {:ok, doc} = Floki.parse_fragment(html)
 

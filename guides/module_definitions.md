@@ -494,6 +494,27 @@ unpublishing or deleting the entry renders the pages that link to it again,
 its own included
 ([Liquid tags and context](block_editor.md#liquid-tags-and-context)).
 
+<!-- usage-rules:end -->
+
+Additional persisted var settings belong in `settings`, for example:
+
+```elixir
+var :website, :link do
+  label "Website"
+  default "https://example.com"
+  settings link_text: "Visit", link_type: :url,
+    link_target_blank: true, link_allow_custom_text: false
+end
+```
+
+This also covers color picker/opacity flags, media config targets, gallery
+allowed types and link identifier schema restrictions. Export emits all of them.
+`link_default_type: :identifier` opens an empty link's dialog on Content
+instead of URL (`:url`, the default); a link the editor has set keeps its own
+type, and the editor can still switch tabs.
+
+<!-- usage-rules:start topic="module-definitions" -->
+
 ### Var layout
 
 The block editor lays out a block's vars in rows of twelve units, in
@@ -545,23 +566,6 @@ layout panel shows these rows: drag vars between rows and set their widths
 there.
 
 <!-- usage-rules:end -->
-
-Additional persisted var settings belong in `settings`, for example:
-
-```elixir
-var :website, :link do
-  label "Website"
-  default "https://example.com"
-  settings link_text: "Visit", link_type: :url,
-    link_target_blank: true, link_allow_custom_text: false
-end
-```
-
-This also covers color picker/opacity flags, media config targets, gallery
-allowed types and link identifier schema restrictions. Export emits all of them.
-`link_default_type: :identifier` opens an empty link's dialog on Content
-instead of URL (`:url`, the default); a link the editor has set keeps its own
-type, and the editor can still switch tabs.
 
 ## Children and table templates
 
