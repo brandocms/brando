@@ -1120,10 +1120,14 @@ defmodule BrandoAdmin.Components.Form.Input.MultiSelect do
     Enum.find(opts, &(option_value(&1) == wanted_id))
   end
 
+  # An `{:array, Ecto.Enum}` field holds atoms, and the options' values are
+  # strings by now (`ensure_string_values/1`), so both sides compare as text.
   defp get_opt(opt, opts, _relation_key, _) do
+    wanted = to_string(opt)
+
     Enum.find(opts, fn
-      %{value: value} -> to_string(value) == opt
-      %{id: value} -> to_string(value) == opt
+      %{value: value} -> to_string(value) == wanted
+      %{id: value} -> to_string(value) == wanted
     end)
   end
 

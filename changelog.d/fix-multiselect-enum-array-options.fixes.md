@@ -1,0 +1,1 @@
+- A gallery's "Allowed media" setting in the module editor and a gallery variable no longer warns "Unavailable options: image, video" when both are allowed, and its chosen options show their labels instead of "Missing option".
