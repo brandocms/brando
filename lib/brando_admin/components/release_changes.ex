@@ -254,7 +254,6 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
         aria-label={gettext("Apply %{name}", name: row_name(@row))}
         phx-click="toggle_row"
         phx-value-uid={@row.uid}
-        onclick="event.stopPropagation()"
         data-testid="release-row-check"
       />
       <div>
