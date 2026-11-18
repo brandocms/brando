@@ -294,6 +294,15 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   def unused_filter?(params), do: Map.get(params || %{}, "filter:unused") in ["true", true]
 
   @doc """
+  Whether the listing shows the folder the header names (`current_folder`,
+  "" for the root). A folder filter the library can't resolve (deleted,
+  hidden, another library's) heads the page as the root, while the listing
+  still filters on that folder.
+  """
+  def folder_listed?(params, ""), do: Map.get(params || %{}, "filter:folder_id") in [nil, "", "root"]
+  def folder_listed?(_params, _current_folder), do: true
+
+  @doc """
   The filter the library's listing applies for `params`: every `filter:`
   parameter, as `Content.List` passes them on, with the folder as
   `list_params/2` resolves it.

@@ -76,6 +76,23 @@ defmodule BrandoAdmin.FileLibraryRootSortTest do
     assert has_element?(view, ".image-picker-main-actions span", "3 files")
   end
 
+  # The page falls back to the root, but the listing filters on the folder
+  # named: a sort would move root files it isn't showing.
+  test "a folder filter that doesn't resolve offers no sort", %{conn: conn} do
+    file(nil, "loose.pdf")
+    hidden = Brando.Media.Folders.hidden_folder_id("uploads")
+    gone = FolderBrowser.folder_id_for("files/default/gone")
+    Repo.delete!(Repo.get!(Folder, gone))
+
+    for folder_id <- [hidden, gone, FolderBrowser.folder_id_for("videos/default/clips")] do
+      {:ok, view, _html} = live(conn, "/admin/assets/files?filter:folder_id=#{folder_id}")
+      refute has_element?(view, @sort)
+    end
+
+    {:ok, view, _html} = live(conn, "/admin/assets/files?filter:folder_id=root")
+    assert has_element?(view, @sort)
+  end
+
   test "a root with no loose files, and All folders, offer no sort", %{conn: conn} do
     file(FolderBrowser.folder_id_for("files/default/terms"), "terms.pdf")
 
