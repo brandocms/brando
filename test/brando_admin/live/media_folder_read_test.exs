@@ -65,13 +65,13 @@ defmodule BrandoAdmin.MediaFolderReadTest do
       {view, _html} = open_library(conn, "filter:folder_id=root")
 
       render_click(view, "assets_go_folder", %{"folder" => "legacy"})
-      assert_patch(view, "/admin/assets/images?filter%3Apath=images%2Flegacy")
+      assert_patch(view, "/admin/assets/images?filter%3Afolder_path=images%2Flegacy")
       render_click(view, "assets_go_folder", %{"folder" => "legacy/pics"})
-      assert_patch(view, "/admin/assets/images?filter%3Apath=images%2Flegacy%2Fpics")
+      assert_patch(view, "/admin/assets/images?filter%3Afolder_path=images%2Flegacy%2Fpics")
       assert render(view) =~ "a.jpg"
 
       render_click(view, "assets_go_parent", %{})
-      assert_patch(view, "/admin/assets/images?filter%3Apath=images%2Flegacy")
+      assert_patch(view, "/admin/assets/images?filter%3Afolder_path=images%2Flegacy")
 
       assert folder_count() == folders
     end

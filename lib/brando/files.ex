@@ -54,6 +54,11 @@ defmodule Brando.Files do
       {:path, path}, query ->
         from q in query, where: ilike(q.path, ^"%#{path}%")
 
+      # A folder known only by its assets' paths (`filter:folder_path`): a
+      # file has no path of its own, so none is in one
+      {:folder_path, _path}, query ->
+        from q in query, where: false
+
       # The listing's "Filename" filter
       {:filename, filename}, query ->
         from q in query, where: ilike(q.filename, ^"%#{filename}%")

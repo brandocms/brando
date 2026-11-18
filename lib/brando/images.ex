@@ -71,6 +71,10 @@ defmodule Brando.Images do
       {:path, path}, query ->
         from q in query, where: ilike(q.path, ^"%#{path}%")
 
+      # A folder known only by its assets' paths (`filter:folder_path`)
+      {:folder_path, path}, query ->
+        from q in query, where: ilike(q.path, ^"%#{path}%")
+
       {:unused, value}, query when value in [true, "true"] ->
         from(t in query, where: t.id not in ^Brando.Content.Usage.used_ids(:image))
 

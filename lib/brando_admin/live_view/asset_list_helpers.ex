@@ -76,34 +76,37 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   @doc """
   Opens `folder` (relative to the upload root, "" for the root) by its stored
   id (`folder_id_to_open/2`). A folder not stored, known only by its assets'
-  paths, is opened by its path, so a user who may not store it still can.
-  The root opens as `root`, which lists its loose assets too: its folder
-  record's id would list only that record's.
+  paths, is opened by its path (`filter:folder_path`), so a user who may not
+  store it still can. The root opens as `root`, which lists its loose assets
+  too: its folder record's id would list only that record's. A search
+  (`filter:path`, `filter:filename`) stays on.
   """
-  def open_folder(socket, folder) when folder in [nil, ""], do: patch_folder_filter(socket, nil)
+  def open_folder(socket, folder, opts \\ [])
+  def open_folder(socket, folder, opts) when folder in [nil, ""], do: patch_folder_filter(socket, nil, opts)
 
-  def open_folder(socket, folder) do
+  def open_folder(socket, folder, opts) do
     case folder_id_to_open(socket, folder) do
       nil ->
-        patch_filter(socket, "filter:path", FolderBrowser.absolute_folder(folder, socket.assigns.upload_root))
+        absolute = FolderBrowser.absolute_folder(folder, socket.assigns.upload_root)
+        patch_filter(socket, "filter:folder_path", absolute, opts)
 
       folder_id ->
-        patch_folder_filter(socket, folder_id)
+        patch_folder_filter(socket, folder_id, opts)
     end
   end
 
   @doc "Patches the URL to filter by the given folder."
-  def patch_folder_filter(socket, folder) do
-    patch_filter(socket, "filter:folder_id", if(is_nil(folder), do: "root", else: to_string(folder)))
+  def patch_folder_filter(socket, folder, opts \\ []) do
+    patch_filter(socket, "filter:folder_id", if(is_nil(folder), do: "root", else: to_string(folder)), opts)
   end
 
-  defp patch_filter(socket, key, value) do
+  defp patch_filter(socket, key, value, opts) do
     uri = socket.assigns.uri
     current_params = URI.decode_query(uri.query || "")
 
     new_params =
       current_params
-      |> Map.drop(["filter:path", "filter:folder_id", "page"])
+      |> Map.drop(["filter:folder_path", "filter:folder_id", "page" | Keyword.get(opts, :drop, [])])
       |> Map.put(key, value)
       |> Enum.reject(fn {_k, v} -> v in [nil, ""] end)
       |> URI.encode_query()
@@ -115,7 +118,49 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
         uri.path <> "?" <> new_params
       end
 
-    Phoenix.LiveView.push_patch(socket, to: to)
+    Phoenix.LiveView.push_patch(socket, to: to, replace: Keyword.get(opts, :replace, false))
+  end
+
+  @doc """
+  The folder `params` name: a stored folder's id (`filter:folder_id`, or
+  `root` or `all`), or the absolute path of a folder known only by its
+  assets' paths (`filter:folder_path`). The search the listing applies
+  (`filter:path` in the Images and Videos libraries) never names one.
+  """
+  def folder_filter(params) when is_map(params), do: params["filter:folder_id"] || params["filter:folder_path"]
+
+  @doc """
+  Brings a link in the shape the libraries used before the search and the
+  folder had parameters of their own up to date: a folder known by its path
+  was `filter:path`, which is also the Images and Videos search. Such a link
+  is `filter:path` alone, with the absolute path of a folder under the
+  upload root (`open_folder/3` wrote nothing else there), and opens that
+  folder as `open_folder/3` does, replacing the URL. A search inside a
+  folder, or one that doesn't start with the upload root, stays a search.
+
+  Only the URL the library opens at is read so: a search typed in the
+  library that happens to start with the upload root is a search. Returns
+  `{:patched, socket}`, or `{:ok, socket}` for a URL that is up to date.
+  """
+  def upgrade_folder_link(socket, params) do
+    first? = !socket.assigns[:folder_link_checked?]
+    socket = Component.assign(socket, :folder_link_checked?, true)
+
+    with true <- first?,
+         path when is_binary(path) <- params["filter:path"],
+         nil <- folder_filter(params),
+         true <- legacy_folder_path?(path, socket.assigns.upload_root) do
+      folder = FolderBrowser.relative_folder(path, socket.assigns.upload_root)
+      {:patched, open_folder(socket, folder, drop: ["filter:path"], replace: true)}
+    else
+      _ -> {:ok, socket}
+    end
+  end
+
+  defp legacy_folder_path?(path, upload_root) do
+    root = FolderBrowser.normalize_folder(upload_root)
+    folder = FolderBrowser.normalize_folder(path)
+    is_binary(root) and is_binary(folder) and String.starts_with?(folder, root <> "/")
   end
 
   @doc "Resolves a folder filter parameter to a relative folder path."
@@ -303,7 +348,11 @@ defmodule BrandoAdmin.LiveView.AssetListHelpers do
   hidden, another library's) heads the page as the root, while the listing
   still filters on that folder.
   """
-  def folder_listed?(params, ""), do: Map.get(params || %{}, "filter:folder_id") in [nil, "", "root"]
+  def folder_listed?(params, "") do
+    params = params || %{}
+    Map.get(params, "filter:folder_id") in [nil, "", "root"] and Map.get(params, "filter:folder_path") in [nil, ""]
+  end
+
   def folder_listed?(_params, _current_folder), do: true
 
   @doc """

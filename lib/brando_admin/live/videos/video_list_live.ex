@@ -81,13 +81,17 @@ defmodule BrandoAdmin.Videos.VideoListLive do
 
   @impl true
   def handle_params(params, _uri, socket) do
-    folder_filter = params["filter:folder_id"] || params["filter:path"]
+    case AssetListHelpers.upgrade_folder_link(socket, params) do
+      {:patched, socket} ->
+        {:noreply, socket}
 
-    {:noreply,
-     socket
-     |> assign_folder_state(folder_filter)
-     |> AssetListHelpers.assign_unused_count(params, &Videos.list_videos/1)
-     |> AssetListHelpers.assign_all_folders(params, &Videos.list_videos/1, :visible_video_count)}
+      {:ok, socket} ->
+        {:noreply,
+         socket
+         |> assign_folder_state(AssetListHelpers.folder_filter(params))
+         |> AssetListHelpers.assign_unused_count(params, &Videos.list_videos/1)
+         |> AssetListHelpers.assign_all_folders(params, &Videos.list_videos/1, :visible_video_count)}
+    end
   end
 
   @impl true
@@ -652,7 +656,7 @@ defmodule BrandoAdmin.Videos.VideoListLive do
           params={AssetListHelpers.list_params(@params, @root_folder_ids)}
           listing={:default}
           saved_views={false}
-          hidden_filters={[:folder_id]}
+          hidden_filters={[:folder_id, :folder_path]}
           empty_title={gettext("No videos in this view")}
           empty_description={gettext("Choose a folder or adjust your search.")}
           extra_selection_actions={
