@@ -19676,6 +19676,11 @@ msgstr "Denne pakken inneholder ingen definisjoner."
 msgid "This can't be undone."
 msgstr "Dette kan ikke angres."
 
+#: lib/brando_admin/live/content/release_changes_live.ex
+#, elixir-autogen, elixir-format
+msgid "This can’t be reverted."
+msgstr "Dette kan ikke tilbakestilles."
+
 #: lib/brando_admin/live/content/module_form_live.ex
 #, elixir-autogen, elixir-format
 msgid "This change affects existing content"

@@ -314,13 +314,18 @@ defmodule BrandoAdmin.Components.ModuleFiles do
 
     with :ok <- authorize_import(socket.assigns.current_user),
          {:ok, source, filename} <- source(socket) do
-      socket = assign(socket, source: source, filename: filename)
+      socket =
+        assign(socket,
+          source: source,
+          filename: filename,
+          replace: replaceable(socket.assigns.replace, source.bundle)
+        )
 
       with {:ok, references} <- references(mappings),
            {:ok, plan} <-
              Definitions.plan(source.bundle, socket.assigns.current_user,
                references: references,
-               replace: replaceable(socket.assigns.replace, source.bundle)
+               replace: socket.assigns.replace
              ) do
         {:noreply, assign(socket, plan: plan)}
       else

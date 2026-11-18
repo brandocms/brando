@@ -322,6 +322,8 @@ defmodule Brando.Content.DefinitionsReleaseReviewTest do
         assert %{changed_since: [], irreversible: []} = Batches.status(Batches.get(batch_id), c.user)
         assert {:ok, %{reverted: [_], conflicts: []}} = Batches.revert(Batches.get(batch_id), c.user)
         assert [] = Repo.preload(text(c), :vars, force: true).vars
+        # Its blocks don't keep the var as a leftover
+        assert Brando.Content.StaleBlocks.count(text(c)) == 0
       end)
     end
 

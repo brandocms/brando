@@ -15,8 +15,10 @@ defmodule Brando.Content.Definitions.Release.Batches do
 
   import Ecto.Query, only: [from: 2]
 
+  require Logger
+
   alias Brando.Content.Definition.{Baselines, Plan, References, Snapshot}
-  alias Brando.Content.{DefinitionApply, DefinitionBatch, Definitions}
+  alias Brando.Content.{DefinitionApply, DefinitionBatch, Definitions, StaleBlocks}
   alias Brando.Content.Definitions.Release
   alias Brando.Repo
 
@@ -215,7 +217,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
   end
 
   # Nothing it could restore, only what needs a migration: it stays, to keep
-  defp revertible(%{revert: [], conflicts: [], irreversible: [_ | _]}), do: {:error, :not_revertible}
+  defp revertible(%{revert: [], conflicts: [], irreversible: [_ | _]}), do: {:error, :needs_migration}
   defp revertible(_preview), do: :ok
 
   defp run_revert(batch, preview, [], revert_batch_id, user), do: transaction_only(batch, preview, revert_batch_id, user)
@@ -224,6 +226,7 @@ defmodule Brando.Content.Definitions.Release.Batches do
     do: apply_revert(batch, preview, uids, revert_batch_id, user)
 
   defp reverted(batch, revert_batch, preview, run, user) do
+    drop_added_leftovers(batch, preview)
     revert_batch = %{revert_batch | run_id: run}
     Repo.update_all(from(b in DefinitionBatch, where: b.id == ^revert_batch.id), set: [run_id: run])
 
@@ -272,7 +275,12 @@ defmodule Brando.Content.Definitions.Release.Batches do
   defp record_revert!(batch, _plan, changes, revert_batch_id, user) do
     now = DateTime.utc_now()
 
-    # Settled by another session since: nothing of the revert stays
+    # Applied again since the preview (an import that ran meanwhile), or
+    # settled by another session: nothing of the revert stays. The importer's
+    # lock holds off other applies until this commits.
+    unless still_the_batchs?(batch, changes, revert_batch_id),
+      do: Repo.rollback("applied again since; review the revert again")
+
     case settle(batch, reverted_at: now, reverted_by_id: user_id(user), revert_batch_id: revert_batch_id) do
       :ok -> :ok
       {:error, reason} -> Repo.rollback(reason)
@@ -288,6 +296,53 @@ defmodule Brando.Content.Definitions.Release.Batches do
       },
       user_id(user)
     )
+  end
+
+  # The blocks of a reverted module keep the refs and vars the apply added
+  # (a sync adds, never removes), which leaves them on an older version: drop
+  # exactly those, as Blocks on older versions would. Nothing else they hold.
+  defp drop_added_leftovers(batch, preview) do
+    reverted = MapSet.new(preview.revert, & &1.uid)
+
+    for row <- rows(batch),
+        row.kind == "module" and MapSet.member?(reverted, row.uid),
+        is_map(row.definition) and is_map(row.previous),
+        resolutions = added(row.definition, row.previous),
+        resolutions != %{} do
+      case StaleBlocks.apply(row.uid, resolutions, preview.actor) do
+        {:ok, _} ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("==> Brando >> Revert left blocks of #{row.uid} on an older version: #{reason}")
+      end
+    end
+  end
+
+  defp added(applied, previous) do
+    for {kind, list, key} <- [{:var, "vars", "key"}, {:ref, "refs", "name"}],
+        name <- keys(applied[list], key) -- keys(previous[list], key),
+        into: %{},
+        do: {{kind, name}, :drop}
+  end
+
+  defp keys(nil, _key), do: []
+  defp keys(list, key), do: Enum.map(list, & &1[key])
+
+  # Each definition the revert wrote was last applied by the batch itself
+  defp still_the_batchs?(_batch, [], _revert_batch_id), do: true
+
+  defp still_the_batchs?(batch, changes, revert_batch_id) do
+    uids = Enum.map(changes, & &1.uid)
+
+    from(a in DefinitionApply,
+      where: a.uid in ^uids and a.batch_id != ^revert_batch_id,
+      distinct: [a.kind, a.uid],
+      order_by: [asc: a.kind, asc: a.uid, desc: a.id],
+      select: a.batch_id
+    )
+    |> Repo.all()
+    |> Enum.all?(&(&1 == batch.batch_id))
   end
 
   # The definitions as they are here, with each one `rows` restores as it

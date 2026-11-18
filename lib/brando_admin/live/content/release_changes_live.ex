@@ -225,10 +225,10 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
         {{schema_module(job.schema), job.entry_id}, state}
       end)
 
+    # Entries this person may not read are counted, not named
     failures =
-      for job <- renders.failed, job.worker == :render do
-        key = {schema_module(job.schema), job.entry_id}
-        %{label: labels[key] || "#{job.schema} ##{job.entry_id}", error: job.error}
+      for job <- renders.failed, job.worker == :render, label = labels[{schema_module(job.schema), job.entry_id}] do
+        %{label: label, error: job.error}
       end
 
     total = renders.rendered + length(renders.failed) + Enum.count(renders.pending, &(&1.worker == :render))
@@ -619,8 +619,10 @@ defmodule BrandoAdmin.Content.ReleaseChangesLive do
   defp error_text(:kept), do: gettext("This apply is already kept.")
   defp error_text(:reverted), do: gettext("This apply is already reverted.")
 
-  defp error_text(:not_revertible),
+  defp error_text(:needs_migration),
     do: gettext("Nothing in this apply can be reverted without a migration. Keep it instead.")
+
+  defp error_text(:not_revertible), do: gettext("This can’t be reverted.")
 
   defp error_text(:no_preview_target), do: gettext("This content type has no preview target.")
   defp error_text(message) when is_binary(message), do: message

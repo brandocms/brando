@@ -107,6 +107,28 @@ defmodule BrandoAdmin.ModuleFilesTest do
     assert Repo.get!(Module, c.module.id).class == "from-zip"
   end
 
+  test "Replace is chosen again for each file", c do
+    Repo.delete_all(Brando.Content.DefinitionApply)
+    c.module |> Changeset.change(class: "made-here") |> Repo.update!()
+    source = File.read!("test/fixtures/definitions/hero.exs.txt")
+    {:ok, hero} = Archive.pack(%{"hero.exs" => String.replace(source, ~s(class "hero"), ~s(class "from-zip"))})
+
+    {:ok, other} =
+      Archive.pack(%{
+        "other.exs" =>
+          source |> String.replace("hero-test", "other-test") |> String.replace("Example.Hero", "Example.Other")
+      })
+
+    {:ok, view, _} = live(c.conn, "/admin/config/content/modules")
+    upload(view, hero)
+    view |> element("[data-testid=module-files-replace]") |> render_click()
+    view |> element("#module-files button[phx-click=reset]") |> render_click()
+    upload(view, other)
+    view |> element("#module-files button[phx-click=reset]") |> render_click()
+    upload(view, hero)
+    assert has_element?(view, "#module-files-apply[disabled]")
+  end
+
   test "selected export includes only the selected module tree", c do
     %Module{}
     |> Module.changeset(

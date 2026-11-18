@@ -1381,9 +1381,15 @@ defmodule BrandoAdmin.Components.ReleaseChanges do
   defp block_state_label(%{state: :changed}), do: gettext("differs")
   defp block_state_label(_), do: gettext("unchanged")
 
-  # One tag a line, so a diff of rendered HTML reads
+  # One tag a line, so a diff of rendered HTML reads. Whitespace between
+  # tags can show on the page, so it keeps a line of its own (`␣`).
   defp pretty(nil), do: ""
-  defp pretty(html), do: html |> String.replace(~r/>\s*</, ">\n<") |> String.trim()
+
+  defp pretty(html) do
+    html
+    |> String.replace(~r/>(\s*)</, fn match -> if match == "><", do: ">\n<", else: ">\n␣\n<" end)
+    |> String.trim()
+  end
 
   ## Apply dialog
 
