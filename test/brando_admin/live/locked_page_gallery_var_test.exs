@@ -3,8 +3,9 @@ defmodule BrandoAdmin.LockedPageGalleryVarTest do
   # translation's gallery variable holds the source's gallery, and writes it
   # as it is edited. The translation's form refuses those writes; the
   # source's form still makes them. (`LockedGalleryVarTest` covers block
-  # variables.)
-  use Brando.LiveCase, async: true
+  # variables.) Not async: `put_test_env(Page, …)` sets the application's
+  # Page configuration, which tests beside it would see.
+  use Brando.LiveCase
 
   import Ecto.Query, only: [from: 2]
 
