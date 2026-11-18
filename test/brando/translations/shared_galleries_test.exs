@@ -220,6 +220,43 @@ defmodule Brando.Translations.SharedGalleriesTest do
     assert var_gallery_id(c.source) == c.album.id
   end
 
+  test "a row saved with another gallery meanwhile keeps it, and no copy is left behind", c do
+    share_with_source(c)
+    entry = load(c.target.id)
+    others = [load(c.source.id)]
+    # Another editor's save, after the split read the entry
+    newer = gallery([c.third])
+    [%Var{id: var_id}] = Enum.filter(block(c.target).vars, &(&1.key == "album"))
+    Repo.update_all(from(v in Var, where: v.id == ^var_id), set: [gallery_id: newer.id])
+    count = Repo.aggregate(Gallery, :count)
+
+    {:ok, copies} = Repo.transaction(fn -> elem(Brando.Translations.SharedGalleries.split(entry, others, c.user), 1) end)
+
+    assert var_gallery_id(c.target) == newer.id
+    # The ref and the asset got theirs; the var's copy went
+    assert length(copies) == 2
+    assert Repo.aggregate(Gallery, :count) == count + 2
+  end
+
+  test "saves of an independent translation in a row queue one split", c do
+    {:ok, _} = Translations.make_independent(Article, c.target.id, c.user)
+
+    Oban.Testing.with_testing_mode(:manual, fn ->
+      Translations.source_saved(load(c.target.id))
+      Translations.source_saved(load(c.target.id))
+
+      jobs =
+        Repo.all(
+          from(j in Oban.Job,
+            where: j.worker == "Brando.Worker.TranslationSync" and fragment("? \\? 'split_galleries'", j.args)
+          ),
+          prefix: "public"
+        )
+
+      assert length(jobs) == 1
+    end)
+  end
+
   test "make_independent copies nothing for a translation whose galleries are already its own", c do
     # Never saved since it was created: the copy's galleries are its own
     count = Repo.aggregate(Gallery, :count)

@@ -87,8 +87,7 @@ defmodule Brando.Translations.SharedGalleries do
     |> Enum.reduce_while({:ok, []}, fn {_, _, _, gallery_id} = holder, {:ok, copies} ->
       case Brando.Galleries.duplicate_gallery(gallery_id, actor) do
         {:ok, copy} ->
-          repoint(holder, copy.id)
-          {:cont, {:ok, [{holder, copy} | copies]}}
+          {:cont, {:ok, repoint(holder, copy, copies)}}
 
         {:error, reason} ->
           {:halt, {:error, {:gallery, gallery_id, reason}}}
@@ -153,8 +152,21 @@ defmodule Brando.Translations.SharedGalleries do
     end
   end
 
-  defp repoint({schema, id, field, _gallery_id}, gallery_id),
-    do: Repo.update_all(from(r in schema, where: r.id == ^id), set: [{field, gallery_id}])
+  # Only while the row still shows the shared gallery: a save since (another
+  # editor's new gallery) keeps its own, and the copy goes
+  defp repoint({schema, id, field, gallery_id} = holder, copy, copies) do
+    query = from(r in schema, where: r.id == ^id and field(r, ^field) == ^gallery_id)
+
+    case Repo.update_all(query, set: [{field, copy.id}]) do
+      {1, _} ->
+        [{holder, copy} | copies]
+
+      {0, _} ->
+        Repo.delete_all(from(o in Brando.Galleries.GalleryObject, where: o.gallery_id == ^copy.id))
+        Repo.delete_all(from(g in Gallery, where: g.id == ^copy.id))
+        copies
+    end
+  end
 
   defp asset_holders(%{id: id} = entry, module) when not is_nil(id) do
     if Brando.Blueprint.embedded?(module) do

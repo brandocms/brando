@@ -6994,7 +6994,12 @@ defmodule BrandoAdmin.Components.Form do
     %{schema: schema, current_user: user, entry: entry} = socket.assigns
 
     with :ok <- Brando.Authorization.Boundary.authorize(user, :update, entry),
-         shared = Brando.Translations.shared_galleries(schema, entry.id),
+         # Copied only when it follows the source now
+         shared =
+           if(Translation.locked?(socket.assigns.translation),
+             do: Brando.Translations.shared_galleries(schema, entry.id),
+             else: []
+           ),
          {:ok, _member} <- Brando.Translations.make_independent(schema, entry.id, user) do
       BrandoAdmin.LiveView.Listing.update_list_entries(schema)
       send(self(), {:toast, gettext("This translation is now independent.")})

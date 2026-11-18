@@ -448,10 +448,15 @@ defmodule Brando.Translations do
   # An independent translation's save may write a gallery another version
   # uses (a form opened before Make independent, a restored revision): it
   # gets its own copy again.
+  # One waiting split per translation: saves in a row queue one. Without
+  # tenancy the nil prefix gives the key a value to compare.
   defp member_saved(%Member{role: :target, synchronized: false, id: member_id}, _opts) do
-    %{split_galleries: member_id}
+    %{"split_galleries" => member_id}
     |> Brando.Tenant.Job.attach()
-    |> Brando.Worker.TranslationSync.new()
+    |> Map.put_new("tenant_prefix", nil)
+    |> Brando.Worker.TranslationSync.new(
+      unique: [period: :infinity, keys: [:split_galleries, :tenant_prefix], states: [:available, :scheduled]]
+    )
     |> Oban.insert()
   end
 

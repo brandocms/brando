@@ -337,7 +337,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # var takes a gallery of its own (`own_gallery/2`) if the one it shows is
   # used elsewhere, so the edits that follow and the save use it. Made the
   # source instead, the row stores a gallery the others still use, and
-  # nothing changes.
+  # nothing changes, but for a var it has not saved yet, which gets a copy
+  # the other versions follow from its next save.
   defp take_own_gallery(
          %{assigns: %{type: :gallery, source_locked: false, gallery: %Brando.Galleries.Gallery{id: shown}}} = socket,
          true
@@ -363,7 +364,8 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
 
     if stored && stored != shown && shown_elsewhere?(socket, shown) do
       case own_gallery(socket, stored) do
-        {:ok, own} -> {adopt_gallery(socket, own, false), move_objects(objects, gallery, own)}
+        # The form takes it too, should the write that follows be refused
+        {:ok, own} -> {adopt_gallery(socket, own, true), move_objects(objects, gallery, own)}
         _ -> {socket, objects}
       end
     else
