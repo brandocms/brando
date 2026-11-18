@@ -911,8 +911,18 @@ defmodule Brando.Villain.Filters do
 
       iex> Brando.Villain.Filters.where(nil, "b", 1, %{})
       []
+
+  An atom field matches its text, as a template reads it
+  (`Brando.Villain.TemplateView.atom_text/1`).
+
+      iex> Brando.Villain.Filters.where([%{status: :draft}, %{status: :published}], "status", "draft", %{})
+      [%{status: :draft}]
   """
   def where(nil, _key, _value, _), do: []
+
+  def where(list, key, value, _) when is_list(list) and is_binary(value),
+    do: Enum.filter(list, &(&1 |> Liquex.Indifferent.get(key) |> TemplateView.atom_text() == value))
+
   def where(list, key, value, _), do: Liquex.Collection.where(list, key, value)
 
   @doc """
@@ -1405,7 +1415,8 @@ defmodule Brando.Villain.Filters do
   in the trash, gives `nil`, so `{% if e %}` leaves it out. Publishing,
   unpublishing or deleting the entry renders the pages that link to it again.
   An editor's render (live preview, frontend edit mode) gives the entry
-  whatever its status; the template can read `e.status`.
+  whatever its status; the template can read `e.status` and compare it with
+  text (`{% if e.status == "draft" %}`).
 
   An entry whose own blocks link to it is the entry being rendered: the form
   renders the blocks before it saves, so the stored row still has the values

@@ -1,0 +1,2 @@
+- A Liquid template can compare an entry's `status` and `language`, and any other atom field such as an `Ecto.Enum` attribute, with text: `{% if e.status == "draft" %}`, `contains "webp"` and `where: "status", "draft"` now match. Printing them is unchanged.
+  A filter of your own that matches an atom it is given as a field (`def label(:draft, _)` for `{{ entry.status | label }}`) gets the text now: match `"draft"`.

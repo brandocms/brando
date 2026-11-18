@@ -227,8 +227,8 @@ card inside `{% if e %}`. Publishing the entry, by hand or at its `publish_at`,
 renders the pages that link to it again, its own included, and the card
 appears; unpublishing or deleting it takes the card away the same way. Live
 preview and frontend edit mode give the entry whatever its status, so editors
-see the card before launch; `<article class="card status-{{ e.status }}">`
-lets your CSS mark one that is not out yet. A card in an entry's own blocks
+see the card before launch; `{% if e.status == "draft" %}` marks one that is not
+out yet. A card in an entry's own blocks
 that loads the entry itself shows it as the form saves it, or in live preview
 as the form has it.
 
@@ -333,6 +333,15 @@ A value printed right after a `{` the template printed, as in
 prints as a character reference, also with a tag between them that prints
 nothing. With text between them, as in `{{ "{" }}"a": {{ json | raw }}}`, the
 value prints as it is.
+
+A field the application keeps as an atom, such as an entry's `status` and
+`language` or an `Ecto.Enum` attribute, reads as its text, also in a list:
+compare it with a string (`{% if entry.status == "published" %}`,
+`{% if image.formats contains "webp" %}`, `entries | where: "status", "draft"`),
+and it prints as the atom's name. `nil`, `true` and `false` stay as they are.
+A filter of your own given such a field (`{{ entry.status | my_filter }}`) gets
+its text, and so does a tag given a variable assigned from it; given the record,
+or the field itself (`{% my_tag entry.status %}`), they get the atom.
 
 Liquid in a value printed with `raw` stays text. `raw` reads the text as what it stands for, so a rich-text field does not need
 it. A comparison sees escaped text: `{% if entry.title == "R&D" %}` compares with
