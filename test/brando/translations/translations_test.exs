@@ -447,13 +447,13 @@ defmodule Brando.TranslationsTest do
       end
 
       new_file = file.()
-      reordered_gallery = fn %{gallery: gallery} = owner -> %{owner | gallery: %{gallery | gallery_objects: []}} end
+      emptied_gallery = fn %{gallery: gallery} = owner -> %{owner | gallery: %{gallery | gallery_objects: []}} end
 
       for {label, changed} <- [
             {"picture ref", edit_ref.("photo", &%{&1 | image_id: other_image.id})},
             {"picture ref removed", edit_ref.("photo", &%{&1 | image_id: nil})},
             {"file ref", edit_ref.("attachment", &%{&1 | file_id: new_file.id})},
-            {"gallery ref", edit_ref.("slides", reordered_gallery)},
+            {"gallery ref", edit_ref.("slides", emptied_gallery)},
             {"image variable", edit_var.("hero", &%{&1 | image_id: other_image.id})},
             {"file variable", edit_var.("brochure", &%{&1 | file_id: new_file.id})},
             {"gallery variable", edit_var.("album", &%{&1 | gallery_id: nil})}
