@@ -87,7 +87,10 @@ both reads `etc/traefik/traefik.yml` and installs the Traefik binary, which
 
 <!-- usage-rules:start topic="deployment" -->
 
-Florist builds a standard Mix release in Docker, copies
+Florist builds a standard Mix release in Docker, from the project's files
+only, so Brando and its npm packages cannot come from a path outside the
+project: `mix brando.doctor --strict` fails on one (see
+[Dependency sources](doctor.md#what-is-checked)). It copies
 `/opt/app/_build/prod/<app>-<version>.tar.gz` out of the image and migrates
 with `bin/<app> eval "MyApp.ReleaseTasks.migrate"`. `mix brando.install`
 creates `MyApp.ReleaseTasks` (`migrate/0`, `rollback/2`, `migrate_tenants/0`,

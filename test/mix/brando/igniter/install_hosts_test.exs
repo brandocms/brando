@@ -140,6 +140,25 @@ defmodule Mix.Brando.Igniter.InstallHostsTest do
     assert host(igniter, ".envrc.staging") == "staging.studio.com"
     assert Enum.any?(igniter.notices, &(&1 =~ "placeholder studio.com"))
     assert Enum.any?(igniter.notices, &(&1 =~ "check_origin was not written"))
+    assert Enum.any?(igniter.notices, &(&1 =~ "mix brando.doctor warns"))
+  end
+
+  @tag :tmp_dir
+  test "mix brando.doctor warns about the environment files written without --domain, and not with it", %{
+    tmp_dir: root
+  } do
+    write_envrc = fn igniter ->
+      for path <- [".envrc.prod", ".envrc.staging"],
+          do: File.write!(Path.join(root, path), IgniterCase.source(igniter, path))
+    end
+
+    write_envrc.(install(project(), ["--yes"]))
+
+    assert %Brando.Doctor.Result{status: :warning, items: [".envrc.prod: " <> _, ".envrc.staging: " <> _]} =
+             Brando.Doctor.Checks.DeployHosts.evaluate(root, :studio)
+
+    write_envrc.(install(project(), ["--yes", "--domain", "studio.no"]))
+    assert %Brando.Doctor.Result{status: :ok} = Brando.Doctor.Checks.DeployHosts.evaluate(root, :studio)
   end
 
   describe "a multi-site installation" do

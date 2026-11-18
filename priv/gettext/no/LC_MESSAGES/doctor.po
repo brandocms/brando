@@ -374,6 +374,16 @@ msgstr "%{entry}: i static_paths/0, men ikke i endepunktets only:"
 msgid "%{entry}: in the endpoint's only: but not in static_paths/0, its files answer the build's 404 page"
 msgstr "%{entry}: i endepunktets only:, men ikke i static_paths/0, filene der svarer med byggets 404-side"
 
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "%{files} set their own PHX_HOST"
+msgstr "%{files} setter sin egen PHX_HOST"
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "%{files} still set PHX_HOST to the installer's placeholder"
+msgstr "%{files} setter fortsatt PHX_HOST til installasjonens plassholder"
+
 #: lib/brando/doctor/checks/migrations.ex
 #, elixir-autogen, elixir-format
 msgid "%{file} differs from %{template}"
@@ -605,6 +615,11 @@ msgid_plural "Blocks of module %{module} (%{uid}): var %{key} in %{count} blocks
 msgstr[0] "Blokker av modul %{module} (%{uid}): variabel %{key} i %{count} blokk"
 msgstr[1] "Blokker av modul %{module} (%{uid}): variabel %{key} i %{count} blokker"
 
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "Brando from %{source}, no local checkouts"
+msgstr "Brando fra %{source}, ingen lokale kopier"
+
 #: lib/brando_admin/components/system_check.ex
 #, elixir-autogen, elixir-format
 msgid "Checking…"
@@ -614,6 +629,16 @@ msgstr "Kontrollerer…"
 #, elixir-autogen, elixir-format
 msgid "Configuration"
 msgstr "Konfigurasjon"
+
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "Dependency sources"
+msgstr "Avhengighetskilder"
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "Deploy hosts"
+msgstr "Verter for utrulling"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -972,6 +997,11 @@ msgstr "Det som er feil satt opp eller utdatert. Kontrollene bare leser; løsnin
 msgid "Write alt text"
 msgstr "Skriv alt-tekst"
 
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "a deploy ships whatever the Yalc copy holds: switch to the npm release with mix brando.assets.setup --npm, or give the package its npm version in package.json and run pnpm install"
+msgstr "en utrulling sender med det Yalc-kopien inneholder: bytt til npm-utgivelsen med mix brando.assets.setup --npm, eller gi pakken sin npm-versjon i package.json og kjør pnpm install"
+
 #: lib/brando/doctor/checks/robots.ex
 #, elixir-autogen, elixir-format
 msgid "a static robots.txt may stand in front of the SEO text"
@@ -1026,6 +1056,11 @@ msgstr "etter blokkonverteringen er en oppførings variabler og referanser entry
 #, elixir-autogen, elixir-format
 msgid "bind each deploy target to one site with `{site_key}`, or list each site's own under its key: %{example}"
 msgstr "knytt hvert publiseringsmål til ett nettsted med `{site_key}`, eller list hvert nettsteds egne under nøkkelen dets: %{example}"
+
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "brando in mix.exs: path %{path}"
+msgstr "brando i mix.exs: sti %{path}"
 
 #: lib/brando/doctor/checks/admin_assets.ex
 #, elixir-autogen, elixir-format
@@ -1251,6 +1286,21 @@ msgstr "fil"
 msgid "fill in the identity's name and logo"
 msgstr "fyll inn navn og logo i identiteten"
 
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "from a Yalc copy, as a development Brando has no npm release: %{names}"
+msgstr "fra en Yalc-kopi, siden en utviklingsversjon av Brando ikke har noen npm-utgivelse: %{names}"
+
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "from a Yalc copy: %{names}"
+msgstr "fra en Yalc-kopi: %{names}"
+
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "from a local checkout: %{names}"
+msgstr "fra en lokal kopi: %{names}"
+
 #: lib/brando/doctor/checks/site_frontends.ex
 #, elixir-autogen, elixir-format
 msgid "generate one with mix brando.gen.site --site KEY, or register the module that renders the site in config :brando, site_frontends"
@@ -1281,6 +1331,11 @@ msgstr "git %{commit}, gren %{branch}"
 msgid "git %{commit}, tag %{tag}"
 msgstr "git %{commit}, tagg %{tag}"
 
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "give :brando a git ref or a Hex version in mix.exs before deploying: the release build sees only the project, and a path dependency recompiles every dependency when its checkout moves"
+msgstr "gi :brando en git-ref eller en Hex-versjon i mix.exs før utrulling: release-bygget ser bare prosjektet, og en sti-avhengighet kompilerer alle avhengigheter på nytt når kopien flytter seg"
+
 #: lib/brando/doctor/checks/oban.ex
 #, elixir-autogen, elixir-format
 msgid "give config :brando, Oban its queues (see Brando.Supervisor)"
@@ -1290,6 +1345,11 @@ msgstr "gi config :brando, Oban køene sine (se Brando.Supervisor)"
 #, elixir-autogen, elixir-format
 msgid "give each site in the deploy target map destinations apart from the other sites'"
 msgstr "gi hvert nettsted i kartet over publiseringsmål mål som er adskilt fra de andre nettstedenes"
+
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "give the @brandocms packages an npm version in package.json, or a Yalc copy for a development Brando (mix brando.assets.setup --npm or --local for BrandoJS), then pnpm install: the release build cannot see a path outside the project"
+msgstr "gi @brandocms-pakkene en npm-versjon i package.json, eller en Yalc-kopi for en utviklingsversjon av Brando (mix brando.assets.setup --npm eller --local for BrandoJS), og kjør pnpm install: release-bygget ser ingen sti utenfor prosjektet"
 
 #: lib/brando/doctor/checks/json_ld.ex
 #, elixir-autogen, elixir-format
@@ -1406,6 +1466,11 @@ msgstr "navnerom %{value} er ikke et CSS-navn"
 msgid "no %{queues} queue"
 msgstr "ingen %{queues}-kø"
 
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "no .envrc.prod or .envrc.staging"
+msgstr "ingen .envrc.prod eller .envrc.staging"
+
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
 msgid "no API key for the Assistant"
@@ -1446,6 +1511,11 @@ msgstr "ingen identitet"
 #, elixir-autogen, elixir-format
 msgid "no image files under %{path} (is the media synced?)"
 msgstr "ingen bildefiler under %{path} (er mediene synkronisert?)"
+
+#: lib/brando/doctor/checks/dependency_sources.ex
+#, elixir-autogen, elixir-format
+msgid "no local checkouts"
+msgstr "ingen lokale kopier"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format
@@ -1692,6 +1762,11 @@ msgstr "se veiledningene for e-post, CDN-levering og innholdsassistenten"
 #, elixir-autogen, elixir-format
 msgid "served from SEO settings"
 msgstr "serveres fra SEO-innstillingene"
+
+#: lib/brando/doctor/checks/deploy_hosts.ex
+#, elixir-autogen, elixir-format
+msgid "set PHX_HOST in them to the host each release serves before deploying; the installer writes it from --domain only when the files are new"
+msgstr "sett PHX_HOST i dem til verten hver release betjener før utrulling; installasjonen skriver den fra --domain bare når filene er nye"
 
 #: lib/brando/doctor/checks/configuration.ex
 #, elixir-autogen, elixir-format

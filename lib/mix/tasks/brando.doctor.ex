@@ -15,9 +15,11 @@ defmodule Mix.Tasks.Brando.Doctor do
   admin route helpers Blueprints link to, the admin's BrandoJS, image
   configs, module versions, module code reading its entries as Villain
   stored them, the sitemap and robots.txt, the identity behind JSON-LD, alt
-  text, calls to deprecated Brando functions in `lib/`, and whether
-  `mix test` would use the development database, plus any checks the
-  application registers (see `Brando.Doctor`).
+  text, calls to deprecated Brando functions in `lib/`, Brando or its npm
+  packages taken from a local checkout, the installer's placeholder
+  `PHX_HOST` in `.envrc.prod` and `.envrc.staging`, and whether `mix test`
+  would use the development database, plus any checks the application
+  registers (see `Brando.Doctor`).
 
   Nothing is changed. The application starts without its web server, with
   Oban's queues stopped and with the Logger at `:error`, so no job runs while
