@@ -7,7 +7,9 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreview do
   @end_tags Map.new(@regions, &{"end" <> &1, &1})
   @tag_name ~r/\A{%-?\s*(\w+|#)/
   @end_raw ~r/{%-?\s*endraw\s*-?%}/
-  @liquid_open ~r/{(?=[{%])/
+  # A brace that opens a Liquid delimiter, or ends a body and could open one
+  # with the text after it.
+  @liquid_open ~r/{(?=[{%]|\z)/
 
   # The tags `Block.liquid_splits/3` turns into a part of the preview: ref slots
   # and pictures, and the datasource region it removes. Every other tag would

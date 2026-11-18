@@ -152,6 +152,18 @@ defmodule BrandoAdmin.Components.Form.Block.LiquidPreviewTest do
     assert code |> Block.liquid_splits([], nil) |> Enum.all?(&is_binary/1)
   end
 
+  test "a brace ending a raw body cannot join the text after it into Liquid" do
+    for code <- [
+          "{% raw %}a{{% endraw %}{ x }}",
+          "{% raw %}{{% endraw %}% ref refs.a %}",
+          "{% raw %}{{% endraw %}{% # c %}{ x }}"
+        ] do
+      assert {:ok, stripped} = LiquidPreview.strip_logic(code)
+      refute stripped =~ ~r/{[{%]/, code
+      assert code |> Block.liquid_splits([], nil) |> Enum.all?(&is_binary/1), code
+    end
+  end
+
   test "raw leaves braces that open no Liquid alone, as style and script bodies need them" do
     code = ~S|{% raw %}<style>.a { color: red }</style><script>if (a) { b({ c: 1 }) }</script>{% endraw %}|
 
