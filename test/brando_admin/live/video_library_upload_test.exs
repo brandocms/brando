@@ -184,6 +184,23 @@ defmodule BrandoAdmin.VideoLibraryUploadTest do
       assert has_element?(view, "#list-row-#{video_id}")
     end
 
+    test "at the root the video goes into the root and lists there", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/admin/assets/videos")
+      opening = attribute(view, @provider_upload, "data-ref")
+      assert String.to_integer(opening) in FolderBrowser.root_folder_ids("videos/default")
+
+      {video_id, token} = start_provider_upload(view, "lib-root", opening)
+      assert to_string(Repo.get!(Video, video_id).folder_id) == opening
+
+      view
+      |> element(@provider_upload)
+      |> render_hook("video_upload_complete", %{"request_ref" => "lib-root", "upload_token" => token})
+
+      _ = render(view)
+      assert has_element?(view, "#list-row-#{video_id}")
+      assert has_element?(view, ".image-picker-main-actions span", "1 video")
+    end
+
     test "a folder outside the library is not taken from the browser", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/admin/assets/videos")
 
@@ -279,6 +296,14 @@ defmodule BrandoAdmin.VideoLibraryUploadTest do
       {:ok, view, _html} = live(conn, "/admin/assets/videos")
       refute has_element?(view, @upload)
       assert has_element?(view, @sort)
+    end
+
+    @tag keys: ~w(brando.videos.create)
+    test "a provider upload with the right to create makes the video", %{conn: conn} do
+      bunny()
+      {:ok, view, _html} = live(conn, "/admin/assets/videos")
+      {video_id, _token} = start_provider_upload(view, "lib-1", attribute(view, @provider_upload, "data-ref"))
+      assert Repo.get!(Video, video_id).type == :bunny
     end
 
     @tag keys: []
