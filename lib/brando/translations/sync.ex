@@ -36,7 +36,9 @@ defmodule Brando.Translations.Sync do
 
   Subform collections whose rows have neither are left untouched, with a
   `skipped_relation` note. A gallery belongs to its ref, so a translation keeps
-  its own gallery; its media and their order follow the source.
+  its own gallery; its media and their order follow the source. A gallery ref
+  the source adds comes with an unsaved copy of the source's gallery, which the
+  translation's save inserts.
   """
 
   alias Brando.AI.Translation
@@ -45,6 +47,7 @@ defmodule Brando.Translations.Sync do
   alias Brando.Blueprint.Relations
   alias Brando.Content.Var
   alias Brando.Content.Var.FollowLinkDefault
+  alias Brando.Galleries.Gallery
   alias Brando.Query.Mutations
   alias Brando.Villain.Blocks.GalleryBlock
   alias Brando.Villain.Blocks.GalleryObjectOverride
@@ -592,6 +595,7 @@ defmodule Brando.Translations.Sync do
           %{source_block | children: []}
           |> Mutations.duplicate_block(true)
           |> Map.merge(%{sync_uid: identity, children: children})
+          |> Map.update!(:refs, fn refs -> Enum.map(loaded(refs), &own_gallery(&1, &1.gallery)) end)
 
         {block, child_notes}
 
@@ -620,7 +624,7 @@ defmodule Brando.Translations.Sync do
     Enum.map(source_refs, fn source_ref ->
       case target_by_name[{source_ref.name, ref_type(source_ref)}] do
         nil ->
-          clone_ref(source_ref)
+          source_ref |> clone_ref() |> own_gallery(source_ref.gallery)
 
         target_ref ->
           target_ref
@@ -629,6 +633,10 @@ defmodule Brando.Translations.Sync do
       end
     end)
   end
+
+  # A ref without a gallery takes a copy of the source's
+  defp merge_gallery(%{gallery: nil, gallery_id: nil} = ref, %{gallery: %Gallery{} = gallery}),
+    do: own_gallery(ref, gallery)
 
   # The translation keeps its own gallery — galleries belong to their ref — but
   # its contents follow the source: same media, same order. Objects already in
@@ -665,6 +673,25 @@ defmodule Brando.Translations.Sync do
   end
 
   defp merge_gallery(ref, _source_ref), do: ref
+
+  # A ref the translation does not have yet gets the source's gallery as an
+  # unsaved copy: the same media, order and per-object config. The
+  # translation's save inserts it as the ref's own gallery
+  # (`Brando.Content.Block.ref_changeset/3` casts it), so no version of the
+  # group ever shares a gallery ref, and nothing is written for a pending
+  # version that is never saved. From then on `merge_gallery/2` keeps its
+  # contents in step with the source.
+  defp own_gallery(ref, %Gallery{gallery_objects: objects} = gallery) when is_list(objects) do
+    objects =
+      objects
+      |> Enum.with_index()
+      |> Enum.map(fn {object, index} -> %{clone(object) | gallery_id: nil, sequence: index} end)
+
+    copy = %{clone(gallery) | inserted_at: nil, updated_at: nil, gallery_objects: objects}
+    %{ref | gallery_id: nil, gallery: copy}
+  end
+
+  defp own_gallery(ref, _gallery), do: ref
 
   # `%{source_index => target_index}`: the longest run of objects holding the
   # same media in the same order, then each remaining source object to an

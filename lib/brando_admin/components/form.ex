@@ -7005,8 +7005,9 @@ defmodule BrandoAdmin.Components.Form do
       send(self(), {:toast, gettext("This translation is now independent.")})
 
       # Its galleries are copies now (`make_independent/3`). Gallery variables
-      # take theirs in the open form (`RenderVar`); a gallery block still
-      # holds the source's until the form is opened again.
+      # take theirs in the open form (`RenderVar`). A gallery ref shares only
+      # when an earlier Brando saved one the source added (`Sync` gives it a
+      # copy now); its block holds the source's until the form is opened again.
       if Enum.any?(shared, &match?({Brando.Content.Ref, _, _, _}, &1)),
         do:
           send(self(), {:toast, gettext("Open the translation again before you change the media in its gallery blocks.")})
