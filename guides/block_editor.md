@@ -340,8 +340,8 @@ compare it with a string (`{% if entry.status == "published" %}`,
 `{% if image.formats contains "webp" %}`, `entries | where: "status", "draft"`),
 and it prints as the atom's name. `nil`, `true` and `false` stay as they are.
 A filter of your own given such a field (`{{ entry.status | my_filter }}`) gets
-its text, and one given the record gets the atom in it; a tag still gets the
-atom.
+its text, and so does a tag given a variable assigned from it; given the record,
+or the field itself (`{% my_tag entry.status %}`), they get the atom.
 
 Liquid in a value printed with `raw` stays text. `raw` reads the text as what it stands for, so a rich-text field does not need
 it. A comparison sees escaped text: `{% if entry.title == "R&D" %}` compares with

@@ -252,7 +252,7 @@ defmodule Brando.Villain.TemplateView do
       end
 
     for {key, field} <- value, not hidden?(value, key, mode) do
-      [wrap(key, key_mode), field |> atom_text() |> wrap(field_mode)]
+      [key |> atom_text() |> wrap(key_mode), field |> atom_text() |> wrap(field_mode)]
     end
   end
 

@@ -12,6 +12,14 @@ defmodule Brando.Villain.AtomFieldValuesTest do
   alias Brando.Villain
   alias Brando.Villain.TemplateView
 
+  defmodule AtomFilters do
+    @moduledoc false
+    use Brando.Villain.Filters
+
+    def kind(_value, _context), do: :lede
+    def kinds(_value, _context), do: [:lede, :lead]
+  end
+
   @compare ~S"""
   [status={{ X.status }}]{% if X.status == "draft" %}[is-draft]{% endif %}{% if X.status == "published" %}[is-published]{% endif %}{% if X.status != "draft" %}[not-draft]{% endif %}{% case X.status %}{% when "draft" %}[case-draft]{% when "published" %}[case-published]{% endcase %}[language={{ X.language }}]{% if X.language == "en" %}[is-en]{% endif %}
   """
@@ -200,20 +208,26 @@ defmodule Brando.Villain.AtomFieldValuesTest do
       assert template |> Liquex.render!(context) |> elem(0) |> IO.iodata_to_binary() == "A|draft,published"
     end
 
-    test "a loop over a map reads an atom value as text" do
-      context = Villain.create_context(%{"x" => TemplateView.wrap(%{"kind" => :lede})})
+    test "a loop over a map reads an atom key and value as text" do
+      context = Villain.create_context(%{"x" => TemplateView.wrap(%{kind: :lede})})
 
       {:ok, template} =
-        Liquex.parse(~S({% for pair in x %}{% if pair[1] == "lede" %}{{ pair[1] }}{% endif %}{% endfor %}))
+        Liquex.parse(
+          ~S({% for pair in x %}{% if pair[0] == "kind" and pair[1] == "lede" %}{{ pair[0] }}={{ pair[1] }}{% endif %}{% endfor %})
+        )
 
-      assert template |> Liquex.render!(context) |> elem(0) |> IO.iodata_to_binary() == "lede"
+      assert template |> Liquex.render!(context) |> elem(0) |> IO.iodata_to_binary() == "kind=lede"
     end
 
     test "a filter's atom result reads as text" do
-      context = Villain.create_context(%{"x" => TemplateView.wrap(%{list: [:a, :b]})})
-      {:ok, template} = Liquex.parse(~S({% assign f = x.list | first %}{% if f == "a" %}{{ f }}{% endif %}))
+      context = Liquex.Context.new(%{"x" => TemplateView.wrap(%{title: "A"})}, filter_module: AtomFilters)
 
-      assert template |> Liquex.render!(context) |> elem(0) |> IO.iodata_to_binary() == "a"
+      {:ok, template} =
+        Liquex.parse(
+          ~S({% assign k = x | kind %}{% if k == "lede" %}{{ k }}{% endif %}{% assign ks = x | kinds %}{% if ks contains "lead" %}|{{ ks | join: "," }}{% endif %})
+        )
+
+      assert template |> Liquex.render!(context) |> elem(0) |> IO.iodata_to_binary() == "lede|lede,lead"
     end
 
     test "gives a tag the atom itself" do
