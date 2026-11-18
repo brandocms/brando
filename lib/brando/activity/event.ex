@@ -27,7 +27,8 @@ defmodule Brando.Activity.Event do
     :note_added,
     :note_resolved,
     :note_reopened,
-    :tool_called
+    :tool_called,
+    :caches_cleared
   ]
 
   @sources [:admin, :scheduler, :assistant, :mcp, :import, :system]

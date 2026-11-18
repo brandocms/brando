@@ -63,6 +63,80 @@ defmodule Brando.Cache do
   end
 
   @doc """
+  Clears what rendered content reads from the caches, for content written
+  outside `Brando.Query`: a seed or a data migration, `Repo.update_all`, SQL.
+  `Brando.Query` evicts what it writes, and nothing else does, so pages and
+  fragments, which are read with no expiry, stay as they were until a
+  restart.
+
+  It empties the caller's site's query cache (pages, fragments, modules,
+  containers, palettes and the other lists and entries `Brando.Query`
+  caches) and rebuilds its identity, SEO, globals, palettes and menus from
+  the database. With `all_sites: true` it does so for every site and
+  environment in the registry, and empties the rest of the query cache too.
+
+  It clears this node's caches at once, and the other nodes' through
+  `Brando.CacheSync`. Inside a transaction begun with
+  `Brando.Repo.transaction/2`, the site caches are rebuilt and the other
+  nodes told once it has committed, and the query cache is emptied again
+  then.
+
+  It does not render anything again: entries keep the HTML stored when they
+  were last rendered. After changing blocks, or what they render (modules,
+  globals, fragments), render the entries with
+  `Brando.Content.Blocks.render_entry/2`.
+
+  A script run in its own VM (`mix run`) clears that VM's caches, and those
+  of the nodes its PubSub reaches. A server it cannot reach keeps its own:
+  clear them from Configuration → Utilities → Clear content caches, which
+  runs this on that server.
+
+  Returns `{:ok, summary}`: how many query cache entries this node held
+  (`:query_entries`), the site caches it rebuilt (`:site_caches`) and
+  whether it cleared one site or all (`:scope`).
+  """
+  @spec clear_content(keyword()) ::
+          {:ok, %{query_entries: non_neg_integer(), site_caches: [atom()], scope: :site | :all}}
+  @decorate span("brando.cache.clear_content")
+  def clear_content(opts \\ []) do
+    opts = Keyword.validate!(opts, all_sites: false)
+
+    if opts[:all_sites] do
+      entries = Enum.sum(for context <- contexts(), do: in_site(context, &clear_site_content/0))
+      {:ok, %{query_entries: entries + Brando.Cache.Query.clear_all(), site_caches: site_cache_names(), scope: :all}}
+    else
+      rebuilt? = not Tenant.outside_site?()
+      entries = clear_site_content()
+      {:ok, %{query_entries: entries, site_caches: if(rebuilt?, do: site_cache_names(), else: []), scope: :site}}
+    end
+  end
+
+  defp clear_site_content do
+    entries = Brando.Cache.Query.clear()
+    unless Tenant.outside_site?(), do: Enum.each(site_cache_names(), &rebuild_after_commit/1)
+    entries
+  end
+
+  defp site_cache_names, do: ~w(identity seo globals palettes navigation)a
+
+  # Every site's caches: each environment in the registry, and `public`'s (no
+  # prefix outside multi-site mode)
+  defp contexts do
+    case Tenant.mode() do
+      :none ->
+        [nil]
+
+      mode ->
+        prefixes = for site <- Tenant.Registry.list_sites(), env <- site.environments, do: Tenant.prefix(site, env)
+        [if(mode == :multi, do: :public) | prefixes]
+    end
+  end
+
+  # Unlike `in_context/2`, with no prefix it leaves the caller's
+  defp in_site(nil, fun), do: Tenant.with_prefix(nil, fun)
+  defp in_site(context, fun), do: in_context(context, fun)
+
+  @doc """
   Empties every cache and reloads the site-wide ones: the query cache (pages,
   fragments, modules, …) and the identity, SEO, globals, palettes and
   navigation caches, on this node. For changes made where no node hears

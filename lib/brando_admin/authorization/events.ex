@@ -425,7 +425,7 @@ defmodule BrandoAdmin.Authorization.Events do
       read:
         ~w(authorization_cancel_preview authorization_cancel_upload authorization_export authorization_preview authorization_report authorization_validate refresh),
       write:
-        ~w(authorization_apply authorization_backfill generate_sitemap rebuild_search_index recalculate_dominant_colors recreate_changed_image_sizes recreate_image_sizes sync_identifiers)
+        ~w(authorization_apply authorization_backfill clear_content_caches generate_sitemap rebuild_search_index recalculate_dominant_colors recreate_changed_image_sizes recreate_image_sizes sync_identifiers)
     ],
     "BrandoAdmin.Sites.WebhooksLive" => [
       read: ~w(replace_url validate),
