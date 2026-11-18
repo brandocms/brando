@@ -10,6 +10,7 @@ defmodule Mix.Tasks.Brando.Setup do
       mix brando.setup --email me@domain.tld --name "Me" --password secret
       mix brando.setup --base-url https://example.com --description "What the site is"
       mix brando.setup --no-assets --no-seeds
+      mix brando.setup --no-demo
 
   Composes the steps a freshly installed application needs before its first
   request, in order:
@@ -30,7 +31,12 @@ defmodule Mix.Tasks.Brando.Setup do
        content (`Brando.Tenant.Seeder`). A site that exists is left alone.
        With `:multi` nothing is seeded: sites are created at `/admin/sites`,
        and each gets the content then. With either, nothing is asked, and
-       `--base-url` and `--description` are unused
+       `--base-url` and `--description` are unused.
+       The modules and the page's blocks are a demo: with `--no-demo` the
+       `index` page and the footer fragment are created empty, and no
+       modules are, in every configured language (or the site's). `--no-demo`
+       is unused with `:multi`. `mix brando.seeds.remove_defaults` takes the
+       demo away later
 
   Each step is skipped when its result already exists, so rerunning after a
   failure resumes rather than duplicates. Nothing is removed or rewritten.
@@ -48,6 +54,7 @@ defmodule Mix.Tasks.Brando.Setup do
     db: :boolean,
     account: :boolean,
     seeds: :boolean,
+    demo: :boolean,
     email: :string,
     name: :string,
     password: :string,
@@ -146,7 +153,7 @@ defmodule Mix.Tasks.Brando.Setup do
       # brando.gen.seeds says so, and that the SEO flags are unused
       Brando.Tenant.enabled?() ->
         step("Seeding default content")
-        Mix.Task.run("brando.gen.seeds", seo_args(opts[:base_url], opts[:description]))
+        Mix.Task.run("brando.gen.seeds", seo_args(opts[:base_url], opts[:description]) ++ demo_args(opts))
 
       true ->
         seed_content(opts)
@@ -156,12 +163,13 @@ defmodule Mix.Tasks.Brando.Setup do
   defp site(opts) do
     step("Provisioning the site")
     key = Brando.config(:site_key)
+    if opts[:demo] == false, do: custom_seeder_notice(Brando.Tenant.Seeder.configured())
 
     creator =
       Brando.Setup.Account.superuser() ||
         Mix.raise("No active superuser found. The site needs an account to create it: run mix brando.gen.admin.")
 
-    case Brando.Setup.Site.provision(creator) do
+    case Brando.Setup.Site.provision(creator, demo: Keyword.get(opts, :demo, true)) do
       {:created, site} ->
         Mix.shell().info([
           :green,
@@ -171,12 +179,33 @@ defmodule Mix.Tasks.Brando.Setup do
       {:exists, site} ->
         Mix.shell().info([:yellow, ~s|    = The site "#{site.key}" exists, and is left as it is\n|])
 
+        if opts[:demo] == false do
+          Mix.shell().info([
+            :yellow,
+            "--no-demo is unused: the site exists, with its content. " <>
+              "mix brando.seeds.remove_defaults takes the demo out of it."
+          ])
+        end
+
       {:error, reason} ->
         Mix.raise(~s|The site "#{key}" was not created. | <> failure(key, reason))
     end
 
     for {key, flag} <- [base_url: "--base-url", description: "--description"], opts[key] do
       Mix.shell().info([:yellow, "#{flag} is unused with tenancy: set it in the site's SEO settings."])
+    end
+  end
+
+  # An application's seeder decides its content: `--no-demo` reaches only one
+  # with `seed/4`
+  defp custom_seeder_notice(seeder) do
+    Code.ensure_loaded(seeder)
+
+    unless function_exported?(seeder, :seed, 4) do
+      Mix.shell().info([
+        :yellow,
+        "--no-demo does not reach #{inspect(seeder)}, which has no seed/4: it seeds the site as it does without it."
+      ])
     end
   end
 
@@ -227,8 +256,10 @@ defmodule Mix.Tasks.Brando.Setup do
 
     description = Keyword.get_lazy(opts, :description, fn -> prompt("Short description of the site:", "") end)
 
-    Mix.Task.run("brando.gen.seeds", seo_args(base_url, description))
+    Mix.Task.run("brando.gen.seeds", seo_args(base_url, description) ++ demo_args(opts))
   end
+
+  defp demo_args(opts), do: if(Keyword.get(opts, :demo, true), do: [], else: ["--no-demo"])
 
   defp seo_args(base_url, description) do
     [{"--base-url", base_url}, {"--description", description}]

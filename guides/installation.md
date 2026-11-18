@@ -144,7 +144,11 @@ skip it.
 asset builds, `ecto.create`/`ecto.migrate`, a superuser account, and default
 content seeds. Each step is skipped when its result already exists, so a rerun
 after a failure resumes instead of duplicating. Skip steps with `--no-assets`,
-`--no-db`, `--no-account` and `--no-seeds`. Setup prompts for anything it needs;
+`--no-db`, `--no-account` and `--no-seeds`. The seeded homepage and footer
+are a demo built from seven modules; `--no-demo` seeds the same content
+without it: identity, SEO, the `main` menu, an empty `index` page and an empty
+footer fragment, with no modules (see [Seeded content](#seeded-content)).
+Setup prompts for anything it needs;
 for an unattended run, supply `--email`, `--name` and `--password` for the
 account and `--base-url` and `--description` for the seeded site identity. The
 account logs in with the password given here; it is not asked to change it on
@@ -157,8 +161,9 @@ setup seeds without tenancy. A site with that key that exists is left alone,
 and a site that cannot be created stops setup with the reason. With `multi`,
 setup seeds nothing: sites are created at `/admin/sites`, and each gets that
 content then. Setup says which in its output, and that `--base-url` and
-`--description` are unused when they are given; `--no-seeds` skips the site
-too.
+`--description` (and, with `multi`, `--no-demo`) are unused when they are
+given; `--no-seeds` skips the site too. With `single`, `--no-demo` gives the
+site its content without the demo.
 `--source PATH` hands a Brando JavaScript source to asset setup. Setup ends
 with `Setup complete.`; [Running the steps separately](#running-the-steps-separately)
 describes each step as its own task.
@@ -186,7 +191,8 @@ authorization is set up separately, in [Authorization](authorization.md).
 
 Open `http://localhost:4000/`. Setup seeded a published page with URI `index`,
 marked as the homepage and rendered with the `index.html` template, built from
-the [seeded modules](#seeded-content). Edit it in `/admin/pages`, or replace it
+the [seeded modules](#seeded-content) (with `--no-demo`, the page has no
+blocks yet). Edit it in `/admin/pages`, or replace it
 with your own. With `single` tenancy the page is in the site setup created,
 in Production and Staging, and `http://localhost:4000/` shows Production's: in
 `single`, a host that no environment has as its domain answers from the live
@@ -635,7 +641,9 @@ operations are separate from the Igniter source plan.
 `brando.gen.seeds` creates the content a new site needs before its first request
 succeeds: identity and SEO per configured language when missing, seven modules,
 a published `index` page built from six of them, a `main` navigation menu and a
-`partials/footer` fragment. It owns an account with `--user ID`, defaulting to
+`partials/footer` fragment. With `--no-demo` it creates no modules, and the
+`index` page and the footer fragment have no blocks; the identity, SEO and
+menu are the same. It owns an account with `--user ID`, defaulting to
 the oldest active superuser. `--base-url URL` and `--description TEXT` fill in
 a newly created SEO record's base URL and fallback meta description; without a
 base URL, canonical links, sharing previews and the sitemap cannot build full
@@ -656,8 +664,58 @@ The seeded modules (Hero, Steps, Cards, Tips, Toolbox, Closing and Footer)
 double as worked examples of the ref conventions: mono micro-labels and links
 live in the module markup, while every piece of copy is a ref an editor can
 change. The Toolbox module keeps its task table in markup on purpose, since it
-documents the framework rather than the site. Delete the page and the modules
-once your own design takes over; nothing else depends on them.
+documents the framework rather than the site.
+
+### Removing the demo
+
+Once the site has its own content, take the demo away with:
+
+```sh
+mix brando.seeds.remove_defaults
+mix brando.seeds.remove_defaults --yes
+```
+
+Without `--yes` it is a dry run, which changes nothing. It lists each of the
+seeded modules (their uids start with `brando-default-`) and every page,
+fragment or other entry whose blocks still use it, with its language and
+admin link, and the seeded homepage and footer of each language:
+
+```text
+==> The homepage and footer from the seeds
+
+    * Fragment "Footer" (en): as seeded, would be moved to the trash — /admin/pages/fragments/update/2
+    * Page "Index" (en): changed since it was seeded, kept — /admin/pages/update/1
+
+==> Modules from the seeds
+
+    Hero (brando-default-hero): still used, kept
+        - Page "Index" (en), 1 block — /admin/pages/update/1
+        - Page "About" (en), 1 block — /admin/pages/update/7
+      Take its blocks out of these, or delete them, then run this again.
+    Footer (brando-default-footer): used only by the homepage and footer as seeded, would be moved to the trash
+```
+
+With `--yes` it moves to the trash the homepage and footer of each language
+that are exactly as the seeds created them, and then each module nothing uses
+any more. Everything else stays: content anyone has edited, and every module
+still in use, which it lists with what to change first. Edits count however
+they were made: a word in a ref, the title, the status, a block added, hidden,
+moved or taken out. A homepage with other fragments or pages under it stays
+too, until those are moved, and so does a homepage or footer with a revision
+waiting to be published. An entry in the trash still uses its modules. It
+compares each homepage and footer with what the seeds create from the seeded
+modules, field by field, leaving out only what saving sets by itself (ids,
+timestamps, the rendered HTML) and the Brando version in the hero's eyebrow;
+content an earlier Brando seeded with other text counts as changed.
+
+Run it again after changing what it listed. The seeds never bring back what
+it removed: a rerun of setup leaves modules in the trash there, and a language
+seeded later gets a homepage without their blocks. With tenancy it works in
+every environment of every site, each on its own; narrow it with `--site KEY`
+and `--environment KEY`. A server that is already running keeps what it
+cached: use Configuration → Utilities → Clear content caches, or restart it. In a
+release, run it on the running node, which updates its own caches:
+`bin/my_app rpc "Brando.Setup.Seeds.remove_defaults(yes: true)"`.
 
 Two conventions the seeds rely on, worth knowing when you write your own:
 

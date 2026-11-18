@@ -416,7 +416,13 @@ record, and what `mix brando.setup` seeds for an installation without tenancy
 (see [Seeded content](installation.md#seeded-content)): seven modules, a
 published `index` page built from them, the `partials/footer` fragment and a
 `main` menu. Staging gets them through the copy, so `/` answers in both
-environments as soon as the site exists. It writes as the system, with the
+environments as soon as the site exists. `mix brando.setup --no-demo` (with
+`single`) provisions the site with `demo: false`, which the seeder's
+`seed/4` takes: the same content without the modules, so the page and the
+footer have no blocks. An application's own seeder gets that option only
+when it defines `seed/4`. `mix brando.seeds.remove_defaults --site KEY`
+takes the demo out of a site's environments later (see
+[Removing the demo](installation.md#removing-the-demo)). It writes as the system, with the
 creating user as the creator of what has one, so it seeds a suspended site
 and needs no rights in the site's content from the user (`authorization_mode:
 :groups`). Seeding is one of provisioning's steps: when it fails,

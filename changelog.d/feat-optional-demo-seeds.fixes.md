@@ -1,0 +1,1 @@
+- Rerunning the seeds no longer creates a second homepage in a language whose seeded homepage is in the trash, and no longer builds new content from seeded modules in the trash.

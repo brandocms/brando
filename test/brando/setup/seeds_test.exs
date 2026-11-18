@@ -10,6 +10,7 @@ defmodule Brando.Setup.SeedsTest do
   alias Brando.Setup.Seeds
 
   import Brando.Test.Support, only: [put_test_env: 2]
+  import Ecto.Query, only: [from: 2]
 
   defp count(schema), do: Brando.Repo.aggregate(schema, :count)
 
@@ -294,6 +295,85 @@ defmodule Brando.Setup.SeedsTest do
       assert Enum.any?(report.skipped, &(&1 == :"page (en)"))
       assert Brando.Repo.get_by(Navigation.Menu, key: "main", language: :en)
       assert count(Pages.Page) == 1
+    end
+  end
+
+  describe "run/2 with demo: false" do
+    test "seeds identity, SEO, the menu, an empty homepage and footer, and no modules" do
+      user = Factory.insert(:random_user)
+      modules = count(Content.Module)
+
+      {:ok, report} = Seeds.run(user, languages: [:en, :no], demo: false)
+
+      assert Enum.sort(report.created ++ report.skipped) ==
+               Enum.sort(for l <- [:en, :no], kind <- ~w(identity seo menu page footer), do: :"#{kind} (#{l})")
+
+      assert count(Content.Module) == modules
+      assert Repo.aggregate(from(m in Content.Module, where: like(m.uid, "brando-default-%")), :count) == 0
+
+      for language <- [:en, :no] do
+        page = Pages.Page |> Repo.get_by!(uri: "index", language: language) |> Repo.preload(:entry_blocks)
+        assert {page.is_homepage, page.status, page.entry_blocks} == {true, :published, []}
+
+        footer =
+          Pages.Fragment
+          |> Repo.get_by!(parent_key: "partials", key: "footer", language: language)
+          |> Repo.preload(:entry_blocks)
+
+        assert footer.entry_blocks == []
+        assert footer.page_id == page.id
+        assert Repo.get_by(Navigation.Menu, key: "main", language: language)
+        assert {:ok, _identity} = Brando.Sites.get_identity(%{matches: %{language: language}})
+        assert {:ok, _seo} = Brando.Sites.get_seo(%{matches: %{language: language}})
+      end
+    end
+
+    test "is safe to run again" do
+      user = Factory.insert(:random_user)
+      {:ok, _first} = Seeds.run(user, languages: [:en], demo: false)
+      counts = Enum.map([Pages.Page, Content.Module, Navigation.Menu, Pages.Fragment], &count/1)
+
+      {:ok, second} = Seeds.run(user, languages: [:en], demo: false)
+
+      assert second.created == []
+      assert Enum.map([Pages.Page, Content.Module, Navigation.Menu, Pages.Fragment], &count/1) == counts
+    end
+
+    test "leaves the demo a site already has alone" do
+      user = Factory.insert(:random_user)
+      {:ok, _first} = Seeds.run(user, languages: [:en])
+      counts = Enum.map([Pages.Page, Content.Module, Content.Block, Pages.Fragment], &count/1)
+
+      {:ok, second} = Seeds.run(user, languages: [:en], demo: false)
+
+      assert second.created == []
+      assert Enum.map([Pages.Page, Content.Module, Content.Block, Pages.Fragment], &count/1) == counts
+    end
+
+    for {task, args} <- [
+          {"brando.setup", ~w(--no-assets --no-db --no-account --no-demo --base-url https://acme.test --description A)},
+          {"brando.gen.seeds", ~w(--no-demo)}
+        ] do
+      test "mix #{task} --no-demo seeds no modules" do
+        Factory.insert(:random_user, role: :superuser)
+        shell = Mix.shell()
+        Mix.shell(Mix.Shell.Process)
+
+        on_exit(fn ->
+          Mix.shell(shell)
+          Mix.Task.reenable("brando.gen.seeds")
+          Mix.Task.reenable("brando.setup")
+        end)
+
+        Mix.Task.reenable("brando.gen.seeds")
+        Mix.Task.reenable(unquote(task))
+        Mix.Task.run(unquote(task), unquote(args))
+
+        assert Repo.aggregate(from(m in Content.Module, where: like(m.uid, "brando-default-%")), :count) == 0
+        assert Repo.get_by(Pages.Page, uri: "index", language: :en)
+        assert Repo.get_by(Pages.Fragment, parent_key: "partials", key: "footer", language: :en)
+        assert shell_output() =~ "Done."
+      end
     end
   end
 end

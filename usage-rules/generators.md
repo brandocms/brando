@@ -28,7 +28,11 @@ skip it.
 asset builds, `ecto.create`/`ecto.migrate`, a superuser account, and default
 content seeds. Each step is skipped when its result already exists, so a rerun
 after a failure resumes instead of duplicating. Skip steps with `--no-assets`,
-`--no-db`, `--no-account` and `--no-seeds`. Setup prompts for anything it needs;
+`--no-db`, `--no-account` and `--no-seeds`. The seeded homepage and footer
+are a demo built from seven modules; `--no-demo` seeds the same content
+without it: identity, SEO, the `main` menu, an empty `index` page and an empty
+footer fragment, with no modules (see [Seeded content](../guides/installation.md#seeded-content)).
+Setup prompts for anything it needs;
 for an unattended run, supply `--email`, `--name` and `--password` for the
 account and `--base-url` and `--description` for the seeded site identity. The
 account logs in with the password given here; it is not asked to change it on
@@ -41,8 +45,9 @@ setup seeds without tenancy. A site with that key that exists is left alone,
 and a site that cannot be created stops setup with the reason. With `multi`,
 setup seeds nothing: sites are created at `/admin/sites`, and each gets that
 content then. Setup says which in its output, and that `--base-url` and
-`--description` are unused when they are given; `--no-seeds` skips the site
-too.
+`--description` (and, with `multi`, `--no-demo`) are unused when they are
+given; `--no-seeds` skips the site too. With `single`, `--no-demo` gives the
+site its content without the demo.
 `--source PATH` hands a Brando JavaScript source to asset setup. Setup ends
 with `Setup complete.`; [Running the steps separately](../guides/installation.md#running-the-steps-separately)
 describes each step as its own task.

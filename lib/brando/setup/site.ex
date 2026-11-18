@@ -21,6 +21,9 @@ defmodule Brando.Setup.Site do
   @doc """
   Provisions the configured site, with `creator` as its creator.
 
+  With `demo: false` its content comes without the demo modules: see
+  `Brando.Tenant.Seeder.seed/4`.
+
   Returns `{:created, site}`, `{:exists, site}` when a site with the key is
   already registered (it is left as it is), `{:error, reason}`, or
   `:not_single` outside `tenancy_mode: :single`, where it does nothing.
@@ -31,25 +34,25 @@ defmodule Brando.Setup.Site do
   site; and `{:incomplete_site, key}`, when the registered site has no live
   environment.
   """
-  @spec provision(User.t()) ::
+  @spec provision(User.t(), keyword()) ::
           {:created, Brando.Sites.Site.t()}
           | {:exists, Brando.Sites.Site.t()}
           | {:error, term()}
           | :not_single
-  def provision(%User{} = creator) do
-    if Brando.Tenant.mode() == :single, do: provision_single(creator), else: :not_single
+  def provision(%User{} = creator, opts \\ []) do
+    if Brando.Tenant.mode() == :single, do: provision_single(creator, opts), else: :not_single
   end
 
-  defp provision_single(creator) do
+  defp provision_single(creator, opts) do
     case Brando.config(:site_key) do
-      key when is_binary(key) and key != "" -> provision_key(key, creator)
+      key when is_binary(key) and key != "" -> provision_key(key, creator, opts)
       _missing -> {:error, :missing_site_key}
     end
   end
 
-  defp provision_key(key, creator) do
+  defp provision_key(key, creator, opts) do
     case Registry.get_site_by_key(key) do
-      nil -> create(key, creator)
+      nil -> create(key, creator, opts)
       site -> existing(site)
     end
   end
@@ -57,11 +60,12 @@ defmodule Brando.Setup.Site do
   # An installation switched to `:single` serves from `public` until
   # `mix brando.migrate_to_tenant` moves its content into the site. A seeded
   # site would take the hosts over and leave that content unreachable.
-  defp create(key, creator) do
+  defp create(key, creator, opts) do
     if public_pages?() do
       {:error, :public_holds_content}
     else
-      with {:ok, site} <- Brando.Tenant.Setup.create_site(attrs(key), creator), do: {:created, site}
+      demo = Keyword.get(opts, :demo, true)
+      with {:ok, site} <- Brando.Tenant.Setup.create_site(attrs(key), creator, demo: demo), do: {:created, site}
     end
   end
 

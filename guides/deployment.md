@@ -841,6 +841,7 @@ server. These have a release form:
 | `mix brando.identifiers.sync` | Configuration → Utilities → Sync identifiers, in each environment with tenancy |
 | `mix brando.translations.split_galleries` | `bin/my_app rpc "Brando.Translations.SharedGalleries.repair()"` |
 | `mix brando.doctor` | Configuration → Utilities, the System check card |
+| `mix brando.seeds.remove_defaults` (`--yes`) | `bin/my_app rpc "Brando.Setup.Seeds.remove_defaults()"` (`remove_defaults(yes: true)`; [Removing the demo](installation.md#removing-the-demo)) |
 
 `Brando.Content.Resave.run/1` re-renders and stores every entry's blocks, as
 the Mix task does, with the task's options as keywords:

@@ -326,7 +326,8 @@ Run `mix help TASK` for current options. These are separate operations:
 | `brando.gen.blueprint_migration` | Reviewed migration/snapshot pair with stale-plan checks, for one Blueprint or every application Blueprint with `--all`; database application is separate |
 | `brando.setup` | Operational post-install setup: assets, database, account, seeds |
 | `brando.gen.languages` / `brando.gen.admin` | Operational language/account initialization |
-| `brando.gen.seeds` | Operational default content: identity, seven modules, index page, menu, footer fragment |
+| `brando.gen.seeds` | Operational default content: identity, seven modules, index page, menu, footer fragment; `--no-demo` without the modules |
+| `brando.seeds.remove_defaults` | Lists what still uses the seeded demo modules; `--yes` moves the unused ones, and the homepage and footer as seeded, to the trash |
 | `brando.setup.tenancy` | Igniter tenancy source preparation |
 | `brando.migrate_to_tenant` | Operational data conversion |
 | `brando.migrate` | Runs public or tenant migrations |
