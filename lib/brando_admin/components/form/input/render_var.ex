@@ -358,15 +358,18 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   # Before a gallery write: a var whose row now stores another gallery than
   # the one it shows, which other rows use, writes its own instead (a form
   # opened before Make independent, or a settings dialog that mounted
-  # since). `objects`, built from the shown gallery, are moved onto it.
+  # since): the gallery its row stores, when that holds what it shows.
+  # `objects`, built from the shown gallery, are moved onto it. Otherwise
+  # the write is refused: the gallery shown is another entry's (a form that
+  # names it, or one that changed since).
   defp own_gallery_first(%{assigns: %{gallery: %Brando.Galleries.Gallery{id: shown} = gallery}} = socket, objects) do
     stored = stored_gallery_id(socket)
 
     if stored && stored != shown && shown_elsewhere?(socket, shown) do
-      case own_gallery(socket, stored) do
+      case own_gallery(socket, stored, false) do
         # The form takes it too, should the write that follows be refused
         {:ok, own} -> {adopt_gallery(socket, own, true), move_objects(objects, gallery, own)}
-        _ -> {socket, objects}
+        _ -> :refuse
       end
     else
       {socket, objects}
@@ -391,18 +394,18 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
   @own_gallery_preload [gallery_objects: [:image, video: [:thumbnail, :file]]]
 
   defp take_gallery(socket, stored) do
-    case own_gallery(socket, stored) do
+    case own_gallery(socket, stored, true) do
       {:ok, own} -> adopt_gallery(socket, own, true)
       _ -> socket
     end
   end
 
   # The gallery the row stores, when nothing else uses it and it holds what
-  # the form shows (media, order and each item's settings), or else a copy of
-  # what the form shows (a source change it has not saved yet). The block's
-  # changeset ignores a value equal to the one it loaded, so that one is
-  # copied too.
-  defp own_gallery(socket, stored) do
+  # the form shows (media, order and each item's settings), or else, with
+  # `copy?`, a copy of what the form shows (a source change it has not saved
+  # yet). The block's changeset ignores a value equal to the one it loaded,
+  # so that one is copied too.
+  defp own_gallery(socket, stored, copy?) do
     shown = socket.assigns.gallery
     loaded = socket.assigns.var.source.data.gallery_id
 
@@ -415,9 +418,24 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
         _ -> nil
       end
 
-    result = if reusable, do: {:ok, reusable}, else: Brando.Galleries.duplicate_gallery(shown, gallery_actor(socket))
+    result =
+      cond do
+        reusable -> {:ok, reusable}
+        copy? -> Brando.Galleries.duplicate_gallery(shown, copy_creator(socket))
+        true -> :error
+      end
 
     with {:ok, own} <- result, do: {:ok, Repo.preload(own, @own_gallery_preload, force: true)}
+  end
+
+  # The copy's items keep their creators; the gallery takes the view's user
+  # (a user id: `gallery_actor/1` may be a scope)
+  defp copy_creator(socket) do
+    case {socket.assigns[:current_user_id], BrandoAdmin.Authorization.current_actor()} do
+      {id, _} when is_integer(id) or is_binary(id) -> normalize_id(id)
+      {_, %{user_id: id}} when is_integer(id) -> id
+      _ -> :system
+    end
   end
 
   defp adopt_gallery(socket, own, notify?) do
@@ -2138,7 +2156,17 @@ defmodule BrandoAdmin.Components.Form.Input.RenderVar do
     do: refuse_gallery_change(socket, "gallery write")
 
   defp persist_gallery(socket, objects, opts) do
-    {socket, objects} = own_gallery_first(socket, objects)
+    case own_gallery_first(socket, objects) do
+      {socket, objects} ->
+        write_gallery(socket, objects, opts)
+
+      :refuse ->
+        send(self(), {:toast, gettext("You do not have permission for this action.")})
+        socket
+    end
+  end
+
+  defp write_gallery(socket, objects, opts) do
     gallery = socket.assigns.gallery
     current_user_id = normalize_id(socket.assigns.current_user_id)
 
