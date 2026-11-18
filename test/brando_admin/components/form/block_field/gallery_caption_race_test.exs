@@ -8,8 +8,8 @@ defmodule BrandoAdmin.Components.Form.BlockField.GalleryCaptionRaceTest do
   use Brando.ConnCase, async: true
 
   alias Brando.Content.Ref
-  alias Brando.Factory
   alias Brando.Drafts.Params
+  alias Brando.Factory
   alias Brando.Galleries.Gallery
   alias Brando.Villain.Blocks.GalleryObjectOverride
   alias BrandoAdmin.Components.Form.BlockField.Ops
@@ -90,13 +90,11 @@ defmodule BrandoAdmin.Components.Form.BlockField.GalleryCaptionRaceTest do
 
   defp reorder(ref), do: put_in(ref, ["gallery", "sort_gallery_object_ids"], ["1", "0"])
 
-  defp edit_first_caption(ref) do
-    update_in(ref, ["data", "data", "gallery_object_overrides"], fn overrides ->
-      Enum.map(overrides, fn override ->
-        if override["placement"] == 0, do: Map.put(override, "title", "First, edited"), else: override
-      end)
-    end)
-  end
+  defp edit_first_caption(ref),
+    do: update_in(ref, ["data", "data", "gallery_object_overrides"], &Enum.map(&1, fn o -> caption_at_zero(o) end))
+
+  defp caption_at_zero(%{"placement" => 0} = override), do: Map.put(override, "title", "First, edited")
+  defp caption_at_zero(override), do: override
 
   defp apply!(state, op) do
     {:ok, state} = Ops.apply_op(state, op)
