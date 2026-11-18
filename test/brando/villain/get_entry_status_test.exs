@@ -371,14 +371,19 @@ defmodule Brando.Villain.GetEntryStatusTest do
       assert stored(target) =~ ~s(class="card")
       {:ok, entry} = Brando.Query.get_entry(Page, target.id)
 
+      # Created published, the entry has its creation time as `publish_at`.
+      # The passed date is an hour before it: a date equal to it would be no
+      # change, and the save would keep the pending status the render set
+      passed = DateTime.add(entry.publish_at, -3600)
+
       # Rendered as pending while the date is ahead, saved published once it has passed
       entry
       |> Page.changeset(%{publish_at: at(3600)}, c.user)
       |> rendered_for_save([{:blocks, Page.Blocks, nil, []}])
-      |> Ecto.Changeset.put_change(:publish_at, at(-1))
+      |> Ecto.Changeset.put_change(:publish_at, passed)
       |> Pages.update_page(c.user)
 
-      assert Brando.Repo.get(Page, target.id).status == :published
+      assert %{status: :published, publish_at: ^passed} = Brando.Repo.get(Page, target.id)
       assert stored(target) =~ ~s(<div class="card" data-status="published">Launch</div>)
     end
 
