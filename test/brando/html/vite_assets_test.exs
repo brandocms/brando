@@ -5,6 +5,7 @@ defmodule Brando.HTML.ViteAssetsTest do
   import Phoenix.LiveViewTest, only: [render_component: 1, render_component: 2]
 
   alias Brando.HTML
+  alias Ecto.Adapters.SQL.Sandbox
 
   @host_app :brando_html_vite_test
   @env_vars ~w(BRANDO_VITE_FRONTEND_HOST BRANDO_VITE_FRONTEND_PORT BRANDO_VITE_ADMIN_HOST BRANDO_VITE_ADMIN_PORT)
@@ -14,9 +15,9 @@ defmodule Brando.HTML.ViteAssetsTest do
   <!-- dev/test -->
   <script type="module" src="http://localhost:3000/@vite/client" onerror="brandoAssetsMissing(&#39;brando-site-assets-notice&#39;)">
   </script>
-  <script type="module" blocking="render" src="http://localhost:3000/css/app.css" onerror="brandoAssetsMissing(&#39;brando-site-assets-notice&#39;)">
-  </script>
   <script type="module" src="http://localhost:3000/js/critical.js" onerror="brandoAssetsMissing(&#39;brando-site-assets-notice&#39;)">
+  </script>
+  <script type="module" blocking="render" src="http://localhost:3000/css/app.css" onerror="brandoAssetsMissing(&#39;brando-site-assets-notice&#39;)">
   </script>
   <script type="module" src="http://localhost:3000/js/index.js" onerror="brandoAssetsMissing(&#39;brando-site-assets-notice&#39;)">
   </script>
@@ -73,6 +74,11 @@ defmodule Brando.HTML.ViteAssetsTest do
 
     for role <- [:admin, :site], do: cache({Brando.Vite, :start_failure, role}, nil)
 
+    # Rendering from the dev server in development checks the build's manifest
+    # and may refresh the critical CSS: restore both after each test
+    cache(Brando.Tenant.cache_key({:vite, {"manifest_stamp", :app}}), nil)
+    cache(Brando.Tenant.cache_key({:vite, "critical_css"}), "/* no critical css */")
+
     for {scope, name} <- [app: "cache_manifest", admin: "cache_admin_manifest"] do
       cache(Brando.Tenant.cache_key({:vite, name}), %{
         entries: %{css_files: ["/assets/#{scope}.css"], files: ["/assets/#{scope}.js"]},
@@ -124,8 +130,10 @@ defmodule Brando.HTML.ViteAssetsTest do
       assert html =~
                ~s(<script type="module" blocking="render" src="http://localhost:3000/css/app.css")
 
-      # Before the scripts that import it, so the module loads once
-      [before_index, _] = String.split(html, "/js/index.js", parts: 2)
+      # After js/critical.js, as a build orders the two, and before the
+      # script that imports it
+      [_, after_critical] = String.split(html, "/js/critical.js", parts: 2)
+      [before_index, _] = String.split(after_critical, "/js/index.js", parts: 2)
       assert before_index =~ "/css/app.css"
     end
 
@@ -186,6 +194,27 @@ defmodule Brando.HTML.ViteAssetsTest do
 
       # and reads the finished one on the next request
       build_critical(tmp_dir, "second", ".second{color:blue}")
+      assert render_head() =~ ".second{color:blue}"
+    end
+
+    test "keeps the last read while the manifest is briefly gone", %{tmp_dir: tmp_dir} do
+      assert render_head() =~ ".first{color:red}"
+
+      File.rm!("priv/static/manifest.json")
+      assert render_head() =~ ".first{color:red}"
+
+      build_critical(tmp_dir, "second", ".second{color:blue}")
+      assert render_head() =~ ".second{color:blue}"
+    end
+
+    test "is read again when the build wrote the manifest before the stylesheet", %{tmp_dir: tmp_dir} do
+      assert render_head() =~ ".first{color:red}"
+
+      build_critical(tmp_dir, "second", ".second{color:blue}")
+      File.rm!("priv/static/assets/critical-second.css")
+      refute render_head() =~ ".second{color:blue}"
+
+      File.write!("priv/static/assets/critical-second.css", ".second{color:blue}")
       assert render_head() =~ ".second{color:blue}"
     end
 
@@ -490,9 +519,9 @@ defmodule Brando.HTML.ViteAssetsTest do
 
   # The head reads the palettes, from the database
   defp allow_head_render do
-    owner = Ecto.Adapters.SQL.Sandbox.start_owner!(BrandoIntegration.Repo)
-    on_exit(fn -> Ecto.Adapters.SQL.Sandbox.stop_owner(owner) end)
-    Ecto.Adapters.SQL.Sandbox.allow(BrandoIntegration.Repo, owner, self())
+    owner = Sandbox.start_owner!(BrandoIntegration.Repo)
+    on_exit(fn -> Sandbox.stop_owner(owner) end)
+    Sandbox.allow(BrandoIntegration.Repo, owner, self())
     :ok
   end
 

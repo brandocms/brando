@@ -976,9 +976,11 @@ defmodule Brando.HTML do
   # Vite adds the styles that `js/index.js` imports from JavaScript, after the
   # first render: a cross-document view transition would animate the page
   # unstyled. `css/app.css`, the stylesheet `js/index.js` imports in the
-  # installer's frontend, is loaded first as a render-blocking module. It is
-  # the same module as the import, so it loads once and hot-reloads. A site
-  # without one gets no such script, as for `js/critical.js`.
+  # installer's frontend, is loaded before it as a render-blocking module,
+  # after `js/critical.js` as a build orders the two. It is the module the
+  # import loads, so it hot-reloads; once it has been edited, Vite imports it
+  # with a timestamp, fetched again, but both update the same `<style>`. A
+  # site without one gets no such script, as for `js/critical.js`.
   defp frontend_dev_scripts(assigns) do
     frontend_dir = DevSite.frontend_dir()
 
@@ -1001,18 +1003,18 @@ defmodule Brando.HTML do
     >
     </script>
     <script
-      :if={@app_css?}
+      :if={@critical?}
       type="module"
-      blocking="render"
-      src={@vite_origin <> "/css/app.css"}
+      src={@vite_origin <> "/js/critical.js"}
       onerror={@notice? && "brandoAssetsMissing('brando-site-assets-notice')"}
       phx-no-format
     >
     </script>
     <script
-      :if={@critical?}
+      :if={@app_css?}
       type="module"
-      src={@vite_origin <> "/js/critical.js"}
+      blocking="render"
+      src={@vite_origin <> "/css/app.css"}
       onerror={@notice? && "brandoAssetsMissing('brando-site-assets-notice')"}
       phx-no-format
     >
