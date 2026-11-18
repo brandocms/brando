@@ -503,6 +503,43 @@ defmodule Brando.Translations.Sync do
     ]
   end
 
+  @doc """
+  Gives each new ref of a pending version's `payload` (a ref without an id)
+  that holds a saved gallery an unsaved copy of it, as `compute_pending/4`
+  does. A version stored before it did holds the source's gallery there,
+  which the translation's save would refuse.
+  """
+  def own_new_ref_galleries(%schema{} = payload) do
+    fields =
+      if function_exported?(schema, :__blocks_fields__, 0),
+        do: Enum.map(schema.__blocks_fields__(), &:"entry_#{&1.name}"),
+        else: []
+
+    Enum.reduce(fields, payload, fn field, acc ->
+      case Map.get(acc, field) do
+        joins when is_list(joins) -> Map.put(acc, field, Enum.map(joins, &%{&1 | block: own_block_galleries(&1.block)}))
+        _ -> acc
+      end
+    end)
+  end
+
+  defp own_block_galleries(%{refs: refs, children: children} = block) do
+    refs =
+      if is_list(refs) do
+        Enum.map(refs, fn
+          %{id: nil, gallery: %Gallery{id: id} = gallery} = ref when not is_nil(id) -> own_gallery(ref, gallery)
+          ref -> ref
+        end)
+      else
+        refs
+      end
+
+    children = if is_list(children), do: Enum.map(children, &own_block_galleries/1), else: children
+    %{block | refs: refs, children: children}
+  end
+
+  defp own_block_galleries(block), do: block
+
   # --- Merge ------------------------------------------------------------------
 
   defp merge(source, target, spec) do

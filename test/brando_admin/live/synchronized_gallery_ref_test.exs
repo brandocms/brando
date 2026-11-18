@@ -214,4 +214,35 @@ defmodule BrandoAdmin.SynchronizedGalleryRefTest do
     refute own in [nil, c.slides.id]
     assert media(own) == media(c.slides.id)
   end
+
+  test "a pending version stored with the source's gallery on a new ref saves a copy too", c do
+    # As versions computed before `Sync` gave such a ref a copy hold it
+    version = Repo.one!(from(v in Brando.Translations.PendingVersion, where: v.status == :pending))
+    payload = Translations.decode_payload(version)
+    [%{block: %{refs: [ref]} = block} = join] = payload.entry_blocks
+    {:ok, slides} = Brando.Galleries.get_gallery(%{matches: %{id: c.slides.id}, preload: [gallery_objects: [:image]]})
+    shared = %{ref | gallery_id: slides.id, gallery: slides}
+    payload = %{payload | entry_blocks: [%{join | block: %{block | refs: [shared]}}]}
+
+    Repo.update_all(from(v in Brando.Translations.PendingVersion, where: v.id == ^version.id),
+      set: [payload: Brando.Utils.term_to_binary(payload)]
+    )
+
+    save_pending(c)
+
+    own = ref_gallery_id(c.target.id)
+    refute own in [nil, c.slides.id]
+    assert media(own) == media(c.slides.id)
+  end
+
+  test "the copy of a gallery in the trash is not in the trash", c do
+    # Trashed while the source's ref still shows it
+    Repo.update_all(from(g in Gallery, where: g.id == ^c.slides.id), set: [deleted_at: DateTime.utc_now()])
+    Translations.source_saved(load(c.source.id))
+    save_pending(c)
+
+    own = ref_gallery_id(c.target.id)
+    refute own in [nil, c.slides.id]
+    assert is_nil(Repo.get!(Gallery, own).deleted_at)
+  end
 end
