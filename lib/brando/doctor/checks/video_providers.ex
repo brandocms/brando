@@ -2,8 +2,8 @@ defmodule Brando.Doctor.Checks.VideoProviders do
   @moduledoc """
   The video provider problems `Brando.Videos.ProviderConfigCheck` logs at boot:
   partial credentials, credentials without a webhook secret, and a
-  `default_video_upload_strategy` whose provider can't upload. Boot logs are
-  rarely read, so Utilities lists them too, in the same words.
+  `default_video_upload_strategy` whose provider has no usable credentials.
+  Boot logs are rarely read, so Utilities lists them too, in the same words.
   """
   use Brando.Doctor.Check
   use Gettext, backend: Brando.Gettext
@@ -20,7 +20,7 @@ defmodule Brando.Doctor.Checks.VideoProviders do
   def run(_context) do
     case ProviderConfigCheck.problems() do
       [] ->
-        ok(dgettext("doctor", "no configuration problems"))
+        ok(dgettext("doctor", "no credential problems"))
 
       problems ->
         warning(

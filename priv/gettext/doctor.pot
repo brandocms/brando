@@ -1578,7 +1578,7 @@ msgstr ""
 
 #: lib/brando/doctor/checks/video_providers.ex
 #, elixir-autogen, elixir-format
-msgid "no configuration problems"
+msgid "no credential problems"
 msgstr ""
 
 #: lib/brando/doctor/checks/test_database.ex
